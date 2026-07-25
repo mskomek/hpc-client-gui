@@ -10,7 +10,7 @@ from truba_gui.cli.main import run_cli
 def test_version_json(capsys) -> None:
     assert run_cli(["--format", "json", "version"]) == 0
     payload = json.loads(capsys.readouterr().out)
-    assert payload["name"] == "truba-client-gui"
+    assert payload["name"] == "hpc-client-gui"
     assert payload["version"]
 
 

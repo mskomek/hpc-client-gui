@@ -8,12 +8,12 @@ venv/
 
 
 /reports/
-/build/truba-client-gui/COLLECT-00.toc
+/build/hpc-client-gui/COLLECT-00.toc
 
-/dist/truba-client-gui/_internal/PySide6/
-/dist/truba-client-gui/_internal/shiboken6/
-/dist/truba-client-gui/_internal/cryptography-46.0.5.dist-info/
-/dist/truba-client-gui/_internal/templates/
+/dist/hpc-client-gui/_internal/PySide6/
+/dist/hpc-client-gui/_internal/shiboken6/
+/dist/hpc-client-gui/_internal/cryptography-46.0.5.dist-info/
+/dist/hpc-client-gui/_internal/templates/
 
 # Qt / PySide
 *.qrc
@@ -37,7 +37,7 @@ Thumbs.db
 # IDE
 .vscode/
 .idea/
-/TrubaGUI.zip
+/HPC-Client-GUI.zip
 /.continue/
 /chatlogs/
 /.codex/

@@ -7,7 +7,7 @@ $ErrorActionPreference = "Stop"
 $Root = Split-Path -Parent $PSScriptRoot
 Set-Location $Root
 
-$distDir = Join-Path $Root "dist/truba-client-gui"
+$distDir = Join-Path $Root "dist/hpc-client-gui"
 if (-not (Test-Path $distDir)) {
     throw "Expected ONEDIR output not found: $distDir"
 }
@@ -63,17 +63,17 @@ if (Test-Path (Join-Path $Root "templates")) {
     Copy-Item -Path (Join-Path $Root "templates") -Destination $versionDir -Recurse -Force
 }
 
-$exePath = Join-Path $versionDir "truba-client-gui.exe"
+$exePath = Join-Path $versionDir "hpc-client-gui.exe"
 if (-not (Test-Path $exePath)) {
     throw "Expected packaged exe not found: $exePath"
 }
 
-$releaseExeName = "truba-client-gui.exe"
+$releaseExeName = "hpc-client-gui.exe"
 
 $changelogOut = Join-Path $versionDir "CHANGELOG.md"
 Set-Content -Path $changelogOut -Value $releaseChangelogContent -Encoding utf8
 
-$zipName = "truba-client-gui_windows_onedir.zip"
+$zipName = "hpc-client-gui_windows_onedir.zip"
 $zipPath = Join-Path $versionDir $zipName
 if (Test-Path $zipPath) { Remove-Item $zipPath -Force }
 Compress-Archive -Path (Join-Path $versionDir "*") -DestinationPath $zipPath -Force

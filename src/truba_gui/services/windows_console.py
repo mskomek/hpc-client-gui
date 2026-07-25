@@ -7,7 +7,7 @@ attached console, it can fail with:
 
     "Failed to open terminal."
 
-To keep TrubaGUI fully standalone (and avoid flashing a console window), we
+To keep HPC Client GUI fully standalone (and avoid flashing a console window), we
 allocate a console once and immediately hide it.
 """
 

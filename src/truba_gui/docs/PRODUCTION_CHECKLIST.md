@@ -1,6 +1,6 @@
-# TrubaGUI — Production Checklist (Windows)
+# HPC Client GUI — Production Checklist (Windows)
 
-Bu dosya, TrubaGUI'nin "ürün" gibi paketlenip sahada kullanılmasında en sık sorun çıkaran alanlar için tek sayfalık kontrol listesidir.
+Bu dosya, HPC Client GUI'nin "ürün" gibi paketlenip sahada kullanılmasında en sık sorun çıkaran alanlar için tek sayfalık kontrol listesidir.
 
 ## 1) Windows / Ortam
 
@@ -10,7 +10,7 @@ Bu dosya, TrubaGUI'nin "ürün" gibi paketlenip sahada kullanılmasında en sık
 
 ## 2) VcXsrv (X11)
 
-- [ ] TrubaGUI tarafından kullanılan VcXsrv tek instance
+- [ ] HPC Client GUI tarafından kullanılan VcXsrv tek instance
 - [ ] `127.0.0.1:6000` dinliyor (DISPLAY `:0`)
 - [ ] VcXsrv argümanları: `-listen tcp` (plink -X için gerekli)
 - [ ] Loglar:

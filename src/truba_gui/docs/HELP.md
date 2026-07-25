@@ -1,4 +1,4 @@
-# TRUBA Client GUI
+# HPC Client GUI
 
 > **Unofficial client-side GUI** to simplify **SSH / Slurm / X11 workflows** on the **TRUBA HPC system** or any similar **Slurm-based HPC**.
 >
@@ -183,4 +183,3 @@ scontrol show job <JOBID>
 salloc -N 1 -n 1 -c 4 --mem=8G -t 01:00:00
 srun --pty bash
 ```
-

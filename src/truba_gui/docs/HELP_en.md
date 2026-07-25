@@ -1,4 +1,4 @@
-# TRUBA Client GUI — Help
+# HPC Client GUI — Help
 
 > **Unofficial client-side GUI** to simplify **SSH / Slurm / X11 workflows** on the **TRUBA HPC system** or any similar **Slurm-based HPC**.
 >

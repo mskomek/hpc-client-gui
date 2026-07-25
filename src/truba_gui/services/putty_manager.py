@@ -4,7 +4,7 @@ from __future__ import annotations
 
 Goal
 ----
-TrubaGUI must be able to run X11 forwarding on Windows *without* requiring the
+HPC Client GUI must be able to run X11 forwarding on Windows *without* requiring the
 user to install PuTTY/MobaXterm. For password-based SSH, Windows OpenSSH is not
 practical from a GUI (no TTY), so we rely on **plink.exe**.
 
@@ -50,7 +50,7 @@ def _download(url: str, dest: Path, log: Optional[Callable[[str], None]] = None,
             progress.setMinimumDuration(0)
             progress.setValue(0)
 
-        req = urllib.request.Request(url, headers={"User-Agent": "TrubaGUI/1.0"}, method="GET")
+        req = urllib.request.Request(url, headers={"User-Agent": "HPC-Client-GUI/1.0"}, method="GET")
         with urllib.request.urlopen(req, timeout=60) as resp:
             total = int(resp.headers.get("Content-Length") or 0)
             chunk = 1024 * 128

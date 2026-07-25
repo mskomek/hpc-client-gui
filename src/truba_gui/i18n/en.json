@@ -1,6 +1,6 @@
 {
   "app": {
-    "title": "HPC Workflow Workspace"
+    "title": "HPC Client GUI"
   },
   "tabs": {
     "login": "Connection",

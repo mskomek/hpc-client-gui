@@ -19,7 +19,7 @@ def _http_get_json(url: str, timeout: float = 20.0) -> dict:
         url,
         headers={
             # GitHub API is rate-limited; a UA improves compatibility.
-            "User-Agent": "TrubaGUI/1.0 (+https://github.com/)",
+            "User-Agent": "HPC-Client-GUI/1.0 (+https://github.com/mskomek/hpc-client-gui)",
             "Accept": "application/vnd.github+json",
         },
         method="GET",

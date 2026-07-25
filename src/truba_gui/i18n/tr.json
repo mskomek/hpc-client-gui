@@ -1,6 +1,6 @@
 {
   "app": {
-    "title": "HPC İş Akışı Arayüzü"
+    "title": "HPC Client GUI"
   },
   "tabs": {
     "login": "Bağlantı",

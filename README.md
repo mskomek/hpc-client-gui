@@ -1,9 +1,9 @@
-# TRUBA Client GUI (Unofficial)
+# HPC Client GUI
 
-A **client-side GUI application** developed to manage **SSH + Slurm + (optional) X11 workflows** from a single interface on **TRUBA and similar Slurm-based HPC systems**.
+A **client-side GUI application** for **SSH + Slurm + optional X11 workflows** on TRUBA and other Slurm-based HPC systems.
 
-> ⚠️ This software is **NOT an official TRUBA tool**.  
-> It is developed for use on **TRUBA or similar Slurm/SSH-based infrastructures**.
+> ⚠️ This software is **not an official TRUBA tool**.
+> It is designed for TRUBA and similar Slurm/SSH-based HPC infrastructures.
 
 ---
 

@@ -31,7 +31,7 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: truba-client-gui-${{ github.event.inputs.version }}
+          name: hpc-client-gui-${{ github.event.inputs.version }}
           path: |
             dist/releases/v${{ github.event.inputs.version }}/**
       - name: Publish GitHub Release
@@ -41,5 +41,7 @@ jobs:
           name: v${{ github.event.inputs.version }}
           body_path: dist/releases/v${{ github.event.inputs.version }}/CHANGELOG.md
           files: |
+            dist/releases/v${{ github.event.inputs.version }}/hpc-client-gui_windows_onedir.zip
+            dist/releases/v${{ github.event.inputs.version }}/hpc-client-gui_windows_onedir.zip.sha256
             dist/releases/v${{ github.event.inputs.version }}/truba-client-gui_windows_onedir.zip
             dist/releases/v${{ github.event.inputs.version }}/truba-client-gui_windows_onedir.zip.sha256

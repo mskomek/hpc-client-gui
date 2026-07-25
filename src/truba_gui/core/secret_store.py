@@ -36,7 +36,7 @@ def protect_secret(plaintext: str) -> str:
     kernel32 = ctypes.windll.kernel32
     if not crypt32.CryptProtectData(
         ctypes.byref(input_blob),
-        "TrubaGUI saved connection",
+        "HPC Client GUI saved connection",
         None,
         None,
         None,

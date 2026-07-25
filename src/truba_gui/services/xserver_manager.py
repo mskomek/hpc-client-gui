@@ -28,7 +28,7 @@ _STDERR_LOG = Path.home() / ".truba_slurm_gui" / "vcxsrv_stderr.log"
 
 
 def stop_x_server_started_by_app(log: Optional[Callable[[str], None]] = None) -> bool:
-    """Stop VcXsrv if it was started by TrubaGUI.
+    """Stop VcXsrv if it was started by HPC Client GUI.
 
     We record the PID when we start VcXsrv. If the user runs their own
     X server, we do not attempt to kill it.
@@ -160,7 +160,7 @@ def _download_file(url: str, dest: Path, log: Optional[Callable[[str], None]] = 
             progress.setMinimumDuration(0)
             progress.setValue(0)
 
-        req = urllib.request.Request(url, headers={"User-Agent": "TrubaGUI/1.0"}, method="GET")
+        req = urllib.request.Request(url, headers={"User-Agent": "HPC-Client-GUI/1.0"}, method="GET")
         with urllib.request.urlopen(req, timeout=60) as resp:
             total = int(resp.headers.get("Content-Length") or 0)
             chunk = 1024 * 128

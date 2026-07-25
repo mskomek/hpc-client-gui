@@ -30,8 +30,8 @@ def _performance_mark(name: str) -> None:
 def _set_application_icon(app: QApplication) -> None:
     """Use the release icon for the app window and taskbar entry too."""
     candidates = [
-        Path(__file__).resolve().parents[2] / "build" / "windows" / "truba-client-gui.ico",
-        Path(getattr(sys, "_MEIPASS", "")) / "truba_gui" / "assets" / "truba-client-gui.ico",
+        Path(__file__).resolve().parents[2] / "build" / "windows" / "hpc-client-gui.ico",
+        Path(getattr(sys, "_MEIPASS", "")) / "truba_gui" / "assets" / "hpc-client-gui.ico",
     ]
     for icon_path in candidates:
         if icon_path.is_file():
@@ -52,7 +52,7 @@ def _bootstrap_safety_checks() -> None:
     try:
         from truba_gui.services.process_registry import cleanup_orphans
 
-        # Conservative orphan guard: kills only TrubaGUI-recorded helpers older than 2h.
+        # Conservative orphan guard: kills only app-recorded helpers older than 2h.
         cleanup_orphans(aggressive=True)
     except Exception:
         pass

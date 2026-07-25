@@ -1,4 +1,4 @@
-# TRUBA Client GUI — Yardım
+# HPC Client GUI — Yardım
 
 > **TRUBA HPC** veya benzeri **Slurm tabanlı HPC** sistemlerinde **SSH / Slurm / X11** iş akışını kolaylaştıran **resmî olmayan** istemci GUI.
 >

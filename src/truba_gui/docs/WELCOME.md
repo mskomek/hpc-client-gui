@@ -1,4 +1,4 @@
-# TRUBA Client GUI — Hızlı Başlangıç
+# HPC Client GUI — Hızlı Başlangıç
 
 > Bu uygulama **TRUBA ve benzeri Slurm tabanlı HPC sistemlerinde** SSH + Slurm + (gerekirse) X11 iş akışını kolaylaştıran **resmî olmayan** bir istemci arayüzüdür.
 

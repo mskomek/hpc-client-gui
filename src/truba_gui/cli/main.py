@@ -13,13 +13,13 @@ from truba_gui.cli.session import CLIConnectionError, CLISession
 from truba_gui.cli.files import download as download_files, upload as upload_files
 
 
-CLI_VERSION = "1.1.12"
+CLI_VERSION = "1.1.13"
 
 
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="truba-client-gui",
-        description="TrubaGUI CLI and GUI launcher.",
+        prog="hpc-client-gui",
+        description="HPC Client GUI CLI and GUI launcher.",
     )
     parser.add_argument(
         "--format",
@@ -263,7 +263,7 @@ def run_cli(argv: Sequence[str] | None = None) -> int:
         return int(gui_main())
     if args.group == "version":
         _emit(
-            {"version": CLI_VERSION, "name": "truba-client-gui", "python": platform.python_version()},
+            {"version": CLI_VERSION, "name": "hpc-client-gui", "python": platform.python_version()},
             output_format=args.format,
             quiet=args.quiet,
         )

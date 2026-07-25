@@ -15,12 +15,12 @@ from truba_gui import __version__
 from truba_gui.core.paths import app_data_dir, is_frozen_exe
 
 
-GITHUB_REPOSITORY = "mskomek/truba-client-gui"
+GITHUB_REPOSITORY = "mskomek/hpc-client-gui"
 GITHUB_LATEST_RELEASE_API = (
     f"https://api.github.com/repos/{GITHUB_REPOSITORY}/releases/latest"
 )
-RELEASE_EXE_NAME = "truba-client-gui.exe"
-RELEASE_ZIP_NAME = "truba-client-gui_windows_onedir.zip"
+RELEASE_EXE_NAME = "hpc-client-gui.exe"
+RELEASE_ZIP_NAME = "hpc-client-gui_windows_onedir.zip"
 RELEASE_SHA_NAME = f"{RELEASE_ZIP_NAME}.sha256"
 ProgressCallback = Callable[[int, str], None]
 
@@ -40,7 +40,7 @@ def _request(url: str, timeout: float = 30.0):
     request = urllib.request.Request(
         url,
         headers={
-            "User-Agent": f"TrubaGUI/{__version__}",
+            "User-Agent": f"HPC-Client-GUI/{__version__}",
             "Accept": "application/vnd.github+json",
         },
     )
@@ -189,7 +189,7 @@ def build_update_script(
     new_exe = install_dir / RELEASE_EXE_NAME
     staging_dir = zip_path.parent / "staging"
     backup_internal = zip_path.parent / "_internal.backup"
-    backup_exe = zip_path.parent / "truba-client-gui.exe.backup"
+    backup_exe = zip_path.parent / "hpc-client-gui.exe.backup"
     install_log = zip_path.parent / "update-install.log"
     return f"""$ErrorActionPreference = "Stop"
 $oldPid = {process_id}

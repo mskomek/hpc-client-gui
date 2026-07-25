@@ -196,7 +196,7 @@ def ftp_server(root: Path, username: str, password: str) -> Iterator[tuple[str, 
         pass
 
     HarnessHandler.authorizer = authorizer
-    HarnessHandler.banner = "TrubaGUI loopback stress harness"
+    HarnessHandler.banner = "HPC Client GUI loopback stress harness"
     server = FTPServer(("127.0.0.1", 0), HarnessHandler)
     host, port = server.socket.getsockname()[:2]
     thread = threading.Thread(
@@ -248,7 +248,7 @@ def build_dataset(root: Path, *, large_size: int) -> dict[str, int]:
             )
             relative = f"{folder_name}/{file_name}"
             path = root / relative
-            seed = f"TrubaGUI:{relative}:".encode("utf-8")
+            seed = f"HPC Client GUI:{relative}:".encode("utf-8")
             if (folder_index, file_index) in large_locations:
                 _write_sparse(path, large_size, seed)
             else:
@@ -469,7 +469,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
             "Run a disposable localhost FTP upload/download integration test "
-            "through TrubaGUI's real RemoteDirPanel/TransferDialog controller."
+            "through HPC Client GUI's real RemoteDirPanel/TransferDialog controller."
         )
     )
     parser.add_argument(

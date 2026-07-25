@@ -1,4 +1,4 @@
-# TRUBA Client GUI — Quick Start
+# HPC Client GUI — Quick Start
 
 > This application is an **unofficial, client-side GUI** that simplifies **SSH + Slurm + (when needed) X11** workflows on **TRUBA** and other **Slurm-based HPC systems**.
 

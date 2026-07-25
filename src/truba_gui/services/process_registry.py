@@ -4,7 +4,7 @@ from __future__ import annotations
 
 Purpose
 -------
-TrubaGUI may spawn external helper processes (e.g. VcXsrv, plink/ssh for X11).
+HPC Client GUI may spawn external helper processes (e.g. VcXsrv, plink/ssh for X11).
 On Windows, these can be left orphaned if the app crashes or is killed.
 
 This registry is best-effort and **log-only**: it helps cleanup stale records
@@ -112,7 +112,7 @@ def cleanup_orphans(*, aggressive: bool = False, age_s: int = 2 * 3600) -> None:
 
     - Always removes records for PIDs that no longer exist.
     - If aggressive=True on Windows, will taskkill remaining registered PIDs.
-      This is intended only for helpers spawned by TrubaGUI.
+      This is intended only for helpers spawned by HPC Client GUI.
     """
     data = _read_all()
     if not data:

@@ -5,7 +5,7 @@ from __future__ import annotations
 Hedef
 - X11 forwarding seçiliyken `xclock`, `matlab` gibi GUI komutları çalıştırıldığında,
   pencere Windows'ta (yerel X server üzerinde) **ayrı bir pencere** olarak açılsın.
-- TrubaGUI içinde yeni sekme/terminal açılmasın.
+- HPC Client GUI içinde yeni sekme/terminal açılmasın.
 
 Neden Paramiko değil?
 - Paramiko ile X11 forwarding mümkün olsa da (request_x11 + xauth + kanal/pty),

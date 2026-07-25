@@ -7,7 +7,7 @@ $ErrorActionPreference = "Stop"
 $Root = Split-Path -Parent $PSScriptRoot
 Set-Location $Root
 
-$spec = "build/windows/truba-client-gui.spec"
+$spec = "build/windows/hpc-client-gui.spec"
 Write-Host "Building with PyInstaller spec: $spec"
 pyinstaller -y --clean $spec
 if ($LASTEXITCODE -ne 0) {
@@ -18,12 +18,12 @@ if ($LASTEXITCODE -ne 0) {
     }
 }
 
-$distDir = Join-Path $Root "dist/truba-client-gui"
+$distDir = Join-Path $Root "dist/hpc-client-gui"
 if (-not (Test-Path $distDir)) {
     throw "Expected ONEDIR output not found: $distDir"
 }
 
-$builtExe = Join-Path $distDir "truba-client-gui.exe"
+$builtExe = Join-Path $distDir "hpc-client-gui.exe"
 if (-not (Test-Path $builtExe)) {
     throw "Expected built EXE not found: $builtExe"
 }
@@ -89,17 +89,17 @@ if (Test-Path (Join-Path $Root "templates")) {
     Copy-Item -Path (Join-Path $Root "templates") -Destination $versionDir -Recurse -Force
 }
 
-$exePath = Join-Path $versionDir "truba-client-gui.exe"
+$exePath = Join-Path $versionDir "hpc-client-gui.exe"
 if (-not (Test-Path $exePath)) {
     throw "Expected packaged exe not found: $exePath"
 }
 
-$releaseExeName = "truba-client-gui.exe"
+$releaseExeName = "hpc-client-gui.exe"
 
 $releaseChangelogPath = Join-Path $versionDir "CHANGELOG.md"
 Set-Content -Path $releaseChangelogPath -Value $releaseChangelogContent -Encoding utf8
 
-$releaseZipName = "truba-client-gui_windows_onedir.zip"
+$releaseZipName = "hpc-client-gui_windows_onedir.zip"
 $releaseZipPath = Join-Path $versionDir $releaseZipName
 if (Test-Path $releaseZipPath) { Remove-Item $releaseZipPath -Force }
 
@@ -109,8 +109,29 @@ $releaseShaPath = "$releaseZipPath.sha256"
 $hash = Get-FileHash $releaseZipPath -Algorithm SHA256
 "$($hash.Hash)  $releaseZipName" | Set-Content -Path $releaseShaPath -Encoding ascii
 
+# v1.1.12 expects the former asset and executable names. Publish one migration
+# package so its updater can install this renamed build; subsequent updates use
+# the canonical HPC Client GUI asset names above.
+$legacyZipName = "truba-client-gui_windows_onedir.zip"
+$legacyZipPath = Join-Path $versionDir $legacyZipName
+$legacyStageDir = Join-Path $releaseBase ".legacy-v$Version"
+if (Test-Path $legacyStageDir) {
+    Remove-Item $legacyStageDir -Recurse -Force
+}
+New-Item -ItemType Directory -Path $legacyStageDir -Force | Out-Null
+Get-ChildItem -Path $versionDir | Where-Object { $_.Name -notlike "*.zip*" } |
+    Copy-Item -Destination $legacyStageDir -Recurse -Force
+Copy-Item -LiteralPath $exePath -Destination (Join-Path $legacyStageDir "truba-client-gui.exe") -Force
+Compress-Archive -Path (Join-Path $legacyStageDir "*") -DestinationPath $legacyZipPath -Force
+$legacyShaPath = "$legacyZipPath.sha256"
+$legacyHash = Get-FileHash $legacyZipPath -Algorithm SHA256
+"$($legacyHash.Hash)  $legacyZipName" | Set-Content -Path $legacyShaPath -Encoding ascii
+Remove-Item $legacyStageDir -Recurse -Force
+
 Write-Host "Release artifacts:"
 Write-Host " - $releaseChangelogPath"
 Write-Host " - $(Join-Path $versionDir $releaseExeName)"
 Write-Host " - $releaseZipPath"
 Write-Host " - $releaseShaPath"
+Write-Host " - $legacyZipPath (v1.1.12 migration)"
+Write-Host " - $legacyShaPath"
