@@ -40,15 +40,28 @@ def _load_source_performance_probe():
 
 _PERFORMANCE_PROBE = _load_source_performance_probe()
 
+_CLI_COMMANDS = {"--help", "-h", "version", "gui", "profile", "doctor", "files"}
+
+
+def _is_cli_invocation(argv: list[str]) -> bool:
+    # Global CLI options may appear before the subcommand, for example
+    # ``--format json version``.  An empty invocation remains the GUI path.
+    return any(argument in _CLI_COMMANDS for argument in argv)
+
+
 if __package__ is None or __package__ == "":
     # script olarak çalıştırıldı -> src/ dizinini sys.path'e ekle
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-    from truba_gui.app import main
+
+if _is_cli_invocation(sys.argv[1:]):
+    from truba_gui.cli.main import run_cli
 else:
-    from .app import main
+    from truba_gui.app import main
 
 if _PERFORMANCE_PROBE is not None:
     _PERFORMANCE_PROBE.mark("application_imports_complete")
 
 if __name__ == "__main__":
+    if _is_cli_invocation(sys.argv[1:]):
+        raise SystemExit(run_cli())
     raise SystemExit(main())

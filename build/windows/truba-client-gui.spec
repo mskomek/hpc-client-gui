@@ -44,6 +44,9 @@ block_cipher = None
 datas = []
 if ASSETS_DIR.exists():
     datas.append((str(ASSETS_DIR), "truba_gui/assets"))
+if ICON_PATH.exists():
+    # Keep the same icon available at runtime for the window/taskbar in releases.
+    datas.append((str(ICON_PATH), "truba_gui/assets"))
 if I18N_DIR.exists():
     datas.append((str(I18N_DIR), "truba_gui/i18n"))
 if DOCS_DIR.exists():
@@ -57,6 +60,10 @@ hiddenimports = sorted(
         "PySide6.QtWidgets",
         "shiboken6",
         "shiboken6.Shiboken",
+        "truba_gui.cli",
+        "truba_gui.cli.main",
+        "truba_gui.cli.session",
+        "truba_gui.cli.files",
     }
 )
 

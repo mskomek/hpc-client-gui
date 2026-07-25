@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import os
 from time import monotonic
 
 from PySide6.QtCore import QTimer, Qt, Signal
 from PySide6.QtWidgets import (
     QApplication,
     QComboBox,
+    QFileDialog,
     QGroupBox,
     QHBoxLayout,
     QLabel,
@@ -783,6 +785,12 @@ class FtpWidget(QWidget):
         self.panel_home = RemoteDirPanel()
         self.panel_scratch.set_transfer_mode_provider(self.current_transfer_mode)
         self.panel_home.set_transfer_mode_provider(self.current_transfer_mode)
+        self.panel_scratch.set_local_target_refresh_callback(
+            self._refresh_local_transfer_target
+        )
+        self.panel_home.set_local_target_refresh_callback(
+            self._refresh_local_transfer_target
+        )
         self.panel_scratch.set_transfer_dialog_visible(False)
         self.panel_home.set_transfer_dialog_visible(False)
         self.transfer_activity = TransferActivityPanel()
@@ -794,6 +802,18 @@ class FtpWidget(QWidget):
         self.panel_home.open_file.connect(self.openFileRequested)
         self.panel_scratch.file_activated.connect(self._download_remote_path)
         self.panel_home.file_activated.connect(self._download_remote_path)
+        self.panel_scratch.download_requested.connect(
+            lambda paths, panel=self.panel_scratch: self._download_remote_paths(panel, paths)
+        )
+        self.panel_home.download_requested.connect(
+            lambda paths, panel=self.panel_home: self._download_remote_paths(panel, paths)
+        )
+        self.panel_scratch.save_as_requested.connect(
+            lambda paths, panel=self.panel_scratch: self._save_remote_paths_as(panel, paths)
+        )
+        self.panel_home.save_as_requested.connect(
+            lambda paths, panel=self.panel_home: self._save_remote_paths_as(panel, paths)
+        )
         self.panel_scratch.submit_requested.connect(self.submitRequested)
         self.panel_home.submit_requested.connect(self.submitRequested)
         self.panel_scratch.run_shell_requested.connect(self.runShellRequested)
@@ -886,6 +906,14 @@ class FtpWidget(QWidget):
     def current_transfer_mode(self, _path: str = "") -> str:
         return str(self.mode_combo.currentData() or AUTO)
 
+    def _refresh_local_transfer_target(self, target_dir: str) -> None:
+        """Refresh the visible local folder after a successful remote transfer."""
+        try:
+            if os.path.abspath(target_dir) == os.path.abspath(self.local_panel.current_dir):
+                self.local_panel.refresh()
+        except (OSError, RuntimeError):
+            pass
+
     def active_remote_panel(self) -> RemoteDirPanel:
         return (
             self.panel_home
@@ -922,6 +950,9 @@ class FtpWidget(QWidget):
         self.mode_combo.setCurrentIndex(max(0, index))
         if hasattr(self, "effective_label"):
             self._update_effective_label()
+
+    def clear_remote_directory_caches(self) -> None:
+        RemoteDirPanel.clear_all_directory_caches()
 
     def _update_remote_titles(self) -> None:
         scratch_title = t("ftp.scratch")
@@ -1021,11 +1052,51 @@ class FtpWidget(QWidget):
         if not self.session or not self.session.get("connected"):
             QMessageBox.warning(self, t("common.error"), t("common.no_connection"))
             return False
+        return self._download_remote_paths(panel, paths)
+
+    def _download_remote_paths(self, panel: RemoteDirPanel, paths: list[str]) -> bool:
+        """Download remote selections directly into the local panel folder."""
+        clean_paths = [str(path) for path in paths if path]
+        target_dir = str(self.local_panel.current_dir or "")
+        if not clean_paths or not target_dir:
+            QMessageBox.warning(self, t("common.error"), t("common.no_connection"))
+            return False
+        if not self.session or not self.session.get("connected"):
+            QMessageBox.warning(self, t("common.error"), t("common.no_connection"))
+            return False
         try:
-            return panel._apply_remote_download_incremental(
-                paths,
-                self.local_panel.current_dir,
-            )
+            return bool(panel._apply_remote_download_incremental(clean_paths, target_dir))
+        except Exception as exc:
+            # A frozen release must not let a context-menu slot exception
+            # terminate the GUI process.
+            QMessageBox.critical(self, t("common.error"), str(exc))
+            return False
+        finally:
+            self.apply_settings()
+
+    def _save_remote_paths_as(self, panel: RemoteDirPanel, paths: list[str]) -> bool:
+        if not self.session or not self.session.get("connected"):
+            QMessageBox.warning(self, t("common.error"), t("common.no_connection"))
+            return False
+        target_dir = QFileDialog.getExistingDirectory(
+            self,
+            _tr("dirs.save_as", "Save remote files as"),
+            self.local_panel.current_dir,
+        )
+        if not target_dir:
+            return False
+        return self._download_remote_paths_to(panel, paths, target_dir)
+
+    def _download_remote_paths_to(
+        self, panel: RemoteDirPanel, paths: list[str], target_dir: str
+    ) -> bool:
+        try:
+            return bool(panel._apply_remote_download_incremental(
+                [str(path) for path in paths if path], str(target_dir)
+            ))
+        except Exception as exc:
+            QMessageBox.critical(self, t("common.error"), str(exc))
+            return False
         finally:
             self.apply_settings()
 

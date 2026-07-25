@@ -257,6 +257,11 @@ class TransferDialog(QDialog):
         self._worker = None
         self._worker_state = {"cancelled": False, "error": ""}
         self._refresh_scheduled = False
+        self._close_when_done = False
+        self._refresh_timer = QTimer(self)
+        self._refresh_timer.setSingleShot(True)
+        self._refresh_timer.setInterval(50)
+        self._refresh_timer.timeout.connect(self._run_scheduled_refresh)
 
     def set_parallel_limit(self, parallel_limit: int) -> int:
         """Set queue concurrency without exceeding the backend-safe cap."""
@@ -311,7 +316,10 @@ class TransferDialog(QDialog):
         if self._refresh_scheduled:
             return
         self._refresh_scheduled = True
-        QTimer.singleShot(50, self._run_scheduled_refresh)
+        # The timer belongs to this dialog. A process-global singleShot can
+        # invoke a bound method after the dialog has been deleted, which is
+        # especially dangerous for remote->local downloads in frozen Qt builds.
+        self._refresh_timer.start()
 
     def _run_scheduled_refresh(self) -> None:
         self._refresh_scheduled = False
@@ -413,20 +421,31 @@ class TransferDialog(QDialog):
     @Slot()
     def _on_all_done(self) -> None:
         self._running = False
+        self._refresh_timer.stop()
         self._refresh()
         if self._stopped and self._pending:
             text = _tr("transfer.stopped_after_current", "Stopped after the current transfer.")
             self.lbl_transfer_stats.setText(text)
             self.transferStatsChanged.emit(text)
+            if self._close_when_done:
+                super().reject()
             return
         if self._cancelled:
             text = _tr("transfer.cancelled", "Transfer cancelled.")
             self.lbl_transfer_stats.setText(text)
             self.transferStatsChanged.emit(text)
+            if self._close_when_done:
+                super().reject()
+            return
+        if self._close_when_done:
+            super().reject()
             return
         if not self._errors and not self._stopped and not self._cancelled and not self._pending:
             self._finished_cleanly = True
-            self.accept()
+            if self._close_when_done:
+                super().reject()
+            else:
+                self.accept()
 
     def _show_errors_menu(self, pos) -> None:
         item = self.errors_list.itemAt(pos)
@@ -565,6 +584,11 @@ class TransferDialog(QDialog):
 
     def reject(self) -> None:  # type: ignore[override]
         self.cancel_all()
+        if self._running or self._active_items or self._active_item is not None:
+            # Keep the QObject alive until the worker has emitted all_done.
+            # The owner will delete the dialog from its finished callback.
+            self._close_when_done = True
+            return
         super().reject()
 
 

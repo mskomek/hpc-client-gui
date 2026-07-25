@@ -80,6 +80,7 @@ class _ShellRunWorker(QRunnable):
 
 class DirectoriesWidget(QWidget):
     open_in_editor = Signal(str, str)  # path, content
+    open_in_editor_new_window = Signal(str, str)  # path, content
     script_submitted = Signal(str, str)  # job_id, script_path
 
     def __init__(self):
@@ -491,6 +492,11 @@ class DirectoriesWidget(QWidget):
 
         btn_download = QPushButton(t("dirs.download") if t("dirs.download") != "[dirs.download]" else "İndir")
         btn_edit = QPushButton(t("dirs.edit") if t("dirs.edit") != "[dirs.edit]" else "Düzelt")
+        btn_edit_new_window = QPushButton(
+            t("dirs.edit_new_window")
+            if t("dirs.edit_new_window") != "[dirs.edit_new_window]"
+            else "Yeni pencerede düzelt"
+        )
         btn_close = QPushButton(t("common.cancel"))
 
         row = QHBoxLayout(dlg)
@@ -498,6 +504,7 @@ class DirectoriesWidget(QWidget):
         row.addStretch(1)
         row.addWidget(btn_download)
         row.addWidget(btn_edit)
+        row.addWidget(btn_edit_new_window)
         row.addWidget(btn_close)
 
         def do_download():
@@ -534,8 +541,22 @@ class DirectoriesWidget(QWidget):
             self.open_in_editor.emit(path, content)
             dlg.accept()
 
+        def do_edit_new_window():
+            if not self.session or not self.session.get("files"):
+                QMessageBox.warning(self, t("common.error"), t("common.no_connection"))
+                return
+            try:
+                content = self.session["files"].read_text(path)
+            except Exception as e:
+                show_exception(self, title=t("common.error"), user_message=f"Okunamadı: {e}", exc=e, area="FILES")
+                return
+            append_event({"type": "open_editor_new_window", "path": path})
+            self.open_in_editor_new_window.emit(path, content)
+            dlg.accept()
+
         btn_download.clicked.connect(do_download)
         btn_edit.clicked.connect(do_edit)
+        btn_edit_new_window.clicked.connect(do_edit_new_window)
         btn_close.clicked.connect(dlg.reject)
 
         dlg.exec()

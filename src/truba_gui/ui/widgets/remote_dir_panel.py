@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime
+import hashlib
 import json
 import os
 import re
@@ -45,8 +46,10 @@ from PySide6.QtWidgets import (
 from truba_gui.core.i18n import t
 from truba_gui.core.ui_errors import show_exception
 from truba_gui.config.storage import (
+    get_remote_directory_cache_enabled,
     get_transfer_parallelism,
     get_upload_preflight_confirmation_enabled,
+    get_transfer_checksum_verification_enabled,
     set_upload_preflight_confirmation_enabled,
 )
 from truba_gui.services.file_clipboard import get_file_clipboard
@@ -624,6 +627,8 @@ class RemoteDirPanel(QWidget):
     open_file = Signal(str)  # remote path (file double click)
     open_file_in_new_window = Signal(str)
     file_activated = Signal(str)
+    download_requested = Signal(list)  # remote paths -> FTP widget's local panel
+    save_as_requested = Signal(list)  # remote paths -> user-selected local folder
     open_in_slot = Signal(int, str)  # slot_index(0/1), remote path
     open_in_slot_new_window = Signal(int, str)
     open_in_slot_new_tab = Signal(int, str)
@@ -638,6 +643,15 @@ class RemoteDirPanel(QWidget):
 
     # single-level undo (last operation)
     _last_undo: Optional[_UndoRecord] = None
+
+    @classmethod
+    def clear_all_directory_caches(cls) -> None:
+        """Drop cached listings for every currently open remote panel."""
+        for panel in list(cls._instances.values()):
+            try:
+                panel._directory_cache.clear()
+            except RuntimeError:
+                continue
 
     def __init__(self, title: str = ""):
         super().__init__()
@@ -654,6 +668,7 @@ class RemoteDirPanel(QWidget):
         self._transfer_activity_callback: Optional[
             Callable[[str, List[TransferItem], str], None]
         ] = None
+        self._local_target_refresh_callback: Optional[Callable[[str], None]] = None
         self._transfer_dialogs: List[TransferDialog] = []
         self._active_transfer_keys: set[tuple[str, str, str]] = set()
         self._local_upload_plan_jobs: Dict[int, _LocalUploadPlanJob] = {}
@@ -741,6 +756,8 @@ class RemoteDirPanel(QWidget):
         self.directory_tabs = QTabBar()
         self.directory_tabs.setExpanding(False)
         self.directory_tabs.setMovable(True)
+        self.directory_tabs.setTabsClosable(True)
+        self.directory_tabs.tabCloseRequested.connect(self._close_directory_tab)
         self.directory_tabs.currentChanged.connect(self._on_directory_tab_changed)
 
         self.tabs = QTabWidget()
@@ -866,6 +883,12 @@ class RemoteDirPanel(QWidget):
         self.path.setText(remote_dir)
         self.refresh()
 
+    def _close_directory_tab(self, index: int) -> None:
+        """Close only additional directory tabs; keep one working tab open."""
+        if self.directory_tabs.count() <= 1 or index < 0:
+            return
+        self.directory_tabs.removeTab(index)
+
     def open_directory_in_new_tab(self, remote_dir: str) -> bool:
         if not self.session or not self.session.get("files"):
             return False
@@ -923,14 +946,31 @@ class RemoteDirPanel(QWidget):
                     get_file_clipboard().set("move", paths)
                     return True
             if (e.modifiers() & Qt.KeyboardModifier.ControlModifier) and e.key() == Qt.Key.Key_V:
-                if self._paste_system_clipboard_into(self.current_dir or "/"):
-                    return True
-                self._paste_remote_clipboard_into(self.current_dir or "/")
+                # Do not start a transfer/dialog while QTreeWidget is still
+                # processing its key event.  In particular, pasting from one
+                # remote directory tab into another can refresh/delete items
+                # underneath the active view and crash frozen Qt builds.
+                dest_dir = self.current_dir or "/"
+                QTimer.singleShot(
+                    0,
+                    lambda target=dest_dir: self._paste_from_clipboard_into(target),
+                )
                 return True
             if (e.modifiers() & Qt.KeyboardModifier.ControlModifier) and e.key() == Qt.Key.Key_Z:
                 self.undo_last()
                 return True
         return super().eventFilter(watched, event)
+
+    def _paste_from_clipboard_into(self, dest_dir: str) -> None:
+        """Start a paste after the originating tree key event has finished."""
+        try:
+            if self._paste_system_clipboard_into(dest_dir):
+                return
+            self._paste_remote_clipboard_into(dest_dir)
+        except Exception as exc:
+            # The delayed callback is outside the caller's event stack, so
+            # keep the last safety net here as well as in the paste helpers.
+            show_exception(self, title=t("common.error"), user_message=str(exc), exc=exc, area="FILES")
 
     def set_session(self, session):
         self.session = session
@@ -953,6 +993,13 @@ class RemoteDirPanel(QWidget):
         callback: Optional[Callable[[str, List[TransferItem], str], None]],
     ) -> None:
         self._transfer_activity_callback = callback
+
+    def set_local_target_refresh_callback(
+        self,
+        callback: Optional[Callable[[str], None]],
+    ) -> None:
+        """Set a callback used to refresh local transfer targets after success."""
+        self._local_target_refresh_callback = callback
 
     def set_transfer_dialog_visible(self, visible: bool) -> None:
         self._show_transfer_dialog = bool(visible)
@@ -1057,6 +1104,8 @@ class RemoteDirPanel(QWidget):
         if not self.session or not self.session.get("files"):
             return []
         key = self._cache_key(remote_dir)
+        if not get_remote_directory_cache_enabled():
+            return list(self.session["files"].listdir_entries(key))
         now = monotonic()
         cached = self._directory_cache.get(key)
         if not force and cached is not None:
@@ -1485,6 +1534,7 @@ class RemoteDirPanel(QWidget):
 
         new_parent_dir = clicked_path if clicked_path and clicked_is_dir else (self.current_dir or "/")
         act_download = menu.addAction(REMOTE_CONTEXT_MENU_LABELS[0])
+        act_save_as = menu.addAction(_tr("dirs.save_as", "Save as..."))
         act_add_queue = menu.addAction(REMOTE_CONTEXT_MENU_LABELS[1])
         act_view_edit = menu.addAction(REMOTE_CONTEXT_MENU_LABELS[2])
         act_open_new_tab = menu.addAction(REMOTE_CONTEXT_MENU_LABELS[3])
@@ -1614,6 +1664,7 @@ class RemoteDirPanel(QWidget):
         single_selection = len(sel_paths) == 1
         single_selection_is_dir = bool(selected_entries[0][1]) if single_selection else False
         act_download.setEnabled(has_selection)
+        act_save_as.setEnabled(has_selection)
         act_add_queue.setEnabled(False)
         act_view_edit.setEnabled(single_selection and not single_selection_is_dir)
         act_open_new_tab.setEnabled(single_selection and single_selection_is_dir)
@@ -1734,7 +1785,14 @@ class RemoteDirPanel(QWidget):
             return
 
         if chosen == act_download:
-            self.download_selected()
+            # The FTP container owns the two-pane transfer target.  Do not
+            # open a local-folder dialog here: that used to make the release
+            # build's right-click path diverge from toolbar/double-click FTP.
+            self.download_requested.emit(list(sel_paths))
+            return
+
+        if chosen == act_save_as:
+            self.save_as_requested.emit(list(sel_paths))
             return
 
         if chosen == act_delete:
@@ -2149,6 +2207,8 @@ class RemoteDirPanel(QWidget):
                     self._transfer_activity_callback(event, event_items, title)
                 if dlg.finished_cleanly() and after_finished is not None:
                     after_finished()
+                if dlg.finished_cleanly():
+                    self._refresh_local_transfer_targets(plan)
             finally:
                 self._active_transfer_keys.difference_update(active_keys)
                 try:
@@ -2166,6 +2226,24 @@ class RemoteDirPanel(QWidget):
         self._active_step = 0
         self._active_title = ""
         return True
+
+    def _refresh_local_transfer_targets(self, plan: List[_PlannedOp]) -> None:
+        """Refresh local folders affected by a completed transfer plan."""
+        callback = self._local_target_refresh_callback
+        if callback is None:
+            return
+        target_dirs = {
+            os.path.dirname(os.path.abspath(op.dst))
+            for op in plan
+            if op.op in {"download", "mkdir_local", "delete_local"} and op.dst
+        }
+        for target_dir in sorted(target_dirs):
+            try:
+                callback(target_dir)
+            except Exception:
+                # Refreshing a view must never turn a successful transfer into
+                # a failed one.
+                pass
 
     def _confirm_transfer_plan(
         self,
@@ -2224,6 +2302,7 @@ class RemoteDirPanel(QWidget):
                 self._requested_transfer_mode(item.src),
                 progress_cb=progress_cb,
             )
+            self._verify_transfer_item(item)
         elif op == "download":
             download_with_mode(
                 files,
@@ -2232,6 +2311,7 @@ class RemoteDirPanel(QWidget):
                 self._requested_transfer_mode(item.src),
                 progress_cb=progress_cb,
             )
+            self._verify_transfer_item(item)
         elif op == "mkdir_remote":
             files.mkdir(item.dst)
         elif op == "mkdir_local":
@@ -2246,6 +2326,33 @@ class RemoteDirPanel(QWidget):
                     pass
         else:
             raise RuntimeError(f"Unknown op: {op}")
+
+    @staticmethod
+    def _sha256_local(path: str) -> str:
+        digest = hashlib.sha256()
+        with open(path, "rb") as stream:
+            for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+                digest.update(chunk)
+        return digest.hexdigest()
+
+    def _verify_transfer_item(self, item: TransferItem) -> None:
+        if not get_transfer_checksum_verification_enabled():
+            return
+        files = self.session["files"]
+        remote_hash = getattr(files, "sha256", None)
+        if not callable(remote_hash):
+            raise RuntimeError(
+                "SHA-256 verification is enabled, but this backend does not provide remote checksums."
+            )
+        local_path = item.src if item.op == "upload" else item.dst
+        remote_path = item.dst if item.op == "upload" else item.src
+        local_digest = self._sha256_local(local_path)
+        remote_digest = str(remote_hash(remote_path) or "").strip().lower()
+        if not remote_digest or local_digest != remote_digest:
+            raise RuntimeError(
+                f"SHA-256 verification failed for {remote_path}: "
+                f"local={local_digest}, remote={remote_digest or '<missing>'}"
+            )
 
     def shutdown(self) -> None:
         """Cancel any in-flight batch operation (best-effort).

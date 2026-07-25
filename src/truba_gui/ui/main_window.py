@@ -118,6 +118,7 @@ class MainWindow(QMainWindow):
         self.directories = DirectoriesWidget()
         self.ftp = FtpWidget()
         self.editor = EditorWidget()
+        self._editor_windows: list[QMainWindow] = []
         self.logs = LogsWidget()
 
         self.tabs.addTab(self.login, t("tabs.login"))
@@ -157,6 +158,7 @@ class MainWindow(QMainWindow):
 
         self.jobs_outputs.request_show_directories.connect(self.show_directories)
         self.directories.open_in_editor.connect(self.open_in_editor)
+        self.directories.open_in_editor_new_window.connect(self.open_in_editor_new_window)
         self.directories.script_submitted.connect(self.on_script_submitted)
         self.ftp.openFileRequested.connect(self.directories.on_open_file)
         self.ftp.submitRequested.connect(self.directories.submit_script)
@@ -324,6 +326,7 @@ class MainWindow(QMainWindow):
                 self,
                 session=getattr(self, "_session", None),
                 update_remote_defaults=self.login.update_active_profile_remote_defaults,
+                clear_remote_directory_cache=self.ftp.clear_remote_directory_caches,
             )
             dlg.exec()
             self.jobs_outputs.apply_refresh_settings()
@@ -628,6 +631,32 @@ class MainWindow(QMainWindow):
         idx = self.tabs.indexOf(self.editor)
         if idx >= 0:
             self.tabs.setCurrentIndex(idx)
+
+    def open_in_editor_new_window(self, path: str, content: str):
+        """Open a standalone, visible editor window for a remote file."""
+        editor = EditorWidget()
+        editor.set_session(getattr(self, "_session", None))
+        editor.open_file(path, content)
+        window = QMainWindow(self, Qt.WindowType.Window)
+        window.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)
+        window.setWindowTitle(f"{t('tabs.editor')}: {path.rsplit('/', 1)[-1] or path}")
+        window.setCentralWidget(editor)
+        window.resize(1000, 700)
+        self._editor_windows.append(window)
+        window_token = id(window)
+
+        def cleanup(*_args):
+            self._editor_windows[:] = [
+                candidate
+                for candidate in self._editor_windows
+                if id(candidate) != window_token
+            ]
+
+        window.destroyed.connect(cleanup)
+        window.show()
+        window.raise_()
+        window.activateWindow()
+        return window
 
     def on_script_submitted(self, job_id: str, script_path: str):
         try:

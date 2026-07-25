@@ -112,6 +112,19 @@ def set_transfer_parallelism(count: int) -> int:
     return value
 
 
+def get_remote_directory_cache_enabled(default: bool = True) -> bool:
+    """Return whether recently visited remote directories should be cached."""
+    value = load_settings().get("remote_directory_cache_enabled", default)
+    return value if isinstance(value, bool) else default
+
+
+def set_remote_directory_cache_enabled(enabled: bool) -> bool:
+    """Persist the remote directory cache preference."""
+    value = bool(enabled)
+    update_settings({"remote_directory_cache_enabled": value})
+    return value
+
+
 _TRANSFER_COMPLETION_ACTIONS = {
     "none",
     "notification",
@@ -151,6 +164,19 @@ def set_upload_preflight_confirmation_enabled(enabled: bool) -> bool:
     """Persist whether local uploads should show the preflight confirmation."""
     value = bool(enabled)
     update_settings({"upload_preflight_confirmation_enabled": value})
+    return value
+
+
+def get_transfer_checksum_verification_enabled(default: bool = False) -> bool:
+    """Return whether completed transfers should be verified with SHA-256."""
+    value = load_settings().get("transfer_checksum_verification_enabled", default)
+    return value if isinstance(value, bool) else default
+
+
+def set_transfer_checksum_verification_enabled(enabled: bool) -> bool:
+    """Persist the optional post-transfer SHA-256 verification setting."""
+    value = bool(enabled)
+    update_settings({"transfer_checksum_verification_enabled": value})
     return value
 
 

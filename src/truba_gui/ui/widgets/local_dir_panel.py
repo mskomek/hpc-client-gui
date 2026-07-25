@@ -259,6 +259,8 @@ class LocalDirPanel(QWidget):
         controls.addWidget(self.btn_refresh)
 
         self.tabs = QTabWidget()
+        self.tabs.setTabsClosable(True)
+        self.tabs.tabCloseRequested.connect(self._close_tab)
         self.tree = self._make_tree()
         self._tab_dirs[self.tree] = self.current_dir
         self.tabs.addTab(self.tree, self._tab_label(self.current_dir))
@@ -297,6 +299,16 @@ class LocalDirPanel(QWidget):
             self.current_dir = self._tab_dirs.get(widget, self.current_dir)
             self.path.setText(self.current_dir)
             self.refresh()
+
+    def _close_tab(self, index: int) -> None:
+        """Keep the original local-directory tab available at all times."""
+        if self.tabs.count() <= 1 or index < 0:
+            return
+        tree = self.tabs.widget(index)
+        self.tabs.removeTab(index)
+        if isinstance(tree, _LocalTree):
+            self._tab_dirs.pop(tree, None)
+        tree.deleteLater()
 
     def open_directory_in_new_tab(self, directory: str) -> bool:
         target = os.path.abspath(os.path.expanduser(directory or ""))

@@ -3,6 +3,7 @@ from __future__ import annotations
 import html
 import re
 import shlex
+import time
 
 from PySide6.QtCore import QThreadPool, QTimer, Signal, Qt
 from PySide6.QtGui import QFontDatabase, QTextCursor
@@ -10,6 +11,7 @@ from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QGroupBox, QPushButton, QTextEdit,
     QLineEdit, QLabel, QMessageBox, QMainWindow, QTabBar, QTabWidget
 )
+from shiboken6 import isValid
 
 from truba_gui.config.storage import (
     SBATCH_FOLLOW_MODE_NEW_TABS_SPLIT,
@@ -44,6 +46,12 @@ _ANSI_COLORS = {
 }
 _LIVE_TAIL_INTERVAL_MS = 1000
 _LIVE_TAIL_LINE_COUNT = 200
+_LIVE_TAIL_MAX_RETRY_INTERVAL_MS = 30_000
+_LIVE_TAIL_IDLE_TIMEOUT_SECONDS = 60
+_LIVE_TAIL_SLOW_INTERVAL_MS = 5_000
+_LIVE_TAIL_FILE_RETRY_INTERVAL_MS = 60_000
+_LIVE_TAIL_INITIAL_RETRY_SECONDS = 30
+_LIVE_TAIL_FILE_RETRY_WINDOW_SECONDS = 5 * 60
 
 
 class _NavigableTextEdit(QTextEdit):
@@ -118,11 +126,19 @@ class _OutputFollowerWidget(QWidget):
     def __init__(self):
         super().__init__()
         self.session = None
+        self._single_slot_mode = False
         self.active_out = ""
         self.active_err = ""
         self._async_workers: set[AsyncCall] = set()
         self._async_busy: dict[str, int] = {}
         self._session_generation = 0
+        self._live_tail_failures = 0
+        self._live_tail_last_content: tuple[str, ...] | None = None
+        self._live_tail_last_change = time.monotonic()
+        self._tail_suspended = False
+        self._tail_alert_visible = False
+        self._tail_stop_notified = False
+        self._live_tail_failure_started: float | None = None
 
         layout = QVBoxLayout(self)
         self.lbl_script = QLabel(t("jobs_outputs.no_script"))
@@ -172,11 +188,81 @@ class _OutputFollowerWidget(QWidget):
         self._live_timer = QTimer(self)
         self._live_timer.setInterval(_LIVE_TAIL_INTERVAL_MS)
         self._live_timer.timeout.connect(self._poll_live)
+        # A top-level follower can be deleted when its window closes while a
+        # tail request is still running.  Invalidate its callback token before
+        # that request is delivered back to the GUI thread.
+        self.destroyed.connect(self._invalidate_async_callbacks)
+
+    def _invalidate_async_callbacks(self, *_args) -> None:
+        self._session_generation += 1
+        self._async_busy.clear()
+
+    def _record_live_tail_result(self, had_error: bool) -> None:
+        """Back off missing/unreadable output files without stopping follow."""
+        if had_error:
+            self._live_tail_failures += 1
+            interval = min(
+                _LIVE_TAIL_INTERVAL_MS * (2 ** self._live_tail_failures),
+                _LIVE_TAIL_MAX_RETRY_INTERVAL_MS,
+            )
+        else:
+            self._live_tail_failures = 0
+            interval = _LIVE_TAIL_INTERVAL_MS
+        if self._live_timer.interval() != interval:
+            self._live_timer.setInterval(interval)
+
+    def _reset_live_tail_idle_state(self) -> None:
+        self._live_tail_last_content = None
+        self._live_tail_last_change = time.monotonic()
+        self._tail_alert_visible = False
+        self._tail_stop_notified = False
+        self._live_tail_failure_started = None
+        self._live_tail_failure_started = None
+
+    def _observe_live_tail_content(self, results) -> None:
+        content = tuple(text for _, _, text, error in results if not error)
+        if content != self._live_tail_last_content:
+            self._live_tail_last_content = content
+            self._live_tail_last_change = time.monotonic()
+            self._tail_stop_notified = False
+            if self._live_timer.interval() == _LIVE_TAIL_SLOW_INTERVAL_MS:
+                self._live_timer.setInterval(_LIVE_TAIL_INTERVAL_MS)
+            return
+        if not self._tail_stop_notified and time.monotonic() - self._live_tail_last_change >= _LIVE_TAIL_IDLE_TIMEOUT_SECONDS:
+            self._live_timer.setInterval(_LIVE_TAIL_SLOW_INTERVAL_MS)
+            self._show_tracking_stopped_dialog("Çıktı 60 saniyedir değişmedi.")
+
+    def _show_tracking_stopped_dialog(self, reason: str) -> None:
+        if self._tail_alert_visible or self._tail_suspended or not isValid(self):
+            return
+        self._tail_alert_visible = True
+        self._tail_stop_notified = True
+        dialog = QMessageBox(self)
+        dialog.setIcon(QMessageBox.Icon.Information)
+        dialog.setWindowTitle("Takip durdu")
+        dialog.setText("Canlı çıktı takibi durdu.")
+        dialog.setInformativeText(reason)
+        resume = dialog.addButton("Takibe devam et", QMessageBox.ButtonRole.AcceptRole)
+        close = dialog.addButton("Pencereyi kapat", QMessageBox.ButtonRole.DestructiveRole)
+        dialog.exec()
+        clicked = dialog.clickedButton()
+        self._tail_alert_visible = False
+        if clicked is resume:
+            self._tail_suspended = False
+            self._live_timer.setInterval(_LIVE_TAIL_SLOW_INTERVAL_MS)
+            self._live_timer.start()
+            self._poll_live()
+        elif clicked is close:
+            self.window().close()
+        else:
+            self._tail_suspended = True
+            self._live_timer.stop()
 
     def set_session(self, session) -> None:
         self._session_generation += 1
         self._async_busy.clear()
         self.session = session
+        self._reset_live_tail_idle_state()
         if session and session.get("connected") and (self.active_out or self.active_err):
             self._live_timer.start()
             self._poll_live()
@@ -185,12 +271,19 @@ class _OutputFollowerWidget(QWidget):
 
     def shutdown(self) -> None:
         self._live_timer.stop()
-        self._session_generation += 1
-        self._async_busy.clear()
+        self._invalidate_async_callbacks()
+        for worker in tuple(self._async_workers):
+            for signal in (worker.signals.finished, worker.signals.failed):
+                try:
+                    signal.disconnect()
+                except (RuntimeError, TypeError):
+                    pass
 
     def open_in_output_slot(self, slot: int, remote_path: str) -> None:
         if not remote_path or slot not in (0, 1):
             return
+        self._tail_suspended = False
+        self._reset_live_tail_idle_state()
         if slot == 0:
             self.active_out = remote_path
             self.path_out.setText(remote_path)
@@ -202,7 +295,8 @@ class _OutputFollowerWidget(QWidget):
         # A follower opened with one slot must keep the empty counterpart
         # available for later assignment from the Files context menu.
         self.out_box.show()
-        self.err_box.show()
+        if not self._single_slot_mode:
+            self.err_box.show()
         if self.session and self.session.get("connected"):
             self._live_timer.start()
             self._poll_live()
@@ -236,6 +330,8 @@ class _OutputFollowerWidget(QWidget):
         self._async_workers.add(worker)
 
         def finished(current_token, result) -> None:
+            if not isValid(self):
+                return
             self._async_workers.discard(worker)
             if self._async_busy.get(key) == generation:
                 self._async_busy.pop(key, None)
@@ -243,6 +339,8 @@ class _OutputFollowerWidget(QWidget):
                 on_success(result)
 
         def failed(_current_token, _exc) -> None:
+            if not isValid(self):
+                return
             self._async_workers.discard(worker)
             if self._async_busy.get(key) == generation:
                 self._async_busy.pop(key, None)
@@ -253,9 +351,20 @@ class _OutputFollowerWidget(QWidget):
         return True
 
     def _poll_live(self) -> None:
-        if not self.session or not self.session.get("connected"):
+        if self._tail_suspended:
             self._live_timer.stop()
             return
+        if not self.session or not self.session.get("connected"):
+            if self._live_tail_failure_started is None:
+                self._live_tail_failure_started = time.monotonic()
+            if time.monotonic() - self._live_tail_failure_started < _LIVE_TAIL_INITIAL_RETRY_SECONDS:
+                self._live_timer.setInterval(_LIVE_TAIL_INTERVAL_MS)
+                self._live_timer.start()
+                return
+            self._live_timer.stop()
+            self._show_tracking_stopped_dialog("Bağlantı 30 saniyedir kesik.")
+            return
+        self._live_tail_failure_started = None
         files = self.session.get("files")
         ssh = self.session.get("ssh")
         paths = (self.active_out, self.active_err)
@@ -287,6 +396,25 @@ class _OutputFollowerWidget(QWidget):
             return results
 
         def success(results) -> None:
+            if not isValid(self):
+                return
+            had_error = any(error for _, _, _, error in results)
+            if had_error:
+                now = time.monotonic()
+                if self._live_tail_failure_started is None:
+                    self._live_tail_failure_started = now
+                elapsed = now - self._live_tail_failure_started
+                if elapsed < _LIVE_TAIL_INITIAL_RETRY_SECONDS:
+                    self._live_timer.setInterval(_LIVE_TAIL_INTERVAL_MS)
+                elif elapsed < _LIVE_TAIL_INITIAL_RETRY_SECONDS + _LIVE_TAIL_FILE_RETRY_WINDOW_SECONDS:
+                    self._live_timer.setInterval(_LIVE_TAIL_FILE_RETRY_INTERVAL_MS)
+                else:
+                    self._live_timer.stop()
+                    self._show_tracking_stopped_dialog("Çıktı dosyasına 5 dakikadır erişilemiyor.")
+            else:
+                self._live_tail_failure_started = None
+                self._record_live_tail_result(False)
+                self._observe_live_tail_content(results)
             for slot, path, text, error in results:
                 current_path = self.active_out if slot == 0 else self.active_err
                 if path != current_path:
@@ -317,6 +445,7 @@ class _SingleFileFollowerWidget(_OutputFollowerWidget):
 
     def __init__(self, remote_path: str):
         super().__init__()
+        self._single_slot_mode = True
         # This is the address bar shown in the standalone "Follow: file"
         # window. Keep its editable contract explicit even if the shared
         # two-slot follower changes later.
@@ -343,6 +472,13 @@ class JobsOutputsWidget(QWidget):
         self._async_workers: set[AsyncCall] = set()
         self._async_busy: dict[str, int] = {}
         self._session_generation = 0
+        self._live_tail_failures = 0
+        self._live_tail_last_content: tuple[str, ...] | None = None
+        self._live_tail_last_change = time.monotonic()
+        self._tail_suspended = False
+        self._tail_alert_visible = False
+        self._tail_stop_notified = False
+        self._live_tail_failure_started: float | None = None
         self._follow_windows: list[QMainWindow] = []
         self._single_file_follow_windows: list[QMainWindow] = []
         self._follow_tabs: list[_OutputFollowerWidget] = []
@@ -352,6 +488,7 @@ class JobsOutputsWidget(QWidget):
         self._follow_target_order: list[str] = []
         self._next_follow_window_number = 1
         self._next_follow_tab_number = 1
+        self.destroyed.connect(self._invalidate_async_callbacks)
 
         self.section_tabs = QTabWidget(self)
         self.details_tab = QWidget(self.section_tabs)
@@ -548,6 +685,7 @@ class JobsOutputsWidget(QWidget):
         self._session_generation += 1
         self._async_busy.clear()
         self.session = session
+        self._reset_live_tail_idle_state()
         self.jobs_text.setPlainText("")
         self.txt_out.setPlainText("")
         self.txt_err.setPlainText("")
@@ -561,6 +699,8 @@ class JobsOutputsWidget(QWidget):
         self.active_err = ""
         self._last_sig = [None, None]
         self._tail_paused = False
+        self._tail_suspended = False
+        self._live_tail_failures = 0
         self._update_tail_pause_button()
         self._live_timer.stop()
         self._jobs_refresh_timer.stop()
@@ -644,6 +784,12 @@ class JobsOutputsWidget(QWidget):
                 self._jobs_refresh_timer.stop()
             self._session_generation += 1
             self._async_busy.clear()
+            for worker in tuple(self._async_workers):
+                for signal in (worker.signals.finished, worker.signals.failed):
+                    try:
+                        signal.disconnect()
+                    except (RuntimeError, TypeError):
+                        pass
             for follower in list(self._follow_tabs):
                 follower.shutdown()
             for window in list(self._follow_windows):
@@ -658,6 +804,73 @@ class JobsOutputsWidget(QWidget):
                 window.close()
         except Exception:
             pass
+
+    def _invalidate_async_callbacks(self, *_args) -> None:
+        """Make pending worker results stale without touching Qt children."""
+        self._session_generation += 1
+        self._async_busy.clear()
+
+    def _record_live_tail_result(self, had_error: bool) -> None:
+        """Back off missing/unreadable output files without stopping follow."""
+        if had_error:
+            self._live_tail_failures += 1
+            interval = min(
+                _LIVE_TAIL_INTERVAL_MS * (2 ** self._live_tail_failures),
+                _LIVE_TAIL_MAX_RETRY_INTERVAL_MS,
+            )
+        else:
+            self._live_tail_failures = 0
+            interval = _LIVE_TAIL_INTERVAL_MS
+        if self._live_timer.interval() != interval:
+            self._live_timer.setInterval(interval)
+
+    def _reset_live_tail_idle_state(self) -> None:
+        self._live_tail_last_content = None
+        self._live_tail_last_change = time.monotonic()
+        self._tail_alert_visible = False
+        self._tail_stop_notified = False
+
+    def _observe_live_tail_content(self, results) -> None:
+        content = tuple(text for _, _, text, error in results if not error)
+        if content != self._live_tail_last_content:
+            self._live_tail_last_content = content
+            self._live_tail_last_change = time.monotonic()
+            self._tail_stop_notified = False
+            if self._live_timer.interval() == _LIVE_TAIL_SLOW_INTERVAL_MS:
+                self._live_timer.setInterval(_LIVE_TAIL_INTERVAL_MS)
+            return
+        if (
+            not self._tail_stop_notified
+            and time.monotonic() - self._live_tail_last_change >= _LIVE_TAIL_IDLE_TIMEOUT_SECONDS
+        ):
+            self._live_timer.setInterval(_LIVE_TAIL_SLOW_INTERVAL_MS)
+            self._show_tracking_stopped_dialog("Çıktı 60 saniyedir değişmedi.")
+
+    def _show_tracking_stopped_dialog(self, reason: str) -> None:
+        if self._tail_alert_visible or self._tail_suspended or not isValid(self):
+            return
+        self._tail_alert_visible = True
+        self._tail_stop_notified = True
+        dialog = QMessageBox(self)
+        dialog.setIcon(QMessageBox.Icon.Information)
+        dialog.setWindowTitle("Takip durdu")
+        dialog.setText("Canlı çıktı takibi durdu.")
+        dialog.setInformativeText(reason)
+        resume = dialog.addButton("Takibe devam et", QMessageBox.ButtonRole.AcceptRole)
+        close = dialog.addButton("Takip ekranını kapat", QMessageBox.ButtonRole.DestructiveRole)
+        dialog.exec()
+        clicked = dialog.clickedButton()
+        self._tail_alert_visible = False
+        if clicked is resume:
+            self._tail_suspended = False
+            self._live_timer.setInterval(_LIVE_TAIL_SLOW_INTERVAL_MS)
+            self._live_timer.start()
+            self._poll_live()
+        else:
+            self._tail_suspended = True
+            self._live_timer.stop()
+            if clicked is close:
+                self.section_tabs.setCurrentWidget(self.files_tab)
 
     def _start_async(
         self,
@@ -676,6 +889,8 @@ class JobsOutputsWidget(QWidget):
         self._async_workers.add(worker)
 
         def finished(current_token, result) -> None:
+            if not isValid(self):
+                return
             self._async_workers.discard(worker)
             if self._async_busy.get(key) == generation:
                 self._async_busy.pop(key, None)
@@ -684,6 +899,8 @@ class JobsOutputsWidget(QWidget):
             on_success(result)
 
         def failed(current_token, exc) -> None:
+            if not isValid(self):
+                return
             self._async_workers.discard(worker)
             if self._async_busy.get(key) == generation:
                 self._async_busy.pop(key, None)
@@ -959,12 +1176,18 @@ class JobsOutputsWidget(QWidget):
         window.setCentralWidget(follower)
         window.resize(900, 650)
         self._follow_windows.append(window)
+        window_token = id(window)
 
         def cleanup(*_args) -> None:
-            follower.shutdown()
             self._unregister_output_target(target_id)
-            if window in self._follow_windows:
-                self._follow_windows.remove(window)
+            # The destroyed signal can run while the C++ QMainWindow is
+            # already being torn down.  Do not compare/access that wrapper;
+            # id() is a Python-only stable token captured before destruction.
+            self._follow_windows[:] = [
+                candidate
+                for candidate in self._follow_windows
+                if id(candidate) != window_token
+            ]
 
         window.destroyed.connect(cleanup)
         window.show()
@@ -989,11 +1212,14 @@ class JobsOutputsWidget(QWidget):
         window.setCentralWidget(follower)
         window.resize(900, 650)
         self._single_file_follow_windows.append(window)
+        window_token = id(window)
 
         def cleanup(*_args) -> None:
-            follower.shutdown()
-            if window in self._single_file_follow_windows:
-                self._single_file_follow_windows.remove(window)
+            self._single_file_follow_windows[:] = [
+                candidate
+                for candidate in self._single_file_follow_windows
+                if id(candidate) != window_token
+            ]
 
         window.destroyed.connect(cleanup)
         window.show()
@@ -1059,6 +1285,8 @@ class JobsOutputsWidget(QWidget):
         """
         Sağ tuş menüsü: seçili dosyayı Output-1 (slot=0) veya Output-2 (slot=1) izle.
         """
+        self._tail_suspended = False
+        self._reset_live_tail_idle_state()
         if slot == 0:
             self.active_out = remote_path
             self.path_out.setText(remote_path)
@@ -1203,6 +1431,8 @@ class JobsOutputsWidget(QWidget):
         widget: QTextEdit,
         horizontal_position: int | None = None,
     ) -> None:
+        if not isValid(widget):
+            return
         if horizontal_position is None:
             horizontal_position = widget.horizontalScrollBar().value()
         cursor = widget.textCursor()
@@ -1211,6 +1441,8 @@ class JobsOutputsWidget(QWidget):
         widget.ensureCursorVisible()
 
         def finish_scroll() -> None:
+            if not isValid(widget):
+                return
             scrollbar = widget.verticalScrollBar()
             scrollbar.setValue(scrollbar.maximum())
             horizontal_scrollbar = widget.horizontalScrollBar()
@@ -1223,6 +1455,8 @@ class JobsOutputsWidget(QWidget):
 
     @staticmethod
     def _is_scrolled_to_bottom(widget: QTextEdit) -> bool:
+        if not isValid(widget):
+            return False
         scrollbar = widget.verticalScrollBar()
         return scrollbar.maximum() - scrollbar.value() <= 1
 
@@ -1233,6 +1467,8 @@ class JobsOutputsWidget(QWidget):
         *,
         follow_latest: bool,
     ) -> None:
+        if not isValid(widget):
+            return
         scrollbar = widget.verticalScrollBar()
         horizontal_scrollbar = widget.horizontalScrollBar()
         previous_position = scrollbar.value()
@@ -1250,12 +1486,23 @@ class JobsOutputsWidget(QWidget):
             )
 
     def _poll_live(self):
+        if self._tail_suspended:
+            self._live_timer.stop()
+            return
         if not self.is_outputs_polling_visible():
             self._live_timer.stop()
             return
-        if not self.session:
+        if not self.session or not self.session.get("connected"):
+            if self._live_tail_failure_started is None:
+                self._live_tail_failure_started = time.monotonic()
+            if time.monotonic() - self._live_tail_failure_started < _LIVE_TAIL_INITIAL_RETRY_SECONDS:
+                self._live_timer.setInterval(_LIVE_TAIL_INTERVAL_MS)
+                self._live_timer.start()
+                return
             self._live_timer.stop()
+            self._show_tracking_stopped_dialog("Bağlantı 30 saniyedir kesik.")
             return
+        self._live_tail_failure_started = None
         self._apply_live_refresh_interval()
         files = self.session.get("files")
         ssh = self.session.get("ssh")
@@ -1292,8 +1539,27 @@ class JobsOutputsWidget(QWidget):
             return results
 
         def success(results) -> None:
+            if not isValid(self):
+                return
             if not self.is_outputs_polling_visible():
                 return
+            had_error = any(error for _, _, _, error in results)
+            if had_error:
+                now = time.monotonic()
+                if self._live_tail_failure_started is None:
+                    self._live_tail_failure_started = now
+                elapsed = now - self._live_tail_failure_started
+                if elapsed < _LIVE_TAIL_INITIAL_RETRY_SECONDS:
+                    self._live_timer.setInterval(_LIVE_TAIL_INTERVAL_MS)
+                elif elapsed < _LIVE_TAIL_INITIAL_RETRY_SECONDS + _LIVE_TAIL_FILE_RETRY_WINDOW_SECONDS:
+                    self._live_timer.setInterval(_LIVE_TAIL_FILE_RETRY_INTERVAL_MS)
+                else:
+                    self._live_timer.stop()
+                    self._show_tracking_stopped_dialog("Çıktı dosyasına 5 dakikadır erişilemiyor.")
+            else:
+                self._live_tail_failure_started = None
+                self._record_live_tail_result(False)
+                self._observe_live_tail_content(results)
             for slot, path, text, error in results:
                 current_path = self.active_out if slot == 0 else self.active_err
                 if path != current_path:

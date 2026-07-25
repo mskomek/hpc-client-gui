@@ -6,7 +6,7 @@ import unittest
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from PySide6.QtWidgets import QApplication, QMainWindow, QTextEdit
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QCoreApplication, QEvent, Qt
 from PySide6.QtTest import QTest
 
 from truba_gui.ui.widgets.jobs_outputs_widget import (
@@ -292,6 +292,49 @@ class JobsOutputsScrollTests(unittest.TestCase):
         widget.shutdown()
         widget.deleteLater()
 
+    def test_missing_live_output_uses_backoff_then_resets_after_success(self) -> None:
+        class FakeSSH:
+            result = (1, "", "tail: cannot open file")
+
+            def run(self, _command, log_output=False):
+                if log_output:
+                    raise AssertionError("live-tail logging must stay disabled")
+                return self.result
+
+        ssh = FakeSSH()
+        widget = JobsOutputsWidget()
+        widget.section_tabs.setCurrentWidget(widget.outputs_tab)
+        widget.session = {"connected": True, "files": object(), "ssh": ssh}
+        widget.active_out = "/tmp/not-created-yet.log"
+        widget._start_async = self._run_async_immediately
+        widget._show_tracking_stopped_dialog = lambda _reason: None
+
+        widget._poll_live()
+        self.assertEqual(widget._live_timer.interval(), 1_000)
+        self.assertTrue(widget.txt_out.toPlainText())
+
+        widget._poll_live()
+        self.assertEqual(widget._live_timer.interval(), 1_000)
+
+        ssh.result = (0, "file is ready\n", "")
+        widget._poll_live()
+        self.assertEqual(widget._live_timer.interval(), 1_000)
+        self.assertEqual(widget.txt_out.toPlainText(), "file is ready\n")
+        widget.shutdown()
+        widget.deleteLater()
+
+    def test_live_text_helpers_ignore_deleted_editor(self) -> None:
+        editor = _NavigableTextEdit()
+        editor.deleteLater()
+        QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+
+        self.assertFalse(JobsOutputsWidget._is_scrolled_to_bottom(editor))
+        JobsOutputsWidget._set_live_text(
+            editor,
+            "late worker result",
+            follow_latest=True,
+        )
+
     def test_follow_window_output1_then_assigns_output2(self) -> None:
         widget = JobsOutputsWidget()
         try:
@@ -394,6 +437,7 @@ class JobsOutputsScrollTests(unittest.TestCase):
 
             self.assertEqual(follower.active_out, "/tmp/reassigned.log")
             self.assertEqual(follower.path_out.text(), "/tmp/reassigned.log")
+            self.assertFalse(follower.err_box.isVisible())
         finally:
             widget.shutdown()
             widget.deleteLater()

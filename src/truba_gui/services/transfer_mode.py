@@ -78,12 +78,22 @@ def resolve_transfer_mode(path: str, requested: str, sample: bytes | None = None
 
 
 def _ascii_bytes_for_remote(data: bytes) -> bytes:
-    text = data.decode("utf-8")
+    try:
+        text = data.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise ValueError(
+            "ASCII transfer requires UTF-8 text content; use Binary mode for this file."
+        ) from exc
     return text.replace("\r\n", "\n").replace("\r", "\n").encode("utf-8")
 
 
 def _ascii_bytes_for_local(data: bytes) -> bytes:
-    text = data.decode("utf-8")
+    try:
+        text = data.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise ValueError(
+            "ASCII transfer requires UTF-8 text content; use Binary mode for this file."
+        ) from exc
     normalized = text.replace("\r\n", "\n").replace("\r", "\n")
     return normalized.replace("\n", os.linesep).encode("utf-8")
 

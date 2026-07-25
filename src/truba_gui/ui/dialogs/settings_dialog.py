@@ -26,6 +26,7 @@ from truba_gui.config.storage import (
     get_file_associations,
     get_lssrv_auto_refresh_enabled,
     get_transfer_parallelism,
+    get_transfer_checksum_verification_enabled,
     get_upload_preflight_confirmation_enabled,
     load_settings,
     set_file_association,
@@ -50,6 +51,7 @@ class SettingsDialog(QDialog):
         *,
         session=None,
         update_remote_defaults=None,
+        clear_remote_directory_cache=None,
     ) -> None:
         super().__init__(parent)
         self.setModal(True)
@@ -57,6 +59,7 @@ class SettingsDialog(QDialog):
 
         st = load_settings()
         self._update_remote_defaults = update_remote_defaults
+        self._clear_remote_directory_cache = clear_remote_directory_cache
 
         self.cb_x11_autodeps = QCheckBox(t("login.x11_autodeps_label"))
         self.cb_x11_autodeps.setToolTip(t("login.x11_autodeps_tip"))
@@ -104,6 +107,28 @@ class SettingsDialog(QDialog):
         self.sp_transfer_parallelism.setValue(get_transfer_parallelism())
         self.sp_transfer_parallelism.setToolTip(t("settings.transfer_parallelism_tip"))
 
+        self.cb_remote_directory_cache = QCheckBox(
+            _tr(
+                "settings.remote_directory_cache_label",
+                "Cache remote directory listings",
+            )
+        )
+        self.cb_remote_directory_cache.setChecked(
+            bool(st.get("remote_directory_cache_enabled", True))
+        )
+        self.cb_remote_directory_cache.setToolTip(
+            _tr(
+                "settings.remote_directory_cache_tip",
+                "Reuse recently visited remote folders until they are changed or refreshed.",
+            )
+        )
+        self.btn_clear_remote_directory_cache = QPushButton(
+            _tr("settings.remote_directory_cache_clear", "Clear remote directory cache")
+        )
+        self.btn_clear_remote_directory_cache.clicked.connect(
+            self._clear_remote_directory_cache_clicked
+        )
+
         self.cb_upload_preflight_confirmation = QCheckBox(
             _tr(
                 "settings.upload_preflight_confirmation_label",
@@ -112,6 +137,22 @@ class SettingsDialog(QDialog):
         )
         self.cb_upload_preflight_confirmation.setChecked(
             get_upload_preflight_confirmation_enabled()
+        )
+
+        self.cb_transfer_checksum_verification = QCheckBox(
+            _tr(
+                "settings.transfer_checksum_verification_label",
+                "Verify transfers with SHA-256 after completion",
+            )
+        )
+        self.cb_transfer_checksum_verification.setChecked(
+            get_transfer_checksum_verification_enabled()
+        )
+        self.cb_transfer_checksum_verification.setToolTip(
+            _tr(
+                "settings.transfer_checksum_verification_tip",
+                "Compare the source and destination SHA-256 values before marking a transfer successful.",
+            )
         )
 
         self.cb_ftp_transfer_type = QComboBox()
@@ -172,6 +213,9 @@ class SettingsDialog(QDialog):
             self.sp_transfer_parallelism,
         )
         ftp_form.addRow(self.cb_upload_preflight_confirmation)
+        ftp_form.addRow(self.cb_transfer_checksum_verification)
+        ftp_form.addRow(self.cb_remote_directory_cache)
+        ftp_form.addRow(self.btn_clear_remote_directory_cache)
         self.btn_ftp_reset_defaults = QPushButton(
             t("settings.ftp_reset_defaults")
         )
@@ -233,11 +277,17 @@ class SettingsDialog(QDialog):
                 "upload_preflight_confirmation_enabled": (
                     self.cb_upload_preflight_confirmation.isChecked()
                 ),
+                "transfer_checksum_verification_enabled": (
+                    self.cb_transfer_checksum_verification.isChecked()
+                ),
                 "ftp_transfer_type": str(
                     self.cb_ftp_transfer_type.currentData() or "auto"
                 ),
+                "remote_directory_cache_enabled": self.cb_remote_directory_cache.isChecked(),
             }
         )
+        if not self.cb_remote_directory_cache.isChecked():
+            self._clear_remote_directory_cache_clicked()
         remote_defaults = (
             self.ftp_scratch_dir.text().strip(),
             self.ftp_home_dir.text().strip(),
@@ -249,6 +299,10 @@ class SettingsDialog(QDialog):
         ):
             self._update_remote_defaults(*remote_defaults)
             self._saved_remote_defaults = remote_defaults
+
+    def _clear_remote_directory_cache_clicked(self) -> None:
+        if self._clear_remote_directory_cache is not None:
+            self._clear_remote_directory_cache()
 
     def _reset_ftp_defaults(self) -> None:
         defaults = truba_default_remote_paths()

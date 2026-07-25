@@ -218,6 +218,18 @@ class SSHFilesBackend(FilesBackend):
         except Exception:
             return False
 
+    def sha256(self, remote_path: str) -> str:
+        """Return the remote file's SHA-256 using the SSH host utility."""
+        import shlex
+
+        code, out, err = self.ssh.run(f"sha256sum -- {shlex.quote(remote_path)}")
+        if code != 0:
+            raise RuntimeError(err.strip() or f"sha256sum failed (exit={code})")
+        digest = str(out or "").strip().split()[0] if str(out or "").strip() else ""
+        if len(digest) != 64:
+            raise RuntimeError("Remote sha256sum returned an invalid digest")
+        return digest.lower()
+
     def is_dir(self, remote_path: str) -> bool:
         try:
             st = self.ssh.sftp.stat(remote_path)

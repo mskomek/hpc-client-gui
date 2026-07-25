@@ -1017,12 +1017,10 @@ class FtpWidgetTests(unittest.TestCase):
                 self.assertEqual(len(published[-1]), 5)
 
                 dialog._refresh_scheduled = False
-                with patch(
-                    "truba_gui.ui.dialogs.transfer_dialog.QTimer.singleShot"
-                ) as single_shot:
+                with patch.object(dialog._refresh_timer, "start") as start_timer:
                     dialog._schedule_refresh()
                     dialog._schedule_refresh()
-                single_shot.assert_called_once()
+                start_timer.assert_called_once_with()
         finally:
             dialog.deleteLater()
 
@@ -3552,6 +3550,61 @@ class FtpWidgetTests(unittest.TestCase):
             clipboard.clear()
             panel.deleteLater()
 
+    def test_remote_ctrl_c_then_ctrl_v_in_another_directory_tab_copies_file(self) -> None:
+        from truba_gui.services.file_clipboard import get_file_clipboard
+
+        files = MockFilesBackend()
+        source = "/arf/scratch/user/project/input.dat"
+        destination = "/arf/scratch/user/project/nested"
+        panel = RemoteDirPanel()
+        clipboard = get_file_clipboard()
+        try:
+            panel.set_session({"connected": True, "files": files})
+            panel.set_dir("/arf/scratch/user/project")
+            source_view = panel.views["all"]
+            for index in range(source_view.topLevelItemCount()):
+                if source_view.topLevelItem(index).text(0) == "input.dat":
+                    source_view.topLevelItem(index).setSelected(True)
+                    break
+            QApplication.sendEvent(
+                source_view,
+                QKeyEvent(
+                    QEvent.Type.KeyPress,
+                    Qt.Key.Key_C,
+                    Qt.KeyboardModifier.ControlModifier,
+                ),
+            )
+            self.assertEqual(clipboard.get().paths, [source])
+
+            self.assertTrue(panel.open_directory_in_new_tab(destination))
+            destination_view = panel.views["all"]
+            with patch.object(
+                panel,
+                "_run_plan_with_progress",
+                side_effect=lambda plan, title, after_finished=None, **kwargs: self._run_plan_synchronously(
+                    panel,
+                    plan,
+                    title,
+                    after_finished,
+                    **kwargs,
+                ),
+            ):
+                QApplication.sendEvent(
+                    destination_view,
+                    QKeyEvent(
+                        QEvent.Type.KeyPress,
+                        Qt.Key.Key_V,
+                        Qt.KeyboardModifier.ControlModifier,
+                    ),
+                )
+                self.app.processEvents()
+
+            self.assertTrue(files.exists(destination + "/input.dat"))
+            self.assertEqual(files._files[destination + "/input.dat"], b"1 2 3\n")
+        finally:
+            clipboard.clear()
+            panel.deleteLater()
+
     def test_local_ctrl_v_downloads_remote_clipboard_to_current_local_dir(self) -> None:
         from truba_gui.services.file_clipboard import get_file_clipboard
 
@@ -3570,6 +3623,7 @@ class FtpWidgetTests(unittest.TestCase):
                     Qt.KeyboardModifier.ControlModifier,
                 )
                 QApplication.sendEvent(self.widget.local_panel.tree, paste_event)
+                self.app.processEvents()
             download.assert_called_once_with(
                 ["/remote/out.txt"],
                 self.widget.local_panel.current_dir,
@@ -4716,6 +4770,55 @@ class FtpWidgetTests(unittest.TestCase):
             downloaded = Path(tmp, "roundtrip.bin")
             files.download("/arf/scratch/user/uploads/payload.bin", str(downloaded))
             self.assertEqual(downloaded.read_bytes(), b"\x00\xffraw")
+
+    def test_ftp_mock_round_trips_turkish_file_and_directory_names(self) -> None:
+        files = MockFilesBackend()
+        panel = self.widget.panel_scratch
+        panel.set_session({"connected": True, "files": files})
+        remote_dir = "/arf/scratch/user/klasör_çğışü"
+
+        with tempfile.TemporaryDirectory() as tmp:
+            local_dir = Path(tmp, "yerel_klasör_İçerik")
+            local_dir.mkdir()
+            local_file = local_dir / "dosya_çığöşü.txt"
+            content = "Türkçe içerik: ÇĞİÖŞÜ çğıöşü\n".encode("utf-8")
+            local_file.write_bytes(content)
+
+            with patch.object(
+                RemoteDirPanel,
+                "_run_plan_with_progress",
+                self._run_plan_synchronously,
+            ):
+                self.assertTrue(panel._apply_local_upload([str(local_dir)], remote_dir))
+
+            remote_file = (
+                remote_dir
+                + "/yerel_klasör_İçerik/dosya_çığöşü.txt"
+            )
+            self.assertEqual(files._files[remote_file], content)
+
+            target_dir = Path(tmp, "indirilenler_İstanbul")
+            target_dir.mkdir()
+            with patch.object(
+                RemoteDirPanel,
+                "_run_plan_with_progress",
+                self._run_plan_synchronously,
+            ):
+                self.assertTrue(
+                    panel._apply_remote_download(
+                        [remote_dir + "/yerel_klasör_İçerik"],
+                        str(target_dir),
+                    )
+                )
+
+            self.assertEqual(
+                (
+                    target_dir
+                    / "yerel_klasör_İçerik"
+                    / "dosya_çığöşü.txt"
+                ).read_bytes(),
+                content,
+            )
 
     def test_ftp_mock_connection_is_environment_gated(self) -> None:
         with patch.dict(os.environ, {FTP_TEST_MODE_ENV: ""}):

@@ -56,9 +56,19 @@ class FTPFilesBackend(FilesBackend):
         self._username = username or "anonymous"
         self._password = password or ""
         self._timeout = float(timeout)
-        self.ftp = FTP()
+        # FTP control commands and directory listings must use UTF-8.  This
+        # keeps Windows local paths and Turkish remote names (ç, ğ, ı, İ, ö,
+        # ş, ü) as Python ``str`` values end to end instead of falling back to
+        # a platform code page.
+        self.ftp = FTP(encoding="utf-8")
         self.ftp.connect(self._host, self._port, timeout=self._timeout)
         self.ftp.login(self._username, self._password)
+        try:
+            self.ftp.sendcmd("OPTS UTF8 ON")
+        except Exception:
+            # Some older FTP servers do not implement the option but still
+            # accept UTF-8 paths.  Keep the client encoding explicitly UTF-8.
+            pass
         self.ftp.voidcmd("TYPE I")
         try:
             self.ftp.set_pasv(True)

@@ -23,6 +23,17 @@ if (-not (Test-Path $distDir)) {
     throw "Expected ONEDIR output not found: $distDir"
 }
 
+$builtExe = Join-Path $distDir "truba-client-gui.exe"
+if (-not (Test-Path $builtExe)) {
+    throw "Expected built EXE not found: $builtExe"
+}
+
+Write-Host "Running release smoke tests before packaging artifacts..."
+& (Join-Path $PSScriptRoot "release_smoke.ps1") -ExePath $builtExe
+if ($LASTEXITCODE -ne 0) {
+    throw "Release smoke tests failed."
+}
+
 $changelogSrc = Join-Path $Root "src/truba_gui/docs/CHANGELOG.md"
 if (-not (Test-Path $changelogSrc)) {
     throw "Expected changelog source not found: $changelogSrc"

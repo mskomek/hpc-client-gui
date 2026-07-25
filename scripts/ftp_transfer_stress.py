@@ -85,9 +85,13 @@ class LoopbackFtpBackend:
 
     @contextmanager
     def _ftp(self) -> Iterator[ftplib.FTP]:
-        ftp = ftplib.FTP()
+        ftp = ftplib.FTP(encoding="utf-8")
         ftp.connect(self.host, self.port, timeout=30)
         ftp.login(self.username, self.password)
+        try:
+            ftp.sendcmd("OPTS UTF8 ON")
+        except ftplib.all_errors:
+            pass
         with self._connection_lock:
             self.connection_count += 1
         try:
@@ -229,12 +233,22 @@ def build_dataset(root: Path, *, large_size: int) -> dict[str, int]:
     sizes: dict[str, int] = {}
     large_locations = {(2, 3), (8, 4)}
     for folder_index in range(10):
-        folder = root / f"folder_{folder_index:02d}"
+        folder_name = (
+            f"klasör_{folder_index:02d}_çğışü"
+            if folder_index == 0
+            else f"folder_{folder_index:02d}"
+        )
+        folder = root / folder_name
         folder.mkdir(parents=True)
         for file_index in range(5):
-            relative = f"folder_{folder_index:02d}/file_{file_index:02d}.bin"
+            file_name = (
+                f"dosya_İçerik_özel_{file_index:02d}.bin"
+                if folder_index == 0
+                else f"file_{file_index:02d}.bin"
+            )
+            relative = f"{folder_name}/{file_name}"
             path = root / relative
-            seed = f"TrubaGUI:{relative}:".encode("ascii")
+            seed = f"TrubaGUI:{relative}:".encode("utf-8")
             if (folder_index, file_index) in large_locations:
                 _write_sparse(path, large_size, seed)
             else:

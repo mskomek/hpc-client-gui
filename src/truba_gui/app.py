@@ -1,6 +1,8 @@
 import sys
 import logging
 from PySide6.QtWidgets import QApplication
+from PySide6.QtGui import QIcon
+from pathlib import Path
 
 from truba_gui.core.i18n import load_saved_language, system_default_language
 from truba_gui.core.i18n import validate_language_files
@@ -9,6 +11,7 @@ from truba_gui.core.debug_support import log_startup_snapshot
 from truba_gui.ui.main_window import MainWindow
 from truba_gui.config.storage import get_ui_pref_bool, set_ui_pref_bool
 from truba_gui.ui.dialogs.welcome_dialog import WelcomeDialog
+from truba_gui.ui.splash_screen import StartupSplash
 
 
 def _performance_probe():
@@ -22,6 +25,18 @@ def _performance_mark(name: str) -> None:
             probe.mark(name)
         except Exception:
             pass
+
+
+def _set_application_icon(app: QApplication) -> None:
+    """Use the release icon for the app window and taskbar entry too."""
+    candidates = [
+        Path(__file__).resolve().parents[2] / "build" / "windows" / "truba-client-gui.ico",
+        Path(getattr(sys, "_MEIPASS", "")) / "truba_gui" / "assets" / "truba-client-gui.ico",
+    ]
+    for icon_path in candidates:
+        if icon_path.is_file():
+            app.setWindowIcon(QIcon(str(icon_path)))
+            return
 
 
 def _bootstrap_safety_checks() -> None:
@@ -46,6 +61,13 @@ def main() -> int:
     _performance_mark("main_entered")
     app = QApplication(sys.argv)
     _performance_mark("qapplication_created")
+    _set_application_icon(app)
+
+    splash = StartupSplash()
+    splash.set_status("Preparing workspace...")
+    splash.show()
+    # Paint the splash before startup checks and widget construction begin.
+    app.processEvents()
 
     # Logging (file-backed, rotating). Must not crash the GUI.
     setup_logging(level=logging.INFO)
@@ -55,6 +77,8 @@ def main() -> int:
     except Exception:
         pass
 
+    splash.set_status("Checking startup environment...")
+    app.processEvents()
     _bootstrap_safety_checks()
     _performance_mark("bootstrap_checks_complete")
 
@@ -66,6 +90,8 @@ def main() -> int:
         """
     )
 
+    splash.set_status("Loading interface...")
+    app.processEvents()
     load_saved_language(system_default_language())
     _performance_mark("language_loaded")
 
@@ -78,6 +104,8 @@ def main() -> int:
         pass
     w.show()
     _performance_mark("main_window_shown")
+    app.processEvents()
+    splash.finish(w)
 
     probe = _performance_probe()
     if probe is not None:
