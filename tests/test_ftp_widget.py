@@ -1111,6 +1111,46 @@ class FtpWidgetTests(unittest.TestCase):
             dialog.cancel_all()
             dialog.deleteLater()
 
+    def test_overwrite_delete_is_followed_by_its_transfer_before_later_items(self) -> None:
+        deletion_done = threading.Event()
+        first_transfer_done = threading.Event()
+        started: list[str] = []
+        items = [
+            TransferItem("delete", "", "/remote/a.bin"),
+            TransferItem("upload", "a.bin", "/remote/a.bin"),
+            TransferItem("upload", "b.bin", "/remote/b.bin"),
+        ]
+
+        def run_item(item, _progress=None):
+            if item.op == "delete":
+                deletion_done.set()
+                return
+            if item.src == "a.bin":
+                self.assertTrue(deletion_done.is_set())
+                time.sleep(0.05)
+                first_transfer_done.set()
+            else:
+                self.assertTrue(first_transfer_done.is_set())
+            started.append(item.src)
+
+        dialog = TransferDialog(
+            title="Upload",
+            items=items,
+            run_item=run_item,
+            parallel_limit=2,
+        )
+        try:
+            dialog.start()
+            deadline = time.monotonic() + 3
+            while time.monotonic() < deadline and not dialog.finished_cleanly():
+                QApplication.processEvents()
+                time.sleep(0.01)
+            self.assertTrue(dialog.finished_cleanly())
+            self.assertEqual(started, ["a.bin", "b.bin"])
+        finally:
+            dialog.cancel_all()
+            dialog.deleteLater()
+
     def test_recursive_plan_prepares_all_mkdirs_before_parallel_upload_phase(self) -> None:
         prepared: list[str] = []
         started: list[str] = []
@@ -1846,6 +1886,33 @@ class FtpWidgetTests(unittest.TestCase):
             ),
             "resume",
         )
+
+    def test_always_use_conflict_action_lasts_only_for_current_process(self) -> None:
+        source = TransferConflictInfo("/source", size=10, mtime=20)
+        target = TransferConflictInfo("/target", size=10, mtime=10)
+        first_panel = RemoteDirPanel()
+        second_panel = RemoteDirPanel()
+        try:
+            with patch.object(
+                RemoteDirPanel, "_session_conflict_action", None
+            ), patch.object(
+                TransferConflictDialog,
+                "get_decision",
+                return_value=TransferConflictDecision("overwrite_if_newer", always_use=True),
+            ) as get_decision, patch.object(
+                first_panel, "_conflict_info", side_effect=[source, target]
+            ):
+                self.assertEqual(first_panel._resolve_conflict("/target", src="/source"), "overwrite_all")
+
+            with patch.object(
+                second_panel, "_conflict_info", side_effect=[source, target]
+            ):
+                self.assertEqual(second_panel._resolve_conflict("/target", src="/source"), "overwrite")
+
+            self.assertEqual(get_decision.call_count, 1)
+        finally:
+            first_panel.deleteLater()
+            second_panel.deleteLater()
 
     def test_both_remote_panels_forward_open_and_submit_signals(self) -> None:
         opened = []
@@ -4680,17 +4747,16 @@ class FtpWidgetTests(unittest.TestCase):
                 patch.object(
                     panel,
                     "_resolve_conflict",
-                    side_effect=["resume", "overwrite", "overwrite"],
+                    side_effect=["overwrite", "overwrite"],
                 ) as resolve,
                 patch.object(panel, "_run_plan_with_progress", return_value=True) as run_plan,
             ):
                 self.assertTrue(panel._apply_remote_download(["/remote/folder"], tmp))
 
-        self.assertEqual(resolve.call_count, 3)
+        self.assertEqual(resolve.call_count, 2)
         self.assertEqual(
             [call.args[0] for call in resolve.call_args_list],
             [
-                str(local_folder),
                 str(local_folder / "a.txt"),
                 str(local_folder / "b.txt"),
             ],
@@ -4752,6 +4818,26 @@ class FtpWidgetTests(unittest.TestCase):
                 Path(tmp, "project", "nested", "result.bin").read_bytes(),
                 b"\x00\x01\x02mock-binary",
             )
+
+            # Uploading a selected directory preserves its complete nested
+            # tree on the remote side as well.
+            with patch.object(
+                RemoteDirPanel,
+                "_run_plan_with_progress",
+                self._run_plan_synchronously,
+            ):
+                self.assertTrue(
+                    self.widget.panel_scratch._apply_local_upload(
+                        [str(Path(tmp, "project"))],
+                        "/arf/scratch/user/uploads",
+                    )
+                )
+            uploaded_nested = Path(tmp, "uploaded-result.bin")
+            files.download(
+                "/arf/scratch/user/uploads/project/nested/result.bin",
+                str(uploaded_nested),
+            )
+            self.assertEqual(uploaded_nested.read_bytes(), b"\x00\x01\x02mock-binary")
 
             local_bin = Path(tmp, "payload.bin")
             local_bin.write_bytes(b"\x00\xffraw")

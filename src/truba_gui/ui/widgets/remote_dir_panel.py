@@ -644,6 +644,11 @@ class RemoteDirPanel(QWidget):
     # single-level undo (last operation)
     _last_undo: Optional[_UndoRecord] = None
 
+    # This is deliberately process-local.  "Always use this action" is a
+    # convenience for the current run, not a persisted preference: a fresh
+    # application launch must ask about the first conflict again.
+    _session_conflict_action: Optional[str] = None
+
     @classmethod
     def clear_all_directory_caches(cls) -> None:
         """Drop cached listings for every currently open remote panel."""
@@ -1978,12 +1983,23 @@ class RemoteDirPanel(QWidget):
         """Return one of: overwrite|resume|skip|rename|cancel (optionally applied to all)."""
         source = self._conflict_info(src or dst, is_local=source_is_local)
         target = self._conflict_info(dst, is_local=target_is_local)
+
+        session_action = RemoteDirPanel._session_conflict_action
+        if session_action is not None:
+            return self._normalize_conflict_decision(
+                TransferConflictDecision(action=session_action), source, target
+            )
+
         decision = TransferConflictDialog.get_decision(
             self,
             source=source,
             target=target,
         )
         action = self._normalize_conflict_decision(decision, source, target)
+        if decision.always_use:
+            # Keep the selected action (rather than its result) so conditional
+            # actions are evaluated against each later conflicting file.
+            RemoteDirPanel._session_conflict_action = decision.action
         apply_all = bool(decision.always_use or decision.apply_current_queue_only)
         return action + "_all" if apply_all else action
 
@@ -2634,6 +2650,11 @@ class RemoteDirPanel(QWidget):
 
             # conflict resolution on local target
             while os.path.exists(local_dst):
+                # A directory selected for download merges into an existing
+                # directory of the same name.  Individual files below it are
+                # still checked for conflicts during the recursive walk.
+                if is_dir and os.path.isdir(local_dst):
+                    break
                 if policy is None:
                     action = self._resolve_conflict(
                         local_dst,
@@ -2979,6 +3000,11 @@ class RemoteDirPanel(QWidget):
         ) -> Generator[None, None, Optional[str]]:
             nonlocal policy
             while os.path.exists(local_path):
+                # Do not treat the selected directory itself as a conflict:
+                # merge it, then resolve conflicts for its contained files.
+                if is_dir and os.path.isdir(local_path):
+                    yield
+                    return local_path
                 yield
                 if policy is None:
                     action = self._resolve_conflict(
@@ -3126,6 +3152,16 @@ class RemoteDirPanel(QWidget):
                     exists = bool(files.exists(rp_base))
                 except Exception:
                     exists = False
+
+                if exists and is_dir:
+                    try:
+                        target_is_dir = bool(files.is_dir(rp_base))
+                    except Exception:
+                        target_is_dir = False
+                    if target_is_dir:
+                        # Merge matching directories; nested file conflicts
+                        # are handled below while building the upload plan.
+                        break
 
                 if exists:
                     if policy is None:
@@ -3405,6 +3441,16 @@ class RemoteDirPanel(QWidget):
                 except Exception:
                     exists = False
                 yield
+
+                if exists and is_dir:
+                    try:
+                        target_is_dir = bool(files.is_dir(rp_base))
+                    except Exception:
+                        target_is_dir = False
+                    if target_is_dir:
+                        # Keep the target directory and resolve only nested
+                        # file conflicts while building the upload plan.
+                        break
 
                 if exists:
                     if policy is None:

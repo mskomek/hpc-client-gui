@@ -13,7 +13,7 @@ from truba_gui.cli.session import CLIConnectionError, CLISession
 from truba_gui.cli.files import download as download_files, upload as upload_files
 
 
-CLI_VERSION = "1.1.13"
+CLI_VERSION = "1.1.14"
 
 
 def _parser() -> argparse.ArgumentParser:

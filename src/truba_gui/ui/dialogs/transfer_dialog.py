@@ -25,6 +25,8 @@ from PySide6.QtWidgets import (
 )
 
 from truba_gui.core.i18n import t
+from truba_gui.core.debug_telemetry import is_source_run
+from truba_gui.core.logging import get_logger
 
 
 def _tr(key: str, fallback: str) -> str:
@@ -200,6 +202,7 @@ class TransferDialog(QDialog):
         self._stopped = False
         self._cancelled = False
         self._started_at_by_item: dict[int, float] = {}
+        self._last_progress_by_item: dict[int, tuple[int, float]] = {}
         self._item_progress_baselines: dict[int, tuple[float, float]] = {}  # item_id -> (done, time)
         self._active_item: TransferItem | None = None
         self._active_items: List[TransferItem] = []
@@ -333,6 +336,11 @@ class TransferDialog(QDialog):
             self.accept()
             return
         self._schedule_refresh()
+        if is_source_run():
+            get_logger("truba_gui.debug.transfer").info(
+                "transfer.queue started title=%r item_count=%d parallel_limit=%d",
+                self.windowTitle(), len(self._items), self._parallel_limit,
+            )
         self._thread = _WorkerThread(
             self._pending,
             self._execute_item,
@@ -366,13 +374,29 @@ class TransferDialog(QDialog):
         except ValueError:
             pass
         self._schedule_refresh()
+        if is_source_run():
+            get_logger("truba_gui.debug.transfer").info(
+                "transfer.item started operation=%s source=%r destination=%r recursive=%s",
+                item.op, item.src, item.dst, item.recursive,
+            )
 
     @Slot(object, bool, str)
     def _on_item_finished(self, item: TransferItem, cancelled: bool, error: str) -> None:
         if item is None:
             return
-        self._started_at_by_item.pop(id(item), None)
+        started = self._started_at_by_item.pop(id(item), None)
         self._item_progress_baselines.pop(id(item), None)
+        progress = self._last_progress_by_item.pop(id(item), None)
+        if is_source_run():
+            elapsed_ms = int((time.monotonic() - started) * 1000) if started is not None else -1
+            bytes_done = progress[0] if progress is not None else 0
+            avg_speed = bytes_done / (elapsed_ms / 1000) if elapsed_ms > 0 else 0.0
+            get_logger("truba_gui.debug.transfer").info(
+                "transfer.item finished operation=%s source=%r destination=%r status=%s bytes=%d average_speed_Bps=%.1f duration_ms=%d error=%r",
+                item.op, item.src, item.dst,
+                "cancelled" if cancelled else ("failed" if error else "completed"),
+                bytes_done, avg_speed, elapsed_ms, error,
+            )
         if cancelled:
             self._pending.clear()
             self._running = False
@@ -417,12 +441,21 @@ class TransferDialog(QDialog):
         self.lbl_transfer_stats.setText(text)
         self.transferStatsChanged.emit(text)
         self.transferProgressChanged.emit(item, done, total)
+        # Chunk callbacks can fire hundreds of times per second.  Keep the
+        # latest byte count for the completion log instead of flooding app.log.
+        self._last_progress_by_item[id(item)] = (int(done), now)
 
     @Slot()
     def _on_all_done(self) -> None:
         self._running = False
         self._refresh_timer.stop()
         self._refresh()
+        if is_source_run():
+            get_logger("truba_gui.debug.transfer").info(
+                "transfer.queue finished title=%r completed=%d failed=%d pending=%d stopped=%s cancelled=%s",
+                self.windowTitle(), len(self._completed), len(self._errors),
+                len(self._pending), self._stopped, self._cancelled,
+            )
         if self._stopped and self._pending:
             text = _tr("transfer.stopped_after_current", "Stopped after the current transfer.")
             self.lbl_transfer_stats.setText(text)
@@ -736,6 +769,26 @@ class _WorkerThread(QObject):
                 if not futures and next_index < len(self._items):
                     item = self._items[next_index]
                     if item.op not in {"upload", "download"}:
+                        next_index += 1
+                        if self._is_removed(item):
+                            continue
+                        if stop_after_current or clear_pending:
+                            break
+                        self.item_started.emit(next_index, item)
+                        finished_item, cancelled, error = self._run_one(item)
+                        self.item_finished.emit(finished_item, cancelled, error)
+                        if cancelled:
+                            break
+                        continue
+                    if (
+                        next_index > 0
+                        and self._items[next_index - 1].op
+                        in {"delete", "delete_local"}
+                    ):
+                        # An overwrite deletion belongs to this exact
+                        # transfer.  Complete it before starting any later
+                        # transfers, so a queue never removes every
+                        # conflicting target before writing the first one.
                         next_index += 1
                         if self._is_removed(item):
                             continue

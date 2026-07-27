@@ -8,6 +8,7 @@ from truba_gui.core.i18n import load_saved_language, system_default_language
 from truba_gui.core.i18n import validate_language_files
 from truba_gui.core.logging_setup import setup_logging, install_excepthook
 from truba_gui.core.debug_support import log_startup_snapshot
+from truba_gui.core.debug_telemetry import DebugTelemetry, is_source_run
 from truba_gui.ui.main_window import MainWindow
 from truba_gui.config.storage import get_ui_pref_bool, set_ui_pref_bool
 from truba_gui.ui.dialogs.welcome_dialog import WelcomeDialog
@@ -72,6 +73,14 @@ def main() -> int:
     # Logging (file-backed, rotating). Must not crash the GUI.
     setup_logging(level=logging.INFO)
     install_excepthook()
+    if is_source_run():
+        # Development-only interaction telemetry.  Keep a Python reference on
+        # QApplication so Qt does not collect the installed event filter.
+        app.debug_telemetry = DebugTelemetry(app)  # type: ignore[attr-defined]
+        app.installEventFilter(app.debug_telemetry)  # type: ignore[attr-defined]
+        logging.getLogger("truba_gui.debug.telemetry").info(
+            "debug telemetry enabled mode=source"
+        )
     try:
         log_startup_snapshot()
     except Exception:

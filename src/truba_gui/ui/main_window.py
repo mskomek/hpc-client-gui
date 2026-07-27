@@ -18,6 +18,7 @@ from truba_gui.config.storage import (
 )
 from truba_gui.core.paths import is_frozen_exe
 from truba_gui.core.i18n import t, set_language
+from truba_gui.core.debug_telemetry import DebugTelemetry, is_source_run
 from truba_gui.services.changelog import chronological_changelog, load_changelog_text
 from truba_gui.services.app_updater import (
     download_and_verify_release,
@@ -130,6 +131,10 @@ class MainWindow(QMainWindow):
         )
         self.tabs.addTab(self.editor, t("tabs.editor"))
         self.tabs.addTab(self.logs, t("tabs.logs") if t("tabs.logs") != "[tabs.logs]" else "Logs")
+        if is_source_run():
+            telemetry = QApplication.instance().findChild(DebugTelemetry)
+            if telemetry is not None:
+                telemetry.observe_tab_widget(self.tabs, "main")
         self.tabs.currentChanged.connect(self._sync_command_polling)
         self.jobs_outputs.polling_visibility_changed.connect(
             self._sync_command_polling
