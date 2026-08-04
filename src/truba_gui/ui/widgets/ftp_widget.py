@@ -48,6 +48,25 @@ def _tr(key: str, fallback: str) -> str:
     return fallback if value == f"[{key}]" else value
 
 
+def _exec_temporary_menu(owner: QWidget, menu: QMenu, position):
+    """Run a context menu without dropping its Python wrapper mid-event-loop.
+
+    PySide owns a ``QMenu`` wrapper separately from Qt's parent-child tree.  On
+    Windows, allowing a locally-created menu wrapper to be collected while its
+    native popup is closing can crash in shiboken.  Keep one strong reference
+    for the complete nested menu loop, then defer the native deletion.
+    """
+    owner._active_context_menu = menu
+    try:
+        return menu.exec(position)
+    finally:
+        if getattr(owner, "_active_context_menu", None) is menu:
+            owner._active_context_menu = None
+        delete_later = getattr(menu, "deleteLater", None)
+        if callable(delete_later):
+            delete_later()
+
+
 class TransferActivityPanel(QGroupBox):
     _MAX_VISIBLE_TRANSFER_ROWS = 500
 
@@ -64,6 +83,7 @@ class TransferActivityPanel(QGroupBox):
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
+        self._active_context_menu: QMenu | None = None
         self._controller = None
         self._controllers: list = []
         self._controller_connections_by_id: dict[int, list[tuple[object, object]]] = {}
@@ -710,7 +730,7 @@ class TransferActivityPanel(QGroupBox):
                 enabled=completed,
             )
 
-        chosen = menu.exec(view.viewport().mapToGlobal(pos))
+        chosen = _exec_temporary_menu(self, menu, view.viewport().mapToGlobal(pos))
         if chosen in actions and chosen.isEnabled():
             method, args = actions[chosen]
             if method == "set_completion_action":
@@ -774,6 +794,7 @@ class FtpWidget(QWidget):
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
+        self._active_context_menu: QMenu | None = None
         self.session = None
         self._scratch_path = ""
         self._home_path = ""
@@ -973,7 +994,7 @@ class FtpWidget(QWidget):
             if key == "scratch"
             else t("ftp.set_home_default")
         )
-        chosen = menu.exec(panel.mapToGlobal(pos))
+        chosen = _exec_temporary_menu(self, menu, panel.mapToGlobal(pos))
         if chosen != action or not panel.current_dir:
             return
         self.set_current_as_default(key)

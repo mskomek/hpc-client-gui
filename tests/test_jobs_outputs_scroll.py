@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import unittest
+from unittest.mock import patch
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
@@ -12,6 +13,7 @@ from PySide6.QtTest import QTest
 from truba_gui.ui.widgets.jobs_outputs_widget import (
     JobsOutputsWidget,
     _NavigableTextEdit,
+    _OutputFollowerWidget,
 )
 
 
@@ -195,6 +197,7 @@ class JobsOutputsScrollTests(unittest.TestCase):
             self.assertEqual(horizontal.value(), 35, path)
 
         previous_positions = {}
+        follower.cb_auto_scroll.setChecked(False)
         for path, _output, vertical, _horizontal in scrollbars:
             vertical.setValue(max(0, vertical.maximum() - 20))
             previous_positions[path] = vertical.value()
@@ -228,7 +231,12 @@ class JobsOutputsScrollTests(unittest.TestCase):
             with self.subTest(window=name):
                 widget = JobsOutputsWidget()
                 try:
-                    result = open_window(widget)
+                    with patch(
+                        "truba_gui.ui.widgets.jobs_outputs_widget."
+                        "get_follow_window_open_minimized_enabled",
+                        return_value=False,
+                    ):
+                        result = open_window(widget)
                     window = result or widget._follow_windows[-1]
                     self.assertIsInstance(window, QMainWindow)
                     self.assertTrue(window.isWindow())
@@ -289,6 +297,112 @@ class JobsOutputsScrollTests(unittest.TestCase):
         self.assertEqual(lines[0], "line 50")
         self.assertNotIn("line 49", lines)
         self.assertEqual(lines[-1], "line 249")
+        widget.shutdown()
+        widget.deleteLater()
+
+    def test_minimized_main_outputs_page_pauses_and_restores_live_follow(self) -> None:
+        widget = JobsOutputsWidget()
+        widget.session = {"connected": True, "files": object()}
+        widget.active_out = "/tmp/output.log"
+        widget.section_tabs.setCurrentWidget(widget.outputs_tab)
+        widget._start_async = lambda *_args, **_kwargs: True
+
+        with patch(
+            "truba_gui.ui.widgets.jobs_outputs_widget."
+            "get_pause_live_follow_when_minimized_enabled",
+            return_value=True,
+        ):
+            widget.set_application_minimized(True)
+            self.assertFalse(widget._live_timer.isActive())
+            self.assertFalse(widget.is_outputs_polling_visible())
+
+            widget.set_application_minimized(False)
+            self.assertTrue(widget._live_timer.isActive())
+            self.assertTrue(widget.is_outputs_polling_visible())
+
+        widget.shutdown()
+        widget.deleteLater()
+
+    def test_minimized_follower_pauses_and_restores_live_follow(self) -> None:
+        follower = _OutputFollowerWidget()
+        follower.session = {"connected": True, "files": object()}
+        follower.active_out = "/tmp/output.log"
+        follower._start_async = lambda *_args, **_kwargs: True
+        follower._live_timer.start()
+
+        with patch(
+            "truba_gui.ui.widgets.jobs_outputs_widget."
+            "get_pause_live_follow_when_minimized_enabled",
+            return_value=True,
+        ):
+            follower.set_window_minimized(True)
+            self.assertFalse(follower._live_timer.isActive())
+
+            follower.set_window_minimized(False)
+            self.assertTrue(follower._live_timer.isActive())
+
+        follower.shutdown()
+        follower.deleteLater()
+
+    def test_minimized_follower_does_not_advance_idle_or_retry_countdowns(self) -> None:
+        follower = _OutputFollowerWidget()
+        follower.session = {"connected": True, "files": object()}
+        follower.active_out = "/tmp/output.log"
+        follower._start_async = lambda *_args, **_kwargs: True
+        follower._live_tail_last_change = 10.0
+        follower._live_tail_failure_started = 20.0
+        follower._tail_suspended = True
+
+        with (
+            patch(
+                "truba_gui.ui.widgets.jobs_outputs_widget."
+                "get_pause_live_follow_when_minimized_enabled",
+                return_value=True,
+            ),
+            patch(
+                "truba_gui.ui.widgets.jobs_outputs_widget.time.monotonic",
+                side_effect=(100.0, 160.0),
+            ),
+        ):
+            follower.set_window_minimized(True)
+            follower.set_window_minimized(False)
+
+        self.assertEqual(follower._live_tail_last_change, 70.0)
+        self.assertEqual(follower._live_tail_failure_started, 80.0)
+        follower.shutdown()
+        follower.deleteLater()
+
+    def test_minimized_main_follower_does_not_advance_idle_or_retry_countdowns(self) -> None:
+        widget = JobsOutputsWidget()
+        widget._live_tail_last_change = 10.0
+        widget._live_tail_failure_started = 20.0
+
+        with (
+            patch(
+                "truba_gui.ui.widgets.jobs_outputs_widget."
+                "get_pause_live_follow_when_minimized_enabled",
+                return_value=True,
+            ),
+            patch(
+                "truba_gui.ui.widgets.jobs_outputs_widget.time.monotonic",
+                side_effect=(100.0, 160.0),
+            ),
+        ):
+            widget.set_application_minimized(True)
+            widget.set_application_minimized(False)
+
+        self.assertEqual(widget._live_tail_last_change, 70.0)
+        self.assertEqual(widget._live_tail_failure_started, 80.0)
+        widget.shutdown()
+        widget.deleteLater()
+
+    def test_reset_live_tail_state_clears_previous_connection_countdown(self) -> None:
+        widget = JobsOutputsWidget()
+        widget._live_tail_failure_started = 123.0
+
+        widget._reset_live_tail_idle_state()
+
+        self.assertIsNone(widget._live_tail_failure_started)
         widget.shutdown()
         widget.deleteLater()
 

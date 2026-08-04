@@ -40,7 +40,7 @@ def _load_source_performance_probe():
 
 _PERFORMANCE_PROBE = _load_source_performance_probe()
 
-_CLI_COMMANDS = {"--help", "-h", "version", "gui", "profile", "doctor", "files"}
+_CLI_COMMANDS = {"--help", "-h", "version", "gui", "profile", "doctor", "files", "jobs"}
 
 
 def _is_cli_invocation(argv: list[str]) -> bool:

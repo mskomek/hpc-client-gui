@@ -32,6 +32,7 @@ from truba_gui.config.system_profile import (
     TRUBA_SYSTEM_DEFAULTS,
     save_user_system_template,
 )
+from truba_gui.core.i18n import t
 from truba_gui.ui.dialogs.connection_dialog import ConnectionDialog
 from truba_gui.ui.dialogs.transfer_conflict_dialog import (
     TransferConflictDecision,
@@ -1892,25 +1893,30 @@ class FtpWidgetTests(unittest.TestCase):
         target = TransferConflictInfo("/target", size=10, mtime=10)
         first_panel = RemoteDirPanel()
         second_panel = RemoteDirPanel()
+        # Reset directly rather than via patch.object: patch.object restores
+        # whatever value was present on entry when its own `with` exits, which
+        # would silently wipe out the session state _resolve_conflict sets
+        # during the block below before the second panel gets a chance to see it.
+        RemoteDirPanel._session_conflict_action = None
         try:
             with patch.object(
-                RemoteDirPanel, "_session_conflict_action", None
-            ), patch.object(
                 TransferConflictDialog,
                 "get_decision",
                 return_value=TransferConflictDecision("overwrite_if_newer", always_use=True),
-            ) as get_decision, patch.object(
-                first_panel, "_conflict_info", side_effect=[source, target]
-            ):
-                self.assertEqual(first_panel._resolve_conflict("/target", src="/source"), "overwrite_all")
+            ) as get_decision:
+                with patch.object(
+                    first_panel, "_conflict_info", side_effect=[source, target]
+                ):
+                    self.assertEqual(first_panel._resolve_conflict("/target", src="/source"), "overwrite_all")
 
-            with patch.object(
-                second_panel, "_conflict_info", side_effect=[source, target]
-            ):
-                self.assertEqual(second_panel._resolve_conflict("/target", src="/source"), "overwrite")
+                with patch.object(
+                    second_panel, "_conflict_info", side_effect=[source, target]
+                ):
+                    self.assertEqual(second_panel._resolve_conflict("/target", src="/source"), "overwrite")
 
             self.assertEqual(get_decision.call_count, 1)
         finally:
+            RemoteDirPanel._session_conflict_action = None
             first_panel.deleteLater()
             second_panel.deleteLater()
 
@@ -3070,6 +3076,95 @@ class FtpWidgetTests(unittest.TestCase):
             self.assertEqual(dialog.home_dir.text(), TRUBA_SYSTEM_DEFAULTS["home_dir"])
         finally:
             dialog.deleteLater()
+
+    def test_connection_dialog_can_remember_password_without_connect_prompts(self) -> None:
+        dialog = ConnectionDialog()
+        try:
+            self.assertFalse(dialog.cb_edit_only_password.isEnabled())
+            dialog.cb_save_password.setChecked(True)
+            dialog.cb_edit_only_password.setChecked(True)
+
+            profile = dialog._collect_profile()
+
+            self.assertIsNotNone(profile)
+            self.assertEqual(profile["password_prompt_policy"], "edit-only")
+            self.assertEqual(
+                dialog.cb_edit_only_password.text(),
+                t("connection.password_no_prompt"),
+            )
+        finally:
+            dialog.deleteLater()
+
+    def test_remembered_profile_is_migrated_to_prompt_free_windows_storage(self) -> None:
+        legacy_profile = {
+            "name": "truba",
+            "host": "login.truba.gov.tr",
+            "password_enc": "legacy-token",
+            "password_salt": "legacy-salt",
+        }
+        login = LoginWidget()
+        try:
+            login.profile_name.setText("truba")
+            login.host.setText("login.truba.gov.tr")
+            login.cb_save_password.setChecked(True)
+            login._password_prompt_policy = "edit-only"
+
+            with (
+                patch(
+                    "truba_gui.ui.widgets.login_widget.load_profiles",
+                    return_value=[legacy_profile],
+                ),
+                patch(
+                    "truba_gui.ui.widgets.login_widget.os_secret_store_available",
+                    return_value=True,
+                ),
+                patch.object(
+                    login,
+                    "_decrypt_profile_password",
+                    return_value="ssh-password",
+                ) as decrypt_password,
+                patch(
+                    "truba_gui.ui.widgets.login_widget.protect_secret",
+                    return_value="windows-protected-password",
+                ),
+                patch("truba_gui.ui.widgets.login_widget.upsert_profile") as save_profile,
+            ):
+                self.assertTrue(login.save_profile())
+
+            decrypt_password.assert_called_once_with(
+                legacy_profile,
+                allow_prompt=True,
+            )
+            saved = save_profile.call_args.args[0]
+            self.assertEqual(saved["password_dpapi"], "windows-protected-password")
+            self.assertNotIn("password_enc", saved)
+            self.assertNotIn("password_salt", saved)
+        finally:
+            login.deleteLater()
+
+    def test_saved_master_password_is_reused_without_showing_a_prompt(self) -> None:
+        login = LoginWidget()
+        try:
+            with (
+                patch(
+                    "truba_gui.ui.widgets.login_widget.load_settings",
+                    return_value={"master_password_dpapi": "protected-master"},
+                ),
+                patch(
+                    "truba_gui.ui.widgets.login_widget.unprotect_secret",
+                    return_value="master-password",
+                ) as decrypt_master,
+                patch("truba_gui.ui.widgets.login_widget.QDialog.exec") as show_dialog,
+            ):
+                self.assertEqual(
+                    login._ask_master_password(confirm=False),
+                    "master-password",
+                )
+
+            decrypt_master.assert_called_once_with("protected-master")
+            show_dialog.assert_not_called()
+        finally:
+            login.deleteLater()
 
     def test_connection_dialog_saves_current_system_as_user_template(self) -> None:
         dialog = ConnectionDialog()

@@ -64,6 +64,25 @@ python -m truba_gui
 
 ---
 
+## Command-line Interface
+
+`python -m truba_gui` exposes a command-line interface (`hpc-client-gui` is its internal program name shown in help output). Top-level commands:
+
+- `gui` - launch the desktop GUI
+- `version` - print version and build information
+- `profile` - manage saved connection profiles (`list`, `show`, `create`, `update`, `delete`, `test`)
+- `doctor` - run local diagnostics (`environment`, `connection`, `smoke`)
+- `files` - remote SFTP file operations (`ls`, `stat`, `checksum`, `mkdir`, `upload`, `download`, `cp`, `mv`, `rm`)
+- `jobs` - scheduler job operations (`list`, `status`, `accounting`, `lssrv`, `submit`, `cancel`)
+
+Shared global options exist (format, quiet, verbose, timeout, profile selection, host/port/user/key overrides, a stdin-based sensitive-value input flag, and strict host-key checking); `python -m truba_gui --help` is authoritative.
+
+- Full guides (drafted later in this wave):
+  - Turkish: `src/truba_gui/docs/CLI_GUIDE_tr.md`
+  - English: `src/truba_gui/docs/CLI_GUIDE_en.md`
+
+---
+
 ## Documentation
 
 - From within the application: click the **Help (❓)** icon in the top-left corner.

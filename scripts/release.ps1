@@ -7,6 +7,23 @@ $ErrorActionPreference = "Stop"
 $Root = Split-Path -Parent $PSScriptRoot
 Set-Location $Root
 
+function Get-Sha256Hex([string]$Path) {
+    # Avoids depending on the Get-FileHash cmdlet, whose module can fail to
+    # autoload under some Windows PowerShell 5.1 environments.
+    $sha256 = [System.Security.Cryptography.SHA256]::Create()
+    try {
+        $stream = [System.IO.File]::OpenRead($Path)
+        try {
+            $bytes = $sha256.ComputeHash($stream)
+        } finally {
+            $stream.Dispose()
+        }
+    } finally {
+        $sha256.Dispose()
+    }
+    return ([BitConverter]::ToString($bytes) -replace '-', '').ToLowerInvariant()
+}
+
 $spec = "build/windows/hpc-client-gui.spec"
 Write-Host "Building with PyInstaller spec: $spec"
 pyinstaller -y --clean $spec
@@ -89,6 +106,13 @@ if (Test-Path (Join-Path $Root "templates")) {
     Copy-Item -Path (Join-Path $Root "templates") -Destination $versionDir -Recurse -Force
 }
 
+Write-Host "Local transfer gate: Turkish-filename round trip and sftp-smoke/1 artifact placement"
+$env:PYTHONPATH = "src"
+python scripts/local_transfer_gate.py --version $Version --release-root $ReleaseRoot
+if ($LASTEXITCODE -ne 0) {
+    throw "Local transfer gate failed."
+}
+
 $exePath = Join-Path $versionDir "hpc-client-gui.exe"
 if (-not (Test-Path $exePath)) {
     throw "Expected packaged exe not found: $exePath"
@@ -106,8 +130,8 @@ if (Test-Path $releaseZipPath) { Remove-Item $releaseZipPath -Force }
 Compress-Archive -Path (Join-Path $versionDir "*") -DestinationPath $releaseZipPath -Force
 
 $releaseShaPath = "$releaseZipPath.sha256"
-$hash = Get-FileHash $releaseZipPath -Algorithm SHA256
-"$($hash.Hash)  $releaseZipName" | Set-Content -Path $releaseShaPath -Encoding ascii
+$hashHex = Get-Sha256Hex $releaseZipPath
+"$hashHex  $releaseZipName" | Set-Content -Path $releaseShaPath -Encoding ascii
 
 # v1.1.12 expects the former asset and executable names. Publish one migration
 # package so its updater can install this renamed build; subsequent updates use
@@ -124,8 +148,8 @@ Get-ChildItem -Path $versionDir | Where-Object { $_.Name -notlike "*.zip*" } |
 Copy-Item -LiteralPath $exePath -Destination (Join-Path $legacyStageDir "truba-client-gui.exe") -Force
 Compress-Archive -Path (Join-Path $legacyStageDir "*") -DestinationPath $legacyZipPath -Force
 $legacyShaPath = "$legacyZipPath.sha256"
-$legacyHash = Get-FileHash $legacyZipPath -Algorithm SHA256
-"$($legacyHash.Hash)  $legacyZipName" | Set-Content -Path $legacyShaPath -Encoding ascii
+$legacyHashHex = Get-Sha256Hex $legacyZipPath
+"$legacyHashHex  $legacyZipName" | Set-Content -Path $legacyShaPath -Encoding ascii
 Remove-Item $legacyStageDir -Recurse -Force
 
 Write-Host "Release artifacts:"

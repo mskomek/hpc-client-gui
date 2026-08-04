@@ -8,7 +8,7 @@ from PySide6.QtWidgets import (
     QMenu, QToolButton, QWidget, QSizePolicy, QHBoxLayout, QLabel
 )
 from PySide6.QtGui import QAction, QIcon, QPixmap, QPainter, QColor
-from PySide6.QtCore import QObject, QThread, QThreadPool, QTimer, Qt, QSize, Signal, Slot
+from PySide6.QtCore import QObject, QThread, QThreadPool, QTimer, Qt, QSize, Signal, Slot, QEvent
 from PySide6.QtSvg import QSvgRenderer
 
 from truba_gui import __version__
@@ -38,6 +38,7 @@ from truba_gui.config.storage import (
     SBATCH_FOLLOW_MODE_NEW_TABS_SPLIT,
     SBATCH_FOLLOW_MODE_OUTPUTS_TAB,
     get_sbatch_follow_mode,
+    get_squeue_auto_refresh_enabled,
 )
 from .dialogs.quick_tour import QuickTourOverlay
 from .async_call import AsyncCall
@@ -64,6 +65,11 @@ class _BackgroundCall(QObject):
 
 
 class MainWindow(QMainWindow):
+
+    def changeEvent(self, event) -> None:  # type: ignore[override]
+        super().changeEvent(event)
+        if event.type() == QEvent.Type.WindowStateChange and hasattr(self, "jobs_outputs"):
+            self.jobs_outputs.set_application_minimized(self.isMinimized())
 
     def _flag_icon(self, country_code: str) -> QIcon:
         """Return a small flag icon from packaged SVGs (stable on Windows)."""
@@ -335,6 +341,7 @@ class MainWindow(QMainWindow):
             )
             dlg.exec()
             self.jobs_outputs.apply_refresh_settings()
+            self._sync_command_polling()
             self.ftp.apply_settings()
         except Exception:
             pass
@@ -619,6 +626,7 @@ class MainWindow(QMainWindow):
             session
             and session.get("connected")
             and self.jobs_outputs.is_details_polling_visible()
+            and get_squeue_auto_refresh_enabled()
         )
         if should_poll_jobs:
             self.job_timer.start()

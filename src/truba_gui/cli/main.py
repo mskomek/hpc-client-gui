@@ -3,17 +3,24 @@ from __future__ import annotations
 import argparse
 import json
 import platform
+import re
 import sys
 from pathlib import Path
 from typing import Any, Sequence
 
-from truba_gui.config.storage import load_profiles
+from truba_gui.config.storage import delete_profile, load_profiles, upsert_profile
 from truba_gui.core.paths import app_data_dir
-from truba_gui.cli.session import CLIConnectionError, CLISession
-from truba_gui.cli.files import download as download_files, upload as upload_files
+from truba_gui.cli.errors import ExitCode, emit_error
+from truba_gui.cli.session import CLIConnectionError, CLISession, build_ssh_conn_info, resolve_profile
+from truba_gui.services.connection_diagnostics import run_connection_diagnostics
+from truba_gui.services.sftp_smoke import run_sftp_smoke
+from truba_gui.cli.files import IF_EXISTS_CHOICES, download as download_files, upload as upload_files
+from truba_gui.cli.jobs import emit_job_result, jobs_backend
 
 
-CLI_VERSION = "1.1.14"
+CLI_VERSION = "1.1.15"
+
+_JOBS_JOB_ID_RE = re.compile(r"\d+(?:[_.]\d+)?\Z")
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -48,10 +55,36 @@ def _parser() -> argparse.ArgumentParser:
     show = profile_commands.add_parser("show", help="Show a profile without secrets.")
     show.add_argument("name")
 
+    create = profile_commands.add_parser("create", help="Create a profile with non-sensitive fields only.")
+    create.add_argument("name")
+    create.add_argument("--host", help="SSH host.")
+    create.add_argument("--port", type=int, help="SSH port.")
+    create.add_argument("--user", dest="username", help="SSH username.")
+    create.add_argument("--key", dest="key_path", help="SSH private-key path.")
+    create.add_argument("--host-key-policy", choices=("accept-new", "strict"), help="Host-key acceptance policy.")
+
+    update = profile_commands.add_parser("update", help="Update non-sensitive fields of a profile.")
+    update.add_argument("name")
+    update.add_argument("--host", help="SSH host.")
+    update.add_argument("--port", type=int, help="SSH port.")
+    update.add_argument("--user", dest="username", help="SSH username.")
+    update.add_argument("--key", dest="key_path", help="SSH private-key path.")
+    update.add_argument("--host-key-policy", choices=("accept-new", "strict"), help="Host-key acceptance policy.")
+
+    delete = profile_commands.add_parser("delete", help="Delete a profile.")
+    delete.add_argument("name")
+    delete.add_argument("--yes", action="store_true", help="Confirm profile removal.")
+
+    test = profile_commands.add_parser("test", help="Verify a saved profile connection.")
+    test.add_argument("name")
+
     doctor = commands.add_parser("doctor", help="Run local diagnostics.")
     doctor_commands = doctor.add_subparsers(dest="doctor_command", required=True)
     doctor_commands.add_parser("environment", help="Inspect the local runtime environment.")
     doctor_commands.add_parser("connection", help="Connect and initialize SFTP.")
+    smoke = doctor_commands.add_parser("smoke", help="Round-trip a smoke file over SFTP.")
+    smoke.add_argument("--keep", action="store_true", help="Preserve the remote smoke directory.")
+    smoke.add_argument("--artifact", help="Write the smoke result JSON artifact to a local path.")
 
     files = commands.add_parser("files", help="Remote SFTP file operations.")
     file_commands = files.add_subparsers(dest="files_command", required=True)
@@ -69,12 +102,24 @@ def _parser() -> argparse.ArgumentParser:
     upload.add_argument("--recursive", action="store_true")
     upload.add_argument("--mode", choices=("binary", "ascii", "auto"), default="binary")
     upload.add_argument("--verify", action="store_true", help="Verify SHA-256 after upload.")
+    upload.add_argument(
+        "--if-exists",
+        choices=IF_EXISTS_CHOICES,
+        default="overwrite",
+        help="Action when the remote destination already exists.",
+    )
     download = file_commands.add_parser("download", help="Download a remote file or directory.")
     download.add_argument("remote_path")
     download.add_argument("local_path")
     download.add_argument("--recursive", action="store_true")
     download.add_argument("--mode", choices=("binary", "ascii", "auto"), default="binary")
     download.add_argument("--verify", action="store_true", help="Verify SHA-256 after download.")
+    download.add_argument(
+        "--if-exists",
+        choices=IF_EXISTS_CHOICES,
+        default="overwrite",
+        help="Action when the local destination already exists.",
+    )
     copy = file_commands.add_parser("cp", help="Copy a remote file or directory.")
     copy.add_argument("source")
     copy.add_argument("destination")
@@ -86,6 +131,20 @@ def _parser() -> argparse.ArgumentParser:
     remove.add_argument("path")
     remove.add_argument("--recursive", action="store_true")
     remove.add_argument("--yes", action="store_true", help="Confirm destructive removal.")
+
+    jobs = commands.add_parser("jobs", help="Inspect scheduler jobs and cluster state.")
+    jobs_command = jobs.add_subparsers(dest="jobs_command", required=True)
+    jobs_command.add_parser("list", help="List the user's queued and running jobs.")
+    status = jobs_command.add_parser("status", help="Show the state of a single job.")
+    status.add_argument("job_id", help="Job ID to inspect.")
+    jobs_command.add_parser("accounting", help="Show accounting data for the user's jobs.")
+    jobs_command.add_parser("lssrv", help="Show login-node cluster state.")
+    submit = jobs_command.add_parser("submit", help="Submit a batch script to the scheduler.")
+    submit.add_argument("script", help="Remote batch script path to submit.")
+    submit.add_argument("--yes", action="store_true", help="Confirm submission of the batch script.")
+    cancel = jobs_command.add_parser("cancel", help="Cancel a queued or running job.")
+    cancel.add_argument("job_id", help="Job ID to cancel.")
+    cancel.add_argument("--yes", action="store_true", help="Confirm cancellation of the job.")
     return parser
 
 
@@ -124,36 +183,176 @@ def _safe_profile(profile: dict[str, Any]) -> dict[str, Any]:
     return {key: profile.get(key) for key in allowed if key in profile}
 
 
+_PROFILE_SCALAR_FIELDS = ("host", "port", "username", "key_path", "host_key_policy")
+
+
+def _provided_profile_fields(args: argparse.Namespace) -> dict[str, Any]:
+    """Collect the non-sensitive scalar profile fields explicitly provided."""
+    provided: dict[str, Any] = {}
+    for key in _PROFILE_SCALAR_FIELDS:
+        value = getattr(args, key, None)
+        if value not in (None, ""):
+            provided[key] = value
+    return provided
+
+
 def _run_profile(args: argparse.Namespace) -> int:
-    profiles = load_profiles()
+    if args.profile_command == "create":
+        record = {"name": args.name}
+        record.update(_provided_profile_fields(args))
+        try:
+            upsert_profile(record)
+        except ValueError as exc:
+            emit_error(str(exc), exit_code=ExitCode.USAGE, output_format=args.format)
+            return ExitCode.USAGE
+        _emit(_safe_profile(record), output_format=args.format, quiet=args.quiet)
+        return ExitCode.SUCCESS
+
+    if args.profile_command == "update":
+        provided = _provided_profile_fields(args)
+        if not provided:
+            emit_error(
+                "profile update requires at least one field "
+                "(--host, --port, --user, --key, --host-key-policy).",
+                exit_code=ExitCode.USAGE,
+                output_format=args.format,
+            )
+            return ExitCode.USAGE
+        existing = resolve_profile(args.name)
+        if existing is None:
+            emit_error(
+                f"Profile not found: {args.name}. Create it with 'profile create {args.name}'.",
+                exit_code=ExitCode.OPERATION_FAILED,
+                output_format=args.format,
+            )
+            return ExitCode.OPERATION_FAILED
+        updated = dict(existing)
+        updated.update(provided)
+        upsert_profile(updated)
+        _emit(_safe_profile(updated), output_format=args.format, quiet=args.quiet)
+        return ExitCode.SUCCESS
+
+    if args.profile_command == "delete":
+        if not args.yes:
+            emit_error(
+                f"Refusing to delete profile '{args.name}' without --yes.",
+                exit_code=ExitCode.USAGE,
+                output_format=args.format,
+            )
+            return ExitCode.USAGE
+        if resolve_profile(args.name) is None:
+            emit_error(
+                f"Profile not found: {args.name}. Nothing to delete.",
+                exit_code=ExitCode.OPERATION_FAILED,
+                output_format=args.format,
+            )
+            return ExitCode.OPERATION_FAILED
+        delete_profile(args.name)
+        _emit(
+            {"operation": "delete", "name": args.name, "status": "ok"},
+            output_format=args.format,
+            quiet=args.quiet,
+        )
+        return ExitCode.SUCCESS
+
+    if args.profile_command == "test":
+        if resolve_profile(args.name) is None:
+            emit_error(
+                f"Profile not found: {args.name}. Create it with 'profile create {args.name}'.",
+                exit_code=ExitCode.OPERATION_FAILED,
+                output_format=args.format,
+            )
+            return ExitCode.OPERATION_FAILED
+        args.profile = args.name
+        session = None
+        try:
+            session = CLISession.open(args)
+        except CLIConnectionError as exc:
+            _emit(
+                {"status": "FAIL", "profile": args.name, "message": str(exc)},
+                output_format=args.format,
+                quiet=args.quiet,
+            )
+            return ExitCode.CONNECTION
+        finally:
+            if session is not None:
+                session.close()
+        _emit(
+            {"status": "PASS", "profile": args.name, "sftp": True},
+            output_format=args.format,
+            quiet=args.quiet,
+        )
+        return ExitCode.SUCCESS
+
     if args.profile_command == "list":
-        _emit([str(profile.get("name", "")) for profile in profiles], output_format=args.format, quiet=args.quiet)
-        return 0
-    selected = next((profile for profile in profiles if profile.get("name") == args.name), None)
+        _emit(
+            [str(profile.get("name", "")) for profile in load_profiles()],
+            output_format=args.format,
+            quiet=args.quiet,
+        )
+        return ExitCode.SUCCESS
+    selected = resolve_profile(args.name)
     if selected is None:
-        print(f"Profile not found: {args.name}", file=sys.stderr)
-        return 1
+        emit_error(
+            f"Profile not found: {args.name}",
+            exit_code=ExitCode.OPERATION_FAILED,
+            output_format=args.format,
+        )
+        return ExitCode.OPERATION_FAILED
     _emit(_safe_profile(selected), output_format=args.format, quiet=args.quiet)
-    return 0
+    return ExitCode.SUCCESS
 
 
 def _run_doctor(args: argparse.Namespace) -> int:
     if args.doctor_command == "connection":
+        try:
+            info = build_ssh_conn_info(args)
+        except CLIConnectionError as exc:
+            emit_error(str(exc), exit_code=ExitCode.CONNECTION, output_format=args.format)
+            return ExitCode.CONNECTION
+        payload = run_connection_diagnostics(info)
+        payload["profile"] = getattr(args, "profile", "") or ""
+        _emit(payload, output_format=args.format, quiet=args.quiet)
+        if all(stage.get("status") == "PASS" for stage in payload.get("stages", {}).values()):
+            return ExitCode.SUCCESS
+        return ExitCode.CONNECTION
+    if args.doctor_command == "smoke":
         session = None
         try:
             session = CLISession.open(args)
-            payload = {"status": "PASS", "profile": session.profile_name, "sftp": True}
-            _emit(payload, output_format=args.format, quiet=args.quiet)
-            return 0
+            payload = run_sftp_smoke(session.files, cleanup=not args.keep)
         except CLIConnectionError as exc:
-            print(str(exc), file=sys.stderr)
-            return 3
+            emit_error(str(exc), exit_code=ExitCode.CONNECTION, output_format=args.format)
+            return ExitCode.CONNECTION
         finally:
             if session is not None:
                 session.close()
+        payload["profile"] = getattr(args, "profile", "") or ""
+        payload["cleanup_requested"] = bool(not args.keep)
+        payload["schema"] = "sftp-smoke/1"
+        _emit(payload, output_format=args.format, quiet=args.quiet)
+        exit_code = ExitCode.SUCCESS if payload.get("status") == "PASS" else ExitCode.CONNECTION
+        if args.artifact:
+            try:
+                Path(args.artifact).write_text(
+                    json.dumps(payload, ensure_ascii=False, indent=2),
+                    encoding="utf-8",
+                )
+            except OSError as exc:
+                emit_error(
+                    f"could not write smoke artifact: {exc}",
+                    exit_code=ExitCode.OPERATION_FAILED,
+                    output_format=args.format,
+                )
+                return ExitCode.OPERATION_FAILED
+        return exit_code
     if args.doctor_command != "environment":
-        print(f"Unsupported doctor command: {args.doctor_command}", file=sys.stderr)
-        return 2
+        emit_error(
+            f"Unsupported doctor command: {args.doctor_command}",
+            exit_code=ExitCode.USAGE,
+            output_format=args.format,
+        )
+        return ExitCode.USAGE
     payload = {
         "status": "PASS",
         "python": platform.python_version(),
@@ -164,13 +363,17 @@ def _run_doctor(args: argparse.Namespace) -> int:
         "profiles": len(load_profiles()),
     }
     _emit(payload, output_format=args.format, quiet=args.quiet)
-    return 0
+    return ExitCode.SUCCESS
 
 
 def _run_files(args: argparse.Namespace) -> int:
     if args.files_command == "rm" and not args.yes:
-        print("Refusing to remove remote data without --yes.", file=sys.stderr)
-        return 2
+        emit_error(
+            "Refusing to remove remote data without --yes.",
+            exit_code=ExitCode.USAGE,
+            output_format=args.format,
+        )
+        return ExitCode.USAGE
     session = None
     try:
         session = CLISession.open(args)
@@ -190,12 +393,14 @@ def _run_files(args: argparse.Namespace) -> int:
             ]
         elif args.files_command == "stat":
             path = str(args.path)
-            size, mtime = session.files.stat(path)
+            entry = session.files.stat_entry(path)
             payload = {
-                "path": path,
-                "type": "directory" if session.files.is_dir(path) else "file",
-                "size": size,
-                "mtime": mtime,
+                "name": entry.name,
+                "path": entry.path,
+                "type": "directory" if entry.is_dir else "file",
+                "size": entry.size,
+                "mtime": entry.mtime,
+                "mode": entry.mode,
             }
         elif args.files_command == "checksum":
             path = str(args.path)
@@ -213,6 +418,7 @@ def _run_files(args: argparse.Namespace) -> int:
                 mode=args.mode,
                 verify=args.verify,
                 quiet=args.quiet,
+                if_exists=args.if_exists,
             )
         elif args.files_command == "download":
             payload = download_files(
@@ -223,6 +429,7 @@ def _run_files(args: argparse.Namespace) -> int:
                 mode=args.mode,
                 verify=args.verify,
                 quiet=args.quiet,
+                if_exists=args.if_exists,
             )
         elif args.files_command == "cp":
             if session.files.is_dir(args.source) and not args.recursive:
@@ -237,16 +444,131 @@ def _run_files(args: argparse.Namespace) -> int:
             session.files.remove(path, recursive=args.recursive)
             payload = {"operation": "rm", "path": path, "status": "ok"}
         else:
-            print(f"Unsupported files command: {args.files_command}", file=sys.stderr)
-            return 2
+            emit_error(
+                f"Unsupported files command: {args.files_command}",
+                exit_code=ExitCode.USAGE,
+                output_format=args.format,
+            )
+            return ExitCode.USAGE
         _emit(payload, output_format=args.format, quiet=args.quiet)
-        return 0
+        return ExitCode.SUCCESS
     except CLIConnectionError as exc:
-        print(str(exc), file=sys.stderr)
-        return 3
+        emit_error(str(exc), exit_code=ExitCode.CONNECTION, output_format=args.format)
+        return ExitCode.CONNECTION
+    except TimeoutError as exc:
+        detail = str(exc).strip() or "remote operation timed out"
+        emit_error(
+            f"Operation timed out: {detail}",
+            exit_code=ExitCode.TIMEOUT,
+            output_format=args.format,
+        )
+        return ExitCode.TIMEOUT
+    except (FileNotFoundError, NotADirectoryError) as exc:
+        detail = getattr(exc, "filename", None) or str(exc)
+        emit_error(
+            f"Not found: {detail}",
+            exit_code=ExitCode.OPERATION_FAILED,
+            output_format=args.format,
+        )
+        return ExitCode.OPERATION_FAILED
+    except PermissionError as exc:
+        detail = getattr(exc, "filename", None) or str(exc)
+        emit_error(
+            f"Permission denied: {detail}",
+            exit_code=ExitCode.OPERATION_FAILED,
+            output_format=args.format,
+        )
+        return ExitCode.OPERATION_FAILED
     except Exception as exc:
-        print(f"File operation failed: {exc}", file=sys.stderr)
-        return 1
+        emit_error(
+            f"File operation failed: {exc}",
+            exit_code=ExitCode.OPERATION_FAILED,
+            output_format=args.format,
+        )
+        return ExitCode.OPERATION_FAILED
+    finally:
+        if session is not None:
+            session.close()
+
+
+def _jobs_username(args: argparse.Namespace) -> str:
+    """Resolve the target username for ``jobs list`` without consuming stdin.
+
+    Mirrors the small, side-effect-free precedence used by
+    ``build_ssh_conn_info``: an explicit ``args.username`` wins, otherwise the
+    profile's username, otherwise an empty string.
+    """
+    profile_name = str(getattr(args, "profile", "") or "").strip()
+    profile = resolve_profile(profile_name) if profile_name else None
+    username = getattr(args, "username", "") or (profile or {}).get("username", "") or ""
+    return str(username)
+
+
+def _is_valid_job_id(value: str) -> bool:
+    """Return whether a job ID is a safe plain, array-task, or step identifier.
+
+    Accepts only digits, optionally followed by a single ``_`` or ``.`` and one
+    or more further digits (for example ``12345``, ``12345_3``, ``12345.0``).
+    """
+    return bool(_JOBS_JOB_ID_RE.fullmatch(value))
+
+
+def _run_jobs(args: argparse.Namespace) -> int:
+    if args.jobs_command not in ("list", "status", "accounting", "lssrv", "submit", "cancel"):
+        emit_error(
+            f"Unsupported jobs command: {args.jobs_command}",
+            exit_code=ExitCode.USAGE,
+            output_format=args.format,
+        )
+        return ExitCode.USAGE
+    if args.jobs_command == "submit" and not args.yes:
+        emit_error(
+            "Refusing to submit a job without --yes.",
+            exit_code=ExitCode.USAGE,
+            output_format=args.format,
+        )
+        return ExitCode.USAGE
+    if args.jobs_command == "cancel" and not args.yes:
+        emit_error(
+            "Refusing to cancel a job without --yes.",
+            exit_code=ExitCode.USAGE,
+            output_format=args.format,
+        )
+        return ExitCode.USAGE
+    if args.jobs_command == "cancel" and not _is_valid_job_id(str(args.job_id)):
+        emit_error(
+            f"Invalid job ID: {args.job_id}",
+            exit_code=ExitCode.USAGE,
+            output_format=args.format,
+        )
+        return ExitCode.USAGE
+    session = None
+    try:
+        session = CLISession.open(args)
+        backend = jobs_backend(session)
+        if args.jobs_command == "list":
+            result = backend.squeue(_jobs_username(args))
+        elif args.jobs_command == "status":
+            result = backend.scontrol_show_job(args.job_id)
+        elif args.jobs_command == "accounting":
+            result = backend.sacct(_jobs_username(args))
+        elif args.jobs_command == "submit":
+            result = backend.sbatch(str(args.script))
+        elif args.jobs_command == "cancel":
+            result = backend.scancel(str(args.job_id))
+        else:
+            result = backend.lssrv()
+        return emit_job_result(result, output_format=args.format, quiet=args.quiet)
+    except CLIConnectionError as exc:
+        emit_error(str(exc), exit_code=ExitCode.CONNECTION, output_format=args.format)
+        return ExitCode.CONNECTION
+    except Exception as exc:
+        emit_error(
+            f"Jobs operation failed: {exc}",
+            exit_code=ExitCode.OPERATION_FAILED,
+            output_format=args.format,
+        )
+        return ExitCode.OPERATION_FAILED
     finally:
         if session is not None:
             session.close()
@@ -267,12 +589,18 @@ def run_cli(argv: Sequence[str] | None = None) -> int:
             output_format=args.format,
             quiet=args.quiet,
         )
-        return 0
+        return ExitCode.SUCCESS
     if args.group == "profile":
         return _run_profile(args)
     if args.group == "doctor":
         return _run_doctor(args)
     if args.group == "files":
         return _run_files(args)
-    print(f"Unsupported command: {args.group}", file=sys.stderr)
-    return 2
+    if args.group == "jobs":
+        return _run_jobs(args)
+    emit_error(
+        f"Unsupported command: {args.group}",
+        exit_code=ExitCode.USAGE,
+        output_format=args.format,
+    )
+    return ExitCode.USAGE

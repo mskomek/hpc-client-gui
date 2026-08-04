@@ -6,12 +6,17 @@ from dataclasses import dataclass
 from typing import Optional, Tuple
 
 SBATCH_OUT_PATTERNS = [
-    re.compile(r"^\s*#SBATCH\s+--output\s*=\s*(.+?)\s*$"),
-    re.compile(r"^\s*#SBATCH\s+-o\s+(.+?)\s*$"),
+    # Slurm accepts both ``--output=file`` and ``--output file``.  The
+    # latter was previously ignored, leaving the post-sbatch follower with
+    # no output path to open.
+    re.compile(r"^\s*#SBATCH\s+--output(?:\s*=\s*|\s+)(.+?)\s*$"),
+    re.compile(r"^\s*#SBATCH\s+-o(?:\s+|(?=\S))(.+?)\s*$"),
 ]
 SBATCH_ERR_PATTERNS = [
-    re.compile(r"^\s*#SBATCH\s+--error\s*=\s*(.+?)\s*$"),
-    re.compile(r"^\s*#SBATCH\s+-e\s+(.+?)\s*$"),
+    # Keep error handling symmetrical with output handling; compact short
+    # options such as ``-ejob.err`` are also valid Slurm syntax.
+    re.compile(r"^\s*#SBATCH\s+--error(?:\s*=\s*|\s+)(.+?)\s*$"),
+    re.compile(r"^\s*#SBATCH\s+-e(?:\s+|(?=\S))(.+?)\s*$"),
 ]
 SBATCH_JOB_NAME_PATTERNS = [
     re.compile(r"^\s*#SBATCH\s+--job-name\s*=\s*(.+?)\s*$"),

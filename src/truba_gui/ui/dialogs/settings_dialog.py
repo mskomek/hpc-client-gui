@@ -19,12 +19,16 @@ from PySide6.QtWidgets import (
 )
 
 from truba_gui.config.storage import (
+    get_follow_window_open_minimized_enabled,
     get_jobs_outputs_refresh_interval_seconds,
+    get_pause_live_follow_when_minimized_enabled,
     get_sbatch_follow_mode,
     get_ftp_transfer_type,
     clear_file_association,
     get_file_associations,
     get_lssrv_auto_refresh_enabled,
+    get_sacct_auto_refresh_enabled,
+    get_squeue_auto_refresh_enabled,
     get_transfer_parallelism,
     get_transfer_checksum_verification_enabled,
     get_upload_preflight_confirmation_enabled,
@@ -78,6 +82,34 @@ class SettingsDialog(QDialog):
         self.sp_jobs_outputs_refresh_interval.setSingleStep(1)
         self.sp_jobs_outputs_refresh_interval.setValue(get_jobs_outputs_refresh_interval_seconds())
         self.sp_jobs_outputs_refresh_interval.setToolTip(t("settings.jobs_outputs_refresh_interval_tip"))
+
+        self.cb_pause_live_follow_when_minimized = QCheckBox(
+            t("settings.pause_live_follow_when_minimized_label")
+        )
+        self.cb_pause_live_follow_when_minimized.setChecked(
+            get_pause_live_follow_when_minimized_enabled()
+        )
+        self.cb_pause_live_follow_when_minimized.setToolTip(
+            t("settings.pause_live_follow_when_minimized_tip")
+        )
+
+        self.cb_follow_window_open_minimized = QCheckBox(
+            t("settings.follow_window_open_minimized_label")
+        )
+        self.cb_follow_window_open_minimized.setChecked(
+            get_follow_window_open_minimized_enabled()
+        )
+        self.cb_follow_window_open_minimized.setToolTip(
+            t("settings.follow_window_open_minimized_tip")
+        )
+
+        self.cb_squeue_auto_refresh = QCheckBox(t("settings.squeue_auto_refresh_label"))
+        self.cb_squeue_auto_refresh.setChecked(get_squeue_auto_refresh_enabled())
+        self.cb_squeue_auto_refresh.setToolTip(t("settings.squeue_auto_refresh_tip"))
+
+        self.cb_sacct_auto_refresh = QCheckBox(t("settings.sacct_auto_refresh_label"))
+        self.cb_sacct_auto_refresh.setChecked(get_sacct_auto_refresh_enabled())
+        self.cb_sacct_auto_refresh.setToolTip(t("settings.sacct_auto_refresh_tip"))
 
         self.cb_lssrv_auto_refresh = QCheckBox(t("settings.lssrv_auto_refresh_label"))
         self.cb_lssrv_auto_refresh.setChecked(get_lssrv_auto_refresh_enabled())
@@ -176,6 +208,10 @@ class SettingsDialog(QDialog):
             t("settings.jobs_outputs_refresh_interval_label"),
             self.sp_jobs_outputs_refresh_interval,
         )
+        jobs_form.addRow(self.cb_pause_live_follow_when_minimized)
+        jobs_form.addRow(self.cb_follow_window_open_minimized)
+        jobs_form.addRow(self.cb_squeue_auto_refresh)
+        jobs_form.addRow(self.cb_sacct_auto_refresh)
         jobs_form.addRow(self.cb_lssrv_auto_refresh)
         jobs_form.addRow(
             t("settings.sbatch_follow_mode_label"),
@@ -269,6 +305,14 @@ class SettingsDialog(QDialog):
                 "close_vcxsrv_on_exit": self.cb_close_vcxsrv_on_exit.isChecked(),
                 "close_x11_procs_on_exit": self.cb_close_x11_procs_on_exit.isChecked(),
                 "jobs_outputs_refresh_interval_seconds": int(self.sp_jobs_outputs_refresh_interval.value()),
+                "pause_live_follow_when_minimized_enabled": (
+                    self.cb_pause_live_follow_when_minimized.isChecked()
+                ),
+                "follow_window_open_minimized_enabled": (
+                    self.cb_follow_window_open_minimized.isChecked()
+                ),
+                "squeue_auto_refresh_enabled": self.cb_squeue_auto_refresh.isChecked(),
+                "sacct_auto_refresh_enabled": self.cb_sacct_auto_refresh.isChecked(),
                 "lssrv_auto_refresh_enabled": self.cb_lssrv_auto_refresh.isChecked(),
                 "sbatch_follow_mode": str(
                     self.cb_sbatch_follow_mode.currentData() or "outputs_tab"

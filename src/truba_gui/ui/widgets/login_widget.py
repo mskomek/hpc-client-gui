@@ -6,13 +6,19 @@ from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QFormLayout, QHBoxLayout,
     QLineEdit, QPushButton, QCheckBox, QLabel, QFileDialog,
     QApplication, QListWidget, QSplitter, QMessageBox, QPlainTextEdit,
-    QInputDialog, QMenu
+    QInputDialog, QMenu, QDialog, QDialogButtonBox
 )
 
 from truba_gui.core.i18n import t
 from truba_gui.core.ui_errors import show_exception
 from truba_gui.config.models import SSHConfig
-from truba_gui.config.storage import load_profiles, upsert_profile, load_settings, delete_profile
+from truba_gui.config.storage import (
+    load_profiles,
+    upsert_profile,
+    load_settings,
+    update_settings,
+    delete_profile,
+)
 from truba_gui.config.system_profile import normalize_system_settings
 from truba_gui.core.history import append_event
 from truba_gui.core.logging import append_log
@@ -602,6 +608,10 @@ class LoginWidget(QWidget):
             self.append_console(
                 "İpucu: SSH sunucusu banner döndürmeden önce gecikiyor olabilir; VPN/ağ, port ve uzak sshd erişimini kontrol edin."
             )
+        elif "key-exchange timed out" in message.lower():
+            self.append_console(
+                "İpucu: SSH anahtar değişimi zaman aşımına uğradı. VPN/ağ bağlantısını, doğru SSH portunu ve sunucunun erişilebilirliğini kontrol edip tekrar deneyin."
+            )
         show_exception(self, title=t("login.conn_error_title"), user_message=message, exc=exc if isinstance(exc, BaseException) else None, area="SSH")
         self.btn_add_connection.setEnabled(True)
         self.btn_connect.setEnabled(bool(self._selected_profile_name()))
@@ -639,12 +649,37 @@ class LoginWidget(QWidget):
         if self._master_password_cache:
             return self._master_password_cache
 
+        saved_master = load_settings().get("master_password_dpapi")
+        if saved_master:
+            try:
+                self._master_password_cache = unprotect_secret(str(saved_master))
+                return self._master_password_cache
+            except Exception:
+                update_settings({"master_password_dpapi": ""})
+
         title = "Şifreleme Parolası"
         prompt = "Kaydedilen şifreleri şifrelemek/çözmek için bir ana parola girin."
-        pw, ok = QInputDialog.getText(self, title, prompt, QLineEdit.EchoMode.Password)
-        if not ok:
+        dialog = QDialog(self)
+        dialog.setWindowTitle(title)
+        layout = QVBoxLayout(dialog)
+        layout.addWidget(QLabel(prompt))
+        password_input = QLineEdit()
+        password_input.setEchoMode(QLineEdit.EchoMode.Password)
+        layout.addWidget(password_input)
+        remember_password = QCheckBox(t("connection.remember_master_password"))
+        remember_password.setEnabled(os_secret_store_available())
+        layout.addWidget(remember_password)
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok
+            | QDialogButtonBox.StandardButton.Cancel
+        )
+        buttons.accepted.connect(dialog.accept)
+        buttons.rejected.connect(dialog.reject)
+        layout.addWidget(buttons)
+        password_input.setFocus()
+        if dialog.exec() != QDialog.DialogCode.Accepted:
             return None
-        pw = (pw or "").strip()
+        pw = password_input.text().strip()
         if not pw:
             QMessageBox.warning(self, t("login.err_title"), t("login.err_master_empty"))
             return None
@@ -661,6 +696,15 @@ class LoginWidget(QWidget):
                 QMessageBox.warning(self, t("login.err_title"), t("login.err_master_mismatch"))
                 return None
         self._master_password_cache = pw
+        if remember_password.isChecked():
+            try:
+                update_settings({"master_password_dpapi": protect_secret(pw)})
+            except Exception as exc:
+                QMessageBox.warning(
+                    self,
+                    t("login.err_title"),
+                    t("connection.master_password_store_failed").format(error=exc),
+                )
         return pw
 
     def _decrypt_saved_password(self, prof: dict) -> str | None:
@@ -680,6 +724,7 @@ class LoginWidget(QWidget):
         except Exception:
             if used_cached_master:
                 self._master_password_cache = ""
+                update_settings({"master_password_dpapi": ""})
                 master = self._ask_master_password(confirm=False)
                 if master is None:
                     return None
@@ -884,13 +929,28 @@ class LoginWidget(QWidget):
         # - When saving with "save password", ask for a master password and encrypt.
         if self.cb_save_password.isChecked():
             plain = self.password.text() or ""
+            current = next(
+                (p for p in load_profiles() if p.get("name") == name),
+                None,
+            )
             if (
                 self._password_prompt_policy == "edit-only"
                 and os_secret_store_available()
-                and plain
             ):
+                # Existing profiles may have been encrypted with a master
+                # password.  Convert them once to Windows credential
+                # protection when the user chooses not to be prompted while
+                # connecting, so future double-click connections stay prompt-free.
+                if not plain and current and current.get("password_enc"):
+                    plain = self._decrypt_profile_password(
+                        current,
+                        allow_prompt=True,
+                    )
+                    if plain is None:
+                        return False
                 try:
-                    prof["password_dpapi"] = protect_secret(plain)
+                    if plain:
+                        prof["password_dpapi"] = protect_secret(plain)
                 except Exception as exc:
                     QMessageBox.critical(
                         self,
@@ -909,7 +969,6 @@ class LoginWidget(QWidget):
                 prof["password_salt"] = enc.salt
             else:
                 # keep existing encrypted password if present (when editing profile)
-                current = next((p for p in load_profiles() if p.get("name") == name), None)
                 if current:
                     for key in ("password_dpapi", "password_enc", "password_salt"):
                         if current.get(key):

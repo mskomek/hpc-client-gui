@@ -69,8 +69,20 @@ class LssrvAutoRefreshTests(unittest.TestCase):
             "get_lssrv_auto_refresh_enabled",
             return_value=False,
         )
+        self.squeue_enabled = patch(
+            "truba_gui.ui.widgets.jobs_outputs_widget."
+            "get_squeue_auto_refresh_enabled",
+            return_value=False,
+        )
+        self.sacct_enabled = patch(
+            "truba_gui.ui.widgets.jobs_outputs_widget."
+            "get_sacct_auto_refresh_enabled",
+            return_value=False,
+        )
         self.interval.start()
         self.enabled_mock = self.enabled.start()
+        self.squeue_enabled_mock = self.squeue_enabled.start()
+        self.sacct_enabled_mock = self.sacct_enabled.start()
         self.widget = JobsOutputsWidget()
         self.slurm = _FakeSlurm()
         self.session = {
@@ -85,6 +97,8 @@ class LssrvAutoRefreshTests(unittest.TestCase):
         QThreadPool.globalInstance().waitForDone(2000)
         self._app.processEvents()
         self.widget.deleteLater()
+        self.sacct_enabled.stop()
+        self.squeue_enabled.stop()
         self.enabled.stop()
         self.interval.stop()
 
@@ -96,13 +110,13 @@ class LssrvAutoRefreshTests(unittest.TestCase):
             time.sleep(0.01)
         self._app.processEvents()
 
-    def test_connected_session_starts_jobs_timer_with_saved_interval(self):
+    def test_connected_session_does_not_start_jobs_timer_when_disabled(self):
         self.widget.set_session(self.session)
 
-        self.assertTrue(self.widget._jobs_refresh_timer.isActive())
+        self.assertFalse(self.widget._jobs_refresh_timer.isActive())
         self.assertEqual(self.widget._jobs_refresh_timer.interval(), 23000)
 
-    def test_disabled_tick_refreshes_jobs_without_lssrv(self):
+    def test_disabled_tick_does_not_refresh_jobs_or_lssrv(self):
         self.widget.set_session(self.session)
         self._wait_for_workers()
         initial_jobs = self.slurm.jobs_calls
@@ -111,20 +125,30 @@ class LssrvAutoRefreshTests(unittest.TestCase):
         self.widget._poll_jobs_and_lssrv()
         self._wait_for_workers()
 
-        self.assertEqual(self.slurm.jobs_calls, initial_jobs + 1)
+        self.assertEqual(self.slurm.jobs_calls, initial_jobs)
         self.assertEqual(self.slurm.lssrv_calls, initial_lssrv)
+
+    def test_disabled_tick_does_not_refresh_lssrv_when_page_opens(self):
+        self.widget.set_session(self.session)
+        self._wait_for_workers()
+
+        self.assertEqual(self.slurm.lssrv_calls, 0)
 
     def test_enabled_tick_refreshes_jobs_and_lssrv(self):
         self.widget.set_session(self.session)
         self._wait_for_workers()
         initial_jobs = self.slurm.jobs_calls
+        initial_sacct = self.slurm.sacct_calls
         initial_lssrv = self.slurm.lssrv_calls
         self.enabled_mock.return_value = True
+        self.squeue_enabled_mock.return_value = True
+        self.sacct_enabled_mock.return_value = True
 
         self.widget._poll_jobs_and_lssrv()
         self._wait_for_workers()
 
         self.assertEqual(self.slurm.jobs_calls, initial_jobs + 1)
+        self.assertEqual(self.slurm.sacct_calls, initial_sacct + 1)
         self.assertEqual(self.slurm.lssrv_calls, initial_lssrv + 1)
 
     def test_disconnected_tick_stops_without_remote_calls(self):
@@ -142,6 +166,9 @@ class LssrvAutoRefreshTests(unittest.TestCase):
         self.assertEqual(self.slurm.lssrv_calls, 0)
 
     def test_hidden_page_stops_jobs_polling_until_visible_again(self):
+        self.enabled_mock.return_value = True
+        self.squeue_enabled_mock.return_value = True
+        self.sacct_enabled_mock.return_value = True
         self.widget.set_session(self.session)
         self._wait_for_workers()
         self.widget.set_page_active(False)

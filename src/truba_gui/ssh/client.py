@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import threading
 import time
 from dataclasses import dataclass
@@ -36,6 +37,15 @@ _ACS_MAP = {
     "i": "␌",
     "`": "◆",
 }
+
+
+# Paramiko uses ``timeout`` both for the TCP connection and for waiting for
+# the initial SSH key exchange.  Clusters behind VPNs or busy login nodes can
+# legitimately take longer than the former 15-second limit.
+_SSH_CONNECT_AND_KEX_TIMEOUT_SECONDS = 45
+_SSH_BANNER_TIMEOUT_SECONDS = 45
+_SSH_AUTH_TIMEOUT_SECONDS = 30
+_SSH_CHANNEL_TIMEOUT_SECONDS = 30
 
 
 def _sanitize_terminal_text(text: str) -> str:
@@ -104,6 +114,7 @@ class SSHConnInfo:
     key_path: str = ""
     host_key_policy: str = "accept-new"  # accept-new | strict
     x11_forwarding: bool = False  # UI flag; actual X11 is handled separately
+    timeout: Optional[float] = None  # None keeps the per-knob defaults below
 
 
 class SSHClientWrapper:
@@ -166,18 +177,23 @@ class SSHClientWrapper:
             self.client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             self.log("SSH: host key policy = accept-new")
 
+        timeout = info.timeout if info.timeout is not None else _SSH_CONNECT_AND_KEX_TIMEOUT_SECONDS
+        banner_timeout = info.timeout if info.timeout is not None else _SSH_BANNER_TIMEOUT_SECONDS
+        auth_timeout = info.timeout if info.timeout is not None else _SSH_AUTH_TIMEOUT_SECONDS
+        channel_timeout = info.timeout if info.timeout is not None else _SSH_CHANNEL_TIMEOUT_SECONDS
+
         if info.key_path:
-            self.log(f"SSH: using key {info.key_path}")
+            self.log(f"SSH: using key {os.path.basename(info.key_path)}")
             pkey = paramiko.RSAKey.from_private_key_file(info.key_path)
             self.client.connect(
                 hostname=info.host,
                 port=info.port,
                 username=info.username or None,
                 pkey=pkey,
-                timeout=15,
-                banner_timeout=30,
-                auth_timeout=30,
-                channel_timeout=30,
+                timeout=timeout,
+                banner_timeout=banner_timeout,
+                auth_timeout=auth_timeout,
+                channel_timeout=channel_timeout,
                 allow_agent=True,
                 look_for_keys=True,
             )
@@ -187,10 +203,10 @@ class SSHClientWrapper:
                 port=info.port,
                 username=info.username or None,
                 password=info.password or None,
-                timeout=15,
-                banner_timeout=30,
-                auth_timeout=30,
-                channel_timeout=30,
+                timeout=timeout,
+                banner_timeout=banner_timeout,
+                auth_timeout=auth_timeout,
+                channel_timeout=channel_timeout,
                 allow_agent=True,
                 look_for_keys=True,
             )
@@ -429,6 +445,8 @@ class SSHClientWrapper:
         else:
             self.log(f"SSH$ {command}")
         stdin, stdout, stderr = self.client.exec_command(command)
+        if timeout_s is None and getattr(self.info, "timeout", None) is not None:
+            timeout_s = self.info.timeout
         if timeout_s is not None:
             try:
                 stdout.channel.settimeout(timeout_s)

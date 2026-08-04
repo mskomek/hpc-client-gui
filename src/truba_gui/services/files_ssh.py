@@ -7,6 +7,19 @@ from typing import List, Tuple
 from truba_gui.services.files_base import FilesBackend, RemoteEntry
 from truba_gui.ssh.client import SSHClientWrapper
 
+
+def _raise_on_failed_run(code: int, err: str, operation: str) -> None:
+    """Translate a remote shell result into a typed failure.
+
+    A socket timeout in ``SSHClientWrapper.run`` surfaces as exit code 124;
+    surface that as ``TimeoutError`` so the CLI can route it to ``TIMEOUT``.
+    """
+    if code == 124:
+        raise TimeoutError(f"{operation} timed out")
+    if code != 0:
+        raise RuntimeError(err.strip() or f"{operation} failed (exit={code})")
+
+
 class SSHFilesBackend(FilesBackend):
     def __init__(self, ssh: SSHClientWrapper):
         if not ssh.sftp:
@@ -61,6 +74,23 @@ class SSHFilesBackend(FilesBackend):
     def stat(self, remote_path: str) -> Tuple[int, int]:
         st = self.ssh.sftp.stat(remote_path)
         return int(getattr(st, "st_size", 0) or 0), int(getattr(st, "st_mtime", 0) or 0)
+
+    def stat_entry(self, remote_path: str) -> RemoteEntry:
+        """Return a full remote entry (six fields) for a single path.
+
+        Mirrors the fields ``listdir_entries`` emits so ``files stat`` and
+        ``files ls`` stay metadata-parity for callers like the CLI.
+        """
+        st = self.ssh.sftp.stat(remote_path)
+        mode = int(getattr(st, "st_mode", 0) or 0)
+        return RemoteEntry(
+            name=os.path.basename(remote_path.rstrip("/")) or "/",
+            path=remote_path,
+            is_dir=pystat.S_ISDIR(mode),
+            size=int(getattr(st, "st_size", 0) or 0),
+            mtime=int(getattr(st, "st_mtime", 0) or 0),
+            mode=mode,
+        )
 
     def download(self, remote_path: str, local_path: str, progress_cb=None) -> None:
         """Download a remote file.
@@ -185,8 +215,7 @@ class SSHFilesBackend(FilesBackend):
         q = shlex.quote(remote_path)
         cmd = f"rm {'-rf' if recursive else '-f'} {q}"
         code, _, err = self.ssh.run(cmd)
-        if code != 0:
-            raise RuntimeError(err.strip() or f"rm failed (exit={code})")
+        _raise_on_failed_run(code, err, "rm")
 
     def rename(self, remote_path: str, new_remote_path: str) -> None:
         # Prefer SFTP rename (atomic on many servers)
@@ -196,8 +225,7 @@ class SSHFilesBackend(FilesBackend):
         import shlex
         q = shlex.quote(remote_dir)
         code, _, err = self.ssh.run(f"mkdir -p {q}")
-        if code != 0:
-            raise RuntimeError(err.strip() or f"mkdir failed (exit={code})")
+        _raise_on_failed_run(code, err, "mkdir")
 
     def chmod(self, remote_path: str, mode: int) -> None:
         try:
@@ -208,8 +236,7 @@ class SSHFilesBackend(FilesBackend):
         import shlex
         q = shlex.quote(remote_path)
         code, _, err = self.ssh.run(f"chmod {mode:03o} {q}")
-        if code != 0:
-            raise RuntimeError(err.strip() or f"chmod failed (exit={code})")
+        _raise_on_failed_run(code, err, "chmod")
 
     def exists(self, remote_path: str) -> bool:
         try:
@@ -223,8 +250,7 @@ class SSHFilesBackend(FilesBackend):
         import shlex
 
         code, out, err = self.ssh.run(f"sha256sum -- {shlex.quote(remote_path)}")
-        if code != 0:
-            raise RuntimeError(err.strip() or f"sha256sum failed (exit={code})")
+        _raise_on_failed_run(code, err, "sha256sum")
         digest = str(out or "").strip().split()[0] if str(out or "").strip() else ""
         if len(digest) != 64:
             raise RuntimeError("Remote sha256sum returned an invalid digest")
@@ -243,13 +269,11 @@ class SSHFilesBackend(FilesBackend):
         d = shlex.quote(dst_remote_path)
         cmd = f"cp {'-r' if recursive else ''} {s} {d}".strip()
         code, _, err = self.ssh.run(cmd)
-        if code != 0:
-            raise RuntimeError(err.strip() or f"cp failed (exit={code})")
+        _raise_on_failed_run(code, err, "cp")
 
     def move(self, src_remote_path: str, dst_remote_path: str) -> None:
         import shlex
         s = shlex.quote(src_remote_path)
         d = shlex.quote(dst_remote_path)
         code, _, err = self.ssh.run(f"mv {s} {d}")
-        if code != 0:
-            raise RuntimeError(err.strip() or f"mv failed (exit={code})")
+        _raise_on_failed_run(code, err, "mv")

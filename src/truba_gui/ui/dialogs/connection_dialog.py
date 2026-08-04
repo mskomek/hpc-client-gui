@@ -59,7 +59,7 @@ class ConnectionDialog(QDialog):
 
         self.cb_save_password = QCheckBox(t("login.save_password"))
         self.cb_edit_only_password = QCheckBox(
-            t("connection.password_edit_only")
+            t("connection.password_no_prompt")
         )
         self.cb_edit_only_password.setToolTip(
             t("connection.password_edit_only_tip")

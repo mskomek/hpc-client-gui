@@ -79,11 +79,35 @@ def get_jobs_outputs_refresh_interval_seconds(default: int = 15) -> int:
     return _coerce_positive_int(st.get("jobs_outputs_refresh_interval_seconds", default), default)
 
 
+def get_pause_live_follow_when_minimized_enabled(default: bool = True) -> bool:
+    """Return whether minimized windows should pause live output following."""
+    value = load_settings().get("pause_live_follow_when_minimized_enabled", default)
+    return value if isinstance(value, bool) else default
+
+
+def get_follow_window_open_minimized_enabled(default: bool = True) -> bool:
+    """Return whether new independent follow windows should open minimized."""
+    value = load_settings().get("follow_window_open_minimized_enabled", default)
+    return value if isinstance(value, bool) else default
+
+
 def set_jobs_outputs_refresh_interval_seconds(seconds: int) -> int:
     """Persist the live Jobs & Outputs polling interval in seconds."""
     value = _coerce_positive_int(seconds, 15)
     update_settings({"jobs_outputs_refresh_interval_seconds": value})
     return value
+
+
+def get_squeue_auto_refresh_enabled(default: bool = True) -> bool:
+    """Return whether squeue should refresh with the Jobs polling timer."""
+    value = load_settings().get("squeue_auto_refresh_enabled", default)
+    return value if isinstance(value, bool) else default
+
+
+def get_sacct_auto_refresh_enabled(default: bool = True) -> bool:
+    """Return whether sacct should refresh with the Jobs polling timer."""
+    value = load_settings().get("sacct_auto_refresh_enabled", default)
+    return value if isinstance(value, bool) else default
 
 
 def get_lssrv_auto_refresh_enabled(default: bool = False) -> bool:

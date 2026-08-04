@@ -57,3 +57,12 @@ Bu dosya, HPC Client GUI'nin "ürün" gibi paketlenip sahada kullanılmasında e
   upload/download bütünlük testini tamamladı
 - [ ] Gerçek kümeye giden release için, ayrılmış test hesabıyla SFTP bağlantısı,
   dizin, upload/download ve SHA-256 doğrulaması kaydedildi
+- [ ] Local Turkish-filename transfer gate and the `sftp-smoke/1` JSON artifact
+  placement under the version folder were verified locally before any live-cluster
+  release step
+
+## 10) CLI Bakım Politikası
+
+- [ ] Yeni/değişen bir CLI komutu varsa `MAINTENANCE_POLICY.md`'deki gate'ler
+  (help metni, JSON sözleşmesi, unit test, ilgiliyse smoke, TODO/CHANGELOG)
+  sağlandı — bkz. [MAINTENANCE_POLICY.md](MAINTENANCE_POLICY.md)

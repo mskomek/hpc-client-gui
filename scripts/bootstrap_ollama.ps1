@@ -1,11 +1,19 @@
 param(
     [string[]]$RequiredModels = @("qwen3.5:9b", "qwen3.5:4b"),
-    [switch]$PullMissingModels
+    [switch]$PullMissingModels,
+    [switch]$EnableLegacyLocalModels
 )
 
 $ErrorActionPreference = "Stop"
 $repoRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $repoRoot
+
+if (-not $EnableLegacyLocalModels) {
+    Write-Host "[INACTIVE] The legacy Ollama/Qwen pipeline is disabled for this project."
+    Write-Host "[INFO] The active delegated worker is OpenCode Go DeepSeek v4 Flash."
+    Write-Host "[INFO] Re-run with -EnableLegacyLocalModels only after explicit user approval."
+    exit 0
+}
 
 function Write-Status([string]$Label, [string]$Message) {
     Write-Host ("[{0}] {1}" -f $Label, $Message)
@@ -107,10 +115,8 @@ foreach ($model in $RequiredModels) {
 }
 
 Write-Host ""
-Write-Status "INFO" "Codex agent config"
-Write-Status "INFO" "  .codex/agents/implementer_local.toml"
-Write-Status "INFO" "  .codex/agents/validator_local.toml"
-Write-Status "INFO" "  .codex/config.toml uses the local_ollama_truba provider"
+Write-Status "WARN" "Legacy Ollama models were checked, but they are not connected to the active Codex/Claude workflow."
+Write-Status "INFO" "The active delegated worker remains tools/ai/deepseek-worker.ps1."
 
 if ($allOk) {
     Write-Status "OK" "Ollama bootstrap check passed."

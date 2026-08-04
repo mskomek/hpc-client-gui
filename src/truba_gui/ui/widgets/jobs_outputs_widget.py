@@ -5,11 +5,11 @@ import re
 import shlex
 import time
 
-from PySide6.QtCore import QThreadPool, QTimer, Signal, Qt
+from PySide6.QtCore import QEvent, QThreadPool, QTimer, Signal, Qt
 from PySide6.QtGui import QFontDatabase, QTextCursor
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QGroupBox, QPushButton, QTextEdit,
-    QLineEdit, QLabel, QMessageBox, QMainWindow, QTabBar, QTabWidget
+    QLineEdit, QLabel, QMessageBox, QMainWindow, QTabBar, QTabWidget, QCheckBox
 )
 from shiboken6 import isValid
 
@@ -19,8 +19,12 @@ from truba_gui.config.storage import (
     SBATCH_FOLLOW_MODE_NEW_WINDOWS_SPLIT,
     SBATCH_FOLLOW_MODE_NONE,
     SBATCH_FOLLOW_MODE_OUTPUTS_TAB,
+    get_follow_window_open_minimized_enabled,
     get_jobs_outputs_refresh_interval_seconds,
     get_lssrv_auto_refresh_enabled,
+    get_pause_live_follow_when_minimized_enabled,
+    get_sacct_auto_refresh_enabled,
+    get_squeue_auto_refresh_enabled,
 )
 from truba_gui.core.i18n import t
 from truba_gui.core.ui_errors import show_exception
@@ -136,6 +140,8 @@ class _OutputFollowerWidget(QWidget):
         self._live_tail_last_content: tuple[str, ...] | None = None
         self._live_tail_last_change = time.monotonic()
         self._tail_suspended = False
+        self._paused_for_minimize = False
+        self._minimize_started_at: float | None = None
         self._tail_alert_visible = False
         self._tail_stop_notified = False
         self._live_tail_failure_started: float | None = None
@@ -143,6 +149,14 @@ class _OutputFollowerWidget(QWidget):
         layout = QVBoxLayout(self)
         self.lbl_script = QLabel(t("jobs_outputs.no_script"))
         layout.addWidget(self.lbl_script)
+        self.cb_auto_scroll = QCheckBox(
+            t("jobs_outputs.auto_scroll")
+            if t("jobs_outputs.auto_scroll") != "[jobs_outputs.auto_scroll]"
+            else "Otomatik kaydır"
+        )
+        self.cb_auto_scroll.setChecked(True)
+        self.cb_auto_scroll.toggled.connect(self._on_auto_scroll_toggled)
+        layout.addWidget(self.cb_auto_scroll)
 
         self.out_box = QGroupBox(t("jobs_outputs.output_stdout"))
         out_layout = QVBoxLayout(self.out_box)
@@ -197,6 +211,12 @@ class _OutputFollowerWidget(QWidget):
         self._session_generation += 1
         self._async_busy.clear()
 
+    def _on_auto_scroll_toggled(self, enabled: bool) -> None:
+        """Immediately catch up when automatic scrolling is re-enabled."""
+        if enabled:
+            for output in (self.txt_out, self.txt_err):
+                JobsOutputsWidget._scroll_to_latest(output)
+
     def _record_live_tail_result(self, had_error: bool) -> None:
         """Back off missing/unreadable output files without stopping follow."""
         if had_error:
@@ -237,6 +257,10 @@ class _OutputFollowerWidget(QWidget):
             return
         self._tail_alert_visible = True
         self._tail_stop_notified = True
+        # QMessageBox.exec() runs a nested event loop.  Stop polling before it
+        # starts so neither live following nor its idle/retry countdowns keep
+        # progressing while the user decides what to do.
+        self._live_timer.stop()
         dialog = QMessageBox(self)
         dialog.setIcon(QMessageBox.Icon.Information)
         dialog.setWindowTitle("Takip durdu")
@@ -249,6 +273,7 @@ class _OutputFollowerWidget(QWidget):
         self._tail_alert_visible = False
         if clicked is resume:
             self._tail_suspended = False
+            self._reset_live_tail_idle_state()
             self._live_timer.setInterval(_LIVE_TAIL_SLOW_INTERVAL_MS)
             self._live_timer.start()
             self._poll_live()
@@ -263,11 +288,40 @@ class _OutputFollowerWidget(QWidget):
         self._async_busy.clear()
         self.session = session
         self._reset_live_tail_idle_state()
-        if session and session.get("connected") and (self.active_out or self.active_err):
+        if (
+            not self._paused_for_minimize
+            and session
+            and session.get("connected")
+            and (self.active_out or self.active_err)
+        ):
             self._live_timer.start()
             self._poll_live()
         else:
             self._live_timer.stop()
+
+    def set_window_minimized(self, minimized: bool) -> None:
+        """Pause this follower while its top-level window is minimized."""
+        pause_enabled = get_pause_live_follow_when_minimized_enabled()
+        self._paused_for_minimize = bool(minimized and pause_enabled)
+        if self._paused_for_minimize:
+            if self._minimize_started_at is None:
+                self._minimize_started_at = time.monotonic()
+            self._live_timer.stop()
+            return
+        if self._minimize_started_at is not None:
+            paused_for = time.monotonic() - self._minimize_started_at
+            self._minimize_started_at = None
+            self._live_tail_last_change += paused_for
+            if self._live_tail_failure_started is not None:
+                self._live_tail_failure_started += paused_for
+        if (
+            self.session
+            and self.session.get("connected")
+            and (self.active_out or self.active_err)
+            and not self._tail_suspended
+        ):
+            self._live_timer.start()
+            self._poll_live()
 
     def shutdown(self) -> None:
         self._live_timer.stop()
@@ -297,7 +351,11 @@ class _OutputFollowerWidget(QWidget):
         self.out_box.show()
         if not self._single_slot_mode:
             self.err_box.show()
-        if self.session and self.session.get("connected"):
+        if (
+            not self._paused_for_minimize
+            and self.session
+            and self.session.get("connected")
+        ):
             self._live_timer.start()
             self._poll_live()
 
@@ -351,7 +409,7 @@ class _OutputFollowerWidget(QWidget):
         return True
 
     def _poll_live(self) -> None:
-        if self._tail_suspended:
+        if self._tail_suspended or self._paused_for_minimize:
             self._live_timer.stop()
             return
         if not self.session or not self.session.get("connected"):
@@ -396,7 +454,7 @@ class _OutputFollowerWidget(QWidget):
             return results
 
         def success(results) -> None:
-            if not isValid(self):
+            if not isValid(self) or self._paused_for_minimize:
                 return
             had_error = any(error for _, _, _, error in results)
             if had_error:
@@ -420,7 +478,7 @@ class _OutputFollowerWidget(QWidget):
                 if path != current_path:
                     continue
                 output = self.txt_out if slot == 0 else self.txt_err
-                follow_latest = JobsOutputsWidget._is_scrolled_to_bottom(output)
+                follow_latest = self.cb_auto_scroll.isChecked()
                 if error:
                     kind_key = (
                         "jobs_outputs.output_kind"
@@ -455,6 +513,17 @@ class _SingleFileFollowerWidget(_OutputFollowerWidget):
         self.out_box.setTitle(remote_path.rstrip("/").rsplit("/", 1)[-1] or remote_path)
 
 
+class _FollowerWindow(QMainWindow):
+    """Top-level follower window that propagates minimize/restore state."""
+
+    def changeEvent(self, event) -> None:  # type: ignore[override]
+        super().changeEvent(event)
+        if event.type() == QEvent.Type.WindowStateChange:
+            follower = self.centralWidget()
+            if isinstance(follower, _OutputFollowerWidget):
+                follower.set_window_minimized(self.isMinimized())
+
+
 class JobsOutputsWidget(QWidget):
     request_show_directories = Signal()
     polling_visibility_changed = Signal()
@@ -469,6 +538,8 @@ class JobsOutputsWidget(QWidget):
         self.active_err: str = ""
         self._last_sig = [None, None]  # (size,mtime) for out/err
         self._tail_paused = False
+        self._paused_for_minimize = False
+        self._main_window_minimized = False
         self._async_workers: set[AsyncCall] = set()
         self._async_busy: dict[str, int] = {}
         self._session_generation = 0
@@ -479,6 +550,7 @@ class JobsOutputsWidget(QWidget):
         self._tail_alert_visible = False
         self._tail_stop_notified = False
         self._live_tail_failure_started: float | None = None
+        self._minimize_started_at: float | None = None
         self._follow_windows: list[QMainWindow] = []
         self._single_file_follow_windows: list[QMainWindow] = []
         self._follow_tabs: list[_OutputFollowerWidget] = []
@@ -679,6 +751,12 @@ class JobsOutputsWidget(QWidget):
         widget.setStyleSheet(
             "QTextEdit { background-color: #111111; color: #e8e8e8; "
             "border: 1px solid #555; selection-background-color: #264f78; }"
+            "QScrollBar:vertical { background: #ffffff; width: 12px; margin: 0; }"
+            "QScrollBar:horizontal { background: #ffffff; height: 12px; margin: 0; }"
+            "QScrollBar::handle:vertical, QScrollBar::handle:horizontal "
+            "{ background: #bdbdbd; min-height: 20px; min-width: 20px; }"
+            "QScrollBar::add-line, QScrollBar::sub-line { background: #ffffff; }"
+            "QScrollBar::add-page, QScrollBar::sub-page { background: #ffffff; }"
         )
 
     def set_session(self, session):
@@ -735,6 +813,24 @@ class JobsOutputsWidget(QWidget):
         self._sync_polling(immediate=active)
         self.polling_visibility_changed.emit()
 
+    def set_application_minimized(self, minimized: bool) -> None:
+        """Pause/resume the main Outputs follower with the app window state."""
+        should_pause = bool(
+            minimized and get_pause_live_follow_when_minimized_enabled()
+        )
+        if self._main_window_minimized == should_pause:
+            return
+        self._main_window_minimized = should_pause
+        if should_pause:
+            self._minimize_started_at = time.monotonic()
+        elif self._minimize_started_at is not None:
+            paused_for = time.monotonic() - self._minimize_started_at
+            self._minimize_started_at = None
+            self._live_tail_last_change += paused_for
+            if self._live_tail_failure_started is not None:
+                self._live_tail_failure_started += paused_for
+        self._sync_polling(immediate=not should_pause)
+
     def is_details_polling_visible(self) -> bool:
         return bool(
             self._page_active
@@ -744,6 +840,7 @@ class JobsOutputsWidget(QWidget):
     def is_outputs_polling_visible(self) -> bool:
         return bool(
             self._page_active
+            and not self._main_window_minimized
             and self.section_tabs.currentWidget() is self.outputs_tab
         )
 
@@ -753,12 +850,19 @@ class JobsOutputsWidget(QWidget):
 
     def _sync_polling(self, *, immediate: bool = False) -> None:
         connected = bool(self.session and self.session.get("connected"))
-        if connected and self.is_details_polling_visible():
+        if (
+            connected
+            and self.is_details_polling_visible()
+            and self._has_auto_refresh_enabled()
+        ):
             self._jobs_refresh_timer.start()
             if immediate:
-                self.refresh_jobs()
-                self.refresh_sacct()
-                self.refresh_lssrv()
+                if get_squeue_auto_refresh_enabled():
+                    self.refresh_jobs()
+                if get_sacct_auto_refresh_enabled():
+                    self.refresh_sacct()
+                if get_lssrv_auto_refresh_enabled():
+                    self.refresh_lssrv()
         else:
             self._jobs_refresh_timer.stop()
 
@@ -829,6 +933,7 @@ class JobsOutputsWidget(QWidget):
         self._live_tail_last_change = time.monotonic()
         self._tail_alert_visible = False
         self._tail_stop_notified = False
+        self._live_tail_failure_started = None
 
     def _observe_live_tail_content(self, results) -> None:
         content = tuple(text for _, _, text, error in results if not error)
@@ -1163,6 +1268,11 @@ class JobsOutputsWidget(QWidget):
             follower.open_in_output_slot(1, error_path)
         return follower
 
+    def _show_new_follow_window(self, window: QMainWindow) -> None:
+        window.show()
+        if get_follow_window_open_minimized_enabled():
+            window.showMinimized()
+
     def _show_follower_window(
         self,
         follower: _OutputFollowerWidget,
@@ -1170,7 +1280,7 @@ class JobsOutputsWidget(QWidget):
         title: str = "",
     ) -> QMainWindow:
         target_id, label = self._register_output_target("window", follower)
-        window = QMainWindow(None, Qt.WindowType.Window)
+        window = _FollowerWindow(None, Qt.WindowType.Window)
         window.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)
         window.setWindowTitle(title or label)
         window.setCentralWidget(follower)
@@ -1190,7 +1300,7 @@ class JobsOutputsWidget(QWidget):
             ]
 
         window.destroyed.connect(cleanup)
-        window.show()
+        self._show_new_follow_window(window)
         return window
 
     def open_in_output_window(self, slot: int, remote_path: str) -> None:
@@ -1204,7 +1314,7 @@ class JobsOutputsWidget(QWidget):
         follower = _SingleFileFollowerWidget(remote_path)
         follower.set_session(self.session)
         filename = remote_path.rstrip("/").rsplit("/", 1)[-1] or remote_path
-        window = QMainWindow(None, Qt.WindowType.Window)
+        window = _FollowerWindow(None, Qt.WindowType.Window)
         window.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)
         window.setWindowTitle(
             t("jobs_outputs.single_follow_window_title").format(name=filename)
@@ -1222,7 +1332,7 @@ class JobsOutputsWidget(QWidget):
             ]
 
         window.destroyed.connect(cleanup)
-        window.show()
+        self._show_new_follow_window(window)
         return window
 
     def open_output_pair_window(
@@ -1371,7 +1481,22 @@ class JobsOutputsWidget(QWidget):
         append_event({"type": "activate_slurm", "script": script_path, "out": out_path, "err": err_path})
 
     # ---------------- Live polling
+    @staticmethod
+    def _has_auto_refresh_enabled() -> bool:
+        return any((
+            get_squeue_auto_refresh_enabled(),
+            get_sacct_auto_refresh_enabled(),
+            get_lssrv_auto_refresh_enabled(),
+        ))
+
     def apply_refresh_settings(self) -> None:
+        # Re-evaluate a changed minimize preference immediately, including
+        # while the application is already minimized.
+        self.set_application_minimized(self.window().isMinimized())
+        for window in (*self._follow_windows, *self._single_file_follow_windows):
+            follower = window.centralWidget()
+            if isinstance(follower, _OutputFollowerWidget):
+                follower.set_window_minimized(window.isMinimized())
         interval_ms = max(1000, get_jobs_outputs_refresh_interval_seconds() * 1000)
         self._jobs_refresh_timer.setInterval(interval_ms)
         self._apply_live_refresh_interval()
@@ -1379,6 +1504,7 @@ class JobsOutputsWidget(QWidget):
             self.session
             and self.session.get("connected")
             and self.is_details_polling_visible()
+            and self._has_auto_refresh_enabled()
         ):
             self._jobs_refresh_timer.start()
         else:
@@ -1389,11 +1515,15 @@ class JobsOutputsWidget(QWidget):
             not self.session
             or not self.session.get("connected")
             or not self.is_details_polling_visible()
+            or not self._has_auto_refresh_enabled()
         ):
             self._jobs_refresh_timer.stop()
             return
         self.apply_refresh_settings()
-        self.refresh_jobs()
+        if get_squeue_auto_refresh_enabled():
+            self.refresh_jobs()
+        if get_sacct_auto_refresh_enabled():
+            self.refresh_sacct()
         if get_lssrv_auto_refresh_enabled():
             self.refresh_lssrv()
 

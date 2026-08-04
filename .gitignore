@@ -41,3 +41,10 @@ Thumbs.db
 /.continue/
 /chatlogs/
 /.codex/
+
+# Project-local delegated-agent run logs and optional non-secret model overrides
+.agent-runs/
+tools/ai/deepseek-models.local.psd1
+
+# Local sequential wave queue and archived wave execution records
+/waves/
