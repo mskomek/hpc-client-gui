@@ -40,6 +40,11 @@ def build_ssh_conn_info(args) -> SSHConnInfo:
         profile = resolve_profile(profile_name)
         if profile is None:
             raise CLIConnectionError(f"Profile not found: {profile_name}")
+        if not profile.get("cli_allowed", False):
+            raise CLIConnectionError(
+                f"Profile '{profile_name}' is not allowed for CLI use. "
+                "Enable it in the connection's edit dialog."
+            )
 
     host = str(getattr(args, "host", "") or (profile or {}).get("host", "")).strip()
     if not host:

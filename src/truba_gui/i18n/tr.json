@@ -572,6 +572,7 @@
     "edit_dialog_title": "Bağlantıyı Düzenle",
     "edit_action": "Düzenle",
     "password_no_prompt": "Bağlanırken bir daha şifre sorma",
+    "cli_allowed": "Bu bağlantının CLI üzerinden kullanılmasına izin ver",
     "remember_master_password": "Ana şifreleme parolasını bu Windows hesabında hatırla",
     "master_password_store_failed": "Ana şifreleme parolası Windows hesabınızla güvenli biçimde saklanamadı: {error}",
     "password_edit_only": "Bağlanırken şifre sorma; yalnızca bu bağlantı düzenlenirken doğrula",

@@ -73,6 +73,7 @@ class ConnectionDialog(QDialog):
 
         self.cb_x11 = QCheckBox(t("login.x11_enable"))
         self.cb_strict_hostkey = QCheckBox(t("login.strict_host_key"))
+        self.cb_cli_allowed = QCheckBox(t("connection.cli_allowed"))
 
         form = QFormLayout()
         form.addRow(t("login.profile_name_label"), self.profile_name)
@@ -90,6 +91,7 @@ class ConnectionDialog(QDialog):
 
         form.addRow("", self.cb_x11)
         form.addRow("", self.cb_strict_hostkey)
+        form.addRow("", self.cb_cli_allowed)
 
         self.system_name = QLineEdit()
         self.scratch_dir = QLineEdit()
@@ -167,6 +169,7 @@ class ConnectionDialog(QDialog):
         self.key_path.setText(str(profile.get("key_path", "")))
         self.cb_x11.setChecked(bool(profile.get("x11_forwarding", False)))
         self.cb_strict_hostkey.setChecked((profile.get("host_key_policy") or "accept-new") == "strict")
+        self.cb_cli_allowed.setChecked(bool(profile.get("cli_allowed", False)))
         self.cb_save_password.setChecked(bool(profile.get("save_password", False)))
         self.cb_edit_only_password.setEnabled(self.cb_save_password.isChecked())
         self.cb_edit_only_password.setChecked(
@@ -292,6 +295,7 @@ class ConnectionDialog(QDialog):
             "key_path": self.key_path.text().strip(),
             "host_key_policy": "strict" if self.cb_strict_hostkey.isChecked() else "accept-new",
             "x11_forwarding": self.cb_x11.isChecked(),
+            "cli_allowed": self.cb_cli_allowed.isChecked(),
             "save_password": self.cb_save_password.isChecked(),
             "password_prompt_policy": (
                 "edit-only"

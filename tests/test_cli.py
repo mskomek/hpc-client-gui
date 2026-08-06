@@ -420,6 +420,7 @@ def test_profile_key_path_flows_into_connection_info() -> None:
             "port": 22,
             "username": "user",
             "key_path": "/home/bob/id_rsa",
+            "cli_allowed": True,
         }
     ]
     args = argparse.Namespace(
@@ -462,7 +463,7 @@ def _profile_args(**overrides) -> argparse.Namespace:
 def test_saved_dpapi_secret_resolves_without_stdin() -> None:
     from truba_gui.cli.session import build_ssh_conn_info
 
-    profiles = [{"name": "alpha", "host": "cluster.example", "password_dpapi": "token-123"}]
+    profiles = [{"name": "alpha", "host": "cluster.example", "password_dpapi": "token-123", "cli_allowed": True}]
     with patch("truba_gui.cli.session.load_profiles", return_value=profiles), patch(
         "truba_gui.cli.session.secret_store.is_available", return_value=True
     ), patch(
@@ -476,7 +477,7 @@ def test_saved_dpapi_secret_resolves_without_stdin() -> None:
 def test_profile_without_saved_secret_leaves_password_empty() -> None:
     from truba_gui.cli.session import build_ssh_conn_info
 
-    profiles = [{"name": "alpha", "host": "cluster.example"}]
+    profiles = [{"name": "alpha", "host": "cluster.example", "cli_allowed": True}]
     with patch("truba_gui.cli.session.load_profiles", return_value=profiles), patch(
         "truba_gui.cli.session.secret_store.is_available", return_value=True
     ), patch("truba_gui.cli.session.secret_store.unprotect_secret") as unprotect:
@@ -488,7 +489,7 @@ def test_profile_without_saved_secret_leaves_password_empty() -> None:
 def test_no_saved_password_flag_skips_dpapi_resolution() -> None:
     from truba_gui.cli.session import build_ssh_conn_info
 
-    profiles = [{"name": "alpha", "host": "cluster.example", "password_dpapi": "token-123"}]
+    profiles = [{"name": "alpha", "host": "cluster.example", "password_dpapi": "token-123", "cli_allowed": True}]
     with patch("truba_gui.cli.session.load_profiles", return_value=profiles), patch(
         "truba_gui.cli.session.secret_store.is_available", return_value=True
     ), patch("truba_gui.cli.session.secret_store.unprotect_secret") as unprotect:
@@ -500,7 +501,7 @@ def test_no_saved_password_flag_skips_dpapi_resolution() -> None:
 def test_dpapi_unavailable_falls_back_to_empty_password() -> None:
     from truba_gui.cli.session import build_ssh_conn_info
 
-    profiles = [{"name": "alpha", "host": "cluster.example", "password_dpapi": "token-123"}]
+    profiles = [{"name": "alpha", "host": "cluster.example", "password_dpapi": "token-123", "cli_allowed": True}]
     with patch("truba_gui.cli.session.load_profiles", return_value=profiles), patch(
         "truba_gui.cli.session.secret_store.is_available", return_value=False
     ), patch("truba_gui.cli.session.secret_store.unprotect_secret") as unprotect:
@@ -518,6 +519,7 @@ def test_key_path_profile_skips_dpapi_resolution() -> None:
             "host": "cluster.example",
             "key_path": "/home/bob/id_rsa",
             "password_dpapi": "token-123",
+            "cli_allowed": True,
         }
     ]
     with patch("truba_gui.cli.session.load_profiles", return_value=profiles), patch(
@@ -533,7 +535,7 @@ def test_password_stdin_flag_overrides_saved_secret() -> None:
 
     from truba_gui.cli.session import build_ssh_conn_info
 
-    profiles = [{"name": "alpha", "host": "cluster.example", "password_dpapi": "token-123"}]
+    profiles = [{"name": "alpha", "host": "cluster.example", "password_dpapi": "token-123", "cli_allowed": True}]
     with patch("truba_gui.cli.session.load_profiles", return_value=profiles), patch(
         "truba_gui.cli.session.secret_store.is_available", return_value=True
     ), patch("truba_gui.cli.session.secret_store.unprotect_secret") as unprotect, patch(
@@ -567,6 +569,7 @@ def test_strict_host_key_flag_overrides_profile_accept_new_default() -> None:
             "username": "user",
             "key_path": "",
             "host_key_policy": "accept-new",
+            "cli_allowed": True,
         }
     ]
     with patch("truba_gui.cli.session.load_profiles", return_value=profiles), patch(
@@ -733,7 +736,7 @@ def test_profile_test_text_mode_matches_json_payload(capsys) -> None:
         def close(self):
             pass
 
-    profiles = [{"name": "alpha", "host": "cluster.example"}]
+    profiles = [{"name": "alpha", "host": "cluster.example", "cli_allowed": True}]
     with patch("truba_gui.cli.session.load_profiles", return_value=profiles), patch(
         "truba_gui.cli.main.CLISession.open", return_value=FakeSession()
     ):
@@ -2213,7 +2216,7 @@ def _conn_info_args(**overrides) -> argparse.Namespace:
 def test_build_ssh_conn_info_uses_default_profile_when_no_flag() -> None:
     from truba_gui.cli.session import build_ssh_conn_info
 
-    profiles = [{"name": "default", "host": "default.example", "username": "du"}]
+    profiles = [{"name": "default", "host": "default.example", "username": "du", "cli_allowed": True}]
     with patch("truba_gui.cli.session.load_profiles", return_value=profiles), patch(
         "truba_gui.config.storage.get_cli_default_profile", return_value="default"
     ):
@@ -2226,8 +2229,8 @@ def test_build_ssh_conn_info_explicit_profile_overrides_default() -> None:
     from truba_gui.cli.session import build_ssh_conn_info
 
     profiles = [
-        {"name": "explicit", "host": "explicit.example", "username": "eu"},
-        {"name": "default", "host": "default.example", "username": "du"},
+        {"name": "explicit", "host": "explicit.example", "username": "eu", "cli_allowed": True},
+        {"name": "default", "host": "default.example", "username": "du", "cli_allowed": True},
     ]
     with patch("truba_gui.cli.session.load_profiles", return_value=profiles), patch(
         "truba_gui.config.storage.get_cli_default_profile", return_value="default"

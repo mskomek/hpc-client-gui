@@ -574,6 +574,7 @@
     "edit_dialog_title": "Edit Connection",
     "edit_action": "Edit",
     "password_no_prompt": "Do not ask for the password again when connecting",
+    "cli_allowed": "Allow this connection to be used from the CLI",
     "remember_master_password": "Remember the encryption password for this Windows account",
     "master_password_store_failed": "The encryption password could not be protected for your Windows account: {error}",
     "password_edit_only": "Do not ask when connecting; verify only when this connection is edited",

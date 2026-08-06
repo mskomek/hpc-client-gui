@@ -29,7 +29,7 @@ from truba_gui.cli.files import IF_EXISTS_CHOICES, download as download_files, u
 from truba_gui.cli.jobs import emit_job_result, jobs_backend
 
 
-CLI_VERSION = "1.1.16"
+CLI_VERSION = "1.1.17"
 
 _JOBS_JOB_ID_RE = re.compile(r"\d+(?:[_.]\d+)?\Z")
 

@@ -161,6 +161,7 @@ class LoginWidget(QWidget):
 
         self.cb_save_password = QCheckBox(t("login.save_password") if t("login.save_password") != "[login.save_password]" else "Şifreyi kaydet")
         self._profile_system_settings = normalize_system_settings(None)
+        self._profile_cli_allowed = False
         self._password_prompt_policy = "when-needed"
         self.key_path = QLineEdit()
         self.btn_browse_key = QPushButton(t("login.browse") if t("login.browse") != "[login.browse]" else "Seç")
@@ -783,6 +784,7 @@ class LoginWidget(QWidget):
         self._profile_system_settings = normalize_system_settings(
             prof.get("system")
         )
+        self._profile_cli_allowed = bool(prof.get("cli_allowed", False))
         # Never auto-fill decrypted password.
         # If legacy plain password exists, show it; if encrypted, keep empty.
         if save_pw and isinstance(prof.get("password"), str) and prof.get("password"):
@@ -810,10 +812,7 @@ class LoginWidget(QWidget):
         initial = self._load_profile_by_name(name)
         if not initial:
             return
-        if (
-            (initial.get("password_prompt_policy") or "when-needed") == "edit-only"
-            and initial.get("password_dpapi")
-        ):
+        if initial.get("password_dpapi"):
             expected = self._decrypt_profile_password(initial, allow_prompt=False)
             if expected is None:
                 return
@@ -831,6 +830,9 @@ class LoginWidget(QWidget):
                     t("login.err_title"),
                     t("connection.edit_auth_failed"),
                 )
+                return
+        elif initial.get("password_enc") and initial.get("password_salt"):
+            if self._decrypt_profile_password(initial, allow_prompt=True) is None:
                 return
         dlg = ConnectionDialog(
             self,
@@ -918,6 +920,7 @@ class LoginWidget(QWidget):
             "key_path": self.key_path.text().strip(),
             "host_key_policy": "strict" if self.cb_strict_hostkey.isChecked() else "accept-new",
             "x11_forwarding": self.cb_x11.isChecked(),
+            "cli_allowed": getattr(self, "_profile_cli_allowed", False),
             # dry_run removed
             "save_password": self.cb_save_password.isChecked(),
             "password_prompt_policy": self._password_prompt_policy,
