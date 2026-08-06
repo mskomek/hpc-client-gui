@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from truba_gui.config.storage import load_profiles
+from truba_gui.core import secret_store
 from truba_gui.services.files_ssh import SSHFilesBackend
 from truba_gui.ssh.client import SSHClientWrapper, SSHConnInfo
 
@@ -17,6 +18,16 @@ def resolve_profile(name: str) -> dict[str, Any] | None:
     )
 
 
+def effective_profile_name(args) -> str:
+    """Return the explicit --profile value, or the saved CLI default profile."""
+    explicit = str(getattr(args, "profile", "") or "").strip()
+    if explicit:
+        return explicit
+    from truba_gui.config.storage import get_cli_default_profile
+
+    return get_cli_default_profile()
+
+
 def build_ssh_conn_info(args) -> SSHConnInfo:
     """Resolve CLI args (and an optional profile) into an ``SSHConnInfo``.
 
@@ -24,7 +35,7 @@ def build_ssh_conn_info(args) -> SSHConnInfo:
     requested profile that does not exist.
     """
     profile = None
-    profile_name = str(getattr(args, "profile", "") or "").strip()
+    profile_name = effective_profile_name(args)
     if profile_name:
         profile = resolve_profile(profile_name)
         if profile is None:
@@ -45,6 +56,18 @@ def build_ssh_conn_info(args) -> SSHConnInfo:
     password = ""
     if getattr(args, "password_stdin", False):
         password = sys.stdin.readline().rstrip("\r\n")
+    elif (
+        profile
+        and not key_path
+        and not getattr(args, "no_saved_password", False)
+        and secret_store.is_available()
+    ):
+        saved_token = profile.get("password_dpapi")
+        if saved_token:
+            try:
+                password = secret_store.unprotect_secret(str(saved_token))
+            except Exception:
+                password = ""
     timeout = getattr(args, "timeout", None)
 
     return SSHConnInfo(

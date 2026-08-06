@@ -45,12 +45,6 @@ if (-not (Test-Path $builtExe)) {
     throw "Expected built EXE not found: $builtExe"
 }
 
-Write-Host "Running release smoke tests before packaging artifacts..."
-& (Join-Path $PSScriptRoot "release_smoke.ps1") -ExePath $builtExe
-if ($LASTEXITCODE -ne 0) {
-    throw "Release smoke tests failed."
-}
-
 $changelogSrc = Join-Path $Root "src/truba_gui/docs/CHANGELOG.md"
 if (-not (Test-Path $changelogSrc)) {
     throw "Expected changelog source not found: $changelogSrc"
@@ -106,16 +100,34 @@ if (Test-Path (Join-Path $Root "templates")) {
     Copy-Item -Path (Join-Path $Root "templates") -Destination $versionDir -Recurse -Force
 }
 
-Write-Host "Local transfer gate: Turkish-filename round trip and sftp-smoke/1 artifact placement"
-$env:PYTHONPATH = "src"
-python scripts/local_transfer_gate.py --version $Version --release-root $ReleaseRoot
-if ($LASTEXITCODE -ne 0) {
-    throw "Local transfer gate failed."
+$helpSourceDir = Join-Path $Root "src/truba_gui/docs"
+$helpDestDir = Join-Path $versionDir "help"
+New-Item -ItemType Directory -Path $helpDestDir -Force | Out-Null
+$requiredHelpFiles = @("HELP_tr.md", "HELP_en.md", "CLI_GUIDE_tr.md", "CLI_GUIDE_en.md")
+foreach ($fileName in $requiredHelpFiles) {
+    $helpSourcePath = Join-Path $helpSourceDir $fileName
+    if (-not (Test-Path -LiteralPath $helpSourcePath -PathType Leaf)) {
+        throw "Release packaging: required help file missing from source: $helpSourcePath"
+    }
+    Copy-Item -Path $helpSourcePath -Destination (Join-Path $helpDestDir $fileName) -Force
 }
 
 $exePath = Join-Path $versionDir "hpc-client-gui.exe"
 if (-not (Test-Path $exePath)) {
     throw "Expected packaged exe not found: $exePath"
+}
+
+Write-Host "Running release smoke tests against the packaged release..."
+& (Join-Path $PSScriptRoot "release_smoke.ps1") -ExePath $exePath
+if ($LASTEXITCODE -ne 0) {
+    throw "Release smoke tests failed."
+}
+
+Write-Host "Local transfer gate: Turkish-filename round trip and sftp-smoke/1 artifact placement"
+$env:PYTHONPATH = "src"
+python scripts/local_transfer_gate.py --version $Version --release-root $ReleaseRoot
+if ($LASTEXITCODE -ne 0) {
+    throw "Local transfer gate failed."
 }
 
 $releaseExeName = "hpc-client-gui.exe"

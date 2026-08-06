@@ -19,19 +19,22 @@ from PySide6.QtWidgets import (
 )
 
 from truba_gui.config.storage import (
-    get_follow_window_open_minimized_enabled,
-    get_jobs_outputs_refresh_interval_seconds,
-    get_pause_live_follow_when_minimized_enabled,
-    get_sbatch_follow_mode,
-    get_ftp_transfer_type,
     clear_file_association,
+    get_cli_default_profile,
+    get_cli_external_access_enabled,
     get_file_associations,
+    get_follow_window_open_minimized_enabled,
+    get_ftp_transfer_type,
+    get_jobs_outputs_refresh_interval_seconds,
     get_lssrv_auto_refresh_enabled,
+    get_pause_live_follow_when_minimized_enabled,
     get_sacct_auto_refresh_enabled,
+    get_sbatch_follow_mode,
     get_squeue_auto_refresh_enabled,
-    get_transfer_parallelism,
     get_transfer_checksum_verification_enabled,
+    get_transfer_parallelism,
     get_upload_preflight_confirmation_enabled,
+    load_profiles,
     load_settings,
     set_file_association,
     update_settings,
@@ -196,11 +199,30 @@ class SettingsDialog(QDialog):
         self.cb_ftp_transfer_type.setToolTip(t("settings.ftp_transfer_type_tip"))
         self._file_associations = get_file_associations()
 
+        self.cb_cli_external_access = QCheckBox(t("settings.cli_external_access_label"))
+        self.cb_cli_external_access.setChecked(get_cli_external_access_enabled())
+        self.cb_cli_external_access.setToolTip(t("settings.cli_external_access_tip"))
+
+        self.cb_cli_default_profile = QComboBox()
+        self.cb_cli_default_profile.addItem(t("settings.cli_default_profile_none"), "")
+        for profile in load_profiles():
+            name = str(profile.get("name") or "").strip()
+            if name:
+                self.cb_cli_default_profile.addItem(name, name)
+        default_index = self.cb_cli_default_profile.findData(get_cli_default_profile())
+        self.cb_cli_default_profile.setCurrentIndex(max(0, default_index))
+        self.cb_cli_default_profile.setToolTip(t("settings.cli_default_profile_tip"))
+
         connection_group = QGroupBox(t("settings.connection_section"))
         connection_form = QFormLayout(connection_group)
         connection_form.addRow(self.cb_x11_autodeps)
         connection_form.addRow(self.cb_close_vcxsrv_on_exit)
         connection_form.addRow(self.cb_close_x11_procs_on_exit)
+        connection_form.addRow(self.cb_cli_external_access)
+        connection_form.addRow(
+            t("settings.cli_default_profile_label"),
+            self.cb_cli_default_profile,
+        )
 
         jobs_group = QGroupBox(t("settings.jobs_outputs_section"))
         jobs_form = QFormLayout(jobs_group)
@@ -304,6 +326,8 @@ class SettingsDialog(QDialog):
                 "x11_autodeps": self.cb_x11_autodeps.isChecked(),
                 "close_vcxsrv_on_exit": self.cb_close_vcxsrv_on_exit.isChecked(),
                 "close_x11_procs_on_exit": self.cb_close_x11_procs_on_exit.isChecked(),
+                "cli_external_access_enabled": self.cb_cli_external_access.isChecked(),
+                "cli_default_profile": str(self.cb_cli_default_profile.currentData() or ""),
                 "jobs_outputs_refresh_interval_seconds": int(self.sp_jobs_outputs_refresh_interval.value()),
                 "pause_live_follow_when_minimized_enabled": (
                     self.cb_pause_live_follow_when_minimized.isChecked()

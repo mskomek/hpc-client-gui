@@ -262,6 +262,32 @@ def set_last_seen_changelog_version(version: str) -> str:
     return value
 
 
+def get_cli_external_access_enabled(default: bool = False) -> bool:
+    """Return whether remote CLI commands may run without a GUI session."""
+    value = load_settings().get("cli_external_access_enabled", default)
+    return value if isinstance(value, bool) else default
+
+
+def set_cli_external_access_enabled(enabled: bool) -> bool:
+    """Persist whether remote CLI commands may run without a GUI session."""
+    value = bool(enabled)
+    update_settings({"cli_external_access_enabled": value})
+    return value
+
+
+def get_cli_default_profile(default: str = "") -> str:
+    """Return the saved CLI default profile name, or an empty string."""
+    value = load_settings().get("cli_default_profile", default)
+    return str(value or "").strip()
+
+
+def set_cli_default_profile(name: str) -> str:
+    """Persist the CLI default profile name."""
+    value = str(name or "").strip()
+    update_settings({"cli_default_profile": value})
+    return value
+
+
 def get_ftp_transfer_type(default: str = "auto") -> str:
     value = str(load_settings().get("ftp_transfer_type", default)).strip().lower()
     return value if value in {"auto", "binary", "ascii"} else default

@@ -8,25 +8,50 @@ import sys
 from pathlib import Path
 from typing import Any, Sequence
 
-from truba_gui.config.storage import delete_profile, load_profiles, upsert_profile
+from truba_gui.config.storage import (
+    delete_profile,
+    get_cli_external_access_enabled,
+    load_profiles,
+    upsert_profile,
+)
 from truba_gui.core.paths import app_data_dir
 from truba_gui.cli.errors import ExitCode, emit_error
-from truba_gui.cli.session import CLIConnectionError, CLISession, build_ssh_conn_info, resolve_profile
+from truba_gui.cli.session import (
+    CLIConnectionError,
+    CLISession,
+    build_ssh_conn_info,
+    effective_profile_name,
+    resolve_profile,
+)
 from truba_gui.services.connection_diagnostics import run_connection_diagnostics
 from truba_gui.services.sftp_smoke import run_sftp_smoke
 from truba_gui.cli.files import IF_EXISTS_CHOICES, download as download_files, upload as upload_files
 from truba_gui.cli.jobs import emit_job_result, jobs_backend
 
 
-CLI_VERSION = "1.1.15"
+CLI_VERSION = "1.1.16"
 
 _JOBS_JOB_ID_RE = re.compile(r"\d+(?:[_.]\d+)?\Z")
 
 
+class _FullHelpArgumentParser(argparse.ArgumentParser):
+    def error(self, message: str) -> None:
+        self.print_help(sys.stderr)
+        self.exit(2, f"{self.prog}: error: {message}\n")
+
+
 def _parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(
+    parser = _FullHelpArgumentParser(
         prog="hpc-client-gui",
         description="HPC Client GUI CLI and GUI launcher.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=(
+            "Examples:\n"
+            "  hpc-client-gui --profile arf files ls /truba/home\n"
+            "  hpc-client-gui --profile arf jobs submit run.sh --yes\n"
+            "  hpc-client-gui --profile arf doctor connection\n"
+            "  hpc-client-gui --format json commands\n"
+        ),
     )
     parser.add_argument(
         "--format",
@@ -43,11 +68,17 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--user", dest="username", help="SSH username override.")
     parser.add_argument("--key", dest="key_path", help="SSH private-key path override.")
     parser.add_argument("--password-stdin", action="store_true", help="Read the SSH password from stdin.")
+    parser.add_argument(
+        "--no-saved-password",
+        action="store_true",
+        help="Do not use a profile's saved DPAPI-protected secret; require --password-stdin instead.",
+    )
     parser.add_argument("--strict-host-key", action="store_true", help="Reject unknown SSH host keys.")
 
     commands = parser.add_subparsers(dest="group")
     commands.add_parser("gui", help="Launch the desktop GUI.")
     commands.add_parser("version", help="Print version and build information.")
+    commands.add_parser("commands", help="Print the full command inventory (for scripting and automation).")
 
     profile = commands.add_parser("profile", help="Inspect saved connection profiles.")
     profile_commands = profile.add_subparsers(dest="profile_command", required=True)
@@ -166,6 +197,58 @@ def _emit(payload: Any, *, output_format: str, quiet: bool = False) -> None:
             print(value)
         return
     print(payload)
+
+
+def _walk_parser(parser: argparse.ArgumentParser, path: list[str]) -> list[dict[str, Any]]:
+    options = []
+    subparsers_action = None
+    for action in parser._actions:
+        if isinstance(action, argparse._SubParsersAction):
+            subparsers_action = action
+            continue
+        if not action.option_strings:
+            continue
+        options.append({"flags": list(action.option_strings), "help": action.help or ""})
+    entries = [{
+        "path": " ".join(path) if path else parser.prog,
+        "help": parser.description or "",
+        "options": options,
+    }]
+    if subparsers_action:
+        for name, subparser in subparsers_action.choices.items():
+            entries.extend(_walk_parser(subparser, path + [name]))
+    return entries
+
+
+def _run_commands(args: argparse.Namespace) -> int:
+    tree = _walk_parser(_parser(), [])
+    exit_codes = {code.name: int(code.value) for code in ExitCode}
+    payload = {"commands": tree, "exit_codes": exit_codes}
+    if args.format == "json":
+        _emit(payload, output_format="json", quiet=args.quiet)
+        return ExitCode.SUCCESS
+    if args.quiet:
+        return ExitCode.SUCCESS
+    for entry in tree:
+        print(f"{entry['path']}: {entry['help']}")
+        for opt in entry["options"]:
+            print(f"    {', '.join(opt['flags'])}  {opt['help']}")
+    print()
+    print("Exit codes:")
+    for name, value in exit_codes.items():
+        print(f"  {value}  {name}")
+    return ExitCode.SUCCESS
+
+
+def _requires_remote_session(args: argparse.Namespace) -> bool:
+    group = getattr(args, "group", None)
+    if group in ("files", "jobs"):
+        return True
+    if group == "profile" and getattr(args, "profile_command", None) == "test":
+        return True
+    if group == "doctor" and getattr(args, "doctor_command", None) in ("connection", "smoke"):
+        return True
+    return False
 
 
 def _safe_profile(profile: dict[str, Any]) -> dict[str, Any]:
@@ -498,7 +581,7 @@ def _jobs_username(args: argparse.Namespace) -> str:
     ``build_ssh_conn_info``: an explicit ``args.username`` wins, otherwise the
     profile's username, otherwise an empty string.
     """
-    profile_name = str(getattr(args, "profile", "") or "").strip()
+    profile_name = effective_profile_name(args)
     profile = resolve_profile(profile_name) if profile_name else None
     username = getattr(args, "username", "") or (profile or {}).get("username", "") or ""
     return str(username)
@@ -590,6 +673,15 @@ def run_cli(argv: Sequence[str] | None = None) -> int:
             quiet=args.quiet,
         )
         return ExitCode.SUCCESS
+    if args.group == "commands":
+        return _run_commands(args)
+    if _requires_remote_session(args) and not get_cli_external_access_enabled():
+        emit_error(
+            "Remote CLI access is disabled. Enable \"Allow external CLI access to remote commands\" in Settings to use this command.",
+            exit_code=ExitCode.OPERATION_FAILED,
+            output_format=args.format,
+        )
+        return ExitCode.OPERATION_FAILED
     if args.group == "profile":
         return _run_profile(args)
     if args.group == "doctor":

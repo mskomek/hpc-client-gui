@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import errno
 import hashlib
 import json
 import socket
@@ -19,6 +20,21 @@ from truba_gui.services.files_ssh import SSHFilesBackend
 from truba_gui.services.sftp_smoke import STAGES as SMOKE_STAGES
 from truba_gui.services.sftp_smoke import run_sftp_smoke
 from truba_gui.ssh.client import SSHClientWrapper, SSHConnInfo
+
+
+@pytest.fixture(autouse=True)
+def _remote_cli_access_enabled():
+    """Let pre-existing remote-command tests run without tripping the gate.
+
+    The production default for ``cli_external_access_enabled`` is off; every
+    legacy test below exercises a remote-session command (``files``, ``jobs``,
+    ``profile test``, ``doctor connection``/``smoke``) and predates the access
+    gate.  Enabling the toggle here keeps those tests focused on their own
+    behaviour.  The access-gate tests explicitly re-patch the getter to
+    ``False`` to exercise the real off-by-default behaviour.
+    """
+    with patch("truba_gui.cli.main.get_cli_external_access_enabled", return_value=True):
+        yield
 
 
 def test_exit_code_timeout_value_lock() -> None:
@@ -426,6 +442,108 @@ def test_profile_key_path_flows_into_connection_info() -> None:
     session.close()
 
 
+def _profile_args(**overrides) -> argparse.Namespace:
+    base = dict(
+        profile="alpha",
+        host="",
+        port=None,
+        username="",
+        key_path="",
+        strict_host_key=False,
+        password_stdin=False,
+        no_saved_password=False,
+        timeout=None,
+        verbose=False,
+    )
+    base.update(overrides)
+    return argparse.Namespace(**base)
+
+
+def test_saved_dpapi_secret_resolves_without_stdin() -> None:
+    from truba_gui.cli.session import build_ssh_conn_info
+
+    profiles = [{"name": "alpha", "host": "cluster.example", "password_dpapi": "token-123"}]
+    with patch("truba_gui.cli.session.load_profiles", return_value=profiles), patch(
+        "truba_gui.cli.session.secret_store.is_available", return_value=True
+    ), patch(
+        "truba_gui.cli.session.secret_store.unprotect_secret", return_value="s3cret"
+    ) as unprotect:
+        info = build_ssh_conn_info(_profile_args())
+    unprotect.assert_called_once_with("token-123")
+    assert info.password == "s3cret"
+
+
+def test_profile_without_saved_secret_leaves_password_empty() -> None:
+    from truba_gui.cli.session import build_ssh_conn_info
+
+    profiles = [{"name": "alpha", "host": "cluster.example"}]
+    with patch("truba_gui.cli.session.load_profiles", return_value=profiles), patch(
+        "truba_gui.cli.session.secret_store.is_available", return_value=True
+    ), patch("truba_gui.cli.session.secret_store.unprotect_secret") as unprotect:
+        info = build_ssh_conn_info(_profile_args())
+    unprotect.assert_not_called()
+    assert info.password == ""
+
+
+def test_no_saved_password_flag_skips_dpapi_resolution() -> None:
+    from truba_gui.cli.session import build_ssh_conn_info
+
+    profiles = [{"name": "alpha", "host": "cluster.example", "password_dpapi": "token-123"}]
+    with patch("truba_gui.cli.session.load_profiles", return_value=profiles), patch(
+        "truba_gui.cli.session.secret_store.is_available", return_value=True
+    ), patch("truba_gui.cli.session.secret_store.unprotect_secret") as unprotect:
+        info = build_ssh_conn_info(_profile_args(no_saved_password=True))
+    unprotect.assert_not_called()
+    assert info.password == ""
+
+
+def test_dpapi_unavailable_falls_back_to_empty_password() -> None:
+    from truba_gui.cli.session import build_ssh_conn_info
+
+    profiles = [{"name": "alpha", "host": "cluster.example", "password_dpapi": "token-123"}]
+    with patch("truba_gui.cli.session.load_profiles", return_value=profiles), patch(
+        "truba_gui.cli.session.secret_store.is_available", return_value=False
+    ), patch("truba_gui.cli.session.secret_store.unprotect_secret") as unprotect:
+        info = build_ssh_conn_info(_profile_args())
+    unprotect.assert_not_called()
+    assert info.password == ""
+
+
+def test_key_path_profile_skips_dpapi_resolution() -> None:
+    from truba_gui.cli.session import build_ssh_conn_info
+
+    profiles = [
+        {
+            "name": "alpha",
+            "host": "cluster.example",
+            "key_path": "/home/bob/id_rsa",
+            "password_dpapi": "token-123",
+        }
+    ]
+    with patch("truba_gui.cli.session.load_profiles", return_value=profiles), patch(
+        "truba_gui.cli.session.secret_store.is_available", return_value=True
+    ), patch("truba_gui.cli.session.secret_store.unprotect_secret") as unprotect:
+        info = build_ssh_conn_info(_profile_args())
+    unprotect.assert_not_called()
+    assert info.password == ""
+
+
+def test_password_stdin_flag_overrides_saved_secret() -> None:
+    from io import StringIO
+
+    from truba_gui.cli.session import build_ssh_conn_info
+
+    profiles = [{"name": "alpha", "host": "cluster.example", "password_dpapi": "token-123"}]
+    with patch("truba_gui.cli.session.load_profiles", return_value=profiles), patch(
+        "truba_gui.cli.session.secret_store.is_available", return_value=True
+    ), patch("truba_gui.cli.session.secret_store.unprotect_secret") as unprotect, patch(
+        "truba_gui.cli.session.sys.stdin", StringIO("from-stdin\n")
+    ):
+        info = build_ssh_conn_info(_profile_args(password_stdin=True))
+    unprotect.assert_not_called()
+    assert info.password == "from-stdin"
+
+
 def test_strict_host_key_flag_overrides_profile_accept_new_default() -> None:
     captured: list[SSHConnInfo] = []
 
@@ -672,6 +790,177 @@ def test_files_ssh_run_124_maps_to_timeout_error() -> None:
         backend.remove("/x")
     with pytest.raises(TimeoutError):
         backend.sha256("/x")
+
+
+def _errno_sftp_raiser(exc_factory):
+    """SFTP client whose listdir_attr/stat raise a freshly built OSError."""
+    return SimpleNamespace(
+        listdir_attr=lambda path: (_ for _ in ()).throw(exc_factory()),
+        stat=lambda path: (_ for _ in ()).throw(exc_factory()),
+    )
+
+
+def _errno_backend(fake_ssh) -> SSHFilesBackend:
+    return SSHFilesBackend(fake_ssh)
+
+
+def _files_session(backend):
+    class FakeSession:
+        files = backend
+
+        def close(self):
+            pass
+
+    return FakeSession()
+
+
+def test_files_ls_missing_sftp_path_reports_not_found_with_path(capsys) -> None:
+    fake_sftp = _errno_sftp_raiser(lambda: OSError(errno.ENOENT, "No such file or directory"))
+    backend = _errno_backend(SimpleNamespace(sftp=fake_sftp, supports_transfer_sftp_channels=lambda: False))
+    with patch("truba_gui.cli.main.CLISession.open", return_value=_files_session(backend)):
+        assert run_cli(["--host", "host", "files", "ls", "/missing"]) == int(ExitCode.OPERATION_FAILED)
+    captured = capsys.readouterr()
+    assert "Not found: /missing" in captured.err
+    assert "Permission denied:" not in captured.err
+
+
+def test_files_ls_permission_denied_sftp_reports_with_path(capsys) -> None:
+    fake_sftp = _errno_sftp_raiser(lambda: OSError(errno.EACCES, "Permission denied"))
+    backend = _errno_backend(SimpleNamespace(sftp=fake_sftp, supports_transfer_sftp_channels=lambda: False))
+    with patch("truba_gui.cli.main.CLISession.open", return_value=_files_session(backend)):
+        assert run_cli(["--host", "host", "files", "ls", "/locked"]) == int(ExitCode.OPERATION_FAILED)
+    captured = capsys.readouterr()
+    assert "Permission denied: /locked" in captured.err
+    assert "Not found:" not in captured.err
+
+
+def test_files_stat_permission_denied_sftp_reports_with_path(capsys) -> None:
+    fake_sftp = _errno_sftp_raiser(lambda: OSError(errno.EACCES, "Permission denied"))
+    backend = _errno_backend(SimpleNamespace(sftp=fake_sftp, supports_transfer_sftp_channels=lambda: False))
+    with patch("truba_gui.cli.main.CLISession.open", return_value=_files_session(backend)):
+        assert run_cli(["--host", "host", "files", "stat", "/locked/file.txt"]) == int(ExitCode.OPERATION_FAILED)
+    captured = capsys.readouterr()
+    assert "Permission denied: /locked/file.txt" in captured.err
+    assert "Not found:" not in captured.err
+
+
+def test_files_checksum_permission_denied_reports_with_path(capsys) -> None:
+    fake_ssh = SimpleNamespace(
+        sftp=object(),
+        supports_transfer_sftp_channels=lambda: False,
+        run=lambda *a, **k: (1, "", "sha256sum: /locked/file.txt: Permission denied"),
+    )
+    backend = _errno_backend(fake_ssh)
+    with patch("truba_gui.cli.main.CLISession.open", return_value=_files_session(backend)):
+        assert run_cli(["--host", "host", "files", "checksum", "/locked/file.txt"]) == int(ExitCode.OPERATION_FAILED)
+    captured = capsys.readouterr()
+    assert "Permission denied: /locked/file.txt" in captured.err
+    assert "Not found:" not in captured.err
+
+
+def test_files_download_permission_denied_reports_with_path(capsys, tmp_path: Path) -> None:
+    class TransferSftp:
+        def stat(self, path):
+            raise OSError(errno.EACCES, "Permission denied")
+
+        def close(self):
+            pass
+
+    fake_ssh = SimpleNamespace(
+        sftp=_errno_sftp_raiser(lambda: OSError(errno.EACCES, "Permission denied")),
+        supports_transfer_sftp_channels=lambda: False,
+        open_transfer_sftp=lambda: TransferSftp(),
+    )
+    backend = _errno_backend(fake_ssh)
+    target = tmp_path / "out.txt"
+    with patch("truba_gui.cli.main.CLISession.open", return_value=_files_session(backend)):
+        assert run_cli(["--host", "host", "files", "download", "/locked/file.txt", str(target)]) == int(
+            ExitCode.OPERATION_FAILED
+        )
+    captured = capsys.readouterr()
+    assert "Permission denied: /locked/file.txt" in captured.err
+    assert "Not found:" not in captured.err
+
+
+def test_files_cp_permission_denied_reports_quoted_destination(capsys) -> None:
+    fake_ssh = SimpleNamespace(
+        sftp=_errno_sftp_raiser(lambda: OSError(errno.EACCES, "Permission denied")),
+        supports_transfer_sftp_channels=lambda: False,
+        run=lambda *a, **k: (1, "", "cp: cannot create regular file '/no/perm/dst': Permission denied"),
+    )
+    backend = _errno_backend(fake_ssh)
+    with patch("truba_gui.cli.main.CLISession.open", return_value=_files_session(backend)):
+        assert run_cli(["--host", "host", "files", "cp", "/no/perm/src", "/no/perm/dst"]) == int(
+            ExitCode.OPERATION_FAILED
+        )
+    captured = capsys.readouterr()
+    assert "Permission denied: /no/perm/dst" in captured.err
+    assert "Not found:" not in captured.err
+
+
+def test_files_mv_permission_denied_reports_quoted_source(capsys) -> None:
+    fake_ssh = SimpleNamespace(
+        sftp=object(),
+        supports_transfer_sftp_channels=lambda: False,
+        run=lambda *a, **k: (1, "", "mv: cannot stat '/no/perm/path': Permission denied"),
+    )
+    backend = _errno_backend(fake_ssh)
+    with patch("truba_gui.cli.main.CLISession.open", return_value=_files_session(backend)):
+        assert run_cli(["--host", "host", "files", "mv", "/no/perm/path", "/dst"]) == int(ExitCode.OPERATION_FAILED)
+    captured = capsys.readouterr()
+    assert "Permission denied: /no/perm/path" in captured.err
+    assert "Not found:" not in captured.err
+
+
+def test_files_rm_permission_denied_reports_quoted_path(capsys) -> None:
+    fake_ssh = SimpleNamespace(
+        sftp=object(),
+        supports_transfer_sftp_channels=lambda: False,
+        run=lambda *a, **k: (1, "", "rm: cannot remove '/no/perm/path': Permission denied"),
+    )
+    backend = _errno_backend(fake_ssh)
+    with patch("truba_gui.cli.main.CLISession.open", return_value=_files_session(backend)):
+        assert run_cli(["--host", "host", "files", "rm", "/no/perm/path", "--yes"]) == int(ExitCode.OPERATION_FAILED)
+    captured = capsys.readouterr()
+    assert "Permission denied: /no/perm/path" in captured.err
+    assert "Not found:" not in captured.err
+
+
+def test_files_rm_missing_reports_not_found_with_path(capsys) -> None:
+    fake_ssh = SimpleNamespace(
+        sftp=object(),
+        supports_transfer_sftp_channels=lambda: False,
+        run=lambda *a, **k: (1, "", "rm: cannot remove '/missing/path': No such file or directory"),
+    )
+    backend = _errno_backend(fake_ssh)
+    with patch("truba_gui.cli.main.CLISession.open", return_value=_files_session(backend)):
+        assert run_cli(["--host", "host", "files", "rm", "/missing/path", "--yes"]) == int(ExitCode.OPERATION_FAILED)
+    captured = capsys.readouterr()
+    assert "Not found: /missing/path" in captured.err
+    assert "Permission denied:" not in captured.err
+
+
+def test_files_ls_existing_empty_directory_returns_empty_list(capsys) -> None:
+    fake_sftp = SimpleNamespace(listdir_attr=lambda path: [])
+    backend = _errno_backend(SimpleNamespace(sftp=fake_sftp, supports_transfer_sftp_channels=lambda: False))
+    with patch("truba_gui.cli.main.CLISession.open", return_value=_files_session(backend)):
+        assert run_cli(["--format", "json", "--host", "host", "files", "ls", "/empty"]) == int(ExitCode.SUCCESS)
+    assert json.loads(capsys.readouterr().out) == []
+
+
+def test_files_mkdir_shell_failure_stays_generic(capsys) -> None:
+    fake_ssh = SimpleNamespace(
+        sftp=object(),
+        supports_transfer_sftp_channels=lambda: False,
+        run=lambda *a, **k: (1, "", "mkdir: cannot create directory '/locked': Permission denied"),
+    )
+    backend = _errno_backend(fake_ssh)
+    with patch("truba_gui.cli.main.CLISession.open", return_value=_files_session(backend)):
+        assert run_cli(["--host", "host", "files", "mkdir", "/locked"]) == int(ExitCode.OPERATION_FAILED)
+    captured = capsys.readouterr()
+    assert "File operation failed" in captured.err
+    assert "Permission denied:" not in captured.err
+    assert "Not found:" not in captured.err
 
 
 @pytest.mark.parametrize(
@@ -1789,3 +2078,230 @@ def test_jobs_cancel_yes_json_envelope_has_result_key(capsys) -> None:
     assert fake_ssh.commands == ["scancel 12345"]
     payload = json.loads(capsys.readouterr().out)
     assert payload == {"result": "scancel: Terminated job 12345"}
+
+
+def test_cli_settings_round_trip_and_defaults(tmp_path: Path) -> None:
+    from truba_gui.config.storage import (
+        get_cli_default_profile,
+        get_cli_external_access_enabled,
+        set_cli_default_profile,
+        set_cli_external_access_enabled,
+    )
+
+    config = tmp_path / "config.json"
+    with patch("truba_gui.config.storage._config_path", return_value=config):
+        assert get_cli_external_access_enabled() is False
+        assert get_cli_default_profile() == ""
+        assert set_cli_external_access_enabled(True) is True
+        assert set_cli_default_profile("  beta  ") == "beta"
+        assert get_cli_external_access_enabled() is True
+        assert get_cli_default_profile() == "beta"
+    record = json.loads(config.read_text(encoding="utf-8"))["settings"]
+    assert record["cli_external_access_enabled"] is True
+    assert record["cli_default_profile"] == "beta"
+
+
+def _run_gate_blocked(argv: list[str], capsys) -> int:
+    with patch("truba_gui.cli.main.CLISession.open") as session_open, patch(
+        "truba_gui.cli.main.get_cli_external_access_enabled", return_value=False
+    ):
+        code = run_cli(argv)
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert "Allow external CLI access to remote commands" in captured.err
+    session_open.assert_not_called()
+    return code
+
+
+@pytest.mark.parametrize(
+    "argv",
+    [
+        ["--host", "host", "files", "ls", "/"],
+        ["--host", "host", "jobs", "list"],
+        ["profile", "test", "alpha"],
+        ["--host", "host", "doctor", "connection"],
+        ["--host", "host", "doctor", "smoke"],
+    ],
+    ids=["files-ls", "jobs-list", "profile-test", "doctor-connection", "doctor-smoke"],
+)
+def test_access_gate_off_blocks_remote_commands(capsys, argv) -> None:
+    assert _run_gate_blocked(argv, capsys) == int(ExitCode.OPERATION_FAILED)
+
+
+def test_access_gate_off_blocked_command_json(capsys) -> None:
+    with patch("truba_gui.cli.main.CLISession.open") as session_open, patch(
+        "truba_gui.cli.main.get_cli_external_access_enabled", return_value=False
+    ):
+        assert run_cli(["--format", "json", "--host", "host", "files", "ls", "/"]) == int(
+            ExitCode.OPERATION_FAILED
+        )
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["error"]["exit_code"] == int(ExitCode.OPERATION_FAILED)
+    assert "Allow external CLI access to remote commands" in payload["error"]["message"]
+    session_open.assert_not_called()
+
+
+def test_access_gate_off_exempt_commands_still_succeed(capsys, tmp_path: Path) -> None:
+    profiles = [{"name": "alpha", "host": "cluster.example", "username": "user"}]
+    with patch("truba_gui.cli.session.load_profiles", return_value=profiles), patch(
+        "truba_gui.cli.main.load_profiles", return_value=profiles
+    ), patch("truba_gui.cli.main.app_data_dir", return_value=tmp_path), patch(
+        "truba_gui.cli.main.get_cli_external_access_enabled", return_value=False
+    ):
+        assert run_cli(["--format", "json", "version"]) == 0
+        assert run_cli(["--format", "json", "commands"]) == 0
+        assert run_cli(["--format", "json", "profile", "list"]) == 0
+        assert run_cli(["--format", "json", "doctor", "environment"]) == 0
+        assert run_cli(["--format", "json", "profile", "show", "alpha"]) == 0
+    captured = capsys.readouterr().out
+    assert '"name": "alpha"' in captured
+    assert '"profiles": 1' in captured
+
+
+def test_access_gate_on_allows_denied_command(capsys) -> None:
+    class FakeFiles:
+        def listdir_entries(self, path):
+            return []
+
+    class FakeSession:
+        files = FakeFiles()
+
+        def close(self):
+            pass
+
+    with patch("truba_gui.cli.main.CLISession.open", return_value=FakeSession()), patch(
+        "truba_gui.cli.main.get_cli_external_access_enabled", return_value=True
+    ):
+        assert run_cli(["--format", "json", "--host", "host", "files", "ls", "/"]) == 0
+    captured = capsys.readouterr()
+    assert "Allow external CLI access" not in captured.err
+    assert json.loads(captured.out) == []
+
+
+def test_effective_profile_name_falls_back_to_saved_default() -> None:
+    from truba_gui.cli.session import effective_profile_name
+
+    args = argparse.Namespace(profile="")
+    with patch("truba_gui.config.storage.get_cli_default_profile", return_value="default"):
+        assert effective_profile_name(args) == "default"
+
+
+def test_effective_profile_name_explicit_overrides_default() -> None:
+    from truba_gui.cli.session import effective_profile_name
+
+    args = argparse.Namespace(profile="explicit")
+    with patch("truba_gui.config.storage.get_cli_default_profile", return_value="default"):
+        assert effective_profile_name(args) == "explicit"
+
+
+def _conn_info_args(**overrides) -> argparse.Namespace:
+    base = dict(
+        profile="",
+        host="",
+        port=None,
+        username="",
+        key_path="",
+        strict_host_key=False,
+        password_stdin=False,
+        no_saved_password=True,
+        timeout=None,
+    )
+    base.update(overrides)
+    return argparse.Namespace(**base)
+
+
+def test_build_ssh_conn_info_uses_default_profile_when_no_flag() -> None:
+    from truba_gui.cli.session import build_ssh_conn_info
+
+    profiles = [{"name": "default", "host": "default.example", "username": "du"}]
+    with patch("truba_gui.cli.session.load_profiles", return_value=profiles), patch(
+        "truba_gui.config.storage.get_cli_default_profile", return_value="default"
+    ):
+        info = build_ssh_conn_info(_conn_info_args())
+    assert info.host == "default.example"
+    assert info.username == "du"
+
+
+def test_build_ssh_conn_info_explicit_profile_overrides_default() -> None:
+    from truba_gui.cli.session import build_ssh_conn_info
+
+    profiles = [
+        {"name": "explicit", "host": "explicit.example", "username": "eu"},
+        {"name": "default", "host": "default.example", "username": "du"},
+    ]
+    with patch("truba_gui.cli.session.load_profiles", return_value=profiles), patch(
+        "truba_gui.config.storage.get_cli_default_profile", return_value="default"
+    ):
+        info = build_ssh_conn_info(_conn_info_args(profile="explicit"))
+    assert info.host == "explicit.example"
+    assert info.username == "eu"
+
+
+def test_build_ssh_conn_info_stale_default_profile_raises() -> None:
+    from truba_gui.cli.session import build_ssh_conn_info
+
+    with patch("truba_gui.cli.session.load_profiles", return_value=[]), patch(
+        "truba_gui.config.storage.get_cli_default_profile", return_value="ghost"
+    ):
+        with pytest.raises(CLIConnectionError, match="Profile not found: ghost"):
+            build_ssh_conn_info(_conn_info_args())
+
+
+def test_jobs_username_honors_default_profile() -> None:
+    from truba_gui.cli.main import _jobs_username
+
+    args = argparse.Namespace(profile="", username="")
+    with patch("truba_gui.cli.main.effective_profile_name", return_value="alpha"), patch(
+        "truba_gui.cli.main.resolve_profile",
+        return_value={"name": "alpha", "username": "defaultuser"},
+    ):
+        assert _jobs_username(args) == "defaultuser"
+
+
+def test_jobs_username_explicit_profile_beats_default() -> None:
+    from truba_gui.cli.main import _jobs_username
+
+    args = argparse.Namespace(profile="explicit", username="")
+    with patch("truba_gui.cli.main.effective_profile_name", return_value="explicit"), patch(
+        "truba_gui.cli.main.resolve_profile",
+        return_value={"name": "explicit", "username": "explicituser"},
+    ):
+        assert _jobs_username(args) == "explicituser"
+
+
+def test_commands_json_inventory_matches_parser_and_exit_codes(capsys) -> None:
+    assert run_cli(["--format", "json", "commands"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    paths = [entry["path"] for entry in payload["commands"]]
+    assert "files ls" in paths
+    assert "jobs submit" in paths
+    assert payload["exit_codes"] == {code.name: int(code.value) for code in ExitCode}
+
+
+def test_unknown_top_level_group_prints_full_help(capsys) -> None:
+    with pytest.raises(SystemExit) as excinfo:
+        run_cli(["fles"])
+    assert excinfo.value.code == 2
+    captured = capsys.readouterr()
+    assert "usage:" in captured.err
+    assert "--format" in captured.err
+    assert "Examples:" in captured.err
+
+
+def test_unknown_files_subcommand_prints_full_group_help(capsys) -> None:
+    with pytest.raises(SystemExit) as excinfo:
+        run_cli(["files", "lss"])
+    assert excinfo.value.code == 2
+    captured = capsys.readouterr()
+    assert "usage:" in captured.err
+    assert "ls" in captured.err
+    assert "upload" in captured.err
+
+
+def test_root_help_contains_examples_block(capsys) -> None:
+    with pytest.raises(SystemExit) as excinfo:
+        run_cli(["--help"])
+    assert excinfo.value.code == 0
+    out = capsys.readouterr().out
+    assert "Examples:" in out
+    assert "hpc-client-gui --profile arf files ls /truba/home" in out

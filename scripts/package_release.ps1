@@ -63,6 +63,18 @@ if (Test-Path (Join-Path $Root "templates")) {
     Copy-Item -Path (Join-Path $Root "templates") -Destination $versionDir -Recurse -Force
 }
 
+$helpSourceDir = Join-Path $Root "src/truba_gui/docs"
+$helpDestDir = Join-Path $versionDir "help"
+New-Item -ItemType Directory -Path $helpDestDir -Force | Out-Null
+$requiredHelpFiles = @("HELP_tr.md", "HELP_en.md", "CLI_GUIDE_tr.md", "CLI_GUIDE_en.md")
+foreach ($fileName in $requiredHelpFiles) {
+    $sourcePath = Join-Path $helpSourceDir $fileName
+    if (-not (Test-Path -LiteralPath $sourcePath -PathType Leaf)) {
+        throw "Release packaging: required help file missing from source: $sourcePath"
+    }
+    Copy-Item -Path $sourcePath -Destination (Join-Path $helpDestDir $fileName) -Force
+}
+
 $exePath = Join-Path $versionDir "hpc-client-gui.exe"
 if (-not (Test-Path $exePath)) {
     throw "Expected packaged exe not found: $exePath"
@@ -87,3 +99,4 @@ Write-Host " - $changelogOut"
 Write-Host " - $(Join-Path $versionDir $releaseExeName)"
 Write-Host " - $zipPath"
 Write-Host " - $shaPath"
+Write-Host " - $helpDestDir"

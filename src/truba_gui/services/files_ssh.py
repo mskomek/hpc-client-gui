@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import contextlib
+import errno
 import os
+import re
 import stat as pystat
 from typing import List, Tuple
 
@@ -8,16 +11,47 @@ from truba_gui.services.files_base import FilesBackend, RemoteEntry
 from truba_gui.ssh.client import SSHClientWrapper
 
 
-def _raise_on_failed_run(code: int, err: str, operation: str) -> None:
+@contextlib.contextmanager
+def _translate_remote_errors(remote_path: str):
+    """Re-raise a typed FileNotFoundError/PermissionError with `remote_path`
+    attached as `.filename`, so callers always get a path-bearing message
+    instead of paramiko's bare `[Errno N] ...` text."""
+    try:
+        yield
+    except (FileNotFoundError, PermissionError) as exc:
+        raise type(exc)(exc.errno, exc.strerror or str(exc), remote_path) from exc
+
+
+_QUOTED_PATH_RE = re.compile(r"'([^']+)'")
+
+
+def _raise_on_failed_run(code: int, err: str, operation: str, path: str | None = None) -> None:
     """Translate a remote shell result into a typed failure.
 
     A socket timeout in ``SSHClientWrapper.run`` surfaces as exit code 124;
     surface that as ``TimeoutError`` so the CLI can route it to ``TIMEOUT``.
+
+    When `path` is given, classify a non-zero, non-timeout failure as
+    ``FileNotFoundError``/``PermissionError`` by matching well-known GNU
+    coreutils stderr wording, attaching whichever path the stderr text
+    quotes (falling back to `path` itself when the text quotes nothing) as
+    ``.filename`` so the CLI can render a path-bearing message. Omitting
+    `path` preserves today's plain ``RuntimeError`` behavior exactly.
     """
     if code == 124:
         raise TimeoutError(f"{operation} timed out")
-    if code != 0:
-        raise RuntimeError(err.strip() or f"{operation} failed (exit={code})")
+    if code == 0:
+        return
+    text = err.strip() or f"{operation} failed (exit={code})"
+    if path is not None:
+        lowered = text.lower()
+        match = _QUOTED_PATH_RE.search(text)
+        reported_path = match.group(1) if match else path
+        if "no such file or directory" in lowered:
+            raise FileNotFoundError(errno.ENOENT, text, reported_path)
+        if "permission denied" in lowered:
+            raise PermissionError(errno.EACCES, text, reported_path)
+    raise RuntimeError(text)
 
 
 class SSHFilesBackend(FilesBackend):
@@ -45,20 +79,22 @@ class SSHFilesBackend(FilesBackend):
         return self._supports_parallel_transfers
 
     def listdir(self, remote_dir: str) -> List[str]:
-        return self.ssh.sftp.listdir(remote_dir)
+        with _translate_remote_errors(remote_dir):
+            return self.ssh.sftp.listdir(remote_dir)
 
     def listdir_entries(self, remote_dir: str) -> List[RemoteEntry]:
         entries: List[RemoteEntry] = []
-        for attr in self.ssh.sftp.listdir_attr(remote_dir):
-            name = getattr(attr, "filename", "") or ""
-            path = remote_dir.rstrip("/") + "/" + name
-            mode = getattr(attr, "st_mode", 0) or 0
-            is_dir = pystat.S_ISDIR(mode)
-            size = int(getattr(attr, "st_size", 0) or 0)
-            mtime = int(getattr(attr, "st_mtime", 0) or 0)
-            entries.append(RemoteEntry(
-                name=name, path=path, is_dir=is_dir, size=size, mtime=mtime, mode=mode
-            ))
+        with _translate_remote_errors(remote_dir):
+            for attr in self.ssh.sftp.listdir_attr(remote_dir):
+                name = getattr(attr, "filename", "") or ""
+                path = remote_dir.rstrip("/") + "/" + name
+                mode = getattr(attr, "st_mode", 0) or 0
+                is_dir = pystat.S_ISDIR(mode)
+                size = int(getattr(attr, "st_size", 0) or 0)
+                mtime = int(getattr(attr, "st_mtime", 0) or 0)
+                entries.append(RemoteEntry(
+                    name=name, path=path, is_dir=is_dir, size=size, mtime=mtime, mode=mode
+                ))
         entries.sort(key=lambda e: (not e.is_dir, e.name.lower()))
         return entries
 
@@ -72,7 +108,8 @@ class SSHFilesBackend(FilesBackend):
             f.write(text.encode("utf-8"))
 
     def stat(self, remote_path: str) -> Tuple[int, int]:
-        st = self.ssh.sftp.stat(remote_path)
+        with _translate_remote_errors(remote_path):
+            st = self.ssh.sftp.stat(remote_path)
         return int(getattr(st, "st_size", 0) or 0), int(getattr(st, "st_mtime", 0) or 0)
 
     def stat_entry(self, remote_path: str) -> RemoteEntry:
@@ -81,7 +118,8 @@ class SSHFilesBackend(FilesBackend):
         Mirrors the fields ``listdir_entries`` emits so ``files stat`` and
         ``files ls`` stay metadata-parity for callers like the CLI.
         """
-        st = self.ssh.sftp.stat(remote_path)
+        with _translate_remote_errors(remote_path):
+            st = self.ssh.sftp.stat(remote_path)
         mode = int(getattr(st, "st_mode", 0) or 0)
         return RemoteEntry(
             name=os.path.basename(remote_path.rstrip("/")) or "/",
@@ -102,7 +140,8 @@ class SSHFilesBackend(FilesBackend):
         """
         sftp = self.ssh.open_transfer_sftp()
         try:
-            remote_size = int(getattr(sftp.stat(remote_path), "st_size", 0) or 0)
+            with _translate_remote_errors(remote_path):
+                remote_size = int(getattr(sftp.stat(remote_path), "st_size", 0) or 0)
             local_size = 0
             try:
                 local_size = os.path.getsize(local_path)
@@ -215,7 +254,7 @@ class SSHFilesBackend(FilesBackend):
         q = shlex.quote(remote_path)
         cmd = f"rm {'-rf' if recursive else '-f'} {q}"
         code, _, err = self.ssh.run(cmd)
-        _raise_on_failed_run(code, err, "rm")
+        _raise_on_failed_run(code, err, "rm", path=remote_path)
 
     def rename(self, remote_path: str, new_remote_path: str) -> None:
         # Prefer SFTP rename (atomic on many servers)
@@ -250,7 +289,7 @@ class SSHFilesBackend(FilesBackend):
         import shlex
 
         code, out, err = self.ssh.run(f"sha256sum -- {shlex.quote(remote_path)}")
-        _raise_on_failed_run(code, err, "sha256sum")
+        _raise_on_failed_run(code, err, "sha256sum", path=remote_path)
         digest = str(out or "").strip().split()[0] if str(out or "").strip() else ""
         if len(digest) != 64:
             raise RuntimeError("Remote sha256sum returned an invalid digest")
@@ -269,11 +308,11 @@ class SSHFilesBackend(FilesBackend):
         d = shlex.quote(dst_remote_path)
         cmd = f"cp {'-r' if recursive else ''} {s} {d}".strip()
         code, _, err = self.ssh.run(cmd)
-        _raise_on_failed_run(code, err, "cp")
+        _raise_on_failed_run(code, err, "cp", path=src_remote_path)
 
     def move(self, src_remote_path: str, dst_remote_path: str) -> None:
         import shlex
         s = shlex.quote(src_remote_path)
         d = shlex.quote(dst_remote_path)
         code, _, err = self.ssh.run(f"mv {s} {d}")
-        _raise_on_failed_run(code, err, "mv")
+        _raise_on_failed_run(code, err, "mv", path=src_remote_path)

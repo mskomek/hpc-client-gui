@@ -18,7 +18,8 @@ function Invoke-ReleaseExeCli {
         [Parameter(Mandatory = $true)]
         [string]$Path,
         [Parameter(Mandatory = $true)]
-        [string[]]$Arguments
+        [string[]]$Arguments,
+        [switch]$PassThru
     )
 
     $psi = [System.Diagnostics.ProcessStartInfo]::new()
@@ -60,6 +61,51 @@ function Invoke-ReleaseExeCli {
     if ($process.ExitCode -ne 0) {
         throw "Release smoke: packaged EXE CLI invocation '$($Arguments -join ' ')' failed with exit code $($process.ExitCode)."
     }
+
+    if ($PassThru) {
+        return $stdout
+    }
+}
+
+function Test-ReleaseHelpFolder {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$ExeDir
+    )
+
+    $helpDir = Join-Path $ExeDir "help"
+    $requiredHelpFiles = @("HELP_tr.md", "HELP_en.md", "CLI_GUIDE_tr.md", "CLI_GUIDE_en.md")
+    foreach ($fileName in $requiredHelpFiles) {
+        $filePath = Join-Path $helpDir $fileName
+        if (-not (Test-Path -LiteralPath $filePath -PathType Leaf)) {
+            throw "Release smoke: required help file missing next to the packaged EXE: $filePath"
+        }
+    }
+    Write-Host "Release smoke: help/ folder present with all 4 required files"
+}
+
+function Test-CommandCoverageInGuides {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Path,
+        [Parameter(Mandatory = $true)]
+        [string]$RepoRoot
+    )
+
+    $json = Invoke-ReleaseExeCli -Path $Path -Arguments @("--format", "json", "commands") -PassThru
+    $data = $json | ConvertFrom-Json
+    $commandPaths = @($data.commands | Select-Object -Skip 1 | ForEach-Object { $_.path })
+
+    $guideEn = Get-Content -Raw -LiteralPath (Join-Path $RepoRoot "src/truba_gui/docs/CLI_GUIDE_en.md")
+    $guideTr = Get-Content -Raw -LiteralPath (Join-Path $RepoRoot "src/truba_gui/docs/CLI_GUIDE_tr.md")
+
+    $missingEn = @($commandPaths | Where-Object { $guideEn -notlike "*$_*" })
+    $missingTr = @($commandPaths | Where-Object { $guideTr -notlike "*$_*" })
+
+    if ($missingEn.Count -gt 0 -or $missingTr.Count -gt 0) {
+        throw "Release smoke: CLI guide coverage gap. Missing from CLI_GUIDE_en.md: [$($missingEn -join ', ')]. Missing from CLI_GUIDE_tr.md: [$($missingTr -join ', ')]."
+    }
+    Write-Host "Release smoke: all $($commandPaths.Count) command paths are documented in both CLI guides"
 }
 
 function Invoke-PackagedExeCliGate {
@@ -74,6 +120,8 @@ function Invoke-PackagedExeCliGate {
     Invoke-ReleaseExeCli -Path $Path -Arguments @("version")
     Write-Host "Release smoke: packaged EXE doctor environment"
     Invoke-ReleaseExeCli -Path $Path -Arguments @("doctor", "environment")
+    Test-ReleaseHelpFolder -ExeDir (Split-Path -Parent $Path)
+    Test-CommandCoverageInGuides -Path $Path -RepoRoot $Root
 }
 
 if ($CliOnly) {
