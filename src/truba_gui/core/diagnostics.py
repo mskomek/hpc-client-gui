@@ -11,7 +11,10 @@ def _candidate_files() -> Iterable[Path]:
     base = Path.home() / ".truba_slurm_gui"
     names = [
         "app.log",
-        "config.json",
+        # config.json is deliberately excluded: it holds saved connection
+        # profiles (host/username) plus encrypted password blobs and salts.
+        # None of that is needed to debug from logs, and it must never leave
+        # the machine in a "send me your logs" bundle.
         "history.json",
         "history.jsonl",
         "last_batch.json",
@@ -28,6 +31,8 @@ def _candidate_files() -> Iterable[Path]:
 
 
 def create_diagnostic_bundle(dest_dir: str) -> Path:
+    from truba_gui.core.log_redaction import redact_text
+
     out_dir = Path(dest_dir).resolve()
     out_dir.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -35,7 +40,13 @@ def create_diagnostic_bundle(dest_dir: str) -> Path:
 
     with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
         for p in _candidate_files():
-            zf.write(p, arcname=p.name)
+            try:
+                content = redact_text(p.read_text(encoding="utf-8", errors="replace"))
+                zf.writestr(p.name, content)
+            except Exception:
+                # Binary or unreadable-as-text; include as-is rather than
+                # drop it silently.
+                zf.write(p, arcname=p.name)
         manifest = {
             "generated_at": datetime.now().isoformat(timespec="seconds"),
             "bundle": zip_path.name,
