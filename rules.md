@@ -83,6 +83,26 @@ Common checks for this repo include:
 
 Do not claim success without recording what was checked.
 
+- Every bug fix must include a narrow regression test when the behavior can be
+  exercised automatically.
+- Tests must assert the observable behavior at the relevant boundary, not only
+  that an internal dependency was called.
+- Parsers for Slurm or other external tools should use anonymized real output
+  fixtures when practical; prefer machine-readable external formats first.
+- CI must run the relevant automated checks for changes to `main`; CI workflow
+  edits require the same review and validation as product code.
+
+## Reliability and Persistence
+
+- SSH, transfer, Slurm, and other network operations must use explicit
+  timeouts and leave an actionable error on timeout.
+- Long-running operations must honour cancellation and release temporary files,
+  sockets, and processes on success, failure, or cancellation.
+- Local configuration, downloads, exports, and generated output must write to
+  a temporary path and atomically replace the final path only after success.
+- Persisted configuration changes must preserve backward compatibility or use
+  a deliberate, testable migration; never silently discard user settings.
+
 ## AI Collaboration Rule
 
 `rules.md` defines product and architecture constraints. `AGENTS.md` defines the
@@ -233,6 +253,9 @@ regardless of which agent drives the call.
 - do not touch `third_party/` assets unless the task explicitly requires it
 - do not edit docs, tests, and source together unless the task truly needs all of them
 - read-only MCP bridge work must stay localhost-only and must not add write or shell execution paths
+- Keep commits focused: do not combine behavior changes with unrelated
+  refactors, and do not mix feature work with release-only metadata unless
+  required.
 
 ## Release Packaging Rule
 
@@ -245,6 +268,11 @@ regardless of which agent drives the call.
 - `help/` is copied from `src/truba_gui/docs/` at packaging time; those files stay the single source of truth and are never edited inside `dist/`.
 - Any user-visible GUI or CLI change updates the Turkish and English docs in the same commit as the code, exactly like the i18n rule.
 - Release is blocked if `help/` is missing a file, or if the CLI guides do not cover every command reported by the CLI's own command inventory.
+- Before a release, inspect the parent-to-release diff. Unexpected source,
+  test, or deleted-file changes block the release until explicitly explained.
+- Release packaging must not overwrite tracked source files. Generated files
+  must be identifiable, and version/configuration metadata should have one
+  authoritative source where practical.
 
 ## Remote Branch Protocol
 

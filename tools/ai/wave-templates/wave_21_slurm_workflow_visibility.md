@@ -1,4 +1,4 @@
-# Wave 21 — Structured Slurm Visibility and HPC Workflow
+# Wave 21 — Structured Slurm Visibility
 
 Status: waiting
 Owner: Codex
@@ -9,43 +9,69 @@ Timeouts: analyze 20m, implement 30m, review 20m
 
 ## Goal
 
-Make the core upload → submit → monitor → results flow easier to use without
-removing raw scheduler output or changing command policy.
+Make the active Jobs & Outputs screen use structured scheduler data while
+preserving raw output for expert diagnostics.
 
 ## Evidence
 
-- `services/slurm_base.py`, `slurm_ssh.py`, and `slurm_mock.py` currently expose
-  raw text for queue/accounting/server queries.
-- `ui/widgets/jobs_widget.py` renders the raw queue text directly.
-- Existing script/template and editor flows already cover much of job creation.
+- `services/slurm_models.py` already has `SlurmJob`, `parse_squeue`, and
+  `parse_sacct`, but the application mounts `JobsOutputsWidget`, not the legacy
+  `JobsWidget` that currently consumes `SlurmJob`.
+- Default `squeue` output is presentation-oriented; default `sacct` output is
+  not requested with the parser-safe `-P/-n` form.
+- User-configured command templates must remain supported; a parser failure
+  must leave raw output visible rather than hiding scheduler diagnostics.
 
 ## Packets
 
-### DS-21A — Parse-once structured job model (Medium)
+### DS-21A — Stable scheduler records and parser coverage (Medium)
 
-- Add a small `SlurmJob` model and parser in the service layer.
-- Keep raw output available and preserve current command/error behavior.
-- Use mock output fixtures for queue and accounting variants.
+- Define machine-readable default templates with an explicit delimiter and
+  stable field order, while preserving existing user overrides.
+- Extend `SlurmJob` only with fields directly used by the next UI packet:
+  reason, nodes, CPUs, node list, and completion exit/failure information when
+  the source provides them.
+- Add fixture-based parser tests for empty fields, embedded delimiters, and raw
+  fallback; do not contact a scheduler.
 
-### DS-21B — Job-linked file actions (Medium)
+Allowed: `config/system_profile.py`, `services/slurm_models.py`, narrow Slurm
+tests, and paired resources only when necessary. Forbidden: UI changes, live
+commands, profiles/schema migration, or invented scheduler settings.
 
-- Add or improve direct access to script, `.out`, `.err`, and result directory
-  using existing file-panel/editor actions.
-- Keep UI handlers thin and all remote path/command construction explicit.
-- Cover unavailable/missing output files with actionable errors.
+### DS-21B — Structured view in the active Jobs & Outputs widget (Medium)
 
-### DS-21C — Clone/resubmit (Medium)
+- Feed parsed queue/accounting records into `JobsOutputsWidget` without moving
+  command composition into the UI.
+- Keep raw `squeue`/`sacct` text reachable in the same screen and fall back to
+  it on malformed or custom output.
+- Show only fields supplied by DS-21A; avoid a new job-details screen or file
+  actions in this packet.
 
-- Reuse the existing editor and submit flow: open a prior script, allow edits,
-  then require the existing confirmation before resubmission.
-- Do not create a second template system or invent scheduler parameters.
+Allowed: `ui/widgets/jobs_outputs_widget.py`, focused widget tests, and both
+i18n files for new visible text. Forbidden: a second job widget, remote file
+actions, polling-policy changes, or broad widget decomposition.
 
-Allowed: Slurm services/models/parsers, jobs UI, existing editor/file actions,
-mock tests, and paired i18n files if visible strings are needed. Forbidden:
-live scheduler calls, new partitions/accounts/limits, and broad UI splitting.
+## Exit Gate
 
-## Exit gate
+The active screen presents reliable structured queue/accounting data, raw text
+remains available, custom command output degrades safely, and all coverage is
+fixture/mock based.
 
-Structured job data powers a useful view while raw output remains available,
-related files are one action away, and resubmission reuses existing safety
-gates.
+## Deferred
+
+Job-linked files, clone/resubmit, and notifications need a separate workflow
+wave after structured records are proven in the active UI.
+
+## Completion Notes
+
+- Completed at:
+- Packet verdicts:
+- Files changed:
+- Tests and exit codes:
+- Remaining uncertainty:
+
+## On Completion
+
+- Codex archives this wave only through `wave-queue.ps1` after every packet
+  has PASS evidence.
+- Stop; report the next waiting wave but do not start it.

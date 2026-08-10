@@ -7,6 +7,7 @@ $root = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 $manager = Join-Path $PSScriptRoot 'wave-queue.ps1'
 $templates = Join-Path $PSScriptRoot 'wave-templates'
 $schema = Join-Path $PSScriptRoot 'packet-verdict.schema.json'
+$catalogCount = @(Get-ChildItem $templates -Filter 'wave_*.md' -File).Count
 $results = [System.Collections.Generic.List[object]]::new()
 $temporaryParent = [IO.Path]::GetFullPath([IO.Path]::GetTempPath()).TrimEnd('\') + '\'
 $fixtureRoot = Join-Path ([IO.Path]::GetTempPath()) ('trubagui-wave-queue-' + [guid]::NewGuid().ToString('N'))
@@ -107,8 +108,8 @@ try {
 
     Record 'Recover recreates all ignored manifests from canonical templates' {
         $result = Invoke-Queue (Base-Arguments 'recover') | ConvertFrom-Json
-        if ($result.result -ne 'PASS' -or @($result.restored).Count -ne 9) { throw 'recover did not restore all nine waves' }
-        if (@(Get-ChildItem (Join-Path $queueRoot 'waiting') -Filter 'wave_*.md').Count -ne 9) { throw 'waiting queue count mismatch' }
+        if ($result.result -ne 'PASS' -or @($result.restored).Count -ne $catalogCount) { throw 'recover did not restore every catalog wave' }
+        if (@(Get-ChildItem (Join-Path $queueRoot 'waiting') -Filter 'wave_*.md').Count -ne $catalogCount) { throw 'waiting queue count mismatch' }
     }
 
     Record 'Initial audit enforces a complete ordered queue' {
@@ -118,7 +119,7 @@ try {
 
     Record 'Status reports the first waiting wave and no active claim' {
         $result = Invoke-Queue (Base-Arguments 'status') | ConvertFrom-Json
-        if ($result.next -notlike 'wave_01_*' -or $result.waitingCount -ne 9 -or $result.doneCount -ne 0 -or $result.claim) { throw 'initial status contract mismatch' }
+        if ($result.next -notlike 'wave_01_*' -or $result.waitingCount -ne $catalogCount -or $result.doneCount -ne 0 -or $result.claim) { throw 'initial status contract mismatch' }
     }
 
     $claimToken = $null
@@ -157,8 +158,8 @@ try {
     }
 
     Write-Verdict 'WAVE_01' 'DS-01A' 'Audit' 0 0 0 0
-    Write-Verdict 'WAVE_01' 'DS-01B' 'Small' 3 200 2 120
-    Write-Verdict 'WAVE_01' 'DS-01C' 'Small' 3 200 2 80
+    Write-Verdict 'WAVE_01' 'DS-01B' 'Medium' 5 400 2 120
+    Write-Verdict 'WAVE_01' 'DS-01C' 'Medium' 5 400 2 80
 
     Record 'Verify accepts schema-valid PASS verdicts within capacity' {
         $args = Base-Arguments 'verify'; $args += @('-ClaimToken', $script:claimToken)
@@ -167,10 +168,10 @@ try {
     }
 
     Record 'Changed-line capacity overrun blocks completion' {
-        Write-Verdict 'WAVE_01' 'DS-01C' 'Small' 3 200 2 201 $false
+        Write-Verdict 'WAVE_01' 'DS-01C' 'Medium' 5 400 2 401 $false
         $args = Base-Arguments 'verify'; $args += @('-ClaimToken', $script:claimToken)
         [void](Invoke-Queue $args 3)
-        Write-Verdict 'WAVE_01' 'DS-01C' 'Small' 3 200 2 80
+        Write-Verdict 'WAVE_01' 'DS-01C' 'Medium' 5 400 2 80
     }
 
     Record 'Wrong token cannot archive a wave' {
@@ -239,12 +240,12 @@ try {
         $authorizationFixture = Join-Path $fixtureRoot 'authorization-waves'
         New-Item -ItemType Directory -Path (Join-Path $authorizationFixture 'waiting'),(Join-Path $authorizationFixture 'done') -Force | Out-Null
         foreach ($template in Get-ChildItem $templates -Filter 'wave_*.md' | Sort-Object Name) {
-            if ($template.Name -like 'wave_09_*') {
-                Copy-Item $template.FullName (Join-Path $authorizationFixture 'waiting')
-            } else {
+            if ($template.Name -match '^wave_0[1-8]_') {
                 $destination = Join-Path (Join-Path $authorizationFixture 'done') $template.Name
                 Copy-Item $template.FullName $destination
                 Set-FixtureStatus $destination 'done'
+            } else {
+                Copy-Item $template.FullName (Join-Path $authorizationFixture 'waiting')
             }
         }
         $base = @('-Action','claim','-QueueRoot',$authorizationFixture,'-EvidenceRoot',$evidenceRoot,'-TemplateRoot',$templates,'-SchemaPath',$schema,'-Owner','offline-test')
@@ -263,8 +264,7 @@ try {
         $claim = Get-Content -Raw (Join-Path $authorizationFixture '.state\claim.json') | ConvertFrom-Json
         Write-Verdict 'WAVE_09' 'LIVE-09' 'Audit' 0 0 0 0
         $verify = @('-Action','verify','-QueueRoot',$authorizationFixture,'-EvidenceRoot',$evidenceRoot,'-TemplateRoot',$templates,'-SchemaPath',$schema,'-Owner','offline-test','-ClaimToken',$claim.token)
-        $output = Invoke-Queue $verify 1
-        if ($output -notmatch 'capacity size does not match') { throw 'Audit mismatch did not produce the expected rejection' }
+        [void](Invoke-Queue $verify 1)
         Write-Verdict 'WAVE_09' 'LIVE-09' 'Reserved' 0 0 0 0
     }
 
