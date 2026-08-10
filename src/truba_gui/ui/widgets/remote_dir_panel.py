@@ -2520,6 +2520,7 @@ class RemoteDirPanel(QWidget):
         This does not add new UX; it only prevents orphan threads and
         persists remaining steps as a diagnostic artifact.
         """
+        still_running: Dict[int, Tuple[QThread, _TransferPlanWorker]] = {}
         try:
             if self._active_worker is not None:
                 try:
@@ -2535,15 +2536,26 @@ class RemoteDirPanel(QWidget):
                     self._active_thread.wait(1500)
                 except Exception:
                     pass
-            planning_jobs = list(self._planning_jobs.values())
-            for _thread, worker in planning_jobs:
+            planning_jobs = list(self._planning_jobs.items())
+            for _job_id, (_thread, worker) in planning_jobs:
                 worker.cancelled = True
-            for thread, _worker in planning_jobs:
+            for job_id, (thread, worker) in planning_jobs:
                 try:
                     thread.quit()
                     thread.wait(1500)
                 except Exception:
                     pass
+                # A worker can still be alive here (e.g. blocked on a
+                # synchronous SFTP call, or on a BlockingQueuedConnection
+                # back to this now-shutting-down GUI thread). Never drop the
+                # last Python reference to a QThread whose OS thread is still
+                # running: PySide6 destroying it in that state is a fatal
+                # native crash ("QThread: Destroyed while thread is still
+                # running"). Keep it referenced; the `thread.finished` signal
+                # already wired at creation calls `_planning_job_finished`,
+                # which pops and `deleteLater()`s it once it actually stops.
+                if thread.isRunning():
+                    still_running[job_id] = (thread, worker)
             # Persist remaining plan if any.
             try:
                 if self._active_plan:
@@ -2555,7 +2567,7 @@ class RemoteDirPanel(QWidget):
         finally:
             self._unregister_instance()
             self._local_upload_plan_jobs.clear()
-            self._planning_jobs.clear()
+            self._planning_jobs = still_running
             self._active_thread = None
             self._active_worker = None
             self._active_plan = []

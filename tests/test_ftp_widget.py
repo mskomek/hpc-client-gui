@@ -5185,6 +5185,9 @@ class FtpWidgetTests(unittest.TestCase):
             def wait(self, timeout: int) -> None:
                 self.wait_calls.append(timeout)
 
+            def isRunning(self) -> bool:
+                return False
+
         active_thread = FakeThread()
         planning_threads = [FakeThread(), FakeThread(), FakeThread()]
         planning_workers = [SimpleNamespace(cancelled=False) for _thread in planning_threads]
@@ -5202,6 +5205,48 @@ class FtpWidgetTests(unittest.TestCase):
                 self.assertEqual(thread.quit_calls, 1)
                 self.assertEqual(thread.wait_calls, [1500])
             self.assertTrue(all(worker.cancelled for worker in planning_workers))
+            # Threads that stopped in time (isRunning() == False) are dropped;
+            # a thread still running after the wait() timeout must stay
+            # referenced so shutdown() never drops the last reference to a
+            # QThread whose OS thread is still alive.
+            self.assertEqual(panel._planning_jobs, {})
+        finally:
+            panel.deleteLater()
+
+    def test_remote_panel_shutdown_keeps_still_running_planning_thread_referenced(self) -> None:
+        panel = RemoteDirPanel()
+
+        class FakeThread:
+            def __init__(self, running_after_wait: bool) -> None:
+                self.quit_calls = 0
+                self.wait_calls: list[int] = []
+                self._running_after_wait = running_after_wait
+
+            def quit(self) -> None:
+                self.quit_calls += 1
+
+            def wait(self, timeout: int) -> None:
+                self.wait_calls.append(timeout)
+
+            def isRunning(self) -> bool:
+                return self._running_after_wait
+
+        stuck_thread = FakeThread(running_after_wait=True)
+        finished_thread = FakeThread(running_after_wait=False)
+        stuck_worker = SimpleNamespace(cancelled=False)
+        finished_worker = SimpleNamespace(cancelled=False)
+        panel._planning_jobs = {
+            0: (stuck_thread, stuck_worker),
+            1: (finished_thread, finished_worker),
+        }
+        try:
+            panel.shutdown()
+
+            self.assertTrue(stuck_worker.cancelled)
+            self.assertTrue(finished_worker.cancelled)
+            # Still-running thread must stay referenced (not dropped) so
+            # PySide6 never destroys it while its OS thread is alive.
+            self.assertEqual(panel._planning_jobs, {0: (stuck_thread, stuck_worker)})
         finally:
             panel.deleteLater()
 
