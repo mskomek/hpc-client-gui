@@ -31,6 +31,13 @@ def write_crash_flag(exc_type: Optional[type] = None, exc_value: Optional[BaseEx
                 except Exception:
                     pass
 
+        try:
+            from truba_gui.core.log_redaction import redact_text
+
+            summary = redact_text(summary)
+        except Exception:
+            pass
+
         flag = {
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "summary": summary[:4000],

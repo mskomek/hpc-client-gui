@@ -10,6 +10,7 @@ from PySide6.QtWidgets import (
 from truba_gui.core.i18n import t
 from truba_gui.core.logging import log_path
 from truba_gui.core.diagnostics import create_diagnostic_bundle
+from truba_gui.core.log_redaction import redact_text
 
 
 class SendLogsDialog(QDialog):
@@ -89,7 +90,7 @@ class SendLogsDialog(QDialog):
             if len(lines) > 5000:
                 lines = lines[-5000:]
             lines.reverse()
-            self._log_view.setPlainText("".join(lines))
+            self._log_view.setPlainText(redact_text("".join(lines)))
         except Exception as e:
             self._log_view.setPlainText(t("logs.read_failed").format(err=str(e)))
 
