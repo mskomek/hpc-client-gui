@@ -51,3 +51,4 @@ tools/ai/deepseek-models.local.psd1
 
 # Release packages are GitHub Release assets, never source-controlled.
 /dist/releases/
+/dist/hpc-client-cli/

@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.2.0
+
+### Licensing Change
+
+Starting with v1.2.0 the project moves from the MIT License to the PolyForm
+Noncommercial License 1.0.0, with a separate commercial license path available
+(see `COMMERCIAL_LICENSE.md`). Prior releases remain MIT-licensed; the MIT
+grant for those releases is not revoked.
+
 ## Unreleased
 
 ## v1.1.21
