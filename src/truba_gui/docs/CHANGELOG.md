@@ -9,6 +9,28 @@ Noncommercial License 1.0.0, with a separate commercial license path available
 (see `COMMERCIAL_LICENSE.md`). Prior releases remain MIT-licensed; the MIT
 grant for those releases is not revoked.
 
+### Stability
+- Transfers: fixed a native crash that could happen on app shutdown while a
+  download/upload planning thread was still active — the thread is now kept
+  alive until it actually finishes instead of being torn down mid-run, and
+  its completion callbacks now guard against a panel that was already closed.
+- Transfers: SFTP transfer channels now use a bounded socket timeout, so a
+  silently dropped connection surfaces as a failed transfer instead of
+  freezing the queue at 100% forever.
+
+### Crash Reporting
+- Added a crash dialog that appears automatically after an unexpected error
+  (and again on the next startup if the app closed unexpectedly), plus a
+  permanent "Send Logs" toolbar button for reviewing and sharing logs anytime.
+
+### Privacy
+- Logs and diagnostics exports now redact the local Windows username and any
+  saved connection profile's username/hostname before they can be copied,
+  exported, or shown in a crash summary.
+- Diagnostics export no longer includes `config.json` (which holds saved
+  connection profiles and encrypted password data); it was never needed for
+  log-based debugging.
+
 ## Unreleased
 
 ## v1.1.21
