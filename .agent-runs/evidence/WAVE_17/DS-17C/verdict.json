@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "wave": "WAVE_17",
+  "packet": "DS-17C",
+  "verdict": "PASS",
+  "verifiedBy": "Codex",
+  "verifiedAt": "2026-08-08T22:35:00+03:00",
+  "relatedRunIds": ["20260808-215444-853-analyze", "20260808-221607-665-implement"],
+  "allowedPaths": ["src/truba_gui/services/transfer_mode.py", "tests/test_ftp_widget.py", "tests/test_transfer_wave17.py"],
+  "observedPaths": ["src/truba_gui/services/transfer_mode.py", "tests/test_ftp_widget.py", "tests/test_transfer_wave17.py"],
+  "diffStat": ["3 files changed; existing optional verification preserved"],
+  "testsRun": [{"command": "$env:PYTHONPATH='src'; python -m pytest tests -q", "exitCode": 0, "outcome": "PASS", "evidenceFile": null}],
+  "evidenceFiles": [".agent-runs/20260808-221607-665-implement/metadata.json"],
+  "reviewFindings": ["Existing optional SHA-256 verification remains unchanged because its callers are outside this bounded packet; no unsafe size-only identity inference was added."],
+  "resolutions": ["No public verification boundary was changed."],
+  "remainingUncertainty": [],
+  "capacity": {"size": "Small", "maxFiles": 3, "maxChangedLines": 200, "observedFiles": 3, "observedChangedLines": 20, "withinLimit": true},
+  "nextPermittedPacket": null
+}

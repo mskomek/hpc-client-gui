@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "wave": "WAVE_17",
+  "packet": "DS-17B",
+  "verdict": "PASS",
+  "verifiedBy": "Codex",
+  "verifiedAt": "2026-08-08T22:35:00+03:00",
+  "relatedRunIds": ["20260808-221607-665-implement"],
+  "allowedPaths": ["src/truba_gui/services/transfer_mode.py", "tests/test_ftp_widget.py", "tests/test_transfer_wave17.py"],
+  "observedPaths": ["src/truba_gui/services/transfer_mode.py", "tests/test_ftp_widget.py", "tests/test_transfer_wave17.py"],
+  "diffStat": ["3 files changed; atomic partial-file completion"],
+  "testsRun": [{"command": "$env:PYTHONPATH='src'; python -m pytest tests/test_transfer_wave17.py tests/test_ftp_widget.py tests/test_local_transfer_gate.py -q", "exitCode": 0, "outcome": "PASS", "evidenceFile": null}],
+  "evidenceFiles": [".agent-runs/20260808-221607-665-implement/metadata.json"],
+  "reviewFindings": ["Independent review passed; downloads use .part plus replace and rename-capable uploads use a temporary server-side name with direct fallback."],
+  "resolutions": ["Existing resume and progress paths remain active against the temporary names."],
+  "remainingUncertainty": [],
+  "capacity": {"size": "Medium", "maxFiles": 5, "maxChangedLines": 400, "observedFiles": 3, "observedChangedLines": 120, "withinLimit": true},
+  "nextPermittedPacket": "DS-17C"
+}

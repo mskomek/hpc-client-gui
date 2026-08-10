@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1, "wave": "WAVE_16", "packet": "DS-16C", "verdict": "PASS", "verifiedBy": "Codex", "verifiedAt": "2026-08-08T21:45:00+03:00",
+  "relatedRunIds": ["20260808-204735-630-implement"],
+  "allowedPaths": ["src/truba_gui/ui/dialogs/transfer_dialog.py", "src/truba_gui/ui/widgets/ftp_widget.py", "src/truba_gui/ui/widgets/remote_dir_panel.py", "tests/test_ftp_widget.py"],
+  "observedPaths": ["src/truba_gui/ui/dialogs/transfer_dialog.py", "src/truba_gui/ui/widgets/ftp_widget.py", "src/truba_gui/ui/widgets/remote_dir_panel.py", "tests/test_ftp_widget.py"],
+  "diffStat": ["4 files changed, 152 changed lines"],
+  "testsRun": [{"command": "$env:PYTHONPATH='src'; python -m pytest tests/test_ftp_widget.py -q", "exitCode": 0, "outcome": "PASS", "evidenceFile": ".agent-runs/20260808-204735-630-implement/metadata.json"}],
+  "evidenceFiles": [".agent-runs/wave16-ds16c.log"], "reviewFindings": [], "resolutions": ["Cached sizes and direct row/progress maps avoid repeated stat and queue scans."], "remainingUncertainty": [],
+  "capacity": {"size": "Medium", "maxFiles": 5, "maxChangedLines": 400, "observedFiles": 4, "observedChangedLines": 152, "withinLimit": true}, "nextPermittedPacket": "DS-16D"
+}
