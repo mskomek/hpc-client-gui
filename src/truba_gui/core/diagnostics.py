@@ -1,0 +1,56 @@
+from __future__ import annotations
+
+import json
+import zipfile
+from datetime import datetime
+from pathlib import Path
+from typing import Iterable
+
+
+def _candidate_files() -> Iterable[Path]:
+    base = Path.home() / ".truba_slurm_gui"
+    names = [
+        "app.log",
+        # config.json is deliberately excluded: it holds saved connection
+        # profiles (host/username) plus encrypted password blobs and salts.
+        # None of that is needed to debug from logs, and it must never leave
+        # the machine in a "send me your logs" bundle.
+        "history.json",
+        "history.jsonl",
+        "last_batch.json",
+        "processes.json",
+        "transfer_journal.jsonl",
+        "vcxsrv_stdout.log",
+        "vcxsrv_stderr.log",
+        "language.json",
+    ]
+    for n in names:
+        p = base / n
+        if p.exists() and p.is_file():
+            yield p
+
+
+def create_diagnostic_bundle(dest_dir: str) -> Path:
+    from truba_gui.core.log_redaction import redact_text
+
+    out_dir = Path(dest_dir).resolve()
+    out_dir.mkdir(parents=True, exist_ok=True)
+    stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    zip_path = out_dir / f"truba_diagnostics_{stamp}.zip"
+
+    with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        for p in _candidate_files():
+            try:
+                content = redact_text(p.read_text(encoding="utf-8", errors="replace"))
+                zf.writestr(p.name, content)
+            except Exception:
+                # Binary or unreadable-as-text; include as-is rather than
+                # drop it silently.
+                zf.write(p, arcname=p.name)
+        manifest = {
+            "generated_at": datetime.now().isoformat(timespec="seconds"),
+            "bundle": zip_path.name,
+        }
+        zf.writestr("manifest.json", json.dumps(manifest, ensure_ascii=False, indent=2))
+
+    return zip_path

@@ -1,0 +1,54 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.env
+
+
+/reports/
+/build/hpc-client-gui/COLLECT-00.toc
+
+/dist/hpc-client-gui/_internal/PySide6/
+/dist/hpc-client-gui/_internal/shiboken6/
+/dist/hpc-client-gui/_internal/cryptography-46.0.5.dist-info/
+/dist/hpc-client-gui/_internal/templates/
+
+# Qt / PySide
+*.qrc
+*.qm
+
+# Logs
+*.log
+
+# Runtime state (app)
+.truba_slurm_gui/
+
+# Third-party binaries (downloaded at runtime)
+src/truba_gui/third_party/
+third_party/
+**/third_party/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+/HPC-Client-GUI.zip
+/.continue/
+/chatlogs/
+/.codex/
+
+# Project-local delegated-agent run logs and optional non-secret model overrides
+.agent-runs/
+tools/ai/deepseek-models.local.psd1
+
+# Local sequential wave queue and archived wave execution records
+/waves/
+
+# Release packages are GitHub Release assets, never source-controlled.
+/dist/releases/
+/dist/hpc-client-cli/

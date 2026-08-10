@@ -1,0 +1,47 @@
+name: Release Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version tag (example: 1.0.0)"
+        required: true
+        default: "0.1.0"
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install deps
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+      - name: Build release artifacts
+        shell: pwsh
+        run: ./scripts/release.ps1 -Version "${{ github.event.inputs.version }}"
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: hpc-client-gui-${{ github.event.inputs.version }}
+          path: |
+            dist/releases/v${{ github.event.inputs.version }}/**
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ github.event.inputs.version }}
+          name: v${{ github.event.inputs.version }}
+          body_path: dist/releases/v${{ github.event.inputs.version }}/CHANGELOG.md
+          files: |
+            dist/releases/v${{ github.event.inputs.version }}/hpc-client-gui_windows_onedir.zip
+            dist/releases/v${{ github.event.inputs.version }}/hpc-client-gui_windows_onedir.zip.sha256
+            dist/releases/v${{ github.event.inputs.version }}/truba-client-gui_windows_onedir.zip
+            dist/releases/v${{ github.event.inputs.version }}/truba-client-gui_windows_onedir.zip.sha256
