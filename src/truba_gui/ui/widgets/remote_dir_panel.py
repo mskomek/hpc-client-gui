@@ -13,6 +13,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Dict, Generator, Iterable, List, Optional, Tuple
 
+from shiboken6 import isValid
+
 from PySide6.QtCore import (
     QEvent,
     Q_ARG,
@@ -2952,6 +2954,8 @@ class RemoteDirPanel(QWidget):
         kind: str,
         result,
     ) -> None:
+        if not isValid(self):
+            return
         if job_id not in self._planning_jobs or not result:
             return
         if result.get("conflict"):
@@ -2983,6 +2987,8 @@ class RemoteDirPanel(QWidget):
         _kind: str,
         exc,
     ) -> None:
+        if not isValid(self):
+            return
         if job_id not in self._planning_jobs:
             return
         show_exception(
@@ -2994,6 +3000,15 @@ class RemoteDirPanel(QWidget):
         )
 
     def _planning_job_finished(self, job_id: int) -> None:
+        if not isValid(self):
+            # The panel's underlying C++ QWidget can already be gone by the
+            # time a background planning QThread we deliberately kept alive
+            # (see shutdown()) finally emits `finished` during app teardown.
+            # Touching `self` past that point corrupts native heap state
+            # instead of raising a clean Python error. There is nothing left
+            # to clean up on a destroyed panel; let `thread`/`worker` be
+            # garbage-collected once the signal-connection reference drops.
+            return
         current = self._planning_jobs.pop(job_id, None)
         if current is not None:
             thread, _worker = current
