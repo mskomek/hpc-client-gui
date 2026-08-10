@@ -48,6 +48,10 @@ _SSH_CONNECT_AND_KEX_TIMEOUT_SECONDS = 45
 _SSH_BANNER_TIMEOUT_SECONDS = 45
 _SSH_AUTH_TIMEOUT_SECONDS = 30
 _SSH_CHANNEL_TIMEOUT_SECONDS = 30
+# Generous relative to the interactive-shell timeout: a transfer channel
+# only needs to detect a truly dead connection, not bound normal chunk
+# pacing on a slow HPC link.
+_SFTP_TRANSFER_TIMEOUT_SECONDS = 60
 
 _KEEPALIVE_INTERVAL_DEFAULT = 30
 
@@ -489,7 +493,18 @@ class SSHClientWrapper:
         is_authenticated = getattr(transport, "is_authenticated", None)
         if callable(is_authenticated) and not is_authenticated():
             raise RuntimeError("SSH transport is not authenticated")
-        return paramiko.SFTPClient.from_transport(transport)
+        sftp = paramiko.SFTPClient.from_transport(transport)
+        # Without a channel timeout, a silently dead connection (dropped VPN,
+        # NAT/firewall idle-kill, etc.) leaves stat()/read()/write() blocked
+        # forever with no way for the worker thread, its QThread, or the app
+        # to ever unstick — the transfer row freezes at 100% and, if the app
+        # is closed while blocked, can crash on shutdown. Bound every SFTP
+        # channel so a dead connection surfaces as a normal socket.timeout
+        # (caught and reported as a failed transfer) instead of hanging.
+        channel = sftp.get_channel()
+        if channel is not None:
+            channel.settimeout(_SFTP_TRANSFER_TIMEOUT_SECONDS)
+        return sftp
 
     def supports_transfer_sftp_channels(self) -> bool:
         """Probe whether the active connection can create isolated channels."""
