@@ -639,5 +639,16 @@
     "s6_title": "Logs & Diagnostics",
     "s6_body": "Use logs and diagnostics export for troubleshooting and support."
   },
-  "common.error_code": "Error Code"
+  "common.error_code": "Error Code",
+  "crash": {
+    "send_logs_btn": "Send Logs",
+    "send_logs_tip": "View and share logs for debugging",
+    "dialog_title": "Send Logs",
+    "dialog_title_crash": "Application Error - Send Logs",
+    "crash_context": "The application encountered an unexpected error. You can share the logs below with the developer.",
+    "manual_context": "Logs are sorted from newest to oldest. You can copy them or create a diagnostic bundle to send to the developer.",
+    "copy_logs": "Copy Logs",
+    "export_diagnostics": "Export Diagnostics",
+    "close": "Close"
+  }
 }

@@ -35,6 +35,7 @@ from .widgets.editor_widget import EditorWidget
 from .widgets.logs_widget import LogsWidget
 from .dialogs.help_dialog import HelpDialog
 from .dialogs.settings_dialog import SettingsDialog
+from .dialogs.send_logs_dialog import SendLogsDialog
 from truba_gui.config.storage import (
     SBATCH_FOLLOW_MODE_NEW_TABS_SPLIT,
     SBATCH_FOLLOW_MODE_OUTPUTS_TAB,
@@ -304,6 +305,12 @@ class MainWindow(QMainWindow):
             lambda: self._check_for_updates(manual=True)
         )
 
+        self._send_logs_btn = QToolButton(self)
+        self._send_logs_btn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
+        self._send_logs_btn.setAutoRaise(False)
+        self._send_logs_btn.setMinimumWidth(110)
+        self._send_logs_btn.clicked.connect(self._open_send_logs)
+
         # Put the button into a container so it doesn't get clipped by the cornerWidget geometry.
         lang_container = QWidget(self)
         lang_container.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
@@ -315,6 +322,7 @@ class MainWindow(QMainWindow):
         )
         layout.addWidget(self._version_label)
         layout.addWidget(self._update_btn)
+        layout.addWidget(self._send_logs_btn)
         layout.addWidget(self._settings_btn)
         layout.addWidget(self._help_btn)
         layout.addWidget(self._lang_btn)
@@ -357,6 +365,13 @@ class MainWindow(QMainWindow):
             self.jobs_outputs.apply_refresh_settings()
             self._sync_command_polling()
             self.ftp.apply_settings()
+        except Exception:
+            pass
+
+    def _open_send_logs(self):
+        try:
+            dlg = SendLogsDialog(self, crash_context=False)
+            dlg.exec()
         except Exception:
             pass
 
@@ -581,6 +596,9 @@ class MainWindow(QMainWindow):
         if hasattr(self, "_update_btn"):
             self._update_btn.setText(t("updates.action"))
             self._update_btn.setToolTip(t("updates.check_tip"))
+        if hasattr(self, "_send_logs_btn"):
+            self._send_logs_btn.setText(t("crash.send_logs_btn"))
+            self._send_logs_btn.setToolTip(t("crash.send_logs_tip"))
         # Button shows currently selected language (with flag) and is wide enough
         if hasattr(self, "_lang_btn"):
             cur = getattr(self, "_current_lang", None)

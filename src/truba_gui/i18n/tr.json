@@ -637,6 +637,17 @@
     "s6_title": "Log ve Tanı",
     "s6_body": "Sorun giderme ve destek için logları ve tanı paketi dışa aktarmayı kullan."
   },
-  "common.error_code": "Hata Kodu"
+  "common.error_code": "Hata Kodu",
+  "crash": {
+    "send_logs_btn": "Logları Gönder",
+    "send_logs_tip": "Hata ayıklama için logları görüntüle ve paylaş",
+    "dialog_title": "Log Gönderimi",
+    "dialog_title_crash": "Uygulama Hatası - Log Gönderimi",
+    "crash_context": "Uygulama beklenmedik bir hatayla karşılaştı. Aşağıdaki logları geliştiriciyle paylaşabilirsiniz.",
+    "manual_context": "Loglar en yeniden eskiye sıralanmıştır. Geliştiriciye göndermek için kopyalayabilir veya tanı paketi oluşturabilirsiniz.",
+    "copy_logs": "Logları Kopyala",
+    "export_diagnostics": "Tanı Paketini Dışa Aktar",
+    "close": "Kapat"
+  }
 }
 

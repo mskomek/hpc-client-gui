@@ -27,12 +27,24 @@ def install_crash_logging() -> None:
             getattr(args.thread, "name", "unknown"),
             exc_info=(args.exc_type, args.exc_value, args.exc_traceback),
         )
+        try:
+            from truba_gui.core.crash_reporter import write_crash_flag
+
+            write_crash_flag(args.exc_type, args.exc_value, args.exc_traceback)
+        except Exception:
+            pass
 
     def _unraisable_hook(args):
         logging.getLogger("truba_gui.crash").error(
             "Unraisable exception object=%r", args.object,
             exc_info=(args.exc_type, args.exc_value, args.exc_traceback),
         )
+        try:
+            from truba_gui.core.crash_reporter import write_crash_flag
+
+            write_crash_flag(args.exc_type, args.exc_value, args.exc_traceback)
+        except Exception:
+            pass
 
     threading.excepthook = _thread_hook
     sys.unraisablehook = _unraisable_hook
@@ -79,14 +91,27 @@ def setup_logging(level: int = logging.INFO) -> None:
 
 
 def install_excepthook() -> None:
-    """Log uncaught exceptions to the app log."""
+    """Log uncaught exceptions to the app log and show crash dialog."""
 
     def _hook(exc_type, exc, tb):
         try:
             logging.getLogger("truba_gui").exception("Uncaught exception", exc_info=(exc_type, exc, tb))
         except Exception:
             pass
-        # Keep default behavior (prints to stderr)
+        try:
+            from truba_gui.core.crash_reporter import write_crash_flag, show_crash_dialog
+
+            write_crash_flag(exc_type, exc, tb)
+            try:
+                from PySide6.QtWidgets import QApplication
+
+                app = QApplication.instance()
+                if app is not None:
+                    show_crash_dialog(None)
+            except Exception:
+                pass
+        except Exception:
+            pass
         try:
             sys.__excepthook__(exc_type, exc, tb)
         except Exception:

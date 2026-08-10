@@ -11,6 +11,7 @@ from truba_gui.core.i18n import validate_language_files
 from truba_gui.core.logging_setup import setup_logging, install_crash_logging, install_excepthook
 from truba_gui.core.debug_support import log_startup_snapshot
 from truba_gui.core.debug_telemetry import DebugTelemetry, is_source_run
+from truba_gui.core.crash_reporter import read_crash_flag, clear_crash_flag
 from truba_gui.ui.main_window import MainWindow
 from truba_gui.config.storage import get_ui_pref_bool, set_ui_pref_bool
 from truba_gui.ui.dialogs.welcome_dialog import WelcomeDialog
@@ -120,6 +121,29 @@ def main() -> int:
     _performance_mark("main_window_shown")
     app.processEvents()
     splash.finish(w)
+
+    # If the previous session crashed, show the crash dialog on startup.
+    try:
+        crash_flag = read_crash_flag()
+        if crash_flag is not None:
+            from truba_gui.ui.dialogs.send_logs_dialog import SendLogsDialog
+            from PySide6.QtCore import QTimer
+
+            def _show_crash_dlg():
+                try:
+                    dlg = SendLogsDialog(
+                        w, crash_context=True,
+                        crash_summary=crash_flag.get("summary", ""),
+                    )
+                    dlg.exec()
+                except Exception:
+                    pass
+                finally:
+                    clear_crash_flag()
+
+            QTimer.singleShot(500, _show_crash_dlg)
+    except Exception:
+        pass
 
     probe = _performance_probe()
     if probe is not None:
