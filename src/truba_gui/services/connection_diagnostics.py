@@ -9,6 +9,7 @@ detail static so no host, username, key path, or raw exception text leaks out.
 from __future__ import annotations
 
 import socket
+from dataclasses import replace
 from typing import Any, Callable, Optional
 
 from truba_gui.ssh.client import SSHClientWrapper, SSHConnInfo
@@ -17,10 +18,8 @@ from truba_gui.ssh.client import SSHClientWrapper, SSHConnInfo
 STAGES = ("port", "auth", "sftp", "checksum")
 
 
-def _default_socket_connect(host: str, port: int, timeout: Optional[float]) -> bool:
-    connection = socket.create_connection((host, port), timeout=timeout)
-    connection.close()
-    return True
+def _default_socket_connect(host: str, port: int, timeout: Optional[float]) -> socket.socket:
+    return socket.create_connection((host, port), timeout=timeout)
 
 
 def _default_ssh_factory(info: SSHConnInfo) -> SSHClientWrapper:
@@ -70,16 +69,18 @@ def run_connection_diagnostics(
         name: {"status": "not_attempted", "detail": ""} for name in STAGES
     }
     wrapper: Any = None
+    connected_socket: Any = None
     try:
         try:
-            socket_connect(info.host, info.port, info.timeout)
+            connected_socket = socket_connect(info.host, info.port, info.timeout)
             stages["port"] = {"status": "PASS", "detail": "reachable"}
         except Exception:
             stages["port"] = {"status": "FAIL", "detail": "port not reachable"}
             return {"status": "FAIL", "profile": "", "stages": stages}
 
         try:
-            wrapper = ssh_factory(info)
+            wrapper = ssh_factory(replace(info, preconnected_socket=connected_socket))
+            connected_socket = None  # The wrapper now owns the socket.
             stages["auth"] = {"status": "PASS", "detail": "authenticated"}
         except Exception:
             stages["auth"] = {"status": "FAIL", "detail": "authentication failed"}
@@ -108,5 +109,10 @@ def run_connection_diagnostics(
         if wrapper is not None:
             try:
                 wrapper.close()
+            except Exception:
+                pass
+        elif connected_socket is not None:
+            try:
+                connected_socket.close()
             except Exception:
                 pass
