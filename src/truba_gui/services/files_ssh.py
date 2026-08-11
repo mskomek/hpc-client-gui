@@ -247,6 +247,21 @@ class SSHFilesBackend(FilesBackend):
             except Exception:
                 pass
 
+    def upload_and_rename(self, local_path: str, temporary_path: str, remote_path: str, progress_cb=None) -> None:
+        sftp = self.ssh.open_transfer_sftp()
+        try:
+            local_size = os.path.getsize(local_path)
+            with open(local_path, "rb") as source, sftp.open(temporary_path, "wb") as target:
+                sent = 0
+                while chunk := source.read(1024 * 1024):
+                    target.write(chunk)
+                    sent += len(chunk)
+                    if progress_cb is not None:
+                        progress_cb(sent, local_size)
+            sftp.rename(temporary_path, remote_path)
+        finally:
+            sftp.close()
+
     def remove(self, remote_path: str, recursive: bool = False) -> None:
         # Use shell rm to support recursive deletes reliably.
         # remote_path is user-provided via UI; quote defensively.
