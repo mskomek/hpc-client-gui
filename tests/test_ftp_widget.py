@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import sys
 import stat
 import tempfile
 import threading
@@ -4413,6 +4414,7 @@ class FtpWidgetTests(unittest.TestCase):
             ],
         )
 
+    @unittest.skipUnless(sys.platform == "win32", "Windows Explorer integration")
     def test_local_context_open_uses_file_explorer_target(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             src = Path(tmp, "old.txt")
