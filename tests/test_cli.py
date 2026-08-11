@@ -601,7 +601,7 @@ def test_verbose_debug_only_with_flag_and_key_path_redacted(capsys) -> None:
     json.loads(verbose.out)
     assert "[debug]" in verbose.err
     assert "[debug]" not in verbose.out
-    assert "using key" in verbose.err
+    assert "using configured key" in verbose.err
     assert "private_place" not in verbose.out + verbose.err
 
 
@@ -1496,6 +1496,8 @@ def test_diagnostics_checksum_nonzero_exit_marks_checksum_fail() -> None:
 
 def test_diagnostics_all_stages_pass_and_wrapper_closed() -> None:
     closed: list[bool] = []
+    connected_socket = object()
+    received_sockets: list[object] = []
 
     class Wrapper:
         def supports_transfer_sftp_channels(self):
@@ -1504,11 +1506,15 @@ def test_diagnostics_all_stages_pass_and_wrapper_closed() -> None:
         def close(self):
             closed.append(True)
 
+    def ssh_factory(info):
+        received_sockets.append(info.preconnected_socket)
+        return Wrapper()
+
     info = SSHConnInfo(host="cluster.example", port=22)
     payload = run_connection_diagnostics(
         info,
-        socket_connect=lambda *_args: True,
-        ssh_factory=lambda _info: Wrapper(),
+        socket_connect=lambda *_args: connected_socket,
+        ssh_factory=ssh_factory,
         checksum_probe=lambda _wrapper: 0,
     )
     assert payload["status"] == "PASS"
@@ -1517,6 +1523,7 @@ def test_diagnostics_all_stages_pass_and_wrapper_closed() -> None:
     assert payload["stages"]["sftp"] == {"status": "PASS", "detail": "sftp subsystem available"}
     assert payload["stages"]["checksum"] == {"status": "PASS", "detail": "sha256sum available"}
     assert closed == [True]
+    assert received_sockets == [connected_socket]
 
 
 def test_doctor_connection_all_pass_exit_zero_json_four_stages(capsys) -> None:

@@ -179,6 +179,7 @@ class SSHConnInfo:
     keepalive_interval_seconds: int = _KEEPALIVE_INTERVAL_DEFAULT  # 0 disables
     known_hosts_path: str = ""
     host_key_decision: Optional[Callable[[HostKeyInfo], str]] = None
+    preconnected_socket: Optional[socket.socket] = None
 
 
 class SSHClientWrapper:
@@ -251,10 +252,11 @@ class SSHClientWrapper:
         banner_timeout = info.timeout if info.timeout is not None else _SSH_BANNER_TIMEOUT_SECONDS
         auth_timeout = info.timeout if info.timeout is not None else _SSH_AUTH_TIMEOUT_SECONDS
         channel_timeout = info.timeout if info.timeout is not None else _SSH_CHANNEL_TIMEOUT_SECONDS
+        connection_kwargs = ({"sock": info.preconnected_socket} if info.preconnected_socket is not None else {})
 
         try:
             if info.key_path:
-                self.log(f"SSH: using key {os.path.basename(info.key_path)}")
+                self.log("SSH: using configured key")
                 pkey = paramiko.PKey.from_path(info.key_path)
                 self.client.connect(
                     hostname=info.host,
@@ -267,6 +269,7 @@ class SSHClientWrapper:
                     channel_timeout=channel_timeout,
                     allow_agent=True,
                     look_for_keys=True,
+                    **connection_kwargs,
                 )
             else:
                 self.client.connect(
@@ -280,6 +283,7 @@ class SSHClientWrapper:
                     channel_timeout=channel_timeout,
                     allow_agent=True,
                     look_for_keys=True,
+                    **connection_kwargs,
                 )
         except paramiko.BadHostKeyException as exc:
             raise HostKeyChangedError(exc.hostname) from exc

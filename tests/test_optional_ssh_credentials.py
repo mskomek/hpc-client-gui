@@ -109,6 +109,23 @@ class OptionalSSHCredentialsTests(unittest.TestCase):
         self.assertEqual(fake_client.connect_kwargs["timeout"], 45)
         self.assertEqual(fake_client.connect_kwargs["banner_timeout"], 45)
 
+    def test_preconnected_socket_is_forwarded_to_paramiko(self):
+        fake_client = _SSHClient()
+        connected_socket = object()
+        with patch(
+            "truba_gui.ssh.client.paramiko.SSHClient",
+            return_value=fake_client,
+        ):
+            wrapper = SSHClientWrapper(
+                SSHConnInfo(
+                    host="cluster.example",
+                    port=22,
+                    preconnected_socket=connected_socket,
+                )
+            )
+            wrapper.connect()
+
+        self.assertIs(fake_client.connect_kwargs["sock"], connected_socket)
     def test_key_path_forwards_loaded_key_object_without_secret(self):
         fake_client = _SSHClient()
         sentinel_key = object()
