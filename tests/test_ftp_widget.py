@@ -5435,7 +5435,7 @@ class FtpWidgetTests(unittest.TestCase):
         )
         plan = run_plan.call_args.args[0]
         self.assertEqual(
-            [(item.op, item.dst) for item in plan if item.op == "delete"],
+            sorted((item.op, item.dst) for item in plan if item.op == "delete"),
             [
                 ("delete", "/remote/folder/a.txt"),
                 ("delete", "/remote/folder/b.txt"),
