@@ -141,6 +141,12 @@ foreach ($fileName in $licenseFiles) {
     Copy-Item -Path $licenseSourcePath -Destination (Join-Path $versionDir $fileName) -Force
 }
 
+$thirdPartyLicensesSource = Join-Path $Root "third_party_licenses"
+if (-not (Test-Path -LiteralPath $thirdPartyLicensesSource -PathType Container)) {
+    throw "Release packaging: third_party_licenses directory missing from source: $thirdPartyLicensesSource"
+}
+Copy-Item -Path $thirdPartyLicensesSource -Destination (Join-Path $versionDir "third_party_licenses") -Recurse -Force
+
 $exePath = Join-Path $versionDir "hpc-client-gui.exe"
 if (-not (Test-Path $exePath)) {
     throw "Expected packaged exe not found: $exePath"
