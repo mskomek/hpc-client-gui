@@ -102,14 +102,22 @@ Shared global options exist (format, quiet, verbose, timeout, profile selection,
 
 ---
 
-## ☕ Support HPC Client GUI
+## Support the Project
 
-HPC Client GUI is developed and maintained as an independent community project.
+HPC Client GUI is independently developed and maintained. If it helps
+researchers, engineers, students, HPC users, or their workflows, they can
+support its continued development through [GitHub Sponsors](https://github.com/sponsors/mskomek).
 
-If you find the project useful in your research or HPC workflow and would like
-to support its continued development, voluntary donations are appreciated.
+Sponsorship helps support ongoing maintenance, bug fixes, documentation,
+compatibility work, and future features.
 
-**Bitcoin (BTC):**
+### GitHub Sponsors
+
+[Sponsor HPC Client GUI on GitHub](https://github.com/sponsors/mskomek)
+
+### Bitcoin (BTC)
+
+Bitcoin remains available as an alternative donation method:
 
 ```text
 bc1qvnrw2rn89rltx8ttj0hfyyte8lasgcsr7f3lxz
