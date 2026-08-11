@@ -26,6 +26,8 @@ Bitcoin is also available as an alternative donation method.
 
 ```text
 bc1qvnrw2rn89rltx8ttj0hfyyte8lasgcsr7f3lxz
+```
+
 <img width="263" height="261" alt="Bitcoin donation QR code" src="https://github.com/user-attachments/assets/a1cf3da4-ce28-42b8-afc7-010548bdb6ee" />
 
 Please verify the address shown in this repository before sending funds.
@@ -33,25 +35,27 @@ Please verify the address shown in this repository before sending funds.
 Cryptocurrency transactions are irreversible. Please ensure that BTC is sent
 using a compatible Bitcoin network.
 
-Important
-Sponsorships and donations are completely optional.
-They do not unlock additional features.
-They do not provide privileges, priority support, or support guarantees.
-They do not grant commercial-use rights.
-A sponsorship or donation does not constitute a commercial license.
-Non-commercial use remains governed by the project's
-PolyForm Noncommercial License 1.0.0.
-Commercial use requires a separate license. See
-COMMERCIAL_LICENSE.md.
-Other Ways to Support the Project
+## Important
+
+- Sponsorships and donations are **completely optional**.
+- They do **not** unlock additional features.
+- They do **not** provide privileges, priority support, or support guarantees.
+- They do **not** grant commercial-use rights.
+- A sponsorship or donation does **not** constitute a commercial license.
+- Non-commercial use remains governed by the project's
+  [PolyForm Noncommercial License 1.0.0](LICENSE).
+- Commercial use requires a separate license. See
+  [COMMERCIAL_LICENSE.md](COMMERCIAL_LICENSE.md).
+
+## Other Ways to Support the Project
 
 Financial support is not required. You can also help by:
 
-starring the repository on GitHub;
-reporting reproducible bugs;
-suggesting useful HPC workflow improvements;
-improving documentation;
-contributing fixes through pull requests;
-sharing the project with other HPC and Slurm users.
+- starring the repository on GitHub;
+- reporting reproducible bugs;
+- suggesting useful HPC workflow improvements;
+- improving documentation;
+- contributing fixes through pull requests;
+- sharing the project with other HPC and Slurm users.
 
 Thank you for supporting the continued development of HPC Client GUI.
