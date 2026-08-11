@@ -36,6 +36,20 @@ if ($env:GITHUB_REF -match '^refs/tags/v(.+)$' -and $Matches[1] -ne $Version) {
     throw "Release tag version $($Matches[1]) does not match input $Version."
 }
 
+$versionInfoPath = Join-Path $Root "build/windows/version_info.txt"
+$versionInfo = Get-Content -Raw -LiteralPath $versionInfoPath
+$expectedTuple = "($(($Version -split '\.') -join ', '), 0)"
+foreach ($field in @("FileVersion", "ProductVersion")) {
+    if (-not (Select-String -InputObject $versionInfo -Pattern "StringStruct\('$field',\s*'$([regex]::Escape($Version))'\)" -Quiet)) {
+        throw "build/windows/version_info.txt $field does not match $Version."
+    }
+}
+foreach ($field in @("filevers", "prodvers")) {
+    if (-not (Select-String -InputObject $versionInfo -Pattern "$field=$([regex]::Escape($expectedTuple))" -Quiet)) {
+        throw "build/windows/version_info.txt $field does not match expected tuple $expectedTuple."
+    }
+}
+
 $changelog = Join-Path $Root "src/truba_gui/docs/CHANGELOG.md"
 if (-not (Select-String -LiteralPath $changelog -Pattern "^##\s+v$([regex]::Escape($Version))\s*$" -Quiet)) {
     throw "Changelog section not found for v$Version."

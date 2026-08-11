@@ -132,6 +132,21 @@ foreach ($fileName in $requiredHelpFiles) {
     Copy-Item -Path $helpSourcePath -Destination (Join-Path $helpDestDir $fileName) -Force
 }
 
+$licenseFiles = @("LICENSE", "COMMERCIAL_LICENSE.md", "THIRD_PARTY_NOTICES.md")
+foreach ($fileName in $licenseFiles) {
+    $licenseSourcePath = Join-Path $Root $fileName
+    if (-not (Test-Path -LiteralPath $licenseSourcePath -PathType Leaf)) {
+        throw "Release packaging: required license file missing from source: $licenseSourcePath"
+    }
+    Copy-Item -Path $licenseSourcePath -Destination (Join-Path $versionDir $fileName) -Force
+}
+
+$thirdPartyLicensesSource = Join-Path $Root "third_party_licenses"
+if (-not (Test-Path -LiteralPath $thirdPartyLicensesSource -PathType Container)) {
+    throw "Release packaging: third_party_licenses directory missing from source: $thirdPartyLicensesSource"
+}
+Copy-Item -Path $thirdPartyLicensesSource -Destination (Join-Path $versionDir "third_party_licenses") -Recurse -Force
+
 $exePath = Join-Path $versionDir "hpc-client-gui.exe"
 if (-not (Test-Path $exePath)) {
     throw "Expected packaged exe not found: $exePath"
