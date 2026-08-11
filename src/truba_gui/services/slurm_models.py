@@ -13,6 +13,10 @@ class SlurmJob:
     max_rss: str = ""
     partition: str = ""
     raw: str = ""
+    nodes: str = ""
+    cpus: str = ""
+    reason: str = ""
+    exit_code: str = ""
 
 
 def _rows(text: str) -> list[tuple[str, list[str]]]:
@@ -33,7 +37,7 @@ def parse_squeue(text: str) -> list[SlurmJob]:
             job_id, partition, name, user, state, elapsed = fields[:6]
         else:
             job_id, partition, name, user, state, elapsed = (fields + [""] * 6)[:6]
-        jobs.append(SlurmJob(job_id, name, user, state, elapsed, partition=partition, raw=raw))
+        jobs.append(SlurmJob(job_id, name, user, state, elapsed, partition=partition, raw=raw, nodes=fields[6] if len(fields) > 6 else "", cpus=fields[7] if len(fields) > 7 else "", reason=fields[8] if len(fields) > 8 else ""))
     return jobs
 
 
@@ -44,5 +48,5 @@ def parse_sacct(text: str) -> list[SlurmJob]:
             continue
         fields += [""] * (5 - len(fields))
         job_id, name, state, elapsed, max_rss = fields[:5]
-        jobs.append(SlurmJob(job_id, name, state=state, elapsed=elapsed, max_rss=max_rss, raw=raw))
+        jobs.append(SlurmJob(job_id, name, state=state, elapsed=elapsed, max_rss=max_rss, raw=raw, exit_code=fields[5] if len(fields) > 5 else ""))
     return jobs

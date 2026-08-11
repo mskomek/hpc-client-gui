@@ -9,7 +9,7 @@ TRUBA_SYSTEM_DEFAULTS: dict[str, str] = {
     "name": "TRUBA",
     "scratch_dir": "/arf/scratch/{user}",
     "home_dir": "/arf/home/{user}",
-    "squeue_command": "squeue -u {user}",
+    "squeue_command": 'squeue -h -u {user} -o "%i|%P|%j|%u|%T|%M|%D|%C|%R"',
     "sbatch_command": "cd -- {script_dir_q} && sbatch -- {script_name_q}",
     "scancel_command": "scancel {job_id_q}",
     "sacct_command": (
