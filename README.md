@@ -104,7 +104,7 @@ Shared global options exist (format, quiet, verbose, timeout, profile selection,
 
 ## Support the Project
 
-HPC Client GUI is independently developed and maintained. If you find HPC Client GUI useful in your research, engineering, or HPC workflow, you can support its continued development through GitHub Sponsors. [GitHub Sponsors](https://github.com/sponsors/mskomek).
+HPC Client GUI is independently developed and maintained. If you find HPC Client GUI useful in your research, engineering, or HPC workflow, you can support its continued development through [GitHub Sponsors](https://github.com/sponsors/mskomek).
 
 Sponsorship helps support ongoing maintenance, bug fixes, documentation,
 compatibility work, and future features.
