@@ -1,5 +1,17 @@
 # Changelog
 
+## v1.2.1
+
+### Licensing
+- Bundled the actual PySide6/shiboken6 (LGPLv3) and paramiko (LGPL-2.1+)
+  license texts inside the packaged application (`third_party_licenses/`);
+  their PyPI wheels don't ship the full license text on their own, so v1.2.0
+  shipped `THIRD_PARTY_NOTICES.md` noting them as not-yet-bundled. See
+  `THIRD_PARTY_NOTICES.md` for details.
+- Fixed a stale numeric file/product version (`filevers`/`prodvers`) in the
+  Windows executable's version resource, and added a release-consistency
+  check so it can't silently drift from the release version again.
+
 ## v1.2.0
 
 ### Licensing Change
