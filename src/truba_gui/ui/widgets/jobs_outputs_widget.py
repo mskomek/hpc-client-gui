@@ -30,6 +30,7 @@ from truba_gui.core.i18n import t
 from truba_gui.core.ui_errors import show_exception
 from truba_gui.core.history import append_event
 from truba_gui.ui.widgets.remote_dir_panel import RemoteDirPanel
+from truba_gui.services.slurm_models import parse_sacct, parse_squeue
 from truba_gui.services.slurm_script_parser import (
     parse_job_name,
     parse_output_error,
@@ -1019,6 +1020,14 @@ class JobsOutputsWidget(QWidget):
         QThreadPool.globalInstance().start(worker)
         return True
 
+    @staticmethod
+    def _structured_slurm_text(jobs, raw: str) -> str:
+        if not jobs:
+            return raw
+        rows = ["JOBID  STATE  NAME  NODES  CPUS  REASON"]
+        rows += [f"{job.job_id}  {job.state}  {job.name}  {job.nodes}  {job.cpus}  {job.reason or job.exit_code}" for job in jobs]
+        return "\n".join(rows) + "\n\nRaw output:\n" + raw
+
     # ---------------- Jobs
     def refresh_jobs(self):
         if not self.session or not self.session.get("slurm"):
@@ -1029,7 +1038,7 @@ class JobsOutputsWidget(QWidget):
         def success(txt) -> None:
             if not self.is_details_polling_visible():
                 return
-            self.jobs_text.setPlainText(txt)
+            self.jobs_text.setPlainText(self._structured_slurm_text(parse_squeue(txt), txt))
             append_event({"type": "squeue", "user": user})
 
         def failed(e) -> None:
@@ -1073,7 +1082,7 @@ class JobsOutputsWidget(QWidget):
         def success(txt) -> None:
             if not self.is_details_polling_visible():
                 return
-            self.meta_text.setPlainText(txt)
+            self.meta_text.setPlainText(self._structured_slurm_text(parse_sacct(txt), txt))
             append_event({"type": "sacct", "user": user})
 
         def failed(e) -> None:
@@ -1098,7 +1107,7 @@ class JobsOutputsWidget(QWidget):
         slurm = self.session["slurm"]
 
         def success(txt) -> None:
-            self.meta_text.setPlainText(txt)
+            self.meta_text.setPlainText(self._structured_slurm_text(parse_sacct(txt), txt))
             append_event({"type": "scontrol_show_job", "jobid": jobid})
 
         def failed(e) -> None:
