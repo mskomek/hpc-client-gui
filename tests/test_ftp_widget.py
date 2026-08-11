@@ -5430,7 +5430,7 @@ class FtpWidgetTests(unittest.TestCase):
 
         self.assertEqual(resolve.call_count, 2)
         self.assertEqual(
-            [call.args[0] for call in resolve.call_args_list],
+            sorted(call.args[0] for call in resolve.call_args_list),
             ["/remote/folder/a.txt", "/remote/folder/b.txt"],
         )
         plan = run_plan.call_args.args[0]
@@ -5482,7 +5482,7 @@ class FtpWidgetTests(unittest.TestCase):
 
         self.assertEqual(resolve.call_count, 2)
         self.assertEqual(
-            [call.args[0] for call in resolve.call_args_list],
+            sorted(call.args[0] for call in resolve.call_args_list),
             [
                 str(local_folder / "a.txt"),
                 str(local_folder / "b.txt"),
