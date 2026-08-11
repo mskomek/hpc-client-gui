@@ -102,21 +102,28 @@ Shared global options exist (format, quiet, verbose, timeout, profile selection,
 
 ---
 
-## ☕ Support / Donations
+## ☕ Support HPC Client GUI
 
-If you find this project useful and would like to support its development,  
-you may make a **voluntary donation**.
+HPC Client GUI is developed and maintained as an independent community project.
+
+If you find the project useful in your research or HPC workflow and would like
+to support its continued development, voluntary donations are appreciated.
 
 **Bitcoin (BTC):**
 
-```
+```text
 bc1qvnrw2rn89rltx8ttj0hfyyte8lasgcsr7f3lxz
 ```
 
-<img width="263" height="261" alt="image" src="https://github.com/user-attachments/assets/a1cf3da4-ce28-42b8-afc7-010548bdb6ee" />
+<img width="263" height="261" alt="Bitcoin donation QR code" src="https://github.com/user-attachments/assets/a1cf3da4-ce28-42b8-afc7-010548bdb6ee" />
 
+Donations are **completely optional** and do not unlock features, privileges,
+priority support, or support guarantees.
 
-Donations are **completely optional** and do **not** grant any special features, privileges, or support guarantees.
+**A donation does not grant commercial-use rights or constitute a commercial license.**
+
+Commercial use still requires a separate commercial license. For additional
+information and other ways to support the project, see [SUPPORT.md](SUPPORT.md).
 
 ---
 
