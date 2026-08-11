@@ -1866,7 +1866,7 @@ def test_jobs_list_text_uses_default_squeue_template(capsys) -> None:
     fake_ssh = _FakeJobsSSH((0, "JOBID STATE\n  123 RUNNING\n", ""))
     with patch("truba_gui.cli.main.CLISession.open", return_value=_fake_jobs_session(fake_ssh)):
         assert run_cli(["--host", "host", "--user", "alice", "jobs", "list"]) == 0
-    assert fake_ssh.commands == ["squeue -h -u alice -o "%i|%P|%j|%u|%T|%M|%D|%C|%R""]
+    assert fake_ssh.commands == ['squeue -h -u alice -o "%i|%P|%j|%u|%T|%M|%D|%C|%R"']
     out = capsys.readouterr().out
     assert "JOBID STATE" in out
     assert "123 RUNNING" in out
@@ -1876,7 +1876,7 @@ def test_jobs_list_json_envelope_matches_stdout(capsys) -> None:
     fake_ssh = _FakeJobsSSH((0, "JOBID STATE\n  123 RUNNING\n", ""))
     with patch("truba_gui.cli.main.CLISession.open", return_value=_fake_jobs_session(fake_ssh)):
         assert run_cli(["--format", "json", "--host", "host", "--user", "alice", "jobs", "list"]) == 0
-    assert fake_ssh.commands == ["squeue -h -u alice -o "%i|%P|%j|%u|%T|%M|%D|%C|%R""]
+    assert fake_ssh.commands == ['squeue -h -u alice -o "%i|%P|%j|%u|%T|%M|%D|%C|%R"']
     payload = json.loads(capsys.readouterr().out)
     assert payload == {"result": "JOBID STATE\n  123 RUNNING\n"}
 
@@ -1888,7 +1888,7 @@ def test_jobs_list_username_falls_back_to_profile(capsys) -> None:
         "truba_gui.cli.main.CLISession.open", return_value=_fake_jobs_session(fake_ssh)
     ):
         assert run_cli(["--profile", "alpha", "jobs", "list"]) == 0
-    assert fake_ssh.commands == ["squeue -h -u profileuser -o "%i|%P|%j|%u|%T|%M|%D|%C|%R""]
+    assert fake_ssh.commands == ['squeue -h -u profileuser -o "%i|%P|%j|%u|%T|%M|%D|%C|%R"']
 
 
 def test_jobs_status_uses_default_scontrol_template(capsys) -> None:
