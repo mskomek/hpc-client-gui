@@ -55,6 +55,9 @@ for _license_name in ("LICENSE", "COMMERCIAL_LICENSE.md", "THIRD_PARTY_NOTICES.m
     _license_path = REPO_ROOT / _license_name
     if _license_path.exists():
         datas.append((str(_license_path), "."))
+THIRD_PARTY_LICENSES_DIR = REPO_ROOT / "third_party_licenses"
+if THIRD_PARTY_LICENSES_DIR.exists():
+    datas.append((str(THIRD_PARTY_LICENSES_DIR), "third_party_licenses"))
 
 hiddenimports = sorted(
     {

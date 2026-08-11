@@ -34,7 +34,7 @@ from truba_gui.cli.files import IF_EXISTS_CHOICES, download as download_files, u
 from truba_gui.cli.jobs import emit_job_result, jobs_backend
 
 
-CLI_VERSION = "1.2.0"
+CLI_VERSION = "1.2.1"
 
 ROOT_ALIASES = {
     "put": ("files", "upload"), "get": ("files", "download"),
