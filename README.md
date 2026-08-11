@@ -1,40 +1,88 @@
 # HPC Client GUI
 
-A **client-side GUI application** for **SSH + Slurm + optional X11 workflows** on TRUBA and other Slurm-based HPC systems.
+**A Windows desktop client for TRUBA and other Slurm-based HPC systems.**
 
+HPC Client GUI brings common HPC tasks into a single desktop application, including
+**SSH connections, remote file management, Slurm job workflows, job output monitoring,
+and optional X11 applications**.
 
-> It is designed for TRUBA and similar Slurm/SSH-based HPC infrastructures.
+It is designed to reduce the need to switch between SSH terminals, file-transfer tools,
+and separate Slurm commands during everyday HPC work.
+
+[**Download Latest Release**](https://github.com/mskomek/hpc-client-gui/releases/latest)
+&nbsp;•&nbsp;
+[**Documentation**](#documentation)
+&nbsp;•&nbsp;
+[**Sponsor**](https://github.com/sponsors/mskomek)
+
+> **Independent project:** HPC Client GUI is not an official TRUBA or TÜBİTAK
+> application. It is a client-side tool designed for TRUBA and compatible
+> SSH/Slurm-based HPC environments.
 
 ---
 
 ## Features
 
-* SSH session management (client-side)
-* Slurm job monitoring / basic job operations (via `squeue`, `sacct`, etc.)
-* Remote file manager (copy / move / paste, drag & drop, resume, progress / cancel, undo-move)
-* i18n: Turkish / English
-* Centralized logging: `~/.truba_slurm_gui/app.log` (rotating)
-* X11 runs **in the background**: `plink.exe -X` + `VcXsrv` (no dedicated X11 UI tab)
+### Remote access and files
+
+- SSH connection and session management
+- Remote file browsing and management
+- SFTP upload and download
+- Transfer progress, cancellation, resume, and conflict handling
+- Copy, move, rename, delete, drag & drop, and remote file editing
+
+### Slurm workflows
+
+- Submit Slurm jobs
+- Monitor active jobs using structured queue information
+- Inspect job details and accounting data
+- Cancel jobs
+- Follow standard output and error files
+- Create and edit Slurm scripts from templates
+
+### Desktop workflow
+
+- Turkish and English interface
+- Saved connection profiles
+- Windows notifications for completed and failed jobs
+- Centralized application logging
+- Optional X11 workflows using VcXsrv and `plink.exe`
+
+### CLI and diagnostics
+
+- Command-line access for profiles, remote files, jobs, and diagnostics
+- Script-friendly text and JSON output
+- Connection and transfer diagnostics
+- SSH host-key verification
+- Protected local credential storage on supported Windows systems
 
 ---
 
-## Installation & Running
+## Installation and Running
 
-### Option A — Standalone (EXE) ✅ Recommended
+### Option A — Portable Windows Package (Recommended)
 
-In this mode, **Python is NOT required**.
+Python is **not required** when using the packaged Windows release.
 
-1. Download the latest package from **GitHub Releases** (Windows).
-2. (Optional: if you will use X11) Install **VcXsrv**.
-3. Obtain **PuTTY / plink**:
-   - Place `plink.exe` next to the application **or**
-   - Specify the `plink.exe` path via application settings (if available).
-4. Run the EXE.
+1. Download the latest Windows package from
+   [GitHub Releases](https://github.com/mskomek/hpc-client-gui/releases/latest).
+2. Extract the downloaded ZIP archive.
+3. Run `hpc-client-gui.exe`.
 
-**External dependencies (NOT bundled in the EXE):**
-- `plink.exe` (PuTTY)
-- `VcXsrv` (required only for X11)
-- Institutional firewall / antivirus policies (permissions may be required in some environments)
+For normal **SSH, SFTP, Slurm, remote file, and CLI workflows**, PuTTY is not required.
+
+### Optional X11 support
+
+If you want to launch remote graphical applications through X11, you may additionally need:
+
+- `VcXsrv`
+- `plink.exe` from PuTTY
+
+These components are used only for optional X11 workflows and are not required for the
+core SSH/SFTP/Slurm functionality.
+
+Institutional firewall, VPN, antivirus, or endpoint-security policies may affect network
+connections or external helper applications.
 
 ---
 
@@ -42,9 +90,9 @@ In this mode, **Python is NOT required**.
 
 #### Requirements
 
-- Windows 10 / 11
-- Python 3.10+ (recommended)
-- (Optional) VcXsrv + plink.exe
+- Windows 10 or Windows 11
+- Python 3.10+
+- Optional for X11: VcXsrv + `plink.exe`
 
 #### Setup
 
@@ -54,11 +102,12 @@ python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 
 pip install -r requirements.txt
-# or:
+
+# Or install the project in editable mode:
 pip install -e .
 ```
 
-#### Run
+#### Run the GUI
 
 ```powershell
 python -m truba_gui
@@ -66,56 +115,96 @@ python -m truba_gui
 
 ---
 
-## Command-line Interface
+## Command-Line Interface
 
-`python -m truba_gui` exposes a command-line interface (`hpc-client-gui` is its internal program name shown in help output). Top-level commands:
+The project also provides CLI access to connection profiles, diagnostics, remote files,
+and Slurm jobs.
 
-- `gui` - launch the desktop GUI
-- `version` - print version and build information
-- `profile` - manage saved connection profiles (`list`, `show`, `create`, `update`, `delete`, `test`)
-- `doctor` - run local diagnostics (`environment`, `connection`, `smoke`)
-- `files` - remote SFTP file operations (`ls`, `stat`, `checksum`, `mkdir`, `upload`, `download`, `cp`, `mv`, `rm`)
-- `jobs` - scheduler job operations (`list`, `status`, `accounting`, `lssrv`, `submit`, `cancel`)
+Top-level commands include:
 
-Shared global options exist (format, quiet, verbose, timeout, profile selection, host/port/user/key overrides, a stdin-based sensitive-value input flag, and strict host-key checking); `python -m truba_gui --help` is authoritative.
+- `gui` — launch the desktop GUI
+- `version` — print version and build information
+- `profile` — manage saved connection profiles
+- `doctor` — run diagnostics
+- `files` — perform remote SFTP file operations
+- `jobs` — perform Slurm scheduler operations
 
-- Full guides (drafted later in this wave):
-  - Turkish: `src/truba_gui/docs/CLI_GUIDE_tr.md`
-  - English: `src/truba_gui/docs/CLI_GUIDE_en.md`
+Examples of available subcommands include:
+
+```text
+profile: list, show, create, update, delete, test
+doctor:  environment, connection, smoke
+files:   ls, stat, checksum, mkdir, upload, download, cp, mv, rm
+jobs:    list, status, accounting, lssrv, submit, cancel
+```
+
+Shared options include output formatting, quiet/verbose modes, timeouts, profile
+selection, SSH host/user/key overrides, sensitive-value input handling, and strict
+host-key checking.
+
+Use the built-in help as the authoritative command reference:
+
+```powershell
+python -m truba_gui --help
+```
+
+Packaged releases may also include the standalone CLI executable:
+
+```text
+hpc-client-cli.exe
+```
+
+### CLI guides
+
+- [Turkish CLI Guide](src/truba_gui/docs/CLI_GUIDE_tr.md)
+- [English CLI Guide](src/truba_gui/docs/CLI_GUIDE_en.md)
 
 ---
 
 ## Documentation
 
-- From within the application: click the **Help (❓)** icon in the top-left corner.
-- As files:
-  - Turkish: `src/truba_gui/docs/HELP_tr.md`
-  - English: `src/truba_gui/docs/HELP_en.md`
+Documentation is available both inside the application and in the repository.
+
+- In the application: use the **Help** button in the top-left area.
+- [Turkish Help](src/truba_gui/docs/HELP_tr.md)
+- [English Help](src/truba_gui/docs/HELP_en.md)
 
 ---
 
 ## Security Notes
 
-- Passwords / tokens are **never written to history** and **never shown in the UI**.
-- Secrets are **never logged** (commands may be logged, but credentials are not).
-- X11 processes are cleaned up on application exit; orphan processes are handled defensively.
+- Sensitive values such as passwords and tokens are not written to command history.
+- Credentials are excluded from normal application logs.
+- Saved credentials can use protected local storage on supported Windows systems.
+- SSH host-key verification is supported.
+- X11 helper processes are cleaned up on application exit where possible.
+- Diagnostic and logging features are designed to avoid exposing sensitive values.
+
+If you discover a security issue, avoid posting credentials, private keys, tokens,
+cluster secrets, or other sensitive information in a public GitHub issue.
 
 ---
 
 ## Support the Project
 
-HPC Client GUI is independently developed and maintained. If you find HPC Client GUI useful in your research, engineering, or HPC workflow, you can support its continued development through [GitHub Sponsors](https://github.com/sponsors/mskomek).
+HPC Client GUI is independently developed and maintained.
 
-Sponsorship helps support ongoing maintenance, bug fixes, documentation,
-compatibility work, and future features.
+If you find HPC Client GUI useful in your research, engineering, or HPC workflow,
+you can support its continued development through
+[GitHub Sponsors](https://github.com/sponsors/mskomek).
+
+Sponsorship can help support ongoing maintenance, bug fixes, testing, documentation,
+compatibility work, release maintenance, and future improvements.
 
 ### GitHub Sponsors
 
-[Sponsor HPC Client GUI on GitHub](https://github.com/sponsors/mskomek)
+[**Sponsor HPC Client GUI on GitHub**](https://github.com/sponsors/mskomek)
+
+Monthly and one-time sponsorship options are available.
 
 ### Bitcoin (BTC)
 
-Bitcoin remains available as an alternative donation method:
+Bitcoin is also available as an alternative voluntary donation method.
 
 ```text
 bc1qvnrw2rn89rltx8ttj0hfyyte8lasgcsr7f3lxz
@@ -123,25 +212,54 @@ bc1qvnrw2rn89rltx8ttj0hfyyte8lasgcsr7f3lxz
 
 <img width="263" height="261" alt="Bitcoin donation QR code" src="https://github.com/user-attachments/assets/a1cf3da4-ce28-42b8-afc7-010548bdb6ee" />
 
-Donations are **completely optional** and do not unlock features, privileges,
-priority support, or support guarantees.
+Please verify the address shown in this repository before sending funds.
 
-**A donation does not grant commercial-use rights or constitute a commercial license.**
+Sponsorships and donations are **completely optional** and do not unlock exclusive
+features, privileges, priority support, or guaranteed support.
 
-Commercial use still requires a separate commercial license. For additional
-information and other ways to support the project, see [SUPPORT.md](SUPPORT.md).
+**A sponsorship or donation does not grant commercial-use rights and does not
+constitute a commercial license.**
+
+For additional information and other ways to support the project, see
+[SUPPORT.md](SUPPORT.md).
 
 ---
 
 ## Licensing
 
-Starting with v1.2.0, this project is licensed under the **PolyForm Noncommercial License 1.0.0** (see `LICENSE`).
+Starting with **v1.2.0**, HPC Client GUI is licensed under the
+**PolyForm Noncommercial License 1.0.0**. See [LICENSE](LICENSE).
 
-- Free personal, academic, educational, public-research, and other permitted non-commercial use stays easy under the PolyForm Noncommercial 1.0.0 terms.
-- **Commercial use requires a separate license.** Commercial embedding, incorporation, OEM/bundling, redistribution as a commercial product, and proprietary commercial derivatives are not covered by the PolyForm Noncommercial License. See [COMMERCIAL_LICENSE.md](COMMERCIAL_LICENSE.md) for details and contact information.
+Under the current licensing model:
 
-**Historical boundary:** releases before v1.2.0 were distributed under the MIT License. That MIT grant is **not revoked** for copies of those earlier releases that were already distributed; they remain MIT-licensed.
+- personal, academic, educational, public-research, and other permitted
+  non-commercial uses remain available under the PolyForm Noncommercial terms;
+- **commercial use requires a separate commercial license**;
+- commercial embedding, incorporation, OEM/bundling, commercial redistribution,
+  and proprietary commercial derivatives are not covered by the non-commercial license.
 
-This is an independent, community project. It is **not an official TRUBA tool** and is not affiliated with TÜBİTAK, ANSYS, or any other organization. It is **client-side only**; it does **NOT** modify the TRUBA infrastructure.
+For commercial licensing details, see
+[COMMERCIAL_LICENSE.md](COMMERCIAL_LICENSE.md).
 
-- Issues / PRs: via GitHub
+### Historical license boundary
+
+Releases before **v1.2.0** were distributed under the MIT License.
+
+That earlier MIT license grant is **not revoked** for copies of those releases that
+were already distributed. Those earlier releases remain subject to the license under
+which they were originally released.
+
+---
+
+## Project Status and Disclaimer
+
+HPC Client GUI is an independent community project.
+
+It is:
+
+- **not an official TRUBA tool**;
+- **not affiliated with TÜBİTAK, ANSYS, or any other organization** unless explicitly stated;
+- a **client-side application**;
+- not designed to modify TRUBA or another HPC provider's server infrastructure.
+
+Issues and pull requests can be submitted through GitHub.
