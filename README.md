@@ -2,7 +2,7 @@
 
 A **client-side GUI application** for **SSH + Slurm + optional X11 workflows** on TRUBA and other Slurm-based HPC systems.
 
-> ⚠️ This software is **not an official TRUBA tool**.
+
 > It is designed for TRUBA and similar Slurm/SSH-based HPC infrastructures.
 
 ---
