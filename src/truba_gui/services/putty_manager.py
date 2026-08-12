@@ -15,12 +15,12 @@ We download a single executable on demand (first use).
 """
 
 import platform
-import urllib.request
 from pathlib import Path
 from typing import Callable, Optional
 
 from truba_gui.core.i18n import t
 from truba_gui.core.paths import third_party_dir
+from truba_gui.services.safe_download import download_atomic
 
 
 PUTTY_PLINK_URL = "https://the.earth.li/~sgtatham/putty/latest/w64/plink.exe"
@@ -37,45 +37,21 @@ def plink_path() -> Path:
 
 def _download(url: str, dest: Path, log: Optional[Callable[[str], None]] = None, parent=None) -> bool:
     dest.parent.mkdir(parents=True, exist_ok=True)
-
     progress = None
-    canceled = False
     try:
         if parent is not None:
             from PySide6.QtWidgets import QProgressDialog
             from PySide6.QtCore import Qt
-
             progress = QProgressDialog(t("putty.downloading"), t("common.cancel"), 0, 100, parent)
             progress.setWindowModality(Qt.WindowModality.ApplicationModal)
             progress.setMinimumDuration(0)
             progress.setValue(0)
-
-        req = urllib.request.Request(url, headers={"User-Agent": "HPC-Client-GUI/1.0"}, method="GET")
-        with urllib.request.urlopen(req, timeout=60) as resp:
-            total = int(resp.headers.get("Content-Length") or 0)
-            chunk = 1024 * 128
-            downloaded = 0
-            with open(dest, "wb") as f:
-                while True:
-                    if progress is not None and progress.wasCanceled():
-                        canceled = True
-                        break
-                    data = resp.read(chunk)
-                    if not data:
-                        break
-                    f.write(data)
-                    downloaded += len(data)
-                    if total > 0 and progress is not None:
-                        progress.setValue(min(100, int(downloaded * 100 / total)))
-
-        if canceled:
-            try:
-                dest.unlink(missing_ok=True)
-            except Exception:
-                pass
+        def update(downloaded: int, total: int) -> None:
+            if total > 0 and progress is not None:
+                progress.setValue(min(100, int(downloaded * 100 / total)))
+        if not download_atomic(url, dest, cancelled=progress.wasCanceled if progress else None, progress=update):
             _log(log, t("putty.download_cancelled"))
             return False
-
         if progress is not None:
             progress.setValue(100)
         return True
@@ -85,8 +61,6 @@ def _download(url: str, dest: Path, log: Optional[Callable[[str], None]] = None,
     finally:
         if progress is not None:
             progress.close()
-
-
 
 def _prompt_download_plink(parent) -> bool:
     """Ask user permission before downloading plink.exe."""
@@ -104,6 +78,11 @@ def _prompt_download_plink(parent) -> bool:
     )
     return ret == QMessageBox.StandardButton.Yes
 
+
+def _prompt_unverified_plink(parent) -> bool:
+    from PySide6.QtWidgets import QMessageBox
+    ret = QMessageBox.question(parent, t("putty.verify_title"), t("putty.verify_msg"), QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+    return ret == QMessageBox.StandardButton.Yes
 
 def ensure_plink_available(*, log: Optional[Callable[[str], None]] = None, parent=None) -> bool:
     """Ensure plink.exe exists (Windows only)."""
@@ -128,6 +107,10 @@ def ensure_plink_available(*, log: Optional[Callable[[str], None]] = None, paren
     _log(log, t("putty.downloading_log").format(url=PUTTY_PLINK_URL))
     ok = _download(PUTTY_PLINK_URL, dest, log=log, parent=parent)
     if ok and dest.exists():
+        if not _prompt_unverified_plink(parent):
+            dest.unlink(missing_ok=True)
+            _log(log, t("putty.unverified_cancelled"))
+            return False
         _log(log, t("putty.ready_log").format(path=dest))
         return True
     return False

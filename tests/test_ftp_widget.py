@@ -3752,6 +3752,35 @@ class FtpWidgetTests(unittest.TestCase):
             self.assertEqual(destination.read_bytes(), b"partial-complete")
             self.assertFalse(part.exists())
 
+    def test_resume_rejects_stale_download_part_metadata(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            destination = Path(tmp, "large.bin")
+            part = Path(str(destination) + ".part")
+            part.write_bytes(b"stale")
+            Path(str(part) + ".meta").write_text("{}", encoding="utf-8")
+            files = MockFilesBackend()
+            files.write_text("/remote/large.bin", "fresh-content")
+
+            download_with_mode(files, "/remote/large.bin", str(destination), BINARY)
+
+            self.assertEqual(destination.read_bytes(), b"fresh-content")
+            self.assertFalse(Path(str(part) + ".meta").exists())
+
+    def test_resume_rejects_stale_upload_part_metadata(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp, "payload.bin")
+            source.write_bytes(b"fresh-content")
+            files = MockFilesBackend()
+            stale = Path(tmp, "stale.bin")
+            stale.write_bytes(b"stale")
+            files.upload(str(stale), "/remote/payload.bin.part")
+            files.write_text("/remote/payload.bin.part.meta", "{}")
+
+            upload_with_mode(files, str(source), "/remote/payload.bin", BINARY)
+
+            self.assertEqual(files.read_text("/remote/payload.bin"), "fresh-content")
+            self.assertFalse(files.exists("/remote/payload.bin.part.meta"))
+
     def test_upload_with_mode_forwards_progress_callback(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             source = Path(tmp, "payload.bin")

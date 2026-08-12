@@ -5,13 +5,13 @@ import platform
 import socket
 import subprocess
 import time
-import urllib.request
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Callable, Optional
 
 from truba_gui.core.i18n import t
 from truba_gui.core.paths import third_party_dir
+from truba_gui.services.safe_download import download_atomic
 
 from truba_gui.services.vcxsrv_release_downloader import get_latest_vcxsrv_asset
 
@@ -147,45 +147,21 @@ def _file_lock(path: Path, timeout_s: float = 6.0):
 
 
 def _download_file(url: str, dest: Path, log: Optional[Callable[[str], None]] = None, parent=None) -> bool:
-    dest.parent.mkdir(parents=True, exist_ok=True)
     progress = None
-    canceled = False
     try:
         if parent is not None:
             from PySide6.QtWidgets import QProgressDialog
             from PySide6.QtCore import Qt
-
             progress = QProgressDialog(t("xserver.downloading"), t("common.cancel"), 0, 100, parent)
             progress.setWindowModality(Qt.WindowModality.ApplicationModal)
             progress.setMinimumDuration(0)
             progress.setValue(0)
-
-        req = urllib.request.Request(url, headers={"User-Agent": "HPC-Client-GUI/1.0"}, method="GET")
-        with urllib.request.urlopen(req, timeout=60) as resp:
-            total = int(resp.headers.get("Content-Length") or 0)
-            chunk = 1024 * 128
-            downloaded = 0
-            with open(dest, "wb") as f:
-                while True:
-                    if progress is not None and progress.wasCanceled():
-                        canceled = True
-                        break
-                    data = resp.read(chunk)
-                    if not data:
-                        break
-                    f.write(data)
-                    downloaded += len(data)
-                    if total > 0 and progress is not None:
-                        progress.setValue(min(100, int(downloaded * 100 / total)))
-
-        if canceled:
-            try:
-                dest.unlink(missing_ok=True)
-            except Exception:
-                pass
+        def update(downloaded: int, total: int) -> None:
+            if total > 0 and progress is not None:
+                progress.setValue(min(100, int(downloaded * 100 / total)))
+        if not download_atomic(url, dest, cancelled=progress.wasCanceled if progress else None, progress=update):
             _log(log, t("xserver.download_cancelled"))
             return False
-
         if progress is not None:
             progress.setValue(100)
         return True
@@ -195,7 +171,6 @@ def _download_file(url: str, dest: Path, log: Optional[Callable[[str], None]] = 
     finally:
         if progress is not None:
             progress.close()
-
 
 def _run_noadmin_installer(installer: Path, target_dir: Path, log: Optional[Callable[[str], None]] = None) -> bool:
     target_dir.mkdir(parents=True, exist_ok=True)
@@ -237,6 +212,11 @@ def _prompt_install(parent, log: Optional[Callable[[str], None]] = None) -> bool
         return False
 
     runtime_dir = vc_dir / "runtime"
+    ret = QMessageBox.question(parent, t("xserver.verify_title"), t("xserver.verify_msg"), QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+    if ret != QMessageBox.StandardButton.Yes:
+        installer_path.unlink(missing_ok=True)
+        _log(log, t("xserver.unverified_cancelled"))
+        return False
     if not _run_noadmin_installer(installer_path, runtime_dir, log=log):
         return False
 
