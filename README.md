@@ -241,13 +241,6 @@ Under the current licensing model:
 For commercial licensing details, see
 [COMMERCIAL_LICENSE.md](COMMERCIAL_LICENSE.md).
 
-### Historical license boundary
-
-Releases before **v1.2.0** were distributed under the MIT License.
-
-That earlier MIT license grant is **not revoked** for copies of those releases that
-were already distributed. Those earlier releases remain subject to the license under
-which they were originally released.
 
 ---
 
@@ -257,8 +250,6 @@ HPC Client GUI is an independent community project.
 
 It is:
 
-- **not an official TRUBA tool**;
-- **not affiliated with TÜBİTAK, ANSYS, or any other organization** unless explicitly stated;
 - a **client-side application**;
 - not designed to modify TRUBA or another HPC provider's server infrastructure.
 
