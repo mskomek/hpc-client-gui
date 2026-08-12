@@ -290,6 +290,12 @@ class LocalDirPanel(QWidget):
     def _make_tree(self) -> _LocalTree:
         tree = _LocalTree(self)
         tree.setColumnCount(4)
+        tree.setHeaderLabels([
+            t("dirs.col_name"),
+            t("dirs.col_size"),
+            t("dirs.col_type"),
+            t("dirs.col_mtime"),
+        ])
         tree.setRootIsDecorated(False)
         tree.setAlternatingRowColors(True)
         tree.setSelectionMode(QTreeWidget.SelectionMode.ExtendedSelection)

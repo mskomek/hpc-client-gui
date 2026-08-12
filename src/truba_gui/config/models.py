@@ -13,6 +13,8 @@ class SSHConfig:
     x11_forwarding: bool = False
     dry_run: bool = False  # mock backend
     keepalive_interval_seconds: int = 30  # 0 disables; clamped to 0..3600
+    transfer_parallelism: int = 1  # profile override; backend cap still applies
+    ssh_timeout: float | None = None  # None uses transport defaults
     system_settings: dict[str, Any] = field(default_factory=dict)
 
 @dataclass

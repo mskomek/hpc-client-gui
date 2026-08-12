@@ -7,6 +7,16 @@ A **client-side GUI application** for **SSH + Slurm + optional X11 workflows** o
 
 ---
 
+One Windows desktop client for remote access, files, scheduler jobs, and optional X11 on TRUBA-compatible clusters. Connect once, browse and transfer files, monitor jobs, and launch X11 tools only when needed.
+
+**Latest Windows release:** [v1.2.4 portable package](https://github.com/mskomek/hpc-client-gui/releases/tag/v1.2.4) (`hpc-client-gui_windows_onedir.zip`)
+
+Quick start: **Download → Extract All → Run** `hpc-client-gui.exe`.
+
+![HPC Client GUI remote files, jobs, and transfers overview](docs/assets/hpc-client-gui-screenshot.png)
+
+Python, PuTTY/plink, and VcXsrv are not required for normal SSH, file, or scheduler use. PuTTY/plink and VcXsrv are optional helpers only when X11 forwarding is enabled.
+
 ## Features
 
 * SSH session management (client-side)
@@ -20,16 +30,17 @@ A **client-side GUI application** for **SSH + Slurm + optional X11 workflows** o
 
 ## Installation & Running
 
-### Option A — Standalone (EXE) ✅ Recommended
+### Option A — Standalone portable package ✅ Recommended
 
 In this mode, **Python is NOT required**.
 
-1. Download the latest package from **GitHub Releases** (Windows).
-2. (Optional: if you will use X11) Install **VcXsrv**.
-3. Obtain **PuTTY / plink**:
-   - Place `plink.exe` next to the application **or**
-   - Specify the `plink.exe` path via application settings (if available).
-4. Run the EXE.
+1. Download the latest portable ZIP from [GitHub Releases](https://github.com/mskomek/hpc-client-gui/releases/tag/v1.2.4).
+2. Extract All, then run `hpc-client-gui.exe`.
+3. If you enable X11, approve the optional plink/VcXsrv downloads or install them yourself.
+
+
+
+
 
 **External dependencies (NOT bundled in the EXE):**
 - `plink.exe` (PuTTY)
@@ -53,7 +64,7 @@ In this mode, **Python is NOT required**.
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 
-pip install -r requirements.txt
+pip install -e .[test]
 # or:
 pip install -e .
 ```
@@ -96,28 +107,22 @@ Shared global options exist (format, quiet, verbose, timeout, profile selection,
 
 ## Security Notes
 
+See [SECURITY.md](SECURITY.md) for supported versions and confidential vulnerability reporting.
+
 - Passwords / tokens are **never written to history** and **never shown in the UI**.
 - Secrets are **never logged** (commands may be logged, but credentials are not).
 - X11 processes are cleaned up on application exit; orphan processes are handled defensively.
 
 ---
 
-## Support the Project
+## ☕ Support HPC Client GUI
 
-HPC Client GUI is independently developed and maintained. If it helps
-researchers, engineers, students, HPC users, or their workflows, they can
-support its continued development through [GitHub Sponsors](https://github.com/sponsors/mskomek).
+HPC Client GUI is developed and maintained as an independent community project.
 
-Sponsorship helps support ongoing maintenance, bug fixes, documentation,
-compatibility work, and future features.
+If you find the project useful in your research or HPC workflow and would like
+to support its continued development, voluntary donations are appreciated.
 
-### GitHub Sponsors
-
-[Sponsor HPC Client GUI on GitHub](https://github.com/sponsors/mskomek)
-
-### Bitcoin (BTC)
-
-Bitcoin remains available as an alternative donation method:
+**Bitcoin (BTC):**
 
 ```text
 bc1qvnrw2rn89rltx8ttj0hfyyte8lasgcsr7f3lxz

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import inspect
+import json
 import tempfile
 from pathlib import Path
 
@@ -205,7 +206,7 @@ def _stream_utf8_lines(source_path: str, dest_path: str, newline: str) -> None:
             dest.write(newline)
 
 
-def _upload_remote(files, local_path: str, remote_path: str, progress_cb=None) -> None:
+def _upload_remote(files, local_path: str, remote_path: str, progress_cb=None, resume_identity=None) -> None:
     """Upload to a server-side ``<remote>.part`` and rename once when the
     backend can rename; otherwise upload directly to the final name.
 
@@ -218,8 +219,25 @@ def _upload_remote(files, local_path: str, remote_path: str, progress_cb=None) -
         _upload_file(files, local_path, remote_path, progress_cb=progress_cb)
         return
     temp_remote = remote_path + ".part"
+    meta_remote = temp_remote + ".meta"
+    source = Path(local_path).stat()
+    identity = json.dumps(resume_identity or {"path": str(remote_path), "size": source.st_size, "mtime_ns": source.st_mtime_ns}, sort_keys=True)
+    try:
+        if files.exists(temp_remote):
+            try:
+                if files.read_text(meta_remote) != identity:
+                    files.remove(temp_remote)
+            except Exception:
+                files.remove(temp_remote)
+        files.write_text(meta_remote, identity)
+    except (AttributeError, NotImplementedError):
+        pass
     _upload_file(files, local_path, temp_remote, progress_cb=progress_cb)
     rename(temp_remote, remote_path)
+    try:
+        files.remove(meta_remote)
+    except (AttributeError, FileNotFoundError, NotImplementedError):
+        pass
 
 
 def _upload_file(files, local_path: str, remote_path: str, progress_cb=None) -> None:
@@ -243,8 +261,10 @@ def upload_with_mode(
     with open(local_path, "rb") as source:
         sample = source.read(CHUNK_SIZE)
     effective = resolve_transfer_mode(local_path, requested, sample)
+    source_stat = Path(local_path).stat()
+    resume_identity = {"path": str(remote_path), "size": source_stat.st_size, "mtime_ns": source_stat.st_mtime_ns}
     if effective == BINARY:
-        _upload_remote(files, local_path, remote_path, progress_cb=progress_cb)
+        _upload_remote(files, local_path, remote_path, progress_cb=progress_cb, resume_identity=resume_identity)
         return effective
     # ASCII conversion streams the source so its line endings can be
     # normalized before the backend upload without ever materializing the
@@ -254,7 +274,7 @@ def upload_with_mode(
         with tempfile.NamedTemporaryFile(delete=False) as temp:
             temp_path = temp.name
         _stream_utf8_lines(local_path, temp_path, "\n")
-        _upload_remote(files, temp_path, remote_path, progress_cb=progress_cb)
+        _upload_remote(files, temp_path, remote_path, progress_cb=progress_cb, resume_identity=resume_identity)
     finally:
         if temp_path:
             try:
@@ -285,6 +305,18 @@ def download_with_mode(
     destination = Path(local_path)
     destination.parent.mkdir(parents=True, exist_ok=True)
     part_path = Path(str(destination) + ".part")
+    meta_path = Path(str(part_path) + ".meta")
+    remote_stat = getattr(files, "stat", None)
+    if callable(remote_stat):
+        remote_size, remote_mtime = remote_stat(remote_path)
+        identity = {"path": str(remote_path), "size": remote_size, "mtime": remote_mtime}
+        try:
+            saved = json.loads(meta_path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            saved = None
+        if part_path.exists() and saved != identity:
+            part_path.unlink(missing_ok=True)
+        meta_path.write_text(json.dumps(identity, sort_keys=True), encoding="utf-8")
     _download_file(files, remote_path, str(part_path), progress_cb=progress_cb)
     try:
         with open(part_path, "rb") as stream:
@@ -308,4 +340,5 @@ def download_with_mode(
             pass
     else:
         os.replace(part_path, destination)
+    meta_path.unlink(missing_ok=True)
     return effective

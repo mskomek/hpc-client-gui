@@ -18,6 +18,8 @@ from PySide6.QtWidgets import (
     QPushButton,
     QToolButton,
     QVBoxLayout,
+    QSpinBox,
+    QDoubleSpinBox,
 )
 
 from truba_gui.core.i18n import t
@@ -28,6 +30,7 @@ from truba_gui.config.system_profile import (
     save_user_system_template,
 )
 from truba_gui.ssh.client import coerce_keepalive_interval
+from truba_gui.config.storage import coerce_profile_transfer_parallelism, coerce_profile_ssh_timeout
 
 ProfileData = dict[str, Any]
 
@@ -48,6 +51,8 @@ class ConnectionDialog(QDialog):
         self._system_template_menu: QMenu | None = None
         self._system_template_submenus: list[QMenu] = []
         self._profile_keepalive = 30
+        self._profile_transfer_parallelism = 1
+        self._profile_ssh_timeout = None
 
         self.setModal(True)
         self.setWindowTitle(t("connection.dialog_title"))
@@ -73,6 +78,13 @@ class ConnectionDialog(QDialog):
         self.btn_browse_key = QPushButton(t("login.browse"))
         self.btn_browse_key.clicked.connect(self.pick_key)
 
+        self.sp_transfer_parallelism = QSpinBox()
+        self.sp_transfer_parallelism.setRange(1, 10)
+        self.sp_ssh_timeout = QDoubleSpinBox()
+        self.sp_ssh_timeout.setRange(0, 600)
+        self.sp_ssh_timeout.setDecimals(1)
+        self.sp_ssh_timeout.setSuffix(" s")
+
         self.cb_x11 = QCheckBox(t("login.x11_enable"))
         self.cb_strict_hostkey = QCheckBox(t("login.strict_host_key"))
         self.cb_cli_allowed = QCheckBox(t("connection.cli_allowed"))
@@ -92,6 +104,8 @@ class ConnectionDialog(QDialog):
         form.addRow(t("login.ssh_key"), key_row)
 
         form.addRow("", self.cb_x11)
+        form.addRow(t("connection.transfer_parallelism"), self.sp_transfer_parallelism)
+        form.addRow(t("connection.ssh_timeout"), self.sp_ssh_timeout)
         form.addRow("", self.cb_strict_hostkey)
         form.addRow("", self.cb_cli_allowed)
 
@@ -175,6 +189,10 @@ class ConnectionDialog(QDialog):
         self._profile_keepalive = coerce_keepalive_interval(
             profile.get("keepalive_interval_seconds", 30)
         )
+        self._profile_transfer_parallelism = coerce_profile_transfer_parallelism(profile.get("transfer_parallelism", 1))
+        self._profile_ssh_timeout = coerce_profile_ssh_timeout(profile.get("ssh_timeout"))
+        self.sp_transfer_parallelism.setValue(self._profile_transfer_parallelism)
+        self.sp_ssh_timeout.setValue(self._profile_ssh_timeout or 0)
         self.cb_save_password.setChecked(bool(profile.get("save_password", False)))
         self.cb_edit_only_password.setEnabled(self.cb_save_password.isChecked())
         self.cb_edit_only_password.setChecked(
@@ -302,6 +320,8 @@ class ConnectionDialog(QDialog):
             "x11_forwarding": self.cb_x11.isChecked(),
             "cli_allowed": self.cb_cli_allowed.isChecked(),
             "keepalive_interval_seconds": self._profile_keepalive,
+            "transfer_parallelism": int(self.sp_transfer_parallelism.value()),
+            "ssh_timeout": float(self.sp_ssh_timeout.value()) or None,
             "save_password": self.cb_save_password.isChecked(),
             "password_prompt_policy": (
                 "edit-only"
