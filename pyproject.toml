@@ -8,7 +8,7 @@ authors = [{ name = "Mehmed Sinan KÖMEK" }]
 license = { text = "PolyForm Noncommercial License 1.0.0" }
 
 [project.optional-dependencies]
-test = ["pyftpdlib>=1.5.9"]
+test = ["pyftpdlib>=2.2.0"]
 
 [build-system]
 requires = ["setuptools>=68"]
