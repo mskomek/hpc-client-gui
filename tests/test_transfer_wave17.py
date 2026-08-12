@@ -192,6 +192,38 @@ class StreamingConversionTests(unittest.TestCase):
         self.assertEqual(kept, b"KEEP")
 
 
+class DroppedConnectionTests(unittest.TestCase):
+    def test_mid_download_drop_preserves_final_and_partial(self) -> None:
+        class Dropped(_MemFiles):
+            def download(self, _remote_path, local_path, progress_cb=None):
+                Path(local_path).write_bytes(b"partial")
+                raise OSError("connection dropped")
+
+        files = Dropped(rename_capable=False)
+        with tempfile.TemporaryDirectory() as tmp:
+            destination = Path(tmp, "data.bin")
+            destination.write_bytes(b"ORIGINAL")
+            with self.assertRaises(OSError):
+                download_with_mode(files, "/remote/data.bin", str(destination), BINARY)
+            self.assertEqual(destination.read_bytes(), b"ORIGINAL")
+            self.assertEqual(Path(str(destination) + ".part").read_bytes(), b"partial")
+
+    def test_mid_upload_drop_preserves_final_and_partial(self) -> None:
+        class Dropped(_MemFiles):
+            def upload(self, local_path, remote_path, progress_cb=None):
+                self.remote[remote_path] = Path(local_path).read_bytes()[:7]
+                raise OSError("connection dropped")
+
+        files = Dropped(rename_capable=True)
+        files.remote["/remote/data.bin"] = b"ORIGINAL"
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp, "data.bin")
+            source.write_bytes(b"NEW CONTENT")
+            with self.assertRaises(OSError):
+                upload_with_mode(files, str(source), "/remote/data.bin", BINARY)
+        self.assertEqual(files.remote["/remote/data.bin"], b"ORIGINAL")
+        self.assertEqual(files.remote["/remote/data.bin.part"], b"NEW CON")
+
 class BoundedReadTests(unittest.TestCase):
     def test_ascii_upload_reads_source_in_bounded_chunks(self) -> None:
         data = b"line\r\n" * 3000

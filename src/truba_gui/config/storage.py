@@ -81,6 +81,15 @@ def get_jobs_outputs_refresh_interval_seconds(default: int = 15) -> int:
     return _coerce_positive_int(st.get("jobs_outputs_refresh_interval_seconds", default), default)
 
 
+def get_live_tracking_warning_interval_seconds(default: int = 60) -> int:
+    """Return idle live-follow warning interval; zero disables the warning."""
+    return _coerce_int_in_range(load_settings().get("live_tracking_warning_interval_seconds", default), default, 0, 3600)
+
+def set_live_tracking_warning_interval_seconds(seconds: int) -> int:
+    value = _coerce_int_in_range(seconds, 60, 0, 3600)
+    update_settings({"live_tracking_warning_interval_seconds": value})
+    return value
+
 def get_pause_live_follow_when_minimized_enabled(default: bool = True) -> bool:
     """Return whether minimized windows should pause live output following."""
     value = load_settings().get("pause_live_follow_when_minimized_enabled", default)
@@ -125,6 +134,55 @@ def set_lssrv_auto_refresh_enabled(enabled: bool) -> bool:
     return value
 
 
+def coerce_profile_transfer_parallelism(value: Any, default: int = 1) -> int:
+    return _coerce_int_in_range(value, default, 1, 10)
+
+
+def coerce_profile_ssh_timeout(value: Any, default: float | None = None) -> float | None:
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return default
+    if number <= 0:
+        return default
+    return min(600.0, number)
+
+
+_CONFLICT_ACTIONS = {"overwrite", "overwrite_if_newer", "resume", "skip", "rename", "cancel"}
+
+
+def get_profile_conflict_action(profile_name: str) -> str | None:
+    name = str(profile_name or "").strip()
+    if not name:
+        return None
+    profile = next((item for item in load_profiles() if item.get("name") == name), None)
+    action = str((profile or {}).get("conflict_action", "")).strip()
+    return action if action in _CONFLICT_ACTIONS else None
+
+
+def set_profile_conflict_action(profile_name: str, action: str) -> str:
+    name = str(profile_name or "").strip()
+    value = str(action or "").strip()
+    if not name or value not in _CONFLICT_ACTIONS:
+        return ""
+    profiles = load_profiles()
+    for profile in profiles:
+        if profile.get("name") == name:
+            profile["conflict_action"] = value
+            upsert_profile(profile)
+            return value
+    return ""
+
+
+def clear_profile_conflict_action(profile_name: str) -> None:
+    name = str(profile_name or "").strip()
+    if not name:
+        return
+    profile = next((item for item in load_profiles() if item.get("name") == name), None)
+    if profile is not None and "conflict_action" in profile:
+        profile = dict(profile)
+        profile.pop("conflict_action", None)
+        upsert_profile(profile)
 def get_transfer_parallelism(default: int = 1) -> int:
     """Return the configured transfer queue parallelism, capped at 10."""
     st = load_settings()

@@ -34,7 +34,10 @@ class _FakeSlurm:
         self.sacct_calls += 1
         return "accounting"
 
+    def scontrol_show_job(self, _job_id):
+        return "job details"
     def lssrv(self):
+
         self.lssrv_calls += 1
         return "servers"
 
@@ -230,8 +233,36 @@ class LssrvAutoRefreshTests(unittest.TestCase):
 
         self.assertEqual(self.slurm.jobs_calls, 1)
 
+    def test_jobs_view_shows_unformatted_squeue_response(self):
+        raw = "JOBID|PARTITION|NAME|USER|ST|TIME\n123|short|train|alice|R|00:12\n"
+        self.slurm.squeue = lambda _user: raw
+
+        self.widget.section_tabs.setCurrentWidget(self.widget.details_tab)
+        self.widget.set_session(self.session)
+        self.widget.refresh_jobs()
+        self._wait_for_workers()
+
+        self.assertEqual(self.widget.jobs_text.toPlainText(), raw)
+
+    def test_accounting_and_job_details_show_unformatted_responses(self):
+        accounting = "JobID|JobName|State\n123|train|COMPLETED\n"
+        details = "JobId=123 JobName=train JobState=COMPLETED\n"
+        self.slurm.sacct = lambda _user: accounting
+        self.slurm.scontrol_show_job = lambda _job_id: details
+
+        self.widget.section_tabs.setCurrentWidget(self.widget.details_tab)
+        self.widget.set_session(self.session)
+        self.widget.refresh_sacct()
+        self._wait_for_workers()
+        self.assertEqual(self.widget.meta_text.toPlainText(), accounting)
+
+        self.widget.meta_job_id.setText("123")
+        self.widget.show_job_details()
+        self._wait_for_workers()
+        self.assertEqual(self.widget.meta_text.toPlainText(), details)
     def test_setting_defaults_to_disabled(self):
         with tempfile.TemporaryDirectory() as temp_dir:
+
             config_path = os.path.join(temp_dir, "config.json")
             with patch.object(storage, "_config_path", return_value=Path(config_path)):
                 self.assertFalse(storage.get_lssrv_auto_refresh_enabled())

@@ -6,7 +6,7 @@ from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QFormLayout, QHBoxLayout,
     QLineEdit, QPushButton, QCheckBox, QLabel, QFileDialog,
     QApplication, QListWidget, QSplitter, QMessageBox, QPlainTextEdit,
-    QInputDialog, QMenu, QDialog, QDialogButtonBox
+    QInputDialog, QMenu, QDialog, QDialogButtonBox, QSpinBox, QDoubleSpinBox
 )
 
 from truba_gui.core.i18n import t
@@ -18,6 +18,8 @@ from truba_gui.config.storage import (
     load_settings,
     update_settings,
     delete_profile,
+    coerce_profile_transfer_parallelism,
+    coerce_profile_ssh_timeout,
 )
 from truba_gui.config.system_profile import normalize_system_settings
 from truba_gui.core.history import append_event
@@ -95,6 +97,8 @@ class _ConnectionWorker(QObject):
     host_key_decision_requested = Signal(object)
 
     def __init__(self, cfg: SSHConfig, shell_size: tuple[int, int], log_cb, shell_output_cb, disconnect_cb=None):
+        self._cancelled = False
+        self._ssh = None
         super().__init__()
         self._cfg = cfg
         self._shell_size = shell_size
@@ -124,6 +128,7 @@ class _ConnectionWorker(QObject):
                 key_path=self._cfg.key_path,
                 host_key_policy=self._cfg.host_key_policy,
                 x11_forwarding=self._cfg.x11_forwarding,
+                timeout=self._cfg.ssh_timeout,
                 keepalive_interval_seconds=self._cfg.keepalive_interval_seconds,
                 host_key_decision=self._decide_host_key,
             )
@@ -133,7 +138,11 @@ class _ConnectionWorker(QObject):
                 shell_output_cb=self._shell_output_cb,
                 disconnect_cb=self._disconnect_cb,
             )
+            self._ssh = ssh
             ssh.connect(shell_size=self._shell_size)
+            if self._cancelled:
+                ssh.close()
+                return
             transport = ssh.client.get_transport() if ssh.client else None
             if transport is not None:
                 authenticated_user = transport.get_username() or ""
@@ -149,6 +158,14 @@ class _ConnectionWorker(QObject):
             })
         except Exception as exc:
             self.failed.emit(str(exc), exc)
+
+    def cancel(self) -> None:
+        self._cancelled = True
+        try:
+            if self._ssh is not None:
+                self._ssh.close()
+        except Exception:
+            pass
 
 
 class LoginWidget(QWidget):
@@ -186,10 +203,19 @@ class LoginWidget(QWidget):
         self._profile_system_settings = normalize_system_settings(None)
         self._profile_cli_allowed = False
         self._profile_keepalive = 30
+        self._profile_transfer_parallelism = 1
+        self._profile_ssh_timeout = None
         self._password_prompt_policy = "when-needed"
         self.key_path = QLineEdit()
         self.btn_browse_key = QPushButton(t("login.browse") if t("login.browse") != "[login.browse]" else "Seç")
         self.btn_browse_key.clicked.connect(self.pick_key)
+
+        self.sp_transfer_parallelism = QSpinBox()
+        self.sp_transfer_parallelism.setRange(1, 10)
+        self.sp_ssh_timeout = QDoubleSpinBox()
+        self.sp_ssh_timeout.setRange(0, 600)
+        self.sp_ssh_timeout.setDecimals(1)
+        self.sp_ssh_timeout.setSuffix(" s")
 
         self.cb_x11 = QCheckBox(t("login.x11_enable") if t("login.x11_enable") != "[login.x11_enable]" else "X11 Forwarding")
         self.cb_strict_hostkey = QCheckBox(t("login.strict_host_key"))
@@ -245,6 +271,8 @@ class LoginWidget(QWidget):
         self.form.addRow(t("login.profile_name_label"), self.profile_name)
         self.form.addRow(t("login.host"), self.host)
         self.form.addRow(t("login.port"), self.port)
+        self.form.addRow(t("connection.transfer_parallelism"), self.sp_transfer_parallelism)
+        self.form.addRow(t("connection.ssh_timeout"), self.sp_ssh_timeout)
         self.form.addRow(t("login.username"), self.username)
         self.form.addRow(t("login.password"), self.password)
         self.form.addRow("", self.cb_save_password)
@@ -309,6 +337,18 @@ class LoginWidget(QWidget):
 
     def shutdown_external_processes(self) -> None:
         """Called by MainWindow on app exit."""
+        # Stop a connection attempt before Qt destroys its QThread.
+        try:
+            worker = self._connect_worker
+            thread = self._connect_thread
+            if worker is not None:
+                worker.cancel()
+            if thread is not None:
+                thread.quit()
+                thread.wait(5000)
+        except Exception:
+            pass
+
         try:
             st = load_settings()
         except Exception:
@@ -855,6 +895,10 @@ class LoginWidget(QWidget):
         self._profile_keepalive = coerce_keepalive_interval(
             prof.get("keepalive_interval_seconds", 30)
         )
+        self._profile_transfer_parallelism = coerce_profile_transfer_parallelism(prof.get("transfer_parallelism", 1))
+        self._profile_ssh_timeout = coerce_profile_ssh_timeout(prof.get("ssh_timeout"))
+        self.sp_transfer_parallelism.setValue(self._profile_transfer_parallelism)
+        self.sp_ssh_timeout.setValue(self._profile_ssh_timeout or 0)
         # Never auto-fill decrypted password.
         # If legacy plain password exists, show it; if encrypted, keep empty.
         if save_pw and isinstance(prof.get("password"), str) and prof.get("password"):
@@ -992,6 +1036,8 @@ class LoginWidget(QWidget):
             "x11_forwarding": self.cb_x11.isChecked(),
             "cli_allowed": getattr(self, "_profile_cli_allowed", False),
             "keepalive_interval_seconds": self._profile_keepalive,
+            "transfer_parallelism": int(self.sp_transfer_parallelism.value()),
+            "ssh_timeout": float(self.sp_ssh_timeout.value()) or None,
             # dry_run removed
             "save_password": self.cb_save_password.isChecked(),
             "password_prompt_policy": self._password_prompt_policy,
@@ -1154,6 +1200,8 @@ class LoginWidget(QWidget):
             x11_forwarding=self.cb_x11.isChecked(),
             dry_run=use_ftp_mock,
             keepalive_interval_seconds=self._profile_keepalive,
+            transfer_parallelism=coerce_profile_transfer_parallelism(self._profile_transfer_parallelism),
+            ssh_timeout=coerce_profile_ssh_timeout(self._profile_ssh_timeout),
             system_settings=normalize_system_settings(
                 self._profile_system_settings
             ),

@@ -14,6 +14,8 @@ class RemoteEntry:
     mode: int = 0
 
 class FilesBackend(ABC):
+    supports_progressive_listing = False
+
     @abstractmethod
     def listdir(self, remote_dir: str) -> List[str]:
         """Backward-compatible: return names."""

@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://trubagui.local/schemas/deepseek-run-metadata-v2.json",
+  "title": "TRUBAGUI DeepSeek Run Metadata",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "runId",
+    "wave",
+    "card",
+    "mode",
+    "model",
+    "opencodeVersion",
+    "outputFormat",
+    "worktree",
+    "gitHeadStart",
+    "gitHeadEnd",
+    "startedAt",
+    "endedAt",
+    "durationSeconds",
+    "timeoutMinutes",
+    "childExitCode",
+    "workerExitCode",
+    "responsePresent",
+    "failureMessage",
+    "timedOut",
+    "killedOnTimeout",
+    "stdoutPath",
+    "stderrPath",
+    "filesChanged",
+    "changedPaths",
+    "diffStat"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 2 },
+    "runId": { "type": "string", "minLength": 1 },
+    "wave": { "type": ["string", "null"] },
+    "card": { "type": ["string", "null"] },
+    "mode": { "enum": ["analyze", "implement", "review", "smoke-test"] },
+    "model": { "type": "string", "minLength": 1 },
+    "opencodeVersion": { "type": "string", "minLength": 1 },
+    "outputFormat": { "enum": ["default", "json"] },
+    "worktree": { "type": "string", "minLength": 1 },
+    "gitHeadStart": { "type": "string" },
+    "gitHeadEnd": { "type": "string" },
+    "startedAt": { "type": "string", "format": "date-time" },
+    "endedAt": { "type": "string", "format": "date-time" },
+    "durationSeconds": { "type": "number", "minimum": 0 },
+    "timeoutMinutes": { "type": "integer", "minimum": 1, "maximum": 120 },
+    "childExitCode": { "type": ["integer", "null"] },
+    "workerExitCode": { "type": "integer" },
+    "responsePresent": { "type": "boolean" },
+    "failureMessage": { "type": ["string", "null"] },
+    "timedOut": { "type": "boolean" },
+    "killedOnTimeout": { "type": "boolean" },
+    "stdoutPath": { "const": "stdout.log" },
+    "stderrPath": { "const": "stderr.log" },
+    "filesChanged": { "type": ["boolean", "null"] },
+    "changedPaths": {
+      "oneOf": [
+        { "type": "null" },
+        { "type": "array", "items": { "type": "string" } }
+      ]
+    },
+    "diffStat": {
+      "oneOf": [
+        { "type": "null" },
+        { "type": "array", "items": { "type": "string" } }
+      ]
+    }
+  }
+}

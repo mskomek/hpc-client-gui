@@ -39,6 +39,7 @@ def _parse_modify(value: str) -> int:
 
 
 class FTPFilesBackend(FilesBackend):
+    supports_progressive_listing = True
     """Plain FTP implementation of the app's file-transfer backend."""
 
     supports_parallel_transfers = False

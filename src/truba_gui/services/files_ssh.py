@@ -8,6 +8,23 @@ import stat as pystat
 from typing import List, Tuple
 
 from truba_gui.services.files_base import FilesBackend, RemoteEntry
+
+_SFTP_CHUNK_SIZE = 8 * 1024 * 1024
+_SFTP_PREFETCH_REQUESTS = 64
+
+
+def _enable_sftp_read_ahead(stream, file_size: int) -> None:
+    prefetch = getattr(stream, "prefetch", None)
+    if callable(prefetch):
+        try:
+            prefetch(file_size=file_size, max_concurrent_requests=_SFTP_PREFETCH_REQUESTS)
+        except TypeError:
+            prefetch(file_size)
+
+def _enable_sftp_pipelining(stream) -> None:
+    pipelined = getattr(stream, "set_pipelined", None)
+    if callable(pipelined):
+        pipelined(True)
 from truba_gui.ssh.client import SSHClientWrapper
 
 
@@ -55,6 +72,7 @@ def _raise_on_failed_run(code: int, err: str, operation: str, path: str | None =
 
 
 class SSHFilesBackend(FilesBackend):
+    supports_progressive_listing = True
     def __init__(self, ssh: SSHClientWrapper):
         if not ssh.sftp:
             raise RuntimeError("SFTP not available")
@@ -84,20 +102,33 @@ class SSHFilesBackend(FilesBackend):
 
     def listdir_entries(self, remote_dir: str) -> List[RemoteEntry]:
         entries: List[RemoteEntry] = []
-        with _translate_remote_errors(remote_dir):
-            for attr in self.ssh.sftp.listdir_attr(remote_dir):
-                name = getattr(attr, "filename", "") or ""
-                path = remote_dir.rstrip("/") + "/" + name
-                mode = getattr(attr, "st_mode", 0) or 0
-                is_dir = pystat.S_ISDIR(mode)
-                size = int(getattr(attr, "st_size", 0) or 0)
-                mtime = int(getattr(attr, "st_mtime", 0) or 0)
-                entries.append(RemoteEntry(
-                    name=name, path=path, is_dir=is_dir, size=size, mtime=mtime, mode=mode
-                ))
+        listing_sftp = self.ssh.sftp
+        opener = getattr(self.ssh, "open_transfer_sftp", None)
+        if callable(opener):
+            try:
+                listing_sftp = opener()
+            except Exception:
+                listing_sftp = self.ssh.sftp
+        if listing_sftp is None:
+            raise RuntimeError("SFTP channel is not available")
+        isolated_sftp = listing_sftp is not self.ssh.sftp
+        try:
+            with _translate_remote_errors(remote_dir):
+                for attr in listing_sftp.listdir_attr(remote_dir):
+                    name = getattr(attr, "filename", "") or ""
+                    path = remote_dir.rstrip("/") + "/" + name
+                    mode = getattr(attr, "st_mode", 0) or 0
+                    is_dir = pystat.S_ISDIR(mode)
+                    size = int(getattr(attr, "st_size", 0) or 0)
+                    mtime = int(getattr(attr, "st_mtime", 0) or 0)
+                    entries.append(RemoteEntry(
+                        name=name, path=path, is_dir=is_dir, size=size, mtime=mtime, mode=mode
+                    ))
+        finally:
+            if isolated_sftp:
+                listing_sftp.close()
         entries.sort(key=lambda e: (not e.is_dir, e.name.lower()))
         return entries
-
     def read_text(self, remote_path: str) -> str:
         with self.ssh.sftp.open(remote_path, "rb") as f:
             data = f.read()
@@ -159,10 +190,11 @@ class SSHFilesBackend(FilesBackend):
                     progress_cb(local_size, remote_size)
                 with sftp.open(remote_path, "rb") as rf:
                     rf.seek(local_size)
+                    _enable_sftp_read_ahead(rf, remote_size)
                     os.makedirs(os.path.dirname(local_path) or ".", exist_ok=True)
                     with open(local_path, "ab") as lf:
                         while True:
-                            chunk = rf.read(1024 * 1024)
+                            chunk = rf.read(_SFTP_CHUNK_SIZE)
                             if not chunk:
                                 break
                             lf.write(chunk)
@@ -175,9 +207,10 @@ class SSHFilesBackend(FilesBackend):
             os.makedirs(os.path.dirname(local_path) or ".", exist_ok=True)
             downloaded = 0
             with sftp.open(remote_path, "rb") as rf:
+                _enable_sftp_read_ahead(rf, remote_size)
                 with open(local_path, "wb") as lf:
                     while True:
-                        chunk = rf.read(1024 * 1024)
+                        chunk = rf.read(_SFTP_CHUNK_SIZE)
                         if not chunk:
                             break
                         lf.write(chunk)
@@ -219,6 +252,7 @@ class SSHFilesBackend(FilesBackend):
                 with open(local_path, "rb") as lf:
                     lf.seek(remote_size)
                     with sftp.open(remote_path, "ab") as rf:
+                        _enable_sftp_pipelining(rf)
                         while True:
                             chunk = lf.read(1024 * 1024)
                             if not chunk:
@@ -252,8 +286,9 @@ class SSHFilesBackend(FilesBackend):
         try:
             local_size = os.path.getsize(local_path)
             with open(local_path, "rb") as source, sftp.open(temporary_path, "wb") as target:
+                _enable_sftp_pipelining(target)
                 sent = 0
-                while chunk := source.read(1024 * 1024):
+                while chunk := source.read(_SFTP_CHUNK_SIZE):
                     target.write(chunk)
                     sent += len(chunk)
                     if progress_cb is not None:

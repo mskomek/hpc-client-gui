@@ -16,7 +16,6 @@ function Read-Version([string]$Path) {
 
 $versions = @(
     (Read-Version (Join-Path $Root "pyproject.toml"))
-    (Read-Version (Join-Path $Root "src/truba_gui/pyproject.toml"))
 )
 $init = Get-Content -Raw (Join-Path $Root "src/truba_gui/__init__.py")
 $initMatch = [regex]::Match($init, '__version__\s*=\s*''([^'']+)''')

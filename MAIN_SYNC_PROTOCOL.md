@@ -18,7 +18,7 @@ paths, never recursive subdirectories.
 
 ## Always excluded
 
-- `.agent-runs/`, `.github/`, `dist/`, `tools/`, `waves/`, root `docs/`, `devtools/`
+- `.agent-runs/`, `dist/`, `tools/`, `waves/`, root `docs/`, `devtools/`
 - `AGENTS.md`, `CLAUDE.md`, `rules.md`, local notes, caches,
   logs, virtual environments, and non-versioned build output
 

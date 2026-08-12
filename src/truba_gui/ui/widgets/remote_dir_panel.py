@@ -23,6 +23,7 @@ from PySide6.QtCore import (
     QObject,
     QPoint,
     QThread,
+    QThreadPool,
     QTimer,
     Qt,
     Signal,
@@ -61,8 +62,12 @@ from truba_gui.core.ui_errors import show_exception
 from truba_gui.config.storage import (
     get_remote_directory_cache_enabled,
     get_transfer_parallelism,
+    coerce_profile_transfer_parallelism,
     get_upload_preflight_confirmation_enabled,
     get_transfer_checksum_verification_enabled,
+    get_profile_conflict_action,
+    set_profile_conflict_action,
+    clear_profile_conflict_action,
     set_upload_preflight_confirmation_enabled,
 )
 from truba_gui.services.file_clipboard import get_file_clipboard
@@ -73,6 +78,7 @@ from truba_gui.services.transfer_mode import (
     normalize_transfer_mode,
     upload_with_mode,
 )
+from truba_gui.ui.async_call import AsyncCall
 from truba_gui.ui.dialogs.transfer_conflict_dialog import (
     TransferConflictDecision,
     TransferConflictDialog,
@@ -730,6 +736,8 @@ class RemoteDirPanel(QWidget):
         self._next_planning_job_id = 0
         self._show_transfer_dialog = True
         self._directory_cache: Dict[str, Tuple[float, List[RemoteEntry]]] = {}
+        self._listing_generation = 0
+        self._listing_worker: Optional[AsyncCall] = None
 
         self.panel_id = str(id(self))
         RemoteDirPanel._instances[self.panel_id] = self
@@ -785,11 +793,11 @@ class RemoteDirPanel(QWidget):
         self.btn_parent.setEnabled(False)
 
         self.btn_refresh = QPushButton(t("dirs.refresh") if t("dirs.refresh") != "[dirs.refresh]" else "Yenile")
-        self.btn_refresh.clicked.connect(lambda: self.refresh(force=True))
+        self.btn_refresh.clicked.connect(lambda: self._refresh_from_ui(force=True))
 
         self.refresh_shortcut = QShortcut(QKeySequence.Refresh, self)
         self.refresh_shortcut.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
-        self.refresh_shortcut.activated.connect(lambda: self.refresh(force=True))
+        self.refresh_shortcut.activated.connect(lambda: self._refresh_from_ui(force=True))
 
         top = QHBoxLayout()
         top.addWidget(self.lbl)
@@ -932,7 +940,7 @@ class RemoteDirPanel(QWidget):
         self.current_dir = remote_dir
         self._category_dir = remote_dir
         self.path.setText(remote_dir)
-        self.refresh()
+        self._refresh_from_ui()
 
     def _close_directory_tab(self, index: int) -> None:
         """Close only additional directory tabs; keep one working tab open."""
@@ -956,7 +964,7 @@ class RemoteDirPanel(QWidget):
         self._category_dir = target
         self.path.setText(target)
         if not changed:
-            self.refresh()
+            self._refresh_from_ui()
         self._update_navigation_controls()
         return True
 
@@ -981,7 +989,7 @@ class RemoteDirPanel(QWidget):
                 self.delete_selected()
                 return True
             if e.key() == Qt.Key.Key_F5 and not e.modifiers():
-                self.refresh(force=True)
+                self._refresh_from_ui(force=True)
                 return True
             if e.key() == Qt.Key.Key_F2 and not e.modifiers():
                 if self.rename_selected(watched):
@@ -1079,7 +1087,61 @@ class RemoteDirPanel(QWidget):
         self.directory_tabs.blockSignals(signals_were_blocked)
         self.path.setText(target)
         self._update_navigation_controls()
-        self.refresh()
+        if bool(getattr(self.session.get("files"), "supports_progressive_listing", False)):
+            self.refresh_async()
+        else:
+            self.refresh()
+
+    def _refresh_from_ui(self, *, force: bool = False) -> None:
+        files = (self.session or {}).get("files")
+        if bool(getattr(files, "supports_progressive_listing", False)):
+            self.refresh_async(force=force)
+        else:
+            self.refresh(force=force)
+
+    def refresh_async(self, force: bool = False) -> bool:
+        """Fetch a directory off the GUI thread; stale navigations are ignored."""
+        if not self.session or not self.session.get("files"):
+            return False
+        self._listing_generation += 1
+        generation = self._listing_generation
+        category_dir = self._category_dir or self.current_dir
+        files = self.session["files"]
+        key = self._cache_key(category_dir)
+        if not force and get_remote_directory_cache_enabled():
+            cached = self._directory_cache.get(key)
+            if cached is not None and monotonic() - cached[0] <= DIRECTORY_CACHE_TTL_SECONDS:
+                self._listing_override = (category_dir, list(cached[1]))
+                self.refresh()
+                return True
+        def fetch() -> list[RemoteEntry]:
+            return list(files.listdir_entries(key))
+        worker = AsyncCall(("directory", generation), fetch)
+        self._listing_worker = worker
+        def finished(token, entries) -> None:
+            if not isValid(self) or token != ("directory", self._listing_generation):
+                return
+            self._listing_worker = None
+            complete = list(entries)
+            self._directory_cache[key] = (monotonic(), complete)
+            visible: list[RemoteEntry] = []
+            def render_batch() -> None:
+                if not isValid(self) or token != ("directory", self._listing_generation):
+                    return
+                visible.extend(complete[len(visible):len(visible) + 200])
+                self._listing_override = (category_dir, list(visible))
+                self.refresh()
+                if len(visible) < len(complete):
+                    QTimer.singleShot(0, render_batch)
+            render_batch()
+        def failed(token, _error) -> None:
+            if isValid(self) and token == ("directory", self._listing_generation):
+                self._listing_worker = None
+                self._show_op_error(str(_error))
+        worker.signals.finished.connect(finished)
+        worker.signals.failed.connect(failed)
+        QThreadPool.globalInstance().start(worker)
+        return True
 
     @staticmethod
     def _cache_key(remote_dir: str) -> str:
@@ -1346,15 +1408,20 @@ class RemoteDirPanel(QWidget):
             return
 
         category_dir = self._category_dir or self.current_dir
-        try:
-            entries = self._listdir_entries_cached(category_dir, force=bool(force))
-        except Exception as e:
-            self._show_op_error(
-                f"{t('dirs.load_failed') if t('dirs.load_failed') != '[dirs.load_failed]' else 'Dizin okunamadı'}: {e}"
-            )
-            for v in self.views.values():
-                v.clear()
-            return
+        override = getattr(self, "_listing_override", None)
+        if override is not None and override[0] == category_dir:
+            entries = list(override[1])
+            self._listing_override = None
+        else:
+            try:
+                entries = self._listdir_entries_cached(category_dir, force=bool(force))
+            except Exception as e:
+                self._show_op_error(
+                    f"{t('dirs.load_failed') if t('dirs.load_failed') != '[dirs.load_failed]' else 'Dizin okunamadı'}: {e}"
+                )
+                for v in self.views.values():
+                    v.clear()
+                return
 
         for v in self.views.values():
             v.clear()
@@ -2069,6 +2136,13 @@ class RemoteDirPanel(QWidget):
         target = self._conflict_info(dst, is_local=target_is_local)
         return self._conflict_decision(source, target)
 
+    def reset_conflict_preference(self) -> None:
+        """Forget the persisted always-use choice for the active profile."""
+        profile_name = str((self.session or {}).get("profile_name", "")).strip() if self.session else ""
+        if profile_name:
+            clear_profile_conflict_action(profile_name)
+        RemoteDirPanel._session_conflict_action = None
+
     def _conflict_decision(
         self,
         source: TransferConflictInfo,
@@ -2081,7 +2155,8 @@ class RemoteDirPanel(QWidget):
         modal dialog. Returns the normalized action string, optionally suffixed
         with "_all".
         """
-        session_action = RemoteDirPanel._session_conflict_action
+        profile_name = str((self.session or {}).get("profile_name", "")).strip() if self.session else ""
+        session_action = get_profile_conflict_action(profile_name) if profile_name else RemoteDirPanel._session_conflict_action
         if session_action is not None:
             return self._normalize_conflict_decision(
                 TransferConflictDecision(action=session_action), source, target
@@ -2096,7 +2171,10 @@ class RemoteDirPanel(QWidget):
         if decision.always_use:
             # Keep the selected action (rather than its result) so conditional
             # actions are evaluated against each later conflicting file.
-            RemoteDirPanel._session_conflict_action = decision.action
+            if profile_name:
+                set_profile_conflict_action(profile_name, decision.action)
+            else:
+                RemoteDirPanel._session_conflict_action = decision.action
         apply_all = bool(decision.always_use or decision.apply_current_queue_only)
         return action + "_all" if apply_all else action
 
@@ -2325,7 +2403,7 @@ class RemoteDirPanel(QWidget):
         plan = filtered_plan
         transfer_items = self._transfer_items_from_plan(plan)
         files = self.session["files"]
-        configured_parallel_limit = get_transfer_parallelism()
+        configured_parallel_limit = coerce_profile_transfer_parallelism(getattr(self.session.get("cfg"), "transfer_parallelism", None), get_transfer_parallelism())
         backend_parallel_limit = (
             configured_parallel_limit
             if bool(getattr(files, "supports_parallel_transfers", False))
@@ -2541,6 +2619,16 @@ class RemoteDirPanel(QWidget):
             planning_jobs = list(self._planning_jobs.items())
             for _job_id, (_thread, worker) in planning_jobs:
                 worker.cancelled = True
+            # Interrupt a planner blocked in the shared browsing SFTP channel
+            # before the SSH transport is closed by MainWindow shutdown.
+            try:
+                files = (self.session or {}).get("files")
+                ssh = getattr(files, "ssh", None)
+                sftp = getattr(ssh, "sftp", None)
+                if sftp is not None:
+                    sftp.close()
+            except Exception:
+                pass
             for job_id, (thread, worker) in planning_jobs:
                 try:
                     thread.quit()

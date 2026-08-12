@@ -21,6 +21,7 @@ from truba_gui.config.storage import (
     SBATCH_FOLLOW_MODE_OUTPUTS_TAB,
     get_follow_window_open_minimized_enabled,
     get_jobs_outputs_refresh_interval_seconds,
+    get_live_tracking_warning_interval_seconds,
     get_lssrv_auto_refresh_enabled,
     get_pause_live_follow_when_minimized_enabled,
     get_sacct_auto_refresh_enabled,
@@ -30,7 +31,7 @@ from truba_gui.core.i18n import t
 from truba_gui.core.ui_errors import show_exception
 from truba_gui.core.history import append_event
 from truba_gui.ui.widgets.remote_dir_panel import RemoteDirPanel
-from truba_gui.services.slurm_models import parse_sacct, parse_squeue
+from truba_gui.services.slurm_models import parse_scontrol
 from truba_gui.services.slurm_script_parser import (
     parse_job_name,
     parse_output_error,
@@ -52,11 +53,12 @@ _ANSI_COLORS = {
 _LIVE_TAIL_INTERVAL_MS = 1000
 _LIVE_TAIL_LINE_COUNT = 200
 _LIVE_TAIL_MAX_RETRY_INTERVAL_MS = 30_000
-_LIVE_TAIL_IDLE_TIMEOUT_SECONDS = 60
 _LIVE_TAIL_SLOW_INTERVAL_MS = 5_000
 _LIVE_TAIL_FILE_RETRY_INTERVAL_MS = 60_000
 _LIVE_TAIL_INITIAL_RETRY_SECONDS = 30
 _LIVE_TAIL_FILE_RETRY_WINDOW_SECONDS = 5 * 60
+_OUTPUT_MAX_LINES = 5000
+_OUTPUT_TRUNCATION_MARKER = "[Older output truncated; showing the latest 5000 lines.]"
 
 
 class _NavigableTextEdit(QTextEdit):
@@ -75,6 +77,28 @@ class _NavigableTextEdit(QTextEdit):
             return
         super().keyPressEvent(event)
 
+
+def _ansi_prefix_for_tail(text: str, cut: int) -> str:
+    prefix: list[str] = []
+    for match in _ANSI_TOKEN_RE.finditer(text[:cut]):
+        if match.group(1) is None:
+            continue
+        if any(code in {"0", ""} for code in match.group(1).split(";")):
+            prefix.clear()
+        prefix.append(match.group(0))
+    return "".join(prefix)
+
+
+def _bounded_output_text(text: str, max_lines: int = _OUTPUT_MAX_LINES) -> str:
+    """Keep live output bounded while retaining newest lines and SGR state."""
+    value = str(text or "")
+    lines = value.splitlines(keepends=True)
+    if len(lines) <= max_lines:
+        return value
+    tail = "".join(lines[-max_lines:])
+    cut = len(value) - len(tail)
+    prefix = _ansi_prefix_for_tail(value, cut)
+    return prefix + _OUTPUT_TRUNCATION_MARKER + "\n" + tail
 
 def _ansi_to_html(text: str) -> str:
     parts = []
@@ -249,9 +273,14 @@ class _OutputFollowerWidget(QWidget):
             if self._live_timer.interval() == _LIVE_TAIL_SLOW_INTERVAL_MS:
                 self._live_timer.setInterval(_LIVE_TAIL_INTERVAL_MS)
             return
-        if not self._tail_stop_notified and time.monotonic() - self._live_tail_last_change >= _LIVE_TAIL_IDLE_TIMEOUT_SECONDS:
+        warning_seconds = get_live_tracking_warning_interval_seconds()
+        if (
+            warning_seconds > 0
+            and not self._tail_stop_notified
+            and time.monotonic() - self._live_tail_last_change >= warning_seconds
+        ):
             self._live_timer.setInterval(_LIVE_TAIL_SLOW_INTERVAL_MS)
-            self._show_tracking_stopped_dialog("Çıktı 60 saniyedir değişmedi.")
+            self._show_tracking_stopped_dialog(f"Çıktı {warning_seconds} saniyedir değişmedi.")
 
     def _show_tracking_stopped_dialog(self, reason: str) -> None:
         if self._tail_alert_visible or self._tail_suspended or not isValid(self):
@@ -600,6 +629,10 @@ class JobsOutputsWidget(QWidget):
         self._apply_terminal_output_style(self.meta_text)
         self.meta_job_id = QLineEdit()
         self.meta_job_id.setPlaceholderText(t("jobs.job_id"))
+        self.meta_job_script = QLabel()
+        self.meta_job_script.setTextFormat(Qt.TextFormat.RichText)
+        self.meta_job_script.setOpenExternalLinks(False)
+        self.meta_job_script.linkActivated.connect(self._open_detail_script)
         self.btn_sacct = QPushButton(t("jobs_outputs.refresh_sacct"))
         self.btn_scontrol = QPushButton(t("jobs_outputs.show_job_details"))
         self.btn_sacct.clicked.connect(self.refresh_sacct)
@@ -611,6 +644,7 @@ class JobsOutputsWidget(QWidget):
         meta_row.addWidget(self.btn_scontrol)
         vm = QVBoxLayout(self.meta_box)
         vm.addLayout(meta_row)
+        vm.addWidget(self.meta_job_script)
         vm.addWidget(self.meta_text)
 
         # --- lssrv
@@ -749,6 +783,7 @@ class JobsOutputsWidget(QWidget):
     def _apply_terminal_output_style(widget: QTextEdit) -> None:
         widget.setLineWrapMode(QTextEdit.NoWrap)
         widget.setFont(QFontDatabase.systemFont(QFontDatabase.FixedFont))
+        widget.document().setMaximumBlockCount(_OUTPUT_MAX_LINES + 1)
         widget.setStyleSheet(
             "QTextEdit { background-color: #111111; color: #e8e8e8; "
             "border: 1px solid #555; selection-background-color: #264f78; }"
@@ -771,6 +806,7 @@ class JobsOutputsWidget(QWidget):
         self.path_out.setText("")
         self.path_err.setText("")
         self.meta_text.setPlainText("")
+        self.meta_job_script.clear()
         self.meta_job_id.setText("")
         self.lssrv_text.setPlainText("")
         self.active_script = ""
@@ -945,12 +981,14 @@ class JobsOutputsWidget(QWidget):
             if self._live_timer.interval() == _LIVE_TAIL_SLOW_INTERVAL_MS:
                 self._live_timer.setInterval(_LIVE_TAIL_INTERVAL_MS)
             return
+        warning_seconds = get_live_tracking_warning_interval_seconds()
         if (
-            not self._tail_stop_notified
-            and time.monotonic() - self._live_tail_last_change >= _LIVE_TAIL_IDLE_TIMEOUT_SECONDS
+            warning_seconds > 0
+            and not self._tail_stop_notified
+            and time.monotonic() - self._live_tail_last_change >= warning_seconds
         ):
             self._live_timer.setInterval(_LIVE_TAIL_SLOW_INTERVAL_MS)
-            self._show_tracking_stopped_dialog("Çıktı 60 saniyedir değişmedi.")
+            self._show_tracking_stopped_dialog(f"Çıktı {warning_seconds} saniyedir değişmedi.")
 
     def _show_tracking_stopped_dialog(self, reason: str) -> None:
         if self._tail_alert_visible or self._tail_suspended or not isValid(self):
@@ -1020,14 +1058,6 @@ class JobsOutputsWidget(QWidget):
         QThreadPool.globalInstance().start(worker)
         return True
 
-    @staticmethod
-    def _structured_slurm_text(jobs, raw: str) -> str:
-        if not jobs:
-            return raw
-        rows = ["JOBID  STATE  NAME  NODES  CPUS  REASON"]
-        rows += [f"{job.job_id}  {job.state}  {job.name}  {job.nodes}  {job.cpus}  {job.reason or job.exit_code}" for job in jobs]
-        return "\n".join(rows) + "\n\nRaw output:\n" + raw
-
     # ---------------- Jobs
     def refresh_jobs(self):
         if not self.session or not self.session.get("slurm"):
@@ -1038,7 +1068,7 @@ class JobsOutputsWidget(QWidget):
         def success(txt) -> None:
             if not self.is_details_polling_visible():
                 return
-            self.jobs_text.setPlainText(self._structured_slurm_text(parse_squeue(txt), txt))
+            self.jobs_text.setPlainText(txt)
             append_event({"type": "squeue", "user": user})
 
         def failed(e) -> None:
@@ -1082,7 +1112,7 @@ class JobsOutputsWidget(QWidget):
         def success(txt) -> None:
             if not self.is_details_polling_visible():
                 return
-            self.meta_text.setPlainText(self._structured_slurm_text(parse_sacct(txt), txt))
+            self.meta_text.setPlainText(txt)
             append_event({"type": "sacct", "user": user})
 
         def failed(e) -> None:
@@ -1094,6 +1124,11 @@ class JobsOutputsWidget(QWidget):
             success,
             on_error=failed,
         )
+
+    def _open_detail_script(self, _link: str) -> None:
+        path = str(getattr(self, "_detail_script_path", "")).strip()
+        if path:
+            self._activate_slurm_script(path)
 
     def show_job_details(self):
         if not self.session or not self.session.get("slurm"):
@@ -1107,7 +1142,13 @@ class JobsOutputsWidget(QWidget):
         slurm = self.session["slurm"]
 
         def success(txt) -> None:
-            self.meta_text.setPlainText(self._structured_slurm_text(parse_sacct(txt), txt))
+            self.meta_text.setPlainText(txt)
+            detail = parse_scontrol(txt, jobid)
+            self._detail_script_path = detail.script_path
+            if detail.script_path:
+                self.meta_job_script.setText(f"<b>{t('jobs_outputs.script_path')}:</b> <a href=\"script\">{detail.script_path}</a>")
+            else:
+                self.meta_job_script.clear()
             append_event({"type": "scontrol_show_job", "jobid": jobid})
 
         def failed(e) -> None:
@@ -1133,7 +1174,7 @@ class JobsOutputsWidget(QWidget):
             if not self.is_details_polling_visible():
                 return
             if txt:
-                self.lssrv_text.setHtml(_ansi_to_html(txt))
+                self.lssrv_text.setHtml(_ansi_to_html(_bounded_output_text(txt)))
             else:
                 self.lssrv_text.setPlainText(t("jobs_outputs.lssrv_empty"))
             append_event({"type": "lssrv", "status": "success"})
@@ -1612,7 +1653,8 @@ class JobsOutputsWidget(QWidget):
         horizontal_scrollbar = widget.horizontalScrollBar()
         previous_position = scrollbar.value()
         previous_horizontal_position = horizontal_scrollbar.value()
-        widget.setPlainText(text)
+        widget.document().setMaximumBlockCount(_OUTPUT_MAX_LINES + 1)
+        widget.setPlainText(_bounded_output_text(text))
         if follow_latest:
             JobsOutputsWidget._scroll_to_latest(
                 widget,

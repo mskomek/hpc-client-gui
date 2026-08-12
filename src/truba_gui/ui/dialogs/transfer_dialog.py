@@ -2,9 +2,7 @@ from __future__ import annotations
 
 import inspect
 import time
-from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
-from dataclasses import dataclass
-from threading import Lock
+from threading import Thread
 from typing import Callable, List
 
 from PySide6.QtCore import QObject, Qt, QTimer, Signal, Slot
@@ -27,25 +25,12 @@ from PySide6.QtWidgets import (
 from truba_gui.core.i18n import t
 from truba_gui.core.debug_telemetry import is_source_run
 from truba_gui.core.logging import get_logger
+from truba_gui.services.transfer_controller import TransferController, TransferItem
 
 
 def _tr(key: str, fallback: str) -> str:
     value = t(key)
     return fallback if value == f"[{key}]" else value
-
-
-@dataclass
-class TransferItem:
-    op: str
-    src: str
-    dst: str
-    recursive: bool = False
-    priority: str = "Normal"
-    cached_size: int | None = None
-
-    def label(self) -> str:
-        name = (self.dst or self.src).rstrip("/").split("/")[-1] or (self.dst or self.src)
-        return f"{self.op}: {name}"
 
 
 class TransferPreflightDialog(QDialog):
@@ -171,6 +156,7 @@ class _TransferWorker(QObject):
 
 class TransferDialog(QDialog):
     _MAX_VISIBLE_LIST_ITEMS = 500
+    _MAX_HISTORY = 1000
     _PROGRESS_PUBLISH_INTERVAL_MS = 150
 
     transferStatsChanged = Signal(str)
@@ -414,6 +400,8 @@ class TransferDialog(QDialog):
             self._errors.append((item, error))
         else:
             self._completed.append(item)
+            if len(self._completed) > self._MAX_HISTORY:
+                del self._completed[:-self._MAX_HISTORY]
         try:
             self._active_items.remove(item)
         except ValueError:
@@ -646,212 +634,50 @@ class _WorkerThread(QObject):
     transfer_progress = Signal(object, object, object)
     all_done = Signal()
 
-    def __init__(
-        self,
-        items: List[TransferItem],
-        run_item: Callable[[TransferItem], None],
-        *,
-        parallel_limit: int = 1,
-    ) -> None:
+    def __init__(self, items, run_item, *, parallel_limit=1):
         super().__init__()
-        self._items = self._normalize_recursive_transfer_plan(items)
-        self._run_item = run_item
-        self._parallel_limit = max(1, min(10, int(parallel_limit or 1)))
-        self._cancel = False
-        self._stop_after_current = False
-        self._clear_pending = False
-        self._removed_item_ids: set[int] = set()
-        self._started_item_ids: set[int] = set()
-        self._priority_by_id = {
-            id(item): str(getattr(item, "priority", "Normal") or "Normal")
-            for item in self._items
-        }
-        self._lock = Lock()
-
-    @staticmethod
-    def _normalize_recursive_transfer_plan(items: List[TransferItem]) -> List[TransferItem]:
-        """Prepare all recursive directories before the bounded file phase.
-
-        Only plans made entirely of mkdir/upload/download are normalized.
-        Any mutation such as delete, move, or copy retains its original order.
-        """
-        plan = list(items)
-        allowed = {"mkdir_remote", "mkdir_local", "upload", "download"}
-        if not plan or any(item.op not in allowed for item in plan):
-            return plan
-        mkdirs = [item for item in plan if item.op in {"mkdir_remote", "mkdir_local"}]
-        transfers = [item for item in plan if item.op in {"upload", "download"}]
-        return mkdirs + transfers if mkdirs and transfers else plan
+        self._items = list(items)
+        self._controller = TransferController(
+            items,
+            run_item,
+            parallel_limit=parallel_limit,
+            on_queue=self._queue_event,
+            on_progress=lambda item, done, total: self.transfer_progress.emit(item, done, total),
+        )
+        self._start_index = 0
 
     def start(self) -> None:
-        from threading import Thread
+        self._controller.start()
+        Thread(target=self._wait_for_done, daemon=True).start()
 
-        Thread(target=self._run, daemon=True).start()
-
-    @Slot()
-    def stop_after_current(self) -> None:
-        with self._lock:
-            self._stop_after_current = True
-
-    @Slot()
-    def cancel_all(self) -> None:
-        with self._lock:
-            self._cancel = True
-            self._stop_after_current = True
-            self._clear_pending = True
-
-    @Slot()
-    def clear_pending(self) -> None:
-        with self._lock:
-            self._clear_pending = True
-            self._stop_after_current = True
-
-    def remove_pending_items(self, items: List[TransferItem]) -> None:
-        with self._lock:
-            self._removed_item_ids.update(id(item) for item in items)
-
-    def set_pending_priorities(self, items: List[TransferItem], priority: str) -> None:
-        """Update only work the scheduler has not submitted yet."""
-        with self._lock:
-            for item in items:
-                item_id = id(item)
-                if item_id not in self._started_item_ids:
-                    self._priority_by_id[item_id] = priority
-
-    def _priority_for(self, item: TransferItem) -> int:
-        order = {"Highest": 0, "High": 1, "Normal": 2, "Low": 3, "Lowest": 4}
-        with self._lock:
-            value = self._priority_by_id.get(
-                id(item),
-                str(getattr(item, "priority", "Normal") or "Normal"),
-            )
-        return order.get(value, 2)
-
-    def _prioritize_transfer_run(self, start_index: int) -> None:
-        """Stably reorder only the next uninterrupted upload/download run."""
-        end_index = start_index
-        while (
-            end_index < len(self._items)
-            and self._items[end_index].op in {"upload", "download"}
-        ):
-            end_index += 1
-        if end_index - start_index > 1:
-            self._items[start_index:end_index] = sorted(
-                self._items[start_index:end_index],
-                key=self._priority_for,
-            )
-
-    def _state(self) -> tuple[bool, bool, bool]:
-        with self._lock:
-            return self._cancel, self._stop_after_current, self._clear_pending
-
-    def _is_removed(self, item: TransferItem) -> bool:
-        with self._lock:
-            return id(item) in self._removed_item_ids
-
-    def _run_one(self, item: TransferItem) -> tuple[TransferItem, bool, str]:
-        try:
-            def progress(done: int, total: int, current=item) -> None:
-                cancel, _stop, _clear = self._state()
-                if cancel:
-                    raise _TransferCancelled()
-                self.transfer_progress.emit(current, int(done), int(total))
-
-            self._run_item(item, progress)
-            return item, False, ""
-        except _TransferCancelled:
-            return (
-                item,
-                True,
-                t("dirs.cancelled")
-                if t("dirs.cancelled") != "[dirs.cancelled]"
-                else "Cancelled.",
-            )
-        except Exception as exc:
-            return item, False, str(exc)
-
-    def _run(self) -> None:
-        next_index = 0
-        futures = {}
-        with ThreadPoolExecutor(max_workers=self._parallel_limit) as executor:
-            while next_index < len(self._items) or futures:
-                cancel, stop_after_current, clear_pending = self._state()
-                if cancel:
-                    break
-                # Directory preparation and every non-transfer operation stay
-                # sequential.  In particular, an upload/download batch cannot
-                # start until preceding mkdir_remote/mkdir_local items finish.
-                if not futures and next_index < len(self._items):
-                    item = self._items[next_index]
-                    if item.op not in {"upload", "download"}:
-                        next_index += 1
-                        if self._is_removed(item):
-                            continue
-                        if stop_after_current or clear_pending:
-                            break
-                        self.item_started.emit(next_index, item)
-                        finished_item, cancelled, error = self._run_one(item)
-                        self.item_finished.emit(finished_item, cancelled, error)
-                        if cancelled:
-                            break
-                        continue
-                    if (
-                        next_index > 0
-                        and self._items[next_index - 1].op
-                        in {"delete", "delete_local"}
-                    ):
-                        # An overwrite deletion belongs to this exact
-                        # transfer.  Complete it before starting any later
-                        # transfers, so a queue never removes every
-                        # conflicting target before writing the first one.
-                        next_index += 1
-                        if self._is_removed(item):
-                            continue
-                        if stop_after_current or clear_pending:
-                            break
-                        self.item_started.emit(next_index, item)
-                        finished_item, cancelled, error = self._run_one(item)
-                        self.item_finished.emit(finished_item, cancelled, error)
-                        if cancelled:
-                            break
-                        continue
-                while (
-                    next_index < len(self._items)
-                    and len(futures) < self._parallel_limit
-                    and not stop_after_current
-                    and not clear_pending
-                ):
-                    self._prioritize_transfer_run(next_index)
-                    item = self._items[next_index]
-                    if item.op not in {"upload", "download"}:
-                        # Barrier: wait for the active transfer batch before
-                        # running a later mkdir or other remote mutation.
-                        break
-                    next_index += 1
-                    if self._is_removed(item):
-                        continue
-                    self.item_started.emit(next_index, item)
-                    with self._lock:
-                        self._started_item_ids.add(id(item))
-                    futures[executor.submit(self._run_one, item)] = item
-                    cancel, stop_after_current, clear_pending = self._state()
-                    if cancel:
-                        break
-                if not futures:
-                    break
-                done, _pending = wait(futures, return_when=FIRST_COMPLETED)
-                should_stop = False
-                for future in done:
-                    futures.pop(future, None)
-                    item, cancelled, error = future.result()
-                    self.item_finished.emit(item, cancelled, error)
-                    if cancelled:
-                        should_stop = True
-                if should_stop:
-                    break
+    def _wait_for_done(self) -> None:
+        self._controller.wait()
         self.all_done.emit()
 
+    def _queue_event(self, event: str, item: TransferItem) -> None:
+        if event == "started":
+            self._start_index += 1
+            self.item_started.emit(self._start_index, item)
+        elif event == "completed":
+            self.item_finished.emit(item, False, "")
+        elif event == "failed":
+            error = next((message for failed, message in self._controller.failed if failed is item), "Transfer failed")
+            self.item_finished.emit(item, error == "cancelled", "" if error == "cancelled" else error)
 
+    def stop_after_current(self) -> None:
+        self._controller.stop_after_current()
+
+    def cancel_all(self) -> None:
+        self._controller.cancel_all()
+
+    def clear_pending(self) -> None:
+        self._controller.clear_pending()
+
+    def remove_pending_items(self, items) -> None:
+        self._controller.remove_pending_items(items)
+
+    def set_pending_priorities(self, items, priority: str) -> None:
+        self._controller.set_pending_priorities(items, priority)
 def _format_size(value: float) -> str:
     try:
         amount = float(value)
