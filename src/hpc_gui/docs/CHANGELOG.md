@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.2.6
+
+### Universal HPC branding
+- Renamed the Python package to hpc_gui and aligned product-facing branding with generic HPC terminology.
+- Improved Linux release startup geometry so the GUI opens within the available desktop area and remains resizable.
+
 ## v1.2.5
 
 ### Cross-platform release

@@ -60,9 +60,6 @@ $releaseChangelogContent = Get-ChangelogSection -Path $changelogSrc -Version $Ve
 
 $releaseBase = Join-Path $Root $ReleaseRoot
 $versionDir = Join-Path $releaseBase "v$Version"
-if (Test-Path $versionDir) {
-    Remove-Item $versionDir -Recurse -Force
-}
 New-Item -ItemType Directory -Path $versionDir -Force | Out-Null
 
 Copy-Item -Path (Join-Path $distDir "*") -Destination $versionDir -Recurse -Force

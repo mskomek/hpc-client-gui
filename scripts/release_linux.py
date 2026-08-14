@@ -32,6 +32,7 @@ SRC_DIR = REPO_ROOT / "src"
 DIST_DIR = REPO_ROOT / "dist"
 RELEASE_ROOT = DIST_DIR / "releases"
 APPIMAGE_DEF_DIR = REPO_ROOT / "build" / "linux" / "appimage"
+APPIMAGE_ICON = APPIMAGE_DEF_DIR / "hpc-client-gui.png"
 DEB_DEF_DIR = REPO_ROOT / "build" / "linux" / "deb"
 FLATPAK_DEF_DIR = REPO_ROOT / "build" / "linux" / "flatpak"
 WINDOWS_ICON = REPO_ROOT / "build" / "windows" / "hpc-client-gui.ico"
@@ -300,6 +301,8 @@ def _build_appimage(version: str, output_dir: Path) -> Path:
     (app_dir / "usr" / "bin").mkdir(parents=True)
     _copy_tree(DIST_DIR / "hpc-client-gui", app_dir / "usr" / "bin")
     shutil.copy2(APPIMAGE_DEF_DIR / DESKTOP_ENTRY_NAME, app_dir / DESKTOP_ENTRY_NAME)
+    if APPIMAGE_ICON.is_file():
+        shutil.copy2(APPIMAGE_ICON, app_dir / APPIMAGE_ICON.name)
     shutil.copy2(APPIMAGE_DEF_DIR / APPRUN_NAME, app_dir / APPRUN_NAME)
     os.chmod(app_dir / APPRUN_NAME, 0o755)
     artifact = output_dir / appimage_artifact_name(version)

@@ -18,6 +18,17 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: Cache Linux release dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/pip
+            ~/.cache/flatpak-builder
+            ~/.local/share/flatpak
+            .flatpak-builder
+            /tmp/appimagetool.AppImage
+          key: linux-release-${{ runner.os }}-${{ hashFiles('pyproject.toml', 'build/linux/flatpak/*.json') }}
+          restore-keys: linux-release-${{ runner.os }}-
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
@@ -48,7 +59,7 @@ jobs:
           flatpak install --user --noninteractive --assumeyes flathub org.freedesktop.Platform//24.08 org.freedesktop.Sdk//24.08
       - name: Install AppImage tool
         run: |
-          curl --fail --location --retry 3 --output /tmp/appimagetool.AppImage https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage
+          if [ ! -f /tmp/appimagetool.AppImage ]; then curl --fail --location --retry 3 --output /tmp/appimagetool.AppImage https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage; fi
           chmod +x /tmp/appimagetool.AppImage
       - name: Build and stage Linux artifacts
         env:

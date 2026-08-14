@@ -9,7 +9,7 @@ A **client-side GUI application** for **SSH + Slurm + optional X11 workflows** a
 
 A desktop client for remote access, files, scheduler jobs, and optional X11 on Slurm-compatible HPC clusters. Connect once, browse and transfer files, monitor jobs, and launch X11 tools only when needed.
 
-**Latest Windows release:** [v1.2.5 portable package](https://github.com/mskomek/hpc-client-gui/releases/tag/v1.2.5) (`hpc-client-gui_windows_onedir.zip`)
+**Latest release:** [v1.2.6](https://github.com/mskomek/hpc-client-gui/releases/tag/v1.2.6) includes Windows ZIP, Linux AppImage, and Linux `.deb` packages.
 
 Quick start: **Download → Extract All → Run** `hpc-client-gui.exe`.
 
@@ -34,7 +34,7 @@ Python, PuTTY/plink, and VcXsrv are not required for normal SSH, file, or schedu
 
 In this mode, **Python is NOT required**.
 
-1. Download the latest portable ZIP from [GitHub Releases](https://github.com/mskomek/hpc-client-gui/releases/tag/v1.2.5).
+1. Download the latest portable ZIP from [GitHub Releases](https://github.com/mskomek/hpc-client-gui/releases/tag/v1.2.6).
 2. Extract All, then run `hpc-client-gui.exe`.
 3. If you enable X11, approve the optional plink/VcXsrv downloads or install them yourself.
 
@@ -79,9 +79,8 @@ python -m hpc_gui
 
 ### Option C — Linux
 
-Linux support is under active development. The public releases currently remain
-**Windows-only** until a Linux artifact is actually published; until then, run
-from source.
+Linux releases target x86_64 and are published as AppImage and `.deb` packages.
+Flatpak is optional because its runtime/SDK is substantially larger.
 
 #### From source (any supported Linux distribution)
 
@@ -98,12 +97,23 @@ python -m hpc_gui
 
 The CLI is available the same way: `python -m hpc_gui --help`.
 
-#### Planned packages
+#### Release packages
 
-AppImage, `.deb`, and Flatpak artifacts are being built and validated for
-x86_64 on Ubuntu LTS, Fedora, and openSUSE. Install, upgrade, uninstall, and
-checksum instructions will be documented here once those artifacts are
-published. See `docs/` for the current plan.
+Download the AppImage or `.deb` from the release page and verify the matching
+`.sha256` file. AppImage runs without installation; `.deb` is for Debian-based
+systems.
+
+Maintainers can build both platforms from Windows with Docker:
+
+```powershell
+.\scripts\build_release.ps1 -Version 1.2.6
+# Reuse only existing Docker, Python, Flatpak, and AppImage caches:
+.\scripts\build_release.ps1 -Version 1.2.6 -Offline
+```
+
+Build caches live under `.cache/release`; the release script creates one
+combined `dist/releases/v<version>` directory and does not redownload existing
+inputs unless they are missing.
 
 #### Linux X11 note
 

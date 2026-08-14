@@ -50,7 +50,10 @@
           "type": "file",
           "path": "../../../src/hpc_gui/docs/CLI_GUIDE_en.md"
         }
-      ]
+      ],
+      "build-options": {
+        "no-debuginfo": true
+      }
     }
   ]
 }
