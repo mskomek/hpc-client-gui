@@ -62,6 +62,16 @@ def _bootstrap_safety_checks() -> None:
         pass
 
 
+def _show_main_window(window: MainWindow, available) -> None:
+    window.setMinimumSize(320, 240)
+    if available is not None:
+        window.resize(
+            max(1, min(1200, available.width() - 48)),
+            max(1, min(800, available.height() - 80)),
+        )
+    window.showNormal()
+
+
 def main() -> int:
     _performance_mark("main_entered")
     app = QApplication(sys.argv)
@@ -120,10 +130,7 @@ def main() -> int:
         pass
     # Keep the restored window within Ubuntu's available desktop area.
     screen = app.primaryScreen()
-    if screen is not None:
-        available = screen.availableGeometry()
-        w.resize(max(1, min(1200, available.width() - 48)), max(1, min(800, available.height() - 80)))
-    w.showMaximized()
+    _show_main_window(w, screen.availableGeometry() if screen is not None else None)
     _performance_mark("main_window_shown")
     app.processEvents()
     splash.finish(w)

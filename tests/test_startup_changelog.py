@@ -6,12 +6,31 @@ from unittest.mock import patch
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
+from PySide6.QtCore import QRect
+from PySide6.QtWidgets import QApplication
+
 from hpc_gui import __version__
+from hpc_gui.app import _show_main_window
 from hpc_gui.services.changelog import chronological_changelog
 from hpc_gui.ui.main_window import MainWindow
 
 
 class StartupChangelogTests(unittest.TestCase):
+    def test_main_window_starts_normal_and_fits_small_screen(self) -> None:
+        app = QApplication.instance() or QApplication([])
+        window = MainWindow()
+        try:
+            _show_main_window(window, QRect(0, 0, 800, 600))
+            app.processEvents()
+
+            self.assertFalse(window.isMaximized())
+            self.assertEqual((window.width(), window.height()), (752, 520))
+            window.resize(640, 480)
+            self.assertEqual((window.width(), window.height()), (640, 480))
+        finally:
+            window.graceful_shutdown()
+            window.close()
+
     def test_changelog_sections_are_rendered_newest_first(self) -> None:
         text = "\n".join(
             [
