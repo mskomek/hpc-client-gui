@@ -1,7 +1,7 @@
 # CLI Exit Codes
 
 The TRUBAGUI command-line surface exposes a stable numeric exit-code contract.
-Constants live in `src/truba_gui/cli/errors.py` (`ExitCode`) and are the single
+Constants live in `src/hpc_gui/cli/errors.py` (`ExitCode`) and are the single
 source of truth for every path in the CLI dispatch; do not hard-code bare
 integers in `main.py`.
 
@@ -16,7 +16,7 @@ integers in `main.py`.
 ## Error output
 
 When a command fails the dispatch routes the failure through `emit_error`
-(`src/truba_gui/cli/errors.py`):
+(`src/hpc_gui/cli/errors.py`):
 
 - **text mode** — an actionable human message is written to `sys.stderr` with the
   existing detail preserved.

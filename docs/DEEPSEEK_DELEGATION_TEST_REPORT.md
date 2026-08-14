@@ -41,7 +41,7 @@ No credential was requested, read, stored, or logged.
 
 - Model discovery: **PASS** — `opencode models` returned `opencode-go/deepseek-v4-flash` and `opencode-go/deepseek-v4-pro`. The wrapper selected Flash for read-only work and Pro for implementation; no non-OpenCode-Go model was selected.
 - Exact smoke response: **PASS** — the shared worker exited `0` with `opencode-go/deepseek-v4-flash` and returned its generated exact `TRUBAGUI_DEEPSEEK_OK_…` nonce. The ephemeral nonce is deliberately not retained in this report.
-- Read-only TRUBAGUI analysis: **PASS** — the Flash worker identified Python/PySide6 from `pyproject.toml`, supporting files including `src/truba_gui/app.py`, and `python scripts/smoke_test.py` from `rules.md`. These claims were checked locally. `git status --porcelain` and `git diff --name-only` showed no model-caused project changes.
+- Read-only TRUBAGUI analysis: **PASS** — the Flash worker identified Python/PySide6 from `pyproject.toml`, supporting files including `src/hpc_gui/app.py`, and `python scripts/smoke_test.py` from `rules.md`. These claims were checked locally. `git status --porcelain` and `git diff --name-only` showed no model-caused project changes.
 - Synthetic review: **PASS** — against a disposable external Git repository, Flash identified `cp.exec(userInput)` as shell/command injection and recommended `execFile`/`spawn` with argument arrays. It did not edit the repository or commit.
 - Disposable implementation: **PASS** — in a separate disposable Git worktree, Pro created only `deepseek-integration-proof.txt` with the exact generated content and newline. The parent disposable worktree was clean, the starting commit was unchanged, and TRUBAGUI was unchanged.
 - Codex orchestration: **PASS** — this Codex task invoked the shared worker for smoke, analysis, review, and implementation, then checked its repository claims and the resulting Git states independently.
@@ -53,7 +53,7 @@ Disposable live-test paths were created under `D:\Projeler\deepseek-live-*`, out
 
 - `powershell -NoProfile -File tools/ai/test-deepseek-integration.ps1 -OfflineOnly`: **PASS**.
 - `PYTHONPATH=src .\.venv\Scripts\python.exe scripts\smoke_test.py`: **PASS** (`smoke test: OK`).
-- `python scripts/smoke_test.py` and `.\.venv\Scripts\python.exe scripts\smoke_test.py` without `PYTHONPATH=src`: **FAIL** (`ModuleNotFoundError: No module named 'truba_gui'`). This is the established source-layout invocation requirement, not a DeepSeek integration failure.
+- `python scripts/smoke_test.py` and `.\.venv\Scripts\python.exe scripts\smoke_test.py` without `PYTHONPATH=src`: **FAIL** (`ModuleNotFoundError: No module named 'hpc_gui'`). This is the established source-layout invocation requirement, not a DeepSeek integration failure.
 - `git diff --check`: **PASS**.
 
 ## Current policy note

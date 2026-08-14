@@ -1,6 +1,6 @@
 """Opt-in source performance recorder.
 
-This module lives outside ``src`` and is loaded only by ``python -m truba_gui``
+This module lives outside ``src`` and is loaded only by ``python -m hpc_gui``
 when TRUBA_GUI_PERF_DEBUG=1. Frozen release builds never load it.
 """
 
@@ -28,7 +28,7 @@ class PerformanceSession:
         now=time.perf_counter,
     ) -> None:
         self.repo_root = repo_root.resolve()
-        self.source_root = (self.repo_root / "src" / "truba_gui").resolve()
+        self.source_root = (self.repo_root / "src" / "hpc_gui").resolve()
         self.interval_ms = interval_ms
         self.slow_ms = slow_ms
         self._now = now

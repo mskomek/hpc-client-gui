@@ -244,7 +244,7 @@ reconcile `TODO.md` with behavior already present in the repository.
 
 **Type:** DeepSeek analyze followed by Codex verification. No source change.
 
-**Scope:** `TODO.md`, `src/truba_gui/cli/`, related services, and
+**Scope:** `TODO.md`, `src/hpc_gui/cli/`, related services, and
 `tests/test_cli.py`.
 
 **Output:** Classify each unchecked item as `missing`, `partial`,
@@ -258,7 +258,7 @@ metadata. No TODO checkbox changes without evidence.
 
 **Type:** DeepSeek implement and review after Codex approves numeric values.
 
-**Allowed:** `src/truba_gui/cli/`, narrow CLI tests, and the CLI contract docs.
+**Allowed:** `src/hpc_gui/cli/`, narrow CLI tests, and the CLI contract docs.
 
 **Forbidden:** UI, live remote calls, persistence-schema changes, release output.
 
@@ -271,8 +271,8 @@ from stderr are retained.
 ```powershell
 $env:PYTHONPATH = "src"
 python -m pytest tests/test_cli.py -q
-python -m truba_gui --format json version
-python -m truba_gui doctor environment
+python -m hpc_gui --format json version
+python -m hpc_gui doctor environment
 git diff --check
 git status --short
 ```
@@ -312,7 +312,7 @@ and later waves can reuse one stable error and JSON model.
 **Scope:** `profile create`, `profile update`, and confirmation-gated deletion,
 using existing `config/storage.py` helpers and round-trip tests.
 
-**Allowed:** `src/truba_gui/cli/`, a narrowly justified `config/` helper, and
+**Allowed:** `src/hpc_gui/cli/`, a narrowly justified `config/` helper, and
 `tests/test_cli.py`.
 
 **Forbidden:** GUI profile flows, a new persistence format, or plaintext
@@ -330,7 +330,7 @@ command-line argument is introduced.
 commands, and tests for existing key-path and strict/accept-new behavior without
 reimplementing it.
 
-**Allowed:** `src/truba_gui/cli/`, `tests/test_cli.py`, and only when justified
+**Allowed:** `src/hpc_gui/cli/`, `tests/test_cli.py`, and only when justified
 `tests/test_optional_ssh_credentials.py`.
 
 **Forbidden:** A parallel connection implementation, GUI profile flows, or live
@@ -384,7 +384,7 @@ sensitive data, and all remote commands share one profile-resolution path.
 **Scope:** Explicit upload/download choices for overwrite, skip, rename, and
 resume, reusing the existing backend resume behavior.
 
-**Allowed:** `src/truba_gui/cli/files.py`, `cli/main.py`, a narrowly justified
+**Allowed:** `src/hpc_gui/cli/files.py`, `cli/main.py`, a narrowly justified
 file-service helper, and tests.
 
 **Forbidden:** Changes to the GUI conflict dialog, silent overwrite, live
@@ -430,7 +430,7 @@ error and JSON behavior.
 **Scope:** Report port reachability, connection/authentication, SFTP subsystem,
 and remote checksum-tool availability as separate fields.
 
-**Allowed:** `src/truba_gui/cli/`, a narrowly justified diagnostics service, and
+**Allowed:** `src/hpc_gui/cli/`, a narrowly justified diagnostics service, and
 `tests/test_cli.py`.
 
 **Forbidden:** Live network calls, sensitive stores, UI changes.
@@ -492,7 +492,7 @@ deferred to Wave 9.
 text/JSON output, preservation of stderr and remote exit codes, and the shared
 jobs-output helper that later jobs packets must reuse.
 
-**Allowed:** `src/truba_gui/cli/`, `src/truba_gui/__main__.py` for top-level jobs
+**Allowed:** `src/hpc_gui/cli/`, `src/hpc_gui/__main__.py` for top-level jobs
 dispatch, a narrowly justified parser service, `tests/test_cli.py`, and
 `tests/test_slurm_ssh.py`.
 
