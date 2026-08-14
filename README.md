@@ -1,13 +1,19 @@
 # HPC Client GUI
 
-A **client-side GUI application** for **SSH + Slurm + optional X11 workflows** on TRUBA and other Slurm-based HPC systems.
+A **desktop client for SSH, SFTP, Slurm, and optional X11 workflows** on remote **High-Performance Computing (HPC) clusters**.
 
-> ⚠️ This software is **not an official TRUBA tool**.
-> It is designed for TRUBA and similar Slurm/SSH-based HPC infrastructures.
+Designed for researchers, engineers, students, and HPC users who want to access and manage **Slurm/SSH-based computing environments** through a graphical interface instead of relying entirely on terminal workflows.
 
 ---
 
-One Windows desktop client for remote access, files, scheduler jobs, and optional X11 on TRUBA-compatible clusters. Connect once, browse and transfer files, monitor jobs, and launch X11 tools only when needed.
+One desktop client for **remote access, file management, scheduler jobs, transfers, and optional X11 applications**.
+
+Connect to your cluster once, browse and transfer remote files, submit and monitor Slurm jobs, inspect cluster resources, and launch graphical X11 applications only when needed.
+
+HPC Client GUI is designed to work with **standard SSH/SFTP and Slurm-based infrastructures**, making it suitable for university, research, laboratory, and organizational HPC environments.
+
+> **Compatibility:** The application can be used with TRUBA and other SSH/Slurm-based HPC systems.  
+> HPC Client GUI is an independent open-source project and is **not affiliated with or officially endorsed by TRUBA or any HPC service provider**.
 
 **Latest Windows release:** [v1.2.4 portable package](https://github.com/mskomek/hpc-client-gui/releases/tag/v1.2.4) (`hpc-client-gui_windows_onedir.zip`)
 
@@ -15,7 +21,9 @@ Quick start: **Download → Extract All → Run** `hpc-client-gui.exe`.
 
 ![HPC Client GUI remote files, jobs, and transfers overview](docs/assets/hpc-client-gui-screenshot.png)
 
-Python, PuTTY/plink, and VcXsrv are not required for normal SSH, file, or scheduler use. PuTTY/plink and VcXsrv are optional helpers only when X11 forwarding is enabled.
+Python, PuTTY/plink, and VcXsrv are **not required** for normal SSH, file transfer, or scheduler workflows.
+
+PuTTY/plink and VcXsrv are optional helpers used only when **X11 forwarding** is enabled.
 
 ## Features
 
