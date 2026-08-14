@@ -1,0 +1,10 @@
+Package: hpc-client-gui
+Version: <VERSION>
+Section: net
+Priority: optional
+Architecture: amd64
+Depends: libegl1, libgl1, libxkbcommon0, libxcb-xinerama0
+Maintainer: Mehmed Sinan KOMEK <mskomek@users.noreply.github.com>
+Description: SSH + Slurm + file transfer client for Slurm-based HPC systems
+ Desktop client for SSH, remote files, Slurm jobs, and optional X11 on
+ Compatible Slurm clusters. Bundled PySide6 GUI and CLI.

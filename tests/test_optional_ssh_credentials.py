@@ -10,7 +10,7 @@ import paramiko
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from truba_gui.ssh.client import (
+from hpc_gui.ssh.client import (
     HostKeyChangedError,
     HostKeyRejectedError,
     SSHClientWrapper,
@@ -80,7 +80,7 @@ class OptionalSSHCredentialsTests(unittest.TestCase):
         self._temp = tempfile.TemporaryDirectory()
         self.addCleanup(self._temp.cleanup)
         app_data = patch(
-            "truba_gui.ssh.client.app_data_dir",
+            "hpc_gui.ssh.client.app_data_dir",
             return_value=Path(self._temp.name),
         )
         app_data.start()
@@ -89,7 +89,7 @@ class OptionalSSHCredentialsTests(unittest.TestCase):
     def test_empty_username_and_password_use_ssh_defaults(self):
         fake_client = _SSHClient()
         with patch(
-            "truba_gui.ssh.client.paramiko.SSHClient",
+            "hpc_gui.ssh.client.paramiko.SSHClient",
             return_value=fake_client,
         ):
             wrapper = SSHClientWrapper(
@@ -113,7 +113,7 @@ class OptionalSSHCredentialsTests(unittest.TestCase):
         fake_client = _SSHClient()
         connected_socket = object()
         with patch(
-            "truba_gui.ssh.client.paramiko.SSHClient",
+            "hpc_gui.ssh.client.paramiko.SSHClient",
             return_value=fake_client,
         ):
             wrapper = SSHClientWrapper(
@@ -131,10 +131,10 @@ class OptionalSSHCredentialsTests(unittest.TestCase):
         sentinel_key = object()
         key_path = "/home/bob/id_rsa"
         with patch(
-            "truba_gui.ssh.client.paramiko.SSHClient",
+            "hpc_gui.ssh.client.paramiko.SSHClient",
             return_value=fake_client,
         ), patch(
-            "truba_gui.ssh.client.paramiko.PKey.from_path",
+            "hpc_gui.ssh.client.paramiko.PKey.from_path",
             return_value=sentinel_key,
         ) as loader:
             wrapper = SSHClientWrapper(
@@ -159,7 +159,7 @@ class OptionalSSHCredentialsTests(unittest.TestCase):
             key_path = str(Path(td) / "id_ecdsa")
             paramiko.ECDSAKey.generate().write_private_key_file(key_path)
             with patch(
-                "truba_gui.ssh.client.paramiko.SSHClient",
+                "hpc_gui.ssh.client.paramiko.SSHClient",
                 return_value=fake_client,
             ):
                 wrapper = SSHClientWrapper(
@@ -180,7 +180,7 @@ class OptionalSSHCredentialsTests(unittest.TestCase):
             with self.subTest(value=value):
                 fake_client = _SSHClient()
                 with patch(
-                    "truba_gui.ssh.client.paramiko.SSHClient",
+                    "hpc_gui.ssh.client.paramiko.SSHClient",
                     return_value=fake_client,
                 ):
                     SSHClientWrapper(
@@ -195,7 +195,7 @@ class OptionalSSHCredentialsTests(unittest.TestCase):
     def test_strict_host_key_policy_loads_system_keys_and_applies_reject(self):
         fake_client = _SSHClient()
         with patch(
-            "truba_gui.ssh.client.paramiko.SSHClient",
+            "hpc_gui.ssh.client.paramiko.SSHClient",
             return_value=fake_client,
         ):
             wrapper = SSHClientWrapper(
@@ -217,7 +217,7 @@ class OptionalSSHCredentialsTests(unittest.TestCase):
             known_hosts = str(Path(td) / "known_hosts")
             for decision in ("once", "save", "cancel"):
                 with self.subTest(decision=decision), patch(
-                    "truba_gui.ssh.client.paramiko.SSHClient",
+                    "hpc_gui.ssh.client.paramiko.SSHClient",
                     return_value=fake_client,
                 ):
                     SSHClientWrapper(
@@ -253,7 +253,7 @@ class OptionalSSHCredentialsTests(unittest.TestCase):
 
         fake_client.connect = reject_changed
         with patch(
-            "truba_gui.ssh.client.paramiko.SSHClient",
+            "hpc_gui.ssh.client.paramiko.SSHClient",
             return_value=fake_client,
         ), self.assertRaises(HostKeyChangedError):
             SSHClientWrapper(

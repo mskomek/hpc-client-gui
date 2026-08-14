@@ -1,15 +1,15 @@
 # HPC Client GUI
 
-A **client-side GUI application** for **SSH + Slurm + optional X11 workflows** on TRUBA and other Slurm-based HPC systems.
+A **client-side GUI application** for **SSH + Slurm + optional X11 workflows** across Slurm-based HPC systems.
 
-> ⚠️ This software is **not an official TRUBA tool**.
-> It is designed for TRUBA and similar Slurm/SSH-based HPC infrastructures.
+> ⚠️ This is an independent, client-side community project.
+> It works with compatible SSH/Slurm HPC infrastructures.
 
 ---
 
-One Windows desktop client for remote access, files, scheduler jobs, and optional X11 on TRUBA-compatible clusters. Connect once, browse and transfer files, monitor jobs, and launch X11 tools only when needed.
+A desktop client for remote access, files, scheduler jobs, and optional X11 on Slurm-compatible HPC clusters. Connect once, browse and transfer files, monitor jobs, and launch X11 tools only when needed.
 
-**Latest Windows release:** [v1.2.4 portable package](https://github.com/mskomek/hpc-client-gui/releases/tag/v1.2.4) (`hpc-client-gui_windows_onedir.zip`)
+**Latest Windows release:** [v1.2.5 portable package](https://github.com/mskomek/hpc-client-gui/releases/tag/v1.2.5) (`hpc-client-gui_windows_onedir.zip`)
 
 Quick start: **Download → Extract All → Run** `hpc-client-gui.exe`.
 
@@ -34,7 +34,7 @@ Python, PuTTY/plink, and VcXsrv are not required for normal SSH, file, or schedu
 
 In this mode, **Python is NOT required**.
 
-1. Download the latest portable ZIP from [GitHub Releases](https://github.com/mskomek/hpc-client-gui/releases/tag/v1.2.4).
+1. Download the latest portable ZIP from [GitHub Releases](https://github.com/mskomek/hpc-client-gui/releases/tag/v1.2.5).
 2. Extract All, then run `hpc-client-gui.exe`.
 3. If you enable X11, approve the optional plink/VcXsrv downloads or install them yourself.
 
@@ -72,14 +72,50 @@ pip install -e .
 #### Run
 
 ```powershell
-python -m truba_gui
+python -m hpc_gui
 ```
+
+---
+
+### Option C — Linux
+
+Linux support is under active development. The public releases currently remain
+**Windows-only** until a Linux artifact is actually published; until then, run
+from source.
+
+#### From source (any supported Linux distribution)
+
+Requirements: Python 3.10+, a Qt runtime (PySide6 bundles it), and the platform
+libraries Qt needs (`libegl1` on Ubuntu/Debian, equivalent on Fedora/openSUSE).
+
+```bash
+# In the project root directory
+python -m venv .venv
+. .venv/bin/activate
+pip install -e .[test]
+python -m hpc_gui
+```
+
+The CLI is available the same way: `python -m hpc_gui --help`.
+
+#### Planned packages
+
+AppImage, `.deb`, and Flatpak artifacts are being built and validated for
+x86_64 on Ubuntu LTS, Fedora, and openSUSE. Install, upgrade, uninstall, and
+checksum instructions will be documented here once those artifacts are
+published. See `docs/` for the current plan.
+
+#### Linux X11 note
+
+X11 forwarding on Linux uses the **system OpenSSH client** (`ssh -X/-Y`); it does
+not use the Windows plink/VcXsrv path. Confirm `ssh` is installed before relying
+on X11 apps.
 
 ---
 
 ## Command-line Interface
 
-`python -m truba_gui` exposes a command-line interface (`hpc-client-gui` is its internal program name shown in help output). Top-level commands:
+`python -m hpc_gui` exposes a command-line interface (`hpc-client-gui` is its internal program name shown in help output). Top-level commands:
 
 - `gui` - launch the desktop GUI
 - `version` - print version and build information
@@ -88,11 +124,11 @@ python -m truba_gui
 - `files` - remote SFTP file operations (`ls`, `stat`, `checksum`, `mkdir`, `upload`, `download`, `cp`, `mv`, `rm`)
 - `jobs` - scheduler job operations (`list`, `status`, `accounting`, `lssrv`, `submit`, `cancel`)
 
-Shared global options exist (format, quiet, verbose, timeout, profile selection, host/port/user/key overrides, a stdin-based sensitive-value input flag, and strict host-key checking); `python -m truba_gui --help` is authoritative.
+Shared global options exist (format, quiet, verbose, timeout, profile selection, host/port/user/key overrides, a stdin-based sensitive-value input flag, and strict host-key checking); `python -m hpc_gui --help` is authoritative.
 
 - Full guides (drafted later in this wave):
-  - Turkish: `src/truba_gui/docs/CLI_GUIDE_tr.md`
-  - English: `src/truba_gui/docs/CLI_GUIDE_en.md`
+  - Turkish: `src/hpc_gui/docs/CLI_GUIDE_tr.md`
+  - English: `src/hpc_gui/docs/CLI_GUIDE_en.md`
 
 ---
 
@@ -100,8 +136,8 @@ Shared global options exist (format, quiet, verbose, timeout, profile selection,
 
 - From within the application: click the **Help (❓)** icon in the top-left corner.
 - As files:
-  - Turkish: `src/truba_gui/docs/HELP_tr.md`
-  - English: `src/truba_gui/docs/HELP_en.md`
+  - Turkish: `src/hpc_gui/docs/HELP_tr.md`
+  - English: `src/hpc_gui/docs/HELP_en.md`
 
 ---
 
@@ -149,6 +185,6 @@ Starting with v1.2.0, this project is licensed under the **PolyForm Noncommercia
 
 **Historical boundary:** releases before v1.2.0 were distributed under the MIT License. That MIT grant is **not revoked** for copies of those earlier releases that were already distributed; they remain MIT-licensed.
 
-This is an independent, community project. It is **not an official TRUBA tool** and is not affiliated with TÜBİTAK, ANSYS, or any other organization. It is **client-side only**; it does **NOT** modify the TRUBA infrastructure.
+This is an independent, community project. It is not affiliated with TÜBİTAK, ANSYS, or any other organization. It is **client-side only**; it does **NOT** modify remote HPC infrastructure.
 
 - Issues / PRs: via GitHub

@@ -30,9 +30,9 @@ from pyftpdlib.handlers import FTPHandler
 from pyftpdlib.servers import FTPServer
 from PySide6.QtWidgets import QApplication
 
-from truba_gui.services.files_base import RemoteEntry
-from truba_gui.ui.widgets import remote_dir_panel as remote_panel_module
-from truba_gui.ui.widgets.remote_dir_panel import RemoteDirPanel
+from hpc_gui.services.files_base import RemoteEntry
+from hpc_gui.ui.widgets import remote_dir_panel as remote_panel_module
+from hpc_gui.ui.widgets.remote_dir_panel import RemoteDirPanel
 
 
 SMALL_SIZE = 10 * 1024

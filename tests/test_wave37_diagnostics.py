@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from truba_gui.config import storage
-from truba_gui.services.connection_diagnostics import run_connection_diagnostics
-from truba_gui.ssh.client import SSHConnInfo
+from hpc_gui.config import storage
+from hpc_gui.services.connection_diagnostics import run_connection_diagnostics
+from hpc_gui.ssh.client import SSHConnInfo
 
 
 def test_diagnostics_includes_dns_and_slurm_stages() -> None:

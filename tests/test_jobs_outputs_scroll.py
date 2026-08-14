@@ -10,7 +10,7 @@ from PySide6.QtWidgets import QApplication, QMainWindow, QTextEdit
 from PySide6.QtCore import QCoreApplication, QEvent, Qt
 from PySide6.QtTest import QTest
 
-from truba_gui.ui.widgets.jobs_outputs_widget import (
+from hpc_gui.ui.widgets.jobs_outputs_widget import (
     JobsOutputsWidget,
     _NavigableTextEdit,
     _OutputFollowerWidget,
@@ -232,7 +232,7 @@ class JobsOutputsScrollTests(unittest.TestCase):
                 widget = JobsOutputsWidget()
                 try:
                     with patch(
-                        "truba_gui.ui.widgets.jobs_outputs_widget."
+                        "hpc_gui.ui.widgets.jobs_outputs_widget."
                         "get_follow_window_open_minimized_enabled",
                         return_value=False,
                     ):
@@ -308,7 +308,7 @@ class JobsOutputsScrollTests(unittest.TestCase):
         widget._start_async = lambda *_args, **_kwargs: True
 
         with patch(
-            "truba_gui.ui.widgets.jobs_outputs_widget."
+            "hpc_gui.ui.widgets.jobs_outputs_widget."
             "get_pause_live_follow_when_minimized_enabled",
             return_value=True,
         ):
@@ -331,7 +331,7 @@ class JobsOutputsScrollTests(unittest.TestCase):
         follower._live_timer.start()
 
         with patch(
-            "truba_gui.ui.widgets.jobs_outputs_widget."
+            "hpc_gui.ui.widgets.jobs_outputs_widget."
             "get_pause_live_follow_when_minimized_enabled",
             return_value=True,
         ):
@@ -355,12 +355,12 @@ class JobsOutputsScrollTests(unittest.TestCase):
 
         with (
             patch(
-                "truba_gui.ui.widgets.jobs_outputs_widget."
+                "hpc_gui.ui.widgets.jobs_outputs_widget."
                 "get_pause_live_follow_when_minimized_enabled",
                 return_value=True,
             ),
             patch(
-                "truba_gui.ui.widgets.jobs_outputs_widget.time.monotonic",
+                "hpc_gui.ui.widgets.jobs_outputs_widget.time.monotonic",
                 side_effect=(100.0, 160.0),
             ),
         ):
@@ -379,12 +379,12 @@ class JobsOutputsScrollTests(unittest.TestCase):
 
         with (
             patch(
-                "truba_gui.ui.widgets.jobs_outputs_widget."
+                "hpc_gui.ui.widgets.jobs_outputs_widget."
                 "get_pause_live_follow_when_minimized_enabled",
                 return_value=True,
             ),
             patch(
-                "truba_gui.ui.widgets.jobs_outputs_widget.time.monotonic",
+                "hpc_gui.ui.widgets.jobs_outputs_widget.time.monotonic",
                 side_effect=(100.0, 160.0),
             ),
         ):

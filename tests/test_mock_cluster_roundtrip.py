@@ -53,7 +53,7 @@ class MockClusterRoundTripTests(unittest.TestCase):
         cmd = [
             sys.executable,
             "-m",
-            "truba_gui",
+            "hpc_gui",
             "--format",
             "json",
             "--host",

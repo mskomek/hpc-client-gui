@@ -11,15 +11,15 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from truba_gui.cli.errors import ExitCode
-from truba_gui.cli.main import _run_doctor, run_cli
-from truba_gui.cli.session import CLIConnectionError, CLISession
-from truba_gui.services.connection_diagnostics import run_connection_diagnostics
-from truba_gui.services.files_base import RemoteEntry
-from truba_gui.services.files_ssh import SSHFilesBackend
-from truba_gui.services.sftp_smoke import STAGES as SMOKE_STAGES
-from truba_gui.services.sftp_smoke import run_sftp_smoke
-from truba_gui.ssh.client import SSHClientWrapper, SSHConnInfo
+from hpc_gui.cli.errors import ExitCode
+from hpc_gui.cli.main import _run_doctor, run_cli
+from hpc_gui.cli.session import CLIConnectionError, CLISession
+from hpc_gui.services.connection_diagnostics import run_connection_diagnostics
+from hpc_gui.services.files_base import RemoteEntry
+from hpc_gui.services.files_ssh import SSHFilesBackend
+from hpc_gui.services.sftp_smoke import STAGES as SMOKE_STAGES
+from hpc_gui.services.sftp_smoke import run_sftp_smoke
+from hpc_gui.ssh.client import SSHClientWrapper, SSHConnInfo
 
 
 @pytest.fixture(autouse=True)
@@ -33,7 +33,7 @@ def _remote_cli_access_enabled():
     behaviour.  The access-gate tests explicitly re-patch the getter to
     ``False`` to exercise the real off-by-default behaviour.
     """
-    with patch("truba_gui.cli.main.get_cli_external_access_enabled", return_value=True):
+    with patch("hpc_gui.cli.main.get_cli_external_access_enabled", return_value=True):
         yield
 
 
@@ -58,7 +58,7 @@ def test_profile_list_does_not_print_secrets(capsys) -> None:
             "password_dpapi": "encrypted-secret",
         }
     ]
-    with patch("truba_gui.cli.session.load_profiles", return_value=profiles):
+    with patch("hpc_gui.cli.session.load_profiles", return_value=profiles):
         assert run_cli(["--format", "json", "profile", "show", "test"]) == 0
     output = capsys.readouterr().out
     assert "cluster.example" in output
@@ -67,7 +67,7 @@ def test_profile_list_does_not_print_secrets(capsys) -> None:
 
 
 def test_profile_show_missing_exit_one_with_message(capsys) -> None:
-    with patch("truba_gui.cli.session.load_profiles", return_value=[]):
+    with patch("hpc_gui.cli.session.load_profiles", return_value=[]):
         assert run_cli(["profile", "show", "MISSING"]) == 1
     captured = capsys.readouterr()
     assert captured.out == ""
@@ -87,7 +87,7 @@ def test_profile_show_never_prints_sensitive_field_values(capsys) -> None:
             "system": {"slurm": True},
         }
     ]
-    with patch("truba_gui.cli.session.load_profiles", return_value=profiles):
+    with patch("hpc_gui.cli.session.load_profiles", return_value=profiles):
         assert run_cli(["--format", "json", "profile", "show", "alpha"]) == 0
     output = capsys.readouterr().out
     for secret in ("plain-secret", "dpapi-token", "enc-token", "salt-value"):
@@ -96,7 +96,7 @@ def test_profile_show_never_prints_sensitive_field_values(capsys) -> None:
 
 def test_profile_create_round_trips_to_config_path(capsys, tmp_path: Path) -> None:
     config = tmp_path / "config.json"
-    with patch("truba_gui.config.storage._config_path", return_value=config):
+    with patch("hpc_gui.config.storage._config_path", return_value=config):
         assert (
             run_cli(
                 [
@@ -157,7 +157,7 @@ def test_profile_update_preserves_secrets_and_system_round_trip(capsys, tmp_path
         "password_salt": "salt-value",
         "system": {"slurm": True},
     }
-    with patch("truba_gui.config.storage._config_path", return_value=config):
+    with patch("hpc_gui.config.storage._config_path", return_value=config):
         json.dump({"profiles": [existing]}, config.open("w", encoding="utf-8"))
         assert run_cli(["--format", "json", "profile", "update", "alpha", "--host", "new.example"]) == 0
     output = capsys.readouterr().out
@@ -180,8 +180,8 @@ def test_profile_update_preserves_secrets_and_system_round_trip(capsys, tmp_path
 
 
 def test_profile_update_with_no_field_exits_two_no_write(capsys) -> None:
-    with patch("truba_gui.cli.main.load_profiles", return_value=[]), patch(
-        "truba_gui.cli.main.upsert_profile"
+    with patch("hpc_gui.cli.main.load_profiles", return_value=[]), patch(
+        "hpc_gui.cli.main.upsert_profile"
     ) as upsert:
         assert run_cli(["profile", "update", "alpha"]) == 2
     captured = capsys.readouterr()
@@ -192,8 +192,8 @@ def test_profile_update_with_no_field_exits_two_no_write(capsys) -> None:
 
 
 def test_profile_update_missing_name_exit_one_no_write(capsys) -> None:
-    with patch("truba_gui.cli.session.load_profiles", return_value=[]), patch(
-        "truba_gui.cli.main.upsert_profile"
+    with patch("hpc_gui.cli.session.load_profiles", return_value=[]), patch(
+        "hpc_gui.cli.main.upsert_profile"
     ) as upsert:
         assert run_cli(["profile", "update", "MISSING", "--host", "new.example"]) == 1
     captured = capsys.readouterr()
@@ -204,7 +204,7 @@ def test_profile_update_missing_name_exit_one_no_write(capsys) -> None:
 
 
 def test_profile_delete_without_yes_exit_two_no_call(capsys) -> None:
-    with patch("truba_gui.cli.main.delete_profile") as delete:
+    with patch("hpc_gui.cli.main.delete_profile") as delete:
         assert run_cli(["profile", "delete", "alpha"]) == 2
     captured = capsys.readouterr()
     assert captured.out == ""
@@ -213,8 +213,8 @@ def test_profile_delete_without_yes_exit_two_no_call(capsys) -> None:
 
 
 def test_profile_delete_missing_name_exit_one_no_write(capsys) -> None:
-    with patch("truba_gui.cli.session.load_profiles", return_value=[]), patch(
-        "truba_gui.cli.main.delete_profile"
+    with patch("hpc_gui.cli.session.load_profiles", return_value=[]), patch(
+        "hpc_gui.cli.main.delete_profile"
     ) as delete:
         assert run_cli(["profile", "delete", "MISSING", "--yes"]) == 1
     captured = capsys.readouterr()
@@ -224,8 +224,8 @@ def test_profile_delete_missing_name_exit_one_no_write(capsys) -> None:
 
 
 def test_profile_delete_yes_calls_delete_profile_and_exits_zero(capsys) -> None:
-    with patch("truba_gui.cli.session.load_profiles", return_value=[{"name": "alpha"}]), patch(
-        "truba_gui.cli.main.delete_profile"
+    with patch("hpc_gui.cli.session.load_profiles", return_value=[{"name": "alpha"}]), patch(
+        "hpc_gui.cli.main.delete_profile"
     ) as delete:
         assert run_cli(["--format", "json", "profile", "delete", "alpha", "--yes"]) == 0
     payload = json.loads(capsys.readouterr().out)
@@ -236,8 +236,8 @@ def test_profile_delete_yes_calls_delete_profile_and_exits_zero(capsys) -> None:
 
 
 def test_doctor_environment_json(capsys, tmp_path: Path) -> None:
-    with patch("truba_gui.cli.main.app_data_dir", return_value=tmp_path), patch(
-        "truba_gui.cli.main.load_profiles", return_value=[]
+    with patch("hpc_gui.cli.main.app_data_dir", return_value=tmp_path), patch(
+        "hpc_gui.cli.main.load_profiles", return_value=[]
     ):
         assert run_cli(["--format", "json", "doctor", "environment"]) == 0
     payload = json.loads(capsys.readouterr().out)
@@ -270,7 +270,7 @@ def test_files_ls_uses_shared_cli_session(capsys) -> None:
         def close(self):
             pass
 
-    with patch("truba_gui.cli.main.CLISession.open", return_value=FakeSession()):
+    with patch("hpc_gui.cli.main.CLISession.open", return_value=FakeSession()):
         assert run_cli(["--format", "json", "--host", "host", "files", "ls", "/uzak/klasör"]) == 0
     payload = json.loads(capsys.readouterr().out)
     assert payload[0]["name"] == "dosya_ç.txt"
@@ -293,7 +293,7 @@ def test_files_ls_success_exit_zero(capsys) -> None:
         def close(self):
             pass
 
-    with patch("truba_gui.cli.main.CLISession.open", return_value=FakeSession()):
+    with patch("hpc_gui.cli.main.CLISession.open", return_value=FakeSession()):
         assert run_cli(["--host", "host", "files", "ls", "/"]) == 0
 
 
@@ -305,7 +305,7 @@ def test_files_rm_refusal_exit_two_stderr_retained(capsys) -> None:
 
 
 def test_unknown_top_level_argument_exit_two_direct_run_cli_parse() -> None:
-    with patch("truba_gui.cli.main.CLISession.open") as session_open:
+    with patch("hpc_gui.cli.main.CLISession.open") as session_open:
         with pytest.raises(SystemExit) as excinfo:
             run_cli(["definitely-not-a-command"])
         assert excinfo.value.code == 2
@@ -322,7 +322,7 @@ def test_doctor_unsupported_command_handler_usage_exit_two(capsys) -> None:
 
 def test_connection_failure_exit_three(capsys) -> None:
     with patch(
-        "truba_gui.cli.main.CLISession.open",
+        "hpc_gui.cli.main.CLISession.open",
         side_effect=CLIConnectionError("host unreachable"),
     ):
         assert run_cli(["--host", "host", "files", "ls", "/"]) == 3
@@ -341,7 +341,7 @@ def test_operation_failure_exit_one(capsys) -> None:
         def close(self):
             pass
 
-    with patch("truba_gui.cli.main.CLISession.open", return_value=FakeSession()):
+    with patch("hpc_gui.cli.main.CLISession.open", return_value=FakeSession()):
         assert run_cli(["--host", "host", "files", "ls", "/"]) == 1
     captured = capsys.readouterr()
     assert "File operation failed" in captured.err
@@ -359,7 +359,7 @@ def test_json_error_parity_on_failed_remote_op(capsys) -> None:
         def close(self):
             pass
 
-    with patch("truba_gui.cli.main.CLISession.open", return_value=FakeSession()):
+    with patch("hpc_gui.cli.main.CLISession.open", return_value=FakeSession()):
         assert run_cli(["--format", "json", "--host", "host", "files", "ls", "/"]) == 1
     captured = capsys.readouterr()
     payload = json.loads(captured.out)
@@ -392,7 +392,7 @@ def test_session_timeout_plumbed_into_connection_info() -> None:
         timeout=12.5,
         verbose=False,
     )
-    with patch("truba_gui.cli.session.SSHClientWrapper", FakeSSH):
+    with patch("hpc_gui.cli.session.SSHClientWrapper", FakeSSH):
         session = CLISession.open(args)
     assert session.ssh.info.timeout == 12.5
     assert session.ssh.logger is None
@@ -434,8 +434,8 @@ def test_profile_key_path_flows_into_connection_info() -> None:
         timeout=None,
         verbose=False,
     )
-    with patch("truba_gui.cli.session.load_profiles", return_value=profiles), patch(
-        "truba_gui.cli.session.SSHClientWrapper", RecordingSSH
+    with patch("hpc_gui.cli.session.load_profiles", return_value=profiles), patch(
+        "hpc_gui.cli.session.SSHClientWrapper", RecordingSSH
     ):
         session = CLISession.open(args)
     assert captured[0].key_path == "/home/bob/id_rsa"
@@ -461,13 +461,13 @@ def _profile_args(**overrides) -> argparse.Namespace:
 
 
 def test_saved_dpapi_secret_resolves_without_stdin() -> None:
-    from truba_gui.cli.session import build_ssh_conn_info
+    from hpc_gui.cli.session import build_ssh_conn_info
 
     profiles = [{"name": "alpha", "host": "cluster.example", "password_dpapi": "token-123", "cli_allowed": True}]
-    with patch("truba_gui.cli.session.load_profiles", return_value=profiles), patch(
-        "truba_gui.cli.session.secret_store.is_available", return_value=True
+    with patch("hpc_gui.cli.session.load_profiles", return_value=profiles), patch(
+        "hpc_gui.cli.session.secret_store.is_available", return_value=True
     ), patch(
-        "truba_gui.cli.session.secret_store.unprotect_secret", return_value="s3cret"
+        "hpc_gui.cli.session.secret_store.unprotect_secret", return_value="s3cret"
     ) as unprotect:
         info = build_ssh_conn_info(_profile_args())
     unprotect.assert_called_once_with("token-123")
@@ -475,43 +475,43 @@ def test_saved_dpapi_secret_resolves_without_stdin() -> None:
 
 
 def test_profile_without_saved_secret_leaves_password_empty() -> None:
-    from truba_gui.cli.session import build_ssh_conn_info
+    from hpc_gui.cli.session import build_ssh_conn_info
 
     profiles = [{"name": "alpha", "host": "cluster.example", "cli_allowed": True}]
-    with patch("truba_gui.cli.session.load_profiles", return_value=profiles), patch(
-        "truba_gui.cli.session.secret_store.is_available", return_value=True
-    ), patch("truba_gui.cli.session.secret_store.unprotect_secret") as unprotect:
+    with patch("hpc_gui.cli.session.load_profiles", return_value=profiles), patch(
+        "hpc_gui.cli.session.secret_store.is_available", return_value=True
+    ), patch("hpc_gui.cli.session.secret_store.unprotect_secret") as unprotect:
         info = build_ssh_conn_info(_profile_args())
     unprotect.assert_not_called()
     assert info.password == ""
 
 
 def test_no_saved_password_flag_skips_dpapi_resolution() -> None:
-    from truba_gui.cli.session import build_ssh_conn_info
+    from hpc_gui.cli.session import build_ssh_conn_info
 
     profiles = [{"name": "alpha", "host": "cluster.example", "password_dpapi": "token-123", "cli_allowed": True}]
-    with patch("truba_gui.cli.session.load_profiles", return_value=profiles), patch(
-        "truba_gui.cli.session.secret_store.is_available", return_value=True
-    ), patch("truba_gui.cli.session.secret_store.unprotect_secret") as unprotect:
+    with patch("hpc_gui.cli.session.load_profiles", return_value=profiles), patch(
+        "hpc_gui.cli.session.secret_store.is_available", return_value=True
+    ), patch("hpc_gui.cli.session.secret_store.unprotect_secret") as unprotect:
         info = build_ssh_conn_info(_profile_args(no_saved_password=True))
     unprotect.assert_not_called()
     assert info.password == ""
 
 
 def test_dpapi_unavailable_falls_back_to_empty_password() -> None:
-    from truba_gui.cli.session import build_ssh_conn_info
+    from hpc_gui.cli.session import build_ssh_conn_info
 
     profiles = [{"name": "alpha", "host": "cluster.example", "password_dpapi": "token-123", "cli_allowed": True}]
-    with patch("truba_gui.cli.session.load_profiles", return_value=profiles), patch(
-        "truba_gui.cli.session.secret_store.is_available", return_value=False
-    ), patch("truba_gui.cli.session.secret_store.unprotect_secret") as unprotect:
+    with patch("hpc_gui.cli.session.load_profiles", return_value=profiles), patch(
+        "hpc_gui.cli.session.secret_store.is_available", return_value=False
+    ), patch("hpc_gui.cli.session.secret_store.unprotect_secret") as unprotect:
         info = build_ssh_conn_info(_profile_args())
     unprotect.assert_not_called()
     assert info.password == ""
 
 
 def test_key_path_profile_skips_dpapi_resolution() -> None:
-    from truba_gui.cli.session import build_ssh_conn_info
+    from hpc_gui.cli.session import build_ssh_conn_info
 
     profiles = [
         {
@@ -522,9 +522,9 @@ def test_key_path_profile_skips_dpapi_resolution() -> None:
             "cli_allowed": True,
         }
     ]
-    with patch("truba_gui.cli.session.load_profiles", return_value=profiles), patch(
-        "truba_gui.cli.session.secret_store.is_available", return_value=True
-    ), patch("truba_gui.cli.session.secret_store.unprotect_secret") as unprotect:
+    with patch("hpc_gui.cli.session.load_profiles", return_value=profiles), patch(
+        "hpc_gui.cli.session.secret_store.is_available", return_value=True
+    ), patch("hpc_gui.cli.session.secret_store.unprotect_secret") as unprotect:
         info = build_ssh_conn_info(_profile_args())
     unprotect.assert_not_called()
     assert info.password == ""
@@ -533,13 +533,13 @@ def test_key_path_profile_skips_dpapi_resolution() -> None:
 def test_password_stdin_flag_overrides_saved_secret() -> None:
     from io import StringIO
 
-    from truba_gui.cli.session import build_ssh_conn_info
+    from hpc_gui.cli.session import build_ssh_conn_info
 
     profiles = [{"name": "alpha", "host": "cluster.example", "password_dpapi": "token-123", "cli_allowed": True}]
-    with patch("truba_gui.cli.session.load_profiles", return_value=profiles), patch(
-        "truba_gui.cli.session.secret_store.is_available", return_value=True
-    ), patch("truba_gui.cli.session.secret_store.unprotect_secret") as unprotect, patch(
-        "truba_gui.cli.session.sys.stdin", StringIO("from-stdin\n")
+    with patch("hpc_gui.cli.session.load_profiles", return_value=profiles), patch(
+        "hpc_gui.cli.session.secret_store.is_available", return_value=True
+    ), patch("hpc_gui.cli.session.secret_store.unprotect_secret") as unprotect, patch(
+        "hpc_gui.cli.session.sys.stdin", StringIO("from-stdin\n")
     ):
         info = build_ssh_conn_info(_profile_args(password_stdin=True))
     unprotect.assert_not_called()
@@ -572,8 +572,8 @@ def test_strict_host_key_flag_overrides_profile_accept_new_default() -> None:
             "cli_allowed": True,
         }
     ]
-    with patch("truba_gui.cli.session.load_profiles", return_value=profiles), patch(
-        "truba_gui.cli.session.SSHClientWrapper", RecordingSSH
+    with patch("hpc_gui.cli.session.load_profiles", return_value=profiles), patch(
+        "hpc_gui.cli.session.SSHClientWrapper", RecordingSSH
     ):
         assert run_cli(["--strict-host-key", "--format", "json", "profile", "test", "alpha"]) == 0
     assert captured[0].host_key_policy == "strict"
@@ -588,14 +588,14 @@ def test_verbose_debug_only_with_flag_and_key_path_redacted(capsys) -> None:
     ssh_inst.open_sftp.return_value = MagicMock()
     ssh_inst.open_sftp.return_value.listdir_attr.return_value = []
 
-    with patch("truba_gui.ssh.client.paramiko", fake_paramiko):
+    with patch("hpc_gui.ssh.client.paramiko", fake_paramiko):
         assert run_cli([*args_base, "files", "ls", "/"]) == 0
     plain = capsys.readouterr()
     json.loads(plain.out)
     assert "[debug]" not in plain.err
     assert "private_place" not in plain.out + plain.err
 
-    with patch("truba_gui.ssh.client.paramiko", fake_paramiko):
+    with patch("hpc_gui.ssh.client.paramiko", fake_paramiko):
         assert run_cli(["--verbose", *args_base, "files", "ls", "/"]) == 0
     verbose = capsys.readouterr()
     json.loads(verbose.out)
@@ -620,7 +620,7 @@ def test_files_stat_metadata_parity_with_ls(capsys) -> None:
         def close(self):
             pass
 
-    with patch("truba_gui.cli.main.CLISession.open", return_value=FakeSession()):
+    with patch("hpc_gui.cli.main.CLISession.open", return_value=FakeSession()):
         assert run_cli(["--format", "json", "--host", "host", "files", "ls", "/data"]) == 0
         ls_payload = json.loads(capsys.readouterr().out)
         assert run_cli(["--format", "json", "--host", "host", "files", "stat", "/data/data.bin"]) == 0
@@ -643,7 +643,7 @@ def test_files_empty_directory_exit_zero(capsys) -> None:
         def close(self):
             pass
 
-    with patch("truba_gui.cli.main.CLISession.open", return_value=FakeSession()):
+    with patch("hpc_gui.cli.main.CLISession.open", return_value=FakeSession()):
         assert run_cli(["--format", "json", "--host", "host", "files", "ls", "/"]) == 0
     assert json.loads(capsys.readouterr().out) == []
 
@@ -659,7 +659,7 @@ def test_files_not_found_exit_one_distinct_message(capsys) -> None:
         def close(self):
             pass
 
-    with patch("truba_gui.cli.main.CLISession.open", return_value=FakeSession()):
+    with patch("hpc_gui.cli.main.CLISession.open", return_value=FakeSession()):
         assert run_cli(["--host", "host", "files", "ls", "/missing"]) == 1
     captured = capsys.readouterr()
     assert "Not found:" in captured.err
@@ -676,8 +676,8 @@ def test_profile_test_success_json_payload_and_session_closed(capsys) -> None:
             closed.append(True)
 
     profiles = [{"name": "alpha", "host": "cluster.example", "username": "user"}]
-    with patch("truba_gui.cli.session.load_profiles", return_value=profiles), patch(
-        "truba_gui.cli.main.CLISession.open", return_value=FakeSession()
+    with patch("hpc_gui.cli.session.load_profiles", return_value=profiles), patch(
+        "hpc_gui.cli.main.CLISession.open", return_value=FakeSession()
     ):
         assert run_cli(["--format", "json", "profile", "test", "alpha"]) == 0
     payload = json.loads(capsys.readouterr().out)
@@ -689,10 +689,10 @@ def test_profile_test_success_json_payload_and_session_closed(capsys) -> None:
 
 def test_profile_test_connection_failure_exit_three_fail_payload(capsys) -> None:
     with patch(
-        "truba_gui.cli.session.load_profiles",
+        "hpc_gui.cli.session.load_profiles",
         return_value=[{"name": "alpha", "host": "cluster.example"}],
     ), patch(
-        "truba_gui.cli.main.CLISession.open",
+        "hpc_gui.cli.main.CLISession.open",
         side_effect=CLIConnectionError("host unreachable"),
     ):
         assert run_cli(["--format", "json", "profile", "test", "alpha"]) == 3
@@ -704,10 +704,10 @@ def test_profile_test_connection_failure_exit_three_fail_payload(capsys) -> None
 
 def test_profile_test_connection_failure_text_carries_fail(capsys) -> None:
     with patch(
-        "truba_gui.cli.session.load_profiles",
+        "hpc_gui.cli.session.load_profiles",
         return_value=[{"name": "alpha", "host": "cluster.example"}],
     ), patch(
-        "truba_gui.cli.main.CLISession.open",
+        "hpc_gui.cli.main.CLISession.open",
         side_effect=CLIConnectionError("host unreachable"),
     ):
         assert run_cli(["profile", "test", "alpha"]) == 3
@@ -718,8 +718,8 @@ def test_profile_test_connection_failure_text_carries_fail(capsys) -> None:
 
 
 def test_profile_test_missing_exit_one_and_opener_not_called(capsys) -> None:
-    with patch("truba_gui.cli.session.load_profiles", return_value=[]), patch(
-        "truba_gui.cli.main.CLISession.open"
+    with patch("hpc_gui.cli.session.load_profiles", return_value=[]), patch(
+        "hpc_gui.cli.main.CLISession.open"
     ) as session_open:
         assert run_cli(["profile", "test", "MISSING"]) == 1
     captured = capsys.readouterr()
@@ -737,8 +737,8 @@ def test_profile_test_text_mode_matches_json_payload(capsys) -> None:
             pass
 
     profiles = [{"name": "alpha", "host": "cluster.example", "cli_allowed": True}]
-    with patch("truba_gui.cli.session.load_profiles", return_value=profiles), patch(
-        "truba_gui.cli.main.CLISession.open", return_value=FakeSession()
+    with patch("hpc_gui.cli.session.load_profiles", return_value=profiles), patch(
+        "hpc_gui.cli.main.CLISession.open", return_value=FakeSession()
     ):
         assert run_cli(["profile", "test", "alpha"]) == 0
     captured = capsys.readouterr()
@@ -758,7 +758,7 @@ def test_files_access_denied_exit_one_distinct_message(capsys) -> None:
         def close(self):
             pass
 
-    with patch("truba_gui.cli.main.CLISession.open", return_value=FakeSession()):
+    with patch("hpc_gui.cli.main.CLISession.open", return_value=FakeSession()):
         assert run_cli(["--host", "host", "files", "ls", "/"]) == 1
     captured = capsys.readouterr()
     assert "Permission denied:" in captured.err
@@ -776,7 +776,7 @@ def test_files_operation_timeout_exit_124(capsys) -> None:
         def close(self):
             pass
 
-    with patch("truba_gui.cli.main.CLISession.open", return_value=FakeSession()):
+    with patch("hpc_gui.cli.main.CLISession.open", return_value=FakeSession()):
         assert run_cli(["--host", "host", "files", "ls", "/"]) == 124
     captured = capsys.readouterr()
     assert "Operation timed out" in captured.err
@@ -820,7 +820,7 @@ def _files_session(backend):
 def test_files_ls_missing_sftp_path_reports_not_found_with_path(capsys) -> None:
     fake_sftp = _errno_sftp_raiser(lambda: OSError(errno.ENOENT, "No such file or directory"))
     backend = _errno_backend(SimpleNamespace(sftp=fake_sftp, supports_transfer_sftp_channels=lambda: False))
-    with patch("truba_gui.cli.main.CLISession.open", return_value=_files_session(backend)):
+    with patch("hpc_gui.cli.main.CLISession.open", return_value=_files_session(backend)):
         assert run_cli(["--host", "host", "files", "ls", "/missing"]) == int(ExitCode.OPERATION_FAILED)
     captured = capsys.readouterr()
     assert "Not found: /missing" in captured.err
@@ -830,7 +830,7 @@ def test_files_ls_missing_sftp_path_reports_not_found_with_path(capsys) -> None:
 def test_files_ls_permission_denied_sftp_reports_with_path(capsys) -> None:
     fake_sftp = _errno_sftp_raiser(lambda: OSError(errno.EACCES, "Permission denied"))
     backend = _errno_backend(SimpleNamespace(sftp=fake_sftp, supports_transfer_sftp_channels=lambda: False))
-    with patch("truba_gui.cli.main.CLISession.open", return_value=_files_session(backend)):
+    with patch("hpc_gui.cli.main.CLISession.open", return_value=_files_session(backend)):
         assert run_cli(["--host", "host", "files", "ls", "/locked"]) == int(ExitCode.OPERATION_FAILED)
     captured = capsys.readouterr()
     assert "Permission denied: /locked" in captured.err
@@ -840,7 +840,7 @@ def test_files_ls_permission_denied_sftp_reports_with_path(capsys) -> None:
 def test_files_stat_permission_denied_sftp_reports_with_path(capsys) -> None:
     fake_sftp = _errno_sftp_raiser(lambda: OSError(errno.EACCES, "Permission denied"))
     backend = _errno_backend(SimpleNamespace(sftp=fake_sftp, supports_transfer_sftp_channels=lambda: False))
-    with patch("truba_gui.cli.main.CLISession.open", return_value=_files_session(backend)):
+    with patch("hpc_gui.cli.main.CLISession.open", return_value=_files_session(backend)):
         assert run_cli(["--host", "host", "files", "stat", "/locked/file.txt"]) == int(ExitCode.OPERATION_FAILED)
     captured = capsys.readouterr()
     assert "Permission denied: /locked/file.txt" in captured.err
@@ -854,7 +854,7 @@ def test_files_checksum_permission_denied_reports_with_path(capsys) -> None:
         run=lambda *a, **k: (1, "", "sha256sum: /locked/file.txt: Permission denied"),
     )
     backend = _errno_backend(fake_ssh)
-    with patch("truba_gui.cli.main.CLISession.open", return_value=_files_session(backend)):
+    with patch("hpc_gui.cli.main.CLISession.open", return_value=_files_session(backend)):
         assert run_cli(["--host", "host", "files", "checksum", "/locked/file.txt"]) == int(ExitCode.OPERATION_FAILED)
     captured = capsys.readouterr()
     assert "Permission denied: /locked/file.txt" in captured.err
@@ -876,7 +876,7 @@ def test_files_download_permission_denied_reports_with_path(capsys, tmp_path: Pa
     )
     backend = _errno_backend(fake_ssh)
     target = tmp_path / "out.txt"
-    with patch("truba_gui.cli.main.CLISession.open", return_value=_files_session(backend)):
+    with patch("hpc_gui.cli.main.CLISession.open", return_value=_files_session(backend)):
         assert run_cli(["--host", "host", "files", "download", "/locked/file.txt", str(target)]) == int(
             ExitCode.OPERATION_FAILED
         )
@@ -892,7 +892,7 @@ def test_files_cp_permission_denied_reports_quoted_destination(capsys) -> None:
         run=lambda *a, **k: (1, "", "cp: cannot create regular file '/no/perm/dst': Permission denied"),
     )
     backend = _errno_backend(fake_ssh)
-    with patch("truba_gui.cli.main.CLISession.open", return_value=_files_session(backend)):
+    with patch("hpc_gui.cli.main.CLISession.open", return_value=_files_session(backend)):
         assert run_cli(["--host", "host", "files", "cp", "/no/perm/src", "/no/perm/dst"]) == int(
             ExitCode.OPERATION_FAILED
         )
@@ -908,7 +908,7 @@ def test_files_mv_permission_denied_reports_quoted_source(capsys) -> None:
         run=lambda *a, **k: (1, "", "mv: cannot stat '/no/perm/path': Permission denied"),
     )
     backend = _errno_backend(fake_ssh)
-    with patch("truba_gui.cli.main.CLISession.open", return_value=_files_session(backend)):
+    with patch("hpc_gui.cli.main.CLISession.open", return_value=_files_session(backend)):
         assert run_cli(["--host", "host", "files", "mv", "/no/perm/path", "/dst"]) == int(ExitCode.OPERATION_FAILED)
     captured = capsys.readouterr()
     assert "Permission denied: /no/perm/path" in captured.err
@@ -922,7 +922,7 @@ def test_files_rm_permission_denied_reports_quoted_path(capsys) -> None:
         run=lambda *a, **k: (1, "", "rm: cannot remove '/no/perm/path': Permission denied"),
     )
     backend = _errno_backend(fake_ssh)
-    with patch("truba_gui.cli.main.CLISession.open", return_value=_files_session(backend)):
+    with patch("hpc_gui.cli.main.CLISession.open", return_value=_files_session(backend)):
         assert run_cli(["--host", "host", "files", "rm", "/no/perm/path", "--yes"]) == int(ExitCode.OPERATION_FAILED)
     captured = capsys.readouterr()
     assert "Permission denied: /no/perm/path" in captured.err
@@ -936,7 +936,7 @@ def test_files_rm_missing_reports_not_found_with_path(capsys) -> None:
         run=lambda *a, **k: (1, "", "rm: cannot remove '/missing/path': No such file or directory"),
     )
     backend = _errno_backend(fake_ssh)
-    with patch("truba_gui.cli.main.CLISession.open", return_value=_files_session(backend)):
+    with patch("hpc_gui.cli.main.CLISession.open", return_value=_files_session(backend)):
         assert run_cli(["--host", "host", "files", "rm", "/missing/path", "--yes"]) == int(ExitCode.OPERATION_FAILED)
     captured = capsys.readouterr()
     assert "Not found: /missing/path" in captured.err
@@ -946,7 +946,7 @@ def test_files_rm_missing_reports_not_found_with_path(capsys) -> None:
 def test_files_ls_existing_empty_directory_returns_empty_list(capsys) -> None:
     fake_sftp = SimpleNamespace(listdir_attr=lambda path: [])
     backend = _errno_backend(SimpleNamespace(sftp=fake_sftp, supports_transfer_sftp_channels=lambda: False))
-    with patch("truba_gui.cli.main.CLISession.open", return_value=_files_session(backend)):
+    with patch("hpc_gui.cli.main.CLISession.open", return_value=_files_session(backend)):
         assert run_cli(["--format", "json", "--host", "host", "files", "ls", "/empty"]) == int(ExitCode.SUCCESS)
     assert json.loads(capsys.readouterr().out) == []
 
@@ -958,7 +958,7 @@ def test_files_mkdir_shell_failure_stays_generic(capsys) -> None:
         run=lambda *a, **k: (1, "", "mkdir: cannot create directory '/locked': Permission denied"),
     )
     backend = _errno_backend(fake_ssh)
-    with patch("truba_gui.cli.main.CLISession.open", return_value=_files_session(backend)):
+    with patch("hpc_gui.cli.main.CLISession.open", return_value=_files_session(backend)):
         assert run_cli(["--host", "host", "files", "mkdir", "/locked"]) == int(ExitCode.OPERATION_FAILED)
     captured = capsys.readouterr()
     assert "File operation failed" in captured.err
@@ -979,7 +979,7 @@ def test_connect_plumbs_timeout_into_paramiko_connect_kwargs(timeout, expected) 
     ssh_inst.get_transport.return_value = None
     ssh_inst.open_sftp.return_value = MagicMock()
     info = SSHConnInfo(host="cluster.example", port=22, timeout=timeout)
-    with patch("truba_gui.ssh.client.paramiko", fake_paramiko):
+    with patch("hpc_gui.ssh.client.paramiko", fake_paramiko):
         SSHClientWrapper(info=info).connect()
     kwargs = ssh_inst.connect.call_args.kwargs
     assert kwargs["timeout"] == expected[0]
@@ -1046,7 +1046,7 @@ def test_files_not_a_directory_exit_one_distinct_message(capsys) -> None:
         def close(self):
             pass
 
-    with patch("truba_gui.cli.main.CLISession.open", return_value=FakeSession()):
+    with patch("hpc_gui.cli.main.CLISession.open", return_value=FakeSession()):
         assert run_cli(["--host", "host", "files", "ls", "/missing"]) == 1
     captured = capsys.readouterr()
     assert "Not found:" in captured.err
@@ -1099,7 +1099,7 @@ def _run_files(args, files) -> int:
     def fake_session(*_args):
         return SimpleNamespace(files=files, close=lambda: None)
 
-    with patch("truba_gui.cli.main.CLISession.open", side_effect=fake_session):
+    with patch("hpc_gui.cli.main.CLISession.open", side_effect=fake_session):
         return run_cli(args)
 
 
@@ -1528,7 +1528,7 @@ def test_diagnostics_all_stages_pass_and_wrapper_closed() -> None:
 
 def test_doctor_connection_all_pass_exit_zero_json_four_stages(capsys) -> None:
     fixture = _diag_fixture({"port": "PASS", "auth": "PASS", "sftp": "PASS", "checksum": "PASS"})
-    with patch("truba_gui.cli.main.run_connection_diagnostics", return_value=fixture):
+    with patch("hpc_gui.cli.main.run_connection_diagnostics", return_value=fixture):
         assert run_cli(["--format", "json", "--host", "host", "doctor", "connection"]) == 0
     payload = json.loads(capsys.readouterr().out)
     assert payload["status"] == "PASS"
@@ -1539,7 +1539,7 @@ def test_doctor_connection_any_fail_exit_three_json_four_stages(capsys) -> None:
     fixture = _diag_fixture(
         {"port": "PASS", "auth": "FAIL", "sftp": "not_attempted", "checksum": "not_attempted"}
     )
-    with patch("truba_gui.cli.main.run_connection_diagnostics", return_value=fixture):
+    with patch("hpc_gui.cli.main.run_connection_diagnostics", return_value=fixture):
         assert run_cli(["--format", "json", "--host", "host", "doctor", "connection"]) == 3
     payload = json.loads(capsys.readouterr().out)
     assert payload["status"] == "FAIL"
@@ -1550,7 +1550,7 @@ def test_doctor_connection_text_exposes_same_stage_names(capsys) -> None:
     fixture = _diag_fixture(
         {"port": "PASS", "auth": "PASS", "sftp": "PASS", "checksum": "FAIL"}
     )
-    with patch("truba_gui.cli.main.run_connection_diagnostics", return_value=fixture):
+    with patch("hpc_gui.cli.main.run_connection_diagnostics", return_value=fixture):
         assert run_cli(["--host", "host", "doctor", "connection"]) == 3
     out = capsys.readouterr().out
     assert "status: FAIL" in out
@@ -1573,7 +1573,7 @@ def test_doctor_connection_never_leaks_raw_exception_detail(capsys) -> None:
             checksum_probe=lambda _wrapper: 0,
         )
 
-    with patch("truba_gui.cli.main.run_connection_diagnostics", wrapped):
+    with patch("hpc_gui.cli.main.run_connection_diagnostics", wrapped):
         assert run_cli(["--host", "host", "doctor", "connection"]) == 3
     captured = capsys.readouterr()
     assert secret not in captured.out + captured.err
@@ -1737,8 +1737,8 @@ class _FakeSmokeSession:
     [([], True), (["--keep"], False)],
 )
 def test_doctor_smoke_keep_flag_controls_cleanup(extra_args, expected_cleanup, capsys) -> None:
-    with patch("truba_gui.cli.main.run_sftp_smoke", return_value=_smoke_all_pass()) as run_mock, patch(
-        "truba_gui.cli.main.CLISession.open", return_value=_FakeSmokeSession()
+    with patch("hpc_gui.cli.main.run_sftp_smoke", return_value=_smoke_all_pass()) as run_mock, patch(
+        "hpc_gui.cli.main.CLISession.open", return_value=_FakeSmokeSession()
     ):
         assert run_cli(["--format", "json", "--host", "host", "doctor", "smoke", *extra_args]) == 0
     assert run_mock.call_args.kwargs["cleanup"] is expected_cleanup
@@ -1752,8 +1752,8 @@ def test_doctor_smoke_keep_flag_controls_cleanup(extra_args, expected_cleanup, c
 )
 def test_doctor_smoke_artifact_written(tmp_path, capsys, fixture, expected_exit) -> None:
     artifact = tmp_path / "smoke.json"
-    with patch("truba_gui.cli.main.run_sftp_smoke", return_value=fixture), patch(
-        "truba_gui.cli.main.CLISession.open", return_value=_FakeSmokeSession()
+    with patch("hpc_gui.cli.main.run_sftp_smoke", return_value=fixture), patch(
+        "hpc_gui.cli.main.CLISession.open", return_value=_FakeSmokeSession()
     ):
         assert run_cli(
             ["--format", "json", "--host", "host", "doctor", "smoke", "--artifact", str(artifact)]
@@ -1765,8 +1765,8 @@ def test_doctor_smoke_artifact_written(tmp_path, capsys, fixture, expected_exit)
 
 
 def test_doctor_smoke_artifact_write_failure_returns_operation_failed(tmp_path, capsys) -> None:
-    with patch("truba_gui.cli.main.run_sftp_smoke", return_value=_smoke_all_pass()), patch(
-        "truba_gui.cli.main.CLISession.open", return_value=_FakeSmokeSession()
+    with patch("hpc_gui.cli.main.run_sftp_smoke", return_value=_smoke_all_pass()), patch(
+        "hpc_gui.cli.main.CLISession.open", return_value=_FakeSmokeSession()
     ):
         result = run_cli(
             ["--host", "host", "doctor", "smoke", "--artifact", str(tmp_path / "missing" / "out.json")]
@@ -1777,13 +1777,13 @@ def test_doctor_smoke_artifact_write_failure_returns_operation_failed(tmp_path, 
 
 def test_doctor_smoke_text_and_json_expose_identical_stage_set(capsys) -> None:
     fixture = _smoke_fixture(_PARTIAL)
-    with patch("truba_gui.cli.main.run_sftp_smoke", return_value=fixture), patch(
-        "truba_gui.cli.main.CLISession.open", return_value=_FakeSmokeSession()
+    with patch("hpc_gui.cli.main.run_sftp_smoke", return_value=fixture), patch(
+        "hpc_gui.cli.main.CLISession.open", return_value=_FakeSmokeSession()
     ):
         assert run_cli(["--host", "host", "doctor", "smoke"]) == 3
     text_out = capsys.readouterr().out
-    with patch("truba_gui.cli.main.run_sftp_smoke", return_value=fixture), patch(
-        "truba_gui.cli.main.CLISession.open", return_value=_FakeSmokeSession()
+    with patch("hpc_gui.cli.main.run_sftp_smoke", return_value=fixture), patch(
+        "hpc_gui.cli.main.CLISession.open", return_value=_FakeSmokeSession()
     ):
         assert run_cli(["--format", "json", "--host", "host", "doctor", "smoke"]) == 3
     json_payload = json.loads(capsys.readouterr().out)
@@ -1801,8 +1801,8 @@ def test_doctor_smoke_closes_session(capsys) -> None:
         def close(self):
             closed.append(True)
 
-    with patch("truba_gui.cli.main.run_sftp_smoke", return_value=_smoke_all_pass()), patch(
-        "truba_gui.cli.main.CLISession.open", return_value=FakeSession()
+    with patch("hpc_gui.cli.main.run_sftp_smoke", return_value=_smoke_all_pass()), patch(
+        "hpc_gui.cli.main.CLISession.open", return_value=FakeSession()
     ):
         assert run_cli(["--format", "json", "--host", "host", "doctor", "smoke"]) == 0
     assert closed == [True]
@@ -1821,7 +1821,7 @@ def test_doctor_smoke_never_leaks_sensitive_detail(capsys) -> None:
         def close(self):
             pass
 
-    with patch("truba_gui.cli.main.CLISession.open", return_value=FakeSession()):
+    with patch("hpc_gui.cli.main.CLISession.open", return_value=FakeSession()):
         assert run_cli(["--host", "host", "doctor", "smoke"]) == 3
     captured = capsys.readouterr()
     assert secret not in captured.out + captured.err
@@ -1864,7 +1864,7 @@ def test_jobs_help_lists_all_four_subcommands(capsys) -> None:
 
 def test_jobs_list_text_uses_default_squeue_template(capsys) -> None:
     fake_ssh = _FakeJobsSSH((0, "JOBID STATE\n  123 RUNNING\n", ""))
-    with patch("truba_gui.cli.main.CLISession.open", return_value=_fake_jobs_session(fake_ssh)):
+    with patch("hpc_gui.cli.main.CLISession.open", return_value=_fake_jobs_session(fake_ssh)):
         assert run_cli(["--host", "host", "--user", "alice", "jobs", "list"]) == 0
     assert fake_ssh.commands == ['squeue -h -u alice -o "%i|%P|%j|%u|%T|%M|%D|%C|%R"']
     out = capsys.readouterr().out
@@ -1874,7 +1874,7 @@ def test_jobs_list_text_uses_default_squeue_template(capsys) -> None:
 
 def test_jobs_list_json_envelope_matches_stdout(capsys) -> None:
     fake_ssh = _FakeJobsSSH((0, "JOBID STATE\n  123 RUNNING\n", ""))
-    with patch("truba_gui.cli.main.CLISession.open", return_value=_fake_jobs_session(fake_ssh)):
+    with patch("hpc_gui.cli.main.CLISession.open", return_value=_fake_jobs_session(fake_ssh)):
         assert run_cli(["--format", "json", "--host", "host", "--user", "alice", "jobs", "list"]) == 0
     assert fake_ssh.commands == ['squeue -h -u alice -o "%i|%P|%j|%u|%T|%M|%D|%C|%R"']
     payload = json.loads(capsys.readouterr().out)
@@ -1884,8 +1884,8 @@ def test_jobs_list_json_envelope_matches_stdout(capsys) -> None:
 def test_jobs_list_username_falls_back_to_profile(capsys) -> None:
     profiles = [{"name": "alpha", "host": "cluster.example", "username": "profileuser"}]
     fake_ssh = _FakeJobsSSH((0, "JOBID STATE\n", ""))
-    with patch("truba_gui.cli.session.load_profiles", return_value=profiles), patch(
-        "truba_gui.cli.main.CLISession.open", return_value=_fake_jobs_session(fake_ssh)
+    with patch("hpc_gui.cli.session.load_profiles", return_value=profiles), patch(
+        "hpc_gui.cli.main.CLISession.open", return_value=_fake_jobs_session(fake_ssh)
     ):
         assert run_cli(["--profile", "alpha", "jobs", "list"]) == 0
     assert fake_ssh.commands == ['squeue -h -u profileuser -o "%i|%P|%j|%u|%T|%M|%D|%C|%R"']
@@ -1893,14 +1893,14 @@ def test_jobs_list_username_falls_back_to_profile(capsys) -> None:
 
 def test_jobs_status_uses_default_scontrol_template(capsys) -> None:
     fake_ssh = _FakeJobsSSH((0, "JobId=123 JobName=test State=RUNNING\n", ""))
-    with patch("truba_gui.cli.main.CLISession.open", return_value=_fake_jobs_session(fake_ssh)):
+    with patch("hpc_gui.cli.main.CLISession.open", return_value=_fake_jobs_session(fake_ssh)):
         assert run_cli(["--host", "host", "jobs", "status", "123"]) == 0
     assert fake_ssh.commands == ["scontrol show job 123"]
     assert "JobId=123" in capsys.readouterr().out
 
 
 def test_jobs_status_requires_job_id_argument() -> None:
-    with patch("truba_gui.cli.main.CLISession.open") as session_open:
+    with patch("hpc_gui.cli.main.CLISession.open") as session_open:
         with pytest.raises(SystemExit) as excinfo:
             run_cli(["--host", "host", "jobs", "status"])
         assert excinfo.value.code == 2
@@ -1909,7 +1909,7 @@ def test_jobs_status_requires_job_id_argument() -> None:
 
 def test_jobs_list_connection_failure_exit_three(capsys) -> None:
     with patch(
-        "truba_gui.cli.main.CLISession.open",
+        "hpc_gui.cli.main.CLISession.open",
         side_effect=CLIConnectionError("host unreachable"),
     ):
         assert run_cli(["--host", "host", "jobs", "list"]) == 3
@@ -1923,7 +1923,7 @@ def test_jobs_status_unexpected_exception_exit_one_jobs_prefix(capsys) -> None:
         def run(self, command, **kwargs):
             raise RuntimeError("scheduler exploded")
 
-    with patch("truba_gui.cli.main.CLISession.open", return_value=_fake_jobs_session(BoomSSH((0, "", "")))):
+    with patch("hpc_gui.cli.main.CLISession.open", return_value=_fake_jobs_session(BoomSSH((0, "", "")))):
         assert run_cli(["--host", "host", "jobs", "status", "123"]) == 1
     captured = capsys.readouterr()
     assert "Jobs operation failed" in captured.err
@@ -1941,7 +1941,7 @@ _LSSRV_STDOUT = "Login node         CPUs    Load\nnode1                32    0.1
 
 def test_jobs_accounting_text_uses_default_sacct_template(capsys) -> None:
     fake_ssh = _FakeJobsSSH((0, _ACCOUNTING_STDOUT, ""))
-    with patch("truba_gui.cli.main.CLISession.open", return_value=_fake_jobs_session(fake_ssh)):
+    with patch("hpc_gui.cli.main.CLISession.open", return_value=_fake_jobs_session(fake_ssh)):
         assert run_cli(["--host", "host", "--user", "alice", "jobs", "accounting"]) == 0
     assert fake_ssh.commands == [_SACCT_COMMAND]
     out = capsys.readouterr().out
@@ -1951,7 +1951,7 @@ def test_jobs_accounting_text_uses_default_sacct_template(capsys) -> None:
 
 def test_jobs_accounting_json_envelope_matches_stdout(capsys) -> None:
     fake_ssh = _FakeJobsSSH((0, _ACCOUNTING_STDOUT, ""))
-    with patch("truba_gui.cli.main.CLISession.open", return_value=_fake_jobs_session(fake_ssh)):
+    with patch("hpc_gui.cli.main.CLISession.open", return_value=_fake_jobs_session(fake_ssh)):
         assert run_cli(["--format", "json", "--host", "host", "--user", "alice", "jobs", "accounting"]) == 0
     assert fake_ssh.commands == [_SACCT_COMMAND]
     payload = json.loads(capsys.readouterr().out)
@@ -1961,8 +1961,8 @@ def test_jobs_accounting_json_envelope_matches_stdout(capsys) -> None:
 def test_jobs_accounting_username_falls_back_to_profile(capsys) -> None:
     profiles = [{"name": "alpha", "host": "cluster.example", "username": "profileuser"}]
     fake_ssh = _FakeJobsSSH((0, "Account line\n", ""))
-    with patch("truba_gui.cli.session.load_profiles", return_value=profiles), patch(
-        "truba_gui.cli.main.CLISession.open", return_value=_fake_jobs_session(fake_ssh)
+    with patch("hpc_gui.cli.session.load_profiles", return_value=profiles), patch(
+        "hpc_gui.cli.main.CLISession.open", return_value=_fake_jobs_session(fake_ssh)
     ):
         assert run_cli(["--profile", "alpha", "jobs", "accounting"]) == 0
     assert fake_ssh.commands == [
@@ -1972,7 +1972,7 @@ def test_jobs_accounting_username_falls_back_to_profile(capsys) -> None:
 
 def test_jobs_accounting_connection_failure_exit_three(capsys) -> None:
     with patch(
-        "truba_gui.cli.main.CLISession.open",
+        "hpc_gui.cli.main.CLISession.open",
         side_effect=CLIConnectionError("host unreachable"),
     ):
         assert run_cli(["--host", "host", "jobs", "accounting"]) == 3
@@ -1983,7 +1983,7 @@ def test_jobs_accounting_connection_failure_exit_three(capsys) -> None:
 
 def test_jobs_lssrv_text_uses_default_status_template(capsys) -> None:
     fake_ssh = _FakeJobsSSH((0, _LSSRV_STDOUT, ""))
-    with patch("truba_gui.cli.main.CLISession.open", return_value=_fake_jobs_session(fake_ssh)):
+    with patch("hpc_gui.cli.main.CLISession.open", return_value=_fake_jobs_session(fake_ssh)):
         assert run_cli(["--host", "host", "jobs", "lssrv"]) == 0
     assert fake_ssh.commands == ["lssrv"]
     out = capsys.readouterr().out
@@ -1992,7 +1992,7 @@ def test_jobs_lssrv_text_uses_default_status_template(capsys) -> None:
 
 def test_jobs_lssrv_json_envelope_matches_stdout(capsys) -> None:
     fake_ssh = _FakeJobsSSH((0, _LSSRV_STDOUT, ""))
-    with patch("truba_gui.cli.main.CLISession.open", return_value=_fake_jobs_session(fake_ssh)):
+    with patch("hpc_gui.cli.main.CLISession.open", return_value=_fake_jobs_session(fake_ssh)):
         assert run_cli(["--format", "json", "--host", "host", "jobs", "lssrv"]) == 0
     assert fake_ssh.commands == ["lssrv"]
     payload = json.loads(capsys.readouterr().out)
@@ -2001,7 +2001,7 @@ def test_jobs_lssrv_json_envelope_matches_stdout(capsys) -> None:
 
 def test_jobs_lssrv_connection_failure_exit_three(capsys) -> None:
     with patch(
-        "truba_gui.cli.main.CLISession.open",
+        "hpc_gui.cli.main.CLISession.open",
         side_effect=CLIConnectionError("host unreachable"),
     ):
         assert run_cli(["--host", "host", "jobs", "lssrv"]) == 3
@@ -2012,7 +2012,7 @@ def test_jobs_lssrv_connection_failure_exit_three(capsys) -> None:
 
 def test_jobs_lssrv_nonzero_exit_maps_to_operation_failed(capsys) -> None:
     fake_ssh = _FakeJobsSSH((1, "", "lssrv: command not found"))
-    with patch("truba_gui.cli.main.CLISession.open", return_value=_fake_jobs_session(fake_ssh)):
+    with patch("hpc_gui.cli.main.CLISession.open", return_value=_fake_jobs_session(fake_ssh)):
         assert run_cli(["--host", "host", "jobs", "lssrv"]) == 1
     captured = capsys.readouterr()
     assert "Jobs operation failed" in captured.err
@@ -2021,14 +2021,14 @@ def test_jobs_lssrv_nonzero_exit_maps_to_operation_failed(capsys) -> None:
 
 def test_jobs_submit_yes_submits_script_and_exits_zero(capsys) -> None:
     fake_ssh = _FakeJobsSSH((0, "Submitted batch job 12347\n", ""))
-    with patch("truba_gui.cli.main.CLISession.open", return_value=_fake_jobs_session(fake_ssh)):
+    with patch("hpc_gui.cli.main.CLISession.open", return_value=_fake_jobs_session(fake_ssh)):
         assert run_cli(["--host", "host", "jobs", "submit", "/home/alice/run.sh", "--yes"]) == 0
     assert fake_ssh.commands == ["cd -- /home/alice && sbatch -- run.sh"]
     assert "Submitted batch job 12347" in capsys.readouterr().out
 
 
 def test_jobs_submit_without_yes_exits_usage_no_session(capsys) -> None:
-    with patch("truba_gui.cli.main.CLISession.open") as session_open:
+    with patch("hpc_gui.cli.main.CLISession.open") as session_open:
         assert run_cli(["--host", "host", "jobs", "submit", "/home/alice/run.sh"]) == int(ExitCode.USAGE)
     session_open.assert_not_called()
     captured = capsys.readouterr()
@@ -2038,7 +2038,7 @@ def test_jobs_submit_without_yes_exits_usage_no_session(capsys) -> None:
 
 def test_jobs_submit_yes_json_envelope_has_result_key(capsys) -> None:
     fake_ssh = _FakeJobsSSH((0, "Submitted batch job 12347\n", ""))
-    with patch("truba_gui.cli.main.CLISession.open", return_value=_fake_jobs_session(fake_ssh)):
+    with patch("hpc_gui.cli.main.CLISession.open", return_value=_fake_jobs_session(fake_ssh)):
         assert run_cli(["--format", "json", "--host", "host", "jobs", "submit", "/home/alice/run.sh", "--yes"]) == 0
     assert fake_ssh.commands == ["cd -- /home/alice && sbatch -- run.sh"]
     payload = json.loads(capsys.readouterr().out)
@@ -2047,14 +2047,14 @@ def test_jobs_submit_yes_json_envelope_has_result_key(capsys) -> None:
 
 def test_jobs_cancel_yes_cancels_job_and_exits_zero(capsys) -> None:
     fake_ssh = _FakeJobsSSH((0, "scancel: Terminated job 12345\n", ""))
-    with patch("truba_gui.cli.main.CLISession.open", return_value=_fake_jobs_session(fake_ssh)):
+    with patch("hpc_gui.cli.main.CLISession.open", return_value=_fake_jobs_session(fake_ssh)):
         assert run_cli(["--host", "host", "jobs", "cancel", "12345", "--yes"]) == 0
     assert fake_ssh.commands == ["scancel 12345"]
     assert "scancel: Terminated job 12345" in capsys.readouterr().out
 
 
 def test_jobs_cancel_without_yes_exits_usage_no_session(capsys) -> None:
-    with patch("truba_gui.cli.main.CLISession.open") as session_open:
+    with patch("hpc_gui.cli.main.CLISession.open") as session_open:
         assert run_cli(["--host", "host", "jobs", "cancel", "12345"]) == int(ExitCode.USAGE)
     session_open.assert_not_called()
     captured = capsys.readouterr()
@@ -2063,7 +2063,7 @@ def test_jobs_cancel_without_yes_exits_usage_no_session(capsys) -> None:
 
 
 def test_jobs_cancel_unsafe_job_id_exits_usage_no_session(capsys) -> None:
-    with patch("truba_gui.cli.main.CLISession.open") as session_open:
+    with patch("hpc_gui.cli.main.CLISession.open") as session_open:
         assert run_cli(["--host", "host", "jobs", "cancel", "12345; rm -rf /", "--yes"]) == int(
             ExitCode.USAGE
         )
@@ -2075,7 +2075,7 @@ def test_jobs_cancel_unsafe_job_id_exits_usage_no_session(capsys) -> None:
 
 def test_jobs_cancel_array_task_id_accepted(capsys) -> None:
     fake_ssh = _FakeJobsSSH((0, "scancel: Terminated job 12345_3\n", ""))
-    with patch("truba_gui.cli.main.CLISession.open", return_value=_fake_jobs_session(fake_ssh)):
+    with patch("hpc_gui.cli.main.CLISession.open", return_value=_fake_jobs_session(fake_ssh)):
         assert run_cli(["--host", "host", "jobs", "cancel", "12345_3", "--yes"]) == 0
     assert fake_ssh.commands == ["scancel 12345_3"]
     assert "scancel: Terminated job 12345_3" in capsys.readouterr().out
@@ -2083,7 +2083,7 @@ def test_jobs_cancel_array_task_id_accepted(capsys) -> None:
 
 def test_jobs_cancel_yes_json_envelope_has_result_key(capsys) -> None:
     fake_ssh = _FakeJobsSSH((0, "scancel: Terminated job 12345\n", ""))
-    with patch("truba_gui.cli.main.CLISession.open", return_value=_fake_jobs_session(fake_ssh)):
+    with patch("hpc_gui.cli.main.CLISession.open", return_value=_fake_jobs_session(fake_ssh)):
         assert run_cli(["--format", "json", "--host", "host", "jobs", "cancel", "12345", "--yes"]) == 0
     assert fake_ssh.commands == ["scancel 12345"]
     payload = json.loads(capsys.readouterr().out)
@@ -2091,7 +2091,7 @@ def test_jobs_cancel_yes_json_envelope_has_result_key(capsys) -> None:
 
 
 def test_cli_settings_round_trip_and_defaults(tmp_path: Path) -> None:
-    from truba_gui.config.storage import (
+    from hpc_gui.config.storage import (
         get_cli_default_profile,
         get_cli_external_access_enabled,
         set_cli_default_profile,
@@ -2099,7 +2099,7 @@ def test_cli_settings_round_trip_and_defaults(tmp_path: Path) -> None:
     )
 
     config = tmp_path / "config.json"
-    with patch("truba_gui.config.storage._config_path", return_value=config):
+    with patch("hpc_gui.config.storage._config_path", return_value=config):
         assert get_cli_external_access_enabled() is False
         assert get_cli_default_profile() == ""
         assert set_cli_external_access_enabled(True) is True
@@ -2112,8 +2112,8 @@ def test_cli_settings_round_trip_and_defaults(tmp_path: Path) -> None:
 
 
 def _run_gate_blocked(argv: list[str], capsys) -> int:
-    with patch("truba_gui.cli.main.CLISession.open") as session_open, patch(
-        "truba_gui.cli.main.get_cli_external_access_enabled", return_value=False
+    with patch("hpc_gui.cli.main.CLISession.open") as session_open, patch(
+        "hpc_gui.cli.main.get_cli_external_access_enabled", return_value=False
     ):
         code = run_cli(argv)
     captured = capsys.readouterr()
@@ -2139,8 +2139,8 @@ def test_access_gate_off_blocks_remote_commands(capsys, argv) -> None:
 
 
 def test_access_gate_off_blocked_command_json(capsys) -> None:
-    with patch("truba_gui.cli.main.CLISession.open") as session_open, patch(
-        "truba_gui.cli.main.get_cli_external_access_enabled", return_value=False
+    with patch("hpc_gui.cli.main.CLISession.open") as session_open, patch(
+        "hpc_gui.cli.main.get_cli_external_access_enabled", return_value=False
     ):
         assert run_cli(["--format", "json", "--host", "host", "files", "ls", "/"]) == int(
             ExitCode.OPERATION_FAILED
@@ -2153,10 +2153,10 @@ def test_access_gate_off_blocked_command_json(capsys) -> None:
 
 def test_access_gate_off_exempt_commands_still_succeed(capsys, tmp_path: Path) -> None:
     profiles = [{"name": "alpha", "host": "cluster.example", "username": "user"}]
-    with patch("truba_gui.cli.session.load_profiles", return_value=profiles), patch(
-        "truba_gui.cli.main.load_profiles", return_value=profiles
-    ), patch("truba_gui.cli.main.app_data_dir", return_value=tmp_path), patch(
-        "truba_gui.cli.main.get_cli_external_access_enabled", return_value=False
+    with patch("hpc_gui.cli.session.load_profiles", return_value=profiles), patch(
+        "hpc_gui.cli.main.load_profiles", return_value=profiles
+    ), patch("hpc_gui.cli.main.app_data_dir", return_value=tmp_path), patch(
+        "hpc_gui.cli.main.get_cli_external_access_enabled", return_value=False
     ):
         assert run_cli(["--format", "json", "version"]) == 0
         assert run_cli(["--format", "json", "commands"]) == 0
@@ -2179,8 +2179,8 @@ def test_access_gate_on_allows_denied_command(capsys) -> None:
         def close(self):
             pass
 
-    with patch("truba_gui.cli.main.CLISession.open", return_value=FakeSession()), patch(
-        "truba_gui.cli.main.get_cli_external_access_enabled", return_value=True
+    with patch("hpc_gui.cli.main.CLISession.open", return_value=FakeSession()), patch(
+        "hpc_gui.cli.main.get_cli_external_access_enabled", return_value=True
     ):
         assert run_cli(["--format", "json", "--host", "host", "files", "ls", "/"]) == 0
     captured = capsys.readouterr()
@@ -2189,18 +2189,18 @@ def test_access_gate_on_allows_denied_command(capsys) -> None:
 
 
 def test_effective_profile_name_falls_back_to_saved_default() -> None:
-    from truba_gui.cli.session import effective_profile_name
+    from hpc_gui.cli.session import effective_profile_name
 
     args = argparse.Namespace(profile="")
-    with patch("truba_gui.config.storage.get_cli_default_profile", return_value="default"):
+    with patch("hpc_gui.config.storage.get_cli_default_profile", return_value="default"):
         assert effective_profile_name(args) == "default"
 
 
 def test_effective_profile_name_explicit_overrides_default() -> None:
-    from truba_gui.cli.session import effective_profile_name
+    from hpc_gui.cli.session import effective_profile_name
 
     args = argparse.Namespace(profile="explicit")
-    with patch("truba_gui.config.storage.get_cli_default_profile", return_value="default"):
+    with patch("hpc_gui.config.storage.get_cli_default_profile", return_value="default"):
         assert effective_profile_name(args) == "explicit"
 
 
@@ -2221,11 +2221,11 @@ def _conn_info_args(**overrides) -> argparse.Namespace:
 
 
 def test_build_ssh_conn_info_uses_default_profile_when_no_flag() -> None:
-    from truba_gui.cli.session import build_ssh_conn_info
+    from hpc_gui.cli.session import build_ssh_conn_info
 
     profiles = [{"name": "default", "host": "default.example", "username": "du", "cli_allowed": True}]
-    with patch("truba_gui.cli.session.load_profiles", return_value=profiles), patch(
-        "truba_gui.config.storage.get_cli_default_profile", return_value="default"
+    with patch("hpc_gui.cli.session.load_profiles", return_value=profiles), patch(
+        "hpc_gui.config.storage.get_cli_default_profile", return_value="default"
     ):
         info = build_ssh_conn_info(_conn_info_args())
     assert info.host == "default.example"
@@ -2233,14 +2233,14 @@ def test_build_ssh_conn_info_uses_default_profile_when_no_flag() -> None:
 
 
 def test_build_ssh_conn_info_explicit_profile_overrides_default() -> None:
-    from truba_gui.cli.session import build_ssh_conn_info
+    from hpc_gui.cli.session import build_ssh_conn_info
 
     profiles = [
         {"name": "explicit", "host": "explicit.example", "username": "eu", "cli_allowed": True},
         {"name": "default", "host": "default.example", "username": "du", "cli_allowed": True},
     ]
-    with patch("truba_gui.cli.session.load_profiles", return_value=profiles), patch(
-        "truba_gui.config.storage.get_cli_default_profile", return_value="default"
+    with patch("hpc_gui.cli.session.load_profiles", return_value=profiles), patch(
+        "hpc_gui.config.storage.get_cli_default_profile", return_value="default"
     ):
         info = build_ssh_conn_info(_conn_info_args(profile="explicit"))
     assert info.host == "explicit.example"
@@ -2248,10 +2248,10 @@ def test_build_ssh_conn_info_explicit_profile_overrides_default() -> None:
 
 
 def test_build_ssh_conn_info_stale_default_profile_raises() -> None:
-    from truba_gui.cli.session import build_ssh_conn_info
+    from hpc_gui.cli.session import build_ssh_conn_info
 
-    with patch("truba_gui.cli.session.load_profiles", return_value=[]), patch(
-        "truba_gui.config.storage.get_cli_default_profile", return_value="ghost"
+    with patch("hpc_gui.cli.session.load_profiles", return_value=[]), patch(
+        "hpc_gui.config.storage.get_cli_default_profile", return_value="ghost"
     ):
         with pytest.raises(CLIConnectionError, match="Profile not found: ghost"):
             build_ssh_conn_info(_conn_info_args())
@@ -2262,34 +2262,34 @@ def test_build_ssh_conn_info_stale_default_profile_raises() -> None:
     [(120, 120), (999999, 3600), (-5, 0), ("oops", 30), (None, 30)],
 )
 def test_build_ssh_conn_info_keepalive_from_profile(saved, expected: int) -> None:
-    from truba_gui.cli.session import build_ssh_conn_info
+    from hpc_gui.cli.session import build_ssh_conn_info
 
     profile = {"name": "alpha", "host": "cluster.example", "cli_allowed": True}
     if saved is not None:
         profile["keepalive_interval_seconds"] = saved
     profiles = [profile]
-    with patch("truba_gui.cli.session.load_profiles", return_value=profiles):
+    with patch("hpc_gui.cli.session.load_profiles", return_value=profiles):
         info = build_ssh_conn_info(_conn_info_args(profile="alpha"))
     assert info.keepalive_interval_seconds == expected
 
 
 def test_jobs_username_honors_default_profile() -> None:
-    from truba_gui.cli.main import _jobs_username
+    from hpc_gui.cli.main import _jobs_username
 
     args = argparse.Namespace(profile="", username="")
-    with patch("truba_gui.cli.main.effective_profile_name", return_value="alpha"), patch(
-        "truba_gui.cli.main.resolve_profile",
+    with patch("hpc_gui.cli.main.effective_profile_name", return_value="alpha"), patch(
+        "hpc_gui.cli.main.resolve_profile",
         return_value={"name": "alpha", "username": "defaultuser"},
     ):
         assert _jobs_username(args) == "defaultuser"
 
 
 def test_jobs_username_explicit_profile_beats_default() -> None:
-    from truba_gui.cli.main import _jobs_username
+    from hpc_gui.cli.main import _jobs_username
 
     args = argparse.Namespace(profile="explicit", username="")
-    with patch("truba_gui.cli.main.effective_profile_name", return_value="explicit"), patch(
-        "truba_gui.cli.main.resolve_profile",
+    with patch("hpc_gui.cli.main.effective_profile_name", return_value="explicit"), patch(
+        "hpc_gui.cli.main.resolve_profile",
         return_value={"name": "explicit", "username": "explicituser"},
     ):
         assert _jobs_username(args) == "explicituser"

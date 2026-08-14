@@ -16,8 +16,8 @@ sys.path.insert(0, os.path.abspath("src"))
 from PySide6.QtCore import QThreadPool
 from PySide6.QtWidgets import QApplication
 
-from truba_gui.config import storage
-from truba_gui.ui.widgets.jobs_outputs_widget import JobsOutputsWidget
+from hpc_gui.config import storage
+from hpc_gui.ui.widgets.jobs_outputs_widget import JobsOutputsWidget
 
 
 class _FakeSlurm:
@@ -63,22 +63,22 @@ class LssrvAutoRefreshTests(unittest.TestCase):
 
     def setUp(self):
         self.interval = patch(
-            "truba_gui.ui.widgets.jobs_outputs_widget."
+            "hpc_gui.ui.widgets.jobs_outputs_widget."
             "get_jobs_outputs_refresh_interval_seconds",
             return_value=23,
         )
         self.enabled = patch(
-            "truba_gui.ui.widgets.jobs_outputs_widget."
+            "hpc_gui.ui.widgets.jobs_outputs_widget."
             "get_lssrv_auto_refresh_enabled",
             return_value=False,
         )
         self.squeue_enabled = patch(
-            "truba_gui.ui.widgets.jobs_outputs_widget."
+            "hpc_gui.ui.widgets.jobs_outputs_widget."
             "get_squeue_auto_refresh_enabled",
             return_value=False,
         )
         self.sacct_enabled = patch(
-            "truba_gui.ui.widgets.jobs_outputs_widget."
+            "hpc_gui.ui.widgets.jobs_outputs_widget."
             "get_sacct_auto_refresh_enabled",
             return_value=False,
         )

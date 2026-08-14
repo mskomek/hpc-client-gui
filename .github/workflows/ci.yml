@@ -24,7 +24,7 @@ jobs:
           pip install -e .[test]
           pip install pytest
       - name: Compile check
-        run: python -m compileall src/truba_gui
+        run: python -m compileall src/hpc_gui
       - name: i18n drift gate
         run: python scripts/check_i18n.py
       - name: Smoke test

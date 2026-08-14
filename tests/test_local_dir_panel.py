@@ -12,8 +12,8 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QKeyEvent
 from PySide6.QtWidgets import QApplication, QMessageBox
 
-from truba_gui.services.local_files import list_local_entries, safe_initial_local_directory
-from truba_gui.ui.widgets.local_dir_panel import LocalDirPanel
+from hpc_gui.services.local_files import list_local_entries, safe_initial_local_directory
+from hpc_gui.ui.widgets.local_dir_panel import LocalDirPanel
 
 
 class LocalDirPanelTests(unittest.TestCase):
@@ -154,7 +154,7 @@ class LocalDirPanelTests(unittest.TestCase):
             self.assertFalse((source_dir / "move.txt").exists())
 
     def test_local_ctrl_v_emits_remote_clipboard_paste_request(self) -> None:
-        from truba_gui.services.file_clipboard import get_file_clipboard
+        from hpc_gui.services.file_clipboard import get_file_clipboard
 
         emitted: list[tuple[list[str], str]] = []
         clipboard = get_file_clipboard()
@@ -185,7 +185,7 @@ class LocalDirPanelTests(unittest.TestCase):
             self.assertTrue(self.panel.set_dir(str(root)))
             self._select_name("recalculated")
             with patch(
-                "truba_gui.ui.widgets.local_dir_panel.QMessageBox.question",
+                "hpc_gui.ui.widgets.local_dir_panel.QMessageBox.question",
                 return_value=QMessageBox.StandardButton.Yes,
             ):
                 self.assertTrue(self.panel.delete_selected())
@@ -201,7 +201,7 @@ class LocalDirPanelTests(unittest.TestCase):
             self.assertTrue(self.panel.set_dir(str(root)))
             self._select_name("delete-key.txt")
             with patch(
-                "truba_gui.ui.widgets.local_dir_panel.QMessageBox.question",
+                "hpc_gui.ui.widgets.local_dir_panel.QMessageBox.question",
                 return_value=QMessageBox.StandardButton.Yes,
             ):
                 self._press(Qt.Key.Key_Delete)

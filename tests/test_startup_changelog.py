@@ -6,9 +6,9 @@ from unittest.mock import patch
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from truba_gui import __version__
-from truba_gui.services.changelog import chronological_changelog
-from truba_gui.ui.main_window import MainWindow
+from hpc_gui import __version__
+from hpc_gui.services.changelog import chronological_changelog
+from hpc_gui.ui.main_window import MainWindow
 
 
 class StartupChangelogTests(unittest.TestCase):
@@ -44,12 +44,12 @@ class StartupChangelogTests(unittest.TestCase):
 
         with (
             patch(
-                "truba_gui.ui.main_window.get_last_seen_changelog_version",
+                "hpc_gui.ui.main_window.get_last_seen_changelog_version",
                 side_effect=["1.1.0", __version__],
             ),
-            patch("truba_gui.ui.main_window.set_last_seen_changelog_version", remember),
+            patch("hpc_gui.ui.main_window.set_last_seen_changelog_version", remember),
             patch(
-                "truba_gui.ui.main_window.load_changelog_text",
+                "hpc_gui.ui.main_window.load_changelog_text",
                 return_value="# Changelog\n\n## v1.1.0\n- old\n\n## v1.1.1\n- new",
             ),
         ):

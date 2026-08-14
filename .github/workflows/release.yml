@@ -12,6 +12,65 @@ permissions:
   contents: write
 
 jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install Qt and packaging runtime
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes libegl1 libxkbcommon0 libxcb-xinerama0 flatpak flatpak-builder
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .[test]
+          pip install pyinstaller
+      - name: Source checks
+        env:
+          PYTHONPATH: src
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          python -m compileall src/hpc_gui
+          python scripts/check_i18n.py
+          python scripts/smoke_test.py
+          python -m unittest discover -s tests -p "test_*.py"
+      - name: Validate Linux packaging plan
+        run: |
+          python scripts/release_linux.py --version "${{ github.event.inputs.version }}" --json
+      - name: Install Flatpak runtime
+        run: |
+          flatpak remote-add --if-not-exists --user flathub https://flathub.org/repo/flathub.flatpakrepo
+          flatpak install --user --noninteractive --assumeyes flathub org.freedesktop.Platform//24.08 org.freedesktop.Sdk//24.08
+      - name: Install AppImage tool
+        run: |
+          curl --fail --location --retry 3 --output /tmp/appimagetool.AppImage https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage
+          chmod +x /tmp/appimagetool.AppImage
+      - name: Build and stage Linux artifacts
+        env:
+          PYTHONPATH: src
+          APPIMAGETOOL: /tmp/appimagetool.AppImage
+        run: |
+          python scripts/release_linux.py --version "${{ github.event.inputs.version }}" --execute
+      - name: Packaged CLI smoke
+        run: |
+          python scripts/linux_release_smoke.py --binary dist/hpc-client-gui/hpc-client-gui
+      - name: Packaged GUI smoke (offscreen)
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          python scripts/linux_release_smoke.py --binary dist/hpc-client-gui/hpc-client-gui --gui
+      - name: Upload Linux artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: hpc-client-gui-linux-${{ github.event.inputs.version }}
+          path: |
+            dist/releases/v${{ github.event.inputs.version }}/**
+
   build-windows:
     runs-on: windows-latest
     steps:
@@ -27,6 +86,16 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e .[test]
           pip install pyinstaller
+      - name: Windows source checks
+        shell: pwsh
+        env:
+          PYTHONPATH: src
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          python -m compileall src/hpc_gui
+          python scripts/check_i18n.py
+          python scripts/smoke_test.py
+          python -m unittest discover -s tests -p "test_*.py"
       - name: Build release artifacts
         shell: pwsh
         run: ./scripts/release.ps1 -Version "${{ github.event.inputs.version }}"
@@ -36,14 +105,25 @@ jobs:
           name: hpc-client-gui-${{ github.event.inputs.version }}
           path: |
             dist/releases/v${{ github.event.inputs.version }}/**
+
+  publish-release:
+    needs: [build-linux, build-windows]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Windows artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: hpc-client-gui-${{ github.event.inputs.version }}
+          path: dist/releases/v${{ github.event.inputs.version }}
+      - name: Download Linux artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: hpc-client-gui-linux-${{ github.event.inputs.version }}
+          path: dist/releases/v${{ github.event.inputs.version }}
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ github.event.inputs.version }}
           name: v${{ github.event.inputs.version }}
           body_path: dist/releases/v${{ github.event.inputs.version }}/CHANGELOG.md
-          files: |
-            dist/releases/v${{ github.event.inputs.version }}/hpc-client-gui_windows_onedir.zip
-            dist/releases/v${{ github.event.inputs.version }}/hpc-client-gui_windows_onedir.zip.sha256
-            dist/releases/v${{ github.event.inputs.version }}/truba-client-gui_windows_onedir.zip
-            dist/releases/v${{ github.event.inputs.version }}/truba-client-gui_windows_onedir.zip.sha256
+          files: dist/releases/v${{ github.event.inputs.version }}/*
