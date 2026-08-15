@@ -15,6 +15,10 @@ dialog does not reappear.
 The send-logs dialog shows the collected log text before anything leaves your
 machine, and gives you two actions:
 
+![Crash Reports and Send Logs](https://raw.githubusercontent.com/wiki/mskomek/hpc-client-gui/assets/send-logs.png)
+
+*The send-logs dialog. Note the redaction: the account name and host already read `<user>` and `<host>`.*
+
 - **Copy to clipboard** — copies the displayed text so you can paste it into an
   issue.
 - **Export diagnostics** — writes a ZIP bundle to a location you choose.

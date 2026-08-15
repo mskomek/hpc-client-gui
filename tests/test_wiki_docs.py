@@ -38,6 +38,11 @@ class WikiCheckTest(unittest.TestCase):
             "missing Turkish counterpart": lambda r: (r / "Topic-TR.md").unlink(),
             "unresolved wiki link": lambda r: _write(r, "Topic", "# Topic\n\n[[Gone|Nowhere]]\n"),
             "unresolved asset reference": lambda r: _write(r, "Topic", "# Topic\n\n![x](assets/missing.png)\n"),
+            "unresolved asset reference assets/gone.png": lambda r: _write(
+                r,
+                "Topic",
+                f"# Topic\n\n![x]({check_wiki.WIKI_RAW_PREFIX}assets/gone.png)\n",
+            ),
             "heading count differs": lambda r: _write(r, "Topic", "# Topic\n\n## Extra\n"),
             "forbidden term": lambda r: _write(r, "Topic", "# Topic\n\nSee waves/ for details.\n"),
             "not listed in _Sidebar.md": lambda r: _write(r, "_Sidebar", "- [[Home|Home]]\n- [[Ana|Home-TR]]\n- [[Konu|Topic-TR]]\n"),

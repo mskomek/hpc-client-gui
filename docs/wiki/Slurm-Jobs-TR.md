@@ -5,6 +5,10 @@
 **Jobs & Outputs** alanı iş gönderme, izleme ve iptal etmeyi kapsar. Çıktı
 takibinin kendi sayfası vardır: [[İş Çıktıları|Job-Outputs-TR]].
 
+![Slurm Jobs](https://raw.githubusercontent.com/wiki/mskomek/hpc-client-gui/assets/jobs.png)
+
+*İşler görünümü; geçerli kullanıcı için ayrıştırılmış `squeue` çıktısı.*
+
 ## Gönderme
 
 Üçü de `sbatch` ile biten üç yol:

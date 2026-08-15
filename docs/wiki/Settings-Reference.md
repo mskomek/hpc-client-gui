@@ -5,6 +5,10 @@
 Every option in the **Settings** dialog, in the sections the dialog uses.
 Labels below are the English interface strings.
 
+![Settings Reference](https://raw.githubusercontent.com/wiki/mskomek/hpc-client-gui/assets/settings.png)
+
+*The Settings dialog: Connection and X11, Jobs & Outputs, and File transfer.*
+
 ## Connection and X11
 
 | Setting | What it does |

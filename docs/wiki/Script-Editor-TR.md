@@ -5,6 +5,10 @@
 Uzak betikleri yerinde düzenleyin: açın, düzenleyin, geri kaydedin ve
 gönderin — elle indirip yükleme döngüsü olmadan.
 
+![Script Editor](https://raw.githubusercontent.com/wiki/mskomek/hpc-client-gui/assets/script-editor.png)
+
+*Düzenleyicide açık bir Slurm betiği; uzak yol, Open, Lint ve Save.*
+
 ## Açma ve kaydetme
 
 **Open**, **Remote:** yolundaki dosyayı yükler; dosya yöneticisinin **Edit** ve

@@ -5,6 +5,10 @@
 **Settings** iletişim kutusundaki her seçenek, iletişim kutusunun kullandığı
 bölümlere göre. Aşağıdaki etiketler arayüzün İngilizce metinleridir.
 
+![Settings Reference](https://raw.githubusercontent.com/wiki/mskomek/hpc-client-gui/assets/settings.png)
+
+*Ayarlar iletişim kutusu: Connection and X11, Jobs & Outputs ve File transfer.*
+
 ## Connection and X11
 
 | Ayar | Ne yapar |

@@ -6,6 +6,10 @@ Yan yana iki panel: bir tarafta **Local**, diğer tarafta uzak dizin. İkisi
 arasındaki aktarımlar [[Dosya Aktarımları|File-Transfers-TR]] sayfasında
 anlatılır; bu sayfa gezinme ve dosya işlemleriyle ilgilidir.
 
+![Remote File Manager](https://raw.githubusercontent.com/wiki/mskomek/hpc-client-gui/assets/file-manager.png)
+
+*Solda yerel panel, sağda uzak dizin, altta aktarım kuyruğu.*
+
 ## Gezinme
 
 **Back**, **Up** ve **Refresh** ağaçta dolaşır; yerel birimler için

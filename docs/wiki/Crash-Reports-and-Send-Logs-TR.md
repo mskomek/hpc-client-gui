@@ -15,6 +15,10 @@ kutusu yeniden görünmez.
 Bu iletişim kutusu, makinenizden hiçbir şey ayrılmadan önce toplanan günlük
 metnini gösterir ve iki eylem sunar:
 
+![Crash Reports and Send Logs](https://raw.githubusercontent.com/wiki/mskomek/hpc-client-gui/assets/send-logs.png)
+
+*Günlük gönderme iletişim kutusu. Maskelemeye dikkat: hesap adı ve ana bilgisayar zaten `<user>` ve `<host>` olarak görünüyor.*
+
 - **Panoya kopyala** — görüntülenen metni kopyalar; bir bildirime
   yapıştırabilirsiniz.
 - **Tanılamayı dışa aktar** — seçtiğiniz bir konuma ZIP paketi yazar.

@@ -5,6 +5,10 @@
 Edit remote scripts in place: open, edit, save back, and submit — without a
 manual download and upload cycle.
 
+![Script Editor](https://raw.githubusercontent.com/wiki/mskomek/hpc-client-gui/assets/script-editor.png)
+
+*A Slurm script open in the editor, with the remote path, Open, Lint, and Save.*
+
 ## Opening and saving
 
 **Open** loads the file at the **Remote:** path; the file manager's **Edit**

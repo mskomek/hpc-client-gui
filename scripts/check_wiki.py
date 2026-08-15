@@ -16,6 +16,10 @@ RESERVED = {"_Sidebar", "_Footer", "README", "PUBLISHING"}
 NOT_PUBLISHED = {"README", "PUBLISHING"}
 WIKI_LINK = re.compile(r"\[\[([^\]|]+?)(?:\|([^\]]+?))?\]\]")
 MD_LINK = re.compile(r"!\[[^\]]*\]\(([^)\s]+)\)")
+# GitHub serves wiki assets from this prefix; relative subdirectory paths do not
+# resolve reliably in rendered wiki pages, so pages reference the raw URL and
+# this checker maps it back to the file that must exist in `docs/wiki/`.
+WIKI_RAW_PREFIX = "https://raw.githubusercontent.com/wiki/mskomek/hpc-client-gui/"
 HEADING = re.compile(r"^#{1,6}\s+\S", re.MULTILINE)
 FORBIDDEN = [
     (re.compile(r"(?i)\bdeepseek\b"), "internal orchestration tooling"),
@@ -71,7 +75,9 @@ def check_wiki(wiki_root: Path) -> list[str]:
             if target not in pages:
                 problems.append(f"{name}.md: unresolved wiki link [[{target}]]")
         for ref in MD_LINK.findall(content[name]):
-            if ref.startswith(("http://", "https://", "data:")):
+            if ref.startswith(WIKI_RAW_PREFIX):
+                ref = ref[len(WIKI_RAW_PREFIX) :]
+            elif ref.startswith(("http://", "https://", "data:")):
                 continue
             if not (wiki_root / ref).exists():
                 problems.append(f"{name}.md: unresolved asset reference {ref}")

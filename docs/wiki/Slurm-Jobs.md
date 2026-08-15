@@ -5,6 +5,10 @@
 The **Jobs & Outputs** area covers submitting, watching, and cancelling jobs.
 Output following has its own page: [[Job Outputs|Job-Outputs]].
 
+![Slurm Jobs](https://raw.githubusercontent.com/wiki/mskomek/hpc-client-gui/assets/jobs.png)
+
+*The jobs view, showing parsed `squeue` output for the current user.*
+
 ## Submitting
 
 Three routes, all ending in `sbatch`:

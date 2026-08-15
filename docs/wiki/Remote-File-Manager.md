@@ -6,6 +6,10 @@ Two panels side by side: **Local** on one side, the remote directory on the
 other. Transfers between them are covered in [[File Transfers|File-Transfers]];
 this page is about browsing and manipulating files.
 
+![Remote File Manager](https://raw.githubusercontent.com/wiki/mskomek/hpc-client-gui/assets/file-manager.png)
+
+*The local panel on the left, the remote directory on the right, and the transfer queue below.*
+
 ## Navigating
 
 **Back**, **Up**, and **Refresh** move through the tree, with **Drives** for
