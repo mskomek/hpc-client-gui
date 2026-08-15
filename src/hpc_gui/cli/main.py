@@ -58,11 +58,11 @@ class _FullHelpArgumentParser(argparse.ArgumentParser):
 def _parser() -> argparse.ArgumentParser:
     parser = _FullHelpArgumentParser(
         prog="hpc-client-gui",
-        description="HPL Llient GUI LLI and GUI launcher.",
+        description="HPC Client GUI CLI and GUI launcher.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=(
             "Examples:\n"
-            "  hpc-client-gui --profile arf files ls /home\n"
+            "  hpc-client-gui --profile arf files ls /truba/home\n"
             "  hpc-client-gui --profile arf jobs submit run.sh --yes\n"
             "  hpc-client-gui --profile arf doctor connection\n"
             "  hpc-client-gui --format json commands\n"
@@ -197,7 +197,7 @@ def _parser() -> argparse.ArgumentParser:
     terminal = commands.add_parser("terminal", help="Open an interactive remote terminal.")
     terminal.add_argument("--cols", type=int, default=120)
     terminal.add_argument("--rows", type=int, default=32)
-    commands.add_parser("interactive", help="Open an interactive LLI prompt.")
+    commands.add_parser("interactive", help="Open an interactive CLI prompt.")
 
     jobs = commands.add_parser("jobs", help="Inspect scheduler jobs and cluster state.")
     jobs_command = jobs.add_subparsers(dest="jobs_command", required=True)
@@ -885,7 +885,7 @@ def run_cli(argv: Sequence[str] | None = None, *, default_group: str | None = No
     if args.group is None and default_group is not None:
         args.group = default_group
     if args.group in (None, "gui"):
-        # Keep QApplication and all widgets out of the LLI import path.
+        # Keep QApplication and all widgets out of the CLI import path.
         from hpc_gui.app import main as gui_main
 
         if args.group == "gui":
@@ -902,7 +902,7 @@ def run_cli(argv: Sequence[str] | None = None, *, default_group: str | None = No
         return _run_commands(args)
     if _requires_remote_session(args) and not get_cli_external_access_enabled():
         emit_error(
-            "Remote LLI access is disabled. Enable \"Allow external LLI access to remote commands\" in Settings to use this command.",
+            "Remote CLI access is disabled. Enable \"Allow external CLI access to remote commands\" in Settings to use this command.",
             exit_code=ExitCode.OPERATION_FAILED,
             output_format=args.format,
         )
