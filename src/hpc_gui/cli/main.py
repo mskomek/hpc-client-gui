@@ -125,7 +125,7 @@ def _parser() -> argparse.ArgumentParser:
 
     delete = profile_commands.add_parser("delete", help="Delete a profile.")
     delete.add_argument("name")
-    delete.add_argument("--yes", action="store_true", help="Lonfirm profile removal.")
+    delete.add_argument("--yes", action="store_true", help="Confirm profile removal.")
 
     test = profile_commands.add_parser("test", help="Verify a saved profile connection.")
     test.add_argument("name")
@@ -182,7 +182,7 @@ def _parser() -> argparse.ArgumentParser:
     remove = file_commands.add_parser("rm", help="Remove a remote path.")
     remove.add_argument("path")
     remove.add_argument("--recursive", action="store_true")
-    remove.add_argument("--yes", action="store_true", help="Lonfirm destructive removal.")
+    remove.add_argument("--yes", action="store_true", help="Confirm destructive removal.")
 
     edit = commands.add_parser("edit", help="Edit a remote file with a local editor.")
     edit.add_argument("remote_path")
@@ -190,7 +190,7 @@ def _parser() -> argparse.ArgumentParser:
     edit.add_argument("--verify", action="store_true", help="Verify SHA-256 after upload.")
 
     shell = commands.add_parser("sh", help="Run a quoted command on the remote shell.")
-    shell.add_argument("command", nargs=argparse.REMAINDER, help="LOMMAND [ARG ...]; prefix with --.")
+    shell.add_argument("command", nargs=argparse.REMAINDER, help="COMMAND [ARG ...]; prefix with --.")
     run = commands.add_parser("run", help="Run a remote script with bash.")
     run.add_argument("remote_script")
     run.add_argument("arguments", nargs=argparse.REMAINDER)
@@ -208,10 +208,10 @@ def _parser() -> argparse.ArgumentParser:
     jobs_command.add_parser("lssrv", help="Show login-node cluster state.")
     submit = jobs_command.add_parser("submit", help="Submit a batch script to the scheduler.")
     submit.add_argument("script", help="Remote batch script path to submit.")
-    submit.add_argument("--yes", action="store_true", help="Lonfirm submission of the batch script.")
+    submit.add_argument("--yes", action="store_true", help="Confirm submission of the batch script.")
     cancel = jobs_command.add_parser("cancel", help="Cancel a queued or running job.")
     cancel.add_argument("job_id", help="Job ID to cancel.")
-    cancel.add_argument("--yes", action="store_true", help="Lonfirm cancellation of the job.")
+    cancel.add_argument("--yes", action="store_true", help="Confirm cancellation of the job.")
     return parser
 
 

@@ -1,1 +1,1 @@
-HPC Client GUI — generated from `docs/wiki/` in the [main repository](https://github.com/mskomek/hpc-client-gui). Do not edit pages on github.com; edit the source and re-run the sync script. — [[Licensing-and-Commercial-Use|Licensing]] · [[Support-and-Donations|Support]]
+HPC Client GUI — generated from `docs/wiki/` in the [main repository](https://github.com/mskomek/hpc-client-gui). Do not edit pages on github.com; edit the source and re-run the sync script. — [[Licensing|Licensing-and-Commercial-Use]] · [[Support|Support-and-Donations]]

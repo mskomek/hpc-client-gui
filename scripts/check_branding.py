@@ -16,7 +16,10 @@ CORRUPT_PATTERNS = [
     re.compile(r"\bHPL\b"),
     re.compile(r"\bLlient\b"),
     re.compile(r"\bLLI\b"),
-    re.compile(r"\bL(?:reate|onnect|opy|ancel|lient|ancelled)\b"),
+    re.compile(
+        r"\bL(?:reate|onnect|opy|ancel|ancelled|onfirm|onfig|ommand|heck|urrent|lient|hange)\b"
+    ),
+    re.compile(r"\bL(?:OMMAND|ONFIRM|REATE|ANCEL|OPY|ONNECT|HECK)\b"),
     re.compile(r"conoig"),
     re.compile(r"JSnN"),
 ]
@@ -39,9 +42,13 @@ def _iter_files(base: Path):
 
 def find_corrupt_strings(base: Path) -> list[str]:
     findings: list[str] = []
-    self_path = Path(__file__).resolve()
+    # The checkers spell the corrupt tokens out on purpose.
+    checkers = {
+        (Path(__file__).parent / name).resolve()
+        for name in ("check_branding.py", "check_wiki.py")
+    }
     for path in _iter_files(base):
-        if path.resolve() == self_path:
+        if path.resolve() in checkers:
             continue
         try:
             text = path.read_text(encoding="utf-8")
