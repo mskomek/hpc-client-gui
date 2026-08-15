@@ -12,8 +12,8 @@ jobs:
       PYTHONPATH: src
       QT_QPA_PLATFORM: offscreen
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
       - name: Install Qt runtime
@@ -33,14 +33,24 @@ jobs:
         run: python -m pytest tests/test_cli.py tests/test_cli_entrypoint.py -q --tb=short -rf
 
 
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Branding string gate
+        run: python scripts/check_branding.py
+
   ssh_sftp:
     runs-on: ubuntu-latest
     env:
       PYTHONPATH: src
       QT_QPA_PLATFORM: offscreen
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
       - name: Install Qt runtime
@@ -59,8 +69,8 @@ jobs:
       PYTHONPATH: src
       QT_QPA_PLATFORM: offscreen
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
       - name: Install deps
@@ -76,8 +86,8 @@ jobs:
       PYTHONPATH: src
       QT_QPA_PLATFORM: offscreen
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
       - name: Install Qt runtime

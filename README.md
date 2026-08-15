@@ -144,6 +144,12 @@ Shared global options exist (format, quiet, verbose, timeout, profile selection,
 
 ## Documentation
 
+- **[Wiki](https://github.com/mskomek/hpc-client-gui/wiki)** — installation,
+  feature guides, CLI reference, troubleshooting, and project docs, in English
+  and Turkish. Start at
+  [Quick Start](https://github.com/mskomek/hpc-client-gui/wiki/Quick-Start).
+  Wiki pages are generated from `docs/wiki/` in this repository; edit them
+  there, not on github.com.
 - From within the application: click the **Help (❓)** icon in the top-left corner.
 - As files:
   - Turkish: `src/hpc_gui/docs/HELP_tr.md`

@@ -36,6 +36,22 @@ sending BTC using a compatible Bitcoin network.
 * Commercial use requires a separate license. See
   [COMMERCIAL_LICENSE.md](COMMERCIAL_LICENSE.md).
 
+## Getting Help
+
+Before opening an issue, check the
+[wiki](https://github.com/mskomek/hpc-client-gui/wiki):
+
+* [Troubleshooting](https://github.com/mskomek/hpc-client-gui/wiki/Troubleshooting)
+  and [FAQ](https://github.com/mskomek/hpc-client-gui/wiki/FAQ), organized by
+  symptom;
+* [Logs and Diagnostics](https://github.com/mskomek/hpc-client-gui/wiki/Logs-and-Diagnostics)
+  for where the log lives and what the `doctor` commands check;
+* [Crash Reports and Send Logs](https://github.com/mskomek/hpc-client-gui/wiki/Crash-Reports-and-Send-Logs)
+  for exporting a redacted diagnostic bundle to attach to a report.
+
+Turkish pages carry a `-TR` suffix, for example
+[SSS](https://github.com/mskomek/hpc-client-gui/wiki/FAQ-TR).
+
 ## Other Ways to Support the Project
 
 Financial support is not required. Users can also help by:
