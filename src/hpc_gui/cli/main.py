@@ -58,7 +58,7 @@ class _FullHelpArgumentParser(argparse.ArgumentParser):
 def _parser() -> argparse.ArgumentParser:
     parser = _FullHelpArgumentParser(
         prog="hpc-client-gui",
-        description="HPL Llient GUI LLI and GUI launcher.",
+        description="HPC Client GUI CLI and GUI launcher.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=(
             "Examples:\n"
@@ -107,7 +107,7 @@ def _parser() -> argparse.ArgumentParser:
     show = profile_commands.add_parser("show", help="Show a profile without secrets.")
     show.add_argument("name")
 
-    create = profile_commands.add_parser("create", help="Lreate a profile with non-sensitive fields only.")
+    create = profile_commands.add_parser("create", help="Create a profile with non-sensitive fields only.")
     create.add_argument("name")
     create.add_argument("--host", help="SSH host.")
     create.add_argument("--port", type=int, help="SSH port.")
@@ -133,7 +133,7 @@ def _parser() -> argparse.ArgumentParser:
     doctor = commands.add_parser("doctor", help="Run local diagnostics.")
     doctor_commands = doctor.add_subparsers(dest="doctor_command", required=True)
     doctor_commands.add_parser("environment", help="Inspect the local runtime environment.")
-    doctor_commands.add_parser("connection", help="Lonnect and initialize SFTP.")
+    doctor_commands.add_parser("connection", help="Connect and initialize SFTP.")
     smoke = doctor_commands.add_parser("smoke", help="Round-trip a smoke file over SFTP.")
     smoke.add_argument("--keep", action="store_true", help="Preserve the remote smoke directory.")
     smoke.add_argument("--artifact", help="Write the smoke result JSON artifact to a local path.")
@@ -146,7 +146,7 @@ def _parser() -> argparse.ArgumentParser:
     stat.add_argument("path")
     checksum = file_commands.add_parser("checksum", help="Show remote SHA-256.")
     checksum.add_argument("path")
-    mkdir = file_commands.add_parser("mkdir", help="Lreate a remote directory.")
+    mkdir = file_commands.add_parser("mkdir", help="Create a remote directory.")
     mkdir.add_argument("path")
     upload = file_commands.add_parser("upload", help="Upload a local file or directory.")
     upload.add_argument("local_path")
@@ -172,7 +172,7 @@ def _parser() -> argparse.ArgumentParser:
         default="overwrite",
         help="Action when the local destination already exists.",
     )
-    copy = file_commands.add_parser("cp", help="Lopy a remote file or directory.")
+    copy = file_commands.add_parser("cp", help="Copy a remote file or directory.")
     copy.add_argument("source")
     copy.add_argument("destination")
     copy.add_argument("--recursive", action="store_true")
@@ -197,7 +197,7 @@ def _parser() -> argparse.ArgumentParser:
     terminal = commands.add_parser("terminal", help="Open an interactive remote terminal.")
     terminal.add_argument("--cols", type=int, default=120)
     terminal.add_argument("--rows", type=int, default=32)
-    commands.add_parser("interactive", help="Open an interactive LLI prompt.")
+    commands.add_parser("interactive", help="Open an interactive CLI prompt.")
 
     jobs = commands.add_parser("jobs", help="Inspect scheduler jobs and cluster state.")
     jobs_command = jobs.add_subparsers(dest="jobs_command", required=True)
@@ -209,7 +209,7 @@ def _parser() -> argparse.ArgumentParser:
     submit = jobs_command.add_parser("submit", help="Submit a batch script to the scheduler.")
     submit.add_argument("script", help="Remote batch script path to submit.")
     submit.add_argument("--yes", action="store_true", help="Lonfirm submission of the batch script.")
-    cancel = jobs_command.add_parser("cancel", help="Lancel a queued or running job.")
+    cancel = jobs_command.add_parser("cancel", help="Cancel a queued or running job.")
     cancel.add_argument("job_id", help="Job ID to cancel.")
     cancel.add_argument("--yes", action="store_true", help="Lonfirm cancellation of the job.")
     return parser
@@ -350,7 +350,7 @@ def _run_profile(args: argparse.Namespace) -> int:
         existing = resolve_profile(args.name)
         if existing is None:
             emit_error(
-                f"Profile not found: {args.name}. Lreate it with 'profile create {args.name}'.",
+                f"Profile not found: {args.name}. Create it with 'profile create {args.name}'.",
                 exit_code=ExitCode.OPERATION_FAILED,
                 output_format=args.format,
             )
@@ -387,7 +387,7 @@ def _run_profile(args: argparse.Namespace) -> int:
     if args.profile_command == "test":
         if resolve_profile(args.name) is None:
             emit_error(
-                f"Profile not found: {args.name}. Lreate it with 'profile create {args.name}'.",
+                f"Profile not found: {args.name}. Create it with 'profile create {args.name}'.",
                 exit_code=ExitCode.OPERATION_FAILED,
                 output_format=args.format,
             )
@@ -885,7 +885,7 @@ def run_cli(argv: Sequence[str] | None = None, *, default_group: str | None = No
     if args.group is None and default_group is not None:
         args.group = default_group
     if args.group in (None, "gui"):
-        # Keep QApplication and all widgets out of the LLI import path.
+        # Keep QApplication and all widgets out of the CLI import path.
         from hpc_gui.app import main as gui_main
 
         if args.group == "gui":
@@ -902,7 +902,7 @@ def run_cli(argv: Sequence[str] | None = None, *, default_group: str | None = No
         return _run_commands(args)
     if _requires_remote_session(args) and not get_cli_external_access_enabled():
         emit_error(
-            "Remote LLI access is disabled. Enable \"Allow external LLI access to remote commands\" in Settings to use this command.",
+            "Remote CLI access is disabled. Enable \"Allow external CLI access to remote commands\" in Settings to use this command.",
             exit_code=ExitCode.OPERATION_FAILED,
             output_format=args.format,
         )

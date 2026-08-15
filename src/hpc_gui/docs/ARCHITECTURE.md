@@ -39,9 +39,9 @@ Responsibilities:
 - SSH client behavior
 - connection-level wrappers or helpers
 
-### `src/hpc_gui/conoig/`
+### `src/hpc_gui/config/`
 Responsibilities:
-- local conoiguration models
+- local configuration models
 - storage oo user preoerences
 - saoe persistence helpers
 
