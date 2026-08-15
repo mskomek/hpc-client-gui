@@ -23,7 +23,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 WIKI_SOURCE = REPO_ROOT / "docs" / "wiki"
 WIKI_REMOTE = "https://github.com/mskomek/hpc-client-gui.wiki.git"
 # Never mirrored, whatever ends up inside docs/wiki/.
-EXCLUDED_NAMES = {"README.md"}
+EXCLUDED_NAMES = {"README.md", "PUBLISHING.md"}
 EXCLUDED_PATTERN = re.compile(
     r"(^|[\\/])(waves|\.agent-runs|\.git|\.env)([\\/]|$)"
     r"|\.(pem|key|ppk|p12|pfx)$"
@@ -103,7 +103,16 @@ def main(argv: list[str] | None = None) -> int:
     with tempfile.TemporaryDirectory() as tmp:
         target_root = Path(tmp) / "wiki"
         print(f"cloning {args.remote}")
-        _run(["git", "clone", "--depth", "1", args.remote, str(target_root)])
+        try:
+            _run(["git", "clone", "--depth", "1", args.remote, str(target_root)])
+        except subprocess.CalledProcessError as exc:
+            print(exc.stderr.strip())
+            print(
+                "\nThe wiki repository could not be cloned. A GitHub wiki does not\n"
+                "exist until it is enabled in the repository settings and its first\n"
+                "page is created on github.com. Do that once, then re-run this script."
+            )
+            return 1
         plan = build_plan(source, target_root)
         print_plan(plan)
 

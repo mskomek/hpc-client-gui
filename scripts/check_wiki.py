@@ -11,7 +11,9 @@ import sys
 from pathlib import Path
 
 
-RESERVED = {"_Sidebar", "_Footer", "README"}
+RESERVED = {"_Sidebar", "_Footer", "README", "PUBLISHING"}
+# Maintainer docs that live here but are never mirrored to the wiki.
+NOT_PUBLISHED = {"README", "PUBLISHING"}
 WIKI_LINK = re.compile(r"\[\[([^\]|]+?)(?:\|([^\]]+?))?\]\]")
 MD_LINK = re.compile(r"!\[[^\]]*\]\(([^)\s]+)\)")
 HEADING = re.compile(r"^#{1,6}\s+\S", re.MULTILINE)
@@ -64,7 +66,7 @@ def check_wiki(wiki_root: Path) -> list[str]:
                 f"{name}: heading count differs (EN {en_headings}, TR {tr_headings})"
             )
 
-    for name in sorted(pages):
+    for name in sorted(set(pages) - NOT_PUBLISHED):
         for target in _link_targets(content[name]):
             if target not in pages:
                 problems.append(f"{name}.md: unresolved wiki link [[{target}]]")
