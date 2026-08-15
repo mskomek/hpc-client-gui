@@ -19,7 +19,7 @@ if (-not (Test-Path -LiteralPath $cliExeSource -PathType Leaf)) {
     throw "Expected console CLI output not found: $cliExeSource"
 }
 
-$changelogSrc = Join-Path $Root "src/truba_gui/docs/CHANGELOG.md"
+$changelogSrc = Join-Path $Root "src/hpc_gui/docs/CHANGELOG.md"
 if (-not (Test-Path $changelogSrc)) {
     throw "Expected changelog source not found: $changelogSrc"
 }
@@ -60,9 +60,6 @@ $releaseChangelogContent = Get-ChangelogSection -Path $changelogSrc -Version $Ve
 
 $releaseBase = Join-Path $Root $ReleaseRoot
 $versionDir = Join-Path $releaseBase "v$Version"
-if (Test-Path $versionDir) {
-    Remove-Item $versionDir -Recurse -Force
-}
 New-Item -ItemType Directory -Path $versionDir -Force | Out-Null
 
 Copy-Item -Path (Join-Path $distDir "*") -Destination $versionDir -Recurse -Force
@@ -71,7 +68,7 @@ if (Test-Path (Join-Path $Root "templates")) {
     Copy-Item -Path (Join-Path $Root "templates") -Destination $versionDir -Recurse -Force
 }
 
-$helpSourceDir = Join-Path $Root "src/truba_gui/docs"
+$helpSourceDir = Join-Path $Root "src/hpc_gui/docs"
 $helpDestDir = Join-Path $versionDir "help"
 New-Item -ItemType Directory -Path $helpDestDir -Force | Out-Null
 $requiredHelpFiles = @("HELP_tr.md", "HELP_en.md", "CLI_GUIDE_tr.md", "CLI_GUIDE_en.md")
@@ -88,7 +85,6 @@ if (-not (Test-Path $exePath)) {
     throw "Expected packaged exe not found: $exePath"
 }
 
-$releaseExeName = "hpc-client-gui.exe"
 
 $changelogOut = Join-Path $versionDir "CHANGELOG.md"
 Set-Content -Path $changelogOut -Value $releaseChangelogContent -Encoding utf8
@@ -102,9 +98,11 @@ $shaPath = "$zipPath.sha256"
 $hash = Get-FileHash $zipPath -Algorithm SHA256
 "$($hash.Hash)  $zipName" | Set-Content -Path $shaPath -Encoding ascii
 
+# onedir releases are distributed as archives; keep executables inside them.
+Remove-Item -LiteralPath $exePath, (Join-Path $versionDir "hpc-client-cli.exe") -Force
+
 Write-Host "Release artifacts:"
 Write-Host " - $changelogOut"
-Write-Host " - $(Join-Path $versionDir $releaseExeName)"
 Write-Host " - $zipPath"
 Write-Host " - $shaPath"
 Write-Host " - $helpDestDir"

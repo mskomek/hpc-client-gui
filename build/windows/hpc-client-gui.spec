@@ -21,11 +21,11 @@ if not (REPO_ROOT / "src").is_dir():
     raise SystemExit(f"[spec] Could not locate repo root from {SPEC_DIR}")
 
 SRC_DIR = REPO_ROOT / "src"
-ENTRY_SCRIPT = SRC_DIR / "truba_gui" / "__main__.py"
+ENTRY_SCRIPT = SRC_DIR / "hpc_gui" / "__main__.py"
 
-ASSETS_DIR = SRC_DIR / "truba_gui" / "assets"
-I18N_DIR   = SRC_DIR / "truba_gui" / "i18n"
-DOCS_DIR   = SRC_DIR / "truba_gui" / "docs"
+ASSETS_DIR = SRC_DIR / "hpc_gui" / "assets"
+I18N_DIR   = SRC_DIR / "hpc_gui" / "i18n"
+DOCS_DIR   = SRC_DIR / "hpc_gui" / "docs"
 
 ICON_PATH = SPEC_DIR / "hpc-client-gui.ico"
 VERSION_FILE = SPEC_DIR / "version_info.txt"
@@ -43,14 +43,14 @@ block_cipher = None
 
 datas = []
 if ASSETS_DIR.exists():
-    datas.append((str(ASSETS_DIR), "truba_gui/assets"))
+    datas.append((str(ASSETS_DIR), "hpc_gui/assets"))
 if ICON_PATH.exists():
     # Keep the same icon available at runtime for the window/taskbar in releases.
-    datas.append((str(ICON_PATH), "truba_gui/assets"))
+    datas.append((str(ICON_PATH), "hpc_gui/assets"))
 if I18N_DIR.exists():
-    datas.append((str(I18N_DIR), "truba_gui/i18n"))
+    datas.append((str(I18N_DIR), "hpc_gui/i18n"))
 if DOCS_DIR.exists():
-    datas.append((str(DOCS_DIR), "truba_gui/docs"))
+    datas.append((str(DOCS_DIR), "hpc_gui/docs"))
 for _license_name in ("LICENSE", "COMMERCIAL_LICENSE.md", "THIRD_PARTY_NOTICES.md"):
     _license_path = REPO_ROOT / _license_name
     if _license_path.exists():
@@ -67,10 +67,10 @@ hiddenimports = sorted(
         "PySide6.QtWidgets",
         "shiboken6",
         "shiboken6.Shiboken",
-        "truba_gui.cli",
-        "truba_gui.cli.main",
-        "truba_gui.cli.session",
-        "truba_gui.cli.files",
+        "hpc_gui.cli",
+        "hpc_gui.cli.main",
+        "hpc_gui.cli.session",
+        "hpc_gui.cli.files",
     }
 )
 
@@ -78,7 +78,7 @@ binaries = collect_dynamic_libs("shiboken6")
 
 excludes = [
     "PySide6.scripts.deploy_lib",
-    "_truba_gui_perf_probe",
+    "_hpc_gui_perf_probe",
 ]
 
 a = Analysis(

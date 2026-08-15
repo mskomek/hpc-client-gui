@@ -17,12 +17,12 @@ function Read-Version([string]$Path) {
 $versions = @(
     (Read-Version (Join-Path $Root "pyproject.toml"))
 )
-$init = Get-Content -Raw (Join-Path $Root "src/truba_gui/__init__.py")
+$init = Get-Content -Raw (Join-Path $Root "src/hpc_gui/__init__.py")
 $initMatch = [regex]::Match($init, '__version__\s*=\s*''([^'']+)''')
 if (-not $initMatch.Success) { throw "__version__ declaration not found." }
 $versions += $initMatch.Groups[1].Value
 
-$cli = Get-Content -Raw (Join-Path $Root "src/truba_gui/cli/main.py")
+$cli = Get-Content -Raw (Join-Path $Root "src/hpc_gui/cli/main.py")
 $cliMatch = [regex]::Match($cli, 'CLI_VERSION\s*=\s*"([^"]+)"')
 if (-not $cliMatch.Success) { throw "CLI_VERSION declaration not found." }
 $versions += $cliMatch.Groups[1].Value
@@ -49,12 +49,12 @@ foreach ($field in @("filevers", "prodvers")) {
     }
 }
 
-$changelog = Join-Path $Root "src/truba_gui/docs/CHANGELOG.md"
+$changelog = Join-Path $Root "src/hpc_gui/docs/CHANGELOG.md"
 if (-not (Select-String -LiteralPath $changelog -Pattern "^##\s+v$([regex]::Escape($Version))\s*$" -Quiet)) {
     throw "Changelog section not found for v$Version."
 }
 
-$helpDir = Join-Path $Root "src/truba_gui/docs"
+$helpDir = Join-Path $Root "src/hpc_gui/docs"
 foreach ($name in @("HELP_tr.md", "HELP_en.md", "CLI_GUIDE_tr.md", "CLI_GUIDE_en.md")) {
     if (-not (Test-Path -LiteralPath (Join-Path $helpDir $name) -PathType Leaf)) {
         throw "Required help file missing: $name"

@@ -1,0 +1,59 @@
+{
+  "app-id": "io.github.mskomek.HpcClientGui",
+  "runtime": "org.freedesktop.Platform",
+  "runtime-version": "24.08",
+  "sdk": "org.freedesktop.Sdk",
+  "command": "hpc-client-gui",
+  "finish-args": [
+    "--share=network",
+    "--socket=x11",
+    "--socket=wayland",
+    "--device=dri",
+    "--share=ipc",
+    "--filesystem=home"
+  ],
+  "modules": [
+    {
+      "name": "python-pyside6",
+      "buildsystem": "simple",
+      "build-commands": [
+        "install -Dm755 hpc-client-gui /app/bin/hpc-client-gui",
+        "cp -a _internal /app/bin/",
+        "install -Dm644 io.github.mskomek.hpc-client-gui.desktop /app/share/applications/io.github.mskomek.hpc-client-gui.desktop",
+        "install -Dm644 HELP_tr.md /app/share/hpc-client-gui/HELP_tr.md",
+        "install -Dm644 HELP_en.md /app/share/hpc-client-gui/HELP_en.md",
+        "install -Dm644 CLI_GUIDE_tr.md /app/share/hpc-client-gui/CLI_GUIDE_tr.md",
+        "install -Dm644 CLI_GUIDE_en.md /app/share/hpc-client-gui/CLI_GUIDE_en.md"
+      ],
+      "sources": [
+        {
+          "type": "dir",
+          "path": "../../../dist/hpc-client-gui"
+        },
+        {
+          "type": "file",
+          "path": "io.github.mskomek.hpc-client-gui.desktop"
+        },
+        {
+          "type": "file",
+          "path": "../../../src/hpc_gui/docs/HELP_tr.md"
+        },
+        {
+          "type": "file",
+          "path": "../../../src/hpc_gui/docs/HELP_en.md"
+        },
+        {
+          "type": "file",
+          "path": "../../../src/hpc_gui/docs/CLI_GUIDE_tr.md"
+        },
+        {
+          "type": "file",
+          "path": "../../../src/hpc_gui/docs/CLI_GUIDE_en.md"
+        }
+      ],
+      "build-options": {
+        "no-debuginfo": true
+      }
+    }
+  ]
+}

@@ -6,12 +6,31 @@ from unittest.mock import patch
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from truba_gui import __version__
-from truba_gui.services.changelog import chronological_changelog
-from truba_gui.ui.main_window import MainWindow
+from PySide6.QtCore import QRect
+from PySide6.QtWidgets import QApplication
+
+from hpc_gui import __version__
+from hpc_gui.app import _show_main_window
+from hpc_gui.services.changelog import chronological_changelog
+from hpc_gui.ui.main_window import MainWindow
 
 
 class StartupChangelogTests(unittest.TestCase):
+    def test_main_window_starts_normal_and_fits_small_screen(self) -> None:
+        app = QApplication.instance() or QApplication([])
+        window = MainWindow()
+        try:
+            _show_main_window(window, QRect(0, 0, 800, 600))
+            app.processEvents()
+
+            self.assertFalse(window.isMaximized())
+            self.assertEqual((window.width(), window.height()), (752, 520))
+            window.resize(640, 480)
+            self.assertEqual((window.width(), window.height()), (640, 480))
+        finally:
+            window.graceful_shutdown()
+            window.close()
+
     def test_changelog_sections_are_rendered_newest_first(self) -> None:
         text = "\n".join(
             [
@@ -44,12 +63,12 @@ class StartupChangelogTests(unittest.TestCase):
 
         with (
             patch(
-                "truba_gui.ui.main_window.get_last_seen_changelog_version",
+                "hpc_gui.ui.main_window.get_last_seen_changelog_version",
                 side_effect=["1.1.0", __version__],
             ),
-            patch("truba_gui.ui.main_window.set_last_seen_changelog_version", remember),
+            patch("hpc_gui.ui.main_window.set_last_seen_changelog_version", remember),
             patch(
-                "truba_gui.ui.main_window.load_changelog_text",
+                "hpc_gui.ui.main_window.load_changelog_text",
                 return_value="# Changelog\n\n## v1.1.0\n- old\n\n## v1.1.1\n- new",
             ),
         ):

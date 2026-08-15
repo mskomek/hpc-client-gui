@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from truba_gui.services.slurm_script_parser import parse_output_error, resolve_path
-from truba_gui.services.command_history_store import is_sensitive_command
-from truba_gui.core.diagnostics import create_diagnostic_bundle
+from hpc_gui.services.slurm_script_parser import parse_output_error, resolve_path
+from hpc_gui.services.command_history_store import is_sensitive_command
+from hpc_gui.core.diagnostics import create_diagnostic_bundle
 from tempfile import TemporaryDirectory
 
 

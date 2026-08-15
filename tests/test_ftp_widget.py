@@ -18,8 +18,8 @@ from PySide6.QtCore import QEvent, QMimeData, QPoint, Qt, QUrl
 from PySide6.QtGui import QKeyEvent
 from PySide6.QtWidgets import QApplication, QDialog, QPlainTextEdit, QMessageBox
 
-from truba_gui.services.files_mock import MockFilesBackend
-from truba_gui.services.transfer_mode import (
+from hpc_gui.services.files_mock import MockFilesBackend
+from hpc_gui.services.transfer_mode import (
     ASCII,
     AUTO,
     BINARY,
@@ -29,38 +29,38 @@ from truba_gui.services.transfer_mode import (
     resolve_transfer_mode,
     upload_with_mode,
 )
-from truba_gui.config.system_profile import (
-    TRUBA_SYSTEM_DEFAULTS,
+from hpc_gui.config.system_profile import (
+    HPC_SYSTEM_DEFAULTS,
     save_user_system_template,
 )
-from truba_gui.core.i18n import t
-from truba_gui.ui.dialogs.connection_dialog import ConnectionDialog
-from truba_gui.ui.dialogs.transfer_conflict_dialog import (
+from hpc_gui.core.i18n import t
+from hpc_gui.ui.dialogs.connection_dialog import ConnectionDialog
+from hpc_gui.ui.dialogs.transfer_conflict_dialog import (
     TransferConflictDecision,
     TransferConflictDialog,
     TransferConflictInfo,
 )
-from truba_gui.ui.dialogs.transfer_dialog import (
+from hpc_gui.ui.dialogs.transfer_dialog import (
     TransferDialog,
     TransferItem,
     TransferPreflightDialog,
 )
-from truba_gui.ui.dialogs.settings_dialog import SettingsDialog
-from truba_gui.ui.main_window import MainWindow
-from truba_gui.ui.widgets.directories_widget import (
+from hpc_gui.ui.dialogs.settings_dialog import SettingsDialog
+from hpc_gui.ui.main_window import MainWindow
+from hpc_gui.ui.widgets.directories_widget import (
     DirectoriesWidget,
     _BatchSubmitWorker,
     _ShellRunWorker,
 )
-from truba_gui.ui.widgets.ftp_widget import FtpWidget
-from truba_gui.ui.widgets.local_dir_panel import LOCAL_CONTEXT_MENU_LABELS
-from truba_gui.ui.widgets.login_widget import (
+from hpc_gui.ui.widgets.ftp_widget import FtpWidget
+from hpc_gui.ui.widgets.local_dir_panel import LOCAL_CONTEXT_MENU_LABELS
+from hpc_gui.ui.widgets.login_widget import (
     FTP_TEST_MODE_ENV,
     LoginWidget,
     is_ftp_mock_host,
     is_ftp_test_mode_enabled,
 )
-from truba_gui.ui.widgets.remote_dir_panel import (
+from hpc_gui.ui.widgets.remote_dir_panel import (
     DIRECTORY_CACHE_TTL_SECONDS,
     MIME_REMOTE_PATHS,
     REMOTE_CONTEXT_MENU_LABELS,
@@ -70,9 +70,9 @@ from truba_gui.ui.widgets.remote_dir_panel import (
     _PermissionsDialog,
     _encode_payload,
 )
-from truba_gui.services.files_base import RemoteEntry
-from truba_gui.services.files_ssh import SSHFilesBackend
-from truba_gui.core.i18n import load_language
+from hpc_gui.services.files_base import RemoteEntry
+from hpc_gui.services.files_ssh import SSHFilesBackend
+from hpc_gui.core.i18n import load_language
 
 
 class _Files:
@@ -199,7 +199,7 @@ class FtpWidgetTests(unittest.TestCase):
 
     def setUp(self) -> None:
         self.state_patch = patch(
-            "truba_gui.ui.widgets.ftp_widget.get_ftp_state",
+            "hpc_gui.ui.widgets.ftp_widget.get_ftp_state",
             return_value={
                 "local_dir": os.getcwd(),
                 "active_remote": "scratch",
@@ -207,11 +207,11 @@ class FtpWidgetTests(unittest.TestCase):
             },
         )
         self.type_patch = patch(
-            "truba_gui.ui.widgets.ftp_widget.get_ftp_transfer_type",
+            "hpc_gui.ui.widgets.ftp_widget.get_ftp_transfer_type",
             return_value=AUTO,
         )
         self.update_patch = patch(
-            "truba_gui.ui.widgets.ftp_widget.update_ftp_state",
+            "hpc_gui.ui.widgets.ftp_widget.update_ftp_state",
             return_value={},
         )
         self.state_patch.start()
@@ -242,7 +242,7 @@ class FtpWidgetTests(unittest.TestCase):
         return True
 
     def tearDown(self) -> None:
-        from truba_gui.services.file_clipboard import get_file_clipboard
+        from hpc_gui.services.file_clipboard import get_file_clipboard
 
         QApplication.processEvents()
         self.widget.shutdown()
@@ -460,7 +460,7 @@ class FtpWidgetTests(unittest.TestCase):
             panel = self.widget.transfer_activity
             panel.attach_controller(dialog)
             with patch.object(dialog, "process_queue") as process, patch(
-                "truba_gui.ui.widgets.ftp_widget.QMenu",
+                "hpc_gui.ui.widgets.ftp_widget.QMenu",
                 FakeMenu,
             ):
                 panel._show_queue_menu(QPoint(0, 0))
@@ -518,7 +518,7 @@ class FtpWidgetTests(unittest.TestCase):
             panel = self.widget.transfer_activity
             panel.attach_controller(dialog)
             panel.queue_list.topLevelItem(1).setSelected(True)
-            with patch("truba_gui.ui.widgets.ftp_widget.QMenu", FakeMenu):
+            with patch("hpc_gui.ui.widgets.ftp_widget.QMenu", FakeMenu):
                 panel._show_queue_menu(QPoint(0, 0))
 
             self.assertEqual(dialog._pending, [items[0], items[2]])
@@ -583,7 +583,7 @@ class FtpWidgetTests(unittest.TestCase):
         try:
             panel = self.widget.transfer_activity
             panel.attach_controller(dialog)
-            with patch("truba_gui.ui.widgets.ftp_widget.QMenu", FakeMenu):
+            with patch("hpc_gui.ui.widgets.ftp_widget.QMenu", FakeMenu):
                 panel._show_queue_menu(QPoint(0, 0))
             root = FakeMenu.instance
             self.assertEqual(
@@ -662,16 +662,16 @@ class FtpWidgetTests(unittest.TestCase):
     def test_completion_action_persists_and_never_runs_system_action(self) -> None:
         panel = self.widget.transfer_activity
         with patch(
-            "truba_gui.ui.widgets.ftp_widget.set_transfer_completion_action",
+            "hpc_gui.ui.widgets.ftp_widget.set_transfer_completion_action",
             return_value="play_sound",
-        ) as save, patch("truba_gui.ui.widgets.ftp_widget.QApplication.beep") as beep:
+        ) as save, patch("hpc_gui.ui.widgets.ftp_widget.QApplication.beep") as beep:
             panel._set_completion_action("play_sound")
         save.assert_called_once_with("play_sound")
         beep.assert_called_once()
         self.assertIn("play_sound", panel.status_label.text())
 
         with patch(
-            "truba_gui.ui.widgets.ftp_widget.set_transfer_completion_action",
+            "hpc_gui.ui.widgets.ftp_widget.set_transfer_completion_action",
             return_value="shutdown_once",
         ) as save:
             panel._set_completion_action("shutdown_once")
@@ -722,13 +722,13 @@ class FtpWidgetTests(unittest.TestCase):
             panel = self.widget.transfer_activity
             panel.attach_controller(dialog)
             panel.failed_list.topLevelItem(0).setSelected(True)
-            with patch("truba_gui.ui.widgets.ftp_widget.QMenu", FakeMenu):
+            with patch("hpc_gui.ui.widgets.ftp_widget.QMenu", FakeMenu):
                 panel._show_transfer_menu(panel.failed_list, QPoint(0, 0), "failed")
             self.assertEqual(dialog._errors, [])
             self.assertEqual(dialog._pending, [failed])
 
             chosen_index[0] = 1
-            with patch("truba_gui.ui.widgets.ftp_widget.QMenu", FakeMenu):
+            with patch("hpc_gui.ui.widgets.ftp_widget.QMenu", FakeMenu):
                 panel._show_transfer_menu(
                     panel.completed_list,
                     QPoint(0, 0),
@@ -832,7 +832,7 @@ class FtpWidgetTests(unittest.TestCase):
 
             self.assertIsNone(panel._controller)
             self.assertEqual(panel.completed_list.topLevelItemCount(), 1)
-            with patch("truba_gui.ui.widgets.ftp_widget.QMenu", FakeMenu):
+            with patch("hpc_gui.ui.widgets.ftp_widget.QMenu", FakeMenu):
                 panel._show_transfer_menu(
                     panel.completed_list,
                     QPoint(0, 0),
@@ -1027,7 +1027,7 @@ class FtpWidgetTests(unittest.TestCase):
         paths = ["/remote/file.txt", "/remote/folder"]
         started_at = time.monotonic()
         with patch(
-            "truba_gui.ui.widgets.remote_dir_panel.QMessageBox.question",
+            "hpc_gui.ui.widgets.remote_dir_panel.QMessageBox.question",
             return_value=QMessageBox.StandardButton.Yes,
         ):
             self.assertTrue(panel._delete_paths(paths, [(paths[0], False), (paths[1], True)]))
@@ -1183,7 +1183,7 @@ class FtpWidgetTests(unittest.TestCase):
             self.assertEqual(dialog.queue_list.count(), 0)
 
             dialog._started_at = 1.0
-            with patch("truba_gui.ui.dialogs.transfer_dialog.time.monotonic", return_value=3.0):
+            with patch("hpc_gui.ui.dialogs.transfer_dialog.time.monotonic", return_value=3.0):
                 dialog._on_transfer_progress(transfer_item, 2048, 4096)
             detail = dialog.lbl_transfer_stats.text()
             self.assertIn("2.0 KB/4.0 KB", detail)
@@ -1410,7 +1410,7 @@ class FtpWidgetTests(unittest.TestCase):
             TransferItem("upload", "two.bin", "/remote/root/two.bin"),
         ]
         worker = __import__(
-            "truba_gui.ui.dialogs.transfer_dialog",
+            "hpc_gui.ui.dialogs.transfer_dialog",
             fromlist=["_WorkerThread"],
         )._WorkerThread(items, lambda _item, _progress=None: None, parallel_limit=3)
         self.assertEqual(worker._items, items)
@@ -1441,7 +1441,7 @@ class FtpWidgetTests(unittest.TestCase):
         try:
             dialog._on_item_started(0, transfer_item)
             with patch(
-                "truba_gui.ui.dialogs.transfer_dialog.time.monotonic",
+                "hpc_gui.ui.dialogs.transfer_dialog.time.monotonic",
                 side_effect=[100.0, 102.0],
             ):
                 dialog._on_transfer_progress(transfer_item, 8_000_000, 10_000_000)
@@ -1470,7 +1470,7 @@ class FtpWidgetTests(unittest.TestCase):
                 lambda _item, done, total: published.append((int(done), int(total)))
             )
             with patch(
-                "truba_gui.ui.dialogs.transfer_dialog.time.monotonic",
+                "hpc_gui.ui.dialogs.transfer_dialog.time.monotonic",
                 side_effect=[10.0, 10.001, 10.002, 10.100, 10.251, 10.252],
             ):
                 dialog._on_transfer_progress(item, 100, 1000)
@@ -1529,7 +1529,7 @@ class FtpWidgetTests(unittest.TestCase):
             ]
 
             with patch(
-                "truba_gui.ui.widgets.remote_dir_panel.get_transfer_parallelism",
+                "hpc_gui.ui.widgets.remote_dir_panel.get_transfer_parallelism",
                 return_value=3,
             ):
                 self.assertTrue(panel._run_plan_with_progress(plan, "Download"))
@@ -1620,7 +1620,7 @@ class FtpWidgetTests(unittest.TestCase):
             panel.session = {"connected": True, "files": backend}
             try:
                 with patch(
-                    "truba_gui.ui.widgets.remote_dir_panel.get_transfer_parallelism",
+                    "hpc_gui.ui.widgets.remote_dir_panel.get_transfer_parallelism",
                     return_value=3,
                 ):
                     self.assertTrue(
@@ -1806,26 +1806,26 @@ class FtpWidgetTests(unittest.TestCase):
                 pass
 
         with patch(
-            "truba_gui.ui.widgets.remote_dir_panel.get_upload_preflight_confirmation_enabled",
+            "hpc_gui.ui.widgets.remote_dir_panel.get_upload_preflight_confirmation_enabled",
             return_value=True,
         ), patch(
-            "truba_gui.ui.widgets.remote_dir_panel.TransferPreflightDialog",
+            "hpc_gui.ui.widgets.remote_dir_panel.TransferPreflightDialog",
             FakePreflightDialog,
         ), patch(
-            "truba_gui.ui.widgets.remote_dir_panel.set_upload_preflight_confirmation_enabled"
+            "hpc_gui.ui.widgets.remote_dir_panel.set_upload_preflight_confirmation_enabled"
         ) as persist:
             self.assertTrue(panel._confirm_transfer_plan([item], "Upload", 1))
         persist.assert_called_once_with(False)
 
         FakePreflightDialog.result = QDialog.DialogCode.Rejected
         with patch(
-            "truba_gui.ui.widgets.remote_dir_panel.get_upload_preflight_confirmation_enabled",
+            "hpc_gui.ui.widgets.remote_dir_panel.get_upload_preflight_confirmation_enabled",
             return_value=True,
         ), patch(
-            "truba_gui.ui.widgets.remote_dir_panel.TransferPreflightDialog",
+            "hpc_gui.ui.widgets.remote_dir_panel.TransferPreflightDialog",
             FakePreflightDialog,
         ), patch(
-            "truba_gui.ui.widgets.remote_dir_panel.set_upload_preflight_confirmation_enabled"
+            "hpc_gui.ui.widgets.remote_dir_panel.set_upload_preflight_confirmation_enabled"
         ) as persist:
             self.assertFalse(panel._confirm_transfer_plan([item], "Upload", 1))
         persist.assert_not_called()
@@ -1834,10 +1834,10 @@ class FtpWidgetTests(unittest.TestCase):
         panel = self.widget.panel_scratch
         item = TransferItem("mkdir_remote", "", "/remote/empty")
         with patch(
-            "truba_gui.ui.widgets.remote_dir_panel.get_upload_preflight_confirmation_enabled",
+            "hpc_gui.ui.widgets.remote_dir_panel.get_upload_preflight_confirmation_enabled",
             return_value=False,
         ), patch(
-            "truba_gui.ui.widgets.remote_dir_panel.TransferPreflightDialog"
+            "hpc_gui.ui.widgets.remote_dir_panel.TransferPreflightDialog"
         ) as dialog:
             self.assertTrue(panel._confirm_transfer_plan([item], "Upload", 1))
         dialog.assert_not_called()
@@ -1872,10 +1872,10 @@ class FtpWidgetTests(unittest.TestCase):
             empty_folder = Path(tmp) / "empty"
             empty_folder.mkdir()
             with patch(
-                "truba_gui.ui.widgets.remote_dir_panel.get_upload_preflight_confirmation_enabled",
+                "hpc_gui.ui.widgets.remote_dir_panel.get_upload_preflight_confirmation_enabled",
                 return_value=False,
             ), patch(
-                "truba_gui.ui.widgets.remote_dir_panel.TransferPreflightDialog"
+                "hpc_gui.ui.widgets.remote_dir_panel.TransferPreflightDialog"
             ) as dialog:
                 self.assertTrue(
                     panel._apply_local_upload([str(empty_folder)], "/remote")
@@ -2045,7 +2045,7 @@ class FtpWidgetTests(unittest.TestCase):
 
         panel.set_transfer_activity_callback(record_activity)
         with tempfile.TemporaryDirectory() as tmp, patch(
-            "truba_gui.ui.widgets.remote_dir_panel.get_transfer_parallelism",
+            "hpc_gui.ui.widgets.remote_dir_panel.get_transfer_parallelism",
             return_value=5,
         ), patch.object(panel, "_confirm_transfer_plan", return_value=True) as confirm:
             roots = []
@@ -2391,7 +2391,7 @@ class FtpWidgetTests(unittest.TestCase):
         shell_runs = []
 
         with (
-            patch("truba_gui.ui.main_window.QTimer.singleShot"),
+            patch("hpc_gui.ui.main_window.QTimer.singleShot"),
             patch.object(DirectoriesWidget, "on_open_file", record_open),
             patch.object(DirectoriesWidget, "submit_script", record_submit),
             patch.object(DirectoriesWidget, "run_shell_script", record_shell_run),
@@ -2415,7 +2415,7 @@ class FtpWidgetTests(unittest.TestCase):
                 window.deleteLater()
 
     def test_main_window_batch_shell_uses_login_terminal_order(self) -> None:
-        with patch("truba_gui.ui.main_window.QTimer.singleShot"):
+        with patch("hpc_gui.ui.main_window.QTimer.singleShot"):
             window = MainWindow()
         try:
             with (
@@ -2478,7 +2478,7 @@ class FtpWidgetTests(unittest.TestCase):
         self.assertEqual(len(done), 1)
 
     def test_main_window_contains_top_level_ftp_tab(self) -> None:
-        with patch("truba_gui.ui.main_window.QTimer.singleShot"):
+        with patch("hpc_gui.ui.main_window.QTimer.singleShot"):
             window = MainWindow()
         try:
             labels = [
@@ -2492,7 +2492,7 @@ class FtpWidgetTests(unittest.TestCase):
             window.deleteLater()
 
     def test_submission_follow_modes_route_to_the_requested_destination(self) -> None:
-        with patch("truba_gui.ui.main_window.QTimer.singleShot"):
+        with patch("hpc_gui.ui.main_window.QTimer.singleShot"):
             window = MainWindow()
         try:
             for mode, shows_jobs_page in {
@@ -2504,7 +2504,7 @@ class FtpWidgetTests(unittest.TestCase):
             }.items():
                 window.tabs.setCurrentWidget(window.ftp)
                 with patch.object(window.jobs_outputs, "focus_job") as focus, patch(
-                    "truba_gui.ui.main_window.get_sbatch_follow_mode",
+                    "hpc_gui.ui.main_window.get_sbatch_follow_mode",
                     return_value=mode,
                 ):
                     window.on_script_submitted("123", "/remote/job.sbatch")
@@ -2523,7 +2523,7 @@ class FtpWidgetTests(unittest.TestCase):
             window.deleteLater()
 
     def test_focus_job_none_still_refreshes_and_binds_script(self) -> None:
-        from truba_gui.ui.widgets.jobs_outputs_widget import JobsOutputsWidget
+        from hpc_gui.ui.widgets.jobs_outputs_widget import JobsOutputsWidget
         jobs_widget = JobsOutputsWidget()
         try:
             jobs_widget.section_tabs.setCurrentWidget(jobs_widget.details_tab)
@@ -2550,7 +2550,7 @@ class FtpWidgetTests(unittest.TestCase):
             jobs_widget.deleteLater()
 
     def test_sbatch_follow_modes_use_existing_follower_helpers(self) -> None:
-        from truba_gui.ui.widgets.jobs_outputs_widget import JobsOutputsWidget
+        from hpc_gui.ui.widgets.jobs_outputs_widget import JobsOutputsWidget
 
         class ScriptFiles:
             def read_text(self, _path: str) -> str:
@@ -2605,7 +2605,7 @@ class FtpWidgetTests(unittest.TestCase):
             jobs_widget.deleteLater()
 
     def test_generic_new_window_follower_is_one_single_file_window(self) -> None:
-        from truba_gui.ui.widgets.jobs_outputs_widget import (
+        from hpc_gui.ui.widgets.jobs_outputs_widget import (
             JobsOutputsWidget,
             _SingleFileFollowerWidget,
         )
@@ -2630,7 +2630,7 @@ class FtpWidgetTests(unittest.TestCase):
             jobs_widget.deleteLater()
 
     def test_combined_sbatch_follower_uses_one_clear_output_error_window(self) -> None:
-        from truba_gui.ui.widgets.jobs_outputs_widget import JobsOutputsWidget
+        from hpc_gui.ui.widgets.jobs_outputs_widget import JobsOutputsWidget
 
         class ScriptFiles:
             def read_text(self, _path: str) -> str:
@@ -2660,7 +2660,7 @@ class FtpWidgetTests(unittest.TestCase):
             jobs_widget.deleteLater()
 
     def test_sbatch_follow_mode_settings_migrate_and_persist(self) -> None:
-        from truba_gui.config import storage
+        from hpc_gui.config import storage
 
         with patch.object(storage, "load_settings", return_value={
             "focus_jobs_outputs_after_submission_enabled": False,
@@ -2678,7 +2678,7 @@ class FtpWidgetTests(unittest.TestCase):
 
     def test_sbatch_follow_mode_settings_have_all_tooltips(self) -> None:
         with patch(
-            "truba_gui.ui.dialogs.settings_dialog.get_sbatch_follow_mode",
+            "hpc_gui.ui.dialogs.settings_dialog.get_sbatch_follow_mode",
             return_value="outputs_tab",
         ):
             dialog = SettingsDialog()
@@ -2704,7 +2704,7 @@ class FtpWidgetTests(unittest.TestCase):
                     ).strip()
                 )
             with patch(
-                "truba_gui.ui.dialogs.settings_dialog.update_settings"
+                "hpc_gui.ui.dialogs.settings_dialog.update_settings"
             ) as update:
                 dialog.cb_sbatch_follow_mode.setCurrentIndex(
                     dialog.cb_sbatch_follow_mode.findData("new_windows_split")
@@ -2793,7 +2793,7 @@ class FtpWidgetTests(unittest.TestCase):
                 "/arf/home/{user}",
             )
             with patch(
-                "truba_gui.ui.dialogs.settings_dialog.update_settings"
+                "hpc_gui.ui.dialogs.settings_dialog.update_settings"
             ):
                 dialog.btn_apply.click()
             self.assertEqual(
@@ -2810,7 +2810,7 @@ class FtpWidgetTests(unittest.TestCase):
             QApplication.processEvents()
             dialog.sp_transfer_parallelism.setValue(2)
             with patch(
-                "truba_gui.ui.dialogs.settings_dialog.update_settings"
+                "hpc_gui.ui.dialogs.settings_dialog.update_settings"
             ) as update:
                 dialog.btn_apply.click()
 
@@ -2828,7 +2828,7 @@ class FtpWidgetTests(unittest.TestCase):
 
     def test_settings_controls_upload_preflight_confirmation(self) -> None:
         with patch(
-            "truba_gui.ui.dialogs.settings_dialog.get_upload_preflight_confirmation_enabled",
+            "hpc_gui.ui.dialogs.settings_dialog.get_upload_preflight_confirmation_enabled",
             return_value=True,
         ):
             dialog = SettingsDialog()
@@ -2839,7 +2839,7 @@ class FtpWidgetTests(unittest.TestCase):
                 "Show upload plan confirmation",
             )
             with patch(
-                "truba_gui.ui.dialogs.settings_dialog.update_settings"
+                "hpc_gui.ui.dialogs.settings_dialog.update_settings"
             ) as update:
                 dialog.cb_upload_preflight_confirmation.setChecked(False)
                 dialog.btn_apply.click()
@@ -2898,7 +2898,7 @@ class FtpWidgetTests(unittest.TestCase):
                 ),
                 patch.object(login, "refresh_profiles"),
                 patch(
-                    "truba_gui.ui.widgets.login_widget.upsert_profile"
+                    "hpc_gui.ui.widgets.login_widget.upsert_profile"
                 ) as save_profile,
             ):
                 self.assertTrue(
@@ -3037,7 +3037,7 @@ class FtpWidgetTests(unittest.TestCase):
                 "_apply_local_upload",
                 return_value=True,
             ) as synchronous, patch(
-                "truba_gui.ui.widgets.remote_dir_panel.TransferDialog",
+                "hpc_gui.ui.widgets.remote_dir_panel.TransferDialog",
                 FakeController,
             ):
                 self.widget.local_panel.uploadRequested.emit([str(folder)])
@@ -3259,7 +3259,7 @@ class FtpWidgetTests(unittest.TestCase):
         dialog = None
         try:
             with tempfile.TemporaryDirectory() as tmp, patch(
-                "truba_gui.ui.widgets.remote_dir_panel.get_transfer_parallelism",
+                "hpc_gui.ui.widgets.remote_dir_panel.get_transfer_parallelism",
                 return_value=2,
             ):
                 started_at = time.monotonic()
@@ -3489,7 +3489,7 @@ class FtpWidgetTests(unittest.TestCase):
 
         with (
             patch(
-                "truba_gui.ui.widgets.ftp_widget.monotonic",
+                "hpc_gui.ui.widgets.ftp_widget.monotonic",
                 side_effect=[10.0, 10.1, 11.2],
             ),
             patch.object(
@@ -3527,7 +3527,7 @@ class FtpWidgetTests(unittest.TestCase):
 
     def test_settings_offer_exact_transfer_modes_and_default_auto(self) -> None:
         with patch(
-            "truba_gui.ui.dialogs.settings_dialog.get_ftp_transfer_type",
+            "hpc_gui.ui.dialogs.settings_dialog.get_ftp_transfer_type",
             return_value=AUTO,
         ):
             dialog = SettingsDialog()
@@ -3543,7 +3543,7 @@ class FtpWidgetTests(unittest.TestCase):
             finally:
                 dialog.deleteLater()
 
-    def test_connection_dialog_applies_truba_system_template_from_menu(self) -> None:
+    def test_connection_dialog_applies_hpc_system_template_from_menu(self) -> None:
         dialog = ConnectionDialog()
         try:
             dialog.scratch_dir.setText("/custom/scratch")
@@ -3553,12 +3553,12 @@ class FtpWidgetTests(unittest.TestCase):
             self.assertIsNotNone(root_menu)
             truba_menu = root_menu.actions()[0].menu()
             self.assertIsNotNone(truba_menu)
-            self.assertEqual(root_menu.actions()[0].text(), "TRUBA")
+            self.assertEqual(root_menu.actions()[0].text(), "HPC")
             truba_menu.actions()[0].trigger()
 
-            self.assertEqual(dialog.system_name.text(), "TRUBA")
-            self.assertEqual(dialog.scratch_dir.text(), TRUBA_SYSTEM_DEFAULTS["scratch_dir"])
-            self.assertEqual(dialog.home_dir.text(), TRUBA_SYSTEM_DEFAULTS["home_dir"])
+            self.assertEqual(dialog.system_name.text(), "HPC")
+            self.assertEqual(dialog.scratch_dir.text(), HPC_SYSTEM_DEFAULTS["scratch_dir"])
+            self.assertEqual(dialog.home_dir.text(), HPC_SYSTEM_DEFAULTS["home_dir"])
         finally:
             dialog.deleteLater()
 
@@ -3596,11 +3596,11 @@ class FtpWidgetTests(unittest.TestCase):
 
             with (
                 patch(
-                    "truba_gui.ui.widgets.login_widget.load_profiles",
+                    "hpc_gui.ui.widgets.login_widget.load_profiles",
                     return_value=[legacy_profile],
                 ),
                 patch(
-                    "truba_gui.ui.widgets.login_widget.os_secret_store_available",
+                    "hpc_gui.ui.widgets.login_widget.os_secret_store_available",
                     return_value=True,
                 ),
                 patch.object(
@@ -3609,10 +3609,10 @@ class FtpWidgetTests(unittest.TestCase):
                     return_value="ssh-password",
                 ) as decrypt_password,
                 patch(
-                    "truba_gui.ui.widgets.login_widget.protect_secret",
+                    "hpc_gui.ui.widgets.login_widget.protect_secret",
                     return_value="windows-protected-password",
                 ),
-                patch("truba_gui.ui.widgets.login_widget.upsert_profile") as save_profile,
+                patch("hpc_gui.ui.widgets.login_widget.upsert_profile") as save_profile,
             ):
                 self.assertTrue(login.save_profile())
 
@@ -3632,14 +3632,14 @@ class FtpWidgetTests(unittest.TestCase):
         try:
             with (
                 patch(
-                    "truba_gui.ui.widgets.login_widget.load_settings",
+                    "hpc_gui.ui.widgets.login_widget.load_settings",
                     return_value={"master_password_dpapi": "protected-master"},
                 ),
                 patch(
-                    "truba_gui.ui.widgets.login_widget.unprotect_secret",
+                    "hpc_gui.ui.widgets.login_widget.unprotect_secret",
                     return_value="master-password",
                 ) as decrypt_master,
-                patch("truba_gui.ui.widgets.login_widget.QDialog.exec") as show_dialog,
+                patch("hpc_gui.ui.widgets.login_widget.QDialog.exec") as show_dialog,
             ):
                 self.assertEqual(
                     login._ask_master_password(confirm=False),
@@ -3659,15 +3659,15 @@ class FtpWidgetTests(unittest.TestCase):
             dialog.home_dir.setText("/home/{user}")
             with (
                 patch(
-                    "truba_gui.ui.dialogs.connection_dialog.QInputDialog.getText",
+                    "hpc_gui.ui.dialogs.connection_dialog.QInputDialog.getText",
                     return_value=("My Cluster", True),
                 ),
                 patch(
-                    "truba_gui.ui.dialogs.connection_dialog.save_user_system_template",
-                    return_value=dict(TRUBA_SYSTEM_DEFAULTS, name="My Cluster"),
+                    "hpc_gui.ui.dialogs.connection_dialog.save_user_system_template",
+                    return_value=dict(HPC_SYSTEM_DEFAULTS, name="My Cluster"),
                 ) as save_template,
                 patch(
-                    "truba_gui.ui.dialogs.connection_dialog.load_user_system_templates",
+                    "hpc_gui.ui.dialogs.connection_dialog.load_user_system_templates",
                     return_value=[],
                 ),
             ):
@@ -3690,11 +3690,11 @@ class FtpWidgetTests(unittest.TestCase):
 
         with (
             patch(
-                "truba_gui.config.system_profile.load_settings",
+                "hpc_gui.config.system_profile.load_settings",
                 side_effect=lambda: saved_settings,
             ),
             patch(
-                "truba_gui.config.system_profile.update_settings",
+                "hpc_gui.config.system_profile.update_settings",
                 side_effect=fake_update,
             ) as update,
         ):
@@ -3991,7 +3991,7 @@ class FtpWidgetTests(unittest.TestCase):
                     item.setSelected(True)
                     break
 
-            with patch("truba_gui.ui.widgets.remote_dir_panel.QMenu", FakeMenu):
+            with patch("hpc_gui.ui.widgets.remote_dir_panel.QMenu", FakeMenu):
                 panel._on_context_menu(view, QPoint(0, 0))
                 FakeMenu.choose_text = "Assign to Follow window 1 Output 2"
                 panel._on_context_menu(view, QPoint(0, 0))
@@ -4061,7 +4061,7 @@ class FtpWidgetTests(unittest.TestCase):
                     item.setSelected(True)
                     break
 
-            with patch("truba_gui.ui.widgets.remote_dir_panel.QMenu", FakeMenu):
+            with patch("hpc_gui.ui.widgets.remote_dir_panel.QMenu", FakeMenu):
                 panel._on_context_menu(view, QPoint(0, 0))
 
             self.assertEqual(submitted, ["/remote/job.slurm"])
@@ -4113,7 +4113,7 @@ class FtpWidgetTests(unittest.TestCase):
                     item.setSelected(True)
                     break
 
-            with patch("truba_gui.ui.widgets.remote_dir_panel.QMenu", FakeMenu):
+            with patch("hpc_gui.ui.widgets.remote_dir_panel.QMenu", FakeMenu):
                 panel._on_context_menu(view, QPoint(0, 0))
 
             labels = [
@@ -4127,7 +4127,7 @@ class FtpWidgetTests(unittest.TestCase):
             panel.deleteLater()
 
     def test_remote_context_menu_restores_clipboard_actions(self) -> None:
-        from truba_gui.services.file_clipboard import get_file_clipboard
+        from hpc_gui.services.file_clipboard import get_file_clipboard
 
         class FakeAction:
             def __init__(self, text: str) -> None:
@@ -4170,7 +4170,7 @@ class FtpWidgetTests(unittest.TestCase):
                     item.setSelected(True)
                     break
 
-            with patch("truba_gui.ui.widgets.remote_dir_panel.QMenu", FakeMenu):
+            with patch("hpc_gui.ui.widgets.remote_dir_panel.QMenu", FakeMenu):
                 panel._on_context_menu(view, QPoint(0, 0))
 
             labels = [
@@ -4187,7 +4187,7 @@ class FtpWidgetTests(unittest.TestCase):
             panel.deleteLater()
 
     def test_remote_ctrl_c_and_ctrl_x_store_selected_paths(self) -> None:
-        from truba_gui.services.file_clipboard import get_file_clipboard
+        from hpc_gui.services.file_clipboard import get_file_clipboard
 
         files = _Files()
         files.remote["/remote/out.txt"] = b"out"
@@ -4229,7 +4229,7 @@ class FtpWidgetTests(unittest.TestCase):
             panel.deleteLater()
 
     def test_remote_ctrl_c_then_ctrl_v_in_another_directory_tab_copies_file(self) -> None:
-        from truba_gui.services.file_clipboard import get_file_clipboard
+        from hpc_gui.services.file_clipboard import get_file_clipboard
 
         files = MockFilesBackend()
         source = "/arf/scratch/user/project/input.dat"
@@ -4284,7 +4284,7 @@ class FtpWidgetTests(unittest.TestCase):
             panel.deleteLater()
 
     def test_local_ctrl_v_downloads_remote_clipboard_to_current_local_dir(self) -> None:
-        from truba_gui.services.file_clipboard import get_file_clipboard
+        from hpc_gui.services.file_clipboard import get_file_clipboard
 
         clipboard = get_file_clipboard()
         try:
@@ -4366,7 +4366,7 @@ class FtpWidgetTests(unittest.TestCase):
                     item.setSelected(True)
                     break
             with patch(
-                "truba_gui.ui.widgets.local_dir_panel.QInputDialog.getText",
+                "hpc_gui.ui.widgets.local_dir_panel.QInputDialog.getText",
                 return_value=("new.txt", True),
             ):
                 event = QKeyEvent(QEvent.Type.KeyPress, Qt.Key.Key_F2, Qt.KeyboardModifier.NoModifier)
@@ -4390,7 +4390,7 @@ class FtpWidgetTests(unittest.TestCase):
         self.assertIsNotNone(item)
         item.setSelected(True)
         with patch(
-            "truba_gui.ui.widgets.remote_dir_panel.QInputDialog.getText",
+            "hpc_gui.ui.widgets.remote_dir_panel.QInputDialog.getText",
             return_value=("new.txt", True),
         ):
             event = QKeyEvent(QEvent.Type.KeyPress, Qt.Key.Key_F2, Qt.KeyboardModifier.NoModifier)
@@ -4455,9 +4455,41 @@ class FtpWidgetTests(unittest.TestCase):
                 if item.text(0) == "old.txt":
                     item.setSelected(True)
                     break
-            with patch("truba_gui.ui.widgets.local_dir_panel.subprocess.Popen") as popen:
+            with patch("hpc_gui.ui.widgets.local_dir_panel.subprocess.Popen") as popen:
                 self.assertTrue(local.open_selected_in_file_explorer())
             popen.assert_called_once_with(["explorer", str(Path(tmp))])
+
+    def test_local_context_open_on_linux_invokes_file_manager(self) -> None:
+        from unittest import mock
+
+        with tempfile.TemporaryDirectory() as tmp:
+            src = Path(tmp, "old.txt")
+            src.write_text("data", encoding="utf-8")
+            local = self.widget.local_panel
+            self.assertTrue(local.set_dir(tmp))
+            for index in range(local.tree.topLevelItemCount()):
+                item = local.tree.topLevelItem(index)
+                if item.text(0) == "old.txt":
+                    item.setSelected(True)
+                    break
+
+            # Patch only the os module the widget sees, so pathlib's flavour
+            # (bound at import from the real os.name) is not disturbed.
+            class _PosixOsStub:
+                name = "posix"
+                environ = {}
+
+            with mock.patch("hpc_gui.ui.widgets.local_dir_panel.os", _PosixOsStub()):
+                with mock.patch(
+                    "hpc_gui.ui.widgets.local_dir_panel.QDesktopServices.openUrl"
+                ) as open_url:
+                    self.assertTrue(local.open_selected_in_file_explorer())
+            open_url.assert_called_once()
+            arg_url = open_url.call_args.args[0]
+            self.assertEqual(
+                arg_url.toLocalFile().replace("\\", "/").rstrip("/"),
+                str(Path(tmp)).replace("\\", "/").rstrip("/"),
+            )
 
     def test_local_open_with_chooses_program_and_saves_association(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -4473,18 +4505,18 @@ class FtpWidgetTests(unittest.TestCase):
                     item.setSelected(True)
                     break
             with patch(
-                "truba_gui.ui.widgets.local_dir_panel.get_file_association",
+                "hpc_gui.ui.widgets.local_dir_panel.get_file_association",
                 return_value="",
             ), patch(
-                "truba_gui.ui.widgets.local_dir_panel.QFileDialog.getOpenFileName",
+                "hpc_gui.ui.widgets.local_dir_panel.QFileDialog.getOpenFileName",
                 return_value=(str(program), ""),
             ), patch(
-                "truba_gui.ui.widgets.local_dir_panel.QMessageBox.question",
+                "hpc_gui.ui.widgets.local_dir_panel.QMessageBox.question",
                 return_value=QMessageBox.StandardButton.Yes,
             ), patch(
-                "truba_gui.ui.widgets.local_dir_panel.set_file_association"
+                "hpc_gui.ui.widgets.local_dir_panel.set_file_association"
             ) as set_assoc, patch(
-                "truba_gui.ui.widgets.local_dir_panel.subprocess.Popen"
+                "hpc_gui.ui.widgets.local_dir_panel.subprocess.Popen"
             ) as popen:
                 self.assertTrue(local.open_selected_with_program())
 
@@ -4493,7 +4525,7 @@ class FtpWidgetTests(unittest.TestCase):
 
     def test_settings_lists_and_clears_file_associations(self) -> None:
         with patch(
-            "truba_gui.ui.dialogs.settings_dialog.get_file_associations",
+            "hpc_gui.ui.dialogs.settings_dialog.get_file_associations",
             return_value={".slurm": r"C:\Tools\editor.exe"},
         ):
             dialog = SettingsDialog()
@@ -4502,7 +4534,7 @@ class FtpWidgetTests(unittest.TestCase):
             self.assertIn(".slurm", dialog.file_associations_list.item(0).text())
             dialog.file_associations_list.setCurrentRow(0)
             with patch(
-                "truba_gui.ui.dialogs.settings_dialog.clear_file_association",
+                "hpc_gui.ui.dialogs.settings_dialog.clear_file_association",
                 return_value={},
             ) as clear_assoc:
                 dialog._clear_selected_file_association()
@@ -4552,7 +4584,7 @@ class FtpWidgetTests(unittest.TestCase):
                     break
             self.assertIsNotNone(target_item)
 
-            with patch("truba_gui.ui.widgets.local_dir_panel.QMenu", FakeMenu):
+            with patch("hpc_gui.ui.widgets.local_dir_panel.QMenu", FakeMenu):
                 local._on_context_menu(local.tree.visualItemRect(target_item).center())
 
             self.assertEqual(local.tabs.count(), 2)
@@ -4563,7 +4595,7 @@ class FtpWidgetTests(unittest.TestCase):
             local = self.widget.local_panel
             self.assertTrue(local.set_dir(tmp))
             with patch(
-                "truba_gui.ui.widgets.local_dir_panel.QInputDialog.getText",
+                "hpc_gui.ui.widgets.local_dir_panel.QInputDialog.getText",
                 return_value=("child", True),
             ):
                 self.assertTrue(local.create_directory(enter=True))
@@ -4596,7 +4628,7 @@ class FtpWidgetTests(unittest.TestCase):
         panel.session = {"connected": True, "files": files}
         panel.current_dir = "/arf/scratch/user"
         with patch(
-            "truba_gui.ui.widgets.remote_dir_panel.QInputDialog.getText",
+            "hpc_gui.ui.widgets.remote_dir_panel.QInputDialog.getText",
             return_value=("new-job", True),
         ):
             self.assertTrue(panel.create_new_folder_and_enter())
@@ -4641,7 +4673,7 @@ class FtpWidgetTests(unittest.TestCase):
                 item.setSelected(True)
                 break
 
-        with patch("truba_gui.ui.widgets.remote_dir_panel.QMenu", FakeMenu):
+        with patch("hpc_gui.ui.widgets.remote_dir_panel.QMenu", FakeMenu):
             panel._on_context_menu(view, QPoint(0, 0))
 
         self.assertEqual(panel.tabs.count(), 7)
@@ -4708,8 +4740,8 @@ class FtpWidgetTests(unittest.TestCase):
             def selected_mode(self):
                 return 0o600
 
-        with patch("truba_gui.ui.widgets.remote_dir_panel.QMenu", FakeMenu), patch(
-            "truba_gui.ui.widgets.remote_dir_panel._PermissionsDialog",
+        with patch("hpc_gui.ui.widgets.remote_dir_panel.QMenu", FakeMenu), patch(
+            "hpc_gui.ui.widgets.remote_dir_panel._PermissionsDialog",
             FakePermissionsDialog,
         ):
             panel._on_context_menu(view, QPoint(0, 0))
@@ -4746,9 +4778,9 @@ class FtpWidgetTests(unittest.TestCase):
                 return None
 
         with patch(
-            "truba_gui.ui.widgets.remote_dir_panel._PermissionsDialog",
+            "hpc_gui.ui.widgets.remote_dir_panel._PermissionsDialog",
             FakePermissionsDialog,
-        ), patch("truba_gui.ui.widgets.remote_dir_panel.QMessageBox.warning") as warning:
+        ), patch("hpc_gui.ui.widgets.remote_dir_panel.QMessageBox.warning") as warning:
             self.assertFalse(panel.change_permissions())
 
         warning.assert_called_once()
@@ -4782,7 +4814,7 @@ class FtpWidgetTests(unittest.TestCase):
                 return 0o1755
 
         with patch(
-            "truba_gui.ui.widgets.remote_dir_panel._PermissionsDialog",
+            "hpc_gui.ui.widgets.remote_dir_panel._PermissionsDialog",
             FakePermissionsDialog,
         ):
             self.assertTrue(panel.change_permissions())
@@ -5054,7 +5086,7 @@ class FtpWidgetTests(unittest.TestCase):
         panel.session = {"connected": True, "files": files}
 
         with patch(
-            "truba_gui.ui.widgets.remote_dir_panel.monotonic",
+            "hpc_gui.ui.widgets.remote_dir_panel.monotonic",
             side_effect=[0.0, 10.0, 20.0],
         ):
             panel.set_dir("/remote")
@@ -5069,7 +5101,7 @@ class FtpWidgetTests(unittest.TestCase):
         panel.session = {"connected": True, "files": files}
 
         with patch(
-            "truba_gui.ui.widgets.remote_dir_panel.monotonic",
+            "hpc_gui.ui.widgets.remote_dir_panel.monotonic",
             side_effect=[0.0, 10.0, 20.0],
         ):
             panel.set_dir("/remote")
@@ -5098,7 +5130,7 @@ class FtpWidgetTests(unittest.TestCase):
         panel.session = {"connected": True, "files": files}
 
         with patch(
-            "truba_gui.ui.widgets.remote_dir_panel.monotonic",
+            "hpc_gui.ui.widgets.remote_dir_panel.monotonic",
             side_effect=[0.0, 3601.0],
         ):
             panel.set_dir("/remote")
@@ -5113,7 +5145,7 @@ class FtpWidgetTests(unittest.TestCase):
 
         self.assertEqual(DIRECTORY_CACHE_TTL_SECONDS, 3600.0)
         with patch(
-            "truba_gui.ui.widgets.remote_dir_panel.monotonic",
+            "hpc_gui.ui.widgets.remote_dir_panel.monotonic",
             side_effect=[0.0, 3599.0, 3601.0],
         ):
             panel.set_dir("/remote")

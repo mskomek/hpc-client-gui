@@ -1,4 +1,4 @@
-from truba_gui.services.slurm_models import parse_sacct, parse_squeue
+from hpc_gui.services.slurm_models import parse_sacct, parse_squeue
 
 
 def test_parse_squeue_keeps_raw_rows_and_structured_fields() -> None:
@@ -34,7 +34,7 @@ def test_parse_sacct_reads_observed_scheduler_detail_fields() -> None:
     assert jobs[0].script_path == "/home/a/job.slurm"
 
 def test_parse_scontrol_extracts_detail_script_path() -> None:
-    from truba_gui.services.slurm_models import parse_scontrol
+    from hpc_gui.services.slurm_models import parse_scontrol
 
     job = parse_scontrol(
         "JobId=123 NodeList=node01 Reason=OOM ExitCode=1:0 Command=/home/a/job.slurm",

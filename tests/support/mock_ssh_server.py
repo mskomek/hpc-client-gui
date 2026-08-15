@@ -5,7 +5,7 @@ never-persisted host key and a fixed, clearly-fake test account
 credential, and no network egress involved anywhere in this module.
 
 Exercises the exact same wire protocol (SSH exec + SFTP subsystem) that
-``truba_gui.ssh.client.SSHClientWrapper`` speaks against a real host, so
+``hpc_gui.ssh.client.SSHClientWrapper`` speaks against a real host, so
 tests using this server prove a real round trip rather than a mocked
 service-layer stand-in.
 """
@@ -30,8 +30,8 @@ MOCK_PASSWORD = "mockpass123"  # noqa: test-only fixture credential, not a real 
 class _MockShell:
     """Executes the exact small set of POSIX shell commands this project's
     SSH backend shells out to (``mkdir -p``, ``rm``, ``chmod``, ``sha256sum``,
-    ``cp``, ``mv`` from ``truba_gui.services.files_ssh``; ``squeue``/``sbatch``/
-    ``scancel``/``sacct``/``scontrol`` from ``truba_gui.services.slurm_ssh``)
+    ``cp``, ``mv`` from ``hpc_gui.services.files_ssh``; ``squeue``/``sbatch``/
+    ``scancel``/``sacct``/``scontrol`` from ``hpc_gui.services.slurm_ssh``)
     against a real, disposable local directory, plus canned Slurm text for the
     scheduler commands. Anything else is reported as unrecognized rather than
     guessed at."""

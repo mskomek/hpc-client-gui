@@ -11,18 +11,18 @@ REPO_ROOT = SPEC_DIR
 while REPO_ROOT != REPO_ROOT.parent and not (REPO_ROOT / "src").is_dir():
     REPO_ROOT = REPO_ROOT.parent
 SRC_DIR = REPO_ROOT / "src"
-ENTRY_SCRIPT = SRC_DIR / "truba_gui" / "cli" / "__main__.py"
-I18N_DIR = SRC_DIR / "truba_gui" / "i18n"
-DOCS_DIR = SRC_DIR / "truba_gui" / "docs"
+ENTRY_SCRIPT = SRC_DIR / "hpc_gui" / "cli" / "__main__.py"
+I18N_DIR = SRC_DIR / "hpc_gui" / "i18n"
+DOCS_DIR = SRC_DIR / "hpc_gui" / "docs"
 
 if not ENTRY_SCRIPT.is_file():
     raise SystemExit(f"[spec] ENTRY_SCRIPT not found: {ENTRY_SCRIPT}")
 
 datas = []
 if I18N_DIR.exists():
-    datas.append((str(I18N_DIR), "truba_gui/i18n"))
+    datas.append((str(I18N_DIR), "hpc_gui/i18n"))
 if DOCS_DIR.exists():
-    datas.append((str(DOCS_DIR), "truba_gui/docs"))
+    datas.append((str(DOCS_DIR), "hpc_gui/docs"))
 for _license_name in ("LICENSE", "COMMERCIAL_LICENSE.md", "THIRD_PARTY_NOTICES.md"):
     _license_path = REPO_ROOT / _license_name
     if _license_path.exists():
@@ -36,7 +36,7 @@ a = Analysis(
     pathex=[str(REPO_ROOT), str(SRC_DIR)],
     binaries=collect_dynamic_libs("paramiko"),
     datas=datas,
-    hiddenimports=["truba_gui.cli.main", "truba_gui.cli.files", "truba_gui.cli.jobs"],
+    hiddenimports=["hpc_gui.cli.main", "hpc_gui.cli.files", "hpc_gui.cli.jobs"],
     hookspath=[], runtime_hooks=[], excludes=["PySide6", "shiboken6"],
     noarchive=False,
 )

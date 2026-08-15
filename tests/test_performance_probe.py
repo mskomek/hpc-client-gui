@@ -30,7 +30,7 @@ class PerformanceProbeTests(unittest.TestCase):
         module = _load_probe_module()
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
-            (root / "src" / "truba_gui").mkdir(parents=True)
+            (root / "src" / "hpc_gui").mkdir(parents=True)
             session = module.PerformanceSession(root, interval_ms=20, slow_ms=30)
             session.start()
             app = QApplication.instance() or QApplication([])
@@ -53,7 +53,7 @@ class PerformanceProbeTests(unittest.TestCase):
         module = _load_probe_module()
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
-            (root / "src" / "truba_gui").mkdir(parents=True)
+            (root / "src" / "hpc_gui").mkdir(parents=True)
             session = module.PerformanceSession(
                 root,
                 interval_ms=100,
@@ -76,7 +76,7 @@ class PerformanceProbeTests(unittest.TestCase):
         module = _load_probe_module()
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
-            (root / "src" / "truba_gui").mkdir(parents=True)
+            (root / "src" / "hpc_gui").mkdir(parents=True)
             session = module.PerformanceSession(
                 root,
                 interval_ms=100,

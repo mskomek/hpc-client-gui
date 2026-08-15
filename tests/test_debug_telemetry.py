@@ -4,7 +4,7 @@ from PySide6.QtCore import QEvent, Qt
 from PySide6.QtGui import QKeyEvent
 from PySide6.QtWidgets import QApplication, QWidget
 
-from truba_gui.core.debug_telemetry import DebugTelemetry
+from hpc_gui.core.debug_telemetry import DebugTelemetry
 
 
 def test_key_event_with_keyboard_modifiers_is_logged_without_error() -> None:

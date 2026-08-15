@@ -13,9 +13,9 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from PySide6.QtWidgets import QApplication
 
-from truba_gui.core.i18n import load_language
-from truba_gui.ui.dialogs.transfer_dialog import TransferDialog, TransferItem
-from truba_gui.ui.widgets.ftp_widget import TransferActivityPanel
+from hpc_gui.core.i18n import load_language
+from hpc_gui.ui.dialogs.transfer_dialog import TransferDialog, TransferItem
+from hpc_gui.ui.widgets.ftp_widget import TransferActivityPanel
 
 
 def _load_performance_probe():
@@ -78,7 +78,7 @@ class TransferPerformanceScenarioTests(unittest.TestCase):
             lambda _item, done, total: published.append((done, total))
         )
         with patch(
-            "truba_gui.ui.dialogs.transfer_dialog.time.monotonic",
+            "hpc_gui.ui.dialogs.transfer_dialog.time.monotonic",
             side_effect=[0.0] + [0.001] * 999,
         ):
             for done in range(1, 1001):
