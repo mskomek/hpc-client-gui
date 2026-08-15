@@ -22,6 +22,8 @@ CORRUPT_PATTERNS = [
     re.compile(r"\bL(?:OMMAND|ONFIRM|REATE|ANCEL|OPY|ONNECT|HECK)\b"),
     re.compile(r"conoig"),
     re.compile(r"JSnN"),
+    # The same rename also replaced "f" with "o" inside words.
+    re.compile(r"\b(?:oor|oile|olow|oake|oailure|preoer|saoe|workolow|oiles)\b"),
 ]
 SCAN_SUFFIXES = {".py", ".md", ".json", ".ps1", ".yml", ".yaml", ".txt"}
 SCAN_ROOTS = ("src", "docs", "scripts", "tests", "README.md", "SECURITY.md", "SUPPORT.md")
