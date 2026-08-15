@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import argparse
 import re
-import shutil
 import subprocess
 import sys
 import tempfile
@@ -30,6 +29,18 @@ EXCLUDED_PATTERN = re.compile(
     r"|(^|[\\/])(id_rsa|id_ed25519|known_hosts|credentials|secrets)",
     re.IGNORECASE,
 )
+
+
+TEXT_SUFFIXES = {".md", ".markdown", ".txt"}
+
+
+def _payload(path: Path) -> bytes:
+    """Bytes to mirror. Text is normalised to LF so a CRLF checkout on either
+    side does not make every file compare as changed."""
+    data = path.read_bytes()
+    if path.suffix.lower() in TEXT_SUFFIXES:
+        data = data.replace(b"\r\n", b"\n")
+    return data
 
 
 def _run(args: list[str], cwd: Path | None = None) -> str:
@@ -63,7 +74,7 @@ def build_plan(source: list[Path], target_root: Path) -> dict[str, list[Path]]:
         target = target_root / rel
         if rel not in existing:
             add.append(rel)
-        elif target.read_bytes() != (WIKI_SOURCE / rel).read_bytes():
+        elif _payload(target) != _payload(WIKI_SOURCE / rel):
             update.append(rel)
     delete = sorted(existing - set(source))
     return {"add": add, "update": update, "delete": delete}
@@ -83,7 +94,7 @@ def apply_plan(plan: dict[str, list[Path]], target_root: Path) -> None:
     for rel in plan["add"] + plan["update"]:
         target = target_root / rel
         target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(WIKI_SOURCE / rel, target)
+        target.write_bytes(_payload(WIKI_SOURCE / rel))
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -104,7 +115,21 @@ def main(argv: list[str] | None = None) -> int:
         target_root = Path(tmp) / "wiki"
         print(f"cloning {args.remote}")
         try:
-            _run(["git", "clone", "--depth", "1", args.remote, str(target_root)])
+            # core.autocrlf would rewrite line endings on checkout, so every
+            # file would compare as changed and each publish would rewrite the
+            # whole wiki.
+            _run(
+                [
+                    "git",
+                    "-c",
+                    "core.autocrlf=false",
+                    "clone",
+                    "--depth",
+                    "1",
+                    args.remote,
+                    str(target_root),
+                ]
+            )
         except subprocess.CalledProcessError as exc:
             print(exc.stderr.strip())
             print(
