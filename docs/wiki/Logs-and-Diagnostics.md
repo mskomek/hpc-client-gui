@@ -58,7 +58,7 @@ gate on connectivity before doing real work:
 hpc-client-gui --profile mycluster doctor connection || exit $?
 ```
 
-See [[CLI Exit Codes|CLI-Exit-Codes]].
+See [[CLI Guide|CLI-Guide]].
 
 ## Increasing detail
 
@@ -72,6 +72,4 @@ issue. See [[Crash Reports and Send Logs|Crash-Reports-and-Send-Logs]].
 
 ## See also
 
-[[Troubleshooting|Troubleshooting]] ·
-[[Data and Privacy|Data-and-Privacy]] ·
-[[Security Model|Security-Model]]
+[[Troubleshooting|Troubleshooting]] · [[Data and Privacy|Data-and-Privacy]] · [[Security Model|Security-Model]]

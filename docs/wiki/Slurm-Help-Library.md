@@ -44,7 +44,7 @@ sinfo                              # partitions and their state
 
 The same operations are available through the application — see
 [[Slurm Jobs|Slurm-Jobs]] — and through the command line, where
-[[CLI Command Reference|CLI-Command-Reference]] documents `jobs list`,
+[[CLI Guide|CLI-Guide]] documents `jobs list`,
 `jobs status`, `jobs accounting`, `jobs submit`, and `jobs cancel`.
 
 ## Before your first job on a new cluster
@@ -64,6 +64,4 @@ customization for exactly this reason.
 
 ## See also
 
-[[Job Script Templates|Job-Script-Templates]] ·
-[[Slurm Jobs|Slurm-Jobs]] ·
-[[Quick Start|Quick-Start]]
+[[Job Script Templates|Job-Script-Templates]] · [[Slurm Jobs|Slurm-Jobs]] · [[Quick Start|Quick-Start]]

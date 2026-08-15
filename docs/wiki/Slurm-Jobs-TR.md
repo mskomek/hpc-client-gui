@@ -56,7 +56,7 @@ hpc-client-gui --profile mycluster jobs cancel 123456 --yes
 ```
 
 `--yes` zorunludur; olmadan komut `2` ile çıkar. Bkz.
-[[CLI Çıkış Kodları|CLI-Exit-Codes-TR]].
+[[CLI Kılavuzu|CLI-Guide-TR]].
 
 ## Bildirimler
 
@@ -94,10 +94,8 @@ hpc-client-gui --profile mycluster jobs lssrv
 
 `squeue`, `scontrol`, `sacct`, `sbatch`, `scancel` ve `lssrv` takma adları
 bunlara karşılık gelir. Bkz.
-[[CLI Komut Referansı|CLI-Command-Reference-TR]].
+[[CLI Kılavuzu|CLI-Guide-TR]].
 
 ## Ayrıca bkz.
 
-[[İş Betiği Şablonları|Job-Script-Templates-TR]] ·
-[[Slurm Yardım Kütüphanesi|Slurm-Help-Library-TR]] ·
-[[İş Çıktıları|Job-Outputs-TR]]
+[[İş Betiği Şablonları|Job-Script-Templates-TR]] · [[Slurm Yardım Kütüphanesi|Slurm-Help-Library-TR]] · [[İş Çıktıları|Job-Outputs-TR]]

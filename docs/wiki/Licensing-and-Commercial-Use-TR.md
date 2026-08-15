@@ -60,6 +60,4 @@ değiştirmez.
 
 ## Ayrıca bkz.
 
-[[Destek ve Bağış|Support-and-Donations-TR]] ·
-[[Katkıda Bulunma|Contributing-TR]] ·
-[[Güvenlik Modeli|Security-Model-TR]]
+[[Destek ve Bağış|Support-and-Donations-TR]] · [[Katkıda Bulunma|Contributing-TR]] · [[Güvenlik Modeli|Security-Model-TR]]

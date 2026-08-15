@@ -78,6 +78,4 @@ hpc-client-gui --profile mycluster files download \
 
 ## See also
 
-[[Slurm Jobs|Slurm-Jobs]] ·
-[[Remote File Manager|Remote-File-Manager]] ·
-[[File Transfers|File-Transfers]]
+[[Slurm Jobs|Slurm-Jobs]] · [[Remote File Manager|Remote-File-Manager]] · [[File Transfers|File-Transfers]]

@@ -7,6 +7,9 @@ Bildirimler ve pull request'ler
 etkisi olan her şey için genel bir bildirim yerine gizli bildirim kanalını
 kullanın — bkz. [[Güvenlik Modeli|Security-Model-TR]].
 
+> Yetkili katkı kılavuzu depodaki [`CONTRIBUTING.md`](https://github.com/mskomek/hpc-client-gui/blob/main/CONTRIBUTING.md)
+> dosyasıdır. Bu sayfa onu özetler; ikisi çelişirse o dosya geçerlidir.
+
 ## Başlamadan önce
 
 - [[Mimari|Architecture-TR]] sayfasını okuyun. İnceleme geri bildirimlerinin
@@ -55,6 +58,4 @@ onlar için kabul edilebilir olduğunu doğrulayın. Bkz.
 
 ## Ayrıca bkz.
 
-[[Test ve CI|Testing-and-CI-TR]] ·
-[[Kaynaktan Derleme|Building-from-Source-TR]] ·
-[[Destek ve Bağış|Support-and-Donations-TR]]
+[[Test ve CI|Testing-and-CI-TR]] · [[Kaynaktan Derleme|Building-from-Source-TR]] · [[Destek ve Bağış|Support-and-Donations-TR]]

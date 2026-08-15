@@ -87,6 +87,4 @@ whether VcXsrv and the X11/SSH processes are closed with the application.
 
 ## See also
 
-[[Terminal and Remote Commands|Terminal-and-Remote-Commands]] ·
-[[Settings Reference|Settings-Reference]] ·
-[[Troubleshooting|Troubleshooting]]
+[[Terminal and Remote Commands|Terminal-and-Remote-Commands]] · [[Settings Reference|Settings-Reference]] · [[Troubleshooting|Troubleshooting]]

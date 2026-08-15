@@ -26,57 +26,29 @@ bağlar.
   gönderin.
 - [[Uyumluluk ve Destek Matrisi|Compatibility-and-Support-Matrix-TR]] — hangi
   platformda neyin desteklendiği.
+- [[Küme Gereksinimleri|Cluster-Requirements-TR]] — kümemde çalışır mı?
 - [[SSS|FAQ-TR]] — belirtiye göre gruplanmış kısa yanıtlar.
 
 ## Kurulum
 
-[[Windows|Installation-Windows-TR]] ·
-[[Linux|Installation-Linux-TR]] ·
-[[Kaynaktan|Installation-From-Source-TR]] ·
-[[Yükseltme ve kaldırma|Upgrading-and-Uninstalling-TR]]
+[[Windows|Installation-Windows-TR]] · [[Linux|Installation-Linux-TR]] · [[Kaynaktan|Installation-From-Source-TR]] · [[Yükseltme ve kaldırma|Upgrading-and-Uninstalling-TR]]
 
 ## Uygulamayı kullanma
 
-[[Bağlantı ve Profiller|Connecting-and-Profiles-TR]] ·
-[[Uzak Dosya Yöneticisi|Remote-File-Manager-TR]] ·
-[[Dosya Aktarımları|File-Transfers-TR]] ·
-[[Slurm İşleri|Slurm-Jobs-TR]] ·
-[[İş Çıktıları|Job-Outputs-TR]] ·
-[[Betik Düzenleyici|Script-Editor-TR]] ·
-[[Terminal ve Uzak Komutlar|Terminal-and-Remote-Commands-TR]] ·
-[[X11 Yönlendirme|X11-Forwarding-TR]] ·
-[[Ayarlar Referansı|Settings-Reference-TR]] ·
-[[Arayüz Dili ve i18n|Interface-Language-and-i18n-TR]]
+[[Bağlantı ve Profiller|Connecting-and-Profiles-TR]] · [[Uzak Dosya Yöneticisi|Remote-File-Manager-TR]] · [[Dosya Aktarımları|File-Transfers-TR]] · [[Slurm İşleri|Slurm-Jobs-TR]] · [[İş Çıktıları|Job-Outputs-TR]] · [[Betik Düzenleyici|Script-Editor-TR]] · [[Terminal ve Uzak Komutlar|Terminal-and-Remote-Commands-TR]] · [[X11 Yönlendirme|X11-Forwarding-TR]] · [[Ayarlar Referansı|Settings-Reference-TR]] · [[Arayüz Dili ve i18n|Interface-Language-and-i18n-TR]]
 
 ## Otomasyon
 
-[[CLI Genel Bakış|CLI-Overview-TR]] ·
-[[CLI Komut Referansı|CLI-Command-Reference-TR]] ·
-[[CLI Çıkış Kodları|CLI-Exit-Codes-TR]] ·
-[[CLI Çıktı Sözleşmesi|CLI-Output-Contract-TR]] ·
-[[Betik Örnekleri|Scripting-Examples-TR]]
+[[CLI Kılavuzu|CLI-Guide-TR]] · [[Betik Örnekleri|Scripting-Examples-TR]]
 
 ## İşletim ve sorun giderme
 
-[[Günlükler ve Tanılama|Logs-and-Diagnostics-TR]] ·
-[[Çökme Raporları ve Günlük Gönderme|Crash-Reports-and-Send-Logs-TR]] ·
-[[Sorun Giderme|Troubleshooting-TR]] ·
-[[Güvenlik Modeli|Security-Model-TR]] ·
-[[Veri ve Gizlilik|Data-and-Privacy-TR]]
+[[Günlükler ve Tanılama|Logs-and-Diagnostics-TR]] · [[Çökme Raporları ve Günlük Gönderme|Crash-Reports-and-Send-Logs-TR]] · [[Sorun Giderme|Troubleshooting-TR]] · [[Güvenlik Modeli|Security-Model-TR]] · [[Veri ve Gizlilik|Data-and-Privacy-TR]]
 
 ## Slurm
 
-[[Slurm Yardım Kütüphanesi|Slurm-Help-Library-TR]] ·
-[[İş Betiği Şablonları|Job-Script-Templates-TR]]
+[[Slurm Yardım Kütüphanesi|Slurm-Help-Library-TR]] · [[İş Betiği Şablonları|Job-Script-Templates-TR]]
 
 ## Proje
 
-[[Mimari|Architecture-TR]] ·
-[[Kaynaktan Derleme|Building-from-Source-TR]] ·
-[[Sürüm Süreci|Release-Process-TR]] ·
-[[Test ve CI|Testing-and-CI-TR]] ·
-[[Katkıda Bulunma|Contributing-TR]] ·
-[[Lisanslama ve Ticari Kullanım|Licensing-and-Commercial-Use-TR]] ·
-[[Destek ve Bağış|Support-and-Donations-TR]] ·
-[[Sürüm Geçmişi|Release-History-TR]] ·
-[[Sözlük|Glossary-TR]]
+[[Mimari|Architecture-TR]] · [[Kaynaktan Derleme|Building-from-Source-TR]] · [[Sürüm Süreci|Release-Process-TR]] · [[Test ve CI|Testing-and-CI-TR]] · [[Katkıda Bulunma|Contributing-TR]] · [[Lisanslama ve Ticari Kullanım|Licensing-and-Commercial-Use-TR]] · [[Destek ve Bağış|Support-and-Donations-TR]] · [[Sürüm Geçmişi|Release-History-TR]] · [[Sözlük|Glossary-TR]]

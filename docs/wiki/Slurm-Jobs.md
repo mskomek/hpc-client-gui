@@ -55,7 +55,7 @@ hpc-client-gui --profile mycluster jobs cancel 123456 --yes
 ```
 
 `--yes` is required; without it the command exits `2`. See
-[[CLI Exit Codes|CLI-Exit-Codes]].
+[[CLI Guide|CLI-Guide]].
 
 ## Notifications
 
@@ -90,10 +90,8 @@ hpc-client-gui --profile mycluster jobs lssrv
 ```
 
 Aliases `squeue`, `scontrol`, `sacct`, `sbatch`, `scancel`, and `lssrv` map to
-these. See [[CLI Command Reference|CLI-Command-Reference]].
+these. See [[CLI Guide|CLI-Guide]].
 
 ## See also
 
-[[Job Script Templates|Job-Script-Templates]] ·
-[[Slurm Help Library|Slurm-Help-Library]] ·
-[[Job Outputs|Job-Outputs]]
+[[Job Script Templates|Job-Script-Templates]] · [[Slurm Help Library|Slurm-Help-Library]] · [[Job Outputs|Job-Outputs]]

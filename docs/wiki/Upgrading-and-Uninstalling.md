@@ -69,6 +69,4 @@ and history. Copy anything you want to keep first.
 
 ## See also
 
-[[Installation on Windows|Installation-Windows]] ·
-[[Installation on Linux|Installation-Linux]] ·
-[[Data and Privacy|Data-and-Privacy]]
+[[Installation on Windows|Installation-Windows]] · [[Installation on Linux|Installation-Linux]] · [[Data and Privacy|Data-and-Privacy]]

@@ -66,7 +66,7 @@ hpc-client-gui --profile mycluster interactive
 
 `sh` tek bir uzak komut çalıştırır; `run` uzak bir betik çalıştırır;
 `interactive` ise uzak bir kabuk değil, bu uygulamanın kendi komutları için bir
-istem açar. Bkz. [[CLI Komut Referansı|CLI-Command-Reference-TR]].
+istem açar. Bkz. [[CLI Kılavuzu|CLI-Guide-TR]].
 
 ## Oturum düşerse
 
@@ -76,6 +76,4 @@ tuşuna basın ya da Evet yanıtını verin. Bkz.
 
 ## Ayrıca bkz.
 
-[[Betik Düzenleyici|Script-Editor-TR]] ·
-[[X11 Yönlendirme|X11-Forwarding-TR]] ·
-[[Slurm Yardım Kütüphanesi|Slurm-Help-Library-TR]]
+[[Betik Düzenleyici|Script-Editor-TR]] · [[X11 Yönlendirme|X11-Forwarding-TR]] · [[Slurm Yardım Kütüphanesi|Slurm-Help-Library-TR]]

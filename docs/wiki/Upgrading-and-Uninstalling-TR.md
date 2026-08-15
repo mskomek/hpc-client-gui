@@ -69,6 +69,4 @@ her şeyi önce kopyalayın.
 
 ## Ayrıca bkz.
 
-[[Windows Kurulumu|Installation-Windows-TR]] ·
-[[Linux Kurulumu|Installation-Linux-TR]] ·
-[[Veri ve Gizlilik|Data-and-Privacy-TR]]
+[[Windows Kurulumu|Installation-Windows-TR]] · [[Linux Kurulumu|Installation-Linux-TR]] · [[Veri ve Gizlilik|Data-and-Privacy-TR]]

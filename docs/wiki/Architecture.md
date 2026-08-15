@@ -60,6 +60,4 @@ failures surface as logged, observable events rather than as a hung interface.
 
 ## See also
 
-[[Building from Source|Building-from-Source]] ·
-[[Testing and CI|Testing-and-CI]] ·
-[[Contributing|Contributing]]
+[[Building from Source|Building-from-Source]] · [[Testing and CI|Testing-and-CI]] · [[Contributing|Contributing]]

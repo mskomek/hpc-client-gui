@@ -88,6 +88,4 @@ belirler.
 
 ## Ayrıca bkz.
 
-[[Terminal ve Uzak Komutlar|Terminal-and-Remote-Commands-TR]] ·
-[[Ayarlar Referansı|Settings-Reference-TR]] ·
-[[Sorun Giderme|Troubleshooting-TR]]
+[[Terminal ve Uzak Komutlar|Terminal-and-Remote-Commands-TR]] · [[Ayarlar Referansı|Settings-Reference-TR]] · [[Sorun Giderme|Troubleshooting-TR]]

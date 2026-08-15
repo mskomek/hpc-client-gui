@@ -68,10 +68,10 @@ değişikliğin meşru olduğunu öğrendikten sonra girdiyi güncelleyin.
 
 **"Remote CLI access is disabled."** Dış erişim kapısı kapalıdır. Ayarlar'da
 "Allow external CLI access to remote commands" seçeneğini etkinleştirin. Bkz.
-[[CLI Genel Bakış|CLI-Overview-TR]].
+[[CLI Kılavuzu|CLI-Guide-TR]].
 
 **Silme, gönderme veya iptalde çıkış kodu 2.** Komut açık onay gerektirir.
-`--yes` ekleyin. Bkz. [[CLI Çıkış Kodları|CLI-Exit-Codes-TR]].
+`--yes` ekleyin. Bkz. [[CLI Kılavuzu|CLI-Guide-TR]].
 
 ## Aktarımlar
 

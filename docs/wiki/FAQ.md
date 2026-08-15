@@ -61,12 +61,12 @@ rather than in plain text. For automation, prefer keys. See
 
 "Allow external CLI access to remote commands" is off by default. Enable it in
 Settings if you want to script against the cluster. See
-[[CLI Overview|CLI-Overview]].
+[[CLI Guide|CLI-Guide]].
 
 ## Why did my delete or submit command exit with code 2?
 
 It needed `--yes`. Commands that destroy data or change cluster state refuse to
-run without explicit confirmation. See [[CLI Exit Codes|CLI-Exit-Codes]].
+run without explicit confirmation. See [[CLI Guide|CLI-Guide]].
 
 ## Can I resume an interrupted transfer?
 

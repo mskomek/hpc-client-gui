@@ -116,10 +116,8 @@ hpc-client-gui --profile mycluster files mkdir /scratch/$USER/run1
 hpc-client-gui --profile mycluster files rm /scratch/$USER/old --recursive --yes
 ```
 
-See [[CLI Command Reference|CLI-Command-Reference]].
+See [[CLI Guide|CLI-Guide]].
 
 ## See also
 
-[[File Transfers|File-Transfers]] ·
-[[Script Editor|Script-Editor]] ·
-[[Settings Reference|Settings-Reference]]
+[[File Transfers|File-Transfers]] · [[Script Editor|Script-Editor]] · [[Settings Reference|Settings-Reference]]

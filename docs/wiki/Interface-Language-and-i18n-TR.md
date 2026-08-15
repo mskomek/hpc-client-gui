@@ -36,7 +36,7 @@ gelir ve değiştirilmeden gösterilir.
 
 Buna komut satırı arayüzü de dâhildir: yardım metni, seçenek adları ve hata
 iletileri İngilizcedir ve otomasyonun dayanması gereken sözleşme çıkış
-kodlarıdır. Bkz. [[CLI Çıkış Kodları|CLI-Exit-Codes-TR]].
+kodlarıdır. Bkz. [[CLI Kılavuzu|CLI-Guide-TR]].
 
 ## Katkı verenler için
 
@@ -62,6 +62,4 @@ gerektirir — bir yapılandırma değişikliği değil, önemli bir katkıdır.
 
 ## Ayrıca bkz.
 
-[[Ayarlar Referansı|Settings-Reference-TR]] ·
-[[Katkıda Bulunma|Contributing-TR]] ·
-[[Sözlük|Glossary-TR]]
+[[Ayarlar Referansı|Settings-Reference-TR]] · [[Katkıda Bulunma|Contributing-TR]] · [[Sözlük|Glossary-TR]]

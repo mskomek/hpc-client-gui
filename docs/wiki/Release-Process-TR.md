@@ -62,6 +62,4 @@ sha256sum -c hpc-client-gui-1.2.6-x86_64.AppImage.sha256
 
 ## Ayrıca bkz.
 
-[[Kaynaktan Derleme|Building-from-Source-TR]] ·
-[[Test ve CI|Testing-and-CI-TR]] ·
-[[Sürüm Geçmişi|Release-History-TR]]
+[[Kaynaktan Derleme|Building-from-Source-TR]] · [[Test ve CI|Testing-and-CI-TR]] · [[Sürüm Geçmişi|Release-History-TR]]

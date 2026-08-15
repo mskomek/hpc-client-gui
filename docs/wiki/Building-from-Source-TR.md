@@ -71,6 +71,4 @@ sha256sum -c hpc-client-gui-1.2.6-x86_64.AppImage.sha256
 
 ## Ayrıca bkz.
 
-[[Sürüm Süreci|Release-Process-TR]] ·
-[[Test ve CI|Testing-and-CI-TR]] ·
-[[Mimari|Architecture-TR]]
+[[Sürüm Süreci|Release-Process-TR]] · [[Test ve CI|Testing-and-CI-TR]] · [[Mimari|Architecture-TR]]

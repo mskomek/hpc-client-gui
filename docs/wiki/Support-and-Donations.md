@@ -46,5 +46,4 @@ use requires a separate license — see
 
 ## See also
 
-[[FAQ|FAQ]] · [[Troubleshooting|Troubleshooting]] ·
-[[Licensing and Commercial Use|Licensing-and-Commercial-Use]]
+[[FAQ|FAQ]] · [[Troubleshooting|Troubleshooting]] · [[Licensing and Commercial Use|Licensing-and-Commercial-Use]]

@@ -60,7 +60,7 @@ tanılama — grafik oturum olmadan ve başka bir soru sorulmadan ulaşabilir.
 
 Bunu bilinçli olarak ve yalnızca yerel süreçlere güvendiğiniz makinelerde
 açın. Bkz. [[Ayarlar Referansı|Settings-Reference-TR]] ve
-[[CLI Genel Bakış|CLI-Overview-TR]].
+[[CLI Kılavuzu|CLI-Guide-TR]].
 
 ## Yıkıcı işlemler
 
@@ -92,6 +92,4 @@ güvenlik düzeltmesi alır; bildirmeden önce yükseltin. İlkenin tamamı depo
 
 ## Ayrıca bkz.
 
-[[Veri ve Gizlilik|Data-and-Privacy-TR]] ·
-[[Bağlantı ve Profiller|Connecting-and-Profiles-TR]] ·
-[[Ayarlar Referansı|Settings-Reference-TR]]
+[[Veri ve Gizlilik|Data-and-Privacy-TR]] · [[Bağlantı ve Profiller|Connecting-and-Profiles-TR]] · [[Ayarlar Referansı|Settings-Reference-TR]]

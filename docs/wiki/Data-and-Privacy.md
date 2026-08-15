@@ -81,6 +81,4 @@ a private channel instead — see `SECURITY.md` and
 
 ## See also
 
-[[Crash Reports and Send Logs|Crash-Reports-and-Send-Logs]] ·
-[[Logs and Diagnostics|Logs-and-Diagnostics]] ·
-[[Security Model|Security-Model]]
+[[Crash Reports and Send Logs|Crash-Reports-and-Send-Logs]] · [[Logs and Diagnostics|Logs-and-Diagnostics]] · [[Security Model|Security-Model]]

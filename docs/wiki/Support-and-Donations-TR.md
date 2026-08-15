@@ -47,5 +47,4 @@ yerine geçmez**. Ticari kullanım ayrı bir lisans gerektirir — bkz.
 
 ## Ayrıca bkz.
 
-[[SSS|FAQ-TR]] · [[Sorun Giderme|Troubleshooting-TR]] ·
-[[Lisanslama ve Ticari Kullanım|Licensing-and-Commercial-Use-TR]]
+[[SSS|FAQ-TR]] · [[Sorun Giderme|Troubleshooting-TR]] · [[Lisanslama ve Ticari Kullanım|Licensing-and-Commercial-Use-TR]]

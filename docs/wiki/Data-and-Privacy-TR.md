@@ -80,6 +80,4 @@ bir kanaldan iletin — bkz. `SECURITY.md` ve
 
 ## Ayrıca bkz.
 
-[[Çökme Raporları ve Günlük Gönderme|Crash-Reports-and-Send-Logs-TR]] ·
-[[Günlükler ve Tanılama|Logs-and-Diagnostics-TR]] ·
-[[Güvenlik Modeli|Security-Model-TR]]
+[[Çökme Raporları ve Günlük Gönderme|Crash-Reports-and-Send-Logs-TR]] · [[Günlükler ve Tanılama|Logs-and-Diagnostics-TR]] · [[Güvenlik Modeli|Security-Model-TR]]

@@ -114,10 +114,8 @@ hpc-client-gui --profile mycluster files mkdir /scratch/$USER/run1
 hpc-client-gui --profile mycluster files rm /scratch/$USER/old --recursive --yes
 ```
 
-Bkz. [[CLI Komut Referansı|CLI-Command-Reference-TR]].
+Bkz. [[CLI Kılavuzu|CLI-Guide-TR]].
 
 ## Ayrıca bkz.
 
-[[Dosya Aktarımları|File-Transfers-TR]] ·
-[[Betik Düzenleyici|Script-Editor-TR]] ·
-[[Ayarlar Referansı|Settings-Reference-TR]]
+[[Dosya Aktarımları|File-Transfers-TR]] · [[Betik Düzenleyici|Script-Editor-TR]] · [[Ayarlar Referansı|Settings-Reference-TR]]

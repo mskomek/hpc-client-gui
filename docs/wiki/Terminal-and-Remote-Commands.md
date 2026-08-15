@@ -65,7 +65,7 @@ hpc-client-gui --profile mycluster interactive
 
 `sh` runs a single remote command; `run` runs a remote script; `interactive`
 opens a prompt for this application's own commands rather than a remote shell.
-See [[CLI Command Reference|CLI-Command-Reference]].
+See [[CLI Guide|CLI-Guide]].
 
 ## If the session drops
 
@@ -75,6 +75,4 @@ press `r` or answer Yes. See
 
 ## See also
 
-[[Script Editor|Script-Editor]] ·
-[[X11 Forwarding|X11-Forwarding]] ·
-[[Slurm Help Library|Slurm-Help-Library]]
+[[Script Editor|Script-Editor]] · [[X11 Forwarding|X11-Forwarding]] · [[Slurm Help Library|Slurm-Help-Library]]

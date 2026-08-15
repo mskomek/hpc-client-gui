@@ -92,6 +92,4 @@ to `TRUBA_EDITOR` and then `EDITOR`), and uploads it back when you are done.
 
 ## See also
 
-[[Slurm Jobs|Slurm-Jobs]] ·
-[[Remote File Manager|Remote-File-Manager]] ·
-[[Job Script Templates|Job-Script-Templates]]
+[[Slurm Jobs|Slurm-Jobs]] · [[Remote File Manager|Remote-File-Manager]] · [[Job Script Templates|Job-Script-Templates]]

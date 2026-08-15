@@ -60,6 +60,4 @@ PYTHONPATH=src QT_QPA_PLATFORM=offscreen python -m pytest tests/ -q
 
 ## See also
 
-[[Contributing|Contributing]] ·
-[[Architecture|Architecture]] ·
-[[Building from Source|Building-from-Source]]
+[[Contributing|Contributing]] · [[Architecture|Architecture]] · [[Building from Source|Building-from-Source]]

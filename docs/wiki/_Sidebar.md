@@ -5,6 +5,7 @@
 - [[HPC Client GUI Wiki|Home]]
 - [[Quick Start|Quick-Start]]
 - [[Compatibility and Support Matrix|Compatibility-and-Support-Matrix]]
+- [[Cluster Requirements|Cluster-Requirements]]
 - [[FAQ|FAQ]]
 
 **Install**
@@ -29,10 +30,7 @@
 
 **Automation**
 
-- [[CLI Overview|CLI-Overview]]
-- [[CLI Command Reference|CLI-Command-Reference]]
-- [[CLI Exit Codes|CLI-Exit-Codes]]
-- [[CLI Output Contract|CLI-Output-Contract]]
+- [[CLI Guide|CLI-Guide]]
 - [[Scripting Examples|Scripting-Examples]]
 
 **Operations**
@@ -67,6 +65,7 @@
 - [[HPC Client GUI Wiki|Home-TR]]
 - [[Hızlı Başlangıç|Quick-Start-TR]]
 - [[Uyumluluk ve Destek Matrisi|Compatibility-and-Support-Matrix-TR]]
+- [[Küme Gereksinimleri|Cluster-Requirements-TR]]
 - [[SSS|FAQ-TR]]
 
 **Kurulum**
@@ -91,10 +90,7 @@
 
 **Otomasyon**
 
-- [[CLI Genel Bakış|CLI-Overview-TR]]
-- [[CLI Komut Referansı|CLI-Command-Reference-TR]]
-- [[CLI Çıkış Kodları|CLI-Exit-Codes-TR]]
-- [[CLI Çıktı Sözleşmesi|CLI-Output-Contract-TR]]
+- [[CLI Kılavuzu|CLI-Guide-TR]]
 - [[Betik Örnekleri|Scripting-Examples-TR]]
 
 **İşletim**

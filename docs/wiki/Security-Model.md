@@ -59,7 +59,7 @@ jobs, edit, shell, and diagnostics — using your saved profiles, with no GUI
 session and no further prompt.
 
 Enable it deliberately, on machines where you trust the local processes. See
-[[Settings Reference|Settings-Reference]] and [[CLI Overview|CLI-Overview]].
+[[Settings Reference|Settings-Reference]] and [[CLI Guide|CLI-Guide]].
 
 ## Destructive operations
 
@@ -90,6 +90,4 @@ receives security fixes; upgrade before reporting. The full policy is
 
 ## See also
 
-[[Data and Privacy|Data-and-Privacy]] ·
-[[Connecting and Profiles|Connecting-and-Profiles]] ·
-[[Settings Reference|Settings-Reference]]
+[[Data and Privacy|Data-and-Privacy]] · [[Connecting and Profiles|Connecting-and-Profiles]] · [[Settings Reference|Settings-Reference]]

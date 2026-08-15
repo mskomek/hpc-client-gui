@@ -67,6 +67,4 @@ kurulumlarla uyumluluk için korunmaktadır.
 
 ## Sonraki adımlar
 
-[[Hızlı Başlangıç|Quick-Start-TR]] ·
-[[Kaynaktan kurulum|Installation-From-Source-TR]] ·
-[[Yükseltme ve kaldırma|Upgrading-and-Uninstalling-TR]]
+[[Hızlı Başlangıç|Quick-Start-TR]] · [[Kaynaktan kurulum|Installation-From-Source-TR]] · [[Yükseltme ve kaldırma|Upgrading-and-Uninstalling-TR]]

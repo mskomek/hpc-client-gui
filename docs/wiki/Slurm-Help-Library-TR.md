@@ -45,7 +45,7 @@ sinfo                              # bölümler ve durumları
 Aynı işlemler uygulama üzerinden de yapılabilir — bkz.
 [[Slurm İşleri|Slurm-Jobs-TR]] — ve komut satırından da; `jobs list`,
 `jobs status`, `jobs accounting`, `jobs submit` ve `jobs cancel` komutları
-[[CLI Komut Referansı|CLI-Command-Reference-TR]] sayfasında belgelenmiştir.
+[[CLI Kılavuzu|CLI-Guide-TR]] sayfasında belgelenmiştir.
 
 ## Yeni bir kümede ilk işinizden önce
 
@@ -64,6 +64,4 @@ temizlik ilkelerini doğrulayın. Uygulamadaki Slurm çıktı ayrıştırmasın�
 
 ## Ayrıca bkz.
 
-[[İş Betiği Şablonları|Job-Script-Templates-TR]] ·
-[[Slurm İşleri|Slurm-Jobs-TR]] ·
-[[Hızlı Başlangıç|Quick-Start-TR]]
+[[İş Betiği Şablonları|Job-Script-Templates-TR]] · [[Slurm İşleri|Slurm-Jobs-TR]] · [[Hızlı Başlangıç|Quick-Start-TR]]

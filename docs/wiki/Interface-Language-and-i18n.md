@@ -35,7 +35,7 @@ language the cluster produces and is shown unchanged.
 
 That includes the command-line interface: its help text, option names, and
 error messages are English, and its exit codes are the contract automation
-should rely on. See [[CLI Exit Codes|CLI-Exit-Codes]].
+should rely on. See [[CLI Guide|CLI-Guide]].
 
 ## For contributors
 
@@ -60,6 +60,4 @@ substantial contribution rather than a configuration change.
 
 ## See also
 
-[[Settings Reference|Settings-Reference]] ·
-[[Contributing|Contributing]] ·
-[[Glossary|Glossary]]
+[[Settings Reference|Settings-Reference]] · [[Contributing|Contributing]] · [[Glossary|Glossary]]

@@ -30,5 +30,4 @@ help surface, so you do not need to visit GitHub to see what changed.
 
 ## See also
 
-[[Release Process|Release-Process]] ·
-[[Upgrading and Uninstalling|Upgrading-and-Uninstalling]]
+[[Release Process|Release-Process]] · [[Upgrading and Uninstalling|Upgrading-and-Uninstalling]]

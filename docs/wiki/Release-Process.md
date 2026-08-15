@@ -61,6 +61,4 @@ sha256sum -c hpc-client-gui-1.2.6-x86_64.AppImage.sha256
 
 ## See also
 
-[[Building from Source|Building-from-Source]] ·
-[[Testing and CI|Testing-and-CI]] ·
-[[Release History|Release-History]]
+[[Building from Source|Building-from-Source]] · [[Testing and CI|Testing-and-CI]] · [[Release History|Release-History]]

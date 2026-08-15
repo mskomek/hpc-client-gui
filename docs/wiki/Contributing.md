@@ -7,6 +7,10 @@ Issues and pull requests go through
 impact, use the private reporting channel instead of a public issue — see
 [[Security Model|Security-Model]].
 
+> The authoritative contribution guide is [`CONTRIBUTING.md`](https://github.com/mskomek/hpc-client-gui/blob/main/CONTRIBUTING.md)
+> in the repository. This page summarises it; where the two differ, that
+> file governs.
+
 ## Before you start
 
 - Read [[Architecture|Architecture]]. Most review feedback is about code
@@ -54,6 +58,4 @@ on behalf of an employer, confirm this is acceptable to them first. See
 
 ## See also
 
-[[Testing and CI|Testing-and-CI]] ·
-[[Building from Source|Building-from-Source]] ·
-[[Support and Donations|Support-and-Donations]]
+[[Testing and CI|Testing-and-CI]] · [[Building from Source|Building-from-Source]] · [[Support and Donations|Support-and-Donations]]

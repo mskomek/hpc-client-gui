@@ -91,7 +91,7 @@ hpc-client-gui --profile mycluster files upload ./inputs /scratch/$USER/inputs -
 ```
 
 `--if-exists` takes `overwrite`, `skip`, `rename`, or `resume`. See
-[[CLI Command Reference|CLI-Command-Reference]].
+[[CLI Guide|CLI-Guide]].
 
 ## Measuring throughput
 
@@ -111,6 +111,4 @@ overnight transfer without permanently changing what happens afterwards.
 
 ## See also
 
-[[Remote File Manager|Remote-File-Manager]] ·
-[[Settings Reference|Settings-Reference]] ·
-[[Troubleshooting|Troubleshooting]]
+[[Remote File Manager|Remote-File-Manager]] · [[Settings Reference|Settings-Reference]] · [[Troubleshooting|Troubleshooting]]

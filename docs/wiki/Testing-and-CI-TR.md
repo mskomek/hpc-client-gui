@@ -60,6 +60,4 @@ PYTHONPATH=src QT_QPA_PLATFORM=offscreen python -m pytest tests/ -q
 
 ## Ayrıca bkz.
 
-[[Katkıda Bulunma|Contributing-TR]] ·
-[[Mimari|Architecture-TR]] ·
-[[Kaynaktan Derleme|Building-from-Source-TR]]
+[[Katkıda Bulunma|Contributing-TR]] · [[Mimari|Architecture-TR]] · [[Kaynaktan Derleme|Building-from-Source-TR]]

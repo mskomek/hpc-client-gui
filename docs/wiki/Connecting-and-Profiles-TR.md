@@ -90,10 +90,8 @@ hpc-client-gui profile test mycluster
 
 `profile create` ve `profile update` yalnızca gizli olmayan alanları kabul
 eder; böylece hiçbir parola komut satırında görünmez. `profile delete`, `--yes`
-gerektirir. Bkz. [[CLI Komut Referansı|CLI-Command-Reference-TR]].
+gerektirir. Bkz. [[CLI Kılavuzu|CLI-Guide-TR]].
 
 ## Ayrıca bkz.
 
-[[Hızlı Başlangıç|Quick-Start-TR]] ·
-[[Ayarlar Referansı|Settings-Reference-TR]] ·
-[[Sorun Giderme|Troubleshooting-TR]]
+[[Hızlı Başlangıç|Quick-Start-TR]] · [[Ayarlar Referansı|Settings-Reference-TR]] · [[Sorun Giderme|Troubleshooting-TR]]

@@ -66,10 +66,10 @@ itself, then update the entry once you know the change is legitimate.
 
 **"Remote CLI access is disabled."** The external-access gate is off. Enable
 "Allow external CLI access to remote commands" in Settings. See
-[[CLI Overview|CLI-Overview]].
+[[CLI Guide|CLI-Guide]].
 
 **Exit code 2 on a delete, submit, or cancel.** The command requires explicit
-confirmation. Add `--yes`. See [[CLI Exit Codes|CLI-Exit-Codes]].
+confirmation. Add `--yes`. See [[CLI Guide|CLI-Guide]].
 
 ## Transfers
 

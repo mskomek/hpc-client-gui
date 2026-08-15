@@ -63,6 +63,4 @@ modify remote HPC infrastructure.
 
 ## See also
 
-[[Support and Donations|Support-and-Donations]] ·
-[[Contributing|Contributing]] ·
-[[Security Model|Security-Model]]
+[[Support and Donations|Support-and-Donations]] · [[Contributing|Contributing]] · [[Security Model|Security-Model]]

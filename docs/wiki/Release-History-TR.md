@@ -30,5 +30,4 @@ gösterir; neyin değiştiğini görmek için GitHub'a gitmeniz gerekmez.
 
 ## Ayrıca bkz.
 
-[[Sürüm Süreci|Release-Process-TR]] ·
-[[Yükseltme ve Kaldırma|Upgrading-and-Uninstalling-TR]]
+[[Sürüm Süreci|Release-Process-TR]] · [[Yükseltme ve Kaldırma|Upgrading-and-Uninstalling-TR]]

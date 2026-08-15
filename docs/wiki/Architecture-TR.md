@@ -61,6 +61,4 @@ gözlemlenebilir olaylar olarak yüzeye çıkar.
 
 ## Ayrıca bkz.
 
-[[Kaynaktan Derleme|Building-from-Source-TR]] ·
-[[Test ve CI|Testing-and-CI-TR]] ·
-[[Katkıda Bulunma|Contributing-TR]]
+[[Kaynaktan Derleme|Building-from-Source-TR]] · [[Test ve CI|Testing-and-CI-TR]] · [[Katkıda Bulunma|Contributing-TR]]

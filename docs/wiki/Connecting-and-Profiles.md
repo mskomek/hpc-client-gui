@@ -90,10 +90,8 @@ hpc-client-gui profile test mycluster
 
 `profile create` and `profile update` accept non-sensitive fields only, so no
 password ever appears on a command line. `profile delete` requires `--yes`.
-See [[CLI Command Reference|CLI-Command-Reference]].
+See [[CLI Guide|CLI-Guide]].
 
 ## See also
 
-[[Quick Start|Quick-Start]] ·
-[[Settings Reference|Settings-Reference]] ·
-[[Troubleshooting|Troubleshooting]]
+[[Quick Start|Quick-Start]] · [[Settings Reference|Settings-Reference]] · [[Troubleshooting|Troubleshooting]]

@@ -46,7 +46,7 @@ python -m hpc_gui --help
 ```
 
 `hpc-client-gui` is the program name shown in help output. See
-[[CLI Overview|CLI-Overview]].
+[[CLI Guide|CLI-Guide]].
 
 ## Running the desktop application headlessly
 
@@ -58,6 +58,4 @@ QT_QPA_PLATFORM=offscreen python -m hpc_gui --help
 
 ## Next steps
 
-[[Building from Source|Building-from-Source]] ·
-[[Architecture|Architecture]] ·
-[[Contributing|Contributing]]
+[[Building from Source|Building-from-Source]] · [[Architecture|Architecture]] · [[Contributing|Contributing]]

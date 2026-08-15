@@ -24,7 +24,7 @@ suitable for attaching to a bug report. See
 
 **Exit code** — the numeric status a command-line invocation ends with.
 Contractual; branch on it rather than on message text. See
-[[CLI Exit Codes|CLI-Exit-Codes]].
+[[CLI Guide|CLI-Guide]].
 
 **Host key** — the cryptographic identity a remote host presents. Trusting one
 saves it to `~/.truba_slurm_gui/known_hosts`. A *changed* host key is always
@@ -89,5 +89,4 @@ local screen. Needed only for graphical programs, never for batch jobs.
 
 ## See also
 
-[[FAQ|FAQ]] · [[Slurm Help Library|Slurm-Help-Library]] ·
-[[Architecture|Architecture]]
+[[FAQ|FAQ]] · [[Slurm Help Library|Slurm-Help-Library]] · [[Architecture|Architecture]]

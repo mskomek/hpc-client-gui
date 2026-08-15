@@ -52,10 +52,8 @@ ortamlarda uygulamanın bağlanabilmesi için BT biriminizin onayı gerekebilir.
 ## Komut satırı arayüzü
 
 Taşınabilir paket, kaynaktan kurulumla aynı komut satırı arayüzünü sunar. Bkz.
-[[CLI Genel Bakış|CLI-Overview-TR]].
+[[CLI Kılavuzu|CLI-Guide-TR]].
 
 ## Sonraki adımlar
 
-[[Hızlı Başlangıç|Quick-Start-TR]] ·
-[[Yükseltme ve kaldırma|Upgrading-and-Uninstalling-TR]] ·
-[[Sorun Giderme|Troubleshooting-TR]]
+[[Hızlı Başlangıç|Quick-Start-TR]] · [[Yükseltme ve kaldırma|Upgrading-and-Uninstalling-TR]] · [[Sorun Giderme|Troubleshooting-TR]]

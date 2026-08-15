@@ -24,7 +24,7 @@ bildirimine eklenmeye uygun maskelenmiş ZIP. Bkz.
 
 **Çıkış kodu** — bir komut satırı çağrısının bittiği sayısal durum.
 Sözleşmedir; ileti metni yerine buna dallanın. Bkz.
-[[CLI Çıkış Kodları|CLI-Exit-Codes-TR]].
+[[CLI Kılavuzu|CLI-Guide-TR]].
 
 **Ana bilgisayar anahtarı** — uzak ana bilgisayarın sunduğu kriptografik
 kimlik. Güvenilen anahtar `~/.truba_slurm_gui/known_hosts` dosyasına kaydedilir.
@@ -92,5 +92,4 @@ Yalnızca grafiksel programlar için gerekir, toplu işler için asla.
 
 ## Ayrıca bkz.
 
-[[SSS|FAQ-TR]] · [[Slurm Yardım Kütüphanesi|Slurm-Help-Library-TR]] ·
-[[Mimari|Architecture-TR]]
+[[SSS|FAQ-TR]] · [[Slurm Yardım Kütüphanesi|Slurm-Help-Library-TR]] · [[Mimari|Architecture-TR]]

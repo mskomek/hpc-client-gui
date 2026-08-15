@@ -76,6 +76,4 @@ bkz. [[Güvenlik Modeli|Security-Model-TR]].
 
 ## Ayrıca bkz.
 
-[[Günlükler ve Tanılama|Logs-and-Diagnostics-TR]] ·
-[[Sorun Giderme|Troubleshooting-TR]] ·
-[[Destek ve Bağış|Support-and-Donations-TR]]
+[[Günlükler ve Tanılama|Logs-and-Diagnostics-TR]] · [[Sorun Giderme|Troubleshooting-TR]] · [[Destek ve Bağış|Support-and-Donations-TR]]

@@ -23,57 +23,30 @@ Product behavior is canonical in `src/hpc_gui/docs/` (`HELP_en.md`,
 - [[Quick Start|Quick-Start]] — install, connect, and submit a first job.
 - [[Compatibility and Support Matrix|Compatibility-and-Support-Matrix]] — what
   is supported on which platform.
+- [[Cluster Requirements|Cluster-Requirements]] — will it work on my
+  cluster?
 - [[FAQ|FAQ]] — short answers, grouped by symptom.
 
 ## Install
 
-[[Windows|Installation-Windows]] ·
-[[Linux|Installation-Linux]] ·
-[[From source|Installation-From-Source]] ·
-[[Upgrading and uninstalling|Upgrading-and-Uninstalling]]
+[[Windows|Installation-Windows]] · [[Linux|Installation-Linux]] · [[From source|Installation-From-Source]] · [[Upgrading and uninstalling|Upgrading-and-Uninstalling]]
 
 ## Use the application
 
-[[Connecting and Profiles|Connecting-and-Profiles]] ·
-[[Remote File Manager|Remote-File-Manager]] ·
-[[File Transfers|File-Transfers]] ·
-[[Slurm Jobs|Slurm-Jobs]] ·
-[[Job Outputs|Job-Outputs]] ·
-[[Script Editor|Script-Editor]] ·
-[[Terminal and Remote Commands|Terminal-and-Remote-Commands]] ·
-[[X11 Forwarding|X11-Forwarding]] ·
-[[Settings Reference|Settings-Reference]] ·
-[[Interface Language and i18n|Interface-Language-and-i18n]]
+[[Connecting and Profiles|Connecting-and-Profiles]] · [[Remote File Manager|Remote-File-Manager]] · [[File Transfers|File-Transfers]] · [[Slurm Jobs|Slurm-Jobs]] · [[Job Outputs|Job-Outputs]] · [[Script Editor|Script-Editor]] · [[Terminal and Remote Commands|Terminal-and-Remote-Commands]] · [[X11 Forwarding|X11-Forwarding]] · [[Settings Reference|Settings-Reference]] · [[Interface Language and i18n|Interface-Language-and-i18n]]
 
 ## Automate
 
-[[CLI Overview|CLI-Overview]] ·
-[[CLI Command Reference|CLI-Command-Reference]] ·
-[[CLI Exit Codes|CLI-Exit-Codes]] ·
-[[CLI Output Contract|CLI-Output-Contract]] ·
-[[Scripting Examples|Scripting-Examples]]
+[[CLI Guide|CLI-Guide]] · [[Scripting Examples|Scripting-Examples]]
 
 ## Operate and troubleshoot
 
-[[Logs and Diagnostics|Logs-and-Diagnostics]] ·
-[[Crash Reports and Send Logs|Crash-Reports-and-Send-Logs]] ·
-[[Troubleshooting|Troubleshooting]] ·
-[[Security Model|Security-Model]] ·
-[[Data and Privacy|Data-and-Privacy]]
+[[Logs and Diagnostics|Logs-and-Diagnostics]] · [[Crash Reports and Send Logs|Crash-Reports-and-Send-Logs]] · [[Troubleshooting|Troubleshooting]] · [[Security Model|Security-Model]] · [[Data and Privacy|Data-and-Privacy]]
 
 ## Slurm
 
-[[Slurm Help Library|Slurm-Help-Library]] ·
-[[Job Script Templates|Job-Script-Templates]]
+[[Slurm Help Library|Slurm-Help-Library]] · [[Job Script Templates|Job-Script-Templates]]
 
 ## Project
 
-[[Architecture|Architecture]] ·
-[[Building from Source|Building-from-Source]] ·
-[[Release Process|Release-Process]] ·
-[[Testing and CI|Testing-and-CI]] ·
-[[Contributing|Contributing]] ·
-[[Licensing and Commercial Use|Licensing-and-Commercial-Use]] ·
-[[Support and Donations|Support-and-Donations]] ·
-[[Release History|Release-History]] ·
-[[Glossary|Glossary]]
+[[Architecture|Architecture]] · [[Building from Source|Building-from-Source]] · [[Release Process|Release-Process]] · [[Testing and CI|Testing-and-CI]] · [[Contributing|Contributing]] · [[Licensing and Commercial Use|Licensing-and-Commercial-Use]] · [[Support and Donations|Support-and-Donations]] · [[Release History|Release-History]] · [[Glossary|Glossary]]

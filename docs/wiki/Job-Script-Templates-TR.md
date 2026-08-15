@@ -83,6 +83,4 @@ hpc-client-gui --profile mycluster jobs submit /scratch/$USER/job.sh --yes
 
 ## Ayrıca bkz.
 
-[[Slurm Yardım Kütüphanesi|Slurm-Help-Library-TR]] ·
-[[Betik Örnekleri|Scripting-Examples-TR]] ·
-[[İş Çıktıları|Job-Outputs-TR]]
+[[Slurm Yardım Kütüphanesi|Slurm-Help-Library-TR]] · [[Betik Örnekleri|Scripting-Examples-TR]] · [[İş Çıktıları|Job-Outputs-TR]]

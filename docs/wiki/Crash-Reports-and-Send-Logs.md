@@ -73,6 +73,4 @@ see [[Security Model|Security-Model]].
 
 ## See also
 
-[[Logs and Diagnostics|Logs-and-Diagnostics]] ·
-[[Troubleshooting|Troubleshooting]] ·
-[[Support and Donations|Support-and-Donations]]
+[[Logs and Diagnostics|Logs-and-Diagnostics]] · [[Troubleshooting|Troubleshooting]] · [[Support and Donations|Support-and-Donations]]

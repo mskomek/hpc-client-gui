@@ -63,13 +63,13 @@ saklanır. Otomasyon için anahtarları tercih edin. Bkz.
 
 "Allow external CLI access to remote commands" öntanımlı olarak kapalıdır.
 Kümeye karşı betik yazmak istiyorsanız Ayarlar'dan etkinleştirin. Bkz.
-[[CLI Genel Bakış|CLI-Overview-TR]].
+[[CLI Kılavuzu|CLI-Guide-TR]].
 
 ## Silme veya gönderme komutum neden 2 koduyla çıktı?
 
 `--yes` gerekiyordu. Veriyi yok eden veya küme durumunu değiştiren komutlar
 açık onay olmadan çalışmayı reddeder. Bkz.
-[[CLI Çıkış Kodları|CLI-Exit-Codes-TR]].
+[[CLI Kılavuzu|CLI-Guide-TR]].
 
 ## Kesilen bir aktarımı sürdürebilir miyim?
 

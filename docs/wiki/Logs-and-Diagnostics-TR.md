@@ -59,7 +59,7 @@ gerçek işe başlamadan bağlanabilirliği denetleyebilir:
 hpc-client-gui --profile mycluster doctor connection || exit $?
 ```
 
-Bkz. [[CLI Çıkış Kodları|CLI-Exit-Codes-TR]].
+Bkz. [[CLI Kılavuzu|CLI-Guide-TR]].
 
 ## Ayrıntıyı artırma
 
@@ -74,6 +74,4 @@ bir tanılama paketi toplar. Bkz.
 
 ## Ayrıca bkz.
 
-[[Sorun Giderme|Troubleshooting-TR]] ·
-[[Veri ve Gizlilik|Data-and-Privacy-TR]] ·
-[[Güvenlik Modeli|Security-Model-TR]]
+[[Sorun Giderme|Troubleshooting-TR]] · [[Veri ve Gizlilik|Data-and-Privacy-TR]] · [[Güvenlik Modeli|Security-Model-TR]]

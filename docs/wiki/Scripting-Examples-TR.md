@@ -9,10 +9,10 @@ Etkileşimsiz kullanım için tarifler. Hepsinde iki kural geçerlidir:
    kimlik doğrulamayı tercih edin; parola kaçınılmazsa ekrana yansıtılmayan bir
    kaynaktan `--password-stdin` ile verin.
 2. **İleti metnine değil çıkış koduna dallanın.** Bkz.
-   [[CLI Çıkış Kodları|CLI-Exit-Codes-TR]].
+   [[CLI Kılavuzu|CLI-Guide-TR]].
 
 Bunların çalışması için Ayarlar'da "Allow external CLI access to remote
-commands" etkin olmalıdır — bkz. [[CLI Genel Bakış|CLI-Overview-TR]].
+commands" etkin olmalıdır — bkz. [[CLI Kılavuzu|CLI-Guide-TR]].
 
 ## Ortamın sağlıklı olduğunu denetleyin
 
@@ -110,6 +110,4 @@ reddeder; gözetimsiz otomasyon için doğru öntanım budur.
 
 ## Ayrıca bkz.
 
-[[CLI Komut Referansı|CLI-Command-Reference-TR]] ·
-[[CLI Çıktı Sözleşmesi|CLI-Output-Contract-TR]] ·
-[[İş Betiği Şablonları|Job-Script-Templates-TR]]
+[[CLI Kılavuzu|CLI-Guide-TR]] · [[İş Betiği Şablonları|Job-Script-Templates-TR]]

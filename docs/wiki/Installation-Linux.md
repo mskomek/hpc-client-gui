@@ -67,6 +67,4 @@ compatibility with existing installations.
 
 ## Next steps
 
-[[Quick Start|Quick-Start]] ·
-[[Installation from source|Installation-From-Source]] ·
-[[Upgrading and uninstalling|Upgrading-and-Uninstalling]]
+[[Quick Start|Quick-Start]] · [[Installation from source|Installation-From-Source]] · [[Upgrading and uninstalling|Upgrading-and-Uninstalling]]

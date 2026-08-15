@@ -72,7 +72,7 @@ See [[File Transfers|File-Transfers]].
 
 Enable external access deliberately, and only on machines where you trust the
 local processes. See [[Security Model|Security-Model]] and
-[[CLI Overview|CLI-Overview]].
+[[CLI Guide|CLI-Guide]].
 
 ## Local file associations
 
@@ -88,6 +88,4 @@ and persists to `~/.truba_slurm_gui/language.json`. See
 
 ## See also
 
-[[Connecting and Profiles|Connecting-and-Profiles]] ·
-[[File Transfers|File-Transfers]] ·
-[[Security Model|Security-Model]]
+[[Connecting and Profiles|Connecting-and-Profiles]] · [[File Transfers|File-Transfers]] · [[Security Model|Security-Model]]

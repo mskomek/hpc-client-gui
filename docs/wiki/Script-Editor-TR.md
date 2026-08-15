@@ -92,6 +92,4 @@ yüklemeden sonra SHA-256 değerini denetler.
 
 ## Ayrıca bkz.
 
-[[Slurm İşleri|Slurm-Jobs-TR]] ·
-[[Uzak Dosya Yöneticisi|Remote-File-Manager-TR]] ·
-[[İş Betiği Şablonları|Job-Script-Templates-TR]]
+[[Slurm İşleri|Slurm-Jobs-TR]] · [[Uzak Dosya Yöneticisi|Remote-File-Manager-TR]] · [[İş Betiği Şablonları|Job-Script-Templates-TR]]

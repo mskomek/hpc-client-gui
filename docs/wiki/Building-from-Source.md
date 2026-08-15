@@ -71,6 +71,4 @@ sha256sum -c hpc-client-gui-1.2.6-x86_64.AppImage.sha256
 
 ## See also
 
-[[Release Process|Release-Process]] ·
-[[Testing and CI|Testing-and-CI]] ·
-[[Architecture|Architecture]]
+[[Release Process|Release-Process]] · [[Testing and CI|Testing-and-CI]] · [[Architecture|Architecture]]

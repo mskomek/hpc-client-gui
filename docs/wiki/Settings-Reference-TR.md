@@ -73,7 +73,7 @@ Bkz. [[Dosya Aktarımları|File-Transfers-TR]].
 
 Dış erişimi bilinçli olarak ve yalnızca yerel süreçlere güvendiğiniz
 makinelerde açın. Bkz. [[Güvenlik Modeli|Security-Model-TR]] ve
-[[CLI Genel Bakış|CLI-Overview-TR]].
+[[CLI Kılavuzu|CLI-Guide-TR]].
 
 ## Local file associations
 
@@ -89,6 +89,4 @@ Arayüz dili — Türkçe veya İngilizce — uygulama içinde seçilir ve
 
 ## Ayrıca bkz.
 
-[[Bağlantı ve Profiller|Connecting-and-Profiles-TR]] ·
-[[Dosya Aktarımları|File-Transfers-TR]] ·
-[[Güvenlik Modeli|Security-Model-TR]]
+[[Bağlantı ve Profiller|Connecting-and-Profiles-TR]] · [[Dosya Aktarımları|File-Transfers-TR]] · [[Güvenlik Modeli|Security-Model-TR]]

@@ -50,10 +50,8 @@ department before the application can connect.
 ## Command-line interface
 
 The portable package exposes the same command-line interface as the source
-install. See [[CLI Overview|CLI-Overview]].
+install. See [[CLI Guide|CLI-Guide]].
 
 ## Next steps
 
-[[Quick Start|Quick-Start]] ·
-[[Upgrading and uninstalling|Upgrading-and-Uninstalling]] ·
-[[Troubleshooting|Troubleshooting]]
+[[Quick Start|Quick-Start]] · [[Upgrading and uninstalling|Upgrading-and-Uninstalling]] · [[Troubleshooting|Troubleshooting]]

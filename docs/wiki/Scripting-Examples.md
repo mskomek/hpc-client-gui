@@ -9,10 +9,10 @@ Recipes for non-interactive use. Two rules run through all of them:
    authentication; when a password is unavoidable, feed it through
    `--password-stdin` from a source that is not echoed.
 2. **Branch on the exit code**, not on message text. See
-   [[CLI Exit Codes|CLI-Exit-Codes]].
+   [[CLI Guide|CLI-Guide]].
 
 Before any of this works, "Allow external CLI access to remote commands" must
-be enabled in Settings — see [[CLI Overview|CLI-Overview]].
+be enabled in Settings — see [[CLI Guide|CLI-Guide]].
 
 ## Check that the environment is sane
 
@@ -110,6 +110,4 @@ the right default for unattended automation.
 
 ## See also
 
-[[CLI Command Reference|CLI-Command-Reference]] ·
-[[CLI Output Contract|CLI-Output-Contract]] ·
-[[Job Script Templates|Job-Script-Templates]]
+[[CLI Guide|CLI-Guide]] · [[Job Script Templates|Job-Script-Templates]]

@@ -47,7 +47,7 @@ python -m hpc_gui --help
 ```
 
 Yardım çıktısında görünen program adı `hpc-client-gui` şeklindedir. Bkz.
-[[CLI Genel Bakış|CLI-Overview-TR]].
+[[CLI Kılavuzu|CLI-Guide-TR]].
 
 ## Masaüstü uygulamasını başsız çalıştırma
 
@@ -59,6 +59,4 @@ QT_QPA_PLATFORM=offscreen python -m hpc_gui --help
 
 ## Sonraki adımlar
 
-[[Kaynaktan Derleme|Building-from-Source-TR]] ·
-[[Mimari|Architecture-TR]] ·
-[[Katkıda Bulunma|Contributing-TR]]
+[[Kaynaktan Derleme|Building-from-Source-TR]] · [[Mimari|Architecture-TR]] · [[Katkıda Bulunma|Contributing-TR]]

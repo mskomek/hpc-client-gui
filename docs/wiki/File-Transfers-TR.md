@@ -93,7 +93,7 @@ hpc-client-gui --profile mycluster files upload ./inputs /scratch/$USER/inputs -
 ```
 
 `--if-exists`; `overwrite`, `skip`, `rename` veya `resume` alır. Bkz.
-[[CLI Komut Referansı|CLI-Command-Reference-TR]].
+[[CLI Kılavuzu|CLI-Guide-TR]].
 
 ## Hızı ölçme
 
@@ -114,6 +114,4 @@ değiştirmeden kullanışlıdır.
 
 ## Ayrıca bkz.
 
-[[Uzak Dosya Yöneticisi|Remote-File-Manager-TR]] ·
-[[Ayarlar Referansı|Settings-Reference-TR]] ·
-[[Sorun Giderme|Troubleshooting-TR]]
+[[Uzak Dosya Yöneticisi|Remote-File-Manager-TR]] · [[Ayarlar Referansı|Settings-Reference-TR]] · [[Sorun Giderme|Troubleshooting-TR]]
