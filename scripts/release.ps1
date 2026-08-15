@@ -172,7 +172,7 @@ if ($LASTEXITCODE -ne 0) {
 $releaseChangelogPath = Join-Path $versionDir "CHANGELOG.md"
 Set-Content -Path $releaseChangelogPath -Value $releaseChangelogContent -Encoding utf8
 
-$releaseZipName = "hpc-client-gui_windows_onedir.zip"
+$releaseZipName = "hpc-client-gui_windows_x64_onedir.zip"
 $releaseZipPath = Join-Path $versionDir $releaseZipName
 if (Test-Path $releaseZipPath) { Remove-Item $releaseZipPath -Force }
 

@@ -89,7 +89,7 @@ if (-not (Test-Path $exePath)) {
 $changelogOut = Join-Path $versionDir "CHANGELOG.md"
 Set-Content -Path $changelogOut -Value $releaseChangelogContent -Encoding utf8
 
-$zipName = "hpc-client-gui_windows_onedir.zip"
+$zipName = "hpc-client-gui_windows_x64_onedir.zip"
 $zipPath = Join-Path $versionDir $zipName
 if (Test-Path $zipPath) { Remove-Item $zipPath -Force }
 Compress-Archive -Path (Join-Path $versionDir "*") -DestinationPath $zipPath -Force

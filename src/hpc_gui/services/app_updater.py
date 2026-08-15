@@ -20,7 +20,7 @@ GITHUB_LATEST_RELEASE_API = (
     f"https://api.github.com/repos/{GITHUB_REPOSITORY}/releases/latest"
 )
 RELEASE_EXE_NAME = "hpc-client-gui.exe"
-RELEASE_ZIP_NAME = "hpc-client-gui_windows_onedir.zip"
+RELEASE_ZIP_NAME = "hpc-client-gui_windows_x64_onedir.zip"
 RELEASE_SHA_NAME = f"{RELEASE_ZIP_NAME}.sha256"
 ProgressCallback = Callable[[int, str], None]
 

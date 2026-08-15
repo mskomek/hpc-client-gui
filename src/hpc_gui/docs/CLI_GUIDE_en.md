@@ -73,7 +73,7 @@ hpc-client-gui --format json commands
 Verify help with the packaged EXE on Windows:
 
 ```cmd
-set "EXE=D:\Projeler\hpc-client-gui_windows_onedir\hpc-client-gui.exe"
+set "EXE=D:\Projeler\hpc-client-gui_windows_x64_onedir\hpc-client-gui.exe"
 "%EXE%" --help
 "%EXE%" --format json commands
 "%EXE%" files upload --help
