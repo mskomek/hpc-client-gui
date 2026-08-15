@@ -1,5 +1,5 @@
-from truba_gui.config.models import SSHConfig
-from truba_gui.config.storage import coerce_profile_ssh_timeout, coerce_profile_transfer_parallelism
+from hpc_gui.config.models import SSHConfig
+from hpc_gui.config.storage import coerce_profile_ssh_timeout, coerce_profile_transfer_parallelism
 
 
 def test_profile_transfer_settings_are_bounded() -> None:

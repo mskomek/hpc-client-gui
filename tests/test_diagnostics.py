@@ -5,7 +5,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
-from truba_gui.core import diagnostics
+from hpc_gui.core import diagnostics
 
 
 class DiagnosticBundleTests(unittest.TestCase):
@@ -28,7 +28,7 @@ class DiagnosticBundleTests(unittest.TestCase):
             with patch.object(Path, "home", return_value=home), patch(
                 "getpass.getuser", return_value="mkomek"
             ), patch(
-                "truba_gui.config.storage.load_profiles",
+                "hpc_gui.config.storage.load_profiles",
                 return_value=[{"username": "mkomek", "host": "arf.truba.gov.tr"}],
             ):
                 bundle_path = diagnostics.create_diagnostic_bundle(out_dir)

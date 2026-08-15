@@ -1,0 +1,21 @@
+#!/bin/sh
+# AppImage AppRun launcher for HPC Client GUI.
+# Bundled PyInstaller onedir lives under usr/bin; the entry binary is
+# hpc-client-gui.  This script is a thin launcher so the desktop entry and
+# AppDir layout stay stable across rebuilds.
+set -eu
+
+APP_DIR="$(dirname "$(readlink -f "$0")")"
+BIN_DIR="$APP_DIR/usr/bin"
+
+if [ -x "$BIN_DIR/hpc-client-gui" ]; then
+    exec "$BIN_DIR/hpc-client-gui" "$@"
+fi
+
+# Fallback for layouts where the onedir binary sits directly in AppDir.
+if [ -x "$APP_DIR/hpc-client-gui" ]; then
+    exec "$APP_DIR/hpc-client-gui" "$@"
+fi
+
+echo "HPC Client GUI: bundled binary not found under AppDir" >&2
+exit 1

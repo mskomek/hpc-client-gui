@@ -1,13 +1,13 @@
 import unittest
 from unittest.mock import patch
 
-from truba_gui.core.log_redaction import redact_text
+from hpc_gui.core.log_redaction import redact_text
 
 
 class LogRedactionTests(unittest.TestCase):
     def test_redacts_local_and_remote_usernames_and_hosts(self) -> None:
         with patch("getpass.getuser", return_value="mkomek"), patch(
-            "truba_gui.config.storage.load_profiles",
+            "hpc_gui.config.storage.load_profiles",
             return_value=[{"username": "mkomek", "host": "arf.truba.gov.tr"}],
         ):
             text = (
@@ -26,14 +26,14 @@ class LogRedactionTests(unittest.TestCase):
 
     def test_empty_text_and_no_secrets_are_noops(self) -> None:
         with patch("getpass.getuser", side_effect=Exception("no user")), patch(
-            "truba_gui.config.storage.load_profiles", return_value=[]
+            "hpc_gui.config.storage.load_profiles", return_value=[]
         ):
             self.assertEqual(redact_text(""), "")
             self.assertEqual(redact_text("hello world"), "hello world")
 
     def test_does_not_partially_redact_overlapping_usernames(self) -> None:
         with patch("getpass.getuser", return_value="user"), patch(
-            "truba_gui.config.storage.load_profiles",
+            "hpc_gui.config.storage.load_profiles",
             return_value=[{"username": "user2", "host": ""}],
         ):
             out = redact_text("path/user2/file and path/user/file")

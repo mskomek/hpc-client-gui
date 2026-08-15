@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from truba_gui.services import transfer_speed_test
-from truba_gui.services.transfer_speed_test import run_transfer_speed_test
+from hpc_gui.services import transfer_speed_test
+from hpc_gui.services.transfer_speed_test import run_transfer_speed_test
 
 
 class _Files:

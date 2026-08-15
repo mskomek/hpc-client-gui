@@ -13,7 +13,7 @@ $env:PYTHONPATH = Join-Path $Root "src"
 Set-Location $Root
 $venvPython = Join-Path $Root ".venv/Scripts/python.exe"
 if (Test-Path $venvPython) {
-    & $venvPython -m truba_gui
+    & $venvPython -m hpc_gui
 } else {
-    python -m truba_gui
+    python -m hpc_gui
 }

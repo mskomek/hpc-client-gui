@@ -1,4 +1,4 @@
-from truba_gui.ui.widgets.jobs_outputs_widget import (
+from hpc_gui.ui.widgets.jobs_outputs_widget import (
     _OUTPUT_MAX_LINES,
     _OUTPUT_TRUNCATION_MARKER,
     _ansi_to_html,

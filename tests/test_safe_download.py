@@ -1,7 +1,7 @@
 from pathlib import Path
 from unittest.mock import patch
 
-from truba_gui.services.safe_download import download_atomic
+from hpc_gui.services.safe_download import download_atomic
 
 
 class Response:

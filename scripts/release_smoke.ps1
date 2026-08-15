@@ -96,8 +96,8 @@ function Test-CommandCoverageInGuides {
     $data = $json | ConvertFrom-Json
     $commandPaths = @($data.commands | Select-Object -Skip 1 | ForEach-Object { $_.path })
 
-    $guideEn = Get-Content -Raw -LiteralPath (Join-Path $RepoRoot "src/truba_gui/docs/CLI_GUIDE_en.md")
-    $guideTr = Get-Content -Raw -LiteralPath (Join-Path $RepoRoot "src/truba_gui/docs/CLI_GUIDE_tr.md")
+    $guideEn = Get-Content -Raw -LiteralPath (Join-Path $RepoRoot "src/hpc_gui/docs/CLI_GUIDE_en.md")
+    $guideTr = Get-Content -Raw -LiteralPath (Join-Path $RepoRoot "src/hpc_gui/docs/CLI_GUIDE_tr.md")
 
     $missingEn = @($commandPaths | Where-Object { $guideEn -notlike "*$_*" })
     $missingTr = @($commandPaths | Where-Object { $guideTr -notlike "*$_*" })
@@ -143,10 +143,10 @@ if ($LASTEXITCODE -ne 0) {
     throw "FTP transfer smoke test failed."
 }
 
-Write-Host "Release smoke: virtual TRUBA EXE SSH/SFTP/Slurm and FTP test"
+Write-Host "Release smoke: virtual HPC GUI EXE SSH/SFTP/Slurm and FTP test"
 python scripts/virtual_truba_exe_test.py --exe $resolvedExe --ssh-port 0 --ftp-port 0
 if ($LASTEXITCODE -ne 0) {
-    throw "Virtual TRUBA EXE integration test failed."
+    throw "Virtual HPC GUI EXE integration test failed."
 }
 
 Write-Host "Release smoke: packaged EXE startup"

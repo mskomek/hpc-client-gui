@@ -8,8 +8,8 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication
 
-from truba_gui.services.files_base import RemoteEntry
-from truba_gui.ui.widgets.remote_dir_panel import RemoteDirPanel
+from hpc_gui.services.files_base import RemoteEntry
+from hpc_gui.ui.widgets.remote_dir_panel import RemoteDirPanel
 
 
 class _Files:

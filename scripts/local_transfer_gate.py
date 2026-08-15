@@ -20,7 +20,7 @@ import tempfile
 import time
 from pathlib import Path
 
-from truba_gui.services.sftp_smoke import run_sftp_smoke
+from hpc_gui.services.sftp_smoke import run_sftp_smoke
 
 SCHEMA = "sftp-smoke/1"
 

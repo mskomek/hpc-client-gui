@@ -9,7 +9,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QLabel
 
-from truba_gui.ui.widgets.remote_accordion import RemoteAccordion
+from hpc_gui.ui.widgets.remote_accordion import RemoteAccordion
 
 
 class RemoteAccordionTests(unittest.TestCase):

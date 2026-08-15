@@ -61,7 +61,7 @@ if (-not (Test-Path -LiteralPath $builtCliExe -PathType Leaf)) {
     throw "Expected built CLI EXE not found: $builtCliExe"
 }
 
-$changelogSrc = Join-Path $Root "src/truba_gui/docs/CHANGELOG.md"
+$changelogSrc = Join-Path $Root "src/hpc_gui/docs/CHANGELOG.md"
 if (-not (Test-Path $changelogSrc)) {
     throw "Expected changelog source not found: $changelogSrc"
 }
@@ -120,7 +120,7 @@ if (Test-Path (Join-Path $Root "templates")) {
     Copy-Item -Path (Join-Path $Root "templates") -Destination $versionDir -Recurse -Force
 }
 
-$helpSourceDir = Join-Path $Root "src/truba_gui/docs"
+$helpSourceDir = Join-Path $Root "src/hpc_gui/docs"
 $helpDestDir = Join-Path $versionDir "help"
 New-Item -ItemType Directory -Path $helpDestDir -Force | Out-Null
 $requiredHelpFiles = @("HELP_tr.md", "HELP_en.md", "CLI_GUIDE_tr.md", "CLI_GUIDE_en.md")
@@ -168,7 +168,6 @@ if ($LASTEXITCODE -ne 0) {
     throw "Local transfer gate failed."
 }
 
-$releaseExeName = "hpc-client-gui.exe"
 
 $releaseChangelogPath = Join-Path $versionDir "CHANGELOG.md"
 Set-Content -Path $releaseChangelogPath -Value $releaseChangelogContent -Encoding utf8
@@ -186,7 +185,7 @@ $hashHex = Get-Sha256Hex $releaseZipPath
 # v1.1.12 expects the former asset and executable names. Publish one migration
 # package so its updater can install this renamed build; subsequent updates use
 # the canonical HPC Client GUI asset names above.
-$legacyZipName = "truba-client-gui_windows_onedir.zip"
+$legacyZipName = "hpc-client-gui_windows_onedir.zip"
 $legacyZipPath = Join-Path $versionDir $legacyZipName
 $legacyStageDir = Join-Path $releaseBase ".legacy-v$Version"
 if (Test-Path $legacyStageDir) {
@@ -195,16 +194,18 @@ if (Test-Path $legacyStageDir) {
 New-Item -ItemType Directory -Path $legacyStageDir -Force | Out-Null
 Get-ChildItem -Path $versionDir | Where-Object { $_.Name -notlike "*.zip*" } |
     Copy-Item -Destination $legacyStageDir -Recurse -Force
-Copy-Item -LiteralPath $exePath -Destination (Join-Path $legacyStageDir "truba-client-gui.exe") -Force
+Copy-Item -LiteralPath $exePath -Destination (Join-Path $legacyStageDir "hpc-client-gui.exe") -Force
 Compress-Archive -Path (Join-Path $legacyStageDir "*") -DestinationPath $legacyZipPath -Force
 $legacyShaPath = "$legacyZipPath.sha256"
 $legacyHashHex = Get-Sha256Hex $legacyZipPath
 "$legacyHashHex  $legacyZipName" | Set-Content -Path $legacyShaPath -Encoding ascii
 Remove-Item $legacyStageDir -Recurse -Force
 
+# onedir releases are distributed as archives; keep executables inside them.
+Remove-Item -LiteralPath $exePath, $cliExePath -Force
+
 Write-Host "Release artifacts:"
 Write-Host " - $releaseChangelogPath"
-Write-Host " - $(Join-Path $versionDir $releaseExeName)"
 Write-Host " - $releaseZipPath"
 Write-Host " - $releaseShaPath"
 Write-Host " - $legacyZipPath (v1.1.12 migration)"

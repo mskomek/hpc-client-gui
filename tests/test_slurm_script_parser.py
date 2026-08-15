@@ -1,4 +1,4 @@
-from truba_gui.services.slurm_script_parser import parse_output_error
+from hpc_gui.services.slurm_script_parser import parse_output_error
 
 
 def test_parse_output_error_accepts_slurm_equals_and_space_forms() -> None:

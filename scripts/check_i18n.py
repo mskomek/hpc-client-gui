@@ -152,14 +152,14 @@ def flatten_keys(d: dict, prefix: str = "") -> set[str]:
 
 
 def main() -> int:
-    base = Path(__file__).resolve().parents[1] / "src" / "truba_gui" / "i18n"
+    base = Path(__file__).resolve().parents[1] / "src" / "hpc_gui" / "i18n"
     tr = json.loads((base / "tr.json").read_text(encoding="utf-8"))
     en = json.loads((base / "en.json").read_text(encoding="utf-8"))
     k_tr = flatten_keys(tr)
     k_en = flatten_keys(en)
     miss_en = sorted(k_tr - k_en)
     miss_tr = sorted(k_en - k_tr)
-    src_root = Path(__file__).resolve().parents[1] / "src" / "truba_gui"
+    src_root = Path(__file__).resolve().parents[1] / "src" / "hpc_gui"
     hardcoded = find_hardcoded_ui_strings(src_root)
     missing_refs = find_missing_translation_references(src_root, k_tr & k_en)
     if not miss_en and not miss_tr and not hardcoded and not missing_refs:

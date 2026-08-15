@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from truba_gui.config import storage
+from hpc_gui.config import storage
 
 
 def test_live_tracking_warning_interval_defaults_and_allows_disable(monkeypatch, tmp_path) -> None:

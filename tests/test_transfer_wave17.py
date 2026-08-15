@@ -15,7 +15,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from truba_gui.services.transfer_mode import (
+from hpc_gui.services.transfer_mode import (
     ASCII,
     AUTO,
     BINARY,

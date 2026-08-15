@@ -1,8 +1,8 @@
 # UTF-8
 VSVersionInfo(
   ffi=FixedFileInfo(
-    filevers=(1, 2, 4, 0),
-    prodvers=(1, 2, 4, 0),
+    filevers=(1, 2, 6, 0),
+    prodvers=(1, 2, 6, 0),
     mask=0x3f,
     flags=0x0,
     OS=0x40004,
@@ -17,12 +17,12 @@ VSVersionInfo(
         [
           StringStruct('CompanyName', 'Unofficial / Community'),
           StringStruct('FileDescription', 'HPC Client GUI (Slurm/SSH/X11 helper)'),
-          StringStruct('FileVersion', '1.2.4'),
+          StringStruct('FileVersion', '1.2.6'),
           StringStruct('InternalName', 'hpc-client-gui'),
           StringStruct('LegalCopyright', 'Copyright (c) 2026 Mehmed Sinan KÖMEK'),
           StringStruct('OriginalFilename', 'hpc-client-gui.exe'),
           StringStruct('ProductName', 'HPC Client GUI'),
-          StringStruct('ProductVersion', '1.2.4'),
+          StringStruct('ProductVersion', '1.2.6'),
         ]
       )
     ]),

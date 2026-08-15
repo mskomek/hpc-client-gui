@@ -22,16 +22,16 @@ sys.path.insert(0, str(REPO_ROOT / "src"))
 sys.path.insert(0, str(REPO_ROOT / "tests"))
 from support.mock_ssh_server import MockSSHServer  # noqa: E402
 
-from truba_gui.config.storage import (
+from hpc_gui.config.storage import (
     _config_path,
     set_cli_external_access_enabled,
     upsert_profile,
 )  # noqa: E402
-from truba_gui.config.system_profile import TRUBA_SYSTEM_DEFAULTS  # noqa: E402
-from truba_gui.core.secret_store import protect_secret  # noqa: E402
-from truba_gui.services.files_ftp import FTPFilesBackend  # noqa: E402
-from truba_gui.services.files_ssh import SSHFilesBackend  # noqa: E402
-from truba_gui.ssh.client import SSHClientWrapper, SSHConnInfo  # noqa: E402
+from hpc_gui.config.system_profile import HPC_SYSTEM_DEFAULTS  # noqa: E402
+from hpc_gui.core.secret_store import protect_secret  # noqa: E402
+from hpc_gui.services.files_ftp import FTPFilesBackend  # noqa: E402
+from hpc_gui.services.files_ssh import SSHFilesBackend  # noqa: E402
+from hpc_gui.ssh.client import SSHClientWrapper, SSHConnInfo  # noqa: E402
 
 
 def start_ftp(root: Path, port: int) -> tuple[FTPServer, threading.Thread, int]:
@@ -62,7 +62,7 @@ def save_test_profile(port: int) -> None:
         "x11_forwarding": False,
         "cli_allowed": True,
         "password_dpapi": protect_secret("test"),
-        "system": dict(TRUBA_SYSTEM_DEFAULTS),
+        "system": dict(HPC_SYSTEM_DEFAULTS),
     }
     upsert_profile(profile)
     set_cli_external_access_enabled(True)

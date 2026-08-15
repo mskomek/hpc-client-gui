@@ -3,7 +3,7 @@ from __future__ import annotations
 import threading
 import time
 
-from truba_gui.services.transfer_controller import TransferController, TransferItem
+from hpc_gui.services.transfer_controller import TransferController, TransferItem
 
 
 def test_controller_runs_parallel_and_bounds_history() -> None:
@@ -68,3 +68,25 @@ def test_controller_retry_failed_requeues_item() -> None:
     controller.start()
     assert controller.wait(2)
     assert controller.completed == [item]
+
+
+def test_controller_enqueue_adds_work_while_running() -> None:
+    started = threading.Event()
+    release = threading.Event()
+    completed: list[str] = []
+
+    def run(item, progress):
+        started.set()
+        release.wait(2)
+        completed.append(item.src)
+
+    controller = TransferController(
+        [TransferItem("download", "first", "first")],
+        run,
+    )
+    controller.start()
+    assert started.wait(1)
+    assert controller.enqueue([TransferItem("upload", "second", "second")])
+    release.set()
+    assert controller.wait(2)
+    assert completed == ["first", "second"]

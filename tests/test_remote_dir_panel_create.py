@@ -8,7 +8,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from PySide6.QtWidgets import QApplication
 
-from truba_gui.ui.widgets.remote_dir_panel import RemoteDirPanel
+from hpc_gui.ui.widgets.remote_dir_panel import RemoteDirPanel
 
 
 class _Files:
@@ -46,7 +46,7 @@ class RemoteDirPanelCreateTests(unittest.TestCase):
 
     def test_create_folder_in_requested_parent(self) -> None:
         with patch(
-            "truba_gui.ui.widgets.remote_dir_panel.QInputDialog.getText",
+            "hpc_gui.ui.widgets.remote_dir_panel.QInputDialog.getText",
             return_value=("results", True),
         ):
             self.assertTrue(self.panel.create_new_folder("/arf/scratch/user/job"))
@@ -55,7 +55,7 @@ class RemoteDirPanelCreateTests(unittest.TestCase):
 
     def test_create_empty_file_in_current_directory(self) -> None:
         with patch(
-            "truba_gui.ui.widgets.remote_dir_panel.QInputDialog.getText",
+            "hpc_gui.ui.widgets.remote_dir_panel.QInputDialog.getText",
             return_value=("notes.txt", True),
         ):
             self.assertTrue(self.panel.create_new_file())
@@ -68,10 +68,10 @@ class RemoteDirPanelCreateTests(unittest.TestCase):
     def test_rejects_path_separators(self) -> None:
         with (
             patch(
-                "truba_gui.ui.widgets.remote_dir_panel.QInputDialog.getText",
+                "hpc_gui.ui.widgets.remote_dir_panel.QInputDialog.getText",
                 return_value=("../bad", True),
             ),
-            patch("truba_gui.ui.widgets.remote_dir_panel.QMessageBox.warning") as warning,
+            patch("hpc_gui.ui.widgets.remote_dir_panel.QMessageBox.warning") as warning,
         ):
             self.assertFalse(self.panel.create_new_file())
 

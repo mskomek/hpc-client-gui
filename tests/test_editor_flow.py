@@ -10,7 +10,7 @@ from PySide6.QtCore import QEvent, Qt
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QMessageBox
 
-from truba_gui.ui.widgets.editor_widget import EditorWidget
+from hpc_gui.ui.widgets.editor_widget import EditorWidget
 
 
 class _FakeFiles:
@@ -53,7 +53,7 @@ class EditorFlowTests(unittest.TestCase):
         QMessageBox.warning = staticmethod(lambda *a, **k: QMessageBox.StandardButton.Ok)
         QMessageBox.critical = staticmethod(lambda *a, **k: QMessageBox.StandardButton.Ok)
         self._history_patch = patch(
-            "truba_gui.ui.widgets.editor_widget.append_event"
+            "hpc_gui.ui.widgets.editor_widget.append_event"
         )
         self._history_patch.start()
 

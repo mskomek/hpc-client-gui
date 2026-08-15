@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=HPC Client GUI
+Name[tr]=HPC İstemci GUI
+Comment=SSH + Slurm + file transfer client for Slurm-based HPC systems
+Comment[tr]=Slurm tabanlı HPC sistemleri için SSH + Slurm + dosya aktarım istemcisi
+Exec=hpc-client-gui
+Icon=io.github.mskomek.hpc-client-gui
+Terminal=false
+Categories=Network;System;FileTransfer;
+Keywords=SSH;Slurm;SFTP;HPC;remote;file transfer;
+StartupWMClass=hpc-client-gui
