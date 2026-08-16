@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import List, Tuple
+from typing import Iterator, List, Tuple
 
 @dataclass
 class RemoteEntry:
@@ -25,6 +25,15 @@ class FilesBackend(ABC):
     def listdir_entries(self, remote_dir: str) -> List[RemoteEntry]:
         """Preferred: return rich entries."""
         raise NotImplementedError
+
+    def iterdir_entries(self, remote_dir: str) -> Iterator[RemoteEntry]:
+        """Yield entries as they arrive from the server.
+
+        Backends without a streaming protocol fall back to the blocking
+        listing.  Consumers may abandon the iterator (close the generator) to
+        cancel; backends that hold a channel must clean up in ``finally``.
+        """
+        yield from self.listdir_entries(remote_dir)
 
     @abstractmethod
     def read_text(self, remote_path: str) -> str:

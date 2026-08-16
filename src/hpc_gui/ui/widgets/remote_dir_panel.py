@@ -7,6 +7,7 @@ import os
 import re
 import shutil
 import stat as pystat
+import threading
 import weakref
 from time import monotonic
 from dataclasses import dataclass
@@ -22,6 +23,7 @@ from PySide6.QtCore import (
     QMimeData,
     QObject,
     QPoint,
+    QRunnable,
     QThread,
     QThreadPool,
     QTimer,
@@ -78,7 +80,6 @@ from hpc_gui.services.transfer_mode import (
     normalize_transfer_mode,
     upload_with_mode,
 )
-from hpc_gui.ui.async_call import AsyncCall
 from hpc_gui.ui.dialogs.transfer_conflict_dialog import (
     TransferConflictDecision,
     TransferConflictDialog,
@@ -145,7 +146,64 @@ def _category(entry: RemoteEntry) -> str:
 
 
 MIME_REMOTE_PATHS = "application/x-truba-remote-paths"
-DIRECTORY_CACHE_TTL_SECONDS = 3600.0
+# Short enough that a directory a running job writes into does not stay stale
+# on screen; long enough that back/up navigation is still instant.
+DIRECTORY_CACHE_TTL_SECONDS = 60.0
+
+# Flush a partial listing to the tree at whichever limit trips first, so a
+# slow directory paints early without one repaint per entry.
+LISTING_BATCH_SIZE = 200
+LISTING_BATCH_INTERVAL_SECONDS = 0.05
+
+
+class _DirectoryListingSignals(QObject):
+    batch = Signal(object, object)
+    finished = Signal(object)
+    failed = Signal(object, object)
+
+
+class _DirectoryListingWorker(QRunnable):
+    """Stream one remote directory listing off the GUI thread.
+
+    Cancelling abandons the backend iterator, which releases the shared
+    listing channel, so a fast A->B->C navigation does not keep paying for
+    A's traffic.
+    """
+
+    def __init__(self, token: object, files, remote_dir: str) -> None:
+        super().__init__()
+        self.token = token
+        self.signals = _DirectoryListingSignals()
+        self._files = files
+        self._remote_dir = remote_dir
+        self._cancelled = threading.Event()
+
+    def cancel(self) -> None:
+        self._cancelled.set()
+
+    @Slot()
+    def run(self) -> None:
+        batch: List[RemoteEntry] = []
+        try:
+            deadline = monotonic() + LISTING_BATCH_INTERVAL_SECONDS
+            for entry in self._files.iterdir_entries(self._remote_dir):
+                if self._cancelled.is_set():
+                    return
+                batch.append(entry)
+                if len(batch) >= LISTING_BATCH_SIZE or monotonic() >= deadline:
+                    self.signals.batch.emit(self.token, batch)
+                    batch = []
+                    deadline = monotonic() + LISTING_BATCH_INTERVAL_SECONDS
+        except Exception as exc:
+            if not self._cancelled.is_set():
+                self.signals.failed.emit(self.token, exc)
+            return
+        if self._cancelled.is_set():
+            return
+        if batch:
+            self.signals.batch.emit(self.token, batch)
+        self.signals.finished.emit(self.token)
+
 
 REMOTE_CONTEXT_MENU_LABELS = [
     "Download",
@@ -544,8 +602,15 @@ class _RemoteTree(QTreeWidget):
         self.apply_sort()
 
     def apply_sort(self) -> None:
-        if self._sort_column is None or self.topLevelItemCount() < 2:
+        if self.topLevelItemCount() < 2:
             return
+        # Entries stream in arrival order, so an untouched header still has to
+        # impose the default name-ascending grouping once the listing lands.
+        column = 0 if self._sort_column is None else self._sort_column
+        reverse = (
+            self._sort_column is not None
+            and self._sort_order == Qt.SortOrder.DescendingOrder
+        )
 
         items = [self.takeTopLevelItem(0) for _ in range(self.topLevelItemCount())]
         parent_items = [item for item in items if bool(item.data(0, Qt.ItemDataRole.UserRole + 2))]
@@ -559,7 +624,6 @@ class _RemoteTree(QTreeWidget):
             for item in items
             if item not in parent_items and not bool(item.data(0, Qt.ItemDataRole.UserRole + 1))
         ]
-        reverse = self._sort_order == Qt.SortOrder.DescendingOrder
 
         def key(item: QTreeWidgetItem):
             role = (
@@ -567,9 +631,9 @@ class _RemoteTree(QTreeWidget):
                 _SORT_SIZE_ROLE,
                 _SORT_TYPE_ROLE,
                 _SORT_MTIME_ROLE,
-            )[self._sort_column]
+            )[column]
             value = item.data(0, role)
-            if self._sort_column in (0, 2):
+            if column in (0, 2):
                 return _natural_sort_key(str(value or ""))
             return int(value or 0)
 
@@ -737,7 +801,9 @@ class RemoteDirPanel(QWidget):
         self._show_transfer_dialog = True
         self._directory_cache: Dict[str, Tuple[float, List[RemoteEntry]]] = {}
         self._listing_generation = 0
-        self._listing_worker: Optional[AsyncCall] = None
+        self._listing_worker: Optional[_DirectoryListingWorker] = None
+        self._streaming_key = ""
+        self._streaming_entries: List[RemoteEntry] = []
 
         self.panel_id = str(id(self))
         RemoteDirPanel._instances[self.panel_id] = self
@@ -1099,14 +1165,22 @@ class RemoteDirPanel(QWidget):
         else:
             self.refresh(force=force)
 
+    def _cancel_listing_worker(self) -> None:
+        worker, self._listing_worker = self._listing_worker, None
+        if worker is not None:
+            worker.cancel()
+
+    def _listing_token_is_current(self, token: object) -> bool:
+        return isValid(self) and token == ("directory", self._listing_generation)
+
     def refresh_async(self, force: bool = False) -> bool:
-        """Fetch a directory off the GUI thread; stale navigations are ignored."""
+        """Stream a directory into the tree; stale navigations are cancelled."""
         if not self.session or not self.session.get("files"):
             return False
+        self._cancel_listing_worker()
         self._listing_generation += 1
-        generation = self._listing_generation
+        token = ("directory", self._listing_generation)
         category_dir = self._category_dir or self.current_dir
-        files = self.session["files"]
         key = self._cache_key(category_dir)
         if not force and get_remote_directory_cache_enabled():
             cached = self._directory_cache.get(key)
@@ -1114,34 +1188,43 @@ class RemoteDirPanel(QWidget):
                 self._listing_override = (category_dir, list(cached[1]))
                 self.refresh()
                 return True
-        def fetch() -> list[RemoteEntry]:
-            return list(files.listdir_entries(key))
-        worker = AsyncCall(("directory", generation), fetch)
+        # Clear up front: leaving the previous directory's rows under the new
+        # path invites a click on a row that is no longer there.
+        self._begin_render(category_dir)
+        self._streaming_key = key
+        self._streaming_entries = []
+        worker = _DirectoryListingWorker(token, self.session["files"], key)
         self._listing_worker = worker
-        def finished(token, entries) -> None:
-            if not isValid(self) or token != ("directory", self._listing_generation):
-                return
-            self._listing_worker = None
-            complete = list(entries)
-            self._directory_cache[key] = (monotonic(), complete)
-            visible: list[RemoteEntry] = []
-            def render_batch() -> None:
-                if not isValid(self) or token != ("directory", self._listing_generation):
-                    return
-                visible.extend(complete[len(visible):len(visible) + 200])
-                self._listing_override = (category_dir, list(visible))
-                self.refresh()
-                if len(visible) < len(complete):
-                    QTimer.singleShot(0, render_batch)
-            render_batch()
-        def failed(token, _error) -> None:
-            if isValid(self) and token == ("directory", self._listing_generation):
-                self._listing_worker = None
-                self._show_op_error(str(_error))
-        worker.signals.finished.connect(finished)
-        worker.signals.failed.connect(failed)
+        worker.signals.batch.connect(self._on_listing_batch)
+        worker.signals.finished.connect(self._on_listing_finished)
+        worker.signals.failed.connect(self._on_listing_failed)
         QThreadPool.globalInstance().start(worker)
         return True
+
+    def _on_listing_batch(self, token: object, entries: object) -> None:
+        if not self._listing_token_is_current(token):
+            return
+        self._streaming_entries.extend(entries)
+        self._append_entries(entries)
+
+    def _on_listing_finished(self, token: object) -> None:
+        if not self._listing_token_is_current(token):
+            return
+        self._listing_worker = None
+        self._directory_cache[self._streaming_key] = (
+            monotonic(),
+            list(self._streaming_entries),
+        )
+        self._finish_render()
+
+    def _on_listing_failed(self, token: object, error: object) -> None:
+        if not self._listing_token_is_current(token):
+            return
+        self._listing_worker = None
+        self._show_op_error(
+            f"{t('dirs.load_failed') if t('dirs.load_failed') != '[dirs.load_failed]' else 'Dizin okunamadı'}: {error}"
+        )
+        self._finish_render()
 
     @staticmethod
     def _cache_key(remote_dir: str) -> str:
@@ -1203,7 +1286,7 @@ class RemoteDirPanel(QWidget):
             try:
                 current = self._normalize_remote_dir(panel.current_dir or "/")
                 if current in affected:
-                    panel.refresh(force=True)
+                    panel._refresh_from_ui(force=True)
             except RuntimeError:
                 if RemoteDirPanel._instances.get(panel_id) is panel:
                     RemoteDirPanel._instances.pop(panel_id, None)
@@ -1400,6 +1483,77 @@ class RemoteDirPanel(QWidget):
             return st.standardIcon(QStyle.StandardPixmap.SP_DriveDVDIcon)
         return st.standardIcon(QStyle.StandardPixmap.SP_FileIcon)
 
+    def _make_entry_item(self, entry: RemoteEntry) -> QTreeWidgetItem:
+        it = QTreeWidgetItem()
+        it.setText(0, entry.name)
+        it.setIcon(0, self._icon_for(entry))
+        it.setText(1, "" if entry.is_dir else _fmt_size(entry.size))
+        file_type = _file_type(entry.name, entry.is_dir)
+        it.setText(2, file_type)
+        it.setText(3, _fmt_mtime(entry.mtime))
+        it.setData(0, Qt.ItemDataRole.UserRole, entry.path)
+        it.setData(0, Qt.ItemDataRole.UserRole + 1, bool(entry.is_dir))
+        it.setData(0, _SORT_NAME_ROLE, entry.name)
+        it.setData(0, _SORT_SIZE_ROLE, int(entry.size or 0))
+        it.setData(0, _SORT_TYPE_ROLE, file_type)
+        it.setData(0, _SORT_MTIME_ROLE, int(entry.mtime or 0))
+        it.setData(0, _FILE_MODE_ROLE, int(entry.mode or 0))
+        return it
+
+    def _make_parent_item(self, parent_dir: str) -> QTreeWidgetItem:
+        item = QTreeWidgetItem()
+        item.setText(0, "..")
+        item.setIcon(0, self.style().standardIcon(QStyle.StandardPixmap.SP_DirIcon))
+        item.setText(1, "")
+        item.setText(2, _file_type("..", True))
+        item.setText(3, "")
+        item.setData(0, Qt.ItemDataRole.UserRole, parent_dir)
+        item.setData(0, Qt.ItemDataRole.UserRole + 1, True)
+        item.setData(0, Qt.ItemDataRole.UserRole + 2, True)
+        item.setData(0, _SORT_NAME_ROLE, "..")
+        item.setData(0, _SORT_SIZE_ROLE, 0)
+        item.setData(0, _SORT_TYPE_ROLE, _file_type("..", True))
+        item.setData(0, _SORT_MTIME_ROLE, 0)
+        item.setData(0, _FILE_MODE_ROLE, 0)
+        return item
+
+    def _begin_render(self, category_dir: str) -> None:
+        """Empty every view and seed the ".." row for a new listing."""
+        for v in self.views.values():
+            v.clear()
+        parent_dir = self._remote_parent_dir(category_dir)
+        if parent_dir:
+            self.views["all"].addTopLevelItem(self._make_parent_item(parent_dir))
+            if "folders" in self.views:
+                self.views["folders"].addTopLevelItem(self._make_parent_item(parent_dir))
+        self._update_navigation_controls()
+
+    def _append_entries(self, entries: Iterable[RemoteEntry]) -> None:
+        """Add one batch. Never clears: rebuilding per batch is quadratic."""
+        views = list(self.views.values())
+        for v in views:
+            v.setUpdatesEnabled(False)
+        try:
+            for e in entries:
+                self.views["all"].addTopLevelItem(self._make_entry_item(e))
+                cat = _category(e)
+                if cat in self.views:
+                    self.views[cat].addTopLevelItem(self._make_entry_item(e))
+        finally:
+            for v in views:
+                v.setUpdatesEnabled(True)
+
+    def _finish_render(self) -> None:
+        """Sort and size columns once, after the last batch."""
+        for v in self.views.values():
+            v.apply_sort()
+            v.resizeColumnToContents(0)
+            v.resizeColumnToContents(1)
+            v.resizeColumnToContents(2)
+            v.resizeColumnToContents(3)
+        self._update_undo_enabled()
+        self._update_navigation_controls()
+
     def refresh(self, force: bool = False):
         if not self.session or not self.session.get("files"):
             for v in self.views.values():
@@ -1423,64 +1577,9 @@ class RemoteDirPanel(QWidget):
                     v.clear()
                 return
 
-        for v in self.views.values():
-            v.clear()
-
-        def add(view: QTreeWidget, entry: RemoteEntry):
-            it = QTreeWidgetItem()
-            it.setText(0, entry.name)
-            it.setIcon(0, self._icon_for(entry))
-            it.setText(1, "" if entry.is_dir else _fmt_size(entry.size))
-            file_type = _file_type(entry.name, entry.is_dir)
-            it.setText(2, file_type)
-            it.setText(3, _fmt_mtime(entry.mtime))
-            it.setData(0, Qt.ItemDataRole.UserRole, entry.path)
-            it.setData(0, Qt.ItemDataRole.UserRole + 1, bool(entry.is_dir))
-            it.setData(0, _SORT_NAME_ROLE, entry.name)
-            it.setData(0, _SORT_SIZE_ROLE, int(entry.size or 0))
-            it.setData(0, _SORT_TYPE_ROLE, file_type)
-            it.setData(0, _SORT_MTIME_ROLE, int(entry.mtime or 0))
-            it.setData(0, _FILE_MODE_ROLE, int(entry.mode or 0))
-            view.addTopLevelItem(it)
-
-        parent_dir = self._remote_parent_dir(category_dir)
-        if parent_dir:
-            def make_parent_item() -> QTreeWidgetItem:
-                item = QTreeWidgetItem()
-                item.setText(0, "..")
-                item.setIcon(0, self.style().standardIcon(QStyle.StandardPixmap.SP_DirIcon))
-                item.setText(1, "")
-                item.setText(2, _file_type("..", True))
-                item.setText(3, "")
-                item.setData(0, Qt.ItemDataRole.UserRole, parent_dir)
-                item.setData(0, Qt.ItemDataRole.UserRole + 1, True)
-                item.setData(0, Qt.ItemDataRole.UserRole + 2, True)
-                item.setData(0, _SORT_NAME_ROLE, "..")
-                item.setData(0, _SORT_SIZE_ROLE, 0)
-                item.setData(0, _SORT_TYPE_ROLE, _file_type("..", True))
-                item.setData(0, _SORT_MTIME_ROLE, 0)
-                item.setData(0, _FILE_MODE_ROLE, 0)
-                return item
-
-            self.views["all"].addTopLevelItem(make_parent_item())
-            if "folders" in self.views:
-                self.views["folders"].addTopLevelItem(make_parent_item())
-
-        for e in entries:
-            add(self.views["all"], e)
-            cat = _category(e)
-            if cat in self.views:
-                add(self.views[cat], e)
-
-        for v in self.views.values():
-            v.apply_sort()
-            v.resizeColumnToContents(0)
-            v.resizeColumnToContents(1)
-            v.resizeColumnToContents(2)
-            v.resizeColumnToContents(3)
-
-        self._update_undo_enabled()
-        self._update_navigation_controls()
+        self._begin_render(category_dir)
+        self._append_entries(entries)
+        self._finish_render()
 
     # ---------- selection helpers ----------
     def _selected_paths_from_view(self, view: QTreeWidget) -> List[str]:
@@ -1850,7 +1949,7 @@ class RemoteDirPanel(QWidget):
             self.create_new_file(new_parent_dir)
             return
         if chosen == act_refresh:
-            self.refresh(force=True)
+            self._refresh_from_ui(force=True)
             return
 
         if act_paste_local_here is not None and chosen == act_paste_local_here:
@@ -2034,7 +2133,7 @@ class RemoteDirPanel(QWidget):
             )
             return False
 
-        self.refresh(force=True)
+        self._refresh_from_ui(force=True)
         return True
 
     def rename_selected(self, view: Optional[QTreeWidget] = None) -> bool:
