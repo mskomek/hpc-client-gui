@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.2.7
+
+### Transfer reliability and release hardening
+- Added streaming remote directory listings over a reused SFTP channel.
+- Improved cancellation cleanup, in-flight transfer key release, and partial-download decisions.
+- Added end-to-end SSH/SFTP coverage for cancelled transfers and directory streaming.
+- Hardened release automation for cached cross-platform builds and package validation.
+
 ## v1.2.6
 
 ### Universal HPC branding

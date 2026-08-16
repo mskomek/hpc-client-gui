@@ -17,12 +17,12 @@ VSVersionInfo(
         [
           StringStruct('CompanyName', 'Unofficial / Community'),
           StringStruct('FileDescription', 'HPC Client GUI (Slurm/SSH/X11 helper)'),
-          StringStruct('FileVersion', '1.2.6'),
+          StringStruct('FileVersion', '1.2.7'),
           StringStruct('InternalName', 'hpc-client-gui'),
           StringStruct('LegalCopyright', 'Copyright (c) 2026 Mehmed Sinan KÖMEK'),
           StringStruct('OriginalFilename', 'hpc-client-gui.exe'),
           StringStruct('ProductName', 'HPC Client GUI'),
-          StringStruct('ProductVersion', '1.2.6'),
+          StringStruct('ProductVersion', '1.2.7'),
         ]
       )
     ]),

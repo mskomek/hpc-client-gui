@@ -53,6 +53,9 @@ _SSH_CHANNEL_TIMEOUT_SECONDS = 30
 # only needs to detect a truly dead connection, not bound normal chunk
 # pacing on a slow HPC link.
 _SFTP_TRANSFER_TIMEOUT_SECONDS = 60
+# Directory browsing is interactive: waiting a full transfer timeout on a dead
+# link before the panel reports anything is far too long for a click.
+_SFTP_LISTING_TIMEOUT_SECONDS = 15
 
 _KEEPALIVE_INTERVAL_DEFAULT = 30
 
@@ -538,6 +541,10 @@ class SSHClientWrapper:
         with self._listing_lock:
             if self._listing_sftp is None:
                 self._listing_sftp = self.open_transfer_sftp()
+                get_channel = getattr(self._listing_sftp, "get_channel", None)
+                channel = get_channel() if callable(get_channel) else None
+                if channel is not None:
+                    channel.settimeout(_SFTP_LISTING_TIMEOUT_SECONDS)
             clean = False
             try:
                 yield self._listing_sftp

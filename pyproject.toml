@@ -1,6 +1,6 @@
 [project]
 name = "hpc-client-gui"
-version = "1.2.6"
+version = "1.2.7"
 requires-python = ">=3.10"
 dependencies = ["PySide6>=6.5", "paramiko>=3.4", "cryptography>=41.0"]
 
@@ -8,7 +8,7 @@ authors = [{ name = "Mehmed Sinan KÖMEK" }]
 license = { text = "PolyForm Noncommercial License 1.0.0" }
 
 [project.optional-dependencies]
-test = ["pyftpdlib>=1.5.9"]
+test = ["pyftpdlib>=1.5.9", "pytest>=7"]
 
 [build-system]
 requires = ["setuptools>=68"]
