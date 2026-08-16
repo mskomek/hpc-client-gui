@@ -5,12 +5,15 @@ import errno
 import os
 import re
 import stat as pystat
-from typing import List, Tuple
+from typing import Iterator, List, Tuple
 
 from hpc_gui.services.files_base import FilesBackend, RemoteEntry
 
 _SFTP_CHUNK_SIZE = 8 * 1024 * 1024
 _SFTP_PREFETCH_REQUESTS = 64
+# Paramiko's documented default; enough to keep the pipe full for most
+# directories. Raise only against a measured TRUBA baseline.
+_LISTDIR_READ_AHEADS = 50
 
 
 def _enable_sftp_read_ahead(stream, file_size: int) -> None:
@@ -99,6 +102,32 @@ class SSHFilesBackend(FilesBackend):
     def listdir(self, remote_dir: str) -> List[str]:
         with _translate_remote_errors(remote_dir):
             return self.ssh.sftp.listdir(remote_dir)
+
+    @staticmethod
+    def _entry_from_attr(remote_dir: str, attr) -> RemoteEntry:
+        name = getattr(attr, "filename", "") or ""
+        mode = getattr(attr, "st_mode", 0) or 0
+        return RemoteEntry(
+            name=name,
+            path=remote_dir.rstrip("/") + "/" + name,
+            is_dir=pystat.S_ISDIR(mode),
+            size=int(getattr(attr, "st_size", 0) or 0),
+            mtime=int(getattr(attr, "st_mtime", 0) or 0),
+            mode=mode,
+        )
+
+    def iterdir_entries(self, remote_dir: str) -> Iterator[RemoteEntry]:
+        """Stream a directory over the shared listing channel.
+
+        ``listdir_iter`` keeps several READDIR requests in flight, so entries
+        surface while the server is still walking the directory instead of
+        after the whole listing lands.  Unsorted by design: the caller renders
+        in arrival order and sorts once at the end.
+        """
+        with self.ssh.listing_sftp() as sftp:
+            with _translate_remote_errors(remote_dir):
+                for attr in sftp.listdir_iter(remote_dir, read_aheads=_LISTDIR_READ_AHEADS):
+                    yield self._entry_from_attr(remote_dir, attr)
 
     def listdir_entries(self, remote_dir: str) -> List[RemoteEntry]:
         entries: List[RemoteEntry] = []

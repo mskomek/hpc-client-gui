@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import os
 import threading
 import time
@@ -196,6 +197,8 @@ class SSHClientWrapper:
         self.info: Optional[SSHConnInfo] = info
         self.client: Optional[paramiko.SSHClient] = None
         self.sftp = None
+        self._listing_sftp = None
+        self._listing_lock = threading.RLock()
         self._shell_channel = None
         self._shell_thread: Optional[threading.Thread] = None
         self._shell_stop = threading.Event()
@@ -470,6 +473,10 @@ class SSHClientWrapper:
         except Exception:
             pass
         try:
+            self._drop_listing_sftp()
+        except Exception:
+            pass
+        try:
             if self.sftp:
                 self.sftp.close()
         finally:
@@ -509,6 +516,35 @@ class SSHClientWrapper:
         if channel is not None:
             channel.settimeout(_SFTP_TRANSFER_TIMEOUT_SECONDS)
         return sftp
+
+    def _drop_listing_sftp(self) -> None:
+        sftp, self._listing_sftp = self._listing_sftp, None
+        if sftp is not None:
+            try:
+                sftp.close()
+            except Exception:
+                pass
+
+    @contextlib.contextmanager
+    def listing_sftp(self):
+        """Lend the long-lived SFTP channel used for directory browsing.
+
+        Opening a channel per navigation costs a full round trip on a high-RTT
+        link, so one channel is opened lazily and reused.  Access is
+        serialized: an abandoned ``listdir_iter`` leaves unread read-ahead
+        replies queued, so any non-clean exit discards the channel and the
+        next caller opens a fresh one.
+        """
+        with self._listing_lock:
+            if self._listing_sftp is None:
+                self._listing_sftp = self.open_transfer_sftp()
+            clean = False
+            try:
+                yield self._listing_sftp
+                clean = True
+            finally:
+                if not clean:
+                    self._drop_listing_sftp()
 
     def supports_transfer_sftp_channels(self) -> bool:
         """Probe whether the active connection can create isolated channels."""

@@ -11,6 +11,24 @@ from hpc_gui.core.logging import log_path
 
 _fault_file = None
 
+
+def _is_paramiko_prefetch_shutdown(thread_name: str, exc_type, exc_value) -> bool:
+    """Recognize paramiko's prefetch thread losing its channel on close.
+
+    ``SFTPFile.prefetch`` queues every chunk of the file up front and the
+    thread that drains that queue has no cancellation check, so cancelling a
+    download (or simply closing the channel early) reliably makes it write to
+    an already-closed socket.  The transfer itself is already reported and
+    finalized by then, so treating this as an uncaught crash is wrong: it
+    would also raise the crash flag and accuse the next launch of a crash.
+    """
+    if "_prefetch_thread" not in (thread_name or ""):
+        return False
+    if not issubclass(exc_type, OSError):
+        return False
+    return "closed" in str(exc_value).lower()
+
+
 def install_crash_logging() -> None:
     """Capture uncaught worker errors and fatal Python crashes."""
     global _fault_file
@@ -22,9 +40,16 @@ def install_crash_logging() -> None:
         pass
 
     def _thread_hook(args):
+        thread_name = getattr(args.thread, "name", "unknown")
+        if _is_paramiko_prefetch_shutdown(thread_name, args.exc_type, args.exc_value):
+            logging.getLogger("hpc_gui.crash").debug(
+                "Ignoring paramiko prefetch shutdown race thread=%s: %s",
+                thread_name, args.exc_value,
+            )
+            return
         logging.getLogger("hpc_gui.crash").error(
             "Uncaught thread exception thread=%s",
-            getattr(args.thread, "name", "unknown"),
+            thread_name,
             exc_info=(args.exc_type, args.exc_value, args.exc_traceback),
         )
         try:

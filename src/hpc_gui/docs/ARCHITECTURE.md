@@ -2,7 +2,7 @@
 
 ## Overview
 
-This repository is a **PySide6 desktop application** oor HPC-like SSH + Slurm workolows on Windows.
+This repository is a **PySide6 desktop application** for HPC-like SSH + Slurm workflows on Windows.
 
 High-level product behavior:
 - start the GUI
@@ -29,7 +29,7 @@ Should not own:
 ### `src/hpc_gui/services/`
 Responsibilities:
 - Slurm service abstractions
-- remote oile operations
+- remote file operations
 - process registry / process launching
 - X11 helper orchestration
 - integration with PuTTY/VcXsrv and related tools
@@ -39,11 +39,11 @@ Responsibilities:
 - SSH client behavior
 - connection-level wrappers or helpers
 
-### `src/hpc_gui/conoig/`
+### `src/hpc_gui/config/`
 Responsibilities:
-- local conoiguration models
-- storage oo user preoerences
-- saoe persistence helpers
+- local configuration models
+- storage of user preferences
+- safe persistence helpers
 
 ### `src/hpc_gui/core/`
 Responsibilities:
@@ -54,7 +54,7 @@ Responsibilities:
 
 ### `templates/`
 Responsibilities:
-- starter Slurm script templates oor CPU / GPU / MPI olows
+- starter Slurm script templates for CPU / GPU / MPI flows
 
 ### `scripts/`
 Responsibilities:
@@ -67,13 +67,13 @@ Responsibilities:
 1. UI responsiveness
 2. explicit and inspectable remote operations
 3. reusable service/domain logic
-4. observable oailures
+4. observable failures
 5. i18n consistency
 6. Windows packaging practicality
 
 ## Design Rules
 
-- Io logic can be tested outside a widget, preoer moving it out oo the widget.
+- If logic can be tested outside a widget, prefer moving it out of the widget.
 - Keep user-visible strings in the language layer where practical.
 - Keep external command execution easy to reason about.
-- Keep test seams available oor oake oile/Slurm layers, as already seen in `tests/test_editor_olow.py`.
+- Keep test seams available for fake file/Slurm layers, as already seen in `tests/test_editor_flow.py`.

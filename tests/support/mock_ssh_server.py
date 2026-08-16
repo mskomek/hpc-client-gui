@@ -246,8 +246,15 @@ class _StubSFTPServer(paramiko.SFTPServerInterface):
 
     def list_folder(self, path):
         real = self._realpath(path)
+        try:
+            names = os.listdir(real)
+        except OSError as exc:
+            # A real server answers NO_SUCH_FILE/PERMISSION_DENIED here;
+            # letting the OSError escape would flatten both into a generic
+            # "Failure" and hide the client's path-bearing error messages.
+            return paramiko.SFTPServer.convert_errno(exc.errno)
         out = []
-        for name in os.listdir(real):
+        for name in names:
             attr = paramiko.SFTPAttributes.from_stat(os.stat(os.path.join(real, name)))
             attr.filename = name
             out.append(attr)

@@ -570,6 +570,8 @@
     "cancelled": "Transfer cancelled.",
     "conflict_title": "Target file already exists",
     "conflict_intro": "The target file already exists. Please choose an action.",
+    "conflict_partial_title": "Unfinished download found",
+    "conflict_partial_intro": "A partially downloaded file from an earlier attempt is here. Please choose an action.",
     "source_file": "Source file:",
     "target_file": "Target file:",
     "conflict_file_info": "{size}\n{mtime}",

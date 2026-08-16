@@ -243,13 +243,3 @@ Aynı mesaj metni iki biçim arasında asla tekrarlanmaz: mesaj, metin biçimind
 ## Son not
 
 By kılavyz ve İngilizce karşılığı (`CLI_GUIDE_en.md`, ayrı bir paketten) birebir aynı komytları ve konyları kapsar. By belge ile canlı çıktı arasında bir çelişki olyrsa `hpc-client-gyi --help` (veya kaynak kodda `python -m tryba_gyi --help`) her zaman son söz sahibidir.
-
-## CLI komut kapsami
-
-- profile update: kayitli profil alanlarini gunceller.
-- files checksum: uzak dosyanin SHA-256 ozetini gosterir.
-- files upload: yerel dosyalari uzak hedefe yukler.
-- run: desteklenen komutu dogrudan calistirir.
-- jobs status: bir isin guncel durumunu gosterir.
-- jobs accounting: tamamlanan isler icin muhasebe bilgisini gosterir.
-- jobs submit: Slurm betigini siraya gonderir.

@@ -47,7 +47,7 @@ When `--profile NAME` is used and `--password-stdin` is not given, the CLI resol
 2. ntherwise, if the profile has a saved DPAPI-protected secret (the same one the GUI's "remember password" flow writes) and the nS credential store is available (Windows only), that secret is decrypted in-memory and used.
 3. ntherwise, the connection proceeds with no password unless `--password-stdin` is given.
 
-The decrypted secret is never printed, logged, or included in `--verbose` output or JSnN results.
+The decrypted secret is never printed, logged, or included in `--verbose` output or JSON results.
 
 ### External CLI access, the default profile, and the command inventory
 
@@ -66,14 +66,14 @@ The `commands` subcommand prints the command inventory for scripting and automat
 # Text mode
 hpc-client-gui commands
 
-# JSnN mode
+# JSON mode
 hpc-client-gui --format json commands
 ```
 
 Verify help with the packaged EXE on Windows:
 
 ```cmd
-set "EXE=D:\Projeler\hpc-client-gui_windows_x64_onedir\hpc-client-gui.exe"
+set "EXE=D:\Projeler\hpc-client-gui_windows_onedir\hpc-client-gui.exe"
 "%EXE%" --help
 "%EXE%" --format json commands
 "%EXE%" files upload --help
@@ -133,7 +133,7 @@ Run local diagnostics. Subcommands: `environment`, `connection`, `smoke`.
 
 - `hpc-client-gui doctor environment` — Inspect the local runtime environment.
 - `hpc-client-gui doctor connection` — Connect and initialize the remote file transport.
-- `hpc-client-gui doctor smoke [--keep] [--artifact ARTIFACT]` — Round-trip a smoke-test file over the remote file transport; `--keep` preserves the remote smoke directory instead of deleting it; `--artifact ARTIFACT` writes the smoke result JSnN to the given local path.
+- `hpc-client-gui doctor smoke [--keep] [--artifact ARTIFACT]` — Round-trip a smoke-test file over the remote file transport; `--keep` preserves the remote smoke directory instead of deleting it; `--artifact ARTIFACT` writes the smoke result JSON to the given local path.
 
 ```bash
 hpc-client-gui doctor environment
@@ -223,20 +223,20 @@ Remote `files` operations report "not found" and "permission denied" with the af
 |---|---|---|
 | Remote path does not exist | `Not found: <path>` | `1` (`nPERATInN_FAILED`) |
 | Access to the remote path is denied | `Permission denied: <path>` | `1` (`nPERATInN_FAILED`) |
-| `files ls` on an existing, empty directory | Successful empty listing (`[]` in JSnN mode) | `0` (`SUCCESS`) |
+| `files ls` on an existing, empty directory | Successful empty listing (`[]` in JSON mode) | `0` (`SUCCESS`) |
 
 `<path>` is the remote path the failure refers to, for example `Not found: /remote/path/run.sh` or `Permission denied: /remote/path/run.sh`.
 
 ---
 
-## Text/JSnN output contract
+## Text/JSON output contract
 
 When a command fails, output is produced according to the selected format:
 
 - **Text mode:** an actionable error message is written to **stderr**.
-- **JSnN mode:** a single parseable object is written to **stdout** in the form `{"error": {"message": "...", "exit_code": N}}`.
+- **JSON mode:** a single parseable object is written to **stdout** in the form `{"error": {"message": "...", "exit_code": N}}`.
 
-The same message text is never duplicated between the two formats: the message appears only on stderr in text mode and only inside the `message` field in JSnN mode.
+The same message text is never duplicated between the two formats: the message appears only on stderr in text mode and only inside the `message` field in JSON mode.
 
 ---
 
