@@ -59,7 +59,9 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from hpc_gui.core.debug_telemetry import is_source_run
 from hpc_gui.core.i18n import t
+from hpc_gui.core.logging import get_logger
 from hpc_gui.core.ui_errors import show_exception
 from hpc_gui.config.storage import (
     get_remote_directory_cache_enabled,
@@ -3230,6 +3232,12 @@ class RemoteDirPanel(QWidget):
         affected_dirs: set[str] = set()
         seen: set[str] = set()
         policy: Optional[str] = None
+        if is_source_run():
+            get_logger("hpc_gui.debug.transfer").info(
+                "plan.download started sources=%d target=%r session_policy=%r",
+                len(src_paths), target_dir,
+                RemoteDirPanel._session_conflict_action,
+            )
         for src in src_paths:
             if worker.cancelled:
                 return {}
@@ -3241,6 +3249,10 @@ class RemoteDirPanel(QWidget):
                 is_dir = bool(files.is_dir(src_clean))
             except Exception:
                 is_dir = src.endswith("/")
+            if is_source_run():
+                get_logger("hpc_gui.debug.transfer").info(
+                    "plan.source remote=%r is_dir=%s", src_clean, is_dir,
+                )
             affected_dirs.add(self._parent_remote_dir(src_clean))
             if is_dir:
                 affected_dirs.add(self._normalize_remote_dir(src_clean))
@@ -3270,6 +3282,12 @@ class RemoteDirPanel(QWidget):
                 # directory out of the plan silently, so the queue ran only the
                 # mkdirs and reported success while nothing was downloaded.
                 entries = list(files.listdir_entries(remote_dir))
+                if is_source_run():
+                    get_logger("hpc_gui.debug.transfer").info(
+                        "plan.walk remote_dir=%r entries=%d dirs=%d",
+                        remote_dir, len(entries),
+                        sum(1 for entry in entries if entry.is_dir),
+                    )
                 child_dirs: List[Tuple[str, str]] = []
                 for entry in entries:
                     rel_path = f"{rel_dir}/{entry.name}" if rel_dir else entry.name
@@ -3300,6 +3318,14 @@ class RemoteDirPanel(QWidget):
                         )
                     )
                 stack.extend(reversed(child_dirs))
+        if is_source_run():
+            counts: Dict[str, int] = {}
+            for op in plan:
+                counts[op.op] = counts.get(op.op, 0) + 1
+            get_logger("hpc_gui.debug.transfer").info(
+                "plan.download finished ops=%d breakdown=%r policy=%r",
+                len(plan), counts, policy,
+            )
         return {
             "plan": plan,
             "title": "İndiriliyor...",
@@ -3339,6 +3365,11 @@ class RemoteDirPanel(QWidget):
                 action_simple = raw_action.replace("_all", "")
             else:
                 action_simple = policy
+            if is_source_run():
+                get_logger("hpc_gui.debug.transfer").info(
+                    "plan.conflict remote=%r local=%r action=%s policy=%r",
+                    remote_path, local_path, action_simple, policy,
+                )
             if action_simple == "cancel":
                 return None, policy
             if action_simple == "skip":
