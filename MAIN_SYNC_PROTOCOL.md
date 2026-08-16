@@ -13,8 +13,8 @@ paths, never recursive subdirectories.
 - `src/`
 - `templates/`
 - `tests/`
-- `.gitignore`, `LICENSE`, `MAIN_SYNC_PROTOCOL.md`, `README.md`, `pyproject.toml`, `requirements.txt`,
-  and `template.slurm`
+- `.gitignore`, `CONTRIBUTING.md`, `LICENSE`, `MAIN_SYNC_PROTOCOL.md`, `README.md`, `SECURITY.md`,
+  `SUPPORT.md`, `pyproject.toml`, `requirements.txt`, and `template.slurm`
 
 ## Always excluded
 

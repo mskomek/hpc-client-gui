@@ -24,6 +24,7 @@ def _minimal_wiki(root: Path) -> None:
 
 
 class WikiCheckTest(unittest.TestCase):
+    @unittest.skipUnless(WIKI_ROOT.is_dir(), "docs/wiki is outside the main sync boundary")
     def test_repository_wiki_is_clean(self):
         self.assertEqual(check_wiki.check_wiki(WIKI_ROOT), [])
 
