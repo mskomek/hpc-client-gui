@@ -206,8 +206,12 @@ class TransferController:
                             self._finish_item(result, error)
                             if error == "cancelled":
                                 self._cancel.set()
-                        if self._cancel.is_set():
-                            break
+                    # Drain the whole batch even after a cancel. The executor
+                    # waits for those futures on shutdown regardless, and
+                    # abandoning them here means their items never reach
+                    # _finish_item, so subscribers keep showing them as active.
+                    if self._cancel.is_set():
+                        break
         finally:
             self._done.set()
             for item in self.pending:

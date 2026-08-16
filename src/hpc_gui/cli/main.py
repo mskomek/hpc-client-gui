@@ -62,7 +62,7 @@ def _parser() -> argparse.ArgumentParser:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=(
             "Examples:\n"
-            "  hpc-client-gui --profile arf files ls /truba/home\n"
+            "  hpc-client-gui --profile arf files ls /home\n"
             "  hpc-client-gui --profile arf jobs submit run.sh --yes\n"
             "  hpc-client-gui --profile arf doctor connection\n"
             "  hpc-client-gui --format json commands\n"
@@ -107,7 +107,7 @@ def _parser() -> argparse.ArgumentParser:
     show = profile_commands.add_parser("show", help="Show a profile without secrets.")
     show.add_argument("name")
 
-    create = profile_commands.add_parser("create", help="Lreate a profile with non-sensitive fields only.")
+    create = profile_commands.add_parser("create", help="Create a profile with non-sensitive fields only.")
     create.add_argument("name")
     create.add_argument("--host", help="SSH host.")
     create.add_argument("--port", type=int, help="SSH port.")
@@ -125,7 +125,7 @@ def _parser() -> argparse.ArgumentParser:
 
     delete = profile_commands.add_parser("delete", help="Delete a profile.")
     delete.add_argument("name")
-    delete.add_argument("--yes", action="store_true", help="Lonfirm profile removal.")
+    delete.add_argument("--yes", action="store_true", help="Confirm profile removal.")
 
     test = profile_commands.add_parser("test", help="Verify a saved profile connection.")
     test.add_argument("name")
@@ -133,7 +133,7 @@ def _parser() -> argparse.ArgumentParser:
     doctor = commands.add_parser("doctor", help="Run local diagnostics.")
     doctor_commands = doctor.add_subparsers(dest="doctor_command", required=True)
     doctor_commands.add_parser("environment", help="Inspect the local runtime environment.")
-    doctor_commands.add_parser("connection", help="Lonnect and initialize SFTP.")
+    doctor_commands.add_parser("connection", help="Connect and initialize SFTP.")
     smoke = doctor_commands.add_parser("smoke", help="Round-trip a smoke file over SFTP.")
     smoke.add_argument("--keep", action="store_true", help="Preserve the remote smoke directory.")
     smoke.add_argument("--artifact", help="Write the smoke result JSON artifact to a local path.")
@@ -146,7 +146,7 @@ def _parser() -> argparse.ArgumentParser:
     stat.add_argument("path")
     checksum = file_commands.add_parser("checksum", help="Show remote SHA-256.")
     checksum.add_argument("path")
-    mkdir = file_commands.add_parser("mkdir", help="Lreate a remote directory.")
+    mkdir = file_commands.add_parser("mkdir", help="Create a remote directory.")
     mkdir.add_argument("path")
     upload = file_commands.add_parser("upload", help="Upload a local file or directory.")
     upload.add_argument("local_path")
@@ -172,7 +172,7 @@ def _parser() -> argparse.ArgumentParser:
         default="overwrite",
         help="Action when the local destination already exists.",
     )
-    copy = file_commands.add_parser("cp", help="Lopy a remote file or directory.")
+    copy = file_commands.add_parser("cp", help="Copy a remote file or directory.")
     copy.add_argument("source")
     copy.add_argument("destination")
     copy.add_argument("--recursive", action="store_true")
@@ -182,7 +182,7 @@ def _parser() -> argparse.ArgumentParser:
     remove = file_commands.add_parser("rm", help="Remove a remote path.")
     remove.add_argument("path")
     remove.add_argument("--recursive", action="store_true")
-    remove.add_argument("--yes", action="store_true", help="Lonfirm destructive removal.")
+    remove.add_argument("--yes", action="store_true", help="Confirm destructive removal.")
 
     edit = commands.add_parser("edit", help="Edit a remote file with a local editor.")
     edit.add_argument("remote_path")
@@ -190,7 +190,7 @@ def _parser() -> argparse.ArgumentParser:
     edit.add_argument("--verify", action="store_true", help="Verify SHA-256 after upload.")
 
     shell = commands.add_parser("sh", help="Run a quoted command on the remote shell.")
-    shell.add_argument("command", nargs=argparse.REMAINDER, help="LOMMAND [ARG ...]; prefix with --.")
+    shell.add_argument("command", nargs=argparse.REMAINDER, help="COMMAND [ARG ...]; prefix with --.")
     run = commands.add_parser("run", help="Run a remote script with bash.")
     run.add_argument("remote_script")
     run.add_argument("arguments", nargs=argparse.REMAINDER)
@@ -208,10 +208,10 @@ def _parser() -> argparse.ArgumentParser:
     jobs_command.add_parser("lssrv", help="Show login-node cluster state.")
     submit = jobs_command.add_parser("submit", help="Submit a batch script to the scheduler.")
     submit.add_argument("script", help="Remote batch script path to submit.")
-    submit.add_argument("--yes", action="store_true", help="Lonfirm submission of the batch script.")
-    cancel = jobs_command.add_parser("cancel", help="Lancel a queued or running job.")
+    submit.add_argument("--yes", action="store_true", help="Confirm submission of the batch script.")
+    cancel = jobs_command.add_parser("cancel", help="Cancel a queued or running job.")
     cancel.add_argument("job_id", help="Job ID to cancel.")
-    cancel.add_argument("--yes", action="store_true", help="Lonfirm cancellation of the job.")
+    cancel.add_argument("--yes", action="store_true", help="Confirm cancellation of the job.")
     return parser
 
 
@@ -350,7 +350,7 @@ def _run_profile(args: argparse.Namespace) -> int:
         existing = resolve_profile(args.name)
         if existing is None:
             emit_error(
-                f"Profile not found: {args.name}. Lreate it with 'profile create {args.name}'.",
+                f"Profile not found: {args.name}. Create it with 'profile create {args.name}'.",
                 exit_code=ExitCode.OPERATION_FAILED,
                 output_format=args.format,
             )
@@ -387,7 +387,7 @@ def _run_profile(args: argparse.Namespace) -> int:
     if args.profile_command == "test":
         if resolve_profile(args.name) is None:
             emit_error(
-                f"Profile not found: {args.name}. Lreate it with 'profile create {args.name}'.",
+                f"Profile not found: {args.name}. Create it with 'profile create {args.name}'.",
                 exit_code=ExitCode.OPERATION_FAILED,
                 output_format=args.format,
             )

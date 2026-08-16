@@ -3004,6 +3004,7 @@ class FtpWidgetTests(unittest.TestCase):
                 self.transferStatsChanged = FakeSignal()
                 self.transferListsChanged = FakeSignal()
                 self.transferProgressChanged = FakeSignal()
+                self.queueFinished = FakeSignal()
                 self.finished = FakeSignal()
                 self.started = False
 
@@ -5138,15 +5139,16 @@ class FtpWidgetTests(unittest.TestCase):
 
         self.assertEqual(files.calls, ["/remote", "/remote"])
 
-    def test_remote_directory_cache_lives_for_at_most_one_hour(self) -> None:
+    def test_remote_directory_cache_expires_after_its_ttl(self) -> None:
         files = _CountingFiles()
         panel = self.widget.panel_scratch
         panel.session = {"connected": True, "files": files}
 
-        self.assertEqual(DIRECTORY_CACHE_TTL_SECONDS, 3600.0)
+        ttl = DIRECTORY_CACHE_TTL_SECONDS
+        self.assertEqual(ttl, 60.0)
         with patch(
             "hpc_gui.ui.widgets.remote_dir_panel.monotonic",
-            side_effect=[0.0, 3599.0, 3601.0],
+            side_effect=[0.0, ttl - 1.0, ttl + 1.0],
         ):
             panel.set_dir("/remote")
             panel.refresh()

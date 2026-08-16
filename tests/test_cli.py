@@ -2330,4 +2330,4 @@ def test_root_help_contains_examples_block(capsys) -> None:
     assert excinfo.value.code == 0
     out = capsys.readouterr().out
     assert "Examples:" in out
-    assert "hpc-client-gui --profile arf files ls /truba/home" in out
+    assert "hpc-client-gui --profile arf files ls /home" in out
