@@ -406,12 +406,19 @@ class TransferDialog(QDialog):
                 "cancelled" if cancelled else ("failed" if error else "completed"),
                 bytes_done, avg_speed, elapsed_ms, error,
             )
+        # Every outcome must fall through to the shared cleanup below: leaving
+        # a cancelled item in `_active_items` keeps its "Running: ..." row on
+        # screen forever and makes start()/process_queue() refuse to run again.
         if cancelled:
             self._pending.clear()
             self._running = False
-            self._schedule_refresh()
-            return
-        if error:
+            # Park it with the failures so the existing retry path can restart
+            # it; a cancelled transfer that lands in no list at all cannot be
+            # resumed by any means.
+            self._errors.append(
+                (item, _tr("transfer.cancelled", "Transfer cancelled."))
+            )
+        elif error:
             self._errors.append((item, error))
         else:
             self._completed.append(item)
@@ -670,7 +677,12 @@ class _WorkerThread(QObject):
 
     def _wait_for_done(self) -> None:
         self._controller.wait()
-        self.all_done.emit()
+        try:
+            self.all_done.emit()
+        except RuntimeError:
+            # The dialog was closed while the queue drained; there is nobody
+            # left to notify, and letting this escape logs a bogus crash.
+            pass
 
     def _queue_event(self, event: str, item: TransferItem) -> None:
         if event == "started":
