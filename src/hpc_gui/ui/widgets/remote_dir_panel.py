@@ -3266,10 +3266,10 @@ class RemoteDirPanel(QWidget):
                 if worker.cancelled:
                     return {}
                 remote_dir, rel_dir = stack.pop()
-                try:
-                    entries = list(files.listdir_entries(remote_dir))
-                except Exception:
-                    entries = []
+                # Do not swallow this. A failed listing here used to leave the
+                # directory out of the plan silently, so the queue ran only the
+                # mkdirs and reported success while nothing was downloaded.
+                entries = list(files.listdir_entries(remote_dir))
                 child_dirs: List[Tuple[str, str]] = []
                 for entry in entries:
                     rel_path = f"{rel_dir}/{entry.name}" if rel_dir else entry.name
