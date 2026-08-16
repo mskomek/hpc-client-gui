@@ -162,6 +162,11 @@ class TransferDialog(QDialog):
     transferStatsChanged = Signal(str)
     transferListsChanged = Signal(object, object, object)
     transferProgressChanged = Signal(object, object, object)
+    # Fires when the queue stops for any reason, including a cancel. Owners
+    # that reserved something for the duration of the queue must release it
+    # here: the dialog stays open after a cancel, so its `finished` signal
+    # may never arrive.
+    queueFinished = Signal()
 
     def __init__(
         self,
@@ -481,6 +486,7 @@ class TransferDialog(QDialog):
                 self.windowTitle(), len(self._completed), len(self._errors),
                 len(self._pending), self._stopped, self._cancelled,
             )
+        self.queueFinished.emit()
         if self._stopped and self._pending:
             text = _tr("transfer.stopped_after_current", "Stopped after the current transfer.")
             self.lbl_transfer_stats.setText(text)

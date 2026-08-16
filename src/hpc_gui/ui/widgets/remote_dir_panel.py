@@ -2576,6 +2576,15 @@ class RemoteDirPanel(QWidget):
                     pass
                 dlg.deleteLater()
 
+        def release_reserved_keys() -> None:
+            # The queue is done; stop treating these transfers as in flight.
+            # Waiting for `finished` used to hold them forever after a cancel,
+            # because a cancelled dialog stays open and never emits it - so
+            # re-downloading the same files planned them and then filtered
+            # every one of them out again as a duplicate.
+            self._active_transfer_keys.difference_update(dlg._truba_active_keys)
+
+        dlg.queueFinished.connect(release_reserved_keys)
         dlg.finished.connect(handle_finished)
         self._transfer_dialogs.append(dlg)
         dlg.start()

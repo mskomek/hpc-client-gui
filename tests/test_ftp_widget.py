@@ -3004,6 +3004,7 @@ class FtpWidgetTests(unittest.TestCase):
                 self.transferStatsChanged = FakeSignal()
                 self.transferListsChanged = FakeSignal()
                 self.transferProgressChanged = FakeSignal()
+                self.queueFinished = FakeSignal()
                 self.finished = FakeSignal()
                 self.started = False
 
