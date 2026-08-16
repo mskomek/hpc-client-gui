@@ -68,13 +68,19 @@ class TransferConflictDialog(QDialog):
         *,
         source: TransferConflictInfo,
         target: TransferConflictInfo,
+        partial: bool = False,
     ) -> None:
         super().__init__(parent)
+        # A leftover ".part" is a different situation from a finished file:
+        # the target is unfinished, so say so rather than claiming it exists.
         self.setWindowTitle(
-            _tr("transfer.conflict_title", "Target file already exists")
+            _tr("transfer.conflict_partial_title", "Unfinished download found")
+            if partial
+            else _tr("transfer.conflict_title", "Target file already exists")
         )
         self._source = source
         self._target = target
+        self._partial = partial
         self._accepted = False
 
         root = QVBoxLayout(self)
@@ -82,6 +88,11 @@ class TransferConflictDialog(QDialog):
         root.addWidget(
             QLabel(
                 _tr(
+                    "transfer.conflict_partial_intro",
+                    "A partially downloaded file from an earlier attempt is here.\nPlease choose an action.",
+                )
+                if partial
+                else _tr(
                     "transfer.conflict_intro",
                     "The target file already exists.\nPlease choose an action.",
                 )
@@ -218,8 +229,9 @@ class TransferConflictDialog(QDialog):
         *,
         source: TransferConflictInfo,
         target: TransferConflictInfo,
+        partial: bool = False,
     ) -> TransferConflictDecision:
-        dialog = cls(parent, source=source, target=target)
+        dialog = cls(parent, source=source, target=target, partial=partial)
         if dialog.exec() != QDialog.DialogCode.Accepted:
             return TransferConflictDecision(action="cancel")
         return dialog.decision()

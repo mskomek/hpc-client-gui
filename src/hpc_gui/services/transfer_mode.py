@@ -15,6 +15,11 @@ TRANSFER_MODES = (AUTO, BINARY, ASCII)
 # Bounded read size for classification samples and streaming conversion.
 CHUNK_SIZE = 8192
 
+# Suffix for an in-progress transfer. The planner reads it too, so that a
+# leftover chunk from a cancelled download is offered to the user instead of
+# being resumed or discarded behind their back.
+PARTIAL_SUFFIX = ".part"
+
 _ASCII_INVALID = (
     "ASCII transfer requires UTF-8 text content; use Binary mode for this file."
 )
@@ -218,7 +223,7 @@ def _upload_remote(files, local_path: str, remote_path: str, progress_cb=None, r
     if not callable(rename):
         _upload_file(files, local_path, remote_path, progress_cb=progress_cb)
         return
-    temp_remote = remote_path + ".part"
+    temp_remote = remote_path + PARTIAL_SUFFIX
     meta_remote = temp_remote + ".meta"
     source = Path(local_path).stat()
     identity = json.dumps(resume_identity or {"path": str(remote_path), "size": source.st_size, "mtime_ns": source.st_mtime_ns}, sort_keys=True)
@@ -304,7 +309,7 @@ def download_with_mode(
 ) -> str:
     destination = Path(local_path)
     destination.parent.mkdir(parents=True, exist_ok=True)
-    part_path = Path(str(destination) + ".part")
+    part_path = Path(str(destination) + PARTIAL_SUFFIX)
     meta_path = Path(str(part_path) + ".meta")
     remote_stat = getattr(files, "stat", None)
     if callable(remote_stat):

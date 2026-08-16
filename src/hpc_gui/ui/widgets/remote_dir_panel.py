@@ -78,6 +78,7 @@ from hpc_gui.services.file_clipboard import get_file_clipboard
 from hpc_gui.services.files_base import RemoteEntry
 from hpc_gui.services.transfer_mode import (
     BINARY,
+    PARTIAL_SUFFIX as PARTIAL_DOWNLOAD_SUFFIX,
     download_with_mode,
     normalize_transfer_mode,
     upload_with_mode,
@@ -459,6 +460,7 @@ class _TransferPlanWorker(QObject):
         self.cancelled = False
         self._pending_source = None
         self._pending_target = None
+        self._pending_partial = False
         self._pending_decision = "cancel"
         self._pending_rename_dir = ""
         self._pending_rename_name = ""
@@ -473,7 +475,7 @@ class _TransferPlanWorker(QObject):
             return
         self.finished.emit(self.job_id, self.kind, result)
 
-    def request_conflict_decision(self, source, target) -> str:
+    def request_conflict_decision(self, source, target, *, partial: bool = False) -> str:
         """Show the conflict dialog on the GUI thread and return the raw action.
 
         Called from the worker thread while planning. Blocks until the GUI
@@ -482,6 +484,7 @@ class _TransferPlanWorker(QObject):
         """
         self._pending_source = source
         self._pending_target = target
+        self._pending_partial = bool(partial)
         self._pending_decision = "cancel"
         QMetaObject.invokeMethod(
             self._panel,
@@ -2248,6 +2251,8 @@ class RemoteDirPanel(QWidget):
         self,
         source: TransferConflictInfo,
         target: TransferConflictInfo,
+        *,
+        partial: bool = False,
     ) -> str:
         """Turn already-known conflict info into a decision.
 
@@ -2267,6 +2272,7 @@ class RemoteDirPanel(QWidget):
             self,
             source=source,
             target=target,
+            partial=partial,
         )
         action = self._normalize_conflict_decision(decision, source, target)
         if decision.always_use:
@@ -2295,6 +2301,7 @@ class RemoteDirPanel(QWidget):
             worker._pending_decision = self._conflict_decision(
                 worker._pending_source,
                 worker._pending_target,
+                partial=getattr(worker, "_pending_partial", False),
             )
         except Exception:
             worker._pending_decision = "cancel"
@@ -3360,15 +3367,30 @@ class RemoteDirPanel(QWidget):
         (None = cancel, "" = skip) together with the updated policy, and appends
         delete_local ops to `plan` for overwrite choices.
         """
-        while os.path.exists(local_path):
+        while True:
+            part_path = local_path + PARTIAL_DOWNLOAD_SUFFIX
+            # A leftover ".part" from a cancelled attempt is prior state the
+            # user has to rule on too: resuming it or throwing it away is not
+            # a decision this planner gets to make silently.
+            partial = (
+                not is_dir
+                and not os.path.exists(local_path)
+                and os.path.exists(part_path)
+            )
+            if not partial and not os.path.exists(local_path):
+                return local_path, policy
             # Do not treat the selected directory itself as a conflict: merge
             # it, then resolve conflicts for its contained files.
             if is_dir and os.path.isdir(local_path):
                 return local_path, policy
             if policy is None:
                 source = self._conflict_info(remote_path, is_local=False)
-                target = self._conflict_info(local_path, is_local=True)
-                raw_action = worker.request_conflict_decision(source, target)
+                target = self._conflict_info(
+                    part_path if partial else local_path, is_local=True
+                )
+                raw_action = worker.request_conflict_decision(
+                    source, target, partial=partial
+                )
                 if raw_action.endswith("_all"):
                     policy = raw_action.replace("_all", "")
                 action_simple = raw_action.replace("_all", "")
@@ -3376,8 +3398,8 @@ class RemoteDirPanel(QWidget):
                 action_simple = policy
             if is_source_run():
                 get_logger("hpc_gui.debug.transfer").info(
-                    "plan.conflict remote=%r local=%r action=%s policy=%r",
-                    remote_path, local_path, action_simple, policy,
+                    "plan.conflict remote=%r local=%r partial=%s action=%s policy=%r",
+                    remote_path, local_path, partial, action_simple, policy,
                 )
             if action_simple == "cancel":
                 return None, policy
@@ -3393,16 +3415,19 @@ class RemoteDirPanel(QWidget):
                 local_path = renamed
                 continue
             if action_simple == "overwrite":
+                # Overwrite means start over, so drop the leftover chunk as
+                # well - otherwise the transfer would quietly resume from it.
                 plan.append(
                     _PlannedOp(
                         op="delete_local",
                         src="",
-                        dst=local_path,
-                        recursive=is_dir,
+                        dst=part_path if partial else local_path,
+                        recursive=False if partial else is_dir,
                     )
                 )
+            # "resume" falls through unchanged: the partial stays, and
+            # download_with_mode continues from it once its identity matches.
             return local_path, policy
-        return local_path, policy
 
     def _apply_local_upload(self, local_paths: List[str], dest_dir: str) -> bool:
         if not self.session or not self.session.get("files"):

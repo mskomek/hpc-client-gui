@@ -570,6 +570,8 @@
     "cancelled": "Aktarım iptal edildi.",
     "conflict_title": "Hedef dosya zaten var",
     "conflict_intro": "Hedef dosya zaten var. Lütfen bir işlem seçin.",
+    "conflict_partial_title": "Yarım kalmış indirme bulundu",
+    "conflict_partial_intro": "Önceki bir denemeden kalan yarım indirilmiş bir dosya var. Lütfen bir işlem seçin.",
     "source_file": "Kaynak dosya:",
     "target_file": "Hedef dosya:",
     "conflict_file_info": "{size}\n{mtime}",

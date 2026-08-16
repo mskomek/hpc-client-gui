@@ -36,9 +36,20 @@ CANCEL_AFTER_BYTES = 6 * 1024 * 1024
 
 
 class _PlanWorker:
-    """Stand-in for _TransferPlanWorker: the planner only reads `cancelled`."""
+    """Stand-in for _TransferPlanWorker's GUI bridge, with a canned answer."""
 
     cancelled = False
+
+    def __init__(self, action: str = "resume") -> None:
+        self.action = action
+        self.conflicts: list[tuple[str, bool]] = []
+
+    def request_conflict_decision(self, _source, target, *, partial: bool = False) -> str:
+        self.conflicts.append((target.path, partial))
+        return self.action
+
+    def request_rename(self, _dst_dir: str, _current_name: str):
+        raise AssertionError("rename was not expected")
 
 
 class DownloadCancelWireTests(unittest.TestCase):
@@ -87,11 +98,12 @@ class DownloadCancelWireTests(unittest.TestCase):
         threading.excepthook = lambda args: None
         self.addCleanup(lambda: setattr(threading, "excepthook", previous))
 
-    def _plan(self) -> list:
+    def _plan(self, action: str = "resume") -> tuple[list, _PlanWorker]:
+        worker = _PlanWorker(action)
         result = self.panel._build_remote_download_plan_background(
-            _PlanWorker(), self.files, ["/results/DP_41"], str(self.target)
+            worker, self.files, ["/results/DP_41"], str(self.target)
         )
-        return list(result["plan"])
+        return list(result["plan"]), worker
 
     def _open_channels(self) -> int:
         transport = self.ssh.client.get_transport()
@@ -123,9 +135,10 @@ class DownloadCancelWireTests(unittest.TestCase):
         return controller
 
     def test_cancel_keeps_the_partial_and_leaves_the_session_usable(self) -> None:
-        plan = self._plan()
+        plan, planner = self._plan()
         downloads = [op for op in plan if op.op == "download"]
         self.assertEqual(len(downloads), 5)
+        self.assertEqual(planner.conflicts, [], "nothing exists yet, nothing to ask")
         # Warm the persistent listing channel first: it is opened once and
         # kept, so counting before it exists would read as a leak afterwards.
         list(self.files.iterdir_entries("/results/DP_41"))
@@ -152,22 +165,62 @@ class DownloadCancelWireTests(unittest.TestCase):
         self.assertEqual(len(list(self.files.iterdir_entries("/results/DP_41"))), 5)
         self.assertEqual(self._open_channels(), channels_before)
 
-        # And the next plan still contains every file, so a retry can restart.
-        again = [op for op in self._plan() if op.op == "download"]
-        self.assertEqual(len(again), 5)
+        # And the next plan still contains every file, so a retry can restart -
+        # after asking what to do with the leftover chunk.
+        again, planner = self._plan()
+        self.assertEqual(len([op for op in again if op.op == "download"]), 5)
+        self.assertEqual(
+            planner.conflicts, [(str(folder / f"{BIG_NAME}.part"), True)]
+        )
 
-    def test_retrying_after_a_cancel_completes_the_file(self) -> None:
-        self._run_until_cancelled(self._plan())
-
-        for op in self._plan():
+    def _run_plan_to_completion(self, plan) -> None:
+        for op in plan:
             self.panel._execute_transfer_item(
                 TransferItem(op.op, op.src, op.dst, op.recursive)
             )
 
+    def _assert_big_file_complete(self) -> None:
         finished = self.target / "DP_41" / BIG_NAME
         self.assertTrue(finished.exists())
         self.assertEqual(finished.stat().st_size, BIG_SIZE)
         self.assertFalse((self.target / "DP_41" / f"{BIG_NAME}.part").exists())
+
+    def test_resuming_after_a_cancel_completes_the_file(self) -> None:
+        plan, _ = self._plan()
+        self._run_until_cancelled(plan)
+
+        retry, planner = self._plan("resume")
+        self.assertEqual([partial for _path, partial in planner.conflicts], [True])
+        self.assertNotIn("delete_local", [op.op for op in retry])
+        self._run_plan_to_completion(retry)
+        self._assert_big_file_complete()
+
+    def test_overwriting_a_partial_discards_it_before_downloading(self) -> None:
+        plan, _ = self._plan()
+        self._run_until_cancelled(plan)
+        part = self.target / "DP_41" / f"{BIG_NAME}.part"
+        self.assertTrue(part.exists())
+
+        retry, planner = self._plan("overwrite")
+        self.assertEqual([partial for _path, partial in planner.conflicts], [True])
+        # The leftover chunk is dropped first, so the transfer starts over
+        # instead of quietly resuming from it.
+        deletes = [op.dst for op in retry if op.op == "delete_local"]
+        self.assertEqual(deletes, [str(part)])
+        self._run_plan_to_completion(retry)
+        self._assert_big_file_complete()
+
+    def test_skipping_a_partial_leaves_it_alone(self) -> None:
+        plan, _ = self._plan()
+        self._run_until_cancelled(plan)
+
+        retry, planner = self._plan("skip")
+        self.assertEqual([partial for _path, partial in planner.conflicts], [True])
+        self.assertNotIn(
+            str(self.target / "DP_41" / BIG_NAME),
+            [op.dst for op in retry if op.op == "download"],
+        )
+        self.assertTrue((self.target / "DP_41" / f"{BIG_NAME}.part").exists())
 
 
 if __name__ == "__main__":
