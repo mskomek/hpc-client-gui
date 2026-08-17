@@ -1,206 +1,329 @@
 # HPC Client GUI
 
-A **client-side GUI application** for **SSH + Slurm + optional X11 workflows** across Slurm-based HPC systems.
+[![CI](https://github.com/mskomek/hpc-client-gui/actions/workflows/ci.yml/badge.svg)](https://github.com/mskomek/hpc-client-gui/actions/workflows/ci.yml)
+[![Latest release](https://img.shields.io/github/v/release/mskomek/hpc-client-gui)](https://github.com/mskomek/hpc-client-gui/releases/latest)
+[![Python](https://img.shields.io/badge/Python-3.10%2B-blue)](pyproject.toml)
+[![Platforms](https://img.shields.io/badge/platform-Windows%20%7C%20Linux-lightgrey)](#downloads)
 
-> ⚠️ This is an independent, client-side community project.
-> It works with compatible SSH/Slurm HPC infrastructures.
+**A cross-platform desktop client for SSH, SFTP, Slurm job management, remote files, CLI workflows, and optional X11 forwarding on HPC systems.**
+
+Connect to a remote cluster, browse and transfer files, submit and monitor Slurm jobs, inspect job output, use terminal workflows, and launch X11 applications from one client.
+
+> [!NOTE]
+> HPC Client GUI is an independent community project. It is **not an official TRUBA tool** and is not affiliated with TÜBİTAK ULAKBİM. TRUBA is one supported deployment context; the client is designed for standard SSH + Slurm HPC environments in general.
+
+**[Download latest release](https://github.com/mskomek/hpc-client-gui/releases/latest)** · **[Documentation](https://github.com/mskomek/hpc-client-gui/wiki)** · **[CLI guide](src/hpc_gui/docs/CLI_GUIDE_en.md)** · **[Report an issue](https://github.com/mskomek/hpc-client-gui/issues)**
 
 ---
 
-A desktop client for remote access, files, scheduler jobs, and optional X11 on Slurm-compatible HPC clusters. Connect once, browse and transfer files, monitor jobs, and launch X11 tools only when needed.
+## Why HPC Client GUI?
 
-**Latest release:** [v1.2.6](https://github.com/mskomek/hpc-client-gui/releases/tag/v1.2.6) includes Windows ZIP, Linux AppImage, and Linux `.deb` packages.
+Many HPC workflows still require switching between a terminal, an SFTP client, scheduler commands, job-output files, and separate X11 tools.
 
-Quick start: **Download → Extract All → Run** `hpc-client-gui.exe`.
+HPC Client GUI brings those common tasks together in a desktop application without requiring a web portal or additional server-side service on the cluster.
 
-![HPC Client GUI remote files, jobs, and transfers overview](docs/assets/hpc-client-gui-screenshot.png)
+* **Standard SSH + Slurm workflow** — designed for clusters exposing SSH and common Slurm commands.
+* **Windows and Linux support** — packaged desktop releases for both platforms.
+* **GUI and CLI** — use the desktop interface for daily work and the CLI for repeatable workflows.
+* **Remote file management** — browse directories, upload/download files, create folders, rename, delete, and manage transfers.
+* **Slurm job control** — submit jobs, inspect queue/accounting state, cancel jobs, and read output files.
+* **Optional X11 support** — launch remote graphical applications when required.
+* **English and Turkish interface/documentation**.
 
-Python, PuTTY/plink, and VcXsrv are not required for normal SSH, file, or scheduler use. PuTTY/plink and VcXsrv are optional helpers only when X11 forwarding is enabled.
+## Downloads
+
+Current packages are available from the:
+
+### [Latest Release](https://github.com/mskomek/hpc-client-gui/releases/latest)
+
+| Platform               | Release asset                              | Start                                |
+| ---------------------- | ------------------------------------------ | ------------------------------------ |
+| Windows 10/11 x64      | `hpc-client-gui_windows_onedir.zip`        | Extract and run `hpc-client-gui.exe` |
+| Linux x86_64           | `hpc-client-gui-<version>-x86_64.AppImage` | Make executable and run              |
+| Debian / Ubuntu x86_64 | `hpc-client-gui_<version>_amd64.deb`       | Install the `.deb` package           |
+| Linux / Flatpak        | `hpc-client-gui-<version>-x86_64.flatpak`  | Install and run the Flatpak bundle   |
+
+Where provided, release assets also include **SHA-256 checksum files**.
+
+## Windows quick start
+
+1. Download `hpc-client-gui_windows_onedir.zip` from the [latest release](https://github.com/mskomek/hpc-client-gui/releases/latest).
+2. Select **Extract All**.
+3. Run `hpc-client-gui.exe`.
+4. Enter your cluster host, SSH port, username, and authentication method.
+5. Connect and use the Files, Jobs, Outputs, Terminal, or optional X11 tools.
+
+> Do not run the executable directly from inside the ZIP archive.
+
+Python, PuTTY/plink, and VcXsrv are **not required for normal SSH, file-transfer, or Slurm workflows** in the packaged Windows build.
+
+## Linux quick start
+
+Download the AppImage, `.deb`, or Flatpak package from the [latest release](https://github.com/mskomek/hpc-client-gui/releases/latest).
+
+### AppImage
+
+```bash
+chmod +x hpc-client-gui-*-x86_64.AppImage
+./hpc-client-gui-*-x86_64.AppImage
+```
+
+### Flatpak
+
+```bash
+flatpak install --user ./hpc-client-gui-*-x86_64.flatpak
+flatpak run io.github.mskomek.HpcClientGui
+```
+
+---
 
 ## Features
 
-* SSH session management (client-side)
-* Slurm job monitoring / basic job operations (via `squeue`, `sacct`, etc.)
-* Remote file manager (copy / move / paste, drag & drop, resume, progress / cancel, undo-move)
-* i18n: Turkish / English
-* Centralized logging: `~/.truba_slurm_gui/app.log` (rotating)
-* X11 runs **in the background**: `plink.exe -X` + `VcXsrv` (no dedicated X11 UI tab)
+### SSH and connection profiles
+
+* SSH host, port, and username configuration
+* Password and key-based authentication
+* Reusable connection/system profiles
+* Optional cluster-specific presets
+* Standard SSH-based cluster connectivity
+
+### Remote files and transfers
+
+* Browse local and remote directories
+* Upload and download files
+* Upload and download directories
+* Transfer progress
+* Transfer cancellation
+* File-conflict handling
+* Create remote directories
+* Rename files and directories
+* Delete files and directories
+* Remote navigation history
+
+### Slurm jobs
+
+Submit and manage workloads through standard Slurm commands.
+
+Supported workflows include:
+
+* `sbatch`
+* `squeue`
+* `sacct`
+* `scancel`
+
+The GUI can be used to:
+
+* Submit Slurm scripts
+* Monitor running and pending jobs
+* Inspect completed-job information
+* Cancel jobs
+* Read output and error files
+* Follow job output
+
+### Terminal and editor
+
+HPC Client GUI includes desktop terminal and editor workflows for common remote tasks.
+
+This makes it possible to use file management, job management, terminal commands, and remote editing from the same application.
+
+### CLI
+
+The project also includes a command-line interface.
+
+From source:
+
+```bash
+python -m hpc_gui --help
+```
+
+Windows releases also include:
+
+```text
+hpc-client-cli.exe
+```
+
+Documentation:
+
+* [English CLI guide](src/hpc_gui/docs/CLI_GUIDE_en.md)
+* [Türkçe CLI kılavuzu](src/hpc_gui/docs/CLI_GUIDE_tr.md)
 
 ---
 
-## Installation & Running
+## X11 forwarding
 
-### Option A — Standalone portable package ✅ Recommended
+X11 support is **optional** and is not required for normal SSH, file-transfer, terminal, or Slurm use.
 
-In this mode, **Python is NOT required**.
+### Windows
 
-1. Download the latest portable ZIP from [GitHub Releases](https://github.com/mskomek/hpc-client-gui/releases/tag/v1.2.6).
-2. Extract All, then run `hpc-client-gui.exe`.
-3. If you enable X11, approve the optional plink/VcXsrv downloads or install them yourself.
+Remote X11 applications can use optional components such as:
 
+* PuTTY / plink
+* VcXsrv
 
+These components are only relevant when running graphical remote applications.
 
+### Linux
 
+Linux X11 forwarding uses the **system OpenSSH client** together with the local Linux graphical environment.
 
-**External dependencies (NOT bundled in the EXE):**
-- `plink.exe` (PuTTY)
-- `VcXsrv` (required only for X11)
-- Institutional firewall / antivirus policies (permissions may be required in some environments)
+PuTTY/plink and VcXsrv are not used on Linux.
+
+Actual X11 availability also depends on the remote cluster's SSH configuration and installed software.
 
 ---
 
-### Option B — From Source (Developer Mode)
+## Supported HPC environments
 
-#### Requirements
+HPC Client GUI is designed around common HPC standards rather than one specific cluster.
 
-- Windows 10 / 11
-- Python 3.10+ (recommended)
-- (Optional) VcXsrv + plink.exe
+A typical compatible environment provides:
 
-#### Setup
+```text
+SSH
+ ├── remote shell
+ ├── SFTP / remote files
+ └── optional X11 forwarding
+
+Slurm
+ ├── sbatch
+ ├── squeue
+ ├── sacct
+ └── scancel
+```
+
+TRUBA is one supported use case, but the architecture is intended to work with other SSH + Slurm based HPC systems as well.
+
+Cluster-specific policies may affect:
+
+* MFA
+* SSH authentication
+* login-node restrictions
+* scheduler configuration
+* filesystem layout
+* X11 forwarding
+* Slurm accounting access
+
+---
+
+## Run from source
+
+### Requirements
+
+* Python 3.10+
+* Git
+* A desktop environment supported by PySide6
+
+Clone:
+
+```bash
+git clone https://github.com/mskomek/hpc-client-gui.git
+cd hpc-client-gui
+```
+
+Create a virtual environment:
+
+```bash
+python -m venv .venv
+```
+
+### Windows PowerShell
 
 ```powershell
-# In the project root directory
-python -m venv .venv
 .\.venv\Scripts\Activate.ps1
+```
 
-pip install -e .[test]
-# or:
+### Linux
+
+```bash
+source .venv/bin/activate
+```
+
+Install:
+
+```bash
+python -m pip install --upgrade pip
 pip install -e .
 ```
 
-#### Run
-
-```powershell
-python -m hpc_gui
-```
-
----
-
-### Option C — Linux
-
-Linux releases target x86_64 and are published as AppImage and `.deb` packages.
-Flatpak is optional because its runtime/SDK is substantially larger.
-
-#### From source (any supported Linux distribution)
-
-Requirements: Python 3.10+, a Qt runtime (PySide6 bundles it), and the platform
-libraries Qt needs (`libegl1` on Ubuntu/Debian, equivalent on Fedora/openSUSE).
+Run:
 
 ```bash
-# In the project root directory
-python -m venv .venv
-. .venv/bin/activate
-pip install -e .[test]
 python -m hpc_gui
 ```
 
-The CLI is available the same way: `python -m hpc_gui --help`.
+## Development
 
-#### Release packages
+Install test dependencies:
 
-Download the AppImage or `.deb` from the release page and verify the matching
-`.sha256` file. AppImage runs without installation; `.deb` is for Debian-based
-systems.
-
-Maintainers can build both platforms from Windows with Docker:
-
-```powershell
-.\scripts\build_release.ps1 -Version 1.2.6
-# Reuse only existing Docker, Python, Flatpak, and AppImage caches:
-.\scripts\build_release.ps1 -Version 1.2.6 -Offline
+```bash
+pip install -e ".[test]"
 ```
 
-Build caches live under `.cache/release`; the release script creates one
-combined `dist/releases/v<version>` directory and does not redownload existing
-inputs unless they are missing.
+Run tests:
 
-#### Linux X11 note
+```bash
+pytest -q
+```
 
-X11 forwarding on Linux uses the **system OpenSSH client** (`ssh -X/-Y`); it does
-not use the Windows plink/VcXsrv path. Confirm `ssh` is installed before relying
-on X11 apps.
-
----
-
-## Command-line Interface
-
-`python -m hpc_gui` exposes a command-line interface (`hpc-client-gui` is its internal program name shown in help output). Top-level commands:
-
-- `gui` - launch the desktop GUI
-- `version` - print version and build information
-- `profile` - manage saved connection profiles (`list`, `show`, `create`, `update`, `delete`, `test`)
-- `doctor` - run local diagnostics (`environment`, `connection`, `smoke`)
-- `files` - remote SFTP file operations (`ls`, `stat`, `checksum`, `mkdir`, `upload`, `download`, `cp`, `mv`, `rm`)
-- `jobs` - scheduler job operations (`list`, `status`, `accounting`, `lssrv`, `submit`, `cancel`)
-
-Shared global options exist (format, quiet, verbose, timeout, profile selection, host/port/user/key overrides, a stdin-based sensitive-value input flag, and strict host-key checking); `python -m hpc_gui --help` is authoritative.
-
-- Full guides (drafted later in this wave):
-  - Turkish: `src/hpc_gui/docs/CLI_GUIDE_tr.md`
-  - English: `src/hpc_gui/docs/CLI_GUIDE_en.md`
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development and contribution details.
 
 ---
 
 ## Documentation
 
-- **[Wiki](https://github.com/mskomek/hpc-client-gui/wiki)** — installation,
-  feature guides, CLI reference, troubleshooting, and project docs, in English
-  and Turkish. Start at
-  [Quick Start](https://github.com/mskomek/hpc-client-gui/wiki/Quick-Start).
-  Wiki pages are generated from `docs/wiki/` in this repository; edit them
-  there, not on github.com.
-- From within the application: click the **Help (❓)** icon in the top-left corner.
-- As files:
-  - Turkish: `src/hpc_gui/docs/HELP_tr.md`
-  - English: `src/hpc_gui/docs/HELP_en.md`
+* [GitHub Wiki](https://github.com/mskomek/hpc-client-gui/wiki)
+* [English help](src/hpc_gui/docs/HELP_en.md)
+* [Türkçe yardım](src/hpc_gui/docs/HELP_tr.md)
+* [English CLI guide](src/hpc_gui/docs/CLI_GUIDE_en.md)
+* [Türkçe CLI kılavuzu](src/hpc_gui/docs/CLI_GUIDE_tr.md)
+* [Architecture](src/hpc_gui/docs/ARCHITECTURE.md)
+* [Changelog](src/hpc_gui/docs/CHANGELOG.md)
+* [Contributing](CONTRIBUTING.md)
+* [Security policy](SECURITY.md)
+* [Support](SUPPORT.md)
 
 ---
 
-## Security Notes
+## Security
 
-See [SECURITY.md](SECURITY.md) for supported versions and confidential vulnerability reporting.
+Do not commit:
 
-- Passwords / tokens are **never written to history** and **never shown in the UI**.
-- Secrets are **never logged** (commands may be logged, but credentials are not).
-- X11 processes are cleaned up on application exit; orphan processes are handled defensively.
+* passwords
+* private SSH keys
+* tokens
+* cluster credentials
 
----
+Use standard SSH security practices and verify host identity when connecting to a system for the first time.
 
-## ☕ Support HPC Client GUI
-
-HPC Client GUI is developed and maintained as an independent community project.
-
-If you find the project useful in your research or HPC workflow and would like
-to support its continued development, voluntary donations are appreciated.
-
-**Bitcoin (BTC):**
-
-```text
-bc1qvnrw2rn89rltx8ttj0hfyyte8lasgcsr7f3lxz
-```
-
-<img width="263" height="261" alt="Bitcoin donation QR code" src="https://github.com/user-attachments/assets/a1cf3da4-ce28-42b8-afc7-010548bdb6ee" />
-
-Donations are **completely optional** and do not unlock features, privileges,
-priority support, or support guarantees.
-
-**A donation does not grant commercial-use rights or constitute a commercial license.**
-
-Commercial use still requires a separate commercial license. For additional
-information and other ways to support the project, see [SUPPORT.md](SUPPORT.md).
+Security vulnerabilities should be reported according to [SECURITY.md](SECURITY.md) rather than posted publicly.
 
 ---
 
-## Licensing
+## License
 
-Starting with v1.2.0, this project is licensed under the **PolyForm Noncommercial License 1.0.0** (see `LICENSE`).
+The project source is distributed under the **PolyForm Noncommercial License 1.0.0**.
 
-- Free personal, academic, educational, public-research, and other permitted non-commercial use stays easy under the PolyForm Noncommercial 1.0.0 terms.
-- **Commercial use requires a separate license.** Commercial embedding, incorporation, OEM/bundling, redistribution as a commercial product, and proprietary commercial derivatives are not covered by the PolyForm Noncommercial License. See [COMMERCIAL_LICENSE.md](COMMERCIAL_LICENSE.md) for details and contact information.
+See [LICENSE](LICENSE) for the full terms.
 
-**Historical boundary:** releases before v1.2.0 were distributed under the MIT License. That MIT grant is **not revoked** for copies of those earlier releases that were already distributed; they remain MIT-licensed.
+Commercial licensing information is available in:
 
-This is an independent, community project. It is not affiliated with TÜBİTAK, ANSYS, or any other organization. It is **client-side only**; it does **NOT** modify remote HPC infrastructure.
+[COMMERCIAL_LICENSE.md](COMMERCIAL_LICENSE.md)
 
-- Issues / PRs: via GitHub
+Third-party software remains under its respective licenses:
+
+* [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
+* `third_party_licenses/`
+
+---
+
+## Support the project
+
+If HPC Client GUI is useful to you, you can support continued development through:
+
+### [GitHub Sponsors](https://github.com/sponsors/mskomek)
+
+Additional support information is available in [SUPPORT.md](SUPPORT.md).
+
+---
+
+**HPC Client GUI aims to make routine SSH + file transfer + Slurm + optional X11 workflows easier while remaining usable across different HPC environments rather than depending on one specific cluster.**
