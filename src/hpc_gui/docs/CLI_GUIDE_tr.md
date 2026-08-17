@@ -17,6 +17,7 @@ files upload
 run
 jobs status
 jobs accounting
+jobs submit
 ```
 
 ```bash
