@@ -139,7 +139,7 @@ Highly customized banners / shells may change command outputs. The app is design
 
 ## SLURM Quick Commands (Sık Kullanılan Komutlar)
 
-> Bu bölüm, GUI’yi kullanırken terminalde hızlıca kontrol etmek isteyenler için **kısa bir kılavuzdur**.
+> Bu bölüm, GUI’yi kullanırken terminalde hızlıca kontrol etmek isteyenler için **kısa bir kılavuzdur**.  
 > Kurumunuza göre partition/constraint isimleri farklı olabilir.
 
 ### Job gönderme

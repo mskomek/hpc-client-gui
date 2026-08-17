@@ -43,7 +43,12 @@ jobs:
       - name: Branding string gate
         run: python scripts/check_branding.py
       - name: Wiki source gate
-        run: python scripts/check_wiki.py
+        run: |
+          if [ -d docs/wiki ]; then
+            python scripts/check_wiki.py
+          else
+            echo "wiki check: SKIPPED (docs/wiki is outside the main sync boundary)"
+          fi
 
   ssh_sftp:
     runs-on: ubuntu-latest
