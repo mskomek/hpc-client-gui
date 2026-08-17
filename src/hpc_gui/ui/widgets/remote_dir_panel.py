@@ -70,12 +70,14 @@ from hpc_gui.config.storage import (
     get_upload_preflight_confirmation_enabled,
     get_transfer_checksum_verification_enabled,
     get_profile_conflict_action,
+    get_profile_id,
     set_profile_conflict_action,
     clear_profile_conflict_action,
     set_upload_preflight_confirmation_enabled,
 )
 from hpc_gui.services.file_clipboard import get_file_clipboard
 from hpc_gui.services.files_base import RemoteEntry
+from hpc_gui.services.remote_navigation_store import navigation_store_for_profile
 from hpc_gui.services.transfer_mode import (
     BINARY,
     PARTIAL_SUFFIX as PARTIAL_DOWNLOAD_SUFFIX,
@@ -163,6 +165,9 @@ class _DirectoryListingSignals(QObject):
     batch = Signal(object, object)
     finished = Signal(object)
     failed = Signal(object, object)
+    # Always emitted once the run ends, cancelled or not, so the panel knows
+    # the shared listing channel is free and a coalesced request may start.
+    settled = Signal(object)
 
 
 class _DirectoryListingWorker(QRunnable):
@@ -186,6 +191,12 @@ class _DirectoryListingWorker(QRunnable):
 
     @Slot()
     def run(self) -> None:
+        try:
+            self._run()
+        finally:
+            self.signals.settled.emit(self.token)
+
+    def _run(self) -> None:
         batch: List[RemoteEntry] = []
         try:
             deadline = monotonic() + LISTING_BATCH_INTERVAL_SECONDS
@@ -807,6 +818,10 @@ class RemoteDirPanel(QWidget):
         self._directory_cache: Dict[str, Tuple[float, List[RemoteEntry]]] = {}
         self._listing_generation = 0
         self._listing_worker: Optional[_DirectoryListingWorker] = None
+        self._pending_listing: Optional[Tuple[object, str]] = None
+        self._dirty_views: set[str] = set()
+        self._navigation_store = None
+        self._pending_select_name = ""
         self._streaming_key = ""
         self._streaming_entries: List[RemoteEntry] = []
 
@@ -863,6 +878,24 @@ class RemoteDirPanel(QWidget):
         self.btn_parent.clicked.connect(self.go_parent)
         self.btn_parent.setEnabled(False)
 
+        self.btn_favorites = QToolButton()
+        self.btn_favorites.setText(
+            t("dirs.favorites") if t("dirs.favorites") != "[dirs.favorites]" else "★ Favoriler"
+        )
+        self.btn_favorites.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+        self.btn_favorites.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
+        self.btn_favorites.setMenu(QMenu(self.btn_favorites))
+        self.btn_favorites.menu().aboutToShow.connect(self._populate_favorites_menu)
+
+        self.btn_history = QToolButton()
+        self.btn_history.setText(
+            t("dirs.history") if t("dirs.history") != "[dirs.history]" else "Geçmiş"
+        )
+        self.btn_history.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+        self.btn_history.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
+        self.btn_history.setMenu(QMenu(self.btn_history))
+        self.btn_history.menu().aboutToShow.connect(self._populate_history_menu)
+
         self.btn_refresh = QPushButton(t("dirs.refresh") if t("dirs.refresh") != "[dirs.refresh]" else "Yenile")
         self.btn_refresh.clicked.connect(lambda: self._refresh_from_ui(force=True))
 
@@ -881,6 +914,8 @@ class RemoteDirPanel(QWidget):
         top.addWidget(self.btn_delete)
         top.addWidget(self.btn_undo)
         top.addWidget(self.btn_parent)
+        top.addWidget(self.btn_favorites)
+        top.addWidget(self.btn_history)
         top.addWidget(self.btn_refresh)
 
         self.directory_tabs = QTabBar()
@@ -1000,6 +1035,7 @@ class RemoteDirPanel(QWidget):
         return cleaned.rsplit("/", 1)[-1] or cleaned
 
     def _on_tab_changed(self, index: int) -> None:
+        self._settle_current_view()
         self._update_navigation_controls()
 
     def _on_directory_tab_changed(self, index: int) -> None:
@@ -1105,7 +1141,107 @@ class RemoteDirPanel(QWidget):
     def set_session(self, session):
         self.session = session
         self._directory_cache.clear()
+        self._navigation_store = None
         self._update_navigation_controls()
+
+    # ---- favorites and history -----------------------------------------
+    def _navigation(self):
+        """The active profile's favorites/history store, or None."""
+        store = getattr(self, "_navigation_store", None)
+        if store is not None:
+            return store
+        profile_name = str((self.session or {}).get("profile_name", "")).strip()
+        if not profile_name:
+            return None
+        store = navigation_store_for_profile(get_profile_id(profile_name) or "")
+        self._navigation_store = store
+        return store
+
+    def _record_navigation_visit(self, remote_dir: str) -> None:
+        """Remember a directory that actually opened."""
+        store = self._navigation()
+        if store is not None and remote_dir:
+            store.record_visit(remote_dir)
+
+    def _navigate_to_favorite(self, path: str, kind: str) -> None:
+        # A favorite means "take me there", not "open it": a file favorite
+        # lands in its parent directory with the file selected.
+        if kind == "file":
+            self.set_dir(self._parent_remote_dir(path))
+            self._pending_select_name = self._basename(path)
+        else:
+            self.set_dir(path)
+
+    @staticmethod
+    def _basename(path: str) -> str:
+        clean = (path or "/").rstrip("/") or "/"
+        return clean.rsplit("/", 1)[-1] or clean
+
+    def _populate_favorites_menu(self) -> None:
+        menu = self.btn_favorites.menu()
+        menu.clear()
+        store = self._navigation()
+        if store is None:
+            menu.addAction(
+                t("dirs.favorites_unavailable")
+                if t("dirs.favorites_unavailable") != "[dirs.favorites_unavailable]"
+                else "Favoriler kullanılamıyor (güvenli depolama yok)"
+            ).setEnabled(False)
+            return
+        favorites = store.favorites()
+        for item in favorites:
+            path = str(item.get("path", ""))
+            kind = str(item.get("kind", "directory"))
+            action = menu.addAction(f"{item.get('label') or self._basename(path)}\t{path}")
+            action.triggered.connect(
+                lambda _checked=False, p=path, k=kind: self._navigate_to_favorite(p, k)
+            )
+        if favorites:
+            menu.addSeparator()
+        current = self._category_dir or self.current_dir
+        if store.is_favorite(current):
+            label = (
+                t("dirs.favorite_remove")
+                if t("dirs.favorite_remove") != "[dirs.favorite_remove]"
+                else "Bu dizini favorilerden kaldır"
+            )
+            menu.addAction(label).triggered.connect(
+                lambda _checked=False, p=current: store.remove_favorite(p)
+            )
+        else:
+            label = (
+                t("dirs.favorite_add")
+                if t("dirs.favorite_add") != "[dirs.favorite_add]"
+                else "Mevcut dizini favorilere ekle"
+            )
+            menu.addAction(label).triggered.connect(
+                lambda _checked=False, p=current: store.add_favorite(p, "directory")
+            )
+
+    def _populate_history_menu(self) -> None:
+        menu = self.btn_history.menu()
+        menu.clear()
+        store = self._navigation()
+        if store is None:
+            menu.addAction(
+                t("dirs.history_unavailable")
+                if t("dirs.history_unavailable") != "[dirs.history_unavailable]"
+                else "Geçmiş kullanılamıyor (güvenli depolama yok)"
+            ).setEnabled(False)
+            return
+        entries = store.history()
+        for item in entries:
+            path = str(item.get("path", ""))
+            action = menu.addAction(f"{self._basename(path)}\t{path}")
+            action.triggered.connect(lambda _checked=False, p=path: self.set_dir(p))
+        if entries:
+            menu.addSeparator()
+        label = (
+            t("dirs.history_clear")
+            if t("dirs.history_clear") != "[dirs.history_clear]"
+            else "Geçmişi temizle"
+        )
+        menu.addAction(label).triggered.connect(lambda _checked=False: store.clear_history())
 
     def set_transfer_mode_provider(
         self, provider: Optional[Callable[[str], str]]
@@ -1171,7 +1307,13 @@ class RemoteDirPanel(QWidget):
             self.refresh(force=force)
 
     def _cancel_listing_worker(self) -> None:
-        worker, self._listing_worker = self._listing_worker, None
+        """Abandon the in-flight listing but keep the reference until it settles.
+
+        The worker still owns the shared listing channel until its run ends, so
+        dropping the reference here would let the next request start a second
+        listing that only blocks on the channel lock.
+        """
+        worker = self._listing_worker
         if worker is not None:
             worker.cancel()
 
@@ -1183,6 +1325,7 @@ class RemoteDirPanel(QWidget):
         if not self.session or not self.session.get("files"):
             return False
         self._cancel_listing_worker()
+        self._pending_listing = None
         self._listing_generation += 1
         token = ("directory", self._listing_generation)
         category_dir = self._category_dir or self.current_dir
@@ -1196,6 +1339,15 @@ class RemoteDirPanel(QWidget):
         # Clear up front: leaving the previous directory's rows under the new
         # path invites a click on a row that is no longer there.
         self._begin_render(category_dir)
+        if self._listing_worker is not None:
+            # Only the newest request survives: an A->B->C burst never pays for
+            # B's traffic, it is replaced before it ever starts.
+            self._pending_listing = (token, key)
+            return True
+        self._start_listing_worker(token, key)
+        return True
+
+    def _start_listing_worker(self, token: object, key: str) -> None:
         self._streaming_key = key
         self._streaming_entries = []
         worker = _DirectoryListingWorker(token, self.session["files"], key)
@@ -1203,8 +1355,19 @@ class RemoteDirPanel(QWidget):
         worker.signals.batch.connect(self._on_listing_batch)
         worker.signals.finished.connect(self._on_listing_finished)
         worker.signals.failed.connect(self._on_listing_failed)
+        worker.signals.settled.connect(self._on_listing_settled)
         QThreadPool.globalInstance().start(worker)
-        return True
+
+    def _on_listing_settled(self, token: object) -> None:
+        if not isValid(self):
+            return
+        worker = self._listing_worker
+        if worker is None or worker.token != token:
+            return
+        self._listing_worker = None
+        pending, self._pending_listing = self._pending_listing, None
+        if pending is not None and self._listing_token_is_current(pending[0]):
+            self._start_listing_worker(*pending)
 
     def _on_listing_batch(self, token: object, entries: object) -> None:
         if not self._listing_token_is_current(token):
@@ -1215,17 +1378,16 @@ class RemoteDirPanel(QWidget):
     def _on_listing_finished(self, token: object) -> None:
         if not self._listing_token_is_current(token):
             return
-        self._listing_worker = None
         self._directory_cache[self._streaming_key] = (
             monotonic(),
             list(self._streaming_entries),
         )
         self._finish_render()
+        self._record_navigation_visit(self._streaming_key)
 
     def _on_listing_failed(self, token: object, error: object) -> None:
         if not self._listing_token_is_current(token):
             return
-        self._listing_worker = None
         self._show_op_error(
             f"{t('dirs.load_failed') if t('dirs.load_failed') != '[dirs.load_failed]' else 'Dizin okunamadı'}: {error}"
         )
@@ -1549,15 +1711,39 @@ class RemoteDirPanel(QWidget):
                 v.setUpdatesEnabled(True)
 
     def _finish_render(self) -> None:
-        """Sort and size columns once, after the last batch."""
-        for v in self.views.values():
-            v.apply_sort()
-            v.resizeColumnToContents(0)
-            v.resizeColumnToContents(1)
-            v.resizeColumnToContents(2)
-            v.resizeColumnToContents(3)
+        """Sort and size the visible category now, the rest when first shown.
+
+        Sorting and measuring all seven trees costs 28 column scans per
+        navigation, and six of them are for tabs nobody is looking at.
+        """
+        self._dirty_views = set(self.views)
+        self._settle_current_view()
+        self._select_pending_name()
         self._update_undo_enabled()
         self._update_navigation_controls()
+
+    def _select_pending_name(self) -> None:
+        """Highlight the row a file favorite asked for, once it exists."""
+        name, self._pending_select_name = self._pending_select_name, ""
+        if not name:
+            return
+        view = self.views["all"]
+        for index in range(view.topLevelItemCount()):
+            item = view.topLevelItem(index)
+            if item.text(0) == name:
+                view.setCurrentItem(item)
+                view.scrollToItem(item)
+                return
+
+    def _settle_current_view(self) -> None:
+        current = self.tabs.currentWidget()
+        for key, view in self.views.items():
+            if view is not current or key not in self._dirty_views:
+                continue
+            self._dirty_views.discard(key)
+            view.apply_sort()
+            for column in range(4):
+                view.resizeColumnToContents(column)
 
     def refresh(self, force: bool = False):
         if not self.session or not self.session.get("files"):
@@ -1585,6 +1771,7 @@ class RemoteDirPanel(QWidget):
         self._begin_render(category_dir)
         self._append_entries(entries)
         self._finish_render()
+        self._record_navigation_visit(category_dir)
 
     # ---------- selection helpers ----------
     def _selected_paths_from_view(self, view: QTreeWidget) -> List[str]:
@@ -1779,6 +1966,14 @@ class RemoteDirPanel(QWidget):
         act_add_queue = menu.addAction(REMOTE_CONTEXT_MENU_LABELS[1])
         act_view_edit = menu.addAction(REMOTE_CONTEXT_MENU_LABELS[2])
         act_open_new_tab = menu.addAction(REMOTE_CONTEXT_MENU_LABELS[3])
+        act_favorite = None
+        navigation = self._navigation()
+        if navigation is not None and clicked_path:
+            act_favorite = menu.addAction(
+                _tr("dirs.favorite_remove_item", "Favorilerden kaldır")
+                if navigation.is_favorite(clicked_path)
+                else _tr("dirs.favorite_add_item", "Favorilere ekle")
+            )
         act_submit = None
         if submit_path:
             act_submit = menu.addAction(_tr("dirs.submit_sbatch", "Submit with sbatch"))
@@ -1979,6 +2174,11 @@ class RemoteDirPanel(QWidget):
         if not sel_paths:
             return
 
+        if act_favorite is not None and chosen == act_favorite and clicked_path:
+            navigation.toggle_favorite(
+                clicked_path, "directory" if clicked_is_dir else "file"
+            )
+            return
         if act_submit is not None and chosen == act_submit:
             self.submit_requested.emit(submit_path)
             return

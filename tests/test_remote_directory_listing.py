@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import time
 import unittest
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
@@ -39,6 +40,27 @@ class _StreamingFiles:
         delivered = 0
         try:
             for entry in self.entries:
+                yield entry
+                delivered += 1
+        finally:
+            if delivered < len(self.entries):
+                self.abandoned += 1
+
+
+class _SlowStreamingFiles(_StreamingFiles):
+    """Backend slow enough that a click burst overlaps one in-flight listing."""
+
+    def __init__(self, entries: list[RemoteEntry]) -> None:
+        super().__init__(entries)
+        self.paths: list[str] = []
+
+    def iterdir_entries(self, path: str):
+        self.paths.append(path)
+        self.iter_calls += 1
+        delivered = 0
+        try:
+            for entry in self.entries:
+                time.sleep(0.0002)
                 yield entry
                 delivered += 1
         finally:
@@ -106,11 +128,42 @@ class RemoteDirectoryListingTests(unittest.TestCase):
         panel = self._panel(files)
         panel.set_dir("/work/a")
         panel.set_dir("/work/b")
+        # B only starts once A's abandoned run settles, so drain twice.
+        self._drain()
         self._drain()
 
         self.assertEqual(files.iter_calls, 2)
         self.assertGreaterEqual(files.abandoned, 1)
         self.assertIsNone(panel._listing_worker)
+
+    def test_navigation_burst_only_lists_the_first_and_last_target(self) -> None:
+        # A->B->C->D: A is already on the wire, D is what the user wants, and
+        # B and C must never reach the backend at all.
+        files = _SlowStreamingFiles(_entries(5000))
+        panel = self._panel(files)
+        panel.set_dir("/work/a")
+        panel.set_dir("/work/b")
+        panel.set_dir("/work/c")
+        panel.set_dir("/work/d")
+        # The coalesced request only starts once the abandoned one settles, so
+        # drain a second time to let it run to completion.
+        self._drain()
+        self._drain()
+
+        self.assertEqual(files.paths, ["/work/a", "/work/d"])
+        self.assertEqual(panel.current_dir, "/work/d")
+        self.assertIsNone(panel._listing_worker)
+        self.assertIsNone(panel._pending_listing)
+
+    def test_only_the_visible_category_is_sorted_up_front(self) -> None:
+        panel = self._panel(_StreamingFiles(_entries(30)))
+        panel.set_dir("/work")
+        self._drain()
+
+        self.assertNotIn("all", panel._dirty_views)
+        self.assertIn("slurm", panel._dirty_views)
+        panel.tabs.setCurrentWidget(panel.views["slurm"])
+        self.assertNotIn("slurm", panel._dirty_views)
 
     def test_cached_directory_skips_the_network(self) -> None:
         files = _StreamingFiles(_entries(10))

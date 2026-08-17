@@ -49,6 +49,22 @@ class PackagingError(RuntimeError):
     """An actionable Linux packaging failure."""
 
 
+def require_ubuntu_host() -> None:
+    """Require Ubuntu for artifact builds while keeping dry-run planning portable."""
+    if sys.platform != "linux":
+        raise PackagingError("Linux artifact builds require Ubuntu LTS (CI or WSL Ubuntu).")
+    try:
+        os_release = Path("/etc/os-release").read_text(encoding="utf-8")
+    except OSError as exc:
+        raise PackagingError("Linux artifact builds require an Ubuntu /etc/os-release file.") from exc
+    distro_id = next(
+        (line.partition("=")[2].strip().strip('"') for line in os_release.splitlines() if line.startswith("ID=")),
+        "",
+    )
+    if distro_id != "ubuntu":
+        raise PackagingError("Linux artifact builds require Ubuntu LTS (CI or WSL Ubuntu).")
+
+
 def resolve_version() -> str:
     """Return the single authoritative release version or raise."""
     versions: List[str] = []
@@ -351,6 +367,7 @@ def _build_flatpak(version: str, output_dir: Path) -> Path:
 
 def execute_linux_build(version: Optional[str] = None) -> List[Path]:
     """Build all approved Linux artifacts and stage checksums and metadata."""
+    require_ubuntu_host()
     effective_version = version or resolve_version()
     if effective_version != resolve_version():
         raise PackagingError(f"Requested version does not match source version: {effective_version}")

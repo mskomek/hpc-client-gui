@@ -46,6 +46,32 @@ class ResolveVersionTest(unittest.TestCase):
         )
 
 
+class UbuntuHostTest(unittest.TestCase):
+    def test_ubuntu_host_is_accepted(self) -> None:
+        with (
+            mock.patch.object(rl.sys, "platform", "linux"),
+            mock.patch.object(rl.Path, "read_text", return_value="ID=ubuntu\n"),
+        ):
+            rl.require_ubuntu_host()
+
+    def test_non_ubuntu_host_is_rejected(self) -> None:
+        with (
+            mock.patch.object(rl.sys, "platform", "linux"),
+            mock.patch.object(rl.Path, "read_text", return_value="ID=fedora\n"),
+            self.assertRaisesRegex(rl.PackagingError, "Ubuntu LTS"),
+        ):
+            rl.require_ubuntu_host()
+
+    def test_execute_checks_ubuntu_before_building(self) -> None:
+        with (
+            mock.patch.object(rl, "require_ubuntu_host", side_effect=rl.PackagingError("Ubuntu required")),
+            mock.patch.object(rl, "resolve_version") as resolve_version,
+            self.assertRaisesRegex(rl.PackagingError, "Ubuntu required"),
+        ):
+            rl.execute_linux_build()
+        resolve_version.assert_not_called()
+
+
 class RequiredFilesTest(unittest.TestCase):
     def test_help_files_inventory(self) -> None:
         files = rl.required_release_files()
