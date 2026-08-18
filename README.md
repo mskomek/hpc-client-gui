@@ -9,9 +9,6 @@
 
 Connect to a remote cluster, browse and transfer files, submit and monitor Slurm jobs, inspect job output, use terminal workflows, and launch X11 applications from one client.
 
-> [!NOTE]
-> HPC Client GUI is an independent community project. It is **not an official TRUBA tool** and is not affiliated with TÜBİTAK ULAKBİM. TRUBA is one supported deployment context; the client is designed for standard SSH + Slurm HPC environments in general.
-
 **[Download latest release](https://github.com/mskomek/hpc-client-gui/releases/latest)** · **[Documentation](https://github.com/mskomek/hpc-client-gui/wiki)** · **[CLI guide](src/hpc_gui/docs/CLI_GUIDE_en.md)** · **[Report an issue](https://github.com/mskomek/hpc-client-gui/issues)**
 
 ---
