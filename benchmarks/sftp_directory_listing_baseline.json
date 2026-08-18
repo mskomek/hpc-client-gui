@@ -1,0 +1,13 @@
+{
+  "schema": 1,
+  "label": "synthetic-local",
+  "generated_by": "scripts/benchmark_sftp_listing.py --repeats 3",
+  "description": "Local disposable Paramiko server; GUI rendering and real network excluded.",
+  "environment": "Linux local worktree, Python 3.14, Paramiko 5.0.0",
+  "channel_establishment_median_ms": 45.77,
+  "measurements": [
+    {"entries": 100, "cold_first_entry_median_ms": 74.04, "cold_total_median_ms": 101.05, "warm_first_entry_median_ms": 18.88, "warm_total_median_ms": 81.53, "navigation_counts": [100, 1, 100]},
+    {"entries": 1000, "cold_first_entry_median_ms": 33.37, "cold_total_median_ms": 183.78, "warm_first_entry_median_ms": 28.79, "warm_total_median_ms": 175.37, "navigation_counts": [1000, 1, 1000]},
+    {"entries": 10000, "cold_first_entry_median_ms": 71.35, "cold_total_median_ms": 904.36, "warm_first_entry_median_ms": 57.22, "warm_total_median_ms": 899.56, "navigation_counts": [10000, 1, 10000]}
+  ]
+}
