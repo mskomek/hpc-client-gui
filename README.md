@@ -1,14 +1,21 @@
 # HPC Client GUI
 
-A cross-platform desktop **HPC client** for Slurm-based systems: use SSH, browse
-remote files with SFTP, manage and monitor Slurm jobs, and run the GUI or CLI
-from the same project. It is compatible with TRUBA and other Slurm clusters,
-without coupling the client to any one provider.
+A cross-platform desktop **HPC client** for Slurm-based systems: connect over
+SSH, browse and transfer remote files with an SFTP client, manage and monitor
+Slurm jobs, and use the GUI or CLI from Windows and Linux. It is compatible
+with TRUBA and other Slurm clusters without coupling the client to one provider.
 
 **Windows and Linux supported** · GUI + CLI · SSH · SFTP client · Slurm job
 manager · optional X11
 
-[Download the latest release and its assets](https://github.com/mskomek/hpc-client-gui/releases/latest)
+**Windows and Linux:** [Download the latest release](https://github.com/mskomek/hpc-client-gui/releases/latest) or [download the latest Windows portable ZIP](https://github.com/mskomek/hpc-client-gui/releases/latest/download/hpc-client-gui_windows_onedir.zip).
+
+GUI, CLI, SSH, SFTP, Slurm job management, and optional X11 forwarding are
+included in the product surface. This is an independent client-side project
+for compatible HPC infrastructures, including TRUBA-compatible systems; it
+does not modify the cluster.
+
+Quick start on Windows: **Download → Extract All → Run** `hpc-client-gui.exe`.
 
 ![HPC Client GUI remote files, jobs, and transfers overview](docs/assets/hpc-client-gui-screenshot.png)
 
@@ -19,7 +26,7 @@ OpenSSH client.
 ## Features
 
 * SSH session management (client-side)
-* SFTP remote file manager (copy / move / paste, drag & drop, resume, progress / cancel)
+* SFTP remote file manager (browse, copy / move / paste, drag & drop, resume, progress / cancel)
 * Slurm job management and monitoring (via `squeue`, `sacct`, etc.)
 * CLI for profiles, diagnostics, files, and jobs
 * i18n: Turkish / English
@@ -34,7 +41,7 @@ OpenSSH client.
 
 In this mode, **Python is NOT required**.
 
-1. Download `hpc-client-gui_windows_onedir.zip` from the [latest release](https://github.com/mskomek/hpc-client-gui/releases/latest).
+1. Download the [latest Windows portable ZIP](https://github.com/mskomek/hpc-client-gui/releases/latest/download/hpc-client-gui_windows_onedir.zip).
 2. Extract All, then run `hpc-client-gui.exe`.
 3. If you enable X11, approve the optional plink/VcXsrv downloads or install them yourself.
 
@@ -45,16 +52,17 @@ In this mode, **Python is NOT required**.
 
 ---
 
-### Linux — AppImage, `.deb`, or Flatpak
+### Linux packages
 
-Download the AppImage, Debian package, or Flatpak bundle from the [latest
+Linux releases target x86_64 and are published as AppImage, `.deb`, and Flatpak
+packages. Download the package and matching `.sha256` file from the [latest
 release](https://github.com/mskomek/hpc-client-gui/releases/latest). AppImage
-runs without installation; `.deb` is for Debian-based systems; Flatpak uses
-the published bundle. Verify the matching `.sha256` file when present.
+runs without installation; `.deb` is for Debian-based systems; Flatpak is
+available for systems with Flatpak support.
 
 ### From Source (Developer Mode)
 
-#### Requirements
+#### Windows
 
 - Windows 10 / 11
 - Python 3.10+ (recommended)
@@ -78,9 +86,7 @@ pip install -e .
 python -m hpc_gui
 ```
 
----
-
-#### From source (any supported Linux distribution)
+#### Linux (any supported distribution)
 
 Requirements: Python 3.10+, a Qt runtime (PySide6 bundles it), and the platform
 libraries Qt needs (`libegl1` on Ubuntu/Debian, equivalent on Fedora/openSUSE).
