@@ -2,6 +2,18 @@
 
 This directory provides the project-local OpenCode delegation wrapper shared by Codex and Claude Code. It uses only model identifiers returned by `opencode models`; it does not store or handle OpenCode credentials. The project default for every mode is the discovered OpenCode Go DeepSeek v4 Flash model. A different discovered OpenCode Go DeepSeek model requires an explicit `-Model` override.
 
+## Git boundary
+
+When the repository is opened from WSL, Codex/Claude create a clean clone or
+worktree on local Linux storage and a temporary local branch. The OpenCode
+worker runs only in its supplied separate worktree. It may inspect, edit, and
+test there, but it must never stage, commit, push, reset, clean, or alter a
+remote. Codex alone commits the reviewed work.
+
+Temporary, feature, worker, and `codex/develop` branches are local-only. The
+only branch ever pushed to `origin` is the final verified `main`, following
+`MAIN_SYNC_PROTOCOL.md`.
+
 Run `powershell -NoProfile -File tools/ai/deepseek-worker.ps1 -Mode dry-run` to check selection without a model call. See `docs/DEEPSEEK_DELEGATION.md` for the operating procedure and safety limits.
 
 Wave work starts through `start-deepseek-background.ps1`. It returns a PID,

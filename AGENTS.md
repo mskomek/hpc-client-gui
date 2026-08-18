@@ -12,6 +12,22 @@ worker, never a replacement for Codex and never the source of product,
 architecture, authorization, schema, migration, credential, provider, release,
 or Git-history decisions.
 
+## Linux/WSL Git workflow and push boundary
+
+When working from WSL on a Windows-mounted checkout (`/mnt/<drive>/...`):
+
+1. Clone or create a clean Git worktree on the local Linux filesystem.
+2. Create a temporary local branch there for the task.
+3. Do all edits and tests in that local worktree.
+4. Codex reviews and commits the result; delegated OpenCode/DeepSeek workers
+   never stage, commit, or push.
+5. Fast-forward the local `codex/develop` branch with the reviewed commit.
+6. Use `MAIN_SYNC_PROTOCOL.md` to sync approved paths into local `main`.
+
+Never push a temporary, feature, worker, or `codex/develop` branch to `origin`.
+Only the final, verified `main` branch may be pushed, and only by Codex after
+the main-sync path approval and release gates pass.
+
 ## Default DeepSeek workflow
 
 Use `tools/ai/deepseek-worker.ps1` for non-trivial repository discovery,

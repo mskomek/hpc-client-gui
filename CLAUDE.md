@@ -1,5 +1,19 @@
 # TRUBAGUI Claude Code guidance
 
+## Linux/WSL Git workflow and push boundary
+
+When running in WSL from a Windows-mounted checkout (`/mnt/<drive>/...`), use
+an ordinary clone or clean Git worktree on the local Linux filesystem and make
+a temporary local branch for the task. Work and test there. Codex remains the
+only agent that stages and commits the reviewed result; OpenCode/DeepSeek may
+only work in their supplied separate worktree and must never stage, commit,
+push, reset, clean, or alter remotes.
+
+After review, Codex fast-forwards local `codex/develop`, then follows
+`MAIN_SYNC_PROTOCOL.md` to sync approved paths into local `main`.
+Never push a temporary, feature, worker, or `codex/develop` branch. Only the
+final verified `main` branch may be pushed to `origin`.
+
 Read `rules.md` first. Project architecture, safety, testing, and release rules
 remain authoritative. Preserve pre-existing changes and keep work narrowly
 scoped.
