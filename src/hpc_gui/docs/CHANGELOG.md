@@ -7,6 +7,7 @@
 - Improved cancellation cleanup, in-flight transfer key release, and partial-download decisions.
 - Added end-to-end SSH/SFTP coverage for cancelled transfers and directory streaming.
 - Hardened release automation for cached cross-platform builds and package validation.
+- Added a release-surface guard and reproducible synthetic SFTP listing benchmark.
 
 ## v1.2.6
 
