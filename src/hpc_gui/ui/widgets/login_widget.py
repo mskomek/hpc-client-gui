@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from PySide6.QtCore import QCoreApplication, QObject, QThread, QTimer, Signal, Qt, QEvent
-from PySide6.QtGui import QFontDatabase, QTextCursor
+from PySide6.QtGui import QFontDatabase
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QFormLayout, QHBoxLayout,
     QLineEdit, QPushButton, QCheckBox, QLabel, QFileDialog,
@@ -43,7 +43,6 @@ from hpc_gui.core.secret_store import (
     protect_secret,
     unprotect_secret,
 )
-from hpc_gui.services.terminal_emulator import TerminalEmulator
 from hpc_gui.ui.widgets.terminal_input import TerminalInput
 from hpc_gui.ui.widgets.terminal_widget import TerminalWidget
 from hpc_gui.ui.dialogs.connection_dialog import ConnectionDialog
@@ -348,8 +347,6 @@ class LoginWidget(QWidget):
 
         self._session = {"connected": False, "cfg": SSHConfig(), "ssh": None, "slurm": None, "files": None}
         self._console_log_lines: list[str] = []
-        self._terminal_emulator = TerminalEmulator(columns=self._console_shell_geometry()[0], rows=self._console_shell_geometry()[1])
-        self._terminal_emulation_enabled = True
         self._last_shell_geometry: tuple[int, int] | None = None
         self._connect_thread: QThread | None = None
         self._connect_worker: _ConnectionWorker | None = None
@@ -457,13 +454,6 @@ class LoginWidget(QWidget):
     def _render_console_view(self) -> None:
         try:
             lines = list(self._console_log_lines)
-            terminal_text = ""
-            if self._terminal_emulation_enabled:
-                terminal_text = self._terminal_emulator.render().rstrip("\n")
-            if terminal_text:
-                if lines:
-                    lines.append("")
-                lines.extend(terminal_text.splitlines())
             text = "\n".join(lines)
             self.console.blockSignals(True)
             try:
@@ -506,17 +496,10 @@ class LoginWidget(QWidget):
                 return
             if not hasattr(self, "console") or not shiboken6.isValid(self.console):
                 return
-            if not self._terminal_emulation_enabled:
-                self._append_log_line(msg)
-                return
-            self._terminal_emulator.feed(msg or "")
+            self._append_log_line(msg)
             self._schedule_console_render()
-        except Exception as exc:
-            self._terminal_emulation_enabled = False
-            self._append_log_line(f"[terminal emulator disabled: {exc}]")
-            fallback = (msg or "").rstrip("\n")
-            if fallback:
-                self._append_log_line(fallback)
+        except Exception:
+            pass
 
     def eventFilter(self, obj, event) -> bool:
         try:
@@ -623,10 +606,6 @@ class LoginWidget(QWidget):
             if self._last_shell_geometry == (cols, rows):
                 return
             ssh.resize_shell_pty(cols, rows)
-            try:
-                self._terminal_emulator.resize(cols, rows)
-            except Exception:
-                pass
             self._last_shell_geometry = (cols, rows)
             self.terminal_dimensions_label.setText(f"{cols}×{rows}")
         except Exception:
@@ -639,13 +618,6 @@ class LoginWidget(QWidget):
         self._pending_old_ssh = old_ssh
         if self.terminal_widget is not None:
             self.terminal_widget.detach()
-        self._terminal_emulation_enabled = True
-        try:
-            cols, rows = self._console_shell_geometry()
-            self._terminal_emulator.reset()
-            self._terminal_emulator.resize(cols, rows)
-        except Exception:
-            pass
         self.btn_connect.setEnabled(False)
         self.btn_add_connection.setEnabled(False)
         self.status_label.setText(t("login.status_connecting"))
