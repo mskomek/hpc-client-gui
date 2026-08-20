@@ -29,6 +29,8 @@ class StartupChangelogTests(unittest.TestCase):
             self.assertEqual((window.width(), window.height()), (640, 480))
         finally:
             window.graceful_shutdown()
+            self.assertFalse(window._startup_changelog_timer.isActive())
+            self.assertFalse(window._startup_update_timer.isActive())
             window.close()
 
     def test_changelog_sections_are_rendered_newest_first(self) -> None:
