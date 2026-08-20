@@ -11,6 +11,8 @@ class TerminalAssetsTests(unittest.TestCase):
         bridge = (ASSETS / "bridge.js").read_text(encoding="utf-8")
         self.assertNotIn("http://", page)
         self.assertNotIn("https://", page)
+        self.assertIn("html, body, #terminal", page)
+        self.assertIn("height: 100%", page)
         self.assertIn("hpcSetFontSize", bridge)
         for name in ("xterm.js", "xterm.css", "addon-fit.js", "bridge.js"):
             self.assertTrue((ASSETS / name).is_file(), name)

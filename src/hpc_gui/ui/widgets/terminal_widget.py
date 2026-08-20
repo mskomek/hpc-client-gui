@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from PySide6.QtCore import QUrl, QTimer, Qt, Signal, Slot
-from PySide6.QtWidgets import QVBoxLayout, QWidget
+from PySide6.QtWidgets import QSizePolicy, QVBoxLayout, QWidget
 
 from hpc_gui.services.terminal_bridge import TerminalBridge
 from hpc_gui.core.i18n import t
@@ -28,10 +28,13 @@ class TerminalWidget(QWidget):
 
         self.bridge = TerminalBridge(self)
         self.setAccessibleName(t("login.terminal_accessible_name"))
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        self.setMinimumHeight(240)
         self._ready = False
         self._focus_requested = False
         self._font_size = 14
         self.view = QWebEngineView(self)
+        self.view.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.view.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.view.setPage(LocalTerminalPage(self.view))
         self.channel = QWebChannel(self.view.page())
@@ -43,7 +46,7 @@ class TerminalWidget(QWidget):
         self._resize_timer.timeout.connect(self._fit)
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.addWidget(self.view)
+        layout.addWidget(self.view, 1)
         self.view.setUrl(QUrl.fromLocalFile(str(self._index_path())))
 
     @staticmethod

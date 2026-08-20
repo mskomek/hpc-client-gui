@@ -310,6 +310,7 @@ class LoginWidget(QWidget):
 
         right = QWidget()
         right_lay = QVBoxLayout(right)
+        right_lay.setSpacing(8)
         action_row = QHBoxLayout()
         action_row.addWidget(self.btn_add_connection)
         action_row.addWidget(self.btn_connect)
@@ -322,8 +323,8 @@ class LoginWidget(QWidget):
         )
         right_lay.addWidget(self.terminal_header)
         self.console_title_label = QLabel(t("login.console_title"))
-        right_lay.addWidget(self.console_title_label)
-        right_lay.addWidget(self.terminal_widget or self.console)
+        self.console_title_label.setVisible(False)
+        right_lay.addWidget(self.terminal_widget or self.console, 1)
         right_lay.addWidget(self.quick_command_row)
 
         splitter = QSplitter()
@@ -331,6 +332,9 @@ class LoginWidget(QWidget):
         splitter.addWidget(right)
         splitter.setStretchFactor(0, 1)
         splitter.setStretchFactor(1, 3)
+        splitter.setCollapsible(0, False)
+        splitter.setCollapsible(1, False)
+        splitter.setSizes([220, 780])
 
         root = QVBoxLayout(self)
         root.addWidget(splitter)

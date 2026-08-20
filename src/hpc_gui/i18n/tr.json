@@ -71,6 +71,7 @@
     "console_title": "Konsol",
     "terminal_find": "Bul",
     "terminal_clear": "Terminali temizle",
+    "terminal_clear_short": "Temizle",
     "terminal_font_decrease": "Yazı tipini küçült",
     "terminal_font_increase": "Yazı tipini büyüt",
     "terminal_font_decrease_short": "A−",

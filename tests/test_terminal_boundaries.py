@@ -1,6 +1,9 @@
 import ast
+import os
 import unittest
 from pathlib import Path
+
+os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 
 ROOT = Path(__file__).parents[1]
@@ -26,6 +29,20 @@ class TerminalBoundaryTests(unittest.TestCase):
         names = imports(ROOT / "src/hpc_gui/ui/widgets/terminal_header.py")
         self.assertFalse(any(name.startswith("hpc_gui.ssh") for name in names))
         self.assertFalse(any("config.storage" in name for name in names))
+
+    def test_terminal_header_uses_compact_tool_buttons(self):
+        from PySide6.QtWidgets import QApplication, QToolButton
+        from hpc_gui.ui.widgets.terminal_header import TerminalHeader
+
+        app = QApplication.instance() or QApplication([])
+        header = TerminalHeader()
+        self.addCleanup(header.deleteLater)
+        self.assertTrue(all(isinstance(button, QToolButton) for button in (
+            header.find_button,
+            header.clear_button,
+            header.font_down_button,
+            header.font_up_button,
+        )))
 
 
 if __name__ == "__main__":

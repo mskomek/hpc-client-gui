@@ -71,6 +71,7 @@
     "console_title": "Console",
     "terminal_find": "Find",
     "terminal_clear": "Clear terminal",
+    "terminal_clear_short": "Clear",
     "terminal_font_decrease": "Decrease font",
     "terminal_font_increase": "Increase font",
     "terminal_font_decrease_short": "A−",
