@@ -10,7 +10,7 @@ from PySide6.QtWidgets import (
 )
 
 from hpc_gui.core.i18n import t
-from hpc_gui.core.ui_errors import show_exception
+from hpc_gui.core.ui_errors import describe_connection_error, show_exception
 from hpc_gui.config.models import SSHConfig
 from hpc_gui.config.storage import (
     load_profiles,
@@ -740,17 +740,11 @@ class LoginWidget(QWidget):
             message = t("connection.host_key_changed").format(host=exc.hostname)
         elif isinstance(exc, HostKeyRejectedError):
             message = t("connection.host_key_rejected").format(host=exc.hostname)
+        elif isinstance(exc, BaseException):
+            message = describe_connection_error(exc, message)
         self.status_label.setText(t("login.status_disconnected") if t("login.status_disconnected") != "[login.status_disconnected]" else "Bağlı değil")
         self.cmd_in.set_connected(False)
         self.append_console(t("login.conn_error_prefix").format(err=message))
-        if "SSH protocol banner" in message or "banner" in message.lower():
-            self.append_console(
-                "İpucu: SSH sunucusu banner döndürmeden önce gecikiyor olabilir; VPN/ağ, port ve uzak sshd erişimini kontrol edin."
-            )
-        elif "key-exchange timed out" in message.lower():
-            self.append_console(
-                "İpucu: SSH anahtar değişimi zaman aşımına uğradı. VPN/ağ bağlantısını, doğru SSH portunu ve sunucunun erişilebilirliğini kontrol edip tekrar deneyin."
-            )
         show_exception(self, title=t("login.conn_error_title"), user_message=message, exc=exc if isinstance(exc, BaseException) else None, area="SSH")
         self.btn_add_connection.setEnabled(True)
         self.btn_connect.setEnabled(bool(self._selected_profile_name()))
