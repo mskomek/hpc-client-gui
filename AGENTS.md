@@ -14,19 +14,28 @@ or Git-history decisions.
 
 ## Linux/WSL Git workflow and push boundary
 
-When working from WSL on a Windows-mounted checkout (`/mnt/<drive>/...`):
+When Codex, Claude, or OpenCode is started from Linux/WSL on a
+Windows-mounted checkout (`/mnt/<drive>/...`):
 
-1. Clone or create a clean Git worktree on the local Linux filesystem.
-2. Create a temporary local branch there for the task.
-3. Do all edits and tests in that local worktree.
-4. Codex reviews and commits the result; delegated OpenCode/DeepSeek workers
-   never stage, commit, or push.
-5. Fast-forward the local `codex/develop` branch with the reviewed commit.
-6. Use `MAIN_SYNC_PROTOCOL.md` to sync approved paths into local `main`.
+1. Do not edit the mounted Windows worktree directly.
+2. Clone or create a clean sibling worktree on the local Linux filesystem and
+   create a fresh `linux-develop` branch there from the intended base.
+3. Do all edits, tests, and review in that Linux worktree, regardless of which
+   agent performs the work.
+4. At handoff, transfer only the verified changes to the Windows repository and
+   commit them there. Preserve unrelated Windows changes; never reset, clean,
+   or overwrite them to force the handoff.
+5. The final report must state exactly:
+   `Linux'te yapıldı, Windows ortamına commitlendi.`
+   It must also include the Linux branch, Windows branch, and final Windows
+   commit hash.
 
 Never push a temporary, feature, worker, or `codex/develop` branch to `origin`.
 Only the final, verified `main` branch may be pushed, and only by Codex after
 the main-sync path approval and release gates pass.
+
+For Linux-native-only checkouts, use the normal local branch workflow. Native
+Windows sessions work directly in the Windows repository and commit there.
 
 ## Default DeepSeek workflow
 

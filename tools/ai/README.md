@@ -1,5 +1,18 @@
 # DeepSeek worker
 
+## Cross-platform repository handoff
+
+This worker is used by Codex, Claude, and OpenCode. If it is invoked from
+Linux/WSL for a task targeting this Windows-mounted repository, the caller
+must use a clean local Linux clone/worktree and a fresh `linux-develop` branch.
+All implementation, tests, and review stay there. The verified result is then
+transferred to the Windows repository and committed there without overwriting
+unrelated Windows work. The final report must state:
+`Linux'te yapıldı, Windows ortamına commitlendi.`
+
+Native Windows sessions work directly in the Windows repository. Linux-native
+projects use their normal local branch workflow.
+
 This directory provides the project-local OpenCode delegation wrapper shared by Codex and Claude Code. It uses only model identifiers returned by `opencode models`; it does not store or handle OpenCode credentials. The project default for every mode is the discovered OpenCode Go DeepSeek v4 Flash model. A different discovered OpenCode Go DeepSeek model requires an explicit `-Model` override.
 
 ## Git boundary

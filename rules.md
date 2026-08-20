@@ -105,6 +105,21 @@ Do not claim success without recording what was checked.
 
 ## AI Collaboration Rule
 
+### Linux/WSL to Windows repository handoff
+
+This rule applies equally to Codex, Claude, and OpenCode. When a Linux/WSL
+session works on a file in this Windows-mounted repository, do not edit the
+mounted worktree. Create a clean local Linux clone or sibling worktree and a
+fresh `linux-develop` branch from the intended base; perform all edits, tests,
+and review there. Once verified, transfer only those changes to the Windows
+repository and commit them there, preserving unrelated Windows changes and
+never using reset, clean, or overwrite to force the handoff.
+
+The final report must state exactly `Linux'te yapıldı, Windows ortamına
+commitlendi.` and include the Linux branch, Windows branch, and final Windows
+commit hash. Native Windows sessions work directly in the Windows repository;
+Linux-native-only checkouts use the normal local branch workflow.
+
 `rules.md` defines product and architecture constraints. `AGENTS.md` defines the
 Codex workflow, and `CLAUDE.md` defines the Claude Code workflow. When they
 overlap, the stricter safety or validation rule applies; no agent instruction

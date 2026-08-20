@@ -2,15 +2,20 @@
 
 ## Linux/WSL Git workflow and push boundary
 
-When running in WSL from a Windows-mounted checkout (`/mnt/<drive>/...`), use
-an ordinary clone or clean Git worktree on the local Linux filesystem and make
-a temporary local branch for the task. Work and test there. Codex remains the
-only agent that stages and commits the reviewed result; OpenCode/DeepSeek may
-only work in their supplied separate worktree and must never stage, commit,
-push, reset, clean, or alter remotes.
+When Claude, Codex, or OpenCode is started from Linux/WSL on a
+Windows-mounted checkout (`/mnt/<drive>/...`), do not edit the mounted
+worktree. Create a clean sibling worktree on local Linux storage and a fresh
+`linux-develop` branch from the intended base. All implementation, tests, and
+review happen there. At handoff, transfer only verified changes to the Windows
+repository and commit them there, preserving unrelated Windows changes and
+never using reset, clean, or overwrite to force the handoff.
 
-After review, Codex fast-forwards local `codex/develop`, then follows
-`MAIN_SYNC_PROTOCOL.md` to sync approved paths into local `main`.
+The final report must state exactly:
+`Linux'te yapıldı, Windows ortamına commitlendi.`
+It must include the Linux branch, Windows branch, and final Windows commit hash.
+
+Linux-native-only checkouts use the normal local branch workflow. Native
+Windows sessions work directly in the Windows repository and commit there.
 Never push a temporary, feature, worker, or `codex/develop` branch. Only the
 final verified `main` branch may be pushed to `origin`.
 
