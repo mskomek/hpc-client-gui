@@ -42,7 +42,7 @@ if I18N_DIR.exists():
     datas.append((str(I18N_DIR), "hpc_gui/i18n"))
 if DOCS_DIR.exists():
     datas.append((str(DOCS_DIR), "hpc_gui/docs"))
-for _license_name in ("LICENSE", "COMMERCIAL_LICENSE.md", "THIRD_PARTY_NOTICES.md", "QT_LGPL_SOURCE_OFFER.md"):
+for _license_name in ("LICENSE", "COMMERCIAL_LICENSE.md", "THIRD_PARTY_NOTICES.md", "QT_LGPL_SOURCE_OFFER.md", "THIRD_PARTY_VERSIONS.txt"):
     _license_path = REPO_ROOT / _license_name
     if _license_path.exists():
         datas.append((str(_license_path), "."))

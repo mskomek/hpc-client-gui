@@ -7,6 +7,8 @@ $ErrorActionPreference = "Stop"
 $Root = Split-Path -Parent $PSScriptRoot
 Set-Location $Root
 
+python scripts/generate_third_party_versions.py --version $Version
+
 & (Join-Path $PSScriptRoot 'check_release_ci_workflow.ps1')
 if (-not $?) { throw 'Release CI workflow gate failed.' }
 
@@ -132,7 +134,7 @@ foreach ($fileName in $requiredHelpFiles) {
     Copy-Item -Path $helpSourcePath -Destination (Join-Path $helpDestDir $fileName) -Force
 }
 
-$licenseFiles = @("LICENSE", "COMMERCIAL_LICENSE.md", "THIRD_PARTY_NOTICES.md", "QT_LGPL_SOURCE_OFFER.md")
+$licenseFiles = @("LICENSE", "COMMERCIAL_LICENSE.md", "THIRD_PARTY_NOTICES.md", "QT_LGPL_SOURCE_OFFER.md", "THIRD_PARTY_VERSIONS.txt")
 foreach ($fileName in $licenseFiles) {
     $licenseSourcePath = Join-Path $Root $fileName
     if (-not (Test-Path -LiteralPath $licenseSourcePath -PathType Leaf)) {
