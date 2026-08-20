@@ -13,6 +13,7 @@ relicensed under the HPC Client GUI license.
 | PySide6 | LGPLv3 terms used by this project | Qt for Python bindings |
 | shiboken6 | LGPLv3 terms used by this project | CPython bindings generator for Qt (runtime support for PySide6) |
 | Qt libraries | Applicable Qt LGPL terms | Qt libraries distributed through PySide6 |
+| xterm.js / @xterm/addon-fit | MIT | Vendored embedded-terminal assets; license and provenance are in `src/hpc_gui/assets/terminal/NOTICE.md` |
 | paramiko | LGPL-2.1+ | SSHv2 protocol implementation |
 | cryptography | Apache-2.0 / BSD | Cryptographic primitives used by paramiko |
 
@@ -31,6 +32,9 @@ bundled directly in `third_party_licenses/`:
 - `third_party_licenses/paramiko-LGPL-2.1.txt` — GNU Lesser General Public
   License v2.1, covering paramiko (unmodified, taken from paramiko's own
   wheel distribution).
+- `src/hpc_gui/assets/terminal/NOTICE.md` — bundled xterm.js and addon-fit
+  provenance plus the complete MIT license text. This file ships with the
+  terminal assets in Windows and Linux packages.
 
 LGPL-covered components may be replaced or modified under the rights granted
 by the LGPL. The exact dependency and Qt runtime versions shipped in each

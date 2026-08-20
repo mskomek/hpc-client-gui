@@ -78,7 +78,6 @@ jobs:
     runs-on: windows-latest
     env:
       PYTHONPATH: src
-      QT_QPA_PLATFORM: offscreen
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -91,6 +90,10 @@ jobs:
           pip install pytest
       - name: Windows boundary tests
         run: python -m pytest tests/test_safe_download.py tests/test_version_consistency.py tests/test_startup_changelog.py -q --tb=short
+      - name: Terminal transport tests
+        run: |
+          python -m unittest discover -s tests -p "test_terminal_*.py"
+          python -m unittest discover -s tests -p "test_ssh_terminal_stream.py"
   gui:
     runs-on: ubuntu-latest
     env:

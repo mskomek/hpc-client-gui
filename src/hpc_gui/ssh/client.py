@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import contextlib
+import codecs
 import os
 import threading
 import time
@@ -205,6 +206,8 @@ class SSHClientWrapper:
         self._shell_channel = None
         self._shell_thread: Optional[threading.Thread] = None
         self._shell_stop = threading.Event()
+        self._shell_send_lock = threading.Lock()
+        self._shell_decoder = codecs.getincrementaldecoder("utf-8")("replace")
         self._shell_geometry: Tuple[int, int] = (120, 40)
         self._log = logger or log_cb
         self._shell_output_cb = shell_output_cb
@@ -324,7 +327,11 @@ class SSHClientWrapper:
             if transport is None or not transport.is_active():
                 return
             cols, rows = self._shell_geometry
-            channel = self.client.invoke_shell(term="xterm", width=cols, height=rows)
+            try:
+                channel = self.client.invoke_shell(term="xterm-256color", width=cols, height=rows)
+            except Exception as preferred_exc:
+                self.log(f"SSH: xterm-256color unavailable; falling back to xterm ({preferred_exc.__class__.__name__})")
+                channel = self.client.invoke_shell(term="xterm", width=cols, height=rows)
             try:
                 channel.settimeout(0.2)
             except Exception:
@@ -334,6 +341,7 @@ class SSHClientWrapper:
             return
 
         self._shell_channel = channel
+        self._shell_decoder = codecs.getincrementaldecoder("utf-8")("replace")
         self._shell_stop = threading.Event()
         self._shell_thread = threading.Thread(
             target=self._shell_reader_loop,
@@ -358,30 +366,41 @@ class SSHClientWrapper:
             pass
 
     def send_shell_text(self, text: str) -> bool:
-        channel = self._shell_channel
-        if channel is None or getattr(channel, "closed", False):
-            return False
         payload = (text or "").rstrip("\r\n")
         if not payload:
             return True
-        try:
-            sent = channel.send(payload + "\n")
-            return sent > 0
-        except Exception:
-            return False
+        return self._send_shell_payload((payload + "\n").encode("utf-8"))
 
     def send_shell_input(self, data: str) -> bool:
-        channel = self._shell_channel
-        if channel is None or getattr(channel, "closed", False):
-            return False
         payload = data or ""
         if not payload:
             return True
+        return self._send_shell_payload(payload.encode("utf-8"))
+
+    def _send_shell_payload(self, payload: bytes) -> bool:
+        if not payload:
+            return True
+        with self._shell_send_lock:
+            channel = self._shell_channel
+            if channel is None or getattr(channel, "closed", False):
+                return False
+            offset = 0
+            try:
+                while offset < len(payload):
+                    sent = channel.send(payload[offset:])
+                    if not sent:
+                        return False
+                    offset += sent
+                return True
+            except Exception:
+                return False
+
+    def _decode_shell_bytes(self, data: bytes, *, final: bool = False) -> None:
         try:
-            sent = channel.send(payload)
-            return sent > 0
+            text = self._shell_decoder.decode(data, final=final)
         except Exception:
-            return False
+            return
+        self._handle_shell_output(text)
 
     def _drain_initial_shell_output(self, channel, duration: float = 0.35) -> None:
         deadline = time.monotonic() + duration
@@ -393,7 +412,7 @@ class SSHClientWrapper:
                 data = channel.recv(4096)
                 if not data:
                     break
-                self._handle_shell_output(data.decode(errors="replace"))
+                self._decode_shell_bytes(data)
             except socket.timeout:
                 continue
             except Exception:
@@ -407,7 +426,7 @@ class SSHClientWrapper:
                 if channel.recv_ready():
                     data = channel.recv(4096)
                     if data:
-                        self._handle_shell_output(data.decode(errors="replace"))
+                        self._decode_shell_bytes(data)
                     continue
                 if getattr(channel, "closed", False) or channel.exit_status_ready():
                     unexpected_disconnect = True
@@ -450,6 +469,7 @@ class SSHClientWrapper:
         self._shell_thread = None
         try:
             if channel is not None:
+                self._decode_shell_bytes(b"", final=True)
                 try:
                     channel.close()
                 except Exception:
@@ -460,6 +480,7 @@ class SSHClientWrapper:
                     thread.join(timeout=1.0)
                 except Exception:
                     pass
+            self._decode_shell_bytes(b"", final=True)
 
     def _notify_disconnect(self, reason: str) -> None:
         if not self._disconnect_cb:

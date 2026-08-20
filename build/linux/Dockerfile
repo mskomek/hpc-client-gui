@@ -11,6 +11,10 @@ RUN apt-get update \
        flatpak-builder \
        fuse3 \
        libfuse2t64 \
+       libegl1 \
+       libgl1 \
+       libxkbcommon0 \
+       libxcb-xinerama0 \
        python3 \
        python3-venv \
        wget \

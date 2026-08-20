@@ -95,7 +95,8 @@ class QuickTourOverlay(QWidget):
             TourStep(
                 title=t("tour.s3_title"),
                 body=t("tour.s3_body"),
-                target_getter=lambda: getattr(m.login, "cmd_in", None),
+                target_getter=lambda: getattr(m.login, "terminal_widget", None)
+                or getattr(m.login, "console", None),
                 tab_index=m.tabs.indexOf(m.login),
             ),
             TourStep(
