@@ -28,6 +28,8 @@ paths, never recursive subdirectories.
   `SUPPORT.md`, `pyproject.toml`, `requirements.txt`, and `template.slurm`
 - `AGENTS.md`, `CLAUDE.md`, and `tools/ai/README.md` — repository workflow and
   delegated-worker safety instructions
+- `QT_LGPL_SOURCE_OFFER.md`, `THIRD_PARTY_NOTICES.md`, and
+  `requirements-release.lock` — release licensing and dependency metadata
 
 ## Always excluded
 
