@@ -45,6 +45,7 @@ from hpc_gui.core.secret_store import (
 )
 from hpc_gui.ui.widgets.terminal_input import TerminalInput
 from hpc_gui.ui.widgets.terminal_widget import TerminalWidget
+from hpc_gui.ui.widgets.terminal_header import TerminalHeader
 from hpc_gui.ui.dialogs.connection_dialog import ConnectionDialog
 
 import os
@@ -232,9 +233,10 @@ class LoginWidget(QWidget):
         self.btn_connect = QPushButton(t("login.connect_selected"))
         self.btn_connect.clicked.connect(self.connect_selected_profile)
 
-        self.status_label = QLabel(t("login.status_disconnected") if t("login.status_disconnected") != "[login.status_disconnected]" else "Bağlı değil")
-        self.terminal_identity_label = QLabel(t("login.terminal_protocol_ssh"))
-        self.terminal_dimensions_label = QLabel("—")
+        self.terminal_header = TerminalHeader(self)
+        self.status_label = self.terminal_header.status_label
+        self.terminal_identity_label = self.terminal_header.identity_label
+        self.terminal_dimensions_label = self.terminal_header.dimensions_label
 
         # ---- Console
         self.console = _TerminalConsole(self)
@@ -272,18 +274,10 @@ class LoginWidget(QWidget):
         self.quick_command_row.setLayout(cmd_row)
         self.quick_command_row.setVisible(False)
 
-        self.btn_terminal_find = QPushButton("⌕")
-        self.btn_terminal_find.setToolTip(t("login.terminal_find"))
-        self.btn_terminal_find.clicked.connect(self._find_terminal_text)
-        self.btn_terminal_clear = QPushButton("×")
-        self.btn_terminal_clear.setToolTip(t("login.terminal_clear"))
-        self.btn_terminal_clear.clicked.connect(lambda: self.terminal_widget and self.terminal_widget.clear())
-        self.btn_terminal_font_down = QPushButton(t("login.terminal_font_decrease_short"))
-        self.btn_terminal_font_down.setToolTip(t("login.terminal_font_decrease"))
-        self.btn_terminal_font_down.clicked.connect(lambda: self.terminal_widget and self.terminal_widget.change_font_size(-1))
-        self.btn_terminal_font_up = QPushButton(t("login.terminal_font_increase_short"))
-        self.btn_terminal_font_up.setToolTip(t("login.terminal_font_increase"))
-        self.btn_terminal_font_up.clicked.connect(lambda: self.terminal_widget and self.terminal_widget.change_font_size(1))
+        self.btn_terminal_find = self.terminal_header.find_button
+        self.btn_terminal_clear = self.terminal_header.clear_button
+        self.btn_terminal_font_down = self.terminal_header.font_down_button
+        self.btn_terminal_font_up = self.terminal_header.font_up_button
 
         self.terminal_widget: TerminalWidget | None = None
         self._terminal_init_error: str | None = None
@@ -321,16 +315,12 @@ class LoginWidget(QWidget):
         action_row.addWidget(self.btn_connect)
         action_row.addStretch(1)
         right_lay.addLayout(action_row)
-        terminal_header = QHBoxLayout()
-        terminal_header.addWidget(self.status_label)
-        terminal_header.addWidget(self.terminal_identity_label)
-        terminal_header.addStretch(1)
-        terminal_header.addWidget(self.btn_terminal_find)
-        terminal_header.addWidget(self.btn_terminal_font_down)
-        terminal_header.addWidget(self.btn_terminal_font_up)
-        terminal_header.addWidget(self.btn_terminal_clear)
-        terminal_header.addWidget(self.terminal_dimensions_label)
-        right_lay.addLayout(terminal_header)
+        self.terminal_header.find_requested.connect(self._find_terminal_text)
+        self.terminal_header.clear_requested.connect(lambda: self.terminal_widget and self.terminal_widget.clear())
+        self.terminal_header.font_delta_requested.connect(
+            lambda delta: self.terminal_widget and self.terminal_widget.change_font_size(delta)
+        )
+        right_lay.addWidget(self.terminal_header)
         self.console_title_label = QLabel(t("login.console_title"))
         right_lay.addWidget(self.console_title_label)
         right_lay.addWidget(self.terminal_widget or self.console)
@@ -1390,10 +1380,7 @@ class LoginWidget(QWidget):
             self.console.setPlaceholderText(t("login.console_placeholder"))
             self.cmd_in.setPlaceholderText(t("login.command_placeholder"))
             self.btn_run_cmd.setText(t("login.run_command"))
-            self.btn_terminal_find.setToolTip(t("login.terminal_find"))
-            self.btn_terminal_clear.setToolTip(t("login.terminal_clear"))
-            self.btn_terminal_font_down.setToolTip(t("login.terminal_font_decrease"))
-            self.btn_terminal_font_up.setToolTip(t("login.terminal_font_increase"))
+            self.terminal_header.retranslate_ui()
             self.btn_add_connection.setText(t("login.add_connection"))
             self.btn_connect.setText(t("login.connect_selected"))
         except Exception:
