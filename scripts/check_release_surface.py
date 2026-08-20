@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -15,6 +16,19 @@ RESIDUE_RE = re.compile(r"(?i)drafted later|this wave|agent-runs|deepseek|openco
 
 def check_release_surface(root: Path) -> list[str]:
     problems: list[str] = []
+    if (root / ".git").exists():
+        tracked_dist = subprocess.run(
+            ["git", "ls-files", "dist/releases"],
+            cwd=root,
+            check=False,
+            capture_output=True,
+            text=True,
+        ).stdout.splitlines()
+        if tracked_dist:
+            problems.append(
+                "dist/releases: generated release artifacts must not be tracked "
+                f"({len(tracked_dist)} paths; remove them from the current tree)"
+            )
     readme = (root / "README.md").read_text(encoding="utf-8")
     version_match = VERSION_RE.search((root / "pyproject.toml").read_text(encoding="utf-8"))
     if not version_match:

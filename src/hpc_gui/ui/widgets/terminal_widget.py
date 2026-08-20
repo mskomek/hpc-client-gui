@@ -6,6 +6,7 @@ from PySide6.QtCore import QUrl, QTimer, Qt, Signal, Slot
 from PySide6.QtWidgets import QVBoxLayout, QWidget
 
 from hpc_gui.services.terminal_bridge import TerminalBridge
+from hpc_gui.core.i18n import t
 
 class TerminalWidget(QWidget):
     ready = Signal()
@@ -26,7 +27,7 @@ class TerminalWidget(QWidget):
                 return bool(url.isLocalFile() and is_main_frame)
 
         self.bridge = TerminalBridge(self)
-        self.setAccessibleName("Remote terminal")
+        self.setAccessibleName(t("login.terminal_accessible_name"))
         self._ready = False
         self._focus_requested = False
         self._font_size = 14
