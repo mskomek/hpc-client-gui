@@ -132,7 +132,7 @@ foreach ($fileName in $requiredHelpFiles) {
     Copy-Item -Path $helpSourcePath -Destination (Join-Path $helpDestDir $fileName) -Force
 }
 
-$licenseFiles = @("LICENSE", "COMMERCIAL_LICENSE.md", "THIRD_PARTY_NOTICES.md")
+$licenseFiles = @("LICENSE", "COMMERCIAL_LICENSE.md", "THIRD_PARTY_NOTICES.md", "QT_LGPL_SOURCE_OFFER.md")
 foreach ($fileName in $licenseFiles) {
     $licenseSourcePath = Join-Path $Root $fileName
     if (-not (Test-Path -LiteralPath $licenseSourcePath -PathType Leaf)) {

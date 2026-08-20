@@ -1,15 +1,18 @@
 # Third-Party Notices
 
-HPC Client GUI is licensed under the PolyForm Noncommercial License 1.0.0.
+HPC Client GUI itself is licensed under the PolyForm Noncommercial License
+1.0.0. Commercial use remains governed by the separate `COMMERCIAL_LICENSE.md`.
 This application also bundles third-party runtime dependencies, each of which
-is distributed under its own license.
+remains distributed under its own license. No third-party component is
+relicensed under the HPC Client GUI license.
 
 ## Bundled runtime dependencies
 
 | Component | License | Notes |
 | --- | --- | --- |
-| PySide6 | LGPLv3 | Qt for Python bindings |
-| shiboken6 | LGPLv3 | CPython bindings generator for Qt (runtime support for PySide6) |
+| PySide6 | LGPLv3 terms used by this project | Qt for Python bindings |
+| shiboken6 | LGPLv3 terms used by this project | CPython bindings generator for Qt (runtime support for PySide6) |
+| Qt libraries | Applicable Qt LGPL terms | Qt libraries distributed through PySide6 |
 | paramiko | LGPL-2.1+ | SSHv2 protocol implementation |
 | cryptography | Apache-2.0 / BSD | Cryptographic primitives used by paramiko |
 
@@ -29,9 +32,16 @@ bundled directly in `third_party_licenses/`:
   License v2.1, covering paramiko (unmodified, taken from paramiko's own
   wheel distribution).
 
+LGPL-covered components may be replaced or modified under the rights granted
+by the LGPL. The exact dependency and Qt runtime versions shipped in each
+binary release are recorded in the generated `THIRD_PARTY_VERSIONS.txt`
+manifest. Corresponding-source information for Qt and PySide6 components is
+described in `QT_LGPL_SOURCE_OFFER.md`.
+
 ## License texts
 
-The `LICENSE`, `COMMERCIAL_LICENSE.md`, this notices file, and
+The `LICENSE`, `COMMERCIAL_LICENSE.md`, this notices file,
+`QT_LGPL_SOURCE_OFFER.md`, `THIRD_PARTY_VERSIONS.txt`, and
 `third_party_licenses/` all ship alongside the packaged application. If you
-receive a copy of this software without them, you may obtain them from the
-project's source repository.
+receive a copy of this software without them, obtain the missing notices from
+the corresponding source or release materials before redistributing it.
