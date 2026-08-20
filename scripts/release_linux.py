@@ -287,6 +287,7 @@ def _run(command: List[str], *, cwd: Path = REPO_ROOT) -> None:
 def _generate_version_manifest(version: str) -> None:
     _run([sys.executable, "scripts/generate_third_party_versions.py", "--version", version])
     _run([sys.executable, "scripts/generate_sbom.py", "--version", version])
+    _run([sys.executable, "scripts/generate_qt_lgpl_sources.py"])
 
 
 def _copy_tree(source: Path, destination: Path) -> None:
@@ -307,6 +308,7 @@ def _stage_common_release_files(destination: Path) -> None:
             shutil.copy2(path, target)
     shutil.copy2(REPO_ROOT / "THIRD_PARTY_VERSIONS.txt", destination / "THIRD_PARTY_VERSIONS.txt")
     shutil.copy2(REPO_ROOT / "SBOM.cdx.json", destination / "SBOM.cdx.json")
+    shutil.copy2(REPO_ROOT / "QT_LGPL_SOURCES.json", destination / "QT_LGPL_SOURCES.json")
     help_dir = destination / "help"
     help_dir.mkdir(exist_ok=True)
     docs_dir = SRC_DIR / "hpc_gui" / "docs"
