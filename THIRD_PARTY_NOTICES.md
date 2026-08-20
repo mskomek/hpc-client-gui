@@ -35,13 +35,15 @@ bundled directly in `third_party_licenses/`:
 LGPL-covered components may be replaced or modified under the rights granted
 by the LGPL. The exact dependency and Qt runtime versions shipped in each
 binary release are recorded in the generated `THIRD_PARTY_VERSIONS.txt`
-manifest. Corresponding-source information for Qt and PySide6 components is
-described in `QT_LGPL_SOURCE_OFFER.md`.
+manifest, and the machine-readable dependency inventory is in
+`SBOM.cdx.json`. Corresponding-source information for Qt and PySide6
+components is described in `QT_LGPL_SOURCE_OFFER.md`.
 
 ## License texts
 
 The `LICENSE`, `COMMERCIAL_LICENSE.md`, this notices file,
 `QT_LGPL_SOURCE_OFFER.md`, `THIRD_PARTY_VERSIONS.txt`, and
+`SBOM.cdx.json`, and
 `third_party_licenses/` all ship alongside the packaged application. If you
 receive a copy of this software without them, obtain the missing notices from
 the corresponding source or release materials before redistributing it.
