@@ -131,11 +131,13 @@ class _MockShell:
 
 
 class _ServerInterface(paramiko.ServerInterface):
-    def __init__(self, shell: _MockShell, username: str, password: str) -> None:
+    def __init__(self, shell: _MockShell, username: str, password: str, pty_sizes, resize_sizes) -> None:
         self.event = threading.Event()
         self.shell = shell
         self.username = username
         self.password = password
+        self.pty_sizes = pty_sizes
+        self.resize_sizes = resize_sizes
 
     def check_channel_request(self, kind: str, chanid: int) -> int:
         return paramiko.OPEN_SUCCEEDED if kind == "session" else paramiko.OPEN_FAILED_ADMINISTRATIVELY_PROHIBITED
@@ -180,6 +182,7 @@ class _ServerInterface(paramiko.ServerInterface):
         pixelheight: int,
         modes: bytes,
     ) -> bool:
+        self.pty_sizes.append((width, height, pixelwidth, pixelheight, term.decode("ascii", errors="replace")))
         return True
 
     def check_channel_window_change_request(
@@ -190,6 +193,7 @@ class _ServerInterface(paramiko.ServerInterface):
         pixelwidth: int,
         pixelheight: int,
     ) -> bool:
+        self.resize_sizes.append((width, height, pixelwidth, pixelheight))
         return True
 
     def _shell_loop(self, channel: paramiko.Channel) -> None:
@@ -319,6 +323,8 @@ class MockSSHServer:
         self._thread: threading.Thread | None = None
         self._stop = threading.Event()
         self.port = 0
+        self.pty_sizes: list[tuple[int, int, int, int, str]] = []
+        self.resize_sizes: list[tuple[int, int, int, int]] = []
 
     def __enter__(self) -> "MockSSHServer":
         _StubSFTPServer.ROOT = self.root_dir
@@ -350,6 +356,8 @@ class MockSSHServer:
             _MockShell(self.root_dir),
             self.username,
             self.password,
+            self.pty_sizes,
+            self.resize_sizes,
         )
         try:
             transport.start_server(server=server)

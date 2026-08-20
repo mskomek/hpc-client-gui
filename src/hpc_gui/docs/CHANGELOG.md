@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.2.8
+
+### Embedded terminal and clearer connection diagnostics
+- Replaced the legacy terminal surface with a bundled xterm.js terminal that requires no CDN or runtime download.
+- Added live PTY streaming, resize synchronization, find, clear, and font-size controls.
+- Fixed connection-page spacing and removed the unused fallback console that appeared behind saved connections.
+- Added actionable Turkish and English explanations for authentication, DNS, timeout, port, key, banner, and SSH protocol failures.
+- Clarified diagnostic codes so users can match an error dialog to the corresponding log entry.
+
 ## v1.2.7
 
 ### Transfer reliability and release hardening
