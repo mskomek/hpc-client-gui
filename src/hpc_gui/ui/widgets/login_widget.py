@@ -285,6 +285,8 @@ class LoginWidget(QWidget):
             self.terminal_widget = TerminalWidget(self)
         except RuntimeError as exc:
             self._terminal_init_error = str(exc)
+        else:
+            self.console.hide()
 
         self.form = QFormLayout()
         self.form.addRow(t("login.profile_name_label"), self.profile_name)
