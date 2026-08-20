@@ -19,7 +19,8 @@
       "build-commands": [
         "install -Dm755 hpc-client-gui /app/bin/hpc-client-gui",
         "cp -a _internal /app/bin/",
-        "install -Dm644 io.github.mskomek.hpc-client-gui.desktop /app/share/applications/io.github.mskomek.hpc-client-gui.desktop",
+        "install -Dm644 io.github.mskomek.HpcClientGui.desktop /app/share/applications/io.github.mskomek.HpcClientGui.desktop",
+        "install -Dm644 hpc-client-gui.png /app/share/icons/hicolor/256x256/apps/io.github.mskomek.HpcClientGui.png",
         "install -Dm644 HELP_tr.md /app/share/hpc-client-gui/HELP_tr.md",
         "install -Dm644 HELP_en.md /app/share/hpc-client-gui/HELP_en.md",
         "install -Dm644 CLI_GUIDE_tr.md /app/share/hpc-client-gui/CLI_GUIDE_tr.md",
@@ -32,7 +33,11 @@
         },
         {
           "type": "file",
-          "path": "io.github.mskomek.hpc-client-gui.desktop"
+          "path": "io.github.mskomek.HpcClientGui.desktop"
+        },
+        {
+          "type": "file",
+          "path": "../appimage/hpc-client-gui.png"
         },
         {
           "type": "file",
