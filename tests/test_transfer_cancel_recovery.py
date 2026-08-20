@@ -24,7 +24,7 @@ from hpc_gui.ui.dialogs.transfer_dialog import TransferDialog
 
 class TransferControllerCancelTests(unittest.TestCase):
     def test_cancel_reports_every_item_of_a_parallel_batch(self) -> None:
-        started = threading.Barrier(3, timeout=5)
+        started = threading.Barrier(4, timeout=5)
         events: list[tuple[str, str]] = []
         lock = threading.Lock()
 
