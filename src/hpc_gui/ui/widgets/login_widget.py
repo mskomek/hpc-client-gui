@@ -234,6 +234,8 @@ class LoginWidget(QWidget):
         self.btn_connect.clicked.connect(self.connect_selected_profile)
 
         self.status_label = QLabel(t("login.status_disconnected") if t("login.status_disconnected") != "[login.status_disconnected]" else "Bağlı değil")
+        self.terminal_identity_label = QLabel("SSH")
+        self.terminal_dimensions_label = QLabel("—")
 
         # ---- Console
         self.console = _TerminalConsole(self)
@@ -267,6 +269,22 @@ class LoginWidget(QWidget):
         cmd_row = QHBoxLayout()
         cmd_row.addWidget(self.cmd_in)
         cmd_row.addWidget(self.btn_run_cmd)
+        self.quick_command_row = QWidget()
+        self.quick_command_row.setLayout(cmd_row)
+        self.quick_command_row.setVisible(False)
+
+        self.btn_terminal_find = QPushButton("⌕")
+        self.btn_terminal_find.setToolTip(t("login.terminal_find"))
+        self.btn_terminal_find.clicked.connect(self._find_terminal_text)
+        self.btn_terminal_clear = QPushButton("×")
+        self.btn_terminal_clear.setToolTip(t("login.terminal_clear"))
+        self.btn_terminal_clear.clicked.connect(lambda: self.terminal_widget and self.terminal_widget.clear())
+        self.btn_terminal_font_down = QPushButton("A−")
+        self.btn_terminal_font_down.setToolTip(t("login.terminal_font_decrease"))
+        self.btn_terminal_font_down.clicked.connect(lambda: self.terminal_widget and self.terminal_widget.change_font_size(-1))
+        self.btn_terminal_font_up = QPushButton("A+")
+        self.btn_terminal_font_up.setToolTip(t("login.terminal_font_increase"))
+        self.btn_terminal_font_up.clicked.connect(lambda: self.terminal_widget and self.terminal_widget.change_font_size(1))
 
         self.terminal_widget: TerminalWidget | None = None
         self._terminal_init_error: str | None = None
@@ -304,11 +322,20 @@ class LoginWidget(QWidget):
         action_row.addWidget(self.btn_connect)
         action_row.addStretch(1)
         right_lay.addLayout(action_row)
-        right_lay.addWidget(self.status_label)
+        terminal_header = QHBoxLayout()
+        terminal_header.addWidget(self.status_label)
+        terminal_header.addWidget(self.terminal_identity_label)
+        terminal_header.addStretch(1)
+        terminal_header.addWidget(self.btn_terminal_find)
+        terminal_header.addWidget(self.btn_terminal_font_down)
+        terminal_header.addWidget(self.btn_terminal_font_up)
+        terminal_header.addWidget(self.btn_terminal_clear)
+        terminal_header.addWidget(self.terminal_dimensions_label)
+        right_lay.addLayout(terminal_header)
         self.console_title_label = QLabel(t("login.console_title"))
         right_lay.addWidget(self.console_title_label)
         right_lay.addWidget(self.terminal_widget or self.console)
-        right_lay.addLayout(cmd_row)
+        right_lay.addWidget(self.quick_command_row)
 
         splitter = QSplitter()
         splitter.addWidget(self.profiles_list)
@@ -601,6 +628,7 @@ class LoginWidget(QWidget):
             except Exception:
                 pass
             self._last_shell_geometry = (cols, rows)
+            self.terminal_dimensions_label.setText(f"{cols}×{rows}")
         except Exception:
             pass
 
@@ -715,6 +743,9 @@ class LoginWidget(QWidget):
             }
             if self.terminal_widget is not None and ssh is not None:
                 self.terminal_widget.attach(ssh)
+            if isinstance(cfg, SSHConfig):
+                identity = f"{cfg.username}@{cfg.host}" if cfg.username else cfg.host
+                self.terminal_identity_label.setText(identity)
             self.status_label.setText(t("login.status_connected") if t("login.status_connected") != "[login.status_connected]" else "Bağlı")
             self.cmd_in.set_connected(True)
             self.append_console("SSH bağlantısı kuruldu.")
@@ -736,6 +767,7 @@ class LoginWidget(QWidget):
     def _on_connect_failed(self, message: str, exc: object) -> None:
         if self.terminal_widget is not None:
             self.terminal_widget.detach()
+        self.terminal_identity_label.setText("SSH")
         if isinstance(exc, HostKeyChangedError):
             message = t("connection.host_key_changed").format(host=exc.hostname)
         elif isinstance(exc, HostKeyRejectedError):
@@ -1191,6 +1223,7 @@ class LoginWidget(QWidget):
             "files": files,
             "profile_name": self.profile_name.text().strip(),
         }
+        self.terminal_identity_label.setText("Mock")
         self.status_label.setText(t("login.status_mock") if t("login.status_mock") != "[login.status_mock]" else "Mock mod")
         self.cmd_in.set_connected(False)
         self.append_console("Mock bağlantı aktif.")
@@ -1259,6 +1292,7 @@ class LoginWidget(QWidget):
             else:
                 return self._begin_connect_async(cfg, old_ssh)
         except Exception as e:
+            self.terminal_identity_label.setText("SSH")
             self.status_label.setText(t("login.status_disconnected") if t("login.status_disconnected") != "[login.status_disconnected]" else "Bağlı değil")
             self.append_console(t("login.conn_error_prefix").format(err=e))
             msg = str(e)
@@ -1280,6 +1314,13 @@ class LoginWidget(QWidget):
             return
         self.cmd_in.clear()
         self.run_command_text(cmd)
+
+    def _find_terminal_text(self) -> None:
+        if self.terminal_widget is None:
+            return
+        text, ok = QInputDialog.getText(self, t("login.terminal_find"), t("login.terminal_find"))
+        if ok:
+            self.terminal_widget.find_text(text)
 
     def run_command_text(self, cmd: str) -> None:
         cmd = (cmd or '').strip()
@@ -1321,6 +1362,7 @@ class LoginWidget(QWidget):
         self._session["connected"] = False
         if self.terminal_widget is not None:
             self.terminal_widget.detach()
+        self.terminal_identity_label.setText("SSH")
         self.status_label.setText(t("login.status_disconnected") if t("login.status_disconnected") != "[login.status_disconnected]" else "Bağlı değil")
         self.cmd_in.set_connected(False)
         notice = t("login.reconnect_notice").format(reason=reason or "")
@@ -1376,6 +1418,10 @@ class LoginWidget(QWidget):
             self.console.setPlaceholderText(t("login.console_placeholder"))
             self.cmd_in.setPlaceholderText(t("login.command_placeholder"))
             self.btn_run_cmd.setText(t("login.run_command"))
+            self.btn_terminal_find.setToolTip(t("login.terminal_find"))
+            self.btn_terminal_clear.setToolTip(t("login.terminal_clear"))
+            self.btn_terminal_font_down.setToolTip(t("login.terminal_font_decrease"))
+            self.btn_terminal_font_up.setToolTip(t("login.terminal_font_increase"))
             self.btn_add_connection.setText(t("login.add_connection"))
             self.btn_connect.setText(t("login.connect_selected"))
         except Exception:

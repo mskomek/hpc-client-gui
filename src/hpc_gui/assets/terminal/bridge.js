@@ -13,6 +13,10 @@
   };
   window.hpcFocus = () => terminal.focus();
   window.hpcClear = () => terminal.clear();
+  window.hpcSetFontSize = (size) => {
+    terminal.options.fontSize = size;
+    fit.fit();
+  };
 
   new QWebChannel(qt.webChannelTransport, (channel) => {
     window.hpcBridge = channel.objects.terminal;

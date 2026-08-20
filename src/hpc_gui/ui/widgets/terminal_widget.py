@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from PySide6.QtCore import QUrl, QTimer, Signal, Slot
+from PySide6.QtCore import QUrl, QTimer, Qt, Signal, Slot
 from PySide6.QtWidgets import QVBoxLayout, QWidget
 
 from hpc_gui.services.terminal_bridge import TerminalBridge
@@ -26,7 +26,12 @@ class TerminalWidget(QWidget):
                 return bool(url.isLocalFile() and is_main_frame)
 
         self.bridge = TerminalBridge(self)
+        self.setAccessibleName("Remote terminal")
+        self._ready = False
+        self._focus_requested = False
+        self._font_size = 14
         self.view = QWebEngineView(self)
+        self.view.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.view.setPage(LocalTerminalPage(self.view))
         self.channel = QWebChannel(self.view.page())
         self.channel.registerObject("terminal", self.bridge)
@@ -48,8 +53,11 @@ class TerminalWidget(QWidget):
         if not ok:
             self.failed.emit("terminal page failed to load")
             return
+        self._ready = True
         self.ready.emit()
         self._fit()
+        if self._focus_requested:
+            self.focus_terminal()
 
     def _fit(self) -> None:
         self.view.page().runJavaScript("window.hpcFit && window.hpcFit();")
@@ -60,6 +68,9 @@ class TerminalWidget(QWidget):
 
     @Slot()
     def focus_terminal(self) -> None:
+        self._focus_requested = True
+        if not self._ready:
+            return
         self.view.setFocus()
         self.view.page().runJavaScript("window.hpcFocus && window.hpcFocus();")
 
@@ -71,3 +82,11 @@ class TerminalWidget(QWidget):
 
     def clear(self) -> None:
         self.view.page().runJavaScript("window.hpcClear && window.hpcClear();")
+
+    def change_font_size(self, delta: int) -> None:
+        self._font_size = max(8, min(24, self._font_size + int(delta)))
+        self.view.page().runJavaScript(f"window.hpcSetFontSize && window.hpcSetFontSize({self._font_size});")
+
+    def find_text(self, text: str) -> None:
+        if text:
+            self.view.page().findText(text)
