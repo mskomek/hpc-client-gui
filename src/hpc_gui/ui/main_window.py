@@ -180,8 +180,18 @@ class MainWindow(QMainWindow):
         self.ftp.runShellRequested.connect(self.directories.run_shell_script)
         self.editor.script_submitted.connect(self.on_script_submitted)
         self.editor.run_in_terminal_requested.connect(self.run_shell_in_terminal)
-        QTimer.singleShot(700, self._show_startup_changelog_if_needed)
-        QTimer.singleShot(1500, lambda: self._check_for_updates(manual=False))
+        self._startup_changelog_timer = QTimer(self)
+        self._startup_changelog_timer.setSingleShot(True)
+        self._startup_changelog_timer.timeout.connect(
+            self._show_startup_changelog_if_needed
+        )
+        self._startup_changelog_timer.start(700)
+        self._startup_update_timer = QTimer(self)
+        self._startup_update_timer.setSingleShot(True)
+        self._startup_update_timer.timeout.connect(
+            lambda: self._check_for_updates(manual=False)
+        )
+        self._startup_update_timer.start(1500)
 
     def run_shell_batch_in_terminal(self, script_paths: list[str]) -> None:
         commands = [f"bash {shlex.quote(path)}" for path in script_paths if path]
@@ -207,6 +217,10 @@ class MainWindow(QMainWindow):
             try:
                 if hasattr(self, "job_timer") and self.job_timer:
                     self.job_timer.stop()
+                if hasattr(self, "_startup_changelog_timer"):
+                    self._startup_changelog_timer.stop()
+                if hasattr(self, "_startup_update_timer"):
+                    self._startup_update_timer.stop()
                 self._job_poll_generation += 1
                 self._job_poll_worker = None
                 if getattr(self, "_job_tray", None):

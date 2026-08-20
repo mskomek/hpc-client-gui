@@ -135,6 +135,8 @@ class TransferDialogCancelTests(unittest.TestCase):
 
         dialog._pending = [items[1]]
         self.assertTrue(dialog.process_queue())
+        dialog.cancel_all()
+        self._pump(lambda: not dialog._running and not dialog._active_items)
 
 
 if __name__ == "__main__":
