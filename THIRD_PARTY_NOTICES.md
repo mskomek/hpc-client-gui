@@ -8,8 +8,10 @@ is distributed under its own license.
 
 | Component | License | Notes |
 | --- | --- | --- |
-| PySide6 | LGPLv3 | Qt for Python bindings |
-| shiboken6 | LGPLv3 | CPython bindings generator for Qt (runtime support for PySide6) |
+| PySide6 | LGPLv3 terms used by this project | Qt for Python bindings |
+| shiboken6 | LGPLv3 terms used by this project | CPython bindings generator for Qt (runtime support for PySide6) |
+| Qt libraries | Applicable Qt LGPL terms | Qt libraries distributed through PySide6 |
+| xterm.js / @xterm/addon-fit | MIT | Vendored local terminal frontend assets; see `third_party_licenses/xterm-MIT.txt` |
 | paramiko | LGPL-2.1+ | SSHv2 protocol implementation |
 | cryptography | Apache-2.0 / BSD | Cryptographic primitives used by paramiko |
 

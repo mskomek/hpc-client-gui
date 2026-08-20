@@ -45,6 +45,7 @@ from hpc_gui.core.secret_store import (
 )
 from hpc_gui.services.terminal_emulator import TerminalEmulator
 from hpc_gui.ui.widgets.terminal_input import TerminalInput
+from hpc_gui.ui.widgets.terminal_widget import TerminalWidget
 from hpc_gui.ui.dialogs.connection_dialog import ConnectionDialog
 
 import os
@@ -267,6 +268,13 @@ class LoginWidget(QWidget):
         cmd_row.addWidget(self.cmd_in)
         cmd_row.addWidget(self.btn_run_cmd)
 
+        self.terminal_widget: TerminalWidget | None = None
+        self._terminal_init_error: str | None = None
+        try:
+            self.terminal_widget = TerminalWidget(self)
+        except RuntimeError as exc:
+            self._terminal_init_error = str(exc)
+
         self.form = QFormLayout()
         self.form.addRow(t("login.profile_name_label"), self.profile_name)
         self.form.addRow(t("login.host"), self.host)
@@ -299,7 +307,7 @@ class LoginWidget(QWidget):
         right_lay.addWidget(self.status_label)
         self.console_title_label = QLabel(t("login.console_title"))
         right_lay.addWidget(self.console_title_label)
-        right_lay.addWidget(self.console)
+        right_lay.addWidget(self.terminal_widget or self.console)
         right_lay.addLayout(cmd_row)
 
         splitter = QSplitter()
@@ -330,6 +338,11 @@ class LoginWidget(QWidget):
         self.ssh_console_message.connect(self._append_ssh_console_to_widget)
         self.shell_output_message.connect(self._append_shell_output_to_widget)
         self.ssh_disconnected.connect(self._handle_ssh_disconnected)
+        if self.terminal_widget is not None:
+            self.terminal_widget.failed.connect(lambda msg: self.append_console(f"[terminal: {msg}]"))
+            self.terminal_widget.bridge.error.connect(lambda msg: self.append_console(f"[terminal: {msg}]"))
+        elif self._terminal_init_error:
+            self.append_console(f"[terminal unavailable: {self._terminal_init_error}]")
 
         self.refresh_profiles()
         self.btn_connect.setEnabled(False)
@@ -337,6 +350,8 @@ class LoginWidget(QWidget):
 
     def shutdown_external_processes(self) -> None:
         """Called by MainWindow on app exit."""
+        if self.terminal_widget is not None:
+            self.terminal_widget.detach()
         # Stop a connection attempt before Qt destroys its QThread.
         try:
             worker = self._connect_worker
@@ -395,6 +410,8 @@ class LoginWidget(QWidget):
             pass
 
     def append_shell_output(self, msg: str) -> None:
+        if self.terminal_widget is not None:
+            self.terminal_widget.bridge.receive_output(msg)
         try:
             self.shell_output_message.emit(msg)
         except RuntimeError:
@@ -458,6 +475,8 @@ class LoginWidget(QWidget):
 
     def _append_shell_output_to_widget(self, msg: str) -> None:
         try:
+            if self.terminal_widget is not None:
+                return
             if not hasattr(self, "console") or not shiboken6.isValid(self.console):
                 return
             if not self._terminal_emulation_enabled:
@@ -542,7 +561,10 @@ class LoginWidget(QWidget):
                 return False
             text = text.replace("\r\n", "\n").replace("\r", "\n").replace("\n", "\r")
             if ssh.send_shell_input(text):
-                self.console.setFocus()
+                if self.terminal_widget is not None:
+                    self.terminal_widget.focus_terminal()
+                else:
+                    self.console.setFocus()
                 return True
         except Exception:
             pass
@@ -587,6 +609,8 @@ class LoginWidget(QWidget):
             return False
         self._connect_in_progress = True
         self._pending_old_ssh = old_ssh
+        if self.terminal_widget is not None:
+            self.terminal_widget.detach()
         self._terminal_emulation_enabled = True
         try:
             cols, rows = self._console_shell_geometry()
@@ -689,12 +713,17 @@ class LoginWidget(QWidget):
                 "files": files,
                 "profile_name": self.profile_name.text().strip(),
             }
+            if self.terminal_widget is not None and ssh is not None:
+                self.terminal_widget.attach(ssh)
             self.status_label.setText(t("login.status_connected") if t("login.status_connected") != "[login.status_connected]" else "Bağlı")
             self.cmd_in.set_connected(True)
             self.append_console("SSH bağlantısı kuruldu.")
             self._sync_shell_geometry()
             try:
-                self.console.setFocus()
+                if self.terminal_widget is not None:
+                    self.terminal_widget.focus_terminal()
+                else:
+                    self.console.setFocus()
             except Exception:
                 pass
             if isinstance(cfg, SSHConfig):
@@ -705,6 +734,8 @@ class LoginWidget(QWidget):
             self.btn_connect.setEnabled(bool(self._selected_profile_name()))
 
     def _on_connect_failed(self, message: str, exc: object) -> None:
+        if self.terminal_widget is not None:
+            self.terminal_widget.detach()
         if isinstance(exc, HostKeyChangedError):
             message = t("connection.host_key_changed").format(host=exc.hostname)
         elif isinstance(exc, HostKeyRejectedError):
@@ -1288,6 +1319,8 @@ class LoginWidget(QWidget):
         if not self._session.get("connected", False):
             return
         self._session["connected"] = False
+        if self.terminal_widget is not None:
+            self.terminal_widget.detach()
         self.status_label.setText(t("login.status_disconnected") if t("login.status_disconnected") != "[login.status_disconnected]" else "Bağlı değil")
         self.cmd_in.set_connected(False)
         notice = t("login.reconnect_notice").format(reason=reason or "")
