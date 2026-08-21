@@ -3626,6 +3626,13 @@ class FtpWidgetTests(unittest.TestCase):
         finally:
             dialog.deleteLater()
 
+    def test_connection_dialog_has_room_for_advanced_commands(self) -> None:
+        dialog = ConnectionDialog()
+        try:
+            self.assertGreaterEqual(dialog.minimumWidth(), 720)
+        finally:
+            dialog.deleteLater()
+
     def test_connection_dialog_can_remember_password_without_connect_prompts(self) -> None:
         dialog = ConnectionDialog()
         try:

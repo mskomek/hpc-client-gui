@@ -56,6 +56,7 @@ class ConnectionDialog(QDialog):
 
         self.setModal(True)
         self.setWindowTitle(t("connection.dialog_title"))
+        self.setMinimumWidth(720)
 
         self.profile_name = QLineEdit()
         self.host = QLineEdit()
