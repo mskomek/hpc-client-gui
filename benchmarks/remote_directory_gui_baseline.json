@@ -1,0 +1,72 @@
+{
+  "schema": 1,
+  "label": "synthetic-offscreen-gui",
+  "description": "Fabricated progressive entries rendered by the real RemoteDirPanel; excludes SSH and SFTP.",
+  "repeats": 3,
+  "timeout_seconds": 15.0,
+  "measurements": [
+    {
+      "entries": 100,
+      "first_batch_ms": 6.861,
+      "first_row_ms": 39.656,
+      "full_render_ms": 54.238,
+      "rows": 100
+    },
+    {
+      "entries": 100,
+      "first_batch_ms": 2.656,
+      "first_row_ms": 42.801,
+      "full_render_ms": 62.814,
+      "rows": 100
+    },
+    {
+      "entries": 100,
+      "first_batch_ms": 4.176,
+      "first_row_ms": 41.501,
+      "full_render_ms": 54.599,
+      "rows": 100
+    },
+    {
+      "entries": 1000,
+      "first_batch_ms": 4.51,
+      "first_row_ms": 80.508,
+      "full_render_ms": 514.836,
+      "rows": 1000
+    },
+    {
+      "entries": 1000,
+      "first_batch_ms": 4.407,
+      "first_row_ms": 65.356,
+      "full_render_ms": 666.987,
+      "rows": 1000
+    },
+    {
+      "entries": 1000,
+      "first_batch_ms": 3.528,
+      "first_row_ms": 59.179,
+      "full_render_ms": 360.437,
+      "rows": 1000
+    },
+    {
+      "entries": 10000,
+      "first_batch_ms": 15.907,
+      "first_row_ms": 85.822,
+      "full_render_ms": 3647.932,
+      "rows": 10000
+    },
+    {
+      "entries": 10000,
+      "first_batch_ms": 7.168,
+      "first_row_ms": 56.358,
+      "full_render_ms": 3375.005,
+      "rows": 10000
+    },
+    {
+      "entries": 10000,
+      "first_batch_ms": 5.871,
+      "first_row_ms": 60.522,
+      "full_render_ms": 3696.961,
+      "rows": 10000
+    }
+  ]
+}
