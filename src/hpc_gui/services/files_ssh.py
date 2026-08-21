@@ -300,6 +300,7 @@ class SSHFilesBackend(FilesBackend):
             sent = 0
             with open(local_path, "rb") as lf:
                 with sftp.open(remote_path, "wb") as rf:
+                    _enable_sftp_pipelining(rf)
                     while True:
                         chunk = lf.read(1024 * 1024)
                         if not chunk:

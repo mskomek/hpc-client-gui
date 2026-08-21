@@ -1,0 +1,53 @@
+{
+  "schema": 1,
+  "label": "synthetic-local-transfer",
+  "description": "SSHFilesBackend.upload (overwrite mode) and .download against the in-repo disposable mock SSH/SFTP server; excludes GUI and real network.",
+  "repeats": 5,
+  "python_version": "3.12.4",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "paramiko_version": "3.5.1",
+  "measurements": [
+    {
+      "size_mib": 1,
+      "bytes": 1048576,
+      "upload_overwrite_ms": [
+        75.50260000061826,
+        66.58770000285585,
+        75.60989999910817,
+        67.22489999810932,
+        59.11990000095102
+      ],
+      "download_ms": [
+        98.9434999974037,
+        26.303500002541114,
+        48.91689999931259,
+        5.870000000868458,
+        7.338999999774387
+      ],
+      "upload_overwrite_median_ms": 67.225,
+      "download_median_ms": 26.304,
+      "verified_repeats": 5
+    },
+    {
+      "size_mib": 32,
+      "bytes": 33554432,
+      "upload_overwrite_ms": [
+        1481.6952000001038,
+        1551.3661000004504,
+        1739.9880999982997,
+        1322.0354999975825,
+        1548.1214999999793
+      ],
+      "download_ms": [
+        3755.206400001043,
+        4.3876999989151955,
+        8.51909999983036,
+        8.732599999348167,
+        4.280900000594556
+      ],
+      "upload_overwrite_median_ms": 1548.121,
+      "download_median_ms": 8.519,
+      "verified_repeats": 5
+    }
+  ]
+}
