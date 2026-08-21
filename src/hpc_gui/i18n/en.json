@@ -611,6 +611,7 @@
   },
   "connection": {
     "dialog_title": "Add Connection",
+    "advanced_settings": "Advanced settings",
     "save": "Save",
     "save_and_connect": "Save & Connect",
     "edit_dialog_title": "Edit Connection",

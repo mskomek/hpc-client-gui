@@ -3563,6 +3563,24 @@ class FtpWidgetTests(unittest.TestCase):
         finally:
             dialog.deleteLater()
 
+    def test_connection_dialog_advanced_settings_collapses_without_losing_values(self) -> None:
+        dialog = ConnectionDialog()
+        try:
+            dialog.sp_transfer_parallelism.setValue(4)
+            dialog.squeue_command.setText("squeue --custom")
+            self.assertTrue(dialog.advanced_body.isHidden())
+
+            dialog.advanced_button.click()
+            self.assertFalse(dialog.advanced_body.isHidden())
+            dialog.advanced_button.click()
+            self.assertTrue(dialog.advanced_body.isHidden())
+
+            profile = dialog._collect_profile()
+            self.assertEqual(profile["transfer_parallelism"], 4)
+            self.assertEqual(profile["system"]["squeue_command"], "squeue --custom")
+        finally:
+            dialog.deleteLater()
+
     def test_connection_dialog_can_remember_password_without_connect_prompts(self) -> None:
         dialog = ConnectionDialog()
         try:

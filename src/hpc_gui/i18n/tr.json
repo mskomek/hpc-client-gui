@@ -611,6 +611,7 @@
   },
   "connection": {
     "dialog_title": "Bağlantı Ekle",
+    "advanced_settings": "Gelişmiş ayarlar",
     "save": "Kaydet",
     "save_and_connect": "Kaydet ve Bağlan",
     "edit_dialog_title": "Bağlantıyı Düzenle",

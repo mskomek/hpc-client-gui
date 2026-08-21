@@ -103,12 +103,6 @@ class ConnectionDialog(QDialog):
         key_row.addWidget(self.btn_browse_key)
         form.addRow(t("login.ssh_key"), key_row)
 
-        form.addRow("", self.cb_x11)
-        form.addRow(t("connection.transfer_parallelism"), self.sp_transfer_parallelism)
-        form.addRow(t("connection.ssh_timeout"), self.sp_ssh_timeout)
-        form.addRow("", self.cb_strict_hostkey)
-        form.addRow("", self.cb_cli_allowed)
-
         self.system_name = QLineEdit()
         self.scratch_dir = QLineEdit()
         self.home_dir = QLineEdit()
@@ -154,6 +148,22 @@ class ConnectionDialog(QDialog):
         system_group = QGroupBox(t("connection.system_settings"))
         system_group.setLayout(system_form)
 
+        self.advanced_button = QToolButton()
+        self.advanced_button.setText(t("connection.advanced_settings"))
+        self.advanced_button.setCheckable(True)
+        self.advanced_button.setChecked(False)
+        self.advanced_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+        self.advanced_body = QGroupBox()
+        advanced_form = QFormLayout(self.advanced_body)
+        advanced_form.addRow("", self.cb_x11)
+        advanced_form.addRow(t("connection.transfer_parallelism"), self.sp_transfer_parallelism)
+        advanced_form.addRow(t("connection.ssh_timeout"), self.sp_ssh_timeout)
+        advanced_form.addRow("", self.cb_strict_hostkey)
+        advanced_form.addRow("", self.cb_cli_allowed)
+        advanced_form.addRow(system_group)
+        self.advanced_body.setVisible(False)
+        self.advanced_button.toggled.connect(self._set_advanced_visible)
+
         self.btn_save = QPushButton(t("connection.save"))
         self.btn_save.clicked.connect(self._save_clicked)
 
@@ -171,11 +181,18 @@ class ConnectionDialog(QDialog):
 
         root = QVBoxLayout(self)
         root.addLayout(form)
-        root.addWidget(system_group)
+        root.addWidget(self.advanced_button)
+        root.addWidget(self.advanced_body)
         root.addLayout(button_row)
 
         self._load_profile(self._initial_profile)
         self._rebuild_system_template_menu()
+
+    def _set_advanced_visible(self, visible: bool) -> None:
+        self.advanced_body.setVisible(visible)
+        self.advanced_button.setArrowType(
+            Qt.ArrowType.DownArrow if visible else Qt.ArrowType.RightArrow
+        )
 
     def _load_profile(self, profile: ProfileData) -> None:
         self.profile_name.setText(str(profile.get("name", "")))
