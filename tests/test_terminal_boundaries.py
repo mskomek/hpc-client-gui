@@ -44,6 +44,17 @@ class TerminalBoundaryTests(unittest.TestCase):
             header.font_up_button,
         )))
 
+    def test_terminal_status_is_plain_single_line_text(self):
+        from PySide6.QtWidgets import QApplication
+        from PySide6.QtWidgets import QFrame
+        from hpc_gui.ui.widgets.terminal_header import TerminalHeader
+
+        app = QApplication.instance() or QApplication([])
+        header = TerminalHeader()
+        self.addCleanup(header.deleteLater)
+        self.assertEqual(header.status_label.frameShape(), QFrame.Shape.NoFrame)
+        self.assertFalse(header.status_label.wordWrap())
+
 
 if __name__ == "__main__":
     unittest.main()

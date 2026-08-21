@@ -16,8 +16,9 @@ class TerminalHeader(QWidget):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.status_label = QLabel()
-        self.status_label.setFrameShape(QFrame.Shape.StyledPanel)
-        self.status_label.setMargin(5)
+        self.status_label.setFrameShape(QFrame.Shape.NoFrame)
+        self.status_label.setMargin(0)
+        self.status_label.setWordWrap(False)
         self.identity_label = QLabel()
         identity_font = self.identity_label.font()
         identity_font.setBold(True)

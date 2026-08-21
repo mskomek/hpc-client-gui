@@ -1256,13 +1256,14 @@ class LoginWidget(QWidget):
         except Exception as e:
             self.terminal_identity_label.setText(t("login.terminal_protocol_ssh"))
             self.status_label.setText(t("login.status_disconnected") if t("login.status_disconnected") != "[login.status_disconnected]" else "Bağlı değil")
-            self.append_console(t("login.conn_error_prefix").format(err=e))
             msg = str(e)
+            message = describe_connection_error(e, msg)
+            self.append_console(t("login.conn_error_prefix").format(err=message))
             if "SSH protocol banner" in msg or "banner" in msg.lower():
                 self.append_console(
                     "İpucu: SSH sunucusu banner döndürmeden önce gecikiyor olabilir; VPN/ağ, port ve uzak sshd erişimini kontrol edin."
                 )
-            show_exception(self, title=t("login.conn_error_title"), user_message=str(e), exc=e, area="SSH")
+            show_exception(self, title=t("login.conn_error_title"), user_message=message, exc=e, area="SSH")
             return False
         return True
 

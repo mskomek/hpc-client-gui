@@ -30,6 +30,13 @@ class UiErrorTests(unittest.TestCase):
                 self.assertIn(expected, message)
                 self.assertIn("Teknik ayrıntı", message)
 
+    def test_unknown_connection_error_keeps_code_as_technical_detail(self):
+        load_language("tr")
+        message = describe_connection_error(RuntimeError("ssh fbcbbe"))
+        self.assertIn("Sunucuya bağlantı kurulamadı", message)
+        self.assertIn("ssh fbcbbe", message)
+        self.assertIn("Teknik ayrıntı", message)
+
 
 if __name__ == "__main__":
     unittest.main()
