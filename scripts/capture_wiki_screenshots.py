@@ -133,7 +133,7 @@ LOCAL_WORKSPACE = HOME / "projects" / "analysis"
 
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
-from PySide6.QtWidgets import QApplication  # noqa: E402
+from PySide6.QtWidgets import QApplication, QLabel, QHBoxLayout, QVBoxLayout, QWidget  # noqa: E402
 
 from hpc_gui.core.i18n import load_language  # noqa: E402
 from hpc_gui.services.files_mock import MockFilesBackend  # noqa: E402
@@ -219,6 +219,26 @@ def _capture_jobs(app) -> Path:
     return _save(w, "jobs", (900, 380))
 
 
+def _capture_overview(app) -> Path:
+    from hpc_gui.ui.widgets.ftp_widget import FtpWidget
+    from hpc_gui.ui.widgets.jobs_widget import JobsWidget
+
+    w = QWidget()
+    layout = QVBoxLayout(w)
+    layout.addWidget(QLabel("Connected: example-cluster  •  researcher@hpc.example.org"))
+    columns = QHBoxLayout()
+    files = FtpWidget()
+    files.set_session(_session())
+    files.local_panel.set_dir(str(LOCAL_WORKSPACE))
+    jobs = JobsWidget()
+    jobs.jobs = parse_squeue(SQUEUE_TEXT)
+    jobs.out.setPlainText(SQUEUE_TEXT)
+    columns.addWidget(files, 3)
+    columns.addWidget(jobs, 2)
+    layout.addLayout(columns)
+    return _save(w, "overview", (1300, 760))
+
+
 def _capture_editor(app) -> Path:
     from hpc_gui.ui.widgets.editor_widget import EditorWidget
 
@@ -247,6 +267,7 @@ def _capture_send_logs(app) -> Path:
 
 
 CAPTURES = {
+    "overview": _capture_overview,
     "file-manager": _capture_file_manager,
     "jobs": _capture_jobs,
     "script-editor": _capture_editor,
