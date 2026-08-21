@@ -4,6 +4,7 @@ import os
 import sys
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
@@ -34,7 +35,12 @@ class FmtSizeTests(unittest.TestCase):
 
 class FileTypeTests(unittest.TestCase):
     def test_directories_use_translated_folder_label(self) -> None:
-        self.assertEqual(helpers.file_type("anything", True), "Klasör")
+        with patch.object(helpers, "t", return_value="Folder"):
+            self.assertEqual(helpers.file_type("anything", True), "Folder")
+
+    def test_missing_translation_falls_back_to_turkish_label(self) -> None:
+        with patch.object(helpers, "t", return_value="[dirs.type_folder]"):
+            self.assertEqual(helpers.file_type("anything", True), "Klasör")
 
     def test_known_extensions_map_to_descriptions(self) -> None:
         self.assertEqual(helpers.file_type("a.ISO", False), "Disc Image File")
