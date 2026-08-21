@@ -3581,6 +3581,51 @@ class FtpWidgetTests(unittest.TestCase):
         finally:
             dialog.deleteLater()
 
+    def test_connection_dialog_round_trips_advanced_profile_values(self) -> None:
+        profile = {
+            "name": "example",
+            "host": "hpc.example.org",
+            "port": 2222,
+            "username": "researcher",
+            "key_path": "C:/keys/example",
+            "host_key_policy": "strict",
+            "x11_forwarding": True,
+            "cli_allowed": True,
+            "keepalive_interval_seconds": 90,
+            "transfer_parallelism": 4,
+            "ssh_timeout": 12.5,
+            "system": {
+                "name": "Example HPC",
+                "scratch_dir": "/scratch/{user}",
+                "home_dir": "/home/{user}",
+                "squeue_command": "squeue --custom",
+                "sbatch_command": "sbatch --custom",
+                "scancel_command": "scancel --custom",
+                "sacct_command": "sacct --custom",
+                "scontrol_command": "scontrol --custom",
+                "status_command": "status --custom",
+                "active_job_ids_command": "jobs --custom",
+                "job_state_command": "state --custom",
+            },
+        }
+        dialog = ConnectionDialog(initial_profile=profile)
+        try:
+            self.assertTrue(dialog.advanced_body.isHidden())
+            collected = dialog._collect_profile()
+            self.assertEqual(collected["port"], 2222)
+            self.assertEqual(collected["transfer_parallelism"], 4)
+            self.assertEqual(collected["ssh_timeout"], 12.5)
+            self.assertEqual(collected["keepalive_interval_seconds"], 90)
+            self.assertEqual(collected["system"]["status_command"], "status --custom")
+
+            dialog.advanced_button.click()
+            dialog.sp_transfer_parallelism.setValue(5)
+            changed = dialog._collect_profile()
+            self.assertEqual(changed["transfer_parallelism"], 5)
+            self.assertEqual(changed["system"]["squeue_command"], "squeue --custom")
+        finally:
+            dialog.deleteLater()
+
     def test_connection_dialog_can_remember_password_without_connect_prompts(self) -> None:
         dialog = ConnectionDialog()
         try:
