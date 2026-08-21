@@ -3616,6 +3616,8 @@ class FtpWidgetTests(unittest.TestCase):
             self.assertEqual(collected["transfer_parallelism"], 4)
             self.assertEqual(collected["ssh_timeout"], 12.5)
             self.assertEqual(collected["keepalive_interval_seconds"], 90)
+            self.assertEqual(collected["system"]["scratch_dir"], "/scratch/{user}")
+            self.assertEqual(collected["system"]["home_dir"], "/home/{user}")
             self.assertEqual(collected["system"]["status_command"], "status --custom")
 
             dialog.advanced_button.click()
