@@ -1,34 +1,28 @@
 # HPC Client GUI
 
-A cross-platform desktop **HPC client** for Slurm-based systems: connect over
-SSH, browse and transfer remote files with an SFTP client, manage and monitor
-Slurm jobs, and use the GUI or CLI from Windows and Linux. It is compatible
-with TRUBA and other Slurm clusters without coupling the client to one provider.
-
-**Windows and Linux supported** · GUI + CLI · SSH · SFTP client · Slurm job
-manager · optional X11
+A cross-platform desktop client for Slurm-based HPC systems: connect over SSH,
+browse and transfer remote files with SFTP, manage and monitor Slurm jobs, and
+use the GUI or CLI from Windows and Linux.
 
 **Windows and Linux:** [Download the latest release](https://github.com/mskomek/hpc-client-gui/releases/latest) or [download the latest Windows portable ZIP](https://github.com/mskomek/hpc-client-gui/releases/latest/download/hpc-client-gui_windows_onedir.zip).
 
 GUI, CLI, SSH, SFTP, Slurm job management, and optional X11 forwarding are
 included in the product surface. This is an independent client-side project
-for compatible HPC infrastructures, including TRUBA-compatible systems; it
-does not modify the cluster.
+for compatible Slurm/HPC infrastructures, including TRUBA-compatible systems;
+it does not modify the cluster.
 
 Quick start on Windows: **Download → Extract All → Run** `hpc-client-gui.exe`.
 
-![HPC Client GUI remote files, jobs, and transfers overview](docs/assets/hpc-client-gui-screenshot.png)
+![HPC Client GUI remote files and jobs overview](docs/wiki/assets/overview.png)
 
-Python is not required for packaged Windows or Linux releases. PuTTY/plink and
-VcXsrv are optional Windows helpers for X11 only; Linux X11 uses the system
-OpenSSH client.
+Python, PuTTY/plink, and VcXsrv are not required for normal SSH, file, or scheduler use. PuTTY/plink and VcXsrv are optional helpers only when X11 forwarding is enabled.
 
 ## Features
 
 * SSH session management (client-side)
-* SFTP remote file manager (browse, copy / move / paste, drag & drop, resume, progress / cancel)
-* Slurm job management and monitoring (via `squeue`, `sacct`, etc.)
-* CLI for profiles, diagnostics, files, and jobs
+* SFTP remote file browsing and transfers
+* Slurm job monitoring / basic job operations (via `squeue`, `sacct`, etc.)
+* Remote file manager (copy / move / paste, drag & drop, resume, progress / cancel, undo-move)
 * i18n: Turkish / English
 * Centralized logging: `~/.truba_slurm_gui/app.log` (rotating)
 * X11 runs **in the background**: `plink.exe -X` + `VcXsrv` (no dedicated X11 UI tab)
@@ -37,7 +31,7 @@ OpenSSH client.
 
 ## Installation & Running
 
-### Windows — Standalone portable ZIP
+### Windows — Standalone portable package
 
 In this mode, **Python is NOT required**.
 
@@ -52,17 +46,9 @@ In this mode, **Python is NOT required**.
 
 ---
 
-### Linux packages
-
-Linux releases target x86_64 and are published as AppImage, `.deb`, and Flatpak
-packages. Download the package and matching `.sha256` file from the [latest
-release](https://github.com/mskomek/hpc-client-gui/releases/latest). AppImage
-runs without installation; `.deb` is for Debian-based systems; Flatpak is
-available for systems with Flatpak support.
-
 ### From Source (Developer Mode)
 
-#### Windows
+#### Requirements
 
 - Windows 10 / 11
 - Python 3.10+ (recommended)
@@ -86,7 +72,15 @@ pip install -e .
 python -m hpc_gui
 ```
 
-#### Linux (any supported distribution)
+---
+
+### Linux packages
+
+Linux releases target x86_64 and are published as AppImage, `.deb`, and Flatpak
+packages. Download the package and matching `.sha256` file from the [latest
+release](https://github.com/mskomek/hpc-client-gui/releases/latest).
+
+#### From source (any supported Linux distribution)
 
 Requirements: Python 3.10+, a Qt runtime (PySide6 bundles it), and the platform
 libraries Qt needs (`libegl1` on Ubuntu/Debian, equivalent on Fedora/openSUSE).
@@ -101,12 +95,18 @@ python -m hpc_gui
 
 The CLI is available the same way: `python -m hpc_gui --help`.
 
+#### Release packages
+
+AppImage runs without installation; `.deb` is for Debian-based systems;
+Flatpak is available for systems with Flatpak support. Verify the matching
+`.sha256` file when downloading an artifact.
+
 Maintainers can build both platforms from Windows with Docker:
 
 ```powershell
-.\scripts\build_release.ps1 -Version 1.2.7
+ .\scripts\build_release.ps1 -Version 1.2.7
 # Reuse only existing Docker, Python, Flatpak, and AppImage caches:
-.\scripts\build_release.ps1 -Version 1.2.7 -Offline
+ .\scripts\build_release.ps1 -Version 1.2.7 -Offline
 ```
 
 Build caches live under `.cache/release`; the release script creates one
