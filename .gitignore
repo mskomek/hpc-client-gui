@@ -9,11 +9,15 @@ venv/
 
 /reports/
 /build/hpc-client-gui/COLLECT-00.toc
+/build/hpc-client-gui-linux/
+/build/build-v*/
 
-/dist/hpc-client-gui/_internal/PySide6/
-/dist/hpc-client-gui/_internal/shiboken6/
-/dist/hpc-client-gui/_internal/cryptography-46.0.5.dist-info/
-/dist/hpc-client-gui/_internal/templates/
+# Generated onedir output; the whole dist tree is release packaging output.
+/dist/
+
+# Release build caches (Docker/Python/Flatpak inputs and Flatpak build temp)
+/.cache/
+/.flatpak-builder/
 
 # Qt / PySide
 *.qrc
@@ -50,6 +54,4 @@ tools/ai/deepseek-models.local.psd1
 /waves/
 
 # Release packages are GitHub Release assets, never source-controlled.
-/dist/releases/
-/dist/hpc-client-cli/
 /build/hpc-client-cli/
