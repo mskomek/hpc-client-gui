@@ -1,7 +1,7 @@
 """Measure synthetic local SFTP directory-listing behavior.
 
-The disposable Paramiko server is local and has no network or cluster access.
-Results are evidence for regression comparison, not real-HPC performance claims.
+The disposable Paramiko server is local and has no cluster access. Results are
+regression evidence, not real-HPC or FileZilla performance claims.
 """
 
 from __future__ import annotations
@@ -28,12 +28,12 @@ def timed_listing(backend: SSHFilesBackend, path: str) -> tuple[float, float, in
     stream = backend.iterdir_entries(path)
     first_started = time.perf_counter()
     try:
-        first = next(stream)
+        next(stream)
         first_ms = (time.perf_counter() - first_started) * 1000
         count = 1 + sum(1 for _ in stream)
     finally:
         stream.close()
-    return (first_ms, (time.perf_counter() - started) * 1000, count)
+    return first_ms, (time.perf_counter() - started) * 1000, count
 
 
 def create_fixture(root: Path, size: int) -> str:
@@ -41,16 +41,15 @@ def create_fixture(root: Path, size: int) -> str:
     directory.mkdir()
     (directory / "child").mkdir()
     (directory / "child" / "entry.dat").write_bytes(b"x")
-    for index in range(max(0, size - 1)):
+    for index in range(size - 1):
         (directory / f"entry-{index:05d}.dat").write_bytes(b"x")
     return f"/listing-{size}"
 
 
 def run(repeats: int) -> dict:
-    sizes = (100, 1000, 10000)
     with tempfile.TemporaryDirectory(prefix="hpc_client_sftp_benchmark_") as temp:
         root = Path(temp)
-        paths = {size: create_fixture(root, size) for size in sizes}
+        paths = {size: create_fixture(root, size) for size in (100, 1000, 10000)}
         with MockSSHServer(root) as server:
             ssh = SSHClientWrapper()
             ssh.connect(SSHConnInfo(
@@ -59,7 +58,6 @@ def run(repeats: int) -> dict:
                 known_hosts_path=str(root / "known_hosts"),
             ))
             try:
-                backend = SSHFilesBackend(ssh)
                 establishment = []
                 for _ in range(repeats):
                     started = time.perf_counter()
@@ -68,21 +66,21 @@ def run(repeats: int) -> dict:
                     channel.close()
 
                 measurements = []
+                backend = SSHFilesBackend(ssh)
                 for size, path in paths.items():
                     cold = timed_listing(backend, path)
                     warm = [timed_listing(backend, path) for _ in range(repeats)]
-                    child_path = path + "/child"
-                    navigation = [timed_listing(backend, item) for item in (path, child_path, path)]
+                    navigation = [timed_listing(backend, item) for item in (path, path + "/child", path)]
                     measurements.append({
                         "entries": size,
-                        "cold": {"first_entry_ms": cold[0], "total_ms": cold[1], "count": cold[2]},
-                        "warm": [{"first_entry_ms": row[0], "total_ms": row[1], "count": row[2]} for row in warm],
-                        "parent_child_parent": [{"first_entry_ms": row[0], "total_ms": row[1], "count": row[2]} for row in navigation],
+                        "cold": dict(zip(("first_entry_ms", "total_ms", "count"), cold)),
+                        "warm": [dict(zip(("first_entry_ms", "total_ms", "count"), row)) for row in warm],
+                        "parent_child_parent": [dict(zip(("first_entry_ms", "total_ms", "count"), row)) for row in navigation],
                     })
                 return {
                     "schema": 2,
                     "label": "synthetic-local",
-                    "description": "Local disposable Paramiko server; excludes GUI rendering and real network time.",
+                    "description": "Local disposable Paramiko server; GUI rendering and real network excluded.",
                     "repeats": repeats,
                     "repeat_count": repeats,
                     "python_version": platform.python_version(),
@@ -103,13 +101,10 @@ def _package_version(name: str) -> str | None:
 
 
 def summary(report: dict) -> str:
-    lines = ["Synthetic/local SFTP directory-listing benchmark", "(Paramiko wire, GUI rendering excluded)"]
-    establish = statistics.median(report["channel_establishment_ms"])
-    lines.append(f"channel establishment median: {establish:.2f} ms")
+    lines = ["Synthetic/local SFTP directory-listing benchmark", "(Paramiko wire; GUI rendering and real network excluded)"]
+    lines.append(f"channel establishment median: {statistics.median(report['channel_establishment_ms']):.2f} ms")
     for item in report["measurements"]:
-        warm_total = statistics.median(row["total_ms"] for row in item["warm"])
-        warm_first = statistics.median(row["first_entry_ms"] for row in item["warm"])
-        lines.append(f"{item['entries']:>5} entries: warm first {warm_first:.2f} ms, warm total {warm_total:.2f} ms")
+        lines.append(f"{item['entries']:>5} entries: warm first {statistics.median(r['first_entry_ms'] for r in item['warm']):.2f} ms, warm total {statistics.median(r['total_ms'] for r in item['warm']):.2f} ms")
     return "\n".join(lines)
 
 
