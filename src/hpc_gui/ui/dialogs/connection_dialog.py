@@ -29,6 +29,7 @@ from hpc_gui.config.system_profile import (
     normalize_system_settings,
     save_user_system_template,
 )
+from hpc_gui.plugins.templates import installed_cluster_template_groups
 from hpc_gui.ssh.client import coerce_keepalive_interval
 from hpc_gui.config.storage import coerce_profile_transfer_parallelism, coerce_profile_ssh_timeout
 
@@ -50,9 +51,16 @@ class ConnectionDialog(QDialog):
         self._on_connect = on_connect
         self._system_template_menu: QMenu | None = None
         self._system_template_submenus: list[QMenu] = []
+        self._system_template_source: dict[str, str] | None = None
         self._profile_keepalive = 30
         self._profile_transfer_parallelism = 1
         self._profile_ssh_timeout = None
+        source = (initial_profile or {}).get("system_template_source")
+        self._system_template_source = (
+            {str(k): str(v) for k, v in source.items()}
+            if isinstance(source, dict)
+            else None
+        )
 
         self.setModal(True)
         self.setWindowTitle(t("connection.dialog_title"))
@@ -250,7 +258,10 @@ class ConnectionDialog(QDialog):
             "job_state_command": self.job_state_command.text().strip(),
         }
 
-    def _apply_system_template(self, template: ProfileData) -> None:
+    def _apply_system_template(
+        self, template: ProfileData, provenance: dict[str, str] | None = None
+    ) -> None:
+        self._system_template_source = dict(provenance) if provenance else None
         system = normalize_system_settings(template)
         self.system_name.setText(system["name"])
         self.scratch_dir.setText(system["scratch_dir"])
@@ -276,6 +287,24 @@ class ConnectionDialog(QDialog):
                 action.triggered.connect(
                     lambda _checked=False, selected=dict(template): self._apply_system_template(selected)
                 )
+        plugin_groups = installed_cluster_template_groups()
+        if plugin_groups:
+            plugin_menu = QMenu(t("connection.plugin_templates"), menu)
+            menu.addMenu(plugin_menu)
+            submenus.append(plugin_menu)
+            for group_name, templates in sorted(plugin_groups.items()):
+                group_menu = (
+                    plugin_menu
+                    if len(templates) == 1
+                    else self._add_nested_group(plugin_menu, group_name)
+                )
+                for template in templates:
+                    action = group_menu.addAction(template.settings.get("name", group_name))
+                    action.triggered.connect(
+                        lambda _checked=False, selected=dict(template.settings), provenance=dict(
+                            template.provenance
+                        ): self._apply_system_template(selected, provenance)
+                    )
         user_templates = load_user_system_templates()
         if user_templates:
             user_menu = QMenu(t("connection.user_templates"), menu)
@@ -286,9 +315,29 @@ class ConnectionDialog(QDialog):
                 action.triggered.connect(
                     lambda _checked=False, selected=dict(template): self._apply_system_template(selected)
                 )
+        menu.addSeparator()
+        more_action = menu.addAction(t("connection.get_more_plugins"))
+        more_action.triggered.connect(self._open_plugin_manager)
         self._system_template_menu = menu
         self._system_template_submenus = submenus
         self.btn_system_templates.setMenu(menu)
+
+    @staticmethod
+    def _add_nested_group(parent_menu: QMenu, group_name: str) -> QMenu:
+        submenu = QMenu(group_name, parent_menu)
+        parent_menu.addMenu(submenu)
+        return submenu
+
+    def _open_plugin_manager(self) -> None:
+        try:
+            from hpc_gui.ui.dialogs.plugin_manager_dialog import PluginManagerDialog
+
+            dialog = PluginManagerDialog(self)
+            dialog.plugins_changed.connect(self._rebuild_system_template_menu)
+            dialog.exec()
+            self._rebuild_system_template_menu()
+        except Exception:
+            pass
 
     def _save_current_system_template(self) -> None:
         default_name = self.system_name.text().strip() or t("connection.custom_system_template")
@@ -327,7 +376,7 @@ class ConnectionDialog(QDialog):
             QMessageBox.warning(self, t("login.err_title"), t("login.err_port_numeric"))
             return None
 
-        return {
+        profile: ProfileData = {
             "name": self.profile_name.text().strip(),
             "host": self.host.text().strip(),
             "port": port,
@@ -350,6 +399,9 @@ class ConnectionDialog(QDialog):
                 **self._system_form_values(),
             },
         }
+        if self._system_template_source:
+            profile["system_template_source"] = dict(self._system_template_source)
+        return profile
 
     def _save_clicked(self) -> None:
         profile = self._collect_profile()

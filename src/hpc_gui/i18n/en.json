@@ -663,7 +663,9 @@
     "scontrol_command": "Job details command",
     "status_command": "Custom status command",
     "active_job_ids_command": "Active job IDs command",
-    "job_state_command": "Completed job state command"
+    "job_state_command": "Completed job state command",
+    "plugin_templates": "Installed Plugins",
+    "get_more_plugins": "Get more plugins..."
   },
   "tour": {
     "prev": "Back",
