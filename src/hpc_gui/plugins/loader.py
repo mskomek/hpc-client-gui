@@ -222,12 +222,41 @@ def load_installed_plugins(
                 continue
             lint_index_raw = raw_pack
 
+        # Optional job-template index entrypoint (same isolation rules).
+        templates_index_raw = None
+        templates_rel = manifest.entrypoints.get("job_templates")
+        if isinstance(templates_rel, list):
+            templates_rel = templates_rel[0] if templates_rel else None
+        if isinstance(templates_rel, str) and templates_rel:
+            if templates_rel.startswith("/") or ".." in templates_rel.split("/"):
+                result.problems.append(
+                    PluginProblem(
+                        plugin_id, version, f"unsafe job-template entrypoint: {templates_rel!r}"
+                    )
+                )
+                continue
+            raw_templates, error = _load_json(package_dir / templates_rel)
+            if error:
+                result.problems.append(
+                    PluginProblem(plugin_id, version, f"job template index: {error}")
+                )
+                continue
+            if not isinstance(raw_templates, dict) or raw_templates.get("schema_version") != 1:
+                result.problems.append(
+                    PluginProblem(
+                        plugin_id, version, "job template index: unsupported schema_version"
+                    )
+                )
+                continue
+            templates_index_raw = raw_templates
+
         result.plugins.append(
             InstalledPlugin(
                 manifest=manifest,
                 directory=package_dir,
                 cluster_profiles=tuple(profiles),
                 lint_index=lint_index_raw,
+                job_templates_index=templates_index_raw,
             )
         )
 

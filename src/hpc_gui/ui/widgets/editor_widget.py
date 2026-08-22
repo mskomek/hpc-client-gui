@@ -123,12 +123,18 @@ class EditorWidget(QWidget):
 
         self.btn_load = QPushButton(t("editor.open"))
         self.btn_save = QPushButton(t("editor.save"))
+        self.btn_new_template = QPushButton(
+            t("editor.new_from_template")
+            if t("editor.new_from_template") != "[editor.new_from_template]"
+            else "New from Template..."
+        )
         self.btn_save_submit = QPushButton(t("editor.save_submit") if t("editor.save_submit") != "[editor.save_submit]" else "Save + Submit")
         self.btn_save_run = QPushButton(t("editor.save_run") if t("editor.save_run") != "[editor.save_run]" else "Save + Run")
         self.btn_lint = QPushButton(t("editor.lint") if t("editor.lint") != "[editor.lint]" else "Lint")
 
         self.btn_load.clicked.connect(self.load_path)
         self.btn_save.clicked.connect(self.save_path)
+        self.btn_new_template.clicked.connect(self.new_from_template)
         self.btn_save_submit.clicked.connect(lambda: self.save_path(force_submit=True))
         self.btn_save_run.clicked.connect(lambda: self.save_path(run_in_terminal=True))
         self.btn_lint.clicked.connect(self.run_lint)
@@ -138,6 +144,7 @@ class EditorWidget(QWidget):
         top.addWidget(self.lbl_remote)
         top.addWidget(self.path_in, 1)
         top.addWidget(self.btn_load)
+        top.addWidget(self.btn_new_template)
         top.addWidget(self.btn_lint)
         top.addWidget(self.btn_save)
         top.addWidget(self.btn_save_submit)
@@ -360,6 +367,11 @@ class EditorWidget(QWidget):
     def retranslate_ui(self):
         self.lbl_remote.setText(t("editor.remote"))
         self.btn_load.setText(t("editor.open"))
+        self.btn_new_template.setText(
+            t("editor.new_from_template")
+            if t("editor.new_from_template") != "[editor.new_from_template]"
+            else "New from Template..."
+        )
         self.btn_lint.setText(t("editor.lint") if t("editor.lint") != "[editor.lint]" else "Lint")
         self.btn_save.setText(t("editor.save"))
         self.btn_save_submit.setText(t("editor.save_submit") if t("editor.save_submit") != "[editor.save_submit]" else "Save + Submit")
@@ -480,6 +492,48 @@ class EditorWidget(QWidget):
             labels.append(f"[{location}] {severity}: {diagnostic.message} ({diagnostic.rule_id})")
             positions.append(max(0, (diagnostic.line or 1) - 1))
         return labels, positions
+
+    def new_from_template(self):
+        """Open the plugin-template browser; rendered text opens in a NEW
+        document tab for review/editing. Nothing is saved or submitted
+        automatically."""
+        from hpc_gui.plugins.job_templates import load_job_templates
+
+        try:
+            templates = load_job_templates()
+        except Exception:
+            templates = []
+        if not templates:
+            QMessageBox.information(
+                self,
+                t("common.info"),
+                t("templates.none_installed"),
+            )
+            return
+        from hpc_gui.ui.dialogs.template_browser_dialog import TemplateBrowserDialog
+
+        dialog = TemplateBrowserDialog(self, templates)
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return
+        template, values = dialog.result_template, dialog.result_values
+        if template is None:
+            return
+        from hpc_gui.plugins.job_templates import render_template
+
+        try:
+            rendered = render_template(template, values)
+        except Exception as exc:
+            QMessageBox.warning(self, t("common.error"), str(exc))
+            return
+        # Preview requirement: content lands in an unsaved editor tab.
+        suggested = template.file_name or f"{template.id}.txt"
+        self.open_file("", rendered)
+        index = self.document_tabs.currentIndex()
+        if index >= 0:
+            self.document_tabs.setTabText(index, self._tab_title(suggested))
+        document = self._current_document()
+        if document is not None:
+            document.path = ""
 
     def load_path(self):
         if not self.session or not self.session.get("files"):
