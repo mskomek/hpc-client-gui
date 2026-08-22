@@ -1,0 +1,213 @@
+"""Local, read-only loader for installed declarative plugins.
+
+The loader never executes plugin content and performs no network access.
+A malformed single plugin is recorded as a problem and skipped so the
+application can still start with the remaining (or zero) plugins.
+"""
+
+from __future__ import annotations
+
+import json
+import logging
+import re
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any
+
+from hpc_gui import __version__
+from hpc_gui.plugins.compatibility import is_app_compatible
+from hpc_gui.plugins.models import (
+    PLUGIN_API_VERSION,
+    ClusterProfileDefinition,
+    InstalledPlugin,
+    PluginFile,
+    PluginManifest,
+)
+from hpc_gui.plugins.storage import (
+    MANIFEST_NAME,
+    plugin_package_dir,
+    read_active_versions,
+)
+from hpc_gui.plugins.validator import validate_cluster_profile_dict, validate_manifest_dict
+
+logger = logging.getLogger(__name__)
+
+
+@dataclass
+class PluginProblem:
+    plugin_id: str
+    version: str
+    reason: str
+
+
+@dataclass
+class PluginLoadResult:
+    plugins: list[InstalledPlugin] = field(default_factory=list)
+    problems: list[PluginProblem] = field(default_factory=list)
+
+
+def _load_json(path: Path) -> tuple[Any | None, str | None]:
+    try:
+        with path.open("r", encoding="utf-8") as handle:
+            return json.load(handle), None
+    except FileNotFoundError:
+        return None, f"file not found: {path.name}"
+    except json.JSONDecodeError as exc:
+        return None, f"invalid JSON in {path.name}: {exc}"
+    except OSError as exc:
+        return None, f"cannot read {path.name}: {exc}"
+
+
+def _build_manifest(raw: Any) -> tuple[PluginManifest | None, str | None]:
+    errors = validate_manifest_dict(raw)
+    if errors:
+        return None, "; ".join(errors)
+    files = tuple(
+        PluginFile(
+            path=entry["path"],
+            sha256=entry["sha256"],
+            size=entry["size"],
+            role=entry["role"],
+        )
+        for entry in raw["files"]
+    )
+    manifest = PluginManifest(
+        schema_version=raw["schema_version"],
+        plugin_api=raw["plugin_api"],
+        id=raw["id"],
+        name=raw["name"],
+        version=raw["version"],
+        publisher=raw["publisher"],
+        license=raw["license"],
+        description=raw["description"],
+        requires_app=raw["requires_app"],
+        capabilities=tuple(raw["capabilities"]),
+        entrypoints=dict(raw.get("entrypoints") or {}),
+        files=files,
+    )
+    return manifest, None
+
+
+def _build_profile(raw: Any) -> tuple[ClusterProfileDefinition | None, str | None]:
+    errors = validate_cluster_profile_dict(raw)
+    if errors:
+        return None, "; ".join(errors)
+    profile = ClusterProfileDefinition(
+        profile_id=str(raw["profile_id"]),
+        name=str(raw["name"]),
+        scheduler=str(raw["scheduler"]),
+        paths={
+            key: value
+            for key, value in (raw.get("paths") or {}).items()
+            if isinstance(value, str)
+        },
+        commands={
+            key: value
+            for key, value in (raw.get("commands") or {}).items()
+            if isinstance(value, str)
+        },
+        description=str(raw.get("description") or ""),
+    )
+    return profile, None
+
+
+def load_installed_plugins(
+    root: str | Path | None = None,
+    app_version: str = __version__,
+) -> PluginLoadResult:
+    """Load all active installed plugins from local storage.
+
+    Only locally present declarative payloads are read. Problems are
+    collected instead of raised; a broken plugin never blocks startup.
+    """
+    result = PluginLoadResult()
+
+    active = read_active_versions(root)
+    if not active:
+        return result
+
+    id_pattern = re.compile(r"^[a-z][a-z0-9]*(?:\.[a-z0-9]+)+$")
+    for plugin_id, version in sorted(active.items()):
+        if not id_pattern.fullmatch(plugin_id) or "/" in version or "\\" in version or ".." in version:
+            result.problems.append(
+                PluginProblem(plugin_id=plugin_id, version=version, reason="unsafe plugin id or version")
+            )
+            continue
+
+        package_dir = plugin_package_dir(plugin_id, version, root)
+        raw_manifest, error = _load_json(package_dir / MANIFEST_NAME)
+        if error:
+            result.problems.append(PluginProblem(plugin_id, version, error))
+            continue
+
+        manifest, error = _build_manifest(raw_manifest)
+        if error or manifest is None:
+            result.problems.append(PluginProblem(plugin_id, version, f"invalid manifest: {error}"))
+            continue
+
+        if manifest.id != plugin_id or manifest.version != version:
+            result.problems.append(
+                PluginProblem(
+                    plugin_id,
+                    version,
+                    "manifest identity does not match the active index entry",
+                )
+            )
+            continue
+        if manifest.plugin_api != PLUGIN_API_VERSION:
+            result.problems.append(
+                PluginProblem(plugin_id, version, f"unsupported plugin API: {manifest.plugin_api}")
+            )
+            continue
+        if not is_app_compatible(manifest.requires_app, app_version):
+            result.problems.append(
+                PluginProblem(
+                    plugin_id,
+                    version,
+                    f"incompatible with app {app_version} (requires {manifest.requires_app})",
+                )
+            )
+            continue
+
+        profiles: list[ClusterProfileDefinition] = []
+        profile_failed = False
+        cluster_entrypoints = manifest.entrypoints.get("cluster_profiles")
+        if isinstance(cluster_entrypoints, str):
+            cluster_entrypoints = [cluster_entrypoints]
+        for rel in cluster_entrypoints or []:
+            if not isinstance(rel, str) or not rel or rel.startswith("/") or ".." in rel.split("/"):
+                profile_failed = True
+                result.problems.append(
+                    PluginProblem(plugin_id, version, f"unsafe cluster-profile entrypoint: {rel!r}")
+                )
+                break
+            raw_profile, error = _load_json(package_dir / rel)
+            if error:
+                profile_failed = True
+                result.problems.append(PluginProblem(plugin_id, version, error))
+                break
+            profile, error = _build_profile(raw_profile)
+            if error or profile is None:
+                profile_failed = True
+                result.problems.append(PluginProblem(plugin_id, version, f"invalid cluster profile: {error}"))
+                break
+            profiles.append(profile)
+
+        if profile_failed:
+            continue
+
+        result.plugins.append(
+            InstalledPlugin(
+                manifest=manifest,
+                directory=package_dir,
+                cluster_profiles=tuple(profiles),
+            )
+        )
+
+    if result.problems:
+        logger.warning(
+            "Skipped %d invalid installed plugin(s): %s",
+            len(result.problems),
+            "; ".join(f"{p.plugin_id}@{p.version}: {p.reason}" for p in result.problems),
+        )
+    return result
