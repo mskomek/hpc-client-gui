@@ -4,12 +4,14 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import time
 from collections.abc import Callable
 from pathlib import Path
 from typing import Mapping
 
 from hpc_gui.plugins.storage import (
+    packages_dir,
     plugins_root,
     read_active_versions,
     write_active_versions,
@@ -87,3 +89,26 @@ def record_installed_version(
         active = read_active_versions(root)
         active[plugin_id] = version
         write_active_versions(active, root=root)
+
+
+def remove_plugin(plugin_id: str, root: str | Path | None = None) -> list[str]:
+    """Remove every installed version of a plugin and deactivate it.
+
+    Only plugin-owned files under ``<plugins>/packages/<plugin_id>`` are
+    deleted. Saved connection profiles and user templates are never touched.
+    Returns the versions that were removed.
+    """
+    state = read_installed_state(root)
+    record = state.pop(plugin_id, {})
+    removed = list(record.get("versions", []))
+    write_installed_state(state, root=root)
+
+    active = read_active_versions(root)
+    if plugin_id in active:
+        del active[plugin_id]
+        write_active_versions(active, root=root)
+
+    package_dir = packages_dir(root) / plugin_id
+    if package_dir.exists():
+        shutil.rmtree(package_dir, ignore_errors=True)
+    return removed
