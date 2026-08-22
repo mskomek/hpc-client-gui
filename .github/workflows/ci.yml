@@ -6,6 +6,41 @@ on:
   pull_request:
 
 jobs:
+  compat:
+    name: Compatibility (${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.12"]
+    env:
+      PYTHONPATH: src
+      QT_QPA_PLATFORM: offscreen
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install Qt runtime
+        run: sudo apt-get update && sudo apt-get install --yes libegl1
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .[test]
+          pip install pytest
+      - name: Compile check
+        run: python -m compileall src/hpc_gui
+      - name: i18n drift gate
+        run: python scripts/check_i18n.py
+      - name: Headless smoke tests
+        run: >
+          python -m pytest tests/test_cli.py tests/test_cli_entrypoint.py
+          tests/test_config_storage_atomic.py tests/test_profile_identity.py
+          tests/test_profile_transfer_settings.py tests/test_slurm_models.py
+          tests/test_slurm_script_parser.py tests/test_remote_entry_helpers.py
+          tests/test_upload_pipelining.py tests/test_version_consistency.py
+          -q --tb=short -rf
+
   cli:
     runs-on: ubuntu-latest
     env:
@@ -44,8 +79,6 @@ jobs:
         run: python scripts/check_branding.py
       - name: Release surface gate
         run: python scripts/check_release_surface.py
-      - name: Release surface regression test
-        run: python -m unittest tests/test_release_surface.py -v
       - name: Wiki source gate
         run: |
           if [ -d docs/wiki ]; then
@@ -94,6 +127,36 @@ jobs:
         run: |
           python -m unittest discover -s tests -p "test_terminal_*.py"
           python -m unittest discover -s tests -p "test_ssh_terminal_stream.py"
+  lint:
+    name: Lint (Ruff)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install Ruff
+        run: pip install "ruff>=0.4"
+      - name: Ruff check (E4/E7/E9/F)
+        run: ruff check src scripts tests
+
+  dependency_audit:
+    name: Dependency audit (pip-audit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install runtime dependency closure in an isolated environment
+        run: |
+          python -m venv .venv-audit
+          .venv-audit/bin/python -m pip install --upgrade pip
+          .venv-audit/bin/pip install -e .
+          .venv-audit/bin/pip install pip-audit
+      - name: Audit runtime dependency closure
+        run: .venv-audit/bin/pip-audit --skip-editable --progress-spinner off
+
   gui:
     runs-on: ubuntu-latest
     env:
@@ -110,6 +173,9 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -e .[test]
-          pip install pytest
-      - name: GUI and offline test suite
-        run: python -m pytest tests/ -q --tb=short -rf
+          pip install pytest pytest-cov
+      - name: GUI and offline test suite (report-only coverage)
+        run: >
+          python -m pytest tests/ -q --tb=short -rf
+          --cov=hpc_gui --cov-report=term --cov-report=json:coverage.json
+          --cov-fail-under=0
