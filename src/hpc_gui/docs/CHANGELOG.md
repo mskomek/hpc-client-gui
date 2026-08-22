@@ -1,14 +1,23 @@
 # Changelog
 
+## v1.2.8
+
+### Embedded terminal and clearer connection diagnostics
+- Replaced the legacy terminal surface with a bundled xterm.js terminal that requires no CDN or runtime download.
+- Added live PTY streaming, resize synchronization, find, clear, and font-size controls.
+- Fixed connection-page spacing and removed the unused fallback console that appeared behind saved connections.
+- Added actionable Turkish and English explanations for authentication, DNS, timeout, port, key, banner, and SSH protocol failures.
+- Clarified diagnostic codes so users can match an error dialog to the corresponding log entry.
+
 ## v1.2.7
 
 ### Transfer reliability and release hardening
 - Added streaming remote directory listings over a reused SFTP channel.
 - Improved cancellation cleanup, in-flight transfer key release, and partial-download decisions.
 - Added end-to-end SSH/SFTP coverage for cancelled transfers and directory streaming.
+- Updated the public release surface for Windows, Linux, GUI, and CLI users.
+- Added a release-surface drift guard and a reproducible synthetic SFTP listing benchmark.
 - Hardened release automation for cached cross-platform builds and package validation.
-- Updated the public release surface for Windows and Linux GUI/CLI users.
-- Added a reproducible synthetic SFTP listing benchmark and manual HPC/FileZilla comparison procedure.
 
 ## v1.2.6
 
