@@ -319,6 +319,12 @@ class MainWindow(QMainWindow):
             lambda: self._check_for_updates(manual=True)
         )
 
+        self._plugins_btn = QToolButton(self)
+        self._plugins_btn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
+        self._plugins_btn.setAutoRaise(False)
+        self._plugins_btn.setMinimumWidth(88)
+        self._plugins_btn.clicked.connect(self._open_plugins)
+
         self._send_logs_btn = QToolButton(self)
         self._send_logs_btn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
         self._send_logs_btn.setAutoRaise(False)
@@ -336,6 +342,7 @@ class MainWindow(QMainWindow):
         )
         layout.addWidget(self._version_label)
         layout.addWidget(self._update_btn)
+        layout.addWidget(self._plugins_btn)
         layout.addWidget(self._send_logs_btn)
         layout.addWidget(self._settings_btn)
         layout.addWidget(self._help_btn)
@@ -385,6 +392,15 @@ class MainWindow(QMainWindow):
     def _open_send_logs(self):
         try:
             dlg = SendLogsDialog(self, crash_context=False)
+            dlg.exec()
+        except Exception:
+            pass
+
+    def _open_plugins(self):
+        try:
+            from hpc_gui.ui.dialogs.plugin_manager_dialog import PluginManagerDialog
+
+            dlg = PluginManagerDialog(self)
             dlg.exec()
         except Exception:
             pass
@@ -610,6 +626,9 @@ class MainWindow(QMainWindow):
         if hasattr(self, "_update_btn"):
             self._update_btn.setText(t("updates.action"))
             self._update_btn.setToolTip(t("updates.check_tip"))
+        if hasattr(self, "_plugins_btn"):
+            self._plugins_btn.setText(t("plugins.action"))
+            self._plugins_btn.setToolTip(t("plugins.dialog_title"))
         if hasattr(self, "_send_logs_btn"):
             self._send_logs_btn.setText(t("crash.send_logs_btn"))
             self._send_logs_btn.setToolTip(t("crash.send_logs_tip"))
