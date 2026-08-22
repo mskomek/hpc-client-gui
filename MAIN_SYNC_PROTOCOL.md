@@ -24,7 +24,10 @@ superseded; its exclusion rules survive as the published-tree boundary below.
 Before treating a tree as `main`, the following stay **untracked**
 (`git rm -r --cached`); local copies remain on disk:
 
-- `.agent-runs/`, `tools/`, `devtools/`, `waves/`
+- `.agent-runs/`, `tools/`, `devtools/` (except `performance_probe.py`,
+  which tests load), `waves/`
+- `AGENTS.md` and `CLAUDE.md`: these two are **never synced to `main` and
+  never pushed**; they exist only as local working copies
 - internal process documents under root `docs/` (delegation reports, wave
   plans/audits, publication kit)
 
