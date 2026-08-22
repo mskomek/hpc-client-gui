@@ -33,10 +33,14 @@ _KIND_ALIASES = {
     "line_regex": "line_regex",
     "regex-line": "line_regex",
     "ordered_patterns": "ordered_patterns",
+    "ordered-patterns": "ordered_patterns",
     "count": "count",
 }
 
 _SEVERITIES = {severity.value for severity in Severity}
+
+# Narrow, documented `when` grammar. Each key is matched against LintContext.
+_WHEN_KEYS = frozenset({"target_version", "remote_platform"})
 
 
 class RulePackError(ValueError):
@@ -127,9 +131,16 @@ def parse_rule(raw: Any, source_label: str) -> CompiledRule:
                 f"{source_label} [{rule_id}]: count needs a 'min' or 'max'"
             )
 
+    if kind == "ordered_patterns":
+        require_all_probe = match.get("require_all", raw.get("require_all"))
+        if require_all_probe is not None and not isinstance(require_all_probe, bool):
+            raise RulePackError(
+                f"{source_label} [{rule_id}]: require_all must be a boolean"
+            )
+
     when_raw = raw.get("when")
     when = when_raw if isinstance(when_raw, dict) else {}
-    unknown_when = set(when) - {"target_version"}
+    unknown_when = set(when) - _WHEN_KEYS
     if unknown_when:
         raise RulePackError(
             f"{source_label} [{rule_id}]: unsupported condition keys {sorted(unknown_when)}"
@@ -140,6 +151,19 @@ def parse_rule(raw: Any, source_label: str) -> CompiledRule:
     ):
         raise RulePackError(
             f"{source_label} [{rule_id}]: invalid when.target_version {target!r}"
+        )
+    remote_platform = when.get("remote_platform")
+    if remote_platform is not None and (
+        not isinstance(remote_platform, str) or not remote_platform.strip()
+    ):
+        raise RulePackError(
+            f"{source_label} [{rule_id}]: when.remote_platform must be a non-empty string"
+        )
+
+    require_all = match.get("require_all", raw.get("require_all"))
+    if require_all is not None and kind != "ordered_patterns":
+        raise RulePackError(
+            f"{source_label} [{rule_id}]: require_all is only valid for ordered_patterns"
         )
 
     return CompiledRule(
@@ -155,6 +179,7 @@ def parse_rule(raw: Any, source_label: str) -> CompiledRule:
         when=dict(when),
         min_count=min_count,
         max_count=max_count,
+        require_all=True if require_all is None else bool(require_all),
     )
 
 

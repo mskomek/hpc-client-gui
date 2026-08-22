@@ -61,6 +61,7 @@ class CompiledRule:
     when: dict = field(default_factory=dict)
     min_count: int | None = None
     max_count: int | None = None
+    require_all: bool = True
 
 
 @dataclass(frozen=True)
