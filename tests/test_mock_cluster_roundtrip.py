@@ -32,7 +32,18 @@ class MockClusterRoundTripTests(unittest.TestCase):
         config_dir = self.root_dir / ".truba_slurm_gui"
         config_dir.mkdir()
         (config_dir / "config.json").write_text(
-            json.dumps({"settings": {"cli_external_access_enabled": True}}),
+            json.dumps(
+                {
+                    "settings": {"cli_external_access_enabled": True},
+                    "profiles": [
+                        {
+                            "name": "mock",
+                            "cli_allowed": True,
+                            "system": {"status_command": "lssrv"},
+                        }
+                    ],
+                }
+            ),
             encoding="utf-8",
         )
         self.server = MockSSHServer(self.root_dir)
@@ -40,7 +51,7 @@ class MockClusterRoundTripTests(unittest.TestCase):
         self.addCleanup(self.server.__exit__)
         self.addCleanup(self._temp.cleanup)
 
-    def _run_cli(self, *args: str) -> subprocess.CompletedProcess:
+    def _run_cli(self, *args: str, profile: str | None = None) -> subprocess.CompletedProcess:
         env = {"PYTHONPATH": str(REPO_ROOT / "src")}
         import os
 
@@ -63,8 +74,10 @@ class MockClusterRoundTripTests(unittest.TestCase):
             "--user",
             MOCK_USERNAME,
             "--password-stdin",
-            *args,
         ]
+        if profile:
+            cmd.extend(["--profile", profile])
+        cmd.extend(args)
         return subprocess.run(
             cmd,
             input=MOCK_PASSWORD + "\n",
@@ -114,7 +127,7 @@ class MockClusterRoundTripTests(unittest.TestCase):
         list_proc = self._run_cli("jobs", "list")
         self.assertEqual(list_proc.returncode, 0, list_proc.stderr)
 
-        lssrv_proc = self._run_cli("jobs", "lssrv")
+        lssrv_proc = self._run_cli("jobs", "lssrv", profile="mock")
         self.assertEqual(lssrv_proc.returncode, 0, lssrv_proc.stderr)
 
         accounting_proc = self._run_cli("jobs", "accounting")

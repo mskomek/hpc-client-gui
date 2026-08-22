@@ -788,8 +788,27 @@ def _jobs_username(args: argparse.Namespace) -> str:
     """
     profile_name = effective_profile_name(args)
     profile = resolve_profile(profile_name) if profile_name else None
-    username = getattr(args, "username", "") or (profile or {}).get("username", "") or ""
-    return str(username)
+    username = str(getattr(args, "username", "") or (profile or {}).get("username", "") or "")
+    return username
+
+
+def _profile_system_settings(args: argparse.Namespace) -> dict[str, Any] | None:
+    """Resolve the selected profile's embedded system settings, if any.
+
+    Saved profiles keep a resolved ``system`` snapshot; the CLI reuses it so
+    site-specific commands (for example a ``lssrv`` status command) come from
+    the profile rather than from generic built-in defaults.
+    """
+    profile_name = effective_profile_name(args)
+    if not profile_name:
+        return None
+    profile = resolve_profile(profile_name)
+    if not isinstance(profile, dict):
+        return None
+    system = profile.get("system")
+    if not isinstance(system, dict):
+        return None
+    return {key: value for key, value in system.items() if isinstance(value, str)}
 
 
 def _is_valid_job_id(value: str) -> bool:
@@ -833,7 +852,7 @@ def _run_jobs(args: argparse.Namespace) -> int:
     session = None
     try:
         session = CLISession.open(args)
-        backend = jobs_backend(session)
+        backend = jobs_backend(session, system_settings=_profile_system_settings(args))
         if args.jobs_command == "list":
             result = backend.squeue(_jobs_username(args))
         elif args.jobs_command == "status":
