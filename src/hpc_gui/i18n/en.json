@@ -187,7 +187,9 @@
     "replace_label": "Replace:",
     "replace_placeholder": "Replace with",
     "replace": "Replace",
-    "replace_all": "Replace all"
+    "replace_all": "Replace all",
+    "lint_no_linter": "No linter is installed for this file type. Install a lint plugin from the Plugin Manager.",
+    "lint_results_title": "Lint results"
   },
   "dirs": {
     "refresh": "Refresh",
