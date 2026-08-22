@@ -169,7 +169,6 @@ class ConnectionDialog(QDialog):
         advanced_form.addRow(t("connection.ssh_timeout"), self.sp_ssh_timeout)
         advanced_form.addRow("", self.cb_strict_hostkey)
         advanced_form.addRow("", self.cb_cli_allowed)
-        advanced_form.addRow(system_group)
         self.advanced_body.setVisible(False)
         self.advanced_button.toggled.connect(self._set_advanced_visible)
 
@@ -190,6 +189,9 @@ class ConnectionDialog(QDialog):
 
         root = QVBoxLayout(self)
         root.addLayout(form)
+        # Ready-made system settings (templates + site fields) stay visible at
+        # the top instead of hiding inside the advanced section.
+        root.addWidget(system_group)
         root.addWidget(self.advanced_button)
         root.addWidget(self.advanced_body)
         root.addLayout(button_row)
