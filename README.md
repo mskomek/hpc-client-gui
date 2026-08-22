@@ -9,7 +9,9 @@ use the GUI or CLI from Windows and Linux.
 GUI, CLI, SSH, SFTP, Slurm job management, and optional X11 forwarding are
 included in the product surface. This is an independent client-side project
 for compatible Slurm/HPC infrastructures, including TRUBA-compatible systems;
-it does not modify the cluster.
+it does not modify the cluster. Compatibility claims distinguish **designed
+for** (standard SSH + Slurm behavior) from **verified on** environments —
+see [docs/COMPATIBILITY_VALIDATION.md](docs/COMPATIBILITY_VALIDATION.md).
 
 Quick start on Windows: **Download → Extract All → Run** `hpc-client-gui.exe`.
 

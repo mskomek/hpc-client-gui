@@ -37,8 +37,9 @@ def _rows(text: str) -> list[tuple[str, list[str]]]:
     lines = [line.strip() for line in text.splitlines() if line.strip()]
     if not lines:
         return []
-    header = lines[0]
-    delimiter = "|" if "|" in header else None
+    # Banners/MOTD noise can precede scheduler output, so the delimiter is
+    # detected from the whole response rather than only the first line.
+    delimiter = "|" if any("|" in line for line in lines) else None
     return [(line, [part.strip() for part in line.split(delimiter)]) for line in lines[1:]]
 
 
