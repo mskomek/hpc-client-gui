@@ -384,10 +384,26 @@ class EditorWidget(QWidget):
             return
         issues = self._collect_lint_issues(path, text)
         diagnostics = self._run_plugin_lint(path, text)
+        diagnostics = diagnostics + self._run_cross_checks(text)
         if not issues and not diagnostics:
             QMessageBox.information(self, t("common.info"), t("editor.lint_ok") if t("editor.lint_ok") != "[editor.lint_ok]" else "Lint passed. No obvious issues found.")
             return
         self._show_lint_results(path, issues, diagnostics)
+
+    def _run_cross_checks(self, text: str) -> list:
+        """Static Slurm/Fluent resource-consistency checks on the same text."""
+        from hpc_gui.lint.job_context import (
+            cross_diagnostics,
+            parse_fluent_launch,
+            parse_slurm_context,
+        )
+
+        try:
+            context = parse_slurm_context(text)
+            launch = parse_fluent_launch(text)
+            return cross_diagnostics(context, launch)
+        except Exception:  # never break the editor on parse surprises
+            return []
 
     def _run_plugin_lint(self, path: str, text: str) -> list:
         """Run installed declarative lint packs matching the file name."""
