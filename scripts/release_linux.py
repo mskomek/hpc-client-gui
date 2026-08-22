@@ -41,7 +41,7 @@ DESKTOP_ENTRY_NAME = "hpc-client-gui.desktop"
 APPRUN_NAME = "AppRun"
 FLATPAK_ID = "io.github.mskomek.HpcClientGui"
 REQUIRED_HELP_FILES = ("HELP_tr.md", "HELP_en.md", "CLI_GUIDE_tr.md", "CLI_GUIDE_en.md")
-REQUIRED_LICENSE_FILES = ("LICENSE", "COMMERCIAL_LICENSE.md", "THIRD_PARTY_NOTICES.md")
+REQUIRED_LICENSE_FILES = ("LICENSE", "COMMERCIAL_LICENSE.md", "THIRD_PARTY_NOTICES.md", "QT_LGPL_SOURCE_OFFER.md")
 THIRD_PARTY_LICENSES_DIR = REPO_ROOT / "third_party_licenses"
 
 
@@ -284,6 +284,12 @@ def _run(command: List[str], *, cwd: Path = REPO_ROOT) -> None:
         raise PackagingError(f"Command failed with exit {result.returncode}: {' '.join(command)}")
 
 
+def _generate_version_manifest(version: str) -> None:
+    _run([sys.executable, "scripts/generate_third_party_versions.py", "--version", version])
+    _run([sys.executable, "scripts/generate_sbom.py", "--version", version])
+    _run([sys.executable, "scripts/generate_qt_lgpl_sources.py"])
+
+
 def _copy_tree(source: Path, destination: Path) -> None:
     if not source.is_dir():
         raise PackagingError(f"Packaging input directory missing: {source}")
@@ -300,6 +306,9 @@ def _stage_common_release_files(destination: Path) -> None:
             _copy_tree(path, target)
         else:
             shutil.copy2(path, target)
+    shutil.copy2(REPO_ROOT / "THIRD_PARTY_VERSIONS.txt", destination / "THIRD_PARTY_VERSIONS.txt")
+    shutil.copy2(REPO_ROOT / "SBOM.cdx.json", destination / "SBOM.cdx.json")
+    shutil.copy2(REPO_ROOT / "QT_LGPL_SOURCES.json", destination / "QT_LGPL_SOURCES.json")
     help_dir = destination / "help"
     help_dir.mkdir(exist_ok=True)
     docs_dir = SRC_DIR / "hpc_gui" / "docs"
@@ -371,6 +380,9 @@ def execute_linux_build(version: Optional[str] = None) -> List[Path]:
     effective_version = version or resolve_version()
     if effective_version != resolve_version():
         raise PackagingError(f"Requested version does not match source version: {effective_version}")
+    _generate_version_manifest(effective_version)
+    if not (REPO_ROOT / "THIRD_PARTY_VERSIONS.txt").is_file():
+        raise PackagingError("Version manifest generation produced no THIRD_PARTY_VERSIONS.txt")
     validate_required_files()
     validate_desktop_entry()
     validate_apprun()

@@ -38,6 +38,18 @@ Bu programın mantığı çok basit:
 
 ---
 
+## Gömülü SSH terminali
+
+Bağlantı sekmesindeki terminal, uzak kabuğu uygulamanın içinde açar. Terminal
+alanı pencereyle birlikte yeniden boyutlanır; **Bul**, **Temizle**, **A−** ve
+**A+** araçları yerel görünümü yönetir. Terminal dosyaları paket içinde gelir;
+CDN veya çalışma anında indirme kullanılmaz.
+
+Bağlantı kurulamazsa pencere olası nedeni ve kontrol edilmesi gerekenleri
+gösterir. `SSH-XXXXXX` biçimindeki tanı kodu, aynı hatayı günlükte bulmak içindir.
+
+---
+
 ## Kurulum ve çalıştırma
 
 ### Standalone (EXE)
@@ -185,7 +197,8 @@ Kurum banner/alias/modül çıktıları farklıysa bazı parse senaryolarında l
 
 ## Linux destegi
 
-Linux destegi aktif olarak gelistirilmektedir. Genel surumler su an **yalnizca Windows** icindir; bir Linux paketi yayinlanana kadar kaynak kodundan calistirin.
+Linux x86_64 sürümü GitHub Releases sayfasında AppImage, Debian `.deb` ve
+Flatpak paketleri olarak yayımlanır. Her paketin yanında SHA-256 dosyası bulunur.
 
 ### Gereksinimler
 

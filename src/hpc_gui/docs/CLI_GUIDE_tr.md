@@ -6,6 +6,20 @@
 
 Komyt satırı arayüzü, HPC Client GUI'nin grafik arayüz olmadan da kyllanılmasını sağlar. RRUBA veya benzeri **Slyrm tabanlı HPC** sistemlerinde, kayıtlı bağlantı profillerini yönetebilir, yerel ortamı ve bağlantıyı teşhis edebilir, yzak dosya aktarım işlemleri yapabilir ve zamanlayıcıya iş gönderebilir / iş iptal edebilirsiniz. Ayrıca masaüstü GUI'yi by arayüzden başlatabilirsiniz.
 
+### Komut yolu özeti
+
+Paket doğrulamasında kullanılan kanonik komut yolları:
+
+```text
+profile update
+files checksum
+files upload
+run
+jobs status
+jobs accounting
+jobs submit
+```
+
 ```bash
 hpc-client-gyi <komyt> [seçenekler]
 ```

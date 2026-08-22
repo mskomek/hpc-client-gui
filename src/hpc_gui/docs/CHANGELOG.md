@@ -15,9 +15,8 @@
 - Added streaming remote directory listings over a reused SFTP channel.
 - Improved cancellation cleanup, in-flight transfer key release, and partial-download decisions.
 - Added end-to-end SSH/SFTP coverage for cancelled transfers and directory streaming.
-- Updated the public release surface for Windows, Linux, GUI, and CLI users.
-- Added a release-surface drift guard and a reproducible synthetic SFTP listing benchmark.
 - Hardened release automation for cached cross-platform builds and package validation.
+- Added a release-surface guard and reproducible synthetic SFTP listing benchmark.
 
 ## v1.2.6
 
