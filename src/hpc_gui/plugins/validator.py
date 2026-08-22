@@ -39,7 +39,7 @@ CLUSTER_PROFILE_REQUIRED_KEYS = ("schema_version", "profile_id", "name", "schedu
 KNOWN_SCHEDULERS = frozenset({"slurm"})
 
 # Declarative payloads only; anything runnable is forbidden regardless of role.
-ALLOWED_PAYLOAD_SUFFIXES = frozenset({".json", ".md", ".txt"})
+ALLOWED_PAYLOAD_SUFFIXES = frozenset({".json", ".md", ".txt", ".tpl"})
 
 # Placeholders the scheduler backend actually interpolates. Unknown forms are
 # rejected so a malformed/malicious template cannot inject format surprises.

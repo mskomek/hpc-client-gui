@@ -152,6 +152,7 @@
   "editor": {
     "title": "Editor",
     "open": "Open",
+    "new_from_template": "New from Template...",
     "save": "Save",
     "submit": "Submit (sbatch)",
     "save_submit": "Save + Submit",
@@ -737,5 +738,10 @@
     "disable": "Disable",
     "enable": "Enable",
     "disabled_label": "Disabled (no templates provided)"
+  },
+  "templates": {
+    "dialog_title": "Job Templates",
+    "list_label": "Installed templates:",
+    "none_installed": "No job templates are installed. Install a template plugin from the Plugin Manager."
   }
 }

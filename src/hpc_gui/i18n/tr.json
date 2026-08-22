@@ -152,6 +152,7 @@
   "editor": {
     "title": "Editör",
     "open": "Aç",
+    "new_from_template": "Şablondan Yeni...",
     "save": "Kaydet",
     "submit": "Gönder (sbatch)",
     "save_submit": "Kaydet + Gonder",
@@ -737,5 +738,10 @@
     "disable": "Devre dışı bırak",
     "enable": "Etkinleştir",
     "disabled_label": "Devre dışı (şablon sağlamaz)"
+  },
+  "templates": {
+    "dialog_title": "İş Şablonları",
+    "list_label": "Kurulu şablonlar:",
+    "none_installed": "Kurulu iş şablonu yok. Eklenti Yöneticisi'nden bir şablon eklentisi kurun."
   }
 }
