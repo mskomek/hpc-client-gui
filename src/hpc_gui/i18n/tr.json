@@ -663,7 +663,9 @@
     "scontrol_command": "İş detay komutu",
     "status_command": "Özel durum komutu",
     "active_job_ids_command": "Aktif iş kimlikleri komutu",
-    "job_state_command": "Tamamlanan iş durumu komutu"
+    "job_state_command": "Tamamlanan iş durumu komutu",
+    "plugin_templates": "Kurulu Eklentiler",
+    "get_more_plugins": "Daha fazla eklenti..."
   },
   "tour": {
     "prev": "Geri",
