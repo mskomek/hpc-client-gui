@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import shutil
 import uuid
 from dataclasses import dataclass
@@ -50,11 +51,12 @@ from hpc_gui.plugins.registry_client import (
     RegistryError,
     default_fetcher,
 )
-from hpc_gui.plugins.state import record_installed_version
+from hpc_gui.plugins.state import activate_version, read_active_versions, record_installed_version
 from hpc_gui.plugins.storage import (
     MANIFEST_NAME,
     packages_dir,
     plugins_root,
+    write_active_versions,
 )
 from hpc_gui.plugins.validator import (
     KNOWN_CAPABILITIES,
@@ -63,6 +65,8 @@ from hpc_gui.plugins.validator import (
 )
 
 STAGING_DIR_NAME = ".staging"
+
+logger = logging.getLogger(__name__)
 
 
 class InstallError(RuntimeError):
@@ -183,6 +187,8 @@ def install_plugin_from_registry(
     if not (isinstance(plugin_id, str) and isinstance(version, str) and isinstance(manifest_rel, str)):
         raise InstallError("Registry entry is incomplete.")
 
+    logger.info("Installing plugin %s@%s", plugin_id, version)
+
     # Step 2: exact manifest download + SHA verification (steps 2-3).
     url = OFFICIAL_RAW_BASE + manifest_rel
     payload = _fetch_bytes(fetch, url, MANIFEST_MAX_BYTES, "Cannot download the plugin manifest")
@@ -285,7 +291,41 @@ def install_plugin_from_registry(
         )
 
         # Steps 9-10: record state and activate only after full success.
+        previous_active = read_active_versions(root).get(plugin_id)
         record_installed_version(plugin_id, version, root=root, activate=True)
+
+        # Post-activation runtime validation with automatic rollback: the
+        # active pointer returns to the previous version if anything fails.
+        from hpc_gui.plugins.loader import load_installed_plugins
+
+        loaded = load_installed_plugins(root=root, app_version=app_version)
+        activated_ok = any(
+            installed.manifest.id == plugin_id and installed.manifest.version == version
+            for installed in loaded.plugins
+        )
+        if not activated_ok:
+            logger.warning(
+                "Plugin %s@%s failed post-activation validation; rolling back to %s",
+                plugin_id,
+                version,
+                previous_active or "<inactive>",
+            )
+            if previous_active is not None:
+                write_active_versions(
+                    {**read_active_versions(root), plugin_id: previous_active}, root=root
+                )
+                raise InstallError(
+                    f"Installed {plugin_id}@{version} failed validation; "
+                    f"previous version {previous_active} remains active."
+                )
+            active_now = read_active_versions(root)
+            active_now.pop(plugin_id, None)
+            write_active_versions(active_now, root=root)
+            raise InstallError(
+                f"Installed {plugin_id}@{version} failed validation; plugin deactivated."
+            )
+
+        logger.info("Activated plugin %s@%s", plugin_id, version)
         return InstallResult(installed=installed_plugin, activated=True)
     finally:
         if staging_dir.exists():

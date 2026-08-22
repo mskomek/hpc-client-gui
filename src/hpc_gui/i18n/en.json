@@ -731,6 +731,9 @@
     "unsupported_api": "This plugin uses an unsupported plugin API version.",
     "invalid_plugin": "This plugin is invalid and could not be processed.",
     "remove_confirm_title": "Remove plugin",
-    "remove_confirm_text": "Remove {name}?\n\nSaved connection profiles keep their copied settings; your profiles and user templates are not deleted."
+    "remove_confirm_text": "Remove {name}?\n\nSaved connection profiles keep their copied settings; your profiles and user templates are not deleted.",
+    "disable": "Disable",
+    "enable": "Enable",
+    "disabled_label": "Disabled (no templates provided)"
   }
 }

@@ -38,8 +38,8 @@ from hpc_gui.plugins.registry_client import (
     RegistryError,
     fetch_registry_with_cache,
 )
-from hpc_gui.plugins.state import remove_plugin
-from hpc_gui.plugins.storage import read_active_versions
+from hpc_gui.plugins.state import remove_plugin, set_plugin_disabled
+from hpc_gui.plugins.storage import read_active_versions, read_disabled_ids
 from hpc_gui.ui.async_call import AsyncCall
 
 logger = logging.getLogger(__name__)
@@ -300,6 +300,7 @@ class PluginManagerDialog(QDialog):
             state_records = read_installed_state()
         except Exception:  # pragma: no cover - defensive
             state_records = {}
+        disabled = read_disabled_ids()
 
         rows = []
         for installed in self._installed_versions.plugins:
@@ -316,15 +317,22 @@ class PluginManagerDialog(QDialog):
             return
 
         for name, plugin_id, versions in rows:
-            inner.addWidget(self._installed_card(name, plugin_id, versions))
+            inner.addWidget(
+                self._installed_card(name, plugin_id, versions, plugin_id in disabled)
+            )
 
     def _installed_card(
-        self, name: str, plugin_id: str, versions: list[str]
+        self,
+        name: str,
+        plugin_id: str,
+        versions: list[str],
+        is_disabled: bool = False,
     ) -> QFrame:
         card = QFrame()
         grid = QGridLayout(card)
 
-        title = QLabel(f"{name} — {t('plugins.version')}: {versions[-1] if versions else ''}")
+        title_text = f"{name} — {t('plugins.version')}: {versions[-1] if versions else ''}"
+        title = QLabel(title_text)
         title.setStyleSheet("font-weight: 600;")
         grid.addWidget(title, 0, 0)
         other = ", ".join(versions[:-1])
@@ -332,16 +340,37 @@ class PluginManagerDialog(QDialog):
             others_label = QLabel(f"{t('plugins.other_versions')}: {other}")
             others_label.setStyleSheet("color: #666;")
             grid.addWidget(others_label, 1, 0)
+        if is_disabled:
+            state_label = QLabel(t("plugins.disabled_label"))
+            state_label.setStyleSheet("color: #b26a00;")
+            grid.addWidget(state_label, 2, 0)
 
         row = QHBoxLayout()
         row.addStretch(1)
+        toggle_button = QPushButton(
+            t("plugins.enable") if is_disabled else t("plugins.disable")
+        )
+        toggle_button.clicked.connect(
+            lambda _=False, pid=plugin_id, disabled=is_disabled: self.toggle_plugin_disabled(
+                pid, disabled
+            )
+        )
+        row.addWidget(toggle_button)
         remove_button = QPushButton(t("plugins.remove"))
         remove_button.clicked.connect(
             lambda _=False, pid=plugin_id, pname=name: self.remove_plugin(pid, pname)
         )
         row.addWidget(remove_button)
-        grid.addLayout(row, 2, 0)
+        grid.addLayout(row, 3, 0)
         return card
+
+    def toggle_plugin_disabled(self, plugin_id: str, currently_disabled: bool) -> None:
+        try:
+            set_plugin_disabled(plugin_id, not currently_disabled)
+        except Exception as exc:
+            logger.warning("Could not toggle plugin %s", plugin_id, exc_info=exc)
+            return
+        self.rebuild_tabs()
 
     def _populate_updates(self, active: dict[str, str]) -> None:
         inner = self._clear_list(self.updates_list)

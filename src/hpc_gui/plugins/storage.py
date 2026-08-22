@@ -17,6 +17,28 @@ INSTALLED_INDEX_NAME = "installed.json"
 ACTIVE_INDEX_NAME = "active.json"
 PACKAGES_DIR_NAME = "packages"
 MANIFEST_NAME = "manifest.json"
+DISABLED_FILE_NAME = "disabled.json"
+
+
+def read_disabled_ids(root: str | Path | None = None) -> set[str]:
+    """Read the disabled-plugin id set; disabled plugins stay installed but
+    contribute no templates or rules."""
+    value = _read_json_object(plugins_root(root) / DISABLED_FILE_NAME)
+    raw = value.get("disabled")
+    if not isinstance(raw, list):
+        return set()
+    return {str(item) for item in raw if isinstance(item, str) and item}
+
+
+def write_disabled_ids(disabled, root: str | Path | None = None) -> None:
+    base = plugins_root(root)
+    base.mkdir(parents=True, exist_ok=True)
+    payload = {"disabled": sorted(set(disabled))}
+    temporary = base / (DISABLED_FILE_NAME + ".tmp")
+    with temporary.open("w", encoding="utf-8", newline="\n") as handle:
+        json.dump(payload, handle, indent=2, sort_keys=True)
+        handle.write("\n")
+    temporary.replace(base / DISABLED_FILE_NAME)
 
 
 def plugins_root(override: str | Path | None = None) -> Path:
