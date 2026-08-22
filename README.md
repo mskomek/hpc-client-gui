@@ -158,6 +158,8 @@ Shared global options exist (format, quiet, verbose, timeout, profile selection,
 ## Security Notes
 
 See [SECURITY.md](SECURITY.md) for supported versions and confidential vulnerability reporting.
+Downloads can be checked with SHA-256 checksums, `MANIFEST.json`, and signed
+GitHub attestations — see [docs/VERIFYING_RELEASES.md](docs/VERIFYING_RELEASES.md).
 
 - Passwords / tokens are **never written to history** and **never shown in the UI**.
 - Secrets are **never logged** (commands may be logged, but credentials are not).

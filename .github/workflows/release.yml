@@ -122,7 +122,17 @@ jobs:
   publish-release:
     needs: [build-linux, build-windows]
     runs-on: ubuntu-latest
+    # Attestation needs OIDC (id-token) and the attestations API. These are
+    # scoped to this job only; build jobs keep the repository default.
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
     steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
       - name: Download Windows artifacts
         uses: actions/download-artifact@v4
         with:
@@ -133,6 +143,21 @@ jobs:
         with:
           name: hpc-client-gui-linux-${{ github.event.inputs.version }}
           path: dist/releases/v${{ github.event.inputs.version }}
+      - name: Generate release manifest (MANIFEST.json)
+        run: |
+          python scripts/generate_release_manifest.py \
+            --release-dir "dist/releases/v${{ github.event.inputs.version }}" \
+            --version "v${{ github.event.inputs.version }}"
+      # Signed SLSA provenance for the final downloadable artifacts. Verified
+      # upstream pin: actions/attest-build-provenance v4.2.2 (latest major v4).
+      - name: Attest build provenance for release assets
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: |
+            dist/releases/v${{ github.event.inputs.version }}/*.zip
+            dist/releases/v${{ github.event.inputs.version }}/*.AppImage
+            dist/releases/v${{ github.event.inputs.version }}/*.deb
+            dist/releases/v${{ github.event.inputs.version }}/*.flatpak
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
