@@ -371,12 +371,19 @@ regardless of which agent drives the call.
   `<repo>-local/agent-guides/`) so the local `main` checkout mirrors what is
   pushed.
 - The same applies to untracked internal working folders: `waves/`, `tools/`,
-  and `dist/` stay **outside** the `main` checkout (same external location).
-  They are never staged, committed, or pushed; `dist/` artifacts are rebuilt
-  by the release workflow, and wave/tool state lives in the external folder.
+  and `dist/` are **never staged, committed, or pushed**. They live normally
+  inside the working tree of the local development branch (`codex/develop`),
+  where day-to-day work needs them. Because Git keeps untracked folders
+  shared across branch switches in one directory, briefly set them aside
+  (move to `<repo>-local/`) **only while** reconciling or pushing `main`,
+  then move them back immediately afterwards.
 - Allowed exceptions inside the working tree are local environments and
   caches only: `.venv*/`, `.pytest_cache/`, `.ruff_cache/`, `.idea/`,
   `.claude/`, `.agent-runs/`.
+- Keep only two local branches: `codex/develop` (working line) and `main`
+  (publish line). When a feature/backup/release branch's purpose is done,
+  delete it in the same session (`git branch -d` for merged lines, `-D`
+  otherwise after recording its SHA); remove stale worktrees first.
 - Before pushing, verify with `git ls-tree -r origin/main --name-only` (or
   `git ls-files`) that none of these paths are tracked. If one ever appears,
   remove it with `git rm --cached <path>` in the same session and commit that
