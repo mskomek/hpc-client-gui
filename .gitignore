@@ -57,9 +57,10 @@ tools/ai/deepseek-models.local.psd1
 /build/hpc-client-cli/
 
 # Internal-only paths kept local; never published on main
-# (see MAIN_SYNC_PROTOCOL.md "Always excluded").
+# (see local MAIN_SYNC_PROTOCOL.md copy on the development line).
 /AGENTS.md
 /CLAUDE.md
+/MAIN_SYNC_PROTOCOL.md
 /tools/
 /devtools/*
 !/devtools/performance_probe.py
