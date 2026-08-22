@@ -1,44 +1,47 @@
 # Main Sync Protocol
 
-## Branch and push boundary
+`main` and the development line (`codex/develop`) are reconciled with a real
+Git merge, not path copying. The historical root-path copy procedure is
+superseded; its exclusion rules survive as the published-tree boundary below.
 
-WSL work must happen in a clean clone or worktree on local Linux storage, on a
-temporary local branch. Codex reviews and commits the result, then fast-forwards
-local `codex/develop`. OpenCode/DeepSeek/Claude worker worktrees never stage,
-commit, push, reset, clean, or alter remotes.
+## Reconciliation flow (develop → main)
 
-Temporary, feature, worker, and `codex/develop` branches are never pushed to
-`origin`. Only the final verified `main` branch may be pushed, and only after
-the candidate-path approval below and the relevant validation gates pass.
+1. Fetch tags and confirm `origin/main`; back up both branches
+   (`codex/develop-backup-<date>`, `main-backup-<short>`).
+2. Trial-merge `main` into `codex/develop` in a throwaway worktree with
+   `--no-commit` to inventory conflicts, then abort.
+3. Perform the merge on `codex/develop`, resolving semantically:
+   - packaging/release infrastructure follows `main`;
+   - application code/tests follow the validated development line;
+   - workflows, metadata, and docs combine both.
+4. Run full gates: compileall, i18n gate, Ruff, release-surface check, and the
+   complete offline test suite.
+5. Move local `main` to the merged result (`git branch -f main codex/develop`),
+   verify gates on `main`, then return to `codex/development` work.
 
-Before syncing `codex/develop` to local `main`, list the candidate root paths in
-this file and obtain the user's approval. List only first-level repository
-paths, never recursive subdirectories.
+## Published-tree boundary (Always excluded)
 
-## Eligible root paths
+Before treating a tree as `main`, the following stay **untracked**
+(`git rm -r --cached`); local copies remain on disk:
 
-- `.github/`
-- `build/` — packaging definitions only
-- `dist/` — only a newly validated `dist/releases/v<version>/` release
-- `scripts/`
-- `src/`
-- `templates/`
-- `tests/`
-- `.gitignore`, `CONTRIBUTING.md`, `LICENSE`, `MAIN_SYNC_PROTOCOL.md`, `README.md`, `SECURITY.md`,
-  `SUPPORT.md`, `pyproject.toml`, `requirements.txt`, and `template.slurm`
-- `AGENTS.md`, `CLAUDE.md`, and `tools/ai/README.md` — repository workflow and
-  delegated-worker safety instructions
+- `.agent-runs/`, `tools/`, `devtools/`, `waves/`
+- internal process documents under root `docs/` (delegation reports, wave
+  plans/audits, publication kit)
 
-## Always excluded
+Public user documentation under `docs/` (wiki, assets, CLI docs,
+verification/validation guides) remains tracked.
 
-- `.agent-runs/`, `dist/`, `tools/` except `tools/ai/README.md`, `waves/`, root
-  `docs/`, `devtools/`
-- `rules.md`, local notes, caches,
-  logs, virtual environments, and non-versioned build output
+Never add these paths to `.gitignore` exceptions or re-track them for `main`.
 
 ## Release gate
 
-For a release, first update the version and changelog, run the release checks,
-commit the approved paths, then sync only the approved root paths to `main` and
-push only `main` to `origin`. Never use `git push --all`, `git push --mirror`,
-or a branch wildcard.
+For a release: update version + changelog first, run the release checks, commit
+on the development line, re-run the reconciliation above so `main` contains it,
+and only then push.
+
+## Push boundary
+
+- GitHub (`origin`) carries exactly one branch: `main`. Never push anything
+  else; delete stray remote branches if one appears.
+- Pushing is a separate, explicitly approved action — never part of an
+  implementation wave or reconciliation session.
