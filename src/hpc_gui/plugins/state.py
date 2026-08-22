@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import shutil
 import time
@@ -14,8 +15,12 @@ from hpc_gui.plugins.storage import (
     packages_dir,
     plugins_root,
     read_active_versions,
+    read_disabled_ids,
     write_active_versions,
+    write_disabled_ids,
 )
+
+logger = logging.getLogger(__name__)
 
 INSTALLED_SCHEMA_VERSION = 1
 
@@ -111,4 +116,56 @@ def remove_plugin(plugin_id: str, root: str | Path | None = None) -> list[str]:
     package_dir = packages_dir(root) / plugin_id
     if package_dir.exists():
         shutil.rmtree(package_dir, ignore_errors=True)
+    logger.info("Removed plugin %s (versions: %s)", plugin_id, ", ".join(removed) or "none")
     return removed
+
+
+def activate_version(plugin_id: str, version: str, root: str | Path | None = None) -> None:
+    """Activate an installed plugin version after validating it.
+
+    Only versions that are present on disk and load cleanly may become
+    active; the previous active pointer is restored if validation fails.
+    """
+    from hpc_gui.plugins.loader import load_installed_plugins
+
+    previous = read_active_versions(root).get(plugin_id)
+
+    def _set(pointer_version: str | None) -> None:
+        active = read_active_versions(root)
+        if pointer_version is None:
+            active.pop(plugin_id, None)
+        else:
+            active[plugin_id] = pointer_version
+        write_active_versions(active, root=root)
+
+    _set(version)
+    loaded = load_installed_plugins(root=root)
+    ok = any(
+        installed.manifest.id == plugin_id and installed.manifest.version == version
+        for installed in loaded.plugins
+    )
+    if not ok:
+        logger.warning(
+            "Activation of %s@%s failed validation; restoring %s",
+            plugin_id,
+            version,
+            previous or "<inactive>",
+        )
+        _set(previous)
+        raise ValueError(f"Plugin {plugin_id}@{version} failed validation and was not activated.")
+    logger.info("Activated plugin %s@%s", plugin_id, version)
+
+
+def set_plugin_disabled(plugin_id: str, disabled: bool, root: str | Path | None = None) -> None:
+    """Disable/enable a plugin without deleting any files.
+
+    A disabled plugin contributes no templates or rules; saved profiles are
+    unaffected because they embed resolved snapshots.
+    """
+    current = read_disabled_ids(root)
+    if disabled:
+        current.add(plugin_id)
+    else:
+        current.discard(plugin_id)
+    write_disabled_ids(current, root=root)
+    logger.info("Plugin %s %s", plugin_id, "disabled" if disabled else "enabled")

@@ -27,6 +27,7 @@ from hpc_gui.plugins.storage import (
     MANIFEST_NAME,
     plugin_package_dir,
     read_active_versions,
+    read_disabled_ids,
 )
 from hpc_gui.plugins.validator import validate_cluster_profile_dict, validate_manifest_dict
 
@@ -126,8 +127,12 @@ def load_installed_plugins(
     if not active:
         return result
 
+    disabled = read_disabled_ids(root)
     id_pattern = re.compile(r"^[a-z][a-z0-9]*(?:\.[a-z0-9]+)+$")
     for plugin_id, version in sorted(active.items()):
+        if plugin_id in disabled:
+            # Disabled plugins stay installed but contribute nothing.
+            continue
         if not id_pattern.fullmatch(plugin_id) or "/" in version or "\\" in version or ".." in version:
             result.problems.append(
                 PluginProblem(plugin_id=plugin_id, version=version, reason="unsafe plugin id or version")
