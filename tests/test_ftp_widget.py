@@ -30,7 +30,7 @@ from hpc_gui.services.transfer_mode import (
     upload_with_mode,
 )
 from hpc_gui.config.system_profile import (
-    HPC_SYSTEM_DEFAULTS,
+    GENERIC_SLURM_DEFAULTS,
     save_user_system_template,
 )
 from hpc_gui.core.i18n import t
@@ -2789,7 +2789,7 @@ class FtpWidgetTests(unittest.TestCase):
             self.assertEqual(updates, [])
             self.assertEqual(
                 dialog.ftp_home_dir.text(),
-                "/arf/home/{user}",
+                GENERIC_SLURM_DEFAULTS["home_dir"],
             )
             with patch(
                 "hpc_gui.ui.dialogs.settings_dialog.update_settings"
@@ -2797,7 +2797,12 @@ class FtpWidgetTests(unittest.TestCase):
                 dialog.btn_apply.click()
             self.assertEqual(
                 updates,
-                [("/arf/scratch/{user}", "/arf/home/{user}")],
+                [
+                    (
+                        GENERIC_SLURM_DEFAULTS["scratch_dir"],
+                        GENERIC_SLURM_DEFAULTS["home_dir"],
+                    )
+                ],
             )
         finally:
             dialog.deleteLater()
@@ -3543,7 +3548,7 @@ class FtpWidgetTests(unittest.TestCase):
             finally:
                 dialog.deleteLater()
 
-    def test_connection_dialog_applies_hpc_system_template_from_menu(self) -> None:
+    def test_connection_dialog_applies_generic_slurm_template_from_menu(self) -> None:
         dialog = ConnectionDialog()
         try:
             dialog.scratch_dir.setText("/custom/scratch")
@@ -3551,14 +3556,14 @@ class FtpWidgetTests(unittest.TestCase):
 
             root_menu = dialog.btn_system_templates.menu()
             self.assertIsNotNone(root_menu)
-            truba_menu = root_menu.actions()[0].menu()
-            self.assertIsNotNone(truba_menu)
-            self.assertEqual(root_menu.actions()[0].text(), "HPC")
-            truba_menu.actions()[0].trigger()
+            generic_menu = root_menu.actions()[0].menu()
+            self.assertIsNotNone(generic_menu)
+            self.assertEqual(root_menu.actions()[0].text(), "Generic Slurm")
+            generic_menu.actions()[0].trigger()
 
-            self.assertEqual(dialog.system_name.text(), "HPC")
-            self.assertEqual(dialog.scratch_dir.text(), HPC_SYSTEM_DEFAULTS["scratch_dir"])
-            self.assertEqual(dialog.home_dir.text(), HPC_SYSTEM_DEFAULTS["home_dir"])
+            self.assertEqual(dialog.system_name.text(), "Generic Slurm")
+            self.assertEqual(dialog.scratch_dir.text(), GENERIC_SLURM_DEFAULTS["scratch_dir"])
+            self.assertEqual(dialog.home_dir.text(), GENERIC_SLURM_DEFAULTS["home_dir"])
         finally:
             dialog.deleteLater()
 
@@ -3736,7 +3741,7 @@ class FtpWidgetTests(unittest.TestCase):
                 ),
                 patch(
                     "hpc_gui.ui.dialogs.connection_dialog.save_user_system_template",
-                    return_value=dict(HPC_SYSTEM_DEFAULTS, name="My Cluster"),
+                    return_value=dict(GENERIC_SLURM_DEFAULTS, name="My Cluster"),
                 ) as save_template,
                 patch(
                     "hpc_gui.ui.dialogs.connection_dialog.load_user_system_templates",

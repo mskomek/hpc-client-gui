@@ -60,8 +60,13 @@ class SSHSlurmBackend(SlurmBackend):
         return out if out.strip() else (err or f"[exit={code}]")
 
     def lssrv(self) -> str:
+        status_command = self.system_settings.get("status_command", "").strip()
+        if not status_command:
+            raise RuntimeError(
+                "No site status command is configured for this system template."
+            )
         code, out, err = self.ssh.run(
-            self.system_settings["status_command"],
+            status_command,
             log_output=False,
         )
         if code != 0:

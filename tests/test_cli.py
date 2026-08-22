@@ -37,6 +37,21 @@ def _remote_cli_access_enabled():
         yield
 
 
+@pytest.fixture(autouse=True)
+def _isolated_cli_config(tmp_path):
+    """Keep CLI tests hermetic from the developer machine's real config.
+
+    Profile-derived system settings must never leak a saved default profile
+    into exact-command assertions. Each test gets its own empty config.json;
+    tests that patch ``_config_path`` or ``load_profiles`` themselves are
+    unaffected.
+    """
+    with patch(
+        "hpc_gui.config.storage._config_path", return_value=tmp_path / "config.json"
+    ):
+        yield
+
+
 def test_exit_code_timeout_value_lock() -> None:
     assert int(ExitCode.TIMEOUT) == 124
 
@@ -1981,9 +1996,14 @@ def test_jobs_accounting_connection_failure_exit_three(capsys) -> None:
     assert "host unreachable" in captured.err
 
 
-def test_jobs_lssrv_text_uses_default_status_template(capsys) -> None:
+def test_jobs_lssrv_uses_configured_status_template(capsys) -> None:
     fake_ssh = _FakeJobsSSH((0, _LSSRV_STDOUT, ""))
-    with patch("hpc_gui.cli.main.CLISession.open", return_value=_fake_jobs_session(fake_ssh)):
+    from hpc_gui.services.slurm_ssh import SSHSlurmBackend
+
+    backend = SSHSlurmBackend(fake_ssh, system_settings={"status_command": "lssrv"})
+    with patch("hpc_gui.cli.main.CLISession.open", return_value=_fake_jobs_session(fake_ssh)), patch(
+        "hpc_gui.cli.main.jobs_backend", return_value=backend
+    ):
         assert run_cli(["--host", "host", "jobs", "lssrv"]) == 0
     assert fake_ssh.commands == ["lssrv"]
     out = capsys.readouterr().out
@@ -1992,11 +2012,25 @@ def test_jobs_lssrv_text_uses_default_status_template(capsys) -> None:
 
 def test_jobs_lssrv_json_envelope_matches_stdout(capsys) -> None:
     fake_ssh = _FakeJobsSSH((0, _LSSRV_STDOUT, ""))
-    with patch("hpc_gui.cli.main.CLISession.open", return_value=_fake_jobs_session(fake_ssh)):
+    from hpc_gui.services.slurm_ssh import SSHSlurmBackend
+
+    backend = SSHSlurmBackend(fake_ssh, system_settings={"status_command": "lssrv"})
+    with patch("hpc_gui.cli.main.CLISession.open", return_value=_fake_jobs_session(fake_ssh)), patch(
+        "hpc_gui.cli.main.jobs_backend", return_value=backend
+    ):
         assert run_cli(["--format", "json", "--host", "host", "jobs", "lssrv"]) == 0
     assert fake_ssh.commands == ["lssrv"]
     payload = json.loads(capsys.readouterr().out)
     assert payload == {"result": _LSSRV_STDOUT}
+
+
+def test_jobs_lssrv_without_site_status_command_fails_cleanly(capsys) -> None:
+    fake_ssh = _FakeJobsSSH((0, "", ""))
+    with patch("hpc_gui.cli.main.CLISession.open", return_value=_fake_jobs_session(fake_ssh)):
+        assert run_cli(["--host", "host", "jobs", "lssrv"]) == 1
+    captured = capsys.readouterr()
+    assert "Jobs operation failed" in captured.err
+    assert "No site status command" in captured.err
 
 
 def test_jobs_lssrv_connection_failure_exit_three(capsys) -> None:
@@ -2012,7 +2046,12 @@ def test_jobs_lssrv_connection_failure_exit_three(capsys) -> None:
 
 def test_jobs_lssrv_nonzero_exit_maps_to_operation_failed(capsys) -> None:
     fake_ssh = _FakeJobsSSH((1, "", "lssrv: command not found"))
-    with patch("hpc_gui.cli.main.CLISession.open", return_value=_fake_jobs_session(fake_ssh)):
+    from hpc_gui.services.slurm_ssh import SSHSlurmBackend
+
+    backend = SSHSlurmBackend(fake_ssh, system_settings={"status_command": "lssrv"})
+    with patch("hpc_gui.cli.main.CLISession.open", return_value=_fake_jobs_session(fake_ssh)), patch(
+        "hpc_gui.cli.main.jobs_backend", return_value=backend
+    ):
         assert run_cli(["--host", "host", "jobs", "lssrv"]) == 1
     captured = capsys.readouterr()
     assert "Jobs operation failed" in captured.err
