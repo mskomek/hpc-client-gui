@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.4.0 (Unreleased)
+
+### Plugin ecosystem
+- Introduced the Plugin Manager (Plugins button): Discover/Installed/Updates tabs backed by an official, hash-verified plugin registry.
+- Official downloadable cluster/application plugins; TRUBA system settings moved to a downloadable TRUBA cluster-profile plugin while saved connection profiles remain fully compatible (they keep their copied settings snapshot).
+- Added a declarative lint engine with plugin-delivered rule packs, including an ANSYS Fluent journal linter plugin.
+- Added plugin-delivered job templates ("New from Template...") with safe placeholder rendering and editor-side preview.
+- Added Slurm/Fluent resource cross-checks (CPU allocation vs solver process count) to the lint workflow.
+
 ## v1.3.0
 
 ### Quality gates, release provenance, and transfer performance
