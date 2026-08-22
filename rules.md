@@ -365,11 +365,20 @@ regardless of which agent drives the call.
 ## Local-Only Agent Files (never on main)
 
 - `CLAUDE.md`, `MAIN_SYNC_PROTOCOL.md`, `AGENTS.md`, and similar agent
-  guidance/protocol files are **local-only working copies**: they are never
-  staged, committed, or pushed, and `main` must not contain them.
+  guidance/protocol files must **not exist inside the `main` working tree at
+  all** — neither tracked nor as loose local copies. Keep them in a dedicated
+  directory *outside* the repository (for example
+  `<repo>-local/agent-guides/`) so the local `main` checkout mirrors what is
+  pushed.
+- Allowed exceptions inside the working tree are local environments and
+  caches only: `.venv*/`, `.pytest_cache/`, `.ruff_cache/`, `.idea/`,
+  `.claude/`, `.agent-runs/`.
 - Before pushing, verify with `git ls-tree -r origin/main --name-only` (or
   `git ls-files`) that none of these paths are tracked. If one ever appears,
   remove it with `git rm --cached <path>` in the same session and commit that
-  removal separately; keep the local copy on disk.
+  removal separately; never keep an untracked copy of such a file at the
+  repository root afterwards — move it to the external location instead.
 - `rules.md` is the tracked exception: rule additions belong in a dedicated
   commit and ride with the next approved `main` push.
+- After finishing a wave session, re-check the root: only tracked files plus
+  the allowed exceptions above should remain.
