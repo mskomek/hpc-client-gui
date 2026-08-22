@@ -55,3 +55,14 @@ tools/ai/deepseek-models.local.psd1
 
 # Release packages are GitHub Release assets, never source-controlled.
 /build/hpc-client-cli/
+
+# Internal-only paths kept local; never published on main
+# (see MAIN_SYNC_PROTOCOL.md "Always excluded").
+/tools/
+/devtools/
+/docs/DEEPSEEK_*
+/docs/OPENCODE_*
+/docs/PUBLICATION_KIT.md
+/docs/REPOSITORY_WAVE53_AUDIT.md
+/docs/TERMINAL_WAVE*
+/docs/WAVE_PLAN.md
