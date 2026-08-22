@@ -362,24 +362,26 @@ regardless of which agent drives the call.
 - the move is a local filesystem action: `waves/` stays Git-ignored, so
   archiving never creates a commit or reaches `origin`
 
-## Local-Only Agent Files (never on main)
+## Local-Only Working Files (develop only, never on main)
 
 - `CLAUDE.md`, `MAIN_SYNC_PROTOCOL.md`, `AGENTS.md`, and similar agent
-  guidance/protocol files must **not exist inside the `main` working tree at
-  all** — neither tracked nor as loose local copies. Keep them in a dedicated
-  directory *outside* the repository (for example
-  `<repo>-local/agent-guides/`) so the local `main` checkout mirrors what is
-  pushed.
-- The same applies to untracked internal working folders: `waves/`, `tools/`,
-  and `dist/` are **never staged, committed, or pushed**. They live normally
-  inside the working tree of the local development branch (`codex/develop`),
-  where day-to-day work needs them. Because Git keeps untracked folders
-  shared across branch switches in one directory, briefly set them aside
-  (move to `<repo>-local/`) **only while** reconciling or pushing `main`,
-  then move them back immediately afterwards.
-- Allowed exceptions inside the working tree are local environments and
-  caches only: `.venv*/`, `.pytest_cache/`, `.ruff_cache/`, `.idea/`,
-  `.claude/`, `.agent-runs/`.
+  guidance/protocol files — like the internal `waves/`, `tools/`, and
+  `dist/` folders — are **untracked local working content of
+  `codex/develop`**. They live inside the development working tree but are
+  never staged, committed, or pushed, and `origin/main` must not contain
+  them.
+- Because Git shares untracked files across branch switches in one working
+  directory, before reconciling or pushing `main` temporarily set all of
+  these aside (move to `<repo>-local\`, for example), push only `main`, then
+  move them back immediately. The same applies when a clean `main` checkout
+  is explicitly requested by the user.
+- Before pushing, verify with `git ls-tree -r origin/main --name-only` that
+  none of these paths are tracked. If one ever appears, remove it with
+  `git rm --cached <path>` in the same session, commit that removal
+  separately, and keep the file locally on `codex/develop`.
+- Allowed permanent exceptions inside the working tree are local
+  environments and caches only: `.venv*/`, `.pytest_cache/`,
+  `.ruff_cache/`, `.idea/`, `.claude/`, `.agent-runs/`.
 - Keep only two local branches: `codex/develop` (working line) and `main`
   (publish line). When a feature/backup/release branch's purpose is done,
   delete it in the same session (`git branch -d` for merged lines, `-D`
