@@ -1,5 +1,19 @@
 # Changelog
 
+## v1.3.0
+
+### Quality gates, release provenance, and transfer performance
+- Redesigned the README front page with an offline-captured product screenshot and added a step-by-step download verification guide.
+- Connection dialog: advanced settings collapsed by default with guaranteed profile round-trips and a minimum dialog width.
+- SFTP overwrite uploads now use write pipelining like resume and atomic paths; a local wire benchmark measured ~10-21% faster 32 MiB uploads.
+- Added an offline GUI directory-listing benchmark with regression gate; kept the QTreeWidget architecture based on measured evidence.
+- Extracted pure presentation helpers from the remote file panel.
+- Added a conservative Ruff lint gate, a Python 3.10/3.12 compatibility matrix job, pip-audit dependency auditing, and report-only coverage reporting to CI.
+- Releases now publish a MANIFEST.json inventory and signed build-provenance attestations alongside SHA-256 checksums.
+- Added a TRUBA-independent Slurm compatibility fixture matrix, a capability report contract, and a read-only cluster validation kit; fixed directory parsing when login banners precede scheduler output.
+- Decomposed the SSH client behind a stable facade into dedicated SFTP-channel and interactive-shell owners without behavior change.
+- Stabilized the offline test suite against startup modals and strengthened profile round-trip coverage.
+
 ## v1.2.8
 
 ### Embedded terminal and clearer connection diagnostics
