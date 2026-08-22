@@ -153,6 +153,8 @@ jobs:
           python -m venv .venv-audit
           .venv-audit/bin/python -m pip install --upgrade pip
           .venv-audit/bin/pip install -e .
+          # Keep build tooling at advisory-free versions before auditing.
+          .venv-audit/bin/pip install --upgrade setuptools
           .venv-audit/bin/pip install pip-audit
       - name: Audit runtime dependency closure
         run: .venv-audit/bin/pip-audit --skip-editable --progress-spinner off
