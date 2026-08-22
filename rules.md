@@ -370,6 +370,10 @@ regardless of which agent drives the call.
   directory *outside* the repository (for example
   `<repo>-local/agent-guides/`) so the local `main` checkout mirrors what is
   pushed.
+- The same applies to untracked internal working folders: `waves/`, `tools/`,
+  and `dist/` stay **outside** the `main` checkout (same external location).
+  They are never staged, committed, or pushed; `dist/` artifacts are rebuilt
+  by the release workflow, and wave/tool state lives in the external folder.
 - Allowed exceptions inside the working tree are local environments and
   caches only: `.venv*/`, `.pytest_cache/`, `.ruff_cache/`, `.idea/`,
   `.claude/`, `.agent-runs/`.
