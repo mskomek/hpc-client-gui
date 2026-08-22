@@ -1,9 +1,6 @@
 from __future__ import annotations
 
 import contextlib
-import codecs
-import threading
-import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Optional, Tuple
@@ -17,30 +14,15 @@ import paramiko
 from hpc_gui.core.logging import get_logger
 from hpc_gui.core.paths import app_data_dir
 from hpc_gui.services.command_history_store import is_sensitive_command
+from hpc_gui.ssh.sftp_channels import (
+    SFTPChannelManager,
+    _SFTP_LISTING_TIMEOUT_SECONDS,  # noqa: F401  (re-exported facade constant)
+    _SFTP_TRANSFER_TIMEOUT_SECONDS,  # noqa: F401  (re-exported facade constant)
+)
+from hpc_gui.ssh.shell_session import InteractiveShellSession, _sanitize_terminal_text
 
 
-_ACS_MAP = {
-    "j": "┘",
-    "k": "┐",
-    "l": "┌",
-    "m": "└",
-    "n": "┼",
-    "q": "─",
-    "t": "├",
-    "u": "┤",
-    "v": "┴",
-    "w": "┬",
-    "x": "│",
-    "o": "█",
-    "s": "·",
-    "a": "▒",
-    "f": "°",
-    "g": "±",
-    "h": "␋",
-    "i": "␌",
-    "`": "◆",
-}
-
+# (Terminal ACS map and sanitizer live in hpc_gui.ssh.shell_session.)
 
 # Paramiko uses ``timeout`` both for the TCP connection and for waiting for
 # the initial SSH key exchange.  Clusters behind VPNs or busy login nodes can
@@ -52,10 +34,8 @@ _SSH_CHANNEL_TIMEOUT_SECONDS = 30
 # Generous relative to the interactive-shell timeout: a transfer channel
 # only needs to detect a truly dead connection, not bound normal chunk
 # pacing on a slow HPC link.
-_SFTP_TRANSFER_TIMEOUT_SECONDS = 60
-# Directory browsing is interactive: waiting a full transfer timeout on a dead
-# link before the panel reports anything is far too long for a click.
-_SFTP_LISTING_TIMEOUT_SECONDS = 15
+# (Timeout constants live in hpc_gui.ssh.sftp_channels now; they are
+# re-exported above so existing imports keep working.)
 
 _KEEPALIVE_INTERVAL_DEFAULT = 30
 
@@ -113,63 +93,6 @@ class _KnownHostsPolicy(paramiko.MissingHostKeyPolicy):
         client.save_host_keys(str(self.path))
 
 
-def _sanitize_terminal_text(text: str) -> str:
-    """Remove terminal control sequences and normalize redraw-heavy output."""
-    if not text:
-        return ""
-    text = text.replace("\r\n", "\n").replace("\r", "\n")
-    out: list[str] = []
-    alt_charset = False
-    i = 0
-    n = len(text)
-    while i < n:
-        ch = text[i]
-        code = ord(ch)
-        if ch == "\x1b" and i + 1 < n:
-            nxt = text[i + 1]
-            if nxt == "[":
-                i += 2
-                while i < n and not ("@" <= text[i] <= "~"):
-                    i += 1
-                i += 1
-                continue
-            if nxt in "()":
-                if i + 2 < n:
-                    spec = nxt + text[i + 2]
-                    if spec in ("(0", ")0"):
-                        alt_charset = True
-                    elif spec in ("(B", ")B"):
-                        alt_charset = False
-                i += 3
-                continue
-            if nxt in "PX^_":
-                i += 2
-                while i < n:
-                    if text[i] == "\x1b" and i + 1 < n and text[i + 1] == "\\":
-                        i += 2
-                        break
-                    i += 1
-                continue
-            if "@" <= nxt <= "_":
-                i += 2
-                continue
-            i += 1
-            continue
-        if ch in ("\x0e", "\x0f"):
-            alt_charset = ch == "\x0e"
-            i += 1
-            continue
-        if code < 32 and ch not in ("\n", "\t"):
-            i += 1
-            continue
-        if alt_charset and ch in _ACS_MAP:
-            out.append(_ACS_MAP[ch])
-        else:
-            out.append(ch)
-        i += 1
-    return "".join(out)
-
-
 @dataclass
 class SSHConnInfo:
     host: str
@@ -200,13 +123,10 @@ class SSHClientWrapper:
         self.info: Optional[SSHConnInfo] = info
         self.client: Optional[paramiko.SSHClient] = None
         self.sftp = None
-        self._listing_sftp = None
-        self._listing_lock = threading.RLock()
-        self._shell_channel = None
-        self._shell_thread: Optional[threading.Thread] = None
-        self._shell_stop = threading.Event()
-        self._shell_send_lock = threading.Lock()
-        self._shell_decoder = codecs.getincrementaldecoder("utf-8")("replace")
+        self._sftp_channels = SFTPChannelManager(
+            self._active_transport, log=self.log, opener=lambda: self.open_transfer_sftp()
+        )
+        self._shell_session: Optional[InteractiveShellSession] = None
         self._shell_geometry: Tuple[int, int] = (120, 40)
         self._log = logger or log_cb
         self._shell_output_cb = shell_output_cb
@@ -225,6 +145,57 @@ class SSHClientWrapper:
                 self._log(msg)
             except Exception:
                 pass
+
+    def _active_transport(self):
+        """Active Paramiko transport for the channel manager (may be None)."""
+        return self.client.get_transport() if self.client else None
+
+    # ---------- interactive shell facade ----------
+    # The lifecycle lives in InteractiveShellSession; these bridges keep the
+    # historical attribute surface (tests inject channels/decoders directly).
+
+    def _ensure_shell_session(self) -> InteractiveShellSession:
+        if self._shell_session is None:
+            self._shell_session = InteractiveShellSession(
+                invoke_shell=self._invoke_shell,
+                geometry=self._shell_geometry,
+                on_output=self._shell_output_cb,
+                on_disconnect=self._on_shell_unexpected_disconnect,
+                log=self.log,
+            )
+        return self._shell_session
+
+    def _invoke_shell(self, **kwargs):
+        assert self.client is not None
+        return self.client.invoke_shell(**kwargs)
+
+    def _on_shell_unexpected_disconnect(self, reason: str) -> None:
+        try:
+            self.close()
+        except Exception:
+            pass
+        self._notify_disconnect(reason)
+
+    @property
+    def _shell_channel(self):
+        return self._shell_session.channel if self._shell_session else None
+
+    @_shell_channel.setter
+    def _shell_channel(self, channel) -> None:
+        if channel is None:
+            if self._shell_session is not None:
+                self._shell_session.channel = None
+            return
+        session = self._ensure_shell_session()
+        session.channel = channel
+
+    @property
+    def _shell_decoder(self):
+        return self._ensure_shell_session().decoder
+
+    @_shell_decoder.setter
+    def _shell_decoder(self, decoder) -> None:
+        self._ensure_shell_session().decoder = decoder
 
     def connect(
         self,
@@ -321,165 +292,45 @@ class SSHClientWrapper:
         if not self.client:
             return
         self._stop_shell_session()
-        try:
-            transport = self.client.get_transport()
-            if transport is None or not transport.is_active():
-                return
-            cols, rows = self._shell_geometry
-            try:
-                channel = self.client.invoke_shell(term="xterm-256color", width=cols, height=rows)
-            except Exception as preferred_exc:
-                self.log(f"SSH: xterm-256color unavailable; falling back to xterm ({preferred_exc.__class__.__name__})")
-                channel = self.client.invoke_shell(term="xterm", width=cols, height=rows)
-            try:
-                channel.settimeout(0.2)
-            except Exception:
-                pass
-        except Exception as exc:
-            self.log(f"SSH: interactive shell unavailable ({exc})")
+        transport = self.client.get_transport()
+        if transport is None or not transport.is_active():
             return
-
-        self._shell_channel = channel
-        self._shell_decoder = codecs.getincrementaldecoder("utf-8")("replace")
-        self._shell_stop = threading.Event()
-        self._shell_thread = threading.Thread(
-            target=self._shell_reader_loop,
-            args=(channel,),
-            name="hpc_gui_ssh_shell",
-            daemon=True,
+        session = InteractiveShellSession(
+            invoke_shell=self._invoke_shell,
+            geometry=self._shell_geometry,
+            on_output=self._shell_output_cb,
+            on_disconnect=self._on_shell_unexpected_disconnect,
+            log=self.log,
         )
-        self._drain_initial_shell_output(channel)
-        self._shell_thread.start()
-        self.log("SSH: interactive shell session started")
+        if not session.start():
+            return
+        self._shell_session = session
 
     def resize_shell_pty(self, cols: int, rows: int) -> None:
         cols = max(1, int(cols))
         rows = max(1, int(rows))
         self._shell_geometry = (cols, rows)
-        channel = self._shell_channel
-        if channel is None:
-            return
-        try:
-            channel.resize_pty(width=cols, height=rows)
-        except Exception:
-            pass
+        if self._shell_session is not None:
+            self._shell_session.resize(cols, rows)
 
     def send_shell_text(self, text: str) -> bool:
-        payload = (text or "").rstrip("\r\n")
-        if not payload:
-            return True
-        return self._send_shell_payload((payload + "\n").encode("utf-8"))
+        return self._ensure_shell_session().send_text(text)
 
     def send_shell_input(self, data: str) -> bool:
-        payload = data or ""
-        if not payload:
-            return True
-        return self._send_shell_payload(payload.encode("utf-8"))
+        return self._ensure_shell_session().send_input(data)
 
     def _send_shell_payload(self, payload: bytes) -> bool:
-        if not payload:
-            return True
-        with self._shell_send_lock:
-            channel = self._shell_channel
-            if channel is None or getattr(channel, "closed", False):
-                return False
-            offset = 0
-            try:
-                while offset < len(payload):
-                    sent = channel.send(payload[offset:])
-                    if not sent:
-                        return False
-                    offset += sent
-                return True
-            except Exception:
-                return False
+        return self._ensure_shell_session().send_payload(payload)
 
     def _decode_shell_bytes(self, data: bytes, *, final: bool = False) -> None:
-        try:
-            text = self._shell_decoder.decode(data, final=final)
-        except Exception:
-            return
-        self._handle_shell_output(text)
-
-    def _drain_initial_shell_output(self, channel, duration: float = 0.35) -> None:
-        deadline = time.monotonic() + duration
-        while time.monotonic() < deadline and not self._shell_stop.is_set():
-            try:
-                if not channel.recv_ready():
-                    time.sleep(0.05)
-                    continue
-                data = channel.recv(4096)
-                if not data:
-                    break
-                self._decode_shell_bytes(data)
-            except socket.timeout:
-                continue
-            except Exception:
-                break
-
-    def _shell_reader_loop(self, channel) -> None:
-        unexpected_disconnect = False
-        disconnect_reason = ""
-        while not self._shell_stop.is_set():
-            try:
-                if channel.recv_ready():
-                    data = channel.recv(4096)
-                    if data:
-                        self._decode_shell_bytes(data)
-                    continue
-                if getattr(channel, "closed", False) or channel.exit_status_ready():
-                    unexpected_disconnect = True
-                    disconnect_reason = "SSH shell session ended."
-                    break
-            except socket.timeout:
-                continue
-            except Exception as exc:
-                if not self._shell_stop.is_set():
-                    self.log(f"SSH: shell session read failed ({exc})")
-                    unexpected_disconnect = True
-                    disconnect_reason = str(exc)
-                break
-            time.sleep(0.1)
-        if unexpected_disconnect and not self._shell_stop.is_set():
-            try:
-                self.close()
-            except Exception:
-                pass
-            self._notify_disconnect(disconnect_reason or "SSH shell session ended.")
-
-    def _handle_shell_output(self, text: str) -> None:
-        if not text:
-            return
-        if self._shell_output_cb is not None:
-            try:
-                self._shell_output_cb(text)
-                return
-            except Exception:
-                pass
-        sanitized = _sanitize_terminal_text(text)
-        if sanitized.strip():
-            self.log(sanitized.rstrip("\n"))
+        self._ensure_shell_session().decode_bytes(data, final=final)
 
     def _stop_shell_session(self) -> None:
-        self._shell_stop.set()
-        channel = self._shell_channel
-        self._shell_channel = None
-        thread = self._shell_thread
-        self._shell_thread = None
-        try:
-            if channel is not None:
-                self._decode_shell_bytes(b"", final=True)
-                try:
-                    channel.close()
-                except Exception:
-                    pass
-        finally:
-            if thread is not None and thread.is_alive() and thread is not threading.current_thread():
-                try:
-                    thread.join(timeout=1.0)
-                except Exception:
-                    pass
-            self._decode_shell_bytes(b"", final=True)
+        if self._shell_session is not None:
+            try:
+                self._shell_session.stop()
+            finally:
+                self._shell_session = None
 
     def _notify_disconnect(self, reason: str) -> None:
         if not self._disconnect_cb:
@@ -511,82 +362,27 @@ class SSHClientWrapper:
             self.client = None
         self.log("SSH: closed")
 
-    def open_transfer_sftp(self):
-        """Open an isolated SFTP channel for one upload or download.
+    @property
+    def _listing_sftp(self):
+        """Persistent listing channel (facade over the channel manager)."""
+        return self._sftp_channels.listing_channel
 
-        The browsing channel in ``self.sftp`` is deliberately shared by the
-        UI.  Paramiko SFTP clients are not safe to use from several transfer
-        worker threads, so file transfers must obtain their own channel from
-        the already authenticated transport instead.
-        """
-        if self.client is None:
-            raise RuntimeError("SSH client not connected")
-        transport = self.client.get_transport()
-        if transport is None or not transport.is_active():
-            raise RuntimeError("SSH transport is not active")
-        is_authenticated = getattr(transport, "is_authenticated", None)
-        if callable(is_authenticated) and not is_authenticated():
-            raise RuntimeError("SSH transport is not authenticated")
-        sftp = paramiko.SFTPClient.from_transport(transport)
-        # Without a channel timeout, a silently dead connection (dropped VPN,
-        # NAT/firewall idle-kill, etc.) leaves stat()/read()/write() blocked
-        # forever with no way for the worker thread, its QThread, or the app
-        # to ever unstick — the transfer row freezes at 100% and, if the app
-        # is closed while blocked, can crash on shutdown. Bound every SFTP
-        # channel so a dead connection surfaces as a normal socket.timeout
-        # (caught and reported as a failed transfer) instead of hanging.
-        channel = sftp.get_channel()
-        if channel is not None:
-            channel.settimeout(_SFTP_TRANSFER_TIMEOUT_SECONDS)
-        return sftp
+    def open_transfer_sftp(self):
+        """Open an isolated SFTP channel for one upload or download."""
+        return self._sftp_channels.open_transfer_sftp()
 
     def _drop_listing_sftp(self) -> None:
-        sftp, self._listing_sftp = self._listing_sftp, None
-        if sftp is not None:
-            try:
-                sftp.close()
-            except Exception:
-                pass
+        self._sftp_channels.drop_listing_sftp()
 
     @contextlib.contextmanager
     def listing_sftp(self):
-        """Lend the long-lived SFTP channel used for directory browsing.
-
-        Opening a channel per navigation costs a full round trip on a high-RTT
-        link, so one channel is opened lazily and reused.  Access is
-        serialized: an abandoned ``listdir_iter`` leaves unread read-ahead
-        replies queued, so any non-clean exit discards the channel and the
-        next caller opens a fresh one.
-        """
-        with self._listing_lock:
-            if self._listing_sftp is None:
-                self._listing_sftp = self.open_transfer_sftp()
-                get_channel = getattr(self._listing_sftp, "get_channel", None)
-                channel = get_channel() if callable(get_channel) else None
-                if channel is not None:
-                    channel.settimeout(_SFTP_LISTING_TIMEOUT_SECONDS)
-            clean = False
-            try:
-                yield self._listing_sftp
-                clean = True
-            finally:
-                if not clean:
-                    self._drop_listing_sftp()
+        """Lend the long-lived SFTP channel used for directory browsing."""
+        with self._sftp_channels.listing_sftp() as sftp:
+            yield sftp
 
     def supports_transfer_sftp_channels(self) -> bool:
         """Probe whether the active connection can create isolated channels."""
-        channel = None
-        try:
-            channel = self.open_transfer_sftp()
-            return True
-        except Exception:
-            return False
-        finally:
-            if channel is not None:
-                try:
-                    channel.close()
-                except Exception:
-                    pass
+        return self._sftp_channels.supports_transfer_sftp_channels()
 
     def run(
         self,
