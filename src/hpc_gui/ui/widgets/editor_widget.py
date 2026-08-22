@@ -510,6 +510,7 @@ class EditorWidget(QWidget):
                 t("templates.none_installed"),
             )
             return
+        from PySide6.QtWidgets import QDialog
         from hpc_gui.ui.dialogs.template_browser_dialog import TemplateBrowserDialog
 
         dialog = TemplateBrowserDialog(self, templates)

@@ -8,12 +8,8 @@ from __future__ import annotations
 
 import hashlib
 import json
-import os
 import unittest.mock as mock
-from pathlib import Path
 from types import SimpleNamespace
-
-os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 import pytest
 
@@ -337,15 +333,10 @@ def test_removal_cancelled_does_not_remove(qapp):
 
 def test_updates_tab_lists_newer_compatible_version(qapp):
     dialog = PluginManagerDialog()
-    with mock.patch.object(
-        type(dialog), "_installed_versions", create=True
-    ):
-        pass
     dialog._registry = json.loads(json.dumps(VALID_REGISTRY))
     dialog._registry_source = "network"
 
-    active = {"org.hpcclient.truba": "0.9.0"}
-    inner = dialog._populate_updates(active)
+    dialog._populate_updates({"org.hpcclient.truba": "0.9.0"})
     container = dialog.updates_list.widget()
     text = "\n".join(
         label.text()

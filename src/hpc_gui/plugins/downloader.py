@@ -15,7 +15,6 @@ from hpc_gui.plugins.registry_client import (
     FILE_MAX_BYTES,
     OFFICIAL_RAW_BASE,
     FetchFn,
-    RegistryError,
     default_fetcher,
 )
 

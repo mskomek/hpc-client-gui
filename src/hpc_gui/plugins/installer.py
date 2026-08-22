@@ -51,7 +51,7 @@ from hpc_gui.plugins.registry_client import (
     RegistryError,
     default_fetcher,
 )
-from hpc_gui.plugins.state import activate_version, read_active_versions, record_installed_version
+from hpc_gui.plugins.state import read_active_versions, record_installed_version
 from hpc_gui.plugins.storage import (
     MANIFEST_NAME,
     packages_dir,
