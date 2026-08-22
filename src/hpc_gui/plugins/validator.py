@@ -6,6 +6,8 @@ Schemas closely enough to reject malformed or unsafe local installs.
 
 from __future__ import annotations
 
+import re
+from pathlib import PurePosixPath
 from typing import Any
 
 from hpc_gui.plugins.compatibility import validate_requires_app
@@ -35,6 +37,25 @@ MANIFEST_REQUIRED_KEYS = (
 CLUSTER_PROFILE_REQUIRED_KEYS = ("schema_version", "profile_id", "name", "scheduler")
 
 KNOWN_SCHEDULERS = frozenset({"slurm"})
+
+# Declarative payloads only; anything runnable is forbidden regardless of role.
+ALLOWED_PAYLOAD_SUFFIXES = frozenset({".json", ".md", ".txt"})
+
+# Placeholders the scheduler backend actually interpolates. Unknown forms are
+# rejected so a malformed/malicious template cannot inject format surprises.
+KNOWN_COMMAND_PLACEHOLDERS = frozenset(
+    {
+        "user",
+        "job_id",
+        "job_id_q",
+        "script_dir",
+        "script_dir_q",
+        "script_name",
+        "script_name_q",
+    }
+)
+
+_PLACEHOLDER_RE = re.compile(r"\{([A-Za-z_][A-Za-z0-9_]*)\}")
 
 
 def _is_nonempty_str(value: Any) -> bool:
@@ -102,6 +123,11 @@ def validate_manifest_dict(manifest: Any) -> list[str]:
             errors.append(f"manifest file '{path}' needs a non-negative integer size")
         if entry.get("role") not in KNOWN_FILE_ROLES:
             errors.append(f"unsupported manifest file role: {entry.get('role')!r}")
+        suffix = PurePosixPath(str(path)).suffix.lower()
+        if suffix and suffix not in ALLOWED_PAYLOAD_SUFFIXES:
+            errors.append(
+                f"manifest file '{path}' has a forbidden executable-looking extension '{suffix}'"
+            )
     return errors
 
 
@@ -135,6 +161,21 @@ def validate_cluster_profile_dict(profile: Any) -> list[str]:
             if not isinstance(value, str):
                 errors.append(f"cluster profile '{section_key}' values must be strings")
                 break
+
+    commands = profile.get("commands")
+    if isinstance(commands, dict):
+        for key, value in commands.items():
+            if not isinstance(value, str):
+                continue
+            if key == "status_command":
+                # Site status commands are free-form (for example lssrv).
+                continue
+            for placeholder in _PLACEHOLDER_RE.findall(value):
+                if placeholder not in KNOWN_COMMAND_PLACEHOLDERS:
+                    errors.append(
+                        f"cluster profile command '{key}' uses unknown placeholder "
+                        f"{{{placeholder}}}"
+                    )
     return errors
 
 
