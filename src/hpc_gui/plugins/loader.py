@@ -201,11 +201,33 @@ def load_installed_plugins(
         if profile_failed:
             continue
 
+        # Optional lint index entrypoint: a malformed pack is recorded as a
+        # problem but does not invalidate the rest of the plugin.
+        lint_index_raw = None
+        lint_rel = manifest.entrypoints.get("lint_index")
+        if isinstance(lint_rel, str) and lint_rel:
+            if lint_rel.startswith("/") or ".." in lint_rel.split("/"):
+                result.problems.append(
+                    PluginProblem(plugin_id, version, f"unsafe lint entrypoint: {lint_rel!r}")
+                )
+                continue
+            raw_pack, error = _load_json(package_dir / lint_rel)
+            if error:
+                result.problems.append(PluginProblem(plugin_id, version, f"lint index: {error}"))
+                continue
+            if not isinstance(raw_pack, dict) or raw_pack.get("schema_version") != 1:
+                result.problems.append(
+                    PluginProblem(plugin_id, version, "lint index: unsupported schema_version")
+                )
+                continue
+            lint_index_raw = raw_pack
+
         result.plugins.append(
             InstalledPlugin(
                 manifest=manifest,
                 directory=package_dir,
                 cluster_profiles=tuple(profiles),
+                lint_index=lint_index_raw,
             )
         )
 

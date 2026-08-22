@@ -101,6 +101,7 @@ class InstalledPlugin:
     manifest: PluginManifest
     directory: Path
     cluster_profiles: tuple[ClusterProfileDefinition, ...] = ()
+    lint_index: Mapping[str, Any] | None = None
 
 
 def is_valid_semver(value: Any) -> bool:
