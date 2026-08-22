@@ -54,6 +54,21 @@ def _target_version_matches(when: dict, context: LintContext | None) -> bool:
     return current == target or current.startswith(target + ".")
 
 
+def _remote_platform_matches(when: dict, context: LintContext | None) -> bool:
+    expected = when.get("remote_platform")
+    if not expected:
+        return True
+    if context is None or not context.remote_platform:
+        return False
+    return str(expected).lower() in context.remote_platform.lower()
+
+
+def _rule_conditions_match(when: dict, context: LintContext | None) -> bool:
+    return _target_version_matches(when, context) and _remote_platform_matches(
+        when, context
+    )
+
+
 def _iter_rule_diagnostics(
     text: str,
     index: _LineIndex,
@@ -126,14 +141,17 @@ def _iter_rule_diagnostics(
         cursor = 0
         last_line = last_column = None
         in_order = True
+        missing = False
         for value in rule.values:
             found = text.find(value, cursor)
             if found < 0:
                 in_order = False
+                # Distinguish "out of order" from "absent entirely".
+                missing = text.find(value) < 0
                 break
             last_line, last_column = index.position(found)
             cursor = found + len(value)
-        if not in_order and rule.values:
+        if rule.values and not in_order and (rule.require_all or not missing):
             yield diagnostic(last_line, last_column)
         return
     if kind == "count":
@@ -166,7 +184,7 @@ def lint_text(
     index = _LineIndex(text)
     diagnostics: list[Diagnostic] = []
     for rule in rule_pack.rules:
-        if not _target_version_matches(rule.when, context):
+        if not _rule_conditions_match(rule.when, context):
             continue
         for diagnostic in _iter_rule_diagnostics(
             text, index, rule, rule_pack, context, max_diagnostics_per_rule

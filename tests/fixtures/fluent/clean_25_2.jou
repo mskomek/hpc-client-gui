@@ -1,0 +1,3 @@
+/display set-lsd-bc
+/file/read-case "/arf/scratch/user/case.cas.h5"
+/solve/initialize/hyb-initialization

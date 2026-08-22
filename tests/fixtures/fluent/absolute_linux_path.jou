@@ -1,0 +1,3 @@
+/file/set-tui-version "25.2"
+/file/read-case "/arf/scratch/user/case.cas.h5"
+/solve/initialize/hyb-initialization
