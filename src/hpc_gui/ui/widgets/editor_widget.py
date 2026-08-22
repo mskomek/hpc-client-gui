@@ -383,14 +383,87 @@ class EditorWidget(QWidget):
             QMessageBox.information(self, t("common.info"), t("editor.lint_need_path") if t("editor.lint_need_path") != "[editor.lint_need_path]" else "Please provide a target path first.")
             return
         issues = self._collect_lint_issues(path, text)
-        if not issues:
+        diagnostics = self._run_plugin_lint(path, text)
+        if not issues and not diagnostics:
             QMessageBox.information(self, t("common.info"), t("editor.lint_ok") if t("editor.lint_ok") != "[editor.lint_ok]" else "Lint passed. No obvious issues found.")
             return
-        QMessageBox.warning(
-            self,
-            t("common.warning") if t("common.warning") != "[common.warning]" else "Warning",
-            (t("editor.lint_found") if t("editor.lint_found") != "[editor.lint_found]" else "Lint found potential issues:") + "\n\n" + "\n".join(issues),
+        self._show_lint_results(path, issues, diagnostics)
+
+    def _run_plugin_lint(self, path: str, text: str) -> list:
+        """Run installed declarative lint packs matching the file name."""
+        from hpc_gui.lint.engine import LintError, lint_text
+        from hpc_gui.lint.rulepack import load_lint_packs
+
+        diagnostics = []
+        try:
+            packs = load_lint_packs()
+        except Exception:
+            return diagnostics
+        matched = [pack for pack in packs if pack.matches(path)]
+        for pack in matched:
+            try:
+                diagnostics.extend(lint_text(text, file_name=path, rule_pack=pack))
+            except (LintError, Exception):  # noqa: B014 - never break the editor
+                continue
+        return diagnostics
+
+    def _show_lint_results(self, path: str, issues: list[str], diagnostics: list) -> None:
+        """Show a diagnostics dialog; double-click navigates the editor line."""
+        from PySide6.QtWidgets import QDialog, QListWidget, QListWidgetItem, QVBoxLayout
+        from PySide6.QtGui import QTextCursor
+
+        labels, positions = self._lint_result_entries(issues, diagnostics)
+
+        dialog = QDialog(self)
+        dialog.setWindowTitle(
+            t("editor.lint_results_title")
+            if t("editor.lint_results_title") != "[editor.lint_results_title]"
+            else "Lint results"
         )
+        dialog.resize(640, 380)
+        layout = QVBoxLayout(dialog)
+        listing = QListWidget(dialog)
+        layout.addWidget(listing)
+
+        for label in labels:
+            listing.addItem(QListWidgetItem(label))
+
+        def navigate(item_index: int) -> None:
+            line = positions[item_index] if item_index < len(positions) else -1
+            if line < 0:
+                return
+            cursor = self.text.textCursor()
+            block = self.text.document().findBlockByLineNumber(line)
+            cursor.setPosition(block.position())
+            cursor.movePosition(QTextCursor.MoveOperation.EndOfLine, QTextCursor.MoveMode.KeepAnchor)
+            self.text.setTextCursor(cursor)
+            self.text.setFocus()
+
+        def on_activated(index) -> None:
+            navigate(index.row())
+
+        listing.itemDoubleClicked.connect(lambda _item: navigate(listing.currentRow()))
+        listing.itemActivated.connect(on_activated)
+        dialog.exec()
+
+    @staticmethod
+    def _lint_result_entries(issues: list[str], diagnostics: list) -> tuple[list[str], list[int]]:
+        """Build display labels and 0-based navigation lines (-1 = no target)."""
+        labels: list[str] = []
+        positions: list[int] = []
+        for issue in issues:
+            labels.append(f"- {issue}")
+            positions.append(-1)
+        for diagnostic in sorted(diagnostics, key=lambda d: (d.line or 0, d.column or 0)):
+            location = f"{diagnostic.line}:{diagnostic.column}" if diagnostic.line else "-"
+            severity = (
+                diagnostic.severity.value
+                if hasattr(diagnostic.severity, "value")
+                else str(diagnostic.severity)
+            )
+            labels.append(f"[{location}] {severity}: {diagnostic.message} ({diagnostic.rule_id})")
+            positions.append(max(0, (diagnostic.line or 1) - 1))
+        return labels, positions
 
     def load_path(self):
         if not self.session or not self.session.get("files"):

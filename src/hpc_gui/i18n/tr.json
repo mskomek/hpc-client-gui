@@ -187,7 +187,9 @@
     "replace_label": "Değiştir:",
     "replace_placeholder": "Yeni metin",
     "replace": "Değiştir",
-    "replace_all": "Tümünü değiştir"
+    "replace_all": "Tümünü değiştir",
+    "lint_no_linter": "Bu dosya türü için kurulu bir linter yok. Eklenti Yöneticisi'nden bir lint eklentisi kurun.",
+    "lint_results_title": "Lint sonuçları"
   },
   "dirs": {
     "refresh": "Yenile",
