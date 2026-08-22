@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import getpass
 import re
-from typing import Iterable, List, Tuple
+from typing import List, Tuple
 
 _PLACEHOLDER_USER = "<user>"
 _PLACEHOLDER_HOST = "<host>"

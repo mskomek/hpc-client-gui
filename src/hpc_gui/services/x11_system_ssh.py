@@ -13,9 +13,7 @@ Neden Paramiko değil?
   yaklaşım, sistem `ssh` veya `plink` ile `-X/-Y` kullanmaktır.
 """
 
-import os
 import platform
-import shlex
 import shutil
 from dataclasses import dataclass
 from pathlib import Path

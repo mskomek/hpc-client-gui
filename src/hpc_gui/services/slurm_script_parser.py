@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import posixpath
 import re
-from dataclasses import dataclass
 from typing import Optional, Tuple
 
 SBATCH_OUT_PATTERNS = [

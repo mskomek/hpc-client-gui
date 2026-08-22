@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import contextlib
 import codecs
-import os
 import threading
 import time
 from dataclasses import dataclass

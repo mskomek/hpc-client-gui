@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import shutil
-from typing import Callable, Optional
+from typing import Callable
 
 from PySide6.QtCore import QProcess
 

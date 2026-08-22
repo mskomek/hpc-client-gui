@@ -6,10 +6,16 @@ from hpc_gui.services.safe_download import download_atomic
 
 class Response:
     headers = {"Content-Length": "6"}
-    def __enter__(self): return self
-    def __exit__(self, *args): pass
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        pass
+
     def read(self, size):
-        if hasattr(self, "done"): return b""
+        if hasattr(self, "done"):
+            return b""
         self.done = True
         return b"abcdef"
 
@@ -27,11 +33,14 @@ def test_download_failure_leaves_existing_target_and_cleans_partial(tmp_path: Pa
     target.write_bytes(b"old")
     class Broken(Response):
         def read(self, size):
-            if hasattr(self, "done"): raise OSError("network")
+            if hasattr(self, "done"):
+                raise OSError("network")
             self.done = True
             return b"new"
     with patch("urllib.request.urlopen", return_value=Broken()):
-        try: download_atomic("https://example.invalid/tool.exe", target)
-        except OSError: pass
+        try:
+            download_atomic("https://example.invalid/tool.exe", target)
+        except OSError:
+            pass
     assert target.read_bytes() == b"old"
     assert not target.with_suffix(".exe.part").exists()

@@ -140,7 +140,6 @@ class _TransferWorker(QObject):
 
     @Slot()
     def run(self) -> None:
-        total = len(self._items)
         for idx, item in enumerate(self._items, start=1):
             if self._cancel:
                 self.finished.emit(item, True, t("dirs.cancelled") if t("dirs.cancelled") != "[dirs.cancelled]" else "Cancelled.")

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import datetime
 import hashlib
 import json
 import os
@@ -38,7 +37,6 @@ from PySide6.QtWidgets import (
     QDialog,
     QDialogButtonBox,
     QFileDialog,
-    QGridLayout,
     QGroupBox,
     QListWidget,
     QHBoxLayout,
@@ -4079,7 +4077,6 @@ class RemoteDirPanel(QWidget):
         if not self.session or not self.session.get("files"):
             QMessageBox.warning(self, t("common.error"), t("common.no_connection"))
             return
-        files = self.session["files"]
         tab = self.tabs.currentWidget()
         tab_key = "all"
         for k, v in self.views.items():

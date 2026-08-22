@@ -160,9 +160,9 @@ def validate_deb_control() -> None:
     if not path.is_file():
         raise PackagingError(f".deb control file missing: {path}")
     text = path.read_text(encoding="utf-8")
-    for field in ("Package:", "Version:", "Architecture:", "Description:"):
-        if not re.search(rf"(?m)^{re.escape(field)}", text):
-            raise PackagingError(f".deb control file has no {field} field: {path}")
+    for required_field in ("Package:", "Version:", "Architecture:", "Description:"):
+        if not re.search(rf"(?m)^{re.escape(required_field)}", text):
+            raise PackagingError(f".deb control file has no {required_field} field: {path}")
     if "<VERSION>" not in text:
         raise PackagingError(f".deb control file has no <VERSION> placeholder: {path}")
 

@@ -34,11 +34,10 @@ class TerminalBoundaryTests(unittest.TestCase):
         from PySide6.QtWidgets import QApplication, QToolButton
         from hpc_gui.ui.widgets.terminal_header import TerminalHeader
 
-        app = QApplication.instance() or QApplication([])
+        QApplication.instance() or QApplication([])
         header = TerminalHeader()
         self.addCleanup(header.deleteLater)
-        self.assertTrue(all(isinstance(button, QToolButton) for button in (
-            header.find_button,
+        self.assertTrue(all(isinstance(button, QToolButton) for button in (            header.find_button,
             header.clear_button,
             header.font_down_button,
             header.font_up_button,
@@ -49,7 +48,7 @@ class TerminalBoundaryTests(unittest.TestCase):
         from PySide6.QtWidgets import QFrame
         from hpc_gui.ui.widgets.terminal_header import TerminalHeader
 
-        app = QApplication.instance() or QApplication([])
+        QApplication.instance() or QApplication([])
         header = TerminalHeader()
         self.addCleanup(header.deleteLater)
         self.assertEqual(header.status_label.frameShape(), QFrame.Shape.NoFrame)

@@ -8,7 +8,6 @@ from hpc_gui.services.transfer_controller import TransferController, TransferIte
 
 def test_controller_runs_parallel_and_bounds_history() -> None:
     events = []
-    lock = threading.Lock()
 
     def run(item, progress):
         progress(1, 2)

@@ -2171,7 +2171,6 @@ class FtpWidgetTests(unittest.TestCase):
     def test_both_remote_panels_forward_open_and_submit_signals(self) -> None:
         opened = []
         submitted = []
-        shell_batches = []
         shell_runs = []
         self.widget.openFileRequested.connect(opened.append)
         self.widget.submitRequested.connect(submitted.append)

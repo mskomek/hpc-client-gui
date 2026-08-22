@@ -6,7 +6,6 @@ import sys
 import time
 import uuid
 from dataclasses import dataclass
-from typing import Optional
 
 from hpc_gui.core.logging import get_logger
 

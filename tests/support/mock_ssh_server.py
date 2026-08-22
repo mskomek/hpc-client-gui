@@ -24,7 +24,7 @@ from pathlib import Path
 import paramiko
 
 MOCK_USERNAME = "mockuser"
-MOCK_PASSWORD = "mockpass123"  # noqa: test-only fixture credential, not a real secret
+MOCK_PASSWORD = "mockpass123"  # Test-only fixture credential, not a real secret.
 
 
 class _MockShell:
