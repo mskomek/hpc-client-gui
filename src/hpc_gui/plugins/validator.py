@@ -136,3 +136,96 @@ def validate_cluster_profile_dict(profile: Any) -> list[str]:
                 errors.append(f"cluster profile '{section_key}' values must be strings")
                 break
     return errors
+
+
+REGISTRY_ENTRY_REQUIRED_KEYS = (
+    "id",
+    "name",
+    "version",
+    "plugin_api",
+    "type",
+    "description",
+    "publisher",
+    "requires_app",
+    "manifest_path",
+    "manifest_sha256",
+    "official",
+)
+
+REGISTRY_PLUGIN_TYPES = frozenset(
+    {
+        "cluster-profile",
+        "lint-rules",
+        "job-template",
+        "application-tools",
+    }
+)
+
+
+def _is_sha256_hex(value: Any) -> bool:
+    return (
+        isinstance(value, str)
+        and len(value) == 64
+        and all(character in "0123456789abcdef" for character in value)
+    )
+
+
+def validate_registry_dict(registry: Any) -> list[str]:
+    """Validate a raw registry mapping; returns human-readable problems."""
+    if not isinstance(registry, dict):
+        return ["registry must be a JSON object"]
+    errors: list[str] = []
+    if registry.get("schema_version") != 1:
+        errors.append("registry schema_version must be 1")
+    if registry.get("plugin_api") != PLUGIN_API_VERSION:
+        errors.append(f"registry plugin_api must be {PLUGIN_API_VERSION}")
+
+    repository = registry.get("repository")
+    if not isinstance(repository, dict):
+        errors.append("registry repository must be a JSON object")
+    else:
+        raw_base = repository.get("raw_base")
+        if (
+            not isinstance(raw_base, str)
+            or not raw_base.startswith("https://")
+            or not raw_base.endswith("/")
+        ):
+            errors.append("registry repository.raw_base must be an HTTPS URL ending with '/'")
+
+    plugins = registry.get("plugins")
+    if not isinstance(plugins, list):
+        errors.append("registry plugins must be a list")
+        return errors
+
+    seen: set[tuple[str, str]] = set()
+    for entry in plugins:
+        if not isinstance(entry, dict):
+            errors.append("each registry plugin entry must be a JSON object")
+            continue
+        plugin_id = entry.get("id", "<missing>")
+        label = f"registry entry {plugin_id}"
+        for key in REGISTRY_ENTRY_REQUIRED_KEYS:
+            if key not in entry:
+                errors.append(f"{label} is missing required key '{key}'")
+        if any(key not in entry for key in REGISTRY_ENTRY_REQUIRED_KEYS):
+            continue
+        if not is_valid_semver(entry["version"]):
+            errors.append(f"{label}: invalid semantic version {entry['version']!r}")
+        if entry["plugin_api"] != PLUGIN_API_VERSION:
+            errors.append(f"{label}: unsupported plugin_api {entry['plugin_api']!r}")
+        if entry["type"] not in REGISTRY_PLUGIN_TYPES:
+            errors.append(f"{label}: unknown plugin type {entry['type']!r}")
+        if not is_safe_relative_path(entry["manifest_path"]):
+            errors.append(f"{label}: unsafe manifest_path {entry['manifest_path']!r}")
+        if not _is_sha256_hex(entry["manifest_sha256"]):
+            errors.append(f"{label}: manifest_sha256 must be 64 lowercase hex chars")
+        if not isinstance(entry["official"], bool):
+            errors.append(f"{label}: 'official' must be a boolean")
+        errors.extend(
+            f"{label}: {problem}" for problem in validate_requires_app(entry["requires_app"])
+        )
+        identity = (str(entry["id"]), str(entry["version"]))
+        if identity in seen:
+            errors.append(f"{label}: duplicate (id, version) pair in registry")
+        seen.add(identity)
+    return errors
