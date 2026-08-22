@@ -59,7 +59,8 @@ tools/ai/deepseek-models.local.psd1
 # Internal-only paths kept local; never published on main
 # (see MAIN_SYNC_PROTOCOL.md "Always excluded").
 /tools/
-/devtools/
+/devtools/*
+!/devtools/performance_probe.py
 /docs/DEEPSEEK_*
 /docs/OPENCODE_*
 /docs/PUBLICATION_KIT.md
