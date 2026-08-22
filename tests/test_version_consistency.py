@@ -21,3 +21,7 @@ def test_repository_version_views_match() -> None:
     assert CLI_VERSION == __version__
     changelog = (ROOT / "src/hpc_gui/docs/CHANGELOG.md").read_text(encoding="utf-8")
     assert f"## v{__version__}" in changelog
+    version_info = (ROOT / "build/windows/version_info.txt").read_text(encoding="utf-8")
+    assert f"'{__version__}'" in version_info
+    tuple_version = ", ".join([*__version__.split("."), "0"])
+    assert f"({tuple_version})" in version_info
