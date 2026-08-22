@@ -38,6 +38,18 @@ The mental model is simple:
 
 ---
 
+## Embedded SSH terminal
+
+The terminal on the Connection tab opens the remote shell inside the app. It
+resizes with the window; **Find**, **Clear**, **A−**, and **A+** control the
+local terminal view. All terminal assets are bundled, with no CDN or runtime
+download.
+
+When a connection fails, the dialog explains the likely cause and what to
+check. A diagnostic code such as `SSH-XXXXXX` links the dialog to its log entry.
+
+---
+
 ## What does it do?
 
 - Manage SSH connections (client-side)
@@ -200,8 +212,8 @@ If your site prints banners/warnings that affect command output, parsing may deg
 
 ## Linux support
 
-Linux support is under active development. The public releases currently remain
-**Windows-only** until a Linux artifact is published; until then, run from source.
+Linux x86_64 releases are published on GitHub Releases as AppImage, Debian
+`.deb`, and Flatpak packages. Each package has a sibling SHA-256 file.
 
 ### Requirements
 
