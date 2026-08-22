@@ -19,7 +19,7 @@ from hpc_gui.lint.engine import (
     lint_text,
 )
 from hpc_gui.lint.models import LintContext, RulePack, Severity
-from hpc_gui.lint.rulepack import RulePackError, load_lint_packs, parse_rule, parse_rule_pack
+from hpc_gui.lint.rulepack import RulePackError, load_lint_packs, parse_rule
 
 
 def sha256_bytes(data: bytes) -> str:
@@ -438,7 +438,6 @@ def test_lint_result_entries_are_line_aware(qapp):
     from hpc_gui.lint.models import Diagnostic
     from hpc_gui.ui.widgets.editor_widget import EditorWidget
 
-    widget = EditorWidget()
     diagnostics = [
         Diagnostic(rule_id="B2", severity=Severity.INFO, message="b", line=3, column=2),
         Diagnostic(rule_id="A1", severity=Severity.ERROR, message="a", line=1, column=5),

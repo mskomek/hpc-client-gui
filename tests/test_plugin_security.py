@@ -37,10 +37,10 @@ def build_plugin(
     profile_override: dict | None = None,
 ) -> dict:
     """Create a locally consistent installable package; returns registry entry."""
-    short = plugin_id.split(".")[-1]
-    base = f"plugins/{short}/{version}"
+    base = f"plugins/{plugin_id.split('.')[-1]}/{version}"
     pkg = root / base
     pkg.mkdir(parents=True, exist_ok=True)
+    _ = base  # registry manifest_path below reuses the same layout
 
     profile = {
         "schema_version": 1,
@@ -234,7 +234,6 @@ def test_installer_rejects_oversized_file(tmp_path: Path):
 def test_exception_midway_leaves_active_pointer_untouched(tmp_path: Path):
     entry = build_plugin(tmp_path)
     responses = remote_responses(tmp_path, entry)
-    base = str(Path(entry["manifest_path"]).parent).replace("\\", "/")
 
     call_count = {"n": 0}
 

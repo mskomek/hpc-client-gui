@@ -66,7 +66,6 @@ def make_plugin_files(
         "commands": {"status_command": "lssrv"},
     }
     profile_bytes = json.dumps(profile).encode("utf-8")
-    manifest_dir = f"plugins/{plugin_id.split('.')[-1]}/{version}"
     manifest = {
         "schema_version": 1,
         "plugin_api": 1,

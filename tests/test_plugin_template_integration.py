@@ -56,7 +56,6 @@ def install_profile_fixture(
     broken: bool = False,
 ) -> None:
     """Create a locally installed plugin package (manifest + payload)."""
-    short = plugin_id.split(".")[-1]
     pkg = root / "packages" / plugin_id / version
     pkg.mkdir(parents=True, exist_ok=True)
     if broken:

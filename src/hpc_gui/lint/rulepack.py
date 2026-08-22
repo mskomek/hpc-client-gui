@@ -12,6 +12,7 @@ import json
 import re
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 from hpc_gui import __version__
 from hpc_gui.lint.engine import LintError
