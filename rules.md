@@ -109,11 +109,11 @@ Do not claim success without recording what was checked.
 
 This rule applies equally to Codex, Claude, and OpenCode. When a Linux/WSL
 session works on a file in this Windows-mounted repository, do not edit the
-mounted worktree. Create a clean local Linux clone or sibling worktree and a
-fresh `linux-develop` branch from the intended base; perform all edits, tests,
-and review there. Once verified, transfer only those changes to the Windows
-repository and commit them there, preserving unrelated Windows changes and
-never using reset, clean, or overwrite to force the handoff.
+mounted worktree. Create a clean local Linux clone/worktree and a fresh
+`linux-develop` branch; perform all edits, tests, and review there. Once
+verified, transfer only those changes to the Windows repository and commit
+them there, preserving unrelated Windows changes and never using reset, clean,
+or overwrite to force the handoff.
 
 The final report must state exactly `Linux'te yapıldı, Windows ortamına
 commitlendi.` and include the Linux branch, Windows branch, and final Windows
@@ -218,6 +218,11 @@ orchestration. Both Codex and Claude must drive delegation directly instead:
      check the log for that marker. If it is missing, the launch itself is
      failed/hung (this marker needs no network I/O and should be
      near-instant) — stop that process and relaunch once.
+   - Until the first worker output appears after the start marker, actively
+     poll the log and process state rather than assuming the request is
+     running. Confirm that the worker process is alive and that output has
+     begun before moving to periodic monitoring; otherwise stop and relaunch
+     once.
    - If the marker is present (launch succeeded), **check status again every
      5–15 minutes** for as long as the call is in flight (use 5 minutes when
      output is active or failure risk is elevated, otherwise up to 15):
@@ -247,7 +252,7 @@ regardless of which agent drives the call.
 
 ## TRUBAGUI Change Quality
 
-- Preserve the `src/truba_gui` layer boundaries: UI interaction in `ui/`, remote
+- Preserve the `src/hpc_gui` layer boundaries: UI interaction in `ui/`, remote
   behavior in `ssh/`, reusable operations in `services/`, and persistence in
   `config/` or `core/`.
 - Keep SSH/Slurm command construction explicit, quoted, mockable, and covered by
@@ -275,12 +280,12 @@ regardless of which agent drives the call.
 ## Release Packaging Rule
 
 - Windows release artifacts must live under `dist/releases/v<version>/`.
-- Each version folder must keep its own `CHANGELOG.md`, versioned `.exe`, `.zip`, and `.sha256` files together.
+- Single-file releases may be published directly; multi-file releases (such as Windows onedir) must be distributed as an archive (`.zip` or `.tar.gz`) with its checksum, and must not leave loose executables beside the archive.
 - Do not leave release assets loose at the root of `dist/`.
 - Build scripts and GitHub release workflow should treat `dist/releases/v<version>/` as the canonical release location.
 - If a packaging change creates a new version, create a matching version folder instead of overwriting another release.
-- Each version folder must contain a `help/` folder next to the `.exe`, holding the Turkish and English GUI help and CLI guide (`HELP_tr.md`, `HELP_en.md`, `CLI_GUIDE_tr.md`, `CLI_GUIDE_en.md`).
-- `help/` is copied from `src/truba_gui/docs/` at packaging time; those files stay the single source of truth and are never edited inside `dist/`.
+- Each Windows archive must contain a `help/` folder next to the executable, holding the Turkish and English GUI help and CLI guide (`HELP_tr.md`, `HELP_en.md`, `CLI_GUIDE_tr.md`, `CLI_GUIDE_en.md`).
+- `help/` is copied from `src/hpc_gui/docs/` at packaging time; those files stay the single source of truth and are never edited inside `dist/`.
 - Any user-visible GUI or CLI change updates the Turkish and English docs in the same commit as the code, exactly like the i18n rule.
 - Release is blocked if `help/` is missing a file, or if the CLI guides do not cover every command reported by the CLI's own command inventory.
 - Before a release, inspect the parent-to-release diff. Unexpected source,
@@ -288,6 +293,32 @@ regardless of which agent drives the call.
 - Release packaging must not overwrite tracked source files. Generated files
   must be identifiable, and version/configuration metadata should have one
   authoritative source where practical.
+- Linux release artifacts must use the same canonical `dist/releases/v<version>/`
+  folder as Windows releases; never leave Linux artifacts loose under `dist/`.
+- The Linux artifact set is `hpc-client-gui-<version>-x86_64.AppImage`,
+  `hpc-client-gui_<version>_amd64.deb`, and
+  `hpc-client-gui-<version>.flatpak`; each artifact must have a sibling
+  `<artifact>.sha256` file.
+- Linux packaging definitions belong under `build/linux/`; the executable
+  source of truth remains `src/`, and generated AppImage, `.deb`, Flatpak, and
+  temporary build directories are not source-controlled.
+- Linux release packaging must copy the bilingual `help/` files, changelog,
+  license files, and third-party notices into the version folder; the canonical
+  sources remain `src/hpc_gui/docs/`, repository license files, and
+  `third_party_licenses/`.
+- The Linux release gate must validate version consistency, package metadata,
+  executable permissions, artifact contents, SHA-256 files, CLI smoke
+  (`--help`, `version`, `doctor environment`), and offscreen GUI startup before
+  an artifact is considered releasable.
+- Linux release artifacts are built on Ubuntu LTS; the release workflow starts
+  its Ubuntu and Windows artifact jobs in parallel, while publication waits for
+  both jobs. Fedora and openSUSE remain CI coverage targets as configured.
+- WSL Ubuntu is an approved local Linux build and smoke-test environment, but
+  its output is not publication evidence; the Ubuntu CI artifact build remains
+  the release gate.
+- Linux publication is blocked until the real CI artifact build and smoke run
+  have passed; workflow artifact upload is not equivalent to GitHub Release
+  publication or user approval.
 
 ## Remote Branch Protocol
 
@@ -324,3 +355,21 @@ regardless of which agent drives the call.
 - only one wave is active at a time
 - tasks come from the active wave only
 - future-wave ideas go into future wave docs, not into current implementation
+- when a wave is completed and verified, its manifest moves from
+  `waves/pending/` to `waves/done/` as part of closing the wave; do not leave
+  finished manifests in `pending`. `waves/pending/` keeps only active/queued
+  manifests and queue state (`manifest.json`, `README.md`)
+- the move is a local filesystem action: `waves/` stays Git-ignored, so
+  archiving never creates a commit or reaches `origin`
+
+## Local-Only Agent Files (never on main)
+
+- `CLAUDE.md`, `MAIN_SYNC_PROTOCOL.md`, `AGENTS.md`, and similar agent
+  guidance/protocol files are **local-only working copies**: they are never
+  staged, committed, or pushed, and `main` must not contain them.
+- Before pushing, verify with `git ls-tree -r origin/main --name-only` (or
+  `git ls-files`) that none of these paths are tracked. If one ever appears,
+  remove it with `git rm --cached <path>` in the same session and commit that
+  removal separately; keep the local copy on disk.
+- `rules.md` is the tracked exception: rule additions belong in a dedicated
+  commit and ride with the next approved `main` push.
