@@ -61,7 +61,9 @@ def save_test_profile(port: int) -> None:
         "x11_forwarding": False,
         "cli_allowed": True,
         "password_dpapi": protect_secret("test"),
-        "system": dict(GENERIC_SLURM_DEFAULTS),
+        # v1.4.0 moved site-specific commands (lssrv) into the TRUBA plugin;
+        # this virtual-TRUBA profile declares the same status command.
+        "system": {**GENERIC_SLURM_DEFAULTS, "status_command": "lssrv"},
     }
     upsert_profile(profile)
     set_cli_external_access_enabled(True)
