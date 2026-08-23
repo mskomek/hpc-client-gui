@@ -480,7 +480,7 @@ class ResetRootsTests(unittest.TestCase):
                         with mock.patch.object(
                             FtpWidget,
                             "_confirm_sync_pair",
-                            lambda self, l, r: next(answers),
+                            lambda self, left, right: next(answers),
                         ), mock.patch.object(
                             widget.panel_scratch,
                             "set_dir",

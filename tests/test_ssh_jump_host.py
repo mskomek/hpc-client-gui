@@ -18,10 +18,8 @@ import paramiko  # noqa: E402
 
 from hpc_gui.config.jump_host_profile import (  # noqa: E402
     normalize_jump_host_settings,
-    patch_jump_host_settings,
 )
 from hpc_gui.ssh.client import (  # noqa: E402
-    HostKeyChangedError,
     HostKeyInfo,
     SSHClientWrapper,
     SSHConnInfo,
@@ -251,8 +249,8 @@ class JumpSequenceTests(unittest.TestCase):
             "from_transport",
             staticmethod(fake_from_transport),
         ):
-            first = wrapper.open_transfer_sftp()
-            second = wrapper.open_transfer_sftp()
+            wrapper.open_transfer_sftp()
+            wrapper.open_transfer_sftp()
         self.assertEqual(len(used_transports), 2)
         self.assertTrue(all(t is target.transport for t in used_transports))
         self.assertEqual(jump.connect_count, 1)
@@ -501,7 +499,7 @@ class ProfilePersistenceTests(unittest.TestCase):
         from hpc_gui.ui.dialogs.connection_dialog import ConnectionDialog
 
         os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-        app = QApplication.instance() or QApplication([])
+        QApplication.instance() or QApplication([])
         load_language("en")
         initial = {
             "name": "lab",

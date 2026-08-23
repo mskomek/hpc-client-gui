@@ -272,7 +272,7 @@ class SnapshotAndUiTests(unittest.TestCase):
     def test_stale_streaming_snapshot_never_becomes_source(self) -> None:
         from hpc_gui.ui.widgets.remote_dir_panel import RemoteDirPanel
 
-        files = _FakeFiles()
+        _FakeFiles()
         panel = RemoteDirPanel()
         try:
             panel.session = {
@@ -286,7 +286,7 @@ class SnapshotAndUiTests(unittest.TestCase):
             panel._streaming_entries = [
                 SimpleNamespace(name="stale", path="/target/stale", is_dir=False, size=1, mtime=1, mode=0)
             ]
-            panel._on_listing_finished(stale_token := stale_key)
+            panel._on_listing_finished(stale_key)
             identity, entries = panel.current_entries_snapshot()
             self.assertEqual(entries, [])
         finally:
