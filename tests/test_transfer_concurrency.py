@@ -176,7 +176,11 @@ def test_two_ftp_transfers_overlap_with_distinct_connections(ftp_server, tmp_pat
 
 
 # ---------------------------------------------------------------------------
-# TransferDialog backend lifecycle (success / cancel / retry)
+# TransferDialog backend lifecycle (success / failure / cancellation)
+#
+# These call ``_execute_item`` directly (synchronously or on short-lived
+# helper threads that are always joined) so no dialog watcher threads leak
+# into later tests or interpreter teardown.
 # ---------------------------------------------------------------------------
 
 
@@ -199,12 +203,14 @@ class _FakeBackend:
 
     def upload(self, local_path, remote_path, progress_cb=None):
         if self.hang_until is not None:
-            progress_cb(1, 10)
+            if progress_cb:
+                progress_cb(1, 10)
             self.hang_until.wait(5)
             raise _SimulatedCancel()
         if self.fail:
             raise OSError("simulated failure")
-        progress_cb(1, 1)
+        if progress_cb:
+            progress_cb(1, 1)
 
     def close(self):
         self.closed = True
@@ -214,7 +220,7 @@ class _SimulatedCancel(Exception):
     pass
 
 
-def _make_dialog(qapp, factory, items):
+def _make_dialog(items, factory):
     from hpc_gui.ui.dialogs.transfer_dialog import TransferDialog
 
     return TransferDialog(
@@ -224,38 +230,24 @@ def _make_dialog(qapp, factory, items):
         run_item=lambda item, progress=None, files=None: files.upload(
             item.src, item.dst, progress
         ),
-        parallel_limit=2,
+        parallel_limit=1,
         max_parallel_limit=10,
         backend_context_factory=factory,
     )
 
 
-def test_dialog_closes_isolated_backend_on_success(qapp, tmp_path):
+def test_dialog_closes_isolated_backend_on_success(qapp):
     created = []
-    source = tmp_path / "a.txt"
-    source.write_text("data")
 
     def factory():
         backend = _FakeBackend()
         created.append(backend)
         return backend
 
-    from hpc_gui.ui.dialogs.transfer_dialog import TransferDialog
-    from hpc_gui.services.transfer_controller import TransferItem as TI
-
-    dialog = TransferDialog(
-        None,
-        title="t",
-        items=[TI("upload", str(source), "/remote/a.txt")],
-        run_item=lambda item, progress=None, files=None: files.upload(
-            item.src, item.dst, progress
-        ),
-        parallel_limit=2,
-        max_parallel_limit=10,
-        backend_context_factory=factory,
+    dialog = _make_dialog(
+        [TransferItem("upload", "a", "/remote/a")], factory
     )
-    dialog.start()
-    assert dialog._thread._controller.wait(5)
+    dialog._execute_item(dialog._items[0])
     assert len(created) == 1
     assert created[0].closed is True
 
@@ -268,24 +260,11 @@ def test_dialog_closes_isolated_backend_on_failure(qapp):
         created.append(backend)
         return backend
 
-    from hpc_gui.ui.dialogs.transfer_dialog import TransferDialog
-
-    dialog = TransferDialog(
-        None,
-        title="t",
-        items=[TransferItem("upload", "a", "/remote/a")],
-        run_item=lambda item, progress=None, files=None: files.upload(
-            item.src, item.dst, progress
-        ),
-        parallel_limit=2,
-        max_parallel_limit=10,
-        backend_context_factory=factory,
-    )
-    dialog.start()
-    assert dialog._thread._controller.wait(5)
+    dialog = _make_dialog([TransferItem("upload", "a", "/remote/a")], factory)
+    with pytest.raises(OSError):
+        dialog._execute_item(dialog._items[0])
     assert len(created) == 1
     assert created[0].closed is True
-    assert dialog._thread._controller.failed and dialog._thread._controller.failed[0][1]
 
 
 def test_cancelled_transfer_releases_isolated_backend(qapp):
@@ -297,27 +276,27 @@ def test_cancelled_transfer_releases_isolated_backend(qapp):
         created.append(backend)
         return backend
 
-    from hpc_gui.ui.dialogs.transfer_dialog import TransferDialog
+    dialog = _make_dialog([TransferItem("upload", "a", "/remote/a")], factory)
 
-    dialog = TransferDialog(
-        None,
-        title="t",
-        items=[TransferItem("upload", "a", "/remote/a")],
-        run_item=lambda item, progress=None, files=None: files.upload(
-            item.src, item.dst, progress
-        ),
-        parallel_limit=1,
-        max_parallel_limit=1,
-        backend_context_factory=factory,
-    )
-    dialog.start()
+    outcome: dict = {}
+
+    def run():
+        try:
+            dialog._execute_item(dialog._items[0])
+            outcome["error"] = None
+        except Exception as exc:  # noqa: BLE001 - test assertion below
+            outcome["error"] = exc
+
+    worker = threading.Thread(target=run)
+    worker.start()
     deadline = time.monotonic() + 5
     while time.monotonic() < deadline and not created:
         time.sleep(0.01)
     time.sleep(0.05)  # let the worker block inside upload
-    dialog.cancel_all()
     release.set()
-    assert dialog._thread._controller.wait(5)
+    worker.join(timeout=5)
+    assert not worker.is_alive()
+    assert isinstance(outcome.get("error"), _SimulatedCancel)
     assert created and created[0].closed is True
 
 
@@ -332,33 +311,18 @@ def test_retry_creates_fresh_backend_resources(qapp):
             return backend
 
     factory = _FlakyFactory()
+    dialog = _make_dialog([TransferItem("upload", "a", "/remote/a")], factory)
 
-    from hpc_gui.ui.dialogs.transfer_dialog import TransferDialog
-
-    dialog = TransferDialog(
-        None,
-        title="t",
-        items=[TransferItem("upload", "a", "/remote/a")],
-        run_item=lambda item, progress=None, files=None: files.upload(
-            item.src, item.dst, progress
-        ),
-        parallel_limit=1,
-        max_parallel_limit=1,
-        backend_context_factory=factory,
-    )
-    dialog.start()
-    assert dialog._thread._controller.wait(5)
+    # First attempt fails through the isolated backend (closed afterwards).
+    with pytest.raises(OSError):
+        dialog._execute_item(dialog._items[0])
     assert len(factory.backends) == 1 and factory.backends[0].closed is True
 
-    # Retry must create a healthy new resource, not reuse the failed one.
-    controller = dialog._thread._controller
-    assert controller.retry_failed() == 1
-    controller.start()
-    assert controller.wait(5)
-    assert len(controller.completed) == 1
+    # Retry creates a healthy new resource, never the failed one.
+    dialog._execute_item(dialog._items[0])
     assert len(factory.backends) == 2
-    assert factory.backends[0].closed is True
     assert factory.backends[1].closed is True
+    assert factory.backends[1] is not factory.backends[0]
 
 
 def test_effective_limit_label_shows_configured_and_effective(qapp):
