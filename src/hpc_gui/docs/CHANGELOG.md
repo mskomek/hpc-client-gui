@@ -1,6 +1,6 @@
 # Changelog
 
-## v1.4.0 (Unreleased)
+## v1.4.0
 
 ### File management and connection UX
 - Profile edits now patch known fields onto the stored profile, so plugin provenance, file-manager state, jump settings, and unknown/future keys survive every edit; secret fields are only removed intentionally.
@@ -17,6 +17,10 @@
 - Added a declarative lint engine with plugin-delivered rule packs, including an ANSYS Fluent journal linter plugin.
 - Added plugin-delivered job templates ("New from Template...") with safe placeholder rendering and editor-side preview.
 - Added Slurm/Fluent resource cross-checks (CPU allocation vs solver process count) to the lint workflow.
+- Discover now groups registry entries by plugin and shows only the latest compatible version (older versions remain in details); update actions use PEP 440 version comparison and downgrades are never offered as updates.
+- Registry resolution now selects the highest compatible semantic version instead of relying on listing order; explicitly requested versions resolve exactly; invalid or duplicate registry versions are rejected clearly.
+- Published plugin versions are immutable on disk: identical reinstalls are idempotent, conflicting or corrupt same-version content raises an integrity error without deleting the active version, failed installs/updates keep the previous active version, and state files are written atomically.
+- The official registry client now refuses redirects to any non-official host (HTTPS-only final URLs) in addition to plain HTTP.
 
 ## v1.3.0
 
