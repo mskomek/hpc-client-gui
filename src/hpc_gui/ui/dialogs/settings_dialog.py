@@ -35,7 +35,6 @@ from hpc_gui.config.storage import (
     get_sbatch_follow_mode,
     get_squeue_auto_refresh_enabled,
     get_transfer_checksum_verification_enabled,
-    get_transfer_parallelism,
     get_upload_preflight_confirmation_enabled,
     load_profiles,
     load_settings,
@@ -149,12 +148,10 @@ class SettingsDialog(QDialog):
         self.cb_sbatch_follow_mode.setCurrentIndex(max(0, follow_mode_index))
         self.cb_sbatch_follow_mode.setToolTip(t("settings.sbatch_follow_mode_tip"))
 
-        self.sp_transfer_parallelism = QSpinBox()
-        self.sp_transfer_parallelism.setRange(1, 10)
-        self.sp_transfer_parallelism.setSingleStep(1)
-        self.sp_transfer_parallelism.setValue(get_transfer_parallelism())
-        self.sp_transfer_parallelism.setToolTip(t("settings.transfer_parallelism_tip"))
-
+        # Transfer parallelism is intentionally NOT editable here anymore:
+        # the per-connection-profile value is the single user-facing source
+        # of truth. The stored global "transfer_parallelism" settings key is
+        # kept untouched for backward compatibility with older versions.
         self.cb_remote_directory_cache = QCheckBox(
             _tr(
                 "settings.remote_directory_cache_label",
@@ -288,10 +285,6 @@ class SettingsDialog(QDialog):
             t("settings.ftp_transfer_type_label"),
             self.cb_ftp_transfer_type,
         )
-        ftp_form.addRow(
-            t("settings.transfer_parallelism_label"),
-            self.sp_transfer_parallelism,
-        )
         ftp_form.addRow(self.cb_upload_preflight_confirmation)
         ftp_form.addRow(self.cb_transfer_checksum_verification)
         ftp_form.addRow(t("settings.transfer_speed_test_size_label"), self.cb_transfer_speed_test_size)
@@ -375,7 +368,6 @@ class SettingsDialog(QDialog):
                 "sbatch_follow_mode": str(
                     self.cb_sbatch_follow_mode.currentData() or "outputs_tab"
                 ),
-                "transfer_parallelism": int(self.sp_transfer_parallelism.value()),
                 "upload_preflight_confirmation_enabled": (
                     self.cb_upload_preflight_confirmation.isChecked()
                 ),

@@ -50,6 +50,81 @@ check. A diagnostic code such as `SSH-XXXXXX` links the dialog to its log entry.
 
 ---
 
+## File manager features
+
+### Default local folder (per profile)
+
+Under **Advanced → File browser** each connection profile can define a
+**Default local folder**. When this profile connects, the local file pane
+opens that folder. Leave it blank to keep the normal behavior (the last
+locally visited folder). Scratch and Home remain the separate *remote*
+defaults for the profile.
+
+### Synchronized browsing
+
+The checkable **Synchronized browsing** button in the Files tab mirrors
+*directory navigation only* between the local pane and the active remote
+pane. It never uploads, downloads, creates, renames, or deletes anything.
+
+- Enabling it the first time asks whether the **currently visible local and
+  remote folders** should become the synchronized root pair.
+- Navigation inside the pair is mapped by relative path only; navigation
+  outside either root simply does not mirror.
+- A missing local counterpart folder is reported non-modally and is never
+  created automatically.
+- The button's menu offers **Reset synchronized roots to current folders**
+  and **Disable synchronized browsing**. The root pair is stored per profile.
+
+### Compare directories
+
+The checkable **Compare directories** button adds a **Comparison** column to
+the local and active remote file tables. It compares the *current immediate
+directory only*, reusing metadata the panels already downloaded:
+
+- exact name matching (case-sensitive on the remote side);
+- statuses: Same, Local only, Remote only, Type differs, Size differs,
+  Local newer, Remote newer;
+- modification times use a small tolerance (2 seconds);
+- no recursion into subfolders and no content/SHA comparison;
+- enabling or recomputing causes **zero extra remote listing/stat traffic**;
+  results refresh from existing snapshots after normal loads or transfers.
+
+### Maximum simultaneous transfers
+
+Per connection profile under **Advanced → Transfers**. This controls how many
+file transfers run at the same time within the session — it does not open
+extra login sessions. If the server/backend cannot support isolated parallel
+transfer channels, the limit safely falls back to 1. Values of 2–4 may
+improve throughput on fast links; be considerate on shared HPC login nodes.
+
+### SSH advanced settings
+
+- **Host key verification**: *Trust new hosts, reject changed keys*
+  (`accept-new`; unknown hosts prompt for trust-once/trust-and-save) or
+  *Require previously trusted host* (`strict`). Changed keys are always a
+  hard failure; there is deliberately no "accept everything" mode.
+- **SSH keepalive interval**: seconds between keepalive probes; `0`
+  disables keepalive. It helps detect dead connections but is not a
+  transfer-speed knob.
+- **SSH timeout override**: `0` uses the application defaults; a positive
+  value overrides the SSH connect/channel timeout.
+
+### Connect through jump host (bastion)
+
+Advanced → SSH offers a one-hop jump host: the app connects to the jump host
+first and reaches the target cluster through an SSH `direct-tcpip` channel.
+
+- Exactly one hop; multi-hop chains are not supported in this version.
+- The jump host authenticates with an **SSH key or agent**; there is no jump
+  password field, and your target password/credentials are never reused for
+  the jump host.
+- Both the jump host key and the target host key are verified independently;
+  fingerprint prompts label which host they refer to.
+- Terminal, file browsing, and Slurm features all run over the target
+  connection exactly as with direct connections.
+
+---
+
 ## What does it do?
 
 - Manage SSH connections (client-side)

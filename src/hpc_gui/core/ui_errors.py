@@ -17,7 +17,20 @@ def describe_connection_error(exc: BaseException, fallback: str = "") -> str:
     text = (fallback or str(exc)).strip()
     lowered = text.lower()
 
-    if isinstance(exc, (paramiko.AuthenticationException, paramiko.PasswordRequiredException)) or any(
+    # Jump-host stages get distinct, actionable messages.
+    from hpc_gui.ssh.jump import (
+        JumpAuthenticationError,
+        JumpConnectionError,
+        JumpForwardingDeniedError,
+    )
+
+    if isinstance(exc, JumpAuthenticationError):
+        key = "connection.jump_error_auth"
+    elif isinstance(exc, JumpForwardingDeniedError):
+        key = "connection.jump_error_forwarding"
+    elif isinstance(exc, JumpConnectionError):
+        key = "connection.jump_error_connect"
+    elif isinstance(exc, (paramiko.AuthenticationException, paramiko.PasswordRequiredException)) or any(
         phrase in lowered
         for phrase in ("authentication failed", "auth failed", "no authentication methods")
     ):

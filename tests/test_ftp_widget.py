@@ -1507,7 +1507,11 @@ class FtpWidgetTests(unittest.TestCase):
 
         panel = self.widget.panel_scratch
         files = ParallelFiles()
-        panel.session = {"connected": True, "files": files}
+        panel.session = {
+            "connected": True,
+            "files": files,
+            "cfg": SimpleNamespace(transfer_parallelism=3),
+        }
         controllers: list[TransferDialog] = []
         completed = threading.Event()
 
@@ -1528,11 +1532,7 @@ class FtpWidgetTests(unittest.TestCase):
                 for index in range(4)
             ]
 
-            with patch(
-                "hpc_gui.ui.widgets.remote_dir_panel.get_transfer_parallelism",
-                return_value=3,
-            ):
-                self.assertTrue(panel._run_plan_with_progress(plan, "Download"))
+            self.assertTrue(panel._run_plan_with_progress(plan, "Download"))
 
             deadline = time.monotonic() + 5
             while time.monotonic() < deadline and not completed.is_set():
@@ -1617,21 +1617,21 @@ class FtpWidgetTests(unittest.TestCase):
                 source.write_bytes(b"payload")
                 items.append(TransferItem("upload", str(source), f"/remote/{index}.bin"))
             panel = self.widget.panel_scratch
-            panel.session = {"connected": True, "files": backend}
+            panel.session = {
+                "connected": True,
+                "files": backend,
+                "cfg": SimpleNamespace(transfer_parallelism=3),
+            }
             try:
-                with patch(
-                    "hpc_gui.ui.widgets.remote_dir_panel.get_transfer_parallelism",
-                    return_value=3,
-                ):
-                    self.assertTrue(
-                        panel._run_plan_with_progress(
-                            [
-                                _PlannedOp(item.op, item.src, item.dst)
-                                for item in items
-                            ],
-                            "Upload",
-                        )
+                self.assertTrue(
+                    panel._run_plan_with_progress(
+                        [
+                            _PlannedOp(item.op, item.src, item.dst)
+                            for item in items
+                        ],
+                        "Upload",
                     )
+                )
                 dialog = panel._transfer_dialogs[-1]
                 self.assertEqual(dialog._parallel_limit, 3)
                 self.assertEqual(dialog._max_parallel_limit, 3)
@@ -2033,7 +2033,13 @@ class FtpWidgetTests(unittest.TestCase):
 
         files = SingleConnectionFiles()
         panel = self.widget.panel_scratch
-        panel.set_session({"connected": True, "files": files})
+        panel.set_session(
+            {
+                "connected": True,
+                "files": files,
+                "cfg": SimpleNamespace(transfer_parallelism=5),
+            }
+        )
         controllers: list[TransferDialog] = []
         completed = threading.Event()
 
@@ -2044,10 +2050,9 @@ class FtpWidgetTests(unittest.TestCase):
                 completed.set()
 
         panel.set_transfer_activity_callback(record_activity)
-        with tempfile.TemporaryDirectory() as tmp, patch(
-            "hpc_gui.ui.widgets.remote_dir_panel.get_transfer_parallelism",
-            return_value=5,
-        ), patch.object(panel, "_confirm_transfer_plan", return_value=True) as confirm:
+        with tempfile.TemporaryDirectory() as tmp, patch.object(
+            panel, "_confirm_transfer_plan", return_value=True
+        ) as confirm:
             roots = []
             for name in ("first", "second"):
                 root = Path(tmp) / name
@@ -2812,14 +2817,24 @@ class FtpWidgetTests(unittest.TestCase):
         try:
             dialog.show()
             QApplication.processEvents()
-            dialog.sp_transfer_parallelism.setValue(2)
+            # FM-04: the global transfer-parallelism editor was removed;
+            # per-profile value is the single user-facing source of truth.
+            dialog.cb_upload_preflight_confirmation.setChecked(False)
             with patch(
                 "hpc_gui.ui.dialogs.settings_dialog.update_settings"
             ) as update:
                 dialog.btn_apply.click()
 
             update.assert_called_once()
-            self.assertEqual(update.call_args.args[0]["transfer_parallelism"], 2)
+            self.assertNotIn(
+                "transfer_parallelism",
+                update.call_args.args[0],
+                "Settings dialog must not write a global transfer_parallelism value",
+            )
+            self.assertEqual(
+                update.call_args.args[0]["upload_preflight_confirmation_enabled"],
+                False,
+            )
             self.assertTrue(dialog.isVisible())
             self.assertEqual(dialog.btn_apply.text(), "Apply")
             self.assertEqual(dialog.btn_close.text(), "Close")
@@ -3257,16 +3272,17 @@ class FtpWidgetTests(unittest.TestCase):
 
         files = PipelineFiles()
         panel = self.widget.panel_scratch
-        session = {"connected": True, "files": files}
+        session = {
+            "connected": True,
+            "files": files,
+            "cfg": SimpleNamespace(transfer_parallelism=2),
+        }
         panel.session = session
         panel._show_transfer_dialog = False
         gui_thread = threading.get_ident()
         dialog = None
         try:
-            with tempfile.TemporaryDirectory() as tmp, patch(
-                "hpc_gui.ui.widgets.remote_dir_panel.get_transfer_parallelism",
-                return_value=2,
-            ):
+            with tempfile.TemporaryDirectory() as tmp:
                 started_at = time.monotonic()
                 self.assertTrue(
                     panel._apply_remote_download_incremental(

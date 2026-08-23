@@ -17,12 +17,24 @@ from PySide6.QtWidgets import (
     QPushButton,
     QSplitter,
     QTabWidget,
+    QToolButton,
     QTreeWidget,
     QTreeWidgetItem,
     QVBoxLayout,
     QWidget,
 )
 
+from hpc_gui.config.file_manager_profile import (
+    normalize_file_manager_settings,
+    update_profile_file_manager_settings,
+)
+from hpc_gui.services.synchronized_browsing import SyncRoots, local_to_remote, remote_to_local
+from hpc_gui.services.directory_comparison import (
+    CompareStatus,
+    compare_directory_entries,
+)
+
+from hpc_gui.config.file_manager_profile import normalize_file_manager_settings
 from hpc_gui.config.storage import (
     get_transfer_completion_action,
     get_ftp_state,
@@ -1035,10 +1047,50 @@ class FtpWidget(QWidget):
         self.btn_upload = QPushButton(t("ftp.upload_selected"))
         self.btn_download = QPushButton(t("ftp.download_selected"))
 
+        self._sync_navigation_guard = False
+        self._sync_status_reason = ""
+        self._sync_roots = SyncRoots()
+        self.btn_sync_browsing = QToolButton()
+        self.btn_sync_browsing.setText(t("ftp.sync_browsing"))
+        self.btn_sync_browsing.setCheckable(True)
+        self.btn_sync_browsing.setEnabled(False)
+        self.btn_sync_browsing.setPopupMode(
+            QToolButton.ToolButtonPopupMode.MenuButtonPopup
+        )
+        sync_menu = QMenu(self.btn_sync_browsing)
+        act_reset_roots = sync_menu.addAction(t("ftp.sync_reset_roots"))
+        act_disable_sync = sync_menu.addAction(t("ftp.sync_disable"))
+        act_reset_roots.triggered.connect(self._reset_synchronized_roots)
+        act_disable_sync.triggered.connect(self.btn_sync_browsing.setChecked)
+        self.btn_sync_browsing.setMenu(sync_menu)
+        self.btn_sync_browsing.toggled.connect(self._on_sync_browsing_toggled)
+
+        self._comparison_waiting_reason = ""
+        self.btn_compare_directories = QToolButton()
+        self.btn_compare_directories.setText(t("ftp.compare_directories"))
+        self.btn_compare_directories.setCheckable(True)
+        self.btn_compare_directories.setEnabled(False)
+        self.btn_compare_directories.setToolTip(
+            t("ftp.compare_directories_tooltip")
+            if t("ftp.compare_directories_tooltip") != "[ftp.compare_directories_tooltip]"
+            else ""
+        )
+        self.btn_compare_directories.toggled.connect(
+            self._on_compare_directories_toggled
+        )
+        self._comparison_recompute_timer = QTimer(self)
+        self._comparison_recompute_timer.setSingleShot(True)
+        self._comparison_recompute_timer.setInterval(150)
+        self._comparison_recompute_timer.timeout.connect(
+            self._recompute_directory_comparison
+        )
+
         toolbar = QHBoxLayout()
         toolbar.addWidget(self.mode_label)
         toolbar.addWidget(self.mode_combo)
         toolbar.addWidget(self.effective_label)
+        toolbar.addWidget(self.btn_sync_browsing)
+        toolbar.addWidget(self.btn_compare_directories)
         toolbar.addStretch(1)
         toolbar.addWidget(self.btn_upload)
         toolbar.addWidget(self.btn_download)
@@ -1059,6 +1111,25 @@ class FtpWidget(QWidget):
         )
         self.local_panel.directoryChanged.connect(
             lambda path: update_ftp_state(local_dir=path)
+        )
+        self.local_panel.directoryChanged.connect(
+            self._on_synchronized_local_dir_changed
+        )
+        self.panel_scratch.directoryChanged.connect(
+            lambda path, panel=self.panel_scratch: self._on_synchronized_remote_dir_changed(path, panel)
+        )
+        self.panel_home.directoryChanged.connect(
+            lambda path, panel=self.panel_home: self._on_synchronized_remote_dir_changed(path, panel)
+        )
+        self.local_panel.directoryLoaded.connect(
+            lambda _path: self._schedule_comparison_recompute()
+        )
+        for panel in (self.panel_scratch, self.panel_home):
+            panel.directoryLoaded.connect(
+                lambda _path: self._schedule_comparison_recompute()
+            )
+        self.accordion.activeChanged.connect(
+            lambda _key: self._schedule_comparison_recompute()
         )
         self.accordion.activeChanged.connect(
             lambda key: update_ftp_state(active_remote=key)
@@ -1164,6 +1235,7 @@ class FtpWidget(QWidget):
         self.panel_scratch.set_session(session)
         self.panel_home.set_session(session)
         if not session or not session.get("connected"):
+            self._apply_synchronized_state()
             return
         cfg = session.get("cfg")
         user = getattr(cfg, "username", "") or "user"
@@ -1179,6 +1251,340 @@ class FtpWidget(QWidget):
         self._update_remote_titles()
         self.panel_scratch.set_dir(scratch)
         self.panel_home.set_dir(home)
+        file_manager = normalize_file_manager_settings(
+            getattr(cfg, "file_manager_settings", None)
+        )
+        local_start_dir = file_manager["local_start_dir"]
+        if local_start_dir and os.path.isdir(local_start_dir):
+            self.local_panel.set_dir(local_start_dir)
+        self._apply_synchronized_state()
+
+    # ---- synchronized browsing ------------------------------------------
+    def _session_sync_settings(self) -> dict:
+        cfg = (self.session or {}).get("cfg")
+        return normalize_file_manager_settings(
+            getattr(cfg, "file_manager_settings", None)
+        ).get("sync") or {}
+
+    def _set_sync_status(self, reason: str) -> None:
+        self._sync_status_reason = reason
+        self.btn_sync_browsing.setToolTip(reason or t("ftp.sync_browsing"))
+
+    def _set_sync_checked(self, checked: bool) -> None:
+        if self.btn_sync_browsing.isChecked() == checked:
+            return
+        self.btn_sync_browsing.blockSignals(True)
+        try:
+            self.btn_sync_browsing.setChecked(checked)
+        finally:
+            self.btn_sync_browsing.blockSignals(False)
+
+    def _apply_synchronized_state(self) -> None:
+        """Reload the sync/compare button state for the current session/profile."""
+        self._sync_navigation_guard = False
+        self._sync_status_reason = ""
+        connected = bool(self.session and self.session.get("connected"))
+        self.btn_sync_browsing.setEnabled(connected)
+        file_manager = self._session_file_manager()
+        sync = file_manager.get("sync") or {}
+        self._sync_roots = SyncRoots(
+            str(sync.get("local_root", "")),
+            str(sync.get("remote_root", "")),
+        )
+        if not connected:
+            self._set_sync_checked(False)
+            self._set_sync_status("")
+        else:
+            enabled = bool(sync.get("enabled"))
+            local_root_ok = (
+                bool(self._sync_roots.local_root)
+                and os.path.isdir(self._sync_roots.local_root)
+                and bool(self._sync_roots.remote_root)
+            )
+            if enabled and local_root_ok:
+                self._set_sync_checked(True)
+                self._set_sync_status("")
+            else:
+                self._set_sync_checked(False)
+                if enabled and not local_root_ok:
+                    self._set_sync_status(t("ftp.sync_local_root_unavailable"))
+                else:
+                    self._set_sync_status("")
+        self._apply_comparison_state(file_manager)
+
+    # ---- directory comparison -------------------------------------------
+    def _session_file_manager(self) -> dict:
+        cfg = (self.session or {}).get("cfg")
+        return normalize_file_manager_settings(
+            getattr(cfg, "file_manager_settings", None)
+        )
+
+    def _set_compare_checked(self, checked: bool) -> None:
+        if self.btn_compare_directories.isChecked() == checked:
+            return
+        self.btn_compare_directories.blockSignals(True)
+        try:
+            self.btn_compare_directories.setChecked(checked)
+        finally:
+            self.btn_compare_directories.blockSignals(False)
+
+    def _apply_comparison_state(self, file_manager: dict) -> None:
+        """Reset comparison UI from the current profile's stored setting."""
+        connected = bool(self.session and self.session.get("connected"))
+        self._comparison_waiting_reason = ""
+        self._comparison_recompute_timer.stop()
+        self._set_comparison_waiting("")
+        self.btn_compare_directories.setEnabled(connected)
+        wanted = bool(file_manager.get("comparison_enabled")) if connected else False
+        self._set_compare_checked(wanted)
+        self._apply_comparison_visibility(wanted)
+        if wanted:
+            self._schedule_comparison_recompute()
+
+    def _apply_comparison_visibility(self, visible: bool) -> None:
+        self.local_panel.set_comparison_visible(visible)
+        self.panel_scratch.set_comparison_visible(visible)
+        self.panel_home.set_comparison_visible(visible)
+
+    def _set_comparison_waiting(self, reason: str) -> None:
+        self._comparison_waiting_reason = reason
+        base = t("ftp.compare_directories")
+        self.btn_compare_directories.setToolTip(
+            f"{base}\n{reason}" if reason else base
+        )
+
+    def _persist_comparison_setting(self, value: bool) -> bool:
+        profile_name = str((self.session or {}).get("profile_name") or "").strip()
+        if not profile_name:
+            return False
+        update_profile_file_manager_settings(
+            profile_name,
+            {"comparison_enabled": value},
+        )
+        return True
+
+    def _on_compare_directories_toggled(self, checked: bool) -> None:
+        self._apply_comparison_visibility(checked)
+        if not (self.session and self.session.get("connected")):
+            return
+        if checked:
+            self._schedule_comparison_recompute()
+        else:
+            self._comparison_recompute_timer.stop()
+            self._set_comparison_waiting("")
+        saved = self._session_file_manager()
+        if bool(saved.get("comparison_enabled")) == bool(checked):
+            return
+        try:
+            self._persist_comparison_setting(bool(checked))
+        except Exception as exc:
+            self.btn_compare_directories.setChecked(not checked)
+            self._set_comparison_waiting(str(exc))
+
+    def _schedule_comparison_recompute(self) -> None:
+        if not self.btn_compare_directories.isChecked():
+            return
+        if not (self.session and self.session.get("connected")):
+            return
+        self._comparison_recompute_timer.start()
+
+    def _recompute_directory_comparison(self) -> None:
+        if not self.btn_compare_directories.isChecked():
+            return
+        if not (self.session and self.session.get("connected")):
+            return
+        local_panel = self.local_panel
+        remote_panel = self.active_remote_panel()
+        other_remote = (
+            self.panel_home if remote_panel is self.panel_scratch else self.panel_scratch
+        )
+        local_identity, local_entries = local_panel.current_entries_snapshot()
+        remote_identity, remote_entries = remote_panel.current_entries_snapshot()
+        local_current = str(local_panel.current_dir or "")
+        remote_current = str(remote_panel.current_dir or "").rstrip("/") or "/"
+        missing = []
+        if not local_identity or local_identity != local_current:
+            missing.append(t("ftp.waiting_local_folder"))
+        if not remote_identity or remote_identity != remote_current:
+            missing.append(t("ftp.waiting_remote_folder"))
+        if missing:
+            local_panel.clear_comparison_statuses()
+            remote_panel.clear_comparison_statuses()
+            self._set_comparison_waiting("; ".join(missing))
+            return
+        try:
+            result = compare_directory_entries(local_entries, remote_entries)
+        except Exception as exc:
+            local_panel.clear_comparison_statuses()
+            remote_panel.clear_comparison_statuses()
+            self._set_comparison_waiting(str(exc))
+            return
+        if (
+            str(local_panel.current_dir or "") != local_identity
+            or (str(remote_panel.current_dir or "").rstrip("/") or "/") != remote_identity
+            or self.active_remote_panel() is not remote_panel
+        ):
+            return
+        other_remote.clear_comparison_statuses()
+        local_panel.apply_comparison_statuses(result.local)
+        remote_panel.apply_comparison_statuses(result.remote)
+        self._set_comparison_waiting("")
+
+    def _persist_sync_patch(self, patch: dict) -> bool:
+        profile_name = str((self.session or {}).get("profile_name") or "").strip()
+        if not profile_name:
+            return False
+        update_profile_file_manager_settings(
+            profile_name,
+            {"sync": patch},
+        )
+        return True
+
+    def _confirm_sync_pair(self, local_dir: str, remote_dir: str) -> bool:
+        message = "\n".join(
+            [
+                t("ftp.sync_confirm_question"),
+                f"{t('ftp.sync_local_root')}: {local_dir}",
+                f"{t('ftp.sync_remote_root')}: {remote_dir}",
+            ]
+        )
+        return QMessageBox.question(
+            self,
+            t("ftp.sync_browsing"),
+            message,
+        ) == QMessageBox.StandardButton.Yes
+
+    def _on_sync_browsing_toggled(self, checked: bool) -> None:
+        if checked:
+            self._enable_synchronized_browsing()
+        else:
+            self._disable_synchronized_browsing()
+
+    def _enable_synchronized_browsing(self) -> None:
+        if not (self.session and self.session.get("connected")):
+            self._set_sync_checked(False)
+            return
+        roots = self._sync_roots
+        if roots.local_root and roots.remote_root:
+            # Saved pair exists; never navigate as a side effect of toggling.
+            if os.path.isdir(roots.local_root):
+                self._set_sync_status("")
+                if not bool(self._session_sync_settings().get("enabled")):
+                    try:
+                        self._persist_sync_patch({"enabled": True})
+                    except Exception as exc:
+                        self._set_sync_checked(False)
+                        QMessageBox.warning(self, t("common.error"), str(exc))
+                        return
+            else:
+                # Case C: keep the stored pair, explain, do not enable.
+                self._set_sync_status(t("ftp.sync_local_root_unavailable"))
+                self._set_sync_checked(False)
+            return
+        local_dir = str(self.local_panel.current_dir or "")
+        remote_dir = str(self.active_remote_panel().current_dir or "").strip()
+        if (
+            not local_dir
+            or not os.path.isdir(local_dir)
+            or not remote_dir
+        ):
+            self._set_sync_checked(False)
+            return
+        if not self._confirm_sync_pair(local_dir, remote_dir):
+            self._set_sync_checked(False)
+            return
+        try:
+            self._persist_sync_patch(
+                {
+                    "enabled": True,
+                    "local_root": local_dir,
+                    "remote_root": remote_dir,
+                }
+            )
+        except Exception as exc:
+            self._set_sync_checked(False)
+            QMessageBox.warning(self, t("common.error"), str(exc))
+            return
+        self._sync_roots = SyncRoots(local_dir, remote_dir)
+        self._set_sync_status("")
+
+    def _disable_synchronized_browsing(self) -> None:
+        self._sync_navigation_guard = False
+        self._set_sync_status("")
+        if self.session and self.session.get("connected"):
+            saved = self._session_sync_settings()
+            if saved.get("enabled"):
+                try:
+                    self._persist_sync_patch({"enabled": False})
+                except Exception as exc:
+                    QMessageBox.warning(self, t("common.error"), str(exc))
+
+    def _reset_synchronized_roots(self) -> None:
+        if not (self.session and self.session.get("connected")):
+            return
+        local_dir = str(self.local_panel.current_dir or "")
+        remote_dir = str(self.active_remote_panel().current_dir or "").strip()
+        if (
+            not local_dir
+            or not os.path.isdir(local_dir)
+            or not remote_dir
+        ):
+            return
+        if not self._confirm_sync_pair(local_dir, remote_dir):
+            return
+        keep_enabled = bool(self._session_sync_settings().get("enabled"))
+        try:
+            self._persist_sync_patch(
+                {
+                    "local_root": local_dir,
+                    "remote_root": remote_dir,
+                    **({"enabled": True} if keep_enabled else {}),
+                }
+            )
+        except Exception as exc:
+            QMessageBox.warning(self, t("common.error"), str(exc))
+            return
+        self._sync_roots = SyncRoots(local_dir, remote_dir)
+
+    def _on_synchronized_local_dir_changed(self, path: str) -> None:
+        if not self.btn_sync_browsing.isChecked():
+            return
+        if self._sync_navigation_guard:
+            return
+        target = local_to_remote(path, self._sync_roots)
+        if target is None:
+            self._set_sync_status(t("ftp.sync_outside_root"))
+            return
+        panel = self.active_remote_panel()
+        if (panel.current_dir or "").rstrip("/") == target.rstrip("/"):
+            return
+        self._sync_navigation_guard = True
+        try:
+            panel.set_dir(target)
+        finally:
+            self._sync_navigation_guard = False
+
+    def _on_synchronized_remote_dir_changed(self, path: str, panel) -> None:
+        if panel is not self.active_remote_panel():
+            return
+        if not self.btn_sync_browsing.isChecked():
+            return
+        if self._sync_navigation_guard:
+            return
+        target = remote_to_local(path, self._sync_roots)
+        if target is None:
+            self._set_sync_status(t("ftp.sync_remote_outside_root"))
+            return
+        if not os.path.isdir(target):
+            self._set_sync_status(t("ftp.sync_local_root_unavailable"))
+            return
+        if str(self.local_panel.current_dir or "") == target:
+            return
+        self._sync_navigation_guard = True
+        try:
+            self.local_panel.set_dir(target)
+        finally:
+            self._sync_navigation_guard = False
 
     def upload_selected(self) -> bool:
         paths = self.local_panel.selected_paths()
@@ -1330,6 +1736,10 @@ class FtpWidget(QWidget):
             self.mode_combo.setItemText(index, t(f"ftp.{key}"))
         self.btn_upload.setText(t("ftp.upload_selected"))
         self.btn_download.setText(t("ftp.download_selected"))
+        self.btn_sync_browsing.setText(t("ftp.sync_browsing"))
+        if not self._sync_status_reason:
+            self._set_sync_status("")
+        self.btn_compare_directories.setText(t("ftp.compare_directories"))
         self.transfer_activity.retranslate_ui()
         self._update_remote_titles()
         self.panel_scratch.retranslate_ui()

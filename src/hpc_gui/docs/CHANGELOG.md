@@ -2,6 +2,15 @@
 
 ## v1.4.0 (Unreleased)
 
+### File management and connection UX
+- Profile edits now patch known fields onto the stored profile, so plugin provenance, file-manager state, jump settings, and unknown/future keys survive every edit; secret fields are only removed intentionally.
+- Added a per-profile **Default local folder** (Advanced → File browser) that opens in the local pane when the profile connects.
+- Added **Synchronized browsing**: navigation-only mirroring between the local pane and the active remote pane via an explicit, per-profile root pair captured from the current folders.
+- Added metadata-only **directory comparison** with a Comparison column (Same / Local only / Remote only / Type differs / Size differs / Local newer / Remote newer), computed from existing snapshots with zero extra SFTP traffic.
+- Connection dialog advanced section now groups SSH / Transfers / Other, offers secure host-key verification modes as a two-option combo, an editable per-profile SSH keepalive interval (0 disables), and clearer SSH timeout wording (0 = application defaults).
+- Renamed the per-profile transfer limit to **Maximum simultaneous transfers** and made it the single user-facing source of truth; removed the duplicate global transfer-parallelism editor from Settings (stored legacy value is untouched).
+- Added one-hop **SSH jump host (bastion)** support using Paramiko `direct-tcpip`: jump authenticates with key/agent only, both host keys are verified independently, jump/target failures clean up all resources, and transfers never create additional jump logins.
+
 ### Plugin ecosystem
 - Introduced the Plugin Manager (Plugins button): Discover/Installed/Updates tabs backed by an official, hash-verified plugin registry.
 - Official downloadable cluster/application plugins; TRUBA system settings moved to a downloadable TRUBA cluster-profile plugin while saved connection profiles remain fully compatible (they keep their copied settings snapshot).

@@ -16,6 +16,8 @@ class SSHConfig:
     transfer_parallelism: int = 1  # profile override; backend cap still applies
     ssh_timeout: float | None = None  # None uses transport defaults
     system_settings: dict[str, Any] = field(default_factory=dict)
+    file_manager_settings: dict[str, Any] = field(default_factory=dict)
+    jump_host_settings: dict[str, Any] = field(default_factory=dict)
 
 @dataclass
 class AppConfig:
