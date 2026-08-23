@@ -17,6 +17,7 @@
 ### Packaging and CI
 - Declared `packaging>=23` as a runtime dependency (used by the plugin stack) and fixed the wheel asset declarations (SVG/terminal HTML-JS-CSS assets were missing due to an `*.seg` typo); new packaging test builds and inspects the wheel.
 - New module-specific coverage floors plus a 65% global coverage gate in CI; release workflow third-party actions are pinned to full commit SHAs.
+- The cross-repository Plugin API contract suite is pinned to official registry tag [`hpc-client-gui-plugins v1.0.0`](https://github.com/mskomek/hpc-client-gui-plugins/releases/tag/v1.0.0) for this release.
 
 ## v1.4.0
 
