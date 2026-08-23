@@ -7,11 +7,15 @@ Implements the strict install algorithm:
 3. validate manifest identity, plugin API, app compatibility, capabilities;
 4. stage only the manifest-declared files with per-file size/SHA-256 checks;
 5. validate capability entrypoints;
-6. atomically move staging into the immutable version directory;
+6. publish staging into the immutable version directory — a version that is
+   already present is reused only when its verified contents match the
+   manifest byte-for-byte; conflicting or corrupt versions are never
+   overwritten (best-effort atomicity via same-volume rename);
 7. record installed metadata and activate — only after everything verified.
 
 Any failure before activation cleans up staging and leaves previous state
-untouched. All functions are synchronous/UI-independent.
+untouched; published version directories are never deleted first. All
+functions are synchronous/UI-independent.
 """
 
 from __future__ import annotations
@@ -168,6 +172,44 @@ def _check_entrypoint_payloads(staging_dir: Path, manifest: PluginManifest) -> t
     return tuple(profiles)
 
 
+def _existing_install_matches(
+    final_dir: Path,
+    manifest: PluginManifest,
+    expected_manifest_sha: str | None,
+) -> bool:
+    """Return True only if the installed version is byte-identical to the
+    verified incoming payload. Published versions are immutable, so a
+    mismatch means conflict or corruption — never a silent overwrite."""
+    try:
+        installed_manifest = final_dir / MANIFEST_NAME
+        if not installed_manifest.is_file():
+            return False
+        if (
+            expected_manifest_sha
+            and compute_local_sha256(installed_manifest) != expected_manifest_sha
+        ):
+            return False
+        declared = {entry.path for entry in manifest.files}
+        for existing in final_dir.rglob("*"):
+            if not existing.is_file():
+                continue
+            rel = existing.relative_to(final_dir).as_posix()
+            if rel == MANIFEST_NAME or rel in declared:
+                continue
+            return False  # undeclared extra file: treat as corruption
+        for entry in manifest.files:
+            path = final_dir / entry.path
+            if not path.is_file():
+                return False
+            if path.stat().st_size != entry.size:
+                return False
+            if compute_local_sha256(path) != entry.sha256:
+                return False
+    except OSError:
+        return False
+    return True
+
+
 def install_plugin_from_registry(
     registry_entry: dict[str, Any],
     *,
@@ -277,12 +319,28 @@ def install_plugin_from_registry(
 
         profiles = _check_entrypoint_payloads(staging_dir, manifest)
 
-        # Step 8: atomic-ish move into the immutable version directory.
+        # Step 8: publish staging into the immutable version directory.
+        # Staging and packages share the same filesystem/volume, so the
+        # rename below is atomic on supported platforms. An existing
+        # version directory is never deleted first: verified-identical
+        # content is reused idempotently, anything else is a conflict.
         final_dir = packages_dir(root) / plugin_id / version
         if final_dir.exists():
-            shutil.rmtree(final_dir)
-        final_dir.parent.mkdir(parents=True, exist_ok=True)
-        shutil.move(str(staging_dir), str(final_dir))
+            if _existing_install_matches(final_dir, manifest, expected_manifest_sha):
+                logger.info(
+                    "Reusing existing verified install of %s@%s", plugin_id, version
+                )
+            else:
+                raise InstallError(
+                    f"Version directory for {plugin_id}@{version} already exists "
+                    "with different or corrupt contents. Published plugin "
+                    "versions are immutable; remove the conflicting version "
+                    "explicitly before reinstalling. The previously active "
+                    "version was left untouched."
+                )
+        else:
+            final_dir.parent.mkdir(parents=True, exist_ok=True)
+            shutil.move(str(staging_dir), str(final_dir))
 
         installed_plugin = InstalledPlugin(
             manifest=manifest,

@@ -7,6 +7,7 @@ or service module may hardcode plugin paths.
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -113,6 +114,13 @@ def write_active_versions(active: Mapping[str, str], root: str | Path | None = N
         "plugin_api": PLUGIN_API_VERSION,
         "active": dict(active),
     }
-    with (base / ACTIVE_INDEX_NAME).open("w", encoding="utf-8", newline="\n") as handle:
+    # Atomic replace so a crash can never leave a truncated or half-written
+    # active-version pointer behind.
+    target = base / ACTIVE_INDEX_NAME
+    temporary = base / (ACTIVE_INDEX_NAME + ".tmp")
+    with temporary.open("w", encoding="utf-8", newline="\n") as handle:
         json.dump(payload, handle, indent=2, sort_keys=True)
         handle.write("\n")
+        handle.flush()
+        os.fsync(handle.fileno())
+    temporary.replace(target)
