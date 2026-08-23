@@ -10,10 +10,33 @@ are ever downloaded or executed by the plugin system.
 The top-right control strip contains a **Plugins** button (between Update
 and Send Logs). It opens the Plugin Manager with three tabs:
 
-- **Discover** — browse the official registry catalog.
+- **Discover** — browse the official registry catalog. Loading starts
+  automatically when the manager opens (status shows *Loading plugins…*,
+  then *Online*, *Cached*, or *Offline*); Refresh re-checks manually.
 - **Installed** — see installed versions, enable/disable, or remove plugins.
 - **Updates** — compatible newer versions appear here; updating is always
   your explicit choice (no auto-update).
+
+Each Discover card shows the plugin name and version, publisher, a short
+description, translated capability badges (*Cluster profiles*, *Job
+templates*, *Lint rules*), whether it is compatible with your running app
+version, and its current state: installed, disabled, incompatible, or update
+available. **Details** opens the full record: ID, publisher, version,
+license, compatible app range, capabilities, description, older versions,
+installed state, and the source (*Official plugin registry*).
+
+Missing something? Use **Request a plugin** in the Plugin Manager header.
+It opens the dedicated issue form in the plugin registry repository:
+
+[Request a plugin](https://github.com/mskomek/hpc-client-gui-plugins/issues/new?template=plugin-request.yml)
+
+Good requests include support for another HPC center, a new Slurm cluster
+profile, PBS/other scheduler profiles for future consideration, ANSYS Fluent
+or OpenFOAM templates, journal/job-script lint rules, and
+institution-specific paths or queues. Application bugs stay in
+[hpc-client-gui](https://github.com/mskomek/hpc-client-gui/issues/new/choose);
+plugin requests and plugin content corrections belong in
+[hpc-client-gui-plugins](https://github.com/mskomek/hpc-client-gui-plugins/issues/new/choose).
 
 ## Official registry and offline behavior
 
@@ -33,8 +56,22 @@ manager shows an **Offline** state and the app keeps working normally.
 - Every manifest and payload file is hash-verified before activation.
 - A failed or tampered install leaves previous state untouched; failed
   updates automatically roll back to the previously active version.
+- Published plugin versions are immutable on disk: reinstalling an identical,
+  verified version is idempotent, and conflicting same-version content is
+  reported instead of overwritten.
 - Only the official registry is supported in v1; custom registry URLs are
   not exposed.
+- Plugins never silently rewrite previously saved connection profiles: saved
+  profiles keep their copied settings snapshot.
+
+## Transfers and parallelism (related setting)
+
+The connection dialog's *Advanced → Maximum simultaneous transfers* controls
+how many files upload/download concurrently. The **configured** value is per
+profile; the transfer dialog also shows the **effective** limit for the
+current connection, which can be lower depending on backend capability or
+server limits. Multiple files may transfer concurrently; a single large file
+is not currently segmented into parallel parts.
 
 ## Cluster profiles and System Templates
 

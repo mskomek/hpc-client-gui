@@ -93,9 +93,21 @@ ve panellerin çoktan indirdiği üst veriler kullanılır:
 
 Bağlantı profiline özgüdür (**Gelişmiş → Aktarımlar**). Bu ayar oturum içinde
 aynı anda kaç dosya aktarımı çalışacağını belirler; ek kullanıcı oturumu
-açmaz. Sunucu/arka uç izole paralel aktarım kanallarını desteklemiyorsa sınır
-güvenle 1'e düşer. Hızlı hatlarda 2–4 değerleri verimi artırabilir; paylaşılan
-HPC giriş düğümlerinde ölçülü olun.
+açmaz. Aktarım penceresi hem **ayarlanan** değeri hem de bağlantı için
+**geçerli** limiti gösterir: birden çok dosya paralel gidebilir; tek büyük
+dosya şu anda parçalara bölünerek aktarılmaz. Hızlı hatlarda 2–4 değerleri
+verimi artırabilir; paylaşılan HPC giriş düğümlerinde ölçülü olun. İzole
+bağlantı sağlayamayan sunucu/arka uçlar geçerli sınırı güvenle 1'e düşürür.
+
+### Eklentiler
+
+Sağ üstteki **Eklentiler** düğmesiyle Eklenti Yöneticisi'ni açın. Kayıt
+defteri açılışta otomatik yüklenir — durum *Eklentiler yükleniyor…*, sonra
+*Çevrimiçi*, *Önbellek* veya *Çevrimdışı* olur. **Keşfet** sekmesinden küme
+profili, iş şablonu ve lint paklerini kurun; kurmadan önce karttaki
+**Ayrıntılar** ile tam kaydı inceleyin. Eksik bir eklenti mi var? Başlıktaki
+**Eklenti iste** düğmesi resmî eklenti deposundaki istek formunu açar. Tam
+kılavuz: [PLUGINS_tr.md](PLUGINS_tr.md).
 
 ### Gelişmiş SSH ayarları
 

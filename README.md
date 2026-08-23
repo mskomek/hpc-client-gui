@@ -127,7 +127,8 @@ The GUI can be used to:
 
 HPC Client GUI has a first-class, declarative plugin ecosystem backed by the
 official registry [hpc-client-gui-plugins](https://github.com/mskomek/hpc-client-gui-plugins).
-From the built-in Plugin Manager you can install:
+Open it via the top-right **Plugins** button. From the Plugin Manager's
+**Discover** tab you can install:
 
 * **Cluster profiles** — ready-made site/scheduler definitions (for example
   TRUBA) with paths and command templates.
@@ -141,6 +142,16 @@ distributed or run at install time, and installation happens entirely on your
 desktop — there is **no server-side cluster installation**. Every file is
 verified against SHA-256 hashes recorded in the official registry before a
 plugin is activated.
+
+Missing a plugin? [Request one](https://github.com/mskomek/hpc-client-gui-plugins/issues/new?template=plugin-request.yml) —
+cluster profiles, Slurm/solver job templates, and lint packs are all welcome.
+Application bugs (SSH/SFTP/FTP, UI, crashes) belong in
+[this repository](https://github.com/mskomek/hpc-client-gui/issues/new/choose);
+plugin requests and plugin content corrections belong in the
+[plugin repository](https://github.com/mskomek/hpc-client-gui-plugins/issues/new/choose).
+
+Full guide: [PLUGINS_en.md](src/hpc_gui/docs/PLUGINS_en.md) ·
+[Türkçe](src/hpc_gui/docs/PLUGINS_tr.md)
 
 ### Terminal and editor
 
