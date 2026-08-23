@@ -198,6 +198,9 @@ jobs:
     env:
       PYTHONPATH: src
       QT_QPA_PLATFORM: offscreen
+      # Keep the WebEngine terminal disabled under coverage so interpreter
+      # teardown cannot segfault (same guard as tests/conftest.py).
+      HPC_GUI_DISABLE_WEBENGINE: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
