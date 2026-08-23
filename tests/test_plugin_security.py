@@ -311,6 +311,62 @@ def test_post_activation_validation_failure_triggers_rollback(tmp_path: Path, mo
 
 
 # ---------------------------------------------------------------------------
+# Fetcher redirect / final-host policy
+# ---------------------------------------------------------------------------
+
+
+def test_final_url_policy_allows_only_official_https_hosts():
+    from hpc_gui.plugins.registry_client import _final_url_is_allowed
+
+    assert _final_url_is_allowed(
+        "https://raw.githubusercontent.com/mskomek/hpc-client-gui-plugins/main/registry.json"
+    )
+    assert not _final_url_is_allowed("http://raw.githubusercontent.com/registry.json")
+    assert not _final_url_is_allowed("https://evil.example.com/payload.json")
+    assert not _final_url_is_allowed("https://raw.githubusercontent.com.evil.com/x")
+
+
+def test_default_fetcher_rejects_redirect_to_unexpected_host(monkeypatch):
+    import io
+
+    from hpc_gui.plugins.registry_client import RegistryError, default_fetcher
+
+    class FakeResponse(io.BytesIO):
+        def geturl(self):
+            return "https://cdn.evil.example.com/registry.json"
+
+    def fake_urlopen(request, timeout=None):
+        return FakeResponse(b'{"ok": true}')
+
+    monkeypatch.setattr("urllib.request.urlopen", fake_urlopen)
+    with pytest.raises(RegistryError, match="unexpected final host|Refusing"):
+        default_fetcher(
+            "https://raw.githubusercontent.com/mskomek/hpc-client-gui-plugins/main/registry.json",
+            1024,
+        )
+
+
+def test_default_fetcher_rejects_insecure_http_final_url(monkeypatch):
+    import io
+
+    from hpc_gui.plugins.registry_client import RegistryError, default_fetcher
+
+    class FakeResponse(io.BytesIO):
+        def geturl(self):
+            return "http://raw.githubusercontent.com/registry.json"
+
+    def fake_urlopen(request, timeout=None):
+        return FakeResponse(b'{"ok": true}')
+
+    monkeypatch.setattr("urllib.request.urlopen", fake_urlopen)
+    with pytest.raises(RegistryError):
+        default_fetcher(
+            "https://raw.githubusercontent.com/mskomek/hpc-client-gui-plugins/main/registry.json",
+            1024,
+        )
+
+
+# ---------------------------------------------------------------------------
 # Disable behavior
 # ---------------------------------------------------------------------------
 
