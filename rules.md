@@ -333,6 +333,21 @@ regardless of which agent drives the call.
   leave a non-`main` branch on the remote after a release; delete it if one
   appears.
 
+### Branch Lifecycle (mandatory cleanup)
+
+- Any branch created other than `main` (feature/fix/ci/release branches,
+  including PR branches) **must be deleted immediately after its merge**.
+- The deletion happens in the same repository where the branch was created
+  (the normal repo checkout):
+  - local copy: `git branch -d <branch>` right after merging;
+  - remote copy, if one exists: `git push origin --delete <branch>` (or
+    merge the PR with `--delete-branch`);
+  - also prune stale remote-tracking refs with `git fetch --prune`.
+- A merged-but-not-deleted branch is treated as leftover state: the session
+  that created it must not finish while the branch still exists.
+- Exception: long-lived permanent lines explicitly named in this file
+  (`main`, and the local-only working line `codex/develop`).
+
 ### Main Sync Inclusion Gate
 
 - Before syncing `codex/develop` to `main`, classify every changed path from
