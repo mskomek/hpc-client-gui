@@ -1,6 +1,6 @@
 # Changelog
 
-## v1.4.0 (2026-08-23)
+## v1.4.0
 
 ### File management and connection UX
 - Profile edits now patch known fields onto the stored profile, so plugin provenance, file-manager state, jump settings, and unknown/future keys survive every edit; secret fields are only removed intentionally.
