@@ -214,8 +214,9 @@ jobs:
           pip install -e .[test]
           pip install pytest pytest-cov
       - name: GUI and offline test suite (coverage gate)
+        # The wheel build lives in the dedicated packaging job.
         run: >
-          python -m pytest tests/ -q --tb=short -rf
+          python -m pytest tests/ -q --tb=short -rf -m "not packaging"
           --cov=hpc_gui --cov-report=term --cov-report=json:coverage.json
           --cov-fail-under=65
       - name: Module-specific coverage floors
