@@ -175,10 +175,9 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: mskomek/hpc-client-gui-plugins
-          # Release pin: follows plugins main. For a release, replace this
-          # with an explicit tag/commit of the plugins repo and advance it
-          # intentionally.
-          ref: main
+          # Release pin: explicit registry tag. Advance intentionally
+          # (see PRODUCTION_CHECKLIST.md §11).
+          ref: v1.0.0
           path: hpc-client-gui-plugins
       - uses: actions/setup-python@v5
         with:
