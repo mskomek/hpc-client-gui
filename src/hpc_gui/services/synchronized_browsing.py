@@ -7,6 +7,7 @@ comparison (never naive ``startswith``) so sibling prefixes such as
 
 from __future__ import annotations
 
+import ntpath
 import os
 import posixpath
 from dataclasses import dataclass
@@ -18,8 +19,23 @@ class SyncRoots:
     remote_root: str = ""
 
 
+def _looks_like_windows_path(path: str) -> bool:
+    """Detect Windows-style local paths regardless of host OS.
+
+    The GUI runs on Windows while tests (and CI) may run on Linux, so
+    ``C:\\...`` roots must parse with Windows semantics everywhere.
+    """
+    text = str(path or "")
+    if "\\" in text:
+        return True
+    return bool(ntpath.splitdrive(text)[0])
+
+
 def normalize_local_root(path: str) -> str:
-    return os.path.abspath(os.path.expanduser(str(path or "").strip()))
+    text = str(path or "").strip()
+    if _looks_like_windows_path(text):
+        return ntpath.normpath(text)
+    return os.path.abspath(os.path.expanduser(text))
 
 
 def normalize_remote_root(path: str) -> str:
@@ -28,11 +44,17 @@ def normalize_remote_root(path: str) -> str:
 
 
 def _absolute_local(path: str) -> str:
-    return os.path.normpath(os.path.abspath(os.path.expanduser(str(path or ""))))
+    text = str(path or "").strip()
+    if _looks_like_windows_path(text):
+        return ntpath.normpath(text)
+    return os.path.normpath(os.path.abspath(os.path.expanduser(text)))
 
 
 def _split_local(absolute_path: str) -> tuple[str, list[str]]:
-    drive, tail = os.path.splitdrive(absolute_path)
+    if _looks_like_windows_path(absolute_path):
+        drive, tail = ntpath.splitdrive(absolute_path)
+    else:
+        drive, tail = os.path.splitdrive(absolute_path)
     parts = [part for part in tail.replace("\\", "/").split("/") if part and part != "."]
     return drive.casefold(), parts
 
@@ -103,6 +125,9 @@ def remote_to_local(remote_path: str, roots: SyncRoots) -> str | None:
     components = _remote_relative_components(remote_path, roots.remote_root)
     if components is None:
         return None
+    normalized_root = normalize_local_root(local_root)
     if not components:
-        return normalize_local_root(local_root)
-    return os.path.join(normalize_local_root(local_root), *components)
+        return normalized_root
+    if _looks_like_windows_path(normalized_root):
+        return ntpath.join(normalized_root, *components)
+    return os.path.join(normalized_root, *components)

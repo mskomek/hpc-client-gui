@@ -17,7 +17,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from PySide6.QtWidgets import QApplication  # noqa: E402
 
 from hpc_gui.config.file_manager_profile import (  # noqa: E402
-    FILE_MANAGER_DEFAULTS,
     normalize_file_manager_settings,
     patch_file_manager_settings,
 )

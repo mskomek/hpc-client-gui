@@ -231,7 +231,7 @@ class ParallelismSourceOfTruthTests(unittest.TestCase):
 
     def test_settings_dialog_has_no_global_parallelism_editor(self) -> None:
         os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-        app = QApplication.instance() or QApplication([])
+        QApplication.instance() or QApplication([])
         from hpc_gui.core.i18n import load_language
         from hpc_gui.ui.dialogs.settings_dialog import SettingsDialog
 

@@ -30,11 +30,9 @@ from hpc_gui.config.file_manager_profile import (
 )
 from hpc_gui.services.synchronized_browsing import SyncRoots, local_to_remote, remote_to_local
 from hpc_gui.services.directory_comparison import (
-    CompareStatus,
     compare_directory_entries,
 )
 
-from hpc_gui.config.file_manager_profile import normalize_file_manager_settings
 from hpc_gui.config.storage import (
     get_transfer_completion_action,
     get_ftp_state,
