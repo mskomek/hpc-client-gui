@@ -218,7 +218,7 @@ jobs:
         run: >
           python -m pytest tests/ -q --tb=short -rf -m "not packaging"
           --cov=hpc_gui --cov-report=term --cov-report=json:coverage.json
-          --cov-fail-under=65
+          --cov-report=xml:coverage.xml --cov-fail-under=65
       - name: Module-specific coverage floors
         run: python scripts/check_module_coverage.py coverage.xml
 
