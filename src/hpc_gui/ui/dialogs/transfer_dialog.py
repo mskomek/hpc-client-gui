@@ -176,11 +176,25 @@ class TransferDialog(QDialog):
         run_item: Callable[[TransferItem], None],
         parallel_limit: int = 1,
         max_parallel_limit: int = 10,
+        configured_limit: int | None = None,
+        backend_context_factory=None,
     ) -> None:
         super().__init__(parent)
         self.setModal(False)
         self.setWindowTitle(title or t("dirs.progress_title"))
         self._run_item = run_item
+        # Optional factory producing an isolated, closeable files backend for
+        # one worker thread (parallel-safe backends such as FTP). The queue
+        # bounds concurrency, so at most ``parallel_limit`` extra connections
+        # exist; the dialog closes each one in a finally block.
+        self._backend_context_factory = backend_context_factory
+        # The per-profile setting is the configured value; the value actually
+        # used can be lower (backend capability / server channel limits).
+        self._configured_limit = (
+            max(1, min(10, int(configured_limit)))
+            if configured_limit is not None
+            else None
+        )
         try:
             self._run_item_accepts_progress = (
                 len(inspect.signature(run_item).parameters) >= 2
@@ -244,12 +258,7 @@ class TransferDialog(QDialog):
         root = QVBoxLayout(self)
         root.addWidget(self.lbl_status)
         root.addWidget(self.lbl_transfer_stats)
-        self.lbl_parallel_hint = QLabel(
-            _tr(
-                "transfer.parallel_hint",
-                "Configured parallel transfer limit: {limit}",
-            ).format(limit=self._parallel_limit)
-        )
+        self.lbl_parallel_hint = QLabel(self._parallel_hint_text())
         root.addWidget(self.lbl_parallel_hint)
         root.addWidget(self.tabs)
         root.addLayout(btn_row)
@@ -264,17 +273,37 @@ class TransferDialog(QDialog):
         self._refresh_timer.setInterval(50)
         self._refresh_timer.timeout.connect(self._run_scheduled_refresh)
 
+    def _parallel_hint_text(self) -> str:
+        configured = self._configured_limit
+        effective = self._parallel_limit
+        if configured is not None and configured != effective:
+            reason = (
+                t("transfer.parallel_reduced_backend")
+                if self._max_parallel_limit <= 1
+                else t("transfer.parallel_reduced_server")
+            )
+            return (
+                _tr(
+                    "transfer.parallel_hint_pair",
+                    "Configured limit: {configured} · Effective limit for this connection: {effective} ({reason})",
+                ).format(configured=configured, effective=effective, reason=reason)
+            )
+        if configured is not None:
+            return _tr(
+                "transfer.parallel_hint_effective",
+                "Configured limit: {configured} · Effective limit for this connection: {effective}",
+            ).format(configured=configured, effective=effective)
+        return _tr(
+            "transfer.parallel_hint",
+            "Configured parallel transfer limit: {limit}",
+        ).format(limit=effective)
+
     def set_parallel_limit(self, parallel_limit: int) -> int:
         """Set queue concurrency without exceeding the backend-safe cap."""
         requested = max(1, min(10, int(parallel_limit or 1)))
         self._parallel_limit = min(requested, self._max_parallel_limit)
         if hasattr(self, "lbl_parallel_hint"):
-            self.lbl_parallel_hint.setText(
-                _tr(
-                    "transfer.parallel_hint",
-                    "Configured parallel transfer limit: {limit}",
-                ).format(limit=self._parallel_limit)
-            )
+            self.lbl_parallel_hint.setText(self._parallel_hint_text())
         return self._parallel_limit
 
     def _status_text(self) -> str:
@@ -367,7 +396,34 @@ class TransferDialog(QDialog):
         return True
 
     def _execute_item(self, item: TransferItem, progress_cb=None) -> None:
-        if self._run_item_accepts_progress:
+        factory = self._backend_context_factory
+        if (
+            factory is not None
+            and item.op in {"upload", "download"}
+        ):
+            # Parallel-safe backends: run this transfer against an isolated,
+            # per-thread connection and always close it afterwards.
+            try:
+                backend = factory()
+            except Exception:
+                backend = None
+            if backend is not None:
+                try:
+                    self._invoke_run_item(item, progress_cb, files=backend)
+                    return
+                finally:
+                    close = getattr(backend, "close", None)
+                    if callable(close):
+                        try:
+                            close()
+                        except Exception:
+                            pass
+        self._invoke_run_item(item, progress_cb)
+
+    def _invoke_run_item(self, item: TransferItem, progress_cb=None, files=None) -> None:
+        if files is not None:
+            self._run_item(item, progress_cb, files=files)
+        elif self._run_item_accepts_progress:
             self._run_item(item, progress_cb)
         else:
             self._run_item(item)

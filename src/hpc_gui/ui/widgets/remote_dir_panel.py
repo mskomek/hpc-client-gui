@@ -2813,6 +2813,8 @@ class RemoteDirPanel(QWidget):
             run_item=self._execute_transfer_item,
             parallel_limit=effective_parallel_limit,
             max_parallel_limit=backend_parallel_limit,
+            configured_limit=configured_parallel_limit,
+            backend_context_factory=self._transfer_backend_context,
         )
         if self._transfer_activity_callback is not None:
             self._transfer_activity_callback("controller", [dlg], title)
@@ -2911,10 +2913,23 @@ class RemoteDirPanel(QWidget):
             return None
         return (op.op, op.src, op.dst)
 
-    def _execute_transfer_item(self, item: TransferItem, progress_cb=None) -> None:
+    def _transfer_backend_context(self):
+        """Return an isolated files backend for one parallel transfer worker.
+
+        Only backends that declare ``supports_parallel_transfers`` and expose
+        ``open_transfer_backend`` qualify; the transfer queue closes whatever
+        this returns after each item (success, failure, or cancellation).
+        """
+        files = self.session.get("files") if self.session else None
+        if files is None or not bool(getattr(files, "supports_parallel_transfers", False)):
+            return None
+        opener = getattr(files, "open_transfer_backend", None)
+        return opener() if callable(opener) else None
+
+    def _execute_transfer_item(self, item: TransferItem, progress_cb=None, *, files=None) -> None:
         if not self.session or not self.session.get("files"):
             raise RuntimeError(t("common.no_connection"))
-        files = self.session["files"]
+        files = files or self.session["files"]
         op = item.op
         if op == "delete":
             recursive = item.recursive
@@ -2940,7 +2955,7 @@ class RemoteDirPanel(QWidget):
                 self._requested_transfer_mode(item.src),
                 progress_cb=progress_cb,
             )
-            self._verify_transfer_item(item)
+            self._verify_transfer_item(item, files=files)
         elif op == "download":
             download_with_mode(
                 files,
@@ -2949,7 +2964,7 @@ class RemoteDirPanel(QWidget):
                 self._requested_transfer_mode(item.src),
                 progress_cb=progress_cb,
             )
-            self._verify_transfer_item(item)
+            self._verify_transfer_item(item, files=files)
         elif op == "mkdir_remote":
             files.mkdir(item.dst)
         elif op == "mkdir_local":
@@ -2973,10 +2988,10 @@ class RemoteDirPanel(QWidget):
                 digest.update(chunk)
         return digest.hexdigest()
 
-    def _verify_transfer_item(self, item: TransferItem) -> None:
+    def _verify_transfer_item(self, item: TransferItem, *, files=None) -> None:
         if not get_transfer_checksum_verification_enabled():
             return
-        files = self.session["files"]
+        files = files or self.session["files"]
         remote_hash = getattr(files, "sha256", None)
         if not callable(remote_hash):
             raise RuntimeError(
