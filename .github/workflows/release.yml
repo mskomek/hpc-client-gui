@@ -46,6 +46,9 @@ jobs:
         env:
           PYTHONPATH: src
           QT_QPA_PLATFORM: offscreen
+          # unittest does not load tests/conftest.py; keep the QtWebEngine
+          # terminal disabled so interpreter teardown cannot segfault.
+          HPC_GUI_DISABLE_WEBENGINE: "1"
         run: |
           python -m compileall src/hpc_gui
           python scripts/check_i18n.py
@@ -104,6 +107,9 @@ jobs:
         env:
           PYTHONPATH: src
           QT_QPA_PLATFORM: offscreen
+          # unittest does not load tests/conftest.py; keep the QtWebEngine
+          # terminal disabled so interpreter teardown cannot access-violate.
+          HPC_GUI_DISABLE_WEBENGINE: "1"
         run: |
           python -m compileall src/hpc_gui
           python scripts/check_i18n.py
