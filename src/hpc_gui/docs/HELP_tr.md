@@ -50,6 +50,80 @@ gösterir. `SSH-XXXXXX` biçimindeki tanı kodu, aynı hatayı günlükte bulmak
 
 ---
 
+## Dosya yöneticisi özellikleri
+
+### Varsayılan yerel klasör (profil başına)
+
+**Gelişmiş → Dosya tarayıcı** altında her bağlantı profili bir **Varsayılan
+yerel klasör** tanımlayabilir. Profil bağlandığında yerel dosya bölmesi bu
+klasörü açar. Boş bırakılırsa normal davranış korunur (son gezilen yerel
+klasör). Scratch ve Home, profilin ayrı *uzak* varsayılanları olmaya devam
+eder.
+
+### Eşzamanlı gezinme
+
+Dosyalar sekmesindeki **Eşzamanlı gezinme** düğmesi, yalnızca *dizin
+gezinmesini* yerel bölme ile etkin uzak bölme arasında aynalar. Hiçbir
+zaman dosya yüklemez/indirmez/oluşturmaz/adlandırma yapmaz/silmez.
+
+- İlk açılışta görünen soru, **o an görünür yerel ve uzak klasörlerin**
+  eşzamanlı kök çifti olarak kaydedilmesini sağlar.
+- Kök çifti içindeki gezinme göreli yol ile eşlenir; kökün dışına çıkınca
+  yansıtma durur.
+- Yerelde karşılığı olmayan uzak klasör için uyarı sessizce durum satırında
+  gösterilir; klasör otomatik oluşturulmaz.
+- Düğmenin menüsünde **Eşzamanlı kökleri geçerli klasörlere sıfırla** ve
+  **Eşzamanlı gezmeyi kapat** bulunur. Kök çifti profil başına saklanır.
+
+### Dizinleri karşılaştır
+
+**Dizinleri karşılaştır** düğmesi, yerel ve etkin uzak dosya tablolarına bir
+**Karşılaştırma** sütunu ekler. Yalnızca *geçerli anlık dizin* karşılaştırılır
+ve panellerin çoktan indirdiği üst veriler kullanılır:
+
+- tam ad eşleşmesi (uzak taraf büyük/küçük harfe duyarlıdır);
+- durumlar: Aynı, Yalnızca yerel, Yalnızca uzak, Tür farklı, Boyut farklı,
+  Yerel daha yeni, Uzak daha yeni;
+- değişim zamanlarında küçük bir tolerans (2 saniye) kullanılır;
+- alt klasörlere inilmez, içerik/SHA karşılaştırması yapılmaz;
+- açmak veya yeniden hesaplamak **ek SFTP listeleme/stat trafiği üretmez**;
+  sonuçlar mevcut anlık görüntülerden güncellenir.
+
+### En fazla eşzamanlı aktarım
+
+Bağlantı profiline özgüdür (**Gelişmiş → Aktarımlar**). Bu ayar oturum içinde
+aynı anda kaç dosya aktarımı çalışacağını belirler; ek kullanıcı oturumu
+açmaz. Sunucu/arka uç izole paralel aktarım kanallarını desteklemiyorsa sınır
+güvenle 1'e düşer. Hızlı hatlarda 2–4 değerleri verimi artırabilir; paylaşılan
+HPC giriş düğümlerinde ölçülü olun.
+
+### Gelişmiş SSH ayarları
+
+- **Sunucu anahtarı doğrulaması**: *Yeni sunuculara güven, değişen anahtarı
+  reddet* (`accept-new`; bilinmeyen sunucular parmak izi sorar) ya da
+  *Yalnızca önceden güvenilen sunucu* (`strict`). Değişen anahtar her koşulda
+  bağlantıyı keser; "tümünü kabul" gibi güvensiz bir seçenek yoktur.
+- **SSH canlı tutma aralığı**: keepalive sinyalleri arasındaki saniye; `0`
+  kapatır. Kopan bağlantıları fark etmeye yarar, aktarım hızı ayarı değildir.
+- **SSH zaman aşımı geçersiz kılma**: `0` uygulama varsayılanlarını kullanır;
+  pozitif değer SSH bağlantı/kanal zaman aşımını değiştirir.
+
+### Jump (bastion) sunucu üzerinden bağlan
+
+Gelişmiş → SSH altında tek atlamlı jump sunucu desteği vardır: uygulama önce
+jump sunucusuna bağlanır ve hedef kümeye SSH `direct-tcpip` kanalı üzerinden
+ulaşır.
+
+- Bu sürümde yalnızca tek atlam desteklenir; zincirleme atlama yoktur.
+- Jump sunucuda kimlik doğrulama **SSH anahtarı veya ajan** ile yapılır;
+  jump şifre alanı yoktur ve hedef şifreniz asla jump için kullanılmaz.
+- Hem jump hem hedef sunucu anahtarları bağımsız doğrulanır; parmak izi
+  pencereleri hangi sunucuya ait olduğunu belirtir.
+- Terminal, dosya gezinme ve Slurm özellikleri doğrudan bağlantıda olduğu
+  gibi hedef bağlantı üzerinde çalışır.
+
+---
+
 ## Kurulum ve çalıştırma
 
 ### Standalone (EXE)

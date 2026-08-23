@@ -33,6 +33,7 @@ from hpc_gui.config.storage import (
     get_file_association,
     set_file_association,
 )
+from hpc_gui.services.directory_comparison import CompareStatus, ComparableEntry
 from hpc_gui.services.local_files import (
     list_local_entries,
     list_windows_drives,
@@ -241,6 +242,7 @@ class _LocalTree(QTreeWidget):
 class LocalDirPanel(QWidget):
     remotePathsDropped = Signal(list, str)
     directoryChanged = Signal(str)
+    directoryLoaded = Signal(str)
     selectionChanged = Signal()
     fileActivated = Signal(str)
     uploadRequested = Signal(list)
@@ -252,6 +254,9 @@ class LocalDirPanel(QWidget):
         self._history: list[str] = []
         self._tab_dirs: dict[_LocalTree, str] = {}
         self._local_clipboard: tuple[str, list[str]] | None = None
+        self._current_entries_snapshot: list[ComparableEntry] = []
+        self._snapshot_dir: str = ""
+        self._comparison_statuses: dict[str, CompareStatus] | None = None
 
         self.title_label = QLabel(t("ftp.local_title"))
         self.path = QLineEdit(self.current_dir)
@@ -289,13 +294,15 @@ class LocalDirPanel(QWidget):
 
     def _make_tree(self) -> _LocalTree:
         tree = _LocalTree(self)
-        tree.setColumnCount(4)
+        tree.setColumnCount(5)
         tree.setHeaderLabels([
             t("dirs.col_name"),
             t("dirs.col_size"),
             t("dirs.col_type"),
             t("dirs.col_mtime"),
+            t("ftp.comparison_column") if t("ftp.comparison_column") != "[ftp.comparison_column]" else "Comparison",
         ])
+        tree.hideColumn(4)
         tree.setRootIsDecorated(False)
         tree.setAlternatingRowColors(True)
         tree.setSelectionMode(QTreeWidget.SelectionMode.ExtendedSelection)
@@ -345,12 +352,18 @@ class LocalDirPanel(QWidget):
         self.btn_back.setText(t("ftp.back"))
         self.btn_parent.setText(t("ftp.parent"))
         self.btn_refresh.setText(t("ftp.refresh"))
+        comparison_header = (
+            t("ftp.comparison_column")
+            if t("ftp.comparison_column") != "[ftp.comparison_column]"
+            else "Comparison"
+        )
         self.tree.setHeaderLabels(
             [
                 t("dirs.col_name"),
                 t("dirs.col_size"),
                 t("dirs.col_type"),
                 t("dirs.col_mtime"),
+                comparison_header,
             ]
         )
         for index in range(self.tabs.count()):
@@ -362,6 +375,7 @@ class LocalDirPanel(QWidget):
                         t("dirs.col_size"),
                         t("dirs.col_type"),
                         t("dirs.col_mtime"),
+                        comparison_header,
                     ]
                 )
                 self.tabs.setTabText(index, self._tab_label(self._tab_dirs.get(widget, "")))
@@ -455,6 +469,16 @@ class LocalDirPanel(QWidget):
         if parent != self.current_dir:
             self.set_dir(parent)
 
+    def current_entries_snapshot(self) -> tuple[str, list[ComparableEntry]]:
+        """Return the committed (directory, entries) metadata snapshot.
+
+        The snapshot is only valid while it belongs to ``current_dir``;
+        a failed refresh never masquerades as a successful one.
+        """
+        if self._snapshot_dir != self.current_dir:
+            return "", []
+        return self._snapshot_dir, list(self._current_entries_snapshot)
+
     def refresh(self) -> None:
         self.tree.clear()
         try:
@@ -462,6 +486,16 @@ class LocalDirPanel(QWidget):
         except (OSError, PermissionError) as exc:
             QMessageBox.warning(self, t("common.error"), t("ftp.local_read_failed").format(error=exc))
             return
+        self._current_entries_snapshot = [
+            ComparableEntry(
+                name=entry.name,
+                is_dir=bool(entry.is_dir),
+                size=int(entry.size or 0),
+                mtime=int(entry.mtime or 0),
+            )
+            for entry in entries
+        ]
+        self._snapshot_dir = self.current_dir
         self.path.setText(self.current_dir)
         parent = str(Path(self.current_dir).parent)
         if parent and parent != self.current_dir:
@@ -469,6 +503,66 @@ class LocalDirPanel(QWidget):
         for entry in entries:
             self._add_entry(entry.name, entry.path, entry.is_dir, entry.size, entry.mtime)
         self.tree.apply_sort()
+        if self._comparison_statuses:
+            self._render_comparison_statuses()
+        self.directoryLoaded.emit(self.current_dir)
+
+    # ---- comparison column ----------------------------------------------
+    def set_comparison_visible(self, visible: bool) -> None:
+        for tree in list(self._tab_dirs):
+            try:
+                tree.showColumn(4) if visible else tree.hideColumn(4)
+            except RuntimeError:
+                continue
+        if not visible:
+            self.clear_comparison_statuses()
+
+    def clear_comparison_statuses(self) -> None:
+        self._comparison_statuses = None
+        for tree in list(self._tab_dirs):
+            try:
+                for index in range(tree.topLevelItemCount()):
+                    tree.topLevelItem(index).setText(4, "")
+                    tree.topLevelItem(index).setToolTip(4, "")
+            except RuntimeError:
+                continue
+
+    def _comparison_status_labels(self) -> dict[CompareStatus, str]:
+        return {
+            CompareStatus.SAME: t("ftp.cmp_same"),
+            CompareStatus.LOCAL_ONLY: t("ftp.cmp_local_only"),
+            CompareStatus.REMOTE_ONLY: t("ftp.cmp_remote_only"),
+            CompareStatus.TYPE_MISMATCH: t("ftp.cmp_type_differs"),
+            CompareStatus.SIZE_DIFFERENT: t("ftp.cmp_size_different"),
+            CompareStatus.LOCAL_NEWER: t("ftp.cmp_local_newer"),
+            CompareStatus.REMOTE_NEWER: t("ftp.cmp_remote_newer"),
+        }
+
+    def _render_comparison_statuses(self) -> None:
+        statuses = self._comparison_statuses or {}
+        labels = self._comparison_status_labels()
+        try:
+            items = [self.tree.topLevelItem(i) for i in range(self.tree.topLevelItemCount())]
+        except RuntimeError:
+            return
+        for item in items:
+            if bool(item.data(0, Qt.ItemDataRole.UserRole + 2)):
+                continue
+            name = str(item.data(0, _SORT_NAME_ROLE) or "")
+            status = statuses.get(name)
+            if status is None:
+                item.setText(4, "")
+                item.setToolTip(4, "")
+                continue
+            label = labels.get(status, str(status.value))
+            item.setText(4, "=" if status is CompareStatus.SAME else label)
+            item.setToolTip(4, label)
+
+    def apply_comparison_statuses(
+        self, statuses: dict[str, CompareStatus]
+    ) -> None:
+        self._comparison_statuses = dict(statuses)
+        self._render_comparison_statuses()
 
     def selected_paths(self) -> list[str]:
         return [

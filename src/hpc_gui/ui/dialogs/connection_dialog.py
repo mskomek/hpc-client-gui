@@ -6,6 +6,7 @@ from typing import Any
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QCheckBox,
+    QComboBox,
     QDialog,
     QFileDialog,
     QFormLayout,
@@ -18,11 +19,20 @@ from PySide6.QtWidgets import (
     QPushButton,
     QToolButton,
     QVBoxLayout,
+    QWidget,
     QSpinBox,
     QDoubleSpinBox,
 )
 
 from hpc_gui.core.i18n import t
+from hpc_gui.config.file_manager_profile import (
+    normalize_file_manager_settings,
+    patch_file_manager_settings,
+)
+from hpc_gui.config.jump_host_profile import (
+    normalize_jump_host_settings,
+    patch_jump_host_settings,
+)
 from hpc_gui.config.system_profile import (
     builtin_system_template_groups,
     load_user_system_templates,
@@ -52,6 +62,7 @@ class ConnectionDialog(QDialog):
         self._system_template_menu: QMenu | None = None
         self._system_template_submenus: list[QMenu] = []
         self._system_template_source: dict[str, str] | None = None
+        self._template_action_taken = False
         self._profile_keepalive = 30
         self._profile_transfer_parallelism = 1
         self._profile_ssh_timeout = None
@@ -95,8 +106,61 @@ class ConnectionDialog(QDialog):
         self.sp_ssh_timeout.setSuffix(" s")
 
         self.cb_x11 = QCheckBox(t("login.x11_enable"))
-        self.cb_strict_hostkey = QCheckBox(t("login.strict_host_key"))
+        self.cb_host_key_policy = QComboBox()
+        self.cb_host_key_policy.addItem(t("connection.host_key_accept_new"), "accept-new")
+        self.cb_host_key_policy.addItem(t("connection.host_key_strict"), "strict")
+        self.cb_host_key_policy.setToolTip(
+            t("connection.host_key_verification_tip")
+        )
         self.cb_cli_allowed = QCheckBox(t("connection.cli_allowed"))
+
+        self.sp_keepalive = QSpinBox()
+        self.sp_keepalive.setRange(0, 3600)
+        self.sp_keepalive.setValue(30)
+        self.sp_keepalive.setSuffix(" s")
+        self.sp_keepalive.setToolTip(
+            t("connection.ssh_keepalive_tip")
+        )
+
+        # ---- jump host (one-hop bastion) ---------------------------------
+        self.cb_jump_enabled = QCheckBox(t("connection.jump_enable"))
+        self.jump_host = QLineEdit()
+        self.sp_jump_port = QSpinBox()
+        self.sp_jump_port.setRange(1, 65535)
+        self.sp_jump_port.setValue(22)
+        self.jump_username = QLineEdit()
+        self.jump_key_path = QLineEdit()
+        self.btn_browse_jump_key = QPushButton(t("login.browse"))
+        self.btn_browse_jump_key.clicked.connect(self.pick_jump_key)
+        self.cb_jump_host_key_policy = QComboBox()
+        self.cb_jump_host_key_policy.addItem(
+            t("connection.host_key_accept_new"), "accept-new"
+        )
+        self.cb_jump_host_key_policy.addItem(
+            t("connection.host_key_strict"), "strict"
+        )
+        jump_row = QHBoxLayout()
+        jump_row.addWidget(self.jump_key_path)
+        jump_row.addWidget(self.btn_browse_jump_key)
+        self._jump_child_widgets = [
+            self.jump_host,
+            self.sp_jump_port,
+            self.jump_username,
+            self.jump_key_path,
+            self.btn_browse_jump_key,
+            self.cb_jump_host_key_policy,
+        ]
+        for widget in self._jump_child_widgets:
+            widget.setEnabled(False)
+        self.cb_jump_enabled.toggled.connect(self._set_jump_children_enabled)
+        self.cb_jump_enabled.setToolTip(t("connection.jump_auth_tip"))
+
+        self.default_local_dir = QLineEdit()
+        self.btn_browse_default_local = QPushButton(t("connection.browse_default_local_folder"))
+        self.btn_browse_default_local.clicked.connect(self.pick_default_local_dir)
+        self.default_local_dir.setToolTip(
+            t("connection.default_local_dir_tooltip")
+        )
 
         form = QFormLayout()
         form.addRow(t("login.profile_name_label"), self.profile_name)
@@ -163,12 +227,51 @@ class ConnectionDialog(QDialog):
         self.advanced_button.setChecked(False)
         self.advanced_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
         self.advanced_body = QGroupBox()
-        advanced_form = QFormLayout(self.advanced_body)
-        advanced_form.addRow("", self.cb_x11)
-        advanced_form.addRow(t("connection.transfer_parallelism"), self.sp_transfer_parallelism)
-        advanced_form.addRow(t("connection.ssh_timeout"), self.sp_ssh_timeout)
-        advanced_form.addRow("", self.cb_strict_hostkey)
-        advanced_form.addRow("", self.cb_cli_allowed)
+        advanced_layout = QVBoxLayout(self.advanced_body)
+
+        ssh_group = QGroupBox(t("connection.ssh_group"))
+        ssh_form = QFormLayout(ssh_group)
+        ssh_form.addRow(t("connection.host_key_verification"), self.cb_host_key_policy)
+        ssh_form.addRow(t("connection.ssh_keepalive_interval"), self.sp_keepalive)
+        self.sp_ssh_timeout.setToolTip(
+            t("connection.ssh_timeout_override_tip")
+        )
+        ssh_form.addRow(t("connection.ssh_timeout_override"), self.sp_ssh_timeout)
+        ssh_form.addRow("", self.cb_jump_enabled)
+        ssh_form.addRow(t("connection.jump_host_label"), self.jump_host)
+        ssh_form.addRow(t("connection.jump_port"), self.sp_jump_port)
+        ssh_form.addRow(t("connection.jump_username"), self.jump_username)
+        ssh_form.addRow(t("connection.jump_ssh_key"), jump_row)
+        ssh_form.addRow(
+            t("connection.jump_host_key_verification"),
+            self.cb_jump_host_key_policy,
+        )
+
+        transfers_group = QGroupBox(t("connection.transfers_group"))
+        transfers_form = QFormLayout(transfers_group)
+        self.sp_transfer_parallelism.setToolTip(
+            t("connection.max_simultaneous_transfers_tip")
+        )
+        transfers_form.addRow(
+            t("connection.max_simultaneous_transfers"),
+            self.sp_transfer_parallelism,
+        )
+
+        other_group = QGroupBox(t("connection.other_group"))
+        other_form = QFormLayout(other_group)
+        other_form.addRow("", self.cb_x11)
+        other_form.addRow("", self.cb_cli_allowed)
+        file_browser_group = QGroupBox(t("connection.file_browser_group"))
+        browser_form = QFormLayout(file_browser_group)
+        local_dir_row = QHBoxLayout()
+        local_dir_row.addWidget(self.default_local_dir)
+        local_dir_row.addWidget(self.btn_browse_default_local)
+        browser_form.addRow(t("connection.default_local_dir"), local_dir_row)
+        other_form.addRow("", file_browser_group)
+
+        advanced_layout.addWidget(ssh_group)
+        advanced_layout.addWidget(transfers_group)
+        advanced_layout.addWidget(other_group)
         self.advanced_body.setVisible(False)
         self.advanced_button.toggled.connect(self._set_advanced_visible)
 
@@ -199,6 +302,10 @@ class ConnectionDialog(QDialog):
         self._load_profile(self._initial_profile)
         self._rebuild_system_template_menu()
 
+    def _set_jump_children_enabled(self, enabled: bool) -> None:
+        for widget in self._jump_child_widgets:
+            widget.setEnabled(enabled)
+
     def _set_advanced_visible(self, visible: bool) -> None:
         self.advanced_body.setVisible(visible)
         self.advanced_button.setArrowType(
@@ -212,7 +319,14 @@ class ConnectionDialog(QDialog):
         self.username.setText(str(profile.get("username", "")))
         self.key_path.setText(str(profile.get("key_path", "")))
         self.cb_x11.setChecked(bool(profile.get("x11_forwarding", False)))
-        self.cb_strict_hostkey.setChecked((profile.get("host_key_policy") or "accept-new") == "strict")
+        host_key_policy = str(profile.get("host_key_policy") or "accept-new").strip()
+        if host_key_policy not in {"accept-new", "strict"}:
+            host_key_policy = "accept-new"
+        policy_index = self.cb_host_key_policy.findData(host_key_policy)
+        self.cb_host_key_policy.setCurrentIndex(max(0, policy_index))
+        self.sp_keepalive.setValue(
+            coerce_keepalive_interval(profile.get("keepalive_interval_seconds", 30))
+        )
         self.cb_cli_allowed.setChecked(bool(profile.get("cli_allowed", False)))
         self._profile_keepalive = coerce_keepalive_interval(
             profile.get("keepalive_interval_seconds", 30)
@@ -226,6 +340,23 @@ class ConnectionDialog(QDialog):
         self.cb_edit_only_password.setChecked(
             (profile.get("password_prompt_policy") or "when-needed") == "edit-only"
         )
+        file_manager = normalize_file_manager_settings(profile.get("file_manager"))
+        self.default_local_dir.setText(file_manager["local_start_dir"])
+        jump = normalize_jump_host_settings(profile.get("jump_host"))
+        was_blocked = self.cb_jump_enabled.blockSignals(True)
+        try:
+            self.cb_jump_enabled.setChecked(bool(jump["enabled"]))
+        finally:
+            self.cb_jump_enabled.blockSignals(was_blocked)
+        self.jump_host.setText(jump["host"])
+        self.sp_jump_port.setValue(int(jump["port"]))
+        self.jump_username.setText(jump["username"])
+        self.jump_key_path.setText(jump["key_path"])
+        jump_policy_index = self.cb_jump_host_key_policy.findData(
+            jump["host_key_policy"]
+        )
+        self.cb_jump_host_key_policy.setCurrentIndex(max(0, jump_policy_index))
+        self._set_jump_children_enabled(bool(jump["enabled"]))
 
         system = normalize_system_settings(profile.get("system"))
         self.system_name.setText(system["name"])
@@ -264,6 +395,7 @@ class ConnectionDialog(QDialog):
         self, template: ProfileData, provenance: dict[str, str] | None = None
     ) -> None:
         self._system_template_source = dict(provenance) if provenance else None
+        self._template_action_taken = True
         system = normalize_system_settings(template)
         self.system_name.setText(system["name"])
         self.scratch_dir.setText(system["scratch_dir"])
@@ -371,6 +503,20 @@ class ConnectionDialog(QDialog):
         if path:
             self.key_path.setText(path)
 
+    def pick_default_local_dir(self) -> None:
+        path = QFileDialog.getExistingDirectory(
+            self,
+            t("connection.browse_default_local_folder"),
+            self.default_local_dir.text().strip() or "",
+        )
+        if path:
+            self.default_local_dir.setText(path)
+
+    def pick_jump_key(self) -> None:
+        path, _ = QFileDialog.getOpenFileName(self, t("connection.jump_ssh_key"))
+        if path:
+            self.jump_key_path.setText(path)
+
     def _collect_profile(self) -> ProfileData | None:
         try:
             port = int(self.port.text().strip() or "22")
@@ -378,31 +524,78 @@ class ConnectionDialog(QDialog):
             QMessageBox.warning(self, t("login.err_title"), t("login.err_port_numeric"))
             return None
 
-        profile: ProfileData = {
-            "name": self.profile_name.text().strip(),
-            "host": self.host.text().strip(),
-            "port": port,
-            "username": self.username.text().strip(),
-            "password": self.password.text(),
-            "key_path": self.key_path.text().strip(),
-            "host_key_policy": "strict" if self.cb_strict_hostkey.isChecked() else "accept-new",
-            "x11_forwarding": self.cb_x11.isChecked(),
-            "cli_allowed": self.cb_cli_allowed.isChecked(),
-            "keepalive_interval_seconds": self._profile_keepalive,
-            "transfer_parallelism": int(self.sp_transfer_parallelism.value()),
-            "ssh_timeout": float(self.sp_ssh_timeout.value()) or None,
-            "save_password": self.cb_save_password.isChecked(),
-            "password_prompt_policy": (
-                "edit-only"
-                if self.cb_edit_only_password.isChecked()
-                else "when-needed"
-            ),
-            "system": {
-                **self._system_form_values(),
+        # Editing starts from the stored profile so unknown/future keys
+        # (plugin provenance, file_manager, jump_host, ...) survive.
+        is_edit = bool(self._initial_profile)
+        profile: ProfileData = dict(self._initial_profile) if is_edit else {}
+
+        profile.update(
+            {
+                "name": self.profile_name.text().strip(),
+                "host": self.host.text().strip(),
+                "port": port,
+                "username": self.username.text().strip(),
+                "password": self.password.text(),
+                "key_path": self.key_path.text().strip(),
+                "host_key_policy": str(
+                    self.cb_host_key_policy.currentData() or "accept-new"
+                ),
+                "x11_forwarding": self.cb_x11.isChecked(),
+                "cli_allowed": self.cb_cli_allowed.isChecked(),
+                "keepalive_interval_seconds": int(self.sp_keepalive.value()),
+                "transfer_parallelism": int(self.sp_transfer_parallelism.value()),
+                "ssh_timeout": float(self.sp_ssh_timeout.value()) or None,
+                "save_password": self.cb_save_password.isChecked(),
+                "password_prompt_policy": (
+                    "edit-only"
+                    if self.cb_edit_only_password.isChecked()
+                    else "when-needed"
+                ),
+                "system": {
+                    **self._system_form_values(),
+                },
+            }
+        )
+        # Secret storage stays authoritative in LoginWidget; never carry
+        # stored secret material through the dialog result.
+        for secret_key in ("password_dpapi", "password_enc", "password_salt"):
+            profile.pop(secret_key, None)
+
+        if self._template_action_taken:
+            if self._system_template_source:
+                profile["system_template_source"] = dict(self._system_template_source)
+            else:
+                profile.pop("system_template_source", None)
+        elif not is_edit:
+            profile.pop("system_template_source", None)
+
+        profile["file_manager"] = patch_file_manager_settings(
+            (self._initial_profile or {}).get("file_manager"),
+            {"local_start_dir": self.default_local_dir.text().strip()},
+        )
+        if (
+            self.cb_jump_enabled.isChecked()
+            and not self.jump_host.text().strip()
+        ):
+            QMessageBox.warning(
+                self,
+                t("common.error"),
+                t("connection.jump_host_required"),
+            )
+            return None
+        profile["jump_host"] = patch_jump_host_settings(
+            (self._initial_profile or {}).get("jump_host"),
+            {
+                "enabled": self.cb_jump_enabled.isChecked(),
+                "host": self.jump_host.text().strip(),
+                "port": int(self.sp_jump_port.value()),
+                "username": self.jump_username.text().strip(),
+                "key_path": self.jump_key_path.text().strip(),
+                "host_key_policy": str(
+                    self.cb_jump_host_key_policy.currentData() or "accept-new"
+                ),
             },
-        }
-        if self._system_template_source:
-            profile["system_template_source"] = dict(self._system_template_source)
+        )
         return profile
 
     def _save_clicked(self) -> None:

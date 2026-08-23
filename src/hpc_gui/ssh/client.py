@@ -3,7 +3,7 @@ from __future__ import annotations
 import contextlib
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Optional, Tuple
+from typing import TYPE_CHECKING, Callable, Optional, Protocol, Tuple
 
 import socket
 
@@ -20,6 +20,21 @@ from hpc_gui.ssh.sftp_channels import (
     _SFTP_TRANSFER_TIMEOUT_SECONDS,  # noqa: F401  (re-exported facade constant)
 )
 from hpc_gui.ssh.shell_session import InteractiveShellSession, _sanitize_terminal_text
+
+if TYPE_CHECKING:  # pragma: no cover - import cycle guard for typing only
+    from hpc_gui.ssh.jump import SSHJumpInfo
+
+
+class SocketLike(Protocol):
+    """Minimal socket-like surface Paramiko needs from a preconnected channel."""
+
+    def send(self, data: bytes) -> int: ...
+
+    def recv(self, size: int) -> bytes: ...
+
+    def settimeout(self, timeout: float | None) -> None: ...
+
+    def close(self) -> None: ...
 
 
 # (Terminal ACS map and sanitizer live in hpc_gui.ssh.shell_session.)
@@ -55,17 +70,20 @@ class HostKeyInfo:
     hostname: str
     key_type: str
     fingerprint: str
+    role: str = "target"  # target | jump
 
 
 class HostKeyChangedError(paramiko.SSHException):
-    def __init__(self, hostname: str):
+    def __init__(self, hostname: str, role: str = "target"):
         self.hostname = hostname
+        self.role = role
         super().__init__(f"Host key changed for {hostname}; connection cancelled.")
 
 
 class HostKeyRejectedError(paramiko.SSHException):
-    def __init__(self, hostname: str):
+    def __init__(self, hostname: str, role: str = "target"):
         self.hostname = hostname
+        self.role = role
         super().__init__(f"Unknown host key rejected for {hostname}.")
 
 
@@ -74,14 +92,16 @@ class _KnownHostsPolicy(paramiko.MissingHostKeyPolicy):
         self,
         path: Path,
         decide: Optional[Callable[[HostKeyInfo], str]],
+        role: str = "target",
     ) -> None:
         self.path = path
         self.decide = decide
+        self.role = role
 
     def missing_host_key(self, client, hostname, key) -> None:
         fingerprint = getattr(key, "fingerprint", "") or key.get_fingerprint().hex()
         decision = self.decide(
-            HostKeyInfo(hostname, key.get_name(), fingerprint)
+            HostKeyInfo(hostname, key.get_name(), fingerprint, role=self.role)
         ) if self.decide else "save"
         if decision == "once":
             return
@@ -106,7 +126,8 @@ class SSHConnInfo:
     keepalive_interval_seconds: int = _KEEPALIVE_INTERVAL_DEFAULT  # 0 disables
     known_hosts_path: str = ""
     host_key_decision: Optional[Callable[[HostKeyInfo], str]] = None
-    preconnected_socket: Optional[socket.socket] = None
+    preconnected_socket: Optional[SocketLike] = None
+    jump: Optional["SSHJumpInfo"] = None
 
 
 class SSHClientWrapper:
@@ -123,6 +144,7 @@ class SSHClientWrapper:
         self.info: Optional[SSHConnInfo] = info
         self.client: Optional[paramiko.SSHClient] = None
         self.sftp = None
+        self._jump_connection: Optional[object] = None
         self._sftp_channels = SFTPChannelManager(
             self._active_transport, log=self.log, opener=lambda: self.open_transfer_sftp()
         )
@@ -231,7 +253,32 @@ class SSHClientWrapper:
         banner_timeout = info.timeout if info.timeout is not None else _SSH_BANNER_TIMEOUT_SECONDS
         auth_timeout = info.timeout if info.timeout is not None else _SSH_AUTH_TIMEOUT_SECONDS
         channel_timeout = info.timeout if info.timeout is not None else _SSH_CHANNEL_TIMEOUT_SECONDS
-        connection_kwargs = ({"sock": info.preconnected_socket} if info.preconnected_socket is not None else {})
+
+        # One-hop jump host: open a direct-tcpip channel through the bastion
+        # and feed it to the target connect as a preconnected socket.
+        sock: Optional[SocketLike] = info.preconnected_socket
+        jump = getattr(info, "jump", None)
+        if jump is not None and getattr(jump, "enabled", False) and sock is None:
+            from hpc_gui.ssh.jump import JumpConnection  # local: avoids import cycle
+
+            jump_connection = JumpConnection(
+                jump,
+                target_host=info.host,
+                target_port=info.port,
+                known_hosts_path=str(known_hosts_path),
+                host_key_decision=info.host_key_decision,
+                log=self.log,
+            )
+            self._jump_connection = jump_connection
+            try:
+                sock = jump_connection.open()
+                self.log(
+                    f"SSH: connecting target through jump ({info.host}:{info.port})"
+                )
+            except Exception:
+                self._jump_connection = None
+                raise
+        connection_kwargs = ({"sock": sock} if sock is not None else {})
 
         try:
             if info.key_path:
@@ -265,7 +312,29 @@ class SSHClientWrapper:
                     **connection_kwargs,
                 )
         except paramiko.BadHostKeyException as exc:
+            # Target host-key change: drop the partial target client and
+            # all jump resources before propagating.
+            try:
+                if self.client is not None:
+                    close = getattr(self.client, "close", None)
+                    if callable(close):
+                        close()
+            finally:
+                self.client = None
+            self._close_jump_connection()
             raise HostKeyChangedError(exc.hostname) from exc
+        except Exception:
+            # Target connect/auth failure after a jump channel exists:
+            # drop the partial target client and all jump resources.
+            try:
+                if self.client is not None:
+                    close = getattr(self.client, "close", None)
+                    if callable(close):
+                        close()
+            finally:
+                self.client = None
+            self._close_jump_connection()
+            raise
         transport = self.client.get_transport()
         if transport is not None:
             banner = transport.get_banner()
@@ -284,8 +353,13 @@ class SSHClientWrapper:
         if shell_size is not None:
             cols, rows = shell_size
             self._shell_geometry = (max(1, int(cols)), max(1, int(rows)))
-        self._start_shell_session()
-        self.sftp = self.client.open_sftp()
+        try:
+            self._start_shell_session()
+            self.sftp = self.client.open_sftp()
+        except Exception:
+            # Shell/SFTP initialization failure: full target + jump cleanup.
+            self.close()
+            raise
         self.log("SSH: connected, SFTP ready")
 
     def _start_shell_session(self) -> None:
@@ -340,6 +414,19 @@ class SSHClientWrapper:
         except Exception:
             pass
 
+    def _close_jump_connection(self) -> None:
+        """Close the jump channel/client; safe and idempotent."""
+        jump_connection = self._jump_connection
+        self._jump_connection = None
+        if jump_connection is None:
+            return
+        try:
+            close = getattr(jump_connection, "close", None)
+            if callable(close):
+                close()
+        except Exception:
+            pass
+
     def close(self) -> None:
         self.log("SSH: closing")
         try:
@@ -360,6 +447,8 @@ class SSHClientWrapper:
                 self.client.close()
         finally:
             self.client = None
+        # Jump resources last: the direct-tcpip channel, then the client.
+        self._close_jump_connection()
         self.log("SSH: closed")
 
     @property

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 from PySide6.QtCore import QCoreApplication, QObject, QThread, QTimer, Signal, Qt, QEvent
 from PySide6.QtGui import QFontDatabase, QTextCursor
 from PySide6.QtWidgets import (
@@ -14,6 +16,7 @@ from hpc_gui.core.ui_errors import describe_connection_error, show_exception
 from hpc_gui.config.models import SSHConfig
 from hpc_gui.config.storage import (
     load_profiles,
+    merge_profile_patch,
     upsert_profile,
     load_settings,
     update_settings,
@@ -21,6 +24,15 @@ from hpc_gui.config.storage import (
     coerce_profile_transfer_parallelism,
     coerce_profile_ssh_timeout,
 )
+from hpc_gui.config.file_manager_profile import (
+    normalize_file_manager_settings,
+    patch_file_manager_settings,
+)
+from hpc_gui.config.jump_host_profile import (
+    normalize_jump_host_settings,
+    patch_jump_host_settings,
+)
+from hpc_gui.ssh.jump import jump_info_from_settings
 from hpc_gui.config.system_profile import normalize_system_settings
 from hpc_gui.core.history import append_event
 from hpc_gui.core.logging import append_log
@@ -132,6 +144,9 @@ class _ConnectionWorker(QObject):
                 timeout=self._cfg.ssh_timeout,
                 keepalive_interval_seconds=self._cfg.keepalive_interval_seconds,
                 host_key_decision=self._decide_host_key,
+                jump=jump_info_from_settings(
+                    getattr(self._cfg, "jump_host_settings", None)
+                ),
             )
             ssh = SSHClientWrapper(
                 conn,
@@ -202,6 +217,10 @@ class LoginWidget(QWidget):
 
         self.cb_save_password = QCheckBox(t("login.save_password") if t("login.save_password") != "[login.save_password]" else "Şifreyi kaydet")
         self._profile_system_settings = normalize_system_settings(None)
+        self._profile_file_manager_settings = normalize_file_manager_settings(None)
+        self._profile_file_manager_raw: dict[str, Any] = {}
+        self._profile_jump_host_raw: dict[str, Any] = {}
+        self._profile_jump_host_settings = normalize_jump_host_settings(None)
         self._profile_cli_allowed = False
         self._profile_keepalive = 30
         self._profile_transfer_parallelism = 1
@@ -219,7 +238,12 @@ class LoginWidget(QWidget):
         self.sp_ssh_timeout.setSuffix(" s")
 
         self.cb_x11 = QCheckBox(t("login.x11_enable") if t("login.x11_enable") != "[login.x11_enable]" else "X11 Forwarding")
+        self._profile_host_key_policy = "accept-new"
         self.cb_strict_hostkey = QCheckBox(t("login.strict_host_key"))
+        # Legacy visible checkbox kept only as a mirror of the canonical
+        # host-key policy state below; the Add/Edit Connection dialog combo
+        # is the primary user-facing control.
+        self.cb_strict_hostkey.toggled.connect(self._on_strict_hostkey_toggled)
 
         # Simulation / dry-run option removed from UI.
         # (If a legacy profile contains a 'dry_run' field, it is ignored.)
@@ -292,8 +316,8 @@ class LoginWidget(QWidget):
         self.form.addRow(t("login.profile_name_label"), self.profile_name)
         self.form.addRow(t("login.host"), self.host)
         self.form.addRow(t("login.port"), self.port)
-        self.form.addRow(t("connection.transfer_parallelism"), self.sp_transfer_parallelism)
-        self.form.addRow(t("connection.ssh_timeout"), self.sp_ssh_timeout)
+        self.form.addRow(t("connection.max_simultaneous_transfers"), self.sp_transfer_parallelism)
+        self.form.addRow(t("connection.ssh_timeout_override"), self.sp_ssh_timeout)
         self.form.addRow(t("login.username"), self.username)
         self.form.addRow(t("login.password"), self.password)
         self.form.addRow("", self.cb_save_password)
@@ -367,6 +391,9 @@ class LoginWidget(QWidget):
         self.refresh_profiles()
         self.btn_connect.setEnabled(False)
         self.cmd_in.set_connected(False)
+
+    def _on_strict_hostkey_toggled(self, checked: bool) -> None:
+        self._profile_host_key_policy = "strict" if checked else "accept-new"
 
     def shutdown_external_processes(self) -> None:
         """Called by MainWindow on app exit."""
@@ -651,6 +678,11 @@ class LoginWidget(QWidget):
             info = data.get("info")
             if not isinstance(info, HostKeyInfo):
                 return
+            role_label = (
+                t("connection.host_key_role_jump")
+                if getattr(info, "role", "target") == "jump"
+                else t("connection.host_key_role_target")
+            )
             dialog = QMessageBox(self)
             dialog.setIcon(QMessageBox.Icon.Warning)
             dialog.setWindowTitle(t("connection.host_key_prompt_title"))
@@ -659,6 +691,7 @@ class LoginWidget(QWidget):
                     host=info.hostname,
                     key_type=info.key_type,
                     fingerprint=info.fingerprint,
+                    role=role_label,
                 )
             )
             save = dialog.addButton(
@@ -905,7 +938,11 @@ class LoginWidget(QWidget):
         self.username.setText(prof.get("username", ""))
         self.key_path.setText(prof.get("key_path", ""))
         self.cb_x11.setChecked(bool(prof.get("x11_forwarding", False)))
-        self.cb_strict_hostkey.setChecked((prof.get("host_key_policy") or "accept-new") == "strict")
+        host_key_policy = str(prof.get("host_key_policy") or "accept-new").strip()
+        if host_key_policy not in {"accept-new", "strict"}:
+            host_key_policy = "accept-new"
+        self._profile_host_key_policy = host_key_policy
+        self.cb_strict_hostkey.setChecked(host_key_policy == "strict")
         # legacy field: prof.get("dry_run") ignored
 
         save_pw = bool(prof.get("save_password", False))
@@ -916,6 +953,18 @@ class LoginWidget(QWidget):
         self._profile_system_settings = normalize_system_settings(
             prof.get("system")
         )
+        raw_file_manager = prof.get("file_manager")
+        self._profile_file_manager_raw = (
+            dict(raw_file_manager) if isinstance(raw_file_manager, dict) else {}
+        )
+        self._profile_file_manager_settings = normalize_file_manager_settings(
+            raw_file_manager
+        )
+        raw_jump_host = prof.get("jump_host")
+        self._profile_jump_host_raw = (
+            dict(raw_jump_host) if isinstance(raw_jump_host, dict) else {}
+        )
+        self._profile_jump_host_settings = normalize_jump_host_settings(raw_jump_host)
         self._profile_cli_allowed = bool(prof.get("cli_allowed", False))
         self._profile_keepalive = coerce_keepalive_interval(
             prof.get("keepalive_interval_seconds", 30)
@@ -1051,13 +1100,23 @@ class LoginWidget(QWidget):
             QMessageBox.warning(self, t("login.err_title"), t("login.err_port_numeric"))
             return False
 
-        prof = {
+        # Resolve the stored profile so the save patches known fields onto
+        # it instead of discarding unrelated keys (plugin provenance,
+        # file_manager, jump_host, ...).
+        original_name = getattr(self, "_editing_profile_original_name", "").strip()
+        existing_name = original_name or name
+        existing = next(
+            (p for p in load_profiles() if p.get("name") == existing_name),
+            None,
+        )
+
+        patch: dict[str, Any] = {
             "name": name,
             "host": self.host.text().strip(),
             "port": port,
             "username": self.username.text().strip(),
             "key_path": self.key_path.text().strip(),
-            "host_key_policy": "strict" if self.cb_strict_hostkey.isChecked() else "accept-new",
+            "host_key_policy": self._profile_host_key_policy,
             "x11_forwarding": self.cb_x11.isChecked(),
             "cli_allowed": getattr(self, "_profile_cli_allowed", False),
             "keepalive_interval_seconds": self._profile_keepalive,
@@ -1067,16 +1126,35 @@ class LoginWidget(QWidget):
             "save_password": self.cb_save_password.isChecked(),
             "password_prompt_policy": self._password_prompt_policy,
             "system": normalize_system_settings(self._profile_system_settings),
+            "file_manager": patch_file_manager_settings(
+                getattr(self, "_profile_file_manager_raw", None),
+                {
+                    "local_start_dir": normalize_file_manager_settings(
+                        getattr(self, "_profile_file_manager_settings", None)
+                    )["local_start_dir"]
+                },
+            ),
+            "jump_host": patch_jump_host_settings(
+                getattr(self, "_profile_jump_host_raw", None),
+                normalize_jump_host_settings(
+                    getattr(self, "_profile_jump_host_settings", None)
+                ),
+            ),
         }
 
         # Password storage (encrypted):
         # - Do not store plaintext in config.
         # - When saving with "save password", ask for a master password and encrypt.
+        remove_keys: list[str] = []
         if self.cb_save_password.isChecked():
             plain = self.password.text() or ""
-            current = next(
-                (p for p in load_profiles() if p.get("name") == name),
-                None,
+            current = (
+                existing
+                if existing is not None and existing.get("name") == name
+                else next(
+                    (p for p in load_profiles() if p.get("name") == name),
+                    None,
+                )
             )
             if (
                 self._password_prompt_policy == "edit-only"
@@ -1095,7 +1173,7 @@ class LoginWidget(QWidget):
                         return False
                 try:
                     if plain:
-                        prof["password_dpapi"] = protect_secret(plain)
+                        patch["password_dpapi"] = protect_secret(plain)
                 except Exception as exc:
                     QMessageBox.critical(
                         self,
@@ -1110,25 +1188,31 @@ class LoginWidget(QWidget):
                 if master is None:
                     return False
                 enc = encrypt_with_master(master, plain)
-                prof["password_enc"] = enc.token
-                prof["password_salt"] = enc.salt
+                patch["password_enc"] = enc.token
+                patch["password_salt"] = enc.salt
             else:
                 # keep existing encrypted password if present (when editing profile)
                 if current:
                     for key in ("password_dpapi", "password_enc", "password_salt"):
                         if current.get(key):
-                            prof[key] = current.get(key)
+                            patch[key] = current.get(key)
 
             # Always clear legacy plaintext field
-            prof["password"] = ""
+            patch["password"] = ""
         else:
-            prof["password"] = ""
+            patch["password"] = ""
+            remove_keys.extend(
+                ["password_enc", "password_salt", "password_dpapi"]
+            )
+
+        prof = merge_profile_patch(existing, patch, remove_keys=remove_keys)
+        # Only one secret scheme may survive a save.
+        if "password_dpapi" in prof:
             prof.pop("password_enc", None)
             prof.pop("password_salt", None)
+        elif "password_enc" in prof:
             prof.pop("password_dpapi", None)
-
         upsert_profile(prof)
-        original_name = getattr(self, "_editing_profile_original_name", "").strip()
         if original_name and original_name != name:
             delete_profile(original_name)
         self.refresh_profiles(select_name=name)
@@ -1222,7 +1306,7 @@ class LoginWidget(QWidget):
             username=self.username.text().strip(),
             password=password,
             key_path=self.key_path.text().strip(),
-            host_key_policy=("strict" if self.cb_strict_hostkey.isChecked() else "accept-new"),
+            host_key_policy=self._profile_host_key_policy,
             x11_forwarding=self.cb_x11.isChecked(),
             dry_run=use_ftp_mock,
             keepalive_interval_seconds=self._profile_keepalive,
@@ -1230,6 +1314,16 @@ class LoginWidget(QWidget):
             ssh_timeout=coerce_profile_ssh_timeout(self._profile_ssh_timeout),
             system_settings=normalize_system_settings(
                 self._profile_system_settings
+            ),
+            file_manager_settings=dict(
+                normalize_file_manager_settings(
+                    getattr(self, "_profile_file_manager_settings", None)
+                )
+            ),
+            jump_host_settings=dict(
+                normalize_jump_host_settings(
+                    getattr(self, "_profile_jump_host_settings", None)
+                )
             ),
         )
 

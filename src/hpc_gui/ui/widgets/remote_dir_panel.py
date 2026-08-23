@@ -63,7 +63,6 @@ from hpc_gui.core.logging import get_logger
 from hpc_gui.core.ui_errors import show_exception
 from hpc_gui.config.storage import (
     get_remote_directory_cache_enabled,
-    get_transfer_parallelism,
     coerce_profile_transfer_parallelism,
     get_upload_preflight_confirmation_enabled,
     get_transfer_checksum_verification_enabled,
@@ -75,6 +74,7 @@ from hpc_gui.config.storage import (
 )
 from hpc_gui.services.file_clipboard import get_file_clipboard
 from hpc_gui.services.files_base import RemoteEntry
+from hpc_gui.services.directory_comparison import CompareStatus, ComparableEntry
 from hpc_gui.services.remote_navigation_store import navigation_store_for_profile
 from hpc_gui.services.transfer_mode import (
     BINARY,
@@ -715,6 +715,8 @@ class RemoteDirPanel(QWidget):
     batch_shell_requested = Signal(list)  # remote shell script paths (sorted, case-insensitive)
     run_shell_requested = Signal(str)  # remote shell script path
     set_default_requested = Signal()
+    directoryChanged = Signal(str)
+    directoryLoaded = Signal(str)
 
     # registry to refresh source/target panels on move
     _instances: Dict[str, "RemoteDirPanel"] = {}
@@ -744,6 +746,9 @@ class RemoteDirPanel(QWidget):
         self.current_dir = ""
         self._category_dir = ""
         self.title = title
+        self._snapshot_dir = ""
+        self._snapshot_entries: List[ComparableEntry] = []
+        self._comparison_statuses: Optional[dict] = None
         self._transfer_mode_provider: Optional[Callable[[str], str]] = None
         self._output_target_provider: Optional[
             Callable[[], List[Tuple[str, str]]]
@@ -948,21 +953,26 @@ class RemoteDirPanel(QWidget):
             t("dirs.col_size"),
             t("dirs.col_type"),
             t("dirs.col_mtime"),
+            t("ftp.comparison_column")
+            if t("ftp.comparison_column") != "[ftp.comparison_column]"
+            else "Comparison",
         ]
         for view in self.views.values():
             view.setHeaderLabels(headers)
 
     def _make_view(self) -> _RemoteTree:
         w = _RemoteTree(panel=self)
-        w.setColumnCount(4)
+        w.setColumnCount(5)
         w.setHeaderLabels(
             [
                 t("dirs.col_name") if t("dirs.col_name") != "[dirs.col_name]" else "Filename",
                 t("dirs.col_size") if t("dirs.col_size") != "[dirs.col_size]" else "Filesize",
                 t("dirs.col_type") if t("dirs.col_type") != "[dirs.col_type]" else "Filetype",
                 t("dirs.col_mtime") if t("dirs.col_mtime") != "[dirs.col_mtime]" else "Last modified",
+                t("ftp.comparison_column") if t("ftp.comparison_column") != "[ftp.comparison_column]" else "Comparison",
             ]
         )
+        w.hideColumn(4)
         w.setRootIsDecorated(False)
         w.setAlternatingRowColors(True)
         w.setSelectionMode(QTreeWidget.SelectionMode.ExtendedSelection)
@@ -988,9 +998,12 @@ class RemoteDirPanel(QWidget):
         remote_dir = str(self.directory_tabs.tabData(index) or "")
         if not remote_dir:
             return
+        previous = self.current_dir
         self.current_dir = remote_dir
         self._category_dir = remote_dir
         self.path.setText(remote_dir)
+        if remote_dir != previous:
+            self.directoryChanged.emit(remote_dir)
         self._refresh_from_ui()
 
     def _close_directory_tab(self, index: int) -> None:
@@ -1011,11 +1024,14 @@ class RemoteDirPanel(QWidget):
             self.directory_tabs.setTabData(index, target)
         changed = self.directory_tabs.currentIndex() != index
         self.directory_tabs.setCurrentIndex(index)
+        previous = self.current_dir
         self.current_dir = target
         self._category_dir = target
         self.path.setText(target)
         if not changed:
             self._refresh_from_ui()
+        if self.current_dir != previous:
+            self.directoryChanged.emit(self.current_dir)
         self._update_navigation_controls()
         return True
 
@@ -1224,6 +1240,7 @@ class RemoteDirPanel(QWidget):
 
     def set_dir(self, remote_dir: str):
         target = (remote_dir or "").rstrip("/") or "/"
+        previous = self.current_dir
         self.current_dir = target
         self._category_dir = target
         signals_were_blocked = self.directory_tabs.blockSignals(True)
@@ -1237,6 +1254,8 @@ class RemoteDirPanel(QWidget):
             self.directory_tabs.setTabData(index, target)
         self.directory_tabs.blockSignals(signals_were_blocked)
         self.path.setText(target)
+        if target != previous:
+            self.directoryChanged.emit(target)
         self._update_navigation_controls()
         if bool(getattr(self.session.get("files"), "supports_progressive_listing", False)):
             self.refresh_async()
@@ -1328,6 +1347,36 @@ class RemoteDirPanel(QWidget):
         )
         self._finish_render()
         self._record_navigation_visit(self._streaming_key)
+        self._commit_snapshot(self._streaming_key, self._streaming_entries)
+        if self._cache_key(self.current_dir) == self._streaming_key:
+            self.directoryLoaded.emit(self.current_dir)
+
+    # ---- comparison snapshot --------------------------------------------
+    @staticmethod
+    def _comparable_entry(entry: RemoteEntry) -> ComparableEntry:
+        return ComparableEntry(
+            name=entry.name,
+            is_dir=bool(entry.is_dir),
+            size=int(entry.size or 0),
+            mtime=int(entry.mtime or 0),
+        )
+
+    def _commit_snapshot(
+        self, remote_dir: str, entries: Iterable[RemoteEntry]
+    ) -> None:
+        """Commit the final listing of a finished generation as the
+        comparison source; pending/abandoned streams never reach here."""
+        self._snapshot_dir = self._cache_key(remote_dir)
+        self._snapshot_entries = [
+            self._comparable_entry(entry) for entry in entries
+        ]
+
+    def current_entries_snapshot(self) -> tuple[str, List[ComparableEntry]]:
+        """Return (path, entries) only when committed for current_dir."""
+        key = self._cache_key(self.current_dir or "/")
+        if self._snapshot_dir != key:
+            return "", []
+        return self._snapshot_dir, list(self._snapshot_entries)
 
     def _on_listing_failed(self, token: object, error: object) -> None:
         if not self._listing_token_is_current(token):
@@ -1716,6 +1765,70 @@ class RemoteDirPanel(QWidget):
         self._append_entries(entries)
         self._finish_render()
         self._record_navigation_visit(category_dir)
+        self._commit_snapshot(category_dir, entries)
+        self.directoryLoaded.emit(self.current_dir)
+
+    # ---- comparison column ----------------------------------------------
+    def set_comparison_visible(self, visible: bool) -> None:
+        for view in list(getattr(self, "views", {}).values()):
+            try:
+                if visible:
+                    view.showColumn(4)
+                else:
+                    view.hideColumn(4)
+            except RuntimeError:
+                continue
+        if not visible:
+            self.clear_comparison_statuses()
+
+    def clear_comparison_statuses(self) -> None:
+        self._comparison_statuses = None
+        for view in list(getattr(self, "views", {}).values()):
+            try:
+                for index in range(view.topLevelItemCount()):
+                    item = view.topLevelItem(index)
+                    item.setText(4, "")
+                    item.setToolTip(4, "")
+            except RuntimeError:
+                continue
+
+    def _comparison_status_labels(self) -> dict[CompareStatus, str]:
+        return {
+            CompareStatus.SAME: t("ftp.cmp_same"),
+            CompareStatus.LOCAL_ONLY: t("ftp.cmp_local_only"),
+            CompareStatus.REMOTE_ONLY: t("ftp.cmp_remote_only"),
+            CompareStatus.TYPE_MISMATCH: t("ftp.cmp_type_differs"),
+            CompareStatus.SIZE_DIFFERENT: t("ftp.cmp_size_different"),
+            CompareStatus.LOCAL_NEWER: t("ftp.cmp_local_newer"),
+            CompareStatus.REMOTE_NEWER: t("ftp.cmp_remote_newer"),
+        }
+
+    def _render_comparison_statuses(self) -> None:
+        statuses = self._comparison_statuses or {}
+        labels = self._comparison_status_labels()
+        for view in list(self.views.values()):
+            try:
+                items = [view.topLevelItem(i) for i in range(view.topLevelItemCount())]
+            except RuntimeError:
+                continue
+            for item in items:
+                if bool(item.data(0, Qt.ItemDataRole.UserRole + 2)):
+                    continue
+                name = str(item.data(0, _SORT_NAME_ROLE) or "")
+                status = statuses.get(name)
+                if status is None:
+                    item.setText(4, "")
+                    item.setToolTip(4, "")
+                    continue
+                label = labels.get(status, str(status.value))
+                item.setText(4, "=" if status is CompareStatus.SAME else label)
+                item.setToolTip(4, label)
+
+    def apply_comparison_statuses(
+        self, statuses: dict[str, CompareStatus]
+    ) -> None:
+        self._comparison_statuses = dict(statuses)
+        self._render_comparison_statuses()
 
     # ---------- selection helpers ----------
     def _selected_paths_from_view(self, view: QTreeWidget) -> List[str]:
@@ -2655,7 +2768,13 @@ class RemoteDirPanel(QWidget):
         plan = filtered_plan
         transfer_items = self._transfer_items_from_plan(plan)
         files = self.session["files"]
-        configured_parallel_limit = coerce_profile_transfer_parallelism(getattr(self.session.get("cfg"), "transfer_parallelism", None), get_transfer_parallelism())
+        # The per-profile value is the single authority. A legacy profile
+        # without the field safely defaults to 1; the stored *global*
+        # "transfer_parallelism" settings key is never used here.
+        configured_parallel_limit = coerce_profile_transfer_parallelism(
+            getattr(self.session.get("cfg"), "transfer_parallelism", None),
+            1,
+        )
         backend_parallel_limit = (
             configured_parallel_limit
             if bool(getattr(files, "supports_parallel_transfers", False))

@@ -5,7 +5,27 @@ import os
 import tempfile
 import uuid
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Iterable, List, Optional
+
+
+def merge_profile_patch(
+    existing: dict[str, Any] | None,
+    patch: dict[str, Any],
+    *,
+    remove_keys: Iterable[str] = (),
+) -> dict[str, Any]:
+    """Patch known profile fields onto an existing profile record.
+
+    The result starts from a shallow copy of ``existing`` so unknown
+    top-level keys and untouched nested dictionaries survive an edit.
+    Only explicitly listed keys are removed. Pure function; no I/O.
+    """
+    result: dict[str, Any] = dict(existing) if isinstance(existing, dict) else {}
+    for key, value in (patch or {}).items():
+        result[key] = value
+    for key in remove_keys or ():
+        result.pop(key, None)
+    return result
 
 
 def _config_dir() -> Path:
