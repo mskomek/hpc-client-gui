@@ -1,6 +1,6 @@
 # Changelog
 
-## v1.4.1 (Unreleased)
+## v1.4.1
 
 ### Plugin Manager
 - The Plugin Manager now loads the registry automatically when first opened (Loading → Online/Cached/Offline states); Refresh is disabled while a request is in flight and re-enabled afterwards, and closing the dialog mid-load stays safe.
