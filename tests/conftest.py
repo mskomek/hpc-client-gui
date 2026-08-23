@@ -25,11 +25,19 @@ os.environ.setdefault("HPC_GUI_DISABLE_WEBENGINE", "1")
 
 import pytest  # noqa: E402
 
-from hpc_gui.ui import main_window as main_window_module  # noqa: E402
+try:
+    # Lightweight runs such as the Plugin API contract suite execute without
+    # Qt installed; the startup-popup guard below only applies then.
+    from hpc_gui.ui import main_window as main_window_module  # noqa: E402
+except ImportError:  # pragma: no cover - exercised only in non-Qt environments
+    main_window_module = None
 
 
 @pytest.fixture(autouse=True)
 def _no_main_window_startup_popups():
+    if main_window_module is None:
+        yield
+        return
     with (
         patch.object(
             main_window_module.MainWindow,
