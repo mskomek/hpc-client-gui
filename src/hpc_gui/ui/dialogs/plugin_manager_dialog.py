@@ -14,6 +14,7 @@ from __future__ import annotations
 import logging
 
 from PySide6.QtCore import Qt, Signal
+from packaging.version import InvalidVersion, Version
 from PySide6.QtWidgets import (
     QDialog,
     QFrame,
@@ -211,10 +212,55 @@ class PluginManagerDialog(QDialog):
             entry.get("id") in active and active[entry["id"]] == entry.get("version")
         )
 
+    @staticmethod
+    def _parse_version(value: object) -> Version | None:
+        try:
+            return Version(str(value or ""))
+        except (InvalidVersion, TypeError):
+            return None
+
+    def _grouped_latest(self) -> list[tuple[dict, list[str]]]:
+        """Group registry entries by plugin id.
+
+        Returns one ``(entry, other_versions)`` pair per plugin: the latest
+        app-compatible version is the primary card; when no version is
+        compatible, the highest version is shown as an incompatible card.
+        Registry order never decides which version is latest. Older
+        versions stay reachable through the details view.
+        """
+        groups: dict[str, list[dict]] = {}
+        for entry in self._entries():
+            groups.setdefault(str(entry.get("id", "")), []).append(entry)
+        grouped: list[tuple[dict, list[str]]] = []
+        for entries in groups.values():
+            parsed: list[tuple[Version | None, dict]] = [
+                (self._parse_version(entry.get("version")), entry) for entry in entries
+            ]
+            with_versions = [item for item in parsed if item[0] is not None]
+            pool = (
+                [item for item in with_versions
+                 if is_app_compatible(str(item[1].get("requires_app", "")), self._app_version)]
+                or with_versions
+                or parsed
+            )
+            best_version, best = max(
+                pool,
+                key=lambda item: item[0] if item[0] is not None else Version("0"),
+            )
+            others = sorted(
+                (str(entry.get("version")) for _, entry in parsed
+                 if entry is not best and entry.get("version") != best.get("version")),
+                key=lambda value: Version(value),
+                reverse=True,
+            )
+            grouped.append((best, others))
+        grouped.sort(key=lambda item: self._entry_sort_key(item[0]))
+        return grouped
+
     def _populate_discover(self, active: dict[str, str]) -> None:
         inner = self._clear_list(self.discover_list)
-        entries = self._entries()
-        if not entries:
+        grouped = self._grouped_latest()
+        if not grouped:
             inner.addWidget(
                 self._empty_label(
                     "plugins.registry_unavailable"
@@ -223,15 +269,25 @@ class PluginManagerDialog(QDialog):
                 )
             )
             return
-        for entry in entries:
-            inner.addWidget(self._discover_card(entry, active))
+        disabled_ids = read_disabled_ids()
+        for entry, others in grouped:
+            inner.addWidget(self._discover_card(entry, active, disabled_ids, others))
 
-    def _discover_card(self, entry: dict, active: dict[str, str]) -> QFrame:
+    def _discover_card(
+        self,
+        entry: dict,
+        active: dict[str, str],
+        disabled_ids: set[str] | None = None,
+        other_versions: list[str] | None = None,
+    ) -> QFrame:
         card = QFrame()
         card.setObjectName("pluginCard")
         grid = QGridLayout(card)
+        disabled_ids = disabled_ids or set()
+        plugin_id = str(entry.get("id", ""))
+        version = str(entry.get("version", ""))
 
-        name = f"{entry.get('name', '')} v{entry.get('version', '')}"
+        name = f"{entry.get('name', '')} v{version}"
         title = QLabel(name)
         title.setStyleSheet("font-weight: 600;")
         grid.addWidget(title, 0, 0)
@@ -249,20 +305,51 @@ class PluginManagerDialog(QDialog):
         description.setWordWrap(True)
         grid.addWidget(description, 2, 0)
 
+        if other_versions:
+            others = QLabel(
+                f"{t('plugins.other_versions_catalog')}: {', '.join(other_versions)}"
+            )
+            others.setStyleSheet("color: #666;")
+            grid.addWidget(others, 3, 0)
+
         compatible = is_app_compatible(
             str(entry.get("requires_app", "")), self._app_version
+        )
+        installed_here = self._is_installed(entry, active)
+        active_version = active.get(plugin_id)
+        update_available = bool(
+            compatible
+            and active_version
+            and not installed_here
+            and self._is_newer_version(version, active_version)
         )
         buttons = QHBoxLayout()
 
         details_button = QToolButton(card)
         details_button.setText(t("plugins.details"))
-        details_button.clicked.connect(lambda _=False, e=entry: self.show_details(e))
+        details_button.clicked.connect(
+            lambda _=False, e=entry, o=other_versions or []: self.show_details(e, o)
+        )
         buttons.addWidget(details_button)
         buttons.addStretch(1)
 
-        if self._is_installed(entry, active):
+        row = 4
+        if installed_here and plugin_id not in disabled_ids:
             badge = QLabel(t("plugins.installed_badge"))
             badge.setStyleSheet("color: #2e7d32; font-weight: 600; padding-right: 8px;")
+            buttons.addWidget(badge)
+        elif update_available:
+            badge = QLabel(t("plugins.update_available"))
+            badge.setStyleSheet("color: #b26a00; font-weight: 600; padding-right: 8px;")
+            buttons.addWidget(badge)
+            update_button = QPushButton(t("plugins.update"))
+            update_button.clicked.connect(
+                lambda _=False, e=entry, b=update_button: self.install_plugin(e, b)
+            )
+            buttons.addWidget(update_button)
+        elif plugin_id in disabled_ids:
+            badge = QLabel(t("plugins.disabled_label"))
+            badge.setStyleSheet("color: #b26a00; font-weight: 600; padding-right: 8px;")
             buttons.addWidget(badge)
         else:
             install_button = QPushButton(t("plugins.install"))
@@ -276,8 +363,12 @@ class PluginManagerDialog(QDialog):
                 )
             buttons.addWidget(install_button)
 
-        grid.addLayout(buttons, 3, 0)
-        card.setProperty("searchText", self._search_text_for(entry).lower())
+        grid.addLayout(buttons, row, 0)
+        search_versions = " ".join([version, *(other_versions or [])])
+        card.setProperty(
+            "searchText",
+            (self._search_text_for(entry) + " " + search_versions).lower(),
+        )
         return card
 
     @staticmethod
@@ -375,13 +466,14 @@ class PluginManagerDialog(QDialog):
     def _populate_updates(self, active: dict[str, str]) -> None:
         inner = self._clear_list(self.updates_list)
         updates = []
-        for entry in self._entries():
-            current = active.get(entry.get("id", ""))
+        for entry, _others in self._grouped_latest():
+            plugin_id = str(entry.get("id", ""))
+            current = active.get(plugin_id)
             if not current or current == entry.get("version"):
                 continue
             if not is_app_compatible(str(entry.get("requires_app", "")), self._app_version):
                 continue
-            if self._version_greater(str(entry.get("version", "")), current):
+            if self._is_newer_version(str(entry.get("version", "")), current):
                 updates.append(entry)
         if not updates:
             inner.addWidget(self._empty_label("plugins.no_updates"))
@@ -404,21 +496,18 @@ class PluginManagerDialog(QDialog):
             inner.addWidget(card)
 
     @staticmethod
-    def _version_greater(candidate: str, current: str) -> bool:
-        def parts(value: str) -> tuple[int, ...]:
-            core = value.split("+", 1)[0].split("-", 1)[0]
-            numbers = [int(p) for p in core.split(".") if p.isdigit()]
-            while len(numbers) < 3:
-                numbers.append(0)
-            return tuple(numbers)
-
-        return parts(candidate) > parts(current)
+    def _is_newer_version(candidate: str, current: str) -> bool:
+        """PEP 440 comparison; unparseable versions never count as updates."""
+        try:
+            return Version(candidate) > Version(current)
+        except InvalidVersion:
+            return False
 
     # ------------------------------------------------------------------
     # Actions
     # ------------------------------------------------------------------
 
-    def show_details(self, entry: dict) -> None:
+    def show_details(self, entry: dict, other_versions: list[str] | None = None) -> None:
         lines = [
             f"ID: {entry.get('id', '')}",
             f"{t('plugins.publisher')}: {entry.get('publisher', '')}",
@@ -426,6 +515,12 @@ class PluginManagerDialog(QDialog):
             f"{t('plugins.license')}: {entry.get('license', '—')}",
             f"{t('plugins.capabilities')}: {entry.get('type', '')}",
             f"{t('plugins.requires_app_label')}: {entry.get('requires_app', '')}",
+        ]
+        if other_versions:
+            lines.append(
+                f"{t('plugins.other_versions_catalog')}: {', '.join(other_versions)}"
+            )
+        lines += [
             "",
             str(entry.get("description", "")),
         ]

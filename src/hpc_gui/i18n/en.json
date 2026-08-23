@@ -788,7 +788,9 @@
     "remove_confirm_text": "Remove {name}?\n\nSaved connection profiles keep their copied settings; your profiles and user templates are not deleted.",
     "disable": "Disable",
     "enable": "Enable",
-    "disabled_label": "Disabled (no templates provided)"
+    "disabled_label": "Disabled (no templates provided)",
+    "update_available": "Update available",
+    "other_versions_catalog": "Other versions"
   },
   "templates": {
     "dialog_title": "Job Templates",
