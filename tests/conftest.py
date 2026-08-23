@@ -10,6 +10,7 @@ are stubbed; every other QTimer.singleShot user keeps working.
 
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 from unittest.mock import patch
@@ -17,6 +18,10 @@ from unittest.mock import patch
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT / "src") not in sys.path:
     sys.path.insert(0, str(ROOT / "src"))
+
+# QtWebEngine's Chromium profile teardown segfaults at interpreter exit in
+# offscreen test runs, so tests use the plain console fallback instead.
+os.environ.setdefault("HPC_GUI_DISABLE_WEBENGINE", "1")
 
 import pytest  # noqa: E402
 
