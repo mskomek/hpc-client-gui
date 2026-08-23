@@ -42,7 +42,14 @@ class FTPFilesBackend(FilesBackend):
     supports_progressive_listing = True
     """Plain FTP implementation of the app's file-transfer backend."""
 
-    supports_parallel_transfers = False
+    # Parallel transfers are safe here because every queued upload/download
+    # runs against its own isolated ``FTPFilesBackend`` (its own control and
+    # data connections) obtained through :meth:`open_transfer_backend`. A
+    # single ``ftplib.FTP`` object is never shared between threads. The
+    # transfer queue bounds the number of concurrent workers, so at most
+    # that many extra connections exist. Non-transfer metadata operations
+    # keep using the shared browsing connection.
+    supports_parallel_transfers = True
 
     def __init__(
         self,
@@ -58,6 +65,7 @@ class FTPFilesBackend(FilesBackend):
         self._username = username or "anonymous"
         self._password = password or ""
         self._timeout = float(timeout)
+        self._closed = False
         # FTP control commands and directory listings must use UTF-8.  This
         # keeps Windows local paths and Turkish remote names (ç, ğ, ı, İ, ö,
         # ş, ü) as Python ``str`` values end to end instead of falling back to
@@ -78,6 +86,12 @@ class FTPFilesBackend(FilesBackend):
             pass
 
     def open_transfer_backend(self) -> "FTPFilesBackend":
+        """Return an isolated backend (own connection) for one transfer.
+
+        Used by the transfer queue so each worker thread gets private
+        control/data connections; the returned instance must be closed by
+        the caller on success, failure, or cancellation.
+        """
         return FTPFilesBackend(
             self._host,
             port=self._port,
@@ -87,6 +101,9 @@ class FTPFilesBackend(FilesBackend):
         )
 
     def close(self) -> None:
+        if getattr(self, "_closed", False):
+            return
+        self._closed = True
         try:
             self.ftp.quit()
         except Exception:

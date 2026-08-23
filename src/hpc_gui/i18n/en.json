@@ -123,7 +123,8 @@
     "no_connection": "No connection.",
     "details": "Details",
     "apply_all": "Apply to all conflicts",
-    "close": "Close"
+    "close": "Close",
+    "and": "and"
   },
   "placeholders": {
     "host": "Server name or IP",
@@ -631,7 +632,11 @@
     "conflict_skip": "Skip",
     "conflict_always_use": "Always use this action",
     "conflict_current_queue_only": "Apply to current queue only",
-    "conflict_downloads_only": "Apply only to downloads"
+    "conflict_downloads_only": "Apply only to downloads",
+    "parallel_hint_effective": "Configured limit: {configured} · Effective limit for this connection: {effective}",
+    "parallel_hint_pair": "Configured limit: {configured} · Effective limit for this connection: {effective} ({reason})",
+    "parallel_reduced_backend": "this connection type transfers one file at a time",
+    "parallel_reduced_server": "limited by the server or connection type"
   },
   "connection": {
     "dialog_title": "Add Connection",
@@ -790,7 +795,29 @@
     "enable": "Enable",
     "disabled_label": "Disabled (no templates provided)",
     "update_available": "Update available",
-    "other_versions_catalog": "Other versions"
+    "other_versions_catalog": "Other versions",
+    "status_loading": "Loading plugins…",
+    "request_plugin": "Request a plugin",
+    "request_plugin_tip": "Request new cluster profiles, Slurm or solver job templates, and lint packs in the official plugin repository.",
+    "request_plugin_failed": "Could not open the browser for the plugin request page.",
+    "capability_cluster_profile": "Cluster profiles",
+    "capability_lint_rules": "Lint rules",
+    "capability_job_templates": "Job templates",
+    "capability_application_tools": "Application tools",
+    "compatible_with_running": "Compatible with this app",
+    "incompatible_with_running": "Incompatible with this app",
+    "source_label": "Source",
+    "source_official_registry": "Official plugin registry",
+    "installed_state": "Installed state",
+    "installed_active": "Installed and active",
+    "installed_disabled": "Installed but disabled",
+    "installed_not_installed": "Not installed",
+    "install_summary": "{name} installed successfully: {details} added.",
+    "install_generic": "{name} installed successfully.",
+    "summary_cluster_profiles": "{count} cluster profile(s)",
+    "summary_job_templates": "{count} job template(s)",
+    "summary_lint_rule_packs": "{count} lint rule pack(s)",
+    "open_failed": "The Plugin Manager could not be opened. Details were written to the logs."
   },
   "templates": {
     "dialog_title": "Job Templates",

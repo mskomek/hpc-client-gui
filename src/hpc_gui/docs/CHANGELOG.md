@@ -1,5 +1,23 @@
 # Changelog
 
+## v1.4.1 (Unreleased)
+
+### Plugin Manager
+- The Plugin Manager now loads the registry automatically when first opened (Loading → Online/Cached/Offline states); Refresh is disabled while a request is in flight and re-enabled afterwards, and closing the dialog mid-load stays safe.
+- Discover cards show translated capability badges, compatibility with the running app, and installed/disabled/incompatible/update-available state; Details adds license range, source (*Official plugin registry*), installed state, and older versions.
+- Added **Request a plugin** (Turkish: *Eklenti iste*) which opens the dedicated issue form in the official plugin repository; the destination URL is fixed and allow-listed.
+- Successful installs/updates now show a completion summary with counts of added cluster profiles, job templates, and lint rule packs (from loader data).
+- Opening the Plugin Manager can no longer fail silently: failures are logged with an error id and surfaced to the user.
+
+### Transfers
+- Migrated the legacy global transfer-parallelism setting: profiles saved before v1.4.0 now inherit the old global value once (clamped to 1–10); profile-specific values always win and later launches never rewrite them.
+- Plain FTP transfers now run over isolated per-transfer connections, so FTP supports parallel file transfer safely; a single large file is still never segmented.
+- The transfer dialog shows configured versus effective parallelism and explains when the effective limit is reduced to one.
+
+### Packaging and CI
+- Declared `packaging>=23` as a runtime dependency (used by the plugin stack) and fixed the wheel asset declarations (SVG/terminal HTML-JS-CSS assets were missing due to an `*.seg` typo); new packaging test builds and inspects the wheel.
+- New module-specific coverage floors plus a 65% global coverage gate in CI; release workflow third-party actions are pinned to full commit SHAs.
+
 ## v1.4.0
 
 ### File management and connection UX

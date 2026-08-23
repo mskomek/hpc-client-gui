@@ -198,6 +198,9 @@ jobs:
     env:
       PYTHONPATH: src
       QT_QPA_PLATFORM: offscreen
+      # Keep the WebEngine terminal disabled under coverage so interpreter
+      # teardown cannot segfault (same guard as tests/conftest.py).
+      HPC_GUI_DISABLE_WEBENGINE: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -210,8 +213,30 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e .[test]
           pip install pytest pytest-cov
-      - name: GUI and offline test suite (report-only coverage)
+      - name: GUI and offline test suite (coverage gate)
+        # The wheel build lives in the dedicated packaging job.
         run: >
-          python -m pytest tests/ -q --tb=short -rf
+          python -m pytest tests/ -q --tb=short -rf -m "not packaging"
           --cov=hpc_gui --cov-report=term --cov-report=json:coverage.json
-          --cov-fail-under=0
+          --cov-report=xml:coverage.xml --cov-fail-under=65
+      - name: Module-specific coverage floors
+        run: python scripts/check_module_coverage.py coverage.xml
+
+  packaging:
+    name: Packaging (wheel assets)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install build tooling and runtime dependency set only
+        run: |
+          python -m pip install --upgrade pip
+          pip install build packaging
+          pip install -r requirements.txt
+          pip install pytest pyftpdlib paramiko cryptography pyside6
+      - name: Wheel asset and metadata smoke test
+        env:
+          PYTHONPATH: src
+        run: python -m pytest tests/test_wheel_packaging.py -m packaging -q
