@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 from PySide6.QtCore import QUrl, QTimer, Qt, Signal, Slot
@@ -14,6 +15,10 @@ class TerminalWidget(QWidget):
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
+        if os.environ.get("HPC_GUI_DISABLE_WEBENGINE"):
+            # Test/offscreen escape hatch: Chromium's profile teardown can
+            # segfault at interpreter exit, so tests fall back to the console.
+            raise RuntimeError("Qt WebEngine disabled via HPC_GUI_DISABLE_WEBENGINE")
         try:
             from PySide6.QtWebChannel import QWebChannel
             from PySide6.QtWebEngineCore import QWebEnginePage
