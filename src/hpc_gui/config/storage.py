@@ -159,6 +159,52 @@ def coerce_profile_transfer_parallelism(value: Any, default: int = 1) -> int:
     return _coerce_int_in_range(value, default, 1, 10)
 
 
+def _is_valid_parallelism(value: Any) -> bool:
+    """Strict validity for stored profile values (no bools/strings)."""
+    return (
+        isinstance(value, int)
+        and not isinstance(value, bool)
+        and 1 <= value <= 10
+    )
+
+
+def migrate_legacy_transfer_parallelism(cfg: Dict[str, Any]) -> bool:
+    """One-time migration of the legacy global transfer-parallelism setting.
+
+    v1.4.0 made the per-profile ``transfer_parallelism`` the single source of
+    truth, so profiles saved earlier silently fell back to 1. This copies a
+    valid legacy global value into every profile that lacks a valid profile-
+    specific one. It runs once per profile (the written field makes later
+    runs no-ops), never overwrites valid profile-specific values, clamps to
+    1..10, and preserves all other fields.
+
+    Pure function over the config mapping; returns True when it changed it.
+    """
+    profiles = cfg.get("profiles")
+    if not isinstance(profiles, list):
+        return False
+    settings = cfg.get("settings")
+    legacy_raw = settings.get("transfer_parallelism") if isinstance(settings, dict) else None
+    # Numeric legacy values are clamped into the supported range; anything
+    # else is malformed and contributes the safe default.
+    if isinstance(legacy_raw, int) and not isinstance(legacy_raw, bool):
+        legacy_value = _coerce_int_in_range(legacy_raw, 1, 1, 10)
+    else:
+        legacy_value = 1
+    changed = False
+    for profile in profiles:
+        if not isinstance(profile, dict):
+            continue
+        current = profile.get("transfer_parallelism")
+        if _is_valid_parallelism(current):
+            continue  # profile-specific choice always wins
+        target = coerce_profile_transfer_parallelism(legacy_value, 1)
+        if current != target:
+            profile["transfer_parallelism"] = target
+            changed = True
+    return changed
+
+
 def coerce_profile_ssh_timeout(value: Any, default: float | None = None) -> float | None:
     try:
         number = float(value)
@@ -489,6 +535,7 @@ def load_profiles() -> List[Dict[str, Any]]:
     profs = cfg.get("profiles", [])
     if not isinstance(profs, list):
         return []
+    changed = False
     # Profiles used to be identified by name alone, which loses everything
     # keyed to a profile as soon as the user renames it.  Stamp a stable id on
     # legacy entries once, on first read.
@@ -496,6 +543,12 @@ def load_profiles() -> List[Dict[str, Any]]:
     if missing:
         for profile in missing:
             profile["id"] = str(uuid.uuid4())
+        changed = True
+    # One-time migration: copy the legacy global transfer-parallelism value
+    # into profiles that lack a valid profile-specific one.
+    if migrate_legacy_transfer_parallelism(cfg):
+        changed = True
+    if changed:
         cfg["profiles"] = profs
         save_config(cfg)
     return profs

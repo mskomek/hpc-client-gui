@@ -33,7 +33,7 @@ Product behavior is canonical in `src/hpc_gui/docs/` (`HELP_en.md`,
 
 ## Use the application
 
-[[Connecting and Profiles|Connecting-and-Profiles]] · [[Remote File Manager|Remote-File-Manager]] · [[File Transfers|File-Transfers]] · [[Slurm Jobs|Slurm-Jobs]] · [[Job Outputs|Job-Outputs]] · [[Script Editor|Script-Editor]] · [[Terminal and Remote Commands|Terminal-and-Remote-Commands]] · [[X11 Forwarding|X11-Forwarding]] · [[Settings Reference|Settings-Reference]] · [[Interface Language and i18n|Interface-Language-and-i18n]]
+[[Connecting and Profiles|Connecting-and-Profiles]] · [[Remote File Manager|Remote-File-Manager]] · [[File Transfers|File-Transfers]] · [[Slurm Jobs|Slurm-Jobs]] · [[Job Outputs|Job-Outputs]] · [[Script Editor|Script-Editor]] · [[Terminal and Remote Commands|Terminal-and-Remote-Commands]] · [[X11 Forwarding|X11-Forwarding]] · [[Plugins|Plugins]] · [[Settings Reference|Settings-Reference]] · [[Interface Language and i18n|Interface-Language-and-i18n]]
 
 ## Automate
 

@@ -66,3 +66,14 @@ Bu dosya, HPC Client GUI'nin "ürün" gibi paketlenip sahada kullanılmasında e
 - [ ] Yeni/değişen bir CLI komutu varsa `MAINTENANCE_POLICY.md`'deki gate'ler
   (help metni, JSON sözleşmesi, unit test, ilgiliyse smoke, TODO/CHANGELOG)
   sağlandı — bkz. [MAINTENANCE_POLICY.md](MAINTENANCE_POLICY.md)
+
+## 11) Plugin API v1 / cross-repo release gates
+- [ ] Development CI may follow the plugin registry's `main`; **before cutting a
+  release, pin the "Plugin API contract" job's checkout `ref:` in
+  `.github/workflows/ci.yml` to an explicit plugin repository tag or commit**
+  and advance that pin intentionally after the release.
+- [ ] The pinned contract suite passed against the real registry content
+  (registry validation, manifests, hashes, TRUBA profile load, Fluent 0.2.0
+  selection, lint + template rendering, update/rollback).
+- [ ] Release workflow uses commit-SHA-pinned third-party actions (see
+  .github/workflows/release.yml); version comments kept next to each SHA.
