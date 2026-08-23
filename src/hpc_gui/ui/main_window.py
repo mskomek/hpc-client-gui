@@ -1,3 +1,4 @@
+import logging
 import shlex
 import webbrowser
 
@@ -20,6 +21,7 @@ from hpc_gui.config.storage import (
 from hpc_gui.core.paths import is_frozen_exe
 from hpc_gui.core.i18n import t, set_language
 from hpc_gui.core.debug_telemetry import DebugTelemetry, is_source_run
+from hpc_gui.core.ui_errors import show_exception
 from hpc_gui.services.changelog import chronological_changelog, load_changelog_text
 from hpc_gui.services.app_updater import (
     download_and_verify_release,
@@ -67,6 +69,8 @@ class _BackgroundCall(QObject):
 
 
 class MainWindow(QMainWindow):
+
+    _logger = logging.getLogger("hpc_gui.ui.main_window")
 
     def changeEvent(self, event) -> None:  # type: ignore[override]
         super().changeEvent(event)
@@ -402,8 +406,17 @@ class MainWindow(QMainWindow):
 
             dlg = PluginManagerDialog(self)
             dlg.exec()
-        except Exception:
-            pass
+        except Exception as exc:
+            # A silent failure here made plugin problems undiagnosable; log
+            # the real exception and surface a translated user message.
+            self._logger.exception("Opening the Plugin Manager failed")
+            show_exception(
+                self,
+                title=t("plugins.dialog_title"),
+                user_message=t("plugins.open_failed"),
+                exc=exc,
+                area="PLUGINS",
+            )
 
     def _show_startup_changelog_if_needed(self) -> None:
         try:
