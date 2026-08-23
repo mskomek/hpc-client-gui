@@ -123,6 +123,25 @@ The GUI can be used to:
 * Read output and error files
 * Follow job output
 
+### Plugins
+
+HPC Client GUI has a first-class, declarative plugin ecosystem backed by the
+official registry [hpc-client-gui-plugins](https://github.com/mskomek/hpc-client-gui-plugins).
+From the built-in Plugin Manager you can install:
+
+* **Cluster profiles** — ready-made site/scheduler definitions (for example
+  TRUBA) with paths and command templates.
+* **Application lint packs** — conservative static rules such as ANSYS Fluent
+  journal checks.
+* **Reusable Slurm job templates** — safe, placeholder-based submission
+  templates rendered by plain substitution only.
+
+Plugin content is **declarative data**: no executable plugin code is
+distributed or run at install time, and installation happens entirely on your
+desktop — there is **no server-side cluster installation**. Every file is
+verified against SHA-256 hashes recorded in the official registry before a
+plugin is activated.
+
 ### Terminal and editor
 
 HPC Client GUI includes desktop terminal and editor workflows for common remote tasks.

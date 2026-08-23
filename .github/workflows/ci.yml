@@ -159,6 +159,40 @@ jobs:
       - name: Audit runtime dependency closure
         run: .venv-audit/bin/pip-audit --skip-editable --progress-spinner off
 
+  contract:
+    name: Plugin API contract
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: src
+      QT_QPA_PLATFORM: offscreen
+      # Release pinning: point `ref:` below at an explicit plugins commit or
+      # tag before cutting a release, and advance it intentionally afterwards.
+      # The default follows the registry's main branch during development.
+      HPC_GUI_CONTRACT_REPO: ${{ github.workspace }}/hpc-client-gui-plugins
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check out the official plugin registry (sibling directory)
+        uses: actions/checkout@v4
+        with:
+          repository: mskomek/hpc-client-gui-plugins
+          # Release pin: follows plugins main. For a release, replace this
+          # with an explicit tag/commit of the plugins repo and advance it
+          # intentionally.
+          ref: main
+          path: hpc-client-gui-plugins
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install deps
+        # The contract suite is deliberately lightweight: it exercises the
+        # plugin stack without importing Qt, so no GUI dependencies install.
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest packaging jsonschema
+      - name: Cross-repository plugin contract tests
+        run: >
+          python -m pytest tests/test_plugin_contract.py -q --tb=short -rf
+
   gui:
     runs-on: ubuntu-latest
     env:

@@ -17,8 +17,12 @@ import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable
+from urllib.parse import urlsplit
+
+from packaging.version import InvalidVersion, Version
 
 from hpc_gui import __version__
+from hpc_gui.plugins.compatibility import is_app_compatible
 from hpc_gui.plugins.storage import plugins_root
 from hpc_gui.plugins.validator import validate_registry_dict
 
@@ -40,9 +44,22 @@ FetchFn = Callable[[str, int], bytes]
 
 DEFAULT_TIMEOUT_SECONDS = 30.0
 
+# After redirects the final response must still come from an official host
+# over HTTPS. Redirects to any other host (even https://) are refused.
+ALLOWED_FINAL_HOSTS = frozenset({"raw.githubusercontent.com"})
+
 
 class RegistryError(RuntimeError):
     """Raised when the official registry cannot be fetched or trusted."""
+
+
+def _final_url_is_allowed(final_url: object) -> bool:
+    if not isinstance(final_url, str):
+        return True  # fetchers without redirect introspection; scheme checked by caller
+    parts = urlsplit(final_url)
+    if parts.scheme != "https":
+        return False
+    return (parts.hostname or "").lower() in ALLOWED_FINAL_HOSTS
 
 
 def default_fetcher(url: str, max_bytes: int) -> bytes:
@@ -52,9 +69,11 @@ def default_fetcher(url: str, max_bytes: int) -> bytes:
         headers={"User-Agent": f"HPC-Client-GUI/{__version__}"},
     )
     with urllib.request.urlopen(request, timeout=DEFAULT_TIMEOUT_SECONDS) as response:
-        final_scheme = getattr(response, "geturl", lambda: url)()
-        if isinstance(final_scheme, str) and final_scheme.startswith("http://"):
-            raise RegistryError("Refusing insecure HTTP redirect.")
+        final_url = getattr(response, "geturl", lambda: url)()
+        if not _final_url_is_allowed(final_url):
+            raise RegistryError(
+                "Refusing insecure HTTP redirect or unexpected final host."
+            )
         payload = response.read(max_bytes + 1)
     if len(payload) > max_bytes:
         raise RegistryError(f"Response from {url} exceeds the size limit.")
@@ -149,14 +168,67 @@ def fetch_registry_with_cache(
 
 
 def find_registry_entry(
-    registry: dict[str, Any], plugin_id: str, version: str | None = None
+    registry: dict[str, Any],
+    plugin_id: str,
+    version: str | None = None,
+    app_version: str | None = None,
 ) -> dict[str, Any]:
-    """Resolve one validated registry entry by id (latest listed version)."""
+    """Resolve one validated registry entry by id.
+
+    With ``version`` the exactly matching entry is returned. Without a
+    version, the highest semantic version wins (PEP 440 ordering via
+    ``packaging.version.Version``); registry order never matters. When
+    ``app_version`` is supplied, entries whose ``requires_app`` range does
+    not admit that release are skipped so a newer incompatible version
+    never shadows an older compatible one.
+    """
     matches = [
         entry
         for entry in registry.get("plugins", [])
-        if entry.get("id") == plugin_id and (version is None or entry.get("version") == version)
+        if isinstance(entry, dict) and entry.get("id") == plugin_id
     ]
     if not matches:
         raise RegistryError(f"Plugin not found in the official registry: {plugin_id}")
-    return matches[0]
+
+    by_version: dict[str, dict[str, Any]] = {}
+    for entry in matches:
+        raw = entry.get("version")
+        if not isinstance(raw, str) or not raw:
+            raise RegistryError(f"Registry entry for {plugin_id} has no valid version.")
+        if raw in by_version:
+            raise RegistryError(
+                f"Duplicate registry entries for {plugin_id} {raw}."
+            )
+        try:
+            parsed = Version(raw)
+        except InvalidVersion as exc:
+            raise RegistryError(
+                f"Registry version '{raw}' for {plugin_id} is not a valid "
+                f"PEP 440 version."
+            ) from exc
+        by_version[raw] = (parsed, entry)
+
+    def _compatible(entry: dict[str, Any]) -> bool:
+        if app_version is None:
+            return True
+        return is_app_compatible(str(entry.get("requires_app", "")), app_version)
+
+    if version is not None:
+        found = by_version.get(version)
+        if found is None:
+            raise RegistryError(
+                f"Plugin version not found in the official registry: "
+                f"{plugin_id} {version}"
+            )
+        return found[1]
+
+    candidates = [(parsed, entry) for parsed, entry in by_version.values() if _compatible(entry)]
+    if not candidates:
+        raise RegistryError(
+            f"No version of {plugin_id} is compatible with app {app_version}."
+        )
+    # Stable releases win over prereleases (pip-like policy); a prerelease
+    # is only chosen when no stable version is compatible.
+    stable = [item for item in candidates if not item[0].is_prerelease]
+    pool = stable or candidates
+    return max(pool, key=lambda item: item[0])[1]
