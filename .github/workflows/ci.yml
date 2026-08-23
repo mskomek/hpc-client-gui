@@ -210,8 +210,29 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e .[test]
           pip install pytest pytest-cov
-      - name: GUI and offline test suite (report-only coverage)
+      - name: GUI and offline test suite (coverage gate)
         run: >
           python -m pytest tests/ -q --tb=short -rf
           --cov=hpc_gui --cov-report=term --cov-report=json:coverage.json
-          --cov-fail-under=0
+          --cov-fail-under=65
+      - name: Module-specific coverage floors
+        run: python scripts/check_module_coverage.py coverage.xml
+
+  packaging:
+    name: Packaging (wheel assets)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install build tooling and runtime dependency set only
+        run: |
+          python -m pip install --upgrade pip
+          pip install build packaging
+          pip install -r requirements.txt
+          pip install pytest pyftpdlib paramiko cryptography pyside6
+      - name: Wheel asset and metadata smoke test
+        env:
+          PYTHONPATH: src
+        run: python -m pytest tests/test_wheel_packaging.py -m packaging -q
