@@ -35,7 +35,7 @@ bağlar.
 
 ## Uygulamayı kullanma
 
-[[Bağlantı ve Profiller|Connecting-and-Profiles-TR]] · [[Uzak Dosya Yöneticisi|Remote-File-Manager-TR]] · [[Dosya Aktarımları|File-Transfers-TR]] · [[Slurm İşleri|Slurm-Jobs-TR]] · [[İş Çıktıları|Job-Outputs-TR]] · [[Betik Düzenleyici|Script-Editor-TR]] · [[Terminal ve Uzak Komutlar|Terminal-and-Remote-Commands-TR]] · [[X11 Yönlendirme|X11-Forwarding-TR]] · [[Ayarlar Referansı|Settings-Reference-TR]] · [[Arayüz Dili ve i18n|Interface-Language-and-i18n-TR]]
+[[Bağlantı ve Profiller|Connecting-and-Profiles-TR]] · [[Uzak Dosya Yöneticisi|Remote-File-Manager-TR]] · [[Dosya Aktarımları|File-Transfers-TR]] · [[Slurm İşleri|Slurm-Jobs-TR]] · [[İş Çıktıları|Job-Outputs-TR]] · [[Betik Düzenleyici|Script-Editor-TR]] · [[Terminal ve Uzak Komutlar|Terminal-and-Remote-Commands-TR]] · [[X11 Yönlendirme|X11-Forwarding-TR]] · [[Eklentiler|Plugins-TR]] · [[Ayarlar Referansı|Settings-Reference-TR]] · [[Arayüz Dili ve i18n|Interface-Language-and-i18n-TR]]
 
 ## Otomasyon
 

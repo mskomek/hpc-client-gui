@@ -25,6 +25,7 @@
 - [[Script Editor|Script-Editor]]
 - [[Terminal and Remote Commands|Terminal-and-Remote-Commands]]
 - [[X11 Forwarding|X11-Forwarding]]
+- [[Plugins|Plugins]]
 - [[Settings Reference|Settings-Reference]]
 - [[Interface Language and i18n|Interface-Language-and-i18n]]
 
@@ -85,6 +86,7 @@
 - [[Betik Düzenleyici|Script-Editor-TR]]
 - [[Terminal ve Uzak Komutlar|Terminal-and-Remote-Commands-TR]]
 - [[X11 Yönlendirme|X11-Forwarding-TR]]
+- [[Eklentiler|Plugins-TR]]
 - [[Ayarlar Referansı|Settings-Reference-TR]]
 - [[Arayüz Dili ve i18n|Interface-Language-and-i18n-TR]]
 
