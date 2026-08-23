@@ -175,7 +175,10 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: mskomek/hpc-client-gui-plugins
-          ref: main
+          # Release pin: currently pinned to the registry hardening branch.
+          # Advance this intentionally: once PR mskomek/hpc-client-gui-plugins#1
+          # is merged, point this back at `main` (or an explicit tag/commit).
+          ref: feat/registry-validation-fluent-metadata
           path: hpc-client-gui-plugins
       - uses: actions/setup-python@v5
         with:
