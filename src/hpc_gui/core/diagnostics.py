@@ -36,7 +36,7 @@ def create_diagnostic_bundle(dest_dir: str) -> Path:
     out_dir = Path(dest_dir).resolve()
     out_dir.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    zip_path = out_dir / f"truba_diagnostics_{stamp}.zip"
+    zip_path = out_dir / f"hpc_diagnostics_{stamp}.zip"
 
     with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
         for p in _candidate_files():
