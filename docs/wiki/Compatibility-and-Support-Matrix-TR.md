@@ -9,6 +9,8 @@ Geçerli sürüm: **1.2.6** (`pyproject.toml`).
 | Platform | Biçim | Notlar |
 |---|---|---|
 | Windows 10 / 11 | `hpc-client-gui.exe` içeren taşınabilir ZIP | Python gerekmez |
+| macOS 13+ Apple Silicon | `hpc-client-gui_macos_arm64.dmg` | İmzalı/notarize release DMG'si |
+| macOS 13+ Intel | `hpc-client-gui_macos_x86_64.dmg` | İmzalı/notarize release DMG'si |
 | Linux x86_64 | AppImage | Kurulum olmadan çalışır |
 | Linux x86_64 (Debian tabanlı) | `.deb` | Sistem geneline kurulur |
 | Tüm desteklenen platformlar | Kaynaktan | Python 3.10+, `pip install -e .` |
@@ -30,6 +32,7 @@ belgelenmiştir. Qt platform kitaplıkları gereklidir (Ubuntu/Debian'da
 | `plink.exe` (PuTTY) | İsteğe bağlı, yalnızca X11, Windows | İsteğe bağlı, yalnızca X11 |
 | VcXsrv | İsteğe bağlı, yalnızca X11, Windows | İsteğe bağlı, yalnızca X11 |
 | Sistem OpenSSH istemcisi | Windows'ta X11 için kullanılmaz | Linux'ta X11 için gerekir |
+| XQuartz | Gerekmez | Yalnızca macOS X11 için gerekir |
 
 ## Küme tarafı gereksinimleri
 
@@ -52,6 +55,7 @@ yürütmek yerine yumuşak biçimde başarısız olmak ve ayrıntıyı günlüğ
 | plink + VcXsrv ile X11 (Windows) | Önerilen | Windows'ta en güvenilir yol |
 | Anahtarla OpenSSH üzerinden X11 | Destekleniyor | `ssh -X/-Y` kullanır |
 | Parolayla OpenSSH üzerinden X11 | Sınırlı | Gizli TTY istemleri kilitleyebilir; plink tercih edilir |
+| macOS X11 ve parola | Sınırlı | SSH anahtarı veya agent gerekir; yalnızca parolalı X11 başlatılmaz |
 | Ana bilgisayar anahtarı ilkesi `accept-new` | Destekleniyor | Bilinmeyen anahtarlar için güvenip kaydet, bir kerelik güven veya iptal sorulur |
 | Ana bilgisayar anahtarı ilkesi `strict` | Destekleniyor | Bilinmeyen anahtarlar reddedilir; değişen anahtarlar her zaman reddedilir |
 
@@ -66,4 +70,5 @@ yazılır.
 
 Ayrıca bkz. [[Windows Kurulumu|Installation-Windows-TR]],
 [[Linux Kurulumu|Installation-Linux-TR]] ve
+[[macOS Kurulumu|Installation-macOS-TR]],
 [[X11 Yönlendirme|X11-Forwarding-TR]].
