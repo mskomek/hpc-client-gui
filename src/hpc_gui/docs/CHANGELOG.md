@@ -1,5 +1,16 @@
 # Changelog
 
+## v1.5.0
+
+### Plugin Manager
+- Installed plugins with more than one version now offer **Activate / Roll back**: installed versions are listed in PEP 440 order (1.10 > 1.9), the truly active version is shown as the headline version, and switching requires explicit confirmation. Activation runs off the GUI thread, keeps every installed version (nothing is deleted), leaves enabled/disabled state untouched, and restores the previous active version automatically when validation fails.
+- Installed plugin versions are re-validated locally on load and activation: the manifest is compared against the SHA-256 trusted at install time, every declared payload file is checked for size and hash, and undeclared extra files inside the immutable version directory are rejected. A broken plugin is skipped with an actionable reinstall message; healthy plugins keep loading and nothing is ever deleted automatically.
+- Existing installs are migrated once via trust-on-first-use verification: files are verified against their current manifest, and only then is that hash recorded atomically as the initial trust anchor (`installed.json` schema 2). This migration cannot prove the files were unchanged between installation and migration.
+
+### Repository and CI
+- PR-based contribution model documented for `main` (short-lived feature branches, deleted after merge); stale references to removed internal instruction files cleaned up.
+- CI workflows gain branch/PR-scoped concurrency cancellation; all GitHub Actions are pinned to verified full commit SHAs; release builds report artifact sizes.
+
 ## v1.4.2
 
 ### macOS release support
