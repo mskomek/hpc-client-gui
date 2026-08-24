@@ -333,9 +333,40 @@ jobs:
             dist/releases/v${{ github.event.inputs.version }}/hpc-client-gui_macos_x86_64.dmg
             dist/releases/v${{ github.event.inputs.version }}/hpc-client-gui_macos_x86_64.dmg.sha256
 
+  verify-macos-signed-candidate:
+    name: Verify signed macOS candidate artifacts
+    if: ${{ inputs.sign == true || inputs.publish == true }}
+    needs: [sign-macos-arm64, sign-macos-x86_64]
+    runs-on: macos-15
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: hpc-client-gui-macos-arm64-signed-${{ github.event.inputs.version }}
+          path: dist/releases/v${{ github.event.inputs.version }}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: hpc-client-gui-macos-x86_64-signed-${{ github.event.inputs.version }}
+          path: dist/releases/v${{ github.event.inputs.version }}
+      - name: Verify checksums, signatures, and Gatekeeper assessment
+        shell: bash
+        run: |
+          set -euo pipefail
+          release_dir="dist/releases/v${{ github.event.inputs.version }}"
+          for dmg in "$release_dir"/*.dmg; do
+            shasum -a 256 -c "$dmg.sha256"
+            mount_point="$(mktemp -d)"
+            hdiutil attach "$dmg" -nobrowse -mountpoint "$mount_point"
+            app="$(find "$mount_point" -maxdepth 2 -name '*.app' -type d -print -quit)"
+            test -n "$app"
+            codesign --verify --deep --strict "$app"
+            spctl --assess --type execute "$app"
+            hdiutil detach "$mount_point"
+            rmdir "$mount_point"
+          done
+
   publish-release:
     if: ${{ inputs.publish == true }}
-    needs: [build-linux, build-windows, build-macos-arm64, build-macos-x86_64, sign-macos-arm64, sign-macos-x86_64]
+    needs: [build-linux, build-windows, build-macos-arm64, build-macos-x86_64, sign-macos-arm64, sign-macos-x86_64, verify-macos-signed-candidate]
     runs-on: ubuntu-latest
     # Attestation needs OIDC (id-token) and the attestations API. These are
     # scoped to this job only; build jobs keep the repository default.
