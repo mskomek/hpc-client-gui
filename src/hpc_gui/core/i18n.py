@@ -2,8 +2,7 @@ import json
 import locale
 from pathlib import Path
 
-_SETTINGS_DIR = Path.home() / ".truba_slurm_gui"
-_LANG_FILE = _SETTINGS_DIR / "language.json"
+from hpc_gui.core.paths import app_data_dir
 
 _LANG: dict = {}
 _CURRENT = "tr"
@@ -25,8 +24,7 @@ def set_language(lang: str) -> None:
     """Set UI language and persist it under ~/.truba_slurm_gui/language.json."""
     load_language(lang)
     try:
-        _SETTINGS_DIR.mkdir(parents=True, exist_ok=True)
-        with open(_LANG_FILE, "w", encoding="utf-8") as f:
+        with open(app_data_dir() / "language.json", "w", encoding="utf-8") as f:
             json.dump({"lang": lang}, f)
     except Exception:
         # non-fatal
@@ -49,8 +47,9 @@ def load_saved_language(default: str = "tr") -> str:
     """Load persisted language if present; returns the language code used."""
     lang = default
     try:
-        if _LANG_FILE.exists():
-            data = json.load(open(_LANG_FILE, "r", encoding="utf-8"))
+        language_file = app_data_dir() / "language.json"
+        if language_file.exists():
+            data = json.load(open(language_file, "r", encoding="utf-8"))
             if isinstance(data, dict) and data.get("lang") in ("tr", "en"):
                 lang = data["lang"]
     except Exception:
