@@ -249,6 +249,7 @@ If your site prints banners/warnings that affect command output, parsing may deg
 | X11 + plink + VcXsrv | Recommended | Most reliable on Windows |
 | X11 + OpenSSH + key | Supported | Uses system/bundled ssh with `-Y/-X` |
 | X11 + OpenSSH + password | Limited | Hidden TTY prompts can block; plink preferred |
+| macOS X11 + password | Limited | Use an SSH key or agent; password-only X11 is not started |
 | Host key policy = `accept-new` | Supported | Unknown keys prompt for trust-and-save, trust-once, or cancel; saved keys go to `~/.truba_slurm_gui/known_hosts` |
 | Host key policy = `strict` | Supported | Unknown keys are rejected; changed keys are always rejected |
 

@@ -241,6 +241,7 @@ Kurum banner/alias/modül çıktıları farklıysa bazı parse senaryolarında l
 | X11 + plink + VcXsrv | Önerilen | Windows'ta en stabil yol |
 | X11 + OpenSSH + key | Desteklenir | Sistem/paket ssh ile `-Y/-X` |
 | X11 + OpenSSH + parola | Kısıtlı | Gizli TTY prompt bloklayabilir, plink önerilir |
+| macOS X11 + parola | Kısıtlı | SSH anahtarı veya agent kullanın; yalnız parolalı X11 başlatılmaz |
 | Host key policy = `accept-new` | Desteklenir | Bilinmeyen anahtarda güvenip kaydetme, bir kez güvenme veya iptal seçenekleri sunulur; kayıtlar `~/.truba_slurm_gui/known_hosts` dosyasına yazılır |
 | Host key policy = `strict` | Desteklenir | Bilinmeyen anahtar reddedilir; değişmiş anahtar her zaman reddedilir |
 

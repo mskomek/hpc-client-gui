@@ -84,6 +84,10 @@ class X11Runner:
         if not self.should_handle(info, cmd):
             return False
 
+        if _is_macos() and getattr(info, "password", None) and not getattr(info, "key_path", None):
+            self._log(t("login.x11_macos_password_limit"))
+            return True
+
         p = parent or self._parent
         if not ensure_x_server_running(self._log, parent=p, allow_download=True):
             self._log("X11: Yerel X server başlatılamadı veya hazır değil.")

@@ -62,6 +62,7 @@
     "close_x11_procs_label": "Program kapanınca X11/SSH süreçlerini kapat",
     "x11_finished": "[X11 bitti] code={code}",
     "x11_started": "X11 başlatıldı:\n{cmd}\nBeklenen: pencere Windows'ta ayrı açılır.",
+    "x11_macos_password_limit": "macOS X11 için SSH anahtarı veya agent gerekir; yalnız parolalı X11 başlatılmadı.",
     "cmd_error": "Komut hatası: {err}",
     "stderr": "Standart hata çıktısı:\n{data}",
     "save": "Kaydet",
