@@ -10,6 +10,7 @@
 ### Repository and CI
 - PR-based contribution model documented for `main` (short-lived feature branches, deleted after merge); stale references to removed internal instruction files cleaned up.
 - CI workflows gain branch/PR-scoped concurrency cancellation; all GitHub Actions are pinned to verified full commit SHAs; release builds report artifact sizes.
+- macOS releases can be published unsigned when Apple signing credentials are unavailable; Gatekeeper approval is required on first launch.
 
 ## v1.4.2
 
