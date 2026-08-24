@@ -34,13 +34,22 @@ def _performance_mark(name: str) -> None:
 def _set_application_icon(app: QApplication) -> None:
     """Use the release icon for the app window and taskbar entry too."""
     candidates = [
+        Path(__file__).resolve().parents[2] / "build" / "macos" / "hpc-client-gui.icns",
         Path(__file__).resolve().parents[2] / "build" / "windows" / "hpc-client-gui.ico",
+        Path(getattr(sys, "_MEIPASS", "")) / "hpc_gui" / "assets" / "hpc-client-gui.icns",
         Path(getattr(sys, "_MEIPASS", "")) / "hpc_gui" / "assets" / "hpc-client-gui.ico",
     ]
     for icon_path in candidates:
         if icon_path.is_file():
             app.setWindowIcon(QIcon(str(icon_path)))
             return
+
+
+def _configure_application_identity(app: QApplication) -> None:
+    app.setApplicationName("HPC Client GUI")
+    app.setApplicationDisplayName("HPC Client GUI")
+    app.setOrganizationName("mskomek")
+    app.setOrganizationDomain("github.com")
 
 
 def _bootstrap_safety_checks() -> None:
@@ -75,6 +84,7 @@ def _show_main_window(window: MainWindow, available) -> None:
 def main() -> int:
     _performance_mark("main_entered")
     app = QApplication(sys.argv)
+    _configure_application_identity(app)
     _performance_mark("qapplication_created")
     _set_application_icon(app)
 

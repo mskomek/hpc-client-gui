@@ -3,6 +3,7 @@ from pathlib import Path
 from datetime import datetime
 
 from hpc_gui.services.command_history_store import is_sensitive_command
+from hpc_gui.core.paths import app_data_dir
 
 
 def _redact_cmd(cmd: str) -> str:
@@ -27,9 +28,7 @@ def _sanitize_event(event: dict) -> dict:
     return e
 
 def _history_path() -> Path:
-    base = Path.home() / ".truba_slurm_gui"
-    base.mkdir(parents=True, exist_ok=True)
-    return base / "history.json"
+    return app_data_dir() / "history.json"
 
 def append_event(event: dict) -> None:
     p = _history_path()

@@ -2,8 +2,7 @@
 
 Covers:
 
-- the FTP backend truthfully declares parallel capability via isolated
-  per-transfer connections;
+- FTP safely caps queued transfers at one despite isolated connections;
 - two FTP transfers actually overlap using distinct connections;
 - the transfer dialog closes every isolated backend on success, failure,
   and cancellation, and retry creates fresh resources;
@@ -86,8 +85,8 @@ def _backend(server) -> FTPFilesBackend:
 # ---------------------------------------------------------------------------
 
 
-def test_ftp_backend_declares_parallel_capability():
-    assert FTPFilesBackend.supports_parallel_transfers is True
+def test_ftp_backend_forces_serial_queueing():
+    assert FTPFilesBackend.supports_parallel_transfers is False
 
 
 def test_ftp_transfer_backends_are_isolated_and_close_is_idempotent(ftp_server):

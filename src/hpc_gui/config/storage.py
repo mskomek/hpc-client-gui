@@ -5,6 +5,8 @@ import os
 import tempfile
 import uuid
 from pathlib import Path
+
+from hpc_gui.core.paths import app_data_dir
 from typing import Any, Dict, Iterable, List, Optional
 
 
@@ -29,9 +31,7 @@ def merge_profile_patch(
 
 
 def _config_dir() -> Path:
-    d = Path.home() / ".truba_slurm_gui"
-    d.mkdir(parents=True, exist_ok=True)
-    return d
+    return app_data_dir()
 
 
 def _config_path() -> Path:
@@ -607,6 +607,15 @@ def delete_profile(name: str) -> None:
         cfg.pop("last_profile_id", None)
     save_config(cfg)
     for profile in removed:
+        reference = profile.get("password_keychain_ref")
+        still_used = any(
+            reference and p.get("password_keychain_ref") == reference
+            for p in cfg["profiles"]
+        )
+        if reference and not still_used:
+            from ..core.secret_store import delete_keychain_secret
+
+            delete_keychain_secret(str(reference))
         profile_id = str(profile.get("id") or "")
         if not profile_id:
             continue

@@ -96,8 +96,10 @@ aynı anda kaç dosya aktarımı çalışacağını belirler; ek kullanıcı otu
 açmaz. Aktarım penceresi hem **ayarlanan** değeri hem de bağlantı için
 **geçerli** limiti gösterir: birden çok dosya paralel gidebilir; tek büyük
 dosya şu anda parçalara bölünerek aktarılmaz. Hızlı hatlarda 2–4 değerleri
-verimi artırabilir; paylaşılan HPC giriş düğümlerinde ölçülü olun. İzole
-bağlantı sağlayamayan sunucu/arka uçlar geçerli sınırı güvenle 1'e düşürür.
+verimi artırabilir; paylaşılan HPC giriş düğümlerinde ölçülü olun. Düz FTP,
+bazı sunucular eşzamanlı veri kanallarını düşürdüğü için her zaman tek
+aktarımla sınırlıdır; yalıtılmış kanalları destekleyen SFTP ayarlanan
+paralelliği kullanabilir.
 
 ### Eklentiler
 
@@ -239,6 +241,7 @@ Kurum banner/alias/modül çıktıları farklıysa bazı parse senaryolarında l
 | X11 + plink + VcXsrv | Önerilen | Windows'ta en stabil yol |
 | X11 + OpenSSH + key | Desteklenir | Sistem/paket ssh ile `-Y/-X` |
 | X11 + OpenSSH + parola | Kısıtlı | Gizli TTY prompt bloklayabilir, plink önerilir |
+| macOS X11 + parola | Kısıtlı | SSH anahtarı veya agent kullanın; yalnız parolalı X11 başlatılmaz |
 | Host key policy = `accept-new` | Desteklenir | Bilinmeyen anahtarda güvenip kaydetme, bir kez güvenme veya iptal seçenekleri sunulur; kayıtlar `~/.truba_slurm_gui/known_hosts` dosyasına yazılır |
 | Host key policy = `strict` | Desteklenir | Bilinmeyen anahtar reddedilir; değişmiş anahtar her zaman reddedilir |
 

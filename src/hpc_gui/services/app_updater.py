@@ -13,6 +13,7 @@ from typing import Callable
 
 from hpc_gui import __version__
 from hpc_gui.core.paths import app_data_dir, is_frozen_exe
+from hpc_gui.core.platform import current_os, release_platform_key
 
 
 GITHUB_REPOSITORY = "mskomek/hpc-client-gui"
@@ -23,6 +24,7 @@ RELEASE_EXE_NAME = "hpc-client-gui.exe"
 RELEASE_ZIP_NAME = "hpc-client-gui_windows_onedir.zip"
 RELEASE_SHA_NAME = f"{RELEASE_ZIP_NAME}.sha256"
 ProgressCallback = Callable[[int, str], None]
+CancelCallback = Callable[[], bool]
 
 
 @dataclass(frozen=True)
@@ -34,6 +36,20 @@ class UpdateRelease:
     sha_name: str
     sha_url: str
     html_url: str
+    install_strategy: str = "windows"
+
+
+def release_asset_names(platform_key: str | None = None) -> tuple[str, str] | None:
+    key = platform_key or release_platform_key()
+    names = {
+        "windows_x86_64": (RELEASE_ZIP_NAME, RELEASE_SHA_NAME),
+        "macos_arm64": ("hpc-client-gui_macos_arm64.dmg", "hpc-client-gui_macos_arm64.dmg.sha256"),
+        "macos_x86_64": ("hpc-client-gui_macos_x86_64.dmg", "hpc-client-gui_macos_x86_64.dmg.sha256"),
+        "linux_x86_64": None,
+    }
+    if key not in names:
+        raise RuntimeError(f"Unsupported update platform: {key}")
+    return names[key]
 
 
 def _request(url: str, timeout: float = 30.0):
@@ -75,12 +91,14 @@ def get_latest_release(timeout: float = 30.0) -> UpdateRelease:
         raise RuntimeError("GitHub release tag does not contain a version.")
     version = version_match.group(1)
 
-    expected_zip = RELEASE_ZIP_NAME
-    expected_sha = RELEASE_SHA_NAME
     assets = {
         str(asset.get("name") or ""): str(asset.get("browser_download_url") or "")
         for asset in payload.get("assets") or []
     }
+    release_assets = release_asset_names()
+    if release_assets is None:
+        return UpdateRelease(version, tag, "", "", "", "", str(payload.get("html_url") or ""), "manual")
+    expected_zip, expected_sha = release_assets
     if not assets.get(expected_zip) or not assets.get(expected_sha):
         raise RuntimeError(
             f"Release assets are incomplete: {expected_zip} and {expected_sha} are required."
@@ -94,6 +112,7 @@ def get_latest_release(timeout: float = 30.0) -> UpdateRelease:
         sha_name=expected_sha,
         sha_url=assets[expected_sha],
         html_url=str(payload.get("html_url") or ""),
+        install_strategy="windows" if current_os() == "windows" else "manual",
     )
 
 
@@ -105,6 +124,7 @@ def _download(
     progress_start: int = 0,
     progress_end: int = 100,
     status: str = "",
+    cancelled: CancelCallback | None = None,
 ) -> None:
     destination.parent.mkdir(parents=True, exist_ok=True)
     temporary = destination.with_suffix(destination.suffix + ".part")
@@ -113,6 +133,8 @@ def _download(
             total = int(response.headers.get("Content-Length") or 0)
             downloaded = 0
             while True:
+                if cancelled and cancelled():
+                    raise RuntimeError("Update download cancelled.")
                 chunk = response.read(1024 * 1024)
                 if not chunk:
                     break
@@ -138,10 +160,19 @@ def _download(
 def download_and_verify_release(
     release: UpdateRelease,
     progress_cb: ProgressCallback | None = None,
+    cancelled: CancelCallback | None = None,
 ) -> Path:
     update_dir = app_data_dir() / "updates" / f"v{release.version}"
     zip_path = update_dir / release.zip_name
     sha_path = update_dir / release.sha_name
+
+    if zip_path.exists() and sha_path.exists():
+        expected = sha_path.read_text(encoding="ascii", errors="ignore").strip().split()[0]
+        actual = hashlib.sha256(zip_path.read_bytes()).hexdigest()
+        if expected and actual.lower() == expected.lower():
+            if progress_cb:
+                progress_cb(100, "ready")
+            return zip_path
 
     if progress_cb:
         progress_cb(10, "downloading")
@@ -152,6 +183,7 @@ def download_and_verify_release(
         progress_start=10,
         progress_end=15,
         status="downloading",
+        cancelled=cancelled,
     )
     _download(
         release.zip_url,
@@ -160,6 +192,7 @@ def download_and_verify_release(
         progress_start=15,
         progress_end=90,
         status="downloading",
+        cancelled=cancelled,
     )
 
     if progress_cb:
@@ -279,6 +312,8 @@ try {{
 
 
 def launch_update_installer(zip_path: Path, new_version: str) -> None:
+    if current_os() != "windows":
+        raise RuntimeError("Automatic installation is available only on Windows.")
     if not is_frozen_exe():
         raise RuntimeError("Automatic installation is available only in the packaged app.")
 

@@ -1,5 +1,6 @@
 import logging
 import shlex
+import threading
 import webbrowser
 
 from PySide6.QtWidgets import (
@@ -57,11 +58,15 @@ class _BackgroundCall(QObject):
     def __init__(self, fn):
         super().__init__()
         self._fn = fn
+        self._cancelled = threading.Event()
+
+    def cancel(self) -> None:
+        self._cancelled.set()
 
     @Slot()
     def run(self) -> None:
         try:
-            self.finished.emit(self._fn(self.progress.emit))
+            self.finished.emit(self._fn(self.progress.emit, self._cancelled.is_set))
         except Exception as exc:
             self.failed.emit(str(exc))
         finally:
@@ -118,6 +123,7 @@ class MainWindow(QMainWindow):
         self._update_progress: QProgressDialog | None = None
         self._update_manual = False
         self._update_interactive = False
+        self._update_cancelled = False
         self._job_poll_worker: AsyncCall | None = None
         self._job_poll_generation = 0
         self._init_language_menu()
@@ -225,6 +231,7 @@ class MainWindow(QMainWindow):
                     self._startup_changelog_timer.stop()
                 if hasattr(self, "_startup_update_timer"):
                     self._startup_update_timer.stop()
+                self._cancel_update_jobs()
                 self._job_poll_generation += 1
                 self._job_poll_worker = None
                 if getattr(self, "_job_tray", None):
@@ -461,6 +468,7 @@ class MainWindow(QMainWindow):
             dialog.setMinimumDuration(0)
             dialog.setRange(0, 100)
             dialog.setWindowModality(Qt.WindowModality.WindowModal)
+            dialog.rejected.connect(self._cancel_update_jobs)
             self._update_progress = dialog
         self._on_update_progress(value, status_key)
         self._update_progress.show()
@@ -476,11 +484,18 @@ class MainWindow(QMainWindow):
 
     def _close_update_progress(self) -> None:
         if self._update_progress is not None:
-            self._update_progress.close()
+            self._update_progress.hide()
             self._update_progress.deleteLater()
             self._update_progress = None
 
+    def _cancel_update_jobs(self) -> None:
+        self._update_cancelled = True
+        for worker in self._update_workers.values():
+            worker.cancel()
+        self._close_update_progress()
+
     def _run_update_job(self, fn, on_success) -> None:
+        self._update_cancelled = False
         thread = QThread(self)
         worker = _BackgroundCall(fn)
         worker.moveToThread(thread)
@@ -513,11 +528,14 @@ class MainWindow(QMainWindow):
         if manual:
             self._show_update_progress(5, "checking")
         self._run_update_job(
-            lambda progress: get_latest_release(),
+            lambda progress, _cancelled: get_latest_release(),
             self._on_release_checked,
         )
 
     def _on_release_checked(self, release) -> None:
+        if self._update_cancelled:
+            self._close_update_progress()
+            return
         if not is_newer_version(release.version, __version__):
             self._close_update_progress()
             if self._update_manual:
@@ -540,6 +558,16 @@ class MainWindow(QMainWindow):
                 webbrowser.open(release.html_url)
             return
 
+        if release.install_strategy == "manual":
+            self._close_update_progress()
+            QMessageBox.information(
+                self,
+                t("updates.title"),
+                t("updates.manual_install").format(version=release.version),
+            )
+            webbrowser.open(release.zip_url or release.html_url)
+            return
+
         if not self._update_manual:
             self._show_update_progress(10, "available")
         else:
@@ -559,14 +587,17 @@ class MainWindow(QMainWindow):
             return
         self._on_update_progress(10, "downloading")
         self._run_update_job(
-            lambda progress: (
+            lambda progress, cancelled: (
                 release,
-                download_and_verify_release(release, progress_cb=progress),
+                download_and_verify_release(release, progress_cb=progress, cancelled=cancelled),
             ),
             self._on_update_downloaded,
         )
 
     def _on_update_downloaded(self, result) -> None:
+        if self._update_cancelled:
+            self._close_update_progress()
+            return
         release, zip_path = result
         answer = QMessageBox.question(
             self,
@@ -587,6 +618,9 @@ class MainWindow(QMainWindow):
         QApplication.quit()
 
     def _on_update_error(self, message: str) -> None:
+        if self._update_cancelled:
+            self._close_update_progress()
+            return
         self._close_update_progress()
         if not self._update_interactive:
             return

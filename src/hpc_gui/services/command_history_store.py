@@ -7,6 +7,8 @@ from typing import List
 
 import re
 
+from hpc_gui.core.paths import app_data_dir
+
 
 def default_history_path() -> Path:
     """Persistent command history path.
@@ -14,9 +16,7 @@ def default_history_path() -> Path:
     Stored alongside other app artifacts:
       ~/.truba_slurm_gui/history.jsonl
     """
-    base = Path.home() / ".truba_slurm_gui"
-    base.mkdir(parents=True, exist_ok=True)
-    return base / "history.jsonl"
+    return app_data_dir() / "history.jsonl"
 
 
 # Commands that likely contain secrets. If matched, they must NOT be persisted.

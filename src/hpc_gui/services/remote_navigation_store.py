@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from ..core import secret_store
+from hpc_gui.core.paths import app_data_dir
 
 MAX_HISTORY = 100
 SCHEMA_VERSION = 1
@@ -28,7 +29,7 @@ _KEYRING_USERNAME = "remote-navigation"
 
 
 def _private_dir() -> Path:
-    d = Path.home() / ".truba_slurm_gui" / "private"
+    d = app_data_dir() / "private"
     d.mkdir(parents=True, exist_ok=True)
     return d
 
