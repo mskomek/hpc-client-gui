@@ -7,6 +7,11 @@ on:
         description: "Version tag (example: 1.0.0)"
         required: true
         default: "0.1.0"
+      publish:
+        description: "Publish a GitHub Release after all artifacts pass"
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: write
@@ -20,7 +25,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Cache Linux release dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@6849a6489940f00c2f30c0fb92c6274307ccb58a # v4.1.2
         with:
           path: |
             ~/.cache/pip
@@ -125,8 +130,79 @@ jobs:
           path: |
             dist/releases/v${{ github.event.inputs.version }}/**
 
+  build-macos-arm64:
+    name: macOS arm64 artifacts
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.11"
+      - name: Cache Mac release dependencies
+        uses: actions/cache@6849a6489940f00c2f30c0fb92c6274307ccb58a # v4.1.2
+        with:
+          path: ~/Library/Caches/pip
+          key: macos-arm64-release-${{ hashFiles('requirements-release.lock') }}
+      - name: Install dependencies and run source checks
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-release.lock
+          pip install -e .
+          python -m compileall src/hpc_gui
+          python scripts/check_i18n.py
+          PYTHONPATH=src HPC_GUI_DISABLE_WEBENGINE=1 python -m pytest tests/test_macos_x11.py tests/test_app_updater.py tests/test_macos_release.py -q --tb=short
+      - name: Build, smoke, and stage arm64 DMG
+        env:
+          PYTHONPATH: src
+        run: python scripts/release_macos.py --version "${{ github.event.inputs.version }}" --arch arm64 --execute
+      - name: Upload arm64 Mac artifacts
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: hpc-client-gui-macos-arm64-${{ github.event.inputs.version }}
+          path: |
+            dist/releases/v${{ github.event.inputs.version }}/hpc-client-gui_macos_arm64.dmg
+            dist/releases/v${{ github.event.inputs.version }}/hpc-client-gui_macos_arm64.dmg.sha256
+
+  build-macos-x86_64:
+    name: macOS x86_64 artifacts
+    runs-on: macos-15-intel
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.11"
+      - name: Cache Mac release dependencies
+        uses: actions/cache@6849a6489940f00c2f30c0fb92c6274307ccb58a # v4.1.2
+        with:
+          path: ~/Library/Caches/pip
+          key: macos-x86_64-release-${{ hashFiles('requirements-release.lock') }}
+      - name: Install dependencies and run source checks
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-release.lock
+          pip install -e .
+          python -m compileall src/hpc_gui
+          python scripts/check_i18n.py
+          PYTHONPATH=src HPC_GUI_DISABLE_WEBENGINE=1 python -m pytest tests/test_macos_x11.py tests/test_app_updater.py tests/test_macos_release.py -q --tb=short
+      - name: Build, smoke, and stage x86_64 DMG
+        env:
+          PYTHONPATH: src
+        run: python scripts/release_macos.py --version "${{ github.event.inputs.version }}" --arch x86_64 --execute
+      - name: Upload x86_64 Mac artifacts
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: hpc-client-gui-macos-x86_64-${{ github.event.inputs.version }}
+          path: |
+            dist/releases/v${{ github.event.inputs.version }}/hpc-client-gui_macos_x86_64.dmg
+            dist/releases/v${{ github.event.inputs.version }}/hpc-client-gui_macos_x86_64.dmg.sha256
+
   publish-release:
-    needs: [build-linux, build-windows]
+    if: ${{ inputs.publish == true }}
+    needs: [build-linux, build-windows, build-macos-arm64, build-macos-x86_64]
     runs-on: ubuntu-latest
     # Attestation needs OIDC (id-token) and the attestations API. These are
     # scoped to this job only; build jobs keep the repository default.
@@ -149,6 +225,24 @@ jobs:
         with:
           name: hpc-client-gui-linux-${{ github.event.inputs.version }}
           path: dist/releases/v${{ github.event.inputs.version }}
+      - name: Download Mac arm64 artifacts
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: hpc-client-gui-macos-arm64-${{ github.event.inputs.version }}
+          path: dist/releases/v${{ github.event.inputs.version }}
+      - name: Download Mac x86_64 artifacts
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: hpc-client-gui-macos-x86_64-${{ github.event.inputs.version }}
+          path: dist/releases/v${{ github.event.inputs.version }}
+      - name: Refuse an existing release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "v${{ github.event.inputs.version }}" >/dev/null 2>&1; then
+            echo "Release already exists; refusing to replace it."
+            exit 1
+          fi
       - name: Generate release manifest (MANIFEST.json)
         run: |
           python scripts/generate_release_manifest.py \
@@ -164,6 +258,7 @@ jobs:
             dist/releases/v${{ github.event.inputs.version }}/*.AppImage
             dist/releases/v${{ github.event.inputs.version }}/*.deb
             dist/releases/v${{ github.event.inputs.version }}/*.flatpak
+            dist/releases/v${{ github.event.inputs.version }}/*.dmg
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@72f2c25fcb47643c292f7107632f7a47c1df5cd8 # v2.3.2
         with:
