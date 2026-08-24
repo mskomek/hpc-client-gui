@@ -47,6 +47,9 @@ class TransferKeyReleaseTests(unittest.TestCase):
         ]
 
     def tearDown(self) -> None:
+        stop = getattr(self, "_stop_event", None)
+        if stop is not None:
+            stop.set()
         for dialog in list(self.panel._transfer_dialogs):
             dialog.cancel_all()
         self._pump(
@@ -81,6 +84,7 @@ class TransferKeyReleaseTests(unittest.TestCase):
         # it must stop emitting progress events, otherwise the thread keeps
         # crossing Qt events into widgets deleted by later tests (segfault).
         self.addCleanup(stop.set)
+        self._stop_event = stop
         return execute, started, stop
 
     def test_cancel_releases_the_keys_so_the_same_files_replan(self) -> None:
@@ -92,9 +96,9 @@ class TransferKeyReleaseTests(unittest.TestCase):
         self.assertEqual(len(self.panel._active_transfer_keys), 2)
 
         dialog = self.panel._transfer_dialogs[-1]
+        stop.set()
         dialog.cancel_all()
         self._pump(lambda: not dialog._running)
-        stop.set()
 
         # The dialog is still open and never emitted `finished` - this is
         # exactly when the keys used to stay reserved for good.
@@ -133,9 +137,9 @@ class TransferKeyReleaseTests(unittest.TestCase):
         )
 
         for dialog in list(self.panel._transfer_dialogs):
+            stop.set()
             dialog.cancel_all()
         self._pump(lambda: all(not dialog._running for dialog in self.panel._transfer_dialogs))
-        stop.set()
 
 
 if __name__ == "__main__":
