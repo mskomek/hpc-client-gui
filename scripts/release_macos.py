@@ -21,6 +21,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 DIST_ROOT = REPO_ROOT / "dist"
 RELEASE_ROOT = DIST_ROOT / "releases"
 SPEC_PATH = REPO_ROOT / "build" / "macos" / "hpc-client-gui.spec"
+SMOKE_SCRIPT = REPO_ROOT / "scripts" / "macos_release_smoke.py"
 
 
 class PackagingError(RuntimeError):
@@ -129,6 +130,7 @@ def execute(plan: ReleasePlan) -> Path:
     _run(plan.commands[0], env=env)
     app = DIST_ROOT / "HPC Client GUI.app"
     _validate_bundle(app, plan.version)
+    _run((sys.executable, str(SMOKE_SCRIPT), "--app", str(app), "--version", plan.version, "--gui"), env=env)
 
     if plan.staging.exists():
         shutil.rmtree(plan.staging)
