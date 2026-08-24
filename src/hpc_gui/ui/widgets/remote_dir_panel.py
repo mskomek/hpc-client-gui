@@ -2714,11 +2714,12 @@ class RemoteDirPanel(QWidget):
     def _journal_transfer(self, event: str, **fields) -> None:
         """Append transfer operation events for diagnostics/audit."""
         try:
-            from pathlib import Path
             import json
             from datetime import datetime
 
-            p = Path.home() / ".truba_slurm_gui" / "transfer_journal.jsonl"
+            from hpc_gui.core.paths import app_data_dir
+
+            p = app_data_dir() / "transfer_journal.jsonl"
             p.parent.mkdir(parents=True, exist_ok=True)
             payload = {"ts": datetime.now().isoformat(timespec="seconds"), "event": event}
             payload.update(fields or {})
@@ -3083,11 +3084,12 @@ class RemoteDirPanel(QWidget):
         This is *logs-only* / diagnostics; it does not auto-resume.
         """
         try:
-            from pathlib import Path
             import json
             import time
 
-            out_path = Path.home() / ".truba_slurm_gui" / "last_batch.json"
+            from hpc_gui.core.paths import app_data_dir
+
+            out_path = app_data_dir() / "last_batch.json"
             out_path.parent.mkdir(parents=True, exist_ok=True)
             payload = {
                 "ts": int(time.time()),

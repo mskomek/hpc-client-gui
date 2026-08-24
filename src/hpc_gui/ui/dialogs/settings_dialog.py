@@ -42,6 +42,7 @@ from hpc_gui.config.storage import (
     update_settings,
 )
 from hpc_gui.core.i18n import t
+from hpc_gui.core.platform import current_os
 from hpc_gui.services.transfer_speed_test import run_transfer_speed_test
 from hpc_gui.ui.async_call import AsyncCall
 from hpc_gui.config.system_profile import (
@@ -81,6 +82,7 @@ class SettingsDialog(QDialog):
         self.cb_close_vcxsrv_on_exit = QCheckBox(t("login.close_vcxsrv_label"))
         self.cb_close_vcxsrv_on_exit.setToolTip(t("login.close_vcxsrv_tip"))
         self.cb_close_vcxsrv_on_exit.setChecked(bool(st.get("close_vcxsrv_on_exit", True)))
+        self.cb_close_vcxsrv_on_exit.setVisible(current_os() != "macos")
 
         self.cb_close_x11_procs_on_exit = QCheckBox(t("login.close_x11_procs_label"))
         self.cb_close_x11_procs_on_exit.setToolTip(t("login.close_x11_procs_tip"))

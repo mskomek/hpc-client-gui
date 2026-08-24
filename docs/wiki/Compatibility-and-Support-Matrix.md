@@ -9,6 +9,8 @@ Current version: **1.2.6** (`pyproject.toml`).
 | Platform | Format | Notes |
 |---|---|---|
 | Windows 10 / 11 | Portable ZIP containing `hpc-client-gui.exe` | Python not required |
+| macOS 13+ Apple Silicon | `hpc-client-gui_macos_arm64.dmg` | Signed/notarized release DMG |
+| macOS 13+ Intel | `hpc-client-gui_macos_x86_64.dmg` | Signed/notarized release DMG |
 | Linux x86_64 | AppImage | Runs without installation |
 | Linux x86_64 (Debian-based) | `.deb` | Installs system-wide |
 | Any supported platform | From source | Python 3.10+, `pip install -e .` |
@@ -30,6 +32,7 @@ distribution equivalent elsewhere).
 | `plink.exe` (PuTTY) | Optional, X11 only, Windows | Optional, X11 only |
 | VcXsrv | Optional, X11 only, Windows | Optional, X11 only |
 | System OpenSSH client | Not used for X11 on Windows | Required for X11 on Linux |
+| XQuartz | Not required | Required only for macOS X11 |
 
 ## Cluster-side requirements
 
@@ -50,6 +53,7 @@ the details rather than to guess.
 | X11 via plink + VcXsrv (Windows) | Recommended | Most reliable on Windows |
 | X11 via OpenSSH with a key | Supported | Uses `ssh -X/-Y` |
 | X11 via OpenSSH with a password | Limited | Hidden TTY prompts can block; plink preferred |
+| macOS X11 with a password | Limited | SSH key or agent required; password-only X11 is not started |
 | Host key policy `accept-new` | Supported | Unknown keys prompt to trust-and-save, trust once, or cancel |
 | Host key policy `strict` | Supported | Unknown keys rejected; changed keys always rejected |
 
@@ -63,4 +67,5 @@ Saved host keys are written to `~/.truba_slurm_gui/known_hosts`.
 
 See also [[Installation on Windows|Installation-Windows]],
 [[Installation on Linux|Installation-Linux]], and
+[[Installation on macOS|Installation-macOS]], and
 [[X11 Forwarding|X11-Forwarding]].

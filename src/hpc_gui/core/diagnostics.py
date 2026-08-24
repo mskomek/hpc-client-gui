@@ -6,11 +6,11 @@ from datetime import datetime
 from pathlib import Path
 from typing import Iterable
 
+from hpc_gui.core.paths import app_data_dir, app_log_dir
+
 
 def _candidate_files() -> Iterable[Path]:
-    base = Path.home() / ".truba_slurm_gui"
-    names = [
-        "app.log",
+    locations = [(app_log_dir(), ["app.log", "crash_flag.json"]), (app_data_dir(), [
         # config.json is deliberately excluded: it holds saved connection
         # profiles (host/username) plus encrypted password blobs and salts.
         # None of that is needed to debug from logs, and it must never leave
@@ -23,11 +23,12 @@ def _candidate_files() -> Iterable[Path]:
         "vcxsrv_stdout.log",
         "vcxsrv_stderr.log",
         "language.json",
-    ]
-    for n in names:
-        p = base / n
-        if p.exists() and p.is_file():
-            yield p
+    ])]
+    for base, names in locations:
+        for n in names:
+            p = base / n
+            if p.exists() and p.is_file():
+                yield p
 
 
 def create_diagnostic_bundle(dest_dir: str) -> Path:
@@ -36,7 +37,7 @@ def create_diagnostic_bundle(dest_dir: str) -> Path:
     out_dir = Path(dest_dir).resolve()
     out_dir.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    zip_path = out_dir / f"truba_diagnostics_{stamp}.zip"
+    zip_path = out_dir / f"hpc_diagnostics_{stamp}.zip"
 
     with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
         for p in _candidate_files():

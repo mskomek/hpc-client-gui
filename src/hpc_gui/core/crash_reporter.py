@@ -3,21 +3,16 @@ from __future__ import annotations
 import json
 import traceback
 from datetime import datetime, timezone
-from pathlib import Path
 from typing import Optional
+
+from hpc_gui.core.paths import app_log_dir
 
 
 _CRASH_FLAG_NAME = "crash_flag.json"
 
 
-def _log_dir() -> Path:
-    d = Path.home() / ".truba_slurm_gui"
-    d.mkdir(parents=True, exist_ok=True)
-    return d
-
-
-def _crash_flag_path() -> Path:
-    return _log_dir() / _CRASH_FLAG_NAME
+def _crash_flag_path():
+    return app_log_dir() / _CRASH_FLAG_NAME
 
 
 def write_crash_flag(exc_type: Optional[type] = None, exc_value: Optional[BaseException] = None, exc_tb=None) -> None:

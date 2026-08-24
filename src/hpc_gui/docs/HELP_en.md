@@ -97,9 +97,9 @@ extra login sessions. The transfer dialog shows both the **configured** value
 and the **effective** limit for the current connection: multiple files may be
 transferred concurrently, but a single large file is not segmented into
 parallel parts. Values of 2–4 may improve throughput on fast links; be
-considerate on shared HPC login nodes, and note that servers or backends that
-cannot provide isolated per-transfer connections safely reduce the effective
-limit to 1.
+considerate on shared HPC login nodes. Plain FTP is always limited to one
+transfer because some servers drop simultaneous data channels; SFTP can use
+the configured parallelism when it supports isolated channels.
 
 ### Plugins
 
@@ -249,6 +249,7 @@ If your site prints banners/warnings that affect command output, parsing may deg
 | X11 + plink + VcXsrv | Recommended | Most reliable on Windows |
 | X11 + OpenSSH + key | Supported | Uses system/bundled ssh with `-Y/-X` |
 | X11 + OpenSSH + password | Limited | Hidden TTY prompts can block; plink preferred |
+| macOS X11 + password | Limited | Use an SSH key or agent; password-only X11 is not started |
 | Host key policy = `accept-new` | Supported | Unknown keys prompt for trust-and-save, trust-once, or cancel; saved keys go to `~/.truba_slurm_gui/known_hosts` |
 | Host key policy = `strict` | Supported | Unknown keys are rejected; changed keys are always rejected |
 

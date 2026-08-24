@@ -33,6 +33,7 @@ class DiagnosticBundleTests(unittest.TestCase):
             ):
                 bundle_path = diagnostics.create_diagnostic_bundle(out_dir)
 
+            self.assertTrue(bundle_path.name.startswith("hpc_diagnostics_"))
             with zipfile.ZipFile(bundle_path) as zf:
                 names = zf.namelist()
                 self.assertNotIn("config.json", names)

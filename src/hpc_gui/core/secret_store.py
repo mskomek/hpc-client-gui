@@ -3,7 +3,10 @@ from __future__ import annotations
 import base64
 import ctypes
 import sys
+import uuid
 from ctypes import wintypes
+
+KEYCHAIN_SERVICE = "io.github.mskomek.HpcClientGui"
 
 
 class _DataBlob(ctypes.Structure):
@@ -76,3 +79,48 @@ def unprotect_secret(token: str) -> str:
     finally:
         kernel32.LocalFree(output_blob.pbData)
         del input_buffer
+
+
+def keychain_available() -> bool:
+    if sys.platform != "darwin":
+        return False
+    try:
+        import keyring
+
+        keyring.get_keyring()
+        return True
+    except Exception:
+        return False
+
+
+def protect_keychain_secret(plaintext: str, reference: str | None = None) -> str:
+    if not keychain_available():
+        raise RuntimeError("macOS Keychain is unavailable")
+    import keyring
+
+    reference = reference or uuid.uuid4().hex
+    keyring.set_password(KEYCHAIN_SERVICE, reference, plaintext or "")
+    return reference
+
+
+def unprotect_keychain_secret(reference: str) -> str:
+    if not keychain_available():
+        raise RuntimeError("macOS Keychain is unavailable")
+    import keyring
+
+    value = keyring.get_password(KEYCHAIN_SERVICE, reference)
+    if value is None:
+        raise RuntimeError("macOS Keychain entry is unavailable")
+    return value
+
+
+def delete_keychain_secret(reference: str) -> None:
+    if not reference or not keychain_available():
+        return
+    import keyring
+
+    try:
+        keyring.delete_password(KEYCHAIN_SERVICE, reference)
+    except Exception:
+        # Deleting an already-missing entry is harmless during profile cleanup.
+        pass

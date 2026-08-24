@@ -22,11 +22,14 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 from hpc_gui.core.logging import get_logger
+from hpc_gui.core.paths import app_data_dir
 
 
-_DIR = Path.home() / ".truba_slurm_gui"
-_PATH = _DIR / "processes.json"
 _log = get_logger("hpc_gui.proc")
+
+
+def _registry_path() -> Path:
+    return app_data_dir() / "processes.json"
 
 
 def _is_windows() -> bool:
@@ -35,8 +38,9 @@ def _is_windows() -> bool:
 
 def _read_all() -> Dict[str, Any]:
     try:
-        if _PATH.exists():
-            return json.loads(_PATH.read_text(encoding="utf-8", errors="ignore") or "{}") or {}
+        path = _registry_path()
+        if path.exists():
+            return json.loads(path.read_text(encoding="utf-8", errors="ignore") or "{}") or {}
     except Exception:
         return {}
     return {}
@@ -44,8 +48,7 @@ def _read_all() -> Dict[str, Any]:
 
 def _write_all(data: Dict[str, Any]) -> None:
     try:
-        _DIR.mkdir(parents=True, exist_ok=True)
-        _PATH.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+        _registry_path().write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
     except Exception:
         pass
 
