@@ -56,12 +56,10 @@ tools/ai/deepseek-models.local.psd1
 # Release packages are GitHub Release assets, never source-controlled.
 /build/hpc-client-cli/
 
-# Internal-only paths kept local; never published on main
-# (see local MAIN_SYNC_PROTOCOL.md copy on the development line).
-/AGENTS.md
-/CLAUDE.md
+# Internal-only paths kept local; never published on main.
+# The authoritative internal rules (rules.md) live only on the development
+# line and are intentionally not part of this public repository.
 /rules.md
-/MAIN_SYNC_PROTOCOL.md
 /tools/
 /devtools/*
 !/devtools/performance_probe.py

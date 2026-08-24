@@ -64,6 +64,24 @@ manager shows an **Offline** state and the app keeps working normally.
 - Plugins never silently rewrite previously saved connection profiles: saved
   profiles keep their copied settings snapshot.
 
+## Installed versions, rollback, and local integrity
+
+The *Installed* tab shows the actually active version and lists every
+installed version in version order (1.10 is newer than 1.9). Selecting a
+version offers **Activate** (newer) or **Roll back** (older) after an
+explicit confirmation. Rollback never deletes installed versions, keeps your
+enabled/disabled choice independent of versions, and automatically restores
+the previous active version if validation fails.
+
+On every load and activation the app re-verifies installed files locally:
+the manifest must match the hash recorded at install time, all declared
+files are checked for size and SHA-256, and unexpected extra files are
+rejected. A plugin that fails is skipped with a reinstall hint — never
+deleted — while healthy plugins keep loading. Installs made before this
+record keeping existed are migrated once by verifying against their current
+manifest; that one-time migration cannot detect changes that happened
+between installation and migration.
+
 ## Transfers and parallelism (related setting)
 
 The connection dialog's *Advanced → Maximum simultaneous transfers* controls

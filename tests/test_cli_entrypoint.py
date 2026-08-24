@@ -1,12 +1,38 @@
 from __future__ import annotations
 
+import subprocess
 import sys
 from io import StringIO
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
 from hpc_gui.cli.main import _normalize_alias_argv, _parser, _run_script, _run_sh, run_cli
 from hpc_gui.cli.session import CLIConnectionError, CLISession, build_ssh_conn_info
+
+
+def test_cli_import_never_pulls_qt_or_webengine() -> None:
+    """The CLI must work without Qt/PySide6 installed (headless servers)."""
+    import os
+
+    repo_src = Path(__file__).resolve().parents[1] / "src"
+    code = (
+        "import sys;"
+        "import hpc_gui.cli.main as cli;"
+        "banned = [m for m in sys.modules if m.split('.')[0] in {'PySide6', 'PyQt6'}];"
+        "print('banned:', banned);"
+        "sys.exit(1 if banned else 0)"
+    )
+    env = dict(os.environ)
+    env["PYTHONPATH"] = str(repo_src)
+    result = subprocess.run(
+        [sys.executable, "-c", code],
+        capture_output=True,
+        text=True,
+        env=env,
+        timeout=60,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
 
 
 def test_console_entry_parser_exposes_masked_password_prompt() -> None:

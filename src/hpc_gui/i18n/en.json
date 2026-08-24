@@ -817,7 +817,18 @@
     "summary_cluster_profiles": "{count} cluster profile(s)",
     "summary_job_templates": "{count} job template(s)",
     "summary_lint_rule_packs": "{count} lint rule pack(s)",
-    "open_failed": "The Plugin Manager could not be opened. Details were written to the logs."
+    "open_failed": "The Plugin Manager could not be opened. Details were written to the logs.",
+    "active_badge": "Active",
+    "activate": "Activate",
+    "rollback": "Roll back",
+    "activating": "Changing version…",
+    "switch_version_label": "Installed versions:",
+    "version_switch_confirm_title": "Change plugin version",
+    "version_activate_confirm_text": "Activate {name} {version}?",
+    "version_rollback_confirm_text": "Roll {name} back from {current} to {version}? No installed version will be removed.",
+    "version_switch_success": "{name} now uses version {version}.",
+    "version_switch_failed": "Could not switch {name} to {version}. The previously active version remains active.",
+    "corrupt_plugin": "{name} failed its integrity check and was skipped. Reinstall it from the Discover tab; no installed version was deleted."
   },
   "templates": {
     "dialog_title": "Job Templates",

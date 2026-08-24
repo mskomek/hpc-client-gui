@@ -84,6 +84,25 @@ excludes = [
     "_hpc_gui_perf_probe",
 ]
 
+# Files that must never ship in production bundles. DevTools resources
+# (72 MiB debug pak + 11 MiB standard pak) exist for browser debugging only;
+# the terminal WebView never loads them. Everything else — including
+# QtWebEngineCore itself, ICU data, and software OpenGL fallback — stays so
+# the GUI terminal keeps working everywhere.
+EXCLUDED_NAME_PATTERNS = (
+    "qtwebengine_devtools_resources",
+)
+
+
+def _keep_entry(entry) -> bool:
+    name = str(entry[0]).replace("\\", "/").lower()
+    return not any(pattern in name for pattern in EXCLUDED_NAME_PATTERNS)
+
+
+def _report_savings(stage: str, entries) -> None:
+    print(f"[spec] {stage}: excluded {len(entries)} devtool/unused entries")
+
+
 a = Analysis(
     [str(ENTRY_SCRIPT)],
     pathex=[str(REPO_ROOT), str(SRC_DIR)],
@@ -98,6 +117,11 @@ a = Analysis(
     cipher=block_cipher,
     noarchive=False,
 )
+
+_excluded = [entry for entry in a.datas + a.binaries if not _keep_entry(entry)]
+a.datas = [entry for entry in a.datas if _keep_entry(entry)]
+a.binaries = [entry for entry in a.binaries if _keep_entry(entry)]
+_report_savings("post-analysis", _excluded)
 
 pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 

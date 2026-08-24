@@ -147,7 +147,11 @@ Plugin content is **declarative data**: no executable plugin code is
 distributed or run at install time, and installation happens entirely on your
 desktop — there is **no server-side cluster installation**. Every file is
 verified against SHA-256 hashes recorded in the official registry before a
-plugin is activated.
+plugin is activated, and installed plugins are re-verified locally on every
+launch. Installed versions can be switched or rolled back from the
+**Installed** tab.
+
+![Plugin Manager with the TRUBA and ANSYS Fluent plugins](https://raw.githubusercontent.com/mskomek/hpc-client-gui/main/docs/assets/plugin-manager.png)
 
 Missing a plugin? [Request one](https://github.com/mskomek/hpc-client-gui-plugins/issues/new?template=plugin-request.yml) —
 cluster profiles, Slurm/solver job templates, and lint packs are all welcome.

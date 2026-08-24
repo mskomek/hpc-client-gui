@@ -11,6 +11,13 @@ on:
 permissions:
   contents: write
 
+# Release builds are never auto-cancelled: a manually dispatched build must
+# always run to completion. The group only serializes concurrent dispatches
+# for the same version input.
+concurrency:
+  group: release-${{ github.event.inputs.version || github.ref }}
+  cancel-in-progress: false
+
 jobs:
   build-linux:
     name: Linux artifacts (Ubuntu 24.04)
@@ -20,7 +27,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Cache Linux release dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
         with:
           path: |
             ~/.cache/pip
@@ -149,6 +156,22 @@ jobs:
         with:
           name: hpc-client-gui-linux-${{ github.event.inputs.version }}
           path: dist/releases/v${{ github.event.inputs.version }}
+      - name: Report artifact sizes
+        run: |
+          echo "## Artifact sizes (v${{ github.event.inputs.version }})" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Asset | Bytes | MiB |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| --- | ---: | ---: |" >> "$GITHUB_STEP_SUMMARY"
+          total=0
+          for f in dist/releases/v${{ github.event.inputs.version }}/*; do
+            [ -f "$f" ] || continue
+            bytes=$(stat -c %s "$f")
+            total=$((total + bytes))
+            printf '| %s | %s | %.2f |\n' "$(basename "$f")" "$bytes" \
+              "$(awk "BEGIN{print $bytes/1048576}")" >> "$GITHUB_STEP_SUMMARY"
+          done
+          printf '| **Total** | **%s** | **%.2f** |\n' "$total" \
+            "$(awk "BEGIN{print $total/1048576}")" >> "$GITHUB_STEP_SUMMARY"
       - name: Generate release manifest (MANIFEST.json)
         run: |
           python scripts/generate_release_manifest.py \
