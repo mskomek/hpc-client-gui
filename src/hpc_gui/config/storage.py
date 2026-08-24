@@ -5,6 +5,8 @@ import os
 import tempfile
 import uuid
 from pathlib import Path
+
+from hpc_gui.core.paths import app_data_dir
 from typing import Any, Dict, Iterable, List, Optional
 
 
@@ -29,9 +31,7 @@ def merge_profile_patch(
 
 
 def _config_dir() -> Path:
-    d = Path.home() / ".truba_slurm_gui"
-    d.mkdir(parents=True, exist_ok=True)
-    return d
+    return app_data_dir()
 
 
 def _config_path() -> Path:

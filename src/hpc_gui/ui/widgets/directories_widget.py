@@ -628,7 +628,9 @@ class DirectoriesWidget(QWidget):
     @staticmethod
     def _resolve_template_path(template_key: str) -> Path:
         root = Path(__file__).resolve().parents[4]
-        user_tpl = Path.home() / ".truba_slurm_gui" / "templates"
+        from hpc_gui.core.paths import app_data_dir
+
+        user_tpl = app_data_dir() / "templates"
         env_tpl = Path(os.environ.get("TRUBA_TEMPLATE_DIR", "")).expanduser() if os.environ.get("TRUBA_TEMPLATE_DIR") else None
         filename_map = {
             "core": "template.slurm",
