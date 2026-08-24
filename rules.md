@@ -322,6 +322,11 @@ regardless of which agent drives the call.
 
 ## Remote Branch Protocol
 
+- **This file (`rules.md`) lives only on `codex/develop`.** It is tracked
+  there and nowhere else: never merge, cherry-pick, or copy it onto `main`
+  (or any release/feature branch), and never push it to `origin`. When
+  syncing `codex/develop` onto `main`, exclude it (see the Main Sync
+  Inclusion Gate below). `main` ignores the path via `.gitignore`.
 - GitHub (`origin`) carries exactly one branch: `main`. No other branch is ever
   pushed to `origin`.
 - `codex/develop` (and any other working branch) stays local-only. Do all
