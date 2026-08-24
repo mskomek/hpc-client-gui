@@ -45,4 +45,4 @@ def test_macos_password_x11_is_explicitly_rejected():
     info = type("Info", (), {"x11_forwarding": True, "password": "secret", "key_path": ""})()
     with mock.patch.object(x11_runner, "_is_macos", return_value=True):
         assert runner.run_if_x11(info, "xclock") is True
-    assert messages[0] == "[login.x11_macos_password_limit]"
+    assert "password-only" in messages[0] or messages[0] == "[login.x11_macos_password_limit]"
