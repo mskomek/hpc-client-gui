@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.4.2
+
+### macOS release support
+- Added native Apple Silicon and Intel macOS DMG packaging, signed-release gates, and architecture-aware update assets.
+- Added macOS Keychain storage, XQuartz preflight checks, and documented terminal/X11 limitations.
+- Release diagnostics now use the HPC naming convention and update cancellation preserves downloaded candidates.
+
 ## v1.4.1
 
 ### Plugin Manager
