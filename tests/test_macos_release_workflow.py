@@ -14,7 +14,7 @@ def test_release_workflow_has_two_mac_artifact_jobs_and_publish_dependencies():
     assert "runs-on: macos-15" in text
     assert "build-macos-x86_64:" in text
     assert "runs-on: macos-15-intel" in text
-    assert "needs: [build-linux, build-windows, build-macos-arm64, build-macos-x86_64, sign-macos-arm64, sign-macos-x86_64]" in text
+    assert "needs: [build-linux, build-windows, build-macos-arm64, build-macos-x86_64, sign-macos-arm64, sign-macos-x86_64, verify-macos-signed-candidate]" in text
     assert "environment: macos-release" in text
     assert "hpc-client-gui_macos_arm64.dmg" in text
     assert "hpc-client-gui_macos_x86_64.dmg" in text
@@ -52,6 +52,17 @@ def test_sign_only_candidate_is_separate_from_publication():
     assert "inputs.publish || inputs.sign" in text
     dry_run = text.split("  verify-macos-dry-run:\n", 1)[1].split("\n  sign-macos-arm64:", 1)[0]
     assert "inputs.publish != true && inputs.sign != true" in dry_run
+
+
+def test_signed_candidates_are_verified_before_publish():
+    text = WORKFLOW.read_text(encoding="utf-8")
+    block = text.split("  verify-macos-signed-candidate:\n", 1)[1].split("\n  publish-release:", 1)[0]
+    assert "needs: [sign-macos-arm64, sign-macos-x86_64]" in block
+    assert "shasum -a 256 -c" in block
+    assert "codesign --verify --deep --strict" in block
+    assert "spctl --assess --type execute" in block
+    publish = text.split("  publish-release:\n", 1)[1]
+    assert "verify-macos-signed-candidate" in publish.split("\n    runs-on:", 1)[0]
 
 
 def test_signing_secret_mapping_is_complete_and_publish_only():
