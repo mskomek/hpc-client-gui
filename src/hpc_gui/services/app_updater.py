@@ -23,6 +23,7 @@ RELEASE_EXE_NAME = "hpc-client-gui.exe"
 RELEASE_ZIP_NAME = "hpc-client-gui_windows_onedir.zip"
 RELEASE_SHA_NAME = f"{RELEASE_ZIP_NAME}.sha256"
 ProgressCallback = Callable[[int, str], None]
+CancelCallback = Callable[[], bool]
 
 
 @dataclass(frozen=True)
@@ -105,6 +106,7 @@ def _download(
     progress_start: int = 0,
     progress_end: int = 100,
     status: str = "",
+    cancelled: CancelCallback | None = None,
 ) -> None:
     destination.parent.mkdir(parents=True, exist_ok=True)
     temporary = destination.with_suffix(destination.suffix + ".part")
@@ -113,6 +115,8 @@ def _download(
             total = int(response.headers.get("Content-Length") or 0)
             downloaded = 0
             while True:
+                if cancelled and cancelled():
+                    raise RuntimeError("Update download cancelled.")
                 chunk = response.read(1024 * 1024)
                 if not chunk:
                     break
@@ -138,10 +142,19 @@ def _download(
 def download_and_verify_release(
     release: UpdateRelease,
     progress_cb: ProgressCallback | None = None,
+    cancelled: CancelCallback | None = None,
 ) -> Path:
     update_dir = app_data_dir() / "updates" / f"v{release.version}"
     zip_path = update_dir / release.zip_name
     sha_path = update_dir / release.sha_name
+
+    if zip_path.exists() and sha_path.exists():
+        expected = sha_path.read_text(encoding="ascii", errors="ignore").strip().split()[0]
+        actual = hashlib.sha256(zip_path.read_bytes()).hexdigest()
+        if expected and actual.lower() == expected.lower():
+            if progress_cb:
+                progress_cb(100, "ready")
+            return zip_path
 
     if progress_cb:
         progress_cb(10, "downloading")
@@ -152,6 +165,7 @@ def download_and_verify_release(
         progress_start=10,
         progress_end=15,
         status="downloading",
+        cancelled=cancelled,
     )
     _download(
         release.zip_url,
@@ -160,6 +174,7 @@ def download_and_verify_release(
         progress_start=15,
         progress_end=90,
         status="downloading",
+        cancelled=cancelled,
     )
 
     if progress_cb:
