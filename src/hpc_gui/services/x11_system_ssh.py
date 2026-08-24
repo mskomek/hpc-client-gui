@@ -129,6 +129,8 @@ def build_x11_launch(
         # Make failures explicit and non-interactive by default
         strict_mode = "yes" if (host_key_policy or "").strip().lower() == "strict" else "accept-new"
         args += ["-o", "ExitOnForwardFailure=yes", "-o", "ForwardX11=yes", "-o", f"StrictHostKeyChecking={strict_mode}"]
+        if platform.system().lower() == "darwin" and Path("/opt/X11/bin/xauth").exists():
+            args += ["-o", "XAuthLocation=/opt/X11/bin/xauth"]
         if password:
             # Don't attempt password auth here; it will prompt in a hidden console.
             args += ["-o", "BatchMode=yes"]

@@ -46,6 +46,14 @@ class TransferKeyReleaseTests(unittest.TestCase):
             _PlannedOp("download", "/remote/DP_41/small.dat", "C:/local/DP_41/small.dat"),
         ]
 
+    def tearDown(self) -> None:
+        for dialog in list(self.panel._transfer_dialogs):
+            dialog.cancel_all()
+        self._pump(
+            lambda: all(not dialog._running for dialog in self.panel._transfer_dialogs),
+            timeout=10.0,
+        )
+
     def _pump(self, predicate, timeout: float = 5.0) -> None:
         deadline = time.monotonic() + timeout
         while time.monotonic() < deadline:
@@ -124,8 +132,9 @@ class TransferKeyReleaseTests(unittest.TestCase):
             f"a duplicate download was queued: {queued}",
         )
 
-        self.panel._transfer_dialogs[0].cancel_all()
-        self._pump(lambda: not self.panel._transfer_dialogs[0]._running)
+        for dialog in list(self.panel._transfer_dialogs):
+            dialog.cancel_all()
+        self._pump(lambda: all(not dialog._running for dialog in self.panel._transfer_dialogs))
         stop.set()
 
 

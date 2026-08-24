@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Callable, Optional
 
 from hpc_gui.core.i18n import t
-from hpc_gui.core.paths import third_party_dir
+from hpc_gui.core.paths import app_data_dir, app_log_dir, third_party_dir
 from hpc_gui.services.safe_download import download_atomic
 
 from hpc_gui.services.vcxsrv_release_downloader import get_latest_vcxsrv_asset
@@ -20,11 +20,23 @@ from hpc_gui.services.vcxsrv_release_downloader import get_latest_vcxsrv_asset
 # - For plink -X to work reliably on Windows, local X server must listen on TCP 127.0.0.1:6000 (DISPLAY :0).
 # - VcXsrv must be SINGLE instance; starting a second one often exits immediately with "another window manager".
 
-_LOCK_PATH = Path.home() / ".truba_slurm_gui" / "vcxsrv_start.lock"
 _LAST_START_TS = 0.0
-_PID_PATH = Path.home() / ".truba_slurm_gui" / "vcxsrv_pid.txt"
-_STDOUT_LOG = Path.home() / ".truba_slurm_gui" / "vcxsrv_stdout.log"
-_STDERR_LOG = Path.home() / ".truba_slurm_gui" / "vcxsrv_stderr.log"
+
+
+def _lock_path() -> Path:
+    return app_data_dir() / "vcxsrv_start.lock"
+
+
+def _pid_path() -> Path:
+    return app_data_dir() / "vcxsrv_pid.txt"
+
+
+def _stdout_log_path() -> Path:
+    return app_log_dir() / "vcxsrv_stdout.log"
+
+
+def _stderr_log_path() -> Path:
+    return app_log_dir() / "vcxsrv_stderr.log"
 
 
 def stop_x_server_started_by_app(log: Optional[Callable[[str], None]] = None) -> bool:
@@ -37,9 +49,10 @@ def stop_x_server_started_by_app(log: Optional[Callable[[str], None]] = None) ->
         return False
 
     try:
-        if not _PID_PATH.exists():
+        pid_path = _pid_path()
+        if not pid_path.exists():
             return False
-        pid_s = (_PID_PATH.read_text(encoding="utf-8", errors="ignore") or "").strip()
+        pid_s = (pid_path.read_text(encoding="utf-8", errors="ignore") or "").strip()
         pid = int(pid_s)
     except Exception:
         return False
@@ -61,7 +74,7 @@ def stop_x_server_started_by_app(log: Optional[Callable[[str], None]] = None) ->
         return True
     finally:
         try:
-            _PID_PATH.unlink(missing_ok=True)
+            pid_path.unlink(missing_ok=True)
         except Exception:
             pass
 
@@ -73,6 +86,10 @@ def _log(log: Optional[Callable[[str], None]], msg: str) -> None:
 
 def _is_windows() -> bool:
     return platform.system().lower() == "windows"
+
+
+def _is_macos() -> bool:
+    return platform.system().lower() == "darwin"
 
 
 def _is_port_open(host: str, port: int) -> bool:
@@ -101,6 +118,25 @@ def is_local_x_available(log: Optional[Callable[[str], None]] = None) -> bool:
         return True
     _log(log, "X11: DISPLAY ortam degiskeni ayarli degil.")
     return False
+
+
+def ensure_xquartz_available(
+    log: Optional[Callable[[str], None]] = None,
+) -> bool:
+    """Validate the user-installed XQuartz prerequisites without installing them."""
+    if not _is_macos():
+        return False
+    if not Path("/Applications/Utilities/XQuartz.app").exists():
+        _log(log, "X11: XQuartz bulunamadı. https://www.xquartz.org/ adresinden kurun.")
+        return False
+    if not Path("/opt/X11/bin/xauth").exists():
+        _log(log, "X11: XQuartz xauth bulunamadı: /opt/X11/bin/xauth")
+        return False
+    display = os.environ.get("DISPLAY", "").strip()
+    if not display or display in {":0", "localhost:0.0"}:
+        _log(log, "X11: XQuartz DISPLAY ortamı kullanılamıyor; XQuartz'u başlatın.")
+        return False
+    return True
 
 
 def _vcxsrv_dir() -> Path:
@@ -219,7 +255,7 @@ def _prompt_install(parent, log: Optional[Callable[[str], None]] = None) -> bool
         return False
 
     vc_dir = _vcxsrv_dir()
-    download_dir = Path.home() / ".truba_slurm_gui" / "downloads"
+    download_dir = app_data_dir() / "downloads"
     download_dir.mkdir(parents=True, exist_ok=True)
     installer_path = download_dir / asset.name
 
@@ -259,6 +295,8 @@ def ensure_x_server_running(
     Windows it requires 127.0.0.1:6000 to be listening (plink requirement).
     """
 
+    if _is_macos():
+        return ensure_xquartz_available(log)
     if not _is_windows():
         return is_local_x_available(log)
 
@@ -290,7 +328,7 @@ def ensure_x_server_running(
 
     # Single instance: cross-process lock
     try:
-        with _file_lock(_LOCK_PATH, timeout_s=6.0):
+        with _file_lock(_lock_path(), timeout_s=6.0):
             # Someone else might have started it while we waited
             if _is_display_listening(display):
                 return True
@@ -309,10 +347,8 @@ def ensure_x_server_running(
             ]
 
             creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
-            log_dir = Path.home() / ".truba_slurm_gui"
-            log_dir.mkdir(parents=True, exist_ok=True)
-            stdout_path = _STDOUT_LOG
-            stderr_path = _STDERR_LOG
+            stdout_path = _stdout_log_path()
+            stderr_path = _stderr_log_path()
             stdout_f = open(stdout_path, "ab", buffering=0)
             stderr_f = open(stderr_path, "ab", buffering=0)
 
@@ -335,8 +371,7 @@ def ensure_x_server_running(
             except Exception:
                 pass
             try:
-                _PID_PATH.parent.mkdir(parents=True, exist_ok=True)
-                _PID_PATH.write_text(str(proc.pid), encoding="utf-8")
+                _pid_path().write_text(str(proc.pid), encoding="utf-8")
             except Exception:
                 # PID recording is best-effort
                 pass
@@ -349,14 +384,14 @@ def ensure_x_server_running(
                 if proc.poll() is not None:
                     _log(
                         log,
-                        t("xserver.start_closed") + "\n" + t("xserver.details_log").format(path=str(_STDERR_LOG))
+                        t("xserver.start_closed") + "\n" + t("xserver.details_log").format(path=str(_stderr_log_path()))
                     )
                     return False
                 time.sleep(0.1)
 
             _log(
                 log,
-                t("xserver.port_not_open") + "\n" + t("xserver.details_log").format(path=str(_STDERR_LOG))
+                t("xserver.port_not_open") + "\n" + t("xserver.details_log").format(path=str(_stderr_log_path()))
             )
             return False
 

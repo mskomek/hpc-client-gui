@@ -11,6 +11,14 @@
 - PR-based contribution model documented for `main` (short-lived feature branches, deleted after merge); stale references to removed internal instruction files cleaned up.
 - CI workflows gain branch/PR-scoped concurrency cancellation; all GitHub Actions are pinned to verified full commit SHAs; release builds report artifact sizes.
 
+## v1.4.2
+
+### macOS release support
+- Added native Apple Silicon and Intel macOS DMG packaging, signed-release gates, and architecture-aware update assets.
+- Added macOS Keychain storage, XQuartz preflight checks, and documented terminal/X11 limitations.
+- Release diagnostics now use the HPC naming convention and update cancellation preserves downloaded candidates.
+- Updated the release workflow cache action to the supported v4.2.3 implementation.
+
 ## v1.4.1
 
 ### Plugin Manager

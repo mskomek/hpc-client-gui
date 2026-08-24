@@ -3,7 +3,7 @@
 [![CI](https://github.com/mskomek/hpc-client-gui/actions/workflows/ci.yml/badge.svg)](https://github.com/mskomek/hpc-client-gui/actions/workflows/ci.yml)
 [![Latest release](https://img.shields.io/github/v/release/mskomek/hpc-client-gui)](https://github.com/mskomek/hpc-client-gui/releases/latest)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-blue)](pyproject.toml)
-[![Platforms](https://img.shields.io/badge/platform-Windows%20%7C%20Linux-lightgrey)](#downloads)
+[![Platforms](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)](#downloads)
 
 **A cross-platform desktop client for SSH, SFTP, Slurm job management, remote files, CLI workflows, and optional X11 forwarding on HPC systems.**
 
@@ -28,7 +28,7 @@ Many HPC workflows still require switching between a terminal, an SFTP client, s
 HPC Client GUI brings those common tasks together in a desktop application without requiring a web portal or additional server-side service on the cluster.
 
 * **Standard SSH + Slurm workflow** - designed for clusters exposing SSH and common Slurm commands.
-* **Windows and Linux support** - packaged desktop releases for both platforms.
+* **Windows, macOS, and Linux support** - packaged releases when the corresponding release gate passes.
 * **GUI and CLI** - use the desktop interface for daily work and the CLI for repeatable workflows.
 * **Remote file management** - browse directories, upload/download files, create folders, rename, delete, and manage transfers.
 * **Slurm job control** - submit jobs, inspect queue/accounting state, cancel jobs, and read output files.
@@ -44,6 +44,8 @@ Current packages are available from the:
 | Platform               | Release asset                              | Start                                |
 | ---------------------- | ------------------------------------------ | ------------------------------------ |
 | Windows 10/11 x64      | `hpc-client-gui_windows_onedir.zip`        | Extract and run `hpc-client-gui.exe` |
+| macOS 13+ Apple Silicon | `hpc-client-gui_macos_arm64.dmg`          | Open DMG and drag to Applications |
+| macOS 13+ Intel          | `hpc-client-gui_macos_x86_64.dmg`         | Open DMG and drag to Applications |
 | Linux x86_64           | `hpc-client-gui-<version>-x86_64.AppImage` | Make executable and run              |
 | Debian / Ubuntu x86_64 | `hpc-client-gui_<version>_amd64.deb`       | Install the `.deb` package           |
 | Linux / Flatpak        | `hpc-client-gui-<version>-x86_64.flatpak`  | Install and run the Flatpak bundle   |
@@ -52,6 +54,22 @@ Where provided, release assets also include **SHA-256 checksum files**. Each
 release also publishes a `MANIFEST.json` inventory (size + SHA-256 per asset)
 and signed build-provenance attestations — see
 [docs/VERIFYING_RELEASES.md](docs/VERIFYING_RELEASES.md).
+
+macOS downloads are architecture-specific: use **arm64** for Apple Silicon
+and **x86_64** for Intel Macs. macOS 13 or newer is required. This project is
+an unofficial client-side tool, not an official TRUBA tool.
+
+## macOS quick start
+
+1. Download the DMG matching your Mac architecture from the [latest release](https://github.com/mskomek/hpc-client-gui/releases/latest).
+2. Optionally verify its sibling `.sha256` file.
+3. Open the DMG and drag **HPC Client GUI.app** to **Applications**.
+4. Launch it from Finder. Keychain access prompts are used only to store a
+   saved connection password; the password is not written to `config.json`.
+5. To update, download the newer DMG and replace the existing application.
+
+XQuartz is optional and is required only for remote X11 GUI forwarding. Normal
+SSH, SFTP, Slurm, and terminal workflows do not require XQuartz.
 
 ## Windows quick start
 
@@ -212,6 +230,13 @@ Linux X11 forwarding uses the **system OpenSSH client** together with the local 
 PuTTY/plink and VcXsrv are not used on Linux.
 
 Actual X11 availability also depends on the remote cluster's SSH configuration and installed software.
+
+### macOS
+
+macOS X11 uses the user-installed XQuartz application and system OpenSSH.
+XQuartz must provide a valid `DISPLAY` and `/opt/X11/bin/xauth`. Password-only
+X11 is not started; use an SSH key or agent. The application never downloads or
+stops XQuartz.
 
 ---
 

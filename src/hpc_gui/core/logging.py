@@ -9,11 +9,11 @@ The UI "Logs" tab tails this file.
 import logging
 from pathlib import Path
 
+from hpc_gui.core.paths import app_log_dir
+
 
 def _log_dir() -> Path:
-    d = Path.home() / ".truba_slurm_gui"
-    d.mkdir(parents=True, exist_ok=True)
-    return d
+    return app_log_dir()
 
 
 def log_path() -> Path:
