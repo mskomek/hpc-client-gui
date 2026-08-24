@@ -9,7 +9,13 @@
 
 Connect to a remote cluster, browse and transfer files, submit and monitor Slurm jobs, inspect job output, use terminal workflows, and launch X11 applications from one client.
 
-**[Download latest release](https://github.com/mskomek/hpc-client-gui/releases/latest)** · **[Documentation](https://github.com/mskomek/hpc-client-gui/wiki)** · **[CLI guide](src/hpc_gui/docs/CLI_GUIDE_en.md)** · **[Report an issue](https://github.com/mskomek/hpc-client-gui/issues)**
+**[Download latest release](https://github.com/mskomek/hpc-client-gui/releases/latest)** · **[Documentation](https://github.com/mskomek/hpc-client-gui/wiki)** · **[CLI guide](src/hpc_gui/docs/CLI_GUIDE_en.md)** · **[Report an issue](https://github.com/mskomek/hpc-client-gui/issues)** · **[Plugins](https://github.com/mskomek/hpc-client-gui-plugins)**
+
+> **🔌 Plugins & requests:** Plugins (cluster profiles, job templates, lint packs) live in the official registry
+> **[mskomek/hpc-client-gui-plugins](https://github.com/mskomek/hpc-client-gui-plugins)**.
+> Missing a plugin, want a new cluster profile, solver template, or lint pack? **Requests belong there** —
+> [open a plugin request](https://github.com/mskomek/hpc-client-gui-plugins/issues/new?template=plugin-request.yml).
+> Application bugs stay in this repository's [issue chooser](https://github.com/mskomek/hpc-client-gui/issues/new/choose).
 
 ![HPC Client GUI remote files and jobs overview](docs/wiki/assets/overview.png)
 
