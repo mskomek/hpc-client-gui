@@ -63,6 +63,8 @@ def test_signed_candidates_are_verified_before_publish():
     assert "spctl --assess --type execute" in block
     publish = text.split("  publish-release:\n", 1)[1]
     assert "verify-macos-signed-candidate" in publish.split("\n    runs-on:", 1)[0]
+    assert "Validate final release inventory" in publish
+    assert 'assert not any("unsigned" in name.lower() for name in names)' in publish
 
 
 def test_signing_secret_mapping_is_complete_and_publish_only():

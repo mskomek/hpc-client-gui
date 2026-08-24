@@ -412,6 +412,28 @@ jobs:
           python scripts/generate_release_manifest.py \
             --release-dir "dist/releases/v${{ github.event.inputs.version }}" \
             --version "v${{ github.event.inputs.version }}"
+      - name: Validate final release inventory
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          release_dir = Path("dist/releases/v${{ github.event.inputs.version }}")
+          manifest = json.loads((release_dir / "MANIFEST.json").read_text(encoding="utf-8"))
+          assert manifest["release"] == "v${{ github.event.inputs.version }}"
+          names = {item["file"] for item in manifest["artifacts"]}
+          required = {
+              "hpc-client-gui_macos_arm64.dmg",
+              "hpc-client-gui_macos_arm64.dmg.sha256",
+              "hpc-client-gui_macos_x86_64.dmg",
+              "hpc-client-gui_macos_x86_64.dmg.sha256",
+          }
+          assert required <= names
+          assert not any("unsigned" in name.lower() for name in names)
+          assert {item["platform"] for item in manifest["artifacts"]} >= {
+              "linux", "windows", "macos"
+          }
+          PY
       # Third-party actions are pinned to verified full commit SHAs (version
       # comments beside each pin). Advance these intentionally.
       - name: Attest build provenance for release assets
