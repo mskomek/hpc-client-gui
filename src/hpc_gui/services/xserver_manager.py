@@ -88,6 +88,10 @@ def _is_windows() -> bool:
     return platform.system().lower() == "windows"
 
 
+def _is_macos() -> bool:
+    return platform.system().lower() == "darwin"
+
+
 def _is_port_open(host: str, port: int) -> bool:
     try:
         with socket.create_connection((host, port), timeout=0.25):
@@ -114,6 +118,25 @@ def is_local_x_available(log: Optional[Callable[[str], None]] = None) -> bool:
         return True
     _log(log, "X11: DISPLAY ortam degiskeni ayarli degil.")
     return False
+
+
+def ensure_xquartz_available(
+    log: Optional[Callable[[str], None]] = None,
+) -> bool:
+    """Validate the user-installed XQuartz prerequisites without installing them."""
+    if not _is_macos():
+        return False
+    if not Path("/Applications/Utilities/XQuartz.app").exists():
+        _log(log, "X11: XQuartz bulunamadı. https://www.xquartz.org/ adresinden kurun.")
+        return False
+    if not Path("/opt/X11/bin/xauth").exists():
+        _log(log, "X11: XQuartz xauth bulunamadı: /opt/X11/bin/xauth")
+        return False
+    display = os.environ.get("DISPLAY", "").strip()
+    if not display or display in {":0", "localhost:0.0"}:
+        _log(log, "X11: XQuartz DISPLAY ortamı kullanılamıyor; XQuartz'u başlatın.")
+        return False
+    return True
 
 
 def _vcxsrv_dir() -> Path:
@@ -272,6 +295,8 @@ def ensure_x_server_running(
     Windows it requires 127.0.0.1:6000 to be listening (plink requirement).
     """
 
+    if _is_macos():
+        return ensure_xquartz_available(log)
     if not _is_windows():
         return is_local_x_available(log)
 
