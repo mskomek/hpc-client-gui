@@ -52,6 +52,6 @@ a defect:
 New CHANGELOG entries and technical/maintenance reports (this document,
 architecture notes, release checklists written for engineering use) are
 written in English. User-facing GUI strings and the CLI guides continue to
-be maintained in both Turkish and English per [rules.md](../../../rules.md)'s
+be maintained in both Turkish and English per the project's internal
 i18n requirements — this policy applies to internal/engineering
 documentation only, not user-facing UI text.

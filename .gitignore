@@ -60,6 +60,7 @@ tools/ai/deepseek-models.local.psd1
 # (see local MAIN_SYNC_PROTOCOL.md copy on the development line).
 /AGENTS.md
 /CLAUDE.md
+/rules.md
 /MAIN_SYNC_PROTOCOL.md
 /tools/
 /devtools/*
