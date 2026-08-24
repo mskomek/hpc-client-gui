@@ -12,6 +12,7 @@
 
 - [[Installation on Windows|Installation-Windows]]
 - [[Installation on Linux|Installation-Linux]]
+- [[Installation on macOS|Installation-macOS]]
 - [[Installation from Source|Installation-From-Source]]
 - [[Upgrading and Uninstalling|Upgrading-and-Uninstalling]]
 
@@ -73,6 +74,7 @@
 
 - [[Windows Kurulumu|Installation-Windows-TR]]
 - [[Linux Kurulumu|Installation-Linux-TR]]
+- [[macOS Kurulumu|Installation-macOS-TR]]
 - [[Kaynaktan Kurulum|Installation-From-Source-TR]]
 - [[Yükseltme ve Kaldırma|Upgrading-and-Uninstalling-TR]]
 
