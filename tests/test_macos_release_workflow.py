@@ -31,6 +31,19 @@ def test_publish_is_opt_in_and_actions_are_sha_pinned():
             assert "@" in line and len(line.split("@", 1)[1].split()[0]) >= 40
 
 
+def test_unsigned_dry_run_verifies_all_platforms_without_publishing():
+    text = WORKFLOW.read_text(encoding="utf-8")
+    block = text.split("  verify-macos-dry-run:\n", 1)[1].split("\n  sign-macos-arm64:", 1)[0]
+    assert "if: ${{ inputs.publish != true }}" in block
+    assert "hpc-client-gui-macos-arm64-unsigned-${{ github.event.inputs.version }}" in block
+    assert "hpc-client-gui-macos-x86_64-unsigned-${{ github.event.inputs.version }}" in block
+    assert "hpc-client-gui-linux-${{ github.event.inputs.version }}" in block
+    assert "hpc-client-gui-${{ github.event.inputs.version }}" in block
+    assert "generate_release_manifest.py" in block
+    assert '"linux", "windows", "macos"' in block
+    assert "softprops/action-gh-release" not in block
+
+
 def test_signing_secret_mapping_is_complete_and_publish_only():
     text = WORKFLOW.read_text(encoding="utf-8")
     for name in (
