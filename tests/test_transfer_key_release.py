@@ -57,19 +57,26 @@ class TransferKeyReleaseTests(unittest.TestCase):
 
     def _stalling_executor(self):
         started = threading.Event()
+        stop = threading.Event()
 
         def execute(item, progress_cb=None):
             if item.op != "download" or progress_cb is None:
                 return
             started.set()
             for _ in range(2000):
+                if stop.is_set():
+                    return
                 progress_cb(1, 2)
                 time.sleep(0.005)
 
-        return execute, started
+        # The executor runs on a worker thread; once the dialog is cancelled
+        # it must stop emitting progress events, otherwise the thread keeps
+        # crossing Qt events into widgets deleted by later tests (segfault).
+        self.addCleanup(stop.set)
+        return execute, started, stop
 
     def test_cancel_releases_the_keys_so_the_same_files_replan(self) -> None:
-        execute, started = self._stalling_executor()
+        execute, started, stop = self._stalling_executor()
         self.panel._execute_transfer_item = execute  # type: ignore[method-assign]
 
         self.assertTrue(self.panel._run_plan_with_progress(list(self.plan), "test"))
@@ -79,6 +86,7 @@ class TransferKeyReleaseTests(unittest.TestCase):
         dialog = self.panel._transfer_dialogs[-1]
         dialog.cancel_all()
         self._pump(lambda: not dialog._running)
+        stop.set()
 
         # The dialog is still open and never emitted `finished` - this is
         # exactly when the keys used to stay reserved for good.
@@ -98,7 +106,7 @@ class TransferKeyReleaseTests(unittest.TestCase):
         )
 
     def test_keys_stay_reserved_while_the_queue_is_running(self) -> None:
-        execute, started = self._stalling_executor()
+        execute, started, stop = self._stalling_executor()
         self.panel._execute_transfer_item = execute  # type: ignore[method-assign]
 
         self.assertTrue(self.panel._run_plan_with_progress(list(self.plan), "test"))
@@ -118,6 +126,7 @@ class TransferKeyReleaseTests(unittest.TestCase):
 
         self.panel._transfer_dialogs[0].cancel_all()
         self._pump(lambda: not self.panel._transfer_dialogs[0]._running)
+        stop.set()
 
 
 if __name__ == "__main__":
