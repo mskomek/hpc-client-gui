@@ -34,7 +34,7 @@ def test_publish_is_opt_in_and_actions_are_sha_pinned():
 def test_unsigned_dry_run_verifies_all_platforms_without_publishing():
     text = WORKFLOW.read_text(encoding="utf-8")
     block = text.split("  verify-macos-dry-run:\n", 1)[1].split("\n  sign-macos-arm64:", 1)[0]
-    assert "if: ${{ inputs.publish != true }}" in block
+    assert "if: ${{ inputs.publish != true && inputs.sign != true }}" in block
     assert "hpc-client-gui-macos-arm64-unsigned-${{ github.event.inputs.version }}" in block
     assert "hpc-client-gui-macos-x86_64-unsigned-${{ github.event.inputs.version }}" in block
     assert "hpc-client-gui-linux-${{ github.event.inputs.version }}" in block
@@ -42,6 +42,16 @@ def test_unsigned_dry_run_verifies_all_platforms_without_publishing():
     assert "generate_release_manifest.py" in block
     assert '"linux", "windows", "macos"' in block
     assert "softprops/action-gh-release" not in block
+
+
+def test_sign_only_candidate_is_separate_from_publication():
+    text = WORKFLOW.read_text(encoding="utf-8")
+    assert 'description: "Sign and notarize macOS candidates without publishing"' in text
+    assert "if: ${{ inputs.sign == true || inputs.publish == true }}" in text
+    assert "if: ${{ inputs.publish == true }}" in text
+    assert "inputs.publish || inputs.sign" in text
+    dry_run = text.split("  verify-macos-dry-run:\n", 1)[1].split("\n  sign-macos-arm64:", 1)[0]
+    assert "inputs.publish != true && inputs.sign != true" in dry_run
 
 
 def test_signing_secret_mapping_is_complete_and_publish_only():
