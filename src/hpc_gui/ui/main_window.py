@@ -558,6 +558,16 @@ class MainWindow(QMainWindow):
                 webbrowser.open(release.html_url)
             return
 
+        if release.install_strategy == "manual":
+            self._close_update_progress()
+            QMessageBox.information(
+                self,
+                t("updates.title"),
+                t("updates.manual_install").format(version=release.version),
+            )
+            webbrowser.open(release.zip_url or release.html_url)
+            return
+
         if not self._update_manual:
             self._show_update_progress(10, "available")
         else:
