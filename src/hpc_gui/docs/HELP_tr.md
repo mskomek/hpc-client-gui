@@ -96,8 +96,10 @@ aynı anda kaç dosya aktarımı çalışacağını belirler; ek kullanıcı otu
 açmaz. Aktarım penceresi hem **ayarlanan** değeri hem de bağlantı için
 **geçerli** limiti gösterir: birden çok dosya paralel gidebilir; tek büyük
 dosya şu anda parçalara bölünerek aktarılmaz. Hızlı hatlarda 2–4 değerleri
-verimi artırabilir; paylaşılan HPC giriş düğümlerinde ölçülü olun. İzole
-bağlantı sağlayamayan sunucu/arka uçlar geçerli sınırı güvenle 1'e düşürür.
+verimi artırabilir; paylaşılan HPC giriş düğümlerinde ölçülü olun. Düz FTP,
+bazı sunucular eşzamanlı veri kanallarını düşürdüğü için her zaman tek
+aktarımla sınırlıdır; yalıtılmış kanalları destekleyen SFTP ayarlanan
+paralelliği kullanabilir.
 
 ### Eklentiler
 

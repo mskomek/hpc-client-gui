@@ -42,14 +42,9 @@ class FTPFilesBackend(FilesBackend):
     supports_progressive_listing = True
     """Plain FTP implementation of the app's file-transfer backend."""
 
-    # Parallel transfers are safe here because every queued upload/download
-    # runs against its own isolated ``FTPFilesBackend`` (its own control and
-    # data connections) obtained through :meth:`open_transfer_backend`. A
-    # single ``ftplib.FTP`` object is never shared between threads. The
-    # transfer queue bounds the number of concurrent workers, so at most
-    # that many extra connections exist. Non-transfer metadata operations
-    # keep using the shared browsing connection.
-    supports_parallel_transfers = True
+    # Some FTP servers drop simultaneous data channels despite isolated
+    # control connections. Keep FTP transfers serial; SFTP remains parallel.
+    supports_parallel_transfers = False
 
     def __init__(
         self,
