@@ -34,7 +34,9 @@ def _performance_mark(name: str) -> None:
 def _set_application_icon(app: QApplication) -> None:
     """Use the release icon for the app window and taskbar entry too."""
     candidates = [
+        Path(__file__).resolve().parents[2] / "build" / "macos" / "hpc-client-gui.icns",
         Path(__file__).resolve().parents[2] / "build" / "windows" / "hpc-client-gui.ico",
+        Path(getattr(sys, "_MEIPASS", "")) / "hpc_gui" / "assets" / "hpc-client-gui.icns",
         Path(getattr(sys, "_MEIPASS", "")) / "hpc_gui" / "assets" / "hpc-client-gui.ico",
     ]
     for icon_path in candidates:
