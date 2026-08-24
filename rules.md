@@ -1,6 +1,6 @@
 # rules.md
 
-Last updated: 2026-08-08
+Last updated: 2026-08-24
 
 ## Mission
 
@@ -120,20 +120,23 @@ commitlendi.` and include the Linux branch, Windows branch, and final Windows
 commit hash. Native Windows sessions work directly in the Windows repository;
 Linux-native-only checkouts use the normal local branch workflow.
 
-`rules.md` defines product and architecture constraints. `AGENTS.md` defines the
-Codex workflow, and `CLAUDE.md` defines the Claude Code workflow. When they
-overlap, the stricter safety or validation rule applies; no agent instruction
-may weaken this file.
+`rules.md` is the single authority for product and architecture constraints;
+`AGENTS.md` only points here and describes the contribution workflow. When
+guidance overlaps, the stricter safety or validation rule applies. Do not
+duplicate rules into other files (including per-agent files such as
+`CLAUDE.md`, which is not used in this repository).
 
 Codex and Claude remain the primary orchestrators. For non-trivial discovery,
 implementation, and review they should invoke the shared project worker:
 
 `powershell -NoProfile -File tools/ai/deepseek-worker.ps1`
 
-The default delegated model is the OpenCode Go DeepSeek v4 Flash identifier
-returned by `opencode models`. Never route DeepSeek through an undocumented
-Codex/Claude proxy. Project-local Ollama/Qwen agents are inactive until the user
-explicitly re-enables them.
+The temporary default delegated model is the discovered `opencode/x-preview-f-free`
+identifier returned by `opencode models`; when it is unavailable, selection
+falls back to the discovered OpenCode Go DeepSeek v4 Flash identifier. Never
+route delegated models through an undocumented Codex/Claude proxy.
+Project-local Ollama/Qwen agents are inactive until the user explicitly
+re-enables them.
 
 Delegated work must be narrow and reviewable:
 
@@ -181,8 +184,7 @@ orchestration. Both Codex and Claude must drive delegation directly instead:
    (`> path/to/run.log 2>&1`).
 3. When a call finishes, do not read the raw log into context. Extract only
    the decision-relevant lines (progress narration, the final report,
-   verdicts, exit codes) — `tools/ai/parse-run-log.js <log-file> [--tail N]`
-   does this filtering; use it (or an equivalent one-off filter) rather than
+   verdicts, exit codes) with an equivalent one-off filter rather than
    dumping the full log.
 4. The primary agent performs verification directly — never delegate
    verification to a subagent. Inspect `git status`/`git diff` yourself,
@@ -327,27 +329,29 @@ regardless of which agent drives the call.
   (or any release/feature branch), and never push it to `origin`. When
   syncing `codex/develop` onto `main`, exclude it (see the Main Sync
   Inclusion Gate below). `main` ignores the path via `.gitignore`.
-- GitHub (`origin`) carries exactly one branch: `main`. No other branch is ever
-  pushed to `origin`.
-- `codex/develop` (and any other working branch) stays local-only. Do all
-  day-to-day work there.
-- To publish, sync the local working branch's changes onto local `main`
-  (cherry-pick or merge, whichever preserves history without fabricating
-  conflicts — see prior release commits for the pattern) and push only `main`.
-- Never `git push origin <branch>` for anything other than `main`, and never
-  leave a non-`main` branch on the remote after a release; delete it if one
-  appears.
+### Branching and pull requests
+
+- `main` is protected: changes land only through pull requests with passing
+  required status checks, resolved review conversations, and an up-to-date
+  branch. Administrators retain an explicit emergency bypass.
+- Short-lived remote feature branches are allowed for open pull requests;
+  they must be deleted (locally and on `origin`) immediately after merge.
+  `delete_branch_on_merge` is enabled on GitHub.
+- `codex/develop` (and any other working branch) stays local-only unless a
+  pull request needs it published as `feat/...` or `fix/...`.
+- Never force-push or delete `main`, and never move or rewrite existing
+  `v*` release tags.
 
 ### Main Sync Inclusion Gate
 
 - Before syncing `codex/develop` to `main`, classify every changed path from
   `main...codex/develop` at the repository root.
-- Only root files and folders explicitly allowed by `MAIN_SYNC_PROTOCOL.md`
-  may be candidates for the sync.
+- Only application sources, tests, packaging definitions, tracked docs, and
+  CI configuration are candidates for the sync.
 - Never stage, merge, cherry-pick, or push excluded content such as `waves/`,
-  `tools/`, root `docs/`, `.agent-runs/`, agent instruction files, local
-  protocol/rules files, caches, logs, virtual environments, or temporary
-  build outputs.
+  `tools/`, `.agent-runs/`, agent instruction files, local protocol/rules
+  files (`rules.md`, `AGENTS.md` local copies), caches, logs, virtual
+  environments, or temporary build outputs.
 - `build/` and `dist/` are selective: include only approved packaging
   definitions and validated versioned release artifacts; never synchronize
   their temporary or historical local outputs by default.
@@ -369,12 +373,12 @@ regardless of which agent drives the call.
 
 ## Local-Only Working Files (develop only, never on main)
 
-- `CLAUDE.md`, `MAIN_SYNC_PROTOCOL.md`, `AGENTS.md`, and similar agent
-  guidance/protocol files — like the internal `waves/`, `tools/`, and
-  `dist/` folders — are **untracked local working content of
+- Local agent guidance/protocol files - like the internal `waves/`, `tools/`,
+  and `dist/` folders - are **untracked local working content of
   `codex/develop`**. They live inside the development working tree but are
   never staged, committed, or pushed, and `origin/main` must not contain
-  them.
+  them. The only exception is the minimal tracked `AGENTS.md` on `main`,
+  which points to this file as the single authority.
 - Because Git shares untracked files across branch switches in one working
   directory, before reconciling or pushing `main` temporarily set all of
   these aside (move to `<repo>-local\`, for example), push only `main`, then
