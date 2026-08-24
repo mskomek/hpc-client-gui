@@ -13,13 +13,22 @@ from hpc_gui.services.x11_system_ssh import (
     is_likely_x11_related_command,
     wrap_remote_cmd_clean_env,
 )
-from hpc_gui.services.xserver_manager import ensure_x_server_running, stop_x_server_started_by_app
+from hpc_gui.services.xserver_manager import (
+    ensure_x_server_running,
+    stop_x_server_started_by_app,
+)
 
 
 def _is_windows() -> bool:
     import platform
 
     return platform.system().lower() == "windows"
+
+
+def _is_macos() -> bool:
+    import platform
+
+    return platform.system().lower() == "darwin"
 
 
 class X11Runner:
@@ -50,6 +59,11 @@ class X11Runner:
             if not ensure_x_server_running(self._log, parent=p, allow_download=allow_download):
                 return False
             return True
+        if _is_macos():
+            if not self._system_ssh_available():
+                self._log("X11: macOS sistem OpenSSH istemcisi bulunamadı.")
+                return False
+            return ensure_x_server_running(self._log, parent=p)
         # Linux: system OpenSSH is required; the local X server is the DISPLAY env.
         if not self._system_ssh_available():
             self._log("X11: sistem OpenSSH istemcisi (ssh) bulunamadi. X11 iletimi icin ssh kurun.")
@@ -72,7 +86,7 @@ class X11Runner:
 
         p = parent or self._parent
         if not ensure_x_server_running(self._log, parent=p, allow_download=True):
-            self._log("X11: Yerel X server (VcXsrv) baslatilamadi.")
+            self._log("X11: Yerel X server başlatılamadı veya hazır değil.")
             return True
 
         remote_cmd = wrap_remote_cmd_clean_env(cmd)
