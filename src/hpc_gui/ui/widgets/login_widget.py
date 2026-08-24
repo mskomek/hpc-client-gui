@@ -54,6 +54,10 @@ from hpc_gui.core.secret_store import (
     is_available as os_secret_store_available,
     protect_secret,
     unprotect_secret,
+    keychain_available,
+    protect_keychain_secret,
+    unprotect_keychain_secret,
+    delete_keychain_secret,
 )
 from hpc_gui.ui.widgets.terminal_input import TerminalInput
 from hpc_gui.ui.widgets.terminal_widget import TerminalWidget
@@ -909,6 +913,17 @@ class LoginWidget(QWidget):
         *,
         allow_prompt: bool,
     ) -> str | None:
+        keychain_ref = prof.get("password_keychain_ref")
+        if keychain_ref:
+            try:
+                return unprotect_keychain_secret(str(keychain_ref))
+            except Exception:
+                QMessageBox.critical(
+                    self,
+                    t("login.err_title"),
+                    t("connection.saved_password_unavailable"),
+                )
+                return None
         token = prof.get("password_dpapi")
         if token:
             try:
@@ -1000,7 +1015,7 @@ class LoginWidget(QWidget):
         initial = self._load_profile_by_name(name)
         if not initial:
             return
-        if initial.get("password_dpapi"):
+        if initial.get("password_keychain_ref") or initial.get("password_dpapi"):
             expected = self._decrypt_profile_password(initial, allow_prompt=False)
             if expected is None:
                 return
@@ -1148,15 +1163,31 @@ class LoginWidget(QWidget):
         remove_keys: list[str] = []
         if self.cb_save_password.isChecked():
             plain = self.password.text() or ""
-            current = (
-                existing
-                if existing is not None and existing.get("name") == name
-                else next(
-                    (p for p in load_profiles() if p.get("name") == name),
-                    None,
-                )
+            current = existing or next(
+                (p for p in load_profiles() if p.get("name") == name),
+                None,
             )
-            if (
+            if keychain_available():
+                if not plain and current and current.get("password_keychain_ref"):
+                    plain = self._decrypt_profile_password(current, allow_prompt=False)
+                    if plain is None:
+                        return False
+                try:
+                    if plain:
+                        patch["password_keychain_ref"] = protect_keychain_secret(
+                            plain,
+                            str(current.get("password_keychain_ref"))
+                            if current and current.get("password_keychain_ref")
+                            else None,
+                        )
+                except Exception as exc:
+                    QMessageBox.critical(
+                        self,
+                        t("login.err_title"),
+                        t("connection.password_store_failed").format(error=exc),
+                    )
+                    return False
+            elif (
                 self._password_prompt_policy == "edit-only"
                 and os_secret_store_available()
             ):
@@ -1193,7 +1224,12 @@ class LoginWidget(QWidget):
             else:
                 # keep existing encrypted password if present (when editing profile)
                 if current:
-                    for key in ("password_dpapi", "password_enc", "password_salt"):
+                    for key in (
+                        "password_keychain_ref",
+                        "password_dpapi",
+                        "password_enc",
+                        "password_salt",
+                    ):
                         if current.get(key):
                             patch[key] = current.get(key)
 
@@ -1201,17 +1237,32 @@ class LoginWidget(QWidget):
             patch["password"] = ""
         else:
             patch["password"] = ""
+            if existing and existing.get("password_keychain_ref"):
+                delete_keychain_secret(str(existing["password_keychain_ref"]))
             remove_keys.extend(
-                ["password_enc", "password_salt", "password_dpapi"]
+                [
+                    "password_keychain_ref",
+                    "password_enc",
+                    "password_salt",
+                    "password_dpapi",
+                ]
             )
 
         prof = merge_profile_patch(existing, patch, remove_keys=remove_keys)
         # Only one secret scheme may survive a save.
-        if "password_dpapi" in prof:
+        if "password_keychain_ref" in prof:
+            prof.pop("password_dpapi", None)
+            prof.pop("password_enc", None)
+            prof.pop("password_salt", None)
+        elif "password_dpapi" in prof:
             prof.pop("password_enc", None)
             prof.pop("password_salt", None)
         elif "password_enc" in prof:
             prof.pop("password_dpapi", None)
+        old_keychain_ref = str((existing or {}).get("password_keychain_ref") or "")
+        new_keychain_ref = str(prof.get("password_keychain_ref") or "")
+        if old_keychain_ref and old_keychain_ref != new_keychain_ref:
+            delete_keychain_secret(old_keychain_ref)
         upsert_profile(prof)
         if original_name and original_name != name:
             delete_profile(original_name)

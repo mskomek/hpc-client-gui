@@ -81,6 +81,19 @@ def build_ssh_conn_info(args) -> SSHConnInfo:
                 password = secret_store.unprotect_secret(str(saved_token))
             except Exception:
                 password = ""
+    elif (
+        profile
+        and not key_path
+        and not getattr(args, "no_saved_password", False)
+        and profile.get("password_keychain_ref")
+        and getattr(secret_store, "keychain_available", lambda: False)()
+    ):
+        try:
+            password = secret_store.unprotect_keychain_secret(
+                str(profile["password_keychain_ref"])
+            )
+        except Exception:
+            password = ""
     timeout = getattr(args, "timeout", None)
     keepalive_interval_seconds = coerce_keepalive_interval(
         (profile or {}).get("keepalive_interval_seconds", 30)
