@@ -20,6 +20,7 @@ class ReleaseManifestTests(unittest.TestCase):
             (release_dir / "hpc-client-gui_windows_onedir.zip").write_bytes(b"win")
             (release_dir / "hpc-client-gui_windows_onedir.zip.sha256").write_text("x  y\n")
             (release_dir / "hpc-client-gui-1.0.0-x86_64.AppImage").write_bytes(b"app")
+            (release_dir / "hpc-client-gui_macos_arm64.dmg").write_bytes(b"dmg")
             (release_dir / "CHANGELOG.md").write_text("# notes\n")
 
             manifest = gen.build_manifest(release_dir, "v1.0.0")
@@ -33,6 +34,7 @@ class ReleaseManifestTests(unittest.TestCase):
             {
                 "CHANGELOG.md",
                 "hpc-client-gui-1.0.0-x86_64.AppImage",
+                "hpc-client-gui_macos_arm64.dmg",
                 "hpc-client-gui_windows_onedir.zip",
                 "hpc-client-gui_windows_onedir.zip.sha256",
             },
@@ -42,6 +44,8 @@ class ReleaseManifestTests(unittest.TestCase):
         self.assertEqual(by_name["hpc-client-gui_windows_onedir.zip"]["format"], "zip")
         self.assertEqual(by_name["hpc-client-gui-1.0.0-x86_64.AppImage"]["platform"], "linux")
         self.assertEqual(by_name["hpc-client-gui-1.0.0-x86_64.AppImage"]["format"], "appimage")
+        self.assertEqual(by_name["hpc-client-gui_macos_arm64.dmg"]["platform"], "macos")
+        self.assertEqual(by_name["hpc-client-gui_macos_arm64.dmg"]["format"], "dmg")
         self.assertEqual(by_name["hpc-client-gui_windows_onedir.zip.sha256"]["format"], "checksum")
 
     def test_sha256_matches_hashlib_for_known_content(self) -> None:

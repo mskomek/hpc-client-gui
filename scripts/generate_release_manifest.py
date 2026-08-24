@@ -25,6 +25,8 @@ _PLATFORM_HINTS = {
     "appimage": "linux",
     ".deb": "linux",
     "flatpak": "linux",
+    "macos": "macos",
+    ".dmg": "macos",
 }
 
 _FORMAT_HINTS = {
@@ -33,6 +35,7 @@ _FORMAT_HINTS = {
     ".appimage": "appimage",
     ".deb": "deb",
     ".flatpak": "flatpak",
+    ".dmg": "dmg",
     ".md": "text",
 }
 

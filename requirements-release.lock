@@ -1,8 +1,14 @@
 altgraph==0.17.5
+backports.tarfile==1.2.0
 bcrypt==5.0.0
 cffi==2.1.1
 cryptography==50.0.0
 iniconfig==2.3.0
+importlib_metadata==8.7.0
+jaraco.classes==3.4.0
+jaraco.context==6.0.1
+jaraco.functools==4.1.0
+keyring==25.6.0
 invoke==3.0.3
 packaging==26.3
 paramiko==5.0.0
@@ -16,9 +22,11 @@ Pygments==2.21.0
 pyinstaller==6.22.2
 pyinstaller-hooks-contrib==2026.6
 PyNaCl==1.6.2
+more-itertools==10.7.0
 PySide6==6.11.2
 PySide6_Addons==6.11.2
 PySide6_Essentials==6.11.2
 pytest==9.1.1
 setuptools==84.0.0
 shiboken6==6.11.2
+zipp==3.23.0
