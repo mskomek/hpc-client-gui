@@ -74,11 +74,8 @@ class TransferKeyReleaseTests(unittest.TestCase):
             if item.op != "download" or progress_cb is None:
                 return
             started.set()
-            for _ in range(2000):
-                if stop.is_set():
-                    return
-                progress_cb(1, 2)
-                time.sleep(0.005)
+            progress_cb(1, 2)
+            stop.wait()
 
         # The executor runs on a worker thread; once the dialog is cancelled
         # it must stop emitting progress events, otherwise the thread keeps
