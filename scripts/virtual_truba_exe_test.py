@@ -26,7 +26,7 @@ from hpc_gui.config.storage import (
     set_cli_external_access_enabled,
     upsert_profile,
 )  # noqa: E402
-from hpc_gui.config.system_profile import HPC_SYSTEM_DEFAULTS  # noqa: E402
+from hpc_gui.config.system_profile import GENERIC_SLURM_DEFAULTS  # noqa: E402
 from hpc_gui.core.secret_store import protect_secret  # noqa: E402
 from hpc_gui.services.files_ftp import FTPFilesBackend  # noqa: E402
 from hpc_gui.services.files_ssh import SSHFilesBackend  # noqa: E402
@@ -61,7 +61,9 @@ def save_test_profile(port: int) -> None:
         "x11_forwarding": False,
         "cli_allowed": True,
         "password_dpapi": protect_secret("test"),
-        "system": dict(HPC_SYSTEM_DEFAULTS),
+        # v1.4.0 moved site-specific commands (lssrv) into the TRUBA plugin;
+        # this virtual-TRUBA profile declares the same status command.
+        "system": {**GENERIC_SLURM_DEFAULTS, "status_command": "lssrv"},
     }
     upsert_profile(profile)
     set_cli_external_access_enabled(True)

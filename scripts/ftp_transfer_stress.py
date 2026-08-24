@@ -20,10 +20,11 @@ import sys
 import tempfile
 import threading
 import time
+from types import SimpleNamespace
 from contextlib import contextmanager
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Callable, Iterator
+from typing import Iterator
 
 from pyftpdlib.authorizers import DummyAuthorizer
 from pyftpdlib.handlers import FTPHandler
@@ -31,7 +32,6 @@ from pyftpdlib.servers import FTPServer
 from PySide6.QtWidgets import QApplication
 
 from hpc_gui.services.files_base import RemoteEntry
-from hpc_gui.ui.widgets import remote_dir_panel as remote_panel_module
 from hpc_gui.ui.widgets.remote_dir_panel import RemoteDirPanel
 
 
@@ -369,8 +369,6 @@ def run(mode: str, parallel: int, timeout_seconds: int) -> dict[str, object]:
     username = "trubagui_stress"
     password = "ephemeral-only"
     app = QApplication.instance() or QApplication([])
-    original_parallelism: Callable[[], int] = remote_panel_module.get_transfer_parallelism
-    remote_panel_module.get_transfer_parallelism = lambda: parallel
     temp_root = Path(tempfile.mkdtemp(prefix="trubagui_ftp_stress_"))
     result: dict[str, object] | None = None
     try:
@@ -389,7 +387,11 @@ def run(mode: str, parallel: int, timeout_seconds: int) -> dict[str, object]:
         with ftp_server(server_root, username, password) as (host, port):
             backend = LoopbackFtpBackend(host, port, username, password)
             panel = RemoteDirPanel("FTP stress")
-            panel.set_session({"files": backend})
+            # v1.4.0: the per-profile value is the single parallelism
+            # authority; inject it through the session config.
+            panel.set_session(
+                {"files": backend, "cfg": SimpleNamespace(transfer_parallelism=parallel)}
+            )
             panel.set_transfer_dialog_visible(False)
 
             try:
@@ -457,7 +459,6 @@ def run(mode: str, parallel: int, timeout_seconds: int) -> dict[str, object]:
             "download": asdict(download),
         }
     finally:
-        remote_panel_module.get_transfer_parallelism = original_parallelism
         remove_temp_root(temp_root)
     if result is None:
         raise RuntimeError("stress run completed without a result")

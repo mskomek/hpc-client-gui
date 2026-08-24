@@ -10,6 +10,7 @@ from PySide6.QtWidgets import (
     QDialog,
     QFileDialog,
     QFormLayout,
+    QFrame,
     QGroupBox,
     QHBoxLayout,
     QLineEdit,
@@ -17,8 +18,10 @@ from PySide6.QtWidgets import (
     QMenu,
     QMessageBox,
     QPushButton,
+    QScrollArea,
     QToolButton,
     QVBoxLayout,
+    QWidget,
     QSpinBox,
     QDoubleSpinBox,
 )
@@ -289,27 +292,57 @@ class ConnectionDialog(QDialog):
         button_row.addWidget(self.btn_save_connect)
         button_row.addWidget(self.btn_cancel)
 
-        root = QVBoxLayout(self)
+        root = QVBoxLayout()
         root.addLayout(form)
         # Ready-made system settings (templates + site fields) stay visible at
         # the top instead of hiding inside the advanced section.
         root.addWidget(system_group)
         root.addWidget(self.advanced_button)
         root.addWidget(self.advanced_body)
-        root.addLayout(button_row)
+
+        # The advanced section is tall; keep the dialog within the screen by
+        # scrolling the content while the action row stays fixed at the bottom.
+        content = QWidget()
+        content.setLayout(root)
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.NoFrame)
+        scroll.setWidget(content)
+
+        dialog_layout = QVBoxLayout(self)
+        dialog_layout.addWidget(scroll, 1)
+        dialog_layout.addLayout(button_row)
 
         self._load_profile(self._initial_profile)
         self._rebuild_system_template_menu()
 
+    def _clamp_dialog_to_screen(self) -> None:
+        screen = self.screen() or self.windowHandle().screen()
+        if screen is None:
+            return
+        available = screen.availableGeometry().adjusted(16, 16, -16, -16)
+        if self.height() > available.height():
+            self.resize(self.width(), available.height())
+        if self.width() > available.width():
+            self.resize(available.width(), self.height())
+
     def _set_jump_children_enabled(self, enabled: bool) -> None:
         for widget in self._jump_child_widgets:
             widget.setEnabled(enabled)
+
+    def showEvent(self, event) -> None:
+        # Keep the dialog inside the screen from the start; the scroll area
+        # absorbs any overflow instead of growing past the desktop.
+        super().showEvent(event)
+        self._clamp_dialog_to_screen()
 
     def _set_advanced_visible(self, visible: bool) -> None:
         self.advanced_body.setVisible(visible)
         self.advanced_button.setArrowType(
             Qt.ArrowType.DownArrow if visible else Qt.ArrowType.RightArrow
         )
+        if visible:
+            self._clamp_dialog_to_screen()
 
     def _load_profile(self, profile: ProfileData) -> None:
         self.profile_name.setText(str(profile.get("name", "")))
