@@ -43,6 +43,13 @@ def _set_application_icon(app: QApplication) -> None:
             return
 
 
+def _configure_application_identity(app: QApplication) -> None:
+    app.setApplicationName("HPC Client GUI")
+    app.setApplicationDisplayName("HPC Client GUI")
+    app.setOrganizationName("mskomek")
+    app.setOrganizationDomain("github.com")
+
+
 def _bootstrap_safety_checks() -> None:
     """Best-effort startup guards.
 
@@ -75,6 +82,7 @@ def _show_main_window(window: MainWindow, available) -> None:
 def main() -> int:
     _performance_mark("main_entered")
     app = QApplication(sys.argv)
+    _configure_application_identity(app)
     _performance_mark("qapplication_created")
     _set_application_icon(app)
 
