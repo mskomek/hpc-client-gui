@@ -123,7 +123,8 @@
     "no_connection": "Bağlantı yok.",
     "details": "Detaylar",
     "apply_all": "Tüm çakışmalara uygula",
-    "close": "Kapat"
+    "close": "Kapat",
+    "and": "ve"
   },
   "placeholders": {
     "host": "Sunucu adı veya IP",
@@ -631,7 +632,11 @@
     "conflict_skip": "Atla",
     "conflict_always_use": "Her zaman bu işlemi kullan",
     "conflict_current_queue_only": "Yalnızca geçerli kuyruğa uygula",
-    "conflict_downloads_only": "Yalnızca indirmelere uygula"
+    "conflict_downloads_only": "Yalnızca indirmelere uygula",
+    "parallel_hint_effective": "Ayarlanan limit: {configured} · Bu bağlantı için geçerli limit: {effective}",
+    "parallel_hint_pair": "Ayarlanan limit: {configured} · Bu bağlantı için geçerli limit: {effective} ({reason})",
+    "parallel_reduced_backend": "bu bağlantı türü aynı anda tek dosya aktarır",
+    "parallel_reduced_server": "sunucu veya bağlantı türü nedeniyle sınırlı"
   },
   "connection": {
     "dialog_title": "Bağlantı Ekle",
@@ -788,7 +793,31 @@
     "remove_confirm_text": "{name} kaldırılsın mı?\n\nKayıtlı bağlantı profilleri kopyalanmış ayarlarını korur; profilleriniz ve kullanıcı şablonlarınız silinmez.",
     "disable": "Devre dışı bırak",
     "enable": "Etkinleştir",
-    "disabled_label": "Devre dışı (şablon sağlamaz)"
+    "disabled_label": "Devre dışı (şablon sağlamaz)",
+    "update_available": "Güncelleme var",
+    "other_versions_catalog": "Diğer sürümler",
+    "status_loading": "Eklentiler yükleniyor…",
+    "request_plugin": "Eklenti iste",
+    "request_plugin_tip": "Yeni küme profilleri, Slurm/çözücü iş şablonları ve lint pakleri isteklerini resmî eklenti deposunda paylaşın.",
+    "request_plugin_failed": "Eklenti isteği sayfası tarayıcıda açılamadı.",
+    "capability_cluster_profile": "Küme profilleri",
+    "capability_lint_rules": "Lint kuralları",
+    "capability_job_templates": "İş şablonları",
+    "capability_application_tools": "Uygulama araçları",
+    "compatible_with_running": "Bu uygulama sürümüyle uyumlu",
+    "incompatible_with_running": "Bu uygulama sürümüyle uyumsuz",
+    "source_label": "Kaynak",
+    "source_official_registry": "Resmî eklenti kayıt defteri",
+    "installed_state": "Kurulum durumu",
+    "installed_active": "Kurulu ve etkin",
+    "installed_disabled": "Kurulu ama devre dışı",
+    "installed_not_installed": "Kurulu değil",
+    "install_summary": "{name} başarıyla kuruldu: {details} eklendi.",
+    "install_generic": "{name} başarıyla kuruldu.",
+    "summary_cluster_profiles": "{count} küme profili",
+    "summary_job_templates": "{count} iş şablonu",
+    "summary_lint_rule_packs": "{count} lint kural paketi",
+    "open_failed": "Eklenti Yöneticisi açılamadı. Ayrıntılar günlüklere yazıldı."
   },
   "templates": {
     "dialog_title": "İş Şablonları",

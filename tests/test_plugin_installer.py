@@ -13,6 +13,7 @@ import pytest
 
 from hpc_gui.plugins.downloader import (
     DownloadError,
+    compute_local_sha256,
     download_exact_file,
     payload_url,
     validate_payload_rel_path,
@@ -190,6 +191,111 @@ def test_find_registry_entry_latest_and_specific():
     assert found["version"] == "1.0.0"
     with pytest.raises(RegistryError):
         find_registry_entry(registry, "org.hpcclient.missing")
+
+
+# ---------------------------------------------------------------------------
+# Latest-version resolution (registry order must never decide "latest")
+# ---------------------------------------------------------------------------
+
+
+def make_fluent_entry(version: str, requires_app: str = ">=1.4.0") -> dict:
+    return {
+        "id": "org.hpcclient.fluent",
+        "name": "Fluent Tools",
+        "version": version,
+        "plugin_api": 1,
+        "type": "lint-rules",
+        "description": "Fluent tools.",
+        "publisher": "HPC Client GUI",
+        "requires_app": requires_app,
+        "manifest_path": f"plugins/fluent/{version}/manifest.json",
+        "manifest_sha256": sha256_bytes(version.encode()),
+        "official": True,
+    }
+
+
+def fluent_registry(*entries) -> dict:
+    return {**VALID_REGISTRY, "plugins": list(entries)}
+
+
+def test_latest_resolution_ascending_order():
+    registry = fluent_registry(make_fluent_entry("0.1.0"), make_fluent_entry("0.2.0"))
+    found = find_registry_entry(registry, "org.hpcclient.fluent")
+    assert found["version"] == "0.2.0"
+
+
+def test_latest_resolution_reversed_order():
+    registry = fluent_registry(make_fluent_entry("0.2.0"), make_fluent_entry("0.1.0"))
+    found = find_registry_entry(registry, "org.hpcclient.fluent")
+    assert found["version"] == "0.2.0"
+
+
+def test_latest_resolution_with_app_version_guarantee():
+    registry = fluent_registry(make_fluent_entry("0.1.0"), make_fluent_entry("0.2.0"))
+    found = find_registry_entry(
+        registry, "org.hpcclient.fluent", app_version="1.4.0"
+    )
+    assert found["version"] == "0.2.0"
+
+
+def test_explicit_version_selection():
+    registry = fluent_registry(make_fluent_entry("0.1.0"), make_fluent_entry("0.2.0"))
+    found = find_registry_entry(registry, "org.hpcclient.fluent", version="0.1.0")
+    assert found["version"] == "0.1.0"
+    with pytest.raises(RegistryError):
+        find_registry_entry(registry, "org.hpcclient.fluent", version="9.9.9")
+
+
+def test_incompatible_newer_version_is_skipped():
+    registry = fluent_registry(
+        make_fluent_entry("0.1.0", ">=1.4.0"),
+        make_fluent_entry("0.2.0", ">=1.5.0"),
+    )
+    found = find_registry_entry(
+        registry, "org.hpcclient.fluent", app_version="1.4.0"
+    )
+    assert found["version"] == "0.1.0"
+
+    # The newest overall is still resolvable explicitly.
+    explicit = find_registry_entry(registry, "org.hpcclient.fluent", version="0.2.0")
+    assert explicit["version"] == "0.2.0"
+
+
+def test_no_compatible_version_raises():
+    registry = fluent_registry(make_fluent_entry("0.2.0", ">=99.0.0"))
+    with pytest.raises(RegistryError):
+        find_registry_entry(registry, "org.hpcclient.fluent", app_version="1.4.0")
+
+
+def test_prerelease_does_not_shadow_stable_release():
+    registry = fluent_registry(
+        make_fluent_entry("0.2.0"), make_fluent_entry("0.3.0rc1")
+    )
+    found = find_registry_entry(registry, "org.hpcclient.fluent")
+    assert found["version"] == "0.2.0"
+
+
+def test_post_release_sorts_after_release():
+    registry = fluent_registry(
+        make_fluent_entry("0.2.0"), make_fluent_entry("0.2.0.post1")
+    )
+    found = find_registry_entry(registry, "org.hpcclient.fluent")
+    assert found["version"] == "0.2.0.post1"
+
+
+def test_duplicate_id_version_records_rejected():
+    registry = fluent_registry(
+        make_fluent_entry("0.1.0"), make_fluent_entry("0.1.0")
+    )
+    with pytest.raises(RegistryError, match="Duplicate"):
+        find_registry_entry(registry, "org.hpcclient.fluent")
+
+
+@pytest.mark.parametrize("bad", ["not-a-version", "", "1.0.0.0.0-final.broken"])
+def test_invalid_versions_fail_validation(bad):
+    registry = fluent_registry(make_fluent_entry(bad))
+    with pytest.raises(RegistryError):
+        find_registry_entry(registry, "org.hpcclient.fluent")
 
 
 # ---------------------------------------------------------------------------
@@ -420,3 +526,210 @@ def test_interrupted_install_keeps_previous_state(tmp_path: Path):
     # The previous active version and its files are untouched.
     assert read_active_versions(tmp_path) == {"org.hpcclient.truba": "1.0.0"}
     assert (packages_dir(tmp_path) / "org.hpcclient.truba" / "1.0.0" / "manifest.json").is_file()
+
+
+def _assert_no_staging_or_part_leftovers(tmp_path: Path) -> None:
+    base = Path(plugins_root(tmp_path))
+    staging = base / STAGING_DIR_NAME
+    assert not staging.exists() or not any(staging.iterdir())
+    assert not list(base.rglob("*.part"))
+    assert not list(base.rglob("*.tmp"))
+
+
+# ---------------------------------------------------------------------------
+# Immutable-version and failure-injection behaviour
+# ---------------------------------------------------------------------------
+
+
+def test_conflicting_same_version_payload_is_rejected(tmp_path: Path):
+    responses, manifest, manifest_bytes = full_install_responses()
+    entry = make_registry_entry(manifest, manifest_bytes)
+    install_plugin_from_registry(
+        entry, root=tmp_path, app_version="1.4.0", fetcher=make_fetcher(responses)
+    )
+
+    # A different payload published under the same immutable version.
+    conflicting, conflicting_bytes, _ = full_install_responses(
+        plugin_id="org.hpcclient.truba", version="1.0.0"
+    )
+    tampered_profile = json.loads(conflicting[OFFICIAL_RAW_BASE + "plugins/truba/1.0.0/cluster-profile.json"])
+    tampered_profile["description"] = "A completely different payload."
+    new_profile_bytes = json.dumps(tampered_profile).encode("utf-8")
+    conflicting_manifest = json.loads(conflicting[OFFICIAL_RAW_BASE + "plugins/truba/1.0.0/manifest.json"])
+    conflicting_manifest["files"][0]["sha256"] = sha256_bytes(new_profile_bytes)
+    conflicting_manifest["files"][0]["size"] = len(new_profile_bytes)
+    conflicting[OFFICIAL_RAW_BASE + "plugins/truba/1.0.0/cluster-profile.json"] = new_profile_bytes
+    new_manifest_bytes = json.dumps(conflicting_manifest).encode("utf-8")
+    conflicting[OFFICIAL_RAW_BASE + "plugins/truba/1.0.0/manifest.json"] = new_manifest_bytes
+    conflicting_entry = make_registry_entry(conflicting_manifest, new_manifest_bytes)
+
+    with pytest.raises(InstallError, match="immutable|conflict"):
+        install_plugin_from_registry(
+            conflicting_entry,
+            root=tmp_path,
+            app_version="1.4.0",
+            fetcher=make_fetcher(conflicting),
+        )
+
+    # The previously active version is intact and still active.
+    assert read_active_versions(tmp_path) == {"org.hpcclient.truba": "1.0.0"}
+    kept = json.loads(
+        (packages_dir(tmp_path) / "org.hpcclient.truba" / "1.0.0" / "cluster-profile.json").read_text("utf-8")
+    )
+    assert "description" not in kept or kept.get("description") != "A completely different payload."
+    _assert_no_staging_or_part_leftovers(tmp_path)
+
+
+def test_corrupted_existing_version_is_not_overwritten(tmp_path: Path):
+    responses, manifest, manifest_bytes = full_install_responses()
+    entry = make_registry_entry(manifest, manifest_bytes)
+    fetcher = make_fetcher(responses)
+    install_plugin_from_registry(entry, root=tmp_path, app_version="1.4.0", fetcher=fetcher)
+
+    version_file = packages_dir(tmp_path) / "org.hpcclient.truba" / "1.0.0" / "cluster-profile.json"
+    version_file.write_text('{"corrupted": true}', encoding="utf-8")
+
+    with pytest.raises(InstallError, match="immutable|conflict"):
+        install_plugin_from_registry(entry, root=tmp_path, app_version="1.4.0", fetcher=fetcher)
+
+    assert version_file.read_text(encoding="utf-8") == '{"corrupted": true}'
+    _assert_no_staging_or_part_leftovers(tmp_path)
+
+
+def test_idempotent_reinstall_leaves_directory_untouched(tmp_path: Path):
+    responses, manifest, manifest_bytes = full_install_responses()
+    entry = make_registry_entry(manifest, manifest_bytes)
+    fetcher = make_fetcher(responses)
+    install_plugin_from_registry(entry, root=tmp_path, app_version="1.4.0", fetcher=fetcher)
+
+    version_dir = packages_dir(tmp_path) / "org.hpcclient.truba" / "1.0.0"
+    before = {
+        p.relative_to(version_dir).as_posix(): (p.stat().st_size, compute_local_sha256(p))
+        for p in sorted(version_dir.rglob("*"))
+        if p.is_file()
+    }
+    install_plugin_from_registry(entry, root=tmp_path, app_version="1.4.0", fetcher=fetcher)
+
+    after = {
+        p.relative_to(version_dir).as_posix(): (p.stat().st_size, compute_local_sha256(p))
+        for p in sorted(version_dir.rglob("*"))
+        if p.is_file()
+    }
+    assert after == before
+    assert set(after) == {"manifest.json", "cluster-profile.json"}
+    assert read_installed_state(tmp_path)["org.hpcclient.truba"]["versions"] == ["1.0.0"]
+    assert read_active_versions(tmp_path) == {"org.hpcclient.truba": "1.0.0"}
+    _assert_no_staging_or_part_leftovers(tmp_path)
+
+
+def test_update_from_older_to_newer_version(tmp_path: Path):
+    responses_old, manifest_old, bytes_old = full_install_responses(version="0.1.0")
+    entry_old = make_registry_entry(manifest_old, bytes_old)
+    responses_new, manifest_new, bytes_new = full_install_responses(version="0.2.0")
+    entry_new = make_registry_entry(manifest_new, bytes_new)
+
+    install_plugin_from_registry(
+        entry_old, root=tmp_path, app_version="1.4.0", fetcher=make_fetcher(responses_old)
+    )
+    result = install_plugin_from_registry(
+        entry_new, root=tmp_path, app_version="1.4.0", fetcher=make_fetcher(responses_new)
+    )
+    assert result.activated
+    assert read_active_versions(tmp_path)["org.hpcclient.truba"] == "0.2.0"
+    # 0.1.0 stays on disk for rollback.
+    assert (
+        packages_dir(tmp_path) / "org.hpcclient.truba" / "0.1.0" / "manifest.json"
+    ).is_file()
+    assert sorted(read_installed_state(tmp_path)["org.hpcclient.truba"]["versions"]) == [
+        "0.1.0",
+        "0.2.0",
+    ]
+
+
+def test_failed_update_preserves_previous_version(tmp_path: Path):
+    responses_old, manifest_old, bytes_old = full_install_responses(version="0.1.0")
+    entry_old = make_registry_entry(manifest_old, bytes_old)
+    install_plugin_from_registry(
+        entry_old, root=tmp_path, app_version="1.4.0", fetcher=make_fetcher(responses_old)
+    )
+
+    responses_new, manifest_new, bytes_new = full_install_responses(version="0.2.0")
+    del responses_new[OFFICIAL_RAW_BASE + "plugins/truba/0.2.0/cluster-profile.json"]
+    entry_new = make_registry_entry(manifest_new, bytes_new)
+    with pytest.raises(InstallError):
+        install_plugin_from_registry(
+            entry_new, root=tmp_path, app_version="1.4.0", fetcher=make_fetcher(responses_new)
+        )
+
+    assert read_active_versions(tmp_path) == {"org.hpcclient.truba": "0.1.0"}
+    assert (
+        packages_dir(tmp_path) / "org.hpcclient.truba" / "0.1.0" / "manifest.json"
+    ).is_file()
+    assert not (packages_dir(tmp_path) / "org.hpcclient.truba" / "0.2.0").exists()
+    _assert_no_staging_or_part_leftovers(tmp_path)
+
+
+def test_failure_before_activation_preserves_previous_active(tmp_path: Path, monkeypatch):
+    import hpc_gui.plugins.installer as installer_module
+
+    responses_old, manifest_old, bytes_old = full_install_responses(version="0.1.0")
+    install_plugin_from_registry(
+        make_registry_entry(manifest_old, bytes_old),
+        root=tmp_path,
+        app_version="1.4.0",
+        fetcher=make_fetcher(responses_old),
+    )
+
+    responses_new, manifest_new, bytes_new = full_install_responses(version="0.2.0")
+    entry_new = make_registry_entry(manifest_new, bytes_new)
+
+    def exploding_record(*args, **kwargs):
+        raise OSError("disk full while writing state")
+
+    monkeypatch.setattr(installer_module, "record_installed_version", exploding_record)
+    with pytest.raises(Exception):
+        install_plugin_from_registry(
+            entry_new,
+            root=tmp_path,
+            app_version="1.4.0",
+            fetcher=make_fetcher(responses_new),
+        )
+
+    # Files were published but activation never happened; the previous
+    # active pointer is untouched.
+    assert read_active_versions(tmp_path) == {"org.hpcclient.truba": "0.1.0"}
+    _assert_no_staging_or_part_leftovers(tmp_path)
+
+
+def test_post_activation_loader_failure_rolls_back(tmp_path: Path, monkeypatch):
+    import hpc_gui.plugins.loader as loader_module
+
+    responses_old, manifest_old, bytes_old = full_install_responses(version="0.1.0")
+    install_plugin_from_registry(
+        make_registry_entry(manifest_old, bytes_old),
+        root=tmp_path,
+        app_version="1.4.0",
+        fetcher=make_fetcher(responses_old),
+    )
+
+    responses_new, manifest_new, bytes_new = full_install_responses(version="0.2.0")
+    entry_new = make_registry_entry(manifest_new, bytes_new)
+
+    real_load = loader_module.load_installed_plugins
+
+    def failing_load(**kwargs):
+        result = real_load(**kwargs)
+        result.plugins = [p for p in result.plugins if p.manifest.version != "0.2.0"]
+        return result
+
+    monkeypatch.setattr(loader_module, "load_installed_plugins", failing_load)
+    with pytest.raises(InstallError, match="previous version 0.1.0 remains active"):
+        install_plugin_from_registry(
+            entry_new,
+            root=tmp_path,
+            app_version="1.4.0",
+            fetcher=make_fetcher(responses_new),
+        )
+
+    assert read_active_versions(tmp_path) == {"org.hpcclient.truba": "0.1.0"}
+    _assert_no_staging_or_part_leftovers(tmp_path)

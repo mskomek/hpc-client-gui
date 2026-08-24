@@ -93,9 +93,23 @@ directory only*, reusing metadata the panels already downloaded:
 
 Per connection profile under **Advanced → Transfers**. This controls how many
 file transfers run at the same time within the session — it does not open
-extra login sessions. If the server/backend cannot support isolated parallel
-transfer channels, the limit safely falls back to 1. Values of 2–4 may
-improve throughput on fast links; be considerate on shared HPC login nodes.
+extra login sessions. The transfer dialog shows both the **configured** value
+and the **effective** limit for the current connection: multiple files may be
+transferred concurrently, but a single large file is not segmented into
+parallel parts. Values of 2–4 may improve throughput on fast links; be
+considerate on shared HPC login nodes, and note that servers or backends that
+cannot provide isolated per-transfer connections safely reduce the effective
+limit to 1.
+
+### Plugins
+
+Open the Plugin Manager with the **Plugins** button (top-right control strip).
+The registry loads automatically when it opens — status shows *Loading
+plugins…*, then *Online*, *Cached*, or *Offline*. Install cluster profiles,
+job templates, and lint packs from **Discover**; see *Details* on any card for
+the full record before installing. Missing a plugin? Use **Request a plugin**
+to open the request form in the official plugin repository. See
+[PLUGINS_en.md](PLUGINS_en.md) for the complete guide.
 
 ### SSH advanced settings
 

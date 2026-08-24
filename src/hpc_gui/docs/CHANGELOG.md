@@ -1,6 +1,25 @@
 # Changelog
 
-## v1.4.0 (Unreleased)
+## v1.4.1
+
+### Plugin Manager
+- The Plugin Manager now loads the registry automatically when first opened (Loading → Online/Cached/Offline states); Refresh is disabled while a request is in flight and re-enabled afterwards, and closing the dialog mid-load stays safe.
+- Discover cards show translated capability badges, compatibility with the running app, and installed/disabled/incompatible/update-available state; Details adds license range, source (*Official plugin registry*), installed state, and older versions.
+- Added **Request a plugin** (Turkish: *Eklenti iste*) which opens the dedicated issue form in the official plugin repository; the destination URL is fixed and allow-listed.
+- Successful installs/updates now show a completion summary with counts of added cluster profiles, job templates, and lint rule packs (from loader data).
+- Opening the Plugin Manager can no longer fail silently: failures are logged with an error id and surfaced to the user.
+
+### Transfers
+- Migrated the legacy global transfer-parallelism setting: profiles saved before v1.4.0 now inherit the old global value once (clamped to 1–10); profile-specific values always win and later launches never rewrite them.
+- Plain FTP transfers now run over isolated per-transfer connections, so FTP supports parallel file transfer safely; a single large file is still never segmented.
+- The transfer dialog shows configured versus effective parallelism and explains when the effective limit is reduced to one.
+
+### Packaging and CI
+- Declared `packaging>=23` as a runtime dependency (used by the plugin stack) and fixed the wheel asset declarations (SVG/terminal HTML-JS-CSS assets were missing due to an `*.seg` typo); new packaging test builds and inspects the wheel.
+- New module-specific coverage floors plus a 65% global coverage gate in CI; release workflow third-party actions are pinned to full commit SHAs.
+- The cross-repository Plugin API contract suite is pinned to official registry tag [`hpc-client-gui-plugins v1.0.0`](https://github.com/mskomek/hpc-client-gui-plugins/releases/tag/v1.0.0) for this release.
+
+## v1.4.0
 
 ### File management and connection UX
 - Profile edits now patch known fields onto the stored profile, so plugin provenance, file-manager state, jump settings, and unknown/future keys survive every edit; secret fields are only removed intentionally.
@@ -17,6 +36,10 @@
 - Added a declarative lint engine with plugin-delivered rule packs, including an ANSYS Fluent journal linter plugin.
 - Added plugin-delivered job templates ("New from Template...") with safe placeholder rendering and editor-side preview.
 - Added Slurm/Fluent resource cross-checks (CPU allocation vs solver process count) to the lint workflow.
+- Discover now groups registry entries by plugin and shows only the latest compatible version (older versions remain in details); update actions use PEP 440 version comparison and downgrades are never offered as updates.
+- Registry resolution now selects the highest compatible semantic version instead of relying on listing order; explicitly requested versions resolve exactly; invalid or duplicate registry versions are rejected clearly.
+- Published plugin versions are immutable on disk: identical reinstalls are idempotent, conflicting or corrupt same-version content raises an integrity error without deleting the active version, failed installs/updates keep the previous active version, and state files are written atomically.
+- The official registry client now refuses redirects to any non-official host (HTTPS-only final URLs) in addition to plain HTTP.
 
 ## v1.3.0
 

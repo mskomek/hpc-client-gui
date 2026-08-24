@@ -10,10 +10,33 @@ indirmez/çalıştırmaz.
 Sağ üstteki kontrol şeridinde (Güncelle ve Günlük Gönder arasında) **Eklentiler**
 düğmesi bulunur. Üç sekmeli Eklenti Yöneticisi'ni açar:
 
-- **Keşfet** — resmi kayıt defteri kataloğuna göz atın.
+- **Keşfet** — resmi kayıt defteri kataloğuna göz atın. Yönetici açıldığında
+  yükleme otomatik başlar (durum sırayla *Eklentiler yükleniyor…*, *Çevrimiçi*,
+  *Önbellek*, *Çevrimdışı* olur); Yenile ile manuel kontrol yapılır.
 - **Kurulu** — kurulu sürümleri görün; devre dışı bırak/etkinleştir veya kaldır.
 - **Güncellemeler** — uyumlu yeni sürümler burada görünür; güncelleme her zaman
   sizin açık tercihinizdir (otomatik güncelleme yok).
+
+Her Keşfet kartında eklenti adı/sürümü, yayıncı, kısa açıklama, çevrilmiş
+yetenek rozetleri (*Küme profilleri*, *İş şablonları*, *Lint kuralları*),
+çalışan uygulama sürümünüzle uyumluluk ve mevcut durum (kurulu, devre dışı,
+uyumsuz, güncelleme var) görünür. **Ayrıntılar** tam kaydı gösterir: kimlik,
+yayıncı, sürüm, lisans, uyumlu uygulama aralığı, yetenekler, açıklama, eski
+sürümler, kurulum durumu ve kaynak (*Resmî eklenti kayıt defteri*).
+
+Bir eklenti mi eksik? Yönetici başlığındaki **Eklenti iste** düğmesini
+kullanın. Eklenti deposundaki özel istek formunu açar:
+
+[Eklenti iste](https://github.com/mskomek/hpc-client-gui-plugins/issues/new?template=plugin-request.yml)
+
+Uygun istekler: başka bir HPC merkezi desteği, yeni Slurm küme profili,
+ileride değerlendirilmek üzere PBS/diğer zamanlayıcılar, ANSYS Fluent veya
+OpenFOAM şablonları, journal/iş betiği lint kuralları, kuruma özgü yollar ve
+kuyruklar. Uygulama hataları
+[hpc-client-gui](https://github.com/mskomek/hpc-client-gui/issues/new/choose)
+deposuna; eklenti istekleri ve içerik düzeltmeleri
+[hpc-client-gui-plugins](https://github.com/mskomek/hpc-client-gui-plugins/issues/new/choose)
+deposuna açılır.
 
 ## Resmi kayıt defteri ve çevrimdışı davranış
 
@@ -33,8 +56,22 @@ gösterir ve uygulama normal çalışmaya devam eder.
 - Her manifest ve içerik dosyası aktivasyondan önce hash ile doğrulanır.
 - Başarısız veya kurcalanmış kurulum mevcut duruma dokunmaz; başarısız
   güncellemeler otomatik olarak önceki aktif sürüme geri döner.
+- Yayınlanmış eklenti sürümleri diskte değişmezdir: özdeş ve doğrulanmış bir
+  sürümü yeniden kurmak idempotenttir; çelişen içerik uyarı bildirilir,
+  üzerine yazılmaz.
 - v1'de yalnızca resmi kayıt defteri desteklenir; özel kayıt defteri adresleri
   arayüzde sunulmaz.
+- Eklentiler kayıtlı bağlantı profillerinizi sessizce değiştirmez: kayıtlı
+  profiller kendi kopyalanmış ayar anlık görüntülerini korur.
+
+## Aktarımlar ve paralellik (ilgili ayar)
+
+Bağlantı penceresindeki *Gelişmiş → En fazla eş zamanlı aktarım* ayarı kaç
+dosyanın aynı anda yüklenecek/indirileceğini belirler. **Ayarlanan** değer
+profile özgüdür; aktarım penceresi bağlantının **geçerli** limitini de
+gösterir (arka uç yeteneğine veya sunucu sınırlarına göre daha düşük
+olabilir). Birden çok dosya paralel gidebilir; tek büyük dosya şu anda
+parçalara bölünerek aktarılmaz.
 
 ## Küme profilleri ve System Templates
 

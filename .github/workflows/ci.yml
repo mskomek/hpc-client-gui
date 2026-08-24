@@ -159,11 +159,47 @@ jobs:
       - name: Audit runtime dependency closure
         run: .venv-audit/bin/pip-audit --skip-editable --progress-spinner off
 
+  contract:
+    name: Plugin API contract
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: src
+      QT_QPA_PLATFORM: offscreen
+      # Release pinning: point `ref:` below at an explicit plugins commit or
+      # tag before cutting a release, and advance it intentionally afterwards.
+      # The default follows the registry's main branch during development.
+      HPC_GUI_CONTRACT_REPO: ${{ github.workspace }}/hpc-client-gui-plugins
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check out the official plugin registry (sibling directory)
+        uses: actions/checkout@v4
+        with:
+          repository: mskomek/hpc-client-gui-plugins
+          # Release pin: explicit registry tag. Advance intentionally
+          # (see PRODUCTION_CHECKLIST.md §11).
+          ref: v1.0.0
+          path: hpc-client-gui-plugins
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install deps
+        # The contract suite is deliberately lightweight: it exercises the
+        # plugin stack without importing Qt, so no GUI dependencies install.
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest packaging jsonschema
+      - name: Cross-repository plugin contract tests
+        run: >
+          python -m pytest tests/test_plugin_contract.py -q --tb=short -rf
+
   gui:
     runs-on: ubuntu-latest
     env:
       PYTHONPATH: src
       QT_QPA_PLATFORM: offscreen
+      # Keep the WebEngine terminal disabled under coverage so interpreter
+      # teardown cannot segfault (same guard as tests/conftest.py).
+      HPC_GUI_DISABLE_WEBENGINE: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -176,8 +212,30 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e .[test]
           pip install pytest pytest-cov
-      - name: GUI and offline test suite (report-only coverage)
+      - name: GUI and offline test suite (coverage gate)
+        # The wheel build lives in the dedicated packaging job.
         run: >
-          python -m pytest tests/ -q --tb=short -rf
+          python -m pytest tests/ -q --tb=short -rf -m "not packaging"
           --cov=hpc_gui --cov-report=term --cov-report=json:coverage.json
-          --cov-fail-under=0
+          --cov-report=xml:coverage.xml --cov-fail-under=65
+      - name: Module-specific coverage floors
+        run: python scripts/check_module_coverage.py coverage.xml
+
+  packaging:
+    name: Packaging (wheel assets)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install build tooling and runtime dependency set only
+        run: |
+          python -m pip install --upgrade pip
+          pip install build packaging
+          pip install -r requirements.txt
+          pip install pytest pyftpdlib paramiko cryptography pyside6
+      - name: Wheel asset and metadata smoke test
+        env:
+          PYTHONPATH: src
+        run: python -m pytest tests/test_wheel_packaging.py -m packaging -q
