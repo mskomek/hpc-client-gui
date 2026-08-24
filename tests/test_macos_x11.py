@@ -37,3 +37,12 @@ def test_macos_system_ssh_sets_xauth_location(monkeypatch):
         launch = build_x11_launch("host", 22, "user", "xclock")
     assert launch is not None
     assert "XAuthLocation=/opt/X11/bin/xauth" in launch.args
+
+
+def test_macos_password_x11_is_explicitly_rejected():
+    messages: list[str] = []
+    runner = x11_runner.X11Runner(log_cb=messages.append)
+    info = type("Info", (), {"x11_forwarding": True, "password": "secret", "key_path": ""})()
+    with mock.patch.object(x11_runner, "_is_macos", return_value=True):
+        assert runner.run_if_x11(info, "xclock") is True
+    assert messages[0] == "[login.x11_macos_password_limit]"
