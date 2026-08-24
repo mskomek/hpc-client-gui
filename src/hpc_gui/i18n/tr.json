@@ -97,6 +97,7 @@
     "ready_title": "Güncelleme hazır",
     "ready_message": "v{version} indirildi ve doğrulandı.\n\nUygulama kapatılıp güncellensin mi?",
     "source_mode": "v{version} bulundu. Otomatik kurulum yalnız paketlenmiş Windows sürümünde kullanılabilir; GitHub sayfası açılacak.",
+    "manual_install": "v{version} bulundu. Uygun sürüm indirmesi açılacak; Finder veya sistem paket yöneticisi üzerinden el ile kurun.",
     "progress_title": "Uygulama Güncellemesi",
     "status_checking": "Güncellemeler kontrol ediliyor...",
     "status_available": "Yeni sürüm bulundu.",

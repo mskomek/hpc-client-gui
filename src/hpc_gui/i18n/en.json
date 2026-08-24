@@ -97,6 +97,7 @@
     "ready_title": "Update ready",
     "ready_message": "v{version} was downloaded and verified.\n\nClose the application and install it now?",
     "source_mode": "v{version} is available. Automatic installation is available only in the packaged Windows build; the GitHub page will open.",
+    "manual_install": "v{version} is available. The matching release download will open; install it manually through Finder or your system package manager.",
     "progress_title": "Application Update",
     "status_checking": "Checking for updates...",
     "status_available": "A new version is available.",

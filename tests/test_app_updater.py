@@ -4,7 +4,13 @@ from types import SimpleNamespace
 
 import pytest
 
-from hpc_gui.services.app_updater import UpdateRelease, _download, download_and_verify_release
+from hpc_gui.services.app_updater import (
+    UpdateRelease,
+    _download,
+    download_and_verify_release,
+    launch_update_installer,
+    release_asset_names,
+)
 from hpc_gui.ui.main_window import MainWindow
 
 
@@ -69,3 +75,22 @@ def test_closing_update_progress_cancels_active_download():
     MainWindow._cancel_update_jobs(window)
 
     assert worker.cancelled and window._update_cancelled and closed
+
+
+def test_release_assets_are_platform_specific():
+    assert release_asset_names("windows_x86_64")[0].endswith(".zip")
+    assert release_asset_names("macos_arm64")[0].endswith("_arm64.dmg")
+    assert release_asset_names("macos_x86_64")[0].endswith("_x86_64.dmg")
+    assert release_asset_names("linux_x86_64") is None
+
+
+def test_unknown_update_platform_is_rejected():
+    with pytest.raises(RuntimeError, match="Unsupported update platform"):
+        release_asset_names("macos_ppc64")
+
+
+def test_macos_never_launches_windows_installer(monkeypatch, tmp_path: Path):
+    monkeypatch.setattr("hpc_gui.services.app_updater.current_os", lambda: "macos")
+
+    with pytest.raises(RuntimeError, match="only on Windows"):
+        launch_update_installer(tmp_path / "update.dmg", "1.5.0")
