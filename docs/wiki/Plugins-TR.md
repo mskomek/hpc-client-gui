@@ -18,6 +18,34 @@ ile doğrulanır, kurulum tamamen masaüstünüzde olur (kümeye hiçbir şey
 kurulmaz) ve kayıtlı bağlantı profilleriniz asla sessizce değiştirilmez.
 Eklentiler *Kurulu* sekmesinden her an devre dışı bırakılabilir veya kaldırılabilir.
 
+## Kurulu sürümler: Etkinleştirme ve geri alma
+
+Bir eklentinin birden fazla kurulu sürümü varsa *Kurulu* sekmesinde sürüm
+listesi görünür. Başlıkta gösterilen sürüm her zaman gerçekten etkin olan
+sürümdür; sürümler numaraya göre sıralanır (1.10, 1.9'dan daha yenidir).
+Bir sürüm seçip onaylayarak daha yenisini **etkinleştirebilir** veya eski bir
+sürüme **geri dönebilirsiniz**:
+
+- Geri alma işlemi kurulu hiçbir sürümü silmez.
+- Eklentinin etkin/devre dışı durumu seçilen sürümden bağımsızdır.
+- Etkinleştirme doğrulamayı geçemezse önceki etkin sürüm etkin kalır.
+- Sürüm değiştirme arka planda çalışır; arayüz yanıt vermeye devam eder.
+
+## Yerel bütünlük kontrolleri
+
+Bir eklenti sürümü her yüklendiğinde veya etkinleştirildiğinde uygulama onu
+yerel olarak yeniden doğrular: manifest, kurulum sırasında kaydedilen
+SHA-256 değeriyle eşleşmelidir; bildirilen tüm dosyaların boyutu ve karması
+doğrulanır; eklenti klasöründeki beklenmeyen ek dosyalar reddedilir. Bu
+denetimleri geçemeyen eklenti, yeniden kurulum önerisiyle atlanır — otomatik
+olarak asla silinmez, diğer sağlam eklentiler çalışmaya devam eder ve
+doğrulanan daha eski bir sürüme elle geri dönüş yapılabilir.
+
+Bu kayıt tutma başlamadan önce kurulmuş eski yüklemeler bir kez geçirilir:
+dosyaları mevcut manifest'lerine göre doğrulanır ve ancak o zaman bu karma
+başlangıç güven değeri olarak kaydedilir. Bu tek seferlik geçişin, kurulum
+ile geçiş arasında oluşmuş değişiklikleri tespit edemediğini unutmayın.
+
 ## Eklenti isteği
 
 Bir küme profili, çözücü şablonu veya lint paketi mi eksik? Yönetici
