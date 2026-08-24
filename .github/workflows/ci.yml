@@ -107,6 +107,61 @@ jobs:
       - name: SSH and SFTP test suite
         run: python -m pytest tests/test_optional_ssh_credentials.py tests/test_slurm_ssh.py tests/test_local_transfer_gate.py tests/test_transfer_wave17.py tests/test_transfer_controller.py tests/test_profile_transfer_settings.py -q --tb=short -rf
 
+  macos:
+    name: macOS (${{ matrix.arch }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-15
+            arch: arm64
+          - os: macos-15-intel
+            arch: x86_64
+    env:
+      PYTHONPATH: src
+      QT_QPA_PLATFORM: offscreen
+      HPC_GUI_DISABLE_WEBENGINE: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Cache pip downloads
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Caches/pip
+          key: macos-${{ matrix.arch }}-py311-${{ hashFiles('requirements-release.lock') }}
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .[test]
+          pip install ruff pytest
+      - name: Compile check
+        run: python -m compileall src/hpc_gui
+      - name: macOS boundary and release-surface tests
+        run: >
+          python -m pytest tests/test_platform.py tests/test_paths.py
+          tests/test_app_updater.py tests/test_secret_store.py
+          tests/test_macos_product_surface.py tests/test_macos_x11.py
+          tests/test_macos_release.py tests/test_macos_packaging_spec.py
+          tests/test_version_consistency.py -q --tb=short -rf
+      - name: Representative portable contracts
+        run: >
+          python -m pytest tests/test_optional_ssh_credentials.py
+          tests/test_slurm_ssh.py tests/test_local_transfer_gate.py
+          tests/test_profile_transfer_settings.py tests/test_plugin_contract.py
+          -q --tb=short -rf
+      - name: Ruff gate
+        run: ruff check src scripts tests
+      - name: WebEngine/package surface smoke
+        env:
+          HPC_GUI_DISABLE_WEBENGINE: "0"
+        run: >
+          python -m pytest tests/test_macos_packaging_spec.py
+          tests/test_terminal_assets.py tests/test_terminal_bridge.py
+          -q --tb=short -rf
+
   windows:
     runs-on: windows-latest
     env:
