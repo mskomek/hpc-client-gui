@@ -22,6 +22,11 @@ DIST_ROOT = REPO_ROOT / "dist"
 RELEASE_ROOT = DIST_ROOT / "releases"
 SPEC_PATH = REPO_ROOT / "build" / "macos" / "hpc-client-gui.spec"
 SMOKE_SCRIPT = REPO_ROOT / "scripts" / "macos_release_smoke.py"
+RELEASE_METADATA = (
+    "LICENSE", "COMMERCIAL_LICENSE.md", "THIRD_PARTY_NOTICES.md",
+    "QT_LGPL_SOURCE_OFFER.md", "THIRD_PARTY_VERSIONS.txt",
+    "SBOM.cdx.json", "QT_LGPL_SOURCES.json",
+)
 
 
 class PackagingError(RuntimeError):
@@ -109,6 +114,9 @@ def _validate_bundle(app: Path, version: str) -> None:
         raise PackagingError("bundle identifier mismatch")
     if str(info.get("CFBundleShortVersionString")) != version:
         raise PackagingError("bundle version mismatch")
+    for name in RELEASE_METADATA:
+        if not any(path.name == name for path in app.rglob(name)):
+            raise PackagingError(f"required release metadata missing from app: {name}")
     forbidden = {"vcxsrv.exe", "plink.exe"}
     for path in app.rglob("*"):
         if path.name.lower() in forbidden or path.suffix.lower() == ".dll":
@@ -127,6 +135,12 @@ def execute(plan: ReleasePlan) -> Path:
     require_macos()
     require_native_arch(plan.arch)
     env = dict(os.environ, MACOS_TARGET_ARCH=plan.arch, APP_VERSION=plan.version)
+    for command in (
+        (sys.executable, "scripts/generate_third_party_versions.py", "--version", plan.version),
+        (sys.executable, "scripts/generate_sbom.py", "--version", plan.version),
+        (sys.executable, "scripts/generate_qt_lgpl_sources.py"),
+    ):
+        _run(command, env=env)
     _run(plan.commands[0], env=env)
     app = DIST_ROOT / "HPC Client GUI.app"
     _validate_bundle(app, plan.version)
@@ -142,6 +156,11 @@ def execute(plan: ReleasePlan) -> Path:
     _run(plan.commands[2])
     checksum = plan.output.with_name(plan.output.name + ".sha256")
     checksum.write_text(f"{_sha256(plan.output)}  {plan.output.name}\n", encoding="ascii")
+    for name in RELEASE_METADATA:
+        source = REPO_ROOT / name
+        if not source.is_file():
+            raise PackagingError(f"release metadata missing: {source}")
+        shutil.copy2(source, plan.output.parent / name)
     return plan.output
 
 
