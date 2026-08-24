@@ -23,6 +23,12 @@ class AsyncCall(QRunnable):
         try:
             result = self._fn()
         except Exception as exc:
-            self.signals.failed.emit(self.token, exc)
+            try:
+                self.signals.failed.emit(self.token, exc)
+            except RuntimeError:
+                pass
             return
-        self.signals.finished.emit(self.token, result)
+        try:
+            self.signals.finished.emit(self.token, result)
+        except RuntimeError:
+            pass
