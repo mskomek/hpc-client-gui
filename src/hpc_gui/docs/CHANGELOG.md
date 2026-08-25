@@ -23,6 +23,13 @@
 
 ## v1.5.0
 
+### Plugin API v2 and the ANSYS Script & Journal Linter
+- Added Plugin API v2 as a strictly additive extension of v1: one new capability, `linter-tool`, lets the official registry ship hash-verified, pure-Python linter engines inside the existing manifest/installer verification chain. Nothing executes at install time; engines load lazily only when the user opens the tool, wrapped in defensive error handling.
+- Added an "Open tool" action on installed plugin cards for linter-tool plugins, hosting the engine-provided page in a dialog.
+- The official registry now publishes `org.hpcclient.ansyslint` 0.1.0 (ANSYS Script & Journal Linter), an unofficial offline linter for Ansys journals/scripts across Fluent, MAPDL, Workbench (including nested `SendCommand` payloads), CCL products, ICEM replays, System Coupling and more. It requires app >= 1.5.0.
+- Note for users on releases <= 1.4.x: once the registry carries a Plugin API v2 entry, those clients report the official registry as unavailable until upgraded.
+- Plugin Manager now shows the "Linter tool" capability badge; Turkish and English resources updated.
+
 ### Plugin Manager
 - Installed plugins with more than one version now offer **Activate / Roll back**: installed versions are listed in PEP 440 order (1.10 > 1.9), the truly active version is shown as the headline version, and switching requires explicit confirmation. Activation runs off the GUI thread, keeps every installed version (nothing is deleted), leaves enabled/disabled state untouched, and restores the previous active version automatically when validation fails.
 - Installed plugin versions are re-validated locally on load and activation: the manifest is compared against the SHA-256 trusted at install time, every declared payload file is checked for size and hash, and undeclared extra files inside the immutable version directory are rejected. A broken plugin is skipped with an actionable reinstall message; healthy plugins keep loading and nothing is ever deleted automatically.

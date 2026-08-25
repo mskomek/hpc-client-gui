@@ -476,13 +476,13 @@ def test_incompatible_app_rejected_before_download(tmp_path: Path):
 def test_unsupported_plugin_api_rejected(tmp_path: Path):
     responses, manifest, manifest_bytes = full_install_responses()
     manifest_dict = json.loads(responses[OFFICIAL_RAW_BASE + "plugins/truba/1.0.0/manifest.json"])
-    manifest_dict["plugin_api"] = 2
+    manifest_dict["plugin_api"] = 99
     tampered = json.dumps(manifest_dict).encode()
     base = "plugins/truba/1.0.0"
     responses[OFFICIAL_RAW_BASE + base + "/manifest.json"] = tampered
 
     entry = make_registry_entry(manifest, tampered)
-    with pytest.raises(InstallError, match="Unsupported plugin API|plugin_api must be 1"):
+    with pytest.raises(InstallError, match="Unsupported plugin API|plugin_api must be one of"):
         install_plugin_from_registry(
             entry, root=tmp_path, app_version="1.4.0", fetcher=make_fetcher(responses)
         )

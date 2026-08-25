@@ -91,4 +91,33 @@ lint kural paketleri (editörün *Lint* eylemi) sağlayabilir. Şablonlar düz
 yer tutucu değişimiyle üretilir, her zaman kaydedilmemiş bir sekmede incelemeye
 açılır; kaydetme/gönderme tamamen size bağlıdır.
 
+## Denetleyici araçları (Plugin API v2)
+
+Bu sürümden itibaren resmî kayıt defteri **denetleyici araçları** da
+yayımlayabilir: alınan manifest/kurulum doğrulama zinciri içinde SHA-256 ile
+sabitlenmiş, saf Python analiz motoru taşıyan isteğe bağlı eklentiler.
+Kurulum sırasında hiçbir şey çalıştırılmaz; motor yalnızca aracı açtığınızda
+tembel yükleme ile devreye girer.
+
+İlk denetleyici aracı **ANSYS Script & Journal Linter**
+(`org.hpcclient.ansyslint`), Ansys journal/betikleri için gayriresmî,
+çevrimdışı bir denetleyicidir: Fluent journal (TUI/Scheme), iç içe
+`SendCommand` payload'ları da dahil Workbench `.wbjn`, Mechanical APDL
+girdileri, CFX/CFD-Post/TurboGrid CCL oturum ve durum dosyaları, ICEM replay
+betikleri, System Coupling betikleri ayrıca DesignModeler, Mechanical,
+SpaceClaim/Discovery, Electronics Desktop ve Motion dosyaları için yapısal
+tanıma sunar.
+
+Kurduktan sonra **Kurulu** sekmesindeki kartında **Aracı aç** düğmesi belirir.
+Sayfa; dosya/klasör seçimi, manuel geçersiz kılma ile otomatik ürün algılama,
+Ansys sürüm seçici (24.2 / 25.1 / 25.2 / 26.1), batch/headless/interactive
+modu, Linux/Windows hedefi, önem filtreleri, tanı başına resmî kaynak
+bağlantısı ve JSON/metin dışa aktarma sunar. Aynı motor, eklenti deposu
+çıkışında CLI da sağlar (`scripts/ansys-journal-lint.py`).
+
+ANSYS, Inc. tarafından geliştirilmemiştir, onaylanmaz; resmî dokümantasyonun
+yerini tutmaz ve sezgisel bulguları açıkça etiketler — betiklerinizi kurulu
+sürümünüze göre doğrulayın.
+
 Türkçe sürüm bu sayfadır; İngilizcesi için [PLUGINS_en.md](PLUGINS_en.md).
+

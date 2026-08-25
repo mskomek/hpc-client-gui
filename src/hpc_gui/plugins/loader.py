@@ -17,7 +17,7 @@ from typing import Any
 from hpc_gui import __version__
 from hpc_gui.plugins.compatibility import is_app_compatible
 from hpc_gui.plugins.models import (
-    PLUGIN_API_VERSION,
+    SUPPORTED_PLUGIN_API_VERSIONS,
     ClusterProfileDefinition,
     InstalledPlugin,
     PluginFile,
@@ -159,7 +159,7 @@ def load_installed_plugins(
                 )
             )
             continue
-        if manifest.plugin_api != PLUGIN_API_VERSION:
+        if manifest.plugin_api not in SUPPORTED_PLUGIN_API_VERSIONS:
             result.problems.append(
                 PluginProblem(plugin_id, version, f"unsupported plugin API: {manifest.plugin_api}")
             )
@@ -250,6 +250,39 @@ def load_installed_plugins(
                 continue
             templates_index_raw = raw_templates
 
+        # Optional Plugin API v2 linter-engine entrypoint. Only the declared
+        # path is recorded here - importing engine code happens lazily and
+        # defensively in plugins/linter_tools.py, never at load time.
+        linter_engine_raw = None
+        linter_rel = manifest.entrypoints.get("linter_engine")
+        if isinstance(linter_rel, str) and linter_rel:
+            if (
+                linter_rel.startswith("/")
+                or ".." in linter_rel.split("/")
+                or "\\" in linter_rel
+            ):
+                result.problems.append(
+                    PluginProblem(plugin_id, version, f"unsafe linter-engine entrypoint: {linter_rel!r}")
+                )
+                continue
+            declared_roles = {entry.path: entry.role for entry in manifest.files}
+            if declared_roles.get(linter_rel) != "linter-engine":
+                result.problems.append(
+                    PluginProblem(
+                        plugin_id,
+                        version,
+                        "linter-engine entrypoint does not match a declared "
+                        "'linter-engine' payload",
+                    )
+                )
+                continue
+            if not (package_dir / linter_rel).is_file():
+                result.problems.append(
+                    PluginProblem(plugin_id, version, f"linter engine missing: {linter_rel}")
+                )
+                continue
+            linter_engine_raw = {"module": linter_rel}
+
         result.plugins.append(
             InstalledPlugin(
                 manifest=manifest,
@@ -257,6 +290,7 @@ def load_installed_plugins(
                 cluster_profiles=tuple(profiles),
                 lint_index=lint_index_raw,
                 job_templates_index=templates_index_raw,
+                linter_engine=linter_engine_raw,
             )
         )
 

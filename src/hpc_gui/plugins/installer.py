@@ -38,7 +38,7 @@ from hpc_gui.plugins.downloader import (
     validate_payload_rel_path,
 )
 from hpc_gui.plugins.models import (
-    PLUGIN_API_VERSION,
+    SUPPORTED_PLUGIN_API_VERSIONS,
     ClusterProfileDefinition,
     InstalledPlugin,
     PluginFile,
@@ -172,6 +172,26 @@ def _check_entrypoint_payloads(staging_dir: Path, manifest: PluginManifest) -> t
     return tuple(profiles)
 
 
+def _check_linter_entrypoint(staging_dir: Path, manifest: PluginManifest) -> dict[str, str] | None:
+    """Statically verify a Plugin API v2 linter-engine entrypoint.
+
+    Only declared paths/roles/files are checked - engine code is never
+    imported at install time.
+    """
+    rel = manifest.entrypoints.get("linter_engine")
+    if not isinstance(rel, str) or not rel:
+        return None
+    validate_payload_rel_path(rel)
+    declared = {entry.path: entry.role for entry in manifest.files}
+    if declared.get(rel) != "linter-engine":
+        raise InstallError(
+            "Linter engine entrypoint does not match a declared 'linter-engine' payload."
+        )
+    if not (staging_dir / rel).is_file():
+        raise InstallError(f"Linter engine file missing after download: {rel}")
+    return {"module": rel}
+
+
 def _existing_install_matches(
     final_dir: Path,
     manifest: PluginManifest,
@@ -245,7 +265,7 @@ def install_plugin_from_registry(
     manifest = _build_manifest(raw_manifest)
     if manifest.id != plugin_id or manifest.version != version:
         raise InstallError("Manifest identity does not match the registry entry.")
-    if manifest.plugin_api != PLUGIN_API_VERSION:
+    if manifest.plugin_api not in SUPPORTED_PLUGIN_API_VERSIONS:
         raise InstallError(f"Unsupported plugin API version: {manifest.plugin_api}")
     if not is_app_compatible(manifest.requires_app, app_version):
         raise InstallError(
@@ -318,6 +338,7 @@ def install_plugin_from_registry(
                 raise InstallError(f"Staged SHA-256 mismatch: {file_entry.path}")
 
         profiles = _check_entrypoint_payloads(staging_dir, manifest)
+        linter_engine = _check_linter_entrypoint(staging_dir, manifest)
 
         # Step 8: publish staging into the immutable version directory.
         # Staging and packages share the same filesystem/volume, so the
@@ -346,6 +367,7 @@ def install_plugin_from_registry(
             manifest=manifest,
             directory=final_dir.resolve(),
             cluster_profiles=profiles,
+            linter_engine=linter_engine,
         )
 
         # Steps 9-10: record state and activate only after full success.
