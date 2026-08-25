@@ -108,7 +108,10 @@
     "status_installing": "Installing the update and restarting the application...",
     "error_title": "Update error",
     "error_message": "The update could not be completed:\n{error}",
-    "changelog_title": "What's new in v{version}"
+    "changelog_title": "What's new in v{version}",
+    "security_unsigned_mac": "Warning: this macOS build is NOT Apple Developer ID signed or notarized. Gatekeeper may block the first launch - control-click the app and choose Open, or use System Settings > Privacy & Security > Open Anyway. The SHA-256 checksum and GitHub build provenance verify integrity and origin, but they are not substitutes for Apple code signing.",
+    "security_signed_mac": "This macOS build was Developer ID signed, notarized, stapled, and passed a Gatekeeper assessment (see RELEASE_SECURITY.json).",
+    "security_unknown_mac": "Note: this release does not publish signing status metadata (RELEASE_SECURITY.json is missing), so its macOS build must be treated as unsigned."
   },
   "common": {
     "ok": "OK",
@@ -819,7 +822,18 @@
     "summary_cluster_profiles": "{count} cluster profile(s)",
     "summary_job_templates": "{count} job template(s)",
     "summary_lint_rule_packs": "{count} lint rule pack(s)",
-    "open_failed": "The Plugin Manager could not be opened. Details were written to the logs."
+    "open_failed": "The Plugin Manager could not be opened. Details were written to the logs.",
+    "active_badge": "Active",
+    "activate": "Activate",
+    "rollback": "Roll back",
+    "activating": "Changing version…",
+    "switch_version_label": "Installed versions:",
+    "version_switch_confirm_title": "Change plugin version",
+    "version_activate_confirm_text": "Activate {name} {version}?",
+    "version_rollback_confirm_text": "Roll {name} back from {current} to {version}? No installed version will be removed.",
+    "version_switch_success": "{name} now uses version {version}.",
+    "version_switch_failed": "Could not switch {name} to {version}. The previously active version remains active.",
+    "corrupt_plugin": "{name} failed its integrity check and was skipped. Reinstall it from the Discover tab; no installed version was deleted."
   },
   "templates": {
     "dialog_title": "Job Templates",

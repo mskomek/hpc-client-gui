@@ -20,10 +20,12 @@ from hpc_gui.config.storage import (
     set_last_seen_changelog_version,
 )
 from hpc_gui.core.paths import is_frozen_exe
+from hpc_gui.core.platform import current_os
 from hpc_gui.core.i18n import t, set_language
 from hpc_gui.core.debug_telemetry import DebugTelemetry, is_source_run
 from hpc_gui.core.ui_errors import show_exception
 from hpc_gui.services.changelog import chronological_changelog, load_changelog_text
+from hpc_gui.services import app_updater
 from hpc_gui.services.app_updater import (
     download_and_verify_release,
     get_latest_release,
@@ -560,10 +562,18 @@ class MainWindow(QMainWindow):
 
         if release.install_strategy == "manual":
             self._close_update_progress()
+            message = t("updates.manual_install").format(version=release.version)
+            if current_os() == "macos":
+                security_key = {
+                    app_updater.SECURITY_UNSIGNED: "updates.security_unsigned_mac",
+                    app_updater.SECURITY_SIGNED: "updates.security_signed_mac",
+                    app_updater.SECURITY_UNKNOWN: "updates.security_unknown_mac",
+                }.get(release.security_status, "updates.security_unknown_mac")
+                message += "\n\n" + t(security_key)
             QMessageBox.information(
                 self,
                 t("updates.title"),
-                t("updates.manual_install").format(version=release.version),
+                message,
             )
             webbrowser.open(release.zip_url or release.html_url)
             return

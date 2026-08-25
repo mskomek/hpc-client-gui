@@ -4,22 +4,32 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Version tag (example: 1.0.0)"
+        description: "Version tag (example: 1.5.1)"
         required: true
         default: "0.1.0"
       publish:
-        description: "Publish a GitHub Release after all artifacts pass"
+        description: "Publish a GitHub Release after the final gate passes"
         required: false
         default: false
         type: boolean
-      sign:
-        description: "Sign and notarize macOS artifacts before publishing"
+      macos_mode:
+        description: "macOS publication mode (signed is the default)"
         required: false
-        default: false
-        type: boolean
+        default: signed
+        type: choice
+        options:
+          - signed
+          - unsigned
 
 permissions:
   contents: write
+
+# Release builds are never auto-cancelled: a manually dispatched build must
+# always run to completion. The group only serializes concurrent dispatches
+# for the same version input.
+concurrency:
+  group: release-${{ github.event.inputs.version || github.ref }}
+  cancel-in-progress: false
 
 jobs:
   build-linux:
@@ -30,7 +40,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Cache Linux release dependencies
-        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
         with:
           path: |
             ~/.cache/pip
@@ -52,18 +62,14 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements-release.lock
           pip install -e . --no-deps
-      - name: Source checks
+      - name: Release preflight suite
+        # Shared with CI (scripts/release_test_suite.py): a release must not
+        # be publishable while the revision's required test suite is red.
         env:
           PYTHONPATH: src
           QT_QPA_PLATFORM: offscreen
-          # unittest does not load tests/conftest.py; keep the QtWebEngine
-          # terminal disabled so interpreter teardown cannot segfault.
           HPC_GUI_DISABLE_WEBENGINE: "1"
-        run: |
-          python -m compileall src/hpc_gui
-          python scripts/check_i18n.py
-          python scripts/smoke_test.py
-          python -m unittest discover -s tests -p "test_*.py"
+        run: python scripts/release_test_suite.py
       - name: Validate Linux packaging plan
         run: |
           python scripts/release_linux.py --version "${{ github.event.inputs.version }}" --json
@@ -112,19 +118,13 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements-release.lock
           pip install -e . --no-deps
-      - name: Windows source checks
+      - name: Release preflight suite
         shell: pwsh
         env:
           PYTHONPATH: src
           QT_QPA_PLATFORM: offscreen
-          # unittest does not load tests/conftest.py; keep the QtWebEngine
-          # terminal disabled so interpreter teardown cannot access-violate.
           HPC_GUI_DISABLE_WEBENGINE: "1"
-        run: |
-          python -m compileall src/hpc_gui
-          python scripts/check_i18n.py
-          python scripts/smoke_test.py
-          python -m unittest discover -s tests -p "test_*.py"
+        run: python scripts/release_test_suite.py
       - name: Build release artifacts
         shell: pwsh
         run: ./scripts/release.ps1 -Version "${{ github.event.inputs.version }}"
@@ -157,18 +157,21 @@ jobs:
           pip install -e .
           python -m compileall src/hpc_gui
           python scripts/check_i18n.py
-          PYTHONPATH=src HPC_GUI_DISABLE_WEBENGINE=1 python -m pytest tests/test_macos_x11.py tests/test_app_updater.py tests/test_macos_release.py -q --tb=short
+          PYTHONPATH=src HPC_GUI_DISABLE_WEBENGINE=1 python -m pytest tests/test_macos_x11.py tests/test_app_updater.py tests/test_macos_release.py tests/test_macos_packaging_spec.py tests/test_macos_release_workflow.py tests/test_workflow_action_pins.py tests/test_version_consistency.py -q --tb=short
       - name: Build, smoke, and stage arm64 DMG
         env:
           PYTHONPATH: src
         run: python scripts/release_macos.py --version "${{ github.event.inputs.version }}" --arch arm64 --execute
-      - name: Upload arm64 Mac artifacts
+      - name: Upload arm64 Mac candidate artifacts
+        # Candidates are always built unsigned; signing happens in a dedicated
+        # gated job so an unsigned publication can never look signed.
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: hpc-client-gui-macos-arm64-${{ inputs.sign && 'signed' || 'unsigned' }}-${{ github.event.inputs.version }}
+          name: hpc-client-gui-macos-arm64-candidate-${{ github.event.inputs.version }}
           path: |
             dist/releases/v${{ github.event.inputs.version }}/hpc-client-gui_macos_arm64.dmg
             dist/releases/v${{ github.event.inputs.version }}/hpc-client-gui_macos_arm64.dmg.sha256
+            dist/releases/v${{ github.event.inputs.version }}/bundle-size-report-macos-arm64.txt
 
   build-macos-x86_64:
     name: macOS x86_64 artifacts
@@ -192,72 +195,23 @@ jobs:
           pip install -e .
           python -m compileall src/hpc_gui
           python scripts/check_i18n.py
-          PYTHONPATH=src HPC_GUI_DISABLE_WEBENGINE=1 python -m pytest tests/test_macos_x11.py tests/test_app_updater.py tests/test_macos_release.py -q --tb=short
+          PYTHONPATH=src HPC_GUI_DISABLE_WEBENGINE=1 python -m pytest tests/test_macos_x11.py tests/test_app_updater.py tests/test_macos_release.py tests/test_macos_packaging_spec.py tests/test_macos_release_workflow.py tests/test_workflow_action_pins.py tests/test_version_consistency.py -q --tb=short
       - name: Build, smoke, and stage x86_64 DMG
         env:
           PYTHONPATH: src
         run: python scripts/release_macos.py --version "${{ github.event.inputs.version }}" --arch x86_64 --execute
-      - name: Upload x86_64 Mac artifacts
+      - name: Upload x86_64 Mac candidate artifacts
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: hpc-client-gui-macos-x86_64-${{ inputs.sign && 'signed' || 'unsigned' }}-${{ github.event.inputs.version }}
+          name: hpc-client-gui-macos-x86_64-candidate-${{ github.event.inputs.version }}
           path: |
             dist/releases/v${{ github.event.inputs.version }}/hpc-client-gui_macos_x86_64.dmg
             dist/releases/v${{ github.event.inputs.version }}/hpc-client-gui_macos_x86_64.dmg.sha256
-
-  verify-macos-dry-run:
-    name: Verify unsigned dry-run artifacts
-    if: ${{ inputs.publish != true && inputs.sign != true }}
-    needs: [build-linux, build-windows, build-macos-arm64, build-macos-x86_64]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
-        with:
-          python-version: "3.11"
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
-        with:
-          name: hpc-client-gui-linux-${{ github.event.inputs.version }}
-          path: dist/releases/v${{ github.event.inputs.version }}
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
-        with:
-          name: hpc-client-gui-${{ github.event.inputs.version }}
-          path: dist/releases/v${{ github.event.inputs.version }}
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
-        with:
-          name: hpc-client-gui-macos-arm64-unsigned-${{ github.event.inputs.version }}
-          path: dist/releases/v${{ github.event.inputs.version }}
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
-        with:
-          name: hpc-client-gui-macos-x86_64-unsigned-${{ github.event.inputs.version }}
-          path: dist/releases/v${{ github.event.inputs.version }}
-      - name: Generate and verify dry-run manifest
-        run: |
-          python scripts/generate_release_manifest.py --release-dir "dist/releases/v${{ github.event.inputs.version }}" --version "v${{ github.event.inputs.version }}"
-          test -f "dist/releases/v${{ github.event.inputs.version }}/hpc-client-gui_macos_arm64.dmg"
-          test -f "dist/releases/v${{ github.event.inputs.version }}/hpc-client-gui_macos_arm64.dmg.sha256"
-          test -f "dist/releases/v${{ github.event.inputs.version }}/hpc-client-gui_macos_x86_64.dmg"
-          test -f "dist/releases/v${{ github.event.inputs.version }}/hpc-client-gui_macos_x86_64.dmg.sha256"
-          python - <<'PY'
-          import json
-          from pathlib import Path
-          manifest = json.loads(Path("dist/releases/v${{ github.event.inputs.version }}/MANIFEST.json").read_text())
-          names = {item["file"] for item in manifest["artifacts"]}
-          required = {
-              "hpc-client-gui_macos_arm64.dmg",
-              "hpc-client-gui_macos_arm64.dmg.sha256",
-              "hpc-client-gui_macos_x86_64.dmg",
-              "hpc-client-gui_macos_x86_64.dmg.sha256",
-          }
-          assert required <= names
-          assert {item["platform"] for item in manifest["artifacts"]} >= {
-              "linux", "windows", "macos"
-          }
-          PY
+            dist/releases/v${{ github.event.inputs.version }}/bundle-size-report-macos-x86_64.txt
 
   sign-macos-arm64:
     name: Sign and notarize macOS arm64
-    if: ${{ inputs.sign == true }}
+    if: ${{ inputs.macos_mode == 'signed' }}
     needs: build-macos-arm64
     runs-on: macos-15
     environment: macos-release
@@ -296,7 +250,7 @@ jobs:
 
   sign-macos-x86_64:
     name: Sign and notarize macOS x86_64
-    if: ${{ inputs.sign == true }}
+    if: ${{ inputs.macos_mode == 'signed' }}
     needs: build-macos-x86_64
     runs-on: macos-15-intel
     environment: macos-release
@@ -335,10 +289,22 @@ jobs:
 
   verify-macos-signed-candidate:
     name: Verify signed macOS candidate artifacts
-    if: ${{ inputs.sign == true }}
-    needs: [sign-macos-arm64, sign-macos-x86_64]
+    if: ${{ inputs.macos_mode == 'signed' }}
+    needs: [build-linux, build-windows, sign-macos-arm64, sign-macos-x86_64]
     runs-on: macos-15
     steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.11"
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: hpc-client-gui-${{ github.event.inputs.version }}
+          path: dist/releases/v${{ github.event.inputs.version }}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: hpc-client-gui-linux-${{ github.event.inputs.version }}
+          path: dist/releases/v${{ github.event.inputs.version }}
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: hpc-client-gui-macos-arm64-signed-${{ github.event.inputs.version }}
@@ -352,8 +318,9 @@ jobs:
         run: |
           set -euo pipefail
           release_dir="dist/releases/v${{ github.event.inputs.version }}"
-          for dmg in "$release_dir"/*.dmg; do
-            shasum -a 256 -c "$dmg.sha256"
+          cd "$release_dir"
+          for checksum in *.sha256; do shasum -a 256 -c "$checksum"; done
+          for dmg in ./*.dmg; do
             mount_point="$(mktemp -d)"
             hdiutil attach "$dmg" -nobrowse -mountpoint "$mount_point"
             app="$(find "$mount_point" -maxdepth 2 -name '*.app' -type d -print -quit)"
@@ -363,10 +330,236 @@ jobs:
             hdiutil detach "$mount_point"
             rmdir "$mount_point"
           done
+      - name: Report artifact sizes
+        shell: bash
+        run: |
+          echo "## Artifact sizes (v${{ github.event.inputs.version }})" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Asset | Bytes | MiB |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| --- | ---: | ---: |" >> "$GITHUB_STEP_SUMMARY"
+          total=0
+          for f in dist/releases/v${{ github.event.inputs.version }}/*; do
+            [ -f "$f" ] || continue
+            bytes=$(stat -f %z "$f")
+            total=$((total + bytes))
+            printf '| %s | %s | %.2f |\n' "$(basename "$f")" "$bytes" \
+              "$(awk "BEGIN{print $bytes/1048576}")" >> "$GITHUB_STEP_SUMMARY"
+          done
+          printf '| **Total** | **%s** | **%.2f** |\n' "$total" \
+            "$(awk "BEGIN{print $total/1048576}")" >> "$GITHUB_STEP_SUMMARY"
+      - name: Generate signed release metadata and notes
+        env:
+          COMMIT_SHA: ${{ github.sha }}
+        run: |
+          python scripts/generate_release_security.py \
+            --release-dir "dist/releases/v${{ github.event.inputs.version }}" \
+            --version "v${{ github.event.inputs.version }}" \
+            --commit "$COMMIT_SHA" \
+            --mode signed-notarized --arch arm64 --arch x86_64
+          python - <<'PY'
+          from pathlib import Path
+          version = "v${{ github.event.inputs.version }}"
+          notes = Path(f"dist/releases/{version}/RELEASE_NOTES.md")
+          changelog = Path("src/hpc_gui/docs/CHANGELOG.md").read_text(encoding="utf-8")
+          section = ""
+          marker = f"## {version}\n"
+          if marker in changelog:
+              section = changelog.split(marker, 1)[1].split("\n## ", 1)[0]
+          header = (
+              f"# {version}\n\n"
+              "macOS release mode: **signed and notarized**. Both DMGs were "
+              "Developer ID signed, notarized, stapled, checksum verified, "
+              "and passed a Gatekeeper assessment before publication.\n\n"
+          )
+          notes.write_text(header + ("\n## Changes\n" + section if section else ""), encoding="utf-8")
+          PY
+      - name: Generate and validate release manifest
+        run: |
+          python scripts/generate_release_manifest.py --release-dir "dist/releases/v${{ github.event.inputs.version }}" --version "v${{ github.event.inputs.version }}"
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          manifest = json.loads(Path("dist/releases/v${{ github.event.inputs.version }}/MANIFEST.json").read_text())
+          names = {item["file"] for item in manifest["artifacts"]}
+          required = {
+              "hpc-client-gui_macos_arm64.dmg",
+              "hpc-client-gui_macos_arm64.dmg.sha256",
+              "hpc-client-gui_macos_x86_64.dmg",
+              "hpc-client-gui_macos_x86_64.dmg.sha256",
+              "RELEASE_SECURITY.json",
+          }
+          assert required <= names
+          assert {item["platform"] for item in manifest["artifacts"]} >= {
+              "linux", "windows", "macos"
+          }
+          PY
+      - name: Upload release metadata
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: hpc-client-gui-release-metadata-${{ github.event.inputs.version }}
+          path: |
+            dist/releases/v${{ github.event.inputs.version }}/MANIFEST.json
+            dist/releases/v${{ github.event.inputs.version }}/RELEASE_SECURITY.json
+            dist/releases/v${{ github.event.inputs.version }}/RELEASE_NOTES.md
+
+  verify-unsigned-release:
+    name: Verify unsigned release inventory
+    if: ${{ inputs.macos_mode == 'unsigned' }}
+    needs: [build-linux, build-windows, build-macos-arm64, build-macos-x86_64]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.11"
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: hpc-client-gui-linux-${{ github.event.inputs.version }}
+          path: dist/releases/v${{ github.event.inputs.version }}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: hpc-client-gui-${{ github.event.inputs.version }}
+          path: dist/releases/v${{ github.event.inputs.version }}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: hpc-client-gui-macos-arm64-candidate-${{ github.event.inputs.version }}
+          path: dist/releases/v${{ github.event.inputs.version }}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: hpc-client-gui-macos-x86_64-candidate-${{ github.event.inputs.version }}
+          path: dist/releases/v${{ github.event.inputs.version }}
+      - name: Verify checksums and inventory without any signing claims
+        run: |
+          set -euo pipefail
+          cd "dist/releases/v${{ github.event.inputs.version }}"
+          for checksum in *.sha256; do sha256sum -c "$checksum"; done
+          test -f hpc-client-gui_macos_arm64.dmg
+          test -f hpc-client-gui_macos_x86_64.dmg
+      - name: Report artifact sizes
+        # Runs after every platform artifact has been downloaded so the
+        # summary always includes both DMGs and the true total.
+        run: |
+          echo "## Artifact sizes (v${{ github.event.inputs.version }})" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Asset | Bytes | MiB |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| --- | ---: | ---: |" >> "$GITHUB_STEP_SUMMARY"
+          total=0
+          for f in dist/releases/v${{ github.event.inputs.version }}/*; do
+            [ -f "$f" ] || continue
+            bytes=$(stat -c %s "$f")
+            total=$((total + bytes))
+            printf '| %s | %s | %.2f |\n' "$(basename "$f")" "$bytes" \
+              "$(awk "BEGIN{print $bytes/1048576}")" >> "$GITHUB_STEP_SUMMARY"
+          done
+          printf '| **Total** | **%s** | **%.2f** |\n' "$total" \
+            "$(awk "BEGIN{print $total/1048576}")" >> "$GITHUB_STEP_SUMMARY"
+      - name: Generate unsigned release metadata and notes
+        env:
+          COMMIT_SHA: ${{ github.sha }}
+        run: |
+          python scripts/generate_release_security.py \
+            --release-dir "dist/releases/v${{ github.event.inputs.version }}" \
+            --version "v${{ github.event.inputs.version }}" \
+            --commit "$COMMIT_SHA" \
+            --mode unsigned --arch arm64 --arch x86_64
+          python - <<'PY'
+          from pathlib import Path
+          version = "v${{ github.event.inputs.version }}"
+          notes = Path(f"dist/releases/{version}/RELEASE_NOTES.md")
+          changelog = Path("src/hpc_gui/docs/CHANGELOG.md").read_text(encoding="utf-8")
+          section = ""
+          marker = f"## {version}\n"
+          if marker in changelog:
+              section = changelog.split(marker, 1)[1].split("\n## ", 1)[0]
+          warning = (
+              "> **Warning: this macOS build is NOT Apple Developer ID signed "
+              "or notarized.**\n"
+              ">\n"
+              "> macOS Gatekeeper may block the first launch; approve the app "
+              "once via Finder > right-click > Open or System Settings > "
+              "Privacy & Security > Open Anyway.\n"
+              ">\n"
+              "> SHA-256 checksums and GitHub build provenance attest that the "
+              "download was built from this repository, but they are not "
+              "substitutes for Apple code signing.\n"
+          )
+          header = (
+              f"# {version}\n\n"
+              "macOS release mode: **unsigned** (Developer ID credentials were "
+              "not used for this publication).\n\n"
+          )
+          notes.write_text(header + warning + ("\n## Changes\n" + section if section else ""), encoding="utf-8")
+          PY
+      - name: Generate and validate release manifest
+        run: |
+          python scripts/generate_release_manifest.py --release-dir "dist/releases/v${{ github.event.inputs.version }}" --version "v${{ github.event.inputs.version }}"
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          manifest = json.loads(Path("dist/releases/v${{ github.event.inputs.version }}/MANIFEST.json").read_text())
+          names = {item["file"] for item in manifest["artifacts"]}
+          required = {
+              "hpc-client-gui_macos_arm64.dmg",
+              "hpc-client-gui_macos_arm64.dmg.sha256",
+              "hpc-client-gui_macos_x86_64.dmg",
+              "hpc-client-gui_macos_x86_64.dmg.sha256",
+              "RELEASE_SECURITY.json",
+          }
+          assert required <= names
+          assert {item["platform"] for item in manifest["artifacts"]} >= {
+              "linux", "windows", "macos"
+          }
+          PY
+      - name: Upload release metadata
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: hpc-client-gui-release-metadata-${{ github.event.inputs.version }}
+          path: |
+            dist/releases/v${{ github.event.inputs.version }}/MANIFEST.json
+            dist/releases/v${{ github.event.inputs.version }}/RELEASE_SECURITY.json
+            dist/releases/v${{ github.event.inputs.version }}/RELEASE_NOTES.md
+
+  release-gate:
+    name: Final release gate
+    # always() is required so the gate can observe skipped signing jobs and
+    # turn an unexpected skip/failure into a hard violation instead of an
+    # accidental pass-through.
+    if: ${{ always() }}
+    needs:
+      - build-linux
+      - build-windows
+      - build-macos-arm64
+      - build-macos-x86_64
+      - sign-macos-arm64
+      - sign-macos-x86_64
+      - verify-macos-signed-candidate
+      - verify-unsigned-release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.11"
+      - name: Evaluate final release gate
+        env:
+          GATE_MACOS_MODE: ${{ inputs.macos_mode }}
+          GATE_RESULT_BUILD_LINUX: ${{ needs.build-linux.result }}
+          GATE_RESULT_BUILD_WINDOWS: ${{ needs.build-windows.result }}
+          GATE_RESULT_BUILD_MACOS_ARM64: ${{ needs.build-macos-arm64.result }}
+          GATE_RESULT_BUILD_MACOS_X86_64: ${{ needs.build-macos-x86_64.result }}
+          GATE_RESULT_SIGN_MACOS_ARM64: ${{ needs.sign-macos-arm64.result }}
+          GATE_RESULT_SIGN_MACOS_X86_64: ${{ needs.sign-macos-x86_64.result }}
+          GATE_RESULT_VERIFY_MACOS_SIGNED_CANDIDATE: ${{ needs.verify-macos-signed-candidate.result }}
+          GATE_RESULT_VERIFY_UNSIGNED_RELEASE: ${{ needs.verify-unsigned-release.result }}
+        run: python scripts/release_gate.py
 
   publish-release:
+    name: Publish GitHub Release
+    # Publication is opt-in and can only run after the final release gate
+    # succeeded, so neither a failed nor an unexpectedly skipped required
+    # job can race ahead of publication.
     if: ${{ inputs.publish == true }}
-    needs: [build-linux, build-windows, build-macos-arm64, build-macos-x86_64]
+    needs: [release-gate]
     runs-on: ubuntu-latest
     # Attestation needs OIDC (id-token) and the attestations API. These are
     # scoped to this job only; build jobs keep the repository default.
@@ -389,16 +582,37 @@ jobs:
         with:
           name: hpc-client-gui-linux-${{ github.event.inputs.version }}
           path: dist/releases/v${{ github.event.inputs.version }}
-      - name: Download Mac arm64 artifacts
+      - name: Download Mac arm64 artifacts for the selected mode
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
-          name: hpc-client-gui-macos-arm64-${{ inputs.sign && 'signed' || 'unsigned' }}-${{ github.event.inputs.version }}
+          name: hpc-client-gui-macos-arm64-${{ inputs.macos_mode == 'signed' && 'signed' || 'candidate' }}-${{ github.event.inputs.version }}
           path: dist/releases/v${{ github.event.inputs.version }}
-      - name: Download Mac x86_64 artifacts
+      - name: Download Mac x86_64 artifacts for the selected mode
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
-          name: hpc-client-gui-macos-x86_64-${{ inputs.sign && 'signed' || 'unsigned' }}-${{ github.event.inputs.version }}
+          name: hpc-client-gui-macos-x86_64-${{ inputs.macos_mode == 'signed' && 'signed' || 'candidate' }}-${{ github.event.inputs.version }}
           path: dist/releases/v${{ github.event.inputs.version }}
+      - name: Download release metadata
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: hpc-client-gui-release-metadata-${{ github.event.inputs.version }}
+          path: dist/releases/v${{ github.event.inputs.version }}
+      - name: Report artifact sizes
+        run: |
+          echo "## Artifact sizes (v${{ github.event.inputs.version }})" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Asset | Bytes | MiB |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| --- | ---: | ---: |" >> "$GITHUB_STEP_SUMMARY"
+          total=0
+          for f in dist/releases/v${{ github.event.inputs.version }}/*; do
+            [ -f "$f" ] || continue
+            bytes=$(stat -c %s "$f")
+            total=$((total + bytes))
+            printf '| %s | %s | %.2f |\n' "$(basename "$f")" "$bytes" \
+              "$(awk "BEGIN{print $bytes/1048576}")" >> "$GITHUB_STEP_SUMMARY"
+          done
+          printf '| **Total** | **%s** | **%.2f** |\n' "$total" \
+            "$(awk "BEGIN{print $total/1048576}")" >> "$GITHUB_STEP_SUMMARY"
       - name: Refuse an existing release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -407,12 +621,7 @@ jobs:
             echo "Release already exists; refusing to replace it."
             exit 1
           fi
-      - name: Generate release manifest (MANIFEST.json)
-        run: |
-          python scripts/generate_release_manifest.py \
-            --release-dir "dist/releases/v${{ github.event.inputs.version }}" \
-            --version "v${{ github.event.inputs.version }}"
-      - name: Validate final release inventory
+      - name: Validate final release inventory and security metadata
         run: |
           python - <<'PY'
           import json
@@ -420,6 +629,7 @@ jobs:
 
           release_dir = Path("dist/releases/v${{ github.event.inputs.version }}")
           manifest = json.loads((release_dir / "MANIFEST.json").read_text(encoding="utf-8"))
+          security = json.loads((release_dir / "RELEASE_SECURITY.json").read_text(encoding="utf-8"))
           assert manifest["release"] == "v${{ github.event.inputs.version }}"
           names = {item["file"] for item in manifest["artifacts"]}
           required = {
@@ -427,11 +637,27 @@ jobs:
               "hpc-client-gui_macos_arm64.dmg.sha256",
               "hpc-client-gui_macos_x86_64.dmg",
               "hpc-client-gui_macos_x86_64.dmg.sha256",
+              "RELEASE_SECURITY.json",
           }
           assert required <= names
           assert {item["platform"] for item in manifest["artifacts"]} >= {
               "linux", "windows", "macos"
           }
+          expected_mode = "${{ inputs.macos_mode == 'signed' && 'signed-notarized' || 'unsigned' }}"
+          assert security["macos_mode"] == expected_mode, security
+          signed_claims = (
+              security["developer_id_verification_passed"]
+              and security["notarization_passed"]
+              and security["stapling_passed"]
+              and security["gatekeeper_assessment_passed"]
+          )
+          if expected_mode == "signed-notarized":
+              assert signed_claims, "signed publication requires verified signing claims"
+          else:
+              assert not signed_claims, "unsigned publication must never claim signing"
+          notes = (release_dir / "RELEASE_NOTES.md").read_text(encoding="utf-8")
+          if expected_mode == "unsigned":
+              assert "NOT" in notes and "Gatekeeper" in notes
           PY
       # Third-party actions are pinned to verified full commit SHAs (version
       # comments beside each pin). Advance these intentionally.
@@ -444,10 +670,12 @@ jobs:
             dist/releases/v${{ github.event.inputs.version }}/*.deb
             dist/releases/v${{ github.event.inputs.version }}/*.flatpak
             dist/releases/v${{ github.event.inputs.version }}/*.dmg
+            dist/releases/v${{ github.event.inputs.version }}/MANIFEST.json
+            dist/releases/v${{ github.event.inputs.version }}/RELEASE_SECURITY.json
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@72f2c25fcb47643c292f7107632f7a47c1df5cd8 # v2.3.2
         with:
           tag_name: v${{ github.event.inputs.version }}
           name: v${{ github.event.inputs.version }}
-          body_path: dist/releases/v${{ github.event.inputs.version }}/CHANGELOG.md
+          body_path: dist/releases/v${{ github.event.inputs.version }}/RELEASE_NOTES.md
           files: dist/releases/v${{ github.event.inputs.version }}/*

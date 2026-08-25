@@ -72,6 +72,26 @@ a = Analysis(
     excludes=["PySide6.scripts.deploy_lib", "_hpc_gui_perf_probe"],
     noarchive=False,
 )
+
+# Files that must never ship in production bundles. DevTools resources exist
+# for browser debugging only; the terminal WebView never loads them.
+# QtWebEngineCore, ICU data, and software GL fallbacks stay so the GUI
+# terminal keeps working everywhere (same policy as the Windows/Linux specs).
+EXCLUDED_NAME_PATTERNS = (
+    "qtwebengine_devtools_resources",
+)
+
+
+def _keep_entry(entry) -> bool:
+    name = str(entry[0]).replace("\\", "/").lower()
+    return not any(pattern in name for pattern in EXCLUDED_NAME_PATTERNS)
+
+
+_excluded = [entry for entry in a.datas + a.binaries if not _keep_entry(entry)]
+a.datas = [entry for entry in a.datas if _keep_entry(entry)]
+a.binaries = [entry for entry in a.binaries if _keep_entry(entry)]
+print(f"[spec] post-analysis: excluded {len(_excluded)} devtool/unused entries")
+
 pyz = PYZ(a.pure, a.zipped_data)
 exe = EXE(
     pyz, a.scripts, [], exclude_binaries=True, name="HPC Client GUI",
@@ -93,8 +113,8 @@ app = BUNDLE(
     info_plist={
         "CFBundleDisplayName": "HPC Client GUI",
         "CFBundleName": "HPC Client GUI",
-        "CFBundleShortVersionString": os.environ.get("APP_VERSION", "1.4.2"),
-        "CFBundleVersion": os.environ.get("APP_VERSION", "1.4.2"),
+        "CFBundleShortVersionString": os.environ.get("APP_VERSION", "1.5.0"),
+        "CFBundleVersion": os.environ.get("APP_VERSION", "1.5.0"),
         "LSMinimumSystemVersion": "13.0",
         "NSHighResolutionCapable": True,
     },

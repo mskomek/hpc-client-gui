@@ -23,6 +23,11 @@ GITHUB_LATEST_RELEASE_API = (
 RELEASE_EXE_NAME = "hpc-client-gui.exe"
 RELEASE_ZIP_NAME = "hpc-client-gui_windows_onedir.zip"
 RELEASE_SHA_NAME = f"{RELEASE_ZIP_NAME}.sha256"
+SECURITY_ASSET_NAME = "RELEASE_SECURITY.json"
+# Allowed values for UpdateRelease.security_status.
+SECURITY_SIGNED = "signed-notarized"
+SECURITY_UNSIGNED = "unsigned"
+SECURITY_UNKNOWN = "unknown"
 ProgressCallback = Callable[[int, str], None]
 CancelCallback = Callable[[], bool]
 
@@ -37,6 +42,25 @@ class UpdateRelease:
     sha_url: str
     html_url: str
     install_strategy: str = "windows"
+    # "signed-notarized", "unsigned", or "unknown" (metadata asset missing).
+    security_status: str = SECURITY_UNKNOWN
+
+
+def parse_release_security(payload: object) -> str:
+    """Map RELEASE_SECURITY.json content onto a known security status."""
+    if not isinstance(payload, dict):
+        return SECURITY_UNKNOWN
+    mode = str(payload.get("macos_mode") or "")
+    if mode == SECURITY_SIGNED:
+        return (
+            SECURITY_SIGNED
+            if payload.get("developer_id_verification_passed")
+            and payload.get("notarization_passed")
+            else SECURITY_UNKNOWN
+        )
+    if mode == SECURITY_UNSIGNED:
+        return SECURITY_UNSIGNED
+    return SECURITY_UNKNOWN
 
 
 def release_asset_names(platform_key: str | None = None) -> tuple[str, str] | None:
@@ -104,6 +128,17 @@ def get_latest_release(timeout: float = 30.0) -> UpdateRelease:
             f"Release assets are incomplete: {expected_zip} and {expected_sha} are required."
         )
 
+    security_status = SECURITY_UNKNOWN
+    security_url = assets.get(SECURITY_ASSET_NAME)
+    if security_url:
+        try:
+            with _request(security_url, timeout=timeout) as response:
+                security_status = parse_release_security(
+                    json.loads(response.read().decode("utf-8", errors="replace"))
+                )
+        except (OSError, ValueError, RuntimeError):
+            security_status = SECURITY_UNKNOWN
+
     return UpdateRelease(
         version=version,
         tag=tag,
@@ -113,6 +148,7 @@ def get_latest_release(timeout: float = 30.0) -> UpdateRelease:
         sha_url=assets[expected_sha],
         html_url=str(payload.get("html_url") or ""),
         install_strategy="windows" if current_os() == "windows" else "manual",
+        security_status=security_status,
     )
 
 

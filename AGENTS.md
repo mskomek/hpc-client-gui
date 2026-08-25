@@ -112,3 +112,11 @@ Do NOT add any of the following to commit messages:
 All commits must use only the repository owner's configured Git author/committer identity.
 
 Before creating a commit, inspect the final commit message and remove any AI attribution trailers.
+
+## Public repository workflow
+
+- Never commit directly to `main`; open a pull request from a short-lived
+  feature branch and let the required status checks decide.
+- Delete feature branches (local and remote) immediately after merge.
+- Keep local agent guidance files (`AGENTS.md`, `CLAUDE.md`, `rules.md`) out
+  of the public repository; they stay ignored on every branch.
