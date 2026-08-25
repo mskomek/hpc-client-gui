@@ -27,6 +27,13 @@ RELEASE_METADATA = (
     "QT_LGPL_SOURCE_OFFER.md", "THIRD_PARTY_VERSIONS.txt",
     "SBOM.cdx.json", "QT_LGPL_SOURCES.json",
 )
+# Compressed DMG size budget in MiB. The evidence-based target keeps the Mac
+# packages comparable with the other platforms (~1364/1499 MiB was rejected).
+# A build may override it upward explicitly via HPC_GUI_DMG_BUDGET_MIB so an
+# emergency release is never blocked silently, but any override must be a
+# deliberate, documented decision.
+DEFAULT_DMG_BUDGET_MIB = 600
+DMG_BUDGET_ENV = "HPC_GUI_DMG_BUDGET_MIB"
 
 
 class PackagingError(RuntimeError):
@@ -131,6 +138,45 @@ def _sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def dmg_budget_mib(environ: dict[str, str] | None = None) -> int:
+    env = os.environ if environ is None else environ
+    raw = env.get(DMG_BUDGET_ENV, "").strip()
+    if not raw:
+        return DEFAULT_DMG_BUDGET_MIB
+    try:
+        budget = int(raw)
+    except ValueError as exc:
+        raise PackagingError(f"{DMG_BUDGET_ENV} must be an integer: {raw!r}") from exc
+    if budget < 1:
+        raise PackagingError(f"{DMG_BUDGET_ENV} must be positive: {budget}")
+    return budget
+
+
+def check_dmg_budget(dmg: Path, budget_mib: int) -> str:
+    """Return a report line for the DMG size or raise when over budget."""
+    size_bytes = dmg.stat().st_size
+    size_mib = size_bytes / (1024 * 1024)
+    line = f"dmg_size: {size_bytes} bytes ({size_mib:.2f} MiB); budget: {budget_mib} MiB"
+    if size_mib > budget_mib:
+        raise PackagingError(
+            "DMG exceeds the package-size budget ("
+            f"{line}). Reduce the bundle or set {DMG_BUDGET_ENV} explicitly "
+            "with evidence that the remaining payload is required."
+        )
+    return line
+
+
+def write_bundle_report(app: Path, output: Path, extra_lines: tuple[str, ...] = ()) -> Path:
+    from report_bundle_sizes import collect_report, format_report
+
+    text = format_report(collect_report(app))
+    if extra_lines:
+        text += "\n".join(extra_lines) + "\n"
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(text, encoding="utf-8")
+    return output
+
+
 def execute(plan: ReleasePlan) -> Path:
     require_macos()
     require_native_arch(plan.arch)
@@ -144,6 +190,8 @@ def execute(plan: ReleasePlan) -> Path:
     _run(plan.commands[0], env=env)
     app = DIST_ROOT / "HPC Client GUI.app"
     _validate_bundle(app, plan.version)
+    report_path = plan.output.parent / f"bundle-size-report-macos-{plan.arch}.txt"
+    write_bundle_report(app, report_path)
     _run((sys.executable, str(SMOKE_SCRIPT), "--app", str(app), "--version", plan.version, "--gui"), env=env)
 
     if plan.staging.exists():
@@ -156,6 +204,8 @@ def execute(plan: ReleasePlan) -> Path:
     _run(plan.commands[2])
     checksum = plan.output.with_name(plan.output.name + ".sha256")
     checksum.write_text(f"{_sha256(plan.output)}  {plan.output.name}\n", encoding="ascii")
+    budget_line = check_dmg_budget(plan.output, dmg_budget_mib())
+    write_bundle_report(app, report_path, extra_lines=(budget_line,))
     for name in RELEASE_METADATA:
         source = REPO_ROOT / name
         if not source.is_file():

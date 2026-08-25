@@ -72,3 +72,6 @@ tools/ai/deepseek-models.local.psd1
 /docs/TERMINAL_WAVE*
 /docs/WAVE_PLAN.md
 coverage.xml
+
+# Wheel build output
+/build/lib/
