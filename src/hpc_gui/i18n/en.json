@@ -108,7 +108,10 @@
     "status_installing": "Installing the update and restarting the application...",
     "error_title": "Update error",
     "error_message": "The update could not be completed:\n{error}",
-    "changelog_title": "What's new in v{version}"
+    "changelog_title": "What's new in v{version}",
+    "security_unsigned_mac": "Warning: this macOS build is NOT Apple Developer ID signed or notarized. Gatekeeper may block the first launch - control-click the app and choose Open, or use System Settings > Privacy & Security > Open Anyway. The SHA-256 checksum and GitHub build provenance verify integrity and origin, but they are not substitutes for Apple code signing.",
+    "security_signed_mac": "This macOS build was Developer ID signed, notarized, stapled, and passed a Gatekeeper assessment (see RELEASE_SECURITY.json).",
+    "security_unknown_mac": "Note: this release does not publish signing status metadata (RELEASE_SECURITY.json is missing), so its macOS build must be treated as unsigned."
   },
   "common": {
     "ok": "OK",

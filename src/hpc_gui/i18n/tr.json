@@ -108,7 +108,10 @@
     "status_installing": "Güncelleme yükleniyor ve uygulama yeniden başlatılıyor...",
     "error_title": "Güncelleme hatası",
     "error_message": "Güncelleme tamamlanamadı:\n{error}",
-    "changelog_title": "v{version} yenilikleri"
+    "changelog_title": "v{version} yenilikleri",
+    "security_unsigned_mac": "Uyarı: bu macOS sürümü Apple Developer ID ile imzalı ve notarize DEĞİLDİR. Gatekeeper ilk açılışta engelleyebilir - uygulamayı denetim tıklayıp \"Aç\" seçin veya Sistem Ayarları > Gizlilik ve Güvenlik > Yine de Aç yolunu kullanın. SHA-256 sağlama değeri ve GitHub yapı kaniti bütünlüğü doğrular ancak Apple kod imzasının yerine geçmez.",
+    "security_signed_mac": "Bu macOS sürümü Developer ID ile imzalandı, notarize edildi, staple'landı ve Gatekeeper değerlendirmesinden geçti (RELEASE_SECURITY.json dosyasına bakın).",
+    "security_unknown_mac": "Not: bu sürüm imza durumu üst verisi yayınlamıyor (RELEASE_SECURITY.json eksik); macOS sürümü imzasız kabul edilmelidir."
   },
   "common": {
     "ok": "Tamam",

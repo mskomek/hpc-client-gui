@@ -1,8 +1,22 @@
 # Installation on macOS
 
 HPC Client GUI macOS packages are distributed outside the Mac App Store as
-signed and notarized DMG files when the release gate is complete. macOS 13 or
-newer is required.
+DMG files. macOS 13 or newer is required.
+
+## Signed or unsigned?
+
+Every release publishes a `RELEASE_SECURITY.json` asset that states exactly
+what happened to the DMGs:
+
+- `macos_mode: "signed-notarized"` — both DMGs were Developer ID signed,
+  notarized, stapled, checksum verified, and passed a Gatekeeper assessment.
+- `macos_mode: "unsigned"` — Apple signing credentials were not used. The
+  app is **not** Developer ID signed or notarized; Gatekeeper may block the
+  first launch (see below). SHA-256 checksums and GitHub build provenance
+  attest integrity and origin but are **not** substitutes for Apple code
+  signing.
+
+If the metadata asset is missing, treat the build as unsigned.
 
 ## Choose the correct DMG
 
@@ -19,6 +33,17 @@ file and the release includes a `MANIFEST.json` inventory.
 3. Open the DMG.
 4. Drag **HPC Client GUI.app** to **Applications**.
 5. Launch it from Finder.
+
+### If Gatekeeper blocks the first launch
+
+1. Try opening the app normally first.
+2. If macOS reports that the app cannot be verified, control-click
+   (right-click) the app in Finder and choose **Open**, then confirm, or use
+   **System Settings → Privacy & Security → Open Anyway**.
+3. Do not disable Gatekeeper globally and do not make quarantine-stripping
+   (`xattr`) commands part of your normal installation routine.
+4. Verify the DMG SHA-256 and, where available, the GitHub build attestation
+   as described in [Verifying Releases](https://github.com/mskomek/hpc-client-gui/blob/main/docs/VERIFYING_RELEASES.md).
 
 The application may ask for Keychain access when you save a connection password.
 Only an opaque Keychain reference is stored in the application configuration;
