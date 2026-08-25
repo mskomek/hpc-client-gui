@@ -54,13 +54,14 @@ PLUGIN_REQUEST_URL = (
     "?template=plugin-request.yml"
 )
 
-# Human-readable labels for Plugin API v1 capability identifiers. Raw
+# Human-readable labels for Plugin API v1/v2 capability identifiers. Raw
 # identifiers must never appear as primary UI text.
 _CAPABILITY_LABEL_KEYS = {
     "cluster-profile": "plugins.capability_cluster_profile",
     "lint-rules": "plugins.capability_lint_rules",
     "job-template": "plugins.capability_job_templates",
     "application-tools": "plugins.capability_application_tools",
+    "linter-tool": "plugins.capability_linter_tool",
 }
 
 
@@ -515,8 +516,16 @@ class PluginManagerDialog(QDialog):
             return
 
         for name, plugin_id, versions in rows:
+            installed = installed_by_id.get(plugin_id)
+            has_tool = bool(
+                installed is not None
+                and "linter-tool" in getattr(installed.manifest, "capabilities", ())
+                and getattr(installed, "linter_engine", None)
+            )
             inner.addWidget(
-                self._installed_card(name, plugin_id, versions, plugin_id in disabled)
+                self._installed_card(
+                    name, plugin_id, versions, plugin_id in disabled, has_tool=has_tool
+                )
             )
 
     def _installed_card(
@@ -525,6 +534,7 @@ class PluginManagerDialog(QDialog):
         plugin_id: str,
         versions: list[str],
         is_disabled: bool = False,
+        has_tool: bool = False,
     ) -> QFrame:
         card = QFrame()
         grid = QGridLayout(card)
@@ -545,6 +555,12 @@ class PluginManagerDialog(QDialog):
 
         row = QHBoxLayout()
         row.addStretch(1)
+        if has_tool and not is_disabled:
+            open_tool_button = QPushButton(t("plugins.open_tool"))
+            open_tool_button.clicked.connect(
+                lambda _=False, pid=plugin_id: self.open_linter_tool(pid)
+            )
+            row.addWidget(open_tool_button)
         toggle_button = QPushButton(
             t("plugins.enable") if is_disabled else t("plugins.disable")
         )
@@ -569,6 +585,55 @@ class PluginManagerDialog(QDialog):
             logger.warning("Could not toggle plugin %s", plugin_id, exc_info=exc)
             return
         self.rebuild_tabs()
+
+    def open_linter_tool(self, plugin_id: str) -> None:
+        """Open a Plugin API v2 linter tool hosted in a modal dialog."""
+        from PySide6.QtWidgets import QMessageBox
+
+        installed = next(
+            (
+                item
+                for item in self._installed_versions.plugins
+                if item.manifest.id == plugin_id
+            ),
+            None,
+        )
+        if installed is None:
+            QMessageBox.warning(
+                self,
+                t("plugins.tool_open_failed"),
+                f"{plugin_id}: {t('plugins.tool_not_installed')}",
+            )
+            return
+        try:
+            from hpc_gui.plugins.linter_tools import load_tool_for_plugin
+
+            tool = load_tool_for_plugin(installed)
+        except Exception as exc:
+            logger.warning("Could not load linter tool %s", plugin_id, exc_info=exc)
+            QMessageBox.warning(
+                self,
+                t("plugins.tool_open_failed"),
+                str(exc),
+            )
+            return
+
+        dialog = QDialog(self)
+        dialog.setWindowTitle(f"{tool.title} — {plugin_id}@{tool.version}")
+        dialog.resize(980, 680)
+        layout = QVBoxLayout(dialog)
+        try:
+            page = tool.page_factory(parent=dialog)
+        except Exception as exc:
+            logger.warning("Linter tool page creation failed for %s", plugin_id, exc_info=exc)
+            QMessageBox.warning(
+                self,
+                t("plugins.tool_open_failed"),
+                str(exc),
+            )
+            return
+        layout.addWidget(page)
+        dialog.exec()
 
     def _populate_updates(self, active: dict[str, str]) -> None:
         inner = self._clear_list(self.updates_list)

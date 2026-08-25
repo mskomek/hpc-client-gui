@@ -111,6 +111,10 @@ profili, iş şablonu ve lint paklerini kurun; kurmadan önce karttaki
 **Eklenti iste** düğmesi resmî eklenti deposundaki istek formunu açar. Tam
 kılavuz: [PLUGINS_tr.md](PLUGINS_tr.md).
 
+Bir denetleyici aracı eklentisi kurduktan sonra (örnek: gayriresmî ANSYS
+Script & Journal Linter), **Kurulu** kartında **Aracı aç** düğmesi görünür.
+Ayrıntılar: [PLUGINS_tr.md](PLUGINS_tr.md).
+
 ### Gelişmiş SSH ayarları
 
 - **Sunucu anahtarı doğrulaması**: *Yeni sunuculara güven, değişen anahtarı

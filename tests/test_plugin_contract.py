@@ -77,12 +77,20 @@ def test_real_registry_passes_repository_validator(plugins_repo: Path):
 
 
 def test_all_entries_compatible_with_app_1_4_0(registry: dict):
+    """Plugin API v1 entries must stay installable on the old pinned line;
+    anything incompatible must be a deliberate Plugin API v2 tool that
+    requires the first v2-capable release (>= 1.5.0) so old clients never
+    select a package they cannot load."""
     entries = registry["plugins"]
     assert entries, "official registry must not be empty"
     incompatible = [
         f"{entry['id']}@{entry['version']}"
         for entry in entries
         if not is_app_compatible(str(entry["requires_app"]), CONTRACT_APP_VERSION)
+        and (
+            entry.get("plugin_api") != 2
+            or not is_app_compatible(str(entry["requires_app"]), "1.5.0")
+        )
     ]
     assert not incompatible, f"incompatible entries: {incompatible}"
 
@@ -98,6 +106,9 @@ def test_manifest_hashes_and_identities_match_registry(registry: dict, plugins_r
         manifest = json.loads(payload)
         assert manifest["id"] == entry["id"]
         assert manifest["version"] == entry["version"]
+        if manifest["plugin_api"] == 2:
+            assert "linter-tool" in manifest["capabilities"]
+            continue
         assert manifest["plugin_api"] == 1
         assert is_app_compatible(str(manifest["requires_app"]), CONTRACT_APP_VERSION)
 

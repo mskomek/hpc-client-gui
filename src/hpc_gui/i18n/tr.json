@@ -809,6 +809,7 @@
     "capability_lint_rules": "Lint kuralları",
     "capability_job_templates": "İş şablonları",
     "capability_application_tools": "Uygulama araçları",
+    "capability_linter_tool": "Denetleyici aracı",
     "compatible_with_running": "Bu uygulama sürümüyle uyumlu",
     "incompatible_with_running": "Bu uygulama sürümüyle uyumsuz",
     "source_label": "Kaynak",
@@ -826,14 +827,17 @@
     "active_badge": "Etkin",
     "activate": "Etkinleştir",
     "rollback": "Geri al",
-    "activating": "Sürüm değiştiriliyor…",
+    "activating": "Sürüm değiştiriliyor.",
     "switch_version_label": "Kurulu sürümler:",
     "version_switch_confirm_title": "Plugin sürümünü değiştir",
     "version_activate_confirm_text": "{name} {version} sürümü etkinleştirilsin mi?",
     "version_rollback_confirm_text": "{name}, {current} sürümünden {version} sürümüne geri alınsın mı? Kurulu hiçbir sürüm silinmez.",
     "version_switch_success": "{name} artık {version} sürümünü kullanıyor.",
     "version_switch_failed": "{name} eklentisi {version} sürümüne geçirilemedi. Önceki etkin sürüm etkin kalmaya devam ediyor.",
-    "corrupt_plugin": "{name} bütünlük denetimini geçemedi ve atlandı. Keşfet sekmesinden yeniden kurun; kurulu hiçbir sürüm silinmedi."
+    "corrupt_plugin": "{name} bütünlük denetimini geçemedi ve atlandı. Keşfet sekmesinden yeniden kurun; kurulu hiçbir sürüm silinmedi.",
+    "open_tool": "Aracı aç",
+    "tool_open_failed": "Denetleyici aracı açılamadı",
+    "tool_not_installed": "Eklenti kurulu değil veya devre dışı."
   },
   "templates": {
     "dialog_title": "İş Şablonları",

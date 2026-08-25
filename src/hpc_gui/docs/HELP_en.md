@@ -110,6 +110,10 @@ job templates, and lint packs from **Discover**; see *Details* on any card for
 the full record before installing. Missing a plugin? Use **Request a plugin**
 to open the request form in the official plugin repository. See
 [PLUGINS_en.md](PLUGINS_en.md) for the complete guide.
+After installing a linter-tool plugin (such as the unofficial
+ANSYS Script & Journal Linter), its **Installed** card shows an **Open tool**
+button hosting the tool page. See [PLUGINS_en.md](PLUGINS_en.md).
+
 
 ### SSH advanced settings
 

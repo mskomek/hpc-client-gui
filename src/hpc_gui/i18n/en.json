@@ -809,6 +809,7 @@
     "capability_lint_rules": "Lint rules",
     "capability_job_templates": "Job templates",
     "capability_application_tools": "Application tools",
+    "capability_linter_tool": "Linter tool",
     "compatible_with_running": "Compatible with this app",
     "incompatible_with_running": "Incompatible with this app",
     "source_label": "Source",
@@ -826,14 +827,17 @@
     "active_badge": "Active",
     "activate": "Activate",
     "rollback": "Roll back",
-    "activating": "Changing version…",
+    "activating": "Changing version.",
     "switch_version_label": "Installed versions:",
     "version_switch_confirm_title": "Change plugin version",
     "version_activate_confirm_text": "Activate {name} {version}?",
     "version_rollback_confirm_text": "Roll {name} back from {current} to {version}? No installed version will be removed.",
     "version_switch_success": "{name} now uses version {version}.",
     "version_switch_failed": "Could not switch {name} to {version}. The previously active version remains active.",
-    "corrupt_plugin": "{name} failed its integrity check and was skipped. Reinstall it from the Discover tab; no installed version was deleted."
+    "corrupt_plugin": "{name} failed its integrity check and was skipped. Reinstall it from the Discover tab; no installed version was deleted.",
+    "open_tool": "Open tool",
+    "tool_open_failed": "Could not open the linter tool",
+    "tool_not_installed": "The plugin is not installed or is disabled."
   },
   "templates": {
     "dialog_title": "Job Templates",

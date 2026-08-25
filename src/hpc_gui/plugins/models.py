@@ -16,11 +16,16 @@ PLUGIN_ID_RE = re.compile(r"^[a-z][a-z0-9]*(?:\.[a-z0-9]+)+$")
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 
 PLUGIN_API_VERSION = 1
+# Additive generations understood by this release. v1 manifests stay
+# exactly as before; v2 adds the opt-in "linter-tool" capability with
+# hash-verified engine files (see validator/installer/loader).
+SUPPORTED_PLUGIN_API_VERSIONS = frozenset({1, 2})
 
 CAPABILITY_CLUSTER_PROFILE = "cluster-profile"
 CAPABILITY_LINT_RULES = "lint-rules"
 CAPABILITY_JOB_TEMPLATE = "job-template"
 CAPABILITY_APPLICATION_TOOLS = "application-tools"
+CAPABILITY_LINTER_TOOL = "linter-tool"
 
 KNOWN_CAPABILITIES = frozenset(
     {
@@ -28,6 +33,7 @@ KNOWN_CAPABILITIES = frozenset(
         CAPABILITY_LINT_RULES,
         CAPABILITY_JOB_TEMPLATE,
         CAPABILITY_APPLICATION_TOOLS,
+        CAPABILITY_LINTER_TOOL,
     }
 )
 
@@ -39,6 +45,9 @@ KNOWN_FILE_ROLES = frozenset(
         "template-index",
         "template-content",
         "documentation",
+        # Plugin API v2 linter-tool roles:
+        "linter-engine",
+        "linter-data",
     }
 )
 
@@ -103,6 +112,9 @@ class InstalledPlugin:
     cluster_profiles: tuple[ClusterProfileDefinition, ...] = ()
     lint_index: Mapping[str, Any] | None = None
     job_templates_index: Mapping[str, Any] | None = None
+    # Plugin API v2 linter-tool entrypoint: {"module": "<rel path .py>"}.
+    # The engine is NOT imported here - see plugins/linter_tools.py.
+    linter_engine: Mapping[str, Any] | None = None
 
 
 def is_valid_semver(value: Any) -> bool:
