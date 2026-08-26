@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import os
 import re
 import shutil
@@ -100,6 +101,8 @@ from hpc_gui.ui.models.remote_entry_helpers import (
     fmt_size as _fmt_size,
     natural_sort_key as _natural_sort_key,
 )
+
+logger = logging.getLogger(__name__)
 
 
 MIME_REMOTE_PATHS = "application/x-truba-remote-paths"
@@ -1852,6 +1855,53 @@ class RemoteDirPanel(QWidget):
         return entries
 
     @staticmethod
+    def _ansys_lint_supported(remote_path: str) -> bool:
+        from hpc_gui.plugins.linter_tools import supported_suffixes
+
+        name = remote_path.rstrip("/").rsplit("/", 1)[-1]
+        dot = name.rfind(".")
+        if dot < 0:
+            return False
+        return name[dot:].lower() in supported_suffixes()
+
+    def run_ansys_lint(self, remote_path: str) -> None:
+        from hpc_gui.plugins.linter_tools import (
+            ToolLoadError,
+            lint_text_with_tool,
+        )
+        from hpc_gui.ui.dialogs.ansys_lint_results_dialog import (
+            show_ansys_lint_results,
+        )
+
+        files = (self.session or {}).get("files")
+        if not files:
+            QMessageBox.warning(
+                self, t("common.error"), t("common.no_connection")
+            )
+            return
+        try:
+            text = files.read_text(remote_path)
+            run = lint_text_with_tool(text, file_name=remote_path)
+        except ToolLoadError as exc:
+            QMessageBox.warning(self, t("ansyslint.title"), str(exc))
+            return
+        except Exception as exc:  # defensive: network/engine failures stay contained
+            logger.warning(
+                "ANSYS lint failed for %s", remote_path, exc_info=exc
+            )
+            QMessageBox.warning(
+                self,
+                t("ansyslint.title"),
+                f"{type(exc).__name__}: {exc}",
+            )
+            return
+        show_ansys_lint_results(
+            self,
+            f"{t('ansyslint.title')} — "
+            f"{remote_path.rstrip('/').rsplit('/', 1)[-1]}",
+            run,
+        )
+
     def _submit_candidate(entries: List[Tuple[str, bool]]) -> str:
         if len(entries) != 1:
             return ""
@@ -2170,6 +2220,12 @@ class RemoteDirPanel(QWidget):
         act_save_as.setEnabled(has_selection)
         act_add_queue.setEnabled(False)
         act_view_edit.setEnabled(single_selection and not single_selection_is_dir)
+        act_ansys_lint = menu.addAction(_tr("files.ansys_lint", "ANSYS Journal Lint"))
+        act_ansys_lint.setEnabled(
+            single_selection
+            and not single_selection_is_dir
+            and self._ansys_lint_supported(sel_paths[0])
+        )
         act_open_new_tab.setEnabled(single_selection and single_selection_is_dir)
         if act_open_out1 is not None:
             act_open_out1.setEnabled(single_selection and not single_selection_is_dir)
@@ -2251,6 +2307,10 @@ class RemoteDirPanel(QWidget):
 
         if act_run_shell is not None and chosen == act_run_shell:
             self.run_shell_requested.emit(shell_run_path)
+            return
+
+        if chosen == act_ansys_lint:
+            self.run_ansys_lint(sel_paths[0])
             return
 
         if chosen == act_view_edit:

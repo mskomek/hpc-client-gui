@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import datetime
 import json
+import logging
 import os
 import re
 import shutil
@@ -237,6 +238,9 @@ class _LocalTree(QTreeWidget):
             event.accept()
             return
         super().mouseReleaseEvent(event)
+
+
+logger = logging.getLogger(__name__)
 
 
 class LocalDirPanel(QWidget):
@@ -731,6 +735,12 @@ class LocalDirPanel(QWidget):
         act_create_dir_enter.setEnabled(bool(self.current_dir))
         act_delete.setEnabled(bool(paths))
         act_rename.setEnabled(one_selected)
+        act_ansys_lint = menu.addAction(t("files.ansys_lint"))
+        act_ansys_lint.setEnabled(
+            one_selected
+            and not one_is_dir
+            and self._ansys_lint_supported(Path(str(paths[0])).suffix.lower())
+        )
         if one_selected and item is not None and bool(item.data(0, Qt.ItemDataRole.UserRole + 2)):
             act_upload.setEnabled(False)
             act_open.setEnabled(True)
@@ -769,6 +779,34 @@ class LocalDirPanel(QWidget):
         if chosen == act_rename:
             self.rename_selected()
             return
+        if chosen == act_ansys_lint:
+            self.run_ansys_lint(Path(str(paths[0])))
+            return
+
+    @staticmethod
+    def _ansys_lint_supported(suffix: str) -> bool:
+        from hpc_gui.plugins.linter_tools import supported_suffixes
+
+        return suffix in supported_suffixes()
+
+    def run_ansys_lint(self, path: Path) -> None:
+        from hpc_gui.plugins.linter_tools import ToolLoadError, lint_paths_with_tool
+        from hpc_gui.ui.dialogs.ansys_lint_results_dialog import (
+            show_ansys_lint_results,
+        )
+
+        try:
+            run = lint_paths_with_tool([path])
+        except ToolLoadError as exc:
+            QMessageBox.warning(self, t("ansyslint.title"), str(exc))
+            return
+        except Exception as exc:  # defensive: engine failures stay contained
+            logger.warning("ANSYS lint failed for %s", path, exc_info=exc)
+            QMessageBox.warning(
+                self, t("ansyslint.title"), f"{type(exc).__name__}: {exc}"
+            )
+            return
+        show_ansys_lint_results(self, f"{t('ansyslint.title')} — {path.name}", run)
 
     def rename_selected(self) -> bool:
         selected = self._selected_items()
