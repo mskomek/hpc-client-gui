@@ -52,6 +52,16 @@ check. A diagnostic code such as `SSH-XXXXXX` links the dialog to its log entry.
 
 ## File manager features
 
+### Editing files from the file panes
+
+Right-click a **local** file and choose **Edit** to open it in the in-app
+editor with real read/write access to the local filesystem; **Edit in new
+window** opens the same editor in a standalone window. Remote files use
+**View/Edit**, which loads the content over the session and saves back to
+the server. The editor's **Lint** button checks the current text; for
+full Ansys journal linting use the right-click **ANSYS Journal Lint**
+quick check or **Send to plugin ▸** (see [Plugins](#plugins)).
+
 ### Default local folder (per profile)
 
 Under **Advanced → File browser** each connection profile can define a

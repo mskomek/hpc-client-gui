@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import posixpath
 import re
+from pathlib import Path
 
 from PySide6.QtCore import QEvent, Signal, Qt
 from PySide6.QtGui import QKeySequence, QShortcut, QTextCursor
@@ -98,9 +99,11 @@ class _EditorDocument(QWidget):
         path: str = "",
         content: str = "",
         parent=None,
+        is_local: bool = False,
     ):
         super().__init__(parent)
         self.path = path
+        self.is_local = is_local
         self.text = _EditorTextEdit(owner, self)
         self.text.setPlainText(content)
         layout = QVBoxLayout(self)
@@ -227,8 +230,12 @@ class EditorWidget(QWidget):
     def _tab_title(path: str) -> str:
         return posixpath.basename(path.rstrip("/")) if path else t("editor.title")
 
-    def _add_document(self, path: str = "", content: str = "") -> _EditorDocument:
-        document = _EditorDocument(self, path, content, self.document_tabs)
+    def _add_document(
+        self, path: str = "", content: str = "", is_local: bool = False
+    ) -> _EditorDocument:
+        document = _EditorDocument(
+            self, path, content, self.document_tabs, is_local=is_local
+        )
         index = self.document_tabs.addTab(document, self._tab_title(path))
         self.document_tabs.setTabToolTip(index, path)
         self.document_tabs.setCurrentIndex(index)
@@ -343,10 +350,13 @@ class EditorWidget(QWidget):
     def set_session(self, session):
         self.session = session
 
-    def open_file(self, path: str, content: str):
+    def open_file(self, path: str, content: str, is_local: bool = False):
         existing = self._document_index_for_path(path)
         if existing >= 0:
             self.document_tabs.setCurrentIndex(existing)
+            document = self.document_tabs.widget(existing)
+            if isinstance(document, _EditorDocument):
+                document.is_local = is_local
             return
         current = self._current_document()
         if (
@@ -356,13 +366,19 @@ class EditorWidget(QWidget):
             and self.document_tabs.count() == 1
         ):
             current.path = path
+            current.is_local = is_local
             current.text.setPlainText(content)
             index = self.document_tabs.indexOf(current)
             self.document_tabs.setTabText(index, self._tab_title(path))
             self.document_tabs.setTabToolTip(index, path)
             self._on_current_document_changed(index)
             return
-        self._add_document(path, content)
+        self._add_document(path, content, is_local=is_local)
+
+    def open_local_file(self, path: str) -> None:
+        """Open a local filesystem file for in-app editing (no session)."""
+        text = Path(path).read_text(encoding="utf-8", errors="replace")
+        self.open_file(path, text, is_local=True)
 
     def retranslate_ui(self):
         self.lbl_remote.setText(t("editor.remote"))
@@ -537,6 +553,16 @@ class EditorWidget(QWidget):
             document.path = ""
 
     def load_path(self):
+        document = self._current_document()
+        if document is not None and document.is_local:
+            path = document.path
+            try:
+                content = Path(path).read_text(encoding="utf-8", errors="replace")
+                document.text.setPlainText(content)
+                append_event({"type": "editor_load", "path": path})
+            except OSError as e:
+                show_exception(self, title=t("common.error"), user_message=t("editor.open_failed").format(err=e), exc=e, area="EDITOR")
+            return
         if not self.session or not self.session.get("files"):
             QMessageBox.warning(self, t("common.error"), t("common.no_connection"))
             return
@@ -551,10 +577,25 @@ class EditorWidget(QWidget):
             show_exception(self, title=t("common.error"), user_message=t("editor.open_failed").format(err=e), exc=e, area="EDITOR")
 
     def save_path(self, force_submit: bool = False, run_in_terminal: bool = False):
+        document = self._current_document()
+        path = self.path_in.text().strip()
+        if document is not None and document.is_local:
+            if not path:
+                return
+            text = self.text.toPlainText()
+            if not self._validate_before_save(path, text):
+                return
+            try:
+                Path(path).write_text(text, encoding="utf-8", newline="")
+                self._set_active_document_path(path)
+                append_event({"type": "editor_save", "path": path})
+                QMessageBox.information(self, t("common.info"), t("editor.saved") if t("editor.saved") != "[editor.saved]" else "Saved.")
+            except OSError as e:
+                show_exception(self, title=t("common.error"), user_message=t("editor.save_failed").format(err=e), exc=e, area="EDITOR")
+            return
         if not self.session or not self.session.get("files"):
             QMessageBox.warning(self, t("common.error"), t("common.no_connection"))
             return
-        path = self.path_in.text().strip()
         if not path:
             return
         text = self.text.toPlainText()
