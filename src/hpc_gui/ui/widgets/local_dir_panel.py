@@ -251,6 +251,7 @@ class LocalDirPanel(QWidget):
     fileActivated = Signal(str)
     uploadRequested = Signal(list)
     remoteClipboardPasteRequested = Signal(list, str)
+    editRequested = Signal(str, bool)  # path, new_window
 
     def __init__(self, initial_directory: str = "", parent=None) -> None:
         super().__init__(parent)
@@ -718,8 +719,14 @@ class LocalDirPanel(QWidget):
         act_open = menu.addAction(LOCAL_CONTEXT_MENU_LABELS[3])
         act_open_with = menu.addAction(t("files.open_with"))
         act_open_new_tab = menu.addAction(LOCAL_CONTEXT_MENU_LABELS[5])
-        act_edit = menu.addAction(LOCAL_CONTEXT_MENU_LABELS[6])
-        act_edit.setEnabled(False)
+        act_edit = menu.addAction(
+            t("dirs.edit") if t("dirs.edit") != "[dirs.edit]" else "Edit"
+        )
+        act_edit_new_window = menu.addAction(
+            t("dirs.edit_new_window")
+            if t("dirs.edit_new_window") != "[dirs.edit_new_window]"
+            else "Edit in new window"
+        )
         menu.addSeparator()
         act_create_dir = menu.addAction(LOCAL_CONTEXT_MENU_LABELS[8])
         act_create_dir_enter = menu.addAction(LOCAL_CONTEXT_MENU_LABELS[9])
@@ -732,6 +739,8 @@ class LocalDirPanel(QWidget):
         act_open.setEnabled(not paths or one_selected)
         act_open_with.setEnabled(one_selected and not one_is_dir)
         act_open_new_tab.setEnabled(one_is_dir)
+        act_edit.setEnabled(one_selected and not one_is_dir)
+        act_edit_new_window.setEnabled(one_selected and not one_is_dir)
         act_create_dir_enter.setEnabled(bool(self.current_dir))
         act_delete.setEnabled(bool(paths))
         act_rename.setEnabled(one_selected)
@@ -767,6 +776,12 @@ class LocalDirPanel(QWidget):
         if chosen == act_open_new_tab and one_is_dir:
             self.open_directory_in_new_tab(paths[0])
             return
+        if chosen == act_edit:
+            self._edit_selected(new_window=False)
+            return
+        if chosen == act_edit_new_window:
+            self._edit_selected(new_window=True)
+            return
         if chosen == act_create_dir:
             self.create_directory(enter=False)
             return
@@ -791,6 +806,15 @@ class LocalDirPanel(QWidget):
         from hpc_gui.plugins.linter_tools import supported_suffixes
 
         return suffix in supported_suffixes()
+
+    def _edit_selected(self, new_window: bool) -> None:
+        selected = self._selected_items()
+        if len(selected) != 1:
+            return
+        path = str(selected[0].data(0, Qt.ItemDataRole.UserRole))
+        if not path or Path(path).is_dir():
+            return
+        self.editRequested.emit(path, new_window)
 
     def _build_send_to_plugin_menu(self, menu, path_str: str | None):
         """Attach a "send to plugin" submenu when a tool supports the file."""

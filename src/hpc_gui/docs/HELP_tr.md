@@ -52,6 +52,16 @@ gösterir. `SSH-XXXXXX` biçimindeki tanı kodu, aynı hatayı günlükte bulmak
 
 ## Dosya yöneticisi özellikleri
 
+### Dosya bölmelerinden düzenleme
+
+**Yerel** bir dosyaya sağ tıklayıp **Düzelt**'i seçin: dosya, uygulama içi
+düzenleyicide gerçek okuma/yazma desteğiyle açılır; **Yeni pencerede
+düzelt** aynı düzenleyiciyi bağımsız pencerede açar. Uzak dosyalar için
+**Görüntüle/Düzenle** kullanılır: içerik oturum üzerinden yüklenir ve
+sunucuya geri kaydedilir. Düzenleyicinin **Lint** düğmesi açık metni
+denetler; tam Ansys journal denetimi için sağ tıklama **ANSYS Journal
+Denetimi** ya da **Eklentiye gönder ▸** (bkz. [Eklentiler](#eklentiler)).
+
 ### Varsayılan yerel klasör (profil başına)
 
 **Gelişmiş → Dosya tarayıcı** altında her bağlantı profili bir **Varsayılan

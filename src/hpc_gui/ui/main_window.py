@@ -2,6 +2,7 @@ import logging
 import shlex
 import threading
 import webbrowser
+from pathlib import Path
 
 from PySide6.QtWidgets import (
     QApplication, QDialog, QMainWindow, QMessageBox, QProgressDialog,
@@ -186,6 +187,7 @@ class MainWindow(QMainWindow):
         self.directories.open_in_editor_new_window.connect(self.open_in_editor_new_window)
         self.directories.script_submitted.connect(self.on_script_submitted)
         self.ftp.openFileRequested.connect(self.directories.on_open_file)
+        self.ftp.editLocalRequested.connect(self.open_local_in_editor)
         self.ftp.submitRequested.connect(self.directories.submit_script)
         self.ftp.batchSubmitRequested.connect(self.directories.submit_scripts_batch)
         self.ftp.batchShellRequested.connect(self.run_shell_batch_in_terminal)
@@ -792,6 +794,51 @@ class MainWindow(QMainWindow):
         window.raise_()
         window.activateWindow()
         return window
+
+    def open_local_in_editor(self, path: str, new_window: bool = False):
+        """Open a local filesystem file in the in-app editor (no session)."""
+        from PySide6.QtWidgets import QMessageBox
+
+        try:
+            content = Path(path).read_text(encoding="utf-8", errors="replace")
+        except OSError as exc:
+            logging.getLogger("hpc_gui.ui.main_window").warning(
+                "Could not open local file for editing: %s", path, exc_info=exc
+            )
+            QMessageBox.warning(
+                self,
+                t("common.error"),
+                f"{type(exc).__name__}: {exc}",
+            )
+            return
+        if new_window:
+            editor = EditorWidget()
+            editor.open_file(path, content, is_local=True)
+            window = QMainWindow(self, Qt.WindowType.Window)
+            window.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)
+            window.setWindowTitle(f"{t('tabs.editor')}: {Path(path).name or path}")
+            window.setCentralWidget(editor)
+            window.resize(1000, 700)
+            self._editor_windows.append(window)
+            window_token = id(window)
+
+            def cleanup(*_args):
+                self._editor_windows[:] = [
+                    candidate
+                    for candidate in self._editor_windows
+                    if id(candidate) != window_token
+                ]
+
+            window.destroyed.connect(cleanup)
+            window.show()
+            window.raise_()
+            window.activateWindow()
+            return window
+        self.editor.open_file(path, content, is_local=True)
+        idx = self.tabs.indexOf(self.editor)
+        if idx >= 0:
+            self.tabs.setCurrentIndex(idx)
+        return None
 
     def on_script_submitted(self, job_id: str, script_path: str):
         try:
