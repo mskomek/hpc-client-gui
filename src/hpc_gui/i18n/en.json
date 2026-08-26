@@ -153,7 +153,8 @@
     "open_with_select_program": "Choose program",
     "open_with_program_filter": "Programs (*.exe);;All files (*.*)",
     "open_with_save_title": "Save file association?",
-    "open_with_save_prompt": "Use this program for {extension} files next time?"
+    "open_with_save_prompt": "Use this program for {extension} files next time?",
+    "ansys_lint": "ANSYS Journal Lint"
   },
   "editor": {
     "title": "Editor",
@@ -843,5 +844,10 @@
     "dialog_title": "Job Templates",
     "list_label": "Installed templates:",
     "none_installed": "No job templates are installed. Install a template plugin from the Plugin Manager."
+  },
+  "ansyslint": {
+    "title": "ANSYS Journal Linter",
+    "no_findings": "no findings",
+    "summary_label": "{e} error(s), {w} warning(s), {i} info"
   }
 }

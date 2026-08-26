@@ -113,6 +113,11 @@ kılavuz: [PLUGINS_tr.md](PLUGINS_tr.md).
 
 Bir denetleyici aracı eklentisi kurduktan sonra (örnek: gayriresmî ANSYS
 Script & Journal Linter), **Kurulu** kartında **Aracı aç** düğmesi görünür.
+Yerel ve uzak dosya panellerinde desteklenen dosyalara sağ tıklayınca hızlı
+**ANSYS Journal Denetimi** ve seçili dosyayı destekleyen kurulu her aracı
+listeleyen **Eklentiye gönder ▸** alt menüsü çıkar; bir araç seçince o
+eklenti dosya önceden yüklenmiş şekilde açılır. Denetim sonuç penceresindeki
+**Düzelt (Eklentide aç)** düğmesi de aynı yönlendirmeyi yapar.
 Ayrıntılar: [PLUGINS_tr.md](PLUGINS_tr.md).
 
 ### Gelişmiş SSH ayarları

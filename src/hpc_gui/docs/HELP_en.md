@@ -112,7 +112,12 @@ to open the request form in the official plugin repository. See
 [PLUGINS_en.md](PLUGINS_en.md) for the complete guide.
 After installing a linter-tool plugin (such as the unofficial
 ANSYS Script & Journal Linter), its **Installed** card shows an **Open tool**
-button hosting the tool page. See [PLUGINS_en.md](PLUGINS_en.md).
+button hosting the tool page. Supported files in the local and remote file
+panels also gain a right-click **ANSYS Journal Lint** quick check and a
+**Send to plugin ▸** submenu listing every installed tool that supports the
+selected file; choosing one opens that tool with the file pre-loaded. The
+lint results window offers **Fix (open in tool)** for the same redirect. See
+[PLUGINS_en.md](PLUGINS_en.md).
 
 
 ### SSH advanced settings

@@ -148,3 +148,59 @@ def list_linter_tools(root=None, app_version=None) -> list[LinterTool]:
             logger.warning("Skipping linter tool %s@%s: %s",
                            installed.manifest.id, installed.manifest.version, exc)
     return tools
+
+
+_NOT_INSTALLED_MESSAGE = (
+    "No linter tool plugin is installed. Install the ANSYS Script & Journal "
+    "Linter from the Plugin Manager (Discover tab)."
+)
+
+
+def first_linter_tool(root=None, app_version=None) -> LinterTool:
+    tools = list_linter_tools(root=root, app_version=app_version)
+    if not tools:
+        raise ToolLoadError(_NOT_INSTALLED_MESSAGE)
+    return tools[0]
+
+
+def _engine_module(tool: LinterTool):
+    import importlib
+
+    return importlib.import_module(tool.module_name)
+
+
+def supported_suffixes() -> frozenset[str]:
+    """File suffixes the installed linter tool understands (empty if none).
+
+    The engine package ``__init__`` lazily re-exports only the callable
+    API; ``SUPPORTED_SUFFIXES`` lives in the ``api`` submodule, so fall
+    back to importing that sibling when the attribute is absent.
+    """
+    import importlib
+
+    try:
+        tool = first_linter_tool()
+        module = _engine_module(tool)
+        suffixes = getattr(module, "SUPPORTED_SUFFIXES", None)
+        if suffixes is None:
+            api = importlib.import_module(f"{tool.module_name}.api")
+            suffixes = getattr(api, "SUPPORTED_SUFFIXES", ())
+    except (ToolLoadError, ImportError):
+        return frozenset()
+    return frozenset(str(s).lower() for s in suffixes)
+
+
+def lint_paths_with_tool(paths, options=None):
+    """Run the installed engine over files/folders; returns its run result."""
+    module = _engine_module(first_linter_tool())
+    if options is None:
+        return module.lint_paths(paths)
+    return module.lint_paths(paths, options)
+
+
+def lint_text_with_tool(text: str, *, file_name: str = "", options=None):
+    """Run the installed engine over in-memory content."""
+    module = _engine_module(first_linter_tool())
+    if options is None:
+        return module.lint_text(text, file_name=file_name)
+    return module.lint_text(text, file_name=file_name, options=options)
