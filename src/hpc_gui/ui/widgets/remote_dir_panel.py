@@ -1864,6 +1864,74 @@ class RemoteDirPanel(QWidget):
             return False
         return name[dot:].lower() in supported_suffixes()
 
+    @staticmethod
+    def _remote_file_name(remote_path: str) -> str:
+        return remote_path.rstrip("/").rsplit("/", 1)[-1]
+
+    @staticmethod
+    def _remote_suffix(remote_path: str) -> str:
+        name = RemoteDirPanel._remote_file_name(remote_path)
+        dot = name.rfind(".")
+        return name[dot:].lower() if dot >= 0 else ""
+
+    def _build_send_to_plugin_menu(self, menu, remote_path: str | None):
+        """Attach a "send to plugin" submenu when a tool supports the file."""
+        if not remote_path:
+            return None
+        from hpc_gui.plugins.linter_tools import tools_supporting_suffix
+
+        try:
+            tools = tools_supporting_suffix(self._remote_suffix(remote_path))
+        except Exception:  # defensive: menu building never breaks the panel
+            logger.warning("Tool lookup failed for %s", remote_path, exc_info=True)
+            return None
+        if not tools:
+            return None
+        send_menu = menu.addMenu(t("files.send_to_plugin"))
+        for tool in tools:
+            action = send_menu.addAction(tool.title)
+            action.triggered.connect(
+                lambda _=False, tl=tool, p=remote_path: self.open_in_tool(tl, p)
+            )
+        return send_menu
+
+    def open_in_tool(self, tool, remote_path: str) -> None:
+        """Open a linter-tool page pre-loaded with one remote file.
+
+        Tool pages re-read paths from disk, so the current content is
+        materialized into a suffixed temporary file for the lifetime of
+        the modal page and removed afterwards.
+        """
+        from hpc_gui.plugins.linter_tools import (
+            remove_temp_copy,
+            temp_copy_for_tool,
+        )
+        from hpc_gui.ui.dialogs.linter_tool_host import host_tool_page
+
+        files = (self.session or {}).get("files")
+        if not files:
+            QMessageBox.warning(self, t("common.error"), t("common.no_connection"))
+            return
+        temp_path = None
+        try:
+            text = files.read_text(remote_path)
+            temp_path = temp_copy_for_tool(text, self._remote_file_name(remote_path))
+        except Exception as exc:  # network or disk failure stays contained
+            logger.warning("Could not fetch %s for tool", remote_path, exc_info=exc)
+            QMessageBox.warning(
+                self, t("ansyslint.title"), f"{type(exc).__name__}: {exc}"
+            )
+            return
+        try:
+            host_tool_page(
+                self,
+                tool,
+                initial_paths=[str(temp_path)],
+                title=f"{tool.title} — {self._remote_file_name(remote_path)}",
+            )
+        finally:
+            remove_temp_copy(temp_path)
+
     def run_ansys_lint(self, remote_path: str) -> None:
         from hpc_gui.plugins.linter_tools import (
             ToolLoadError,
@@ -1872,6 +1940,14 @@ class RemoteDirPanel(QWidget):
         from hpc_gui.ui.dialogs.ansys_lint_results_dialog import (
             show_ansys_lint_results,
         )
+
+        def open_in_tool() -> None:
+            from hpc_gui.plugins.linter_tools import first_linter_tool
+
+            try:
+                self.open_in_tool(first_linter_tool(), remote_path)
+            except Exception as exc:  # already messaged by the fetch/host path
+                logger.warning("Fix redirect failed for %s", remote_path, exc_info=exc)
 
         files = (self.session or {}).get("files")
         if not files:
@@ -1898,8 +1974,9 @@ class RemoteDirPanel(QWidget):
         show_ansys_lint_results(
             self,
             f"{t('ansyslint.title')} — "
-            f"{remote_path.rstrip('/').rsplit('/', 1)[-1]}",
+            f"{self._remote_file_name(remote_path)}",
             run,
+            open_in_tool=open_in_tool,
         )
 
     def _submit_candidate(entries: List[Tuple[str, bool]]) -> str:
@@ -2225,6 +2302,9 @@ class RemoteDirPanel(QWidget):
             single_selection
             and not single_selection_is_dir
             and self._ansys_lint_supported(sel_paths[0])
+        )
+        self._build_send_to_plugin_menu(
+            menu, sel_paths[0] if single_selection and not single_selection_is_dir else None
         )
         act_open_new_tab.setEnabled(single_selection and single_selection_is_dir)
         if act_open_out1 is not None:
