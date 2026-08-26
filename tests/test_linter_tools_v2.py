@@ -222,6 +222,44 @@ def test_results_dialog_fix_button_invokes_callback(qapp):
 
 
 # ---------------------------------------------------------------------------
+# Remote panel open_in_tool: temp copy lifecycle (Wave 72).
+# ---------------------------------------------------------------------------
+
+
+def test_remote_open_in_tool_temp_copy_lifecycle(qapp, monkeypatch):
+    from pathlib import Path
+
+    from hpc_gui.services.files_mock import MockFilesBackend
+    from hpc_gui.ui.widgets.remote_dir_panel import RemoteDirPanel
+
+    panel = RemoteDirPanel()
+    panel.set_session({"connected": True, "files": MockFilesBackend()})
+
+    hosted = {}
+
+    def fake_host(parent, tool, *, initial_paths=None, title=None):
+        paths = list(initial_paths or [])
+        hosted["title"] = title
+        hosted["paths"] = paths
+        hosted["existed_during_host"] = [Path(p).exists() for p in paths]
+        return True
+
+    monkeypatch.setattr(
+        "hpc_gui.ui.dialogs.linter_tool_host.host_tool_page", fake_host
+    )
+    tool = _fake_tool("fake_lint_engine", "org.fake")
+    panel.open_in_tool(tool, "/arf/scratch/user/example.txt")
+
+    assert len(hosted["paths"]) == 1
+    temp_path = Path(hosted["paths"][0])
+    assert hosted["existed_during_host"] == [True]
+    assert temp_path.suffix == ".txt"
+    assert "example.txt" in (hosted["title"] or "")
+    # Removed once the hosted page closed.
+    assert not temp_path.exists()
+
+
+# ---------------------------------------------------------------------------
 # first_linter_tool() against an empty (isolated) plugins root
 # ---------------------------------------------------------------------------
 
