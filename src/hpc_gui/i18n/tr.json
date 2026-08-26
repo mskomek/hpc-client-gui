@@ -154,7 +154,8 @@
     "open_with_program_filter": "Programlar (*.exe);;Tüm dosyalar (*.*)",
     "open_with_save_title": "Dosya ilişkilendirmesi kaydedilsin mi?",
     "open_with_save_prompt": "{extension} dosyaları için bu program sonraki sefer de kullanılsın mı?",
-    "ansys_lint": "ANSYS Journal Denetimi"
+    "ansys_lint": "ANSYS Journal Denetimi",
+    "send_to_plugin": "Eklentiye gönder"
   },
   "editor": {
     "title": "Editör",
@@ -848,6 +849,7 @@
   "ansyslint": {
     "title": "ANSYS Journal Linter",
     "no_findings": "bulgular yok",
-    "summary_label": "{e} hata, {w} uyari, {i} bilgi"
+    "summary_label": "{e} hata, {w} uyari, {i} bilgi",
+    "fix_open_tool": "Düzelt (Eklentide aç)"
   }
 }

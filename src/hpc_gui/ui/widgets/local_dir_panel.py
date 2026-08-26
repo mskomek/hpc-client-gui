@@ -741,6 +741,9 @@ class LocalDirPanel(QWidget):
             and not one_is_dir
             and self._ansys_lint_supported(Path(str(paths[0])).suffix.lower())
         )
+        self._build_send_to_plugin_menu(
+            menu, str(paths[0]) if one_selected and not one_is_dir else None
+        )
         if one_selected and item is not None and bool(item.data(0, Qt.ItemDataRole.UserRole + 2)):
             act_upload.setEnabled(False)
             act_open.setEnabled(True)
@@ -789,11 +792,51 @@ class LocalDirPanel(QWidget):
 
         return suffix in supported_suffixes()
 
+    def _build_send_to_plugin_menu(self, menu, path_str: str | None):
+        """Attach a "send to plugin" submenu when a tool supports the file."""
+        if not path_str:
+            return None
+        from hpc_gui.plugins.linter_tools import tools_supporting_suffix
+
+        try:
+            tools = tools_supporting_suffix(Path(path_str).suffix.lower())
+        except Exception:  # defensive: menu building never breaks the panel
+            logger.warning("Tool lookup failed for %s", path_str, exc_info=True)
+            return None
+        if not tools:
+            return None
+        send_menu = menu.addMenu(t("files.send_to_plugin"))
+        for tool in tools:
+            action = send_menu.addAction(tool.title)
+            action.triggered.connect(
+                lambda _=False, tl=tool, p=path_str: self.open_in_tool(tl, p)
+            )
+        return send_menu
+
+    def open_in_tool(self, tool, path_str: str) -> None:
+        """Open a linter-tool page pre-loaded with one local file."""
+        from hpc_gui.ui.dialogs.linter_tool_host import host_tool_page
+
+        host_tool_page(
+            self,
+            tool,
+            initial_paths=[path_str],
+            title=f"{tool.title} — {Path(path_str).name}",
+        )
+
     def run_ansys_lint(self, path: Path) -> None:
         from hpc_gui.plugins.linter_tools import ToolLoadError, lint_paths_with_tool
         from hpc_gui.ui.dialogs.ansys_lint_results_dialog import (
             show_ansys_lint_results,
         )
+
+        def open_in_tool() -> None:
+            from hpc_gui.plugins.linter_tools import first_linter_tool
+
+            try:
+                self.open_in_tool(first_linter_tool(), str(path))
+            except Exception as exc:  # already messaged by the host
+                logger.warning("Fix redirect failed for %s", path, exc_info=exc)
 
         try:
             run = lint_paths_with_tool([path])
@@ -806,7 +849,9 @@ class LocalDirPanel(QWidget):
                 self, t("ansyslint.title"), f"{type(exc).__name__}: {exc}"
             )
             return
-        show_ansys_lint_results(self, f"{t('ansyslint.title')} — {path.name}", run)
+        show_ansys_lint_results(
+            self, f"{t('ansyslint.title')} — {path.name}", run, open_in_tool=open_in_tool
+        )
 
     def rename_selected(self) -> bool:
         selected = self._selected_items()

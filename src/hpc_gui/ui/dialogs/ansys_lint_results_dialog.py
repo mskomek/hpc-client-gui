@@ -71,8 +71,13 @@ def format_run_entries(run_result) -> list[tuple[str, list[str]]]:
     return groups
 
 
-def show_ansys_lint_results(parent, title: str, run_result) -> None:
-    """Modal results window grouped by file with severity colors."""
+def build_ansys_lint_results_dialog(parent, title: str, run_result, open_in_tool=None):
+    """Build the modal results window grouped by file with severity colors.
+
+    ``open_in_tool`` is an optional zero-argument callback that redirects
+    the user into the full linter tool ("Fix"); the button only appears
+    when it is supplied.
+    """
     dialog = QDialog(parent)
     dialog.setWindowTitle(title)
     dialog.resize(900, 560)
@@ -118,6 +123,16 @@ def show_ansys_lint_results(parent, title: str, run_result) -> None:
             parts.extend(lines)
         QApplication.clipboard().setText("\n".join(parts))
 
+    if open_in_tool is not None:
+        btn_fix = QPushButton(_tr("ansyslint.fix_open_tool", "Fix (open in tool)"))
+
+        def open_tool() -> None:
+            dialog.accept()
+            open_in_tool()
+
+        btn_fix.clicked.connect(open_tool)
+        buttons.addWidget(btn_fix)
+
     btn_copy = QPushButton(_tr("common.copy", "Copy"))
     btn_copy.clicked.connect(copy_all)
     buttons.addWidget(btn_copy)
@@ -126,4 +141,11 @@ def show_ansys_lint_results(parent, title: str, run_result) -> None:
     buttons.addWidget(btn_close)
     layout.addLayout(buttons)
 
-    dialog.exec()
+    return dialog
+
+
+def show_ansys_lint_results(parent, title: str, run_result, open_in_tool=None) -> None:
+    """Build and exec the modal results window."""
+    build_ansys_lint_results_dialog(
+        parent, title, run_result, open_in_tool=open_in_tool
+    ).exec()

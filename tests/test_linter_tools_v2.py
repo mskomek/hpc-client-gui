@@ -80,6 +80,148 @@ def test_supported_suffixes_empty_when_no_tool_installed(monkeypatch):
 
 
 # ---------------------------------------------------------------------------
+# tools_supporting_suffix() lists every supporting tool.
+# ---------------------------------------------------------------------------
+
+
+def _fake_tool(module_name, plugin_id):
+    return LinterTool(
+        plugin_id=plugin_id,
+        version="0.1.0",
+        title=plugin_id,
+        description="",
+        page_factory=lambda **kwargs: None,
+        module_name=module_name,
+    )
+
+
+def _install_fake_module(monkeypatch, module_name, suffixes):
+    package = types.ModuleType(module_name)
+    package.__path__ = []
+    api = types.ModuleType(f"{module_name}.api")
+    api.SUPPORTED_SUFFIXES = set(suffixes)
+    monkeypatch.setitem(sys.modules, module_name, package)
+    monkeypatch.setitem(sys.modules, f"{module_name}.api", api)
+
+
+def test_tools_supporting_suffix_filters_tools(monkeypatch):
+    from hpc_gui.plugins.linter_tools import tools_supporting_suffix
+
+    _install_fake_module(monkeypatch, "engine_a", {".jou", ".wbjn"})
+    _install_fake_module(monkeypatch, "engine_b", {".ccl"})
+    tools = [
+        _fake_tool("engine_a", "org.a"),
+        _fake_tool("engine_b", "org.b"),
+    ]
+    monkeypatch.setattr(
+        "hpc_gui.plugins.linter_tools.list_linter_tools", lambda *a, **k: tools
+    )
+    matches = tools_supporting_suffix(".jou")
+    assert [t.plugin_id for t in matches] == ["org.a"]
+    assert tools_supporting_suffix(".xyz") == []
+    assert tools_supporting_suffix("") == []
+
+
+def test_tools_supporting_suffix_tolerates_broken_engine(monkeypatch):
+    from hpc_gui.plugins.linter_tools import tools_supporting_suffix
+
+    _install_fake_module(monkeypatch, "engine_ok", {".jou"})
+    tools = [
+        _fake_tool("engine_missing", "org.missing"),  # module never registered
+        _fake_tool("engine_ok", "org.ok"),
+    ]
+    monkeypatch.setattr(
+        "hpc_gui.plugins.linter_tools.list_linter_tools", lambda *a, **k: tools
+    )
+    assert [t.plugin_id for t in tools_supporting_suffix(".jou")] == ["org.ok"]
+
+
+# ---------------------------------------------------------------------------
+# temp_copy_for_tool() / remove_temp_copy()
+# ---------------------------------------------------------------------------
+
+
+def test_temp_copy_preserves_suffix_and_content():
+    from hpc_gui.plugins.linter_tools import remove_temp_copy, temp_copy_for_tool
+
+    temp_path = temp_copy_for_tool("/file/read a.jou\n", "/truba/home/x/job.jou")
+    try:
+        assert temp_path.suffix == ".jou"
+        assert temp_path.read_text(encoding="utf-8") == "/file/read a.jou\n"
+        assert temp_path.exists()
+    finally:
+        remove_temp_copy(temp_path)
+    assert not temp_path.exists()
+
+
+def test_temp_copy_without_suffix_uses_txt():
+    from hpc_gui.plugins.linter_tools import remove_temp_copy, temp_copy_for_tool
+
+    temp_path = temp_copy_for_tool("data", "noextension")
+    try:
+        assert temp_path.suffix == ".txt"
+    finally:
+        remove_temp_copy(temp_path)
+
+
+# ---------------------------------------------------------------------------
+# Results dialog "Fix" redirect button.
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def qapp():
+    from PySide6.QtWidgets import QApplication
+
+    app = QApplication.instance() or QApplication([])
+    from hpc_gui.core.i18n import load_language
+
+    load_language("en")
+    yield app
+
+
+def _fake_run():
+    class _Run:
+        files = [_FileResult([])]
+
+    return _Run()
+
+
+def _fix_buttons(dialog):
+    from PySide6.QtWidgets import QPushButton
+
+    return [
+        b
+        for b in dialog.findChildren(QPushButton)
+        if "open in tool" in b.text()
+    ]
+
+
+def test_results_dialog_hides_fix_button_without_callback(qapp):
+    from hpc_gui.ui.dialogs.ansys_lint_results_dialog import (
+        build_ansys_lint_results_dialog,
+    )
+
+    dialog = build_ansys_lint_results_dialog(None, "Lint", _fake_run())
+    assert _fix_buttons(dialog) == []
+
+
+def test_results_dialog_fix_button_invokes_callback(qapp):
+    from hpc_gui.ui.dialogs.ansys_lint_results_dialog import (
+        build_ansys_lint_results_dialog,
+    )
+
+    fired = []
+    dialog = build_ansys_lint_results_dialog(
+        None, "Lint", _fake_run(), open_in_tool=lambda: fired.append(True)
+    )
+    buttons = _fix_buttons(dialog)
+    assert len(buttons) == 1
+    buttons[0].click()
+    assert fired == [True]
+
+
+# ---------------------------------------------------------------------------
 # first_linter_tool() against an empty (isolated) plugins root
 # ---------------------------------------------------------------------------
 
