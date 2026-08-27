@@ -34,7 +34,7 @@ from hpc_gui.cli.files import IF_EXISTS_CHOICES, download as download_files, upl
 from hpc_gui.cli.jobs import emit_job_result, jobs_backend
 
 
-CLI_VERSION = "1.5.2"
+CLI_VERSION = "1.5.3"
 
 ROOT_ALIASES = {
     "put": ("files", "upload"), "get": ("files", "download"),

@@ -5,7 +5,7 @@ import webbrowser
 from pathlib import Path
 
 from PySide6.QtWidgets import (
-    QApplication, QDialog, QMainWindow, QMessageBox, QProgressDialog,
+    QApplication, QDialog, QMainWindow, QMessageBox,
     QSystemTrayIcon, QTabWidget, QTextEdit, QVBoxLayout, QPushButton
 )
 from PySide6.QtWidgets import (
@@ -50,6 +50,7 @@ from hpc_gui.config.storage import (
 )
 from .dialogs.quick_tour import QuickTourOverlay
 from .async_call import AsyncCall
+from .splash_screen import UpdateSplash
 
 
 class _BackgroundCall(QObject):
@@ -123,7 +124,7 @@ class MainWindow(QMainWindow):
         self._update_jobs: set[QThread] = set()
         self._update_workers: dict[QThread, _BackgroundCall] = {}
         self._update_busy_count = 0
-        self._update_progress: QProgressDialog | None = None
+        self._update_progress: UpdateSplash | None = None
         self._update_manual = False
         self._update_interactive = False
         self._update_cancelled = False
@@ -464,13 +465,8 @@ class MainWindow(QMainWindow):
 
     def _show_update_progress(self, value: int, status_key: str) -> None:
         if self._update_progress is None:
-            dialog = QProgressDialog(self)
+            dialog = UpdateSplash(self)
             dialog.setWindowTitle(t("updates.progress_title"))
-            dialog.setCancelButton(None)
-            dialog.setAutoClose(False)
-            dialog.setAutoReset(False)
-            dialog.setMinimumDuration(0)
-            dialog.setRange(0, 100)
             dialog.setWindowModality(Qt.WindowModality.WindowModal)
             dialog.rejected.connect(self._cancel_update_jobs)
             self._update_progress = dialog
@@ -483,8 +479,7 @@ class MainWindow(QMainWindow):
         label = t(f"updates.status_{status_key}")
         if label.startswith("[updates.status_"):
             label = status_key
-        self._update_progress.setLabelText(label)
-        self._update_progress.setValue(max(0, min(100, int(value))))
+        self._update_progress.set_status(label, value)
 
     def _close_update_progress(self) -> None:
         if self._update_progress is not None:

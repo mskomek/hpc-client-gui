@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## v1.5.3
+
+### Local plugin checks
+- Added a splash-sized update status window with live download and verification progress.
+- Grouped local file plugin actions under an `Eklentiler` / `Plugins` submenu.
+- Enabled ANSYS Journal lint for installed declarative lint packs, including multi-file `.jou` checks.
+
 ## v1.5.2
 
 ### macOS and release reliability
