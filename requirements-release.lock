@@ -2,11 +2,11 @@ altgraph==0.17.5
 backports.tarfile==1.2.0
 bcrypt==5.0.0
 cffi==2.1.1
-cryptography==48.0.1
+cryptography==50.0.0
 iniconfig==2.3.0
 importlib_metadata==8.7.0
 jaraco.classes==3.4.0
-jaraco.context==6.0.1
+jaraco.context==6.1.0
 jaraco.functools==4.1.0
 keyring==25.6.0
 invoke==3.0.3
