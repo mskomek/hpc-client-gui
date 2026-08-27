@@ -64,7 +64,8 @@ her aracın denetimlerini de ekler; tam journal denetimi için ayrıca sağ
 tıklama **ANSYS Journal Denetimi** ya da **Eklentiye gönder ▸** de
 kullanılabilir (bkz. [Eklentiler](#eklentiler)). Birden fazla dosya
 (2–10) seçimi, her dosyanın türünü ortak bir araç desteklediğinde
-desteklenir.
+desteklenir; tek bir klasör seçimi de içinde desteklenen dosyalar
+varsa desteklenir (özyinelemeli tarama).
 
 ### Varsayılan yerel klasör (profil başına)
 

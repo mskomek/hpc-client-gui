@@ -64,7 +64,8 @@ runs every supporting tool and merges its diagnostics; for full journal
 linting you can also use the right-click **ANSYS Journal Lint** quick
 check or **Send to plugin ▸** (see [Plugins](#plugins)). Selecting
 multiple files (2–10) is supported when every file's type is supported
-by a common tool.
+by a common tool; a single folder is also supported when it contains
+supported files (scanned recursively).
 
 ### Default local folder (per profile)
 

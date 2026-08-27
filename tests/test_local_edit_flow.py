@@ -142,3 +142,48 @@ def test_local_panel_edit_ignores_directories(qapp, tmp_path, monkeypatch):
 
     panel._edit_selected(new_window=False)
     assert captured == []
+
+
+def test_folder_contains_supported_file(qapp, tmp_path, monkeypatch):
+    from hpc_gui.ui.widgets.local_dir_panel import LocalDirPanel
+
+    sub = tmp_path / "sub"
+    sub.mkdir()
+    (sub / "job.jou").write_text("x", encoding="utf-8")
+    (tmp_path / "other").mkdir()
+    (tmp_path / "other" / "notes.xyz").write_text("x", encoding="utf-8")
+
+    monkeypatch.setattr(
+        "hpc_gui.plugins.linter_tools.supported_suffixes",
+        lambda: frozenset({".jou"}),
+    )
+    panel = LocalDirPanel(str(tmp_path))
+    assert panel._folder_contains_supported_file(str(sub)) is True
+    assert panel._folder_contains_supported_file(str(tmp_path / "other")) is False
+    assert panel._folder_contains_supported_file(str(tmp_path / "other" / "notes.xyz")) is False
+
+
+def test_tools_for_folder_lists_supporting_tools(qapp, tmp_path, monkeypatch):
+    from hpc_gui.plugins.linter_tools import LinterTool
+    from hpc_gui.ui.widgets.local_dir_panel import LocalDirPanel
+
+    sub = tmp_path / "sub2"
+    sub.mkdir()
+    (sub / "job.jou").write_text("x", encoding="utf-8")
+
+    tool = LinterTool("org.fake", "0.1.0", "Fake", "", lambda **k: None, "mod")
+    monkeypatch.setattr(
+        "hpc_gui.plugins.linter_tools.list_linter_tools",
+        lambda *a, **k: [tool],
+    )
+    monkeypatch.setattr(
+        "hpc_gui.plugins.linter_tools.tool_supported_suffixes",
+        lambda t: frozenset({".jou"}),
+    )
+    panel = LocalDirPanel(str(tmp_path))
+    tools = panel._tools_for_folder(str(sub))
+    assert [t.plugin_id for t in tools] == ["org.fake"]
+
+    (sub / "job.jou").unlink()
+    (sub / "notes.xyz").write_text("x", encoding="utf-8")
+    assert panel._tools_for_folder(str(sub)) == []

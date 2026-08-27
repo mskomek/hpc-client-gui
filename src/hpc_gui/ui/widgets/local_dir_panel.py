@@ -744,21 +744,40 @@ class LocalDirPanel(QWidget):
         act_create_dir_enter.setEnabled(bool(self.current_dir))
         act_delete.setEnabled(bool(paths))
         act_rename.setEnabled(one_selected)
-        # Batch-aware lint: enable when 1-10 files and a common tool exists.
+        # Batch-aware lint: 1-10 files with a common tool, or a single folder
+        # containing at least one supported file.
         lint_batch_ok = False
+        folder_lint_path: str | None = None
         if paths:
-            all_files = all(not Path(str(p)).is_dir() for p in paths)
-            if all_files and 1 <= len(paths) <= 10:
+            if one_selected and one_is_dir:
                 try:
-                    from hpc_gui.plugins.linter_tools import tools_supporting_all_suffixes
-
-                    suffixes = [Path(str(p)).suffix.lower() for p in paths]
-                    lint_batch_ok = bool(tools_supporting_all_suffixes(suffixes))
+                    if self._folder_contains_supported_file(str(paths[0])):
+                        lint_batch_ok = True
+                        folder_lint_path = str(paths[0])
                 except Exception:
                     lint_batch_ok = False
+            else:
+                all_files = all(not Path(str(p)).is_dir() for p in paths)
+                if all_files and 1 <= len(paths) <= 10:
+                    try:
+                        from hpc_gui.plugins.linter_tools import tools_supporting_all_suffixes
+
+                        suffixes = [Path(str(p)).suffix.lower() for p in paths]
+                        lint_batch_ok = bool(tools_supporting_all_suffixes(suffixes))
+                    except Exception:
+                        lint_batch_ok = False
         act_ansys_lint = menu.addAction(t("files.ansys_lint"))
         act_ansys_lint.setEnabled(lint_batch_ok)
-        if len(paths) == 1 and not one_is_dir:
+        if one_selected and one_is_dir and folder_lint_path:
+            tools = self._tools_for_folder(folder_lint_path)
+            if tools:
+                send_menu = menu.addMenu(t("files.send_to_plugin"))
+                for tool in tools:
+                    action = send_menu.addAction(tool.title)
+                    action.triggered.connect(
+                        lambda _=False, tl=tool, p=folder_lint_path: self.open_in_tool(tl, p)
+                    )
+        elif len(paths) == 1 and not one_is_dir:
             self._build_send_to_plugin_menu(
                 menu, str(paths[0]) if one_selected and not one_is_dir else None
             )
@@ -828,6 +847,48 @@ class LocalDirPanel(QWidget):
             else:
                 self.run_ansys_lint_batch([Path(str(p)) for p in paths])
             return
+
+    def _folder_contains_supported_file(self, folder: str) -> bool:
+        from hpc_gui.plugins.linter_tools import supported_suffixes
+
+        try:
+            supported = supported_suffixes()
+            if not supported:
+                return False
+            count = 0
+            for p in Path(folder).rglob("*"):
+                if p.is_file() and p.suffix.lower() in supported:
+                    return True
+                count += 1
+                if count > 200:
+                    break
+        except Exception:
+            return False
+        return False
+
+    def _tools_for_folder(self, folder: str) -> list:
+        from hpc_gui.plugins.linter_tools import list_linter_tools, tool_supported_suffixes
+
+        try:
+            supported = set()
+            for p in Path(folder).rglob("*"):
+                if p.is_file():
+                    sfx = p.suffix.lower()
+                    if sfx:
+                        supported.add(sfx)
+                    if len(supported) > 20:
+                        break
+            if not supported:
+                return []
+            tools = []
+            for tool in list_linter_tools():
+                declared = tool_supported_suffixes(tool)
+                if declared & supported:
+                    tools.append(tool)
+            return tools
+        except Exception:
+            logger.warning("Tool lookup failed for folder %s", folder, exc_info=True)
+            return []
 
     @staticmethod
     def _ansys_lint_supported(suffix: str) -> bool:
