@@ -154,6 +154,7 @@
     "open_with_program_filter": "Programs (*.exe);;All files (*.*)",
     "open_with_save_title": "Save file association?",
     "open_with_save_prompt": "Use this program for {extension} files next time?",
+    "plugins": "Plugins",
     "ansys_lint": "ANSYS Journal Lint",
     "no_supported_remote_lint_files": "No supported lint files were found in this remote folder.",
     "send_to_plugin": "Send to plugin"

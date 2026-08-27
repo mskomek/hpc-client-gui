@@ -758,20 +758,23 @@ class LocalDirPanel(QWidget):
                     lint_batch_ok = False
             else:
                 all_files = all(not Path(str(p)).is_dir() for p in paths)
-                if all_files and 1 <= len(paths) <= 10:
-                    try:
-                        from hpc_gui.plugins.linter_tools import tools_supporting_all_suffixes
-
-                        suffixes = [Path(str(p)).suffix.lower() for p in paths]
-                        lint_batch_ok = bool(tools_supporting_all_suffixes(suffixes))
-                    except Exception:
-                        lint_batch_ok = False
-        act_ansys_lint = menu.addAction(t("files.ansys_lint"))
-        act_ansys_lint.setEnabled(lint_batch_ok)
+                if all_files and paths:
+                    suffixes = [Path(str(p)).suffix.lower() for p in paths]
+                    lint_batch_ok = self._local_lint_supports_suffixes(suffixes)
+        plugin_menu = menu.addMenu(t("files.plugins")) if paths else None
+        act_ansys_lint = (
+            plugin_menu.addAction(t("files.ansys_lint"))
+            if plugin_menu is not None
+            else None
+        )
+        if act_ansys_lint is not None:
+            act_ansys_lint.setEnabled(lint_batch_ok)
         if one_selected and one_is_dir and folder_lint_path:
             tools = self._tools_for_folder(folder_lint_path)
             if tools:
-                send_menu = menu.addMenu(t("files.send_to_plugin"))
+                send_menu = plugin_menu.addMenu(t("files.send_to_plugin")) if plugin_menu else None
+                if send_menu is None:
+                    tools = []
                 for tool in tools:
                     action = send_menu.addAction(tool.title)
                     action.triggered.connect(
@@ -779,7 +782,7 @@ class LocalDirPanel(QWidget):
                     )
         elif len(paths) == 1 and not one_is_dir:
             self._build_send_to_plugin_menu(
-                menu, str(paths[0]) if one_selected and not one_is_dir else None
+                plugin_menu, str(paths[0]) if one_selected and not one_is_dir else None
             )
         elif lint_batch_ok:
             # Batch submenu: tools supporting every selected file.
@@ -791,7 +794,9 @@ class LocalDirPanel(QWidget):
             except Exception:
                 batch_tools = []
             if batch_tools:
-                send_menu = menu.addMenu(t("files.send_to_plugin"))
+                send_menu = plugin_menu.addMenu(t("files.send_to_plugin")) if plugin_menu else None
+                if send_menu is None:
+                    batch_tools = []
                 for tool in batch_tools:
                     action = send_menu.addAction(tool.title)
                     action.triggered.connect(
@@ -841,7 +846,7 @@ class LocalDirPanel(QWidget):
         if chosen == act_rename:
             self.rename_selected()
             return
-        if chosen == act_ansys_lint:
+        if act_ansys_lint is not None and chosen == act_ansys_lint:
             if len(paths) == 1:
                 self.run_ansys_lint(Path(str(paths[0])))
             else:
@@ -849,10 +854,8 @@ class LocalDirPanel(QWidget):
             return
 
     def _folder_contains_supported_file(self, folder: str) -> bool:
-        from hpc_gui.plugins.linter_tools import supported_suffixes
-
         try:
-            supported = supported_suffixes()
+            supported = self._local_lint_suffixes()
             if not supported:
                 return False
             count = 0
@@ -865,6 +868,34 @@ class LocalDirPanel(QWidget):
         except Exception:
             return False
         return False
+
+    @staticmethod
+    def _local_lint_suffixes() -> set[str]:
+        """Return suffixes supported by installed declarative or v2 linters."""
+        suffixes: set[str] = set()
+        try:
+            from hpc_gui.plugins.linter_tools import list_linter_tools, tool_supported_suffixes
+
+            for tool in list_linter_tools():
+                suffixes.update(tool_supported_suffixes(tool))
+        except Exception:
+            pass
+        try:
+            from hpc_gui.lint.rulepack import load_lint_packs
+
+            for pack in load_lint_packs():
+                for pattern in pack.file_patterns:
+                    suffix = Path(pattern).suffix.lower()
+                    if suffix and not any(char in suffix for char in "*?["):
+                        suffixes.add(suffix)
+        except Exception:
+            pass
+        return suffixes
+
+    @classmethod
+    def _local_lint_supports_suffixes(cls, suffixes: list[str]) -> bool:
+        supported = cls._local_lint_suffixes()
+        return bool(suffixes) and all(suffix.lower() in supported for suffix in suffixes)
 
     def _tools_for_folder(self, folder: str) -> list:
         from hpc_gui.plugins.linter_tools import list_linter_tools, tool_supported_suffixes
@@ -905,7 +936,7 @@ class LocalDirPanel(QWidget):
             return
         self.editRequested.emit(path, new_window)
 
-    def _build_send_to_plugin_menu(self, menu, path_str: str | None):
+    def _build_send_to_plugin_menu(self, plugin_menu, path_str: str | None):
         """Attach a "send to plugin" submenu when a tool supports the file."""
         if not path_str:
             return None
@@ -918,7 +949,9 @@ class LocalDirPanel(QWidget):
             return None
         if not tools:
             return None
-        send_menu = menu.addMenu(t("files.send_to_plugin"))
+        if plugin_menu is None:
+            return None
+        send_menu = plugin_menu.addMenu(t("files.send_to_plugin"))
         for tool in tools:
             action = send_menu.addAction(tool.title)
             action.triggered.connect(
@@ -968,7 +1001,11 @@ class LocalDirPanel(QWidget):
         try:
             run = lint_paths_with_tool([path])
         except ToolLoadError as exc:
-            QMessageBox.warning(self, t("ansyslint.title"), str(exc))
+            diagnostics = self._run_local_rulepack_lint(path)
+            if diagnostics is None:
+                QMessageBox.warning(self, t("ansyslint.title"), str(exc))
+            else:
+                self._show_local_lint_results(path, diagnostics)
             return
         except Exception as exc:  # defensive: engine failures stay contained
             logger.warning("ANSYS lint failed for %s", path, exc_info=exc)
@@ -979,6 +1016,36 @@ class LocalDirPanel(QWidget):
         show_ansys_lint_results(
             self, f"{t('ansyslint.title')} — {path.name}", run, open_in_tool=open_in_tool
         )
+
+    @staticmethod
+    def _run_local_rulepack_lint(path: Path) -> list | None:
+        from hpc_gui.lint.engine import lint_text
+        from hpc_gui.lint.rulepack import load_lint_packs
+
+        try:
+            text = path.read_text(encoding="utf-8")
+            packs = [pack for pack in load_lint_packs() if pack.matches(str(path))]
+            if not packs:
+                return None
+            diagnostics = []
+            for pack in packs:
+                diagnostics.extend(lint_text(text, file_name=str(path), rule_pack=pack))
+            return diagnostics
+        except (OSError, UnicodeError):
+            return None
+
+    def _show_local_lint_results(self, path: Path, diagnostics: list) -> None:
+        if not diagnostics:
+            QMessageBox.information(
+                self, t("ansyslint.title"), f"{path.name}: {t('editor.lint_ok')}"
+            )
+            return
+        lines = []
+        for diagnostic in diagnostics:
+            location = f"{diagnostic.line}:{diagnostic.column or 1}" if diagnostic.line else "-"
+            severity = getattr(diagnostic.severity, "value", diagnostic.severity)
+            lines.append(f"[{location}] {severity}: {diagnostic.message} ({diagnostic.rule_id})")
+        QMessageBox.warning(self, t("ansyslint.title"), "\n".join(lines))
 
     def run_ansys_lint_batch(self, paths: list[Path]) -> None:
         from hpc_gui.plugins.linter_tools import ToolLoadError, lint_paths_with_tool
@@ -1004,7 +1071,21 @@ class LocalDirPanel(QWidget):
         try:
             run = lint_paths_with_tool(paths)
         except ToolLoadError as exc:
-            QMessageBox.warning(self, t("ansyslint.title"), str(exc))
+            results = [(path, self._run_local_rulepack_lint(path)) for path in paths]
+            if any(diagnostics is not None for _path, diagnostics in results):
+                lines = []
+                for path, diagnostics in results:
+                    lines.append(f"{path.name}:")
+                    if diagnostics:
+                        lines.extend(
+                            f"  [{d.line}:{d.column or 1}] {d.message} ({d.rule_id})"
+                            for d in diagnostics
+                        )
+                    else:
+                        lines.append(f"  {t('editor.lint_ok')}")
+                QMessageBox.warning(self, t("ansyslint.title"), "\n".join(lines))
+            else:
+                QMessageBox.warning(self, t("ansyslint.title"), str(exc))
             return
         except Exception as exc:  # defensive: engine failures stay contained
             logger.warning("ANSYS lint failed for %s", paths, exc_info=exc)
