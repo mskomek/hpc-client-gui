@@ -2172,6 +2172,7 @@ class RemoteDirPanel(QWidget):
             open_in_tool=open_in_tool,
         )
 
+    @staticmethod
     def _submit_candidate(entries: List[Tuple[str, bool]]) -> str:
         if len(entries) != 1:
             return ""

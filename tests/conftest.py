@@ -49,5 +49,11 @@ def _no_main_window_startup_popups():
             "_check_for_updates",
             lambda self, manual=True: None,
         ),
-    ):
-        yield
+        ):
+            yield
+
+
+@pytest.fixture(autouse=True)
+def _isolate_plugin_data(tmp_path, monkeypatch):
+    """Prevent developer-installed plugins from changing offline test results."""
+    monkeypatch.setattr("hpc_gui.plugins.storage.app_data_dir", lambda: tmp_path)

@@ -2,27 +2,50 @@ name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
 
-# One run per branch/PR: a new push cancels the superseded run for the
-# same ref. Release builds are handled by their own workflow and are never
-# auto-cancelled.
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.head_ref || github.ref }}
   cancel-in-progress: true
 
+env:
+  PYTHONPATH: src
+  QT_QPA_PLATFORM: offscreen
+  HPC_GUI_DISABLE_WEBENGINE: "1"
+
 jobs:
-  compat:
-    name: Compatibility (${{ matrix.python-version }})
+  quality:
+    name: Quality (Python 3.11)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.11"
+      - name: Install Qt runtime
+        run: sudo apt-get update && sudo apt-get install --yes libegl1
+      - name: Install development dependencies
+        run: python -m pip install --requirement requirements-dev.txt
+      - name: Run all local pre-push checks
+        run: python scripts/ci.py pre-push
+      - name: Upload coverage reports
+        if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: coverage-${{ github.run_id }}
+          if-no-files-found: ignore
+          path: |
+            coverage.json
+            coverage.xml
+
+  compatibility:
+    name: Compatibility (Python ${{ matrix.python-version }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         python-version: ["3.10", "3.12"]
-    env:
-      PYTHONPATH: src
-      QT_QPA_PLATFORM: offscreen
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
@@ -30,89 +53,10 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install Qt runtime
         run: sudo apt-get update && sudo apt-get install --yes libegl1
-      - name: Install deps
-        run: |
-          python -m pip install --upgrade pip
-          pip install -e .[test]
-          pip install pytest
-      - name: Compile check
-        run: python -m compileall src/hpc_gui
-      - name: i18n drift gate
-        run: python scripts/check_i18n.py
-      - name: Headless smoke tests
-        run: >
-          python -m pytest tests/test_cli.py tests/test_cli_entrypoint.py
-          tests/test_config_storage_atomic.py tests/test_profile_identity.py
-          tests/test_profile_transfer_settings.py tests/test_slurm_models.py
-          tests/test_slurm_script_parser.py tests/test_remote_entry_helpers.py
-          tests/test_upload_pipelining.py tests/test_version_consistency.py
-          -q --tb=short -rf
-
-  cli:
-    runs-on: ubuntu-latest
-    env:
-      PYTHONPATH: src
-      QT_QPA_PLATFORM: offscreen
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
-        with:
-          python-version: "3.11"
-      - name: Install Qt runtime
-        run: sudo apt-get update && sudo apt-get install --yes libegl1
-      - name: Install deps
-        run: |
-          python -m pip install --upgrade pip
-          pip install -e .[test]
-          pip install pytest
-      - name: Compile check
-        run: python -m compileall src/hpc_gui
-      - name: i18n drift gate
-        run: python scripts/check_i18n.py
-      - name: Smoke test
-        run: python scripts/smoke_test.py
-      - name: CLI test suite
-        run: python -m pytest tests/test_cli.py tests/test_cli_entrypoint.py -q --tb=short -rf
-
-
-  docs:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
-        with:
-          python-version: "3.11"
-      - name: Branding string gate
-        run: python scripts/check_branding.py
-      - name: Release surface gate
-        run: python scripts/check_release_surface.py
-      - name: Wiki source gate
-        run: |
-          if [ -d docs/wiki ]; then
-            python scripts/check_wiki.py
-          else
-            echo "wiki check: SKIPPED (docs/wiki is outside the main sync boundary)"
-          fi
-
-  ssh_sftp:
-    runs-on: ubuntu-latest
-    env:
-      PYTHONPATH: src
-      QT_QPA_PLATFORM: offscreen
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
-        with:
-          python-version: "3.11"
-      - name: Install Qt runtime
-        run: sudo apt-get update && sudo apt-get install --yes libegl1
-      - name: Install deps
-        run: |
-          python -m pip install --upgrade pip
-          pip install -e .[test]
-          pip install pytest
-      - name: SSH and SFTP test suite
-        run: python -m pytest tests/test_optional_ssh_credentials.py tests/test_slurm_ssh.py tests/test_local_transfer_gate.py tests/test_transfer_wave17.py tests/test_transfer_controller.py tests/test_profile_transfer_settings.py -q --tb=short -rf
+      - name: Install development dependencies
+        run: python -m pip install --requirement requirements-dev.txt
+      - name: Run compatibility checks
+        run: python scripts/ci.py compat
 
   macos:
     name: macOS (${{ matrix.arch }})
@@ -125,179 +69,48 @@ jobs:
             arch: arm64
           - os: macos-15-intel
             arch: x86_64
-    env:
-      PYTHONPATH: src
-      QT_QPA_PLATFORM: offscreen
-      HPC_GUI_DISABLE_WEBENGINE: "1"
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.11"
-      - name: Cache pip downloads
-        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
-        with:
-          path: ~/Library/Caches/pip
-          key: macos-${{ matrix.arch }}-py311-${{ hashFiles('requirements-release.lock') }}
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -e .[test]
-          pip install ruff pytest
-      - name: Compile check
-        run: python -m compileall src/hpc_gui
-      - name: macOS boundary and release-surface tests
-        run: >
-          python -m pytest tests/test_platform.py tests/test_paths.py
-          tests/test_app_updater.py tests/test_secret_store.py
-          tests/test_macos_product_surface.py tests/test_macos_x11.py
-          tests/test_macos_release.py tests/test_macos_packaging_spec.py
-          tests/test_version_consistency.py -q --tb=short -rf
-      - name: Representative portable contracts
-        run: >
-          python -m pytest tests/test_optional_ssh_credentials.py
-          tests/test_slurm_ssh.py tests/test_local_transfer_gate.py
-          tests/test_profile_transfer_settings.py tests/test_plugin_contract.py
-          -q --tb=short -rf
-      - name: Ruff gate
-        run: ruff check src scripts tests
-      - name: WebEngine/package surface smoke
-        env:
-          HPC_GUI_DISABLE_WEBENGINE: "0"
-        run: >
-          python -m pytest tests/test_macos_packaging_spec.py
-          tests/test_terminal_assets.py tests/test_terminal_bridge.py
-          -q --tb=short -rf
+      - name: Install development dependencies
+        run: python -m pip install --requirement requirements-dev.txt
+      - name: Run macOS checks
+        run: python scripts/ci.py macos
 
   windows:
+    name: Windows
     runs-on: windows-latest
-    env:
-      PYTHONPATH: src
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.11"
-      - name: Install deps
-        run: |
-          python -m pip install --upgrade pip
-          pip install -e .[test]
-          pip install pytest
-      - name: Windows boundary tests
-        run: python -m pytest tests/test_safe_download.py tests/test_version_consistency.py tests/test_startup_changelog.py -q --tb=short
-      - name: Terminal transport tests
-        run: |
-          python -m unittest discover -s tests -p "test_terminal_*.py"
-          python -m unittest discover -s tests -p "test_ssh_terminal_stream.py"
-  lint:
-    name: Lint (Ruff)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
-        with:
-          python-version: "3.11"
-      - name: Install Ruff
-        run: pip install "ruff>=0.4"
-      - name: Ruff check (E4/E7/E9/F)
-        run: ruff check src scripts tests
-
-  dependency_audit:
-    name: Dependency audit (pip-audit)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
-        with:
-          python-version: "3.11"
-      - name: Install runtime dependency closure in an isolated environment
-        run: |
-          python -m venv .venv-audit
-          .venv-audit/bin/python -m pip install --upgrade pip
-          .venv-audit/bin/pip install -e .
-          # Keep build tooling at advisory-free versions before auditing.
-          .venv-audit/bin/pip install --upgrade setuptools
-          .venv-audit/bin/pip install pip-audit
-      - name: Audit runtime dependency closure
-        run: .venv-audit/bin/pip-audit --skip-editable --progress-spinner off
+      - name: Install development dependencies
+        shell: pwsh
+        run: python -m pip install --requirement requirements-dev.txt
+      - name: Run Windows checks
+        shell: pwsh
+        run: python scripts/ci.py windows
 
   contract:
     name: Plugin API contract
     runs-on: ubuntu-latest
     env:
-      PYTHONPATH: src
-      QT_QPA_PLATFORM: offscreen
-      # Release pinning: point `ref:` below at an explicit plugins commit or
-      # tag before cutting a release, and advance it intentionally afterwards.
-      # The default follows the registry's main branch during development.
       HPC_GUI_CONTRACT_REPO: ${{ github.workspace }}/hpc-client-gui-plugins
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - name: Check out the official plugin registry (sibling directory)
+      - name: Check out official plugin registry
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           repository: mskomek/hpc-client-gui-plugins
-          # Release pin: explicit registry tag. Advance intentionally
-          # (see PRODUCTION_CHECKLIST.md §11).
           ref: v1.0.0
           path: hpc-client-gui-plugins
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.11"
-      - name: Install deps
-        # The contract suite is deliberately lightweight: it exercises the
-        # plugin stack without importing Qt, so no GUI dependencies install.
-        run: |
-          python -m pip install --upgrade pip
-          pip install pytest packaging jsonschema
-      - name: Cross-repository plugin contract tests
-        run: >
-          python -m pytest tests/test_plugin_contract.py -q --tb=short -rf
-
-  gui:
-    runs-on: ubuntu-latest
-    env:
-      PYTHONPATH: src
-      QT_QPA_PLATFORM: offscreen
-      # Keep the WebEngine terminal disabled under coverage so interpreter
-      # teardown cannot segfault (same guard as tests/conftest.py).
-      HPC_GUI_DISABLE_WEBENGINE: "1"
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
-        with:
-          python-version: "3.11"
-      - name: Install Qt runtime
-        run: sudo apt-get update && sudo apt-get install --yes libegl1
-      - name: Install deps
-        run: |
-          python -m pip install --upgrade pip
-          pip install -e .[test]
-          pip install pytest pytest-cov
-      - name: GUI and offline test suite (coverage gate)
-        # Shared release/CI test definition: the release preflight runs the
-        # same suite (scripts/release_test_suite.py) so a red suite always
-        # blocks publication too. The coverage flags live only here.
-        run: >
-          python scripts/release_test_suite.py --coverage
-      - name: Module-specific coverage floors
-        run: python scripts/check_module_coverage.py coverage.xml
-
-  packaging:
-    name: Packaging (wheel assets)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
-        with:
-          python-version: "3.11"
-      - name: Install build tooling and runtime dependency set only
-        run: |
-          python -m pip install --upgrade pip
-          pip install build packaging
-          pip install -r requirements.txt
-          pip install pytest pyftpdlib paramiko cryptography pyside6
-      - name: Wheel asset and metadata smoke test
-        env:
-          PYTHONPATH: src
-        run: python -m pytest tests/test_wheel_packaging.py -m packaging -q
+      - name: Install contract dependencies
+        run: python -m pip install pytest packaging jsonschema
+      - name: Run contract checks
+        run: python scripts/ci.py contract

@@ -69,7 +69,7 @@ jobs:
           PYTHONPATH: src
           QT_QPA_PLATFORM: offscreen
           HPC_GUI_DISABLE_WEBENGINE: "1"
-        run: python scripts/release_test_suite.py
+        run: python scripts/ci.py release
       - name: Validate Linux packaging plan
         run: |
           python scripts/release_linux.py --version "${{ github.event.inputs.version }}" --json
@@ -124,7 +124,7 @@ jobs:
           PYTHONPATH: src
           QT_QPA_PLATFORM: offscreen
           HPC_GUI_DISABLE_WEBENGINE: "1"
-        run: python scripts/release_test_suite.py
+        run: python scripts/ci.py release
       - name: Build release artifacts
         shell: pwsh
         run: ./scripts/release.ps1 -Version "${{ github.event.inputs.version }}"

@@ -190,10 +190,10 @@ def test_release_preflight_shares_the_ci_test_suite():
     linux = _job_block("build-linux")
     windows = _job_block("build-windows")
     for block in (linux, windows):
-        assert "release_test_suite.py" in block
+        assert "python scripts/ci.py release" in block
         assert "unittest discover" not in block
     ci = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
-    assert "release_test_suite.py --coverage" in ci
+    assert "python scripts/ci.py pre-push" in ci
 
 
 def test_release_notes_are_generated_from_the_changelog():
