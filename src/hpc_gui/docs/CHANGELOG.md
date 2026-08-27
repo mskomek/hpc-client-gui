@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## v1.5.2
+
+### macOS and release reliability
+- Restored macOS x86_64 compatibility by selecting a supported `cryptography` version for Intel Macs.
+- Fixed the final release gate so x86_64 job results are evaluated under their complete job IDs.
+- Kept macOS release artifacts unsigned when the unsigned publication mode is selected, with checksums and clear Gatekeeper guidance.
+
 ## v1.5.1
 
 ### CI and developer workflow
