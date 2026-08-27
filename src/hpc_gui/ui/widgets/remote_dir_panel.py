@@ -174,6 +174,50 @@ class _DirectoryListingWorker(QRunnable):
         self.signals.finished.emit(self.token)
 
 
+class _RemoteLintSignals(QObject):
+    finished = Signal(object)
+    failed = Signal(object)
+
+
+class _RemoteLintWorker(QRunnable):
+    """Read and lint a remote folder without blocking the Qt event loop."""
+
+    # ponytail: cap remote scans at 200 files; add paged/cancellable scanning if needed.
+    MAX_FILES = 200
+
+    def __init__(self, files, remote_dir: str) -> None:
+        super().__init__()
+        self.files = files
+        self.remote_dir = remote_dir.rstrip("/") or "/"
+        self.signals = _RemoteLintSignals()
+
+    @Slot()
+    def run(self) -> None:
+        try:
+            from hpc_gui.plugins.linter_tools import lint_text_with_tool, supported_suffixes
+
+            supported = supported_suffixes()
+            paths: list[str] = []
+            pending = [self.remote_dir]
+            while pending and len(paths) < self.MAX_FILES:
+                current = pending.pop()
+                for entry in self.files.listdir_entries(current):
+                    path = entry.path.rstrip("/")
+                    if entry.is_dir:
+                        pending.append(path)
+                    elif RemoteDirPanel._remote_suffix(path) in supported:
+                        paths.append(path)
+                        if len(paths) >= self.MAX_FILES:
+                            break
+            results = [
+                lint_text_with_tool(self.files.read_text(path), file_name=path)
+                for path in paths
+            ]
+            self.signals.finished.emit((paths, results))
+        except Exception as exc:
+            self.signals.failed.emit(exc)
+
+
 REMOTE_CONTEXT_MENU_LABELS = [
     "Download",
     "Add files to queue",
@@ -770,6 +814,7 @@ class RemoteDirPanel(QWidget):
         self._directory_cache: Dict[str, Tuple[float, List[RemoteEntry]]] = {}
         self._listing_generation = 0
         self._listing_worker: Optional[_DirectoryListingWorker] = None
+        self._remote_lint_worker: Optional[_RemoteLintWorker] = None
         self._pending_listing: Optional[Tuple[object, str]] = None
         self._dirty_views: set[str] = set()
         self._navigation_store = None
@@ -2073,6 +2118,60 @@ class RemoteDirPanel(QWidget):
             open_in_tool=open_in_tool,
         )
 
+    def run_ansys_lint_folder(self, remote_path: str) -> None:
+        files = (self.session or {}).get("files")
+        if not files:
+            QMessageBox.warning(self, t("common.error"), t("common.no_connection"))
+            return
+        if self._remote_lint_worker is not None:
+            return
+        worker = _RemoteLintWorker(files, remote_path)
+        self._remote_lint_worker = worker
+        worker.signals.finished.connect(self._on_remote_lint_finished)
+        worker.signals.failed.connect(self._on_remote_lint_failed)
+        QThreadPool.globalInstance().start(worker)
+
+    def _on_remote_lint_failed(self, error: object) -> None:
+        self._remote_lint_worker = None
+        logger.warning("Remote folder lint failed: %r", error)
+        QMessageBox.warning(self, t("ansyslint.title"), f"{type(error).__name__}: {error}")
+
+    def _on_remote_lint_finished(self, payload: object) -> None:
+        from hpc_gui.ui.dialogs.ansys_lint_results_dialog import (
+            show_ansys_lint_results,
+        )
+
+        self._remote_lint_worker = None
+        remote_paths, file_results = payload
+        if not remote_paths:
+            QMessageBox.information(
+                self, t("ansyslint.title"), t("files.no_supported_remote_lint_files")
+            )
+            return
+        import types
+
+        totals = {"error": 0, "warning": 0, "info": 0}
+        for result in file_results:
+            for key in totals:
+                totals[key] += result.summary.get(key, 0)
+        run = types.SimpleNamespace(files=file_results, summary=totals)
+
+        def open_in_tool() -> None:
+            from hpc_gui.plugins.linter_tools import tools_supporting_all_suffixes
+
+            tools = tools_supporting_all_suffixes(
+                [self._remote_suffix(path) for path in remote_paths]
+            )
+            if tools:
+                self.open_in_tool_batch(tools[0], remote_paths)
+
+        show_ansys_lint_results(
+            self,
+            f"{t('ansyslint.title')} — {self._remote_file_name(remote_paths[0])} +{len(remote_paths) - 1}",
+            run,
+            open_in_tool=open_in_tool,
+        )
+
     def _submit_candidate(entries: List[Tuple[str, bool]]) -> str:
         if len(entries) != 1:
             return ""
@@ -2403,6 +2502,9 @@ class RemoteDirPanel(QWidget):
                     lint_batch_ok = bool(tools_supporting_all_suffixes(suffixes))
                 except Exception:
                     lint_batch_ok = False
+            elif single_selection and single_selection_is_dir and self.session:
+                # The recursive remote scan runs only after the user chooses it.
+                lint_batch_ok = True
         act_ansys_lint = menu.addAction(_tr("files.ansys_lint", "ANSYS Journal Lint"))
         act_ansys_lint.setEnabled(lint_batch_ok)
         if single_selection and not single_selection_is_dir:
@@ -2509,7 +2611,10 @@ class RemoteDirPanel(QWidget):
 
         if chosen == act_ansys_lint:
             if len(sel_paths) == 1:
-                self.run_ansys_lint(sel_paths[0])
+                if single_selection_is_dir:
+                    self.run_ansys_lint_folder(sel_paths[0])
+                else:
+                    self.run_ansys_lint(sel_paths[0])
             else:
                 self.run_ansys_lint_batch(sel_paths)
             return

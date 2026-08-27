@@ -259,6 +259,26 @@ def test_remote_open_in_tool_temp_copy_lifecycle(qapp, monkeypatch):
     assert not temp_path.exists()
 
 
+def test_remote_folder_lint_worker_recurses_only_supported_files(monkeypatch):
+    from types import SimpleNamespace
+
+    from hpc_gui.services.files_mock import MockFilesBackend
+    from hpc_gui.ui.widgets.remote_dir_panel import _RemoteLintWorker
+
+    _install_stub_engine(monkeypatch, api_suffixes=(".slurm",))
+    sys.modules["fake_lint_engine"].lint_text = lambda text, **kwargs: SimpleNamespace(
+        summary={"error": 0, "warning": 0, "info": 0}
+    )
+    received = []
+    worker = _RemoteLintWorker(MockFilesBackend(), "/arf/scratch/user")
+    worker.signals.finished.connect(received.append)
+    worker.run()
+
+    paths, results = received[0]
+    assert paths == ["/arf/scratch/user/job.slurm"]
+    assert len(results) == 1
+
+
 # ---------------------------------------------------------------------------
 # first_linter_tool() against an empty (isolated) plugins root
 # ---------------------------------------------------------------------------
