@@ -103,7 +103,8 @@ def sign_and_notarize(app: Path, dmg: Path, entitlements: Path, arch: str) -> Pa
             if stage.exists():
                 shutil.rmtree(stage)
             stage.mkdir(parents=True)
-            shutil.copytree(app, stage / app.name)
+            # Keep framework symlinks intact when rebuilding the signed DMG.
+            shutil.copytree(app, stage / app.name, symlinks=True)
             (stage / "Applications").symlink_to("/Applications")
             _run(["hdiutil", "create", "-format", "UDZO", "-srcfolder", str(stage), str(dmg)])
             _run(["xcrun", "notarytool", "submit", str(dmg), "--key", str(notary_key), "--key-id", key_id, "--issuer", issuer_id, "--team-id", team_id, "--wait"])
