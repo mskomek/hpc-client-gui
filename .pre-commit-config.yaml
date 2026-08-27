@@ -1,0 +1,15 @@
+repos:
+  - repo: local
+    hooks:
+      - id: ci-quick
+        name: CI quick checks
+        entry: python scripts/ci.py quick
+        language: system
+        pass_filenames: false
+        stages: [pre-commit]
+      - id: ci-pre-push
+        name: CI pre-push checks
+        entry: python scripts/ci.py pre-push
+        language: system
+        pass_filenames: false
+        stages: [pre-push]

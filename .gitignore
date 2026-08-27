@@ -73,6 +73,8 @@ tools/ai/deepseek-models.local.psd1
 /docs/TERMINAL_WAVE*
 /docs/WAVE_PLAN.md
 coverage.xml
+.ci-tmp-smoke/
+coverage.json
 
 # Wheel build output
 /build/lib/

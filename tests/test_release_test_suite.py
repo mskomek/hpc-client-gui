@@ -10,6 +10,8 @@ class ReleaseTestSuiteTests(unittest.TestCase):
         self.assertTrue(all(isinstance(argument, str) for command in commands for argument in command))
         self.assertIn("--cov=hpc_gui", commands[-2])
         self.assertIn("--cov-append", commands[-1])
+        self.assertNotIn("--cov-fail-under=65", commands[-2])
+        self.assertIn("--cov-fail-under=65", commands[-1])
 
 
 if __name__ == "__main__":

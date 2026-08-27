@@ -1055,7 +1055,7 @@ def test_rollback_requires_confirmation_and_runs_off_gui_thread(qapp, frozen_thr
         activated.append((plugin_id, version))
 
     with mock.patch(
-        "hpc_gui.ui.dialogs.plugin_manager_dialog.activate_version",
+        "hpc_gui.plugins.state.activate_version",
         side_effect=fake_activate,
     ), mock.patch("PySide6.QtWidgets.QMessageBox", FakeBox):
         dialog.change_plugin_version(
@@ -1083,7 +1083,7 @@ def test_rollback_cancelled_keeps_current_version(qapp):
             return FakeBox.No
 
     with mock.patch(
-        "hpc_gui.ui.dialogs.plugin_manager_dialog.activate_version"
+        "hpc_gui.plugins.state.activate_version"
     ) as activate, mock.patch("PySide6.QtWidgets.QMessageBox", FakeBox):
         dialog.change_plugin_version("org.hpcclient.multi", "Multi", "1.9.0", "1.10.0")
 
@@ -1108,7 +1108,7 @@ def test_failed_activation_preserves_previous_version_message(qapp, frozen_threa
             shown.append(args)
 
     with mock.patch(
-        "hpc_gui.ui.dialogs.plugin_manager_dialog.activate_version",
+        "hpc_gui.plugins.state.activate_version",
         side_effect=ValueError("validation failed"),
     ), mock.patch("PySide6.QtWidgets.QMessageBox", FakeBox):
         dialog.change_plugin_version("org.hpcclient.multi", "Multi", "1.9.0", "1.10.0")

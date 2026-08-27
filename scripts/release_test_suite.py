@@ -42,6 +42,7 @@ PYTEST_BASE = (
     "-rf",
     "-m",
     "not packaging",
+    "tests",
 )
 
 # Wire-heavy suites spawn real socket/paramiko worker threads that outlive
@@ -54,12 +55,13 @@ ISOLATED_WIRE_FILES = (
     "tests/test_download_cancel_wire.py",
 )
 
+COVERAGE_FAIL_UNDER = 65
+
 COVERAGE_ARGS = (
     "--cov=hpc_gui",
     "--cov-report=term",
     "--cov-report=json:coverage.json",
     "--cov-report=xml:coverage.xml",
-    "--cov-fail-under=65",
 )
 
 COVERAGE_APPEND_ARGS = (
@@ -68,7 +70,7 @@ COVERAGE_APPEND_ARGS = (
     "--cov-report=term",
     "--cov-report=json:coverage.json",
     "--cov-report=xml:coverage.xml",
-    "--cov-fail-under=65",
+    f"--cov-fail-under={COVERAGE_FAIL_UNDER}",
 )
 
 

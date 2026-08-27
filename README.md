@@ -337,13 +337,16 @@ python -m hpc_gui
 Install test dependencies:
 
 ```bash
-pip install -e ".[test]"
+python -m pip install --requirement requirements-dev.txt
+pre-commit install
+pre-commit install --hook-type pre-push
 ```
 
-Run tests:
+Run the local checks:
 
 ```bash
-pytest -q
+python scripts/ci.py quick
+python scripts/ci.py pre-push
 ```
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for development and contribution details.
