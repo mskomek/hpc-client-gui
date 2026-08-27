@@ -87,7 +87,7 @@ def build_commands(*, coverage: bool) -> list[tuple[str, ...]]:
         coverage_args = COVERAGE_APPEND_ARGS if coverage else ()
         if coverage and index == len(ISOLATED_WIRE_FILES) - 1:
             coverage_args += (f"--cov-fail-under={COVERAGE_FAIL_UNDER}",)
-        commands.append(PYTEST_BASE + (path,) + coverage_args)
+        commands.append(PYTEST_BASE[:-1] + (path,) + coverage_args)
     return commands
 
 
