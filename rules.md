@@ -334,6 +334,8 @@ regardless of which agent drives the call.
 - GitHub'a push, PR oluşturma/kapatma ve remote branch silme işlemleri yalnızca
   kullanıcı açıkça istediğinde yapılır; commit veya branch hazırlama talebi tek
   başına push yetkisi vermez.
+- Yalnızca `main` branch'i pushlanabilir; `codex/develop` ve diğer tüm branch'ler
+  pushlanamaz.
 - `main` is protected: changes land only through pull requests with passing
   required status checks, resolved review conversations, and an up-to-date
   branch. Administrators retain an explicit emergency bypass.
