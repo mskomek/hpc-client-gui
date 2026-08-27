@@ -15,6 +15,7 @@ from hpc_gui.plugins.models import (
     KNOWN_CAPABILITIES,
     KNOWN_FILE_ROLES,
     PLUGIN_API_VERSION,
+    SUPPORTED_PLUGIN_API_VERSIONS,
     is_safe_relative_path,
     is_valid_semver,
 )
@@ -38,8 +39,14 @@ CLUSTER_PROFILE_REQUIRED_KEYS = ("schema_version", "profile_id", "name", "schedu
 
 KNOWN_SCHEDULERS = frozenset({"slurm"})
 
-# Declarative payloads only; anything runnable is forbidden regardless of role.
+# Declarative payloads only (v1); anything runnable is forbidden regardless
+# of role. Plugin API v2 additionally allows hash-verified Python engine
+# files, but only with the dedicated "linter-engine" role.
 ALLOWED_PAYLOAD_SUFFIXES = frozenset({".json", ".md", ".txt", ".tpl"})
+V2_EXTRA_SUFFIXES = frozenset({".py"})
+V2_LINTER_ENGINE_ROLE = "linter-engine"
+V2_LINTER_DATA_ROLE = "linter-data"
+V2_LINTER_ENTRYPOINT_KEY = "linter_engine"
 
 # Placeholders the scheduler backend actually interpolates. Unknown forms are
 # rejected so a malformed/malicious template cannot inject format surprises.
@@ -76,8 +83,13 @@ def validate_manifest_dict(manifest: Any) -> list[str]:
 
     if manifest["schema_version"] != 1:
         errors.append("manifest schema_version must be 1")
-    if manifest["plugin_api"] != PLUGIN_API_VERSION:
-        errors.append(f"manifest plugin_api must be {PLUGIN_API_VERSION}")
+    if manifest["plugin_api"] not in SUPPORTED_PLUGIN_API_VERSIONS:
+        supported = ", ".join(str(v) for v in sorted(SUPPORTED_PLUGIN_API_VERSIONS))
+        errors.append(
+            f"manifest plugin_api must be one of: {supported} "
+            f"(got {manifest['plugin_api']!r})"
+        )
+    plugin_api = manifest["plugin_api"]
     if not is_valid_semver(manifest["version"]):
         errors.append(f"manifest version '{manifest['version']}' is not a valid semantic version")
     for key in ("id", "name", "publisher", "license", "description"):
@@ -98,6 +110,32 @@ def validate_manifest_dict(manifest: Any) -> list[str]:
 
     if not isinstance(manifest["entrypoints"], dict):
         errors.append("manifest entrypoints must be a JSON object")
+    elif plugin_api == 1 and V2_LINTER_ENTRYPOINT_KEY in manifest["entrypoints"]:
+        errors.append(
+            f"manifest entrypoint '{V2_LINTER_ENTRYPOINT_KEY}' requires plugin_api 2"
+        )
+    elif plugin_api == 2:
+        linter_entry = manifest["entrypoints"].get(V2_LINTER_ENTRYPOINT_KEY)
+        if not isinstance(linter_entry, str) or not linter_entry.strip():
+            errors.append(
+                f"plugin_api 2 manifests need entrypoint '{V2_LINTER_ENTRYPOINT_KEY}' "
+                "pointing at the engine __init__.py"
+            )
+        else:
+            declared_paths = {
+                entry.get("path")
+                for entry in manifest.get("files", [])
+                if isinstance(entry, dict)
+            } if isinstance(manifest.get("files"), list) else set()
+            if (
+                is_safe_relative_path(linter_entry)
+                and declared_paths
+                and linter_entry not in declared_paths
+            ):
+                errors.append(
+                    f"entrypoint '{V2_LINTER_ENTRYPOINT_KEY}' does not match any "
+                    "declared manifest file"
+                )
 
     files = manifest["files"]
     if not isinstance(files, list) or not files:
@@ -121,12 +159,28 @@ def validate_manifest_dict(manifest: Any) -> list[str]:
         size = entry.get("size")
         if not isinstance(size, int) or isinstance(size, bool) or size < 0:
             errors.append(f"manifest file '{path}' needs a non-negative integer size")
-        if entry.get("role") not in KNOWN_FILE_ROLES:
-            errors.append(f"unsupported manifest file role: {entry.get('role')!r}")
+        role = entry.get("role")
+        if role not in KNOWN_FILE_ROLES:
+            errors.append(f"unsupported manifest file role: {role!r}")
         suffix = PurePosixPath(str(path)).suffix.lower()
-        if suffix and suffix not in ALLOWED_PAYLOAD_SUFFIXES:
+        allowed_suffixes = set(ALLOWED_PAYLOAD_SUFFIXES)
+        if plugin_api == 2:
+            allowed_suffixes |= V2_EXTRA_SUFFIXES
+        if suffix and suffix not in allowed_suffixes:
             errors.append(
                 f"manifest file '{path}' has a forbidden executable-looking extension '{suffix}'"
+            )
+        # v2 pairing rules: .py files must be linter-engine payloads, and the
+        # linter roles are only meaningful under plugin_api 2.
+        if suffix == ".py" and (plugin_api != 2 or role != V2_LINTER_ENGINE_ROLE):
+            errors.append(
+                f"manifest file '{path}' is Python; only plugin_api 2 manifests may "
+                f"include .py files and they must use role '{V2_LINTER_ENGINE_ROLE}'"
+            )
+        if role == V2_LINTER_ENGINE_ROLE and (plugin_api != 2 or suffix != ".py"):
+            errors.append(
+                f"manifest file '{path}' uses role '{V2_LINTER_ENGINE_ROLE}' which "
+                "requires plugin_api 2 and a .py extension"
             )
     return errors
 
@@ -199,6 +253,7 @@ REGISTRY_PLUGIN_TYPES = frozenset(
         "lint-rules",
         "job-template",
         "application-tools",
+        "linter-tool",
     }
 )
 
@@ -252,8 +307,11 @@ def validate_registry_dict(registry: Any) -> list[str]:
             continue
         if not is_valid_semver(entry["version"]):
             errors.append(f"{label}: invalid semantic version {entry['version']!r}")
-        if entry["plugin_api"] != PLUGIN_API_VERSION:
-            errors.append(f"{label}: unsupported plugin_api {entry['plugin_api']!r}")
+        if entry["plugin_api"] not in SUPPORTED_PLUGIN_API_VERSIONS:
+            supported = ", ".join(str(v) for v in sorted(SUPPORTED_PLUGIN_API_VERSIONS))
+            errors.append(
+                f"{label}: unsupported plugin_api {entry['plugin_api']!r} (supported: {supported})"
+            )
         if entry["type"] not in REGISTRY_PLUGIN_TYPES:
             errors.append(f"{label}: unknown plugin type {entry['type']!r}")
         if not is_safe_relative_path(entry["manifest_path"]):

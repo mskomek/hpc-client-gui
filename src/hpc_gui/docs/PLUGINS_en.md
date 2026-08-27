@@ -110,3 +110,32 @@ Templates render by plain placeholder substitution, always open in an
 unsaved tab for review, and nothing runs until you explicitly save/submit.
 
 See [PLUGINS_tr.md](PLUGINS_tr.md) for the Turkish version.
+
+## Linter tools (Plugin API v2)
+
+Starting with this release, the official registry can also publish
+**linter tools**: optional plugins that ship a hash-verified, pure-Python
+analysis engine inside the usual manifest/installer verification chain.
+Nothing runs at install time - the engine loads only when you open it,
+and every byte is pinned by SHA-256 exactly like declarative data.
+
+The first linter tool is **ANSYS Script & Journal Linter**
+(`org.hpcclient.ansyslint`). It is an *unofficial* offline checker for
+Ansys journals and scripts: Fluent journals (TUI/Scheme), Workbench
+`.wbjn` files including nested `SendCommand` payloads, Mechanical APDL
+inputs, CFX/CFD-Post/TurboGrid CCL sessions and states, ICEM replay
+scripts, System Coupling scripts, plus structural detection for
+DesignModeler, Mechanical, SpaceClaim/Discovery, Electronics Desktop and
+Motion files.
+
+After installing it, its card on the **Installed** tab gains an
+**Open tool** button. The page offers file/folder selection, automatic
+product detection with manual override, an Ansys version selector
+(24.2 / 25.1 / 25.2 / 26.1), batch/headless/interactive mode, Linux/Windows
+portability targets, severity filters, per-diagnostic official source
+links, and JSON/text export. The same engine provides a CLI in the plugin
+repository checkout (`scripts/ansys-journal-lint.py`).
+
+It is not affiliated with or endorsed by ANSYS, Inc., does not replace the
+official documentation, and labels heuristic findings explicitly -
+verify scripts against your installed release.

@@ -20,7 +20,12 @@ PySide6 loads at startup (`libegl1` on Ubuntu/Debian).
 
 ## Before opening a pull request
 
-Every CI job is blocking, so run the same checks locally:
+`main` is protected: changes land only through pull requests from short-lived
+feature branches, and every required status check must pass before merging
+(this applies to maintainers too). Delete your feature branch — locally and on
+the remote — right after merge. Keep each pull request limited to one outcome.
+
+Run the same checks locally that CI will run:
 
 ```bash
 PYTHONPATH=src python scripts/check_i18n.py
