@@ -39,7 +39,9 @@ def qapp():
 def installed(tmp_path: Path) -> InstalledPlugin:
     engines = sorted(Path(REPO).glob("plugins/ansys-lint/*/engine"))
     if not engines:
-        pytest.skip("plugins checkout carries no ansys-lint engine")
+        raise AssertionError(
+            "HPC_GUI_CONTRACT_REPO is configured, but it carries no ansys-lint engine"
+        )
     engine_src = engines[-1]
     manifest_path = engine_src.parent / "manifest.json"
     raw = json.loads(manifest_path.read_text(encoding="utf-8"))
