@@ -109,3 +109,9 @@ def test_macos_staging_preserves_framework_symlinks():
     signing_script = (rm.REPO_ROOT / "scripts" / "sign_macos_release.py").read_text(encoding="utf-8")
     assert "shutil.copytree(app, plan.staging / app.name, symlinks=True)" in release_script
     assert "shutil.copytree(app, stage / app.name, symlinks=True)" in signing_script
+
+
+def test_release_lock_keeps_macos_x86_64_cryptography_support():
+    lock = (rm.REPO_ROOT / "requirements-release.lock").read_text(encoding="utf-8")
+    assert "cryptography==48.0.1" in lock
+    assert "cryptography==50.0.0" not in lock
