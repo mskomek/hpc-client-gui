@@ -113,6 +113,10 @@
     "security_signed_mac": "Bu macOS sürümü Developer ID ile imzalandı, notarize edildi, staple'landı ve Gatekeeper değerlendirmesinden geçti (RELEASE_SECURITY.json dosyasına bakın).",
     "security_unknown_mac": "Not: bu sürüm imza durumu üst verisi yayınlamıyor (RELEASE_SECURITY.json eksik); macOS sürümü imzasız kabul edilmelidir."
   },
+  "splash": {
+    "title": "HPC WORKSPACE",
+    "subtitle": "SSH  •  Slurm  •  X11 İş Akışı Yöneticisi"
+  },
   "common": {
     "ok": "Tamam",
     "cancel": "İptal",
