@@ -874,8 +874,13 @@ class LocalDirPanel(QWidget):
         """Return suffixes supported by installed declarative or v2 linters."""
         suffixes: set[str] = set()
         try:
-            from hpc_gui.plugins.linter_tools import list_linter_tools, tool_supported_suffixes
+            from hpc_gui.plugins.linter_tools import (
+                list_linter_tools,
+                supported_suffixes,
+                tool_supported_suffixes,
+            )
 
+            suffixes.update(supported_suffixes())
             for tool in list_linter_tools():
                 suffixes.update(tool_supported_suffixes(tool))
         except Exception:
