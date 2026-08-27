@@ -331,6 +331,9 @@ regardless of which agent drives the call.
   Inclusion Gate below). `main` ignores the path via `.gitignore`.
 ### Branching and pull requests
 
+- GitHub'a push, PR oluşturma/kapatma ve remote branch silme işlemleri yalnızca
+  kullanıcı açıkça istediğinde yapılır; commit veya branch hazırlama talebi tek
+  başına push yetkisi vermez.
 - `main` is protected: changes land only through pull requests with passing
   required status checks, resolved review conversations, and an up-to-date
   branch. Administrators retain an explicit emergency bypass.
