@@ -197,7 +197,9 @@ def execute(plan: ReleasePlan) -> Path:
     if plan.staging.exists():
         shutil.rmtree(plan.staging)
     plan.staging.mkdir(parents=True)
-    shutil.copytree(app, plan.staging / app.name)
+    # Preserve PyInstaller's relative framework symlinks; following them
+    # duplicates Qt frameworks and inflates the DMG dramatically.
+    shutil.copytree(app, plan.staging / app.name, symlinks=True)
     (plan.staging / "Applications").symlink_to("/Applications")
     plan.output.parent.mkdir(parents=True, exist_ok=True)
     _run(plan.commands[1])
