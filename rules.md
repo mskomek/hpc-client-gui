@@ -351,6 +351,9 @@ regardless of which agent drives the call.
   `main...codex/develop` at the repository root.
 - Only application sources, tests, packaging definitions, tracked docs, and
   CI configuration are candidates for the sync.
+- `waves/` and `tools/` are permanently excluded from every `codex/develop` →
+  `main` synchronization; never stage, merge, cherry-pick, or push them to
+  `main`.
 - Never stage, merge, cherry-pick, or push excluded content such as `waves/`,
   `tools/`, `.agent-runs/`, agent instruction files, local protocol/rules
   files (`rules.md`, `AGENTS.md` local copies), caches, logs, virtual
