@@ -2,7 +2,9 @@ altgraph==0.17.5
 backports.tarfile==1.2.0
 bcrypt==5.0.0
 cffi==2.1.1
-cryptography==48.0.1
+# macOS x86_64 has no supported cryptography wheel after 48.x.
+cryptography==50.0.0; sys_platform != "darwin" or platform_machine != "x86_64"
+cryptography==48.0.1; sys_platform == "darwin" and platform_machine == "x86_64"
 iniconfig==2.3.0
 importlib_metadata==8.7.0
 jaraco.classes==3.4.0

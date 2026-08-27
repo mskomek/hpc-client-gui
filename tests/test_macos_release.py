@@ -114,4 +114,4 @@ def test_macos_staging_preserves_framework_symlinks():
 def test_release_lock_keeps_macos_x86_64_cryptography_support():
     lock = (rm.REPO_ROOT / "requirements-release.lock").read_text(encoding="utf-8")
     assert "cryptography==48.0.1" in lock
-    assert "cryptography==50.0.0" not in lock
+    assert 'cryptography==50.0.0; sys_platform != "darwin" or platform_machine != "x86_64"' in lock
