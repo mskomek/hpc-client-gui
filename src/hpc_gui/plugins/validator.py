@@ -12,6 +12,7 @@ from typing import Any
 
 from hpc_gui.plugins.compatibility import validate_requires_app
 from hpc_gui.plugins.models import (
+    CAPABILITY_LINTER_TOOL,
     KNOWN_CAPABILITIES,
     KNOWN_FILE_ROLES,
     PLUGIN_API_VERSION,
@@ -107,6 +108,13 @@ def validate_manifest_dict(manifest: Any) -> list[str]:
         for capability in capabilities:
             if capability not in KNOWN_CAPABILITIES:
                 errors.append(f"unsupported plugin capability: {capability!r}")
+    if isinstance(capabilities, list) and plugin_api == 1 and CAPABILITY_LINTER_TOOL in capabilities:
+        errors.append("manifest capability 'linter-tool' requires plugin_api 2")
+    if plugin_api == 2 and (
+        not isinstance(capabilities, list)
+        or CAPABILITY_LINTER_TOOL not in capabilities
+    ):
+        errors.append("plugin_api 2 manifests require the 'linter-tool' capability")
 
     if not isinstance(manifest["entrypoints"], dict):
         errors.append("manifest entrypoints must be a JSON object")
@@ -135,6 +143,11 @@ def validate_manifest_dict(manifest: Any) -> list[str]:
                 errors.append(
                     f"entrypoint '{V2_LINTER_ENTRYPOINT_KEY}' does not match any "
                     "declared manifest file"
+                )
+            if not linter_entry.endswith("/__init__.py"):
+                errors.append(
+                    f"manifest entrypoint '{V2_LINTER_ENTRYPOINT_KEY}' must point "
+                    "to a package __init__.py"
                 )
 
     files = manifest["files"]
@@ -181,6 +194,15 @@ def validate_manifest_dict(manifest: Any) -> list[str]:
             errors.append(
                 f"manifest file '{path}' uses role '{V2_LINTER_ENGINE_ROLE}' which "
                 "requires plugin_api 2 and a .py extension"
+            )
+        if role in {V2_LINTER_ENGINE_ROLE, V2_LINTER_DATA_ROLE} and plugin_api != 2:
+            errors.append(
+                f"manifest file '{path}' uses v2 role '{role}' but plugin_api is not 2"
+            )
+        if role == V2_LINTER_DATA_ROLE and suffix not in {".json", ".md", ".txt"}:
+            errors.append(
+                f"manifest file '{path}' uses role '{V2_LINTER_DATA_ROLE}' with "
+                f"unsupported extension '{suffix}'"
             )
     return errors
 
