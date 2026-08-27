@@ -102,3 +102,10 @@ def test_bundle_report_lists_largest_files(tmp_path):
     text = format_report(report)
     assert "big.bin" in text and "small.bin" in text
     assert text.index("big.bin") < text.index("small.bin")
+
+
+def test_macos_staging_preserves_framework_symlinks():
+    release_script = (rm.REPO_ROOT / "scripts" / "release_macos.py").read_text(encoding="utf-8")
+    signing_script = (rm.REPO_ROOT / "scripts" / "sign_macos_release.py").read_text(encoding="utf-8")
+    assert "shutil.copytree(app, plan.staging / app.name, symlinks=True)" in release_script
+    assert "shutil.copytree(app, stage / app.name, symlinks=True)" in signing_script
