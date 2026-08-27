@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## v1.5.1
+
+### CI and developer workflow
+- Unified local and GitHub Actions validation behind `scripts/ci.py`, added deterministic development dependencies and commit/push hooks, and kept the `%65` coverage gate after all GUI suites are combined.
+- Fixed plugin version activation/rollback test coverage, isolated installed-plugin fixtures, and corrected the GUI transfer candidate helper used by context menus.
+
 ### Release integrity
 - Repaired the release dependency graph: publication now runs only after a final release gate that requires the Linux, Windows, both macOS builds, the selected macOS verification path, and — in signed mode — both signing/notarization jobs plus signed-candidate verification. A failed, cancelled, or unexpectedly skipped required job can no longer race ahead of publication.
 - Replaced the ambiguous `publish` + `sign` input combination with explicit `publish` (boolean, default `false`) and `macos_mode` (`signed` default / `unsigned`) inputs; a normal dry run never publishes, unsigned publication is an explicit choice, and an unsigned release can never claim signing.

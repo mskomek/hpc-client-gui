@@ -8,7 +8,7 @@ Değişiklik günlüğü kanoniktir ve depoda bulunur:
 
 Yayımlanmış çıktılar ve sürüm notları
 [sürümler sayfasındadır](https://github.com/mskomek/hpc-client-gui/releases).
-Geçerli sürüm **1.5.0**.
+Geçerli sürüm **1.5.1**.
 
 Bu sayfa değişiklik günlüğünü bilinçli olarak tekrarlamaz. Sürüm geçmişinin
 ikinci bir kopyası ilkinden sapar ve insanların okuduğu kopya yanlış olur.
