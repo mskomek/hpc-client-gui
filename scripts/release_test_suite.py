@@ -80,10 +80,10 @@ def build_commands(*, coverage: bool) -> list[tuple[str, ...]]:
         for argument in ("--ignore", path)
     )
     commands.append(
-        PYTEST_BASE + ignores + ((COVERAGE_ARGS,) if coverage else ())
+        PYTEST_BASE + ignores + (COVERAGE_ARGS if coverage else ())
     )
     commands.append(
-        PYTEST_BASE + ISOLATED_WIRE_FILES + ((COVERAGE_APPEND_ARGS,) if coverage else ())
+        PYTEST_BASE + ISOLATED_WIRE_FILES + (COVERAGE_APPEND_ARGS if coverage else ())
     )
     return commands
 
