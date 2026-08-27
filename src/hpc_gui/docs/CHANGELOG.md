@@ -1,6 +1,34 @@
 # Changelog
 
+## Unreleased
+
+### Release integrity
+- Repaired the release dependency graph: publication now runs only after a final release gate that requires the Linux, Windows, both macOS builds, the selected macOS verification path, and — in signed mode — both signing/notarization jobs plus signed-candidate verification. A failed, cancelled, or unexpectedly skipped required job can no longer race ahead of publication.
+- Replaced the ambiguous `publish` + `sign` input combination with explicit `publish` (boolean, default `false`) and `macos_mode` (`signed` default / `unsigned`) inputs; a normal dry run never publishes, unsigned publication is an explicit choice, and an unsigned release can never claim signing.
+- Release preflight now executes the same shared test suite as CI (`scripts/release_test_suite.py`) instead of `unittest discover`, so a red suite blocks releases exactly like it blocks PRs.
+
+### macOS
+- macOS packaging excludes QtWebEngine DevTools resources (matching Windows/Linux), records a sorted largest-files bundle report per architecture, and enforces an evidence-based compressed-DMG size budget (600 MiB by default, overridable via `HPC_GUI_DMG_BUDGET_MIB`).
+- Every publication emits `RELEASE_SECURITY.json` stating the macOS mode, source commit, Developer ID/notarization/stapling/Gatekeeper outcomes, and artifact architectures; release notes are generated from the changelog and carry a prominent warning for unsigned builds.
+- The in-app updater shows an explicit unsigned-build (or unknown-status) warning before pointing macOS users at a DMG; missing metadata is displayed as unknown, never as signed.
+
+### Documentation and policy
+- Honest Gatekeeper guidance in English/Turkish installation, verification, quick-start, and release-process docs: try opening normally, then Finder right-click → Open or System Settings → Privacy & Security → Open Anyway; never disable Gatekeeper globally.
+- All GitHub Actions across every workflow are pinned to verified full commit SHAs with version comments; an automated scanner fails any floating action reference.
+- Artifact-size reporting moved after all platform artifacts are downloaded, so summaries include both DMGs and the true total.
+
+### Repository
+- Branch protection on `main` enforces pull requests and required checks for everyone including the repository owner (no direct admin pushes).
+- The plugin registry gains a blocking consumer-contract CI job against application v1.5.0, and registry tag `v1.0.0` received its formal GitHub Release object.
+
 ## v1.5.0
+
+### Plugin API v2 and the ANSYS Script & Journal Linter
+- Added Plugin API v2 as a strictly additive extension of v1: one new capability, `linter-tool`, lets the official registry ship hash-verified, pure-Python linter engines inside the existing manifest/installer verification chain. Nothing executes at install time; engines load lazily only when the user opens the tool, wrapped in defensive error handling.
+- Added an "Open tool" action on installed plugin cards for linter-tool plugins, hosting the engine-provided page in a dialog.
+- The official registry now publishes `org.hpcclient.ansyslint` 0.1.0 (ANSYS Script & Journal Linter), an unofficial offline linter for Ansys journals/scripts across Fluent, MAPDL, Workbench (including nested `SendCommand` payloads), CCL products, ICEM replays, System Coupling and more. It requires app >= 1.5.0.
+- Note for users on releases <= 1.4.x: once the registry carries a Plugin API v2 entry, those clients report the official registry as unavailable until upgraded.
+- Plugin Manager now shows the "Linter tool" capability badge; Turkish and English resources updated.
 
 ### Plugin Manager
 - Installed plugins with more than one version now offer **Activate / Roll back**: installed versions are listed in PEP 440 order (1.10 > 1.9), the truly active version is shown as the headline version, and switching requires explicit confirmation. Activation runs off the GUI thread, keeps every installed version (nothing is deleted), leaves enabled/disabled state untouched, and restores the previous active version automatically when validation fails.

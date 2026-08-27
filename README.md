@@ -51,22 +51,30 @@ Current packages are available from the:
 | Linux / Flatpak        | `hpc-client-gui-<version>-x86_64.flatpak`  | Install and run the Flatpak bundle   |
 
 Where provided, release assets also include **SHA-256 checksum files**. Each
-release also publishes a `MANIFEST.json` inventory (size + SHA-256 per asset)
-and signed build-provenance attestations — see
+release also publishes a `MANIFEST.json` inventory (size + SHA-256 per asset),
+a `RELEASE_SECURITY.json` statement of the macOS signing mode, and signed
+build-provenance attestations — see
 [docs/VERIFYING_RELEASES.md](docs/VERIFYING_RELEASES.md).
 
 macOS downloads are architecture-specific: use **arm64** for Apple Silicon
-and **x86_64** for Intel Macs. macOS 13 or newer is required. This project is
-an unofficial client-side tool, not an official TRUBA tool.
+and **x86_64** for Intel Macs. macOS 13 or newer is required. Signed,
+notarized macOS builds are the default release mode; when a release is built
+in `unsigned` mode (Apple credentials unavailable), the release notes and
+`RELEASE_SECURITY.json` say so explicitly and Gatekeeper may ask for approval
+on first launch. This project is an unofficial client-side tool, not an
+official TRUBA tool.
 
 ## macOS quick start
 
 1. Download the DMG matching your Mac architecture from the [latest release](https://github.com/mskomek/hpc-client-gui/releases/latest).
 2. Optionally verify its sibling `.sha256` file.
 3. Open the DMG and drag **HPC Client GUI.app** to **Applications**.
-4. Launch it from Finder. Keychain access prompts are used only to store a
-   saved connection password; the password is not written to `config.json`.
-5. To update, download the newer DMG and replace the existing application.
+4. Launch it from Finder. If Gatekeeper blocks the first launch, control-click
+   (right-click) the app and choose **Open**, or use **System Settings →
+   Privacy & Security → Open Anyway**. Do not disable Gatekeeper globally.
+5. Keychain access prompts are used only to store a saved connection password;
+   the password is not written to `config.json`.
+6. To update, download the newer DMG and replace the existing application.
 
 XQuartz is optional and is required only for remote X11 GUI forwarding. Normal
 SSH, SFTP, Slurm, and terminal workflows do not require XQuartz.

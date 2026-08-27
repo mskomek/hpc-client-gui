@@ -108,7 +108,10 @@
     "status_installing": "Güncelleme yükleniyor ve uygulama yeniden başlatılıyor...",
     "error_title": "Güncelleme hatası",
     "error_message": "Güncelleme tamamlanamadı:\n{error}",
-    "changelog_title": "v{version} yenilikleri"
+    "changelog_title": "v{version} yenilikleri",
+    "security_unsigned_mac": "Uyarı: bu macOS sürümü Apple Developer ID ile imzalı ve notarize DEĞİLDİR. Gatekeeper ilk açılışta engelleyebilir - uygulamayı denetim tıklayıp \"Aç\" seçin veya Sistem Ayarları > Gizlilik ve Güvenlik > Yine de Aç yolunu kullanın. SHA-256 sağlama değeri ve GitHub yapı kaniti bütünlüğü doğrular ancak Apple kod imzasının yerine geçmez.",
+    "security_signed_mac": "Bu macOS sürümü Developer ID ile imzalandı, notarize edildi, staple'landı ve Gatekeeper değerlendirmesinden geçti (RELEASE_SECURITY.json dosyasına bakın).",
+    "security_unknown_mac": "Not: bu sürüm imza durumu üst verisi yayınlamıyor (RELEASE_SECURITY.json eksik); macOS sürümü imzasız kabul edilmelidir."
   },
   "common": {
     "ok": "Tamam",
@@ -150,7 +153,10 @@
     "open_with_select_program": "Program seç",
     "open_with_program_filter": "Programlar (*.exe);;Tüm dosyalar (*.*)",
     "open_with_save_title": "Dosya ilişkilendirmesi kaydedilsin mi?",
-    "open_with_save_prompt": "{extension} dosyaları için bu program sonraki sefer de kullanılsın mı?"
+    "open_with_save_prompt": "{extension} dosyaları için bu program sonraki sefer de kullanılsın mı?",
+    "ansys_lint": "ANSYS Journal Denetimi",
+    "no_supported_remote_lint_files": "Bu uzak klasörde denetlenebilecek desteklenen dosya bulunamadı.",
+    "send_to_plugin": "Eklentiye gönder"
   },
   "editor": {
     "title": "Editör",
@@ -806,6 +812,7 @@
     "capability_lint_rules": "Lint kuralları",
     "capability_job_templates": "İş şablonları",
     "capability_application_tools": "Uygulama araçları",
+    "capability_linter_tool": "Denetleyici aracı",
     "compatible_with_running": "Bu uygulama sürümüyle uyumlu",
     "incompatible_with_running": "Bu uygulama sürümüyle uyumsuz",
     "source_label": "Kaynak",
@@ -823,18 +830,27 @@
     "active_badge": "Etkin",
     "activate": "Etkinleştir",
     "rollback": "Geri al",
-    "activating": "Sürüm değiştiriliyor…",
+    "activating": "Sürüm değiştiriliyor.",
     "switch_version_label": "Kurulu sürümler:",
     "version_switch_confirm_title": "Plugin sürümünü değiştir",
     "version_activate_confirm_text": "{name} {version} sürümü etkinleştirilsin mi?",
     "version_rollback_confirm_text": "{name}, {current} sürümünden {version} sürümüne geri alınsın mı? Kurulu hiçbir sürüm silinmez.",
     "version_switch_success": "{name} artık {version} sürümünü kullanıyor.",
     "version_switch_failed": "{name} eklentisi {version} sürümüne geçirilemedi. Önceki etkin sürüm etkin kalmaya devam ediyor.",
-    "corrupt_plugin": "{name} bütünlük denetimini geçemedi ve atlandı. Keşfet sekmesinden yeniden kurun; kurulu hiçbir sürüm silinmedi."
+    "corrupt_plugin": "{name} bütünlük denetimini geçemedi ve atlandı. Keşfet sekmesinden yeniden kurun; kurulu hiçbir sürüm silinmedi.",
+    "open_tool": "Aracı aç",
+    "tool_open_failed": "Denetleyici aracı açılamadı",
+    "tool_not_installed": "Eklenti kurulu değil veya devre dışı."
   },
   "templates": {
     "dialog_title": "İş Şablonları",
     "list_label": "Kurulu şablonlar:",
     "none_installed": "Kurulu iş şablonu yok. Eklenti Yöneticisi'nden bir şablon eklentisi kurun."
+  },
+  "ansyslint": {
+    "title": "ANSYS Journal Linter",
+    "no_findings": "bulgular yok",
+    "summary_label": "{e} hata, {w} uyari, {i} bilgi",
+    "fix_open_tool": "Düzelt (Eklentide aç)"
   }
 }

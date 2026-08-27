@@ -260,11 +260,13 @@ def test_valid_local_plugin_loads(tmp_path: Path):
 
 
 def test_unsupported_plugin_api_rejected(tmp_path: Path):
-    manifest = {**VALID_MANIFEST, "plugin_api": 2}
+    manifest = {**VALID_MANIFEST, "plugin_api": 99}
     install_plugin(tmp_path, manifest, VALID_PROFILE)
     result = load_installed_plugins(root=tmp_path, app_version="1.4.0")
     assert result.plugins == []
-    assert any("plugin_api must be 1" in problem.reason for problem in result.problems)
+    assert any(
+        "plugin_api must be one of" in problem.reason for problem in result.problems
+    )
 
 
 def test_incompatible_app_rejected(tmp_path: Path):

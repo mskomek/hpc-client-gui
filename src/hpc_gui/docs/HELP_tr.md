@@ -52,6 +52,21 @@ gösterir. `SSH-XXXXXX` biçimindeki tanı kodu, aynı hatayı günlükte bulmak
 
 ## Dosya yöneticisi özellikleri
 
+### Dosya bölmelerinden düzenleme
+
+**Yerel** bir dosyaya sağ tıklayıp **Düzelt**'i seçin: dosya, uygulama içi
+düzenleyicide gerçek okuma/yazma desteğiyle açılır; **Yeni pencerede
+düzelt** aynı düzenleyiciyi bağımsız pencerede açar. Uzak dosyalar için
+**Görüntüle/Düzenle** kullanılır: içerik oturum üzerinden yüklenir ve
+sunucuya geri kaydedilir. Düzenleyicinin **Lint** düğmesi açık metni
+denetler ve kurulu ANSYS linter araçlarından dosya türünü destekleyen
+her aracın denetimlerini de ekler; tam journal denetimi için ayrıca sağ
+tıklama **ANSYS Journal Denetimi** ya da **Eklentiye gönder ▸** de
+kullanılabilir (bkz. [Eklentiler](#eklentiler)). Birden fazla dosya
+(2–10) seçimi, her dosyanın türünü ortak bir araç desteklediğinde
+desteklenir; tek bir klasör seçimi de içinde desteklenen dosyalar
+varsa desteklenir (özyinelemeli tarama).
+
 ### Varsayılan yerel klasör (profil başına)
 
 **Gelişmiş → Dosya tarayıcı** altında her bağlantı profili bir **Varsayılan
@@ -110,6 +125,15 @@ profili, iş şablonu ve lint paklerini kurun; kurmadan önce karttaki
 **Ayrıntılar** ile tam kaydı inceleyin. Eksik bir eklenti mi var? Başlıktaki
 **Eklenti iste** düğmesi resmî eklenti deposundaki istek formunu açar. Tam
 kılavuz: [PLUGINS_tr.md](PLUGINS_tr.md).
+
+Bir denetleyici aracı eklentisi kurduktan sonra (örnek: gayriresmî ANSYS
+Script & Journal Linter), **Kurulu** kartında **Aracı aç** düğmesi görünür.
+Yerel ve uzak dosya panellerinde desteklenen dosyalara sağ tıklayınca hızlı
+**ANSYS Journal Denetimi** ve seçili dosyayı destekleyen kurulu her aracı
+listeleyen **Eklentiye gönder ▸** alt menüsü çıkar; bir araç seçince o
+eklenti dosya önceden yüklenmiş şekilde açılır. Denetim sonuç penceresindeki
+**Düzelt (Eklentide aç)** düğmesi de aynı yönlendirmeyi yapar.
+Ayrıntılar: [PLUGINS_tr.md](PLUGINS_tr.md).
 
 ### Gelişmiş SSH ayarları
 
