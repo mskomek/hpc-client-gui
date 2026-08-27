@@ -1979,6 +1979,100 @@ class RemoteDirPanel(QWidget):
             open_in_tool=open_in_tool,
         )
 
+    def open_in_tool_batch(self, tool, remote_paths: list[str]) -> None:
+        """Open a linter-tool page pre-loaded with multiple remote files."""
+        from hpc_gui.plugins.linter_tools import (
+            remove_temp_copy,
+            temp_copy_for_tool,
+        )
+        from hpc_gui.ui.dialogs.linter_tool_host import host_tool_page
+
+        files = (self.session or {}).get("files")
+        if not files:
+            QMessageBox.warning(self, t("common.error"), t("common.no_connection"))
+            return
+        temp_paths: list[Path] = []
+        try:
+            for remote_path in remote_paths:
+                text = files.read_text(remote_path)
+                temp_paths.append(
+                    temp_copy_for_tool(text, self._remote_file_name(remote_path))
+                )
+        except Exception as exc:  # network or disk failure stays contained
+            for p in temp_paths:
+                remove_temp_copy(p)
+            logger.warning("Could not fetch %s for tool", remote_paths, exc_info=exc)
+            QMessageBox.warning(
+                self, t("ansyslint.title"), f"{type(exc).__name__}: {exc}"
+            )
+            return
+        try:
+            names = ", ".join(self._remote_file_name(p) for p in remote_paths[:3])
+            if len(remote_paths) > 3:
+                names += f" +{len(remote_paths) - 3}"
+            host_tool_page(
+                self,
+                tool,
+                initial_paths=[str(p) for p in temp_paths],
+                title=f"{tool.title} — {names}",
+            )
+        finally:
+            for p in temp_paths:
+                remove_temp_copy(p)
+
+    def run_ansys_lint_batch(self, remote_paths: list[str]) -> None:
+        from hpc_gui.plugins.linter_tools import ToolLoadError, lint_text_with_tool
+        from hpc_gui.ui.dialogs.ansys_lint_results_dialog import (
+            show_ansys_lint_results,
+        )
+        import types
+
+        def open_in_tool() -> None:
+            from hpc_gui.plugins.linter_tools import tools_supporting_all_suffixes
+
+            try:
+                suffixes = [self._remote_suffix(p) for p in remote_paths]
+                tools = tools_supporting_all_suffixes(suffixes)
+                if not tools:
+                    return
+                self.open_in_tool_batch(tools[0], remote_paths)
+            except Exception as exc:
+                logger.warning("Fix redirect failed for %s", remote_paths, exc_info=exc)
+
+        files = (self.session or {}).get("files")
+        if not files:
+            QMessageBox.warning(self, t("common.error"), t("common.no_connection"))
+            return
+        file_results = []
+        try:
+            for remote_path in remote_paths:
+                text = files.read_text(remote_path)
+                file_results.append(lint_text_with_tool(text, file_name=remote_path))
+        except ToolLoadError as exc:
+            QMessageBox.warning(self, t("ansyslint.title"), str(exc))
+            return
+        except Exception as exc:  # defensive: network/engine failures stay contained
+            logger.warning("ANSYS lint failed for %s", remote_paths, exc_info=exc)
+            QMessageBox.warning(
+                self, t("ansyslint.title"), f"{type(exc).__name__}: {exc}"
+            )
+            return
+        # Build a LintRunResult-like object for the dialog.
+        totals = {"error": 0, "warning": 0, "info": 0}
+        for fr in file_results:
+            for key in totals:
+                totals[key] += fr.summary.get(key, 0) if hasattr(fr, "summary") else 0
+        run = types.SimpleNamespace(files=file_results, summary=totals)
+        names = ", ".join(self._remote_file_name(p) for p in remote_paths[:3])
+        if len(remote_paths) > 3:
+            names += f" +{len(remote_paths) - 3}"
+        show_ansys_lint_results(
+            self,
+            f"{t('ansyslint.title')} — {names}",
+            run,
+            open_in_tool=open_in_tool,
+        )
+
     def _submit_candidate(entries: List[Tuple[str, bool]]) -> str:
         if len(entries) != 1:
             return ""
@@ -2297,15 +2391,39 @@ class RemoteDirPanel(QWidget):
         act_save_as.setEnabled(has_selection)
         act_add_queue.setEnabled(False)
         act_view_edit.setEnabled(single_selection and not single_selection_is_dir)
+        # Batch-aware quick lint: 1-10 files and a common tool exists.
+        lint_batch_ok = False
+        if has_selection:
+            all_files = all(not is_dir for _, is_dir in selected_entries)
+            if all_files and 1 <= len(sel_paths) <= 10:
+                try:
+                    from hpc_gui.plugins.linter_tools import tools_supporting_all_suffixes
+
+                    suffixes = [self._remote_suffix(p) for p in sel_paths]
+                    lint_batch_ok = bool(tools_supporting_all_suffixes(suffixes))
+                except Exception:
+                    lint_batch_ok = False
         act_ansys_lint = menu.addAction(_tr("files.ansys_lint", "ANSYS Journal Lint"))
-        act_ansys_lint.setEnabled(
-            single_selection
-            and not single_selection_is_dir
-            and self._ansys_lint_supported(sel_paths[0])
-        )
-        self._build_send_to_plugin_menu(
-            menu, sel_paths[0] if single_selection and not single_selection_is_dir else None
-        )
+        act_ansys_lint.setEnabled(lint_batch_ok)
+        if single_selection and not single_selection_is_dir:
+            self._build_send_to_plugin_menu(
+                menu, sel_paths[0] if single_selection and not single_selection_is_dir else None
+            )
+        elif lint_batch_ok:
+            try:
+                from hpc_gui.plugins.linter_tools import tools_supporting_all_suffixes
+
+                suffixes = [self._remote_suffix(p) for p in sel_paths]
+                batch_tools = tools_supporting_all_suffixes(suffixes)
+            except Exception:
+                batch_tools = []
+            if batch_tools:
+                send_menu = menu.addMenu(t("files.send_to_plugin"))
+                for tool in batch_tools:
+                    action = send_menu.addAction(tool.title)
+                    action.triggered.connect(
+                        lambda _=False, tl=tool, ps=list(sel_paths): self.open_in_tool_batch(tl, ps)
+                    )
         act_open_new_tab.setEnabled(single_selection and single_selection_is_dir)
         if act_open_out1 is not None:
             act_open_out1.setEnabled(single_selection and not single_selection_is_dir)
@@ -2390,7 +2508,10 @@ class RemoteDirPanel(QWidget):
             return
 
         if chosen == act_ansys_lint:
-            self.run_ansys_lint(sel_paths[0])
+            if len(sel_paths) == 1:
+                self.run_ansys_lint(sel_paths[0])
+            else:
+                self.run_ansys_lint_batch(sel_paths)
             return
 
         if chosen == act_view_edit:

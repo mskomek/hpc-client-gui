@@ -60,9 +60,11 @@ window** opens the same editor in a standalone window. Remote files use
 **View/Edit**, which loads the content over the session and saves back to
 the server. The editor's **Lint** button checks the current text and,
 when an ANSYS linter tool is installed and the file type matches, also
-runs that tool and merges its diagnostics; for full journal linting you
-can also use the right-click **ANSYS Journal Lint** quick check or
-**Send to plugin ▸** (see [Plugins](#plugins)).
+runs every supporting tool and merges its diagnostics; for full journal
+linting you can also use the right-click **ANSYS Journal Lint** quick
+check or **Send to plugin ▸** (see [Plugins](#plugins)). Selecting
+multiple files (2–10) is supported when every file's type is supported
+by a common tool.
 
 ### Default local folder (per profile)
 

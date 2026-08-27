@@ -458,10 +458,7 @@ class EditorWidget(QWidget):
 
         try:
             from hpc_gui.lint.models import Diagnostic, Severity
-            from hpc_gui.plugins.linter_tools import (
-                lint_text_with_tool,
-                tools_supporting_suffix,
-            )
+            from hpc_gui.plugins.linter_tools import tools_supporting_suffix
         except Exception:
             return []
         suffix = Path(path).suffix.lower()
@@ -476,38 +473,70 @@ class EditorWidget(QWidget):
             return []
         if not tools:
             return []
-        tool = tools[0]
-        try:
-            run = lint_text_with_tool(text, file_name=path)
-        except Exception:
-            logging.getLogger(__name__).warning(
-                "v2 lint failed for %s via %s", path, tool.plugin_id, exc_info=True
-            )
+        # Collect from every supporting tool; per-tool failures are contained.
+        raw_diags: list[tuple] = []  # (tool, diag)
+        for tool in tools:
+            try:
+                from hpc_gui.plugins.linter_tools import lint_text_with_tool_for
+
+                run = lint_text_with_tool_for(tool, text, file_name=path)
+            except Exception:
+                logging.getLogger(__name__).warning(
+                    "v2 lint failed for %s via %s", path, tool.plugin_id, exc_info=True
+                )
+                continue
+            # lint_text_with_tool_for returns a FileResult (editor path);
+            # be tolerant if a future wrapper returns a LintRunResult or list.
+            diags: list = []
+            if hasattr(run, "diagnostics"):
+                diags = list(getattr(run, "diagnostics") or [])
+            elif hasattr(run, "files"):
+                for fr in getattr(run, "files") or []:
+                    diags.extend(getattr(fr, "diagnostics", []) or [])
+            elif isinstance(run, list):
+                diags = run
+            for diag in diags:
+                raw_diags.append((tool, diag))
+        if not raw_diags:
             return []
-        # lint_text_with_tool returns a FileResult (editor path);
-        # be tolerant if a future wrapper returns a LintRunResult or list.
-        diags: list = []
-        if hasattr(run, "diagnostics"):
-            diags = list(getattr(run, "diagnostics") or [])
-        elif hasattr(run, "files"):
-            for fr in getattr(run, "files") or []:
-                diags.extend(getattr(fr, "diagnostics", []) or [])
-        elif isinstance(run, list):
-            diags = run
+        # Deduplicate by (rule_id, line, column, message); sort by position.
+        seen: set[tuple] = set()
+        deduped: list[tuple] = []
+        for tool, diag in raw_diags:
+            key = (
+                getattr(diag, "code", getattr(diag, "rule_id", "V2")),
+                getattr(diag, "line", None),
+                getattr(diag, "column", None),
+                getattr(diag, "message", str(diag)),
+            )
+            if key in seen:
+                continue
+            seen.add(key)
+            deduped.append((tool, diag))
+        deduped.sort(
+            key=lambda item: (
+                getattr(item[1], "line", None) or 9999,
+                getattr(item[1], "column", None) or 0,
+                getattr(item[1], "code", getattr(item[1], "rule_id", "")),
+            )
+        )
+        # When multiple tools contribute, prefix the message with the plugin id
+        # so the result list stays attributable without changing the model shape.
+        multi = len({t.plugin_id for t, _ in deduped}) > 1
         converted: list = []
-        for diag in diags:
-            # Engine diagnostics are ansys_lint.model.Diagnostic; map to
-            # hpc_gui.lint.models.Diagnostic for the editor result UI.
+        for tool, diag in deduped:
             try:
                 severity_value = getattr(diag.severity, "value", str(diag.severity))
                 severity = Severity(severity_value)
             except ValueError:
                 severity = Severity.INFO
+            raw_message = getattr(diag, "message", str(diag))
+            message = f"[{tool.plugin_id}] {raw_message}" if multi else raw_message
             converted.append(
                 Diagnostic(
                     rule_id=getattr(diag, "code", getattr(diag, "rule_id", "V2")),
                     severity=severity,
-                    message=getattr(diag, "message", str(diag)),
+                    message=message,
                     line=getattr(diag, "line", None),
                     column=getattr(diag, "column", None),
                     end_line=getattr(diag, "end_line", getattr(diag, "endLine", None)),

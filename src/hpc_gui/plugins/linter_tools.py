@@ -257,3 +257,29 @@ def lint_text_with_tool(text: str, *, file_name: str = "", options=None):
     if options is None:
         return module.lint_text(text, file_name=file_name)
     return module.lint_text(text, file_name=file_name, options=options)
+
+
+def lint_text_with_tool_for(
+    tool: LinterTool, text: str, *, file_name: str = "", options=None
+):
+    """Run a specific installed engine over in-memory content."""
+    module = _engine_module(tool)
+    if options is None:
+        return module.lint_text(text, file_name=file_name)
+    return module.lint_text(text, file_name=file_name, options=options)
+
+
+def tools_supporting_all_suffixes(
+    suffixes: list[str], root=None, app_version=None
+) -> list[LinterTool]:
+    """Tools whose engine supports every suffix in the list."""
+    wanted = [str(s).lower() for s in suffixes if str(s).lower()]
+    if not wanted:
+        return []
+    candidates = list_linter_tools(root=root, app_version=app_version)
+    matching: list[LinterTool] = []
+    for tool in candidates:
+        declared = tool_supported_suffixes(tool)
+        if all(s in declared for s in wanted):
+            matching.append(tool)
+    return matching

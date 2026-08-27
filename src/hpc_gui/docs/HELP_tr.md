@@ -59,10 +59,12 @@ düzenleyicide gerçek okuma/yazma desteğiyle açılır; **Yeni pencerede
 düzelt** aynı düzenleyiciyi bağımsız pencerede açar. Uzak dosyalar için
 **Görüntüle/Düzenle** kullanılır: içerik oturum üzerinden yüklenir ve
 sunucuya geri kaydedilir. Düzenleyicinin **Lint** düğmesi açık metni
-denetler ve kurulu bir ANSYS linter aracı dosya türünü destekliyorsa o
-aracın denetimlerini de ekler; tam journal denetimi için ayrıca sağ
+denetler ve kurulu ANSYS linter araçlarından dosya türünü destekleyen
+her aracın denetimlerini de ekler; tam journal denetimi için ayrıca sağ
 tıklama **ANSYS Journal Denetimi** ya da **Eklentiye gönder ▸** de
-kullanılabilir (bkz. [Eklentiler](#eklentiler)).
+kullanılabilir (bkz. [Eklentiler](#eklentiler)). Birden fazla dosya
+(2–10) seçimi, her dosyanın türünü ortak bir araç desteklediğinde
+desteklenir.
 
 ### Varsayılan yerel klasör (profil başına)
 
