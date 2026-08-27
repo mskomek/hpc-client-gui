@@ -412,6 +412,7 @@ class EditorWidget(QWidget):
             return
         issues = self._collect_lint_issues(path, text)
         diagnostics = self._run_plugin_lint(path, text)
+        diagnostics = diagnostics + self._run_v2_tool_lint(path, text)
         diagnostics = diagnostics + self._run_cross_checks(text)
         if not issues and not diagnostics:
             QMessageBox.information(self, t("common.info"), t("editor.lint_ok") if t("editor.lint_ok") != "[editor.lint_ok]" else "Lint passed. No obvious issues found.")
@@ -450,6 +451,75 @@ class EditorWidget(QWidget):
             except (LintError, Exception):  # noqa: B014 - never break the editor
                 continue
         return diagnostics
+
+    def _run_v2_tool_lint(self, path: str, text: str) -> list:
+        """Run Plugin API v2 linter tools for the file suffix (additive)."""
+        import logging
+
+        try:
+            from hpc_gui.lint.models import Diagnostic, Severity
+            from hpc_gui.plugins.linter_tools import (
+                lint_text_with_tool,
+                tools_supporting_suffix,
+            )
+        except Exception:
+            return []
+        suffix = Path(path).suffix.lower()
+        if not suffix:
+            return []
+        try:
+            tools = tools_supporting_suffix(suffix)
+        except Exception:
+            logging.getLogger(__name__).warning(
+                "v2 lint tool lookup failed for %s", path, exc_info=True
+            )
+            return []
+        if not tools:
+            return []
+        tool = tools[0]
+        try:
+            run = lint_text_with_tool(text, file_name=path)
+        except Exception:
+            logging.getLogger(__name__).warning(
+                "v2 lint failed for %s via %s", path, tool.plugin_id, exc_info=True
+            )
+            return []
+        # lint_text_with_tool returns a FileResult (editor path);
+        # be tolerant if a future wrapper returns a LintRunResult or list.
+        diags: list = []
+        if hasattr(run, "diagnostics"):
+            diags = list(getattr(run, "diagnostics") or [])
+        elif hasattr(run, "files"):
+            for fr in getattr(run, "files") or []:
+                diags.extend(getattr(fr, "diagnostics", []) or [])
+        elif isinstance(run, list):
+            diags = run
+        converted: list = []
+        for diag in diags:
+            # Engine diagnostics are ansys_lint.model.Diagnostic; map to
+            # hpc_gui.lint.models.Diagnostic for the editor result UI.
+            try:
+                severity_value = getattr(diag.severity, "value", str(diag.severity))
+                severity = Severity(severity_value)
+            except ValueError:
+                severity = Severity.INFO
+            converted.append(
+                Diagnostic(
+                    rule_id=getattr(diag, "code", getattr(diag, "rule_id", "V2")),
+                    severity=severity,
+                    message=getattr(diag, "message", str(diag)),
+                    line=getattr(diag, "line", None),
+                    column=getattr(diag, "column", None),
+                    end_line=getattr(diag, "end_line", getattr(diag, "endLine", None)),
+                    end_column=getattr(diag, "end_column", getattr(diag, "endColumn", None)),
+                    explanation=getattr(diag, "explanation", "") or "",
+                    suggested_fix=getattr(diag, "suggested_fix", getattr(diag, "suggestedFix", "")) or "",
+                    documentation_url=getattr(diag, "source_url", getattr(diag, "documentation_url", "")) or "",
+                    plugin_id=getattr(tool, "plugin_id", ""),
+                    plugin_version=getattr(tool, "version", ""),
+                )
+            )
+        return converted
 
     def _show_lint_results(self, path: str, issues: list[str], diagnostics: list) -> None:
         """Show a diagnostics dialog; double-click navigates the editor line."""
