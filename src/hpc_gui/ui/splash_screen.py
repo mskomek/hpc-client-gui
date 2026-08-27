@@ -4,6 +4,8 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor, QFont, QPainter, QPixmap
 from PySide6.QtWidgets import QDialog, QLabel, QProgressBar, QSplashScreen, QVBoxLayout
 
+from hpc_gui.core.i18n import t
+
 
 class StartupSplash(QSplashScreen):
     """Simple splash shown while the main window is being built."""
@@ -27,12 +29,12 @@ class StartupSplash(QSplashScreen):
         painter.setPen(QColor("#1f2937"))
         title_font = QFont("Segoe UI", 23, QFont.Weight.DemiBold)
         painter.setFont(title_font)
-        painter.drawText(0, 56, cls.WIDTH, 38, Qt.AlignmentFlag.AlignHCenter, "HPC WORKSPACE")
+        painter.drawText(0, 56, cls.WIDTH, 38, Qt.AlignmentFlag.AlignHCenter, t("splash.title"))
 
         subtitle_font = QFont("Segoe UI", 10)
         painter.setFont(subtitle_font)
         painter.setPen(QColor("#5b6472"))
-        painter.drawText(0, 108, cls.WIDTH, 24, Qt.AlignmentFlag.AlignHCenter, "SSH  •  Slurm  •  X11 Workflow Manager")
+        painter.drawText(0, 108, cls.WIDTH, 24, Qt.AlignmentFlag.AlignHCenter, t("splash.subtitle"))
         painter.end()
         return pixmap
 
@@ -53,7 +55,7 @@ class UpdateSplash(QDialog):
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
-        self.setWindowTitle("HPC WORKSPACE")
+        self.setWindowTitle(t("splash.title"))
         self.setFixedSize(self.WIDTH, self.HEIGHT)
         self.setWindowFlags(
             Qt.WindowType.Dialog
@@ -72,11 +74,11 @@ class UpdateSplash(QDialog):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(24, 24, 24, 26)
         layout.setSpacing(10)
-        title = QLabel("HPC WORKSPACE", self)
+        title = QLabel(t("splash.title"), self)
         title.setObjectName("title")
         title.setAlignment(Qt.AlignmentFlag.AlignHCenter)
         layout.addWidget(title)
-        subtitle = QLabel("SSH  •  Slurm  •  X11 Workflow Manager", self)
+        subtitle = QLabel(t("splash.subtitle"), self)
         subtitle.setObjectName("subtitle")
         subtitle.setAlignment(Qt.AlignmentFlag.AlignHCenter)
         layout.addWidget(subtitle)
