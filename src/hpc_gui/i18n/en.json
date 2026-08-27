@@ -115,7 +115,11 @@
   },
   "splash": {
     "title": "HPC WORKSPACE",
-    "subtitle": "SSH  •  Slurm  •  X11 Workflow Manager"
+    "subtitle": "SSH  •  Slurm  •  X11 Workflow Manager",
+    "status_starting": "Starting application...",
+    "status_preparing": "Preparing workspace...",
+    "status_checking": "Checking startup environment...",
+    "status_loading": "Loading interface..."
   },
   "common": {
     "ok": "OK",

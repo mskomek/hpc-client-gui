@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## v1.5.4
+
+### Demo and developer experience
+- Added a 49-second English-captioned offline demo covering connection profiles, remote file management, parallel transfers, Slurm jobs and output, Plugin Manager, and ANSYS journal lint.
+- Added a reproducible `python scripts/create_demo_gif.py` generator using disposable mock data.
+- Localized startup splash status messages in English and Turkish.
+
 ## v1.5.3
 
 ### Local plugin checks

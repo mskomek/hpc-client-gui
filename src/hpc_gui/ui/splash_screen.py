@@ -18,7 +18,7 @@ class StartupSplash(QSplashScreen):
         self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, True)
         self.setWindowFlag(Qt.WindowType.FramelessWindowHint, True)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, False)
-        self._status = "Starting application..."
+        self._status = t("splash.status_starting")
 
     @classmethod
     def _build_pixmap(cls) -> QPixmap:
