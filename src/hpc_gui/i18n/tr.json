@@ -115,7 +115,11 @@
   },
   "splash": {
     "title": "HPC WORKSPACE",
-    "subtitle": "SSH  •  Slurm  •  X11 İş Akışı Yöneticisi"
+    "subtitle": "SSH  •  Slurm  •  X11 İş Akışı Yöneticisi",
+    "status_starting": "Uygulama başlatılıyor...",
+    "status_preparing": "Çalışma alanı hazırlanıyor...",
+    "status_checking": "Başlangıç ortamı denetleniyor...",
+    "status_loading": "Arayüz yükleniyor..."
   },
   "common": {
     "ok": "Tamam",
