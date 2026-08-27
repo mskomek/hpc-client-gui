@@ -59,8 +59,10 @@ düzenleyicide gerçek okuma/yazma desteğiyle açılır; **Yeni pencerede
 düzelt** aynı düzenleyiciyi bağımsız pencerede açar. Uzak dosyalar için
 **Görüntüle/Düzenle** kullanılır: içerik oturum üzerinden yüklenir ve
 sunucuya geri kaydedilir. Düzenleyicinin **Lint** düğmesi açık metni
-denetler; tam Ansys journal denetimi için sağ tıklama **ANSYS Journal
-Denetimi** ya da **Eklentiye gönder ▸** (bkz. [Eklentiler](#eklentiler)).
+denetler ve kurulu bir ANSYS linter aracı dosya türünü destekliyorsa o
+aracın denetimlerini de ekler; tam journal denetimi için ayrıca sağ
+tıklama **ANSYS Journal Denetimi** ya da **Eklentiye gönder ▸** de
+kullanılabilir (bkz. [Eklentiler](#eklentiler)).
 
 ### Varsayılan yerel klasör (profil başına)
 

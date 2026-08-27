@@ -58,9 +58,11 @@ Right-click a **local** file and choose **Edit** to open it in the in-app
 editor with real read/write access to the local filesystem; **Edit in new
 window** opens the same editor in a standalone window. Remote files use
 **View/Edit**, which loads the content over the session and saves back to
-the server. The editor's **Lint** button checks the current text; for
-full Ansys journal linting use the right-click **ANSYS Journal Lint**
-quick check or **Send to plugin ▸** (see [Plugins](#plugins)).
+the server. The editor's **Lint** button checks the current text and,
+when an ANSYS linter tool is installed and the file type matches, also
+runs that tool and merges its diagnostics; for full journal linting you
+can also use the right-click **ANSYS Journal Lint** quick check or
+**Send to plugin ▸** (see [Plugins](#plugins)).
 
 ### Default local folder (per profile)
 
