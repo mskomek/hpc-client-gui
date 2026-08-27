@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import posixpath
 import re
+from pathlib import Path
 
 from PySide6.QtCore import QEvent, Signal, Qt
 from PySide6.QtGui import QKeySequence, QShortcut, QTextCursor
@@ -98,9 +99,11 @@ class _EditorDocument(QWidget):
         path: str = "",
         content: str = "",
         parent=None,
+        is_local: bool = False,
     ):
         super().__init__(parent)
         self.path = path
+        self.is_local = is_local
         self.text = _EditorTextEdit(owner, self)
         self.text.setPlainText(content)
         layout = QVBoxLayout(self)
@@ -227,8 +230,12 @@ class EditorWidget(QWidget):
     def _tab_title(path: str) -> str:
         return posixpath.basename(path.rstrip("/")) if path else t("editor.title")
 
-    def _add_document(self, path: str = "", content: str = "") -> _EditorDocument:
-        document = _EditorDocument(self, path, content, self.document_tabs)
+    def _add_document(
+        self, path: str = "", content: str = "", is_local: bool = False
+    ) -> _EditorDocument:
+        document = _EditorDocument(
+            self, path, content, self.document_tabs, is_local=is_local
+        )
         index = self.document_tabs.addTab(document, self._tab_title(path))
         self.document_tabs.setTabToolTip(index, path)
         self.document_tabs.setCurrentIndex(index)
@@ -343,10 +350,13 @@ class EditorWidget(QWidget):
     def set_session(self, session):
         self.session = session
 
-    def open_file(self, path: str, content: str):
+    def open_file(self, path: str, content: str, is_local: bool = False):
         existing = self._document_index_for_path(path)
         if existing >= 0:
             self.document_tabs.setCurrentIndex(existing)
+            document = self.document_tabs.widget(existing)
+            if isinstance(document, _EditorDocument):
+                document.is_local = is_local
             return
         current = self._current_document()
         if (
@@ -356,13 +366,19 @@ class EditorWidget(QWidget):
             and self.document_tabs.count() == 1
         ):
             current.path = path
+            current.is_local = is_local
             current.text.setPlainText(content)
             index = self.document_tabs.indexOf(current)
             self.document_tabs.setTabText(index, self._tab_title(path))
             self.document_tabs.setTabToolTip(index, path)
             self._on_current_document_changed(index)
             return
-        self._add_document(path, content)
+        self._add_document(path, content, is_local=is_local)
+
+    def open_local_file(self, path: str) -> None:
+        """Open a local filesystem file for in-app editing (no session)."""
+        text = Path(path).read_text(encoding="utf-8", errors="replace")
+        self.open_file(path, text, is_local=True)
 
     def retranslate_ui(self):
         self.lbl_remote.setText(t("editor.remote"))
@@ -396,6 +412,7 @@ class EditorWidget(QWidget):
             return
         issues = self._collect_lint_issues(path, text)
         diagnostics = self._run_plugin_lint(path, text)
+        diagnostics = diagnostics + self._run_v2_tool_lint(path, text)
         diagnostics = diagnostics + self._run_cross_checks(text)
         if not issues and not diagnostics:
             QMessageBox.information(self, t("common.info"), t("editor.lint_ok") if t("editor.lint_ok") != "[editor.lint_ok]" else "Lint passed. No obvious issues found.")
@@ -434,6 +451,104 @@ class EditorWidget(QWidget):
             except (LintError, Exception):  # noqa: B014 - never break the editor
                 continue
         return diagnostics
+
+    def _run_v2_tool_lint(self, path: str, text: str) -> list:
+        """Run Plugin API v2 linter tools for the file suffix (additive)."""
+        import logging
+
+        try:
+            from hpc_gui.lint.models import Diagnostic, Severity
+            from hpc_gui.plugins.linter_tools import tools_supporting_suffix
+        except Exception:
+            return []
+        suffix = Path(path).suffix.lower()
+        if not suffix:
+            return []
+        try:
+            tools = tools_supporting_suffix(suffix)
+        except Exception:
+            logging.getLogger(__name__).warning(
+                "v2 lint tool lookup failed for %s", path, exc_info=True
+            )
+            return []
+        if not tools:
+            return []
+        # Collect from every supporting tool; per-tool failures are contained.
+        raw_diags: list[tuple] = []  # (tool, diag)
+        for tool in tools:
+            try:
+                from hpc_gui.plugins.linter_tools import lint_text_with_tool_for
+
+                run = lint_text_with_tool_for(tool, text, file_name=path)
+            except Exception:
+                logging.getLogger(__name__).warning(
+                    "v2 lint failed for %s via %s", path, tool.plugin_id, exc_info=True
+                )
+                continue
+            # lint_text_with_tool_for returns a FileResult (editor path);
+            # be tolerant if a future wrapper returns a LintRunResult or list.
+            diags: list = []
+            if hasattr(run, "diagnostics"):
+                diags = list(getattr(run, "diagnostics") or [])
+            elif hasattr(run, "files"):
+                for fr in getattr(run, "files") or []:
+                    diags.extend(getattr(fr, "diagnostics", []) or [])
+            elif isinstance(run, list):
+                diags = run
+            for diag in diags:
+                raw_diags.append((tool, diag))
+        if not raw_diags:
+            return []
+        # Deduplicate by (rule_id, line, column, message); sort by position.
+        seen: set[tuple] = set()
+        deduped: list[tuple] = []
+        for tool, diag in raw_diags:
+            key = (
+                getattr(diag, "code", getattr(diag, "rule_id", "V2")),
+                getattr(diag, "line", None),
+                getattr(diag, "column", None),
+                getattr(diag, "message", str(diag)),
+            )
+            if key in seen:
+                continue
+            seen.add(key)
+            deduped.append((tool, diag))
+        deduped.sort(
+            key=lambda item: (
+                getattr(item[1], "line", None) or 9999,
+                getattr(item[1], "column", None) or 0,
+                getattr(item[1], "code", getattr(item[1], "rule_id", "")),
+            )
+        )
+        # When multiple tools contribute, prefix the message with the plugin id
+        # so the result list stays attributable without changing the model shape.
+        multi = len({t.plugin_id for t, _ in deduped}) > 1
+        converted: list = []
+        for tool, diag in deduped:
+            try:
+                severity_value = getattr(diag.severity, "value", str(diag.severity))
+                severity = Severity(severity_value)
+            except ValueError:
+                severity = Severity.INFO
+            raw_message = getattr(diag, "message", str(diag))
+            message = f"[{tool.plugin_id}] {raw_message}" if multi else raw_message
+            converted.append(
+                Diagnostic(
+                    rule_id=getattr(diag, "code", getattr(diag, "rule_id", "V2")),
+                    severity=severity,
+                    message=message,
+                    line=getattr(diag, "line", None),
+                    column=getattr(diag, "column", None),
+                    end_line=getattr(diag, "end_line", getattr(diag, "endLine", None)),
+                    end_column=getattr(diag, "end_column", getattr(diag, "endColumn", None)),
+                    explanation=getattr(diag, "explanation", "") or "",
+                    suggested_fix=getattr(diag, "suggested_fix", getattr(diag, "suggestedFix", "")) or "",
+                    documentation_url=getattr(diag, "source_url", getattr(diag, "documentation_url", "")) or "",
+                    plugin_id=getattr(tool, "plugin_id", ""),
+                    plugin_version=getattr(tool, "version", ""),
+                )
+            )
+        return converted
 
     def _show_lint_results(self, path: str, issues: list[str], diagnostics: list) -> None:
         """Show a diagnostics dialog; double-click navigates the editor line."""
@@ -537,6 +652,16 @@ class EditorWidget(QWidget):
             document.path = ""
 
     def load_path(self):
+        document = self._current_document()
+        if document is not None and document.is_local:
+            path = document.path
+            try:
+                content = Path(path).read_text(encoding="utf-8", errors="replace")
+                document.text.setPlainText(content)
+                append_event({"type": "editor_load", "path": path})
+            except OSError as e:
+                show_exception(self, title=t("common.error"), user_message=t("editor.open_failed").format(err=e), exc=e, area="EDITOR")
+            return
         if not self.session or not self.session.get("files"):
             QMessageBox.warning(self, t("common.error"), t("common.no_connection"))
             return
@@ -551,10 +676,25 @@ class EditorWidget(QWidget):
             show_exception(self, title=t("common.error"), user_message=t("editor.open_failed").format(err=e), exc=e, area="EDITOR")
 
     def save_path(self, force_submit: bool = False, run_in_terminal: bool = False):
+        document = self._current_document()
+        path = self.path_in.text().strip()
+        if document is not None and document.is_local:
+            if not path:
+                return
+            text = self.text.toPlainText()
+            if not self._validate_before_save(path, text):
+                return
+            try:
+                Path(path).write_text(text, encoding="utf-8", newline="")
+                self._set_active_document_path(path)
+                append_event({"type": "editor_save", "path": path})
+                QMessageBox.information(self, t("common.info"), t("editor.saved") if t("editor.saved") != "[editor.saved]" else "Saved.")
+            except OSError as e:
+                show_exception(self, title=t("common.error"), user_message=t("editor.save_failed").format(err=e), exc=e, area="EDITOR")
+            return
         if not self.session or not self.session.get("files"):
             QMessageBox.warning(self, t("common.error"), t("common.no_connection"))
             return
-        path = self.path_in.text().strip()
         if not path:
             return
         text = self.text.toPlainText()

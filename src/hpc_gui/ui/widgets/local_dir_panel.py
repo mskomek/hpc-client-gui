@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import datetime
 import json
+import logging
 import os
 import re
 import shutil
@@ -239,6 +240,9 @@ class _LocalTree(QTreeWidget):
         super().mouseReleaseEvent(event)
 
 
+logger = logging.getLogger(__name__)
+
+
 class LocalDirPanel(QWidget):
     remotePathsDropped = Signal(list, str)
     directoryChanged = Signal(str)
@@ -247,6 +251,7 @@ class LocalDirPanel(QWidget):
     fileActivated = Signal(str)
     uploadRequested = Signal(list)
     remoteClipboardPasteRequested = Signal(list, str)
+    editRequested = Signal(str, bool)  # path, new_window
 
     def __init__(self, initial_directory: str = "", parent=None) -> None:
         super().__init__(parent)
@@ -714,8 +719,14 @@ class LocalDirPanel(QWidget):
         act_open = menu.addAction(LOCAL_CONTEXT_MENU_LABELS[3])
         act_open_with = menu.addAction(t("files.open_with"))
         act_open_new_tab = menu.addAction(LOCAL_CONTEXT_MENU_LABELS[5])
-        act_edit = menu.addAction(LOCAL_CONTEXT_MENU_LABELS[6])
-        act_edit.setEnabled(False)
+        act_edit = menu.addAction(
+            t("dirs.edit") if t("dirs.edit") != "[dirs.edit]" else "Edit"
+        )
+        act_edit_new_window = menu.addAction(
+            t("dirs.edit_new_window")
+            if t("dirs.edit_new_window") != "[dirs.edit_new_window]"
+            else "Edit in new window"
+        )
         menu.addSeparator()
         act_create_dir = menu.addAction(LOCAL_CONTEXT_MENU_LABELS[8])
         act_create_dir_enter = menu.addAction(LOCAL_CONTEXT_MENU_LABELS[9])
@@ -728,9 +739,64 @@ class LocalDirPanel(QWidget):
         act_open.setEnabled(not paths or one_selected)
         act_open_with.setEnabled(one_selected and not one_is_dir)
         act_open_new_tab.setEnabled(one_is_dir)
+        act_edit.setEnabled(one_selected and not one_is_dir)
+        act_edit_new_window.setEnabled(one_selected and not one_is_dir)
         act_create_dir_enter.setEnabled(bool(self.current_dir))
         act_delete.setEnabled(bool(paths))
         act_rename.setEnabled(one_selected)
+        # Batch-aware lint: 1-10 files with a common tool, or a single folder
+        # containing at least one supported file.
+        lint_batch_ok = False
+        folder_lint_path: str | None = None
+        if paths:
+            if one_selected and one_is_dir:
+                try:
+                    if self._folder_contains_supported_file(str(paths[0])):
+                        lint_batch_ok = True
+                        folder_lint_path = str(paths[0])
+                except Exception:
+                    lint_batch_ok = False
+            else:
+                all_files = all(not Path(str(p)).is_dir() for p in paths)
+                if all_files and 1 <= len(paths) <= 10:
+                    try:
+                        from hpc_gui.plugins.linter_tools import tools_supporting_all_suffixes
+
+                        suffixes = [Path(str(p)).suffix.lower() for p in paths]
+                        lint_batch_ok = bool(tools_supporting_all_suffixes(suffixes))
+                    except Exception:
+                        lint_batch_ok = False
+        act_ansys_lint = menu.addAction(t("files.ansys_lint"))
+        act_ansys_lint.setEnabled(lint_batch_ok)
+        if one_selected and one_is_dir and folder_lint_path:
+            tools = self._tools_for_folder(folder_lint_path)
+            if tools:
+                send_menu = menu.addMenu(t("files.send_to_plugin"))
+                for tool in tools:
+                    action = send_menu.addAction(tool.title)
+                    action.triggered.connect(
+                        lambda _=False, tl=tool, p=folder_lint_path: self.open_in_tool(tl, p)
+                    )
+        elif len(paths) == 1 and not one_is_dir:
+            self._build_send_to_plugin_menu(
+                menu, str(paths[0]) if one_selected and not one_is_dir else None
+            )
+        elif lint_batch_ok:
+            # Batch submenu: tools supporting every selected file.
+            try:
+                from hpc_gui.plugins.linter_tools import tools_supporting_all_suffixes
+
+                suffixes = [Path(str(p)).suffix.lower() for p in paths]
+                batch_tools = tools_supporting_all_suffixes(suffixes)
+            except Exception:
+                batch_tools = []
+            if batch_tools:
+                send_menu = menu.addMenu(t("files.send_to_plugin"))
+                for tool in batch_tools:
+                    action = send_menu.addAction(tool.title)
+                    action.triggered.connect(
+                        lambda _=False, tl=tool, ps=list(paths): self.open_in_tool_batch(tl, ps)
+                    )
         if one_selected and item is not None and bool(item.data(0, Qt.ItemDataRole.UserRole + 2)):
             act_upload.setEnabled(False)
             act_open.setEnabled(True)
@@ -754,6 +820,12 @@ class LocalDirPanel(QWidget):
         if chosen == act_open_new_tab and one_is_dir:
             self.open_directory_in_new_tab(paths[0])
             return
+        if chosen == act_edit:
+            self._edit_selected(new_window=False)
+            return
+        if chosen == act_edit_new_window:
+            self._edit_selected(new_window=True)
+            return
         if chosen == act_create_dir:
             self.create_directory(enter=False)
             return
@@ -769,6 +841,183 @@ class LocalDirPanel(QWidget):
         if chosen == act_rename:
             self.rename_selected()
             return
+        if chosen == act_ansys_lint:
+            if len(paths) == 1:
+                self.run_ansys_lint(Path(str(paths[0])))
+            else:
+                self.run_ansys_lint_batch([Path(str(p)) for p in paths])
+            return
+
+    def _folder_contains_supported_file(self, folder: str) -> bool:
+        from hpc_gui.plugins.linter_tools import supported_suffixes
+
+        try:
+            supported = supported_suffixes()
+            if not supported:
+                return False
+            count = 0
+            for p in Path(folder).rglob("*"):
+                if p.is_file() and p.suffix.lower() in supported:
+                    return True
+                count += 1
+                if count > 200:
+                    break
+        except Exception:
+            return False
+        return False
+
+    def _tools_for_folder(self, folder: str) -> list:
+        from hpc_gui.plugins.linter_tools import list_linter_tools, tool_supported_suffixes
+
+        try:
+            supported = set()
+            for p in Path(folder).rglob("*"):
+                if p.is_file():
+                    sfx = p.suffix.lower()
+                    if sfx:
+                        supported.add(sfx)
+                    if len(supported) > 20:
+                        break
+            if not supported:
+                return []
+            tools = []
+            for tool in list_linter_tools():
+                declared = tool_supported_suffixes(tool)
+                if declared & supported:
+                    tools.append(tool)
+            return tools
+        except Exception:
+            logger.warning("Tool lookup failed for folder %s", folder, exc_info=True)
+            return []
+
+    @staticmethod
+    def _ansys_lint_supported(suffix: str) -> bool:
+        from hpc_gui.plugins.linter_tools import supported_suffixes
+
+        return suffix in supported_suffixes()
+
+    def _edit_selected(self, new_window: bool) -> None:
+        selected = self._selected_items()
+        if len(selected) != 1:
+            return
+        path = str(selected[0].data(0, Qt.ItemDataRole.UserRole))
+        if not path or Path(path).is_dir():
+            return
+        self.editRequested.emit(path, new_window)
+
+    def _build_send_to_plugin_menu(self, menu, path_str: str | None):
+        """Attach a "send to plugin" submenu when a tool supports the file."""
+        if not path_str:
+            return None
+        from hpc_gui.plugins.linter_tools import tools_supporting_suffix
+
+        try:
+            tools = tools_supporting_suffix(Path(path_str).suffix.lower())
+        except Exception:  # defensive: menu building never breaks the panel
+            logger.warning("Tool lookup failed for %s", path_str, exc_info=True)
+            return None
+        if not tools:
+            return None
+        send_menu = menu.addMenu(t("files.send_to_plugin"))
+        for tool in tools:
+            action = send_menu.addAction(tool.title)
+            action.triggered.connect(
+                lambda _=False, tl=tool, p=path_str: self.open_in_tool(tl, p)
+            )
+        return send_menu
+
+    def open_in_tool(self, tool, path_str: str) -> None:
+        """Open a linter-tool page pre-loaded with one local file."""
+        from hpc_gui.ui.dialogs.linter_tool_host import host_tool_page
+
+        host_tool_page(
+            self,
+            tool,
+            initial_paths=[path_str],
+            title=f"{tool.title} — {Path(path_str).name}",
+        )
+
+    def open_in_tool_batch(self, tool, paths: list[str]) -> None:
+        """Open a linter-tool page pre-loaded with multiple local files."""
+        from hpc_gui.ui.dialogs.linter_tool_host import host_tool_page
+
+        names = ", ".join(Path(str(p)).name for p in paths[:3])
+        if len(paths) > 3:
+            names += f" +{len(paths) - 3}"
+        host_tool_page(
+            self,
+            tool,
+            initial_paths=[str(p) for p in paths],
+            title=f"{tool.title} — {names}",
+        )
+
+    def run_ansys_lint(self, path: Path) -> None:
+        from hpc_gui.plugins.linter_tools import ToolLoadError, lint_paths_with_tool
+        from hpc_gui.ui.dialogs.ansys_lint_results_dialog import (
+            show_ansys_lint_results,
+        )
+
+        def open_in_tool() -> None:
+            from hpc_gui.plugins.linter_tools import first_linter_tool
+
+            try:
+                self.open_in_tool(first_linter_tool(), str(path))
+            except Exception as exc:  # already messaged by the host
+                logger.warning("Fix redirect failed for %s", path, exc_info=exc)
+
+        try:
+            run = lint_paths_with_tool([path])
+        except ToolLoadError as exc:
+            QMessageBox.warning(self, t("ansyslint.title"), str(exc))
+            return
+        except Exception as exc:  # defensive: engine failures stay contained
+            logger.warning("ANSYS lint failed for %s", path, exc_info=exc)
+            QMessageBox.warning(
+                self, t("ansyslint.title"), f"{type(exc).__name__}: {exc}"
+            )
+            return
+        show_ansys_lint_results(
+            self, f"{t('ansyslint.title')} — {path.name}", run, open_in_tool=open_in_tool
+        )
+
+    def run_ansys_lint_batch(self, paths: list[Path]) -> None:
+        from hpc_gui.plugins.linter_tools import ToolLoadError, lint_paths_with_tool
+        from hpc_gui.ui.dialogs.ansys_lint_results_dialog import (
+            show_ansys_lint_results,
+        )
+
+        if not paths:
+            return
+
+        def open_in_tool() -> None:
+            from hpc_gui.plugins.linter_tools import tools_supporting_all_suffixes
+
+            try:
+                suffixes = [p.suffix.lower() for p in paths]
+                tools = tools_supporting_all_suffixes(suffixes)
+                if not tools:
+                    return
+                self.open_in_tool_batch(tools[0], [str(p) for p in paths])
+            except Exception as exc:
+                logger.warning("Fix redirect failed for %s", paths, exc_info=exc)
+
+        try:
+            run = lint_paths_with_tool(paths)
+        except ToolLoadError as exc:
+            QMessageBox.warning(self, t("ansyslint.title"), str(exc))
+            return
+        except Exception as exc:  # defensive: engine failures stay contained
+            logger.warning("ANSYS lint failed for %s", paths, exc_info=exc)
+            QMessageBox.warning(
+                self, t("ansyslint.title"), f"{type(exc).__name__}: {exc}"
+            )
+            return
+        names = ", ".join(p.name for p in paths[:3])
+        if len(paths) > 3:
+            names += f" +{len(paths) - 3}"
+        show_ansys_lint_results(
+            self, f"{t('ansyslint.title')} — {names}", run, open_in_tool=open_in_tool
+        )
 
     def rename_selected(self) -> bool:
         selected = self._selected_items()
