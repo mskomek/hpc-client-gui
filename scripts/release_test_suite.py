@@ -70,7 +70,6 @@ COVERAGE_APPEND_ARGS = (
     "--cov-report=term",
     "--cov-report=json:coverage.json",
     "--cov-report=xml:coverage.xml",
-    f"--cov-fail-under={COVERAGE_FAIL_UNDER}",
 )
 
 
@@ -84,9 +83,11 @@ def build_commands(*, coverage: bool) -> list[tuple[str, ...]]:
     commands.append(
         PYTEST_BASE + ignores + (COVERAGE_ARGS if coverage else ())
     )
-    commands.append(
-        PYTEST_BASE + ISOLATED_WIRE_FILES + (COVERAGE_APPEND_ARGS if coverage else ())
-    )
+    for index, path in enumerate(ISOLATED_WIRE_FILES):
+        coverage_args = COVERAGE_APPEND_ARGS if coverage else ()
+        if coverage and index == len(ISOLATED_WIRE_FILES) - 1:
+            coverage_args += (f"--cov-fail-under={COVERAGE_FAIL_UNDER}",)
+        commands.append(PYTEST_BASE + (path,) + coverage_args)
     return commands
 
 
