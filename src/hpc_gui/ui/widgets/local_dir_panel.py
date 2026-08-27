@@ -761,7 +761,7 @@ class LocalDirPanel(QWidget):
                 if all_files and paths:
                     suffixes = [Path(str(p)).suffix.lower() for p in paths]
                     lint_batch_ok = self._local_lint_supports_suffixes(suffixes)
-        plugin_menu = menu.addMenu(t("files.plugins")) if paths else None
+        plugin_menu = menu.addMenu(t("files.plugins")) if lint_batch_ok else None
         act_ansys_lint = (
             plugin_menu.addAction(t("files.ansys_lint"))
             if plugin_menu is not None
