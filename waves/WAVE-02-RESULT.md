@@ -47,3 +47,16 @@ both DMGs below budget, stop pruning and keep the smaller, lower-risk diff.
 If either remains over budget, perform a module-level import audit and test
 one exclusion at a time. Do not raise the budget or remove WebEngine runtime
 files.
+
+## Release validation finding
+
+The first post-merge verification run passed arm64, Linux, and Windows but
+failed x86_64 during packaged GUI smoke. The failure was not a size failure:
+`cryptography==50.0.0` produced a Rust extension requiring
+`_SSL_get0_group_name`, which was absent from the bundled x86_64
+`libssl.3.dylib`.
+
+The develop lock already pins `cryptography==48.0.1`, the last line retaining
+macOS x86_64 wheel support. A focused regression test now protects this
+compatibility constraint. The fix must still be brought through the protected
+PR flow and revalidated on both macOS architectures before publication.
