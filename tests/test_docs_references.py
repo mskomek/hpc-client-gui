@@ -47,6 +47,12 @@ def test_referenced_local_files_exist() -> None:
 
 
 def test_agent_guidance_points_at_single_authority() -> None:
-    agents = (ROOT / "AGENTS.md").read_text(encoding="utf-8")
-    assert "rules.md" in agents
-    assert "pull request" in agents.lower()
+    # AGENTS.md is intentionally local-only (gitignored); the public
+    # contribution workflow lives in CONTRIBUTING.md.
+    agents = ROOT / "AGENTS.md"
+    if agents.exists():
+        text = agents.read_text(encoding="utf-8")
+        assert "rules.md" in text
+        assert "pull request" in text.lower()
+    contributing = (ROOT / "CONTRIBUTING.md").read_text(encoding="utf-8")
+    assert "pull request" in contributing.lower()
