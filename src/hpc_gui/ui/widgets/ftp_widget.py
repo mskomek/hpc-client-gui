@@ -943,6 +943,7 @@ class FtpWidget(QWidget):
     batchSubmitRequested = Signal(list)
     batchShellRequested = Signal(list)
     runShellRequested = Signal(str)
+    editLocalRequested = Signal(str, bool)  # path, new_window
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
@@ -1103,6 +1104,7 @@ class FtpWidget(QWidget):
         self.local_panel.selectionChanged.connect(self._update_effective_label)
         self.local_panel.fileActivated.connect(self._upload_local_path)
         self.local_panel.uploadRequested.connect(self._upload_local_paths)
+        self.local_panel.editRequested.connect(self.editLocalRequested)
         self.local_panel.remotePathsDropped.connect(self._download_dropped_paths)
         self.local_panel.remoteClipboardPasteRequested.connect(
             self._download_remote_clipboard_paths
