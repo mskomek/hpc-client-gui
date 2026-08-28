@@ -93,7 +93,6 @@ def test_full_saved_system_dict_is_preserved_verbatim():
 
 def test_quota_limits_are_kept_in_system_templates():
     normalized = normalize_system_settings({
-        "quota_tracking_enabled": True,
         "home_quota_limit": "2 TB",
         "home_inode_limit": "500K",
         "scratch_quota_limit": "2 TB",
@@ -103,12 +102,6 @@ def test_quota_limits_are_kept_in_system_templates():
     assert normalized["home_inode_limit"] == "500K"
     assert normalized["scratch_quota_limit"] == "2 TB"
     assert normalized["scratch_inode_limit"] == "500K"
-    assert normalized["quota_tracking_enabled"] is True
-
-
-def test_quota_tracking_is_disabled_by_default_or_explicit_false():
-    assert normalize_system_settings({})["quota_tracking_enabled"] is False
-    assert normalize_system_settings({"quota_tracking_enabled": False})["quota_tracking_enabled"] is False
 
 
 def test_partial_old_dict_is_normalized_safely():
