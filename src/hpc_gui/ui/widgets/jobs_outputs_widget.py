@@ -33,9 +33,8 @@ from hpc_gui.core.history import append_event
 from hpc_gui.ui.widgets.remote_dir_panel import RemoteDirPanel
 from hpc_gui.services.slurm_models import parse_scontrol
 from hpc_gui.services.slurm_script_parser import (
+    parse_job_paths,
     parse_job_name,
-    parse_output_error,
-    resolve_path,
 )
 from hpc_gui.config.system_profile import format_remote_path, normalize_system_settings
 from hpc_gui.ui.async_call import AsyncCall
@@ -633,6 +632,7 @@ class JobsOutputsWidget(QWidget):
         self.meta_job_script.setTextFormat(Qt.TextFormat.RichText)
         self.meta_job_script.setOpenExternalLinks(False)
         self.meta_job_script.linkActivated.connect(self._open_detail_script)
+        self.meta_job_workdir = QLabel()
         self.btn_sacct = QPushButton(t("jobs_outputs.refresh_sacct"))
         self.btn_scontrol = QPushButton(t("jobs_outputs.show_job_details"))
         self.btn_sacct.clicked.connect(self.refresh_sacct)
@@ -645,6 +645,7 @@ class JobsOutputsWidget(QWidget):
         vm = QVBoxLayout(self.meta_box)
         vm.addLayout(meta_row)
         vm.addWidget(self.meta_job_script)
+        vm.addWidget(self.meta_job_workdir)
         vm.addWidget(self.meta_text)
 
         # --- lssrv
@@ -807,6 +808,7 @@ class JobsOutputsWidget(QWidget):
         self.path_err.setText("")
         self.meta_text.setPlainText("")
         self.meta_job_script.clear()
+        self.meta_job_workdir.clear()
         self.meta_job_id.setText("")
         self.lssrv_text.setPlainText("")
         self.active_script = ""
@@ -1490,12 +1492,13 @@ class JobsOutputsWidget(QWidget):
         self.active_script = script_path
         self.lbl_script.setText(t("jobs_outputs.active_script").format(path=script_path))
 
-        out_raw, err_raw = parse_output_error(script_text)
         job_name = parse_job_name(script_text)
         jobid = self.cancel_id.text().strip() or None
-        # resolve paths relative to script dir
-        out_path = resolve_path(script_path, out_raw, jobid, job_name) if out_raw else ""
-        err_path = resolve_path(script_path, err_raw, jobid, job_name) if err_raw else ""
+        paths = parse_job_paths(script_text, script_path, jobid, job_name)
+        out_path, err_path = paths.stdout, paths.stderr
+        self.meta_job_workdir.setText(
+            f"<b>{t('jobs_outputs.workdir')}:</b> {paths.workdir}"
+        )
 
         if follow_mode == SBATCH_FOLLOW_MODE_NEW_WINDOW_COMBINED:
             self.open_output_pair_window(out_path, err_path)

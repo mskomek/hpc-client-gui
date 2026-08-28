@@ -363,6 +363,7 @@
     "accounting_placeholder": "sacct / scontrol sonuçları",
     "refresh_sacct": "sacct Yenile",
     "script_path": "Betik yolu",
+    "workdir": "Çalışma dizini",
     "show_job_details": "İş detaylarını göster",
     "job_id_required": "İş kimliği gerekli.",
     "search_placeholder": "Çıktıda ara",
