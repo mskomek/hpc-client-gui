@@ -693,6 +693,7 @@
     "system_name": "System name",
     "scratch_dir": "Job / scratch directory",
     "home_dir": "Home directory",
+    "quota_tracking_enabled": "Enable manual quota tracking",
     "home_quota_limit": "Home quota limit",
     "home_inode_limit": "Home inode limit",
     "scratch_quota_limit": "Scratch quota limit",

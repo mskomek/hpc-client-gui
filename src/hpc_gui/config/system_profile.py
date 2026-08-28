@@ -5,10 +5,11 @@ from typing import Any, Iterable
 from hpc_gui.config.storage import load_settings, update_settings
 
 
-GENERIC_SLURM_DEFAULTS: dict[str, str] = {
+GENERIC_SLURM_DEFAULTS: dict[str, Any] = {
     "name": "Generic Slurm",
     "scratch_dir": "",
     "home_dir": "",
+    "quota_tracking_enabled": False,
     "home_quota_limit": "",
     "home_inode_limit": "",
     "scratch_quota_limit": "",
@@ -42,7 +43,7 @@ def hpc_default_remote_paths() -> dict[str, str]:
     }
 
 
-def builtin_system_template_groups() -> dict[str, list[dict[str, str]]]:
+def builtin_system_template_groups() -> dict[str, list[dict[str, Any]]]:
     return {
         "Generic Slurm": [dict(GENERIC_SLURM_DEFAULTS)],
     }
@@ -50,7 +51,7 @@ def builtin_system_template_groups() -> dict[str, list[dict[str, str]]]:
 
 def plugin_system_template_groups(
     installed_plugins: Iterable[Any] | None,
-) -> dict[str, list[dict[str, str]]]:
+) -> dict[str, list[dict[str, Any]]]:
     """Convert installed declarative plugins into system-template groups.
 
     Accepts any iterable of objects exposing ``manifest.name`` and a
@@ -70,21 +71,23 @@ def plugin_system_template_groups(
     return groups
 
 
-def normalize_system_settings(value: Any) -> dict[str, str]:
+def normalize_system_settings(value: Any) -> dict[str, Any]:
     settings = dict(GENERIC_SLURM_DEFAULTS)
     if isinstance(value, dict):
         for key in settings:
             candidate = value.get(key)
-            if isinstance(candidate, str) and candidate.strip():
+            if key == "quota_tracking_enabled" and isinstance(candidate, bool):
+                settings[key] = candidate
+            elif isinstance(candidate, str) and candidate.strip():
                 settings[key] = candidate.strip()
     return settings
 
 
-def load_user_system_templates() -> list[dict[str, str]]:
+def load_user_system_templates() -> list[dict[str, Any]]:
     templates = load_settings().get(SYSTEM_TEMPLATE_SETTINGS_KEY, [])
     if not isinstance(templates, list):
         return []
-    result: list[dict[str, str]] = []
+    result: list[dict[str, Any]] = []
     for item in templates:
         if not isinstance(item, dict):
             continue
@@ -97,7 +100,7 @@ def load_user_system_templates() -> list[dict[str, str]]:
     return result
 
 
-def save_user_system_template(name: str, settings: Any) -> dict[str, str]:
+def save_user_system_template(name: str, settings: Any) -> dict[str, Any]:
     template = normalize_system_settings(settings)
     template["name"] = str(name or "").strip()
     if not template["name"]:

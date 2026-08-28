@@ -693,6 +693,7 @@
     "system_name": "Sistem adı",
     "scratch_dir": "İş / scratch dizini",
     "home_dir": "Ana dizin",
+    "quota_tracking_enabled": "Elle kota takibini etkinleştir",
     "home_quota_limit": "Home kota limiti",
     "home_inode_limit": "Home inode limiti",
     "scratch_quota_limit": "Scratch kota limiti",
