@@ -34,12 +34,6 @@ SYSTEM_SETTING_COMMAND_KEYS: tuple[str, ...] = tuple(
 )
 
 SYSTEM_TEMPLATE_SETTINGS_KEY = "system_templates"
-QUOTA_LIMIT_KEYS = (
-    "home_quota_limit",
-    "home_inode_limit",
-    "scratch_quota_limit",
-    "scratch_inode_limit",
-)
 
 
 def hpc_default_remote_paths() -> dict[str, str]:
@@ -47,14 +41,6 @@ def hpc_default_remote_paths() -> dict[str, str]:
         "scratch_dir": GENERIC_SLURM_DEFAULTS["scratch_dir"],
         "home_dir": GENERIC_SLURM_DEFAULTS["home_dir"],
     }
-
-
-def quota_tracking_enabled(value: Any) -> bool:
-    """Return whether manual quota tracking has usable configured limits."""
-    settings = normalize_system_settings(value)
-    return bool(settings["quota_tracking_enabled"]) and any(
-        settings[key].strip() for key in QUOTA_LIMIT_KEYS
-    )
 
 
 def builtin_system_template_groups() -> dict[str, list[dict[str, Any]]]:

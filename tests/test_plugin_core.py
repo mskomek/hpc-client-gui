@@ -15,7 +15,6 @@ from hpc_gui.config.system_profile import (
     format_remote_path,
     load_user_system_templates,
     normalize_system_settings,
-    quota_tracking_enabled,
     plugin_system_template_groups,
 )
 from hpc_gui.plugins.compatibility import is_app_compatible, validate_requires_app
@@ -110,8 +109,6 @@ def test_quota_limits_are_kept_in_system_templates():
 def test_quota_tracking_is_disabled_by_default_or_explicit_false():
     assert normalize_system_settings({})["quota_tracking_enabled"] is False
     assert normalize_system_settings({"quota_tracking_enabled": False})["quota_tracking_enabled"] is False
-    assert not quota_tracking_enabled({"quota_tracking_enabled": True})
-    assert quota_tracking_enabled({"quota_tracking_enabled": True, "home_quota_limit": "2 TB"})
 
 
 def test_partial_old_dict_is_normalized_safely():
