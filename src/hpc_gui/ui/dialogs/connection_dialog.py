@@ -181,10 +181,6 @@ class ConnectionDialog(QDialog):
         self.system_name = QLineEdit()
         self.scratch_dir = QLineEdit()
         self.home_dir = QLineEdit()
-        self.home_quota_limit = QLineEdit()
-        self.home_inode_limit = QLineEdit()
-        self.scratch_quota_limit = QLineEdit()
-        self.scratch_inode_limit = QLineEdit()
         self.squeue_command = QLineEdit()
         self.sbatch_command = QLineEdit()
         self.scancel_command = QLineEdit()
@@ -210,10 +206,6 @@ class ConnectionDialog(QDialog):
         system_form.addRow(t("connection.system_templates"), system_actions)
         system_form.addRow(t("connection.scratch_dir"), self.scratch_dir)
         system_form.addRow(t("connection.home_dir"), self.home_dir)
-        system_form.addRow(t("connection.home_quota_limit"), self.home_quota_limit)
-        system_form.addRow(t("connection.home_inode_limit"), self.home_inode_limit)
-        system_form.addRow(t("connection.scratch_quota_limit"), self.scratch_quota_limit)
-        system_form.addRow(t("connection.scratch_inode_limit"), self.scratch_inode_limit)
         system_form.addRow(t("connection.squeue_command"), self.squeue_command)
         system_form.addRow(t("connection.sbatch_command"), self.sbatch_command)
         system_form.addRow(t("connection.scancel_command"), self.scancel_command)
@@ -402,10 +394,6 @@ class ConnectionDialog(QDialog):
         self.system_name.setText(system["name"])
         self.scratch_dir.setText(system["scratch_dir"])
         self.home_dir.setText(system["home_dir"])
-        self.home_quota_limit.setText(system["home_quota_limit"])
-        self.home_inode_limit.setText(system["home_inode_limit"])
-        self.scratch_quota_limit.setText(system["scratch_quota_limit"])
-        self.scratch_inode_limit.setText(system["scratch_inode_limit"])
         self.squeue_command.setText(system["squeue_command"])
         self.sbatch_command.setText(system["sbatch_command"])
         self.scancel_command.setText(system["scancel_command"])
@@ -425,10 +413,6 @@ class ConnectionDialog(QDialog):
             "name": self.system_name.text().strip(),
             "scratch_dir": self.scratch_dir.text().strip(),
             "home_dir": self.home_dir.text().strip(),
-            "home_quota_limit": self.home_quota_limit.text().strip(),
-            "home_inode_limit": self.home_inode_limit.text().strip(),
-            "scratch_quota_limit": self.scratch_quota_limit.text().strip(),
-            "scratch_inode_limit": self.scratch_inode_limit.text().strip(),
             "squeue_command": self.squeue_command.text().strip(),
             "sbatch_command": self.sbatch_command.text().strip(),
             "scancel_command": self.scancel_command.text().strip(),

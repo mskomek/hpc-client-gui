@@ -91,19 +91,6 @@ def test_full_saved_system_dict_is_preserved_verbatim():
     assert normalized["status_command"] == "lssrv"
 
 
-def test_quota_limits_are_kept_in_system_templates():
-    normalized = normalize_system_settings({
-        "home_quota_limit": "2 TB",
-        "home_inode_limit": "500K",
-        "scratch_quota_limit": "2 TB",
-        "scratch_inode_limit": "500K",
-    })
-    assert normalized["home_quota_limit"] == "2 TB"
-    assert normalized["home_inode_limit"] == "500K"
-    assert normalized["scratch_quota_limit"] == "2 TB"
-    assert normalized["scratch_inode_limit"] == "500K"
-
-
 def test_partial_old_dict_is_normalized_safely():
     normalized = normalize_system_settings({"name": "Old", "scratch_dir": "/old/scratch"})
     assert normalized["name"] == "Old"
