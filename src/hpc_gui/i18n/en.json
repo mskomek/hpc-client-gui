@@ -363,6 +363,7 @@
     "accounting_placeholder": "sacct / scontrol results",
     "refresh_sacct": "Refresh sacct",
     "script_path": "Script path",
+    "workdir": "Working directory",
     "show_job_details": "Show job details",
     "job_id_required": "Job ID is required.",
     "search_placeholder": "Search output",
