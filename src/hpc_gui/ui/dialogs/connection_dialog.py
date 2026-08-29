@@ -498,6 +498,7 @@ class ConnectionDialog(QDialog):
             return
         retention_value = retention.strip()
         if retention_value and (not retention_value.isdigit() or int(retention_value) < 0):
+            QMessageBox.warning(self, t("common.error"), t("connection.storage_retention_invalid"))
             return
         source_url, ok = QInputDialog.getText(
             self, t("connection.storage_edit"), t("connection.storage_source_url"),
@@ -507,6 +508,7 @@ class ConnectionDialog(QDialog):
             return
         source_url = source_url.strip()
         if source_url and not source_url.startswith("https://"):
+            QMessageBox.warning(self, t("common.error"), t("connection.storage_source_url_invalid"))
             return
         current["label"] = label.strip()
         current["path_template"] = path.strip()
