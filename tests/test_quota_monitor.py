@@ -1,4 +1,4 @@
-from hpc_gui.services.quota_monitor import quota_gate
+from hpc_gui.services.quota_monitor import quota_gate, quota_state_for_profile
 
 
 def test_quota_gate_never_works_without_command_or_when_disabled():
@@ -22,3 +22,11 @@ def test_quota_gate_requires_consent_and_connection():
 def test_quota_gate_rejects_multiline_commands():
     source = {"enabled": True, "command_template": "quota\nrm", "backend_id": "x"}
     assert quota_gate(source, backend_ids={"x"}) == "invalid_configuration"
+
+
+def test_quota_state_reads_profile_provider_template():
+    profile = {"provider_template": {"quota_sources": [{
+        "enabled": True, "consent": True, "backend_id": "x", "command_template": "quota {user}"
+    }]}}
+    assert quota_state_for_profile(profile, backend_ids={"x"}, connected=True) == "eligible"
+    assert quota_state_for_profile({}) == "not_configured"

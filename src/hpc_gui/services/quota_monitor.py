@@ -28,3 +28,16 @@ def quota_gate(
     if not consented:
         return "ready_not_enabled"
     return "eligible" if connected else "ready_not_enabled"
+
+
+def quota_state_for_profile(
+    profile: dict[str, Any] | None,
+    *,
+    backend_ids: Iterable[str] = (),
+    connected: bool = False,
+) -> str:
+    """Evaluate the first stored provider quota source without side effects."""
+    template = profile.get("provider_template") if isinstance(profile, dict) else None
+    sources = template.get("quota_sources") if isinstance(template, dict) else None
+    source = sources[0] if isinstance(sources, list) and sources and isinstance(sources[0], dict) else None
+    return quota_gate(source, backend_ids=backend_ids, connected=connected)
