@@ -73,6 +73,14 @@ def test_unknown_mode_is_rejected():
     assert len(gate.evaluate_gate("adhoc", {})) == 1
 
 
+def test_collect_results_preserves_x86_64_job_ids(monkeypatch):
+    monkeypatch.setenv("GATE_RESULT_BUILD_MACOS_X86_64", "success")
+    monkeypatch.setenv("GATE_RESULT_SIGN_MACOS_X86_64", "skipped")
+    results = gate._collect_results()
+    assert results["build-macos-x86_64"] == "success"
+    assert results["sign-macos-x86_64"] == "skipped"
+
+
 def test_security_metadata_never_claims_signing_for_unsigned():
     meta = sec.build_security_metadata("v1.5.1", "abc123", "unsigned", ["arm64"])
     assert meta["macos_mode"] == "unsigned"

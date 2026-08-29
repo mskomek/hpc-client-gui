@@ -14,7 +14,7 @@ def test_macos_ci_matrix_covers_both_native_architectures():
     assert "arch: arm64" in text
     assert "arch: x86_64" in text
     assert "fail-fast: false" in text
-    assert "hashFiles('requirements-release.lock')" in text
+    assert "python scripts/ci.py macos" in text
 
 
 def test_macos_ci_has_no_release_upload_or_signing_step():

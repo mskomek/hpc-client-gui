@@ -47,6 +47,9 @@ class TransferKeyReleaseTests(unittest.TestCase):
         ]
 
     def tearDown(self) -> None:
+        stop = getattr(self, "_stop_event", None)
+        if stop is not None:
+            stop.set()
         for dialog in list(self.panel._transfer_dialogs):
             dialog.cancel_all()
         self._pump(
@@ -65,19 +68,24 @@ class TransferKeyReleaseTests(unittest.TestCase):
 
     def _stalling_executor(self):
         started = threading.Event()
+        stop = threading.Event()
 
         def execute(item, progress_cb=None):
             if item.op != "download" or progress_cb is None:
                 return
             started.set()
-            for _ in range(2000):
-                progress_cb(1, 2)
-                time.sleep(0.005)
+            progress_cb(1, 2)
+            stop.wait()
 
-        return execute, started
+        # The executor runs on a worker thread; once the dialog is cancelled
+        # it must stop emitting progress events, otherwise the thread keeps
+        # crossing Qt events into widgets deleted by later tests (segfault).
+        self.addCleanup(stop.set)
+        self._stop_event = stop
+        return execute, started, stop
 
     def test_cancel_releases_the_keys_so_the_same_files_replan(self) -> None:
-        execute, started = self._stalling_executor()
+        execute, started, stop = self._stalling_executor()
         self.panel._execute_transfer_item = execute  # type: ignore[method-assign]
 
         self.assertTrue(self.panel._run_plan_with_progress(list(self.plan), "test"))
@@ -85,6 +93,7 @@ class TransferKeyReleaseTests(unittest.TestCase):
         self.assertEqual(len(self.panel._active_transfer_keys), 2)
 
         dialog = self.panel._transfer_dialogs[-1]
+        stop.set()
         dialog.cancel_all()
         self._pump(lambda: not dialog._running)
 
@@ -106,7 +115,7 @@ class TransferKeyReleaseTests(unittest.TestCase):
         )
 
     def test_keys_stay_reserved_while_the_queue_is_running(self) -> None:
-        execute, started = self._stalling_executor()
+        execute, started, stop = self._stalling_executor()
         self.panel._execute_transfer_item = execute  # type: ignore[method-assign]
 
         self.assertTrue(self.panel._run_plan_with_progress(list(self.plan), "test"))
@@ -125,6 +134,7 @@ class TransferKeyReleaseTests(unittest.TestCase):
         )
 
         for dialog in list(self.panel._transfer_dialogs):
+            stop.set()
             dialog.cancel_all()
         self._pump(lambda: all(not dialog._running for dialog in self.panel._transfer_dialogs))
 

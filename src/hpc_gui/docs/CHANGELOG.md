@@ -2,10 +2,37 @@
 
 ## Unreleased
 
+## v1.5.5
+
+Provider persistence, safe quota lifecycle foundations, and the coordinated
+release contract are aligned for the next application release.
+
 ## v1.5.4
 
-Version metadata and packaged application identifiers are aligned with the
-1.5.4 application release.
+### Demo and developer experience
+- Added a 49-second English-captioned offline demo covering connection profiles, remote file management, parallel transfers, Slurm jobs and output, Plugin Manager, and ANSYS journal lint.
+- Added a reproducible `python scripts/create_demo_gif.py` generator using disposable mock data.
+- Localized startup splash status messages in English and Turkish.
+
+## v1.5.3
+
+### Local plugin checks
+- Added a splash-sized update status window with live download and verification progress.
+- Grouped local file plugin actions under an `Eklentiler` / `Plugins` submenu.
+- Enabled ANSYS Journal lint for installed declarative lint packs, including multi-file `.jou` checks.
+
+## v1.5.2
+
+### macOS and release reliability
+- Restored macOS x86_64 compatibility by selecting a supported `cryptography` version for Intel Macs.
+- Fixed the final release gate so x86_64 job results are evaluated under their complete job IDs.
+- Kept macOS release artifacts unsigned when the unsigned publication mode is selected, with checksums and clear Gatekeeper guidance.
+
+## v1.5.1
+
+### CI and developer workflow
+- Unified local and GitHub Actions validation behind `scripts/ci.py`, added deterministic development dependencies and commit/push hooks, and kept the `%65` coverage gate after all GUI suites are combined.
+- Fixed plugin version activation/rollback test coverage, isolated installed-plugin fixtures, and corrected the GUI transfer candidate helper used by context menus.
 
 ### Structured provider profiles
 - Cluster-profile payload v2 now round-trips through the loader and connection

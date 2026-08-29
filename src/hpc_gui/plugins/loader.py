@@ -1,8 +1,13 @@
-"""Local, read-only loader for installed declarative plugins.
+"""Local loader for installed declarative plugins.
 
 The loader never executes plugin content and performs no network access.
 A malformed single plugin is recorded as a problem and skipped so the
 application can still start with the remaining (or zero) plugins.
+
+Each active version is also re-validated locally (trusted manifest hash +
+per-file size/SHA-256 + no undeclared extra files). Legacy installs are
+migrated once via trust-on-first-use verification, which atomically records
+the manifest hash as the initial trust anchor.
 """
 
 from __future__ import annotations
@@ -16,6 +21,12 @@ from typing import Any
 
 from hpc_gui import __version__
 from hpc_gui.plugins.compatibility import is_app_compatible
+from hpc_gui.plugins.integrity import (
+    REINSTALL_HINT,
+    IntegrityError,
+    ensure_trusted_hash,
+    verify_installed_version,
+)
 from hpc_gui.plugins.models import (
     SUPPORTED_PLUGIN_API_VERSIONS,
     ClusterProfileDefinition,
@@ -105,6 +116,8 @@ def load_installed_plugins(
 
     Only locally present declarative payloads are read. Problems are
     collected instead of raised; a broken plugin never blocks startup.
+    Legacy records without a stored manifest hash gain one via atomic TOFU
+    migration when their files verify cleanly.
     """
     result = PluginLoadResult()
 
@@ -155,6 +168,35 @@ def load_installed_plugins(
                     plugin_id,
                     version,
                     f"incompatible with app {app_version} (requires {manifest.requires_app})",
+                )
+            )
+            continue
+
+        # Local integrity re-validation: compare the manifest with the hash
+        # trusted at install time and verify every declared payload file.
+        # Legacy records are TOFU-migrated (verified once against their
+        # current files, then trusted). A broken version is skipped — never
+        # deleted — so the remaining plugins keep loading.
+        try:
+            trusted_hash = ensure_trusted_hash(plugin_id, version, root=root)
+        except IntegrityError as exc:
+            result.problems.append(
+                PluginProblem(
+                    plugin_id,
+                    version,
+                    f"integrity check failed ({REINSTALL_HINT}): {exc}",
+                )
+            )
+            continue
+        errors = verify_installed_version(
+            plugin_id, version, root=root, expected_manifest_sha=trusted_hash
+        )
+        if errors:
+            result.problems.append(
+                PluginProblem(
+                    plugin_id,
+                    version,
+                    f"integrity check failed ({REINSTALL_HINT}): " + "; ".join(errors),
                 )
             )
             continue

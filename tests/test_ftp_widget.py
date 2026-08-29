@@ -3774,6 +3774,29 @@ class FtpWidgetTests(unittest.TestCase):
         finally:
             dialog.deleteLater()
 
+    def test_system_template_save_syncs_structured_provider_edits(self) -> None:
+        dialog = ConnectionDialog()
+        try:
+            dialog._provider_template = {
+                "storage": [{"id": "home", "path_template": "/old/{user}"}],
+                "quota_sources": [{"id": "q1", "enabled": True, "command_template": "old"}],
+            }
+            dialog.storage_rows = [{"id": "home", "path_template": "/new/{user}"}]
+            dialog.quota_command.setText("")
+            with (
+                patch(
+                    "hpc_gui.ui.dialogs.connection_dialog.QInputDialog.getText",
+                    return_value=("Structured", True),
+                ),
+                patch("hpc_gui.ui.dialogs.connection_dialog.save_user_system_template") as save_template,
+            ):
+                dialog._save_current_system_template()
+            saved = save_template.call_args.args[1]["provider_template"]
+            self.assertEqual(saved["storage"][0]["path_template"], "/new/{user}")
+            self.assertEqual(saved["quota_sources"][0]["command_template"], "")
+        finally:
+            dialog.deleteLater()
+
     def test_user_system_template_persists_by_name(self) -> None:
         saved_settings = {"system_templates": []}
 

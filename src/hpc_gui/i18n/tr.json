@@ -130,6 +130,14 @@
     "security_signed_mac": "Bu macOS sürümü Developer ID ile imzalandı, notarize edildi, staple'landı ve Gatekeeper değerlendirmesinden geçti (RELEASE_SECURITY.json dosyasına bakın).",
     "security_unknown_mac": "Not: bu sürüm imza durumu üst verisi yayınlamıyor (RELEASE_SECURITY.json eksik); macOS sürümü imzasız kabul edilmelidir."
   },
+  "splash": {
+    "title": "HPC WORKSPACE",
+    "subtitle": "SSH  •  Slurm  •  X11 İş Akışı Yöneticisi",
+    "status_starting": "Uygulama başlatılıyor...",
+    "status_preparing": "Çalışma alanı hazırlanıyor...",
+    "status_checking": "Başlangıç ortamı denetleniyor...",
+    "status_loading": "Arayüz yükleniyor..."
+  },
   "common": {
     "ok": "Tamam",
     "cancel": "İptal",
@@ -171,6 +179,7 @@
     "open_with_program_filter": "Programlar (*.exe);;Tüm dosyalar (*.*)",
     "open_with_save_title": "Dosya ilişkilendirmesi kaydedilsin mi?",
     "open_with_save_prompt": "{extension} dosyaları için bu program sonraki sefer de kullanılsın mı?",
+    "plugins": "Eklentiler",
     "ansys_lint": "ANSYS Journal Denetimi",
     "no_supported_remote_lint_files": "Bu uzak klasörde denetlenebilecek desteklenen dosya bulunamadı.",
     "send_to_plugin": "Eklentiye gönder"

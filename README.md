@@ -9,6 +9,12 @@
 
 Connect to a remote cluster, browse and transfer files, submit and monitor Slurm jobs, inspect job output, use terminal workflows, and launch X11 applications from one client.
 
+![HPC Client GUI 49-second demo](docs/demo/hpc-client-gui-demo.gif)
+
+The demo uses the repository's disposable mock backends and fabricated data; it
+never connects to a real cluster or includes real credentials. Rebuild it with
+`python scripts/create_demo_gif.py`.
+
 **[Download latest release](https://github.com/mskomek/hpc-client-gui/releases/latest)** · **[Documentation](https://github.com/mskomek/hpc-client-gui/wiki)** · **[CLI guide](src/hpc_gui/docs/CLI_GUIDE_en.md)** · **[Report an issue](https://github.com/mskomek/hpc-client-gui/issues)** · **[Plugins](https://github.com/mskomek/hpc-client-gui-plugins)**
 
 > **🔌 Plugins & requests:** Plugins (cluster profiles, job templates, lint packs) live in the official registry
@@ -359,13 +365,16 @@ python -m hpc_gui
 Install test dependencies:
 
 ```bash
-pip install -e ".[test]"
+python -m pip install --requirement requirements-dev.txt
+pre-commit install
+pre-commit install --hook-type pre-push
 ```
 
-Run tests:
+Run the local checks:
 
 ```bash
-pytest -q
+python scripts/ci.py quick
+python scripts/ci.py pre-push
 ```
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for development and contribution details.

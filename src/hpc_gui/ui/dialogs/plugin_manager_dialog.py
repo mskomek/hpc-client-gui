@@ -21,6 +21,7 @@ from PySide6.QtWidgets import (
     QFrame,
     QGridLayout,
     QHBoxLayout,
+    QComboBox,
     QLabel,
     QLineEdit,
     QPushButton,
@@ -82,6 +83,7 @@ class PluginManagerDialog(QDialog):
         self._registry_source: str | None = None
         self._install_worker: AsyncCall | None = None
         self._refresh_worker: AsyncCall | None = None
+        self._version_worker: AsyncCall | None = None
         self._auto_refresh_started = False
         self._last_install_result = None
 
@@ -511,11 +513,23 @@ class PluginManagerDialog(QDialog):
             if plugin_id not in installed_by_id:
                 rows.append((plugin_id, plugin_id, [version]))
 
+        for problem in getattr(self._installed_versions, "problems", ()):
+            label = QLabel(t("plugins.corrupt_plugin").format(name=problem.plugin_id))
+            label.setWordWrap(True)
+            label.setStyleSheet("color: #b00020; padding: 8px;")
+            inner.addWidget(label)
+
         if not rows:
-            inner.addWidget(self._empty_label("plugins.no_installed"))
+            if not getattr(self._installed_versions, "problems", ()):
+                inner.addWidget(self._empty_label("plugins.no_installed"))
             return
 
         for name, plugin_id, versions in rows:
+            versions = sorted(
+                set(versions) | ({active[plugin_id]} if plugin_id in active else set()),
+                key=lambda value: self._parse_version(value) or Version("0"),
+                reverse=True,
+            )
             installed = installed_by_id.get(plugin_id)
             has_tool = bool(
                 installed is not None
@@ -524,7 +538,8 @@ class PluginManagerDialog(QDialog):
             )
             inner.addWidget(
                 self._installed_card(
-                    name, plugin_id, versions, plugin_id in disabled, has_tool=has_tool
+                    name, plugin_id, versions, active.get(plugin_id), plugin_id in disabled,
+                    has_tool=has_tool,
                 )
             )
 
@@ -533,17 +548,19 @@ class PluginManagerDialog(QDialog):
         name: str,
         plugin_id: str,
         versions: list[str],
+        active_version: str | None = None,
         is_disabled: bool = False,
         has_tool: bool = False,
     ) -> QFrame:
         card = QFrame()
         grid = QGridLayout(card)
 
-        title_text = f"{name} — {t('plugins.version')}: {versions[-1] if versions else ''}"
+        active_version = active_version or (versions[0] if versions else None)
+        title_text = f"{name} — {t('plugins.version')}: {active_version or ''}"
         title = QLabel(title_text)
         title.setStyleSheet("font-weight: 600;")
         grid.addWidget(title, 0, 0)
-        other = ", ".join(versions[:-1])
+        other = ", ".join(version for version in versions if version != active_version)
         if other:
             others_label = QLabel(f"{t('plugins.other_versions')}: {other}")
             others_label.setStyleSheet("color: #666;")
@@ -552,6 +569,37 @@ class PluginManagerDialog(QDialog):
             state_label = QLabel(t("plugins.disabled_label"))
             state_label.setStyleSheet("color: #b26a00;")
             grid.addWidget(state_label, 2, 0)
+
+        version_row = QHBoxLayout()
+        version_row.addWidget(QLabel(t("plugins.switch_version_label")))
+        version_combo = QComboBox()
+        version_combo.addItems(versions)
+        if active_version:
+            version_combo.setCurrentText(active_version)
+        version_row.addWidget(version_combo)
+        version_button = QPushButton()
+        version_row.addWidget(version_button)
+        grid.addLayout(version_row, 3, 0)
+
+        def update_version_action(selected: str) -> None:
+            if not active_version or selected == active_version:
+                version_button.setText(t("plugins.rollback"))
+                version_button.setEnabled(False)
+                return
+            version_button.setText(
+                t("plugins.activate")
+                if self._is_newer_version(selected, active_version)
+                else t("plugins.rollback")
+            )
+            version_button.setEnabled(True)
+
+        version_combo.currentTextChanged.connect(update_version_action)
+        version_button.clicked.connect(
+            lambda _=False: self.change_plugin_version(
+                plugin_id, name, version_combo.currentText(), active_version
+            )
+        )
+        update_version_action(version_combo.currentText())
 
         row = QHBoxLayout()
         row.addStretch(1)
@@ -575,8 +623,66 @@ class PluginManagerDialog(QDialog):
             lambda _=False, pid=plugin_id, pname=name: self.remove_plugin(pid, pname)
         )
         row.addWidget(remove_button)
-        grid.addLayout(row, 3, 0)
+        grid.addLayout(row, 4, 0)
         return card
+
+    def change_plugin_version(
+        self, plugin_id: str, name: str, version: str, current_version: str
+    ) -> None:
+        if self._version_worker is not None or version == current_version:
+            return
+        rollback = not self._is_newer_version(version, current_version)
+        from PySide6.QtWidgets import QMessageBox
+
+        key = (
+            "plugins.version_rollback_confirm_text"
+            if rollback
+            else "plugins.version_activate_confirm_text"
+        )
+        if QMessageBox.question(
+            self,
+            t("plugins.version_switch_confirm_title"),
+            t(key).format(name=name, version=version, current=current_version),
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No,
+        ) != QMessageBox.Yes:
+            return
+
+        from hpc_gui.plugins.state import activate_version
+
+        self._set_status("plugins.activating")
+        worker = AsyncCall(
+            ("plugin-version", plugin_id, version),
+            lambda: activate_version(plugin_id, version),
+        )
+        self._version_worker = worker
+
+        def finished(_token, _result) -> None:
+            if self._version_worker is worker:
+                self._version_worker = None
+            QMessageBox.information(
+                self,
+                t("plugins.version_switch_confirm_title"),
+                t("plugins.version_switch_success").format(name=name, version=version),
+            )
+            self.plugins_changed.emit()
+            self.rebuild_tabs()
+
+        def failed(_token, _error) -> None:
+            if self._version_worker is worker:
+                self._version_worker = None
+            QMessageBox.warning(
+                self,
+                t("plugins.version_switch_confirm_title"),
+                t("plugins.version_switch_failed").format(name=name, version=version),
+            )
+            self.rebuild_tabs()
+
+        worker.signals.finished.connect(finished)
+        worker.signals.failed.connect(failed)
+        from PySide6.QtCore import QThreadPool
+
+        QThreadPool.globalInstance().start(worker)
 
     def toggle_plugin_disabled(self, plugin_id: str, currently_disabled: bool) -> None:
         try:
@@ -890,4 +996,5 @@ class PluginManagerDialog(QDialog):
     def reject(self) -> None:  # safe shutdown even with a worker in flight
         self._refresh_worker = None
         self._install_worker = None
+        self._version_worker = None
         super().reject()

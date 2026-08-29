@@ -283,7 +283,12 @@ def test_missing_entrypoint_file_rejected(tmp_path: Path):
     (pkg / "cluster-profile.json").unlink()
     result = load_installed_plugins(root=tmp_path, app_version="1.4.0")
     assert result.plugins == []
-    assert any("file not found" in problem.reason for problem in result.problems)
+    # The local integrity re-check catches the missing declared file before
+    # the entrypoint loader would; either way the plugin is skipped.
+    assert any(
+        "missing payload file" in problem.reason or "file not found" in problem.reason
+        for problem in result.problems
+    )
 
 
 def test_malformed_plugin_json_is_isolated(tmp_path: Path):
