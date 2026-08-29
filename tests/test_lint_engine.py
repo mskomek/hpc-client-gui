@@ -380,6 +380,10 @@ def _make_dialog_with_box_capture():
 def test_editor_without_linter_shows_no_linter_hint(qapp, monkeypatch):
     from hpc_gui.core.i18n import t
 
+    monkeypatch.setattr("hpc_gui.lint.rulepack.load_lint_packs", lambda: [])
+    monkeypatch.setattr(
+        "hpc_gui.plugins.linter_tools.tools_supporting_suffix", lambda _suffix: []
+    )
     widget, FakeBox, shown = _make_dialog_with_box_capture()
     widget.path_in.setText("case.jou")
     widget.text.setPlainText("/display set\n")
