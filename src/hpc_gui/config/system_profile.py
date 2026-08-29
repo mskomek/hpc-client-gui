@@ -66,21 +66,23 @@ def plugin_system_template_groups(
     return groups
 
 
-def normalize_system_settings(value: Any) -> dict[str, str]:
+def normalize_system_settings(value: Any) -> dict[str, Any]:
     settings = dict(GENERIC_SLURM_DEFAULTS)
     if isinstance(value, dict):
         for key in settings:
             candidate = value.get(key)
             if isinstance(candidate, str) and candidate.strip():
                 settings[key] = candidate.strip()
+        if isinstance(value.get("provider_template"), dict):
+            settings["provider_template"] = dict(value["provider_template"])
     return settings
 
 
-def load_user_system_templates() -> list[dict[str, str]]:
+def load_user_system_templates() -> list[dict[str, Any]]:
     templates = load_settings().get(SYSTEM_TEMPLATE_SETTINGS_KEY, [])
     if not isinstance(templates, list):
         return []
-    result: list[dict[str, str]] = []
+    result: list[dict[str, Any]] = []
     for item in templates:
         if not isinstance(item, dict):
             continue

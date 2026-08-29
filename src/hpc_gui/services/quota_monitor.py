@@ -2,9 +2,95 @@
 
 from __future__ import annotations
 
-from typing import Any, Iterable
+from dataclasses import dataclass
+from concurrent.futures import Future, ThreadPoolExecutor
+import re
+from typing import Any, Callable, Iterable
 
 KNOWN_QUOTA_SCOPES = frozenset({"user", "group", "project", "unknown"})
+_PLACEHOLDER_RE = re.compile(r"\{([A-Za-z_][A-Za-z0-9_]*)\}")
+KNOWN_PLACEHOLDERS = frozenset({"user", "subject", "path", "path_q"})
+
+
+@dataclass(frozen=True)
+class QuotaResult:
+    state: str
+    used_bytes: int | None = None
+    soft_limit_bytes: int | None = None
+    hard_limit_bytes: int | None = None
+    scope: str = "unknown"
+    pool_id: str | None = None
+    error: str | None = None
+
+
+@dataclass(frozen=True)
+class QuotaBackend:
+    backend_id: str
+    build_command: Callable[[dict[str, Any]], str]
+    parse: Callable[[str], QuotaResult]
+
+
+class QuotaBackendRegistry:
+    """Allow-list of safe adapters; production is empty until documented."""
+    def __init__(self, backends: Iterable[QuotaBackend] = ()) -> None:
+        self._backends = {backend.backend_id: backend for backend in backends}
+
+    @property
+    def ids(self) -> frozenset[str]:
+        return frozenset(self._backends)
+
+    def get(self, backend_id: str) -> QuotaBackend | None:
+        return self._backends.get(backend_id)
+
+
+class QuotaMonitor:
+    """Bounded, coalescing runtime; no remote work occurs before quota_gate."""
+    def __init__(self, registry: QuotaBackendRegistry, transport: Callable[[str, float, int], str], *, max_output: int = 65536) -> None:
+        self.registry, self.transport, self.max_output = registry, transport, max_output
+        self._executor = ThreadPoolExecutor(max_workers=2)
+        self._pending: dict[tuple[str, str, str, str], Future[QuotaResult]] = {}
+        self._generation: dict[tuple[str, str, str, str], int] = {}
+
+    def refresh(self, source: dict[str, Any], *, connection_id: str, provider_id: str,
+                subject: str, connected: bool = True) -> Future[QuotaResult] | None:
+        state = quota_gate(source, backend_ids=self.registry.ids, connected=connected,
+                           subject_available=bool(subject))
+        if state != "eligible":
+            return None
+        command_template = str(source.get("command_template") or "")
+        if any(item not in KNOWN_PLACEHOLDERS for item in _PLACEHOLDER_RE.findall(command_template)):
+            return None
+        backend = self.registry.get(str(source.get("backend_id")))
+        key = (connection_id, provider_id, str(source.get("id", "")), subject)
+        if key in self._pending and not self._pending[key].done():
+            return self._pending[key]
+        generation = self._generation.get(key, 0)
+        timeout = min(max(float(source.get("timeout_seconds") or 30), 0.1), 60.0)
+        command = backend.build_command(source) if backend else ""
+        def run() -> QuotaResult:
+            try:
+                output = self.transport(command, timeout, self.max_output)
+                if self._generation.get(key, 0) != generation:
+                    return QuotaResult("stale")
+                return backend.parse(output) if backend else QuotaResult("unsupported")
+            except TimeoutError:
+                return QuotaResult("error", error="timeout")
+            except Exception as exc:  # transport/parser isolation
+                return QuotaResult("error", error=type(exc).__name__)
+        future = self._executor.submit(run)
+        self._pending[key] = future
+        future.add_done_callback(lambda _: self._pending.pop(key, None))
+        return future
+
+    def invalidate(self, *, connection_id: str, provider_id: str, source_id: str, subject: str) -> None:
+        key = (connection_id, provider_id, source_id, subject)
+        self._generation[key] = self._generation.get(key, 0) + 1
+        future = self._pending.pop(key, None)
+        if future:
+            future.cancel()
+
+    def close(self) -> None:
+        self._executor.shutdown(wait=False, cancel_futures=True)
 
 
 def quota_gate(
