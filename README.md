@@ -186,6 +186,10 @@ Application bugs (SSH/SFTP/FTP, UI, crashes) belong in
 plugin requests and plugin content corrections belong in the
 [plugin repository](https://github.com/mskomek/hpc-client-gui-plugins/issues/new/choose).
 
+**Add a cluster provider:** start with the [provider authoring guide](docs/ADDING_CLUSTER_PROVIDER.md),
+fill only verified site details, and leave quota blank when no safe command is known.
+An unconfigured quota source is supported: the app does not query or monitor it.
+
 Full guide: [PLUGINS_en.md](src/hpc_gui/docs/PLUGINS_en.md) ·
 [Türkçe](src/hpc_gui/docs/PLUGINS_tr.md)
 
