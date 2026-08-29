@@ -14,6 +14,7 @@ from typing import Callable
 from hpc_gui import __version__
 from hpc_gui.core.paths import app_data_dir, is_frozen_exe
 from hpc_gui.core.platform import current_os, release_platform_key
+from hpc_gui.services.installation_context import detect_installation
 
 
 GITHUB_REPOSITORY = "mskomek/hpc-client-gui"
@@ -119,9 +120,10 @@ def get_latest_release(timeout: float = 30.0) -> UpdateRelease:
         str(asset.get("name") or ""): str(asset.get("browser_download_url") or "")
         for asset in payload.get("assets") or []
     }
+    installation = detect_installation()
     release_assets = release_asset_names()
     if release_assets is None:
-        return UpdateRelease(version, tag, "", "", "", "", str(payload.get("html_url") or ""), "manual")
+        return UpdateRelease(version, tag, "", "", "", "", str(payload.get("html_url") or ""), installation.capability)
     expected_zip, expected_sha = release_assets
     if not assets.get(expected_zip) or not assets.get(expected_sha):
         raise RuntimeError(
@@ -147,7 +149,7 @@ def get_latest_release(timeout: float = 30.0) -> UpdateRelease:
         sha_name=expected_sha,
         sha_url=assets[expected_sha],
         html_url=str(payload.get("html_url") or ""),
-        install_strategy="windows" if current_os() == "windows" else "manual",
+        install_strategy=installation.capability,
         security_status=security_status,
     )
 

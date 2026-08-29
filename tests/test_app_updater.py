@@ -13,6 +13,7 @@ from hpc_gui.services.app_updater import (
     parse_release_security,
     release_asset_names,
 )
+from hpc_gui.services.installation_context import InstallationContext
 from hpc_gui.ui.main_window import MainWindow
 
 
@@ -126,3 +127,8 @@ def test_security_metadata_parsing_matches_modes():
 def test_missing_security_metadata_defaults_to_unknown():
     release = UpdateRelease("1.5.1", "v1.5.1", "a.zip", "u", "a.sha256", "s", "page")
     assert release.security_status == app_updater.SECURITY_UNKNOWN
+
+
+def test_unknown_installation_is_manual_only():
+    context = InstallationContext("unknown", "test", None, "", "", "x86_64", "manual", "not identified")
+    assert context.capability == "manual"
