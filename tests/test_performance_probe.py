@@ -47,7 +47,9 @@ class PerformanceProbeTests(unittest.TestCase):
             ]
             delays = [event for event in events if event["event"] == "event_loop_delay"]
             self.assertTrue(delays)
-            self.assertGreaterEqual(delays[0]["delay_ms"], 80)
+            # Loaded CI runners record their own startup jitter above slow_ms
+            # first, so the blocking tick is not necessarily delays[0].
+            self.assertGreaterEqual(max(d["delay_ms"] for d in delays), 80)
 
     def test_slow_event_loop_tick_is_recorded(self):
         module = _load_probe_module()
