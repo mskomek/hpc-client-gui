@@ -60,11 +60,11 @@ def test_inputs_define_explicit_signed_default_and_opt_in_publication():
 
 def test_dry_run_can_never_publish():
     publish = _job_block("publish-release")
-    assert re.search(
-        r"^    if: \$\{\{ inputs\.publish == true \|\| github\.event\.inputs\.publish == 'true' \}\}",
-        publish,
-        re.MULTILINE,
-    )
+    publish_if = next(line.strip() for line in publish.splitlines() if line.strip().startswith("if:"))
+    assert "always()" in publish_if
+    assert "needs.release-gate.result == 'success'" in publish_if
+    assert "inputs.publish == true" in publish_if
+    assert "github.event.inputs.publish == 'true'" in publish_if
     # Publication is gated behind the final gate job only.
     gate_needs = _needs(_job_block("release-gate"))
     for required in (
