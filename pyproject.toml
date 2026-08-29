@@ -1,7 +1,7 @@
 [project]
 name = "hpc-client-gui"
 version = "1.5.4"
-requires-python = ">=3.10"
+requires-python = "==3.14.*"
 dependencies = [
     "PySide6>=6.5",
     "paramiko>=3.4",
@@ -47,7 +47,7 @@ hpc_gui = [
 ]
 
 [tool.ruff]
-target-version = "py310"
+target-version = "py314"
 line-length = 100
 src = ["src", "tests", "scripts"]
 

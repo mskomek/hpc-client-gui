@@ -16,7 +16,7 @@ izler.
 - **Linux:** x86_64 için AppImage veya `.deb` dosyasını indirin, eşleşen
   `.sha256` dosyasını doğrulayın ve çalıştırın. Bkz.
   [[Linux Kurulumu|Installation-Linux-TR]].
-- **Kaynaktan:** Python 3.10+, bir sanal ortam ve `pip install -e .[test]`.
+- **Kaynaktan:** Python 3.14.x, bir sanal ortam ve `pip install -e .[test]`.
   Bkz. [[Kaynaktan kurulum|Installation-From-Source-TR]].
 
 ## 2. Bağlanın

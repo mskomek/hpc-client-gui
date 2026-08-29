@@ -316,7 +316,7 @@ Flatpak paketleri olarak yayımlanır. Her paketin yanında SHA-256 dosyası bul
 ### Gereksinimler
 
 - Desteklenen bir Linux dagitim (su an Ubuntu LTS, Fedora veya openSUSE), x86_64.
-- Python 3.10+.
+- Python 3.14.x.
 - PySide6'nin ihtiyac duydugu Qt platform kutuphaneleri (orn. Ubuntu/Debian'da libegl1).
 
 ### Kaynak kodundan calistirma

@@ -5,7 +5,7 @@
 ## Do I need Python?
 
 Not for the packaged builds. The Windows portable ZIP and the Linux AppImage
-and `.deb` bundle everything they need. Python 3.10+ is required only when you
+and `.deb` bundle everything they need. Python 3.14.x is required only when you
 run from source.
 
 ## Is this an official tool from my cluster or my institution?

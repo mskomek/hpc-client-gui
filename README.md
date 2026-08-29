@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/mskomek/hpc-client-gui/actions/workflows/ci.yml/badge.svg)](https://github.com/mskomek/hpc-client-gui/actions/workflows/ci.yml)
 [![Latest release](https://img.shields.io/github/v/release/mskomek/hpc-client-gui)](https://github.com/mskomek/hpc-client-gui/releases/latest)
-[![Python](https://img.shields.io/badge/Python-3.10%2B-blue)](pyproject.toml)
+[![Python](https://img.shields.io/badge/Python-3.14.x-blue)](pyproject.toml)
 [![Platforms](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)](#downloads)
 
 **A cross-platform desktop client for SSH, SFTP, Slurm job management, remote files, CLI workflows, and optional X11 forwarding on HPC systems.**
@@ -294,7 +294,7 @@ report template live in
 
 ### Requirements
 
-* Python 3.10+
+* Python 3.14.x
 * Git
 * A desktop environment supported by PySide6
 
