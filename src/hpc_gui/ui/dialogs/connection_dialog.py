@@ -477,8 +477,26 @@ class ConnectionDialog(QDialog):
         )
         if not ok:
             return
+        backup, ok = QInputDialog.getItem(
+            self, t("connection.storage_edit"), t("connection.storage_backup"),
+            [t("connection.storage_unknown"), t("connection.storage_yes"), t("connection.storage_no")],
+            0, False,
+        )
+        if not ok:
+            return
+        cleanup, ok = QInputDialog.getText(
+            self, t("connection.storage_edit"), t("connection.storage_cleanup"),
+            text=str((current.get("policy") or {}).get("cleanup_note") or ""),
+        )
+        if not ok:
+            return
         current["label"] = label.strip()
         current["path_template"] = path.strip()
+        current["policy"] = {
+            **(current.get("policy") if isinstance(current.get("policy"), dict) else {}),
+            "backup": {t("connection.storage_yes"): True, t("connection.storage_no"): False}.get(backup),
+            "cleanup_note": cleanup.strip(),
+        }
         self._set_storage_rows(self.storage_rows)
 
     def _system_form_values(self) -> dict[str, str]:
