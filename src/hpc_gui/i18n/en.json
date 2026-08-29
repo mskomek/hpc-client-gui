@@ -712,6 +712,8 @@
     "quota_consent": "I consent to quota queries for this source",
     "quota_backend": "Reviewed backend ID",
     "quota_command": "Command template",
+    "quota_scope": "Quota scope",
+    "quota_subject": "Subject template",
     "quota_command_placeholder": "Leave blank if your site does not provide this",
     "quota_disabled_tip": "Quota monitoring is off by default and never runs without a reviewed backend, consent, and a connection.",
     "storage_unknown": "Unknown",
