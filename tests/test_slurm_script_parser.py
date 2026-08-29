@@ -39,3 +39,12 @@ def test_directives_after_first_executable_line_are_ignored() -> None:
         job_id="7",
     )
     assert paths.stdout == "/home/alice/slurm-7.out"
+
+
+def test_array_job_placeholders_use_observed_array_id() -> None:
+    paths = parse_job_paths(
+        "#SBATCH --output=logs/%A_%a_%J_%j.out\n",
+        "/home/alice/run.slurm",
+        job_id="42_3",
+    )
+    assert paths.stdout == "/home/alice/logs/42_3_42_3_42_3.out"

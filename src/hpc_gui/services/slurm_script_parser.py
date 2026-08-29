@@ -101,7 +101,12 @@ def _resolve_from_dir(
     job_name: Optional[str] = None,
 ) -> str:
     if job_id:
-        value = value.replace("%j", str(job_id)).replace("%A", str(job_id))
+        job_id = str(job_id)
+        master_id, _, array_id = job_id.partition("_")
+        value = value.replace("%j", job_id).replace("%J", job_id)
+        value = value.replace("%A", master_id)
+        if array_id:
+            value = value.replace("%a", array_id)
     if job_name:
         value = value.replace("%x", str(job_name))
     return posixpath.normpath(value if value.startswith("/") else posixpath.join(directory, value))

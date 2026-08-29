@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 
 
@@ -28,12 +29,9 @@ class SlurmJob:
 def _observed_fields(raw: str) -> dict[str, str]:
     """Read only key=value fields actually emitted by scheduler output."""
     fields: dict[str, str] = {}
-    for token in raw.replace("|", " ").split():
-        if "=" not in token:
-            continue
-        key, value = token.split("=", 1)
-        if key in {"NodeList", "Reason", "ExitCode", "Command", "FailedNode", "WorkDir", "StdOut", "StdErr"}:
-            fields[key] = value.strip()
+    keys = "NodeList|Reason|ExitCode|Command|FailedNode|WorkDir|StdOut|StdErr"
+    for match in re.finditer(rf"(?P<key>{keys})=(?P<value>.*?)(?=\s+\w+=|$)", raw):
+        fields[match.group("key")] = match.group("value").strip().strip('"')
     return fields
 
 def _rows(text: str) -> list[tuple[str, list[str]]]:

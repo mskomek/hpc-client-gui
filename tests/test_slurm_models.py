@@ -1,4 +1,4 @@
-from hpc_gui.services.slurm_models import parse_sacct, parse_squeue
+from hpc_gui.services.slurm_models import parse_sacct, parse_scontrol, parse_squeue
 
 
 def test_parse_squeue_keeps_raw_rows_and_structured_fields() -> None:
@@ -49,3 +49,14 @@ def test_parse_scontrol_extracts_detail_script_path() -> None:
     assert job.workdir == "/home/a/results"
     assert job.stdout_path == "/home/a/results/out-123.log"
     assert job.stderr_path == "/home/a/results/err-123.log"
+
+
+def test_parse_scontrol_keeps_spaces_in_scheduler_paths() -> None:
+    job = parse_scontrol(
+        "JobId=9 WorkDir=/home/a/my results StdOut=/home/a/my results/out 9.log "
+        "StdErr=/home/a/my results/err 9.log",
+        "9",
+    )
+    assert job.workdir == "/home/a/my results"
+    assert job.stdout_path == "/home/a/my results/out 9.log"
+    assert job.stderr_path == "/home/a/my results/err 9.log"
