@@ -93,6 +93,10 @@ unsaved tab for review, and nothing runs until you explicitly save/submit.
 
 See [PLUGINS_tr.md](PLUGINS_tr.md) for the Turkish version.
 
+For provider authoring, see the repository's
+[English guide](../../../docs/ADDING_CLUSTER_PROVIDER.md) and
+[Turkish guide](../../../docs/ADDING_CLUSTER_PROVIDER_tr.md).
+
 ## Linter tools (Plugin API v2)
 
 The Plugin API v2 contract is ready for the official registry to publish
