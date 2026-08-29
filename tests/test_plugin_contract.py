@@ -28,7 +28,7 @@ from hpc_gui.plugins.registry_client import (
 )
 from hpc_gui.plugins.state import activate_version
 
-CONTRACT_APP_VERSION = "1.4.0"
+CONTRACT_APP_VERSION = "1.5.3"
 
 REPO = os.environ.get("HPC_GUI_CONTRACT_REPO", "")
 pytestmark = pytest.mark.skipif(
