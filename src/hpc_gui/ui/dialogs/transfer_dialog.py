@@ -725,7 +725,9 @@ class _WorkerThread(QObject):
             run_item,
             parallel_limit=parallel_limit,
             on_queue=self._queue_event,
-            on_progress=lambda item, done, total: self.transfer_progress.emit(item, done, total),
+            on_progress=lambda item, done, total: self._emit(
+                self.transfer_progress, item, done, total
+            ),
         )
         self._start_index = 0
 
@@ -736,24 +738,29 @@ class _WorkerThread(QObject):
     def enqueue(self, items) -> bool:
         return self._controller.enqueue(items)
 
+    def _emit(self, signal, *args) -> None:
+        # Worker threads keep reporting while a cancelled dialog is being
+        # deleted by its owner. Emitting into the deleted QObject raises
+        # RuntimeError at best and crashes the interpreter at worst, and
+        # there is nobody left to notify either way.
+        try:
+            signal.emit(*args)
+        except RuntimeError:
+            pass
+
     def _wait_for_done(self) -> None:
         self._controller.wait()
-        try:
-            self.all_done.emit()
-        except RuntimeError:
-            # The dialog was closed while the queue drained; there is nobody
-            # left to notify, and letting this escape logs a bogus crash.
-            pass
+        self._emit(self.all_done)
 
     def _queue_event(self, event: str, item: TransferItem) -> None:
         if event == "started":
             self._start_index += 1
-            self.item_started.emit(self._start_index, item)
+            self._emit(self.item_started, self._start_index, item)
         elif event == "completed":
-            self.item_finished.emit(item, False, "")
+            self._emit(self.item_finished, item, False, "")
         elif event == "failed":
             error = next((message for failed, message in self._controller.failed if failed is item), "Transfer failed")
-            self.item_finished.emit(item, error == "cancelled", "" if error == "cancelled" else error)
+            self._emit(self.item_finished, item, error == "cancelled", "" if error == "cancelled" else error)
 
     def stop_after_current(self) -> None:
         self._controller.stop_after_current()

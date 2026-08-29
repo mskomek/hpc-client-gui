@@ -31,8 +31,6 @@ class _Files:
 
 
 class TransferKeyReleaseTests(unittest.TestCase):
-    _retired: list = []
-
     @classmethod
     def setUpClass(cls) -> None:
         cls.app = QApplication.instance() or QApplication([])
@@ -41,7 +39,7 @@ class TransferKeyReleaseTests(unittest.TestCase):
         self.panel = RemoteDirPanel()
         self.panel.set_session({"connected": True, "files": _Files()})
         self.panel.set_transfer_dialog_visible(False)
-        self.addCleanup(self._retire_panel)
+        self.addCleanup(self.panel.deleteLater)
         self.plan = [
             _PlannedOp("mkdir_local", "", "C:/local/DP_41"),
             _PlannedOp("download", "/remote/DP_41/big.h5", "C:/local/DP_41/big.h5"),
@@ -58,15 +56,6 @@ class TransferKeyReleaseTests(unittest.TestCase):
             lambda: all(not dialog._running for dialog in self.panel._transfer_dialogs),
             timeout=10.0,
         )
-
-    def _retire_panel(self) -> None:
-        # The stalled transfer threads are daemons that may still emit into
-        # the panel after the test ends. Destroying it - via deleteLater or
-        # by dropping the last Python reference - lets those emissions reach
-        # freed C++ objects and crashes the interpreter. Park the panel
-        # instead; the process is about to exit anyway.
-        self.panel.hide()
-        self._retired.append(self.panel)
 
     def _pump(self, predicate, timeout: float = 5.0) -> None:
         deadline = time.monotonic() + timeout
