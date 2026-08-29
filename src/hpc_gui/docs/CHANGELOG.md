@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Structured provider profiles
+- Cluster-profile payload v2 now round-trips through the loader and connection
+  dialog while legacy v1 profiles remain supported.
+- Provider storage areas can be added, edited, removed, and annotated with
+  backup, cleanup, retention, and HTTPS source metadata.
+- Optional quota settings are explicit and off by default; the shared gate
+  rejects incomplete or unsupported sources without starting remote work.
+
 ### Release integrity
 - Repaired the release dependency graph: publication now runs only after a final release gate that requires the Linux, Windows, both macOS builds, the selected macOS verification path, and — in signed mode — both signing/notarization jobs plus signed-candidate verification. A failed, cancelled, or unexpectedly skipped required job can no longer race ahead of publication.
 - Replaced the ambiguous `publish` + `sign` input combination with explicit `publish` (boolean, default `false`) and `macos_mode` (`signed` default / `unsigned`) inputs; a normal dry run never publishes, unsigned publication is an explicit choice, and an unsigned release can never claim signing.
