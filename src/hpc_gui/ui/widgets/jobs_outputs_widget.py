@@ -1147,6 +1147,16 @@ class JobsOutputsWidget(QWidget):
             self.meta_text.setPlainText(txt)
             detail = parse_scontrol(txt, jobid)
             self._detail_script_path = detail.script_path
+            if detail.workdir:
+                self.meta_job_workdir.setText(
+                    f"<b>{t('jobs_outputs.workdir')}:</b> {detail.workdir}"
+                )
+            if detail.stdout_path:
+                self.active_out = detail.stdout_path
+                self.path_out.setText(detail.stdout_path)
+            if detail.stderr_path:
+                self.active_err = detail.stderr_path
+                self.path_err.setText(detail.stderr_path)
             if detail.script_path:
                 self.meta_job_script.setText(f"<b>{t('jobs_outputs.script_path')}:</b> <a href=\"script\">{detail.script_path}</a>")
             else:
