@@ -28,7 +28,7 @@ from hpc_gui.plugins.registry_client import (
 )
 from hpc_gui.plugins.state import activate_version
 
-CONTRACT_APP_VERSION = "1.5.3"
+CONTRACT_APP_VERSION = "1.5.4"
 
 REPO = os.environ.get("HPC_GUI_CONTRACT_REPO", "")
 pytestmark = pytest.mark.skipif(
@@ -142,7 +142,10 @@ def test_truba_v2_plugin_installs_and_retains_structured_sections(
     registry, local_fetcher, tmp_path: Path
 ):
     entry = find_registry_entry(
-        registry, "org.hpcclient.truba", version="1.1.0", app_version="1.5.0"
+        registry,
+        "org.hpcclient.truba",
+        version="1.1.0",
+        app_version=CONTRACT_APP_VERSION,
     )
     result = install_plugin_from_registry(
         entry, root=tmp_path, app_version="1.5.0", fetcher=local_fetcher

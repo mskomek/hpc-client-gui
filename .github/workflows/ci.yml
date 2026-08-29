@@ -239,7 +239,7 @@ jobs:
           repository: mskomek/hpc-client-gui-plugins
           # Release pin: explicit registry tag. Advance intentionally
           # (see PRODUCTION_CHECKLIST.md §11).
-          ref: v1.0.0
+          ref: 757668cbff011367075b054d3004d6229e9fb607
           path: hpc-client-gui-plugins
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
