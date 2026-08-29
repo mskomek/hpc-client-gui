@@ -1,4 +1,4 @@
-FROM ubuntu:24.04
+FROM ubuntu:26.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -38,7 +38,7 @@ RUN apt-get update \
        libxcb-xinerama0 \
        libxcb-xkb1 \
        python3 \
-       libpython3.12 \
+       libpython3.14 \
        python3-venv \
        wget \
     && rm -rf /var/lib/apt/lists/*

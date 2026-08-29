@@ -535,7 +535,7 @@ class _FileOpWorker(QObject):
         total = len(self._plan)
         for i, op in enumerate(self._plan, start=1):
             if self._cancel:
-                self.finished.emit(True, "İptal edildi.")
+                self.finished.emit(True, t("dirs.cancelled"))
                 return
             label = f"{i}/{total}: {os.path.basename((op.dst or op.src).rstrip('/'))}"
             self.progress.emit(i, label)
@@ -839,16 +839,16 @@ class RemoteDirPanel(QWidget):
         self.path = QLineEdit()
         self.path.returnPressed.connect(self._open_path_field)
 
-        self.btn_upload = QPushButton(t("dirs.upload") if t("dirs.upload") != "[dirs.upload]" else "Yükle")
+        self.btn_upload = QPushButton(t("dirs.upload"))
         self.btn_upload.clicked.connect(self.upload_files)
 
         self.btn_new_folder = QPushButton(
-            t("dirs.new_folder") if t("dirs.new_folder") != "[dirs.new_folder]" else "Yeni Klasör"
+            t("dirs.new_folder")
         )
         self.btn_new_folder.clicked.connect(self.create_new_folder)
 
         self.btn_new_file = QPushButton(
-            t("dirs.new_file") if t("dirs.new_file") != "[dirs.new_file]" else "Yeni Dosya"
+            t("dirs.new_file")
         )
         self.btn_new_file.clicked.connect(self.create_new_file)
 
@@ -862,7 +862,7 @@ class RemoteDirPanel(QWidget):
         )
         self.btn_download.clicked.connect(self.download_selected)
 
-        self.btn_delete = QPushButton(t("dirs.delete") if t("dirs.delete") != "[dirs.delete]" else "Sil")
+        self.btn_delete = QPushButton(t("dirs.delete"))
         self.btn_delete.clicked.connect(self.delete_selected)
 
         self.btn_undo = QPushButton(t("dirs.undo") if t("dirs.undo") != "[dirs.undo]" else "Geri Al")
@@ -933,7 +933,7 @@ class RemoteDirPanel(QWidget):
             "other": self._make_view(),
         }
         self.tabs.addTab(self.views["all"], t("dirs.tab_all") if t("dirs.tab_all") != "[dirs.tab_all]" else "Tümü")
-        self.tabs.addTab(self.views["folders"], t("dirs.tab_folders") if t("dirs.tab_folders") != "[dirs.tab_folders]" else "Klasörler")
+        self.tabs.addTab(self.views["folders"], t("dirs.tab_folders"))
         self.tabs.addTab(self.views["iso"], t("dirs.tab_iso") if t("dirs.tab_iso") != "[dirs.tab_iso]" else "ISO")
         self.tabs.addTab(
             self.views["archives"], t("dirs.tab_archives") if t("dirs.tab_archives") != "[dirs.tab_archives]" else "Arşivler"
@@ -3036,16 +3036,16 @@ class RemoteDirPanel(QWidget):
         lo = text.lower()
 
         if "permission denied" in lo or "access is denied" in lo:
-            return "İzin yok (Permission denied)", "Bu işlem için gerekli izinlerin yok. (chmod/chown veya doğru dizin?)"
+            return t("errors.permission_denied"), t("errors.permission_denied_detail")
 
         if "no space left on device" in lo or "disk quota exceeded" in lo or "quota exceeded" in lo:
-            return "Disk dolu / Kota aşıldı", "Hedef tarafta boş alan kalmamış veya kota limitine ulaşıldı."
+            return t("errors.no_space"), t("errors.no_space_detail")
 
         if "read-only file system" in lo:
-            return "Salt okunur dosya sistemi", "Hedef dosya sistemi read-only. Yazma işlemi yapılamaz."
+            return t("errors.read_only"), t("errors.read_only_detail")
 
         # fallback
-        return t("common.error"), "İşlem başarısız oldu. Detaylar aşağıda."
+        return t("common.error"), t("errors.operation_failed_detail")
 
     def _show_op_error(self, raw: str) -> None:
         title, short = self._humanize_error(raw)
@@ -4227,7 +4227,7 @@ class RemoteDirPanel(QWidget):
 
         return self._run_plan_with_progress(
             plan,
-            "Yükleniyor...",
+            t("dirs.uploading"),
             after_finished=lambda: self._finish_remote_directory_mutation([dest_dir]),
             confirm_before_start=True,
         )
@@ -4321,7 +4321,7 @@ class RemoteDirPanel(QWidget):
                     plan.append(_PlannedOp("upload", local_file, remote_file))
         return {
             "plan": plan,
-            "title": "Yükleniyor...",
+            "title": t("dirs.uploading"),
             "affected_dirs": [self._normalize_remote_dir(dest_dir)],
             "confirm_before_start": True,
         }
@@ -4358,7 +4358,7 @@ class RemoteDirPanel(QWidget):
                 return
             self._run_plan_with_progress(
                 plan,
-                "Yükleniyor...",
+                t("dirs.uploading"),
                 after_finished=lambda dest=job.dest_dir: self._finish_remote_directory_mutation([dest]),
                 confirm_before_start=True,
             )
@@ -4571,7 +4571,7 @@ class RemoteDirPanel(QWidget):
         if not self.current_dir:
             QMessageBox.warning(self, t("common.error"), t("dirs.no_directory_selected"))
             return
-        paths, _ = QFileDialog.getOpenFileNames(self, t("dirs.upload") if t("dirs.upload") != "[dirs.upload]" else "Yükle")
+        paths, _ = QFileDialog.getOpenFileNames(self, t("dirs.upload"))
         if not paths:
             return
         self._apply_local_upload_incremental(paths, self.current_dir)

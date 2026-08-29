@@ -11,6 +11,7 @@ class TerminalBridge(QObject):
     output = Signal(str)
     state_changed = Signal(str)
     error = Signal(str)
+    ready = Signal()
 
     def __init__(self, parent: QObject | None = None) -> None:
         super().__init__(parent)
@@ -24,6 +25,11 @@ class TerminalBridge(QObject):
     def receive_output(self, text: str) -> None:
         if text:
             self.output.emit(text)
+
+    @Slot()
+    def terminal_ready(self) -> None:
+        """Called only after the page has created xterm and its channel."""
+        self.ready.emit()
 
     def detach(self) -> None:
         if self._ssh is None:

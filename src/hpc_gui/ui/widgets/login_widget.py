@@ -219,7 +219,7 @@ class LoginWidget(QWidget):
         self.password = QLineEdit()
         self.password.setEchoMode(QLineEdit.EchoMode.Password)
 
-        self.cb_save_password = QCheckBox(t("login.save_password") if t("login.save_password") != "[login.save_password]" else "Şifreyi kaydet")
+        self.cb_save_password = QCheckBox(t("login.save_password"))
         self._profile_system_settings = normalize_system_settings(None)
         self._profile_file_manager_settings = normalize_file_manager_settings(None)
         self._profile_file_manager_raw: dict[str, Any] = {}
@@ -231,7 +231,7 @@ class LoginWidget(QWidget):
         self._profile_ssh_timeout = None
         self._password_prompt_policy = "when-needed"
         self.key_path = QLineEdit()
-        self.btn_browse_key = QPushButton(t("login.browse") if t("login.browse") != "[login.browse]" else "Seç")
+        self.btn_browse_key = QPushButton(t("login.browse"))
         self.btn_browse_key.clicked.connect(self.pick_key)
 
         self.sp_transfer_parallelism = QSpinBox()
@@ -241,7 +241,7 @@ class LoginWidget(QWidget):
         self.sp_ssh_timeout.setDecimals(1)
         self.sp_ssh_timeout.setSuffix(" s")
 
-        self.cb_x11 = QCheckBox(t("login.x11_enable") if t("login.x11_enable") != "[login.x11_enable]" else "X11 Forwarding")
+        self.cb_x11 = QCheckBox(t("login.x11_enable"))
         self._profile_host_key_policy = "accept-new"
         self.cb_strict_hostkey = QCheckBox(t("login.strict_host_key"))
         # Legacy visible checkbox kept only as a mirror of the canonical
@@ -252,7 +252,7 @@ class LoginWidget(QWidget):
         # Simulation / dry-run option removed from UI.
         # (If a legacy profile contains a 'dry_run' field, it is ignored.)
 
-        self.btn_save = QPushButton(t("login.save") if t("login.save") != "[login.save]" else "Kaydet")
+        self.btn_save = QPushButton(t("login.save"))
         self.btn_save.clicked.connect(self.save_profile)
 
         self.btn_add_connection = QPushButton(t("login.add_connection"))
@@ -290,7 +290,7 @@ class LoginWidget(QWidget):
             "selection-background-color: #264f78; }"
         )
         self.cmd_in.setPlaceholderText(t("login.command_placeholder"))
-        self.btn_run_cmd = QPushButton(t("login.run_command") if t("login.run_command") != "[login.run_command]" else "Çalıştır")
+        self.btn_run_cmd = QPushButton(t("login.run_command"))
         self.btn_run_cmd.clicked.connect(self.cmd_in.submit_current)
         self.cmd_in.command_submitted.connect(self.run_command_text)
         self.cmd_in.reconnect_requested.connect(self._prompt_reconnect)
@@ -751,9 +751,9 @@ class LoginWidget(QWidget):
             if isinstance(cfg, SSHConfig):
                 identity = f"{cfg.username}@{cfg.host}" if cfg.username else cfg.host
                 self.terminal_identity_label.setText(identity)
-            self.status_label.setText(t("login.status_connected") if t("login.status_connected") != "[login.status_connected]" else "Bağlı")
+            self.status_label.setText(t("login.status_connected"))
             self.cmd_in.set_connected(True)
-            self.append_console("SSH bağlantısı kuruldu.")
+            self.append_console(t("login.ssh_connected"))
             self._sync_shell_geometry()
             try:
                 if self.terminal_widget is not None:
@@ -779,7 +779,7 @@ class LoginWidget(QWidget):
             message = t("connection.host_key_rejected").format(host=exc.hostname)
         elif isinstance(exc, BaseException):
             message = describe_connection_error(exc, message)
-        self.status_label.setText(t("login.status_disconnected") if t("login.status_disconnected") != "[login.status_disconnected]" else "Bağlı değil")
+        self.status_label.setText(t("login.status_disconnected"))
         self.cmd_in.set_connected(False)
         self.append_console(t("login.conn_error_prefix").format(err=message))
         show_exception(self, title=t("login.conn_error_title"), user_message=message, exc=exc if isinstance(exc, BaseException) else None, area="SSH")
@@ -827,44 +827,62 @@ class LoginWidget(QWidget):
             except Exception:
                 update_settings({"master_password_dpapi": ""})
 
-        title = "Şifreleme Parolası"
-        prompt = "Kaydedilen şifreleri şifrelemek/çözmek için bir ana parola girin."
+        if confirm:
+            title_key = "login.master_create_title"
+            prompt_key = "login.master_create_prompt"
+            password_label_key = "login.master_password_label"
+            confirm_label_key = "login.master_confirm_label"
+            accept_key = "login.master_save"
+        else:
+            title_key = "login.master_unlock_title"
+            prompt_key = "login.master_unlock_prompt"
+            password_label_key = "login.master_password_label"
+            confirm_label_key = None
+            accept_key = "login.master_unlock"
+        title = t(title_key)
         dialog = QDialog(self)
         dialog.setWindowTitle(title)
         layout = QVBoxLayout(dialog)
-        layout.addWidget(QLabel(prompt))
+        prompt = QLabel(t(prompt_key))
+        prompt.setWordWrap(True)
+        layout.addWidget(prompt)
+        form = QFormLayout()
         password_input = QLineEdit()
         password_input.setEchoMode(QLineEdit.EchoMode.Password)
-        layout.addWidget(password_input)
+        form.addRow(t(password_label_key), password_input)
+        confirm_input = None
+        if confirm:
+            confirm_input = QLineEdit()
+            confirm_input.setEchoMode(QLineEdit.EchoMode.Password)
+            form.addRow(t(confirm_label_key), confirm_input)
+        layout.addLayout(form)
         remember_password = QCheckBox(t("connection.remember_master_password"))
-        remember_password.setEnabled(os_secret_store_available())
+        remember_password.setVisible(os_secret_store_available())
+        remember_password.setChecked(False)
         layout.addWidget(remember_password)
         buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Ok
             | QDialogButtonBox.StandardButton.Cancel
         )
-        buttons.accepted.connect(dialog.accept)
+        buttons.button(QDialogButtonBox.StandardButton.Ok).setText(t(accept_key))
+        buttons.button(QDialogButtonBox.StandardButton.Cancel).setText(t("common.cancel"))
+
+        def accept_dialog() -> None:
+            if not password_input.text().strip():
+                QMessageBox.warning(self, t("login.err_title"), t("login.err_master_empty"))
+                return
+            if confirm_input is not None and confirm_input.text() != password_input.text().strip():
+                QMessageBox.warning(self, t("login.err_title"), t("login.err_master_mismatch"))
+                return
+            dialog.accept()
+
+        buttons.accepted.connect(accept_dialog)
         buttons.rejected.connect(dialog.reject)
         layout.addWidget(buttons)
         password_input.setFocus()
         if dialog.exec() != QDialog.DialogCode.Accepted:
             return None
         pw = password_input.text().strip()
-        if not pw:
-            QMessageBox.warning(self, t("login.err_title"), t("login.err_master_empty"))
-            return None
-        if confirm:
-            pw2, ok2 = QInputDialog.getText(
-                self,
-                title,
-                "Ana parolayı tekrar girin (doğrulama):",
-                QLineEdit.EchoMode.Password,
-            )
-            if not ok2:
-                return None
-            if pw2 != pw:
-                QMessageBox.warning(self, t("login.err_title"), t("login.err_master_mismatch"))
-                return None
         self._master_password_cache = pw
         if remember_password.isChecked():
             try:
@@ -942,7 +960,7 @@ class LoginWidget(QWidget):
         return ""
 
     def pick_key(self) -> None:
-        path, _ = QFileDialog.getOpenFileName(self, t("login.ssh_key") if t("login.ssh_key") != "[login.ssh_key]" else "SSH Anahtar Seç")
+        path, _ = QFileDialog.getOpenFileName(self, t("login.ssh_key"))
         if path:
             self.key_path.setText(path)
 
@@ -1043,7 +1061,7 @@ class LoginWidget(QWidget):
             on_save=self._save_profile_from_dialog,
             on_connect=self._save_and_connect_from_dialog,
         )
-        dlg.setWindowTitle(t("connection.edit_dialog_title") if t("connection.edit_dialog_title") != "[connection.edit_dialog_title]" else "Edit Connection")
+        dlg.setWindowTitle(t("connection.edit_dialog_title"))
         self._editing_profile_original_name = name
         try:
             dlg.exec()
@@ -1060,8 +1078,8 @@ class LoginWidget(QWidget):
             return
         self.profiles_list.setCurrentItem(item)
         menu = QMenu(self)
-        act_connect = menu.addAction(t("login.connect") if t("login.connect") != "[login.connect]" else "Bağlan")
-        act_edit = menu.addAction(t("connection.edit_action") if t("connection.edit_action") != "[connection.edit_action]" else "Edit")
+        act_connect = menu.addAction(t("login.connect"))
+        act_edit = menu.addAction(t("connection.edit_action"))
         chosen = menu.exec(self.profiles_list.mapToGlobal(pos))
         if chosen == act_connect:
             self.connect_selected_profile()
@@ -1268,7 +1286,7 @@ class LoginWidget(QWidget):
             delete_profile(original_name)
         self.refresh_profiles(select_name=name)
         append_event({"type": "profile_save", "name": name})
-        self.append_console(f"Profil kaydedildi: {name}")
+        self.append_console(t("login.profile_saved").format(name=name))
         return True
 
     def update_active_profile_remote_defaults(
@@ -1321,9 +1339,9 @@ class LoginWidget(QWidget):
             "profile_name": self.profile_name.text().strip(),
         }
         self.terminal_identity_label.setText(t("login.terminal_mock"))
-        self.status_label.setText(t("login.status_mock") if t("login.status_mock") != "[login.status_mock]" else "Mock mod")
+        self.status_label.setText(t("login.status_mock"))
         self.cmd_in.set_connected(False)
-        self.append_console("Mock bağlantı aktif.")
+        self.append_console(t("login.mock_connected"))
         append_event({"type": "connect", "host": cfg.host, "user": cfg.username, "dry_run": True})
         self.session_changed.emit(self._session)
 
@@ -1392,7 +1410,7 @@ class LoginWidget(QWidget):
                 return False
 
         target = f"{cfg.username}@{cfg.host}" if cfg.username else cfg.host
-        self.append_console(f"Bağlanılıyor: {target}:{cfg.port}")
+        self.append_console(t("login.connecting_to").format(target=target, port=cfg.port))
         try:
             if cfg.dry_run:
                 self._finish_mock_connection(cfg, old_ssh)
@@ -1400,13 +1418,13 @@ class LoginWidget(QWidget):
                 return self._begin_connect_async(cfg, old_ssh)
         except Exception as e:
             self.terminal_identity_label.setText(t("login.terminal_protocol_ssh"))
-            self.status_label.setText(t("login.status_disconnected") if t("login.status_disconnected") != "[login.status_disconnected]" else "Bağlı değil")
+            self.status_label.setText(t("login.status_disconnected"))
             msg = str(e)
             message = describe_connection_error(e, msg)
             self.append_console(t("login.conn_error_prefix").format(err=message))
             if "SSH protocol banner" in msg or "banner" in msg.lower():
                 self.append_console(
-                    "İpucu: SSH sunucusu banner döndürmeden önce gecikiyor olabilir; VPN/ağ, port ve uzak sshd erişimini kontrol edin."
+                    t("login.ssh_banner_hint")
                 )
             show_exception(self, title=t("login.conn_error_title"), user_message=message, exc=e, area="SSH")
             return False
@@ -1439,7 +1457,7 @@ class LoginWidget(QWidget):
             if cmd.lower() == "r":
                 self._prompt_reconnect()
                 return
-            self.append_console("SSH bagli degil (Mock modda komut calistirilmaz).")
+            self.append_console(t("login.ssh_not_connected_mock"))
             return
 
         info = getattr(ssh, "info", None)
@@ -1471,7 +1489,7 @@ class LoginWidget(QWidget):
         if self.terminal_widget is not None:
             self.terminal_widget.detach()
         self.terminal_identity_label.setText(t("login.terminal_protocol_ssh"))
-        self.status_label.setText(t("login.status_disconnected") if t("login.status_disconnected") != "[login.status_disconnected]" else "Bağlı değil")
+        self.status_label.setText(t("login.status_disconnected"))
         self.cmd_in.set_connected(False)
         notice = t("login.reconnect_notice").format(reason=reason or "")
         if notice != "[login.reconnect_notice]":

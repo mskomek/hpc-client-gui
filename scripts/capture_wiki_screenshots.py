@@ -58,7 +58,7 @@ JOB_SCRIPT = """\
 set -euo pipefail
 
 module purge
-# module load python/3.11
+# module load python/3.14
 
 python analyze.py --input data/input.csv --output results/
 """

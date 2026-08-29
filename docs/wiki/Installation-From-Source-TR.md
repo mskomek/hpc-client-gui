@@ -7,7 +7,7 @@ aynı uygulamayı ve aynı komut satırı arayüzünü verir.
 
 ## Gereksinimler
 
-- Python 3.10 veya üzeri (`requires-python = ">=3.10"`).
+- Python 3.14.x (`requires-python = "==3.14.*"`).
 - Linux'ta PySide6'nın ihtiyaç duyduğu Qt platform kitaplıkları
   (Ubuntu/Debian'da `libegl1`, Fedora ve openSUSE'de dağıtımın karşılığı).
 - İsteğe bağlı, yalnızca X11 için: Windows'ta `plink.exe` ve VcXsrv, Linux'ta
