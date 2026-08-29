@@ -113,8 +113,8 @@ app = BUNDLE(
     info_plist={
         "CFBundleDisplayName": "HPC Client GUI",
         "CFBundleName": "HPC Client GUI",
-        "CFBundleShortVersionString": os.environ.get("APP_VERSION", "1.5.0"),
-        "CFBundleVersion": os.environ.get("APP_VERSION", "1.5.0"),
+        "CFBundleShortVersionString": os.environ.get("APP_VERSION", "1.5.4"),
+        "CFBundleVersion": os.environ.get("APP_VERSION", "1.5.4"),
         "LSMinimumSystemVersion": "13.0",
         "NSHighResolutionCapable": True,
     },

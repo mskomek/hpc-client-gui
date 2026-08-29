@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## v1.5.4
+
+Version metadata and packaged application identifiers are aligned with the
+1.5.4 application release.
+
 ### Structured provider profiles
 - Cluster-profile payload v2 now round-trips through the loader and connection
   dialog while legacy v1 profiles remain supported.
