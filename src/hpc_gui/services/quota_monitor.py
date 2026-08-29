@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Any, Iterable
 
+KNOWN_QUOTA_SCOPES = frozenset({"user", "group", "project", "unknown"})
+
 
 def quota_gate(
     source: dict[str, Any] | None,
@@ -18,6 +20,9 @@ def quota_gate(
         return "not_configured"
     if source.get("enabled") is not True:
         return "disabled"
+    scope = str(source.get("scope") or "").strip()
+    if scope and scope not in KNOWN_QUOTA_SCOPES:
+        return "invalid_configuration"
     backend_id = str(source.get("backend_id") or "").strip()
     if not backend_id or backend_id not in set(backend_ids) or not subject_available:
         return "incomplete/unsupported"

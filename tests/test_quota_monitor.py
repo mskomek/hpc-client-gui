@@ -30,3 +30,8 @@ def test_quota_state_reads_profile_provider_template():
     }]}}
     assert quota_state_for_profile(profile, backend_ids={"x"}, connected=True) == "eligible"
     assert quota_state_for_profile({}) == "not_configured"
+
+
+def test_quota_gate_rejects_unknown_scope():
+    source = {"enabled": True, "command_template": "quota", "backend_id": "x", "scope": "all"}
+    assert quota_gate(source, backend_ids={"x"}) == "invalid_configuration"
