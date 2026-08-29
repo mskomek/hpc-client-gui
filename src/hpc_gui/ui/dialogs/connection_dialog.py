@@ -208,6 +208,7 @@ class ConnectionDialog(QDialog):
         self.btn_storage_edit.clicked.connect(self._edit_storage_area)
         self.btn_storage_remove.clicked.connect(self._remove_storage_area)
         self.quota_enabled = QCheckBox(t("connection.quota_enable"))
+        self.quota_consent = QCheckBox(t("connection.quota_consent"))
         self.quota_backend = QLineEdit()
         self.quota_command = QLineEdit()
         self.quota_command.setPlaceholderText(t("connection.quota_command_placeholder"))
@@ -254,6 +255,7 @@ class ConnectionDialog(QDialog):
         system_group.setLayout(system_form)
         quota_form = QFormLayout()
         quota_form.addRow("", self.quota_enabled)
+        quota_form.addRow("", self.quota_consent)
         quota_form.addRow(t("connection.quota_backend"), self.quota_backend)
         quota_form.addRow(t("connection.quota_command"), self.quota_command)
         quota_group = QGroupBox(t("connection.quota_settings"))
@@ -454,6 +456,7 @@ class ConnectionDialog(QDialog):
         sources = (self._provider_template or {}).get("quota_sources", [])
         source = sources[0] if isinstance(sources, list) and sources and isinstance(sources[0], dict) else {}
         self.quota_enabled.setChecked(source.get("enabled") is True)
+        self.quota_consent.setChecked(source.get("consent") is True)
         self.quota_backend.setText(str(source.get("backend_id") or ""))
         self.quota_command.setText(str(source.get("command_template") or ""))
 
@@ -761,6 +764,7 @@ class ConnectionDialog(QDialog):
                 source = dict(sources[0]) if isinstance(sources, list) and sources and isinstance(sources[0], dict) else {"id": "local-quota"}
                 source.update({
                     "enabled": self.quota_enabled.isChecked(),
+                    "consent": self.quota_consent.isChecked(),
                     "backend_id": self.quota_backend.text().strip(),
                     "command_template": self.quota_command.text().strip(),
                 })

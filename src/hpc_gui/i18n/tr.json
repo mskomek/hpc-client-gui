@@ -709,6 +709,7 @@
     "storage_source_url_invalid": "Politika kaynak URL'si HTTPS kullanmalıdır.",
     "quota_settings": "İsteğe bağlı kota izleme",
     "quota_enable": "Yerel kota izlemeyi etkinleştir",
+    "quota_consent": "Bu kaynak için kota sorgularına izin veriyorum",
     "quota_backend": "Onaylı backend kimliği",
     "quota_command": "Komut şablonu",
     "quota_command_placeholder": "Siteniz sağlamıyorsa boş bırakın",
