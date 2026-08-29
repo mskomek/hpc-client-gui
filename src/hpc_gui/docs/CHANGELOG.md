@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## v1.5.5
+
+Provider persistence, safe quota lifecycle foundations, and the coordinated
+release contract are aligned for the next application release.
+
 ## v1.5.4
 
 ### Demo and developer experience

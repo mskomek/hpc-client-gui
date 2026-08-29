@@ -589,7 +589,25 @@ class ConnectionDialog(QDialog):
         }
         self._set_storage_rows(self.storage_rows)
 
+    def _sync_structured_editor(self) -> None:
+        if not self._provider_template:
+            return
+        self._provider_template["storage"] = [dict(row) for row in self.storage_rows]
+        sources = self._provider_template.get("quota_sources")
+        preserved = [dict(item) for item in sources if isinstance(item, dict)] if isinstance(sources, list) else []
+        source = dict(preserved[0]) if preserved else {"id": "local-quota"}
+        source.update({
+            "enabled": self.quota_enabled.isChecked(),
+            "consent": self.quota_consent.isChecked(),
+            "backend_id": str(self.quota_backend.currentData() or "").strip(),
+            "command_template": self.quota_command.text().strip(),
+            "scope": self.quota_scope.text().strip(),
+            "subject_template": self.quota_subject.text().strip(),
+        })
+        self._provider_template["quota_sources"] = [source, *preserved[1:]]
+
     def _system_form_values(self) -> dict[str, Any]:
+        self._sync_structured_editor()
         values: dict[str, Any] = {
             "name": self.system_name.text().strip(),
             "scratch_dir": self.scratch_dir.text().strip(),
@@ -807,7 +825,7 @@ class ConnectionDialog(QDialog):
         # an ephemeral UI action.  Keep every source and update only the source
         # represented by the current quota editor.
         if self._provider_template:
-            self._provider_template["storage"] = [dict(row) for row in self.storage_rows]
+            self._sync_structured_editor()
             sources = self._provider_template.get("quota_sources")
             if not isinstance(sources, list):
                 sources = []

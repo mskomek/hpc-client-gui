@@ -65,6 +65,7 @@ KNOWN_COMMAND_PLACEHOLDERS = frozenset(
         "script_name_q",
     }
 )
+KNOWN_QUOTA_PLACEHOLDERS = frozenset({"user", "subject", "path", "path_q"})
 
 _PLACEHOLDER_RE = re.compile(r"\{([A-Za-z_][A-Za-z0-9_]*)\}")
 _SAFE_PROFILE_ID_RE = re.compile(r"^[a-z][a-z0-9_-]{0,63}$")
@@ -274,6 +275,8 @@ def validate_cluster_profile_dict(profile: Any) -> list[str]:
             errors.append(f"cluster profile '{section_key}' must be a JSON object")
             continue
         for value in section.values():
+            if value is None:
+                continue
             if not isinstance(value, str):
                 errors.append(f"cluster profile '{section_key}' values must be strings")
                 break
@@ -296,6 +299,26 @@ def validate_cluster_profile_dict(profile: Any) -> list[str]:
                 errors.append(f"cluster profile command '{key}' contains control characters")
             if "\n" in value or "\r" in value:
                 errors.append(f"cluster profile command '{key}' must be single-line")
+
+    sources = profile.get("quota_sources")
+    if isinstance(sources, list):
+        for index, source in enumerate(sources):
+            if not isinstance(source, dict):
+                continue
+            for field in ("command_template", "subject_template"):
+                value = source.get(field)
+                if not isinstance(value, str):
+                    continue
+                for placeholder in _PLACEHOLDER_RE.findall(value):
+                    if placeholder not in KNOWN_QUOTA_PLACEHOLDERS:
+                        errors.append(
+                            f"cluster profile quota_sources[{index}] '{field}' uses unknown placeholder "
+                            f"{{{placeholder}}}"
+                        )
+                if any(ord(character) < 32 for character in value) or "\n" in value or "\r" in value:
+                    errors.append(
+                        f"cluster profile quota_sources[{index}] '{field}' must be single-line and control-free"
+                    )
     return errors
 
 
