@@ -281,6 +281,12 @@ regardless of which agent drives the call.
 
 ## Release Packaging Rule
 
+- `pyproject.toml` is the single application-version source of truth. When a
+  new version is created, run `python scripts/sync_version.py X.Y.Z` before
+  committing; it synchronizes runtime, CLI, Windows, macOS, and release-history
+  declarations. Run the release consistency check afterward. Never hand-edit
+  only one version location.
+
 - Windows release artifacts must live under `dist/releases/v<version>/`.
 - Single-file releases may be published directly; multi-file releases (such as Windows onedir) must be distributed as an archive (`.zip` or `.tar.gz`) with its checksum, and must not leave loose executables beside the archive.
 - Do not leave release assets loose at the root of `dist/`.
