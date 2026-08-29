@@ -694,6 +694,8 @@
     "system_name": "System name",
     "scratch_dir": "Job / scratch directory",
     "home_dir": "Home directory",
+    "storage_areas": "Storage areas",
+    "storage_areas_empty": "No configured storage areas.",
     "squeue_command": "List jobs command",
     "sbatch_command": "Submit job command",
     "scancel_command": "Cancel job command",
