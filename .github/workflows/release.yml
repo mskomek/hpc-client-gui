@@ -572,7 +572,7 @@ jobs:
     # Publication is opt-in and can only run after the final release gate
     # succeeded, so neither a failed nor an unexpectedly skipped required
     # job can race ahead of publication.
-    if: ${{ inputs.publish == true || github.event.inputs.publish == 'true' }}
+    if: ${{ always() && needs.release-gate.result == 'success' && (inputs.publish == true || github.event.inputs.publish == 'true') }}
     needs: [release-gate]
     runs-on: ubuntu-latest
     # Attestation needs OIDC (id-token) and the attestations API. These are
