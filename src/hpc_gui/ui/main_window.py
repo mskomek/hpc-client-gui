@@ -469,6 +469,7 @@ class MainWindow(QMainWindow):
             dialog.setWindowTitle(t("updates.progress_title"))
             dialog.setWindowModality(Qt.WindowModality.WindowModal)
             dialog.rejected.connect(self._cancel_update_jobs)
+            dialog.canceled.connect(self._cancel_update_jobs)
             self._update_progress = dialog
         self._on_update_progress(value, status_key)
         self._update_progress.show()
@@ -575,10 +576,7 @@ class MainWindow(QMainWindow):
             webbrowser.open(release.zip_url or release.html_url)
             return
 
-        if not self._update_manual:
-            self._show_update_progress(10, "available")
-        else:
-            self._on_update_progress(10, "available")
+        self._close_update_progress()
         answer = QMessageBox.question(
             self,
             t("updates.available_title"),
@@ -590,9 +588,8 @@ class MainWindow(QMainWindow):
             QMessageBox.StandardButton.Yes,
         )
         if answer != QMessageBox.StandardButton.Yes:
-            self._close_update_progress()
             return
-        self._on_update_progress(10, "downloading")
+        self._show_update_progress(10, "downloading")
         self._run_update_job(
             lambda progress, cancelled: (
                 release,
@@ -606,6 +603,7 @@ class MainWindow(QMainWindow):
             self._close_update_progress()
             return
         release, zip_path = result
+        self._close_update_progress()
         answer = QMessageBox.question(
             self,
             t("updates.ready_title"),
@@ -614,10 +612,9 @@ class MainWindow(QMainWindow):
             QMessageBox.StandardButton.Yes,
         )
         if answer != QMessageBox.StandardButton.Yes:
-            self._close_update_progress()
             return
         try:
-            self._on_update_progress(100, "installing")
+            self._show_update_progress(100, "installing")
             launch_update_installer(zip_path, release.version)
         except Exception as exc:
             self._on_update_error(str(exc))
