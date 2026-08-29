@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLineEdit,
     QInputDialog,
+    QLabel,
     QMenu,
     QMessageBox,
     QPushButton,
@@ -194,6 +195,8 @@ class ConnectionDialog(QDialog):
         self.status_command = QLineEdit()
         self.active_job_ids_command = QLineEdit()
         self.job_state_command = QLineEdit()
+        self.storage_summary = QLabel()
+        self.storage_summary.setWordWrap(True)
 
         self.btn_system_templates = QToolButton()
         self.btn_system_templates.setText(t("connection.system_templates_menu"))
@@ -211,6 +214,7 @@ class ConnectionDialog(QDialog):
         system_form.addRow(t("connection.system_templates"), system_actions)
         system_form.addRow(t("connection.scratch_dir"), self.scratch_dir)
         system_form.addRow(t("connection.home_dir"), self.home_dir)
+        system_form.addRow(t("connection.storage_areas"), self.storage_summary)
         system_form.addRow(t("connection.squeue_command"), self.squeue_command)
         system_form.addRow(t("connection.sbatch_command"), self.sbatch_command)
         system_form.addRow(t("connection.scancel_command"), self.scancel_command)
@@ -412,6 +416,7 @@ class ConnectionDialog(QDialog):
             self.password.setText(str(profile.get("password", "")))
         else:
             self.password.setText("")
+        self._update_storage_summary()
 
     def _system_form_values(self) -> dict[str, str]:
         return {
@@ -449,6 +454,20 @@ class ConnectionDialog(QDialog):
         self.status_command.setText(system["status_command"])
         self.active_job_ids_command.setText(system["active_job_ids_command"])
         self.job_state_command.setText(system["job_state_command"])
+        self._update_storage_summary()
+
+    def _update_storage_summary(self) -> None:
+        rows = (self._provider_template or {}).get("storage", [])
+        if not isinstance(rows, list):
+            rows = []
+        visible = [
+            f"{row.get('label', row.get('id', ''))}: {row.get('path_template', '').strip()}"
+            for row in rows
+            if isinstance(row, dict)
+            and row.get("path_template", "").strip()
+            and row.get("enabled") is not False
+        ]
+        self.storage_summary.setText("\n".join(visible) or t("connection.storage_areas_empty"))
 
     def _rebuild_system_template_menu(self) -> None:
         menu = QMenu(self)
