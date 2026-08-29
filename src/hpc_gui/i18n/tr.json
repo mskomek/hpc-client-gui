@@ -705,6 +705,8 @@
     "storage_cleanup": "Temizleme notu",
     "storage_retention": "Saklama süresi (gün, isteğe bağlı)",
     "storage_source_url": "Politika kaynak URL'si (isteğe bağlı)",
+    "storage_retention_invalid": "Saklama süresi negatif olmayan gün sayısı olmalıdır.",
+    "storage_source_url_invalid": "Politika kaynak URL'si HTTPS kullanmalıdır.",
     "storage_unknown": "Bilinmiyor",
     "storage_yes": "Evet",
     "storage_no": "Hayır",
