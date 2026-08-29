@@ -30,6 +30,21 @@ def merge_profile_patch(
     return result
 
 
+def resolve_provider_overrides(
+    provider: dict[str, Any] | None,
+    overrides: dict[str, Any] | None,
+) -> dict[str, Any]:
+    """Apply explicit provider overrides with inherit/set/clear semantics.
+
+    Missing keys inherit. ``None`` and blank strings persist a clear, while
+    false-y non-string values such as ``False`` remain deliberate settings.
+    """
+    result = dict(provider) if isinstance(provider, dict) else {}
+    for key, value in (overrides or {}).items():
+        result[key] = None if value is None or (isinstance(value, str) and not value.strip()) else value
+    return result
+
+
 def _config_dir() -> Path:
     return app_data_dir()
 

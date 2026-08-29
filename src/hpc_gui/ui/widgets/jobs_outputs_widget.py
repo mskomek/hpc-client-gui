@@ -33,9 +33,9 @@ from hpc_gui.core.history import append_event
 from hpc_gui.ui.widgets.remote_dir_panel import RemoteDirPanel
 from hpc_gui.services.slurm_models import parse_scontrol
 from hpc_gui.services.slurm_script_parser import (
+    parse_job_paths,
     parse_job_name,
-    parse_output_error,
-    resolve_path,
+    storage_area_for_path,
 )
 from hpc_gui.config.system_profile import format_remote_path, normalize_system_settings
 from hpc_gui.ui.async_call import AsyncCall
@@ -581,6 +581,7 @@ class JobsOutputsWidget(QWidget):
         self._tail_stop_notified = False
         self._live_tail_failure_started: float | None = None
         self._minimize_started_at: float | None = None
+        self._detail_scheduler_paths: tuple[str, str] = ("", "")
         self._follow_windows: list[QMainWindow] = []
         self._single_file_follow_windows: list[QMainWindow] = []
         self._follow_tabs: list[_OutputFollowerWidget] = []
@@ -633,6 +634,7 @@ class JobsOutputsWidget(QWidget):
         self.meta_job_script.setTextFormat(Qt.TextFormat.RichText)
         self.meta_job_script.setOpenExternalLinks(False)
         self.meta_job_script.linkActivated.connect(self._open_detail_script)
+        self.meta_job_workdir = QLabel()
         self.btn_sacct = QPushButton(t("jobs_outputs.refresh_sacct"))
         self.btn_scontrol = QPushButton(t("jobs_outputs.show_job_details"))
         self.btn_sacct.clicked.connect(self.refresh_sacct)
@@ -645,6 +647,7 @@ class JobsOutputsWidget(QWidget):
         vm = QVBoxLayout(self.meta_box)
         vm.addLayout(meta_row)
         vm.addWidget(self.meta_job_script)
+        vm.addWidget(self.meta_job_workdir)
         vm.addWidget(self.meta_text)
 
         # --- lssrv
@@ -807,7 +810,9 @@ class JobsOutputsWidget(QWidget):
         self.path_err.setText("")
         self.meta_text.setPlainText("")
         self.meta_job_script.clear()
+        self.meta_job_workdir.clear()
         self.meta_job_id.setText("")
+        self._detail_scheduler_paths = ("", "")
         self.lssrv_text.setPlainText("")
         self.active_script = ""
         self.active_out = ""
@@ -1129,6 +1134,29 @@ class JobsOutputsWidget(QWidget):
         path = str(getattr(self, "_detail_script_path", "")).strip()
         if path:
             self._activate_slurm_script(path)
+            stdout, stderr = self._detail_scheduler_paths
+            if stdout:
+                self.active_out = stdout
+                self.path_out.setText(stdout)
+            if stderr:
+                self.active_err = stderr
+                self.path_err.setText(stderr)
+
+    def _show_workdir(self, path: str) -> None:
+        cfg = (self.session or {}).get("cfg")
+        system = normalize_system_settings(getattr(cfg, "system_settings", None))
+        user = getattr(cfg, "username", "")
+        area = storage_area_for_path(
+            path,
+            {
+                "home": format_remote_path(system["home_dir"], user),
+                "scratch": format_remote_path(system["scratch_dir"], user),
+            },
+        )
+        suffix = f" ({area})" if area else ""
+        self.meta_job_workdir.setText(
+            f"<b>{t('jobs_outputs.workdir')}:</b> {path}{suffix}"
+        )
 
     def show_job_details(self):
         if not self.session or not self.session.get("slurm"):
@@ -1145,6 +1173,15 @@ class JobsOutputsWidget(QWidget):
             self.meta_text.setPlainText(txt)
             detail = parse_scontrol(txt, jobid)
             self._detail_script_path = detail.script_path
+            self._detail_scheduler_paths = (detail.stdout_path, detail.stderr_path)
+            if detail.workdir:
+                self._show_workdir(detail.workdir)
+            if detail.stdout_path:
+                self.active_out = detail.stdout_path
+                self.path_out.setText(detail.stdout_path)
+            if detail.stderr_path:
+                self.active_err = detail.stderr_path
+                self.path_err.setText(detail.stderr_path)
             if detail.script_path:
                 self.meta_job_script.setText(f"<b>{t('jobs_outputs.script_path')}:</b> <a href=\"script\">{detail.script_path}</a>")
             else:
@@ -1490,12 +1527,11 @@ class JobsOutputsWidget(QWidget):
         self.active_script = script_path
         self.lbl_script.setText(t("jobs_outputs.active_script").format(path=script_path))
 
-        out_raw, err_raw = parse_output_error(script_text)
         job_name = parse_job_name(script_text)
         jobid = self.cancel_id.text().strip() or None
-        # resolve paths relative to script dir
-        out_path = resolve_path(script_path, out_raw, jobid, job_name) if out_raw else ""
-        err_path = resolve_path(script_path, err_raw, jobid, job_name) if err_raw else ""
+        paths = parse_job_paths(script_text, script_path, jobid, job_name)
+        out_path, err_path = paths.stdout, paths.stderr
+        self._show_workdir(paths.workdir)
 
         if follow_mode == SBATCH_FOLLOW_MODE_NEW_WINDOW_COMBINED:
             self.open_output_pair_window(out_path, err_path)

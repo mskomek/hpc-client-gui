@@ -32,6 +32,8 @@ def test_referenced_local_files_exist() -> None:
     for path in _tracked_files():
         if path.suffix.lower() != ".md":
             continue
+        if not path.is_file():
+            continue  # Deleted tracked files are outside this link check.
         text = _strip_code_blocks(path.read_text(encoding="utf-8", errors="replace"))
         for match in LINK_RE.finditer(text):
             target = match.group(1)
