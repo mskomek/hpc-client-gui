@@ -3,6 +3,7 @@ __pycache__/
 *.py[cod]
 *.egg-info/
 .venv/
+.venv-*/
 venv/
 .env
 
@@ -28,7 +29,10 @@ venv/
 .coverage
 .pytest_cache/
 .ruff_cache/
+.mypy_cache/
+.tox/
 .tmp-*/
+/logs/
 
 # Runtime state (app)
 .truba_slurm_gui/
