@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QInputDialog,
     QLabel,
+    QListWidget,
     QMenu,
     QMessageBox,
     QPushButton,
@@ -197,6 +198,13 @@ class ConnectionDialog(QDialog):
         self.job_state_command = QLineEdit()
         self.storage_summary = QLabel()
         self.storage_summary.setWordWrap(True)
+        self.storage_rows: list[dict[str, Any]] = []
+        self.storage_list = QListWidget()
+        self.storage_list.setMaximumHeight(90)
+        self.btn_storage_add = QPushButton(t("connection.storage_add"))
+        self.btn_storage_remove = QPushButton(t("connection.storage_remove"))
+        self.btn_storage_add.clicked.connect(self._add_storage_area)
+        self.btn_storage_remove.clicked.connect(self._remove_storage_area)
 
         self.btn_system_templates = QToolButton()
         self.btn_system_templates.setText(t("connection.system_templates_menu"))
@@ -214,7 +222,13 @@ class ConnectionDialog(QDialog):
         system_form.addRow(t("connection.system_templates"), system_actions)
         system_form.addRow(t("connection.scratch_dir"), self.scratch_dir)
         system_form.addRow(t("connection.home_dir"), self.home_dir)
-        system_form.addRow(t("connection.storage_areas"), self.storage_summary)
+        storage_controls = QVBoxLayout()
+        storage_controls.addWidget(self.storage_list)
+        storage_buttons = QHBoxLayout()
+        storage_buttons.addWidget(self.btn_storage_add)
+        storage_buttons.addWidget(self.btn_storage_remove)
+        storage_controls.addLayout(storage_buttons)
+        system_form.addRow(t("connection.storage_areas"), storage_controls)
         system_form.addRow(t("connection.squeue_command"), self.squeue_command)
         system_form.addRow(t("connection.sbatch_command"), self.sbatch_command)
         system_form.addRow(t("connection.scancel_command"), self.scancel_command)
@@ -418,6 +432,31 @@ class ConnectionDialog(QDialog):
             self.password.setText("")
         self._update_storage_summary()
 
+    def _set_storage_rows(self, rows: Any) -> None:
+        self.storage_rows = [dict(row) for row in rows if isinstance(row, dict)] if isinstance(rows, list) else []
+        self.storage_list.clear()
+        for row in self.storage_rows:
+            label = str(row.get("label") or row.get("id") or "Storage")
+            path = str(row.get("path_template") or "").strip()
+            self.storage_list.addItem(f"{label}: {path}" if path else f"{label} ({t('connection.storage_areas_empty')})")
+
+    def _add_storage_area(self) -> None:
+        label, ok = QInputDialog.getText(self, t("connection.storage_add"), t("connection.storage_label"))
+        if not ok or not label.strip():
+            return
+        path, ok = QInputDialog.getText(self, t("connection.storage_add"), t("connection.storage_path"))
+        if not ok:
+            return
+        area_id = "-".join(label.strip().lower().split())
+        self.storage_rows.append({"id": area_id, "label": label.strip(), "path_template": path.strip()})
+        self._set_storage_rows(self.storage_rows)
+
+    def _remove_storage_area(self) -> None:
+        row = self.storage_list.currentRow()
+        if row >= 0:
+            self.storage_rows.pop(row)
+            self._set_storage_rows(self.storage_rows)
+
     def _system_form_values(self) -> dict[str, str]:
         return {
             "name": self.system_name.text().strip(),
@@ -468,6 +507,7 @@ class ConnectionDialog(QDialog):
             and row.get("enabled") is not False
         ]
         self.storage_summary.setText("\n".join(visible) or t("connection.storage_areas_empty"))
+        self._set_storage_rows(rows)
 
     def _rebuild_system_template_menu(self) -> None:
         menu = QMenu(self)
@@ -629,6 +669,7 @@ class ConnectionDialog(QDialog):
             else:
                 profile.pop("system_template_source", None)
             if self._provider_template:
+                self._provider_template["storage"] = [dict(row) for row in self.storage_rows]
                 profile["provider_template"] = dict(self._provider_template)
             else:
                 profile.pop("provider_template", None)
