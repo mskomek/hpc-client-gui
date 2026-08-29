@@ -37,6 +37,9 @@ MANIFEST_REQUIRED_KEYS = (
 )
 
 CLUSTER_PROFILE_REQUIRED_KEYS = ("schema_version", "profile_id", "name", "scheduler")
+V2_PROFILE_SECTIONS = frozenset(
+    {"description", "metadata", "paths", "commands", "site", "scheduler_hints", "software", "storage", "quota_sources"}
+)
 
 KNOWN_SCHEDULERS = frozenset({"slurm"})
 
@@ -217,14 +220,35 @@ def validate_cluster_profile_dict(profile: Any) -> list[str]:
             errors.append(f"cluster profile is missing required key '{key}'")
     if errors:
         return errors
-    if profile["schema_version"] != 1:
-        errors.append("cluster profile schema_version must be 1")
+    if profile["schema_version"] not in (1, 2):
+        errors.append("cluster profile schema_version must be 1 or 2")
     if not _is_nonempty_str(profile["profile_id"]):
         errors.append("cluster profile 'profile_id' must be a non-empty string")
     if not _is_nonempty_str(profile["name"]):
         errors.append("cluster profile 'name' must be a non-empty string")
     if profile["scheduler"] not in KNOWN_SCHEDULERS:
         errors.append(f"unsupported scheduler: {profile['scheduler']!r}")
+
+    if profile["schema_version"] == 2:
+        unknown = set(profile) - set(CLUSTER_PROFILE_REQUIRED_KEYS) - V2_PROFILE_SECTIONS
+        errors.extend(f"cluster profile has unknown key '{key}'" for key in sorted(unknown))
+        for section_key in V2_PROFILE_SECTIONS - {"description", "paths", "commands", "storage", "quota_sources"}:
+            section = profile.get(section_key)
+            if section is not None and not isinstance(section, dict):
+                errors.append(f"cluster profile '{section_key}' must be an object")
+        for section_key in ("storage", "quota_sources"):
+            section = profile.get(section_key)
+            if section is not None and not isinstance(section, list):
+                errors.append(f"cluster profile '{section_key}' must be a list")
+            elif isinstance(section, list):
+                for index, item in enumerate(section):
+                    if not isinstance(item, dict):
+                        errors.append(f"cluster profile '{section_key}[{index}]' must be an object")
+                        continue
+                    if not _is_nonempty_str(item.get("id")):
+                        errors.append(f"cluster profile '{section_key}[{index}]' needs a non-empty id")
+                    if section_key == "storage" and not _is_nonempty_str(item.get("label")):
+                        errors.append(f"cluster profile 'storage[{index}]' needs a non-empty label")
 
     for section_key in ("paths", "commands"):
         section = profile.get(section_key)

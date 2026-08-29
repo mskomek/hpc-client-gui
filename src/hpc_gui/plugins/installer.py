@@ -40,6 +40,7 @@ from hpc_gui.plugins.downloader import (
 from hpc_gui.plugins.models import (
     SUPPORTED_PLUGIN_API_VERSIONS,
     ClusterProfileDefinition,
+    build_cluster_profile,
     InstalledPlugin,
     PluginFile,
     PluginManifest,
@@ -151,24 +152,7 @@ def _check_entrypoint_payloads(staging_dir: Path, manifest: PluginManifest) -> t
         problems = validate_cluster_profile_dict(raw_profile)
         if problems:
             raise InstallError(f"Invalid cluster profile '{rel}': " + "; ".join(problems))
-        profiles.append(
-            ClusterProfileDefinition(
-                profile_id=str(raw_profile["profile_id"]),
-                name=str(raw_profile["name"]),
-                scheduler=str(raw_profile["scheduler"]),
-                paths={
-                    key: value
-                    for key, value in (raw_profile.get("paths") or {}).items()
-                    if isinstance(value, str)
-                },
-                commands={
-                    key: value
-                    for key, value in (raw_profile.get("commands") or {}).items()
-                    if isinstance(value, str)
-                },
-                description=str(raw_profile.get("description") or ""),
-            )
-        )
+        profiles.append(build_cluster_profile(raw_profile))
     return tuple(profiles)
 
 

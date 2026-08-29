@@ -1,4 +1,4 @@
-"""Typed models for installed declarative plugins (Plugin API v1)."""
+"""Typed models for installed declarative plugins."""
 
 from __future__ import annotations
 
@@ -84,6 +84,13 @@ class ClusterProfileDefinition:
     paths: Mapping[str, str] = field(default_factory=dict)
     commands: Mapping[str, str] = field(default_factory=dict)
     description: str = ""
+    schema_version: int = 1
+    metadata: Mapping[str, Any] = field(default_factory=dict)
+    site: Mapping[str, Any] = field(default_factory=dict)
+    scheduler_hints: Mapping[str, Any] = field(default_factory=dict)
+    software: Mapping[str, Any] = field(default_factory=dict)
+    storage: tuple[Mapping[str, Any], ...] = ()
+    quota_sources: tuple[Mapping[str, Any], ...] = ()
 
     def to_system_settings(self) -> dict[str, str]:
         """Map the declarative profile onto app system-settings keys.
@@ -103,6 +110,25 @@ class ClusterProfileDefinition:
             if isinstance(value, str) and value.strip():
                 settings[key] = value
         return settings
+
+
+def build_cluster_profile(raw: Mapping[str, Any]) -> ClusterProfileDefinition:
+    """Build a validated profile without discarding v2 structured sections."""
+    return ClusterProfileDefinition(
+        profile_id=str(raw["profile_id"]),
+        name=str(raw["name"]),
+        scheduler=str(raw["scheduler"]),
+        paths={key: value for key, value in (raw.get("paths") or {}).items() if isinstance(value, str)},
+        commands={key: value for key, value in (raw.get("commands") or {}).items() if isinstance(value, str)},
+        description=str(raw.get("description") or ""),
+        schema_version=int(raw.get("schema_version", 1)),
+        metadata=dict(raw.get("metadata") or {}),
+        site=dict(raw.get("site") or {}),
+        scheduler_hints=dict(raw.get("scheduler_hints") or {}),
+        software=dict(raw.get("software") or {}),
+        storage=tuple(dict(item) for item in (raw.get("storage") or [])),
+        quota_sources=tuple(dict(item) for item in (raw.get("quota_sources") or [])),
+    )
 
 
 @dataclass(frozen=True)

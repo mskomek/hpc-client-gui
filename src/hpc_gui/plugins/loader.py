@@ -19,6 +19,7 @@ from hpc_gui.plugins.compatibility import is_app_compatible
 from hpc_gui.plugins.models import (
     SUPPORTED_PLUGIN_API_VERSIONS,
     ClusterProfileDefinition,
+    build_cluster_profile,
     InstalledPlugin,
     PluginFile,
     PluginManifest,
@@ -93,23 +94,7 @@ def _build_profile(raw: Any) -> tuple[ClusterProfileDefinition | None, str | Non
     errors = validate_cluster_profile_dict(raw)
     if errors:
         return None, "; ".join(errors)
-    profile = ClusterProfileDefinition(
-        profile_id=str(raw["profile_id"]),
-        name=str(raw["name"]),
-        scheduler=str(raw["scheduler"]),
-        paths={
-            key: value
-            for key, value in (raw.get("paths") or {}).items()
-            if isinstance(value, str)
-        },
-        commands={
-            key: value
-            for key, value in (raw.get("commands") or {}).items()
-            if isinstance(value, str)
-        },
-        description=str(raw.get("description") or ""),
-    )
-    return profile, None
+    return build_cluster_profile(raw), None
 
 
 def load_installed_plugins(
