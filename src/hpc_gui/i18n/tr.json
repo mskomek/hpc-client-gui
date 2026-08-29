@@ -718,6 +718,7 @@
     "quota_status_off": "Kota izleme kapalı.",
     "quota_status_unconfigured": "Kota komutu yapılandırılmadı — izleme kapalı.",
     "quota_status_backend_required": "Sorgu öncesi onaylı backend ve açık kullanıcı izni gerekir.",
+    "quota_status_invalid": "Kota yapılandırması geçersiz.",
     "quota_command_placeholder": "Siteniz sağlamıyorsa boş bırakın",
     "quota_disabled_tip": "Kota izleme varsayılan olarak kapalıdır; onaylı backend, izin ve bağlantı olmadan çalışmaz.",
     "storage_unknown": "Bilinmiyor",

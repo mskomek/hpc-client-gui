@@ -45,6 +45,7 @@ from hpc_gui.config.system_profile import (
 )
 from hpc_gui.plugins.templates import installed_cluster_template_groups
 from hpc_gui.plugins.models import validate_storage_policy
+from hpc_gui.services.quota_monitor import quota_gate
 from hpc_gui.ssh.client import coerce_keepalive_interval
 from hpc_gui.config.storage import coerce_profile_transfer_parallelism, coerce_profile_ssh_timeout
 
@@ -271,6 +272,9 @@ class ConnectionDialog(QDialog):
         self.quota_enabled.toggled.connect(self.quota_command.setEnabled)
         self.quota_enabled.toggled.connect(self._update_quota_status)
         self.quota_command.textChanged.connect(self._update_quota_status)
+        self.quota_backend.textChanged.connect(self._update_quota_status)
+        self.quota_scope.textChanged.connect(self._update_quota_status)
+        self.quota_consent.toggled.connect(self._update_quota_status)
         quota_group.setToolTip(t("connection.quota_disabled_tip"))
 
         self.advanced_button = QToolButton()
@@ -473,10 +477,22 @@ class ConnectionDialog(QDialog):
         self._update_quota_status()
 
     def _update_quota_status(self) -> None:
-        if not self.quota_enabled.isChecked():
+        state = quota_gate(
+            {
+                "enabled": self.quota_enabled.isChecked(),
+                "consent": self.quota_consent.isChecked(),
+                "backend_id": self.quota_backend.text().strip(),
+                "command_template": self.quota_command.text().strip(),
+                "scope": self.quota_scope.text().strip(),
+            },
+            backend_ids=(),
+        )
+        if state == "disabled":
             self.quota_status.setText(t("connection.quota_status_off"))
-        elif not self.quota_command.text().strip():
+        elif state == "not_configured":
             self.quota_status.setText(t("connection.quota_status_unconfigured"))
+        elif state == "invalid_configuration":
+            self.quota_status.setText(t("connection.quota_status_invalid"))
         else:
             self.quota_status.setText(t("connection.quota_status_backend_required"))
 
