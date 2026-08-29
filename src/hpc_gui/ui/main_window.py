@@ -5,7 +5,7 @@ import webbrowser
 from pathlib import Path
 
 from PySide6.QtWidgets import (
-    QApplication, QDialog, QMainWindow, QMessageBox, QProgressDialog,
+    QApplication, QDialog, QMainWindow, QMessageBox,
     QSystemTrayIcon, QTabWidget, QTextEdit, QVBoxLayout, QPushButton
 )
 from PySide6.QtWidgets import (
@@ -50,13 +50,14 @@ from hpc_gui.config.storage import (
 )
 from .dialogs.quick_tour import QuickTourOverlay
 from .async_call import AsyncCall
+from .splash_screen import UpdateSplash
 
 
 class _BackgroundCall(QObject):
     finished = Signal(object)
     failed = Signal(str)
     done = Signal()
-    progress = Signal(int, str)
+    progress = Signal(int, str, int, int)
 
     def __init__(self, fn):
         super().__init__()
@@ -123,7 +124,7 @@ class MainWindow(QMainWindow):
         self._update_jobs: set[QThread] = set()
         self._update_workers: dict[QThread, _BackgroundCall] = {}
         self._update_busy_count = 0
-        self._update_progress: QProgressDialog | None = None
+        self._update_progress: UpdateSplash | None = None
         self._update_manual = False
         self._update_interactive = False
         self._update_cancelled = False
@@ -464,35 +465,26 @@ class MainWindow(QMainWindow):
 
     def _show_update_progress(self, value: int, status_key: str) -> None:
         if self._update_progress is None:
-            dialog = QProgressDialog(self)
-            dialog.setWindowTitle(t("updates.progress_title"))
-            dialog.setWindowFlag(Qt.WindowType.WindowCloseButtonHint, True)
-            dialog.setCancelButton(QPushButton(t("common.cancel"), dialog))
-            dialog.setAutoClose(False)
-            dialog.setAutoReset(False)
-            dialog.setMinimumDuration(0)
-            dialog.setRange(0, 100)
+            dialog = UpdateSplash(self)
             dialog.setWindowModality(Qt.WindowModality.WindowModal)
             dialog.rejected.connect(self._cancel_update_jobs)
-            dialog.canceled.connect(self._cancel_update_jobs)
             self._update_progress = dialog
         self._on_update_progress(value, status_key)
         self._update_progress.show()
 
-    def _on_update_progress(self, value: int, status_key: str) -> None:
+    def _on_update_progress(
+        self, value: int, status_key: str, downloaded: int = 0, total: int = 0
+    ) -> None:
         if self._update_progress is None:
             return
-        label = t(f"updates.status_{status_key}")
-        if label.startswith("[updates.status_"):
-            label = status_key
-        self._update_progress.setLabelText(label)
-        if status_key == "downloading":
-            # Some servers omit Content-Length; keep the bar visibly active
-            # instead of leaving it frozen at 10/15 until EOF.
-            self._update_progress.setRange(0, 0)
-        else:
-            self._update_progress.setRange(0, 100)
-            self._update_progress.setValue(max(0, min(100, int(value))))
+        label = {
+            "checking": "Checking for updates...",
+            "downloading": "Downloading update...",
+            "verifying": "Verifying downloaded file...",
+            "ready": "Update is ready to install.",
+            "installing": "Installing update...",
+        }.get(status_key, status_key)
+        self._update_progress.set_status(label, value, downloaded, total)
 
     def _close_update_progress(self) -> None:
         if self._update_progress is not None:

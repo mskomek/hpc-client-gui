@@ -1,9 +1,12 @@
 from pathlib import Path
 
 
-def test_language_is_loaded_before_splash_and_statuses_are_translated():
-    source = (Path(__file__).resolve().parents[1] / "src" / "hpc_gui" / "app.py").read_text(encoding="utf-8")
+def test_splash_text_never_depends_on_translation_catalog():
+    root = Path(__file__).resolve().parents[1]
+    source = (root / "src" / "hpc_gui" / "app.py").read_text(encoding="utf-8")
+    splash = (root / "src" / "hpc_gui" / "ui" / "splash_screen.py").read_text(encoding="utf-8")
 
-    assert source.index("load_saved_language(") < source.index("StartupSplash()")
-    for key in ("status_preparing", "status_checking", "status_loading"):
-        assert f't("splash.{key}")' in source
+    assert 't("splash.' not in source
+    assert 't("splash.' not in splash
+    assert "HPC WORKSPACE" in splash
+    assert "APPLICATION UPDATE" in splash

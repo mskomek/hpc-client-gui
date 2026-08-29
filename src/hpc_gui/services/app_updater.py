@@ -29,7 +29,7 @@ SECURITY_ASSET_NAME = "RELEASE_SECURITY.json"
 SECURITY_SIGNED = "signed-notarized"
 SECURITY_UNSIGNED = "unsigned"
 SECURITY_UNKNOWN = "unknown"
-ProgressCallback = Callable[[int, str], None]
+ProgressCallback = Callable[[int, str, int, int], None]
 CancelCallback = Callable[[], bool]
 
 
@@ -186,10 +186,10 @@ def _download(
                         )
                     else:
                         value = progress_start
-                    progress_cb(value, status)
+                    progress_cb(value, status, downloaded, total)
         temporary.replace(destination)
         if progress_cb:
-            progress_cb(progress_end, status)
+            progress_cb(progress_end, status, downloaded, total)
     finally:
         if temporary.exists():
             temporary.unlink(missing_ok=True)
@@ -209,11 +209,11 @@ def download_and_verify_release(
         actual = hashlib.sha256(zip_path.read_bytes()).hexdigest()
         if expected and actual.lower() == expected.lower():
             if progress_cb:
-                progress_cb(100, "ready")
+                progress_cb(100, "ready", 0, 0)
             return zip_path
 
     if progress_cb:
-        progress_cb(10, "downloading")
+        progress_cb(10, "downloading", 0, 0)
     _download(
         release.sha_url,
         sha_path,
@@ -234,14 +234,14 @@ def download_and_verify_release(
     )
 
     if progress_cb:
-        progress_cb(95, "verifying")
+        progress_cb(95, "verifying", 0, 0)
     expected = sha_path.read_text(encoding="ascii", errors="ignore").strip().split()[0]
     actual = hashlib.sha256(zip_path.read_bytes()).hexdigest()
     if not expected or actual.lower() != expected.lower():
         zip_path.unlink(missing_ok=True)
         raise RuntimeError("Downloaded update SHA256 verification failed.")
     if progress_cb:
-        progress_cb(100, "ready")
+        progress_cb(100, "ready", 0, 0)
     return zip_path
 
 
