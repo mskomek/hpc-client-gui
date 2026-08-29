@@ -109,6 +109,24 @@ flatpak install --user ./hpc-client-gui-*-x86_64.flatpak
 flatpak run io.github.mskomek.HpcClientGui
 ```
 
+### Terminal graphics troubleshooting
+
+If the embedded terminal is blank, corrupted, or transparent on Ubuntu, open
+**Settings → Terminal graphics** and choose **Compatibility mode**, then
+restart the application. **Automatic** starts with normal rendering and may
+offer this choice after repeated GBM/EGL warnings; **GPU acceleration** keeps
+the normal path. The detection is only a troubleshooting signal, not proof of
+a particular GPU or driver failure. Use **Reset automatic preference** to try
+normal rendering again. As a temporary launcher workaround:
+
+```bash
+QTWEBENGINE_CHROMIUM_FLAGS="--disable-gpu" hpc-client-gui
+```
+
+This affects the local terminal renderer only; it does not change GPU
+resources used by remote HPC computations. The setting applies on the next
+launch and preserves externally supplied Chromium flags.
+
 ---
 
 ## Features

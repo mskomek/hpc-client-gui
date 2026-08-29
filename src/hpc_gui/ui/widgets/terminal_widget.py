@@ -10,6 +10,7 @@ from hpc_gui.services.terminal_bridge import TerminalBridge
 from hpc_gui.core.i18n import t
 
 class TerminalWidget(QWidget):
+    READINESS_TIMEOUT_MS = 5000
     ready = Signal()
     failed = Signal(str)
 
@@ -36,6 +37,7 @@ class TerminalWidget(QWidget):
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.setMinimumHeight(240)
         self._ready = False
+        self._load_generation = 0
         self._focus_requested = False
         self._font_size = 14
         self.view = QWebEngineView(self)
@@ -46,6 +48,14 @@ class TerminalWidget(QWidget):
         self.channel.registerObject("terminal", self.bridge)
         self.view.page().setWebChannel(self.channel)
         self.view.loadFinished.connect(self._loaded)
+        self.view.loadStarted.connect(self._load_started)
+        self.bridge.ready.connect(self._bridge_ready)
+        self.setStyleSheet("background-color: #111;")
+        self.view.setStyleSheet("background-color: #111;")
+        self._readiness_timer = QTimer(self)
+        self._readiness_timer.setSingleShot(True)
+        self._readiness_timer.setInterval(self.READINESS_TIMEOUT_MS)
+        self._readiness_timer.timeout.connect(self._readiness_timeout)
         self._resize_timer = QTimer(self)
         self._resize_timer.setSingleShot(True)
         self._resize_timer.timeout.connect(self._fit)
@@ -60,13 +70,31 @@ class TerminalWidget(QWidget):
 
     def _loaded(self, ok: bool) -> None:
         if not ok:
-            self.failed.emit("terminal page failed to load")
+            self._readiness_timer.stop()
+            self._ready = False
+            self.failed.emit(t("login.terminal_page_failed"))
             return
-        self._ready = True
-        self.ready.emit()
+        self._readiness_timer.start()
         self._fit()
         if self._focus_requested:
             self.focus_terminal()
+
+    def _load_started(self) -> None:
+        self._load_generation += 1
+        self._ready = False
+        self._readiness_timer.stop()
+
+    def _bridge_ready(self) -> None:
+        if self._ready:
+            return
+        self._readiness_timer.stop()
+        self._ready = True
+        self.ready.emit()
+        self._fit()
+
+    def _readiness_timeout(self) -> None:
+        if not self._ready:
+            self.failed.emit(t("login.terminal_readiness_timeout"))
 
     def _fit(self) -> None:
         self.view.page().runJavaScript("window.hpcFit && window.hpcFit();")

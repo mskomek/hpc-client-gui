@@ -47,6 +47,14 @@
     "err_title": "Error",
     "err_master_empty": "Master password cannot be empty.",
     "err_master_mismatch": "Master passwords do not match.",
+    "master_create_title": "Create an encryption password",
+    "master_create_prompt": "Choose a separate password to protect saved connection passwords on this device. This is not your SSH or cluster login password.",
+    "master_unlock_title": "Unlock saved passwords",
+    "master_unlock_prompt": "Enter the encryption password you previously chose to unlock saved connection passwords on this device. This is not your SSH or cluster login password.",
+    "master_password_label": "Encryption password",
+    "master_confirm_label": "Confirm encryption password",
+    "master_save": "Save",
+    "master_unlock": "Unlock",
     "err_port_numeric": "Port must be numeric.",
     "err_master_wrong": "Master password is wrong or the saved password could not be decrypted.",
     "err_host_user_required": "Host and username are required.",
@@ -80,13 +88,22 @@
     "terminal_protocol_ssh": "SSH",
     "terminal_mock": "Mock",
     "terminal_accessible_name": "Remote terminal",
+    "terminal_page_failed": "The terminal page could not be loaded.",
+    "terminal_readiness_timeout": "The terminal did not become ready in time.",
     "reconnect_prompt_title": "Reconnect?",
     "reconnect_prompt_message": "The SSH session ended unexpectedly. Do you want to reconnect?",
     "reconnect_notice": "SSH connection dropped: {reason}\nPress r or choose Yes to reconnect.",
     "reconnect_started": "Reconnecting...",
     "reconnect_placeholder": "Disconnected: type r and press Enter to reconnect",
     "strict_host_key": "Strict host key checking",
-    "status_connecting": "Connecting..."
+    "status_connecting": "Connecting...",
+    "ssh_connected": "SSH connection established.",
+    "mock_connected": "Mock connection active.",
+    "connecting_to": "Connecting to {target}:{port}",
+    "ssh_banner_hint": "Tip: the SSH server may be slow to send its banner. Check the VPN/network, port, and remote sshd access.",
+    "ssh_not_connected_mock": "SSH is not connected (commands are disabled in mock mode).",
+    "ssh_disconnected": "SSH connection lost.",
+    "profile_saved": "Profile saved: {name}"
   },
   "updates": {
     "action": "Update",
@@ -373,7 +390,8 @@
     "tail_stopped_title": "Tracking stopped",
     "tail_stopped_message": "Live output tracking stopped.",
     "tail_close_window": "Close window",
-    "tail_close_screen": "Close tracking screen"
+    "tail_close_screen": "Close tracking screen",
+    "tracking_stopped_disconnected": "Connection has been unavailable for 30 seconds."
   },
   "putty": {
     "downloading": "Downloading plink.exe...",
@@ -420,8 +438,24 @@
   "errors": {
     "permission_denied": "Permission denied.",
     "no_space": "No space left / quota exceeded.",
+    "no_space_detail": "The target has no free space left or its quota limit has been reached.",
     "read_only": "Read-only file system.",
-    "operation_failed": "Operation failed."
+    "operation_failed": "Operation failed.",
+    "permission_denied_detail": "You do not have permission to perform this operation. Check chmod/chown or the target directory.",
+    "read_only_detail": "The target file system is read-only, so it cannot be written.",
+    "operation_failed_detail": "The operation failed. See the details below."
+  },
+  "graphics": {
+    "suggestion_title": "Terminal graphics compatibility",
+    "suggestion_message": "Graphics compatibility warnings were detected while rendering the terminal. If the terminal appears blank, corrupted, or transparent, disabling GPU acceleration may help. This choice will be remembered and requires restarting the application.",
+    "enable_restart": "Enable and restart",
+    "enable_later": "Enable, restart later",
+    "not_now": "Not now",
+    "restart_required_title": "Restart required",
+    "restart_required": "Compatibility mode is saved. Close and reopen the application to apply it.",
+    "restart_deferred": "Compatibility mode is saved. Restart was deferred because the application is busy. Close and reopen it when safe.",
+    "restart_failed": "Compatibility mode was saved, but the application could not restart. Close and reopen it manually.",
+    "preference_save_failed": "The terminal graphics preference could not be saved."
   },
   "language": {
     "menu_title": "Language",
@@ -521,7 +555,20 @@
     "file_associations_section": "Local file associations",
     "file_association_change": "Change program",
     "file_association_clear": "Clear association",
-    "file_association_none_selected": "Select a file association first."
+    "file_association_none_selected": "Select a file association first.",
+    "terminal_graphics_section": "Terminal graphics",
+    "terminal_graphics_mode_label": "Rendering policy",
+    "terminal_graphics_mode_auto": "Automatic",
+    "terminal_graphics_mode_compatibility": "Compatibility mode",
+    "terminal_graphics_mode_accelerated": "GPU acceleration",
+    "terminal_graphics_applied_label": "Current session configuration",
+    "terminal_graphics_applied_normal": "Normal rendering path",
+    "terminal_graphics_applied_disabled": "GPU-disable compatibility flag applied",
+    "terminal_graphics_remembered": "An automatic compatibility preference is remembered for the next launch.",
+    "terminal_graphics_not_remembered": "No automatic compatibility preference is remembered.",
+    "terminal_graphics_restart_required": "Changes take effect after restarting the application.",
+    "terminal_graphics_reset": "Reset automatic preference / retry normal rendering",
+    "terminal_graphics_tip": "If the terminal appears blank, corrupted, or transparent, try compatibility mode. Changes take effect after restarting the application."
   },
   "ftp": {
     "local_title": "Local",

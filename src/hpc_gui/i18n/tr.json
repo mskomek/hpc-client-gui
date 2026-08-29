@@ -47,6 +47,14 @@
     "err_title": "Hata",
     "err_master_empty": "Ana parola boş olamaz.",
     "err_master_mismatch": "Ana parolalar eşleşmiyor.",
+    "master_create_title": "Şifreleme parolası oluştur",
+    "master_create_prompt": "Bu cihazdaki kayıtlı bağlantı parolalarını korumak için ayrı bir parola seçin. Bu, SSH veya küme giriş parolanız değildir.",
+    "master_unlock_title": "Kayıtlı parolaların kilidini aç",
+    "master_unlock_prompt": "Bu cihazdaki kayıtlı bağlantı parolalarının kilidini açmak için daha önce seçtiğiniz şifreleme parolasını girin. Bu, SSH veya küme giriş parolanız değildir.",
+    "master_password_label": "Şifreleme parolası",
+    "master_confirm_label": "Şifreleme parolasını doğrula",
+    "master_save": "Kaydet",
+    "master_unlock": "Kilidi aç",
     "err_port_numeric": "Port sayısal olmalı.",
     "err_master_wrong": "Ana parola yanlış veya kayıtlı şifre çözülemedi.",
     "err_host_user_required": "Host ve kullanıcı adı gerekli.",
@@ -80,13 +88,22 @@
     "terminal_protocol_ssh": "SSH",
     "terminal_mock": "Simülasyon",
     "terminal_accessible_name": "Uzak terminal",
+    "terminal_page_failed": "Terminal sayfası yüklenemedi.",
+    "terminal_readiness_timeout": "Terminal zamanında hazır olmadı.",
     "reconnect_prompt_title": "Yeniden bağlanılsın mı?",
     "reconnect_prompt_message": "SSH oturumu beklenmedik şekilde kapandı. Yeniden bağlanmak ister misiniz?",
     "reconnect_notice": "SSH bağlantısı koptu: {reason}\nYeniden bağlanmak için r yazıp Enter'a basın veya Evet'i seçin.",
     "reconnect_started": "Yeniden bağlanılıyor...",
     "reconnect_placeholder": "Bağlantı yok: yeniden bağlanmak için r yazıp Enter'a basın",
     "strict_host_key": "Sıkı sunucu anahtarı doğrulaması",
-    "status_connecting": "Bağlanılıyor..."
+    "status_connecting": "Bağlanılıyor...",
+    "ssh_connected": "SSH bağlantısı kuruldu.",
+    "mock_connected": "Mock bağlantı aktif.",
+    "connecting_to": "{target}:{port} adresine bağlanılıyor",
+    "ssh_banner_hint": "İpucu: SSH sunucusu banner göndermeden önce gecikiyor olabilir. VPN/ağ, port ve uzak sshd erişimini kontrol edin.",
+    "ssh_not_connected_mock": "SSH bağlı değil (komutlar mock modda devre dışıdır).",
+    "ssh_disconnected": "SSH bağlantısı kesildi.",
+    "profile_saved": "Profil kaydedildi: {name}"
   },
   "updates": {
     "action": "Güncelle",
@@ -373,7 +390,8 @@
     "tail_stopped_title": "Takip durdu",
     "tail_stopped_message": "Canlı çıktı takibi durdu.",
     "tail_close_window": "Pencereyi kapat",
-    "tail_close_screen": "Takip ekranını kapat"
+    "tail_close_screen": "Takip ekranını kapat",
+    "tracking_stopped_disconnected": "Bağlantı 30 saniyedir kullanılamıyor."
   },
   "putty": {
     "downloading": "plink.exe indiriliyor...",
@@ -420,8 +438,24 @@
   "errors": {
     "permission_denied": "İzin yok (Permission denied).",
     "no_space": "Disk dolu / Kota aşıldı (No space left / quota).",
+    "no_space_detail": "Hedef tarafta boş alan kalmamış veya kota limitine ulaşılmış.",
     "read_only": "Salt okunur dosya sistemi (Read-only file system).",
-    "operation_failed": "İşlem başarısız."
+    "operation_failed": "İşlem başarısız.",
+    "permission_denied_detail": "Bu işlemi yapmak için izniniz yok. chmod/chown ayarlarını veya hedef dizini kontrol edin.",
+    "read_only_detail": "Hedef dosya sistemi salt okunur olduğu için yazılamıyor.",
+    "operation_failed_detail": "İşlem başarısız oldu. Ayrıntılar aşağıda."
+  },
+  "graphics": {
+    "suggestion_title": "Terminal grafik uyumluluğu",
+    "suggestion_message": "Terminal görüntülenirken grafik uyumluluğu uyarıları algılandı. Terminal boş, bozuk veya saydam görünüyorsa GPU hızlandırmasını kapatmak yardımcı olabilir. Bu seçim hatırlanır ve uygulamanın yeniden başlatılmasını gerektirir.",
+    "enable_restart": "Etkinleştir ve yeniden başlat",
+    "enable_later": "Etkinleştir, sonra yeniden başlat",
+    "not_now": "Şimdi değil",
+    "restart_required_title": "Yeniden başlatma gerekli",
+    "restart_required": "Uyumluluk modu kaydedildi. Uygulamayı uygulamak için kapatıp yeniden açın.",
+    "restart_deferred": "Uyumluluk modu kaydedildi. Uygulama meşgul olduğu için yeniden başlatma ertelendi. Güvenli olduğunda kapatıp yeniden açın.",
+    "restart_failed": "Uyumluluk modu kaydedildi ancak uygulama yeniden başlatılamadı. Kapatıp elle yeniden açın.",
+    "preference_save_failed": "Terminal grafik tercihi kaydedilemedi."
   },
   "language": {
     "menu_title": "Dil",
@@ -521,7 +555,20 @@
     "file_associations_section": "Yerel dosya ilişkilendirmeleri",
     "file_association_change": "Programı değiştir",
     "file_association_clear": "İlişkilendirmeyi temizle",
-    "file_association_none_selected": "Önce bir dosya ilişkilendirmesi seçin."
+    "file_association_none_selected": "Önce bir dosya ilişkilendirmesi seçin.",
+    "terminal_graphics_section": "Terminal grafikleri",
+    "terminal_graphics_mode_label": "Görüntüleme politikası",
+    "terminal_graphics_mode_auto": "Otomatik",
+    "terminal_graphics_mode_compatibility": "Uyumluluk modu",
+    "terminal_graphics_mode_accelerated": "GPU hızlandırma",
+    "terminal_graphics_applied_label": "Mevcut oturum yapılandırması",
+    "terminal_graphics_applied_normal": "Normal görüntüleme yolu",
+    "terminal_graphics_applied_disabled": "GPU kapatma uyumluluk seçeneği uygulandı",
+    "terminal_graphics_remembered": "Otomatik uyumluluk tercihi sonraki açılış için hatırlanıyor.",
+    "terminal_graphics_not_remembered": "Hatırlanan otomatik uyumluluk tercihi yok.",
+    "terminal_graphics_restart_required": "Değişiklikler uygulama yeniden başlatıldıktan sonra geçerli olur.",
+    "terminal_graphics_reset": "Otomatik tercihi sıfırla / normal görüntülemeyi yeniden dene",
+    "terminal_graphics_tip": "Terminal boş, bozuk veya saydam görünüyorsa uyumluluk modunu deneyin. Değişiklikler uygulama yeniden başlatıldıktan sonra geçerli olur."
   },
   "ftp": {
     "local_title": "Lokal",
