@@ -110,13 +110,14 @@ açılır; kaydetme/gönderme tamamen size bağlıdır.
 
 ## Denetleyici araçları (Plugin API v2)
 
-Bu sürümden itibaren resmî kayıt defteri **denetleyici araçları** da
+Plugin API v2 sözleşmesi, resmî kayıt defterinin **denetleyici araçları**
+yayımlaması için hazırdır; bu sürümde ANSYS paketi henüz yayımlanmamıştır.
 yayımlayabilir: alınan manifest/kurulum doğrulama zinciri içinde SHA-256 ile
 sabitlenmiş, saf Python analiz motoru taşıyan isteğe bağlı eklentiler.
 Kurulum sırasında hiçbir şey çalıştırılmaz; motor yalnızca aracı açtığınızda
 tembel yükleme ile devreye girer.
 
-İlk denetleyici aracı **ANSYS Script & Journal Linter**
+Planlanan ilk denetleyici aracı **ANSYS Script & Journal Linter**
 (`org.hpcclient.ansyslint`), Ansys journal/betikleri için gayriresmî,
 çevrimdışı bir denetleyicidir: Fluent journal (TUI/Scheme), iç içe
 `SendCommand` payload'ları da dahil Workbench `.wbjn`, Mechanical APDL
@@ -125,7 +126,8 @@ betikleri, System Coupling betikleri ayrıca DesignModeler, Mechanical,
 SpaceClaim/Discovery, Electronics Desktop ve Motion dosyaları için yapısal
 tanıma sunar.
 
-Kurduktan sonra **Kurulu** sekmesindeki kartında **Aracı aç** düğmesi belirir.
+Kayıt defteri paketi yayımlanıp kurulduğunda **Kurulu** sekmesindeki kartında
+**Aracı aç** düğmesi belirir.
 Sayfa; dosya/klasör seçimi, manuel geçersiz kılma ile otomatik ürün algılama,
 Ansys sürüm seçici (24.2 / 25.1 / 25.2 / 26.1), batch/headless/interactive
 modu, Linux/Windows hedefi, önem filtreleri, tanı başına resmî kaynak
@@ -137,4 +139,7 @@ yerini tutmaz ve sezgisel bulguları açıkça etiketler — betiklerinizi kurul
 sürümünüze göre doğrulayın.
 
 Türkçe sürüm bu sayfadır; İngilizcesi için [PLUGINS_en.md](PLUGINS_en.md).
+
+Sağlayıcı yazma rehberi: [Türkçe](../../../docs/ADDING_CLUSTER_PROVIDER_tr.md) ·
+[English](../../../docs/ADDING_CLUSTER_PROVIDER.md).
 

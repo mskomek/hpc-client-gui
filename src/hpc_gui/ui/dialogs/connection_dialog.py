@@ -15,6 +15,8 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLineEdit,
     QInputDialog,
+    QLabel,
+    QListWidget,
     QMenu,
     QMessageBox,
     QPushButton,
@@ -42,6 +44,8 @@ from hpc_gui.config.system_profile import (
     save_user_system_template,
 )
 from hpc_gui.plugins.templates import installed_cluster_template_groups
+from hpc_gui.plugins.models import validate_storage_policy
+from hpc_gui.services.quota_monitor import quota_gate
 from hpc_gui.ssh.client import coerce_keepalive_interval
 from hpc_gui.config.storage import coerce_profile_transfer_parallelism, coerce_profile_ssh_timeout
 
@@ -64,6 +68,11 @@ class ConnectionDialog(QDialog):
         self._system_template_menu: QMenu | None = None
         self._system_template_submenus: list[QMenu] = []
         self._system_template_source: dict[str, str] | None = None
+        self._provider_template: dict[str, Any] | None = (
+            dict((initial_profile or {}).get("provider_template"))
+            if isinstance((initial_profile or {}).get("provider_template"), dict)
+            else None
+        )
         self._template_action_taken = False
         self._profile_keepalive = 30
         self._profile_transfer_parallelism = 1
@@ -189,6 +198,25 @@ class ConnectionDialog(QDialog):
         self.status_command = QLineEdit()
         self.active_job_ids_command = QLineEdit()
         self.job_state_command = QLineEdit()
+        self.storage_summary = QLabel()
+        self.storage_summary.setWordWrap(True)
+        self.storage_rows: list[dict[str, Any]] = []
+        self.storage_list = QListWidget()
+        self.storage_list.setMaximumHeight(90)
+        self.btn_storage_add = QPushButton(t("connection.storage_add"))
+        self.btn_storage_edit = QPushButton(t("connection.storage_edit"))
+        self.btn_storage_remove = QPushButton(t("connection.storage_remove"))
+        self.btn_storage_add.clicked.connect(self._add_storage_area)
+        self.btn_storage_edit.clicked.connect(self._edit_storage_area)
+        self.btn_storage_remove.clicked.connect(self._remove_storage_area)
+        self.quota_enabled = QCheckBox(t("connection.quota_enable"))
+        self.quota_consent = QCheckBox(t("connection.quota_consent"))
+        self.quota_backend = QLineEdit()
+        self.quota_command = QLineEdit()
+        self.quota_scope = QLineEdit()
+        self.quota_subject = QLineEdit()
+        self.quota_status = QLabel()
+        self.quota_command.setPlaceholderText(t("connection.quota_command_placeholder"))
 
         self.btn_system_templates = QToolButton()
         self.btn_system_templates.setText(t("connection.system_templates_menu"))
@@ -206,6 +234,14 @@ class ConnectionDialog(QDialog):
         system_form.addRow(t("connection.system_templates"), system_actions)
         system_form.addRow(t("connection.scratch_dir"), self.scratch_dir)
         system_form.addRow(t("connection.home_dir"), self.home_dir)
+        storage_controls = QVBoxLayout()
+        storage_controls.addWidget(self.storage_list)
+        storage_buttons = QHBoxLayout()
+        storage_buttons.addWidget(self.btn_storage_add)
+        storage_buttons.addWidget(self.btn_storage_edit)
+        storage_buttons.addWidget(self.btn_storage_remove)
+        storage_controls.addLayout(storage_buttons)
+        system_form.addRow(t("connection.storage_areas"), storage_controls)
         system_form.addRow(t("connection.squeue_command"), self.squeue_command)
         system_form.addRow(t("connection.sbatch_command"), self.sbatch_command)
         system_form.addRow(t("connection.scancel_command"), self.scancel_command)
@@ -222,6 +258,24 @@ class ConnectionDialog(QDialog):
         )
         system_group = QGroupBox(t("connection.system_settings"))
         system_group.setLayout(system_form)
+        quota_form = QFormLayout()
+        quota_form.addRow("", self.quota_enabled)
+        quota_form.addRow("", self.quota_consent)
+        quota_form.addRow(t("connection.quota_backend"), self.quota_backend)
+        quota_form.addRow(t("connection.quota_command"), self.quota_command)
+        quota_form.addRow(t("connection.quota_scope"), self.quota_scope)
+        quota_form.addRow(t("connection.quota_subject"), self.quota_subject)
+        quota_form.addRow(t("connection.quota_status"), self.quota_status)
+        quota_group = QGroupBox(t("connection.quota_settings"))
+        quota_group.setLayout(quota_form)
+        self.quota_enabled.toggled.connect(self.quota_backend.setEnabled)
+        self.quota_enabled.toggled.connect(self.quota_command.setEnabled)
+        self.quota_enabled.toggled.connect(self._update_quota_status)
+        self.quota_command.textChanged.connect(self._update_quota_status)
+        self.quota_backend.textChanged.connect(self._update_quota_status)
+        self.quota_scope.textChanged.connect(self._update_quota_status)
+        self.quota_consent.toggled.connect(self._update_quota_status)
+        quota_group.setToolTip(t("connection.quota_disabled_tip"))
 
         self.advanced_button = QToolButton()
         self.advanced_button.setText(t("connection.advanced_settings"))
@@ -297,6 +351,7 @@ class ConnectionDialog(QDialog):
         # Ready-made system settings (templates + site fields) stay visible at
         # the top instead of hiding inside the advanced section.
         root.addWidget(system_group)
+        root.addWidget(quota_group)
         root.addWidget(self.advanced_button)
         root.addWidget(self.advanced_body)
 
@@ -407,6 +462,128 @@ class ConnectionDialog(QDialog):
             self.password.setText(str(profile.get("password", "")))
         else:
             self.password.setText("")
+        self._update_storage_summary()
+        self._load_quota_widgets()
+
+    def _load_quota_widgets(self) -> None:
+        sources = (self._provider_template or {}).get("quota_sources", [])
+        source = sources[0] if isinstance(sources, list) and sources and isinstance(sources[0], dict) else {}
+        self.quota_enabled.setChecked(source.get("enabled") is True)
+        self.quota_consent.setChecked(source.get("consent") is True)
+        self.quota_backend.setText(str(source.get("backend_id") or ""))
+        self.quota_command.setText(str(source.get("command_template") or ""))
+        self.quota_scope.setText(str(source.get("scope") or ""))
+        self.quota_subject.setText(str(source.get("subject_template") or ""))
+        self._update_quota_status()
+
+    def _update_quota_status(self) -> None:
+        state = quota_gate(
+            {
+                "enabled": self.quota_enabled.isChecked(),
+                "consent": self.quota_consent.isChecked(),
+                "backend_id": self.quota_backend.text().strip(),
+                "command_template": self.quota_command.text().strip(),
+                "scope": self.quota_scope.text().strip(),
+            },
+            backend_ids=(),
+        )
+        if state == "disabled":
+            self.quota_status.setText(t("connection.quota_status_off"))
+        elif state == "not_configured":
+            self.quota_status.setText(t("connection.quota_status_unconfigured"))
+        elif state == "invalid_configuration":
+            self.quota_status.setText(t("connection.quota_status_invalid"))
+        else:
+            self.quota_status.setText(t("connection.quota_status_backend_required"))
+
+    def _set_storage_rows(self, rows: Any) -> None:
+        self.storage_rows = [dict(row) for row in rows if isinstance(row, dict)] if isinstance(rows, list) else []
+        self.storage_list.clear()
+        for row in self.storage_rows:
+            label = str(row.get("label") or row.get("id") or "Storage")
+            path = str(row.get("path_template") or "").strip()
+            self.storage_list.addItem(f"{label}: {path}" if path else f"{label} ({t('connection.storage_areas_empty')})")
+
+    def _add_storage_area(self) -> None:
+        label, ok = QInputDialog.getText(self, t("connection.storage_add"), t("connection.storage_label"))
+        if not ok or not label.strip():
+            return
+        path, ok = QInputDialog.getText(self, t("connection.storage_add"), t("connection.storage_path"))
+        if not ok:
+            return
+        area_id = "-".join(label.strip().lower().split())
+        self.storage_rows.append({"id": area_id, "label": label.strip(), "path_template": path.strip()})
+        self._set_storage_rows(self.storage_rows)
+
+    def _remove_storage_area(self) -> None:
+        row = self.storage_list.currentRow()
+        if row >= 0:
+            self.storage_rows.pop(row)
+            self._set_storage_rows(self.storage_rows)
+
+    def _edit_storage_area(self) -> None:
+        row = self.storage_list.currentRow()
+        if row < 0 or row >= len(self.storage_rows):
+            return
+        current = self.storage_rows[row]
+        label, ok = QInputDialog.getText(
+            self, t("connection.storage_edit"), t("connection.storage_label"),
+            text=str(current.get("label") or current.get("id") or ""),
+        )
+        if not ok or not label.strip():
+            return
+        path, ok = QInputDialog.getText(
+            self, t("connection.storage_edit"), t("connection.storage_path"),
+            text=str(current.get("path_template") or ""),
+        )
+        if not ok:
+            return
+        backup, ok = QInputDialog.getItem(
+            self, t("connection.storage_edit"), t("connection.storage_backup"),
+            [t("connection.storage_unknown"), t("connection.storage_yes"), t("connection.storage_no")],
+            0, False,
+        )
+        if not ok:
+            return
+        cleanup, ok = QInputDialog.getText(
+            self, t("connection.storage_edit"), t("connection.storage_cleanup"),
+            text=str((current.get("policy") or {}).get("cleanup_note") or ""),
+        )
+        if not ok:
+            return
+        retention, ok = QInputDialog.getText(
+            self, t("connection.storage_edit"), t("connection.storage_retention"),
+            text=str((current.get("policy") or {}).get("retention_days") or ""),
+        )
+        if not ok:
+            return
+        retention_value = retention.strip()
+        policy_check = {"retention_days": int(retention_value) if retention_value else None}
+        if retention_value and not retention_value.isdigit():
+            policy_check["retention_days"] = retention_value
+        if validate_storage_policy(policy_check):
+            QMessageBox.warning(self, t("common.error"), t("connection.storage_retention_invalid"))
+            return
+        source_url, ok = QInputDialog.getText(
+            self, t("connection.storage_edit"), t("connection.storage_source_url"),
+            text=str((current.get("policy") or {}).get("documentation_url") or ""),
+        )
+        if not ok:
+            return
+        source_url = source_url.strip()
+        if validate_storage_policy({"documentation_url": source_url}):
+            QMessageBox.warning(self, t("common.error"), t("connection.storage_source_url_invalid"))
+            return
+        current["label"] = label.strip()
+        current["path_template"] = path.strip()
+        current["policy"] = {
+            **(current.get("policy") if isinstance(current.get("policy"), dict) else {}),
+            "backup": {t("connection.storage_yes"): True, t("connection.storage_no"): False}.get(backup),
+            "cleanup_note": cleanup.strip(),
+            "retention_days": int(retention_value) if retention_value else None,
+            "documentation_url": source_url,
+        }
+        self._set_storage_rows(self.storage_rows)
 
     def _system_form_values(self) -> dict[str, str]:
         return {
@@ -424,9 +601,13 @@ class ConnectionDialog(QDialog):
         }
 
     def _apply_system_template(
-        self, template: ProfileData, provenance: dict[str, str] | None = None
+        self,
+        template: ProfileData,
+        provenance: dict[str, str] | None = None,
+        structured: dict[str, Any] | None = None,
     ) -> None:
         self._system_template_source = dict(provenance) if provenance else None
+        self._provider_template = dict(structured) if structured else None
         self._template_action_taken = True
         system = normalize_system_settings(template)
         self.system_name.setText(system["name"])
@@ -440,6 +621,22 @@ class ConnectionDialog(QDialog):
         self.status_command.setText(system["status_command"])
         self.active_job_ids_command.setText(system["active_job_ids_command"])
         self.job_state_command.setText(system["job_state_command"])
+        self._update_storage_summary()
+        self._load_quota_widgets()
+
+    def _update_storage_summary(self) -> None:
+        rows = (self._provider_template or {}).get("storage", [])
+        if not isinstance(rows, list):
+            rows = []
+        visible = [
+            f"{row.get('label', row.get('id', ''))}: {row.get('path_template', '').strip()}"
+            for row in rows
+            if isinstance(row, dict)
+            and row.get("path_template", "").strip()
+            and row.get("enabled") is not False
+        ]
+        self.storage_summary.setText("\n".join(visible) or t("connection.storage_areas_empty"))
+        self._set_storage_rows(rows)
 
     def _rebuild_system_template_menu(self) -> None:
         menu = QMenu(self)
@@ -469,7 +666,9 @@ class ConnectionDialog(QDialog):
                     action.triggered.connect(
                         lambda _checked=False, selected=dict(template.settings), provenance=dict(
                             template.provenance
-                        ): self._apply_system_template(selected, provenance)
+                        ), structured=dict(template.structured): self._apply_system_template(
+                            selected, provenance, structured
+                        )
                     )
         user_templates = load_user_system_templates()
         if user_templates:
@@ -598,6 +797,22 @@ class ConnectionDialog(QDialog):
                 profile["system_template_source"] = dict(self._system_template_source)
             else:
                 profile.pop("system_template_source", None)
+            if self._provider_template:
+                self._provider_template["storage"] = [dict(row) for row in self.storage_rows]
+                sources = self._provider_template.get("quota_sources", [])
+                source = dict(sources[0]) if isinstance(sources, list) and sources and isinstance(sources[0], dict) else {"id": "local-quota"}
+                source.update({
+                    "enabled": self.quota_enabled.isChecked(),
+                    "consent": self.quota_consent.isChecked(),
+                    "backend_id": self.quota_backend.text().strip(),
+                    "command_template": self.quota_command.text().strip(),
+                    "scope": self.quota_scope.text().strip(),
+                    "subject_template": self.quota_subject.text().strip(),
+                })
+                self._provider_template["quota_sources"] = [source]
+                profile["provider_template"] = dict(self._provider_template)
+            else:
+                profile.pop("provider_template", None)
         elif not is_edit:
             profile.pop("system_template_source", None)
 

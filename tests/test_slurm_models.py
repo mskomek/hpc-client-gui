@@ -1,4 +1,4 @@
-from hpc_gui.services.slurm_models import parse_sacct, parse_squeue
+from hpc_gui.services.slurm_models import parse_sacct, parse_scontrol, parse_squeue
 
 
 def test_parse_squeue_keeps_raw_rows_and_structured_fields() -> None:
@@ -37,10 +37,26 @@ def test_parse_scontrol_extracts_detail_script_path() -> None:
     from hpc_gui.services.slurm_models import parse_scontrol
 
     job = parse_scontrol(
-        "JobId=123 NodeList=node01 Reason=OOM ExitCode=1:0 Command=/home/a/job.slurm",
+        "JobId=123 NodeList=node01 Reason=OOM ExitCode=1:0 "
+        "WorkDir=/home/a/results StdOut=/home/a/results/out-123.log "
+        "StdErr=/home/a/results/err-123.log Command=/home/a/job.slurm",
         "123",
     )
     assert job.nodelist == "node01"
     assert job.failure_reason == "OOM"
     assert job.exit_code == "1:0"
     assert job.script_path == "/home/a/job.slurm"
+    assert job.workdir == "/home/a/results"
+    assert job.stdout_path == "/home/a/results/out-123.log"
+    assert job.stderr_path == "/home/a/results/err-123.log"
+
+
+def test_parse_scontrol_keeps_spaces_in_scheduler_paths() -> None:
+    job = parse_scontrol(
+        "JobId=9 WorkDir=/home/a/my results StdOut=/home/a/my results/out 9.log "
+        "StdErr=/home/a/my results/err 9.log",
+        "9",
+    )
+    assert job.workdir == "/home/a/my results"
+    assert job.stdout_path == "/home/a/my results/out 9.log"
+    assert job.stderr_path == "/home/a/my results/err 9.log"
