@@ -38,8 +38,10 @@ def probe_packagekit(runner=subprocess.run) -> PackageKitCapability:
 
 def stage_verified_deb(source: Path, update_dir: Path) -> Path:
     """Copy verified bytes into a private, non-predictable staging directory."""
+    if source.is_symlink():
+        raise ValueError("verified update must be a regular DEB file")
     source = source.resolve(strict=True)
-    if not source.is_file() or source.is_symlink() or source.suffix.lower() != ".deb":
+    if not source.is_file() or source.suffix.lower() != ".deb":
         raise ValueError("verified update must be a regular DEB file")
     update_dir.mkdir(parents=True, exist_ok=True)
     staging = Path(tempfile.mkdtemp(prefix="deb-", dir=update_dir))
@@ -57,7 +59,9 @@ def stage_verified_deb(source: Path, update_dir: Path) -> Path:
 
 
 def build_packagekit_command(deb_path: Path) -> list[str]:
+    if deb_path.is_symlink():
+        raise ValueError("package path must be a regular DEB file")
     path = deb_path.resolve()
-    if path.suffix.lower() != ".deb" or not path.is_file() or path.is_symlink():
+    if path.suffix.lower() != ".deb" or not path.is_file():
         raise ValueError("package path must be a regular DEB file")
     return ["pkcon", "install-local", str(path)]

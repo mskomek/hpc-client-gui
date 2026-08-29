@@ -197,7 +197,7 @@ def test_release_preflight_shares_the_ci_test_suite():
         assert "python scripts/ci.py release" in block
         assert "unittest discover" not in block
     ci = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
-    assert "python scripts/ci.py pre-push" in ci
+    assert "python scripts/ci.py macos" in ci
 
 
 def test_release_notes_are_generated_from_the_changelog():
