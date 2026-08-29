@@ -207,6 +207,10 @@ class ConnectionDialog(QDialog):
         self.btn_storage_add.clicked.connect(self._add_storage_area)
         self.btn_storage_edit.clicked.connect(self._edit_storage_area)
         self.btn_storage_remove.clicked.connect(self._remove_storage_area)
+        self.quota_enabled = QCheckBox(t("connection.quota_enable"))
+        self.quota_backend = QLineEdit()
+        self.quota_command = QLineEdit()
+        self.quota_command.setPlaceholderText(t("connection.quota_command_placeholder"))
 
         self.btn_system_templates = QToolButton()
         self.btn_system_templates.setText(t("connection.system_templates_menu"))
@@ -248,6 +252,15 @@ class ConnectionDialog(QDialog):
         )
         system_group = QGroupBox(t("connection.system_settings"))
         system_group.setLayout(system_form)
+        quota_form = QFormLayout()
+        quota_form.addRow("", self.quota_enabled)
+        quota_form.addRow(t("connection.quota_backend"), self.quota_backend)
+        quota_form.addRow(t("connection.quota_command"), self.quota_command)
+        quota_group = QGroupBox(t("connection.quota_settings"))
+        quota_group.setLayout(quota_form)
+        self.quota_enabled.toggled.connect(self.quota_backend.setEnabled)
+        self.quota_enabled.toggled.connect(self.quota_command.setEnabled)
+        quota_group.setToolTip(t("connection.quota_disabled_tip"))
 
         self.advanced_button = QToolButton()
         self.advanced_button.setText(t("connection.advanced_settings"))
@@ -323,6 +336,7 @@ class ConnectionDialog(QDialog):
         # Ready-made system settings (templates + site fields) stay visible at
         # the top instead of hiding inside the advanced section.
         root.addWidget(system_group)
+        root.addWidget(quota_group)
         root.addWidget(self.advanced_button)
         root.addWidget(self.advanced_body)
 
@@ -434,6 +448,14 @@ class ConnectionDialog(QDialog):
         else:
             self.password.setText("")
         self._update_storage_summary()
+        self._load_quota_widgets()
+
+    def _load_quota_widgets(self) -> None:
+        sources = (self._provider_template or {}).get("quota_sources", [])
+        source = sources[0] if isinstance(sources, list) and sources and isinstance(sources[0], dict) else {}
+        self.quota_enabled.setChecked(source.get("enabled") is True)
+        self.quota_backend.setText(str(source.get("backend_id") or ""))
+        self.quota_command.setText(str(source.get("command_template") or ""))
 
     def _set_storage_rows(self, rows: Any) -> None:
         self.storage_rows = [dict(row) for row in rows if isinstance(row, dict)] if isinstance(rows, list) else []
@@ -558,6 +580,7 @@ class ConnectionDialog(QDialog):
         self.active_job_ids_command.setText(system["active_job_ids_command"])
         self.job_state_command.setText(system["job_state_command"])
         self._update_storage_summary()
+        self._load_quota_widgets()
 
     def _update_storage_summary(self) -> None:
         rows = (self._provider_template or {}).get("storage", [])
@@ -734,6 +757,14 @@ class ConnectionDialog(QDialog):
                 profile.pop("system_template_source", None)
             if self._provider_template:
                 self._provider_template["storage"] = [dict(row) for row in self.storage_rows]
+                sources = self._provider_template.get("quota_sources", [])
+                source = dict(sources[0]) if isinstance(sources, list) and sources and isinstance(sources[0], dict) else {"id": "local-quota"}
+                source.update({
+                    "enabled": self.quota_enabled.isChecked(),
+                    "backend_id": self.quota_backend.text().strip(),
+                    "command_template": self.quota_command.text().strip(),
+                })
+                self._provider_template["quota_sources"] = [source]
                 profile["provider_template"] = dict(self._provider_template)
             else:
                 profile.pop("provider_template", None)
