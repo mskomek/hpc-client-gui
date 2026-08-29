@@ -154,9 +154,11 @@ def main() -> int:
     _configure_application_identity(app)
     _performance_mark("qapplication_created")
     _set_application_icon(app)
+    load_saved_language(system_default_language())
+    _performance_mark("language_loaded")
 
     splash = StartupSplash()
-    splash.set_status("Preparing workspace...")
+    splash.set_status(t("splash.status_preparing"))
     splash.show()
     # Paint the splash before startup checks and widget construction begin.
     app.processEvents()
@@ -189,7 +191,7 @@ def main() -> int:
     except Exception:
         pass
 
-    splash.set_status("Checking startup environment...")
+    splash.set_status(t("splash.status_checking"))
     app.processEvents()
     _bootstrap_safety_checks()
     _performance_mark("bootstrap_checks_complete")
@@ -202,10 +204,8 @@ def main() -> int:
         """
     )
 
-    splash.set_status("Loading interface...")
+    splash.set_status(t("splash.status_loading"))
     app.processEvents()
-    load_saved_language(system_default_language())
-    _performance_mark("language_loaded")
 
     w = MainWindow()
     _performance_mark("main_window_created")
