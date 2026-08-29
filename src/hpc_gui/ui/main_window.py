@@ -619,6 +619,7 @@ class MainWindow(QMainWindow):
             return
         try:
             self._show_update_progress(100, "installing")
+            QApplication.processEvents()
             launch_update_installer(zip_path, release.version)
         except Exception as exc:
             self._on_update_error(str(exc))
