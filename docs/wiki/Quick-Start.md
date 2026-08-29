@@ -13,7 +13,7 @@ canonical "first job in 5 minutes" flow in `src/hpc_gui/docs/HELP_en.md`.
   See [[Installation on Windows|Installation-Windows]].
 - **Linux:** download the AppImage or `.deb` for x86_64, verify the matching
   `.sha256`, then run it. See [[Installation on Linux|Installation-Linux]].
-- **From source:** Python 3.10+, a virtual environment, and
+- **From source:** Python 3.14.x, a virtual environment, and
   `pip install -e .[test]`. See
   [[Installation from source|Installation-From-Source]].
 

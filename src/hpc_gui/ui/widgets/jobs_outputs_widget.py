@@ -450,7 +450,7 @@ class _OutputFollowerWidget(QWidget):
                 self._live_timer.start()
                 return
             self._live_timer.stop()
-            self._show_tracking_stopped_dialog("Bağlantı 30 saniyedir kesik.")
+            self._show_tracking_stopped_dialog(t("jobs_outputs.tracking_stopped_disconnected"))
             return
         self._live_tail_failure_started = None
         files = self.session.get("files")
@@ -609,7 +609,7 @@ class JobsOutputsWidget(QWidget):
 
         self.cancel_id = QLineEdit()
         self.cancel_id.setPlaceholderText(t("jobs.job_id"))
-        self.btn_cancel = QPushButton(t("jobs.cancel") if t("jobs.cancel") != "[jobs.cancel]" else "İşi İptal Et")
+        self.btn_cancel = QPushButton(t("jobs.cancel"))
         self.btn_cancel.clicked.connect(self.cancel_job)
 
         row = QHBoxLayout()
@@ -1717,7 +1717,7 @@ class JobsOutputsWidget(QWidget):
                 self._live_timer.start()
                 return
             self._live_timer.stop()
-            self._show_tracking_stopped_dialog("Bağlantı 30 saniyedir kesik.")
+            self._show_tracking_stopped_dialog(t("jobs_outputs.tracking_stopped_disconnected"))
             return
         self._live_tail_failure_started = None
         self._apply_live_refresh_interval()
@@ -1821,7 +1821,7 @@ class JobsOutputsWidget(QWidget):
         self.err_box.setTitle(t("jobs_outputs.output_stderr"))
         self.lbl_script.setText(t("jobs_outputs.no_script") if t("jobs_outputs.no_script") != "[jobs_outputs.no_script]" else "Aktif Slurm Script: (yok)")
         self.btn_refresh.setText(t("jobs.refresh") if t("jobs.refresh") != "[jobs.refresh]" else "Yenile")
-        self.btn_cancel.setText(t("jobs.cancel") if t("jobs.cancel") != "[jobs.cancel]" else "İşi İptal Et")
+        self.btn_cancel.setText(t("jobs.cancel"))
         self.cancel_id.setPlaceholderText(t("jobs.job_id"))
         self.meta_job_id.setPlaceholderText(t("jobs.job_id"))
         self.meta_text.setPlaceholderText(t("jobs_outputs.accounting_placeholder"))

@@ -13,7 +13,7 @@ Current version: **1.2.6** (`pyproject.toml`).
 | macOS 13+ Intel | `hpc-client-gui_macos_x86_64.dmg` | Signed/notarized release DMG |
 | Linux x86_64 | AppImage | Runs without installation |
 | Linux x86_64 (Debian-based) | `.deb` | Installs system-wide |
-| Any supported platform | From source | Python 3.10+, `pip install -e .` |
+| Any supported platform | From source | Python 3.14.x, `pip install -e .` |
 
 Flatpak is optional and not part of the standard release set, because its
 runtime and SDK are substantially larger. There is no ARM64 build.
@@ -26,7 +26,7 @@ distribution equivalent elsewhere).
 
 | Requirement | Portable / packaged | From source |
 |---|---|---|
-| Python 3.10+ | Not required | Required |
+| Python 3.14.x | Not required | Required |
 | Qt runtime | Bundled | Provided by PySide6 |
 | Qt platform libraries | Bundled or system | System (`libegl1` class) |
 | `plink.exe` (PuTTY) | Optional, X11 only, Windows | Optional, X11 only |

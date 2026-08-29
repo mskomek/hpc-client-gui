@@ -5,7 +5,7 @@
 ## Python gerekli mi?
 
 Paketli derlemeler için hayır. Windows taşınabilir ZIP ile Linux AppImage ve
-`.deb` paketleri ihtiyaç duydukları her şeyi içerir. Python 3.10+ yalnızca
+`.deb` paketleri ihtiyaç duydukları her şeyi içerir. Python 3.14.x yalnızca
 kaynaktan çalıştırırken gerekir.
 
 ## Bu, kümemin veya kurumumun resmî aracı mı?

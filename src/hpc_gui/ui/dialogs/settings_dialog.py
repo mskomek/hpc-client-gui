@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+
 from PySide6.QtCore import QThreadPool, Qt
 from PySide6.QtWidgets import (
     QCheckBox,
@@ -10,6 +12,7 @@ from PySide6.QtWidgets import (
     QFormLayout,
     QGroupBox,
     QHBoxLayout,
+    QLabel,
     QLineEdit,
     QScrollArea,
     QListWidget,
@@ -43,6 +46,7 @@ from hpc_gui.config.storage import (
 )
 from hpc_gui.core.i18n import t
 from hpc_gui.core.platform import current_os
+from hpc_gui.core.terminal_graphics import has_flag, normalize_settings
 from hpc_gui.services.transfer_speed_test import run_transfer_speed_test
 from hpc_gui.ui.async_call import AsyncCall
 from hpc_gui.config.system_profile import (
@@ -74,6 +78,33 @@ class SettingsDialog(QDialog):
         self._session = session
         self._update_remote_defaults = update_remote_defaults
         self._clear_remote_directory_cache = clear_remote_directory_cache
+        graphics_mode, self._terminal_graphics_auto_compatibility = normalize_settings(st)
+
+        self.cb_terminal_graphics_mode = QComboBox()
+        for mode, key in (
+            ("auto", "settings.terminal_graphics_mode_auto"),
+            ("compatibility", "settings.terminal_graphics_mode_compatibility"),
+            ("accelerated", "settings.terminal_graphics_mode_accelerated"),
+        ):
+            self.cb_terminal_graphics_mode.addItem(t(key), mode)
+        self.cb_terminal_graphics_mode.setCurrentIndex(
+            max(0, self.cb_terminal_graphics_mode.findData(graphics_mode))
+        )
+        self.lbl_terminal_graphics_applied = QLabel(
+            t("settings.terminal_graphics_applied_disabled")
+            if has_flag(os.environ.get("QTWEBENGINE_CHROMIUM_FLAGS", ""))
+            else t("settings.terminal_graphics_applied_normal")
+        )
+        self.lbl_terminal_graphics_remembered = QLabel(
+            t("settings.terminal_graphics_remembered")
+            if self._terminal_graphics_auto_compatibility
+            else t("settings.terminal_graphics_not_remembered")
+        )
+        self.lbl_terminal_graphics_remembered.setWordWrap(True)
+        self.lbl_terminal_graphics_tip = QLabel(t("settings.terminal_graphics_tip"))
+        self.lbl_terminal_graphics_tip.setWordWrap(True)
+        self.btn_reset_terminal_graphics = QPushButton(t("settings.terminal_graphics_reset"))
+        self.btn_reset_terminal_graphics.clicked.connect(self._reset_terminal_graphics)
 
         self.cb_x11_autodeps = QCheckBox(t("login.x11_autodeps_label"))
         self.cb_x11_autodeps.setToolTip(t("login.x11_autodeps_tip"))
@@ -244,6 +275,14 @@ class SettingsDialog(QDialog):
             self.cb_cli_default_profile,
         )
 
+        graphics_group = QGroupBox(t("settings.terminal_graphics_section"))
+        graphics_form = QFormLayout(graphics_group)
+        graphics_form.addRow(t("settings.terminal_graphics_mode_label"), self.cb_terminal_graphics_mode)
+        graphics_form.addRow(t("settings.terminal_graphics_applied_label"), self.lbl_terminal_graphics_applied)
+        graphics_form.addRow(self.lbl_terminal_graphics_remembered)
+        graphics_form.addRow(self.lbl_terminal_graphics_tip)
+        graphics_form.addRow(self.btn_reset_terminal_graphics)
+
         jobs_group = QGroupBox(t("settings.jobs_outputs_section"))
         jobs_form = QFormLayout(jobs_group)
         jobs_form.addRow(
@@ -335,6 +374,7 @@ class SettingsDialog(QDialog):
         content = QWidget()
         content_layout = QVBoxLayout(content)
         content_layout.addWidget(connection_group)
+        content_layout.addWidget(graphics_group)
         content_layout.addWidget(jobs_group)
         content_layout.addWidget(ftp_group)
         content_layout.addWidget(associations_group)
@@ -380,6 +420,8 @@ class SettingsDialog(QDialog):
                     self.cb_ftp_transfer_type.currentData() or "auto"
                 ),
                 "remote_directory_cache_enabled": self.cb_remote_directory_cache.isChecked(),
+                "terminal_graphics_mode": str(self.cb_terminal_graphics_mode.currentData() or "auto"),
+                "terminal_graphics_auto_compatibility": self._terminal_graphics_auto_compatibility,
             }
         )
         if not self.cb_remote_directory_cache.isChecked():
@@ -395,6 +437,17 @@ class SettingsDialog(QDialog):
         ):
             self._update_remote_defaults(*remote_defaults)
             self._saved_remote_defaults = remote_defaults
+
+    def _reset_terminal_graphics(self) -> None:
+        self.cb_terminal_graphics_mode.setCurrentIndex(
+            max(0, self.cb_terminal_graphics_mode.findData("auto"))
+        )
+        self._terminal_graphics_auto_compatibility = False
+        update_settings({
+            "terminal_graphics_mode": "auto",
+            "terminal_graphics_auto_compatibility": False,
+        })
+        self.lbl_terminal_graphics_remembered.setText(t("settings.terminal_graphics_not_remembered"))
 
     def _run_transfer_speed_test(self) -> None:
         session = self._session

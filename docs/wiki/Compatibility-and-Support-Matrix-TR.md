@@ -13,7 +13,7 @@ Geçerli sürüm: **1.2.6** (`pyproject.toml`).
 | macOS 13+ Intel | `hpc-client-gui_macos_x86_64.dmg` | İmzalı/notarize release DMG'si |
 | Linux x86_64 | AppImage | Kurulum olmadan çalışır |
 | Linux x86_64 (Debian tabanlı) | `.deb` | Sistem geneline kurulur |
-| Tüm desteklenen platformlar | Kaynaktan | Python 3.10+, `pip install -e .` |
+| Tüm desteklenen platformlar | Kaynaktan | Python 3.14.x, `pip install -e .` |
 
 Flatpak isteğe bağlıdır ve standart sürüm setinin parçası değildir; çalışma
 zamanı ve SDK'sı belirgin biçimde daha büyüktür. ARM64 derlemesi yoktur.
@@ -26,7 +26,7 @@ belgelenmiştir. Qt platform kitaplıkları gereklidir (Ubuntu/Debian'da
 
 | Gereksinim | Taşınabilir / paketli | Kaynaktan |
 |---|---|---|
-| Python 3.10+ | Gerekmez | Gerekir |
+| Python 3.14.x | Gerekmez | Gerekir |
 | Qt çalışma zamanı | Birlikte gelir | PySide6 sağlar |
 | Qt platform kitaplıkları | Birlikte gelir veya sistem | Sistem (`libegl1` sınıfı) |
 | `plink.exe` (PuTTY) | İsteğe bağlı, yalnızca X11, Windows | İsteğe bağlı, yalnızca X11 |

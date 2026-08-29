@@ -49,7 +49,7 @@ Bu programın mantığı çok basit:
 ## Quick start (5 minutes)
 
 1. **Install requirements**
-   - Python 3.10+
+   - Python 3.14.x
    - `plink.exe` (PuTTY)
    - `VcXsrv` (X server for Windows)
 
@@ -129,7 +129,7 @@ Highly customized banners / shells may change command outputs. The app is design
   - X11 gerekiyorsa `VcXsrv`
 
 ### Kaynak Koddan
-- Python 3.10+ önerilir.
+- Python 3.14.x önerilir.
 - Kurulum:
   - `pip install -e .[test]`
 - Çalıştırma:

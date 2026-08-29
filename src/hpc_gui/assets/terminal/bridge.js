@@ -23,5 +23,6 @@
     window.hpcBridge.output.connect((text) => terminal.write(text));
     terminal.onData((data) => window.hpcBridge.send_input(data));
     window.hpcFit();
+    window.hpcBridge.terminal_ready();
   });
 })();

@@ -17,7 +17,7 @@ pre-commit install --hook-type pre-push
 python -m hpc_gui
 ```
 
-Python 3.10+ is required. On Linux you also need the Qt platform libraries
+Python 3.14.x is required. On Linux you also need the Qt platform libraries
 PySide6 loads at startup (`libegl1` on Ubuntu/Debian).
 
 ## Push öncesi kontrol

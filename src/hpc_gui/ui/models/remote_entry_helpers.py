@@ -38,7 +38,7 @@ def fmt_mtime(ts: int) -> str:
 def file_type(name: str, is_dir: bool) -> str:
     if is_dir:
         folder = t("dirs.type_folder")
-        return folder if folder != "[dirs.type_folder]" else "Klasör"
+        return folder
     lower = name.lower()
     if lower.endswith(".iso"):
         return "Disc Image File"
