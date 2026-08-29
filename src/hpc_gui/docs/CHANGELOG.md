@@ -2,13 +2,43 @@
 
 ## Unreleased
 
+## v1.5.6
+
+### Update experience
+- Replaced the generic update progress dialog with a dedicated application-update splash that remains responsive while checking, downloading, verifying, and starting installation.
+- Download progress now shows transferred and total package sizes alongside the progress bar; downloads without a known total remain visibly active.
+- Ensured the installation splash is painted before the external updater starts, preventing it from being skipped during the handoff.
+- Kept update checking, download, and checksum verification off the Qt GUI thread, with cancellation and partial-file cleanup preserved.
+
+### Startup splash
+- Removed translation-key leakage such as `splash.title` by making startup and updater splash copy self-contained English text.
+- Added regression coverage for splash copy and byte-level updater progress reporting.
+
 ## v1.5.5
 
-Provider persistence, safe quota lifecycle foundations, and the coordinated
-release contract are aligned for the next application release.
+### Runtime and compatibility
+- Moved the application and release toolchain to Python 3.14 as the single supported Python generation.
+- Added installation-aware update handoff so packaged Windows builds can download, verify, and safely launch their replacement workflow while source and unsupported installations remain manual-only.
 
-- Release packaging and repository safeguards are verified for v1.5.5.
-- Unsigned publication now proceeds only after the final release gate succeeds.
+### Structured provider profiles and storage
+- Preserved cluster-profile v2 data, provider overrides, provenance, unknown future fields, scheduler paths, and structured storage metadata across connection-profile edits.
+- Added provider storage-area cards and editors for paths, retention, cleanup, backup, source URLs, and scheduler work-directory classification.
+- Added English and Turkish provider-authoring guides and TRUBA profile-v2 contract coverage.
+
+### Quota safety foundations
+- Added explicit opt-in quota metadata and a shared, side-effect-free eligibility gate; incomplete, unsupported, or unapproved quota sources never trigger remote work.
+- Persisted quota consent and scope metadata, validated storage-policy values, and exposed configuration status without claiming that a live quota backend or dashboard exists.
+
+### Slurm path reliability
+- Preferred scheduler-reported job paths when previewing and opening scripts.
+- Preserved array-job paths, spaces, and scheduler working directories without requiring quota access.
+
+### Release and repository reliability
+- Unified release version declarations, aligned the application with the released plugin contract, and restored performance and packaging checks.
+- Hardened unsigned macOS publication so it runs only after the final release gate succeeds; retained architecture-specific compatibility and bundle diagnostics.
+- Restored ignore safeguards for credentials, virtual environments, build products, coverage, IDE state, local agent files, and generated development artifacts.
+- Repaired merged CI compatibility issues and missing upload translations, leaving all required platform, GUI, CLI, plugin, packaging, audit, and documentation checks green.
+
 
 ## v1.5.4
 
