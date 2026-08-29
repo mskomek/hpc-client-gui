@@ -418,7 +418,7 @@ jobs:
 
   verify-unsigned-release:
     name: Verify unsigned release inventory
-    if: ${{ inputs.macos_mode == 'unsigned' }}
+    if: ${{ github.event.inputs.macos_mode == 'unsigned' || inputs.macos_mode == 'unsigned' }}
     needs: [build-linux, build-windows, build-macos-arm64, build-macos-x86_64]
     runs-on: ubuntu-latest
     steps:
@@ -556,7 +556,7 @@ jobs:
           python-version: "3.14"
       - name: Evaluate final release gate
         env:
-          GATE_MACOS_MODE: ${{ inputs.macos_mode }}
+          GATE_MACOS_MODE: ${{ github.event.inputs.macos_mode || inputs.macos_mode }}
           GATE_RESULT_BUILD_LINUX: ${{ needs.build-linux.result }}
           GATE_RESULT_BUILD_WINDOWS: ${{ needs.build-windows.result }}
           GATE_RESULT_BUILD_MACOS_ARM64: ${{ needs.build-macos-arm64.result }}
