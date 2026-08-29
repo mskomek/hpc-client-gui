@@ -1,4 +1,8 @@
-from hpc_gui.services.slurm_script_parser import parse_job_paths, parse_output_error
+from hpc_gui.services.slurm_script_parser import (
+    parse_job_paths,
+    parse_output_error,
+    storage_area_for_path,
+)
 
 
 def test_parse_output_error_accepts_slurm_equals_and_space_forms() -> None:
@@ -48,3 +52,9 @@ def test_array_job_placeholders_use_observed_array_id() -> None:
         job_id="42_3",
     )
     assert paths.stdout == "/home/alice/logs/42_3_42_3_42_3.out"
+
+
+def test_storage_area_matches_path_components_and_prefers_specific_root() -> None:
+    roots = {"home": "/data/user", "scratch": "/data/user/scratch"}
+    assert storage_area_for_path("/data/user/scratch/run/out.log", roots) == "scratch"
+    assert storage_area_for_path("/data/userland/file", roots) is None
