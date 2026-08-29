@@ -64,6 +64,11 @@ class ConnectionDialog(QDialog):
         self._system_template_menu: QMenu | None = None
         self._system_template_submenus: list[QMenu] = []
         self._system_template_source: dict[str, str] | None = None
+        self._provider_template: dict[str, Any] | None = (
+            dict((initial_profile or {}).get("provider_template"))
+            if isinstance((initial_profile or {}).get("provider_template"), dict)
+            else None
+        )
         self._template_action_taken = False
         self._profile_keepalive = 30
         self._profile_transfer_parallelism = 1
@@ -424,9 +429,13 @@ class ConnectionDialog(QDialog):
         }
 
     def _apply_system_template(
-        self, template: ProfileData, provenance: dict[str, str] | None = None
+        self,
+        template: ProfileData,
+        provenance: dict[str, str] | None = None,
+        structured: dict[str, Any] | None = None,
     ) -> None:
         self._system_template_source = dict(provenance) if provenance else None
+        self._provider_template = dict(structured) if structured else None
         self._template_action_taken = True
         system = normalize_system_settings(template)
         self.system_name.setText(system["name"])
@@ -469,7 +478,9 @@ class ConnectionDialog(QDialog):
                     action.triggered.connect(
                         lambda _checked=False, selected=dict(template.settings), provenance=dict(
                             template.provenance
-                        ): self._apply_system_template(selected, provenance)
+                        ), structured=dict(template.structured): self._apply_system_template(
+                            selected, provenance, structured
+                        )
                     )
         user_templates = load_user_system_templates()
         if user_templates:
@@ -598,6 +609,10 @@ class ConnectionDialog(QDialog):
                 profile["system_template_source"] = dict(self._system_template_source)
             else:
                 profile.pop("system_template_source", None)
+            if self._provider_template:
+                profile["provider_template"] = dict(self._provider_template)
+            else:
+                profile.pop("provider_template", None)
         elif not is_edit:
             profile.pop("system_template_source", None)
 
