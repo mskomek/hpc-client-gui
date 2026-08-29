@@ -290,6 +290,7 @@
     "edit_new_window": "Yeni pencerede düzelt",
     "save_as": "Farklı Kaydet",
     "upload": "Yükle",
+    "uploading": "Yükleniyor…",
     "template_upload": "Şablon Yükle",
     "template_extract_iso": "extract_iso.py",
     "template_missing": "Şablon dosyası bulunamadı: {path}",

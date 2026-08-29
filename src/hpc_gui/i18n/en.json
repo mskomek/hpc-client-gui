@@ -290,6 +290,7 @@
     "edit_new_window": "Edit in new window",
     "save_as": "Save as",
     "upload": "Upload",
+    "uploading": "Uploading…",
     "template_upload": "Template Upload",
     "template_extract_iso": "extract_iso.py",
     "template_missing": "Template file not found: {path}",
