@@ -466,13 +466,15 @@ class MainWindow(QMainWindow):
         if self._update_progress is None:
             dialog = QProgressDialog(self)
             dialog.setWindowTitle(t("updates.progress_title"))
-            dialog.setCancelButton(None)
+            dialog.setWindowFlag(Qt.WindowType.WindowCloseButtonHint, True)
+            dialog.setCancelButton(QPushButton(t("common.cancel"), dialog))
             dialog.setAutoClose(False)
             dialog.setAutoReset(False)
             dialog.setMinimumDuration(0)
             dialog.setRange(0, 100)
             dialog.setWindowModality(Qt.WindowModality.WindowModal)
             dialog.rejected.connect(self._cancel_update_jobs)
+            dialog.canceled.connect(self._cancel_update_jobs)
             self._update_progress = dialog
         self._on_update_progress(value, status_key)
         self._update_progress.show()
@@ -484,7 +486,13 @@ class MainWindow(QMainWindow):
         if label.startswith("[updates.status_"):
             label = status_key
         self._update_progress.setLabelText(label)
-        self._update_progress.setValue(max(0, min(100, int(value))))
+        if status_key == "downloading":
+            # Some servers omit Content-Length; keep the bar visibly active
+            # instead of leaving it frozen at 10/15 until EOF.
+            self._update_progress.setRange(0, 0)
+        else:
+            self._update_progress.setRange(0, 100)
+            self._update_progress.setValue(max(0, min(100, int(value))))
 
     def _close_update_progress(self) -> None:
         if self._update_progress is not None:
@@ -580,10 +588,7 @@ class MainWindow(QMainWindow):
             webbrowser.open(release.zip_url or release.html_url)
             return
 
-        if not self._update_manual:
-            self._show_update_progress(10, "available")
-        else:
-            self._on_update_progress(10, "available")
+        self._close_update_progress()
         answer = QMessageBox.question(
             self,
             t("updates.available_title"),
@@ -595,9 +600,8 @@ class MainWindow(QMainWindow):
             QMessageBox.StandardButton.Yes,
         )
         if answer != QMessageBox.StandardButton.Yes:
-            self._close_update_progress()
             return
-        self._on_update_progress(10, "downloading")
+        self._show_update_progress(10, "downloading")
         self._run_update_job(
             lambda progress, cancelled: (
                 release,
@@ -611,6 +615,7 @@ class MainWindow(QMainWindow):
             self._close_update_progress()
             return
         release, zip_path = result
+        self._close_update_progress()
         answer = QMessageBox.question(
             self,
             t("updates.ready_title"),
@@ -619,10 +624,9 @@ class MainWindow(QMainWindow):
             QMessageBox.StandardButton.Yes,
         )
         if answer != QMessageBox.StandardButton.Yes:
-            self._close_update_progress()
             return
         try:
-            self._on_update_progress(100, "installing")
+            self._show_update_progress(100, "installing")
             launch_update_installer(zip_path, release.version)
         except Exception as exc:
             self._on_update_error(str(exc))
