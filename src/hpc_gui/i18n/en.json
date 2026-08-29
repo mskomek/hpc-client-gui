@@ -703,6 +703,8 @@
     "storage_path": "Storage path",
     "storage_backup": "Backup status",
     "storage_cleanup": "Cleanup note",
+    "storage_retention": "Retention days (optional)",
+    "storage_source_url": "Policy source URL (optional)",
     "storage_unknown": "Unknown",
     "storage_yes": "Yes",
     "storage_no": "No",

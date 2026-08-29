@@ -490,12 +490,32 @@ class ConnectionDialog(QDialog):
         )
         if not ok:
             return
+        retention, ok = QInputDialog.getText(
+            self, t("connection.storage_edit"), t("connection.storage_retention"),
+            text=str((current.get("policy") or {}).get("retention_days") or ""),
+        )
+        if not ok:
+            return
+        retention_value = retention.strip()
+        if retention_value and (not retention_value.isdigit() or int(retention_value) < 0):
+            return
+        source_url, ok = QInputDialog.getText(
+            self, t("connection.storage_edit"), t("connection.storage_source_url"),
+            text=str((current.get("policy") or {}).get("documentation_url") or ""),
+        )
+        if not ok:
+            return
+        source_url = source_url.strip()
+        if source_url and not source_url.startswith("https://"):
+            return
         current["label"] = label.strip()
         current["path_template"] = path.strip()
         current["policy"] = {
             **(current.get("policy") if isinstance(current.get("policy"), dict) else {}),
             "backup": {t("connection.storage_yes"): True, t("connection.storage_no"): False}.get(backup),
             "cleanup_note": cleanup.strip(),
+            "retention_days": int(retention_value) if retention_value else None,
+            "documentation_url": source_url,
         }
         self._set_storage_rows(self.storage_rows)
 
