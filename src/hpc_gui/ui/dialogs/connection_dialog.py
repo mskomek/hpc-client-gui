@@ -44,6 +44,7 @@ from hpc_gui.config.system_profile import (
     save_user_system_template,
 )
 from hpc_gui.plugins.templates import installed_cluster_template_groups
+from hpc_gui.plugins.models import validate_storage_policy
 from hpc_gui.ssh.client import coerce_keepalive_interval
 from hpc_gui.config.storage import coerce_profile_transfer_parallelism, coerce_profile_ssh_timeout
 
@@ -541,7 +542,10 @@ class ConnectionDialog(QDialog):
         if not ok:
             return
         retention_value = retention.strip()
-        if retention_value and (not retention_value.isdigit() or int(retention_value) < 0):
+        policy_check = {"retention_days": int(retention_value) if retention_value else None}
+        if retention_value and not retention_value.isdigit():
+            policy_check["retention_days"] = retention_value
+        if validate_storage_policy(policy_check):
             QMessageBox.warning(self, t("common.error"), t("connection.storage_retention_invalid"))
             return
         source_url, ok = QInputDialog.getText(
@@ -551,7 +555,7 @@ class ConnectionDialog(QDialog):
         if not ok:
             return
         source_url = source_url.strip()
-        if source_url and not source_url.startswith("https://"):
+        if validate_storage_policy({"documentation_url": source_url}):
             QMessageBox.warning(self, t("common.error"), t("connection.storage_source_url_invalid"))
             return
         current["label"] = label.strip()

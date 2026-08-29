@@ -141,6 +141,19 @@ def build_cluster_profile(raw: Mapping[str, Any]) -> ClusterProfileDefinition:
     )
 
 
+def validate_storage_policy(policy: Mapping[str, Any] | None) -> str | None:
+    """Validate the small policy subset edited by the connection dialog."""
+    if not isinstance(policy, Mapping):
+        return None
+    retention = policy.get("retention_days")
+    if retention is not None and (not isinstance(retention, int) or isinstance(retention, bool) or retention < 0):
+        return "retention_days must be a non-negative integer"
+    source_url = str(policy.get("documentation_url") or "").strip()
+    if source_url and not source_url.startswith("https://"):
+        return "documentation_url must use HTTPS"
+    return None
+
+
 @dataclass(frozen=True)
 class InstalledPlugin:
     manifest: PluginManifest
