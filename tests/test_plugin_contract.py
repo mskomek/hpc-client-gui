@@ -28,7 +28,7 @@ from hpc_gui.plugins.registry_client import (
 )
 from hpc_gui.plugins.state import activate_version
 
-CONTRACT_APP_VERSION = "1.5.4"
+CONTRACT_APP_VERSION = "1.5.5"
 PRE_V2_APP_VERSION = "1.4.0"
 V2_APP_FLOOR = "1.5.0"
 
