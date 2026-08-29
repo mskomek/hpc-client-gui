@@ -12,6 +12,7 @@ venv/
 /build/hpc-client-gui/COLLECT-00.toc
 /build/hpc-client-gui-linux/
 /build/build-v*/
+/build/hpc-updater-demo/
 
 # Generated onedir output; the whole dist tree is release packaging output.
 /dist/
