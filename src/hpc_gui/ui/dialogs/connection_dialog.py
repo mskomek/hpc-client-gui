@@ -213,6 +213,7 @@ class ConnectionDialog(QDialog):
         self.quota_command = QLineEdit()
         self.quota_scope = QLineEdit()
         self.quota_subject = QLineEdit()
+        self.quota_status = QLabel()
         self.quota_command.setPlaceholderText(t("connection.quota_command_placeholder"))
 
         self.btn_system_templates = QToolButton()
@@ -262,10 +263,13 @@ class ConnectionDialog(QDialog):
         quota_form.addRow(t("connection.quota_command"), self.quota_command)
         quota_form.addRow(t("connection.quota_scope"), self.quota_scope)
         quota_form.addRow(t("connection.quota_subject"), self.quota_subject)
+        quota_form.addRow(t("connection.quota_status"), self.quota_status)
         quota_group = QGroupBox(t("connection.quota_settings"))
         quota_group.setLayout(quota_form)
         self.quota_enabled.toggled.connect(self.quota_backend.setEnabled)
         self.quota_enabled.toggled.connect(self.quota_command.setEnabled)
+        self.quota_enabled.toggled.connect(self._update_quota_status)
+        self.quota_command.textChanged.connect(self._update_quota_status)
         quota_group.setToolTip(t("connection.quota_disabled_tip"))
 
         self.advanced_button = QToolButton()
@@ -465,6 +469,15 @@ class ConnectionDialog(QDialog):
         self.quota_command.setText(str(source.get("command_template") or ""))
         self.quota_scope.setText(str(source.get("scope") or ""))
         self.quota_subject.setText(str(source.get("subject_template") or ""))
+        self._update_quota_status()
+
+    def _update_quota_status(self) -> None:
+        if not self.quota_enabled.isChecked():
+            self.quota_status.setText(t("connection.quota_status_off"))
+        elif not self.quota_command.text().strip():
+            self.quota_status.setText(t("connection.quota_status_unconfigured"))
+        else:
+            self.quota_status.setText(t("connection.quota_status_backend_required"))
 
     def _set_storage_rows(self, rows: Any) -> None:
         self.storage_rows = [dict(row) for row in rows if isinstance(row, dict)] if isinstance(rows, list) else []
