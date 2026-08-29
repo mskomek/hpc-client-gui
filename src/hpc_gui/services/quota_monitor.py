@@ -9,7 +9,7 @@ def quota_gate(
     source: dict[str, Any] | None,
     *,
     backend_ids: Iterable[str] = (),
-    consented: bool = False,
+    consented: bool | None = None,
     connected: bool = False,
     subject_available: bool = True,
 ) -> str:
@@ -23,6 +23,8 @@ def quota_gate(
         return "incomplete/unsupported"
     if "\n" in str(source["command_template"]) or "\r" in str(source["command_template"]):
         return "invalid_configuration"
+    if consented is None:
+        consented = source.get("consent") is True
     if not consented:
         return "ready_not_enabled"
     return "eligible" if connected else "ready_not_enabled"

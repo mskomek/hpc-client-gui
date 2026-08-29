@@ -14,9 +14,9 @@ def test_quota_gate_requires_reviewed_backend_and_subject():
 
 
 def test_quota_gate_requires_consent_and_connection():
-    source = {"enabled": True, "command_template": "quota {user}", "backend_id": "x"}
-    assert quota_gate(source, backend_ids={"x"}, consented=True) == "ready_not_enabled"
-    assert quota_gate(source, backend_ids={"x"}, consented=True, connected=True) == "eligible"
+    source = {"enabled": True, "consent": True, "command_template": "quota {user}", "backend_id": "x"}
+    assert quota_gate(source, backend_ids={"x"}) == "ready_not_enabled"
+    assert quota_gate(source, backend_ids={"x"}, connected=True) == "eligible"
 
 
 def test_quota_gate_rejects_multiline_commands():
