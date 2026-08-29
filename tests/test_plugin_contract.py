@@ -29,6 +29,8 @@ from hpc_gui.plugins.registry_client import (
 from hpc_gui.plugins.state import activate_version
 
 CONTRACT_APP_VERSION = "1.5.4"
+PRE_V2_APP_VERSION = "1.4.0"
+V2_APP_FLOOR = "1.5.0"
 
 REPO = os.environ.get("HPC_GUI_CONTRACT_REPO", "")
 pytestmark = pytest.mark.skipif(
@@ -76,11 +78,8 @@ def test_real_registry_passes_repository_validator(plugins_repo: Path):
         sys.path.remove(str(scripts_dir))
 
 
-def test_all_entries_compatible_with_app_1_4_0(registry: dict):
-    """Plugin API v1 entries must stay installable on the old pinned line;
-    anything incompatible must be a deliberate Plugin API v2 tool that
-    requires the first v2-capable release (>= 1.5.0) so old clients never
-    select a package they cannot load."""
+def test_all_entries_compatible_with_supported_app_lines(registry: dict):
+    """All entries work on the current app; v2 tools stay hidden from old clients."""
     entries = registry["plugins"]
     assert entries, "official registry must not be empty"
     incompatible = [
@@ -89,7 +88,7 @@ def test_all_entries_compatible_with_app_1_4_0(registry: dict):
         if not is_app_compatible(str(entry["requires_app"]), CONTRACT_APP_VERSION)
         and (
             entry.get("plugin_api") != 2
-            or not is_app_compatible(str(entry["requires_app"]), "1.5.0")
+            or not is_app_compatible(str(entry["requires_app"]), V2_APP_FLOOR)
         )
     ]
     assert not incompatible, f"incompatible entries: {incompatible}"
@@ -148,11 +147,11 @@ def test_truba_v2_plugin_installs_and_retains_structured_sections(
         app_version=CONTRACT_APP_VERSION,
     )
     result = install_plugin_from_registry(
-        entry, root=tmp_path, app_version="1.5.0", fetcher=local_fetcher
+        entry, root=tmp_path, app_version=CONTRACT_APP_VERSION, fetcher=local_fetcher
     )
     assert result.activated
 
-    loaded = load_installed_plugins(root=tmp_path, app_version="1.5.0")
+    loaded = load_installed_plugins(root=tmp_path, app_version=CONTRACT_APP_VERSION)
     profile = loaded.plugins[0].cluster_profiles[0]
     assert profile.schema_version == 2
     assert {item["id"] for item in profile.storage} == {"home", "scratch"}
