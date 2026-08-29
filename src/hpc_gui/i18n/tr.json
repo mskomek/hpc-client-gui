@@ -697,6 +697,7 @@
     "storage_areas": "Depolama alanları",
     "storage_areas_empty": "Yapılandırılmış depolama alanı yok.",
     "storage_add": "Depolama ekle",
+    "storage_edit": "Depolamayı düzenle",
     "storage_remove": "Depolamayı sil",
     "storage_label": "Depolama etiketi",
     "storage_path": "Depolama yolu",

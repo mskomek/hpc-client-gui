@@ -202,8 +202,10 @@ class ConnectionDialog(QDialog):
         self.storage_list = QListWidget()
         self.storage_list.setMaximumHeight(90)
         self.btn_storage_add = QPushButton(t("connection.storage_add"))
+        self.btn_storage_edit = QPushButton(t("connection.storage_edit"))
         self.btn_storage_remove = QPushButton(t("connection.storage_remove"))
         self.btn_storage_add.clicked.connect(self._add_storage_area)
+        self.btn_storage_edit.clicked.connect(self._edit_storage_area)
         self.btn_storage_remove.clicked.connect(self._remove_storage_area)
 
         self.btn_system_templates = QToolButton()
@@ -226,6 +228,7 @@ class ConnectionDialog(QDialog):
         storage_controls.addWidget(self.storage_list)
         storage_buttons = QHBoxLayout()
         storage_buttons.addWidget(self.btn_storage_add)
+        storage_buttons.addWidget(self.btn_storage_edit)
         storage_buttons.addWidget(self.btn_storage_remove)
         storage_controls.addLayout(storage_buttons)
         system_form.addRow(t("connection.storage_areas"), storage_controls)
@@ -456,6 +459,27 @@ class ConnectionDialog(QDialog):
         if row >= 0:
             self.storage_rows.pop(row)
             self._set_storage_rows(self.storage_rows)
+
+    def _edit_storage_area(self) -> None:
+        row = self.storage_list.currentRow()
+        if row < 0 or row >= len(self.storage_rows):
+            return
+        current = self.storage_rows[row]
+        label, ok = QInputDialog.getText(
+            self, t("connection.storage_edit"), t("connection.storage_label"),
+            text=str(current.get("label") or current.get("id") or ""),
+        )
+        if not ok or not label.strip():
+            return
+        path, ok = QInputDialog.getText(
+            self, t("connection.storage_edit"), t("connection.storage_path"),
+            text=str(current.get("path_template") or ""),
+        )
+        if not ok:
+            return
+        current["label"] = label.strip()
+        current["path_template"] = path.strip()
+        self._set_storage_rows(self.storage_rows)
 
     def _system_form_values(self) -> dict[str, str]:
         return {

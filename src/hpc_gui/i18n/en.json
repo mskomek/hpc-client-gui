@@ -697,6 +697,7 @@
     "storage_areas": "Storage areas",
     "storage_areas_empty": "No configured storage areas.",
     "storage_add": "Add storage",
+    "storage_edit": "Edit storage",
     "storage_remove": "Remove storage",
     "storage_label": "Storage label",
     "storage_path": "Storage path",
