@@ -47,6 +47,15 @@ def test_cancelled_update_download_removes_partial_file(monkeypatch, tmp_path: P
     assert not (tmp_path / "update.zip.part").exists()
 
 
+def test_download_reports_transferred_and_total_bytes(monkeypatch, tmp_path: Path):
+    monkeypatch.setattr("hpc_gui.services.app_updater._request", lambda *_args, **_kwargs: _Response())
+    progress = []
+
+    _download("https://example.invalid/update.zip", tmp_path / "update.zip", progress_cb=lambda *args: progress.append(args))
+
+    assert progress[-1] == (100, "", 2, 2)
+
+
 def test_update_reuses_verified_download(monkeypatch, tmp_path: Path):
     release = UpdateRelease("1.4.2", "v1.4.2", "update.zip", "zip", "update.zip.sha256", "sha", "page")
     update_dir = tmp_path / "updates" / "v1.4.2"
