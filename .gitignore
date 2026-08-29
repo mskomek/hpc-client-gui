@@ -80,7 +80,7 @@ tools/ai/deepseek-models.local.psd1
 /.claude/
 /tools/
 /devtools/*
-/devtools/
+!/devtools/performance_probe.py
 /MAIN_SYNC_PROTOCOL.md
 /docs/DEEPSEEK_*
 /docs/OPENCODE_*
