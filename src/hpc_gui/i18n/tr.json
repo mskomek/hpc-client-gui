@@ -703,6 +703,8 @@
     "storage_path": "Depolama yolu",
     "storage_backup": "Yedekleme durumu",
     "storage_cleanup": "Temizleme notu",
+    "storage_retention": "Saklama süresi (gün, isteğe bağlı)",
+    "storage_source_url": "Politika kaynak URL'si (isteğe bağlı)",
     "storage_unknown": "Bilinmiyor",
     "storage_yes": "Evet",
     "storage_no": "Hayır",
