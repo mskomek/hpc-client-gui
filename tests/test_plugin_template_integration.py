@@ -161,7 +161,11 @@ def _menu_texts(menu) -> list[str]:
     return [action.text() for action in menu.actions()]
 
 
-def test_menu_without_plugins_has_builtin_user_and_more(qapp):
+def test_menu_without_plugins_has_builtin_user_and_more(qapp, monkeypatch):
+    monkeypatch.setattr(
+        "hpc_gui.ui.dialogs.connection_dialog.installed_cluster_template_groups",
+        lambda: {},
+    )
     dialog = ConnectionDialog()
     try:
         texts = _menu_texts(dialog.btn_system_templates.menu())
