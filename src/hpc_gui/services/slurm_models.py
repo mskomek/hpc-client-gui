@@ -20,6 +20,9 @@ class SlurmJob:
     nodelist: str = ""
     failure_reason: str = ""
     script_path: str = ""
+    workdir: str = ""
+    stdout_path: str = ""
+    stderr_path: str = ""
 
 
 def _observed_fields(raw: str) -> dict[str, str]:
@@ -29,7 +32,7 @@ def _observed_fields(raw: str) -> dict[str, str]:
         if "=" not in token:
             continue
         key, value = token.split("=", 1)
-        if key in {"NodeList", "Reason", "ExitCode", "Command", "FailedNode"}:
+        if key in {"NodeList", "Reason", "ExitCode", "Command", "FailedNode", "WorkDir", "StdOut", "StdErr"}:
             fields[key] = value.strip()
     return fields
 
@@ -80,6 +83,9 @@ def format_job_details(job: SlurmJob) -> str:
         ("Failure reason", job.failure_reason or job.reason),
         ("Exit code", job.exit_code),
         ("Script path", job.script_path),
+        ("Working directory", job.workdir),
+        ("Stdout path", job.stdout_path),
+        ("Stderr path", job.stderr_path),
     )
     return "\n".join(f"{label}: {value}" for label, value in fields if value)
 
@@ -93,4 +99,7 @@ def parse_scontrol(text: str, job_id: str = "") -> SlurmJob:
         failure_reason=observed.get("Reason", ""),
         exit_code=observed.get("ExitCode", ""),
         script_path=observed.get("Command", ""),
+        workdir=observed.get("WorkDir", ""),
+        stdout_path=observed.get("StdOut", ""),
+        stderr_path=observed.get("StdErr", ""),
     )
