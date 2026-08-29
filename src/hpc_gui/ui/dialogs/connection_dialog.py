@@ -211,6 +211,8 @@ class ConnectionDialog(QDialog):
         self.quota_consent = QCheckBox(t("connection.quota_consent"))
         self.quota_backend = QLineEdit()
         self.quota_command = QLineEdit()
+        self.quota_scope = QLineEdit()
+        self.quota_subject = QLineEdit()
         self.quota_command.setPlaceholderText(t("connection.quota_command_placeholder"))
 
         self.btn_system_templates = QToolButton()
@@ -258,6 +260,8 @@ class ConnectionDialog(QDialog):
         quota_form.addRow("", self.quota_consent)
         quota_form.addRow(t("connection.quota_backend"), self.quota_backend)
         quota_form.addRow(t("connection.quota_command"), self.quota_command)
+        quota_form.addRow(t("connection.quota_scope"), self.quota_scope)
+        quota_form.addRow(t("connection.quota_subject"), self.quota_subject)
         quota_group = QGroupBox(t("connection.quota_settings"))
         quota_group.setLayout(quota_form)
         self.quota_enabled.toggled.connect(self.quota_backend.setEnabled)
@@ -459,6 +463,8 @@ class ConnectionDialog(QDialog):
         self.quota_consent.setChecked(source.get("consent") is True)
         self.quota_backend.setText(str(source.get("backend_id") or ""))
         self.quota_command.setText(str(source.get("command_template") or ""))
+        self.quota_scope.setText(str(source.get("scope") or ""))
+        self.quota_subject.setText(str(source.get("subject_template") or ""))
 
     def _set_storage_rows(self, rows: Any) -> None:
         self.storage_rows = [dict(row) for row in rows if isinstance(row, dict)] if isinstance(rows, list) else []
@@ -767,6 +773,8 @@ class ConnectionDialog(QDialog):
                     "consent": self.quota_consent.isChecked(),
                     "backend_id": self.quota_backend.text().strip(),
                     "command_template": self.quota_command.text().strip(),
+                    "scope": self.quota_scope.text().strip(),
+                    "subject_template": self.quota_subject.text().strip(),
                 })
                 self._provider_template["quota_sources"] = [source]
                 profile["provider_template"] = dict(self._provider_template)

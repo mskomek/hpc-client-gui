@@ -712,6 +712,8 @@
     "quota_consent": "Bu kaynak için kota sorgularına izin veriyorum",
     "quota_backend": "Onaylı backend kimliği",
     "quota_command": "Komut şablonu",
+    "quota_scope": "Kota kapsamı",
+    "quota_subject": "Özne şablonu",
     "quota_command_placeholder": "Siteniz sağlamıyorsa boş bırakın",
     "quota_disabled_tip": "Kota izleme varsayılan olarak kapalıdır; onaylı backend, izin ve bağlantı olmadan çalışmaz.",
     "storage_unknown": "Bilinmiyor",
