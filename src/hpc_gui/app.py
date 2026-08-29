@@ -1,19 +1,35 @@
+# ruff: noqa: E402  (Qt imports intentionally follow the graphics bootstrap)
 import sys
 import os
 import logging
+import subprocess
+from hpc_gui.config.storage import load_settings
+from hpc_gui.core.terminal_graphics import (
+    GbmWarningTracker,
+    apply_bootstrap,
+    restart_command,
+    restart_environment,
+)
+
+# This import must stay before any Qt/WebEngine import: the Chromium flags are
+# selected during bootstrap, not after QApplication has initialized Qt.
+GRAPHICS_BOOTSTRAP = apply_bootstrap(load_settings())
+_GBM_TRACKER = GbmWarningTracker()
+_gbm_suggestion_pending = False
+
 from PySide6.QtCore import qInstallMessageHandler
-from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication, QMessageBox
 from PySide6.QtGui import QIcon
 from pathlib import Path
 
 from hpc_gui.core.i18n import load_saved_language, system_default_language
-from hpc_gui.core.i18n import validate_language_files
+from hpc_gui.core.i18n import t, validate_language_files
 from hpc_gui.core.logging_setup import setup_logging, install_crash_logging, install_excepthook
 from hpc_gui.core.debug_support import log_startup_snapshot
 from hpc_gui.core.debug_telemetry import DebugTelemetry, is_source_run
 from hpc_gui.core.crash_reporter import read_crash_flag, clear_crash_flag
 from hpc_gui.ui.main_window import MainWindow
-from hpc_gui.config.storage import get_ui_pref_bool, set_ui_pref_bool
+from hpc_gui.config.storage import get_ui_pref_bool, set_ui_pref_bool, update_settings
 from hpc_gui.ui.dialogs.welcome_dialog import WelcomeDialog
 from hpc_gui.ui.splash_screen import StartupSplash
 
@@ -65,10 +81,61 @@ def _bootstrap_safety_checks() -> None:
     try:
         from hpc_gui.services.process_registry import cleanup_orphans
 
-        # Conservative orphan guard: kills only app-recorded helpers older than 2h.
         cleanup_orphans(aggressive=True)
     except Exception:
         pass
+
+
+def _qt_message_handler(mode, context, message) -> None:
+    """Keep Qt logging and forward only measured GBM evidence to the GUI."""
+    del context
+    logging.getLogger("hpc_gui.qt").error("Qt message type=%s: %s", mode, message)
+    global _gbm_suggestion_pending
+    if GRAPHICS_BOOTSTRAP.mode == "auto" and not GRAPHICS_BOOTSTRAP.applied_disable_gpu:
+        if _GBM_TRACKER.record(str(message)):
+            _gbm_suggestion_pending = True
+
+
+def _offer_graphics_compatibility(window: MainWindow) -> None:
+    global _gbm_suggestion_pending
+    if not _gbm_suggestion_pending:
+        return
+    _gbm_suggestion_pending = False
+    if GRAPHICS_BOOTSTRAP.mode != "auto" or GRAPHICS_BOOTSTRAP.applied_disable_gpu:
+        return
+    box = QMessageBox(window)
+    box.setIcon(QMessageBox.Icon.Warning)
+    box.setWindowTitle(t("graphics.suggestion_title"))
+    box.setText(t("graphics.suggestion_message"))
+    enable_restart = box.addButton(t("graphics.enable_restart"), QMessageBox.ButtonRole.AcceptRole)
+    enable_later = box.addButton(t("graphics.enable_later"), QMessageBox.ButtonRole.DestructiveRole)
+    box.addButton(t("graphics.not_now"), QMessageBox.ButtonRole.RejectRole)
+    box.exec()
+    clicked = box.clickedButton()
+    if clicked not in (enable_restart, enable_later):
+        return
+    try:
+        update_settings({"terminal_graphics_auto_compatibility": True})
+    except Exception as exc:
+        logging.getLogger("hpc_gui").error("could not save terminal graphics preference: %s", exc)
+        QMessageBox.warning(window, t("common.error"), t("graphics.preference_save_failed"))
+        return
+    if clicked is enable_later:
+        return
+    try:
+        session = getattr(getattr(window, "login", None), "_session", {})
+        if session.get("connected"):
+            QMessageBox.information(window, t("graphics.restart_required_title"), t("graphics.restart_deferred"))
+            return
+        command = restart_command()
+        window.close()
+        if window.isVisible():
+            QMessageBox.warning(window, t("common.error"), t("graphics.restart_deferred"))
+            return
+        subprocess.Popen(command, env=restart_environment(), cwd=os.getcwd())
+    except Exception as exc:
+        logging.getLogger("hpc_gui").error("graphics compatibility restart failed: %s", exc)
+        QMessageBox.warning(window, t("common.error"), t("graphics.restart_failed"))
 
 
 def _show_main_window(window: MainWindow, available) -> None:
@@ -98,8 +165,17 @@ def main() -> int:
     setup_logging(level=logging.INFO)
     install_crash_logging()
     install_excepthook()
-    qInstallMessageHandler(lambda mode, context, message: logging.getLogger("hpc_gui.qt").error("Qt message type=%s: %s", mode, message))
+    qInstallMessageHandler(_qt_message_handler)
     logging.getLogger("hpc_gui").info("process started pid=%s", os.getpid())
+    logging.getLogger("hpc_gui.graphics").info(
+        "terminal graphics policy=%s remembered=%s applied=%s origin=%s qt_platform=%s session=%s",
+        GRAPHICS_BOOTSTRAP.mode,
+        GRAPHICS_BOOTSTRAP.remembered_auto_compatibility,
+        GRAPHICS_BOOTSTRAP.applied_disable_gpu,
+        GRAPHICS_BOOTSTRAP.flag_origin,
+        os.environ.get("QT_QPA_PLATFORM", ""),
+        os.environ.get("XDG_SESSION_TYPE", ""),
+    )
     if is_source_run():
         # Development-only interaction telemetry.  Keep a Python reference on
         # QApplication so Qt does not collect the installed event filter.
@@ -144,6 +220,11 @@ def main() -> int:
     _performance_mark("main_window_shown")
     app.processEvents()
     splash.finish(w)
+    from PySide6.QtCore import QTimer
+    graphics_timer = QTimer(w)
+    graphics_timer.setInterval(250)
+    graphics_timer.timeout.connect(lambda: _offer_graphics_compatibility(w))
+    graphics_timer.start()
 
     # If the previous session crashed, show the crash dialog on startup.
     try:

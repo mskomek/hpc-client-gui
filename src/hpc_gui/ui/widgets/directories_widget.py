@@ -671,7 +671,7 @@ class DirectoriesWidget(QWidget):
             return
 
         dlg = QDialog(self)
-        dlg.setWindowTitle(t("dirs.file_actions") if t("dirs.file_actions") != "[dirs.file_actions]" else "Dosya İşlemleri")
+        dlg.setWindowTitle(t("dirs.file_actions"))
 
         btn_download = QPushButton(t("dirs.download") if t("dirs.download") != "[dirs.download]" else "İndir")
         btn_edit = QPushButton(t("dirs.edit") if t("dirs.edit") != "[dirs.edit]" else "Düzelt")
@@ -699,7 +699,7 @@ class DirectoriesWidget(QWidget):
             except Exception as e:
                 show_exception(self, title=t("common.error"), user_message=t("dirs.unreadable").format(err=e), exc=e, area="FILES")
                 return
-            save_path, _ = QFileDialog.getSaveFileName(self, t("dirs.save_as") if t("dirs.save_as") != "[dirs.save_as]" else "Farklı Kaydet")
+            save_path, _ = QFileDialog.getSaveFileName(self, t("dirs.save_as"))
             if not save_path:
                 return
             try:

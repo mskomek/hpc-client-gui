@@ -668,8 +668,8 @@ class LocalDirPanel(QWidget):
     def create_directory(self, *, enter: bool = False) -> bool:
         name, ok = QInputDialog.getText(
             self,
-            t("dirs.new_folder") if t("dirs.new_folder") != "[dirs.new_folder]" else "Yeni Klasör",
-            t("dirs.new_folder_label") if t("dirs.new_folder_label") != "[dirs.new_folder_label]" else "Klasör adı:",
+            t("dirs.new_folder"),
+            t("dirs.new_folder_label"),
         )
         if not ok or not name.strip():
             return False

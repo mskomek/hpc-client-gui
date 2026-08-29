@@ -38,9 +38,9 @@ class FileTypeTests(unittest.TestCase):
         with patch.object(helpers, "t", return_value="Folder"):
             self.assertEqual(helpers.file_type("anything", True), "Folder")
 
-    def test_missing_translation_falls_back_to_turkish_label(self) -> None:
+    def test_missing_translation_does_not_reintroduce_hardcoded_label(self) -> None:
         with patch.object(helpers, "t", return_value="[dirs.type_folder]"):
-            self.assertEqual(helpers.file_type("anything", True), "Klasör")
+            self.assertEqual(helpers.file_type("anything", True), "[dirs.type_folder]")
 
     def test_known_extensions_map_to_descriptions(self) -> None:
         self.assertEqual(helpers.file_type("a.ISO", False), "Disc Image File")
