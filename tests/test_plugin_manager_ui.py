@@ -390,7 +390,15 @@ def test_dialog_opens_offline_without_cache(qapp):
             dialog.deleteLater()
 
 
-def test_mocked_registry_populates_discover(qapp):
+def test_mocked_registry_populates_discover(qapp, monkeypatch):
+    monkeypatch.setattr(
+        "hpc_gui.ui.dialogs.plugin_manager_dialog.read_active_versions",
+        lambda: {},
+    )
+    monkeypatch.setattr(
+        "hpc_gui.ui.dialogs.plugin_manager_dialog.read_disabled_ids",
+        lambda: set(),
+    )
     dialog = PluginManagerDialog(fetcher=lambda url, limit: (_ for _ in ()).throw(OSError()))
     try:
         apply_registry(dialog)
