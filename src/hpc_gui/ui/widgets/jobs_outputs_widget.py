@@ -580,6 +580,7 @@ class JobsOutputsWidget(QWidget):
         self._tail_stop_notified = False
         self._live_tail_failure_started: float | None = None
         self._minimize_started_at: float | None = None
+        self._detail_scheduler_paths: tuple[str, str] = ("", "")
         self._follow_windows: list[QMainWindow] = []
         self._single_file_follow_windows: list[QMainWindow] = []
         self._follow_tabs: list[_OutputFollowerWidget] = []
@@ -810,6 +811,7 @@ class JobsOutputsWidget(QWidget):
         self.meta_job_script.clear()
         self.meta_job_workdir.clear()
         self.meta_job_id.setText("")
+        self._detail_scheduler_paths = ("", "")
         self.lssrv_text.setPlainText("")
         self.active_script = ""
         self.active_out = ""
@@ -1131,6 +1133,13 @@ class JobsOutputsWidget(QWidget):
         path = str(getattr(self, "_detail_script_path", "")).strip()
         if path:
             self._activate_slurm_script(path)
+            stdout, stderr = self._detail_scheduler_paths
+            if stdout:
+                self.active_out = stdout
+                self.path_out.setText(stdout)
+            if stderr:
+                self.active_err = stderr
+                self.path_err.setText(stderr)
 
     def show_job_details(self):
         if not self.session or not self.session.get("slurm"):
@@ -1147,6 +1156,7 @@ class JobsOutputsWidget(QWidget):
             self.meta_text.setPlainText(txt)
             detail = parse_scontrol(txt, jobid)
             self._detail_script_path = detail.script_path
+            self._detail_scheduler_paths = (detail.stdout_path, detail.stderr_path)
             if detail.workdir:
                 self.meta_job_workdir.setText(
                     f"<b>{t('jobs_outputs.workdir')}:</b> {detail.workdir}"
