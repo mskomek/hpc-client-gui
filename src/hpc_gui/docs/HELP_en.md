@@ -333,7 +333,7 @@ Linux x86_64 releases are published on GitHub Releases as AppImage, Debian
 
 - A supported Linux distribution (currently Ubuntu LTS, Fedora, or openSUSE),
   x86_64.
-- Python 3.10+.
+- Python 3.14.x.
 - Qt platform libraries PySide6 needs (e.g. `libegl1` on Ubuntu/Debian).
 
 ### Run from source
