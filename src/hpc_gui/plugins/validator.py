@@ -67,6 +67,7 @@ KNOWN_COMMAND_PLACEHOLDERS = frozenset(
 )
 
 _PLACEHOLDER_RE = re.compile(r"\{([A-Za-z_][A-Za-z0-9_]*)\}")
+_SAFE_PROFILE_ID_RE = re.compile(r"^[a-z][a-z0-9_-]{0,63}$")
 
 
 def _is_nonempty_str(value: Any) -> bool:
@@ -222,7 +223,7 @@ def validate_cluster_profile_dict(profile: Any) -> list[str]:
         return errors
     if profile["schema_version"] not in (1, 2):
         errors.append("cluster profile schema_version must be 1 or 2")
-    if not _is_nonempty_str(profile["profile_id"]):
+    if not _is_nonempty_str(profile["profile_id"]) or not _SAFE_PROFILE_ID_RE.fullmatch(str(profile["profile_id"])):
         errors.append("cluster profile 'profile_id' must be a non-empty string")
     if not _is_nonempty_str(profile["name"]):
         errors.append("cluster profile 'name' must be a non-empty string")
@@ -241,14 +242,29 @@ def validate_cluster_profile_dict(profile: Any) -> list[str]:
             if section is not None and not isinstance(section, list):
                 errors.append(f"cluster profile '{section_key}' must be a list")
             elif isinstance(section, list):
+                seen_ids: set[str] = set()
                 for index, item in enumerate(section):
                     if not isinstance(item, dict):
                         errors.append(f"cluster profile '{section_key}[{index}]' must be an object")
                         continue
-                    if not _is_nonempty_str(item.get("id")):
+                    if not _is_nonempty_str(item.get("id")) or not _SAFE_PROFILE_ID_RE.fullmatch(str(item.get("id"))):
                         errors.append(f"cluster profile '{section_key}[{index}]' needs a non-empty id")
+                    elif item["id"] in seen_ids:
+                        errors.append(f"cluster profile '{section_key}' has duplicate id '{item['id']}'")
+                    seen_ids.add(str(item.get("id")))
                     if section_key == "storage" and not _is_nonempty_str(item.get("label")):
                         errors.append(f"cluster profile 'storage[{index}]' needs a non-empty label")
+                    if section_key == "storage" and item.get("kind") not in {None, "home", "scratch", "project", "custom", "node-local"}:
+                        errors.append(f"cluster profile 'storage[{index}]' has an unsupported kind")
+                    if section_key == "storage" and item.get("access_context") not in {None, "login-node", "shared", "compute-node", "unknown"}:
+                        errors.append(f"cluster profile 'storage[{index}]' has an unsupported access_context")
+                    if section_key == "quota_sources" and item.get("scope") not in {None, "user", "group", "project", "unknown"}:
+                        errors.append(f"cluster profile 'quota_sources[{index}]' has an unsupported scope")
+                if section_key == "storage":
+                    source_ids = {str(item.get("id")) for item in (profile.get("quota_sources") or []) if isinstance(item, dict)}
+                    for index, item in enumerate(section):
+                        if isinstance(item, dict) and item.get("quota_source_id") and item["quota_source_id"] not in source_ids:
+                            errors.append(f"cluster profile 'storage[{index}]' references an unknown quota source")
 
     for section_key in ("paths", "commands"):
         section = profile.get(section_key)
@@ -276,6 +292,10 @@ def validate_cluster_profile_dict(profile: Any) -> list[str]:
                         f"cluster profile command '{key}' uses unknown placeholder "
                         f"{{{placeholder}}}"
                     )
+            if any(ord(character) < 32 and character not in "\t" for character in value):
+                errors.append(f"cluster profile command '{key}' contains control characters")
+            if "\n" in value or "\r" in value:
+                errors.append(f"cluster profile command '{key}' must be single-line")
     return errors
 
 
