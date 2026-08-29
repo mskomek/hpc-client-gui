@@ -458,6 +458,9 @@ def test_successful_install_updates_state_and_emits_signal(qapp, frozen_thread_p
     ), mock.patch(
         "hpc_gui.plugins.state.read_active_versions", return_value={}
     ), mock.patch(
+        "hpc_gui.ui.dialogs.plugin_manager_dialog.read_active_versions",
+        return_value={},
+    ), mock.patch(
         "hpc_gui.ui.dialogs.plugin_manager_dialog.load_installed_plugins"
     ) as loader, mock.patch(
         "hpc_gui.ui.dialogs.plugin_manager_dialog.install_plugin_from_registry",
