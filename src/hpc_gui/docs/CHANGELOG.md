@@ -8,6 +8,7 @@ Provider persistence, safe quota lifecycle foundations, and the coordinated
 release contract are aligned for the next application release.
 
 - Release packaging and repository safeguards are verified for v1.5.5.
+- Unsigned publication now proceeds only after the final release gate succeeds.
 
 ## v1.5.4
 
