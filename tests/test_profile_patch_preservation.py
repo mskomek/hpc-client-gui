@@ -149,6 +149,28 @@ class ConnectionDialogPreservationTests(unittest.TestCase):
         assert collected is not None
         self.assertEqual(collected["system_template_source"]["plugin_id"], "org.hpcclient.truba")
 
+    def test_saved_provider_edits_preserve_all_quota_sources(self) -> None:
+        profile = _existing_profile()
+        profile["provider_template"] = {
+            "schema_version": 2,
+            "storage": [{"id": "home", "label": "Home", "path_template": "/home/{user}"}],
+            "quota_sources": [
+                {"id": "home", "enabled": True, "consent": True, "backend_id": "", "command_template": "", "scope": "user"},
+                {"id": "project", "enabled": False, "command_template": "keep", "scope": "project"},
+            ],
+        }
+        dialog = ConnectionDialog(initial_profile=profile)
+        try:
+            dialog.storage_rows[0]["path_template"] = "/changed/{user}"
+            collected = dialog._collect_profile()
+        finally:
+            dialog.deleteLater()
+        assert collected is not None
+        sources = collected["provider_template"]["quota_sources"]
+        self.assertEqual([source["id"] for source in sources], ["home", "project"])
+        self.assertEqual(sources[1]["command_template"], "keep")
+        self.assertEqual(collected["provider_template"]["storage"][0]["path_template"], "/changed/{user}")
+
     def test_legacy_new_profile_has_blank_local_start(self) -> None:
         collected = self._dialog_collect({"name": "legacy", "host": "h"})
         assert collected is not None

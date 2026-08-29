@@ -64,7 +64,6 @@ def _assemble_existing() -> int:
         source = FRAME_DIR / f"real-{name}.png"
         if not source.exists():
             raise RuntimeError(f"missing real capture frame: {source}")
-        image = Image.open(source).convert("RGB")
         frames.append(_caption(source, title, subtitle))
     durations = [4000, 4000, 5000, 4500, 4500, 4500, 4500, 4500, 4500]
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
