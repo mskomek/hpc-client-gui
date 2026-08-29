@@ -709,6 +709,7 @@
     "storage_source_url_invalid": "Policy source URL must use HTTPS.",
     "quota_settings": "Optional quota monitoring",
     "quota_enable": "Enable local quota monitoring",
+    "quota_consent": "I consent to quota queries for this source",
     "quota_backend": "Reviewed backend ID",
     "quota_command": "Command template",
     "quota_command_placeholder": "Leave blank if your site does not provide this",
