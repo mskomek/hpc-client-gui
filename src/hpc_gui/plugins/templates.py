@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 from hpc_gui import __version__
 from hpc_gui.plugins.loader import load_installed_plugins
@@ -17,6 +18,7 @@ from hpc_gui.plugins.loader import load_installed_plugins
 class PluginSystemTemplate:
     settings: dict[str, str]
     provenance: dict[str, str] = field(default_factory=dict)
+    structured: dict[str, Any] = field(default_factory=dict)
 
 
 def installed_cluster_template_groups(
@@ -41,6 +43,15 @@ def installed_cluster_template_groups(
                         "plugin_id": installed.manifest.id,
                         "plugin_version": installed.manifest.version,
                         "profile_id": profile.profile_id,
+                    },
+                    structured={
+                        "schema_version": profile.schema_version,
+                        "metadata": dict(profile.metadata),
+                        "site": dict(profile.site),
+                        "scheduler_hints": dict(profile.scheduler_hints),
+                        "software": dict(profile.software),
+                        "storage": [dict(item) for item in profile.storage],
+                        "quota_sources": [dict(item) for item in profile.quota_sources],
                     },
                 )
             )
