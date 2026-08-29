@@ -25,6 +25,10 @@ venv/
 
 # Logs
 *.log
+.coverage
+.pytest_cache/
+.ruff_cache/
+.tmp-*/
 
 # Runtime state (app)
 .truba_slurm_gui/

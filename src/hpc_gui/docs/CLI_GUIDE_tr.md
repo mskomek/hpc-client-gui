@@ -87,7 +87,7 @@ hpc-client-gyi --format json commands
 Windows'ta paketlenmiş EXE ile yardım doğrylaması:
 
 ```cmd
-set "EXE=D:\Projeler\tryba-client-gyi_windows_onedir\hpc-client-gui.exe"
+set "EXE=D:\Projeler\hpc-client-gui_windows_onedir\hpc-client-gui.exe"
 "%EXE%" --help
 "%EXE%" --format json commands
 "%EXE%" files ypload --help
