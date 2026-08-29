@@ -71,18 +71,28 @@ tools/ai/deepseek-models.local.psd1
 /rules.md
 /AGENTS.md
 /CLAUDE.md
+/uv.lock
+**/AGENTS.md
+**/CLAUDE.md
+**/rules.md
+/.agents/
+/.agent-runs/
+/.claude/
 /tools/
 /devtools/*
-!/devtools/performance_probe.py
+/devtools/
+/MAIN_SYNC_PROTOCOL.md
 /docs/DEEPSEEK_*
 /docs/OPENCODE_*
 /docs/PUBLICATION_KIT.md
 /docs/REPOSITORY_WAVE53_AUDIT.md
 /docs/TERMINAL_WAVE*
 /docs/WAVE_PLAN.md
+/docs/update-waves/
 coverage.xml
 .ci-tmp-smoke/
 coverage.json
 
 # Wheel build output
 /build/lib/
+/waves/
