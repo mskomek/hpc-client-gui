@@ -111,6 +111,16 @@ class ClusterProfileDefinition:
                 settings[key] = value
         return settings
 
+    def visible_storage_areas(self) -> tuple[Mapping[str, Any], ...]:
+        """Return configured storage rows suitable for a path card."""
+        visible: list[Mapping[str, Any]] = []
+        for area in self.storage:
+            path = str(area.get("path_template") or "").strip()
+            if not path or area.get("enabled") is False:
+                continue
+            visible.append(area)
+        return tuple(visible)
+
 
 def build_cluster_profile(raw: Mapping[str, Any]) -> ClusterProfileDefinition:
     """Build a validated profile without discarding v2 structured sections."""
