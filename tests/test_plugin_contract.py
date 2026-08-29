@@ -138,6 +138,24 @@ def test_truba_plugin_installs_and_profile_loads(registry, local_fetcher, tmp_pa
     assert profiles[0].scheduler == "slurm"
 
 
+def test_truba_v2_plugin_installs_and_retains_structured_sections(
+    registry, local_fetcher, tmp_path: Path
+):
+    entry = find_registry_entry(
+        registry, "org.hpcclient.truba", version="1.1.0", app_version="1.5.0"
+    )
+    result = install_plugin_from_registry(
+        entry, root=tmp_path, app_version="1.5.0", fetcher=local_fetcher
+    )
+    assert result.activated
+
+    loaded = load_installed_plugins(root=tmp_path, app_version="1.5.0")
+    profile = loaded.plugins[0].cluster_profiles[0]
+    assert profile.schema_version == 2
+    assert {item["id"] for item in profile.storage} == {"home", "scratch"}
+    assert profile.quota_sources[0]["enabled"] is False
+
+
 def test_fluent_latest_compatible_is_0_2_0_and_loads(registry, local_fetcher, tmp_path: Path):
     entry = find_registry_entry(
         registry, "org.hpcclient.fluent", app_version=CONTRACT_APP_VERSION
