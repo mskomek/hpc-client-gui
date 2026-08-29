@@ -111,6 +111,23 @@ def _resolve_from_dir(
         value = value.replace("%x", str(job_name))
     return posixpath.normpath(value if value.startswith("/") else posixpath.join(directory, value))
 
+
+def storage_area_for_path(path: str, roots: dict[str, str]) -> Optional[str]:
+    """Return the most specific known storage root containing ``path``."""
+    candidate = posixpath.normpath(path)
+    matches = []
+    for name, root in roots.items():
+        root = str(root or "").strip()
+        if not root.startswith("/"):
+            continue
+        root = posixpath.normpath(root)
+        try:
+            if posixpath.commonpath((candidate, root)) == root:
+                matches.append((len(root), name))
+        except ValueError:
+            continue
+    return max(matches)[1] if matches else None
+
 def resolve_path(script_remote_path: str, value: str, job_id: Optional[str] = None, job_name: Optional[str] = None) -> str:
     # Replace common placeholders if possible
     if job_id:

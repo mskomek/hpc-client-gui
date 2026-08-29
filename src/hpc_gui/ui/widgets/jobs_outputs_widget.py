@@ -35,6 +35,7 @@ from hpc_gui.services.slurm_models import parse_scontrol
 from hpc_gui.services.slurm_script_parser import (
     parse_job_paths,
     parse_job_name,
+    storage_area_for_path,
 )
 from hpc_gui.config.system_profile import format_remote_path, normalize_system_settings
 from hpc_gui.ui.async_call import AsyncCall
@@ -1141,6 +1142,22 @@ class JobsOutputsWidget(QWidget):
                 self.active_err = stderr
                 self.path_err.setText(stderr)
 
+    def _show_workdir(self, path: str) -> None:
+        cfg = (self.session or {}).get("cfg")
+        system = normalize_system_settings(getattr(cfg, "system_settings", None))
+        user = getattr(cfg, "username", "")
+        area = storage_area_for_path(
+            path,
+            {
+                "home": format_remote_path(system["home_dir"], user),
+                "scratch": format_remote_path(system["scratch_dir"], user),
+            },
+        )
+        suffix = f" ({area})" if area else ""
+        self.meta_job_workdir.setText(
+            f"<b>{t('jobs_outputs.workdir')}:</b> {path}{suffix}"
+        )
+
     def show_job_details(self):
         if not self.session or not self.session.get("slurm"):
             return
@@ -1158,9 +1175,7 @@ class JobsOutputsWidget(QWidget):
             self._detail_script_path = detail.script_path
             self._detail_scheduler_paths = (detail.stdout_path, detail.stderr_path)
             if detail.workdir:
-                self.meta_job_workdir.setText(
-                    f"<b>{t('jobs_outputs.workdir')}:</b> {detail.workdir}"
-                )
+                self._show_workdir(detail.workdir)
             if detail.stdout_path:
                 self.active_out = detail.stdout_path
                 self.path_out.setText(detail.stdout_path)
@@ -1516,9 +1531,7 @@ class JobsOutputsWidget(QWidget):
         jobid = self.cancel_id.text().strip() or None
         paths = parse_job_paths(script_text, script_path, jobid, job_name)
         out_path, err_path = paths.stdout, paths.stderr
-        self.meta_job_workdir.setText(
-            f"<b>{t('jobs_outputs.workdir')}:</b> {paths.workdir}"
-        )
+        self._show_workdir(paths.workdir)
 
         if follow_mode == SBATCH_FOLLOW_MODE_NEW_WINDOW_COMBINED:
             self.open_output_pair_window(out_path, err_path)
