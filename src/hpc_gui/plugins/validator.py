@@ -12,6 +12,7 @@ from typing import Any
 
 from hpc_gui.plugins.compatibility import validate_requires_app
 from hpc_gui.plugins.models import (
+    CAPABILITY_LINTER_TOOL,
     KNOWN_CAPABILITIES,
     KNOWN_FILE_ROLES,
     PLUGIN_API_VERSION,
@@ -36,6 +37,9 @@ MANIFEST_REQUIRED_KEYS = (
 )
 
 CLUSTER_PROFILE_REQUIRED_KEYS = ("schema_version", "profile_id", "name", "scheduler")
+V2_PROFILE_SECTIONS = frozenset(
+    {"description", "metadata", "paths", "commands", "site", "scheduler_hints", "software", "storage", "quota_sources"}
+)
 
 KNOWN_SCHEDULERS = frozenset({"slurm"})
 
@@ -107,6 +111,13 @@ def validate_manifest_dict(manifest: Any) -> list[str]:
         for capability in capabilities:
             if capability not in KNOWN_CAPABILITIES:
                 errors.append(f"unsupported plugin capability: {capability!r}")
+    if isinstance(capabilities, list) and plugin_api == 1 and CAPABILITY_LINTER_TOOL in capabilities:
+        errors.append("manifest capability 'linter-tool' requires plugin_api 2")
+    if plugin_api == 2 and (
+        not isinstance(capabilities, list)
+        or CAPABILITY_LINTER_TOOL not in capabilities
+    ):
+        errors.append("plugin_api 2 manifests require the 'linter-tool' capability")
 
     if not isinstance(manifest["entrypoints"], dict):
         errors.append("manifest entrypoints must be a JSON object")
@@ -135,6 +146,11 @@ def validate_manifest_dict(manifest: Any) -> list[str]:
                 errors.append(
                     f"entrypoint '{V2_LINTER_ENTRYPOINT_KEY}' does not match any "
                     "declared manifest file"
+                )
+            if not linter_entry.endswith("/__init__.py"):
+                errors.append(
+                    f"manifest entrypoint '{V2_LINTER_ENTRYPOINT_KEY}' must point "
+                    "to a package __init__.py"
                 )
 
     files = manifest["files"]
@@ -182,6 +198,15 @@ def validate_manifest_dict(manifest: Any) -> list[str]:
                 f"manifest file '{path}' uses role '{V2_LINTER_ENGINE_ROLE}' which "
                 "requires plugin_api 2 and a .py extension"
             )
+        if role in {V2_LINTER_ENGINE_ROLE, V2_LINTER_DATA_ROLE} and plugin_api != 2:
+            errors.append(
+                f"manifest file '{path}' uses v2 role '{role}' but plugin_api is not 2"
+            )
+        if role == V2_LINTER_DATA_ROLE and suffix not in {".json", ".md", ".txt"}:
+            errors.append(
+                f"manifest file '{path}' uses role '{V2_LINTER_DATA_ROLE}' with "
+                f"unsupported extension '{suffix}'"
+            )
     return errors
 
 
@@ -195,14 +220,35 @@ def validate_cluster_profile_dict(profile: Any) -> list[str]:
             errors.append(f"cluster profile is missing required key '{key}'")
     if errors:
         return errors
-    if profile["schema_version"] != 1:
-        errors.append("cluster profile schema_version must be 1")
+    if profile["schema_version"] not in (1, 2):
+        errors.append("cluster profile schema_version must be 1 or 2")
     if not _is_nonempty_str(profile["profile_id"]):
         errors.append("cluster profile 'profile_id' must be a non-empty string")
     if not _is_nonempty_str(profile["name"]):
         errors.append("cluster profile 'name' must be a non-empty string")
     if profile["scheduler"] not in KNOWN_SCHEDULERS:
         errors.append(f"unsupported scheduler: {profile['scheduler']!r}")
+
+    if profile["schema_version"] == 2:
+        unknown = set(profile) - set(CLUSTER_PROFILE_REQUIRED_KEYS) - V2_PROFILE_SECTIONS
+        errors.extend(f"cluster profile has unknown key '{key}'" for key in sorted(unknown))
+        for section_key in V2_PROFILE_SECTIONS - {"description", "paths", "commands", "storage", "quota_sources"}:
+            section = profile.get(section_key)
+            if section is not None and not isinstance(section, dict):
+                errors.append(f"cluster profile '{section_key}' must be an object")
+        for section_key in ("storage", "quota_sources"):
+            section = profile.get(section_key)
+            if section is not None and not isinstance(section, list):
+                errors.append(f"cluster profile '{section_key}' must be a list")
+            elif isinstance(section, list):
+                for index, item in enumerate(section):
+                    if not isinstance(item, dict):
+                        errors.append(f"cluster profile '{section_key}[{index}]' must be an object")
+                        continue
+                    if not _is_nonempty_str(item.get("id")):
+                        errors.append(f"cluster profile '{section_key}[{index}]' needs a non-empty id")
+                    if section_key == "storage" and not _is_nonempty_str(item.get("label")):
+                        errors.append(f"cluster profile 'storage[{index}]' needs a non-empty label")
 
     for section_key in ("paths", "commands"):
         section = profile.get(section_key)

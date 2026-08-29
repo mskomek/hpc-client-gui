@@ -390,7 +390,15 @@ def test_dialog_opens_offline_without_cache(qapp):
             dialog.deleteLater()
 
 
-def test_mocked_registry_populates_discover(qapp):
+def test_mocked_registry_populates_discover(qapp, monkeypatch):
+    monkeypatch.setattr(
+        "hpc_gui.ui.dialogs.plugin_manager_dialog.read_active_versions",
+        lambda: {},
+    )
+    monkeypatch.setattr(
+        "hpc_gui.ui.dialogs.plugin_manager_dialog.read_disabled_ids",
+        lambda: set(),
+    )
     dialog = PluginManagerDialog(fetcher=lambda url, limit: (_ for _ in ()).throw(OSError()))
     try:
         apply_registry(dialog)
@@ -450,6 +458,9 @@ def test_successful_install_updates_state_and_emits_signal(qapp, frozen_thread_p
     ), mock.patch(
         "hpc_gui.plugins.state.read_active_versions", return_value={}
     ), mock.patch(
+        "hpc_gui.ui.dialogs.plugin_manager_dialog.read_active_versions",
+        return_value={},
+    ), mock.patch(
         "hpc_gui.ui.dialogs.plugin_manager_dialog.load_installed_plugins"
     ) as loader, mock.patch(
         "hpc_gui.ui.dialogs.plugin_manager_dialog.install_plugin_from_registry",
@@ -488,7 +499,15 @@ def test_successful_install_updates_state_and_emits_signal(qapp, frozen_thread_p
         assert dialog._install_worker is None
 
 
-def test_failed_install_restores_state_and_shows_error(qapp, frozen_thread_pool):
+def test_failed_install_restores_state_and_shows_error(qapp, frozen_thread_pool, monkeypatch):
+    monkeypatch.setattr(
+        "hpc_gui.ui.dialogs.plugin_manager_dialog.read_active_versions",
+        lambda: {},
+    )
+    monkeypatch.setattr(
+        "hpc_gui.ui.dialogs.plugin_manager_dialog.read_disabled_ids",
+        lambda: set(),
+    )
     dialog = PluginManagerDialog(fetcher=registry_fetcher())
     entry = VALID_REGISTRY["plugins"][0]
     shown = []
