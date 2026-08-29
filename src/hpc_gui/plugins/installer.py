@@ -356,7 +356,9 @@ def install_plugin_from_registry(
 
         # Steps 9-10: record state and activate only after full success.
         previous_active = read_active_versions(root).get(plugin_id)
-        record_installed_version(plugin_id, version, root=root, activate=True)
+        record_installed_version(
+            plugin_id, version, root=root, activate=True, manifest_sha256=expected_manifest_sha
+        )
 
         # Post-activation runtime validation with automatic rollback: the
         # active pointer returns to the previous version if anything fails.

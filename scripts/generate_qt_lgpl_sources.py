@@ -26,7 +26,7 @@ def read_versions(path: Path) -> dict[str, str]:
 
 
 def verify_url(url: str) -> None:
-    request = Request(url, method="GET")
+    request = Request(url, method="GET", headers={"User-Agent": "hpc-client-gui-release/1"})
     try:
         with urlopen(request, timeout=20) as response:
             response.read(1)

@@ -64,6 +64,23 @@ gösterir ve uygulama normal çalışmaya devam eder.
 - Eklentiler kayıtlı bağlantı profillerinizi sessizce değiştirmez: kayıtlı
   profiller kendi kopyalanmış ayar anlık görüntülerini korur.
 
+## Kurulu sürümler, geri alma ve yerel bütünlük
+
+*Kurulu* sekmesi gerçekten etkin olan sürümü gösterir ve kurulu tüm
+sürümleri sıralar (1.10, 1.9'dan daha yenidir). Bir sürüm seçmek, açık
+onaydan sonra daha yeni sürüm için **etkinleştirmeyi**, eski sürüm için
+**geri almayı** sunar. Geri alma kurulu hiçbir sürümü silmez,
+etkin/devre dışı tercihini sürümden bağımsız tutar ve doğrulama başarısız
+olursa önceki etkin sürümü otomatik korur.
+
+Her yükleme ve etkinleştirmede uygulama kurulu dosyaları yerel olarak yeniden
+doğrular: manifest kurulumda kaydedilen hash ile eşleşmeli, bildirilen tüm
+dosyaların boyutu ve SHA-256 değeri kontrol edilmeli, beklenmeyen ek dosyalar
+reddedilmelidir. Denetimi geçemeyen eklenti yeniden kurulum önerisiyle
+atlanır — asla silinmez — sağlam eklentiler yüklenmeye devam eder. Bu kayıt
+tutmadan önce yapılmış kurulumlar bir kez geçirilir; tek seferlik bu geçiş
+kurulum ile geçiş arasında oluşan değişiklikleri tespit edemez.
+
 ## Aktarımlar ve paralellik (ilgili ayar)
 
 Bağlantı penceresindeki *Gelişmiş → En fazla eş zamanlı aktarım* ayarı kaç

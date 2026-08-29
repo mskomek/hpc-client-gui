@@ -77,8 +77,7 @@ def _fake_home() -> Path:
     embeds the real account name, and the file manager renders its local path
     verbatim into the screenshot.
     """
-    root = Path(tempfile.gettempdir()).drive or REPO_ROOT.drive or ""
-    home = Path(f"{root}/wiki-capture/{USER}")
+    home = Path(tempfile.gettempdir()) / "hpc-client-gui-wiki-capture" / USER
     shutil.rmtree(home.parent, ignore_errors=True)
     home.mkdir(parents=True)
 

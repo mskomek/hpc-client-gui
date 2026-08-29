@@ -86,13 +86,21 @@ def evaluate_gate(macos_mode: str, results: dict[str, str]) -> list[str]:
 
 
 def _collect_results() -> dict[str, str]:
-    prefix = "GATE_RESULT_"
+    env_prefix = "GATE_RESULT_"
     results: dict[str, str] = {}
     for name, value in os.environ.items():
-        if name.startswith(prefix):
+        if name.startswith(env_prefix):
             # Job names only ever contain hyphens (no underscores), so the
             # workflow can encode them losslessly with underscores.
-            job = name[len(prefix):].strip().lower().replace("_", "-")
+            encoded = name[len(env_prefix):].strip().lower()
+            # GitHub environment names cannot preserve hyphens, while the
+            # job id intentionally uses x86_64. Decode that token before the
+            # remaining separators are normalized.
+            if encoded.endswith("_x86_64"):
+                job_prefix = encoded[: -len("_x86_64")].replace("_", "-")
+                job = f"{job_prefix}-x86_64"
+            else:
+                job = encoded.replace("_", "-")
             results[job] = value.strip().lower()
     return results
 

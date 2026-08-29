@@ -42,6 +42,7 @@ PYTEST_BASE = (
     "-rf",
     "-m",
     "not packaging",
+    "tests",
 )
 
 # Wire-heavy suites spawn real socket/paramiko worker threads that outlive
@@ -54,12 +55,13 @@ ISOLATED_WIRE_FILES = (
     "tests/test_download_cancel_wire.py",
 )
 
+COVERAGE_FAIL_UNDER = 65
+
 COVERAGE_ARGS = (
     "--cov=hpc_gui",
     "--cov-report=term",
     "--cov-report=json:coverage.json",
     "--cov-report=xml:coverage.xml",
-    "--cov-fail-under=65",
 )
 
 COVERAGE_APPEND_ARGS = (
@@ -68,7 +70,6 @@ COVERAGE_APPEND_ARGS = (
     "--cov-report=term",
     "--cov-report=json:coverage.json",
     "--cov-report=xml:coverage.xml",
-    "--cov-fail-under=65",
 )
 
 
@@ -80,11 +81,13 @@ def build_commands(*, coverage: bool) -> list[tuple[str, ...]]:
         for argument in ("--ignore", path)
     )
     commands.append(
-        PYTEST_BASE + ignores + ((COVERAGE_ARGS,) if coverage else ())
+        PYTEST_BASE + ignores + (COVERAGE_ARGS if coverage else ())
     )
-    commands.append(
-        PYTEST_BASE + ISOLATED_WIRE_FILES + ((COVERAGE_APPEND_ARGS,) if coverage else ())
-    )
+    for index, path in enumerate(ISOLATED_WIRE_FILES):
+        coverage_args = COVERAGE_APPEND_ARGS if coverage else ()
+        if coverage and index == len(ISOLATED_WIRE_FILES) - 1:
+            coverage_args += (f"--cov-fail-under={COVERAGE_FAIL_UNDER}",)
+        commands.append(PYTEST_BASE[:-1] + (path,) + coverage_args)
     return commands
 
 

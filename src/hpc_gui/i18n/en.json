@@ -130,6 +130,14 @@
     "security_signed_mac": "This macOS build was Developer ID signed, notarized, stapled, and passed a Gatekeeper assessment (see RELEASE_SECURITY.json).",
     "security_unknown_mac": "Note: this release does not publish signing status metadata (RELEASE_SECURITY.json is missing), so its macOS build must be treated as unsigned."
   },
+  "splash": {
+    "title": "HPC WORKSPACE",
+    "subtitle": "SSH  •  Slurm  •  X11 Workflow Manager",
+    "status_starting": "Starting application...",
+    "status_preparing": "Preparing workspace...",
+    "status_checking": "Checking startup environment...",
+    "status_loading": "Loading interface..."
+  },
   "common": {
     "ok": "OK",
     "cancel": "Cancel",
@@ -171,6 +179,7 @@
     "open_with_program_filter": "Programs (*.exe);;All files (*.*)",
     "open_with_save_title": "Save file association?",
     "open_with_save_prompt": "Use this program for {extension} files next time?",
+    "plugins": "Plugins",
     "ansys_lint": "ANSYS Journal Lint",
     "no_supported_remote_lint_files": "No supported lint files were found in this remote folder.",
     "send_to_plugin": "Send to plugin"

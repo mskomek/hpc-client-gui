@@ -6,18 +6,33 @@ import argparse
 import json
 import os
 from pathlib import Path
+from typing import Mapping
+
+from packaging.markers import default_environment
+from packaging.requirements import Requirement
 
 
-def read_lock(path: Path) -> list[tuple[str, str]]:
+def read_lock(path: Path, environment: Mapping[str, str] | None = None) -> list[tuple[str, str]]:
+    marker_environment = default_environment()
+    if environment is not None:
+        marker_environment.update(environment)
     components = []
     for line in path.read_text(encoding="utf-8").splitlines():
         line = line.strip()
         if not line or line.startswith("#"):
             continue
-        name, separator, version = line.partition("==")
-        if not separator or not name or not version:
+        try:
+            requirement = Requirement(line)
+        except ValueError as exc:
+            raise ValueError(f"Unsupported or unpinned lock entry: {line}") from exc
+        if not requirement.specifier or len(requirement.specifier) != 1:
             raise ValueError(f"Unsupported or unpinned lock entry: {line}")
-        components.append((name, version))
+        specifier = next(iter(requirement.specifier))
+        if specifier.operator != "==":
+            raise ValueError(f"Unsupported or unpinned lock entry: {line}")
+        if requirement.marker is not None and not requirement.marker.evaluate(marker_environment):
+            continue
+        components.append((requirement.name, specifier.version))
     return sorted(components, key=lambda item: item[0].lower())
 
 

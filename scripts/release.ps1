@@ -8,8 +8,11 @@ $Root = Split-Path -Parent $PSScriptRoot
 Set-Location $Root
 
 python scripts/generate_third_party_versions.py --version $Version
+if ($LASTEXITCODE -ne 0) { throw "Third-party version manifest generation failed." }
 python scripts/generate_sbom.py --version $Version
+if ($LASTEXITCODE -ne 0) { throw "SBOM generation failed." }
 python scripts/generate_qt_lgpl_sources.py
+if ($LASTEXITCODE -ne 0) { throw "Qt LGPL source manifest generation failed." }
 
 & (Join-Path $PSScriptRoot 'check_release_ci_workflow.ps1')
 if (-not $?) { throw 'Release CI workflow gate failed.' }

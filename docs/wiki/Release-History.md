@@ -8,7 +8,7 @@ The changelog is canonical and lives in the repository:
 
 Published artifacts and their release notes are on the
 [releases page](https://github.com/mskomek/hpc-client-gui/releases). The
-current version is **1.5.4**.
+current version is **1.5.5**.
 
 This page deliberately does not restate the changelog. A second copy of release
 history drifts from the first, and the copy people happen to read is then

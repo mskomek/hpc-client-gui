@@ -60,7 +60,11 @@ def test_inputs_define_explicit_signed_default_and_opt_in_publication():
 
 def test_dry_run_can_never_publish():
     publish = _job_block("publish-release")
-    assert re.search(r"^    if: \$\{\{ inputs\.publish == true \}\}", publish, re.MULTILINE)
+    assert re.search(
+        r"^    if: \$\{\{ inputs\.publish == true \|\| github\.event\.inputs\.publish == 'true' \}\}",
+        publish,
+        re.MULTILINE,
+    )
     # Publication is gated behind the final gate job only.
     gate_needs = _needs(_job_block("release-gate"))
     for required in (
@@ -190,10 +194,10 @@ def test_release_preflight_shares_the_ci_test_suite():
     linux = _job_block("build-linux")
     windows = _job_block("build-windows")
     for block in (linux, windows):
-        assert "release_test_suite.py" in block
+        assert "python scripts/ci.py release" in block
         assert "unittest discover" not in block
     ci = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
-    assert "release_test_suite.py --coverage" in ci
+    assert "python scripts/ci.py pre-push" in ci
 
 
 def test_release_notes_are_generated_from_the_changelog():

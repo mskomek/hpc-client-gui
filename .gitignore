@@ -64,12 +64,13 @@ tools/ai/deepseek-models.local.psd1
 # Release packages are GitHub Release assets, never source-controlled.
 /build/hpc-client-cli/
 
-# Internal-only paths kept local; never published on main
-# (see local MAIN_SYNC_PROTOCOL.md copy on the development line).
+# Internal-only paths kept local; never published on main.
+# The authoritative internal rules (rules.md) and AI agent guidance files
+# (AGENTS.md, CLAUDE.md) live only on the development line and are
+# intentionally not part of this public repository.
+/rules.md
 /AGENTS.md
 /CLAUDE.md
-/rules.md
-/MAIN_SYNC_PROTOCOL.md
 /tools/
 /devtools/*
 !/devtools/performance_probe.py
@@ -80,6 +81,8 @@ tools/ai/deepseek-models.local.psd1
 /docs/TERMINAL_WAVE*
 /docs/WAVE_PLAN.md
 coverage.xml
+.ci-tmp-smoke/
+coverage.json
 
 # Wheel build output
 /build/lib/

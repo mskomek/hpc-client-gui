@@ -22,7 +22,7 @@ from hpc_gui.plugins.storage import (
 
 logger = logging.getLogger(__name__)
 
-INSTALLED_SCHEMA_VERSION = 1
+INSTALLED_SCHEMA_VERSION = 2
 
 
 def _atomic_write_json(path: Path, payload: dict) -> None:
@@ -52,9 +52,21 @@ def read_installed_state(root: str | Path | None = None) -> dict[str, dict]:
     result: dict[str, dict] = {}
     for plugin_id, record in payload["plugins"].items():
         if isinstance(record, dict) and isinstance(record.get("versions"), list):
+            hashes = record.get("manifest_hashes")
+            migrated = record.get("migrated")
             result[str(plugin_id)] = {
                 "versions": [str(v) for v in record["versions"] if isinstance(v, str)],
                 "installed_at": str(record.get("installed_at", "")),
+                "manifest_hashes": (
+                    {str(k): str(v) for k, v in hashes.items() if isinstance(v, str)}
+                    if isinstance(hashes, dict)
+                    else {}
+                ),
+                "migrated": (
+                    [str(v) for v in migrated if isinstance(v, str)]
+                    if isinstance(migrated, list)
+                    else []
+                ),
             }
     return result
 
@@ -73,11 +85,14 @@ def record_installed_version(
     root: str | Path | None = None,
     activate: bool = True,
     now: Callable[[], str] | None = None,
+    manifest_sha256: str | None = None,
 ) -> None:
     """Record an installed version in installed.json (and activate it).
 
     Activation happens only after the caller has fully verified the install;
-    failures before this point must leave previous state untouched.
+    failures before this point must leave previous state untouched. The
+    verified manifest SHA-256 is stored as the version's trust anchor for
+    later local integrity re-validation.
     """
     timestamp = (
         now or (lambda: time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()))
@@ -86,14 +101,30 @@ def record_installed_version(
     record = state.setdefault(plugin_id, {"versions": [], "installed_at": timestamp})
     versions = [v for v in record.get("versions", []) if v != version]
     versions.append(version)
-    record["versions"] = sorted(versions)
+    record["versions"] = sorted(versions, key=_version_sort_key)
     record.setdefault("installed_at", timestamp)
+    if manifest_sha256:
+        hashes = record.setdefault("manifest_hashes", {})
+        if isinstance(hashes, dict):
+            hashes[version] = manifest_sha256
+        migrated = record.get("migrated")
+        if isinstance(migrated, list) and version in migrated:
+            migrated.remove(version)
     # Keep insertion order stable for readability.
     write_installed_state(state, root=root)
     if activate:
         active = read_active_versions(root)
         active[plugin_id] = version
         write_active_versions(active, root=root)
+
+
+def _version_sort_key(value: str):
+    from packaging.version import InvalidVersion, Version
+
+    try:
+        return (0, Version(str(value)))
+    except InvalidVersion:
+        return (1, Version("0"))
 
 
 def remove_plugin(plugin_id: str, root: str | Path | None = None) -> list[str]:

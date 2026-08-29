@@ -147,12 +147,7 @@ jobs:
       - name: Compile check
         run: python -m compileall src/hpc_gui
       - name: macOS boundary and release-surface tests
-        run: >
-          python -m pytest tests/test_platform.py tests/test_paths.py
-          tests/test_app_updater.py tests/test_secret_store.py
-          tests/test_macos_product_surface.py tests/test_macos_x11.py
-          tests/test_macos_release.py tests/test_macos_packaging_spec.py
-          tests/test_version_consistency.py -q --tb=short -rf
+        run: python scripts/ci.py macos
       - name: Representative portable contracts
         run: >
           python -m pytest tests/test_optional_ssh_credentials.py

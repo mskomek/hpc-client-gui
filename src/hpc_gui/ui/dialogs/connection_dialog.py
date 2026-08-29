@@ -211,7 +211,8 @@ class ConnectionDialog(QDialog):
         self.btn_storage_remove.clicked.connect(self._remove_storage_area)
         self.quota_enabled = QCheckBox(t("connection.quota_enable"))
         self.quota_consent = QCheckBox(t("connection.quota_consent"))
-        self.quota_backend = QLineEdit()
+        self.quota_backend = QComboBox()
+        self.quota_backend.addItem(t("connection.quota_status_unconfigured"), "")
         self.quota_command = QLineEdit()
         self.quota_scope = QLineEdit()
         self.quota_subject = QLineEdit()
@@ -272,7 +273,7 @@ class ConnectionDialog(QDialog):
         self.quota_enabled.toggled.connect(self.quota_command.setEnabled)
         self.quota_enabled.toggled.connect(self._update_quota_status)
         self.quota_command.textChanged.connect(self._update_quota_status)
-        self.quota_backend.textChanged.connect(self._update_quota_status)
+        self.quota_backend.currentTextChanged.connect(self._update_quota_status)
         self.quota_scope.textChanged.connect(self._update_quota_status)
         self.quota_consent.toggled.connect(self._update_quota_status)
         quota_group.setToolTip(t("connection.quota_disabled_tip"))
@@ -470,7 +471,10 @@ class ConnectionDialog(QDialog):
         source = sources[0] if isinstance(sources, list) and sources and isinstance(sources[0], dict) else {}
         self.quota_enabled.setChecked(source.get("enabled") is True)
         self.quota_consent.setChecked(source.get("consent") is True)
-        self.quota_backend.setText(str(source.get("backend_id") or ""))
+        backend_id = str(source.get("backend_id") or "").strip()
+        if backend_id and self.quota_backend.findData(backend_id) < 0:
+            self.quota_backend.addItem(f"{backend_id} (unsupported)", backend_id)
+        self.quota_backend.setCurrentIndex(max(0, self.quota_backend.findData(backend_id)))
         self.quota_command.setText(str(source.get("command_template") or ""))
         self.quota_scope.setText(str(source.get("scope") or ""))
         self.quota_subject.setText(str(source.get("subject_template") or ""))
@@ -481,7 +485,7 @@ class ConnectionDialog(QDialog):
             {
                 "enabled": self.quota_enabled.isChecked(),
                 "consent": self.quota_consent.isChecked(),
-                "backend_id": self.quota_backend.text().strip(),
+                "backend_id": str(self.quota_backend.currentData() or "").strip(),
                 "command_template": self.quota_command.text().strip(),
                 "scope": self.quota_scope.text().strip(),
             },
@@ -585,8 +589,26 @@ class ConnectionDialog(QDialog):
         }
         self._set_storage_rows(self.storage_rows)
 
-    def _system_form_values(self) -> dict[str, str]:
-        return {
+    def _sync_structured_editor(self) -> None:
+        if not self._provider_template:
+            return
+        self._provider_template["storage"] = [dict(row) for row in self.storage_rows]
+        sources = self._provider_template.get("quota_sources")
+        preserved = [dict(item) for item in sources if isinstance(item, dict)] if isinstance(sources, list) else []
+        source = dict(preserved[0]) if preserved else {"id": "local-quota"}
+        source.update({
+            "enabled": self.quota_enabled.isChecked(),
+            "consent": self.quota_consent.isChecked(),
+            "backend_id": str(self.quota_backend.currentData() or "").strip(),
+            "command_template": self.quota_command.text().strip(),
+            "scope": self.quota_scope.text().strip(),
+            "subject_template": self.quota_subject.text().strip(),
+        })
+        self._provider_template["quota_sources"] = [source, *preserved[1:]]
+
+    def _system_form_values(self) -> dict[str, Any]:
+        self._sync_structured_editor()
+        values: dict[str, Any] = {
             "name": self.system_name.text().strip(),
             "scratch_dir": self.scratch_dir.text().strip(),
             "home_dir": self.home_dir.text().strip(),
@@ -599,6 +621,11 @@ class ConnectionDialog(QDialog):
             "active_job_ids_command": self.active_job_ids_command.text().strip(),
             "job_state_command": self.job_state_command.text().strip(),
         }
+        if self._provider_template is not None:
+            values["provider_template"] = {
+                key: value for key, value in self._provider_template.items()
+            }
+        return values
 
     def _apply_system_template(
         self,
@@ -648,7 +675,9 @@ class ConnectionDialog(QDialog):
             for template in templates:
                 action = submenu.addAction(template["name"])
                 action.triggered.connect(
-                    lambda _checked=False, selected=dict(template): self._apply_system_template(selected)
+                    lambda _checked=False, selected=dict(template): self._apply_system_template(
+                        selected, structured=selected.get("provider_template")
+                    )
                 )
         plugin_groups = installed_cluster_template_groups()
         if plugin_groups:
@@ -792,27 +821,34 @@ class ConnectionDialog(QDialog):
         for secret_key in ("password_dpapi", "password_enc", "password_salt"):
             profile.pop(secret_key, None)
 
-        if self._template_action_taken:
+        # Structured provider data is part of the saved connection state, not
+        # an ephemeral UI action.  Keep every source and update only the source
+        # represented by the current quota editor.
+        if self._provider_template:
+            self._sync_structured_editor()
+            sources = self._provider_template.get("quota_sources")
+            if not isinstance(sources, list):
+                sources = []
+            preserved = [dict(item) for item in sources if isinstance(item, dict)]
+            source = dict(preserved[0]) if preserved else {"id": "local-quota"}
+            source.update({
+                "enabled": self.quota_enabled.isChecked(),
+                "consent": self.quota_consent.isChecked(),
+                "backend_id": str(self.quota_backend.currentData() or "").strip(),
+                "command_template": self.quota_command.text().strip(),
+                "scope": self.quota_scope.text().strip(),
+                "subject_template": self.quota_subject.text().strip(),
+            })
+            self._provider_template["quota_sources"] = [source, *preserved[1:]]
+            profile["provider_template"] = dict(self._provider_template)
+            if self._system_template_source:
+                profile["system_template_source"] = dict(self._system_template_source)
+        elif self._template_action_taken:
             if self._system_template_source:
                 profile["system_template_source"] = dict(self._system_template_source)
             else:
                 profile.pop("system_template_source", None)
-            if self._provider_template:
-                self._provider_template["storage"] = [dict(row) for row in self.storage_rows]
-                sources = self._provider_template.get("quota_sources", [])
-                source = dict(sources[0]) if isinstance(sources, list) and sources and isinstance(sources[0], dict) else {"id": "local-quota"}
-                source.update({
-                    "enabled": self.quota_enabled.isChecked(),
-                    "consent": self.quota_consent.isChecked(),
-                    "backend_id": self.quota_backend.text().strip(),
-                    "command_template": self.quota_command.text().strip(),
-                    "scope": self.quota_scope.text().strip(),
-                    "subject_template": self.quota_subject.text().strip(),
-                })
-                self._provider_template["quota_sources"] = [source]
-                profile["provider_template"] = dict(self._provider_template)
-            else:
-                profile.pop("provider_template", None)
+            profile.pop("provider_template", None)
         elif not is_edit:
             profile.pop("system_template_source", None)
 
