@@ -123,3 +123,6 @@ sürümünüze göre doğrulayın.
 
 Türkçe sürüm bu sayfadır; İngilizcesi için [PLUGINS_en.md](PLUGINS_en.md).
 
+Sağlayıcı yazma rehberi: [Türkçe](../../../docs/ADDING_CLUSTER_PROVIDER_tr.md) ·
+[English](../../../docs/ADDING_CLUSTER_PROVIDER.md).
+
