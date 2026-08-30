@@ -111,9 +111,10 @@ unsaved tab for review, and nothing runs until you explicitly save/submit.
 
 See [PLUGINS_tr.md](PLUGINS_tr.md) for the Turkish version.
 
-For provider authoring, see the repository's
-[English guide](../../../docs/ADDING_CLUSTER_PROVIDER.md) and
-[Turkish guide](../../../docs/ADDING_CLUSTER_PROVIDER_tr.md).
+For provider authoring, use the authoritative
+[English guide in the plugin repository](https://github.com/mskomek/hpc-client-gui-plugins/blob/main/docs/ADDING_CLUSTER_PROVIDER.md).
+The [plugin request form](https://github.com/mskomek/hpc-client-gui-plugins/issues/new?template=plugin-request.yml)
+is available if you want to request a provider without authoring its profile.
 
 ## Linter tools (Plugin API v2)
 
