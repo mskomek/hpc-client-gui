@@ -1,4 +1,8 @@
 import hashlib
+import base64
+import inspect
+import os
+import subprocess
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -8,6 +12,7 @@ from hpc_gui.services import app_updater
 from hpc_gui.services.app_updater import (
     UpdateRelease,
     _download,
+    build_update_script,
     download_and_verify_release,
     launch_update_installer,
     parse_release_security,
@@ -15,6 +20,7 @@ from hpc_gui.services.app_updater import (
 )
 from hpc_gui.services.installation_context import InstallationContext
 from hpc_gui.ui.main_window import MainWindow
+from hpc_gui.ui.splash_screen import UpdateSplash
 
 
 class _Response:
@@ -56,6 +62,29 @@ def test_download_reports_transferred_and_total_bytes(monkeypatch, tmp_path: Pat
     assert progress[-1] == (100, "", 2, 2)
 
 
+def test_download_percentage_is_actual_package_percentage(monkeypatch, tmp_path: Path):
+    monkeypatch.setattr("hpc_gui.services.app_updater._request", lambda *_args, **_kwargs: _Response())
+    progress = []
+
+    _download("https://example.invalid/update.zip", tmp_path / "update.zip", progress_cb=lambda *args: progress.append(args))
+
+    assert progress[0] == (50, "", 1, 2)
+    assert progress[1] == (100, "", 2, 2)
+
+
+def test_unknown_content_length_reports_bytes_without_fake_percentage(monkeypatch, tmp_path: Path):
+    class UnknownLength(_Response):
+        headers = {}
+
+    monkeypatch.setattr("hpc_gui.services.app_updater._request", lambda *_args, **_kwargs: UnknownLength())
+    progress = []
+
+    _download("https://example.invalid/update.zip", tmp_path / "update.zip", progress_cb=lambda *args: progress.append(args))
+
+    assert progress[0] == (0, "", 1, 0)
+    assert progress[-1] == (100, "", 2, 0)
+
+
 def test_update_reuses_verified_download(monkeypatch, tmp_path: Path):
     release = UpdateRelease("1.4.2", "v1.4.2", "update.zip", "zip", "update.zip.sha256", "sha", "page")
     update_dir = tmp_path / "updates" / "v1.4.2"
@@ -89,11 +118,26 @@ def test_closing_update_progress_cancels_active_download():
     assert worker.cancelled and window._update_cancelled and closed
 
 
+def test_manual_update_check_shows_splash_before_worker_starts():
+    source = inspect.getsource(MainWindow).split("def _check_for_updates", 1)[1]
+    source = source.split("def _on_release_checked", 1)[0]
+    assert source.index("_show_update_progress") < source.index("_run_update_job")
+
+
+def test_update_splash_formats_binary_units():
+    assert UpdateSplash._format_bytes(1024) == "1.0 KB"
+    assert UpdateSplash._format_bytes(1024**2) == "1.0 MB"
+    assert UpdateSplash._format_bytes(1024**3) == "1.0 GB"
+
+
 def test_release_assets_are_platform_specific():
     assert release_asset_names("windows_x86_64")[0].endswith(".zip")
     assert release_asset_names("macos_arm64")[0].endswith("_arm64.dmg")
     assert release_asset_names("macos_x86_64")[0].endswith("_x86_64.dmg")
-    assert release_asset_names("linux_x86_64") is None
+    assert release_asset_names("linux_x86_64", "source", "1.5.6") is None
+    assert release_asset_names("linux_x86_64", "linux-appimage", "1.5.6")[0].endswith("x86_64.AppImage")
+    assert release_asset_names("linux_x86_64", "linux-deb", "1.5.6")[0].endswith("_amd64.deb")
+    assert release_asset_names("linux_x86_64", "linux-flatpak", "1.5.6")[0].endswith(".flatpak")
 
 
 def test_unknown_update_platform_is_rejected():
@@ -113,7 +157,7 @@ def test_updater_selects_arch_specific_dmg_per_platform():
     assert release_asset_names("macos_arm64")[0] == "hpc-client-gui_macos_arm64.dmg"
     assert release_asset_names("macos_x86_64")[0] == "hpc-client-gui_macos_x86_64.dmg"
     assert "dmg" not in release_asset_names("windows_x86_64")[0]
-    assert release_asset_names("linux_x86_64") is None
+    assert release_asset_names("linux_x86_64", "source", "1.5.6") is None
 
 
 def test_security_metadata_parsing_matches_modes():
@@ -139,5 +183,36 @@ def test_missing_security_metadata_defaults_to_unknown():
 
 
 def test_unknown_installation_is_manual_only():
-    context = InstallationContext("unknown", "test", None, "", "", "x86_64", "manual", "not identified")
-    assert context.capability == "manual"
+    context = InstallationContext("unknown", "test", None, "", "", "x86_64", "unsupported", "not identified")
+    assert context.capability == "unsupported"
+
+
+def test_windows_installer_script_has_independent_real_progress_and_rollback(tmp_path: Path):
+    script = build_update_script(
+        zip_path=tmp_path / "update.zip",
+        install_dir=tmp_path / "app",
+        current_exe=tmp_path / "app" / "hpc-client-gui.exe",
+        new_version="1.5.6",
+        process_id=42,
+    )
+
+    assert "System.Windows.Forms.Form" in script
+    assert "$extractDone += $read" in script
+    assert "$copyDone += $read" in script
+    assert "[Math]::Max($script:lastProgress" in script
+    assert "Rollback started" in script
+    assert "New process healthy" in script
+    assert "Copy-Item -Path (Join-Path $stagingDir" not in script
+
+    if os.name == "nt":
+        encoded = base64.b64encode(script.encode()).decode()
+        subprocess.run(
+            [
+                "powershell.exe",
+                "-NoProfile",
+                "-Command",
+                "[scriptblock]::Create([Text.Encoding]::UTF8.GetString("
+                f"[Convert]::FromBase64String('{encoded}'))) | Out-Null",
+            ],
+            check=True,
+        )

@@ -70,7 +70,7 @@ class UpdateSplash(QDialog):
     """Splash-sized progress window used while an application update runs."""
 
     WIDTH = StartupSplash.WIDTH
-    HEIGHT = StartupSplash.HEIGHT
+    HEIGHT = 250
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
@@ -112,7 +112,8 @@ class UpdateSplash(QDialog):
         layout.addWidget(self.detail_label)
         self.progress_bar = QProgressBar(self)
         self.progress_bar.setRange(0, 100)
-        self.progress_bar.setTextVisible(False)
+        self.progress_bar.setTextVisible(True)
+        self.progress_bar.setFormat("%p%")
         layout.addWidget(self.progress_bar)
         self.cancel_button = QPushButton(CANCEL_TEXT, self)
         self.cancel_button.clicked.connect(self.reject)
@@ -124,8 +125,10 @@ class UpdateSplash(QDialog):
         self.status_label.setText(message)
         if downloaded and not total:
             self.progress_bar.setRange(0, 0)
+            self.progress_bar.setFormat("")
         else:
             self.progress_bar.setRange(0, 100)
+            self.progress_bar.setFormat("%p%")
             self.progress_bar.setValue(max(0, min(100, int(value))))
         self.detail_label.setText(
             f"{self._format_bytes(downloaded)} / {self._format_bytes(total)}"
@@ -139,4 +142,6 @@ class UpdateSplash(QDialog):
             return f"{size} B"
         if size < 1024 * 1024:
             return f"{size / 1024:.1f} KB"
-        return f"{size / (1024 * 1024):.1f} MB"
+        if size < 1024 * 1024 * 1024:
+            return f"{size / (1024 * 1024):.1f} MB"
+        return f"{size / (1024 * 1024 * 1024):.1f} GB"
