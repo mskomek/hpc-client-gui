@@ -259,6 +259,12 @@ Remote X11 applications can use optional components such as:
 
 These components are only relevant when running graphical remote applications.
 
+Install them from their official pages; the application does not automatically
+download and execute third-party installers. SSH keys are preferred. With Plink
+password authentication, the password is redacted from application logs and
+diagnostics, although the live Windows process command line may remain visible
+to other same-user processes.
+
 ### Linux
 
 Linux X11 forwarding uses the **system OpenSSH client** together with the local Linux graphical environment.
@@ -407,7 +413,7 @@ Do not commit:
 
 Use standard SSH security practices and verify host identity when connecting to a system for the first time.
 
-Downloads can be verified with SHA-256 checksums, `MANIFEST.json`, and signed GitHub attestations — see [docs/VERIFYING_RELEASES.md](docs/VERIFYING_RELEASES.md).
+Manual downloads can be verified with SHA-256 checksums, `MANIFEST.json`, and signed GitHub attestations. Automatic updates additionally require Ed25519-signed metadata verified against an embedded application key — see [docs/VERIFYING_RELEASES.md](docs/VERIFYING_RELEASES.md).
 
 Security vulnerabilities should be reported according to [SECURITY.md](SECURITY.md) rather than posted publicly.
 

@@ -26,6 +26,12 @@ class X11Launch:
     args: List[str]
     backend: str  # ssh | plink
 
+    @property
+    def display_args(self) -> List[str]:
+        from hpc_gui.core.log_redaction import redact_command_args
+
+        return redact_command_args(self.args)
+
 
 def _package_root() -> Path:
     # .../hpc_gui/services/x11_system_ssh.py -> .../hpc_gui

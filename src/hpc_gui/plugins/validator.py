@@ -43,14 +43,23 @@ V2_PROFILE_SECTIONS = frozenset(
 
 KNOWN_SCHEDULERS = frozenset({"slurm"})
 
-# Declarative payloads only (v1); anything runnable is forbidden regardless
-# of role. Plugin API v2 additionally allows hash-verified Python engine
-# files, but only with the dedicated "linter-engine" role.
+_TRUSTED_SLURM_COMMANDS = {
+    "squeue_command": 'squeue -h -u {user} -o "%i|%P|%j|%u|%T|%M|%D|%C|%R"',
+    "sbatch_command": "cd -- {script_dir_q} && sbatch -- {script_name_q}",
+    "scancel_command": "scancel {job_id_q}",
+    "sacct_command": "sacct -u {user} --format=JobID,JobName,State,Elapsed,MaxRSS,AllocTRES",
+    "scontrol_command": "scontrol show job {job_id_q}",
+    "status_command": "lssrv",
+    "active_job_ids_command": 'squeue -h -u {user} -o "%A"',
+    "job_state_command": "sacct -n -X -j {job_id_q} -o State -P",
+}
+
+# Declarative payloads only; anything runnable is forbidden regardless of role.
 ALLOWED_PAYLOAD_SUFFIXES = frozenset({".json", ".md", ".txt", ".tpl"})
-V2_EXTRA_SUFFIXES = frozenset({".py"})
 V2_LINTER_ENGINE_ROLE = "linter-engine"
 V2_LINTER_DATA_ROLE = "linter-data"
 V2_LINTER_ENTRYPOINT_KEY = "linter_engine"
+TRUSTED_DECLARATIVE_ENGINES = frozenset({"declarative-rules-v1"})
 
 # Placeholders the scheduler backend actually interpolates. Unknown forms are
 # rejected so a malformed/malicious template cannot inject format surprises.
@@ -152,6 +161,9 @@ def validate_manifest_dict(manifest: Any) -> list[str]:
                     f"manifest entrypoint '{V2_LINTER_ENTRYPOINT_KEY}' must point "
                     "to a package __init__.py"
                 )
+    engine_id = manifest["entrypoints"].get("engine") if isinstance(manifest["entrypoints"], dict) else None
+    if engine_id is not None and engine_id not in TRUSTED_DECLARATIVE_ENGINES:
+        errors.append(f"unknown declarative engine ID: {engine_id!r}")
 
     files = manifest["files"]
     if not isinstance(files, list) or not files:
@@ -179,24 +191,13 @@ def validate_manifest_dict(manifest: Any) -> list[str]:
         if role not in KNOWN_FILE_ROLES:
             errors.append(f"unsupported manifest file role: {role!r}")
         suffix = PurePosixPath(str(path)).suffix.lower()
-        allowed_suffixes = set(ALLOWED_PAYLOAD_SUFFIXES)
-        if plugin_api == 2:
-            allowed_suffixes |= V2_EXTRA_SUFFIXES
-        if suffix and suffix not in allowed_suffixes:
+        if suffix and suffix not in ALLOWED_PAYLOAD_SUFFIXES:
             errors.append(
                 f"manifest file '{path}' has a forbidden executable-looking extension '{suffix}'"
             )
-        # v2 pairing rules: .py files must be linter-engine payloads, and the
-        # linter roles are only meaningful under plugin_api 2.
-        if suffix == ".py" and (plugin_api != 2 or role != V2_LINTER_ENGINE_ROLE):
+        if role == V2_LINTER_ENGINE_ROLE:
             errors.append(
-                f"manifest file '{path}' is Python; only plugin_api 2 manifests may "
-                f"include .py files and they must use role '{V2_LINTER_ENGINE_ROLE}'"
-            )
-        if role == V2_LINTER_ENGINE_ROLE and (plugin_api != 2 or suffix != ".py"):
-            errors.append(
-                f"manifest file '{path}' uses role '{V2_LINTER_ENGINE_ROLE}' which "
-                "requires plugin_api 2 and a .py extension"
+                f"manifest file '{path}' uses forbidden executable role '{V2_LINTER_ENGINE_ROLE}'"
             )
         if role in {V2_LINTER_ENGINE_ROLE, V2_LINTER_DATA_ROLE} and plugin_api != 2:
             errors.append(
@@ -267,8 +268,8 @@ def validate_cluster_profile_dict(profile: Any) -> list[str]:
         for key, value in commands.items():
             if not isinstance(value, str):
                 continue
-            if key == "status_command":
-                # Site status commands are free-form (for example lssrv).
+            if key not in _TRUSTED_SLURM_COMMANDS or value != _TRUSTED_SLURM_COMMANDS[key]:
+                errors.append(f"cluster profile command '{key}' is not an application-owned Slurm operation")
                 continue
             for placeholder in _PLACEHOLDER_RE.findall(value):
                 if placeholder not in KNOWN_COMMAND_PLACEHOLDERS:
@@ -302,6 +303,7 @@ REGISTRY_PLUGIN_TYPES = frozenset(
         "linter-tool",
     }
 )
+DISCOVERABLE_PLUGIN_API_VERSIONS = frozenset({1, 2})
 
 
 def _is_sha256_hex(value: Any) -> bool:
@@ -353,8 +355,8 @@ def validate_registry_dict(registry: Any) -> list[str]:
             continue
         if not is_valid_semver(entry["version"]):
             errors.append(f"{label}: invalid semantic version {entry['version']!r}")
-        if entry["plugin_api"] not in SUPPORTED_PLUGIN_API_VERSIONS:
-            supported = ", ".join(str(v) for v in sorted(SUPPORTED_PLUGIN_API_VERSIONS))
+        if entry["plugin_api"] not in DISCOVERABLE_PLUGIN_API_VERSIONS:
+            supported = ", ".join(str(v) for v in sorted(DISCOVERABLE_PLUGIN_API_VERSIONS))
             errors.append(
                 f"{label}: unsupported plugin_api {entry['plugin_api']!r} (supported: {supported})"
             )

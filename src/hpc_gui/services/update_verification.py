@@ -11,6 +11,7 @@ import hashlib
 import json
 from pathlib import Path
 from typing import Mapping
+from urllib.parse import urlsplit
 
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
@@ -19,6 +20,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 MAX_METADATA_BYTES = 512 * 1024
 MAX_PAYLOAD_BYTES = 256 * 1024
 SUPPORTED_SCHEMA = 1
+ALLOWED_UPDATE_HOSTS = frozenset({"github.com", "objects.githubusercontent.com", "release-assets.githubusercontent.com"})
 
 
 class UpdateVerificationError(ValueError):
@@ -59,13 +61,15 @@ def verify_signed_metadata(raw: bytes, trusted_keys: Mapping[str, bytes]) -> dic
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise UpdateVerificationError("signed payload is not valid JSON") from exc
     _validate_metadata(metadata)
+    if metadata.get("key_id") != key_id:
+        raise UpdateVerificationError("signed payload key ID mismatch")
     return metadata
 
 
 def _validate_metadata(metadata: object) -> None:
     if not isinstance(metadata, dict):
         raise UpdateVerificationError("signed payload must be an object")
-    required = {"product", "version", "channel", "artifacts"}
+    required = {"schema_version", "product", "version", "channel", "key_id", "artifacts"}
     if not required <= metadata.keys() or metadata["product"] != "hpc-client-gui":
         raise UpdateVerificationError("signed product metadata is incomplete")
     artifacts = metadata["artifacts"]
@@ -75,19 +79,31 @@ def _validate_metadata(metadata: object) -> None:
     for artifact in artifacts:
         if not isinstance(artifact, dict):
             raise UpdateVerificationError("invalid artifact entry")
-        fields = (artifact.get("kind"), artifact.get("architecture"), artifact.get("file"))
+        fields = (artifact.get("platform"), artifact.get("architecture"), artifact.get("file"))
         if not all(isinstance(value, str) and value for value in fields):
             raise UpdateVerificationError("artifact identity is incomplete")
         if fields in seen:
             raise UpdateVerificationError("duplicate artifact target")
         seen.add(fields)
-        if not isinstance(artifact.get("url"), str) or not artifact["url"].startswith("https://"):
-            raise UpdateVerificationError("artifact URL must use HTTPS")
+        validate_update_url(artifact.get("url"))
+        if not isinstance(artifact.get("kind"), str) or not artifact["kind"]:
+            raise UpdateVerificationError("artifact type is incomplete")
         if not isinstance(artifact.get("size"), int) or artifact["size"] < 0:
             raise UpdateVerificationError("invalid artifact size")
         digest = artifact.get("sha256")
         if not isinstance(digest, str) or len(digest) != 64 or any(c not in "0123456789abcdefABCDEF" for c in digest):
             raise UpdateVerificationError("invalid artifact digest")
+
+
+def validate_update_url(url: object) -> str:
+    if not isinstance(url, str):
+        raise UpdateVerificationError("artifact URL is missing")
+    parsed = urlsplit(url)
+    if parsed.scheme != "https" or parsed.username or parsed.password:
+        raise UpdateVerificationError("artifact URL must use HTTPS without credentials")
+    if (parsed.hostname or "").casefold() not in ALLOWED_UPDATE_HOSTS:
+        raise UpdateVerificationError("artifact URL host is not trusted")
+    return url
 
 
 def verify_artifact(path: Path, artifact: Mapping[str, object]) -> None:

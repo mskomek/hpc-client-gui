@@ -20,11 +20,9 @@ class SSHSlurmBackend(SlurmBackend):
 
     def _command(self, key: str, **values: str) -> str:
         template = self.system_settings[key]
-        quoted = {
-            f"{name}_q": shlex.quote(str(value))
-            for name, value in values.items()
-        }
-        return template.format(**values, **quoted)
+        quoted = {name: shlex.quote(str(value)) for name, value in values.items()}
+        quoted.update({f"{name}_q": value for name, value in quoted.items()})
+        return template.format(**quoted)
 
     def squeue(self, user: str) -> str:
         cmd = self._command("squeue_command", user=user)
@@ -64,6 +62,10 @@ class SSHSlurmBackend(SlurmBackend):
         if not status_command:
             raise RuntimeError(
                 "No site status command is configured for this system template."
+            )
+        if status_command != "lssrv":
+            raise RuntimeError(
+                "The configured legacy site status command is not an allowlisted adapter."
             )
         code, out, err = self.ssh.run(
             status_command,

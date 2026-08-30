@@ -12,12 +12,16 @@ strip; loading starts automatically (status: *Loading plugins…*, then
 - **Slurm / solver job templates** — used via *New from Template...* in the editor.
 - **Lint rule packs** — applied by the editor's *Lint* action.
 
-Plugin API v1 plugins contain declarative data only: no Python, no scripts,
+Supported plugins contain declarative data only: no Python, no scripts,
 no binaries are downloaded or executed. Every file is SHA-256-verified before
 activation, installs happen only on your desktop (nothing is installed on the
 cluster), and saved connection profiles are never silently rewritten - they
 keep their copied settings snapshot. Plugins can be disabled or removed at
 any time from the *Installed* tab.
+
+Legacy Plugin API v2 packages containing Python engines remain installed but
+are disabled as incompatible. Update or reinstall them as declarative lint rule
+packs; their Python is never imported.
 
 ## Installed versions: Activate and Roll back
 

@@ -2,21 +2,20 @@ from __future__ import annotations
 
 import os
 import platform
+import shutil
 import socket
 import subprocess
+import webbrowser
 import time
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Callable, Optional
 
 from hpc_gui.core.i18n import t
-from hpc_gui.core.paths import app_data_dir, app_log_dir, third_party_dir
-from hpc_gui.services.safe_download import download_atomic
+from hpc_gui.core.paths import app_data_dir, app_log_dir
 
-from hpc_gui.services.vcxsrv_release_downloader import get_latest_vcxsrv_asset
-
-# Standalone goals:
-# - No PuTTY/MobaXterm required (we download plink/vcxsrv with explicit user consent elsewhere).
+# X11 goals:
+# - Third-party executables must be installed by the user from official sources.
 # - For plink -X to work reliably on Windows, local X server must listen on TCP 127.0.0.1:6000 (DISPLAY :0).
 # - VcXsrv must be SINGLE instance; starting a second one often exits immediately with "another window manager".
 
@@ -139,39 +138,14 @@ def ensure_xquartz_available(
     return True
 
 
-def _vcxsrv_dir() -> Path:
-    return third_party_dir() / "vcxsrv"
-
-
-def _find_xserver_exe(vc_dir: Path) -> Optional[Path]:
-    candidates = [
-        vc_dir / "runtime" / "vcxsrv.exe",
-        vc_dir / "runtime" / "XWin.exe",
-        vc_dir / "vcxsrv.exe",
-        vc_dir / "XWin.exe",
-    ]
-    for c in candidates:
-        if c.exists():
-            return c
-    # recursive fallback
-    for folder in (vc_dir / "runtime", vc_dir):
-        if folder.exists():
-            try:
-                for p in folder.rglob("vcxsrv.exe"):
-                    return p
-                for p in folder.rglob("XWin.exe"):
-                    return p
-            except Exception:
-                pass
-    return None
-
-
 def vcxsrv_executable_path() -> Optional[Path]:
-    """Return detected local VcXsrv executable path, if available."""
-    try:
-        return _find_xserver_exe(_vcxsrv_dir())
-    except Exception:
-        return None
+    """Return a user-installed VcXsrv executable, never an app download cache."""
+    candidates = [shutil.which("vcxsrv"), shutil.which("XWin")]
+    for env_name in ("ProgramFiles", "ProgramFiles(x86)"):
+        root = os.environ.get(env_name)
+        if root:
+            candidates.extend((str(Path(root) / "VcXsrv" / "vcxsrv.exe"), str(Path(root) / "VcXsrv" / "XWin.exe")))
+    return next((Path(value) for value in candidates if value and Path(value).is_file()), None)
 
 
 @contextmanager
@@ -198,88 +172,22 @@ def _file_lock(path: Path, timeout_s: float = 6.0):
             pass
 
 
-def _download_file(url: str, dest: Path, log: Optional[Callable[[str], None]] = None, parent=None) -> bool:
-    progress = None
-    try:
-        if parent is not None:
-            from PySide6.QtWidgets import QProgressDialog
-            from PySide6.QtCore import Qt
-            progress = QProgressDialog(t("xserver.downloading"), t("common.cancel"), 0, 100, parent)
-            progress.setWindowModality(Qt.WindowModality.ApplicationModal)
-            progress.setMinimumDuration(0)
-            progress.setValue(0)
-        def update(downloaded: int, total: int) -> None:
-            if total > 0 and progress is not None:
-                progress.setValue(min(100, int(downloaded * 100 / total)))
-        if not download_atomic(url, dest, cancelled=progress.wasCanceled if progress else None, progress=update):
-            _log(log, t("xserver.download_cancelled"))
-            return False
-        if progress is not None:
-            progress.setValue(100)
-        return True
-    except Exception as e:
-        _log(log, t("xserver.download_error").format(err=e))
-        return False
-    finally:
-        if progress is not None:
-            progress.close()
-
-def _run_noadmin_installer(installer: Path, target_dir: Path, log: Optional[Callable[[str], None]] = None) -> bool:
-    target_dir.mkdir(parents=True, exist_ok=True)
-    try:
-        cmd = [str(installer), "/S", f"/D={str(target_dir)}"]
-        _log(log, t("xserver.install_start").format(exe=cmd[0]))
-        creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
-        proc = subprocess.run(cmd, capture_output=True, text=True, creationflags=creationflags)
-        if proc.returncode != 0:
-            _log(log, t("xserver.install_error").format(rc=proc.returncode, stderr=proc.stderr.strip()))
-            return False
-        return True
-    except Exception as e:
-        _log(log, t("xserver.install_exception").format(err=e))
-        return False
-
-
 def _prompt_install(parent, log: Optional[Callable[[str], None]] = None) -> bool:
     from PySide6.QtWidgets import QMessageBox
-
-    asset = get_latest_vcxsrv_asset()
-    if not asset or not asset.download_url:
-        _log(log, t("xserver.release_failed_log"))
-        QMessageBox.warning(parent, t("xserver.prompt_title"), t("xserver.version_not_found"))
-        return False
-
-    msg = t("xserver.prompt_msg").format(name=asset.name, mb=asset.size/1024/1024)
+    msg = "VcXsrv is required. Open its official download page?"
     ret = QMessageBox.question(parent, t("xserver.required_title"), msg, QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
     if ret != QMessageBox.StandardButton.Yes:
         return False
+    webbrowser.open("https://sourceforge.net/projects/vcxsrv/files/vcxsrv/")
+    _log(log, "VcXsrv official download page opened; automatic installer execution is disabled.")
+    return False
 
-    vc_dir = _vcxsrv_dir()
-    download_dir = app_data_dir() / "downloads"
-    download_dir.mkdir(parents=True, exist_ok=True)
-    installer_path = download_dir / asset.name
 
-    _log(log, t("xserver.download_log").format(url=asset.download_url))
-    if not _download_file(asset.download_url, installer_path, log=log, parent=parent):
-        return False
-
-    runtime_dir = vc_dir / "runtime"
-    ret = QMessageBox.question(parent, t("xserver.verify_title"), t("xserver.verify_msg"), QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
-    if ret != QMessageBox.StandardButton.Yes:
-        installer_path.unlink(missing_ok=True)
-        _log(log, t("xserver.unverified_cancelled"))
-        return False
-    if not _run_noadmin_installer(installer_path, runtime_dir, log=log):
-        return False
-
-    xexe = _find_xserver_exe(vc_dir)
-    if not xexe:
-        _log(log, t("xserver.missing_after_install"))
-        QMessageBox.warning(parent, t("xserver.prompt_title"), t("xserver.missing_after_install"))
-        return False
-
-    _log(log, t("xserver.ready").format(path=xexe))
-    return True
+def _vcxsrv_args(executable: Path, display: int) -> list[str]:
+    return [
+        str(executable), f":{display}", "-multiwindow", "-noreset",
+        "-notrayicon", "-listen", "tcp",
+    ]
 
 
 def ensure_x_server_running(
@@ -313,14 +221,13 @@ def ensure_x_server_running(
             time.sleep(0.1)
         return _is_display_listening(display)
 
-    vc_dir = _vcxsrv_dir()
-    xexe = _find_xserver_exe(vc_dir)
+    xexe = vcxsrv_executable_path()
 
     if not xexe:
         _log(log, t("xserver.local_not_found"))
         if allow_download and parent is not None:
             if _prompt_install(parent, log=log):
-                xexe = _find_xserver_exe(vc_dir)
+                xexe = vcxsrv_executable_path()
 
     if not xexe:
         _log(log, t("xserver.need_confirm_log"))
@@ -335,16 +242,7 @@ def ensure_x_server_running(
 
             # Start VcXsrv with TCP listening (plink requirement).
             # Keep args minimal & stable; invalid args cause help popup (and no server).
-            args = [
-                str(xexe),
-                f":{display}",
-                "-multiwindow",
-                "-ac",
-                "-noreset",
-                "-notrayicon",
-                "-listen",
-                "tcp",
-            ]
+            args = _vcxsrv_args(xexe, display)
 
             creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
             stdout_path = _stdout_log_path()
