@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from urllib.parse import unquote
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Mapping
@@ -19,10 +20,9 @@ STORAGE_ACCESS_CONTEXTS = frozenset({"login-node", "shared", "compute-node", "un
 _STORAGE_PLACEHOLDER_RE = re.compile(r"\{([A-Za-z_][A-Za-z0-9_]*)\}")
 
 PLUGIN_API_VERSION = 1
-# Additive generations understood by this release. v1 manifests stay
-# exactly as before; v2 adds the opt-in "linter-tool" capability with
-# hash-verified engine files (see validator/installer/loader).
-SUPPORTED_PLUGIN_API_VERSIONS = frozenset({1, 2})
+# API v2 executed downloaded Python and is deliberately unsupported. Existing
+# installs remain on disk but the loader marks them incompatible.
+SUPPORTED_PLUGIN_API_VERSIONS = frozenset({1})
 
 CAPABILITY_CLUSTER_PROFILE = "cluster-profile"
 CAPABILITY_LINT_RULES = "lint-rules"
@@ -48,8 +48,6 @@ KNOWN_FILE_ROLES = frozenset(
         "template-index",
         "template-content",
         "documentation",
-        # Plugin API v2 linter-tool roles:
-        "linter-engine",
         "linter-data",
     }
 )
@@ -186,8 +184,7 @@ class InstalledPlugin:
     cluster_profiles: tuple[ClusterProfileDefinition, ...] = ()
     lint_index: Mapping[str, Any] | None = None
     job_templates_index: Mapping[str, Any] | None = None
-    # Plugin API v2 linter-tool entrypoint: {"module": "<rel path .py>"}.
-    # The engine is NOT imported here - see plugins/linter_tools.py.
+    # Reserved for an application-owned declarative engine descriptor.
     linter_engine: Mapping[str, Any] | None = None
 
 
@@ -198,11 +195,12 @@ def is_valid_semver(value: Any) -> bool:
 def is_safe_relative_path(value: Any) -> bool:
     if not isinstance(value, str) or not value:
         return False
-    if "\\" in value or value.startswith("/"):
+    decoded = unquote(value)
+    if decoded != value or "\\" in decoded or decoded.startswith("/"):
         return False
     if re.match(r"^[A-Za-z]:", value):
         return False
     if re.match(r"^[a-zA-Z][a-zA-Z0-9+.-]*://", value):
         return False
-    segments = value.split("/")
+    segments = decoded.split("/")
     return all(segment not in ("", "..") for segment in segments)

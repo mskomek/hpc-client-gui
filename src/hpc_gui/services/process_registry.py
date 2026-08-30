@@ -17,11 +17,13 @@ import json
 import os
 import platform
 import subprocess
+import tempfile
 import time
 from pathlib import Path
 from typing import Any, Dict, Optional
 
 from hpc_gui.core.logging import get_logger
+from hpc_gui.core.log_redaction import redact_text
 from hpc_gui.core.paths import app_data_dir
 
 
@@ -48,8 +50,20 @@ def _read_all() -> Dict[str, Any]:
 
 def _write_all(data: Dict[str, Any]) -> None:
     try:
-        _registry_path().write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+        path = _registry_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        fd, temporary_name = tempfile.mkstemp(prefix=path.name + ".", suffix=".tmp", dir=path.parent)
+        temporary = Path(temporary_name)
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            handle.write(redact_text(json.dumps(data, ensure_ascii=False, indent=2)))
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary, path)
+        if os.name == "posix":
+            path.chmod(0o600)
     except Exception:
+        if "temporary" in locals():
+            temporary.unlink(missing_ok=True)
         pass
 
 
@@ -65,8 +79,8 @@ def register(pid: int, *, kind: str, cmd: str = "", meta: Optional[Dict[str, Any
     data[str(pid)] = {
         "pid": pid,
         "kind": str(kind or ""),
-        "cmd": str(cmd or ""),
-        "meta": meta or {},
+        "cmd": redact_text(str(cmd or "")),
+        "meta": json.loads(redact_text(json.dumps(meta or {}, ensure_ascii=False))),
         "ts": int(time.time()),
         "host_pid": os.getpid(),
     }

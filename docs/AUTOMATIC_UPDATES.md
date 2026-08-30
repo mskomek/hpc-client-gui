@@ -1,8 +1,14 @@
 # Automatic update support
 
 The updater selects an artifact from verified installation evidence, operating
-system, and architecture. Every downloaded package is checked against its
-published SHA-256 file before installation is offered.
+system, and architecture. Automatic installation requires Ed25519-signed
+metadata verified by a public key embedded in the application. The metadata
+binds product, version, channel, platform, architecture, filename, type, exact
+size, SHA-256, and an allowlisted HTTPS GitHub Releases URL. Adjacent SHA-256
+files remain for manual verification but are not an update trust root.
+
+Signing-key rotation requires an application release containing the new public
+key. Release publication fails if the repository signing secret is unavailable.
 
 | Installation | Update behavior |
 | --- | --- |

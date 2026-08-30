@@ -34,6 +34,8 @@ def _atomic_write_json(path: Path, payload: dict) -> None:
         handle.flush()
         os.fsync(handle.fileno())
     temporary.replace(path)
+    if os.name == "posix":
+        path.chmod(0o600)
 
 
 def installed_index_path(root: str | Path | None = None) -> Path:

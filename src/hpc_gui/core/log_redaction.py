@@ -2,11 +2,21 @@ from __future__ import annotations
 
 import getpass
 import re
-from typing import List, Tuple
+from typing import Iterable, List, Tuple
 
 _PLACEHOLDER_USER = "<user>"
 _PLACEHOLDER_HOST = "<host>"
 _MIN_SECRET_LEN = 3
+
+_SECRET_PATTERNS = (
+    (re.compile(r"(?i)((?<!\S)(?:-pw|--password|--passphrase)\s+)(?:\"[^\"]*\"|'[^']*'|\S+)"), r"\1<redacted>"),
+    (re.compile(r"(?i)((?<!\S)--password=)[^\s]+"), r"\1<redacted>"),
+    (re.compile(r"(?i)(\b(?:password|passwd|passphrase|token|api[_-]?key|session[_-]?token)\s*[=:]\s*)[^\s,;]+"), r"\1<redacted>"),
+    (re.compile(r"(?i)(\bAuthorization\s*:\s*Bearer\s+)[^\s,;]+"), r"\1<redacted>"),
+    (re.compile(r"(?i)(\bCookie\s*:\s*)[^\r\n]+"), r"\1<redacted>"),
+    (re.compile(r"(?i)(https?://)[^/@\s:]+:[^/@\s]*@"), r"\1<redacted>@"),
+    (re.compile(r"-----BEGIN [^-\r\n]*PRIVATE KEY-----.*?-----END [^-\r\n]*PRIVATE KEY-----", re.DOTALL), "<redacted private key>"),
+)
 
 
 def _collect_secrets() -> Tuple[List[str], List[str]]:
@@ -69,7 +79,24 @@ def redact_text(text: str) -> str:
     """
     if not text:
         return text
+    for pattern, replacement in _SECRET_PATTERNS:
+        text = pattern.sub(replacement, text)
     usernames, hosts = _collect_secrets()
     text = _replace_all(text, usernames, _PLACEHOLDER_USER)
     text = _replace_all(text, hosts, _PLACEHOLDER_HOST)
     return text
+
+
+def redact_command_args(args: Iterable[object]) -> list[str]:
+    """Return argv safe for display or persistence."""
+    values = [str(value) for value in args]
+    safe: list[str] = []
+    redact_next = False
+    for value in values:
+        if redact_next:
+            safe.append("<redacted>")
+            redact_next = False
+            continue
+        safe.append(redact_text(value))
+        redact_next = value.casefold() in {"-pw", "--password", "--passphrase"}
+    return safe

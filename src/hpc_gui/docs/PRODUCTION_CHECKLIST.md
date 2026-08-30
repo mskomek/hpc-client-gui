@@ -67,13 +67,17 @@ Bu dosya, HPC Client GUI'nin "ürün" gibi paketlenip sahada kullanılmasında e
   (help metni, JSON sözleşmesi, unit test, ilgiliyse smoke, TODO/CHANGELOG)
   sağlandı — bkz. [MAINTENANCE_POLICY.md](MAINTENANCE_POLICY.md)
 
-## 11) Plugin API v1 / cross-repo release gates
+## 11) Plugin and signed-update release gates
+- [ ] `UPDATE_SIGNING_PRIVATE_KEY_B64` contains the Ed25519 private key matching
+  embedded key id `release-2026-01`; it exists only as a protected Actions secret.
+- [ ] `UPDATE_METADATA.json` was generated and its signature, platform, size,
+  digest, and GitHub release URL passed the updater verification tests.
 - [ ] Development CI may follow the plugin registry's `main`; **before cutting a
   release, pin the "Plugin API contract" job's checkout `ref:` in
   `.github/workflows/ci.yml` to an explicit plugin repository tag or commit**
   and advance that pin intentionally after the release.
 - [ ] The pinned contract suite passed against the real registry content
-  (registry validation, manifests, hashes, TRUBA profile load, Fluent 0.2.0
-  selection, lint + template rendering, update/rollback).
+  (registry validation, manifests, hashes, TRUBA profile load, declarative lint
+  rules and template rendering, update/rollback). No plugin payload is executable.
 - [ ] Release workflow uses commit-SHA-pinned third-party actions (see
   .github/workflows/release.yml); version comments kept next to each SHA.

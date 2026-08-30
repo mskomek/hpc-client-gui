@@ -387,6 +387,10 @@ jobs:
           )
           notes.write_text(header + ("\n## Changes\n" + section if section else ""), encoding="utf-8")
           PY
+      - name: Generate signed update metadata
+        env:
+          UPDATE_SIGNING_PRIVATE_KEY_B64: ${{ secrets.UPDATE_SIGNING_PRIVATE_KEY_B64 }}
+        run: python scripts/generate_signed_update_metadata.py --release-dir "dist/releases/v${{ github.event.inputs.version }}" --version "${{ github.event.inputs.version }}"
       - name: Generate and validate release manifest
         run: |
           python scripts/generate_release_manifest.py --release-dir "dist/releases/v${{ github.event.inputs.version }}" --version "v${{ github.event.inputs.version }}"
@@ -409,6 +413,7 @@ jobs:
               "hpc-client-gui_macos_x86_64.dmg",
               "hpc-client-gui_macos_x86_64.dmg.sha256",
               "RELEASE_SECURITY.json",
+              "UPDATE_METADATA.json",
           }
           assert required <= names
           assert {item["platform"] for item in manifest["artifacts"]} >= {
@@ -512,6 +517,10 @@ jobs:
           )
           notes.write_text(header + warning + ("\n## Changes\n" + section if section else ""), encoding="utf-8")
           PY
+      - name: Generate signed update metadata
+        env:
+          UPDATE_SIGNING_PRIVATE_KEY_B64: ${{ secrets.UPDATE_SIGNING_PRIVATE_KEY_B64 }}
+        run: python scripts/generate_signed_update_metadata.py --release-dir "dist/releases/v${{ github.event.inputs.version }}" --version "${{ github.event.inputs.version }}"
       - name: Generate and validate release manifest
         run: |
           python scripts/generate_release_manifest.py --release-dir "dist/releases/v${{ github.event.inputs.version }}" --version "v${{ github.event.inputs.version }}"
@@ -534,6 +543,7 @@ jobs:
               "hpc-client-gui_macos_x86_64.dmg",
               "hpc-client-gui_macos_x86_64.dmg.sha256",
               "RELEASE_SECURITY.json",
+              "UPDATE_METADATA.json",
           }
           assert required <= names
           assert {item["platform"] for item in manifest["artifacts"]} >= {
@@ -547,6 +557,7 @@ jobs:
           path: |
             dist/releases/v${{ github.event.inputs.version }}/MANIFEST.json
             dist/releases/v${{ github.event.inputs.version }}/RELEASE_SECURITY.json
+            dist/releases/v${{ github.event.inputs.version }}/UPDATE_METADATA.json
             dist/releases/v${{ github.event.inputs.version }}/RELEASE_NOTES.md
 
   release-gate:
@@ -676,6 +687,7 @@ jobs:
               "hpc-client-gui_macos_x86_64.dmg",
               "hpc-client-gui_macos_x86_64.dmg.sha256",
               "RELEASE_SECURITY.json",
+              "UPDATE_METADATA.json",
           }
           assert required <= names
           assert {item["platform"] for item in manifest["artifacts"]} >= {
@@ -710,6 +722,7 @@ jobs:
             dist/releases/v${{ github.event.inputs.version }}/*.dmg
             dist/releases/v${{ github.event.inputs.version }}/MANIFEST.json
             dist/releases/v${{ github.event.inputs.version }}/RELEASE_SECURITY.json
+            dist/releases/v${{ github.event.inputs.version }}/UPDATE_METADATA.json
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@72f2c25fcb47643c292f7107632f7a47c1df5cd8 # v2.3.2
         with:

@@ -128,7 +128,7 @@ class X11Runner:
         proc.readyReadStandardError.connect(lambda: self._append_process_io(proc, err=True))
         proc.readyReadStandardOutput.connect(lambda: self._append_process_io(proc, err=False))
 
-        cmd_show = " ".join([launch.program] + launch.args)
+        cmd_show = " ".join([launch.program] + launch.display_args)
 
         def _on_finished(code, _status):
             self._log(t("login.x11_finished").format(code=code))
@@ -151,7 +151,7 @@ class X11Runner:
 
                 pid = int(proc.processId() or 0)
                 if pid:
-                    register(pid, kind=f"x11_{launch.backend}", cmd=cmd_show)
+                    register(pid, kind=f"x11_{launch.backend}")
             except Exception:
                 pass
 

@@ -54,6 +54,18 @@ class TerminalBoundaryTests(unittest.TestCase):
         self.assertEqual(header.status_label.frameShape(), QFrame.Shape.NoFrame)
         self.assertFalse(header.status_label.wordWrap())
 
+    def test_hostile_remote_output_crosses_webchannel_as_data(self):
+        from hpc_gui.services.terminal_bridge import TerminalBridge
+
+        hostile = "</script><script>alert(1)</script>"
+        received = []
+        bridge = TerminalBridge()
+        bridge.output.connect(received.append)
+        bridge.receive_output(hostile)
+        self.assertEqual(received, [hostile])
+        source = (ROOT / "src/hpc_gui/ui/widgets/terminal_widget.py").read_text(encoding="utf-8")
+        self.assertNotIn("runJavaScript(text", source)
+
 
 if __name__ == "__main__":
     unittest.main()

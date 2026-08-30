@@ -530,6 +530,9 @@ def update_ftp_state(
 
 def save_config(cfg: Dict[str, Any]) -> None:
     p = _config_path()
+    p.parent.mkdir(parents=True, exist_ok=True)
+    if os.name == "posix":
+        p.parent.chmod(0o700)
     fd, tmp_name = tempfile.mkstemp(
         prefix=p.name + ".", suffix=".tmp", dir=p.parent
     )
@@ -540,6 +543,8 @@ def save_config(cfg: Dict[str, Any]) -> None:
             fh.flush()
             os.fsync(fh.fileno())
         os.replace(tmp, p)
+        if os.name == "posix":
+            p.chmod(0o600)
     except Exception:
         tmp.unlink(missing_ok=True)
         raise

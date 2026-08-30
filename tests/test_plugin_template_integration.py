@@ -296,10 +296,11 @@ def test_plugin_update_keeps_old_snapshot_new_uses_new_version(qapp, tmp_path: P
         finally:
             dialog.deleteLater()
 
-    # Activate 1.1.0 with a changed status command.
+    # Activate 1.1.0 with a changed non-command field. Provider commands are
+    # application-owned and cannot vary by plugin version.
     profile_v11 = {
         **TRUBA_PROFILE_V1,
-        "commands": {**TRUBA_PROFILE_V1["commands"], "status_command": "lssrv-v2"},
+        "description": "updated profile",
     }
     install_profile_fixture(tmp_path, version="1.1.0", profile=profile_v11)
 
@@ -321,7 +322,7 @@ def test_plugin_update_keeps_old_snapshot_new_uses_new_version(qapp, tmp_path: P
             dialog2.deleteLater()
 
     assert old_status == "lssrv"  # old snapshot unchanged by the update
-    assert new_status == "lssrv-v2"  # fresh templates use the new version
+    assert new_status == "lssrv"  # application-owned command remains constrained
     assert new_source["plugin_version"] == "1.1.0"
 
 
