@@ -5,6 +5,11 @@ Cluster providers are declarative plugins maintained in the
 They describe public site defaults such as Slurm guidance and storage paths;
 they do not install software on a cluster or contain credentials.
 
+Providers declare supported Slurm intent and metadata; they cannot introduce
+arbitrary remote shell operations. The application owns accepted scheduler
+commands and shell-quotes substituted values. Provider-specific status behavior
+requires an application allowlisted adapter; unknown legacy commands fail closed.
+
 Use the plugin repository's [complete provider tutorial](https://github.com/mskomek/hpc-client-gui-plugins/blob/main/docs/ADDING_CLUSTER_PROVIDER.md)
 for scaffolding, schema fields, storage, optional quota, packaging, hashes,
 validation, and pull requests.

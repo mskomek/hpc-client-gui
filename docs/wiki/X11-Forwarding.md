@@ -15,9 +15,9 @@ connection and launch graphical applications as commands.
 **Enable X11 forwarding (for GUI apps)** on the connection form. Three related
 options live in Settings, under Connection and X11:
 
-- **When X11 is enabled, check/download/start required tools** — on Connect,
-  the required helpers are checked and, if missing, downloaded with your
-  consent and started.
+- **When X11 is enabled, check/start required tools** — on Connect, installed
+  helpers are checked and started. Missing tools open their official download
+  page; executables are not downloaded or run automatically.
 - **Close VcXsrv when the app exits** — if the application started VcXsrv, it
   is closed by PID.
 - **Close X11/SSH processes on exit** — the plink/ssh processes the application
@@ -28,12 +28,14 @@ options live in Settings, under Connection and X11:
 On Windows the path is `plink.exe -X` together with **VcXsrv** as the X server
 listening on `127.0.0.1:6000`.
 
-**Neither is bundled in the executable.** When one is missing you are asked
-before anything is downloaded — the prompt names the file and its size — and
-you can install them yourself instead. If no stable checksum or signature is
-available for an installer, the application says so and asks again before
-running it; declining rejects the unverified installer rather than proceeding
-quietly.
+**Neither is bundled in the executable.** Install both from their official
+download pages. VcXsrv is started without `-ac`, so X access control is not
+disabled.
+
+Password authentication requires Plink's `-pw` argument. The application
+redacts it from logs, previews, process metadata, and diagnostics, but Windows
+may still expose the live process command line to other processes owned by the
+same user. SSH keys or an agent are preferred for X11 authentication.
 
 Common failures are reported specifically: `plink.exe` could not be prepared,
 VcXsrv could not be started (a firewall or permissions issue), VcXsrv started

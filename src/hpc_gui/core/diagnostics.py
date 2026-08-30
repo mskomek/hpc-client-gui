@@ -6,6 +6,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Iterable
 
+from hpc_gui import __version__
 from hpc_gui.core.paths import app_data_dir, app_log_dir
 
 
@@ -40,17 +41,20 @@ def create_diagnostic_bundle(dest_dir: str) -> Path:
     zip_path = out_dir / f"hpc_diagnostics_{stamp}.zip"
 
     with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        included = []
+        skipped = []
         for p in _candidate_files():
             try:
-                content = redact_text(p.read_text(encoding="utf-8", errors="replace"))
+                content = redact_text(p.read_text(encoding="utf-8", errors="strict"))
                 zf.writestr(p.name, content)
-            except Exception:
-                # Binary or unreadable-as-text; include as-is rather than
-                # drop it silently.
-                zf.write(p, arcname=p.name)
+                included.append(p.name)
+            except (OSError, UnicodeError) as exc:
+                skipped.append({"file": p.name, "reason": type(exc).__name__})
         manifest = {
             "generated_at": datetime.now().isoformat(timespec="seconds"),
-            "bundle": zip_path.name,
+            "application_version": __version__,
+            "included_files": included,
+            "skipped_files": skipped,
         }
         zf.writestr("manifest.json", json.dumps(manifest, ensure_ascii=False, indent=2))
 

@@ -3082,16 +3082,20 @@ class RemoteDirPanel(QWidget):
         """Append transfer operation events for diagnostics/audit."""
         try:
             import json
+            import os
             from datetime import datetime
 
             from hpc_gui.core.paths import app_data_dir
+            from hpc_gui.core.log_redaction import redact_text
 
             p = app_data_dir() / "transfer_journal.jsonl"
             p.parent.mkdir(parents=True, exist_ok=True)
             payload = {"ts": datetime.now().isoformat(timespec="seconds"), "event": event}
             payload.update(fields or {})
             with p.open("a", encoding="utf-8") as f:
-                f.write(json.dumps(payload, ensure_ascii=False) + "\n")
+                f.write(redact_text(json.dumps(payload, ensure_ascii=False)) + "\n")
+            if os.name == "posix":
+                p.chmod(0o600)
         except Exception:
             pass
 
@@ -3452,6 +3456,7 @@ class RemoteDirPanel(QWidget):
         """
         try:
             import json
+            import os
             import time
 
             from hpc_gui.core.paths import app_data_dir
@@ -3472,6 +3477,8 @@ class RemoteDirPanel(QWidget):
                 ],
             }
             out_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+            if os.name == "posix":
+                out_path.chmod(0o600)
         except Exception:
             pass
 

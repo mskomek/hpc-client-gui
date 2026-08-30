@@ -80,6 +80,8 @@ def verify_version_dir(
     existence/size/SHA-256, and absence of undeclared extra files.
     """
     errors: list[str] = []
+    if package_dir.is_symlink():
+        return ["plugin package directory is a symlink"]
     manifest_path = package_dir / MANIFEST_NAME
     if expected_manifest_sha:
         try:
@@ -100,6 +102,9 @@ def verify_version_dir(
         rel = str(entry["path"])
         declared.add(rel)
         target = package_dir / rel
+        if target.is_symlink():
+            errors.append(f"symlink payload is forbidden: {rel}")
+            continue
         if not target.is_file():
             errors.append(f"missing payload file: {rel}")
             continue

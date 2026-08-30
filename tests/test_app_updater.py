@@ -86,12 +86,14 @@ def test_unknown_content_length_reports_bytes_without_fake_percentage(monkeypatc
 
 
 def test_update_reuses_verified_download(monkeypatch, tmp_path: Path):
-    release = UpdateRelease("1.4.2", "v1.4.2", "update.zip", "zip", "update.zip.sha256", "sha", "page")
+    release = UpdateRelease(
+        "1.4.2", "v1.4.2", "update.zip", "zip", "update.zip.sha256", "sha", "page",
+        signed_artifact={"size": 5, "sha256": hashlib.sha256(b"ready").hexdigest(), "url": "https://github.com/x/update.zip"},
+    )
     update_dir = tmp_path / "updates" / "v1.4.2"
     update_dir.mkdir(parents=True)
     archive = update_dir / release.zip_name
     archive.write_bytes(b"ready")
-    (update_dir / release.sha_name).write_text(f"{hashlib.sha256(b'ready').hexdigest()}  update.zip\n")
     monkeypatch.setattr("hpc_gui.services.app_updater.app_data_dir", lambda: tmp_path)
     monkeypatch.setattr("hpc_gui.services.app_updater._download", lambda *_args, **_kwargs: pytest.fail("must reuse archive"))
 
@@ -179,6 +181,9 @@ def test_appimage_handoff_runs_helper_from_verified_new_image(monkeypatch, tmp_p
     monkeypatch.setattr(app_updater, "current_os", lambda: "linux")
     monkeypatch.setattr(app_updater, "detect_installation", lambda: context)
     monkeypatch.setattr(app_updater.subprocess, "Popen", popen)
+    app_updater._VERIFIED_UPDATE_ARTIFACTS[package.resolve()] = {
+        "size": 3, "sha256": hashlib.sha256(b"new").hexdigest()
+    }
     launch_update_installer(package, "2.0", "linux-appimage")
     assert commands[0][:2] == [str(package.resolve()), "--updater-helper"]
 
