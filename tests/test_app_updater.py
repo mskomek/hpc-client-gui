@@ -145,11 +145,42 @@ def test_unknown_update_platform_is_rejected():
         release_asset_names("macos_ppc64")
 
 
-def test_macos_never_launches_windows_installer(monkeypatch, tmp_path: Path):
+def test_unpackaged_app_never_launches_installer(monkeypatch, tmp_path: Path):
     monkeypatch.setattr("hpc_gui.services.app_updater.current_os", lambda: "macos")
 
-    with pytest.raises(RuntimeError, match="only on Windows"):
+    with pytest.raises(RuntimeError, match="packaged app"):
         launch_update_installer(tmp_path / "update.dmg", "1.5.0")
+
+
+def test_install_handoff_never_shows_complete_before_helper_starts():
+    source = Path("src/hpc_gui/ui/main_window.py").read_text(encoding="utf-8")
+    handoff = source[source.index("def _on_update_downloaded"):source.index("def _on_update_error")]
+    assert '_show_update_progress(100, "installing")' not in handoff
+    assert '_show_update_progress(0, "preparing")' in handoff
+
+
+def test_appimage_handoff_runs_helper_from_verified_new_image(monkeypatch, tmp_path: Path):
+    current = tmp_path / "current.AppImage"
+    package = tmp_path / "new.AppImage"
+    current.write_bytes(b"old")
+    package.write_bytes(b"new")
+    context = InstallationContext(
+        "appimage", "APPIMAGE", current, "hpc-client-gui", "1.0", "x86_64",
+        "linux-appimage", "identified",
+    )
+    commands = []
+
+    def popen(command, **_kwargs):
+        commands.append(command)
+        Path(command[-1]).with_suffix(".ready").write_text("ready", encoding="ascii")
+        return SimpleNamespace()
+
+    monkeypatch.setattr(app_updater, "is_frozen_exe", lambda: True)
+    monkeypatch.setattr(app_updater, "current_os", lambda: "linux")
+    monkeypatch.setattr(app_updater, "detect_installation", lambda: context)
+    monkeypatch.setattr(app_updater.subprocess, "Popen", popen)
+    launch_update_installer(package, "2.0", "linux-appimage")
+    assert commands[0][:2] == [str(package.resolve()), "--updater-helper"]
 
 
 def test_updater_selects_arch_specific_dmg_per_platform():

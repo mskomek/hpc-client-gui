@@ -10,6 +10,7 @@
     "--socket=wayland",
     "--device=dri",
     "--share=ipc",
+    "--talk-name=org.freedesktop.Flatpak",
     "--filesystem=home"
   ],
   "modules": [

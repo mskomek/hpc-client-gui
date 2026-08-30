@@ -28,7 +28,35 @@ def test_linux_installation_strategies_are_evidence_based(monkeypatch, tmp_path:
     assert installation_context.detect_installation().capability == "linux-appimage"
 
     monkeypatch.setenv("FLATPAK_ID", "io.github.mskomek.HpcClientGui")
-    assert installation_context.detect_installation().capability == "linux-flatpak"
+    monkeypatch.setattr(installation_context, "_run", lambda _args: "installed")
+    context = installation_context.detect_installation()
+    assert context.capability == "linux-flatpak"
+    assert "scope=user" in context.reason
+
+
+def test_appimage_runtime_mount_maps_back_to_original_image(monkeypatch, tmp_path: Path):
+    image = tmp_path / "client.AppImage"
+    executable = tmp_path / "mount" / "usr" / "bin" / "client"
+    image.write_bytes(b"image")
+    executable.parent.mkdir(parents=True)
+    executable.write_bytes(b"exe")
+    _platform(monkeypatch, "linux", executable)
+    monkeypatch.delenv("FLATPAK_ID", raising=False)
+    monkeypatch.setenv("APPIMAGE", str(image))
+    monkeypatch.setenv("APPDIR", str(tmp_path / "mount"))
+    context = installation_context.detect_installation()
+    assert context.capability == "linux-appimage"
+    assert context.executable == image.resolve()
+
+
+def test_non_writable_appimage_falls_back_safely(monkeypatch, tmp_path: Path):
+    image = tmp_path / "client.AppImage"
+    image.write_bytes(b"image")
+    _platform(monkeypatch, "linux", image)
+    monkeypatch.delenv("FLATPAK_ID", raising=False)
+    monkeypatch.setenv("APPIMAGE", str(image))
+    monkeypatch.setattr(installation_context.os, "access", lambda *_args: False)
+    assert installation_context.detect_installation().capability == "unsupported"
 
 
 def test_deb_and_source_strategies_do_not_guess(monkeypatch, tmp_path: Path):
