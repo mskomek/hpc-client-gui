@@ -52,11 +52,11 @@ def _deb_context(executable: Path, architecture: str) -> InstallationContext | N
     if len(fields) < 3 or fields[0] != package or fields[2] != "amd64":
         return InstallationContext(
             "deb", "dpkg-query", executable, package, fields[1] if len(fields) > 1 else "",
-            architecture, "manual", "Package identity or architecture is not supported.",
+            architecture, "unsupported", "Package identity or architecture is not supported.",
         )
     return InstallationContext(
         "deb", "dpkg-query", executable, package, fields[1], architecture,
-        "manual", "DEB updates require the Ubuntu/Debian installer wave.",
+        "linux-deb", "Updates are delegated to the system package manager.",
     )
 
 
@@ -67,14 +67,14 @@ def detect_installation() -> InstallationContext:
 
     if os_key == "linux":
         if os.environ.get("FLATPAK_ID"):
-            return InstallationContext("flatpak", "FLATPAK_ID", executable, os.environ["FLATPAK_ID"], "", architecture, "manual", "Updates are delegated to Flatpak.")
+            return InstallationContext("flatpak", "FLATPAK_ID", executable, os.environ["FLATPAK_ID"], "", architecture, "linux-flatpak", "Updates are delegated to Flatpak.")
         appimage = os.environ.get("APPIMAGE")
         if appimage and Path(appimage).is_file() and Path(appimage).resolve() == executable:
-            return InstallationContext("appimage", "APPIMAGE runtime", executable, "hpc-client-gui", "", architecture, "manual", "AppImage replacement is handled by a later update wave.")
+            return InstallationContext("appimage", "APPIMAGE runtime", executable, "hpc-client-gui", "", architecture, "linux-appimage", "AppImage installation was identified safely.")
         deb = _deb_context(executable, architecture)
         if deb:
             return deb
-        return InstallationContext("source", "no package ownership evidence", executable, "hpc-client-gui", "", architecture, "manual", "This installation is not owned by a supported package manager.")
+        return InstallationContext("source", "no package ownership evidence", executable, "hpc-client-gui", "", architecture, "source", "Source installations require a manual update.")
 
     if os_key == "macos":
         bundle = next((parent for parent in (executable, *executable.parents) if parent.suffix == ".app"), None)
@@ -84,8 +84,8 @@ def detect_installation() -> InstallationContext:
                 info = plistlib.loads(info_path.read_bytes())
             except (OSError, plistlib.InvalidFileException, ValueError):
                 info = {}
-            return InstallationContext("macos-bundle", "Info.plist", executable, str(info.get("CFBundleIdentifier") or ""), str(info.get("CFBundleShortVersionString") or ""), architecture, "manual", "Sparkle feasibility is required before automatic macOS updates.")
+            return InstallationContext("macos-bundle", "Info.plist", executable, str(info.get("CFBundleIdentifier") or ""), str(info.get("CFBundleShortVersionString") or ""), architecture, "macos-bundle", "Bundle replacement requires a signed, writable installation.")
 
     if os_key == "windows" and getattr(sys, "frozen", False):
-        return InstallationContext("windows", "frozen executable", executable, "hpc-client-gui", "", architecture, "windows", "Windows updater is supported.")
-    return InstallationContext("unknown", "insufficient installation evidence", executable, "", "", architecture, "manual", "Installation type could not be identified safely.")
+        return InstallationContext("windows", "frozen executable", executable, "hpc-client-gui", "", architecture, "windows-portable", "Windows portable updater is supported.")
+    return InstallationContext("unknown", "insufficient installation evidence", executable, "", "", architecture, "unsupported", "Installation type could not be identified safely.")

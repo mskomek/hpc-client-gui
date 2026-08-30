@@ -1,6 +1,6 @@
 [project]
 name = "hpc-client-gui"
-version = "1.5.6"
+version = "1.5.7"
 requires-python = "==3.14.*"
 dependencies = [
     "PySide6>=6.5",

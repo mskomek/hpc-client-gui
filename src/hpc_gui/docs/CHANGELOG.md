@@ -2,17 +2,28 @@
 
 ## Unreleased
 
+## v1.5.7
+
+### Cross-platform updater architecture
+- Download progress now shows the real package percentage and transferred/total size; downloads without a known total remain indeterminate and show only downloaded bytes.
+- Added an independent Windows WinForms installation splash with real byte-based extraction/copy progress, relative file status, monotonic phases, timestamped logs, startup health checking, and rollback.
+- Made installation strategies and Linux/macOS architecture-specific artifact selection explicit; package-owned, source, and unknown installations retain safe documented fallbacks instead of guessed writes.
+- Added installation-context, artifact-selection, PowerShell parser, progress, rollback, cancellation, and splash-lifecycle regression coverage.
+
 ## v1.5.6
 
 ### Update experience
 - Replaced the generic update progress dialog with a dedicated application-update splash that remains responsive while checking, downloading, verifying, and starting installation.
-- Download progress now shows transferred and total package sizes alongside the progress bar; downloads without a known total remain visibly active.
+- Download progress shows transferred and total package sizes alongside the progress bar; downloads without a known total remain visibly active.
 - Ensured the installation splash is painted before the external updater starts, preventing it from being skipped during the handoff.
 - Kept update checking, download, and checksum verification off the Qt GUI thread, with cancellation and partial-file cleanup preserved.
 
 ### Startup splash
 - Removed translation-key leakage such as `splash.title` by making startup and updater splash copy self-contained English text.
 - Added regression coverage for splash copy and byte-level updater progress reporting.
+
+### Transfer dialog reliability
+- Prevented stalled transfer workers from signaling deleted dialogs or panels during shutdown.
 
 ## v1.5.5
 
