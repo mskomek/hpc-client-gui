@@ -47,6 +47,8 @@ jobs:
           tests/test_slurm_script_parser.py tests/test_remote_entry_helpers.py
           tests/test_upload_pipelining.py tests/test_version_consistency.py
           -q --tb=short -rf
+      - name: Updater strategy tests
+        run: python -m pytest tests/test_app_updater.py tests/test_installation_context.py tests/test_updater_helper.py -q --tb=short
 
   cli:
     runs-on: ubuntu-latest
@@ -148,6 +150,8 @@ jobs:
         run: python -m compileall src/hpc_gui
       - name: macOS boundary and release-surface tests
         run: python scripts/ci.py macos
+      - name: Updater strategy tests
+        run: python -m pytest tests/test_app_updater.py tests/test_installation_context.py tests/test_updater_helper.py -q --tb=short
       - name: Representative portable contracts
         run: >
           python -m pytest tests/test_optional_ssh_credentials.py
@@ -179,7 +183,7 @@ jobs:
           pip install -e .[test]
           pip install pytest
       - name: Windows boundary tests
-        run: python -m pytest tests/test_safe_download.py tests/test_version_consistency.py tests/test_startup_changelog.py -q --tb=short
+        run: python -m pytest tests/test_safe_download.py tests/test_version_consistency.py tests/test_startup_changelog.py tests/test_app_updater.py tests/test_installation_context.py tests/test_updater_helper.py -q --tb=short
       - name: Terminal transport tests
         run: |
           python -m unittest discover -s tests -p "test_terminal_*.py"

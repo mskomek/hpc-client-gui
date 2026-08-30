@@ -564,7 +564,11 @@ class MainWindow(QMainWindow):
                 webbrowser.open(release.html_url)
             return
 
-        if release.install_strategy not in AUTOMATIC_INSTALL_STRATEGIES:
+        macos_auto_supported = not (
+            release.install_strategy == "macos-bundle"
+            and release.security_status != app_updater.SECURITY_SIGNED
+        )
+        if release.install_strategy not in AUTOMATIC_INSTALL_STRATEGIES or not macos_auto_supported:
             self._close_update_progress()
             message = t("updates.manual_install").format(version=release.version)
             if current_os() == "macos":
@@ -621,9 +625,9 @@ class MainWindow(QMainWindow):
         if answer != QMessageBox.StandardButton.Yes:
             return
         try:
-            self._show_update_progress(100, "installing")
+            self._show_update_progress(0, "preparing")
             QApplication.processEvents()
-            launch_update_installer(zip_path, release.version)
+            launch_update_installer(zip_path, release.version, release.install_strategy)
         except Exception as exc:
             self._on_update_error(str(exc))
             return

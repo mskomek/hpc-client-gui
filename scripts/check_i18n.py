@@ -35,6 +35,9 @@ UI_CONSTRUCTORS = {
 MESSAGEBOX_METHODS = {"critical", "information", "question", "warning"}
 FILE_DIALOG_METHODS = {"getExistingDirectory", "getOpenFileName", "getOpenFileNames", "getSaveFileName"}
 I18N_KEY_PATTERN = re.compile(r"^[a-z][a-z0-9_]*(?:\.[a-z][a-z0-9_]*)+$")
+# The independent updater intentionally uses fixed English strings because it
+# must run after the translated main application has exited or been replaced.
+HARDCODED_UI_ALLOWLIST = {"updater_helper.py"}
 
 
 def _call_name(node: ast.AST) -> str:
@@ -72,7 +75,9 @@ def _iter_literal_args(arg: ast.AST):
 def find_hardcoded_ui_strings(src_root: Path) -> list[str]:
     findings: list[str] = []
     for path in sorted(src_root.rglob("*.py")):
-        if any(part in {"i18n", "__pycache__"} for part in path.parts):
+        if path.name in HARDCODED_UI_ALLOWLIST or any(
+            part in {"i18n", "__pycache__"} for part in path.parts
+        ):
             continue
         tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
         for node in ast.walk(tree):
