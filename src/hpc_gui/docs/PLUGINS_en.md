@@ -102,6 +102,15 @@ Saved connections keep their own copied settings snapshot, so removing or
 updating a plugin never changes existing connections. *Get more plugins...*
 at the bottom of the template menu opens the Plugin Manager.
 
+You can also configure structured **Storage Areas** directly on a new Generic
+Slurm connection; a provider plugin is not required. Home, Scratch, Project,
+Custom, and Node local areas can carry passive path and policy metadata. Local
+profiles have no plugin provenance, and their structured data is saved only in
+the connection or user system template. Quota remains optional: the GUI only
+uses reviewed application-owned backends, and a local profile cannot define a
+quota command, parser, hook, or executable provider content. With no supported
+backend, storage still works and quota performs no remote work.
+
 ## Job templates and lint
 
 Plugins can deliver job script templates (*New from Template...* in the
