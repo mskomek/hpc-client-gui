@@ -3,9 +3,11 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import plistlib
 import re
 import subprocess
 import sys
+import time
 import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
@@ -29,7 +31,10 @@ SECURITY_ASSET_NAME = "RELEASE_SECURITY.json"
 SECURITY_SIGNED = "signed-notarized"
 SECURITY_UNSIGNED = "unsigned"
 SECURITY_UNKNOWN = "unknown"
-AUTOMATIC_INSTALL_STRATEGIES = {"windows-portable"}
+SELF_UPDATE_STRATEGIES = {"windows-portable", "macos-bundle", "linux-appimage"}
+PACKAGE_MANAGER_UPDATE_STRATEGIES = {"linux-deb", "linux-flatpak"}
+MANUAL_UPDATE_STRATEGIES = {"source", "unsupported"}
+AUTOMATIC_INSTALL_STRATEGIES = SELF_UPDATE_STRATEGIES | PACKAGE_MANAGER_UPDATE_STRATEGIES
 ProgressCallback = Callable[[int, str, int, int], None]
 CancelCallback = Callable[[], bool]
 
@@ -484,11 +489,88 @@ try {{
 """
 
 
-def launch_update_installer(zip_path: Path, new_version: str) -> None:
-    if current_os() != "windows":
-        raise RuntimeError("Automatic installation is available only on Windows.")
+def _launch_packaged_helper(package_path: Path, new_version: str, strategy: str) -> None:
+    installation = detect_installation()
+    if installation.capability != strategy or installation.executable is None:
+        raise RuntimeError("The update target could not be identified safely.")
+    if strategy == "macos-bundle" and installation.identity != "io.github.mskomek.HpcClientGui":
+        raise RuntimeError("The macOS application bundle identity is not supported.")
+    target = installation.executable
+    if strategy == "macos-bundle":
+        target = next(parent for parent in target.parents if parent.suffix == ".app")
+    helper_command = [sys.executable]
+    source_bundle = ""
+    mount_point = ""
+    if strategy == "linux-appimage":
+        os.chmod(package_path, package_path.stat().st_mode | 0o100)
+        helper_command = [str(package_path.resolve())]
+    elif strategy == "macos-bundle":
+        attached = subprocess.run(
+            ["hdiutil", "attach", "-nobrowse", "-plist", str(package_path.resolve())],
+            capture_output=True, check=True,
+        )
+        entities = plistlib.loads(attached.stdout).get("system-entities", [])
+        mounts = [item["mount-point"] for item in entities if item.get("mount-point")]
+        if not mounts:
+            raise RuntimeError("The update image did not mount.")
+        mount_point = mounts[-1]
+        bundle = Path(mount_point) / "HPC Client GUI.app"
+        info = plistlib.loads((bundle / "Contents" / "Info.plist").read_bytes())
+        executable_name = str(info.get("CFBundleExecutable") or "HPC Client GUI")
+        helper_executable = bundle / "Contents" / "MacOS" / executable_name
+        try:
+            subprocess.run(["codesign", "--verify", "--deep", "--strict", str(bundle)], check=True)
+            subprocess.run(["spctl", "--assess", "--type", "execute", str(bundle)], check=True)
+            archs = subprocess.run(
+                ["lipo", "-archs", str(helper_executable)], capture_output=True, text=True, check=True
+            ).stdout.split()
+            if info.get("CFBundleIdentifier") != "io.github.mskomek.HpcClientGui" or installation.architecture not in archs:
+                raise RuntimeError("The update bundle identity or architecture is invalid.")
+        except Exception:
+            subprocess.run(["hdiutil", "detach", mount_point], check=False)
+            raise
+        source_bundle = str(bundle)
+        helper_command = [str(helper_executable)]
+    config_path = package_path.parent / "updater-config.json"
+    ready_path = config_path.with_suffix(".ready")
+    ready_path.unlink(missing_ok=True)
+    config_path.write_text(json.dumps({
+        "strategy": strategy,
+        "package": str(package_path.resolve()),
+        "target": str(target.resolve()),
+        "current_pid": os.getpid(),
+        "version": new_version,
+        "architecture": installation.architecture,
+        "flatpak_scope": installation.reason.partition("scope=")[2] or "user",
+        "source_bundle": source_bundle,
+        "mount_point": mount_point,
+    }), encoding="utf-8")
+    try:
+        subprocess.Popen(
+            helper_command + ["--updater-helper", str(config_path)],
+            cwd=str(package_path.parent), close_fds=True,
+            start_new_session=current_os() != "windows",
+        )
+        for _ in range(50):
+            if ready_path.exists():
+                return
+            time.sleep(0.1)
+        raise RuntimeError("The independent updater did not start.")
+    except Exception:
+        if mount_point:
+            subprocess.run(["hdiutil", "detach", mount_point], check=False)
+        raise
+
+
+def launch_update_installer(zip_path: Path, new_version: str, strategy: str = "windows-portable") -> None:
     if not is_frozen_exe():
         raise RuntimeError("Automatic installation is available only in the packaged app.")
+
+    if strategy != "windows-portable":
+        _launch_packaged_helper(zip_path, new_version, strategy)
+        return
+    if current_os() != "windows":
+        raise RuntimeError("The Windows updater cannot run on this platform.")
 
     current_exe = Path(sys.executable).resolve()
     install_dir = current_exe.parent
