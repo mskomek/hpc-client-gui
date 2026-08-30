@@ -28,6 +28,7 @@ from hpc_gui.core.ui_errors import show_exception
 from hpc_gui.services.changelog import chronological_changelog, load_changelog_text
 from hpc_gui.services import app_updater
 from hpc_gui.services.app_updater import (
+    AUTOMATIC_INSTALL_STRATEGIES,
     download_and_verify_release,
     get_latest_release,
     is_newer_version,
@@ -479,6 +480,7 @@ class MainWindow(QMainWindow):
             return
         label = {
             "checking": "Checking for updates...",
+            "preparing": "Preparing download...",
             "downloading": "Downloading update...",
             "verifying": "Verifying downloaded file...",
             "ready": "Update is ready to install.",
@@ -562,7 +564,7 @@ class MainWindow(QMainWindow):
                 webbrowser.open(release.html_url)
             return
 
-        if release.install_strategy == "manual":
+        if release.install_strategy not in AUTOMATIC_INSTALL_STRATEGIES:
             self._close_update_progress()
             message = t("updates.manual_install").format(version=release.version)
             if current_os() == "macos":
@@ -593,7 +595,8 @@ class MainWindow(QMainWindow):
         )
         if answer != QMessageBox.StandardButton.Yes:
             return
-        self._show_update_progress(10, "downloading")
+        self._show_update_progress(0, "preparing")
+        QApplication.processEvents()
         self._run_update_job(
             lambda progress, cancelled: (
                 release,
