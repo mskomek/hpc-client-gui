@@ -112,7 +112,7 @@ class _KnownHostsPolicy(paramiko.MissingHostKeyPolicy):
         client.get_host_keys().add(hostname, key.get_name(), key)
         # ponytail: single-process write; add locking if parallel profile connects arrive.
         client.save_host_keys(str(self.path))
-        if os.name == "posix":
+        if os.name == "posix" and self.path.exists():
             self.path.chmod(0o600)
 
 
