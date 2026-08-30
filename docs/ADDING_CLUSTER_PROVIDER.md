@@ -19,6 +19,5 @@ Scratch, Project, Slurm, and public documentation while leaving quota disabled.
 A missing or disabled quota definition performs no quota request, probing,
 timer, retry, `df`, `du`, or `find` fallback. Do not copy quota commands from
 another site.
-
 If you want support added but do not want to prepare the profile yourself, use
 the plugin repository's [request form](https://github.com/mskomek/hpc-client-gui-plugins/issues/new?template=plugin-request.yml).
