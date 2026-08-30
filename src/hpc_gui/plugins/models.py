@@ -14,6 +14,9 @@ SEMVER_RE = re.compile(
 )
 PLUGIN_ID_RE = re.compile(r"^[a-z][a-z0-9]*(?:\.[a-z0-9]+)+$")
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
+STORAGE_KINDS = frozenset({"home", "scratch", "project", "custom", "node-local"})
+STORAGE_ACCESS_CONTEXTS = frozenset({"login-node", "shared", "compute-node", "unknown"})
+_STORAGE_PLACEHOLDER_RE = re.compile(r"\{([A-Za-z_][A-Za-z0-9_]*)\}")
 
 PLUGIN_API_VERSION = 1
 # Additive generations understood by this release. v1 manifests stay
@@ -152,6 +155,28 @@ def validate_storage_policy(policy: Mapping[str, Any] | None) -> str | None:
     if source_url and not source_url.startswith("https://"):
         return "documentation_url must use HTTPS"
     return None
+
+
+def validate_storage_area(area: Mapping[str, Any] | None) -> str | None:
+    """Validate passive storage metadata before it is saved locally."""
+    if not isinstance(area, Mapping):
+        return "storage area must be an object"
+    if not isinstance(area.get("id"), str) or not area["id"].strip():
+        return "storage area needs an id"
+    if not isinstance(area.get("label"), str) or not area["label"].strip():
+        return "storage area needs a label"
+    kind = area.get("kind", "custom")
+    if kind not in STORAGE_KINDS:
+        return "storage area kind is unsupported"
+    context = area.get("access_context", "unknown")
+    if context not in STORAGE_ACCESS_CONTEXTS:
+        return "storage access context is unsupported"
+    path = str(area.get("path_template") or "")
+    if any(character in path for character in "\r\n;|&`$()<>"):
+        return "storage path contains unsupported command syntax"
+    if any(name != "user" for name in _STORAGE_PLACEHOLDER_RE.findall(path)):
+        return "storage path uses an unsupported placeholder"
+    return validate_storage_policy(area.get("policy"))
 
 
 @dataclass(frozen=True)
