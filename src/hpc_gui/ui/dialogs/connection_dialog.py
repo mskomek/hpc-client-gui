@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from copy import deepcopy
 from typing import Any
 
 from PySide6.QtCore import Qt
@@ -44,7 +45,10 @@ from hpc_gui.config.system_profile import (
     save_user_system_template,
 )
 from hpc_gui.plugins.templates import installed_cluster_template_groups
-from hpc_gui.plugins.models import validate_storage_policy
+from hpc_gui.plugins.models import (
+    validate_storage_area,
+    validate_storage_policy,
+)
 from hpc_gui.services.quota_monitor import quota_gate
 from hpc_gui.ssh.client import coerce_keepalive_interval
 from hpc_gui.config.storage import coerce_profile_transfer_parallelism, coerce_profile_ssh_timeout
@@ -69,10 +73,12 @@ class ConnectionDialog(QDialog):
         self._system_template_submenus: list[QMenu] = []
         self._system_template_source: dict[str, str] | None = None
         self._provider_template: dict[str, Any] | None = (
-            dict((initial_profile or {}).get("provider_template"))
+            deepcopy((initial_profile or {}).get("provider_template"))
             if isinstance((initial_profile or {}).get("provider_template"), dict)
             else None
         )
+        self._provider_origin = "plugin" if self._provider_template is not None else None
+        self._legacy_storage_snapshot: dict[str, str] = {}
         self._template_action_taken = False
         self._profile_keepalive = 30
         self._profile_transfer_parallelism = 1
@@ -83,6 +89,12 @@ class ConnectionDialog(QDialog):
             if isinstance(source, dict)
             else None
         )
+        if self._provider_template is not None:
+            self._provider_origin = (
+                "plugin"
+                if self._system_template_source and self._system_template_source.get("kind") == "plugin"
+                else "local"
+            )
 
         self.setModal(True)
         self.setWindowTitle(t("connection.dialog_title"))
@@ -263,7 +275,8 @@ class ConnectionDialog(QDialog):
         quota_form.addRow("", self.quota_enabled)
         quota_form.addRow("", self.quota_consent)
         quota_form.addRow(t("connection.quota_backend"), self.quota_backend)
-        quota_form.addRow(t("connection.quota_command"), self.quota_command)
+        self.quota_command_label = QLabel(t("connection.quota_command"))
+        quota_form.addRow(self.quota_command_label, self.quota_command)
         quota_form.addRow(t("connection.quota_scope"), self.quota_scope)
         quota_form.addRow(t("connection.quota_subject"), self.quota_subject)
         quota_form.addRow(t("connection.quota_status"), self.quota_status)
@@ -450,6 +463,10 @@ class ConnectionDialog(QDialog):
         self.system_name.setText(system["name"])
         self.scratch_dir.setText(system["scratch_dir"])
         self.home_dir.setText(system["home_dir"])
+        self._legacy_storage_snapshot = {
+            "home_dir": self.home_dir.text().strip(),
+            "scratch_dir": self.scratch_dir.text().strip(),
+        }
         self.squeue_command.setText(system["squeue_command"])
         self.sbatch_command.setText(system["sbatch_command"])
         self.scancel_command.setText(system["scancel_command"])
@@ -478,7 +495,30 @@ class ConnectionDialog(QDialog):
         self.quota_command.setText(str(source.get("command_template") or ""))
         self.quota_scope.setText(str(source.get("scope") or ""))
         self.quota_subject.setText(str(source.get("subject_template") or ""))
+        local = self._provider_origin == "local"
+        if local:
+            self.quota_backend.clear()
+            self.quota_backend.addItem(t("connection.quota_status_unconfigured"), "")
+        for widget in (self.quota_command_label, self.quota_command, self.quota_scope, self.quota_subject):
+            widget.setVisible(not local)
+        if local:
+            self.quota_command.clear()
+            self.quota_scope.clear()
+            self.quota_subject.clear()
         self._update_quota_status()
+
+    def _ensure_local_provider_template(self) -> dict[str, Any]:
+        if self._provider_template is None:
+            self._provider_origin = "local"
+            self._provider_template = {
+                "schema_version": 2,
+                "profile_id": "local",
+                "name": self.system_name.text().strip() or "Custom HPC",
+                "scheduler": "slurm",
+                "storage": [],
+                "quota_sources": [],
+            }
+        return self._provider_template
 
     def _update_quota_status(self) -> None:
         state = quota_gate(
@@ -515,8 +555,40 @@ class ConnectionDialog(QDialog):
         path, ok = QInputDialog.getText(self, t("connection.storage_add"), t("connection.storage_path"))
         if not ok:
             return
-        area_id = "-".join(label.strip().lower().split())
-        self.storage_rows.append({"id": area_id, "label": label.strip(), "path_template": path.strip()})
+        kind_values = ["home", "scratch", "project", "custom", "node-local"]
+        kind, ok = QInputDialog.getItem(
+            self, t("connection.storage_add"), t("connection.storage_kind"), kind_values, 3, False
+        )
+        if not ok:
+            return
+        contexts = ["login-node", "shared", "compute-node", "unknown"]
+        access_context, ok = QInputDialog.getItem(
+            self, t("connection.storage_add"), t("connection.storage_access_context"), contexts, 3, False
+        )
+        if not ok:
+            return
+        path = path.strip()
+        area_id = "-".join(label.strip().lower().split()) or "storage"
+        used_ids = {str(row.get("id")) for row in self.storage_rows}
+        base_id = area_id
+        suffix = 2
+        while area_id in used_ids:
+            area_id = f"{base_id}-{suffix}"
+            suffix += 1
+        area = {
+            "id": area_id,
+            "label": label.strip(),
+            "kind": kind,
+            "enabled": True,
+            "path_template": path,
+            "access_context": access_context,
+            "policy": {"backup": None, "retention_days": None},
+        }
+        if validate_storage_area(area):
+            QMessageBox.warning(self, t("common.error"), t("connection.storage_path_invalid"))
+            return
+        self._ensure_local_provider_template()
+        self.storage_rows.append(area)
         self._set_storage_rows(self.storage_rows)
 
     def _remove_storage_area(self) -> None:
@@ -539,6 +611,22 @@ class ConnectionDialog(QDialog):
         path, ok = QInputDialog.getText(
             self, t("connection.storage_edit"), t("connection.storage_path"),
             text=str(current.get("path_template") or ""),
+        )
+        if not ok:
+            return
+        kind_values = ["home", "scratch", "project", "custom", "node-local"]
+        kind, ok = QInputDialog.getItem(
+            self, t("connection.storage_edit"), t("connection.storage_kind"), kind_values,
+            max(0, kind_values.index(str(current.get("kind") or "custom")))
+            if current.get("kind") in kind_values else 3, False,
+        )
+        if not ok:
+            return
+        contexts = ["login-node", "shared", "compute-node", "unknown"]
+        access_context, ok = QInputDialog.getItem(
+            self, t("connection.storage_edit"), t("connection.storage_access_context"), contexts,
+            max(0, contexts.index(str(current.get("access_context") or "unknown")))
+            if current.get("access_context") in contexts else 3, False,
         )
         if not ok:
             return
@@ -578,6 +666,15 @@ class ConnectionDialog(QDialog):
         if validate_storage_policy({"documentation_url": source_url}):
             QMessageBox.warning(self, t("common.error"), t("connection.storage_source_url_invalid"))
             return
+        current["kind"] = kind
+        current["access_context"] = access_context
+        current["enabled"] = current.get("enabled") is not False
+        current["id"] = str(current.get("id") or "custom")
+        candidate = dict(current, label=label.strip(), path_template=path.strip())
+        if validate_storage_area(candidate):
+            QMessageBox.warning(self, t("common.error"), t("connection.storage_path_invalid"))
+            return
+        self._ensure_local_provider_template()
         current["label"] = label.strip()
         current["path_template"] = path.strip()
         current["policy"] = {
@@ -590,21 +687,42 @@ class ConnectionDialog(QDialog):
         self._set_storage_rows(self.storage_rows)
 
     def _sync_structured_editor(self) -> None:
-        if not self._provider_template:
+        feature_used = bool(self.storage_rows) or self.quota_enabled.isChecked()
+        feature_used = feature_used or bool(self.quota_scope.text().strip())
+        feature_used = feature_used or bool(self.quota_subject.text().strip())
+        feature_used = feature_used or bool(self.quota_backend.currentData())
+        if self._provider_template is None and not feature_used:
             return
-        self._provider_template["storage"] = [dict(row) for row in self.storage_rows]
-        sources = self._provider_template.get("quota_sources")
+        provider = self._ensure_local_provider_template()
+        self._sync_legacy_storage_paths()
+        provider["storage"] = [dict(row) for row in self.storage_rows]
+        sources = provider.get("quota_sources")
         preserved = [dict(item) for item in sources if isinstance(item, dict)] if isinstance(sources, list) else []
         source = dict(preserved[0]) if preserved else {"id": "local-quota"}
         source.update({
             "enabled": self.quota_enabled.isChecked(),
             "consent": self.quota_consent.isChecked(),
             "backend_id": str(self.quota_backend.currentData() or "").strip(),
-            "command_template": self.quota_command.text().strip(),
+            "command_template": "" if self._provider_origin == "local" else self.quota_command.text().strip(),
             "scope": self.quota_scope.text().strip(),
             "subject_template": self.quota_subject.text().strip(),
         })
-        self._provider_template["quota_sources"] = [source, *preserved[1:]]
+        provider["quota_sources"] = [source, *preserved[1:]]
+
+    def _sync_legacy_storage_paths(self) -> None:
+        """Keep legacy Home/Scratch fields and structured rows aligned."""
+        for key, kind in (("home_dir", "home"), ("scratch_dir", "scratch")):
+            value = getattr(self, key)
+            current = value.text().strip()
+            previous = self._legacy_storage_snapshot.get(key, current)
+            rows = [row for row in self.storage_rows if row.get("kind") == kind or row.get("id") == kind]
+            if current != previous:
+                for row in rows:
+                    row["path_template"] = current
+            elif rows and rows[0].get("path_template"):
+                current = str(rows[0]["path_template"]).strip()
+                value.setText(current)
+            self._legacy_storage_snapshot[key] = current
 
     def _system_form_values(self) -> dict[str, Any]:
         self._sync_structured_editor()
@@ -633,13 +751,20 @@ class ConnectionDialog(QDialog):
         provenance: dict[str, str] | None = None,
         structured: dict[str, Any] | None = None,
     ) -> None:
+        if structured is None and isinstance(template.get("provider_template"), dict):
+            structured = template["provider_template"]
         self._system_template_source = dict(provenance) if provenance else None
-        self._provider_template = dict(structured) if structured else None
+        self._provider_template = deepcopy(structured) if structured else None
+        self._provider_origin = "plugin" if provenance and structured else ("local" if structured else None)
         self._template_action_taken = True
         system = normalize_system_settings(template)
         self.system_name.setText(system["name"])
         self.scratch_dir.setText(system["scratch_dir"])
         self.home_dir.setText(system["home_dir"])
+        self._legacy_storage_snapshot = {
+            "home_dir": self.home_dir.text().strip(),
+            "scratch_dir": self.scratch_dir.text().strip(),
+        }
         self.squeue_command.setText(system["squeue_command"])
         self.sbatch_command.setText(system["sbatch_command"])
         self.scancel_command.setText(system["scancel_command"])
@@ -824,23 +949,8 @@ class ConnectionDialog(QDialog):
         # Structured provider data is part of the saved connection state, not
         # an ephemeral UI action.  Keep every source and update only the source
         # represented by the current quota editor.
-        if self._provider_template:
-            self._sync_structured_editor()
-            sources = self._provider_template.get("quota_sources")
-            if not isinstance(sources, list):
-                sources = []
-            preserved = [dict(item) for item in sources if isinstance(item, dict)]
-            source = dict(preserved[0]) if preserved else {"id": "local-quota"}
-            source.update({
-                "enabled": self.quota_enabled.isChecked(),
-                "consent": self.quota_consent.isChecked(),
-                "backend_id": str(self.quota_backend.currentData() or "").strip(),
-                "command_template": self.quota_command.text().strip(),
-                "scope": self.quota_scope.text().strip(),
-                "subject_template": self.quota_subject.text().strip(),
-            })
-            self._provider_template["quota_sources"] = [source, *preserved[1:]]
-            profile["provider_template"] = dict(self._provider_template)
+        if self._provider_template is not None:
+            profile["provider_template"] = deepcopy(self._provider_template)
             if self._system_template_source:
                 profile["system_template_source"] = dict(self._system_template_source)
         elif self._template_action_taken:
