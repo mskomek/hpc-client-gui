@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+## v1.5.8
+
+### Security hardening
+- Redacted Plink/X11 passwords and other credentials from logs, process metadata,
+  command previews, crash reports, and diagnostics bundles.
+- Converted downloaded plugins to declarative data only; legacy executable
+  Python plugins are rejected and disabled.
+- Removed automatic execution of unverified PuTTY/VcXsrv downloads and removed
+  VcXsrv's unauthenticated `-ac` startup flag.
+- Added signed Ed25519 update metadata verification with strict artifact,
+  platform, size, hash, HTTPS, and host validation.
+- Restricted provider command templates, hardened local state permissions, and
+  added security regression coverage.
+
 ## v1.5.7
 
 ### Cross-platform updater architecture
