@@ -60,6 +60,13 @@ def _deb_context(executable: Path, architecture: str) -> InstallationContext | N
     )
 
 
+def _flatpak_scope(app_id: str) -> str:
+    for scope in ("user", "system"):
+        if _run(["flatpak-spawn", "--host", "flatpak", "info", f"--{scope}", app_id]):
+            return scope
+    return "unknown"
+
+
 def detect_installation() -> InstallationContext:
     os_key = current_os()
     architecture = current_architecture()
@@ -67,10 +74,22 @@ def detect_installation() -> InstallationContext:
 
     if os_key == "linux":
         if os.environ.get("FLATPAK_ID"):
-            return InstallationContext("flatpak", "FLATPAK_ID", executable, os.environ["FLATPAK_ID"], "", architecture, "linux-flatpak", "Updates are delegated to Flatpak.")
+            app_id = os.environ["FLATPAK_ID"]
+            scope = _flatpak_scope(app_id)
+            capability = "linux-flatpak" if app_id == "io.github.mskomek.HpcClientGui" and scope != "unknown" else "unsupported"
+            return InstallationContext("flatpak", "FLATPAK_ID", executable, app_id, "", architecture, capability, f"Updates are delegated to Flatpak; scope={scope}")
         appimage = os.environ.get("APPIMAGE")
-        if appimage and Path(appimage).is_file() and Path(appimage).resolve() == executable:
-            return InstallationContext("appimage", "APPIMAGE runtime", executable, "hpc-client-gui", "", architecture, "linux-appimage", "AppImage installation was identified safely.")
+        appdir = os.environ.get("APPDIR")
+        image = Path(appimage).resolve() if appimage else None
+        runtime_matches = bool(
+            image and image.is_file() and (
+                image == executable
+                or (appdir and Path(appdir).resolve() in executable.parents)
+            )
+        )
+        if runtime_matches:
+            capability = "linux-appimage" if os.access(image.parent, os.W_OK) else "unsupported"
+            return InstallationContext("appimage", "APPIMAGE runtime", image, "hpc-client-gui", "", architecture, capability, "AppImage installation was identified safely." if capability == "linux-appimage" else "The AppImage directory is not writable.")
         deb = _deb_context(executable, architecture)
         if deb:
             return deb
@@ -84,7 +103,9 @@ def detect_installation() -> InstallationContext:
                 info = plistlib.loads(info_path.read_bytes())
             except (OSError, plistlib.InvalidFileException, ValueError):
                 info = {}
-            return InstallationContext("macos-bundle", "Info.plist", executable, str(info.get("CFBundleIdentifier") or ""), str(info.get("CFBundleShortVersionString") or ""), architecture, "macos-bundle", "Bundle replacement requires a signed, writable installation.")
+            identity = str(info.get("CFBundleIdentifier") or "")
+            capability = "macos-bundle" if identity == "io.github.mskomek.HpcClientGui" and os.access(bundle.parent, os.W_OK) else "unsupported"
+            return InstallationContext("macos-bundle", "Info.plist", executable, identity, str(info.get("CFBundleShortVersionString") or ""), architecture, capability, "Writable application bundle identified." if capability == "macos-bundle" else "Bundle identity or location is not supported.")
 
     if os_key == "windows" and getattr(sys, "frozen", False):
         return InstallationContext("windows", "frozen executable", executable, "hpc-client-gui", "", architecture, "windows-portable", "Windows portable updater is supported.")

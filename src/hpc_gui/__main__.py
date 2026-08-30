@@ -53,7 +53,9 @@ if __package__ is None or __package__ == "":
     # script olarak çalıştırıldı -> src/ dizinini sys.path'e ekle
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-if _is_cli_invocation(sys.argv[1:]):
+if "--updater-helper" in sys.argv[1:]:
+    from hpc_gui.services.updater_helper import run_helper
+elif _is_cli_invocation(sys.argv[1:]):
     from hpc_gui.cli.main import run_cli
 else:
     from hpc_gui.app import main
@@ -62,6 +64,9 @@ if _PERFORMANCE_PROBE is not None:
     _PERFORMANCE_PROBE.mark("application_imports_complete")
 
 if __name__ == "__main__":
+    if "--updater-helper" in sys.argv[1:]:
+        index = sys.argv.index("--updater-helper")
+        raise SystemExit(run_helper(Path(sys.argv[index + 1])))
     if _is_cli_invocation(sys.argv[1:]):
         raise SystemExit(run_cli())
     raise SystemExit(main())

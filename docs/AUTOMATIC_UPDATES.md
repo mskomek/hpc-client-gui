@@ -6,14 +6,15 @@ published SHA-256 file before installation is offered.
 
 | Installation | Update behavior |
 | --- | --- |
-| Windows portable x86_64 | Fully automatic. An independent WinForms updater waits for the application, extracts and copies with real byte progress, keeps backups, checks the restarted process, and rolls back on failure. |
-| macOS `.app` bundle (arm64 / x86_64) | Manual DMG handoff. The correct architecture is selected; bundle replacement remains manual so signing, notarization, Gatekeeper, and non-writable application locations are not bypassed. |
-| Linux AppImage x86_64 | Manual installation. The AppImage artifact and checksum are selected correctly, but no independent GUI runtime is currently shipped for safe automatic replacement. |
-| Debian / Ubuntu `.deb` amd64 | Package-manager-managed installation. The `.deb` artifact is selected from `dpkg-query` ownership evidence; administrator authentication and installation remain delegated to the system. |
-| Flatpak | Flatpak-managed update. Application files are never replaced directly. |
+| Windows portable x86_64 | Self-update. The independent WinForms updater extracts and copies with real byte progress, health-checks, restarts, and rolls back. |
+| macOS `.app` bundle (arm64 / x86_64) | Conditional self-update. Signed/notarized, architecture-correct DMGs can replace a writable bundle after `codesign` and Gatekeeper checks. Other locations/builds stay manual. |
+| Linux AppImage x86_64 | Self-update for a verified user-writable `APPIMAGE` target, with byte progress, atomic replacement, health check, and rollback. |
+| Debian / Ubuntu `.deb` amd64 | APT-managed. The verified package is passed to `pkexec apt install`; APT owns authentication and installed files. |
+| Flatpak | Flatpak-managed. The verified release bundle is passed to Flatpak using the detected user/system scope; host handoff failure falls back safely. |
 | Source / pip | Manual update. Source trees are never overwritten. |
 | Unknown installation | Unsupported; no installation target is guessed. |
 
 Download cancellation removes the partial `.part` file and leaves the running
-application untouched. Once Windows replacement begins, cancellation is
-disabled because interrupting file replacement cannot be made safely.
+application untouched. Installation progress is numeric only for measurable
+self-update work; APT and Flatpak transactions remain indeterminate. Destructive
+installation cannot be cancelled from the updater UI.

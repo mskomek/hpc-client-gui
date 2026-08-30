@@ -396,6 +396,14 @@ jobs:
           manifest = json.loads(Path("dist/releases/v${{ github.event.inputs.version }}/MANIFEST.json").read_text())
           names = {item["file"] for item in manifest["artifacts"]}
           required = {
+              "hpc-client-gui_windows_onedir.zip",
+              "hpc-client-gui_windows_onedir.zip.sha256",
+              "hpc-client-gui-${{ github.event.inputs.version }}-x86_64.AppImage",
+              "hpc-client-gui-${{ github.event.inputs.version }}-x86_64.AppImage.sha256",
+              "hpc-client-gui_${{ github.event.inputs.version }}_amd64.deb",
+              "hpc-client-gui_${{ github.event.inputs.version }}_amd64.deb.sha256",
+              "hpc-client-gui-${{ github.event.inputs.version }}.flatpak",
+              "hpc-client-gui-${{ github.event.inputs.version }}.flatpak.sha256",
               "hpc-client-gui_macos_arm64.dmg",
               "hpc-client-gui_macos_arm64.dmg.sha256",
               "hpc-client-gui_macos_x86_64.dmg",
@@ -513,6 +521,14 @@ jobs:
           manifest = json.loads(Path("dist/releases/v${{ github.event.inputs.version }}/MANIFEST.json").read_text())
           names = {item["file"] for item in manifest["artifacts"]}
           required = {
+              "hpc-client-gui_windows_onedir.zip",
+              "hpc-client-gui_windows_onedir.zip.sha256",
+              "hpc-client-gui-${{ github.event.inputs.version }}-x86_64.AppImage",
+              "hpc-client-gui-${{ github.event.inputs.version }}-x86_64.AppImage.sha256",
+              "hpc-client-gui_${{ github.event.inputs.version }}_amd64.deb",
+              "hpc-client-gui_${{ github.event.inputs.version }}_amd64.deb.sha256",
+              "hpc-client-gui-${{ github.event.inputs.version }}.flatpak",
+              "hpc-client-gui-${{ github.event.inputs.version }}.flatpak.sha256",
               "hpc-client-gui_macos_arm64.dmg",
               "hpc-client-gui_macos_arm64.dmg.sha256",
               "hpc-client-gui_macos_x86_64.dmg",
@@ -647,6 +663,14 @@ jobs:
           assert manifest["release"] == "v${{ github.event.inputs.version }}"
           names = {item["file"] for item in manifest["artifacts"]}
           required = {
+              "hpc-client-gui_windows_onedir.zip",
+              "hpc-client-gui_windows_onedir.zip.sha256",
+              "hpc-client-gui-${{ github.event.inputs.version }}-x86_64.AppImage",
+              "hpc-client-gui-${{ github.event.inputs.version }}-x86_64.AppImage.sha256",
+              "hpc-client-gui_${{ github.event.inputs.version }}_amd64.deb",
+              "hpc-client-gui_${{ github.event.inputs.version }}_amd64.deb.sha256",
+              "hpc-client-gui-${{ github.event.inputs.version }}.flatpak",
+              "hpc-client-gui-${{ github.event.inputs.version }}.flatpak.sha256",
               "hpc-client-gui_macos_arm64.dmg",
               "hpc-client-gui_macos_arm64.dmg.sha256",
               "hpc-client-gui_macos_x86_64.dmg",
