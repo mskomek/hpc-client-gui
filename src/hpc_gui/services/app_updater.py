@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import hashlib
 import json
 import os
 import plistlib
@@ -9,14 +8,21 @@ import subprocess
 import sys
 import time
 import urllib.request
+import base64
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable
+from typing import Any, Callable, Mapping
 
 from hpc_gui import __version__
 from hpc_gui.core.paths import app_data_dir, is_frozen_exe
 from hpc_gui.core.platform import current_os, release_platform_key
 from hpc_gui.services.installation_context import detect_installation
+from hpc_gui.services.update_verification import (
+    UpdateVerificationError,
+    validate_update_url,
+    verify_artifact,
+    verify_signed_metadata,
+)
 
 
 GITHUB_REPOSITORY = "mskomek/hpc-client-gui"
@@ -27,6 +33,10 @@ RELEASE_EXE_NAME = "hpc-client-gui.exe"
 RELEASE_ZIP_NAME = "hpc-client-gui_windows_onedir.zip"
 RELEASE_SHA_NAME = f"{RELEASE_ZIP_NAME}.sha256"
 SECURITY_ASSET_NAME = "RELEASE_SECURITY.json"
+SIGNED_METADATA_ASSET_NAME = "UPDATE_METADATA.json"
+TRUSTED_UPDATE_KEYS = {
+    "release-2026-01": base64.b64decode("c3P8bG6x8qG27HppkSKLyGlmR3QVV7VDTPX7cLXt2v4=")
+}
 # Allowed values for UpdateRelease.security_status.
 SECURITY_SIGNED = "signed-notarized"
 SECURITY_UNSIGNED = "unsigned"
@@ -37,6 +47,7 @@ MANUAL_UPDATE_STRATEGIES = {"source", "unsupported"}
 AUTOMATIC_INSTALL_STRATEGIES = SELF_UPDATE_STRATEGIES | PACKAGE_MANAGER_UPDATE_STRATEGIES
 ProgressCallback = Callable[[int, str, int, int], None]
 CancelCallback = Callable[[], bool]
+_VERIFIED_UPDATE_ARTIFACTS: dict[Path, Mapping[str, Any]] = {}
 
 
 @dataclass(frozen=True)
@@ -51,6 +62,7 @@ class UpdateRelease:
     install_strategy: str = "unsupported"
     # "signed-notarized", "unsigned", or "unknown" (metadata asset missing).
     security_status: str = SECURITY_UNKNOWN
+    signed_artifact: Mapping[str, Any] | None = None
 
 
 def parse_release_security(payload: object) -> str:
@@ -142,10 +154,34 @@ def get_latest_release(timeout: float = 30.0) -> UpdateRelease:
     if release_assets is None:
         return UpdateRelease(version, tag, "", "", "", "", str(payload.get("html_url") or ""), installation.capability)
     expected_zip, expected_sha = release_assets
-    if not assets.get(expected_zip) or not assets.get(expected_sha):
+    if not assets.get(expected_zip):
         raise RuntimeError(
-            f"Release assets are incomplete: {expected_zip} and {expected_sha} are required."
+            f"Release assets are incomplete: {expected_zip} is required."
         )
+
+    metadata_url = assets.get(SIGNED_METADATA_ASSET_NAME)
+    if not metadata_url:
+        raise RuntimeError("Release has no signed update metadata; automatic update is disabled.")
+    try:
+        validate_update_url(metadata_url)
+        with _request(metadata_url, timeout=timeout) as response:
+            validate_update_url(response.geturl())
+            metadata = verify_signed_metadata(response.read(), TRUSTED_UPDATE_KEYS)
+    except (OSError, UpdateVerificationError) as exc:
+        raise RuntimeError(f"Signed update metadata verification failed: {exc}") from exc
+    platform_name, architecture = release_platform_key().split("_", 1)
+    matches = [
+        artifact for artifact in metadata["artifacts"]
+        if artifact["file"] == expected_zip
+        and artifact["platform"] == platform_name
+        and artifact["architecture"] == architecture
+        and artifact["kind"] == installation.capability
+    ]
+    if metadata["version"].lstrip("v") != version or metadata["channel"] != "stable" or len(matches) != 1:
+        raise RuntimeError("Signed update metadata does not match this release and platform.")
+    signed_artifact = matches[0]
+    if signed_artifact["url"] != assets[expected_zip]:
+        raise RuntimeError("Signed artifact URL does not match the GitHub release asset.")
 
     security_status = SECURITY_UNKNOWN
     security_url = assets.get(SECURITY_ASSET_NAME)
@@ -168,6 +204,7 @@ def get_latest_release(timeout: float = 30.0) -> UpdateRelease:
         html_url=str(payload.get("html_url") or ""),
         install_strategy=installation.capability,
         security_status=security_status,
+        signed_artifact=signed_artifact,
     )
 
 
@@ -180,11 +217,16 @@ def _download(
     progress_end: int = 100,
     status: str = "",
     cancelled: CancelCallback | None = None,
+    verify_update_host: bool = False,
 ) -> None:
     destination.parent.mkdir(parents=True, exist_ok=True)
     temporary = destination.with_suffix(destination.suffix + ".part")
     try:
+        if verify_update_host:
+            validate_update_url(url)
         with _request(url, timeout=timeout) as response, temporary.open("wb") as output:
+            if verify_update_host:
+                validate_update_url(response.geturl())
             total = int(response.headers.get("Content-Length") or 0)
             downloaded = 0
             while True:
@@ -219,46 +261,43 @@ def download_and_verify_release(
 ) -> Path:
     update_dir = app_data_dir() / "updates" / f"v{release.version}"
     zip_path = update_dir / release.zip_name
-    sha_path = update_dir / release.sha_name
+    artifact = release.signed_artifact
+    if artifact is None:
+        raise RuntimeError("Automatic update requires authenticated signed metadata.")
 
-    if zip_path.exists() and sha_path.exists():
-        expected = sha_path.read_text(encoding="ascii", errors="ignore").strip().split()[0]
-        actual = hashlib.sha256(zip_path.read_bytes()).hexdigest()
-        if expected and actual.lower() == expected.lower():
+    if zip_path.exists():
+        try:
+            verify_artifact(zip_path, artifact)
             if progress_cb:
                 progress_cb(100, "ready", 0, 0)
+            _VERIFIED_UPDATE_ARTIFACTS[zip_path.resolve()] = artifact
             return zip_path
+        except UpdateVerificationError:
+            zip_path.unlink(missing_ok=True)
 
     if progress_cb:
         progress_cb(0, "preparing", 0, 0)
     _download(
-        release.sha_url,
-        sha_path,
-        progress_cb=progress_cb,
-        progress_start=0,
-        progress_end=0,
-        status="preparing",
-        cancelled=cancelled,
-    )
-    _download(
-        release.zip_url,
+        str(artifact["url"]),
         zip_path,
         progress_cb=progress_cb,
         progress_start=0,
         progress_end=100,
         status="downloading",
         cancelled=cancelled,
+        verify_update_host=True,
     )
 
     if progress_cb:
         progress_cb(100, "verifying", 0, 0)
-    expected = sha_path.read_text(encoding="ascii", errors="ignore").strip().split()[0]
-    actual = hashlib.sha256(zip_path.read_bytes()).hexdigest()
-    if not expected or actual.lower() != expected.lower():
+    try:
+        verify_artifact(zip_path, artifact)
+    except UpdateVerificationError as exc:
         zip_path.unlink(missing_ok=True)
-        raise RuntimeError("Downloaded update SHA256 verification failed.")
+        raise RuntimeError(f"Downloaded update verification failed: {exc}") from exc
     if progress_cb:
         progress_cb(100, "ready", 0, 0)
+    _VERIFIED_UPDATE_ARTIFACTS[zip_path.resolve()] = artifact
     return zip_path
 
 
@@ -545,6 +584,8 @@ def _launch_packaged_helper(package_path: Path, new_version: str, strategy: str)
         "source_bundle": source_bundle,
         "mount_point": mount_point,
     }), encoding="utf-8")
+    if os.name == "posix":
+        config_path.chmod(0o600)
     try:
         subprocess.Popen(
             helper_command + ["--updater-helper", str(config_path)],
@@ -565,6 +606,10 @@ def _launch_packaged_helper(package_path: Path, new_version: str, strategy: str)
 def launch_update_installer(zip_path: Path, new_version: str, strategy: str = "windows-portable") -> None:
     if not is_frozen_exe():
         raise RuntimeError("Automatic installation is available only in the packaged app.")
+    artifact = _VERIFIED_UPDATE_ARTIFACTS.get(zip_path.resolve())
+    if artifact is None:
+        raise RuntimeError("Update artifact has no authenticated verification record.")
+    verify_artifact(zip_path, artifact)
 
     if strategy != "windows-portable":
         _launch_packaged_helper(zip_path, new_version, strategy)

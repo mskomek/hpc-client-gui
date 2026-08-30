@@ -167,19 +167,19 @@ def test_unknown_command_placeholder_rejected():
         "commands": {"squeue_command": "squeue --me={home_dir}{user}"},
     }
     errors = validate_cluster_profile_dict(profile)
-    assert any("unknown placeholder {home_dir}" in e for e in errors)
+    assert any("not an application-owned Slurm operation" in e for e in errors)
 
 
-def test_known_placeholders_accepted_and_status_free_form():
+def test_only_application_owned_slurm_commands_are_accepted():
     profile = {
         "schema_version": 1,
         "profile_id": "truba",
         "name": "T",
         "scheduler": "slurm",
         "commands": {
-            "squeue_command": 'squeue -h -u {user}',
+            "squeue_command": 'squeue -h -u {user} -o "%i|%P|%j|%u|%T|%M|%D|%C|%R"',
             "scancel_command": "scancel {job_id_q}",
-            "status_command": "squeue --fancy-{anything}",
+            "status_command": "lssrv",
         },
     }
     assert validate_cluster_profile_dict(profile) == []

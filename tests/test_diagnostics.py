@@ -21,7 +21,7 @@ class DiagnosticBundleTests(unittest.TestCase):
                 encoding="utf-8",
             )
             (app_data / "app.log").write_text(
-                r"C:\Users\mkomek\file.log connecting to arf.truba.gov.tr",
+                r"C:\Users\mkomek\file.log connecting to arf.truba.gov.tr -pw FakeX11Password Authorization: Bearer fake.token",
                 encoding="utf-8",
             )
 
@@ -43,6 +43,10 @@ class DiagnosticBundleTests(unittest.TestCase):
                 self.assertNotIn("arf.truba.gov.tr", log_content)
                 self.assertIn("<user>", log_content)
                 self.assertIn("<host>", log_content)
+                self.assertNotIn("FakeX11Password", log_content)
+                self.assertNotIn("fake.token", log_content)
+                manifest = json.loads(zf.read("manifest.json"))
+                self.assertIn("app.log", manifest["included_files"])
 
 
 if __name__ == "__main__":

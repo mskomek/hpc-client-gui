@@ -91,6 +91,8 @@ def app_data_dir() -> Path:
     else:
         base = legacy_app_data_dir(home)
     base.mkdir(parents=True, exist_ok=True)
+    if os.name == "posix":
+        base.chmod(0o700)
     return base
 
 

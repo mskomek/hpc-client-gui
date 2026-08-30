@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import traceback
 from datetime import datetime, timezone
 from typing import Optional
@@ -37,7 +38,10 @@ def write_crash_flag(exc_type: Optional[type] = None, exc_value: Optional[BaseEx
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "summary": summary[:4000],
         }
-        _crash_flag_path().write_text(json.dumps(flag, ensure_ascii=False, indent=2), encoding="utf-8")
+        path = _crash_flag_path()
+        path.write_text(json.dumps(flag, ensure_ascii=False, indent=2), encoding="utf-8")
+        if os.name == "posix":
+            path.chmod(0o600)
     except Exception:
         pass
 

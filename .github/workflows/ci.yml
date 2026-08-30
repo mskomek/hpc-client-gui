@@ -49,6 +49,12 @@ jobs:
           -q --tb=short -rf
       - name: Updater strategy tests
         run: python -m pytest tests/test_app_updater.py tests/test_installation_context.py tests/test_updater_helper.py -q --tb=short
+      - name: Security regression gate
+        run: >
+          python -m pytest tests/test_security_hardening_wave.py
+          tests/test_log_redaction.py tests/test_diagnostics.py
+          tests/test_update_verification.py tests/test_plugin_security.py
+          tests/test_terminal_boundaries.py -q --tb=short
 
   cli:
     runs-on: ubuntu-latest

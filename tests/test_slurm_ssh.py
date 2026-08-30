@@ -76,7 +76,8 @@ class SSHSlurmBackendTests(unittest.TestCase):
         )
 
         backend.squeue("alice")
-        backend.lssrv()
+        with self.assertRaisesRegex(RuntimeError, "allowlisted"):
+            backend.lssrv()
         backend.active_job_ids("alice")
         backend.job_state("12 34")
 
@@ -84,7 +85,6 @@ class SSHSlurmBackendTests(unittest.TestCase):
             ssh.commands,
             [
                 "queue --owner alice",
-                "cluster-status",
                 "queue-ids alice",
                 "job-state '12 34'",
             ],

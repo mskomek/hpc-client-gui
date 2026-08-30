@@ -25,11 +25,13 @@ def _signed(metadata):
 
 def _metadata(**overrides):
     value = {
+        "schema_version": 1,
         "product": "hpc-client-gui",
         "version": "1.6.0",
         "channel": "stable",
+        "key_id": "fixture",
         "artifacts": [{
-            "kind": "deb", "architecture": "amd64", "file": "app.deb",
+            "kind": "deb", "platform": "linux", "architecture": "x86_64", "file": "app.deb",
             "url": "https://github.com/mskomek/hpc-client-gui/releases/download/v1.6.0/app.deb",
             "size": 3, "sha256": "a" * 64,
         }],
@@ -60,6 +62,12 @@ def test_metadata_rejects_duplicate_targets_and_non_https_urls():
     metadata["artifacts"][0]["url"] = "http://example.invalid/app.deb"
     raw, keys = _signed(metadata)
     with pytest.raises(UpdateVerificationError, match="HTTPS"):
+        verify_signed_metadata(raw, keys)
+
+    metadata = _metadata()
+    metadata["artifacts"][0]["url"] = "https://evil.example/app.deb"
+    raw, keys = _signed(metadata)
+    with pytest.raises(UpdateVerificationError, match="host"):
         verify_signed_metadata(raw, keys)
 
 

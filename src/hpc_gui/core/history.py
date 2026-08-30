@@ -1,4 +1,5 @@
 import json
+import os
 from pathlib import Path
 from datetime import datetime
 
@@ -42,3 +43,5 @@ def append_event(event: dict) -> None:
     event["ts"] = datetime.now().isoformat(timespec="seconds")
     data.append(event)
     p.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    if os.name == "posix":
+        p.chmod(0o600)

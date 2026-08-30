@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List
@@ -114,6 +115,8 @@ class CommandHistoryStore:
             self.path.parent.mkdir(parents=True, exist_ok=True)
             with self.path.open("a", encoding="utf-8") as f:
                 f.write(json.dumps({"cmd": cmd}, ensure_ascii=False) + "\n")
+            if os.name == "posix":
+                self.path.chmod(0o600)
         except Exception:
             # Never break UI due to IO issues
             pass

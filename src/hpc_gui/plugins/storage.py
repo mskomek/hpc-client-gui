@@ -40,6 +40,8 @@ def write_disabled_ids(disabled, root: str | Path | None = None) -> None:
         json.dump(payload, handle, indent=2, sort_keys=True)
         handle.write("\n")
     temporary.replace(base / DISABLED_FILE_NAME)
+    if os.name == "posix":
+        (base / DISABLED_FILE_NAME).chmod(0o600)
 
 
 def plugins_root(override: str | Path | None = None) -> Path:
@@ -124,3 +126,5 @@ def write_active_versions(active: Mapping[str, str], root: str | Path | None = N
         handle.flush()
         os.fsync(handle.fileno())
     temporary.replace(target)
+    if os.name == "posix":
+        target.chmod(0o600)

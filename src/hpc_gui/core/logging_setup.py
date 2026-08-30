@@ -7,9 +7,15 @@ import threading
 from logging.handlers import RotatingFileHandler
 
 from hpc_gui.core.logging import log_path
+from hpc_gui.core.log_redaction import redact_text
 
 
 _fault_file = None
+
+
+class _RedactingFormatter(logging.Formatter):
+    def format(self, record: logging.LogRecord) -> str:
+        return redact_text(super().format(record))
 
 
 def _is_paramiko_prefetch_shutdown(thread_name: str, exc_type, exc_value) -> bool:
@@ -92,7 +98,7 @@ def setup_logging(level: int = logging.INFO) -> None:
         if any(isinstance(h, RotatingFileHandler) for h in root.handlers):
             return
 
-        fmt = logging.Formatter(
+        fmt = _RedactingFormatter(
             fmt="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
             datefmt="%Y-%m-%d %H:%M:%S",
         )
