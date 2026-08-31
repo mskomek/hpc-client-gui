@@ -215,6 +215,8 @@ class LoginWidget(QWidget):
         self.host = QLineEdit()
         self.port = QLineEdit("22")
         self.username = QLineEdit()
+        self.project = QLineEdit()
+        self.account = QLineEdit()
 
         self.password = QLineEdit()
         self.password.setEchoMode(QLineEdit.EchoMode.Password)
@@ -323,6 +325,8 @@ class LoginWidget(QWidget):
         self.form.addRow(t("connection.max_simultaneous_transfers"), self.sp_transfer_parallelism)
         self.form.addRow(t("connection.ssh_timeout_override"), self.sp_ssh_timeout)
         self.form.addRow(t("login.username"), self.username)
+        self.form.addRow(t("connection.project"), self.project)
+        self.form.addRow(t("connection.account"), self.account)
         self.form.addRow(t("login.password"), self.password)
         self.form.addRow("", self.cb_save_password)
 
@@ -969,6 +973,8 @@ class LoginWidget(QWidget):
         self.host.setText(prof.get("host", ""))
         self.port.setText(str(prof.get("port", 22)))
         self.username.setText(prof.get("username", ""))
+        self.project.setText(prof.get("project", ""))
+        self.account.setText(prof.get("account", ""))
         self.key_path.setText(prof.get("key_path", ""))
         self.cb_x11.setChecked(bool(prof.get("x11_forwarding", False)))
         host_key_policy = str(prof.get("host_key_policy") or "accept-new").strip()
@@ -1148,6 +1154,8 @@ class LoginWidget(QWidget):
             "host": self.host.text().strip(),
             "port": port,
             "username": self.username.text().strip(),
+            "project": self.project.text().strip(),
+            "account": self.account.text().strip(),
             "key_path": self.key_path.text().strip(),
             "host_key_policy": self._profile_host_key_policy,
             "x11_forwarding": self.cb_x11.isChecked(),
@@ -1373,6 +1381,8 @@ class LoginWidget(QWidget):
             host=self.host.text().strip(),
             port=port,
             username=self.username.text().strip(),
+            project=self.project.text().strip(),
+            account=self.account.text().strip(),
             password=password,
             key_path=self.key_path.text().strip(),
             host_key_policy=self._profile_host_key_policy,

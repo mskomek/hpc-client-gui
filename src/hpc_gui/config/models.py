@@ -7,6 +7,8 @@ class SSHConfig:
     host: str = ""
     port: int = 22
     username: str = ""
+    project: str = ""
+    account: str = ""
     password: str = ""
     key_path: str = ""
     host_key_policy: str = "accept-new"  # accept-new | strict

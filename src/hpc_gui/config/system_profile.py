@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
+import re
 from typing import Any, Iterable
 
 from hpc_gui.config.storage import load_settings, update_settings
@@ -29,6 +31,42 @@ SYSTEM_SETTING_COMMAND_KEYS: tuple[str, ...] = tuple(
 )
 
 SYSTEM_TEMPLATE_SETTINGS_KEY = "system_templates"
+_PROVIDER_PLACEHOLDER_RE = re.compile(r"\{([A-Za-z_][A-Za-z0-9_]*)\}")
+_PROVIDER_PLACEHOLDERS = {"user", "user_first", "project", "account"}
+
+
+@dataclass(frozen=True)
+class ProviderContext:
+    user: str = ""
+    project: str = ""
+    account: str = ""
+
+    @property
+    def user_first(self) -> str:
+        return self.user[:1]
+
+
+@dataclass(frozen=True)
+class ResolvedProviderPath:
+    state: str
+    path: str
+    missing: tuple[str, ...] = ()
+
+
+def resolve_provider_path(template: str, context: ProviderContext) -> ResolvedProviderPath:
+    """Resolve only application-owned provider placeholders."""
+    if not isinstance(template, str):
+        return ResolvedProviderPath("invalid-template", "")
+    names = _PROVIDER_PLACEHOLDER_RE.findall(template)
+    unknown = tuple(dict.fromkeys(name for name in names if name not in _PROVIDER_PLACEHOLDERS))
+    if unknown:
+        return ResolvedProviderPath("invalid-template", template)
+    values = {"user": context.user, "user_first": context.user_first,
+              "project": context.project, "account": context.account}
+    missing = tuple(dict.fromkeys(name for name in names if not values[name]))
+    if missing:
+        return ResolvedProviderPath("missing-context", template, missing)
+    return ResolvedProviderPath("resolved", _PROVIDER_PLACEHOLDER_RE.sub(lambda m: values[m.group(1)], template))
 
 
 def hpc_default_remote_paths() -> dict[str, str]:
@@ -119,7 +157,5 @@ def save_user_system_template(name: str, settings: Any) -> dict[str, str]:
 
 
 def format_remote_path(template: str, username: str) -> str:
-    try:
-        return template.format(user=username)
-    except (KeyError, ValueError):
-        return template
+    result = resolve_provider_path(template, ProviderContext(user=username))
+    return result.path
