@@ -1,4 +1,4 @@
-"""Lazy, defensive loading of installed Plugin API v2 linter tools.
+"""Lazy, defensive loading of the application-approved ANSYS trusted tool.
 
 The loader (``plugins.loader``) only records the declared engine path.
 Importing plugin-supplied code happens here - and only when the user
@@ -13,8 +13,12 @@ import logging
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable
+import importlib.util
+import importlib
+import sys
 
 from hpc_gui.plugins.loader import load_installed_plugins
+from hpc_gui.plugins.trusted_tools import is_approved_trusted_tool
 
 logger = logging.getLogger(__name__)
 
@@ -44,12 +48,43 @@ class LinterTool:
 def load_tool_for_plugin(installed) -> LinterTool:
     """Load (and cache) the linter tool of one installed plugin.
 
-    ``installed`` is an :class:`~hpc_gui.plugins.models.InstalledPlugin`.
+    ``installed`` is an :class:`~hpc_gui.plugins.models.InstalledPlugin` whose
+    identity has passed the application-owned Trusted Tool policy.
     """
-    raise ToolLoadError(
-        "Executable linter plugins are disabled. Update or reinstall this plugin "
-        "as a declarative rule pack."
-    )
+    if not is_approved_trusted_tool(installed.manifest):
+        raise ToolLoadError("Executable plugin is disabled unless it is an application-approved trusted tool.")
+    descriptor = getattr(installed, "linter_engine", None) or {}
+    rel = descriptor.get("module")
+    if rel != "engine/ansys_lint/__init__.py":
+        raise ToolLoadError("Trusted tool entrypoint is not approved.")
+    package_dir = Path(installed.directory)
+    init_path = package_dir / rel
+    if not init_path.is_file():
+        raise ToolLoadError("Trusted tool engine is missing.")
+    module_name = "_hpc_gui_trusted_ansys_lint"
+    try:
+        spec = importlib.util.spec_from_file_location(
+            module_name, init_path, submodule_search_locations=[str(init_path.parent)]
+        )
+        if spec is None or spec.loader is None:
+            raise ToolLoadError("Trusted tool engine cannot be loaded.")
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[module_name] = module
+        spec.loader.exec_module(module)
+        descriptor = module.create_plugin()
+        return LinterTool(
+            plugin_id=installed.manifest.id,
+            version=installed.manifest.version,
+            title=str(descriptor["title"]),
+            description=str(descriptor.get("description", "")),
+            page_factory=descriptor["page_factory"],
+            module_name=module_name,
+        )
+    except ToolLoadError:
+        raise
+    except Exception as exc:
+        sys.modules.pop(module_name, None)
+        raise ToolLoadError(f"Trusted tool failed to load: {exc}") from exc
 
 
 def list_linter_tools(root=None, app_version=None) -> list[LinterTool]:
@@ -83,7 +118,10 @@ def first_linter_tool(root=None, app_version=None) -> LinterTool:
 
 
 def _engine_module(tool: LinterTool):
-    raise ToolLoadError("Executable plugin engines are disabled.")
+    try:
+        return sys.modules[tool.module_name]
+    except KeyError as exc:
+        raise ToolLoadError("Trusted tool is no longer loaded.") from exc
 
 
 def tool_supported_suffixes(tool: LinterTool) -> frozenset[str]:
@@ -93,7 +131,15 @@ def tool_supported_suffixes(tool: LinterTool) -> frozenset[str]:
     API; ``SUPPORTED_SUFFIXES`` lives in the ``api`` submodule, so fall
     back to importing that sibling when the attribute is absent.
     """
-    return frozenset()
+    module = _engine_module(tool)
+    suffixes = getattr(module, "SUPPORTED_SUFFIXES", None)
+    if suffixes is None:
+        try:
+            api = sys.modules.get(f"{module.__name__}.api") or importlib.import_module(f"{module.__name__}.api")
+            suffixes = api.SUPPORTED_SUFFIXES
+        except (AttributeError, ImportError):
+            return frozenset()
+    return frozenset(str(value).lower() for value in suffixes)
 
 
 def supported_suffixes() -> frozenset[str]:
@@ -112,7 +158,11 @@ def tools_supporting_suffix(suffix: str, root=None, app_version=None) -> list[Li
         return []
     matches: list[LinterTool] = []
     for tool in list_linter_tools(root=root, app_version=app_version):
-        if wanted in tool_supported_suffixes(tool):
+        try:
+            supported = tool_supported_suffixes(tool)
+        except ToolLoadError:
+            continue
+        if wanted in supported:
             matches.append(tool)
     return matches
 
@@ -186,7 +236,10 @@ def tools_supporting_all_suffixes(
     candidates = list_linter_tools(root=root, app_version=app_version)
     matching: list[LinterTool] = []
     for tool in candidates:
-        declared = tool_supported_suffixes(tool)
+        try:
+            declared = tool_supported_suffixes(tool)
+        except ToolLoadError:
+            continue
         if all(s in declared for s in wanted):
             matching.append(tool)
     return matching

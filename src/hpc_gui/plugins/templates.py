@@ -48,6 +48,8 @@ def installed_cluster_template_groups(
                         "schema_version": profile.schema_version,
                         "metadata": dict(profile.metadata),
                         "site": dict(profile.site),
+                        "access": dict(profile.access),
+                        "requirements": dict(profile.requirements),
                         "scheduler_hints": dict(profile.scheduler_hints),
                         "software": dict(profile.software),
                         "storage": [dict(item) for item in profile.storage],

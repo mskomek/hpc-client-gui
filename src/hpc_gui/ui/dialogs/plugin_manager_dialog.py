@@ -569,6 +569,10 @@ class PluginManagerDialog(QDialog):
             state_label = QLabel(t("plugins.disabled_label"))
             state_label.setStyleSheet("color: #b26a00;")
             grid.addWidget(state_label, 2, 0)
+        if has_tool:
+            tool_label = QLabel("Trusted Tool")
+            tool_label.setStyleSheet("color: #245a9a;")
+            grid.addWidget(tool_label, 2, 0)
 
         version_row = QHBoxLayout()
         version_row.addWidget(QLabel(t("plugins.switch_version_label")))
@@ -693,7 +697,7 @@ class PluginManagerDialog(QDialog):
         self.rebuild_tabs()
 
     def open_linter_tool(self, plugin_id: str) -> None:
-        """Open a Plugin API v2 linter tool hosted in a modal dialog."""
+        """Open the approved Trusted Tool hosted in a modal dialog."""
         from PySide6.QtWidgets import QMessageBox
 
         installed = next(

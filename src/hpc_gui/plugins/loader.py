@@ -1,6 +1,6 @@
-"""Local loader for installed declarative plugins.
+"""Local loader for installed declarative plugins and approved tool metadata.
 
-The loader never executes plugin content and performs no network access.
+The loader never executes provider content and performs no network access.
 A malformed single plugin is recorded as a problem and skipped so the
 application can still start with the remaining (or zero) plugins.
 
@@ -42,6 +42,7 @@ from hpc_gui.plugins.storage import (
     read_disabled_ids,
 )
 from hpc_gui.plugins.validator import validate_cluster_profile_dict, validate_manifest_dict
+from hpc_gui.plugins.trusted_tools import trusted_tool_error
 
 logger = logging.getLogger(__name__)
 
@@ -283,6 +284,16 @@ def load_installed_plugins(
         linter_engine_raw = None
         linter_rel = manifest.entrypoints.get("linter_engine")
         if isinstance(linter_rel, str) and linter_rel:
+            reason = trusted_tool_error({
+                "plugin_api": manifest.plugin_api,
+                "id": manifest.id,
+                "publisher": manifest.publisher,
+                "capabilities": manifest.capabilities,
+                "entrypoints": manifest.entrypoints,
+            })
+            if reason:
+                result.problems.append(PluginProblem(plugin_id, version, f"unapproved trusted tool: {reason}"))
+                continue
             if (
                 linter_rel.startswith("/")
                 or ".." in linter_rel.split("/")
