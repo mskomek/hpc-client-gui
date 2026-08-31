@@ -16,6 +16,7 @@ from hpc_gui.ssh.client import (
     SSHClientWrapper,
     SSHConnInfo,
     _KeyboardInteractiveSource,
+    load_private_key_with_certificate,
 )
 
 
@@ -130,6 +131,21 @@ class OptionalSSHCredentialsTests(unittest.TestCase):
         self.assertEqual(seen["prompts"], [("Code: ", False)])
         self.assertEqual(transport.username, "user")
         self.assertNotIn("otp-response", repr(_KeyboardInteractiveSource("user", handler)))
+
+    def test_private_key_loads_conventional_openssh_certificate(self):
+        key_path = Path(self._temp.name) / "id_ed25519"
+        cert_path = Path(f"{key_path}-cert.pub")
+        key_path.write_text("private-key-placeholder")
+        cert_path.write_text("ssh-ed25519-cert-v01@openssh.com placeholder")
+        class Key:
+            def load_certificate(self, path):
+                self.certificate_path = path
+
+        key = Key()
+        with patch("hpc_gui.ssh.client.paramiko.PKey.from_path", return_value=key):
+            loaded = load_private_key_with_certificate(str(key_path))
+        self.assertIs(loaded, key)
+        self.assertEqual(loaded.certificate_path, str(cert_path))
 
     def test_preconnected_socket_is_forwarded_to_paramiko(self):
         fake_client = _SSHClient()

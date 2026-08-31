@@ -89,6 +89,15 @@ class HostKeyRejectedError(paramiko.SSHException):
         super().__init__(f"Unknown host key rejected for {hostname}.")
 
 
+def load_private_key_with_certificate(key_path: str):
+    """Load a private key and its conventional sibling OpenSSH certificate."""
+    pkey = paramiko.PKey.from_path(key_path)
+    certificate_path = Path(key_path).with_name(Path(key_path).name + "-cert.pub")
+    if certificate_path.is_file():
+        pkey.load_certificate(str(certificate_path))
+    return pkey
+
+
 class _KnownHostsPolicy(paramiko.MissingHostKeyPolicy):
     def __init__(
         self,
@@ -331,7 +340,7 @@ class SSHClientWrapper:
             pkey = None
             if info.key_path:
                 self.log("SSH: using configured key")
-                pkey = paramiko.PKey.from_path(info.key_path)
+                pkey = load_private_key_with_certificate(info.key_path)
             auth_strategy = None
             if info.keyboard_interactive_handler is not None:
                 auth_strategy = _ConnectionAuthStrategy(info, pkey)
