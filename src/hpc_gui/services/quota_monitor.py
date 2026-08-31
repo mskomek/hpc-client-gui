@@ -21,6 +21,11 @@ class QuotaResult:
     scope: str = "unknown"
     pool_id: str | None = None
     error: str | None = None
+    used_files: int | None = None
+    soft_limit_files: int | None = None
+    hard_limit_files: int | None = None
+    storage_id: str | None = None
+    path: str | None = None
 
 
 @dataclass(frozen=True)
@@ -41,6 +46,22 @@ class QuotaBackendRegistry:
 
     def get(self, backend_id: str) -> QuotaBackend | None:
         return self._backends.get(backend_id)
+
+
+def build_production_quota_backend_registry() -> QuotaBackendRegistry:
+    """Return only application-reviewed production backends."""
+    return QuotaBackendRegistry()
+
+
+def format_quota_result(result: QuotaResult) -> str:
+    def amount(used: int | None, limit: int | None, suffix: str) -> str | None:
+        if used is None:
+            return None
+        return f"{used} / {limit} {suffix}" if limit is not None else f"{used} {suffix}"
+
+    values = [amount(result.used_bytes, result.soft_limit_bytes, "bytes"),
+              amount(result.used_files, result.soft_limit_files, "files")]
+    return " · ".join(value for value in values if value) or ""
 
 
 class QuotaMonitor:

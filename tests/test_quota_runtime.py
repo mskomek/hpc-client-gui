@@ -1,5 +1,6 @@
 from hpc_gui.services.quota_monitor import (
     QuotaBackend, QuotaBackendRegistry, QuotaMonitor, QuotaResult,
+    build_production_quota_backend_registry, format_quota_result,
 )
 from threading import Event
 
@@ -35,3 +36,11 @@ def test_eligible_fake_backend_coalesces_and_parses():
     assert first.result().used_bytes == 3
     assert len(calls) == 1
     monitor.close()
+
+
+def test_quota_result_supports_file_counts_and_storage_metadata():
+    result = QuotaResult("ok", used_bytes=12, soft_limit_bytes=20,
+                         used_files=3, soft_limit_files=10,
+                         storage_id="scratch", path="/scratch/user")
+    assert format_quota_result(result) == "12 / 20 bytes · 3 / 10 files"
+    assert build_production_quota_backend_registry().ids == frozenset()
