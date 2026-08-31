@@ -72,10 +72,9 @@ Bu dosya, HPC Client GUI'nin "ürün" gibi paketlenip sahada kullanılmasında e
   embedded key id `release-2026-01`; it exists only as a protected Actions secret.
 - [ ] `UPDATE_METADATA.json` was generated and its signature, platform, size,
   digest, and GitHub release URL passed the updater verification tests.
-- [ ] Development CI may follow the plugin registry's `main`; **before cutting a
-  release, pin the "Plugin API contract" job's checkout `ref:` in
-  `.github/workflows/ci.yml` to an explicit plugin repository tag or commit**
-  and advance that pin intentionally after the release.
+- [x] The Plugin API contract job is pinned to immutable plugin commit
+  `a320cde6affe9072523a49352b2d688e050168b3` in `.github/workflows/ci.yml`.
+  Advance that pin intentionally after a reviewed registry release.
 - [ ] The pinned contract suite passed against the real registry content
   (registry validation, manifests, hashes, TRUBA profile load, declarative lint
   rules and template rendering, update/rollback). No plugin payload is executable.
