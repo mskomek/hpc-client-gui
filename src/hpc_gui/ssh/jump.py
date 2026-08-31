@@ -23,6 +23,7 @@ from hpc_gui.ssh.client import (
     HostKeyRejectedError,
     _KnownHostsPolicy,
     coerce_keepalive_interval,
+    load_private_key_with_certificate,
 )
 
 
@@ -120,7 +121,7 @@ class JumpConnection:
             timeout = 45.0
             try:
                 if self.info.key_path:
-                    pkey = paramiko.PKey.from_path(self.info.key_path)
+                    pkey = load_private_key_with_certificate(self.info.key_path)
                     client.connect(
                         hostname=self.info.host,
                         port=self.info.port,
