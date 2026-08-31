@@ -1,0 +1,6 @@
+[
+  {"fs": "home", "space_used": 123456789, "space_quota": 42949672960,
+   "inode_used": 1200, "inode_quota": 1000000},
+  {"fs": "pscratch", "space_used": 987654321, "space_quota": 21990232555520,
+   "inode_used": 54321, "inode_quota": 10000000}
+]

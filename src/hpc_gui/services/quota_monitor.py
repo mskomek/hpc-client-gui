@@ -50,7 +50,11 @@ class QuotaBackendRegistry:
 
 def build_production_quota_backend_registry() -> QuotaBackendRegistry:
     """Return only application-reviewed production backends."""
-    return QuotaBackendRegistry()
+    from hpc_gui.services.nersc_quota import build_nersc_quota_command, parse_nersc_showquota_json
+
+    return QuotaBackendRegistry([
+        QuotaBackend("nersc-showquota-json", build_nersc_quota_command, parse_nersc_showquota_json),
+    ])
 
 
 def format_quota_result(result: QuotaResult) -> str:
