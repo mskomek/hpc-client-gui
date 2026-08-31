@@ -43,4 +43,4 @@ def test_quota_result_supports_file_counts_and_storage_metadata():
                          used_files=3, soft_limit_files=10,
                          storage_id="scratch", path="/scratch/user")
     assert format_quota_result(result) == "12 / 20 bytes · 3 / 10 files"
-    assert build_production_quota_backend_registry().ids == frozenset()
+    assert build_production_quota_backend_registry().ids == {"nersc-showquota-json"}
