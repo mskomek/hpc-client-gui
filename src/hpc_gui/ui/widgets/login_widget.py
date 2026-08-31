@@ -112,6 +112,7 @@ class _ConnectionWorker(QObject):
     finished = Signal(object)
     failed = Signal(str, object)
     host_key_decision_requested = Signal(object)
+    keyboard_interactive_requested = Signal(object)
 
     def __init__(self, cfg: SSHConfig, shell_size: tuple[int, int], log_cb, shell_output_cb, disconnect_cb=None):
         self._cancelled = False
@@ -135,8 +136,25 @@ class _ConnectionWorker(QObject):
                 return "cancel"
         return str(request["decision"])
 
+    def _keyboard_interactive(self, title, instructions, prompts):
+        request = {
+            "title": title or "SSH authentication",
+            "instructions": instructions or "",
+            "prompts": list(prompts or []),
+            "responses": [],
+            "done": threading.Event(),
+        }
+        self.keyboard_interactive_requested.emit(request)
+        while not request["done"].wait(0.1):
+            if self._cancelled or QCoreApplication.closingDown():
+                return []
+        return list(request.get("responses") or [])
+
     def run(self) -> None:
         try:
+            auth_methods = ((self._cfg.system_settings or {}).get("access") or {}).get(
+                "auth_methods", []
+            )
             conn = SSHConnInfo(
                 host=self._cfg.host,
                 port=self._cfg.port,
@@ -150,6 +168,11 @@ class _ConnectionWorker(QObject):
                 host_key_decision=self._decide_host_key,
                 jump=jump_info_from_settings(
                     getattr(self._cfg, "jump_host_settings", None)
+                ),
+                keyboard_interactive_handler=(
+                    self._keyboard_interactive
+                    if "keyboard-interactive" in auth_methods
+                    else None
                 ),
             )
             ssh = SSHClientWrapper(
@@ -665,6 +688,9 @@ class LoginWidget(QWidget):
         worker.host_key_decision_requested.connect(
             self._prompt_host_key_decision
         )
+        worker.keyboard_interactive_requested.connect(
+            self._prompt_keyboard_interactive
+        )
         self._connect_thread = thread
         self._connect_worker = worker
         worker.moveToThread(thread)
@@ -717,6 +743,31 @@ class LoginWidget(QWidget):
             dialog.exec()
             clicked = dialog.clickedButton()
             data["decision"] = "save" if clicked is save else "once" if clicked is once else "cancel"
+        finally:
+            if isinstance(done, threading.Event):
+                done.set()
+
+    def _prompt_keyboard_interactive(self, request: object) -> None:
+        data = request if isinstance(request, dict) else {}
+        done = data.get("done")
+        responses: list[str] = []
+        try:
+            title = str(data.get("title") or "SSH authentication")
+            instructions = str(data.get("instructions") or "")
+            for prompt, echo in data.get("prompts") or []:
+                label = str(prompt or "SSH response")
+                if instructions:
+                    label = f"{instructions}\n\n{label}"
+                value, ok = QInputDialog.getText(
+                    self,
+                    title,
+                    label,
+                    QLineEdit.EchoMode.Normal if echo else QLineEdit.EchoMode.Password,
+                )
+                if not ok:
+                    return
+                responses.append(value)
+            data["responses"] = responses
         finally:
             if isinstance(done, threading.Event):
                 done.set()

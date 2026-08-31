@@ -11,6 +11,7 @@ import socket
 from hpc_gui.core.debug_support import timed
 
 import paramiko
+from paramiko.auth_strategy import AuthSource, AuthStrategy, InMemoryPrivateKey
 
 from hpc_gui.core.logging import get_logger
 from hpc_gui.core.paths import app_data_dir
@@ -131,6 +132,49 @@ class SSHConnInfo:
     host_key_decision: Optional[Callable[[HostKeyInfo], str]] = None
     preconnected_socket: Optional[SocketLike] = None
     jump: Optional["SSHJumpInfo"] = None
+    keyboard_interactive_handler: Optional[Callable[[str, str, list[tuple[str, bool]]], list[str]]] = None
+
+
+class _KeyboardInteractiveSource(AuthSource):
+    def __init__(self, username, handler):
+        super().__init__(username)
+        self.handler = handler
+
+    def __repr__(self):
+        return self._repr(user=self.username)
+
+    def authenticate(self, transport):
+        return transport.auth_interactive(self.username, self.handler)
+
+
+class _ConnectionAuthStrategy(AuthStrategy):
+    def __init__(self, info: SSHConnInfo, pkey=None):
+        super().__init__(ssh_config=None)
+        self.info = info
+        self.pkey = pkey
+
+    def get_sources(self):
+        username = self.info.username
+        if self.pkey is not None:
+            yield InMemoryPrivateKey(username, self.pkey)
+        if self.info.password:
+            yield _PasswordSource(username, lambda: self.info.password)
+        if self.info.keyboard_interactive_handler is not None:
+            yield _KeyboardInteractiveSource(
+                username, self.info.keyboard_interactive_handler
+            )
+
+
+class _PasswordSource(AuthSource):
+    def __init__(self, username, password_getter):
+        super().__init__(username)
+        self.password_getter = password_getter
+
+    def __repr__(self):
+        return self._repr(user=self.username)
+
+    def authenticate(self, transport):
+        return transport.auth_password(self.username, self.password_getter())
 
 
 class SSHClientWrapper:
@@ -284,9 +328,26 @@ class SSHClientWrapper:
         connection_kwargs = ({"sock": sock} if sock is not None else {})
 
         try:
+            pkey = None
             if info.key_path:
                 self.log("SSH: using configured key")
                 pkey = paramiko.PKey.from_path(info.key_path)
+            auth_strategy = None
+            if info.keyboard_interactive_handler is not None:
+                auth_strategy = _ConnectionAuthStrategy(info, pkey)
+            if auth_strategy is not None:
+                self.client.connect(
+                    hostname=info.host,
+                    port=info.port,
+                    username=info.username or None,
+                    timeout=timeout,
+                    banner_timeout=banner_timeout,
+                    auth_timeout=auth_timeout,
+                    channel_timeout=channel_timeout,
+                    auth_strategy=auth_strategy,
+                    **connection_kwargs,
+                )
+            elif info.key_path:
                 self.client.connect(
                     hostname=info.host,
                     port=info.port,

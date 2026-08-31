@@ -15,6 +15,7 @@ from hpc_gui.ssh.client import (
     HostKeyRejectedError,
     SSHClientWrapper,
     SSHConnInfo,
+    _KeyboardInteractiveSource,
 )
 
 
@@ -108,6 +109,27 @@ class OptionalSSHCredentialsTests(unittest.TestCase):
         self.assertTrue(fake_client.connect_kwargs["look_for_keys"])
         self.assertEqual(fake_client.connect_kwargs["timeout"], 45)
         self.assertEqual(fake_client.connect_kwargs["banner_timeout"], 45)
+
+    def test_keyboard_interactive_returns_ephemeral_challenge_responses(self):
+        seen = {}
+
+        def handler(title, instructions, prompts):
+            seen.update(title=title, instructions=instructions, prompts=prompts)
+            return ["otp-response"]
+
+        class Transport:
+            def auth_interactive(self, username, callback):
+                self.username = username
+                self.result = callback("MFA", "Choose a factor", [("Code: ", False)])
+                return self.result
+
+        transport = Transport()
+        result = _KeyboardInteractiveSource("user", handler).authenticate(transport)
+
+        self.assertEqual(result, ["otp-response"])
+        self.assertEqual(seen["prompts"], [("Code: ", False)])
+        self.assertEqual(transport.username, "user")
+        self.assertNotIn("otp-response", repr(_KeyboardInteractiveSource("user", handler)))
 
     def test_preconnected_socket_is_forwarded_to_paramiko(self):
         fake_client = _SSHClient()
