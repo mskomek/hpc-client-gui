@@ -125,15 +125,15 @@ For provider authoring, use the authoritative
 The [plugin request form](https://github.com/mskomek/hpc-client-gui-plugins/issues/new?template=plugin-request.yml)
 is available if you want to request a provider without authoring its profile.
 
-## Linter tools (Plugin API v2)
+## Trusted tools
 
-The Plugin API v2 contract is ready for the official registry to publish
-**linter tools**: optional plugins that ship a hash-verified, pure-Python
-analysis engine inside the usual manifest/installer verification chain.
+ANSYS Lint is a separately reviewed **Trusted Tool**, not a generic
+executable plugin. Its identity is application-approved and its code is
+loaded only after the usual manifest/file hash checks.
 Nothing runs at install time - the engine loads only when you open it,
 and every byte is pinned by SHA-256 exactly like declarative data.
 
-The first planned linter tool is **ANSYS Script & Journal Linter**
+The current tool is **ANSYS Script & Journal Linter**
 (`org.hpcclient.ansyslint`). It is an *unofficial* offline checker for
 Ansys journals and scripts: Fluent journals (TUI/Scheme), Workbench
 `.wbjn` files including nested `SendCommand` payloads, Mechanical APDL

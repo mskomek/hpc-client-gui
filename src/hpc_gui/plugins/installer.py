@@ -57,6 +57,7 @@ from hpc_gui.plugins.registry_client import (
     default_fetcher,
 )
 from hpc_gui.plugins.state import read_active_versions, record_installed_version
+from hpc_gui.plugins.trusted_tools import trusted_tool_error
 from hpc_gui.plugins.storage import (
     MANIFEST_NAME,
     packages_dir,
@@ -162,6 +163,17 @@ def _check_linter_entrypoint(staging_dir: Path, manifest: PluginManifest) -> dic
     Only declared paths/roles/files are checked - engine code is never
     imported at install time.
     """
+    if manifest.plugin_api != 2:
+        return None
+    reason = trusted_tool_error({
+        "plugin_api": manifest.plugin_api,
+        "id": manifest.id,
+        "publisher": manifest.publisher,
+        "capabilities": manifest.capabilities,
+        "entrypoints": manifest.entrypoints,
+    })
+    if reason:
+        raise InstallError(f"Unapproved trusted tool: {reason}")
     rel = manifest.entrypoints.get("linter_engine")
     if not isinstance(rel, str) or not rel:
         return None

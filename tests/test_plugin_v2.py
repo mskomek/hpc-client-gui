@@ -27,10 +27,9 @@ def _manifest(code: bytes) -> dict:
     }
 
 
-def test_api_v2_python_is_incompatible_and_executable_payload_is_rejected():
+def test_unapproved_python_tool_is_rejected_by_trusted_policy():
     problems = validate_manifest_dict(_manifest(b"raise RuntimeError('must not run')"))
-    assert any("plugin_api" in problem for problem in problems)
-    assert any("forbidden executable-looking extension" in problem for problem in problems)
+    assert any("unapproved trusted tool" in problem for problem in problems)
 
 
 def test_legacy_plugin_cannot_execute_marker_payload(tmp_path: Path):

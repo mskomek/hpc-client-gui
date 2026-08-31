@@ -58,7 +58,7 @@ def _install_stub_engine(monkeypatch, *, api_suffixes=(".jou",), init_attr=None)
 
 def test_supported_suffixes_falls_back_to_api_submodule(monkeypatch):
     _install_stub_engine(monkeypatch)  # attribute only on the .api submodule
-    assert supported_suffixes() == frozenset()
+    assert supported_suffixes() == frozenset({".jou"})
 
 
 def test_supported_suffixes_prefers_package_attribute(monkeypatch):
@@ -66,7 +66,7 @@ def test_supported_suffixes_prefers_package_attribute(monkeypatch):
         monkeypatch, api_suffixes=(".dat",), init_attr={".wbjn", ".JOu"}
     )
     # Package-level declaration wins and entries are normalized to lowercase.
-    assert supported_suffixes() == frozenset()
+    assert supported_suffixes() == frozenset({".jou", ".wbjn"})
 
 
 def test_supported_suffixes_empty_when_no_tool_installed(monkeypatch):
@@ -117,7 +117,7 @@ def test_tools_supporting_suffix_filters_tools(monkeypatch):
         "hpc_gui.plugins.linter_tools.list_linter_tools", lambda *a, **k: tools
     )
     matches = tools_supporting_suffix(".jou")
-    assert matches == []
+    assert [tool.plugin_id for tool in matches] == ["org.a"]
     assert tools_supporting_suffix(".xyz") == []
     assert tools_supporting_suffix("") == []
 
@@ -133,7 +133,7 @@ def test_tools_supporting_suffix_tolerates_broken_engine(monkeypatch):
     monkeypatch.setattr(
         "hpc_gui.plugins.linter_tools.list_linter_tools", lambda *a, **k: tools
     )
-    assert tools_supporting_suffix(".jou") == []
+    assert [tool.plugin_id for tool in tools_supporting_suffix(".jou")] == ["org.ok"]
 
 
 # ---------------------------------------------------------------------------
@@ -275,8 +275,8 @@ def test_remote_folder_lint_worker_recurses_only_supported_files(monkeypatch):
     worker.run()
 
     paths, results = received[0]
-    assert paths == []
-    assert results == []
+    assert paths == ["/arf/scratch/user/job.slurm"]
+    assert len(results) == 1
 
 
 # ---------------------------------------------------------------------------
@@ -304,9 +304,9 @@ def test_lint_text_with_tool_forwards_options(monkeypatch):
         return "run-result"
 
     sys.modules[tool.module_name].lint_text = fake_lint_text
-    with pytest.raises(ToolLoadError, match="disabled"):
-        lint_text_with_tool("abc", file_name="a.jou", options=object())
-    assert calls == []
+    assert lint_text_with_tool("abc", file_name="a.jou", options=object()) == "run-result"
+    assert len(calls) == 1
+    assert calls[0][0:2] == ("abc", "a.jou")
 
 
 # ---------------------------------------------------------------------------

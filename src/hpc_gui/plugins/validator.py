@@ -11,6 +11,7 @@ from pathlib import PurePosixPath
 from typing import Any
 
 from hpc_gui.plugins.compatibility import validate_requires_app
+from hpc_gui.plugins.trusted_tools import trusted_tool_error
 from hpc_gui.plugins.models import (
     CAPABILITY_LINTER_TOOL,
     KNOWN_CAPABILITIES,
@@ -127,6 +128,10 @@ def validate_manifest_dict(manifest: Any) -> list[str]:
         or CAPABILITY_LINTER_TOOL not in capabilities
     ):
         errors.append("plugin_api 2 manifests require the 'linter-tool' capability")
+    if plugin_api == 2:
+        reason = trusted_tool_error(manifest)
+        if reason:
+            errors.append(f"unapproved trusted tool: {reason}")
 
     if not isinstance(manifest["entrypoints"], dict):
         errors.append("manifest entrypoints must be a JSON object")

@@ -20,9 +20,9 @@ STORAGE_ACCESS_CONTEXTS = frozenset({"login-node", "shared", "compute-node", "un
 _STORAGE_PLACEHOLDER_RE = re.compile(r"\{([A-Za-z_][A-Za-z0-9_]*)\}")
 
 PLUGIN_API_VERSION = 1
-# API v2 executed downloaded Python and is deliberately unsupported. Existing
-# installs remain on disk but the loader marks them incompatible.
-SUPPORTED_PLUGIN_API_VERSIONS = frozenset({1})
+# The legacy numeric marker 2 is accepted only after the application-owned
+# trusted-tool policy approves the exact ANSYS identity.
+SUPPORTED_PLUGIN_API_VERSIONS = frozenset({1, 2})
 
 CAPABILITY_CLUSTER_PROFILE = "cluster-profile"
 CAPABILITY_LINT_RULES = "lint-rules"
@@ -88,6 +88,8 @@ class ClusterProfileDefinition:
     schema_version: int = 1
     metadata: Mapping[str, Any] = field(default_factory=dict)
     site: Mapping[str, Any] = field(default_factory=dict)
+    access: Mapping[str, Any] = field(default_factory=dict)
+    requirements: Mapping[str, Any] = field(default_factory=dict)
     scheduler_hints: Mapping[str, Any] = field(default_factory=dict)
     software: Mapping[str, Any] = field(default_factory=dict)
     storage: tuple[Mapping[str, Any], ...] = ()
@@ -117,7 +119,8 @@ class ClusterProfileDefinition:
         visible: list[Mapping[str, Any]] = []
         for area in self.storage:
             path = str(area.get("path_template") or "").strip()
-            if not path or area.get("enabled") is False:
+            resolver = area.get("resolver")
+            if (not path and not isinstance(resolver, Mapping)) or area.get("enabled") is False:
                 continue
             visible.append(area)
         return tuple(visible)
@@ -135,6 +138,8 @@ def build_cluster_profile(raw: Mapping[str, Any]) -> ClusterProfileDefinition:
         schema_version=int(raw.get("schema_version", 1)),
         metadata=dict(raw.get("metadata") or {}),
         site=dict(raw.get("site") or {}),
+        access=dict(raw.get("access") or {}),
+        requirements=dict(raw.get("requirements") or {}),
         scheduler_hints=dict(raw.get("scheduler_hints") or {}),
         software=dict(raw.get("software") or {}),
         storage=tuple(dict(item) for item in (raw.get("storage") or [])),

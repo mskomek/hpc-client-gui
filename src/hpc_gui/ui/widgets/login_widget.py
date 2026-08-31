@@ -240,6 +240,8 @@ class LoginWidget(QWidget):
         self.username = QLineEdit()
         self.project = QLineEdit()
         self.account = QLineEdit()
+        self.project_label = QLabel(t("connection.project"))
+        self.account_label = QLabel(t("connection.account"))
 
         self.password = QLineEdit()
         self.password.setEchoMode(QLineEdit.EchoMode.Password)
@@ -348,8 +350,8 @@ class LoginWidget(QWidget):
         self.form.addRow(t("connection.max_simultaneous_transfers"), self.sp_transfer_parallelism)
         self.form.addRow(t("connection.ssh_timeout_override"), self.sp_ssh_timeout)
         self.form.addRow(t("login.username"), self.username)
-        self.form.addRow(t("connection.project"), self.project)
-        self.form.addRow(t("connection.account"), self.account)
+        self.form.addRow(self.project_label, self.project)
+        self.form.addRow(self.account_label, self.account)
         self.form.addRow(t("login.password"), self.password)
         self.form.addRow("", self.cb_save_password)
 
@@ -1043,6 +1045,7 @@ class LoginWidget(QWidget):
         self._profile_system_settings = normalize_system_settings(
             prof.get("system")
         )
+        self._update_provider_requirement_labels()
         raw_file_manager = prof.get("file_manager")
         self._profile_file_manager_raw = (
             dict(raw_file_manager) if isinstance(raw_file_manager, dict) else {}
@@ -1073,6 +1076,15 @@ class LoginWidget(QWidget):
     def _load_profile_by_name(self, name: str) -> dict | None:
         profiles = load_profiles()
         return next((p for p in profiles if p.get("name") == name), None)
+
+    def _update_provider_requirement_labels(self) -> None:
+        provider = self._profile_system_settings.get("provider_template") or {}
+        requirements = provider.get("requirements", {}) if isinstance(provider, dict) else {}
+        for key, label in (("project", self.project_label), ("account", self.account_label)):
+            rule = requirements.get(key) if isinstance(requirements, dict) else None
+            name = str((rule or {}).get("label") or t(f"connection.{key}")) if isinstance(rule, dict) else t(f"connection.{key}")
+            label.setText(name + (" *" if isinstance(rule, dict) and rule.get("required") else ""))
+            label.setToolTip(str((rule or {}).get("help") or ""))
 
     def open_add_connection_dialog(self) -> None:
         dlg = ConnectionDialog(
@@ -1412,6 +1424,15 @@ class LoginWidget(QWidget):
             return False
 
         old_ssh = self._session.get("ssh") if hasattr(self, "_session") else None
+
+        provider = self._profile_system_settings.get("provider_template") or {}
+        requirements = provider.get("requirements", {}) if isinstance(provider, dict) else {}
+        for key, widget, label in (("project", self.project, self.project_label), ("account", self.account, self.account_label)):
+            rule = requirements.get(key) if isinstance(requirements, dict) else None
+            if isinstance(rule, dict) and rule.get("required") and not widget.text().strip():
+                QMessageBox.warning(self, t("login.err_title"), f"{label.text().rstrip(' *')} is required for this provider.")
+                widget.setFocus()
+                return False
 
         # If password is not typed, resolve the saved secret according to the profile policy.
         password = self.password.text()
