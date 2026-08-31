@@ -12,6 +12,8 @@ import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
+
+from hpc_gui.services.deb_installer import build_packagekit_command, probe_packagekit
 from typing import Callable
 
 APP_ID = "io.github.mskomek.HpcClientGui"
@@ -146,8 +148,11 @@ def install_deb(config: HelperConfig, progress: Progress, runner=subprocess.run,
     if config.package.suffix.lower() != ".deb" or not config.package.is_file():
         raise RuntimeError("Verified DEB package is missing.")
     try:
+        capability = probe_packagekit(runner)
+        if not capability.local_install:
+            raise RuntimeError(capability.reason)
         progress(None, "Requesting administrator permission...")
-        _run_checked(["pkexec", "apt", "install", "-y", str(config.package)], runner)
+        _run_checked(build_packagekit_command(config.package), runner)
         progress(None, "Verifying installed version...")
         result = _run_checked(
             ["dpkg-query", "-W", "-f=${Version}", "hpc-client-gui"], runner
