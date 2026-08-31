@@ -957,6 +957,10 @@ class FtpWidget(QWidget):
         self.local_panel = LocalDirPanel(state["local_dir"])
         self.panel_scratch = RemoteDirPanel()
         self.panel_home = RemoteDirPanel()
+        self.remote_panels: dict[str, RemoteDirPanel] = {
+            "scratch": self.panel_scratch,
+            "home": self.panel_home,
+        }
         self.panel_scratch.set_transfer_mode_provider(self.current_transfer_mode)
         self.panel_home.set_transfer_mode_provider(self.current_transfer_mode)
         self.panel_scratch.set_local_target_refresh_callback(
@@ -1153,11 +1157,46 @@ class FtpWidget(QWidget):
             pass
 
     def active_remote_panel(self) -> RemoteDirPanel:
-        return (
-            self.panel_home
-            if self.accordion.active_key == "home"
-            else self.panel_scratch
-        )
+        return self.remote_panels.get(self.accordion.active_key, self.panel_scratch)
+
+    def _add_provider_storage_panels(self, session, context: ProviderContext) -> None:
+        for key in tuple(self.remote_panels):
+            if key in {"scratch", "home"}:
+                continue
+            panel = self.remote_panels.pop(key)
+            self.accordion.remove_section(key)
+            panel.shutdown()
+        cfg = session.get("cfg") or {}
+        provider = getattr(cfg, "provider_template", {}) or {}
+        for area in provider.get("storage", []) if isinstance(provider, dict) else []:
+            if not isinstance(area, dict) or area.get("enabled") is False:
+                continue
+            key = str(area.get("id") or "").strip()
+            if not key or key in self.remote_panels:
+                continue
+            template = str(area.get("path_template") or "")
+            result = resolve_provider_path(template, context)
+            panel = RemoteDirPanel()
+            panel.set_session(session)
+            panel.set_transfer_mode_provider(self.current_transfer_mode)
+            panel.set_transfer_dialog_visible(False)
+            panel.open_file.connect(self.openFileRequested)
+            panel.file_activated.connect(self._download_remote_path)
+            panel.download_requested.connect(lambda paths, panel=panel: self._download_remote_paths(panel, paths))
+            panel.save_as_requested.connect(lambda paths, panel=panel: self._save_remote_paths_as(panel, paths))
+            panel.submit_requested.connect(self.submitRequested)
+            panel.batch_submit_requested.connect(self.batchSubmitRequested)
+            panel.batch_shell_requested.connect(self.batchShellRequested)
+            panel.run_shell_requested.connect(self.runShellRequested)
+            if result.state == "resolved":
+                panel.title = result.path
+                panel.lbl.setText(result.path)
+                panel.set_dir(result.path)
+            else:
+                panel.title = str(area.get("label") or key)
+                panel.lbl.setText(panel.title + " — context required")
+            self.remote_panels[key] = panel
+            self.accordion.add_section(key, panel.title, panel)
 
     @staticmethod
     def _selected_remote_paths(panel: RemoteDirPanel) -> list[str]:
@@ -1241,6 +1280,7 @@ class FtpWidget(QWidget):
         user = getattr(cfg, "username", "") or "user"
         system = normalize_system_settings(getattr(cfg, "system_settings", None))
         context = ProviderContext(user=user, project=getattr(cfg, "project", ""), account=getattr(cfg, "account", ""))
+        self._add_provider_storage_panels(session, context)
         scratch_result = resolve_provider_path(system["scratch_dir"], context)
         home_result = resolve_provider_path(system["home_dir"], context)
         scratch = scratch_result.path if scratch_result.state == "resolved" else ""

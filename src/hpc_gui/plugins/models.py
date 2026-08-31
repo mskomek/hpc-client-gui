@@ -172,7 +172,7 @@ def validate_storage_area(area: Mapping[str, Any] | None) -> str | None:
     path = str(area.get("path_template") or "")
     if any(character in path for character in "\r\n;|&`$()<>"):
         return "storage path contains unsupported command syntax"
-    if any(name != "user" for name in _STORAGE_PLACEHOLDER_RE.findall(path)):
+    if any(name not in {"user", "user_first", "project", "account"} for name in _STORAGE_PLACEHOLDER_RE.findall(path)):
         return "storage path uses an unsupported placeholder"
     return validate_storage_policy(area.get("policy"))
 

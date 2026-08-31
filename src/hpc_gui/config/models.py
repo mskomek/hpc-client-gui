@@ -9,6 +9,7 @@ class SSHConfig:
     username: str = ""
     project: str = ""
     account: str = ""
+    provider_template: dict[str, Any] = field(default_factory=dict)
     password: str = ""
     key_path: str = ""
     host_key_policy: str = "accept-new"  # accept-new | strict
