@@ -642,6 +642,10 @@ jobs:
         with:
           name: hpc-client-gui-release-metadata-${{ github.event.inputs.version }}
           path: dist/releases/v${{ github.event.inputs.version }}
+      - name: Regenerate final release manifest
+        # Artifact downloads are merged from multiple runners. Recompute the
+        # inventory after that merge so uploaded files and manifest bytes agree.
+        run: python scripts/generate_release_manifest.py --release-dir "dist/releases/v${{ github.event.inputs.version }}" --version "v${{ github.event.inputs.version }}"
       - name: Report artifact sizes
         run: |
           echo "## Artifact sizes (v${{ github.event.inputs.version }})" >> "$GITHUB_STEP_SUMMARY"
