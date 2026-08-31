@@ -36,6 +36,33 @@ class RemoteAccordion(QWidget):
         section = self._sections.get(key)
         return section[1] if section else None
 
+    def add_section(self, key: str, title: str, body: QWidget) -> None:
+        if key in self._sections:
+            return
+        button = QToolButton(self)
+        button.setText(title)
+        button.setCheckable(True)
+        button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+        button.setArrowType(Qt.ArrowType.RightArrow)
+        button.setAccessibleName(title)
+        button.clicked.connect(lambda _checked=False, selected=key: self.set_active(selected))
+        self.layout().addWidget(button)
+        self.layout().addWidget(body, 1)
+        self._sections[key] = (button, body)
+
+    def remove_section(self, key: str) -> QWidget | None:
+        section = self._sections.pop(key, None)
+        if not section:
+            return None
+        button, body = section
+        self.layout().removeWidget(button)
+        self.layout().removeWidget(body)
+        button.deleteLater()
+        body.setParent(None)
+        if self._active_key == key:
+            self.set_active(next(iter(self._sections), ""), emit=False)
+        return body
+
     def set_title(self, key: str, title: str) -> None:
         section = self._sections.get(key)
         if not section:

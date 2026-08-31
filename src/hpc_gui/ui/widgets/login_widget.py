@@ -1383,6 +1383,7 @@ class LoginWidget(QWidget):
             username=self.username.text().strip(),
             project=self.project.text().strip(),
             account=self.account.text().strip(),
+            provider_template=dict(self._profile_system_settings.get("provider_template") or {}),
             password=password,
             key_path=self.key_path.text().strip(),
             host_key_policy=self._profile_host_key_policy,
