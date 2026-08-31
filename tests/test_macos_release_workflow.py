@@ -180,6 +180,15 @@ def test_artifact_size_report_runs_after_every_platform_download():
             assert -1 < last_mac < report_pos
 
 
+def test_publish_rebuilds_manifest_after_final_artifact_merge():
+    publish = _job_block("publish-release")
+    manifest = publish.find("Regenerate final release manifest")
+    report = publish.find("Report artifact sizes")
+    assert manifest > -1
+    assert manifest < report
+    assert "scripts/generate_release_manifest.py" in publish[manifest:report]
+
+
 def test_release_preflight_shares_the_ci_test_suite():
     shared = (ROOT / "scripts" / "release_test_suite.py").read_text(encoding="utf-8")
     assert '"not packaging"' in shared
