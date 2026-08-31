@@ -54,11 +54,13 @@ def build_production_quota_backend_registry() -> QuotaBackendRegistry:
 
     from hpc_gui.services.lumi_quota import build_lumi_quota_command, parse_lumi_quota
     from hpc_gui.services.cineca_quota import build_cineca_cinquota_command, parse_cineca_cinquota
+    from hpc_gui.services.pawsey_quota import build_pawsey_account_balance_command, parse_pawsey_account_balance
 
     return QuotaBackendRegistry([
         QuotaBackend("nersc-showquota-json", build_nersc_quota_command, parse_nersc_showquota_json),
         QuotaBackend("lumi-quota", build_lumi_quota_command, parse_lumi_quota),
         QuotaBackend("cineca-cinquota", build_cineca_cinquota_command, parse_cineca_cinquota),
+        QuotaBackend("pawsey-account-balance", build_pawsey_account_balance_command, parse_pawsey_account_balance),
     ])
 
 
