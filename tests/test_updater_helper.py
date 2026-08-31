@@ -84,24 +84,47 @@ def test_deb_delegates_to_pkexec_apt_verifies_and_restarts(tmp_path: Path):
 
     def runner(command, **_kwargs):
         commands.append(command)
-        stdout = "2.0.0" if command[0] == "dpkg-query" else ""
+        stdout = {
+            "pkcon": "install-local\n",
+            "dpkg-query": "2.0.0",
+        }.get(command[0], "")
         return subprocess.CompletedProcess(command, 0, stdout, "")
 
     launches = []
     install_deb(config(tmp_path, "linux-deb", package, target), lambda *_: None, runner, lambda command, **_kwargs: launches.append(command))
-    assert commands[0] == ["pkexec", "apt", "install", "-y", str(package)]
-    assert commands[1][0] == "dpkg-query"
-    assert commands[2] == ["dpkg", "--compare-versions", "2.0.0", "ge", "2.0.0"]
+    assert commands[0] == ["pkcon", "get-actions"]
+    assert commands[1] == ["pkcon", "install-local", str(package.resolve())]
+    assert commands[2][0] == "dpkg-query"
+    assert commands[3] == ["dpkg", "--compare-versions", "2.0.0", "ge", "2.0.0"]
     assert launches == [[str(target)]]
 
 
-def test_deb_authentication_or_apt_failure_is_not_repaired_manually(tmp_path: Path):
+def test_deb_stops_when_packagekit_local_install_is_unavailable(tmp_path: Path):
+    package = tmp_path / "update.deb"
+    package.write_bytes(b"deb")
+    commands = []
+
+    def runner(command, **_kwargs):
+        commands.append(command)
+        return subprocess.CompletedProcess(command, 0, "repair\n", "")
+
+    with pytest.raises(RuntimeError, match="does not support local package installation"):
+        install_deb(config(tmp_path, "linux-deb", package, tmp_path / "app"), lambda *_: None, runner)
+    assert commands == [["pkcon", "get-actions"]]
+
+
+def test_deb_authentication_failure_is_not_repaired_manually(tmp_path: Path):
     package = tmp_path / "update.deb"
     package.write_bytes(b"deb")
     result = subprocess.CompletedProcess([], 126, "", "authorization cancelled")
     launches = []
+    def runner(command, **_kwargs):
+        if command == ["pkcon", "get-actions"]:
+            return subprocess.CompletedProcess(command, 0, "install-local\n", "")
+        return result
+
     with pytest.raises(RuntimeError, match="authorization cancelled"):
-        install_deb(config(tmp_path, "linux-deb", package, tmp_path / "app"), lambda *_: None, lambda *_args, **_kwargs: result, lambda command, **_kwargs: launches.append(command))
+        install_deb(config(tmp_path, "linux-deb", package, tmp_path / "app"), lambda *_: None, runner, lambda command, **_kwargs: launches.append(command))
     assert launches == [[str(tmp_path / "app")]]
 
 
