@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-ALLOWED_REMOTE_VARIABLES = frozenset({"HOME", "SCRATCH", "WORK", "PROJECT"})
+ALLOWED_REMOTE_VARIABLES = frozenset({"HOME", "SCRATCH", "WORK", "PROJECT", "FAST", "PUBLIC", "DRES"})
 _REMOTE_COMMANDS = {name: f"printf '%s\\n' \"${name}\"" for name in ALLOWED_REMOTE_VARIABLES}
 MAX_PATH_OUTPUT = 4096
 
