@@ -798,6 +798,8 @@
     "default_local_dir": "Varsayılan yerel klasör",
     "browse_default_local_folder": "Varsayılan yerel klasör seç",
     "default_local_dir_tooltip": "Bu profil bağlandığında bu klasör açılır",
+    "project": "Proje / tahsis (ops.)",
+    "account": "Slurm hesabı (ops.)",
     "ssh_group": "SSH",
     "transfers_group": "Aktarımlar",
     "other_group": "Diğer",

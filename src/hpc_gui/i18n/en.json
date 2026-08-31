@@ -798,6 +798,8 @@
     "default_local_dir": "Default local folder",
     "browse_default_local_folder": "Browse for default local folder",
     "default_local_dir_tooltip": "This folder is opened when this profile connects",
+    "project": "Project / allocation (optional)",
+    "account": "Slurm account (optional)",
     "ssh_group": "SSH",
     "transfers_group": "Transfers",
     "other_group": "Other",

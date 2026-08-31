@@ -40,7 +40,7 @@ from hpc_gui.config.storage import (
     set_transfer_completion_action,
     update_ftp_state,
 )
-from hpc_gui.config.system_profile import format_remote_path, normalize_system_settings
+from hpc_gui.config.system_profile import ProviderContext, resolve_provider_path, normalize_system_settings
 from hpc_gui.core.i18n import t
 from hpc_gui.services.transfer_mode import (
     ASCII,
@@ -1240,8 +1240,11 @@ class FtpWidget(QWidget):
         cfg = session.get("cfg")
         user = getattr(cfg, "username", "") or "user"
         system = normalize_system_settings(getattr(cfg, "system_settings", None))
-        scratch = format_remote_path(system["scratch_dir"], user)
-        home = format_remote_path(system["home_dir"], user)
+        context = ProviderContext(user=user, project=getattr(cfg, "project", ""), account=getattr(cfg, "account", ""))
+        scratch_result = resolve_provider_path(system["scratch_dir"], context)
+        home_result = resolve_provider_path(system["home_dir"], context)
+        scratch = scratch_result.path if scratch_result.state == "resolved" else ""
+        home = home_result.path if home_result.state == "resolved" else ""
         self._scratch_path = scratch
         self._home_path = home
         self.panel_scratch.title = scratch

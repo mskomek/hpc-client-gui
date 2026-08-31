@@ -104,6 +104,8 @@ class ConnectionDialog(QDialog):
         self.host = QLineEdit()
         self.port = QLineEdit("22")
         self.username = QLineEdit()
+        self.project = QLineEdit()
+        self.account = QLineEdit()
         self.password = QLineEdit()
         self.password.setEchoMode(QLineEdit.EchoMode.Password)
 
@@ -190,6 +192,8 @@ class ConnectionDialog(QDialog):
         form.addRow(t("login.host"), self.host)
         form.addRow(t("login.port"), self.port)
         form.addRow(t("login.username"), self.username)
+        form.addRow(t("connection.project"), self.project)
+        form.addRow(t("connection.account"), self.account)
         form.addRow(t("login.password"), self.password)
         form.addRow("", self.cb_save_password)
         form.addRow("", self.cb_edit_only_password)
@@ -418,6 +422,8 @@ class ConnectionDialog(QDialog):
         self.host.setText(str(profile.get("host", "")))
         self.port.setText(str(profile.get("port", 22)))
         self.username.setText(str(profile.get("username", "")))
+        self.project.setText(str(profile.get("project", "")))
+        self.account.setText(str(profile.get("account", "")))
         self.key_path.setText(str(profile.get("key_path", "")))
         self.cb_x11.setChecked(bool(profile.get("x11_forwarding", False)))
         host_key_policy = str(profile.get("host_key_policy") or "accept-new").strip()
@@ -920,6 +926,8 @@ class ConnectionDialog(QDialog):
                 "host": self.host.text().strip(),
                 "port": port,
                 "username": self.username.text().strip(),
+                "project": self.project.text().strip(),
+                "account": self.account.text().strip(),
                 "password": self.password.text(),
                 "key_path": self.key_path.text().strip(),
                 "host_key_policy": str(
