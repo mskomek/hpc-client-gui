@@ -379,6 +379,7 @@ def test_format_run_entries_groups_by_file_and_reports_totals():
 
 def test_results_dialog_explains_fields_and_actions(qapp, monkeypatch):
     from PySide6.QtCore import Qt
+    from PySide6.QtTest import QTest
     from PySide6.QtWidgets import QListWidget, QPushButton
 
     from hpc_gui.ui.dialogs import ansys_lint_results_dialog as results
@@ -402,6 +403,9 @@ def test_results_dialog_explains_fields_and_actions(qapp, monkeypatch):
     assert any("Suggested action:" in line for line in rendered)
     assert any("Documentation:" in line for line in rendered)
     assert sum("fluent" in line for line in rendered) == 2
+    missing = results.format_diagnostic_explanation(second)
+    assert not any("Suggested action:" in line for line in missing)
+    assert not any("Documentation:" in line for line in missing)
 
     items.setCurrentRow(1)
     buttons = {button.text(): button for button in dialog.findChildren(QPushButton)}
@@ -416,3 +420,7 @@ def test_results_dialog_explains_fields_and_actions(qapp, monkeypatch):
     assert opened == [diagnostic.source_url]
     assert items.item(1).data(Qt.ItemDataRole.UserRole) is diagnostic
     assert items.focusPolicy() != Qt.FocusPolicy.NoFocus
+    dialog.show()
+    items.setFocus()
+    QTest.keyClick(items, Qt.Key.Key_Tab)
+    assert isinstance(dialog.focusWidget(), QPushButton)
