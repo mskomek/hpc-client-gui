@@ -12,7 +12,7 @@ from typing import Any, Mapping
 from hpc_gui.core.paths import app_data_dir
 
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 
 def default_job_record_path() -> Path:
@@ -50,13 +50,19 @@ class JobRecordStore:
                 """CREATE TABLE IF NOT EXISTS job_records (
                     job_id TEXT PRIMARY KEY, profile_id TEXT NOT NULL DEFAULT '',
                     provider_id TEXT NOT NULL DEFAULT '', state TEXT NOT NULL DEFAULT '',
+                    exit_code TEXT NOT NULL DEFAULT '',
                     submitted_at REAL NOT NULL, updated_at REAL NOT NULL,
                     script_path TEXT NOT NULL DEFAULT '', script_hash TEXT NOT NULL DEFAULT '',
                     script_text TEXT NOT NULL DEFAULT '', resources_json TEXT NOT NULL DEFAULT '{}',
                     timing_json TEXT NOT NULL DEFAULT '{}', scope TEXT NOT NULL DEFAULT 'app-submitted'
                 )"""
             )
-            self._db.execute("PRAGMA user_version = 1")
+            self._db.execute("PRAGMA user_version = 2")
+            self._db.commit()
+            version = 2
+        if version < 2:
+            self._db.execute("ALTER TABLE job_records ADD COLUMN exit_code TEXT NOT NULL DEFAULT ''")
+            self._db.execute("PRAGMA user_version = 2")
             self._db.commit()
 
     def upsert(self, record: Mapping[str, Any]) -> None:
@@ -90,13 +96,25 @@ class JobRecordStore:
         row = self._db.execute("SELECT * FROM job_records WHERE job_id = ?", (str(job_id),)).fetchone()
         return self._row(row) if row else None
 
+    def update_observation(self, job_id: str, *, state: str = "", timing: Mapping[str, Any] | None = None, resources: Mapping[str, Any] | None = None, exit_code: str = "") -> None:
+        current = self.get(job_id)
+        if current is None:
+            return
+        merged_timing = {**current["timing"], **dict(timing or {})}
+        merged_resources = {**current["resources"], **dict(resources or {})}
+        self._db.execute(
+            "UPDATE job_records SET state=?, exit_code=?, updated_at=?, timing_json=?, resources_json=? WHERE job_id=?",
+            (state or current["state"], exit_code or current["exit_code"], time.time(), json.dumps(merged_timing), json.dumps(merged_resources), str(job_id)),
+        )
+        self._db.commit()
+
     def list(self, limit: int = 100) -> list[dict[str, Any]]:
         rows = self._db.execute("SELECT * FROM job_records ORDER BY submitted_at DESC LIMIT ?", (max(1, int(limit)),)).fetchall()
         return [self._row(row) for row in rows]
 
     @staticmethod
     def _row(row) -> dict[str, Any]:
-        keys = ("job_id", "profile_id", "provider_id", "state", "submitted_at", "updated_at", "script_path", "script_hash", "script_text", "resources_json", "timing_json", "scope")
+        keys = ("job_id", "profile_id", "provider_id", "state", "exit_code", "submitted_at", "updated_at", "script_path", "script_hash", "script_text", "resources_json", "timing_json", "scope")
         result = dict(zip(keys, row))
         result["resources"] = json.loads(result.pop("resources_json"))
         result["timing"] = json.loads(result.pop("timing_json"))
