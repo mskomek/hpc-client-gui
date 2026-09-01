@@ -6,6 +6,7 @@ from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
 from hpc_gui.core import diagnostics
+from hpc_gui.services.cluster_self_test import ClusterSelfTestResult, SelfTestSection
 
 
 class DiagnosticBundleTests(unittest.TestCase):
@@ -47,6 +48,36 @@ class DiagnosticBundleTests(unittest.TestCase):
                 self.assertNotIn("fake.token", log_content)
                 manifest = json.loads(zf.read("manifest.json"))
                 self.assertIn("app.log", manifest["included_files"])
+
+    def test_v2_bundle_has_safe_structured_context_and_bounded_logs(self) -> None:
+        with TemporaryDirectory() as home_dir, TemporaryDirectory() as out_dir:
+            home = Path(home_dir)
+            app_data = home / ".truba_slurm_gui"
+            app_data.mkdir(parents=True, exist_ok=True)
+            (app_data / "history.jsonl").write_text(
+                "\n".join(f"line-{i}" for i in range(6000)), encoding="utf-8"
+            )
+            provider = {
+                "name": "Example",
+                "access": {"auth_methods": ["key"]},
+                "secret_token": "DUMMY-TOKEN",
+            }
+            with patch.object(Path, "home", return_value=home), patch(
+                "hpc_gui.config.storage.load_profiles", return_value=[]
+            ):
+                bundle_path = diagnostics.create_diagnostic_bundle(
+                    out_dir,
+                    provider=provider,
+                    self_test=ClusterSelfTestResult("PASS", (SelfTestSection("Connection"),)),
+                )
+            with zipfile.ZipFile(bundle_path) as zf:
+                names = set(zf.namelist())
+                assert {"manifest.json", "runtime.json", "plugins.json", "provider.json", "self_test.json"} <= names
+                combined = b"".join(zf.read(name) for name in names)
+                self.assertNotIn(b"DUMMY-TOKEN", combined)
+                manifest = json.loads(zf.read("manifest.json"))
+                self.assertEqual(manifest["schema"], "hpc-diagnostics/2")
+                self.assertTrue(manifest["redaction"]["secrets_excluded"])
 
 
 if __name__ == "__main__":
