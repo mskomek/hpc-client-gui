@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import hashlib
 import json
 import logging
 import os
@@ -83,6 +82,10 @@ from hpc_gui.services.transfer_mode import (
     download_with_mode,
     normalize_transfer_mode,
     upload_with_mode,
+)
+from hpc_gui.services.transfer_integrity import (
+    VerificationState,
+    verify_transfer,
 )
 from hpc_gui.ui.dialogs.transfer_conflict_dialog import (
     TransferConflictDecision,
@@ -3352,31 +3355,28 @@ class RemoteDirPanel(QWidget):
         else:
             raise RuntimeError(f"Unknown op: {op}")
 
-    @staticmethod
-    def _sha256_local(path: str) -> str:
-        digest = hashlib.sha256()
-        with open(path, "rb") as stream:
-            for chunk in iter(lambda: stream.read(1024 * 1024), b""):
-                digest.update(chunk)
-        return digest.hexdigest()
-
     def _verify_transfer_item(self, item: TransferItem, *, files=None) -> None:
         if not get_transfer_checksum_verification_enabled():
             return
         files = files or self.session["files"]
         remote_hash = getattr(files, "sha256", None)
         if not callable(remote_hash):
-            raise RuntimeError(
-                "SHA-256 verification is enabled, but this backend does not provide remote checksums."
-            )
+            self._last_verification = VerificationState.UNSUPPORTED
+            return
         local_path = item.src if item.op == "upload" else item.dst
         remote_path = item.dst if item.op == "upload" else item.src
-        local_digest = self._sha256_local(local_path)
-        remote_digest = str(remote_hash(remote_path) or "").strip().lower()
-        if not remote_digest or local_digest != remote_digest:
+        self._last_verification = VerificationState.VERIFYING
+        try:
+            remote_digest = remote_hash(remote_path)
+        except Exception:
+            self._last_verification = VerificationState.UNSUPPORTED
+            return
+        result = verify_transfer(local_path, remote_digest)
+        self._last_verification = result.state
+        if result.state is VerificationState.FAILED:
             raise RuntimeError(
                 f"SHA-256 verification failed for {remote_path}: "
-                f"local={local_digest}, remote={remote_digest or '<missing>'}"
+                f"local={result.local_digest}, remote={result.remote_digest}"
             )
 
     def shutdown(self) -> None:
