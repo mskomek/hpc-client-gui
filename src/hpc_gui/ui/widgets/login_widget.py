@@ -37,6 +37,7 @@ from hpc_gui.config.system_profile import normalize_system_settings
 from hpc_gui.core.history import append_event
 from hpc_gui.core.logging import append_log
 from hpc_gui.services.slurm_mock import MockSlurmBackend
+from hpc_gui.services.profile_duplicate import duplicate_profile
 from hpc_gui.services.files_mock import MockFilesBackend
 from hpc_gui.services.x11_runner import X11Runner
 from hpc_gui.ssh.client import (
@@ -1149,12 +1150,29 @@ class LoginWidget(QWidget):
         menu = QMenu(self)
         act_connect = menu.addAction(t("login.connect"))
         act_edit = menu.addAction(t("connection.edit_action"))
+        act_duplicate = menu.addAction(t("login.duplicate"))
         chosen = menu.exec(self.profiles_list.mapToGlobal(pos))
         if chosen == act_connect:
             self.connect_selected_profile()
             return
         if chosen == act_edit:
             self.open_edit_connection_dialog(item.text())
+        if chosen == act_duplicate:
+            self.duplicate_selected_profile(item.text())
+
+    def duplicate_selected_profile(self, profile_name: str | None = None) -> None:
+        name = (profile_name or self._selected_profile_name()).strip()
+        original = self._load_profile_by_name(name)
+        if not original:
+            return
+        duplicate = duplicate_profile(original, [p.get("name", "") for p in load_profiles()])
+        dialog = ConnectionDialog(
+            self,
+            initial_profile=duplicate,
+            on_save=self._save_profile_from_dialog,
+        )
+        dialog.setWindowTitle(t("login.duplicate"))
+        dialog.exec()
 
     def _on_profile_double_clicked(self, item) -> None:
         if item is None:

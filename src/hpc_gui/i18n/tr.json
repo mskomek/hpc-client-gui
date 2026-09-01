@@ -25,6 +25,7 @@
     "x11_enable": "X11 yönlendirme (grafik arayüzlü uygulamalar için)",
     "dry_run": "Simülasyon / Deneme çalıştırması (uzak sistem olmadan arayüz testi)",
     "connect": "Bağlan",
+    "duplicate": "Profili çoğalt",
     "disconnect": "Bağlantıyı Kes",
     "status_disconnected": "Bağlı değil",
     "status_connected": "Bağlı",
