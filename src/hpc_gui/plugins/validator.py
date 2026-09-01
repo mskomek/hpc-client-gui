@@ -128,10 +128,13 @@ def validate_manifest_dict(manifest: Any) -> list[str]:
         or CAPABILITY_LINTER_TOOL not in capabilities
     ):
         errors.append("plugin_api 2 manifests require the 'linter-tool' capability")
+    trusted_tool = False
     if plugin_api == 2:
         reason = trusted_tool_error(manifest)
         if reason:
             errors.append(f"unapproved trusted tool: {reason}")
+        else:
+            trusted_tool = True
 
     if not isinstance(manifest["entrypoints"], dict):
         errors.append("manifest entrypoints must be a JSON object")
@@ -196,11 +199,12 @@ def validate_manifest_dict(manifest: Any) -> list[str]:
         if role not in KNOWN_FILE_ROLES:
             errors.append(f"unsupported manifest file role: {role!r}")
         suffix = PurePosixPath(str(path)).suffix.lower()
-        if suffix and suffix not in ALLOWED_PAYLOAD_SUFFIXES:
+        executable_engine_file = trusted_tool and role == V2_LINTER_ENGINE_ROLE and suffix == ".py"
+        if suffix and suffix not in ALLOWED_PAYLOAD_SUFFIXES and not executable_engine_file:
             errors.append(
                 f"manifest file '{path}' has a forbidden executable-looking extension '{suffix}'"
             )
-        if role == V2_LINTER_ENGINE_ROLE:
+        if role == V2_LINTER_ENGINE_ROLE and not trusted_tool:
             errors.append(
                 f"manifest file '{path}' uses forbidden executable role '{V2_LINTER_ENGINE_ROLE}'"
             )
