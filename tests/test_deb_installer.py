@@ -12,14 +12,16 @@ from hpc_gui.services.deb_installer import (
 
 def test_packagekit_probe_distinguishes_local_install_support():
     class Result:
-        returncode = 0
-        stdout = "install-local\nrepair\n"
+        returncode = 1
+        stdout = ""
+        stderr = "A filename to install is required"
 
     assert probe_packagekit(lambda *args, **kwargs: Result()).local_install
 
     class Unsupported:
-        returncode = 0
-        stdout = "repair\n"
+        returncode = 1
+        stdout = ""
+        stderr = "Command 'install-local' is not supported"
 
     assert not probe_packagekit(lambda *args, **kwargs: Unsupported()).local_install
 

@@ -20,7 +20,7 @@ class PackageKitCapability:
 def probe_packagekit(runner=subprocess.run) -> PackageKitCapability:
     try:
         result = runner(
-            ["pkcon", "get-actions"],
+            ["pkcon", "install-local"],
             capture_output=True,
             text=True,
             timeout=3,
@@ -28,10 +28,8 @@ def probe_packagekit(runner=subprocess.run) -> PackageKitCapability:
         )
     except (OSError, subprocess.TimeoutExpired):
         return PackageKitCapability(False, False, "PackageKit is unavailable.")
-    actions = result.stdout or ""
-    if result.returncode != 0:
-        return PackageKitCapability(True, False, "PackageKit could not report supported actions.")
-    if "install-local" not in actions:
+    output = f"{result.stdout or ''}\n{result.stderr or ''}".lower()
+    if result.returncode != 0 and "filename to install is required" not in output:
         return PackageKitCapability(True, False, "PackageKit does not support local package installation.")
     return PackageKitCapability(True, True, "PackageKit local installation is available.")
 
