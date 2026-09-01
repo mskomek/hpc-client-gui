@@ -825,7 +825,18 @@
     "host_key_role_target": "Target host",
     "jump_error_connect": "Could not connect to the jump host. Check the address, port and network path.",
     "jump_error_auth": "Jump host authentication failed. This version expects SSH key or agent authentication for the jump host.",
-    "jump_error_forwarding": "The jump host refused to forward to the target (direct-tcpip denied). Contact the administrator or use a direct connection."
+    "jump_error_forwarding": "The jump host refused to forward to the target (direct-tcpip denied). Contact the administrator or use a direct connection.",
+    "test_cluster": "Test Cluster"
+  },
+  "cluster_self_test": {
+    "title": "Cluster Self-Test",
+    "ready": "Run safe, read-only checks for this connection.",
+    "running": "Testing cluster… the dialog remains responsive.",
+    "summary": "Cluster self-test: {status}",
+    "failed": "The self-test could not complete. You can run it again.",
+    "results": "Cluster self-test results",
+    "run_again": "Run Again",
+    "copy": "Copy Result"
   },
   "tour": {
     "prev": "Back",
