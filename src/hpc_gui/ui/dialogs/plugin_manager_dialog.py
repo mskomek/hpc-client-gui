@@ -394,6 +394,13 @@ class PluginManagerDialog(QDialog):
         description.setWordWrap(True)
         grid.addWidget(description, 2, 0)
 
+        trusted = "linter-tool" in self._entry_capabilities(entry)
+        if trusted:
+            disclosure = QLabel(t("plugins.trusted_tool_disclosure_short"))
+            disclosure.setWordWrap(True)
+            disclosure.setStyleSheet("color: #8a4b00; padding: 2px 0;")
+            grid.addWidget(disclosure, 3, 0)
+
         # Capability badges (translated; raw identifiers never shown).
         caps_row = QHBoxLayout()
         caps_row.setContentsMargins(0, 2, 0, 2)
@@ -406,14 +413,14 @@ class PluginManagerDialog(QDialog):
             )
             caps_row.addWidget(badge)
         caps_row.addStretch(1)
-        grid.addLayout(caps_row, 3, 0)
+        grid.addLayout(caps_row, 4 if trusted else 3, 0)
 
         if other_versions:
             others = QLabel(
                 f"{t('plugins.other_versions_catalog')}: {', '.join(other_versions)}"
             )
             others.setStyleSheet("color: #666;")
-            grid.addWidget(others, 4, 0)
+            grid.addWidget(others, 5 if trusted else 4, 0)
 
         installed_here = self._is_installed(entry, active)
         active_version = active.get(plugin_id)
@@ -433,7 +440,7 @@ class PluginManagerDialog(QDialog):
         buttons.addWidget(details_button)
         buttons.addStretch(1)
 
-        row = 5
+        row = 6 if trusted else 5
         if installed_here and plugin_id not in disabled_ids:
             badge = QLabel(t("plugins.installed_badge"))
             badge.setStyleSheet("color: #2e7d32; font-weight: 600; padding-right: 8px;")
@@ -570,7 +577,7 @@ class PluginManagerDialog(QDialog):
             state_label.setStyleSheet("color: #b26a00;")
             grid.addWidget(state_label, 2, 0)
         if has_tool:
-            tool_label = QLabel("Trusted Tool")
+            tool_label = QLabel(t("plugins.trusted_tool_label"))
             tool_label.setStyleSheet("color: #245a9a;")
             grid.addWidget(tool_label, 2, 0)
 
@@ -817,6 +824,8 @@ class PluginManagerDialog(QDialog):
         ]
         if "cluster-profile" in set(self._entry_capabilities(entry)):
             lines += ["", t("plugins.cluster_commands_warning")]
+        if "linter-tool" in set(self._entry_capabilities(entry)):
+            lines += ["", t("plugins.trusted_tool_disclosure")]
         from PySide6.QtWidgets import QMessageBox
 
         QMessageBox.information(
