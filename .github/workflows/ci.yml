@@ -244,7 +244,7 @@ jobs:
           repository: mskomek/hpc-client-gui-plugins
           # Release pin: explicit immutable registry commit. Advance intentionally
           # (see PRODUCTION_CHECKLIST.md §11).
-          ref: d50ffca1380ecdf5c5bf11dbcbee03fcbff9a9dc
+          ref: 4e79325873a3eda232071339b367722ccacbb8f8
           path: hpc-client-gui-plugins
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:

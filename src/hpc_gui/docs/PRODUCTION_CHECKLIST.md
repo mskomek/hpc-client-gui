@@ -73,7 +73,7 @@ Bu dosya, HPC Client GUI'nin "ürün" gibi paketlenip sahada kullanılmasında e
 - [ ] `UPDATE_METADATA.json` was generated and its signature, platform, size,
   digest, and GitHub release URL passed the updater verification tests.
 - [x] The Plugin API contract job is pinned to immutable plugin commit
-  `d50ffca1380ecdf5c5bf11dbcbee03fcbff9a9dc` in
+  `4e79325873a3eda232071339b367722ccacbb8f8` in
   `.github/workflows/ci.yml` (local release candidate; it must be published
   before remote CI can resolve it).
   Advance that pin intentionally after a reviewed registry release.
