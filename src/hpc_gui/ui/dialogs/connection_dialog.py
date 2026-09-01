@@ -50,6 +50,7 @@ from hpc_gui.plugins.models import (
     validate_storage_policy,
 )
 from hpc_gui.services.quota_monitor import quota_gate
+from hpc_gui.ui.dialogs.cluster_self_test_dialog import ClusterSelfTestDialog
 from hpc_gui.ssh.client import coerce_keepalive_interval
 from hpc_gui.config.storage import coerce_profile_transfer_parallelism, coerce_profile_ssh_timeout
 
@@ -355,11 +356,15 @@ class ConnectionDialog(QDialog):
         self.btn_save_connect = QPushButton(t("connection.save_and_connect"))
         self.btn_save_connect.clicked.connect(self._save_and_connect_clicked)
 
+        self.btn_test_cluster = QPushButton(t("connection.test_cluster"))
+        self.btn_test_cluster.clicked.connect(self._test_cluster)
+
         self.btn_cancel = QPushButton(t("common.cancel"))
         self.btn_cancel.clicked.connect(self.reject)
 
         button_row = QHBoxLayout()
         button_row.addStretch(1)
+        button_row.addWidget(self.btn_test_cluster)
         button_row.addWidget(self.btn_save)
         button_row.addWidget(self.btn_save_connect)
         button_row.addWidget(self.btn_cancel)
@@ -1006,6 +1011,11 @@ class ConnectionDialog(QDialog):
         if self._on_save is not None and not self._on_save(profile):
             return
         self.accept()
+
+    def _test_cluster(self) -> None:
+        profile = self._collect_profile()
+        if profile is not None:
+            ClusterSelfTestDialog(self, profile).exec()
 
     def _save_and_connect_clicked(self) -> None:
         profile = self._collect_profile()
