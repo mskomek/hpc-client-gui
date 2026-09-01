@@ -960,6 +960,13 @@
     "title": "ANSYS Journal Linter",
     "no_findings": "no findings",
     "summary_label": "{e} error(s), {w} warning(s), {i} info",
-    "fix_open_tool": "Fix (open in tool)"
+    "fix_open_tool": "Fix (open in tool)",
+    "why_flagged": "Why flagged",
+    "confidence": "Confidence",
+    "suggested_action": "Suggested action",
+    "documentation": "Documentation",
+    "copy_diagnostic": "Copy diagnostic",
+    "copy_suggestion": "Copy suggestion",
+    "open_documentation": "Open documentation"
   }
 }

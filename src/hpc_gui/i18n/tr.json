@@ -960,6 +960,13 @@
     "title": "ANSYS Journal Linter",
     "no_findings": "bulgular yok",
     "summary_label": "{e} hata, {w} uyari, {i} bilgi",
-    "fix_open_tool": "Düzelt (Eklentide aç)"
+    "fix_open_tool": "Düzelt (Eklentide aç)",
+    "why_flagged": "İşaretlenme nedeni",
+    "confidence": "Güven düzeyi",
+    "suggested_action": "Önerilen işlem",
+    "documentation": "Belgelendirme",
+    "copy_diagnostic": "Tanıyı kopyala",
+    "copy_suggestion": "Öneriyi kopyala",
+    "open_documentation": "Belgeyi aç"
   }
 }
