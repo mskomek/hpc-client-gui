@@ -112,10 +112,12 @@ class EditorFlowTests(unittest.TestCase):
         self.w.open_file("/arf/scratch/user/job.slurm", "#!/bin/bash\n#SBATCH -p orfoz")
         self.assertFalse(self.w.btn_save_run.isVisible())
         self.assertTrue(self.w.btn_save_submit.isVisible())
+        self.assertTrue(self.w.btn_array.isVisible())
 
         self.w.open_file("/arf/scratch/user/readme.txt", "hello")
         self.assertFalse(self.w.btn_save_run.isVisible())
         self.assertFalse(self.w.btn_save_submit.isVisible())
+        self.assertFalse(self.w.btn_array.isVisible())
 
     def test_validation_can_block_save(self):
         QMessageBox.question = staticmethod(lambda *a, **k: QMessageBox.StandardButton.No)

@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
 from hpc_gui.core.i18n import t
 from hpc_gui.core.ui_errors import show_exception
 from hpc_gui.core.history import append_event
+from hpc_gui.ui.dialogs.slurm_array_dialog import edit_slurm_array
 
 
 class _EditorTextEdit(QTextEdit):
@@ -134,6 +135,7 @@ class EditorWidget(QWidget):
         self.btn_save_submit = QPushButton(t("editor.save_submit") if t("editor.save_submit") != "[editor.save_submit]" else "Save + Submit")
         self.btn_save_run = QPushButton(t("editor.save_run") if t("editor.save_run") != "[editor.save_run]" else "Save + Run")
         self.btn_lint = QPushButton(t("editor.lint") if t("editor.lint") != "[editor.lint]" else "Lint")
+        self.btn_array = QPushButton(t("editor.array") if t("editor.array") != "[editor.array]" else "Array...")
 
         self.btn_load.clicked.connect(self.load_path)
         self.btn_save.clicked.connect(self.save_path)
@@ -141,6 +143,7 @@ class EditorWidget(QWidget):
         self.btn_save_submit.clicked.connect(lambda: self.save_path(force_submit=True))
         self.btn_save_run.clicked.connect(lambda: self.save_path(run_in_terminal=True))
         self.btn_lint.clicked.connect(self.run_lint)
+        self.btn_array.clicked.connect(self.edit_array)
 
         top = QHBoxLayout()
         self.lbl_remote = QLabel(t("editor.remote"))
@@ -149,6 +152,7 @@ class EditorWidget(QWidget):
         top.addWidget(self.btn_load)
         top.addWidget(self.btn_new_template)
         top.addWidget(self.btn_lint)
+        top.addWidget(self.btn_array)
         top.addWidget(self.btn_save)
         top.addWidget(self.btn_save_submit)
         top.addWidget(self.btn_save_run)
@@ -346,6 +350,12 @@ class EditorWidget(QWidget):
         lower = path.lower()
         self.btn_save_run.setVisible(lower.endswith(".sh"))
         self.btn_save_submit.setVisible(lower.endswith((".slurm", ".sbatch")))
+        self.btn_array.setVisible(lower.endswith((".slurm", ".sbatch")))
+
+    def edit_array(self) -> None:
+        edited = edit_slurm_array(self, self.text.toPlainText())
+        if edited is not None:
+            self.text.setPlainText(edited)
 
     def set_session(self, session):
         self.session = session
@@ -389,6 +399,7 @@ class EditorWidget(QWidget):
             else "New from Template..."
         )
         self.btn_lint.setText(t("editor.lint") if t("editor.lint") != "[editor.lint]" else "Lint")
+        self.btn_array.setText(t("editor.array") if t("editor.array") != "[editor.array]" else "Array...")
         self.btn_save.setText(t("editor.save"))
         self.btn_save_submit.setText(t("editor.save_submit") if t("editor.save_submit") != "[editor.save_submit]" else "Save + Submit")
         self.btn_save_run.setText(t("editor.save_run") if t("editor.save_run") != "[editor.save_run]" else "Save + Run")
