@@ -14,3 +14,7 @@ The tool is intentionally narrow: it parses selected local content and emits
 findings. It receives no SSH credentials, keyring, updater secrets, provider
 registry write access, or automatic institutional-authentication capability.
 Unknown executable plugins remain disabled.
+
+The tool runs inside the application process and is not OS-sandboxed. The
+allowlist and integrity checks establish an application trust boundary; they do
+not promise memory isolation or protection from a compromised trusted tool.
