@@ -17,6 +17,7 @@ from PySide6.QtWidgets import (
 
 from hpc_gui.core.i18n import t
 from hpc_gui.services.cluster_self_test import ClusterSelfTestResult, run_cluster_self_test
+from hpc_gui.services.provider_capabilities import build_provider_capability_view, observed_from_self_test
 from hpc_gui.ssh.client import SSHConnInfo
 from hpc_gui.ssh.jump import jump_info_from_settings
 from hpc_gui.ui.async_call import AsyncCall
@@ -108,6 +109,18 @@ class ClusterSelfTestDialog(QDialog):
             return
         self._result = result
         self.summary.setText(t("cluster_self_test.summary").format(status=result.status))
+        view = build_provider_capability_view(
+            self._profile.get("provider_template"),
+            observed_from_self_test(result),
+            project=str(self._profile.get("project") or ""),
+            account=str(self._profile.get("account") or ""),
+        )
+        self.results.addItem(QListWidgetItem(t("cluster_self_test.declared_header").format(provider=view.provider)))
+        self.results.addItem(QListWidgetItem(t("cluster_self_test.observed_header")))
+        for capability in view.capabilities:
+            self.results.addItem(QListWidgetItem(
+                f"  {capability.id}: {capability.declared} / {capability.observed}"
+            ))
         for section in result.sections:
             header = QListWidgetItem(section.id)
             font = header.font()
