@@ -48,6 +48,7 @@ from hpc_gui.services.transfer_mode import (
     BINARY,
     resolve_transfer_mode,
 )
+from hpc_gui.services.provider_path_resolver import ProviderPathResolver, RemotePathResult
 from hpc_gui.ui.widgets.local_dir_panel import LocalDirPanel
 from hpc_gui.ui.widgets.remote_accordion import RemoteAccordion
 from hpc_gui.ui.widgets.remote_dir_panel import RemoteDirPanel
@@ -1168,6 +1169,7 @@ class FtpWidget(QWidget):
             panel.shutdown()
         cfg = session.get("cfg") or {}
         provider = getattr(cfg, "provider_template", {}) or {}
+        remote_resolver = ProviderPathResolver(session.get("ssh")) if session.get("ssh") is not None else None
         for area in provider.get("storage", []) if isinstance(provider, dict) else []:
             if not isinstance(area, dict) or area.get("enabled") is False:
                 continue
@@ -1176,6 +1178,10 @@ class FtpWidget(QWidget):
                 continue
             template = str(area.get("path_template") or "")
             result = resolve_provider_path(template, context)
+            resolver = area.get("resolver")
+            if not template and isinstance(resolver, dict) and resolver.get("type") == "remote-environment":
+                variable = str(resolver.get("variable") or "")
+                result = remote_resolver.resolve(variable) if remote_resolver is not None else RemotePathResult("unavailable", reason="not connected")
             panel = RemoteDirPanel()
             panel.set_session(session)
             panel.set_transfer_mode_provider(self.current_transfer_mode)
@@ -1194,7 +1200,8 @@ class FtpWidget(QWidget):
                 panel.set_dir(result.path)
             else:
                 panel.title = str(area.get("label") or key)
-                panel.lbl.setText(panel.title + " — context required")
+                reason = "Path unavailable in the current remote environment" if result.state in {"unavailable", "invalid"} else "Provider context required"
+                panel.lbl.setText(panel.title + " — " + reason)
             self.remote_panels[key] = panel
             self.accordion.add_section(key, panel.title, panel)
 

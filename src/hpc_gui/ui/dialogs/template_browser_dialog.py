@@ -29,9 +29,13 @@ from hpc_gui.plugins.job_templates import JobTemplate
 
 
 class TemplateBrowserDialog(QDialog):
-    def __init__(self, parent=None, templates=None):
+    def __init__(self, parent=None, templates=None, provider_template=None):
         super().__init__(parent)
         self._templates = list(templates or [])
+        provider = provider_template if isinstance(provider_template, dict) else {}
+        hints = provider.get("scheduler_hints", {})
+        self._partitions = tuple(str(value) for value in (hints.get("partitions") or []) if str(value).strip()) if isinstance(hints, dict) else ()
+        self._account = str(provider.get("account") or "").strip()
         self.result_template: JobTemplate | None = None
         self.result_values: dict[str, object] = {}
 
@@ -118,6 +122,14 @@ class TemplateBrowserDialog(QDialog):
                 field = QCheckBox()
                 field.setChecked(bool(variable.default))
                 self.form.addRow(label, field)
+            elif variable.name == "partition" and self._partitions:
+                field = QComboBox()
+                field.setEditable(True)
+                field.addItems(list(dict.fromkeys((*self._partitions, *variable.choices))))
+                default = variable.default if isinstance(variable.default, str) else None
+                if default:
+                    field.setCurrentText(default)
+                self.form.addRow(label, field)
             elif variable.type == "choice" and variable.choices:
                 field = QComboBox()
                 field.addItems(list(variable.choices))
@@ -131,6 +143,8 @@ class TemplateBrowserDialog(QDialog):
                     variable.default, bool
                 ):
                     field.setText(str(variable.default))
+                elif variable.name == "account" and self._account:
+                    field.setText(self._account)
                 self.form.addRow(label, field)
         self._update_preview()
 

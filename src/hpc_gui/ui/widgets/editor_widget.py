@@ -628,7 +628,14 @@ class EditorWidget(QWidget):
         from PySide6.QtWidgets import QDialog
         from hpc_gui.ui.dialogs.template_browser_dialog import TemplateBrowserDialog
 
-        dialog = TemplateBrowserDialog(self, templates)
+        provider_template = {}
+        if isinstance(self.session, dict):
+            cfg = self.session.get("cfg")
+            provider_template = getattr(cfg, "provider_template", {}) or {}
+            if isinstance(provider_template, dict):
+                provider_template = dict(provider_template)
+                provider_template["account"] = getattr(cfg, "account", "")
+        dialog = TemplateBrowserDialog(self, templates, provider_template=provider_template)
         if dialog.exec() != QDialog.DialogCode.Accepted:
             return
         template, values = dialog.result_template, dialog.result_values
