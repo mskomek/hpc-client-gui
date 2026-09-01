@@ -20,25 +20,39 @@ from hpc_gui.lint.engine import lint_text
 from hpc_gui.lint.models import LintContext, Severity
 from hpc_gui.lint.rulepack import parse_rule_pack
 from hpc_gui.plugins.registry_client import OFFICIAL_RAW_BASE, OFFICIAL_REGISTRY_URL
+from hpc_gui.plugins.compatibility import is_app_compatible
+from packaging.version import Version
 
 FIXTURES = Path(__file__).resolve().parent / "fixtures" / "fluent"
 PLUGIN_REPO = Path(__file__).resolve().parents[2] / "hpc-client-gui-plugins"
-FLUENT_DIR = PLUGIN_REPO / "plugins" / "fluent" / "0.1.0"
 
 requires_plugin_repo = pytest.mark.skipif(
-    not FLUENT_DIR.is_dir(), reason="sibling hpc-client-gui-plugins checkout not present"
+    not (PLUGIN_REPO / "registry.json").is_file(),
+    reason="sibling hpc-client-gui-plugins checkout not present",
 )
 
 
+def latest_fluent_dir() -> Path:
+    registry = json.loads((PLUGIN_REPO / "registry.json").read_text(encoding="utf-8"))
+    entries = [
+        entry for entry in registry["plugins"]
+        if entry["id"] == "org.hpcclient.fluent"
+        and is_app_compatible(entry["requires_app"], "1.5.8")
+    ]
+    latest = max(entries, key=lambda entry: Version(entry["version"]))
+    return PLUGIN_REPO / Path(latest["manifest_path"]).parent
+
+
 def load_published_pack() -> "object":
-    manifest = json.loads((FLUENT_DIR / "manifest.json").read_text(encoding="utf-8"))
+    fluent_dir = latest_fluent_dir()
+    manifest = json.loads((fluent_dir / "manifest.json").read_text(encoding="utf-8"))
     index_rel = manifest["entrypoints"]["lint_index"]
-    index = json.loads((FLUENT_DIR / index_rel).read_text(encoding="utf-8"))
+    index = json.loads((fluent_dir / index_rel).read_text(encoding="utf-8"))
     return parse_rule_pack(
         index,
         plugin_id=manifest["id"],
         plugin_version=manifest["version"],
-        package_dir=FLUENT_DIR,
+        package_dir=fluent_dir,
     )
 
 
@@ -147,7 +161,8 @@ def test_registry_entry_installs_via_exact_file_protocol(tmp_path: Path):
     from hpc_gui.plugins.state import read_installed_state
 
     registry = json.loads((PLUGIN_REPO / "registry.json").read_text(encoding="utf-8"))
-    entry = next(p for p in registry["plugins"] if p["id"] == "org.hpcclient.fluent")
+    entries = [p for p in registry["plugins"] if p["id"] == "org.hpcclient.fluent"]
+    entry = max(entries, key=lambda item: Version(item["version"]))
 
     responses = {}
 
@@ -163,7 +178,7 @@ def test_registry_entry_installs_via_exact_file_protocol(tmp_path: Path):
     result = install_plugin_from_registry(
         entry,
         root=tmp_path,
-        app_version="1.4.0",
+        app_version="1.5.8",
         fetcher=fetch,
     )
     assert result.activated is True
@@ -173,3 +188,36 @@ def test_registry_entry_installs_via_exact_file_protocol(tmp_path: Path):
         "hpc_gui.lint.rulepack", fromlist=["load_lint_packs"]
     ).load_lint_packs(root=tmp_path, app_version="1.4.0")
     assert [p.linter_id for p in packs] == ["fluent-journal"]
+    assert entry["version"] == "0.2.0"
+
+
+@requires_plugin_repo
+def test_latest_fluent_template_renders_after_install(tmp_path: Path):
+    from hpc_gui.plugins.installer import install_plugin_from_registry
+    from hpc_gui.plugins.job_templates import load_job_templates, render_template
+
+    registry = json.loads((PLUGIN_REPO / "registry.json").read_text(encoding="utf-8"))
+    entry = max(
+        (item for item in registry["plugins"] if item["id"] == "org.hpcclient.fluent"),
+        key=lambda item: Version(item["version"]),
+    )
+
+    def fetch(url: str, max_bytes: int) -> bytes:
+        source = (PLUGIN_REPO / "registry.json") if url == OFFICIAL_REGISTRY_URL else PLUGIN_REPO / url[len(OFFICIAL_RAW_BASE):]
+        payload = source.read_bytes()
+        assert len(payload) <= max_bytes
+        return payload
+
+    install_plugin_from_registry(entry, root=tmp_path, app_version="1.5.8", fetcher=fetch)
+    template = load_job_templates(root=tmp_path, app_version="1.5.8")[0]
+    rendered = render_template(template, {
+        "partition": "standard",
+        "cpus": 8,
+        "time_limit": "02:00:00",
+        "fluent_version": "v252",
+        "journal_file": "case.jou",
+        "journal_base": "case",
+    })
+    assert "#SBATCH --partition=standard" in rendered
+    assert "fluent 3ddp -g -t8 -i case.jou" in rendered
+    assert "{{" not in rendered and "}}" not in rendered

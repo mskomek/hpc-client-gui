@@ -10,6 +10,8 @@ startup or other plugins.
 from __future__ import annotations
 
 import logging
+import hashlib
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable
@@ -22,7 +24,21 @@ from hpc_gui.plugins.trusted_tools import is_approved_trusted_tool
 
 logger = logging.getLogger(__name__)
 
-_TOOL_CACHE: dict[tuple[str, str], LinterTool] = {}
+def _tool_module_name(installed) -> str:
+    """Return a private namespace for this immutable installed tool."""
+    manifest = installed.manifest
+    identity = "\0".join(
+        [manifest.id, manifest.version, *(file.sha256 for file in manifest.files)]
+    )
+    digest = hashlib.sha256(identity.encode("ascii")).hexdigest()[:16]
+    safe_id = re.sub(r"[^a-zA-Z0-9_]", "_", manifest.id)
+    return f"_hpc_gui_trusted_{safe_id}_{digest}"
+
+
+def _remove_module_namespace(module_name: str) -> None:
+    for name in tuple(sys.modules):
+        if name == module_name or name.startswith(module_name + "."):
+            sys.modules.pop(name, None)
 
 
 class ToolLoadError(RuntimeError):
@@ -61,7 +77,8 @@ def load_tool_for_plugin(installed) -> LinterTool:
     init_path = package_dir / rel
     if not init_path.is_file():
         raise ToolLoadError("Trusted tool engine is missing.")
-    module_name = "_hpc_gui_trusted_ansys_lint"
+    module_name = _tool_module_name(installed)
+    previous_dont_write_bytecode = sys.dont_write_bytecode
     try:
         spec = importlib.util.spec_from_file_location(
             module_name, init_path, submodule_search_locations=[str(init_path.parent)]
@@ -70,7 +87,11 @@ def load_tool_for_plugin(installed) -> LinterTool:
             raise ToolLoadError("Trusted tool engine cannot be loaded.")
         module = importlib.util.module_from_spec(spec)
         sys.modules[module_name] = module
-        spec.loader.exec_module(module)
+        sys.dont_write_bytecode = True
+        try:
+            spec.loader.exec_module(module)
+        finally:
+            sys.dont_write_bytecode = previous_dont_write_bytecode
         descriptor = module.create_plugin()
         return LinterTool(
             plugin_id=installed.manifest.id,
@@ -83,7 +104,8 @@ def load_tool_for_plugin(installed) -> LinterTool:
     except ToolLoadError:
         raise
     except Exception as exc:
-        sys.modules.pop(module_name, None)
+        sys.dont_write_bytecode = previous_dont_write_bytecode
+        _remove_module_namespace(module_name)
         raise ToolLoadError(f"Trusted tool failed to load: {exc}") from exc
 
 
