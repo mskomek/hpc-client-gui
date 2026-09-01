@@ -25,6 +25,7 @@
     "x11_enable": "Enable X11 forwarding (for GUI apps)",
     "dry_run": "Simulation / Dry-run (UI test without a remote system)",
     "connect": "Connect",
+    "duplicate": "Duplicate profile",
     "disconnect": "Disconnect",
     "status_disconnected": "Disconnected",
     "status_connected": "Connected",
