@@ -36,9 +36,16 @@ _COMMANDS = (
     CommandDefinition("NAV-FILES", "tabs.ftp", "navigation", "shell", "tabs.ftp"),
     CommandDefinition("NAV-EDITOR", "tabs.editor", "navigation", "shell", "tabs.editor"),
     CommandDefinition("FILE-REFRESH", "dirs.refresh", "files", "directory", "dirs.refresh", ("F5",)),
+    CommandDefinition("FILE-LOCAL-COPY", "dirs.copy", "files", "local_files", "dirs.copy", ("Ctrl+C",)),
+    CommandDefinition("FILE-LOCAL-CUT", "dirs.move", "files", "local_files", "dirs.move", ("Ctrl+X",)),
+    CommandDefinition("FILE-LOCAL-PASTE", "dirs.paste", "files", "local_files", "dirs.paste", ("Ctrl+V",)),
+    CommandDefinition("FILE-REMOTE-COPY", "dirs.copy", "files", "remote_files", "dirs.copy", ("Ctrl+C",)),
+    CommandDefinition("FILE-REMOTE-CUT", "dirs.move", "files", "remote_files", "dirs.move", ("Ctrl+X",)),
+    CommandDefinition("FILE-REMOTE-PASTE", "dirs.paste", "files", "remote_files", "dirs.paste", ("Ctrl+V",)),
+    CommandDefinition("FILE-REMOTE-UNDO", "dirs.undo", "files", "remote_files", "dirs.undo", ("Ctrl+Z",)),
     CommandDefinition("FILE-OPEN", "editor.open", "files", "directory", "editor.open"),
-    CommandDefinition("FILE-UPLOAD", "ftp.upload", "files", "directory", "ftp.upload"),
-    CommandDefinition("FILE-DOWNLOAD", "ftp.download", "files", "directory", "ftp.download"),
+    CommandDefinition("FILE-UPLOAD", "ftp.upload_selected", "files", "directory", "ftp.upload_selected"),
+    CommandDefinition("FILE-DOWNLOAD", "ftp.download_selected", "files", "directory", "ftp.download_selected"),
     CommandDefinition("EDIT-SAVE", "editor.save", "editor", "editor", "editor.save", ("Ctrl+S",)),
     CommandDefinition("EDIT-SUBMIT", "editor.submit", "editor", "editor", "editor.submit", ("Ctrl+Shift+S",)),
     CommandDefinition("EDIT-LINT", "editor.lint", "editor", "editor", "editor.lint"),
@@ -46,7 +53,7 @@ _COMMANDS = (
     CommandDefinition("JOB-REFRESH", "jobs.refresh", "jobs", "jobs", "jobs.refresh"),
     CommandDefinition("JOB-CANCEL", "jobs.cancel", "jobs", "jobs", "jobs.cancel"),
     CommandDefinition("PLUGIN-MANAGER", "files.plugins", "plugins", "shell", "files.plugins"),
-    CommandDefinition("DIAGNOSTICS-EXPORT", "dirs.export_diagnostics", "diagnostics", "logs", "dirs.export_diagnostics"),
+    CommandDefinition("DIAGNOSTICS-EXPORT", "logs.export_diagnostics", "diagnostics", "logs", "logs.export_diagnostics"),
 )
 
 
