@@ -836,7 +836,9 @@
     "failed": "Öz test tamamlanamadı. Yeniden çalıştırabilirsiniz.",
     "results": "Küme öz testi sonuçları",
     "run_again": "Yeniden Çalıştır",
-    "copy": "Sonucu Kopyala"
+    "copy": "Sonucu Kopyala",
+    "declared_header": "Sağlayıcının beyanı: {provider}",
+    "observed_header": "Bu bağlantıda algılanan"
   },
   "tour": {
     "prev": "Geri",

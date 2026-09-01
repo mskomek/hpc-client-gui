@@ -836,7 +836,9 @@
     "failed": "The self-test could not complete. You can run it again.",
     "results": "Cluster self-test results",
     "run_again": "Run Again",
-    "copy": "Copy Result"
+    "copy": "Copy Result",
+    "declared_header": "Declared by provider: {provider}",
+    "observed_header": "Detected on this connection"
   },
   "tour": {
     "prev": "Back",
