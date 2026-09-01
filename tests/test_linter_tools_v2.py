@@ -360,6 +360,8 @@ def test_format_file_entries_lists_location_fix_and_source():
     assert any("2:3" in ln and "C1" in ln for ln in lines)
     assert any('fix:' in ln for ln in lines)
     assert any("https://example.test/doc" in ln for ln in lines)
+    assert any("why flagged" in ln.lower() for ln in lines)
+    assert any("confidence: structural" in ln.lower() for ln in lines)
 
 
 def test_format_run_entries_groups_by_file_and_reports_totals():
@@ -373,3 +375,44 @@ def test_format_run_entries_groups_by_file_and_reports_totals():
     header, lines = groups[0]
     assert header == "job.jou"
     assert any("no findings" in ln for ln in lines)
+
+
+def test_results_dialog_explains_fields_and_actions(qapp, monkeypatch):
+    from PySide6.QtCore import Qt
+    from PySide6.QtWidgets import QListWidget, QPushButton
+
+    from hpc_gui.ui.dialogs import ansys_lint_results_dialog as results
+
+    diagnostic = _Diag(fix="/file/set-tui-version \"25.2\"", url="https://example.test/doc")
+    diagnostic.explanation = "The journal uses a version-sensitive command."
+    diagnostic.is_heuristic = True
+    second = _Diag(code="C2", fix=None, url=None)
+
+    class _SecondFile(_FileResult):
+        file_path = "other.jou"
+
+    class _Run:
+        files = [_FileResult([diagnostic]), _SecondFile([second])]
+
+    dialog = results.build_ansys_lint_results_dialog(None, "Lint", _Run())
+    items = dialog.findChild(QListWidget)
+    rendered = [items.item(index).text() for index in range(items.count())]
+    assert any("Why flagged: The journal uses" in line for line in rendered)
+    assert any("Confidence: heuristic" in line for line in rendered)
+    assert any("Suggested action:" in line for line in rendered)
+    assert any("Documentation:" in line for line in rendered)
+    assert sum("fluent" in line for line in rendered) == 2
+
+    items.setCurrentRow(1)
+    buttons = {button.text(): button for button in dialog.findChildren(QPushButton)}
+    buttons["Copy diagnostic"].click()
+    assert "Why flagged" in qapp.clipboard().text()
+    buttons["Copy suggestion"].click()
+    assert qapp.clipboard().text() == diagnostic.suggested_fix
+
+    opened = []
+    monkeypatch.setattr(results.QDesktopServices, "openUrl", lambda url: opened.append(url.toString()))
+    buttons["Open documentation"].click()
+    assert opened == [diagnostic.source_url]
+    assert items.item(1).data(Qt.ItemDataRole.UserRole) is diagnostic
+    assert items.focusPolicy() != Qt.FocusPolicy.NoFocus

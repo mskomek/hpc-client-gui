@@ -6,9 +6,10 @@ without Qt; the dialog only renders those lines.
 
 from __future__ import annotations
 
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QColor
+from PySide6.QtCore import QUrl, Qt
+from PySide6.QtGui import QColor, QDesktopServices
 from PySide6.QtWidgets import (
+    QApplication,
     QDialog,
     QHBoxLayout,
     QLabel,
@@ -56,10 +57,21 @@ def format_file_entries(file_result) -> list[str]:
         location = "?" if diag.line is None else f"{diag.line}:{diag.column or 1}"
         marker = "!" if diag.severity.value == "error" else ("~" if diag.severity.value == "warning" else "-")
         lines.append(f"  [{marker} {location}] {diag.code}: {diag.message}")
-        if diag.suggested_fix:
-            lines.append(f"      fix: {diag.suggested_fix}")
-        if diag.source_url:
-            lines.append(f"      src: {diag.source_url}")
+        lines.extend(format_diagnostic_explanation(diag))
+    return lines
+
+
+def format_diagnostic_explanation(diag) -> list[str]:
+    """Format only fields supplied by the lint engine; never invent advice."""
+    lines = [f"      {_tr('ansyslint.why_flagged', 'why flagged')}: {getattr(diag, 'explanation', '') or diag.message}"]
+    confidence = "heuristic" if getattr(diag, "is_heuristic", False) else "structural"
+    lines.append(f"      {_tr('ansyslint.confidence', 'confidence')}: {confidence}")
+    if diag.suggested_fix:
+        lines.append(f"      fix: {diag.suggested_fix}")
+        lines.append(f"      {_tr('ansyslint.suggested_action', 'suggested action')}: {diag.suggested_fix}")
+    if diag.source_url:
+        lines.append(f"      src: {diag.source_url}")
+        lines.append(f"      {_tr('ansyslint.documentation', 'documentation')}: {diag.source_url}")
     return lines
 
 
@@ -97,31 +109,51 @@ def build_ansys_lint_results_dialog(parent, title: str, run_result, open_in_tool
 
     list_widget = QListWidget(dialog)
     list_widget.setWordWrap(True)
-    for _header, lines in format_run_entries(run_result):
-        for line_index, line in enumerate(lines):
-            item = QListWidgetItem(line)
-            stripped = line.strip()
-            if line_index > 0 and stripped.startswith(("!", "~", "-")):
-                severity = {"!": "error", "~": "warning", "-": "info"}[stripped[0]]
-                item.setForeground(QColor(_SEVERITY_COLORS[severity]))
-            elif line_index == 0:
-                font = item.font()
-                font.setBold(True)
-                item.setFont(font)
-            item.setData(Qt.ItemDataRole.UserRole, line_index == 0)
+    for file_result in sorted(run_result.files, key=lambda result: result.file_path):
+        header = QListWidgetItem(format_file_entries(file_result)[0])
+        font = header.font()
+        font.setBold(True)
+        header.setFont(font)
+        list_widget.addItem(header)
+        for diag in file_result.sorted_diagnostics():
+            marker = "!" if diag.severity.value == "error" else ("~" if diag.severity.value == "warning" else "-")
+            location = "?" if diag.line is None else f"{diag.line}:{diag.column or 1}"
+            item = QListWidgetItem(f"  [{marker} {location}] {diag.code}: {diag.message}")
+            item.setForeground(QColor(_SEVERITY_COLORS[diag.severity.value]))
+            item.setData(Qt.ItemDataRole.UserRole, diag)
             list_widget.addItem(item)
+            for line in format_diagnostic_explanation(diag):
+                list_widget.addItem(QListWidgetItem(line))
     layout.addWidget(list_widget, 1)
 
     buttons = QHBoxLayout()
     buttons.addStretch(1)
 
     def copy_all() -> None:
-        from PySide6.QtWidgets import QApplication
-
         parts: list[str] = []
         for _header, lines in format_run_entries(run_result):
             parts.extend(lines)
         QApplication.clipboard().setText("\n".join(parts))
+
+    def selected_diagnostic():
+        item = list_widget.currentItem()
+        return item.data(Qt.ItemDataRole.UserRole) if item is not None else None
+
+    def copy_selected() -> None:
+        diag = selected_diagnostic()
+        if diag is not None:
+            QApplication.clipboard().setText("\n".join(format_diagnostic_explanation(diag)))
+
+    def copy_suggestion() -> None:
+        diag = selected_diagnostic()
+        if diag is not None and diag.suggested_fix:
+            QApplication.clipboard().setText(diag.suggested_fix)
+
+    def open_documentation() -> None:
+        diag = selected_diagnostic()
+        url = str(getattr(diag, "source_url", "") or "") if diag is not None else ""
+        if url.startswith("https://"):
+            QDesktopServices.openUrl(QUrl(url))
 
     if open_in_tool is not None:
         btn_fix = QPushButton(_tr("ansyslint.fix_open_tool", "Fix (open in tool)"))
@@ -136,6 +168,14 @@ def build_ansys_lint_results_dialog(parent, title: str, run_result, open_in_tool
     btn_copy = QPushButton(_tr("common.copy", "Copy"))
     btn_copy.clicked.connect(copy_all)
     buttons.addWidget(btn_copy)
+    for key, callback in (
+        ("ansyslint.copy_diagnostic", copy_selected),
+        ("ansyslint.copy_suggestion", copy_suggestion),
+        ("ansyslint.open_documentation", open_documentation),
+    ):
+        button = QPushButton(_tr(key, key.rsplit(".", 1)[-1]))
+        button.clicked.connect(callback)
+        buttons.addWidget(button)
     btn_close = QPushButton(_tr("common.close", "Close"))
     btn_close.clicked.connect(dialog.accept)
     buttons.addWidget(btn_close)
