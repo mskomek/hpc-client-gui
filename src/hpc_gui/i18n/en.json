@@ -175,6 +175,7 @@
     "state": "State",
     "refresh": "Refresh",
     "cancel": "Cancel Job",
+    "cancel_confirm": "Cancel job {job_id}?",
     "job_id": "Job ID"
   },
   "files": {

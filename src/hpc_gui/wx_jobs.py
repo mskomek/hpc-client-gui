@@ -194,7 +194,7 @@ def show_jobs(parent=None, model: WxJobsModel | None = None, *, list_jobs=None, 
     splitter.SetMinimumPaneSize(220)
     root.Add(splitter, 1, wx.EXPAND | wx.ALL, 8)
     panel.SetSizer(root)
-    state = {"items": [], "selected_job": "", "closed": False, "in_flight": False, "output_in_flight": False}
+    state = {"items": [], "selected_job": "", "closed": False, "in_flight": False, "output_in_flight": False, "cancel_in_flight": False}
     state_lock = Lock()
     timer = wx.Timer(frame)
 
@@ -282,8 +282,30 @@ def show_jobs(parent=None, model: WxJobsModel | None = None, *, list_jobs=None, 
             details.SetValue("\n".join(f"{key}: {value}" for key, value in item.items()))
 
     def cancel_job(_event):
-        if cancel and model.tracking.selected_job_id:
-            cancel(model.tracking.selected_job_id)
+        job_id = model.tracking.selected_job_id
+        if not cancel or not job_id or state["cancel_in_flight"]:
+            return
+        if wx.MessageBox(t("jobs.cancel_confirm").format(job_id=job_id), t("jobs.cancel"), wx.YES_NO | wx.ICON_WARNING) != wx.YES:
+            return
+        state["cancel_in_flight"] = True
+        cancel_button.Enable(False)
+
+        def worker():
+            try:
+                cancel(job_id)
+                wx.CallAfter(cancel_done, None)
+            except Exception as error:
+                wx.CallAfter(cancel_done, error)
+
+        def cancel_done(error):
+            state["cancel_in_flight"] = False
+            if state["closed"]:
+                return
+            cancel_button.Enable(True)
+            if error:
+                details.SetValue(str(error))
+
+        Thread(target=worker, daemon=True).start()
 
     def close(_event):
         if state["closed"]:
