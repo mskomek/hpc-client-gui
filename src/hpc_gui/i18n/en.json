@@ -508,6 +508,7 @@
   },
   "help": {
     "help_title": "Help",
+    "wx_shell_description": "wxPython migration shell",
     "welcome_title": "Welcome",
     "dont_show_again": "Don't show again",
     "missing_help_text": "Help content could not be loaded.",

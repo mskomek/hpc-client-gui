@@ -508,6 +508,7 @@
   },
   "help": {
     "help_title": "Yardım",
+    "wx_shell_description": "wxPython geçiş kabuğu",
     "welcome_title": "Hoş Geldiniz",
     "dont_show_again": "Bir daha gösterme",
     "missing_help_text": "Yardım içeriği yüklenemedi.",

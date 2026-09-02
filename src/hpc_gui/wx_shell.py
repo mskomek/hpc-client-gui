@@ -28,8 +28,10 @@ def main() -> int:
     panel = wx.Panel(frame)
     root = wx.BoxSizer(wx.VERTICAL)
     menu = wx.Menu()
+    command_items = []
     for command in COMMAND_REGISTRY.by_context("shell"):
         item = menu.Append(wx.ID_ANY, command.label())
+        command_items.append((command, item))
         frame.Bind(wx.EVT_MENU, lambda _event, command_id=command.id: _dispatch(command_id, frame, lifecycle, session_state), item)
     frame.SetMenuBar(wx.MenuBar())
     frame.GetMenuBar().Append(menu, t("help.help_title"))
@@ -40,17 +42,23 @@ def main() -> int:
         language_items[language] = item
         frame.Bind(wx.EVT_MENU, lambda _event, language=language: set_language(language), item)
     frame.GetMenuBar().Append(language_menu, t("help.language"))
-    root.Add(wx.StaticText(panel, label=f"HPC Client GUI {__version__}"), 0, wx.ALL, 12)
-    root.Add(wx.StaticText(panel, label="wx migration shell"), 0, wx.LEFT | wx.BOTTOM, 12)
+    title_label = wx.StaticText(panel, label=f"HPC Client GUI {__version__}")
+    description_label = wx.StaticText(panel, label=t("help.wx_shell_description"))
+    root.Add(title_label, 0, wx.ALL, 12)
+    root.Add(description_label, 0, wx.LEFT | wx.BOTTOM, 12)
     panel.SetSizer(root)
     frame.CreateStatusBar()
     frame.SetStatusText(t("common.ready"))
 
     def refresh_labels(_language=None):
         frame.SetTitle(f"{t('app.title')} {__version__}")
+        title_label.SetLabel(f"{t('app.title')} {__version__}")
+        description_label.SetLabel(t("help.wx_shell_description"))
         frame.SetStatusText(t("common.ready"))
         frame.GetMenuBar().SetLabelTop(0, t("help.help_title"))
         frame.GetMenuBar().SetLabelTop(1, t("help.language"))
+        for command, item in command_items:
+            menu.SetLabel(item.GetId(), command.label())
         for language, item in language_items.items():
             language_menu.SetLabel(item.GetId(), t("help.english" if language == "en" else "help.turkish"))
 
