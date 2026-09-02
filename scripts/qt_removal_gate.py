@@ -7,7 +7,6 @@ import json
 import re
 import subprocess
 from datetime import datetime
-from fnmatch import fnmatch
 from pathlib import Path, PurePosixPath
 
 REQUIRED_WX_EVIDENCE_PLATFORMS = ("windows", "linux", "macos")
@@ -17,8 +16,20 @@ MANUAL_CHECKS = ("launch", "connection", "terminal", "files", "jobs", "plugins",
 QT_PACKAGING_PREFIXES = ("pyside6", "shiboken6", "qtcore", "qtgui", "qtwidgets", "qtsvg", "qtweb")
 
 
-class GitScanError(RuntimeError):
-    """The gate cannot establish a trustworthy tracked-file scan."""
+class GateScanError(RuntimeError):
+    """The gate cannot establish a trustworthy scan."""
+
+
+class GitScanError(GateScanError):
+    """Git enumeration or dirty-tree inspection failed."""
+
+
+class SourceScanError(GateScanError):
+    """A tracked production Python file could not be scanned."""
+
+
+class PackagingScanError(GateScanError):
+    """A tracked packaging spec could not be scanned."""
 
 
 def _full_sha(value: object) -> bool:
@@ -76,9 +87,12 @@ def _relevant_dirty_files(root: Path) -> list[str]:
     names = [line.replace("\\", "/") for line in result.stdout.splitlines() if line.strip()]
     relevant = []
     for name in names:
-        is_relevant = name.startswith(("src/", "build/", "docs/v2/")) or name in PRODUCTION_DEPENDENCY_FILES
-        if is_relevant and (name.startswith("src/") or name.startswith("docs/v2/") or name in PRODUCTION_DEPENDENCY_FILES or fnmatch(name, "build/**/*.spec")):
+        is_spec = name.startswith("build/") and name.endswith(".spec")
+        is_relevant = name.startswith(("src/", "docs/v2/")) or name in PRODUCTION_DEPENDENCY_FILES or is_spec
+        if is_relevant:
             relevant.append(name)
+    if "scripts/qt_removal_gate.py" in names:
+        relevant.append("scripts/qt_removal_gate.py")
     return sorted(set(relevant))
 
 
@@ -112,11 +126,11 @@ def production_qt_imports(root: Path, *, return_scanned: bool = False):
     records: list[dict[str, object]] = []
     files = [path for path in git_tracked_files(root) if _relative(root, path).startswith("src/") and path.suffix == ".py"]
     for path in files:
+        rel = _relative(root, path)
         try:
             tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
-        except (OSError, SyntaxError):
-            continue
-        rel = _relative(root, path)
+        except (OSError, SyntaxError, UnicodeError) as exc:
+            raise SourceScanError(f"production source AST scan failed: {rel}: {type(exc).__name__}: {exc}") from exc
         for node in ast.walk(tree):
             names = [alias.name for alias in node.names] if isinstance(node, ast.Import) else [node.module] if isinstance(node, ast.ImportFrom) and node.module else []
             for name in names:
@@ -144,8 +158,8 @@ def packaging_blockers(root: Path, *, return_scanned: bool = False):
     for path in specs:
         try:
             tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
-        except (OSError, SyntaxError):
-            continue
+        except (OSError, SyntaxError, UnicodeError) as exc:
+            raise PackagingScanError(f"packaging AST scan failed: {_relative(root, path)}: {type(exc).__name__}: {exc}") from exc
         for node in ast.walk(tree):
             values: list[ast.AST] = []
             if isinstance(node, ast.Assign) and any(isinstance(target, ast.Name) and target.id in {"hiddenimports", "binaries"} for target in node.targets):
@@ -283,7 +297,7 @@ def main() -> int:
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
     commit = current_commit(root)
-    report: dict[str, object] = {"schema": "qt-removal-gate/3", "commit": commit, "scan_basis": "git-tracked-files", "working_tree_gate_relevant_clean": False}
+    report: dict[str, object] = {"schema": "qt-removal-gate/3", "commit": commit, "scan_basis": "git-tracked-files", "working_tree_gate_relevant_clean": False, "scan_errors": []}
     try:
         dirty = _relevant_dirty_files(root)
         imports, source_files = production_qt_imports(root, return_scanned=True)
@@ -295,8 +309,8 @@ def main() -> int:
         p0 = _p0_statuses(root)
         decision, reasons = evaluate_gate(p0=p0, qt_imports=imports, qt_dependencies=dependencies, qt_packaging=packaging, default_runtime=runtime, packaged=packaged, manual=manual, commit=commit, dirty_relevant=dirty)
         report.update({"decision": decision, "reasons": reasons, "p0": p0, "qt_imports": imports, "qt_files": sorted({item["path"] for item in imports}), "qt_dependencies": dependencies, "qt_packaging": packaging, "qt_packaging_files": sorted({item["path"] for item in packaging}), "default_gui_runtime": runtime, "packaged_evidence": packaged, "packaged_evidence_details": packaged_details, "manual_evidence": manual, "manual_evidence_details": manual_details, "scanned_dependency_files": dependency_files, "scanned_spec_files": spec_files, "scanned_source_file_count": len(source_files), "working_tree_gate_relevant_clean": not dirty})
-    except (GitScanError, OSError, UnicodeError) as exc:
-        report.update({"decision": "NO-GO", "reasons": [str(exc)], "p0": {}, "qt_imports": [], "qt_files": [], "qt_dependencies": [], "qt_packaging": [], "qt_packaging_files": [], "default_gui_runtime": None, "packaged_evidence": {}, "manual_evidence": {}, "scanned_dependency_files": [], "scanned_spec_files": [], "scanned_source_file_count": 0})
+    except (GateScanError, OSError, UnicodeError) as exc:
+        report.update({"decision": "NO-GO", "reasons": [str(exc)], "scan_errors": [{"category": "source" if isinstance(exc, SourceScanError) else "packaging" if isinstance(exc, PackagingScanError) else "gate", "error": str(exc)}], "p0": {}, "qt_imports": [], "qt_files": [], "qt_dependencies": [], "qt_packaging": [], "qt_packaging_files": [], "default_gui_runtime": None, "packaged_evidence": {}, "manual_evidence": {}, "scanned_dependency_files": [], "scanned_spec_files": [], "scanned_source_file_count": 0})
     if args.output:
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")

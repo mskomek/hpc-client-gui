@@ -6,6 +6,9 @@ import pytest
 from scripts.qt_removal_gate import (
     MANUAL_CHECKS,
     PACKAGED_CHECKS,
+    PackagingScanError,
+    SourceScanError,
+    _relevant_dirty_files,
     dependency_records,
     evaluate_gate,
     git_tracked_files,
@@ -53,6 +56,26 @@ def test_tracked_source_scan_ignores_comments_and_untracked_file(tmp_path):
     assert [item["import"] for item in production_qt_imports(root)] == ["PySide6.QtWidgets", "PySide6.QtCore"]
 
 
+def test_source_scan_fails_closed_for_tracked_parse_error(tmp_path):
+    root = git_fixture(tmp_path, {"src/hpc_gui/broken.py": "import PySide6\ndef (\n"})
+    with pytest.raises(SourceScanError, match=r"src/hpc_gui/broken.py.*SyntaxError"):
+        production_qt_imports(root)
+
+
+def test_source_scan_fails_closed_for_read_error(tmp_path, monkeypatch):
+    root = git_fixture(tmp_path, {"src/hpc_gui/broken.py": "import PySide6\n"})
+    original = type((root / "src/hpc_gui/broken.py")).read_text
+
+    def failing_read(path, *args, **kwargs):
+        if path.name == "broken.py":
+            raise OSError("simulated read failure")
+        return original(path, *args, **kwargs)
+
+    monkeypatch.setattr(type(root / "src/hpc_gui/broken.py"), "read_text", failing_read)
+    with pytest.raises(SourceScanError, match="simulated read failure"):
+        production_qt_imports(root)
+
+
 def test_git_tracked_enumeration_rejects_git_failure(tmp_path):
     with pytest.raises(Exception):
         git_tracked_files(tmp_path)
@@ -87,6 +110,30 @@ def test_packaging_patterns_and_cli_excludes(tmp_path):
     assert refs == {"PySide6.QtCore", "shiboken6", "PySide6.QtWidgets", "PySide6.QtGui"}
 
 
+def test_spec_scan_fails_closed_for_tracked_parse_error(tmp_path):
+    root = git_fixture(tmp_path, {"build/windows/broken.spec": "hiddenimports = [\n"})
+    with pytest.raises(PackagingScanError, match=r"build/windows/broken.spec.*SyntaxError"):
+        packaging_blockers(root)
+
+
+def test_dirty_gate_script_and_staged_changes_block(tmp_path):
+    root = git_fixture(tmp_path, {"scripts/qt_removal_gate.py": "print('gate')\n", "notes.txt": "ok\n"})
+    gate_script = root / "scripts/qt_removal_gate.py"
+    gate_script.write_text("print('changed')\n", encoding="utf-8")
+    assert "scripts/qt_removal_gate.py" in _relevant_dirty_files(root)
+    subprocess.run(["git", "add", str(gate_script)], cwd=root, check=True)
+    assert "scripts/qt_removal_gate.py" in _relevant_dirty_files(root)
+
+
+def test_untracked_irrelevant_and_ignored_tmp_do_not_block(tmp_path):
+    root = git_fixture(tmp_path, {"notes.txt": "ok\n", ".gitignore": "/.tmp/\n"})
+    (root / "notes.local").write_text("local\n", encoding="utf-8")
+    tmp = root / ".tmp"
+    tmp.mkdir()
+    (tmp / "ignored.txt").write_text("do not inspect\n", encoding="utf-8")
+    assert _relevant_dirty_files(root) == []
+
+
 def test_evidence_validator_matrix(tmp_path):
     missing = tmp_path / "missing.json"
     assert read_packaged_evidence(missing, "windows", SHA)[0] == "MISSING"
@@ -99,9 +146,26 @@ def test_evidence_validator_matrix(tmp_path):
     assert read_packaged_evidence(path, "windows", SHA)[0] == "STALE"
     evidence(path, "wx-packaged-smoke/1", "linux", PACKAGED_CHECKS)
     assert read_packaged_evidence(path, "windows", SHA)[0] == "FAIL"
-    for extra in ({"result": "FAIL"}, {"result": "UNVERIFIED"}, {"artifact": ""}, {"artifact_sha256": "1234"}, {"checks": {}}):
-        evidence(path, "wx-packaged-smoke/1", "windows", PACKAGED_CHECKS, **extra)
-        assert read_packaged_evidence(path, "windows", SHA)[0] != "PASS"
+    data = {"schema": "wx-packaged-smoke/1", "commit": SHA, "platform": "windows", "artifact": "app", "artifact_sha256": "b" * 64, "result": "PASS", "checks": {name: "PASS" for name in PACKAGED_CHECKS}}
+    for key, value, expected in (("result", "FAIL", "FAIL"), ("result", "UNVERIFIED", "FAIL"), ("artifact", "", "INVALID"), ("artifact_sha256", "1234", "INVALID"), ("artifact_sha256", "z" * 64, "INVALID")):
+        candidate = dict(data)
+        candidate[key] = value
+        path.write_text(json.dumps(candidate), encoding="utf-8")
+        assert read_packaged_evidence(path, "windows", SHA)[0] == expected
+    for value in ("FAIL", "UNVERIFIED"):
+        candidate = dict(data)
+        candidate["checks"] = {name: "PASS" for name in PACKAGED_CHECKS}
+        candidate["checks"]["process_started"] = value
+        path.write_text(json.dumps(candidate), encoding="utf-8")
+        assert read_packaged_evidence(path, "windows", SHA)[0] == "INVALID"
+    candidate = dict(data)
+    candidate.pop("commit")
+    path.write_text(json.dumps(candidate), encoding="utf-8")
+    assert read_packaged_evidence(path, "windows", SHA)[0] == "STALE"
+    candidate = dict(data)
+    candidate["commit"] = "c" * 40
+    path.write_text(json.dumps(candidate), encoding="utf-8")
+    assert read_packaged_evidence(path, "windows", SHA)[0] == "STALE"
     evidence(path, "wx-packaged-smoke/1", "windows", PACKAGED_CHECKS)
     assert read_packaged_evidence(path, "windows", SHA)[0] == "PASS"
 
@@ -114,6 +178,12 @@ def test_manual_evidence_requires_audit_fields(tmp_path):
     assert read_manual_evidence(path, "windows", SHA)[0] == "INVALID"
     evidence(path, "wx-manual-parity/1", "windows", MANUAL_CHECKS, tester="manual-win", tested_at="2026-09-02T15:30:00+03:00")
     assert read_manual_evidence(path, "windows", SHA)[0] == "PASS"
+    evidence(path, "wx-manual-parity/1", "windows", MANUAL_CHECKS, tester="manual-win", tested_at="2026-09-02T12:30:00Z")
+    assert read_manual_evidence(path, "windows", SHA)[0] == "PASS"
+    evidence(path, "wx-manual-parity/1", "windows", MANUAL_CHECKS, tester="   ", tested_at="2026-09-02T15:30:00+03:00")
+    assert read_manual_evidence(path, "windows", SHA)[0] == "INVALID"
+    evidence(path, "wx-manual-parity/1", "windows", MANUAL_CHECKS, tester="manual-win", tested_at="2026-09-02T15:30:00")
+    assert read_manual_evidence(path, "windows", SHA)[0] == "INVALID"
 
 
 def test_gate_requires_platforms_runtime_p0_and_clean_tree():
