@@ -22,11 +22,13 @@ class ProfileSummary:
 
 
 class WxConnectionModel:
-    def __init__(self, profiles: list[dict[str, Any]] | None = None, *, connect: Callable[[dict[str, Any]], None] | None = None) -> None:
+    def __init__(self, profiles: list[dict[str, Any]] | None = None, *, connect: Callable[[dict[str, Any]], None] | None = None, host_key_decision: Callable[[HostKeyRequest], str] | None = None, keyboard_interactive: Callable[[KeyboardInteractiveRequest], list[str]] | None = None) -> None:
         self.profiles = list(profiles or [])
         self.selected_name = ""
         self.controller = ConnectionController()
         self._connect = connect
+        self._host_key_decision = host_key_decision
+        self._keyboard_interactive = keyboard_interactive
 
     def summaries(self) -> tuple[ProfileSummary, ...]:
         return tuple(
@@ -48,6 +50,14 @@ class WxConnectionModel:
         self.controller.begin_connect()
         self._connect(dict(profile))
         return True
+
+    def decide_host_key(self, request: HostKeyRequest) -> str:
+        """Return an explicit policy; unknown keys are never trusted silently."""
+        return self._host_key_decision(request) if self._host_key_decision else "reject"
+
+    def answer_keyboard_interactive(self, request: KeyboardInteractiveRequest) -> list[str]:
+        """Delegate MFA prompts without retaining or logging responses."""
+        return list(self._keyboard_interactive(request)) if self._keyboard_interactive else []
 
 
 def show_connection(parent=None, profiles=None, *, connect=None, lifecycle=None) -> int:
