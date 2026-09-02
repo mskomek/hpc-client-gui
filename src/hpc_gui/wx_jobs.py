@@ -341,7 +341,7 @@ def show_jobs(parent=None, model: WxJobsModel | None = None, *, list_jobs=None, 
 
         show_job_output(frame, model, view.id, read_output=read_stdout)
 
-    def close(_event):
+    def close(_event=None):
         if state["closed"]:
             return
         state["closed"] = True
