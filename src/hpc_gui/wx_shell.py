@@ -94,7 +94,12 @@ def _dispatch(command_id: str, parent=None, lifecycle=None) -> None:
         from hpc_gui.config.storage import load_profiles
         from hpc_gui.wx_connection import show_connection
 
-        show_connection(parent, load_profiles(), lifecycle=lifecycle)
+        def connected(session):
+            ssh = session.get("ssh") if isinstance(session, dict) else None
+            if ssh is not None and callable(getattr(ssh, "close", None)):
+                lifecycle.register_cleanup(ssh.close)
+
+        show_connection(parent, load_profiles(), lifecycle=lifecycle, on_connected=connected)
     elif command_id == "NAV-FILES":
         from hpc_gui.wx_local_files import show_local_files
 
