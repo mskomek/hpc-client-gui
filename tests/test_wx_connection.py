@@ -56,3 +56,4 @@ def test_connection_view_uses_shared_ssh_session_adapters():
     source = open("src/hpc_gui/wx_connection.py", encoding="utf-8").read()
     assert "SSHClientWrapper" in source and "SSHFilesBackend(ssh)" in source
     assert "SSHSlurmBackend(ssh" in source and "ssh.close()" in source
+    assert "output_subscribers" in source
