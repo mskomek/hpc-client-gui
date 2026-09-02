@@ -16,6 +16,8 @@ def test_wx_shell_uses_shared_commands_and_responsive_start_size():
 def test_wx_shell_dispatches_core_views():
     source = Path("src/hpc_gui/wx_shell.py").read_text(encoding="utf-8")
     assert 'command_id == "NAV-FILES"' in source
+    assert "open_editor_new_window=lambda path: open_local(path, True)" in source
+    assert "Path(path).read_text" in source and "wx.CallAfter(show_editor" in source
     assert 'command_id == "NAV-EDITOR"' in source
     assert 'command_id == "NAV-JOBS"' in source
     assert "show_jobs(parent, lifecycle=lifecycle)" in source
