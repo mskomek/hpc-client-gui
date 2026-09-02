@@ -46,6 +46,14 @@ def show_remote_files(parent=None, model: WxRemoteDirectoryModel | None = None, 
     def load(_event=None):
         if not loader:
             return
+        requested_path = path.GetValue().strip()
+        if requested_path != model.current_path:
+            try:
+                model.navigate(requested_path)
+            except Exception as error:
+                wx.MessageBox(str(error), t("login.err_title"), wx.OK | wx.ICON_ERROR)
+                path.SetValue(model.current_path)
+                return
         with lock:
             if state["closed"] or state["busy"]:
                 return
