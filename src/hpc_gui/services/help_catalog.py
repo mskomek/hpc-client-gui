@@ -87,6 +87,11 @@ class HelpCatalog:
             rows.append(ShortcutHelpRow(item.command_id, label, display_binding(item.binding, platform), item.context))
         return tuple(rows)
 
+    def gesture_reference(self):
+        from hpc_gui.services.gesture_help import load_gesture_help
+
+        return load_gesture_help()
+
 
 def is_allowed_external_url(url: str, domains: set[str]) -> bool:
     parsed = urlparse(url)
