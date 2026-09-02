@@ -44,3 +44,4 @@ def test_remote_view_runs_operations_off_the_wx_thread():
     assert "wx.CallAfter(operation_done" in source
     assert '"open", "edit", "edit_new_window", "download"' in source
     assert "open_editor_new_window=None" in source
+    assert "read_text=None" in source and "wx.CallAfter(done, read_text(remote_path), None)" in source

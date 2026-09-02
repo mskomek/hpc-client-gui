@@ -9,7 +9,7 @@ from hpc_gui.core.i18n import t
 from hpc_gui.wx_remote_files import WxRemoteDirectoryModel
 
 
-def show_remote_files(parent=None, model: WxRemoteDirectoryModel | None = None, *, loader=None, operation=None, open_editor=None, open_editor_new_window=None) -> int:
+def show_remote_files(parent=None, model: WxRemoteDirectoryModel | None = None, *, loader=None, operation=None, read_text=None, open_editor=None, open_editor_new_window=None) -> int:
     try:
         import wx
     except ImportError as exc:
@@ -70,7 +70,7 @@ def show_remote_files(parent=None, model: WxRemoteDirectoryModel | None = None, 
             path.SetValue(model.current_path)
             load()
         elif open_editor:
-            open_editor(entry.path)
+            open_in_editor(entry.path, open_editor)
 
     def context(event):
         index, _flags = listing.HitTest(event.GetPosition())
@@ -90,14 +90,39 @@ def show_remote_files(parent=None, model: WxRemoteDirectoryModel | None = None, 
         menu.Destroy()
 
     def run_action(action, selected):
-        if action == "open" and open_editor and selected:
-            open_editor(selected[0])
-        elif action == "edit" and open_editor and selected:
-            open_editor(selected[0])
+        if action in {"open", "edit"} and open_editor and selected:
+            open_in_editor(selected[0], open_editor)
         elif action == "edit_new_window" and open_editor_new_window and selected:
-            open_editor_new_window(selected[0])
+            open_in_editor(selected[0], open_editor_new_window)
         else:
             run_operation(action, selected)
+
+    def open_in_editor(remote_path, callback):
+        if not read_text:
+            callback(remote_path)
+            return
+        with lock:
+            if state["closed"] or state["busy"]:
+                return
+            state["busy"] = True
+
+        def done(content, error):
+            with lock:
+                state["busy"] = False
+            if state["closed"]:
+                return
+            if error:
+                wx.MessageBox(str(error), t("login.err_title"), wx.OK | wx.ICON_ERROR)
+            else:
+                callback(remote_path, content)
+
+        def worker():
+            try:
+                wx.CallAfter(done, read_text(remote_path), None)
+            except Exception as error:
+                wx.CallAfter(done, "", error)
+
+        Thread(target=worker, daemon=True).start()
 
     def run_operation(action, selected):
         if not operation or not selected or action in {"open", "edit", "edit_new_window"}:
