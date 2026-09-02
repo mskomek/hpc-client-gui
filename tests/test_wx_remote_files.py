@@ -42,3 +42,4 @@ def test_remote_view_runs_operations_off_the_wx_thread():
     assert "Thread(target=worker" in source
     assert 't("dirs.delete_confirm")' in source
     assert "wx.CallAfter(operation_done" in source
+    assert '"download", "copy", "move", "rename", "delete"' in source

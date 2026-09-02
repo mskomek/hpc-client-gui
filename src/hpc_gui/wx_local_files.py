@@ -161,8 +161,9 @@ def show_local_files(parent=None, path: str | Path | None = None, *, open_editor
             listing.Select(index)
         entry = entries[index]
         menu = wx.Menu()
-        for action in model.context_actions(entry.is_dir):
-            labels = {"open": "editor.open", "open_with": "common.open_with", "edit": "dirs.edit", "edit_new_window": "dirs.edit_new_window", "rename": "dirs.rename", "delete": "dirs.delete", "copy_path": "dirs.copy_path", "refresh": "dirs.refresh", "new_tab": "dirs.new_folder"}
+        actions = model.context_actions(entry.is_dir) + (("upload",) if upload else ())
+        for action in actions:
+            labels = {"open": "editor.open", "open_with": "common.open_with", "edit": "dirs.edit", "edit_new_window": "dirs.edit_new_window", "rename": "dirs.rename", "delete": "dirs.delete", "copy_path": "dirs.copy_path", "refresh": "dirs.refresh", "new_tab": "dirs.new_folder", "upload": "ftp.upload_selected"}
             item = menu.Append(wx.ID_ANY, t(labels.get(action, "help.help_title")))
             listing.Bind(wx.EVT_MENU, lambda _event, action=action: run_action(action), item)
         listing.PopupMenu(menu)
