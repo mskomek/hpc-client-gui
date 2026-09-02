@@ -59,6 +59,7 @@ def connect_profile(profile: dict[str, Any], model: "WxConnectionModel") -> dict
             "files": SSHFilesBackend(ssh),
             "slurm": SSHSlurmBackend(ssh, profile.get("system") or {}),
             "profile_name": str(profile.get("name", "")),
+            "profile": dict(profile),
             "output_subscribers": output_subscribers,
         }
     except Exception:

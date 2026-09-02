@@ -147,7 +147,30 @@ def _dispatch(command_id: str, parent=None, lifecycle=None, session_state=None) 
     elif command_id == "NAV-JOBS":
         from hpc_gui.wx_jobs import show_jobs
 
-        show_jobs(parent, lifecycle=lifecycle)
+        session = (session_state or {}).get("session") or {}
+        slurm = session.get("slurm")
+        files = session.get("files")
+        profile = session.get("profile") or {}
+
+        def list_jobs():
+            if not slurm:
+                return ()
+            raw = slurm.squeue(str(profile.get("username", "")))
+            rows = []
+            for line in str(raw or "").splitlines()[1:]:
+                fields = line.split()
+                if fields:
+                    rows.append({"id": fields[0], "state": fields[4] if len(fields) > 4 else "", "name": fields[2] if len(fields) > 2 else ""})
+            return rows
+
+        def read_output(job_id):
+            if not slurm or not files:
+                return {}
+            metadata = str(slurm.scontrol_show_job(job_id) or "")
+            paths = {key: next((part.split("=", 1)[1] for part in metadata.split() if part.startswith(f"{key}=")), "") for key in ("StdOut", "StdErr")}
+            return {"stdout": files.read_text(paths["StdOut"]) if paths["StdOut"] else "", "stderr": files.read_text(paths["StdErr"]) if paths["StdErr"] else ""}
+
+        show_jobs(parent, lifecycle=lifecycle, list_jobs=list_jobs, read_output=read_output, cancel=slurm.scancel if slurm else None)
 
 
 __all__ = ["main"]
