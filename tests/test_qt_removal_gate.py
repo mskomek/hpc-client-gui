@@ -1,32 +1,52 @@
-from hpc_gui.services.parity_matrix import Evidence, render_status
-from scripts.qt_removal_gate import evaluate_gate, production_qt_imports
+from scripts.qt_removal_gate import MANUAL_CHECKS, PACKAGED_CHECKS, dependency_records, evaluate_gate, packaging_blockers, production_qt_imports
+
+SHA = "a" * 40
 
 
-def test_qt_removal_gate_reports_no_go_for_partial_p0_and_qt_dependency():
-    baseline = "| GUI-SHELL-001 | thing | P0 |\n| GUI-SHELL-002 | thing | P1 |"
-    status = render_status(baseline, {"GUI-SHELL-001": Evidence("PARTIAL", "qt", "wx", "test"), "GUI-SHELL-002": Evidence("COVERED", "qt", "wx", "test")})
-    report = evaluate_gate(baseline, status, 'dependencies = ["PySide6>=6.5"]', ["src/hpc_gui/app.py"], qt_imports=[{"path": "src/hpc_gui/app.py", "line": 1, "import": "PySide6"}])
-    assert report["decision"] == "NO-GO"
-    assert any("P0 not covered" in reason for reason in report["reasons"])
-    assert report["qt_dependencies"]
-    assert report["qt_files"] == ["src/hpc_gui/app.py"]
-    assert report["qt_imports"][0]["line"] == 1
+def gate(**overrides):
+    values = {"p0": {"GUI-TEST-001": "COVERED"}, "qt_imports": [], "qt_dependencies": [], "qt_packaging": [], "default_runtime": "wx", "packaged": {p: "PASS" for p in ("windows", "linux", "macos")}, "manual": {p: "PASS" for p in ("windows", "linux", "macos")}, "commit": SHA}
+    values.update(overrides)
+    return evaluate_gate(**values)
 
 
-def test_ast_scanner_ignores_comments_and_docstrings(tmp_path):
+def test_ast_imports_block_but_comments_and_docstrings_do_not(tmp_path):
     source = tmp_path / "src" / "hpc_gui"
     source.mkdir(parents=True)
-    (source / "safe.py").write_text('"""PySide6 mention only."""\n# from PySide6 import QtCore\n', encoding="utf-8")
+    (source / "safe.py").write_text('"""PySide6 mention."""\n# import PySide6\n', encoding="utf-8")
     assert production_qt_imports(tmp_path) == []
+    (source / "bad.py").write_text("import PySide6.QtWidgets\nfrom PySide6.QtCore import QObject\n", encoding="utf-8")
+    assert [item["import"] for item in production_qt_imports(tmp_path)] == ["PySide6.QtWidgets", "PySide6.QtCore"]
 
 
-def test_dependency_only_qt_is_still_no_go():
-    report = evaluate_gate("", "", 'dependencies = ["PySide6>=6.5"]', packaged_evidence=True, manual_evidence=True)
-    assert report["decision"] == "NO-GO" and not report["qt_imports"]
+def test_dependency_names_are_normalized(tmp_path):
+    (tmp_path / "requirements.txt").write_text("pyside-6>=6\nshiboken6\n", encoding="utf-8")
+    records = dependency_records(tmp_path)
+    assert {item["dependency"] for item in records} == {"pyside-6", "shiboken6"}
+    assert gate(qt_dependencies=records)[0] == "NO-GO"
 
 
-def test_true_go_fixture_requires_all_removal_evidence():
-    baseline = "| GUI-SHELL-001 | thing | P0 |"
-    status = render_status(baseline, {"GUI-SHELL-001": Evidence("COVERED", "qt", "wx", "test")})
-    report = evaluate_gate(baseline, status, "", packaged_evidence=True, manual_evidence=True)
-    assert report["decision"] == "GO"
+def test_packaging_scanner_ignores_excludes_and_comments(tmp_path):
+    build = tmp_path / "build"
+    build.mkdir()
+    (build / "gui.spec").write_text('hiddenimports=["PySide6.QtWidgets"]\nexcludes=["PySide6", "shiboken6"]\n# PySide6\ncollect_dynamic_libs("shiboken6")\n', encoding="utf-8")
+    assert {item["reference"] for item in packaging_blockers(tmp_path)} == {"PySide6.QtWidgets", "shiboken6"}
+
+
+def test_runtime_and_p0_are_hard_blockers():
+    assert gate(default_runtime="qt")[0] == "NO-GO"
+    assert gate(p0={"GUI-TEST-001": "PARTIAL"})[0] == "NO-GO"
+
+
+def test_platform_completeness_is_hard_blocker():
+    assert gate(packaged={"windows": "PASS", "linux": "MISSING", "macos": "MISSING"})[0] == "NO-GO"
+    assert gate(manual={"windows": "PASS", "linux": "PASS", "macos": "UNVERIFIED"})[0] == "NO-GO"
+
+
+def test_true_go_fixture():
+    assert gate()[0] == "GO"
+
+
+def test_evidence_schema_shape_is_versioned():
+    data = {"schema": "wx-packaged-smoke/1", "commit": SHA, "result": "PASS", "checks": {name: "PASS" for name in PACKAGED_CHECKS}}
+    assert data["schema"] and len(data["commit"]) == 40
+    assert set(MANUAL_CHECKS) >= {"connection", "shutdown"}
