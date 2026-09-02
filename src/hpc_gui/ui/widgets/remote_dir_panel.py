@@ -76,6 +76,8 @@ from hpc_gui.services.file_clipboard import get_file_clipboard
 from hpc_gui.services.files_base import RemoteEntry
 from hpc_gui.services.directory_comparison import CompareStatus, ComparableEntry
 from hpc_gui.services.remote_navigation_store import navigation_store_for_profile
+from hpc_gui.core.platform import current_os
+from hpc_gui.services.shortcut_preferences import active_binding
 from hpc_gui.services.transfer_mode import (
     BINARY,
     PARTIAL_SUFFIX as PARTIAL_DOWNLOAD_SUFFIX,
@@ -988,6 +990,8 @@ class RemoteDirPanel(QWidget):
         self.btn_delete.setText(t("dirs.delete"))
         self.btn_undo.setText(t("dirs.undo"))
         self.btn_refresh.setText(t("dirs.refresh"))
+        binding = active_binding("FILE-NEW-FOLDER", current_os())
+        self.btn_new_folder.setToolTip(f"{t('dirs.new_folder')} ({binding})" if binding else t("dirs.new_folder"))
         self.path_label.setText(t("dirs.path"))
         self.queue_group.setTitle(t("dirs.queue_title"))
         self.queue_current_label.setText(t("dirs.queue_current"))
@@ -2440,7 +2444,9 @@ class RemoteDirPanel(QWidget):
                     existing_output_actions[existing_out1] = (target_id, 0)
                     existing_output_actions[existing_out2] = (target_id, 1)
         menu.addSeparator()
-        act_new_folder = menu.addAction(REMOTE_CONTEXT_MENU_LABELS[5])
+        binding = active_binding("FILE-NEW-FOLDER", current_os())
+        create_label = REMOTE_CONTEXT_MENU_LABELS[5] + (f" ({binding})" if binding else "")
+        act_new_folder = menu.addAction(create_label)
         act_new_folder_enter = menu.addAction(REMOTE_CONTEXT_MENU_LABELS[6])
         act_new_file = menu.addAction(REMOTE_CONTEXT_MENU_LABELS[7])
         act_refresh = menu.addAction(REMOTE_CONTEXT_MENU_LABELS[8])

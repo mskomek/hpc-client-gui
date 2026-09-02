@@ -17,6 +17,8 @@ from PySide6.QtWidgets import (
 
 from hpc_gui.core.i18n import t
 from hpc_gui.config.storage import set_ui_pref_bool
+from hpc_gui.core.platform import current_os
+from hpc_gui.services.shortcut_preferences import active_binding
 
 
 @dataclass
@@ -79,41 +81,35 @@ class QuickTourOverlay(QWidget):
 
     def _build_steps(self) -> list[TourStep]:
         m = self.main_window
+        def binding(command: str) -> str:
+            return active_binding(command, current_os()) or t("help.unbound_command")
         return [
             TourStep(
                 title=t("tour.s1_title"),
-                body=t("tour.s1_body"),
-                target_getter=lambda: getattr(m.login, "host", None),
-                tab_index=m.tabs.indexOf(m.login),
+                body=t("tour.s1_body").format(binding=binding("APP-COMMAND-PALETTE")),
+                target_getter=lambda: getattr(m, "_help_btn", None),
             ),
             TourStep(
                 title=t("tour.s2_title"),
-                body=t("tour.s2_body"),
-                target_getter=lambda: getattr(m.login, "cb_x11", None),
-                tab_index=m.tabs.indexOf(m.login),
+                body=t("tour.s2_body").format(binding=binding("FILE-NEW-FOLDER")),
+                target_getter=lambda: getattr(getattr(m.directories, "panel_scratch", None), "btn_new_folder", None),
+                tab_index=m.tabs.indexOf(m.directories),
             ),
             TourStep(
                 title=t("tour.s3_title"),
                 body=t("tour.s3_body"),
-                target_getter=lambda: getattr(m.login, "terminal_widget", None)
-                or getattr(m.login, "console", None),
-                tab_index=m.tabs.indexOf(m.login),
+                target_getter=lambda: getattr(getattr(m.directories, "panel_scratch", None), "tree", None),
+                tab_index=m.tabs.indexOf(m.directories),
             ),
             TourStep(
                 title=t("tour.s4_title"),
-                body=t("tour.s4_body"),
-                target_getter=lambda: getattr(m.jobs_outputs, "btn_refresh", None),
-                tab_index=m.tabs.indexOf(m.jobs_outputs),
+                body=t("tour.s4_body").format(binding=binding("EDIT-EXECUTE")),
+                target_getter=lambda: getattr(m.editor, "btn_save_submit", None) or getattr(m.editor, "btn_save_run", None),
+                tab_index=m.tabs.indexOf(m.editor),
             ),
             TourStep(
                 title=t("tour.s5_title"),
                 body=t("tour.s5_body"),
-                target_getter=lambda: getattr(m.directories, "panel_scratch", None),
-                tab_index=m.tabs.indexOf(m.directories),
-            ),
-            TourStep(
-                title=t("tour.s6_title"),
-                body=t("tour.s6_body"),
                 target_getter=lambda: getattr(m.logs, "btn_diag", None),
                 tab_index=m.tabs.indexOf(m.logs),
             ),
