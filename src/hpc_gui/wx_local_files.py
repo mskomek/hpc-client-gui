@@ -238,8 +238,17 @@ def show_local_files(parent=None, path: str | Path | None = None, *, open_editor
 
             Thread(target=remove, daemon=True).start()
 
+    def key_down(event) -> None:
+        actions = {wx.WXK_F2: "rename", wx.WXK_DELETE: "delete", wx.WXK_F5: "refresh"}
+        action = actions.get(event.GetKeyCode())
+        if action:
+            run_action(action)
+            return
+        event.Skip()
+
     listing.Bind(wx.EVT_LIST_ITEM_ACTIVATED, activate)
     listing.Bind(wx.EVT_CONTEXT_MENU, context_menu)
+    listing.Bind(wx.EVT_KEY_DOWN, key_down)
     subscribe_language_change(refresh_labels)
     frame.Bind(wx.EVT_CLOSE, lambda event: (unsubscribe_language_change(refresh_labels), event.Skip()))
     refresh()

@@ -53,3 +53,4 @@ def test_local_view_exposes_keyboard_and_context_actions():
     assert "EVT_LIST_ITEM_ACTIVATED" in source
     assert "EVT_CONTEXT_MENU" in source and "open_editor" in source
     assert 'actions = (model.context_actions(entry.is_dir)' in source and '"new_folder", "refresh"' in source
+    assert "EVT_KEY_DOWN" in source and "WXK_F2" in source and "WXK_DELETE" in source
