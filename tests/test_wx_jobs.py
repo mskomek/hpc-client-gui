@@ -47,5 +47,6 @@ def test_job_output_view_has_live_timer_and_resize_hooks():
     assert "lifecycle.register_cleanup(close)" in source
     assert "jobs.cancel_confirm" in source and "Thread(target=worker" in source
     assert "files.auto_scroll" in source and "follow.GetValue()" in source
+    assert "model.open_detached()" in source and "show_job_output(frame" in source
     assert "items = tuple(result or ())" in source and "for item in items" in source
     assert "SimpleNamespace(**item)" in source and "failure.as_lines()" in source

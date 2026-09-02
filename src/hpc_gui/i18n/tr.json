@@ -176,6 +176,7 @@
     "refresh": "Yenile",
     "cancel": "İşi İptal Et",
     "cancel_confirm": "{job_id} işi iptal edilsin mi?",
+    "open_output": "Çıktıyı Aç",
     "job_id": "İş Kimliği"
   },
   "files": {

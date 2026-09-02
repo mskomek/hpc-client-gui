@@ -176,6 +176,7 @@
     "refresh": "Refresh",
     "cancel": "Cancel Job",
     "cancel_confirm": "Cancel job {job_id}?",
+    "open_output": "Open Output",
     "job_id": "Job ID"
   },
   "files": {
