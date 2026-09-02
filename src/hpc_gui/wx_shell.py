@@ -67,11 +67,13 @@ def main() -> int:
 
         tray = TrayIcon()
         tray.SetIcon(wx.ArtProvider.GetIcon(wx.ART_INFORMATION), "HPC Client GUI")
+        lifecycle.set_tray_notifier(lambda message: tray.ShowBalloon(t("login.job_notification_title"), message, 5000))
     except (ImportError, RuntimeError):
         pass
 
     def close(_event):
         unsubscribe_language_change(refresh_labels)
+        lifecycle.set_tray_notifier(None)
         lifecycle.shutdown()
         if tray:
             tray.Destroy()
