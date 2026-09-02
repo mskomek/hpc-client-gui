@@ -236,8 +236,9 @@ def show_jobs(parent=None, model: WxJobsModel | None = None, *, list_jobs=None, 
                 if error:
                     details.SetValue(str(error))
                 else:
-                    render_items(result)
-                    for item in result or ():
+                    items = tuple(result or ())
+                    render_items(items)
+                    for item in items:
                         if isinstance(item, dict):
                             model.update_job_state(item.get("id", item.get("job_id", "")), item.get("state", ""), item.get("name", ""))
 
