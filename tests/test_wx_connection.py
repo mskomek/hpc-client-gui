@@ -44,6 +44,12 @@ def test_connection_model_enters_connected_state_for_returned_session():
     assert model.controller.state.value == "connected"
 
 
+def test_connection_model_rejects_explicit_connector_failure():
+    model = WxConnectionModel([{"name": "cluster"}], connect=lambda _profile: False)
+    assert model.select("cluster") and not model.connect_selected()
+    assert model.controller.state.value == "failed"
+
+
 def test_profile_builds_shared_ssh_info_with_security_callbacks():
     model = WxConnectionModel([], host_key_decision=lambda _request: "once", keyboard_interactive=lambda _request: ["code"])
     info = ssh_info_from_profile({"host": "hpc.example", "port": 2222, "username": "user", "host_key_policy": "accept-new"}, model)
