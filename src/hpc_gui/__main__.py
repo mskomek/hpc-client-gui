@@ -57,7 +57,7 @@ if __package__ is None or __package__ == "":
     # script olarak çalıştırıldı -> src/ dizinini sys.path'e ekle
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from hpc_gui.runtime import DEFAULT_GUI_RUNTIME
+from hpc_gui.runtime import DEFAULT_GUI_RUNTIME  # noqa: E402
 
 if "--wx" in sys.argv[1:]:
     from hpc_gui.wx_shell import main
