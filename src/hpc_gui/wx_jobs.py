@@ -286,6 +286,8 @@ def show_jobs(parent=None, model: WxJobsModel | None = None, *, list_jobs=None, 
             cancel(model.tracking.selected_job_id)
 
     def close(_event):
+        if state["closed"]:
+            return
         state["closed"] = True
         timer.Stop()
         unsubscribe_language_change(refresh_labels)
@@ -306,6 +308,8 @@ def show_jobs(parent=None, model: WxJobsModel | None = None, *, list_jobs=None, 
     timer.Start(1000)
     frame.Bind(wx.EVT_TIMER, tick, timer)
     frame.Bind(wx.EVT_CLOSE, close)
+    if lifecycle is not None:
+        lifecycle.register_cleanup(close)
     subscribe_language_change(refresh_labels)
     refresh_jobs()
     frame.Show()
