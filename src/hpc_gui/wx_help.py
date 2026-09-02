@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from hpc_gui.core.platform import current_os
+from hpc_gui.core.i18n import t
 from hpc_gui.services.command_palette import CommandPalette
 from hpc_gui.services.help_catalog import is_allowed_external_url
 from hpc_gui.services.help_search import HelpSearchIndex
@@ -46,6 +47,8 @@ def show_help(parent=None) -> int:
     root = wx.BoxSizer(wx.VERTICAL)
     search = wx.TextCtrl(panel, style=wx.TE_PROCESS_ENTER)
     results = wx.ListBox(panel)
+    search.SetName(t("help.help_title"))
+    results.SetName(t("help.help_title"))
     root.Add(search, 0, wx.EXPAND | wx.ALL, 8)
     root.Add(results, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 8)
     panel.SetSizer(root)
@@ -55,6 +58,7 @@ def show_help(parent=None) -> int:
 
     search.Bind(wx.EVT_TEXT, refresh)
     refresh()
+    search.SetFocus()
     frame.Show()
     return wx.ID_OK
 
