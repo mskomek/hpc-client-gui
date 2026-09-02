@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from threading import Lock, Thread
 from typing import Any, Callable
 
 from hpc_gui.services.job_failure_classifier import explain_job_failure
@@ -93,17 +94,44 @@ def show_job_output(parent, model: WxJobsModel, view_id: str, *, read_output=Non
     frame = wx.Frame(parent, title=f"Job output {view.id}", size=(800, 500))
     output = wx.TextCtrl(frame, style=wx.TE_MULTILINE | wx.TE_READONLY | wx.HSCROLL)
     timer = wx.Timer(frame)
+    state = {"closed": False, "in_flight": False}
+    state_lock = Lock()
 
     def refresh(_event=None):
-        if read_output:
-            output.SetValue(model.update_detached(view.id, read_output()))
-            output.ShowPosition(output.GetLastPosition())
+        if not read_output:
+            return
+        with state_lock:
+            if state["closed"] or state["in_flight"]:
+                return
+            state["in_flight"] = True
+
+        def fetch() -> None:
+            try:
+                text = model.update_detached(view.id, read_output())
+                wx.CallAfter(apply, text, None)
+            except Exception as error:
+                wx.CallAfter(apply, "", error)
+
+        def apply(text, error) -> None:
+            with state_lock:
+                state["in_flight"] = False
+                if state["closed"]:
+                    return
+            if error:
+                output.SetValue(str(error))
+            else:
+                output.SetValue(text)
+                output.ShowPosition(output.GetLastPosition())
+
+        Thread(target=fetch, daemon=True).start()
 
     def resized(_event):
         model.resize_detached(view.id, max(1, output.GetClientSize().width // 8), max(1, output.GetClientSize().height // 16))
         _event.Skip()
 
     def closed(_event):
+        with state_lock:
+            state["closed"] = True
         timer.Stop()
         frame.Destroy()
 

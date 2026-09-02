@@ -4,9 +4,12 @@ from __future__ import annotations
 
 import os
 import shutil
+from threading import Thread
 from dataclasses import dataclass
 from pathlib import Path
 from urllib.parse import quote
+
+from hpc_gui.core.i18n import t
 
 
 @dataclass(frozen=True)
@@ -114,16 +117,16 @@ class LocalBrowserModel:
         return ("open", "open_with", "edit", "edit_new_window", "new_tab", "rename", "delete") if is_dir else ("open", "open_with", "edit", "edit_new_window", "rename", "delete")
 
 
-def show_local_files(parent=None, path: str | Path | None = None, *, open_editor=None) -> int:
+def show_local_files(parent=None, path: str | Path | None = None, *, open_editor=None, open_editor_new_window=None, upload=None) -> int:
     try:
         import wx
     except ImportError as exc:
         raise RuntimeError("wxPython is not installed") from exc
     model = LocalBrowserModel(path or Path.cwd())
-    frame = wx.Frame(parent, title="Files", size=(900, 600))
-    listing = wx.ListCtrl(frame, style=wx.LC_REPORT | wx.LC_SINGLE_SEL)
-    listing.InsertColumn(0, "Name")
-    listing.InsertColumn(1, "Size")
+    frame = wx.Frame(parent, title=t("tabs.ftp"), size=(900, 600))
+    listing = wx.ListCtrl(frame, style=wx.LC_REPORT | wx.LC_MULTIPLE)
+    listing.InsertColumn(0, t("dirs.col_name"))
+    listing.InsertColumn(1, t("dirs.col_size"))
     entries = []
 
     def refresh() -> None:
@@ -142,25 +145,41 @@ def show_local_files(parent=None, path: str | Path | None = None, *, open_editor
         index, _flags = listing.HitTest(event.GetPosition())
         if index < 0:
             return
+        if not listing.IsSelected(index):
+            listing.ClearSelections()
+            listing.Select(index)
         entry = entries[index]
         menu = wx.Menu()
         for action in model.context_actions(entry.is_dir):
-            item = menu.Append(wx.ID_ANY, action.replace("_", " ").title())
-            listing.Bind(wx.EVT_MENU, lambda _event, action=action: run_action(action, entry), item)
+            labels = {"open": "editor.open", "open_with": "common.open_with", "edit": "dirs.edit", "edit_new_window": "dirs.edit_new_window", "rename": "dirs.rename", "delete": "dirs.delete", "new_tab": "dirs.new_folder"}
+            item = menu.Append(wx.ID_ANY, t(labels.get(action, "help.help_title")))
+            listing.Bind(wx.EVT_MENU, lambda _event, action=action: run_action(action), item)
         listing.PopupMenu(menu)
         menu.Destroy()
 
-    def run_action(action: str, entry: LocalEntry) -> None:
+    def selected_entries() -> list[LocalEntry]:
+        return [entry for index, entry in enumerate(entries) if listing.IsSelected(index)]
+
+    def run_action(action: str) -> None:
+        selected = selected_entries()
+        if not selected:
+            return
+        entry = selected[0]
         if action in {"open", "edit", "edit_new_window", "new_tab"}:
             if action == "new_tab":
                 model.new_tab(entry.path)
             elif action == "open":
                 model.activate(entry.path, open_editor=open_editor)
+            elif action == "edit_new_window" and open_editor_new_window:
+                open_editor_new_window(str(entry.path))
             else:
                 if open_editor:
-                    open_editor(str(entry.path))
+                    for item in selected:
+                        open_editor(str(item.path))
         elif action == "open_with":
             os.startfile(str(entry.path))
+        elif action == "upload" and upload:
+            upload(tuple(str(item.path) for item in selected))
         elif action == "rename":
             dialog = wx.TextEntryDialog(frame, "New name", "Rename", entry.path.name)
             try:
@@ -169,9 +188,19 @@ def show_local_files(parent=None, path: str | Path | None = None, *, open_editor
                     refresh()
             finally:
                 dialog.Destroy()
-        elif action == "delete" and wx.MessageBox(f"Delete {entry.path.name}?", "Confirm", wx.YES_NO | wx.ICON_WARNING) == wx.YES:
-            model.delete([entry.path])
-            refresh()
+        elif action == "delete" and wx.MessageBox(t("dirs.delete_confirm"), t("dirs.delete"), wx.YES_NO | wx.ICON_WARNING) == wx.YES:
+            paths = tuple(item.path for item in selected)
+            listing.Enable(False)
+
+            def remove() -> None:
+                try:
+                    model.delete(list(paths))
+                    wx.CallAfter(lambda: (listing.Enable(True), refresh()))
+                except Exception as error:
+                    message = str(error)
+                    wx.CallAfter(lambda: (listing.Enable(True), wx.MessageBox(message, t("login.err_title"), wx.OK | wx.ICON_ERROR)))
+
+            Thread(target=remove, daemon=True).start()
 
     listing.Bind(wx.EVT_LIST_ITEM_ACTIVATED, activate)
     listing.Bind(wx.EVT_CONTEXT_MENU, context_menu)
