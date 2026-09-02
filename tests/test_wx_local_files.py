@@ -38,6 +38,20 @@ def test_file_url_clipboard_payload_preserves_spaces_and_unicode(tmp_path: Path)
     assert payload.startswith("file:///") and "%20" in payload and "%C3%BC" in payload
 
 
+def test_local_clipboard_copy_and_move_paste(tmp_path: Path):
+    source = tmp_path / "source.txt"
+    source.write_text("data", encoding="utf-8")
+    target_dir = tmp_path / "target"
+    target_dir.mkdir()
+    model = LocalBrowserModel(target_dir)
+    model.copy([source])
+    assert model.paste() == (target_dir / source.name,)
+    moved = tmp_path / "moved.txt"
+    moved.write_text("data", encoding="utf-8")
+    model.copy([moved], move=True)
+    assert model.paste() == (target_dir / moved.name,) and not moved.exists()
+
+
 def test_local_browser_model_has_no_toolkit_import():
     source = open("src/hpc_gui/wx_local_files.py", encoding="utf-8").read()
     assert "from PySide6" not in source
@@ -54,3 +68,4 @@ def test_local_view_exposes_keyboard_and_context_actions():
     assert "EVT_CONTEXT_MENU" in source and "open_editor" in source
     assert 'actions = (model.context_actions(entry.is_dir)' in source and '"new_folder", "refresh"' in source
     assert "EVT_KEY_DOWN" in source and "WXK_F2" in source and "WXK_DELETE" in source
+    assert "model.copy" in source and "model.paste" in source and "ControlDown" in source
