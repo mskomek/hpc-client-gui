@@ -79,7 +79,7 @@ def show_remote_files(parent=None, model: WxRemoteDirectoryModel | None = None, 
             listing.Select(index)
         selected = tuple(entry.path for idx, entry in enumerate(state["entries"]) if listing.IsSelected(idx))
         menu = wx.Menu()
-        for action in ("copy", "move", "rename", "delete"):
+        for action in ("download", "copy", "move", "rename", "delete"):
             item = menu.Append(wx.ID_ANY, t(f"dirs.{action}"))
             listing.Bind(wx.EVT_MENU, lambda _event, action=action: run_operation(action, selected), item)
         listing.PopupMenu(menu)
