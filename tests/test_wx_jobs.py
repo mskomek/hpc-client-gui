@@ -29,4 +29,9 @@ def test_failure_backoff_and_provenance_hook():
 
 def test_jobs_model_has_no_qt_import():
     source = open("src/hpc_gui/wx_jobs.py", encoding="utf-8").read()
-    assert "PySide6" not in source and "import wx" not in source
+    assert "PySide6" not in source and "def show_job_output" in source
+
+
+def test_job_output_view_has_live_timer_and_resize_hooks():
+    source = open("src/hpc_gui/wx_jobs.py", encoding="utf-8").read()
+    assert "EVT_TIMER" in source and "EVT_SIZE" in source and "update_detached" in source

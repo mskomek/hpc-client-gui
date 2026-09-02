@@ -83,4 +83,38 @@ class WxJobsModel:
             self.notify(str(job_id))
 
 
-__all__ = ["DetachedOutput", "WxJobsModel", "clean_output"]
+def show_job_output(parent, model: WxJobsModel, view_id: str, *, read_output=None, interval_ms: int = 1000) -> int:
+    """Show a bounded detached output view; polling stays in the callback."""
+    try:
+        import wx
+    except ImportError as exc:
+        raise RuntimeError("wxPython is not installed") from exc
+    view = next(item for item in model.detached if item.id == str(view_id))
+    frame = wx.Frame(parent, title=f"Job output {view.id}", size=(800, 500))
+    output = wx.TextCtrl(frame, style=wx.TE_MULTILINE | wx.TE_READONLY | wx.HSCROLL)
+    timer = wx.Timer(frame)
+
+    def refresh(_event=None):
+        if read_output:
+            output.SetValue(model.update_detached(view.id, read_output()))
+            output.ShowPosition(output.GetLastPosition())
+
+    def resized(_event):
+        model.resize_detached(view.id, max(1, output.GetClientSize().width // 8), max(1, output.GetClientSize().height // 16))
+        _event.Skip()
+
+    def closed(_event):
+        timer.Stop()
+        frame.Destroy()
+
+    frame.Bind(wx.EVT_TIMER, refresh, timer)
+    frame.Bind(wx.EVT_SIZE, resized)
+    frame.Bind(wx.EVT_CLOSE, closed)
+    if read_output:
+        timer.Start(max(100, int(interval_ms)))
+        refresh()
+    frame.Show()
+    return wx.ID_OK
+
+
+__all__ = ["DetachedOutput", "WxJobsModel", "clean_output", "show_job_output"]
