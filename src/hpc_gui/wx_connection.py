@@ -12,6 +12,9 @@ from hpc_gui.services.connection_controller import (
     ConnectionController, HostKeyRequest, KeyboardInteractiveRequest,
 )
 from hpc_gui.ssh.client import SSHConnInfo, HostKeyInfo
+from hpc_gui.services.files_ssh import SSHFilesBackend
+from hpc_gui.services.slurm_ssh import SSHSlurmBackend
+from hpc_gui.ssh.client import SSHClientWrapper
 
 
 @dataclass(frozen=True)
@@ -41,6 +44,23 @@ def ssh_info_from_profile(profile: dict[str, Any], model: "WxConnectionModel") -
         host_key_decision=host_key,
         keyboard_interactive_handler=keyboard,
     )
+
+
+def connect_profile(profile: dict[str, Any], model: "WxConnectionModel") -> dict[str, Any]:
+    """Open the shared SSH/files/Slurm session for one selected profile."""
+    ssh = SSHClientWrapper(ssh_info_from_profile(profile, model))
+    try:
+        ssh.connect()
+        return {
+            "connected": True,
+            "ssh": ssh,
+            "files": SSHFilesBackend(ssh),
+            "slurm": SSHSlurmBackend(ssh, profile.get("system") or {}),
+            "profile_name": str(profile.get("name", "")),
+        }
+    except Exception:
+        ssh.close()
+        raise
 
 
 class WxConnectionModel:
@@ -90,6 +110,8 @@ def show_connection(parent=None, profiles=None, *, connect=None, lifecycle=None)
     except ImportError as exc:
         raise RuntimeError("wxPython is not installed") from exc
     model = WxConnectionModel(profiles, connect=connect)
+    if connect is None:
+        model._connect = lambda profile: connect_profile(profile, model)
     frame = wx.Frame(parent, title=t("tabs.connection"), size=(720, 520))
     panel = wx.Panel(frame)
     root = wx.BoxSizer(wx.VERTICAL)
@@ -171,4 +193,4 @@ def show_connection(parent=None, profiles=None, *, connect=None, lifecycle=None)
     return wx.ID_OK
 
 
-__all__ = ["HostKeyRequest", "KeyboardInteractiveRequest", "ProfileSummary", "WxConnectionModel", "show_connection", "ssh_info_from_profile"]
+__all__ = ["HostKeyRequest", "KeyboardInteractiveRequest", "ProfileSummary", "WxConnectionModel", "connect_profile", "show_connection", "ssh_info_from_profile"]

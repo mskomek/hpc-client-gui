@@ -49,3 +49,9 @@ def test_profile_builds_shared_ssh_info_with_security_callbacks():
     assert info.host == "hpc.example" and info.port == 2222
     assert info.host_key_decision(HostKeyInfo("hpc.example", "ssh-ed25519", "aa:bb")) == "once"
     assert info.keyboard_interactive_handler("MFA", "", [("Code", False)]) == ["code"]
+
+
+def test_connection_view_uses_shared_ssh_session_adapters():
+    source = open("src/hpc_gui/wx_connection.py", encoding="utf-8").read()
+    assert "SSHClientWrapper" in source and "SSHFilesBackend(ssh)" in source
+    assert "SSHSlurmBackend(ssh" in source and "ssh.close()" in source
