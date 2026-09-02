@@ -7,6 +7,7 @@ import os
 from hpc_gui import __version__
 from hpc_gui.core.i18n import load_saved_language, system_default_language, t
 from hpc_gui.services.command_registry import COMMAND_REGISTRY
+from hpc_gui.wx_lifecycle import WxLifecycleController
 from hpc_gui.wx_runtime import environment_without_qt_graphics
 
 
@@ -20,6 +21,7 @@ def main() -> int:
         raise RuntimeError("wxPython is not installed; use the default Qt runtime") from exc
     load_saved_language(system_default_language())
     app = wx.App(False)
+    lifecycle = WxLifecycleController()
     frame = wx.Frame(None, title=f"HPC Client GUI {__version__}", size=(960, 640))
     panel = wx.Panel(frame)
     root = wx.BoxSizer(wx.VERTICAL)
@@ -34,6 +36,30 @@ def main() -> int:
     panel.SetSizer(root)
     frame.CreateStatusBar()
     frame.SetStatusText("Ready")
+
+    tray = None
+    try:
+        import wx.adv
+
+        class TrayIcon(wx.adv.TaskBarIcon):
+            def CreatePopupMenu(self):
+                menu = wx.Menu()
+                close = menu.Append(wx.ID_EXIT, "Exit")
+                self.Bind(wx.EVT_MENU, lambda _event: frame.Close(), close)
+                return menu
+
+        tray = TrayIcon()
+        tray.SetIcon(wx.ArtProvider.GetIcon(wx.ART_INFORMATION), "HPC Client GUI")
+    except (ImportError, RuntimeError):
+        pass
+
+    def close(_event):
+        lifecycle.shutdown()
+        if tray:
+            tray.Destroy()
+        frame.Destroy()
+
+    frame.Bind(wx.EVT_CLOSE, close)
     frame.Show()
     app.MainLoop()
     return 0
