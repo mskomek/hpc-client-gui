@@ -77,6 +77,32 @@ def show_connection(parent=None, profiles=None, *, connect=None, lifecycle=None)
     root.Add(connect_button, 0, wx.ALIGN_RIGHT | wx.ALL, 8)
     panel.SetSizer(root)
 
+    def host_key_dialog(request: HostKeyRequest) -> str:
+        message = t("connection.host_key_prompt_message").format(
+            role=request.role, host=request.hostname, key_type="SSH", fingerprint=request.fingerprint
+        )
+        dialog = wx.MessageDialog(frame, message, t("connection.host_key_prompt_title"), wx.YES_NO | wx.CANCEL | wx.ICON_WARNING)
+        try:
+            result = dialog.ShowModal()
+        finally:
+            dialog.Destroy()
+        return "save" if result == wx.ID_YES else "once" if result == wx.ID_NO else "reject"
+
+    def mfa_dialog(request: KeyboardInteractiveRequest) -> list[str]:
+        answers = []
+        for prompt in request.prompts:
+            dialog = wx.TextEntryDialog(frame, f"{request.instructions}\n\n{prompt}", request.title)
+            try:
+                if dialog.ShowModal() != wx.ID_OK:
+                    return []
+                answers.append(dialog.GetValue())
+            finally:
+                dialog.Destroy()
+        return answers
+
+    model._host_key_decision = host_key_dialog
+    model._keyboard_interactive = mfa_dialog
+
     def select(_event):
         model.select(choices.GetStringSelection())
 
