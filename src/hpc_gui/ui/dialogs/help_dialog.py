@@ -1,51 +1,85 @@
 from __future__ import annotations
 
-from PySide6.QtWidgets import QDialog, QVBoxLayout, QTextBrowser, QHBoxLayout, QPushButton, QTabWidget
 from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QDialog, QHBoxLayout, QLabel, QLineEdit, QListWidget, QPushButton, QSplitter, QTextBrowser, QVBoxLayout
 
-from hpc_gui.core.i18n import t, current_language
-from hpc_gui.core.resources import read_doc_text
+from hpc_gui.core.i18n import subscribe_language_change, t, unsubscribe_language_change
+from hpc_gui.core.platform import current_os
+from hpc_gui.services.help_catalog import HELP_CATALOG
+from hpc_gui.services.help_search import HelpSearchIndex
+from hpc_gui.services.shortcut_preferences import ShortcutPreferences
 
 
 class HelpDialog(QDialog):
+    """Qt presentation of the shared left-navigation/right-content Help Center."""
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle(t("help.help_title"))
-        self.setModal(True)
         self.setMinimumSize(820, 620)
+        self.catalog = HELP_CATALOG
+        self.search_index = HelpSearchIndex(self.catalog)
+        self.shortcuts = ShortcutPreferences(current_os())
+        self.current_topic_id = self.catalog.navigation()[0].id
 
         layout = QVBoxLayout(self)
+        header = QHBoxLayout()
+        header.addWidget(QLabel(t("help.help_title")))
+        self.search = QLineEdit()
+        self.search.setPlaceholderText(t("help.search_placeholder"))
+        header.addWidget(self.search, 1)
+        layout.addLayout(header)
 
-        self.tabs = QTabWidget(self)
-        self.browser_core = QTextBrowser(self)
-        self.browser_truba = QTextBrowser(self)
-        self.browser_generic = QTextBrowser(self)
-        self.browser_core.setOpenExternalLinks(True)
-        self.browser_truba.setOpenExternalLinks(True)
-        self.browser_generic.setOpenExternalLinks(True)
-        self.tabs.addTab(self.browser_core, t("help.library_core"))
-        self.tabs.addTab(self.browser_truba, t("help.library_truba"))
-        self.tabs.addTab(self.browser_generic, t("help.library_generic"))
-        layout.addWidget(self.tabs, 1)
+        self.splitter = QSplitter(Qt.Horizontal)
+        self.sidebar = QListWidget()
+        self.browser = QTextBrowser()
+        self.browser.setOpenExternalLinks(False)
+        self.splitter.addWidget(self.sidebar)
+        self.splitter.addWidget(self.browser)
+        self.splitter.setSizes([240, 580])
+        layout.addWidget(self.splitter, 1)
 
-        bottom = QHBoxLayout()
-        bottom.addStretch(1)
-        btn = QPushButton(t("common.close"), self)
-        btn.clicked.connect(self.accept)
-        bottom.addWidget(btn, 0, Qt.AlignRight)
-        layout.addLayout(bottom)
+        close = QPushButton(t("common.close"))
+        close.clicked.connect(self.accept)
+        layout.addWidget(close, 0, Qt.AlignRight)
+        self.navigation = self.catalog.navigation()
+        self.sidebar.currentRowChanged.connect(self._select_row)
+        self.search.textChanged.connect(self._search)
+        subscribe_language_change(self._language_changed)
+        self.destroyed.connect(lambda: unsubscribe_language_change(self._language_changed))
+        self._refresh_labels()
 
-        self._reload_docs()
+    def _binding(self, command_id: str) -> str | None:
+        return next((item.binding for item in self.shortcuts.bindings() if item.command_id == command_id), None)
 
-    def _reload_docs(self):
-        lang = current_language()
-        docs = (
-            (self.browser_core, read_doc_text(f"HELP_{lang}.md")),
-            (self.browser_truba, read_doc_text(f"HELP_LIBRARY_TRUBA_{lang}.md")),
-            (self.browser_generic, read_doc_text(f"HELP_LIBRARY_GENERIC_{lang}.md")),
-        )
-        for browser, md in docs:
-            if md:
-                browser.setMarkdown(md)
+    def _refresh_labels(self, _language=None):
+        selected = self.current_topic_id
+        self.setWindowTitle(t("help.help_title"))
+        self.search.setPlaceholderText(t("help.search_placeholder"))
+        self.sidebar.blockSignals(True)
+        self.sidebar.clear()
+        self.sidebar.addItems([item.title() for item in self.navigation])
+        self.sidebar.setCurrentRow(next((index for index, item in enumerate(self.navigation) if item.id == selected), 0))
+        self.sidebar.blockSignals(False)
+        self._render()
+
+    def _language_changed(self, _language):
+        self._refresh_labels(_language)
+
+    def _select_row(self, row: int):
+        if 0 <= row < len(self.navigation):
+            self.current_topic_id = self.navigation[row].id
+            self._render()
+
+    def _search(self, query: str):
+        results = self.search_index.search(query, platform=current_os())
+        if results:
+            result = results[0]
+            if result.kind == "topic" and any(item.id == result.id for item in self.navigation):
+                self.current_topic_id = result.id
+                self._refresh_labels()
             else:
-                browser.setPlainText(t("help.missing_help_text"))
+                self.browser.setPlainText(result.body)
+
+    def _render(self):
+        self.browser.setMarkdown(self.catalog.render_page(self.current_topic_id, current_os(), self._binding))

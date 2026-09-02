@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import Callable
 from urllib.parse import urlparse
 
-from hpc_gui.core.i18n import t
+from hpc_gui.core.i18n import current_language, t
 from hpc_gui.services.platform_keymap import KeyBinding, bindings_for, display_binding
 
 
@@ -29,6 +29,16 @@ class ShortcutHelpRow:
     label: str
     binding: str
     context: str
+
+
+@dataclass(frozen=True)
+class HelpNavigationItem:
+    id: str
+    title_key: str | None = None
+    static_library: str | None = None
+
+    def title(self) -> str:
+        return t(self.title_key) if self.title_key else self.id
 
 
 _TOPICS = (
@@ -55,6 +65,11 @@ class HelpCatalog:
     def topics(self) -> tuple[HelpTopic, ...]:
         return tuple(self._topics.values())
 
+    def navigation(self) -> tuple[HelpNavigationItem, ...]:
+        items = [HelpNavigationItem(topic.id, topic.title_key) for topic in self.topics()]
+        items.extend((HelpNavigationItem("help.library.truba", "help.library_truba"), HelpNavigationItem("help.library.generic", "help.library_generic")))
+        return tuple(items)
+
     def get(self, topic_id: str) -> HelpTopic:
         return self._topics[topic_id]
 
@@ -73,6 +88,20 @@ class HelpCatalog:
             lines.extend(("", "Commands:"))
             lines.extend(f"- {command_id}: {binding_lookup(command_id) or t('help.unbound_command')}" for command_id in topic.command_ids)
         return "\n".join(lines)
+
+    def render_page(self, topic_id: str, platform: str, binding_lookup: Callable[[str], str | None]) -> str:
+        if topic_id == "help.library.truba":
+            from hpc_gui.core.resources import read_doc_text
+            return read_doc_text(f"HELP_LIBRARY_TRUBA_{current_language()}.md") or t("help.missing_help_text")
+        if topic_id == "help.library.generic":
+            from hpc_gui.core.resources import read_doc_text
+            return read_doc_text(f"HELP_LIBRARY_GENERIC_{current_language()}.md") or t("help.missing_help_text")
+        if topic_id == "help.keyboard-shortcuts":
+            rows = self.shortcut_reference(platform)
+            return "\n".join([f"# {t('help.section_keyboard_shortcuts')}", "", *[f"- {row.label} — {row.binding} ({row.context})" for row in rows]])
+        if topic_id == "help.mouse-gestures":
+            return "\n".join([f"# {t('help.section_mouse_gestures')}", "", *[f"- {row.gesture}: {row.behavior}" for row in self.gesture_reference()]])
+        return self.render(topic_id, binding_lookup)
 
     def shortcut_reference(self, platform: str, bindings: tuple[KeyBinding, ...] | None = None) -> tuple[ShortcutHelpRow, ...]:
         active = bindings if bindings is not None else bindings_for(platform)

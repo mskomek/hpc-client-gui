@@ -6,6 +6,15 @@ from hpc_gui.core.paths import app_data_dir
 
 _LANG: dict = {}
 _CURRENT = "tr"
+_LANGUAGE_LISTENERS = set()
+
+
+def subscribe_language_change(callback) -> None:
+    _LANGUAGE_LISTENERS.add(callback)
+
+
+def unsubscribe_language_change(callback) -> None:
+    _LANGUAGE_LISTENERS.discard(callback)
 
 def load_language(lang: str = "tr") -> None:
     global _LANG, _CURRENT
@@ -23,6 +32,11 @@ def current_language() -> str:
 def set_language(lang: str) -> None:
     """Set UI language and persist it under ~/.truba_slurm_gui/language.json."""
     load_language(lang)
+    for callback in tuple(_LANGUAGE_LISTENERS):
+        try:
+            callback(lang)
+        except Exception:
+            pass
     try:
         with open(app_data_dir() / "language.json", "w", encoding="utf-8") as f:
             json.dump({"lang": lang}, f)

@@ -29,7 +29,7 @@ _INTERACTIONS = (
 class HelpSearchIndex:
     def __init__(self, catalog=HELP_CATALOG, docs_root: Path | None = None) -> None:
         self.catalog = catalog
-        root = docs_root or Path(__file__).parents[1] / "docs"
+        root = docs_root or Path(__file__).parents[3] / "docs"
         self._static = tuple(
             HelpSearchResult("static", path.stem, path.stem, "static", path.read_text(encoding="utf-8"))
             for path in sorted(root.glob("HELP*.md"))
