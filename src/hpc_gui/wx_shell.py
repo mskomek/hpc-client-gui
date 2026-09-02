@@ -28,7 +28,7 @@ def main() -> int:
     menu = wx.Menu()
     for command in COMMAND_REGISTRY.by_context("shell"):
         item = menu.Append(wx.ID_ANY, command.label())
-        frame.Bind(wx.EVT_MENU, lambda _event, command_id=command.id: _dispatch(command_id), item)
+        frame.Bind(wx.EVT_MENU, lambda _event, command_id=command.id: _dispatch(command_id, frame, lifecycle), item)
     frame.SetMenuBar(wx.MenuBar())
     frame.GetMenuBar().Append(menu, t("help.help_title"))
     language_menu = wx.Menu()
@@ -85,11 +85,23 @@ def main() -> int:
     return 0
 
 
-def _dispatch(command_id: str) -> None:
+def _dispatch(command_id: str, parent=None, lifecycle=None) -> None:
     if command_id in {"APP-HELP", "APP-COMMAND-PALETTE"}:
         from hpc_gui.wx_help import show_help
 
-        show_help()
+        show_help(parent)
+    elif command_id == "NAV-FILES":
+        from hpc_gui.wx_local_files import show_local_files
+
+        show_local_files(parent)
+    elif command_id == "NAV-EDITOR":
+        from hpc_gui.wx_editor_view import show_editor
+
+        show_editor(parent)
+    elif command_id == "NAV-JOBS":
+        from hpc_gui.wx_jobs import show_jobs
+
+        show_jobs(parent, lifecycle=lifecycle)
 
 
 __all__ = ["main"]
