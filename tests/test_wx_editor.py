@@ -23,3 +23,4 @@ def test_wx_editor_view_has_async_remote_save_and_distinct_actions():
     assert "save_remote=None" in source
     assert "Thread(target=worker" in source
     assert "on_submit=None" in source and "on_run=None" in source
+    assert "event.Veto()" in source and "save_document(on_done=frame.Close)" in source

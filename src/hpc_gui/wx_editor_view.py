@@ -39,13 +39,15 @@ def show_editor(parent=None, model: WxEditorModel | None = None, *, path: str = 
         elif mode == "run" and on_run:
             on_run(model.controller.active)
 
-    def save_document(mode="save"):
+    def save_document(mode="save", on_done=None):
         active = model.controller.update_content(editor.GetValue())
         if active.is_local and active.path:
             try:
                 Path(active.path).write_text(active.content, encoding=active.encoding)
                 model.controller.mark_saved()
                 finish_action(mode)
+                if on_done:
+                    on_done()
             except OSError as error:
                 wx.MessageBox(str(error), t("login.err_title"), wx.OK | wx.ICON_ERROR)
         elif save_remote and active.path:
@@ -60,6 +62,8 @@ def show_editor(parent=None, model: WxEditorModel | None = None, *, path: str = 
                     return
                 model.controller.mark_saved()
                 finish_action(mode)
+                if on_done:
+                    on_done()
 
             def worker():
                 try:
@@ -71,6 +75,8 @@ def show_editor(parent=None, model: WxEditorModel | None = None, *, path: str = 
             Thread(target=worker, daemon=True).start()
         else:
             model.save_target(submit=mode == "submit", run=mode == "run")
+            if on_done:
+                on_done()
 
     save.Bind(wx.EVT_BUTTON, lambda _event: save_document())
     submit.Bind(wx.EVT_BUTTON, lambda _event: save_document("submit"))
@@ -82,7 +88,9 @@ def show_editor(parent=None, model: WxEditorModel | None = None, *, path: str = 
             if choice == wx.CANCEL:
                 return
             if choice == wx.YES:
-                save_document()
+                event.Veto()
+                save_document(on_done=frame.Close)
+                return
         unsubscribe_language_change(refresh_labels)
         event.Skip()
 
