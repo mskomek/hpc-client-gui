@@ -20,6 +20,7 @@ class WxLifecycleController:
         self.progress = UpdateProgress()
         self.cancel_token = Event()
         self.tray_notify = tray_notify
+        self._notified_jobs: set[str] = set()
         self._cleanup: list[Callable[[], None]] = []
         self.splash_message = ""
         self.shutdown_started = False
@@ -46,9 +47,16 @@ class WxLifecycleController:
     def register_cleanup(self, cleanup: Callable[[], None]) -> None:
         self._cleanup.append(cleanup)
 
-    def notify_job(self, message: str) -> bool:
+    def set_tray_notifier(self, notifier: Callable[[str], None] | None) -> None:
+        self.tray_notify = notifier
+
+    def notify_job(self, message: str, *, job_id: str | None = None) -> bool:
         if self.tray_notify is None:
             return False
+        if job_id is not None and str(job_id) in self._notified_jobs:
+            return False
+        if job_id is not None:
+            self._notified_jobs.add(str(job_id))
         self.tray_notify(str(message))
         return True
 
