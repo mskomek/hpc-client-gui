@@ -57,6 +57,8 @@ if __package__ is None or __package__ == "":
     # script olarak çalıştırıldı -> src/ dizinini sys.path'e ekle
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from hpc_gui.runtime import DEFAULT_GUI_RUNTIME
+
 if "--wx" in sys.argv[1:]:
     from hpc_gui.wx_shell import main
 elif "--updater-helper" in sys.argv[1:]:
@@ -64,7 +66,10 @@ elif "--updater-helper" in sys.argv[1:]:
 elif _is_cli_invocation(sys.argv[1:]):
     from hpc_gui.cli.main import run_cli
 else:
-    from hpc_gui.app import main
+    if DEFAULT_GUI_RUNTIME == "wx":
+        from hpc_gui.wx_shell import main
+    else:
+        from hpc_gui.app import main
 
 if _PERFORMANCE_PROBE is not None:
     _PERFORMANCE_PROBE.mark("application_imports_complete")
