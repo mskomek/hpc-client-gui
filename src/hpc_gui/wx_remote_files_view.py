@@ -5,7 +5,7 @@ from __future__ import annotations
 from threading import Lock, Thread
 from pathlib import PurePosixPath
 
-from hpc_gui.core.i18n import t
+from hpc_gui.core.i18n import subscribe_language_change, t, unsubscribe_language_change
 from hpc_gui.wx_remote_files import WxRemoteDirectoryModel
 
 
@@ -36,6 +36,12 @@ def show_remote_files(parent=None, model: WxRemoteDirectoryModel | None = None, 
         for entry in state["entries"]:
             index = listing.InsertItem(listing.GetItemCount(), PurePosixPath(entry.path).name or entry.path)
             listing.SetItem(index, 1, str(entry.size))
+
+    def refresh_labels(_language=None):
+        frame.SetTitle(t("tabs.ftp"))
+        listing.SetColumn(0, t("dirs.col_name"))
+        listing.SetColumn(1, t("dirs.col_size"))
+        refresh.SetLabel(t("dirs.refresh"))
 
     def load(_event=None):
         if not loader:
@@ -164,7 +170,8 @@ def show_remote_files(parent=None, model: WxRemoteDirectoryModel | None = None, 
     listing.Bind(wx.EVT_CONTEXT_MENU, context)
     refresh.Bind(wx.EVT_BUTTON, load)
     path.Bind(wx.EVT_TEXT_ENTER, load)
-    frame.Bind(wx.EVT_CLOSE, close)
+    subscribe_language_change(refresh_labels)
+    frame.Bind(wx.EVT_CLOSE, lambda event: (unsubscribe_language_change(refresh_labels), close(event)))
     load()
     frame.Show()
     return wx.ID_OK

@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from threading import Thread
 
-from hpc_gui.core.i18n import t
+from hpc_gui.core.i18n import subscribe_language_change, t, unsubscribe_language_change
 from hpc_gui.services.editor_controller import EditorCommandService
 from hpc_gui.wx_editor import WxEditorModel
 
@@ -83,8 +83,15 @@ def show_editor(parent=None, model: WxEditorModel | None = None, *, path: str = 
                 return
             if choice == wx.YES:
                 save_document()
+        unsubscribe_language_change(refresh_labels)
         event.Skip()
 
+    def refresh_labels(_language=None):
+        save.SetLabel(t("editor.save"))
+        submit.SetLabel(t("editor.submit"))
+        run.SetLabel(t("editor.save_submit"))
+
+    subscribe_language_change(refresh_labels)
     frame.Bind(wx.EVT_CLOSE, close)
     frame.Show()
     return wx.ID_OK
