@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import os
 import shlex
+from pathlib import Path
+from threading import Thread
 
 from hpc_gui import __version__
 from hpc_gui.core.i18n import load_saved_language, set_language, subscribe_language_change, system_default_language, t, unsubscribe_language_change
@@ -113,8 +115,21 @@ def _dispatch(command_id: str, parent=None, lifecycle=None, session_state=None) 
         show_connection(parent, load_profiles(), lifecycle=lifecycle, on_connected=connected)
     elif command_id == "NAV-FILES":
         from hpc_gui.wx_local_files import show_local_files
+        from hpc_gui.wx_editor_view import show_editor
 
-        show_local_files(parent)
+        def open_local(path, new_window=False):
+            def worker():
+                try:
+                    content = Path(path).read_text(encoding="utf-8")
+                    wx.CallAfter(show_editor, parent, path=path, content=content)
+                except Exception as error:
+                    wx.CallAfter(wx.MessageBox, str(error), t("login.err_title"), wx.OK | wx.ICON_ERROR)
+
+            import wx
+
+            Thread(target=worker, daemon=True).start()
+
+        show_local_files(parent, open_editor=lambda path: open_local(path), open_editor_new_window=lambda path: open_local(path, True))
     elif command_id == "NAV-DIRECTORIES":
         from hpc_gui.wx_editor_view import show_editor
         from hpc_gui.wx_remote_files_view import show_remote_files
