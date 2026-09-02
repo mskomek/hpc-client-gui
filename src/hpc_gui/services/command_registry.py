@@ -53,6 +53,7 @@ _COMMANDS = (
     CommandDefinition("EDIT-SAVE", "editor.save", "editor", "editor", "editor.save", ("Ctrl+S",)),
     CommandDefinition("EDIT-SUBMIT", "editor.submit", "editor", "editor", "editor.submit", ("Ctrl+Shift+S",)),
     CommandDefinition("EDIT-LINT", "editor.lint", "editor", "editor", "editor.lint"),
+    CommandDefinition("EDIT-EXECUTE", "editor.save_submit", "editor", "editor", "editor.save_submit"),
     CommandDefinition("TERM-FOCUS", "tabs.login", "terminal", "terminal", "tabs.login"),
     CommandDefinition("JOB-REFRESH", "jobs.refresh", "jobs", "jobs", "jobs.refresh"),
     CommandDefinition("JOB-CANCEL", "jobs.cancel", "jobs", "jobs", "jobs.cancel"),
