@@ -194,7 +194,7 @@ def show_jobs(parent=None, model: WxJobsModel | None = None, *, list_jobs=None, 
     splitter.SetMinimumPaneSize(220)
     root.Add(splitter, 1, wx.EXPAND | wx.ALL, 8)
     panel.SetSizer(root)
-    state = {"items": [], "closed": False, "in_flight": False}
+    state = {"items": [], "selected_job": "", "closed": False, "in_flight": False, "output_in_flight": False}
     state_lock = Lock()
     timer = wx.Timer(frame)
 
@@ -236,9 +236,46 @@ def show_jobs(parent=None, model: WxJobsModel | None = None, *, list_jobs=None, 
 
         Thread(target=fetch, daemon=True).start()
 
+    def refresh_outputs(_event=None):
+        if not read_output:
+            return
+        with state_lock:
+            job_id = state["selected_job"]
+            if state["closed"] or state["output_in_flight"] or not job_id:
+                return
+            state["output_in_flight"] = True
+
+        def fetch():
+            try:
+                result = read_output(job_id)
+                wx.CallAfter(render_outputs, result, None)
+            except Exception as error:
+                wx.CallAfter(render_outputs, None, error)
+
+        Thread(target=fetch, daemon=True).start()
+
+    def render_outputs(result, error):
+        with state_lock:
+            state["output_in_flight"] = False
+            if state["closed"]:
+                return
+        if error:
+            details.SetValue(str(error))
+            return
+        if isinstance(result, dict):
+            stdout.SetValue(clean_output(result.get("stdout", "")))
+            stderr.SetValue(clean_output(result.get("stderr", "")))
+        elif isinstance(result, (tuple, list)):
+            stdout.SetValue(clean_output(result[0] if result else ""))
+            stderr.SetValue(clean_output(result[1] if len(result) > 1 else ""))
+        else:
+            stdout.SetValue(clean_output(result))
+            stderr.SetValue("")
+
     def select_job(event):
         item = state["items"][event.GetIndex()]
         job_id = str(item.get("id", item.get("job_id", ""))) if isinstance(item, dict) else str(item)
+        state["selected_job"] = job_id
         model.tracking.select_job(job_id)
         if isinstance(item, dict):
             model.set_output(item.get("stdout_path", ""), item.get("stderr_path", ""))
@@ -255,8 +292,12 @@ def show_jobs(parent=None, model: WxJobsModel | None = None, *, list_jobs=None, 
 
     jobs.Bind(wx.EVT_LIST_ITEM_SELECTED, select_job)
     cancel_button.Bind(wx.EVT_BUTTON, cancel_job)
+    def tick(event):
+        refresh_jobs(event)
+        refresh_outputs(event)
+
     timer.Start(1000)
-    frame.Bind(wx.EVT_TIMER, refresh_jobs, timer)
+    frame.Bind(wx.EVT_TIMER, tick, timer)
     frame.Bind(wx.EVT_CLOSE, close)
     refresh_jobs()
     frame.Show()
