@@ -95,8 +95,8 @@ def show_remote_files(parent=None, model: WxRemoteDirectoryModel | None = None, 
             listing.Select(index)
         selected = tuple(entry.path for idx, entry in enumerate(state["entries"]) if listing.IsSelected(idx))
         menu = wx.Menu()
-        actions = ("open", "edit", "edit_new_window", "download", "copy", "move", "rename", "delete")
-        labels = {"open": "editor.open", "edit": "dirs.edit", "edit_new_window": "dirs.edit_new_window"}
+        actions = ("open", "edit", "edit_new_window", "download", "upload", "copy", "move", "rename", "delete")
+        labels = {"open": "editor.open", "edit": "dirs.edit", "edit_new_window": "dirs.edit_new_window", "upload": "ftp.upload_selected"}
         for action in actions:
             item = menu.Append(wx.ID_ANY, t(labels.get(action, f"dirs.{action}")))
             listing.Bind(wx.EVT_MENU, lambda _event, action=action: run_action(action, selected), item)
@@ -144,6 +144,7 @@ def show_remote_files(parent=None, model: WxRemoteDirectoryModel | None = None, 
         if action == "delete" and wx.MessageBox(t("dirs.delete_confirm"), t("dirs.delete"), wx.YES_NO | wx.ICON_WARNING) != wx.YES:
             return
         destination = ""
+        operation_paths = selected
         if action in {"rename", "copy", "move"}:
             title_key = "dirs.rename" if action == "rename" else "dirs.destination"
             default = PurePosixPath(selected[0]).name if action == "rename" else str(PurePosixPath(selected[0]).parent)
@@ -166,6 +167,15 @@ def show_remote_files(parent=None, model: WxRemoteDirectoryModel | None = None, 
                 destination = dialog.GetPath()
             finally:
                 dialog.Destroy()
+        elif action == "upload":
+            dialog = wx.FileDialog(frame, t("ftp.upload_selected"), style=wx.FD_OPEN | wx.FD_MULTIPLE)
+            try:
+                if dialog.ShowModal() != wx.ID_OK:
+                    return
+                operation_paths = tuple(dialog.GetPaths())
+                destination = model.current_path
+            finally:
+                dialog.Destroy()
         with lock:
             if state["closed"] or state["busy"]:
                 return
@@ -174,7 +184,7 @@ def show_remote_files(parent=None, model: WxRemoteDirectoryModel | None = None, 
 
         def worker():
             try:
-                operation(action, selected, destination)
+                operation(action, operation_paths, destination)
                 wx.CallAfter(operation_done, None)
             except Exception as error:
                 wx.CallAfter(operation_done, error)
