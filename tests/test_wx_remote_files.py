@@ -46,3 +46,4 @@ def test_remote_view_runs_operations_off_the_wx_thread():
     assert "open_editor_new_window=None" in source
     assert "read_text=None" in source and "wx.CallAfter(done, read_text(remote_path), None)" in source
     assert "model.navigate(requested_path)" in source and "path.SetValue(model.current_path)" in source
+    assert "PurePosixPath(selected[0]).parent / new_name" in source and "operation(action, selected, destination)" in source

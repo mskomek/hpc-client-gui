@@ -138,10 +138,13 @@ def _dispatch(command_id: str, parent=None, lifecycle=None, session_state=None) 
         files = session.get("files")
         slurm = session.get("slurm")
         ssh = session.get("ssh")
-        def remote_operation(action, paths):
+        def remote_operation(action, paths, destination=""):
             if action == "delete" and files:
                 for remote_path in paths:
                     files.remove(remote_path, recursive=True)
+                return
+            if action == "rename" and files and len(paths) == 1 and destination:
+                files.rename(paths[0], destination)
                 return
             raise RuntimeError(f"Remote action is not available from this view: {action}")
         def editor(path, content=""):
