@@ -138,6 +138,12 @@ def _dispatch(command_id: str, parent=None, lifecycle=None, session_state=None) 
         files = session.get("files")
         slurm = session.get("slurm")
         ssh = session.get("ssh")
+        def remote_operation(action, paths):
+            if action == "delete" and files:
+                for remote_path in paths:
+                    files.remove(remote_path, recursive=True)
+                return
+            raise RuntimeError(f"Remote action is not available from this view: {action}")
         def editor(path, content=""):
             show_editor(
                 parent,
@@ -151,6 +157,7 @@ def _dispatch(command_id: str, parent=None, lifecycle=None, session_state=None) 
             parent,
             loader=files.iterdir_entries if files else None,
             read_text=files.read_text if files else None,
+            operation=remote_operation,
             open_editor=editor,
             open_editor_new_window=editor,
         )
