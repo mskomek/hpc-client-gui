@@ -114,7 +114,7 @@ class LocalBrowserModel:
         return ("open", "open_with", "edit", "edit_new_window", "new_tab", "rename", "delete") if is_dir else ("open", "open_with", "edit", "edit_new_window", "rename", "delete")
 
 
-def show_local_files(parent=None, path: str | Path | None = None) -> int:
+def show_local_files(parent=None, path: str | Path | None = None, *, open_editor=None) -> int:
     try:
         import wx
     except ImportError as exc:
@@ -124,9 +124,58 @@ def show_local_files(parent=None, path: str | Path | None = None) -> int:
     listing = wx.ListCtrl(frame, style=wx.LC_REPORT | wx.LC_SINGLE_SEL)
     listing.InsertColumn(0, "Name")
     listing.InsertColumn(1, "Size")
-    for entry in model.list_entries():
-        index = listing.InsertItem(listing.GetItemCount(), entry.path.name)
-        listing.SetItem(index, 1, str(entry.size))
+    entries = []
+
+    def refresh() -> None:
+        entries[:] = model.list_entries()
+        listing.DeleteAllItems()
+        for entry in entries:
+            index = listing.InsertItem(listing.GetItemCount(), entry.path.name)
+            listing.SetItem(index, 1, str(entry.size))
+
+    def activate(event) -> None:
+        entry = entries[event.GetIndex()]
+        if model.activate(entry.path, open_editor=open_editor) == "navigate":
+            refresh()
+
+    def context_menu(event) -> None:
+        index, _flags = listing.HitTest(event.GetPosition())
+        if index < 0:
+            return
+        entry = entries[index]
+        menu = wx.Menu()
+        for action in model.context_actions(entry.is_dir):
+            item = menu.Append(wx.ID_ANY, action.replace("_", " ").title())
+            listing.Bind(wx.EVT_MENU, lambda _event, action=action: run_action(action, entry), item)
+        listing.PopupMenu(menu)
+        menu.Destroy()
+
+    def run_action(action: str, entry: LocalEntry) -> None:
+        if action in {"open", "edit", "edit_new_window", "new_tab"}:
+            if action == "new_tab":
+                model.new_tab(entry.path)
+            elif action == "open":
+                model.activate(entry.path, open_editor=open_editor)
+            else:
+                if open_editor:
+                    open_editor(str(entry.path))
+        elif action == "open_with":
+            os.startfile(str(entry.path))
+        elif action == "rename":
+            dialog = wx.TextEntryDialog(frame, "New name", "Rename", entry.path.name)
+            try:
+                if dialog.ShowModal() == wx.ID_OK:
+                    model.rename(entry.path, dialog.GetValue())
+                    refresh()
+            finally:
+                dialog.Destroy()
+        elif action == "delete" and wx.MessageBox(f"Delete {entry.path.name}?", "Confirm", wx.YES_NO | wx.ICON_WARNING) == wx.YES:
+            model.delete([entry.path])
+            refresh()
+
+    listing.Bind(wx.EVT_LIST_ITEM_ACTIVATED, activate)
+    listing.Bind(wx.EVT_CONTEXT_MENU, context_menu)
+    refresh()
     frame.Show()
     return wx.ID_OK
 

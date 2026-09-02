@@ -33,3 +33,9 @@ def test_file_url_clipboard_payload_preserves_spaces_and_unicode(tmp_path: Path)
 def test_local_browser_model_has_no_toolkit_import():
     source = open("src/hpc_gui/wx_local_files.py", encoding="utf-8").read()
     assert "from PySide6" not in source
+
+
+def test_local_view_exposes_keyboard_and_context_actions():
+    source = open("src/hpc_gui/wx_local_files.py", encoding="utf-8").read()
+    assert "EVT_LIST_ITEM_ACTIVATED" in source
+    assert "EVT_CONTEXT_MENU" in source and "open_editor" in source
