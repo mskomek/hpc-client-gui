@@ -69,3 +69,4 @@ def test_local_view_exposes_keyboard_and_context_actions():
     assert 'actions = (model.context_actions(entry.is_dir)' in source and '"new_folder", "refresh"' in source
     assert "EVT_KEY_DOWN" in source and "WXK_F2" in source and "WXK_DELETE" in source
     assert "model.copy" in source and "model.paste" in source and "ControlDown" in source
+    assert "WXK_BACK" in source and "GetItemCount()" in source
