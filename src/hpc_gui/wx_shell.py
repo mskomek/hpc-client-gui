@@ -2,12 +2,18 @@
 
 from __future__ import annotations
 
+import os
+
 from hpc_gui import __version__
 from hpc_gui.core.i18n import load_saved_language, system_default_language, t
 from hpc_gui.services.command_registry import COMMAND_REGISTRY
+from hpc_gui.wx_runtime import environment_without_qt_graphics
 
 
 def main() -> int:
+    clean_environment = environment_without_qt_graphics()
+    for name in set(os.environ) - set(clean_environment):
+        os.environ.pop(name, None)
     try:
         import wx
     except ImportError as exc:
