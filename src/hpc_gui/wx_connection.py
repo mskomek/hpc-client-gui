@@ -11,6 +11,7 @@ from hpc_gui.core.i18n import subscribe_language_change, t, unsubscribe_language
 from hpc_gui.services.connection_controller import (
     ConnectionController, HostKeyRequest, KeyboardInteractiveRequest,
 )
+from hpc_gui.ssh.client import SSHConnInfo, HostKeyInfo
 
 
 @dataclass(frozen=True)
@@ -19,6 +20,27 @@ class ProfileSummary:
     host: str
     username: str
     provider: str = ""
+
+
+def ssh_info_from_profile(profile: dict[str, Any], model: "WxConnectionModel") -> SSHConnInfo:
+    """Build the shared SSH request without copying secrets into UI state."""
+    def host_key(info: HostKeyInfo) -> str:
+        return model.decide_host_key(HostKeyRequest(info.hostname, info.fingerprint, info.role))
+
+    def keyboard(title: str, instructions: str, prompts: list[tuple[str, bool]]) -> list[str]:
+        request = KeyboardInteractiveRequest(title, instructions, tuple(prompt for prompt, _echo in prompts))
+        return model.answer_keyboard_interactive(request)
+
+    return SSHConnInfo(
+        host=str(profile.get("host", "")),
+        port=int(profile.get("port", 22) or 22),
+        username=str(profile.get("username", "")),
+        password=str(profile.get("password", "")),
+        key_path=str(profile.get("key_path", "") or profile.get("ssh_key", "")),
+        host_key_policy=str(profile.get("host_key_policy", "accept-new") or "accept-new"),
+        host_key_decision=host_key,
+        keyboard_interactive_handler=keyboard,
+    )
 
 
 class WxConnectionModel:
@@ -149,4 +171,4 @@ def show_connection(parent=None, profiles=None, *, connect=None, lifecycle=None)
     return wx.ID_OK
 
 
-__all__ = ["HostKeyRequest", "KeyboardInteractiveRequest", "ProfileSummary", "WxConnectionModel", "show_connection"]
+__all__ = ["HostKeyRequest", "KeyboardInteractiveRequest", "ProfileSummary", "WxConnectionModel", "show_connection", "ssh_info_from_profile"]
