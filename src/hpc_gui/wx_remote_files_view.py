@@ -9,7 +9,7 @@ from hpc_gui.core.i18n import t
 from hpc_gui.wx_remote_files import WxRemoteDirectoryModel
 
 
-def show_remote_files(parent=None, model: WxRemoteDirectoryModel | None = None, *, loader=None, operation=None) -> int:
+def show_remote_files(parent=None, model: WxRemoteDirectoryModel | None = None, *, loader=None, operation=None, open_editor=None, open_editor_new_window=None) -> int:
     try:
         import wx
     except ImportError as exc:
@@ -69,6 +69,8 @@ def show_remote_files(parent=None, model: WxRemoteDirectoryModel | None = None, 
             model.navigate(entry.path)
             path.SetValue(model.current_path)
             load()
+        elif open_editor:
+            open_editor(entry.path)
 
     def context(event):
         index, _flags = listing.HitTest(event.GetPosition())
@@ -79,14 +81,26 @@ def show_remote_files(parent=None, model: WxRemoteDirectoryModel | None = None, 
             listing.Select(index)
         selected = tuple(entry.path for idx, entry in enumerate(state["entries"]) if listing.IsSelected(idx))
         menu = wx.Menu()
-        for action in ("download", "copy", "move", "rename", "delete"):
-            item = menu.Append(wx.ID_ANY, t(f"dirs.{action}"))
-            listing.Bind(wx.EVT_MENU, lambda _event, action=action: run_operation(action, selected), item)
+        actions = ("open", "edit", "edit_new_window", "download", "copy", "move", "rename", "delete")
+        labels = {"open": "editor.open", "edit": "dirs.edit", "edit_new_window": "dirs.edit_new_window"}
+        for action in actions:
+            item = menu.Append(wx.ID_ANY, t(labels.get(action, f"dirs.{action}")))
+            listing.Bind(wx.EVT_MENU, lambda _event, action=action: run_action(action, selected), item)
         listing.PopupMenu(menu)
         menu.Destroy()
 
+    def run_action(action, selected):
+        if action == "open" and open_editor and selected:
+            open_editor(selected[0])
+        elif action == "edit" and open_editor and selected:
+            open_editor(selected[0])
+        elif action == "edit_new_window" and open_editor_new_window and selected:
+            open_editor_new_window(selected[0])
+        else:
+            run_operation(action, selected)
+
     def run_operation(action, selected):
-        if not operation or not selected:
+        if not operation or not selected or action in {"open", "edit", "edit_new_window"}:
             return
         if action == "delete" and wx.MessageBox(t("dirs.delete_confirm"), t("dirs.delete"), wx.YES_NO | wx.ICON_WARNING) != wx.YES:
             return
