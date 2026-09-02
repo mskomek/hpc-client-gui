@@ -7,6 +7,7 @@ from typing import Callable
 from urllib.parse import urlparse
 
 from hpc_gui.core.i18n import t
+from hpc_gui.services.platform_keymap import KeyBinding, bindings_for, display_binding
 
 
 @dataclass(frozen=True)
@@ -20,6 +21,14 @@ class HelpTopic:
 
     def title(self) -> str:
         return t(self.title_key)
+
+
+@dataclass(frozen=True)
+class ShortcutHelpRow:
+    command_id: str
+    label: str
+    binding: str
+    context: str
 
 
 _TOPICS = (
@@ -64,6 +73,19 @@ class HelpCatalog:
             lines.extend(("", "Commands:"))
             lines.extend(f"- {command_id}: {binding_lookup(command_id) or t('help.unbound_command')}" for command_id in topic.command_ids)
         return "\n".join(lines)
+
+    def shortcut_reference(self, platform: str, bindings: tuple[KeyBinding, ...] | None = None) -> tuple[ShortcutHelpRow, ...]:
+        active = bindings if bindings is not None else bindings_for(platform)
+        from hpc_gui.services.command_registry import COMMAND_REGISTRY
+
+        rows = []
+        for item in active:
+            try:
+                label = COMMAND_REGISTRY.get(item.command_id).label()
+            except KeyError:
+                label = item.command_id
+            rows.append(ShortcutHelpRow(item.command_id, label, display_binding(item.binding, platform), item.context))
+        return tuple(rows)
 
 
 def is_allowed_external_url(url: str, domains: set[str]) -> bool:
