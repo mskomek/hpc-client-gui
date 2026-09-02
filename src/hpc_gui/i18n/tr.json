@@ -159,6 +159,10 @@
     "dont_save": "Kaydetme",
     "unsaved_changes": "Bu belgede kaydedilmemiş değişiklikler var.",
     "and": "ve"
+    ,"command_palette": "Komut Paleti"
+    ,"test_cluster": "Küme testi"
+    ,"new_slurm_script": "Yeni Slurm betiği"
+    ,"ansys_linter": "ANSYS Linter"
   },
   "placeholders": {
     "host": "Sunucu adı veya IP",

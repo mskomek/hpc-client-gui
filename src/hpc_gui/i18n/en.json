@@ -159,6 +159,10 @@
     "dont_save": "Don't Save",
     "unsaved_changes": "This document has unsaved changes.",
     "and": "and"
+    ,"command_palette": "Command Palette"
+    ,"test_cluster": "Test Cluster"
+    ,"new_slurm_script": "New Slurm Script"
+    ,"ansys_linter": "ANSYS Linter"
   },
   "placeholders": {
     "host": "Server name or IP",
