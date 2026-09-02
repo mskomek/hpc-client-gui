@@ -31,5 +31,6 @@ def test_wx_shell_dispatches_core_views():
     assert "loader=files.iterdir_entries" in source and "read_text=files.read_text" in source
     assert "operation=remote_operation" in source and "files.remove(remote_path, recursive=True)" in source
     assert "files.rename(paths[0], destination)" in source
+    assert "files.copy if action == \"copy\" else files.move" in source
     assert 'command_id == "NAV-TERMINAL"' in source and "show_terminal(parent, ssh=session.get(\"ssh\"), lifecycle=lifecycle)" in source
     assert "command_items" in source and "description_label.SetLabel" in source

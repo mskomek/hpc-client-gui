@@ -278,6 +278,7 @@
     "paste_into": "Klasöre yapıştır",
     "rename": "Yeniden adlandır",
     "rename_invalid": "Yol ayırıcı içermeyen geçerli bir dosya adı girin.",
+    "destination": "Hedef dizin",
     "undo": "Geri Al",
     "paste_from_local": "Yerelden Yapıştır",
     "paste_from_local_into": "Yerelden klasöre yapıştır",
