@@ -17,7 +17,8 @@ Run the same cases against the current Qt build and the wx candidate. Mark
 |---|---|---|
 | GUI-FILE-014/018 | Middle-click a folder, then a directory tab | Folder opens in a new tab; tab middle-click has no inferred close action. |
 | GUI-FILE-015 | Select two entries, right-click selected and unselected entries | Existing multi-selection is retained for selected target; unselected target becomes the explicit target. |
-| GUI-FILE-016/017 | Drag remote entries between panes; repeat with Ctrl; drag a local path to a remote folder | Move, copy, and upload are asynchronous, target the drop folder, and preserve errors/conflict gates. |
+| GUI-FILE-016 | Drag remote entries between panes; drag a local path to a remote folder | Move/upload is asynchronous, targets the drop folder, and preserves errors/conflict gates. |
+| GUI-FILE-017 | Repeat the remote drag with Ctrl | Copy is asynchronous and preserves the same safety gates. |
 | GUI-XFER-010/011 | Double-click local then remote files in FTP view | Upload/download is queued to the active destination. |
 | GUI-XFER-012/013/014 | Open menus for queued, failed, and completed transfers | Actions match state; failure reason remains visible and completed items are not offered an implied retry. |
 | GUI-CONN-010 | Single-click, then double-click a saved profile | Single click selects only; double-click connects that profile. |
