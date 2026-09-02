@@ -155,6 +155,9 @@
     "details": "Detaylar",
     "apply_all": "Tüm çakışmalara uygula",
     "close": "Kapat",
+    "save_changes": "Değişiklikleri kaydet",
+    "dont_save": "Kaydetme",
+    "unsaved_changes": "Bu belgede kaydedilmemiş değişiklikler var.",
     "and": "ve"
   },
   "placeholders": {

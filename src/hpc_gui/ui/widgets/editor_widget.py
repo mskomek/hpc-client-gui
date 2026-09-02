@@ -105,8 +105,12 @@ class _EditorDocument(QWidget):
         super().__init__(parent)
         self.path = path
         self.is_local = is_local
+        self.saved_text = content
         self.text = _EditorTextEdit(owner, self)
         self.text.setPlainText(content)
+        self.text.textChanged.connect(
+            lambda document=self: owner._document_modified(document)
+        )
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(self.text)
@@ -204,8 +208,10 @@ class EditorWidget(QWidget):
         self._shortcuts.append(shortcut)
 
     def _install_shortcuts(self) -> None:
+        self._add_shortcut("Ctrl+N", self.new_document)
         self._add_shortcut("Ctrl+S", self.save_path)
         self._add_shortcut("Ctrl+Shift+S", lambda: self.save_path(force_submit=True))
+        self._add_shortcut("Ctrl+Enter", self.execute_active)
         self._add_shortcut("Ctrl+Z", lambda: self.text.undo())
         self._add_shortcut("Ctrl+Y", lambda: self.text.redo())
         self._add_shortcut("Ctrl+X", lambda: self.text.cut())
@@ -213,11 +219,24 @@ class EditorWidget(QWidget):
         self._add_shortcut("Ctrl+V", lambda: self.text.paste())
         self._add_shortcut("Ctrl+A", lambda: self.text.selectAll())
         self._add_shortcut("Ctrl+F", self.find_text)
+        self._add_shortcut("Ctrl+H", self.find_text)
         self._add_shortcut("F3", self.find_next)
         self._add_shortcut("Ctrl+O", self.focus_open_path)
         self._add_shortcut("Ctrl+W", self.close_active_tab)
         self._add_shortcut("Ctrl+Tab", lambda: self.switch_document(1))
         self._add_shortcut("Ctrl+Shift+Tab", lambda: self.switch_document(-1))
+
+    def new_document(self) -> None:
+        self._add_document()
+
+    def execute_active(self) -> None:
+        path = self.path_in.text().strip().lower()
+        if path.endswith((".slurm", ".sbatch")):
+            self.save_path(force_submit=True)
+        elif path.endswith(".sh"):
+            self.save_path(run_in_terminal=True)
+        else:
+            self.save_path()
 
     @property
     def text(self) -> QTextEdit:
@@ -261,6 +280,21 @@ class EditorWidget(QWidget):
 
     def _close_document_tab(self, index: int) -> None:
         document = self.document_tabs.widget(index)
+        if isinstance(document, _EditorDocument) and self._is_document_modified(document):
+            box = QMessageBox(self)
+            box.setWindowTitle(t("common.confirm"))
+            box.setText(t("common.unsaved_changes"))
+            save = box.addButton(t("common.save_changes"), QMessageBox.ButtonRole.AcceptRole)
+            discard = box.addButton(t("common.dont_save"), QMessageBox.ButtonRole.DestructiveRole)
+            box.addButton(t("common.cancel"), QMessageBox.ButtonRole.RejectRole)
+            box.exec()
+            if box.clickedButton() is save:
+                self.document_tabs.setCurrentIndex(index)
+                self.save_path()
+                if self._is_document_modified(document):
+                    return
+            elif box.clickedButton() is not discard:
+                return
         self.document_tabs.removeTab(index)
         if document is not None:
             document.deleteLater()
@@ -346,6 +380,17 @@ class EditorWidget(QWidget):
         self.path_in.setText(path)
         self._update_save_actions(path)
 
+    @staticmethod
+    def _is_document_modified(document: _EditorDocument) -> bool:
+        return document.text.toPlainText() != document.saved_text
+
+    def _document_modified(self, document: _EditorDocument) -> None:
+        index = self.document_tabs.indexOf(document)
+        if index < 0:
+            return
+        title = self._tab_title(document.path)
+        self.document_tabs.setTabText(index, f"{title} *" if self._is_document_modified(document) else title)
+
     def _update_save_actions(self, path: str) -> None:
         lower = path.lower()
         self.btn_save_run.setVisible(lower.endswith(".sh"))
@@ -377,6 +422,7 @@ class EditorWidget(QWidget):
         ):
             current.path = path
             current.is_local = is_local
+            current.saved_text = content
             current.text.setPlainText(content)
             index = self.document_tabs.indexOf(current)
             self.document_tabs.setTabText(index, self._tab_title(path))
@@ -705,7 +751,12 @@ class EditorWidget(QWidget):
             try:
                 Path(path).write_text(text, encoding="utf-8", newline="")
                 self._set_active_document_path(path)
+                document.saved_text = text
+                document.text.document().setModified(False)
                 append_event({"type": "editor_save", "path": path})
+                if run_in_terminal and path.lower().endswith(".sh"):
+                    self.run_in_terminal_requested.emit(path)
+                    return
                 QMessageBox.information(self, t("common.info"), t("editor.saved") if t("editor.saved") != "[editor.saved]" else "Saved.")
             except OSError as e:
                 show_exception(self, title=t("common.error"), user_message=t("editor.save_failed").format(err=e), exc=e, area="EDITOR")
@@ -721,6 +772,8 @@ class EditorWidget(QWidget):
         try:
             self.session["files"].write_text(path, text)
             self._set_active_document_path(path)
+            document.saved_text = text
+            document.text.document().setModified(False)
             append_event({"type": "editor_save", "path": path})
             if run_in_terminal:
                 if path.lower().endswith(".sh"):

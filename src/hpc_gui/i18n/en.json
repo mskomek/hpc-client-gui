@@ -155,6 +155,9 @@
     "details": "Details",
     "apply_all": "Apply to all conflicts",
     "close": "Close",
+    "save_changes": "Save changes",
+    "dont_save": "Don't Save",
+    "unsaved_changes": "This document has unsaved changes.",
     "and": "and"
   },
   "placeholders": {
