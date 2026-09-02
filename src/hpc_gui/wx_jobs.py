@@ -185,9 +185,16 @@ def show_jobs(parent=None, model: WxJobsModel | None = None, *, list_jobs=None, 
     stdout = wx.TextCtrl(output_split, style=wx.TE_MULTILINE | wx.TE_READONLY | wx.HSCROLL)
     stderr = wx.TextCtrl(output_split, style=wx.TE_MULTILINE | wx.TE_READONLY | wx.HSCROLL)
     output_split.SplitHorizontally(stdout, stderr)
+    output_controls = wx.BoxSizer(wx.HORIZONTAL)
+    refresh_button = wx.Button(right, label=t("jobs.refresh"))
+    follow = wx.CheckBox(right, label=t("files.auto_scroll"))
+    follow.SetValue(True)
+    output_controls.Add(refresh_button, 0, wx.RIGHT, 6)
+    output_controls.Add(follow, 0, wx.ALIGN_CENTER_VERTICAL)
     cancel_button = wx.Button(right, label=t("jobs.cancel"))
     right_sizer.Add(details, 0, wx.EXPAND | wx.ALL, 6)
     right_sizer.Add(output_split, 1, wx.EXPAND | wx.LEFT | wx.RIGHT, 6)
+    right_sizer.Add(output_controls, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 6)
     right_sizer.Add(cancel_button, 0, wx.ALIGN_RIGHT | wx.ALL, 6)
     right.SetSizer(right_sizer)
     splitter.SplitVertically(jobs, right, 300)
@@ -271,6 +278,9 @@ def show_jobs(parent=None, model: WxJobsModel | None = None, *, list_jobs=None, 
         else:
             stdout.SetValue(clean_output(result))
             stderr.SetValue("")
+        if follow.GetValue():
+            stdout.ShowPosition(stdout.GetLastPosition())
+            stderr.ShowPosition(stderr.GetLastPosition())
 
     def select_job(event):
         item = state["items"][event.GetIndex()]
@@ -319,9 +329,12 @@ def show_jobs(parent=None, model: WxJobsModel | None = None, *, list_jobs=None, 
         frame.SetTitle(t("jobs.title"))
         jobs.SetColumn(0, t("jobs.job_id"))
         jobs.SetColumn(1, t("jobs.state"))
+        refresh_button.SetLabel(t("jobs.refresh"))
+        follow.SetLabel(t("files.auto_scroll"))
         cancel_button.SetLabel(t("jobs.cancel"))
 
     jobs.Bind(wx.EVT_LIST_ITEM_SELECTED, select_job)
+    refresh_button.Bind(wx.EVT_BUTTON, refresh_jobs)
     cancel_button.Bind(wx.EVT_BUTTON, cancel_job)
     def tick(event):
         refresh_jobs(event)
