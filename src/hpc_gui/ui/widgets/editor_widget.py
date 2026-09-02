@@ -12,6 +12,8 @@ from PySide6.QtWidgets import (
 )
 
 from hpc_gui.core.i18n import t
+from hpc_gui.core.platform import current_os
+from hpc_gui.services.shortcut_preferences import active_binding
 from hpc_gui.core.ui_errors import show_exception
 from hpc_gui.core.history import append_event
 from hpc_gui.ui.dialogs.slurm_array_dialog import edit_slurm_array
@@ -454,6 +456,9 @@ class EditorWidget(QWidget):
         self.btn_save.setText(t("editor.save"))
         self.btn_save_submit.setText(t("editor.save_submit") if t("editor.save_submit") != "[editor.save_submit]" else "Save + Submit")
         self.btn_save_run.setText(t("editor.save_run") if t("editor.save_run") != "[editor.save_run]" else "Save + Run")
+        for button, command in ((self.btn_save_submit, "EDIT-EXECUTE"), (self.btn_save_run, "EDIT-EXECUTE")):
+            binding = active_binding(command, current_os())
+            button.setToolTip(f"{button.text()} ({binding})" if binding else button.text())
         self.path_in.setPlaceholderText(t("placeholders.script_path"))
         self.find_in.setPlaceholderText(t("editor.find_placeholder"))
         self.replace_in.setPlaceholderText(t("editor.replace_placeholder"))

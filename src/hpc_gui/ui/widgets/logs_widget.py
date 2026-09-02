@@ -7,6 +7,8 @@ from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QT
 from hpc_gui.core.i18n import t
 from hpc_gui.core.logging import log_path
 from hpc_gui.core.diagnostics import create_diagnostic_bundle
+from hpc_gui.core.platform import current_os
+from hpc_gui.services.shortcut_preferences import active_binding
 
 class LogsWidget(QWidget):
     def __init__(self):
@@ -62,6 +64,8 @@ class LogsWidget(QWidget):
         self.btn_copy.setText(t("logs.copy"))
         self.btn_copy_path.setText(t("logs.copy_path"))
         self.btn_diag.setText(t("logs.export_diagnostics"))
+        binding = active_binding("DIAGNOSTICS-EXPORT", current_os())
+        self.btn_diag.setToolTip(f"{t('logs.export_diagnostics')} ({binding})" if binding else t("logs.export_diagnostics"))
 
     def refresh(self) -> None:
         p = log_path()

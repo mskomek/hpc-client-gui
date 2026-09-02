@@ -30,6 +30,8 @@ from PySide6.QtWidgets import (
 )
 
 from hpc_gui.core.i18n import t
+from hpc_gui.core.platform import current_os
+from hpc_gui.services.shortcut_preferences import active_binding
 from hpc_gui.config.storage import (
     get_file_association,
     set_file_association,
@@ -728,7 +730,9 @@ class LocalDirPanel(QWidget):
             else "Edit in new window"
         )
         menu.addSeparator()
-        act_create_dir = menu.addAction(LOCAL_CONTEXT_MENU_LABELS[8])
+        binding = active_binding("FILE-NEW-FOLDER", current_os())
+        create_label = LOCAL_CONTEXT_MENU_LABELS[8] + (f" ({binding})" if binding else "")
+        act_create_dir = menu.addAction(create_label)
         act_create_dir_enter = menu.addAction(LOCAL_CONTEXT_MENU_LABELS[9])
         act_refresh = menu.addAction(LOCAL_CONTEXT_MENU_LABELS[10])
         menu.addSeparator()

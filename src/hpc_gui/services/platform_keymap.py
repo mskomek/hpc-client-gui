@@ -37,6 +37,8 @@ _COMMON = (
     KeyBinding("FILE-PROPERTIES", "Alt+Enter", "files"),
     KeyBinding("FILE-EDIT", "F4", "files"),
     KeyBinding("FILE-NEW-FOLDER", "F7", "files"),
+    KeyBinding("DIAGNOSTICS-EXPORT", "F8", "logs"),
+    KeyBinding("EDIT-EXECUTE", "Ctrl+Enter", "editor"),
     KeyBinding("TERM-COPY", "Ctrl+Shift+C", "terminal"),
     KeyBinding("TERM-PASTE", "Ctrl+Shift+V", "terminal"),
 )

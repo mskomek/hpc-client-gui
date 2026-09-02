@@ -5,11 +5,19 @@ from __future__ import annotations
 from typing import Any
 
 from hpc_gui.config.storage import load_settings, update_settings
-from hpc_gui.services.platform_keymap import KeyBinding, bindings_for
+from hpc_gui.services.platform_keymap import KeyBinding, bindings_for, display_binding
 
 
 SCHEMA_VERSION = 1
 SETTINGS_KEY = "shortcut_preferences"
+
+
+def active_binding(command_id: str, platform: str, settings: dict[str, Any] | None = None) -> str | None:
+    """Return the first active display binding for a command."""
+    return next(
+        (display_binding(item.binding, platform) for item in ShortcutPreferences(platform, settings).bindings() if item.command_id == command_id),
+        None,
+    )
 
 
 class ShortcutPreferences:

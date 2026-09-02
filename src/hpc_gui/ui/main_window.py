@@ -22,6 +22,7 @@ from hpc_gui.config.storage import (
 )
 from hpc_gui.core.paths import is_frozen_exe
 from hpc_gui.core.platform import current_os
+from hpc_gui.services.shortcut_preferences import active_binding
 from hpc_gui.core.i18n import t, set_language
 from hpc_gui.core.debug_telemetry import DebugTelemetry, is_source_run
 from hpc_gui.core.ui_errors import show_exception
@@ -283,6 +284,9 @@ class MainWindow(QMainWindow):
         menubar = self.menuBar()
 
         self._help_menu = menubar.addMenu(t("help.help_title"))
+        self._act_command_palette = QAction(self)
+        self._act_command_palette.triggered.connect(self._open_help)
+        self._help_menu.addAction(self._act_command_palette)
         self._act_help_center = QAction(t("help.open_help"), self)
         self._act_help_center.triggered.connect(self._open_help)
         self._help_menu.addAction(self._act_help_center)
@@ -680,6 +684,9 @@ class MainWindow(QMainWindow):
             self._help_menu.setTitle(t("help.help_title"))
         if hasattr(self, "_act_help_center"):
             self._act_help_center.setText(t("help.open_help"))
+        if hasattr(self, "_act_command_palette"):
+            binding = active_binding("APP-COMMAND-PALETTE", current_os())
+            self._act_command_palette.setText(t("common.command_palette") + (f" ({binding})" if binding else ""))
         if hasattr(self, "_help_btn"):
             self._help_btn.setText(t("help.help_title"))
             self._help_btn.setToolTip(t("help.open_help"))
