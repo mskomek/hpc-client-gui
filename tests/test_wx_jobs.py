@@ -46,3 +46,4 @@ def test_job_output_view_has_live_timer_and_resize_hooks():
     assert "EVT_TIMER" in source and "EVT_SIZE" in source and "update_detached" in source
     assert "lifecycle.register_cleanup(close)" in source
     assert "jobs.cancel_confirm" in source and "Thread(target=worker" in source
+    assert "files.auto_scroll" in source and "follow.GetValue()" in source
