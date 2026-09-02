@@ -32,13 +32,15 @@ def clean_output(text: str, max_lines: int = 5000) -> str:
 
 
 class WxJobsModel:
-    def __init__(self, *, notify: Callable[[str], None] | None = None, provenance: JobProvenanceCapture | None = None) -> None:
+    def __init__(self, *, notify: Callable[[str], None] | None = None, provenance: JobProvenanceCapture | None = None, completion_notify: Callable[[str, str], None] | None = None) -> None:
         self.tracking = JobTrackingController()
         self.notify = notify
         self.provenance = provenance
         self.detached: list[DetachedOutput] = []
         self.failure = None
         self.tail_failures = 0
+        self.completion_notify = completion_notify
+        self._job_states: dict[str, str] = {}
 
     def poll_allowed(self, details_visible: bool = True, auto_refresh: bool = True) -> bool:
         return self.tracking.should_poll_jobs(details_visible, auto_refresh)
@@ -83,6 +85,20 @@ class WxJobsModel:
             self.provenance.submitted(job_id, script_text, **kwargs)
         if self.notify:
             self.notify(str(job_id))
+
+    def update_job_state(self, job_id: str, state: str, message: str = "") -> bool:
+        """Publish one completion event per observed terminal state transition."""
+        job_id, state = str(job_id).strip(), str(state).strip().upper()
+        if not job_id:
+            return False
+        previous = self._job_states.get(job_id)
+        self._job_states[job_id] = state
+        if state not in {"COMPLETED", "COMPLETING", "FAILED", "CANCELLED", "TIMEOUT", "OUT_OF_MEMORY"}:
+            return False
+        if previous == state or not self.completion_notify:
+            return False
+        self.completion_notify(job_id, message or state)
+        return True
 
 
 def show_job_output(parent, model: WxJobsModel, view_id: str, *, read_output=None, interval_ms: int = 1000) -> int:
@@ -146,13 +162,15 @@ def show_job_output(parent, model: WxJobsModel, view_id: str, *, read_output=Non
     return wx.ID_OK
 
 
-def show_jobs(parent=None, model: WxJobsModel | None = None, *, list_jobs=None, read_output=None, cancel=None) -> int:
+def show_jobs(parent=None, model: WxJobsModel | None = None, *, list_jobs=None, read_output=None, cancel=None, lifecycle=None) -> int:
     """Create the wx Jobs workspace; callbacks are service adapters, never UI IO."""
     try:
         import wx
     except ImportError as exc:
         raise RuntimeError("wxPython is not installed") from exc
     model = model or WxJobsModel()
+    if lifecycle is not None and model.completion_notify is None:
+        model.completion_notify = lambda job_id, message: lifecycle.notify_job(message, job_id=job_id)
     frame = wx.Frame(parent, title=t("jobs.title"), size=(1000, 700))
     panel = wx.Panel(frame)
     root = wx.BoxSizer(wx.VERTICAL)
@@ -212,6 +230,9 @@ def show_jobs(parent=None, model: WxJobsModel | None = None, *, list_jobs=None, 
                     details.SetValue(str(error))
                 else:
                     render_items(result)
+                    for item in result or ():
+                        if isinstance(item, dict):
+                            model.update_job_state(item.get("id", item.get("job_id", "")), item.get("state", ""), item.get("name", ""))
 
         Thread(target=fetch, daemon=True).start()
 

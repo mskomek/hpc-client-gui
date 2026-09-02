@@ -27,6 +27,15 @@ def test_failure_backoff_and_provenance_hook():
     assert explanation.category == "oom"
 
 
+def test_job_completion_notifies_once_per_terminal_state():
+    events = []
+    model = WxJobsModel(completion_notify=lambda job_id, message: events.append((job_id, message)))
+    assert not model.update_job_state("42", "RUNNING")
+    assert model.update_job_state("42", "COMPLETED", "done")
+    assert not model.update_job_state("42", "COMPLETED", "again")
+    assert events == [("42", "done")]
+
+
 def test_jobs_model_has_no_qt_import():
     source = open("src/hpc_gui/wx_jobs.py", encoding="utf-8").read()
     assert "PySide6" not in source and "def show_job_output" in source
