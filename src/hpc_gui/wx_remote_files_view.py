@@ -220,8 +220,27 @@ def show_remote_files(parent=None, model: WxRemoteDirectoryModel | None = None, 
         state["closed"] = True
         frame.Destroy()
 
+    def key_down(event):
+        if event.ControlDown() and event.GetKeyCode() == ord("A"):
+            for index in range(listing.GetItemCount()):
+                listing.Select(index)
+            return
+        if event.GetKeyCode() == wx.WXK_BACK:
+            model.navigate(str(PurePosixPath(model.current_path).parent))
+            path.SetValue(model.current_path)
+            load()
+            return
+        actions = {wx.WXK_F2: "rename", wx.WXK_DELETE: "delete", wx.WXK_F5: "refresh"}
+        action = actions.get(event.GetKeyCode())
+        if action:
+            selected = tuple(entry.path for index, entry in enumerate(state["entries"]) if listing.IsSelected(index))
+            run_action(action, selected)
+            return
+        event.Skip()
+
     listing.Bind(wx.EVT_LIST_ITEM_ACTIVATED, activate)
     listing.Bind(wx.EVT_CONTEXT_MENU, context)
+    listing.Bind(wx.EVT_KEY_DOWN, key_down)
     refresh.Bind(wx.EVT_BUTTON, load)
     path.Bind(wx.EVT_TEXT_ENTER, load)
     subscribe_language_change(refresh_labels)
