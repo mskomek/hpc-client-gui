@@ -513,7 +513,19 @@
     "library_label": "Kütüphane",
     "library_core": "Temel Yardım",
     "library_truba": "Küme Rehberi",
-    "library_generic": "Genel Slurm/HPC"
+    "library_generic": "Genel Slurm/HPC",
+    "section_getting_started": "Başlangıç",
+    "section_connections": "Bağlantılar",
+    "section_terminal": "Terminal",
+    "section_files_transfers": "Dosyalar ve Aktarımlar",
+    "section_jobs": "İşler",
+    "section_editor": "Düzenleyici",
+    "section_plugins": "Eklentiler",
+    "section_ansys": "ANSYS",
+    "section_troubleshooting": "Sorun Giderme",
+    "section_keyboard_shortcuts": "Klavye Kısayolları",
+    "section_mouse_gestures": "Fare ve Hareketler",
+    "unbound_command": "Atanmamış"
   },
   "settings": {
     "action": "Ayarlar",

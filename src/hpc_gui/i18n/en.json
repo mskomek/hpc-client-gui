@@ -513,7 +513,19 @@
     "library_label": "Library",
     "library_core": "Core Help",
     "library_truba": "Cluster Playbook",
-    "library_generic": "Generic Slurm/HPC"
+    "library_generic": "Generic Slurm/HPC",
+    "section_getting_started": "Getting Started",
+    "section_connections": "Connections",
+    "section_terminal": "Terminal",
+    "section_files_transfers": "Files & Transfers",
+    "section_jobs": "Jobs",
+    "section_editor": "Editor",
+    "section_plugins": "Plugins",
+    "section_ansys": "ANSYS",
+    "section_troubleshooting": "Troubleshooting",
+    "section_keyboard_shortcuts": "Keyboard Shortcuts",
+    "section_mouse_gestures": "Mouse & Gestures",
+    "unbound_command": "Unbound"
   },
   "settings": {
     "action": "Settings",
