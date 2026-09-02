@@ -1,4 +1,4 @@
-from hpc_gui.wx_connection import WxConnectionModel
+from hpc_gui.wx_connection import HostKeyRequest, KeyboardInteractiveRequest, WxConnectionModel
 
 
 def test_profile_management_and_mock_connect():
@@ -24,3 +24,12 @@ def test_wx_connection_view_has_async_selection_and_double_click_connect():
     assert "EVT_LISTBOX_DCLICK" in source
     assert "Thread(target=worker" in source and "wx.CallAfter(done" in source
     assert "subscribe_language_change(refresh_labels)" in source
+
+
+def test_connection_security_callbacks_fail_closed_and_do_not_store_mfa():
+    request = HostKeyRequest("hpc.example", "aa:bb")
+    mfa = KeyboardInteractiveRequest("MFA", "code", ("Response:",))
+    model = WxConnectionModel([], keyboard_interactive=lambda _request: ["one-time"])
+    assert model.decide_host_key(request) == "reject"
+    assert model.answer_keyboard_interactive(mfa) == ["one-time"]
+    assert not hasattr(model, "one-time")
