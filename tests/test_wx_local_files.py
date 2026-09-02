@@ -16,7 +16,8 @@ def test_local_browser_paths_sort_tabs_and_context(tmp_path: Path):
     assert model.activate(tmp_path / "á file.txt", open_editor=opened.append) == "edit"
     assert opened == [str((tmp_path / "á file.txt").resolve())]
     assert model.file_action("rename", tmp_path / "x")[:2] == ("rename", str(tmp_path / "x"))
-    renamed = model.rename(tmp_path / "á file.txt", "renamed.txt")
+    (tmp_path / "folder" / "child.txt").write_text("x", encoding="utf-8")
+    renamed = model.rename(tmp_path / "folder" / "child.txt", "renamed.txt")
     assert renamed.name == "renamed.txt"
     assert model.delete([renamed]) == (renamed,)
     model.close_tab()
