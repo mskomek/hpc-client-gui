@@ -279,6 +279,7 @@
     "rename": "Rename",
     "rename_invalid": "Enter a valid file name without path separators.",
     "destination": "Destination directory",
+    "local_destination": "Choose local download folder",
     "undo": "Undo",
     "paste_from_local": "Paste from local",
     "paste_from_local_into": "Paste from local into folder",

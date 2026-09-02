@@ -152,6 +152,11 @@ def _dispatch(command_id: str, parent=None, lifecycle=None, session_state=None) 
                     target = str(PurePosixPath(destination) / PurePosixPath(remote_path).name)
                     (files.copy if action == "copy" else files.move)(remote_path, target)
                 return
+            if action == "download" and files and destination:
+                for remote_path in paths:
+                    target = str(Path(destination) / PurePosixPath(remote_path).name)
+                    files.download(remote_path, target)
+                return
             raise RuntimeError(f"Remote action is not available from this view: {action}")
         def editor(path, content=""):
             show_editor(
