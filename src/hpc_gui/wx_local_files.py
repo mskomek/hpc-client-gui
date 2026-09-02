@@ -30,6 +30,8 @@ class LocalBrowserModel:
         self.active_tab = 0
         self.sort_key = "name"
         self.reverse = False
+        self.clipboard: tuple[Path, ...] = ()
+        self.clipboard_move = False
 
     def list_entries(self) -> tuple[LocalEntry, ...]:
         entries = [LocalEntry(item, item.is_dir(), item.stat().st_size if item.is_file() else 0) for item in self.current_path.iterdir()]
@@ -102,6 +104,29 @@ class LocalBrowserModel:
         target.mkdir()
         return target
 
+    def copy(self, paths: list[str | Path], *, move: bool = False) -> None:
+        self.clipboard = tuple(Path(path).expanduser().resolve() for path in paths)
+        self.clipboard_move = bool(move)
+
+    def paste(self) -> tuple[Path, ...]:
+        pasted = []
+        for source in self.clipboard:
+            if not source.exists():
+                raise FileNotFoundError(str(source))
+            target = self.current_path / source.name
+            if target.exists() or target == source:
+                raise FileExistsError(str(target))
+            if self.clipboard_move:
+                shutil.move(str(source), str(target))
+            elif source.is_dir():
+                shutil.copytree(source, target)
+            else:
+                shutil.copy2(source, target)
+            pasted.append(target)
+        if self.clipboard_move:
+            self.clipboard = ()
+        return tuple(pasted)
+
     def delete(self, paths: list[str | Path]) -> tuple[Path, ...]:
         removed = []
         for value in paths:
@@ -125,7 +150,7 @@ class LocalBrowserModel:
 
     @staticmethod
     def context_actions(is_dir: bool) -> tuple[str, ...]:
-        actions = ("open", "open_with", "edit", "edit_new_window", "rename", "delete", "copy_path", "refresh")
+        actions = ("open", "open_with", "edit", "edit_new_window", "rename", "delete", "copy", "cut", "paste", "copy_path", "refresh")
         return actions + (("new_tab",) if is_dir else ())
 
 
@@ -165,7 +190,7 @@ def show_local_files(parent=None, path: str | Path | None = None, *, open_editor
             listing.Select(index)
         entry = entries[index] if index >= 0 else None
         menu = wx.Menu()
-        actions = (model.context_actions(entry.is_dir) + (("upload",) if upload else ())) if entry else ("new_folder", "refresh")
+        actions = (model.context_actions(entry.is_dir) + (("upload",) if upload else ())) if entry else ("new_folder", "paste", "refresh")
         for action in actions:
             labels = {"open": "editor.open", "open_with": "common.open_with", "edit": "dirs.edit", "edit_new_window": "dirs.edit_new_window", "rename": "dirs.rename", "delete": "dirs.delete", "copy_path": "dirs.copy_path", "refresh": "dirs.refresh", "new_tab": "dirs.new_folder", "upload": "ftp.upload_selected"}
             item = menu.Append(wx.ID_ANY, t(labels.get(action, "help.help_title")))
@@ -189,9 +214,23 @@ def show_local_files(parent=None, path: str | Path | None = None, *, open_editor
             finally:
                 dialog.Destroy()
             return
+        if action == "paste":
+            listing.Enable(False)
+            def paste_worker():
+                try:
+                    model.paste()
+                    wx.CallAfter(lambda: (listing.Enable(True), refresh()))
+                except Exception as error:
+                    message = str(error)
+                    wx.CallAfter(lambda: (listing.Enable(True), wx.MessageBox(message, t("login.err_title"), wx.OK | wx.ICON_ERROR)))
+            Thread(target=paste_worker, daemon=True).start()
+            return
         if not selected:
             return
         entry = selected[0]
+        if action in {"copy", "cut"}:
+            model.copy([item.path for item in selected], move=action == "cut")
+            return
         if action in {"open", "edit", "edit_new_window", "new_tab"}:
             if action == "new_tab":
                 model.new_tab(entry.path)
@@ -239,6 +278,9 @@ def show_local_files(parent=None, path: str | Path | None = None, *, open_editor
             Thread(target=remove, daemon=True).start()
 
     def key_down(event) -> None:
+        if event.ControlDown() and event.GetKeyCode() in (ord("C"), ord("X"), ord("V")):
+            run_action({ord("C"): "copy", ord("X"): "cut", ord("V"): "paste"}[event.GetKeyCode()])
+            return
         actions = {wx.WXK_F2: "rename", wx.WXK_DELETE: "delete", wx.WXK_F5: "refresh"}
         action = actions.get(event.GetKeyCode())
         if action:
