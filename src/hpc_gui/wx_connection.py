@@ -95,6 +95,9 @@ class WxConnectionModel:
             return False
         self.controller.begin_connect()
         session = self._connect(dict(profile))
+        if session is False:
+            self.controller.fail()
+            return False
         if isinstance(session, dict):
             self.controller.finish(session)
         return True
@@ -172,7 +175,8 @@ def show_connection(parent=None, profiles=None, *, connect=None, lifecycle=None,
 
         def worker():
             try:
-                model.connect_selected()
+                if not model.connect_selected():
+                    raise RuntimeError(t("login.error"))
                 wx.CallAfter(done, None)
             except Exception as error:
                 wx.CallAfter(done, error)
