@@ -80,7 +80,10 @@ class _EditorTextEdit(QTextEdit):
             return
         if (
             event.key() == Qt.Key.Key_End
-            and event.modifiers() == Qt.KeyboardModifier.NoModifier
+            and event.modifiers() in (
+                Qt.KeyboardModifier.NoModifier,
+                Qt.KeyboardModifier.ControlModifier,
+            )
         ):
             cursor = self.textCursor()
             cursor.movePosition(QTextCursor.MoveOperation.End)
@@ -221,6 +224,8 @@ class EditorWidget(QWidget):
         self._add_shortcut("Ctrl+F", self.find_text)
         self._add_shortcut("Ctrl+H", self.find_text)
         self._add_shortcut("F3", self.find_next)
+        self._add_shortcut("F8", self.run_lint)
+        self._add_shortcut("Shift+F8", self.run_lint)
         self._add_shortcut("Ctrl+O", self.focus_open_path)
         self._add_shortcut("Ctrl+W", self.close_active_tab)
         self._add_shortcut("Ctrl+Tab", lambda: self.switch_document(1))
