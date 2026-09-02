@@ -55,16 +55,37 @@ class TerminalModel:
         return self.font_size
 
 
-def show_terminal(parent=None, send_input=None, resize_pty=None) -> int:
+def show_terminal(parent=None, send_input=None, resize_pty=None, *, ssh=None) -> int:
     try:
         import wx
     except ImportError as exc:
         raise RuntimeError("wxPython is not installed") from exc
+    if ssh is not None:
+        send_input = ssh.send_shell_input
+        resize_pty = ssh.resize_shell_pty
     model = TerminalModel(send_input, resize_pty)
     frame = wx.Frame(parent, title="Terminal", size=(900, 600))
     frame._terminal_model = model
     text = wx.TextCtrl(frame, style=wx.TE_MULTILINE | wx.TE_READONLY | wx.TE_RICH2)
     text.SetFocus()
+    subscriber = None
+    if ssh is not None:
+        subscribers = getattr(ssh, "_wx_output_subscribers", None)
+        if subscribers is not None:
+            def subscriber(data):
+                wx.CallAfter(model.receive, data)
+
+            subscribers.append(subscriber)
+
+    def close(_event):
+        if subscriber is not None and subscribers is not None:
+            try:
+                subscribers.remove(subscriber)
+            except ValueError:
+                pass
+        frame.Destroy()
+
+    frame.Bind(wx.EVT_CLOSE, close)
     frame.Show()
     return wx.ID_OK
 

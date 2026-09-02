@@ -48,7 +48,9 @@ def ssh_info_from_profile(profile: dict[str, Any], model: "WxConnectionModel") -
 
 def connect_profile(profile: dict[str, Any], model: "WxConnectionModel") -> dict[str, Any]:
     """Open the shared SSH/files/Slurm session for one selected profile."""
-    ssh = SSHClientWrapper(ssh_info_from_profile(profile, model))
+    output_subscribers = []
+    ssh = SSHClientWrapper(ssh_info_from_profile(profile, model), shell_output_cb=lambda text: [callback(text) for callback in tuple(output_subscribers)])
+    ssh._wx_output_subscribers = output_subscribers
     try:
         ssh.connect()
         return {
@@ -57,6 +59,7 @@ def connect_profile(profile: dict[str, Any], model: "WxConnectionModel") -> dict
             "files": SSHFilesBackend(ssh),
             "slurm": SSHSlurmBackend(ssh, profile.get("system") or {}),
             "profile_name": str(profile.get("name", "")),
+            "output_subscribers": output_subscribers,
         }
     except Exception:
         ssh.close()
