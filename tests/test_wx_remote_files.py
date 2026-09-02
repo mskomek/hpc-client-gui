@@ -35,3 +35,10 @@ def test_remote_clipboard_undo_permissions_and_middle_click():
 def test_remote_model_has_no_toolkit_import():
     source = open("src/hpc_gui/wx_remote_files.py", encoding="utf-8").read()
     assert "PySide6" not in source and "import wx" not in source
+
+
+def test_remote_view_runs_operations_off_the_wx_thread():
+    source = open("src/hpc_gui/wx_remote_files_view.py", encoding="utf-8").read()
+    assert "Thread(target=worker" in source
+    assert 't("dirs.delete_confirm")' in source
+    assert "wx.CallAfter(operation_done" in source

@@ -81,9 +81,41 @@ def show_remote_files(parent=None, model: WxRemoteDirectoryModel | None = None, 
         menu = wx.Menu()
         for action in ("copy", "move", "rename", "delete"):
             item = menu.Append(wx.ID_ANY, t(f"dirs.{action}"))
-            listing.Bind(wx.EVT_MENU, lambda _event, action=action: operation(action, selected) if operation else None, item)
+            listing.Bind(wx.EVT_MENU, lambda _event, action=action: run_operation(action, selected), item)
         listing.PopupMenu(menu)
         menu.Destroy()
+
+    def run_operation(action, selected):
+        if not operation or not selected:
+            return
+        if action == "delete" and wx.MessageBox(t("dirs.delete_confirm"), t("dirs.delete"), wx.YES_NO | wx.ICON_WARNING) != wx.YES:
+            return
+        with lock:
+            if state["closed"] or state["busy"]:
+                return
+            state["busy"] = True
+        listing.Enable(False)
+
+        def worker():
+            try:
+                operation(action, selected)
+                wx.CallAfter(operation_done, None)
+            except Exception as error:
+                wx.CallAfter(operation_done, error)
+
+        def operation_done(error):
+            with lock:
+                state["busy"] = False
+            if state["closed"]:
+                return
+            listing.Enable(True)
+            if error:
+                wx.MessageBox(str(error), t("login.err_title"), wx.OK | wx.ICON_ERROR)
+            else:
+                model.invalidate()
+                load()
+
+        Thread(target=worker, daemon=True).start()
 
     def close(_event):
         state["closed"] = True
