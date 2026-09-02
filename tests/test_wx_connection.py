@@ -1,0 +1,19 @@
+from hpc_gui.wx_connection import WxConnectionModel
+
+
+def test_profile_management_and_mock_connect():
+    profiles = [{"name": "cluster", "host": "hpc.example", "username": "user", "password": "secret", "system": {"provider": "generic"}}]
+    connected = []
+    model = WxConnectionModel(profiles, connect=connected.append)
+    assert model.summaries()[0].host == "hpc.example"
+    assert "password" not in model.summaries()[0].__dict__
+    assert model.select("cluster") and model.connect_selected()
+    assert connected[0]["host"] == "hpc.example"
+    assert model.controller.state.value == "connecting"
+
+
+def test_unknown_profile_and_optional_wx_import():
+    model = WxConnectionModel([])
+    assert not model.select("missing") and not model.connect_selected()
+    source = open("src/hpc_gui/wx_connection.py", encoding="utf-8").read()
+    assert "from PySide6" not in source and "import wx" in source
