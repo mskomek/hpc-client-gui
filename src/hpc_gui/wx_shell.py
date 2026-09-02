@@ -144,6 +144,11 @@ def _dispatch(command_id: str, parent=None, lifecycle=None, session_state=None) 
             on_submit=(lambda document: slurm.sbatch(document.path)) if slurm else None,
             on_run=(lambda document: ssh.send_shell_text(f"bash -- {shlex.quote(document.path)}\n")) if ssh else None,
         )
+    elif command_id == "NAV-TERMINAL":
+        from hpc_gui.wx_terminal import show_terminal
+
+        session = (session_state or {}).get("session") or {}
+        show_terminal(parent, ssh=session.get("ssh"))
     elif command_id == "NAV-JOBS":
         from hpc_gui.wx_jobs import show_jobs
 
