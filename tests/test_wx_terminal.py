@@ -22,3 +22,6 @@ def test_wx_terminal_keeps_ssh_renderer_optional():
     assert "from PySide6" not in source and "import wx" in source
     assert "ssh.send_shell_input" in source and "ssh.resize_shell_pty" in source
     assert "wx.ID_CANCEL" in source and "status_disconnected" in source
+    assert "EVT_CHAR" in source and "render_output" in source
+    assert "event.ControlDown()" in source and "text.Copy()" in source
+    assert "text.Paste()" in source and "len(lines) > 5000" in source
