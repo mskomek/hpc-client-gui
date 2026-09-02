@@ -25,7 +25,7 @@ class TransferSessionController:
         return TransferStatus(len(self.engine.pending), len(self.engine.failed), len(self.engine.completed))
 
     def set_conflict_policy(self, policy: str) -> None:
-        if policy not in {"ask", "overwrite", "skip", "rename"}:
+        if policy not in {"ask", "overwrite", "skip", "rename", "resume"}:
             raise ValueError(f"unsupported conflict policy: {policy}")
         self.conflict_policy = policy
 
