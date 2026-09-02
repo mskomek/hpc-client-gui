@@ -1,4 +1,5 @@
-from hpc_gui.wx_connection import HostKeyRequest, KeyboardInteractiveRequest, WxConnectionModel
+from hpc_gui.ssh.client import HostKeyInfo
+from hpc_gui.wx_connection import HostKeyRequest, KeyboardInteractiveRequest, WxConnectionModel, ssh_info_from_profile
 
 
 def test_profile_management_and_mock_connect():
@@ -40,3 +41,11 @@ def test_connection_model_enters_connected_state_for_returned_session():
     model = WxConnectionModel([{"name": "cluster"}], connect=lambda _profile: {"connected": True})
     assert model.select("cluster") and model.connect_selected()
     assert model.controller.state.value == "connected"
+
+
+def test_profile_builds_shared_ssh_info_with_security_callbacks():
+    model = WxConnectionModel([], host_key_decision=lambda _request: "once", keyboard_interactive=lambda _request: ["code"])
+    info = ssh_info_from_profile({"host": "hpc.example", "port": 2222, "username": "user", "host_key_policy": "accept-new"}, model)
+    assert info.host == "hpc.example" and info.port == 2222
+    assert info.host_key_decision(HostKeyInfo("hpc.example", "ssh-ed25519", "aa:bb")) == "once"
+    assert info.keyboard_interactive_handler("MFA", "", [("Code", False)]) == ["code"]
