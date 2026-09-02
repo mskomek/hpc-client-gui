@@ -172,6 +172,7 @@
   },
   "jobs": {
     "title": "Jobs",
+    "state": "State",
     "refresh": "Refresh",
     "cancel": "Cancel Job",
     "job_id": "Job ID"

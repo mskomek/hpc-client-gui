@@ -172,6 +172,7 @@
   },
   "jobs": {
     "title": "İşler",
+    "state": "Durum",
     "refresh": "Yenile",
     "cancel": "İşi İptal Et",
     "job_id": "İş Kimliği"

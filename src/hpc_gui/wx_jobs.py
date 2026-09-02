@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from threading import Lock, Thread
 from typing import Any, Callable
 
+from hpc_gui.core.i18n import t
 from hpc_gui.services.job_failure_classifier import explain_job_failure
 from hpc_gui.services.job_provenance import JobProvenanceCapture
 from hpc_gui.services.job_tracking_controller import JobTrackingController
@@ -145,4 +146,100 @@ def show_job_output(parent, model: WxJobsModel, view_id: str, *, read_output=Non
     return wx.ID_OK
 
 
-__all__ = ["DetachedOutput", "WxJobsModel", "clean_output", "show_job_output"]
+def show_jobs(parent=None, model: WxJobsModel | None = None, *, list_jobs=None, read_output=None, cancel=None) -> int:
+    """Create the wx Jobs workspace; callbacks are service adapters, never UI IO."""
+    try:
+        import wx
+    except ImportError as exc:
+        raise RuntimeError("wxPython is not installed") from exc
+    model = model or WxJobsModel()
+    frame = wx.Frame(parent, title=t("jobs.title"), size=(1000, 700))
+    panel = wx.Panel(frame)
+    root = wx.BoxSizer(wx.VERTICAL)
+    splitter = wx.SplitterWindow(panel)
+    jobs = wx.ListCtrl(splitter, style=wx.LC_REPORT | wx.LC_SINGLE_SEL)
+    jobs.InsertColumn(0, t("jobs.job_id"))
+    jobs.InsertColumn(1, t("jobs.state"))
+    right = wx.Panel(splitter)
+    right_sizer = wx.BoxSizer(wx.VERTICAL)
+    details = wx.TextCtrl(right, style=wx.TE_MULTILINE | wx.TE_READONLY)
+    output_split = wx.SplitterWindow(right)
+    stdout = wx.TextCtrl(output_split, style=wx.TE_MULTILINE | wx.TE_READONLY | wx.HSCROLL)
+    stderr = wx.TextCtrl(output_split, style=wx.TE_MULTILINE | wx.TE_READONLY | wx.HSCROLL)
+    output_split.SplitHorizontally(stdout, stderr)
+    cancel_button = wx.Button(right, label=t("jobs.cancel"))
+    right_sizer.Add(details, 0, wx.EXPAND | wx.ALL, 6)
+    right_sizer.Add(output_split, 1, wx.EXPAND | wx.LEFT | wx.RIGHT, 6)
+    right_sizer.Add(cancel_button, 0, wx.ALIGN_RIGHT | wx.ALL, 6)
+    right.SetSizer(right_sizer)
+    splitter.SplitVertically(jobs, right, 300)
+    splitter.SetMinimumPaneSize(220)
+    root.Add(splitter, 1, wx.EXPAND | wx.ALL, 8)
+    panel.SetSizer(root)
+    state = {"items": [], "closed": False, "in_flight": False}
+    state_lock = Lock()
+    timer = wx.Timer(frame)
+
+    def render_items(items):
+        state["items"] = list(items or [])
+        jobs.DeleteAllItems()
+        for item in state["items"]:
+            job_id = str(item.get("id", item.get("job_id", ""))) if isinstance(item, dict) else str(item)
+            job_state = str(item.get("state", "")) if isinstance(item, dict) else ""
+            index = jobs.InsertItem(jobs.GetItemCount(), job_id)
+            jobs.SetItem(index, 1, job_state)
+
+    def refresh_jobs(_event=None):
+        if not list_jobs:
+            return
+        with state_lock:
+            if state["closed"] or state["in_flight"]:
+                return
+            state["in_flight"] = True
+
+        def fetch():
+            try:
+                result = list_jobs()
+                wx.CallAfter(done, result, None)
+            except Exception as error:
+                wx.CallAfter(done, (), error)
+
+        def done(result, error):
+            with state_lock:
+                state["in_flight"] = False
+            if not state["closed"]:
+                if error:
+                    details.SetValue(str(error))
+                else:
+                    render_items(result)
+
+        Thread(target=fetch, daemon=True).start()
+
+    def select_job(event):
+        item = state["items"][event.GetIndex()]
+        job_id = str(item.get("id", item.get("job_id", ""))) if isinstance(item, dict) else str(item)
+        model.tracking.select_job(job_id)
+        if isinstance(item, dict):
+            model.set_output(item.get("stdout_path", ""), item.get("stderr_path", ""))
+            details.SetValue("\n".join(f"{key}: {value}" for key, value in item.items()))
+
+    def cancel_job(_event):
+        if cancel and model.tracking.selected_job_id:
+            cancel(model.tracking.selected_job_id)
+
+    def close(_event):
+        state["closed"] = True
+        timer.Stop()
+        frame.Destroy()
+
+    jobs.Bind(wx.EVT_LIST_ITEM_SELECTED, select_job)
+    cancel_button.Bind(wx.EVT_BUTTON, cancel_job)
+    timer.Start(1000)
+    frame.Bind(wx.EVT_TIMER, refresh_jobs, timer)
+    frame.Bind(wx.EVT_CLOSE, close)
+    refresh_jobs()
+    frame.Show()
+    return wx.ID_OK
+
+
+__all__ = ["DetachedOutput", "WxJobsModel", "clean_output", "show_job_output", "show_jobs"]
