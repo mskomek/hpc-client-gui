@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Callable
 
+from hpc_gui.core.platform import current_os
 from hpc_gui.services.shortcut_preferences import ShortcutPreferences
 
 
@@ -20,12 +21,12 @@ class SettingsSnapshot:
 
 
 class WxSettingsModel:
-    def __init__(self, settings: dict[str, Any] | None = None, *, apply: Callable[[SettingsSnapshot], None] | None = None) -> None:
+    def __init__(self, settings: dict[str, Any] | None = None, *, apply: Callable[[SettingsSnapshot], None] | None = None, platform: str | None = None) -> None:
         raw = dict(settings or {})
         self.global_settings = {key: raw[key] for key in GLOBAL_KEYS if key in raw}
         self.profile_settings = {key: raw[key] for key in PROFILE_KEYS if key in raw}
         self.apply_callback = apply
-        self.shortcuts = ShortcutPreferences("windows", {"shortcut_preferences": self.global_settings.get("shortcut_preferences", {})})
+        self.shortcuts = ShortcutPreferences(platform or current_os(), {"shortcut_preferences": self.global_settings.get("shortcut_preferences", {})})
 
     def set_global(self, key: str, value: Any) -> None:
         if key not in GLOBAL_KEYS:

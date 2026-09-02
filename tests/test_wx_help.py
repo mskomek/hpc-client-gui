@@ -14,3 +14,8 @@ def test_wx_help_uses_shared_search_palette_and_platform_display():
 def test_wx_help_model_is_toolkit_free():
     source = open("src/hpc_gui/wx_help.py", encoding="utf-8").read()
     assert "from PySide6" not in source
+
+
+def test_wx_help_model_uses_native_platform_shortcuts():
+    model = WxHelpModel("macos")
+    assert any(item.binding == "Cmd+," for item in model.shortcuts.bindings())
