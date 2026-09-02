@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import shlex
 from pathlib import Path
+from pathlib import PurePosixPath
 from threading import Thread
 
 from hpc_gui import __version__
@@ -145,6 +146,11 @@ def _dispatch(command_id: str, parent=None, lifecycle=None, session_state=None) 
                 return
             if action == "rename" and files and len(paths) == 1 and destination:
                 files.rename(paths[0], destination)
+                return
+            if action in {"copy", "move"} and files and destination:
+                for remote_path in paths:
+                    target = str(PurePosixPath(destination) / PurePosixPath(remote_path).name)
+                    (files.copy if action == "copy" else files.move)(remote_path, target)
                 return
             raise RuntimeError(f"Remote action is not available from this view: {action}")
         def editor(path, content=""):

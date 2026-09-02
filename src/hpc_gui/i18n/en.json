@@ -278,6 +278,7 @@
     "paste_into": "Paste into folder",
     "rename": "Rename",
     "rename_invalid": "Enter a valid file name without path separators.",
+    "destination": "Destination directory",
     "undo": "Undo",
     "paste_from_local": "Paste from local",
     "paste_from_local_into": "Paste from local into folder",

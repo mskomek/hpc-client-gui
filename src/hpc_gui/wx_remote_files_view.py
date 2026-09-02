@@ -144,16 +144,18 @@ def show_remote_files(parent=None, model: WxRemoteDirectoryModel | None = None, 
         if action == "delete" and wx.MessageBox(t("dirs.delete_confirm"), t("dirs.delete"), wx.YES_NO | wx.ICON_WARNING) != wx.YES:
             return
         destination = ""
-        if action == "rename":
-            dialog = wx.TextEntryDialog(frame, t("dirs.rename"), t("dirs.rename"), PurePosixPath(selected[0]).name)
+        if action in {"rename", "copy", "move"}:
+            title_key = "dirs.rename" if action == "rename" else "dirs.destination"
+            default = PurePosixPath(selected[0]).name if action == "rename" else str(PurePosixPath(selected[0]).parent)
+            dialog = wx.TextEntryDialog(frame, t(title_key), t(title_key), default)
             try:
                 if dialog.ShowModal() != wx.ID_OK:
                     return
                 new_name = dialog.GetValue().strip()
-                if not new_name or PurePosixPath(new_name).name != new_name or new_name in {".", ".."}:
+                if not new_name or (action == "rename" and (PurePosixPath(new_name).name != new_name or new_name in {".", ".."})):
                     wx.MessageBox(t("dirs.rename_invalid"), t("dirs.rename"), wx.OK | wx.ICON_ERROR)
                     return
-                destination = str(PurePosixPath(selected[0]).parent / new_name)
+                destination = str(PurePosixPath(selected[0]).parent / new_name) if action == "rename" else str(PurePosixPath(new_name))
             finally:
                 dialog.Destroy()
         with lock:
