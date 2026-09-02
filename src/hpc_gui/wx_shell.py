@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import shlex
 
 from hpc_gui import __version__
 from hpc_gui.core.i18n import load_saved_language, set_language, subscribe_language_change, system_default_language, t, unsubscribe_language_change
@@ -22,13 +23,14 @@ def main() -> int:
     load_saved_language(system_default_language())
     app = wx.App(False)
     lifecycle = WxLifecycleController()
+    session_state = {"session": None}
     frame = wx.Frame(None, title=f"HPC Client GUI {__version__}", size=(960, 640))
     panel = wx.Panel(frame)
     root = wx.BoxSizer(wx.VERTICAL)
     menu = wx.Menu()
     for command in COMMAND_REGISTRY.by_context("shell"):
         item = menu.Append(wx.ID_ANY, command.label())
-        frame.Bind(wx.EVT_MENU, lambda _event, command_id=command.id: _dispatch(command_id, frame, lifecycle), item)
+        frame.Bind(wx.EVT_MENU, lambda _event, command_id=command.id: _dispatch(command_id, frame, lifecycle, session_state), item)
     frame.SetMenuBar(wx.MenuBar())
     frame.GetMenuBar().Append(menu, t("help.help_title"))
     language_menu = wx.Menu()
@@ -85,7 +87,7 @@ def main() -> int:
     return 0
 
 
-def _dispatch(command_id: str, parent=None, lifecycle=None) -> None:
+def _dispatch(command_id: str, parent=None, lifecycle=None, session_state=None) -> None:
     if command_id in {"APP-HELP", "APP-COMMAND-PALETTE"}:
         from hpc_gui.wx_help import show_help
 
@@ -95,6 +97,7 @@ def _dispatch(command_id: str, parent=None, lifecycle=None) -> None:
         from hpc_gui.wx_connection import show_connection
 
         def connected(session):
+            session_state["session"] = session
             ssh = session.get("ssh") if isinstance(session, dict) else None
             if ssh is not None and callable(getattr(ssh, "close", None)):
                 lifecycle.register_cleanup(ssh.close)
@@ -107,7 +110,16 @@ def _dispatch(command_id: str, parent=None, lifecycle=None) -> None:
     elif command_id == "NAV-EDITOR":
         from hpc_gui.wx_editor_view import show_editor
 
-        show_editor(parent)
+        session = (session_state or {}).get("session") or {}
+        files = session.get("files")
+        slurm = session.get("slurm")
+        ssh = session.get("ssh")
+        show_editor(
+            parent,
+            save_remote=files.write_text if files else None,
+            on_submit=(lambda document: slurm.sbatch(document.path)) if slurm else None,
+            on_run=(lambda document: ssh.send_shell_text(f"bash -- {shlex.quote(document.path)}\n")) if ssh else None,
+        )
     elif command_id == "NAV-JOBS":
         from hpc_gui.wx_jobs import show_jobs
 
