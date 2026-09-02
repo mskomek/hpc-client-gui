@@ -158,6 +158,14 @@ def show_remote_files(parent=None, model: WxRemoteDirectoryModel | None = None, 
                 destination = str(PurePosixPath(selected[0]).parent / new_name) if action == "rename" else str(PurePosixPath(new_name))
             finally:
                 dialog.Destroy()
+        elif action == "download":
+            dialog = wx.DirDialog(frame, t("dirs.local_destination"))
+            try:
+                if dialog.ShowModal() != wx.ID_OK:
+                    return
+                destination = dialog.GetPath()
+            finally:
+                dialog.Destroy()
         with lock:
             if state["closed"] or state["busy"]:
                 return
