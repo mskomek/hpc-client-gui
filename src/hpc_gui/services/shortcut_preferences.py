@@ -10,6 +10,20 @@ from hpc_gui.services.platform_keymap import KeyBinding, bindings_for, display_b
 
 SCHEMA_VERSION = 1
 SETTINGS_KEY = "shortcut_preferences"
+KEYMAP_MODES = {"standard", "legacy"}
+
+
+def migrate_keymap_settings(settings: dict[str, Any] | None, mode: str | None = None) -> dict[str, Any]:
+    """Add the one-time keymap choice without changing existing bindings."""
+    result = dict(settings or {})
+    stored = result.get(SETTINGS_KEY)
+    stored = stored if isinstance(stored, dict) else {}
+    if "keymap_mode" not in stored:
+        chosen = mode or "standard"
+        if chosen not in KEYMAP_MODES:
+            raise ValueError(f"unsupported keymap mode: {chosen}")
+        result[SETTINGS_KEY] = {**stored, "keymap_mode": chosen}
+    return result
 
 
 def active_binding(command_id: str, platform: str, settings: dict[str, Any] | None = None) -> str | None:
@@ -23,12 +37,13 @@ def active_binding(command_id: str, platform: str, settings: dict[str, Any] | No
 class ShortcutPreferences:
     def __init__(self, platform: str, settings: dict[str, Any] | None = None) -> None:
         self.platform = platform
-        defaults = bindings_for(platform)
+        stored = (settings if settings is not None else load_settings()).get(SETTINGS_KEY, {})
+        stored = stored if isinstance(stored, dict) else {}
+        mode = stored.get("keymap_mode", "standard")
+        self._keymap_mode = mode if mode in KEYMAP_MODES else "standard"
+        defaults = bindings_for("windows" if self._keymap_mode == "legacy" else platform)
         self._defaults = tuple(defaults)
         self._bindings = list(defaults)
-        stored = (settings if settings is not None else load_settings()).get(SETTINGS_KEY, {})
-        if not isinstance(stored, dict):
-            stored = {}
         custom = stored.get("bindings", stored if "version" not in stored else {})
         if isinstance(custom, dict):
             self._bindings = [item for item in defaults if item.command_id not in custom]
@@ -82,7 +97,7 @@ class ShortcutPreferences:
         grouped: dict[str, list[str]] = {}
         for item in self._bindings:
             grouped.setdefault(item.command_id, []).append(item.binding)
-        return {"version": SCHEMA_VERSION, "platform": self.platform, "bindings": grouped}
+        return {"version": SCHEMA_VERSION, "platform": self.platform, "keymap_mode": self._keymap_mode, "bindings": grouped}
 
     def persist(self) -> dict[str, Any]:
         value = self.serialize()
