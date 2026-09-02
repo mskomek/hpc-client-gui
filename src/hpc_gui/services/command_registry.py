@@ -31,6 +31,7 @@ _COMMANDS = (
     CommandDefinition("APP-DISCONNECT", "login.disconnect", "application", "session", "login.disconnect"),
     CommandDefinition("APP-SETTINGS", "settings.action", "application", "shell", "settings.dialog_title"),
     CommandDefinition("APP-HELP", "help.open_help", "application", "shell", "help.open_help", ("F1",)),
+    CommandDefinition("APP-COMMAND-PALETTE", "common.command_palette", "application", "shell", "common.command_palette", ("Ctrl+Shift+P",)),
     CommandDefinition("NAV-JOBS", "tabs.jobs_outputs", "navigation", "shell", "tabs.jobs_outputs"),
     CommandDefinition("NAV-DIRECTORIES", "tabs.directories", "navigation", "shell", "tabs.directories"),
     CommandDefinition("NAV-FILES", "tabs.ftp", "navigation", "shell", "tabs.ftp"),
@@ -46,6 +47,9 @@ _COMMANDS = (
     CommandDefinition("FILE-OPEN", "editor.open", "files", "directory", "editor.open"),
     CommandDefinition("FILE-UPLOAD", "ftp.upload_selected", "files", "directory", "ftp.upload_selected"),
     CommandDefinition("FILE-DOWNLOAD", "ftp.download_selected", "files", "directory", "ftp.download_selected"),
+    CommandDefinition("FILE-NEW-FOLDER", "dirs.new_folder", "files", "directory", "dirs.new_folder"),
+    CommandDefinition("JOB-TEST-CLUSTER", "common.test_cluster", "diagnostics", "shell", "common.test_cluster"),
+    CommandDefinition("EDITOR-NEW-SLURM", "common.new_slurm_script", "editor", "editor", "common.new_slurm_script"),
     CommandDefinition("EDIT-SAVE", "editor.save", "editor", "editor", "editor.save", ("Ctrl+S",)),
     CommandDefinition("EDIT-SUBMIT", "editor.submit", "editor", "editor", "editor.submit", ("Ctrl+Shift+S",)),
     CommandDefinition("EDIT-LINT", "editor.lint", "editor", "editor", "editor.lint"),
@@ -53,6 +57,7 @@ _COMMANDS = (
     CommandDefinition("JOB-REFRESH", "jobs.refresh", "jobs", "jobs", "jobs.refresh"),
     CommandDefinition("JOB-CANCEL", "jobs.cancel", "jobs", "jobs", "jobs.cancel"),
     CommandDefinition("PLUGIN-MANAGER", "files.plugins", "plugins", "shell", "files.plugins"),
+    CommandDefinition("PLUGIN-ANSYS-LINTER", "files.ansys_lint", "plugins", "editor", "files.ansys_lint"),
     CommandDefinition("DIAGNOSTICS-EXPORT", "logs.export_diagnostics", "diagnostics", "logs", "logs.export_diagnostics"),
 )
 
