@@ -20,6 +20,8 @@ class DetachedOutput:
     stdout_path: str = ""
     stderr_path: str = ""
     mode: str = "combined"
+    cols: int = 80
+    rows: int = 24
 
 
 def clean_output(text: str, max_lines: int = 5000) -> str:
@@ -46,6 +48,19 @@ class WxJobsModel:
         view = DetachedOutput(str(len(self.detached) + 1), stdout_path, stderr_path, mode)
         self.detached.append(view)
         return view
+
+    def update_detached(self, view_id: str, text: str, max_lines: int = 5000) -> str:
+        if not any(view.id == str(view_id) for view in self.detached):
+            raise KeyError(view_id)
+        return clean_output(text, max_lines)
+
+    def resize_detached(self, view_id: str, cols: int, rows: int) -> DetachedOutput:
+        for index, view in enumerate(self.detached):
+            if view.id == str(view_id):
+                resized = DetachedOutput(view.id, view.stdout_path, view.stderr_path, view.mode, max(1, int(cols)), max(1, int(rows)))
+                self.detached[index] = resized
+                return resized
+        raise KeyError(view_id)
 
     def record_tail_failure(self) -> int:
         self.tail_failures += 1

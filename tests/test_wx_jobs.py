@@ -11,6 +11,8 @@ def test_jobs_polling_ansi_detached_minimize_and_cancel():
     assert model.poll_allowed()
     assert clean_output("\x1b[31mred\nblue") == "red\nblue\n"
     assert model.open_detached("/out", "/err", "split").mode == "split"
+    assert model.update_detached("1", "one\ntwo\n", 1) == "two\n"
+    assert model.resize_detached("1", 120, 40).cols == 120
     assert model.cancel_job(lambda job_id: job_id, "42") == "42"
     model.tracking.set_minimized(True)
     assert not model.tracking.should_follow_output(True)
