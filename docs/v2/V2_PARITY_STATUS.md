@@ -6,7 +6,7 @@ Automated evidence only; manual-only behavior is never marked covered.
 |---|---|---|---|---|
 | GUI-SHELL-001 | COVERED | app.py | wx_shell.py | test_cli_entrypoint.py |
 | GUI-SHELL-002 | COVERED | main_window.py | wx_lifecycle.py | test_app_updater.py |
-| GUI-SHELL-003 | COVERED | main_window.py | wx_shell.py | test_wx_shell.py |
+| GUI-SHELL-003 | PARTIAL | main_window.py | wx_shell.py | test_wx_shell.py |
 | GUI-CONN-001 | COVERED | login_widget.py | wx_connection.py | test_wx_connection.py |
 | GUI-CONN-002 | COVERED | connection_dialog.py | wx_connection.py | test_optional_ssh_credentials.py |
 | GUI-CONN-003 | COVERED | connection_dialog.py | wx_connection.py | test_provider_capabilities.py |
@@ -15,12 +15,12 @@ Automated evidence only; manual-only behavior is never marked covered.
 | GUI-TERM-001 | COVERED | terminal_widget.py | wx_terminal.py | test_wx_terminal.py |
 | GUI-TERM-002 | PARTIAL | main_window.py | wx_terminal.py | test_editor_flow.py |
 | GUI-FILE-001 | COVERED | local_dir_panel.py | wx_local_files.py | test_wx_local_files.py |
-| GUI-FILE-002 | COVERED | main_window.py | wx_editor.py; wx_local_files.py | test_local_edit_flow.py; test_wx_local_files.py |
-| GUI-FILE-003 | COVERED | local_dir_panel.py | wx_local_files.py | test_wx_local_files.py |
+| GUI-FILE-002 | PARTIAL | main_window.py | wx_editor.py; wx_local_files.py | test_local_edit_flow.py; test_wx_local_files.py |
+| GUI-FILE-003 | PARTIAL | local_dir_panel.py | wx_local_files.py | test_wx_local_files.py |
 | GUI-XFER-001 | COVERED | transfer_dialog.py | wx_transfer_workspace.py | test_transfer_concurrency.py |
 | GUI-XFER-002 | COVERED | ftp_widget.py | wx_transfer_workspace.py | test_local_transfer_gate.py |
 | GUI-JOBS-001 | COVERED | jobs_widget.py | wx_jobs.py | test_wx_jobs.py |
-| GUI-JOBS-002 | COVERED | jobs_outputs_widget.py | wx_jobs.py | test_jobs_outputs_scroll.py; test_wx_jobs.py |
+| GUI-JOBS-002 | PARTIAL | jobs_outputs_widget.py | wx_jobs.py | test_jobs_outputs_scroll.py; test_wx_jobs.py |
 | GUI-JOBS-003 | COVERED | services/ | wx_jobs.py | test_job_history_dashboard.py |
 | GUI-JOBS-004 | COVERED | walltime_suggestions.py | wx_jobs.py | test_walltime_suggestions.py |
 | GUI-EDIT-001 | COVERED | editor_widget.py | wx_editor.py | test_wx_editor.py |
