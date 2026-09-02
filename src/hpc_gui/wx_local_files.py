@@ -92,6 +92,16 @@ class LocalBrowserModel:
         source.rename(target)
         return target
 
+    def new_folder(self, name: str) -> Path:
+        name = str(name).strip()
+        if not name or Path(name).name != name or name in {".", ".."}:
+            raise ValueError("invalid local name")
+        target = (self.current_path / name).resolve()
+        if target.parent != self.current_path or target.exists():
+            raise FileExistsError(str(target))
+        target.mkdir()
+        return target
+
     @staticmethod
     def delete(paths: list[str | Path]) -> tuple[Path, ...]:
         removed = []
@@ -114,7 +124,8 @@ class LocalBrowserModel:
 
     @staticmethod
     def context_actions(is_dir: bool) -> tuple[str, ...]:
-        return ("open", "open_with", "edit", "edit_new_window", "new_tab", "rename", "delete") if is_dir else ("open", "open_with", "edit", "edit_new_window", "rename", "delete")
+        actions = ("open", "open_with", "edit", "edit_new_window", "rename", "delete", "copy_path", "refresh")
+        return actions + (("new_tab",) if is_dir else ())
 
 
 def show_local_files(parent=None, path: str | Path | None = None, *, open_editor=None, open_editor_new_window=None, upload=None) -> int:
@@ -151,7 +162,7 @@ def show_local_files(parent=None, path: str | Path | None = None, *, open_editor
         entry = entries[index]
         menu = wx.Menu()
         for action in model.context_actions(entry.is_dir):
-            labels = {"open": "editor.open", "open_with": "common.open_with", "edit": "dirs.edit", "edit_new_window": "dirs.edit_new_window", "rename": "dirs.rename", "delete": "dirs.delete", "new_tab": "dirs.new_folder"}
+            labels = {"open": "editor.open", "open_with": "common.open_with", "edit": "dirs.edit", "edit_new_window": "dirs.edit_new_window", "rename": "dirs.rename", "delete": "dirs.delete", "copy_path": "dirs.copy_path", "refresh": "dirs.refresh", "new_tab": "dirs.new_folder"}
             item = menu.Append(wx.ID_ANY, t(labels.get(action, "help.help_title")))
             listing.Bind(wx.EVT_MENU, lambda _event, action=action: run_action(action), item)
         listing.PopupMenu(menu)
@@ -178,16 +189,25 @@ def show_local_files(parent=None, path: str | Path | None = None, *, open_editor
                         open_editor(str(item.path))
         elif action == "open_with":
             os.startfile(str(entry.path))
+        elif action == "copy_path":
+            if wx.TheClipboard.Open():
+                wx.TheClipboard.SetData(wx.TextDataObject(str(entry.path)))
+                wx.TheClipboard.Close()
+        elif action == "refresh":
+            refresh()
         elif action == "upload" and upload:
             upload(tuple(str(item.path) for item in selected))
         elif action == "rename":
-            dialog = wx.TextEntryDialog(frame, "New name", "Rename", entry.path.name)
+            dialog = wx.TextEntryDialog(frame, t("dirs.rename"), t("dirs.rename"), entry.path.name)
             try:
                 if dialog.ShowModal() == wx.ID_OK:
                     model.rename(entry.path, dialog.GetValue())
                     refresh()
             finally:
                 dialog.Destroy()
+        elif action == "new_tab":
+            model.new_tab(entry.path)
+            refresh()
         elif action == "delete" and wx.MessageBox(t("dirs.delete_confirm"), t("dirs.delete"), wx.YES_NO | wx.ICON_WARNING) == wx.YES:
             paths = tuple(item.path for item in selected)
             listing.Enable(False)

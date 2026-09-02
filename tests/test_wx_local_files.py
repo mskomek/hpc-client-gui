@@ -20,6 +20,8 @@ def test_local_browser_paths_sort_tabs_and_context(tmp_path: Path):
     renamed = model.rename(tmp_path / "folder" / "child.txt", "renamed.txt")
     assert renamed.name == "renamed.txt"
     assert model.delete([renamed]) == (renamed,)
+    created = model.new_folder("new-folder")
+    assert created.is_dir()
     model.close_tab()
     assert model.current_path == tmp_path.resolve()
 
@@ -33,6 +35,11 @@ def test_file_url_clipboard_payload_preserves_spaces_and_unicode(tmp_path: Path)
 def test_local_browser_model_has_no_toolkit_import():
     source = open("src/hpc_gui/wx_local_files.py", encoding="utf-8").read()
     assert "from PySide6" not in source
+
+
+def test_local_context_actions_include_safe_navigation_actions():
+    actions = LocalBrowserModel.context_actions(True)
+    assert "copy_path" in actions and "refresh" in actions and "new_tab" in actions
 
 
 def test_local_view_exposes_keyboard_and_context_actions():
