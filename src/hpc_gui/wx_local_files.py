@@ -160,14 +160,12 @@ def show_local_files(parent=None, path: str | Path | None = None, *, open_editor
 
     def context_menu(event) -> None:
         index, _flags = listing.HitTest(event.GetPosition())
-        if index < 0:
-            return
-        if not listing.IsSelected(index):
+        if index >= 0 and not listing.IsSelected(index):
             listing.ClearSelections()
             listing.Select(index)
-        entry = entries[index]
+        entry = entries[index] if index >= 0 else None
         menu = wx.Menu()
-        actions = model.context_actions(entry.is_dir) + (("upload",) if upload else ())
+        actions = (model.context_actions(entry.is_dir) + (("upload",) if upload else ())) if entry else ("new_folder", "refresh")
         for action in actions:
             labels = {"open": "editor.open", "open_with": "common.open_with", "edit": "dirs.edit", "edit_new_window": "dirs.edit_new_window", "rename": "dirs.rename", "delete": "dirs.delete", "copy_path": "dirs.copy_path", "refresh": "dirs.refresh", "new_tab": "dirs.new_folder", "upload": "ftp.upload_selected"}
             item = menu.Append(wx.ID_ANY, t(labels.get(action, "help.help_title")))
@@ -180,6 +178,17 @@ def show_local_files(parent=None, path: str | Path | None = None, *, open_editor
 
     def run_action(action: str) -> None:
         selected = selected_entries()
+        if action == "new_folder":
+            dialog = wx.TextEntryDialog(frame, t("dirs.new_folder"), t("dirs.new_folder"))
+            try:
+                if dialog.ShowModal() == wx.ID_OK:
+                    model.new_folder(dialog.GetValue())
+                    refresh()
+            except Exception as error:
+                wx.MessageBox(str(error), t("login.err_title"), wx.OK | wx.ICON_ERROR)
+            finally:
+                dialog.Destroy()
+            return
         if not selected:
             return
         entry = selected[0]

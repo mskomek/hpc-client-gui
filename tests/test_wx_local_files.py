@@ -52,3 +52,4 @@ def test_local_view_exposes_keyboard_and_context_actions():
     source = open("src/hpc_gui/wx_local_files.py", encoding="utf-8").read()
     assert "EVT_LIST_ITEM_ACTIVATED" in source
     assert "EVT_CONTEXT_MENU" in source and "open_editor" in source
+    assert 'actions = (model.context_actions(entry.is_dir)' in source and '"new_folder", "refresh"' in source
