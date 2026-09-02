@@ -171,7 +171,7 @@ def _dispatch(command_id: str, parent=None, lifecycle=None, session_state=None) 
         from hpc_gui.wx_terminal import show_terminal
 
         session = (session_state or {}).get("session") or {}
-        show_terminal(parent, ssh=session.get("ssh"))
+        show_terminal(parent, ssh=session.get("ssh"), lifecycle=lifecycle)
     elif command_id == "NAV-JOBS":
         from hpc_gui.wx_jobs import show_jobs
 

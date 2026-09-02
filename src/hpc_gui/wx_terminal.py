@@ -60,7 +60,7 @@ class TerminalModel:
         return self.font_size
 
 
-def show_terminal(parent=None, send_input=None, resize_pty=None, *, ssh=None) -> int:
+def show_terminal(parent=None, send_input=None, resize_pty=None, *, ssh=None, lifecycle=None) -> int:
     try:
         import wx
     except ImportError as exc:
@@ -115,7 +115,12 @@ def show_terminal(parent=None, send_input=None, resize_pty=None, *, ssh=None) ->
 
             subscribers.append(subscriber)
 
-    def close(_event):
+    closed = False
+    def close(_event=None):
+        nonlocal closed
+        if closed:
+            return
+        closed = True
         if subscriber is not None and subscribers is not None:
             try:
                 subscribers.remove(subscriber)
@@ -124,6 +129,8 @@ def show_terminal(parent=None, send_input=None, resize_pty=None, *, ssh=None) ->
         frame.Destroy()
 
     frame.Bind(wx.EVT_CLOSE, close)
+    if lifecycle is not None:
+        lifecycle.register_cleanup(close)
     frame.Show()
     return wx.ID_OK
 
