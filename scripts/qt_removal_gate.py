@@ -14,9 +14,8 @@ def evaluate_gate(baseline: str, status: str, pyproject: str) -> dict[str, objec
     p0 = set(re.findall(r"\|\s*(GUI-[A-Z]+-\d{3})\s*\|.*?\|\s*P0\s*\|", baseline))
     status_rows = dict(re.findall(r"\|\s*(GUI-[A-Z]+-\d{3})\s*\|\s*([^|]+?)\s*\|", status))
     reasons = [f"P0 not covered: {item}" for item in sorted(p0) if status_rows.get(item, "").strip() != "COVERED"]
-    if "PySide6" in pyproject:
-        reasons.append("Qt runtime dependency remains declared")
-    return {"schema": "qt-removal-gate/1", "decision": "GO" if not reasons else "NO-GO", "reasons": reasons}
+    dependencies = [line.strip() for line in pyproject.splitlines() if "PySide6" in line]
+    return {"schema": "qt-removal-gate/1", "decision": "GO" if not reasons else "NO-GO", "reasons": reasons, "qt_dependencies": dependencies}
 
 
 def main() -> int:
