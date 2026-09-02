@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import os
 import shutil
+import subprocess
+import sys
 from threading import Thread
 from dataclasses import dataclass
 from pathlib import Path
@@ -21,6 +23,16 @@ class LocalEntry:
 
 def file_url_payload(paths: list[Path]) -> str:
     return "\r\n".join(f"file:///{quote(str(path).replace(os.sep, '/'))}" for path in paths)
+
+
+def open_with_system(path: str | Path) -> None:
+    target = str(Path(path).expanduser().resolve())
+    if hasattr(os, "startfile"):
+        os.startfile(target)
+    elif sys.platform == "darwin":
+        subprocess.Popen(["open", target])
+    else:
+        subprocess.Popen(["xdg-open", target])
 
 
 class LocalBrowserModel:
@@ -243,7 +255,7 @@ def show_local_files(parent=None, path: str | Path | None = None, *, open_editor
                     for item in selected:
                         open_editor(str(item.path))
         elif action == "open_with":
-            os.startfile(str(entry.path))
+            open_with_system(entry.path)
         elif action == "copy_path":
             if wx.TheClipboard.Open():
                 wx.TheClipboard.SetData(wx.TextDataObject(str(entry.path)))
@@ -306,4 +318,4 @@ def show_local_files(parent=None, path: str | Path | None = None, *, open_editor
     return wx.ID_OK
 
 
-__all__ = ["LocalBrowserModel", "LocalEntry", "file_url_payload", "show_local_files"]
+__all__ = ["LocalBrowserModel", "LocalEntry", "file_url_payload", "open_with_system", "show_local_files"]
