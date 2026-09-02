@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from threading import Thread
 from typing import Any, Callable
+
+from hpc_gui.core.i18n import t
 
 from hpc_gui.services.connection_controller import (
     ConnectionController, HostKeyRequest, KeyboardInteractiveRequest,
@@ -47,18 +50,53 @@ class WxConnectionModel:
         return True
 
 
-def show_connection(parent=None, profiles=None) -> int:
+def show_connection(parent=None, profiles=None, *, connect=None, lifecycle=None) -> int:
     try:
         import wx
     except ImportError as exc:
         raise RuntimeError("wxPython is not installed") from exc
-    model = WxConnectionModel(profiles)
-    frame = wx.Frame(parent, title="Connections", size=(720, 520))
+    model = WxConnectionModel(profiles, connect=connect)
+    frame = wx.Frame(parent, title=t("tabs.connection"), size=(720, 520))
     panel = wx.Panel(frame)
     root = wx.BoxSizer(wx.VERTICAL)
     choices = wx.ListBox(panel, choices=[item.name for item in model.summaries()])
+    connect_button = wx.Button(panel, label=t("login.connect"))
+    status = wx.StaticText(panel, label=t("login.status_disconnected"))
     root.Add(choices, 1, wx.EXPAND | wx.ALL, 8)
+    root.Add(status, 0, wx.LEFT | wx.RIGHT, 8)
+    root.Add(connect_button, 0, wx.ALIGN_RIGHT | wx.ALL, 8)
     panel.SetSizer(root)
+
+    def select(_event):
+        model.select(choices.GetStringSelection())
+
+    def connect_selected(_event=None):
+        if not model.select(choices.GetStringSelection()) or not model._connect:
+            return
+        connect_button.Enable(False)
+        status.SetLabel(t("login.status_connecting"))
+
+        def worker():
+            try:
+                model.connect_selected()
+                wx.CallAfter(done, None)
+            except Exception as error:
+                wx.CallAfter(done, error)
+
+        def done(error):
+            connect_button.Enable(True)
+            if error:
+                model.controller.fail()
+                status.SetLabel(t("login.error"))
+                wx.MessageBox(str(error), t("login.err_title"), wx.OK | wx.ICON_ERROR)
+            else:
+                status.SetLabel(t("login.status_connected"))
+
+        Thread(target=worker, daemon=True).start()
+
+    choices.Bind(wx.EVT_LISTBOX, select)
+    choices.Bind(wx.EVT_LISTBOX_DCLICK, connect_selected)
+    connect_button.Bind(wx.EVT_BUTTON, connect_selected)
     frame.Show()
     return wx.ID_OK
 

@@ -17,3 +17,9 @@ def test_unknown_profile_and_optional_wx_import():
     assert not model.select("missing") and not model.connect_selected()
     source = open("src/hpc_gui/wx_connection.py", encoding="utf-8").read()
     assert "from PySide6" not in source and "import wx" in source
+
+
+def test_wx_connection_view_has_async_selection_and_double_click_connect():
+    source = open("src/hpc_gui/wx_connection.py", encoding="utf-8").read()
+    assert "EVT_LISTBOX_DCLICK" in source
+    assert "Thread(target=worker" in source and "wx.CallAfter(done" in source

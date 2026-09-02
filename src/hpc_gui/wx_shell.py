@@ -90,6 +90,10 @@ def _dispatch(command_id: str, parent=None, lifecycle=None) -> None:
         from hpc_gui.wx_help import show_help
 
         show_help(parent)
+    elif command_id == "APP-CONNECT":
+        from hpc_gui.wx_connection import show_connection
+
+        show_connection(parent)
     elif command_id == "NAV-FILES":
         from hpc_gui.wx_local_files import show_local_files
 
