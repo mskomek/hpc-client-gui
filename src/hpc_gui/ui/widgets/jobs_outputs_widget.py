@@ -32,6 +32,7 @@ from hpc_gui.core.ui_errors import show_exception
 from hpc_gui.core.history import append_event
 from hpc_gui.ui.widgets.remote_dir_panel import RemoteDirPanel
 from hpc_gui.services.slurm_models import parse_scontrol
+from hpc_gui.services.job_tracking_controller import JobTrackingController
 from hpc_gui.services.slurm_script_parser import (
     parse_job_paths,
     parse_job_name,
@@ -561,6 +562,7 @@ class JobsOutputsWidget(QWidget):
     def __init__(self):
         super().__init__()
         self.session = None
+        self._tracking = JobTrackingController()
         self._page_active = True
 
         self.active_script: str = ""
@@ -802,6 +804,7 @@ class JobsOutputsWidget(QWidget):
         self._session_generation += 1
         self._async_busy.clear()
         self.session = session
+        self._tracking.set_session(session)
         self._reset_live_tail_idle_state()
         self.jobs_text.setPlainText("")
         self.txt_out.setPlainText("")
@@ -852,6 +855,7 @@ class JobsOutputsWidget(QWidget):
         if self._page_active == active:
             return
         self._page_active = active
+        self._tracking.set_page_active(active)
         self._sync_polling(immediate=active)
         self.polling_visibility_changed.emit()
 
@@ -863,6 +867,7 @@ class JobsOutputsWidget(QWidget):
         if self._main_window_minimized == should_pause:
             return
         self._main_window_minimized = should_pause
+        self._tracking.set_minimized(should_pause)
         if should_pause:
             self._minimize_started_at = time.monotonic()
         elif self._minimize_started_at is not None:
@@ -874,16 +879,15 @@ class JobsOutputsWidget(QWidget):
         self._sync_polling(immediate=not should_pause)
 
     def is_details_polling_visible(self) -> bool:
-        return bool(
-            self._page_active
-            and self.section_tabs.currentWidget() is self.details_tab
+        return self._tracking.should_poll_jobs(
+            self.section_tabs.currentWidget() is self.details_tab,
+            True,
         )
 
     def is_outputs_polling_visible(self) -> bool:
-        return bool(
-            self._page_active
-            and not self._main_window_minimized
-            and self.section_tabs.currentWidget() is self.outputs_tab
+        self._tracking.set_output_metadata(stdout_path=self.active_out, stderr_path=self.active_err)
+        return self._tracking.should_follow_output(
+            self.section_tabs.currentWidget() is self.outputs_tab,
         )
 
     def _on_section_tab_changed(self, _index: int) -> None:
@@ -1174,6 +1178,10 @@ class JobsOutputsWidget(QWidget):
             detail = parse_scontrol(txt, jobid)
             self._detail_script_path = detail.script_path
             self._detail_scheduler_paths = (detail.stdout_path, detail.stderr_path)
+            self._tracking.set_output_metadata(
+                stdout_path=detail.stdout_path, stderr_path=detail.stderr_path,
+                script_path=detail.script_path, workdir=detail.workdir,
+            )
             if detail.workdir:
                 self._show_workdir(detail.workdir)
             if detail.stdout_path:
@@ -1248,6 +1256,7 @@ class JobsOutputsWidget(QWidget):
             return
         self.cancel_id.setText(jobid)
         self.meta_job_id.setText(jobid)
+        self._tracking.select_job(jobid)
         self.refresh_jobs()
         self.refresh_sacct()
         if script_path:
@@ -1531,6 +1540,10 @@ class JobsOutputsWidget(QWidget):
         jobid = self.cancel_id.text().strip() or None
         paths = parse_job_paths(script_text, script_path, jobid, job_name)
         out_path, err_path = paths.stdout, paths.stderr
+        self._tracking.set_output_metadata(
+            stdout_path=out_path, stderr_path=err_path,
+            script_path=script_path, workdir=paths.workdir,
+        )
         self._show_workdir(paths.workdir)
 
         if follow_mode == SBATCH_FOLLOW_MODE_NEW_WINDOW_COMBINED:
