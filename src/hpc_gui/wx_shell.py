@@ -107,6 +107,30 @@ def _dispatch(command_id: str, parent=None, lifecycle=None, session_state=None) 
         from hpc_gui.wx_local_files import show_local_files
 
         show_local_files(parent)
+    elif command_id == "NAV-DIRECTORIES":
+        from hpc_gui.wx_editor_view import show_editor
+        from hpc_gui.wx_remote_files_view import show_remote_files
+
+        session = (session_state or {}).get("session") or {}
+        files = session.get("files")
+        slurm = session.get("slurm")
+        ssh = session.get("ssh")
+        def editor(path, content=""):
+            show_editor(
+                parent,
+                path=path,
+                content=content,
+                save_remote=files.write_text if files else None,
+                on_submit=(lambda document: slurm.sbatch(document.path)) if slurm else None,
+                on_run=(lambda document: ssh.send_shell_text(f"bash -- {shlex.quote(document.path)}\n")) if ssh else None,
+            )
+        show_remote_files(
+            parent,
+            loader=files.iterdir_entries if files else None,
+            read_text=files.read_text if files else None,
+            open_editor=editor,
+            open_editor_new_window=editor,
+        )
     elif command_id == "NAV-EDITOR":
         from hpc_gui.wx_editor_view import show_editor
 

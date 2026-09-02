@@ -23,3 +23,5 @@ def test_wx_shell_dispatches_core_views():
     assert "lifecycle.register_cleanup(ssh.close)" in source
     assert "save_remote=files.write_text" in source and "slurm.sbatch" in source
     assert "send_shell_text" in source
+    assert 'command_id == "NAV-DIRECTORIES"' in source
+    assert "loader=files.iterdir_entries" in source and "read_text=files.read_text" in source
