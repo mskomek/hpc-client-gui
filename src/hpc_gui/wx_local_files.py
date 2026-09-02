@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import shutil
 from dataclasses import dataclass
 from pathlib import Path
 from urllib.parse import quote
@@ -74,6 +75,33 @@ class LocalBrowserModel:
         if open_editor:
             open_editor(str(target))
         return "edit"
+
+    def rename(self, path: str | Path, new_name: str) -> Path:
+        source = Path(path).expanduser().resolve()
+        name = Path(new_name).name
+        if not name or name != new_name or name in {".", ".."}:
+            raise ValueError("invalid local name")
+        if source.parent != self.current_path or not source.exists():
+            raise FileNotFoundError(str(source))
+        target = source.with_name(name)
+        if target.exists():
+            raise FileExistsError(str(target))
+        source.rename(target)
+        return target
+
+    @staticmethod
+    def delete(paths: list[str | Path]) -> tuple[Path, ...]:
+        removed = []
+        for value in paths:
+            target = Path(value).expanduser().resolve()
+            if not target.exists():
+                continue
+            if target.is_dir():
+                shutil.rmtree(target)
+            else:
+                target.unlink()
+            removed.append(target)
+        return tuple(removed)
 
     @staticmethod
     def file_action(action: str, path: str | Path, value: str = "") -> tuple[str, str, str]:
