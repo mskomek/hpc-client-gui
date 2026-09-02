@@ -20,6 +20,12 @@ def test_local_browser_paths_sort_tabs_and_context(tmp_path: Path):
     renamed = model.rename(tmp_path / "folder" / "child.txt", "renamed.txt")
     assert renamed.name == "renamed.txt"
     assert model.delete([renamed]) == (renamed,)
+    try:
+        model.delete([tmp_path])
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("current directory must not be deletable")
     created = model.new_folder("new-folder")
     assert created.is_dir()
     model.close_tab()
