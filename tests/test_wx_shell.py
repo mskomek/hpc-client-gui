@@ -28,3 +28,4 @@ def test_wx_shell_dispatches_core_views():
     assert 'command_id == "NAV-DIRECTORIES"' in source
     assert "loader=files.iterdir_entries" in source and "read_text=files.read_text" in source
     assert 'command_id == "NAV-TERMINAL"' in source and "show_terminal(parent, ssh=session.get(\"ssh\"))" in source
+    assert "command_items" in source and "description_label.SetLabel" in source
