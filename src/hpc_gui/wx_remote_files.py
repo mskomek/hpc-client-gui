@@ -79,6 +79,10 @@ class WxRemoteDirectoryModel(RemoteDirectoryController):
         return self.new_tab(path)
 
     @staticmethod
+    def context_action(action: str, paths: Iterable[str], destination: str = "") -> RemoteOperation:
+        return WxRemoteDirectoryModel.operation(action, paths, destination)
+
+    @staticmethod
     def operation(kind: str, paths: Iterable[str], destination: str = "") -> RemoteOperation:
         if kind not in {"copy", "move", "delete", "rename", "create", "undo"}:
             raise ValueError(kind)

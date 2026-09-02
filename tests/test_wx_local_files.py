@@ -12,6 +12,10 @@ def test_local_browser_paths_sort_tabs_and_context(tmp_path: Path):
     tab = model.new_tab(tmp_path / "folder")
     assert tab == 1 and model.current_path.name == "folder"
     assert "new_tab" in model.context_actions(True)
+    opened = []
+    assert model.activate(tmp_path / "á file.txt", open_editor=opened.append) == "edit"
+    assert opened == [str((tmp_path / "á file.txt").resolve())]
+    assert model.file_action("rename", tmp_path / "x")[:2] == ("rename", str(tmp_path / "x"))
     model.close_tab()
     assert model.current_path == tmp_path.resolve()
 
