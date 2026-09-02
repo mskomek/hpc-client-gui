@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 from pathlib import Path
+from threading import Thread
 
 from hpc_gui.core.i18n import t
 from hpc_gui.services.editor_controller import EditorCommandService
 from hpc_gui.wx_editor import WxEditorModel
 
 
-def show_editor(parent=None, model: WxEditorModel | None = None, *, path: str = "", content: str = "") -> int:
+def show_editor(parent=None, model: WxEditorModel | None = None, *, path: str = "", content: str = "", save_remote=None, on_submit=None, on_run=None) -> int:
     try:
         import wx
     except ImportError as exc:
@@ -32,18 +33,44 @@ def show_editor(parent=None, model: WxEditorModel | None = None, *, path: str = 
     root.Add(buttons, 0, wx.ALIGN_RIGHT | wx.LEFT | wx.RIGHT | wx.BOTTOM, 8)
     panel.SetSizer(root)
 
+    def finish_action(mode):
+        if mode == "submit" and on_submit:
+            on_submit(model.controller.active)
+        elif mode == "run" and on_run:
+            on_run(model.controller.active)
+
     def save_document(mode="save"):
         active = model.controller.update_content(editor.GetValue())
         if active.is_local and active.path:
             try:
                 Path(active.path).write_text(active.content, encoding=active.encoding)
                 model.controller.mark_saved()
+                finish_action(mode)
             except OSError as error:
                 wx.MessageBox(str(error), t("login.err_title"), wx.OK | wx.ICON_ERROR)
-        elif mode == "submit":
-            model.save_target(submit=True)
-        elif mode == "run":
-            model.save_target(run=True)
+        elif save_remote and active.path:
+            for button in (save, submit, run):
+                button.Enable(False)
+
+            def done(error=None):
+                for button in (save, submit, run):
+                    button.Enable(True)
+                if error:
+                    wx.MessageBox(str(error), t("login.err_title"), wx.OK | wx.ICON_ERROR)
+                    return
+                model.controller.mark_saved()
+                finish_action(mode)
+
+            def worker():
+                try:
+                    save_remote(active.path, active.content)
+                    wx.CallAfter(done)
+                except Exception as error:
+                    wx.CallAfter(done, error)
+
+            Thread(target=worker, daemon=True).start()
+        else:
+            model.save_target(submit=mode == "submit", run=mode == "run")
 
     save.Bind(wx.EVT_BUTTON, lambda _event: save_document())
     submit.Bind(wx.EVT_BUTTON, lambda _event: save_document("submit"))
