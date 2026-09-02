@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from hpc_gui.core.i18n import t
+
 
 @dataclass(frozen=True)
 class TerminalSize:
@@ -60,6 +62,9 @@ def show_terminal(parent=None, send_input=None, resize_pty=None, *, ssh=None) ->
         import wx
     except ImportError as exc:
         raise RuntimeError("wxPython is not installed") from exc
+    if ssh is None and send_input is None:
+        wx.MessageBox(t("login.status_disconnected"), t("login.err_title"), wx.OK | wx.ICON_WARNING)
+        return wx.ID_CANCEL
     if ssh is not None:
         send_input = ssh.send_shell_input
         resize_pty = ssh.resize_shell_pty
