@@ -104,7 +104,7 @@ class WxConnectionModel:
         return list(self._keyboard_interactive(request)) if self._keyboard_interactive else []
 
 
-def show_connection(parent=None, profiles=None, *, connect=None, lifecycle=None) -> int:
+def show_connection(parent=None, profiles=None, *, connect=None, lifecycle=None, on_connected=None) -> int:
     try:
         import wx
     except ImportError as exc:
@@ -181,6 +181,8 @@ def show_connection(parent=None, profiles=None, *, connect=None, lifecycle=None)
                 wx.MessageBox(str(error), t("login.err_title"), wx.OK | wx.ICON_ERROR)
             else:
                 status.SetLabel(t("login.status_connected"))
+                if on_connected and model.controller.session:
+                    on_connected(model.controller.session)
 
         Thread(target=worker, daemon=True).start()
 

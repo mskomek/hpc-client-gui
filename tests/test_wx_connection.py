@@ -26,6 +26,7 @@ def test_wx_connection_view_has_async_selection_and_double_click_connect():
     assert "Thread(target=worker" in source and "wx.CallAfter(done" in source
     assert "subscribe_language_change(refresh_labels)" in source
     assert "host_key_prompt_message" in source and "mfa_dialog" in source
+    assert "on_connected=None" in source
 
 
 def test_connection_security_callbacks_fail_closed_and_do_not_store_mfa():
