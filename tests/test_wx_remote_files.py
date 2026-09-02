@@ -50,3 +50,4 @@ def test_remote_view_runs_operations_off_the_wx_thread():
     assert 'action in {"rename", "copy", "move"}' in source and "dirs.destination" in source
     assert 'action == "download"' in source and "wx.DirDialog" in source
     assert 'action == "upload"' in source and "wx.FileDialog" in source
+    assert 'action == "new_folder"' in source and "wx.TextEntryDialog" in source
