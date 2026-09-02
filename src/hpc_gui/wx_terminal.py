@@ -24,6 +24,9 @@ class TerminalModel:
 
     def receive(self, data: str) -> None:
         self.text += str(data or "")
+        lines = self.text.splitlines()
+        if len(lines) > 5000:
+            self.text = "\n".join(lines[-5000:])
 
     def key_input(self, key: str, *, command: bool = False, shift: bool = False) -> str:
         if key == "C" and not shift and not command:
@@ -71,14 +74,44 @@ def show_terminal(parent=None, send_input=None, resize_pty=None, *, ssh=None) ->
     model = TerminalModel(send_input, resize_pty)
     frame = wx.Frame(parent, title="Terminal", size=(900, 600))
     frame._terminal_model = model
-    text = wx.TextCtrl(frame, style=wx.TE_MULTILINE | wx.TE_READONLY | wx.TE_RICH2)
+    text = wx.TextCtrl(frame, style=wx.TE_MULTILINE | wx.TE_RICH2 | wx.TE_PROCESS_TAB)
     text.SetFocus()
+    def render_output(data):
+        model.receive(data)
+        text.ChangeValue("\n".join(model.text.splitlines()[-5000:]))
+        text.ShowPosition(text.GetLastPosition())
+
+    def key_event(event):
+        keycode = event.GetKeyCode()
+        if (event.CmdDown() or event.ControlDown()) and keycode in (ord("C"), ord("V")):
+            if keycode == ord("V"):
+                text.Paste()
+            elif event.CmdDown() or event.ShiftDown():
+                text.Copy()
+            else:
+                model.key_input("C")
+            return
+        key = event.GetUnicodeKey()
+        if key == wx.WXK_NONE or not (32 <= key <= 126):
+            key = event.GetKeyCode()
+        if key in (3, 4, 26):
+            key = {3: "C", 4: "D", 26: "Z"}[key]
+        if isinstance(key, int) and key > 0:
+            key = chr(key)
+        if event.ControlDown() and str(key).upper() == "C" and event.ShiftDown():
+            text.Copy()
+        elif key:
+            model.key_input(str(key), command=event.CmdDown(), shift=event.ShiftDown())
+        else:
+            event.Skip()
+
+    text.Bind(wx.EVT_CHAR, key_event)
     subscriber = None
     if ssh is not None:
         subscribers = getattr(ssh, "_wx_output_subscribers", None)
         if subscribers is not None:
             def subscriber(data):
-                wx.CallAfter(model.receive, data)
+                wx.CallAfter(render_output, data)
 
             subscribers.append(subscriber)
 
