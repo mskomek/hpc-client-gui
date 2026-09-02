@@ -1,5 +1,7 @@
 # Current Qt GUI Feature-Parity Baseline
 
+Adaptive layout and geometry rules: [GUI Adaptive Layout/DPI Contract](GUI_ADAPTIVE_LAYOUT_DPI_CONTRACT.md).
+
 This is the authoritative inventory for a future wx adapter. It describes the
 current Qt surface only; it does not define a redesign or authorize wx code.
 The inventory was reviewed against `MainWindow`, its six tabs, the top-right
