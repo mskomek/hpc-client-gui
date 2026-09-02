@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from threading import Thread
 from typing import Any, Callable
 
-from hpc_gui.core.i18n import t
+from hpc_gui.core.i18n import subscribe_language_change, t, unsubscribe_language_change
 
 from hpc_gui.services.connection_controller import (
     ConnectionController, HostKeyRequest, KeyboardInteractiveRequest,
@@ -70,6 +70,14 @@ def show_connection(parent=None, profiles=None, *, connect=None, lifecycle=None)
     def select(_event):
         model.select(choices.GetStringSelection())
 
+    def refresh_labels(_language=None):
+        frame.SetTitle(t("tabs.connection"))
+        connect_button.SetLabel(t("login.connect"))
+        if model.controller.state.value == "connected":
+            status.SetLabel(t("login.status_connected"))
+        elif model.controller.state.value != "connecting":
+            status.SetLabel(t("login.status_disconnected"))
+
     def connect_selected(_event=None):
         if not model.select(choices.GetStringSelection()) or not model._connect:
             return
@@ -97,6 +105,8 @@ def show_connection(parent=None, profiles=None, *, connect=None, lifecycle=None)
     choices.Bind(wx.EVT_LISTBOX, select)
     choices.Bind(wx.EVT_LISTBOX_DCLICK, connect_selected)
     connect_button.Bind(wx.EVT_BUTTON, connect_selected)
+    subscribe_language_change(refresh_labels)
+    frame.Bind(wx.EVT_CLOSE, lambda event: (unsubscribe_language_change(refresh_labels), event.Skip()))
     frame.Show()
     return wx.ID_OK
 

@@ -19,3 +19,4 @@ def test_wx_shell_dispatches_core_views():
     assert 'command_id == "NAV-EDITOR"' in source
     assert 'command_id == "NAV-JOBS"' in source
     assert "show_jobs(parent, lifecycle=lifecycle)" in source
+    assert "show_connection(parent, load_profiles(), lifecycle=lifecycle)" in source
