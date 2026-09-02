@@ -15,6 +15,7 @@ def test_dynamic_storage_and_directory_workflows():
     workspace.submit_item("/scratch/user/job.slurm", "123")
     workspace.run_shell("/scratch/user/run.sh")
     assert opened == ["/scratch/user/job.slurm"] and submitted == [("/scratch/user/job.slurm", "123")] and shell
+    assert workspace.double_click("/scratch/user", is_dir=True) == "navigate"
 
 
 def test_batch_submit_is_deterministic_and_model_has_no_qt():

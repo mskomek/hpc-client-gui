@@ -65,9 +65,25 @@ class LocalBrowserModel:
         self.reverse = self.sort_key == key and not self.reverse
         self.sort_key = key
 
+    def activate(self, path: str | Path, *, open_editor=None) -> str:
+        """Activate an entry without coupling the model to wx widgets."""
+        target = Path(path).expanduser().resolve()
+        if target.is_dir():
+            self.navigate(target)
+            return "navigate"
+        if open_editor:
+            open_editor(str(target))
+        return "edit"
+
+    @staticmethod
+    def file_action(action: str, path: str | Path, value: str = "") -> tuple[str, str, str]:
+        if action not in {"open", "open_with", "edit", "edit_new_window", "rename", "delete"}:
+            raise ValueError(action)
+        return action, str(Path(path)), value
+
     @staticmethod
     def context_actions(is_dir: bool) -> tuple[str, ...]:
-        return ("open", "open_with", "edit", "edit_new_window", "new_tab") if is_dir else ("open", "open_with", "edit", "edit_new_window")
+        return ("open", "open_with", "edit", "edit_new_window", "new_tab", "rename", "delete") if is_dir else ("open", "open_with", "edit", "edit_new_window", "rename", "delete")
 
 
 def show_local_files(parent=None, path: str | Path | None = None) -> int:

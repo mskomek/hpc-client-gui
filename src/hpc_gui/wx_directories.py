@@ -36,7 +36,10 @@ class WxDirectoriesWorkspace:
     def storage(self, storage_id: str) -> StoragePane:
         return next(item for item in self.storages if item.id == storage_id)
 
-    def double_click(self, path: str) -> str:
+    def double_click(self, path: str, *, is_dir: bool = False) -> str:
+        if is_dir and self.remote:
+            self.remote[next(iter(self.remote))].navigate(path)
+            return "navigate"
         if self._open_editor:
             self._open_editor(path)
         return "view_edit"

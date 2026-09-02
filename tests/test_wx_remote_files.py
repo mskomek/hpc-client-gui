@@ -29,6 +29,7 @@ def test_remote_clipboard_undo_permissions_and_middle_click():
     else:
         raise AssertionError("recursive chmod must stay disabled")
     assert model.middle_click("/folder") == 1
+    assert model.context_action("rename", ["/a"], "/b").kind == "rename"
 
 
 def test_remote_model_has_no_toolkit_import():
