@@ -21,3 +21,4 @@ def test_wx_terminal_keeps_ssh_renderer_optional():
     source = open("src/hpc_gui/wx_terminal.py", encoding="utf-8").read()
     assert "from PySide6" not in source and "import wx" in source
     assert "ssh.send_shell_input" in source and "ssh.resize_shell_pty" in source
+    assert "wx.ID_CANCEL" in source and "status_disconnected" in source
