@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
 from hpc_gui.core.i18n import t
 from hpc_gui.core.platform import current_os
 from hpc_gui.services.shortcut_preferences import active_binding
+from hpc_gui.services.editor_controller import EditorCommandService
 from hpc_gui.core.ui_errors import show_exception
 from hpc_gui.core.history import append_event
 from hpc_gui.ui.dialogs.slurm_array_dialog import edit_slurm_array
@@ -237,10 +238,11 @@ class EditorWidget(QWidget):
         self._add_document()
 
     def execute_active(self) -> None:
-        path = self.path_in.text().strip().lower()
-        if path.endswith((".slurm", ".sbatch")):
+        path = self.path_in.text().strip()
+        mode = EditorCommandService.execute_mode(path)
+        if mode == "submit":
             self.save_path(force_submit=True)
-        elif path.endswith(".sh"):
+        elif mode == "run":
             self.save_path(run_in_terminal=True)
         else:
             self.save_path()
