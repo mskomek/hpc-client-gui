@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from urllib.parse import quote
 
-from hpc_gui.core.i18n import t
+from hpc_gui.core.i18n import subscribe_language_change, t, unsubscribe_language_change
 
 
 @dataclass(frozen=True)
@@ -147,6 +147,11 @@ def show_local_files(parent=None, path: str | Path | None = None, *, open_editor
             index = listing.InsertItem(listing.GetItemCount(), entry.path.name)
             listing.SetItem(index, 1, str(entry.size))
 
+    def refresh_labels(_language=None):
+        frame.SetTitle(t("tabs.ftp"))
+        listing.SetColumn(0, t("dirs.col_name"))
+        listing.SetColumn(1, t("dirs.col_size"))
+
     def activate(event) -> None:
         entry = entries[event.GetIndex()]
         if model.activate(entry.path, open_editor=open_editor) == "navigate":
@@ -225,6 +230,8 @@ def show_local_files(parent=None, path: str | Path | None = None, *, open_editor
 
     listing.Bind(wx.EVT_LIST_ITEM_ACTIVATED, activate)
     listing.Bind(wx.EVT_CONTEXT_MENU, context_menu)
+    subscribe_language_change(refresh_labels)
+    frame.Bind(wx.EVT_CLOSE, lambda event: (unsubscribe_language_change(refresh_labels), event.Skip()))
     refresh()
     frame.Show()
     return wx.ID_OK

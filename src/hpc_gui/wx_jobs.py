@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from threading import Lock, Thread
 from typing import Any, Callable
 
-from hpc_gui.core.i18n import t
+from hpc_gui.core.i18n import subscribe_language_change, t, unsubscribe_language_change
 from hpc_gui.services.job_failure_classifier import explain_job_failure
 from hpc_gui.services.job_provenance import JobProvenanceCapture
 from hpc_gui.services.job_tracking_controller import JobTrackingController
@@ -288,7 +288,14 @@ def show_jobs(parent=None, model: WxJobsModel | None = None, *, list_jobs=None, 
     def close(_event):
         state["closed"] = True
         timer.Stop()
+        unsubscribe_language_change(refresh_labels)
         frame.Destroy()
+
+    def refresh_labels(_language=None):
+        frame.SetTitle(t("jobs.title"))
+        jobs.SetColumn(0, t("jobs.job_id"))
+        jobs.SetColumn(1, t("jobs.state"))
+        cancel_button.SetLabel(t("jobs.cancel"))
 
     jobs.Bind(wx.EVT_LIST_ITEM_SELECTED, select_job)
     cancel_button.Bind(wx.EVT_BUTTON, cancel_job)
@@ -299,6 +306,7 @@ def show_jobs(parent=None, model: WxJobsModel | None = None, *, list_jobs=None, 
     timer.Start(1000)
     frame.Bind(wx.EVT_TIMER, tick, timer)
     frame.Bind(wx.EVT_CLOSE, close)
+    subscribe_language_change(refresh_labels)
     refresh_jobs()
     frame.Show()
     return wx.ID_OK
