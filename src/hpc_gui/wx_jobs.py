@@ -189,8 +189,10 @@ def show_jobs(parent=None, model: WxJobsModel | None = None, *, list_jobs=None, 
     output_controls = wx.BoxSizer(wx.HORIZONTAL)
     refresh_button = wx.Button(right, label=t("jobs.refresh"))
     follow = wx.CheckBox(right, label=t("files.auto_scroll"))
+    detached_button = wx.Button(right, label=t("jobs.open_output"))
     follow.SetValue(True)
     output_controls.Add(refresh_button, 0, wx.RIGHT, 6)
+    output_controls.Add(detached_button, 0, wx.RIGHT, 6)
     output_controls.Add(follow, 0, wx.ALIGN_CENTER_VERTICAL)
     cancel_button = wx.Button(right, label=t("jobs.cancel"))
     right_sizer.Add(details, 0, wx.EXPAND | wx.ALL, 6)
@@ -323,6 +325,22 @@ def show_jobs(parent=None, model: WxJobsModel | None = None, *, list_jobs=None, 
 
         Thread(target=worker, daemon=True).start()
 
+    def open_detached(_event):
+        job_id = state["selected_job"]
+        if not read_output or not job_id:
+            return
+        view = model.open_detached()
+
+        def read_stdout():
+            result = read_output(job_id)
+            if isinstance(result, dict):
+                return result.get("stdout", "")
+            if isinstance(result, (tuple, list)):
+                return result[0] if result else ""
+            return result
+
+        show_job_output(frame, model, view.id, read_output=read_stdout)
+
     def close(_event):
         if state["closed"]:
             return
@@ -336,11 +354,13 @@ def show_jobs(parent=None, model: WxJobsModel | None = None, *, list_jobs=None, 
         jobs.SetColumn(0, t("jobs.job_id"))
         jobs.SetColumn(1, t("jobs.state"))
         refresh_button.SetLabel(t("jobs.refresh"))
+        detached_button.SetLabel(t("jobs.open_output"))
         follow.SetLabel(t("files.auto_scroll"))
         cancel_button.SetLabel(t("jobs.cancel"))
 
     jobs.Bind(wx.EVT_LIST_ITEM_SELECTED, select_job)
     refresh_button.Bind(wx.EVT_BUTTON, refresh_jobs)
+    detached_button.Bind(wx.EVT_BUTTON, open_detached)
     cancel_button.Bind(wx.EVT_BUTTON, cancel_job)
     def tick(event):
         refresh_jobs(event)
