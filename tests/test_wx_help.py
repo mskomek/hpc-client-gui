@@ -1,3 +1,4 @@
+from hpc_gui.core.i18n import load_language, set_language
 from hpc_gui.wx_help import WxHelpModel
 
 
@@ -19,3 +20,22 @@ def test_wx_help_model_is_toolkit_free():
 def test_wx_help_model_uses_native_platform_shortcuts():
     model = WxHelpModel("macos")
     assert any(item.binding == "Cmd+," for item in model.shortcuts.bindings())
+
+
+def test_help_center_navigation_and_shared_content():
+    load_language("en")
+    model = WxHelpModel("windows")
+    assert [item.id for item in model.navigation()] == [topic.id for topic in model.catalog.topics()] + ["help.library.truba", "help.library.generic"]
+    page = model.select_topic("help.keyboard-shortcuts")
+    assert "Keyboard Shortcuts" in page and "Ctrl+" in page
+    assert model.select_topic("help.library.generic")
+
+
+def test_help_topic_survives_language_switch_and_titles_refresh():
+    load_language("en")
+    model = WxHelpModel("windows")
+    model.select_topic("help.keyboard-shortcuts")
+    set_language("tr")
+    assert model.current_topic_id == "help.keyboard-shortcuts"
+    assert "Klavye Kısayolları" in model.page()
+    set_language("en")

@@ -140,6 +140,7 @@
     "status_loading": "Loading interface..."
   },
   "common": {
+    "ready": "Ready",
     "ok": "OK",
     "cancel": "Cancel",
     "confirm": "Confirm",
@@ -510,6 +511,10 @@
     "dont_show_again": "Don't show again",
     "missing_help_text": "Help content could not be loaded.",
     "open_help": "Open Help",
+    "search_placeholder": "Search help…",
+    "language": "Language",
+    "english": "English",
+    "turkish": "Türkçe",
     "library_label": "Library",
     "library_core": "Core Help",
     "library_truba": "Cluster Playbook",

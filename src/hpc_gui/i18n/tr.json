@@ -140,6 +140,7 @@
     "status_loading": "Arayüz yükleniyor..."
   },
   "common": {
+    "ready": "Hazır",
     "ok": "Tamam",
     "cancel": "İptal",
     "confirm": "Onay",
@@ -510,6 +511,10 @@
     "dont_show_again": "Bir daha gösterme",
     "missing_help_text": "Yardım içeriği yüklenemedi.",
     "open_help": "Yardımı Aç",
+    "search_placeholder": "Yardımda ara…",
+    "language": "Dil",
+    "english": "English",
+    "turkish": "Türkçe",
     "library_label": "Kütüphane",
     "library_core": "Temel Yardım",
     "library_truba": "Küme Rehberi",
