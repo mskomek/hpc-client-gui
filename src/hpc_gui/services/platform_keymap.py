@@ -41,13 +41,48 @@ _COMMON = (
     KeyBinding("TERM-PASTE", "Ctrl+Shift+V", "terminal"),
 )
 
+_MACOS = (
+    KeyBinding("APP-SETTINGS", "Cmd+,", "shell"),
+    KeyBinding("APP-COMMAND-PALETTE", "Cmd+Shift+P", "shell"),
+    KeyBinding("FILE-COPY", "Cmd+C", "files"),
+    KeyBinding("FILE-CUT", "Cmd+X", "files"),
+    KeyBinding("FILE-PASTE", "Cmd+V", "files"),
+    KeyBinding("FILE-SELECT-ALL", "Cmd+A", "files"),
+    KeyBinding("FILE-NEW-FOLDER", "Shift+Cmd+N", "files"),
+    KeyBinding("FILE-PARENT", "Cmd+Up", "files"),
+    KeyBinding("FILE-BACK", "Cmd+[", "files"),
+    KeyBinding("FILE-FORWARD", "Cmd+]", "files"),
+    KeyBinding("FILE-NEW-TAB", "Cmd+T", "files"),
+    KeyBinding("FILE-CLOSE-TAB", "Cmd+W", "files"),
+    KeyBinding("FILE-FIND", "Cmd+F", "files"),
+    KeyBinding("EDIT-NEW", "Cmd+N", "editor"),
+    KeyBinding("EDIT-OPEN", "Cmd+O", "editor"),
+    KeyBinding("EDIT-SAVE", "Cmd+S", "editor"),
+    KeyBinding("EDIT-SAVE-AS", "Shift+Cmd+S", "editor"),
+    KeyBinding("EDIT-EXECUTE", "Cmd+Enter", "editor"),
+    KeyBinding("EDIT-UNDO", "Cmd+Z", "editor"),
+    KeyBinding("EDIT-REDO", "Shift+Cmd+Z", "editor"),
+    KeyBinding("TERM-COPY", "Cmd+C", "terminal"),
+    KeyBinding("TERM-PASTE", "Cmd+V", "terminal"),
+    KeyBinding("TERM-FIND", "Cmd+F", "terminal"),
+)
+
 
 def bindings_for(platform: str) -> tuple[KeyBinding, ...]:
     """Return defaults for Windows/Linux; reject unsupported mechanical remaps."""
     normalized = platform.strip().lower()
+    if normalized == "macos" or normalized == "darwin":
+        return _MACOS
     if normalized not in {"windows", "win32", "linux"}:
         raise ValueError(f"unsupported keymap platform: {platform}")
     return _COMMON
+
+
+def display_binding(binding: str, platform: str) -> str:
+    """Render Command bindings with the native macOS menu glyph."""
+    if platform.strip().lower() in {"macos", "darwin"}:
+        return binding.replace("Cmd+", "⌘").replace("Shift+", "⇧")
+    return binding
 
 
 def conflicts(bindings: tuple[KeyBinding, ...]) -> tuple[tuple[KeyBinding, KeyBinding], ...]:
