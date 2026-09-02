@@ -48,7 +48,9 @@ class WxConnectionModel:
         if profile is None or self._connect is None:
             return False
         self.controller.begin_connect()
-        self._connect(dict(profile))
+        session = self._connect(dict(profile))
+        if isinstance(session, dict):
+            self.controller.finish(session)
         return True
 
     def decide_host_key(self, request: HostKeyRequest) -> str:

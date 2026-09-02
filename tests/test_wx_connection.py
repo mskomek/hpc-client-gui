@@ -34,3 +34,9 @@ def test_connection_security_callbacks_fail_closed_and_do_not_store_mfa():
     assert model.decide_host_key(request) == "reject"
     assert model.answer_keyboard_interactive(mfa) == ["one-time"]
     assert not hasattr(model, "one-time")
+
+
+def test_connection_model_enters_connected_state_for_returned_session():
+    model = WxConnectionModel([{"name": "cluster"}], connect=lambda _profile: {"connected": True})
+    assert model.select("cluster") and model.connect_selected()
+    assert model.controller.state.value == "connected"
