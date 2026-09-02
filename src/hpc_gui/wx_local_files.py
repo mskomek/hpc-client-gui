@@ -102,11 +102,12 @@ class LocalBrowserModel:
         target.mkdir()
         return target
 
-    @staticmethod
-    def delete(paths: list[str | Path]) -> tuple[Path, ...]:
+    def delete(self, paths: list[str | Path]) -> tuple[Path, ...]:
         removed = []
         for value in paths:
             target = Path(value).expanduser().resolve()
+            if target == self.current_path or self.current_path not in target.parents:
+                raise ValueError("local delete target must be inside the current directory")
             if not target.exists():
                 continue
             if target.is_dir():
