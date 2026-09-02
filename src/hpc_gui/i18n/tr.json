@@ -175,6 +175,7 @@
     "state": "Durum",
     "refresh": "Yenile",
     "cancel": "İşi İptal Et",
+    "cancel_confirm": "{job_id} işi iptal edilsin mi?",
     "job_id": "İş Kimliği"
   },
   "files": {

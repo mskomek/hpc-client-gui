@@ -45,3 +45,4 @@ def test_job_output_view_has_live_timer_and_resize_hooks():
     source = open("src/hpc_gui/wx_jobs.py", encoding="utf-8").read()
     assert "EVT_TIMER" in source and "EVT_SIZE" in source and "update_detached" in source
     assert "lifecycle.register_cleanup(close)" in source
+    assert "jobs.cancel_confirm" in source and "Thread(target=worker" in source
