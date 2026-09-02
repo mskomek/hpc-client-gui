@@ -33,6 +33,7 @@ from hpc_gui.config.jump_host_profile import (
     patch_jump_host_settings,
 )
 from hpc_gui.ssh.jump import jump_info_from_settings
+from hpc_gui.services.connection_controller import ConnectionController
 from hpc_gui.config.system_profile import normalize_system_settings
 from hpc_gui.core.history import append_event
 from hpc_gui.core.logging import append_log
@@ -400,6 +401,7 @@ class LoginWidget(QWidget):
         root.addWidget(splitter)
 
         self._session = {"connected": False, "cfg": SSHConfig(), "ssh": None, "slurm": None, "files": None}
+        self._connection_controller = ConnectionController()
         self._console_log_lines: list[str] = []
         self._last_shell_geometry: tuple[int, int] | None = None
         self._connect_thread: QThread | None = None
@@ -437,6 +439,7 @@ class LoginWidget(QWidget):
         try:
             worker = self._connect_worker
             thread = self._connect_thread
+            self._connection_controller.cancel_connect()
             if worker is not None:
                 worker.cancel()
             if thread is not None:
@@ -672,6 +675,7 @@ class LoginWidget(QWidget):
         if self._connect_in_progress:
             return False
         self._connect_in_progress = True
+        self._connection_controller.begin_connect()
         self._pending_old_ssh = old_ssh
         if self.terminal_widget is not None:
             self.terminal_widget.detach()
@@ -804,6 +808,7 @@ class LoginWidget(QWidget):
                 "files": files,
                 "profile_name": self.profile_name.text().strip(),
             }
+            self._connection_controller.finish(self._session)
             if self.terminal_widget is not None and ssh is not None:
                 self.terminal_widget.attach(ssh)
             if isinstance(cfg, SSHConfig):
@@ -828,6 +833,7 @@ class LoginWidget(QWidget):
             self.btn_connect.setEnabled(bool(self._selected_profile_name()))
 
     def _on_connect_failed(self, message: str, exc: object) -> None:
+        self._connection_controller.fail()
         if self.terminal_widget is not None:
             self.terminal_widget.detach()
         self.terminal_identity_label.setText(t("login.terminal_protocol_ssh"))
@@ -1587,6 +1593,7 @@ class LoginWidget(QWidget):
         if not self._session.get("connected", False):
             return
         self._session["connected"] = False
+        self._connection_controller.finish_disconnect()
         if self.terminal_widget is not None:
             self.terminal_widget.detach()
         self.terminal_identity_label.setText(t("login.terminal_protocol_ssh"))
