@@ -34,7 +34,10 @@ def main() -> int:
 
 
 def _dispatch(command_id: str) -> None:
-    del command_id
+    if command_id in {"APP-HELP", "APP-COMMAND-PALETTE"}:
+        from hpc_gui.wx_help import show_help
+
+        show_help()
 
 
 __all__ = ["main"]
