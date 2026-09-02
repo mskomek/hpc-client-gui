@@ -162,6 +162,9 @@ def _dispatch(command_id: str, parent=None, lifecycle=None, session_state=None) 
                     target = str(PurePosixPath(destination) / Path(local_path).name)
                     files.upload(local_path, target)
                 return
+            if action == "new_folder" and files and destination:
+                files.mkdir(destination)
+                return
             raise RuntimeError(f"Remote action is not available from this view: {action}")
         def editor(path, content=""):
             show_editor(
