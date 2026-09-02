@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from threading import Lock, Thread
+from types import SimpleNamespace
 from typing import Any, Callable
 
 from hpc_gui.core.i18n import subscribe_language_change, t, unsubscribe_language_change
@@ -290,7 +291,11 @@ def show_jobs(parent=None, model: WxJobsModel | None = None, *, list_jobs=None, 
         model.tracking.select_job(job_id)
         if isinstance(item, dict):
             model.set_output(item.get("stdout_path", ""), item.get("stderr_path", ""))
-            details.SetValue("\n".join(f"{key}: {value}" for key, value in item.items()))
+            lines = [f"{key}: {value}" for key, value in item.items()]
+            failure = model.explain_failure(SimpleNamespace(**item))
+            if failure:
+                lines.extend(failure.as_lines())
+            details.SetValue("\n".join(lines))
 
     def cancel_job(_event):
         job_id = model.tracking.selected_job_id
