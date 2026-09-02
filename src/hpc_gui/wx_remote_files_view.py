@@ -143,6 +143,19 @@ def show_remote_files(parent=None, model: WxRemoteDirectoryModel | None = None, 
             return
         if action == "delete" and wx.MessageBox(t("dirs.delete_confirm"), t("dirs.delete"), wx.YES_NO | wx.ICON_WARNING) != wx.YES:
             return
+        destination = ""
+        if action == "rename":
+            dialog = wx.TextEntryDialog(frame, t("dirs.rename"), t("dirs.rename"), PurePosixPath(selected[0]).name)
+            try:
+                if dialog.ShowModal() != wx.ID_OK:
+                    return
+                new_name = dialog.GetValue().strip()
+                if not new_name or PurePosixPath(new_name).name != new_name or new_name in {".", ".."}:
+                    wx.MessageBox(t("dirs.rename_invalid"), t("dirs.rename"), wx.OK | wx.ICON_ERROR)
+                    return
+                destination = str(PurePosixPath(selected[0]).parent / new_name)
+            finally:
+                dialog.Destroy()
         with lock:
             if state["closed"] or state["busy"]:
                 return
@@ -151,7 +164,7 @@ def show_remote_files(parent=None, model: WxRemoteDirectoryModel | None = None, 
 
         def worker():
             try:
-                operation(action, selected)
+                operation(action, selected, destination)
                 wx.CallAfter(operation_done, None)
             except Exception as error:
                 wx.CallAfter(operation_done, error)
