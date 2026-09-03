@@ -310,6 +310,13 @@ def test_wx_remote_clicked_directory_context_cut_paste_moves_to_clicked_director
     _pump(wx_app, lambda: ("move", "/work/a.txt", "/work/dest/a.txt") in backend.calls)
     assert "/work/a.txt" not in backend.entries
     assert "/work/dest/a.txt" in backend.entries
+    undo = wx.KeyEvent(wx.wxEVT_KEY_DOWN)
+    undo.SetKeyCode(ord("Z"))
+    undo.SetControlDown(True)
+    listing.ProcessEvent(undo)
+    _pump(wx_app, lambda: ("move", "/work/dest/a.txt", "/work/a.txt") in backend.calls)
+    assert "/work/a.txt" in backend.entries
+    assert "/work/dest/a.txt" not in backend.entries
 
 
 class _Dialog:
