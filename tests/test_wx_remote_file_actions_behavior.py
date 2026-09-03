@@ -33,8 +33,8 @@ def wx_app():
     app.Destroy()
 
 
-def _browser(app, backend, model=None):
-    show_remote_files(model=model, loader=backend.iterdir_entries, operation=backend.operation)
+def _browser(app, backend, model=None, operation=None):
+    show_remote_files(model=model, loader=backend.iterdir_entries, operation=operation or backend.operation)
     frame = [window for window in wx.GetTopLevelWindows() if hasattr(window, "_wx_remote_controls")][-1]
     _pump(app, lambda: frame._wx_remote_controls["listing"].GetItemCount() >= 1)
     return frame
@@ -126,6 +126,24 @@ def test_wx_remote_backspace_navigates_parent_and_f5_refreshes(wx_app):
     refresh_event.SetKeyCode(wx.WXK_F5)
     listing.ProcessEvent(refresh_event)
     _pump(wx_app, lambda: backend.list_calls > calls)
+
+
+def test_wx_remote_paste_failure_is_visible_and_recovers(wx_app, monkeypatch):
+    backend = MockRemoteFilesBackend()
+    errors = []
+
+    def failing_operation(_action, _paths, _destination=""):
+        raise RuntimeError("paste failed")
+
+    frame = _browser(wx_app, backend, WxRemoteDirectoryModel("/work"), failing_operation)
+    listing = frame._wx_remote_controls["listing"]
+    listing.Select(0)
+    get_file_clipboard().set("copy", ["/work/a.txt"])
+    monkeypatch.setattr(wx, "MessageBox", lambda message, *_args, **_kwargs: errors.append(message) or wx.OK)
+    frame._wx_remote_run_action("paste", (), "/work")
+    _pump(wx_app, lambda: not frame._wx_remote_state["busy"])
+    assert errors == ["paste failed"]
+    assert listing.IsEnabled()
 
 
 class _Dialog:
