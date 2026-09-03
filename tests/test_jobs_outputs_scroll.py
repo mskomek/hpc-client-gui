@@ -303,6 +303,7 @@ class JobsOutputsScrollTests(unittest.TestCase):
     def test_minimized_main_outputs_page_pauses_and_restores_live_follow(self) -> None:
         widget = JobsOutputsWidget()
         widget.session = {"connected": True, "files": object()}
+        widget._tracking.set_session(widget.session)
         widget.active_out = "/tmp/output.log"
         widget.section_tabs.setCurrentWidget(widget.outputs_tab)
         widget._start_async = lambda *_args, **_kwargs: True
@@ -313,7 +314,7 @@ class JobsOutputsScrollTests(unittest.TestCase):
             return_value=True,
         ):
             widget.set_application_minimized(True)
-            self.assertFalse(widget._live_timer.isActive())
+            self.assertTrue(widget._live_timer.isActive())
             self.assertFalse(widget.is_outputs_polling_visible())
 
             widget.set_application_minimized(False)
@@ -336,7 +337,8 @@ class JobsOutputsScrollTests(unittest.TestCase):
             return_value=True,
         ):
             follower.set_window_minimized(True)
-            self.assertFalse(follower._live_timer.isActive())
+            self.assertTrue(follower._live_timer.isActive())
+            self.assertTrue(follower._paused_for_minimize)
 
             follower.set_window_minimized(False)
             self.assertTrue(follower._live_timer.isActive())
