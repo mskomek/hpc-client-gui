@@ -6,6 +6,7 @@ import pytest
 wx = pytest.importorskip("wx")
 
 from mock_hpc_files import MockRemoteFilesBackend
+from hpc_gui.services.file_clipboard import get_file_clipboard
 from hpc_gui.wx_remote_files_view import show_remote_files
 
 
@@ -31,8 +32,8 @@ def wx_app():
     app.Destroy()
 
 
-def _browser(app, backend):
-    show_remote_files(loader=backend.iterdir_entries, operation=backend.operation)
+def _browser(app, backend, model=None):
+    show_remote_files(model=model, loader=backend.iterdir_entries, operation=backend.operation)
     frame = [window for window in wx.GetTopLevelWindows() if hasattr(window, "_wx_remote_controls")][-1]
     _pump(app, lambda: frame._wx_remote_controls["listing"].GetItemCount() >= 1)
     return frame
@@ -60,6 +61,34 @@ def test_remote_new_folder_uses_clicked_directory_target(wx_app, monkeypatch):
     frame._wx_remote_run_action("new_folder", ("/work",), "/work")
     _pump(wx_app, lambda: ("mkdir", "/work/child") in backend.calls)
     assert "/work/child" in backend.entries
+
+
+def test_wx_remote_keyboard_copy_and_paste_use_shared_clipboard(wx_app):
+    backend = MockRemoteFilesBackend()
+    frame = _browser(wx_app, backend)
+    listing = frame._wx_remote_controls["listing"]
+    listing.Select(0)
+    copy_event = wx.KeyEvent(wx.wxEVT_KEY_DOWN)
+    copy_event.SetKeyCode(ord("C"))
+    copy_event.SetControlDown(True)
+    listing.ProcessEvent(copy_event)
+    assert get_file_clipboard().get().paths == ["/work"]
+
+
+def test_wx_remote_copy_path_uses_system_clipboard_without_backend(wx_app):
+    backend = MockRemoteFilesBackend()
+    frame = _browser(wx_app, backend)
+    listing = frame._wx_remote_controls["listing"]
+    listing.Select(0)
+    frame._wx_remote_run_action("copy_path", ("/work",), "/")
+    assert wx.TheClipboard.Open()
+    try:
+        data = wx.TextDataObject()
+        assert wx.TheClipboard.GetData(data)
+        assert data.GetText() == "/work"
+    finally:
+        wx.TheClipboard.Close()
+    assert not any(call[0] in {"copy", "move"} for call in backend.calls)
 
 
 class _Dialog:
