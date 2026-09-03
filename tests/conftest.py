@@ -26,6 +26,22 @@ os.environ.setdefault("HPC_GUI_DISABLE_WEBENGINE", "1")
 import pytest  # noqa: E402
 
 try:
+    import wx  # noqa: E402
+except ImportError:  # pragma: no cover - exercised only in non-wx environments
+    pass
+else:
+    # wx.App installs a GUI log target, so any wx error (a clipboard another
+    # process momentarily holds, a destroyed control) opens a modal dialog that
+    # blocks the run until someone clicks it. Tests want the text, not a dialog.
+    _wx_app_init = wx.App.__init__
+
+    def _wx_app_init_without_modal_logging(self, *args, **kwargs):
+        _wx_app_init(self, *args, **kwargs)
+        wx.Log.SetActiveTarget(wx.LogStderr())
+
+    wx.App.__init__ = _wx_app_init_without_modal_logging
+
+try:
     # Lightweight runs such as the Plugin API contract suite execute without
     # Qt installed; the startup-popup guard below only applies then.
     from hpc_gui.ui import main_window as main_window_module  # noqa: E402
