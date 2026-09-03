@@ -7,6 +7,7 @@ from hpc_gui.wx_local_files import show_local_files
 from hpc_gui.wx_remote_files import WxRemoteDirectoryModel
 from hpc_gui.wx_remote_files_view import show_remote_files
 from mock_hpc_files import MockRemoteFilesBackend
+from support.wx_clipboard import read_clipboard_text
 from hpc_gui.core.i18n import load_language
 from hpc_gui.services.file_clipboard import get_file_clipboard
 
@@ -266,11 +267,5 @@ def test_wx_remote_context_copy_path_writes_clipboard_without_backend(wx_app):
     listing.ProcessEvent(event)
     listing.PopupMenu=orig
     # verify clipboard
-    assert wx.TheClipboard.Open()
-    try:
-        data=wx.TextDataObject()
-        wx.TheClipboard.GetData(data)
-        assert "/work" in data.GetText()
-    finally:
-        wx.TheClipboard.Close()
+    assert "/work" in read_clipboard_text()
     assert not any(c[0] in ("copy","move") for c in backend.calls)

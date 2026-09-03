@@ -7,7 +7,7 @@ import re
 import stat as pystat
 from typing import Iterator, List, Tuple
 
-from hpc_gui.services.files_base import FilesBackend, RemoteEntry
+from hpc_gui.services.files_base import RESUME_DEST_LARGER, FilesBackend, RemoteEntry
 
 _SFTP_CHUNK_SIZE = 8 * 1024 * 1024
 _SFTP_PREFETCH_REQUESTS = 64
@@ -195,18 +195,19 @@ class SSHFilesBackend(FilesBackend):
         )
 
     def download(self, remote_path: str, local_path: str, progress_cb=None) -> None:
-        self._download(remote_path, local_path, progress_cb)
+        self._download(remote_path, local_path, progress_cb, resume=False)
 
     def resume_download(self, remote_path: str, local_path: str, progress_cb=None) -> None:
-        self._download(remote_path, local_path, progress_cb)
+        self._download(remote_path, local_path, progress_cb, resume=True)
 
-    def _download(self, remote_path: str, local_path: str, progress_cb=None) -> None:
+    def _download(self, remote_path: str, local_path: str, progress_cb=None, *, resume: bool) -> None:
         """Download a remote file.
 
-        Resume behavior:
-        - If local_path exists and is smaller than the remote size, resume from local size.
-        - If sizes match, do nothing.
-        - Otherwise, overwrite.
+        ``resume=False`` always replaces the local file from byte zero.
+        ``resume=True`` continues from the existing local size when the local file
+        is a strict prefix of the remote file, completes as a no-op when the sizes
+        already match, and is rejected when the local file is larger than the
+        remote one.
         """
         sftp = self.ssh.open_transfer_sftp()
         try:
@@ -218,13 +219,16 @@ class SSHFilesBackend(FilesBackend):
             except Exception:
                 local_size = 0
 
-            if local_size == remote_size and remote_size > 0:
-                if progress_cb is not None:
-                    progress_cb(remote_size, remote_size)
-                return
+            if resume:
+                if local_size == remote_size and remote_size > 0:
+                    if progress_cb is not None:
+                        progress_cb(remote_size, remote_size)
+                    return
+                if local_size > remote_size:
+                    raise ValueError(RESUME_DEST_LARGER.format(path=local_path))
 
             # Resume only when local is a strict prefix of remote.
-            if 0 < local_size < remote_size:
+            if resume and 0 < local_size < remote_size:
                 if progress_cb is not None:
                     progress_cb(local_size, remote_size)
                 with sftp.open(remote_path, "rb") as rf:
@@ -242,7 +246,7 @@ class SSHFilesBackend(FilesBackend):
                                 progress_cb(local_size, remote_size)
                 return
 
-            # Overwrite
+            # Full transfer from byte zero (overwrite, or resume with no partial data).
             os.makedirs(os.path.dirname(local_path) or ".", exist_ok=True)
             downloaded = 0
             with sftp.open(remote_path, "rb") as rf:
@@ -263,18 +267,19 @@ class SSHFilesBackend(FilesBackend):
                 pass
 
     def upload(self, local_path: str, remote_path: str, progress_cb=None) -> None:
-        self._upload(local_path, remote_path, progress_cb)
+        self._upload(local_path, remote_path, progress_cb, resume=False)
 
     def resume_upload(self, local_path: str, remote_path: str, progress_cb=None) -> None:
-        self._upload(local_path, remote_path, progress_cb)
+        self._upload(local_path, remote_path, progress_cb, resume=True)
 
-    def _upload(self, local_path: str, remote_path: str, progress_cb=None) -> None:
+    def _upload(self, local_path: str, remote_path: str, progress_cb=None, *, resume: bool) -> None:
         """Upload a local file.
 
-        Resume behavior:
-        - If remote_path exists and is smaller than the local size, resume from remote size.
-        - If sizes match, do nothing.
-        - Otherwise, overwrite.
+        ``resume=False`` always replaces the remote file from byte zero.
+        ``resume=True`` continues from the existing remote size when the remote
+        file is a strict prefix of the local file, completes as a no-op when the
+        sizes already match, and is rejected when the remote file is larger than
+        the local one.
         """
         sftp = self.ssh.open_transfer_sftp()
         try:
@@ -285,13 +290,16 @@ class SSHFilesBackend(FilesBackend):
             except Exception:
                 remote_size = 0
 
-            if remote_size == local_size and local_size > 0:
-                if progress_cb is not None:
-                    progress_cb(local_size, local_size)
-                return
+            if resume:
+                if remote_size == local_size and local_size > 0:
+                    if progress_cb is not None:
+                        progress_cb(local_size, local_size)
+                    return
+                if remote_size > local_size:
+                    raise ValueError(RESUME_DEST_LARGER.format(path=remote_path))
 
             # Resume only when remote is a strict prefix of local.
-            if 0 < remote_size < local_size:
+            if resume and 0 < remote_size < local_size:
                 if progress_cb is not None:
                     progress_cb(remote_size, local_size)
                 with open(local_path, "rb") as lf:
@@ -308,7 +316,7 @@ class SSHFilesBackend(FilesBackend):
                                 progress_cb(remote_size, local_size)
                 return
 
-            # Overwrite
+            # Full transfer from byte zero (overwrite, or resume with no partial data).
             sent = 0
             with open(local_path, "rb") as lf:
                 with sftp.open(remote_path, "wb") as rf:

@@ -6,6 +6,7 @@ import pytest
 wx = pytest.importorskip("wx")
 
 from mock_hpc_files import MockRemoteFilesBackend
+from support.wx_clipboard import read_clipboard_text
 from hpc_gui.services.file_clipboard import get_file_clipboard
 from hpc_gui.core.i18n import load_language
 from hpc_gui.wx_remote_files import WxRemoteDirectoryModel
@@ -234,13 +235,7 @@ def test_wx_remote_copy_path_uses_system_clipboard_without_backend(wx_app):
     listing = frame._wx_remote_controls["listing"]
     listing.Select(0)
     frame._wx_remote_run_action("copy_path", ("/work",), "/")
-    assert wx.TheClipboard.Open()
-    try:
-        data = wx.TextDataObject()
-        assert wx.TheClipboard.GetData(data)
-        assert data.GetText() == "/work"
-    finally:
-        wx.TheClipboard.Close()
+    assert read_clipboard_text() == "/work"
     assert not any(call[0] in {"copy", "move"} for call in backend.calls)
 
 
@@ -251,13 +246,7 @@ def test_wx_remote_copy_path_preserves_multiple_selected_paths(wx_app):
     listing.Select(0)
     listing.Select(1)
     frame._wx_remote_run_action("copy_path", ("/work/a.txt", "/work/b.txt"), "/work")
-    assert wx.TheClipboard.Open()
-    try:
-        data = wx.TextDataObject()
-        assert wx.TheClipboard.GetData(data)
-        assert data.GetText().splitlines() == ["/work/a.txt", "/work/b.txt"]
-    finally:
-        wx.TheClipboard.Close()
+    assert read_clipboard_text().splitlines() == ["/work/a.txt", "/work/b.txt"]
     assert not backend.calls
 
 

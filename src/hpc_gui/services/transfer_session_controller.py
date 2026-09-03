@@ -31,7 +31,7 @@ class TransferSessionController:
 
     def _run_item(self, item: TransferItem, progress) -> None:
         decision = None
-        if self._conflict_check and self._conflict_check(item.dst):
+        if self._conflict_check and self._conflict_check(item):
             decision = self.conflict_policy
             if decision in {"ask", "rename"}:
                 if not self._conflict_resolver:

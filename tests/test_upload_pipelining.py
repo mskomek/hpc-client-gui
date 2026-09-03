@@ -120,7 +120,7 @@ class ResumeUploadTests(unittest.TestCase):
             source.write_bytes(b"abcdefgh")
             progress: list[tuple[int, int]] = []
 
-            backend.upload(
+            backend.resume_upload(
                 str(source),
                 "/remote/resume.bin",
                 progress_cb=lambda done, total: progress.append((done, total)),
@@ -141,7 +141,7 @@ class ResumeUploadTests(unittest.TestCase):
             source.write_bytes(b"1234")
             progress: list[tuple[int, int]] = []
 
-            backend.upload(
+            backend.resume_upload(
                 str(source),
                 "/remote/same.bin",
                 progress_cb=lambda done, total: progress.append((done, total)),

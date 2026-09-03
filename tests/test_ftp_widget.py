@@ -1722,7 +1722,7 @@ class FtpWidgetTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             source = Path(tmp) / "resume.bin"
             source.write_bytes(b"abcdefgh")
-            backend.upload(
+            backend.resume_upload(
                 str(source),
                 "/remote/resume.bin",
                 progress_cb=lambda done, total: progress.append((done, total)),
