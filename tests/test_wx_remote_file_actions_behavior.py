@@ -109,6 +109,23 @@ def test_wx_remote_copy_path_uses_system_clipboard_without_backend(wx_app):
     assert not any(call[0] in {"copy", "move"} for call in backend.calls)
 
 
+def test_wx_remote_copy_path_preserves_multiple_selected_paths(wx_app):
+    backend = MockRemoteFilesBackend()
+    frame = _browser(wx_app, backend, WxRemoteDirectoryModel("/work"))
+    listing = frame._wx_remote_controls["listing"]
+    listing.Select(0)
+    listing.Select(1)
+    frame._wx_remote_run_action("copy_path", ("/work/a.txt", "/work/b.txt"), "/work")
+    assert wx.TheClipboard.Open()
+    try:
+        data = wx.TextDataObject()
+        assert wx.TheClipboard.GetData(data)
+        assert data.GetText().splitlines() == ["/work/a.txt", "/work/b.txt"]
+    finally:
+        wx.TheClipboard.Close()
+    assert not backend.calls
+
+
 def test_wx_remote_keyboard_cut_and_undo_leaves_pending_clipboard_untouched(wx_app):
     backend = MockRemoteFilesBackend()
     frame = _browser(wx_app, backend, WxRemoteDirectoryModel("/work"))
