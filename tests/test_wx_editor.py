@@ -31,7 +31,7 @@ def test_wx_editor_view_has_async_remote_save_and_distinct_actions():
     assert "save_remote=None" in source
     assert "Thread(target=worker" in source
     assert "on_submit=None" in source and "on_run=None" in source
-    assert "event.Veto()" in source and "save_document(on_done=frame.Close)" in source
+    assert "event.Veto()" in source and "save_document(on_done=destroy_after_save)" in source
 
 
 def _pump(app, predicate, timeout=2):
@@ -198,3 +198,17 @@ def test_wx_remote_save_close_while_in_flight_discards_late_ui_callback(wx_app):
     release.set()
     wx_app.ProcessPendingEvents()
     assert not [window for window in wx.GetTopLevelWindows() if window and window.GetTitle() == "job.slurm"]
+
+
+def test_wx_editor_dirty_close_save_changes_popup_saves_then_closes(wx_app, monkeypatch):
+    saved = []
+    model = WxEditorModel()
+    frame = _open_view(model, save_remote=lambda path, content: saved.append((path, content)))
+    frame._wx_editor_controls["editor"].SetValue("popup-approved")
+    monkeypatch.setattr(wx, "MessageBox", lambda *_args, **_kwargs: wx.YES)
+
+    frame.Close()
+    _pump(wx_app, lambda: saved == [("/remote/job.slurm", "popup-approved")])
+    wx.Yield()
+    _pump(wx_app, lambda: not [window for window in wx.GetTopLevelWindows() if window and window.GetTitle() == "job.slurm"])
+    assert not model.controller.active.dirty
