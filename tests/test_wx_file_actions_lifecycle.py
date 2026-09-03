@@ -353,6 +353,65 @@ def test_wx_remote_listing_completion_after_close_is_safe(wx_app):
     assert frame._wx_remote_state["closed"]
 
 
+def test_wx_remote_stale_listing_error_is_ignored_after_navigation(wx_app, monkeypatch):
+    started = threading.Event()
+    release = threading.Event()
+    errors = []
+
+    def loader(path):
+        if path == "/work":
+            started.set()
+            release.wait(2)
+            raise RuntimeError("stale listing")
+        return (RemoteEntry("/current.txt"),)
+
+    monkeypatch.setattr(wx, "MessageBox", lambda *args, **kwargs: errors.append(args))
+    show_remote_files(model=WxRemoteDirectoryModel("/work"), loader=loader, operation=lambda *_args: None)
+    frame = [window for window in wx.GetTopLevelWindows() if hasattr(window, "_wx_remote_controls")][-1]
+    listing = frame._wx_remote_controls["listing"]
+    assert started.wait(2)
+    back = wx.KeyEvent(wx.wxEVT_KEY_DOWN)
+    back.SetKeyCode(wx.WXK_BACK)
+    listing.ProcessEvent(back)
+    _pump(wx_app, lambda: listing.GetItemCount() == 1)
+    release.set()
+    _pump(wx_app, lambda: listing.GetItemText(0) == "current.txt")
+    assert listing.GetItemText(0) == "current.txt"
+    assert errors == []
+
+
+def test_wx_local_stale_listing_error_is_ignored_after_navigation(wx_app, tmp_path: Path, monkeypatch):
+    first = tmp_path / "first"
+    first.mkdir()
+    current = tmp_path / "current"
+    current.mkdir()
+    (current / "current.txt").write_text("x", encoding="utf-8")
+    started = threading.Event()
+    release = threading.Event()
+    errors = []
+
+    def loader(model, path=None):
+        if Path(path) == first.resolve():
+            started.set()
+            release.wait(2)
+            raise RuntimeError("stale listing")
+        return (LocalEntry(current / "current.txt", False, 1),)
+
+    monkeypatch.setattr(LocalBrowserModel, "list_entries", loader)
+    monkeypatch.setattr(wx, "MessageBox", lambda *args, **kwargs: errors.append(args))
+    show_local_files(path=first)
+    frame = [window for window in wx.GetTopLevelWindows() if hasattr(window, "_wx_local_controls")][-1]
+    listing = frame._wx_local_controls["listing"]
+    assert started.wait(2)
+    back = wx.KeyEvent(wx.wxEVT_KEY_DOWN)
+    back.SetKeyCode(wx.WXK_BACK)
+    listing.ProcessEvent(back)
+    _pump(wx_app, lambda: frame._wx_local_model.current_path == tmp_path.resolve())
+    release.set()
+    _pump(wx_app, lambda: listing.GetItemCount() == 1 and listing.GetItemText(0) == "current.txt")
+    assert errors == []
+
+
 class _Dialog:
     def __init__(self, value):
         self.value = value
