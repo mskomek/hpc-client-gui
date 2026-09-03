@@ -29,6 +29,7 @@
 - [[Plugins|Plugins]]
 - [[Settings Reference|Settings-Reference]]
 - [[Interface Language and i18n|Interface-Language-and-i18n]]
+- [[GUI Feature Guide|GUI-Feature-Guide]]
 
 **Automation**
 
@@ -91,6 +92,7 @@
 - [[Eklentiler|Plugins-TR]]
 - [[Ayarlar Referansı|Settings-Reference-TR]]
 - [[Arayüz Dili ve i18n|Interface-Language-and-i18n-TR]]
+- [[GUI Özellik Rehberi|GUI-Feature-Guide-TR]]
 
 **Otomasyon**
 
