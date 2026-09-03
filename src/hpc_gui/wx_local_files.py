@@ -311,6 +311,9 @@ def show_local_files(parent=None, path: str | Path | None = None, *, open_editor
         if action == "paste":
             mutate(model.paste)
             return
+        if action == "refresh":
+            refresh()
+            return
         if not selected:
             return
         entry = selected[0]
@@ -346,8 +349,6 @@ def show_local_files(parent=None, path: str | Path | None = None, *, open_editor
             if wx.TheClipboard.Open():
                 wx.TheClipboard.SetData(wx.TextDataObject(str(entry.path)))
                 wx.TheClipboard.Close()
-        elif action == "refresh":
-            refresh()
         elif action == "rename":
             dialog = wx.TextEntryDialog(frame, t("dirs.rename"), t("dirs.rename"), entry.path.name)
             try:

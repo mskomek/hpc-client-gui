@@ -1,4 +1,5 @@
 import time
+from pathlib import Path
 
 import pytest
 
@@ -8,6 +9,7 @@ from hpc_gui.services.file_context_actions import context_selection, visible_act
 from hpc_gui.core.i18n import load_language
 from hpc_gui.wx_remote_files import WxRemoteDirectoryModel
 from hpc_gui.wx_remote_files_view import show_remote_files
+from hpc_gui.wx_local_files import show_local_files
 
 
 @pytest.fixture
@@ -116,3 +118,43 @@ def test_wx_remote_context_target_stress_uses_real_events(wx_app):
             wrong_targets += 1
     assert wrong_targets == 0, captured[-4:]
     assert len(captured) == 200
+
+
+def test_wx_local_mutation_stress_uses_real_actions(wx_app, tmp_path: Path, monkeypatch):
+    show_local_files(path=tmp_path)
+    frame = [window for window in wx.GetTopLevelWindows() if hasattr(window, "_wx_local_controls")][-1]
+    listing = frame._wx_local_controls["listing"]
+    rename_target = {"name": ""}
+
+    class Dialog:
+        def ShowModal(self):
+            return wx.ID_OK
+
+        def GetValue(self):
+            return rename_target["name"]
+
+        def Destroy(self):
+            pass
+
+    monkeypatch.setattr(wx, "TextEntryDialog", lambda *_args, **_kwargs: Dialog())
+    monkeypatch.setattr(wx, "MessageBox", lambda *_args, **_kwargs: wx.YES)
+    for index in range(100):
+        original = tmp_path / f"stress-{index}.txt"
+        renamed = tmp_path / f"renamed-{index}.txt"
+        original.write_text("x", encoding="utf-8")
+        frame._wx_local_run_action("refresh")
+        row = next(i for i in range(listing.GetItemCount()) if listing.GetItemText(i) == original.name)
+        for item_index in range(listing.GetItemCount()):
+            listing.Select(item_index, False)
+        listing.Select(row)
+        rename_target["name"] = renamed.name
+        frame._wx_local_run_action("rename")
+        _pump(wx_app, lambda: not frame._wx_local_state["mutation_in_flight"])
+        assert renamed.exists() and not original.exists()
+        for item_index in range(listing.GetItemCount()):
+            listing.Select(item_index, False)
+        row = next(i for i in range(listing.GetItemCount()) if listing.GetItemText(i) == renamed.name)
+        listing.Select(row)
+        frame._wx_local_run_action("delete")
+        _pump(wx_app, lambda: not frame._wx_local_state["mutation_in_flight"])
+        assert not renamed.exists()
