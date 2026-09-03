@@ -37,7 +37,8 @@ class MockHPCJobs:
                 self.read_gate.wait(2)
             if job_id in self.missing:
                 raise FileNotFoundError(job_id)
-            return {"stdout": self.stdout[job_id], "stderr": self.stderr[job_id]}
+            with self._lock:
+                return {"stdout": self.stdout[job_id], "stderr": self.stderr[job_id]}
         finally:
             with self._lock:
                 self.active_reads -= 1
@@ -50,7 +51,14 @@ class MockHPCJobs:
 
     def append(self, job_id, line, *, stream="stdout"):
         target = self.stdout if stream == "stdout" else self.stderr
-        target[str(job_id)] += f"\n{line}"
+        with self._lock:
+            target[str(job_id)] += f"\n{line}"
 
     def transition(self, job_id, state):
-        self.jobs[str(job_id)]["state"] = state
+        with self._lock:
+            self.jobs[str(job_id)]["state"] = state
+
+    def set_output(self, job_id, text, *, stream="stdout"):
+        target = self.stdout if stream == "stdout" else self.stderr
+        with self._lock:
+            target[str(job_id)] = str(text)
