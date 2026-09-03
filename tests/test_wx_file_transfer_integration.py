@@ -200,6 +200,17 @@ def test_wx_file_transfer_conflict_ask_uses_gui_decision_seam(monkeypatch):
     parent = wx.Frame(None)
     files = _ConflictFiles()
     state = {"session": {"files": files}, "conflict_policy": "ask"}
+    # New conflict UI is a dedicated dialog, not MessageBox; mock the dialog creation to return overwrite
+    from hpc_gui import wx_transfer_workspace as _wx_tw
+    class _MockDlg:
+        def __init__(self, *a, **kw):
+            self._wx_conflict_result = {"value": "overwrite"}
+        def ShowModal(self):
+            return wx.ID_OK
+        def Destroy(self):
+            pass
+    monkeypatch.setattr(_wx_tw, "create_transfer_conflict_dialog", lambda *a, **kw: _MockDlg())
+    # also keep old MessageBox mock for fallback
     monkeypatch.setattr(wx, "MessageBox", lambda *_args, **_kwargs: wx.YES)
     controller = _start_file_transfers(
         state,
@@ -244,6 +255,17 @@ def test_wx_file_transfer_conflict_gui_decline_does_not_upload(monkeypatch, choi
     files = _ConflictFiles()
     state = {"session": {"files": files}, "conflict_policy": "ask"}
     result = wx.NO if choice == "no" else wx.CANCEL
+    # Mock dialog to respect old MessageBox-based decline semantics
+    from hpc_gui import wx_transfer_workspace as _wx_tw
+    decision = "skip" if choice == "no" else "cancel"
+    class _MockDlg:
+        def __init__(self, *a, **kw):
+            self._wx_conflict_result = {"value": decision}
+        def ShowModal(self):
+            return wx.ID_OK if decision == "skip" else wx.ID_CANCEL
+        def Destroy(self):
+            pass
+    monkeypatch.setattr(_wx_tw, "create_transfer_conflict_dialog", lambda *a, **kw: _MockDlg())
     monkeypatch.setattr(wx, "MessageBox", lambda *_args, **_kwargs: result)
     controller = _start_file_transfers(
         state,
