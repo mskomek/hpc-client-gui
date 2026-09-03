@@ -84,6 +84,7 @@ def show_help(parent=None, topic_id: str | None = None) -> int:
     root = wx.BoxSizer(wx.VERTICAL)
     search = wx.TextCtrl(panel, style=wx.TE_PROCESS_ENTER)
     search.SetHint(t("help.search_placeholder"))
+    search_results = wx.ListBox(panel)
     split = wx.SplitterWindow(panel)
     sidebar = wx.ListBox(split)
     content = wx.TextCtrl(split, style=wx.TE_MULTILINE | wx.TE_READONLY | wx.HSCROLL)
@@ -91,29 +92,39 @@ def show_help(parent=None, topic_id: str | None = None) -> int:
     split.SetMinimumPaneSize(180)
     close = wx.Button(panel, label=t("common.close"))
     root.Add(search, 0, wx.EXPAND | wx.ALL, 8)
+    root.Add(search_results, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 8)
     root.Add(split, 1, wx.EXPAND | wx.LEFT | wx.RIGHT, 8)
     root.Add(close, 0, wx.ALIGN_RIGHT | wx.ALL, 8)
     panel.SetSizer(root)
     navigation = model.navigation()
+    results = []
 
     def refresh(_lang=None):
         sidebar.Set([item.title() for item in navigation])
         sidebar.SetSelection(next((index for index, item in enumerate(navigation) if item.id == model.current_topic_id), 0))
+        search_results.Set([f"{item.title} ({item.context})" for item in results])
         content.SetValue(model.page())
         frame.SetTitle(t("help.help_title"))
+        search_results.Show(bool(results))
+        panel.Layout()
 
     def choose(_event):
         model.select_topic(navigation[sidebar.GetSelection()].id)
         refresh()
 
     def search_changed(_event):
-        results = model.search_help(search.GetValue())
+        nonlocal results
+        results = list(model.search_help(search.GetValue()))
+        refresh()
+
+    def choose_result(_event):
         if results:
-            model.navigate_result(results[0])
+            model.navigate_result(results[search_results.GetSelection()])
             refresh()
 
     sidebar.Bind(wx.EVT_LISTBOX, choose)
     search.Bind(wx.EVT_TEXT, search_changed)
+    search_results.Bind(wx.EVT_LISTBOX, choose_result)
     close.Bind(wx.EVT_BUTTON, lambda _event: frame.Close())
     def on_language(lang):
         wx.CallAfter(refresh, lang)
