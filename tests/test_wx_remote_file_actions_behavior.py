@@ -290,6 +290,28 @@ def test_wx_remote_clicked_directory_context_paste_targets_clicked_directory(wx_
     _pump(wx_app, lambda: ("copy", "/work/a.txt", "/work/dest/a.txt") in backend.calls)
 
 
+def test_wx_remote_clicked_directory_context_cut_paste_moves_to_clicked_directory(wx_app):
+    backend = MockRemoteFilesBackend()
+    backend.entries["/work/dest"] = True
+    frame = _browser(wx_app, backend, WxRemoteDirectoryModel("/work"))
+    get_file_clipboard().set("move", ["/work/a.txt"])
+    listing = frame._wx_remote_controls["listing"]
+    row = next(index for index in range(listing.GetItemCount()) if listing.GetItemText(index) == "dest")
+
+    def choose_paste(menu):
+        item = next(item for item in menu.GetMenuItems() if item.GetItemLabelText() == "Paste")
+        listing.ProcessEvent(wx.CommandEvent(wx.wxEVT_MENU, item.GetId()))
+
+    listing.PopupMenu = choose_paste
+    position = listing.ClientToScreen(listing.GetItemPosition(row))
+    event = wx.ContextMenuEvent(wx.wxEVT_CONTEXT_MENU, listing.GetId())
+    event.SetPosition(position)
+    listing.ProcessEvent(event)
+    _pump(wx_app, lambda: ("move", "/work/a.txt", "/work/dest/a.txt") in backend.calls)
+    assert "/work/a.txt" not in backend.entries
+    assert "/work/dest/a.txt" in backend.entries
+
+
 class _Dialog:
     def __init__(self, value):
         self.value = value
