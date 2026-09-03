@@ -103,6 +103,28 @@ def test_wx_local_f5_refreshes_without_a_selection(wx_app, tmp_path: Path):
     assert listing.GetItemText(0) == "new.txt"
 
 
+def test_wx_local_delete_removes_selected_files_and_directories_only(wx_app, tmp_path: Path, monkeypatch):
+    (tmp_path / "a.txt").write_text("a", encoding="utf-8")
+    (tmp_path / "b.txt").write_text("b", encoding="utf-8")
+    selected_dir = tmp_path / "selected-dir"
+    selected_dir.mkdir()
+    (selected_dir / "nested.txt").write_text("nested", encoding="utf-8")
+    untouched = tmp_path / "untouched.txt"
+    untouched.write_text("keep", encoding="utf-8")
+    frame = _browser(wx_app, tmp_path)
+    listing = frame._wx_local_controls["listing"]
+    monkeypatch.setattr(wx, "MessageBox", lambda *_args, **_kwargs: wx.YES)
+    for name in ("a.txt", "selected-dir"):
+        row = next(index for index in range(listing.GetItemCount()) if listing.GetItemText(index) == name)
+        listing.Select(row)
+    frame._wx_local_run_action("delete")
+    _pump(wx_app, lambda: not frame._wx_local_state["mutation_in_flight"])
+    assert not (tmp_path / "a.txt").exists()
+    assert not selected_dir.exists()
+    assert (tmp_path / "b.txt").exists()
+    assert untouched.exists()
+
+
 def test_local_directory_context_creates_folder_under_clicked_directory(wx_app, tmp_path: Path, monkeypatch):
     folder = tmp_path / "folder"
     folder.mkdir()
