@@ -195,6 +195,12 @@ def show_local_files(parent=None, path: str | Path | None = None, *, open_editor
     state = {"context_target": None, "closed": False, "mutation_in_flight": False}
     labels = FILE_CONTEXT_LABEL_KEYS
 
+    def safe_call_after(callback, *args):
+        try:
+            wx.CallAfter(callback, *args)
+        except (AssertionError, RuntimeError):
+            return
+
     def refresh() -> None:
         entries[:] = model.list_entries()
         listing.DeleteAllItems()
@@ -249,9 +255,9 @@ def show_local_files(parent=None, path: str | Path | None = None, *, open_editor
         def worker():
             try:
                 operation()
-                wx.CallAfter(mutation_done, None)
+                safe_call_after(mutation_done, None)
             except Exception as error:
-                wx.CallAfter(mutation_done, error)
+                safe_call_after(mutation_done, error)
 
         def mutation_done(error):
             state["mutation_in_flight"] = False
