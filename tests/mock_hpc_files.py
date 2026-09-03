@@ -73,6 +73,11 @@ class MockRemoteFilesBackend:
             return path in self.entries
 
     def operation(self, action, paths, destination=""):
+        if action == "new_folder":
+            # Production creates the folder from the destination alone; a
+            # background New Folder has no selected paths at all.
+            self.mkdir(destination)
+            return
         for path in paths:
             if action == "rename":
                 self.rename(path, destination)
@@ -82,8 +87,6 @@ class MockRemoteFilesBackend:
                 self.copy(path, f"{destination.rstrip('/')}/{path.rsplit('/', 1)[-1]}")
             elif action == "move":
                 self.move(path, f"{destination.rstrip('/')}/{path.rsplit('/', 1)[-1]}")
-            elif action == "new_folder":
-                self.mkdir(destination)
             elif action in {"upload", "download"}:
                 getattr(self, action)(path, destination)
             else:
