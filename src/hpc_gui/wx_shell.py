@@ -218,11 +218,13 @@ def _start_file_transfers(session_state, lifecycle, items, *, on_progress=None, 
         ready.wait()
         return decision["value"]
 
-    def run_item(item, progress):
+    def run_item(item, progress, *, conflict_decision=None):
         if item.op == "upload":
-            files.upload(item.src, item.dst)
+            method = files.resume_upload if conflict_decision == "resume" else files.upload
+            method(item.src, item.dst)
         elif item.op == "download":
-            files.download(item.src, item.dst)
+            method = files.resume_download if conflict_decision == "resume" else files.download
+            method(item.src, item.dst)
         else:
             raise RuntimeError(f"unsupported transfer item: {item.op}")
         progress(1, 1)
