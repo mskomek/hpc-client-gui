@@ -91,6 +91,18 @@ def test_local_delete_key_runs_async_and_refreshes_visible_rows(wx_app, tmp_path
     assert listing.GetItemCount() == 0
 
 
+def test_wx_local_f5_refreshes_without_a_selection(wx_app, tmp_path: Path):
+    frame = _browser(wx_app, tmp_path)
+    listing = frame._wx_local_controls["listing"]
+    assert listing.GetItemCount() == 0
+    (tmp_path / "new.txt").write_text("x", encoding="utf-8")
+    event = wx.KeyEvent(wx.wxEVT_KEY_DOWN)
+    event.SetKeyCode(wx.WXK_F5)
+    listing.ProcessEvent(event)
+    assert listing.GetItemCount() == 1
+    assert listing.GetItemText(0) == "new.txt"
+
+
 def test_local_directory_context_creates_folder_under_clicked_directory(wx_app, tmp_path: Path, monkeypatch):
     folder = tmp_path / "folder"
     folder.mkdir()
