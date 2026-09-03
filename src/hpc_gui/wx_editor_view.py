@@ -84,6 +84,13 @@ def show_editor(parent=None, model: WxEditorModel | None = None, *, path: str = 
     submit.Bind(wx.EVT_BUTTON, lambda _event: save_document("submit"))
     run.Bind(wx.EVT_BUTTON, lambda _event: save_document("run"))
 
+    def content_changed(event):
+        if not state["in_flight"]:
+            model.controller.update_content(editor.GetValue())
+        event.Skip()
+
+    editor.Bind(wx.EVT_TEXT, content_changed)
+
     def close(event):
         if state["in_flight"]:
             state["closed"] = True
@@ -96,7 +103,12 @@ def show_editor(parent=None, model: WxEditorModel | None = None, *, path: str = 
                 return
             if choice == wx.YES:
                 event.Veto()
-                save_document(on_done=frame.Close)
+                def destroy_after_save():
+                    state["closed"] = True
+                    unsubscribe_language_change(refresh_labels)
+                    frame.Destroy()
+
+                save_document(on_done=destroy_after_save)
                 return
             state["closed"] = True
             unsubscribe_language_change(refresh_labels)
