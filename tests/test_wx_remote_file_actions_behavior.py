@@ -65,6 +65,23 @@ def test_wx_remote_download_uses_selected_destination_dialog(wx_app, monkeypatch
     _pump(wx_app, lambda: ("download", "/work/a.txt", str(tmp_path)) in backend.calls)
 
 
+def test_wx_remote_delete_removes_selected_files_and_directory_only(wx_app, monkeypatch):
+    backend = MockRemoteFilesBackend()
+    backend.entries.update({"/work/selected-dir": True, "/work/selected-dir/nested.txt": False, "/work/keep.txt": False})
+    frame = _browser(wx_app, backend, WxRemoteDirectoryModel("/work"))
+    listing = frame._wx_remote_controls["listing"]
+    monkeypatch.setattr(wx, "MessageBox", lambda *_args, **_kwargs: wx.YES)
+    for name in ("a.txt", "selected-dir"):
+        row = next(index for index in range(listing.GetItemCount()) if listing.GetItemText(index) == name)
+        listing.Select(row)
+    frame._wx_remote_run_action("delete", ("/work/a.txt", "/work/selected-dir"), "/work")
+    _pump(wx_app, lambda: not frame._wx_remote_state["busy"])
+    assert "/work/a.txt" not in backend.entries
+    assert "/work/selected-dir" not in backend.entries
+    assert "/work/selected-dir/nested.txt" not in backend.entries
+    assert "/work/keep.txt" in backend.entries
+
+
 def test_remote_new_folder_uses_clicked_directory_target(wx_app, monkeypatch):
     backend = MockRemoteFilesBackend()
     frame = _browser(wx_app, backend)
