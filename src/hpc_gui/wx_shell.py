@@ -11,6 +11,8 @@ from threading import Thread
 from hpc_gui import __version__
 from hpc_gui.core.i18n import load_saved_language, set_language, subscribe_language_change, system_default_language, t, unsubscribe_language_change
 from hpc_gui.services.command_registry import COMMAND_REGISTRY
+from hpc_gui.services.transfer_controller import TransferItem
+from hpc_gui.services.transfer_session_controller import TransferSessionController
 from hpc_gui.wx_lifecycle import WxLifecycleController
 from hpc_gui.wx_runtime import environment_without_qt_graphics
 
@@ -164,6 +166,29 @@ def _get_editor_manager(session_state, parent, lifecycle, *, save_remote=None, o
     return manager
 
 
+def _start_file_transfers(session_state, lifecycle, items):
+    """Queue file-view transfers through the shared transfer lifecycle."""
+    session = session_state.get("session") or {}
+    files = session.get("files")
+    if not files or not items:
+        raise RuntimeError(t("common.no_connection"))
+
+    def run_item(item, _progress):
+        if item.op == "upload":
+            files.upload(item.src, item.dst)
+        elif item.op == "download":
+            files.download(item.src, item.dst)
+        else:
+            raise RuntimeError(f"unsupported transfer item: {item.op}")
+
+    controller = TransferSessionController(items, run_item)
+    controller.start()
+    session_state.setdefault("transfer_sessions", set()).add(controller)
+    if lifecycle is not None:
+        lifecycle.register_cleanup(controller.cancel)
+    return controller
+
+
 def _dispatch(command_id: str, parent=None, lifecycle=None, session_state=None) -> None:
     if command_id in {"APP-HELP", "APP-COMMAND-PALETTE"}:
         from hpc_gui.wx_help import show_help
@@ -219,8 +244,8 @@ def _dispatch(command_id: str, parent=None, lifecycle=None, session_state=None) 
 
             def worker():
                 try:
-                    for local_path in paths:
-                        files.upload(local_path, str(remote_dir / Path(local_path).name))
+                    items = [TransferItem("upload", local_path, str(remote_dir / Path(local_path).name)) for local_path in paths]
+                    _start_file_transfers(session_state, lifecycle, items)
                 except Exception as error:
                     wx.CallAfter(wx.MessageBox, str(error), t("login.err_title"), wx.OK | wx.ICON_ERROR)
 
@@ -247,14 +272,12 @@ def _dispatch(command_id: str, parent=None, lifecycle=None, session_state=None) 
                     (files.copy if action == "copy" else files.move)(remote_path, target)
                 return
             if action == "download" and files and destination:
-                for remote_path in paths:
-                    target = str(Path(destination) / PurePosixPath(remote_path).name)
-                    files.download(remote_path, target)
+                items = [TransferItem("download", remote_path, str(Path(destination) / PurePosixPath(remote_path).name)) for remote_path in paths]
+                _start_file_transfers(session_state, lifecycle, items)
                 return
             if action == "upload" and files and destination:
-                for local_path in paths:
-                    target = str(PurePosixPath(destination) / Path(local_path).name)
-                    files.upload(local_path, target)
+                items = [TransferItem("upload", local_path, str(PurePosixPath(destination) / Path(local_path).name)) for local_path in paths]
+                _start_file_transfers(session_state, lifecycle, items)
                 return
             if action == "new_folder" and files and destination:
                 files.mkdir(destination)

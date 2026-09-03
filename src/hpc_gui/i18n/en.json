@@ -272,6 +272,7 @@
     "history_unavailable": "History unavailable (no secure storage)",
     "new": "New",
     "new_folder": "New Folder",
+    "new_tab": "Open in New Tab",
     "new_file": "New File",
     "new_folder_title": "New Folder",
     "new_folder_label": "Folder name:",

@@ -6,7 +6,7 @@ from threading import Lock, Thread
 from pathlib import PurePosixPath
 
 from hpc_gui.core.i18n import subscribe_language_change, t, unsubscribe_language_change
-from hpc_gui.services.file_context_actions import context_selection, visible_actions
+from hpc_gui.services.file_context_actions import FILE_CONTEXT_LABEL_KEYS, context_selection, visible_actions
 from hpc_gui.wx_remote_files import WxRemoteDirectoryModel
 
 
@@ -101,19 +101,14 @@ def show_remote_files(parent=None, model: WxRemoteDirectoryModel | None = None, 
             clicked.is_dir if clicked else None,
             tuple(entry.path for entry in selected_entries),
             tuple(entry.is_dir for entry in selected_entries),
+            background=index < 0 and position != wx.DefaultPosition,
         )
         selected = selection.effective_paths
         menu = wx.Menu()
         candidate_actions = ("open", "edit", "edit_new_window", "download", "upload", "copy", "move", "rename", "delete", "paste", "copy_path", "refresh", "new_folder", "new_tab")
         allowed = visible_actions(selection, remote=True)
         actions = tuple(action for action in candidate_actions if action in allowed) if selected else ("new_folder", "refresh")
-        labels = {
-            "open": "editor.open", "edit": "dirs.edit", "edit_new_window": "dirs.edit_new_window",
-            "download": "dirs.download", "upload": "dirs.upload", "copy": "dirs.copy",
-            "move": "dirs.move", "rename": "dirs.rename", "delete": "dirs.delete",
-            "new_folder": "dirs.new_folder", "refresh": "dirs.refresh", "paste": "dirs.paste",
-            "copy_path": "dirs.copy_path", "new_tab": "dirs.new_folder",
-        }
+        labels = FILE_CONTEXT_LABEL_KEYS
         for action in actions:
             item = menu.Append(wx.ID_ANY, t(labels.get(action, f"dirs.{action}")))
             target_dir = clicked.path if clicked and clicked.is_dir else model.current_path
@@ -173,7 +168,7 @@ def show_remote_files(parent=None, model: WxRemoteDirectoryModel | None = None, 
         Thread(target=worker, daemon=True).start()
 
     def run_operation(action, selected, target_dir=None):
-        if not operation or action in {"open", "edit", "edit_new_window"} or (not selected and action != "new_folder"):
+        if not operation or action in {"open", "edit", "edit_new_window"} or (not selected and action not in {"new_folder", "upload"}):
             return
         if action == "delete" and wx.MessageBox(t("dirs.delete_confirm"), t("dirs.delete"), wx.YES_NO | wx.ICON_WARNING) != wx.YES:
             return
