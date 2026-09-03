@@ -177,6 +177,8 @@
     "cancel": "İşi İptal Et",
     "cancel_confirm": "{job_id} işi iptal edilsin mi?",
     "open_output": "Çıktıyı Aç",
+    "pause_output": "Canlı Takibi Duraklat",
+    "resume_output": "Canlı Takibe Devam Et",
     "job_id": "İş Kimliği"
   },
   "files": {

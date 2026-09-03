@@ -32,7 +32,7 @@ FEATURE_EVIDENCE = {
     "GUI-XFER-001": Evidence("COVERED", "transfer_dialog.py", "wx_transfer_workspace.py", "test_transfer_concurrency.py"),
     "GUI-XFER-002": Evidence("COVERED", "ftp_widget.py", "wx_transfer_workspace.py", "test_local_transfer_gate.py"),
     "GUI-JOBS-001": Evidence("COVERED", "jobs_widget.py", "wx_jobs.py", "test_wx_jobs.py"),
-    "GUI-JOBS-002": Evidence("PARTIAL", "jobs_outputs_widget.py", "wx_jobs.py", "test_jobs_outputs_scroll.py; test_wx_jobs.py"),
+    "GUI-JOBS-002": Evidence("COVERED", "jobs_outputs_widget.py", "wx_jobs.py", "test_jobs_outputs_scroll.py; test_wx_jobs.py; test_wx_jobs_behavior.py", "Real wx Jobs frame/event tests cover pause refresh, minimize/restore, non-overlapping reads, and stale-result rejection."),
     "GUI-JOBS-003": Evidence("COVERED", "services/", "wx_jobs.py", "test_job_history_dashboard.py"),
     "GUI-JOBS-004": Evidence("COVERED", "walltime_suggestions.py", "wx_jobs.py", "test_walltime_suggestions.py"),
     "GUI-EDIT-001": Evidence("COVERED", "editor_widget.py", "wx_editor.py", "test_wx_editor.py"),
