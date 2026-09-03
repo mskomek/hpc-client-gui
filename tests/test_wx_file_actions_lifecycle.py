@@ -72,6 +72,32 @@ def test_wx_local_close_while_delete_in_flight_is_safe(wx_app, tmp_path: Path, m
     assert frame._wx_local_state["closed"]
 
 
+def test_wx_local_close_while_paste_in_flight_is_safe(wx_app, tmp_path: Path, monkeypatch):
+    source = tmp_path / "source.txt"
+    source.write_text("x", encoding="utf-8")
+    target = tmp_path / "target"
+    target.mkdir()
+    (target / "seed.txt").write_text("x", encoding="utf-8")
+    started = threading.Event()
+    release = threading.Event()
+    original = LocalBrowserModel.paste
+
+    def blocked_paste(model):
+        started.set()
+        release.wait(2)
+        return original(model)
+
+    monkeypatch.setattr(LocalBrowserModel, "paste", blocked_paste)
+    frame = _local(wx_app, target)
+    frame._wx_local_model.copy([source])
+    frame._wx_local_run_action("paste")
+    assert started.wait(2)
+    frame.Close(True)
+    release.set()
+    wx_app.ProcessPendingEvents()
+    assert frame._wx_local_state["closed"]
+
+
 def test_wx_remote_close_while_move_in_flight_is_safe(wx_app, monkeypatch):
     backend = MockRemoteFilesBackend()
     started = threading.Event()
@@ -84,6 +110,25 @@ def test_wx_remote_close_while_move_in_flight_is_safe(wx_app, monkeypatch):
     monkeypatch.setattr(wx, "TextEntryDialog", lambda *_args, **_kwargs: _Dialog("/work"))
     frame = _remote(wx_app, backend, blocked_operation)
     frame._wx_remote_run_action("move", ("/work/a.txt",), "/work")
+    assert started.wait(2)
+    frame.Close(True)
+    release.set()
+    wx_app.ProcessPendingEvents()
+    assert frame._wx_remote_state["closed"]
+
+
+def test_wx_remote_close_while_delete_in_flight_is_safe(wx_app, monkeypatch):
+    backend = MockRemoteFilesBackend()
+    started = threading.Event()
+    release = threading.Event()
+
+    def blocked_operation(*_args):
+        started.set()
+        release.wait(2)
+
+    monkeypatch.setattr(wx, "MessageBox", lambda *_args, **_kwargs: wx.YES)
+    frame = _remote(wx_app, backend, blocked_operation)
+    frame._wx_remote_run_action("delete", ("/work/a.txt",), "/work")
     assert started.wait(2)
     frame.Close(True)
     release.set()
