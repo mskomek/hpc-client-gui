@@ -7,6 +7,7 @@ wx = pytest.importorskip("wx")
 
 from mock_hpc_files import MockRemoteFilesBackend
 from hpc_gui.services.file_clipboard import get_file_clipboard
+from hpc_gui.core.i18n import load_language
 from hpc_gui.wx_remote_files import WxRemoteDirectoryModel
 from hpc_gui.wx_remote_files_view import show_remote_files
 
@@ -24,6 +25,7 @@ def _pump(app, predicate, timeout=2):
 
 @pytest.fixture
 def wx_app():
+    load_language("en")
     app = wx.App(False)
     yield app
     for window in wx.GetTopLevelWindows():
@@ -144,6 +146,41 @@ def test_wx_remote_paste_failure_is_visible_and_recovers(wx_app, monkeypatch):
     _pump(wx_app, lambda: not frame._wx_remote_state["busy"])
     assert errors == ["paste failed"]
     assert listing.IsEnabled()
+
+
+def test_wx_remote_background_context_shows_directory_actions(wx_app, monkeypatch):
+    backend = MockRemoteFilesBackend()
+    frame = _browser(wx_app, backend)
+    listing = frame._wx_remote_controls["listing"]
+    labels = []
+    listing.PopupMenu = lambda menu: labels.extend(item.GetItemLabelText() for item in menu.GetMenuItems())
+    position = listing.ClientToScreen(wx.Point(5, max(5, listing.GetSize().height - 5)))
+    event = wx.ContextMenuEvent(wx.wxEVT_CONTEXT_MENU, listing.GetId())
+    event.SetPosition(position)
+    listing.ProcessEvent(event)
+    assert "Upload" in labels
+    assert "New Folder" in labels
+    assert "Refresh" in labels
+    assert "Edit" not in labels and "Rename" not in labels
+
+
+def test_wx_remote_background_upload_targets_current_directory(wx_app, monkeypatch):
+    backend = MockRemoteFilesBackend()
+    frame = _browser(wx_app, backend)
+    listing = frame._wx_remote_controls["listing"]
+    monkeypatch.setattr(wx, "FileDialog", lambda *_args, **_kwargs: _FileDialog(("local.txt",)))
+
+    def choose_upload(menu):
+        item = next(item for item in menu.GetMenuItems() if item.GetItemLabelText() == "Upload")
+        event = wx.CommandEvent(wx.wxEVT_MENU, item.GetId())
+        listing.ProcessEvent(event)
+
+    listing.PopupMenu = choose_upload
+    position = listing.ClientToScreen(wx.Point(5, max(5, listing.GetSize().height - 5)))
+    event = wx.ContextMenuEvent(wx.wxEVT_CONTEXT_MENU, listing.GetId())
+    event.SetPosition(position)
+    listing.ProcessEvent(event)
+    _pump(wx_app, lambda: ("upload", "local.txt", "/") in backend.calls)
 
 
 class _Dialog:
