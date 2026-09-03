@@ -143,6 +143,31 @@ def test_wx_remote_new_folder_failure_shows_error_and_recovers(wx_app, monkeypat
     assert frame._wx_remote_controls["listing"].IsEnabled()
 
 
+def test_wx_remote_delete_confirmation_cancel_preserves_selection(wx_app, monkeypatch):
+    backend = MockRemoteFilesBackend()
+    frame = _browser(wx_app, backend, WxRemoteDirectoryModel("/work"))
+    monkeypatch.setattr(wx, "MessageBox", lambda *_args, **_kwargs: wx.NO)
+    frame._wx_remote_run_action("delete", ("/work/a.txt",), "/work")
+    wx_app.ProcessPendingEvents()
+    assert "/work/a.txt" in backend.entries
+    assert not backend.calls
+    assert frame._wx_remote_controls["listing"].IsEnabled()
+
+
+def test_wx_remote_delete_failure_shows_error_and_recovers(wx_app, monkeypatch):
+    errors = []
+
+    def failing_operation(*_args, **_kwargs):
+        raise OSError("delete failed")
+
+    frame = _browser(wx_app, MockRemoteFilesBackend(), WxRemoteDirectoryModel("/work"), failing_operation)
+    monkeypatch.setattr(wx, "MessageBox", lambda message, *_args, **_kwargs: errors.append(message) or wx.YES)
+    frame._wx_remote_run_action("delete", ("/work/a.txt",), "/work")
+    _pump(wx_app, lambda: not frame._wx_remote_state["busy"])
+    assert errors[-1] == "delete failed"
+    assert frame._wx_remote_controls["listing"].IsEnabled()
+
+
 def test_wx_remote_keyboard_copy_and_paste_use_shared_clipboard(wx_app):
     backend = MockRemoteFilesBackend()
     backend.entries["/work/dest"] = True
