@@ -227,17 +227,27 @@ def _upload_remote(files, local_path: str, remote_path: str, progress_cb=None, r
     meta_remote = temp_remote + ".meta"
     source = Path(local_path).stat()
     identity = json.dumps(resume_identity or {"path": str(remote_path), "size": source.st_size, "mtime_ns": source.st_mtime_ns}, sort_keys=True)
+    # A server-side partial whose identity still matches is a real resume
+    # point; anything else is dropped so the upload starts from byte zero.
+    resume = False
     try:
         if files.exists(temp_remote):
             try:
-                if files.read_text(meta_remote) != identity:
-                    files.remove(temp_remote)
+                resume = files.read_text(meta_remote) == identity
             except Exception:
+                resume = False
+            if resume:
+                try:
+                    partial_size, _mtime = files.stat(temp_remote)
+                    resume = 0 < partial_size < source.st_size
+                except Exception:
+                    resume = False
+            if not resume:
                 files.remove(temp_remote)
         files.write_text(meta_remote, identity)
     except (AttributeError, NotImplementedError):
         pass
-    _upload_file(files, local_path, temp_remote, progress_cb=progress_cb)
+    _upload_file(files, local_path, temp_remote, progress_cb=progress_cb, resume=resume)
     rename(temp_remote, remote_path)
     try:
         files.remove(meta_remote)
@@ -245,15 +255,18 @@ def _upload_remote(files, local_path: str, remote_path: str, progress_cb=None, r
         pass
 
 
-def _upload_file(files, local_path: str, remote_path: str, progress_cb=None) -> None:
+def _upload_file(files, local_path: str, remote_path: str, progress_cb=None, *, resume: bool = False) -> None:
+    method = getattr(files, "resume_upload", None) if resume else None
+    if not callable(method):
+        method = files.upload
     try:
-        signature = inspect.signature(files.upload)
+        signature = inspect.signature(method)
         if "progress_cb" in signature.parameters:
-            files.upload(local_path, remote_path, progress_cb=progress_cb)
+            method(local_path, remote_path, progress_cb=progress_cb)
             return
     except (TypeError, ValueError):
         pass
-    files.upload(local_path, remote_path)
+    method(local_path, remote_path)
 
 
 def upload_with_mode(
@@ -289,15 +302,18 @@ def upload_with_mode(
     return effective
 
 
-def _download_file(files, remote_path: str, local_path: str, progress_cb=None) -> None:
+def _download_file(files, remote_path: str, local_path: str, progress_cb=None, *, resume: bool = False) -> None:
+    method = getattr(files, "resume_download", None) if resume else None
+    if not callable(method):
+        method = files.download
     try:
-        signature = inspect.signature(files.download)
+        signature = inspect.signature(method)
         if "progress_cb" in signature.parameters:
-            files.download(remote_path, local_path, progress_cb=progress_cb)
+            method(remote_path, local_path, progress_cb=progress_cb)
             return
     except (TypeError, ValueError):
         pass
-    files.download(remote_path, local_path)
+    method(remote_path, local_path)
 
 
 def download_with_mode(
@@ -311,6 +327,9 @@ def download_with_mode(
     destination.parent.mkdir(parents=True, exist_ok=True)
     part_path = Path(str(destination) + PARTIAL_SUFFIX)
     meta_path = Path(str(part_path) + ".meta")
+    # Only a partial whose identity still matches the remote file, and which
+    # is a strict prefix of it, is a real resume point.
+    resume = False
     remote_stat = getattr(files, "stat", None)
     if callable(remote_stat):
         remote_size, remote_mtime = remote_stat(remote_path)
@@ -321,8 +340,14 @@ def download_with_mode(
             saved = None
         if part_path.exists() and saved != identity:
             part_path.unlink(missing_ok=True)
+        if part_path.exists():
+            resume = 0 < part_path.stat().st_size < remote_size
+            if not resume:
+                part_path.unlink(missing_ok=True)
         meta_path.write_text(json.dumps(identity, sort_keys=True), encoding="utf-8")
-    _download_file(files, remote_path, str(part_path), progress_cb=progress_cb)
+    elif part_path.exists():
+        part_path.unlink(missing_ok=True)
+    _download_file(files, remote_path, str(part_path), progress_cb=progress_cb, resume=resume)
     try:
         with open(part_path, "rb") as stream:
             sample = stream.read(CHUNK_SIZE)
