@@ -10,6 +10,7 @@ class MockRemoteFilesBackend:
         self._lock = Lock()
         self.entries = {"/": True, "/work": True, "/work/a.txt": False, "/work/b.txt": False}
         self.calls = []
+        self.list_calls = 0
         self.thread_ids = []
 
     def _record(self, operation, *values):
@@ -18,6 +19,8 @@ class MockRemoteFilesBackend:
             self.thread_ids.append(get_ident())
 
     def iterdir_entries(self, path):
+        with self._lock:
+            self.list_calls += 1
         path = path.rstrip("/") or "/"
         prefix = path if path == "/" else path + "/"
         children = {}
