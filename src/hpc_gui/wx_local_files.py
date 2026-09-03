@@ -192,7 +192,7 @@ def show_local_files(parent=None, path: str | Path | None = None, *, open_editor
     listing.InsertColumn(0, t("dirs.col_name"))
     listing.InsertColumn(1, t("dirs.col_size"))
     entries = []
-    state = {"context_target": None, "closed": False, "mutation_in_flight": False}
+    state = {"context_target": None, "closed": False, "mutation_in_flight": False, "view_generation": 0}
     labels = FILE_CONTEXT_LABEL_KEYS
 
     def safe_call_after(callback, *args):
@@ -208,6 +208,12 @@ def show_local_files(parent=None, path: str | Path | None = None, *, open_editor
             index = listing.InsertItem(listing.GetItemCount(), entry.path.name)
             listing.SetItem(index, 1, str(entry.size))
 
+    def navigate(target) -> None:
+        resolved = Path(target).expanduser().resolve()
+        if resolved != model.current_path:
+            state["view_generation"] += 1
+        model.navigate(resolved)
+
     def refresh_labels(_language=None):
         frame.SetTitle(t("tabs.ftp"))
         listing.SetColumn(0, t("dirs.col_name"))
@@ -215,8 +221,11 @@ def show_local_files(parent=None, path: str | Path | None = None, *, open_editor
 
     def activate(event) -> None:
         entry = entries[event.GetIndex()]
-        if model.activate(entry.path, open_editor=open_editor) == "navigate":
+        if entry.is_dir:
+            navigate(entry.path)
             refresh()
+        elif open_editor:
+            open_editor(str(entry.path))
 
     def context_menu(event) -> None:
         position = event.GetPosition()
@@ -251,6 +260,8 @@ def show_local_files(parent=None, path: str | Path | None = None, *, open_editor
             return
         state["mutation_in_flight"] = True
         listing.Enable(False)
+        origin_path = model.current_path
+        origin_generation = state["view_generation"]
 
         def worker():
             try:
@@ -266,7 +277,7 @@ def show_local_files(parent=None, path: str | Path | None = None, *, open_editor
             listing.Enable(True)
             if error:
                 wx.MessageBox(str(error), t("login.err_title"), wx.OK | wx.ICON_ERROR)
-            else:
+            elif model.current_path == origin_path and state["view_generation"] == origin_generation:
                 refresh()
 
         Thread(target=worker, daemon=True).start()
@@ -308,10 +319,11 @@ def show_local_files(parent=None, path: str | Path | None = None, *, open_editor
         if action in {"open", "edit", "edit_new_window", "new_tab"}:
             if action == "new_tab":
                 model.new_tab(entry.path)
+                state["view_generation"] += 1
                 refresh()
             elif action == "open":
                 if entry.is_dir:
-                    model.navigate(entry.path)
+                    navigate(entry.path)
                     refresh()
                 else:
                     try:
@@ -358,7 +370,7 @@ def show_local_files(parent=None, path: str | Path | None = None, *, open_editor
                 listing.Select(index)
             return
         if event.GetKeyCode() == wx.WXK_BACK:
-            model.parent()
+            navigate(model.current_path.parent)
             refresh()
             return
         actions = {wx.WXK_F2: "rename", wx.WXK_DELETE: "delete", wx.WXK_F5: "refresh"}
