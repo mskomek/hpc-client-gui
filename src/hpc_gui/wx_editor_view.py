@@ -27,62 +27,69 @@ def show_editor(parent=None, model: WxEditorModel | None = None, *, path: str = 
     save = wx.Button(panel, label=t("editor.save"))
     submit = wx.Button(panel, label=t("editor.submit"))
     run = wx.Button(panel, label=t("editor.save_submit"))
+    status = wx.StaticText(panel, label="")
     for button in (save, submit, run):
         buttons.Add(button, 0, wx.RIGHT, 6)
     root.Add(editor, 1, wx.EXPAND | wx.ALL, 8)
     root.Add(buttons, 0, wx.ALIGN_RIGHT | wx.LEFT | wx.RIGHT | wx.BOTTOM, 8)
+    root.Add(status, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 8)
     panel.SetSizer(root)
-
-    def finish_action(mode):
-        if mode == "submit" and on_submit:
-            on_submit(model.controller.active)
-        elif mode == "run" and on_run:
-            on_run(model.controller.active)
+    state = {"closed": False, "in_flight": False}
 
     def save_document(mode="save", on_done=None):
+        if state["closed"] or state["in_flight"]:
+            return
         active = model.controller.update_content(editor.GetValue())
-        if active.is_local and active.path:
+        state["in_flight"] = True
+        editor.Enable(False)
+        for button in (save, submit, run):
+            button.Enable(False)
+
+        def worker(snapshot=active):
+            saved = False
             try:
-                Path(active.path).write_text(active.content, encoding=active.encoding)
-                model.controller.mark_saved()
-                finish_action(mode)
-                if on_done:
-                    on_done()
-            except OSError as error:
-                wx.MessageBox(str(error), t("login.err_title"), wx.OK | wx.ICON_ERROR)
-        elif save_remote and active.path:
+                if snapshot.is_local and snapshot.path:
+                    Path(snapshot.path).write_text(snapshot.content, encoding=snapshot.encoding)
+                    saved = True
+                elif save_remote and snapshot.path:
+                    save_remote(snapshot.path, snapshot.content)
+                    saved = True
+                if mode == "submit" and on_submit:
+                    on_submit(snapshot)
+                elif mode == "run" and on_run:
+                    on_run(snapshot)
+                wx.CallAfter(done, None, saved, on_done)
+            except Exception as error:
+                wx.CallAfter(done, error, saved, None)
+
+        def done(error, saved, callback):
+            state["in_flight"] = False
+            if state["closed"]:
+                return
+            editor.Enable(True)
             for button in (save, submit, run):
-                button.Enable(False)
+                button.Enable(True)
+            if saved:
+                model.controller.mark_saved(active.content)
+            if error:
+                status.SetLabel(str(error))
+                return
+            status.SetLabel("")
+            if callback:
+                callback()
 
-            def done(error=None):
-                for button in (save, submit, run):
-                    button.Enable(True)
-                if error:
-                    wx.MessageBox(str(error), t("login.err_title"), wx.OK | wx.ICON_ERROR)
-                    return
-                model.controller.mark_saved()
-                finish_action(mode)
-                if on_done:
-                    on_done()
-
-            def worker():
-                try:
-                    save_remote(active.path, active.content)
-                    wx.CallAfter(done)
-                except Exception as error:
-                    wx.CallAfter(done, error)
-
-            Thread(target=worker, daemon=True).start()
-        else:
-            model.save_target(submit=mode == "submit", run=mode == "run")
-            if on_done:
-                on_done()
+        Thread(target=worker, daemon=True).start()
 
     save.Bind(wx.EVT_BUTTON, lambda _event: save_document())
     submit.Bind(wx.EVT_BUTTON, lambda _event: save_document("submit"))
     run.Bind(wx.EVT_BUTTON, lambda _event: save_document("run"))
 
     def close(event):
+        if state["in_flight"]:
+            state["closed"] = True
+            unsubscribe_language_change(refresh_labels)
+            event.Skip()
+            return
         if model.controller.active and model.controller.active.dirty:
             choice = wx.MessageBox(t("common.save_changes"), t("tabs.editor"), wx.YES_NO | wx.CANCEL | wx.ICON_WARNING)
             if choice == wx.CANCEL:
@@ -91,8 +98,9 @@ def show_editor(parent=None, model: WxEditorModel | None = None, *, path: str = 
                 event.Veto()
                 save_document(on_done=frame.Close)
                 return
-        unsubscribe_language_change(refresh_labels)
-        event.Skip()
+            state["closed"] = True
+            unsubscribe_language_change(refresh_labels)
+            event.Skip()
 
     def refresh_labels(_language=None):
         save.SetLabel(t("editor.save"))
@@ -101,6 +109,8 @@ def show_editor(parent=None, model: WxEditorModel | None = None, *, path: str = 
 
     subscribe_language_change(refresh_labels)
     frame.Bind(wx.EVT_CLOSE, close)
+    frame._wx_editor_controls = {"editor": editor, "save": save, "submit": submit, "run": run, "status": status}
+    frame._wx_editor_state = state
     frame.Show()
     return wx.ID_OK
 
