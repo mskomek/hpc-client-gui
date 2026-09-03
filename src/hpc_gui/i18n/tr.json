@@ -272,6 +272,7 @@
     "history_unavailable": "Geçmiş kullanılamıyor (güvenli depolama yok)",
     "new": "Yeni",
     "new_folder": "Yeni Klasör",
+    "new_tab": "Yeni Sekmede Aç",
     "new_file": "Yeni Dosya",
     "new_folder_title": "Yeni Klasör",
     "new_folder_label": "Klasör adı:",

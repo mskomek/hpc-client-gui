@@ -12,7 +12,7 @@ from pathlib import Path
 from urllib.parse import quote
 
 from hpc_gui.core.i18n import subscribe_language_change, t, unsubscribe_language_change
-from hpc_gui.services.file_context_actions import context_selection, visible_actions
+from hpc_gui.services.file_context_actions import FILE_CONTEXT_LABEL_KEYS, context_selection, visible_actions
 
 
 @dataclass(frozen=True)
@@ -182,13 +182,7 @@ def show_local_files(parent=None, path: str | Path | None = None, *, open_editor
     listing.InsertColumn(1, t("dirs.col_size"))
     entries = []
     state = {"context_target": None, "closed": False, "mutation_in_flight": False}
-    labels = {
-        "open": "editor.open", "open_with": "common.open_with", "edit": "dirs.edit",
-        "edit_new_window": "dirs.edit_new_window", "upload": "dirs.upload",
-        "rename": "dirs.rename", "delete": "dirs.delete", "copy": "dirs.copy",
-        "cut": "dirs.move", "paste": "dirs.paste", "copy_path": "dirs.copy_path",
-        "refresh": "dirs.refresh", "new_tab": "dirs.new_folder", "new_folder": "dirs.new_folder",
-    }
+    labels = FILE_CONTEXT_LABEL_KEYS
 
     def refresh() -> None:
         entries[:] = model.list_entries()
@@ -222,6 +216,7 @@ def show_local_files(parent=None, path: str | Path | None = None, *, open_editor
             entry.is_dir if entry else None,
             tuple(str(item.path) for item in selected),
             tuple(item.is_dir for item in selected),
+            background=index < 0 and position != wx.DefaultPosition,
         )
         menu = wx.Menu()
         actions = tuple(action for action in visible_actions(selection, remote=False) if action != "upload" or upload)
@@ -261,6 +256,17 @@ def show_local_files(parent=None, path: str | Path | None = None, *, open_editor
 
     def run_action(action: str) -> None:
         selected = selected_entries()
+        if action == "upload" and upload:
+            if selected:
+                upload(tuple(str(item.path) for item in selected))
+            else:
+                dialog = wx.FileDialog(frame, t("ftp.upload_selected"), style=wx.FD_OPEN | wx.FD_MULTIPLE)
+                try:
+                    if dialog.ShowModal() == wx.ID_OK:
+                        upload(tuple(dialog.GetPaths()))
+                finally:
+                    dialog.Destroy()
+            return
         if action == "new_folder":
             dialog = wx.TextEntryDialog(frame, t("dirs.new_folder"), t("dirs.new_folder"))
             try:
@@ -311,8 +317,6 @@ def show_local_files(parent=None, path: str | Path | None = None, *, open_editor
                 wx.TheClipboard.Close()
         elif action == "refresh":
             refresh()
-        elif action == "upload" and upload:
-            upload(tuple(str(item.path) for item in selected))
         elif action == "rename":
             dialog = wx.TextEntryDialog(frame, t("dirs.rename"), t("dirs.rename"), entry.path.name)
             try:

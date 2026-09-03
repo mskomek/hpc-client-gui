@@ -88,7 +88,7 @@ def test_local_view_exposes_keyboard_and_context_actions():
 
 
 def test_local_context_policy_distinguishes_selection_shapes():
-    assert visible_actions(context_selection(None, None), remote=False) == ("paste", "refresh", "new_folder")
+    assert visible_actions(context_selection(None, None), remote=False) == ("upload", "paste", "refresh", "new_folder")
     one_file = context_selection("a.txt", False, ("a.txt",), (False,))
     assert {"open", "open_with", "edit", "rename", "delete", "upload"} <= set(visible_actions(one_file, remote=False))
     one_dir = context_selection("folder", True, ("folder",), (True,))
