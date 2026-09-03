@@ -26,14 +26,6 @@ class WxEditorWindowManager:
     def _callbacks(self):
         return {"save_remote": self.save_remote, "on_submit": self.on_submit, "on_run": self.on_run}
 
-    def rebind(self, *, save_remote=None, on_submit=None, on_run=None, action_factory=None):
-        self.save_remote, self.on_submit, self.on_run = save_remote, on_submit, on_run
-        if action_factory is not None:
-            self.action_factory = action_factory
-        for frame in (self.primary_frame, *self.standalone_frames):
-            if frame and not frame.IsBeingDeleted():
-                frame._wx_editor_rebind_callbacks(save_remote, on_submit, on_run)
-
     def begin_primary_request(self):
         self._primary_request_generation += 1
         return self._primary_request_generation

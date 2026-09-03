@@ -113,34 +113,34 @@ def _editor_action_factory(session_state):
 
         def save_remote(path, content):
             if not files:
-                raise RuntimeError("Remote file service is unavailable")
+                raise RuntimeError(t("editor.remote_file_service_unavailable"))
             files.write_text(path, content)
 
         def submit(current):
             if not current.path:
-                raise RuntimeError("Document path is required")
+                raise RuntimeError(t("editor.document_path_required"))
             if current.is_local:
                 if not files or not slurm:
-                    raise RuntimeError("Upload or Slurm service is unavailable")
+                    raise RuntimeError(t("editor.upload_or_slurm_unavailable"))
                 remote_path = str(PurePosixPath("~") / Path(current.path).name)
                 files.upload(current.path, remote_path)
                 slurm.sbatch(remote_path)
             elif not slurm:
-                raise RuntimeError("Slurm service is unavailable")
+                raise RuntimeError(t("editor.slurm_unavailable"))
             else:
                 slurm.sbatch(current.path)
 
         def run(current):
             if not current.path:
-                raise RuntimeError("Document path is required")
+                raise RuntimeError(t("editor.document_path_required"))
             if current.is_local:
                 if not files or not ssh:
-                    raise RuntimeError("Upload or SSH service is unavailable")
+                    raise RuntimeError(t("editor.upload_or_ssh_unavailable"))
                 remote_path = str(PurePosixPath("~") / Path(current.path).name)
                 files.upload(current.path, remote_path)
                 ssh.send_shell_text(f"bash -- {shlex.quote(remote_path)}\n")
             elif not ssh:
-                raise RuntimeError("SSH service is unavailable")
+                raise RuntimeError(t("editor.ssh_unavailable"))
             else:
                 ssh.send_shell_text(f"bash -- {shlex.quote(current.path)}\n")
 
