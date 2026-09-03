@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
+from hpc_gui.core.i18n import t
 from hpc_gui.services.transfer_controller import TransferItem
 from hpc_gui.services.transfer_session_controller import TransferSessionController
 from hpc_gui.wx_local_files import LocalBrowserModel
@@ -16,6 +17,87 @@ class StorageState:
     name: str
     available: bool
     reason: str = ""
+
+
+def create_transfer_progress(parent, controller=None):
+    """Create the small wx owner for a transfer session, if wx is available."""
+    try:
+        import wx
+    except ImportError:
+        return None
+
+    frame = wx.Frame(parent, title=t("transfer.ftp_activity_title"), size=(520, 150))
+    panel = wx.Panel(frame)
+    title = wx.StaticText(panel, label=t("transfer.ftp_activity_title"))
+    detail = wx.StaticText(panel, label=t("transfer.no_active_transfer"))
+    gauge = wx.Gauge(panel, range=1)
+    cancel = wx.Button(panel, label=t("transfer.cancel"))
+    layout = wx.BoxSizer(wx.VERTICAL)
+    layout.Add(title, 0, wx.ALL | wx.EXPAND, 8)
+    layout.Add(detail, 0, wx.LEFT | wx.RIGHT | wx.EXPAND, 8)
+    layout.Add(gauge, 0, wx.ALL | wx.EXPAND, 8)
+    layout.Add(cancel, 0, wx.ALIGN_RIGHT | wx.LEFT | wx.RIGHT | wx.BOTTOM, 8)
+    panel.SetSizer(layout)
+    state = {"closed": False, "controller": controller}
+
+    def post(callback, *args):
+        if state["closed"]:
+            return
+        try:
+            wx.CallAfter(callback, *args)
+        except (AssertionError, RuntimeError):
+            return
+
+    def set_controller(value):
+        state["controller"] = value
+
+    def update_queue(event, item):
+        if event == "started":
+            detail.SetLabel(t("transfer.active_item").format(item=item.label()))
+        elif event == "completed":
+            detail.SetLabel(t("transfer.completed_tab"))
+        elif event == "failed":
+            detail.SetLabel(t("transfer.errors_tab"))
+
+    def update_progress(item, done, total):
+        gauge.SetRange(max(1, int(total)))
+        gauge.SetValue(min(max(0, int(done)), gauge.GetRange()))
+        detail.SetLabel(t("transfer.progress_detail").format(item=item.label(), done=done, total=total, speed="", eta=""))
+
+    def finish():
+        if state["closed"]:
+            return
+        controller_value = state["controller"]
+        if controller_value and controller_value.engine.failed:
+            detail.SetLabel(t("transfer.cancelled") if controller_value.engine.failed[-1][1] == "cancelled" else t("transfer.errors_tab"))
+        elif controller_value:
+            detail.SetLabel(t("transfer.completed_tab"))
+        cancel.Disable()
+
+    def cancel_transfer(_event):
+        value = state["controller"]
+        if value:
+            value.cancel()
+            detail.SetLabel(t("transfer.cancelled"))
+            cancel.Disable()
+
+    def close(_event):
+        state["closed"] = True
+        value = state["controller"]
+        if value and not value.engine.wait(0):
+            value.cancel()
+        frame.Destroy()
+
+    cancel.Bind(wx.EVT_BUTTON, cancel_transfer)
+    frame.Bind(wx.EVT_CLOSE, close)
+    frame._wx_transfer_controls = {"title": title, "detail": detail, "gauge": gauge, "cancel": cancel}
+    frame._wx_transfer_state = state
+    frame._wx_transfer_set_controller = set_controller
+    frame._wx_transfer_queue = lambda event, item: post(update_queue, event, item)
+    frame._wx_transfer_progress = lambda item, done, total: post(update_progress, item, done, total)
+    frame._wx_transfer_finish = lambda: post(finish)
+    frame.Show()
+    return frame
 
 
 class WxTransferWorkspace:

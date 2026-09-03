@@ -405,6 +405,7 @@ def test_wx_remote_clicked_directory_context_cut_paste_moves_to_clicked_director
     _pump(wx_app, lambda: ("move", "/work/a.txt", "/work/dest/a.txt") in backend.calls)
     assert "/work/a.txt" not in backend.entries
     assert "/work/dest/a.txt" in backend.entries
+    _pump(wx_app, lambda: not frame._wx_remote_state["busy"])
     undo = wx.KeyEvent(wx.wxEVT_KEY_DOWN)
     undo.SetKeyCode(ord("Z"))
     undo.SetControlDown(True)

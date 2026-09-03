@@ -261,3 +261,32 @@ def test_wx_file_transfer_conflict_gui_decline_does_not_upload(monkeypatch, choi
     parent.Destroy()
     app.ProcessPendingEvents()
     app.Destroy()
+
+
+def test_wx_file_transfer_opens_visible_progress_surface():
+    wx = pytest.importorskip("wx")
+    app = wx.App(False)
+    parent = wx.Frame(None)
+    files = _Files()
+    state = {"session": {"files": files}}
+    controller = _start_file_transfers(
+        state,
+        _Lifecycle(),
+        [TransferItem("upload", "a.txt", "/a.txt")],
+        parent=parent,
+    )
+    progress_frames = [window for window in wx.GetTopLevelWindows() if hasattr(window, "_wx_transfer_controls")]
+    assert progress_frames
+    window = progress_frames[-1]
+    controls = window._wx_transfer_controls
+    deadline = time.monotonic() + 2
+    while not controller.engine.wait(0) and time.monotonic() < deadline:
+        app.ProcessPendingEvents()
+        wx.MilliSleep(5)
+    app.ProcessPendingEvents()
+    assert controls["gauge"].GetValue() == 1
+    assert controls["cancel"].IsEnabled() is False
+    window.Close(True)
+    parent.Destroy()
+    app.ProcessPendingEvents()
+    app.Destroy()

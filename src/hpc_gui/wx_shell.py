@@ -168,6 +168,8 @@ def _get_editor_manager(session_state, parent, lifecycle, *, save_remote=None, o
 
 def _start_file_transfers(session_state, lifecycle, items, *, on_progress=None, conflict_resolver=None, files_backend=None, parent=None):
     """Queue file-view transfers through the shared transfer lifecycle."""
+    from hpc_gui.wx_transfer_workspace import create_transfer_progress
+
     session = session_state.get("session") or {}
     files = files_backend or session.get("files")
     if not files or not items:
@@ -217,13 +219,28 @@ def _start_file_transfers(session_state, lifecycle, items, *, on_progress=None, 
             raise RuntimeError(f"unsupported transfer item: {item.op}")
         progress(1, 1)
 
+    transfer_window = create_transfer_progress(parent) if parent else None
+
+    def queue_event(event, item):
+        if transfer_window:
+            transfer_window._wx_transfer_queue(event, item)
+
+    def progress_event(item, done, total):
+        if transfer_window:
+            transfer_window._wx_transfer_progress(item, done, total)
+        if on_progress:
+            on_progress(item, done, total)
+
     controller = TransferSessionController(
         items,
         run_item,
         conflict_check=getattr(files, "exists", None),
         conflict_resolver=conflict_resolver or session_state.get("conflict_resolver") or (wx_conflict_resolver if parent else None),
-        on_progress=on_progress,
+        on_queue=queue_event,
+        on_progress=progress_event,
     )
+    if transfer_window:
+        transfer_window._wx_transfer_set_controller(controller)
     if session_state.get("conflict_policy"):
         controller.set_conflict_policy(session_state["conflict_policy"])
     sessions = session_state.setdefault("transfer_sessions", set())
@@ -233,6 +250,8 @@ def _start_file_transfers(session_state, lifecycle, items, *, on_progress=None, 
     def forget_when_done():
         controller.engine.wait()
         sessions.discard(controller)
+        if transfer_window:
+            transfer_window._wx_transfer_finish()
 
     Thread(target=forget_when_done, daemon=True).start()
     if lifecycle is not None:
