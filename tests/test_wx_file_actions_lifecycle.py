@@ -6,7 +6,7 @@ import pytest
 
 wx = pytest.importorskip("wx")
 
-from hpc_gui.wx_local_files import LocalBrowserModel, show_local_files
+from hpc_gui.wx_local_files import LocalBrowserModel, LocalEntry, show_local_files
 from hpc_gui.wx_remote_files import RemoteEntry, WxRemoteDirectoryModel
 from hpc_gui.wx_remote_files_view import show_remote_files
 from mock_hpc_files import MockRemoteFilesBackend
@@ -237,11 +237,13 @@ def test_wx_remote_old_mutation_completion_does_not_overwrite_real_backspace_nav
 def test_wx_remote_stale_listing_does_not_overwrite_new_navigation(wx_app):
     started = threading.Event()
     release = threading.Event()
+    finished = threading.Event()
 
     def loader(path):
         if path == "/work":
             started.set()
             release.wait(2)
+            finished.set()
             return (RemoteEntry("/work/old.txt"),)
         return (RemoteEntry("/new/current.txt"),)
 
@@ -255,8 +257,55 @@ def test_wx_remote_stale_listing_does_not_overwrite_new_navigation(wx_app):
     _pump(wx_app, lambda: frame._wx_remote_model.current_path == "/" and listing.GetItemCount() == 1)
     assert listing.GetItemText(0) == "current.txt"
     release.set()
+    assert finished.wait(2)
     wx_app.ProcessPendingEvents()
-    wx.MilliSleep(20)
+    assert listing.GetItemText(0) == "current.txt"
+
+
+def test_wx_local_listing_runs_off_gui_thread(wx_app, tmp_path: Path, monkeypatch):
+    (tmp_path / "entry.txt").write_text("x", encoding="utf-8")
+    thread_ids = []
+    original = LocalBrowserModel.list_entries
+
+    def record_thread(model, path=None):
+        thread_ids.append(threading.get_ident())
+        return original(model, path)
+
+    monkeypatch.setattr(LocalBrowserModel, "list_entries", record_thread)
+    frame = _local(wx_app, tmp_path)
+    assert thread_ids and thread_ids[0] != threading.get_ident()
+    frame.Close(True)
+
+
+def test_wx_local_stale_listing_does_not_overwrite_new_navigation(wx_app, tmp_path: Path, monkeypatch):
+    first = tmp_path / "first"
+    first.mkdir()
+    target = tmp_path / "current.txt"
+    target.write_text("x", encoding="utf-8")
+    started = threading.Event()
+    release = threading.Event()
+    finished = threading.Event()
+
+    def loader(model, path=None):
+        requested = Path(path)
+        if requested == first.resolve():
+            started.set()
+            release.wait(2)
+            finished.set()
+            return (LocalEntry(first / "old.txt", False, 0),)
+        return (LocalEntry(target, False, 1),)
+
+    monkeypatch.setattr(LocalBrowserModel, "list_entries", loader)
+    show_local_files(path=first)
+    frame = [window for window in wx.GetTopLevelWindows() if hasattr(window, "_wx_local_controls")][-1]
+    assert started.wait(2)
+    listing = frame._wx_local_controls["listing"]
+    back = wx.KeyEvent(wx.wxEVT_KEY_DOWN)
+    back.SetKeyCode(wx.WXK_BACK)
+    listing.ProcessEvent(back)
+    _pump(wx_app, lambda: listing.GetItemCount() == 1 and listing.GetItemText(0) == "current.txt")
+    release.set()
+    assert finished.wait(2)
     wx_app.ProcessPendingEvents()
     assert listing.GetItemText(0) == "current.txt"
 

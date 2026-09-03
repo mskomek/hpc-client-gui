@@ -57,7 +57,7 @@ def test_local_double_click_routes_file_to_editor_and_folder_to_visible_navigati
     event.SetIndex(folder_index)
     listing.ProcessEvent(event)
     assert frame._wx_local_state["context_target"] is None
-    assert frame._wx_local_controls["listing"].GetItemCount() == 0
+    _pump(wx_app, lambda: frame._wx_local_controls["listing"].GetItemCount() == 0)
 
 
 def test_local_context_event_targets_unselected_row_without_dropping_target(wx_app, tmp_path: Path):
@@ -87,8 +87,7 @@ def test_local_delete_key_runs_async_and_refreshes_visible_rows(wx_app, tmp_path
     event = wx.KeyEvent(wx.wxEVT_KEY_DOWN)
     event.SetKeyCode(wx.WXK_DELETE)
     listing.ProcessEvent(event)
-    _pump(wx_app, lambda: not target.exists())
-    assert listing.GetItemCount() == 0
+    _pump(wx_app, lambda: not target.exists() and listing.GetItemCount() == 0)
 
 
 def test_wx_local_f5_refreshes_without_a_selection(wx_app, tmp_path: Path):
@@ -99,7 +98,7 @@ def test_wx_local_f5_refreshes_without_a_selection(wx_app, tmp_path: Path):
     event = wx.KeyEvent(wx.wxEVT_KEY_DOWN)
     event.SetKeyCode(wx.WXK_F5)
     listing.ProcessEvent(event)
-    assert listing.GetItemCount() == 1
+    _pump(wx_app, lambda: listing.GetItemCount() == 1)
     assert listing.GetItemText(0) == "new.txt"
 
 
