@@ -107,7 +107,7 @@ def show_remote_files(parent=None, model: WxRemoteDirectoryModel | None = None, 
         menu = wx.Menu()
         candidate_actions = ("open", "edit", "edit_new_window", "download", "upload", "copy", "move", "rename", "delete", "paste", "copy_path", "refresh", "new_folder", "new_tab")
         allowed = visible_actions(selection, remote=True)
-        actions = tuple(action for action in candidate_actions if action in allowed) if selected else ("new_folder", "refresh")
+        actions = tuple(action for action in candidate_actions if action in allowed)
         labels = FILE_CONTEXT_LABEL_KEYS
         for action in actions:
             item = menu.Append(wx.ID_ANY, t(labels.get(action, f"dirs.{action}")))
