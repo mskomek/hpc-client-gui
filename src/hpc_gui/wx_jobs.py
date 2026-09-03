@@ -109,7 +109,7 @@ def show_job_output(parent, model: WxJobsModel, view_id: str, *, read_output=Non
     except ImportError as exc:
         raise RuntimeError("wxPython is not installed") from exc
     view = next(item for item in model.detached if item.id == str(view_id))
-    frame = wx.Frame(parent, title=f"Job output {view.id}", size=(800, 500))
+    frame = wx.Frame(parent, title=f"{t('jobs.open_output')} {view.id}", size=(800, 500))
     output = wx.TextCtrl(frame, style=wx.TE_MULTILINE | wx.TE_READONLY | wx.HSCROLL)
     timer = wx.Timer(frame)
     state = {"closed": False, "in_flight": False}
