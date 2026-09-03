@@ -241,6 +241,7 @@
     "remote": "Remote:",
     "open_failed": "Could not open file: {err}",
     "save_failed": "Could not save file: {err}",
+    "action_requires_save": "Cannot submit or run because the document could not be saved.",
     "submit_error": "Submission error: {err}",
     "find_label": "Find:",
     "find_placeholder": "Find text",
