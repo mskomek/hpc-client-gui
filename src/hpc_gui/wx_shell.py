@@ -120,11 +120,37 @@ def _dispatch(command_id: str, parent=None, lifecycle=None, session_state=None) 
         session = (session_state or {}).get("session") or {}
         files = session.get("files")
 
+        def local_submit(document):
+            if not files or not session.get("slurm"):
+                return
+            import wx
+            remote_path = str(PurePosixPath("~") / Path(document.path).name)
+            def worker():
+                try:
+                    files.upload(document.path, remote_path)
+                    session["slurm"].sbatch(remote_path)
+                except Exception as error:
+                    wx.CallAfter(wx.MessageBox, str(error), t("login.err_title"), wx.OK | wx.ICON_ERROR)
+            Thread(target=worker, daemon=True).start()
+
+        def local_run(document):
+            if not files or not session.get("ssh"):
+                return
+            import wx
+            remote_path = str(PurePosixPath("~") / Path(document.path).name)
+            def worker():
+                try:
+                    files.upload(document.path, remote_path)
+                    session["ssh"].send_shell_text(f"bash -- {shlex.quote(remote_path)}\n")
+                except Exception as error:
+                    wx.CallAfter(wx.MessageBox, str(error), t("login.err_title"), wx.OK | wx.ICON_ERROR)
+            Thread(target=worker, daemon=True).start()
+
         def open_local(path, new_window=False):
             def worker():
                 try:
                     content = Path(path).read_text(encoding="utf-8")
-                    wx.CallAfter(show_editor, parent, path=path, content=content)
+                    wx.CallAfter(show_editor, parent, path=path, content=content, on_submit=local_submit, on_run=local_run)
                 except Exception as error:
                     wx.CallAfter(wx.MessageBox, str(error), t("login.err_title"), wx.OK | wx.ICON_ERROR)
 
