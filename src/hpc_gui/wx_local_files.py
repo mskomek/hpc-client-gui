@@ -257,7 +257,10 @@ def show_local_files(parent=None, path: str | Path | None = None, *, open_editor
                     for item in selected:
                         open_editor(str(item.path))
         elif action == "open_with":
-            open_with_system(entry.path)
+            try:
+                open_with_system(entry.path)
+            except OSError as error:
+                wx.MessageBox(str(error), t("login.err_title"), wx.OK | wx.ICON_ERROR)
         elif action == "copy_path":
             if wx.TheClipboard.Open():
                 wx.TheClipboard.SetData(wx.TextDataObject(str(entry.path)))
