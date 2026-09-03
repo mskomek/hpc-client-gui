@@ -191,7 +191,7 @@ def test_wx_remote_backspace_navigates_parent_and_f5_refreshes(wx_app):
     back_event.SetKeyCode(wx.WXK_BACK)
     listing.ProcessEvent(back_event)
     assert frame._wx_remote_controls["path"].GetValue() == "/"
-    _pump(wx_app, lambda: listing.GetItemCount() >= 1)
+    _pump(wx_app, lambda: not frame._wx_remote_state["busy"] and listing.GetItemCount() >= 1)
     calls = backend.list_calls
     refresh_event = wx.KeyEvent(wx.wxEVT_KEY_DOWN)
     refresh_event.SetKeyCode(wx.WXK_F5)
@@ -250,6 +250,24 @@ def test_wx_remote_background_upload_targets_current_directory(wx_app, monkeypat
     event.SetPosition(position)
     listing.ProcessEvent(event)
     _pump(wx_app, lambda: ("upload", "local.txt", "/") in backend.calls)
+
+
+def test_wx_remote_background_context_paste_targets_current_directory(wx_app):
+    backend = MockRemoteFilesBackend()
+    frame = _browser(wx_app, backend, WxRemoteDirectoryModel("/work"))
+    get_file_clipboard().set("copy", ["/work/a.txt"])
+    listing = frame._wx_remote_controls["listing"]
+
+    def choose_paste(menu):
+        item = next(item for item in menu.GetMenuItems() if item.GetItemLabelText() == "Paste")
+        listing.ProcessEvent(wx.CommandEvent(wx.wxEVT_MENU, item.GetId()))
+
+    listing.PopupMenu = choose_paste
+    position = listing.ClientToScreen(wx.Point(5, max(5, listing.GetSize().height - 5)))
+    event = wx.ContextMenuEvent(wx.wxEVT_CONTEXT_MENU, listing.GetId())
+    event.SetPosition(position)
+    listing.ProcessEvent(event)
+    _pump(wx_app, lambda: ("copy", "/work/a.txt", "/work/a.txt") in backend.calls)
 
 
 class _Dialog:
