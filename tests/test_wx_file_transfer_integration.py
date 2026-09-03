@@ -84,3 +84,17 @@ def test_wx_file_transfer_session_removed_after_cancel():
     while time.monotonic() < deadline and state.get("transfer_sessions"):
         time.sleep(0.01)
     assert state["transfer_sessions"] == set()
+
+
+def test_wx_file_context_transfer_reaches_progress_callback():
+    files = _Files()
+    progress = []
+    state = {"session": {"files": files}}
+    controller = _start_file_transfers(
+        state,
+        _Lifecycle(),
+        [TransferItem("upload", "a.txt", "/a.txt")],
+        on_progress=lambda item, done, total: progress.append((item.src, done, total)),
+    )
+    assert controller.engine.wait(2)
+    assert progress == [("a.txt", 1, 1)]
