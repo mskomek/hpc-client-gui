@@ -158,3 +158,42 @@ def test_wx_local_mutation_stress_uses_real_actions(wx_app, tmp_path: Path, monk
         frame._wx_local_run_action("delete")
         _pump(wx_app, lambda: not frame._wx_local_state["mutation_in_flight"])
         assert not renamed.exists()
+
+
+def test_wx_remote_mutation_stress_uses_real_actions(wx_app, monkeypatch):
+    backend = MockRemoteFilesBackend()
+    show_remote_files(
+        model=WxRemoteDirectoryModel("/work"),
+        loader=backend.iterdir_entries,
+        operation=backend.operation,
+    )
+    frame = [window for window in wx.GetTopLevelWindows() if hasattr(window, "_wx_remote_controls")][-1]
+    listing = frame._wx_remote_controls["listing"]
+    _pump(wx_app, lambda: listing.GetItemCount() >= 1 and not frame._wx_remote_state["busy"])
+    rename_target = {"name": ""}
+
+    class Dialog:
+        def ShowModal(self):
+            return wx.ID_OK
+
+        def GetValue(self):
+            return rename_target["name"]
+
+        def Destroy(self):
+            pass
+
+    monkeypatch.setattr(wx, "TextEntryDialog", lambda *_args, **_kwargs: Dialog())
+    for index in range(100):
+        source = f"/work/remote-{index}.txt"
+        target = f"/work/renamed-{index}.txt"
+        backend.entries[source] = False
+        frame._wx_remote_run_action("refresh", ())
+        _pump(wx_app, lambda: any(listing.GetItemText(row) == f"remote-{index}.txt" for row in range(listing.GetItemCount())))
+        row = next(row for row in range(listing.GetItemCount()) if listing.GetItemText(row) == f"remote-{index}.txt")
+        for item_index in range(listing.GetItemCount()):
+            listing.Select(item_index, False)
+        listing.Select(row)
+        rename_target["name"] = f"renamed-{index}.txt"
+        frame._wx_remote_run_action("rename", (source,), "/work")
+        _pump(wx_app, lambda: not frame._wx_remote_state["busy"])
+        assert target in backend.entries and source not in backend.entries
