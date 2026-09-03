@@ -36,6 +36,17 @@ def open_with_system(path: str | Path) -> None:
         subprocess.Popen(["xdg-open", target])
 
 
+def reveal_in_file_manager(path: str | Path) -> None:
+    target = Path(path).expanduser().resolve()
+    directory = target if target.is_dir() else target.parent
+    if hasattr(os, "startfile"):
+        os.startfile(str(directory))
+    elif sys.platform == "darwin":
+        subprocess.Popen(["open", "-R", str(target)])
+    else:
+        subprocess.Popen(["xdg-open", str(directory)])
+
+
 class LocalBrowserModel:
     def __init__(self, path: str | Path = Path.cwd()) -> None:
         self.current_path = Path(path).expanduser().resolve()
@@ -291,13 +302,14 @@ def show_local_files(parent=None, path: str | Path | None = None, *, open_editor
         if action in {"open", "edit", "edit_new_window", "new_tab"}:
             if action == "new_tab":
                 model.new_tab(entry.path)
+                refresh()
             elif action == "open":
                 if entry.is_dir:
                     model.navigate(entry.path)
                     refresh()
                 else:
                     try:
-                        open_with_system(entry.path)
+                        reveal_in_file_manager(entry.path)
                     except OSError as error:
                         wx.MessageBox(str(error), t("login.err_title"), wx.OK | wx.ICON_ERROR)
             elif action == "edit_new_window" and open_editor_new_window:
@@ -327,9 +339,6 @@ def show_local_files(parent=None, path: str | Path | None = None, *, open_editor
                 wx.MessageBox(str(error), t("login.err_title"), wx.OK | wx.ICON_ERROR)
             finally:
                 dialog.Destroy()
-        elif action == "new_tab":
-            model.new_tab(entry.path)
-            refresh()
         elif action == "delete" and wx.MessageBox(t("dirs.delete_confirm"), t("dirs.delete"), wx.YES_NO | wx.ICON_WARNING) == wx.YES:
             paths = tuple(item.path for item in selected)
             mutate(lambda: model.delete(list(paths)))
@@ -372,4 +381,4 @@ def show_local_files(parent=None, path: str | Path | None = None, *, open_editor
     return wx.ID_OK
 
 
-__all__ = ["LocalBrowserModel", "LocalEntry", "file_url_payload", "open_with_system", "show_local_files"]
+__all__ = ["LocalBrowserModel", "LocalEntry", "file_url_payload", "open_with_system", "reveal_in_file_manager", "show_local_files"]
