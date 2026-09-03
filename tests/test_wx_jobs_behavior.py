@@ -46,37 +46,68 @@ def wx_jobs():
 
 
 def test_wx_job_output_pause_keeps_refreshing_but_stops_live_follow(wx_jobs):
-    values = [{"stdout": "line 1", "stderr": "err 1"}, {"stdout": "line 1\nline 2", "stderr": "err 2"}]
+    values = [{"stdout": "line 1", "stderr": "err 1"}, {"stdout": "line 1\nline 2", "stderr": "err 2"}, {"stdout": "line 1\nline 2\nline 3", "stderr": "err 3"}]
     frame = None
     frame = _open(wx_jobs, lambda: [{"id": "42", "state": "RUNNING"}], lambda _job: values.pop(0))
     _pump(wx_jobs, lambda: frame._wx_jobs_controls["jobs"].GetItemCount() == 1)
     _select(frame)
     _pump(wx_jobs, lambda: "line 1" in frame._wx_jobs_controls["stdout"].GetValue())
+    frame._wx_jobs_controls["stdout"].SetInsertionPoint(0)
     _click(frame._wx_jobs_controls["pause"])
     frame._wx_jobs_refresh_outputs()
     _pump(wx_jobs, lambda: "line 2" in frame._wx_jobs_controls["stdout"].GetValue())
     assert frame._wx_jobs_state["user_paused"]
     assert frame._wx_jobs_state["selected_job"] == "42"
     assert frame._wx_jobs_controls["stdout"].GetValue().endswith("line 2\n")
+    assert frame._wx_jobs_controls["stdout"].GetInsertionPoint() < frame._wx_jobs_controls["stdout"].GetLastPosition()
+    paused_follow_calls = frame._wx_jobs_state["follow_calls"]
+    _click(frame._wx_jobs_controls["pause"])
+    frame._wx_jobs_refresh_outputs()
+    _pump(wx_jobs, lambda: "line 3" in frame._wx_jobs_controls["stdout"].GetValue())
+    assert frame._wx_jobs_state["follow_calls"] > paused_follow_calls
 
 
 def test_wx_job_output_minimize_suspends_follow_and_restore_resumes_it(wx_jobs):
     list_calls = []
-    frame = _open(wx_jobs, lambda: list_calls.append(1) or [{"id": "42", "state": "RUNNING"}], lambda _job: {"stdout": "output"})
+    values = [{"stdout": "output-1"}, {"stdout": "output-2"}, {"stdout": "output-3"}]
+    frame = _open(wx_jobs, lambda: list_calls.append(1) or [{"id": "42", "state": "RUNNING"}], lambda _job: values.pop(0))
     _pump(wx_jobs, lambda: frame._wx_jobs_controls["jobs"].GetItemCount() == 1)
     _select(frame)
-    _pump(wx_jobs, lambda: frame._wx_jobs_controls["stdout"].GetValue())
+    _pump(wx_jobs, lambda: frame._wx_jobs_controls["stdout"].GetValue() == "output-1\n")
     event = wx.IconizeEvent(frame.GetId(), True)
     frame.ProcessEvent(event)
     assert frame._wx_jobs_state["minimized"]
     before = len(list_calls)
     frame._wx_jobs_refresh_jobs()
     assert len(list_calls) == before
-    assert frame._wx_jobs_controls["stdout"].GetValue() == "output\n"
+    frame._wx_jobs_refresh_outputs()
+    _pump(wx_jobs, lambda: frame._wx_jobs_controls["stdout"].GetValue() == "output-2\n")
+    assert frame._wx_jobs_state["minimized"]
     frame.ProcessEvent(wx.IconizeEvent(frame.GetId(), False))
     assert not frame._wx_jobs_state["minimized"]
     frame._wx_jobs_refresh_jobs()
     _pump(wx_jobs, lambda: len(list_calls) > before)
+    frame._wx_jobs_refresh_outputs()
+    _pump(wx_jobs, lambda: frame._wx_jobs_controls["stdout"].GetValue() == "output-3\n")
+    assert not frame._wx_jobs_state["user_paused"]
+
+
+def test_wx_job_output_pause_survives_minimize_restore(wx_jobs):
+    list_calls = []
+    frame = _open(wx_jobs, lambda: list_calls.append(1) or [{"id": "42", "state": "RUNNING"}], lambda _job: {"stdout": "next"})
+    _pump(wx_jobs, lambda: frame._wx_jobs_controls["jobs"].GetItemCount() == 1)
+    _select(frame)
+    _pump(wx_jobs, lambda: frame._wx_jobs_controls["stdout"].GetValue())
+    _click(frame._wx_jobs_controls["pause"])
+    assert frame._wx_jobs_state["user_paused"]
+    frame.ProcessEvent(wx.IconizeEvent(frame.GetId(), True))
+    before = len(list_calls)
+    frame._wx_jobs_refresh_jobs()
+    assert len(list_calls) == before
+    frame.ProcessEvent(wx.IconizeEvent(frame.GetId(), False))
+    _pump(wx_jobs, lambda: not frame._wx_jobs_state["minimized"])
+    assert frame._wx_jobs_state["user_paused"]
+    assert frame._wx_jobs_controls["pause"].GetLabel() == "Resume Live Follow"
 
 
 def test_wx_job_output_does_not_overlap_remote_reads(wx_jobs):
