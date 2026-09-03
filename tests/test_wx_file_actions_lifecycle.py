@@ -183,6 +183,29 @@ def test_wx_remote_old_mutation_completion_does_not_overwrite_navigation(wx_app,
     assert frame._wx_remote_model.current_path == "/"
 
 
+def test_wx_remote_old_mutation_completion_does_not_overwrite_real_backspace_navigation(wx_app, monkeypatch):
+    backend = MockRemoteFilesBackend()
+    started = threading.Event()
+    release = threading.Event()
+
+    def blocked_operation(*_args):
+        started.set()
+        release.wait(2)
+
+    monkeypatch.setattr(wx, "TextEntryDialog", lambda *_args, **_kwargs: _Dialog("/work"))
+    frame = _remote(wx_app, backend, blocked_operation)
+    listing = frame._wx_remote_controls["listing"]
+    frame._wx_remote_run_action("move", ("/work/a.txt",), "/work")
+    assert started.wait(2)
+    back = wx.KeyEvent(wx.wxEVT_KEY_DOWN)
+    back.SetKeyCode(wx.WXK_BACK)
+    listing.ProcessEvent(back)
+    assert frame._wx_remote_model.current_path == "/"
+    release.set()
+    _pump(wx_app, lambda: not frame._wx_remote_state["busy"])
+    assert frame._wx_remote_model.current_path == "/"
+
+
 class _Dialog:
     def __init__(self, value):
         self.value = value
