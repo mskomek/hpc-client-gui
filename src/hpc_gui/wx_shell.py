@@ -219,7 +219,25 @@ def _start_file_transfers(session_state, lifecycle, items, *, on_progress=None, 
             raise RuntimeError(f"unsupported transfer item: {item.op}")
         progress(1, 1)
 
-    transfer_window = create_transfer_progress(parent) if parent else None
+    transfer_window = None
+    if parent:
+        import wx
+
+        ready = Event()
+
+        def create_window():
+            nonlocal transfer_window
+            transfer_window = create_transfer_progress(parent)
+            ready.set()
+
+        try:
+            if wx.IsMainThread():
+                create_window()
+            else:
+                wx.CallAfter(create_window)
+                ready.wait(2)
+        except (AssertionError, RuntimeError):
+            pass
 
     def queue_event(event, item):
         if transfer_window:
