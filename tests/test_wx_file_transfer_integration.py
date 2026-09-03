@@ -234,3 +234,30 @@ def test_wx_file_transfer_rename_policy_generates_available_destination():
     parent.Destroy()
     app.ProcessPendingEvents()
     app.Destroy()
+
+
+@pytest.mark.parametrize("choice", ["no", "cancel"])
+def test_wx_file_transfer_conflict_gui_decline_does_not_upload(monkeypatch, choice):
+    wx = pytest.importorskip("wx")
+    app = wx.App(False)
+    parent = wx.Frame(None)
+    files = _ConflictFiles()
+    state = {"session": {"files": files}, "conflict_policy": "ask"}
+    result = wx.NO if choice == "no" else wx.CANCEL
+    monkeypatch.setattr(wx, "MessageBox", lambda *_args, **_kwargs: result)
+    controller = _start_file_transfers(
+        state,
+        _Lifecycle(),
+        [TransferItem("upload", "a.txt", "/work/a.txt")],
+        parent=parent,
+    )
+    deadline = time.monotonic() + 2
+    while not controller.engine.wait(0) and time.monotonic() < deadline:
+        app.ProcessPendingEvents()
+        wx.MilliSleep(5)
+    app.ProcessPendingEvents()
+    assert controller.engine.wait(0)
+    assert files.calls == []
+    parent.Destroy()
+    app.ProcessPendingEvents()
+    app.Destroy()
