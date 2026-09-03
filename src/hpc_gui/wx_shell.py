@@ -6,7 +6,7 @@ import os
 import shlex
 from pathlib import Path
 from pathlib import PurePosixPath
-from threading import Thread
+from threading import Event, Thread
 
 from hpc_gui import __version__
 from hpc_gui.core.i18n import load_saved_language, set_language, subscribe_language_change, system_default_language, t, unsubscribe_language_change
@@ -166,12 +166,37 @@ def _get_editor_manager(session_state, parent, lifecycle, *, save_remote=None, o
     return manager
 
 
-def _start_file_transfers(session_state, lifecycle, items, *, on_progress=None, conflict_resolver=None, files_backend=None):
+def _start_file_transfers(session_state, lifecycle, items, *, on_progress=None, conflict_resolver=None, files_backend=None, parent=None):
     """Queue file-view transfers through the shared transfer lifecycle."""
     session = session_state.get("session") or {}
     files = files_backend or session.get("files")
     if not files or not items:
         raise RuntimeError(t("common.no_connection"))
+
+    def wx_conflict_resolver(item):
+        import wx
+
+        decision = {"value": "cancel"}
+        ready = Event()
+
+        def ask():
+            try:
+                choice = wx.MessageBox(
+                    t("transfer.conflict_message").format(path=item.dst),
+                    t("transfer.conflict_title"),
+                    wx.YES_NO | wx.CANCEL | wx.ICON_WARNING,
+                    parent,
+                )
+                decision["value"] = {wx.YES: "overwrite", wx.NO: "skip"}.get(choice, "cancel")
+            finally:
+                ready.set()
+
+        try:
+            wx.CallAfter(ask)
+        except (AssertionError, RuntimeError):
+            return "cancel"
+        ready.wait()
+        return decision["value"]
 
     def run_item(item, progress):
         if item.op == "upload":
@@ -186,7 +211,7 @@ def _start_file_transfers(session_state, lifecycle, items, *, on_progress=None, 
         items,
         run_item,
         conflict_check=getattr(files, "exists", None),
-        conflict_resolver=conflict_resolver or session_state.get("conflict_resolver"),
+        conflict_resolver=conflict_resolver or session_state.get("conflict_resolver") or (wx_conflict_resolver if parent else None),
         on_progress=on_progress,
     )
     if session_state.get("conflict_policy"):
@@ -261,7 +286,7 @@ def _dispatch(command_id: str, parent=None, lifecycle=None, session_state=None) 
             def worker():
                 try:
                     items = [TransferItem("upload", local_path, str(remote_dir / Path(local_path).name)) for local_path in paths]
-                    _start_file_transfers(session_state, lifecycle, items, files_backend=files)
+                    _start_file_transfers(session_state, lifecycle, items, files_backend=files, parent=parent)
                 except Exception as error:
                     wx.CallAfter(wx.MessageBox, str(error), t("login.err_title"), wx.OK | wx.ICON_ERROR)
 
@@ -289,11 +314,11 @@ def _dispatch(command_id: str, parent=None, lifecycle=None, session_state=None) 
                 return
             if action == "download" and files and destination:
                 items = [TransferItem("download", remote_path, str(Path(destination) / PurePosixPath(remote_path).name)) for remote_path in paths]
-                _start_file_transfers(session_state, lifecycle, items, files_backend=files)
+                _start_file_transfers(session_state, lifecycle, items, files_backend=files, parent=parent)
                 return
             if action == "upload" and files and destination:
                 items = [TransferItem("upload", local_path, str(PurePosixPath(destination) / Path(local_path).name)) for local_path in paths]
-                _start_file_transfers(session_state, lifecycle, items, files_backend=files)
+                _start_file_transfers(session_state, lifecycle, items, files_backend=files, parent=parent)
                 return
             if action == "new_folder" and files and destination:
                 files.mkdir(destination)
