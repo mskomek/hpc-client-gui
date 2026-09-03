@@ -43,7 +43,7 @@ class JobTrackingController:
         )
 
     def should_poll_jobs(self, details_visible: bool, auto_refresh: bool) -> bool:
-        return self.connected and self.page_active and bool(details_visible and auto_refresh)
+        return self.connected and self.page_active and not self.minimized and bool(details_visible and auto_refresh)
 
     def should_follow_output(self, outputs_visible: bool) -> bool:
         return self.connected and self.page_active and not self.minimized and bool(outputs_visible and (self.output.stdout_path or self.output.stderr_path))
