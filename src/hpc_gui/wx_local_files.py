@@ -6,7 +6,7 @@ import os
 import shutil
 import subprocess
 import sys
-from threading import Thread
+from threading import Lock, Thread
 from dataclasses import dataclass
 from pathlib import Path
 from urllib.parse import quote
@@ -57,8 +57,9 @@ class LocalBrowserModel:
         self.clipboard: tuple[Path, ...] = ()
         self.clipboard_move = False
 
-    def list_entries(self) -> tuple[LocalEntry, ...]:
-        entries = [LocalEntry(item, item.is_dir(), item.stat().st_size if item.is_file() else 0) for item in self.current_path.iterdir()]
+    def list_entries(self, path: str | Path | None = None) -> tuple[LocalEntry, ...]:
+        current_path = self.current_path if path is None else Path(path).expanduser().resolve()
+        entries = [LocalEntry(item, item.is_dir(), item.stat().st_size if item.is_file() else 0) for item in current_path.iterdir()]
         key = (lambda item: item.path.name.casefold()) if self.sort_key == "name" else (lambda item: item.size)
         return tuple(sorted(entries, key=key, reverse=self.reverse))
 
@@ -192,7 +193,8 @@ def show_local_files(parent=None, path: str | Path | None = None, *, open_editor
     listing.InsertColumn(0, t("dirs.col_name"))
     listing.InsertColumn(1, t("dirs.col_size"))
     entries = []
-    state = {"context_target": None, "closed": False, "mutation_in_flight": False, "view_generation": 0}
+    state = {"context_target": None, "closed": False, "mutation_in_flight": False, "view_generation": 0, "listing_request_id": 0}
+    threading_lock = Lock()
     labels = FILE_CONTEXT_LABEL_KEYS
 
     def safe_call_after(callback, *args):
@@ -202,11 +204,40 @@ def show_local_files(parent=None, path: str | Path | None = None, *, open_editor
             return
 
     def refresh() -> None:
-        entries[:] = model.list_entries()
-        listing.DeleteAllItems()
-        for entry in entries:
-            index = listing.InsertItem(listing.GetItemCount(), entry.path.name)
-            listing.SetItem(index, 1, str(entry.size))
+        with threading_lock:
+            if state["closed"]:
+                return
+            state["listing_request_id"] += 1
+            request_id = state["listing_request_id"]
+            requested_path = model.current_path
+            request_generation = state["view_generation"]
+
+        def done(result, error):
+            with threading_lock:
+                current = (
+                    not state["closed"]
+                    and request_id == state["listing_request_id"]
+                    and request_generation == state["view_generation"]
+                    and requested_path == model.current_path
+                )
+            if not current:
+                return
+            if error:
+                wx.MessageBox(str(error), t("login.err_title"), wx.OK | wx.ICON_ERROR)
+                return
+            entries[:] = result
+            listing.DeleteAllItems()
+            for entry in entries:
+                index = listing.InsertItem(listing.GetItemCount(), entry.path.name)
+                listing.SetItem(index, 1, str(entry.size))
+
+        def worker():
+            try:
+                safe_call_after(done, model.list_entries(requested_path), None)
+            except Exception as error:
+                safe_call_after(done, (), error)
+
+        Thread(target=worker, daemon=True).start()
 
     def navigate(target) -> None:
         resolved = Path(target).expanduser().resolve()
