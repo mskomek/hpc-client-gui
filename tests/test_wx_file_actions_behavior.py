@@ -138,3 +138,15 @@ def test_reveal_file_manager_macos_uses_finder_semantics(monkeypatch, tmp_path: 
     monkeypatch.setattr(subprocess, "Popen", lambda args: calls.append(args))
     wx_local_files.reveal_in_file_manager(target)
     assert calls == [["open", str(target)] if is_dir else ["open", "-R", str(target)]]
+
+
+@pytest.mark.parametrize("is_dir", [False, True])
+def test_reveal_file_manager_linux_opens_parent_or_directory(monkeypatch, tmp_path: Path, is_dir):
+    target = tmp_path / ("folder" if is_dir else "file.txt")
+    target.mkdir() if is_dir else target.write_text("x", encoding="utf-8")
+    calls = []
+    monkeypatch.delattr(os, "startfile", raising=False)
+    monkeypatch.setattr(wx_local_files.sys, "platform", "linux")
+    monkeypatch.setattr(subprocess, "Popen", lambda args: calls.append(args))
+    wx_local_files.reveal_in_file_manager(target)
+    assert calls == [["xdg-open", str(target if is_dir else target.parent)]]
