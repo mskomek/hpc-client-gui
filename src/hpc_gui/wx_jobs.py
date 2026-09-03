@@ -102,7 +102,7 @@ class WxJobsModel:
         return True
 
 
-def show_job_output(parent, model: WxJobsModel, view_id: str, *, read_output=None, interval_ms: int = 1000) -> int:
+def show_job_output(parent, model: WxJobsModel, view_id: str, *, read_output=None, interval_ms: int = 1000, lifecycle=None) -> int:
     """Show a bounded detached output view; polling stays in the callback."""
     try:
         import wx
@@ -147,15 +147,22 @@ def show_job_output(parent, model: WxJobsModel, view_id: str, *, read_output=Non
         model.resize_detached(view.id, max(1, output.GetClientSize().width // 8), max(1, output.GetClientSize().height // 16))
         _event.Skip()
 
-    def closed(_event):
+    def closed(_event=None):
         with state_lock:
             state["closed"] = True
         timer.Stop()
+        unsubscribe_language_change(refresh_labels)
         frame.Destroy()
+
+    def refresh_labels(_language=None):
+        frame.SetTitle(f"{t('jobs.open_output')} {view.id}")
 
     frame.Bind(wx.EVT_TIMER, refresh, timer)
     frame.Bind(wx.EVT_SIZE, resized)
     frame.Bind(wx.EVT_CLOSE, closed)
+    subscribe_language_change(refresh_labels)
+    if lifecycle is not None:
+        lifecycle.register_cleanup(closed)
     if read_output:
         timer.Start(max(100, int(interval_ms)))
         refresh()
@@ -339,7 +346,7 @@ def show_jobs(parent=None, model: WxJobsModel | None = None, *, list_jobs=None, 
                 return result[0] if result else ""
             return result
 
-        show_job_output(frame, model, view.id, read_output=read_stdout)
+        show_job_output(frame, model, view.id, read_output=read_stdout, lifecycle=lifecycle)
 
     def close(_event=None):
         if state["closed"]:
