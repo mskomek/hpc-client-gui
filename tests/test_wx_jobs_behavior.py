@@ -114,9 +114,11 @@ def test_wx_job_output_does_not_overlap_remote_reads(wx_jobs):
     started = threading.Event()
     release = threading.Event()
     calls = []
+    read_threads = []
 
     def read(_job):
         calls.append(1)
+        read_threads.append(threading.get_ident())
         started.set()
         release.wait(2)
         return {"stdout": "done"}
@@ -129,6 +131,7 @@ def test_wx_job_output_does_not_overlap_remote_reads(wx_jobs):
     assert len(calls) == 1
     release.set()
     _pump(wx_jobs, lambda: frame._wx_jobs_controls["stdout"].GetValue() == "done\n")
+    assert read_threads and read_threads[0] != threading.get_ident()
 
 
 def test_wx_job_output_discards_stale_result_after_job_selection_changes(wx_jobs):
