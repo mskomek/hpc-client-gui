@@ -1,4 +1,9 @@
 from pathlib import Path
+import threading
+
+import pytest
+
+wx = pytest.importorskip("wx")
 
 
 def test_wx_shell_is_optional_and_has_migration_entrypoint():
@@ -40,3 +45,48 @@ def test_wx_shell_dispatches_core_views():
     assert 'command_id == "NAV-TERMINAL"' in source and "show_terminal(parent, ssh=session.get(\"ssh\"), lifecycle=lifecycle)" in source
     assert "command_items" in source and "description_label.SetLabel" in source
     assert "lifecycle.register_cleanup(destroy_tray)" in source and "def destroy_tray" in source
+
+
+def test_wx_shell_remote_operation_keeps_session_snapshot(monkeypatch):
+    from hpc_gui.wx_shell import _dispatch
+    import hpc_gui.wx_remote_files_view as remote_view
+
+    class Files:
+        def __init__(self, name):
+            self.name = name
+            self.calls = []
+            self.started = threading.Event()
+            self.release = threading.Event()
+
+        def iterdir_entries(self, _path):
+            return ()
+
+        def read_text(self, _path):
+            return ""
+
+        def move(self, source, destination):
+            self.calls.append((self.name, source, destination))
+            self.started.set()
+            self.release.wait(2)
+
+    class Slurm:
+        pass
+
+    class Lifecycle:
+        def register_cleanup(self, _callback):
+            pass
+
+    first, second = Files("A"), Files("B")
+    state = {"session": {"files": first, "slurm": Slurm()}}
+    captured = []
+    monkeypatch.setattr(remote_view, "show_remote_files", lambda *args, **kwargs: captured.append(kwargs))
+    _dispatch("NAV-DIRECTORIES", None, Lifecycle(), state)
+    operation = captured[-1]["operation"]
+    worker = threading.Thread(target=operation, args=("move", ("/a",), "/b"))
+    worker.start()
+    assert first.started.wait(2)
+    state["session"] = {"files": second, "slurm": Slurm()}
+    first.release.set()
+    worker.join(2)
+    assert first.calls == [("A", "/a", "/b/a")]
+    assert second.calls == []
