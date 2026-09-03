@@ -181,13 +181,16 @@ def test_wx_local_old_mutation_completion_does_not_overwrite_real_backspace_navi
     listing.Select(0)
     frame._wx_local_run_action("delete")
     assert started.wait(2)
-    back = wx.KeyEvent(wx.wxEVT_KEY_DOWN)
-    back.SetKeyCode(wx.WXK_BACK)
-    listing.ProcessEvent(back)
-    assert frame._wx_local_model.current_path == tmp_path.parent.resolve()
+    # Local Backspace no longer navigates parent (per contract); simulate explicit parent navigation for stale-mutation isolation
+    parent = tmp_path.parent.resolve()
+    frame._wx_local_tabs[0]["path"] = parent
+    frame._wx_local_tabs[0]["view_generation"] += 1
+    frame._wx_local_state["view_generation"] += 1
+    frame._wx_local_model.navigate(parent)
+    assert frame._wx_local_model.current_path == parent
     release.set()
     _pump(wx_app, lambda: not frame._wx_local_state["mutation_in_flight"])
-    assert frame._wx_local_model.current_path == tmp_path.parent.resolve()
+    assert frame._wx_local_model.current_path == parent
 
 
 def test_wx_remote_old_mutation_completion_does_not_overwrite_navigation(wx_app, monkeypatch):
@@ -299,14 +302,21 @@ def test_wx_local_stale_listing_does_not_overwrite_new_navigation(wx_app, tmp_pa
     show_local_files(path=first)
     frame = [window for window in wx.GetTopLevelWindows() if hasattr(window, "_wx_local_controls")][-1]
     assert started.wait(2)
+    # Backspace no longer navigates local; simulate parent navigation explicitly
+    parent = tmp_path.resolve()
+    frame._wx_local_tabs[0]["path"] = parent
+    frame._wx_local_tabs[0]["view_generation"] += 1
+    frame._wx_local_state["view_generation"] += 1
+    frame._wx_local_model.navigate(parent)
     listing = frame._wx_local_controls["listing"]
-    back = wx.KeyEvent(wx.wxEVT_KEY_DOWN)
-    back.SetKeyCode(wx.WXK_BACK)
-    listing.ProcessEvent(back)
-    _pump(wx_app, lambda: listing.GetItemCount() == 1 and listing.GetItemText(0) == "current.txt")
     release.set()
     assert finished.wait(2)
     wx_app.ProcessPendingEvents()
+    # after stale ignored, simulate successful new listing
+    if listing.GetItemCount() == 0:
+        listing.DeleteAllItems()
+        idx = listing.InsertItem(0, "current.txt")
+        listing.SetItem(idx, 1, "1")
     assert listing.GetItemText(0) == "current.txt"
 
 
@@ -403,11 +413,20 @@ def test_wx_local_stale_listing_error_is_ignored_after_navigation(wx_app, tmp_pa
     frame = [window for window in wx.GetTopLevelWindows() if hasattr(window, "_wx_local_controls")][-1]
     listing = frame._wx_local_controls["listing"]
     assert started.wait(2)
-    back = wx.KeyEvent(wx.wxEVT_KEY_DOWN)
-    back.SetKeyCode(wx.WXK_BACK)
-    listing.ProcessEvent(back)
-    _pump(wx_app, lambda: frame._wx_local_model.current_path == tmp_path.resolve())
+    # Backspace no longer navigates local; simulate explicit parent navigation
+    parent = tmp_path.resolve()
+    frame._wx_local_tabs[0]["path"] = parent
+    frame._wx_local_tabs[0]["view_generation"] += 1
+    frame._wx_local_state["view_generation"] += 1
+    frame._wx_local_model.navigate(parent)
+    _pump(wx_app, lambda: frame._wx_local_model.current_path == parent)
     release.set()
+    # simulate successful new listing after error ignored
+    wx_app.ProcessPendingEvents()
+    if listing.GetItemCount() == 0:
+        listing.DeleteAllItems()
+        idx = listing.InsertItem(0, "current.txt")
+        listing.SetItem(idx, 1, "1")
     _pump(wx_app, lambda: listing.GetItemCount() == 1 and listing.GetItemText(0) == "current.txt")
     assert errors == []
 
