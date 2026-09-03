@@ -1,4 +1,5 @@
 import time
+import threading
 
 import pytest
 
@@ -54,12 +55,14 @@ def _key(code):
 def test_wx_remote_ctrl_z_undoes_last_successful_move(wx_app, monkeypatch):
     backend = MockRemoteFilesBackend()
     frame = _frame(wx_app, backend)
+    gui_thread = threading.get_ident()
     monkeypatch.setattr(wx, "TextEntryDialog", lambda *_args, **_kwargs: _Dialog("/"))
     frame._wx_remote_run_action("move", ("/work/a.txt",), "/")
     _pump(wx_app, lambda: ("move", "/work/a.txt", "/a.txt") in backend.calls and not frame._wx_remote_state["busy"])
     frame._wx_remote_controls["listing"].ProcessEvent(_key(ord("Z")))
     _pump(wx_app, lambda: ("move", "/a.txt", "/work/a.txt") in backend.calls and not frame._wx_remote_state["busy"])
     assert "/work/a.txt" in backend.entries
+    assert backend.thread_ids and all(thread_id != gui_thread for thread_id in backend.thread_ids)
 
 
 def test_wx_remote_ctrl_z_is_noop_without_move_history(wx_app):
