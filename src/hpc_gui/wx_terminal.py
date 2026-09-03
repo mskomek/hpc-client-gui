@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from hpc_gui.core.i18n import t
+from hpc_gui.core.i18n import subscribe_language_change, t, unsubscribe_language_change
 
 
 @dataclass(frozen=True)
@@ -72,7 +72,7 @@ def show_terminal(parent=None, send_input=None, resize_pty=None, *, ssh=None, li
         send_input = ssh.send_shell_input
         resize_pty = ssh.resize_shell_pty
     model = TerminalModel(send_input, resize_pty)
-    frame = wx.Frame(parent, title="Terminal", size=(900, 600))
+    frame = wx.Frame(parent, title=t("help.section_terminal"), size=(900, 600))
     frame._terminal_model = model
     text = wx.TextCtrl(frame, style=wx.TE_MULTILINE | wx.TE_RICH2 | wx.TE_PROCESS_TAB)
     text.SetFocus()
@@ -116,6 +116,9 @@ def show_terminal(parent=None, send_input=None, resize_pty=None, *, ssh=None, li
             subscribers.append(subscriber)
 
     closed = False
+    def refresh_labels(_language=None):
+        frame.SetTitle(t("help.section_terminal"))
+
     def close(_event=None):
         nonlocal closed
         if closed:
@@ -126,9 +129,11 @@ def show_terminal(parent=None, send_input=None, resize_pty=None, *, ssh=None, li
                 subscribers.remove(subscriber)
             except ValueError:
                 pass
+        unsubscribe_language_change(refresh_labels)
         frame.Destroy()
 
     frame.Bind(wx.EVT_CLOSE, close)
+    subscribe_language_change(refresh_labels)
     if lifecycle is not None:
         lifecycle.register_cleanup(close)
     frame.Show()
