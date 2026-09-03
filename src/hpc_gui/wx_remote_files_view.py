@@ -104,7 +104,8 @@ def show_remote_files(parent=None, model: WxRemoteDirectoryModel | None = None, 
 
     def context(event):
         position = event.GetPosition()
-        index = -1 if position == wx.DefaultPosition else listing.HitTest(listing.ScreenToClient(position))[0]
+        keyboard_context = position == wx.DefaultPosition or (position.x < 0 and position.y < 0)
+        index = -1 if keyboard_context else listing.HitTest(listing.ScreenToClient(position))[0]
         if index >= 0 and not listing.IsSelected(index):
             for selected_index in range(listing.GetItemCount()):
                 listing.Select(selected_index, False)
@@ -116,7 +117,7 @@ def show_remote_files(parent=None, model: WxRemoteDirectoryModel | None = None, 
             clicked.is_dir if clicked else None,
             tuple(entry.path for entry in selected_entries),
             tuple(entry.is_dir for entry in selected_entries),
-            background=index < 0 and position != wx.DefaultPosition,
+            background=index < 0 and not keyboard_context,
         )
         selected = selection.effective_paths
         menu = wx.Menu()

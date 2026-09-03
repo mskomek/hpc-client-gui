@@ -229,7 +229,8 @@ def show_local_files(parent=None, path: str | Path | None = None, *, open_editor
 
     def context_menu(event) -> None:
         position = event.GetPosition()
-        index = -1 if position == wx.DefaultPosition else listing.HitTest(listing.ScreenToClient(position))[0]
+        keyboard_context = position == wx.DefaultPosition or (position.x < 0 and position.y < 0)
+        index = -1 if keyboard_context else listing.HitTest(listing.ScreenToClient(position))[0]
         if index >= 0 and not listing.IsSelected(index):
             for selected_index in range(listing.GetItemCount()):
                 listing.Select(selected_index, False)
@@ -242,7 +243,7 @@ def show_local_files(parent=None, path: str | Path | None = None, *, open_editor
             entry.is_dir if entry else None,
             tuple(str(item.path) for item in selected),
             tuple(item.is_dir for item in selected),
-            background=index < 0 and position != wx.DefaultPosition,
+            background=index < 0 and not keyboard_context,
         )
         menu = wx.Menu()
         actions = tuple(action for action in visible_actions(selection, remote=False) if action != "upload" or upload)
