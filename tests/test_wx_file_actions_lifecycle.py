@@ -310,6 +310,49 @@ def test_wx_local_stale_listing_does_not_overwrite_new_navigation(wx_app, tmp_pa
     assert listing.GetItemText(0) == "current.txt"
 
 
+def test_wx_local_listing_completion_after_close_is_safe(wx_app, tmp_path: Path, monkeypatch):
+    started = threading.Event()
+    release = threading.Event()
+    finished = threading.Event()
+
+    def loader(model, path=None):
+        started.set()
+        release.wait(2)
+        finished.set()
+        return ()
+
+    monkeypatch.setattr(LocalBrowserModel, "list_entries", loader)
+    show_local_files(path=tmp_path)
+    frame = [window for window in wx.GetTopLevelWindows() if hasattr(window, "_wx_local_controls")][-1]
+    assert started.wait(2)
+    frame.Close(True)
+    release.set()
+    assert finished.wait(2)
+    wx_app.ProcessPendingEvents()
+    assert frame._wx_local_state["closed"]
+
+
+def test_wx_remote_listing_completion_after_close_is_safe(wx_app):
+    started = threading.Event()
+    release = threading.Event()
+    finished = threading.Event()
+
+    def loader(_path):
+        started.set()
+        release.wait(2)
+        finished.set()
+        return ()
+
+    show_remote_files(model=WxRemoteDirectoryModel("/work"), loader=loader, operation=lambda *_args: None)
+    frame = [window for window in wx.GetTopLevelWindows() if hasattr(window, "_wx_remote_controls")][-1]
+    assert started.wait(2)
+    frame.Close(True)
+    release.set()
+    assert finished.wait(2)
+    wx_app.ProcessPendingEvents()
+    assert frame._wx_remote_state["closed"]
+
+
 class _Dialog:
     def __init__(self, value):
         self.value = value
