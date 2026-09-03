@@ -115,6 +115,34 @@ def test_remote_new_folder_uses_clicked_directory_target(wx_app, monkeypatch):
     assert "/work/child" in backend.entries
 
 
+def test_wx_remote_new_folder_rejects_invalid_name(wx_app, monkeypatch):
+    backend = MockRemoteFilesBackend()
+    errors = []
+    frame = _browser(wx_app, backend, WxRemoteDirectoryModel("/work"))
+    monkeypatch.setattr(wx, "TextEntryDialog", lambda *_args, **_kwargs: _Dialog("../bad"))
+    monkeypatch.setattr(wx, "MessageBox", lambda message, *_args, **_kwargs: errors.append(message) or wx.OK)
+    frame._wx_remote_run_action("new_folder", (), "/work")
+    assert errors
+    assert "/work/../bad" not in backend.entries
+    assert frame._wx_remote_controls["listing"].IsEnabled()
+
+
+def test_wx_remote_new_folder_failure_shows_error_and_recovers(wx_app, monkeypatch):
+    backend = MockRemoteFilesBackend()
+    errors = []
+
+    def failing_operation(*_args, **_kwargs):
+        raise OSError("mkdir failed")
+
+    frame = _browser(wx_app, backend, WxRemoteDirectoryModel("/work"), failing_operation)
+    monkeypatch.setattr(wx, "TextEntryDialog", lambda *_args, **_kwargs: _Dialog("child"))
+    monkeypatch.setattr(wx, "MessageBox", lambda message, *_args, **_kwargs: errors.append(message) or wx.OK)
+    frame._wx_remote_run_action("new_folder", (), "/work")
+    _pump(wx_app, lambda: not frame._wx_remote_state["busy"])
+    assert errors == ["mkdir failed"]
+    assert frame._wx_remote_controls["listing"].IsEnabled()
+
+
 def test_wx_remote_keyboard_copy_and_paste_use_shared_clipboard(wx_app):
     backend = MockRemoteFilesBackend()
     backend.entries["/work/dest"] = True
