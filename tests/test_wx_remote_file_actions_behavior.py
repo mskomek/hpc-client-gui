@@ -57,6 +57,14 @@ def test_remote_move_and_upload_actions_reach_backend_off_gui_thread(wx_app, mon
     assert all(thread_id != gui_thread for thread_id in backend.thread_ids)
 
 
+def test_wx_remote_download_uses_selected_destination_dialog(wx_app, monkeypatch, tmp_path):
+    backend = MockRemoteFilesBackend()
+    frame = _browser(wx_app, backend)
+    monkeypatch.setattr(wx, "DirDialog", lambda *_args, **_kwargs: _DestinationDialog(str(tmp_path)))
+    frame._wx_remote_run_action("download", ("/work/a.txt",), "/work")
+    _pump(wx_app, lambda: ("download", "/work/a.txt", str(tmp_path)) in backend.calls)
+
+
 def test_remote_new_folder_uses_clicked_directory_target(wx_app, monkeypatch):
     backend = MockRemoteFilesBackend()
     frame = _browser(wx_app, backend)
@@ -243,4 +251,9 @@ class _Dialog:
 
 class _FileDialog(_Dialog):
     def GetPaths(self):
+        return self.value
+
+
+class _DestinationDialog(_Dialog):
+    def GetPath(self):
         return self.value
