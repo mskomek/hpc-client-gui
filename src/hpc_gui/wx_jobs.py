@@ -197,9 +197,11 @@ def show_jobs(parent=None, model: WxJobsModel | None = None, *, list_jobs=None, 
     refresh_button = wx.Button(right, label=t("jobs.refresh"))
     follow = wx.CheckBox(right, label=t("files.auto_scroll"))
     detached_button = wx.Button(right, label=t("jobs.open_output"))
+    pause_button = wx.Button(right, label=t("jobs.pause_output"))
     follow.SetValue(True)
     output_controls.Add(refresh_button, 0, wx.RIGHT, 6)
     output_controls.Add(detached_button, 0, wx.RIGHT, 6)
+    output_controls.Add(pause_button, 0, wx.RIGHT, 6)
     output_controls.Add(follow, 0, wx.ALIGN_CENTER_VERTICAL)
     cancel_button = wx.Button(right, label=t("jobs.cancel"))
     right_sizer.Add(details, 0, wx.EXPAND | wx.ALL, 6)
@@ -211,7 +213,7 @@ def show_jobs(parent=None, model: WxJobsModel | None = None, *, list_jobs=None, 
     splitter.SetMinimumPaneSize(220)
     root.Add(splitter, 1, wx.EXPAND | wx.ALL, 8)
     panel.SetSizer(root)
-    state = {"items": [], "selected_job": "", "closed": False, "in_flight": False, "output_in_flight": False, "cancel_in_flight": False}
+    state = {"items": [], "selected_job": "", "closed": False, "in_flight": False, "output_in_flight": False, "cancel_in_flight": False, "user_paused": False, "minimized": False}
     state_lock = Lock()
     timer = wx.Timer(frame)
 
@@ -225,7 +227,7 @@ def show_jobs(parent=None, model: WxJobsModel | None = None, *, list_jobs=None, 
             jobs.SetItem(index, 1, job_state)
 
     def refresh_jobs(_event=None):
-        if not list_jobs:
+        if not list_jobs or state["minimized"]:
             return
         with state_lock:
             if state["closed"] or state["in_flight"]:
@@ -266,17 +268,21 @@ def show_jobs(parent=None, model: WxJobsModel | None = None, *, list_jobs=None, 
         def fetch():
             try:
                 result = read_output(job_id)
-                wx.CallAfter(render_outputs, result, None)
+                wx.CallAfter(render_outputs, result, None, job_id)
             except Exception as error:
-                wx.CallAfter(render_outputs, None, error)
+                wx.CallAfter(render_outputs, None, error, job_id)
 
         Thread(target=fetch, daemon=True).start()
 
-    def render_outputs(result, error):
+    def render_outputs(result, error, request_job_id=""):
         with state_lock:
             state["output_in_flight"] = False
             if state["closed"]:
                 return
+            stale = request_job_id and request_job_id != state["selected_job"]
+        if stale:
+            refresh_outputs()
+            return
         if error:
             details.SetValue(str(error))
             return
@@ -289,9 +295,19 @@ def show_jobs(parent=None, model: WxJobsModel | None = None, *, list_jobs=None, 
         else:
             stdout.SetValue(clean_output(result))
             stderr.SetValue("")
-        if follow.GetValue():
+        if follow.GetValue() and not state["user_paused"] and not state["minimized"]:
             stdout.ShowPosition(stdout.GetLastPosition())
             stderr.ShowPosition(stderr.GetLastPosition())
+
+    def toggle_pause(_event=None):
+        state["user_paused"] = not state["user_paused"]
+        pause_button.SetLabel(t("jobs.resume_output" if state["user_paused"] else "jobs.pause_output"))
+
+    def iconized(event):
+        state["minimized"] = bool(event.IsIconized())
+        if not state["minimized"]:
+            refresh_jobs()
+        event.Skip()
 
     def select_job(event):
         item = state["items"][event.GetIndex()]
@@ -305,6 +321,7 @@ def show_jobs(parent=None, model: WxJobsModel | None = None, *, list_jobs=None, 
             if failure:
                 lines.extend(failure.as_lines())
             details.SetValue("\n".join(lines))
+        refresh_outputs()
 
     def cancel_job(_event):
         job_id = model.tracking.selected_job_id
@@ -364,10 +381,12 @@ def show_jobs(parent=None, model: WxJobsModel | None = None, *, list_jobs=None, 
         detached_button.SetLabel(t("jobs.open_output"))
         follow.SetLabel(t("files.auto_scroll"))
         cancel_button.SetLabel(t("jobs.cancel"))
+        pause_button.SetLabel(t("jobs.resume_output" if state["user_paused"] else "jobs.pause_output"))
 
     jobs.Bind(wx.EVT_LIST_ITEM_SELECTED, select_job)
     refresh_button.Bind(wx.EVT_BUTTON, refresh_jobs)
     detached_button.Bind(wx.EVT_BUTTON, open_detached)
+    pause_button.Bind(wx.EVT_BUTTON, toggle_pause)
     cancel_button.Bind(wx.EVT_BUTTON, cancel_job)
     def tick(event):
         refresh_jobs(event)
@@ -375,10 +394,15 @@ def show_jobs(parent=None, model: WxJobsModel | None = None, *, list_jobs=None, 
 
     timer.Start(1000)
     frame.Bind(wx.EVT_TIMER, tick, timer)
+    frame.Bind(wx.EVT_ICONIZE, iconized)
     frame.Bind(wx.EVT_CLOSE, close)
     if lifecycle is not None:
         lifecycle.register_cleanup(close)
     subscribe_language_change(refresh_labels)
+    frame._wx_jobs_state = state
+    frame._wx_jobs_controls = {"jobs": jobs, "stdout": stdout, "stderr": stderr, "follow": follow, "pause": pause_button}
+    frame._wx_jobs_refresh_jobs = refresh_jobs
+    frame._wx_jobs_refresh_outputs = refresh_outputs
     refresh_jobs()
     frame.Show()
     return wx.ID_OK

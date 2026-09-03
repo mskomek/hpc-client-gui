@@ -20,7 +20,7 @@ Automated evidence only; manual-only behavior is never marked covered.
 | GUI-XFER-001 | COVERED | transfer_dialog.py | wx_transfer_workspace.py | test_transfer_concurrency.py |
 | GUI-XFER-002 | COVERED | ftp_widget.py | wx_transfer_workspace.py | test_local_transfer_gate.py |
 | GUI-JOBS-001 | COVERED | jobs_widget.py | wx_jobs.py | test_wx_jobs.py |
-| GUI-JOBS-002 | PARTIAL | jobs_outputs_widget.py | wx_jobs.py | test_jobs_outputs_scroll.py; test_wx_jobs.py |
+| GUI-JOBS-002 | COVERED | jobs_outputs_widget.py | wx_jobs.py | test_jobs_outputs_scroll.py; test_wx_jobs.py; test_wx_jobs_behavior.py |
 | GUI-JOBS-003 | COVERED | services/ | wx_jobs.py | test_job_history_dashboard.py |
 | GUI-JOBS-004 | COVERED | walltime_suggestions.py | wx_jobs.py | test_walltime_suggestions.py |
 | GUI-EDIT-001 | COVERED | editor_widget.py | wx_editor.py | test_wx_editor.py |
