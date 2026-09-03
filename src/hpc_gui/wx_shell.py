@@ -68,6 +68,13 @@ def main() -> int:
     subscribe_language_change(refresh_labels)
 
     tray = None
+
+    def destroy_tray():
+        nonlocal tray
+        if tray is not None:
+            tray.Destroy()
+            tray = None
+
     try:
         import wx.adv
 
@@ -81,6 +88,7 @@ def main() -> int:
         tray = TrayIcon()
         tray.SetIcon(wx.ArtProvider.GetIcon(wx.ART_INFORMATION), "HPC Client GUI")
         lifecycle.set_tray_notifier(lambda message: tray.ShowBalloon(t("login.job_notification_title"), message, 5000))
+        lifecycle.register_cleanup(destroy_tray)
     except (ImportError, RuntimeError):
         pass
 
@@ -88,8 +96,6 @@ def main() -> int:
         unsubscribe_language_change(refresh_labels)
         lifecycle.set_tray_notifier(None)
         lifecycle.shutdown()
-        if tray:
-            tray.Destroy()
         frame.Destroy()
 
     frame.Bind(wx.EVT_CLOSE, close)
