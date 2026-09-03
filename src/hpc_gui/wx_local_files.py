@@ -175,7 +175,7 @@ def show_local_files(parent=None, path: str | Path | None = None, *, open_editor
         raise RuntimeError("wxPython is not installed") from exc
     model = LocalBrowserModel(path or Path.cwd())
     frame = wx.Frame(parent, title=t("tabs.ftp"), size=(900, 600))
-    listing = wx.ListCtrl(frame, style=wx.LC_REPORT | wx.LC_MULTIPLE)
+    listing = wx.ListCtrl(frame, style=wx.LC_REPORT)
     listing.InsertColumn(0, t("dirs.col_name"))
     listing.InsertColumn(1, t("dirs.col_size"))
     entries = []

@@ -26,6 +26,8 @@ Product behavior is canonical in `src/hpc_gui/docs/` (`HELP_en.md`,
 - [[Cluster Requirements|Cluster-Requirements]] — will it work on my
   cluster?
 - [[FAQ|FAQ]] — short answers, grouped by symptom.
+- [[GUI Feature Guide|GUI-Feature-Guide]] — old Qt and new wx screens with
+  reproducible mock validation.
 
 ## Install
 

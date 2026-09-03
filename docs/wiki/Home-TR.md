@@ -28,6 +28,8 @@ bağlar.
   platformda neyin desteklendiği.
 - [[Küme Gereksinimleri|Cluster-Requirements-TR]] — kümemde çalışır mı?
 - [[SSS|FAQ-TR]] — belirtiye göre gruplanmış kısa yanıtlar.
+- [[GUI Özellik Rehberi|GUI-Feature-Guide-TR]] — eski Qt ve yeni wx ekranları
+  ile yeniden üretilebilir mock doğrulaması.
 
 ## Kurulum
 
