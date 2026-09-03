@@ -82,6 +82,30 @@ def test_wx_remote_delete_removes_selected_files_and_directory_only(wx_app, monk
     assert "/work/keep.txt" in backend.entries
 
 
+def test_wx_remote_rename_updates_backend_and_visible_listing(wx_app, monkeypatch):
+    backend = MockRemoteFilesBackend()
+    frame = _browser(wx_app, backend, WxRemoteDirectoryModel("/work"))
+    monkeypatch.setattr(wx, "TextEntryDialog", lambda *_args, **_kwargs: _Dialog("renamed.txt"))
+    frame._wx_remote_run_action("rename", ("/work/a.txt",), "/work")
+    _pump(wx_app, lambda: ("rename", "/work/a.txt", "/work/renamed.txt") in backend.calls)
+    _pump(wx_app, lambda: not frame._wx_remote_state["busy"] and any(frame._wx_remote_controls["listing"].GetItemText(index) == "renamed.txt" for index in range(frame._wx_remote_controls["listing"].GetItemCount())))
+    assert "/work/a.txt" not in backend.entries
+    assert "/work/renamed.txt" in backend.entries
+
+
+def test_wx_remote_rename_conflict_shows_error_and_preserves_source(wx_app, monkeypatch):
+    backend = MockRemoteFilesBackend()
+    errors = []
+    frame = _browser(wx_app, backend, WxRemoteDirectoryModel("/work"))
+    monkeypatch.setattr(wx, "TextEntryDialog", lambda *_args, **_kwargs: _Dialog("b.txt"))
+    monkeypatch.setattr(wx, "MessageBox", lambda message, *_args, **_kwargs: errors.append(message) or wx.OK)
+    frame._wx_remote_run_action("rename", ("/work/a.txt",), "/work")
+    _pump(wx_app, lambda: not frame._wx_remote_state["busy"])
+    assert errors
+    assert "/work/a.txt" in backend.entries
+    assert frame._wx_remote_controls["listing"].IsEnabled()
+
+
 def test_remote_new_folder_uses_clicked_directory_target(wx_app, monkeypatch):
     backend = MockRemoteFilesBackend()
     frame = _browser(wx_app, backend)
