@@ -42,7 +42,7 @@ def reveal_in_file_manager(path: str | Path) -> None:
     if hasattr(os, "startfile"):
         os.startfile(str(directory))
     elif sys.platform == "darwin":
-        subprocess.Popen(["open", "-R", str(target)])
+        subprocess.Popen(["open", str(directory)] if target.is_dir() else ["open", "-R", str(target)])
     else:
         subprocess.Popen(["xdg-open", str(directory)])
 
