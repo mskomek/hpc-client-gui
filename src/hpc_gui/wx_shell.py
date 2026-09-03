@@ -81,7 +81,7 @@ def main() -> int:
         class TrayIcon(wx.adv.TaskBarIcon):
             def CreatePopupMenu(self):
                 menu = wx.Menu()
-                close = menu.Append(wx.ID_EXIT, "Exit")
+                close = menu.Append(wx.ID_EXIT, t("common.close"))
                 self.Bind(wx.EVT_MENU, lambda _event: frame.Close(), close)
                 return menu
 
