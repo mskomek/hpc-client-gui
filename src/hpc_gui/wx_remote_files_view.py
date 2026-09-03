@@ -32,6 +32,13 @@ def show_remote_files(parent=None, model: WxRemoteDirectoryModel | None = None, 
     state = {"entries": [], "busy": False, "closed": False, "editor_request_id": 0}
     lock = Lock()
 
+    def safe_call_after(callback, *args):
+        try:
+            wx.CallAfter(callback, *args)
+        except (AssertionError, RuntimeError):
+            # The wx application may have been destroyed while a worker exits.
+            return
+
     def render(entries):
         state["entries"] = list(entries)
         listing.DeleteAllItems()
@@ -73,9 +80,9 @@ def show_remote_files(parent=None, model: WxRemoteDirectoryModel | None = None, 
 
         def worker():
             try:
-                wx.CallAfter(done, model.list_entries(loader, force=True), None)
+                safe_call_after(done, model.list_entries(loader, force=True), None)
             except Exception as error:
-                wx.CallAfter(done, (), error)
+                safe_call_after(done, (), error)
 
         Thread(target=worker, daemon=True).start()
 
@@ -137,7 +144,7 @@ def show_remote_files(parent=None, model: WxRemoteDirectoryModel | None = None, 
         if action == "paste":
             clipboard = get_file_clipboard().get()
             if clipboard:
-                run_operation(clipboard.op, tuple(clipboard.paths), target_dir or model.current_path)
+                run_operation(clipboard.op, tuple(clipboard.paths), target_dir or model.current_path, from_paste=True)
             return
         if action in {"open", "edit"} and open_editor and selected:
             entry = next((item for item in state["entries"] if item.path == selected[0]), None)
@@ -175,13 +182,13 @@ def show_remote_files(parent=None, model: WxRemoteDirectoryModel | None = None, 
 
         def worker():
             try:
-                wx.CallAfter(done, read_text(remote_path), None)
+                safe_call_after(done, read_text(remote_path), None)
             except Exception as error:
-                wx.CallAfter(done, "", error)
+                safe_call_after(done, "", error)
 
         Thread(target=worker, daemon=True).start()
 
-    def run_operation(action, selected, target_dir=None):
+    def run_operation(action, selected, target_dir=None, *, from_paste=False):
         if not operation or action in {"open", "edit", "edit_new_window"} or (not selected and action not in {"new_folder", "upload"}):
             return
         if action == "delete" and wx.MessageBox(t("dirs.delete_confirm"), t("dirs.delete"), wx.YES_NO | wx.ICON_WARNING) != wx.YES:
@@ -200,7 +207,7 @@ def show_remote_files(parent=None, model: WxRemoteDirectoryModel | None = None, 
                 destination = str(PurePosixPath(target_dir or model.current_path) / new_name)
             finally:
                 dialog.Destroy()
-        elif action in {"rename", "copy", "move"}:
+        elif action in {"rename", "copy", "move"} and not from_paste:
             title_key = "dirs.rename" if action == "rename" else "dirs.destination"
             default = PurePosixPath(selected[0]).name if action == "rename" else str(PurePosixPath(selected[0]).parent)
             dialog = wx.TextEntryDialog(frame, t(title_key), t(title_key), default)
@@ -214,6 +221,8 @@ def show_remote_files(parent=None, model: WxRemoteDirectoryModel | None = None, 
                 destination = str(PurePosixPath(selected[0]).parent / new_name) if action == "rename" else str(PurePosixPath(new_name))
             finally:
                 dialog.Destroy()
+        elif from_paste:
+            destination = str(PurePosixPath(target_dir or model.current_path))
         elif action == "download":
             dialog = wx.DirDialog(frame, t("dirs.local_destination"))
             try:
@@ -240,9 +249,9 @@ def show_remote_files(parent=None, model: WxRemoteDirectoryModel | None = None, 
         def worker():
             try:
                 operation(action, operation_paths, destination)
-                wx.CallAfter(operation_done, None)
+                safe_call_after(operation_done, None)
             except Exception as error:
-                wx.CallAfter(operation_done, error)
+                safe_call_after(operation_done, error)
 
         def operation_done(error):
             with lock:

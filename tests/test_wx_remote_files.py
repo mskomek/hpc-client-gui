@@ -41,10 +41,10 @@ def test_remote_view_runs_operations_off_the_wx_thread():
     source = open("src/hpc_gui/wx_remote_files_view.py", encoding="utf-8").read()
     assert "Thread(target=worker" in source
     assert 't("dirs.delete_confirm")' in source
-    assert "wx.CallAfter(operation_done" in source
+    assert "safe_call_after(operation_done" in source
     assert '"open", "edit", "edit_new_window", "download"' in source
     assert "open_editor_new_window=None" in source
-    assert "read_text=None" in source and "wx.CallAfter(done, read_text(remote_path), None)" in source
+    assert "read_text=None" in source and "safe_call_after(done, read_text(remote_path), None)" in source
     assert "model.navigate(requested_path)" in source and "path.SetValue(model.current_path)" in source
     assert "PurePosixPath(selected[0]).parent / new_name" in source and "operation(action, operation_paths, destination)" in source
     assert 'action in {"rename", "copy", "move"}' in source and "dirs.destination" in source
