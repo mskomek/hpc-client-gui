@@ -165,12 +165,15 @@ def show_remote_files(parent=None, model: WxRemoteDirectoryModel | None = None, 
                     model.invalidate()
                     load()
             def undo_operation():
+                completed = 0
                 try:
                     for source, destination in inverse:
                         operation("move", (source,), destination.rsplit("/", 1)[0] or "/")
+                        completed += 1
                     safe_call_after(undo_done, None)
                 except Exception as error:
-                    move_history.push(record)
+                    if completed < len(record.moves):
+                        move_history.push(type(record)(record.moves[completed:]))
                     safe_call_after(undo_done, error)
             with lock:
                 if state["closed"] or state["busy"]:
