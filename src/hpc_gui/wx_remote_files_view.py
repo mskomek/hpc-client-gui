@@ -19,7 +19,7 @@ def show_remote_files(parent=None, model: WxRemoteDirectoryModel | None = None, 
     panel = wx.Panel(frame)
     root = wx.BoxSizer(wx.VERTICAL)
     path = wx.TextCtrl(panel, value=model.current_path, style=wx.TE_PROCESS_ENTER)
-    listing = wx.ListCtrl(panel, style=wx.LC_REPORT | wx.LC_MULTIPLE)
+    listing = wx.ListCtrl(panel, style=wx.LC_REPORT)
     listing.InsertColumn(0, t("dirs.col_name"))
     listing.InsertColumn(1, t("dirs.col_size"))
     refresh = wx.Button(panel, label=t("dirs.refresh"))
@@ -120,7 +120,7 @@ def show_remote_files(parent=None, model: WxRemoteDirectoryModel | None = None, 
             if state["closed"]:
                 return
             state["editor_request_id"] += 1
-            request_id = state["editor_request_id"]
+            request_id = callback._wx_request_started() if getattr(callback, "_wx_request_started", None) else state["editor_request_id"]
 
         def done(content, error):
             if state["closed"]:
@@ -247,6 +247,9 @@ def show_remote_files(parent=None, model: WxRemoteDirectoryModel | None = None, 
     path.Bind(wx.EVT_TEXT_ENTER, load)
     subscribe_language_change(refresh_labels)
     frame.Bind(wx.EVT_CLOSE, lambda event: (unsubscribe_language_change(refresh_labels), close(event)))
+    frame._wx_remote_controls = {"listing": listing, "path": path}
+    frame._wx_remote_state = state
+    frame._wx_remote_run_action = run_action
     load()
     frame.Show()
     return wx.ID_OK

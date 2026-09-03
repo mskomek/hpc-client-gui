@@ -37,6 +37,10 @@ def show_editor(parent=None, model: WxEditorModel | None = None, *, path: str = 
     panel.SetSizer(root)
     state = {"closed": False, "in_flight": False, "destroy_notified": False}
 
+    def rebind_callbacks(new_save_remote, new_on_submit, new_on_run):
+        nonlocal save_remote, on_submit, on_run
+        save_remote, on_submit, on_run = new_save_remote, new_on_submit, new_on_run
+
     def notify_destroy():
         if on_destroy is not None and not state["destroy_notified"]:
             state["destroy_notified"] = True
@@ -157,6 +161,7 @@ def show_editor(parent=None, model: WxEditorModel | None = None, *, path: str = 
     frame._wx_editor_model = model
     frame._wx_editor_load_document = load_document
     frame._wx_editor_save_for_replacement = save_for_replacement
+    frame._wx_editor_rebind_callbacks = rebind_callbacks
     frame.Show()
     return frame
 
