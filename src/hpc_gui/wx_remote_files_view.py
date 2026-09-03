@@ -310,6 +310,7 @@ def show_remote_files(parent=None, model: WxRemoteDirectoryModel | None = None, 
     subscribe_language_change(refresh_labels)
     frame.Bind(wx.EVT_CLOSE, lambda event: (unsubscribe_language_change(refresh_labels), close(event)))
     frame._wx_remote_controls = {"listing": listing, "path": path}
+    frame._wx_remote_model = model
     frame._wx_remote_state = state
     frame._wx_remote_run_action = run_action
     load()
