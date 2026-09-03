@@ -166,6 +166,19 @@ def _get_editor_manager(session_state, parent, lifecycle, *, save_remote=None, o
     return manager
 
 
+def _destination_exists(files, op: str, destination: str) -> bool:
+    """Does the transfer destination already exist?
+
+    A download writes to the local filesystem, so asking the remote backend
+    whether the destination exists would both miss real conflicts and report
+    phantom ones.
+    """
+    if op == "download":
+        return os.path.exists(destination)
+    probe = getattr(files, "exists", None)
+    return bool(probe) and bool(probe(destination))
+
+
 def _start_file_transfers(session_state, lifecycle, items, *, on_progress=None, conflict_resolver=None, files_backend=None, parent=None):
     """Queue file-view transfers through the shared transfer lifecycle."""
     from hpc_gui.wx_transfer_workspace import create_transfer_progress
@@ -184,7 +197,7 @@ def _start_file_transfers(session_state, lifecycle, items, *, on_progress=None, 
             stem = target.name[: -len(suffix)] if suffix else target.name
             for index in range(1, 10000):
                 candidate = target.with_name(f"{stem} ({index}){suffix}")
-                if not getattr(files, "exists", lambda _path: False)(str(candidate)):
+                if not _destination_exists(files, item.op, str(candidate)):
                     return ("rename", str(candidate))
             return "cancel"
 
@@ -262,7 +275,7 @@ def _start_file_transfers(session_state, lifecycle, items, *, on_progress=None, 
     controller = TransferSessionController(
         items,
         run_item,
-        conflict_check=getattr(files, "exists", None),
+        conflict_check=lambda item: _destination_exists(files, item.op, item.dst),
         conflict_resolver=conflict_resolver or session_state.get("conflict_resolver") or (wx_conflict_resolver if parent else None),
         on_queue=queue_event,
         on_progress=progress_event,

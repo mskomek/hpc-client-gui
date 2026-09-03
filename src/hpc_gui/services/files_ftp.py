@@ -9,7 +9,7 @@ import tempfile
 from ftplib import FTP, error_perm
 from typing import List, Tuple
 
-from hpc_gui.services.files_base import FilesBackend, RemoteEntry
+from hpc_gui.services.files_base import RESUME_DEST_LARGER, FilesBackend, RemoteEntry
 
 
 def _norm(path: str) -> str:
@@ -228,12 +228,18 @@ class FTPFilesBackend(FilesBackend):
         return size, mtime
 
     def download(self, remote_path: str, local_path: str, progress_cb=None) -> None:
-        self._download(remote_path, local_path, progress_cb)
+        self._download(remote_path, local_path, progress_cb, resume=False)
 
     def resume_download(self, remote_path: str, local_path: str, progress_cb=None) -> None:
-        self._download(remote_path, local_path, progress_cb)
+        self._download(remote_path, local_path, progress_cb, resume=True)
 
-    def _download(self, remote_path: str, local_path: str, progress_cb=None) -> None:
+    def _download(self, remote_path: str, local_path: str, progress_cb=None, *, resume: bool) -> None:
+        """Download a remote file.
+
+        ``resume=False`` issues ``RETR`` without ``REST`` into a truncated local
+        file. ``resume=True`` continues from the existing local size via ``REST``
+        when the local file is a strict prefix of the remote one.
+        """
         remote_path = _norm(remote_path)
         self.ftp.voidcmd("TYPE I")
         remote_size, _ = self.stat(remote_path)
@@ -242,12 +248,15 @@ class FTPFilesBackend(FilesBackend):
             local_size = os.path.getsize(local_path)
         except Exception:
             local_size = 0
-        if local_size == remote_size and remote_size > 0:
-            if progress_cb is not None:
-                progress_cb(remote_size, remote_size)
-            return
+        if resume:
+            if local_size == remote_size and remote_size > 0:
+                if progress_cb is not None:
+                    progress_cb(remote_size, remote_size)
+                return
+            if local_size > remote_size:
+                raise ValueError(RESUME_DEST_LARGER.format(path=local_path))
         os.makedirs(os.path.dirname(local_path) or ".", exist_ok=True)
-        mode = "ab" if 0 < local_size < remote_size else "wb"
+        mode = "ab" if resume and 0 < local_size < remote_size else "wb"
         transferred = local_size if mode == "ab" else 0
 
         def on_chunk(chunk: bytes) -> None:
@@ -265,12 +274,18 @@ class FTPFilesBackend(FilesBackend):
             )
 
     def upload(self, local_path: str, remote_path: str, progress_cb=None) -> None:
-        self._upload(local_path, remote_path, progress_cb)
+        self._upload(local_path, remote_path, progress_cb, resume=False)
 
     def resume_upload(self, local_path: str, remote_path: str, progress_cb=None) -> None:
-        self._upload(local_path, remote_path, progress_cb)
+        self._upload(local_path, remote_path, progress_cb, resume=True)
 
-    def _upload(self, local_path: str, remote_path: str, progress_cb=None) -> None:
+    def _upload(self, local_path: str, remote_path: str, progress_cb=None, *, resume: bool) -> None:
+        """Upload a local file.
+
+        ``resume=False`` always issues ``STOR`` from local byte zero.
+        ``resume=True`` issues ``APPE`` from the existing remote size when the
+        remote file is a strict prefix of the local one.
+        """
         remote_path = _norm(remote_path)
         self.ftp.voidcmd("TYPE I")
         self._ensure_parent_dirs(remote_path)
@@ -280,11 +295,14 @@ class FTPFilesBackend(FilesBackend):
             remote_size, _ = self.stat(remote_path)
         except Exception:
             remote_size = 0
-        if remote_size == local_size and local_size > 0:
-            if progress_cb is not None:
-                progress_cb(local_size, local_size)
-            return
-        command = "APPE" if 0 < remote_size < local_size else "STOR"
+        if resume:
+            if remote_size == local_size and local_size > 0:
+                if progress_cb is not None:
+                    progress_cb(local_size, local_size)
+                return
+            if remote_size > local_size:
+                raise ValueError(RESUME_DEST_LARGER.format(path=remote_path))
+        command = "APPE" if resume and 0 < remote_size < local_size else "STOR"
         sent = remote_size if command == "APPE" else 0
 
         def on_chunk(chunk: bytes) -> None:

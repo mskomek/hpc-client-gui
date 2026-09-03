@@ -200,7 +200,7 @@ def test_wx_file_transfer_conflict_ask_cancel():
     assert _run_conflict("ask", lambda _item: "cancel") == []
 
 
-def test_wx_file_transfer_resume_uses_direction_specific_backend_method():
+def test_wx_file_transfer_resume_uses_direction_specific_backend_method(tmp_path):
     upload_files = _ResumableFiles("upload")
     upload_state = {"session": {"files": upload_files}, "conflict_policy": "ask"}
     upload = _start_file_transfers(
@@ -212,16 +212,19 @@ def test_wx_file_transfer_resume_uses_direction_specific_backend_method():
     assert upload.engine.wait(2)
     assert upload_files.calls == [("resume_upload", "a.txt", "/work/item")]
 
+    # A download conflicts against the LOCAL destination, so it must exist.
+    local_destination = tmp_path / "item"
+    local_destination.write_bytes(b"partial")
     download_files = _ResumableFiles("download")
     download_state = {"session": {"files": download_files}, "conflict_policy": "ask"}
     download = _start_file_transfers(
         download_state,
         _Lifecycle(),
-        [TransferItem("download", "/remote/item", "/work/item")],
+        [TransferItem("download", "/remote/item", str(local_destination))],
         conflict_resolver=lambda _item: "resume",
     )
     assert download.engine.wait(2)
-    assert download_files.calls == [("resume_download", "/remote/item", "/work/item")]
+    assert download_files.calls == [("resume_download", "/remote/item", str(local_destination))]
 
 
 def test_wx_file_transfer_policy_overwrite():
@@ -382,3 +385,79 @@ def test_wx_file_transfer_cancel_button_cancels_controller():
     parent.Destroy()
     app.ProcessPendingEvents()
     app.Destroy()
+
+
+# --------------------------------------------------------------------------
+# Conflict decision -> real backend byte semantics (not method labels)
+# --------------------------------------------------------------------------
+
+from test_transfer_resume_semantics import (  # noqa: E402
+    PARTIAL,
+    REMOTE_FILE,
+    SOURCE,
+    ftp_backend,
+    ssh_backend,
+)
+
+
+def _run_decision(files, item, decision):
+    controller = _start_file_transfers(
+        {"session": {"files": files}, "conflict_policy": "ask"},
+        _Lifecycle(),
+        [item],
+        conflict_resolver=lambda _item: decision,
+    )
+    assert controller.engine.wait(5)
+    return controller
+
+
+@pytest.mark.parametrize("decision,expected", [
+    ("overwrite", SOURCE),
+    ("resume", PARTIAL + SOURCE[len(PARTIAL):]),
+])
+def test_conflict_decision_drives_ftp_upload_bytes(tmp_path, decision, expected):
+    source = tmp_path / "src.bin"
+    source.write_bytes(SOURCE)
+    files = ftp_backend({REMOTE_FILE: PARTIAL})
+    _run_decision(files, TransferItem("upload", str(source), REMOTE_FILE), decision)
+    assert bytes(files.ftp.files[REMOTE_FILE]) == expected
+    assert files.ftp.transfer_commands == (["STOR"] if decision == "overwrite" else ["APPE"])
+
+
+@pytest.mark.parametrize("decision,expected", [
+    ("overwrite", SOURCE),
+    ("resume", PARTIAL + SOURCE[len(PARTIAL):]),
+])
+def test_conflict_decision_drives_ssh_upload_bytes(tmp_path, decision, expected):
+    source = tmp_path / "src.bin"
+    source.write_bytes(SOURCE)
+    files, sftp = ssh_backend({REMOTE_FILE: PARTIAL})
+    _run_decision(files, TransferItem("upload", str(source), REMOTE_FILE), decision)
+    assert bytes(sftp.store[REMOTE_FILE]) == expected
+    assert sftp.modes(REMOTE_FILE) == (["wb"] if decision == "overwrite" else ["ab"])
+
+
+@pytest.mark.parametrize("decision,expected", [
+    ("overwrite", SOURCE),
+    ("resume", PARTIAL + SOURCE[len(PARTIAL):]),
+])
+def test_conflict_decision_drives_ssh_download_bytes(tmp_path, decision, expected):
+    local = tmp_path / "dst.bin"
+    local.write_bytes(PARTIAL)
+    files, sftp = ssh_backend({REMOTE_FILE: SOURCE})
+    _run_decision(files, TransferItem("download", REMOTE_FILE, str(local)), decision)
+    assert local.read_bytes() == expected
+    assert sftp.seeks(REMOTE_FILE) == ([] if decision == "overwrite" else [len(PARTIAL)])
+
+
+@pytest.mark.parametrize("decision,expected", [
+    ("overwrite", SOURCE),
+    ("resume", PARTIAL + SOURCE[len(PARTIAL):]),
+])
+def test_conflict_decision_drives_ftp_download_bytes(tmp_path, decision, expected):
+    local = tmp_path / "dst.bin"
+    local.write_bytes(PARTIAL)
+    files = ftp_backend({REMOTE_FILE: SOURCE})
+    _run_decision(files, TransferItem("download", REMOTE_FILE, str(local)), decision)
+    assert local.read_bytes() == expected
+    assert files.ftp.rest_offsets == ([None] if decision == "overwrite" else [len(PARTIAL)])

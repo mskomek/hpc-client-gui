@@ -4,6 +4,12 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Iterator, List, Tuple
 
+# Resume is only meaningful when the destination is a strict prefix of the
+# source. A larger destination is never partial progress, so resume must fail
+# loudly instead of appending to, or truncating, unrelated data.
+RESUME_DEST_LARGER = "cannot resume: destination {path} is larger than the source"
+
+
 @dataclass
 class RemoteEntry:
     name: str
