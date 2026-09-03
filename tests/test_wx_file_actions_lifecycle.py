@@ -461,3 +461,24 @@ class _Dialog:
 
     def Destroy(self):
         pass
+
+
+def test_wx_remote_listing_runs_off_gui_thread(wx_app):
+    backend = MockRemoteFilesBackend()
+    gui_thread = threading.get_ident()
+    thread_ids = []
+
+    def loader(path):
+        thread_ids.append(threading.get_ident())
+        return backend.iterdir_entries(path)
+
+    show_remote_files(
+        model=WxRemoteDirectoryModel("/work"),
+        loader=loader,
+        operation=backend.operation,
+    )
+    frame = [window for window in wx.GetTopLevelWindows() if hasattr(window, "_wx_remote_controls")][-1]
+    _pump(wx_app, lambda: frame._wx_remote_controls["listing"].GetItemCount() >= 1)
+    assert thread_ids
+    assert all(thread_id != gui_thread for thread_id in thread_ids)
+    frame.Close(True)

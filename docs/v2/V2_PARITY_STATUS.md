@@ -16,7 +16,7 @@ Automated evidence only; manual-only behavior is never marked covered.
 | GUI-TERM-002 | PARTIAL | main_window.py | wx_terminal.py | test_editor_flow.py |
 | GUI-FILE-001 | COVERED | local_dir_panel.py | wx_local_files.py | test_wx_local_files.py |
 | GUI-FILE-002 | COVERED | main_window.py | wx_shell.py; wx_editor_windows.py; wx_editor_view.py; wx_remote_files_view.py | test_wx_editor.py; test_wx_editor_window_parity.py; test_wx_remote_editor_flow.py; test_wx_editor_cross_view_actions.py |
-| GUI-FILE-003 | PARTIAL | local_dir_panel.py | wx_local_files.py | test_wx_local_files.py |
+| GUI-FILE-003 | COVERED | local_dir_panel.py; remote_dir_panel.py | wx_local_files.py; wx_remote_files_view.py; wx_transfer_workspace.py; wx_shell.py | test_wx_file_context_matrix.py; test_wx_file_keyboard_parity.py; test_wx_file_browser_tabs.py; test_wx_file_actions_lifecycle.py; test_wx_remote_move_undo.py; test_wx_file_transfer_integration.py; test_wx_transfer_conflict_ui.py; test_wx_transfer_ui_lifecycle.py; test_transfer_resume_semantics.py; test_wx_file_context_i18n.py; test_wx_file003_final_stress.py |
 | GUI-XFER-001 | COVERED | transfer_dialog.py | wx_transfer_workspace.py | test_transfer_concurrency.py |
 | GUI-XFER-002 | COVERED | ftp_widget.py | wx_transfer_workspace.py | test_local_transfer_gate.py |
 | GUI-JOBS-001 | COVERED | jobs_widget.py | wx_jobs.py | test_wx_jobs.py |
