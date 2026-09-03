@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import inspect
 from dataclasses import dataclass
 from typing import Iterable
 
@@ -20,11 +21,16 @@ class TransferSessionController:
         self._run_item_backend = run_item
         self._conflict_check = conflict_check
         self._conflict_resolver = conflict_resolver
+        parameters = inspect.signature(run_item).parameters
+        self._run_item_accepts_decision = "conflict_decision" in parameters or any(
+            parameter.kind is parameter.VAR_KEYWORD for parameter in parameters.values()
+        )
         self.engine = TransferController(items, self._run_item, **kwargs)
         self.conflict_policy = "ask"
         self.checksum_enabled = False
 
     def _run_item(self, item: TransferItem, progress) -> None:
+        decision = None
         if self._conflict_check and self._conflict_check(item.dst):
             decision = self.conflict_policy
             if decision in {"ask", "rename"}:
@@ -41,7 +47,10 @@ class TransferSessionController:
                 raise TransferCancelled()
             if decision not in {"overwrite", "resume"}:
                 raise ValueError(f"unsupported conflict decision: {decision}")
-        self._run_item_backend(item, progress)
+        if self._run_item_accepts_decision:
+            self._run_item_backend(item, progress, conflict_decision=decision)
+        else:
+            self._run_item_backend(item, progress)
 
     def status(self) -> TransferStatus:
         return TransferStatus(len(self.engine.pending), len(self.engine.failed), len(self.engine.completed))

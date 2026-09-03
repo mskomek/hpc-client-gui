@@ -82,7 +82,7 @@ def test_local_view_exposes_keyboard_and_context_actions():
     assert "context_selection" in source and "visible_actions" in source
     assert "EVT_KEY_DOWN" in source and "WXK_F2" in source and "WXK_DELETE" in source
     assert "model.copy" in source and "model.paste" in source and "ControlDown" in source
-    assert "WXK_BACK" in source and "GetItemCount()" in source
+    assert "REMOVED: Backspace parent navigation for local" in source and "GetItemCount()" in source
     assert "open_with_system" in source and "subprocess.Popen([\"xdg-open\", target])" in source
     assert "except OSError as error" in source and "wx.MessageBox(str(error)" in source
 

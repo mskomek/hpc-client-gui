@@ -17,6 +17,24 @@ class _Files:
         self.calls.append(("download", source, destination))
 
 
+class _ResumableFiles(_Files):
+    def __init__(self, direction):
+        super().__init__()
+        self.direction = direction
+        self.existing = {"/work/item"}
+
+    def exists(self, path):
+        return path in self.existing
+
+    def resume_upload(self, source, destination):
+        assert self.direction == "upload"
+        self.calls.append(("resume_upload", source, destination))
+
+    def resume_download(self, source, destination):
+        assert self.direction == "download"
+        self.calls.append(("resume_download", source, destination))
+
+
 class _Lifecycle:
     def __init__(self):
         self.cleanups = []
@@ -180,6 +198,30 @@ def test_wx_file_transfer_conflict_ask_rename():
 
 def test_wx_file_transfer_conflict_ask_cancel():
     assert _run_conflict("ask", lambda _item: "cancel") == []
+
+
+def test_wx_file_transfer_resume_uses_direction_specific_backend_method():
+    upload_files = _ResumableFiles("upload")
+    upload_state = {"session": {"files": upload_files}, "conflict_policy": "ask"}
+    upload = _start_file_transfers(
+        upload_state,
+        _Lifecycle(),
+        [TransferItem("upload", "a.txt", "/work/item")],
+        conflict_resolver=lambda _item: "resume",
+    )
+    assert upload.engine.wait(2)
+    assert upload_files.calls == [("resume_upload", "a.txt", "/work/item")]
+
+    download_files = _ResumableFiles("download")
+    download_state = {"session": {"files": download_files}, "conflict_policy": "ask"}
+    download = _start_file_transfers(
+        download_state,
+        _Lifecycle(),
+        [TransferItem("download", "/remote/item", "/work/item")],
+        conflict_resolver=lambda _item: "resume",
+    )
+    assert download.engine.wait(2)
+    assert download_files.calls == [("resume_download", "/remote/item", "/work/item")]
 
 
 def test_wx_file_transfer_policy_overwrite():

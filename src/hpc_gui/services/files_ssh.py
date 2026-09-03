@@ -195,6 +195,12 @@ class SSHFilesBackend(FilesBackend):
         )
 
     def download(self, remote_path: str, local_path: str, progress_cb=None) -> None:
+        self._download(remote_path, local_path, progress_cb)
+
+    def resume_download(self, remote_path: str, local_path: str, progress_cb=None) -> None:
+        self._download(remote_path, local_path, progress_cb)
+
+    def _download(self, remote_path: str, local_path: str, progress_cb=None) -> None:
         """Download a remote file.
 
         Resume behavior:
@@ -257,6 +263,12 @@ class SSHFilesBackend(FilesBackend):
                 pass
 
     def upload(self, local_path: str, remote_path: str, progress_cb=None) -> None:
+        self._upload(local_path, remote_path, progress_cb)
+
+    def resume_upload(self, local_path: str, remote_path: str, progress_cb=None) -> None:
+        self._upload(local_path, remote_path, progress_cb)
+
+    def _upload(self, local_path: str, remote_path: str, progress_cb=None) -> None:
         """Upload a local file.
 
         Resume behavior:

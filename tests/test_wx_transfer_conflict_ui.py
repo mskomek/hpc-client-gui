@@ -28,11 +28,12 @@ class _Files:
         self.calls.append(("download", src, dst))
 
 class _ResumeFiles(_Files):
-    # simulate SSH backend with resume support marker
-    supports_resume=True
-    def upload(self, src, dst):
-        # if dst exists and we are resuming, we should have partial handling
-        self.calls.append(("upload_resume", src, dst))
+    def resume_upload(self, src, dst):
+        self.calls.append(("resume_upload", src, dst))
+
+class _DownloadResumeFiles(_Files):
+    def resume_download(self, src, dst):
+        self.calls.append(("resume_download", src, dst))
 
 def test_wx_conflict_dialog_has_required_buttons(wx_app):
     parent=wx.Frame(None)
@@ -60,15 +61,33 @@ def test_wx_conflict_dialog_hides_resume_when_backend_cannot_resume(wx_app):
     parent.Destroy()
     wx_app.ProcessPendingEvents()
 
-def test_wx_conflict_dialog_shows_resume_when_backend_supports(wx_app):
+def test_wx_conflict_dialog_shows_resume_only_for_upload_direction(wx_app):
     parent=wx.Frame(None)
-    # use name that triggers _supports_resume via class name
-    # we cannot instantiate without ssh, so use mock with supports_resume True
     files=_ResumeFiles(existing={"/dst/file.txt"})
-    item=TransferItem("upload","src","/dst/file.txt")
-    dlg=create_transfer_conflict_dialog(parent, files, item)
+    upload=TransferItem("upload","src","/dst/file.txt")
+    dlg=create_transfer_conflict_dialog(parent, files, upload)
     assert dlg._wx_conflict_controls["resume"] is not None
     assert dlg._wx_conflict_resume_supported is True
+    dlg.Destroy()
+    download=TransferItem("download","/remote/file.txt","/dst/file.txt")
+    dlg=create_transfer_conflict_dialog(parent, files, download)
+    assert dlg._wx_conflict_controls["resume"] is None
+    assert dlg._wx_conflict_resume_supported is False
+    dlg.Destroy()
+    parent.Destroy()
+    wx_app.ProcessPendingEvents()
+
+def test_wx_conflict_dialog_shows_resume_only_for_download_direction(wx_app):
+    parent=wx.Frame(None)
+    files=_DownloadResumeFiles(existing={"/dst/file.txt"})
+    download=TransferItem("download","/remote/file.txt","/dst/file.txt")
+    dlg=create_transfer_conflict_dialog(parent, files, download)
+    assert dlg._wx_conflict_controls["resume"] is not None
+    assert dlg._wx_conflict_resume_supported is True
+    dlg.Destroy()
+    upload=TransferItem("upload","src","/dst/file.txt")
+    dlg=create_transfer_conflict_dialog(parent, files, upload)
+    assert dlg._wx_conflict_controls["resume"] is None
     dlg.Destroy()
     parent.Destroy()
     wx_app.ProcessPendingEvents()
@@ -170,6 +189,19 @@ def test_wx_conflict_dialog_hides_resume_without_explicit_backend_capability(wx_
     dlg2=create_transfer_conflict_dialog(parent, fake_ftp, item)
     assert dlg2._wx_conflict_controls["resume"] is None
     dlg2.Destroy()
+    parent.Destroy()
+    wx_app.ProcessPendingEvents()
+
+def test_wx_conflict_dialog_ignores_generic_resume_flags(wx_app):
+    parent=wx.Frame(None)
+    class GenericResume:
+        supports_resume = True
+        def exists(self, _path): return True
+    files = GenericResume()
+    for item in (TransferItem("upload", "src", "/dst/file.txt"), TransferItem("download", "/src/file.txt", "/dst/file.txt")):
+        dlg=create_transfer_conflict_dialog(parent, files, item)
+        assert dlg._wx_conflict_controls["resume"] is None
+        dlg.Destroy()
     parent.Destroy()
     wx_app.ProcessPendingEvents()
 

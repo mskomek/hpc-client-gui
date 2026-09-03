@@ -22,26 +22,7 @@ class StorageState:
 def _supports_resume(files, item) -> bool:
     if files is None or item is None:
         return False
-    # Explicit capability only: backend must expose concrete resume API or flag.
-    # No class-name or source inspection.
-    if bool(getattr(files, "supports_resume", False)):
-        return True
-    if callable(getattr(files, "resume_upload", None)) or callable(getattr(files, "resume_download", None)):
-        return True
-    caps = getattr(files, "transfer_capabilities", None)
-    if callable(caps):
-        try:
-            cap = caps()
-            if getattr(cap, "resume_upload", False) or getattr(cap, "resume_download", False):
-                return True
-        except Exception:
-            pass
-    elif caps is not None:
-        if getattr(caps, "resume_upload", False) or getattr(caps, "resume_download", False):
-            return True
-    # Check for offset-aware upload/download signature (explicit)
-    # We do not infer from REST/APPE strings.
-    return False
+    return callable(getattr(files, f"resume_{item.op}", None))
 
 
 def create_transfer_conflict_dialog(parent, files, item):
