@@ -27,7 +27,7 @@ def show_remote_files(parent=None, model: WxRemoteDirectoryModel | None = None, 
     root.Add(listing, 1, wx.EXPAND | wx.LEFT | wx.RIGHT, 6)
     root.Add(refresh, 0, wx.ALIGN_RIGHT | wx.ALL, 6)
     panel.SetSizer(root)
-    state = {"entries": [], "busy": False, "closed": False}
+    state = {"entries": [], "busy": False, "closed": False, "editor_request_id": 0}
     lock = Lock()
 
     def render(entries):
@@ -117,19 +117,21 @@ def show_remote_files(parent=None, model: WxRemoteDirectoryModel | None = None, 
             callback(remote_path)
             return
         with lock:
-            if state["closed"] or state["busy"]:
+            if state["closed"]:
                 return
-            state["busy"] = True
+            state["editor_request_id"] += 1
+            request_id = state["editor_request_id"]
 
         def done(content, error):
-            with lock:
-                state["busy"] = False
             if state["closed"]:
                 return
             if error:
                 wx.MessageBox(str(error), t("login.err_title"), wx.OK | wx.ICON_ERROR)
             else:
-                callback(remote_path, content)
+                if getattr(callback, "_wx_request_aware", False):
+                    callback(remote_path, content, request_id)
+                else:
+                    callback(remote_path, content)
 
         def worker():
             try:

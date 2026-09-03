@@ -17,7 +17,7 @@ def test_wx_shell_dispatches_core_views():
     source = Path("src/hpc_gui/wx_shell.py").read_text(encoding="utf-8")
     assert 'command_id == "NAV-FILES"' in source
     assert "open_editor_new_window=lambda path: open_local(path, True)" in source
-    assert "Path(path).read_text" in source and "wx.CallAfter(show_editor" in source
+    assert "Path(path).read_text" in source and "editor_manager.open_primary" in source
     assert "upload=upload_local" in source and "files.upload(local_path" in source
     assert "on_submit=local_submit" in source and "on_run=local_run" in source
     assert 'command_id == "NAV-EDITOR"' in source
