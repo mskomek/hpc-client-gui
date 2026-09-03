@@ -143,13 +143,14 @@ def test_wx_local_mutation_stress_uses_real_actions(wx_app, tmp_path: Path, monk
         renamed = tmp_path / f"renamed-{index}.txt"
         original.write_text("x", encoding="utf-8")
         frame._wx_local_run_action("refresh")
+        _pump(wx_app, lambda: any(listing.GetItemText(i) == original.name for i in range(listing.GetItemCount())))
         row = next(i for i in range(listing.GetItemCount()) if listing.GetItemText(i) == original.name)
         for item_index in range(listing.GetItemCount()):
             listing.Select(item_index, False)
         listing.Select(row)
         rename_target["name"] = renamed.name
         frame._wx_local_run_action("rename")
-        _pump(wx_app, lambda: not frame._wx_local_state["mutation_in_flight"])
+        _pump(wx_app, lambda: not frame._wx_local_state["mutation_in_flight"] and any(listing.GetItemText(i) == renamed.name for i in range(listing.GetItemCount())))
         assert renamed.exists() and not original.exists()
         for item_index in range(listing.GetItemCount()):
             listing.Select(item_index, False)
