@@ -385,6 +385,7 @@ def show_local_files(parent=None, path: str | Path | None = None, *, open_editor
     listing.Bind(wx.EVT_CONTEXT_MENU, context_menu)
     listing.Bind(wx.EVT_KEY_DOWN, key_down)
     frame._wx_local_controls = {"listing": listing}
+    frame._wx_local_model = model
     frame._wx_local_state = state
     frame._wx_local_run_action = run_action
     subscribe_language_change(refresh_labels)
