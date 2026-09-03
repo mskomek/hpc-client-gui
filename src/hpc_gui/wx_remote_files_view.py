@@ -7,6 +7,7 @@ from pathlib import PurePosixPath
 
 from hpc_gui.core.i18n import subscribe_language_change, t, unsubscribe_language_change
 from hpc_gui.services.file_context_actions import FILE_CONTEXT_LABEL_KEYS, context_selection, visible_actions
+from hpc_gui.services.file_clipboard import get_file_clipboard
 from hpc_gui.wx_remote_files import WxRemoteDirectoryModel
 
 
@@ -124,6 +125,19 @@ def show_remote_files(parent=None, model: WxRemoteDirectoryModel | None = None, 
             model.new_tab(selected[0])
             path.SetValue(model.current_path)
             load()
+            return
+        if action in {"copy", "cut"} and selected:
+            get_file_clipboard().set("move" if action == "cut" else "copy", list(selected))
+            return
+        if action == "copy_path" and selected:
+            if wx.TheClipboard.Open():
+                wx.TheClipboard.SetData(wx.TextDataObject("\r\n".join(selected)))
+                wx.TheClipboard.Close()
+            return
+        if action == "paste":
+            clipboard = get_file_clipboard().get()
+            if clipboard:
+                run_operation(clipboard.op, tuple(clipboard.paths), target_dir or model.current_path)
             return
         if action in {"open", "edit"} and open_editor and selected:
             entry = next((item for item in state["entries"] if item.path == selected[0]), None)
@@ -253,6 +267,14 @@ def show_remote_files(parent=None, model: WxRemoteDirectoryModel | None = None, 
             for index in range(listing.GetItemCount()):
                 listing.Select(index)
             return
+        selected = tuple(entry.path for index, entry in enumerate(state["entries"]) if listing.IsSelected(index))
+        if event.ControlDown() and event.GetKeyCode() in (ord("C"), ord("X"), ord("V")):
+            action = {ord("C"): "copy", ord("X"): "cut", ord("V"): "paste"}[event.GetKeyCode()]
+            run_action(action, selected, model.current_path)
+            return
+        if event.ControlDown() and event.GetKeyCode() == ord("Z"):
+            get_file_clipboard().clear()
+            return
         if event.GetKeyCode() == wx.WXK_BACK:
             model.navigate(str(PurePosixPath(model.current_path).parent))
             path.SetValue(model.current_path)
@@ -261,7 +283,6 @@ def show_remote_files(parent=None, model: WxRemoteDirectoryModel | None = None, 
         actions = {wx.WXK_F2: "rename", wx.WXK_DELETE: "delete", wx.WXK_F5: "refresh"}
         action = actions.get(event.GetKeyCode())
         if action:
-            selected = tuple(entry.path for index, entry in enumerate(state["entries"]) if listing.IsSelected(index))
             run_action(action, selected)
             return
         event.Skip()
