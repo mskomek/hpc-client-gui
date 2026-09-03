@@ -70,65 +70,60 @@ def test_wx_local_ctrl_c_copies_selected_paths(wx_app, tmp_path: Path):
 
 def test_wx_local_ctrl_x_then_ctrl_v_moves_selected_file(wx_app, tmp_path: Path):
     src_dir=tmp_path / "src"; src_dir.mkdir()
-    dst_dir=tmp_path / "dst"; dst_dir.mkdir()
+    dst_dir=src_dir / "dst"; dst_dir.mkdir()
     src=src_dir / "move.txt"
     src.write_text("data")
     frame=_local(wx_app, src_dir)
     listing=frame._wx_local_controls["listing"]
-    _pump(wx_app, lambda: listing.GetItemCount()==1)
-    listing.Select(0)
+    _pump(wx_app, lambda: any(listing.GetItemText(i)=="dst" for i in range(listing.GetItemCount())))
+    idx=next(i for i in range(listing.GetItemCount()) if listing.GetItemText(i)=="move.txt")
+    for i in range(listing.GetItemCount()):
+        listing.Select(i, False)
+    listing.Select(idx, True)
     cut=wx.KeyEvent(wx.wxEVT_KEY_DOWN)
     cut.SetKeyCode(ord("X"))
     cut.SetControlDown(True)
     listing.ProcessEvent(cut)
     assert frame._wx_local_model.clipboard_move
-    # switch to dst tab via new tab
-    frame._wx_local_model.new_tab(dst_dir)
-    # create visible tab for dst
-    import wx as wxx
-    nb=frame._wx_local_notebook
-    panel=wxx.Panel(nb)
-    lst=wxx.ListCtrl(panel, style=wxx.LC_REPORT)
-    lst.InsertColumn(0,"Name"); lst.InsertColumn(1,"Size")
-    sizer=wxx.BoxSizer(wxx.VERTICAL); sizer.Add(lst,1,wxx.EXPAND); panel.SetSizer(sizer)
-    new_entry={"id":999,"path":dst_dir.resolve(),"listing":lst,"entries":[],"view_generation":0,"listing_request_id":0,"closed":False,"panel":panel}
-    frame._wx_local_tabs.append(new_entry)
-    nb.AddPage(panel,"dst",True)
-    frame._wx_local_model.active_tab=nb.GetSelection()
-    frame._wx_local_model.current_path=dst_dir.resolve()
-    frame._wx_local_controls["listing"]=lst
-    # paste via active tab run_action (key handler would delegate)
-    frame._wx_local_run_action("paste")
+    for i in range(listing.GetItemCount()):
+        listing.Select(i, False)
+    dst_idx=next(i for i in range(listing.GetItemCount()) if listing.GetItemText(i)=="dst")
+    listing.Select(dst_idx, True)
+    frame._wx_local_run_action("new_tab")
+    _pump(wx_app, lambda: frame._wx_local_notebook.GetPageCount()==2)
+    # now active is dst tab
+    active=frame._wx_local_controls["listing"]
+    paste=wx.KeyEvent(wx.wxEVT_KEY_DOWN)
+    paste.SetKeyCode(ord("V"))
+    paste.SetControlDown(True)
+    active.ProcessEvent(paste)
     _pump(wx_app, lambda: (dst_dir / "move.txt").exists())
     assert not src.exists()
     assert (dst_dir / "move.txt").exists()
 
 def test_wx_local_ctrl_c_then_ctrl_v_copies_selected_file(wx_app, tmp_path: Path):
     src_dir=tmp_path / "src2"; src_dir.mkdir()
-    dst_dir=tmp_path / "dst2"; dst_dir.mkdir()
+    dst_dir=src_dir / "dst2"; dst_dir.mkdir()
     src=src_dir / "copy.txt"
     src.write_text("data")
     frame=_local(wx_app, src_dir)
     listing=frame._wx_local_controls["listing"]
-    _pump(wx_app, lambda: listing.GetItemCount()==1)
-    listing.Select(0)
+    _pump(wx_app, lambda: any(listing.GetItemText(i)=="copy.txt" for i in range(listing.GetItemCount())))
+    idx=next(i for i in range(listing.GetItemCount()) if listing.GetItemText(i)=="copy.txt")
+    for i in range(listing.GetItemCount()):
+        listing.Select(i, False)
+    listing.Select(idx, True)
     ev=wx.KeyEvent(wx.wxEVT_KEY_DOWN); ev.SetKeyCode(ord("C")); ev.SetControlDown(True)
     listing.ProcessEvent(ev)
-    # switch to dst
-    frame._wx_local_model.new_tab(dst_dir)
-    import wx as wxx
-    nb=frame._wx_local_notebook
-    panel=wxx.Panel(nb)
-    lst=wxx.ListCtrl(panel, style=wxx.LC_REPORT)
-    lst.InsertColumn(0,"Name"); lst.InsertColumn(1,"Size")
-    sizer=wxx.BoxSizer(wxx.VERTICAL); sizer.Add(lst,1,wxx.EXPAND); panel.SetSizer(sizer)
-    new_entry={"id":1000,"path":dst_dir.resolve(),"listing":lst,"entries":[],"view_generation":0,"listing_request_id":0,"closed":False,"panel":panel}
-    frame._wx_local_tabs.append(new_entry)
-    nb.AddPage(panel,"dst2",True)
-    frame._wx_local_model.active_tab=nb.GetSelection()
-    frame._wx_local_model.current_path=dst_dir.resolve()
-    frame._wx_local_controls["listing"]=lst
-    frame._wx_local_run_action("paste")
+    for i in range(listing.GetItemCount()):
+        listing.Select(i, False)
+    dst_idx=next(i for i in range(listing.GetItemCount()) if listing.GetItemText(i)=="dst2")
+    listing.Select(dst_idx, True)
+    frame._wx_local_run_action("new_tab")
+    _pump(wx_app, lambda: frame._wx_local_notebook.GetPageCount()==2)
+    active=frame._wx_local_controls["listing"]
+    paste=wx.KeyEvent(wx.wxEVT_KEY_DOWN); paste.SetKeyCode(ord("V")); paste.SetControlDown(True)
+    active.ProcessEvent(paste)
     _pump(wx_app, lambda: (dst_dir / "copy.txt").exists())
     assert src.exists()
     assert (dst_dir / "copy.txt").exists()

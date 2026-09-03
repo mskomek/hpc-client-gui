@@ -59,16 +59,15 @@ def test_wx_local_context_targets_unselected_row(wx_app, tmp_path: Path):
     orig_popup=listing.PopupMenu
     def capture(menu):
         seen.extend(item.GetItemLabelText() for item in menu.GetMenuItems())
-        # do not actually popup
     listing.PopupMenu=capture
     idx=1
     point=listing.ClientToScreen(wx.Point(5, listing.GetItemRect(idx).y+2))
     event=wx.ContextMenuEvent(wx.wxEVT_CONTEXT_MENU, listing.GetId())
     event.SetPosition(point)
     listing.ProcessEvent(event)
-    # unselected row should become selected, old selection cleared
+    assert not listing.IsSelected(0)
     assert listing.IsSelected(idx)
-    assert not listing.IsSelected(0) or listing.IsSelected(idx)
+    assert sum(1 for i in range(listing.GetItemCount()) if listing.IsSelected(i)) == 1
     listing.PopupMenu=orig_popup
 
 def test_wx_local_context_preserves_multiselection(wx_app, tmp_path: Path):
@@ -174,7 +173,9 @@ def test_wx_remote_context_targets_unselected_row(wx_app):
     point=listing.ClientToScreen(wx.Point(5, listing.GetItemRect(idx).y+2))
     event=wx.ContextMenuEvent(wx.wxEVT_CONTEXT_MENU, listing.GetId()); event.SetPosition(point)
     listing.ProcessEvent(event)
+    assert not listing.IsSelected(0)
     assert listing.IsSelected(idx)
+    assert sum(1 for i in range(listing.GetItemCount()) if listing.IsSelected(i)) == 1
     listing.PopupMenu=orig
 
 def test_wx_remote_background_context_paste_targets_current_directory(wx_app):
@@ -195,7 +196,10 @@ def test_wx_remote_background_context_paste_targets_current_directory(wx_app):
     event=wx.ContextMenuEvent(wx.wxEVT_CONTEXT_MENU, listing.GetId()); event.SetPosition(point)
     listing.ProcessEvent(event)
     listing.PopupMenu=orig
-    _pump(wx_app, lambda: ("copy","/work/a.txt","/work/a.txt") in backend.calls or ("copy","/work/a.txt","/work/dest/a.txt") in backend.calls)
+    _pump(wx_app, lambda: ("copy","/work/a.txt","/work/a.txt") in backend.calls)
+    # exact destination must be current dir /work, not /work/dest
+    assert ("copy","/work/a.txt","/work/a.txt") in backend.calls
+    assert ("copy","/work/a.txt","/work/dest/a.txt") not in backend.calls
 
 def test_wx_remote_context_rename_updates_backend(wx_app, monkeypatch):
     backend=MockRemoteFilesBackend()

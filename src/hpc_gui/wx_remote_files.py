@@ -43,14 +43,17 @@ class WxRemoteDirectoryModel(RemoteDirectoryController):
         self._cache: dict[str, tuple[float, tuple[RemoteEntry, ...]]] = {}
         self.selected: tuple[str, ...] = ()
 
-    def list_entries(self, loader: Callable[[str], Iterable[RemoteEntry]], *, force: bool = False) -> tuple[RemoteEntry, ...]:
-        key = self._normalize(self.current_path)
+    def list_entries(self, loader: Callable[[str], Iterable[RemoteEntry]], path: str | None = None, *, force: bool = False) -> tuple[RemoteEntry, ...]:
+        key = self._normalize(path if path is not None else self.current_path)
         cached = self._cache.get(key)
         if not force and cached and time.monotonic() - cached[0] <= self.cache_ttl:
             return cached[1]
         entries = tuple(loader(key))
         self._cache[key] = (time.monotonic(), entries)
         return entries
+
+    def list_entries_for_path(self, loader: Callable[[str], Iterable[RemoteEntry]], path: str, *, force: bool = False) -> tuple[RemoteEntry, ...]:
+        return self.list_entries(loader, path=path, force=force)
 
     def invalidate(self, path: str | None = None) -> None:
         if path is None:

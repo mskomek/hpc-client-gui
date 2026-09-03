@@ -20,24 +20,27 @@ class StorageState:
 
 
 def _supports_resume(files, item) -> bool:
-    # Real resumable backends: SSH (seek+append) and FTP (REST/APPE)
-    name = type(files).__name__ if files is not None else ""
-    if name in ("SSHFilesBackend", "FTPFilesBackend"):
+    if files is None or item is None:
+        return False
+    # Explicit capability only: backend must expose concrete resume API or flag.
+    # No class-name or source inspection.
+    if bool(getattr(files, "supports_resume", False)):
         return True
-    # Mock and others generally do not support resume via offset
-    if getattr(files, "supports_resume", None) is not None:
-        return bool(getattr(files, "supports_resume"))
-    # Fallback: inspect backend for known resume markers
-    try:
-        import inspect
-        src = inspect.getsource(type(files))
-        if "REST" in src or "APPE" in src or "seek" in src.lower():
-            # but mock also may have? exclude mock
-            if name == "MockFilesBackend":
-                return False
+    if callable(getattr(files, "resume_upload", None)) or callable(getattr(files, "resume_download", None)):
+        return True
+    caps = getattr(files, "transfer_capabilities", None)
+    if callable(caps):
+        try:
+            cap = caps()
+            if getattr(cap, "resume_upload", False) or getattr(cap, "resume_download", False):
+                return True
+        except Exception:
+            pass
+    elif caps is not None:
+        if getattr(caps, "resume_upload", False) or getattr(caps, "resume_download", False):
             return True
-    except Exception:
-        pass
+    # Check for offset-aware upload/download signature (explicit)
+    # We do not infer from REST/APPE strings.
     return False
 
 
