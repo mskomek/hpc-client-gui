@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from hpc_gui.services.file_context_actions import context_selection, visible_actions
 from hpc_gui.wx_local_files import LocalBrowserModel, file_url_payload
 
 
@@ -78,9 +79,17 @@ def test_local_view_exposes_keyboard_and_context_actions():
     source = open("src/hpc_gui/wx_local_files.py", encoding="utf-8").read()
     assert "EVT_LIST_ITEM_ACTIVATED" in source
     assert "EVT_CONTEXT_MENU" in source and "open_editor" in source
-    assert 'actions = (model.context_actions(entry.is_dir)' in source and '"new_folder", "paste", "refresh"' in source
+    assert "context_selection" in source and "visible_actions" in source
     assert "EVT_KEY_DOWN" in source and "WXK_F2" in source and "WXK_DELETE" in source
     assert "model.copy" in source and "model.paste" in source and "ControlDown" in source
     assert "WXK_BACK" in source and "GetItemCount()" in source
     assert "open_with_system" in source and "subprocess.Popen([\"xdg-open\", target])" in source
     assert "except OSError as error" in source and "wx.MessageBox(str(error)" in source
+
+
+def test_local_context_policy_distinguishes_selection_shapes():
+    assert visible_actions(context_selection(None, None), remote=False) == ("paste", "refresh", "new_folder")
+    one_file = context_selection("a.txt", False, ("a.txt",), (False,))
+    assert {"open", "open_with", "edit", "rename", "delete", "upload"} <= set(visible_actions(one_file, remote=False))
+    one_dir = context_selection("folder", True, ("folder",), (True,))
+    assert "edit" not in visible_actions(one_dir, remote=False)

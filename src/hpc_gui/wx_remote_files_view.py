@@ -6,6 +6,7 @@ from threading import Lock, Thread
 from pathlib import PurePosixPath
 
 from hpc_gui.core.i18n import subscribe_language_change, t, unsubscribe_language_change
+from hpc_gui.services.file_context_actions import context_selection, visible_actions
 from hpc_gui.wx_remote_files import WxRemoteDirectoryModel
 
 
@@ -87,30 +88,60 @@ def show_remote_files(parent=None, model: WxRemoteDirectoryModel | None = None, 
             open_in_editor(entry.path, open_editor)
 
     def context(event):
-        index, _flags = listing.HitTest(event.GetPosition())
+        position = event.GetPosition()
+        index = -1 if position == wx.DefaultPosition else listing.HitTest(listing.ScreenToClient(position))[0]
         if index >= 0 and not listing.IsSelected(index):
-            listing.ClearSelections()
+            for selected_index in range(listing.GetItemCount()):
+                listing.Select(selected_index, False)
             listing.Select(index)
-        selected = tuple(entry.path for idx, entry in enumerate(state["entries"]) if listing.IsSelected(idx)) if index >= 0 else ()
+        selected_entries = tuple(entry for idx, entry in enumerate(state["entries"]) if listing.IsSelected(idx))
+        clicked = state["entries"][index] if index >= 0 else None
+        selection = context_selection(
+            clicked.path if clicked else None,
+            clicked.is_dir if clicked else None,
+            tuple(entry.path for entry in selected_entries),
+            tuple(entry.is_dir for entry in selected_entries),
+        )
+        selected = selection.effective_paths
         menu = wx.Menu()
-        actions = ("open", "edit", "edit_new_window", "download", "upload", "copy", "move", "rename", "delete", "new_folder") if selected else ("new_folder", "refresh")
-        labels = {"open": "editor.open", "edit": "dirs.edit", "edit_new_window": "dirs.edit_new_window", "upload": "ftp.upload_selected"}
+        candidate_actions = ("open", "edit", "edit_new_window", "download", "upload", "copy", "move", "rename", "delete", "paste", "copy_path", "refresh", "new_folder", "new_tab")
+        allowed = visible_actions(selection, remote=True)
+        actions = tuple(action for action in candidate_actions if action in allowed) if selected else ("new_folder", "refresh")
+        labels = {
+            "open": "editor.open", "edit": "dirs.edit", "edit_new_window": "dirs.edit_new_window",
+            "download": "dirs.download", "upload": "dirs.upload", "copy": "dirs.copy",
+            "move": "dirs.move", "rename": "dirs.rename", "delete": "dirs.delete",
+            "new_folder": "dirs.new_folder", "refresh": "dirs.refresh", "paste": "dirs.paste",
+            "copy_path": "dirs.copy_path", "new_tab": "dirs.new_folder",
+        }
         for action in actions:
             item = menu.Append(wx.ID_ANY, t(labels.get(action, f"dirs.{action}")))
-            listing.Bind(wx.EVT_MENU, lambda _event, action=action: run_action(action, selected), item)
+            target_dir = clicked.path if clicked and clicked.is_dir else model.current_path
+            listing.Bind(wx.EVT_MENU, lambda _event, action=action, target=target_dir: run_action(action, selected, target), item)
         listing.PopupMenu(menu)
         menu.Destroy()
 
-    def run_action(action, selected):
+    def run_action(action, selected, target_dir=None):
         if action == "refresh":
             load()
             return
+        if action == "new_tab" and selected:
+            model.new_tab(selected[0])
+            path.SetValue(model.current_path)
+            load()
+            return
         if action in {"open", "edit"} and open_editor and selected:
-            open_in_editor(selected[0], open_editor)
+            entry = next((item for item in state["entries"] if item.path == selected[0]), None)
+            if action == "open" and entry and entry.is_dir:
+                model.navigate(selected[0])
+                path.SetValue(model.current_path)
+                load()
+            elif entry and not entry.is_dir:
+                open_in_editor(selected[0], open_editor)
         elif action == "edit_new_window" and open_editor_new_window and selected:
             open_in_editor(selected[0], open_editor_new_window)
         else:
-            run_operation(action, selected)
+            run_operation(action, selected, target_dir or model.current_path)
 
     def open_in_editor(remote_path, callback):
         if not read_text:
@@ -141,7 +172,7 @@ def show_remote_files(parent=None, model: WxRemoteDirectoryModel | None = None, 
 
         Thread(target=worker, daemon=True).start()
 
-    def run_operation(action, selected):
+    def run_operation(action, selected, target_dir=None):
         if not operation or action in {"open", "edit", "edit_new_window"} or (not selected and action != "new_folder"):
             return
         if action == "delete" and wx.MessageBox(t("dirs.delete_confirm"), t("dirs.delete"), wx.YES_NO | wx.ICON_WARNING) != wx.YES:
@@ -157,7 +188,7 @@ def show_remote_files(parent=None, model: WxRemoteDirectoryModel | None = None, 
                 if not new_name or PurePosixPath(new_name).name != new_name or new_name in {".", ".."}:
                     wx.MessageBox(t("dirs.rename_invalid"), t("dirs.new_folder"), wx.OK | wx.ICON_ERROR)
                     return
-                destination = str(PurePosixPath(model.current_path) / new_name)
+                destination = str(PurePosixPath(target_dir or model.current_path) / new_name)
             finally:
                 dialog.Destroy()
         elif action in {"rename", "copy", "move"}:
@@ -188,7 +219,7 @@ def show_remote_files(parent=None, model: WxRemoteDirectoryModel | None = None, 
                 if dialog.ShowModal() != wx.ID_OK:
                     return
                 operation_paths = tuple(dialog.GetPaths())
-                destination = model.current_path
+                destination = target_dir or model.current_path
             finally:
                 dialog.Destroy()
         with lock:
