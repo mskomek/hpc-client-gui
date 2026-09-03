@@ -60,9 +60,10 @@ def wx_app():
     app.Destroy()
 
 
-def _open_view(model=None, **callbacks):
-    show_editor(model=model, path="/remote/job.slurm", content="initial", **callbacks)
-    return [window for window in wx.GetTopLevelWindows() if window.GetTitle() == "job.slurm"][-1]
+def _open_view(model=None, path="/remote/job.slurm", content="initial", **callbacks):
+    show_editor(model=model, path=path, content=content, **callbacks)
+    title = path.rsplit("/", 1)[-1] if path else "untitled.sh"
+    return [window for window in wx.GetTopLevelWindows() if window.GetTitle() == title][-1]
 
 
 def _close(frame, app):
@@ -212,3 +213,27 @@ def test_wx_editor_dirty_close_save_changes_popup_saves_then_closes(wx_app, monk
     wx.Yield()
     _pump(wx_app, lambda: not [window for window in wx.GetTopLevelWindows() if window and window.GetTitle() == "job.slurm"])
     assert not model.controller.active.dirty
+
+
+def test_wx_remote_submit_without_save_target_does_not_submit(wx_app):
+    submit_calls = []
+    model = WxEditorModel()
+    model.open("", "unsaved", is_local=False)
+    frame = _open_view(model, path="", on_submit=lambda _document: submit_calls.append(True))
+    _click(frame._wx_editor_controls["submit"])
+    _pump(wx_app, lambda: not frame._wx_editor_state["in_flight"])
+    assert submit_calls == []
+    assert frame._wx_editor_controls["status"].GetLabel()
+    assert all(button.IsEnabled() for button in frame._wx_editor_controls.values() if isinstance(button, wx.Button))
+    _close(frame, wx_app)
+
+
+def test_wx_remote_run_without_save_backend_does_not_run(wx_app):
+    run_calls = []
+    model = WxEditorModel()
+    frame = _open_view(model, on_run=lambda _document: run_calls.append(True))
+    _click(frame._wx_editor_controls["run"])
+    _pump(wx_app, lambda: not frame._wx_editor_state["in_flight"])
+    assert run_calls == []
+    assert frame._wx_editor_controls["status"].GetLabel()
+    _close(frame, wx_app)

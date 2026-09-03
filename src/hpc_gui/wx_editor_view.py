@@ -54,6 +54,8 @@ def show_editor(parent=None, model: WxEditorModel | None = None, *, path: str = 
                 elif save_remote and snapshot.path:
                     save_remote(snapshot.path, snapshot.content)
                     saved = True
+                if mode in {"submit", "run"} and not saved:
+                    raise RuntimeError(t("editor.action_requires_save"))
                 if mode == "submit" and on_submit:
                     on_submit(snapshot)
                 elif mode == "run" and on_run:

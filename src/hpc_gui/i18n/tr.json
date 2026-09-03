@@ -241,6 +241,7 @@
     "remote": "Uzak:",
     "open_failed": "Dosya açılamadı: {err}",
     "save_failed": "Dosya kaydedilemedi: {err}",
+    "action_requires_save": "Belge kaydedilemediği için gönderilemez veya çalıştırılamaz.",
     "submit_error": "Gönderim hatası: {err}",
     "find_label": "Ara:",
     "find_placeholder": "Aranacak metin",
