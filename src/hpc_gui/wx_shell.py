@@ -166,10 +166,10 @@ def _get_editor_manager(session_state, parent, lifecycle, *, save_remote=None, o
     return manager
 
 
-def _start_file_transfers(session_state, lifecycle, items, *, on_progress=None, conflict_resolver=None):
+def _start_file_transfers(session_state, lifecycle, items, *, on_progress=None, conflict_resolver=None, files_backend=None):
     """Queue file-view transfers through the shared transfer lifecycle."""
     session = session_state.get("session") or {}
-    files = session.get("files")
+    files = files_backend or session.get("files")
     if not files or not items:
         raise RuntimeError(t("common.no_connection"))
 
@@ -261,7 +261,7 @@ def _dispatch(command_id: str, parent=None, lifecycle=None, session_state=None) 
             def worker():
                 try:
                     items = [TransferItem("upload", local_path, str(remote_dir / Path(local_path).name)) for local_path in paths]
-                    _start_file_transfers(session_state, lifecycle, items)
+                    _start_file_transfers(session_state, lifecycle, items, files_backend=files)
                 except Exception as error:
                     wx.CallAfter(wx.MessageBox, str(error), t("login.err_title"), wx.OK | wx.ICON_ERROR)
 
@@ -289,11 +289,11 @@ def _dispatch(command_id: str, parent=None, lifecycle=None, session_state=None) 
                 return
             if action == "download" and files and destination:
                 items = [TransferItem("download", remote_path, str(Path(destination) / PurePosixPath(remote_path).name)) for remote_path in paths]
-                _start_file_transfers(session_state, lifecycle, items)
+                _start_file_transfers(session_state, lifecycle, items, files_backend=files)
                 return
             if action == "upload" and files and destination:
                 items = [TransferItem("upload", local_path, str(PurePosixPath(destination) / Path(local_path).name)) for local_path in paths]
-                _start_file_transfers(session_state, lifecycle, items)
+                _start_file_transfers(session_state, lifecycle, items, files_backend=files)
                 return
             if action == "new_folder" and files and destination:
                 files.mkdir(destination)

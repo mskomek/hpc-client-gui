@@ -41,6 +41,31 @@ class _BlockingFiles(_Files):
         self.release.wait(2)
 
 
+def test_wx_file_transfer_uses_operation_session_snapshot():
+    files_a = _BlockingFiles()
+    files_b = _Files()
+    state = {"session": {"files": files_a}}
+    controller = _start_file_transfers(
+        state,
+        _Lifecycle(),
+        [TransferItem("upload", "a.txt", "/a.txt")],
+        files_backend=files_a,
+    )
+    assert files_a.started.wait(2)
+    state["session"] = {"files": files_b}
+    files_a.release.set()
+    assert controller.engine.wait(2)
+    assert files_a.calls == [("upload", "a.txt", "/a.txt")]
+    assert files_b.calls == []
+    next_controller = _start_file_transfers(
+        state,
+        _Lifecycle(),
+        [TransferItem("upload", "b.txt", "/b.txt")],
+    )
+    assert next_controller.engine.wait(2)
+    assert files_b.calls == [("upload", "b.txt", "/b.txt")]
+
+
 class _ConflictFiles(_Files):
     def __init__(self):
         super().__init__()
