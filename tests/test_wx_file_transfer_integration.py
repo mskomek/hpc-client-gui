@@ -41,6 +41,28 @@ class _BlockingFiles(_Files):
         self.release.wait(2)
 
 
+class _ConflictFiles(_Files):
+    def __init__(self):
+        super().__init__()
+        self.existing = {"/work/a.txt"}
+
+    def exists(self, path):
+        return path in self.existing
+
+
+def _run_conflict(policy, resolver=None):
+    files = _ConflictFiles()
+    state = {"session": {"files": files}, "conflict_policy": policy}
+    controller = _start_file_transfers(
+        state,
+        _Lifecycle(),
+        [TransferItem("upload", "a.txt", "/work/a.txt")],
+        conflict_resolver=resolver,
+    )
+    assert controller.engine.wait(2)
+    return files.calls
+
+
 def test_file_context_transfer_uses_transfer_session_boundary():
     files = _Files()
     lifecycle = _Lifecycle()
@@ -80,6 +102,7 @@ def test_wx_file_transfer_session_removed_after_cancel():
     controller.cancel()
     files.release.set()
     assert controller.engine.wait(2)
+    assert controller.engine.failed[0][1] == "cancelled"
     deadline = time.monotonic() + 1
     while time.monotonic() < deadline and state.get("transfer_sessions"):
         time.sleep(0.01)
@@ -98,3 +121,31 @@ def test_wx_file_context_transfer_reaches_progress_callback():
     )
     assert controller.engine.wait(2)
     assert progress == [("a.txt", 1, 1)]
+
+
+def test_wx_file_transfer_conflict_ask_overwrite():
+    assert _run_conflict("ask", lambda _item: "overwrite") == [("upload", "a.txt", "/work/a.txt")]
+
+
+def test_wx_file_transfer_conflict_ask_skip():
+    assert _run_conflict("ask", lambda _item: "skip") == []
+
+
+def test_wx_file_transfer_conflict_ask_rename():
+    assert _run_conflict("ask", lambda _item: ("rename", "/work/a-1.txt")) == [("upload", "a.txt", "/work/a-1.txt")]
+
+
+def test_wx_file_transfer_conflict_ask_cancel():
+    assert _run_conflict("ask", lambda _item: "cancel") == []
+
+
+def test_wx_file_transfer_policy_overwrite():
+    assert _run_conflict("overwrite") == [("upload", "a.txt", "/work/a.txt")]
+
+
+def test_wx_file_transfer_policy_skip():
+    assert _run_conflict("skip") == []
+
+
+def test_wx_file_transfer_policy_rename():
+    assert _run_conflict("rename", lambda _item: ("rename", "/work/a-1.txt")) == [("upload", "a.txt", "/work/a-1.txt")]
