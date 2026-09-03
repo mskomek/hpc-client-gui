@@ -11,8 +11,8 @@ Commit: `f94912f Add GUI feature guides and mock screenshots`
 | `python scripts/capture_wiki_screenshots.py` | PASS | `6/6 screenshots captured` |
 | `python scripts/capture_wx_gui_guide.py` | PASS | 8 wx screenshots saved |
 
-Qt reference images are in `docs/wiki/assets/`. New wx images are in
-`docs/wiki/assets/gui-guide/`.
+Qt reference images are also archived in [`screenshots/qt/`](screenshots/qt/).
+New wx images are archived in [`screenshots/wx/`](screenshots/wx/).
 
 ## Mock HPC / SFTP / Slurm validation
 
