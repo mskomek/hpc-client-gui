@@ -1,3 +1,5 @@
+import pytest
+
 from hpc_gui.services.transfer_controller import TransferItem
 from hpc_gui.wx_shell import _start_file_transfers
 import time
@@ -190,3 +192,26 @@ def test_wx_file_transfer_policy_skip():
 
 def test_wx_file_transfer_policy_rename():
     assert _run_conflict("rename", lambda _item: ("rename", "/work/a-1.txt")) == [("upload", "a.txt", "/work/a-1.txt")]
+
+
+def test_wx_file_transfer_conflict_ask_uses_gui_decision_seam(monkeypatch):
+    wx = pytest.importorskip("wx")
+    app = wx.App(False)
+    parent = wx.Frame(None)
+    files = _ConflictFiles()
+    state = {"session": {"files": files}, "conflict_policy": "ask"}
+    monkeypatch.setattr(wx, "MessageBox", lambda *_args, **_kwargs: wx.YES)
+    controller = _start_file_transfers(
+        state,
+        _Lifecycle(),
+        [TransferItem("upload", "a.txt", "/work/a.txt")],
+        parent=parent,
+    )
+    while not controller.engine.wait(0):
+        app.ProcessPendingEvents()
+        wx.MilliSleep(5)
+    app.ProcessPendingEvents()
+    assert files.calls == [("upload", "a.txt", "/work/a.txt")]
+    parent.Destroy()
+    app.ProcessPendingEvents()
+    app.Destroy()
