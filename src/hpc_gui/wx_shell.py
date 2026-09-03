@@ -166,22 +166,23 @@ def _get_editor_manager(session_state, parent, lifecycle, *, save_remote=None, o
     return manager
 
 
-def _start_file_transfers(session_state, lifecycle, items):
+def _start_file_transfers(session_state, lifecycle, items, *, on_progress=None):
     """Queue file-view transfers through the shared transfer lifecycle."""
     session = session_state.get("session") or {}
     files = session.get("files")
     if not files or not items:
         raise RuntimeError(t("common.no_connection"))
 
-    def run_item(item, _progress):
+    def run_item(item, progress):
         if item.op == "upload":
             files.upload(item.src, item.dst)
         elif item.op == "download":
             files.download(item.src, item.dst)
         else:
             raise RuntimeError(f"unsupported transfer item: {item.op}")
+        progress(1, 1)
 
-    controller = TransferSessionController(items, run_item)
+    controller = TransferSessionController(items, run_item, on_progress=on_progress)
     controller.start()
     sessions = session_state.setdefault("transfer_sessions", set())
     sessions.add(controller)
