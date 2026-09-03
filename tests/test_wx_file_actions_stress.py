@@ -1,4 +1,36 @@
+import time
+
+import pytest
+
+wx = pytest.importorskip("wx")
+
 from hpc_gui.services.file_context_actions import context_selection, visible_actions
+from hpc_gui.core.i18n import load_language
+from hpc_gui.wx_remote_files import WxRemoteDirectoryModel
+from hpc_gui.wx_remote_files_view import show_remote_files
+
+
+@pytest.fixture
+def wx_app():
+    load_language("en")
+    app = wx.App(False)
+    yield app
+    for window in wx.GetTopLevelWindows():
+        if window:
+            window.Destroy()
+    app.ProcessPendingEvents()
+    app.Destroy()
+
+
+def _pump(app, predicate):
+    deadline = time.monotonic() + 2
+    while time.monotonic() < deadline:
+        app.ProcessPendingEvents()
+        if predicate():
+            return
+        wx.MilliSleep(5)
+    app.ProcessPendingEvents()
+    assert predicate()
 from mock_hpc_files import MockRemoteFilesBackend
 
 
@@ -28,3 +60,59 @@ def test_context_policy_stays_stable_under_rapid_selection():
     for index in range(200):
         selection = context_selection(f"/work/{index}", False, (f"/work/{index}",), (False,))
         assert "edit" in visible_actions(selection, remote=True)
+
+
+def test_wx_remote_context_target_stress_uses_real_events(wx_app):
+    backend = MockRemoteFilesBackend()
+    backend.entries.update({"/work/dir-a": True, "/work/dir-b": True})
+    show_remote_files(
+        model=WxRemoteDirectoryModel("/work"),
+        loader=backend.iterdir_entries,
+        operation=backend.operation,
+    )
+    frame = [window for window in wx.GetTopLevelWindows() if hasattr(window, "_wx_remote_controls")][-1]
+    listing = frame._wx_remote_controls["listing"]
+    _pump(wx_app, lambda: listing.GetItemCount() >= 4)
+    wrong_targets = 0
+    captured = []
+
+    def capture(menu):
+        captured.append({item.GetItemLabelText() for item in menu.GetMenuItems()})
+
+    listing.PopupMenu = capture
+    for index in range(200):
+        mode = index % 4
+        if mode == 0:
+            clicked = index % listing.GetItemCount()
+            for item_index in range(listing.GetItemCount()):
+                listing.Select(item_index, False)
+            listing.Select(clicked)
+            rect = listing.GetItemRect(clicked)
+            position = listing.ClientToScreen(rect.GetPosition() + wx.Point(5, max(1, rect.height // 2)))
+        elif mode == 1:
+            for item_index in range(listing.GetItemCount()):
+                listing.Select(item_index, False)
+            listing.Select(0)
+            listing.Select(1)
+            rect = listing.GetItemRect(1)
+            position = listing.ClientToScreen(rect.GetPosition() + wx.Point(5, max(1, rect.height // 2)))
+        elif mode == 2:
+            rect = listing.GetItemRect(listing.GetItemCount() - 1)
+            position = listing.ClientToScreen(wx.Point(5, listing.GetSize().height - 5))
+        else:
+            for item_index in range(listing.GetItemCount()):
+                listing.Select(item_index, False)
+            listing.Select(0)
+            position = wx.DefaultPosition
+        event = wx.ContextMenuEvent(wx.wxEVT_CONTEXT_MENU, listing.GetId())
+        event.SetPosition(position)
+        before = len(captured)
+        listing.ProcessEvent(event)
+        if len(captured) != before + 1:
+            wrong_targets += 1
+        if mode == 2 and ("Edit" in captured[-1] or "Rename" in captured[-1]):
+            wrong_targets += 1
+        if mode == 3 and "Edit" not in captured[-1]:
+            wrong_targets += 1
+    assert wrong_targets == 0, captured[-4:]
+    assert len(captured) == 200
