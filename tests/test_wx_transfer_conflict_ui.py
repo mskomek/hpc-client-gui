@@ -150,32 +150,26 @@ def test_wx_conflict_rename_rejects_existing_destination(wx_app, monkeypatch):
     parent.Destroy()
     wx_app.ProcessPendingEvents()
 
-def test_wx_conflict_resume_uses_real_backend_resume_semantics(wx_app):
-    # prove that resume decision propagates to backend resume semantics
+def test_wx_conflict_dialog_hides_resume_without_explicit_backend_capability(wx_app):
     parent=wx.Frame(None)
-    # Use a backend that supports resume and records offset behavior
-    class ResumeBackend:
-        supports_resume=True
-        def __init__(self):
-            self.calls=[]
-            self.existing={"/dst/file.txt"}
-        def exists(self, p): return p in self.existing
-        def upload(self, src, dst):
-            # if we are called after resume decision, we should be called with same dst (not renamed)
-            # and we treat it as resume (we could check that src file has partial prefix preserved)
-            self.calls.append(("upload", src, dst, "resume"))
-    files=ResumeBackend()
-    item=TransferItem("upload","/tmp/src.txt","/dst/file.txt")
-    # Simulate controller with conflict resolver returning resume
-    def run_item(it, progress):
-        files.upload(it.src, it.dst)
-        progress(1,1)
-    controller=TransferSessionController([item], run_item, conflict_check=files.exists, conflict_resolver=lambda it: "resume")
-    controller.start()
-    assert controller.engine.wait(2)
-    # verify resume path was taken (exists true, decision resume, still uploads to same dst)
-    assert files.calls[0][2]=="/dst/file.txt"
-    assert files.calls[0][3]=="resume"
+    # Backend with class name SSHFilesBackend but no explicit supports_resume must NOT trigger resume
+    FakeSSH = type("SSHFilesBackend", (), {"exists": lambda self, p: True})()
+    item=TransferItem("upload","src","/dst/file.txt")
+    dlg=create_transfer_conflict_dialog(parent, FakeSSH, item)
+    assert dlg._wx_conflict_controls["resume"] is None
+    assert dlg._wx_conflict_resume_supported is False
+    dlg.Destroy()
+    # Also generic fake with source containing REST/APPE must not trigger
+    class FakeFTP:
+        def exists(self, p): return True
+        # simulate source containing REST/APPE if inspected, but should still be hidden
+        def upload(self, s, d): pass
+    FakeFTP.__name__ = "FTPFilesBackend"
+    # we don't set supports_resume, so should be hidden
+    fake_ftp = FakeFTP()
+    dlg2=create_transfer_conflict_dialog(parent, fake_ftp, item)
+    assert dlg2._wx_conflict_controls["resume"] is None
+    dlg2.Destroy()
     parent.Destroy()
     wx_app.ProcessPendingEvents()
 

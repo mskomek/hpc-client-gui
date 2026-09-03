@@ -186,7 +186,7 @@ def show_remote_files(parent=None, model: WxRemoteDirectoryModel | None = None, 
 
         def worker():
             try:
-                safe_call_after(done, model.list_entries(loader, force=True), None)
+                safe_call_after(done, model.list_entries(loader, path=requested_path, force=True), None)
             except Exception as error:
                 safe_call_after(done, (), error)
 
@@ -512,7 +512,7 @@ def show_remote_files(parent=None, model: WxRemoteDirectoryModel | None = None, 
                                 wx.MessageBox(str(err), t("login.err_title"), wx.OK | wx.ICON_ERROR)
                         def wk2():
                             try:
-                                safe_call_after(done2, model.list_entries(loader, force=True) if loader else [], None)
+                                safe_call_after(done2, model.list_entries(loader, path=rq_path, force=True) if loader else [], None)
                             except Exception as e2:
                                 safe_call_after(done2, (), e2)
                         Thread(target=wk2, daemon=True).start()
@@ -619,6 +619,29 @@ def show_remote_files(parent=None, model: WxRemoteDirectoryModel | None = None, 
             if 0 <= model.active_tab < len(model.tabs):
                 model.current_path = tabs[model.active_tab]["path"]
         return True
+
+    def notebook_context(event):
+        pos = event.GetPosition()
+        if pos == wx.DefaultPosition:
+            idx = notebook.GetSelection()
+        else:
+            try:
+                hit = notebook.HitTest(notebook.ScreenToClient(pos))
+                idx = hit[0] if isinstance(hit, tuple) else hit
+            except Exception:
+                idx = notebook.GetSelection()
+        if idx < 0 or idx >= notebook.GetPageCount():
+            return
+        menu = wx.Menu()
+        close_item = menu.Append(wx.ID_ANY, t("common.close"))
+        close_item.Enable(notebook.GetPageCount() > 1)
+        def do_close(_evt, target=idx):
+            close_tab(target)
+        notebook.Bind(wx.EVT_MENU, do_close, close_item)
+        notebook.PopupMenu(menu)
+        menu.Destroy()
+
+    notebook.Bind(wx.EVT_CONTEXT_MENU, notebook_context)
 
     # initial tab
     initial = create_tab(model.current_path)

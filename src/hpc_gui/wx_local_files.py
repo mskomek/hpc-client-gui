@@ -135,32 +135,46 @@ class LocalBrowserModel:
         self.clipboard_move = bool(move)
 
     def paste(self) -> tuple[Path, ...]:
+        return self.paste_into(self.current_path, self.clipboard, self.clipboard_move)
+
+    def paste_into(self, destination: str | Path, clipboard: tuple[Path, ...] | None = None, move: bool | None = None) -> tuple[Path, ...]:
+        dest = Path(destination).expanduser().resolve()
+        clip = tuple(Path(p).expanduser().resolve() for p in (clipboard if clipboard is not None else self.clipboard))
+        is_move = bool(move if move is not None else self.clipboard_move)
         pasted = []
-        for source in self.clipboard:
+        for source in clip:
             if not source.exists():
                 raise FileNotFoundError(str(source))
-            if source.is_dir() and (self.current_path == source or source in self.current_path.parents):
+            if source.is_dir() and (dest == source or source in dest.parents):
                 raise ValueError("cannot paste a directory into itself")
-            target = self.current_path / source.name
+            target = dest / source.name
             if target.exists() or target == source:
                 raise FileExistsError(str(target))
-            if self.clipboard_move:
+            if is_move:
                 shutil.move(str(source), str(target))
             elif source.is_dir():
                 shutil.copytree(source, target)
             else:
                 shutil.copy2(source, target)
             pasted.append(target)
-        if self.clipboard_move:
+        if is_move and clipboard is None:
             self.clipboard = ()
+        elif is_move:
+            # clear global clipboard only if it matches snapshot
+            if tuple(self.clipboard) == clip and self.clipboard_move == is_move:
+                self.clipboard = ()
         return tuple(pasted)
 
     def delete(self, paths: list[str | Path]) -> tuple[Path, ...]:
+        return self.delete_at(paths, self.current_path)
+
+    def delete_at(self, paths: list[str | Path], origin_dir: str | Path) -> tuple[Path, ...]:
+        origin = Path(origin_dir).expanduser().resolve()
         removed = []
         for value in paths:
             target = Path(value).expanduser().resolve()
-            if target == self.current_path or self.current_path not in target.parents:
-                raise ValueError("local delete target must be inside the current directory")
+            if target == origin or origin not in target.parents:
+                raise ValueError("local delete target must be inside the origin directory")
             if not target.exists():
                 continue
             if target.is_dir():
@@ -169,6 +183,20 @@ class LocalBrowserModel:
                 target.unlink()
             removed.append(target)
         return tuple(removed)
+
+    def rename_at(self, source: str | Path, new_name: str, origin_dir: str | Path) -> Path:
+        src = Path(source).expanduser().resolve()
+        origin = Path(origin_dir).expanduser().resolve()
+        name = Path(new_name).name
+        if not name or name != new_name or name in {".", ".."}:
+            raise ValueError("invalid local name")
+        if src.parent != origin or not src.exists():
+            raise FileNotFoundError(str(src))
+        target = src.with_name(name)
+        if target.exists():
+            raise FileExistsError(str(target))
+        src.rename(target)
+        return target
 
     @staticmethod
     def file_action(action: str, path: str | Path, value: str = "") -> tuple[str, str, str]:
@@ -543,7 +571,11 @@ def show_local_files(parent=None, path: str | Path | None = None, *, open_editor
                 dialog.Destroy()
             return
         if action == "paste":
-            mutate(model.paste)
+            # snapshot destination and clipboard at action time
+            dest_snapshot = tstate["path"]
+            clip_snapshot = tuple(model.clipboard)
+            move_snapshot = model.clipboard_move
+            mutate(lambda: model.paste_into(dest_snapshot, clip_snapshot, move_snapshot))
             return
         if action == "refresh":
             refresh()
@@ -596,14 +628,17 @@ def show_local_files(parent=None, path: str | Path | None = None, *, open_editor
             try:
                 if dialog.ShowModal() == wx.ID_OK:
                     new_name = dialog.GetValue()
-                    mutate(lambda: model.rename(entry.path, new_name))
+                    origin_snapshot = tstate["path"]
+                    src_snapshot = entry.path
+                    mutate(lambda: model.rename_at(src_snapshot, new_name, origin_snapshot))
             except Exception as error:
                 wx.MessageBox(str(error), t("login.err_title"), wx.OK | wx.ICON_ERROR)
             finally:
                 dialog.Destroy()
         elif action == "delete" and wx.MessageBox(t("dirs.delete_confirm"), t("dirs.delete"), wx.YES_NO | wx.ICON_WARNING) == wx.YES:
             paths = tuple(item.path for item in selected)
-            mutate(lambda: model.delete(list(paths)))
+            origin_snapshot = tstate["path"]
+            mutate(lambda: model.delete_at(list(paths), origin_snapshot))
 
     def key_down(event) -> None:
         # Use active listing; if no selection handle accordingly
@@ -700,6 +735,30 @@ def show_local_files(parent=None, path: str | Path | None = None, *, open_editor
         if model.active_tab >= len(model.tabs):
             model.active_tab = len(model.tabs)-1
         return True
+
+    def notebook_context(event):
+        pos = event.GetPosition()
+        if pos == wx.DefaultPosition:
+            idx = notebook.GetSelection()
+        else:
+            try:
+                # HitTest returns (idx, flags)
+                hit = notebook.HitTest(notebook.ScreenToClient(pos))
+                idx = hit[0] if isinstance(hit, tuple) else hit
+            except Exception:
+                idx = notebook.GetSelection()
+        if idx < 0 or idx >= notebook.GetPageCount():
+            return
+        menu = wx.Menu()
+        close_item = menu.Append(wx.ID_ANY, t("common.close"))
+        close_item.Enable(notebook.GetPageCount() > 1)
+        def do_close(_evt, target=idx):
+            close_tab(target)
+        notebook.Bind(wx.EVT_MENU, do_close, close_item)
+        notebook.PopupMenu(menu)
+        menu.Destroy()
+
+    notebook.Bind(wx.EVT_CONTEXT_MENU, notebook_context)
 
     # initial tab
     initial = create_tab(model.current_path)
