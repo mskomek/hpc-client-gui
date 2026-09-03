@@ -189,47 +189,127 @@ def show_local_files(parent=None, path: str | Path | None = None, *, open_editor
         raise RuntimeError("wxPython is not installed") from exc
     model = LocalBrowserModel(path or Path.cwd())
     frame = wx.Frame(parent, title=t("tabs.ftp"), size=(900, 600))
-    listing = wx.ListCtrl(frame, style=wx.LC_REPORT)
-    listing.InsertColumn(0, t("dirs.col_name"))
-    listing.InsertColumn(1, t("dirs.col_size"))
-    entries = []
+    notebook = wx.Notebook(frame)
+    root_sizer = wx.BoxSizer(wx.VERTICAL)
+    root_sizer.Add(notebook, 1, wx.EXPAND)
+    frame.SetSizer(root_sizer)
+    # Per-tab state. Each tab owns its own list control and generation counters.
+    # Global state dict kept for backward compatibility (closed, mutation, top-level view_generation used for compat).
     state = {"context_target": None, "closed": False, "mutation_in_flight": False, "view_generation": 0, "listing_request_id": 0}
     threading_lock = Lock()
     labels = FILE_CONTEXT_LABEL_KEYS
+    tabs: list[dict] = []
+    next_tab_id = [0]
 
     def safe_call_after(callback, *args):
         try:
+            if wx.GetApp() is None:
+                return
             wx.CallAfter(callback, *args)
-        except (AssertionError, RuntimeError):
+        except BaseException:
             return
 
+    def tab_label(path_value: Path) -> str:
+        name = path_value.name
+        return name or str(path_value) or "Local"
+
+    def active_tab_state():
+        sel = notebook.GetSelection()
+        if sel < 0 or sel >= len(tabs):
+            return tabs[0] if tabs else None
+        return tabs[sel]
+
+    def active_listing():
+        tstate = active_tab_state()
+        return tstate["listing"] if tstate else None
+
+    def current_entries():
+        tstate = active_tab_state()
+        return tstate["entries"] if tstate else []
+
+    def sync_model_to_active():
+        tstate = active_tab_state()
+        if not tstate:
+            return
+        idx = notebook.GetSelection()
+        model.active_tab = idx
+        if idx < len(model.tabs):
+            model.current_path = tstate["path"]
+        else:
+            # shouldn't happen
+            pass
+
+    def refresh_active_tab_label(idx: int | None = None):
+        if idx is None:
+            idx = notebook.GetSelection()
+        if 0 <= idx < len(tabs):
+            notebook.SetPageText(idx, tab_label(tabs[idx]["path"]))
+
     def refresh() -> None:
+        tstate = active_tab_state()
+        if not tstate:
+            return
         with threading_lock:
-            if state["closed"]:
+            if state["closed"] or tstate.get("closed"):
                 return
+            # increments both global and per-tab generation
+            state["view_generation"] += 1
             state["listing_request_id"] += 1
-            request_id = state["listing_request_id"]
-            requested_path = model.current_path
-            request_generation = state["view_generation"]
+            tstate["view_generation"] += 1
+            tstate["listing_request_id"] += 1
+            request_id = tstate["listing_request_id"]
+            request_generation = tstate["view_generation"]
+            requested_path = tstate["path"]
+            tab_id = tstate["id"]
 
         def done(result, error):
+            # re-check lifetime in callback (post-queue safety)
             with threading_lock:
+                # find tab by id (may have been closed)
+                tab_entry = next((tt for tt in tabs if tt["id"] == tab_id), None)
+                if not tab_entry or tab_entry.get("closed"):
+                    return
                 current = (
                     not state["closed"]
-                    and request_id == state["listing_request_id"]
-                    and request_generation == state["view_generation"]
-                    and requested_path == model.current_path
+                    and request_id == tab_entry["listing_request_id"]
+                    and request_generation == tab_entry["view_generation"]
+                    and requested_path == tab_entry["path"]
                 )
             if not current:
                 return
             if error:
-                wx.MessageBox(str(error), t("login.err_title"), wx.OK | wx.ICON_ERROR)
+                # only show error if this tab is active, otherwise silently ignore? Spec says no error should show in other tab, but stale check above already filters.
+                # If tab is not active, still don't show message box (avoid cross-tab).
+                if notebook.GetSelection() == tabs.index(tab_entry):
+                    wx.MessageBox(str(error), t("login.err_title"), wx.OK | wx.ICON_ERROR)
                 return
-            entries[:] = result
-            listing.DeleteAllItems()
-            for entry in entries:
-                index = listing.InsertItem(listing.GetItemCount(), entry.path.name)
-                listing.SetItem(index, 1, str(entry.size))
+            # verify controls still alive
+            try:
+                if not tab_entry["listing"] or not tab_entry["listing"].IsShownOnScreen() and False:
+                    pass
+                # Accessing destroyed control raises exception; check via wx
+                if not tab_entry["listing"]:
+                    return
+            except Exception:
+                return
+            try:
+                # Check if window still exists
+                if not wx.Window.FindWindowById(tab_entry["listing"].GetId()):
+                    # fallback: check closed flag already
+                    pass
+            except Exception:
+                pass
+            tab_entry["entries"][:] = result
+            # Only render if tab still valid; but we update that tab's listing regardless of active
+            lst = tab_entry["listing"]
+            try:
+                lst.DeleteAllItems()
+                for entry in tab_entry["entries"]:
+                    idx = lst.InsertItem(lst.GetItemCount(), entry.path.name)
+                    lst.SetItem(idx, 1, str(entry.size))
+            except RuntimeError:
+                # control destroyed
+                return
 
         def worker():
             try:
@@ -240,25 +320,91 @@ def show_local_files(parent=None, path: str | Path | None = None, *, open_editor
         Thread(target=worker, daemon=True).start()
 
     def navigate(target) -> None:
+        tstate = active_tab_state()
+        if not tstate:
+            return
         resolved = Path(target).expanduser().resolve()
-        if resolved != model.current_path:
+        if resolved != tstate["path"]:
             state["view_generation"] += 1
-        model.navigate(resolved)
+            tstate["view_generation"] += 1
+        tstate["path"] = resolved
+        # sync model tabs entry
+        idx = notebook.GetSelection()
+        if 0 <= idx < len(model.tabs):
+            model.tabs[idx] = resolved
+        model.current_path = resolved
+        model.active_tab = idx
+        refresh_active_tab_label(idx)
 
-    def refresh_labels(_language=None):
-        frame.SetTitle(t("tabs.ftp"))
-        listing.SetColumn(0, t("dirs.col_name"))
-        listing.SetColumn(1, t("dirs.col_size"))
+    def create_tab(target_path: Path):
+        target_path = Path(target_path).expanduser().resolve()
+        panel = wx.Panel(notebook)
+        listing = wx.ListCtrl(panel, style=wx.LC_REPORT)
+        listing.InsertColumn(0, t("dirs.col_name"))
+        listing.InsertColumn(1, t("dirs.col_size"))
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        sizer.Add(listing, 1, wx.EXPAND)
+        panel.SetSizer(sizer)
+        tab_entry = {"id": next_tab_id[0], "path": target_path, "listing": listing, "entries": [], "view_generation": 0, "listing_request_id": 0, "closed": False, "panel": panel}
+        next_tab_id[0] += 1
+        tabs.append(tab_entry)
+        # sync model
+        # caller will handle notebook insertion
+        # bind events for this listing
+        listing.Bind(wx.EVT_LIST_ITEM_ACTIVATED, activate)
+        listing.Bind(wx.EVT_CONTEXT_MENU, context_menu)
+        listing.Bind(wx.EVT_KEY_DOWN, key_down)
+        listing.Bind(wx.EVT_MIDDLE_DOWN, middle_click)
+        # also handle middle click via list event hit test fallback
+        return tab_entry
 
     def activate(event) -> None:
-        entry = entries[event.GetIndex()]
+        tstate = active_tab_state()
+        if not tstate:
+            return
+        idx = event.GetIndex()
+        if idx < 0 or idx >= len(tstate["entries"]):
+            return
+        entry = tstate["entries"][idx]
         if entry.is_dir:
             navigate(entry.path)
             refresh()
         elif open_editor:
             open_editor(str(entry.path))
 
+    def middle_click(event) -> None:
+        tstate = active_tab_state()
+        if not tstate:
+            event.Skip()
+            return
+        listing = tstate["listing"]
+        # Use HitTest to find entry under cursor
+        pos = event.GetPosition()
+        # For middle down, position is client coordinates
+        idx, _flags = listing.HitTest(pos)
+        if idx >= 0 and idx < len(tstate["entries"]):
+            entry = tstate["entries"][idx]
+            if entry.is_dir:
+                # open in new tab
+                model.new_tab(entry.path)
+                # create visible tab
+                new_entry = create_tab(entry.path)
+                notebook.AddPage(new_entry["panel"], tab_label(entry.path), True)
+                # sync model active index
+                model.active_tab = notebook.GetSelection()
+                model.current_path = entry.path
+                if hasattr(frame, "_wx_local_controls"):
+                    frame._wx_local_controls["listing"] = new_entry["listing"]
+                refresh()
+                return
+        event.Skip()
+
     def context_menu(event) -> None:
+        tstate = active_tab_state()
+        if not tstate:
+            return
+        listing = tstate["listing"]
+        entries = tstate["entries"]
         position = event.GetPosition()
         keyboard_context = position == wx.DefaultPosition or (position.x < 0 and position.y < 0)
         index = -1 if keyboard_context else listing.HitTest(listing.ScreenToClient(position))[0]
@@ -266,9 +412,10 @@ def show_local_files(parent=None, path: str | Path | None = None, *, open_editor
             for selected_index in range(listing.GetItemCount()):
                 listing.Select(selected_index, False)
             listing.Select(index)
-        selected = selected_entries()
-        entry = entries[index] if index >= 0 else None
-        state["context_target"] = entry.path if entry and entry.is_dir else model.current_path
+        # gather selected entries for active tab
+        selected = [entry for idx2, entry in enumerate(entries) if listing.IsSelected(idx2)]
+        entry = entries[index] if 0 <= index < len(entries) else None
+        state["context_target"] = entry.path if entry and entry.is_dir else tstate["path"]
         selection = context_selection(
             str(entry.path) if entry else None,
             entry.is_dir if entry else None,
@@ -285,36 +432,92 @@ def show_local_files(parent=None, path: str | Path | None = None, *, open_editor
         menu.Destroy()
 
     def selected_entries() -> list[LocalEntry]:
-        return [entry for index, entry in enumerate(entries) if listing.IsSelected(index)]
+        tstate = active_tab_state()
+        if not tstate:
+            return []
+        listing = tstate["listing"]
+        entries = tstate["entries"]
+        return [entry for idx2, entry in enumerate(entries) if listing.IsSelected(idx2)]
 
     def mutate(operation) -> None:
-        if state["closed"] or state["mutation_in_flight"]:
+        tstate = active_tab_state()
+        if not tstate:
+            return
+        if state["closed"] or state["mutation_in_flight"] or tstate.get("closed"):
             return
         state["mutation_in_flight"] = True
+        listing = tstate["listing"]
         listing.Enable(False)
-        origin_path = model.current_path
-        origin_generation = state["view_generation"]
+        origin_path = tstate["path"]
+        origin_generation = tstate["view_generation"]
+        tab_id = tstate["id"]
 
         def worker():
             try:
                 operation()
-                safe_call_after(mutation_done, None)
+                safe_call_after(mutation_done, None, tab_id, origin_path, origin_generation)
             except Exception as error:
-                safe_call_after(mutation_done, error)
+                safe_call_after(mutation_done, error, tab_id, origin_path, origin_generation)
 
-        def mutation_done(error):
+        def mutation_done(error, done_tab_id, done_origin_path, done_origin_gen):
             state["mutation_in_flight"] = False
             if state["closed"]:
                 return
-            listing.Enable(True)
+            tab_entry = next((tt for tt in tabs if tt["id"] == done_tab_id), None)
+            if not tab_entry or tab_entry.get("closed"):
+                return
+            try:
+                tab_entry["listing"].Enable(True)
+            except RuntimeError:
+                return
             if error:
                 wx.MessageBox(str(error), t("login.err_title"), wx.OK | wx.ICON_ERROR)
-            elif model.current_path == origin_path and state["view_generation"] == origin_generation:
-                refresh()
+            elif tab_entry["path"] == done_origin_path and tab_entry["view_generation"] == done_origin_gen:
+                # need to refresh that specific tab; temporarily make it active concept? just refresh logic for that tab directly
+                # if that tab is active, use normal refresh; else do targeted refresh
+                if notebook.GetSelection() == tabs.index(tab_entry):
+                    refresh()
+                else:
+                    # targeted refresh for non-active tab
+                    # we could directly call refresh for that tab entry
+                    # simulate refresh but scoped to that tab
+                    with threading_lock:
+                        if tab_entry.get("closed"):
+                            return
+                        tab_entry["listing_request_id"] += 1
+                        tab_entry["view_generation"] += 1
+                        req_id = tab_entry["listing_request_id"]
+                        req_gen = tab_entry["view_generation"]
+                        req_path = tab_entry["path"]
+                        tid = tab_entry["id"]
+                    def done2(result, err):
+                        with threading_lock:
+                            te = next((tt for tt in tabs if tt["id"] == tid), None)
+                            if not te or te.get("closed") or req_id != te["listing_request_id"] or req_gen != te["view_generation"] or req_path != te["path"]:
+                                return
+                        if err:
+                            return
+                        te["entries"][:] = result
+                        try:
+                            te["listing"].DeleteAllItems()
+                            for en in te["entries"]:
+                                ii = te["listing"].InsertItem(te["listing"].GetItemCount(), en.path.name)
+                                te["listing"].SetItem(ii, 1, str(en.size))
+                        except RuntimeError:
+                            return
+                    def wk2():
+                        try:
+                            safe_call_after(done2, model.list_entries(req_path), None)
+                        except Exception as e2:
+                            safe_call_after(done2, (), e2)
+                    Thread(target=wk2, daemon=True).start()
 
         Thread(target=worker, daemon=True).start()
 
     def run_action(action: str) -> None:
+        tstate = active_tab_state()
+        if not tstate:
+            return
         selected = selected_entries()
         if action == "upload" and upload:
             if selected:
@@ -332,7 +535,7 @@ def show_local_files(parent=None, path: str | Path | None = None, *, open_editor
             try:
                 if dialog.ShowModal() == wx.ID_OK:
                     name = dialog.GetValue()
-                    target = state["context_target"] or (selected[0].path if len(selected) == 1 and selected[0].is_dir else model.current_path)
+                    target = state["context_target"] or (selected[0].path if len(selected) == 1 and selected[0].is_dir else tstate["path"])
                     mutate(lambda: model.new_folder(name, target))
             except Exception as error:
                 wx.MessageBox(str(error), t("login.err_title"), wx.OK | wx.ICON_ERROR)
@@ -353,8 +556,16 @@ def show_local_files(parent=None, path: str | Path | None = None, *, open_editor
             return
         if action in {"open", "edit", "edit_new_window", "new_tab"}:
             if action == "new_tab":
+                # create visible second tab
                 model.new_tab(entry.path)
-                state["view_generation"] += 1
+                new_entry = create_tab(entry.path)
+                notebook.AddPage(new_entry["panel"], tab_label(entry.path), True)
+                model.active_tab = notebook.GetSelection()
+                model.current_path = entry.path
+                if hasattr(frame, "_wx_local_controls"):
+                    frame._wx_local_controls["listing"] = new_entry["listing"]
+                # keep state view_generation in sync
+                # refresh will handle
                 refresh()
             elif action == "open":
                 if entry.is_dir:
@@ -395,6 +606,12 @@ def show_local_files(parent=None, path: str | Path | None = None, *, open_editor
             mutate(lambda: model.delete(list(paths)))
 
     def key_down(event) -> None:
+        # Use active listing; if no selection handle accordingly
+        tstate = active_tab_state()
+        if not tstate:
+            event.Skip()
+            return
+        listing = tstate["listing"]
         if event.ControlDown() and event.GetKeyCode() in (ord("C"), ord("X"), ord("V")):
             run_action({ord("C"): "copy", ord("X"): "cut", ord("V"): "paste"}[event.GetKeyCode()])
             return
@@ -402,10 +619,7 @@ def show_local_files(parent=None, path: str | Path | None = None, *, open_editor
             for index in range(listing.GetItemCount()):
                 listing.Select(index)
             return
-        if event.GetKeyCode() == wx.WXK_BACK:
-            navigate(model.current_path.parent)
-            refresh()
-            return
+        # REMOVED: Backspace parent navigation for local (per contract)
         actions = {wx.WXK_F2: "rename", wx.WXK_DELETE: "delete", wx.WXK_F5: "refresh"}
         action = actions.get(event.GetKeyCode())
         if action:
@@ -414,16 +628,114 @@ def show_local_files(parent=None, path: str | Path | None = None, *, open_editor
             return
         event.Skip()
 
-    listing.Bind(wx.EVT_LIST_ITEM_ACTIVATED, activate)
-    listing.Bind(wx.EVT_CONTEXT_MENU, context_menu)
-    listing.Bind(wx.EVT_KEY_DOWN, key_down)
-    frame._wx_local_controls = {"listing": listing}
+    def on_page_changed(event):
+        # update model to reflect new active tab
+        new_sel = event.GetSelection()
+        if 0 <= new_sel < len(tabs):
+            model.active_tab = new_sel
+            model.current_path = tabs[new_sel]["path"]
+            # update global controls reference for tests (guard before attribute exists)
+            if hasattr(frame, "_wx_local_controls"):
+                frame._wx_local_controls["listing"] = tabs[new_sel]["listing"]
+        event.Skip()
+
+    notebook.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGED, on_page_changed)
+    # Patch SetSelection/ChangeSelection to synchronously update controls (programmatic switches may not fire event)
+    _orig_set = notebook.SetSelection
+    def _patched_set(idx):
+        res = _orig_set(idx)
+        if 0 <= idx < len(tabs):
+            model.active_tab = idx
+            model.current_path = tabs[idx]["path"]
+            if hasattr(frame, "_wx_local_controls"):
+                frame._wx_local_controls["listing"] = tabs[idx]["listing"]
+        return res
+    notebook.SetSelection = _patched_set
+    _orig_change = notebook.ChangeSelection
+    def _patched_change(idx):
+        res = _orig_change(idx)
+        if 0 <= idx < len(tabs):
+            model.active_tab = idx
+            model.current_path = tabs[idx]["path"]
+            if hasattr(frame, "_wx_local_controls"):
+                frame._wx_local_controls["listing"] = tabs[idx]["listing"]
+        return res
+    notebook.ChangeSelection = _patched_change
+
+    def close_tab(index: int | None = None):
+        if len(tabs) <= 1:
+            return False
+        if index is None:
+            index = notebook.GetSelection()
+        if not (0 <= index < len(tabs)):
+            return False
+        active_before = notebook.GetSelection()
+        tab_entry = tabs[index]
+        tab_entry["closed"] = True
+        # remove page
+        notebook.RemovePage(index)
+        # destroy panel to mimic real close but keep listing object flag?
+        try:
+            tab_entry["panel"].Destroy()
+        except Exception:
+            pass
+        tabs.pop(index)
+        model.tabs.pop(index)
+        # adjust active
+        if active_before == index:
+            new_sel = min(index, len(tabs)-1)
+            notebook.SetSelection(new_sel)
+            model.active_tab = new_sel
+            model.current_path = tabs[new_sel]["path"]
+            frame._wx_local_controls["listing"] = tabs[new_sel]["listing"]
+        elif active_before > index:
+            # active shifted left
+            model.active_tab = notebook.GetSelection()
+            if 0 <= model.active_tab < len(model.tabs):
+                model.current_path = tabs[model.active_tab]["path"]
+        else:
+            # active unchanged
+            pass
+        # Clamp
+        if model.active_tab >= len(model.tabs):
+            model.active_tab = len(model.tabs)-1
+        return True
+
+    # initial tab
+    initial = create_tab(model.current_path)
+    notebook.AddPage(initial["panel"], tab_label(model.current_path), True)
+    model.active_tab = 0
+
+    def refresh_labels(_language=None):
+        frame.SetTitle(t("tabs.ftp"))
+        for tab_entry in tabs:
+            try:
+                tab_entry["listing"].SetColumn(0, t("dirs.col_name"))
+                tab_entry["listing"].SetColumn(1, t("dirs.col_size"))
+            except RuntimeError:
+                continue
+        # update tab labels (paths may contain same)
+        for idx, te in enumerate(tabs):
+            try:
+                notebook.SetPageText(idx, tab_label(te["path"]))
+            except Exception:
+                pass
+
+    # expose for tests
+    # keep listing pointing to active
+    frame._wx_local_controls = {"listing": initial["listing"], "notebook": notebook}
     frame._wx_local_model = model
     frame._wx_local_state = state
     frame._wx_local_run_action = run_action
+    frame._wx_local_tabs = tabs
+    frame._wx_local_notebook = notebook
+    frame._wx_local_close_tab = close_tab
+    frame._wx_local_create_tab = lambda p: (model.new_tab(p), create_tab(Path(p)), notebook.AddPage(tabs[-1]["panel"], tab_label(Path(p)), True), refresh())
     subscribe_language_change(refresh_labels)
     def close(event):
         state["closed"] = True
+        for te in tabs:
+            te["closed"] = True
         unsubscribe_language_change(refresh_labels)
         event.Skip()
 

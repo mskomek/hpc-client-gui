@@ -188,24 +188,32 @@ def _start_file_transfers(session_state, lifecycle, items, *, on_progress=None, 
                     return ("rename", str(candidate))
             return "cancel"
 
+        from hpc_gui.wx_transfer_workspace import create_transfer_conflict_dialog
+
         decision = {"value": "cancel"}
         ready = Event()
 
         def ask():
             try:
-                choice = wx.MessageBox(
-                    t("transfer.conflict_message").format(path=item.dst),
-                    t("transfer.conflict_title"),
-                    wx.YES_NO | wx.CANCEL | wx.ICON_WARNING,
-                    parent,
-                )
-                decision["value"] = {wx.YES: "overwrite", wx.NO: "skip"}.get(choice, "cancel")
+                dlg = create_transfer_conflict_dialog(parent, files, item)
+                if not dlg:
+                    decision["value"] = "cancel"
+                    return
+                dlg.ShowModal()
+                raw = dlg._wx_conflict_result["value"]
+                # if rename, raw is tuple
+                if isinstance(raw, tuple) and raw and raw[0] == "rename":
+                    decision["value"] = raw
+                else:
+                    # map string decisions
+                    decision["value"] = raw if raw in {"overwrite", "skip", "resume", "cancel"} else "cancel"
+                dlg.Destroy()
             finally:
                 ready.set()
 
         try:
             wx.CallAfter(ask)
-        except (AssertionError, RuntimeError):
+        except BaseException:
             return "cancel"
         ready.wait()
         return decision["value"]
