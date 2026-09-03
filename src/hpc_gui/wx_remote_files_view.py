@@ -29,7 +29,7 @@ def show_remote_files(parent=None, model: WxRemoteDirectoryModel | None = None, 
     root.Add(listing, 1, wx.EXPAND | wx.LEFT | wx.RIGHT, 6)
     root.Add(refresh, 0, wx.ALIGN_RIGHT | wx.ALL, 6)
     panel.SetSizer(root)
-    state = {"entries": [], "busy": False, "closed": False, "editor_request_id": 0}
+    state = {"entries": [], "busy": False, "closed": False, "editor_request_id": 0, "view_generation": 0}
     lock = Lock()
 
     def safe_call_after(callback, *args):
@@ -52,13 +52,19 @@ def show_remote_files(parent=None, model: WxRemoteDirectoryModel | None = None, 
         listing.SetColumn(1, t("dirs.col_size"))
         refresh.SetLabel(t("dirs.refresh"))
 
+    def navigate(target):
+        if str(target) != model.current_path:
+            state["view_generation"] += 1
+        model.navigate(str(target))
+        path.SetValue(model.current_path)
+
     def load(_event=None):
         if not loader:
             return
         requested_path = path.GetValue().strip()
         if requested_path != model.current_path:
             try:
-                model.navigate(requested_path)
+                navigate(requested_path)
             except Exception as error:
                 wx.MessageBox(str(error), t("login.err_title"), wx.OK | wx.ICON_ERROR)
                 path.SetValue(model.current_path)
@@ -89,8 +95,7 @@ def show_remote_files(parent=None, model: WxRemoteDirectoryModel | None = None, 
     def activate(event):
         entry = state["entries"][event.GetIndex()]
         if entry.is_dir:
-            model.navigate(entry.path)
-            path.SetValue(model.current_path)
+            navigate(entry.path)
             load()
         elif open_editor:
             open_in_editor(entry.path, open_editor)
@@ -149,8 +154,7 @@ def show_remote_files(parent=None, model: WxRemoteDirectoryModel | None = None, 
         if action in {"open", "edit"} and open_editor and selected:
             entry = next((item for item in state["entries"] if item.path == selected[0]), None)
             if action == "open" and entry and entry.is_dir:
-                model.navigate(selected[0])
-                path.SetValue(model.current_path)
+                navigate(selected[0])
                 load()
             elif entry and not entry.is_dir:
                 open_in_editor(selected[0], open_editor)
@@ -244,6 +248,8 @@ def show_remote_files(parent=None, model: WxRemoteDirectoryModel | None = None, 
             if state["closed"] or state["busy"]:
                 return
             state["busy"] = True
+            origin_path = model.current_path
+            origin_generation = state["view_generation"]
         listing.Enable(False)
 
         def worker():
@@ -263,7 +269,8 @@ def show_remote_files(parent=None, model: WxRemoteDirectoryModel | None = None, 
                 wx.MessageBox(str(error), t("login.err_title"), wx.OK | wx.ICON_ERROR)
             else:
                 model.invalidate()
-                load()
+                if model.current_path == origin_path and state["view_generation"] == origin_generation:
+                    load()
 
         Thread(target=worker, daemon=True).start()
 
@@ -285,8 +292,7 @@ def show_remote_files(parent=None, model: WxRemoteDirectoryModel | None = None, 
             get_file_clipboard().clear()
             return
         if event.GetKeyCode() == wx.WXK_BACK:
-            model.navigate(str(PurePosixPath(model.current_path).parent))
-            path.SetValue(model.current_path)
+            navigate(str(PurePosixPath(model.current_path).parent))
             load()
             return
         actions = {wx.WXK_F2: "rename", wx.WXK_DELETE: "delete", wx.WXK_F5: "refresh"}
