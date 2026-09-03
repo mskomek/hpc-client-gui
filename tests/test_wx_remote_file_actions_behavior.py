@@ -81,6 +81,18 @@ def test_wx_remote_keyboard_copy_and_paste_use_shared_clipboard(wx_app):
     _pump(wx_app, lambda: ("copy", "/work/a.txt", "/work/dest/a.txt") in backend.calls)
 
 
+def test_wx_remote_ctrl_a_selects_all_rows(wx_app):
+    backend = MockRemoteFilesBackend()
+    backend.entries.update({"/work/folder": True})
+    frame = _browser(wx_app, backend, WxRemoteDirectoryModel("/work"))
+    listing = frame._wx_remote_controls["listing"]
+    event = wx.KeyEvent(wx.wxEVT_KEY_DOWN)
+    event.SetKeyCode(ord("A"))
+    event.SetControlDown(True)
+    listing.ProcessEvent(event)
+    assert all(listing.IsSelected(index) for index in range(listing.GetItemCount()))
+
+
 def test_wx_remote_copy_path_uses_system_clipboard_without_backend(wx_app):
     backend = MockRemoteFilesBackend()
     frame = _browser(wx_app, backend, WxRemoteDirectoryModel("/work"))
