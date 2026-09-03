@@ -30,7 +30,7 @@ def show_remote_files(parent=None, model: WxRemoteDirectoryModel | None = None, 
     root.Add(listing, 1, wx.EXPAND | wx.LEFT | wx.RIGHT, 6)
     root.Add(refresh, 0, wx.ALIGN_RIGHT | wx.ALL, 6)
     panel.SetSizer(root)
-    state = {"entries": [], "busy": False, "closed": False, "editor_request_id": 0, "view_generation": 0}
+    state = {"entries": [], "busy": False, "listing_busy": False, "closed": False, "editor_request_id": 0, "view_generation": 0, "listing_request_id": 0}
     lock = Lock()
     move_history = RemoteMoveHistory()
 
@@ -72,14 +72,24 @@ def show_remote_files(parent=None, model: WxRemoteDirectoryModel | None = None, 
                 path.SetValue(model.current_path)
                 return
         with lock:
-            if state["closed"] or state["busy"]:
+            if state["closed"]:
                 return
-            state["busy"] = True
+            state["listing_busy"] = True
+            state["listing_request_id"] += 1
+            request_id = state["listing_request_id"]
+            request_generation = state["view_generation"]
 
         def done(entries, error):
             with lock:
-                state["busy"] = False
-            if state["closed"]:
+                current = (
+                    not state["closed"]
+                    and request_id == state["listing_request_id"]
+                    and request_generation == state["view_generation"]
+                    and requested_path == model.current_path
+                )
+                if current:
+                    state["listing_busy"] = False
+            if not current:
                 return
             if error:
                 wx.MessageBox(str(error), t("login.err_title"), wx.OK | wx.ICON_ERROR)

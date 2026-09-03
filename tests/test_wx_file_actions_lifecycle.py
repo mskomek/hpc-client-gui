@@ -7,7 +7,7 @@ import pytest
 wx = pytest.importorskip("wx")
 
 from hpc_gui.wx_local_files import LocalBrowserModel, show_local_files
-from hpc_gui.wx_remote_files import WxRemoteDirectoryModel
+from hpc_gui.wx_remote_files import RemoteEntry, WxRemoteDirectoryModel
 from hpc_gui.wx_remote_files_view import show_remote_files
 from mock_hpc_files import MockRemoteFilesBackend
 
@@ -232,6 +232,33 @@ def test_wx_remote_old_mutation_completion_does_not_overwrite_real_backspace_nav
     release.set()
     _pump(wx_app, lambda: not frame._wx_remote_state["busy"])
     assert frame._wx_remote_model.current_path == "/"
+
+
+def test_wx_remote_stale_listing_does_not_overwrite_new_navigation(wx_app):
+    started = threading.Event()
+    release = threading.Event()
+
+    def loader(path):
+        if path == "/work":
+            started.set()
+            release.wait(2)
+            return (RemoteEntry("/work/old.txt"),)
+        return (RemoteEntry("/new/current.txt"),)
+
+    show_remote_files(model=WxRemoteDirectoryModel("/work"), loader=loader, operation=lambda *_args: None)
+    frame = [window for window in wx.GetTopLevelWindows() if hasattr(window, "_wx_remote_controls")][-1]
+    assert started.wait(2)
+    listing = frame._wx_remote_controls["listing"]
+    back = wx.KeyEvent(wx.wxEVT_KEY_DOWN)
+    back.SetKeyCode(wx.WXK_BACK)
+    listing.ProcessEvent(back)
+    _pump(wx_app, lambda: frame._wx_remote_model.current_path == "/" and listing.GetItemCount() == 1)
+    assert listing.GetItemText(0) == "current.txt"
+    release.set()
+    wx_app.ProcessPendingEvents()
+    wx.MilliSleep(20)
+    wx_app.ProcessPendingEvents()
+    assert listing.GetItemText(0) == "current.txt"
 
 
 class _Dialog:
