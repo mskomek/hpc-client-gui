@@ -162,6 +162,34 @@ def test_wx_local_old_mutation_completion_does_not_overwrite_navigation(wx_app, 
     assert frame._wx_local_model.current_path == destination.resolve()
 
 
+def test_wx_local_old_mutation_completion_does_not_overwrite_real_backspace_navigation(wx_app, tmp_path: Path, monkeypatch):
+    target = tmp_path / "remove.txt"
+    target.write_text("x", encoding="utf-8")
+    started = threading.Event()
+    release = threading.Event()
+    original = LocalBrowserModel.delete
+
+    def blocked_delete(model, paths):
+        started.set()
+        release.wait(2)
+        return original(model, paths)
+
+    monkeypatch.setattr(LocalBrowserModel, "delete", blocked_delete)
+    monkeypatch.setattr(wx, "MessageBox", lambda *_args, **_kwargs: wx.YES)
+    frame = _local(wx_app, tmp_path)
+    listing = frame._wx_local_controls["listing"]
+    listing.Select(0)
+    frame._wx_local_run_action("delete")
+    assert started.wait(2)
+    back = wx.KeyEvent(wx.wxEVT_KEY_DOWN)
+    back.SetKeyCode(wx.WXK_BACK)
+    listing.ProcessEvent(back)
+    assert frame._wx_local_model.current_path == tmp_path.parent.resolve()
+    release.set()
+    _pump(wx_app, lambda: not frame._wx_local_state["mutation_in_flight"])
+    assert frame._wx_local_model.current_path == tmp_path.parent.resolve()
+
+
 def test_wx_remote_old_mutation_completion_does_not_overwrite_navigation(wx_app, monkeypatch):
     backend = MockRemoteFilesBackend()
     started = threading.Event()
