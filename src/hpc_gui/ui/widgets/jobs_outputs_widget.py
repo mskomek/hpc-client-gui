@@ -337,7 +337,8 @@ class _OutputFollowerWidget(QWidget):
         if self._paused_for_minimize:
             if self._minimize_started_at is None:
                 self._minimize_started_at = time.monotonic()
-            self._live_timer.stop()
+            if self.session and self.session.get("connected") and (self.active_out or self.active_err):
+                self._live_timer.start()
             return
         if self._minimize_started_at is not None:
             paused_for = time.monotonic() - self._minimize_started_at
@@ -440,7 +441,7 @@ class _OutputFollowerWidget(QWidget):
         return True
 
     def _poll_live(self) -> None:
-        if self._tail_suspended or self._paused_for_minimize:
+        if self._tail_suspended:
             self._live_timer.stop()
             return
         if not self.session or not self.session.get("connected"):
@@ -485,7 +486,7 @@ class _OutputFollowerWidget(QWidget):
             return results
 
         def success(results) -> None:
-            if not isValid(self) or self._paused_for_minimize:
+            if not isValid(self):
                 return
             had_error = any(error for _, _, _, error in results)
             if had_error:
@@ -509,7 +510,7 @@ class _OutputFollowerWidget(QWidget):
                 if path != current_path:
                     continue
                 output = self.txt_out if slot == 0 else self.txt_err
-                follow_latest = self.cb_auto_scroll.isChecked()
+                follow_latest = self.cb_auto_scroll.isChecked() and not self._paused_for_minimize
                 if error:
                     kind_key = (
                         "jobs_outputs.output_kind"
@@ -890,6 +891,15 @@ class JobsOutputsWidget(QWidget):
             self.section_tabs.currentWidget() is self.outputs_tab,
         )
 
+    def is_outputs_refresh_visible(self) -> bool:
+        return bool(
+            self.session
+            and self.session.get("connected")
+            and self._page_active
+            and self.section_tabs.currentWidget() is self.outputs_tab
+            and (self.active_out or self.active_err)
+        )
+
     def _on_section_tab_changed(self, _index: int) -> None:
         self._sync_polling(immediate=True)
         self.polling_visibility_changed.emit()
@@ -914,8 +924,7 @@ class JobsOutputsWidget(QWidget):
 
         should_tail = bool(
             connected
-            and self.is_outputs_polling_visible()
-            and (self.active_out or self.active_err)
+            and self.is_outputs_refresh_visible()
         )
         if should_tail:
             self._apply_live_refresh_interval()
@@ -1719,7 +1728,7 @@ class JobsOutputsWidget(QWidget):
         if self._tail_suspended:
             self._live_timer.stop()
             return
-        if not self.is_outputs_polling_visible():
+        if not self.is_outputs_refresh_visible():
             self._live_timer.stop()
             return
         if not self.session or not self.session.get("connected"):
@@ -1771,7 +1780,7 @@ class JobsOutputsWidget(QWidget):
         def success(results) -> None:
             if not isValid(self):
                 return
-            if not self.is_outputs_polling_visible():
+            if not self.is_outputs_refresh_visible():
                 return
             had_error = any(error for _, _, _, error in results)
             if had_error:
@@ -1795,7 +1804,11 @@ class JobsOutputsWidget(QWidget):
                 if path != current_path:
                     continue
                 widget = self.txt_out if slot == 0 else self.txt_err
-                follow_latest = self._is_scrolled_to_bottom(widget)
+                follow_latest = (
+                    not self._tail_paused
+                    and not self._main_window_minimized
+                    and self._is_scrolled_to_bottom(widget)
+                )
                 if error:
                     kind_key = (
                         "jobs_outputs.output_kind"
