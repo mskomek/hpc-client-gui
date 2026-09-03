@@ -95,6 +95,39 @@ def test_wx_remote_copy_path_uses_system_clipboard_without_backend(wx_app):
     assert not any(call[0] in {"copy", "move"} for call in backend.calls)
 
 
+def test_wx_remote_keyboard_cut_and_undo_update_shared_clipboard(wx_app):
+    backend = MockRemoteFilesBackend()
+    frame = _browser(wx_app, backend, WxRemoteDirectoryModel("/work"))
+    listing = frame._wx_remote_controls["listing"]
+    listing.Select(0)
+    cut_event = wx.KeyEvent(wx.wxEVT_KEY_DOWN)
+    cut_event.SetKeyCode(ord("X"))
+    cut_event.SetControlDown(True)
+    listing.ProcessEvent(cut_event)
+    assert get_file_clipboard().get().op == "move"
+    undo_event = wx.KeyEvent(wx.wxEVT_KEY_DOWN)
+    undo_event.SetKeyCode(ord("Z"))
+    undo_event.SetControlDown(True)
+    listing.ProcessEvent(undo_event)
+    assert get_file_clipboard().get() is None
+
+
+def test_wx_remote_backspace_navigates_parent_and_f5_refreshes(wx_app):
+    backend = MockRemoteFilesBackend()
+    frame = _browser(wx_app, backend, WxRemoteDirectoryModel("/work"))
+    listing = frame._wx_remote_controls["listing"]
+    back_event = wx.KeyEvent(wx.wxEVT_KEY_DOWN)
+    back_event.SetKeyCode(wx.WXK_BACK)
+    listing.ProcessEvent(back_event)
+    assert frame._wx_remote_controls["path"].GetValue() == "/"
+    _pump(wx_app, lambda: listing.GetItemCount() >= 1)
+    calls = backend.list_calls
+    refresh_event = wx.KeyEvent(wx.wxEVT_KEY_DOWN)
+    refresh_event.SetKeyCode(wx.WXK_F5)
+    listing.ProcessEvent(refresh_event)
+    _pump(wx_app, lambda: backend.list_calls > calls)
+
+
 class _Dialog:
     def __init__(self, value):
         self.value = value
