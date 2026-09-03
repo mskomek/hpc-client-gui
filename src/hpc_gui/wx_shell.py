@@ -176,6 +176,16 @@ def _start_file_transfers(session_state, lifecycle, items, *, on_progress=None, 
     def wx_conflict_resolver(item):
         import wx
 
+        if session_state.get("conflict_policy") == "rename":
+            target = PurePosixPath(item.dst)
+            suffix = target.suffix
+            stem = target.name[: -len(suffix)] if suffix else target.name
+            for index in range(1, 10000):
+                candidate = target.with_name(f"{stem} ({index}){suffix}")
+                if not getattr(files, "exists", lambda _path: False)(str(candidate)):
+                    return ("rename", str(candidate))
+            return "cancel"
+
         decision = {"value": "cancel"}
         ready = Event()
 
