@@ -163,6 +163,8 @@ class TransferController:
                 if self._on_progress:
                     self._on_progress(item, int(done), int(total))
             self._run_item(item, progress)
+            if self._cancel.is_set():
+                return item, "cancelled"
             return item, None
         except TransferCancelled:
             return item, "cancelled"

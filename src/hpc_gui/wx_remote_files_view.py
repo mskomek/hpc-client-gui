@@ -8,6 +8,7 @@ from pathlib import PurePosixPath
 from hpc_gui.core.i18n import subscribe_language_change, t, unsubscribe_language_change
 from hpc_gui.services.file_context_actions import FILE_CONTEXT_LABEL_KEYS, context_selection, visible_actions
 from hpc_gui.services.file_clipboard import get_file_clipboard
+from hpc_gui.services.remote_move_history import RemoteMoveHistory
 from hpc_gui.wx_remote_files import WxRemoteDirectoryModel
 
 
@@ -31,6 +32,7 @@ def show_remote_files(parent=None, model: WxRemoteDirectoryModel | None = None, 
     panel.SetSizer(root)
     state = {"entries": [], "busy": False, "closed": False, "editor_request_id": 0, "view_generation": 0}
     lock = Lock()
+    move_history = RemoteMoveHistory()
 
     def safe_call_after(callback, *args):
         try:
@@ -146,6 +148,38 @@ def show_remote_files(parent=None, model: WxRemoteDirectoryModel | None = None, 
                 wx.TheClipboard.SetData(wx.TextDataObject("\r\n".join(selected)))
                 wx.TheClipboard.Close()
             return
+        if action == "undo":
+            record = move_history.pop_last()
+            if not record:
+                return
+            inverse = tuple((moved, original) for original, moved in record.moves)
+            def undo_done(error):
+                with lock:
+                    state["busy"] = False
+                if state["closed"]:
+                    return
+                listing.Enable(True)
+                if error:
+                    wx.MessageBox(str(error), t("login.err_title"), wx.OK | wx.ICON_ERROR)
+                else:
+                    model.invalidate()
+                    load()
+            def undo_operation():
+                try:
+                    for source, destination in inverse:
+                        operation("move", (source,), destination.rsplit("/", 1)[0] or "/")
+                    safe_call_after(undo_done, None)
+                except Exception as error:
+                    move_history.push(record)
+                    safe_call_after(undo_done, error)
+            with lock:
+                if state["closed"] or state["busy"]:
+                    move_history.push(record)
+                    return
+                state["busy"] = True
+            listing.Enable(False)
+            Thread(target=undo_operation, daemon=True).start()
+            return
         if action == "paste":
             clipboard = get_file_clipboard().get()
             if clipboard:
@@ -193,7 +227,7 @@ def show_remote_files(parent=None, model: WxRemoteDirectoryModel | None = None, 
         Thread(target=worker, daemon=True).start()
 
     def run_operation(action, selected, target_dir=None, *, from_paste=False):
-        if not operation or action in {"open", "edit", "edit_new_window"} or (not selected and action not in {"new_folder", "upload"}):
+        if not operation or action in {"open", "edit", "edit_new_window"} or (not selected and action not in {"new_folder", "upload", "paste"}):
             return
         if action == "delete" and wx.MessageBox(t("dirs.delete_confirm"), t("dirs.delete"), wx.YES_NO | wx.ICON_WARNING) != wx.YES:
             return
@@ -255,6 +289,12 @@ def show_remote_files(parent=None, model: WxRemoteDirectoryModel | None = None, 
         def worker():
             try:
                 operation(action, operation_paths, destination)
+                if action == "move":
+                    moved = tuple(
+                        (source, str(PurePosixPath(destination) / PurePosixPath(source).name))
+                        for source in operation_paths
+                    )
+                    move_history.record(moved)
                 safe_call_after(operation_done, None)
             except Exception as error:
                 safe_call_after(operation_done, error)
@@ -289,7 +329,7 @@ def show_remote_files(parent=None, model: WxRemoteDirectoryModel | None = None, 
             run_action(action, selected, model.current_path)
             return
         if event.ControlDown() and event.GetKeyCode() == ord("Z"):
-            get_file_clipboard().clear()
+            run_action("undo", selected, model.current_path)
             return
         if event.GetKeyCode() == wx.WXK_BACK:
             navigate(str(PurePosixPath(model.current_path).parent))

@@ -68,6 +68,10 @@ class MockRemoteFilesBackend:
     def download(self, source, destination):
         self._record("download", source, destination)
 
+    def exists(self, path):
+        with self._lock:
+            return path in self.entries
+
     def operation(self, action, paths, destination=""):
         for path in paths:
             if action == "rename":

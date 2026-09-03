@@ -166,7 +166,7 @@ def _get_editor_manager(session_state, parent, lifecycle, *, save_remote=None, o
     return manager
 
 
-def _start_file_transfers(session_state, lifecycle, items, *, on_progress=None):
+def _start_file_transfers(session_state, lifecycle, items, *, on_progress=None, conflict_resolver=None):
     """Queue file-view transfers through the shared transfer lifecycle."""
     session = session_state.get("session") or {}
     files = session.get("files")
@@ -182,10 +182,18 @@ def _start_file_transfers(session_state, lifecycle, items, *, on_progress=None):
             raise RuntimeError(f"unsupported transfer item: {item.op}")
         progress(1, 1)
 
-    controller = TransferSessionController(items, run_item, on_progress=on_progress)
-    controller.start()
+    controller = TransferSessionController(
+        items,
+        run_item,
+        conflict_check=getattr(files, "exists", None),
+        conflict_resolver=conflict_resolver or session_state.get("conflict_resolver"),
+        on_progress=on_progress,
+    )
+    if session_state.get("conflict_policy"):
+        controller.set_conflict_policy(session_state["conflict_policy"])
     sessions = session_state.setdefault("transfer_sessions", set())
     sessions.add(controller)
+    controller.start()
 
     def forget_when_done():
         controller.engine.wait()
