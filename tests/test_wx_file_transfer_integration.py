@@ -1,5 +1,6 @@
 from hpc_gui.services.transfer_controller import TransferItem
 from hpc_gui.wx_shell import _start_file_transfers
+import time
 
 
 class _Files:
@@ -29,3 +30,14 @@ def test_file_context_transfer_uses_transfer_session_boundary():
     assert controller.engine.wait(2)
     assert files.calls == [("upload", "iş sonuç.txt", "/work/iş sonuç.txt")]
     assert lifecycle.cleanups
+
+
+def test_wx_file_transfer_session_removed_after_success():
+    files = _Files()
+    state = {"session": {"files": files}}
+    controller = _start_file_transfers(state, _Lifecycle(), [TransferItem("upload", "a.txt", "/a.txt")])
+    assert controller.engine.wait(2)
+    deadline = time.monotonic() + 1
+    while time.monotonic() < deadline and state.get("transfer_sessions"):
+        time.sleep(0.01)
+    assert state["transfer_sessions"] == set()
