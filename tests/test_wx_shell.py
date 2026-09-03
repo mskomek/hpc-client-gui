@@ -22,7 +22,7 @@ def test_wx_shell_dispatches_core_views():
     assert "on_submit=local_submit" in source and "on_run=local_run" in source
     assert 'command_id == "NAV-EDITOR"' in source
     assert 'command_id == "NAV-JOBS"' in source
-    assert "show_jobs(parent, lifecycle=lifecycle)" in source
+    assert "show_jobs(" in source and "lifecycle=lifecycle" in source and "list_jobs=list_jobs" in source
     assert "show_connection(parent, load_profiles(), lifecycle=lifecycle, on_connected=connected)" in source
     assert "lifecycle.register_cleanup(ssh.close)" in source
     assert "save_remote=files.write_text" in source and "slurm.sbatch" in source
