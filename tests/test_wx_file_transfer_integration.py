@@ -290,3 +290,31 @@ def test_wx_file_transfer_opens_visible_progress_surface():
     parent.Destroy()
     app.ProcessPendingEvents()
     app.Destroy()
+
+
+def test_wx_file_transfer_cancel_button_cancels_controller():
+    wx = pytest.importorskip("wx")
+    app = wx.App(False)
+    parent = wx.Frame(None)
+    files = _BlockingFiles()
+    state = {"session": {"files": files}}
+    controller = _start_file_transfers(
+        state,
+        _Lifecycle(),
+        [TransferItem("upload", "a.txt", "/a.txt")],
+        parent=parent,
+    )
+    assert files.started.wait(2)
+    window = [item for item in wx.GetTopLevelWindows() if hasattr(item, "_wx_transfer_controls")][-1]
+    cancel = window._wx_transfer_controls["cancel"]
+    cancel.ProcessEvent(wx.CommandEvent(wx.wxEVT_BUTTON, cancel.GetId()))
+    files.release.set()
+    assert controller.engine.wait(2)
+    app.ProcessPendingEvents()
+    assert controller.engine.failed[0][1] == "cancelled"
+    assert not cancel.IsEnabled()
+    assert state["transfer_sessions"] == set()
+    window.Close(True)
+    parent.Destroy()
+    app.ProcessPendingEvents()
+    app.Destroy()
