@@ -213,7 +213,7 @@ def show_jobs(parent=None, model: WxJobsModel | None = None, *, list_jobs=None, 
     splitter.SetMinimumPaneSize(220)
     root.Add(splitter, 1, wx.EXPAND | wx.ALL, 8)
     panel.SetSizer(root)
-    state = {"items": [], "selected_job": "", "closed": False, "in_flight": False, "output_in_flight": False, "cancel_in_flight": False, "user_paused": False, "minimized": False}
+    state = {"items": [], "selected_job": "", "closed": False, "in_flight": False, "output_in_flight": False, "cancel_in_flight": False, "user_paused": False, "minimized": False, "follow_calls": 0}
     state_lock = Lock()
     timer = wx.Timer(frame)
 
@@ -296,6 +296,7 @@ def show_jobs(parent=None, model: WxJobsModel | None = None, *, list_jobs=None, 
             stdout.SetValue(clean_output(result))
             stderr.SetValue("")
         if follow.GetValue() and not state["user_paused"] and not state["minimized"]:
+            state["follow_calls"] += 1
             stdout.ShowPosition(stdout.GetLastPosition())
             stderr.ShowPosition(stderr.GetLastPosition())
 
