@@ -1,10 +1,13 @@
 import time
+import os
+import subprocess
 from pathlib import Path
 
 import pytest
 
 wx = pytest.importorskip("wx")
 
+from hpc_gui import wx_local_files
 from hpc_gui.wx_local_files import show_local_files
 from hpc_gui.core.i18n import load_language
 
@@ -112,3 +115,26 @@ class _Dialog:
 
     def Destroy(self):
         pass
+
+
+@pytest.mark.parametrize("is_dir", [False, True])
+def test_reveal_file_manager_windows_uses_parent_or_directory(monkeypatch, tmp_path: Path, is_dir):
+    target = tmp_path / ("folder" if is_dir else "file.txt")
+    target.mkdir() if is_dir else target.write_text("x", encoding="utf-8")
+    opened = []
+    monkeypatch.setattr(os, "startfile", opened.append, raising=False)
+    monkeypatch.setattr(wx_local_files.sys, "platform", "win32")
+    wx_local_files.reveal_in_file_manager(target)
+    assert opened == [str(target if is_dir else target.parent)]
+
+
+@pytest.mark.parametrize("is_dir", [False, True])
+def test_reveal_file_manager_macos_uses_finder_semantics(monkeypatch, tmp_path: Path, is_dir):
+    target = tmp_path / ("folder" if is_dir else "file.txt")
+    target.mkdir() if is_dir else target.write_text("x", encoding="utf-8")
+    calls = []
+    monkeypatch.delattr(os, "startfile", raising=False)
+    monkeypatch.setattr(wx_local_files.sys, "platform", "darwin")
+    monkeypatch.setattr(subprocess, "Popen", lambda args: calls.append(args))
+    wx_local_files.reveal_in_file_manager(target)
+    assert calls == [["open", str(target)] if is_dir else ["open", "-R", str(target)]]
