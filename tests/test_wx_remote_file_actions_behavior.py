@@ -168,6 +168,24 @@ def test_wx_remote_delete_failure_shows_error_and_recovers(wx_app, monkeypatch):
     assert frame._wx_remote_controls["listing"].IsEnabled()
 
 
+def test_wx_remote_move_preserves_multi_item_destinations(wx_app, monkeypatch):
+    backend = MockRemoteFilesBackend()
+    frame = _browser(wx_app, backend, WxRemoteDirectoryModel("/work"))
+    monkeypatch.setattr(wx, "TextEntryDialog", lambda *_args, **_kwargs: _Dialog("/archive"))
+    backend.entries["/archive"] = True
+    frame._wx_remote_run_action("move", ("/work/a.txt", "/work/b.txt"), "/work")
+    _pump(
+        wx_app,
+        lambda: not frame._wx_remote_state["busy"]
+        and ("move", "/work/a.txt", "/archive/a.txt") in backend.calls
+        and ("move", "/work/b.txt", "/archive/b.txt") in backend.calls,
+    )
+    assert "/archive/a.txt" in backend.entries
+    assert "/archive/b.txt" in backend.entries
+    assert "/work/a.txt" not in backend.entries
+    assert "/work/b.txt" not in backend.entries
+
+
 def test_wx_remote_keyboard_copy_and_paste_use_shared_clipboard(wx_app):
     backend = MockRemoteFilesBackend()
     backend.entries["/work/dest"] = True
