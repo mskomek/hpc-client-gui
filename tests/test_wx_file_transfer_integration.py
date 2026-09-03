@@ -134,6 +134,22 @@ def test_wx_file_transfer_session_removed_after_cancel():
     assert state["transfer_sessions"] == set()
 
 
+def test_wx_file_transfer_lifecycle_shutdown_cleans_active_session():
+    files = _BlockingFiles()
+    lifecycle = _Lifecycle()
+    state = {"session": {"files": files}}
+    controller = _start_file_transfers(state, lifecycle, [TransferItem("upload", "a.txt", "/a.txt")])
+    assert files.started.wait(2)
+    for cleanup in lifecycle.cleanups:
+        cleanup()
+    files.release.set()
+    assert controller.engine.wait(2)
+    deadline = time.monotonic() + 1
+    while time.monotonic() < deadline and state.get("transfer_sessions"):
+        time.sleep(0.01)
+    assert state["transfer_sessions"] == set()
+
+
 def test_wx_file_context_transfer_reaches_progress_callback():
     files = _Files()
     progress = []
