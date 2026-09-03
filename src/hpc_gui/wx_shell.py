@@ -104,15 +104,63 @@ def main() -> int:
     return 0
 
 
+def _editor_action_factory(session_state):
+    def callbacks(document):
+        session = session_state.get("session") or {}
+        files = session.get("files")
+        slurm = session.get("slurm")
+        ssh = session.get("ssh")
+
+        def save_remote(path, content):
+            if not files:
+                raise RuntimeError("Remote file service is unavailable")
+            files.write_text(path, content)
+
+        def submit(current):
+            if not current.path:
+                raise RuntimeError("Document path is required")
+            if current.is_local:
+                if not files or not slurm:
+                    raise RuntimeError("Upload or Slurm service is unavailable")
+                remote_path = str(PurePosixPath("~") / Path(current.path).name)
+                files.upload(current.path, remote_path)
+                slurm.sbatch(remote_path)
+            elif not slurm:
+                raise RuntimeError("Slurm service is unavailable")
+            else:
+                slurm.sbatch(current.path)
+
+        def run(current):
+            if not current.path:
+                raise RuntimeError("Document path is required")
+            if current.is_local:
+                if not files or not ssh:
+                    raise RuntimeError("Upload or SSH service is unavailable")
+                remote_path = str(PurePosixPath("~") / Path(current.path).name)
+                files.upload(current.path, remote_path)
+                ssh.send_shell_text(f"bash -- {shlex.quote(remote_path)}\n")
+            elif not ssh:
+                raise RuntimeError("SSH service is unavailable")
+            else:
+                ssh.send_shell_text(f"bash -- {shlex.quote(current.path)}\n")
+
+        return {
+            "save_remote": save_remote if files else None,
+            "on_submit": submit,
+            "on_run": run,
+        }
+
+    return callbacks
+
+
 def _get_editor_manager(session_state, parent, lifecycle, *, save_remote=None, on_submit=None, on_run=None):
     from hpc_gui.wx_editor_windows import WxEditorWindowManager
 
     manager = session_state.get("editor_manager")
     if manager is None:
-        manager = WxEditorWindowManager(parent, save_remote=save_remote, on_submit=on_submit, on_run=on_run, lifecycle=lifecycle)
+        action_factory = session_state.setdefault("editor_action_factory", _editor_action_factory(session_state))
+        manager = WxEditorWindowManager(parent, action_factory=action_factory, save_remote=save_remote, on_submit=on_submit, on_run=on_run, lifecycle=lifecycle)
         session_state["editor_manager"] = manager
-    else:
-        manager.rebind(save_remote=save_remote, on_submit=on_submit, on_run=on_run)
     return manager
 
 
@@ -128,15 +176,6 @@ def _dispatch(command_id: str, parent=None, lifecycle=None, session_state=None) 
         def connected(session):
             session_state["session"] = session
             ssh = session.get("ssh") if isinstance(session, dict) else None
-            files = session.get("files") if isinstance(session, dict) else None
-            slurm = session.get("slurm") if isinstance(session, dict) else None
-            manager = session_state.get("editor_manager")
-            if manager is not None:
-                manager.rebind(
-                    save_remote=files.write_text if files else None,
-                    on_submit=(lambda document: slurm.sbatch(document.path)) if slurm else None,
-                    on_run=(lambda document: ssh.send_shell_text(f"bash -- {shlex.quote(document.path)}\n")) if ssh else None,
-                )
             if ssh is not None and callable(getattr(ssh, "close", None)):
                 lifecycle.register_cleanup(ssh.close)
 
@@ -146,21 +185,7 @@ def _dispatch(command_id: str, parent=None, lifecycle=None, session_state=None) 
         session = (session_state or {}).get("session") or {}
         files = session.get("files")
 
-        def local_submit(document):
-            if not files or not session.get("slurm"):
-                return
-            remote_path = str(PurePosixPath("~") / Path(document.path).name)
-            files.upload(document.path, remote_path)
-            session["slurm"].sbatch(remote_path)
-
-        def local_run(document):
-            if not files or not session.get("ssh"):
-                return
-            remote_path = str(PurePosixPath("~") / Path(document.path).name)
-            files.upload(document.path, remote_path)
-            session["ssh"].send_shell_text(f"bash -- {shlex.quote(remote_path)}\n")
-
-        editor_manager = _get_editor_manager(session_state, parent, lifecycle, save_remote=files.write_text if files else None, on_submit=local_submit, on_run=local_run)
+        editor_manager = _get_editor_manager(session_state, parent, lifecycle)
 
         def open_local(path, new_window=False):
             request_id = None if new_window else editor_manager.begin_primary_request()
@@ -208,7 +233,6 @@ def _dispatch(command_id: str, parent=None, lifecycle=None, session_state=None) 
         session = (session_state or {}).get("session") or {}
         files = session.get("files")
         slurm = session.get("slurm")
-        ssh = session.get("ssh")
         def remote_operation(action, paths, destination=""):
             if action == "delete" and files:
                 for remote_path in paths:
@@ -249,14 +273,7 @@ def _dispatch(command_id: str, parent=None, lifecycle=None, session_state=None) 
         def editor_new_window(path, content=""):
             editor_manager.open_new_window(path, content, is_local=False)
 
-        editor_manager = _get_editor_manager(
-            session_state,
-            parent,
-            lifecycle,
-            save_remote=files.write_text if files else None,
-            on_submit=(lambda document: slurm.sbatch(document.path)) if slurm else None,
-            on_run=(lambda document: ssh.send_shell_text(f"bash -- {shlex.quote(document.path)}\n")) if ssh else None,
-        )
+        editor_manager = _get_editor_manager(session_state, parent, lifecycle)
         show_remote_files(
             parent,
             loader=files.iterdir_entries if files else None,
@@ -266,18 +283,7 @@ def _dispatch(command_id: str, parent=None, lifecycle=None, session_state=None) 
             open_editor_new_window=editor_new_window,
         )
     elif command_id == "NAV-EDITOR":
-        session = (session_state or {}).get("session") or {}
-        files = session.get("files")
-        slurm = session.get("slurm")
-        ssh = session.get("ssh")
-        _get_editor_manager(
-            session_state,
-            parent,
-            lifecycle,
-            save_remote=files.write_text if files else None,
-            on_submit=(lambda document: slurm.sbatch(document.path)) if slurm else None,
-            on_run=(lambda document: ssh.send_shell_text(f"bash -- {shlex.quote(document.path)}\n")) if ssh else None,
-        ).open_primary("", "", is_local=False)
+        _get_editor_manager(session_state, parent, lifecycle).open_primary("", "", is_local=False)
     elif command_id == "NAV-TERMINAL":
         from hpc_gui.wx_terminal import show_terminal
 

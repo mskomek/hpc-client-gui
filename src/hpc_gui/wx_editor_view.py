@@ -11,7 +11,7 @@ from hpc_gui.services.editor_controller import DocumentModel
 from hpc_gui.wx_editor import WxEditorModel
 
 
-def show_editor(parent=None, model: WxEditorModel | None = None, *, path: str = "", content: str = "", is_local=None, save_remote=None, on_submit=None, on_run=None, on_destroy=None):
+def show_editor(parent=None, model: WxEditorModel | None = None, *, path: str = "", content: str = "", is_local=None, save_remote=None, on_submit=None, on_run=None, action_factory=None, on_destroy=None):
     try:
         import wx
     except ImportError as exc:
@@ -50,6 +50,10 @@ def show_editor(parent=None, model: WxEditorModel | None = None, *, path: str = 
         if state["closed"] or state["in_flight"]:
             return
         active = model.controller.update_content(editor.GetValue())
+        operation_callbacks = action_factory(active) if action_factory else None
+        operation_save_remote = operation_callbacks["save_remote"] if operation_callbacks else save_remote
+        operation_submit = operation_callbacks["on_submit"] if operation_callbacks else on_submit
+        operation_run = operation_callbacks["on_run"] if operation_callbacks else on_run
         state["in_flight"] = True
         editor.Enable(False)
         for button in (save, submit, run):
@@ -61,15 +65,15 @@ def show_editor(parent=None, model: WxEditorModel | None = None, *, path: str = 
                 if snapshot.is_local and snapshot.path:
                     Path(snapshot.path).write_text(snapshot.content, encoding=snapshot.encoding)
                     saved = True
-                elif save_remote and snapshot.path:
-                    save_remote(snapshot.path, snapshot.content)
+                elif operation_save_remote and snapshot.path:
+                    operation_save_remote(snapshot.path, snapshot.content)
                     saved = True
                 if mode in {"submit", "run"} and not saved:
                     raise RuntimeError(t("editor.action_requires_save"))
-                if mode == "submit" and on_submit:
-                    on_submit(snapshot)
-                elif mode == "run" and on_run:
-                    on_run(snapshot)
+                if mode == "submit" and operation_submit:
+                    operation_submit(snapshot)
+                elif mode == "run" and operation_run:
+                    operation_run(snapshot)
                 wx.CallAfter(done, None, saved, on_done)
             except Exception as error:
                 wx.CallAfter(done, error, saved, None)

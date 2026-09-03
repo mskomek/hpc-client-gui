@@ -8,11 +8,12 @@ from hpc_gui.wx_editor_view import show_editor
 
 
 class WxEditorWindowManager:
-    def __init__(self, parent=None, *, save_remote=None, on_submit=None, on_run=None, lifecycle=None):
+    def __init__(self, parent=None, *, save_remote=None, on_submit=None, on_run=None, action_factory=None, lifecycle=None):
         self.parent = parent
         self.save_remote = save_remote
         self.on_submit = on_submit
         self.on_run = on_run
+        self.action_factory = action_factory
         self.lifecycle = lifecycle
         self.primary_frame = None
         self.primary_model = None
@@ -25,8 +26,10 @@ class WxEditorWindowManager:
     def _callbacks(self):
         return {"save_remote": self.save_remote, "on_submit": self.on_submit, "on_run": self.on_run}
 
-    def rebind(self, *, save_remote=None, on_submit=None, on_run=None):
+    def rebind(self, *, save_remote=None, on_submit=None, on_run=None, action_factory=None):
         self.save_remote, self.on_submit, self.on_run = save_remote, on_submit, on_run
+        if action_factory is not None:
+            self.action_factory = action_factory
         for frame in (self.primary_frame, *self.standalone_frames):
             if frame and not frame.IsBeingDeleted():
                 frame._wx_editor_rebind_callbacks(save_remote, on_submit, on_run)
@@ -52,7 +55,7 @@ class WxEditorWindowManager:
         self._primary_request_generation = request_id
         if frame is None or frame.IsBeingDeleted():
             model = WxEditorModel()
-            frame = show_editor(self.parent, model=model, path=path, content=content, is_local=is_local, on_destroy=self._forget, **self._callbacks())
+            frame = show_editor(self.parent, model=model, path=path, content=content, is_local=is_local, on_destroy=self._forget, action_factory=self.action_factory, **self._callbacks())
             self.primary_frame, self.primary_model = frame, model
             return frame
         active = self.primary_model.controller.active
@@ -67,7 +70,8 @@ class WxEditorWindowManager:
             if choice == wx.CANCEL:
                 return frame
             if choice == wx.YES:
-                if not (active.is_local and active.path) and not self.save_remote:
+                callbacks = self.action_factory(active) if self.action_factory else self._callbacks()
+                if not (active.is_local and active.path) and not callbacks["save_remote"]:
                     frame._wx_editor_controls["status"].SetLabel(t("editor.action_requires_save"))
                     return frame
                 self._pending_primary_request = request
@@ -89,7 +93,7 @@ class WxEditorWindowManager:
 
     def open_new_window(self, path, content="", *, is_local=False):
         model = WxEditorModel()
-        frame = show_editor(self.parent, model=model, path=path, content=content, is_local=is_local, on_destroy=self._forget, **self._callbacks())
+        frame = show_editor(self.parent, model=model, path=path, content=content, is_local=is_local, on_destroy=self._forget, action_factory=self.action_factory, **self._callbacks())
         self.standalone_frames.add(frame)
         return frame
 
