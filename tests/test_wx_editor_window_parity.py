@@ -1,3 +1,4 @@
+import threading
 import time
 
 import pytest
@@ -5,6 +6,7 @@ import pytest
 wx = pytest.importorskip("wx")
 
 from hpc_gui.wx_editor_windows import WxEditorWindowManager
+from hpc_gui.wx_shell import _get_editor_manager
 
 
 def _pump(app, predicate, timeout=2):
@@ -172,3 +174,40 @@ def test_wx_editor_window_manager_repeated_open_close_does_not_leak_frames(wx_ap
         _close(standalone, wx_app)
         _close(primary, wx_app)
     assert not [window for window in wx.GetTopLevelWindows() if window and window.GetTitle().endswith(".sh")]
+
+
+def test_wx_primary_editor_pending_save_replace_cannot_overwrite_newer_edit(wx_app, monkeypatch):
+    started, release = threading.Event(), threading.Event()
+
+    def save_remote(_path, _content):
+        started.set()
+        release.wait(2)
+
+    manager = WxEditorWindowManager(save_remote=save_remote)
+    primary = manager.open_primary("/remote/A.sh", "A", is_local=False)
+    primary._wx_editor_controls["editor"].SetValue("A dirty")
+    monkeypatch.setattr(wx, "MessageBox", lambda *_args, **_kwargs: wx.YES)
+    manager.open_primary("/remote/B.sh", "B", is_local=False)
+    assert started.wait(1)
+    manager.open_primary("/remote/C.sh", "C", is_local=False)
+    release.set()
+    _pump(wx_app, lambda: primary._wx_editor_model.controller.active.path == "/remote/C.sh")
+    assert primary._wx_editor_controls["editor"].GetValue() == "C"
+    _close(primary, wx_app)
+
+
+def test_wx_shell_reuses_one_editor_manager_for_local_and_remote_views():
+    class Lifecycle:
+        def __init__(self):
+            self.cleanups = []
+
+        def register_cleanup(self, callback):
+            self.cleanups.append(callback)
+
+    state = {}
+    lifecycle = Lifecycle()
+    first = _get_editor_manager(state, None, lifecycle)
+    second = _get_editor_manager(state, None, lifecycle, save_remote=lambda *_args: None)
+    assert second is first
+    assert len(lifecycle.cleanups) == 1
+    first.close_all()

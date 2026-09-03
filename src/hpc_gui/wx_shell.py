@@ -104,6 +104,18 @@ def main() -> int:
     return 0
 
 
+def _get_editor_manager(session_state, parent, lifecycle, *, save_remote=None, on_submit=None, on_run=None):
+    from hpc_gui.wx_editor_windows import WxEditorWindowManager
+
+    manager = session_state.get("editor_manager")
+    if manager is None:
+        manager = WxEditorWindowManager(parent, save_remote=save_remote, on_submit=on_submit, on_run=on_run, lifecycle=lifecycle)
+        session_state["editor_manager"] = manager
+    else:
+        manager.rebind(save_remote=save_remote, on_submit=on_submit, on_run=on_run)
+    return manager
+
+
 def _dispatch(command_id: str, parent=None, lifecycle=None, session_state=None) -> None:
     if command_id in {"APP-HELP", "APP-COMMAND-PALETTE"}:
         from hpc_gui.wx_help import show_help
@@ -116,13 +128,21 @@ def _dispatch(command_id: str, parent=None, lifecycle=None, session_state=None) 
         def connected(session):
             session_state["session"] = session
             ssh = session.get("ssh") if isinstance(session, dict) else None
+            files = session.get("files") if isinstance(session, dict) else None
+            slurm = session.get("slurm") if isinstance(session, dict) else None
+            manager = session_state.get("editor_manager")
+            if manager is not None:
+                manager.rebind(
+                    save_remote=files.write_text if files else None,
+                    on_submit=(lambda document: slurm.sbatch(document.path)) if slurm else None,
+                    on_run=(lambda document: ssh.send_shell_text(f"bash -- {shlex.quote(document.path)}\n")) if ssh else None,
+                )
             if ssh is not None and callable(getattr(ssh, "close", None)):
                 lifecycle.register_cleanup(ssh.close)
 
         show_connection(parent, load_profiles(), lifecycle=lifecycle, on_connected=connected)
     elif command_id == "NAV-FILES":
         from hpc_gui.wx_local_files import show_local_files
-        from hpc_gui.wx_editor_windows import WxEditorWindowManager
         session = (session_state or {}).get("session") or {}
         files = session.get("files")
 
@@ -140,14 +160,18 @@ def _dispatch(command_id: str, parent=None, lifecycle=None, session_state=None) 
             files.upload(document.path, remote_path)
             session["ssh"].send_shell_text(f"bash -- {shlex.quote(remote_path)}\n")
 
-        editor_manager = WxEditorWindowManager(parent, save_remote=None, on_submit=local_submit, on_run=local_run, lifecycle=lifecycle)
+        editor_manager = _get_editor_manager(session_state, parent, lifecycle, save_remote=files.write_text if files else None, on_submit=local_submit, on_run=local_run)
 
         def open_local(path, new_window=False):
+            request_id = None if new_window else editor_manager.begin_primary_request()
             def worker():
                 try:
                     content = Path(path).read_text(encoding="utf-8")
                     opener = editor_manager.open_new_window if new_window else editor_manager.open_primary
-                    wx.CallAfter(opener, path, content, is_local=True)
+                    if new_window:
+                        wx.CallAfter(opener, path, content, is_local=True)
+                    else:
+                        wx.CallAfter(opener, path, content, is_local=True, request_id=request_id)
                 except Exception as error:
                     wx.CallAfter(wx.MessageBox, str(error), t("login.err_title"), wx.OK | wx.ICON_ERROR)
 
@@ -179,7 +203,6 @@ def _dispatch(command_id: str, parent=None, lifecycle=None, session_state=None) 
 
         show_local_files(parent, open_editor=lambda path: open_local(path), open_editor_new_window=lambda path: open_local(path, True), upload=upload_local)
     elif command_id == "NAV-DIRECTORIES":
-        from hpc_gui.wx_editor_windows import WxEditorWindowManager
         from hpc_gui.wx_remote_files_view import show_remote_files
 
         session = (session_state or {}).get("session") or {}
@@ -218,15 +241,21 @@ def _dispatch(command_id: str, parent=None, lifecycle=None, session_state=None) 
 
         editor._wx_request_aware = True
 
+        def editor_request_started():
+            return editor_manager.begin_primary_request()
+
+        editor._wx_request_started = editor_request_started
+
         def editor_new_window(path, content=""):
             editor_manager.open_new_window(path, content, is_local=False)
 
-        editor_manager = WxEditorWindowManager(
+        editor_manager = _get_editor_manager(
+            session_state,
             parent,
+            lifecycle,
             save_remote=files.write_text if files else None,
             on_submit=(lambda document: slurm.sbatch(document.path)) if slurm else None,
             on_run=(lambda document: ssh.send_shell_text(f"bash -- {shlex.quote(document.path)}\n")) if ssh else None,
-            lifecycle=lifecycle,
         )
         show_remote_files(
             parent,
@@ -237,18 +266,18 @@ def _dispatch(command_id: str, parent=None, lifecycle=None, session_state=None) 
             open_editor_new_window=editor_new_window,
         )
     elif command_id == "NAV-EDITOR":
-        from hpc_gui.wx_editor_view import show_editor
-
         session = (session_state or {}).get("session") or {}
         files = session.get("files")
         slurm = session.get("slurm")
         ssh = session.get("ssh")
-        show_editor(
+        _get_editor_manager(
+            session_state,
             parent,
+            lifecycle,
             save_remote=files.write_text if files else None,
             on_submit=(lambda document: slurm.sbatch(document.path)) if slurm else None,
             on_run=(lambda document: ssh.send_shell_text(f"bash -- {shlex.quote(document.path)}\n")) if ssh else None,
-        )
+        ).open_primary("", "", is_local=False)
     elif command_id == "NAV-TERMINAL":
         from hpc_gui.wx_terminal import show_terminal
 
