@@ -81,6 +81,21 @@ def test_wx_remote_keyboard_copy_and_paste_use_shared_clipboard(wx_app):
     _pump(wx_app, lambda: ("copy", "/work/a.txt", "/work/dest/a.txt") in backend.calls)
 
 
+def test_wx_remote_multi_item_paste_preserves_all_destinations(wx_app):
+    backend = MockRemoteFilesBackend()
+    backend.entries["/work/dest"] = True
+    frame = _browser(wx_app, backend, WxRemoteDirectoryModel("/work"))
+    get_file_clipboard().set("copy", ["/work/a.txt", "/work/b.txt"])
+    frame._wx_remote_run_action("paste", (), "/work/dest")
+    _pump(
+        wx_app,
+        lambda: not frame._wx_remote_state["busy"]
+        and ("copy", "/work/a.txt", "/work/dest/a.txt") in backend.calls
+        and ("copy", "/work/b.txt", "/work/dest/b.txt") in backend.calls,
+    )
+    assert len([call for call in backend.calls if call[0] == "copy"]) == 2
+
+
 def test_wx_remote_ctrl_a_selects_all_rows(wx_app):
     backend = MockRemoteFilesBackend()
     backend.entries.update({"/work/folder": True})
