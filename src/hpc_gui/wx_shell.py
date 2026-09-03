@@ -117,6 +117,8 @@ def _dispatch(command_id: str, parent=None, lifecycle=None, session_state=None) 
     elif command_id == "NAV-FILES":
         from hpc_gui.wx_local_files import show_local_files
         from hpc_gui.wx_editor_view import show_editor
+        session = (session_state or {}).get("session") or {}
+        files = session.get("files")
 
         def open_local(path, new_window=False):
             def worker():
@@ -130,7 +132,29 @@ def _dispatch(command_id: str, parent=None, lifecycle=None, session_state=None) 
 
             Thread(target=worker, daemon=True).start()
 
-        show_local_files(parent, open_editor=lambda path: open_local(path), open_editor_new_window=lambda path: open_local(path, True))
+        def upload_local(paths):
+            if not files:
+                return
+            import wx
+
+            dialog = wx.TextEntryDialog(parent, t("dirs.destination"), t("dirs.destination"), "~")
+            try:
+                if dialog.ShowModal() != wx.ID_OK:
+                    return
+                remote_dir = PurePosixPath(dialog.GetValue().strip() or "~")
+            finally:
+                dialog.Destroy()
+
+            def worker():
+                try:
+                    for local_path in paths:
+                        files.upload(local_path, str(remote_dir / Path(local_path).name))
+                except Exception as error:
+                    wx.CallAfter(wx.MessageBox, str(error), t("login.err_title"), wx.OK | wx.ICON_ERROR)
+
+            Thread(target=worker, daemon=True).start()
+
+        show_local_files(parent, open_editor=lambda path: open_local(path), open_editor_new_window=lambda path: open_local(path, True), upload=upload_local)
     elif command_id == "NAV-DIRECTORIES":
         from hpc_gui.wx_editor_view import show_editor
         from hpc_gui.wx_remote_files_view import show_remote_files
