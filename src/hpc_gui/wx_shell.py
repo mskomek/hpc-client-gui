@@ -183,7 +183,14 @@ def _start_file_transfers(session_state, lifecycle, items):
 
     controller = TransferSessionController(items, run_item)
     controller.start()
-    session_state.setdefault("transfer_sessions", set()).add(controller)
+    sessions = session_state.setdefault("transfer_sessions", set())
+    sessions.add(controller)
+
+    def forget_when_done():
+        controller.engine.wait()
+        sessions.discard(controller)
+
+    Thread(target=forget_when_done, daemon=True).start()
     if lifecycle is not None:
         lifecycle.register_cleanup(controller.cancel)
     return controller
