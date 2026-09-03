@@ -42,6 +42,20 @@ class WxHelpModel:
             self.current_topic_id = result.id
         elif result.kind == "static":
             self.current_topic_id = "help.library.truba" if "TRUBA" in result.id else "help.library.generic" if "GENERIC" in result.id else self.current_topic_id
+        elif result.kind in {"shortcut", "gesture", "interaction"}:
+            if result.kind == "gesture":
+                self.current_topic_id = "help.mouse-gestures"
+                return self.page()
+            if result.kind == "shortcut":
+                self.current_topic_id = "help.keyboard-shortcuts"
+                return self.page()
+            topic_by_context = {
+                "editor": "help.editor",
+                "remote_files": "help.files-transfers",
+                "terminal": "help.terminal",
+                "files": "help.files-transfers",
+            }
+            self.current_topic_id = topic_by_context.get(result.context, self.current_topic_id)
         return self.page()
 
     def palette_search(self, query: str = ""):

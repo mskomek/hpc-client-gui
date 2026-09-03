@@ -39,3 +39,16 @@ def test_help_topic_survives_language_switch_and_titles_refresh():
     assert model.current_topic_id == "help.keyboard-shortcuts"
     assert "Klavye Kısayolları" in model.page()
     set_language("en")
+
+
+def test_help_search_result_navigates_to_shared_topic():
+    load_language("en")
+    model = WxHelpModel("windows")
+    result = model.search_help("middle click")[0]
+    assert result.kind == "gesture"
+    model.navigate_result(result)
+    assert model.current_topic_id == "help.mouse-gestures"
+
+    result = model.search_help("Ctrl+Z")[0]
+    model.navigate_result(result)
+    assert model.current_topic_id in {"help.keyboard-shortcuts", "help.editor", "help.files-transfers", "help.terminal"}
