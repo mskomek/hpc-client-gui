@@ -125,6 +125,8 @@ class LocalBrowserModel:
         for source in self.clipboard:
             if not source.exists():
                 raise FileNotFoundError(str(source))
+            if source.is_dir() and (self.current_path == source or source in self.current_path.parents):
+                raise ValueError("cannot paste a directory into itself")
             target = self.current_path / source.name
             if target.exists() or target == source:
                 raise FileExistsError(str(target))

@@ -51,6 +51,18 @@ def test_local_clipboard_copy_and_move_paste(tmp_path: Path):
     model.copy([moved], move=True)
     assert model.paste() == (target_dir / moved.name,) and not moved.exists()
 
+    folder = tmp_path / "folder"
+    child = folder / "child"
+    child.mkdir(parents=True)
+    model = LocalBrowserModel(child)
+    model.copy([folder])
+    try:
+        model.paste()
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("directory paste into its descendant must be rejected")
+
 
 def test_local_browser_model_has_no_toolkit_import():
     source = open("src/hpc_gui/wx_local_files.py", encoding="utf-8").read()
