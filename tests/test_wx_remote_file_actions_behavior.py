@@ -7,6 +7,7 @@ wx = pytest.importorskip("wx")
 
 from mock_hpc_files import MockRemoteFilesBackend
 from hpc_gui.services.file_clipboard import get_file_clipboard
+from hpc_gui.wx_remote_files import WxRemoteDirectoryModel
 from hpc_gui.wx_remote_files_view import show_remote_files
 
 
@@ -65,19 +66,22 @@ def test_remote_new_folder_uses_clicked_directory_target(wx_app, monkeypatch):
 
 def test_wx_remote_keyboard_copy_and_paste_use_shared_clipboard(wx_app):
     backend = MockRemoteFilesBackend()
-    frame = _browser(wx_app, backend)
+    backend.entries["/work/dest"] = True
+    frame = _browser(wx_app, backend, WxRemoteDirectoryModel("/work"))
     listing = frame._wx_remote_controls["listing"]
     listing.Select(0)
     copy_event = wx.KeyEvent(wx.wxEVT_KEY_DOWN)
     copy_event.SetKeyCode(ord("C"))
     copy_event.SetControlDown(True)
     listing.ProcessEvent(copy_event)
-    assert get_file_clipboard().get().paths == ["/work"]
+    assert get_file_clipboard().get().paths == ["/work/a.txt"]
+    frame._wx_remote_run_action("paste", (), "/work/dest")
+    _pump(wx_app, lambda: ("copy", "/work/a.txt", "/work/dest/a.txt") in backend.calls)
 
 
 def test_wx_remote_copy_path_uses_system_clipboard_without_backend(wx_app):
     backend = MockRemoteFilesBackend()
-    frame = _browser(wx_app, backend)
+    frame = _browser(wx_app, backend, WxRemoteDirectoryModel("/work"))
     listing = frame._wx_remote_controls["listing"]
     listing.Select(0)
     frame._wx_remote_run_action("copy_path", ("/work",), "/")
