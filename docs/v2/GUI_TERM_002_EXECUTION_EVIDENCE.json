@@ -1,0 +1,19 @@
+{
+  "commit": "4818c944b752c47dac8ed68c18fb9fe6cfe076b4",
+  "branch": "develop",
+  "platform": "Windows",
+  "python": "3.12.4",
+  "wxpython": "4.3.1 msw (Phoenix)",
+  "commands": {
+    "focused": {"exit_code": 0, "passed": 2, "failed": 0, "skipped": 0, "duration_seconds": 1.40},
+    "related_wx": {"exit_code": 0, "passed": 19, "failed": 0, "skipped": 0, "duration_seconds": 2.46},
+    "ruff": {"exit_code": 0},
+    "diff_check": {"exit_code": 0}
+  },
+  "flows": {
+    "local_file_to_terminal": "PROVEN",
+    "editor_run_to_terminal": "PROVEN",
+    "remote_file_to_terminal": "IMPLEMENTED_NOT_SEPARATELY_EXECUTED"
+  },
+  "scope_limitation": "Real-wx GUI execution evidence was measured on Windows only."
+}

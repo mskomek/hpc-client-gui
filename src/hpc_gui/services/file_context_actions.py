@@ -45,12 +45,12 @@ class FileContextSelection:
 
 
 LOCAL_ACTIONS = (
-    "open", "open_with", "edit", "edit_new_window", "upload", "rename",
+    "open", "open_with", "edit", "edit_new_window", "run_shell", "upload", "rename",
     "delete", "copy", "cut", "paste", "copy_path", "refresh", "new_tab",
     "new_folder",
 )
 REMOTE_ACTIONS = (
-    "open", "edit", "edit_new_window", "download", "upload", "rename",
+    "open", "edit", "edit_new_window", "run_shell", "download", "upload", "rename",
     "delete", "copy", "move", "paste", "copy_path", "refresh", "new_folder",
     "new_tab",
 )
@@ -75,6 +75,8 @@ def _eligible(selection: FileContextSelection, remote: bool) -> frozenset[str]:
         actions.update({"open", "upload", "new_folder", "new_tab"})
     else:
         actions.update({"upload"})
+    if selection.one_file and selection.effective_paths[0].lower().endswith((".sh", ".bash", ".slurm", ".sbatch")):
+        actions.add("run_shell")
     return frozenset(actions)
 
 
@@ -107,6 +109,7 @@ FILE_CONTEXT_LABEL_KEYS = {
     "rename": "dirs.rename", "delete": "dirs.delete", "copy": "dirs.copy", "cut": "dirs.move",
     "move": "dirs.move", "paste": "dirs.paste", "copy_path": "dirs.copy_path", "refresh": "dirs.refresh",
     "new_tab": "dirs.new_tab", "new_folder": "dirs.new_folder",
+    "run_shell": "dirs.run_shell_terminal",
 }
 
 
