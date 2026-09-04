@@ -159,11 +159,11 @@
     "save_changes": "Değişiklikleri kaydet",
     "dont_save": "Kaydetme",
     "unsaved_changes": "Bu belgede kaydedilmemiş değişiklikler var.",
-    "and": "ve"
-    ,"command_palette": "Komut Paleti"
-    ,"test_cluster": "Küme testi"
-    ,"new_slurm_script": "Yeni Slurm betiği"
-    ,"ansys_linter": "ANSYS Linter"
+    "and": "ve",
+    "command_palette": "Komut Paleti",
+    "test_cluster": "Küme testi",
+    "new_slurm_script": "Yeni Slurm betiği",
+    "ansys_linter": "ANSYS Linter"
   },
   "placeholders": {
     "host": "Sunucu adı veya IP",
@@ -196,7 +196,8 @@
     "plugins": "Eklentiler",
     "ansys_lint": "ANSYS Journal Denetimi",
     "no_supported_remote_lint_files": "Bu uzak klasörde denetlenebilecek desteklenen dosya bulunamadı.",
-    "send_to_plugin": "Eklentiye gönder"
+    "send_to_plugin": "Eklentiye gönder",
+    "auto_scroll": "Otomatik kaydır"
   },
   "editor": {
     "title": "Editör",

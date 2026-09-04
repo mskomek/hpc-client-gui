@@ -21,22 +21,22 @@ def test_wx_shell_uses_shared_commands_and_responsive_start_size():
 def test_wx_shell_dispatches_core_views():
     source = Path("src/hpc_gui/wx_shell.py").read_text(encoding="utf-8")
     assert 'command_id == "NAV-FILES"' in source
-    assert "open_editor_new_window=lambda path: open_local(path, True)" in source
-    assert "Path(path).read_text" in source and "editor_manager.open_primary" in source
-    assert "upload=upload_local" in source and "_start_file_transfers" in source
+    assert '"open_editor_new_window": lambda path: open_local(path, True)' in source
+    assert "Path(path).read_text" in source and "manager.open_primary" in source
+    assert '"upload": upload_local' in source and "_start_file_transfers" in source
     assert "_editor_action_factory" in source and "current.is_local" in source
     assert 'command_id == "NAV-EDITOR"' in source
     assert 'command_id == "NAV-JOBS"' in source
-    assert "show_jobs(" in source and "lifecycle=lifecycle" in source and "list_jobs=list_jobs" in source
-    assert "show_connection(parent, load_profiles(), lifecycle=lifecycle, on_connected=connected)" in source
+    assert "show_jobs(" in source and "lifecycle=lifecycle" in source and '"list_jobs": list_jobs' in source
+    assert "show_connection(parent, **_conn)" in source
     assert "lifecycle.register_cleanup(ssh.close)" in source
     assert "def save_remote(path, content)" in source and "files.write_text(path, content)" in source
     assert "send_shell_text" in source
     assert "slurm.squeue" in source and "slurm.scontrol_show_job" in source
-    assert "files.read_text" in source and "cancel=slurm.scancel" in source
+    assert "files.read_text" in source and "return slurm.scancel(job_id)" in source
     assert 'command_id == "NAV-DIRECTORIES"' in source
-    assert "loader=files.iterdir_entries" in source and "read_text=files.read_text" in source
-    assert "operation=remote_operation" in source and "files.remove(remote_path, recursive=True)" in source
+    assert "loader=files.iterdir_entries" in source and '"read_text": read_text' in source
+    assert '"operation": remote_operation' in source and "files.remove(remote_path, recursive=True)" in source
     assert "files.rename(paths[0], destination)" in source
     assert "files.copy if action == \"copy\" else files.move" in source
     assert "TransferItem(\"download\", remote_path" in source and "_start_file_transfers" in source

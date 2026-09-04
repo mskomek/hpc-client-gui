@@ -70,7 +70,20 @@ def test_wx_shell_exposes_navigation_tabs_and_terminal(shell_i18n):
     controls = frame._wx_shell_controls
     notebook = controls["notebook"]
     assert notebook.GetPageCount() == 5
+    # Qt reference order (main_window.py): Login, Jobs, Directories, FTP, Editor, Logs.
+    # Directories and Logs have no wx view yet; Terminal is an accepted wx-only tab.
     assert [notebook.GetPageText(index) for index in range(5)] == [
-        "Files", "Directories", "Script Editor", "Terminal", "Jobs & Outputs"
+        "Connection", "Jobs & Outputs", "Files", "Script Editor", "Terminal"
     ]
     assert controls["pages"]["NAV-TERMINAL"]["output"].IsEnabled()
+    # GUI-WORKSPACE-001: no primary page may be a bare launcher button.
+    import wx
+
+    for index in range(5):
+        page = notebook.GetPage(index)
+        descendants = list(page.GetChildren())
+        for child in tuple(descendants):
+            descendants.extend(child.GetChildren())
+        buttons = [c for c in descendants if isinstance(c, wx.Button)]
+        assert descendants, f"page {index} has no controls"
+        assert descendants != buttons, f"page {index} is a launcher-only page"
