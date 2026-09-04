@@ -9,9 +9,10 @@ from hpc_gui.core.i18n import subscribe_language_change, t, unsubscribe_language
 from hpc_gui.services.editor_controller import EditorCommandService
 from hpc_gui.services.editor_controller import DocumentModel
 from hpc_gui.wx_editor import WxEditorModel
+from hpc_gui.wx_host import make_host
 
 
-def show_editor(parent=None, model: WxEditorModel | None = None, *, path: str = "", content: str = "", is_local=None, save_remote=None, on_submit=None, on_run=None, action_factory=None, on_destroy=None):
+def _build_editor(parent, model: WxEditorModel | None, *, path: str, content: str, is_local, save_remote, on_submit, on_run, action_factory, on_destroy, embedded):
     try:
         import wx
     except ImportError as exc:
@@ -19,8 +20,8 @@ def show_editor(parent=None, model: WxEditorModel | None = None, *, path: str = 
     model = model or WxEditorModel()
     if model.controller.active is None:
         model.open(path, content, is_local=bool(path and Path(path).exists()) if is_local is None else is_local)
-    frame = wx.Frame(parent, title=EditorCommandService.suggested_filename(path or "untitled.sh"), size=(900, 650))
-    panel = wx.Panel(frame)
+    host, finish = make_host(parent, title=EditorCommandService.suggested_filename(path or "untitled.sh"), size=(900, 650), embedded=embedded)
+    panel = wx.Panel(host)
     root = wx.BoxSizer(wx.VERTICAL)
     editor = wx.TextCtrl(panel, style=wx.TE_MULTILINE | wx.TE_RICH2 | wx.HSCROLL)
     editor.SetValue(model.controller.active.content if model.controller.active else content)
@@ -40,7 +41,7 @@ def show_editor(parent=None, model: WxEditorModel | None = None, *, path: str = 
     def notify_destroy():
         if on_destroy is not None and not state["destroy_notified"]:
             state["destroy_notified"] = True
-            on_destroy(frame)
+            on_destroy(host)
 
     def save_document(mode="save", on_done=None):
         if state["closed"] or state["in_flight"]:
@@ -120,7 +121,7 @@ def show_editor(parent=None, model: WxEditorModel | None = None, *, path: str = 
                     state["closed"] = True
                     unsubscribe_language_change(refresh_labels)
                     notify_destroy()
-                    frame.Destroy()
+                    host.Destroy()
 
                 save_document(on_done=destroy_after_save)
                 return
@@ -142,27 +143,36 @@ def show_editor(parent=None, model: WxEditorModel | None = None, *, path: str = 
     def load_document(new_path, new_content, *, is_local=False):
         model.controller.open(DocumentModel(new_path, new_content, new_content, is_local, suggested_filename=EditorCommandService.suggested_filename(new_path)))
         editor.SetValue(new_content)
-        frame.SetTitle(EditorCommandService.suggested_filename(new_path or "untitled.sh"))
+        host.set_host_title(EditorCommandService.suggested_filename(new_path or "untitled.sh"))
 
     def save_for_replacement(callback):
         save_document(on_done=callback)
 
     subscribe_language_change(refresh_labels)
-    frame.Bind(wx.EVT_CLOSE, close)
+    host.bind_host_close(close)
     if on_destroy is not None:
         def destroyed(event):
             unsubscribe_language_change(refresh_labels)
             notify_destroy()
             event.Skip()
 
-        frame.Bind(wx.EVT_WINDOW_DESTROY, destroyed)
-    frame._wx_editor_controls = {"editor": editor, "save": save, "submit": submit, "run": run, "status": status}
-    frame._wx_editor_state = state
-    frame._wx_editor_model = model
-    frame._wx_editor_load_document = load_document
-    frame._wx_editor_save_for_replacement = save_for_replacement
-    frame.Show()
-    return frame
+        host.Bind(wx.EVT_WINDOW_DESTROY, destroyed)
+    host._wx_editor_controls = {"editor": editor, "save": save, "submit": submit, "run": run, "status": status}
+    host._wx_editor_state = state
+    host._wx_editor_model = model
+    host._wx_editor_load_document = load_document
+    host._wx_editor_save_for_replacement = save_for_replacement
+    finish()
+    return host
 
 
-__all__ = ["show_editor"]
+def build_editor_panel(parent, model: WxEditorModel | None = None, *, path: str = "", content: str = "", is_local=None, save_remote=None, on_submit=None, on_run=None, action_factory=None, on_destroy=None):
+    """Embedded panel factory. Returns the wx.Panel host."""
+    return _build_editor(parent, model, path=path, content=content, is_local=is_local, save_remote=save_remote, on_submit=on_submit, on_run=on_run, action_factory=action_factory, on_destroy=on_destroy, embedded=True)
+
+
+def show_editor(parent=None, model: WxEditorModel | None = None, *, path: str = "", content: str = "", is_local=None, save_remote=None, on_submit=None, on_run=None, action_factory=None, on_destroy=None):
+    return _build_editor(parent, model, path=path, content=content, is_local=is_local, save_remote=save_remote, on_submit=on_submit, on_run=on_run, action_factory=action_factory, on_destroy=on_destroy, embedded=False)
+
+
+__all__ = ["show_editor", "build_editor_panel"]

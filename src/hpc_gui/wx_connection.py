@@ -15,6 +15,7 @@ from hpc_gui.ssh.client import SSHConnInfo, HostKeyInfo
 from hpc_gui.services.files_ssh import SSHFilesBackend
 from hpc_gui.services.slurm_ssh import SSHSlurmBackend
 from hpc_gui.ssh.client import SSHClientWrapper
+from hpc_gui.wx_host import make_host
 
 
 @dataclass(frozen=True)
@@ -111,7 +112,7 @@ class WxConnectionModel:
         return list(self._keyboard_interactive(request)) if self._keyboard_interactive else []
 
 
-def show_connection(parent=None, profiles=None, *, connect=None, lifecycle=None, on_connected=None) -> int:
+def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, embedded):
     try:
         import wx
     except ImportError as exc:
@@ -119,8 +120,8 @@ def show_connection(parent=None, profiles=None, *, connect=None, lifecycle=None,
     model = WxConnectionModel(profiles, connect=connect)
     if connect is None:
         model._connect = lambda profile: connect_profile(profile, model)
-    frame = wx.Frame(parent, title=t("tabs.connection"), size=(720, 520))
-    panel = wx.Panel(frame)
+    host, finish = make_host(parent, title=t("tabs.connection"), size=(720, 520), embedded=embedded)
+    panel = wx.Panel(host)
     root = wx.BoxSizer(wx.VERTICAL)
     choices = wx.ListBox(panel, choices=[item.name for item in model.summaries()])
     connect_button = wx.Button(panel, label=t("login.connect"))
@@ -134,7 +135,7 @@ def show_connection(parent=None, profiles=None, *, connect=None, lifecycle=None,
         message = t("connection.host_key_prompt_message").format(
             role=request.role, host=request.hostname, key_type="SSH", fingerprint=request.fingerprint
         )
-        dialog = wx.MessageDialog(frame, message, t("connection.host_key_prompt_title"), wx.YES_NO | wx.CANCEL | wx.ICON_WARNING)
+        dialog = wx.MessageDialog(host, message, t("connection.host_key_prompt_title"), wx.YES_NO | wx.CANCEL | wx.ICON_WARNING)
         try:
             result = dialog.ShowModal()
         finally:
@@ -144,7 +145,7 @@ def show_connection(parent=None, profiles=None, *, connect=None, lifecycle=None,
     def mfa_dialog(request: KeyboardInteractiveRequest) -> list[str]:
         answers = []
         for prompt in request.prompts:
-            dialog = wx.TextEntryDialog(frame, f"{request.instructions}\n\n{prompt}", request.title)
+            dialog = wx.TextEntryDialog(host, f"{request.instructions}\n\n{prompt}", request.title)
             try:
                 if dialog.ShowModal() != wx.ID_OK:
                     return []
@@ -160,7 +161,7 @@ def show_connection(parent=None, profiles=None, *, connect=None, lifecycle=None,
         model.select(choices.GetStringSelection())
 
     def refresh_labels(_language=None):
-        frame.SetTitle(t("tabs.connection"))
+        host.set_host_title(t("tabs.connection"))
         connect_button.SetLabel(t("login.connect"))
         if model.controller.state.value == "connected":
             status.SetLabel(t("login.status_connected"))
@@ -198,9 +199,23 @@ def show_connection(parent=None, profiles=None, *, connect=None, lifecycle=None,
     choices.Bind(wx.EVT_LISTBOX_DCLICK, connect_selected)
     connect_button.Bind(wx.EVT_BUTTON, connect_selected)
     subscribe_language_change(refresh_labels)
-    frame.Bind(wx.EVT_CLOSE, lambda event: (unsubscribe_language_change(refresh_labels), event.Skip()))
-    frame.Show()
+    host.bind_host_close(lambda event: (unsubscribe_language_change(refresh_labels), event.Skip()))
+    finish()
+    return host
+
+
+def build_connection_panel(parent, profiles=None, *, connect=None, lifecycle=None, on_connected=None):
+    """Embedded panel factory. Returns the wx.Panel host."""
+    return _build_connection(parent, profiles, connect=connect, lifecycle=lifecycle, on_connected=on_connected, embedded=True)
+
+
+def show_connection(parent=None, profiles=None, *, connect=None, lifecycle=None, on_connected=None) -> int:
+    try:
+        import wx
+    except ImportError as exc:
+        raise RuntimeError("wxPython is not installed") from exc
+    _build_connection(parent, profiles, connect=connect, lifecycle=lifecycle, on_connected=on_connected, embedded=False)
     return wx.ID_OK
 
 
-__all__ = ["HostKeyRequest", "KeyboardInteractiveRequest", "ProfileSummary", "WxConnectionModel", "connect_profile", "show_connection", "ssh_info_from_profile"]
+__all__ = ["HostKeyRequest", "KeyboardInteractiveRequest", "ProfileSummary", "WxConnectionModel", "connect_profile", "show_connection", "build_connection_panel", "ssh_info_from_profile"]
