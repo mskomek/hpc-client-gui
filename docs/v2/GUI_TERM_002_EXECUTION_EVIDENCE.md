@@ -1,6 +1,6 @@
 # GUI-TERM-002 Execution Evidence
 
-Environment: Windows, Python 3.12.4 (`D:\Python\Python312\python.exe`), wxPython 4.3.1 msw (Phoenix), branch `develop`, tested commit `4818c944b752c47dac8ed68c18fb9fe6cfe076b4` plus the working-tree change recorded by the final commit.
+Environment: Windows, Python 3.12.4 (`D:\Python\Python312\python.exe`), wxPython 4.3.1 msw (Phoenix), branch `develop`, tested implementation commit `aee93fe04251566a00c14c38152ff2f598aacc36`.
 
 Commands executed:
 
