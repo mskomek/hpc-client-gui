@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 from threading import Lock, Thread
-from pathlib import PurePosixPath
+from pathlib import Path, PurePosixPath
+
+import datetime as _datetime
 
 from hpc_gui.core.i18n import subscribe_language_change, t, unsubscribe_language_change
 from hpc_gui.services.file_context_actions import FILE_CONTEXT_LABEL_KEYS, context_selection, visible_actions
@@ -22,14 +24,65 @@ def _build_remote_files(parent, model: WxRemoteDirectoryModel | None = None, *, 
     host, finish = make_host(parent, title=t("tabs.ftp"), size=(920, 620), embedded=embedded)
     panel = wx.Panel(host)
     root = wx.BoxSizer(wx.VERTICAL)
-    notebook = wx.Notebook(panel)
-    # path control stays outside notebook to reflect active tab
+    # --- toolbar (Qt parity). Only keys existing in both en/tr instantiated.
+    # Existing: dirs.new_folder, new_file, upload, download_selected, delete, undo, favorites, history, refresh
+    # Missing filter keys (dirs.filter_*) omitted entirely.
+    toolbar = wx.BoxSizer(wx.HORIZONTAL)
+    btn_new_folder = wx.Button(panel, label=t("dirs.new_folder"))
+    btn_new_file = wx.Button(panel, label=t("dirs.new_file"))
+    btn_upload = wx.Button(panel, label=t("dirs.upload"))
+    btn_download = wx.Button(panel, label=t("dirs.download_selected"))
+    btn_delete = wx.Button(panel, label=t("dirs.delete"))
+    btn_undo = wx.Button(panel, label=t("dirs.undo"))
+    btn_favorites = wx.Button(panel, label=t("dirs.favorites"))
+    btn_history = wx.Button(panel, label=t("dirs.history"))
+    btn_refresh = wx.Button(panel, label=t("dirs.refresh"))
+    for b in (btn_new_folder, btn_new_file, btn_upload, btn_download, btn_delete, btn_undo, btn_favorites, btn_history, btn_refresh):
+        toolbar.Add(b, 0, wx.ALL, 3)
+    # disable buttons lacking callback: new_file, favorites, history have no panel callback
+    btn_new_file.Disable()
+    btn_favorites.Disable()
+    btn_history.Disable()
+    refresh_btn = btn_refresh  # alias for legacy name
+    path_label = wx.StaticText(panel, label=t("dirs.path"))
     path = wx.TextCtrl(panel, value=model.current_path, style=wx.TE_PROCESS_ENTER)
-    refresh_btn = wx.Button(panel, label=t("dirs.refresh"))
-    root.Add(path, 0, wx.EXPAND | wx.ALL, 6)
+    path_row = wx.BoxSizer(wx.HORIZONTAL)
+    path_row.Add(path_label, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 4)
+    path_row.Add(path, 1, wx.EXPAND | wx.ALL, 4)
+    notebook = wx.Notebook(panel)
+    # Filter row omitted: all dirs.filter_* keys missing in i18n; documented in known limitations.
+    root.Add(toolbar, 0, wx.EXPAND)
+    root.Add(path_row, 0, wx.EXPAND | wx.ALL, 2)
     root.Add(notebook, 1, wx.EXPAND | wx.LEFT | wx.RIGHT, 6)
-    root.Add(refresh_btn, 0, wx.ALIGN_RIGHT | wx.ALL, 6)
     panel.SetSizer(root)
+
+    def _format_mtime(mtime_val) -> str:
+        try:
+            v = int(mtime_val) if mtime_val is not None else 0
+        except Exception:
+            return ""
+        if not v:
+            return ""
+        try:
+            return _datetime.datetime.fromtimestamp(v).strftime("%d-%m-%y %H:%M")
+        except Exception:
+            return ""
+
+    def _type_label(entry) -> str:
+        try:
+            if getattr(entry, "is_dir", False):
+                return t("dirs.type_folder")
+            p = getattr(entry, "path", "")
+            name = PurePosixPath(str(p)).name if p else ""
+            suffix = Path(name).suffix
+            if suffix and len(suffix) > 1:
+                return suffix[1:].upper()
+            fallback = t("ftp.file")
+            if fallback.startswith("["):
+                return ""
+            return fallback
+        except Exception:
+            return ""
     state = {"closed": False, "editor_request_id": 0, "view_generation": 0, "listing_request_id": 0, "busy": False, "listing_busy": False}
     # state kept for backward compat but per-tab has own
     lock = Lock()
@@ -67,11 +120,25 @@ def _build_remote_files(parent, model: WxRemoteDirectoryModel | None = None, *, 
 
     def refresh_labels(_language=None):
         host.set_host_title(t("tabs.ftp"))
-        refresh_btn.SetLabel(t("dirs.refresh"))
+        try:
+            btn_new_folder.SetLabel(t("dirs.new_folder"))
+            btn_new_file.SetLabel(t("dirs.new_file"))
+            btn_upload.SetLabel(t("dirs.upload"))
+            btn_download.SetLabel(t("dirs.download_selected"))
+            btn_delete.SetLabel(t("dirs.delete"))
+            btn_undo.SetLabel(t("dirs.undo"))
+            btn_favorites.SetLabel(t("dirs.favorites"))
+            btn_history.SetLabel(t("dirs.history"))
+            btn_refresh.SetLabel(t("dirs.refresh"))
+            path_label.SetLabel(t("dirs.path"))
+        except Exception:
+            pass
         for te in tabs:
             try:
                 te["listing"].SetColumn(0, t("dirs.col_name"))
                 te["listing"].SetColumn(1, t("dirs.col_size"))
+                te["listing"].SetColumn(2, t("dirs.col_type"))
+                te["listing"].SetColumn(3, t("dirs.col_mtime"))
             except RuntimeError:
                 continue
             idx = tabs.index(te)
@@ -88,6 +155,8 @@ def _build_remote_files(parent, model: WxRemoteDirectoryModel | None = None, *, 
         listing = wx.ListCtrl(tab_panel, style=wx.LC_REPORT)
         listing.InsertColumn(0, t("dirs.col_name"))
         listing.InsertColumn(1, t("dirs.col_size"))
+        listing.InsertColumn(2, t("dirs.col_type"))
+        listing.InsertColumn(3, t("dirs.col_mtime"))
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.Add(listing, 1, wx.EXPAND)
         tab_panel.SetSizer(sizer)
@@ -129,6 +198,8 @@ def _build_remote_files(parent, model: WxRemoteDirectoryModel | None = None, *, 
             for entry in tab_entry["entries"]:
                 idx = lst.InsertItem(lst.GetItemCount(), PurePosixPath(entry.path).name or entry.path)
                 lst.SetItem(idx, 1, str(entry.size))
+                lst.SetItem(idx, 2, _type_label(entry))
+                lst.SetItem(idx, 3, _format_mtime(getattr(entry, "mtime", None)))
         except RuntimeError:
             return
 
@@ -647,6 +718,45 @@ def _build_remote_files(parent, model: WxRemoteDirectoryModel | None = None, *, 
 
     notebook.Bind(wx.EVT_CONTEXT_MENU, notebook_context)
 
+    def _selected_paths_for_toolbar():
+        tstate = active_tab_state()
+        if not tstate:
+            return (), tstate
+        listing = tstate["listing"]
+        return tuple(entry.path for idx, entry in enumerate(tstate["entries"]) if listing.IsSelected(idx)), tstate
+
+    def _on_toolbar_new_folder(_evt):
+        _sel, tstate = _selected_paths_for_toolbar()
+        # run_operation handles dialog; pass selected and target dir
+        target = tstate["path"] if tstate else "/"
+        run_action("new_folder", _sel, target)
+
+    def _on_toolbar_upload(_evt):
+        sel, tstate = _selected_paths_for_toolbar()
+        target = tstate["path"] if tstate else "/"
+        run_action("upload", sel, target)
+
+    def _on_toolbar_download(_evt):
+        sel, _t = _selected_paths_for_toolbar()
+        # Use existing download handling via run_operation; needs selected
+        tstate = active_tab_state()
+        run_action("download", sel, tstate["path"] if tstate else "/")
+
+    def _on_toolbar_delete(_evt):
+        sel, tstate = _selected_paths_for_toolbar()
+        run_action("delete", sel, tstate["path"] if tstate else "/")
+
+    def _on_toolbar_undo(_evt):
+        sel, tstate = _selected_paths_for_toolbar()
+        run_action("undo", sel, tstate["path"] if tstate else "/")
+
+    btn_new_folder.Bind(wx.EVT_BUTTON, _on_toolbar_new_folder)
+    btn_upload.Bind(wx.EVT_BUTTON, _on_toolbar_upload)
+    btn_download.Bind(wx.EVT_BUTTON, _on_toolbar_download)
+    btn_delete.Bind(wx.EVT_BUTTON, _on_toolbar_delete)
+    btn_undo.Bind(wx.EVT_BUTTON, _on_toolbar_undo)
+    # favorites/history remain disabled (no callback); new_file disabled.
+
     # initial tab
     initial = create_tab(model.current_path)
     notebook.AddPage(initial["panel"], tab_label(model.current_path), True)
@@ -654,9 +764,16 @@ def _build_remote_files(parent, model: WxRemoteDirectoryModel | None = None, *, 
 
     refresh_btn.Bind(wx.EVT_BUTTON, load)
     path.Bind(wx.EVT_TEXT_ENTER, load)
+    # disable operation-dependent buttons if no operation callback provided
+    if not operation:
+        for b in (btn_new_folder, btn_upload, btn_download, btn_delete, btn_undo):
+            try:
+                b.Disable()
+            except Exception:
+                pass
     subscribe_language_change(refresh_labels)
     host.bind_host_close(lambda event: (unsubscribe_language_change(refresh_labels), close(event)))
-    host._wx_remote_controls = {"listing": initial["listing"], "path": path, "notebook": notebook}
+    host._wx_remote_controls = {"listing": initial["listing"], "path": path, "notebook": notebook, "toolbar": toolbar, "btn_new_folder": btn_new_folder, "btn_new_file": btn_new_file, "btn_upload": btn_upload, "btn_download": btn_download, "btn_delete": btn_delete, "btn_undo": btn_undo, "btn_favorites": btn_favorites, "btn_history": btn_history, "btn_refresh": btn_refresh, "path_label": path_label}
     host._wx_remote_model = model
     host._wx_remote_state = state
     host._wx_remote_run_action = run_action
