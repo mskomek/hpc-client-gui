@@ -12,7 +12,7 @@ from hpc_gui.services.remote_move_history import RemoteMoveHistory
 from hpc_gui.wx_remote_files import WxRemoteDirectoryModel
 
 
-def show_remote_files(parent=None, model: WxRemoteDirectoryModel | None = None, *, loader=None, operation=None, read_text=None, open_editor=None, open_editor_new_window=None) -> int:
+def show_remote_files(parent=None, model: WxRemoteDirectoryModel | None = None, *, loader=None, operation=None, read_text=None, open_editor=None, open_editor_new_window=None, run_shell=None) -> int:
     try:
         import wx
     except ImportError as exc:
@@ -256,7 +256,7 @@ def show_remote_files(parent=None, model: WxRemoteDirectoryModel | None = None, 
         )
         selected = selection.effective_paths
         menu = wx.Menu()
-        candidate_actions = ("open", "edit", "edit_new_window", "download", "upload", "copy", "move", "rename", "delete", "paste", "copy_path", "refresh", "new_folder", "new_tab")
+        candidate_actions = ("open", "edit", "edit_new_window", "run_shell", "download", "upload", "copy", "move", "rename", "delete", "paste", "copy_path", "refresh", "new_folder", "new_tab")
         allowed = visible_actions(selection, remote=True)
         actions = tuple(action for action in candidate_actions if action in allowed)
         labels = FILE_CONTEXT_LABEL_KEYS
@@ -270,6 +270,9 @@ def show_remote_files(parent=None, model: WxRemoteDirectoryModel | None = None, 
     def run_action(action, selected, target_dir=None):
         tstate = active_tab_state()
         if not tstate:
+            return
+        if action == "run_shell" and run_shell and selected:
+            run_shell(selected[0])
             return
         if action == "refresh":
             load()

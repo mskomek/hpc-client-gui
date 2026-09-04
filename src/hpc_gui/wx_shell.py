@@ -120,6 +120,10 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
 
     tray = _make_tray(wx, frame, tray_factory)
 
+    session_state["run_shell_in_terminal"] = lambda paths: _run_shell_in_terminal(
+        session_state, frame, lifecycle, paths
+    )
+
     def destroy_tray():
         if tray is not None:
             tray.destroy()
@@ -197,11 +201,19 @@ def _editor_action_factory(session_state):
                     raise RuntimeError(t("editor.upload_or_ssh_unavailable"))
                 remote_path = str(PurePosixPath("~") / Path(current.path).name)
                 files.upload(current.path, remote_path)
-                ssh.send_shell_text(f"bash -- {shlex.quote(remote_path)}\n")
+                runner = session_state.get("run_shell_in_terminal")
+                if runner:
+                    runner([remote_path])
+                else:
+                    ssh.send_shell_text(f"bash -- {shlex.quote(remote_path)}\n")
             elif not ssh:
                 raise RuntimeError(t("editor.ssh_unavailable"))
             else:
-                ssh.send_shell_text(f"bash -- {shlex.quote(current.path)}\n")
+                runner = session_state.get("run_shell_in_terminal")
+                if runner:
+                    runner([current.path])
+                else:
+                    ssh.send_shell_text(f"bash -- {shlex.quote(current.path)}\n")
 
         return {
             "save_remote": save_remote if files else None,
@@ -210,6 +222,18 @@ def _editor_action_factory(session_state):
         }
 
     return callbacks
+
+
+def _run_shell_in_terminal(session_state, parent, lifecycle, paths) -> None:
+    session = session_state.get("session") or {}
+    ssh = session.get("ssh")
+    paths = [str(path) for path in paths if path]
+    if not ssh or not paths:
+        return
+    from hpc_gui.wx_terminal import show_terminal
+
+    show_terminal(parent, ssh=ssh, lifecycle=lifecycle)
+    ssh.send_shell_text("\n".join(f"bash -- {shlex.quote(path)}" for path in paths) + "\n")
 
 
 def _get_editor_manager(session_state, parent, lifecycle, *, save_remote=None, on_submit=None, on_run=None):
@@ -422,7 +446,13 @@ def _dispatch(command_id: str, parent=None, lifecycle=None, session_state=None) 
 
             Thread(target=worker, daemon=True).start()
 
-        show_local_files(parent, open_editor=lambda path: open_local(path), open_editor_new_window=lambda path: open_local(path, True), upload=upload_local)
+        show_local_files(
+            parent,
+            open_editor=lambda path: open_local(path),
+            open_editor_new_window=lambda path: open_local(path, True),
+            upload=upload_local,
+            run_shell=lambda path: _run_shell_in_terminal(session_state, parent, lifecycle, [path]),
+        )
     elif command_id == "NAV-DIRECTORIES":
         from hpc_gui.wx_remote_files_view import show_remote_files
 
@@ -475,6 +505,7 @@ def _dispatch(command_id: str, parent=None, lifecycle=None, session_state=None) 
             operation=remote_operation,
             open_editor=editor,
             open_editor_new_window=editor_new_window,
+            run_shell=lambda path: _run_shell_in_terminal(session_state, parent, lifecycle, [path]),
         )
     elif command_id == "NAV-EDITOR":
         _get_editor_manager(session_state, parent, lifecycle).open_primary("", "", is_local=False)

@@ -210,7 +210,7 @@ class LocalBrowserModel:
         return actions + (("new_tab",) if is_dir else ())
 
 
-def show_local_files(parent=None, path: str | Path | None = None, *, open_editor=None, open_editor_new_window=None, upload=None) -> int:
+def show_local_files(parent=None, path: str | Path | None = None, *, open_editor=None, open_editor_new_window=None, upload=None, run_shell=None) -> int:
     try:
         import wx
     except ImportError as exc:
@@ -547,6 +547,9 @@ def show_local_files(parent=None, path: str | Path | None = None, *, open_editor
         if not tstate:
             return
         selected = selected_entries()
+        if action == "run_shell" and run_shell and selected:
+            run_shell(str(selected[0].path))
+            return
         if action == "upload" and upload:
             if selected:
                 upload(tuple(str(item.path) for item in selected))
