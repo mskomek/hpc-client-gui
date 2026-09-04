@@ -13,6 +13,7 @@ from urllib.parse import quote
 
 from hpc_gui.core.i18n import subscribe_language_change, t, unsubscribe_language_change
 from hpc_gui.services.file_context_actions import FILE_CONTEXT_LABEL_KEYS, context_selection, visible_actions
+from hpc_gui.wx_host import make_host
 
 
 @dataclass(frozen=True)
@@ -210,17 +211,17 @@ class LocalBrowserModel:
         return actions + (("new_tab",) if is_dir else ())
 
 
-def show_local_files(parent=None, path: str | Path | None = None, *, open_editor=None, open_editor_new_window=None, upload=None, run_shell=None) -> int:
+def _build_local_files(parent, path: str | Path | None = None, *, open_editor=None, open_editor_new_window=None, upload=None, run_shell=None, embedded):
     try:
         import wx
     except ImportError as exc:
         raise RuntimeError("wxPython is not installed") from exc
     model = LocalBrowserModel(path or Path.cwd())
-    frame = wx.Frame(parent, title=t("tabs.ftp"), size=(900, 600))
-    notebook = wx.Notebook(frame)
+    host, finish = make_host(parent, title=t("tabs.ftp"), size=(900, 600), embedded=embedded)
+    notebook = wx.Notebook(host)
     root_sizer = wx.BoxSizer(wx.VERTICAL)
     root_sizer.Add(notebook, 1, wx.EXPAND)
-    frame.SetSizer(root_sizer)
+    host.SetSizer(root_sizer)
     # Per-tab state. Each tab owns its own list control and generation counters.
     # Global state dict kept for backward compatibility (closed, mutation, top-level view_generation used for compat).
     state = {"context_target": None, "closed": False, "mutation_in_flight": False, "view_generation": 0, "listing_request_id": 0}
@@ -421,8 +422,8 @@ def show_local_files(parent=None, path: str | Path | None = None, *, open_editor
                 # sync model active index
                 model.active_tab = notebook.GetSelection()
                 model.current_path = entry.path
-                if hasattr(frame, "_wx_local_controls"):
-                    frame._wx_local_controls["listing"] = new_entry["listing"]
+                if hasattr(host, "_wx_local_controls"):
+                    host._wx_local_controls["listing"] = new_entry["listing"]
                 refresh()
                 return
         event.Skip()
@@ -554,7 +555,7 @@ def show_local_files(parent=None, path: str | Path | None = None, *, open_editor
             if selected:
                 upload(tuple(str(item.path) for item in selected))
             else:
-                dialog = wx.FileDialog(frame, t("ftp.upload_selected"), style=wx.FD_OPEN | wx.FD_MULTIPLE)
+                dialog = wx.FileDialog(host, t("ftp.upload_selected"), style=wx.FD_OPEN | wx.FD_MULTIPLE)
                 try:
                     if dialog.ShowModal() == wx.ID_OK:
                         upload(tuple(dialog.GetPaths()))
@@ -562,7 +563,7 @@ def show_local_files(parent=None, path: str | Path | None = None, *, open_editor
                     dialog.Destroy()
             return
         if action == "new_folder":
-            dialog = wx.TextEntryDialog(frame, t("dirs.new_folder"), t("dirs.new_folder"))
+            dialog = wx.TextEntryDialog(host, t("dirs.new_folder"), t("dirs.new_folder"))
             try:
                 if dialog.ShowModal() == wx.ID_OK:
                     name = dialog.GetValue()
@@ -597,8 +598,8 @@ def show_local_files(parent=None, path: str | Path | None = None, *, open_editor
                 notebook.AddPage(new_entry["panel"], tab_label(entry.path), True)
                 model.active_tab = notebook.GetSelection()
                 model.current_path = entry.path
-                if hasattr(frame, "_wx_local_controls"):
-                    frame._wx_local_controls["listing"] = new_entry["listing"]
+                if hasattr(host, "_wx_local_controls"):
+                    host._wx_local_controls["listing"] = new_entry["listing"]
                 # keep state view_generation in sync
                 # refresh will handle
                 refresh()
@@ -627,7 +628,7 @@ def show_local_files(parent=None, path: str | Path | None = None, *, open_editor
                 wx.TheClipboard.SetData(wx.TextDataObject(str(entry.path)))
                 wx.TheClipboard.Close()
         elif action == "rename":
-            dialog = wx.TextEntryDialog(frame, t("dirs.rename"), t("dirs.rename"), entry.path.name)
+            dialog = wx.TextEntryDialog(host, t("dirs.rename"), t("dirs.rename"), entry.path.name)
             try:
                 if dialog.ShowModal() == wx.ID_OK:
                     new_name = dialog.GetValue()
@@ -673,8 +674,8 @@ def show_local_files(parent=None, path: str | Path | None = None, *, open_editor
             model.active_tab = new_sel
             model.current_path = tabs[new_sel]["path"]
             # update global controls reference for tests (guard before attribute exists)
-            if hasattr(frame, "_wx_local_controls"):
-                frame._wx_local_controls["listing"] = tabs[new_sel]["listing"]
+            if hasattr(host, "_wx_local_controls"):
+                host._wx_local_controls["listing"] = tabs[new_sel]["listing"]
         event.Skip()
 
     notebook.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGED, on_page_changed)
@@ -685,8 +686,8 @@ def show_local_files(parent=None, path: str | Path | None = None, *, open_editor
         if 0 <= idx < len(tabs):
             model.active_tab = idx
             model.current_path = tabs[idx]["path"]
-            if hasattr(frame, "_wx_local_controls"):
-                frame._wx_local_controls["listing"] = tabs[idx]["listing"]
+            if hasattr(host, "_wx_local_controls"):
+                host._wx_local_controls["listing"] = tabs[idx]["listing"]
         return res
     notebook.SetSelection = _patched_set
     _orig_change = notebook.ChangeSelection
@@ -695,8 +696,8 @@ def show_local_files(parent=None, path: str | Path | None = None, *, open_editor
         if 0 <= idx < len(tabs):
             model.active_tab = idx
             model.current_path = tabs[idx]["path"]
-            if hasattr(frame, "_wx_local_controls"):
-                frame._wx_local_controls["listing"] = tabs[idx]["listing"]
+            if hasattr(host, "_wx_local_controls"):
+                host._wx_local_controls["listing"] = tabs[idx]["listing"]
         return res
     notebook.ChangeSelection = _patched_change
 
@@ -725,7 +726,7 @@ def show_local_files(parent=None, path: str | Path | None = None, *, open_editor
             notebook.SetSelection(new_sel)
             model.active_tab = new_sel
             model.current_path = tabs[new_sel]["path"]
-            frame._wx_local_controls["listing"] = tabs[new_sel]["listing"]
+            host._wx_local_controls["listing"] = tabs[new_sel]["listing"]
         elif active_before > index:
             # active shifted left
             model.active_tab = notebook.GetSelection()
@@ -769,7 +770,7 @@ def show_local_files(parent=None, path: str | Path | None = None, *, open_editor
     model.active_tab = 0
 
     def refresh_labels(_language=None):
-        frame.SetTitle(t("tabs.ftp"))
+        host.set_host_title(t("tabs.ftp"))
         for tab_entry in tabs:
             try:
                 tab_entry["listing"].SetColumn(0, t("dirs.col_name"))
@@ -785,14 +786,14 @@ def show_local_files(parent=None, path: str | Path | None = None, *, open_editor
 
     # expose for tests
     # keep listing pointing to active
-    frame._wx_local_controls = {"listing": initial["listing"], "notebook": notebook}
-    frame._wx_local_model = model
-    frame._wx_local_state = state
-    frame._wx_local_run_action = run_action
-    frame._wx_local_tabs = tabs
-    frame._wx_local_notebook = notebook
-    frame._wx_local_close_tab = close_tab
-    frame._wx_local_create_tab = lambda p: (model.new_tab(p), create_tab(Path(p)), notebook.AddPage(tabs[-1]["panel"], tab_label(Path(p)), True), refresh())
+    host._wx_local_controls = {"listing": initial["listing"], "notebook": notebook}
+    host._wx_local_model = model
+    host._wx_local_state = state
+    host._wx_local_run_action = run_action
+    host._wx_local_tabs = tabs
+    host._wx_local_notebook = notebook
+    host._wx_local_close_tab = close_tab
+    host._wx_local_create_tab = lambda p: (model.new_tab(p), create_tab(Path(p)), notebook.AddPage(tabs[-1]["panel"], tab_label(Path(p)), True), refresh())
     subscribe_language_change(refresh_labels)
     def close(event):
         state["closed"] = True
@@ -801,10 +802,25 @@ def show_local_files(parent=None, path: str | Path | None = None, *, open_editor
         unsubscribe_language_change(refresh_labels)
         event.Skip()
 
-    frame.Bind(wx.EVT_CLOSE, close)
+    host.bind_host_close(close)
     refresh()
-    frame.Show()
+    finish()
+    return host
+
+
+
+
+def build_local_files_panel(parent, path: str | Path | None = None, *, open_editor=None, open_editor_new_window=None, upload=None, run_shell=None):
+    """Embedded panel factory. Returns the wx.Panel host."""
+    return _build_local_files(parent, path, open_editor=open_editor, open_editor_new_window=open_editor_new_window, upload=upload, run_shell=run_shell, embedded=True)
+
+
+def show_local_files(parent=None, path: str | Path | None = None, *, open_editor=None, open_editor_new_window=None, upload=None, run_shell=None) -> int:
+    try:
+        import wx
+    except ImportError as exc:
+        raise RuntimeError("wxPython is not installed") from exc
+    _build_local_files(parent, path, open_editor=open_editor, open_editor_new_window=open_editor_new_window, upload=upload, run_shell=run_shell, embedded=False)
     return wx.ID_OK
 
-
-__all__ = ["LocalBrowserModel", "LocalEntry", "file_url_payload", "open_with_system", "reveal_in_file_manager", "show_local_files"]
+__all__ = ["LocalBrowserModel", "LocalEntry", "file_url_payload", "open_with_system", "reveal_in_file_manager", "show_local_files", "build_local_files_panel"]

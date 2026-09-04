@@ -12,6 +12,7 @@ from hpc_gui.core.i18n import subscribe_language_change, t, unsubscribe_language
 from hpc_gui.services.job_failure_classifier import explain_job_failure
 from hpc_gui.services.job_provenance import JobProvenanceCapture
 from hpc_gui.services.job_tracking_controller import JobTrackingController
+from hpc_gui.wx_host import make_host
 
 
 _ANSI = re.compile(r"\x1b(?:\[[0-?]*[ -/]*[@-~]|\][^\x07]*(?:\x07|\x1b\\))")
@@ -216,7 +217,7 @@ def show_job_output(parent, model: WxJobsModel, view_id: str, *, read_output=Non
     return wx.ID_OK
 
 
-def show_jobs(parent=None, model: WxJobsModel | None = None, *, list_jobs=None, read_output=None, cancel=None, lifecycle=None, final_state=None, generation=None) -> int:
+def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, cancel, lifecycle, final_state, generation, embedded):
     """Create the wx Jobs workspace; callbacks are service adapters, never UI IO."""
     try:
         import wx
@@ -225,8 +226,8 @@ def show_jobs(parent=None, model: WxJobsModel | None = None, *, list_jobs=None, 
     model = model or WxJobsModel()
     if lifecycle is not None and model.completion_notify is None:
         model.completion_notify = lambda job_id, message: lifecycle.notify_job(message, job_id=job_id)
-    frame = wx.Frame(parent, title=t("jobs.title"), size=(1000, 700))
-    panel = wx.Panel(frame)
+    host, finish = make_host(parent, title=t("jobs.title"), size=(1000, 700), embedded=embedded)
+    panel = wx.Panel(host)
     root = wx.BoxSizer(wx.VERTICAL)
     splitter = wx.SplitterWindow(panel)
     jobs = wx.ListCtrl(splitter, style=wx.LC_REPORT | wx.LC_SINGLE_SEL)
@@ -261,7 +262,7 @@ def show_jobs(parent=None, model: WxJobsModel | None = None, *, list_jobs=None, 
     panel.SetSizer(root)
     state = {"items": [], "selected_job": "", "closed": False, "in_flight": False, "output_in_flight": False, "cancel_in_flight": False, "user_paused": False, "minimized": False, "follow_calls": 0}
     state_lock = Lock()
-    timer = wx.Timer(frame)
+    timer = wx.Timer(host)
 
     def post(callback, *args):
         try:
@@ -422,7 +423,7 @@ def show_jobs(parent=None, model: WxJobsModel | None = None, *, list_jobs=None, 
                 return result[0] if result else ""
             return result
 
-        show_job_output(frame, model, view.id, read_output=read_stdout, lifecycle=lifecycle)
+        show_job_output(host, model, view.id, read_output=read_stdout, lifecycle=lifecycle)
 
     def close(_event=None):
         if state["closed"]:
@@ -430,11 +431,11 @@ def show_jobs(parent=None, model: WxJobsModel | None = None, *, list_jobs=None, 
         state["closed"] = True
         timer.Stop()
         unsubscribe_language_change(refresh_labels)
-        frame.Hide()
-        frame.Destroy()
+        host.Hide()
+        host.Destroy()
 
     def refresh_labels(_language=None):
-        frame.SetTitle(t("jobs.title"))
+        host.set_host_title(t("jobs.title"))
         jobs.SetColumn(0, t("jobs.job_id"))
         jobs.SetColumn(1, t("jobs.state"))
         refresh_button.SetLabel(t("jobs.refresh"))
@@ -453,20 +454,35 @@ def show_jobs(parent=None, model: WxJobsModel | None = None, *, list_jobs=None, 
         refresh_outputs(event)
 
     timer.Start(1000)
-    frame.Bind(wx.EVT_TIMER, tick, timer)
-    frame.Bind(wx.EVT_ICONIZE, iconized)
-    frame.Bind(wx.EVT_CLOSE, close)
+    host.Bind(wx.EVT_TIMER, tick, timer)
+    host.Bind(wx.EVT_ICONIZE, iconized)
+    host.bind_host_close(close)
     if lifecycle is not None:
-        lifecycle.register_cleanup(frame.Hide)
+        lifecycle.register_cleanup(host.Hide)
         lifecycle.register_cleanup(close)
     subscribe_language_change(refresh_labels)
-    frame._wx_jobs_state = state
-    frame._wx_jobs_controls = {"jobs": jobs, "stdout": stdout, "stderr": stderr, "follow": follow, "pause": pause_button}
-    frame._wx_jobs_refresh_jobs = refresh_jobs
-    frame._wx_jobs_refresh_outputs = refresh_outputs
+    host._wx_jobs_state = state
+    host._wx_jobs_controls = {"jobs": jobs, "stdout": stdout, "stderr": stderr, "follow": follow, "pause": pause_button}
+    host._wx_jobs_refresh_jobs = refresh_jobs
+    host._wx_jobs_refresh_outputs = refresh_outputs
     refresh_jobs()
-    frame.Show()
+    finish()
+    return host
+
+
+def build_jobs_panel(parent, model: WxJobsModel | None = None, *, list_jobs=None, read_output=None, cancel=None, lifecycle=None, final_state=None, generation=None):
+    """Embedded panel factory. Returns the wx.Panel host."""
+    return _build_jobs(parent, model, list_jobs=list_jobs, read_output=read_output, cancel=cancel, lifecycle=lifecycle, final_state=final_state, generation=generation, embedded=True)
+
+
+def show_jobs(parent=None, model: WxJobsModel | None = None, *, list_jobs=None, read_output=None, cancel=None, lifecycle=None, final_state=None, generation=None) -> int:
+    """Create the wx Jobs workspace; callbacks are service adapters, never UI IO."""
+    try:
+        import wx
+    except ImportError as exc:
+        raise RuntimeError("wxPython is not installed") from exc
+    _build_jobs(parent, model, list_jobs=list_jobs, read_output=read_output, cancel=cancel, lifecycle=lifecycle, final_state=final_state, generation=generation, embedded=False)
     return wx.ID_OK
 
 
-__all__ = ["DetachedOutput", "WxJobsModel", "clean_output", "show_job_output", "show_jobs"]
+__all__ = ["DetachedOutput", "WxJobsModel", "clean_output", "show_job_output", "show_jobs", "build_jobs_panel"]
