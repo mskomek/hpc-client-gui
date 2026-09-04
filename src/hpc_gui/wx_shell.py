@@ -9,7 +9,7 @@ from pathlib import PurePosixPath
 from threading import Event, Thread
 
 from hpc_gui import __version__
-from hpc_gui.core.i18n import load_saved_language, set_language, subscribe_language_change, system_default_language, t, unsubscribe_language_change
+from hpc_gui.core.i18n import current_language, load_saved_language, set_language, subscribe_language_change, system_default_language, t, unsubscribe_language_change
 from hpc_gui.services.command_registry import COMMAND_REGISTRY
 from hpc_gui.services.transfer_controller import TransferItem
 from hpc_gui.services.transfer_session_controller import TransferSessionController
@@ -17,18 +17,65 @@ from hpc_gui.wx_lifecycle import WxLifecycleController
 from hpc_gui.wx_runtime import environment_without_qt_graphics
 
 
-def main() -> int:
-    clean_environment = environment_without_qt_graphics()
-    for name in set(os.environ) - set(clean_environment):
-        os.environ.pop(name, None)
+def _flag_bitmap(wx, language):
+    path = Path(__file__).resolve().parent / "assets" / "flags" / ("gb.svg" if language == "en" else "tr.svg")
+    try:
+        import wx.svg
+
+        return wx.svg.SVGimage.CreateFromBytes(path.read_bytes()).ConvertToBitmap(18, 12)
+    except Exception:
+        bitmap = wx.Bitmap(18, 12)
+        dc = wx.MemoryDC(bitmap)
+        dc.SetBrush(wx.Brush("#1f4e79" if language == "en" else "#e30a17"))
+        dc.Clear()
+        dc.SelectObject(wx.NullBitmap)
+        return bitmap
+
+
+class _WxTrayAdapter:
+    def __init__(self, wx, frame):
+        import wx.adv
+
+        class TrayIcon(wx.adv.TaskBarIcon):
+            def CreatePopupMenu(self):
+                menu = wx.Menu()
+                close = menu.Append(wx.ID_EXIT, t("common.close"))
+                self.Bind(wx.EVT_MENU, lambda _event: frame.Close(), close)
+                return menu
+
+        self._tray = TrayIcon()
+        self._tray.SetIcon(wx.ArtProvider.GetIcon(wx.ART_INFORMATION), "HPC Client GUI")
+
+    def notify(self, message):
+        return self._tray.ShowBalloon(t("login.job_notification_title"), message, 5000)
+
+    def destroy(self):
+        tray, self._tray = self._tray, None
+        if tray is not None:
+            tray.Destroy()
+
+
+def _make_tray(wx, frame, tray_factory):
+    if tray_factory is not None:
+        try:
+            return tray_factory(frame)
+        except (ImportError, RuntimeError):
+            return None
+    try:
+        return _WxTrayAdapter(wx, frame)
+    except (ImportError, RuntimeError):
+        return None
+
+
+def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_state=None):
     try:
         import wx
     except ImportError as exc:
         raise RuntimeError("wxPython is not installed; use the default Qt runtime") from exc
-    load_saved_language(system_default_language())
-    app = wx.App(False)
-    lifecycle = WxLifecycleController()
-    session_state = {"session": None}
+    if app is None:
+        app = wx.App(False)
+    lifecycle = lifecycle or WxLifecycleController()
+    session_state = session_state or {"session": None, "generation": 0}
     frame = wx.Frame(None, title=f"HPC Client GUI {__version__}", size=(960, 640))
     panel = wx.Panel(frame)
     root = wx.BoxSizer(wx.VERTICAL)
@@ -43,7 +90,8 @@ def main() -> int:
     language_menu = wx.Menu()
     language_items = {}
     for language, key in (("en", "english"), ("tr", "turkish")):
-        item = language_menu.Append(wx.ID_ANY, t(f"help.{key}"))
+        item = language_menu.AppendRadioItem(wx.ID_ANY, t(f"language.{key}"), t(f"language.{key}"))
+        item.SetBitmap(_flag_bitmap(wx, language))
         language_items[language] = item
         frame.Bind(wx.EVT_MENU, lambda _event, language=language: set_language(language), item)
     frame.GetMenuBar().Append(language_menu, t("help.language"))
@@ -60,47 +108,56 @@ def main() -> int:
         title_label.SetLabel(f"{t('app.title')} {__version__}")
         description_label.SetLabel(t("help.wx_shell_description"))
         frame.SetStatusText(t("common.ready"))
-        frame.GetMenuBar().SetLabelTop(0, t("help.help_title"))
-        frame.GetMenuBar().SetLabelTop(1, t("help.language"))
+        frame.GetMenuBar().SetMenuLabel(0, t("help.help_title"))
+        frame.GetMenuBar().SetMenuLabel(1, t("help.language"))
         for command, item in command_items:
             menu.SetLabel(item.GetId(), command.label())
         for language, item in language_items.items():
             language_menu.SetLabel(item.GetId(), t("help.english" if language == "en" else "help.turkish"))
+            item.Check(current_language() == language)
 
     subscribe_language_change(refresh_labels)
 
-    tray = None
+    tray = _make_tray(wx, frame, tray_factory)
 
     def destroy_tray():
-        nonlocal tray
         if tray is not None:
-            tray.Destroy()
-            tray = None
+            tray.destroy()
 
-    try:
-        import wx.adv
-
-        class TrayIcon(wx.adv.TaskBarIcon):
-            def CreatePopupMenu(self):
-                menu = wx.Menu()
-                close = menu.Append(wx.ID_EXIT, t("common.close"))
-                self.Bind(wx.EVT_MENU, lambda _event: frame.Close(), close)
-                return menu
-
-        tray = TrayIcon()
-        tray.SetIcon(wx.ArtProvider.GetIcon(wx.ART_INFORMATION), "HPC Client GUI")
-        lifecycle.set_tray_notifier(lambda message: tray.ShowBalloon(t("login.job_notification_title"), message, 5000))
+    if tray is not None:
+        lifecycle.set_tray_notifier(tray.notify)
         lifecycle.register_cleanup(destroy_tray)
-    except (ImportError, RuntimeError):
-        pass
+
+    frame._wx_shell_controls = {"title": title_label, "description": description_label, "menu": menu, "language_menu": language_menu, "language_items": language_items}
+    frame._wx_shell_lifecycle = lifecycle
+    frame._wx_shell_session_state = session_state
+    frame._wx_shell_tray = tray
 
     def close(_event):
         unsubscribe_language_change(refresh_labels)
         lifecycle.set_tray_notifier(None)
+        frame.Hide()
+        for child in wx.GetTopLevelWindows():
+            if child is not frame and child.GetParent() is frame:
+                child.Close()
         lifecycle.shutdown()
         frame.Destroy()
 
     frame.Bind(wx.EVT_CLOSE, close)
+    frame._wx_shell_close = close
+    refresh_labels()
+    return frame, lifecycle, session_state
+
+
+def main() -> int:
+    clean_environment = environment_without_qt_graphics()
+    for name in set(os.environ) - set(clean_environment):
+        os.environ.pop(name, None)
+    load_saved_language(system_default_language())
+    import wx
+
+    app = wx.App(False)
+    frame, _lifecycle, _session_state = create_shell_frame(app)
     frame.Show()
     app.MainLoop()
     return 0
@@ -297,6 +354,8 @@ def _start_file_transfers(session_state, lifecycle, items, *, on_progress=None, 
     Thread(target=forget_when_done, daemon=True).start()
     if lifecycle is not None:
         lifecycle.register_cleanup(controller.cancel)
+        if transfer_window:
+            lifecycle.register_cleanup(lambda: transfer_window._wx_transfer_close(None))
     return controller
 
 
@@ -311,6 +370,7 @@ def _dispatch(command_id: str, parent=None, lifecycle=None, session_state=None) 
 
         def connected(session):
             session_state["session"] = session
+            session_state["generation"] = session_state.get("generation", 0) + 1
             ssh = session.get("ssh") if isinstance(session, dict) else None
             if ssh is not None and callable(getattr(ssh, "close", None)):
                 lifecycle.register_cleanup(ssh.close)
@@ -449,7 +509,15 @@ def _dispatch(command_id: str, parent=None, lifecycle=None, session_state=None) 
             paths = {key: next((part.split("=", 1)[1] for part in metadata.split() if part.startswith(f"{key}=")), "") for key in ("StdOut", "StdErr")}
             return {"stdout": files.read_text(paths["StdOut"]) if paths["StdOut"] else "", "stderr": files.read_text(paths["StdErr"]) if paths["StdErr"] else ""}
 
-        show_jobs(parent, lifecycle=lifecycle, list_jobs=list_jobs, read_output=read_output, cancel=slurm.scancel if slurm else None)
+        show_jobs(
+            parent,
+            lifecycle=lifecycle,
+            list_jobs=list_jobs,
+            final_state=slurm.job_state if slurm else None,
+            generation=lambda: session_state.get("generation", 0),
+            read_output=read_output,
+            cancel=slurm.scancel if slurm else None,
+        )
 
 
 __all__ = ["main"]

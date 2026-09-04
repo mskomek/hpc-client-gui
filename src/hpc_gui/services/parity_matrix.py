@@ -18,7 +18,8 @@ class Evidence:
 FEATURE_EVIDENCE = {
     "GUI-SHELL-001": Evidence("COVERED", "app.py", "wx_shell.py", "test_cli_entrypoint.py"),
     "GUI-SHELL-002": Evidence("COVERED", "main_window.py", "wx_lifecycle.py", "test_app_updater.py"),
-    "GUI-SHELL-003": Evidence("PARTIAL", "main_window.py", "wx_shell.py", "test_wx_shell.py"),
+    "GUI-SHELL-003": Evidence("COVERED", "main_window.py", "wx_shell.py; wx_jobs.py; wx_lifecycle.py; wx_transfer_workspace.py", "test_wx_shell_p0.py; test_wx_shell_p0_stress.py", "Real wx shell/job event chains prove disappeared-job final-state lookup, translated terminal notifications, COMPLETING suppression, duplicate prevention, reconnect generation isolation, tray-unavailable tracking, EVT_CLOSE cleanup, blocked poll and active transfer shutdown races. Windows stress executed 100 terminal transitions, 100 duplicate-poll checks, 50 stale-session completions, 50 normal closes, 25 blocked-poll closes, 25 active-transfer closes, and 50 repeated shutdowns with all measured invariants at zero."),
+    "GUI-I18N-001": Evidence("COVERED", "main_window.py", "wx_shell.py; wx_jobs.py; wx_local_files.py; wx_remote_files_view.py; wx_transfer_workspace.py", "test_wx_shell_i18n.py; test_wx_shell_p0.py; test_wx_shell_p0_stress.py; test_wx_file_context_i18n.py", "Real wx menu selection proves English/Türkçe radio state, packaged flag bitmap assignment, live shell and open Jobs retranslation, current-language job notification text, and 100 EN/TR/EN runtime switch cycles with no missing labels or post-close callbacks. Existing local/remote/transfer i18n tests remain part of the evidence."),
     "GUI-CONN-001": Evidence("COVERED", "login_widget.py", "wx_connection.py", "test_wx_connection.py"),
     "GUI-CONN-002": Evidence("COVERED", "connection_dialog.py", "wx_connection.py", "test_optional_ssh_credentials.py"),
     "GUI-CONN-003": Evidence("COVERED", "connection_dialog.py", "wx_connection.py", "test_provider_capabilities.py"),
