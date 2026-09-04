@@ -1,0 +1,21 @@
+{
+  "date": "2026-09-04",
+  "platform": "Windows 11",
+  "commit": "8987079b5b4160f9d639402fa45266c6d3475fd5",
+  "screenshots": {
+    "qt": ["main.png", "connection.png", "jobs.png", "directories.png", "files.png", "editor.png", "logs.png"],
+    "wx": ["main.png", "files.png", "directories.png", "editor.png", "terminal.png", "jobs.png"]
+  },
+  "binding_results": {
+    "wx_navigation_tabs": "PROVEN",
+    "wx_terminal_surface": "PROVEN_VISIBLE_BACKEND_REQUIRES_SESSION",
+    "wx_language_menu": "PROVEN",
+    "qt_tab_switching": "PROVEN",
+    "session_dependent_buttons": "VISIBLE_NOT_EXECUTED_DISCONNECTED"
+  },
+  "limitations": [
+    "Windows-only screenshots",
+    "No credentials or live cluster session used",
+    "Qt remains DEFAULT_GUI_RUNTIME"
+  ]
+}
