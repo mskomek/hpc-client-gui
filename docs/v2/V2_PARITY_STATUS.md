@@ -25,7 +25,7 @@ Automated evidence only; manual-only behavior is never marked covered.
 | GUI-JOBS-003 | COVERED | services/ | wx_jobs.py | test_job_history_dashboard.py |
 | GUI-JOBS-004 | COVERED | walltime_suggestions.py | wx_jobs.py | test_walltime_suggestions.py |
 | GUI-EDIT-001 | COVERED | editor_widget.py | wx_editor.py | test_wx_editor.py |
-| GUI-EDIT-002 | PARTIAL | main_window.py | wx_editor.py | test_editor_flow.py |
+| GUI-EDIT-002 | COVERED | main_window.py | wx_shell.py; wx_editor_windows.py; wx_editor_view.py | test_wx_editor.py; test_wx_editor_window_parity.py; test_wx_editor_cross_view_actions.py; test_wx_remote_editor_flow.py; test_wx_term002.py |
 | GUI-PLUGIN-001 | COVERED | plugin_manager_dialog.py | wx_plugins.py | test_wx_plugins.py |
 | GUI-PLUGIN-002 | COVERED | ansys_lint_results_dialog.py | wx_ansys.py | test_wx_ansys.py |
 | GUI-SET-001 | COVERED | settings_dialog.py | wx_settings.py | test_wx_settings.py |

@@ -1,0 +1,25 @@
+{
+  "commit": "87a860d28fe4dc7dd21d02a309c7bec7e739e6aa",
+  "branch": "develop",
+  "platform": "Windows",
+  "python": "3.12.4",
+  "wxpython": "4.3.1 msw (Phoenix)",
+  "commands": {
+    "editor_integration": {"exit_code": 0, "passed": 49, "failed": 0, "skipped": 0, "duration_seconds": 18.39},
+    "shell_editor_integration": {"exit_code": 0, "passed": 4, "failed": 0, "skipped": 0, "duration_seconds": 1.56},
+    "full_wx": {"exit_code": 1, "passed": 347, "failed": 1, "skipped": 0, "duration_seconds": 359.42},
+    "ruff": {"exit_code": 0},
+    "compileall": {"exit_code": 0},
+    "diff_check": {"exit_code": 0}
+  },
+  "behaviors": {
+    "local_submit": "PROVEN",
+    "remote_submit": "PROVEN",
+    "local_run": "PROVEN",
+    "remote_run": "PROVEN",
+    "primary_editor_reuse": "PROVEN",
+    "standalone_editor": "PROVEN",
+    "session_safe_backend_selection": "PROVEN"
+  },
+  "scope_limitation": "Real-wx GUI evidence was measured on Windows only."
+}

@@ -109,4 +109,4 @@ Default GUI runtime: qt
 Remaining uncovered P0 rows: 0
 ```
 
-Qt/PySide6/shiboken6 were retained. `GUI-TERM-002` and `GUI-EDIT-002` remain outside this wave and are still `PARTIAL`.
+Qt/PySide6/shiboken6 were retained. `GUI-TERM-002` and `GUI-EDIT-002` have separate execution evidence documents.

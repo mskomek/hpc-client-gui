@@ -42,7 +42,7 @@ def test_remote_view_runs_operations_off_the_wx_thread():
     assert "Thread(target=worker" in source
     assert 't("dirs.delete_confirm")' in source
     assert "safe_call_after(operation_done" in source
-    assert '"open", "edit", "edit_new_window", "download"' in source
+    assert '"open", "edit", "edit_new_window", "run_shell", "download"' in source
     assert "open_editor_new_window=None" in source
     assert "read_text=None" in source and "safe_call_after(done, read_text(remote_path), None)" in source
     assert "navigate(requested_path_text)" in source and "path.SetValue(tstate[\"path\"])" in source
