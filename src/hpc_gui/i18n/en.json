@@ -159,11 +159,11 @@
     "save_changes": "Save changes",
     "dont_save": "Don't Save",
     "unsaved_changes": "This document has unsaved changes.",
-    "and": "and"
-    ,"command_palette": "Command Palette"
-    ,"test_cluster": "Test Cluster"
-    ,"new_slurm_script": "New Slurm Script"
-    ,"ansys_linter": "ANSYS Linter"
+    "and": "and",
+    "command_palette": "Command Palette",
+    "test_cluster": "Test Cluster",
+    "new_slurm_script": "New Slurm Script",
+    "ansys_linter": "ANSYS Linter"
   },
   "placeholders": {
     "host": "Server name or IP",
@@ -196,7 +196,8 @@
     "plugins": "Plugins",
     "ansys_lint": "ANSYS Journal Lint",
     "no_supported_remote_lint_files": "No supported lint files were found in this remote folder.",
-    "send_to_plugin": "Send to plugin"
+    "send_to_plugin": "Send to plugin",
+    "auto_scroll": "Auto-scroll"
   },
   "editor": {
     "title": "Editor",

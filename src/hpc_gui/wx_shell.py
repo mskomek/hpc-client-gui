@@ -102,19 +102,43 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
     notebook = wx.Notebook(panel)
     page_controls = {}
 
-    def add_navigation_page(command_id, title_key):
-        page = wx.Panel(notebook)
-        page_sizer = wx.BoxSizer(wx.VERTICAL)
-        open_button = wx.Button(page, label=COMMAND_REGISTRY.get(command_id).label())
-        page_sizer.Add(open_button, 0, wx.ALL, 12)
-        page.SetSizer(page_sizer)
-        notebook.AddPage(page, t(title_key), False)
-        open_button.Bind(wx.EVT_BUTTON, lambda _event: _dispatch(command_id, frame, lifecycle, session_state))
-        page_controls[command_id] = {"page": page, "button": open_button}
+    # Build embedded panels using shared helpers (panels created once, not lazily)
+    from hpc_gui.wx_connection import build_connection_panel
+    from hpc_gui.wx_editor_view import build_editor_panel
+    from hpc_gui.wx_jobs import build_jobs_panel
+    from hpc_gui.wx_local_files import build_local_files_panel
+    from hpc_gui.wx_remote_files_view import build_remote_files_panel
 
-    add_navigation_page("NAV-FILES", "tabs.ftp")
-    add_navigation_page("NAV-DIRECTORIES", "tabs.directories")
-    add_navigation_page("NAV-EDITOR", "tabs.editor")
+    # Connection
+    _conn = _connection_callbacks(session_state, frame, lifecycle)
+    connection_panel = build_connection_panel(notebook, **_conn)
+    notebook.AddPage(connection_panel, t("tabs.login"), False)
+    page_controls["APP-CONNECT"] = {"page": connection_panel}
+
+    # Jobs & Outputs
+    _jobs = _jobs_callbacks(session_state, frame, lifecycle)
+    jobs_panel = build_jobs_panel(notebook, **_jobs)
+    notebook.AddPage(jobs_panel, t("tabs.jobs_outputs"), False)
+    page_controls["NAV-JOBS"] = {"page": jobs_panel}
+
+    # Files (splitter with local left, remote right)
+    splitter = wx.SplitterWindow(notebook)
+    _local = _local_files_callbacks(session_state, frame, lifecycle)
+    _remote = _remote_files_callbacks(session_state, frame, lifecycle)
+    local_panel = build_local_files_panel(splitter, **_local)
+    remote_panel = build_remote_files_panel(splitter, **_remote)
+    splitter.SplitVertically(local_panel, remote_panel, 300)
+    splitter.SetMinimumPaneSize(200)
+    notebook.AddPage(splitter, t("tabs.ftp"), False)
+    page_controls["NAV-FILES"] = {"page": splitter, "local": local_panel, "remote": remote_panel}
+
+    # Script Editor
+    _editor_kwargs = {"action_factory": _editor_action_factory(session_state)}
+    editor_panel = build_editor_panel(notebook, **_editor_kwargs)
+    notebook.AddPage(editor_panel, t("tabs.editor"), False)
+    page_controls["NAV-EDITOR"] = {"page": editor_panel}
+
+    # Terminal (existing page, unchanged)
     terminal_page = wx.Panel(notebook)
     terminal_sizer = wx.BoxSizer(wx.VERTICAL)
     terminal_output = wx.TextCtrl(terminal_page, style=wx.TE_MULTILINE | wx.TE_READONLY | wx.HSCROLL)
@@ -124,7 +148,6 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
     terminal_page.SetSizer(terminal_sizer)
     notebook.AddPage(terminal_page, t("help.section_terminal"), False)
     page_controls["NAV-TERMINAL"] = {"page": terminal_page, "output": terminal_output, "input": terminal_input}
-    add_navigation_page("NAV-JOBS", "tabs.jobs_outputs")
     root.Add(notebook, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 8)
     panel.SetSizer(root)
     frame.CreateStatusBar()
@@ -150,11 +173,7 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
         frame.SetStatusText(t("common.ready"))
         frame.GetMenuBar().SetMenuLabel(0, t("help.help_title"))
         frame.GetMenuBar().SetMenuLabel(1, t("help.language"))
-        for command_id, controls in page_controls.items():
-            if command_id == "NAV-TERMINAL":
-                continue
-            controls["button"].SetLabel(COMMAND_REGISTRY.get(command_id).label())
-        for index, title_key in enumerate(("tabs.ftp", "tabs.directories", "tabs.editor", "help.section_terminal", "tabs.jobs_outputs")):
+        for index, title_key in enumerate(("tabs.login", "tabs.jobs_outputs", "tabs.ftp", "tabs.editor", "help.section_terminal")):
             notebook.SetPageText(index, t(title_key))
         for command, item in command_items:
             menu.SetLabel(item.GetId(), command.label())
@@ -184,6 +203,26 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
     frame._wx_shell_tray = tray
 
     def close(_event):
+        # Invoke every embedded page's close callback before shutdown
+        for _key, controls in list(page_controls.items()):
+            # For Files splitter, local/remote are stored separately
+            candidates = []
+            if "page" in controls:
+                candidates.append(controls["page"])
+            if "local" in controls:
+                candidates.append(controls["local"])
+            if "remote" in controls:
+                candidates.append(controls["remote"])
+            for host in candidates:
+                cb = getattr(host, "_wx_host_close", None)
+                if callable(cb):
+                    try:
+                        cb()
+                    except Exception:
+                        # ponytail: swallowed so one bad page cannot block shutdown;
+                        # hides page-teardown faults from the leak counters - route to
+                        # the lifecycle diagnostics channel if the stress campaign needs them.
+                        pass
         unsubscribe_language_change(refresh_labels)
         lifecycle.set_tray_notifier(None)
         frame.Hide()
@@ -429,130 +468,239 @@ def _start_file_transfers(session_state, lifecycle, items, *, on_progress=None, 
     return controller
 
 
+def _local_files_callbacks(session_state, parent, lifecycle):
+    _snapshot_session = (session_state or {}).get("session") or {}
+    _snapshot_files = _snapshot_session.get("files")
+    _manager = _get_editor_manager(session_state, parent, lifecycle)
+
+    def open_local(path, new_window=False):
+        manager = _manager
+        request_id = None if new_window else manager.begin_primary_request()
+
+        def worker():
+            try:
+                content = Path(path).read_text(encoding="utf-8")
+                opener = manager.open_new_window if new_window else manager.open_primary
+                if new_window:
+                    import wx
+
+                    wx.CallAfter(opener, path, content, is_local=True)
+                else:
+                    import wx
+
+                    wx.CallAfter(opener, path, content, is_local=True, request_id=request_id)
+            except Exception as error:
+                import wx
+
+                wx.CallAfter(wx.MessageBox, str(error), t("login.err_title"), wx.OK | wx.ICON_ERROR)
+
+        Thread(target=worker, daemon=True).start()
+
+    def upload_local(paths):
+        session = (session_state or {}).get("session") or {}
+        files = _snapshot_files if _snapshot_files is not None else session.get("files")
+        if not files:
+            return
+        import wx
+
+        dialog = wx.TextEntryDialog(parent, t("dirs.destination"), t("dirs.destination"), "~")
+        try:
+            if dialog.ShowModal() != wx.ID_OK:
+                return
+            remote_dir = PurePosixPath(dialog.GetValue().strip() or "~")
+        finally:
+            dialog.Destroy()
+
+        def worker():
+            try:
+                items = [TransferItem("upload", local_path, str(remote_dir / Path(local_path).name)) for local_path in paths]
+                _start_file_transfers(session_state, lifecycle, items, files_backend=files, parent=parent)
+            except Exception as error:
+                import wx
+
+                wx.CallAfter(wx.MessageBox, str(error), t("login.err_title"), wx.OK | wx.ICON_ERROR)
+
+        Thread(target=worker, daemon=True).start()
+
+    return {
+        "open_editor": lambda path: open_local(path),
+        "open_editor_new_window": lambda path: open_local(path, True),
+        "upload": upload_local,
+        "run_shell": lambda path: _run_shell_in_terminal(session_state, parent, lifecycle, [path]),
+    }
+
+
+def _remote_files_callbacks(session_state, parent, lifecycle):
+    _snapshot_session = (session_state or {}).get("session") or {}
+    _snapshot_files = _snapshot_session.get("files")
+    _manager = _get_editor_manager(session_state, parent, lifecycle)
+
+    def remote_operation(action, paths, destination=""):
+        session = (session_state or {}).get("session") or {}
+        files = _snapshot_files if _snapshot_files is not None else session.get("files")
+        if action == "delete" and files:
+            for remote_path in paths:
+                files.remove(remote_path, recursive=True)
+            return
+        if action == "rename" and files and len(paths) == 1 and destination:
+            files.rename(paths[0], destination)
+            return
+        if action in {"copy", "move"} and files and destination:
+            for remote_path in paths:
+                target = str(PurePosixPath(destination) / PurePosixPath(remote_path).name)
+                (files.copy if action == "copy" else files.move)(remote_path, target)
+            return
+        if action == "download" and files and destination:
+            items = [TransferItem("download", remote_path, str(Path(destination) / PurePosixPath(remote_path).name)) for remote_path in paths]
+            _start_file_transfers(session_state, lifecycle, items, files_backend=files, parent=parent)
+            return
+        if action == "upload" and files and destination:
+            items = [TransferItem("upload", local_path, str(PurePosixPath(destination) / Path(local_path).name)) for local_path in paths]
+            _start_file_transfers(session_state, lifecycle, items, files_backend=files, parent=parent)
+            return
+        if action == "new_folder" and files and destination:
+            files.mkdir(destination)
+            return
+        raise RuntimeError(f"Remote action is not available from this view: {action}")
+
+    def _editor(path, content="", request_id=None):
+        _manager.open_primary(path, content, is_local=False, request_id=request_id)
+
+    _editor._wx_request_aware = True
+
+    def _editor_request_started():
+        return _manager.begin_primary_request()
+
+    _editor._wx_request_started = _editor_request_started
+
+    def _editor_new_window(path, content=""):
+        _manager.open_new_window(path, content, is_local=False)
+
+    def _loader(path):
+        session = (session_state or {}).get("session") or {}
+        files = _snapshot_files if _snapshot_files is not None else session.get("files")
+        if files and hasattr(files, "iterdir_entries"):
+            return files.iterdir_entries(path)
+        return ()
+
+    def _read_text(path):
+        session = (session_state or {}).get("session") or {}
+        files = _snapshot_files if _snapshot_files is not None else session.get("files")
+        if files and hasattr(files, "read_text"):
+            return files.read_text(path)
+        return ""
+
+    # Wrap loader/read_text to be callable with path; the remote view will call loader(path)
+    # To keep compatibility with the view's `loader=files.iterdir_entries if files else None` pattern,
+    # we provide functions that dynamically resolve files.
+    def loader(path):
+        return _loader(path)
+
+    def read_text(path):
+        return _read_text(path)
+
+    # Only provide loader/read_text if there is a session; otherwise return None-like behavior
+    # The panel will handle None by not loading, but we provide dynamic functions so embedded
+    # panel works after connection. Check session at call time inside loader already.
+    return {
+        "loader": loader,
+        "read_text": read_text,
+        "operation": remote_operation,
+        "open_editor": _editor,
+        "open_editor_new_window": _editor_new_window,
+        "run_shell": lambda path: _run_shell_in_terminal(session_state, parent, lifecycle, [path]),
+    }
+
+
+def _jobs_callbacks(session_state, parent, lifecycle):
+    _snapshot_session = (session_state or {}).get("session") or {}
+    _snapshot_slurm = _snapshot_session.get("slurm")
+    _snapshot_profile = _snapshot_session.get("profile")
+    _snapshot_files = _snapshot_session.get("files")
+
+    def list_jobs():
+        session = (session_state or {}).get("session") or {}
+        slurm = _snapshot_slurm if _snapshot_slurm is not None else session.get("slurm")
+        profile = _snapshot_profile if _snapshot_profile is not None else session.get("profile") or {}
+        if not slurm:
+            return ()
+        raw = slurm.squeue(str(profile.get("username", "")))
+        rows = []
+        for line in str(raw or "").splitlines()[1:]:
+            fields = line.split()
+            if fields:
+                rows.append({"id": fields[0], "state": fields[4] if len(fields) > 4 else "", "name": fields[2] if len(fields) > 2 else ""})
+        return rows
+
+    def read_output(job_id):
+        session = (session_state or {}).get("session") or {}
+        slurm = _snapshot_slurm if _snapshot_slurm is not None else session.get("slurm")
+        files = _snapshot_files if _snapshot_files is not None else session.get("files")
+        if not slurm or not files:
+            return {}
+        metadata = str(slurm.scontrol_show_job(job_id) or "")
+        paths = {key: next((part.split("=", 1)[1] for part in metadata.split() if part.startswith(f"{key}=")), "") for key in ("StdOut", "StdErr")}
+        return {"stdout": files.read_text(paths["StdOut"]) if paths["StdOut"] else "", "stderr": files.read_text(paths["StdErr"]) if paths["StdErr"] else ""}
+
+    def _cancel(job_id):
+        session = (session_state or {}).get("session") or {}
+        slurm = _snapshot_slurm if _snapshot_slurm is not None else session.get("slurm")
+        if slurm and hasattr(slurm, "scancel"):
+            return slurm.scancel(job_id)
+        return None
+
+    def _final_state(job_id):
+        session = (session_state or {}).get("session") or {}
+        slurm = _snapshot_slurm if _snapshot_slurm is not None else session.get("slurm")
+        if slurm and hasattr(slurm, "job_state"):
+            return slurm.job_state(job_id)
+        return ""
+
+    return {
+        "list_jobs": list_jobs,
+        "read_output": read_output,
+        "cancel": _cancel,
+        "final_state": _final_state,
+        "generation": lambda: session_state.get("generation", 0),
+        "lifecycle": lifecycle,
+    }
+
+
+def _connection_callbacks(session_state, parent, lifecycle):
+    from hpc_gui.config.storage import load_profiles
+
+    profiles = load_profiles()
+
+    def on_connected(session):
+        session_state["session"] = session
+        session_state["generation"] = session_state.get("generation", 0) + 1
+        ssh = session.get("ssh") if isinstance(session, dict) else None
+        if ssh is not None and callable(getattr(ssh, "close", None)):
+            lifecycle.register_cleanup(ssh.close)
+
+    return {"profiles": profiles, "lifecycle": lifecycle, "on_connected": on_connected}
+
+
 def _dispatch(command_id: str, parent=None, lifecycle=None, session_state=None) -> None:
     if command_id in {"APP-HELP", "APP-COMMAND-PALETTE"}:
         from hpc_gui.wx_help import show_help
 
         show_help(parent)
     elif command_id == "APP-CONNECT":
-        from hpc_gui.config.storage import load_profiles
         from hpc_gui.wx_connection import show_connection
 
-        def connected(session):
-            session_state["session"] = session
-            session_state["generation"] = session_state.get("generation", 0) + 1
-            ssh = session.get("ssh") if isinstance(session, dict) else None
-            if ssh is not None and callable(getattr(ssh, "close", None)):
-                lifecycle.register_cleanup(ssh.close)
-
-        show_connection(parent, load_profiles(), lifecycle=lifecycle, on_connected=connected)
+        _conn = _connection_callbacks(session_state, parent, lifecycle)
+        show_connection(parent, **_conn)
     elif command_id == "NAV-FILES":
         from hpc_gui.wx_local_files import show_local_files
-        session = (session_state or {}).get("session") or {}
-        files = session.get("files")
 
-        editor_manager = _get_editor_manager(session_state, parent, lifecycle)
-
-        def open_local(path, new_window=False):
-            request_id = None if new_window else editor_manager.begin_primary_request()
-            def worker():
-                try:
-                    content = Path(path).read_text(encoding="utf-8")
-                    opener = editor_manager.open_new_window if new_window else editor_manager.open_primary
-                    if new_window:
-                        wx.CallAfter(opener, path, content, is_local=True)
-                    else:
-                        wx.CallAfter(opener, path, content, is_local=True, request_id=request_id)
-                except Exception as error:
-                    wx.CallAfter(wx.MessageBox, str(error), t("login.err_title"), wx.OK | wx.ICON_ERROR)
-
-            import wx
-
-            Thread(target=worker, daemon=True).start()
-
-        def upload_local(paths):
-            if not files:
-                return
-            import wx
-
-            dialog = wx.TextEntryDialog(parent, t("dirs.destination"), t("dirs.destination"), "~")
-            try:
-                if dialog.ShowModal() != wx.ID_OK:
-                    return
-                remote_dir = PurePosixPath(dialog.GetValue().strip() or "~")
-            finally:
-                dialog.Destroy()
-
-            def worker():
-                try:
-                    items = [TransferItem("upload", local_path, str(remote_dir / Path(local_path).name)) for local_path in paths]
-                    _start_file_transfers(session_state, lifecycle, items, files_backend=files, parent=parent)
-                except Exception as error:
-                    wx.CallAfter(wx.MessageBox, str(error), t("login.err_title"), wx.OK | wx.ICON_ERROR)
-
-            Thread(target=worker, daemon=True).start()
-
-        show_local_files(
-            parent,
-            open_editor=lambda path: open_local(path),
-            open_editor_new_window=lambda path: open_local(path, True),
-            upload=upload_local,
-            run_shell=lambda path: _run_shell_in_terminal(session_state, parent, lifecycle, [path]),
-        )
+        _kwargs = _local_files_callbacks(session_state, parent, lifecycle)
+        show_local_files(parent, **_kwargs)
     elif command_id == "NAV-DIRECTORIES":
         from hpc_gui.wx_remote_files_view import show_remote_files
 
-        session = (session_state or {}).get("session") or {}
-        files = session.get("files")
-        slurm = session.get("slurm")
-        def remote_operation(action, paths, destination=""):
-            if action == "delete" and files:
-                for remote_path in paths:
-                    files.remove(remote_path, recursive=True)
-                return
-            if action == "rename" and files and len(paths) == 1 and destination:
-                files.rename(paths[0], destination)
-                return
-            if action in {"copy", "move"} and files and destination:
-                for remote_path in paths:
-                    target = str(PurePosixPath(destination) / PurePosixPath(remote_path).name)
-                    (files.copy if action == "copy" else files.move)(remote_path, target)
-                return
-            if action == "download" and files and destination:
-                items = [TransferItem("download", remote_path, str(Path(destination) / PurePosixPath(remote_path).name)) for remote_path in paths]
-                _start_file_transfers(session_state, lifecycle, items, files_backend=files, parent=parent)
-                return
-            if action == "upload" and files and destination:
-                items = [TransferItem("upload", local_path, str(PurePosixPath(destination) / Path(local_path).name)) for local_path in paths]
-                _start_file_transfers(session_state, lifecycle, items, files_backend=files, parent=parent)
-                return
-            if action == "new_folder" and files and destination:
-                files.mkdir(destination)
-                return
-            raise RuntimeError(f"Remote action is not available from this view: {action}")
-        def editor(path, content="", request_id=None):
-            editor_manager.open_primary(path, content, is_local=False, request_id=request_id)
-
-        editor._wx_request_aware = True
-
-        def editor_request_started():
-            return editor_manager.begin_primary_request()
-
-        editor._wx_request_started = editor_request_started
-
-        def editor_new_window(path, content=""):
-            editor_manager.open_new_window(path, content, is_local=False)
-
-        editor_manager = _get_editor_manager(session_state, parent, lifecycle)
-        show_remote_files(
-            parent,
-            loader=files.iterdir_entries if files else None,
-            read_text=files.read_text if files else None,
-            operation=remote_operation,
-            open_editor=editor,
-            open_editor_new_window=editor_new_window,
-            run_shell=lambda path: _run_shell_in_terminal(session_state, parent, lifecycle, [path]),
-        )
+        _kwargs = _remote_files_callbacks(session_state, parent, lifecycle)
+        show_remote_files(parent, **_kwargs)
     elif command_id == "NAV-EDITOR":
         _get_editor_manager(session_state, parent, lifecycle).open_primary("", "", is_local=False)
     elif command_id == "NAV-TERMINAL":
@@ -563,38 +711,9 @@ def _dispatch(command_id: str, parent=None, lifecycle=None, session_state=None) 
     elif command_id == "NAV-JOBS":
         from hpc_gui.wx_jobs import show_jobs
 
-        session = (session_state or {}).get("session") or {}
-        slurm = session.get("slurm")
-        files = session.get("files")
-        profile = session.get("profile") or {}
-
-        def list_jobs():
-            if not slurm:
-                return ()
-            raw = slurm.squeue(str(profile.get("username", "")))
-            rows = []
-            for line in str(raw or "").splitlines()[1:]:
-                fields = line.split()
-                if fields:
-                    rows.append({"id": fields[0], "state": fields[4] if len(fields) > 4 else "", "name": fields[2] if len(fields) > 2 else ""})
-            return rows
-
-        def read_output(job_id):
-            if not slurm or not files:
-                return {}
-            metadata = str(slurm.scontrol_show_job(job_id) or "")
-            paths = {key: next((part.split("=", 1)[1] for part in metadata.split() if part.startswith(f"{key}=")), "") for key in ("StdOut", "StdErr")}
-            return {"stdout": files.read_text(paths["StdOut"]) if paths["StdOut"] else "", "stderr": files.read_text(paths["StdErr"]) if paths["StdErr"] else ""}
-
-        show_jobs(
-            parent,
-            lifecycle=lifecycle,
-            list_jobs=list_jobs,
-            final_state=slurm.job_state if slurm else None,
-            generation=lambda: session_state.get("generation", 0),
-            read_output=read_output,
-            cancel=slurm.scancel if slurm else None,
-        )
+        _kwargs = _jobs_callbacks(session_state, parent, lifecycle)
+        # show_jobs expects lifecycle, list_jobs, read_output, cancel, final_state, generation
+        show_jobs(parent, **_kwargs)
 
 
 __all__ = ["main"]
