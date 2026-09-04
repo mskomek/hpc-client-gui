@@ -13,6 +13,30 @@ from hpc_gui.services.file_clipboard import get_file_clipboard
 from hpc_gui.services.remote_move_history import RemoteMoveHistory
 from hpc_gui.wx_remote_files import WxRemoteDirectoryModel
 from hpc_gui.wx_host import make_host
+from hpc_gui.ui.models.remote_entry_helpers import category as _shared_category, file_type as _shared_file_type, fmt_mtime as _shared_fmt_mtime
+
+
+def _entry_name(entry) -> str:
+    name = getattr(entry, "name", "") or ""
+    if name:
+        return str(name)
+    raw = getattr(entry, "path", "") or ""
+    return str(raw).replace("\\", "/").rstrip("/").rsplit("/", 1)[-1]
+
+
+def _format_mtime(mtime_val) -> str:
+    return _shared_fmt_mtime(mtime_val)
+
+
+def _type_label(entry) -> str:
+    return _shared_file_type(_entry_name(entry), bool(getattr(entry, "is_dir", False)))
+
+
+def _remote_category(entry) -> str:
+    try:
+        return _shared_category(entry)
+    except AttributeError:
+        return "folders" if getattr(entry, "is_dir", False) else "other"
 
 
 def _build_remote_files(parent, model: WxRemoteDirectoryModel | None = None, *, loader=None, operation=None, read_text=None, open_editor=None, open_editor_new_window=None, run_shell=None, embedded):
@@ -50,39 +74,20 @@ def _build_remote_files(parent, model: WxRemoteDirectoryModel | None = None, *, 
     path_row.Add(path_label, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 4)
     path_row.Add(path, 1, wx.EXPAND | wx.ALL, 4)
     notebook = wx.Notebook(panel)
-    # Filter row omitted: all dirs.filter_* keys missing in i18n; documented in known limitations.
     root.Add(toolbar, 0, wx.EXPAND)
     root.Add(path_row, 0, wx.EXPAND | wx.ALL, 2)
     root.Add(notebook, 1, wx.EXPAND | wx.LEFT | wx.RIGHT, 6)
     panel.SetSizer(root)
 
-    def _format_mtime(mtime_val) -> str:
-        try:
-            v = int(mtime_val) if mtime_val is not None else 0
-        except Exception:
-            return ""
-        if not v:
-            return ""
-        try:
-            return _datetime.datetime.fromtimestamp(v).strftime("%d-%m-%y %H:%M")
-        except Exception:
-            return ""
+    # --- remote filter categories (mirrors ui/models/remote_entry_helpers.category) ---
 
-    def _type_label(entry) -> str:
-        try:
-            if getattr(entry, "is_dir", False):
-                return t("dirs.type_folder")
-            p = getattr(entry, "path", "")
-            name = PurePosixPath(str(p)).name if p else ""
-            suffix = Path(name).suffix
-            if suffix and len(suffix) > 1:
-                return suffix[1:].upper()
-            fallback = t("ftp.file")
-            if fallback.startswith("["):
-                return ""
-            return fallback
-        except Exception:
-            return ""
+
+
+
+    FILTER_CATEGORIES = ["all", "folders", "iso", "archives", "slurm", "shell", "other"]
+
+
+
     state = {"closed": False, "editor_request_id": 0, "view_generation": 0, "listing_request_id": 0, "busy": False, "listing_busy": False}
     # state kept for backward compat but per-tab has own
     lock = Lock()
@@ -139,6 +144,14 @@ def _build_remote_files(parent, model: WxRemoteDirectoryModel | None = None, *, 
                 te["listing"].SetColumn(1, t("dirs.col_size"))
                 te["listing"].SetColumn(2, t("dirs.col_type"))
                 te["listing"].SetColumn(3, t("dirs.col_mtime"))
+                # update filter tab labels
+                fb = te.get("filter_notebook")
+                if fb is not None:
+                    for idx2, cat in enumerate(FILTER_CATEGORIES):
+                        try:
+                            fb.SetPageText(idx2, t(f"dirs.tab_{cat}"))
+                        except Exception:
+                            pass
             except RuntimeError:
                 continue
             idx = tabs.index(te)
@@ -147,22 +160,59 @@ def _build_remote_files(parent, model: WxRemoteDirectoryModel | None = None, *, 
             except Exception:
                 pass
 
+    def _filtered_entries(tab_entry, entries):
+        cat = tab_entry.get("filter", "all")
+        if cat == "all":
+            return list(entries)
+        return [e for e in entries if _remote_category(e) == cat]
+
     def create_tab(remote_path: str):
         remote_path = str(PurePosixPath(remote_path or "/"))
         # normalize
         remote_path = remote_path or "/"
         tab_panel = wx.Panel(notebook)
+        filter_nb = wx.Notebook(tab_panel)
+        for cat in FILTER_CATEGORIES:
+            p = wx.Panel(filter_nb)
+            filter_nb.AddPage(p, t(f"dirs.tab_{cat}"))
         listing = wx.ListCtrl(tab_panel, style=wx.LC_REPORT)
         listing.InsertColumn(0, t("dirs.col_name"))
         listing.InsertColumn(1, t("dirs.col_size"))
         listing.InsertColumn(2, t("dirs.col_type"))
         listing.InsertColumn(3, t("dirs.col_mtime"))
         sizer = wx.BoxSizer(wx.VERTICAL)
+        sizer.Add(filter_nb, 0, wx.EXPAND)
         sizer.Add(listing, 1, wx.EXPAND)
         tab_panel.SetSizer(sizer)
-        tab_entry = {"id": next_tab_id[0], "path": remote_path, "listing": listing, "panel": tab_panel, "entries": [], "view_generation": 0, "listing_request_id": 0, "busy": False, "listing_busy": False, "closed": False}
+        tab_entry = {"id": next_tab_id[0], "path": remote_path, "listing": listing, "panel": tab_panel, "entries": [], "full_entries": [], "filter": "all", "filter_notebook": filter_nb, "view_generation": 0, "listing_request_id": 0, "busy": False, "listing_busy": False, "closed": False}
         next_tab_id[0] += 1
         tabs.append(tab_entry)
+
+        def _on_filter_changed(evt):
+            sel = filter_nb.GetSelection()
+            if sel < 0 or sel >= len(FILTER_CATEGORIES):
+                evt.Skip()
+                return
+            tab_entry["filter"] = FILTER_CATEGORIES[sel]
+            # filter already-loaded entries, no remote round-trip
+            try:
+                base = tab_entry.get("full_entries", tab_entry.get("entries", []))
+                visible = _filtered_entries(tab_entry, base)
+                tab_entry["entries"] = visible
+                lst = tab_entry["listing"]
+                lst.DeleteAllItems()
+                for entry in visible:
+                    idx = lst.InsertItem(lst.GetItemCount(), PurePosixPath(entry.path).name or entry.path)
+                    lst.SetItem(idx, 1, str(entry.size))
+                    lst.SetItem(idx, 2, _type_label(entry))
+                    lst.SetItem(idx, 3, _format_mtime(getattr(entry, "mtime", None)))
+                if notebook.GetSelection() == tabs.index(tab_entry):
+                    host._wx_remote_controls["listing"] = lst
+            except RuntimeError:
+                pass
+            evt.Skip()
+
+        filter_nb.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGED, _on_filter_changed)
         listing.Bind(wx.EVT_LIST_ITEM_ACTIVATED, activate)
         listing.Bind(wx.EVT_CONTEXT_MENU, context)
         listing.Bind(wx.EVT_KEY_DOWN, key_down)
@@ -191,11 +241,14 @@ def _build_remote_files(parent, model: WxRemoteDirectoryModel | None = None, *, 
             pass
 
     def render_for_tab(tab_entry, entries):
-        tab_entry["entries"] = list(entries)
+        # store full unfiltered listing; visible is filtered per current tab filter
+        tab_entry["full_entries"] = list(entries)
+        visible = _filtered_entries(tab_entry, entries)
+        tab_entry["entries"] = visible
         try:
             lst = tab_entry["listing"]
             lst.DeleteAllItems()
-            for entry in tab_entry["entries"]:
+            for entry in visible:
                 idx = lst.InsertItem(lst.GetItemCount(), PurePosixPath(entry.path).name or entry.path)
                 lst.SetItem(idx, 1, str(entry.size))
                 lst.SetItem(idx, 2, _type_label(entry))

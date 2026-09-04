@@ -13,9 +13,11 @@ from urllib.parse import quote
 
 from hpc_gui.core.i18n import subscribe_language_change, t, unsubscribe_language_change
 from hpc_gui.services.file_context_actions import FILE_CONTEXT_LABEL_KEYS, context_selection, visible_actions
+from hpc_gui.services.local_files import list_windows_drives
 from hpc_gui.wx_host import make_host
 
 import datetime as _datetime
+from hpc_gui.ui.models.remote_entry_helpers import category as _shared_category, file_type as _shared_file_type, fmt_mtime as _shared_fmt_mtime
 
 
 @dataclass(frozen=True)
@@ -30,6 +32,9 @@ def file_url_payload(paths: list[Path]) -> str:
 
 
 def open_with_system(path: str | Path) -> None:
+
+
+
     target = str(Path(path).expanduser().resolve())
     if hasattr(os, "startfile"):
         os.startfile(target)
@@ -59,6 +64,7 @@ class LocalBrowserModel:
         self.reverse = False
         self.clipboard: tuple[Path, ...] = ()
         self.clipboard_move = False
+        self._history: list[Path] = []
 
     def list_entries(self, path: str | Path | None = None) -> tuple[LocalEntry, ...]:
         current_path = self.current_path if path is None else Path(path).expanduser().resolve()
@@ -66,15 +72,26 @@ class LocalBrowserModel:
         key = (lambda item: item.path.name.casefold()) if self.sort_key == "name" else (lambda item: item.size)
         return tuple(sorted(entries, key=key, reverse=self.reverse))
 
-    def navigate(self, path: str | Path) -> None:
+    def navigate(self, path: str | Path, *, _remember: bool = True) -> None:
         target = Path(path).expanduser().resolve()
         if not target.is_dir():
             raise NotADirectoryError(str(target))
+        if _remember and target != self.current_path:
+            self._history.append(self.current_path)
         self.current_path = target
         self.tabs[self.active_tab] = target
 
     def parent(self) -> None:
         self.navigate(self.current_path.parent)
+
+    def go_back(self) -> None:
+        if not self._history:
+            raise IndexError("no history")
+        target = self._history.pop()
+        self.navigate(target, _remember=False)
+
+    def can_go_back(self) -> bool:
+        return bool(self._history)
 
     def new_tab(self, path: str | Path | None = None) -> int:
         target = Path(path or self.current_path).expanduser().resolve()
@@ -213,6 +230,22 @@ class LocalBrowserModel:
         return actions + (("new_tab",) if is_dir else ())
 
 
+def _entry_name(entry) -> str:
+    name = getattr(entry, "name", "") or ""
+    if name:
+        return str(name)
+    raw = getattr(entry, "path", "") or ""
+    return str(raw).replace("\\", "/").rstrip("/").rsplit("/", 1)[-1]
+
+
+def _format_mtime(mtime_val) -> str:
+    return _shared_fmt_mtime(mtime_val)
+
+
+def _type_label(entry) -> str:
+    return _shared_file_type(_entry_name(entry), bool(getattr(entry, "is_dir", False)))
+
+
 def _build_local_files(parent, path: str | Path | None = None, *, open_editor=None, open_editor_new_window=None, upload=None, run_shell=None, embedded):
     try:
         import wx
@@ -220,12 +253,18 @@ def _build_local_files(parent, path: str | Path | None = None, *, open_editor=No
         raise RuntimeError("wxPython is not installed") from exc
     model = LocalBrowserModel(path or Path.cwd())
     host, finish = make_host(parent, title=t("tabs.ftp"), size=(900, 600), embedded=embedded)
-    # --- toolbar and path controls (Qt parity). Keys verified against i18n below. ---
-    # Only keys existing in both en/tr are instantiated: dirs.refresh, dirs.path,
-    # dirs.col_name/size/type/mtime . Missing keys (dirs.drives/back/up) omitted.
     toolbar_sizer = wx.BoxSizer(wx.HORIZONTAL)
+    btn_drives = wx.Button(host, label=t("ftp.drives"))
+    btn_back = wx.Button(host, label=t("ftp.back"))
+    btn_parent = wx.Button(host, label=t("ftp.parent"))
     btn_refresh = wx.Button(host, label=t("dirs.refresh"))
-    toolbar_sizer.Add(btn_refresh, 0, wx.ALL, 4)
+    for _b in (btn_drives, btn_back, btn_parent, btn_refresh):
+        toolbar_sizer.Add(_b, 0, wx.ALL, 4)
+    # Back uses real history; disabled when empty
+    try:
+        btn_back.Disable()
+    except Exception:
+        pass
     path_ctrl = wx.TextCtrl(host, value=str(model.current_path), style=wx.TE_PROCESS_ENTER)
     # path row with label
     path_row = wx.BoxSizer(wx.HORIZONTAL)
@@ -239,41 +278,7 @@ def _build_local_files(parent, path: str | Path | None = None, *, open_editor=No
     root_sizer.Add(notebook, 1, wx.EXPAND)
     host.SetSizer(root_sizer)
 
-    def _format_mtime(mtime_val) -> str:
-        try:
-            v = int(mtime_val) if mtime_val is not None else 0
-        except Exception:
-            return ""
-        if not v:
-            return ""
-        try:
-            return _datetime.datetime.fromtimestamp(v).strftime("%d-%m-%y %H:%M")
-        except Exception:
-            return ""
 
-    def _type_label(entry) -> str:
-        try:
-            if getattr(entry, "is_dir", False):
-                return t("dirs.type_folder")
-            # derive from path name suffix
-            p = getattr(entry, "path", None)
-            name = ""
-            if p is not None:
-                try:
-                    name = p.name if hasattr(p, "name") else str(p).rsplit("/", 1)[-1].rsplit("\\", 1)[-1]
-                except Exception:
-                    name = str(p)
-            suffix = Path(name).suffix
-            if suffix and len(suffix) > 1:
-                return suffix[1:].upper()
-            fallback = t("ftp.file")
-            if fallback.startswith("["):
-                return ""
-            return fallback
-        except Exception:
-            return ""
-    # Per-tab state. Each tab owns its own list control and generation counters.
-    # Global state dict kept for backward compatibility (closed, mutation, top-level view_generation used for compat).
     state = {"context_target": None, "closed": False, "mutation_in_flight": False, "view_generation": 0, "listing_request_id": 0}
     threading_lock = Lock()
     labels = FILE_CONTEXT_LABEL_KEYS
@@ -421,6 +426,21 @@ def _build_local_files(parent, path: str | Path | None = None, *, open_editor=No
             pass
         refresh_active_tab_label(idx)
 
+    # Widths are applied before rows exist, so content autosizing measures nothing.
+    # Give the fixed columns a readable floor and let Name take the remainder.
+    _COLUMN_FLOORS = (140, 70, 110, 120)
+
+    def _apply_column_widths(listing) -> None:
+        try:
+            for col in (1, 2, 3):
+                listing.SetColumnWidth(col, wx.LIST_AUTOSIZE_USEHEADER)
+                listing.SetColumnWidth(col, max(_COLUMN_FLOORS[col], listing.GetColumnWidth(col)))
+            avail = listing.GetClientSize().GetWidth() or 860
+            fixed = sum(listing.GetColumnWidth(c) for c in (1, 2, 3))
+            listing.SetColumnWidth(0, max(_COLUMN_FLOORS[0], avail - fixed - 24))
+        except Exception:
+            pass
+
     def create_tab(target_path: Path):
         target_path = Path(target_path).expanduser().resolve()
         panel = wx.Panel(notebook)
@@ -429,6 +449,7 @@ def _build_local_files(parent, path: str | Path | None = None, *, open_editor=No
         listing.InsertColumn(1, t("dirs.col_size"))
         listing.InsertColumn(2, t("dirs.col_type"))
         listing.InsertColumn(3, t("dirs.col_mtime"))
+        _apply_column_widths(listing)
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.Add(listing, 1, wx.EXPAND)
         panel.SetSizer(sizer)
@@ -878,12 +899,109 @@ def _build_local_files(parent, path: str | Path | None = None, *, open_editor=No
             except Exception:
                 pass
 
+    def _update_back_button():
+        try:
+            btn_back.Enable(bool(model._history))
+        except Exception:
+            pass
+
+    def show_drives():
+        tstate = active_tab_state()
+        if not tstate:
+            return
+        try:
+            drives = list_windows_drives()
+        except Exception as error:
+            wx.MessageBox(str(error), t("login.err_title"), wx.OK | wx.ICON_ERROR)
+            return
+        # Render drives directly without model navigation; keep history
+        lst = tstate["listing"]
+        try:
+            lst.DeleteAllItems()
+            tstate["entries"][:] = []
+            # Represent drives as synthetic entries for activation
+            for d in drives:
+                # d may be LocalEntry from services.local_files (name, path) or Path
+                name = getattr(d, "name", None) or getattr(d, "path", None) or str(d)
+                path_val = getattr(d, "path", None) or name
+                # Create a minimal entry with expected attributes for later activation
+                class _Drv:
+                    pass
+                ent = _Drv()
+                ent.path = Path(path_val)
+                ent.is_dir = True
+                ent.size = 0
+                # also keep original for display
+                ent._drive_name = str(name)
+                tstate["entries"].append(ent)
+                idx = lst.InsertItem(lst.GetItemCount(), str(name))
+                lst.SetItem(idx, 1, "")
+                lst.SetItem(idx, 2, t("dirs.type_folder"))
+                lst.SetItem(idx, 3, "")
+            try:
+                path_ctrl.SetValue(t("ftp.drives"))
+            except Exception:
+                pass
+        except RuntimeError:
+            return
+
+    def go_back_view():
+        if not model.can_go_back():
+            return
+        try:
+            model.go_back()
+        except Exception as error:
+            wx.MessageBox(str(error), t("login.err_title"), wx.OK | wx.ICON_ERROR)
+            return
+        tstate = active_tab_state()
+        if not tstate:
+            return
+        idx = notebook.GetSelection()
+        tstate["path"] = model.current_path
+        if 0 <= idx < len(model.tabs):
+            model.tabs[idx] = model.current_path
+        try:
+            path_ctrl.SetValue(str(model.current_path))
+        except Exception:
+            pass
+        refresh_active_tab_label(idx)
+        _update_back_button()
+        refresh()
+
+    def go_parent_view():
+        tstate = active_tab_state()
+        if not tstate:
+            return
+        cur = tstate["path"]
+        parent = cur.parent
+        if parent == cur:
+            return
+        try:
+            navigate(parent)
+            refresh()
+            _update_back_button()
+        except Exception as error:
+            wx.MessageBox(str(error), t("login.err_title"), wx.OK | wx.ICON_ERROR)
+
+    # wrap original navigate to update back button after any navigation
+    _orig_navigate = navigate
+    def _wrapped_navigate(target):
+        _orig_navigate(target)
+        _update_back_button()
+    navigate = _wrapped_navigate
+
     path_ctrl.Bind(wx.EVT_TEXT_ENTER, _on_path_enter)
     btn_refresh.Bind(wx.EVT_BUTTON, lambda _e: refresh())
+    btn_drives.Bind(wx.EVT_BUTTON, lambda _e: show_drives())
+    btn_back.Bind(wx.EVT_BUTTON, lambda _e: go_back_view())
+    btn_parent.Bind(wx.EVT_BUTTON, lambda _e: go_parent_view())
 
     def refresh_labels(_language=None):
         host.set_host_title(t("tabs.ftp"))
         try:
+            btn_drives.SetLabel(t("ftp.drives"))
+            btn_back.SetLabel(t("ftp.back"))
+            btn_parent.SetLabel(t("ftp.parent"))
             btn_refresh.SetLabel(t("dirs.refresh"))
             path_label.SetLabel(t("dirs.path"))
         except Exception:
@@ -894,6 +1012,7 @@ def _build_local_files(parent, path: str | Path | None = None, *, open_editor=No
                 tab_entry["listing"].SetColumn(1, t("dirs.col_size"))
                 tab_entry["listing"].SetColumn(2, t("dirs.col_type"))
                 tab_entry["listing"].SetColumn(3, t("dirs.col_mtime"))
+                _apply_column_widths(tab_entry["listing"])
             except RuntimeError:
                 continue
         # update tab labels (paths may contain same)
@@ -903,9 +1022,11 @@ def _build_local_files(parent, path: str | Path | None = None, *, open_editor=No
             except Exception:
                 pass
 
+    # initial back button state
+    _update_back_button()
     # expose for tests
-    # keep listing pointing to active
-    host._wx_local_controls = {"listing": initial["listing"], "notebook": notebook, "path": path_ctrl, "refresh_btn": btn_refresh}
+    # keep listing pointing to active (preserve contract) plus new buttons
+    host._wx_local_controls = {"listing": initial["listing"], "notebook": notebook, "path": path_ctrl, "refresh_btn": btn_refresh, "btn_drives": btn_drives, "btn_back": btn_back, "btn_parent": btn_parent, "btn_refresh": btn_refresh}
     host._wx_local_model = model
     host._wx_local_state = state
     host._wx_local_run_action = run_action

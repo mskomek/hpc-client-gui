@@ -195,8 +195,14 @@ def _build_directories(parent, *, session_state=None, workspace: WxDirectoriesWo
     scratch_model = WxRemoteDirectoryModel(scratch_dir)
     home_model = WxRemoteDirectoryModel(home_dir)
 
+    # Each pane shows its path as a title above the listing (Qt parity: directories_widget.py:216-219)
+    # Use already-derived scratch_dir/home_dir; no new derivation or hardcoded paths.
+    scratch_container = wx.Panel(splitter)
+    scratch_sizer = wx.BoxSizer(wx.VERTICAL)
+    scratch_label = wx.StaticText(scratch_container, label=scratch_dir)
+    scratch_sizer.Add(scratch_label, 0, wx.EXPAND | wx.ALL, 4)
     scratch_panel = build_remote_files_panel(
-        splitter,
+        scratch_container,
         model=scratch_model,
         loader=loader,
         operation=operation,
@@ -205,8 +211,15 @@ def _build_directories(parent, *, session_state=None, workspace: WxDirectoriesWo
         open_editor_new_window=open_editor_new_window,
         run_shell=run_shell,
     )
+    scratch_sizer.Add(scratch_panel, 1, wx.EXPAND)
+    scratch_container.SetSizer(scratch_sizer)
+
+    home_container = wx.Panel(splitter)
+    home_sizer = wx.BoxSizer(wx.VERTICAL)
+    home_label = wx.StaticText(home_container, label=home_dir)
+    home_sizer.Add(home_label, 0, wx.EXPAND | wx.ALL, 4)
     home_panel = build_remote_files_panel(
-        splitter,
+        home_container,
         model=home_model,
         loader=loader,
         operation=operation,
@@ -215,7 +228,10 @@ def _build_directories(parent, *, session_state=None, workspace: WxDirectoriesWo
         open_editor_new_window=open_editor_new_window,
         run_shell=run_shell,
     )
-    splitter.SplitVertically(scratch_panel, home_panel, 500)
+    home_sizer.Add(home_panel, 1, wx.EXPAND)
+    home_container.SetSizer(home_sizer)
+
+    splitter.SplitVertically(scratch_container, home_container, 500)
     splitter.SetMinimumPaneSize(200)
     root.Add(splitter, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 8)
     panel.SetSizer(root)
@@ -315,6 +331,10 @@ def _build_directories(parent, *, session_state=None, workspace: WxDirectoriesWo
         "splitter": splitter,
         "scratch": scratch_panel,
         "home": home_panel,
+        "scratch_container": scratch_container,
+        "home_container": home_container,
+        "scratch_label": scratch_label,
+        "home_label": home_label,
         "new_slurm": btn_new_slurm,
     }
     host._wx_dirs_workspace = workspace
