@@ -248,6 +248,7 @@ def create_transfer_progress(parent, controller=None):
         if value and not value.engine.wait(0):
             value.cancel()
         # Destroy must happen after marking closed
+        frame.Hide()
         frame.Destroy()
 
     def refresh_labels(_language=None):
@@ -304,6 +305,7 @@ def create_transfer_progress(parent, controller=None):
     frame._wx_transfer_finish = _post_finish
     frame._wx_transfer_finish_error = lambda msg: post(lambda: finish_error(msg))
     frame._wx_transfer_refresh_labels = refresh_labels
+    frame._wx_transfer_close = close
     frame.Show()
     return frame
 

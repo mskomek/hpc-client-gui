@@ -42,6 +42,9 @@ class WxJobsModel:
         self.tail_failures = 0
         self.completion_notify = completion_notify
         self._job_states: dict[str, str] = {}
+        self._active_job_ids: set[str] = set()
+        self._monitor_initialized = False
+        self._monitor_generation = 0
 
     def poll_allowed(self, details_visible: bool = True, auto_refresh: bool = True) -> bool:
         return self.tracking.should_poll_jobs(details_visible, auto_refresh)
@@ -94,11 +97,54 @@ class WxJobsModel:
             return False
         previous = self._job_states.get(job_id)
         self._job_states[job_id] = state
-        if state not in {"COMPLETED", "COMPLETING", "FAILED", "CANCELLED", "TIMEOUT", "OUT_OF_MEMORY"}:
+        if state not in {"COMPLETED", "FAILED", "CANCELLED", "TIMEOUT", "OUT_OF_MEMORY"}:
             return False
         if previous == state or not self.completion_notify:
             return False
-        self.completion_notify(job_id, message or state)
+        if message:
+            notification = message
+        elif state == "COMPLETED":
+            notification = t("login.job_completed").format(jobid=job_id)
+        else:
+            notification = t("login.job_failed").format(jobid=job_id, state=state)
+        self.completion_notify(job_id, notification)
+        return True
+
+    def set_monitor_generation(self, generation: int) -> None:
+        generation = int(generation)
+        if generation == self._monitor_generation:
+            return
+        self._monitor_generation = generation
+        self._active_job_ids.clear()
+        self._monitor_initialized = False
+
+    def poll_active_jobs(self, items, final_state=None, *, generation: int | None = None) -> bool:
+        """Track squeue membership and query final states for disappeared jobs."""
+        if generation is not None and int(generation) != self._monitor_generation:
+            return False
+        rows = tuple(items or ())
+        current = {
+            str(item.get("id", item.get("job_id", ""))).strip()
+            for item in rows
+            if isinstance(item, dict) and str(item.get("id", item.get("job_id", ""))).strip()
+        }
+        if not self._monitor_initialized:
+            self._active_job_ids = current
+            self._monitor_initialized = True
+            for item in rows:
+                if isinstance(item, dict):
+                    self._job_states[str(item.get("id", item.get("job_id", "")))] = str(item.get("state", "")).strip().upper()
+            return True
+        for job_id in sorted(self._active_job_ids - current):
+            state = str(final_state(job_id) if final_state else "").strip().upper()
+            if state in {"COMPLETED", "FAILED", "CANCELLED", "TIMEOUT", "OUT_OF_MEMORY"}:
+                self.update_job_state(job_id, state)
+            elif self.completion_notify:
+                self.completion_notify(job_id, t("login.job_finished").format(jobid=job_id))
+        for item in rows:
+            if isinstance(item, dict):
+                self.update_job_state(item.get("id", item.get("job_id", "")), item.get("state", ""), "")
+        self._active_job_ids = current
         return True
 
 
@@ -170,7 +216,7 @@ def show_job_output(parent, model: WxJobsModel, view_id: str, *, read_output=Non
     return wx.ID_OK
 
 
-def show_jobs(parent=None, model: WxJobsModel | None = None, *, list_jobs=None, read_output=None, cancel=None, lifecycle=None) -> int:
+def show_jobs(parent=None, model: WxJobsModel | None = None, *, list_jobs=None, read_output=None, cancel=None, lifecycle=None, final_state=None, generation=None) -> int:
     """Create the wx Jobs workspace; callbacks are service adapters, never UI IO."""
     try:
         import wx
@@ -217,6 +263,13 @@ def show_jobs(parent=None, model: WxJobsModel | None = None, *, list_jobs=None, 
     state_lock = Lock()
     timer = wx.Timer(frame)
 
+    def post(callback, *args):
+        try:
+            if wx.GetApp() is not None:
+                wx.CallAfter(callback, *args)
+        except BaseException:
+            pass
+
     def render_items(items):
         state["items"] = list(items or [])
         jobs.DeleteAllItems()
@@ -229,6 +282,9 @@ def show_jobs(parent=None, model: WxJobsModel | None = None, *, list_jobs=None, 
     def refresh_jobs(_event=None):
         if not list_jobs or state["minimized"]:
             return
+        request_generation = generation() if generation else None
+        if request_generation is not None:
+            model.set_monitor_generation(request_generation)
         with state_lock:
             if state["closed"] or state["in_flight"]:
                 return
@@ -237,14 +293,14 @@ def show_jobs(parent=None, model: WxJobsModel | None = None, *, list_jobs=None, 
         def fetch():
             try:
                 result = list_jobs()
-                wx.CallAfter(done, result, None)
+                post(done, result, None, request_generation)
             except Exception as error:
-                wx.CallAfter(done, (), error)
+                post(done, (), error, request_generation)
 
-        def done(result, error):
+        def done(result, error, request_generation=None):
             with state_lock:
                 state["in_flight"] = False
-            if not state["closed"]:
+            if not state["closed"] and (generation is None or request_generation == generation()):
                 if error:
                     details.SetValue(str(error))
                 else:
@@ -252,7 +308,9 @@ def show_jobs(parent=None, model: WxJobsModel | None = None, *, list_jobs=None, 
                     render_items(items)
                     for item in items:
                         if isinstance(item, dict):
-                            model.update_job_state(item.get("id", item.get("job_id", "")), item.get("state", ""), item.get("name", ""))
+                            job_id = str(item.get("id", item.get("job_id", ""))).strip()
+                            model._job_states.setdefault(job_id, str(item.get("state", "")).strip().upper())
+                    model.poll_active_jobs(items, final_state, generation=request_generation)
 
         Thread(target=fetch, daemon=True).start()
 
@@ -372,6 +430,7 @@ def show_jobs(parent=None, model: WxJobsModel | None = None, *, list_jobs=None, 
         state["closed"] = True
         timer.Stop()
         unsubscribe_language_change(refresh_labels)
+        frame.Hide()
         frame.Destroy()
 
     def refresh_labels(_language=None):
@@ -398,6 +457,7 @@ def show_jobs(parent=None, model: WxJobsModel | None = None, *, list_jobs=None, 
     frame.Bind(wx.EVT_ICONIZE, iconized)
     frame.Bind(wx.EVT_CLOSE, close)
     if lifecycle is not None:
+        lifecycle.register_cleanup(frame.Hide)
         lifecycle.register_cleanup(close)
     subscribe_language_change(refresh_labels)
     frame._wx_jobs_state = state

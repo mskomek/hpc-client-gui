@@ -6,7 +6,8 @@ Automated evidence only; manual-only behavior is never marked covered.
 |---|---|---|---|---|
 | GUI-SHELL-001 | COVERED | app.py | wx_shell.py | test_cli_entrypoint.py |
 | GUI-SHELL-002 | COVERED | main_window.py | wx_lifecycle.py | test_app_updater.py |
-| GUI-SHELL-003 | PARTIAL | main_window.py | wx_shell.py | test_wx_shell.py |
+| GUI-SHELL-003 | COVERED | main_window.py | wx_shell.py; wx_jobs.py; wx_lifecycle.py; wx_transfer_workspace.py | test_wx_shell_p0.py; test_wx_shell_p0_stress.py |
+| GUI-I18N-001 | COVERED | main_window.py | wx_shell.py; wx_jobs.py; wx_local_files.py; wx_remote_files_view.py; wx_transfer_workspace.py | test_wx_shell_i18n.py; test_wx_shell_p0.py; test_wx_shell_p0_stress.py; test_wx_file_context_i18n.py |
 | GUI-CONN-001 | COVERED | login_widget.py | wx_connection.py | test_wx_connection.py |
 | GUI-CONN-002 | COVERED | connection_dialog.py | wx_connection.py | test_optional_ssh_credentials.py |
 | GUI-CONN-003 | COVERED | connection_dialog.py | wx_connection.py | test_provider_capabilities.py |
