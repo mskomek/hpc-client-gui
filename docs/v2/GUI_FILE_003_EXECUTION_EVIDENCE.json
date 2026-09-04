@@ -1,0 +1,52 @@
+{
+  "commit": "db8d35926011529d3f0793c4d1e1920e791e42f4",
+  "branch": "develop",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "python": "3.12.4",
+  "wxpython": "4.3.1 msw (phoenix), wxWidgets 3.3.3",
+  "commands": {
+    "final_stress": {"exit_code": 0, "passed": 11, "failed": 0, "skipped": 0, "duration_seconds": 171.69},
+    "full_wx_suite": {"exit_code": 0, "passed": 330, "failed": 0, "skipped": 0, "errors": 0, "duration_seconds": 251.73},
+    "transfer_concurrency_local_gate": {"exit_code": 0, "passed": 14, "failed": 0, "skipped": 0, "duration_seconds": 1.71},
+    "transfer_resume_semantics": {"exit_code": 0, "passed": 28, "failed": 0, "skipped": 0, "duration_seconds": 0.45},
+    "ruff": {"exit_code": 0},
+    "qt_removal_gate": {"exit_code": 1, "verdict": "NO-GO"}
+  },
+  "stress_counts": {
+    "right-click retarget": "200/200",
+    "local mutations": "100/100",
+    "remote mutations": "100/100",
+    "target switches": "200/200",
+    "navigate/completion races": "200/200",
+    "browser open/close": "50/50",
+    "blocked close-in-flight": "25/25",
+    "FILE transfer items": "100/100",
+    "unicode/space names": "50/50",
+    "reconnect session snapshots": "20/20"
+  },
+  "invariants": {
+    "wrong_targets": 0,
+    "stale_ui_overwrites": 0,
+    "destroyed_control_callbacks": 0,
+    "leaked_file_workers": 0,
+    "leaked_wx_windows": 0,
+    "duplicate_transfers": 0,
+    "lost_transfers": 0,
+    "leaked_transfer_sessions": 0,
+    "mixed_session_transfer_operations": 0,
+    "peak_local_mutation_concurrency": 1,
+    "peak_remote_mutation_concurrency": 1,
+    "lost_remote_mutations": 0
+  },
+  "qt_removal_gate": {
+    "verdict": "NO-GO",
+    "qt_import_points": 113,
+    "qt_production_files": 43,
+    "qt_dependency_records": 6,
+    "qt_unique_packages": 4,
+    "qt_packaging_references": 30,
+    "qt_packaging_files": 3,
+    "default_gui_runtime": "qt"
+  },
+  "scope_limitation": "The real-wx GUI-FILE-003 execution campaign was measured on Windows only."
+}
