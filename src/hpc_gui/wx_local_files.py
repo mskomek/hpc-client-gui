@@ -15,6 +15,8 @@ from hpc_gui.core.i18n import subscribe_language_change, t, unsubscribe_language
 from hpc_gui.services.file_context_actions import FILE_CONTEXT_LABEL_KEYS, context_selection, visible_actions
 from hpc_gui.wx_host import make_host
 
+import datetime as _datetime
+
 
 @dataclass(frozen=True)
 class LocalEntry:
@@ -218,10 +220,58 @@ def _build_local_files(parent, path: str | Path | None = None, *, open_editor=No
         raise RuntimeError("wxPython is not installed") from exc
     model = LocalBrowserModel(path or Path.cwd())
     host, finish = make_host(parent, title=t("tabs.ftp"), size=(900, 600), embedded=embedded)
+    # --- toolbar and path controls (Qt parity). Keys verified against i18n below. ---
+    # Only keys existing in both en/tr are instantiated: dirs.refresh, dirs.path,
+    # dirs.col_name/size/type/mtime . Missing keys (dirs.drives/back/up) omitted.
+    toolbar_sizer = wx.BoxSizer(wx.HORIZONTAL)
+    btn_refresh = wx.Button(host, label=t("dirs.refresh"))
+    toolbar_sizer.Add(btn_refresh, 0, wx.ALL, 4)
+    path_ctrl = wx.TextCtrl(host, value=str(model.current_path), style=wx.TE_PROCESS_ENTER)
+    # path row with label
+    path_row = wx.BoxSizer(wx.HORIZONTAL)
+    path_label = wx.StaticText(host, label=t("dirs.path"))
+    path_row.Add(path_label, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 4)
+    path_row.Add(path_ctrl, 1, wx.EXPAND | wx.ALL, 4)
     notebook = wx.Notebook(host)
     root_sizer = wx.BoxSizer(wx.VERTICAL)
+    root_sizer.Add(toolbar_sizer, 0, wx.EXPAND)
+    root_sizer.Add(path_row, 0, wx.EXPAND)
     root_sizer.Add(notebook, 1, wx.EXPAND)
     host.SetSizer(root_sizer)
+
+    def _format_mtime(mtime_val) -> str:
+        try:
+            v = int(mtime_val) if mtime_val is not None else 0
+        except Exception:
+            return ""
+        if not v:
+            return ""
+        try:
+            return _datetime.datetime.fromtimestamp(v).strftime("%d-%m-%y %H:%M")
+        except Exception:
+            return ""
+
+    def _type_label(entry) -> str:
+        try:
+            if getattr(entry, "is_dir", False):
+                return t("dirs.type_folder")
+            # derive from path name suffix
+            p = getattr(entry, "path", None)
+            name = ""
+            if p is not None:
+                try:
+                    name = p.name if hasattr(p, "name") else str(p).rsplit("/", 1)[-1].rsplit("\\", 1)[-1]
+                except Exception:
+                    name = str(p)
+            suffix = Path(name).suffix
+            if suffix and len(suffix) > 1:
+                return suffix[1:].upper()
+            fallback = t("ftp.file")
+            if fallback.startswith("["):
+                return ""
+            return fallback
+        except Exception:
+            return ""
     # Per-tab state. Each tab owns its own list control and generation counters.
     # Global state dict kept for backward compatibility (closed, mutation, top-level view_generation used for compat).
     state = {"context_target": None, "closed": False, "mutation_in_flight": False, "view_generation": 0, "listing_request_id": 0}
@@ -336,6 +386,8 @@ def _build_local_files(parent, path: str | Path | None = None, *, open_editor=No
                 for entry in tab_entry["entries"]:
                     idx = lst.InsertItem(lst.GetItemCount(), entry.path.name)
                     lst.SetItem(idx, 1, str(entry.size))
+                    lst.SetItem(idx, 2, _type_label(entry))
+                    lst.SetItem(idx, 3, _format_mtime(getattr(entry, "mtime", None)))
             except RuntimeError:
                 # control destroyed
                 return
@@ -363,6 +415,10 @@ def _build_local_files(parent, path: str | Path | None = None, *, open_editor=No
             model.tabs[idx] = resolved
         model.current_path = resolved
         model.active_tab = idx
+        try:
+            path_ctrl.SetValue(str(resolved))
+        except Exception:
+            pass
         refresh_active_tab_label(idx)
 
     def create_tab(target_path: Path):
@@ -371,6 +427,8 @@ def _build_local_files(parent, path: str | Path | None = None, *, open_editor=No
         listing = wx.ListCtrl(panel, style=wx.LC_REPORT)
         listing.InsertColumn(0, t("dirs.col_name"))
         listing.InsertColumn(1, t("dirs.col_size"))
+        listing.InsertColumn(2, t("dirs.col_type"))
+        listing.InsertColumn(3, t("dirs.col_mtime"))
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.Add(listing, 1, wx.EXPAND)
         panel.SetSizer(sizer)
@@ -422,6 +480,10 @@ def _build_local_files(parent, path: str | Path | None = None, *, open_editor=No
                 # sync model active index
                 model.active_tab = notebook.GetSelection()
                 model.current_path = entry.path
+                try:
+                    path_ctrl.SetValue(str(entry.path))
+                except Exception:
+                    pass
                 if hasattr(host, "_wx_local_controls"):
                     host._wx_local_controls["listing"] = new_entry["listing"]
                 refresh()
@@ -532,6 +594,8 @@ def _build_local_files(parent, path: str | Path | None = None, *, open_editor=No
                             for en in te["entries"]:
                                 ii = te["listing"].InsertItem(te["listing"].GetItemCount(), en.path.name)
                                 te["listing"].SetItem(ii, 1, str(en.size))
+                                te["listing"].SetItem(ii, 2, _type_label(en))
+                                te["listing"].SetItem(ii, 3, _format_mtime(getattr(en, "mtime", None)))
                         except RuntimeError:
                             return
                     def wk2():
@@ -598,6 +662,10 @@ def _build_local_files(parent, path: str | Path | None = None, *, open_editor=No
                 notebook.AddPage(new_entry["panel"], tab_label(entry.path), True)
                 model.active_tab = notebook.GetSelection()
                 model.current_path = entry.path
+                try:
+                    path_ctrl.SetValue(str(entry.path))
+                except Exception:
+                    pass
                 if hasattr(host, "_wx_local_controls"):
                     host._wx_local_controls["listing"] = new_entry["listing"]
                 # keep state view_generation in sync
@@ -673,9 +741,14 @@ def _build_local_files(parent, path: str | Path | None = None, *, open_editor=No
         if 0 <= new_sel < len(tabs):
             model.active_tab = new_sel
             model.current_path = tabs[new_sel]["path"]
+            try:
+                path_ctrl.SetValue(str(tabs[new_sel]["path"]))
+            except Exception:
+                pass
             # update global controls reference for tests (guard before attribute exists)
             if hasattr(host, "_wx_local_controls"):
                 host._wx_local_controls["listing"] = tabs[new_sel]["listing"]
+                host._wx_local_controls["path"] = path_ctrl
         event.Skip()
 
     notebook.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGED, on_page_changed)
@@ -686,8 +759,13 @@ def _build_local_files(parent, path: str | Path | None = None, *, open_editor=No
         if 0 <= idx < len(tabs):
             model.active_tab = idx
             model.current_path = tabs[idx]["path"]
+            try:
+                path_ctrl.SetValue(str(tabs[idx]["path"]))
+            except Exception:
+                pass
             if hasattr(host, "_wx_local_controls"):
                 host._wx_local_controls["listing"] = tabs[idx]["listing"]
+                host._wx_local_controls["path"] = path_ctrl
         return res
     notebook.SetSelection = _patched_set
     _orig_change = notebook.ChangeSelection
@@ -696,8 +774,13 @@ def _build_local_files(parent, path: str | Path | None = None, *, open_editor=No
         if 0 <= idx < len(tabs):
             model.active_tab = idx
             model.current_path = tabs[idx]["path"]
+            try:
+                path_ctrl.SetValue(str(tabs[idx]["path"]))
+            except Exception:
+                pass
             if hasattr(host, "_wx_local_controls"):
                 host._wx_local_controls["listing"] = tabs[idx]["listing"]
+                host._wx_local_controls["path"] = path_ctrl
         return res
     notebook.ChangeSelection = _patched_change
 
@@ -727,11 +810,19 @@ def _build_local_files(parent, path: str | Path | None = None, *, open_editor=No
             model.active_tab = new_sel
             model.current_path = tabs[new_sel]["path"]
             host._wx_local_controls["listing"] = tabs[new_sel]["listing"]
+            try:
+                path_ctrl.SetValue(str(tabs[new_sel]["path"]))
+            except Exception:
+                pass
         elif active_before > index:
             # active shifted left
             model.active_tab = notebook.GetSelection()
             if 0 <= model.active_tab < len(model.tabs):
                 model.current_path = tabs[model.active_tab]["path"]
+                try:
+                    path_ctrl.SetValue(str(tabs[model.active_tab]["path"]))
+                except Exception:
+                    pass
         else:
             # active unchanged
             pass
@@ -769,12 +860,40 @@ def _build_local_files(parent, path: str | Path | None = None, *, open_editor=No
     notebook.AddPage(initial["panel"], tab_label(model.current_path), True)
     model.active_tab = 0
 
+    def _on_path_enter(event):
+        text = path_ctrl.GetValue().strip()
+        if not text:
+            try:
+                path_ctrl.SetValue(str(active_tab_state()["path"]))
+            except Exception:
+                pass
+            return
+        try:
+            navigate(text)
+            refresh()
+        except Exception as error:
+            wx.MessageBox(str(error), t("login.err_title"), wx.OK | wx.ICON_ERROR)
+            try:
+                path_ctrl.SetValue(str(active_tab_state()["path"]))
+            except Exception:
+                pass
+
+    path_ctrl.Bind(wx.EVT_TEXT_ENTER, _on_path_enter)
+    btn_refresh.Bind(wx.EVT_BUTTON, lambda _e: refresh())
+
     def refresh_labels(_language=None):
         host.set_host_title(t("tabs.ftp"))
+        try:
+            btn_refresh.SetLabel(t("dirs.refresh"))
+            path_label.SetLabel(t("dirs.path"))
+        except Exception:
+            pass
         for tab_entry in tabs:
             try:
                 tab_entry["listing"].SetColumn(0, t("dirs.col_name"))
                 tab_entry["listing"].SetColumn(1, t("dirs.col_size"))
+                tab_entry["listing"].SetColumn(2, t("dirs.col_type"))
+                tab_entry["listing"].SetColumn(3, t("dirs.col_mtime"))
             except RuntimeError:
                 continue
         # update tab labels (paths may contain same)
@@ -786,7 +905,7 @@ def _build_local_files(parent, path: str | Path | None = None, *, open_editor=No
 
     # expose for tests
     # keep listing pointing to active
-    host._wx_local_controls = {"listing": initial["listing"], "notebook": notebook}
+    host._wx_local_controls = {"listing": initial["listing"], "notebook": notebook, "path": path_ctrl, "refresh_btn": btn_refresh}
     host._wx_local_model = model
     host._wx_local_state = state
     host._wx_local_run_action = run_action
