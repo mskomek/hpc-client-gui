@@ -1,0 +1,43 @@
+{
+  "commit": "270d079398d2688159aeff6db0895ffd240cad7d",
+  "branch": "develop",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "python": "3.12.4",
+  "wxpython": "4.3.1 msw (phoenix), wxWidgets 3.3.3",
+  "parity": {"GUI-SHELL-003": "COVERED", "GUI-I18N-001": "COVERED"},
+  "focused_results": {
+    "test_wx_shell.py": {"passed": 4, "failed": 0, "skipped": 0},
+    "test_wx_jobs.py + test_wx_jobs_behavior.py": {"passed": 10, "failed": 0, "skipped": 0},
+    "test_wx_shell_i18n.py": {"passed": 2, "failed": 0, "skipped": 0},
+    "test_wx_shell_p0.py + test_wx_shell_p0_stress.py": {"passed": 14, "failed": 0, "skipped": 0, "duration_seconds": 76.37},
+    "test_wx_file_context_i18n.py": {"passed": 5, "failed": 0, "skipped": 0},
+    "test_wx_packaged_smoke.py": {"passed": 1, "failed": 0, "skipped": 0}
+  },
+  "full_wx_suite": {"passed": 345, "failed": 1, "skipped": 0, "errors": 0, "duration_seconds": 313.45, "unrelated_failure": "test_wx_remote_copy_path_preserves_multiple_selected_paths"},
+  "stress_counts": {
+    "job terminal transitions": "100/100",
+    "duplicate-poll checks": "100/100",
+    "session/reconnect stale completions": "50/50",
+    "shell normal open/close": "50/50",
+    "blocked job-poll close": "25/25",
+    "active-transfer close": "25/25",
+    "repeated shutdown calls": "50/50",
+    "language switches EN/TR/EN": "100/100"
+  },
+  "invariants": {
+    "duplicate_job_notifications": 0,
+    "missed_final_notifications": 0,
+    "stale_session_notifications": 0,
+    "post_close_tray_notifications": 0,
+    "duplicate_cleanups": 0,
+    "destroyed_control_callbacks": 0,
+    "leaked_shell_windows": 0,
+    "leaked_transfer_sessions": 0,
+    "wrong_language_labels": 0,
+    "missing_translation_labels": 0,
+    "post_close_language_callbacks": 0
+  },
+  "packaged_wx_smoke": {"launch": "PASS", "terminal": "PASS", "files": "PASS", "editor": "PASS", "plugin_ansys": "PASS", "diagnostics_updater": "PASS"},
+  "qt_removal_gate": {"verdict": "NO-GO", "qt_import_points": 113, "qt_production_files": 43, "qt_dependency_records": 6, "qt_unique_packages": 4, "qt_packaging_references": 30, "qt_packaging_files": 3, "default_gui_runtime": "qt", "remaining_uncovered_p0_rows": 0},
+  "platform_scope": "The real-wx GUI-SHELL-003 and GUI-I18N-001 execution campaign was measured on Windows only."
+}
