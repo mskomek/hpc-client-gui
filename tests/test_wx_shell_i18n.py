@@ -63,3 +63,14 @@ def test_wx_shell_language_selection_retranslates_open_jobs_window(shell_i18n):
     assert "İş" in jobs.GetTitle() and frame._wx_shell_controls["description"].GetLabel() != "wxPython migration shell"
     _choose(frame, "en")
     assert jobs.GetTitle() == "Jobs"
+
+
+def test_wx_shell_exposes_navigation_tabs_and_terminal(shell_i18n):
+    _app, frame, _lifecycle = shell_i18n
+    controls = frame._wx_shell_controls
+    notebook = controls["notebook"]
+    assert notebook.GetPageCount() == 5
+    assert [notebook.GetPageText(index) for index in range(5)] == [
+        "Files", "Directories", "Script Editor", "Terminal", "Jobs & Outputs"
+    ]
+    assert controls["pages"]["NAV-TERMINAL"]["output"].IsEnabled()

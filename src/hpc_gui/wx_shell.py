@@ -99,9 +99,49 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
     description_label = wx.StaticText(panel, label=t("help.wx_shell_description"))
     root.Add(title_label, 0, wx.ALL, 12)
     root.Add(description_label, 0, wx.LEFT | wx.BOTTOM, 12)
+    notebook = wx.Notebook(panel)
+    page_controls = {}
+
+    def add_navigation_page(command_id, title_key):
+        page = wx.Panel(notebook)
+        page_sizer = wx.BoxSizer(wx.VERTICAL)
+        open_button = wx.Button(page, label=COMMAND_REGISTRY.get(command_id).label())
+        page_sizer.Add(open_button, 0, wx.ALL, 12)
+        page.SetSizer(page_sizer)
+        notebook.AddPage(page, t(title_key), False)
+        open_button.Bind(wx.EVT_BUTTON, lambda _event: _dispatch(command_id, frame, lifecycle, session_state))
+        page_controls[command_id] = {"page": page, "button": open_button}
+
+    add_navigation_page("NAV-FILES", "tabs.ftp")
+    add_navigation_page("NAV-DIRECTORIES", "tabs.directories")
+    add_navigation_page("NAV-EDITOR", "tabs.editor")
+    terminal_page = wx.Panel(notebook)
+    terminal_sizer = wx.BoxSizer(wx.VERTICAL)
+    terminal_output = wx.TextCtrl(terminal_page, style=wx.TE_MULTILINE | wx.TE_READONLY | wx.HSCROLL)
+    terminal_input = wx.TextCtrl(terminal_page, style=wx.TE_PROCESS_ENTER)
+    terminal_sizer.Add(terminal_output, 1, wx.EXPAND | wx.ALL, 8)
+    terminal_sizer.Add(terminal_input, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 8)
+    terminal_page.SetSizer(terminal_sizer)
+    notebook.AddPage(terminal_page, t("help.section_terminal"), False)
+    page_controls["NAV-TERMINAL"] = {"page": terminal_page, "output": terminal_output, "input": terminal_input}
+    add_navigation_page("NAV-JOBS", "tabs.jobs_outputs")
+    root.Add(notebook, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 8)
     panel.SetSizer(root)
     frame.CreateStatusBar()
     frame.SetStatusText(t("common.ready"))
+
+    def send_terminal_input(event):
+        session = session_state.get("session") or {}
+        ssh = session.get("ssh")
+        value = terminal_input.GetValue()
+        if ssh and value:
+            ssh.send_shell_input(value + "\n")
+            terminal_input.Clear()
+        elif not ssh:
+            terminal_output.AppendText(t("login.status_disconnected") + "\n")
+        event.Skip()
+
+    terminal_input.Bind(wx.EVT_TEXT_ENTER, send_terminal_input)
 
     def refresh_labels(_language=None):
         frame.SetTitle(f"{t('app.title')} {__version__}")
@@ -110,6 +150,12 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
         frame.SetStatusText(t("common.ready"))
         frame.GetMenuBar().SetMenuLabel(0, t("help.help_title"))
         frame.GetMenuBar().SetMenuLabel(1, t("help.language"))
+        for command_id, controls in page_controls.items():
+            if command_id == "NAV-TERMINAL":
+                continue
+            controls["button"].SetLabel(COMMAND_REGISTRY.get(command_id).label())
+        for index, title_key in enumerate(("tabs.ftp", "tabs.directories", "tabs.editor", "help.section_terminal", "tabs.jobs_outputs")):
+            notebook.SetPageText(index, t(title_key))
         for command, item in command_items:
             menu.SetLabel(item.GetId(), command.label())
         for language, item in language_items.items():
@@ -132,7 +178,7 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
         lifecycle.set_tray_notifier(tray.notify)
         lifecycle.register_cleanup(destroy_tray)
 
-    frame._wx_shell_controls = {"title": title_label, "description": description_label, "menu": menu, "language_menu": language_menu, "language_items": language_items}
+    frame._wx_shell_controls = {"title": title_label, "description": description_label, "menu": menu, "language_menu": language_menu, "language_items": language_items, "notebook": notebook, "pages": page_controls}
     frame._wx_shell_lifecycle = lifecycle
     frame._wx_shell_session_state = session_state
     frame._wx_shell_tray = tray
