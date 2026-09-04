@@ -104,9 +104,11 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
 
     # Build embedded panels using shared helpers (panels created once, not lazily)
     from hpc_gui.wx_connection import build_connection_panel
+    from hpc_gui.wx_directories_view import build_directories_panel
     from hpc_gui.wx_editor_view import build_editor_panel
     from hpc_gui.wx_jobs import build_jobs_panel
     from hpc_gui.wx_local_files import build_local_files_panel
+    from hpc_gui.wx_logs_view import build_logs_panel
     from hpc_gui.wx_remote_files_view import build_remote_files_panel
 
     # Connection
@@ -120,6 +122,12 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
     jobs_panel = build_jobs_panel(notebook, **_jobs)
     notebook.AddPage(jobs_panel, t("tabs.jobs_outputs"), False)
     page_controls["NAV-JOBS"] = {"page": jobs_panel}
+
+    # Directories (splitter with two remote panes)
+    _dirs = _directories_callbacks(session_state, frame, lifecycle)
+    directories_panel = build_directories_panel(notebook, **_dirs)
+    notebook.AddPage(directories_panel, t("tabs.directories"), False)
+    page_controls["NAV-DIRECTORIES"] = {"page": directories_panel}
 
     # Files (splitter with local left, remote right)
     splitter = wx.SplitterWindow(notebook)
@@ -148,6 +156,12 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
     terminal_page.SetSizer(terminal_sizer)
     notebook.AddPage(terminal_page, t("help.section_terminal"), False)
     page_controls["NAV-TERMINAL"] = {"page": terminal_page, "output": terminal_output, "input": terminal_input}
+
+    # Logs
+    _logs = _logs_callbacks(session_state, frame, lifecycle)
+    logs_panel = build_logs_panel(notebook, **_logs)
+    notebook.AddPage(logs_panel, t("tabs.logs"), False)
+    page_controls["NAV-LOGS"] = {"page": logs_panel}
     root.Add(notebook, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 8)
     panel.SetSizer(root)
     frame.CreateStatusBar()
@@ -173,7 +187,7 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
         frame.SetStatusText(t("common.ready"))
         frame.GetMenuBar().SetMenuLabel(0, t("help.help_title"))
         frame.GetMenuBar().SetMenuLabel(1, t("help.language"))
-        for index, title_key in enumerate(("tabs.login", "tabs.jobs_outputs", "tabs.ftp", "tabs.editor", "help.section_terminal")):
+        for index, title_key in enumerate(("tabs.login", "tabs.jobs_outputs", "tabs.directories", "tabs.ftp", "tabs.editor", "help.section_terminal", "tabs.logs")):
             notebook.SetPageText(index, t(title_key))
         for command, item in command_items:
             menu.SetLabel(item.GetId(), command.label())
@@ -681,6 +695,18 @@ def _connection_callbacks(session_state, parent, lifecycle):
     return {"profiles": profiles, "lifecycle": lifecycle, "on_connected": on_connected}
 
 
+def _logs_callbacks(session_state, parent, lifecycle):
+    # Logs view uses WxLogsModel internally; no session needed
+    return {}
+
+
+def _directories_callbacks(session_state, parent, lifecycle):
+    # Share single implementation between embedded tab and dispatch
+    # Pass session_state so view can derive scratch/home via system_profile helpers
+    # Also provide run_shell delegation matching _remote_files_callbacks pattern
+    return {"session_state": session_state}
+
+
 def _dispatch(command_id: str, parent=None, lifecycle=None, session_state=None) -> None:
     if command_id in {"APP-HELP", "APP-COMMAND-PALETTE"}:
         from hpc_gui.wx_help import show_help
@@ -697,10 +723,14 @@ def _dispatch(command_id: str, parent=None, lifecycle=None, session_state=None) 
         _kwargs = _local_files_callbacks(session_state, parent, lifecycle)
         show_local_files(parent, **_kwargs)
     elif command_id == "NAV-DIRECTORIES":
-        from hpc_gui.wx_remote_files_view import show_remote_files
+        from hpc_gui.wx_directories_view import show_directories
 
-        _kwargs = _remote_files_callbacks(session_state, parent, lifecycle)
-        show_remote_files(parent, **_kwargs)
+        show_directories(parent, **_directories_callbacks(session_state, parent, lifecycle))
+    elif command_id == "NAV-LOGS":
+        from hpc_gui.wx_logs_view import show_logs
+
+        _kwargs = _logs_callbacks(session_state, parent, lifecycle)
+        show_logs(parent, **_kwargs)
     elif command_id == "NAV-EDITOR":
         _get_editor_manager(session_state, parent, lifecycle).open_primary("", "", is_local=False)
     elif command_id == "NAV-TERMINAL":

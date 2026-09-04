@@ -48,7 +48,7 @@ def test_wx_shell_dispatches_core_views():
 
 
 def test_wx_shell_remote_operation_keeps_session_snapshot(monkeypatch):
-    from hpc_gui.wx_shell import _dispatch
+    from hpc_gui.wx_shell import _dispatch, _remote_files_callbacks
     import hpc_gui.wx_remote_files_view as remote_view
 
     class Files:
@@ -79,8 +79,10 @@ def test_wx_shell_remote_operation_keeps_session_snapshot(monkeypatch):
     first, second = Files("A"), Files("B")
     state = {"session": {"files": first, "slurm": Slurm()}}
     captured = []
+    # NAV-DIRECTORIES now opens the Directories view; the session-snapshot contract
+    # under test belongs to the remote-files callbacks, so exercise them directly.
     monkeypatch.setattr(remote_view, "show_remote_files", lambda *args, **kwargs: captured.append(kwargs))
-    _dispatch("NAV-DIRECTORIES", None, Lifecycle(), state)
+    captured.append(_remote_files_callbacks(state, None, Lifecycle()))
     operation = captured[-1]["operation"]
     worker = threading.Thread(target=operation, args=("move", ("/a",), "/b"))
     worker.start()

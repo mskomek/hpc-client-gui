@@ -269,15 +269,15 @@ def test_wx_standalone_editor_uses_new_session_after_reconnect(wx_app, tmp_path,
 
 def test_wx_shell_real_file_dispatches_preserve_existing_editor_semantics(wx_app, tmp_path, monkeypatch):
     import hpc_gui.wx_local_files as local_view
-    import hpc_gui.wx_remote_files_view as remote_view
+    import hpc_gui.wx_directories_view as directories_view
     from hpc_gui.wx_shell import _dispatch
 
     backend = Backend("session")
     state = {"session": {"files": backend, "slurm": backend, "ssh": backend}}
     lifecycle = Lifecycle()
-    local_calls, remote_calls = [], []
+    local_calls, directories_calls = [], []
     monkeypatch.setattr(local_view, "show_local_files", lambda *args, **kwargs: local_calls.append(kwargs))
-    monkeypatch.setattr(remote_view, "show_remote_files", lambda *args, **kwargs: remote_calls.append(kwargs))
+    monkeypatch.setattr(directories_view, "show_directories", lambda *args, **kwargs: directories_calls.append(kwargs))
     _dispatch("NAV-FILES", None, lifecycle, state)
     manager = state["editor_manager"]
     local = tmp_path / "dispatch.sh"
@@ -286,7 +286,7 @@ def test_wx_shell_real_file_dispatches_preserve_existing_editor_semantics(wx_app
     _dispatch("NAV-DIRECTORIES", None, lifecycle, state)
     _click(frame, "submit")
     _pump(wx_app, lambda: not frame._wx_editor_state["in_flight"])
-    assert local_calls and remote_calls and state["editor_manager"] is manager
+    assert local_calls and directories_calls and state["editor_manager"] is manager
     assert [event[0] for event in backend.events] == ["upload", "sbatch"]
     manager.open_primary("/remote/dispatch.sh", "remote", is_local=False)
     _dispatch("NAV-FILES", None, lifecycle, state)
