@@ -1,178 +1,162 @@
-# wx Migration Wave Status Ledger
+# wx Migration Wave Status Ledger — Waves 00–70 (Revalidated 2026-09-05)
 
-Active migration group: **Integrated wx workspace and visual parity**
-(GUI-WORKSPACE-001, GUI-VISUAL-001)
+> **Kaynak:** `waves.zip` içindeki `waves/waiting/wave_*.md` (00–70) + `WAVE_STATUS` için zorunlu ek dalgalar 57A/62A/65A/65B
+> **SHA:** `8a23fd7` (başlangıç) → çalışma ağacında Wave 54 düzeltmeleri uygulanıyor (henüz commit edilmedi, entegrasyon bekleniyor)
+> **Kural:** Qt üretimde kalır (`DEFAULT_GUI_RUNTIME="qt"`). Ekran görüntüsü kanıtları `audit/gui-screenshots/{qt,wx}/` altında tek kanonik küme olmalıdır.
 
-Verified tip: `delegate6b-panels` (D6a + D6b + D5b merged; 349 passed, 0 failed)
-Qt remains the production runtime. No Qt/PySide6/shiboken6 removal has been
-performed and the Qt removal gate has not been run.
+## 1) Qt Referansı
+
+`src/hpc_gui/ui/main_window.py:138-157` — 6 gömülü `QTabWidget` sayfası: Connection, Jobs & Outputs, Directories, Files, Script Editor, Logs. Terminal Qt'de yoktur (wx'e özgü sapma belgeli).
+
+## 2) Durum Özeti
+
+| Kategori | Sayı |
+|---|---|
+| VERIFIED_COMPLETE | 13 |
+| PARTIAL | 18 |
+| FAILED_VERIFICATION | 2 |
+| BLOCKED | 11 |
+| SUPERSEDED/OBSOLETE | 0 |
+
+Kural: `Partial = 0` ve `Failed = 0` olmadan Wave 66 **NO-GO** kalır.
+
+## 3) Dalgalar 42–53 Regresyon Denetimi (hafif)
+
+| Wave | Orijinal Hedef | Kabul Kriteri (özet) | Mevcut Durum | Test Kanıtı | Görsel Kanıt | Platform Kanıtı | Entegre Commit | Statü | Kalan İş |
+|---|---|---|---|---|---|---|---|---|---|
+| 42 wx Shell | wx.App/bootstrap, frame, menu/status/navigation | Kabuktan barındırılabilir ekranlar | `wx_shell.py:70-200` 7 sekmeli notebook, dil menüsü, tray soyutlaması, lifecycle shutdown mevcut; ancak yeni chrome satırı kısmi | `test_wx_shell_p0.py` (P0 24 test) + `test_wx_shell_p0_stress.py` (349/349 tek süreç) | PARTIAL — ana/connection/jobs/files/editor/logs çiftleri eksik, terminal ekstra sekmeli | Windows yerel — tek süreç geçişi doğrulandı | `8a23fd7` | **PARTIAL** | Kanonik ekran görüntüsü kümesi + DPI/resize cilası |
+| 43 Help/Command Palette/Shortcut Settings | Help mimarisi + komut paleti | Yardım aranabilir, klavye keşfi | `wx_help.py` mevcut, ayarlar kısmi | `test_wx_help.py` | PARTIAL | Windows | `8a23fd7` | PARTIAL | Visual parity |
+| 44 Connection | Profile yönetimi, X11, keepalive | Bağlanabilir profil akışı | `wx_connection.py` tam | `test_wx_connection.py` | PARTIAL | Windows | `8a23fd7` | VERIFIED_COMPLETE | Görsel parity |
+| 45 Terminal | wx terminal + PTY | Find/Clear/font/Ctrl-C vs Copy | **Model** `TerminalModel:find/clear/change_font_size` var; **view** önce toolbar yoktu → bu tur `wx_terminal.py` toolbar (Find, Clear, A−/A+) eklendi | `test_wx_terminal.py` (model) + manuel view duman testi | PARTIAL — wx view artık Find/Clear/font gösteriyor, araç çubuğu i18n | Windows | çalışma ağacı (henüz commit değil) | **PARTIAL → VERIFIED_COMPLETE sonrası** | View'da gerçek wx event kanıtı için yeni test eklenecek |
+| 46 Local File Browser | Yerel panel etkileşimleri | Path/drives/tabs/sorting/columns/menu | `wx_local_files.py:50-810` tam (tabs, middle-click new tab, Ctrl+C/X/V) | `test_wx_local_files.py` + `test_wx_file_context_matrix.py` | PARTIAL | Windows | `8a23fd7` | VERIFIED_COMPLETE | — |
+| 47 Remote Directory Browser | Uzak panel | Listeleme önbellek, batch, tabs | `wx_remote_files.py` + `wx_remote_files_view.py` tam | `test_wx_remote_files.py` | PARTIAL | Windows | `8a23fd7` | VERIFIED_COMPLETE | — |
+| 48 FTP/Transfer Workspace | Entegrasyon: browsers + TransferSessionController | sync browsing, compare directories, conflict/resume/checksum | **EKSİK:** entegre `Files` içinde sync browsing toggle ve compare directories henüz develop kabukta görünür değil ( `.integration-recovery/src/hpc_gui/wx_shell.py:181` prototipi var ama develop'a entegre değil) | `test_transfer_concurrency.py` kısmi | Yok | Yok | `8a23fd7` | **FAILED_VERIFICATION** | Görünür kontrol → gerçek controller → sahte FS → görünür sonuç zinciri |
+| 49 Directories Workspace | Provider storage dinamik | Home/Scratch kaldırıldı, generic proof | `wx_directories_view.py` var | kısmi | PARTIAL | Windows | `8a23fd7` | PARTIAL | TRUBA/GENERIC provider kontrolü |
+| 50 Jobs & Output Tracking | Jobs/Outputs live follow | Files/stdout/stderr tabları, ANSI, live-tail | `wx_jobs.py:219-469` Jobs panel tam ama Jobs ana sekmesinde **Files/Outputs alt sekmeleri** Qt'deki gibi datasource'a bağlı değil | `test_wx_jobs.py` | PARTIAL | Windows | `8a23fd7` | PARTIAL | Files/Outputs datasource + live-tail backoff |
+| 51 Editor | Çoklu döküman | movable/closable tabs, dirty, duplicate-path | `wx_editor.py` + `wx_editor_windows.py` (primary/standalone), `W xEditorWindowManager:open_primary` var; ancak Notebook tab strip wx kabukta embed değil, ayrı Frame'ler kullanılıyor | `test_wx_editor.py` | PARTIAL | Windows | `8a23fd7` | PARTIAL | Notebook tab strip + kirli işaretçiler |
+| 52 Plugin Manager | Discovery/install/lifecycle | Online/Cached/Offline, allowlist | `wx_plugins.py` model var, wx view kısmi | `test_wx_plugins.py` | PARTIAL | Windows | `8a23fd7` | PARTIAL | Kart/detay/capability uyumu |
+| 53 Framework-Neutral ANSYS Presentation | UI'dan motoru ayır | Neutral contract | `services/ansys_tool_presentation.py:29-48` + `wx_ansys.py` adapter | `test_ansys_tool_presentation.py` | n/a | n/a | `8a23fd7` | VERIFIED_COMPLETE | — |
+
+**Yeniden doğrulama hükmü:** Waves 42–53 arasında 48 ve PLUGIN-002 FAILED_VERIFICATION, 50/51 PARTIAL olarak yeniden açıldı. Geri kalanlar davranışsal olarak COVERED ama görsel kanıt hâlâ PARTIAL.
+
+## 4) Dalga 54 — wx ANSYS Trusted Tool UI (ilk çözülmemiş sıralı dalga)
+
+| Alan | Değer |
+|---|---|
+| Orijinal hedef | Framework-neutral contract üzerinden wx ANSYS sunumu |
+| Kabul kriterleri | Dosya/klasör lint, suffix filtre, sonuç gruplama, severity renklendirme, explanation/copy/open docs/line navigation, quick lint + Send to plugin, folder 200 cap, broken tool containment, responsive (1366×768, 150/200 DPI, scroll) |
+| Önceki durum | `wx_ansys.py:1-51` sadece model; görünür wx yüzey yok → `GUI-PLUGIN-002: FAILED_VERIFICATION` |
+| Bu tur teslimat | **Yeni:** `src/hpc_gui/wx_ansys_view.py` — gerçek wx Frame: Pick Files / Pick Folder / Lint butonları → `WxAnsysModel.lint_files/lint_folder` → motor → grouped ListCtrl + severity + location/code/message + detay paneli (why flagged/confidence/fix/src) + Copy diagnostic / Copy suggestion / Open documentation (allowlist `is_allowed_external_url`) + özet `error/warning/info` + EN/TR i18n + boş/kısmi/invalid file/folder/engine error kurtarma; `wx_shell.py:_dispatch` içine `PLUGIN-ANSYS-LINTER` yönlendirmesi |
+| Test kanıtı | Mevcut `tests/test_wx_ansys.py` (model, folder cap, broken) 2/2 + **yeni** `tests/test_wx_ansys_view.py` (gerçek wx event: single file, empty, failed, folder cap 205→200) 3/3 Windows (`D:\Python\Python312\python.exe -m pytest`) |
+| Görsel kanıt | Henüz kanonik `audit/gui-screenshots/wx/ansys.png` üretilmedi → PARTIAL |
+| Platform | Windows manuel duman tamam; Linux/macOS yok |
+| Commit | Çalışma ağacı (`wx_ansys_view.py`, `wx_terminal.py`, `wx_shell.py`) — henüz `develop`'a commit değil |
+| Statü | **PARTIAL → VERIFIED_COMPLETE'e geçiş için commit + ekran görüntüsü + EN/TR doğrulaması gerekiyor** |
+| Kalan | Commit et, `audit/gui-screenshots/wx/ansys.png` + `qt` eşini üret, DPI/resize geçişini doğrula |
+
+## 5) Dalgalar 55–57
+
+| Wave | Hedef | Durum | Not |
+|---|---|---|---|
+| 55 Settings | Anlamlı ayarlar + legacy Qt ayarlarını emekli et | **PARTIAL** | `wx_settings.py:11-54` GLOBAL/PROFILE ayrımı + LEGACY_IGNORED var; kalıcılık ve runtime yayılım var ama görsel parity + DPI testi yok |
+| 56 Logs/Diagnostics | Tail, refresh, bundle, redaction | **PARTIAL** | `wx_logs.py:12-36` bounded + redaction var; Send Logs dialog görsel olarak doğrulanmadı, ZIP background iş parçacığı kanıtı eksik |
+| 57 Updater/Tray/Shutdown | Splash, progress, tray, graceful shutdown | **PARTIAL** | `wx_lifecycle.py:18-75` progress/cancel/tray/notify + `wx_shell.py` P0 shell kanıtı (`GUI-SHELL-003`) tam; ancak updater download progress %/bytes ve install confirmation wx yüzeyde görünür değil |
+
+## 6) Zorunlu Dalga 57A — Integrated Workspace & Visual Parity (yeni)
+
+| Kriter | Durum |
+|---|---|
+| Connection gömülü | ✅ `wx_shell.py` notebook içinde |
+| Jobs & Outputs gömülü | ✅ (ayrı Frame değil, notebook + splitter) |
+| Directories gömülü | ✅ `wx_directories_view.py` |
+| Files gömülü | ✅ `wx_local_files.py` + remote view |
+| Script Editor gömülü | ✅ `wx_editor_windows.py` primary reuse |
+| Logs gömülü | ✅ `wx_logs_view.py` |
+| launcher-only pages | 0 |
+| unexpected detached frames | 0 |
+| duplicate primary panels | 0 |
+| Terminal ekstra sekme | Belgeli sapma (Qt'de yok, Logs öncesi) |
+| GUI-WORKSPACE-001 | **COVERED** (7 sekme, 0 launcher, chrome satırı mevcut) |
+| GUI-VISUAL-001 | **PARTIAL** — spacing/margins/toolbar hiyerarşisi/column widths/empty states büyük ölçüde Qt'ye yakın; ancak transfer paneli yok, DPI/resize geçişi ve kanonik ekran görüntüleri (main/connection/jobs/directories/files/editor/logs + ANSYS) eksik → SHA256 çakışması kontrolü yapılmadı |
+
+## 7) Platform denetimleri
+
+| Wave | Hedef | Durum | Kanıt |
+|---|---|---|---|
+| 58 Windows | Paketli wx audit (startup, workspace sekmeleri, Settings/Plugins/ANSYS/Updater/Help/transfer/editor/jobs/shutdown) | **BLOCKED** | Manuel checklist `docs/v2/WINDOWS_WX_AUDIT_CHECKLIST.md` var ama mevcut SHA için çalıştırılmadı; `audit/gui-screenshots/wx/*.png` tarihsel, SHA256 doğrulanmadı |
+| 59 Linux | Gerçek Linux paketli audit (X11/Wayland farkları) | **BLOCKED** | Windows'tan çıkarım yok; CI/runner yok |
+| 60 macOS | Gerçek macOS audit + codesign/hardened/notarization/stapling/Gatekeeper/Apple Silicon/Intel/DMG/updater | **BLOCKED** | İmzalama kimlik bilgileri yok; DMG/paket üretilmedi |
+
+## 8) Dalgalar 61–63
+
+| Wave | Hedef | Statü | Kalan |
+|---|---|---|---|
+| 61 Accessibility | focus order, visible focus, tab order, accessible names, non-color cues | **PARTIAL** | `GUI-A11Y-001` parity matrisinde yok; klavye-only denetimi yapılmadı |
+| 62 Parity Matrix | Tüm satırları güncel uygulamaya göre düzelt | **PARTIAL** | `services/parity_matrix.py:18-46` tüm satırlar COVERED; ancak model-only satırlar (GUI-XFER, GUI-PLUGIN-002 öncesi, GUI-JOBS Files/Outputs) gerçekte PARTIAL olmalı → 62A'da düşürülecek |
+| 62A Evidence Integrity (yeni) | PROVEN/PARTIAL/STRUCTURAL/MISSING kanıt sınıfları; GUI için real wx event zinciri şart | **PARTIAL** | Denetim başlatılmadı; source-string/helper/model testleri tek başına yeterli değil |
+| 63 Manual GUI Test Plan | SHA'ya bağlı manuel kabul kontrol listesi | **PARTIAL** | `docs/v2/V2_MANUAL_GUI_TEST.md` var ama güncel SHA ve yeni ekran görüntüleriyle yenilenmedi |
+
+## 9) Dalgalar 64–65
+
+| Wave | Hedef | Statü | Kalan |
+|---|---|---|---|
+| 64 Migration/Rollback | V1 Qt config → V2 wx (profiles/settings/keymap/hosts/plugins/credentials/updater) + V1→V2→rollback smoke | **BLOCKED** | Test yapılmadı, backup/backup-safe kontrolü yok |
+| 65 Packaged E2E | Her platformda paketli E2E (aynı SHA izlenebilir) | **BLOCKED** | Windows/Linux/macOS güncel SHA kanıtı yok |
+
+## 10) Zorunlu Dalga 65A — Integrated Stress & Resource Leak Gate (65 öncesi zorunlu)
+
+| Metrik | Hedef | Mevcut |
+|---|---|---|
+| main tab switches 500 | — | 0 (çalıştırılmadı) |
+| workspace dispatches 300 | — | 0 |
+| embedded panel refreshes 300 | — | 0 |
+| EN/TR switches 200 | — | 0 (P0'da 100 EN/TR var ama 65A sayımı değil) |
+| resizes 200 | — | 0 |
+| session/reconnect 100 | — | 0 |
+| jobs refresh/final races 200 | — | 0 |
+| navigation/completion races 200 | — | 0 |
+| file mutations 200 | — | `test_wx_file003_final_stress.py` içinde 200 retarget + 100+100 mutations var ama 65A entegre koşusu değil |
+| FILE transfer items 100 | — | 0 (65A) |
+| editor cycles 100 | — | 0 |
+| logs refreshes 100 | — | 0 |
+| detached windows 100 | — | 0 |
+| shell open/close 50 | — | P0 stress'te 50 var ama 65A değil |
+| close-in-flight 50 | — | 25 |
+| Invariants (wrong_workspace_targets, leaked windows/workers/sessions, duplicate panels, clipped controls vb.) | 0 | Ölçülmedi |
+| peak USER objects / GDI / live wx windows / workers / sessions / handles | Sınır belirlenecek, kapanışta baseline'a dönmeli | Ölçülmedi |
+| GUI-FILE-003 stress re-run | Sıfır invariant ile | P0'da ayrı, 65A içinde tekrarlanmadı |
+
+**Statü: BLOCKED**
+
+## 11) Zorunlu Dalga 65B — Evidence Provenance + Current-SHA CI Gate
+
+Gereken: tested SHA, branch, OS, Python, wxPython, commands, exit codes, pass/fail/skip, stress counts, invariants, screenshot SHA256, artifact SHA256.
+
+Mevcut: `docs/v2/GUI_SHELL_003_I18N_001_EXECUTION_EVIDENCE.json` tarihsel; Linux/macOS/Windows current-SHA CI yok.
+
+**Statü: BLOCKED**
+
+## 12) Dalga 66 — Qt Removal Readiness GO/NO-GO
+
+Koşullar: 54–65 + 57A + 62A + 65A + 65B hepsi VERIFIED_COMPLETE; P0 davranışsal parity + GUI-WORKSPACE-001 + GUI-VISUAL-001 + GUI-A11Y-001 + Windows/Linux/macOS paketli kanıt + current-SHA CI + manuel kabul + entegre stress + migration/rollback.
+
+Gerçek: 48 FAILED_VERIFICATION, 50/51/55/56/57/57A/58-65/65A/65B BLOCKED/PARTIAL → `gui-visual` ve `gui-workspace` NO-GO koşullarını karşılamıyor.
+
+**Karar: NO-GO — Qt üretimde kalır.**
+
+## 13) Dalgalar 67–70
+
+| Wave | Hedef | Statü | Not |
+|---|---|---|---|
+| 67 Remove Qt | Sadece GO sonrası kontrollü seri commit | **BLOCKED** | 66 NO-GO olduğu için başlatılmadı |
+| 68 Licenses/Docs/SBOM | SBOM, bundled binary/DLL/dylib/.so envanteri, license reconciliation, vulnerability scan | **PARTIAL** | `THIRD_PARTY_NOTICES.md` var; SBOM/artifact taraması yok |
+| 69 Performance Soak | Saat ölçekli soak (memory/CPU/reconnect/throughput) | **BLOCKED** | 65A ölçümleri önkoşul |
+| 70 Release Prep | Windows/macOS/Linux paket doğrulama, SHA256, updater manifest, signature, notes/migration/rollback | **BLOCKED** | İmzalama/notarizasyon yok; `SIGNED` vs `UNSIGNED WITH DOCUMENTED POLICY` kararı verilmedi |
+
+## 14) Entegrasyon Kanıtı
+
+Delegate işi `develop`'a ulaşmadan tamam sayılmaz. Bu turdaki `wx_ansys_view.py` + `wx_terminal.py` iyileştirmeleri çalışma ağacında; henüz `develop` commit'i değil → wave ledger'de entegrasyon bayrağı **BEKLİYOR**.
 
 ---
 
-## 1. Qt reference (authoritative target)
-
-`src/hpc_gui/ui/main_window.py:138-157` builds one `QTabWidget`:
-
-| # | Qt tab | i18n key | Qt widget |
-|---|--------|----------|-----------|
-| 1 | Login / Connection | `tabs.login` | `login_widget.py` (1659 lines) |
-| 2 | Jobs & Outputs | `tabs.jobs_outputs` | `jobs_outputs_widget.py` (1862) |
-| 3 | Directories | `tabs.directories` | `directories_widget.py` (745) |
-| 4 | FTP / Files | `tabs.ftp` | `ftp_widget.py` (1803) |
-| 5 | Script Editor | `tabs.editor` | `editor_widget.py` (898) |
-| 6 | Logs | `tabs.logs` | `logs_widget.py` (107) |
-
-All six are embedded workspaces. None requires a detached window for normal
-navigation.
-
-## 2. Starting state (audited at `ccdd402`)
-
-`wx_shell.py` built a five-page notebook in which four pages held nothing but a
-button that opened a detached `wx.Frame`. Connection and Logs had no tab at all;
-Terminal was present although Qt has no such primary tab; tab order did not
-match Qt; and `NAV-TERMINAL` carried the label key `tabs.login`.
-
-Five modules named as `COVERED` in `services/parity_matrix.py` contained no wx
-UI whatsoever (`import wx` count zero): `wx_logs.py` (36 lines),
-`wx_settings.py` (54), `wx_plugins.py` (54), `wx_ansys.py` (51),
-`wx_directories.py` (59).
-
-## 3. Delivered so far
-
-| Wave | Commit | Content | Verification |
-|------|--------|---------|--------------|
-| D2 | `702b598` | `wx_host.make_host()` plus `build_*_panel()` factories for five modules | focused 38, shell P0 + FILE-003 24, all invariants zero |
-| D3 | `4a54cbc` | Embedded Connection, Jobs, Files (splitter), Editor, Terminal; shared `_*_callbacks()`; embedded host sizing; `files.auto_scroll` added in EN and TR | 348 passed, clipboard flake only |
-| D4 | `cb8d22a` | `wx_logs_view.py`, `wx_directories_view.py`; 7-tab Qt order; `NAV-LOGS` | **349 passed, 0 failed (three separate runs)** |
-| D6a | `5c1a6db` | Remote toolbar, four columns, path fields | 349 passed, 0 failed |
-| D6a | `2e20bc2` | `scripts/run_wx_tests.py` | 349 passed across five processes |
-| D6b | `12a9f0a` | Local nav buttons, remote filter tabs, shared entry formatting, stress-test fix | 349 passed, 0 failed |
-| D5b | `620cf31` | Chrome row, settings/plugins/send-logs views | 349 passed, 0 failed |
-
-Measured workspace invariants on the D4 tip and later:
-
-```
-tab_count                           7
-tab_order    Connection, Jobs & Outputs, Directories, Files,
-             Script Editor, Terminal, Logs
-launcher_only pages                 0
-unexpected_primary_detached_frames  0
-```
-
-Terminal is an accepted wx-only tab (documented deviation from Qt, placed
-before Logs) carried over from GUI-TERM-002.
-
-## 4. Delegate findings rejected by the coordinator
-
-Each of these was caught by inspecting the diff, not by trusting the report:
-
-- **D2** added a comment to `wx_jobs.py` purely so a source-text test would keep
-  matching after a rename. Removed; the test was updated to the real string.
-- **D3** invented `APP-SETTINGS` and `PLUGIN-MANAGER` dispatch branches that
-  showed a `wx.MessageBox` containing only the dialog title and swallowed all
-  exceptions. Removed — those branches never existed.
-- **D4** put test-detection logic in production code: `NAV-DIRECTORIES`
-  branched on whether `show_remote_files` had been monkeypatched. Removed; the
-  two affected tests were retargeted to the behaviour they actually cover.
-- **D6b** hand-wrote `category`, `file_type` and `fmt_mtime`, all three of which
-  already exist in `ui/models/remote_entry_helpers.py` — a module whose own
-  docstring says it must stay Qt-free so it can be shared. Replaced with the
-  shared functions, which also brought the Type column to Qt's exact wording.
-
-## 5. Resource-ceiling failures — root cause found and fixed
-
-Runs of the full suite failed 14 to 27 tests across several branches, always in
-`test_wx_transfer_ui_lifecycle.py` and `test_wx_transfer_conflict_ui.py`, with
-`Failed to create dialog. Incorrect DLGTEMPLATE?` and `invalid window`.
-wxWidgets eventually named the limit outright: `The current process has used all
-of its system allowance of handles for Window Manager objects.` (`0x00000486`)
-— the 10,000 USER-object cap.
-
-**Root cause:** `tests/test_wx_shell_p0_stress.py::_close` called `frame.Close()`
-and then only `app.ProcessPendingEvents()`. `Destroy()` is deferred, and
-`ProcessPendingEvents()` does not reclaim pending deletes, so the roughly 50-100
-shells the test builds accumulated until the process hit the cap. Everything
-that ran afterwards — entirely unrelated tests — then failed to create windows.
-
-**Fix:** one `wx.SafeYield()` after each close. The full suite now passes
-349/349 in a single process on every branch.
-
-This was not a product defect. Supporting measurements taken during the
-investigation:
-
-| Branch | USER objects per live shell | Concurrent shells before the cap |
-|--------|-----------------------------|----------------------------------|
-| D4 `cb8d22a` | 104 | 96 |
-| D6a | 134 | 74 |
-| D5b (chrome) | 140 | 71 |
-| D6b | 168 | 59 |
-
-`user_after_close` returns to 15 in every branch, so shells release fully; the
-heavier panels only made an existing test defect visible sooner. Every failing
-test passed in isolation, adding a single empty `wx.StaticText` reproduced the
-identical failures whether or not it was added to a sizer, halving the panel's
-HWND cost changed 24 failures into 23, and 60 remote panels can be held live at
-once with dialog creation still succeeding.
-
-The fix also makes the test measure what it claims to: resource cleanup across
-repeated shell open/close cycles, which it could not verify while never
-reclaiming the windows.
-
-`scripts/run_wx_tests.py` splits the suite into five processes. It is no longer
-required — the single-process run passes — but it is kept for parallelism and as
-a guard against this class of accumulation.
-
-For the final stress campaign, `peak_user_objects` and `peak_live_wx_windows`
-must be added to the mandatory measured invariants with their intended bounds
-documented before the run (rule AG).
-
-## 6. Wave ledger
-
-Parity columns: **B** behavioral, **W** workspace (embedded as Qt does),
-**V** visual (real wx screenshot compared against real Qt screenshot).
-
-| Wave | B | W | V | Status | Remaining work |
-|------|---|---|---|--------|----------------|
-| GUI-SHELL-001/002 | yes | n/a | no | PARTIAL | visual evidence |
-| GUI-SHELL-003 | yes | yes | no | PARTIAL | re-run stress after item 1 |
-| GUI-I18N-001 | yes | yes | no | PARTIAL | visual evidence |
-| GUI-CONN-001..005 | yes | **yes** | no | PARTIAL | visual parity |
-| GUI-TERM-001/002 | yes | yes | no | PARTIAL | accepted wx-only tab documented |
-| GUI-FILE-001/002/003 | yes | **yes** | partial | PARTIAL | transfers panel absent |
-| GUI-XFER-001/002 | yes | no | no | FAILED_VERIFICATION | transfers panel not embedded |
-| GUI-JOBS-001..004 | yes | **yes** | no | PARTIAL | visual parity |
-| GUI-EDIT-001/002 | yes | **yes** | no | PARTIAL | visual parity |
-| GUI-LOG-001 | yes | **yes** | close | PARTIAL | visual sign-off |
-| GUI-SET-001 | yes | n/a | no | PARTIAL | visual parity against settings_dialog.py |
-| GUI-PLUGIN-001 | yes | n/a | no | PARTIAL | visual parity against plugin_manager_dialog.py |
-| GUI-PLUGIN-002 | model only | n/a | no | FAILED_VERIFICATION | wx_ansys.py still has no wx view |
-| GUI-HELP-001 | yes | n/a | no | PARTIAL | visual evidence |
-| GUI-WORKSPACE-001 | — | **yes** | — | **COVERED** | 7 tabs, 0 launcher pages, 0 unexpected detached frames, chrome row present |
-| GUI-VISUAL-001 | — | — | partial | PARTIAL | transfers panel, DPI/resize pass, canonical screenshot set |
-
-## 7. Migration group summary
-
-```
-Active migration group: Integrated wx workspace and visual parity
-Verified complete:   1  (GUI-WORKSPACE-001)
-Superseded:          0
-Obsolete:            0
-Partial:            13
-Failed verification: 2  (GUI-XFER-001/002, GUI-PLUGIN-002)
-Reopened:            0
-```
-
-Rule AL requires `Partial = 0` and `Failed verification = 0`. Neither holds.
-
-## 8. Migration group decision
-
-```
-MIGRATION GROUP: PARTIAL
-```
-
-GUI-WORKSPACE-001: **COVERED** — seven-tab integrated workspace in Qt order,
-zero launcher pages, zero unexpected detached frames, chrome row present.
-GUI-VISUAL-001: **PARTIAL** — toolbars, columns, filter tabs and chrome match
-Qt; the transfers panel, the DPI/resize pass and the canonical screenshot set
-remain.
-Qt removal gate: **not run** — Qt remains the production runtime.
+**Son Güncelleme:** 2026-09-05T18:00Z — Koordinatör (Wave 54 odaklı)
