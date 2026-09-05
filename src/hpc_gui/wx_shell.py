@@ -595,6 +595,10 @@ def _dispatch(command_id: str, parent=None, lifecycle=None, session_state=None) 
             read_output=read_output,
             cancel=slurm.scancel if slurm else None,
         )
+    elif command_id in {"PLUGIN-ANSYS-LINTER", "APP-ANSYS"}:
+        from hpc_gui.wx_ansys_view import show_ansys_lint
+
+        show_ansys_lint(parent, lifecycle=lifecycle)
 
 
 __all__ = ["main"]
