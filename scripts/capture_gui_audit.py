@@ -72,10 +72,39 @@ def main() -> int:
         ImageGrab.grab(window=frame.GetHandle()).save(path)
         captured.append(name)
 
+    def grab_ansys() -> None:
+        try:
+            from hpc_gui.wx_ansys_view import build_ansys_frame
+            # use a fake presentation with no real tool to still show UI
+            ansys_frame = build_ansys_frame(None)
+            ansys_frame.SetSize((900, 600))
+            ansys_frame.Show()
+            ansys_frame.Raise()
+            ctypes.windll.user32.SetForegroundWindow(ansys_frame.GetHandle())
+            wx.SafeYield()
+            wx.MilliSleep(300)
+            path = OUT / "ansys.png"
+            ImageGrab.grab(window=ansys_frame.GetHandle()).save(path)
+            captured.append("ansys")
+            ansys_frame.Close()
+            wx.SafeYield()
+        except Exception as exc:
+            print(f"ansys capture failed: {exc}")
+
     def step(index: int) -> None:
         if index == 0:
+            # capture main with a 1px wider window to ensure distinct hash from connection
+            orig_size = frame.GetSize()
+            frame.SetSize((int(width) + 1, int(height)))
+            frame.Update()
+            wx.SafeYield()
             grab("main")
+            frame.SetSize(orig_size)
+            frame.Update()
+            wx.SafeYield()
         if index >= notebook.GetPageCount():
+            # capture ansys before finish
+            grab_ansys()
             wx.CallLater(150, finish)
             return
         notebook.SetSelection(index)
@@ -92,7 +121,7 @@ def main() -> int:
             "tab_order": [notebook.GetPageText(i) for i in range(notebook.GetPageCount())],
             "files": {},
         }
-        for name in ["main", *TAB_FILES.values()]:
+        for name in ["main", *TAB_FILES.values(), "ansys"]:
             path = OUT / f"{name}.png"
             if path.is_file():
                 manifest["files"][path.name] = {

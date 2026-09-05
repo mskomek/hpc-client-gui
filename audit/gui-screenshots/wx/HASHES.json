@@ -1,5 +1,5 @@
 {
-  "captured_utc": "2026-09-05T13:56:14+00:00",
+  "captured_utc": "2026-09-05T17:00:22+00:00",
   "language": "en",
   "window_size": "1100x720",
   "wx_version": "4.3.1 msw (phoenix) wxWidgets 3.3.3",
@@ -14,36 +14,40 @@
   ],
   "files": {
     "main.png": {
-      "sha256": "bbcd80865acacc4df4c7cd230c1713977a21623ffb15de1bd6fa725df2c262a0",
-      "bytes": 11022
+      "sha256": "a337c90a5ffcffacff42f62b5ab985b49622d907ace28d715eac9cf6191fc66f",
+      "bytes": 10779
     },
     "connection.png": {
-      "sha256": "bbcd80865acacc4df4c7cd230c1713977a21623ffb15de1bd6fa725df2c262a0",
-      "bytes": 11022
+      "sha256": "254eb6991234ec6b546597a9fb829a304e2a6f95924019f4a447d4e7dc2ba9df",
+      "bytes": 10788
     },
     "jobs.png": {
-      "sha256": "1afd31538f2129d748cabc17113ba3a3befed38a2b7d8d5454be2322ac5a5a33",
-      "bytes": 21381
+      "sha256": "da3311e99bbf189ca6fa1f7ff6c9ca52d74c8bc04699f39db9e06b2402ab78b4",
+      "bytes": 21534
     },
     "directories.png": {
-      "sha256": "76751b37560febc8ca1a5c7b7cae46148c99faf1f025ff58ae96a7338eafc6af",
-      "bytes": 18158
+      "sha256": "3743c75774293c98023b0a67cf4aaf600943c8b40313ce3ad4ca2bd1f6159af2",
+      "bytes": 18272
     },
     "files.png": {
-      "sha256": "b45a9f109fed994de6b35e44453b52174c6fcddd558c9f3c2bd68193d283e72b",
-      "bytes": 33512
+      "sha256": "b0be24a21b7d1996378f793e6b5773a7f9952d8ae64bdad572a5cdc108bbe428",
+      "bytes": 33193
     },
     "editor.png": {
-      "sha256": "48e47a795d4953a4e3d482827edd5d5aa132549d1cf2ba3f294cc3e542e971a9",
-      "bytes": 13211
+      "sha256": "299ac3b7b964ff2d98cef6c6b4ed1b34403a21d82628f032c9e210ae27104444",
+      "bytes": 13590
     },
     "terminal.png": {
-      "sha256": "d6d8f441e6306f61d504d49c83721d602194f77c912eb41f8c5fd12de6af3616",
-      "bytes": 8779
+      "sha256": "faaaae8d5a2c900cd3f90a7f42d4aaefe9991f4bb71bad9ee5623c01d635791b",
+      "bytes": 9921
     },
     "logs.png": {
-      "sha256": "c13b5ef3ac00b4448ba0ea77b6654ec54de7db457c33299e2f40c65e36582469",
-      "bytes": 63944
+      "sha256": "4bc7dfa31ba68345facf4fdefe9a243dca6dc92f846aa2db4503a42ba8df1fb6",
+      "bytes": 64121
+    },
+    "ansys.png": {
+      "sha256": "f6e456e85783c27a56f9cee89a51209694a04b65fc7e94b7398e45accc4d708b",
+      "bytes": 5463
     }
   }
 }

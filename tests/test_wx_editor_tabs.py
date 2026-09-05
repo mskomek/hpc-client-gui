@@ -2,7 +2,6 @@
 import pytest
 wx = pytest.importorskip("wx")
 from hpc_gui.wx_editor_view import build_editor_panel
-from hpc_gui.wx_editor import WxEditorModel
 
 def _make_panel():
     app = wx.App.Get() or wx.App(False)

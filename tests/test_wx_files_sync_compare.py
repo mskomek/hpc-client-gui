@@ -1,6 +1,5 @@
 """Wave 48 sync browsing + compare directories real-event tests."""
 import os
-import time
 from pathlib import Path
 
 import pytest
