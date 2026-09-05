@@ -95,10 +95,29 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
         language_items[language] = item
         frame.Bind(wx.EVT_MENU, lambda _event, language=language: set_language(language), item)
     frame.GetMenuBar().Append(language_menu, t("help.language"))
-    title_label = wx.StaticText(panel, label=f"HPC Client GUI {__version__}")
-    description_label = wx.StaticText(panel, label=t("help.wx_shell_description"))
-    root.Add(title_label, 0, wx.ALL, 12)
-    root.Add(description_label, 0, wx.LEFT | wx.BOTTOM, 12)
+    # --- chrome row (Qt order, top-right, above notebook) ---
+    chrome_sizer = wx.BoxSizer(wx.HORIZONTAL)
+    version_label = wx.StaticText(panel, label=f"v{__version__}")
+    update_btn = wx.Button(panel, label=t("updates.action"))
+    plugins_btn = wx.Button(panel, label=t("plugins.action"))
+    send_logs_btn = wx.Button(panel, label=t("crash.send_logs_btn"))
+    settings_btn = wx.Button(panel, label=t("settings.action"))
+    help_btn = wx.Button(panel, label=t("help.help_title"))
+    cur_lang = current_language()
+    language_button = wx.Button(panel, label=t("language.english") if cur_lang == "en" else t("language.turkish"))
+    try:
+        language_button.SetBitmap(_flag_bitmap(wx, cur_lang))
+    except Exception:
+        pass
+    chrome_sizer.AddStretchSpacer(1)
+    chrome_sizer.Add(version_label, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 6)
+    chrome_sizer.Add(update_btn, 0, wx.ALL, 4)
+    chrome_sizer.Add(plugins_btn, 0, wx.ALL, 4)
+    chrome_sizer.Add(send_logs_btn, 0, wx.ALL, 4)
+    chrome_sizer.Add(settings_btn, 0, wx.ALL, 4)
+    chrome_sizer.Add(help_btn, 0, wx.ALL, 4)
+    chrome_sizer.Add(language_button, 0, wx.ALL, 4)
+    root.Add(chrome_sizer, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 6)
     notebook = wx.Notebook(panel)
     page_controls = {}
 
@@ -182,8 +201,6 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
 
     def refresh_labels(_language=None):
         frame.SetTitle(f"{t('app.title')} {__version__}")
-        title_label.SetLabel(f"{t('app.title')} {__version__}")
-        description_label.SetLabel(t("help.wx_shell_description"))
         frame.SetStatusText(t("common.ready"))
         frame.GetMenuBar().SetMenuLabel(0, t("help.help_title"))
         frame.GetMenuBar().SetMenuLabel(1, t("help.language"))
@@ -194,8 +211,208 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
         for language, item in language_items.items():
             language_menu.SetLabel(item.GetId(), t("help.english" if language == "en" else "help.turkish"))
             item.Check(current_language() == language)
+        # chrome row
+        version_label.SetLabel(f"v{__version__}")
+        update_btn.SetLabel(t("updates.action"))
+        plugins_btn.SetLabel(t("plugins.action"))
+        send_logs_btn.SetLabel(t("crash.send_logs_btn"))
+        settings_btn.SetLabel(t("settings.action"))
+        help_btn.SetLabel(t("help.help_title"))
+        cur = current_language()
+        language_button.SetLabel(t("language.english") if cur == "en" else t("language.turkish"))
+        try:
+            language_button.SetBitmap(_flag_bitmap(wx, cur))
+        except Exception:
+            pass
+        language_button.SetToolTip(t("help.language"))
 
     subscribe_language_change(refresh_labels)
+
+    # --- chrome parenting / tracking (Part 3) ---
+    chrome_windows: list = []
+    shell_ref = [frame]
+
+    def _shell_frame():
+        f = shell_ref[0] if shell_ref else None
+        if f is None:
+            return None
+        try:
+            if not wx.Window.FindWindowById(f.GetId()):
+                return None
+        except Exception:
+            return None
+        # also check if being deleted
+        try:
+            if f.IsBeingDeleted():
+                return None
+        except Exception:
+            pass
+        return f
+
+    def _track_new_windows(before_set):
+        f = _shell_frame()
+        if f is None:
+            return
+        after = set(wx.GetTopLevelWindows())
+        for w in after - before_set:
+            try:
+                if w.GetParent() is f:
+                    chrome_windows.append(w)
+                    # untrack when child closes/destroys
+                    def _on_child_close(evt, win=w):
+                        try:
+                            if win in chrome_windows:
+                                chrome_windows.remove(win)
+                        except Exception:
+                            pass
+                        evt.Skip()
+                    def _on_child_destroy(evt, win=w):
+                        try:
+                            if win in chrome_windows:
+                                chrome_windows.remove(win)
+                        except Exception:
+                            pass
+                        evt.Skip()
+                    w.Bind(wx.EVT_CLOSE, _on_child_close)
+                    w.Bind(wx.EVT_WINDOW_DESTROY, _on_child_destroy)
+            except Exception:
+                pass
+
+    def _on_help(_event):
+        f = _shell_frame()
+        if not f:
+            return
+        _dispatch("APP-HELP", f, lifecycle, session_state)
+
+    def _on_update(_event):
+        f = _shell_frame()
+        if not f:
+            return
+        before = set(wx.GetTopLevelWindows())
+
+        def worker():
+            try:
+                from hpc_gui.services.app_updater import get_latest_release, is_newer_version
+                from hpc_gui import __version__ as cur_ver
+                release = get_latest_release()
+
+                def on_done():
+                    ff = _shell_frame()
+                    if not ff:
+                        return
+                    try:
+                        if not wx.Window.FindWindowById(ff.GetId()):
+                            return
+                    except Exception:
+                        return
+                    try:
+                        if not is_newer_version(release.version, cur_ver):
+                            wx.MessageBox(t("updates.up_to_date").format(version=cur_ver), t("updates.title"), wx.OK | wx.ICON_INFORMATION, ff)
+                            _track_new_windows(before)
+                            return
+                        choice = wx.MessageBox(t("updates.available_message").format(current=cur_ver, latest=release.version), t("updates.available_title"), wx.YES_NO | wx.ICON_QUESTION, ff)
+                        _track_new_windows(before)
+                    except Exception as exc:
+                        try:
+                            wx.MessageBox(str(exc), t("updates.error_title"), wx.OK | wx.ICON_ERROR, ff)
+                        except Exception:
+                            pass
+
+                wx.CallAfter(on_done)
+            except Exception as exc:
+                def on_err():
+                    ff = _shell_frame()
+                    if not ff:
+                        return
+                    try:
+                        wx.MessageBox(t("updates.error_message").format(error=str(exc)), t("updates.error_title"), wx.OK | wx.ICON_ERROR, ff)
+                    except Exception:
+                        pass
+                try:
+                    wx.CallAfter(on_err)
+                except Exception:
+                    pass
+
+        Thread(target=worker, daemon=True).start()
+
+    def _on_plugins(_event):
+        f = _shell_frame()
+        if not f:
+            return
+        before = set(wx.GetTopLevelWindows())
+        try:
+            from hpc_gui.wx_plugins_view import show_plugins
+            show_plugins(parent=f)
+        except Exception:
+            pass
+        _track_new_windows(before)
+
+    def _on_send_logs(_event):
+        f = _shell_frame()
+        if not f:
+            return
+        before = set(wx.GetTopLevelWindows())
+        try:
+            from hpc_gui.wx_send_logs_view import show_send_logs
+            show_send_logs(parent=f)
+        except Exception:
+            pass
+        _track_new_windows(before)
+
+    def _on_settings(_event):
+        f = _shell_frame()
+        if not f:
+            return
+        before = set(wx.GetTopLevelWindows())
+        try:
+            from hpc_gui.wx_settings_view import show_settings
+            show_settings(parent=f)
+        except Exception:
+            pass
+        _track_new_windows(before)
+
+    def _on_language_button(_event):
+        f = _shell_frame()
+        if not f:
+            return
+        # show popup menu parented to shell frame, not button
+        cur = current_language()
+        menu = wx.Menu()
+        ids = {}
+        for lang, key in (("en", "english"), ("tr", "turkish")):
+            item = menu.AppendRadioItem(wx.ID_ANY, t(f"language.{key}"))
+            try:
+                item.SetBitmap(_flag_bitmap(wx, lang))
+            except Exception:
+                pass
+            if lang == cur:
+                item.Check(True)
+            ids[item.GetId()] = lang
+
+        def on_choice(evt):
+            lang = ids.get(evt.GetId())
+            if lang:
+                set_language(lang)
+
+        # bind each id
+        for _id in ids:
+            f.Bind(wx.EVT_MENU, on_choice, id=_id)
+        try:
+            f.PopupMenu(menu)
+        finally:
+            menu.Destroy()
+            for _id in ids:
+                try:
+                    f.Unbind(wx.EVT_MENU, id=_id)
+                except Exception:
+                    pass
+
+    help_btn.Bind(wx.EVT_BUTTON, _on_help)
+    update_btn.Bind(wx.EVT_BUTTON, _on_update)
+    plugins_btn.Bind(wx.EVT_BUTTON, _on_plugins)
+    send_logs_btn.Bind(wx.EVT_BUTTON, _on_send_logs)
+    settings_btn.Bind(wx.EVT_BUTTON, _on_settings)
+    language_button.Bind(wx.EVT_BUTTON, _on_language_button)
 
     tray = _make_tray(wx, frame, tray_factory)
 
@@ -211,7 +428,9 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
         lifecycle.set_tray_notifier(tray.notify)
         lifecycle.register_cleanup(destroy_tray)
 
-    frame._wx_shell_controls = {"title": title_label, "description": description_label, "menu": menu, "language_menu": language_menu, "language_items": language_items, "notebook": notebook, "pages": page_controls}
+    frame._wx_shell_controls = {"version": version_label, "update": update_btn, "plugins": plugins_btn, "send_logs": send_logs_btn, "settings": settings_btn, "help": help_btn, "language_button": language_button, "menu": menu, "language_menu": language_menu, "language_items": language_items, "notebook": notebook, "pages": page_controls}
+    frame._wx_shell_chrome_windows = chrome_windows
+    frame._wx_shell_shell_ref = shell_ref
     frame._wx_shell_lifecycle = lifecycle
     frame._wx_shell_session_state = session_state
     frame._wx_shell_tray = tray
@@ -239,10 +458,25 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
                         pass
         unsubscribe_language_change(refresh_labels)
         lifecycle.set_tray_notifier(None)
+        # Close chrome windows first (Part 3 Rule 3) before lifecycle.shutdown
+        for win in list(chrome_windows):
+            try:
+                win.Close()
+            except Exception:
+                pass
+        chrome_windows.clear()
+        # invalidate shell_ref so future handlers abort parenting
+        try:
+            shell_ref[0] = None
+        except Exception:
+            pass
         frame.Hide()
         for child in wx.GetTopLevelWindows():
             if child is not frame and child.GetParent() is frame:
-                child.Close()
+                try:
+                    child.Close()
+                except Exception:
+                    pass
         lifecycle.shutdown()
         frame.Destroy()
 
@@ -331,7 +565,40 @@ def _run_shell_in_terminal(session_state, parent, lifecycle, paths) -> None:
         return
     from hpc_gui.wx_terminal import show_terminal
 
-    show_terminal(parent, ssh=ssh, lifecycle=lifecycle)
+    def do_show():
+        # re-read parent at call time and validate (Part 3 Rule 2)
+        p = parent
+        try:
+            import wx
+            if p is not None and not wx.Window.FindWindowById(p.GetId()):
+                p = None
+        except Exception:
+            p = None
+        # parent must be shell frame; if not alive, abort
+        if p is None:
+            return
+        show_terminal(p, ssh=ssh, lifecycle=lifecycle)
+
+    try:
+        import wx
+
+        if wx.IsMainThread():
+            do_show()
+        else:
+            evt = Event()
+            def _call():
+                try:
+                    do_show()
+                finally:
+                    evt.set()
+            wx.CallAfter(_call)
+            evt.wait(2)
+    except Exception:
+        # fallback direct
+        try:
+            do_show()
+        except Exception:
+            pass
     ssh.send_shell_text("\n".join(f"bash -- {shlex.quote(path)}" for path in paths) + "\n")
 
 

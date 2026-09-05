@@ -89,12 +89,12 @@ def test_wx_shell_language_menu_has_flags_and_tracks_selection(shell):
 
 def test_wx_shell_switch_retranslates_visible_shell(shell):
     _app, frame, _lifecycle, _session, _tray = shell
-    english = (frame.GetTitle(), frame._wx_shell_controls["description"].GetLabel(), frame.GetStatusBar().GetStatusText())
+    english = (frame.GetTitle(), frame._wx_shell_controls["settings"].GetLabel(), frame.GetStatusBar().GetStatusText())
     _select_menu(frame, "tr")
-    turkish = (frame.GetTitle(), frame._wx_shell_controls["description"].GetLabel(), frame.GetStatusBar().GetStatusText())
+    turkish = (frame.GetTitle(), frame._wx_shell_controls["settings"].GetLabel(), frame.GetStatusBar().GetStatusText())
     assert english != turkish
     _select_menu(frame, "en")
-    assert (frame.GetTitle(), frame._wx_shell_controls["description"].GetLabel(), frame.GetStatusBar().GetStatusText()) == english
+    assert (frame.GetTitle(), frame._wx_shell_controls["settings"].GetLabel(), frame.GetStatusBar().GetStatusText()) == english
 
 
 def test_wx_shell_job_completion_uses_disappeared_job_final_state(shell):
