@@ -148,16 +148,27 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
     notebook.AddPage(directories_panel, t("tabs.directories"), False)
     page_controls["NAV-DIRECTORIES"] = {"page": directories_panel}
 
-    # Files (splitter with local left, remote right)
-    splitter = wx.SplitterWindow(notebook)
+    # Files (splitter with local left, remote right + transfers bottom)
+    transfer_splitter = wx.SplitterWindow(notebook)
+    transfer_splitter.SetMinimumPaneSize(140)
+    top_splitter = wx.SplitterWindow(transfer_splitter)
     _local = _local_files_callbacks(session_state, frame, lifecycle)
     _remote = _remote_files_callbacks(session_state, frame, lifecycle)
-    local_panel = build_local_files_panel(splitter, **_local)
-    remote_panel = build_remote_files_panel(splitter, **_remote)
-    splitter.SplitVertically(local_panel, remote_panel, 300)
-    splitter.SetMinimumPaneSize(200)
-    notebook.AddPage(splitter, t("tabs.ftp"), False)
-    page_controls["NAV-FILES"] = {"page": splitter, "local": local_panel, "remote": remote_panel}
+    local_panel = build_local_files_panel(top_splitter, **_local)
+    remote_panel = build_remote_files_panel(top_splitter, **_remote)
+    top_splitter.SplitVertically(local_panel, remote_panel, 300)
+    top_splitter.SetMinimumPaneSize(200)
+    from hpc_gui.wx_transfer_workspace import build_transfers_panel
+
+    transfers_panel = build_transfers_panel(transfer_splitter)
+    # store for routing in _start_file_transfers
+    session_state["embedded_transfers_panel"] = transfers_panel
+    # Give the transfers list room for its column headers, and let a taller
+    # window grow the browsers rather than the transfers area.
+    transfer_splitter.SplitHorizontally(top_splitter, transfers_panel, -220)
+    transfer_splitter.SetSashGravity(0.7)
+    notebook.AddPage(transfer_splitter, t("tabs.ftp"), False)
+    page_controls["NAV-FILES"] = {"page": transfer_splitter, "local": local_panel, "remote": remote_panel, "transfers": transfers_panel}
 
     # Script Editor
     _editor_kwargs = {"action_factory": _editor_action_factory(session_state)}
@@ -438,7 +449,7 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
     def close(_event):
         # Invoke every embedded page's close callback before shutdown
         for _key, controls in list(page_controls.items()):
-            # For Files splitter, local/remote are stored separately
+            # For Files splitter, local/remote/transfers are stored separately
             candidates = []
             if "page" in controls:
                 candidates.append(controls["page"])
@@ -446,6 +457,8 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
                 candidates.append(controls["local"])
             if "remote" in controls:
                 candidates.append(controls["remote"])
+            if "transfers" in controls:
+                candidates.append(controls["transfers"])
             for host in candidates:
                 cb = getattr(host, "_wx_host_close", None)
                 if callable(cb):
@@ -690,7 +703,36 @@ def _start_file_transfers(session_state, lifecycle, items, *, on_progress=None, 
         progress(1, 1)
 
     transfer_window = None
-    if parent:
+    # Prefer embedded transfers panel when shell has one and caller is the shell frame
+    embedded = session_state.get("embedded_transfers_panel")
+    use_embedded = False
+
+    def _embedded_alive(win):
+        if win is None:
+            return False
+        try:
+            import wx as _wx
+
+            if not _wx.Window.FindWindowById(win.GetId()):
+                return False
+            if hasattr(win, "IsBeingDeleted") and win.IsBeingDeleted():
+                return False
+            st = getattr(win, "_wx_transfer_state", None)
+            if isinstance(st, dict) and st.get("closed"):
+                return False
+            return True
+        except Exception:
+            return False
+
+    if embedded and _embedded_alive(embedded):
+        # Route shell's own file transfers to the embedded panel; keep detached path for external parents
+        if parent is not None and hasattr(parent, "_wx_shell_controls"):
+            transfer_window = embedded
+            use_embedded = True
+        elif parent is None:
+            transfer_window = embedded
+            use_embedded = True
+    if not use_embedded and parent:
         import wx
 
         ready = Event()

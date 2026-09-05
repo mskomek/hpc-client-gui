@@ -756,7 +756,14 @@
     "parallel_hint_effective": "Configured limit: {configured} · Effective limit for this connection: {effective}",
     "parallel_hint_pair": "Configured limit: {configured} · Effective limit for this connection: {effective} ({reason})",
     "parallel_reduced_backend": "this connection type transfers one file at a time",
-    "parallel_reduced_server": "limited by the server or connection type"
+    "parallel_reduced_server": "limited by the server or connection type",
+    "col_local": "Server/Local file",
+    "col_direction": "Direction",
+    "col_remote": "Remote file",
+    "col_size": "Size",
+    "col_progress": "Progress",
+    "col_priority": "Priority",
+    "col_status": "Status"
   },
   "connection": {
     "dialog_title": "Add Connection",

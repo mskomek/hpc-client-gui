@@ -128,29 +128,97 @@ def create_transfer_conflict_dialog(parent, files, item):
     return dlg
 
 
-def create_transfer_progress(parent, controller=None):
-    """Create the small wx owner for a transfer session, if wx is available."""
+def _build_transfers(parent, controller=None, embedded=False):
+    """Shared builder for detached and embedded transfer panels."""
     try:
         import wx
     except ImportError:
         return None
+    from hpc_gui.wx_host import make_host
 
-    frame = wx.Frame(parent, title=t("transfer.ftp_activity_title"), size=(520, 150))
-    panel = wx.Panel(frame)
-    title = wx.StaticText(panel, label=t("transfer.ftp_activity_title"))
-    detail = wx.StaticText(panel, label=t("transfer.no_active_transfer"))
-    gauge = wx.Gauge(panel, range=1)
-    cancel = wx.Button(panel, label=t("transfer.cancel"))
-    layout = wx.BoxSizer(wx.VERTICAL)
-    layout.Add(title, 0, wx.ALL | wx.EXPAND, 8)
-    layout.Add(detail, 0, wx.LEFT | wx.RIGHT | wx.EXPAND, 8)
-    layout.Add(gauge, 0, wx.ALL | wx.EXPAND, 8)
-    layout.Add(cancel, 0, wx.ALIGN_RIGHT | wx.LEFT | wx.RIGHT | wx.BOTTOM, 8)
-    panel.SetSizer(layout)
-    state = {"closed": False, "controller": controller}
+    if embedded:
+        host, finish = make_host(parent, title=t("transfer.ftp_activity_title"), size=(520, 260), embedded=True)
+        panel = wx.Panel(host)
+        # status line
+        status = wx.StaticText(panel, label=t("transfer.no_active_transfer"))
+        # notebook with three pages
+        notebook = wx.Notebook(panel)
+        # helper to create ListCtrl with required columns
+        def _make_list():
+            lst = wx.ListCtrl(notebook, style=wx.LC_REPORT | wx.BORDER_SUNKEN)
+            cols = [
+                (t("transfer.col_local"), 170),
+                (t("transfer.col_direction"), 80),
+                (t("transfer.col_remote"), 170),
+                (t("transfer.col_size"), 80),
+                (t("transfer.col_progress"), 110),
+                (t("transfer.col_priority"), 80),
+                (t("transfer.col_status"), 100),
+            ]
+            for idx, (label, width) in enumerate(cols):
+                lst.InsertColumn(idx, label, width=width)
+            return lst
 
+        queue_list = _make_list()
+        failed_list = _make_list()
+        completed_list = _make_list()
+        notebook.AddPage(queue_list, t("transfer.queue_tab"))
+        notebook.AddPage(failed_list, t("transfer.failed_tab"))
+        notebook.AddPage(completed_list, t("transfer.completed_tab"))
+        # button row
+        btn_stop = wx.Button(panel, label=t("transfer.stop"))
+        btn_cancel = wx.Button(panel, label=t("transfer.cancel"))
+        btn_clear = wx.Button(panel, label=t("transfer.clear_pending"))
+        btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        btn_sizer.Add(btn_stop, 0, wx.ALL, 4)
+        btn_sizer.Add(btn_cancel, 0, wx.ALL, 4)
+        btn_sizer.Add(btn_clear, 0, wx.ALL, 4)
+        btn_sizer.AddStretchSpacer(1)
+        layout = wx.BoxSizer(wx.VERTICAL)
+        layout.Add(status, 0, wx.ALL | wx.EXPAND, 6)
+        layout.Add(notebook, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 6)
+        layout.Add(btn_sizer, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 6)
+        panel.SetSizer(layout)
+        state = {"closed": False, "controller": controller, "queue_map": {}, "failed_map": {}, "completed_map": {}}
+        controls = {
+            "status": status,
+            "notebook": notebook,
+            "queue": queue_list,
+            "failed": failed_list,
+            "completed": completed_list,
+            "stop": btn_stop,
+            "cancel": btn_cancel,
+            "clear_pending": btn_clear,
+        }
+        # keep host-level sizer so embedded panel expands correctly when placed in splitter
+        host_sizer = wx.BoxSizer(wx.VERTICAL)
+        host_sizer.Add(panel, 1, wx.EXPAND)
+        host.SetSizer(host_sizer)
+    else:
+        host, finish = make_host(parent, title=t("transfer.ftp_activity_title"), size=(520, 150), embedded=False)
+        panel = wx.Panel(host)
+        title = wx.StaticText(panel, label=t("transfer.ftp_activity_title"))
+        detail = wx.StaticText(panel, label=t("transfer.no_active_transfer"))
+        gauge = wx.Gauge(panel, range=1)
+        cancel = wx.Button(panel, label=t("transfer.cancel"))
+        layout = wx.BoxSizer(wx.VERTICAL)
+        layout.Add(title, 0, wx.ALL | wx.EXPAND, 8)
+        layout.Add(detail, 0, wx.LEFT | wx.RIGHT | wx.EXPAND, 8)
+        layout.Add(gauge, 0, wx.ALL | wx.EXPAND, 8)
+        layout.Add(cancel, 0, wx.ALIGN_RIGHT | wx.LEFT | wx.RIGHT | wx.BOTTOM, 8)
+        panel.SetSizer(layout)
+        # host sizer for frame
+        host_sizer = wx.BoxSizer(wx.VERTICAL)
+        host_sizer.Add(panel, 1, wx.EXPAND)
+        host.SetSizer(host_sizer)
+        host.Layout()
+        state = {"closed": False, "controller": controller}
+        controls = {"title": title, "detail": detail, "gauge": gauge, "cancel": cancel}
+        # alias for shared code expectations
+        status = detail
+
+    # --- common helpers ---
     def post(callback, *args):
-        # pre-enqueue check; real safety is in callback re-check
         if state["closed"]:
             return
         try:
@@ -160,154 +228,617 @@ def create_transfer_progress(parent, controller=None):
         except BaseException:
             return
 
-    def set_controller(value):
-        state["controller"] = value
+    def _has_cancel(ctrl):
+        if ctrl is None:
+            return False
+        if callable(getattr(ctrl, "cancel_all", None)) or callable(getattr(ctrl, "cancel", None)):
+            return True
+        eng = getattr(ctrl, "engine", None)
+        if eng and (callable(getattr(eng, "cancel_all", None)) or callable(getattr(eng, "cancel", None))):
+            return True
+        return False
+
+    def _has_clear(ctrl):
+        if ctrl is None:
+            return False
+        if callable(getattr(ctrl, "clear_pending", None)):
+            return True
+        eng = getattr(ctrl, "engine", None)
+        if eng and callable(getattr(eng, "clear_pending", None)):
+            return True
+        return False
 
     def _is_safe():
         if state["closed"]:
             return False
         try:
-            if not frame or not wx.Window.FindWindowById(frame.GetId()):
+            if not host or not wx.Window.FindWindowById(host.GetId()):
                 return False
         except Exception:
             return False
-        # also check panel destroyed
         try:
-            if not detail or not wx.Window.FindWindowById(detail.GetId()):
+            # check primary control
+            primary = status if embedded else controls.get("detail")
+            if primary and not wx.Window.FindWindowById(primary.GetId()):
                 return False
         except Exception:
             return False
         return True
 
-    def update_queue(event, item):
+    def _update_button_state():
         if not _is_safe():
             return
+        ctrl = state["controller"]
         try:
-            if event == "started":
-                detail.SetLabel(t("transfer.active_item").format(item=item.label()))
-            elif event == "completed":
-                detail.SetLabel(t("transfer.completed_tab"))
-            elif event == "failed":
-                detail.SetLabel(t("transfer.errors_tab"))
-        except RuntimeError:
-            return
-
-    def update_progress(item, done, total):
-        if not _is_safe():
-            return
-        try:
-            gauge.SetRange(max(1, int(total)))
-            gauge.SetValue(min(max(0, int(done)), gauge.GetRange()))
-            detail.SetLabel(t("transfer.progress_detail").format(item=item.label(), done=done, total=total, speed="", eta=""))
-        except RuntimeError:
-            return
-
-    def finish():
-        if not _is_safe():
-            return
-        try:
-            controller_value = state["controller"]
-            if controller_value and controller_value.engine.failed:
-                # check last failure reason
-                last = controller_value.engine.failed[-1][1] if controller_value.engine.failed else ""
-                if last == "cancelled":
-                    detail.SetLabel(t("transfer.cancelled"))
+            if embedded:
+                has_cancel = _has_cancel(ctrl)
+                has_clear = _has_clear(ctrl)
+                controls["stop"].Enable(has_cancel)
+                controls["cancel"].Enable(has_cancel)
+                controls["clear_pending"].Enable(has_clear)
+            else:
+                # detached has single cancel button: enabled when controller present and not closed
+                # keep enabled if controller exists; disable on finish
+                if ctrl is None:
+                    controls["cancel"].Disable()
                 else:
-                    detail.SetLabel(t("transfer.errors_tab"))
-            elif controller_value:
-                detail.SetLabel(t("transfer.completed_tab"))
-            cancel.Disable()
+                    # enabled if cancel available
+                    if _has_cancel(ctrl):
+                        controls["cancel"].Enable(True)
+                    else:
+                        controls["cancel"].Disable()
         except RuntimeError:
-            return
+            pass
 
-    def finish_error(message):
-        if not _is_safe():
-            return
+    def set_controller(value):
+        state["controller"] = value
+        # UI updates must run on main thread
+        def _do_set():
+            _update_button_state()
+            if embedded and value is not None:
+                try:
+                    eng = getattr(value, "engine", None)
+                    pending = []
+                    if eng is not None and hasattr(eng, "pending"):
+                        try:
+                            pending = list(eng.pending)
+                        except Exception:
+                            pending = []
+                    elif hasattr(value, "pending"):
+                        try:
+                            pending = list(value.pending)
+                        except Exception:
+                            pending = []
+                    for it in pending:
+                        iid = id(it)
+                        if iid not in state["queue_map"]:
+                            state["queue_map"][iid] = it
+                            found = False
+                            for idx in range(queue_list.GetItemCount()):
+                                try:
+                                    if queue_list.GetItemData(idx) == iid:
+                                        found = True
+                                        break
+                                except Exception:
+                                    continue
+                            if not found:
+                                try:
+                                    queue_list.InsertItem(queue_list.GetItemCount(), str(getattr(it, "src", "")))
+                                    row = queue_list.GetItemCount() - 1
+                                    queue_list.SetItem(row, 1, str(getattr(it, "dst", "")))
+                                    queue_list.SetItem(row, 2, "Queued")
+                                    queue_list.SetItem(row, 3, "")
+                                    queue_list.SetItem(row, 4, str(getattr(it, "priority", "Normal")))
+                                    queue_list.SetItemData(row, iid)
+                                except RuntimeError:
+                                    pass
+                except Exception:
+                    pass
+
+        # Use post to ensure main thread execution if not on main thread
         try:
-            detail.SetLabel(t("transfer.errors_tab"))
-            cancel.Disable()
-        except RuntimeError:
-            return
+            if wx.IsMainThread():
+                _do_set()
+            else:
+                post(_do_set)
+                # fallback if post skipped due to closed
+                try:
+                    wx.CallAfter(_do_set)
+                except Exception:
+                    pass
+        except Exception:
+            try:
+                post(_do_set)
+            except Exception:
+                pass
 
-    def cancel_transfer(_event):
-        value = state["controller"]
-        if value:
-            value.cancel()
+    # --- embedded specific helpers ---
+    def _find_row(lst, iid):
+        for idx in range(lst.GetItemCount()):
+            try:
+                if lst.GetItemData(idx) == iid:
+                    return idx
+            except Exception:
+                continue
+        return -1
+
+    def _add_row(lst, item, status_text, progress_text):
+        # Columns mirror Qt's transfer list: local, direction, remote, size,
+        # progress, priority, status.
+        op = str(getattr(item, "op", "") or "")
+        local, remote = str(getattr(item, "src", "")), str(getattr(item, "dst", ""))
+        if op == "download":
+            local, remote = remote, local
+        idx = lst.GetItemCount()
+        lst.InsertItem(idx, local)
+        lst.SetItem(idx, 1, op)
+        lst.SetItem(idx, 2, remote)
+        lst.SetItem(idx, 3, str(getattr(item, "size", "") or ""))
+        lst.SetItem(idx, 4, progress_text)
+        lst.SetItem(idx, 5, str(getattr(item, "priority", "") or ""))
+        lst.SetItem(idx, 6, status_text)
+        try:
+            lst.SetItemData(idx, id(item))
+        except Exception:
+            pass
+        return idx
+
+    # --- update callbacks ---
+    if embedded:
+        def update_queue(event, item):
+            if not _is_safe():
+                return
+            try:
+                iid = id(item)
+                if event in ("queued", "started"):
+                    try:
+                        status.SetLabel(t("transfer.active_item").format(item=item.label()))
+                    except Exception:
+                        status.SetLabel(t("transfer.no_active_transfer"))
+                    if iid not in state["queue_map"]:
+                        state["queue_map"][iid] = item
+                        _add_row(queue_list, item, "Queued", "")
+                elif event == "completed":
+                    try:
+                        status.SetLabel(t("transfer.completed_tab"))
+                    except Exception:
+                        pass
+                    state["queue_map"].pop(iid, None)
+                    row = _find_row(queue_list, iid)
+                    if row != -1:
+                        try:
+                            queue_list.DeleteItem(row)
+                        except Exception:
+                            pass
+                    if iid not in state["completed_map"]:
+                        state["completed_map"][iid] = item
+                        _add_row(completed_list, item, "Successful", "")
+                    try:
+                        notebook.SetSelection(2)
+                    except Exception:
+                        pass
+                elif event == "failed":
+                    try:
+                        status.SetLabel(t("transfer.errors_tab"))
+                    except Exception:
+                        pass
+                    state["queue_map"].pop(iid, None)
+                    row = _find_row(queue_list, iid)
+                    if row != -1:
+                        try:
+                            queue_list.DeleteItem(row)
+                        except Exception:
+                            pass
+                    if iid not in state["failed_map"]:
+                        state["failed_map"][iid] = item
+                        _add_row(failed_list, item, "Failed", "")
+                    try:
+                        notebook.SetSelection(1)
+                    except Exception:
+                        pass
+                _update_button_state()
+            except RuntimeError:
+                return
+
+        def update_progress(item, done, total):
+            if not _is_safe():
+                return
+            try:
+                iid = id(item)
+                row = _find_row(queue_list, iid)
+                try:
+                    label = t("transfer.progress_detail").format(item=item.label(), done=done, total=total, speed="", eta="")
+                except Exception:
+                    label = f"{done}/{total}"
+                if row != -1:
+                    try:
+                        queue_list.SetItem(row, 3, label)
+                    except RuntimeError:
+                        pass
+                try:
+                    status.SetLabel(label)
+                except RuntimeError:
+                    pass
+            except RuntimeError:
+                return
+
+        def finish():
+            if not _is_safe():
+                return
+            try:
+                ctrl = state["controller"]
+                if ctrl and getattr(ctrl, "engine", None) and getattr(ctrl.engine, "failed", None):
+                    try:
+                        last = ctrl.engine.failed[-1][1] if ctrl.engine.failed else ""
+                    except Exception:
+                        last = ""
+                    if last == "cancelled":
+                        status.SetLabel(t("transfer.cancelled"))
+                    else:
+                        status.SetLabel(t("transfer.errors_tab"))
+                elif ctrl:
+                    status.SetLabel(t("transfer.completed_tab"))
+                try:
+                    controls["stop"].Disable()
+                    controls["cancel"].Disable()
+                except Exception:
+                    pass
+            except RuntimeError:
+                return
+
+        def finish_error(message):
+            if not _is_safe():
+                return
+            try:
+                status.SetLabel(t("transfer.errors_tab"))
+                try:
+                    controls["stop"].Disable()
+                    controls["cancel"].Disable()
+                except Exception:
+                    pass
+            except RuntimeError:
+                return
+
+        def _do_cancel(_event=None):
+            ctrl = state["controller"]
+            if not ctrl:
+                return
+            called = False
+            for target in (ctrl, getattr(ctrl, "engine", None)):
+                if target is None:
+                    continue
+                for name in ("cancel_all", "cancel"):
+                    m = getattr(target, name, None)
+                    if callable(m):
+                        try:
+                            m()
+                        except Exception:
+                            pass
+                        called = True
+                        break
+                if called:
+                    break
             if _is_safe():
                 try:
-                    detail.SetLabel(t("transfer.cancelled"))
-                    cancel.Disable()
+                    status.SetLabel(t("transfer.cancelled"))
+                    controls["stop"].Disable()
+                    controls["cancel"].Disable()
                 except RuntimeError:
                     pass
 
-    def close(_event):
-        # mark closed before Destroy to prevent late callbacks touching destroyed controls
-        state["closed"] = True
-        unsubscribe_language_change(refresh_labels)
-        value = state["controller"]
-        if value and not value.engine.wait(0):
-            value.cancel()
-        # Destroy must happen after marking closed
-        frame.Hide()
-        frame.Destroy()
+        def _do_clear_pending(_event=None):
+            # call controller method if exists
+            ctrl = state["controller"]
+            for target in (ctrl, getattr(ctrl, "engine", None)):
+                if target is None:
+                    continue
+                m = getattr(target, "clear_pending", None)
+                if callable(m):
+                    try:
+                        m()
+                    except Exception:
+                        pass
+                    break
+            if _is_safe():
+                try:
+                    queue_list.DeleteAllItems()
+                    state["queue_map"].clear()
+                    _update_button_state()
+                except RuntimeError:
+                    pass
 
-    def refresh_labels(_language=None):
-        if state["closed"]:
-            return
-        try:
-            frame.SetTitle(t("transfer.ftp_activity_title"))
-            title.SetLabel(t("transfer.ftp_activity_title"))
-            cancel.SetLabel(t("transfer.cancel"))
-            # preserve dynamic detail? keep current label as is if it's not terminal static?
-            # retranslate terminal/status labels if they are known states
-            current = detail.GetLabel()
-            # map known translations
-            # Instead we update only if detail is one of the known static states, preserve progress detail otherwise
-            cv = state["controller"]
-            if cv and cv.engine.failed:
-                last = cv.engine.failed[-1][1] if cv.engine.failed else ""
-                if last == "cancelled":
-                    detail.SetLabel(t("transfer.cancelled"))
-                else:
-                    detail.SetLabel(t("transfer.errors_tab"))
-            elif cv and not cv.engine.pending and not cv.engine.failed:
-                # completed
-                # if detail was showing no_active or completed, update
-                if current in (t("transfer.no_active_transfer"), t("transfer.completed_tab"), t("transfer.errors_tab"), t("transfer.cancelled")) or "—" not in current:
-                    detail.SetLabel(t("transfer.completed_tab"))
-            else:
-                # keep existing progress detail
+        def close(event=None):
+            if state["closed"]:
+                # already closed, still skip event if needed
+                if event is not None:
+                    try:
+                        event.Skip()
+                    except Exception:
+                        pass
+                return
+            state["closed"] = True
+            try:
+                unsubscribe_language_change(refresh_labels)
+            except Exception:
                 pass
-        except RuntimeError:
-            return
+            ctrl = state["controller"]
+            if ctrl is not None:
+                try:
+                    eng = getattr(ctrl, "engine", None)
+                    if eng is not None and not eng.wait(0):
+                        # try cancel
+                        for target in (ctrl, eng):
+                            m = getattr(target, "cancel_all", None) or getattr(target, "cancel", None)
+                            if callable(m):
+                                try:
+                                    m()
+                                except Exception:
+                                    pass
+                                break
+                except Exception:
+                    pass
+            # for embedded panel, do not destroy host frame; just hide/cleanup
+            # the shell will destroy the frame which contains this panel
+            if event is not None:
+                try:
+                    event.Skip()
+                except Exception:
+                    pass
 
-    cancel.Bind(wx.EVT_BUTTON, cancel_transfer)
-    frame.Bind(wx.EVT_CLOSE, close)
+        def refresh_labels(_language=None):
+            if state["closed"]:
+                return
+            try:
+                host.set_host_title(t("transfer.ftp_activity_title"))
+                # update status if it's a known static value
+                current = status.GetLabel()
+                # Determine if current matches old static translations that need refresh
+                # Keep progress detail containing '—' as is
+                if "—" not in current:
+                    # if controller indicates cancelled/failed/completed, refresh accordingly
+                    ctrl = state["controller"]
+                    try:
+                        if ctrl and getattr(ctrl, "engine", None) and ctrl.engine.failed:
+                            last = ctrl.engine.failed[-1][1] if ctrl.engine.failed else ""
+                            if last == "cancelled":
+                                status.SetLabel(t("transfer.cancelled"))
+                            else:
+                                status.SetLabel(t("transfer.errors_tab"))
+                        elif ctrl and not getattr(ctrl, "engine", None) or (ctrl and not ctrl.engine.pending and not ctrl.engine.failed):
+                            # only refresh if currently a static label
+                            pass
+                        else:
+                            # keep or set to no_active if queue empty and no controller activity
+                            if not state["queue_map"] and not state["failed_map"] and not state["completed_map"]:
+                                status.SetLabel(t("transfer.no_active_transfer"))
+                    except Exception:
+                        pass
+                    # Fallback: translate static labels if they were showing a known static string
+                    # Check limited set
+                    # We can't reliably detect previous language, so if current is not progress, ensure it stays translated
+                    # If status is still one of the three tab labels or no_active/cancelled, re-translate
+                    # Do minimal: if queue is empty and no progress, set to no_active translation
+                    if not state["queue_map"] and current in (t("transfer.no_active_transfer"), t("transfer.completed_tab"), t("transfer.errors_tab"), t("transfer.cancelled")):
+                        # already correct after above, no-op
+                        pass
+                # notebook tabs
+                notebook.SetPageText(0, t("transfer.queue_tab"))
+                notebook.SetPageText(1, t("transfer.failed_tab"))
+                notebook.SetPageText(2, t("transfer.completed_tab"))
+                # columns
+                col_keys = ["transfer.col_local", "transfer.col_direction", "transfer.col_remote", "transfer.col_size", "transfer.col_progress", "transfer.col_priority", "transfer.col_status"]
+                for lst in (queue_list, failed_list, completed_list):
+                    for idx, key in enumerate(col_keys):
+                        try:
+                            item = wx.ListItem()
+                            # need to prepare item for GetColumn/SetColumn pattern
+                            # Fetch existing column to preserve width etc, then set text
+                            # Use ListCtrl GetColumn
+                            col_item = lst.GetColumn(idx)
+                            # GetColumn returns int width? In some wx versions GetColumn returns wxListItem; try both
+                            if isinstance(col_item, wx.ListItem):
+                                col_item.SetText(t(key))
+                                lst.SetColumn(idx, col_item)
+                            else:
+                                # fallback: re-insert column header via SetColumn with new item
+                                new_item = wx.ListItem()
+                                new_item.SetText(t(key))
+                                lst.SetColumn(idx, new_item)
+                        except Exception:
+                            try:
+                                new_item = wx.ListItem()
+                                new_item.SetText(t(key))
+                                lst.SetColumn(idx, new_item)
+                            except Exception:
+                                pass
+                controls["stop"].SetLabel(t("transfer.stop"))
+                controls["cancel"].SetLabel(t("transfer.cancel"))
+                controls["clear_pending"].SetLabel(t("transfer.clear_pending"))
+                _update_button_state()
+            except RuntimeError:
+                return
+
+        controls["stop"].Bind(wx.EVT_BUTTON, _do_cancel)
+        controls["cancel"].Bind(wx.EVT_BUTTON, _do_cancel)
+        controls["clear_pending"].Bind(wx.EVT_BUTTON, _do_clear_pending)
+
+    else:
+        # detached logic (original)
+        def update_queue(event, item):
+            if not _is_safe():
+                return
+            try:
+                if event == "started":
+                    controls["detail"].SetLabel(t("transfer.active_item").format(item=item.label()))
+                elif event == "completed":
+                    controls["detail"].SetLabel(t("transfer.completed_tab"))
+                elif event == "failed":
+                    controls["detail"].SetLabel(t("transfer.errors_tab"))
+            except RuntimeError:
+                return
+
+        def update_progress(item, done, total):
+            if not _is_safe():
+                return
+            try:
+                controls["gauge"].SetRange(max(1, int(total)))
+                controls["gauge"].SetValue(min(max(0, int(done)), controls["gauge"].GetRange()))
+                controls["detail"].SetLabel(t("transfer.progress_detail").format(item=item.label(), done=done, total=total, speed="", eta=""))
+            except RuntimeError:
+                return
+
+        def finish():
+            if not _is_safe():
+                return
+            try:
+                controller_value = state["controller"]
+                if controller_value and controller_value.engine.failed:
+                    last = controller_value.engine.failed[-1][1] if controller_value.engine.failed else ""
+                    if last == "cancelled":
+                        controls["detail"].SetLabel(t("transfer.cancelled"))
+                    else:
+                        controls["detail"].SetLabel(t("transfer.errors_tab"))
+                elif controller_value:
+                    controls["detail"].SetLabel(t("transfer.completed_tab"))
+                controls["cancel"].Disable()
+            except RuntimeError:
+                return
+
+        def finish_error(message):
+            if not _is_safe():
+                return
+            try:
+                controls["detail"].SetLabel(t("transfer.errors_tab"))
+                controls["cancel"].Disable()
+            except RuntimeError:
+                return
+
+        def cancel_transfer(_event):
+            value = state["controller"]
+            if value:
+                # prefer cancel_all
+                m = getattr(value, "cancel_all", None) or getattr(value, "cancel", None)
+                if callable(m):
+                    m()
+                else:
+                    eng = getattr(value, "engine", None)
+                    if eng:
+                        m2 = getattr(eng, "cancel_all", None) or getattr(eng, "cancel", None)
+                        if callable(m2):
+                            m2()
+                if _is_safe():
+                    try:
+                        controls["detail"].SetLabel(t("transfer.cancelled"))
+                        controls["cancel"].Disable()
+                    except RuntimeError:
+                        pass
+
+        def close(_event):
+            state["closed"] = True
+            try:
+                unsubscribe_language_change(refresh_labels)
+            except Exception:
+                pass
+            value = state["controller"]
+            if value and not value.engine.wait(0):
+                try:
+                    m = getattr(value, "cancel_all", None) or getattr(value, "cancel", None)
+                    if callable(m):
+                        m()
+                    else:
+                        eng = getattr(value, "engine", None)
+                        if eng:
+                            m2 = getattr(eng, "cancel_all", None) or getattr(eng, "cancel", None)
+                            if callable(m2):
+                                m2()
+                except Exception:
+                    pass
+            try:
+                host.Hide()
+                host.Destroy()
+            except Exception:
+                pass
+            if _event is not None:
+                try:
+                    _event.Skip()
+                except Exception:
+                    pass
+
+        def refresh_labels(_language=None):
+            if state["closed"]:
+                return
+            try:
+                host.set_host_title(t("transfer.ftp_activity_title"))
+                controls["title"].SetLabel(t("transfer.ftp_activity_title"))
+                controls["cancel"].SetLabel(t("transfer.cancel"))
+                current = controls["detail"].GetLabel()
+                cv = state["controller"]
+                if cv and cv.engine.failed:
+                    last = cv.engine.failed[-1][1] if cv.engine.failed else ""
+                    if last == "cancelled":
+                        controls["detail"].SetLabel(t("transfer.cancelled"))
+                    else:
+                        controls["detail"].SetLabel(t("transfer.errors_tab"))
+                elif cv and not cv.engine.pending and not cv.engine.failed:
+                    if current in (t("transfer.no_active_transfer"), t("transfer.completed_tab"), t("transfer.errors_tab"), t("transfer.cancelled")) or "—" not in current:
+                        controls["detail"].SetLabel(t("transfer.completed_tab"))
+                else:
+                    pass
+            except RuntimeError:
+                return
+
+        controls["cancel"].Bind(wx.EVT_BUTTON, cancel_transfer)
+        # _do_clear not needed for detached but keeps api
+
+    # attach shared attributes
+    host.bind_host_close(close)
     subscribe_language_change(refresh_labels)
-    frame._wx_transfer_controls = {"title": title, "detail": detail, "gauge": gauge, "cancel": cancel}
-    frame._wx_transfer_state = state
-    frame._wx_transfer_set_controller = set_controller
-    # wrap callbacks for safety: each posts a closure that re-checks closed/valid
+    host._wx_transfer_controls = controls
+    host._wx_transfer_state = state
+    host._wx_transfer_set_controller = set_controller
+
     def _post_queue(event, item):
         def cb():
             update_queue(event, item)
         post(cb)
+
     def _post_progress(item, done, total):
         def cb():
             update_progress(item, done, total)
         post(cb)
+
     def _post_finish():
         def cb():
             finish()
         post(cb)
-    frame._wx_transfer_queue = _post_queue
-    frame._wx_transfer_progress = _post_progress
-    frame._wx_transfer_finish = _post_finish
-    frame._wx_transfer_finish_error = lambda msg: post(lambda: finish_error(msg))
-    frame._wx_transfer_refresh_labels = refresh_labels
-    frame._wx_transfer_close = close
-    frame.Show()
-    return frame
+
+    host._wx_transfer_queue = _post_queue
+    host._wx_transfer_progress = _post_progress
+    host._wx_transfer_finish = _post_finish
+    host._wx_transfer_finish_error = lambda msg: post(lambda: finish_error(msg))
+    host._wx_transfer_refresh_labels = refresh_labels
+    host._wx_transfer_close = close
+
+    # initial button state
+    _update_button_state()
+    if embedded:
+        host.Layout()
+    else:
+        try:
+            host.Show()
+        except Exception:
+            pass
+    return host
+
+
+def create_transfer_progress(parent, controller=None):
+    """Create the small wx owner for a transfer session, if wx is available."""
+    return _build_transfers(parent, controller=controller, embedded=False)
+
+
+def build_transfers_panel(parent, controller=None):
+    """Embedded transfers panel factory. Returns the wx.Panel host."""
+    return _build_transfers(parent, controller=controller, embedded=True)
 
 
 class WxTransferWorkspace:
@@ -355,4 +886,4 @@ class WxTransferWorkspace:
         self.session.engine.stop_after_current()
 
 
-__all__ = ["StorageState", "WxTransferWorkspace", "create_transfer_progress", "create_transfer_conflict_dialog", "_supports_resume"]
+__all__ = ["StorageState", "WxTransferWorkspace", "create_transfer_progress", "build_transfers_panel", "create_transfer_conflict_dialog", "_supports_resume"]
