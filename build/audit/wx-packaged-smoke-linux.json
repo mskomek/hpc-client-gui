@@ -1,0 +1,22 @@
+{
+  "schema": "wx-packaged-smoke/1",
+  "commit": "8232b8c7feda546c7fd5a955743e596992b93805",
+  "platform": "linux",
+  "artifact": "wx-artifact-linux.missing",
+  "artifact_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+  "result": "FAIL",
+  "checks": {
+    "process_started": "FAIL",
+    "wx_runtime_started": "FAIL",
+    "main_frame_created": "FAIL",
+    "clean_shutdown": "FAIL"
+  },
+  "details": {
+    "artifact": "artifact not found: D:\\Projeler\\hpc-client-gui\\build\\audit\\wx-artifact-linux.missing"
+  },
+  "python": "3.12.4",
+  "platform_detail": "Windows-11-10.0.26200-SP0",
+  "generated_utc": "2026-09-05T18:46:11.258102+00:00",
+  "exit_code": null,
+  "isolated_from_src": true
+}
