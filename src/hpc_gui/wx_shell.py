@@ -150,8 +150,54 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
     notebook.AddPage(directories_panel, t("tabs.directories"), False)
     page_controls["NAV-DIRECTORIES"] = {"page": directories_panel}
 
-    # Files (splitter with local left, remote right + transfers bottom)
-    transfer_splitter = wx.SplitterWindow(notebook)
+    # Files (header row + splitter with local left, remote right + transfers bottom)
+    files_page = wx.Panel(notebook)
+    files_sizer = wx.BoxSizer(wx.VERTICAL)
+    # header row: Transfer type [Auto v] Effective: Binary  Synchronized browsing  Compare directories
+    #                                         Upload selected  Download selected
+    # Use WrapSizer so narrow windows wrap.
+    files_header = wx.WrapSizer(wx.HORIZONTAL)
+    transfer_type_label = wx.StaticText(files_page, label=t("ftp.transfer_type"))
+    transfer_choice = wx.Choice(files_page, choices=[t("ftp.mode_auto"), t("ftp.mode_binary"), t("ftp.mode_ascii")])
+    # restore from session_state if present
+    try:
+        saved_mode = str(session_state.get("ftp_transfer_type", "auto")).lower()
+        sel_idx = {"auto": 0, "binary": 1, "ascii": 2}.get(saved_mode, 0)
+        transfer_choice.SetSelection(sel_idx)
+    except Exception:
+        transfer_choice.SetSelection(0)
+    # effective label
+    def _current_effective_mode():
+        try:
+            idx = transfer_choice.GetSelection()
+            if idx == 1:
+                return t("ftp.mode_binary")
+            if idx == 2:
+                return t("ftp.mode_ascii")
+            return t("ftp.mode_auto")
+        except Exception:
+            return t("ftp.mode_auto")
+    effective_label = wx.StaticText(files_page, label=t("ftp.effective_type").format(mode=_current_effective_mode()))
+    sync_cb = wx.CheckBox(files_page, label=t("ftp.sync_browsing"))
+    sync_cb.Disable()
+    compare_btn = wx.Button(files_page, label=t("ftp.compare_directories"))
+    try:
+        compare_btn.SetToolTip(t("ftp.compare_directories_tooltip"))
+    except Exception:
+        pass
+    compare_btn.Disable()
+    upload_selected_btn = wx.Button(files_page, label=t("ftp.upload_selected"))
+    download_selected_btn = wx.Button(files_page, label=t("ftp.download_selected"))
+    files_header.Add(transfer_type_label, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 4)
+    files_header.Add(transfer_choice, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 4)
+    files_header.Add(effective_label, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 4)
+    files_header.Add(sync_cb, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 4)
+    files_header.Add(compare_btn, 0, wx.ALL, 4)
+    files_header.AddStretchSpacer(1)
+    files_header.Add(upload_selected_btn, 0, wx.ALL, 4)
+    files_header.Add(download_selected_btn, 0, wx.ALL, 4)
+    files_sizer.Add(files_header, 0, wx.EXPAND | wx.ALL, 4)
+    transfer_splitter = wx.SplitterWindow(files_page)
     transfer_splitter.SetMinimumPaneSize(140)
     top_splitter = wx.SplitterWindow(transfer_splitter)
     _local = _local_files_callbacks(session_state, frame, lifecycle)
@@ -169,8 +215,35 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
     # window grow the browsers rather than the transfers area.
     transfer_splitter.SplitHorizontally(top_splitter, transfers_panel, -220)
     transfer_splitter.SetSashGravity(0.7)
-    notebook.AddPage(transfer_splitter, t("tabs.ftp"), False)
-    page_controls["NAV-FILES"] = {"page": transfer_splitter, "local": local_panel, "remote": remote_panel, "transfers": transfers_panel}
+    files_sizer.Add(transfer_splitter, 1, wx.EXPAND)
+    files_page.SetSizer(files_sizer)
+    def _on_transfer_choice(_evt):
+        try:
+            idx = transfer_choice.GetSelection()
+            mode_key = ["auto", "binary", "ascii"][idx] if 0 <= idx < 3 else "auto"
+            session_state["ftp_transfer_type"] = mode_key
+            effective_label.SetLabel(t("ftp.effective_type").format(mode=_current_effective_mode()))
+            files_page.Layout()
+        except Exception:
+            pass
+    transfer_choice.Bind(wx.EVT_CHOICE, _on_transfer_choice)
+    # Upload/Download selected must call same operation callbacks the remote panel toolbar already uses
+    def _header_upload(_evt):
+        # Same implementation the local toolbar uses; no second upload path.
+        run = getattr(local_panel, "_wx_local_run_action", None)
+        if callable(run):
+            run("upload")
+
+    def _header_download(_evt):
+        # Same implementation the remote toolbar uses; no second download path.
+        run = getattr(remote_panel, "_wx_remote_run_action", None)
+        if callable(run):
+            run("download")
+
+    upload_selected_btn.Bind(wx.EVT_BUTTON, _header_upload)
+    download_selected_btn.Bind(wx.EVT_BUTTON, _header_download)
+    notebook.AddPage(files_page, t("tabs.ftp"), False)
+    page_controls["NAV-FILES"] = {"page": files_page, "local": local_panel, "remote": remote_panel, "transfers": transfers_panel, "splitter": transfer_splitter, "header": files_header, "transfer_type_label": transfer_type_label, "transfer_choice": transfer_choice, "effective_label": effective_label, "sync_cb": sync_cb, "compare_btn": compare_btn, "upload_selected": upload_selected_btn, "download_selected": download_selected_btn}
 
     # Script Editor
     _editor_kwargs = {"action_factory": _editor_action_factory(session_state)}
@@ -238,6 +311,23 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
         except Exception:
             pass
         language_button.SetToolTip(t("help.language"))
+        # Files header row
+        try:
+            transfer_type_label.SetLabel(t("ftp.transfer_type"))
+            # update choice strings
+            current_sel = transfer_choice.GetSelection() if transfer_choice.GetCount() else 0
+            transfer_choice.Clear()
+            for key in ("ftp.mode_auto", "ftp.mode_binary", "ftp.mode_ascii"):
+                transfer_choice.Append(t(key))
+            transfer_choice.SetSelection(current_sel if 0 <= current_sel < transfer_choice.GetCount() else 0)
+            effective_label.SetLabel(t("ftp.effective_type").format(mode=_current_effective_mode()))
+            sync_cb.SetLabel(t("ftp.sync_browsing"))
+            compare_btn.SetLabel(t("ftp.compare_directories"))
+            compare_btn.SetToolTip(t("ftp.compare_directories_tooltip"))
+            upload_selected_btn.SetLabel(t("ftp.upload_selected"))
+            download_selected_btn.SetLabel(t("ftp.download_selected"))
+        except Exception:
+            pass
 
     subscribe_language_change(refresh_labels)
 
