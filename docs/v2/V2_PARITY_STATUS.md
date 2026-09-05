@@ -1,5 +1,8 @@
 # V2 Parity Status
 
+| GUI-WORKSPACE-001 | COVERED | Qt MainWindow | wx_shell.py | wx shell focused suite |
+| GUI-VISUAL-001 | PARTIAL | Qt audit screenshots | wx audit screenshots | screenshot/hash audit; duplicate main/connection hash remains to repair |
+
 Automated evidence only; manual-only behavior is never marked covered.
 
 | ID | Status | Qt evidence | wx evidence | Tests |

@@ -3,7 +3,7 @@
 Active migration group: **Integrated wx workspace and visual parity**
 (GUI-WORKSPACE-001, GUI-VISUAL-001)
 
-Verified tip: `delegate6b-panels` (D6a + D6b + D5b merged; 349 passed, 0 failed)
+Verified tip: `8beb6143719063707aaf5bf52a83e7f768fdbc37` (recovered delegate chain; focused wx suite 40 passed)
 Qt remains the production runtime. No Qt/PySide6/shiboken6 removal has been
 performed and the Qt removal gate has not been run.
 

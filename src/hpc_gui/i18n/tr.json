@@ -159,11 +159,11 @@
     "save_changes": "Değişiklikleri kaydet",
     "dont_save": "Kaydetme",
     "unsaved_changes": "Bu belgede kaydedilmemiş değişiklikler var.",
-    "and": "ve"
-    ,"command_palette": "Komut Paleti"
-    ,"test_cluster": "Küme testi"
-    ,"new_slurm_script": "Yeni Slurm betiği"
-    ,"ansys_linter": "ANSYS Linter"
+    "and": "ve",
+    "command_palette": "Komut Paleti",
+    "test_cluster": "Küme testi",
+    "new_slurm_script": "Yeni Slurm betiği",
+    "ansys_linter": "ANSYS Linter"
   },
   "placeholders": {
     "host": "Sunucu adı veya IP",
@@ -196,7 +196,8 @@
     "plugins": "Eklentiler",
     "ansys_lint": "ANSYS Journal Denetimi",
     "no_supported_remote_lint_files": "Bu uzak klasörde denetlenebilecek desteklenen dosya bulunamadı.",
-    "send_to_plugin": "Eklentiye gönder"
+    "send_to_plugin": "Eklentiye gönder",
+    "auto_scroll": "Otomatik kaydır"
   },
   "editor": {
     "title": "Editör",
@@ -755,7 +756,14 @@
     "parallel_hint_effective": "Ayarlanan limit: {configured} · Bu bağlantı için geçerli limit: {effective}",
     "parallel_hint_pair": "Ayarlanan limit: {configured} · Bu bağlantı için geçerli limit: {effective} ({reason})",
     "parallel_reduced_backend": "bu bağlantı türü aynı anda tek dosya aktarır",
-    "parallel_reduced_server": "sunucu veya bağlantı türü nedeniyle sınırlı"
+    "parallel_reduced_server": "sunucu veya bağlantı türü nedeniyle sınırlı",
+    "col_local": "Sunucu/Yerel dosya",
+    "col_direction": "Yön",
+    "col_remote": "Uzak dosya",
+    "col_size": "Boyut",
+    "col_progress": "İlerleme",
+    "col_priority": "Öncelik",
+    "col_status": "Durum"
   },
   "connection": {
     "dialog_title": "Bağlantı Ekle",
