@@ -127,10 +127,9 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
     root = wx.BoxSizer(wx.VERTICAL)
     choices = wx.ListBox(panel, choices=[item.name for item in model.summaries()])
     status = wx.StaticText(panel, label=t("login.status_disconnected"))
-    try:
-        button_row = wx.WrapSizer(wx.HORIZONTAL)
-    except Exception:
-        button_row = wx.BoxSizer(wx.HORIZONTAL)
+    # Two short buttons never need to wrap, and a WrapSizer ignores the stretch
+    # spacer, which let Connect Selected span the whole row.
+    button_row = wx.BoxSizer(wx.HORIZONTAL)
     add_button = wx.Button(panel, label=t("login.add_connection"))
     connect_button = wx.Button(panel, label=t("login.connect_selected"))
     # connect_button is the Connect Selected action (keeps existing behaviour)

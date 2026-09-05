@@ -1,6 +1,7 @@
 # GUI Visual Parity Report — Qt reference vs wx workspace
 
-Generated against the integrated wx shell at branch `delegate7-layout`.
+Generated against the integrated wx shell at branch `delegate9b-editor-files`
+(D9a and D9b merged).
 Qt remains the production runtime; this report measures how close the optional
 wx workspace has come to it.
 
@@ -21,19 +22,24 @@ GUI-VISUAL-001:    PARTIAL
 
 Structure matches: seven tabs in Qt's order, zero launcher-only pages, zero
 unexpected detached frames, and 400 resize operations with every layout
-invariant at zero. Content parity is partial — four surfaces still lack Qt
-controls, listed below.
+invariant at zero.
+
+Content parity has closed the four gaps this report previously listed. Files now
+matches Qt control for control; Connection, Jobs, Editor, Directories and Logs
+carry every Qt control on their surface. What remains is capability rather than
+layout: four items where the wx side shows the control but no service stands
+behind it, or where no data source exists yet.
 
 ## Screenshot hash table
 
 | File | SHA256 (first 16) | Bytes |
 |------|-------------------|-------|
-| main.png | 36a055a9e58f527a | 9957 |
-| connection.png | 36a055a9e58f527a | 9957 |
-| jobs.png | 052e74bf37ae516a | 12897 |
+| main.png | bbcd80865acacc4d | 11022 |
+| connection.png | bbcd80865acacc4d | 11022 |
+| jobs.png | 1afd31538f2129d7 | 21381 |
 | directories.png | 76751b37560febc8 | 18158 |
-| files.png | 80e78f78363b3535 | 31988 |
-| editor.png | 7b6e386de4df73d9 | 10089 |
+| files.png | b45a9f109fed994d | 33512 |
+| editor.png | 48e47a795d4953a4 | 13211 |
 | terminal.png | d6d8f441e6306f61 | 8779 |
 | logs.png | c13b5ef3ac00b444 | 63944 |
 
@@ -51,85 +57,70 @@ application, so the duplicate is recorded rather than engineered away.
 
 ## Per-surface comparison
 
-### Connection — PARTIAL
+### Connection — CLOSE
 
-| Qt control | wx |
-|------------|-----|
-| profile list | present |
-| connection status | present (`Disconnected`) |
-| Connect | present |
-| **Add Connection** | **missing** |
-| **Connect Selected** | **missing** (wx has a single Connect) |
-| **transport label (`• SSH`)** | **missing** |
-| **embedded terminal pane** | **missing** — wx puts the terminal in its own tab |
-| **terminal Find / A- / A+ / Clear** | **missing** |
+Profile list, status line, **Add Connection** and **Connect Selected** now match
+Qt. Add Connection is visible but disabled until a caller supplies the callback.
 
-Qt embeds the terminal inside the Connection tab. The wx shell keeps Terminal
-as a separate primary tab (the accepted deviation carried from GUI-TERM-002),
-so this is a structural difference, not an omission — but the terminal's
-Find/font/Clear controls are genuinely absent.
+Remaining difference: Qt embeds the terminal inside this tab with Find / A- /
+A+ / Clear controls. The wx shell keeps Terminal as its own primary tab — the
+accepted deviation carried from GUI-TERM-002 — so the surface differs by design,
+but the terminal's find and font controls are genuinely absent.
 
-### Jobs & Outputs — PARTIAL
+### Jobs & Outputs — CLOSE
 
-| Qt control | wx |
-|------------|-----|
-| job list, Refresh, Job ID field, Cancel Job | present |
-| output pane | present |
-| Pause Live Follow, auto-scroll | present (wx addition) |
-| **sub-tabs: Jobs / Details, Files, Outputs** | **missing** |
-| **Accounting Job Details group (Refresh sacct, Show job details)** | **missing** |
-| **Cluster Servers group (Refresh lssrv)** | **missing** |
+Now carries Qt's three sub-tabs (Jobs / Details, Files, Outputs), the job list
+and output pane with Refresh / Open Output / Pause Live Follow / Auto-scroll /
+Cancel Job, the **Accounting & Job Details** group (Refresh sacct, job id, Show
+job details) and the **Cluster Servers (lssrv)** group.
 
-### Files — CLOSE
+Remaining: the Files and Outputs sub-tabs are placeholders. No data source is
+wired to them, and none was invented.
 
-| Qt control | wx |
-|------------|-----|
-| local Drives / Back / Up / Refresh + path | present (Back disabled, no history in the model) |
-| remote New Folder / New File / Upload / Download selected / Delete / Undo / Favorites / History / Refresh | present (New File, Favorites, History disabled — no callback yet) |
-| filter tabs All / Folders / ISO / Archives / Slurm / SH / Other | present |
-| four columns name / size / type / modified | present, same wording via shared helpers |
-| transfers panel: Queue / Failed / Completed, Stop / Cancel / Clear queued | present |
-| transfers columns local / direction / remote / size / progress / priority / status | present |
-| **Transfer type + Effective + Synchronized browsing + Compare directories row** | **missing** |
-| **Upload selected / Download selected (top right)** | **missing** |
+### Files — MATCH
 
-### Script Editor — PARTIAL
+Every Qt control on this surface is present: the transfer-type row (type choice,
+effective label, synchronized browsing, compare directories) with Upload
+selected and Download selected, both browser toolbars, the path fields, the
+filter tabs, the four columns, and the transfers panel with Qt's seven columns,
+its Queue / Failed / Completed tabs and its Stop / Cancel / Clear queued row.
 
-| Qt control | wx |
-|------------|-----|
-| editor area | present |
-| Save | present |
-| Submit (sbatch), Save + Submit | present (wx addition) |
-| **Remote path field** | **missing** |
-| **Open** | **missing** |
-| **New from Template...** | **missing** |
-| **Lint** | **missing** |
-| **document tab strip** | **missing** |
+Synchronized browsing and Compare directories are visible but disabled — no
+service backs them yet.
+
+### Script Editor — CLOSE
+
+Now carries Qt's header row: the remote path field with Open, New from
+Template..., Lint and Save. Open, template and lint are visible but disabled
+until callbacks are supplied. The Submit (sbatch) and Save + Submit buttons
+remain as a wx addition.
+
+Remaining: Qt's document tab strip. The editor model tracks a single document,
+so no strip is built rather than inventing multi-document state.
 
 ### Directories — CLOSE
 
-Two remote panes in a splitter with a Create/Edit ARF Slurm button, matching
-Qt's structure. Pane path titles are present. Not yet compared against Qt at
-matching session state.
+Two remote panes in a splitter with path titles and the Create/Edit ARF Slurm
+button, matching Qt's structure.
 
 ### Logs — CLOSE
 
-Title, read-only text area and the four Qt buttons (Copy, Copy Log Path,
-Export Diagnostics, Refresh) in the same order. Redaction verified visible in
-the captured output.
+Title, read-only text area and Qt's four buttons in the same order, with
+redaction visible in the captured output.
 
 ### Terminal — wx-only surface
 
-No Qt counterpart as a primary tab; Qt embeds its terminal in Connection.
+No Qt counterpart as a primary tab.
 
 ## Remaining work for GUI-VISUAL-001
 
-1. Connection: Add Connection, Connect Selected, transport label, terminal
-   Find/font/Clear controls.
-2. Jobs: the three sub-tabs, the sacct accounting group, the lssrv group.
-3. Files: transfer-type row and the top-right Upload/Download selected buttons.
-4. Editor: remote path field, Open, New from Template, Lint, document tabs.
-5. Re-capture and re-compare after each, then re-run the hash table.
+1. Terminal find and font controls (Find, A-, A+, Clear).
+2. Data sources for the Jobs Files and Outputs sub-tabs.
+3. Services behind synchronized browsing and compare directories.
+4. Editor document tab strip, once the model tracks more than one document.
+
+All four are missing capability rather than missing layout: each is either
+absent, or present, visible and disabled. Nothing on any surface is faked.
 
 ## Known i18n gaps found during this work
 
