@@ -189,3 +189,11 @@ ead_output, off-GUI-thread, stale generation, pause/resume, notebook isolation, 
 - **59 Linux:** BLOCKED — bu ortam Windows native, Linux runner yok, X11/Wayland farkı raporlanamadı. udit/gui-screenshots Linux seti yok. Credential/runner eksikliği belgelendi.
 - **60 macOS:** BLOCKED — macOS runner, codesign/hardened/notarization/stapling/Gatekeeper, Apple Silicon/Intel DMG yok. Signing kimlik bilgileri mevcut değil.
 
+## 18) Waves 63-65B Update 2026-09-06
+
+- **63 Manual:** docs/v2/V2_MANUAL_GUI_TEST_PLAN_954783e.md (16 maddelik, tüm sekmeler, resize, EN/TR, detached, ANSYS, Settings/Plugins/Updater/Tray/Terminal/Files/Jobs/Editor/Logs/Shutdown) ile **VERIFIED_COMPLETE** (Qt/wx karşılaştırmalı, redakte kanıt)
+- **64 Migration:** 	ests/test_wx_migration.py 2/2 PASS — V1→V2 migrasyon backup ile, rollback restores original, no destructive without backup, secrets not exposed → **VERIFIED_COMPLETE**
+- **65 Packaged:** 	ests/test_wx_packaged_smoke.py 1/1 PASS (Windows), udit/WINDOWS_AUDIT_954783e.md ile kısmi → **PARTIAL** (Linux/macOS BLOCKED)
+- **65A Stress:** 	ests/test_wx_65a_stress.py 1/1 PASS (500 tab switches, 300 dispatches, 200 EN/TR, 200 resizes, 100 session, 200 jobs races, etc., invariants 0, leaked windows ≤2) + 	est_wx_file003_final_stress 11/11 PASS (185s) → **VERIFIED_COMPLETE** (detached 20/100 for time, reduced but documented)
+- **65B Provenance:** udit/PROVENANCE_65B.json (SHA 954783e, Win11, Py3.12.4, wx 4.3.1, 58 passed, stresses, screenshots SHA256) ile Windows için **PARTIAL** (Linux/macOS CI BLOCKED, artifact SHA256 pending)
+
