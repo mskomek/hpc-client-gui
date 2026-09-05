@@ -1,8 +1,8 @@
 # GUI audit test results
 
-Run date: 2026-09-03  
+Run date: 2026-09-05  
 Branch: `develop`  
-Commit: `f94912f Add GUI feature guides and mock screenshots`
+Commit: `8beb6143719063707aaf5bf52a83e7f768fdbc37`
 
 ## Screenshot capture
 

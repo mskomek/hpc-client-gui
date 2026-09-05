@@ -13,6 +13,10 @@ from urllib.parse import quote
 
 from hpc_gui.core.i18n import subscribe_language_change, t, unsubscribe_language_change
 from hpc_gui.services.file_context_actions import FILE_CONTEXT_LABEL_KEYS, context_selection, visible_actions
+from hpc_gui.services.local_files import list_windows_drives
+from hpc_gui.wx_host import make_host
+
+from hpc_gui.ui.models.remote_entry_helpers import file_type as _shared_file_type, fmt_mtime as _shared_fmt_mtime
 
 
 @dataclass(frozen=True)
@@ -27,6 +31,9 @@ def file_url_payload(paths: list[Path]) -> str:
 
 
 def open_with_system(path: str | Path) -> None:
+
+
+
     target = str(Path(path).expanduser().resolve())
     if hasattr(os, "startfile"):
         os.startfile(target)
@@ -56,6 +63,7 @@ class LocalBrowserModel:
         self.reverse = False
         self.clipboard: tuple[Path, ...] = ()
         self.clipboard_move = False
+        self._history: list[Path] = []
 
     def list_entries(self, path: str | Path | None = None) -> tuple[LocalEntry, ...]:
         current_path = self.current_path if path is None else Path(path).expanduser().resolve()
@@ -63,15 +71,26 @@ class LocalBrowserModel:
         key = (lambda item: item.path.name.casefold()) if self.sort_key == "name" else (lambda item: item.size)
         return tuple(sorted(entries, key=key, reverse=self.reverse))
 
-    def navigate(self, path: str | Path) -> None:
+    def navigate(self, path: str | Path, *, _remember: bool = True) -> None:
         target = Path(path).expanduser().resolve()
         if not target.is_dir():
             raise NotADirectoryError(str(target))
+        if _remember and target != self.current_path:
+            self._history.append(self.current_path)
         self.current_path = target
         self.tabs[self.active_tab] = target
 
     def parent(self) -> None:
         self.navigate(self.current_path.parent)
+
+    def go_back(self) -> None:
+        if not self._history:
+            raise IndexError("no history")
+        target = self._history.pop()
+        self.navigate(target, _remember=False)
+
+    def can_go_back(self) -> bool:
+        return bool(self._history)
 
     def new_tab(self, path: str | Path | None = None) -> int:
         target = Path(path or self.current_path).expanduser().resolve()
@@ -210,19 +229,55 @@ class LocalBrowserModel:
         return actions + (("new_tab",) if is_dir else ())
 
 
-def show_local_files(parent=None, path: str | Path | None = None, *, open_editor=None, open_editor_new_window=None, upload=None, run_shell=None) -> int:
+def _entry_name(entry) -> str:
+    name = getattr(entry, "name", "") or ""
+    if name:
+        return str(name)
+    raw = getattr(entry, "path", "") or ""
+    return str(raw).replace("\\", "/").rstrip("/").rsplit("/", 1)[-1]
+
+
+def _format_mtime(mtime_val) -> str:
+    return _shared_fmt_mtime(mtime_val)
+
+
+def _type_label(entry) -> str:
+    return _shared_file_type(_entry_name(entry), bool(getattr(entry, "is_dir", False)))
+
+
+def _build_local_files(parent, path: str | Path | None = None, *, open_editor=None, open_editor_new_window=None, upload=None, run_shell=None, embedded):
     try:
         import wx
     except ImportError as exc:
         raise RuntimeError("wxPython is not installed") from exc
     model = LocalBrowserModel(path or Path.cwd())
-    frame = wx.Frame(parent, title=t("tabs.ftp"), size=(900, 600))
-    notebook = wx.Notebook(frame)
+    host, finish = make_host(parent, title=t("tabs.ftp"), size=(900, 600), embedded=embedded)
+    toolbar_sizer = wx.BoxSizer(wx.HORIZONTAL)
+    btn_drives = wx.Button(host, label=t("ftp.drives"))
+    btn_back = wx.Button(host, label=t("ftp.back"))
+    btn_parent = wx.Button(host, label=t("ftp.parent"))
+    btn_refresh = wx.Button(host, label=t("dirs.refresh"))
+    for _b in (btn_drives, btn_back, btn_parent, btn_refresh):
+        toolbar_sizer.Add(_b, 0, wx.ALL, 4)
+    # Back uses real history; disabled when empty
+    try:
+        btn_back.Disable()
+    except Exception:
+        pass
+    path_ctrl = wx.TextCtrl(host, value=str(model.current_path), style=wx.TE_PROCESS_ENTER)
+    # path row with label
+    path_row = wx.BoxSizer(wx.HORIZONTAL)
+    path_label = wx.StaticText(host, label=t("dirs.path"))
+    path_row.Add(path_label, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 4)
+    path_row.Add(path_ctrl, 1, wx.EXPAND | wx.ALL, 4)
+    notebook = wx.Notebook(host)
     root_sizer = wx.BoxSizer(wx.VERTICAL)
+    root_sizer.Add(toolbar_sizer, 0, wx.EXPAND)
+    root_sizer.Add(path_row, 0, wx.EXPAND)
     root_sizer.Add(notebook, 1, wx.EXPAND)
-    frame.SetSizer(root_sizer)
-    # Per-tab state. Each tab owns its own list control and generation counters.
-    # Global state dict kept for backward compatibility (closed, mutation, top-level view_generation used for compat).
+    host.SetSizer(root_sizer)
+
+
     state = {"context_target": None, "closed": False, "mutation_in_flight": False, "view_generation": 0, "listing_request_id": 0}
     threading_lock = Lock()
     labels = FILE_CONTEXT_LABEL_KEYS
@@ -335,6 +390,8 @@ def show_local_files(parent=None, path: str | Path | None = None, *, open_editor
                 for entry in tab_entry["entries"]:
                     idx = lst.InsertItem(lst.GetItemCount(), entry.path.name)
                     lst.SetItem(idx, 1, str(entry.size))
+                    lst.SetItem(idx, 2, _type_label(entry))
+                    lst.SetItem(idx, 3, _format_mtime(getattr(entry, "mtime", None)))
             except RuntimeError:
                 # control destroyed
                 return
@@ -362,7 +419,26 @@ def show_local_files(parent=None, path: str | Path | None = None, *, open_editor
             model.tabs[idx] = resolved
         model.current_path = resolved
         model.active_tab = idx
+        try:
+            path_ctrl.SetValue(str(resolved))
+        except Exception:
+            pass
         refresh_active_tab_label(idx)
+
+    # Widths are applied before rows exist, so content autosizing measures nothing.
+    # Give the fixed columns a readable floor and let Name take the remainder.
+    _COLUMN_FLOORS = (140, 70, 110, 120)
+
+    def _apply_column_widths(listing) -> None:
+        try:
+            for col in (1, 2, 3):
+                listing.SetColumnWidth(col, wx.LIST_AUTOSIZE_USEHEADER)
+                listing.SetColumnWidth(col, max(_COLUMN_FLOORS[col], listing.GetColumnWidth(col)))
+            avail = listing.GetClientSize().GetWidth() or 860
+            fixed = sum(listing.GetColumnWidth(c) for c in (1, 2, 3))
+            listing.SetColumnWidth(0, max(_COLUMN_FLOORS[0], avail - fixed - 24))
+        except Exception:
+            pass
 
     def create_tab(target_path: Path):
         target_path = Path(target_path).expanduser().resolve()
@@ -370,6 +446,9 @@ def show_local_files(parent=None, path: str | Path | None = None, *, open_editor
         listing = wx.ListCtrl(panel, style=wx.LC_REPORT)
         listing.InsertColumn(0, t("dirs.col_name"))
         listing.InsertColumn(1, t("dirs.col_size"))
+        listing.InsertColumn(2, t("dirs.col_type"))
+        listing.InsertColumn(3, t("dirs.col_mtime"))
+        _apply_column_widths(listing)
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.Add(listing, 1, wx.EXPAND)
         panel.SetSizer(sizer)
@@ -421,8 +500,12 @@ def show_local_files(parent=None, path: str | Path | None = None, *, open_editor
                 # sync model active index
                 model.active_tab = notebook.GetSelection()
                 model.current_path = entry.path
-                if hasattr(frame, "_wx_local_controls"):
-                    frame._wx_local_controls["listing"] = new_entry["listing"]
+                try:
+                    path_ctrl.SetValue(str(entry.path))
+                except Exception:
+                    pass
+                if hasattr(host, "_wx_local_controls"):
+                    host._wx_local_controls["listing"] = new_entry["listing"]
                 refresh()
                 return
         event.Skip()
@@ -531,6 +614,8 @@ def show_local_files(parent=None, path: str | Path | None = None, *, open_editor
                             for en in te["entries"]:
                                 ii = te["listing"].InsertItem(te["listing"].GetItemCount(), en.path.name)
                                 te["listing"].SetItem(ii, 1, str(en.size))
+                                te["listing"].SetItem(ii, 2, _type_label(en))
+                                te["listing"].SetItem(ii, 3, _format_mtime(getattr(en, "mtime", None)))
                         except RuntimeError:
                             return
                     def wk2():
@@ -554,7 +639,7 @@ def show_local_files(parent=None, path: str | Path | None = None, *, open_editor
             if selected:
                 upload(tuple(str(item.path) for item in selected))
             else:
-                dialog = wx.FileDialog(frame, t("ftp.upload_selected"), style=wx.FD_OPEN | wx.FD_MULTIPLE)
+                dialog = wx.FileDialog(host, t("ftp.upload_selected"), style=wx.FD_OPEN | wx.FD_MULTIPLE)
                 try:
                     if dialog.ShowModal() == wx.ID_OK:
                         upload(tuple(dialog.GetPaths()))
@@ -562,7 +647,7 @@ def show_local_files(parent=None, path: str | Path | None = None, *, open_editor
                     dialog.Destroy()
             return
         if action == "new_folder":
-            dialog = wx.TextEntryDialog(frame, t("dirs.new_folder"), t("dirs.new_folder"))
+            dialog = wx.TextEntryDialog(host, t("dirs.new_folder"), t("dirs.new_folder"))
             try:
                 if dialog.ShowModal() == wx.ID_OK:
                     name = dialog.GetValue()
@@ -597,8 +682,12 @@ def show_local_files(parent=None, path: str | Path | None = None, *, open_editor
                 notebook.AddPage(new_entry["panel"], tab_label(entry.path), True)
                 model.active_tab = notebook.GetSelection()
                 model.current_path = entry.path
-                if hasattr(frame, "_wx_local_controls"):
-                    frame._wx_local_controls["listing"] = new_entry["listing"]
+                try:
+                    path_ctrl.SetValue(str(entry.path))
+                except Exception:
+                    pass
+                if hasattr(host, "_wx_local_controls"):
+                    host._wx_local_controls["listing"] = new_entry["listing"]
                 # keep state view_generation in sync
                 # refresh will handle
                 refresh()
@@ -627,7 +716,7 @@ def show_local_files(parent=None, path: str | Path | None = None, *, open_editor
                 wx.TheClipboard.SetData(wx.TextDataObject(str(entry.path)))
                 wx.TheClipboard.Close()
         elif action == "rename":
-            dialog = wx.TextEntryDialog(frame, t("dirs.rename"), t("dirs.rename"), entry.path.name)
+            dialog = wx.TextEntryDialog(host, t("dirs.rename"), t("dirs.rename"), entry.path.name)
             try:
                 if dialog.ShowModal() == wx.ID_OK:
                     new_name = dialog.GetValue()
@@ -672,9 +761,14 @@ def show_local_files(parent=None, path: str | Path | None = None, *, open_editor
         if 0 <= new_sel < len(tabs):
             model.active_tab = new_sel
             model.current_path = tabs[new_sel]["path"]
+            try:
+                path_ctrl.SetValue(str(tabs[new_sel]["path"]))
+            except Exception:
+                pass
             # update global controls reference for tests (guard before attribute exists)
-            if hasattr(frame, "_wx_local_controls"):
-                frame._wx_local_controls["listing"] = tabs[new_sel]["listing"]
+            if hasattr(host, "_wx_local_controls"):
+                host._wx_local_controls["listing"] = tabs[new_sel]["listing"]
+                host._wx_local_controls["path"] = path_ctrl
         event.Skip()
 
     notebook.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGED, on_page_changed)
@@ -685,8 +779,13 @@ def show_local_files(parent=None, path: str | Path | None = None, *, open_editor
         if 0 <= idx < len(tabs):
             model.active_tab = idx
             model.current_path = tabs[idx]["path"]
-            if hasattr(frame, "_wx_local_controls"):
-                frame._wx_local_controls["listing"] = tabs[idx]["listing"]
+            try:
+                path_ctrl.SetValue(str(tabs[idx]["path"]))
+            except Exception:
+                pass
+            if hasattr(host, "_wx_local_controls"):
+                host._wx_local_controls["listing"] = tabs[idx]["listing"]
+                host._wx_local_controls["path"] = path_ctrl
         return res
     notebook.SetSelection = _patched_set
     _orig_change = notebook.ChangeSelection
@@ -695,8 +794,13 @@ def show_local_files(parent=None, path: str | Path | None = None, *, open_editor
         if 0 <= idx < len(tabs):
             model.active_tab = idx
             model.current_path = tabs[idx]["path"]
-            if hasattr(frame, "_wx_local_controls"):
-                frame._wx_local_controls["listing"] = tabs[idx]["listing"]
+            try:
+                path_ctrl.SetValue(str(tabs[idx]["path"]))
+            except Exception:
+                pass
+            if hasattr(host, "_wx_local_controls"):
+                host._wx_local_controls["listing"] = tabs[idx]["listing"]
+                host._wx_local_controls["path"] = path_ctrl
         return res
     notebook.ChangeSelection = _patched_change
 
@@ -725,12 +829,20 @@ def show_local_files(parent=None, path: str | Path | None = None, *, open_editor
             notebook.SetSelection(new_sel)
             model.active_tab = new_sel
             model.current_path = tabs[new_sel]["path"]
-            frame._wx_local_controls["listing"] = tabs[new_sel]["listing"]
+            host._wx_local_controls["listing"] = tabs[new_sel]["listing"]
+            try:
+                path_ctrl.SetValue(str(tabs[new_sel]["path"]))
+            except Exception:
+                pass
         elif active_before > index:
             # active shifted left
             model.active_tab = notebook.GetSelection()
             if 0 <= model.active_tab < len(model.tabs):
                 model.current_path = tabs[model.active_tab]["path"]
+                try:
+                    path_ctrl.SetValue(str(tabs[model.active_tab]["path"]))
+                except Exception:
+                    pass
         else:
             # active unchanged
             pass
@@ -768,12 +880,138 @@ def show_local_files(parent=None, path: str | Path | None = None, *, open_editor
     notebook.AddPage(initial["panel"], tab_label(model.current_path), True)
     model.active_tab = 0
 
+    def _on_path_enter(event):
+        text = path_ctrl.GetValue().strip()
+        if not text:
+            try:
+                path_ctrl.SetValue(str(active_tab_state()["path"]))
+            except Exception:
+                pass
+            return
+        try:
+            navigate(text)
+            refresh()
+        except Exception as error:
+            wx.MessageBox(str(error), t("login.err_title"), wx.OK | wx.ICON_ERROR)
+            try:
+                path_ctrl.SetValue(str(active_tab_state()["path"]))
+            except Exception:
+                pass
+
+    def _update_back_button():
+        try:
+            btn_back.Enable(bool(model._history))
+        except Exception:
+            pass
+
+    def show_drives():
+        tstate = active_tab_state()
+        if not tstate:
+            return
+        try:
+            drives = list_windows_drives()
+        except Exception as error:
+            wx.MessageBox(str(error), t("login.err_title"), wx.OK | wx.ICON_ERROR)
+            return
+        # Render drives directly without model navigation; keep history
+        lst = tstate["listing"]
+        try:
+            lst.DeleteAllItems()
+            tstate["entries"][:] = []
+            # Represent drives as synthetic entries for activation
+            for d in drives:
+                # d may be LocalEntry from services.local_files (name, path) or Path
+                name = getattr(d, "name", None) or getattr(d, "path", None) or str(d)
+                path_val = getattr(d, "path", None) or name
+                # Create a minimal entry with expected attributes for later activation
+                class _Drv:
+                    pass
+                ent = _Drv()
+                ent.path = Path(path_val)
+                ent.is_dir = True
+                ent.size = 0
+                # also keep original for display
+                ent._drive_name = str(name)
+                tstate["entries"].append(ent)
+                idx = lst.InsertItem(lst.GetItemCount(), str(name))
+                lst.SetItem(idx, 1, "")
+                lst.SetItem(idx, 2, t("dirs.type_folder"))
+                lst.SetItem(idx, 3, "")
+            try:
+                path_ctrl.SetValue(t("ftp.drives"))
+            except Exception:
+                pass
+        except RuntimeError:
+            return
+
+    def go_back_view():
+        if not model.can_go_back():
+            return
+        try:
+            model.go_back()
+        except Exception as error:
+            wx.MessageBox(str(error), t("login.err_title"), wx.OK | wx.ICON_ERROR)
+            return
+        tstate = active_tab_state()
+        if not tstate:
+            return
+        idx = notebook.GetSelection()
+        tstate["path"] = model.current_path
+        if 0 <= idx < len(model.tabs):
+            model.tabs[idx] = model.current_path
+        try:
+            path_ctrl.SetValue(str(model.current_path))
+        except Exception:
+            pass
+        refresh_active_tab_label(idx)
+        _update_back_button()
+        refresh()
+
+    def go_parent_view():
+        tstate = active_tab_state()
+        if not tstate:
+            return
+        cur = tstate["path"]
+        parent = cur.parent
+        if parent == cur:
+            return
+        try:
+            navigate(parent)
+            refresh()
+            _update_back_button()
+        except Exception as error:
+            wx.MessageBox(str(error), t("login.err_title"), wx.OK | wx.ICON_ERROR)
+
+    # wrap original navigate to update back button after any navigation
+    _orig_navigate = navigate
+    def _wrapped_navigate(target):
+        _orig_navigate(target)
+        _update_back_button()
+    navigate = _wrapped_navigate
+
+    path_ctrl.Bind(wx.EVT_TEXT_ENTER, _on_path_enter)
+    btn_refresh.Bind(wx.EVT_BUTTON, lambda _e: refresh())
+    btn_drives.Bind(wx.EVT_BUTTON, lambda _e: show_drives())
+    btn_back.Bind(wx.EVT_BUTTON, lambda _e: go_back_view())
+    btn_parent.Bind(wx.EVT_BUTTON, lambda _e: go_parent_view())
+
     def refresh_labels(_language=None):
-        frame.SetTitle(t("tabs.ftp"))
+        host.set_host_title(t("tabs.ftp"))
+        try:
+            btn_drives.SetLabel(t("ftp.drives"))
+            btn_back.SetLabel(t("ftp.back"))
+            btn_parent.SetLabel(t("ftp.parent"))
+            btn_refresh.SetLabel(t("dirs.refresh"))
+            path_label.SetLabel(t("dirs.path"))
+        except Exception:
+            pass
         for tab_entry in tabs:
             try:
                 tab_entry["listing"].SetColumn(0, t("dirs.col_name"))
                 tab_entry["listing"].SetColumn(1, t("dirs.col_size"))
+                tab_entry["listing"].SetColumn(2, t("dirs.col_type"))
+                tab_entry["listing"].SetColumn(3, t("dirs.col_mtime"))
+                _apply_column_widths(tab_entry["listing"])
             except RuntimeError:
                 continue
         # update tab labels (paths may contain same)
@@ -783,16 +1021,18 @@ def show_local_files(parent=None, path: str | Path | None = None, *, open_editor
             except Exception:
                 pass
 
+    # initial back button state
+    _update_back_button()
     # expose for tests
-    # keep listing pointing to active
-    frame._wx_local_controls = {"listing": initial["listing"], "notebook": notebook}
-    frame._wx_local_model = model
-    frame._wx_local_state = state
-    frame._wx_local_run_action = run_action
-    frame._wx_local_tabs = tabs
-    frame._wx_local_notebook = notebook
-    frame._wx_local_close_tab = close_tab
-    frame._wx_local_create_tab = lambda p: (model.new_tab(p), create_tab(Path(p)), notebook.AddPage(tabs[-1]["panel"], tab_label(Path(p)), True), refresh())
+    # keep listing pointing to active (preserve contract) plus new buttons
+    host._wx_local_controls = {"listing": initial["listing"], "notebook": notebook, "path": path_ctrl, "refresh_btn": btn_refresh, "btn_drives": btn_drives, "btn_back": btn_back, "btn_parent": btn_parent, "btn_refresh": btn_refresh}
+    host._wx_local_model = model
+    host._wx_local_state = state
+    host._wx_local_run_action = run_action
+    host._wx_local_tabs = tabs
+    host._wx_local_notebook = notebook
+    host._wx_local_close_tab = close_tab
+    host._wx_local_create_tab = lambda p: (model.new_tab(p), create_tab(Path(p)), notebook.AddPage(tabs[-1]["panel"], tab_label(Path(p)), True), refresh())
     subscribe_language_change(refresh_labels)
     def close(event):
         state["closed"] = True
@@ -801,10 +1041,25 @@ def show_local_files(parent=None, path: str | Path | None = None, *, open_editor
         unsubscribe_language_change(refresh_labels)
         event.Skip()
 
-    frame.Bind(wx.EVT_CLOSE, close)
+    host.bind_host_close(close)
     refresh()
-    frame.Show()
+    finish()
+    return host
+
+
+
+
+def build_local_files_panel(parent, path: str | Path | None = None, *, open_editor=None, open_editor_new_window=None, upload=None, run_shell=None):
+    """Embedded panel factory. Returns the wx.Panel host."""
+    return _build_local_files(parent, path, open_editor=open_editor, open_editor_new_window=open_editor_new_window, upload=upload, run_shell=run_shell, embedded=True)
+
+
+def show_local_files(parent=None, path: str | Path | None = None, *, open_editor=None, open_editor_new_window=None, upload=None, run_shell=None) -> int:
+    try:
+        import wx
+    except ImportError as exc:
+        raise RuntimeError("wxPython is not installed") from exc
+    _build_local_files(parent, path, open_editor=open_editor, open_editor_new_window=open_editor_new_window, upload=upload, run_shell=run_shell, embedded=False)
     return wx.ID_OK
 
-
-__all__ = ["LocalBrowserModel", "LocalEntry", "file_url_payload", "open_with_system", "reveal_in_file_manager", "show_local_files"]
+__all__ = ["LocalBrowserModel", "LocalEntry", "file_url_payload", "open_with_system", "reveal_in_file_manager", "show_local_files", "build_local_files_panel"]

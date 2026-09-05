@@ -1,7 +1,7 @@
 # wx Migration Wave Status Ledger — Waves 00–70 (Revalidated 2026-09-05)
 
 > **Kaynak:** `waves.zip` içindeki `waves/waiting/wave_*.md` (00–70) + `WAVE_STATUS` için zorunlu ek dalgalar 57A/62A/65A/65B
-> **SHA:** `8a23fd7` (başlangıç) → çalışma ağacında Wave 54 düzeltmeleri uygulanıyor (henüz commit edilmedi, entegrasyon bekleniyor)
+> **SHA:** `8a23fd7` (başlangıç) → `7dae696` (recovered workspace) → `beb3ca1` Wave 54 + merge
 > **Kural:** Qt üretimde kalır (`DEFAULT_GUI_RUNTIME="qt"`). Ekran görüntüsü kanıtları `audit/gui-screenshots/{qt,wx}/` altında tek kanonik küme olmalıdır.
 
 ## 1) Qt Referansı
@@ -155,8 +155,8 @@ Gerçek: 48 FAILED_VERIFICATION, 50/51/55/56/57/57A/58-65/65A/65B BLOCKED/PARTIA
 
 ## 14) Entegrasyon Kanıtı
 
-Delegate işi `develop`'a ulaşmadan tamam sayılmaz. Bu turdaki `wx_ansys_view.py` + `wx_terminal.py` iyileştirmeleri çalışma ağacında; henüz `develop` commit'i değil → wave ledger'de entegrasyon bayrağı **BEKLİYOR**.
+Delegate işi `develop`'a ulaşmadan tamam sayılmaz. Bu turdaki `wx_ansys_view.py` + `wx_terminal.py` iyileştirmeleri `beb3ca1`/`f331d1e` ile `origin/develop` (`7dae696` recovered workspace) üzerine entegre edilmek üzere birleştiriliyor.
 
 ---
 
-**Son Güncelleme:** 2026-09-05T18:00Z — Koordinatör (Wave 54 odaklı)
+**Son Güncelleme:** 2026-09-05T18:00Z — Koordinatör (Wave 54 odaklı, merged with recovered workspace)

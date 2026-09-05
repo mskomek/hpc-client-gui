@@ -159,11 +159,11 @@
     "save_changes": "Save changes",
     "dont_save": "Don't Save",
     "unsaved_changes": "This document has unsaved changes.",
-    "and": "and"
-    ,"command_palette": "Command Palette"
-    ,"test_cluster": "Test Cluster"
-    ,"new_slurm_script": "New Slurm Script"
-    ,"ansys_linter": "ANSYS Linter"
+    "and": "and",
+    "command_palette": "Command Palette",
+    "test_cluster": "Test Cluster",
+    "new_slurm_script": "New Slurm Script",
+    "ansys_linter": "ANSYS Linter"
   },
   "placeholders": {
     "host": "Server name or IP",
@@ -196,7 +196,8 @@
     "plugins": "Plugins",
     "ansys_lint": "ANSYS Journal Lint",
     "no_supported_remote_lint_files": "No supported lint files were found in this remote folder.",
-    "send_to_plugin": "Send to plugin"
+    "send_to_plugin": "Send to plugin",
+    "auto_scroll": "Auto-scroll"
   },
   "editor": {
     "title": "Editor",
@@ -755,7 +756,14 @@
     "parallel_hint_effective": "Configured limit: {configured} · Effective limit for this connection: {effective}",
     "parallel_hint_pair": "Configured limit: {configured} · Effective limit for this connection: {effective} ({reason})",
     "parallel_reduced_backend": "this connection type transfers one file at a time",
-    "parallel_reduced_server": "limited by the server or connection type"
+    "parallel_reduced_server": "limited by the server or connection type",
+    "col_local": "Server/Local file",
+    "col_direction": "Direction",
+    "col_remote": "Remote file",
+    "col_size": "Size",
+    "col_progress": "Progress",
+    "col_priority": "Priority",
+    "col_status": "Status"
   },
   "connection": {
     "dialog_title": "Add Connection",

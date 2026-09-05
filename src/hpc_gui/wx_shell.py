@@ -77,6 +77,8 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
     lifecycle = lifecycle or WxLifecycleController()
     session_state = session_state or {"session": None, "generation": 0}
     frame = wx.Frame(None, title=f"HPC Client GUI {__version__}", size=(960, 640))
+    # Adaptive layout contract: minimum below which controls would clip, sized from widest required row
+    frame.SetMinSize(wx.Size(960, 640))
     panel = wx.Panel(frame)
     root = wx.BoxSizer(wx.VERTICAL)
     menu = wx.Menu()
@@ -95,26 +97,161 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
         language_items[language] = item
         frame.Bind(wx.EVT_MENU, lambda _event, language=language: set_language(language), item)
     frame.GetMenuBar().Append(language_menu, t("help.language"))
-    title_label = wx.StaticText(panel, label=f"HPC Client GUI {__version__}")
-    description_label = wx.StaticText(panel, label=t("help.wx_shell_description"))
-    root.Add(title_label, 0, wx.ALL, 12)
-    root.Add(description_label, 0, wx.LEFT | wx.BOTTOM, 12)
+    # --- chrome row (Qt order, top-right, above notebook) ---
+    chrome_sizer = wx.BoxSizer(wx.HORIZONTAL)
+    version_label = wx.StaticText(panel, label=f"v{__version__}")
+    update_btn = wx.Button(panel, label=t("updates.action"))
+    plugins_btn = wx.Button(panel, label=t("plugins.action"))
+    send_logs_btn = wx.Button(panel, label=t("crash.send_logs_btn"))
+    settings_btn = wx.Button(panel, label=t("settings.action"))
+    help_btn = wx.Button(panel, label=t("help.help_title"))
+    cur_lang = current_language()
+    language_button = wx.Button(panel, label=t("language.english") if cur_lang == "en" else t("language.turkish"))
+    try:
+        language_button.SetBitmap(_flag_bitmap(wx, cur_lang))
+    except Exception:
+        pass
+    chrome_sizer.AddStretchSpacer(1)
+    chrome_sizer.Add(version_label, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 6)
+    chrome_sizer.Add(update_btn, 0, wx.ALL, 4)
+    chrome_sizer.Add(plugins_btn, 0, wx.ALL, 4)
+    chrome_sizer.Add(send_logs_btn, 0, wx.ALL, 4)
+    chrome_sizer.Add(settings_btn, 0, wx.ALL, 4)
+    chrome_sizer.Add(help_btn, 0, wx.ALL, 4)
+    chrome_sizer.Add(language_button, 0, wx.ALL, 4)
+    root.Add(chrome_sizer, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 6)
     notebook = wx.Notebook(panel)
     page_controls = {}
 
-    def add_navigation_page(command_id, title_key):
-        page = wx.Panel(notebook)
-        page_sizer = wx.BoxSizer(wx.VERTICAL)
-        open_button = wx.Button(page, label=COMMAND_REGISTRY.get(command_id).label())
-        page_sizer.Add(open_button, 0, wx.ALL, 12)
-        page.SetSizer(page_sizer)
-        notebook.AddPage(page, t(title_key), False)
-        open_button.Bind(wx.EVT_BUTTON, lambda _event: _dispatch(command_id, frame, lifecycle, session_state))
-        page_controls[command_id] = {"page": page, "button": open_button}
+    # Build embedded panels using shared helpers (panels created once, not lazily)
+    from hpc_gui.wx_connection import build_connection_panel
+    from hpc_gui.wx_directories_view import build_directories_panel
+    from hpc_gui.wx_editor_view import build_editor_panel
+    from hpc_gui.wx_jobs import build_jobs_panel
+    from hpc_gui.wx_local_files import build_local_files_panel
+    from hpc_gui.wx_logs_view import build_logs_panel
+    from hpc_gui.wx_remote_files_view import build_remote_files_panel
 
-    add_navigation_page("NAV-FILES", "tabs.ftp")
-    add_navigation_page("NAV-DIRECTORIES", "tabs.directories")
-    add_navigation_page("NAV-EDITOR", "tabs.editor")
+    # Connection
+    _conn = _connection_callbacks(session_state, frame, lifecycle)
+    connection_panel = build_connection_panel(notebook, **_conn)
+    notebook.AddPage(connection_panel, t("tabs.login"), False)
+    page_controls["APP-CONNECT"] = {"page": connection_panel}
+
+    # Jobs & Outputs
+    _jobs = _jobs_callbacks(session_state, frame, lifecycle)
+    jobs_panel = build_jobs_panel(notebook, **_jobs)
+    notebook.AddPage(jobs_panel, t("tabs.jobs_outputs"), False)
+    page_controls["NAV-JOBS"] = {"page": jobs_panel}
+
+    # Directories (splitter with two remote panes)
+    _dirs = _directories_callbacks(session_state, frame, lifecycle)
+    directories_panel = build_directories_panel(notebook, **_dirs)
+    notebook.AddPage(directories_panel, t("tabs.directories"), False)
+    page_controls["NAV-DIRECTORIES"] = {"page": directories_panel}
+
+    # Files (header row + splitter with local left, remote right + transfers bottom)
+    files_page = wx.Panel(notebook)
+    files_sizer = wx.BoxSizer(wx.VERTICAL)
+    # header row: Transfer type [Auto v] Effective: Binary  Synchronized browsing  Compare directories
+    #                                         Upload selected  Download selected
+    # Use WrapSizer so narrow windows wrap.
+    files_header = wx.WrapSizer(wx.HORIZONTAL)
+    transfer_type_label = wx.StaticText(files_page, label=t("ftp.transfer_type"))
+    transfer_choice = wx.Choice(files_page, choices=[t("ftp.mode_auto"), t("ftp.mode_binary"), t("ftp.mode_ascii")])
+    # restore from session_state if present
+    try:
+        saved_mode = str(session_state.get("ftp_transfer_type", "auto")).lower()
+        sel_idx = {"auto": 0, "binary": 1, "ascii": 2}.get(saved_mode, 0)
+        transfer_choice.SetSelection(sel_idx)
+    except Exception:
+        transfer_choice.SetSelection(0)
+    # effective label
+    def _current_effective_mode():
+        try:
+            idx = transfer_choice.GetSelection()
+            if idx == 1:
+                return t("ftp.mode_binary")
+            if idx == 2:
+                return t("ftp.mode_ascii")
+            return t("ftp.mode_auto")
+        except Exception:
+            return t("ftp.mode_auto")
+    effective_label = wx.StaticText(files_page, label=t("ftp.effective_type").format(mode=_current_effective_mode()))
+    sync_cb = wx.CheckBox(files_page, label=t("ftp.sync_browsing"))
+    sync_cb.Disable()
+    compare_btn = wx.Button(files_page, label=t("ftp.compare_directories"))
+    try:
+        compare_btn.SetToolTip(t("ftp.compare_directories_tooltip"))
+    except Exception:
+        pass
+    compare_btn.Disable()
+    upload_selected_btn = wx.Button(files_page, label=t("ftp.upload_selected"))
+    download_selected_btn = wx.Button(files_page, label=t("ftp.download_selected"))
+    files_header.Add(transfer_type_label, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 4)
+    files_header.Add(transfer_choice, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 4)
+    files_header.Add(effective_label, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 4)
+    files_header.Add(sync_cb, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 4)
+    files_header.Add(compare_btn, 0, wx.ALL, 4)
+    files_header.AddStretchSpacer(1)
+    files_header.Add(upload_selected_btn, 0, wx.ALL, 4)
+    files_header.Add(download_selected_btn, 0, wx.ALL, 4)
+    files_sizer.Add(files_header, 0, wx.EXPAND | wx.ALL, 4)
+    transfer_splitter = wx.SplitterWindow(files_page)
+    transfer_splitter.SetMinimumPaneSize(140)
+    top_splitter = wx.SplitterWindow(transfer_splitter)
+    _local = _local_files_callbacks(session_state, frame, lifecycle)
+    _remote = _remote_files_callbacks(session_state, frame, lifecycle)
+    local_panel = build_local_files_panel(top_splitter, **_local)
+    remote_panel = build_remote_files_panel(top_splitter, **_remote)
+    top_splitter.SplitVertically(local_panel, remote_panel, 340)
+    top_splitter.SetMinimumPaneSize(300)
+    from hpc_gui.wx_transfer_workspace import build_transfers_panel
+
+    transfers_panel = build_transfers_panel(transfer_splitter)
+    # store for routing in _start_file_transfers
+    session_state["embedded_transfers_panel"] = transfers_panel
+    # Give the transfers list room for its column headers, and let a taller
+    # window grow the browsers rather than the transfers area.
+    transfer_splitter.SplitHorizontally(top_splitter, transfers_panel, -220)
+    transfer_splitter.SetSashGravity(0.7)
+    files_sizer.Add(transfer_splitter, 1, wx.EXPAND)
+    files_page.SetSizer(files_sizer)
+    def _on_transfer_choice(_evt):
+        try:
+            idx = transfer_choice.GetSelection()
+            mode_key = ["auto", "binary", "ascii"][idx] if 0 <= idx < 3 else "auto"
+            session_state["ftp_transfer_type"] = mode_key
+            effective_label.SetLabel(t("ftp.effective_type").format(mode=_current_effective_mode()))
+            files_page.Layout()
+        except Exception:
+            pass
+    transfer_choice.Bind(wx.EVT_CHOICE, _on_transfer_choice)
+    # Upload/Download selected must call same operation callbacks the remote panel toolbar already uses
+    def _header_upload(_evt):
+        # Same implementation the local toolbar uses; no second upload path.
+        run = getattr(local_panel, "_wx_local_run_action", None)
+        if callable(run):
+            run("upload")
+
+    def _header_download(_evt):
+        # Same implementation the remote toolbar uses; no second download path.
+        run = getattr(remote_panel, "_wx_remote_run_action", None)
+        if callable(run):
+            run("download")
+
+    upload_selected_btn.Bind(wx.EVT_BUTTON, _header_upload)
+    download_selected_btn.Bind(wx.EVT_BUTTON, _header_download)
+    notebook.AddPage(files_page, t("tabs.ftp"), False)
+    page_controls["NAV-FILES"] = {"page": files_page, "local": local_panel, "remote": remote_panel, "transfers": transfers_panel, "splitter": transfer_splitter, "header": files_header, "transfer_type_label": transfer_type_label, "transfer_choice": transfer_choice, "effective_label": effective_label, "sync_cb": sync_cb, "compare_btn": compare_btn, "upload_selected": upload_selected_btn, "download_selected": download_selected_btn}
+
+    # Script Editor
+    _editor_kwargs = {"action_factory": _editor_action_factory(session_state)}
+    editor_panel = build_editor_panel(notebook, **_editor_kwargs)
+    notebook.AddPage(editor_panel, t("tabs.editor"), False)
+    page_controls["NAV-EDITOR"] = {"page": editor_panel}
+
+    # Terminal (existing page, unchanged)
     terminal_page = wx.Panel(notebook)
     terminal_sizer = wx.BoxSizer(wx.VERTICAL)
     terminal_output = wx.TextCtrl(terminal_page, style=wx.TE_MULTILINE | wx.TE_READONLY | wx.HSCROLL)
@@ -124,7 +261,12 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
     terminal_page.SetSizer(terminal_sizer)
     notebook.AddPage(terminal_page, t("help.section_terminal"), False)
     page_controls["NAV-TERMINAL"] = {"page": terminal_page, "output": terminal_output, "input": terminal_input}
-    add_navigation_page("NAV-JOBS", "tabs.jobs_outputs")
+
+    # Logs
+    _logs = _logs_callbacks(session_state, frame, lifecycle)
+    logs_panel = build_logs_panel(notebook, **_logs)
+    notebook.AddPage(logs_panel, t("tabs.logs"), False)
+    page_controls["NAV-LOGS"] = {"page": logs_panel}
     root.Add(notebook, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 8)
     panel.SetSizer(root)
     frame.CreateStatusBar()
@@ -145,24 +287,235 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
 
     def refresh_labels(_language=None):
         frame.SetTitle(f"{t('app.title')} {__version__}")
-        title_label.SetLabel(f"{t('app.title')} {__version__}")
-        description_label.SetLabel(t("help.wx_shell_description"))
         frame.SetStatusText(t("common.ready"))
         frame.GetMenuBar().SetMenuLabel(0, t("help.help_title"))
         frame.GetMenuBar().SetMenuLabel(1, t("help.language"))
-        for command_id, controls in page_controls.items():
-            if command_id == "NAV-TERMINAL":
-                continue
-            controls["button"].SetLabel(COMMAND_REGISTRY.get(command_id).label())
-        for index, title_key in enumerate(("tabs.ftp", "tabs.directories", "tabs.editor", "help.section_terminal", "tabs.jobs_outputs")):
+        for index, title_key in enumerate(("tabs.login", "tabs.jobs_outputs", "tabs.directories", "tabs.ftp", "tabs.editor", "help.section_terminal", "tabs.logs")):
             notebook.SetPageText(index, t(title_key))
         for command, item in command_items:
             menu.SetLabel(item.GetId(), command.label())
         for language, item in language_items.items():
             language_menu.SetLabel(item.GetId(), t("help.english" if language == "en" else "help.turkish"))
             item.Check(current_language() == language)
+        # chrome row
+        version_label.SetLabel(f"v{__version__}")
+        update_btn.SetLabel(t("updates.action"))
+        plugins_btn.SetLabel(t("plugins.action"))
+        send_logs_btn.SetLabel(t("crash.send_logs_btn"))
+        settings_btn.SetLabel(t("settings.action"))
+        help_btn.SetLabel(t("help.help_title"))
+        cur = current_language()
+        language_button.SetLabel(t("language.english") if cur == "en" else t("language.turkish"))
+        try:
+            language_button.SetBitmap(_flag_bitmap(wx, cur))
+        except Exception:
+            pass
+        language_button.SetToolTip(t("help.language"))
+        # Files header row
+        try:
+            transfer_type_label.SetLabel(t("ftp.transfer_type"))
+            # update choice strings
+            current_sel = transfer_choice.GetSelection() if transfer_choice.GetCount() else 0
+            transfer_choice.Clear()
+            for key in ("ftp.mode_auto", "ftp.mode_binary", "ftp.mode_ascii"):
+                transfer_choice.Append(t(key))
+            transfer_choice.SetSelection(current_sel if 0 <= current_sel < transfer_choice.GetCount() else 0)
+            effective_label.SetLabel(t("ftp.effective_type").format(mode=_current_effective_mode()))
+            sync_cb.SetLabel(t("ftp.sync_browsing"))
+            compare_btn.SetLabel(t("ftp.compare_directories"))
+            compare_btn.SetToolTip(t("ftp.compare_directories_tooltip"))
+            upload_selected_btn.SetLabel(t("ftp.upload_selected"))
+            download_selected_btn.SetLabel(t("ftp.download_selected"))
+        except Exception:
+            pass
 
     subscribe_language_change(refresh_labels)
+
+    # --- chrome parenting / tracking (Part 3) ---
+    chrome_windows: list = []
+    shell_ref = [frame]
+
+    def _shell_frame():
+        f = shell_ref[0] if shell_ref else None
+        if f is None:
+            return None
+        try:
+            if not wx.Window.FindWindowById(f.GetId()):
+                return None
+        except Exception:
+            return None
+        # also check if being deleted
+        try:
+            if f.IsBeingDeleted():
+                return None
+        except Exception:
+            pass
+        return f
+
+    def _track_new_windows(before_set):
+        f = _shell_frame()
+        if f is None:
+            return
+        after = set(wx.GetTopLevelWindows())
+        for w in after - before_set:
+            try:
+                if w.GetParent() is f:
+                    chrome_windows.append(w)
+                    # untrack when child closes/destroys
+                    def _on_child_close(evt, win=w):
+                        try:
+                            if win in chrome_windows:
+                                chrome_windows.remove(win)
+                        except Exception:
+                            pass
+                        evt.Skip()
+                    def _on_child_destroy(evt, win=w):
+                        try:
+                            if win in chrome_windows:
+                                chrome_windows.remove(win)
+                        except Exception:
+                            pass
+                        evt.Skip()
+                    w.Bind(wx.EVT_CLOSE, _on_child_close)
+                    w.Bind(wx.EVT_WINDOW_DESTROY, _on_child_destroy)
+            except Exception:
+                pass
+
+    def _on_help(_event):
+        f = _shell_frame()
+        if not f:
+            return
+        _dispatch("APP-HELP", f, lifecycle, session_state)
+
+    def _on_update(_event):
+        f = _shell_frame()
+        if not f:
+            return
+        before = set(wx.GetTopLevelWindows())
+
+        def worker():
+            try:
+                from hpc_gui.services.app_updater import get_latest_release, is_newer_version
+                from hpc_gui import __version__ as cur_ver
+                release = get_latest_release()
+
+                def on_done():
+                    ff = _shell_frame()
+                    if not ff:
+                        return
+                    try:
+                        if not wx.Window.FindWindowById(ff.GetId()):
+                            return
+                    except Exception:
+                        return
+                    try:
+                        if not is_newer_version(release.version, cur_ver):
+                            wx.MessageBox(t("updates.up_to_date").format(version=cur_ver), t("updates.title"), wx.OK | wx.ICON_INFORMATION, ff)
+                            _track_new_windows(before)
+                            return
+                        wx.MessageBox(t("updates.available_message").format(current=cur_ver, latest=release.version), t("updates.available_title"), wx.YES_NO | wx.ICON_QUESTION, ff)
+                        _track_new_windows(before)
+                    except Exception as exc:
+                        try:
+                            wx.MessageBox(str(exc), t("updates.error_title"), wx.OK | wx.ICON_ERROR, ff)
+                        except Exception:
+                            pass
+
+                wx.CallAfter(on_done)
+            except Exception as exc:
+                def on_err(exc=exc):
+                    ff = _shell_frame()
+                    if not ff:
+                        return
+                    try:
+                        wx.MessageBox(t("updates.error_message").format(error=str(exc)), t("updates.error_title"), wx.OK | wx.ICON_ERROR, ff)
+                    except Exception:
+                        pass
+                try:
+                    wx.CallAfter(on_err)
+                except Exception:
+                    pass
+
+        Thread(target=worker, daemon=True).start()
+
+    def _on_plugins(_event):
+        f = _shell_frame()
+        if not f:
+            return
+        before = set(wx.GetTopLevelWindows())
+        try:
+            from hpc_gui.wx_plugins_view import show_plugins
+            show_plugins(parent=f)
+        except Exception:
+            pass
+        _track_new_windows(before)
+
+    def _on_send_logs(_event):
+        f = _shell_frame()
+        if not f:
+            return
+        before = set(wx.GetTopLevelWindows())
+        try:
+            from hpc_gui.wx_send_logs_view import show_send_logs
+            show_send_logs(parent=f)
+        except Exception:
+            pass
+        _track_new_windows(before)
+
+    def _on_settings(_event):
+        f = _shell_frame()
+        if not f:
+            return
+        before = set(wx.GetTopLevelWindows())
+        try:
+            from hpc_gui.wx_settings_view import show_settings
+            show_settings(parent=f)
+        except Exception:
+            pass
+        _track_new_windows(before)
+
+    def _on_language_button(_event):
+        f = _shell_frame()
+        if not f:
+            return
+        # show popup menu parented to shell frame, not button
+        cur = current_language()
+        menu = wx.Menu()
+        ids = {}
+        for lang, key in (("en", "english"), ("tr", "turkish")):
+            item = menu.AppendRadioItem(wx.ID_ANY, t(f"language.{key}"))
+            try:
+                item.SetBitmap(_flag_bitmap(wx, lang))
+            except Exception:
+                pass
+            if lang == cur:
+                item.Check(True)
+            ids[item.GetId()] = lang
+
+        def on_choice(evt):
+            lang = ids.get(evt.GetId())
+            if lang:
+                set_language(lang)
+
+        # bind each id
+        for _id in ids:
+            f.Bind(wx.EVT_MENU, on_choice, id=_id)
+        try:
+            f.PopupMenu(menu)
+        finally:
+            menu.Destroy()
+            for _id in ids:
+                try:
+                    f.Unbind(wx.EVT_MENU, id=_id)
+                except Exception:
+                    pass
+
+    help_btn.Bind(wx.EVT_BUTTON, _on_help)
+    update_btn.Bind(wx.EVT_BUTTON, _on_update)
+    plugins_btn.Bind(wx.EVT_BUTTON, _on_plugins)
+    send_logs_btn.Bind(wx.EVT_BUTTON, _on_send_logs)
+    settings_btn.Bind(wx.EVT_BUTTON, _on_settings)
+    language_button.Bind(wx.EVT_BUTTON, _on_language_button)
 
     tray = _make_tray(wx, frame, tray_factory)
 
@@ -178,18 +531,57 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
         lifecycle.set_tray_notifier(tray.notify)
         lifecycle.register_cleanup(destroy_tray)
 
-    frame._wx_shell_controls = {"title": title_label, "description": description_label, "menu": menu, "language_menu": language_menu, "language_items": language_items, "notebook": notebook, "pages": page_controls}
+    frame._wx_shell_controls = {"version": version_label, "update": update_btn, "plugins": plugins_btn, "send_logs": send_logs_btn, "settings": settings_btn, "help": help_btn, "language_button": language_button, "menu": menu, "language_menu": language_menu, "language_items": language_items, "notebook": notebook, "pages": page_controls}
+    frame._wx_shell_chrome_windows = chrome_windows
+    frame._wx_shell_shell_ref = shell_ref
     frame._wx_shell_lifecycle = lifecycle
     frame._wx_shell_session_state = session_state
     frame._wx_shell_tray = tray
 
     def close(_event):
+        # Invoke every embedded page's close callback before shutdown
+        for _key, controls in list(page_controls.items()):
+            # For Files splitter, local/remote/transfers are stored separately
+            candidates = []
+            if "page" in controls:
+                candidates.append(controls["page"])
+            if "local" in controls:
+                candidates.append(controls["local"])
+            if "remote" in controls:
+                candidates.append(controls["remote"])
+            if "transfers" in controls:
+                candidates.append(controls["transfers"])
+            for host in candidates:
+                cb = getattr(host, "_wx_host_close", None)
+                if callable(cb):
+                    try:
+                        cb()
+                    except Exception:
+                        # ponytail: swallowed so one bad page cannot block shutdown;
+                        # hides page-teardown faults from the leak counters - route to
+                        # the lifecycle diagnostics channel if the stress campaign needs them.
+                        pass
         unsubscribe_language_change(refresh_labels)
         lifecycle.set_tray_notifier(None)
+        # Close chrome windows first (Part 3 Rule 3) before lifecycle.shutdown
+        for win in list(chrome_windows):
+            try:
+                win.Close()
+            except Exception:
+                pass
+        chrome_windows.clear()
+        # invalidate shell_ref so future handlers abort parenting
+        try:
+            shell_ref[0] = None
+        except Exception:
+            pass
         frame.Hide()
         for child in wx.GetTopLevelWindows():
             if child is not frame and child.GetParent() is frame:
-                child.Close()
+                try:
+                    child.Close()
+                except Exception:
+                    pass
         lifecycle.shutdown()
         frame.Destroy()
 
@@ -278,7 +670,40 @@ def _run_shell_in_terminal(session_state, parent, lifecycle, paths) -> None:
         return
     from hpc_gui.wx_terminal import show_terminal
 
-    show_terminal(parent, ssh=ssh, lifecycle=lifecycle)
+    def do_show():
+        # re-read parent at call time and validate (Part 3 Rule 2)
+        p = parent
+        try:
+            import wx
+            if p is not None and not wx.Window.FindWindowById(p.GetId()):
+                p = None
+        except Exception:
+            p = None
+        # parent must be shell frame; if not alive, abort
+        if p is None:
+            return
+        show_terminal(p, ssh=ssh, lifecycle=lifecycle)
+
+    try:
+        import wx
+
+        if wx.IsMainThread():
+            do_show()
+        else:
+            evt = Event()
+            def _call():
+                try:
+                    do_show()
+                finally:
+                    evt.set()
+            wx.CallAfter(_call)
+            evt.wait(2)
+    except Exception:
+        # fallback direct
+        try:
+            do_show()
+        except Exception:
+            pass
     ssh.send_shell_text("\n".join(f"bash -- {shlex.quote(path)}" for path in paths) + "\n")
 
 
@@ -370,7 +795,36 @@ def _start_file_transfers(session_state, lifecycle, items, *, on_progress=None, 
         progress(1, 1)
 
     transfer_window = None
-    if parent:
+    # Prefer embedded transfers panel when shell has one and caller is the shell frame
+    embedded = session_state.get("embedded_transfers_panel")
+    use_embedded = False
+
+    def _embedded_alive(win):
+        if win is None:
+            return False
+        try:
+            import wx as _wx
+
+            if not _wx.Window.FindWindowById(win.GetId()):
+                return False
+            if hasattr(win, "IsBeingDeleted") and win.IsBeingDeleted():
+                return False
+            st = getattr(win, "_wx_transfer_state", None)
+            if isinstance(st, dict) and st.get("closed"):
+                return False
+            return True
+        except Exception:
+            return False
+
+    if embedded and _embedded_alive(embedded):
+        # Route shell's own file transfers to the embedded panel; keep detached path for external parents
+        if parent is not None and hasattr(parent, "_wx_shell_controls"):
+            transfer_window = embedded
+            use_embedded = True
+        elif parent is None:
+            transfer_window = embedded
+            use_embedded = True
+    if not use_embedded and parent:
         import wx
 
         ready = Event()
@@ -429,130 +883,255 @@ def _start_file_transfers(session_state, lifecycle, items, *, on_progress=None, 
     return controller
 
 
+def _local_files_callbacks(session_state, parent, lifecycle):
+    _snapshot_session = (session_state or {}).get("session") or {}
+    _snapshot_files = _snapshot_session.get("files")
+    _manager = _get_editor_manager(session_state, parent, lifecycle)
+
+    def open_local(path, new_window=False):
+        manager = _manager
+        request_id = None if new_window else manager.begin_primary_request()
+
+        def worker():
+            try:
+                content = Path(path).read_text(encoding="utf-8")
+                opener = manager.open_new_window if new_window else manager.open_primary
+                if new_window:
+                    import wx
+
+                    wx.CallAfter(opener, path, content, is_local=True)
+                else:
+                    import wx
+
+                    wx.CallAfter(opener, path, content, is_local=True, request_id=request_id)
+            except Exception as error:
+                import wx
+
+                wx.CallAfter(wx.MessageBox, str(error), t("login.err_title"), wx.OK | wx.ICON_ERROR)
+
+        Thread(target=worker, daemon=True).start()
+
+    def upload_local(paths):
+        session = (session_state or {}).get("session") or {}
+        files = _snapshot_files if _snapshot_files is not None else session.get("files")
+        if not files:
+            return
+        import wx
+
+        dialog = wx.TextEntryDialog(parent, t("dirs.destination"), t("dirs.destination"), "~")
+        try:
+            if dialog.ShowModal() != wx.ID_OK:
+                return
+            remote_dir = PurePosixPath(dialog.GetValue().strip() or "~")
+        finally:
+            dialog.Destroy()
+
+        def worker():
+            try:
+                items = [TransferItem("upload", local_path, str(remote_dir / Path(local_path).name)) for local_path in paths]
+                _start_file_transfers(session_state, lifecycle, items, files_backend=files, parent=parent)
+            except Exception as error:
+                import wx
+
+                wx.CallAfter(wx.MessageBox, str(error), t("login.err_title"), wx.OK | wx.ICON_ERROR)
+
+        Thread(target=worker, daemon=True).start()
+
+    return {
+        "open_editor": lambda path: open_local(path),
+        "open_editor_new_window": lambda path: open_local(path, True),
+        "upload": upload_local,
+        "run_shell": lambda path: _run_shell_in_terminal(session_state, parent, lifecycle, [path]),
+    }
+
+
+def _remote_files_callbacks(session_state, parent, lifecycle):
+    _snapshot_session = (session_state or {}).get("session") or {}
+    _snapshot_files = _snapshot_session.get("files")
+    _manager = _get_editor_manager(session_state, parent, lifecycle)
+
+    def remote_operation(action, paths, destination=""):
+        session = (session_state or {}).get("session") or {}
+        files = _snapshot_files if _snapshot_files is not None else session.get("files")
+        if action == "delete" and files:
+            for remote_path in paths:
+                files.remove(remote_path, recursive=True)
+            return
+        if action == "rename" and files and len(paths) == 1 and destination:
+            files.rename(paths[0], destination)
+            return
+        if action in {"copy", "move"} and files and destination:
+            for remote_path in paths:
+                target = str(PurePosixPath(destination) / PurePosixPath(remote_path).name)
+                (files.copy if action == "copy" else files.move)(remote_path, target)
+            return
+        if action == "download" and files and destination:
+            items = [TransferItem("download", remote_path, str(Path(destination) / PurePosixPath(remote_path).name)) for remote_path in paths]
+            _start_file_transfers(session_state, lifecycle, items, files_backend=files, parent=parent)
+            return
+        if action == "upload" and files and destination:
+            items = [TransferItem("upload", local_path, str(PurePosixPath(destination) / Path(local_path).name)) for local_path in paths]
+            _start_file_transfers(session_state, lifecycle, items, files_backend=files, parent=parent)
+            return
+        if action == "new_folder" and files and destination:
+            files.mkdir(destination)
+            return
+        raise RuntimeError(f"Remote action is not available from this view: {action}")
+
+    def _editor(path, content="", request_id=None):
+        _manager.open_primary(path, content, is_local=False, request_id=request_id)
+
+    _editor._wx_request_aware = True
+
+    def _editor_request_started():
+        return _manager.begin_primary_request()
+
+    _editor._wx_request_started = _editor_request_started
+
+    def _editor_new_window(path, content=""):
+        _manager.open_new_window(path, content, is_local=False)
+
+    def _loader(path):
+        session = (session_state or {}).get("session") or {}
+        files = _snapshot_files if _snapshot_files is not None else session.get("files")
+        if files and hasattr(files, "iterdir_entries"):
+            return files.iterdir_entries(path)
+        return ()
+
+    def _read_text(path):
+        session = (session_state or {}).get("session") or {}
+        files = _snapshot_files if _snapshot_files is not None else session.get("files")
+        if files and hasattr(files, "read_text"):
+            return files.read_text(path)
+        return ""
+
+    # Wrap loader/read_text to be callable with path; the remote view will call loader(path)
+    # To keep compatibility with the view's `loader=files.iterdir_entries if files else None` pattern,
+    # we provide functions that dynamically resolve files.
+    def loader(path):
+        return _loader(path)
+
+    def read_text(path):
+        return _read_text(path)
+
+    # Only provide loader/read_text if there is a session; otherwise return None-like behavior
+    # The panel will handle None by not loading, but we provide dynamic functions so embedded
+    # panel works after connection. Check session at call time inside loader already.
+    return {
+        "loader": loader,
+        "read_text": read_text,
+        "operation": remote_operation,
+        "open_editor": _editor,
+        "open_editor_new_window": _editor_new_window,
+        "run_shell": lambda path: _run_shell_in_terminal(session_state, parent, lifecycle, [path]),
+    }
+
+
+def _jobs_callbacks(session_state, parent, lifecycle):
+    _snapshot_session = (session_state or {}).get("session") or {}
+    _snapshot_slurm = _snapshot_session.get("slurm")
+    _snapshot_profile = _snapshot_session.get("profile")
+    _snapshot_files = _snapshot_session.get("files")
+
+    def list_jobs():
+        session = (session_state or {}).get("session") or {}
+        slurm = _snapshot_slurm if _snapshot_slurm is not None else session.get("slurm")
+        profile = _snapshot_profile if _snapshot_profile is not None else session.get("profile") or {}
+        if not slurm:
+            return ()
+        raw = slurm.squeue(str(profile.get("username", "")))
+        rows = []
+        for line in str(raw or "").splitlines()[1:]:
+            fields = line.split()
+            if fields:
+                rows.append({"id": fields[0], "state": fields[4] if len(fields) > 4 else "", "name": fields[2] if len(fields) > 2 else ""})
+        return rows
+
+    def read_output(job_id):
+        session = (session_state or {}).get("session") or {}
+        slurm = _snapshot_slurm if _snapshot_slurm is not None else session.get("slurm")
+        files = _snapshot_files if _snapshot_files is not None else session.get("files")
+        if not slurm or not files:
+            return {}
+        metadata = str(slurm.scontrol_show_job(job_id) or "")
+        paths = {key: next((part.split("=", 1)[1] for part in metadata.split() if part.startswith(f"{key}=")), "") for key in ("StdOut", "StdErr")}
+        return {"stdout": files.read_text(paths["StdOut"]) if paths["StdOut"] else "", "stderr": files.read_text(paths["StdErr"]) if paths["StdErr"] else ""}
+
+    def _cancel(job_id):
+        session = (session_state or {}).get("session") or {}
+        slurm = _snapshot_slurm if _snapshot_slurm is not None else session.get("slurm")
+        if slurm and hasattr(slurm, "scancel"):
+            return slurm.scancel(job_id)
+        return None
+
+    def _final_state(job_id):
+        session = (session_state or {}).get("session") or {}
+        slurm = _snapshot_slurm if _snapshot_slurm is not None else session.get("slurm")
+        if slurm and hasattr(slurm, "job_state"):
+            return slurm.job_state(job_id)
+        return ""
+
+    return {
+        "list_jobs": list_jobs,
+        "read_output": read_output,
+        "cancel": _cancel,
+        "final_state": _final_state,
+        "generation": lambda: session_state.get("generation", 0),
+        "lifecycle": lifecycle,
+    }
+
+
+def _connection_callbacks(session_state, parent, lifecycle):
+    from hpc_gui.config.storage import load_profiles
+
+    profiles = load_profiles()
+
+    def on_connected(session):
+        session_state["session"] = session
+        session_state["generation"] = session_state.get("generation", 0) + 1
+        ssh = session.get("ssh") if isinstance(session, dict) else None
+        if ssh is not None and callable(getattr(ssh, "close", None)):
+            lifecycle.register_cleanup(ssh.close)
+
+    return {"profiles": profiles, "lifecycle": lifecycle, "on_connected": on_connected}
+
+
+def _logs_callbacks(session_state, parent, lifecycle):
+    # Logs view uses WxLogsModel internally; no session needed
+    return {}
+
+
+def _directories_callbacks(session_state, parent, lifecycle):
+    # Share single implementation between embedded tab and dispatch
+    # Pass session_state so view can derive scratch/home via system_profile helpers
+    # Also provide run_shell delegation matching _remote_files_callbacks pattern
+    return {"session_state": session_state}
+
+
 def _dispatch(command_id: str, parent=None, lifecycle=None, session_state=None) -> None:
     if command_id in {"APP-HELP", "APP-COMMAND-PALETTE"}:
         from hpc_gui.wx_help import show_help
 
         show_help(parent)
     elif command_id == "APP-CONNECT":
-        from hpc_gui.config.storage import load_profiles
         from hpc_gui.wx_connection import show_connection
 
-        def connected(session):
-            session_state["session"] = session
-            session_state["generation"] = session_state.get("generation", 0) + 1
-            ssh = session.get("ssh") if isinstance(session, dict) else None
-            if ssh is not None and callable(getattr(ssh, "close", None)):
-                lifecycle.register_cleanup(ssh.close)
-
-        show_connection(parent, load_profiles(), lifecycle=lifecycle, on_connected=connected)
+        _conn = _connection_callbacks(session_state, parent, lifecycle)
+        show_connection(parent, **_conn)
     elif command_id == "NAV-FILES":
         from hpc_gui.wx_local_files import show_local_files
-        session = (session_state or {}).get("session") or {}
-        files = session.get("files")
 
-        editor_manager = _get_editor_manager(session_state, parent, lifecycle)
-
-        def open_local(path, new_window=False):
-            request_id = None if new_window else editor_manager.begin_primary_request()
-            def worker():
-                try:
-                    content = Path(path).read_text(encoding="utf-8")
-                    opener = editor_manager.open_new_window if new_window else editor_manager.open_primary
-                    if new_window:
-                        wx.CallAfter(opener, path, content, is_local=True)
-                    else:
-                        wx.CallAfter(opener, path, content, is_local=True, request_id=request_id)
-                except Exception as error:
-                    wx.CallAfter(wx.MessageBox, str(error), t("login.err_title"), wx.OK | wx.ICON_ERROR)
-
-            import wx
-
-            Thread(target=worker, daemon=True).start()
-
-        def upload_local(paths):
-            if not files:
-                return
-            import wx
-
-            dialog = wx.TextEntryDialog(parent, t("dirs.destination"), t("dirs.destination"), "~")
-            try:
-                if dialog.ShowModal() != wx.ID_OK:
-                    return
-                remote_dir = PurePosixPath(dialog.GetValue().strip() or "~")
-            finally:
-                dialog.Destroy()
-
-            def worker():
-                try:
-                    items = [TransferItem("upload", local_path, str(remote_dir / Path(local_path).name)) for local_path in paths]
-                    _start_file_transfers(session_state, lifecycle, items, files_backend=files, parent=parent)
-                except Exception as error:
-                    wx.CallAfter(wx.MessageBox, str(error), t("login.err_title"), wx.OK | wx.ICON_ERROR)
-
-            Thread(target=worker, daemon=True).start()
-
-        show_local_files(
-            parent,
-            open_editor=lambda path: open_local(path),
-            open_editor_new_window=lambda path: open_local(path, True),
-            upload=upload_local,
-            run_shell=lambda path: _run_shell_in_terminal(session_state, parent, lifecycle, [path]),
-        )
+        _kwargs = _local_files_callbacks(session_state, parent, lifecycle)
+        show_local_files(parent, **_kwargs)
     elif command_id == "NAV-DIRECTORIES":
-        from hpc_gui.wx_remote_files_view import show_remote_files
+        from hpc_gui.wx_directories_view import show_directories
 
-        session = (session_state or {}).get("session") or {}
-        files = session.get("files")
-        slurm = session.get("slurm")
-        def remote_operation(action, paths, destination=""):
-            if action == "delete" and files:
-                for remote_path in paths:
-                    files.remove(remote_path, recursive=True)
-                return
-            if action == "rename" and files and len(paths) == 1 and destination:
-                files.rename(paths[0], destination)
-                return
-            if action in {"copy", "move"} and files and destination:
-                for remote_path in paths:
-                    target = str(PurePosixPath(destination) / PurePosixPath(remote_path).name)
-                    (files.copy if action == "copy" else files.move)(remote_path, target)
-                return
-            if action == "download" and files and destination:
-                items = [TransferItem("download", remote_path, str(Path(destination) / PurePosixPath(remote_path).name)) for remote_path in paths]
-                _start_file_transfers(session_state, lifecycle, items, files_backend=files, parent=parent)
-                return
-            if action == "upload" and files and destination:
-                items = [TransferItem("upload", local_path, str(PurePosixPath(destination) / Path(local_path).name)) for local_path in paths]
-                _start_file_transfers(session_state, lifecycle, items, files_backend=files, parent=parent)
-                return
-            if action == "new_folder" and files and destination:
-                files.mkdir(destination)
-                return
-            raise RuntimeError(f"Remote action is not available from this view: {action}")
-        def editor(path, content="", request_id=None):
-            editor_manager.open_primary(path, content, is_local=False, request_id=request_id)
+        show_directories(parent, **_directories_callbacks(session_state, parent, lifecycle))
+    elif command_id == "NAV-LOGS":
+        from hpc_gui.wx_logs_view import show_logs
 
-        editor._wx_request_aware = True
-
-        def editor_request_started():
-            return editor_manager.begin_primary_request()
-
-        editor._wx_request_started = editor_request_started
-
-        def editor_new_window(path, content=""):
-            editor_manager.open_new_window(path, content, is_local=False)
-
-        editor_manager = _get_editor_manager(session_state, parent, lifecycle)
-        show_remote_files(
-            parent,
-            loader=files.iterdir_entries if files else None,
-            read_text=files.read_text if files else None,
-            operation=remote_operation,
-            open_editor=editor,
-            open_editor_new_window=editor_new_window,
-            run_shell=lambda path: _run_shell_in_terminal(session_state, parent, lifecycle, [path]),
-        )
+        _kwargs = _logs_callbacks(session_state, parent, lifecycle)
+        show_logs(parent, **_kwargs)
     elif command_id == "NAV-EDITOR":
         _get_editor_manager(session_state, parent, lifecycle).open_primary("", "", is_local=False)
     elif command_id == "NAV-TERMINAL":
@@ -563,38 +1142,9 @@ def _dispatch(command_id: str, parent=None, lifecycle=None, session_state=None) 
     elif command_id == "NAV-JOBS":
         from hpc_gui.wx_jobs import show_jobs
 
-        session = (session_state or {}).get("session") or {}
-        slurm = session.get("slurm")
-        files = session.get("files")
-        profile = session.get("profile") or {}
-
-        def list_jobs():
-            if not slurm:
-                return ()
-            raw = slurm.squeue(str(profile.get("username", "")))
-            rows = []
-            for line in str(raw or "").splitlines()[1:]:
-                fields = line.split()
-                if fields:
-                    rows.append({"id": fields[0], "state": fields[4] if len(fields) > 4 else "", "name": fields[2] if len(fields) > 2 else ""})
-            return rows
-
-        def read_output(job_id):
-            if not slurm or not files:
-                return {}
-            metadata = str(slurm.scontrol_show_job(job_id) or "")
-            paths = {key: next((part.split("=", 1)[1] for part in metadata.split() if part.startswith(f"{key}=")), "") for key in ("StdOut", "StdErr")}
-            return {"stdout": files.read_text(paths["StdOut"]) if paths["StdOut"] else "", "stderr": files.read_text(paths["StdErr"]) if paths["StdErr"] else ""}
-
-        show_jobs(
-            parent,
-            lifecycle=lifecycle,
-            list_jobs=list_jobs,
-            final_state=slurm.job_state if slurm else None,
-            generation=lambda: session_state.get("generation", 0),
-            read_output=read_output,
-            cancel=slurm.scancel if slurm else None,
-        )
+        _kwargs = _jobs_callbacks(session_state, parent, lifecycle)
+        # show_jobs expects lifecycle, list_jobs, read_output, cancel, final_state, generation
+        show_jobs(parent, **_kwargs)
     elif command_id in {"PLUGIN-ANSYS-LINTER", "APP-ANSYS"}:
         from hpc_gui.wx_ansys_view import show_ansys_lint
 
