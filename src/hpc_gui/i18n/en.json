@@ -1026,6 +1026,20 @@
     "documentation": "Documentation",
     "copy_diagnostic": "Copy diagnostic",
     "copy_suggestion": "Copy suggestion",
-    "open_documentation": "Open documentation"
+    "open_documentation": "Open documentation",
+    "pick_files": "Pick Files",
+    "pick_folder": "Pick Folder",
+    "lint": "Lint",
+    "clear": "Clear",
+    "col_file": "File",
+    "col_severity": "Severity",
+    "col_location": "Location",
+    "col_code": "Code",
+    "col_message": "Message",
+    "no_file_selected": "No file selected",
+    "invalid_file": "Invalid file: {path}",
+    "invalid_folder": "Invalid folder: {path}",
+    "no_supported_files": "No supported files to lint.",
+    "engine_error": "Engine error"
   }
 }

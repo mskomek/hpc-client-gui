@@ -36,7 +36,7 @@ def _format_location(diag) -> str:
     return f"{line}:{col or 1}"
 
 
-def build_ansys_frame(parent=None, presentation: AnsysToolPresentation | None = None, *, lifecycle=None):
+def build_ansys_frame(parent=None, presentation: AnsysToolPresentation | None = None, *, lifecycle=None, file_chooser=None, folder_chooser=None, browser_launcher=None):
     try:
         import wx
     except ImportError as exc:
@@ -67,10 +67,10 @@ def build_ansys_frame(parent=None, presentation: AnsysToolPresentation | None = 
 
     # Toolbar: file / folder pick + lint
     toolbar = wx.BoxSizer(wx.HORIZONTAL)
-    pick_files_btn = wx.Button(panel, label="Pick Files")
-    pick_folder_btn = wx.Button(panel, label="Pick Folder")
-    lint_btn = wx.Button(panel, label="Lint")
-    clear_btn = wx.Button(panel, label=t("common.close") if False else "Clear")
+    pick_files_btn = wx.Button(panel, label=_tr("ansyslint.pick_files", "Pick Files"))
+    pick_folder_btn = wx.Button(panel, label=_tr("ansyslint.pick_folder", "Pick Folder"))
+    lint_btn = wx.Button(panel, label=_tr("ansyslint.lint", "Lint"))
+    clear_btn = wx.Button(panel, label=_tr("ansyslint.clear", "Clear"))
     # Use translated labels where available; fallback to English
     toolbar.Add(pick_files_btn, 0, wx.RIGHT, 6)
     toolbar.Add(pick_folder_btn, 0, wx.RIGHT, 6)
@@ -89,11 +89,11 @@ def build_ansys_frame(parent=None, presentation: AnsysToolPresentation | None = 
     bottom_panel = wx.Panel(splitter)
     # Results list - parent must be top_panel for sizer correctness
     results_ctrl = wx.ListCtrl(top_panel, style=wx.LC_REPORT | wx.LC_SINGLE_SEL)
-    results_ctrl.InsertColumn(0, "File")
-    results_ctrl.InsertColumn(1, "Severity")
-    results_ctrl.InsertColumn(2, "Location")
-    results_ctrl.InsertColumn(3, "Code")
-    results_ctrl.InsertColumn(4, "Message")
+    results_ctrl.InsertColumn(0, _tr("ansyslint.col_file", "File"))
+    results_ctrl.InsertColumn(1, _tr("ansyslint.col_severity", "Severity"))
+    results_ctrl.InsertColumn(2, _tr("ansyslint.col_location", "Location"))
+    results_ctrl.InsertColumn(3, _tr("ansyslint.col_code", "Code"))
+    results_ctrl.InsertColumn(4, _tr("ansyslint.col_message", "Message"))
     top_sizer = wx.BoxSizer(wx.VERTICAL)
     top_sizer.Add(results_ctrl, 1, wx.EXPAND | wx.ALL, 4)
     top_panel.SetSizer(top_sizer)
@@ -122,16 +122,21 @@ def build_ansys_frame(parent=None, presentation: AnsysToolPresentation | None = 
 
     def refresh_labels(_lang=None):
         frame.SetTitle(f"{t('ansyslint.title')} — {presentation.tool.title}")
-        # summary recomputed on next render; keep title update
         copy_diag_btn.SetLabel(t("ansyslint.copy_diagnostic"))
         copy_fix_btn.SetLabel(t("ansyslint.copy_suggestion"))
         open_doc_btn.SetLabel(t("ansyslint.open_documentation"))
-        # toolbar labels i18n-aware
-        pick_files_btn.SetLabel(t("editor.open") if t("editor.open") != "[editor.open]" else "Pick Files")
-        pick_folder_btn.SetLabel(t("dirs.current") if t("dirs.current") != "[dirs.current]" else "Pick Folder")
-        lint_btn.SetLabel(t("editor.lint") if t("editor.lint") != "[editor.lint]" else "Lint")
-        clear_btn.SetLabel(t("common.close") if False else t("dirs.delete") if False else "Clear")
-        # col headers could be localized but keep English for diagnostics table
+        pick_files_btn.SetLabel(_tr("ansyslint.pick_files", "Pick Files"))
+        pick_folder_btn.SetLabel(_tr("ansyslint.pick_folder", "Pick Folder"))
+        lint_btn.SetLabel(_tr("ansyslint.lint", "Lint"))
+        clear_btn.SetLabel(_tr("ansyslint.clear", "Clear"))
+        try:
+            results_ctrl.SetColumn(0, _tr("ansyslint.col_file", "File"))
+            results_ctrl.SetColumn(1, _tr("ansyslint.col_severity", "Severity"))
+            results_ctrl.SetColumn(2, _tr("ansyslint.col_location", "Location"))
+            results_ctrl.SetColumn(3, _tr("ansyslint.col_code", "Code"))
+            results_ctrl.SetColumn(4, _tr("ansyslint.col_message", "Message"))
+        except Exception:
+            pass
         frame.Layout()
 
     def render_results(results: tuple[FileDiagnostics, ...]):
@@ -181,14 +186,13 @@ def build_ansys_frame(parent=None, presentation: AnsysToolPresentation | None = 
 
     def do_lint_files(paths: list[str]):
         if not paths:
-            show_error("No file selected.")
+            show_error(_tr("ansyslint.no_file_selected", "No file selected"))
             return
-        # validate files exist
         valid = []
         for p in paths:
             pp = Path(p)
             if not pp.is_file():
-                show_error(f"Invalid file: {p}")
+                show_error(_tr("ansyslint.invalid_file", "Invalid file: {path}").format(path=p))
                 return
             try:
                 text = pp.read_text(encoding="utf-8", errors="replace")
@@ -196,41 +200,56 @@ def build_ansys_frame(parent=None, presentation: AnsysToolPresentation | None = 
                 show_error(f"Cannot read {p}: {exc}")
                 return
             valid.append((str(pp), text))
-        # run in background to keep UI responsive
         def worker():
             try:
                 results = model.lint_files(valid)
                 import wx as _wx
-                _wx.CallAfter(render_results, results)
-                if not results:
-                    _wx.CallAfter(show_error, "No supported files to lint.")
+                def _cb():
+                    if state["closed"]:
+                        return
+                    render_results(results)
+                    if not results:
+                        show_error(_tr("ansyslint.no_supported_files", "No supported files to lint."))
+                _wx.CallAfter(_cb)
             except Exception as exc:
                 import wx as _wx
-                _wx.CallAfter(show_error, f"{type(exc).__name__}: {exc}")
+                _wx.CallAfter(lambda e=exc: show_error(f"{type(e).__name__}: {e}") if not state["closed"] else None)
         Thread(target=worker, daemon=True).start()
 
     def do_lint_folder(folder: str):
         pp = Path(folder)
         if not pp.is_dir():
-            show_error(f"Invalid folder: {folder}")
+            show_error(_tr("ansyslint.invalid_folder", "Invalid folder: {path}").format(path=folder))
             return
         def worker():
             try:
                 results = model.lint_folder(str(pp), lambda p: Path(p).read_text(encoding="utf-8", errors="replace"))
                 import wx as _wx
-                _wx.CallAfter(render_results, results)
-                if not results:
-                    _wx.CallAfter(show_error, t("files.no_supported_remote_lint_files") if t("files.no_supported_remote_lint_files") != "[files.no_supported_remote_lint_files]" else "No supported files in folder.")
+                def _cb():
+                    if state["closed"]:
+                        return
+                    render_results(results)
+                    if not results:
+                        show_error(_tr("ansyslint.no_supported_files", "No supported files to lint."))
+                _wx.CallAfter(_cb)
             except Exception as exc:
                 import wx as _wx
-                _wx.CallAfter(show_error, f"{type(exc).__name__}: {exc}")
+                _wx.CallAfter(lambda e=exc: show_error(f"{type(e).__name__}: {e}") if not state["closed"] else None)
         Thread(target=worker, daemon=True).start()
 
     def on_pick_files(_evt):
+        if file_chooser is not None:
+            try:
+                paths = file_chooser()
+                if paths is not None:
+                    do_lint_files(list(paths))
+            except Exception as exc:
+                show_error(str(exc))
+            return
         import wx as _wx
         suffixes = presentation.view.suffixes or frozenset({".wbjn", ".jou", ".ccl", ".ansys"})
         wild = ";".join(f"*{s}" for s in sorted(suffixes)) if suffixes else "*.*"
-        dlg = _wx.FileDialog(frame, "Pick Files", wildcard=f"Supported ({wild})|{wild}|All files (*.*)|*.*", style=_wx.FD_OPEN | _wx.FD_MULTIPLE)
+        dlg = _wx.FileDialog(frame, _tr("ansyslint.pick_files", "Pick Files"), wildcard=f"Supported ({wild})|{wild}|All files (*.*)|*.*", style=_wx.FD_OPEN | _wx.FD_MULTIPLE)
         try:
             if dlg.ShowModal() == _wx.ID_OK:
                 do_lint_files(list(dlg.GetPaths()))
@@ -238,8 +257,16 @@ def build_ansys_frame(parent=None, presentation: AnsysToolPresentation | None = 
             dlg.Destroy()
 
     def on_pick_folder(_evt):
+        if folder_chooser is not None:
+            try:
+                folder = folder_chooser()
+                if folder:
+                    do_lint_folder(str(folder))
+            except Exception as exc:
+                show_error(str(exc))
+            return
         import wx as _wx
-        dlg = _wx.DirDialog(frame, "Pick Folder")
+        dlg = _wx.DirDialog(frame, _tr("ansyslint.pick_folder", "Pick Folder"))
         try:
             if dlg.ShowModal() == _wx.ID_OK:
                 do_lint_folder(dlg.GetPath())
@@ -335,8 +362,9 @@ def build_ansys_frame(parent=None, presentation: AnsysToolPresentation | None = 
         if not is_allowed_external_url(url, set(_ALLOWED_DOC_DOMAINS)):
             show_error(f"URL not allowed: {url}")
             return
+        launcher = browser_launcher or _wx.LaunchDefaultBrowser
         try:
-            _wx.LaunchDefaultBrowser(url)
+            launcher(url)
         except Exception as exc:
             show_error(str(exc))
 
@@ -382,8 +410,8 @@ def build_ansys_frame(parent=None, presentation: AnsysToolPresentation | None = 
     return frame
 
 
-def show_ansys_lint(parent=None, presentation: AnsysToolPresentation | None = None, *, lifecycle=None):
-    return build_ansys_frame(parent, presentation, lifecycle=lifecycle)
+def show_ansys_lint(parent=None, presentation: AnsysToolPresentation | None = None, *, lifecycle=None, file_chooser=None, folder_chooser=None, browser_launcher=None):
+    return build_ansys_frame(parent, presentation, lifecycle=lifecycle, file_chooser=file_chooser, folder_chooser=folder_chooser, browser_launcher=browser_launcher)
 
 
 __all__ = ["build_ansys_frame", "show_ansys_lint"]
