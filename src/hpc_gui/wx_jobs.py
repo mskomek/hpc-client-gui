@@ -217,7 +217,7 @@ def show_job_output(parent, model: WxJobsModel, view_id: str, *, read_output=Non
     return wx.ID_OK
 
 
-def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, cancel, lifecycle, final_state, generation, embedded, refresh_sacct=None, show_job_details=None, refresh_lssrv=None, **kwargs):
+def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, cancel, lifecycle, final_state, generation, embedded, refresh_sacct=None, show_job_details=None, refresh_lssrv=None, list_job_files=None, **kwargs):
     """Create the wx Jobs workspace; callbacks are service adapters, never UI IO."""
     try:
         import wx
@@ -230,13 +230,16 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         show_job_details = kwargs.get("show_details") or kwargs.get("scontrol") or kwargs.get("scontrol_show_job") or kwargs.get("show_details_callback")
     if refresh_lssrv is None:
         refresh_lssrv = kwargs.get("lssrv") or kwargs.get("lssrv_refresh") or kwargs.get("lssrv_callback") or kwargs.get("refresh_lssrv_callback")
-    # Also check kwargs for canonical names if passed explicitly as kwargs
+    if list_job_files is None:
+        list_job_files = kwargs.get("list_job_files") or kwargs.get("job_files") or kwargs.get("files_callback")
     if refresh_sacct is None and "refresh_sacct" in kwargs:
         refresh_sacct = kwargs["refresh_sacct"]
     if show_job_details is None and "show_job_details" in kwargs:
         show_job_details = kwargs["show_job_details"]
     if refresh_lssrv is None and "refresh_lssrv" in kwargs:
         refresh_lssrv = kwargs["refresh_lssrv"]
+    if list_job_files is None and "list_job_files" in kwargs:
+        list_job_files = kwargs["list_job_files"]
     model = model or WxJobsModel()
     if lifecycle is not None and model.completion_notify is None:
         model.completion_notify = lambda job_id, message: lifecycle.notify_job(message, job_id=job_id)
@@ -339,29 +342,36 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
     lssrv_sizer.SetMinSize(wx.Size(-1, 90))
     details_sizer.Add(lssrv_sizer, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 8)
     details_page.SetSizer(details_sizer)
-    # Files placeholder
+    # --- Files sub-tab: real datasource (job files) ---
     files_sizer = wx.BoxSizer(wx.VERTICAL)
-    files_placeholder = wx.StaticText(files_page, label=t("jobs_outputs.files_title"))
-    files_sizer.Add(files_placeholder, 0, wx.ALL, 8)
-    files_empty = wx.TextCtrl(files_page, style=wx.TE_MULTILINE | wx.TE_READONLY)
-    files_empty.SetValue("")
-    try:
-        files_empty.SetHint(t("jobs_outputs.files_title"))
-    except Exception:
-        pass
-    files_sizer.Add(files_empty, 1, wx.EXPAND | wx.ALL, 8)
+    files_toolbar = wx.BoxSizer(wx.HORIZONTAL)
+    files_refresh = wx.Button(files_page, label=t("jobs.refresh"))
+    files_toolbar.Add(files_refresh, 0, wx.RIGHT, 6)
+    files_toolbar.AddStretchSpacer(1)
+    files_sizer.Add(files_toolbar, 0, wx.EXPAND | wx.ALL, 4)
+    job_files = wx.ListCtrl(files_page, style=wx.LC_REPORT | wx.LC_SINGLE_SEL)
+    job_files.InsertColumn(0, t("dirs.col_name"))
+    job_files.InsertColumn(1, t("dirs.col_size"))
+    job_files.InsertColumn(2, t("jobs_outputs.file"))
+    files_sizer.Add(job_files, 1, wx.EXPAND | wx.ALL, 6)
     files_page.SetSizer(files_sizer)
-    # Outputs placeholder
+    # --- Outputs sub-tab: real stdout/stderr with follow ---
     outputs_sizer = wx.BoxSizer(wx.VERTICAL)
-    outputs_placeholder = wx.StaticText(outputs_page, label=t("jobs_outputs.outputs_title"))
-    outputs_sizer.Add(outputs_placeholder, 0, wx.ALL, 8)
-    outputs_empty = wx.TextCtrl(outputs_page, style=wx.TE_MULTILINE | wx.TE_READONLY)
-    outputs_empty.SetValue("")
-    try:
-        outputs_empty.SetHint(t("jobs_outputs.outputs_title"))
-    except Exception:
-        pass
-    outputs_sizer.Add(outputs_empty, 1, wx.EXPAND | wx.ALL, 8)
+    outputs_toolbar = wx.BoxSizer(wx.HORIZONTAL)
+    outputs_refresh = wx.Button(outputs_page, label=t("jobs.refresh"))
+    outputs_follow = wx.CheckBox(outputs_page, label=t("files.auto_scroll"))
+    outputs_follow.SetValue(True)
+    outputs_pause = wx.Button(outputs_page, label=t("jobs.pause_output"))
+    outputs_toolbar.Add(outputs_refresh, 0, wx.RIGHT, 6)
+    outputs_toolbar.Add(outputs_pause, 0, wx.RIGHT, 6)
+    outputs_toolbar.Add(outputs_follow, 0, wx.ALIGN_CENTER_VERTICAL)
+    outputs_toolbar.AddStretchSpacer(1)
+    outputs_sizer.Add(outputs_toolbar, 0, wx.EXPAND | wx.ALL, 4)
+    outputs_split = wx.SplitterWindow(outputs_page)
+    outputs_stdout = wx.TextCtrl(outputs_split, style=wx.TE_MULTILINE | wx.TE_READONLY | wx.HSCROLL)
+    outputs_stderr = wx.TextCtrl(outputs_split, style=wx.TE_MULTILINE | wx.TE_READONLY | wx.HSCROLL)
+    outputs_split.SplitHorizontally(outputs_stdout, outputs_stderr)
+    outputs_sizer.Add(outputs_split, 1, wx.EXPAND | wx.ALL, 6)
     outputs_page.SetSizer(outputs_sizer)
     root.Add(notebook, 1, wx.EXPAND | wx.ALL, 8)
     panel.SetSizer(root)
@@ -372,7 +382,7 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         show_details_button.Enable(False)
     if not refresh_lssrv:
         lssrv_button.Enable(False)
-    state = {"items": [], "selected_job": "", "closed": False, "in_flight": False, "output_in_flight": False, "cancel_in_flight": False, "user_paused": False, "minimized": False, "follow_calls": 0, "sacct_in_flight": False, "details_in_flight": False, "lssrv_in_flight": False}
+    state = {"items": [], "selected_job": "", "closed": False, "in_flight": False, "output_in_flight": False, "cancel_in_flight": False, "user_paused": False, "minimized": False, "follow_calls": 0, "sacct_in_flight": False, "details_in_flight": False, "lssrv_in_flight": False, "files_in_flight": False, "outputs_in_flight": False, "files_generation": 0, "outputs_generation": 0, "outputs_paused": False}
     state_lock = Lock()
     timer = wx.Timer(host)
 
@@ -494,6 +504,14 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
                 lines.extend(failure.as_lines())
             details.SetValue("\n".join(lines))
         refresh_outputs()
+        # also refresh Files and Outputs sub-tabs for selected job
+        refresh_job_files()
+        refresh_outputs_tab()
+        # update job_id field for accounting
+        try:
+            job_id_field.SetValue(job_id)
+        except Exception:
+            pass
 
     def cancel_job(_event):
         job_id = model.tracking.selected_job_id
@@ -629,6 +647,99 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
 
         Thread(target=worker, daemon=True).start()
 
+    def refresh_job_files(_event=None):
+        if not list_job_files:
+            return
+        with state_lock:
+            job_id = state["selected_job"]
+            if state["closed"] or not job_id:
+                return
+            state["files_in_flight"] = True
+            state["files_generation"] += 1
+            gen = state["files_generation"]
+            request_id = job_id
+        files_refresh.Enable(False)
+        def worker(req_id=request_id, g=gen):
+            try:
+                entries = list_job_files(req_id)
+                post(lambda: _done_files(entries, None, req_id, g))
+            except Exception as err:
+                post(lambda: _done_files([], err, req_id, g))
+        def _done_files(entries, err, req_id, g):
+            with state_lock:
+                state["files_in_flight"] = False
+                if state["closed"] or g != state["files_generation"] or req_id != state["selected_job"]:
+                    files_refresh.Enable(True)
+                    return
+            files_refresh.Enable(True)
+            if err:
+                job_files.DeleteAllItems()
+                # show error as single row
+                idx = job_files.InsertItem(job_files.GetItemCount(), str(err))
+                return
+            job_files.DeleteAllItems()
+            for entry in entries or []:
+                # entry may be dict or object with name/size/path
+                if isinstance(entry, dict):
+                    name = str(entry.get("name", entry.get("path", ""))).rsplit("/",1)[-1]
+                    size = str(entry.get("size", ""))
+                    path = str(entry.get("path", name))
+                else:
+                    name = str(getattr(entry, "name", getattr(entry, "path", ""))).rsplit("/",1)[-1]
+                    size = str(getattr(entry, "size", ""))
+                    path = str(getattr(entry, "path", name))
+                idx = job_files.InsertItem(job_files.GetItemCount(), name)
+                job_files.SetItem(idx, 1, size)
+                job_files.SetItem(idx, 2, path)
+        Thread(target=worker, daemon=True).start()
+
+    def refresh_outputs_tab(_event=None):
+        if not read_output:
+            return
+        with state_lock:
+            job_id = state["selected_job"]
+            if state["closed"] or not job_id or state["outputs_paused"]:
+                return
+            state["outputs_in_flight"] = True
+            state["outputs_generation"] += 1
+            gen = state["outputs_generation"]
+            request_id = job_id
+        outputs_refresh.Enable(False)
+        def worker(req_id=request_id, g=gen):
+            try:
+                result = read_output(req_id)
+                post(lambda: _done_outputs(result, None, req_id, g))
+            except Exception as err:
+                post(lambda: _done_outputs(None, err, req_id, g))
+        def _done_outputs(result, err, req_id, g):
+            with state_lock:
+                state["outputs_in_flight"] = False
+                if state["closed"] or g != state["outputs_generation"] or req_id != state["selected_job"]:
+                    outputs_refresh.Enable(True)
+                    return
+            outputs_refresh.Enable(True)
+            if err:
+                outputs_stdout.SetValue(str(err))
+                outputs_stderr.SetValue("")
+                return
+            if isinstance(result, dict):
+                outputs_stdout.SetValue(clean_output(result.get("stdout","")))
+                outputs_stderr.SetValue(clean_output(result.get("stderr","")))
+            elif isinstance(result, (tuple,list)):
+                outputs_stdout.SetValue(clean_output(result[0] if result else ""))
+                outputs_stderr.SetValue(clean_output(result[1] if len(result)>1 else ""))
+            else:
+                outputs_stdout.SetValue(clean_output(result))
+                outputs_stderr.SetValue("")
+            if outputs_follow.GetValue() and not state["outputs_paused"] and not state["minimized"]:
+                outputs_stdout.ShowPosition(outputs_stdout.GetLastPosition())
+                outputs_stderr.ShowPosition(outputs_stderr.GetLastPosition())
+        Thread(target=worker, daemon=True).start()
+
+    def toggle_outputs_pause(_event=None):
+        state["outputs_paused"] = not state["outputs_paused"]
+        outputs_pause.SetLabel(t("jobs.resume_output" if state["outputs_paused"] else "jobs.pause_output"))
+
     def open_detached(_event):
         job_id = state["selected_job"]
         if not read_output or not job_id:
@@ -693,17 +804,22 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
             lssrv_text.SetHint(t("jobs_outputs.lssrv_empty"))
         except Exception:
             pass
-        files_placeholder.SetLabel(t("jobs_outputs.files_title"))
         try:
-            files_empty.SetHint(t("jobs_outputs.files_title"))
+            job_files.SetColumn(0, t("dirs.col_name"))
+            job_files.SetColumn(1, t("dirs.col_size"))
+            job_files.SetColumn(2, t("jobs_outputs.file"))
         except Exception:
             pass
-        outputs_placeholder.SetLabel(t("jobs_outputs.outputs_title"))
         try:
-            outputs_empty.SetHint(t("jobs_outputs.outputs_title"))
+            files_refresh.SetLabel(t("jobs.refresh"))
         except Exception:
             pass
-        # also handle lssrv text placeholder when empty?
+        try:
+            outputs_refresh.SetLabel(t("jobs.refresh"))
+            outputs_follow.SetLabel(t("files.auto_scroll"))
+            outputs_pause.SetLabel(t("jobs.resume_output" if state["outputs_paused"] else "jobs.pause_output"))
+        except Exception:
+            pass
         if not lssrv_text.GetValue():
             try:
                 lssrv_text.SetHint(t("jobs_outputs.lssrv_empty"))
@@ -724,6 +840,23 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
     sacct_button.Bind(wx.EVT_BUTTON, _refresh_sacct)
     show_details_button.Bind(wx.EVT_BUTTON, _show_job_details)
     lssrv_button.Bind(wx.EVT_BUTTON, _refresh_lssrv)
+    files_refresh.Bind(wx.EVT_BUTTON, refresh_job_files)
+    outputs_refresh.Bind(wx.EVT_BUTTON, refresh_outputs_tab)
+    outputs_pause.Bind(wx.EVT_BUTTON, toggle_outputs_pause)
+    # notebook page change triggers refresh of visible tab
+    def _on_notebook_page_changed(evt):
+        try:
+            sel = notebook.GetSelection()
+            idx_files = 1
+            idx_outputs = 2
+            if sel == idx_files:
+                refresh_job_files()
+            elif sel == idx_outputs:
+                refresh_outputs_tab()
+        except Exception:
+            pass
+        evt.Skip()
+    notebook.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGED, _on_notebook_page_changed)
     # also allow Enter in job_id_field to trigger show details
     try:
         job_id_field.Bind(wx.EVT_TEXT_ENTER, _show_job_details)
@@ -732,6 +865,19 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
     def tick(event):
         refresh_jobs(event)
         refresh_outputs(event)
+        # also poll outputs tab if visible and follow
+        try:
+            if notebook.GetSelection() == 2:
+                refresh_outputs_tab(event)
+        except Exception:
+            pass
+        # poll files tab if visible
+        try:
+            if notebook.GetSelection() == 1:
+                # files tab auto-refresh not needed, but ensure stale handling
+                pass
+        except Exception:
+            pass
 
     timer.Start(1000)
     host.Bind(wx.EVT_TIMER, tick, timer)
@@ -742,13 +888,15 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         lifecycle.register_cleanup(close)
     subscribe_language_change(refresh_labels)
     host._wx_jobs_state = state
-    host._wx_jobs_controls = {"jobs": jobs, "stdout": stdout, "stderr": stderr, "follow": follow, "pause": pause_button, "refresh": refresh_button, "cancel": cancel_button, "notebook": notebook, "details_page": details_page, "files_page": files_page, "outputs_page": outputs_page, "accounting_text": accounting_text, "job_id_field": job_id_field, "sacct_button": sacct_button, "show_details_button": show_details_button, "lssrv_text": lssrv_text, "lssrv_button": lssrv_button, "lssrv_box": lssrv_box, "accounting_box": accounting_box}
+    host._wx_jobs_controls = {"jobs": jobs, "stdout": stdout, "stderr": stderr, "follow": follow, "pause": pause_button, "refresh": refresh_button, "cancel": cancel_button, "notebook": notebook, "details_page": details_page, "files_page": files_page, "outputs_page": outputs_page, "accounting_text": accounting_text, "job_id_field": job_id_field, "sacct_button": sacct_button, "show_details_button": show_details_button, "lssrv_text": lssrv_text, "lssrv_button": lssrv_button, "lssrv_box": lssrv_box, "accounting_box": accounting_box, "job_files": job_files, "files_refresh": files_refresh, "outputs_stdout": outputs_stdout, "outputs_stderr": outputs_stderr, "outputs_refresh": outputs_refresh, "outputs_follow": outputs_follow, "outputs_pause": outputs_pause}
     host._wx_jobs_refresh_jobs = refresh_jobs
     host._wx_jobs_refresh_outputs = refresh_outputs
     host._wx_jobs_refresh_sacct = _refresh_sacct
     host._wx_jobs_show_details = _show_job_details
     host._wx_jobs_refresh_lssrv = _refresh_lssrv
     host._wx_jobs_notebook = notebook
+    host._wx_jobs_refresh_files = refresh_job_files
+    host._wx_jobs_refresh_outputs_tab = refresh_outputs_tab
     refresh_jobs()
     finish()
     return host
