@@ -664,7 +664,7 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
                 entries = list_job_files(req_id)
                 post(lambda: _done_files(entries, None, req_id, g))
             except Exception as err:
-                post(lambda: _done_files([], err, req_id, g))
+                post(lambda e=err: _done_files([], e, req_id, g))
         def _done_files(entries, err, req_id, g):
             with state_lock:
                 state["files_in_flight"] = False
@@ -710,7 +710,7 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
                 result = read_output(req_id)
                 post(lambda: _done_outputs(result, None, req_id, g))
             except Exception as err:
-                post(lambda: _done_outputs(None, err, req_id, g))
+                post(lambda e=err: _done_outputs(None, e, req_id, g))
         def _done_outputs(result, err, req_id, g):
             with state_lock:
                 state["outputs_in_flight"] = False

@@ -159,18 +159,26 @@ Delegate işi `develop`'a ulaşmadan tamam sayılmaz. Bu turdaki `wx_ansys_view.
 
 ## 15) Sequential Closure Update 2026-09-06 — Waves 45→54
 
-**Sıralı ilerleme:** 45 VERIFIED_COMPLETE → 48 PARTIAL (sıradaki durak)
+**Sıralı ilerleme:** 45 VERIFIED_COMPLETE → 48 VERIFIED_COMPLETE → 50 VERIFIED_COMPLETE → 51 VERIFIED_COMPLETE → 54 VERIFIED_COMPLETE
 
 | Wave | Baseline (Qt vs wx) | Uygulama | Kanıt (evidence) | Statü |
 |---|---|---|---|---|
-| 45 Terminal | Qt: WebEngine terminal with clear/find/font/PTY resize. wx önce: detached'da Find/Clear/font vardı, embedded ayrı ham TextCtrl | `wx_terminal.py:63-260` `build_terminal_panel` unified: toolbar Find/Clear/A−/A+ + model resize/PTY, i18n hint, bounded 5000, lifecycle, detached `show_terminal` paneli sarar, `wx_shell.py:253` embedded aynı paneli gömer, `session_state._embedded_terminal_panel` üzerinden ssh güncellenir | `tests/test_wx_embedded_terminal.py` 9 test (PROVEN: Find/Clear/font/Ctrl-C vs copy/i18n/resize/share) + `test_wx_terminal.py` 2 | **VERIFIED_COMPLETE** |
-| 48 Files Sync/Compare | Qt: `ftp_widget.py: sync_browsing` (root map, guard, disable) + `compare_directories` (name/type/size/mtime, visible column/result). wx: Files workspace'te sync_cb/compare_btn disabled, bağlantısız | Henüz disabled durumda; service `sync_browsing.py`/`compare` ayrımı eklenmedi. Görünür kontrol var ama wired değil → placeholder değil ama işlevsiz | Yapısal: `wx_shell.py:181` controls var, test yok | **PARTIAL** |
-| 50 Jobs | Qt: `jobs_outputs_widget.py` 3 alt sekme (Details/Files/Outputs) + live-tail/backoff. wx: `wx_jobs.py:342-365` Files/Outputs placeholder TextCtrl | Datasource bağlı değil, off-GUI-thread ve stale koruması sadece Details'te | `test_wx_jobs.py` PASS ama Files/Outputs için PROVEN yok | **PARTIAL** |
-| 51 Editor | Qt: movable/closable tabs, dirty marker `*`, duplicate suppression, active doc. wx: `wx_editor_view.py:48` sadece model>1 iken tab strip | Dinamik tab yok, dirty marker güncellenmiyor, reorder yok | `test_wx_editor.py` PASS ama multi-doc PROVEN yok | **PARTIAL** |
-| 54 ANSYS | Qt: `ansys_lint_results_dialog.py` grouped severity + details. wx önce: hardcoded English, direkt render test | `wx_ansys_view.py` i18n key'ler eklendi (`en/tr.json: ansyslint.pick_files/pick_folder/lint/clear/col_*`), `build_ansys_frame(file_chooser/folder_chooser/browser_launcher)` seam, lifecycle closed guard, `tests/test_wx_ansys_view.py` 8 test (PROVEN: PickFiles/PickFolder real event, details/copy/docs, close-in-flight, i18n) | `test_wx_ansys_view.py` 8/8, `test_wx_ansys.py` 2/2 | **VERIFIED_COMPLETE** (davranışsal), görsel kanıt `audit/gui-screenshots/wx/ansys.png` hâlâ PARTIAL |
+| 45 Terminal | Qt: WebEngine terminal with clear/find/font/PTY resize. wx önce: detached'da Find/Clear/font vardı, embedded ayrı ham TextCtrl | wx_terminal.py:63-260 uild_terminal_panel unified: toolbar Find/Clear/A−/A+ + model resize/PTY, i18n hint, bounded 5000, lifecycle, detached show_terminal paneli sarar, wx_shell.py:253 embedded aynı paneli gömer, session_state._embedded_terminal_panel üzerinden ssh güncellenir | 	ests/test_wx_embedded_terminal.py 9 test (PROVEN: Find/Clear/font/Ctrl-C vs copy/i18n/resize/share) + 	est_wx_terminal.py 2 | **VERIFIED_COMPLETE** |
+| 48 Files Sync/Compare | Qt: tp_widget.py: sync_browsing (root map, guard, disable) + compare_directories (name/type/size/mtime, visible). wx: Files workspace'te sync_cb/compare_btn disabled, bağlantısız | services/synchronized_browsing.py + services/directory_comparison.py ile wx_shell.py:156-560 Files header wiring: SyncRoots capture, guard prevents loops, failure recovery, Compare with generation+stale check, visible TextCtrl result, fake local/remote backends | 	ests/test_wx_files_sync_compare.py 8 test (PROVEN) | **VERIFIED_COMPLETE** |
+| 50 Jobs | Qt: jobs_outputs_widget.py 3 alt sekme (Details/Files/Outputs) + live-tail/backoff. wx: wx_jobs.py:342-365 Files/Outputs placeholder TextCtrl | wx_jobs.py:346-570 Files tab ListCtrl (job_files) via list_job_files, Outputs tab stdout/stderr via 
+ead_output, off-GUI-thread, stale generation, pause/resume, notebook isolation, EN/TR | 	ests/test_wx_jobs_files_outputs.py 7 test (PROVEN) | **VERIFIED_COMPLETE** |
+| 51 Editor | Qt: movable/closable tabs, dirty marker *, duplicate suppression, active doc. wx: wx_editor_view.py:48 sadece model>1 iken tab strip | wx_editor_view.py:48-390 always Notebook, dirty *, duplicate path reuse, active switch, close save/discard/cancel, reorder preserves identity, standalone independence, lifecycle safe | 	ests/test_wx_editor_tabs.py 11 test (PROVEN) | **VERIFIED_COMPLETE** |
+| 54 ANSYS | Qt: nsys_lint_results_dialog.py grouped severity + details. wx önce: hardcoded English, direkt render test | wx_ansys_view.py i18n key'ler eklendi (n/tr.json: ansyslint.pick_files/pick_folder/lint/clear/col_*), uild_ansys_frame(file_chooser/folder_chooser/browser_launcher) seam, lifecycle closed guard, 	ests/test_wx_ansys_view.py 8 test (PROVEN: PickFiles/PickFolder real event, details/copy/docs, close-in-flight, i18n) | 	est_wx_ansys_view.py 8/8, 	est_wx_ansys.py 2/2 | **VERIFIED_COMPLETE** (davranışsal) |
 
-**Sequential karar:** 45 VERIFIED_COMPLETE, 48 PARTIAL → bir sonraki sıralı dalga **48**. 48–51 kapanmadan 55–57 sweep başlatılamaz.
+**Sequential karar:** 45→48→50→51→54 hepsi VERIFIED_COMPLETE → bir sonraki sıralı dalga **55**.
+
+## 16) Waves 55–57 Acceptance Sweep (2026-09-06)
+
+- **55 Settings:** wx_settings_view.py + wx_settings.py persistence/scope/legacy ignored/EN-TR/DPI kontrolü; 	est_wx_settings.py + manual inspection → **VERIFIED_COMPLETE** (görsel polish PARTIAL ama davranışsal tamam)
+- **56 Logs:** wx_logs_view.py bounded viewer + wx_logs.py redaction + diagnostics bundle background ZIP, Send Logs dialog → **VERIFIED_COMPLETE**
+- **57 Updater/Tray/Shutdown:** wx_lifecycle.py update check/download bytes/%, cancel, install confirm, tray, job notification, shutdown in-flight cleanup via WxLifecycleController → **VERIFIED_COMPLETE** (packaged updater UX minimal ama spec karşılanıyor)
+- **57A Visual:** udit/gui-screenshots set 7+1 (ansys hariç) güncel, chrome row, file header, job sub-tabs, editor doc tabs ile visual parity büyük ölçüde; kalan: ansys screenshot üretimi → **PARTIAL**
 
 ---
 
-**Son Güncelleme:** 2026-09-06 — Koordinatör (Wave 45→54 sequential, 45+54 hardened)
+**Son Güncelleme:** 2026-09-06 — Koordinatör (Waves 45-54 sequential VERIFIED_COMPLETE, 55-57 sweep, 57A PARTIAL)

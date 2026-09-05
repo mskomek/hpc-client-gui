@@ -11,7 +11,7 @@ from threading import Event, Thread
 from hpc_gui import __version__
 from hpc_gui.core.i18n import current_language, load_saved_language, set_language, subscribe_language_change, system_default_language, t, unsubscribe_language_change
 from hpc_gui.services.command_registry import COMMAND_REGISTRY
-from hpc_gui.services.directory_comparison import ComparableEntry, CompareStatus, compare_directory_entries
+from hpc_gui.services.directory_comparison import ComparableEntry, compare_directory_entries
 from hpc_gui.services.synchronized_browsing import SyncRoots, local_to_remote, normalize_local_root, normalize_remote_root, remote_to_local
 from hpc_gui.services.transfer_controller import TransferItem
 from hpc_gui.services.transfer_session_controller import TransferSessionController
@@ -537,12 +537,12 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
                     pass
             except Exception as e:
                 import wx as _wx
-                def apply_err():
+                def apply_err(err=e):
                     if _compare_state.get("closed") or current_gen != _compare_state.get("generation"):
                         return
                     _compare_state["in_flight"] = False
                     try:
-                        _compare_result.SetValue(str(e))
+                        _compare_result.SetValue(str(err))
                     except Exception:
                         pass
                 try:
