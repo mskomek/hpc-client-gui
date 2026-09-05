@@ -47,6 +47,10 @@ def _close(app, frame, lifecycle):
     for _ in range(10):
         app.ProcessPendingEvents()
         wx.MilliSleep(2)
+    # Destroy() is deferred, and ProcessPendingEvents() alone does not reclaim
+    # the pending deletes. Without this yield they pile up across the run and the
+    # process exhausts its 10,000 USER object allowance part-way through.
+    wx.SafeYield()
 
 
 def test_wx_shell_p0_stress_real_wx_paths():
