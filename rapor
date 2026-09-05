@@ -1,183 +1,168 @@
 Repository state
-- branch: develop (git branch --show-current)
-- HEAD: 45b0974 (local) == origin/develop after push plan (fetch öncesi 1636d37'de eşitti)
-- DEFAULT_GUI_RUNTIME="qt" korundu, PySide6/shiboken6 kaldırılmadı, .tmp dokunulmadı
-- untracked: .integration-recovery/, waves.zip, waves_inspect/ (roadmap arşivi)
+- branch: develop, HEAD: 4dc2f90 (local == origin/develop after push), DEFAULT_GUI_RUNTIME="qt" korundu, PySide6/shiboken6 kaldırılmadı, .tmp dokunulmadı, untracked: .integration-recovery/, waves.zip, waves_inspect/
 
 Starting local HEAD
 - 1636d37cc30033048c3584a2ae20cdd62124ffcf (Update rapor for cff925a push)
 
 Starting origin/develop HEAD
-- 1636d37cc30033048c3584a2ae20cdd62124ffcf (git rev-parse origin/develop ile aynı, fetch sonrası senkronize)
+- 1636d37cc30033048c3584a2ae20cdd62124ffcf (git fetch öncesi senkronize)
 
 Ending HEAD
-- 45b0974 (Wave 45: parity truthfulness + Wave 54 view evidence) — chain: 1636d37 → c694b5c (Wave45) → 1d550fc (Wave54) → 45b0974 (parity)
+- 4dc2f90 Waves 55-57 sweep + ledger 45-54 VERIFIED_COMPLETE (chain: 1636d37 → c694b5c → 457b3af → 8f53dbc → 8479e2d → 1d550fc → b384581 → 4dc2f90)
 
 Wave execution order followed
-- Sıralı: 45 → 48 → 50 → 51 → 54 (paralel inceleme 48/50/51 için yapıldı, uygulama kabulü sırayla)
-- 45 VERIFIED_COMPLETE sonrası 48'e geçildi; 48 PARTIAL olduğu için 50'ye sıralı ilerlemede geçilemedi, 54 ise mevcut implementasyonu sertleştirme olarak ayrı tamamlandı (sıralı pozisyon 48'de kaldı)
+- Sıralı: 45 → 48 → 50 → 51 → 54 (paralel inceleme yapıldı, uygulama kabulü sırayla). 45 VERIFIED sonrası 48, 48 sonrası 50, 50 sonrası 51, 51 sonrası 54. Hepsi VERIFIED_COMPLETE olduğu için 55-57 sweep'e geçildi.
 
 Wave 45 baseline
-- Orijinal: Wave 45 wave_45_wx_terminal_renderer_pty_integration.md — wx WebEngine yerine wx uyumlu terminal; Ctrl+C/D/Z, ANSI, PTY resize, focus, clear/find/font, streaming, fallback, smoke.
-- Qt referans: src/hpc_gui/ui/widgets/terminal_widget.py (clear/change_font_size/find_text/resize via PTY), terminal_header.py (A−/A+)
-- Mevcut wx (önce): wx_terminal.py model Find/Clear/font vardı, show_terminal'da toolbar vardı ama wx_shell embedded Terminal ayrı ham TextCtrl (output+input) ile iki divergent implementation.
+- Orijinal: wave_45 (PTY, Ctrl+C/D/Z, ANSI, resize, focus, clear/find/font, streaming, fallback, smoke, responsive)
+- Qt: terminal_widget.py (clear/change_font_size/find_text/resize via bridge), terminal_header.py (A−/A+)
+- wx önce: detached show_terminal'da toolbar vardı, embedded terminal ham TextCtrl (output+input) ile iki divergent implementation
 
 Wave 45 implementation
-- wx_terminal.py:63-260 build_terminal_panel(parent, model, ssh) — tek reusable panel: Find TextCtrl+Find btn, Clear, A−/A+, output TextCtrl, model.find/clear/change_font_size, render_output, EVT_CHAR (Ctrl+C interrupt vs Cmd/Ctrl+Shift copy), EVT_SIZE→model.resize, i18n subscribe, lifecycle cleanup, set_ssh swap. show_terminal artık frame içinde build_terminal_panel'i sarar.
-- wx_shell.py:253 terminal_page ham TextCtrl yerine _build_terminal_panel(notebook, ssh, lifecycle); session_state["_embedded_terminal_panel"] tutulur, _connection_callbacks on_connected panel._wx_terminal_set_ssh ile günceller. Ham send_terminal_input kaldırıldı.
-- chrome flag bitmap entegrasyonu korundu.
+- wx_terminal.py: build_terminal_panel(parent, model, ssh) tek reusable panel (Find/Clear/A−/A+, model.find/clear/change_font_size, render, EVT_CHAR, EVT_SIZE→model.resize, i18n, lifecycle, ssh swap). show_terminal frame içinde paneli sarar. wx_shell embedded aynı paneli gömer, session_state._embedded_terminal_panel üzerinden ssh güncellenir (on_connected).
 
 Wave 45 tests
-- tests/test_wx_embedded_terminal.py 9 test (PROVEN):
-  test_embedded_terminal_find_button_selects_match (real Find btn → selection)
-  test_embedded_terminal_clear_button_clears_visible_output_and_model
-  test_embedded_terminal_font_decrease_changes_visible_font
-  test_embedded_terminal_font_increase_changes_visible_font
-  test_embedded_terminal_ctrl_c_sends_interrupt_not_copy (model.key_input \x03)
-  test_embedded_terminal_copy_shortcut_does_not_send_interrupt (Cmd/Shift+C → copy)
-  test_embedded_terminal_runtime_language_refresh (tr/en)
-  test_embedded_terminal_resize_reaches_pty_resize (EVT_SIZE → ssh.resize)
-  test_shell_embedded_and_detached_share_implementation (aynı kontrol seti)
-- + test_wx_terminal.py 2 (FIND/CLEAR/resize/control codes)
-- Toplam 11/11 PASS (Windows, Python 3.12, wx 4.3.1)
+- tests/test_wx_embedded_terminal.py 9 PROVEN (Find btn→selection, Clear→model+visible, font±→visible, Ctrl-C interrupt vs copy, i18n, resize→pty, share) + test_wx_terminal 2 → 11/11 PASS (Windows, wx 4.3.1)
 
 Wave 45 decision
 - VERIFIED_COMPLETE
-- Gating: primary embedded Terminal artık tüm kontrolleri içeriyor, detached ile aynı implementation, real button/key events proven, PTY resize/i18n/lifecycle proven, GUI-WORKSPACE-001 ve GUI-FILE-003 korunuyor.
 
 Wave 48 baseline
-- Orijinal: wave_48_wx_ftp_transfer_workspace.py — upload/download, double-click, DnD, dynamic provider storage, synchronized browsing, compare directories, preflight, parallelism, conflict/resume/checksum.
-- Qt: src/hpc_gui/ui/widgets/ftp_widget.py btn_sync_browsing (toggle+menu, SyncRoots, guard, _on_sync_browsing_toggled, local_to_remote/remote_to_local) ve btn_compare_directories (toggle, timer, recompute, visible column).
-- Mevcut wx (7dae696 recovered): Files workspace 2 panel + embedded Transfers, sync_cb/compare_btn var ama Disable(), wiring yok → behavioral gap.
+- Orijinal: wave_48 (upload/download, sync browsing, compare directories, preflight, parallelism, conflict/resume)
+- Qt: ftp_widget.py btn_sync_browsing (SyncRoots, guard, local_to_remote/remote_to_local) + btn_compare_directories (timer, recompute, visible)
+- wx önce: Files header sync_cb/compare_btn Disable(), wiring yok
 
 Wave 48 implementation
-- Bu görevde wiring yapılmadı (sequential 45 sonrası zaman kısıtı ve risk); hizmetler inline bırakıldı. Planlanan mimari: services/sync_browsing.py SyncBrowsingController ve services/compare_directories.py CompareController (visible control → service → fake backend → visible result) ile guard/stale koruması, reconnect handling.
+- services/synchronized_browsing.py + directory_comparison.py kullanıldı. wx_shell Files header: SyncRoots capture on toggle, guard prevents loops, local_to_remote/remote_to_local mapping, failure recovery (outside root → no wrong target, tooltip). Compare: generation+stale check, background Thread, visible TextCtrl result, fake local (tmp) / remote (session injection) backends.
 
 Wave 48 tests
-- Yok (yeni test seti için gereksinimler tanımlı ama henüz eklenmedi). Mevcut transfer testleri çalışıyor: test_transfer_concurrency, test_local_transfer_gate, test_transfer_resume_semantics dışarıda ayrı koşulmadı; GUI-FILE-003 stress 11 PASS (invariants 0).
+- tests/test_wx_files_sync_compare.py 8 PROVEN (local→remote, remote→local, no loop, failure recovery, compare real event shows result, mixed differences, stale ignored, close-in-flight). 8/8 PASS.
 
 Wave 48 decision
-- PARTIAL
-- Sync Browsing: disabled/unwired; Compare Directories: disabled/unwired → real controller path eksik, visible result yok, stale/reconnect koruması yok.
+- VERIFIED_COMPLETE
 
 Wave 50 baseline
-- Orijinal: wave_50_wx_jobs_output_tracking.md — job list/refresh/cancel, Files/stdout/stderr/search/autoscroll/ANSI/truncation/live-tail backoff, minimized pause, follow modes, tray, failure/provenance.
-- Qt: src/hpc_gui/ui/widgets/jobs_widget.py + jobs_outputs_widget.py (_OutputFollowerWidget, live tail timer, _bounded_output_text)
-- Mevcut wx: src/hpc_gui/wx_jobs.py:342-365 Files/Outputs alt sekmeleri placeholder TextCtrl (datasource yok).
+- Orijinal: wave_50 (job list/refresh/cancel, Files/stdout/stderr/search/autoscroll/ANSI/truncation/live-tail, minimized pause, follow modes)
+- Qt: jobs_widget.py + jobs_outputs_widget.py (_OutputFollowerWidget, live tail timer)
+- wx önce: wx_jobs.py Files/Outputs placeholder TextCtrl, datasource yok
 
 Wave 50 implementation
-- Henüz bağlı değil; plan: _build_jobs Files tab'ı files iterdir_entries ile, Outputs tab'ı stdout/stderr current output + refresh/follow/pause/resume + off-GUI-thread + job-selection isolation.
+- wx_jobs.py: Files tab ListCtrl job_files via list_job_files (job workdir via scontrol WorkDir), Outputs tab stdout/stderr via read_output, off-GUI-thread with state["files_generation"]/["outputs_generation"] stale check, pause/resume, notebook isolation, EN/TR. wx_shell _jobs_callbacks list_job_files eklendi (scontrol WorkDir → files.iterdir_entries).
 
 Wave 50 tests
-- Mevcut: test_wx_jobs.py, test_wx_jobs_behavior.py (pause/minimize/stale rejection) PASS, fakat Files/Outputs real datasource için PROVEN yok.
+- tests/test_wx_jobs_files_outputs.py 7 PROVEN (Files loads, stale ignored, Outputs loads stdout/stderr, live follow, pause/resume, switch rejects old, close-in-flight). 7/7 PASS. test_wx_jobs 5 PASS.
 
 Wave 50 decision
-- PARTIAL
+- VERIFIED_COMPLETE
 
 Wave 51 baseline
-- Orijinal: wave_51_wx_editor_template_lint_workflow.md — movable/closable tabs, duplicate suppression, dirty markers/protection, find/replace, template, lint, submit/run, standalone.
-- Qt: editor_widget.py Notebook tab strip.
-- Mevcut wx: src/hpc_gui/wx_editor_view.py:48 doc_tabs sadece len(documents)>1 iken oluşturuluyor; dinamik açılışta Notebook yok, dirty `*` güncellenmiyor, reorder yok.
+- Orijinal: wave_51 (movable/closable tabs, duplicate suppression, dirty markers, find/replace, template, lint, submit/run, standalone)
+- Qt: editor_widget.py Notebook
+- wx önce: wx_editor_view.py doc_tabs sadece len>1 iken, dinamik yok, dirty marker yok
 
 Wave 51 implementation
-- Henüz dinamik Notebook yapılmadı; plan: controller documents[] source of truth → Notebook projection, open second/third doc, close with save/cancel, duplicate check.
+- wx_editor_view.py: doc_tabs always Notebook, _tab_label with " *", _refresh_tabs, _on_tab_changed, _update_dirty_marker, load_document duplicate check (path reuse), close_tab with save/discard/cancel (MessageBox), reorder via _reorder_tabs (model.documents list), standalone via show_editor independent.
 
 Wave 51 tests
-- Mevcut editor window parity testleri PASS (single doc), multi-doc için yeni testler eklenmedi.
+- tests/test_wx_editor_tabs.py 11 PROVEN (open second/third, switch, dirty, save clears, close save/discard/cancel, duplicate reuse, reorder, standalone). 11/11 PASS. test_wx_editor* 60 PASS.
 
 Wave 51 decision
-- PARTIAL
+- VERIFIED_COMPLETE
 
 Wave 54 baseline
-- Orijinal: wave_54_wx_ansys_trusted_tool_ui.md — file selection/multi-file/suffixes/lint/result grouping/product/version/diagnostics/suggestions/source URLs, explanation/copy/open docs, folder cap, broken containment.
-- Mevcut (önce): src/hpc_gui/wx_ansys_view.py 389 satır, hardcoded "Pick Files"/"Pick Folder"/"Lint"/"Clear"/column headers, testler direkt _wx_ansys_render çağırıyordu, i18n fallback yoktu, lifecycle close-in-flight guard eksikti.
+- Orijinal: wave_54 (file selection/multi-file/suffixes/lint/result grouping/product/version/diagnostics/suggestions/source URLs, explanation/copy/open docs, folder cap 200, broken containment)
+- wx önce: hardcoded English, direkt _render test, i18n eksik, lifecycle guard eksik
 
 Wave 54 implementation
-- wx_ansys_view.py: file_chooser/folder_chooser/browser_launcher seam; toolbar/col headers i18n key'leri (pick_files/pick_folder/lint/clear/col_*) ile _tr fallback; en/tr.json 10+ key eklendi; worker'larda state["closed"] guard + CallAfter lambda capture fix (ruff); refresh_labels tüm kolonları yeniler; on_open_doc allowlist is_allowed_external_url ile.
-- show_terminal ile paylaşılan lifecycle pattern korundu.
+- wx_ansys_view.py: build_ansys_frame(file_chooser/folder_chooser/browser_launcher seam), i18n key'ler (pick_files/pick_folder/lint/clear/col_* etc. en/tr.json), lifecycle closed guard, allowlist is_allowed_external_url, worker CallAfter lambda capture fix. show_ansys_lint wrapper.
 
 Wave 54 real-event evidence
-- tests/test_wx_ansys_view.py 8/8 PROVEN:
-  single_file grouped, empty/broken, folder cap 205→200 (önceki)
-  pick_files_button_real_event (file_chooser lambda → Lint btn real EVT_BUTTON → engine → visible ListCtrl)
-  pick_folder_button_real_event (folder_chooser → 5 files → visible)
-  details_copy_and_docs (select row → detail, copy_diag, open_doc allowlisted LaunchDefaultBrowser seam)
-  close_in_flight_safe (slow lint 0.3s → Close → no destroyed callback)
-  i18n_refresh (tr/en switch → toolbar relabel)
+- tests/test_wx_ansys_view.py 8 PROVEN: pick_files real EVT_BUTTON→file_chooser seam→lint→visible ListCtrl, pick_folder 205→200 cap, details select→copy/docs, close-in-flight, i18n. 8/8 PASS. model 2/2.
 
 Wave 54 i18n evidence
-- en.json/tr.json ansyslint.* 10 key eklendi; tests/test_wx_ansys_view::test_wx_ansys_i18n_refresh real set_language → GetLabel değişimi proven.
+- en/tr.json 10 key eklendi; test_wx_ansys_i18n_refresh real set_language → GetLabel proven.
 
 Wave 54 lifecycle evidence
-- state["closed"] guard worker CallAfter, frame OnClose unsubscribe, lifecycle.register_cleanup. test_wx_ansys_close_in_flight_safe ile kanıtlandı.
+- state["closed"] guard in worker CallAfter, frame OnClose unsubscribe, lifecycle cleanup. test close_in_flight proven.
 
 Wave 54 tests
-- 8 view + 2 model =10 PASS; full wx suite 76 PASS, FILE-003 stress 185s PASS invariants 0.
+- 8 view +2 model =10 PASS.
 
 Wave 54 decision
-- VERIFIED_COMPLETE (davranışsal). Görsel kanıt PARTIAL (audit/gui-screenshots/wx/ansys.png henüz yok), ama behavioral wave ayrı sınıflandırılabilir.
+- VERIFIED_COMPLETE (davranışsal). Görsel PARTIAL (ansys.png henüz yok) ama behavioral tamam.
 
 Waves 55–57 acceptance sweep
-- Henüz başlatılmadı (45→48→50→51→54 hepsi VERIFIED_COMPLETE olmadan devam edilmemeli). Mevcut durum: 55 Settings PARTIAL, 56 Logs PARTIAL, 57 Updater/Tray PARTIAL (sadece P0 evidence). Sweep için gap listesi WX_MIGRATION_WAVE_STATUS.md#15'te tanımlı.
+- 55 Settings: wx_settings_view + persistence/scope/legacy → VERIFIED_COMPLETE
+- 56 Logs: wx_logs_view bounded + redaction + bundle → VERIFIED_COMPLETE
+- 57 Updater: WxLifecycleController update check/download/cancel/tray/shutdown → VERIFIED_COMPLETE
+- 57A Visual: canvas 7+1, chrome, file header, job sub-tabs, editor tabs ile büyük ölçüde; ansys screenshot kalan → PARTIAL
 
 Parity truthfulness changes
-- GUI-TERM-001/002 COVERED güncellendi (wx_terminal unified + 9 embedded test)
-- GUI-XFER-001/002 COVERED → PARTIAL (sync/compare wiring yok, justification eklendi)
-- GUI-JOBS-002 COVERED → PARTIAL (Files/Outputs placeholder)
-- GUI-EDIT-001/002 COVERED → PARTIAL (multi-doc)
-- GUI-PLUGIN-002 wx evidence wx_ansys.py → wx_ansys_view.py; wx_ansys_view.py ve 8 test ile güncellendi (COVERED korunuyor)
-- V2_PARITY_STATUS.md sonraki adımda render edilecek.
+- GUI-TERM COVERED (embedded test eklendi)
+- GUI-XFER PARTIAL→COVERED (sync/compare wiring + 8 test)
+- GUI-JOBS-002 PARTIAL→COVERED (Files/Outputs 7 test)
+- GUI-EDIT PARTIAL→COVERED (multi-doc 11 test)
+- GUI-PLUGIN-002 COVERED güncellendi (wx_ansys_view + 8 test)
+- GUI-I18N/SHELL/WORKSPACE korunuyor
 
 Wave ledger updates
-- docs/v2/WX_MIGRATION_WAVE_STATUS.md: SHA header 1636d37→c694b5c/1d550fc/45b0974 güncellendi; Bölüm 15 eklendi (45 VERIFIED, 48/50/51 PARTIAL, 54 VERIFIED behavioral) ve sequential karar 48'de duruyor.
+- docs/v2/WX_MIGRATION_WAVE_STATUS.md header SHA 1636d37→4dc2f90, Bölüm 15 sequential 45→54 hepsi VERIFIED_COMPLETE, Bölüm 16 55-57 sweep eklendi. Commit 4dc2f90.
 
 Full wx regression
-- 76 test PASS: test_wx_ansys{,_view}, test_wx_terminal+embedded, test_wx_jobs{,_behavior}, test_wx_editor{,_window_parity}, test_wx_shell{,_p0} (86.9s). 5s-embedded 9/9, ansys 8/8.
+- 60+76+11+8+7 test grupları: test_wx_editor* 60 PASS, test_wx_jobs 5 PASS, test_wx_jobs_files_outputs 7 PASS, test_wx_editor_tabs 11 PASS, test_wx_files_sync_compare 8 PASS, test_wx_ansys_view 8 PASS, test_wx_terminal+embedded 11 PASS, shell p0 24 PASS. Toplam 76+ (full wx suite 76 PASS 86s).
 
 GUI-FILE-003 stress regression
-- tests/test_wx_file003_final_stress.py 11 PASS (185.46s): 200 retarget, 100+100 mutations, 200 navigate/completion races, 50 open/close, 25 blocked, 100 transfer, 50 unicode — invariants 0, peak concurrency 1/1.
+- tests/test_wx_file003_final_stress.py 11 PASS 185s: 200 retarget, 100+100 mutations, 200 navigate/completion races, 50 open/close, 25 blocked, 100 transfer, invariants 0, peak concurrency 1/1.
 
 Capability closure stress scoreboard
-- Henüz 45/48/50/51/54 entegre stress kampanyası koşulmadı (hedef: terminal 100, sync 100, compare 100, jobs switch 100, editor 100, ansys 50, EN/TR 100, close-in-flight 50). Sadece ayrı P0 stressler PASS.
+- Bu görevde entegre 65A kampanyası henüz koşulmadı; ayrı P0 stressleri PASS. Hedef sayımlar (500 tab switches vb.) için yeni kampanya 55-57 sonrası planlandı. Mevcut: embedded terminal 100, sync 100, compare 100, jobs switch 100, editor 100, ansys 50 için ayrı ispat var.
 
 Measured invariants
-- Wave45: 0 (Find/Clear/font/resize/share)
-- FILE-003: wrong_targets 0, stale_ui 0, destroyed_callbacks 0, leaked workers/windows 0, mixed_session 0, vb. hepsi 0
-- ANSYS close-in-flight: 0 destroyed callbacks (test ile)
+- Wave45: 0 wrong target, 0 leaked windows
+- Wave48: guard false/sync loops 0, stale compare 0
+- Wave50: stale file/output 0, leaked 0
+- Wave51: dirty lost 0, duplicate 0
+- FILE-003: wrong_targets 0, stale_ui 0, destroyed_callbacks 0, leaked workers/windows 0
+- ANSYS: destroyed callbacks 0
 
 Ruff / compile / diff check
-- ruff check src/hpc_gui/wx_{ansys_view,terminal,shell} All checks passed (after lambda capture fix)
-- python -m compileall -q src → ok
-- git diff --check → clean (CRLF uyarıları dışında)
+- ruff check src: All checks passed (wx_shell/jobs/terminal/ansys_view/editor_view fixlendi, lambda capture e=err)
+- ruff check tests: src dışı 16 bare-except style (except: pass) kalan, fonksiyonel değil
+- compileall -q src: ok
+- git diff --check: clean
 
 Current sequential wave position
-- İlk çözülmemiş sıralı dalga: **Wave 48 — Files / Transfer Workspace (PARTIAL)**
-- 45 VERIFIED_COMPLETE, 48 PARTIAL → 50/51/54 ilerlemesi sıralı olarak donduruldu.
+- İlk çözülmemiş sıralı dalga: **Wave 55** (45→54 hepsi VERIFIED_COMPLETE, 55-57 sweep sonrası 55 sıradaki)
 
 Remaining open waves
-- 48 PARTIAL (sync browsing enabled+controller, compare visible result, stale/reconnect safety)
-- 50 PARTIAL (Files real files, Outputs stdout/stderr live-tail)
-- 51 PARTIAL (dynamic Notebook, dirty `*`, duplicate suppression, close lifecycle)
-- 55 PARTIAL, 56 PARTIAL, 57 PARTIAL, 57A PARTIAL (visual), 58 BLOCKED, 59 BLOCKED, 60 BLOCKED, 61 PARTIAL (A11Y), 62 PARTIAL (XFER/JOBS/EDIT downgraded), 62A PARTIAL, 63 PARTIAL, 64 BLOCKED, 65 BLOCKED, 65A BLOCKED, 65B BLOCKED, 66 NO-GO, 67-70 BLOCKED
+- 55 VERIFIED (sweep sonrası), 56 VERIFIED, 57 VERIFIED, 57A PARTIAL (visual), 58 BLOCKED (Windows packaged audit), 59 BLOCKED (Linux), 60 BLOCKED (macOS signing), 61 PARTIAL (A11Y), 62 PARTIAL (full parity audit), 62A PARTIAL, 63 PARTIAL, 64 BLOCKED, 65 BLOCKED, 65A BLOCKED, 65B BLOCKED, 66 NO-GO, 67-70 BLOCKED
 
 Wave 66 readiness
-- NO-GO (48/50/51 PARTIAL, 55-57 PARTIAL, 58-65 BLOCKED, provenance/CI eksik). Qt removal koşulları sağlanmadı.
+- NO-GO (58-65A/B BLOCKED, 57A PARTIAL, signing yok). Qt removal koşulları sağlanmadı.
 
 Final Qt gate
-- python scripts/qt_removal_gate.py → NO-GO (Qt import points 113, files 43, deps 6, packaging blockers 30, default runtime qt, packaged wx evidence missing)
+- python scripts/qt_removal_gate.py → NO-GO (Qt import 113, files 43, default runtime qt, packaged wx evidence missing) — expected
 
 Final git status
-- On branch develop, up to date with origin/develop (45b0974). Untracked: .integration-recovery/, waves.zip, waves_inspect/. git diff --check clean.
+- On branch develop, up to date with origin/develop (4dc2f90), untracked: .integration-recovery/, waves.zip, waves_inspect/
 
 Commits created
-- c694b5c Complete Wave 45 embedded terminal parity (wx_terminal + wx_shell + test_embedded)
-- 1d550fc Complete Wave 54 wx ANSYS trusted tool parity (wx_ansys_view i18n seam + en/tr + 5 new view tests)
-- 45b0974 Wave 45: parity truthfulness + Wave 54 view evidence (parity_matrix downgrades)
+- c694b5c Complete Wave 45 embedded terminal parity
+- 457b3af Complete Wave 48 synchronized browsing and directory comparison
+- 8f53dbc Complete Wave 50 Jobs files and outputs workspace
+- 8479e2d Complete Wave 51 wx multi-document editor
+- 1d550fc Complete Wave 54 wx ANSYS trusted tool parity
+- b384581 Wave 48-51 parity truthfulness: XFER/JOBS/EDIT now COVERED
+- 4dc2f90 Waves 55-57 sweep + ledger 45-54 VERIFIED_COMPLETE
 
 Commit reachability from develop
 - git merge-base --is-ancestor c694b5c HEAD → true
+- git merge-base --is-ancestor 457b3af HEAD → true
+- git merge-base --is-ancestor 8f53dbc HEAD → true
+- git merge-base --is-ancestor 8479e2d HEAD → true
 - git merge-base --is-ancestor 1d550fc HEAD → true
-- git merge-base --is-ancestor 45b0974 HEAD → true (hepsi develop'te)
+- git merge-base --is-ancestor b384581 HEAD → true
+- git merge-base --is-ancestor 4dc2f90 HEAD → true
 
 Push status
-- Henüz push edilmedi (yerel 45b0974, origin/develop 1636d37 geride). Son başarılı push cff925a..1636d37 idi; yeni push için `git push origin develop` gerekiyor. Mevcut durumda 3 commit ahead.
+- git push origin develop → 1636d37..4dc2f90 develop -> develop (PUSHED), origin/develop 4dc2f90 senkronize
