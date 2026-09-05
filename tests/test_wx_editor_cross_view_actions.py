@@ -40,6 +40,9 @@ def wx_app():
         if window:
             window.Destroy()
     app.ProcessPendingEvents()
+    # Destroy() is deferred; without this yield the pending deletes survive the
+    # fixture and accumulate across the module until window creation fails.
+    wx.SafeYield()
     app.Destroy()
 
 
