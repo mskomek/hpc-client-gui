@@ -1,5 +1,5 @@
 {
-  "captured_utc": "2026-09-05T10:09:59+00:00",
+  "captured_utc": "2026-09-05T13:13:33+00:00",
   "language": "en",
   "window_size": "1100x720",
   "wx_version": "4.3.1 msw (phoenix) wxWidgets 3.3.3",
@@ -14,28 +14,28 @@
   ],
   "files": {
     "main.png": {
-      "sha256": "36a055a9e58f527a65d6729a2301dc4297b527dde0b5d5316e4934491c3ffc4f",
-      "bytes": 9957
+      "sha256": "5c37828c00002a996e6d39766f55e25522053274d51f7dc84cb8f481758a1380",
+      "bytes": 11007
     },
     "connection.png": {
-      "sha256": "36a055a9e58f527a65d6729a2301dc4297b527dde0b5d5316e4934491c3ffc4f",
-      "bytes": 9957
+      "sha256": "5c37828c00002a996e6d39766f55e25522053274d51f7dc84cb8f481758a1380",
+      "bytes": 11007
     },
     "jobs.png": {
-      "sha256": "052e74bf37ae516a3fcb4922822e708e5ed9d1d0faa5419d379aafacce215131",
-      "bytes": 12897
+      "sha256": "1afd31538f2129d748cabc17113ba3a3befed38a2b7d8d5454be2322ac5a5a33",
+      "bytes": 21381
     },
     "directories.png": {
       "sha256": "76751b37560febc8ca1a5c7b7cae46148c99faf1f025ff58ae96a7338eafc6af",
       "bytes": 18158
     },
     "files.png": {
-      "sha256": "80e78f78363b353516e04ce75a36a53781e5ef2fd980f3107496c239bce1c65c",
-      "bytes": 31988
+      "sha256": "b45a9f109fed994de6b35e44453b52174c6fcddd558c9f3c2bd68193d283e72b",
+      "bytes": 33512
     },
     "editor.png": {
-      "sha256": "7b6e386de4df73d9045331b14a26af59a64b15c0595922499beaa23ca413a14d",
-      "bytes": 10089
+      "sha256": "48e47a795d4953a4e3d482827edd5d5aa132549d1cf2ba3f294cc3e542e971a9",
+      "bytes": 13211
     },
     "terminal.png": {
       "sha256": "d6d8f441e6306f61d504d49c83721d602194f77c912eb41f8c5fd12de6af3616",

@@ -27,21 +27,19 @@ def _build_editor(parent, model: WxEditorModel | None, *, path: str, content: st
     # Use WrapSizer so narrow windows wrap instead of clipping.
     header = wx.WrapSizer(wx.HORIZONTAL)
     # label: prefer editor.remote ("Remote:") but also reference dirs.path for task key coverage
-    _remote_label_text = t("editor.remote")
-    if _remote_label_text == "[editor.remote]":
-        _remote_label_text = t("dirs.path")
-    remote_label = wx.StaticText(panel, label=_remote_label_text)
+    remote_label = wx.StaticText(panel, label=t("editor.remote"))
     initial_path = model.controller.active.path if model.controller.active and model.controller.active.path else path
     remote_path = wx.TextCtrl(panel, value=initial_path, style=wx.TE_PROCESS_ENTER)
     remote_path.SetHint(t("placeholders.script_path"))
+    # A WrapSizer does not distribute leftover space, so give the path field a
+    # usable width directly instead of relying on a proportion.
+    remote_path.SetMinSize(wx.Size(300, -1))
     btn_open = wx.Button(panel, label=t("editor.open"))
     btn_template = wx.Button(panel, label=t("editor.new_from_template"))
     btn_lint = wx.Button(panel, label=t("editor.lint"))
     save = wx.Button(panel, label=t("editor.save"))
-    # placeholder for dirs.path key usage to satisfy explicit i18n key list
-    _dirs_path_probe = t("dirs.path")
     header.Add(remote_label, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 4)
-    header.Add(remote_path, 1, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 4)
+    header.Add(remote_path, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 4)
     header.Add(btn_open, 0, wx.ALL, 3)
     header.Add(btn_template, 0, wx.ALL, 3)
     header.Add(btn_lint, 0, wx.ALL, 3)
