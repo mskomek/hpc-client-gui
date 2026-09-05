@@ -756,7 +756,14 @@
     "parallel_hint_effective": "Ayarlanan limit: {configured} · Bu bağlantı için geçerli limit: {effective}",
     "parallel_hint_pair": "Ayarlanan limit: {configured} · Bu bağlantı için geçerli limit: {effective} ({reason})",
     "parallel_reduced_backend": "bu bağlantı türü aynı anda tek dosya aktarır",
-    "parallel_reduced_server": "sunucu veya bağlantı türü nedeniyle sınırlı"
+    "parallel_reduced_server": "sunucu veya bağlantı türü nedeniyle sınırlı",
+    "col_local": "Sunucu/Yerel dosya",
+    "col_direction": "Yön",
+    "col_remote": "Uzak dosya",
+    "col_size": "Boyut",
+    "col_progress": "İlerleme",
+    "col_priority": "Öncelik",
+    "col_status": "Durum"
   },
   "connection": {
     "dialog_title": "Bağlantı Ekle",
