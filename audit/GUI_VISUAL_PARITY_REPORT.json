@@ -1,0 +1,89 @@
+{
+  "generated_utc": "2026-09-05T13:56:14+00:00",
+  "branch": "delegate9b-editor-files (D9a + D9b merged)",
+  "window_size": "1100x720",
+  "language": "en",
+  "wx_version": "4.3.1 msw (phoenix) wxWidgets 3.3.3",
+  "tab_order": [
+    "Connection",
+    "Jobs & Outputs",
+    "Directories",
+    "Files",
+    "Script Editor",
+    "Terminal",
+    "Logs"
+  ],
+  "decisions": {
+    "GUI-WORKSPACE-001": "COVERED",
+    "GUI-VISUAL-001": "PARTIAL"
+  },
+  "qt_removal_gate": "not run - Qt remains the production runtime",
+  "measured": {
+    "duplicate_screenshot_hashes": 1,
+    "duplicate_accepted_reason": "main.png equals connection.png because the shell opens on the Connection tab; Qt's main.png shows the same tab",
+    "missing_screenshot_pairs": 0,
+    "resize_operations": 400,
+    "tab_selections": 2800,
+    "negative_or_zero_control_geometry": 0,
+    "zero_sized_primary_workspace": 0,
+    "clipped_required_controls": 0,
+    "horizontal_overflow": 0,
+    "layout_exceptions": 0,
+    "detached_frames_during_resize": 0,
+    "launcher_only_pages": 0,
+    "unexpected_primary_detached_frames": 0
+  },
+  "screenshots": {
+    "main.png": {
+      "sha256": "bbcd80865acacc4df4c7cd230c1713977a21623ffb15de1bd6fa725df2c262a0",
+      "bytes": 11022
+    },
+    "connection.png": {
+      "sha256": "bbcd80865acacc4df4c7cd230c1713977a21623ffb15de1bd6fa725df2c262a0",
+      "bytes": 11022
+    },
+    "jobs.png": {
+      "sha256": "1afd31538f2129d748cabc17113ba3a3befed38a2b7d8d5454be2322ac5a5a33",
+      "bytes": 21381
+    },
+    "directories.png": {
+      "sha256": "76751b37560febc8ca1a5c7b7cae46148c99faf1f025ff58ae96a7338eafc6af",
+      "bytes": 18158
+    },
+    "files.png": {
+      "sha256": "b45a9f109fed994de6b35e44453b52174c6fcddd558c9f3c2bd68193d283e72b",
+      "bytes": 33512
+    },
+    "editor.png": {
+      "sha256": "48e47a795d4953a4e3d482827edd5d5aa132549d1cf2ba3f294cc3e542e971a9",
+      "bytes": 13211
+    },
+    "terminal.png": {
+      "sha256": "d6d8f441e6306f61d504d49c83721d602194f77c912eb41f8c5fd12de6af3616",
+      "bytes": 8779
+    },
+    "logs.png": {
+      "sha256": "c13b5ef3ac00b4448ba0ea77b6654ec54de7db457c33299e2f40c65e36582469",
+      "bytes": 63944
+    }
+  },
+  "surface_status": {
+    "connection": "CLOSE",
+    "jobs": "CLOSE",
+    "files": "MATCH",
+    "editor": "CLOSE",
+    "directories": "CLOSE",
+    "logs": "CLOSE",
+    "terminal": "wx-only surface"
+  },
+  "remaining_for_visual_parity": [
+    "Terminal find and font controls (Find, A-, A+, Clear)",
+    "Data sources for the Jobs Files and Outputs sub-tabs",
+    "Services behind synchronized browsing and compare directories",
+    "Editor document tab strip, once the model tracks more than one document"
+  ],
+  "i18n_gaps": [
+    "transfer.conflict_message missing in en.json and tr.json (pre-existing)"
+  ],
+  "remaining_kind": "missing capability, not missing layout - every listed control is either absent or present-and-disabled; nothing is faked"
+}

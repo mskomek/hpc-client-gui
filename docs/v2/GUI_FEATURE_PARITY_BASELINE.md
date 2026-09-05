@@ -2,6 +2,11 @@
 
 Adaptive layout and geometry rules: [GUI Adaptive Layout/DPI Contract](GUI_ADAPTIVE_LAYOUT_DPI_CONTRACT.md).
 
+| ID | Current integrated workspace gate | Evidence | V2 status |
+| --- | --- | --- | --- |
+| GUI-WORKSPACE-001 | wx primary notebook embeds Connection, Jobs, Directories, Files, Editor, Terminal and Logs | `src/hpc_gui/wx_shell.py`; focused wx shell tests | COVERED |
+| GUI-VISUAL-001 | Canonical Qt/wx screenshot pairs and structural parity evidence | `audit/GUI_VISUAL_PARITY_REPORT.json`; visual audit tests | PARTIAL |
+
 This is the authoritative inventory for a future wx adapter. It describes the
 current Qt surface only; it does not define a redesign or authorize wx code.
 The inventory was reviewed against `MainWindow`, its six tabs, the top-right

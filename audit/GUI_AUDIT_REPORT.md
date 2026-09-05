@@ -1,8 +1,8 @@
 # GUI audit — real Windows screenshots
 
-Date: 2026-09-04  
+Date: 2026-09-05  
 Platform: Windows 11  
-Repository commit: `8987079b5b4160f9d639402fa45266c6d3475fd5`  
+Repository commit: `8beb6143719063707aaf5bf52a83e7f768fdbc37`
 
 The images below are cropped captures of the actual application window. Each
 tab was selected with a real mouse click before capture. No screenshot was
@@ -20,13 +20,16 @@ created from a mock, test fixture, or source rendering.
 | Logs | [logs.png](gui-screenshots/qt/logs.png) | Logs surface opened and rendered. |
 | Main window | [main.png](gui-screenshots/qt/main.png) | Top-level Update, Plugins, Send Logs, Settings and Help controls visible. |
 
-## New wx GUI
+## New wx GUI (embedded workspace)
 
 | Surface | Real screenshot | Visible controls / binding audit |
 |---|---|---|
-| Files | [files.png](gui-screenshots/wx/files.png) | Real wx tab selected; Files navigation button visible and wired to `NAV-FILES`. |
-| Directories | [directories.png](gui-screenshots/wx/directories.png) | Real wx tab selected; Directories navigation button visible and wired to `NAV-DIRECTORIES`. |
-| Script Editor | [editor.png](gui-screenshots/wx/editor.png) | Real wx tab selected; Script Editor navigation button visible and wired to `NAV-EDITOR`. |
+| Connection | [connection.png](gui-screenshots/wx/connection.png) | Embedded profile and connection controls. |
+| Jobs & Outputs | [jobs.png](gui-screenshots/wx/jobs.png) | Embedded jobs/output workspace. |
+| Files | [files.png](gui-screenshots/wx/files.png) | Embedded file workspace and transfer surface. |
+| Directories | [directories.png](gui-screenshots/wx/directories.png) | Embedded directory workspace. |
+| Script Editor | [editor.png](gui-screenshots/wx/editor.png) | Embedded editor controls. |
+| Logs | [logs.png](gui-screenshots/wx/logs.png) | Embedded log viewer. |
 | Terminal | [terminal.png](gui-screenshots/wx/terminal.png) | Real embedded terminal output and input controls visible. |
 | Jobs & Outputs | [jobs.png](gui-screenshots/wx/jobs.png) | Real wx tab selected; Jobs navigation button visible and wired to `NAV-JOBS`. |
 | Main window | [main.png](gui-screenshots/wx/main.png) | Help and Language menus, five navigation tabs, and Ready status visible. |
