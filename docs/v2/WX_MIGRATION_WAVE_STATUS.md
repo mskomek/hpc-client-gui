@@ -209,3 +209,12 @@ ead_output, off-GUI-thread, stale generation, pause/resume, notebook isolation, 
 
 **Final Sequential:** 45-58 VERIFIED, 59/60 BLOCKED, 61-65A VERIFIED/PARTIAL, 65B PARTIAL, 66 NO-GO → **Qt üretimde kalıyor, V2 release BLOCKED.**
 
+## 19b) Waves 68-70 Update 2026-09-06 (part 2)
+
+- **62A Evidence Integrity:** udit/PARITY_EVIDENCE_INTEGRITY_62A.md ile **VERIFIED_COMPLETE** (29 IDs, PROVEN/PARTIAL/STRUCTURAL classification, real wx event chain verified, model-only downgraded)
+- **68 Licenses/SBOM:** udit/SBOM_68.json (100 components) + udit/VULN_68.json (651KB) + udit/LICENSE_INVENTORY_68.md ile **PARTIAL** (bundled binary inventory for packaged artifacts pending Wave 70)
+- **69 Performance Soak:** 65A sonrası saat ölçekli soak (memory/CPU/throughput) pending, 65A invariants 0 ile ilk gate geçildi → **BLOCKED** (long soak pending)
+- **70 Release Prep:** Windows/macOS/Linux paket, SHA256, updater manifest, signature, notes/rollback, SBOM pending; SIGNED vs UNSIGNED kararı verilmedi → **BLOCKED**
+
+**Update:** 62A VERIFIED, 68 PARTIAL, 69-70 BLOCKED.
+
