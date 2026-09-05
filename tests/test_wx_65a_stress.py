@@ -97,7 +97,7 @@ def test_wx_65a_integrated_stress():
         wx.Yield()
     # 100 detached supported windows - open/close ansys
     from hpc_gui.wx_ansys_view import build_ansys_frame
-    for _ in range(20):  # reduced from 100 for time
+    for _ in range(100):
         try:
             f = build_ansys_frame(frame)
             wx.Yield()
