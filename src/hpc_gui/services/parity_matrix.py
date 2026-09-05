@@ -45,11 +45,12 @@ FEATURE_EVIDENCE = {
     "GUI-SET-001": Evidence("COVERED", "settings_dialog.py", "wx_settings.py", "test_wx_settings.py"),
     "GUI-LOG-001": Evidence("COVERED", "logs_widget.py", "wx_logs.py", "test_wx_logs.py"),
     "GUI-HELP-001": Evidence("COVERED", "help_dialog.py", "wx_help.py", "test_wx_help.py"),
+    "GUI-A11Y-001": Evidence("COVERED", "GUI_FEATURE_PARITY_BASELINE.md", "wx_shell.py; wx_terminal.py; wx_editor_view.py; wx_jobs.py; audit/A11Y_AUDIT.md", "test_wx_a11y.py", "Wave 61: tab order, focus, visible labels, keyboard alternatives, no-color cues; terminal limits documented."),
 }
 
 
 def baseline_ids(text: str) -> tuple[str, ...]:
-    return tuple(dict.fromkeys(re.findall(r"GUI-[A-Z]+-\d{3}", text)))
+    return tuple(dict.fromkeys(re.findall(r"GUI-[A-Z0-9]+-\d{3}", text)))
 
 
 def render_status(baseline: str, mapping: dict[str, Evidence] | None = None) -> str:
