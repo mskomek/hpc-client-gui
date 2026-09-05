@@ -3,7 +3,7 @@
 Active migration group: **Integrated wx workspace and visual parity**
 (GUI-WORKSPACE-001, GUI-VISUAL-001)
 
-Verified tip: `cb8d22a` (branch `delegate4-directories-logs`)
+Verified tip: `delegate6b-panels` (D6a + D6b + D5b merged; 349 passed, 0 failed)
 Qt remains the production runtime. No Qt/PySide6/shiboken6 removal has been
 performed and the Qt removal gate has not been run.
 
@@ -44,10 +44,10 @@ UI whatsoever (`import wx` count zero): `wx_logs.py` (36 lines),
 | D2 | `702b598` | `wx_host.make_host()` plus `build_*_panel()` factories for five modules | focused 38, shell P0 + FILE-003 24, all invariants zero |
 | D3 | `4a54cbc` | Embedded Connection, Jobs, Files (splitter), Editor, Terminal; shared `_*_callbacks()`; embedded host sizing; `files.auto_scroll` added in EN and TR | 348 passed, clipboard flake only |
 | D4 | `cb8d22a` | `wx_logs_view.py`, `wx_directories_view.py`; 7-tab Qt order; `NAV-LOGS` | **349 passed, 0 failed (three separate runs)** |
-| D6a | `db8262e` | Remote toolbar, four columns, path fields | REOPENED — see section 5 |
+| D6a | `5c1a6db` | Remote toolbar, four columns, path fields | 349 passed, 0 failed |
 | D6a | `2e20bc2` | `scripts/run_wx_tests.py` | 349 passed across five processes |
-| D6b | `fde8ddb` | Local nav buttons, remote filter tabs, shared entry formatting | REOPENED — see section 5 |
-| D5b | uncommitted | Chrome row, settings/plugins/send-logs views | REOPENED — see section 5 |
+| D6b | `12a9f0a` | Local nav buttons, remote filter tabs, shared entry formatting, stress-test fix | 349 passed, 0 failed |
+| D5b | `620cf31` | Chrome row, settings/plugins/send-logs views | 349 passed, 0 failed |
 
 Measured workspace invariants on the D4 tip and later:
 
@@ -79,58 +79,52 @@ Each of these was caught by inspecting the diff, not by trusting the report:
   docstring says it must stay Qt-free so it can be shared. Replaced with the
   shared functions, which also brought the Type column to Qt's exact wording.
 
-## 5. Resource-ceiling finding (blocks the GUI-VISUAL-001 waves)
+## 5. Resource-ceiling failures — root cause found and fixed
 
-Windows caps a process at **10,000 USER objects**. wxWidgets reports the breach
-verbatim: `The current process has used all of its system allowance of handles
-for Window Manager objects.` (error `0x00000486`). Once crossed, `wx.Dialog` and
-`wx.Frame` creation fails, and whichever wx-heavy tests run next report
-`Failed to create dialog. Incorrect DLGTEMPLATE?` or `invalid window`.
+Runs of the full suite failed 14 to 27 tests across several branches, always in
+`test_wx_transfer_ui_lifecycle.py` and `test_wx_transfer_conflict_ui.py`, with
+`Failed to create dialog. Incorrect DLGTEMPLATE?` and `invalid window`.
+wxWidgets eventually named the limit outright: `The current process has used all
+of its system allowance of handles for Window Manager objects.` (`0x00000486`)
+— the 10,000 USER-object cap.
 
-Measured peak cost of one live shell and the resulting budget:
+**Root cause:** `tests/test_wx_shell_p0_stress.py::_close` called `frame.Close()`
+and then only `app.ProcessPendingEvents()`. `Destroy()` is deferred, and
+`ProcessPendingEvents()` does not reclaim pending deletes, so the roughly 50-100
+shells the test builds accumulated until the process hit the cap. Everything
+that ran afterwards — entirely unrelated tests — then failed to create windows.
+
+**Fix:** one `wx.SafeYield()` after each close. The full suite now passes
+349/349 in a single process on every branch.
+
+This was not a product defect. Supporting measurements taken during the
+investigation:
 
 | Branch | USER objects per live shell | Concurrent shells before the cap |
 |--------|-----------------------------|----------------------------------|
 | D4 `cb8d22a` | 104 | 96 |
-| D6a `db8262e` | 134 (+29%) | 74 |
-| D6b `fde8ddb` | 168 (+62%) | 59 |
+| D6a | 134 | 74 |
+| D5b (chrome) | 140 | 71 |
+| D6b | 168 | 59 |
 
-`user_after_close` returns to 15 in every branch, so shells release fully. This
-is **peak concurrency, not a leak** — three separate leak measurements showed
-zero growth over 20-30 build/destroy cycles.
+`user_after_close` returns to 15 in every branch, so shells release fully; the
+heavier panels only made an existing test defect visible sooner. Every failing
+test passed in isolation, adding a single empty `wx.StaticText` reproduced the
+identical failures whether or not it was added to a sizer, halving the panel's
+HWND cost changed 24 failures into 23, and 60 remote panels can be held live at
+once with dialog creation still succeeding.
 
-`tests/test_wx_shell_p0_stress.py` builds roughly 50-100 shells in sequence.
-`wx.Frame.Destroy()` is deferred until the event loop runs, so pending deletes
-accumulate; at 168 objects per shell the run crosses the cap, at 104 it does not.
+The fix also makes the test measure what it claims to: resource cleanup across
+repeated shell open/close cycles, which it could not verify while never
+reclaiming the windows.
 
-Evidence that the product code is sound:
+`scripts/run_wx_tests.py` splits the suite into five processes. It is no longer
+required — the single-process run passes — but it is kept for parallelism and as
+a guard against this class of accumulation.
 
-- Every failing test passes in isolation: transfer 25/25, `shell_p0` 13/13,
-  `term002` 2/2, shell stress 1/1.
-- Adding a single empty `wx.StaticText` to the remote panel reproduced the
-  identical 14 failures **whether or not it was added to a sizer**, so neither
-  layout nor the specific widgets are at fault.
-- Halving the panel's HWND cost (`wx.ToolBar` in place of nine `wx.Button`s)
-  turned 24 failures into 23. The count is not the driver; proximity to the cap
-  is.
-- 60 remote panels can be held live at once on both D4 and D6a with dialog
-  creation still succeeding, so real usage is unaffected.
-- GUI-FILE-003 stress keeps all twelve measured invariants at zero on D6a and
-  D6b.
-
-`scripts/run_wx_tests.py` splits the suite into five processes and makes D6a
-pass 349/349 against 25 failures in a single process. D6b still fails the
-shell-stress group even in its own process, because that group alone exceeds
-the cap at 168 objects per shell.
-
-### Required before these waves can close
-
-1. Make `test_wx_shell_p0_stress.py` pump the event loop after each shell close
-   so deferred deletes are reclaimed during the run.
-2. Re-measure peak USER objects for D6a and D6b afterwards.
-3. Add `peak_user_objects` and `peak_live_wx_windows` to the mandatory measured
-   invariants of the final stress campaign, with the intended bound documented
-   before the run (rule AG).
+For the final stress campaign, `peak_user_objects` and `peak_live_wx_windows`
+must be added to the mandatory measured invariants with their intended bounds
+documented before the run (rule AG).
 
 ## 6. Wave ledger
 
@@ -149,22 +143,23 @@ Parity columns: **B** behavioral, **W** workspace (embedded as Qt does),
 | GUI-JOBS-001..004 | yes | **yes** | no | PARTIAL | visual parity |
 | GUI-EDIT-001/002 | yes | **yes** | no | PARTIAL | visual parity |
 | GUI-LOG-001 | yes | **yes** | close | PARTIAL | visual sign-off |
-| GUI-SET-001 | model only | n/a | no | REOPENED | D5b blocked by section 5 |
-| GUI-PLUGIN-001/002 | model only | n/a | no | REOPENED | D5b blocked by section 5 |
+| GUI-SET-001 | yes | n/a | no | PARTIAL | visual parity against settings_dialog.py |
+| GUI-PLUGIN-001 | yes | n/a | no | PARTIAL | visual parity against plugin_manager_dialog.py |
+| GUI-PLUGIN-002 | model only | n/a | no | FAILED_VERIFICATION | wx_ansys.py still has no wx view |
 | GUI-HELP-001 | yes | n/a | no | PARTIAL | visual evidence |
-| GUI-WORKSPACE-001 | — | **yes** | — | PARTIAL | chrome row still missing |
-| GUI-VISUAL-001 | — | — | **no** | REOPENED | blocked by section 5 |
+| GUI-WORKSPACE-001 | — | **yes** | — | **COVERED** | 7 tabs, 0 launcher pages, 0 unexpected detached frames, chrome row present |
+| GUI-VISUAL-001 | — | — | partial | PARTIAL | transfers panel, DPI/resize pass, canonical screenshot set |
 
 ## 7. Migration group summary
 
 ```
 Active migration group: Integrated wx workspace and visual parity
-Verified complete:   0
+Verified complete:   1  (GUI-WORKSPACE-001)
 Superseded:          0
 Obsolete:            0
-Partial:            11
-Failed verification: 1
-Reopened:            3
+Partial:            13
+Failed verification: 2  (GUI-XFER-001/002, GUI-PLUGIN-002)
+Reopened:            0
 ```
 
 Rule AL requires `Partial = 0` and `Failed verification = 0`. Neither holds.
@@ -175,8 +170,9 @@ Rule AL requires `Partial = 0` and `Failed verification = 0`. Neither holds.
 MIGRATION GROUP: PARTIAL
 ```
 
-GUI-WORKSPACE-001: **PARTIAL** — the seven-tab integrated workspace exists with
-zero launcher pages and zero unexpected detached frames, but the application
-chrome row is not yet delivered.
-GUI-VISUAL-001: **NOT COVERED**
+GUI-WORKSPACE-001: **COVERED** — seven-tab integrated workspace in Qt order,
+zero launcher pages, zero unexpected detached frames, chrome row present.
+GUI-VISUAL-001: **PARTIAL** — toolbars, columns, filter tabs and chrome match
+Qt; the transfers panel, the DPI/resize pass and the canonical screenshot set
+remain.
 Qt removal gate: **not run** — Qt remains the production runtime.
