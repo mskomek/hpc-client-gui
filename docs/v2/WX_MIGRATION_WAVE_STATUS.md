@@ -182,3 +182,10 @@ ead_output, off-GUI-thread, stale generation, pause/resume, notebook isolation, 
 ---
 
 **Son Güncelleme:** 2026-09-06 — Koordinatör (Waves 45-54 sequential VERIFIED_COMPLETE, 55-57 sweep, 57A PARTIAL)
+
+## 17) Platform Audits Update 2026-09-06
+
+- **58 Windows:** udit/WINDOWS_AUDIT_954783e.md ile VERIFIED_COMPLETE (Win11 26200, Py3.12.4, wx 4.3.1, SHA 954783e, 9 screenshots duplicate 0, test_wx_windows_audit 1/1, test_wx_packaged_smoke 1/1, test_wx_file003 11/11). 
+- **59 Linux:** BLOCKED — bu ortam Windows native, Linux runner yok, X11/Wayland farkı raporlanamadı. udit/gui-screenshots Linux seti yok. Credential/runner eksikliği belgelendi.
+- **60 macOS:** BLOCKED — macOS runner, codesign/hardened/notarization/stapling/Gatekeeper, Apple Silicon/Intel DMG yok. Signing kimlik bilgileri mevcut değil.
+
