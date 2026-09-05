@@ -10,7 +10,7 @@ Starting HEAD
 
 Ending HEAD
 
-- `beb3ca1 Wave 54: real wx ANSYS surface + terminal Find/Clear/font + wave ledger 00-70`
+- `cff925a Merge origin/develop (7dae696) — integrate Wave 54 ANSYS surface with recovered workspace` (önceki `beb3ca1` + `f331d1e` üzerine `7dae696` merge)
 
 Roadmap source
 
@@ -61,7 +61,7 @@ Wave 57A workspace/visual result
 
 Wave 58 Windows result
 
-- **BLOCKED** — checklist `docs/v2/WINDOWS_WX_AUDIT_CHECKLIST.md` var fakat mevcut SHA `beb3ca1` için packaged smoke (startup/workspace/Settings/Plugins/ANSYS/Updater/Help/transfer/editor/jobs/shutdown) çalıştırılmadı; `audit/gui-screenshots/wx/*.png` tarihsel, SHA256 doğrulanmadı
+- **BLOCKED** — checklist `docs/v2/WINDOWS_WX_AUDIT_CHECKLIST.md` var fakat mevcut SHA `cff925a` için packaged smoke (startup/workspace/Settings/Plugins/ANSYS/Updater/Help/transfer/editor/jobs/shutdown) çalıştırılmadı; `audit/gui-screenshots/wx/*.png` tarihsel, SHA256 doğrulanmadı
 
 Wave 59 Linux result
 
@@ -133,7 +133,7 @@ Delegated tasks
 
 Delegated commits integrated into develop
 
-- Bu tur entegrasyon: `beb3ca1` yerel `develop`'a commit edildi, henüz `origin/develop`'a push edilmedi (network/rejected — `git push origin develop` non-fast-forward + `Failed to connect to github.com:443`). Önceki delegate dallarının entegrasyonu (`delegate6b` vb.) mevcut ledger'de entegre; yeni ANSYS/terminal işi entegrasyon bekliyor. Kural: entegre commit `develop`'tan erişilebilir değilse wave complete sayılmaz → Wave 54 PARTIAL kalır
+- Bu tur entegrasyon: `beb3ca1` + `f331d1e` + merge `cff925a` ile `origin/develop` (`7dae696` recovered workspace) ile birleştirildi ve `git push origin develop` ile uzakla senkronize edildi (önce non-fast-forward/retry sonrası `7dae696..cff925a develop -> develop` PUSHED). Kural: entegre commit `develop`'tan erişilebilir → Wave 54 PARTIAL entegre edildi fakat görsel/CI eksik olduğu için VERIFIED_COMPLETE değil
 
 Workspace parity
 
@@ -231,8 +231,10 @@ Final git status
 
 Commits created
 
-- `beb3ca1 Wave 54: real wx ANSYS surface + terminal Find/Clear/font + wave ledger 00-70` (5 files: `docs/v2/WX_MIGRATION_WAVE_STATUS.md`, `src/hpc_gui/wx_ansys_view.py` [new], `src/hpc_gui/wx_terminal.py`, `src/hpc_gui/wx_shell.py`, `tests/test_wx_ansys_view.py` [new])
+- `beb3ca1 Wave 54: real wx ANSYS surface + terminal Find/Clear/font + wave ledger 00-70` (5 files)
+- `f331d1e Add rapor file at root`
+- `cff925a Merge origin/develop (7dae696) — integrate Wave 54 ANSYS surface with recovered workspace` (merge, docs/v2/WX_MIGRATION_WAVE_STATUS.md + src/hpc_gui/wx_shell.py çatışması çözüldü)
 
 Push status
 
-- `git push origin develop` → `non-fast-forward` + `Failed to connect to github.com:443` (network) → **NOT PUSHED**; yerel `beb3ca1` `origin/develop`'a entegre değil; delegate entegrasyonu yerel `develop`'ta, uzakla senkronizasyon bekleniyor
+- `git push origin develop` → ilk denemede `non-fast-forward` + `Failed to connect`, `git fetch` + `git merge origin/develop` sonrası `cff925a` için **PUSHED** (`7dae696..cff925a develop -> develop`)
