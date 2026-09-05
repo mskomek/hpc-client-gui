@@ -4,7 +4,7 @@ import pytest
 
 wx = pytest.importorskip("wx")
 
-from hpc_gui.core.i18n import current_language, load_language
+from hpc_gui.core.i18n import current_language, load_language, t
 from hpc_gui import __version__
 from hpc_gui.wx_jobs import show_jobs
 from hpc_gui.wx_shell import create_shell_frame
@@ -60,7 +60,7 @@ def test_wx_shell_language_selection_retranslates_open_jobs_window(shell_i18n):
     jobs = next(w for w in wx.GetTopLevelWindows() if hasattr(w, "_wx_jobs_state") and w.GetParent() is frame)
     assert frame.GetTitle() == f"HPC Client GUI {__version__}" and jobs.GetTitle() == "Jobs"
     _choose(frame, "tr")
-    assert "İş" in jobs.GetTitle() and frame._wx_shell_controls["description"].GetLabel() != "wxPython migration shell"
+    assert "İş" in jobs.GetTitle() and frame._wx_shell_controls["settings"].GetLabel() == t("settings.action")
     _choose(frame, "en")
     assert jobs.GetTitle() == "Jobs"
 
