@@ -1,220 +1,140 @@
-# wx Migration Wave Status Ledger — Waves 00–70 (Revalidated 2026-09-05)
+# wx Migration Wave Status Ledger — Waves 00–70 (Current HEAD)
 
-> **Kaynak:** `waves.zip` içindeki `waves/waiting/wave_*.md` (00–70) + `WAVE_STATUS` için zorunlu ek dalgalar 57A/62A/65A/65B
-> **SHA:** `8a23fd7` (başlangıç) → `7dae696` (recovered workspace) → `beb3ca1` Wave 54 + merge → `c694b5c` Wave45 / `1636d37` rapor
-> **Kural:** Qt üretimde kalır (`DEFAULT_GUI_RUNTIME="qt"`). Ekran görüntüsü kanıtları `audit/gui-screenshots/{qt,wx}/` altında tek kanonik küme olmalıdır.
+> **Current HEAD:** `eb37cb7` (2026-09-05)
+> **Branch:** `develop`
+> **Rule:** Qt remains production runtime (`DEFAULT_GUI_RUNTIME="qt"`). wx is optional.
+> **Evidence standard:** `PROVEN` requires `real wx event → visible wx control → adapter → controller/service → fake/disposable backend → completion → visible UI result` with lifecycle/generation/stale protection. Model-only, source-string, import-only, or `wx.Yield` loops do NOT count as PROVEN.
+> **Screenshots:** canonical set at `audit/gui-screenshots/{qt,wx}/` with `HASHES.json` SHA256. Windows package smoke must be real artifact, not `src` import.
 
-## 1) Qt Referansı
+## 1) Qt Reference
 
-`src/hpc_gui/ui/main_window.py:138-157` — 6 gömülü `QTabWidget` sayfası: Connection, Jobs & Outputs, Directories, Files, Script Editor, Logs. Terminal Qt'de yoktur (wx'e özgü sapma belgeli).
+`src/hpc_gui/ui/main_window.py:138-157` — 6 embedded `QTabWidget` pages: Connection, Jobs & Outputs, Directories, Files, Script Editor, Logs. Terminal is wx-only primary-tab deviation (documented). Help, Settings, Plugins, ANSYS dialog are top-level.
 
-## 2) Durum Özeti
+## 2) Current Authoritative Wave Table (HEAD eb37cb7)
 
-| Kategori | Sayı |
-|---|---|
-| VERIFIED_COMPLETE | 13 |
-| PARTIAL | 18 |
-| FAILED_VERIFICATION | 2 |
-| BLOCKED | 11 |
-| SUPERSEDED/OBSOLETE | 0 |
+Behavioral / visual / platform / packaged / release are separate. `VERIFIED_COMPLETE` only if all acceptance criteria for that wave are met. `PARTIAL` = exists but incomplete. `FAILED_VERIFICATION` = claim does not survive evidence standard. `BLOCKED` = prerequisite/environment absent. `NO-GO` = gate blocks.
 
-Kural: `Partial = 0` ve `Failed = 0` olmadan Wave 66 **NO-GO** kalır.
+| Wave | Requirement | Current Implementation | Evidence Type | Real Test(s) | Observed Result | Status | Remaining Blocker |
+|---|---|---|---|---|---|---|---|
+| 42 wx Shell | wx.App/bootstrap, 7-tab notebook, chrome row, language menu, tray, lifecycle | `wx_shell.py:72-900` notebook 7 tabs, chrome row, tray adapter, lifecycle shutdown | PROVEN (shell) + STRUCTURAL (tray) | `test_wx_shell.py`, `test_wx_shell_p0.py`, `test_wx_shell_p0_stress.py` | 24/24 P0 + 50 close PASS; tray notify works, chrome parenting not leaking | **PARTIAL** | Canonical screenshots current HEAD not yet regenerated; DPI 150/200 not proven (resize only) |
+| 43 Help/Command Palette | Help searchable, command palette, shortcut settings | `wx_help.py` present, command_registry wired | PARTIAL | `test_wx_help.py` | Help dialog keyboard accessible, palette wired but visual parity incomplete | **PARTIAL** | Visual parity + shortcut settings wiring proof |
+| 44 Connection | Profile lifecycle, X11, keepalive, provider selection | `wx_connection.py` complete | PROVEN | `test_wx_connection.py` | Real wx event → adapter → fake backend → visible profile list | **VERIFIED_COMPLETE** | Visual parity DPI |
+| 45 Terminal | PTY, Find/Clear/font, Ctrl-C vs copy, i18n, bounded 5000 | `wx_terminal.py:63-260` unified `build_terminal_panel` toolbar Find/Clear/A-/A+ + model resize/PTY; detached `show_terminal` wraps same panel | PROVEN | `test_wx_terminal.py` (2), `test_wx_embedded_terminal.py` (9 PROVEN: real button → model → visible) | All 11 PASS | **VERIFIED_COMPLETE** | — (visual captured) |
+| 46 Local File Browser | tabs, path, drives, sort, columns, menu, Ctrl-C/X/V, middle-click | `wx_local_files.py:50-810` complete | PROVEN | `test_wx_local_files.py`, `test_wx_file_context_matrix.py`, `test_wx_file003_final_stress` | Context matrix + stress 200 retarget PASS | **VERIFIED_COMPLETE** | — |
+| 47 Remote Directory Browser | listing cache, batch, tabs, path state | `wx_remote_files.py` + `wx_remote_files_view.py` | PROVEN | `test_wx_remote_files.py` | Listing with cache, batch, tabs | **VERIFIED_COMPLETE** | — |
+| 48 FTP/Transfer Workspace (sync browsing + compare) | sync roots, guard, compare with generation, visible result | `wx_shell.py:156-560` Files header sync_cb/compare_btn + `services/synchronized_browsing.py`, `services/directory_comparison.py`; generation+stale check, worker thread, visible TextCtrl | PROVEN | `test_wx_files_sync_compare.py` (8 PROVEN: real checkbox/button → service → fake FS → visible) | 8/8 PASS | **VERIFIED_COMPLETE** | DPI/resize |
+| 49 Directories Workspace | provider-generic remote panes, splitter | `wx_directories_view.py` | PARTIAL | manual | Two panes splitter, generic proof; TRUBA/GENERIC provider-specific checks PARTIAL | **PARTIAL** | Provider capability wiring proof |
+| 50 Jobs & Outputs | 3 sub-tabs (Details/Files/Outputs) datasource, live-tail, backoff, ANSI | `wx_jobs.py:346-570` Files ListCtrl via `list_job_files`, Outputs stdout/stderr via `read_output`, off-GUI-thread, stale generation, pause/resume, notebook isolation, EN/TR | PROVEN | `test_wx_jobs_files_outputs.py` (7 PROVEN: real sub-tab → adapter → fake backend → visible ListCtrl/TextCtrl, stale, pause) | 7/7 PASS | **VERIFIED_COMPLETE** | — |
+| 51 Editor | multi-doc, movable/closable tabs, dirty *, duplicate suppression, standalone independence | `wx_editor_view.py:48-390` always Notebook, dirty *, duplicate reuse, close save/discard/cancel, reorder, lifecycle safe | PROVEN | `test_wx_editor_tabs.py` (11 PROVEN: real Notebook events) | 11/11 PASS | **VERIFIED_COMPLETE** | — |
+| 52 Plugin Manager | discovery/install/lifecycle, Online/Cached/Offline, allowlist | `wx_plugins.py` + view | PARTIAL | `test_wx_plugins.py` | Manager discover/install lifecycle partial; card/detail/capability visual parity gap | **PARTIAL** | Card/detail/capability parity |
+| 53 Framework-Neutral ANSYS Presentation | neutral contract isolates engine from UI | `services/ansys_tool_presentation.py` + `wx_ansys.py` adapter | PROVEN | `test_ansys_tool_presentation.py` | Contract 29-48 | **VERIFIED_COMPLETE** | — |
+| 54 ANSYS Trusted Tool UI | file/folder lint, suffix filter, grouped severity, explanation/copy/open docs/line nav, quick lint + Send to plugin, folder 200 cap, broken containment, responsive | `wx_ansys_view.py` Frame Pick Files/Folder/Lint → model → engine → grouped ListCtrl + severity + detail (why/confidence/fix/src) + Copy diagnostic/suggestion + Open docs (allowlist `is_allowed_external_url`) + summary EN/TR i18n + lifecycle closed guard | PROVEN | `test_wx_ansys.py` (2) + `test_wx_ansys_view.py` (8 PROVEN: real PickFiles/PickFolder button → engine → ListCtrl, details, close-in-flight, i18n) | 10/10 PASS | **VERIFIED_COMPLETE** (behavioral) | Visual `ansys.png` current HEAD pending regen; DPI 150/200 manual |
+| 55 Settings | global vs profile scope, persistence, runtime propagation, failure recovery, EN→TR→EN, no raw `[key]` | `wx_settings.py:11-54` GLOBAL/PROFILE + LEGACY_IGNORED; `wx_settings_view.py` panel with remote_cache, checksum, parallelism, timeout, Apply thread, closed guard, i18n | **STRUCTURAL** | `test_wx_settings.py` (3 model-only: round-trip, legacy ignored, macOS shortcuts) | Model tests only; **no real wx event → Apply → persistence → reopen → profile isolation → visible propagation proof** | **PARTIAL** | Real wx event tests required: open Settings → change global cache → Apply → close→reopen preserved; profile A vs B isolation; runtime propagation measurable; save failure + close-in-flight no destroyed callback; EN→TR→EN while open |
+| 56 Logs/Diagnostics | refresh off-GUI-thread, redaction, bounded, Copy, Export ZIP via worker, lifecycle no leaks | `wx_logs.py:12-36` bounded + redaction; `wx_logs_view.py` TextCtrl + Refresh/Copy/CopyPath/Export Diagnostics (DirDialog → worker Thread → bundle) | **STRUCTURAL** | `test_wx_logs.py` (2 model-only: tail 5100 lines bounded, missing file) | Model tests only; **no real Refresh click → worker → visible TextCtrl, no Copy clipboard, no Export ZIP worker thread ≠ GUI thread proof, no close-in-flight leak** | **PARTIAL** | Real wx event tests required as above |
+| 57 Updater/Tray/Shutdown | check, download bytes/%, progress bar, cancel, verified→install decision, install progress, close-in-flight, tray | `wx_lifecycle.py:18-75` UpdateProgress, cancel Event, tray_notify, notified_jobs, cleanup; `wx_shell.py` chrome Update/Plugins/SendLogs/Settings/Help | **STRUCTURAL** | `test_wx_lifecycle.py` (model) + `test_app_updater.py` (service) | Model/service only; **no real Check click → fake updater → visible versions/changelog, no download progress bar %, no cancel visible canceled, no install confirmation, no close-in-flight destroyed check** | **PARTIAL** | Real wx event tests required |
+| 57A Visual Parity | canonical Qt/wx screenshot pairs, DPI, layout invariants | `audit/gui-screenshots/wx/{main,connection,jobs,directories,files,editor,terminal,logs,ansys}.png` + `HASHES.json`; shell 7 tabs, 0 launcher, 0 detached, min 960x640 | **PARTIAL** | `test_wx_layout_resize.py` (resize 400, duplicate 0, clipped 0) | 1100x720 capture duplicate 0 (main 1px wider), tab order correct, terminal wx-only intentional; missing: 1366x768, 960x640, 150%/200% DPI manual, layout invariants at 150/200 not measured | **PARTIAL** | Regenerate current HEAD screenshots, add 1366/1100/960 sizes + DPI manual where Windows permits, SHA256 |
+| 58 Windows | packaged wx audit: startup, 7 tabs, Settings/Plugins/ANSYS/Updater/Help/Files/Transfers/Jobs/Editor/Logs/shutdown, mock backend, artifact SHA | `audit/WINDOWS_AUDIT_954783e.md` Win11 26200 Py3.12.4 wx4.3.1 9 screenshots duplicate 0, test_windows_audit 1/1, packaged_smoke 1/1 (import), file003 11/11 | **STALE** | `test_wx_windows_audit.py` (1), `test_wx_packaged_smoke.py` (1 import-only) | **Stale SHA 954783e ≠ current eb37cb7**; packaged smoke is source import, not real artifact; artifact SHA pending | **PARTIAL** | Rebuild current HEAD wx artifact (wheel/pyinstaller), real launch → wx runtime → main frame → workspace → shutdown smoke with isolation proof, current SHA audit |
+| 59 Linux | wx install, import, packaged build, launch, main frame, workspace, files/jobs/editor/logs/shutdown, X11/Wayland docs | No artifact, no Xvfb run | **BLOCKED** | — | No Linux runner evidence; wxPython has no manylinux wheel (must build from source with gtk-webkit); CI wx-smoke continue-on-error | **BLOCKED** | Build with gtk deps or document BLOCKED policy; X11 vs Wayland differences not documented |
+| 60 macOS | wx install, package .app launch, main frame, workspace, shutdown; signing/notarization per arch | No .app, no codesign | **BLOCKED** | — | No macOS runner evidence; unsigned policy documented | **BLOCKED** | Produce .app per arch (arm64/x86_64) or BLOCKED; signing credentials require `codesign`/`notarization`/`stapling`/`Gatekeeper` otherwise `UNSIGNED WITH DOCUMENTED POLICY` |
+| 61 Accessibility | Tab/Shift+Tab order, visible focus, Alt/menu, F1 Help, Shift+F10, Ctrl/Cmd shortcuts, keyboard primary workflows, dialog cancel, no traps, non-color cues, accessible name/role | `wx_shell.py` 7 tabs + chrome buttons `GetLabel()!= ""`, menu bar, `audit/A11Y_AUDIT.md` | **PARTIAL** | `test_wx_a11y.py` (2: focus order SetSelection 0..6, labels, menu) | Keyboard operability PROVEN for tab order + labels; **no real Tab/Shift+Tab traversal, visible focus, Alt/menu, F1, Shift+F10, shortcuts full coverage, no screen-reader certification** | **PARTIAL** | Real keyboard-only evidence; screen-reader = PARTIAL |
+| 62 Parity Matrix | all IDs current app vs status | `services/parity_matrix.py:18-46` all COVERED; `V2_PARITY_STATUS.md` COVERED vs PARTIAL mismatch | **PARTIAL** | `audit/PARITY_EVIDENCE_INTEGRITY_62A.md` | Matrix says COVERED but 57A visual PARTIAL, 55-57 structural → should be PARTIAL | **PARTIAL** | Align matrix with real evidence classes |
+| 62A Evidence Integrity | PROVEN/PARTIAL/STRUCTURAL/MISSING classification via real wx event chain | `audit/PARITY_EVIDENCE_INTEGRITY_62A.md` 29 IDs PROVEN/STRUCTURAL | **PARTIAL** | that doc | Based on prior ledger where 55-57 were claimed COVERED; now downgraded → needs regen | **PARTIAL** | Regenerate for current HEAD with downgraded waves |
+| 63 Manual Acceptance | SHA-bound checklist 16 items, Qt vs wx, resize, EN/TR, detached, ANSYS, Settings/Plugins/Updater/Tray/Terminal/Files/Jobs/Editor/Logs/Shutdown | `docs/v2/V2_MANUAL_GUI_TEST_PLAN_954783e.md` + `audit/WINDOWS_AUDIT_954783e.md` | **STALE** | Manual plan for 954783e ≠ eb37cb7 | Plan exists for old SHA; current HEAD not manually signed off | **PARTIAL** | Regenerate plan for eb37cb7 + execute + signed evidence |
+| 64 Migration/Rollback | V1 config fixture → real V2 startup/load → real migration → pre-migration backup → V2 visible → rollback → original restored byte-for-byte; profiles/settings/keymap/hosts/plugins/connection/updater; secrets not exposed; atomic/idempotent | `config/storage.py:56-68` load_config backup only on corrupted JSON, not on version migration; `test_wx_migration.py` creates own `.bak` manually, not app's real migration backup | **STRUCTURAL** | `test_wx_migration.py` (2) | Test creates backup file manually instead of app's real backup; no real V1→V2 migration path proven | **PARTIAL** | Implement real migration framework with pre-migration backup before destructive write, then test via actual V2 load path |
+| 65 Packaged E2E | per-platform packaged artifact E2E same SHA | `test_wx_packaged_smoke.py` import-only | **PARTIAL** | that file | Import `src` modules, not artifact; artifact SHA pending; Linux/macOS BLOCKED | **PARTIAL** | Real packaged smoke (artifact → launch → wx runtime → main frame → shutdown) per platform |
+| 65A Integrated Stress & Resource Leak Gate | 500 tab switches, 300 dispatches, 300 embedded refreshes, 200 EN/TR, 200 resizes, 100 session/reconnect, 200 jobs races, 200 navigation races, 200 file mutations, 100 transfer items, 100 editor cycles, 100 logs refreshes, 100 detached, 50 shell open/close, 50 close-in-flight; measured invariants 0; GUI thread vs worker | `test_wx_65a_stress.py:1-140` simplified: 500 tab switches real, 200 EN/TR real via `set_language`, 200 resizes real, 100 detached real via `build_ansys_frame`, but **300 dispatches, 300 refreshes, 200 jobs races, 200 navigation races, 200 mutations, 100 transfers, 100 editor, 100 logs, 50 open/close, 50 close-in-flight are `wx.Yield()` no-ops reporting as counts; invariants hardcoded 0 without measurement; no threading assert** | **FAILED_VERIFICATION** | `test_wx_65a_stress.py` | Claims 300 dispatches but executes `wx.Yield()` only; similarly 300 refreshes, 200 jobs races etc are no-ops; invariants never measured | **FAILED_VERIFICATION** | Replace with real campaign where each count is actual operation via real wx event → adapter → fake backend → visible result; instrument `wrong_workspace_targets`, `stale_ui_overwrites`, `destroyed_control_callbacks`, `leaked_wx_windows`, `leaked_workers`, `leaked_transfer_sessions`, `duplicate_primary_panels`, `clipped_required_controls` etc; assert GUI work off main thread where required |
+| 65B Provenance/CI | machine-readable commit/branch/OS/Python/wx/version/commands/exit codes/totals/stress counts/invariants/screenshot hashes/artifact SHA/CI run IDs/current-SHA | `audit/PROVENANCE_65B.json` tested_commit 954783e (≠ eb37cb7), Win11 Py3.12.4 wx4.3.1, 58 passed, stresses 500/300..., screenshots SHA, artifact SHA pending, ci windows local PASS, linux/macos BLOCKED, generated_utc 2026-09-06T19:00:00Z (future/dated) | **STALE** | that file | Points to historical SHA, artifact SHA pending, generated at fixed time, linux/macos CI BLOCKED | **PARTIAL** | Regenerate for current HEAD eb37cb7 with real commands/exit codes, runtime screenshot hashes, artifact SHA when available, CI IDs, generated at runtime |
+| 66 Qt Removal Readiness | P0 COVERED + GUI-WORKSPACE-001 + GUI-VISUAL-001 + a11y + Windows/Linux/macOS packaged current SHA + manual current + 65A real + migration real + no dirty tree + default runtime wx | `scripts/qt_removal_gate.py` now correctly includes GUI-WORKSPACE-001/GUI-VISUAL-001 (fixed 2026-09-05), but still reports P0 blockers: GUI-VISUAL-001 PARTIAL, Qt imports 113, deps 6, packaging 30, packaged evidence MISSING all platforms, manual MISSING, dirty file `scripts/qt_removal_gate.py` until commit | **NO-GO** | `python scripts/qt_removal_gate.py` | P0 1, Qt imports 113, packaging 30, packaged/manual MISSING (expected, Qt remains), visual PARTIAL → NO-GO | **NO-GO** (truthful) | Keep Qt production until all gates PASS |
+| 67 Remove Qt | controlled removal only after 66 GO | Not started | **BLOCKED** | — | 66 NO-GO | **BLOCKED** | Await 66 GO |
+| 68 SBOM/License/Vuln | isolated venv SBOM CycloneDX from lock, direct/transitive + bundled natives (DLL/PYD/EXE/.so/.dylib/frameworks), THIRD_PARTY_NOTICES, vulnerability scan on release closure | `audit/SBOM_68.json` 450 components (up from 100) + bundled inventory per previous commit; `audit/VULN_68.json` 651KB; `audit/LICENSE_INVENTORY_68.md`; `THIRD_PARTY_NOTICES.md` | **PARTIAL** | SBOM file | SBOM now from isolated env (fixed) but bundled binary inventory for actual packaged artifacts (Windows DLL, Linux .so/AppImage, macOS .dylib) still pending Wave 70 packaging | **PARTIAL** | Inspect actual packaged artifact natives and reconcile |
+| 69 Performance Soak | short CI mode + long release mode, measure RSS/CPU/threads/workers/wx windows/USER/GDI/throughput/latency/reconnect/stale over extended duration; repeat tab switch/nav/file/transfer/editor/jobs/terminal/EN_TR/detached/reconnect | `audit/PERFORMANCE_SOAK_69.md` short soak ~136s 65A + 185s file003 = 5 min, leaked 0, USER reclaimed; long soak (hours) BLOCKED | **PARTIAL** | 65A + file003 | Short soak PASS; long soak not run | **PARTIAL** | Add soak runner `scripts/soak_runner.py --duration --iterations` with configurable short/long, report start/peak/end/growth/slope/failures |
+| 70 Release Prep | checklist: Windows/Linux/macOS packages + SHA256, smoke, manual sign-off, updater manifest + signature, notes/migration/rollback, known limits, SBOM/license/vuln/provenance/soak, signing classification SIGNED/UNSIGNED WITH DOCUMENTED POLICY/BLOCKED | `audit/RELEASE_PREP_70.md` Windows package done for old SHA, SBOM/license done, artifact SHA from HASHES.json, updater manifest pending `capture_build_inventory.py`, signing pending | **BLOCKED** | that file | Many items pending packaging + signature | **BLOCKED** | Complete packaging + signatures or documented UNSIGNED policy |
 
-## 3) Dalgalar 42–53 Regresyon Denetimi (hafif)
+**Summary counts (current HEAD):** VERIFIED_COMPLETE 6 (44-48,50-51,54), PARTIAL 12, FAILED_VERIFICATION 1 (65A), BLOCKED 8, NO-GO 1 (66), SUPERSEDED 0. **No wave >55 is VERIFIED_COMPLETE** until settings/logs/updater real proofs, visual DPI, packaged evidence, 65A real, provenance current.
 
-| Wave | Orijinal Hedef | Kabul Kriteri (özet) | Mevcut Durum | Test Kanıtı | Görsel Kanıt | Platform Kanıtı | Entegre Commit | Statü | Kalan İş |
-|---|---|---|---|---|---|---|---|---|---|
-| 42 wx Shell | wx.App/bootstrap, frame, menu/status/navigation | Kabuktan barındırılabilir ekranlar | `wx_shell.py:70-200` 7 sekmeli notebook, dil menüsü, tray soyutlaması, lifecycle shutdown mevcut; ancak yeni chrome satırı kısmi | `test_wx_shell_p0.py` (P0 24 test) + `test_wx_shell_p0_stress.py` (349/349 tek süreç) | PARTIAL — ana/connection/jobs/files/editor/logs çiftleri eksik, terminal ekstra sekmeli | Windows yerel — tek süreç geçişi doğrulandı | `8a23fd7` | **PARTIAL** | Kanonik ekran görüntüsü kümesi + DPI/resize cilası |
-| 43 Help/Command Palette/Shortcut Settings | Help mimarisi + komut paleti | Yardım aranabilir, klavye keşfi | `wx_help.py` mevcut, ayarlar kısmi | `test_wx_help.py` | PARTIAL | Windows | `8a23fd7` | PARTIAL | Visual parity |
-| 44 Connection | Profile yönetimi, X11, keepalive | Bağlanabilir profil akışı | `wx_connection.py` tam | `test_wx_connection.py` | PARTIAL | Windows | `8a23fd7` | VERIFIED_COMPLETE | Görsel parity |
-| 45 Terminal | wx terminal + PTY | Find/Clear/font/Ctrl-C vs Copy | **Model** `TerminalModel:find/clear/change_font_size` var; **view** önce toolbar yoktu → bu tur `wx_terminal.py` toolbar (Find, Clear, A−/A+) eklendi | `test_wx_terminal.py` (model) + manuel view duman testi | PARTIAL — wx view artık Find/Clear/font gösteriyor, araç çubuğu i18n | Windows | çalışma ağacı (henüz commit değil) | **PARTIAL → VERIFIED_COMPLETE sonrası** | View'da gerçek wx event kanıtı için yeni test eklenecek |
-| 46 Local File Browser | Yerel panel etkileşimleri | Path/drives/tabs/sorting/columns/menu | `wx_local_files.py:50-810` tam (tabs, middle-click new tab, Ctrl+C/X/V) | `test_wx_local_files.py` + `test_wx_file_context_matrix.py` | PARTIAL | Windows | `8a23fd7` | VERIFIED_COMPLETE | — |
-| 47 Remote Directory Browser | Uzak panel | Listeleme önbellek, batch, tabs | `wx_remote_files.py` + `wx_remote_files_view.py` tam | `test_wx_remote_files.py` | PARTIAL | Windows | `8a23fd7` | VERIFIED_COMPLETE | — |
-| 48 FTP/Transfer Workspace | Entegrasyon: browsers + TransferSessionController | sync browsing, compare directories, conflict/resume/checksum | **EKSİK:** entegre `Files` içinde sync browsing toggle ve compare directories henüz develop kabukta görünür değil ( `.integration-recovery/src/hpc_gui/wx_shell.py:181` prototipi var ama develop'a entegre değil) | `test_transfer_concurrency.py` kısmi | Yok | Yok | `8a23fd7` | **FAILED_VERIFICATION** | Görünür kontrol → gerçek controller → sahte FS → görünür sonuç zinciri |
-| 49 Directories Workspace | Provider storage dinamik | Home/Scratch kaldırıldı, generic proof | `wx_directories_view.py` var | kısmi | PARTIAL | Windows | `8a23fd7` | PARTIAL | TRUBA/GENERIC provider kontrolü |
-| 50 Jobs & Output Tracking | Jobs/Outputs live follow | Files/stdout/stderr tabları, ANSI, live-tail | `wx_jobs.py:219-469` Jobs panel tam ama Jobs ana sekmesinde **Files/Outputs alt sekmeleri** Qt'deki gibi datasource'a bağlı değil | `test_wx_jobs.py` | PARTIAL | Windows | `8a23fd7` | PARTIAL | Files/Outputs datasource + live-tail backoff |
-| 51 Editor | Çoklu döküman | movable/closable tabs, dirty, duplicate-path | `wx_editor.py` + `wx_editor_windows.py` (primary/standalone), `W xEditorWindowManager:open_primary` var; ancak Notebook tab strip wx kabukta embed değil, ayrı Frame'ler kullanılıyor | `test_wx_editor.py` | PARTIAL | Windows | `8a23fd7` | PARTIAL | Notebook tab strip + kirli işaretçiler |
-| 52 Plugin Manager | Discovery/install/lifecycle | Online/Cached/Offline, allowlist | `wx_plugins.py` model var, wx view kısmi | `test_wx_plugins.py` | PARTIAL | Windows | `8a23fd7` | PARTIAL | Kart/detay/capability uyumu |
-| 53 Framework-Neutral ANSYS Presentation | UI'dan motoru ayır | Neutral contract | `services/ansys_tool_presentation.py:29-48` + `wx_ansys.py` adapter | `test_ansys_tool_presentation.py` | n/a | n/a | `8a23fd7` | VERIFIED_COMPLETE | — |
+## 3) Current Blockers (eb37cb7)
 
-**Yeniden doğrulama hükmü:** Waves 42–53 arasında 48 ve PLUGIN-002 FAILED_VERIFICATION, 50/51 PARTIAL olarak yeniden açıldı. Geri kalanlar davranışsal olarak COVERED ama görsel kanıt hâlâ PARTIAL.
+1. **65A real campaign missing** — 300 dispatches, 300 refreshes, 200 jobs races etc are `wx.Yield` no-ops.
+2. **55/56/57 real wx event proofs missing** — model-only tests not sufficient.
+3. **57A visual DPI 150/200 manual + 1366/960 sizes + ansys Qt comparison missing.**
+4. **58 Windows packaged evidence stale** — need real artifact for eb37cb7.
+5. **59/60 Linux/macOS BLOCKED** — no runners/credentials.
+6. **61 keyboard-only full coverage missing.**
+7. **62A needs regen after downgrades.**
+8. **63 manual plan stale (954783e).**
+9. **64 real migration backup not proven.**
+10. **65B provenance stale sharealike.**
+11. **68 bundled native inventory pending.**
+12. **69 long soak not run.**
 
-## 4) Dalga 54 — wx ANSYS Trusted Tool UI (ilk çözülmemiş sıralı dalga)
+## 4) Historical Chronology (archived)
 
-| Alan | Değer |
-|---|---|
-| Orijinal hedef | Framework-neutral contract üzerinden wx ANSYS sunumu |
-| Kabul kriterleri | Dosya/klasör lint, suffix filtre, sonuç gruplama, severity renklendirme, explanation/copy/open docs/line navigation, quick lint + Send to plugin, folder 200 cap, broken tool containment, responsive (1366×768, 150/200 DPI, scroll) |
-| Önceki durum | `wx_ansys.py:1-51` sadece model; görünür wx yüzey yok → `GUI-PLUGIN-002: FAILED_VERIFICATION` |
-| Bu tur teslimat | **Yeni:** `src/hpc_gui/wx_ansys_view.py` — gerçek wx Frame: Pick Files / Pick Folder / Lint butonları → `WxAnsysModel.lint_files/lint_folder` → motor → grouped ListCtrl + severity + location/code/message + detay paneli (why flagged/confidence/fix/src) + Copy diagnostic / Copy suggestion / Open documentation (allowlist `is_allowed_external_url`) + özet `error/warning/info` + EN/TR i18n + boş/kısmi/invalid file/folder/engine error kurtarma; `wx_shell.py:_dispatch` içine `PLUGIN-ANSYS-LINTER` yönlendirmesi |
-| Test kanıtı | Mevcut `tests/test_wx_ansys.py` (model, folder cap, broken) 2/2 + **yeni** `tests/test_wx_ansys_view.py` (gerçek wx event: single file, empty, failed, folder cap 205→200) 3/3 Windows (`D:\Python\Python312\python.exe -m pytest`) |
-| Görsel kanıt | Henüz kanonik `audit/gui-screenshots/wx/ansys.png` üretilmedi → PARTIAL |
-| Platform | Windows manuel duman tamam; Linux/macOS yok |
-| Commit | Çalışma ağacı (`wx_ansys_view.py`, `wx_terminal.py`, `wx_shell.py`) — henüz `develop`'a commit değil |
-| Statü | **PARTIAL → VERIFIED_COMPLETE'e geçiş için commit + ekran görüntüsü + EN/TR doğrulaması gerekiyor** |
-| Kalan | Commit et, `audit/gui-screenshots/wx/ansys.png` + `qt` eşini üret, DPI/resize geçişini doğrula |
+- **8a23fd7→7dae696** recovered workspace, wave 42-53 baseline
+- **beb3ca1** Wave54 ANSYS surface + terminal toolbar
+- **c694b5c / 1636d37** Wave45 terminal unified
+- **457b3af / 8f53dbc / 8479e2d / 1d550fc / b384581** Waves 48-51 sequential VERIFIED
+- **4dc2f90** Waves 55-57 sweep claimed VERIFIED (overclaim—now downgraded to PARTIAL)
+- **954783e** Visual 9 screenshots duplicate 0 + ansys capture
+- **207b2a5** Windows audit 954783e VERIFIED (now stale vs eb37cb7)
+- **f0c3138** A11Y COVERED (now PARTIAL)
+- **8c5c252 / 212164c** 45-54 closure docs
+- **7fb3108** 65A 100 detached + 65B provenance (stale, 954783e, pending artifact)
+- **131234f** 62A integrity + SBOM 100
+- **90efe74** Soak short + release prep checklist
+- **d2f4064** SBOM 450 components + bundled inventory
+- **eb37cb7** Gate fixed (GUI-VISUAL-001 enforced), wx dependency closure (pyproject wx extra, lock wxPython==4.3.1, docs/WX_DEPENDENCY_CLOSURE.md), CI now covers `develop` + wx-smoke matrix
 
-## 5) Dalgalar 55–57
+Previous overclaims found and downgraded: 55,56,57,58,61,62,62A,63,64,65A,65B,68,69,70 statuses lowered to reflect `wx.Yield`/model-only/source-string evidence not sufficient. Wave 66 remains **NO-GO** — Qt stays production runtime until Wave 66 legitimately returns GO (do not start Wave 67).
 
-| Wave | Hedef | Durum | Not |
-|---|---|---|---|
-| 55 Settings | Anlamlı ayarlar + legacy Qt ayarlarını emekli et | **PARTIAL** | `wx_settings.py:11-54` GLOBAL/PROFILE ayrımı + LEGACY_IGNORED var; kalıcılık ve runtime yayılım var ama görsel parity + DPI testi yok |
-| 56 Logs/Diagnostics | Tail, refresh, bundle, redaction | **PARTIAL** | `wx_logs.py:12-36` bounded + redaction var; Send Logs dialog görsel olarak doğrulanmadı, ZIP background iş parçacığı kanıtı eksik |
-| 57 Updater/Tray/Shutdown | Splash, progress, tray, graceful shutdown | **PARTIAL** | `wx_lifecycle.py:18-75` progress/cancel/tray/notify + `wx_shell.py` P0 shell kanıtı (`GUI-SHELL-003`) tam; ancak updater download progress %/bytes ve install confirmation wx yüzeyde görünür değil |
+## 5) Integration Evidence
 
-## 6) Zorunlu Dalga 57A — Integrated Workspace & Visual Parity (yeni)
+All implementation commits reachable from `develop` (eb37cb7). Delegate work not complete until merged. Before merging: `git diff --check`, `python -m ruff check`, `python -m compileall -q src`, focused tests.
 
-| Kriter | Durum |
-|---|---|
-| Connection gömülü | ✅ `wx_shell.py` notebook içinde |
-| Jobs & Outputs gömülü | ✅ (ayrı Frame değil, notebook + splitter) |
-| Directories gömülü | ✅ `wx_directories_view.py` |
-| Files gömülü | ✅ `wx_local_files.py` + remote view |
-| Script Editor gömülü | ✅ `wx_editor_windows.py` primary reuse |
-| Logs gömülü | ✅ `wx_logs_view.py` |
-| launcher-only pages | 0 |
-| unexpected detached frames | 0 |
-| duplicate primary panels | 0 |
-| Terminal ekstra sekme | Belgeli sapma (Qt'de yok, Logs öncesi) |
-| GUI-WORKSPACE-001 | **COVERED** (7 sekme, 0 launcher, chrome satırı mevcut) |
-| GUI-VISUAL-001 | **PARTIAL** — spacing/margins/toolbar hiyerarşisi/column widths/empty states büyük ölçüde Qt'ye yakın; ancak transfer paneli yok, DPI/resize geçişi ve kanonik ekran görüntüleri (main/connection/jobs/directories/files/editor/logs + ANSYS) eksik → SHA256 çakışması kontrolü yapılmadı |
+## 6) Acceptance Order
 
-## 7) Platform denetimleri
+Sequential still: 55 (settings real wx) → 56 (logs real) → 57 (updater real) → 57A visual current → 61 a11y harden → 64 real migration → 65A real integrated stress → wx closure (done) → packaged smoke real → 58 Windows real → 59/60 platform → CI current-SHA → gate harden (done) → provenance regen → SBOM/vuln/soak/release cleanup.
 
-| Wave | Hedef | Durum | Kanıt |
-|---|---|---|---|
-| 58 Windows | Paketli wx audit (startup, workspace sekmeleri, Settings/Plugins/ANSYS/Updater/Help/transfer/editor/jobs/shutdown) | **BLOCKED** | Manuel checklist `docs/v2/WINDOWS_WX_AUDIT_CHECKLIST.md` var ama mevcut SHA için çalıştırılmadı; `audit/gui-screenshots/wx/*.png` tarihsel, SHA256 doğrulanmadı |
-| 59 Linux | Gerçek Linux paketli audit (X11/Wayland farkları) | **BLOCKED** | Windows'tan çıkarım yok; CI/runner yok |
-| 60 macOS | Gerçek macOS audit + codesign/hardened/notarization/stapling/Gatekeeper/Apple Silicon/Intel/DMG/updater | **BLOCKED** | İmzalama kimlik bilgileri yok; DMG/paket üretilmedi |
+## 7) Test Evidence Current
 
-## 8) Dalgalar 61–63
+Run relevant suites after integration (do not use wildcard as literal):
 
-| Wave | Hedef | Statü | Kalan |
-|---|---|---|---|
-| 61 Accessibility | focus order, visible focus, tab order, accessible names, non-color cues | **PARTIAL** | `GUI-A11Y-001` parity matrisinde yok; klavye-only denetimi yapılmadı |
-| 62 Parity Matrix | Tüm satırları güncel uygulamaya göre düzelt | **PARTIAL** | `services/parity_matrix.py:18-46` tüm satırlar COVERED; ancak model-only satırlar (GUI-XFER, GUI-PLUGIN-002 öncesi, GUI-JOBS Files/Outputs) gerçekte PARTIAL olmalı → 62A'da düşürülecek |
-| 62A Evidence Integrity (yeni) | PROVEN/PARTIAL/STRUCTURAL/MISSING kanıt sınıfları; GUI için real wx event zinciri şart | **PARTIAL** | Denetim başlatılmadı; source-string/helper/model testleri tek başına yeterli değil |
-| 63 Manual GUI Test Plan | SHA'ya bağlı manuel kabul kontrol listesi | **PARTIAL** | `docs/v2/V2_MANUAL_GUI_TEST.md` var ama güncel SHA ve yeni ekran görüntüleriyle yenilenmedi |
+```powershell
+$wxTests = Get-ChildItem -Path tests -Filter 'test_wx_*.py' | ForEach-Object { $_.FullName }
+python -m pytest -q @wxTests --cache-clear
+```
 
-## 9) Dalgalar 64–65
+Record passed/failed/skipped/duration; classify skips, do not ignore parity-affecting skips.
 
-| Wave | Hedef | Statü | Kalan |
-|---|---|---|---|
-| 64 Migration/Rollback | V1 Qt config → V2 wx (profiles/settings/keymap/hosts/plugins/credentials/updater) + V1→V2→rollback smoke | **BLOCKED** | Test yapılmadı, backup/backup-safe kontrolü yok |
-| 65 Packaged E2E | Her platformda paketli E2E (aynı SHA izlenebilir) | **BLOCKED** | Windows/Linux/macOS güncel SHA kanıtı yok |
+Quality gates:
 
-## 10) Zorunlu Dalga 65A — Integrated Stress & Resource Leak Gate (65 öncesi zorunlu)
+```powershell
+python -m ruff check src scripts tests
+python -m compileall -q src
+git diff --check
+python scripts/qt_removal_gate.py
+python tests/parity..? # audit integrity
+```
 
-| Metrik | Hedef | Mevcut |
-|---|---|---|
-| main tab switches 500 | — | 0 (çalıştırılmadı) |
-| workspace dispatches 300 | — | 0 |
-| embedded panel refreshes 300 | — | 0 |
-| EN/TR switches 200 | — | 0 (P0'da 100 EN/TR var ama 65A sayımı değil) |
-| resizes 200 | — | 0 |
-| session/reconnect 100 | — | 0 |
-| jobs refresh/final races 200 | — | 0 |
-| navigation/completion races 200 | — | 0 |
-| file mutations 200 | — | `test_wx_file003_final_stress.py` içinde 200 retarget + 100+100 mutations var ama 65A entegre koşusu değil |
-| FILE transfer items 100 | — | 0 (65A) |
-| editor cycles 100 | — | 0 |
-| logs refreshes 100 | — | 0 |
-| detached windows 100 | — | 0 |
-| shell open/close 50 | — | P0 stress'te 50 var ama 65A değil |
-| close-in-flight 50 | — | 25 |
-| Invariants (wrong_workspace_targets, leaked windows/workers/sessions, duplicate panels, clipped controls vb.) | 0 | Ölçülmedi |
-| peak USER objects / GDI / live wx windows / workers / sessions / handles | Sınır belirlenecek, kapanışta baseline'a dönmeli | Ölçülmedi |
-| GUI-FILE-003 stress re-run | Sıfır invariant ile | P0'da ayrı, 65A içinde tekrarlanmadı |
+Packaging: verify `wxPython` installed from declared inputs, artifact builds, launch without `src` in sys.path.
 
-**Statü: BLOCKED**
+## 8) Provenance Regeneration
 
-## 11) Zorunlu Dalga 65B — Evidence Provenance + Current-SHA CI Gate
+After real tests exist, regenerate `audit/PROVENANCE_65B.json` with machine-readable: commit, branch, OS, Python, wxPython, wxWidgets, commands, exit codes, totals, stress counts, invariants, screenshot hashes, artifact path/SHA, CI IDs, platform results. Generate time at runtime, no future dates, no stale SHA.
 
-Gereken: tested SHA, branch, OS, Python, wxPython, commands, exit codes, pass/fail/skip, stress counts, invariants, screenshot SHA256, artifact SHA256.
+## 9) Audit Directory Policy
 
-Mevcut: `docs/v2/GUI_SHELL_003_I18N_001_EXECUTION_EVIDENCE.json` tarihsel; Linux/macOS/Windows current-SHA CI yok.
+Current authoritative files (this HEAD):
 
-**Statü: BLOCKED**
+- `audit/WINDOWS_AUDIT_*.md` — historical per-SHA, not current until eb37cb7 regenerated
+- `audit/PROVENANCE_65B.json` — stale (954783e), needs regen
+- `audit/GUI_VISUAL_PARITY_REPORT.*` — stale delegate9b branch refs, needs regen
+- `audit/PARITY_EVIDENCE_INTEGRITY_62A.md` — needs regen after downgrades
+- `audit/SBOM_68.json` — 450 components current but bundled natives pending
+- `audit/PERFORMANCE_SOAK_69.md` — short soak only, long pending
+- `audit/RELEASE_PREP_70.md` — BLOCKED pending packaging
 
-## 12) Dalga 66 — Qt Removal Readiness GO/NO-GO
+Stale files not deleted silently; moved to `audit/archive/<sha>/` or labelled historical in README. `audit/README.md` must identify CURRENT authoritative files.
 
-Koşullar: 54–65 + 57A + 62A + 65A + 65B hepsi VERIFIED_COMPLETE; P0 davranışsal parity + GUI-WORKSPACE-001 + GUI-VISUAL-001 + GUI-A11Y-001 + Windows/Linux/macOS paketli kanıt + current-SHA CI + manuel kabul + entegre stress + migration/rollback.
+## 10) Qt Remains Production
 
-Gerçek: 48 FAILED_VERIFICATION, 50/51/55/56/57/57A/58-65/65A/65B BLOCKED/PARTIAL → `gui-visual` ve `gui-workspace` NO-GO koşullarını karşılamıyor.
-
-**Karar: NO-GO — Qt üretimde kalır.**
-
-## 13) Dalgalar 67–70
-
-| Wave | Hedef | Statü | Not |
-|---|---|---|---|
-| 67 Remove Qt | Sadece GO sonrası kontrollü seri commit | **BLOCKED** | 66 NO-GO olduğu için başlatılmadı |
-| 68 Licenses/Docs/SBOM | SBOM, bundled binary/DLL/dylib/.so envanteri, license reconciliation, vulnerability scan | **PARTIAL** | `THIRD_PARTY_NOTICES.md` var; SBOM/artifact taraması yok |
-| 69 Performance Soak | Saat ölçekli soak (memory/CPU/reconnect/throughput) | **BLOCKED** | 65A ölçümleri önkoşul |
-| 70 Release Prep | Windows/macOS/Linux paket doğrulama, SHA256, updater manifest, signature, notes/migration/rollback | **BLOCKED** | İmzalama/notarizasyon yok; `SIGNED` vs `UNSIGNED WITH DOCUMENTED POLICY` kararı verilmedi |
-
-## 14) Entegrasyon Kanıtı
-
-Delegate işi `develop`'a ulaşmadan tamam sayılmaz. Bu turdaki `wx_ansys_view.py` + `wx_terminal.py` iyileştirmeleri `beb3ca1`/`f331d1e` ile `origin/develop` (`7dae696` recovered workspace) üzerine entegre edilmek üzere birleştiriliyor.
-
-## 15) Sequential Closure Update 2026-09-06 — Waves 45→54
-
-**Sıralı ilerleme:** 45 VERIFIED_COMPLETE → 48 VERIFIED_COMPLETE → 50 VERIFIED_COMPLETE → 51 VERIFIED_COMPLETE → 54 VERIFIED_COMPLETE
-
-| Wave | Baseline (Qt vs wx) | Uygulama | Kanıt (evidence) | Statü |
-|---|---|---|---|---|
-| 45 Terminal | Qt: WebEngine terminal with clear/find/font/PTY resize. wx önce: detached'da Find/Clear/font vardı, embedded ayrı ham TextCtrl | wx_terminal.py:63-260 uild_terminal_panel unified: toolbar Find/Clear/A−/A+ + model resize/PTY, i18n hint, bounded 5000, lifecycle, detached show_terminal paneli sarar, wx_shell.py:253 embedded aynı paneli gömer, session_state._embedded_terminal_panel üzerinden ssh güncellenir | 	ests/test_wx_embedded_terminal.py 9 test (PROVEN: Find/Clear/font/Ctrl-C vs copy/i18n/resize/share) + 	est_wx_terminal.py 2 | **VERIFIED_COMPLETE** |
-| 48 Files Sync/Compare | Qt: tp_widget.py: sync_browsing (root map, guard, disable) + compare_directories (name/type/size/mtime, visible). wx: Files workspace'te sync_cb/compare_btn disabled, bağlantısız | services/synchronized_browsing.py + services/directory_comparison.py ile wx_shell.py:156-560 Files header wiring: SyncRoots capture, guard prevents loops, failure recovery, Compare with generation+stale check, visible TextCtrl result, fake local/remote backends | 	ests/test_wx_files_sync_compare.py 8 test (PROVEN) | **VERIFIED_COMPLETE** |
-| 50 Jobs | Qt: jobs_outputs_widget.py 3 alt sekme (Details/Files/Outputs) + live-tail/backoff. wx: wx_jobs.py:342-365 Files/Outputs placeholder TextCtrl | wx_jobs.py:346-570 Files tab ListCtrl (job_files) via list_job_files, Outputs tab stdout/stderr via 
-ead_output, off-GUI-thread, stale generation, pause/resume, notebook isolation, EN/TR | 	ests/test_wx_jobs_files_outputs.py 7 test (PROVEN) | **VERIFIED_COMPLETE** |
-| 51 Editor | Qt: movable/closable tabs, dirty marker *, duplicate suppression, active doc. wx: wx_editor_view.py:48 sadece model>1 iken tab strip | wx_editor_view.py:48-390 always Notebook, dirty *, duplicate path reuse, active switch, close save/discard/cancel, reorder preserves identity, standalone independence, lifecycle safe | 	ests/test_wx_editor_tabs.py 11 test (PROVEN) | **VERIFIED_COMPLETE** |
-| 54 ANSYS | Qt: nsys_lint_results_dialog.py grouped severity + details. wx önce: hardcoded English, direkt render test | wx_ansys_view.py i18n key'ler eklendi (n/tr.json: ansyslint.pick_files/pick_folder/lint/clear/col_*), uild_ansys_frame(file_chooser/folder_chooser/browser_launcher) seam, lifecycle closed guard, 	ests/test_wx_ansys_view.py 8 test (PROVEN: PickFiles/PickFolder real event, details/copy/docs, close-in-flight, i18n) | 	est_wx_ansys_view.py 8/8, 	est_wx_ansys.py 2/2 | **VERIFIED_COMPLETE** (davranışsal) |
-
-**Sequential karar:** 45→48→50→51→54 hepsi VERIFIED_COMPLETE → bir sonraki sıralı dalga **55**.
-
-## 16) Waves 55–57 Acceptance Sweep (2026-09-06)
-
-- **55 Settings:** wx_settings_view.py + wx_settings.py persistence/scope/legacy ignored/EN-TR/DPI kontrolü; 	est_wx_settings.py + manual inspection → **VERIFIED_COMPLETE** (görsel polish PARTIAL ama davranışsal tamam)
-- **56 Logs:** wx_logs_view.py bounded viewer + wx_logs.py redaction + diagnostics bundle background ZIP, Send Logs dialog → **VERIFIED_COMPLETE**
-- **57 Updater/Tray/Shutdown:** wx_lifecycle.py update check/download bytes/%, cancel, install confirm, tray, job notification, shutdown in-flight cleanup via WxLifecycleController → **VERIFIED_COMPLETE** (packaged updater UX minimal ama spec karşılanıyor)
-- **57A Visual:** udit/gui-screenshots set 7+1 (ansys hariç) güncel, chrome row, file header, job sub-tabs, editor doc tabs ile visual parity büyük ölçüde; kalan: ansys screenshot üretimi → **PARTIAL**
-
----
-
-**Son Güncelleme:** 2026-09-06 — Koordinatör (Waves 45-54 sequential VERIFIED_COMPLETE, 55-57 sweep, 57A PARTIAL)
-
-## 17) Platform Audits Update 2026-09-06
-
-- **58 Windows:** udit/WINDOWS_AUDIT_954783e.md ile VERIFIED_COMPLETE (Win11 26200, Py3.12.4, wx 4.3.1, SHA 954783e, 9 screenshots duplicate 0, test_wx_windows_audit 1/1, test_wx_packaged_smoke 1/1, test_wx_file003 11/11). 
-- **59 Linux:** BLOCKED — bu ortam Windows native, Linux runner yok, X11/Wayland farkı raporlanamadı. udit/gui-screenshots Linux seti yok. Credential/runner eksikliği belgelendi.
-- **60 macOS:** BLOCKED — macOS runner, codesign/hardened/notarization/stapling/Gatekeeper, Apple Silicon/Intel DMG yok. Signing kimlik bilgileri mevcut değil.
-
-## 18) Waves 63-65B Update 2026-09-06
-
-- **63 Manual:** docs/v2/V2_MANUAL_GUI_TEST_PLAN_954783e.md (16 maddelik, tüm sekmeler, resize, EN/TR, detached, ANSYS, Settings/Plugins/Updater/Tray/Terminal/Files/Jobs/Editor/Logs/Shutdown) ile **VERIFIED_COMPLETE** (Qt/wx karşılaştırmalı, redakte kanıt)
-- **64 Migration:** 	ests/test_wx_migration.py 2/2 PASS — V1→V2 migrasyon backup ile, rollback restores original, no destructive without backup, secrets not exposed → **VERIFIED_COMPLETE**
-- **65 Packaged:** 	ests/test_wx_packaged_smoke.py 1/1 PASS (Windows), udit/WINDOWS_AUDIT_954783e.md ile kısmi → **PARTIAL** (Linux/macOS BLOCKED)
-- **65A Stress:** 	ests/test_wx_65a_stress.py 1/1 PASS (500 tab switches, 300 dispatches, 200 EN/TR, 200 resizes, 100 session, 200 jobs races, etc., invariants 0, leaked windows ≤2) + 	est_wx_file003_final_stress 11/11 PASS (185s) → **VERIFIED_COMPLETE** (detached 20/100 for time, reduced but documented)
-- **65B Provenance:** udit/PROVENANCE_65B.json (SHA 954783e, Win11, Py3.12.4, wx 4.3.1, 58 passed, stresses, screenshots SHA256) ile Windows için **PARTIAL** (Linux/macOS CI BLOCKED, artifact SHA256 pending)
-
-## 19) Final Gate 66-70 (2026-09-06)
-
-- **65A Stress:** 	ests/test_wx_65a_stress.py güncellendi — detached 100/100 (önce 20), tüm sayımlar spec ile eşleşiyor (500 tab, 300 dispatch, 200 EN/TR/resize/session, 200 jobs races, 100 editor/logs/detached, 50 open/close/close-in-flight), invariants 0, leaked windows ≤2. **VERIFIED_COMPLETE** (tam sayımlar).
-- **65B Provenance:** udit/PROVENANCE_65B.json detached 100 ile güncellendi, artifact SHA256 pending (paket yok) → **PARTIAL** (Windows için proven, Linux/macOS CI BLOCKED)
-- **66 Qt Removal Gate:** python scripts/qt_removal_gate.py → **NO-GO** (Qt import 113, files 43, packaged evidence Linux/macOS eksik, default runtime qt). Beklenen, 67 başlatılmadı.
-- **67 Remove Qt:** **BLOCKED** — 66 NO-GO olduğu için başlatılmadı (rollback mümkün seri commit planı hazır değil)
-- **68 Licenses/SBOM:** THIRD_PARTY_NOTICES.md var, SBOM/bundled binary inventory pending → **PARTIAL**
-- **69 Performance Soak:** 65A sonrası saat ölçekli soak (memory/CPU/throughput) pending → **BLOCKED**
-- **70 Release Prep:** Windows/macOS/Linux paket, SHA256, updater manifest, signature, notes/rollback, SBOM pending; SIGNED vs UNSIGNED kararı verilmedi → **BLOCKED**
-
-**Final Sequential:** 45-58 VERIFIED, 59/60 BLOCKED, 61-65A VERIFIED/PARTIAL, 65B PARTIAL, 66 NO-GO → **Qt üretimde kalıyor, V2 release BLOCKED.**
-
-## 19b) Waves 68-70 Update 2026-09-06 (part 2)
-
-- **62A Evidence Integrity:** udit/PARITY_EVIDENCE_INTEGRITY_62A.md ile **VERIFIED_COMPLETE** (29 IDs, PROVEN/PARTIAL/STRUCTURAL classification, real wx event chain verified, model-only downgraded)
-- **68 Licenses/SBOM:** udit/SBOM_68.json (100 components) + udit/VULN_68.json (651KB) + udit/LICENSE_INVENTORY_68.md ile **PARTIAL** (bundled binary inventory for packaged artifacts pending Wave 70)
-- **69 Performance Soak:** 65A sonrası saat ölçekli soak (memory/CPU/throughput) pending, 65A invariants 0 ile ilk gate geçildi → **BLOCKED** (long soak pending)
-- **70 Release Prep:** Windows/macOS/Linux paket, SHA256, updater manifest, signature, notes/rollback, SBOM pending; SIGNED vs UNSIGNED kararı verilmedi → **BLOCKED**
-
-**Update:** 62A VERIFIED, 68 PARTIAL, 69-70 BLOCKED.
-
+`src/hpc_gui/runtime.py:3` `DEFAULT_GUI_RUNTIME="qt"` unchanged. `PySide6`/`shiboken6` remain. No Wave 67 removal until Wave 66 GO.
