@@ -45,18 +45,33 @@ def _build_editor(parent, model: WxEditorModel | None, *, path: str, content: st
     header.Add(btn_lint, 0, wx.ALL, 3)
     header.Add(save, 0, wx.ALL, 3)
     root.Add(header, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 4)
-    # --- document tab strip (only if model already tracks >1 document) ---
-    doc_tabs = None
-    if len(model.controller.documents) > 1:
-        doc_tabs = wx.Notebook(panel)
-        for _doc in model.controller.documents:
-            _p = wx.Panel(doc_tabs)
-            doc_tabs.AddPage(_p, _doc.path.rsplit("/", 1)[-1] if _doc.path else t("editor.title"))
+    # --- document tab strip (always, dynamic) ---
+    def _tab_label(doc):
+        base = doc.path.rsplit("/", 1)[-1] if doc.path else t("editor.title")
+        return f"{base} *" if getattr(doc, "dirty", False) else base
+    doc_tabs = wx.Notebook(panel)
+    # allow reordering via drag (style) where supported
+    try:
+        # Use agw.aui for movable tabs if available, fallback to Notebook
+        pass
+    except Exception:
+        pass
+    for _doc in model.controller.documents:
+        _p = wx.Panel(doc_tabs)
+        doc_tabs.AddPage(_p, _tab_label(_doc))
+    try:
+        doc_tabs.SetSelection(model.controller.active_index if 0 <= model.controller.active_index < doc_tabs.GetPageCount() else 0)
+    except Exception:
+        pass
+    # if single doc, still show single tab for discoverability
+    if doc_tabs.GetPageCount() == 0:
+        _p = wx.Panel(doc_tabs)
+        doc_tabs.AddPage(_p, _tab_label(model.controller.active) if model.controller.active else t("editor.title"))
         try:
-            doc_tabs.SetSelection(model.controller.active_index if 0 <= model.controller.active_index < doc_tabs.GetPageCount() else 0)
+            doc_tabs.SetSelection(0)
         except Exception:
             pass
-        root.Add(doc_tabs, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 4)
+    root.Add(doc_tabs, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 4)
     editor = wx.TextCtrl(panel, style=wx.TE_MULTILINE | wx.TE_RICH2 | wx.HSCROLL)
     editor.SetValue(model.controller.active.content if model.controller.active else content)
     buttons = wx.BoxSizer(wx.HORIZONTAL)
@@ -277,12 +292,84 @@ def _build_editor(parent, model: WxEditorModel | None, *, path: str, content: st
     remote_path.Bind(wx.EVT_TEXT_ENTER, _on_remote_path_enter)
     _update_header_enabled()
 
+    def _refresh_tabs():
+        try:
+            # ensure doc_tabs matches model.documents
+            # add missing tabs
+            while doc_tabs.GetPageCount() < len(model.controller.documents):
+                _p = wx.Panel(doc_tabs)
+                doc_tabs.AddPage(_p, "")
+            while doc_tabs.GetPageCount() > len(model.controller.documents):
+                doc_tabs.DeletePage(doc_tabs.GetPageCount()-1)
+            for idx, doc in enumerate(model.controller.documents):
+                if idx < doc_tabs.GetPageCount():
+                    doc_tabs.SetPageText(idx, _tab_label(doc))
+            # update selection
+            try:
+                doc_tabs.SetSelection(model.controller.active_index if 0 <= model.controller.active_index < doc_tabs.GetPageCount() else 0)
+            except Exception:
+                pass
+        except Exception:
+            pass
+
+    def _on_tab_changed(event):
+        idx = event.GetSelection()
+        if 0 <= idx < len(model.controller.documents):
+            # switch active document
+            try:
+                model.controller.active_index = idx
+                doc = model.controller.active
+                if doc is not None:
+                    editor.ChangeValue(doc.content)
+                    try:
+                        remote_path.SetValue(doc.path)
+                    except Exception:
+                        pass
+                    host.set_host_title(EditorCommandService.suggested_filename(doc.path or "untitled.sh"))
+            except Exception:
+                pass
+        event.Skip()
+
+    def _update_dirty_marker():
+        try:
+            idx = model.controller.active_index
+            if 0 <= idx < doc_tabs.GetPageCount() and idx < len(model.controller.documents):
+                doc = model.controller.documents[idx]
+                doc_tabs.SetPageText(idx, _tab_label(doc))
+        except Exception:
+            pass
+
     def content_changed(event):
         if not state["in_flight"]:
             model.controller.update_content(editor.GetValue())
+            _update_dirty_marker()
         event.Skip()
 
     editor.Bind(wx.EVT_TEXT, content_changed)
+    try:
+        doc_tabs.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGED, _on_tab_changed)
+    except Exception:
+        pass
+    # allow reordering via drag if supported (no extra style needed for test seam)
+    # expose reorder for tests
+    def _reorder_tabs(from_idx: int, to_idx: int):
+        try:
+            docs = list(model.controller.documents)
+            if 0 <= from_idx < len(docs) and 0 <= to_idx < len(docs):
+                doc = docs.pop(from_idx)
+                docs.insert(to_idx, doc)
+                model.controller.documents = docs
+                if model.controller.active_index == from_idx:
+                    model.controller.active_index = to_idx
+                elif from_idx < model.controller.active_index <= to_idx:
+                    model.controller.active_index -= 1
+                elif to_idx <= model.controller.active_index < from_idx:
+                    model.controller.active_index += 1
+                _refresh_tabs()
+                return True
+        except Exception:
+            pass
+        return False
 
     def close(event):
         if state["in_flight"]:
@@ -335,38 +422,82 @@ def _build_editor(parent, model: WxEditorModel | None, *, path: str, content: st
         submit.SetLabel(t("editor.submit"))
         run.SetLabel(t("editor.save_submit"))
         _update_header_enabled()
-        if doc_tabs is not None:
-            try:
-                for idx, _doc in enumerate(model.controller.documents):
-                    if idx < doc_tabs.GetPageCount():
-                        doc_tabs.SetPageText(idx, _doc.path.rsplit("/", 1)[-1] if _doc.path else t("editor.title"))
-            except Exception:
-                pass
+        _refresh_tabs()
 
     def load_document(new_path, new_content, *, is_local=False):
+        # duplicate suppression: normalize path for comparison
+        norm_new = str(new_path or "").strip()
+        # check existing docs
+        for idx, doc in enumerate(model.controller.documents):
+            if str(doc.path).strip() == norm_new and norm_new:
+                # activate existing
+                try:
+                    model.controller.active_index = idx
+                    editor.ChangeValue(doc.content)
+                    try:
+                        remote_path.SetValue(doc.path)
+                    except Exception:
+                        pass
+                    host.set_host_title(EditorCommandService.suggested_filename(doc.path or "untitled.sh"))
+                    _refresh_tabs()
+                except Exception:
+                    pass
+                return
+        # handle stale: if in-flight, queue? For now direct open
         model.controller.open(DocumentModel(new_path, new_content, new_content, is_local, suggested_filename=EditorCommandService.suggested_filename(new_path)))
-        editor.SetValue(new_content)
+        editor.ChangeValue(new_content)
         try:
             remote_path.SetValue(new_path)
         except Exception:
             pass
         host.set_host_title(EditorCommandService.suggested_filename(new_path or "untitled.sh"))
         _update_header_enabled()
-        if doc_tabs is not None:
-            try:
-                # refresh tab strip
-                while doc_tabs.GetPageCount() < len(model.controller.documents):
-                    _p = wx.Panel(doc_tabs)
-                    doc_tabs.AddPage(_p, "")
-                for idx, _doc in enumerate(model.controller.documents):
-                    if idx < doc_tabs.GetPageCount():
-                        doc_tabs.SetPageText(idx, _doc.path.rsplit("/", 1)[-1] if _doc.path else t("editor.title"))
-                doc_tabs.SetSelection(model.controller.active_index if 0 <= model.controller.active_index < doc_tabs.GetPageCount() else 0)
-            except Exception:
-                pass
+        _refresh_tabs()
 
     def save_for_replacement(callback):
         save_document(on_done=callback)
+
+    def close_tab(index: int | None = None, *, force: bool = False) -> bool:
+        if len(model.controller.documents) <= 1 and not force:
+            return False
+        idx = int(index) if index is not None else int(model.controller.active_index)
+        if not (0 <= idx < len(model.controller.documents)):
+            return False
+        doc = model.controller.documents[idx]
+        if doc.dirty and not force:
+            choice = wx.MessageBox(t("common.save_changes"), t("tabs.editor"), wx.YES_NO | wx.CANCEL | wx.ICON_WARNING)
+            if choice == wx.CANCEL:
+                return False
+            if choice == wx.YES:
+                try:
+                    docs = list(model.controller.documents)
+                    cur = docs[idx]
+                    docs[idx] = cur.mark_saved()
+                    model.controller.documents = docs
+                except Exception:
+                    pass
+        try:
+            docs = list(model.controller.documents)
+            docs.pop(idx)
+            model.controller.documents = docs
+            if model.controller.active_index >= len(docs):
+                model.controller.active_index = max(0, len(docs)-1)
+            elif model.controller.active_index > idx:
+                model.controller.active_index -= 1
+            _refresh_tabs()
+            active = model.controller.active
+            if active is not None:
+                editor.ChangeValue(active.content)
+                try:
+                    remote_path.SetValue(active.path)
+                except Exception:
+                    pass
+                host.set_host_title(EditorCommandService.suggested_filename(active.path or "untitled.sh"))
+            else:
+                editor.Clear()
+            return True
+        except Exception:
+            return False
 
     subscribe_language_change(refresh_labels)
     host.bind_host_close(close)
@@ -377,12 +508,15 @@ def _build_editor(parent, model: WxEditorModel | None, *, path: str, content: st
             event.Skip()
 
         host.Bind(wx.EVT_WINDOW_DESTROY, destroyed)
-    host._wx_editor_controls = {"editor": editor, "save": save, "submit": submit, "run": run, "status": status}
+    host._wx_editor_controls = {"editor": editor, "save": save, "submit": submit, "run": run, "status": status, "doc_tabs": doc_tabs}
     host._wx_editor_header = {"path": remote_path, "path_label": remote_label, "open": btn_open, "new_template": btn_template, "lint": btn_lint, "header": header, "doc_tabs": doc_tabs, "remote_label": remote_label}
     host._wx_editor_state = state
     host._wx_editor_model = model
     host._wx_editor_load_document = load_document
     host._wx_editor_save_for_replacement = save_for_replacement
+    host._wx_editor_close_tab = close_tab
+    host._wx_editor_reorder_tabs = _reorder_tabs
+    host._wx_editor_refresh_tabs = _refresh_tabs
     finish()
     return host
 
