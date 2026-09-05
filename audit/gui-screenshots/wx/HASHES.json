@@ -1,5 +1,5 @@
 {
-  "captured_utc": "2026-09-05T13:13:33+00:00",
+  "captured_utc": "2026-09-05T13:56:14+00:00",
   "language": "en",
   "window_size": "1100x720",
   "wx_version": "4.3.1 msw (phoenix) wxWidgets 3.3.3",
@@ -14,12 +14,12 @@
   ],
   "files": {
     "main.png": {
-      "sha256": "5c37828c00002a996e6d39766f55e25522053274d51f7dc84cb8f481758a1380",
-      "bytes": 11007
+      "sha256": "bbcd80865acacc4df4c7cd230c1713977a21623ffb15de1bd6fa725df2c262a0",
+      "bytes": 11022
     },
     "connection.png": {
-      "sha256": "5c37828c00002a996e6d39766f55e25522053274d51f7dc84cb8f481758a1380",
-      "bytes": 11007
+      "sha256": "bbcd80865acacc4df4c7cd230c1713977a21623ffb15de1bd6fa725df2c262a0",
+      "bytes": 11022
     },
     "jobs.png": {
       "sha256": "1afd31538f2129d748cabc17113ba3a3befed38a2b7d8d5454be2322ac5a5a33",
