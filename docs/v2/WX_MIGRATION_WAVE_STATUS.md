@@ -1,7 +1,7 @@
 # wx Migration Wave Status Ledger — Waves 00–70 (Revalidated 2026-09-05)
 
 > **Kaynak:** `waves.zip` içindeki `waves/waiting/wave_*.md` (00–70) + `WAVE_STATUS` için zorunlu ek dalgalar 57A/62A/65A/65B
-> **SHA:** `8a23fd7` (başlangıç) → `7dae696` (recovered workspace) → `beb3ca1` Wave 54 + merge
+> **SHA:** `8a23fd7` (başlangıç) → `7dae696` (recovered workspace) → `beb3ca1` Wave 54 + merge → `c694b5c` Wave45 / `1636d37` rapor
 > **Kural:** Qt üretimde kalır (`DEFAULT_GUI_RUNTIME="qt"`). Ekran görüntüsü kanıtları `audit/gui-screenshots/{qt,wx}/` altında tek kanonik küme olmalıdır.
 
 ## 1) Qt Referansı
@@ -157,6 +157,20 @@ Gerçek: 48 FAILED_VERIFICATION, 50/51/55/56/57/57A/58-65/65A/65B BLOCKED/PARTIA
 
 Delegate işi `develop`'a ulaşmadan tamam sayılmaz. Bu turdaki `wx_ansys_view.py` + `wx_terminal.py` iyileştirmeleri `beb3ca1`/`f331d1e` ile `origin/develop` (`7dae696` recovered workspace) üzerine entegre edilmek üzere birleştiriliyor.
 
+## 15) Sequential Closure Update 2026-09-06 — Waves 45→54
+
+**Sıralı ilerleme:** 45 VERIFIED_COMPLETE → 48 PARTIAL (sıradaki durak)
+
+| Wave | Baseline (Qt vs wx) | Uygulama | Kanıt (evidence) | Statü |
+|---|---|---|---|---|
+| 45 Terminal | Qt: WebEngine terminal with clear/find/font/PTY resize. wx önce: detached'da Find/Clear/font vardı, embedded ayrı ham TextCtrl | `wx_terminal.py:63-260` `build_terminal_panel` unified: toolbar Find/Clear/A−/A+ + model resize/PTY, i18n hint, bounded 5000, lifecycle, detached `show_terminal` paneli sarar, `wx_shell.py:253` embedded aynı paneli gömer, `session_state._embedded_terminal_panel` üzerinden ssh güncellenir | `tests/test_wx_embedded_terminal.py` 9 test (PROVEN: Find/Clear/font/Ctrl-C vs copy/i18n/resize/share) + `test_wx_terminal.py` 2 | **VERIFIED_COMPLETE** |
+| 48 Files Sync/Compare | Qt: `ftp_widget.py: sync_browsing` (root map, guard, disable) + `compare_directories` (name/type/size/mtime, visible column/result). wx: Files workspace'te sync_cb/compare_btn disabled, bağlantısız | Henüz disabled durumda; service `sync_browsing.py`/`compare` ayrımı eklenmedi. Görünür kontrol var ama wired değil → placeholder değil ama işlevsiz | Yapısal: `wx_shell.py:181` controls var, test yok | **PARTIAL** |
+| 50 Jobs | Qt: `jobs_outputs_widget.py` 3 alt sekme (Details/Files/Outputs) + live-tail/backoff. wx: `wx_jobs.py:342-365` Files/Outputs placeholder TextCtrl | Datasource bağlı değil, off-GUI-thread ve stale koruması sadece Details'te | `test_wx_jobs.py` PASS ama Files/Outputs için PROVEN yok | **PARTIAL** |
+| 51 Editor | Qt: movable/closable tabs, dirty marker `*`, duplicate suppression, active doc. wx: `wx_editor_view.py:48` sadece model>1 iken tab strip | Dinamik tab yok, dirty marker güncellenmiyor, reorder yok | `test_wx_editor.py` PASS ama multi-doc PROVEN yok | **PARTIAL** |
+| 54 ANSYS | Qt: `ansys_lint_results_dialog.py` grouped severity + details. wx önce: hardcoded English, direkt render test | `wx_ansys_view.py` i18n key'ler eklendi (`en/tr.json: ansyslint.pick_files/pick_folder/lint/clear/col_*`), `build_ansys_frame(file_chooser/folder_chooser/browser_launcher)` seam, lifecycle closed guard, `tests/test_wx_ansys_view.py` 8 test (PROVEN: PickFiles/PickFolder real event, details/copy/docs, close-in-flight, i18n) | `test_wx_ansys_view.py` 8/8, `test_wx_ansys.py` 2/2 | **VERIFIED_COMPLETE** (davranışsal), görsel kanıt `audit/gui-screenshots/wx/ansys.png` hâlâ PARTIAL |
+
+**Sequential karar:** 45 VERIFIED_COMPLETE, 48 PARTIAL → bir sonraki sıralı dalga **48**. 48–51 kapanmadan 55–57 sweep başlatılamaz.
+
 ---
 
-**Son Güncelleme:** 2026-09-05T18:00Z — Koordinatör (Wave 54 odaklı, merged with recovered workspace)
+**Son Güncelleme:** 2026-09-06 — Koordinatör (Wave 45→54 sequential, 45+54 hardened)

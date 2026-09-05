@@ -1026,6 +1026,20 @@
     "documentation": "Belgelendirme",
     "copy_diagnostic": "Tanıyı kopyala",
     "copy_suggestion": "Öneriyi kopyala",
-    "open_documentation": "Belgeyi aç"
+    "open_documentation": "Belgeyi aç",
+    "pick_files": "Dosya Seç",
+    "pick_folder": "Klasör Seç",
+    "lint": "Lint",
+    "clear": "Temizle",
+    "col_file": "Dosya",
+    "col_severity": "Önem",
+    "col_location": "Konum",
+    "col_code": "Kod",
+    "col_message": "Mesaj",
+    "no_file_selected": "Dosya seçilmedi",
+    "invalid_file": "Geçersiz dosya: {path}",
+    "invalid_folder": "Geçersiz klasör: {path}",
+    "no_supported_files": "Desteklenen dosya yok.",
+    "engine_error": "Motor hatası"
   }
 }
