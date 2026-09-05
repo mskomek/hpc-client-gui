@@ -77,6 +77,8 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
     lifecycle = lifecycle or WxLifecycleController()
     session_state = session_state or {"session": None, "generation": 0}
     frame = wx.Frame(None, title=f"HPC Client GUI {__version__}", size=(960, 640))
+    # Adaptive layout contract: minimum below which controls would clip, sized from widest required row
+    frame.SetMinSize(wx.Size(960, 640))
     panel = wx.Panel(frame)
     root = wx.BoxSizer(wx.VERTICAL)
     menu = wx.Menu()
@@ -156,8 +158,8 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
     _remote = _remote_files_callbacks(session_state, frame, lifecycle)
     local_panel = build_local_files_panel(top_splitter, **_local)
     remote_panel = build_remote_files_panel(top_splitter, **_remote)
-    top_splitter.SplitVertically(local_panel, remote_panel, 300)
-    top_splitter.SetMinimumPaneSize(200)
+    top_splitter.SplitVertically(local_panel, remote_panel, 340)
+    top_splitter.SetMinimumPaneSize(300)
     from hpc_gui.wx_transfer_workspace import build_transfers_panel
 
     transfers_panel = build_transfers_panel(transfer_splitter)

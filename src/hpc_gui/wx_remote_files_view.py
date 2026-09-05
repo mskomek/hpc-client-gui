@@ -51,7 +51,9 @@ def _build_remote_files(parent, model: WxRemoteDirectoryModel | None = None, *, 
     # --- toolbar (Qt parity). Only keys existing in both en/tr instantiated.
     # Existing: dirs.new_folder, new_file, upload, download_selected, delete, undo, favorites, history, refresh
     # Missing filter keys (dirs.filter_*) omitted entirely.
-    toolbar = wx.BoxSizer(wx.HORIZONTAL)
+    # WrapSizer so the row flows onto a second line in a narrow pane instead of
+    # clipping. Hiding buttons to make the row fit would remove functionality.
+    toolbar = wx.WrapSizer(wx.HORIZONTAL)
     btn_new_folder = wx.Button(panel, label=t("dirs.new_folder"))
     btn_new_file = wx.Button(panel, label=t("dirs.new_file"))
     btn_upload = wx.Button(panel, label=t("dirs.upload"))
@@ -63,7 +65,7 @@ def _build_remote_files(parent, model: WxRemoteDirectoryModel | None = None, *, 
     btn_refresh = wx.Button(panel, label=t("dirs.refresh"))
     for b in (btn_new_folder, btn_new_file, btn_upload, btn_download, btn_delete, btn_undo, btn_favorites, btn_history, btn_refresh):
         toolbar.Add(b, 0, wx.ALL, 3)
-    # disable buttons lacking callback: new_file, favorites, history have no panel callback
+    # No panel callback exists for these yet, so they stay visible but disabled.
     btn_new_file.Disable()
     btn_favorites.Disable()
     btn_history.Disable()

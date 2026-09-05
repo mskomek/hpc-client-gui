@@ -231,8 +231,8 @@ def _build_directories(parent, *, session_state=None, workspace: WxDirectoriesWo
     home_sizer.Add(home_panel, 1, wx.EXPAND)
     home_container.SetSizer(home_sizer)
 
-    splitter.SplitVertically(scratch_container, home_container, 500)
-    splitter.SetMinimumPaneSize(200)
+    splitter.SplitVertically(scratch_container, home_container, 460)
+    splitter.SetMinimumPaneSize(260)
     root.Add(splitter, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 8)
     panel.SetSizer(root)
 
