@@ -47,6 +47,10 @@ def _close(app, frame, lifecycle):
     for _ in range(10):
         app.ProcessPendingEvents()
         wx.MilliSleep(2)
+    # Destroy() is deferred, and ProcessPendingEvents() alone does not reclaim
+    # the pending deletes. Without this yield they pile up across the run and the
+    # process exhausts its 10,000 USER object allowance part-way through.
+    wx.SafeYield()
 
 
 def test_wx_shell_p0_stress_real_wx_paths():
@@ -76,7 +80,12 @@ def test_wx_shell_p0_stress_real_wx_paths():
             frame.ProcessEvent(wx.CommandEvent(wx.wxEVT_MENU, item.GetId()))
             if expected not in jobs_frame.GetTitle():
                 metrics["wrong_language_labels"] += 1
-            labels = [frame.GetTitle(), frame._wx_shell_controls["description"].GetLabel()]
+            controls = frame._wx_shell_controls
+            labels = [frame.GetTitle()]
+            labels.extend(
+                controls[name].GetLabel()
+                for name in ("update", "plugins", "send_logs", "settings", "help")
+            )
             labels.extend(item.GetItemLabelText() for item in frame._wx_shell_controls["language_items"].values())
             if any("[" in label for label in labels):
                 metrics["missing_translation_labels"] += 1

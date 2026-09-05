@@ -1,0 +1,49 @@
+{
+  "captured_utc": "2026-09-05T13:56:14+00:00",
+  "language": "en",
+  "window_size": "1100x720",
+  "wx_version": "4.3.1 msw (phoenix) wxWidgets 3.3.3",
+  "tab_order": [
+    "Connection",
+    "Jobs & Outputs",
+    "Directories",
+    "Files",
+    "Script Editor",
+    "Terminal",
+    "Logs"
+  ],
+  "files": {
+    "main.png": {
+      "sha256": "bbcd80865acacc4df4c7cd230c1713977a21623ffb15de1bd6fa725df2c262a0",
+      "bytes": 11022
+    },
+    "connection.png": {
+      "sha256": "bbcd80865acacc4df4c7cd230c1713977a21623ffb15de1bd6fa725df2c262a0",
+      "bytes": 11022
+    },
+    "jobs.png": {
+      "sha256": "1afd31538f2129d748cabc17113ba3a3befed38a2b7d8d5454be2322ac5a5a33",
+      "bytes": 21381
+    },
+    "directories.png": {
+      "sha256": "76751b37560febc8ca1a5c7b7cae46148c99faf1f025ff58ae96a7338eafc6af",
+      "bytes": 18158
+    },
+    "files.png": {
+      "sha256": "b45a9f109fed994de6b35e44453b52174c6fcddd558c9f3c2bd68193d283e72b",
+      "bytes": 33512
+    },
+    "editor.png": {
+      "sha256": "48e47a795d4953a4e3d482827edd5d5aa132549d1cf2ba3f294cc3e542e971a9",
+      "bytes": 13211
+    },
+    "terminal.png": {
+      "sha256": "d6d8f441e6306f61d504d49c83721d602194f77c912eb41f8c5fd12de6af3616",
+      "bytes": 8779
+    },
+    "logs.png": {
+      "sha256": "c13b5ef3ac00b4448ba0ea77b6654ec54de7db457c33299e2f40c65e36582469",
+      "bytes": 63944
+    }
+  }
+}
