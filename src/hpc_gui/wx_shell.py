@@ -251,16 +251,17 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
     notebook.AddPage(editor_panel, t("tabs.editor"), False)
     page_controls["NAV-EDITOR"] = {"page": editor_panel}
 
-    # Terminal (existing page, unchanged)
-    terminal_page = wx.Panel(notebook)
-    terminal_sizer = wx.BoxSizer(wx.VERTICAL)
-    terminal_output = wx.TextCtrl(terminal_page, style=wx.TE_MULTILINE | wx.TE_READONLY | wx.HSCROLL)
-    terminal_input = wx.TextCtrl(terminal_page, style=wx.TE_PROCESS_ENTER)
-    terminal_sizer.Add(terminal_output, 1, wx.EXPAND | wx.ALL, 8)
-    terminal_sizer.Add(terminal_input, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 8)
-    terminal_page.SetSizer(terminal_sizer)
+    # Terminal — unified reusable panel (same as detached)
+    from hpc_gui.wx_terminal import build_terminal_panel as _build_terminal_panel
+    _term_session = session_state.get("session") or {}
+    _term_ssh = _term_session.get("ssh")
+    terminal_page = _build_terminal_panel(notebook, ssh=_term_ssh, lifecycle=lifecycle)
+    # expose for session updates; on_connected will call _wx_terminal_set_ssh
+    session_state["_embedded_terminal_panel"] = terminal_page
     notebook.AddPage(terminal_page, t("help.section_terminal"), False)
-    page_controls["NAV-TERMINAL"] = {"page": terminal_page, "output": terminal_output, "input": terminal_input}
+    # keep backward-compatible controls map plus direct panel controls
+    _term_controls = getattr(terminal_page, "_wx_terminal_controls", {})
+    page_controls["NAV-TERMINAL"] = {"page": terminal_page, **_term_controls, "output": _term_controls.get("output"), "panel": terminal_page}
 
     # Logs
     _logs = _logs_callbacks(session_state, frame, lifecycle)
@@ -271,19 +272,6 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
     panel.SetSizer(root)
     frame.CreateStatusBar()
     frame.SetStatusText(t("common.ready"))
-
-    def send_terminal_input(event):
-        session = session_state.get("session") or {}
-        ssh = session.get("ssh")
-        value = terminal_input.GetValue()
-        if ssh and value:
-            ssh.send_shell_input(value + "\n")
-            terminal_input.Clear()
-        elif not ssh:
-            terminal_output.AppendText(t("login.status_disconnected") + "\n")
-        event.Skip()
-
-    terminal_input.Bind(wx.EVT_TEXT_ENTER, send_terminal_input)
 
     def refresh_labels(_language=None):
         frame.SetTitle(f"{t('app.title')} {__version__}")
@@ -1092,6 +1080,13 @@ def _connection_callbacks(session_state, parent, lifecycle):
         ssh = session.get("ssh") if isinstance(session, dict) else None
         if ssh is not None and callable(getattr(ssh, "close", None)):
             lifecycle.register_cleanup(ssh.close)
+        # keep embedded terminal in sync with new ssh
+        try:
+            panel = session_state.get("_embedded_terminal_panel")
+            if panel is not None and hasattr(panel, "_wx_terminal_set_ssh"):
+                panel._wx_terminal_set_ssh(ssh)
+        except Exception:
+            pass
 
     return {"profiles": profiles, "lifecycle": lifecycle, "on_connected": on_connected}
 

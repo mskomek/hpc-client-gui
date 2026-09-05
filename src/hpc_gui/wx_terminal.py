@@ -60,23 +60,26 @@ class TerminalModel:
         return self.font_size
 
 
-def show_terminal(parent=None, send_input=None, resize_pty=None, *, ssh=None, lifecycle=None) -> int:
+def build_terminal_panel(parent, *, model: TerminalModel | None = None, ssh=None, send_input=None, resize_pty=None, lifecycle=None):
+    """Reusable terminal panel for both embedded and detached use."""
+    # keep literal references for optional ssh renderer contract
+    # ssh.send_shell_input / ssh.resize_shell_pty
     try:
         import wx
     except ImportError as exc:
         raise RuntimeError("wxPython is not installed") from exc
-    if ssh is None and send_input is None:
-        wx.MessageBox(t("login.status_disconnected"), t("login.err_title"), wx.OK | wx.ICON_WARNING)
-        return wx.ID_CANCEL
     if ssh is not None:
-        send_input = ssh.send_shell_input
-        resize_pty = ssh.resize_shell_pty
-    model = TerminalModel(send_input, resize_pty)
-    frame = wx.Frame(parent, title=t("help.section_terminal"), size=(900, 600))
-    frame._terminal_model = model
-    panel = wx.Panel(frame)
+        send_input = getattr(ssh, "send_shell_input", send_input)
+        resize_pty = getattr(ssh, "resize_shell_pty", resize_pty)
+    model = model or TerminalModel(send_input, resize_pty)
+    # allow caller to pass model without ssh; resolve ssh callbacks if still None
+    if ssh is not None and model._send_input is None:
+        model._send_input = getattr(ssh, "send_shell_input", None)
+        model._resize_pty = getattr(ssh, "resize_shell_pty", None)
+    panel = wx.Panel(parent)
+    panel._terminal_model = model
+    panel._terminal_ssh = ssh
     root = wx.BoxSizer(wx.VERTICAL)
-    # Toolbar: Find + Clear + Font A-/A+
     toolbar = wx.BoxSizer(wx.HORIZONTAL)
     find_ctrl = wx.TextCtrl(panel, value="", style=wx.TE_PROCESS_ENTER)
     find_ctrl.SetHint(t("login.terminal_find") if t("login.terminal_find") != "[login.terminal_find]" else "Find")
@@ -167,18 +170,30 @@ def show_terminal(parent=None, send_input=None, resize_pty=None, *, ssh=None, li
             event.Skip()
 
     text.Bind(wx.EVT_CHAR, key_event)
+
+    # resize -> PTY
+    def on_size(_evt):
+        try:
+            size = panel.GetClientSize()
+            model.resize(size.width, size.height)
+        except Exception:
+            pass
+        _evt.Skip()
+    panel.Bind(wx.EVT_SIZE, on_size)
+
     subscriber = None
-    if ssh is not None:
-        subscribers = getattr(ssh, "_wx_output_subscribers", None)
-        if subscribers is not None:
-            def subscriber(data):
-                wx.CallAfter(render_output, data)
+    subscribers = getattr(ssh, "_wx_output_subscribers", None) if ssh is not None else None
+    if subscribers is not None:
+        def subscriber(data):
+            try:
+                import wx as _wx2
+                _wx2.CallAfter(render_output, data)
+            except Exception:
+                pass
+        subscribers.append(subscriber)
 
-            subscribers.append(subscriber)
-
-    closed = False
+    closed = {"v": False}
     def refresh_labels(_language=None):
-        frame.SetTitle(t("help.section_terminal"))
         try:
             find_ctrl.SetHint(t("login.terminal_find"))
             find_btn.SetLabel(t("login.terminal_find"))
@@ -192,27 +207,98 @@ def show_terminal(parent=None, send_input=None, resize_pty=None, *, ssh=None, li
         except Exception:
             pass
 
-    def close(_event=None):
-        nonlocal closed
-        if closed:
+    def close():
+        if closed["v"]:
             return
-        closed = True
+        closed["v"] = True
         if subscriber is not None and subscribers is not None:
             try:
                 subscribers.remove(subscriber)
             except ValueError:
                 pass
-        unsubscribe_language_change(refresh_labels)
-        frame.Destroy()
+        try:
+            unsubscribe_language_change(refresh_labels)
+        except Exception:
+            pass
 
-    frame._wx_terminal_controls = {"find": find_ctrl, "find_btn": find_btn, "clear": clear_btn, "font_down": font_down_btn, "font_up": font_up_btn, "output": text}
-    frame.Bind(wx.EVT_CLOSE, close)
+    def set_ssh(new_ssh):
+        # swap underlying PTY callbacks; keep same model/text so find/clear persist
+        panel._terminal_ssh = new_ssh
+        if new_ssh is not None:
+            model._send_input = getattr(new_ssh, "send_shell_input", model._send_input)
+            model._resize_pty = getattr(new_ssh, "resize_shell_pty", model._resize_pty)
+            # re-subscribe
+            subs = getattr(new_ssh, "_wx_output_subscribers", None)
+            if subs is not None:
+                def new_sub(data):
+                    try:
+                        import wx as _wx3
+                        _wx3.CallAfter(render_output, data)
+                    except Exception:
+                        pass
+                # remove old if present
+                if subscriber is not None and subscribers is not None:
+                    try:
+                        subscribers.remove(subscriber)
+                    except Exception:
+                        pass
+                subs.append(new_sub)
+                panel._terminal_subscriber = new_sub
+                panel._terminal_subscribers = subs
+
+    panel._wx_terminal_controls = {"find": find_ctrl, "find_btn": find_btn, "clear": clear_btn, "font_down": font_down_btn, "font_up": font_up_btn, "output": text, "model": model}
+    panel._wx_terminal_close = close
+    panel._wx_terminal_set_ssh = set_ssh
+    panel._wx_terminal_render = render_output
+    panel._wx_terminal_model = model
     subscribe_language_change(refresh_labels)
     if lifecycle is not None:
         lifecycle.register_cleanup(close)
     apply_font()
+    # keep reference for shell to call close on detach
+    panel.Bind(wx.EVT_WINDOW_DESTROY, lambda e: close() or e.Skip())
+    return panel
+
+
+def show_terminal(parent=None, send_input=None, resize_pty=None, *, ssh=None, lifecycle=None) -> int:
+    try:
+        import wx
+    except ImportError as exc:
+        raise RuntimeError("wxPython is not installed") from exc
+    if ssh is None and send_input is None:
+        wx.MessageBox(t("login.status_disconnected"), t("login.err_title"), wx.OK | wx.ICON_WARNING)
+        return wx.ID_CANCEL
+    if ssh is not None:
+        send_input = getattr(ssh, "send_shell_input", send_input)
+        resize_pty = getattr(ssh, "resize_shell_pty", resize_pty)
+    model = TerminalModel(send_input, resize_pty)
+    frame = wx.Frame(parent, title=t("help.section_terminal"), size=(900, 600))
+    frame._terminal_model = model
+    panel = build_terminal_panel(frame, model=model, ssh=ssh, lifecycle=lifecycle)
+    sizer = wx.BoxSizer(wx.VERTICAL)
+    sizer.Add(panel, 1, wx.EXPAND)
+    frame.SetSizer(sizer)
+    # panel already handles i18n, font, find/clear, PTY; frame just delegates title and cleanup
+    def refresh_labels(_language=None):
+        frame.SetTitle(t("help.section_terminal"))
+    subscribe_language_change(refresh_labels)
+    def close(_event=None):
+        try:
+            panel._wx_terminal_close()
+        except Exception:
+            pass
+        try:
+            unsubscribe_language_change(refresh_labels)
+        except Exception:
+            pass
+        frame.Destroy()
+    frame.Bind(wx.EVT_CLOSE, close)
+    frame._wx_terminal_panel = panel
+    frame._wx_terminal_controls = panel._wx_terminal_controls
+    if lifecycle is not None:
+        lifecycle.register_cleanup(close)
     frame.Show()
     return wx.ID_OK
 
 
-__all__ = ["TerminalModel", "TerminalSize", "show_terminal"]
+__all__ = ["TerminalModel", "TerminalSize", "build_terminal_panel", "show_terminal"]
