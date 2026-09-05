@@ -1,0 +1,238 @@
+Repository state
+
+- Branch: `develop`, worktree temiz (untracked: `.integration-recovery/`, `waves.zip`, `waves_inspect/` — roadmap arşivleri, üretim dışı)
+- `DEFAULT_GUI_RUNTIME="qt"` değişmedi; `PySide6`/`shiboken6` kaldırılmadı; `.tmp/` dokunulmadı
+
+Starting HEAD
+
+- Uzak `develop` HEAD (görevde verilen): `7dae696bae43eadaf8978c8eea2f485acedbb80f`
+- Yerel `develop` HEAD başlangıç: `8a23fd7 Update the wave ledger after the stress-test fix`
+
+Ending HEAD
+
+- `beb3ca1 Wave 54: real wx ANSYS surface + terminal Find/Clear/font + wave ledger 00-70`
+
+Roadmap source
+
+- `waves.zip` → `waves_inspect/waves/waiting/wave_*.md` (00–70) + `wave_42`–`wave_70` + yeni zorunlu dalgalar 57A/62A/65A/65B bu görevde eklendi
+- Ledger: `docs/v2/WX_MIGRATION_WAVE_STATUS.md` (00–70, sütunlar: Wave / Objective / Acceptance / Implementation / Test / Visual / Platform / Commit / Status / Remaining)
+
+Sequential wave position at start
+
+- `Wave 54 — wx ANSYS Trusted Tool UI` ilk çözülmemiş sıralı dalga; daha yüksek numaralı dalgalar kısmen uygulanmış ama denetlenmemiş
+
+Sequential wave position at end
+
+- Wave 54 için üretim kodu teslim edildi ancak entegrasyon kanıtı (commit `develop`'ta, ekran görüntüsü, EN/TR) eksik olduğu için **PARTIAL** → sıralı pozisyon hâlâ **Wave 54**; 54 VERIFIED_COMPLETE olmadan 55+ ilerlenemez
+
+Revalidated Waves 42–53
+
+- Hafif regresyon: kod var mı / bağlı mı / test üretim yolunu çalıştırıyor mu / sonraki refactor bypass etmiş mi / parity kanıtı güncel mi kontrol edildi
+- Sonuç: 42 PARTIAL, 43 PARTIAL, 44 VERIFIED_COMPLETE, 45 PARTIAL→düzeltildi (aşağıya bak), 46 VERIFIED_COMPLETE, 47 VERIFIED_COMPLETE, 48 FAILED_VERIFICATION (sync browsing / compare directories görünür değil), 49 PARTIAL, 50 PARTIAL (Files/Outputs alt sekmeleri), 51 PARTIAL (multi-doc tab strip), 52 PARTIAL, 53 VERIFIED_COMPLETE
+
+Wave 54 result
+
+- **PARTIAL** (teslim edildi, entegrasyon bekleniyor)
+- Teslim: `src/hpc_gui/wx_ansys_view.py:1-389` — gerçek wx Frame: Pick Files / Pick Folder / Lint → `WxAnsysModel:lint_files/lint_folder` → motor (`AnsysToolPresentation:run`) → grouped ListCtrl (File/Severity/Location/Code/Message) + severity grupla, explanation/confidence/fix/source_url detay paneli, Copy diagnostic / Copy suggestion / Open documentation (allowlist `help_catalog.is_allowed_external_url`), summary `error/warning/info`, EN/TR `subscribe_language_change` ile çalışır; `src/hpc_gui/wx_ansys.py:18-43` motoru çoğaltmaz, suffix filtresi ve `MAX_FOLDER_FILES=200` korunur; hata kurtarma (engine error/invalid file/folder/empty/partial) `wx.MessageBox`; `src/hpc_gui/wx_shell.py:600` `PLUGIN-ANSYS-LINTER` dispatch eklendi
+- Test: `tests/test_wx_ansys.py` 2/2 + yeni `tests/test_wx_ansys_view.py` 3/3 (real wx event: single file grouped, empty+bROKEN, folder cap 205→200) — `D:\Python\Python312\python.exe -m pytest` Windows
+- Görsel: kanonik `audit/gui-screenshots/wx/ansys.png` henüz üretilmedi → visual PARTIAL
+- Platform: Windows duman PASS, Linux/macOS yok
+
+Reopened old waves
+
+- 48 (sync/compare), 50 (Jobs Files/Outputs), 51 (editor tab strip), GUI-PLUGIN-002 (Wave 54 öncesi model-only) yeniden açıldı; 45 terminal view eksikliği kapatıldı
+
+Wave 55 result
+
+- **PARTIAL** — `src/hpc_gui/wx_settings.py:11-54` GLOBAL/PROFILE ayrımı + LEGACY_IGNORED korunuyor, kalıcılık var; görsel parity/DPI kanıtı yok
+
+Wave 56 result
+
+- **PARTIAL** — `src/hpc_gui/wx_logs.py:12-36` bounded tail + `redact_text` var; Send Logs wx yüzeyi görsel doğrulanmadı, ZIP background kanıtı eksik
+
+Wave 57 result
+
+- **PARTIAL** — `src/hpc_gui/wx_lifecycle.py:18-75` progress/cancel/tray/notify + P0 `test_wx_shell_p0` 24 test, `test_wx_shell_p0_stress` 349/349; updater download bytes/%/cancel changelog wx yüzeyde görünür değil
+
+Wave 57A workspace/visual result
+
+- **Workspace: COVERED** — 7 sekme (Connection, Jobs & Outputs, Directories, Files, Script Editor, Terminal [wx-only belgeli], Logs) gömülü; `launcher_only=0`, `unexpected_primary_detached_frames=0`, `duplicate_primary_panels=0`, chrome satırı var
+- **Visual: PARTIAL** — spacing/margins/toolbar/column widths Qt'ye yakın; transfer paneli yok, DPI/resize cilası ve kanonik 7+1 çift (main/connection/jobs/directories/files/editor/logs + ansys) + SHA256 kontrolü eksik
+
+Wave 58 Windows result
+
+- **BLOCKED** — checklist `docs/v2/WINDOWS_WX_AUDIT_CHECKLIST.md` var fakat mevcut SHA `beb3ca1` için packaged smoke (startup/workspace/Settings/Plugins/ANSYS/Updater/Help/transfer/editor/jobs/shutdown) çalıştırılmadı; `audit/gui-screenshots/wx/*.png` tarihsel, SHA256 doğrulanmadı
+
+Wave 59 Linux result
+
+- **BLOCKED** — Windows'tan çıkarım yok; gerçek Linux paketli audit çalıştırılmadı (X11/Wayland farkı raporu yok)
+
+Wave 60 macOS result
+
+- **BLOCKED** — gerçek macOS audit + `codesign`/`hardened runtime`/`notarization`/`stapling`/`Gatekeeper`/`Apple Silicon`/`DMG`/`updater` doğrulanmadı; kimlik bilgileri yok
+
+Wave 61 accessibility result
+
+- **PARTIAL** — `src/hpc_gui/wx_terminal.py` toolbar + `wx_ansys_view.py` butonları klavye erişilebilir; ancak `GUI-A11Y-001` parity matrisinde yok, focus order/tab order/visible focus/a11y names/non-color cues sistematik test edilmedi
+
+Wave 62 parity result
+
+- **PARTIAL** — `src/hpc_gui/services/parity_matrix.py:18-46` tüm satırlar COVERED gösteriyor; model-only satırlar (GUI-XFER, GUI-JOBS Files/Outputs, GUI-EDIT tab strip) henüz PARTIAL'a düşürülmedi — 62A'da düşürülecek
+
+Wave 62A evidence-integrity result
+
+- **PARTIAL** — Sınıflar `PROVEN/PARTIAL/STRUCTURAL/MISSING` tanımlı; denetim başlatılmadı. GUI için `real wx event → visible UI → adapter → fake backend → completion → visible result` zinciri şartı uygulanmadı; source-string/helper/model-only testler tek başına yeterli değil
+
+Wave 63 manual GUI result
+
+- **PARTIAL** — `docs/v2/V2_MANUAL_GUI_TEST.md` var fakat güncel SHA `beb3ca1` ve yeni ekran görüntüleriyle yenilenmedi; resize/runtime dil/ANSYS/tray/terminal/files/jobs/editor/logs/shutdown listesi güncel değil
+
+Wave 64 migration/rollback result
+
+- **BLOCKED** — `V1 Qt config → V2 wx` (profiles/settings/keymap/hosts/plugins/credentials/updater) + `V1→V2→rollback→V1` dumanı çalıştırılmadı; yıkıcı migrasyon backup kontrolü yok
+
+Wave 65 packaged wx result
+
+- **BLOCKED** — Windows/Linux/macOS paketli E2E aynı SHA izlenebilir kanıtı yok
+
+Wave 65A integrated stress result
+
+- **BLOCKED** — Zorunlu sayımlar (tab switches 500 / workspace dispatches 300 / panel refreshes 300 / EN-TR 200 / resizes 200 / session 100 / jobs races 200 / navigation races 200 / file mutations 200 / FILE items 100 / editor 100 / logs 100 / detached 100 / open/close 50 / close-in-flight 50) çalıştırılmadı. `tests/test_wx_file003_final_stress.py` içindeki 200 retarget + 100+100 mutations P0 kanıtı, 65A entegre koşusu değil. Invariantlar (`wrong_workspace_targets`, `leaked_wx_windows`, vb.) ölçülmedi
+
+Wave 65B provenance/CI result
+
+- **BLOCKED** — `tested SHA / branch / OS / Python / wxPython / commands / exit codes / stress counts / invariants / screenshot SHA256 / artifact SHA256` provenansı + current-SHA CI (Windows/Linux/macOS wx) yok; tarihsel `GUI_SHELL_003_I18N_001_EXECUTION_EVIDENCE.json` stale
+
+Wave 66 Qt-removal decision
+
+- **NO-GO** — Koşullar: Wave 54–65 + 57A + 62A + 65A + 65B hepsi VERIFIED_COMPLETE olmalı; `GUI-WORKSPACE-001` COVERED olsa da `GUI-VISUAL-001` PARTIAL, `GUI-A11Y-001` yok, 48 FAILED_VERIFICATION, 50/51 PARTIAL, 58–65 BLOCKED, current-SHA CI yok → `Qt remains production runtime`
+
+Wave 67 status
+
+- **BLOCKED** — Sadece GO sonrası başlar; başlatılmadı, rollback mümkün seri commit planı hazırlanmadı
+
+Wave 68 status
+
+- **PARTIAL** — `THIRD_PARTY_NOTICES.md` var; fakat paketli artifact SBOM, bundled binary/DLL/dylib/.so envanteri, license reconciliation, vulnerability scan, unexpected Qt artifact scan yapılmadı
+
+Wave 69 status
+
+- **BLOCKED** — 65A önkoşul; saat ölçekli soak (memory/CPU/reconnect/throughput/terminal) çalıştırılmadı
+
+Wave 70 status
+
+- **BLOCKED** — Windows/macOS/Linux paket doğrulama, artifact SHA256, updater manifest integrity/signature, notes/migration/rollback, SBOM, `SIGNED` vs `UNSIGNED WITH DOCUMENTED POLICY` kararı verilmedi
+
+Previously claimed-complete waves reopened
+
+- 48 (FTP/Transfer sync/compare), 50 (Jobs Files/Outputs), 51 (Editor multi-doc), GUI-PLUGIN-002 (ANSYS) — önceki `COVERED` etiketleri `PARTIAL`/`FAILED_VERIFICATION`'a düşürüldü
+
+Delegated tasks
+
+- Koordinatör sahipliği: architecture/scope/integration/branch consistency/wave status/evidence quality. Önerilen delegate A–J modeli bu tur tek ajanla yürütüldü; paralel delegate çalıştırılmadı; paylaşılan dosyalar (`wx_shell.py`, `parity_matrix.py`, `V2_PARITY_STATUS.md`, `WX_MIGRATION_WAVE_STATUS.md`) tek entegrasyon sahibinde tutuldu
+
+Delegated commits integrated into develop
+
+- Bu tur entegrasyon: `beb3ca1` yerel `develop`'a commit edildi, henüz `origin/develop`'a push edilmedi (network/rejected — `git push origin develop` non-fast-forward + `Failed to connect to github.com:443`). Önceki delegate dallarının entegrasyonu (`delegate6b` vb.) mevcut ledger'de entegre; yeni ANSYS/terminal işi entegrasyon bekliyor. Kural: entegre commit `develop`'tan erişilebilir değilse wave complete sayılmaz → Wave 54 PARTIAL kalır
+
+Workspace parity
+
+- **PARTIAL** — `GUI-WORKSPACE-001 COVERED` (7 gömülü sekme, 0 launcher, 0 unexpected detached) fakat `GUI-VISUAL-001 PARTIAL` yüzünden grup PARTIAL
+
+Visual parity
+
+- **PARTIAL** — Ana/kronolojik hiyerarşi korunuyor, native wx stil; fakat transfer paneli yok, ANSYS yüzeyi yeni (ekran görüntüsü yok), DPI/resize kanıtı yok, `duplicate unrelated screenshot hashes = 0` doğrulanmadı
+
+Behavioral parity truthfulness
+
+- Davranışsal: terminal model, file/context, jobs/tracking, editor controller, ANSYS engine ayrımı korunuyor. Ancak görsel/workspace taşıyan satırlar COVERED bırakılarak tek boyutla diğer boyut gizleniyor → 62/62A'da düzeltilmesi gerekiyor
+
+ANSYS wx UI
+
+- `src/hpc_gui/wx_ansys_view.py:20-389` gerçek wx yüzey: Pick Files (`wx.FileDialog` multi), Pick Folder (`wx.DirDialog`), Lint butonu → `WxAnsysModel` → `AnsysToolPresentation:run` → grouped `wx.ListCtrl` + detay `why flagged/confidence/fix/src` + Copy/Open docs (allowlist) + summary; `src/hpc_gui/wx_ansys.py:18-43` motoru çoğaltmaz, suffix filtresi ve `MAX_FOLDER_FILES=200` korunur; hata kurtarma (engine error/invalid file/folder/empty/partial) `wx.MessageBox`; EN/TR `subscribe_language_change` ile çalışır; test: 3 real-wx test (single, empty/broken, folder cap 200)
+
+Terminal missing-capability result
+
+- **CLOSED** — Model zaten `find/clear/change_font_size` sağlıyordu (`src/hpc_gui/wx_terminal.py:52-60`). View'a bu tur toolbar eklendi: `find_ctrl` + `Find` (`model.find` → selection), `Clear` (`model.clear` + `text.Clear`), `A−`/`A+` (`model.change_font_size` → `SetFont`) — Qt `terminal_widget.py:120-128` referansıyla eşdeğer, `Ctrl+C` vs `Cmd/Ctrl+Shift+C/V` interrupt/copy ayrımı korundu
+
+Files sync/compare result
+
+- **OPEN (FAILED_VERIFICATION)** — Qt `ftp_widget.py:1057-1097` `sync_browsing` (toggle + menu) ve `compare_directories` (toggle) mevcut; wx `develop` kabukta görünür kontrol yok. `.integration-recovery/src/hpc_gui/wx_shell.py:181` prototipi `develop`'a entegre değil. Gerek: `visible control → TransferSessionController/RemoteDirectoryController → fake FS → visible result`
+
+Jobs output/files result
+
+- **OPEN** — `src/hpc_gui/wx_jobs.py:219-469` Jobs list/refresh/cancel/detached/follow var; fakat Qt `jobs_outputs_widget.py` içindeki Files/Outputs alt sekmeleri (datasource `stdout/stderr/current output` + live-tail/backoff) wx'te datasource'a bağlı değil
+
+Editor multi-document result
+
+- **OPEN** — `src/hpc_gui/wx_editor.py:19-50` + `wx_editor_windows.py:10-100` primary reuse + standalone var, dirty/duplicate-path suppression var; fakat Qt multi-document Notebook tab strip wx kabukta embed değil (wx editör ayrı Frame'ler). `movable/closable tabs`, `dirty markers` notebook içinde doğrulanmadı
+
+Accessibility
+
+- Klavye focus/tab: `wx_terminal.py` toolbar + `wx_ansys_view.py` butonları `Tab` ile erişilebilir, `wx_shell.py` dil menüsü radio; fakat sistematik a11y denetimi yok, `GUI-A11Y-001` matriste yok, non-color cues doğrulanmadı → PARTIAL
+
+Cross-platform evidence
+
+- Windows: `D:\Python\Python312\python.exe -m pytest` 25 test (wx ansys/terminal/jobs/shell) PASS (Windows 10, Python 3.12, wxPython 4.3.1, SHA `beb3ca1`); Linux: yok; macOS: yok (signing/notarization BLOCKED)
+
+Integrated stress scoreboard
+
+- 65A hedef sayımlar (500/300/300/200/200/100/200/200/200/100/100/100/100/50/50) — **0 çalıştırıldı**. `test_wx_file003_final_stress.py` ve `test_wx_shell_p0_stress.py` ayrı P0 koşuları (200 retarget, 100+100 mutations, 100 EN/TR, 50 open/close) PASS ama 65A entegre koşusu değil; invariantlar ölçülmedi
+
+Resource measurements
+
+- Windows 10,000 USER-object tavanı daha önce `test_wx_shell_p0_stress.py::_close` `wx.SafeYield` ile düzeltildi (`docs/v2/WX_MIGRATION_WAVE_STATUS.md:5`); `peak USER/GDI/live wx windows/workers/transfer sessions/handles` için niyet sınırı belirlenmedi, baseline'a dönüş 65A'da ölçülmedi; `peak_user_objects`/`peak_live_wx_windows` zorunlu invariant olarak eklenmeli
+
+Audit provenance
+
+- `audit/gui-screenshots/{qt,wx}/` tarihsel ( `ccdd402` ), `beb3ca1` için yenilenmedi; `audit/GUI_AUDIT_REPORT.md` stale; `GUI_SHELL_003_I18N_001_EXECUTION_EVIDENCE.json` stale SHA; `docs/v2/WX_MIGRATION_WAVE_STATUS.md` güncellendi ama screenshot SHA256 hesaplanmadı
+
+Screenshot hash validation
+
+- Gerek: `duplicate unrelated screenshot hashes = 0`, `missing screenshot pairs = 0` (main/connection/jobs/directories/files/editor/logs + ansys)
+- Mevcut: `audit/gui-screenshots/qt` 7 dosya, `wx` 5 dosya (ansys/logs/connection eksik); `Get-FileHash SHA256` çalıştırılmadı; duplicate kontrolü yok → BLOCKED
+
+CI evidence
+
+- Current-SHA CI (Windows wx / Linux wx / macOS wx) — **yok**. Lokal `D:\Python\Python312\python.exe -m pytest` 25 PASS; `Ruff` PASS; `py_compile` PASS; `git diff --check` temiz; fakat GitHub Actions current `beb3ca1` için çalışmadı
+
+Config migration and rollback
+
+- `V1 → V2 → rollback` dumanı yapılmadı; profiles/settings/keymap/hosts/plugins/credentials/updater metadata migrasyonu test edilmedi; yedekle/kalıcı yıkıcı migrasyon koruması yok → BLOCKED
+
+SBOM / license / vulnerability audit
+
+- `LICENSE`, `THIRD_PARTY_NOTICES.md` var; paketli installer SBOM/bundled binary/DLL inventory, `pip-audit`/`osv` taraması, unexpected Qt artifact scan yapılmadı → PARTIAL
+
+Signing / notarization
+
+- **Windows:** politika belirsiz (`SIGNED` vs `UNSIGNED WITH DOCUMENTED POLICY` kararı verilmedi), Authenticode yok
+- **macOS:** `codesign`/`hardened runtime`/`notarization`/`stapling`/`Gatekeeper` yok → BLOCKED; public dağıtım için hazır değil
+
+Qt dependency gate
+
+- Wave 66 gate çalıştırılmadı; beklenen GO öncesi: `Qt import points = 0`, `Qt production files = 0`, `Qt dependency records = 0`, `Qt unique packages = 0`, `Qt packaging references = 0`, `Qt packaging files = 0`, `DEFAULT_GUI_RUNTIME = wx` — hiçbiri karşılanmadı (Qt üretimde)
+
+Remaining blockers
+
+- 48 sync/compare, 50 Files/Outputs, 51 editor tab strip, 55/56/57 görsel parity, 57A kanonik ekran görüntüleri, 58/59/60 platform auditleri, 61 a11y, 62/62A parity downgrade, 63 manual plan, 64 migration/rollback, 65 packaged E2E, 65A stress+leak (tüm sayımlar + invariantlar + USER/GDI), 65B provenance/CI, 68 SBOM, 69 soak, 70 release + signing
+
+Migration group decision
+
+- `MIGRATION GROUP: PARTIAL` — `GUI-WORKSPACE-001 COVERED`, `GUI-VISUAL-001 PARTIAL`, 48 FAILED_VERIFICATION, 12+ dalga BLOCKED/PARTIAL → `Partial=0` ve `Failed=0` sağlanmadı
+
+Final Qt decision
+
+- `Qt remains production runtime` — Wave 66: **NO-GO**. Wave 67 başlatılmadı
+
+Final git status
+
+- `On branch develop`, `M?` yok (commit sonrası); untracked: `.integration-recovery/`, `waves.zip`, `waves_inspect/` (roadmap arşivleri, yok sayılabilir); `git diff --check` temiz
+
+Commits created
+
+- `beb3ca1 Wave 54: real wx ANSYS surface + terminal Find/Clear/font + wave ledger 00-70` (5 files: `docs/v2/WX_MIGRATION_WAVE_STATUS.md`, `src/hpc_gui/wx_ansys_view.py` [new], `src/hpc_gui/wx_terminal.py`, `src/hpc_gui/wx_shell.py`, `tests/test_wx_ansys_view.py` [new])
+
+Push status
+
+- `git push origin develop` → `non-fast-forward` + `Failed to connect to github.com:443` (network) → **NOT PUSHED**; yerel `beb3ca1` `origin/develop`'a entegre değil; delegate entegrasyonu yerel `develop`'ta, uzakla senkronizasyon bekleniyor
