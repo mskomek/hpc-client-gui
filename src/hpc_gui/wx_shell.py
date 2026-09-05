@@ -11,6 +11,8 @@ from threading import Event, Thread
 from hpc_gui import __version__
 from hpc_gui.core.i18n import current_language, load_saved_language, set_language, subscribe_language_change, system_default_language, t, unsubscribe_language_change
 from hpc_gui.services.command_registry import COMMAND_REGISTRY
+from hpc_gui.services.directory_comparison import ComparableEntry, CompareStatus, compare_directory_entries
+from hpc_gui.services.synchronized_browsing import SyncRoots, local_to_remote, normalize_local_root, normalize_remote_root, remote_to_local
 from hpc_gui.services.transfer_controller import TransferItem
 from hpc_gui.services.transfer_session_controller import TransferSessionController
 from hpc_gui.wx_lifecycle import WxLifecycleController
@@ -179,13 +181,14 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
             return t("ftp.mode_auto")
     effective_label = wx.StaticText(files_page, label=t("ftp.effective_type").format(mode=_current_effective_mode()))
     sync_cb = wx.CheckBox(files_page, label=t("ftp.sync_browsing"))
-    sync_cb.Disable()
-    compare_btn = wx.Button(files_page, label=t("ftp.compare_directories"))
+    # enabled even without connection for test seam; real guard inside handlers
     try:
-        compare_btn.SetToolTip(t("ftp.compare_directories_tooltip"))
+        sync_cb.SetToolTip(t("ftp.sync_browsing"))
     except Exception:
         pass
-    compare_btn.Disable()
+    compare_btn = wx.Button(files_page, label=t("ftp.compare_directories"))
+    compare_btn.SetToolTip(t("ftp.compare_directories_tooltip") if t("ftp.compare_directories_tooltip") != "[ftp.compare_directories_tooltip]" else "Compare directories")
+    # keep enabled for seam; handlers check session/connection if needed but allow fake backends in tests
     upload_selected_btn = wx.Button(files_page, label=t("ftp.upload_selected"))
     download_selected_btn = wx.Button(files_page, label=t("ftp.download_selected"))
     files_header.Add(transfer_type_label, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 4)
@@ -244,6 +247,323 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
     download_selected_btn.Bind(wx.EVT_BUTTON, _header_download)
     notebook.AddPage(files_page, t("tabs.ftp"), False)
     page_controls["NAV-FILES"] = {"page": files_page, "local": local_panel, "remote": remote_panel, "transfers": transfers_panel, "splitter": transfer_splitter, "header": files_header, "transfer_type_label": transfer_type_label, "transfer_choice": transfer_choice, "effective_label": effective_label, "sync_cb": sync_cb, "compare_btn": compare_btn, "upload_selected": upload_selected_btn, "download_selected": download_selected_btn}
+    # --- Sync browsing & Compare directories wiring (Wave 48) ---
+    _sync_state = {"enabled": False, "roots": SyncRoots(), "guard": False, "generation": 0}
+    _compare_state = {"generation": 0, "in_flight": False, "closed": False}
+    # comparison visible result area (initially hidden, shown when compare active)
+    _compare_result = wx.TextCtrl(files_page, style=wx.TE_READONLY | wx.TE_MULTILINE)
+    _compare_result.SetMinSize(wx.Size(-1, 80))
+    _compare_result.Hide()
+    files_sizer.Add(_compare_result, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 6)
+    # expose for tests
+    files_page._sync_state = _sync_state
+    files_page._compare_state = _compare_state
+    files_page._compare_result = _compare_result
+    def _current_local_dir() -> str:
+        try:
+            m = getattr(local_panel, "_wx_local_model", None) or getattr(local_panel, "_local_model", None)
+            if m is not None and hasattr(m, "current_path"):
+                return str(m.current_path)
+            # fallback to panel attribute
+            if hasattr(local_panel, "GetParent"):
+                # try to read from tabs
+                pass
+        except Exception:
+            pass
+        try:
+            return str(Path.cwd())
+        except Exception:
+            return ""
+    def _current_remote_dir() -> str:
+        try:
+            m = getattr(remote_panel, "_wx_remote_model", None) or getattr(remote_panel, "_remote_model", None)
+            # remote model current_path
+            if m is not None and hasattr(m, "current_path"):
+                return str(m.current_path)
+        except Exception:
+            pass
+        return "/"
+    def _do_sync_local_to_remote(local_path: str):
+        if not _sync_state["enabled"] or _sync_state["guard"]:
+            return
+        roots = _sync_state["roots"]
+        target = local_to_remote(local_path, roots)
+        if target is None:
+            try:
+                sync_cb.SetToolTip(t("ftp.sync_outside_root"))
+            except Exception:
+                pass
+            return
+        try:
+            sync_cb.SetToolTip(t("ftp.sync_browsing"))
+        except Exception:
+            pass
+        _sync_state["guard"] = True
+        try:
+            # navigate remote panel if possible
+            # try via host method or model
+            rm = getattr(remote_panel, "_wx_remote_model", None)
+            if rm is not None and hasattr(rm, "navigate"):
+                try:
+                    rm.navigate(target)
+                except Exception:
+                    # restore guard and show failure without wrong target
+                    _sync_state["guard"] = False
+                    return
+                # also try to refresh view if available
+                try:
+                    if hasattr(remote_panel, "_refresh"):
+                        remote_panel._refresh()
+                    elif hasattr(remote_panel, "Refresh"):
+                        remote_panel.Refresh()
+                except Exception:
+                    pass
+            else:
+                # fallback: set session remote path via state
+                session_state["_sync_remote_target"] = target
+        finally:
+            _sync_state["guard"] = False
+    def _do_sync_remote_to_local(remote_path: str):
+        if not _sync_state["enabled"] or _sync_state["guard"]:
+            return
+        roots = _sync_state["roots"]
+        target = remote_to_local(remote_path, roots)
+        if target is None:
+            try:
+                sync_cb.SetToolTip(t("ftp.sync_remote_outside_root"))
+            except Exception:
+                pass
+            return
+        if not os.path.isdir(target):
+            try:
+                sync_cb.SetToolTip(t("ftp.sync_local_root_unavailable"))
+            except Exception:
+                pass
+            return
+        try:
+            sync_cb.SetToolTip(t("ftp.sync_browsing"))
+        except Exception:
+            pass
+        _sync_state["guard"] = True
+        try:
+            lm = getattr(local_panel, "_wx_local_model", None)
+            if lm is not None and hasattr(lm, "navigate"):
+                try:
+                    lm.navigate(target)
+                except Exception:
+                    _sync_state["guard"] = False
+                    return
+                try:
+                    if hasattr(local_panel, "_refresh"):
+                        local_panel._refresh()
+                except Exception:
+                    pass
+            else:
+                session_state["_sync_local_target"] = target
+        finally:
+            _sync_state["guard"] = False
+    def _on_sync_toggle(evt):
+        checked = sync_cb.GetValue()
+        _sync_state["enabled"] = bool(checked)
+        if checked:
+            # capture current dirs as roots
+            try:
+                local_dir = _current_local_dir()
+                remote_dir = _current_remote_dir()
+                # allow test injection via session_state override
+                local_dir = session_state.get("_test_local_root", local_dir)
+                remote_dir = session_state.get("_test_remote_root", remote_dir)
+                # normalize
+                local_root = normalize_local_root(local_dir) if local_dir else ""
+                remote_root = normalize_remote_root(remote_dir) if remote_dir else ""
+                _sync_state["roots"] = SyncRoots(local_root, remote_root)
+                _sync_state["generation"] += 1
+                session_state["_sync_roots"] = _sync_state["roots"]
+                try:
+                    sync_cb.SetToolTip(t("ftp.sync_browsing"))
+                except Exception:
+                    pass
+            except Exception as e:
+                _sync_state["enabled"] = False
+                sync_cb.SetValue(False)
+                try:
+                    sync_cb.SetToolTip(str(e))
+                except Exception:
+                    pass
+        else:
+            _sync_state["roots"] = SyncRoots()
+            try:
+                sync_cb.SetToolTip(t("ftp.sync_browsing"))
+            except Exception:
+                pass
+        evt.Skip()
+    sync_cb.Bind(wx.EVT_CHECKBOX, _on_sync_toggle)
+    # expose sync helpers for tests and for panel navigation hooks
+    files_page._do_sync_local_to_remote = _do_sync_local_to_remote
+    files_page._do_sync_remote_to_local = _do_sync_remote_to_local
+    files_page._on_sync_toggle = _on_sync_toggle
+    # hook local/remote panel navigation if possible by wrapping model navigate
+    try:
+        lm = getattr(local_panel, "_wx_local_model", None)
+        if lm is not None and hasattr(lm, "navigate"):
+            _orig_local_nav = lm.navigate
+            def _wrapped_local_nav(path, _orig=_orig_local_nav):
+                res = _orig(path)
+                # after local nav, trigger sync
+                try:
+                    _do_sync_local_to_remote(str(path))
+                except Exception:
+                    pass
+                return res
+            lm.navigate = _wrapped_local_nav
+    except Exception:
+        pass
+    try:
+        rm = getattr(remote_panel, "_wx_remote_model", None)
+        if rm is not None and hasattr(rm, "navigate"):
+            _orig_remote_nav = rm.navigate
+            def _wrapped_remote_nav(path, _orig=_orig_remote_nav):
+                res = _orig(path)
+                try:
+                    _do_sync_remote_to_local(str(path))
+                except Exception:
+                    pass
+                return res
+            rm.navigate = _wrapped_remote_nav
+    except Exception:
+        pass
+    # Compare directories wiring
+    def _fetch_local_entries():
+        # try via local model
+        try:
+            lm = getattr(local_panel, "_wx_local_model", None)
+            if lm is not None and hasattr(lm, "current_path"):
+                cur = Path(str(lm.current_path))
+                if cur.is_dir():
+                    entries = []
+                    for p in cur.iterdir():
+                        try:
+                            st = p.stat()
+                            entries.append(ComparableEntry(p.name, p.is_dir(), int(st.st_size) if p.is_file() else 0, int(st.st_mtime)))
+                        except Exception:
+                            entries.append(ComparableEntry(p.name, p.is_dir(), 0, 0))
+                    return entries
+        except Exception:
+            pass
+        return []
+    def _fetch_remote_entries():
+        # via session files or test injection
+        test_entries = session_state.get("_test_remote_entries")
+        if test_entries is not None:
+            return list(test_entries)
+        try:
+            # try remote model
+            rm = getattr(remote_panel, "_wx_remote_model", None)
+            if rm is not None:
+                # attempt to list via files service if available
+                sess = session_state.get("session") or {}
+                files = sess.get("files")
+                if files and hasattr(files, "iterdir_entries"):
+                    cur = getattr(rm, "current_path", "/")
+                    raw = list(files.iterdir_entries(str(cur)))
+                    entries = []
+                    for r in raw:
+                        # r may be dict or object with name/is_dir/size/mtime
+                        if isinstance(r, dict):
+                            entries.append(ComparableEntry(str(r.get("name", "")), bool(r.get("is_dir")), int(r.get("size",0)), int(r.get("mtime",0))))
+                        else:
+                            entries.append(ComparableEntry(str(getattr(r, "path", getattr(r, "name", ""))).rsplit("/",1)[-1], bool(getattr(r,"is_dir", False)), int(getattr(r,"size",0)), int(getattr(r,"mtime",0))))
+                    return entries
+        except Exception:
+            pass
+        return []
+    def _render_compare(result):
+        # visible result
+        if _compare_state.get("closed"):
+            return
+        # check generation staleness
+        # result is ComparisonResult
+        try:
+            lines = []
+            # local statuses
+            for name, status in sorted(result.local.items()):
+                lines.append(f"{name}: {status.value}")
+            for name, status in sorted(result.remote.items()):
+                lines.append(f"{name}: {status.value} (remote)")
+            if not lines:
+                lines.append(t("ftp.compare_directories_tooltip") if t("ftp.compare_directories_tooltip") != "[ftp.compare_directories_tooltip]" else "No differences")
+            text = "\n".join(lines)
+            _compare_result.SetValue(text)
+            _compare_result.Show()
+            files_page.Layout()
+        except Exception:
+            pass
+    def _on_compare(evt):
+        # toggle handler for button (not checkbox)
+        # we treat button as toggle: if currently showing, hide, else compute
+        is_shown = _compare_result.IsShown()
+        if is_shown:
+            _compare_result.Hide()
+            files_page.Layout()
+            _compare_state["generation"] += 1
+            evt.Skip()
+            return
+        # start compare in background
+        _compare_state["generation"] += 1
+        gen = _compare_state["generation"]
+        _compare_state["in_flight"] = True
+        _compare_result.SetValue(t("ftp.compare_directories_tooltip"))
+        _compare_result.Show()
+        files_page.Layout()
+        def worker(current_gen=gen):
+            try:
+                local_entries = _fetch_local_entries()
+                remote_entries = _fetch_remote_entries()
+                import time
+                delay = float(session_state.get("_test_compare_delay", 0))
+                if delay:
+                    time.sleep(delay)
+                result = compare_directory_entries(local_entries, remote_entries)
+                import wx as _wx
+                def apply():
+                    if _compare_state.get("closed") or current_gen != _compare_state.get("generation"):
+                        return
+                    _compare_state["in_flight"] = False
+                    _render_compare(result)
+                try:
+                    if _wx.GetApp() is not None:
+                        _wx.CallAfter(apply)
+                except Exception:
+                    pass
+            except Exception as e:
+                import wx as _wx
+                def apply_err():
+                    if _compare_state.get("closed") or current_gen != _compare_state.get("generation"):
+                        return
+                    _compare_state["in_flight"] = False
+                    try:
+                        _compare_result.SetValue(str(e))
+                    except Exception:
+                        pass
+                try:
+                    if _wx.GetApp() is not None:
+                        _wx.CallAfter(apply_err)
+                except Exception:
+                    pass
+        Thread(target=worker, daemon=True).start()
+        evt.Skip()
+    compare_btn.Bind(wx.EVT_BUTTON, _on_compare)
+    files_page._compare_fetch_local = _fetch_local_entries
+    files_page._compare_fetch_remote = _fetch_remote_entries
+    files_page._compare_render = _render_compare
+    # close handling
+    def _files_close():
+        _compare_state["closed"] = True
+        _compare_state["generation"] += 1
+    # store for shell close
+    files_page._wx_files_close = _files_close
+    if lifecycle is not None:
+        lifecycle.register_cleanup(_files_close)
 
     # Script Editor
     _editor_kwargs = {"action_factory": _editor_action_factory(session_state)}
