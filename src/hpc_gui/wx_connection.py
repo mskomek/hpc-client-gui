@@ -112,11 +112,13 @@ class WxConnectionModel:
         return list(self._keyboard_interactive(request)) if self._keyboard_interactive else []
 
 
-def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, embedded):
+def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, embedded, add_connection=None, **kwargs):
     try:
         import wx
     except ImportError as exc:
         raise RuntimeError("wxPython is not installed") from exc
+    if add_connection is None:
+        add_connection = kwargs.get("add_connection") or kwargs.get("on_add_connection") or kwargs.get("on_add") or kwargs.get("add")
     model = WxConnectionModel(profiles, connect=connect)
     if connect is None:
         model._connect = lambda profile: connect_profile(profile, model)
@@ -124,11 +126,22 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
     panel = wx.Panel(host)
     root = wx.BoxSizer(wx.VERTICAL)
     choices = wx.ListBox(panel, choices=[item.name for item in model.summaries()])
-    connect_button = wx.Button(panel, label=t("login.connect"))
     status = wx.StaticText(panel, label=t("login.status_disconnected"))
+    try:
+        button_row = wx.WrapSizer(wx.HORIZONTAL)
+    except Exception:
+        button_row = wx.BoxSizer(wx.HORIZONTAL)
+    add_button = wx.Button(panel, label=t("login.add_connection"))
+    connect_button = wx.Button(panel, label=t("login.connect_selected"))
+    # connect_button is the Connect Selected action (keeps existing behaviour)
+    if not add_connection:
+        add_button.Enable(False)
+    button_row.Add(add_button, 0, wx.RIGHT, 6)
+    button_row.Add(connect_button, 0, wx.RIGHT, 6)
+    button_row.AddStretchSpacer(1)
     root.Add(choices, 1, wx.EXPAND | wx.ALL, 8)
     root.Add(status, 0, wx.LEFT | wx.RIGHT, 8)
-    root.Add(connect_button, 0, wx.ALIGN_RIGHT | wx.ALL, 8)
+    root.Add(button_row, 0, wx.EXPAND | wx.ALL, 8)
     panel.SetSizer(root)
 
     def host_key_dialog(request: HostKeyRequest) -> str:
@@ -162,16 +175,37 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
 
     def refresh_labels(_language=None):
         host.set_host_title(t("tabs.connection"))
-        connect_button.SetLabel(t("login.connect"))
+        add_button.SetLabel(t("login.add_connection"))
+        connect_button.SetLabel(t("login.connect_selected"))
         if model.controller.state.value == "connected":
             status.SetLabel(t("login.status_connected"))
+        elif model.controller.state.value == "connecting":
+            status.SetLabel(t("login.status_connecting"))
         elif model.controller.state.value != "connecting":
             status.SetLabel(t("login.status_disconnected"))
+
+    def _add_connection(_event=None):
+        if not add_connection:
+            return
+        # call on GUI thread; try flexible signatures
+        try:
+            try:
+                add_connection()
+            except TypeError:
+                try:
+                    add_connection(host)
+                except TypeError:
+                    add_connection(panel)
+        except Exception as error:
+            # do not show message box containing only its title
+            wx.MessageBox(str(error), t("login.err_title"), wx.OK | wx.ICON_ERROR)
 
     def connect_selected(_event=None):
         if not model.select(choices.GetStringSelection()) or not model._connect:
             return
         connect_button.Enable(False)
+        if add_connection:
+            add_button.Enable(False)
         status.SetLabel(t("login.status_connecting"))
 
         def worker():
@@ -184,6 +218,8 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
 
         def done(error):
             connect_button.Enable(True)
+            if add_connection:
+                add_button.Enable(True)
             if error:
                 model.controller.fail()
                 status.SetLabel(t("login.error"))
@@ -198,23 +234,32 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
     choices.Bind(wx.EVT_LISTBOX, select)
     choices.Bind(wx.EVT_LISTBOX_DCLICK, connect_selected)
     connect_button.Bind(wx.EVT_BUTTON, connect_selected)
+    add_button.Bind(wx.EVT_BUTTON, _add_connection)
     subscribe_language_change(refresh_labels)
     host.bind_host_close(lambda event: (unsubscribe_language_change(refresh_labels), event.Skip()))
+    # expose for shell resize invariants and tests; keep legacy name connect -> connect_selected
+    host._wx_connection_controls = {"choices": choices, "status": status, "connect": connect_button, "connect_selected": connect_button, "add_connection": add_button, "add": add_button}
+    host._wx_connection_add_button = add_button
+    host._wx_connection_connect_button = connect_button
     finish()
     return host
 
 
-def build_connection_panel(parent, profiles=None, *, connect=None, lifecycle=None, on_connected=None):
+def build_connection_panel(parent, profiles=None, *, connect=None, lifecycle=None, on_connected=None, add_connection=None, **kwargs):
     """Embedded panel factory. Returns the wx.Panel host."""
-    return _build_connection(parent, profiles, connect=connect, lifecycle=lifecycle, on_connected=on_connected, embedded=True)
+    if add_connection is None:
+        add_connection = kwargs.get("add_connection") or kwargs.get("on_add_connection")
+    return _build_connection(parent, profiles, connect=connect, lifecycle=lifecycle, on_connected=on_connected, embedded=True, add_connection=add_connection, **kwargs)
 
 
-def show_connection(parent=None, profiles=None, *, connect=None, lifecycle=None, on_connected=None) -> int:
+def show_connection(parent=None, profiles=None, *, connect=None, lifecycle=None, on_connected=None, add_connection=None, **kwargs) -> int:
     try:
         import wx
     except ImportError as exc:
         raise RuntimeError("wxPython is not installed") from exc
-    _build_connection(parent, profiles, connect=connect, lifecycle=lifecycle, on_connected=on_connected, embedded=False)
+    if add_connection is None:
+        add_connection = kwargs.get("add_connection") or kwargs.get("on_add_connection")
+    _build_connection(parent, profiles, connect=connect, lifecycle=lifecycle, on_connected=on_connected, embedded=False, add_connection=add_connection, **kwargs)
     return wx.ID_OK
 
 
