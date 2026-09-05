@@ -267,6 +267,9 @@ def _p0_statuses(root: Path) -> dict[str, str]:
         cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
         if cells and cells[0].startswith("GUI-") and "P0" in cells:
             result[cells[0]] = "UNVERIFIED"
+        # Also pick up workspace/visual gates that live in separate table without P0 column
+        if cells and cells[0] in {"GUI-WORKSPACE-001", "GUI-VISUAL-001"}:
+            result[cells[0]] = "UNVERIFIED"
     for line in status:
         cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
         if len(cells) > 1 and cells[0] in result:
