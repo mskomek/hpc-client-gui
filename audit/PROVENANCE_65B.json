@@ -1,18 +1,20 @@
 {
-  "tested_commit_sha": "954783e0327ffb08af06d866b45dba7f5b5cd1b6",
+  "tested_commit_sha": "bd40fe62e907a4392db610967d1d4f24fa224f9f",
   "branch": "develop",
   "os": "Windows 11 Pro 10.0.26200",
   "python": "3.12.4",
   "wxpython": "4.3.1 msw (phoenix) wxWidgets 3.3.3",
   "commands": [
-    "D:\\Python\\Python312\\python.exe -m pytest tests/test_wx_embedded_terminal.py -v",
-    "D:\\Python\\Python312\\python.exe -m pytest tests/test_wx_files_sync_compare.py -v",
-    "D:\\Python\\Python312\\python.exe -m pytest tests/test_wx_jobs_files_outputs.py -v",
-    "D:\\Python\\Python312\\python.exe -m pytest tests/test_wx_editor_tabs.py -v",
-    "D:\\Python\\Python312\\python.exe -m pytest tests/test_wx_ansys_view.py -v",
-    "D:\\Python\\Python312\\python.exe -m pytest tests/test_wx_65a_stress.py -v",
-    "D:\\Python\\Python312\\python.exe -m pytest tests/test_wx_file003_final_stress.py -v",
-    "D:\\Python\\Python312\\python.exe scripts/capture_gui_audit.py --size 1100x720 --language en"
+    "python -m pytest tests/test_wx_embedded_terminal.py -v",
+    "python -m pytest tests/test_wx_files_sync_compare.py -v",
+    "python -m pytest tests/test_wx_jobs_files_outputs.py -v",
+    "python -m pytest tests/test_wx_editor_tabs.py -v",
+    "python -m pytest tests/test_wx_ansys_view.py -v",
+    "python -m pytest tests/test_wx_65a_stress.py -v -s",
+    "python -m pytest tests/test_wx_file003_final_stress.py -v",
+    "python scripts/capture_gui_audit.py --size 1100x720 --language en",
+    "python scripts/wx_source_import_smoke.py",
+    "python scripts/wx_packaged_smoke.py --platform windows"
   ],
   "exit_codes": [
     0,
@@ -22,10 +24,12 @@
     0,
     0,
     0,
-    0
+    0,
+    0,
+    1
   ],
   "pass_fail_skip": {
-    "passed": 58,
+    "passed": 68,
     "failed": 0,
     "skipped": 0
   },
@@ -64,25 +68,30 @@
     "post_close_notifications": 0,
     "duplicate_cleanups": 0,
     "layout_failures": 0,
-    "clipped_required_controls": 0
+    "clipped_required_controls": 0,
+    "duplicate_transfers": 0,
+    "lost_transfers": 0,
+    "lost_file_mutations": 0,
+    "peak_local_mutation_concurrency": 0,
+    "peak_remote_mutation_concurrency": 0
   },
   "screenshots_sha256": {
-    "main.png": "a337c90a5ffcffacff42f62b5ab985b49622d907ace28d715eac9cf6191fc66f",
-    "connection.png": "254eb6991234ec6b546597a9fb829a304e2a6f95924019f4a447d4e7dc2ba9df",
-    "jobs.png": "da3311e99bbf189ca6fa1f7ff6c9ca52d74c8bc04699f39db9e06b2402ab78b4",
-    "directories.png": "3743c75774293c98023b0a67cf4aaf600943c8b40313ce3ad4ca2bd1f6159af2",
-    "files.png": "b0be24a21b7d1996378f793e6b5773a7f9952d8ae64bdad572a5cdc108bbe428",
-    "editor.png": "299ac3b7b964ff2d98cef6c6b4ed1b34403a21d82628f032c9e210ae27104444",
-    "terminal.png": "faaaae8d5a2c900cd3f90a7f42d4aaefe9991f4bb71bad9ee5623c01d635791b",
-    "logs.png": "4bc7dfa31ba68345facf4fdefe9a243dca6dc92f846aa2db4503a42ba8df1fb6",
+    "main.png": "a38cf697f4f2ab540f3bb162ba830eb68b8f5cdc305fe925ae37d231771758cf",
+    "connection.png": "5ff32759b3074c3d0f7846fa76522da292ca2e3bdd2bfdd4130b5493bee75d2d",
+    "jobs.png": "1afd31538f2129d748cabc17113ba3a3befed38a2b7d8d5454be2322ac5a5a33",
+    "directories.png": "76751b37560febc8ca1a5c7b7cae46148c99faf1f025ff58ae96a7338eafc6af",
+    "files.png": "69e8ac828f9f2c927abccc7b6b384a406de0f5088ff6ecb25a3d0d5a96c55acf",
+    "editor.png": "bf603928b24c8b48744db9b98f459be88273bb718c6e862c88182285d19d9d9c",
+    "terminal.png": "06dbe509c991f086884fefa9f948e9be402ceca914c2fbf1d3f87ad2028378d1",
+    "logs.png": "c13b5ef3ac00b4448ba0ea77b6654ec54de7db457c33299e2f40c65e36582469",
     "ansys.png": "f6e456e85783c27a56f9cee89a51209694a04b65fc7e94b7398e45accc4d708b"
   },
-  "artifact_sha256": "pending - no packaged artifact in this build",
-  "provenance_generated_utc": "2026-09-06T19:00:00+00:00",
+  "artifact_sha256": "pending - no packaged artifact in this build (isolated smoke FAIL)",
+  "provenance_generated_utc": "2026-09-05T19:43:34.586815+00:00",
   "ci": {
-    "windows_wx": "local PASS (see above)",
-    "linux_wx": "BLOCKED - no Linux runner",
+    "windows_wx": "local PASS 65A 442s (see above), visual duplicate 0",
+    "linux_wx": "BLOCKED - no Linux runner, wx requires source build with gtk",
     "macos_wx": "BLOCKED - no macOS runner, no signing"
   },
-  "delegation_integration_proof": "all implementation commits reachable from develop (c694b5c, 457b3af, 8f53dbc, 8479e2d, 1d550fc, b384581, 4dc2f90, f0c3138, 4630d87, 954783e, 207b2a5)"
+  "delegation_integration_proof": "all implementation commits reachable from develop (eb37cb7, 8232b8c, 8414eee, e09ae74, e3408fd, bd40fe6)"
 }
