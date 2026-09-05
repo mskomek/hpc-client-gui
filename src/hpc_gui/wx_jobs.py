@@ -217,19 +217,44 @@ def show_job_output(parent, model: WxJobsModel, view_id: str, *, read_output=Non
     return wx.ID_OK
 
 
-def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, cancel, lifecycle, final_state, generation, embedded):
+def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, cancel, lifecycle, final_state, generation, embedded, refresh_sacct=None, show_job_details=None, refresh_lssrv=None, **kwargs):
     """Create the wx Jobs workspace; callbacks are service adapters, never UI IO."""
     try:
         import wx
     except ImportError as exc:
         raise RuntimeError("wxPython is not installed") from exc
+    # Alias tolerance for caller naming
+    if refresh_sacct is None:
+        refresh_sacct = kwargs.get("sacct") or kwargs.get("sacct_callback") or kwargs.get("refresh_accounting")
+    if show_job_details is None:
+        show_job_details = kwargs.get("show_details") or kwargs.get("scontrol") or kwargs.get("scontrol_show_job") or kwargs.get("show_details_callback")
+    if refresh_lssrv is None:
+        refresh_lssrv = kwargs.get("lssrv") or kwargs.get("lssrv_refresh") or kwargs.get("lssrv_callback") or kwargs.get("refresh_lssrv_callback")
+    # Also check kwargs for canonical names if passed explicitly as kwargs
+    if refresh_sacct is None and "refresh_sacct" in kwargs:
+        refresh_sacct = kwargs["refresh_sacct"]
+    if show_job_details is None and "show_job_details" in kwargs:
+        show_job_details = kwargs["show_job_details"]
+    if refresh_lssrv is None and "refresh_lssrv" in kwargs:
+        refresh_lssrv = kwargs["refresh_lssrv"]
     model = model or WxJobsModel()
     if lifecycle is not None and model.completion_notify is None:
         model.completion_notify = lambda job_id, message: lifecycle.notify_job(message, job_id=job_id)
     host, finish = make_host(parent, title=t("jobs.title"), size=(1000, 700), embedded=embedded)
     panel = wx.Panel(host)
     root = wx.BoxSizer(wx.VERTICAL)
-    splitter = wx.SplitterWindow(panel)
+    # Sub-tab strip with three pages
+    notebook = wx.Notebook(panel)
+    details_page = wx.Panel(notebook)
+    files_page = wx.Panel(notebook)
+    outputs_page = wx.Panel(notebook)
+    # Keep tab labels via i18n; first tab is Jobs / Details
+    notebook.AddPage(details_page, f"{t('jobs.title')} / {t('common.details')}")
+    notebook.AddPage(files_page, t("jobs_outputs.files_title"))
+    notebook.AddPage(outputs_page, t("jobs_outputs.outputs_title"))
+    # --- Details page layout: existing job list + output + two new groups ---
+    details_sizer = wx.BoxSizer(wx.VERTICAL)
+    splitter = wx.SplitterWindow(details_page)
     jobs = wx.ListCtrl(splitter, style=wx.LC_REPORT | wx.LC_SINGLE_SEL)
     jobs.InsertColumn(0, t("jobs.job_id"))
     jobs.InsertColumn(1, t("jobs.state"))
@@ -240,27 +265,114 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
     stdout = wx.TextCtrl(output_split, style=wx.TE_MULTILINE | wx.TE_READONLY | wx.HSCROLL)
     stderr = wx.TextCtrl(output_split, style=wx.TE_MULTILINE | wx.TE_READONLY | wx.HSCROLL)
     output_split.SplitHorizontally(stdout, stderr)
-    output_controls = wx.BoxSizer(wx.HORIZONTAL)
+    try:
+        output_row = wx.WrapSizer(wx.HORIZONTAL)
+    except Exception:
+        output_row = wx.BoxSizer(wx.HORIZONTAL)
     refresh_button = wx.Button(right, label=t("jobs.refresh"))
     follow = wx.CheckBox(right, label=t("files.auto_scroll"))
     detached_button = wx.Button(right, label=t("jobs.open_output"))
     pause_button = wx.Button(right, label=t("jobs.pause_output"))
     follow.SetValue(True)
-    output_controls.Add(refresh_button, 0, wx.RIGHT, 6)
-    output_controls.Add(detached_button, 0, wx.RIGHT, 6)
-    output_controls.Add(pause_button, 0, wx.RIGHT, 6)
-    output_controls.Add(follow, 0, wx.ALIGN_CENTER_VERTICAL)
+    output_row.Add(refresh_button, 0, wx.RIGHT, 6)
+    output_row.Add(detached_button, 0, wx.RIGHT, 6)
+    output_row.Add(pause_button, 0, wx.RIGHT, 6)
+    output_row.Add(follow, 0, wx.ALIGN_CENTER_VERTICAL)
     cancel_button = wx.Button(right, label=t("jobs.cancel"))
+    try:
+        cancel_row = wx.WrapSizer(wx.HORIZONTAL)
+    except Exception:
+        cancel_row = wx.BoxSizer(wx.HORIZONTAL)
+    cancel_row.AddStretchSpacer(1)
+    cancel_row.Add(cancel_button, 0, wx.ALIGN_CENTER_VERTICAL)
     right_sizer.Add(details, 0, wx.EXPAND | wx.ALL, 6)
     right_sizer.Add(output_split, 1, wx.EXPAND | wx.LEFT | wx.RIGHT, 6)
-    right_sizer.Add(output_controls, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 6)
-    right_sizer.Add(cancel_button, 0, wx.ALIGN_RIGHT | wx.ALL, 6)
+    right_sizer.Add(output_row, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 6)
+    right_sizer.Add(cancel_row, 0, wx.EXPAND | wx.ALL, 6)
     right.SetSizer(right_sizer)
     splitter.SplitVertically(jobs, right, 300)
     splitter.SetMinimumPaneSize(220)
-    root.Add(splitter, 1, wx.EXPAND | wx.ALL, 8)
+    details_sizer.Add(splitter, 1, wx.EXPAND | wx.ALL, 8)
+    # Accounting & Job Details group
+    accounting_box = wx.StaticBox(details_page, label=t("jobs_outputs.accounting_details"))
+    accounting_sizer = wx.StaticBoxSizer(accounting_box, wx.VERTICAL)
+    try:
+        accounting_row = wx.WrapSizer(wx.HORIZONTAL)
+    except Exception:
+        accounting_row = wx.BoxSizer(wx.HORIZONTAL)
+    sacct_button = wx.Button(accounting_box, label=t("jobs_outputs.refresh_sacct"))
+    job_id_field = wx.TextCtrl(accounting_box, style=wx.TE_PROCESS_ENTER)
+    try:
+        job_id_field.SetHint(t("jobs.job_id"))
+    except Exception:
+        pass
+    show_details_button = wx.Button(accounting_box, label=t("jobs_outputs.show_job_details"))
+    accounting_row.Add(sacct_button, 0, wx.RIGHT | wx.ALIGN_CENTER_VERTICAL, 6)
+    accounting_row.Add(job_id_field, 1, wx.RIGHT | wx.EXPAND, 6)
+    accounting_row.Add(show_details_button, 0, wx.ALIGN_CENTER_VERTICAL, 6)
+    accounting_sizer.Add(accounting_row, 0, wx.EXPAND | wx.ALL, 6)
+    accounting_text = wx.TextCtrl(accounting_box, style=wx.TE_MULTILINE | wx.TE_READONLY | wx.HSCROLL)
+    try:
+        accounting_text.SetHint(t("jobs_outputs.accounting_placeholder"))
+    except Exception:
+        pass
+    accounting_sizer.Add(accounting_text, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 6)
+    accounting_sizer.SetMinSize(wx.Size(-1, 90))
+    details_sizer.Add(accounting_sizer, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 8)
+    # Cluster Servers (lssrv) group
+    lssrv_box = wx.StaticBox(details_page, label=t("jobs_outputs.lssrv_title"))
+    lssrv_sizer = wx.StaticBoxSizer(lssrv_box, wx.VERTICAL)
+    try:
+        lssrv_row = wx.WrapSizer(wx.HORIZONTAL)
+    except Exception:
+        lssrv_row = wx.BoxSizer(wx.HORIZONTAL)
+    lssrv_button = wx.Button(lssrv_box, label=t("jobs_outputs.lssrv_refresh"))
+    lssrv_row.Add(lssrv_button, 0, wx.RIGHT | wx.ALIGN_CENTER_VERTICAL, 6)
+    lssrv_row.AddStretchSpacer(1)
+    lssrv_sizer.Add(lssrv_row, 0, wx.EXPAND | wx.ALL, 6)
+    lssrv_text = wx.TextCtrl(lssrv_box, style=wx.TE_MULTILINE | wx.TE_READONLY | wx.HSCROLL)
+    try:
+        lssrv_text.SetHint(t("jobs_outputs.lssrv_empty"))
+    except Exception:
+        pass
+    lssrv_sizer.Add(lssrv_text, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 6)
+    lssrv_sizer.SetMinSize(wx.Size(-1, 90))
+    details_sizer.Add(lssrv_sizer, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 8)
+    details_page.SetSizer(details_sizer)
+    # Files placeholder
+    files_sizer = wx.BoxSizer(wx.VERTICAL)
+    files_placeholder = wx.StaticText(files_page, label=t("jobs_outputs.files_title"))
+    files_sizer.Add(files_placeholder, 0, wx.ALL, 8)
+    files_empty = wx.TextCtrl(files_page, style=wx.TE_MULTILINE | wx.TE_READONLY)
+    files_empty.SetValue("")
+    try:
+        files_empty.SetHint(t("jobs_outputs.files_title"))
+    except Exception:
+        pass
+    files_sizer.Add(files_empty, 1, wx.EXPAND | wx.ALL, 8)
+    files_page.SetSizer(files_sizer)
+    # Outputs placeholder
+    outputs_sizer = wx.BoxSizer(wx.VERTICAL)
+    outputs_placeholder = wx.StaticText(outputs_page, label=t("jobs_outputs.outputs_title"))
+    outputs_sizer.Add(outputs_placeholder, 0, wx.ALL, 8)
+    outputs_empty = wx.TextCtrl(outputs_page, style=wx.TE_MULTILINE | wx.TE_READONLY)
+    outputs_empty.SetValue("")
+    try:
+        outputs_empty.SetHint(t("jobs_outputs.outputs_title"))
+    except Exception:
+        pass
+    outputs_sizer.Add(outputs_empty, 1, wx.EXPAND | wx.ALL, 8)
+    outputs_page.SetSizer(outputs_sizer)
+    root.Add(notebook, 1, wx.EXPAND | wx.ALL, 8)
     panel.SetSizer(root)
-    state = {"items": [], "selected_job": "", "closed": False, "in_flight": False, "output_in_flight": False, "cancel_in_flight": False, "user_paused": False, "minimized": False, "follow_calls": 0}
+    # Initial enable state: disabled when no callback
+    if not refresh_sacct:
+        sacct_button.Enable(False)
+    if not show_job_details:
+        show_details_button.Enable(False)
+    if not refresh_lssrv:
+        lssrv_button.Enable(False)
+    state = {"items": [], "selected_job": "", "closed": False, "in_flight": False, "output_in_flight": False, "cancel_in_flight": False, "user_paused": False, "minimized": False, "follow_calls": 0, "sacct_in_flight": False, "details_in_flight": False, "lssrv_in_flight": False}
     state_lock = Lock()
     timer = wx.Timer(host)
 
@@ -409,6 +521,114 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
 
         Thread(target=worker, daemon=True).start()
 
+    def _refresh_sacct(_event=None):
+        if not refresh_sacct:
+            return
+        with state_lock:
+            if state["closed"] or state["sacct_in_flight"]:
+                return
+            state["sacct_in_flight"] = True
+        sacct_button.Enable(False)
+
+        def worker():
+            try:
+                result = refresh_sacct()
+                wx.CallAfter(_done, result, None)
+            except Exception as error:
+                wx.CallAfter(_done, "", error)
+
+        def _done(result, error):
+            with state_lock:
+                state["sacct_in_flight"] = False
+            if state["closed"]:
+                return
+            sacct_button.Enable(True if refresh_sacct else False)
+            if error:
+                accounting_text.SetValue(str(error))
+            else:
+                text = clean_output(result) if result is not None else ""
+                # keep placeholder visible if empty via SetValue empty
+                accounting_text.SetValue(text)
+                if not text:
+                    # ensure placeholder hint visible; leave value empty
+                    pass
+
+        Thread(target=worker, daemon=True).start()
+
+    def _show_job_details(_event=None):
+        if not show_job_details:
+            return
+        job_id = job_id_field.GetValue().strip() or state["selected_job"] or model.tracking.selected_job_id
+        if not job_id:
+            accounting_text.SetValue(t("jobs_outputs.job_id_required"))
+            return
+        with state_lock:
+            if state["closed"] or state["details_in_flight"]:
+                return
+            state["details_in_flight"] = True
+        show_details_button.Enable(False)
+
+        def worker():
+            try:
+                # callback may expect job_id arg or no arg
+                try:
+                    result = show_job_details(job_id)
+                except TypeError:
+                    result = show_job_details()
+                wx.CallAfter(_done, result, None)
+            except Exception as error:
+                wx.CallAfter(_done, "", error)
+
+        def _done(result, error):
+            with state_lock:
+                state["details_in_flight"] = False
+            if state["closed"]:
+                return
+            show_details_button.Enable(True if show_job_details else False)
+            if error:
+                accounting_text.SetValue(str(error))
+            else:
+                text = clean_output(result) if result is not None and not isinstance(result, dict) else str(result or "")
+                if isinstance(result, dict) and result:
+                    # if dict, dump? but unlikely
+                    text = "\n".join(f"{k}: {v}" for k, v in result.items())
+                accounting_text.SetValue(text)
+
+        Thread(target=worker, daemon=True).start()
+
+    def _refresh_lssrv(_event=None):
+        if not refresh_lssrv:
+            return
+        with state_lock:
+            if state["closed"] or state["lssrv_in_flight"]:
+                return
+            state["lssrv_in_flight"] = True
+        lssrv_button.Enable(False)
+
+        def worker():
+            try:
+                result = refresh_lssrv()
+                wx.CallAfter(_done, result, None)
+            except Exception as error:
+                wx.CallAfter(_done, "", error)
+
+        def _done(result, error):
+            with state_lock:
+                state["lssrv_in_flight"] = False
+            if state["closed"]:
+                return
+            lssrv_button.Enable(True if refresh_lssrv else False)
+            if error:
+                lssrv_text.SetValue(t("jobs_outputs.lssrv_failed"))
+            else:
+                text = str(result or "").strip()
+                if not text:
+                    lssrv_text.SetValue(t("jobs_outputs.lssrv_empty"))
+                else:
+                    lssrv_text.SetValue(clean_output(result))
+
+        Thread(target=worker, daemon=True).start()
+
     def open_detached(_event):
         job_id = state["selected_job"]
         if not read_output or not job_id:
@@ -443,12 +663,72 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         follow.SetLabel(t("files.auto_scroll"))
         cancel_button.SetLabel(t("jobs.cancel"))
         pause_button.SetLabel(t("jobs.resume_output" if state["user_paused"] else "jobs.pause_output"))
+        # notebook and groups
+        try:
+            notebook.SetPageText(0, f"{t('jobs.title')} / {t('common.details')}")
+            notebook.SetPageText(1, t("jobs_outputs.files_title"))
+            notebook.SetPageText(2, t("jobs_outputs.outputs_title"))
+        except Exception:
+            pass
+        try:
+            accounting_box.SetLabel(t("jobs_outputs.accounting_details"))
+        except Exception:
+            pass
+        sacct_button.SetLabel(t("jobs_outputs.refresh_sacct"))
+        show_details_button.SetLabel(t("jobs_outputs.show_job_details"))
+        try:
+            job_id_field.SetHint(t("jobs.job_id"))
+        except Exception:
+            pass
+        try:
+            accounting_text.SetHint(t("jobs_outputs.accounting_placeholder"))
+        except Exception:
+            pass
+        try:
+            lssrv_box.SetLabel(t("jobs_outputs.lssrv_title"))
+        except Exception:
+            pass
+        lssrv_button.SetLabel(t("jobs_outputs.lssrv_refresh"))
+        try:
+            lssrv_text.SetHint(t("jobs_outputs.lssrv_empty"))
+        except Exception:
+            pass
+        files_placeholder.SetLabel(t("jobs_outputs.files_title"))
+        try:
+            files_empty.SetHint(t("jobs_outputs.files_title"))
+        except Exception:
+            pass
+        outputs_placeholder.SetLabel(t("jobs_outputs.outputs_title"))
+        try:
+            outputs_empty.SetHint(t("jobs_outputs.outputs_title"))
+        except Exception:
+            pass
+        # also handle lssrv text placeholder when empty?
+        if not lssrv_text.GetValue():
+            try:
+                lssrv_text.SetHint(t("jobs_outputs.lssrv_empty"))
+            except Exception:
+                pass
 
-    jobs.Bind(wx.EVT_LIST_ITEM_SELECTED, select_job)
+    def select_job_wrapper(event):
+        select_job(event)
+        try:
+            job_id_field.SetValue(state.get("selected_job", ""))
+        except Exception:
+            pass
+    jobs.Bind(wx.EVT_LIST_ITEM_SELECTED, select_job_wrapper)
     refresh_button.Bind(wx.EVT_BUTTON, refresh_jobs)
     detached_button.Bind(wx.EVT_BUTTON, open_detached)
     pause_button.Bind(wx.EVT_BUTTON, toggle_pause)
     cancel_button.Bind(wx.EVT_BUTTON, cancel_job)
+    sacct_button.Bind(wx.EVT_BUTTON, _refresh_sacct)
+    show_details_button.Bind(wx.EVT_BUTTON, _show_job_details)
+    lssrv_button.Bind(wx.EVT_BUTTON, _refresh_lssrv)
+    # also allow Enter in job_id_field to trigger show details
+    try:
+        job_id_field.Bind(wx.EVT_TEXT_ENTER, _show_job_details)
+    except Exception:
+        pass
     def tick(event):
         refresh_jobs(event)
         refresh_outputs(event)
@@ -462,26 +742,43 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         lifecycle.register_cleanup(close)
     subscribe_language_change(refresh_labels)
     host._wx_jobs_state = state
-    host._wx_jobs_controls = {"jobs": jobs, "stdout": stdout, "stderr": stderr, "follow": follow, "pause": pause_button}
+    host._wx_jobs_controls = {"jobs": jobs, "stdout": stdout, "stderr": stderr, "follow": follow, "pause": pause_button, "refresh": refresh_button, "cancel": cancel_button, "notebook": notebook, "details_page": details_page, "files_page": files_page, "outputs_page": outputs_page, "accounting_text": accounting_text, "job_id_field": job_id_field, "sacct_button": sacct_button, "show_details_button": show_details_button, "lssrv_text": lssrv_text, "lssrv_button": lssrv_button, "lssrv_box": lssrv_box, "accounting_box": accounting_box}
     host._wx_jobs_refresh_jobs = refresh_jobs
     host._wx_jobs_refresh_outputs = refresh_outputs
+    host._wx_jobs_refresh_sacct = _refresh_sacct
+    host._wx_jobs_show_details = _show_job_details
+    host._wx_jobs_refresh_lssrv = _refresh_lssrv
+    host._wx_jobs_notebook = notebook
     refresh_jobs()
     finish()
     return host
 
 
-def build_jobs_panel(parent, model: WxJobsModel | None = None, *, list_jobs=None, read_output=None, cancel=None, lifecycle=None, final_state=None, generation=None):
+def build_jobs_panel(parent, model: WxJobsModel | None = None, *, list_jobs=None, read_output=None, cancel=None, lifecycle=None, final_state=None, generation=None, refresh_sacct=None, show_job_details=None, refresh_lssrv=None, **kwargs):
     """Embedded panel factory. Returns the wx.Panel host."""
-    return _build_jobs(parent, model, list_jobs=list_jobs, read_output=read_output, cancel=cancel, lifecycle=lifecycle, final_state=final_state, generation=generation, embedded=True)
+    # alias handling
+    if refresh_sacct is None:
+        refresh_sacct = kwargs.get("refresh_sacct") or kwargs.get("sacct")
+    if show_job_details is None:
+        show_job_details = kwargs.get("show_job_details") or kwargs.get("show_details") or kwargs.get("scontrol")
+    if refresh_lssrv is None:
+        refresh_lssrv = kwargs.get("refresh_lssrv") or kwargs.get("lssrv")
+    return _build_jobs(parent, model, list_jobs=list_jobs, read_output=read_output, cancel=cancel, lifecycle=lifecycle, final_state=final_state, generation=generation, embedded=True, refresh_sacct=refresh_sacct, show_job_details=show_job_details, refresh_lssrv=refresh_lssrv, **kwargs)
 
 
-def show_jobs(parent=None, model: WxJobsModel | None = None, *, list_jobs=None, read_output=None, cancel=None, lifecycle=None, final_state=None, generation=None) -> int:
+def show_jobs(parent=None, model: WxJobsModel | None = None, *, list_jobs=None, read_output=None, cancel=None, lifecycle=None, final_state=None, generation=None, refresh_sacct=None, show_job_details=None, refresh_lssrv=None, **kwargs) -> int:
     """Create the wx Jobs workspace; callbacks are service adapters, never UI IO."""
     try:
         import wx
     except ImportError as exc:
         raise RuntimeError("wxPython is not installed") from exc
-    _build_jobs(parent, model, list_jobs=list_jobs, read_output=read_output, cancel=cancel, lifecycle=lifecycle, final_state=final_state, generation=generation, embedded=False)
+    if refresh_sacct is None:
+        refresh_sacct = kwargs.get("refresh_sacct") or kwargs.get("sacct")
+    if show_job_details is None:
+        show_job_details = kwargs.get("show_job_details") or kwargs.get("show_details") or kwargs.get("scontrol")
+    if refresh_lssrv is None:
+        refresh_lssrv = kwargs.get("refresh_lssrv") or kwargs.get("lssrv")
+    _build_jobs(parent, model, list_jobs=list_jobs, read_output=read_output, cancel=cancel, lifecycle=lifecycle, final_state=final_state, generation=generation, embedded=False, refresh_sacct=refresh_sacct, show_job_details=show_job_details, refresh_lssrv=refresh_lssrv, **kwargs)
     return wx.ID_OK
 
 
