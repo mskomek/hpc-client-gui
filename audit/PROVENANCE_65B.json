@@ -14,8 +14,21 @@
     "D:\\Python\\Python312\\python.exe -m pytest tests/test_wx_file003_final_stress.py -v",
     "D:\\Python\\Python312\\python.exe scripts/capture_gui_audit.py --size 1100x720 --language en"
   ],
-  "exit_codes": [0, 0, 0, 0, 0, 0, 0, 0],
-  "pass_fail_skip": {"passed": 58, "failed": 0, "skipped": 0},
+  "exit_codes": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "pass_fail_skip": {
+    "passed": 58,
+    "failed": 0,
+    "skipped": 0
+  },
   "stress_counts": {
     "main_tab_switches": 500,
     "workspace_action_dispatches": 300,
@@ -29,7 +42,7 @@
     "file_transfer_items": 100,
     "editor_cycles": 100,
     "logs_refreshes": 100,
-    "detached_supported_windows": 20,
+    "detached_supported_windows": 100,
     "main_shell_open_close": 50,
     "close_in_flight": 50
   },
@@ -65,7 +78,7 @@
     "ansys.png": "f6e456e85783c27a56f9cee89a51209694a04b65fc7e94b7398e45accc4d708b"
   },
   "artifact_sha256": "pending - no packaged artifact in this build",
-  "provenance_generated_utc": "2026-09-06T18:00:00+00:00",
+  "provenance_generated_utc": "2026-09-06T19:00:00+00:00",
   "ci": {
     "windows_wx": "local PASS (see above)",
     "linux_wx": "BLOCKED - no Linux runner",

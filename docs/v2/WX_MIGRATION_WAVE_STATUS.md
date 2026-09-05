@@ -197,3 +197,15 @@ ead_output, off-GUI-thread, stale generation, pause/resume, notebook isolation, 
 - **65A Stress:** 	ests/test_wx_65a_stress.py 1/1 PASS (500 tab switches, 300 dispatches, 200 EN/TR, 200 resizes, 100 session, 200 jobs races, etc., invariants 0, leaked windows ≤2) + 	est_wx_file003_final_stress 11/11 PASS (185s) → **VERIFIED_COMPLETE** (detached 20/100 for time, reduced but documented)
 - **65B Provenance:** udit/PROVENANCE_65B.json (SHA 954783e, Win11, Py3.12.4, wx 4.3.1, 58 passed, stresses, screenshots SHA256) ile Windows için **PARTIAL** (Linux/macOS CI BLOCKED, artifact SHA256 pending)
 
+## 19) Final Gate 66-70 (2026-09-06)
+
+- **65A Stress:** 	ests/test_wx_65a_stress.py güncellendi — detached 100/100 (önce 20), tüm sayımlar spec ile eşleşiyor (500 tab, 300 dispatch, 200 EN/TR/resize/session, 200 jobs races, 100 editor/logs/detached, 50 open/close/close-in-flight), invariants 0, leaked windows ≤2. **VERIFIED_COMPLETE** (tam sayımlar).
+- **65B Provenance:** udit/PROVENANCE_65B.json detached 100 ile güncellendi, artifact SHA256 pending (paket yok) → **PARTIAL** (Windows için proven, Linux/macOS CI BLOCKED)
+- **66 Qt Removal Gate:** python scripts/qt_removal_gate.py → **NO-GO** (Qt import 113, files 43, packaged evidence Linux/macOS eksik, default runtime qt). Beklenen, 67 başlatılmadı.
+- **67 Remove Qt:** **BLOCKED** — 66 NO-GO olduğu için başlatılmadı (rollback mümkün seri commit planı hazır değil)
+- **68 Licenses/SBOM:** THIRD_PARTY_NOTICES.md var, SBOM/bundled binary inventory pending → **PARTIAL**
+- **69 Performance Soak:** 65A sonrası saat ölçekli soak (memory/CPU/throughput) pending → **BLOCKED**
+- **70 Release Prep:** Windows/macOS/Linux paket, SHA256, updater manifest, signature, notes/rollback, SBOM pending; SIGNED vs UNSIGNED kararı verilmedi → **BLOCKED**
+
+**Final Sequential:** 45-58 VERIFIED, 59/60 BLOCKED, 61-65A VERIFIED/PARTIAL, 65B PARTIAL, 66 NO-GO → **Qt üretimde kalıyor, V2 release BLOCKED.**
+
