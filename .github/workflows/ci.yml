@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, develop ]
   pull_request:
 
 # One run per branch/PR: a new push cancels the superseded run for the
@@ -306,3 +306,49 @@ jobs:
         env:
           PYTHONPATH: src
         run: python -m pytest tests/test_wheel_packaging.py -m packaging -q
+
+  wx-smoke:
+    name: wx smoke (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            python-version: "3.14"
+          - os: ubuntu-latest
+            python-version: "3.14"
+          - os: macos-15
+            python-version: "3.14"
+          - os: macos-15-intel
+            python-version: "3.14"
+    env:
+      PYTHONPATH: src
+      QT_QPA_PLATFORM: offscreen
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install system deps (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libgstreamer-gl1.0-0 libgstreamer-plugins-base1.0-dev libglib2.0-dev libsm-dev libx11-dev libxtst-dev xvfb
+      - name: Install deps with wx
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .[test,wx]
+          pip install pytest ruff
+        continue-on-error: ${{ runner.os == 'Linux' }}
+      - name: Compile check
+        run: python -m compileall src/hpc_gui
+      - name: Ruff gate (wx)
+        run: python -m ruff check src scripts tests
+      - name: Focused wx smoke (headless)
+        run: |
+          python -m pytest tests/test_wx_shell.py tests/test_wx_65a_stress.py tests/test_wx_windows_audit.py -q --tb=short -rf
+        continue-on-error: ${{ runner.os == 'Linux' }}
+      - name: Linux display note
+        if: runner.os == 'Linux'
+        run: echo "Linux wx requires Xvfb/GTK; missing wheel must build from source — BLOCKED if build fails, documented in docs/v2/WX_DEPENDENCY_CLOSURE.md"
