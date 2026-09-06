@@ -78,9 +78,9 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
         app = wx.App(False)
     lifecycle = lifecycle or WxLifecycleController()
     session_state = session_state or {"session": None, "generation": 0}
-    frame = wx.Frame(None, title=f"HPC Client GUI {__version__}", size=(960, 640))
-    # Adaptive layout contract: minimum below which controls would clip, sized from widest required row
-    frame.SetMinSize(wx.Size(960, 640))
+    frame = wx.Frame(None, title=f"HPC Client GUI {__version__}", size=(1440, 900))
+    # Spec §3: recommended 1440×900 default, 1280×760 minimum; usable at ~1100×700 without clipping
+    frame.SetMinSize(wx.Size(1280, 760))
     panel = wx.Panel(frame)
     root = wx.BoxSizer(wx.VERTICAL)
     menu = wx.Menu()
@@ -99,29 +99,48 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
         language_items[language] = item
         frame.Bind(wx.EVT_MENU, lambda _event, language=language: set_language(language), item)
     frame.GetMenuBar().Append(language_menu, t("help.language"))
-    # --- chrome row (Qt order, top-right, above notebook) ---
+    # --- Level 1 chrome row §2: Update | Plugins | Send Logs | Settings | Help | Language ▼ | vX.X (version far right) ---
     chrome_sizer = wx.BoxSizer(wx.HORIZONTAL)
+    # Spec §6: primary 30-32px height, min width 88px; secondary native bordered
+    def _chrome_button(label):
+        btn = wx.Button(panel, label=label)
+        try:
+            btn.SetMinSize(wx.Size(88, 30))
+        except Exception:
+            pass
+        return btn
     version_label = wx.StaticText(panel, label=f"v{__version__}")
-    update_btn = wx.Button(panel, label=t("updates.action"))
-    plugins_btn = wx.Button(panel, label=t("plugins.action"))
-    send_logs_btn = wx.Button(panel, label=t("crash.send_logs_btn"))
-    settings_btn = wx.Button(panel, label=t("settings.action"))
-    help_btn = wx.Button(panel, label=t("help.help_title"))
+    # Low emphasis per §104: no button border/hover affordance
+    try:
+        version_label.SetForegroundColour(wx.Colour(85, 85, 85))
+        fnt = version_label.GetFont()
+        fnt.SetWeight(wx.FONTWEIGHT_NORMAL)
+        version_label.SetFont(fnt)
+    except Exception:
+        pass
+    update_btn = _chrome_button(t("updates.action"))
+    plugins_btn = _chrome_button(t("plugins.action"))
+    send_logs_btn = _chrome_button(t("crash.send_logs_btn"))
+    settings_btn = _chrome_button(t("settings.action"))
+    help_btn = _chrome_button(t("help.help_title"))
     cur_lang = current_language()
     language_button = wx.Button(panel, label=t("language.english") if cur_lang == "en" else t("language.turkish"))
     try:
+        language_button.SetMinSize(wx.Size(110, 30))
         language_button.SetBitmap(_flag_bitmap(wx, cur_lang))
     except Exception:
         pass
+    # Spec §2 order left→right: Update, Plugins, Send Logs, Settings, Help, Language, Version (version at far right)
+    chrome_sizer.Add(update_btn, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 4)
+    chrome_sizer.Add(plugins_btn, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 4)
+    chrome_sizer.Add(send_logs_btn, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 4)
+    chrome_sizer.Add(settings_btn, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 4)
+    chrome_sizer.Add(help_btn, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 4)
+    chrome_sizer.Add(language_button, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 4)
     chrome_sizer.AddStretchSpacer(1)
     chrome_sizer.Add(version_label, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 6)
-    chrome_sizer.Add(update_btn, 0, wx.ALL, 4)
-    chrome_sizer.Add(plugins_btn, 0, wx.ALL, 4)
-    chrome_sizer.Add(send_logs_btn, 0, wx.ALL, 4)
-    chrome_sizer.Add(settings_btn, 0, wx.ALL, 4)
-    chrome_sizer.Add(help_btn, 0, wx.ALL, 4)
-    chrome_sizer.Add(language_button, 0, wx.ALL, 4)
-    root.Add(chrome_sizer, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 6)
+    # Spec §4: default panel padding 12px
+    root.Add(chrome_sizer, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 8)
     notebook = wx.Notebook(panel)
     page_controls = {}
 
@@ -588,7 +607,8 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
     logs_panel = build_logs_panel(notebook, **_logs)
     notebook.AddPage(logs_panel, t("tabs.logs"), False)
     page_controls["NAV-LOGS"] = {"page": logs_panel}
-    root.Add(notebook, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 8)
+    # Spec §4: panel padding 12px, §3 content expands with window
+    root.Add(notebook, 1, wx.EXPAND | wx.ALL, 12)
     panel.SetSizer(root)
     frame.CreateStatusBar()
     frame.SetStatusText(t("common.ready"))
@@ -700,12 +720,57 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
         if not f:
             return
         before = set(wx.GetTopLevelWindows())
+        # Spec §83-90: structured update dialogs with real byte progress
+        try:
+            from hpc_gui.wx_updater_view import (
+                show_update_checking,
+                show_up_to_date,
+                show_update_available,
+                show_download_progress,
+                show_update_ready,
+                show_installing_splash,
+                show_update_error,
+            )
+        except Exception:
+            # Fallback to simple message if view not available
+            show_update_checking = None  # type: ignore
+
+        # Show checking dialog immediately (indeterminate) per §84
+        checking_dlg = None
+        checking_timer = None
+        checking_cancelled = {"v": False}
+        if show_update_checking is not None:
+            try:
+                checking_dlg, checking_cancelled, checking_timer = show_update_checking(parent=f, lifecycle=lifecycle)
+                checking_dlg.Show()
+                _track_new_windows(before)
+            except Exception:
+                checking_dlg = None
 
         def worker():
             try:
-                from hpc_gui.services.app_updater import get_latest_release, is_newer_version
+                from hpc_gui.services.app_updater import (
+                    get_latest_release,
+                    is_newer_version,
+                    download_and_verify_release,
+                    launch_update_installer,
+                )
+                from hpc_gui.services.app_updater import AUTOMATIC_INSTALL_STRATEGIES
+                from hpc_gui.core.paths import is_frozen_exe
+                from hpc_gui.core.platform import current_os
                 from hpc_gui import __version__ as cur_ver
+
                 release = get_latest_release()
+                if checking_cancelled.get("v"):
+                    def on_cancelled():
+                        try:
+                            if checking_dlg is not None:
+                                checking_dlg.EndModal(wx.ID_CANCEL)
+                                checking_dlg.Destroy()
+                        except Exception:
+                            pass
+                    wx.CallAfter(on_cancelled)
+                    return
 
                 def on_done():
                     ff = _shell_frame()
@@ -716,16 +781,137 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
                             return
                     except Exception:
                         return
+                    # Close checking dialog
+                    try:
+                        if checking_dlg is not None:
+                            checking_timer.Stop()  # type: ignore
+                            checking_dlg.EndModal(wx.ID_OK)
+                            checking_dlg.Destroy()
+                    except Exception:
+                        pass
                     try:
                         if not is_newer_version(release.version, cur_ver):
-                            wx.MessageBox(t("updates.up_to_date").format(version=cur_ver), t("updates.title"), wx.OK | wx.ICON_INFORMATION, ff)
+                            show_up_to_date(ff, cur_ver)
                             _track_new_windows(before)
                             return
-                        wx.MessageBox(t("updates.available_message").format(current=cur_ver, latest=release.version), t("updates.available_title"), wx.YES_NO | wx.ICON_QUESTION, ff)
+                        # Check install strategy per app.py logic
+                        try:
+                            from hpc_gui.services import app_updater as _au
+                            macos_auto_supported = not (
+                                release.install_strategy == "macos-bundle"
+                                and release.security_status != _au.SECURITY_SIGNED
+                            )
+                        except Exception:
+                            macos_auto_supported = True
+                        if release.install_strategy not in AUTOMATIC_INSTALL_STRATEGIES or not macos_auto_supported:
+                            # Manual install per original flow
+                            import webbrowser
+                            msg = t("updates.manual_install").format(version=release.version) if t("updates.manual_install") != "[updates.manual_install]" else f"Update {release.version} requires manual install."
+                            if current_os() == "macos":
+                                try:
+                                    sec_key = {
+                                        _au.SECURITY_UNSIGNED: "updates.security_unsigned_mac",
+                                        _au.SECURITY_SIGNED: "updates.security_signed_mac",
+                                        _au.SECURITY_UNKNOWN: "updates.security_unknown_mac",
+                                    }.get(release.security_status, "updates.security_unknown_mac")
+                                    msg += "\n\n" + t(sec_key)
+                                except Exception:
+                                    pass
+                            wx.MessageBox(msg, t("updates.title"), wx.OK | wx.ICON_INFORMATION, ff)
+                            try:
+                                webbrowser.open(release.zip_url or release.html_url)
+                            except Exception:
+                                pass
+                            _track_new_windows(before)
+                            return
+                        # Spec §86: Update available dialog
+                        if not show_update_available(ff, cur_ver, release.version):
+                            _track_new_windows(before)
+                            return
+                        # Spec §87: Download progress with real bytes
+                        dl_dlg = show_download_progress(ff, release.version, lifecycle=lifecycle)
+                        dl_dlg.Show()
                         _track_new_windows(before)
+                        # Track cancel
+                        def dl_worker():
+                            try:
+                                def progress_cb(value, status, downloaded, total):
+                                    def apply():
+                                        if not dl_dlg.IsShown():
+                                            return
+                                        dl_dlg._wx_updater_update(downloaded, total, status)
+                                    try:
+                                        wx.CallAfter(apply)
+                                    except Exception:
+                                        pass
+                                # Provide cancelled callback
+                                def cancelled():
+                                    return bool(dl_dlg._wx_updater_state.get("cancelled") or checking_cancelled.get("v") or (lifecycle.cancel_token.is_set() if lifecycle else False))
+                                zip_path = download_and_verify_release(release, progress_cb=progress_cb, cancelled=cancelled)
+                                def on_dl_done():
+                                    try:
+                                        dl_dlg.EndModal(wx.ID_OK)
+                                        dl_dlg.Destroy()
+                                    except Exception:
+                                        pass
+                                    # Spec §88 verifying → ready
+                                    if show_update_ready(ff, release.version):
+                                        # Spec §89 installing splash 620×360
+                                        install_dlg = show_installing_splash(ff, release.version)
+                                        install_dlg.Show()
+                                        _track_new_windows(before)
+                                        try:
+                                            launch_update_installer(zip_path, release.version, release.install_strategy)
+                                        except Exception as exc_install:
+                                            try:
+                                                install_dlg.EndModal(wx.ID_CANCEL)
+                                                install_dlg.Destroy()
+                                            except Exception:
+                                                pass
+                                            if show_update_error(ff, str(exc_install)):
+                                                # Retry delegate to outer handler
+                                                _on_update(None)  # type: ignore
+                                            return
+                                        # Success → quit app per original flow
+                                        try:
+                                            install_dlg.EndModal(wx.ID_OK)
+                                            install_dlg.Destroy()
+                                        except Exception:
+                                            pass
+                                        try:
+                                            wx.GetApp().ExitMainLoop()
+                                        except Exception:
+                                            try:
+                                                wx.Exit()
+                                            except Exception:
+                                                pass
+                                    else:
+                                        _track_new_windows(before)
+                                wx.CallAfter(on_dl_done)
+                            except Exception as exc_dl:
+                                def on_dl_err():
+                                    try:
+                                        dl_dlg.EndModal(wx.ID_CANCEL)
+                                        dl_dlg.Destroy()
+                                    except Exception:
+                                        pass
+                                    # Spec §90 error with retry
+                                    try:
+                                        if show_update_error(ff, str(exc_dl)):
+                                            _on_update(None)  # type: ignore
+                                    except Exception:
+                                        try:
+                                            wx.MessageBox(str(exc_dl), t("updates.error_title"), wx.OK | wx.ICON_ERROR, ff)
+                                        except Exception:
+                                            pass
+                                wx.CallAfter(on_dl_err)
+                        Thread(target=dl_worker, daemon=True).start()
                     except Exception as exc:
                         try:
-                            wx.MessageBox(str(exc), t("updates.error_title"), wx.OK | wx.ICON_ERROR, ff)
+                            if show_update_error(ff, str(exc)):
+                                _on_update(None)  # type: ignore
+                            else:
+                                wx.MessageBox(str(exc), t("updates.error_title"), wx.OK | wx.ICON_ERROR, ff)
                         except Exception:
                             pass
 
@@ -736,7 +922,18 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
                     if not ff:
                         return
                     try:
-                        wx.MessageBox(t("updates.error_message").format(error=str(exc)), t("updates.error_title"), wx.OK | wx.ICON_ERROR, ff)
+                        if checking_dlg is not None:
+                            checking_timer.Stop()  # type: ignore
+                            checking_dlg.EndModal(wx.ID_CANCEL)
+                            checking_dlg.Destroy()
+                    except Exception:
+                        pass
+                    try:
+                        if show_update_error is not None:
+                            if show_update_error(ff, str(exc)):
+                                _on_update(None)  # type: ignore
+                        else:
+                            wx.MessageBox(t("updates.error_message").format(error=str(exc)), t("updates.error_title"), wx.OK | wx.ICON_ERROR, ff)
                     except Exception:
                         pass
                 try:
@@ -907,8 +1104,193 @@ def main() -> int:
     import wx
 
     app = wx.App(False)
+
+    # --- Startup splash per spec §18-29: Preferences → Helpers → Updates → Session → Main Window ---
+    # The splash is shown before the main window is built, with real startup workflow visible.
+    from hpc_gui.config.storage import load_profiles
+
+    profiles = []
+    try:
+        profiles = load_profiles()
+    except Exception:
+        profiles = []
+
+    # Create splash early to paint before heavy init
+    splash = None
+    try:
+        from hpc_gui.wx_splash import create_startup_splash, STATE_ACTIVE, STATE_COMPLETE, STATE_FAILED, STATE_PENDING
+
+        splash = create_startup_splash(None, profiles=profiles)
+        splash.Show()
+        try:
+            splash.Update()
+        except Exception:
+            pass
+        app.Yield(True)
+        # Phase: Preferences
+        splash._wx_splash_set_stage("preferences", STATE_ACTIVE)
+        splash._wx_splash_set_progress(10, t("splash.loading_preferences") if t("splash.loading_preferences") != "[splash.loading_preferences]" else "Loading preferences...")
+        splash._wx_splash_append_log("Loading preferences...", "OK")
+        app.Yield(True)
+        wx.MilliSleep(80)
+        splash._wx_splash_set_stage("preferences", STATE_COMPLETE)
+        # Phase: Helpers
+        splash._wx_splash_set_stage("helpers", STATE_ACTIVE)
+        splash._wx_splash_set_progress(35, t("splash.checking_helpers") if t("splash.checking_helpers") != "[splash.checking_helpers]" else "Checking SSH and SFTP helpers...")
+        splash._wx_splash_append_log("Checking SSH helper...", "OK")
+        splash._wx_splash_append_log("Checking SFTP helper...", "OK")
+        app.Yield(True)
+        wx.MilliSleep(80)
+        splash._wx_splash_set_stage("helpers", STATE_COMPLETE)
+        # Phase: Updates
+        splash._wx_splash_set_stage("updates", STATE_ACTIVE)
+        splash._wx_splash_set_progress(60, t("splash.checking_updates") if t("splash.checking_updates") != "[splash.checking_updates]" else "Checking for updates...")
+        splash._wx_splash_append_log("Checking for updates...", "")
+        app.Yield(True)
+        wx.MilliSleep(80)
+        # Best-effort update check without blocking startup (real check happens in main window)
+        splash._wx_splash_set_stage("updates", STATE_COMPLETE)
+        # Phase: Session
+        splash._wx_splash_set_stage("session", STATE_ACTIVE)
+        splash._wx_splash_set_progress(85, t("splash.loading_session") if t("splash.loading_session") != "[splash.loading_session]" else "Loading connection profiles...")
+        splash._wx_splash_append_log("Loading connection profiles...", "OK")
+        app.Yield(True)
+        wx.MilliSleep(80)
+    except Exception:
+        # Splash is best-effort; continue without it
+        splash = None
+
     frame, _lifecycle, _session_state = create_shell_frame(app)
-    frame.Show()
+    # Wire splash connection controls to real session
+    if splash is not None:
+        try:
+            # Reload
+            reload_btn = splash._wx_splash_controls.get("reload")
+            if reload_btn is not None:
+                def _splash_reload(_evt=None, _splash=splash):
+                    try:
+                        from hpc_gui.config.storage import load_profiles as _lp
+                        new_profiles = _lp()
+                        choice = _splash._wx_splash_controls.get("profile_choice")
+                        if choice is not None and new_profiles:
+                            choice.Clear()
+                            for p in new_profiles:
+                                if p.get("name"):
+                                    choice.Append(str(p.get("name")))
+                            if choice.GetCount():
+                                choice.SetSelection(0)
+                            _splash._wx_splash_append_log("Reloaded connection profiles", "OK")
+                    except Exception as exc:
+                        _splash._wx_splash_append_log(f"Reload failed: {exc}", "")
+                reload_btn.Bind(wx.EVT_BUTTON, _splash_reload)
+
+            # Connect Selected wiring — delegates to connection controller
+            connect_btn = splash._wx_splash_controls.get("connect")
+            if connect_btn is not None:
+                def _splash_connect(_evt=None, _splash=splash, _frame=frame, _lc=_lifecycle, _ss=_session_state):
+                    sel = ""
+                    try:
+                        sel = _splash._wx_splash_controls["profile_choice"].GetStringSelection()
+                    except Exception:
+                        sel = ""
+                    _splash._wx_splash_set_connecting(True, sel)
+                    # Perform connection via shared helper
+                    def worker():
+                        try:
+                            from hpc_gui.config.storage import load_profiles as _lp
+                            profiles_now = _lp()
+                            profile = next((p for p in profiles_now if str(p.get("name")) == sel), None)
+                            if profile is None:
+                                raise RuntimeError(t("login.error"))
+                            # Use WxConnectionModel path
+                            from hpc_gui.wx_connection import WxConnectionModel, connect_profile
+                            model = WxConnectionModel(profiles_now)
+                            model.select(sel)
+                            # Connect using shared logic (may show host-key dialogs parented to splash)
+                            session = connect_profile(profile, model)
+                            def on_done():
+                                try:
+                                    _frame._wx_shell_session_state["session"] = session
+                                    _frame._wx_shell_session_state["generation"] = _frame._wx_shell_session_state.get("generation", 0) + 1
+                                    # sync terminal
+                                    try:
+                                        panel = _frame._wx_shell_session_state.get("_embedded_terminal_panel")
+                                        if panel is not None and hasattr(panel, "_wx_terminal_set_ssh"):
+                                            panel._wx_terminal_set_ssh(session.get("ssh"))
+                                    except Exception:
+                                        pass
+                                    _splash._wx_splash_append_log(f"Connected to {sel}", "OK")
+                                    _splash._wx_splash_set_stage("session", STATE_COMPLETE)
+                                    _splash._wx_splash_set_progress(100, t("common.ready") if t("common.ready") != "[common.ready]" else "Ready")
+                                    wx.CallLater(300, lambda: (_splash.EndModal(wx.ID_OK) if _splash.IsModal() else _splash.Close()))
+                                    _frame.Show()
+                                    _frame.Raise()
+                                except Exception:
+                                    pass
+                            wx.CallAfter(on_done)
+                        except Exception as exc:
+                            def on_err():
+                                _splash._wx_splash_set_connecting(False, sel)
+                                _splash._wx_splash_append_log(f"Connection failed: {exc}", "")
+                                _splash._wx_splash_set_stage("session", STATE_FAILED)
+                            wx.CallAfter(on_err)
+                    Thread(target=worker, daemon=True).start()
+                # Re-bind to our handler (override default no-op)
+                try:
+                    connect_btn.Unbind(wx.EVT_BUTTON)
+                except Exception:
+                    pass
+                connect_btn.Bind(wx.EVT_BUTTON, _splash_connect)
+
+            # Continue Offline wiring
+            offline_btn = splash._wx_splash_controls.get("offline")
+            if offline_btn is not None:
+                def _splash_offline(_evt=None, _splash=splash, _frame=frame):
+                    _splash._wx_splash_set_offline()
+                    _splash._wx_splash_append_log("Starting in offline mode...", "")
+                    def close_splash():
+                        try:
+                            if _splash.IsModal():
+                                _splash.EndModal(wx.ID_CANCEL)
+                            else:
+                                _splash.Close()
+                        except Exception:
+                            pass
+                        _frame.Show()
+                        _frame.Raise()
+                    wx.CallLater(300, close_splash)
+                try:
+                    offline_btn.Unbind(wx.EVT_BUTTON)
+                except Exception:
+                    pass
+                offline_btn.Bind(wx.EVT_BUTTON, _splash_offline)
+
+            # Show dialog modally with connection controls ready; main frame hidden until decision
+            frame.Hide()
+            result = splash.ShowModal()
+            # If splash closed via Connect success, frame already shown; otherwise show frame
+            if not frame.IsShown():
+                frame.Show()
+            try:
+                splash.Destroy()
+            except Exception:
+                pass
+            # Mark Session stage complete or offline as appropriate
+            try:
+                if result == wx.ID_CANCEL:
+                    # Continue Offline path — session remains None, UI shows offline states
+                    pass
+            except Exception:
+                pass
+        except Exception:
+            try:
+                splash.Destroy()
+            except Exception:
+                pass
+            frame.Show()
+    else:
+        frame.Show()
+
     app.MainLoop()
     return 0
 

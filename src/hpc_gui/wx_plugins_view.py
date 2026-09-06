@@ -18,7 +18,8 @@ def _build_plugins(parent, model: WxPluginManagerModel | None = None, *, root=No
     model = model or WxPluginManagerModel(root=root, install=install)
     if install is not None and model.install is None:
         model.install = install
-    host, finish = make_host(parent, title=t("plugins.dialog_title"), size=(760, 560), embedded=embedded)
+    # Spec §91: Plugins 800×600 resizable, §92 split 30-35% / 65-70%
+    host, finish = make_host(parent, title=t("plugins.dialog_title"), size=(800, 600), embedded=embedded)
     panel = wx.Panel(host)
     root_sizer = wx.BoxSizer(wx.VERTICAL)
 
@@ -43,22 +44,23 @@ def _build_plugins(parent, model: WxPluginManagerModel | None = None, *, root=No
     btn_close = wx.Button(panel, label=t("common.close"))
 
     top = wx.BoxSizer(wx.HORIZONTAL)
-    top.Add(title, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 6)
+    top.Add(title, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 12)
     top.AddStretchSpacer(1)
-    top.Add(search, 1, wx.ALL, 6)
-    top.Add(status, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 6)
+    top.Add(search, 1, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 12)
+    top.Add(status, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 12)
 
     btn_row = wx.BoxSizer(wx.HORIZONTAL)
-    btn_row.Add(btn_refresh, 0, wx.RIGHT, 6)
-    btn_row.Add(btn_install, 0, wx.RIGHT, 6)
-    btn_row.Add(btn_disable, 0, wx.RIGHT, 6)
-    btn_row.Add(btn_remove, 0, wx.RIGHT, 6)
+    btn_row.Add(btn_refresh, 0, wx.RIGHT, 8)
+    btn_row.Add(btn_install, 0, wx.RIGHT, 8)
+    btn_row.Add(btn_disable, 0, wx.RIGHT, 8)
+    btn_row.Add(btn_remove, 0, wx.RIGHT, 8)
     btn_row.AddStretchSpacer(1)
     btn_row.Add(btn_close, 0)
 
     root_sizer.Add(top, 0, wx.EXPAND)
-    root_sizer.Add(list_ctrl, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 8)
-    root_sizer.Add(btn_row, 0, wx.EXPAND | wx.ALL, 8)
+    root_sizer.Add(list_ctrl, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 12)
+    # Spec §16 footer 12-16px
+    root_sizer.Add(btn_row, 0, wx.EXPAND | wx.ALL, 16)
     panel.SetSizer(root_sizer)
 
     state = {"closed": False, "in_flight": False}
