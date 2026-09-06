@@ -2,8 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main ]
   pull_request:
+    branches: [ main ]
 
 # One run per branch/PR: a new push cancels the superseded run for the
 # same ref. Release builds are handled by their own workflow and are never
