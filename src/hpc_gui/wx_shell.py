@@ -718,100 +718,45 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
         if not f:
             return
         before = set(wx.GetTopLevelWindows())
-        # Spec §83-90: structured update dialogs with real byte progress
         try:
-            from hpc_gui.wx_updater_view import (
-                show_update_checking,
-                show_up_to_date,
-                show_update_available,
-                show_download_progress,
-                show_update_ready,
-                show_installing_splash,
-                show_update_error,
-            )
+            from hpc_gui.wx_updater_view import WxUpdateDialog, STATE_CHECKING, STATE_FAILED, STATE_UPDATE_AVAILABLE, STATE_UP_TO_DATE
+            from hpc_gui import __version__ as cur_ver
         except Exception:
-            # Fallback to simple message if view not available
-            show_update_checking = None  # type: ignore
-
-        # Show checking dialog immediately (indeterminate) per §84
-        checking_dlg = None
-        checking_timer = None
-        checking_cancelled = {"v": False}
-        if show_update_checking is not None:
-            try:
-                checking_dlg, checking_cancelled, checking_timer = show_update_checking(parent=f, lifecycle=lifecycle)
-                checking_dlg.Show()
-                _track_new_windows(before)
-            except Exception:
-                checking_dlg = None
-
+            return
+        dlg = WxUpdateDialog(f, None)
+        dlg._build_for_state(STATE_CHECKING)
+        dlg.dlg.Show()
+        _track_new_windows(before)
         def worker():
             try:
-                from hpc_gui.services.app_updater import (
-                    get_latest_release,
-                    is_newer_version,
-                    download_and_verify_release,
-                    launch_update_installer,
-                )
-                from hpc_gui.services.app_updater import AUTOMATIC_INSTALL_STRATEGIES
-                from hpc_gui.core.paths import is_frozen_exe
+                from hpc_gui.services.app_updater import get_latest_release, is_newer_version, AUTOMATIC_INSTALL_STRATEGIES
                 from hpc_gui.core.platform import current_os
-                from hpc_gui import __version__ as cur_ver
-
-                release = get_latest_release()
-                if checking_cancelled.get("v"):
-                    def on_cancelled():
-                        try:
-                            if checking_dlg is not None:
-                                checking_dlg.EndModal(wx.ID_CANCEL)
-                                checking_dlg.Destroy()
-                        except Exception:
-                            pass
-                    wx.CallAfter(on_cancelled)
-                    return
-
+                from hpc_gui import __version__ as cur_ver2
+                release = get_latest_release(timeout=10)
                 def on_done():
                     ff = _shell_frame()
-                    if not ff:
+                    if not ff or not wx.Window.FindWindowById(ff.GetId()):
+                        try:
+                            dlg.Destroy()
+                        except Exception:
+                            pass
                         return
                     try:
-                        if not wx.Window.FindWindowById(ff.GetId()):
-                            return
-                    except Exception:
-                        return
-                    # Close checking dialog
-                    try:
-                        if checking_dlg is not None:
-                            checking_timer.Stop()  # type: ignore
-                            checking_dlg.EndModal(wx.ID_OK)
-                            checking_dlg.Destroy()
-                    except Exception:
-                        pass
-                    try:
-                        if not is_newer_version(release.version, cur_ver):
-                            show_up_to_date(ff, cur_ver)
+                        if not is_newer_version(release.version, cur_ver2):
+                            dlg._build_for_state(STATE_UP_TO_DATE)
                             _track_new_windows(before)
                             return
-                        # Check install strategy per app.py logic
                         try:
                             from hpc_gui.services import app_updater as _au
-                            macos_auto_supported = not (
-                                release.install_strategy == "macos-bundle"
-                                and release.security_status != _au.SECURITY_SIGNED
-                            )
+                            macos_ok = not (release.install_strategy == "macos-bundle" and release.security_status != _au.SECURITY_SIGNED)
                         except Exception:
-                            macos_auto_supported = True
-                        if release.install_strategy not in AUTOMATIC_INSTALL_STRATEGIES or not macos_auto_supported:
-                            # Manual install per original flow
+                            macos_ok = True
+                        if release.install_strategy not in AUTOMATIC_INSTALL_STRATEGIES or not macos_ok:
                             import webbrowser
                             msg = t("updates.manual_install").format(version=release.version) if t("updates.manual_install") != "[updates.manual_install]" else f"Update {release.version} requires manual install."
                             if current_os() == "macos":
                                 try:
-                                    sec_key = {
-                                        _au.SECURITY_UNSIGNED: "updates.security_unsigned_mac",
-                                        _au.SECURITY_SIGNED: "updates.security_signed_mac",
-                                        _au.SECURITY_UNKNOWN: "updates.security_unknown_mac",
-                                    }.get(release.security_status, "updates.security_unknown_mac")
+                                    sec_key = {_au.SECURITY_UNSIGNED: "updates.security_unsigned_mac", _au.SECURITY_SIGNED: "updates.security_signed_mac", _au.SECURITY_UNKNOWN: "updates.security_unknown_mac"}.get(release.security_status, "updates.security_unknown_mac")
                                     msg += "\n\n" + t(sec_key)
                                 except Exception:
                                     pass
@@ -820,126 +765,41 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
                                 webbrowser.open(release.zip_url or release.html_url)
                             except Exception:
                                 pass
-                            _track_new_windows(before)
-                            return
-                        # Spec §86: Update available dialog
-                        if not show_update_available(ff, cur_ver, release.version):
-                            _track_new_windows(before)
-                            return
-                        # Spec §87: Download progress with real bytes
-                        dl_dlg = show_download_progress(ff, release.version, lifecycle=lifecycle)
-                        dl_dlg.Show()
-                        _track_new_windows(before)
-                        # Track cancel
-                        def dl_worker():
                             try:
-                                def progress_cb(value, status, downloaded, total):
-                                    def apply():
-                                        if not dl_dlg.IsShown():
-                                            return
-                                        dl_dlg._wx_updater_update(downloaded, total, status)
-                                    try:
-                                        wx.CallAfter(apply)
-                                    except Exception:
-                                        pass
-                                # Provide cancelled callback
-                                def cancelled():
-                                    return bool(dl_dlg._wx_updater_state.get("cancelled") or checking_cancelled.get("v") or (lifecycle.cancel_token.is_set() if lifecycle else False))
-                                zip_path = download_and_verify_release(release, progress_cb=progress_cb, cancelled=cancelled)
-                                def on_dl_done():
-                                    try:
-                                        dl_dlg.EndModal(wx.ID_OK)
-                                        dl_dlg.Destroy()
-                                    except Exception:
-                                        pass
-                                    # Spec §88 verifying → ready
-                                    if show_update_ready(ff, release.version):
-                                        # Spec §89 installing splash 620×360
-                                        install_dlg = show_installing_splash(ff, release.version)
-                                        install_dlg.Show()
-                                        _track_new_windows(before)
-                                        try:
-                                            launch_update_installer(zip_path, release.version, release.install_strategy)
-                                        except Exception as exc_install:
-                                            try:
-                                                install_dlg.EndModal(wx.ID_CANCEL)
-                                                install_dlg.Destroy()
-                                            except Exception:
-                                                pass
-                                            if show_update_error(ff, str(exc_install)):
-                                                # Retry delegate to outer handler
-                                                _on_update(None)  # type: ignore
-                                            return
-                                        # Success → quit app per original flow
-                                        try:
-                                            install_dlg.EndModal(wx.ID_OK)
-                                            install_dlg.Destroy()
-                                        except Exception:
-                                            pass
-                                        try:
-                                            wx.GetApp().ExitMainLoop()
-                                        except Exception:
-                                            try:
-                                                wx.Exit()
-                                            except Exception:
-                                                pass
-                                    else:
-                                        _track_new_windows(before)
-                                wx.CallAfter(on_dl_done)
-                            except Exception as exc_dl:
-                                def on_dl_err():
-                                    try:
-                                        dl_dlg.EndModal(wx.ID_CANCEL)
-                                        dl_dlg.Destroy()
-                                    except Exception:
-                                        pass
-                                    # Spec §90 error with retry
-                                    try:
-                                        if show_update_error(ff, str(exc_dl)):
-                                            _on_update(None)  # type: ignore
-                                    except Exception:
-                                        try:
-                                            wx.MessageBox(str(exc_dl), t("updates.error_title"), wx.OK | wx.ICON_ERROR, ff)
-                                        except Exception:
-                                            pass
-                                wx.CallAfter(on_dl_err)
-                        Thread(target=dl_worker, daemon=True).start()
-                    except Exception as exc:
+                                dlg.Destroy()
+                            except Exception:
+                                pass
+                            _track_new_windows(before)
+                            return
+                        dlg.release = release
+                        dlg._total = getattr(release, "size", None)
                         try:
-                            if show_update_error(ff, str(exc)):
-                                _on_update(None)  # type: ignore
-                            else:
-                                wx.MessageBox(str(exc), t("updates.error_title"), wx.OK | wx.ICON_ERROR, ff)
+                            from hpc_gui.wx_updater_view import _parse_whats_new
+                            dlg._whats_new = _parse_whats_new(getattr(release, "body", ""))
                         except Exception:
                             pass
-
+                        dlg._build_for_state(STATE_UPDATE_AVAILABLE)
+                        _track_new_windows(before)
+                    except Exception as e:
+                        dlg._error_message = str(e)
+                        dlg._error_details = f"{type(e).__name__}: {e}"
+                        dlg._build_for_state(STATE_FAILED)
                 wx.CallAfter(on_done)
-            except Exception as exc:
-                def on_err(exc=exc):
+            except Exception as e:
+                def on_err():
                     ff = _shell_frame()
                     if not ff:
+                        try:
+                            dlg.Destroy()
+                        except Exception:
+                            pass
                         return
-                    try:
-                        if checking_dlg is not None:
-                            checking_timer.Stop()  # type: ignore
-                            checking_dlg.EndModal(wx.ID_CANCEL)
-                            checking_dlg.Destroy()
-                    except Exception:
-                        pass
-                    try:
-                        if show_update_error is not None:
-                            if show_update_error(ff, str(exc)):
-                                _on_update(None)  # type: ignore
-                        else:
-                            wx.MessageBox(t("updates.error_message").format(error=str(exc)), t("updates.error_title"), wx.OK | wx.ICON_ERROR, ff)
-                    except Exception:
-                        pass
-                try:
-                    wx.CallAfter(on_err)
-                except Exception:
-                    pass
-
-        Thread(target=worker, daemon=True).start()
+                    dlg._error_message = str(e)
+                    dlg._error_details = f"{type(e).__name__}: {e}"
+                    dlg._build_for_state(STATE_FAILED)
+                wx.CallAfter(on_err)
+        import threading
+        threading.Thread(target=worker, daemon=True).start()
 
     def _on_plugins(_event):
         f = _shell_frame()
