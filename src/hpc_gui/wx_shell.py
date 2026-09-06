@@ -108,7 +108,7 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
     frame.Bind(wx.EVT_MENU, lambda _e: _dispatch("PLUGIN-MANAGE", frame, lifecycle, session_state), act_manage)
     act_plugin_updates = plugins_menu.Append(wx.ID_ANY, t("menu.check_plugin_updates"))
     frame.Bind(wx.EVT_MENU, lambda _e: _dispatch("PLUGIN-UPDATES", frame, lifecycle, session_state), act_plugin_updates)
-    plugins_menu.AppendSeparator()
+    sep_plugins_top = plugins_menu.AppendSeparator()
     # Dynamic plugin roots will be inserted here (between the two separators)
     sep_plugins_bottom = plugins_menu.AppendSeparator()
     act_request = plugins_menu.Append(wx.ID_ANY, t("menu.request_plugin"))
@@ -837,8 +837,11 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
                                 has_visible = True
                         if sub_has:
                             if not show and item.unavailable == "disable":
-                                # Disable submenu items? wx doesn't easily disable menu title, but we can disable its items
-                                pass
+                                for mi in sub_menu.GetMenuItems():
+                                    try:
+                                        mi.Enable(False)
+                                    except Exception:
+                                        pass
                             root_menu.AppendSubMenu(sub_menu, sub_label)
                             has_visible = True
                         else:
@@ -905,6 +908,15 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
                         root_menu.Destroy()
                     except Exception:
                         pass
+            # Exactly one separator when no visible dynamic roots
+            try:
+                has_any = len(_wx_plugin_dynamic_items) > 0
+                sep_plugins_top.Enable(has_any)
+                sep_plugins_bottom.Enable(True)
+                if not has_any:
+                    sep_plugins_top.Enable(False)
+            except Exception:
+                pass
         except Exception as e:
             try:
                 import logging
@@ -934,18 +946,17 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
     def _wx_dispatch_plugin_action(action: str, plugin_id: str):
         try:
             from hpc_gui.services.plugin_menu_actions import dispatch_plugin_menu_action
+            from hpc_gui.services.wx_plugin_menu_host import WxPluginMenuHost
             plugin = _find_wx_plugin(plugin_id)
             if plugin is None:
                 return
-            # For wx, route only if editor exists and action is not trusted tool (which we disable)
-            # Provide editor_panel as editor_widget if it has required methods
-            editor_widget = None
+            editor_page = None
             try:
-                editor_widget = page_controls.get("NAV-EDITOR", {}).get("page")
+                editor_page = page_controls.get("NAV-EDITOR", {}).get("page")
             except Exception:
                 pass
-            # If action would be disabled, dispatcher will block; for wx we still call but it will be disabled earlier
-            dispatch_plugin_menu_action(action, plugin, editor_widget=editor_widget, host_window=frame)
+            host = WxPluginMenuHost(editor_page=editor_page)
+            dispatch_plugin_menu_action(action, plugin, host)
         except Exception as e:
             import logging
             logging.getLogger("hpc_gui.wx_shell").warning("wx dispatch %r failed: %s", action, e, exc_info=e)

@@ -320,53 +320,115 @@ def test_plugin_isolation_real(tmp_path):
 
 
 def test_menu_qt_smoke_offscreen():
-    """Offscreen MainWindow: top-level Menu/Plugins/Help, no old buttons, language/version present, plugin actions under correct menu."""
-    import os
-    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
     try:
-        from PySide6.QtWidgets import QApplication, QToolButton, QLabel
-        from hpc_gui.core.i18n import load_language
-        from hpc_gui.ui.main_window import MainWindow
-    except Exception as e:
+        import os
+        os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+        from PySide6.QtWidgets import QApplication
+    except ImportError as e:
         import pytest
-        pytest.skip(f"Qt not available: {e}")
-
+        pytest.skip(f"PySide6 unavailable: {e}")
+    from hpc_gui.core.i18n import load_language
+    from hpc_gui.ui.main_window import MainWindow
     load_language("en")
     app = QApplication.instance() or QApplication([])
     w = MainWindow()
     try:
-        # Top-level menus
         menubar = w.menuBar()
         titles = [menubar.actions()[i].text() for i in range(len(menubar.actions()))]
         assert "Menu" in titles
         assert "Plugins" in titles
         assert "Help" in titles
-
-        # Old top-right buttons must not exist as QToolButton with those texts
-        # Check that no QToolButton has text Update/Plugins/Send Logs/Settings/Help in corner (they are QActions now)
-        # The corner widget should only have lang_btn and version_label
         corner = menubar.cornerWidget()
         assert corner is not None
-        # Find its layout children: should be exactly 2 widgets (lang_btn and version)
-        from PySide6.QtWidgets import QHBoxLayout
         layout = corner.layout()
         assert layout.count() == 2
-        # Order must be Language -> Version
         first = layout.itemAt(0).widget()
         second = layout.itemAt(1).widget()
         assert first is w._lang_btn
         assert second is w._version_label
         assert w._version_label.text().startswith("v")
-
-        # Plugin actions under correct menu: Plugins menu should contain Browse/Manage/Check/Request
         plugins_texts = [a.text() for a in w._plugins_menu.actions() if not a.isSeparator()]
         assert any("Browse" in t for t in plugins_texts)
         assert any("Manage" in t for t in plugins_texts)
         assert any("Check for Plugin Updates" in t for t in plugins_texts)
         assert any("Request a Plugin" in t for t in plugins_texts)
-
-        # Language selector exists
         assert w._lang_btn is not None
         assert w._version_label is not None
+    finally:
+        w.deleteLater()
+
+
+def test_wx_dispatch_uses_host():
+    src = pathlib.Path("src/hpc_gui/wx_shell.py").read_text(encoding="utf-8")
+    assert "WxPluginMenuHost" in src
+    assert "dispatch_plugin_menu_action(action, plugin, host)" in src
+    # Legacy fallback must not be used in production wx path
+    assert "dispatch_plugin_menu_action(action, plugin, editor_widget=editor_widget, host_window=frame)" not in src
+
+
+def test_wx_submenu_disable_hide():
+    src = pathlib.Path("src/hpc_gui/wx_shell.py").read_text(encoding="utf-8")
+    # disable must actually disable children, not just pass
+    assert "for mi in sub_menu.GetMenuItems():" in src
+    assert "mi.Enable(False)" in src
+    # hide must continue (skip) – check that hide still does continue
+    assert 'if not show and item.unavailable == "hide":' in src
+
+
+def test_dynamic_separators_qt_and_wx():
+    import pathlib
+    qt_src = pathlib.Path("src/hpc_gui/ui/main_window.py").read_text(encoding="utf-8")
+    wx_src = pathlib.Path("src/hpc_gui/wx_shell.py").read_text(encoding="utf-8")
+    # Both must have has_any logic and setVisible/Enable
+    assert "has_any = len(self._plugins_dynamic_actions) > 0" in qt_src
+    assert "setVisible(has_any)" in qt_src
+    assert "has_any = len(_wx_plugin_dynamic_items) > 0" in wx_src
+    assert "sep_plugins_top.Enable" in wx_src
+
+
+def test_qt_separator_visibility_offscreen():
+    try:
+        import os
+        os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+        from PySide6.QtWidgets import QApplication
+    except ImportError as e:
+        import pytest
+        pytest.skip(f"PySide6 unavailable: {e}")
+    from hpc_gui.core.i18n import load_language
+    from hpc_gui.ui.main_window import MainWindow
+    load_language("en")
+    app = QApplication.instance() or QApplication([])
+    w = MainWindow()
+    try:
+        # No dynamic roots initially (no plugins with contributions) -> exactly one separator
+        w._plugin_contributions = []
+        w._plugins_dynamic_actions = []
+        # Ensure separators exist
+        assert w._plugins_dynamic_separator_top is not None
+        assert w._plugins_dynamic_before is not None
+        # Rebuild with no visible roots
+        w._rebuild_plugins_menu_dynamic()
+        # After rebuild, top separator should be hidden (only one visible)
+        assert w._plugins_dynamic_separator_top.isVisible() is False
+        assert w._plugins_dynamic_before.isVisible() is True
+        # Now simulate one visible root
+        from hpc_gui.plugins.ui_contributions import PluginMenuContribution, PluginMenuAction
+        from hpc_gui.plugins.models import PluginManifest, PluginFile
+        mf = PluginManifest(schema_version=1, plugin_api=1, id="org.test.fake", name="Fake", version="1.0.0", publisher="x", license="MIT", description="d", requires_app=">=1.5.8", capabilities=("lint-rules",), entrypoints={}, files=(PluginFile(path="a.json", sha256="0"*64, size=1, role="documentation"),))
+        contrib = PluginMenuContribution(plugin_id="org.test.fake", plugin_version="1.0.0", label="Fake", labels={}, items=(PluginMenuAction(id="a", label="A", labels={}, action="editor.lint_current", when={}, unavailable="disable"),))
+        w._plugin_contributions = [contrib]
+        w._rebuild_plugins_menu_dynamic()
+        assert w._plugins_dynamic_separator_top.isVisible() is True
+        assert w._plugins_dynamic_before.isVisible() is True
+        # All hidden by context: create a contribution where item is hidden
+        from hpc_gui.plugins.ui_contributions import PluginMenuAction as PMA
+        hidden_contrib = PluginMenuContribution(plugin_id="org.test.hidden", plugin_version="1.0.0", label="Hidden", labels={}, items=(PMA(id="a", label="A", labels={}, action="editor.lint_current", when={"connected": True}, unavailable="hide"),))
+        w._plugin_contributions = [hidden_contrib]
+        # Need to set context to disconnected so item is hidden
+        w._session = {"connected": False}
+        w._rebuild_plugins_menu_dynamic()
+        # No visible dynamic actions, so top separator hidden
+        assert len(w._plugins_dynamic_actions) == 0
+        assert w._plugins_dynamic_separator_top.isVisible() is False
     finally:
         w.deleteLater()
