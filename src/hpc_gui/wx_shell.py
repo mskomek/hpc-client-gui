@@ -1202,6 +1202,25 @@ def main() -> int:
                     pass
                 splash._wx_splash_append_log("No updates available", "OK")
             splash._wx_splash_set_stage("updates", STATE_COMPLETE)
+        # Show "Güncelleme yapılsın mı?" popup on splash if fake update found per request
+        _found = splash._wx_splash_state.get("found_update")
+        if _found is not None:
+            try:
+                from hpc_gui.wx_updater_view import show_update_available
+
+                # §86 dialog parented to splash so it appears on splash
+                do_download = show_update_available(splash, __version__, getattr(_found, "version", "1.9.0"), "Sahte güncelleme — demo için.\n\nYeni özellikler ve düzeltmeler içerir.")
+                if do_download:
+                    splash._wx_splash_append_log("Update download requested (on splash)", "")
+                else:
+                    splash._wx_splash_append_log("Update postponed on splash", "")
+            except Exception as e:
+                try:
+                    import logging
+
+                    logging.getLogger("hpc_gui").debug("splash update popup failed: %s", e, exc_info=e)
+                except Exception:
+                    pass
         app.Yield(True)
         splash.Update()
         wx.MilliSleep(200)
@@ -1245,58 +1264,6 @@ def main() -> int:
     frame.Show()
     try:
         frame.Raise()
-    except Exception:
-        pass
-
-    # Demo: after startup, simulate "Check for Updates" finding a new version — show §86 update available UI
-    # This satisfies the user request to see the new-update-found state without needing a real GitHub release.
-    def _demo_update_found():
-        try:
-            from hpc_gui.wx_updater_view import show_update_available, show_download_progress, show_update_ready, _format_bytes
-
-            # Show update available dialog with fake newer version
-            has_update = show_update_available(frame, __version__, "1.9.0", "New features, performance improvements and bug fixes.\n\nSee release notes for details.")
-            if not has_update:
-                return
-            # Simulate download progress with real byte counts per §87
-            dl_dlg = show_download_progress(frame, "1.9.0")
-            dl_dlg.Show()
-            total = 410 * 1024 * 1024  # 410 MB
-            state = {"downloaded": 0}
-
-            def _tick():
-                if not dl_dlg.IsShown():
-                    return
-                # Increment by ~7%
-                state["downloaded"] = min(total, state["downloaded"] + total // 14)
-                pct = int(state["downloaded"] * 100 / total)
-                try:
-                    dl_dlg._wx_updater_update(state["downloaded"], total, "downloading")
-                except Exception:
-                    pass
-                if state["downloaded"] >= total:
-                    try:
-                        dl_dlg.EndModal(wx.ID_OK)
-                        dl_dlg.Destroy()
-                    except Exception:
-                        pass
-                    # Show verifying then ready
-                    try:
-                        if show_update_ready(frame, "1.9.0"):
-                            # In demo, just inform installed
-                            wx.MessageBox("Demo: Update 1.9.0 would be installed now.", t("updates.title") if t("updates.title") != "[updates.title]" else "Updates", wx.OK | wx.ICON_INFORMATION, frame)
-                    except Exception:
-                        pass
-                    return
-                wx.CallLater(280, _tick)
-
-            wx.CallLater(300, _tick)
-        except Exception:
-            pass
-
-    try:
-        # Show demo update 1.2s after main window appears — visible but not blocking startup
-        wx.CallLater(1200, _demo_update_found)
     except Exception:
         pass
 
