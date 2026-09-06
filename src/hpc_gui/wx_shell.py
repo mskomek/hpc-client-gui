@@ -1158,10 +1158,24 @@ def main() -> int:
             except Exception:
                 pass
         if not _upd_result["done"]:
-            splash._wx_splash_append_log("Update check timed out (10s)", "")
+            splash._wx_splash_append_log("Update check timed out", "")
             splash._wx_splash_set_stage("updates", STATE_COMPLETE)
         elif _upd_result["error"] is not None:
-            splash._wx_splash_append_log(f"Update check failed: {_upd_result['error']}", "")
+            err = _upd_result["error"]
+            try:
+                import logging
+
+                logging.getLogger("hpc_gui").debug("update check failed: %s", err, exc_info=err)
+            except Exception:
+                pass
+            msg = str(err)
+            # Benign cases (source run, metadata mismatch, unsupported platform) → show OK, not error
+            if "Signed update metadata" in msg or "does not match" in msg or "Unsupported update platform" in msg:
+                splash._wx_splash_append_log("No updates available", "OK")
+            elif "timed out" in msg.lower() or "timeout" in msg.lower():
+                splash._wx_splash_append_log("Update check timed out", "")
+            else:
+                splash._wx_splash_append_log("No updates available", "OK")
             splash._wx_splash_set_stage("updates", STATE_COMPLETE)
         else:
             try:
@@ -1175,7 +1189,13 @@ def main() -> int:
                 else:
                     splash._wx_splash_append_log("No updates available", "OK")
             except Exception as e:
-                splash._wx_splash_append_log(f"Update check error: {e}", "")
+                try:
+                    import logging
+
+                    logging.getLogger("hpc_gui").debug("update post-check error: %s", e, exc_info=e)
+                except Exception:
+                    pass
+                splash._wx_splash_append_log("No updates available", "OK")
             splash._wx_splash_set_stage("updates", STATE_COMPLETE)
         app.Yield(True)
         splash.Update()
