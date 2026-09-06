@@ -732,12 +732,14 @@ def test_host_key_dialog_mapping(monkeypatch):
 
 
 def test_mfa_order_and_no_log(monkeypatch, caplog):
-    model = WxConnectionModel([], keyboard_interactive=lambda req: ["r1", "r2"])
+    requests = []
+    model = WxConnectionModel([], keyboard_interactive=lambda req: requests.append(req) or ["r1", "r2"])
     from hpc_gui.services.connection_controller import KeyboardInteractiveRequest
-    req = KeyboardInteractiveRequest("Title", "Instructions", ("Prompt1:", "Prompt2:"))
+    req = KeyboardInteractiveRequest("Title", "Instructions", ("Prompt1:", "Prompt2:"), (False, True))
     # Should return in order
     answers = model.answer_keyboard_interactive(req)
     assert answers == ["r1", "r2"]
+    assert requests[0].echo == (False, True)
     # Ensure no secret in logs
     import logging
     logger = logging.getLogger("hpc_gui.wx_connection")
@@ -833,3 +835,58 @@ def test_action_enable_disable_states(monkeypatch):
             wx.Yield()
     finally:
         tmp.cleanup()
+
+
+def test_dialog_save_and_connect_calls_one_callback(monkeypatch):
+    tmp = _isolated_storage(monkeypatch)
+    try:
+        app = wx.App.Get() or wx.App(False)
+        from hpc_gui.wx_connection_dialog import WxConnectionDialog
+
+        frame = wx.Frame(None)
+        calls = []
+        dlg = WxConnectionDialog(
+            frame,
+            on_save=lambda _profile: calls.append("save") or True,
+            on_save_and_connect=lambda _profile: calls.append("save_and_connect") or True,
+        )
+        dlg._collect_profile = lambda: {"name": "p", "host": "h.example"}
+        with mock.patch.object(dlg.dlg, "EndModal") as end_modal:
+            dlg._save_and_connect_clicked()
+        assert calls == ["save_and_connect"]
+        end_modal.assert_called_once_with(wx.ID_OK)
+        dlg.Destroy()
+        frame.Destroy()
+        for _ in range(3):
+            wx.Yield()
+    finally:
+        tmp.cleanup()
+
+
+def test_dialog_preserves_unknown_nested_system_fields(monkeypatch):
+    tmp = _isolated_storage(monkeypatch)
+    try:
+        app = wx.App.Get() or wx.App(False)
+        from hpc_gui.wx_connection_dialog import WxConnectionDialog
+
+        frame = wx.Frame(None)
+        initial = {
+            "name": "p",
+            "host": "h.example",
+            "system": {"future_scheduler_key": {"version": 3}},
+        }
+        dlg = WxConnectionDialog(frame, initial_profile=initial, mode="edit")
+        assert dlg._system_form_values()["future_scheduler_key"] == {"version": 3}
+        dlg.Destroy()
+        frame.Destroy()
+        for _ in range(3):
+            wx.Yield()
+    finally:
+        tmp.cleanup()
+
+
+def test_quota_profile_lookup_supports_nested_provider_template():
+    from hpc_gui.services.quota_monitor import quota_state_for_profile
+
+    profile = {"system": {"provider_template": {"quota_sources": [{"enabled": False, "command_template": "quota"}]}}}
+    assert quota_state_for_profile(profile) == "disabled"

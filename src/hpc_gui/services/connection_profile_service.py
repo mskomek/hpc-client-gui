@@ -259,23 +259,21 @@ def save_profile(
     # Preserve unknown nested keys for file_manager / jump_host via shared helpers
     # so direct callers that provide a partial dict don't lose future fields.
     if "file_manager" in patch:
-        try:
-            from hpc_gui.config.file_manager_profile import patch_file_manager_settings
+        from hpc_gui.config.file_manager_profile import patch_file_manager_settings
 
-            base_fm = (existing or {}).get("file_manager") if isinstance(existing, dict) else None
-            incoming_fm = patch.get("file_manager") if isinstance(patch.get("file_manager"), dict) else {}
-            patch["file_manager"] = patch_file_manager_settings(base_fm, incoming_fm if isinstance(incoming_fm, dict) else {})
-        except Exception:
-            pass
+        base_fm = (existing or {}).get("file_manager") if isinstance(existing, dict) else None
+        incoming_fm = patch.get("file_manager") if isinstance(patch.get("file_manager"), dict) else {}
+        patch["file_manager"] = patch_file_manager_settings(base_fm, incoming_fm)
     if "jump_host" in patch:
-        try:
-            from hpc_gui.config.jump_host_profile import patch_jump_host_settings
+        from hpc_gui.config.jump_host_profile import patch_jump_host_settings
 
-            base_jh = (existing or {}).get("jump_host") if isinstance(existing, dict) else None
-            incoming_jh = patch.get("jump_host") if isinstance(patch.get("jump_host"), dict) else {}
-            patch["jump_host"] = patch_jump_host_settings(base_jh, incoming_jh if isinstance(incoming_jh, dict) else {})
-        except Exception:
-            pass
+        base_jh = (existing or {}).get("jump_host") if isinstance(existing, dict) else None
+        incoming_jh = patch.get("jump_host") if isinstance(patch.get("jump_host"), dict) else {}
+        patch["jump_host"] = patch_jump_host_settings(base_jh, incoming_jh)
+    if "system" in patch and isinstance(patch.get("system"), dict):
+        existing_system = existing.get("system") if isinstance(existing, dict) else None
+        if isinstance(existing_system, dict):
+            patch["system"] = {**existing_system, **patch["system"]}
     # Never carry stale master-derived fields unless explicitly set by secret_patch.
     # collected may have been produced without those fields (dialog pops them).
     prof = merge_profile_patch(existing, patch, remove_keys=remove_keys)

@@ -161,6 +161,9 @@ def quota_state_for_profile(
 ) -> str:
     """Evaluate the first stored provider quota source without side effects."""
     template = profile.get("provider_template") if isinstance(profile, dict) else None
+    if not isinstance(template, dict) and isinstance(profile, dict):
+        system = profile.get("system")
+        template = system.get("provider_template") if isinstance(system, dict) else None
     sources = template.get("quota_sources") if isinstance(template, dict) else None
     source = sources[0] if isinstance(sources, list) and sources and isinstance(sources[0], dict) else None
     return quota_gate(source, backend_ids=backend_ids, connected=connected)

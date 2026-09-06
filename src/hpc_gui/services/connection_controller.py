@@ -29,6 +29,9 @@ class KeyboardInteractiveRequest:
     title: str
     instructions: str
     prompts: tuple[str, ...]
+    # Optional for compatibility with existing callers; wx uses this to
+    # preserve echo/no-echo semantics for each prompt.
+    echo: tuple[bool, ...] = ()
 
 
 class ConnectionController:

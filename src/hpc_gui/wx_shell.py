@@ -258,6 +258,7 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
     _local = _local_files_callbacks(session_state, frame, lifecycle)
     _remote = _remote_files_callbacks(session_state, frame, lifecycle)
     local_panel = build_local_files_panel(top_splitter, **_local)
+    session_state["_embedded_local_files_panel"] = local_panel
     remote_panel = build_remote_files_panel(top_splitter, **_remote)
     top_splitter.SplitVertically(local_panel, remote_panel, 340)
     top_splitter.SetMinimumPaneSize(300)
@@ -1580,6 +1581,7 @@ def _destination_exists(files, op: str, destination: str) -> bool:
 def _start_file_transfers(session_state, lifecycle, items, *, on_progress=None, conflict_resolver=None, files_backend=None, parent=None):
     """Queue file-view transfers through the shared transfer lifecycle."""
     from hpc_gui.wx_transfer_workspace import create_transfer_progress
+    from hpc_gui.config.storage import coerce_profile_transfer_parallelism
 
     session = session_state.get("session") or {}
     files = files_backend or session.get("files")
@@ -1699,9 +1701,12 @@ def _start_file_transfers(session_state, lifecycle, items, *, on_progress=None, 
         if on_progress:
             on_progress(item, done, total)
 
+    profile = session.get("profile") if isinstance(session.get("profile"), dict) else {}
+    parallel_limit = coerce_profile_transfer_parallelism(profile.get("transfer_parallelism", 1))
     controller = TransferSessionController(
         items,
         run_item,
+        parallel_limit=parallel_limit,
         conflict_check=lambda item: _destination_exists(files, item.op, item.dst),
         conflict_resolver=conflict_resolver or session_state.get("conflict_resolver") or (wx_conflict_resolver if parent else None),
         on_queue=queue_event,
@@ -1970,6 +1975,19 @@ def _connection_callbacks(session_state, parent, lifecycle):
     def on_connected(session):
         session_state["session"] = session
         session_state["generation"] = session_state.get("generation", 0) + 1
+        profile = session.get("profile") if isinstance(session, dict) else None
+        file_manager = profile.get("file_manager") if isinstance(profile, dict) else None
+        local_start_dir = file_manager.get("local_start_dir") if isinstance(file_manager, dict) else ""
+        local_panel = session_state.get("_embedded_local_files_panel")
+        if local_panel is not None and isinstance(local_start_dir, str) and local_start_dir.strip():
+            target = Path(local_start_dir).expanduser()
+            if target.is_dir():
+                try:
+                    local_panel._wx_local_model.navigate(target)
+                    local_panel._wx_local_controls["path"].SetValue(str(target.resolve()))
+                    local_panel._wx_local_refresh()
+                except (OSError, RuntimeError):
+                    pass
         ssh = session.get("ssh") if isinstance(session, dict) else None
         if ssh is not None and callable(getattr(ssh, "close", None)):
             lifecycle.register_cleanup(ssh.close)
