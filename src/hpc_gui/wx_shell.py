@@ -99,48 +99,10 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
         language_items[language] = item
         frame.Bind(wx.EVT_MENU, lambda _event, language=language: set_language(language), item)
     frame.GetMenuBar().Append(language_menu, t("help.language"))
-    # --- Level 1 chrome row §2: Update | Plugins | Send Logs | Settings | Help | Language ▼ | vX.X (version far right) ---
-    chrome_sizer = wx.BoxSizer(wx.HORIZONTAL)
-    # Spec §6: primary 30-32px height, min width 88px; secondary native bordered
-    def _chrome_button(label):
-        btn = wx.Button(panel, label=label)
-        try:
-            btn.SetMinSize(wx.Size(88, 30))
-        except Exception:
-            pass
-        return btn
-    version_label = wx.StaticText(panel, label=f"v{__version__}")
-    # Low emphasis per §104: no button border/hover affordance
-    try:
-        version_label.SetForegroundColour(wx.Colour(85, 85, 85))
-        fnt = version_label.GetFont()
-        fnt.SetWeight(wx.FONTWEIGHT_NORMAL)
-        version_label.SetFont(fnt)
-    except Exception:
-        pass
-    update_btn = _chrome_button(t("updates.action"))
-    plugins_btn = _chrome_button(t("plugins.action"))
-    send_logs_btn = _chrome_button(t("crash.send_logs_btn"))
-    settings_btn = _chrome_button(t("settings.action"))
-    help_btn = _chrome_button(t("help.help_title"))
-    cur_lang = current_language()
-    language_button = wx.Button(panel, label=t("language.english") if cur_lang == "en" else t("language.turkish"))
-    try:
-        language_button.SetMinSize(wx.Size(110, 30))
-        language_button.SetBitmap(_flag_bitmap(wx, cur_lang))
-    except Exception:
-        pass
-    # Spec §2 order left→right: Update, Plugins, Send Logs, Settings, Help, Language, Version (version at far right)
-    chrome_sizer.Add(update_btn, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 4)
-    chrome_sizer.Add(plugins_btn, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 4)
-    chrome_sizer.Add(send_logs_btn, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 4)
-    chrome_sizer.Add(settings_btn, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 4)
-    chrome_sizer.Add(help_btn, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 4)
-    chrome_sizer.Add(language_button, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 4)
-    chrome_sizer.AddStretchSpacer(1)
-    chrome_sizer.Add(version_label, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 6)
-    # Spec §4: default panel padding 12px
-    root.Add(chrome_sizer, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 8)
+    version_menu = wx.Menu()
+    version_item = version_menu.Append(wx.ID_ANY, f"v{__version__}")
+    version_item.Enable(False)
+    frame.GetMenuBar().Append(version_menu, f"v{__version__}")
     notebook = wx.Notebook(panel)
     page_controls = {}
 
@@ -616,6 +578,7 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
         frame.SetStatusText(t("common.ready"))
         frame.GetMenuBar().SetMenuLabel(0, t("help.help_title"))
         frame.GetMenuBar().SetMenuLabel(1, t("help.language"))
+        frame.GetMenuBar().SetMenuLabel(2, f"v{__version__}")
         for index, title_key in enumerate(("tabs.login", "help.section_terminal", "tabs.jobs_outputs", "tabs.directories", "tabs.ftp", "tabs.editor", "tabs.logs")):
             notebook.SetPageText(index, t(title_key))
         for command, item in command_items:
@@ -623,20 +586,6 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
         for language, item in language_items.items():
             language_menu.SetLabel(item.GetId(), t("help.english" if language == "en" else "help.turkish"))
             item.Check(current_language() == language)
-        # chrome row
-        version_label.SetLabel(f"v{__version__}")
-        update_btn.SetLabel(t("updates.action"))
-        plugins_btn.SetLabel(t("plugins.action"))
-        send_logs_btn.SetLabel(t("crash.send_logs_btn"))
-        settings_btn.SetLabel(t("settings.action"))
-        help_btn.SetLabel(t("help.help_title"))
-        cur = current_language()
-        language_button.SetLabel(t("language.english") if cur == "en" else t("language.turkish"))
-        try:
-            language_button.SetBitmap(_flag_bitmap(wx, cur))
-        except Exception:
-            pass
-        language_button.SetToolTip(t("help.language"))
         # Files header row
         try:
             transfer_type_label.SetLabel(t("ftp.transfer_type"))
@@ -873,12 +822,6 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
                 except Exception:
                     pass
 
-    help_btn.Bind(wx.EVT_BUTTON, _on_help)
-    update_btn.Bind(wx.EVT_BUTTON, _on_update)
-    plugins_btn.Bind(wx.EVT_BUTTON, _on_plugins)
-    send_logs_btn.Bind(wx.EVT_BUTTON, _on_send_logs)
-    settings_btn.Bind(wx.EVT_BUTTON, _on_settings)
-    language_button.Bind(wx.EVT_BUTTON, _on_language_button)
 
     tray = _make_tray(wx, frame, tray_factory)
 
@@ -894,7 +837,7 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
         lifecycle.set_tray_notifier(tray.notify)
         lifecycle.register_cleanup(destroy_tray)
 
-    frame._wx_shell_controls = {"version": version_label, "update": update_btn, "plugins": plugins_btn, "send_logs": send_logs_btn, "settings": settings_btn, "help": help_btn, "language_button": language_button, "menu": menu, "language_menu": language_menu, "language_items": language_items, "notebook": notebook, "pages": page_controls}
+    frame._wx_shell_controls = {"menu": menu, "language_menu": language_menu, "language_items": language_items, "version_menu": version_menu, "notebook": notebook, "pages": page_controls}
     frame._wx_shell_chrome_windows = chrome_windows
     frame._wx_shell_shell_ref = shell_ref
     frame._wx_shell_lifecycle = lifecycle
