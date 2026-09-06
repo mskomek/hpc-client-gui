@@ -76,6 +76,7 @@ class PluginManifest:
     capabilities: tuple[str, ...]
     entrypoints: Mapping[str, Any]
     files: tuple[PluginFile, ...]
+    ui_contributions: Mapping[str, Any] | None = None
 
 
 @dataclass(frozen=True)
@@ -192,6 +193,7 @@ class InstalledPlugin:
     job_templates_index: Mapping[str, Any] | None = None
     # Reserved for an application-owned declarative engine descriptor.
     linter_engine: Mapping[str, Any] | None = None
+    plugin_menu_contribution: Any | None = None
 
 
 def is_valid_semver(value: Any) -> bool:

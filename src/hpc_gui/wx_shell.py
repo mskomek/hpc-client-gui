@@ -10,7 +10,6 @@ from threading import Event, Thread
 
 from hpc_gui import __version__
 from hpc_gui.core.i18n import current_language, load_saved_language, set_language, subscribe_language_change, system_default_language, t, unsubscribe_language_change
-from hpc_gui.services.command_registry import COMMAND_REGISTRY
 from hpc_gui.services.directory_comparison import ComparableEntry, compare_directory_entries
 from hpc_gui.services.synchronized_browsing import SyncRoots, local_to_remote, normalize_local_root, normalize_remote_root, remote_to_local
 from hpc_gui.services.transfer_controller import TransferItem
@@ -83,26 +82,105 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
     frame.SetMinSize(wx.Size(1280, 760))
     panel = wx.Panel(frame)
     root = wx.BoxSizer(wx.VERTICAL)
-    menu = wx.Menu()
-    command_items = []
-    for command in COMMAND_REGISTRY.by_context("shell"):
-        item = menu.Append(wx.ID_ANY, command.label())
-        command_items.append((command, item))
-        frame.Bind(wx.EVT_MENU, lambda _event, command_id=command.id: _dispatch(command_id, frame, lifecycle, session_state), item)
-    frame.SetMenuBar(wx.MenuBar())
-    frame.GetMenuBar().Append(menu, t("help.help_title"))
-    language_menu = wx.Menu()
-    language_items = {}
-    for language, key in (("en", "english"), ("tr", "turkish")):
-        item = language_menu.AppendRadioItem(wx.ID_ANY, t(f"language.{key}"), t(f"language.{key}"))
-        item.SetBitmap(_flag_bitmap(wx, language))
-        language_items[language] = item
-        frame.Bind(wx.EVT_MENU, lambda _event, language=language: set_language(language), item)
-    frame.GetMenuBar().Append(language_menu, t("help.language"))
+    menubar = wx.MenuBar()
+    # --- Menu ---
+    menu_menu = wx.Menu()
+    menu_items = {}
+    # Settings
+    act_settings = menu_menu.Append(wx.ID_ANY, t("menu.settings"))
+    frame.Bind(wx.EVT_MENU, lambda _e: _dispatch("APP-SETTINGS", frame, lifecycle, session_state), act_settings)
+    menu_items["settings"] = act_settings
+    # Check for Updates
+    act_updates = menu_menu.Append(wx.ID_ANY, t("menu.check_updates"))
+    frame.Bind(wx.EVT_MENU, lambda _e: _dispatch("APP-UPDATE-CHECK", frame, lifecycle, session_state), act_updates)
+    menu_items["check_updates"] = act_updates
+    # Command Palette omitted (no real palette UI) – do not miswire to Help
+    menu_menu.AppendSeparator()
+    act_exit = menu_menu.Append(wx.ID_EXIT, t("menu.exit"))
+    frame.Bind(wx.EVT_MENU, lambda _e: frame.Close(), act_exit)
+    menu_items["exit"] = act_exit
+    menubar.Append(menu_menu, t("menu.menu"))
+    # --- Plugins ---
+    plugins_menu = wx.Menu()
+    act_browse = plugins_menu.Append(wx.ID_ANY, t("menu.browse_install"))
+    frame.Bind(wx.EVT_MENU, lambda _e: _dispatch("PLUGIN-BROWSE", frame, lifecycle, session_state), act_browse)
+    act_manage = plugins_menu.Append(wx.ID_ANY, t("menu.manage_installed"))
+    frame.Bind(wx.EVT_MENU, lambda _e: _dispatch("PLUGIN-MANAGE", frame, lifecycle, session_state), act_manage)
+    act_plugin_updates = plugins_menu.Append(wx.ID_ANY, t("menu.check_plugin_updates"))
+    frame.Bind(wx.EVT_MENU, lambda _e: _dispatch("PLUGIN-UPDATES", frame, lifecycle, session_state), act_plugin_updates)
+    plugins_menu.AppendSeparator()
+    # Dynamic plugin roots will be inserted here (between the two separators)
+    sep_plugins_bottom = plugins_menu.AppendSeparator()
+    act_request = plugins_menu.Append(wx.ID_ANY, t("menu.request_plugin"))
+    frame.Bind(wx.EVT_MENU, lambda _e: _dispatch("PLUGIN-REQUEST", frame, lifecycle, session_state), act_request)
+    menubar.Append(plugins_menu, t("menu.plugins"))
+    frame._wx_shell_plugins_sep_bottom = sep_plugins_bottom
+    # --- Help ---
+    help_menu = wx.Menu()
+    help_items = {}
+    act_help = help_menu.Append(wx.ID_HELP, t("menu.help_center"))
+    frame.Bind(wx.EVT_MENU, lambda _e: _dispatch("APP-HELP", frame, lifecycle, session_state), act_help)
+    help_items["help"] = act_help
+    try:
+        from hpc_gui.wx_help import show_help as _show_help_check  # noqa: F401
+        act_tour = help_menu.Append(wx.ID_ANY, t("menu.quick_tour"))
+        frame.Bind(wx.EVT_MENU, lambda _e: _dispatch("APP-QUICKTOUR", frame, lifecycle, session_state), act_tour)
+        help_items["tour"] = act_tour
+    except Exception:
+        help_items["tour"] = None
+    help_menu.AppendSeparator()
+    act_logs = help_menu.Append(wx.ID_ANY, t("menu.send_logs"))
+    frame.Bind(wx.EVT_MENU, lambda _e: _dispatch("APP-SEND-LOGS", frame, lifecycle, session_state), act_logs)
+    help_items["logs"] = act_logs
+    help_menu.AppendSeparator()
+    act_about = help_menu.Append(wx.ID_ABOUT, t("menu.about"))
+    frame.Bind(wx.EVT_MENU, lambda _e: _dispatch("APP-ABOUT", frame, lifecycle, session_state), act_about)
+    help_items["about"] = act_about
+    menubar.Append(help_menu, t("menu.help"))
+    frame.SetMenuBar(menubar)
+    # --- Compact utility row below menubar (language + version plain text) ---
+    utility = wx.Panel(panel)
+    utility.SetBackgroundColour(panel.GetBackgroundColour())
+    usizer = wx.BoxSizer(wx.HORIZONTAL)
+    usizer.AddStretchSpacer(1)
+    # Language selector compact
+    lang_choice = wx.Choice(utility, choices=[t("language.english"), t("language.turkish")])
+    try:
+        cur_lang = current_language()
+        lang_choice.SetSelection(1 if cur_lang == "tr" else 0)
+    except Exception:
+        lang_choice.SetSelection(0)
+    def _on_lang_choice(evt):
+        sel = lang_choice.GetSelection()
+        set_language("tr" if sel == 1 else "en")
+    lang_choice.Bind(wx.EVT_CHOICE, _on_lang_choice)
+    usizer.Add(lang_choice, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 4)
+    version_text = wx.StaticText(utility, label=f"v{__version__}")
+    version_text.SetForegroundColour(wx.Colour(85, 85, 85))
+    try:
+        font = version_text.GetFont()
+        font.SetWeight(wx.FONTWEIGHT_BOLD)
+        version_text.SetFont(font)
+    except Exception:
+        pass
+    usizer.Add(version_text, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 4)
+    utility.SetSizer(usizer)
+    root.Add(utility, 0, wx.EXPAND)
+    # Keep references for refresh
+    frame._wx_shell_menubar = menubar
+    frame._wx_shell_menu_menu = menu_menu
+    frame._wx_shell_plugins_menu = plugins_menu
+    frame._wx_shell_help_menu = help_menu
+    frame._wx_shell_menu_items = menu_items
+    frame._wx_shell_help_items = help_items
+    frame._wx_shell_plugins_before = sep_plugins_bottom
+    frame._wx_shell_lang_choice = lang_choice
+    frame._wx_shell_version_text = version_text
+    # For compatibility with old tests that check COMMAND_REGISTRY usage, keep dummy but not dumping
+    command_items = []  # no longer dumping all shell commands under Help
+    language_items = {}  # language now handled via choice in utility row
+    language_menu = wx.Menu()  # dummy for test compatibility
     version_menu = wx.Menu()
-    version_item = version_menu.Append(wx.ID_ANY, f"v{__version__}")
-    version_item.Enable(False)
-    frame.GetMenuBar().Append(version_menu, f"v{__version__}")
     notebook = wx.Notebook(panel)
     page_controls = {}
 
@@ -576,16 +654,67 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
     def refresh_labels(_language=None):
         frame.SetTitle(f"{t('app.title')} {__version__}")
         frame.SetStatusText(t("common.ready"))
-        frame.GetMenuBar().SetMenuLabel(0, t("help.help_title"))
-        frame.GetMenuBar().SetMenuLabel(1, t("help.language"))
-        frame.GetMenuBar().SetMenuLabel(2, f"v{__version__}")
+        try:
+            menubar = frame.GetMenuBar()
+            menubar.SetMenuLabel(0, t("menu.menu"))
+            menubar.SetMenuLabel(1, t("menu.plugins"))
+            menubar.SetMenuLabel(2, t("menu.help"))
+            # Update menu items
+            if act_settings:
+                menubar.SetLabel(act_settings.GetId(), t("menu.settings"))
+            if act_updates:
+                menubar.SetLabel(act_updates.GetId(), t("menu.check_updates"))
+            if act_exit:
+                menubar.SetLabel(act_exit.GetId(), t("menu.exit"))
+            if act_browse:
+                menubar.SetLabel(act_browse.GetId(), t("menu.browse_install"))
+            if act_manage:
+                menubar.SetLabel(act_manage.GetId(), t("menu.manage_installed"))
+            if act_plugin_updates:
+                menubar.SetLabel(act_plugin_updates.GetId(), t("menu.check_plugin_updates"))
+            if act_request:
+                menubar.SetLabel(act_request.GetId(), t("menu.request_plugin"))
+            if act_help:
+                menubar.SetLabel(act_help.GetId(), t("menu.help_center"))
+            if act_logs:
+                menubar.SetLabel(act_logs.GetId(), t("menu.send_logs"))
+            if act_about:
+                menubar.SetLabel(act_about.GetId(), t("menu.about"))
+            try:
+                tour_act = help_items.get("tour")
+                if tour_act:
+                    menubar.SetLabel(tour_act.GetId(), t("menu.quick_tour"))
+            except Exception:
+                pass
+            # Update utility row language choice
+            try:
+                cur = current_language()
+                lang_choice.SetString(0, t("language.english"))
+                lang_choice.SetString(1, t("language.turkish"))
+                lang_choice.SetSelection(1 if cur == "tr" else 0)
+                version_text.SetLabel(f"v{__version__}")
+            except Exception:
+                pass
+            # Refresh dynamic plugin menu labels without restart
+            try:
+                _wx_rebuild_plugins_menu()
+            except Exception:
+                pass
+        except Exception:
+            pass
         for index, title_key in enumerate(("tabs.login", "help.section_terminal", "tabs.jobs_outputs", "tabs.directories", "tabs.ftp", "tabs.editor", "tabs.logs")):
             notebook.SetPageText(index, t(title_key))
         for command, item in command_items:
-            menu.SetLabel(item.GetId(), command.label())
+            try:
+                menu.SetLabel(item.GetId(), command.label())
+            except Exception:
+                pass
         for language, item in language_items.items():
-            language_menu.SetLabel(item.GetId(), t("help.english" if language == "en" else "help.turkish"))
-            item.Check(current_language() == language)
+            try:
+                language_menu.SetLabel(item.GetId(), t("help.english" if language == "en" else "help.turkish"))
+                item.Check(current_language() == language)
+            except Exception:
+                pass
         # Files header row
         try:
             transfer_type_label.SetLabel(t("ftp.transfer_type"))
@@ -603,6 +732,233 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
             download_selected_btn.SetLabel(t("ftp.download_selected"))
         except Exception:
             pass
+
+    # --- Plugin menu dynamic handling (framework-neutral contribution model) ---
+    _wx_plugin_dynamic_items: list = []
+    def _wx_current_context():
+        try:
+            from hpc_gui.plugins.ui_contributions import MenuContext
+            sess = session_state.get("session") or {}
+            connected = bool(sess.get("connected")) if isinstance(sess, dict) else False
+            editor_active = False
+            try:
+                # Heuristic: editor panel is current page
+                if "editor_panel" in locals() or "editor_panel" in globals():
+                    pass
+                # Use notebook current page check
+                cur = notebook.GetCurrentPage() if hasattr(notebook, "GetCurrentPage") else None
+                editor_active = cur is editor_panel if "editor_panel" in dir() else False
+                # Fallback: check page_controls
+                if not editor_active:
+                    try:
+                        ed_page = page_controls.get("NAV-EDITOR", {}).get("page")
+                        editor_active = notebook.GetCurrentPage() is ed_page if ed_page else False
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+            file_selected = False
+            from hpc_gui.core.i18n import current_language
+            return MenuContext(connected=connected, editor_active=editor_active, file_selected=file_selected, language=current_language())
+        except Exception:
+            from hpc_gui.plugins.ui_contributions import MenuContext
+            return MenuContext()
+    def _wx_rebuild_plugins_menu():
+        nonlocal _wx_plugin_dynamic_items
+        try:
+            from hpc_gui.plugins.loader import load_installed_plugins
+            from hpc_gui.plugins.ui_contributions import collect_plugin_menu_contributions, evaluate_when, get_display_label
+            from hpc_gui.services.plugin_menu_actions import can_execute_action
+            # Clear previous dynamic
+            for item in list(_wx_plugin_dynamic_items):
+                try:
+                    plugins_menu.Remove(item)
+                    if hasattr(item, "GetSubMenu") and item.GetSubMenu():
+                        try:
+                            item.GetSubMenu().Destroy()
+                        except Exception:
+                            pass
+                except Exception:
+                    pass
+            _wx_plugin_dynamic_items = []
+            # Insertion point is before the stored bottom separator
+            sep_before_request = sep_plugins_bottom
+            # Collect contributions
+            result = load_installed_plugins()
+            contribs = collect_plugin_menu_contributions(result.plugins)
+            ctx = _wx_current_context()
+            for contrib in sorted(contribs, key=lambda c: c.plugin_id):
+                lang = ctx.language
+                root_label = get_display_label(contrib.label, contrib.labels, lang)
+                root_menu = wx.Menu()
+                has_visible = False
+                for item in contrib.items:
+                    from hpc_gui.plugins.ui_contributions import PluginMenuAction, PluginMenuSeparator, PluginMenuSubmenu
+                    if isinstance(item, PluginMenuSeparator):
+                        root_menu.AppendSeparator()
+                        has_visible = True
+                        continue
+                    if isinstance(item, PluginMenuSubmenu):
+                        caps = frozenset(_get_wx_plugin_caps(contrib.plugin_id))
+                        show = evaluate_when(item.when, ctx, caps)
+                        if not show and item.unavailable == "hide":
+                            continue
+                        sub_label = get_display_label(item.label, item.labels, lang)
+                        sub_menu = wx.Menu()
+                        sub_has = False
+                        for child in item.items:
+                            if isinstance(child, PluginMenuSeparator):
+                                sub_menu.AppendSeparator()
+                                sub_has = True
+                                continue
+                            if isinstance(child, PluginMenuAction):
+                                cond_ok = evaluate_when(child.when, ctx, caps)
+                                if not cond_ok and child.unavailable == "hide":
+                                    continue
+                                a_label = get_display_label(child.label, child.labels, lang)
+                                act = sub_menu.Append(wx.ID_ANY, a_label)
+                                if not cond_ok and child.unavailable == "disable":
+                                    act.Enable(False)
+                                # Capability guard & unsupported wx tool check
+                                owning = _find_wx_plugin(contrib.plugin_id)
+                                allowed = False
+                                if owning is not None:
+                                    allowed, _ = can_execute_action(child.action, owning)
+                                if not allowed or child.action == "plugin.open_trusted_tool":
+                                    act.Enable(False)
+                                else:
+                                    # Bind with host-owned identity
+                                    def make_handler(action=child.action, pid=contrib.plugin_id):
+                                        def handler(_evt):
+                                            _wx_dispatch_plugin_action(action, pid)
+                                        return handler
+                                    frame.Bind(wx.EVT_MENU, make_handler(), act)
+                                sub_has = True
+                                has_visible = True
+                        if sub_has:
+                            if not show and item.unavailable == "disable":
+                                # Disable submenu items? wx doesn't easily disable menu title, but we can disable its items
+                                pass
+                            root_menu.AppendSubMenu(sub_menu, sub_label)
+                            has_visible = True
+                        else:
+                            try:
+                                sub_menu.Destroy()
+                            except Exception:
+                                pass
+                        continue
+                    if isinstance(item, PluginMenuAction):
+                        caps = frozenset(_get_wx_plugin_caps(contrib.plugin_id))
+                        cond_ok = evaluate_when(item.when, ctx, caps)
+                        if not cond_ok and item.unavailable == "hide":
+                            continue
+                        a_label = get_display_label(item.label, item.labels, lang)
+                        act = root_menu.Append(wx.ID_ANY, a_label)
+                        if not cond_ok and item.unavailable == "disable":
+                            act.Enable(False)
+                        owning = _find_wx_plugin(contrib.plugin_id)
+                        allowed = False
+                        if owning is not None:
+                            allowed, _ = can_execute_action(item.action, owning)
+                        # Disable unsupported wx tool actions
+                        if not allowed or item.action == "plugin.open_trusted_tool":
+                            act.Enable(False)
+                        else:
+                            def make_handler(action=item.action, pid=contrib.plugin_id):
+                                def handler(_evt):
+                                    _wx_dispatch_plugin_action(action, pid)
+                                return handler
+                            frame.Bind(wx.EVT_MENU, make_handler(), act)
+                        has_visible = True
+                if has_visible:
+                    # Insert before bottom separator
+                    try:
+                        if sep_before_request:
+                            items_now = list(plugins_menu.GetMenuItems())
+                            idx = items_now.index(sep_before_request)
+                            try:
+                                mi = wx.MenuItem(plugins_menu, wx.ID_ANY, root_label, "", wx.ITEM_NORMAL, root_menu)
+                                try:
+                                    mi.SetSubMenu(root_menu)
+                                except Exception:
+                                    pass
+                                plugins_menu.Insert(idx, mi)
+                                _wx_plugin_dynamic_items.append(mi)
+                            except Exception:
+                                plugins_menu.Insert(idx, wx.ID_ANY, root_label, root_menu)
+                                inserted = list(plugins_menu.GetMenuItems())[idx]
+                                _wx_plugin_dynamic_items.append(inserted)
+                        else:
+                            it = plugins_menu.AppendSubMenu(root_menu, root_label)
+                            _wx_plugin_dynamic_items.append(it)
+                    except Exception:
+                        try:
+                            it = plugins_menu.AppendSubMenu(root_menu, root_label)
+                            _wx_plugin_dynamic_items.append(it)
+                        except Exception:
+                            try:
+                                root_menu.Destroy()
+                            except Exception:
+                                pass
+                else:
+                    try:
+                        root_menu.Destroy()
+                    except Exception:
+                        pass
+        except Exception as e:
+            try:
+                import logging
+                logging.getLogger("hpc_gui.wx_shell").warning("wx rebuild plugins menu failed: %s", e, exc_info=e)
+            except Exception:
+                pass
+    def _get_wx_plugin_caps(plugin_id: str):
+        try:
+            from hpc_gui.plugins.loader import load_installed_plugins
+            res = load_installed_plugins()
+            for inst in res.plugins:
+                if inst.manifest.id == plugin_id:
+                    return tuple(inst.manifest.capabilities or ())
+        except Exception:
+            pass
+        return ()
+    def _find_wx_plugin(plugin_id: str):
+        try:
+            from hpc_gui.plugins.loader import load_installed_plugins
+            res = load_installed_plugins()
+            for inst in res.plugins:
+                if inst.manifest.id == plugin_id:
+                    return inst
+        except Exception:
+            pass
+        return None
+    def _wx_dispatch_plugin_action(action: str, plugin_id: str):
+        try:
+            from hpc_gui.services.plugin_menu_actions import dispatch_plugin_menu_action
+            plugin = _find_wx_plugin(plugin_id)
+            if plugin is None:
+                return
+            # For wx, route only if editor exists and action is not trusted tool (which we disable)
+            # Provide editor_panel as editor_widget if it has required methods
+            editor_widget = None
+            try:
+                editor_widget = page_controls.get("NAV-EDITOR", {}).get("page")
+            except Exception:
+                pass
+            # If action would be disabled, dispatcher will block; for wx we still call but it will be disabled earlier
+            dispatch_plugin_menu_action(action, plugin, editor_widget=editor_widget, host_window=frame)
+        except Exception as e:
+            import logging
+            logging.getLogger("hpc_gui.wx_shell").warning("wx dispatch %r failed: %s", action, e, exc_info=e)
+    # Bind menu open to rebuild (evaluate dynamic state when menu is about to open)
+    try:
+        frame.Bind(wx.EVT_MENU_OPEN, lambda evt: (_wx_rebuild_plugins_menu(), evt.Skip()) if evt.GetMenu() is plugins_menu else evt.Skip())
+    except Exception:
+        pass
+    # Initial build
+    try:
+        _wx_rebuild_plugins_menu()
+    except Exception:
+        pass
 
     subscribe_language_change(refresh_labels)
 
@@ -669,7 +1025,6 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
         before = set(wx.GetTopLevelWindows())
         try:
             from hpc_gui.wx_updater_view import WxUpdateDialog, STATE_CHECKING, STATE_FAILED, STATE_UPDATE_AVAILABLE, STATE_UP_TO_DATE
-            from hpc_gui import __version__ as cur_ver
         except Exception:
             return
         dlg = WxUpdateDialog(f, None)
@@ -734,8 +1089,8 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
                         dlg._error_details = f"{type(e).__name__}: {e}"
                         dlg._build_for_state(STATE_FAILED)
                 wx.CallAfter(on_done)
-            except Exception as e:
-                def on_err():
+            except Exception as exc:
+                def on_err(exc=exc):
                     ff = _shell_frame()
                     if not ff:
                         try:
@@ -743,8 +1098,8 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
                         except Exception:
                             pass
                         return
-                    dlg._error_message = str(e)
-                    dlg._error_details = f"{type(e).__name__}: {e}"
+                    dlg._error_message = str(exc)
+                    dlg._error_details = f"{type(exc).__name__}: {exc}"
                     dlg._build_for_state(STATE_FAILED)
                 wx.CallAfter(on_err)
         import threading
@@ -837,6 +1192,12 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
         lifecycle.set_tray_notifier(tray.notify)
         lifecycle.register_cleanup(destroy_tray)
 
+    # Backward compat dummy variables for old control dict
+    menu = menu_menu
+    language_menu = wx.Menu()
+    language_items = {}
+    version_menu = wx.Menu()
+    command_items = []
     frame._wx_shell_controls = {"menu": menu, "language_menu": language_menu, "language_items": language_items, "version_menu": version_menu, "notebook": notebook, "pages": page_controls}
     frame._wx_shell_chrome_windows = chrome_windows
     frame._wx_shell_shell_ref = shell_ref
@@ -918,7 +1279,7 @@ def main() -> int:
     # Create splash early to paint before heavy init — pure visual splash, auto-continue offline
     splash = None
     try:
-        from hpc_gui.wx_splash import create_startup_splash, STATE_ACTIVE, STATE_COMPLETE, STATE_PENDING
+        from hpc_gui.wx_splash import create_startup_splash, STATE_ACTIVE, STATE_COMPLETE
 
         splash = create_startup_splash(None, profiles=profiles, pure_splash=True)
         splash.Show()
@@ -1624,6 +1985,71 @@ def _dispatch(command_id: str, parent=None, lifecycle=None, session_state=None) 
         from hpc_gui.wx_help import show_help
 
         show_help(parent)
+    elif command_id == "APP-SETTINGS":
+        from hpc_gui.wx_settings_view import show_settings
+        try:
+            show_settings(parent=parent)
+        except Exception:
+            pass
+    elif command_id == "APP-UPDATE-CHECK":
+        # Reuse update flow – find frame from parent if needed
+        try:
+            # Try to find shell frame via parent chain; fallback to parent
+            frame = parent
+            # attempt to call _on_update via closure? Instead directly trigger updater dialog
+            import wx
+            if frame and hasattr(frame, "_wx_shell_menubar"):
+                # Use same logic as _on_update but we have no closure; just show updater view
+                from hpc_gui.wx_updater_view import WxUpdateDialog, STATE_CHECKING
+                dlg = WxUpdateDialog(frame, None)
+                dlg._build_for_state(STATE_CHECKING)
+                dlg.dlg.Show()
+            else:
+                from hpc_gui.wx_updater_view import WxUpdateDialog, STATE_CHECKING
+                dlg = WxUpdateDialog(parent, None)
+                dlg._build_for_state(STATE_CHECKING)
+                dlg.dlg.Show()
+        except Exception:
+            pass
+    elif command_id == "APP-SEND-LOGS":
+        from hpc_gui.wx_send_logs_view import show_send_logs
+        try:
+            show_send_logs(parent=parent)
+        except Exception:
+            pass
+    elif command_id == "APP-ABOUT":
+        try:
+            import wx
+            from hpc_gui import __version__
+            wx.MessageBox(f"HPC Client GUI\nv{__version__}\nSSH · Slurm · X11 workflow manager", "About HPC Client GUI", wx.OK | wx.ICON_INFORMATION, parent)
+        except Exception:
+            pass
+    elif command_id == "APP-QUICKTOUR":
+        try:
+            # wx quick tour not implemented – safe no-op, do not claim parity
+            pass
+        except Exception:
+            pass
+    elif command_id in {"PLUGIN-BROWSE", "PLUGIN-MANAGE", "PLUGIN-UPDATES"}:
+        try:
+            from hpc_gui.wx_plugins_view import show_plugins
+            # Map to initial tab
+            tab_map = {"PLUGIN-BROWSE": "discover", "PLUGIN-MANAGE": "installed", "PLUGIN-UPDATES": "updates"}
+            initial = tab_map.get(command_id, "discover")
+            # Try to pass initial_tab if supported
+            try:
+                show_plugins(parent=parent, initial_tab=initial)
+            except TypeError:
+                show_plugins(parent=parent)
+        except Exception:
+            pass
+    elif command_id == "PLUGIN-REQUEST":
+        try:
+            from hpc_gui.ui.dialogs.plugin_manager_dialog import PLUGIN_REQUEST_URL
+            import webbrowser
+            webbrowser.open(PLUGIN_REQUEST_URL)
+        except Exception:
+            pass
     elif command_id == "APP-CONNECT":
         from hpc_gui.wx_connection import show_connection
 

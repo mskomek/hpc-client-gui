@@ -22,7 +22,6 @@ from hpc_gui.config.storage import (
 )
 from hpc_gui.core.paths import is_frozen_exe
 from hpc_gui.core.platform import current_os
-from hpc_gui.services.shortcut_preferences import active_binding
 from hpc_gui.core.i18n import t, set_language
 from hpc_gui.core.debug_telemetry import DebugTelemetry, is_source_run
 from hpc_gui.core.ui_errors import show_exception
@@ -280,95 +279,128 @@ class MainWindow(QMainWindow):
             pass
 
     def _init_language_menu(self):
-        """Top-right settings, help, and language controls."""
+        """Semantic header: Menu / Plugins / Help with compact language + version."""
         menubar = self.menuBar()
-
-        self._help_menu = menubar.addMenu(t("help.help_title"))
-        self._act_command_palette = QAction(self)
-        self._act_command_palette.triggered.connect(self._open_help)
-        self._help_menu.addAction(self._act_command_palette)
-        self._act_help_center = QAction(t("help.open_help"), self)
-        self._act_help_center.triggered.connect(self._open_help)
-        self._help_menu.addAction(self._act_help_center)
-
+        # --- Language menu (compact, directly accessible) ---
         self._lang_menu = QMenu(self)
-
-        # --- Language actions (icons + checkmark) ---
         self._act_tr = QAction(self)
         self._act_en = QAction(self)
         self._act_tr.setCheckable(True)
         self._act_en.setCheckable(True)
-
         self._act_tr.setIcon(self._flag_icon("TR"))
         self._act_en.setIcon(self._flag_icon("GB"))
-
         self._act_tr.triggered.connect(lambda: self._switch_language("tr"))
         self._act_en.triggered.connect(lambda: self._switch_language("en"))
-
         self._lang_menu.addAction(self._act_tr)
         self._lang_menu.addAction(self._act_en)
 
-        # --- Top-right language selector (wide, shows selected language + flag) ---
         self._lang_btn = QToolButton(self)
         self._lang_btn.setPopupMode(QToolButton.InstantPopup)
         self._lang_btn.setMenu(self._lang_menu)
         self._lang_btn.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
         self._lang_btn.setIconSize(QSize(20, 14))
-        self._lang_btn.setMinimumWidth(220)
+        # Compact selector – no wide minimum that crowds the header
         self._lang_btn.setStyleSheet(
-            "QToolButton { padding: 4px 12px; text-align: left; }"
+            "QToolButton { padding: 4px 8px; text-align: left; }"
             "QToolButton::menu-indicator { subcontrol-position: right center; }"
         )
 
-        self._help_btn = QToolButton(self)
-        self._help_btn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
-        self._help_btn.setIcon(self._asset_svg_icon("assets/icons/help.svg", 18, 18))
-        self._help_btn.setAutoRaise(False)
-        self._help_btn.clicked.connect(self._open_help)
-
-        self._settings_btn = QToolButton(self)
-        self._settings_btn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
-        self._settings_btn.setAutoRaise(False)
-        self._settings_btn.setMinimumWidth(88)
-        self._settings_btn.clicked.connect(self._open_settings)
-
-        self._update_btn = QToolButton(self)
-        self._update_btn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
-        self._update_btn.setAutoRaise(False)
-        self._update_btn.setMinimumWidth(100)
-        self._update_btn.clicked.connect(
-            lambda: self._check_for_updates(manual=True)
+        self._version_label = QLabel(f"v{__version__}")
+        self._version_label.setStyleSheet(
+            "QLabel { color: #555; padding: 0 8px; font-weight: 600; }"
         )
 
-        self._plugins_btn = QToolButton(self)
-        self._plugins_btn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
-        self._plugins_btn.setAutoRaise(False)
-        self._plugins_btn.setMinimumWidth(88)
-        self._plugins_btn.clicked.connect(self._open_plugins)
+        # --- Menu ---
+        self._menu_menu = menubar.addMenu(t("menu.menu"))
+        self._act_settings = QAction(t("menu.settings"), self)
+        self._act_settings.triggered.connect(self._open_settings)
+        self._menu_menu.addAction(self._act_settings)
+        self._act_check_updates = QAction(t("menu.check_updates"), self)
+        self._act_check_updates.triggered.connect(lambda: self._check_for_updates(manual=True))
+        self._menu_menu.addAction(self._act_check_updates)
+        # Command Palette only if a REAL implementation exists – omit the fake Help wiring
+        # No visible Command Palette entry when none exists; Help stays on F1.
+        self._menu_menu.addSeparator()
+        self._act_exit = QAction(t("menu.exit"), self)
+        self._act_exit.triggered.connect(self.close)
+        self._menu_menu.addAction(self._act_exit)
 
-        self._send_logs_btn = QToolButton(self)
-        self._send_logs_btn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
-        self._send_logs_btn.setAutoRaise(False)
-        self._send_logs_btn.setMinimumWidth(110)
-        self._send_logs_btn.clicked.connect(self._open_send_logs)
+        # --- Plugins ---
+        self._plugins_menu = menubar.addMenu(t("menu.plugins"))
+        self._act_plugins_discover = QAction(t("menu.browse_install"), self)
+        self._act_plugins_discover.triggered.connect(lambda: self._open_plugins(initial_tab="discover"))
+        self._plugins_menu.addAction(self._act_plugins_discover)
+        self._act_plugins_installed = QAction(t("menu.manage_installed"), self)
+        self._act_plugins_installed.triggered.connect(lambda: self._open_plugins(initial_tab="installed"))
+        self._plugins_menu.addAction(self._act_plugins_installed)
+        self._act_plugins_updates = QAction(t("menu.check_plugin_updates"), self)
+        self._act_plugins_updates.triggered.connect(lambda: self._open_plugins(initial_tab="updates"))
+        self._plugins_menu.addAction(self._act_plugins_updates)
+        self._plugins_menu.addSeparator()
+        # Dynamic plugin roots will be inserted here
+        self._plugins_dynamic_separator_top = None
+        # Keep a reference to the bottom separator/action for insertion point
+        self._plugins_dynamic_before = None
+        self._plugins_menu.addSeparator()
+        self._act_request_plugin = QAction(t("menu.request_plugin"), self)
+        self._act_request_plugin.triggered.connect(self._open_plugin_requests)
+        self._plugins_menu.addAction(self._act_request_plugin)
+        # Capture insertion point: dynamic roots go before the last separator + Request
+        # The separator added above is the bottom separator
+        all_actions = self._plugins_menu.actions()
+        # bottom separator is second-to-last before Request; we want to insert before it
+        if len(all_actions) >= 2:
+            # actions: [discover, installed, updates, sep1, sep2(dynamic-top? actually we added sep then sep?), request]
+            # We added: discover, installed, updates, sep(static), sep(bottom), request
+            # Dynamic should be between those two seps: so before bottom sep
+            self._plugins_dynamic_before = all_actions[-2]  # bottom sep
+        self._plugins_dynamic_separator_top = all_actions[3] if len(all_actions) > 3 else None
 
-        # Put the button into a container so it doesn't get clipped by the cornerWidget geometry.
+        # --- Help ---
+        self._help_menu = menubar.addMenu(t("menu.help"))
+        self._act_help_center = QAction(t("menu.help_center"), self)
+        try:
+            from PySide6.QtGui import QKeySequence
+            self._act_help_center.setShortcut(QKeySequence("F1"))
+        except Exception:
+            pass
+        self._act_help_center.triggered.connect(self._open_help)
+        self._help_menu.addAction(self._act_help_center)
+        # Quick Tour if existing path is real/usable
+        self._act_quick_tour = None
+        try:
+            from hpc_gui.ui.dialogs.quick_tour import QuickTourOverlay  # noqa: F401
+            self._act_quick_tour = QAction(t("menu.quick_tour"), self)
+            self._act_quick_tour.triggered.connect(self.start_quick_tour)
+            self._help_menu.addAction(self._act_quick_tour)
+        except Exception:
+            self._act_quick_tour = None
+        self._help_menu.addSeparator()
+        self._act_send_logs = QAction(t("menu.send_logs"), self)
+        self._act_send_logs.triggered.connect(self._open_send_logs)
+        self._help_menu.addAction(self._act_send_logs)
+        self._help_menu.addSeparator()
+        self._act_about = QAction(t("menu.about"), self)
+        self._act_about.triggered.connect(self._open_about)
+        self._help_menu.addAction(self._act_about)
+
+        # --- Compact upper-right utilities: language + plain version text ---
         lang_container = QWidget(self)
         lang_container.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
         layout = QHBoxLayout(lang_container)
         layout.setContentsMargins(0, 0, 6, 0)
-        self._version_label = QLabel(f"v{__version__}", lang_container)
-        self._version_label.setStyleSheet(
-            "QLabel { color: #555; padding: 0 8px; font-weight: 600; }"
-        )
         layout.addWidget(self._version_label)
-        layout.addWidget(self._update_btn)
-        layout.addWidget(self._plugins_btn)
-        layout.addWidget(self._send_logs_btn)
-        layout.addWidget(self._settings_btn)
-        layout.addWidget(self._help_btn)
         layout.addWidget(self._lang_btn)
         menubar.setCornerWidget(lang_container, Qt.TopRightCorner)
+
+        # Plugin menu dynamic handling
+        self._plugin_contributions: list = []
+        self._plugins_dynamic_actions: list = []
+        self._refresh_plugin_contributions_cache()
+        try:
+            self._plugins_menu.aboutToShow.connect(self._rebuild_plugins_menu_dynamic)
+        except Exception:
+            pass
 
     def _asset_svg_icon(self, rel_path: str, w: int = 18, h: int = 18) -> QIcon:
         """Render an SVG asset into a QIcon (stable across platforms)."""
@@ -417,15 +449,44 @@ class MainWindow(QMainWindow):
         except Exception:
             pass
 
-    def _open_plugins(self):
+    def _open_about(self):
+        try:
+            from hpc_gui.ui.dialogs.about_dialog import AboutDialog
+            dlg = AboutDialog(self)
+            dlg.exec()
+        except Exception:
+            pass
+
+    def _open_plugin_requests(self):
+        try:
+            from hpc_gui.ui.dialogs.plugin_manager_dialog import PLUGIN_REQUEST_URL, PluginManagerDialog
+            from PySide6.QtCore import QUrl
+            from PySide6.QtGui import QDesktopServices
+            url = PLUGIN_REQUEST_URL
+            if PluginManagerDialog._is_allowed_plugin_request_url(url):
+                opened = QDesktopServices.openUrl(QUrl(url))
+                if not opened:
+                    from PySide6.QtWidgets import QMessageBox
+                    QMessageBox.warning(self, t("plugins.dialog_title"), t("plugins.request_plugin_failed"))
+            else:
+                from PySide6.QtWidgets import QMessageBox
+                QMessageBox.warning(self, t("plugins.dialog_title"), t("plugins.request_plugin_failed"))
+        except Exception:
+            pass
+
+    def _open_plugins(self, initial_tab="discover"):
         try:
             from hpc_gui.ui.dialogs.plugin_manager_dialog import PluginManagerDialog
-
-            dlg = PluginManagerDialog(self)
+            dlg = PluginManagerDialog(self, initial_tab=initial_tab)
+            # Live refresh without restart
+            try:
+                dlg.plugins_changed.connect(self._on_plugins_changed)
+            except Exception:
+                pass
             dlg.exec()
+            # Post-exec safety refresh
+            self._refresh_plugin_contributions_cache()
         except Exception as exc:
-            # A silent failure here made plugin problems undiagnosable; log
-            # the real exception and surface a translated user message.
             self._logger.exception("Opening the Plugin Manager failed")
             show_exception(
                 self,
@@ -434,6 +495,215 @@ class MainWindow(QMainWindow):
                 exc=exc,
                 area="PLUGINS",
             )
+
+    def _on_plugins_changed(self):
+        try:
+            self._refresh_plugin_contributions_cache()
+        except Exception:
+            pass
+
+    def _refresh_plugin_contributions_cache(self):
+        try:
+            from hpc_gui.plugins.loader import load_installed_plugins
+            from hpc_gui.plugins.ui_contributions import collect_plugin_menu_contributions
+            # Collect only from enabled/compatible/corrupt-filtered plugins
+            result = load_installed_plugins()
+            # Filter disabled already done by loader; but we also need to keep only those with contribution
+            self._plugin_contributions = collect_plugin_menu_contributions(result.plugins)
+        except Exception as exc:
+            self._logger.warning("Failed to refresh plugin contributions: %s", exc, exc_info=exc)
+            self._plugin_contributions = []
+
+    def _current_menu_context(self):
+        try:
+            from hpc_gui.plugins.ui_contributions import MenuContext
+            from hpc_gui.core.i18n import current_language
+            sess = getattr(self, "_session", None)
+            connected = bool(sess and sess.get("connected")) if isinstance(sess, dict) else False
+            editor_active = False
+            try:
+                editor_active = self.tabs.currentWidget() is self.editor
+            except Exception:
+                pass
+            file_selected = False
+            try:
+                # Heuristic: if directories or ftp has selection
+                if hasattr(self, "directories") and hasattr(self.directories, "panel_scratch"):
+                    pnl = self.directories.panel_scratch
+                    if hasattr(pnl, "tree") and hasattr(pnl.tree, "selectedItems"):
+                        file_selected = bool(pnl.tree.selectedItems())
+            except Exception:
+                pass
+            return MenuContext(connected=connected, editor_active=editor_active, file_selected=file_selected, language=current_language())
+        except Exception:
+            from hpc_gui.plugins.ui_contributions import MenuContext
+            return MenuContext()
+
+    def _rebuild_plugins_menu_dynamic(self):
+        """Evaluate when-conditions on menu open, not on every tab change."""
+        try:
+            from hpc_gui.plugins.ui_contributions import evaluate_when, get_display_label
+            from PySide6.QtGui import QAction
+            from PySide6.QtWidgets import QMenu
+            # Clear prior dynamic
+            for act in list(getattr(self, "_plugins_dynamic_actions", [])):
+                try:
+                    self._plugins_menu.removeAction(act)
+                    # If it's a menu's action, also delete menu
+                    menu = act.menu() if hasattr(act, "menu") else None
+                    if menu is not None:
+                        menu.deleteLater()
+                except Exception:
+                    pass
+            self._plugins_dynamic_actions = []
+            if not getattr(self, "_plugin_contributions", None):
+                return
+            ctx = self._current_menu_context()
+            insert_before = getattr(self, "_plugins_dynamic_before", None)
+            for contrib in sorted(self._plugin_contributions, key=lambda c: c.plugin_id):
+                lang = ctx.language
+                root_label = get_display_label(contrib.label, contrib.labels, lang)
+                # Create root menu for this plugin
+                root_menu = QMenu(root_label, self)
+                # For each item in contribution (preserve order)
+                has_visible = False
+                for item in contrib.items:
+                    from hpc_gui.plugins.ui_contributions import PluginMenuAction, PluginMenuSeparator, PluginMenuSubmenu
+                    if isinstance(item, PluginMenuSeparator):
+                        # Separators inside root: only add if there is a previous non-separator and not at end – but normalization already handled
+                        sep_act = QAction(self)
+                        sep_act.setSeparator(True)
+                        root_menu.addAction(sep_act)
+                        has_visible = True
+                        continue
+                    if isinstance(item, PluginMenuSubmenu):
+                        # Evaluate submenu when
+                        caps = frozenset(self._get_plugin_capabilities(contrib.plugin_id))
+                        show = evaluate_when(item.when, ctx, caps)
+                        if not show:
+                            if item.unavailable == "hide":
+                                continue
+                            # disable – show but disabled
+                        sub_label = get_display_label(item.label, item.labels, lang)
+                        sub_menu = QMenu(sub_label, self)
+                        if not show and item.unavailable == "disable":
+                            sub_menu.setEnabled(False)
+                        # Add inner actions/separators
+                        inner_visible = False
+                        for child in item.items:
+                            if isinstance(child, PluginMenuSeparator):
+                                sep = QAction(self)
+                                sep.setSeparator(True)
+                                sub_menu.addAction(sep)
+                                inner_visible = True
+                                continue
+                            if isinstance(child, PluginMenuAction):
+                                caps2 = caps
+                                cond_ok = evaluate_when(child.when, ctx, caps2)
+                                if not cond_ok and child.unavailable == "hide":
+                                    continue
+                                a_label = get_display_label(child.label, child.labels, lang)
+                                act = QAction(a_label, self)
+                                if not cond_ok and child.unavailable == "disable":
+                                    act.setEnabled(False)
+                                # Check allowlist and capability guard before enabling
+                                from hpc_gui.services.plugin_menu_actions import can_execute_action
+                                # Resolve owning plugin object for dispatch
+                                owning = self._find_installed_plugin(contrib.plugin_id)
+                                if owning is not None:
+                                    allowed, _reason = can_execute_action(child.action, owning)
+                                    if not allowed:
+                                        act.setEnabled(False)
+                                else:
+                                    act.setEnabled(False)
+                                # Capture for dispatcher: host-owned action, pass owning plugin from host
+                                act.triggered.connect(lambda _checked=False, a=child.action, p=contrib.plugin_id: self._dispatch_plugin_action(a, p))
+                                sub_menu.addAction(act)
+                                inner_visible = True
+                                has_visible = True
+                            else:
+                                continue
+                        if inner_visible:
+                            # Normalize separators inside submenu already done
+                            root_menu.addMenu(sub_menu)
+                            has_visible = True
+                        else:
+                            sub_menu.deleteLater()
+                            continue
+                    elif isinstance(item, PluginMenuAction):
+                        caps = frozenset(self._get_plugin_capabilities(contrib.plugin_id))
+                        cond_ok = evaluate_when(item.when, ctx, caps)
+                        if not cond_ok and item.unavailable == "hide":
+                            continue
+                        a_label = get_display_label(item.label, item.labels, lang)
+                        act = QAction(a_label, self)
+                        if not cond_ok and item.unavailable == "disable":
+                            act.setEnabled(False)
+                        from hpc_gui.services.plugin_menu_actions import can_execute_action
+                        owning = self._find_installed_plugin(contrib.plugin_id)
+                        if owning is not None:
+                            allowed, _reason = can_execute_action(item.action, owning)
+                            if not allowed:
+                                act.setEnabled(False)
+                        else:
+                            act.setEnabled(False)
+                        act.triggered.connect(lambda _checked=False, a=item.action, p=contrib.plugin_id: self._dispatch_plugin_action(a, p))
+                        root_menu.addAction(act)
+                        has_visible = True
+                if has_visible:
+                    # Insert before bottom separator
+                    if insert_before is not None:
+                        self._plugins_menu.insertMenu(insert_before, root_menu)
+                        # Keep action reference for removal
+                        self._plugins_dynamic_actions.append(root_menu.menuAction())
+                    else:
+                        action = self._plugins_menu.addMenu(root_menu)
+                        self._plugins_dynamic_actions.append(action)
+                else:
+                    root_menu.deleteLater()
+        except Exception as exc:
+            self._logger.warning("Failed to rebuild Plugins menu: %s", exc, exc_info=exc)
+
+    def _get_plugin_capabilities(self, plugin_id: str) -> tuple[str, ...]:
+        try:
+            for contrib in getattr(self, "_plugin_contributions", []):
+                if contrib.plugin_id == plugin_id:
+                    # Need owning plugin's capabilities
+                    p = self._find_installed_plugin(plugin_id)
+                    if p:
+                        return tuple(p.manifest.capabilities or ())
+            # fallback
+            from hpc_gui.plugins.loader import load_installed_plugins
+            result = load_installed_plugins()
+            for inst in result.plugins:
+                if inst.manifest.id == plugin_id:
+                    return tuple(inst.manifest.capabilities or ())
+        except Exception:
+            pass
+        return ()
+
+    def _find_installed_plugin(self, plugin_id: str):
+        try:
+            from hpc_gui.plugins.loader import load_installed_plugins
+            res = load_installed_plugins()
+            for inst in res.plugins:
+                if inst.manifest.id == plugin_id:
+                    return inst
+        except Exception:
+            pass
+        return None
+
+    def _dispatch_plugin_action(self, action: str, plugin_id: str):
+        try:
+            from hpc_gui.services.plugin_menu_actions import dispatch_plugin_menu_action
+            plugin = self._find_installed_plugin(plugin_id)
+            if plugin is None:
+                self._logger.warning("Plugin %s not found for action %s", plugin_id, action)
+                return
+            # Host owns identity: pass plugin object, not ID string
+            dispatch_plugin_menu_action(action, plugin, editor_widget=getattr(self, "editor", None), host_window=self)
+        except Exception as exc:
+            self._logger.warning("Dispatch of %r for %s failed: %s", action, plugin_id, exc, exc_info=exc)
 
     def _show_startup_changelog_if_needed(self) -> None:
         try:
@@ -520,7 +790,8 @@ class MainWindow(QMainWindow):
         self._update_jobs.add(thread)
         self._update_workers[thread] = worker
         self._update_busy_count += 1
-        self._update_btn.setEnabled(False)
+        if hasattr(self, "_act_check_updates"):
+            self._act_check_updates.setEnabled(False)
         thread.start()
 
     def _update_job_finished(self, thread: QThread) -> None:
@@ -528,7 +799,8 @@ class MainWindow(QMainWindow):
         self._update_workers.pop(thread, None)
         self._update_busy_count = max(0, self._update_busy_count - 1)
         if self._update_busy_count == 0:
-            self._update_btn.setEnabled(True)
+            if hasattr(self, "_act_check_updates"):
+                self._act_check_updates.setEnabled(True)
 
     def _check_for_updates(self, manual: bool = True) -> None:
         if self._update_busy_count:
@@ -675,34 +947,41 @@ class MainWindow(QMainWindow):
             self.tabs.setTabText(self.tabs.indexOf(self.editor), t("tabs.editor"))
             self.tabs.setTabText(self.tabs.indexOf(self.logs), t("tabs.logs"))
 
+        # Menus
+        if hasattr(self, "_menu_menu"):
+            self._menu_menu.setTitle(t("menu.menu"))
+        if hasattr(self, "_act_settings"):
+            self._act_settings.setText(t("menu.settings"))
+        if hasattr(self, "_act_check_updates"):
+            self._act_check_updates.setText(t("menu.check_updates"))
+        if hasattr(self, "_act_exit"):
+            self._act_exit.setText(t("menu.exit"))
+        if hasattr(self, "_plugins_menu"):
+            self._plugins_menu.setTitle(t("menu.plugins"))
+        if hasattr(self, "_act_plugins_discover"):
+            self._act_plugins_discover.setText(t("menu.browse_install"))
+        if hasattr(self, "_act_plugins_installed"):
+            self._act_plugins_installed.setText(t("menu.manage_installed"))
+        if hasattr(self, "_act_plugins_updates"):
+            self._act_plugins_updates.setText(t("menu.check_plugin_updates"))
+        if hasattr(self, "_act_request_plugin"):
+            self._act_request_plugin.setText(t("menu.request_plugin"))
+        if hasattr(self, "_help_menu"):
+            self._help_menu.setTitle(t("menu.help"))
+        if hasattr(self, "_act_help_center"):
+            self._act_help_center.setText(t("menu.help_center"))
+        if hasattr(self, "_act_quick_tour") and self._act_quick_tour is not None:
+            self._act_quick_tour.setText(t("menu.quick_tour"))
+        if hasattr(self, "_act_send_logs"):
+            self._act_send_logs.setText(t("menu.send_logs"))
+        if hasattr(self, "_act_about"):
+            self._act_about.setText(t("menu.about"))
         # Language menu labels / selected language display
         if hasattr(self, "_act_tr"):
             self._act_tr.setText(t("language.turkish"))
         if hasattr(self, "_act_en"):
             self._act_en.setText(t("language.english"))
-        if hasattr(self, "_help_menu"):
-            self._help_menu.setTitle(t("help.help_title"))
-        if hasattr(self, "_act_help_center"):
-            self._act_help_center.setText(t("help.open_help"))
-        if hasattr(self, "_act_command_palette"):
-            binding = active_binding("APP-COMMAND-PALETTE", current_os())
-            self._act_command_palette.setText(t("common.command_palette") + (f" ({binding})" if binding else ""))
-        if hasattr(self, "_help_btn"):
-            self._help_btn.setText(t("help.help_title"))
-            self._help_btn.setToolTip(t("help.open_help"))
-        if hasattr(self, "_settings_btn"):
-            self._settings_btn.setText(t("settings.action"))
-            self._settings_btn.setToolTip(t("settings.dialog_title"))
-        if hasattr(self, "_update_btn"):
-            self._update_btn.setText(t("updates.action"))
-            self._update_btn.setToolTip(t("updates.check_tip"))
-        if hasattr(self, "_plugins_btn"):
-            self._plugins_btn.setText(t("plugins.action"))
-            self._plugins_btn.setToolTip(t("plugins.dialog_title"))
-        if hasattr(self, "_send_logs_btn"):
-            self._send_logs_btn.setText(t("crash.send_logs_btn"))
-            self._send_logs_btn.setToolTip(t("crash.send_logs_tip"))
-        # Button shows currently selected language (with flag) and is wide enough
+        # Button shows currently selected language (with flag) and is compact
         if hasattr(self, "_lang_btn"):
             cur = getattr(self, "_current_lang", None)
             if cur is None:
@@ -723,6 +1002,12 @@ class MainWindow(QMainWindow):
                 if hasattr(self, "_act_en"):
                     self._act_en.setChecked(True)
             self._lang_btn.setToolTip(t("language.menu_title"))
+        # Rebuild plugin menu to retranslate dynamic labels without restart
+        try:
+            self._refresh_plugin_contributions_cache()
+            self._rebuild_plugins_menu_dynamic()
+        except Exception:
+            pass
 
         # Ask children to retranslate if they support it
         for w in (

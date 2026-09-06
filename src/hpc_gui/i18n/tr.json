@@ -1010,6 +1010,32 @@
     "tool_open_failed": "Denetleyici aracı açılamadı",
     "tool_not_installed": "Eklenti kurulu değil veya devre dışı."
   },
+  "menu": {
+    "menu": "Menü",
+    "plugins": "Eklentiler",
+    "help": "Yardım",
+    "settings": "Ayarlar...",
+    "check_updates": "Güncellemeleri Denetle...",
+    "command_palette": "Komut Paleti",
+    "exit": "Çıkış",
+    "browse_install": "Eklenti Gözat & Kur...",
+    "manage_installed": "Kurulu Eklentileri Yönet...",
+    "check_plugin_updates": "Eklenti Güncellemelerini Denetle...",
+    "request_plugin": "Eklenti İste...",
+    "help_center": "Yardım Merkezi...",
+    "quick_tour": "Hızlı Tur...",
+    "send_logs": "Günlükleri Gönder / Tanılama...",
+    "about": "HPC Client GUI Hakkında..."
+  },
+  "about": {
+    "title": "HPC Client GUI Hakkında",
+    "description": "HPC kümeleri için SSH · Slurm · X11 iş akışı yöneticisi.",
+    "version_label": "Sürüm {version}",
+    "project": "Proje Deposu",
+    "license": "Lisans",
+    "notices": "Üçüncü Taraf Bildirimleri",
+    "close": "Kapat"
+  },
   "templates": {
     "dialog_title": "İş Şablonları",
     "list_label": "Kurulu şablonlar:",
