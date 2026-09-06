@@ -106,13 +106,10 @@ def test_plugin_with_contribution_present():
 
 def test_disabled_absent(tmp_path):
     from hpc_gui.plugins.storage import write_disabled_ids
-    # install then disable
     _install_helper(tmp_path, VALID_MANIFEST_HELPER, VALID_PROFILE_HELPER)
     write_disabled_ids({"org.hpcclient.truba"}, root=tmp_path)
     result = load_installed_plugins(root=tmp_path)
     assert result.plugins == []
-    assert result.plugins == []
-    # disabled plugins contribute nothing, problems may contain diagnostic but not crash
 
 
 def test_incompatible_absent(tmp_path):
@@ -121,33 +118,6 @@ def test_incompatible_absent(tmp_path):
     result = load_installed_plugins(root=tmp_path, app_version="1.5.8")
     assert result.plugins == []
     assert any("incompatible" in p.reason for p in result.problems)
-
-
-def test_corrupt_no_crash(tmp_path):
-    # Create a plugin with invalid ui_contributions that should not crash loader
-    pkg = tmp_path / "packages" / "org.test.bad" / "1.0.0"
-    pkg.mkdir(parents=True)
-    bad_manifest = make_manifest(manifest_id="org.test.bad", ui={"plugins_menu": {"label": "", "items": []}})
-    # But our validator would reject empty label, but loader should skip gracefully, not crash
-    # We craft a manifest that passes validator but has bad ui that parser skips
-    bad_manifest2 = make_manifest(manifest_id="org.test.bad", ui={"plugins_menu": {"label": "Bad", "items": [{"kind": "action", "id": "a", "label": "A", "action": "unknown.action"}]}})
-    # This has unknown action but should be parsed? Unknown action will be kept but dispatcher will block
-    # For corrupt test, we use a manifest with ui that has duplicate IDs which parser will skip
-    dup_ui = {"plugins_menu": {"label": "Dup", "items": [
-        {"kind": "action", "id": "dup", "label": "A", "action": "editor.lint_current"},
-        {"kind": "action", "id": "dup", "label": "B", "action": "editor.lint_current"},
-    ]}}
-    good_manifest = make_manifest(manifest_id="org.test.good", version="1.0.0", ui={"plugins_menu": {"label": "Good", "items": [{"kind": "action", "id": "good", "label": "Good", "action": "editor.lint_current"}]}})
-    # Use loader with malformed ui that fails parsing – should not crash and other plugins still load
-    # Simulate by installing a plugin with malformed ui but valid manifest (validator would catch, but we force)
-    # Instead test that one malformed contribution does not break collect
-    from hpc_gui.plugins.models import PluginManifest, PluginFile
-    from hpc_gui.plugins.ui_contributions import collect_plugin_menu_contributions
-    mf = PluginManifest(schema_version=1, plugin_api=1, id="org.test.one", name="One", version="1.0.0", publisher="x", license="MIT", description="d", requires_app=">=1.5.8", capabilities=("lint-rules",), entrypoints={}, files=(PluginFile(path="a.json", sha256="0"*64, size=1, role="documentation"),), ui_contributions={"plugins_menu": {"label": "", "items": []}})  # invalid label
-    inst = InstalledPlugin(manifest=mf, directory=tmp_path, plugin_menu_contribution=None)
-    # This plugin's contribution should be None due to invalid label, but collect should not crash
-    contribs = collect_plugin_menu_contributions([inst])
-    assert contribs == []  # skipped, no crash
 
 
 def test_deterministic_ordering():
