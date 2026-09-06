@@ -28,11 +28,12 @@ def _stage_icon(state: str) -> str:
     return {"pending": "○", "active": "●", "complete": "✓", "failed": "!"} .get(state, "○")
 
 
-def create_startup_splash(parent=None, *, profiles: list[dict] | None = None, lifecycle=None, on_connect=None, on_offline=None, on_reload=None):
+def create_startup_splash(parent=None, *, profiles: list[dict] | None = None, lifecycle=None, on_connect=None, on_offline=None, on_reload=None, pure_splash: bool = False):
     """Create and show the startup splash dialog (spec §18-29). Returns the dialog instance.
 
-    The dialog is modeless and centered; caller controls stage progression via the
-    returned object's public methods.
+    When pure_splash=True the dialog is a visual-only splash (no session/Profile
+    controls) and automatically continues offline — per product decision.
+    Caller controls stage progression via the returned object's public methods.
     """
     try:
         import wx
@@ -111,55 +112,62 @@ def create_startup_splash(parent=None, *, profiles: list[dict] | None = None, li
     root.Add(log_ctrl, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 12)
 
     # --- Connection controls §26: Profile dropdown + Reload / Continue Offline / Connect ---
-    conn_box = wx.StaticBox(panel, label=t("connection.profile") if t("connection.profile") != "[connection.profile]" else "Profile")
-    conn_sizer = wx.StaticBoxSizer(conn_box, wx.VERTICAL)
-    # Profile selector: min 320 preferred 400-500, not full-width on wide monitor
-    try:
-        choices = [str(p.get("name", "")) for p in profiles if p.get("name")]
-    except Exception:
-        choices = []
-    if not choices:
-        choices = [t("connection.no_profiles") if t("connection.no_profiles") != "[connection.no_profiles]" else "No profiles"]
-    profile_choice = wx.Choice(conn_box, choices=choices)
-    try:
-        profile_choice.SetMinSize(wx.Size(320, -1))
-        profile_choice.SetSelection(0 if choices else -1)
-    except Exception:
-        pass
-    # Second row of buttons with hierarchy §26: Connect Primary, Reload Secondary, Continue Tertiary
-    btn_row = wx.BoxSizer(wx.HORIZONTAL)
-    reload_btn = wx.Button(conn_box, label=t("connection.reload") if t("connection.reload") != "[connection.reload]" else "Reload Connections")
-    try:
-        reload_btn.SetMinSize(wx.Size(88, 30))
-    except Exception:
-        pass
-    offline_btn = wx.Button(conn_box, label=t("connection.continue_offline") if t("connection.continue_offline") != "[connection.continue_offline]" else "Continue Offline")
-    try:
-        offline_btn.SetMinSize(wx.Size(88, 30))
-    except Exception:
-        pass
-    connect_btn = wx.Button(conn_box, label=t("login.connect_selected") if t("login.connect_selected") != "[login.connect_selected]" else "Connect")
-    try:
-        connect_btn.SetMinSize(wx.Size(100, 32))
-        # Primary styling: bold
-        fnt = connect_btn.GetFont()
-        fnt.SetWeight(wx.FONTWEIGHT_BOLD)
-        connect_btn.SetFont(fnt)
-    except Exception:
-        pass
-    try:
-        connect_btn.SetDefault()
-    except Exception:
-        pass
-    # Spec places Profile dropdown centered, then row below with Reload on left, Continue/Connect right?
-    # Layout per spec: Profile [dropdown] / [Reload]  [Continue Offline] [Connect] (last two right-aligned)
-    conn_sizer.Add(profile_choice, 0, wx.EXPAND | wx.ALL, 8)
-    btn_row.Add(reload_btn, 0, wx.RIGHT, 8)
-    btn_row.AddStretchSpacer(1)
-    btn_row.Add(offline_btn, 0, wx.RIGHT, 8)
-    btn_row.Add(connect_btn, 0)
-    conn_sizer.Add(btn_row, 0, wx.EXPAND | wx.ALL, 8)
-    root.Add(conn_sizer, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 12)
+    # When pure_splash=True this whole block is omitted — splash is visual-only and
+    # the app auto-continues offline (per user request). Keep placeholders for test compat.
+    if pure_splash:
+        conn_box = None
+        conn_sizer = None
+        profile_choice = None
+        reload_btn = None
+        offline_btn = None
+        connect_btn = None
+    else:
+        conn_box = wx.StaticBox(panel, label=t("connection.profile") if t("connection.profile") != "[connection.profile]" else "Profile")
+        conn_sizer = wx.StaticBoxSizer(conn_box, wx.VERTICAL)
+        # Profile selector: min 320 preferred 400-500, not full-width on wide monitor
+        try:
+            choices = [str(p.get("name", "")) for p in profiles if p.get("name")]
+        except Exception:
+            choices = []
+        if not choices:
+            choices = [t("connection.no_profiles") if t("connection.no_profiles") != "[connection.no_profiles]" else "No profiles"]
+        profile_choice = wx.Choice(conn_box, choices=choices)
+        try:
+            profile_choice.SetMinSize(wx.Size(320, -1))
+            profile_choice.SetSelection(0 if choices else -1)
+        except Exception:
+            pass
+        # Second row of buttons with hierarchy §26: Connect Primary, Reload Secondary, Continue Tertiary
+        btn_row = wx.BoxSizer(wx.HORIZONTAL)
+        reload_btn = wx.Button(conn_box, label=t("connection.reload") if t("connection.reload") != "[connection.reload]" else "Reload Connections")
+        try:
+            reload_btn.SetMinSize(wx.Size(88, 30))
+        except Exception:
+            pass
+        offline_btn = wx.Button(conn_box, label=t("connection.continue_offline") if t("connection.continue_offline") != "[connection.continue_offline]" else "Continue Offline")
+        try:
+            offline_btn.SetMinSize(wx.Size(88, 30))
+        except Exception:
+            pass
+        connect_btn = wx.Button(conn_box, label=t("login.connect_selected") if t("login.connect_selected") != "[login.connect_selected]" else "Connect")
+        try:
+            connect_btn.SetMinSize(wx.Size(100, 32))
+            fnt = connect_btn.GetFont()
+            fnt.SetWeight(wx.FONTWEIGHT_BOLD)
+            connect_btn.SetFont(fnt)
+        except Exception:
+            pass
+        try:
+            connect_btn.SetDefault()
+        except Exception:
+            pass
+        conn_sizer.Add(profile_choice, 0, wx.EXPAND | wx.ALL, 8)
+        btn_row.Add(reload_btn, 0, wx.RIGHT, 8)
+        btn_row.AddStretchSpacer(1)
+        btn_row.Add(offline_btn, 0, wx.RIGHT, 8)
+        btn_row.Add(connect_btn, 0)
+        conn_sizer.Add(btn_row, 0, wx.EXPAND | wx.ALL, 8)
+        root.Add(conn_sizer, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 12)
 
     # --- Mandatory update banner §29 (hidden initially) ---
     mandatory_panel = wx.Panel(panel)
@@ -282,12 +290,11 @@ def create_startup_splash(parent=None, *, profiles: list[dict] | None = None, li
         try:
             mand_detail.SetLabel(details or f"Version {version} must be installed before HPC Client can continue.")
             mandatory_panel.Show()
-            # Disable connection controls per §29
-            profile_choice.Disable()
-            reload_btn.Disable()
-            connect_btn.Disable()
-            # Continue Offline disabled unless explicitly supported — hide/disable
-            offline_btn.Disable()
+            if not pure_splash:
+                profile_choice.Disable()
+                reload_btn.Disable()
+                connect_btn.Disable()
+                offline_btn.Disable()
             panel.Layout()
             dlg.Layout()
             dlg.FitInside()
@@ -295,6 +302,8 @@ def create_startup_splash(parent=None, *, profiles: list[dict] | None = None, li
             pass
 
     def set_connecting(is_connecting: bool, profile_name: str = ""):
+        if pure_splash:
+            return
         try:
             if is_connecting:
                 msg = t("connection.connecting_to").format(name=profile_name) if t("connection.connecting_to") != "[connection.connecting_to]" else f"Connecting to {profile_name}..."
@@ -317,10 +326,11 @@ def create_startup_splash(parent=None, *, profiles: list[dict] | None = None, li
     def set_offline_mode():
         try:
             status_text.SetLabel(t("connection.offline_starting") if t("connection.offline_starting") != "[connection.offline_starting]" else "Starting in offline mode...")
-            profile_choice.Disable()
-            reload_btn.Disable()
-            connect_btn.Disable()
-            offline_btn.Disable()
+            if not pure_splash:
+                profile_choice.Disable()
+                reload_btn.Disable()
+                connect_btn.Disable()
+                offline_btn.Disable()
             panel.Layout()
         except Exception:
             pass
@@ -397,9 +407,10 @@ def create_startup_splash(parent=None, *, profiles: list[dict] | None = None, li
                 _wx.CallAfter(lambda: set_connecting(False, sel))
             Thread(target=reset, daemon=True).start()
 
-    reload_btn.Bind(wx.EVT_BUTTON, _on_reload)
-    offline_btn.Bind(wx.EVT_BUTTON, _on_offline)
-    connect_btn.Bind(wx.EVT_BUTTON, _on_connect)
+    if not pure_splash:
+        reload_btn.Bind(wx.EVT_BUTTON, _on_reload)
+        offline_btn.Bind(wx.EVT_BUTTON, _on_offline)
+        connect_btn.Bind(wx.EVT_BUTTON, _on_connect)
 
     # Language refresh
     def refresh_labels(_lang=None):
