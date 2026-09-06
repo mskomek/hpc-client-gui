@@ -52,7 +52,18 @@ def _provider_name(profile: dict[str, Any]) -> str:
 
 
 def ssh_info_from_profile(profile: dict[str, Any], model: "WxConnectionModel") -> SSHConnInfo:
-    """Build the shared SSH request without copying secrets into UI state."""
+    """Build the shared SSH request without copying secrets into UI state.
+
+    Resolution order:
+      typed password (``profile["password"]``) if present
+        ↓ saved keychain / OS secret via shared service (no prompt)
+        ↓ master-encrypted requires prior GUI-thread resolution – this
+           helper never prompts; it raises ``saved_password_unavailable``
+           when a master-encrypted secret is present but no typed password
+           was supplied. Callers that need interactive master unlock must
+           resolve via ``resolve_password_for_connect`` on the GUI thread
+           before constructing the transient profile.
+    """
 
     def host_key(info: HostKeyInfo) -> str:
         return model.decide_host_key(HostKeyRequest(info.hostname, info.fingerprint, info.role))
@@ -67,17 +78,28 @@ def ssh_info_from_profile(profile: dict[str, Any], model: "WxConnectionModel") -
         return model.answer_keyboard_interactive(request)
 
     # Resolve password securely; wx stored secrets are never in plaintext ``password`` field.
+    # Typed password (transient) takes precedence – this is the path used after
+    # the GUI thread has already resolved any master-encrypted secret via
+    # ``resolve_password_for_connect``.
     password = str(profile.get("password", "") or "")
     if not password and profile.get("save_password"):
-        from hpc_gui.services.connection_profile_service import decrypt_profile_password as resolve_saved_password
+        from hpc_gui.services.connection_profile_service import decrypt_profile_password
 
-        resolved = resolve_saved_password(profile, allow_prompt=False)
-        if resolved is None and any(
+        # Use shared service without prompting – keychain/DPAPI succeed,
+        # master-encrypted returns None (no prompt) and will be surfaced as
+        # saved_password_unavailable. The GUI handler is expected to have
+        # resolved master secrets beforehand and supplied them as typed
+        # password in the transient profile.
+        resolved = decrypt_profile_password(profile, allow_prompt=False)
+        if isinstance(resolved, str) and resolved != "":
+            password = resolved
+        elif resolved is None and any(
             profile.get(key)
-            for key in ("password_keychain_ref", "password_dpapi", "password_enc")
+            for key in ("password_keychain_ref", "password_dpapi", "password_enc", "password_salt")
         ):
             raise RuntimeError("saved_password_unavailable")
-        if isinstance(resolved, str):
+        elif isinstance(resolved, str):
+            # Empty means no saved secret – keep empty (key auth)
             password = resolved
 
     # Provider auth metadata for keyboard-interactive decision
@@ -313,13 +335,19 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
         answers = []
         for index, prompt in enumerate(request.prompts):
             echo = request.echo[index] if index < len(request.echo) else None
-            is_secret = echo is False or (
-                echo is None
-                and any(word in prompt.lower() for word in ("password", "token", "code", "otp", "pin"))
-            )
-            style = wx.TE_PASSWORD if is_secret else 0
-            # Create dialog with appropriate style
-            dlg = wx.TextEntryDialog(host, f"{request.instructions}\n\n{prompt}", request.title, style=style)
+            # Explicit echo wins; fallback heuristic only when echo is None
+            if echo is True:
+                is_secret = False
+            elif echo is False:
+                is_secret = True
+            else:
+                is_secret = any(word in prompt.lower() for word in ("password", "token", "code", "otp", "pin"))
+            # Use robust wx API: PasswordEntryDialog for secret, TextEntryDialog for visible
+            message = f"{request.instructions}\n\n{prompt}" if request.instructions else prompt
+            if is_secret:
+                dlg = wx.PasswordEntryDialog(host, message, request.title)
+            else:
+                dlg = wx.TextEntryDialog(host, message, request.title)
             try:
                 if dlg.ShowModal() != wx.ID_OK:
                     return []
@@ -613,7 +641,7 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
                     from hpc_gui.services.connection_profile_service import verify_edit_authorization
                     # Build verify callback via wx prompt
                     def prompt_verify(expected: str):
-                        dlg = wx.TextEntryDialog(host, t("connection.edit_auth_prompt"), t("connection.edit_auth_title"), style=wx.TE_PASSWORD)
+                        dlg = wx.PasswordEntryDialog(host, t("connection.edit_auth_prompt"), t("connection.edit_auth_title"))
                         result = dlg.ShowModal()
                         val = dlg.GetValue()
                         dlg.Destroy()
@@ -734,6 +762,82 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
             return
         if not model.select(sel):
             return
+        # Resolve credentials on GUI thread before starting worker
+        stored = next((p for p in model.profiles if p.get("name") == sel), None)
+        if stored is None:
+            try:
+                stored = next((p for p in _load_live_profiles() if p.get("name") == sel), None)
+            except Exception:
+                stored = None
+        if stored is None:
+            wx.MessageBox(t("connection.profile_not_found").format(name=sel), t("login.err_title"), wx.OK | wx.ICON_WARNING)
+            return
+        # Typed password for Connect Selected is empty (wx panel has no typed field);
+        # stored["password"] is always empty for persisted profiles, so we rely on
+        # shared resolver. For typed-override tests the caller may have set
+        # stored["password"] transiently – resolve will treat that as typed.
+        ask_master_conn = _master_ask_factory()
+        try:
+            from hpc_gui.services.connection_profile_service import resolve_password_for_connect
+
+            typed_for_connect = str(stored.get("password", "") or "")
+            resolved_password = resolve_password_for_connect(
+                stored, typed_password=typed_for_connect, ask_master=ask_master_conn
+            )
+        except RuntimeError as exc:
+            msg = str(exc)
+            if "master_cancelled" in msg:
+                status.SetLabel(t("connection.auth_cancelled") if t("connection.auth_cancelled") != "[connection.auth_cancelled]" else "Authentication cancelled")
+                _update_button_states()
+                return
+            elif "master_wrong" in msg:
+                wx.MessageBox(t("login.err_master_wrong"), t("login.err_title"), wx.OK | wx.ICON_ERROR)
+                status.SetLabel(t("connection.status_failed"))
+                try:
+                    model.controller.fail()
+                except Exception:
+                    pass
+                _update_button_states()
+                return
+            elif "saved_password_unavailable" in msg:
+                wx.MessageBox(t("connection.saved_password_unavailable"), t("login.err_title"), wx.OK | wx.ICON_ERROR)
+                status.SetLabel(t("connection.status_failed"))
+                try:
+                    model.controller.fail()
+                except Exception:
+                    pass
+                _update_button_states()
+                return
+            else:
+                wx.MessageBox(msg, t("login.err_title"), wx.OK | wx.ICON_ERROR)
+                status.SetLabel(t("connection.status_failed"))
+                try:
+                    model.controller.fail()
+                except Exception:
+                    pass
+                _update_button_states()
+                return
+        except Exception as exc:
+            wx.MessageBox(str(exc), t("login.err_title"), wx.OK | wx.ICON_ERROR)
+            status.SetLabel(t("connection.status_failed"))
+            try:
+                model.controller.fail()
+            except Exception:
+                pass
+            _update_button_states()
+            return
+        if resolved_password is None:
+            wx.MessageBox(t("connection.saved_password_unavailable"), t("login.err_title"), wx.OK | wx.ICON_ERROR)
+            status.SetLabel(t("connection.status_failed"))
+            try:
+                model.controller.fail()
+            except Exception:
+                pass
+            _update_button_states()
+            return
+        # Build transient profile with resolved password – never persisted
+        transient = dict(stored)
+        transient["password"] = resolved_password if resolved_password is not None else ""
         # Disable conflicting while connecting
         connect_button.Enable(False)
         edit_button.Enable(False)
@@ -742,26 +846,60 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
         add_button.Enable(False)
         status.SetLabel(t("login.status_connecting"))
         active_label.SetLabel("")
+        try:
+            model.controller.begin_connect()
+        except Exception:
+            pass
         def worker():
             try:
-                if not model.connect_selected():
+                # Use the transient profile so ssh_info_from_profile sees the typed password
+                # and does not need to re-resolve master secrets on the worker thread.
+                connect_fn = model._connect
+                if connect_fn is None:
+                    from hpc_gui.wx_connection import connect_profile as _default_connect
+
+                    def _default(profile):
+                        return _default_connect(profile, model)
+
+                    connect_fn = _default
+                session = connect_fn(dict(transient))
+                if session is False:
                     raise RuntimeError(t("login.error") if t("login.error") != "[login.error]" else "Connection failed")
+                if isinstance(session, dict):
+                    model.controller.finish(session)
                 wx.CallAfter(done, None)
             except Exception as error:
                 wx.CallAfter(done, error)
         def done(error):
-            connect_button.Enable(True)
-            add_button.Enable(True)
-            # Restore other buttons based on selection
-            _update_button_states()
+            # Clear transient password from memory best-effort
+            try:
+                transient["password"] = ""
+            except Exception:
+                pass
             if error:
-                model.controller.fail()
+                try:
+                    model.controller.fail()
+                except Exception:
+                    pass
                 status.SetLabel(t("connection.status_failed"))
+                _update_button_states()
                 # Show useful error, never with secrets
                 try:
                     msg = str(error)
+                    # Redact any accidental secret (defensive)
+                    if resolved_password and resolved_password in msg:
+                        msg = msg.replace(resolved_password, "<redacted>")
                 except Exception:
                     msg = "Connection failed"
+                # Map safe known errors to translated messages
+                if "saved_password_unavailable" in msg:
+                    msg = t("connection.saved_password_unavailable")
+                elif "master_cancelled" in msg:
+                    msg = t("connection.auth_cancelled") if t("connection.auth_cancelled") != "[connection.auth_cancelled]" else "Authentication cancelled"
+                    status.SetLabel(msg)
+                    return
+                elif "master_wrong" in msg:
+                    msg = t("login.err_master_wrong")
                 wx.MessageBox(msg, t("login.err_title"), wx.OK | wx.ICON_ERROR)
             else:
                 status.SetLabel(t("login.status_connected"))

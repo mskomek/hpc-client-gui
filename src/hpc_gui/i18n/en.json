@@ -907,7 +907,12 @@
     "required_field": "{field} is required for this provider.",
     "cluster_test_running": "Testing...",
     "cluster_test_failed": "Cluster test failed ({error}).",
-    "storage_enabled": "Enabled"
+    "storage_enabled": "Enabled",
+    "auth_cancelled": "Authentication cancelled",
+    "test_credential_error": "Test connection failed due to credential error",
+    "master_unlock_error": "Master password unlock failed",
+    "saved_credential_unavailable": "The saved credential could not be unlocked. Please check your master password or OS credential store.",
+    "credential_unlock_prompt": "Enter master password to unlock saved credentials"
   },
   "cluster_self_test": {
     "title": "Cluster Self-Test",

@@ -54,22 +54,37 @@ def _decrypt_saved_password(
     # Caller provides a prompting callback; if none, cannot decrypt.
     if ask_master is None:
         return None
-    # Try cached master first via ask_master(False) pattern – the caller may
-    # already have resolved DPAPI-stored master.
+    # First attempt – ask_master may return cached value without prompting.
     master = ask_master(False)
     if master is None:
         return None
     try:
         return decrypt_with_master(master, str(token), str(salt))
     except Exception:
-        # Retry once if master may be stale; caller should clear DPAPI cache.
+        # Wrong master – clear any cached DPAPI master and retry once
+        # to allow user to re-enter. This mirrors LoginWidget's retry.
         if master_cache is not None:
-            master_cache.clear()
-        # Second attempt - ask again with confirm=False after clearing cache
-        # The caller decides whether to re-prompt; we simply try again via ask_master
-        # but the outer loop in LoginWidget handles DPAPI clearing. Here just fail
-        # and let caller surface the error.
-        return None
+            try:
+                master_cache.clear()
+            except Exception:
+                pass
+        else:
+            # If caller uses internal cache dict, try to clear via ask_master
+            # internal cache is opaque; we attempt a second prompt anyway.
+            pass
+        # Check if ask_master is wired to a cache that was cleared; second
+        # call should prompt the user again. If second master is None or
+        # same as first and still fails, we treat as wrong password.
+        try:
+            master2 = ask_master(False)
+        except Exception:
+            return None
+        if master2 is None or master2 == master:
+            return None
+        try:
+            return decrypt_with_master(master2, str(token), str(salt))
+        except Exception:
+            return None
 
 
 def decrypt_profile_password(
@@ -329,20 +344,98 @@ def resolve_password_for_connect(
 ) -> str | None:
     """Resolve the password to use for a connection attempt.
 
-    - If the user typed a password, use it.
-    - Otherwise, if the profile opts in to saved password, decrypt via appropriate store.
-    - Returns "" when no password is needed, None when decryption failed / master cancelled.
+    Resolution order:
+      typed password, if present
+        ↓ saved keychain/OS secret, if available
+        ↓ saved master-encrypted secret with wx master-password prompt when required
+        ↓ empty password when authentication does not require a password
+
+    Returns the plaintext password (may be "") or raises ``RuntimeError`` with a
+    safe, non-secret message:
+      * ``master_cancelled`` – user cancelled the master prompt
+      * ``master_wrong`` – wrong master password
+      * ``saved_password_unavailable`` – keychain/DPAPI entry missing or corrupt
+    Callers must not log or persist the returned plaintext and must keep it only
+    in transient connection memory.
+
+    For backward compatibility, when ``ask_master`` is ``None`` and a
+    master-encrypted secret is present the function returns ``None`` instead of
+    raising. New callers should pass an ``ask_master`` callback to get the
+    distinct ``master_cancelled``/``master_wrong`` errors.
     """
+    # Typed password takes precedence and does not require any stored secret.
+    # ``typed_password`` is the content of the password field (may be empty).
+    # Also consider profile["password"] as typed if caller passed the raw profile
+    # without separating typed_password (mirrors LoginWidget's password.text() check).
     if typed_password:
         return typed_password
+    # Fallback: if profile itself carries a transient typed password (e.g. from
+    # _collect_profile) treat it as typed. This preserves Qt parity where
+    # password.text() is checked before decrypting the stored profile.
+    transient = str(profile.get("password", "") or "")
+    if transient:
+        return transient
     name = str(profile.get("name") or "").strip()
     stored = load_profile_by_name(name) if name else profile
     if stored is None:
         stored = profile
     if not stored.get("save_password"):
         return ""
-    # Mirror LoginWidget's _decrypt_profile_password allow_prompt=True
-    result = decrypt_profile_password(stored, allow_prompt=True, ask_master=ask_master)
-    if result is None:
-        return None
-    return result
+    # Keychain
+    keychain_ref = stored.get("password_keychain_ref")
+    if keychain_ref:
+        try:
+            return unprotect_keychain_secret(str(keychain_ref))
+        except Exception:
+            raise RuntimeError("saved_password_unavailable")
+    # DPAPI / OS-protected
+    token = stored.get("password_dpapi")
+    if token:
+        try:
+            return unprotect_secret(str(token))
+        except Exception:
+            raise RuntimeError("saved_password_unavailable")
+    # Master-encrypted
+    enc = stored.get("password_enc")
+    salt = stored.get("password_salt")
+    if enc and salt:
+        if ask_master is None:
+            return None
+        # First prompt – may return cached master without UI
+        master = ask_master(False)
+        if master is None:
+            raise RuntimeError("master_cancelled")
+        try:
+            return decrypt_with_master(master, str(enc), str(salt))
+        except Exception:
+            # Wrong master – clear cached DPAPI master and retry once
+            # (mirrors LoginWidget's cache clear + re-prompt)
+            try:
+                cache_obj = getattr(ask_master, "_cache", None)
+                if isinstance(cache_obj, dict) and "value" in cache_obj:
+                    cache_obj["value"] = ""
+                elif isinstance(cache_obj, list):
+                    try:
+                        cache_obj.clear()
+                    except Exception:
+                        pass
+                from hpc_gui.config.storage import update_settings
+
+                update_settings({"master_password_dpapi": ""})
+            except Exception:
+                pass
+            try:
+                master2 = ask_master(False)
+            except Exception:
+                raise RuntimeError("master_wrong")
+            if master2 is None:
+                raise RuntimeError("master_cancelled")
+            if master2 == master:
+                # Same master tried again and failed – definitely wrong
+                raise RuntimeError("master_wrong")
+            try:
+                return decrypt_with_master(master2, str(enc), str(salt))
+            except Exception:
+                raise RuntimeError("master_wrong")
+    # No saved secret – empty password (e.g. key auth)
+    return ""
