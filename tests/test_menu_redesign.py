@@ -152,9 +152,3 @@ def test_about_dialog_properties():
     assert "https://github.com/mskomek/hpc-client-gui" in src
     # Must not require network to instantiate (no requests)
     assert "requests" not in src.lower()
-
-
-def test_no_tmp_changes():
-    # Ensure .tmp not touched (no files in .tmp modified for this task)
-    # This is a meta test – we just ensure .tmp exists but we didn't write there via our code
-    assert pathlib.Path(".tmp").exists() or True

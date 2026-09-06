@@ -111,7 +111,8 @@ def test_disabled_absent(tmp_path):
     write_disabled_ids({"org.hpcclient.truba"}, root=tmp_path)
     result = load_installed_plugins(root=tmp_path)
     assert result.plugins == []
-    assert any("disabled" not in p.reason for p in result.problems) or True
+    assert result.plugins == []
+    # disabled plugins contribute nothing, problems may contain diagnostic but not crash
 
 
 def test_incompatible_absent(tmp_path):
@@ -335,5 +336,27 @@ def test_max_label_length_enforced():
 
 
 def test_max_nesting_enforced():
-    # Already tested too Deep
-    pass
+    # Real max-depth: Plugins -> plugin root -> submenu -> action is allowed, deeper is rejected
+    ui_ok = {"plugins_menu": {"label": "Root", "items": [
+        {"kind": "submenu", "id": "sub", "label": "Sub", "items": [
+            {"kind": "action", "id": "act", "label": "Act", "action": "editor.lint_current"}
+        ]}
+    ]}}
+    contrib_ok, errs_ok = _parse_plugins_menu(ui_ok["plugins_menu"], "org.test", "1.0.0")
+    assert errs_ok == []
+    assert len(contrib_ok.items) == 1
+    assert len(contrib_ok.items[0].items) == 1
+    # Too deep: submenu inside submenu must be rejected
+    ui_deep = {"plugins_menu": {"label": "Root", "items": [
+        {"kind": "submenu", "id": "sub", "label": "Sub", "items": [
+            {"kind": "submenu", "id": "deep", "label": "Deep", "items": [
+                {"kind": "action", "id": "act", "label": "Act", "action": "editor.lint_current"}
+            ]}
+        ]}
+    ]}}
+    errors = validate_ui_contributions_dict(ui_deep)
+    assert any("max nesting" in e or "invalid kind" in e for e in errors)
+    contrib_deep, _ = _parse_plugins_menu(ui_deep["plugins_menu"], "org.test", "1.0.0")
+    # Deep nested submenu should be skipped, leaving empty submenu (normalized) or no items
+    assert len(contrib_deep.items) == 1
+    assert len(contrib_deep.items[0].items) == 0

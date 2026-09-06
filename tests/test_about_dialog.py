@@ -25,7 +25,7 @@ def test_about_instantiates_offscreen():
         # Find QLabel children
         labels = [c.text() for c in dlg.findChildren(type(dlg.findChild(dlg.__class__))) if hasattr(c, "text")]
         # Instead check window title and version in src
-        assert __version__ in dlg._version_label_ref.text() or __version__ in dlg.windowTitle() or True
+        assert __version__ in dlg._version_label_ref.text()
         dlg.deleteLater()
     except Exception as e:
         import pytest

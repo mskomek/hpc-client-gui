@@ -707,6 +707,21 @@ class EditorWidget(QWidget):
             positions.append(max(0, (diagnostic.line or 1) - 1))
         return labels, positions
 
+    def _load_templates_filtered(self, plugin_id: str | None = None):
+        from hpc_gui.plugins.job_templates import load_job_templates
+        try:
+            return load_job_templates(plugin_id=plugin_id)
+        except TypeError:
+            try:
+                templates = load_job_templates()
+            except Exception:
+                return []
+            if plugin_id:
+                return [t for t in templates if t.plugin_id == plugin_id]
+            return templates
+        except Exception:
+            return []
+
     def new_from_template_for_plugin(self, plugin_id: str):
         """Scoped template flow filtered to one plugin (host-owned)."""
         templates = self._load_templates_filtered(plugin_id)

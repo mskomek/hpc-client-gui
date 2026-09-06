@@ -59,147 +59,77 @@ def can_execute_action(action: str, plugin: InstalledPlugin) -> tuple[bool, str]
 def dispatch_plugin_menu_action(
     action: str,
     plugin: InstalledPlugin,
+    host=None,
     *,
     editor_widget=None,
     host_window=None,
-    template_filter_plugin_id: str | None = None,
 ) -> bool:
-    """Dispatch a host-owned action.
+    """Framework-neutral dispatch.
 
-    Returns True if the action was handled, False otherwise. Never raises
-    for unknown/invalid actions – logs and returns False.
+    Preferred: pass a ``PluginMenuHost`` as *host*.  The legacy
+    ``editor_widget``/``host_window`` kwargs are kept for backward
+    compatibility with existing tests but are not used for UI construction
+    in the shared layer.
     """
+    # Back-compat: if host is actually an editor_widget passed positionally
+    if host is not None and not hasattr(host, "run_editor_lint") and editor_widget is None:
+        # host looks like a widget, not a host – treat as legacy editor_widget
+        editor_widget = host  # type: ignore[assignment]
+        host = None
     allowed, reason = can_execute_action(action, plugin)
     if not allowed:
         logger.warning("Blocked plugin menu action %r for plugin %s: %s", action, getattr(plugin.manifest, "id", "?"), reason)
         return False
 
+    # If a host adapter is supplied, delegate to it – shared layer never builds Qt UI
+    if host is not None:
+        try:
+            if action == "editor.lint_current":
+                return bool(host.run_editor_lint(plugin.manifest.id))
+            if action == "editor.new_from_plugin_templates":
+                return bool(host.open_plugin_templates(plugin.manifest.id))
+            if action == "plugin.open_trusted_tool":
+                return bool(host.open_trusted_tool(plugin))
+        except Exception as exc:
+            logger.warning("Plugin menu action %r failed for %s: %s", action, plugin.manifest.id, exc, exc_info=exc)
+            return False
+        logger.warning("Unhandled plugin menu action %r", action)
+        return False
+
+    # Legacy fallback without host – still no Qt construction, just capability-checked no-op
+    # This path keeps older unit tests that call dispatch without a host from crashing,
+    # but it does not construct dialogs.
     try:
         if action == "editor.lint_current":
-            return _do_editor_lint_current(plugin, editor_widget=editor_widget)
+            if editor_widget is not None and hasattr(editor_widget, "run_lint_for_plugin"):
+                try:
+                    editor_widget.run_lint_for_plugin(plugin.manifest.id)  # type: ignore[attr-defined]
+                    return True
+                except Exception:
+                    pass
+            if editor_widget is not None and hasattr(editor_widget, "run_lint"):
+                try:
+                    editor_widget.run_lint()  # type: ignore[attr-defined]
+                    return True
+                except Exception:
+                    pass
+            logger.warning("editor.lint_current requires a host with run_editor_lint")
+            return False
         if action == "editor.new_from_plugin_templates":
-            return _do_editor_new_from_templates(plugin, editor_widget=editor_widget)
+            if editor_widget is not None and hasattr(editor_widget, "new_from_template_for_plugin"):
+                try:
+                    editor_widget.new_from_template_for_plugin(plugin.manifest.id)  # type: ignore[attr-defined]
+                    return True
+                except Exception:
+                    pass
+            logger.warning("editor.new_from_plugin_templates requires a host with open_plugin_templates")
+            return False
         if action == "plugin.open_trusted_tool":
-            return _do_open_trusted_tool(plugin, host_window=host_window)
+            logger.warning("plugin.open_trusted_tool requires a host with open_trusted_tool (Qt host)")
+            return False
     except Exception as exc:
         logger.warning("Plugin menu action %r failed for %s: %s", action, plugin.manifest.id, exc, exc_info=exc)
         return False
     logger.warning("Unhandled plugin menu action %r", action)
     return False
-
-
-def _do_editor_lint_current(plugin: InstalledPlugin, *, editor_widget=None) -> bool:
-    """Reuse existing Editor lint pipeline. Optional plugin scoping is applied when clean."""
-    if editor_widget is None:
-        logger.warning("editor.lint_current requires an editor_widget")
-        return False
-    # Prefer plugin-scoped lint if the widget exposes a scoped entry point; otherwise fall back to full lint
-    # Attempt optional scoping cleanly:
-    path = ""
-    try:
-        path = getattr(editor_widget, "path_in", None)
-        if path is not None:
-            path = path.text().strip() if hasattr(path, "text") else ""
-        else:
-            path = getattr(editor_widget, "current_path", "") or ""
-    except Exception:
-        path = ""
-    # Try scoped helper if available (not required)
-    scoped = getattr(editor_widget, "run_lint_for_plugin", None)
-    if callable(scoped):
-        try:
-            scoped(plugin.manifest.id)
-            return True
-        except Exception:
-            pass
-    # Fall back to existing generic lint – reuses the same pipeline (no second engine)
-    try:
-        editor_widget.run_lint()
-        return True
-    except Exception as exc:
-        logger.warning("editor.lint_current failed: %s", exc, exc_info=exc)
-        return False
-
-
-def _do_editor_new_from_templates(plugin: InstalledPlugin, *, editor_widget=None) -> bool:
-    if editor_widget is None:
-        logger.warning("editor.new_from_plugin_templates requires editor_widget")
-        return False
-    # Reuse existing New from Template flow but filter to templates owned by the contributing plugin
-    try:
-        from hpc_gui.plugins.job_templates import load_job_templates
-
-        templates = load_job_templates()
-        owned = [t for t in templates if t.plugin_id == plugin.manifest.id]
-        if not owned:
-            logger.warning("No job templates owned by plugin %s", plugin.manifest.id)
-            # Still open the generic dialog filtered to owned (will show empty message)
-            # We reuse the widget's flow with filtered list by monkey-patching load_job_templates locally
-            # Instead, if widget supports filtered entry point, use it
-            filtered = getattr(editor_widget, "new_from_template_for_plugin", None)
-            if callable(filtered):
-                filtered(plugin.manifest.id)
-                return True
-            # Fallback: temporarily patch load_job_templates
-            import hpc_gui.plugins.job_templates as jt_mod
-            original = jt_mod.load_job_templates
-            try:
-                jt_mod.load_job_templates = lambda *a, **k: owned
-                editor_widget.new_from_template()
-            finally:
-                jt_mod.load_job_templates = original
-            return True
-        # If the widget has a filtered entry point, prefer it
-        filtered = getattr(editor_widget, "new_from_template_for_plugin", None)
-        if callable(filtered):
-            filtered(plugin.manifest.id)
-            return True
-        # Generic fallback with patched loader
-        import hpc_gui.plugins.job_templates as jt_mod
-
-        original = jt_mod.load_job_templates
-        try:
-            jt_mod.load_job_templates = lambda *a, **k: owned
-            editor_widget.new_from_template()
-        finally:
-            jt_mod.load_job_templates = original
-        return True
-    except Exception as exc:
-        logger.warning("editor.new_from_plugin_templates failed: %s", exc, exc_info=exc)
-        return False
-
-
-def _do_open_trusted_tool(plugin: InstalledPlugin, *, host_window=None) -> bool:
-    """Route only through the existing approved trusted-tool path and current policy."""
-    from hpc_gui.plugins.linter_tools import ToolLoadError, load_tool_for_plugin
-    from hpc_gui.plugins.trusted_tools import is_approved_trusted_tool
-
-    if not is_approved_trusted_tool(plugin.manifest):
-        logger.warning("plugin %s is not an approved trusted tool", plugin.manifest.id)
-        return False
-    try:
-        tool = load_tool_for_plugin(plugin)
-    except ToolLoadError as exc:
-        logger.warning("Cannot load trusted tool %s: %s", plugin.manifest.id, exc)
-        return False
-    except Exception as exc:
-        logger.warning("Unexpected error loading trusted tool %s: %s", plugin.manifest.id, exc, exc_info=exc)
-        return False
-
-    # Reuse existing hosting: create dialog similar to PluginManagerDialog.open_linter_tool
-    try:
-        from PySide6.QtWidgets import QDialog, QVBoxLayout
-
-        parent = host_window
-        dialog = QDialog(parent)
-        dialog.setWindowTitle(f"{tool.title} — {plugin.manifest.id}@{tool.version}")
-        dialog.resize(980, 680)
-        layout = QVBoxLayout(dialog)
-        page = tool.page_factory(parent=dialog)
-        layout.addWidget(page)
-        dialog.exec()
-        return True
-    except Exception as exc:
-        logger.warning("Opening trusted tool %s failed: %s", plugin.manifest.id, exc, exc_info=exc)
-        return False
 
