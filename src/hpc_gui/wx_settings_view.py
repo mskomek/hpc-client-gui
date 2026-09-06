@@ -16,7 +16,8 @@ def _build_settings(parent, model: WxSettingsModel | None = None, *, settings=No
         raise RuntimeError("wxPython is not installed") from exc
 
     model = model or WxSettingsModel(settings, apply=apply)
-    host, finish = make_host(parent, title=t("settings.dialog_title"), size=(640, 560), embedded=embedded)
+    # Spec §96: Settings 840×620 resizable, §4 dialog body 16px, §98 label width 180-240px
+    host, finish = make_host(parent, title=t("settings.dialog_title"), size=(840, 620), embedded=embedded)
     panel = wx.Panel(host)
     root = wx.BoxSizer(wx.VERTICAL)
 
@@ -42,19 +43,19 @@ def _build_settings(parent, model: WxSettingsModel | None = None, *, settings=No
     btn_sizer.Add(btn_apply, 0, wx.RIGHT, 6)
     btn_sizer.Add(btn_close, 0)
 
-    # layout
-    root.Add(title, 0, wx.ALL, 8)
-    root.Add(cb_remote_cache, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 8)
-    root.Add(cb_checksum, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 8)
+    # layout — §4 spacing scale 4/8/12/16, §16 dialog body 16px, footer 12-16px
+    root.Add(title, 0, wx.ALL, 16)
+    root.Add(cb_remote_cache, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 12)
+    root.Add(cb_checksum, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 12)
     row1 = wx.BoxSizer(wx.HORIZONTAL)
-    row1.Add(lbl_parallel, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 6)
+    row1.Add(lbl_parallel, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 8)
     row1.Add(sp_parallel, 0)
-    root.Add(row1, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 8)
+    root.Add(row1, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 12)
     row2 = wx.BoxSizer(wx.HORIZONTAL)
-    row2.Add(lbl_timeout, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 6)
+    row2.Add(lbl_timeout, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 8)
     row2.Add(sp_timeout, 0)
-    root.Add(row2, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 8)
-    root.Add(btn_sizer, 0, wx.EXPAND | wx.ALL, 8)
+    root.Add(row2, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 12)
+    root.Add(btn_sizer, 0, wx.EXPAND | wx.ALL, 16)
 
     panel.SetSizer(root)
 

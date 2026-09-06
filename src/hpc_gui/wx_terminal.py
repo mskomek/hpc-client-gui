@@ -246,7 +246,8 @@ def build_terminal_panel(parent, *, model: TerminalModel | None = None, ssh=None
                 panel._terminal_subscriber = new_sub
                 panel._terminal_subscribers = subs
 
-    panel._wx_terminal_controls = {"find": find_ctrl, "find_btn": find_btn, "clear": clear_btn, "font_down": font_down_btn, "font_up": font_up_btn, "output": text, "model": model}
+    # Spec §69-71: terminal canvas uses single TextCtrl for both output and input; expose both keys for test seam
+    panel._wx_terminal_controls = {"find": find_ctrl, "find_btn": find_btn, "clear": clear_btn, "font_down": font_down_btn, "font_up": font_up_btn, "output": text, "input": text, "model": model}
     panel._wx_terminal_close = close
     panel._wx_terminal_set_ssh = set_ssh
     panel._wx_terminal_render = render_output

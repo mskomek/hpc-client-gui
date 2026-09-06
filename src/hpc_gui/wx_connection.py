@@ -122,7 +122,8 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
     model = WxConnectionModel(profiles, connect=connect)
     if connect is None:
         model._connect = lambda profile: connect_profile(profile, model)
-    host, finish = make_host(parent, title=t("tabs.connection"), size=(720, 520), embedded=embedded)
+    # Spec §30-32 layout: profile selector min 320 preferred 400-500, label 90-120
+    host, finish = make_host(parent, title=t("tabs.connection"), size=(840, 520), embedded=embedded)
     panel = wx.Panel(host)
     root = wx.BoxSizer(wx.VERTICAL)
     choices = wx.ListBox(panel, choices=[item.name for item in model.summaries()])
@@ -135,12 +136,12 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
     # connect_button is the Connect Selected action (keeps existing behaviour)
     if not add_connection:
         add_button.Enable(False)
-    button_row.Add(add_button, 0, wx.RIGHT, 6)
-    button_row.Add(connect_button, 0, wx.RIGHT, 6)
+    button_row.Add(add_button, 0, wx.RIGHT, 8)
+    button_row.Add(connect_button, 0, wx.RIGHT, 8)
     button_row.AddStretchSpacer(1)
-    root.Add(choices, 1, wx.EXPAND | wx.ALL, 8)
-    root.Add(status, 0, wx.LEFT | wx.RIGHT, 8)
-    root.Add(button_row, 0, wx.EXPAND | wx.ALL, 8)
+    root.Add(choices, 1, wx.EXPAND | wx.ALL, 12)
+    root.Add(status, 0, wx.LEFT | wx.RIGHT, 12)
+    root.Add(button_row, 0, wx.EXPAND | wx.ALL, 12)
     panel.SetSizer(root)
 
     def host_key_dialog(request: HostKeyRequest) -> str:
