@@ -389,8 +389,8 @@ class MainWindow(QMainWindow):
         lang_container.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
         layout = QHBoxLayout(lang_container)
         layout.setContentsMargins(0, 0, 6, 0)
-        layout.addWidget(self._version_label)
         layout.addWidget(self._lang_btn)
+        layout.addWidget(self._version_label)
         menubar.setCornerWidget(lang_container, Qt.TopRightCorner)
 
         # Plugin menu dynamic handling
@@ -560,7 +560,7 @@ class MainWindow(QMainWindow):
                 return
             ctx = self._current_menu_context()
             insert_before = getattr(self, "_plugins_dynamic_before", None)
-            for contrib in sorted(self._plugin_contributions, key=lambda c: c.plugin_id):
+            for contrib in sorted(self._plugin_contributions, key=lambda c: (get_display_label(c.label, c.labels, ctx.language).casefold(), c.label.casefold(), c.plugin_id.casefold())):
                 lang = ctx.language
                 root_label = get_display_label(contrib.label, contrib.labels, lang)
                 # Create root menu for this plugin
@@ -696,12 +696,14 @@ class MainWindow(QMainWindow):
     def _dispatch_plugin_action(self, action: str, plugin_id: str):
         try:
             from hpc_gui.services.plugin_menu_actions import dispatch_plugin_menu_action
+            from hpc_gui.ui.plugin_menu_qt_host import QtPluginMenuHost
+
             plugin = self._find_installed_plugin(plugin_id)
             if plugin is None:
                 self._logger.warning("Plugin %s not found for action %s", plugin_id, action)
                 return
-            # Host owns identity: pass plugin object, not ID string
-            dispatch_plugin_menu_action(action, plugin, editor_widget=getattr(self, "editor", None), host_window=self)
+            host = QtPluginMenuHost(editor_widget=getattr(self, "editor", None), host_window=self)
+            dispatch_plugin_menu_action(action, plugin, host)
         except Exception as exc:
             self._logger.warning("Dispatch of %r for %s failed: %s", action, plugin_id, exc, exc_info=exc)
 

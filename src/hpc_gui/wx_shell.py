@@ -787,7 +787,7 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
             result = load_installed_plugins()
             contribs = collect_plugin_menu_contributions(result.plugins)
             ctx = _wx_current_context()
-            for contrib in sorted(contribs, key=lambda c: c.plugin_id):
+            for contrib in sorted(contribs, key=lambda c: (get_display_label(c.label, c.labels, ctx.language).casefold(), c.label.casefold(), c.plugin_id.casefold())):
                 lang = ctx.language
                 root_label = get_display_label(contrib.label, contrib.labels, lang)
                 root_menu = wx.Menu()

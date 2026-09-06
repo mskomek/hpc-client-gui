@@ -172,11 +172,18 @@ def _parse_index(index: dict, package_dir: Path, plugin_id: str, version: str) -
     return templates
 
 
-def load_job_templates(root=None, app_version: str = __version__) -> list[JobTemplate]:
-    """Load job templates from active, compatible installed plugins."""
+def load_job_templates(root=None, app_version: str = __version__, plugin_id: str | None = None) -> list[JobTemplate]:
+    """Load job templates from active, compatible installed plugins.
+
+    When *plugin_id* is supplied only templates belonging to that plugin are
+    returned.  The default ``None`` preserves the historic ``all templates``
+    behaviour.
+    """
     templates: list[JobTemplate] = []
     result = load_installed_plugins(root=root, app_version=app_version)
     for installed in result.plugins:
+        if plugin_id is not None and installed.manifest.id != plugin_id:
+            continue
         index = installed.job_templates_index
         if not isinstance(index, dict):
             continue

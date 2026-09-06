@@ -267,14 +267,10 @@ def _parse_action(raw: Mapping[str, Any], depth: int, seen_ids: set[str], owning
     labels, label_errors = _validate_labels(labels_raw)
     errors.extend(label_errors)
     when, when_errors = _validate_when(when_raw)
-    # Unknown condition errors are logged but we still treat item as valid for evaluation fail-safe; however for
-    # validation we want to allow unknown conditions to pass through as they will be disabled/hidden at eval time.
-    # So we don't reject on when_errors unless it's malformed structure.
-    # But we log them and keep the when for evaluation.
-    # For now, ignore when_errors for rejection except structure errors.
-    # We will filter when_errors that are truly invalid structure vs unknown condition.
-    # Keep all when entries for evaluation.
-    # So we don't append when_errors to errors for rejection (except if when itself not dict is already handled).
+    if when_errors:
+        for werr in when_errors:
+            logger.warning("plugin %s action %r invalid when %r: %s", owning_id, item_id, when_raw, werr)
+        return None, when_errors
 
     if unavailable not in VALID_UNAVAILABLE:
         errors.append(f"action {item_id!r} unavailable must be 'disable' or 'hide'")
@@ -287,18 +283,7 @@ def _parse_action(raw: Mapping[str, Any], depth: int, seen_ids: set[str], owning
         errors.append(f"action {item_id!r} has unknown properties {extra}")
 
     if errors:
-        # If label errors etc exist, fail
-        # But when_errors for unknown condition should not cause failure; we already handled.
-        # So filter errors that are not from when unknown
-        # Actually we already added when unknown to errors list but we want to not fail whole item for unknown condition.
-        # Let's separate: if errors only contain unknown condition warnings, we should not reject.
-        # Simpler: unknown condition should not be an error for validation rejection, just logged.
-        # So we clear unknown-condition errors from rejection.
-        filtered = [e for e in errors if not e.startswith("unknown condition") and not e.startswith("capability_available")]
-        if filtered:
-            return None, filtered
-        # If only unknown condition issues, keep item but preserve raw when
-        errors = []
+        return None, errors
 
     seen_ids.add(str(item_id))
     act = PluginMenuAction(
@@ -366,7 +351,11 @@ def _parse_submenu(
 
     labels, label_errors = _validate_labels(labels_raw)
     errors.extend(label_errors)
-    when, _when_errors = _validate_when(when_raw)
+    when, when_errors = _validate_when(when_raw)
+    if when_errors:
+        for werr in when_errors:
+            logger.warning("plugin %s submenu %r invalid when %r: %s", owning_id, item_id, when_raw, werr)
+        return None, when_errors
 
     if unavailable not in VALID_UNAVAILABLE:
         errors.append(f"submenu {item_id!r} unavailable must be 'disable' or 'hide'")
@@ -379,10 +368,7 @@ def _parse_submenu(
         return None, errors
 
     if errors:
-        filtered = [e for e in errors if not e.startswith("unknown condition") and not e.startswith("capability_available")]
-        if filtered:
-            return None, filtered
-        errors = []
+        return None, errors
 
     seen_ids.add(str(item_id))
     inner_items: list[PluginMenuItem] = []
@@ -707,6 +693,6 @@ def collect_plugin_menu_contributions(installed_plugins) -> list[PluginMenuContr
                 # dedup by plugin_id; sorting
                 contributions = [c for c in contributions if c.plugin_id != alt.plugin_id]
                 contributions.append(alt)
-    contributions.sort(key=lambda c: c.plugin_id)
+    contributions.sort(key=lambda c: (c.label.casefold(), c.plugin_id.casefold()))
     return contributions
 
