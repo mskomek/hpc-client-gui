@@ -63,6 +63,8 @@ class UpdateRelease:
     # "signed-notarized", "unsigned", or "unknown" (metadata asset missing).
     security_status: str = SECURITY_UNKNOWN
     signed_artifact: Mapping[str, Any] | None = None
+    body: str = ""
+    size: int | None = None
 
 
 def parse_release_security(payload: object) -> str:
@@ -149,10 +151,16 @@ def get_latest_release(timeout: float = 30.0) -> UpdateRelease:
         str(asset.get("name") or ""): str(asset.get("browser_download_url") or "")
         for asset in payload.get("assets") or []
     }
+    asset_sizes = {
+        str(asset.get("name") or ""): int(asset.get("size") or 0)
+        for asset in payload.get("assets") or []
+        if isinstance(asset.get("size"), int)
+    }
+    body = str(payload.get("body") or "")
     installation = detect_installation()
     release_assets = release_asset_names(install_strategy=installation.capability, version=version)
     if release_assets is None:
-        return UpdateRelease(version, tag, "", "", "", "", str(payload.get("html_url") or ""), installation.capability)
+        return UpdateRelease(version, tag, "", "", "", "", str(payload.get("html_url") or ""), installation.capability, body=body, size=None)
     expected_zip, expected_sha = release_assets
     if not assets.get(expected_zip):
         raise RuntimeError(
@@ -194,6 +202,10 @@ def get_latest_release(timeout: float = 30.0) -> UpdateRelease:
         except (OSError, ValueError, RuntimeError):
             security_status = SECURITY_UNKNOWN
 
+    size = asset_sizes.get(expected_zip) or None
+    # Try signed artifact size if available
+    if size is None and isinstance(signed_artifact.get("size"), int):
+        size = int(signed_artifact["size"])
     return UpdateRelease(
         version=version,
         tag=tag,
@@ -205,6 +217,8 @@ def get_latest_release(timeout: float = 30.0) -> UpdateRelease:
         install_strategy=installation.capability,
         security_status=security_status,
         signed_artifact=signed_artifact,
+        body=body,
+        size=size,
     )
 
 
