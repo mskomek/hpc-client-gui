@@ -17,7 +17,7 @@
 | GUI-CONN-003 | COVERED | **STRUCTURAL** | Provider/template metadata — `test_provider_capabilities` (declarative, no UI event) → PARTIAL olarak değerlendirilebilir ama data-only olduğu için STRUCTURAL kabul |  |
 | GUI-CONN-004 | COVERED | **PROVEN** | Quota consent/backend — `test_quota_monitor` |  |
 | GUI-CONN-005 | COVERED | **STRUCTURAL** | X11 (Linux/macOS) — `test_linux_x11`/`test_macos_x11` (platform-specific, Windows'ta STRUCTURAL) |  |
-| GUI-TERM-001 | COVERED | **PROVEN** | Terminal PTY, Find/Clear/font — `test_wx_embedded_terminal` 9 PROVEN (real button → model → visible) |  |
+| GUI-TERM-001 | PARTIAL | **PARTIAL** | Terminal TextCtrl chain PROVEN (Find/Clear/font via TextCtrl), but **xterm.js chain MISSING** — no VT/ANSI, no \r overwrite, no SGR, no alt-screen, no FitAddon PTY, no Unicode/paste-remote per TERMINAL_PARITY_CONTRACT_72.md | 	est_wx_embedded_terminal 9 (TextCtrl) — not xterm |
 | GUI-TERM-002 | COVERED | **PROVEN** | Run in terminal dispatch — `test_wx_term002` + embedded 9 |  |
 | GUI-FILE-001 | COVERED | **PROVEN** | Local browsing — `test_wx_local_files` (real list, tabs, keyboard) |  |
 | GUI-FILE-002 | COVERED | **PROVEN** | Remote/local edit, new window — `test_wx_editor*` 60 PASS |  |
@@ -38,6 +38,6 @@
 | GUI-I18N-001 | COVERED | **PROVEN** | (duplicate, already) |  |
 | GUI-A11Y-001 | COVERED | **PROVEN** | Tab order, labels, keyboard — `test_wx_a11y` 2/2, `audit/A11Y_AUDIT.md` |  |
 
-**Karar:** Tüm COVERED satırlar PROVEN veya belgeLI STRUCTURAL (provider/history gibi data-only) — model-only placeholder kalmadı. Önceki `GUI-XFER`, `GUI-JOBS-002`, `GUI-EDIT` PARTIAL'ları Wave 48/50/51 ile PROVEN'a yükseltildi ve `parity_matrix.py` güncellendi. **Wave 62A: VERIFIED_COMPLETE**
+**Karar (pre-72):** Tüm COVERED satırlar PROVEN/STRUCTURAL zannedildi. **Wave 72 rebaseline (2026-09-06, HEAD da44f639):** `GUI-TERM-001` **PARTIAL** — `TERMINAL_PARITY_CONTRACT_72.md` 35 gap (#1-35) proves TextCtrl != xterm; xterm renderer, FitAddon PTY, Unicode/paste-remote absent. `GUI-TERM-002` remains COVERED (independent editor/file -> terminal dispatch via `test_wx_term002`). **Wave 62A: PARTIAL pending Waves 73-76 xterm chain; regenerated 62A required after 76.**
 
 **Not:** `GUI-VISUAL-001` PARTIAL (Qt ansys eksik, DPI 150/200 manuel) — görsel parity ayrı boyut, davranışsalı gizlemiyor. `GUI-CONN-003/005`, `GUI-JOBS-003/004` STRUCTURAL olarak kabul (data-only, UI event gerekmiyor).
