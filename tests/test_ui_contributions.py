@@ -138,9 +138,6 @@ def test_corrupt_no_crash(tmp_path):
         {"kind": "action", "id": "dup", "label": "B", "action": "editor.lint_current"},
     ]}}
     good_manifest = make_manifest(manifest_id="org.test.good", version="1.0.0", ui={"plugins_menu": {"label": "Good", "items": [{"kind": "action", "id": "good", "label": "Good", "action": "editor.lint_current"}]}})
-    for m in [good_manifest]:
-        # Install good and bad together via direct write_active
-        pass
     # Use loader with malformed ui that fails parsing – should not crash and other plugins still load
     # Simulate by installing a plugin with malformed ui but valid manifest (validator would catch, but we force)
     # Instead test that one malformed contribution does not break collect

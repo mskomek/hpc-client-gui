@@ -556,9 +556,19 @@ class MainWindow(QMainWindow):
                 except Exception:
                     pass
             self._plugins_dynamic_actions = []
-            if not getattr(self, "_plugin_contributions", None):
-                return
             ctx = self._current_menu_context()
+            if not getattr(self, "_plugin_contributions", None):
+                # No contributions at all -> still need to update separator visibility
+                try:
+                    has_any = False
+                    if hasattr(self, "_plugins_dynamic_separator_top") and self._plugins_dynamic_separator_top is not None:
+                        self._plugins_dynamic_separator_top.setVisible(has_any)
+                    if hasattr(self, "_plugins_dynamic_before") and self._plugins_dynamic_before is not None:
+                        self._plugins_dynamic_before.setVisible(True)
+                except Exception:
+                    pass
+                return
+            
             insert_before = getattr(self, "_plugins_dynamic_before", None)
             for contrib in sorted(self._plugin_contributions, key=lambda c: (get_display_label(c.label, c.labels, ctx.language).casefold(), c.label.casefold(), c.plugin_id.casefold())):
                 lang = ctx.language
@@ -661,6 +671,15 @@ class MainWindow(QMainWindow):
                         self._plugins_dynamic_actions.append(action)
                 else:
                     root_menu.deleteLater()
+            # Separator visibility: exactly one when no visible dynamic roots
+            try:
+                has_any = len(self._plugins_dynamic_actions) > 0
+                if hasattr(self, "_plugins_dynamic_separator_top") and self._plugins_dynamic_separator_top is not None:
+                    self._plugins_dynamic_separator_top.setVisible(has_any)
+                if hasattr(self, "_plugins_dynamic_before") and self._plugins_dynamic_before is not None:
+                    self._plugins_dynamic_before.setVisible(True)
+            except Exception:
+                pass
         except Exception as exc:
             self._logger.warning("Failed to rebuild Plugins menu: %s", exc, exc_info=exc)
 
