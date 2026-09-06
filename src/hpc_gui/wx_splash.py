@@ -146,7 +146,7 @@ def create_startup_splash(parent=None, *, profiles: list[dict] | None = None, li
                 pass
 
     gauge = _SplashGauge(panel)
-    gauge.SetValue(100)
+    gauge.SetValue(0)
     root.Add(gauge, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 12)
 
     # --- Current status §24: one line below progress ---
