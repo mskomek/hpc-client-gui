@@ -1124,9 +1124,9 @@ def main() -> int:
         except Exception:
             pass
         app.Yield(True)
-        # Phase: Preferences — longer visible for user
+        # Phase: Preferences — bar full on open per request
         splash._wx_splash_set_stage("preferences", STATE_ACTIVE)
-        splash._wx_splash_set_progress(15, t("splash.loading_preferences") if t("splash.loading_preferences") != "[splash.loading_preferences]" else "Loading preferences...")
+        splash._wx_splash_set_progress(100, t("splash.loading_preferences") if t("splash.loading_preferences") != "[splash.loading_preferences]" else "Loading preferences...")
         splash._wx_splash_append_log("Loading preferences...", "OK")
         app.Yield(True)
         splash.Update()
@@ -1135,9 +1135,9 @@ def main() -> int:
         app.Yield(True)
         splash.Update()
         wx.MilliSleep(200)
-        # Phase: Helpers
+        # Phase: Helpers — keep bar full
         splash._wx_splash_set_stage("helpers", STATE_ACTIVE)
-        splash._wx_splash_set_progress(45, t("splash.checking_helpers") if t("splash.checking_helpers") != "[splash.checking_helpers]" else "Checking SSH and SFTP helpers...")
+        splash._wx_splash_set_progress(100, t("splash.checking_helpers") if t("splash.checking_helpers") != "[splash.checking_helpers]" else "Checking SSH and SFTP helpers...")
         splash._wx_splash_append_log("Checking SSH helper...", "OK")
         splash._wx_splash_append_log("Checking SFTP helper...", "OK")
         app.Yield(True)
@@ -1147,9 +1147,9 @@ def main() -> int:
         app.Yield(True)
         splash.Update()
         wx.MilliSleep(200)
-        # Phase: Updates (final stage — no Session per user request)
+        # Phase: Updates (final stage — no Session per user request) — bar stays full
         splash._wx_splash_set_stage("updates", STATE_ACTIVE)
-        splash._wx_splash_set_progress(75, t("splash.checking_updates") if t("splash.checking_updates") != "[splash.checking_updates]" else "Checking for updates...")
+        splash._wx_splash_set_progress(100, t("splash.checking_updates") if t("splash.checking_updates") != "[splash.checking_updates]" else "Checking for updates...")
         splash._wx_splash_append_log("Checking for updates...", "")
         app.Yield(True)
         splash.Update()

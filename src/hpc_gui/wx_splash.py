@@ -89,10 +89,10 @@ def create_startup_splash(parent=None, *, profiles: list[dict] | None = None, li
         stage_sizer.Add(st, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 4)
     root.Add(stage_sizer, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.BOTTOM, 8)
 
-    # --- Progress bar §23: single bar below stages ---
+    # --- Progress bar §23: single bar below stages — full on open per request ---
     gauge = wx.Gauge(panel, range=100, style=wx.GA_HORIZONTAL | wx.GA_SMOOTH)
     gauge.SetMinSize(wx.Size(-1, 12))
-    gauge.SetValue(0)
+    gauge.SetValue(100)
     root.Add(gauge, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 12)
 
     # --- Current status §24: one line below progress ---
