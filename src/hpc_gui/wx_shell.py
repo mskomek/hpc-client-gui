@@ -1103,8 +1103,7 @@ def main() -> int:
 
     app = wx.App(False)
 
-    # --- Startup splash per spec §18-29: Preferences → Helpers → Updates → Session → Main Window ---
-    # The splash is shown before the main window is built, with real startup workflow visible.
+    # --- Startup splash: Preferences → Helpers → Updates → Main Window (Session & Profile removed per user request) ---
     from hpc_gui.config.storage import load_profiles
 
     profiles = []
@@ -1140,20 +1139,13 @@ def main() -> int:
         app.Yield(True)
         wx.MilliSleep(80)
         splash._wx_splash_set_stage("helpers", STATE_COMPLETE)
-        # Phase: Updates
+        # Phase: Updates (final stage — no Session per user request)
         splash._wx_splash_set_stage("updates", STATE_ACTIVE)
         splash._wx_splash_set_progress(60, t("splash.checking_updates") if t("splash.checking_updates") != "[splash.checking_updates]" else "Checking for updates...")
         splash._wx_splash_append_log("Checking for updates...", "")
         app.Yield(True)
         wx.MilliSleep(80)
         splash._wx_splash_set_stage("updates", STATE_COMPLETE)
-        # Phase: Session — offline mode, no connection attempt
-        splash._wx_splash_set_stage("session", STATE_ACTIVE)
-        splash._wx_splash_set_progress(85, t("splash.loading_session") if t("splash.loading_session") != "[splash.loading_session]" else "Loading connection profiles...")
-        splash._wx_splash_append_log("Loading connection profiles...", "OK")
-        app.Yield(True)
-        wx.MilliSleep(80)
-        splash._wx_splash_set_stage("session", STATE_COMPLETE)
         splash._wx_splash_set_progress(100, t("common.ready") if t("common.ready") != "[common.ready]" else "Ready")
         splash._wx_splash_append_log("Starting in offline mode...", "")
         app.Yield(True)
