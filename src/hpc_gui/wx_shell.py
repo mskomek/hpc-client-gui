@@ -159,6 +159,16 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
     notebook.AddPage(connection_panel, t("tabs.login"), False)
     page_controls["APP-CONNECT"] = {"page": connection_panel}
 
+    # Terminal — right of Connection per user request (Connection | Terminal | Jobs | ...)
+    from hpc_gui.wx_terminal import build_terminal_panel as _build_terminal_panel
+    _term_session = session_state.get("session") or {}
+    _term_ssh = _term_session.get("ssh")
+    terminal_page = _build_terminal_panel(notebook, ssh=_term_ssh, lifecycle=lifecycle)
+    session_state["_embedded_terminal_panel"] = terminal_page
+    notebook.AddPage(terminal_page, t("help.section_terminal"), False)
+    _term_controls = getattr(terminal_page, "_wx_terminal_controls", {})
+    page_controls["NAV-TERMINAL"] = {"page": terminal_page, **_term_controls, "output": _term_controls.get("output"), "panel": terminal_page}
+
     # Jobs & Outputs
     _jobs = _jobs_callbacks(session_state, frame, lifecycle)
     jobs_panel = build_jobs_panel(notebook, **_jobs)
@@ -590,18 +600,6 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
     notebook.AddPage(editor_panel, t("tabs.editor"), False)
     page_controls["NAV-EDITOR"] = {"page": editor_panel}
 
-    # Terminal — unified reusable panel (same as detached)
-    from hpc_gui.wx_terminal import build_terminal_panel as _build_terminal_panel
-    _term_session = session_state.get("session") or {}
-    _term_ssh = _term_session.get("ssh")
-    terminal_page = _build_terminal_panel(notebook, ssh=_term_ssh, lifecycle=lifecycle)
-    # expose for session updates; on_connected will call _wx_terminal_set_ssh
-    session_state["_embedded_terminal_panel"] = terminal_page
-    notebook.AddPage(terminal_page, t("help.section_terminal"), False)
-    # keep backward-compatible controls map plus direct panel controls
-    _term_controls = getattr(terminal_page, "_wx_terminal_controls", {})
-    page_controls["NAV-TERMINAL"] = {"page": terminal_page, **_term_controls, "output": _term_controls.get("output"), "panel": terminal_page}
-
     # Logs
     _logs = _logs_callbacks(session_state, frame, lifecycle)
     logs_panel = build_logs_panel(notebook, **_logs)
@@ -618,7 +616,7 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
         frame.SetStatusText(t("common.ready"))
         frame.GetMenuBar().SetMenuLabel(0, t("help.help_title"))
         frame.GetMenuBar().SetMenuLabel(1, t("help.language"))
-        for index, title_key in enumerate(("tabs.login", "tabs.jobs_outputs", "tabs.directories", "tabs.ftp", "tabs.editor", "help.section_terminal", "tabs.logs")):
+        for index, title_key in enumerate(("tabs.login", "help.section_terminal", "tabs.jobs_outputs", "tabs.directories", "tabs.ftp", "tabs.editor", "tabs.logs")):
             notebook.SetPageText(index, t(title_key))
         for command, item in command_items:
             menu.SetLabel(item.GetId(), command.label())
