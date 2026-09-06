@@ -74,10 +74,14 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
     except ImportError as exc:
         raise RuntimeError("wxPython is not installed; use the default Qt runtime") from exc
     if app is None:
-        app = wx.App(False)
+        app = wx.GetApp()
+        if app is None:
+            app = wx.App(False)
+    # Keep App alive for the lifetime of the frame (prevents PyNoAppError on dynamic wx.Menu creation)
     lifecycle = lifecycle or WxLifecycleController()
     session_state = session_state or {"session": None, "generation": 0}
     frame = wx.Frame(None, title=f"HPC Client GUI {__version__}", size=(1440, 900))
+    frame._wx_app = app
     # Spec §3: recommended 1440×900 default, 1280×760 minimum; usable at ~1100×700 without clipping
     frame.SetMinSize(wx.Size(1280, 760))
     panel = wx.Panel(frame)
