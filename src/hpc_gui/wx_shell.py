@@ -1124,9 +1124,65 @@ def main() -> int:
         except Exception:
             pass
         app.Yield(True)
-        # Phase: Preferences — bar fills stepwise per stage
+        # Phase: Updates first — with 10s timeout per request
+        import time as _time
+
+        splash._wx_splash_set_stage("updates", STATE_ACTIVE)
+        splash._wx_splash_set_progress(20, t("splash.checking_updates") if t("splash.checking_updates") != "[splash.checking_updates]" else "Checking for updates...")
+        splash._wx_splash_append_log("Checking for updates...", "")
+        app.Yield(True)
+        splash.Update()
+        # Real check with 10s max, non-blocking pump
+        _upd_result = {"done": False, "release": None, "error": None}
+
+        def _upd_worker():
+            try:
+                from hpc_gui.services.app_updater import get_latest_release
+
+                _upd_result["release"] = get_latest_release(timeout=10)
+            except Exception as e:
+                _upd_result["error"] = e
+            finally:
+                _upd_result["done"] = True
+
+        Thread(target=_upd_worker, daemon=True).start()
+        _upd_start = _time.monotonic()
+        while not _upd_result["done"] and _time.monotonic() - _upd_start < 10:
+            app.ProcessPendingEvents()
+            wx.MilliSleep(80)
+            # keep bar pulsing slightly
+            try:
+                elapsed = _time.monotonic() - _upd_start
+                prog = min(35, 20 + int(elapsed * 1.2))
+                splash._wx_splash_set_progress(prog, t("splash.checking_updates") if t("splash.checking_updates") != "[splash.checking_updates]" else "Checking for updates...")
+            except Exception:
+                pass
+        if not _upd_result["done"]:
+            splash._wx_splash_append_log("Update check timed out (10s)", "")
+            splash._wx_splash_set_stage("updates", STATE_COMPLETE)
+        elif _upd_result["error"] is not None:
+            splash._wx_splash_append_log(f"Update check failed: {_upd_result['error']}", "")
+            splash._wx_splash_set_stage("updates", STATE_COMPLETE)
+        else:
+            try:
+                from hpc_gui.services.app_updater import is_newer_version
+                from hpc_gui import __version__ as _cur
+
+                rel = _upd_result["release"]
+                if rel and is_newer_version(rel.version, _cur):
+                    splash._wx_splash_append_log(f"Update available: {rel.version}", "")
+                    splash._wx_splash_state["found_update"] = rel
+                else:
+                    splash._wx_splash_append_log("No updates available", "OK")
+            except Exception as e:
+                splash._wx_splash_append_log(f"Update check error: {e}", "")
+            splash._wx_splash_set_stage("updates", STATE_COMPLETE)
+        app.Yield(True)
+        splash.Update()
+        wx.MilliSleep(200)
+        # Phase: Preferences
         splash._wx_splash_set_stage("preferences", STATE_ACTIVE)
-        splash._wx_splash_set_progress(25, t("splash.loading_preferences") if t("splash.loading_preferences") != "[splash.loading_preferences]" else "Loading preferences...")
+        splash._wx_splash_set_progress(55, t("splash.loading_preferences") if t("splash.loading_preferences") != "[splash.loading_preferences]" else "Loading preferences...")
         splash._wx_splash_append_log("Loading preferences...", "OK")
         app.Yield(True)
         splash.Update()
@@ -1137,7 +1193,7 @@ def main() -> int:
         wx.MilliSleep(200)
         # Phase: Helpers
         splash._wx_splash_set_stage("helpers", STATE_ACTIVE)
-        splash._wx_splash_set_progress(60, t("splash.checking_helpers") if t("splash.checking_helpers") != "[splash.checking_helpers]" else "Checking SSH and SFTP helpers...")
+        splash._wx_splash_set_progress(85, t("splash.checking_helpers") if t("splash.checking_helpers") != "[splash.checking_helpers]" else "Checking SSH and SFTP helpers...")
         splash._wx_splash_append_log("Checking SSH helper...", "OK")
         splash._wx_splash_append_log("Checking SFTP helper...", "OK")
         app.Yield(True)
@@ -1147,14 +1203,6 @@ def main() -> int:
         app.Yield(True)
         splash.Update()
         wx.MilliSleep(200)
-        # Phase: Updates (final stage)
-        splash._wx_splash_set_stage("updates", STATE_ACTIVE)
-        splash._wx_splash_set_progress(85, t("splash.checking_updates") if t("splash.checking_updates") != "[splash.checking_updates]" else "Checking for updates...")
-        splash._wx_splash_append_log("Checking for updates...", "")
-        app.Yield(True)
-        splash.Update()
-        wx.MilliSleep(600)
-        splash._wx_splash_set_stage("updates", STATE_COMPLETE)
         splash._wx_splash_set_progress(100, t("common.ready") if t("common.ready") != "[common.ready]" else "Ready")
         splash._wx_splash_append_log("Ready — starting offline...", "")
         app.Yield(True)
