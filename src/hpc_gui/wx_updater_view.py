@@ -139,21 +139,22 @@ class WxUpdateDialog:
             # fallback generic but spec says don't generate generic if none available — keep empty and hide section
             self._whats_new = []
 
-        self.dlg = wx.Dialog(parent, title=t("updates.available_title") if t("updates.available_title") != "[updates.available_title]" else "Update Available", style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER)
-        # Spec §2: 520×420
-        self.dlg.SetMinSize(wx.Size(520, 420))
-        self.dlg.SetSize(wx.Size(520, 420))
+        # Spec §2: 520×390 fixed, compact, not vertically resizable
+        self.dlg = wx.Dialog(parent, title=t("updates.available_title") if t("updates.available_title") != "[updates.available_title]" else "Update Available", style=wx.DEFAULT_DIALOG_STYLE)
+        self.dlg.SetMinSize(wx.Size(520, 390))
+        self.dlg.SetSize(wx.Size(520, 390))
+        self.dlg.SetMaxSize(wx.Size(520, 390))
         self.dlg.CentreOnParent()
 
         self.panel = wx.Panel(self.dlg)
         self.root = wx.BoxSizer(wx.VERTICAL)
         self.panel.SetSizer(self.root)
 
-        # Content sizer that will be cleared and rebuilt per state
+        # Content sizer — fixed height, will be cleared per state
         self.content_sizer = wx.BoxSizer(wx.VERTICAL)
-        self.root.Add(self.content_sizer, 1, wx.EXPAND | wx.ALL, 0)
+        self.root.Add(self.content_sizer, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 12)
 
-        # Footer sizer (buttons)
+        # Footer sizer (buttons) — fixed at bottom
         self.footer_sizer = wx.BoxSizer(wx.HORIZONTAL)
         self.root.Add(self.footer_sizer, 0, wx.EXPAND | wx.ALL, 12)
 
@@ -191,16 +192,19 @@ class WxUpdateDialog:
         except Exception:
             pass
         wx = self.wx
-        # Update title per state
-        titles = {
-            STATE_UPDATE_AVAILABLE: t("updates.available_title") if t("updates.available_title") != "[updates.available_title]" else "Update Available",
-            STATE_DOWNLOADING: t("updates.downloading_title") if t("updates.downloading_title") != "[updates.downloading_title]" else "Downloading Update",
-            STATE_VERIFYING: t("updates.verifying_title") if t("updates.verifying_title") != "[updates.verifying_title]" else "Verifying Update",
-            STATE_READY_TO_INSTALL: t("updates.ready_title") if t("updates.ready_title") != "[updates.ready_title]" else "Update Ready",
-            STATE_INSTALLING: t("updates.installing_title") if t("updates.installing_title") != "[updates.installing_title]" else "Updating HPC Client",
-            STATE_FAILED: t("updates.error_title") if t("updates.error_title") != "[updates.error_title]" else "Update Failed",
-            STATE_UP_TO_DATE: t("updates.title") if t("updates.title") != "[updates.title]" else "Updates",
-        }
+        # Update title per state — mandatory uses Update Required
+        if self.mandatory and state == STATE_UPDATE_AVAILABLE:
+            titles = {STATE_UPDATE_AVAILABLE: t("updates.required_title") if t("updates.required_title") != "[updates.required_title]" else "Update Required"}
+        else:
+            titles = {
+                STATE_UPDATE_AVAILABLE: t("updates.available_title") if t("updates.available_title") != "[updates.available_title]" else "Update Available",
+                STATE_DOWNLOADING: t("updates.downloading_title") if t("updates.downloading_title") != "[updates.downloading_title]" else "Downloading Update",
+                STATE_VERIFYING: t("updates.verifying_title") if t("updates.verifying_title") != "[updates.verifying_title]" else "Verifying Update",
+                STATE_READY_TO_INSTALL: t("updates.ready_title") if t("updates.ready_title") != "[updates.ready_title]" else "Update Ready",
+                STATE_INSTALLING: t("updates.installing_title") if t("updates.installing_title") != "[updates.installing_title]" else "Updating HPC Client",
+                STATE_FAILED: t("updates.error_title") if t("updates.error_title") != "[updates.error_title]" else "Update Failed",
+                STATE_UP_TO_DATE: t("updates.title") if t("updates.title") != "[updates.title]" else "Updates",
+            }
         if state in titles:
             try:
                 self.dlg.SetTitle(titles[state])
@@ -229,11 +233,8 @@ class WxUpdateDialog:
         self.panel.Layout()
         self.dlg.Layout()
         try:
-            self.dlg.Fit()
-            # Keep at least 520x420
-            sz = self.dlg.GetSize()
-            if sz.width < 520 or sz.height < 420:
-                self.dlg.SetSize(wx.Size(max(520, sz.width), max(420, sz.height)))
+            # Spec §2: fixed 520×390, not growing with changelog
+            self.dlg.SetSize(wx.Size(520, 390))
         except Exception:
             pass
         # Ensure visible focus
@@ -247,23 +248,40 @@ class WxUpdateDialog:
         rel = self.release
         cur = __version__
         new = getattr(rel, "version", "") if rel else ""
-        # Header
-        header = wx.StaticText(self.panel, label=t("updates.available_header") if t("updates.available_header") != "[updates.available_header]" else "A new version of HPC Client is available.")
+        # Spec §3-4: compact header and version form with fixed label width 115-130
+        if self.mandatory:
+            hdr_text = t("updates.required_header") if t("updates.required_header") != "[updates.required_header]" else "A required update is available."
+        else:
+            hdr_text = t("updates.available_header") if t("updates.available_header") != "[updates.available_header]" else "A new version of HPC Client is available."
+        header = wx.StaticText(self.panel, label=hdr_text)
         try:
-            fnt = header.GetFont()
-            fnt.SetWeight(wx.FONTWEIGHT_NORMAL)
-            header.SetFont(fnt)
             header.Wrap(480)
         except Exception:
             pass
-        self.content_sizer.Add(header, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 16)
+        self.content_sizer.Add(header, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 12)
 
-        # Version rows
-        grid = wx.FlexGridSizer(2, 2, 6, 12)
+        # Version grid: Current, New/Required, Download size — label col 120px per spec §4
+        grid = wx.FlexGridSizer(3, 2, 6, 12)
         grid.AddGrowableCol(1, 1)
+        # Current
         lbl_cur = wx.StaticText(self.panel, label=t("updates.current_version") if t("updates.current_version") != "[updates.current_version]" else "Current version")
+        try:
+            lbl_cur.SetMinSize(wx.Size(120, -1))
+        except Exception:
+            pass
         val_cur = wx.StaticText(self.panel, label=cur)
-        lbl_new = wx.StaticText(self.panel, label=t("updates.new_version") if t("updates.new_version") != "[updates.new_version]" else "New version")
+        grid.Add(lbl_cur, 0, wx.ALIGN_LEFT | wx.ALIGN_CENTER_VERTICAL)
+        grid.Add(val_cur, 0, wx.ALIGN_LEFT | wx.ALIGN_CENTER_VERTICAL)
+        # New / Required
+        if self.mandatory:
+            lbl_new_text = t("updates.required_version") if t("updates.required_version") != "[updates.required_version]" else "Required version"
+        else:
+            lbl_new_text = t("updates.new_version") if t("updates.new_version") != "[updates.new_version]" else "New version"
+        lbl_new = wx.StaticText(self.panel, label=lbl_new_text)
+        try:
+            lbl_new.SetMinSize(wx.Size(120, -1))
+        except Exception:
+            pass
         val_new = wx.StaticText(self.panel, label=new)
         try:
             fnt2 = val_new.GetFont()
@@ -271,76 +289,97 @@ class WxUpdateDialog:
             val_new.SetFont(fnt2)
         except Exception:
             pass
-        grid.Add(lbl_cur, 0, wx.ALIGN_LEFT)
-        grid.Add(val_cur, 0, wx.ALIGN_LEFT)
-        grid.Add(lbl_new, 0, wx.ALIGN_LEFT)
-        grid.Add(val_new, 0, wx.ALIGN_LEFT)
-        self.content_sizer.Add(grid, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 16)
+        grid.Add(lbl_new, 0, wx.ALIGN_LEFT | wx.ALIGN_CENTER_VERTICAL)
+        grid.Add(val_new, 0, wx.ALIGN_LEFT | wx.ALIGN_CENTER_VERTICAL)
+        # Download size row — always visible per spec §5, real size or Calculating...
+        lbl_sz = wx.StaticText(self.panel, label=t("updates.download_size_label") if t("updates.download_size_label") != "[updates.download_size_label]" else "Download size")
+        try:
+            lbl_sz.SetMinSize(wx.Size(120, -1))
+        except Exception:
+            pass
+        size = self._total
+        if size is not None and size > 0:
+            sz_val = _format_bytes(size)
+        else:
+            # Try to get from release size, else Calculating...
+            sz_val = t("updates.calculating") if t("updates.calculating") != "[updates.calculating]" else "Calculating..."
+            # If we truly have no size, keep Calculating... per spec, don't omit
+            if size is None and not getattr(rel, "size", None):
+                sz_val = t("updates.calculating") if t("updates.calculating") != "[updates.calculating]" else "Calculating..."
+        val_sz = wx.StaticText(self.panel, label=sz_val)
+        grid.Add(lbl_sz, 0, wx.ALIGN_LEFT | wx.ALIGN_CENTER_VERTICAL)
+        grid.Add(val_sz, 0, wx.ALIGN_LEFT | wx.ALIGN_CENTER_VERTICAL)
+        self.content_sizer.Add(grid, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 12)
+
+        if self.mandatory:
+            mand_msg = wx.StaticText(self.panel, label=t("updates.mandatory_message") if t("updates.mandatory_message") != "[updates.mandatory_message]" else "This update must be installed before HPC Client can continue.")
+            try:
+                mand_msg.Wrap(480)
+            except Exception:
+                pass
+            self.content_sizer.Add(mand_msg, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 12)
 
         # Separator
         line = wx.StaticLine(self.panel, style=wx.LI_HORIZONTAL)
-        self.content_sizer.Add(line, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 16)
+        self.content_sizer.Add(line, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 12)
 
-        # What's new
+        # What's new — fixed-height scrollable TextCtrl per spec §6
+        title = wx.StaticText(self.panel, label=t("updates.whats_new") if t("updates.whats_new") != "[updates.whats_new]" else "What's new")
+        try:
+            fnt = title.GetFont()
+            fnt.SetWeight(wx.FONTWEIGHT_BOLD)
+            title.SetFont(fnt)
+        except Exception:
+            pass
+        self.content_sizer.Add(title, 0, wx.LEFT | wx.RIGHT | wx.TOP, 12)
+
+        # Build changelog text from _whats_new or body
+        body = getattr(rel, "body", "") if rel else ""
         if self._whats_new:
-            title = wx.StaticText(self.panel, label=t("updates.whats_new") if t("updates.whats_new") != "[updates.whats_new]" else "What's new")
-            try:
-                fnt = title.GetFont()
-                fnt.SetWeight(wx.FONTWEIGHT_BOLD)
-                title.SetFont(fnt)
-            except Exception:
-                pass
-            self.content_sizer.Add(title, 0, wx.LEFT | wx.RIGHT | wx.TOP, 16)
-            for bullet in self._whats_new[:5]:
-                row = wx.BoxSizer(wx.HORIZONTAL)
-                dot = wx.StaticText(self.panel, label="•")
-                txt = wx.StaticText(self.panel, label=bullet)
-                try:
-                    txt.Wrap(440)
-                except Exception:
-                    pass
-                row.Add(dot, 0, wx.RIGHT, 6)
-                row.Add(txt, 1, wx.EXPAND)
-                self.content_sizer.Add(row, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 6)
-        # View full release notes
-        if getattr(rel, "body", "") or getattr(rel, "html_url", ""):
-            link = wx.Button(self.panel, label=t("updates.view_release_notes") if t("updates.view_release_notes") != "[updates.view_release_notes]" else "View full release notes", style=wx.BORDER_NONE | wx.BU_EXACTFIT)
-            try:
-                link.SetBackgroundColour(self.panel.GetBackgroundColour())
-                fnt = link.GetFont()
-                fnt.SetUnderlined(True)
-                link.SetFont(fnt)
-                link.SetForegroundColour(wx.Colour(37, 99, 235))
-            except Exception:
-                pass
-            link.Bind(wx.EVT_BUTTON, self._on_view_notes)
-            self.content_sizer.Add(link, 0, wx.LEFT | wx.TOP, 16)
-
-        # Download size
-        size = self._total
-        if size is not None and size > 0:
-            sz_txt = f"{t('updates.download_size') if t('updates.download_size') != '[updates.download_size]' else 'Download size:'} {_format_bytes(size)}"
+            txt_content = "\n".join(f"• {b}" for b in self._whats_new[:5])
+        elif body:
+            # Use body as plain text, truncated
+            txt_content = body.strip()[:2000]
         else:
-            # If size not known, omit or show Calculating per spec §7
-            # Prefer omit to avoid inventing; but show Calculating if we want
-            sz_txt = ""
-            # Only show if we have size; otherwise omit
-        if sz_txt:
-            sz_lbl = wx.StaticText(self.panel, label=sz_txt)
-            try:
-                sz_lbl.SetForegroundColour(wx.Colour(80, 80, 80))
-            except Exception:
-                pass
-            self.content_sizer.Add(sz_lbl, 0, wx.LEFT | wx.RIGHT | wx.TOP, 12)
+            txt_content = t("updates.no_changelog") if t("updates.no_changelog") != "[updates.no_changelog]" else "No additional details available."
+        # Fixed-height read-only multiline vertically scrollable word-wrapped selectable
+        changelog = wx.TextCtrl(self.panel, value=txt_content, style=wx.TE_MULTILINE | wx.TE_READONLY | wx.TE_WORDWRAP)
+        changelog.SetMinSize(wx.Size(-1, 100))
+        changelog.SetMaxSize(wx.Size(-1, 100))
+        try:
+            changelog.SetBackgroundColour(wx.Colour(248, 249, 250))
+        except Exception:
+            pass
+        # Ensure no horizontal scrollbar for wrapped text
+        try:
+            changelog.SetWindowStyle(changelog.GetWindowStyle() & ~wx.HSCROLL)
+        except Exception:
+            pass
+        self.content_sizer.Add(changelog, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 8)
+        # Store for tests
+        self._changelog_ctrl = changelog
 
-        self.content_sizer.AddStretchSpacer(1)
+        # View full release notes link directly below changelog
+        link = wx.Button(self.panel, label=t("updates.view_release_notes") if t("updates.view_release_notes") != "[updates.view_release_notes]" else "View full release notes", style=wx.BORDER_NONE | wx.BU_EXACTFIT)
+        try:
+            link.SetBackgroundColour(self.panel.GetBackgroundColour())
+            fnt = link.GetFont()
+            fnt.SetUnderlined(True)
+            link.SetFont(fnt)
+            link.SetForegroundColour(wx.Colour(37, 99, 235))
+        except Exception:
+            pass
+        link.Bind(wx.EVT_BUTTON, self._on_view_notes)
+        self.content_sizer.Add(link, 0, wx.LEFT | wx.TOP, 8)
 
-        # Footer buttons per §8 and §30
+        # Footer buttons per §8 and §30 — Later and Download same size
+        btn_size = wx.Size(135, 32)
         if self.mandatory:
             exit_btn = wx.Button(self.panel, label=t("common.exit") if t("common.exit") != "[common.exit]" else "Exit")
             dl_btn = wx.Button(self.panel, label=t("updates.download_update") if t("updates.download_update") != "[updates.download_update]" else "Download Update")
             try:
-                dl_btn.SetMinSize(wx.Size(130, 30))
+                exit_btn.SetMinSize(btn_size)
+                dl_btn.SetMinSize(btn_size)
                 fnt = dl_btn.GetFont()
                 fnt.SetWeight(wx.FONTWEIGHT_BOLD)
                 dl_btn.SetFont(fnt)
@@ -352,12 +391,12 @@ class WxUpdateDialog:
             self.footer_sizer.AddStretchSpacer(1)
             self.footer_sizer.Add(exit_btn, 0, wx.RIGHT, 8)
             self.footer_sizer.Add(dl_btn, 0)
-            # Close behavior for mandatory handled in _on_close
         else:
             later = wx.Button(self.panel, label=t("common.later") if t("common.later") != "[common.later]" else "Later")
             dl_btn = wx.Button(self.panel, label=t("updates.download_update") if t("updates.download_update") != "[updates.download_update]" else "Download Update")
             try:
-                dl_btn.SetMinSize(wx.Size(130, 30))
+                later.SetMinSize(btn_size)
+                dl_btn.SetMinSize(btn_size)
                 fnt = dl_btn.GetFont()
                 fnt.SetWeight(wx.FONTWEIGHT_BOLD)
                 dl_btn.SetFont(fnt)
@@ -480,10 +519,12 @@ class WxUpdateDialog:
         self.content_sizer.Add(restart, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 16)
         self.content_sizer.AddStretchSpacer(1)
 
+        btn_size = wx.Size(135, 32)
         later = wx.Button(self.panel, label=t("common.later") if t("common.later") != "[common.later]" else "Later")
         install = wx.Button(self.panel, label=t("updates.install_update") if t("updates.install_update") != "[updates.install_update]" else "Install Update")
         try:
-            install.SetMinSize(wx.Size(130, 30))
+            later.SetMinSize(btn_size)
+            install.SetMinSize(btn_size)
             fnt = install.GetFont()
             fnt.SetWeight(wx.FONTWEIGHT_BOLD)
             install.SetFont(fnt)
@@ -547,10 +588,12 @@ class WxUpdateDialog:
         self.content_sizer.Add(details, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 12)
         self.content_sizer.AddStretchSpacer(1)
 
+        btn_size = wx.Size(135, 32)
         close = wx.Button(self.panel, label=t("common.close") if t("common.close") != "[common.close]" else "Close")
         retry = wx.Button(self.panel, label=t("common.retry") if t("common.retry") != "[common.retry]" else "Retry")
         try:
-            retry.SetMinSize(wx.Size(88, 30))
+            close.SetMinSize(btn_size)
+            retry.SetMinSize(btn_size)
             fnt = retry.GetFont()
             fnt.SetWeight(wx.FONTWEIGHT_BOLD)
             retry.SetFont(fnt)
@@ -775,43 +818,38 @@ class WxUpdateDialog:
         try:
             splash = show_installing_splash(self.parent, ver)
             splash.Show()
-            # Simulate real installer progress via handoff — for now use fake phases from real installer if available
-            # The real installer is launched via launch_update_installer which shows its own PowerShell splash on Windows
-            # Here we show the wx splash and drive it with fake progress that mirrors real phases
+            wx_local = self.wx
             def install_worker():
                 try:
                     from hpc_gui.services.app_updater import launch_update_installer
                     if zip_path and rel:
-                        # This will launch the PowerShell installer and quit app
                         launch_update_installer(zip_path, ver, rel.install_strategy)
-                        # If we reach here, installer launched; close splash and quit
                         def do_quit():
                             try:
                                 splash.Destroy()
                             except Exception:
                                 pass
                             try:
-                                wx.GetApp().ExitMainLoop()
+                                wx_local.GetApp().ExitMainLoop()
                             except Exception:
                                 pass
-                        wx.CallAfter(do_quit)
+                        wx_local.CallAfter(do_quit)
                     else:
-                        # No zip — just simulate
                         for pct, phase, fname in [(10, "Preparing installation...", ""), (25, "Backing up current files...", ""), (45, "Copying application files...", "hpc_gui/services/app_updater.py"), (72, "Copying application files...", "hpc_gui/wx_updater_view.py"), (90, "Finalizing installation...", ""), (100, "Verifying installation...", "")]:
                             def upd(p=pct, ph=phase, f=fname):
                                 try:
                                     splash._wx_install_update(p, ph, f)
                                 except Exception:
                                     pass
-                            wx.CallAfter(upd)
+                            wx_local.CallAfter(upd)
                             time.sleep(0.6)
                         def done():
                             try:
                                 splash.Destroy()
                             except Exception:
                                 pass
-                            wx.MessageBox(f"Update {ver} installed. Restart required." if ver else "Update installed.", "Updates", wx.OK | wx.ICON_INFORMATION, self.parent)
-                        wx.CallAfter(done)
+                            wx_local.MessageBox(f"Update {ver} installed. Restart required." if ver else "Update installed.", "Updates", wx_local.OK | wx_local.ICON_INFORMATION, self.parent)
+                        wx_local.CallAfter(done)
                 except Exception as e:
                     def on_fail():
                         try:
@@ -819,7 +857,7 @@ class WxUpdateDialog:
                         except Exception:
                             pass
                         show_update_error(self.parent, str(e))
-                    wx.CallAfter(on_fail)
+                    wx_local.CallAfter(on_fail)
             threading.Thread(target=install_worker, daemon=True).start()
         except Exception as e:
             show_update_error(self.parent, str(e))
@@ -831,9 +869,9 @@ class WxUpdateDialog:
         self._build_for_state(STATE_UPDATE_AVAILABLE)
 
     def _on_close(self, evt):
+        wx = self.wx
         # Spec §26, §27: During download, confirm cancel
         if self.state == STATE_DOWNLOADING and not self._cancelled:
-            wx = self.wx
             res = wx.MessageBox(t("updates.cancel_confirm_message") if t("updates.cancel_confirm_message") != "[updates.cancel_confirm_message]" else "Cancel update download?\n\nThe update is still being downloaded.", t("updates.cancel_confirm_title") if t("updates.cancel_confirm_title") != "[updates.cancel_confirm_title]" else "Cancel update download?", wx.YES_NO | wx.ICON_WARNING, self.dlg)
             if res != wx.YES:
                 try:
@@ -842,7 +880,6 @@ class WxUpdateDialog:
                     pass
                 return
             self._cancel_download()
-            # Don't destroy yet, show cancelled state
             try:
                 evt.Veto()
             except Exception:
@@ -850,19 +887,23 @@ class WxUpdateDialog:
             return
         # For mandatory update, don't allow bypass
         if self.mandatory and self.state in (STATE_UPDATE_AVAILABLE, STATE_FAILED):
-            # Treat close as Exit per §29
             try:
                 evt.Skip()
             except Exception:
                 pass
-            # Caller will handle Exit
             self._closed = True
             try:
                 if hasattr(self, "_pulse_timer"):
                     self._pulse_timer.Stop()
             except Exception:
                 pass
-            self.dlg.EndModal(wx.ID_CANCEL)
+            try:
+                if self.dlg.IsModal():
+                    self.dlg.EndModal(wx.ID_CANCEL)
+                else:
+                    self.dlg.Hide()
+            except Exception:
+                pass
             return
         self._closed = True
         try:
@@ -870,9 +911,15 @@ class WxUpdateDialog:
                 self._pulse_timer.Stop()
         except Exception:
             pass
-        evt.Skip()
         try:
-            self.dlg.EndModal(wx.ID_CANCEL)
+            evt.Skip()
+        except Exception:
+            pass
+        try:
+            if self.dlg.IsModal():
+                self.dlg.EndModal(wx.ID_CANCEL)
+            else:
+                self.dlg.Hide()
         except Exception:
             pass
 
