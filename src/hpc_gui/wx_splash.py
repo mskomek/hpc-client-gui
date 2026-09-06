@@ -27,7 +27,7 @@ def _stage_icon(state: str) -> str:
     return {"pending": "○", "active": "●", "complete": "✓", "failed": "!"} .get(state, "○")
 
 
-def create_startup_splash(parent=None, *, profiles: list[dict] | None = None, lifecycle=None, on_connect=None, on_offline=None, on_reload=None, pure_splash: bool = False):
+def create_startup_splash(parent=None, *, profiles: list[dict] | None = None, lifecycle=None, on_connect=None, on_offline=None, on_reload=None, pure_splash: bool = False, mock_update: bool = False):
     """Create and show the startup splash dialog (spec §18-29). Returns the dialog instance.
 
     When pure_splash=True the dialog is a visual-only splash (no session/Profile
@@ -148,6 +148,8 @@ def create_startup_splash(parent=None, *, profiles: list[dict] | None = None, li
     gauge = _SplashGauge(panel)
     gauge.SetValue(0)
     root.Add(gauge, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 12)
+    progress_detail = wx.StaticText(panel, label="")
+    root.Add(progress_detail, 0, wx.ALIGN_CENTER | wx.LEFT | wx.RIGHT | wx.BOTTOM, 8)
 
     # --- Current status §24: one line below progress ---
     status_text = wx.StaticText(panel, label=t("splash.loading_preferences") if t("splash.loading_preferences") != "[splash.loading_preferences]" else "Loading preferences...")
@@ -180,8 +182,10 @@ def create_startup_splash(parent=None, *, profiles: list[dict] | None = None, li
     mand_btn_row = wx.BoxSizer(wx.HORIZONTAL)
     mand_view = wx.Button(mandatory_panel, label=t("common.details") if t("common.details") != "[common.details]" else "View Details")
     mand_update = wx.Button(mandatory_panel, label=t("updates.update_now") if t("updates.update_now") != "[updates.update_now]" else "Update Now")
+    mand_skip = wx.Button(mandatory_panel, label="Güncellemeyi atla")
     try:
-        mand_update.SetMinSize(wx.Size(100, 32))
+        for button in (mand_view, mand_update, mand_skip):
+            button.SetMinSize(wx.Size(110, 32))
         fnt = mand_update.GetFont()
         fnt.SetWeight(wx.FONTWEIGHT_BOLD)
         mand_update.SetFont(fnt)
@@ -189,7 +193,8 @@ def create_startup_splash(parent=None, *, profiles: list[dict] | None = None, li
         pass
     mand_btn_row.AddStretchSpacer(1)
     mand_btn_row.Add(mand_view, 0, wx.RIGHT, 8)
-    mand_btn_row.Add(mand_update, 0)
+    mand_btn_row.Add(mand_update, 0, wx.RIGHT, 8)
+    mand_btn_row.Add(mand_skip, 0)
     mand_sizer.Add(mand_text, 0, wx.ALL, 8)
     mand_sizer.Add(mand_detail, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 8)
     mand_sizer.Add(mand_btn_row, 0, wx.EXPAND | wx.ALL, 8)
@@ -315,6 +320,18 @@ def create_startup_splash(parent=None, *, profiles: list[dict] | None = None, li
             dlg.FitInside()
         except Exception:
             pass
+
+    def show_mock_update(version: str):
+        mand_text.SetLabel(f"Mock güncelleme bulundu: v{version}")
+        mand_detail.SetLabel("Güncellemeyi indirip mock olarak yükleyebilirsiniz.")
+        mand_view.SetLabel("İndir")
+        mand_update.SetLabel("Mock yükle")
+        mand_update.Disable()
+        mand_skip.SetLabel("Güncellemeyi atla")
+        mand_skip.Enable()
+        mandatory_panel.Show()
+        panel.Layout()
+        dlg.Layout()
 
     def set_connecting(is_connecting: bool, profile_name: str = ""):
         if connect_btn is None:
@@ -493,6 +510,7 @@ def create_startup_splash(parent=None, *, profiles: list[dict] | None = None, li
         "mandatory_detail": mand_detail,
         "mandatory_view": mand_view,
         "mandatory_update": mand_update,
+        "mandatory_skip": mand_skip,
     }
     dlg._wx_splash_set_stage = set_stage
     dlg._wx_splash_set_progress = set_progress
@@ -500,6 +518,16 @@ def create_startup_splash(parent=None, *, profiles: list[dict] | None = None, li
     dlg._wx_splash_append_log = append_log
     dlg._wx_splash_set_indeterminate = set_indeterminate
     dlg._wx_splash_set_mandatory = set_mandatory_update
+    dlg._wx_splash_show_mock_update = show_mock_update if mock_update else None
+    def set_download_metrics(downloaded: int, total: int, speed: float, remaining: float):
+        gauge.SetValue(int(downloaded * 100 / max(1, total)))
+        progress_detail.SetLabel(
+            f"{downloaded / 1024 / 1024:.1f} / {total / 1024 / 1024:.1f} MB  •  "
+            f"{speed / 1024 / 1024:.1f} MB/s  •  {remaining:.0f} sn kaldı"
+        )
+        panel.Layout()
+
+    dlg._wx_splash_set_download_metrics = set_download_metrics
     dlg._wx_splash_set_connecting = set_connecting
     dlg._wx_splash_set_offline = set_offline_mode
     dlg._wx_splash_state = state
