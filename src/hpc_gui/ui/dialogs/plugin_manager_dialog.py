@@ -72,10 +72,13 @@ def capability_label(capability: str) -> str:
     return t(key) if key else str(capability or "")
 
 
+_INITIAL_TAB_MAP = {"discover": 0, "installed": 1, "updates": 2}
+
+
 class PluginManagerDialog(QDialog):
     plugins_changed = Signal()
 
-    def __init__(self, parent=None, *, fetcher=None):
+    def __init__(self, parent=None, *, fetcher=None, initial_tab: str = "discover"):
         super().__init__(parent)
         self._fetcher = fetcher
         self._app_version = __version__
@@ -129,6 +132,10 @@ class PluginManagerDialog(QDialog):
         self.tabs.addTab(self.updates_list, t("plugins.tab_updates"))
 
         self._installed_versions = load_installed_plugins(app_version=self._app_version)
+        # Semantic initial tab selection with safe fallback to discover
+        tab_index = _INITIAL_TAB_MAP.get(str(initial_tab).strip().lower(), 0)
+        self.tabs.setCurrentIndex(tab_index)
+        self._initial_tab = str(initial_tab).strip().lower() if str(initial_tab).strip().lower() in _INITIAL_TAB_MAP else "discover"
 
     # ------------------------------------------------------------------
     # Widget helpers
@@ -701,6 +708,7 @@ class PluginManagerDialog(QDialog):
         except Exception as exc:
             logger.warning("Could not toggle plugin %s", plugin_id, exc_info=exc)
             return
+        self.plugins_changed.emit()
         self.rebuild_tabs()
 
     def open_linter_tool(self, plugin_id: str) -> None:

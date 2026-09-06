@@ -473,6 +473,22 @@ class EditorWidget(QWidget):
             if isinstance(document, _EditorDocument) and not document.path:
                 self.document_tabs.setTabText(index, self._tab_title(""))
 
+    def run_lint_for_plugin(self, plugin_id: str | None = None):
+        """Scoped lint – reuses the same pipeline filtered to one plugin if possible."""
+        path = self.path_in.text().strip()
+        text = self.text.toPlainText()
+        if not path:
+            QMessageBox.information(self, t("common.info"), t("editor.lint_need_path") if t("editor.lint_need_path") != "[editor.lint_need_path]" else "Please provide a target path first.")
+            return
+        issues = self._collect_lint_issues(path, text)
+        diagnostics = self._run_plugin_lint(path, text, plugin_id=plugin_id)
+        diagnostics = diagnostics + self._run_v2_tool_lint(path, text)
+        diagnostics = diagnostics + self._run_cross_checks(text)
+        if not issues and not diagnostics:
+            QMessageBox.information(self, t("common.info"), t("editor.lint_ok") if t("editor.lint_ok") != "[editor.lint_ok]" else "Lint passed. No obvious issues found.")
+            return
+        self._show_lint_results(path, issues, diagnostics)
+
     def run_lint(self):
         path = self.path_in.text().strip()
         text = self.text.toPlainText()
@@ -503,7 +519,7 @@ class EditorWidget(QWidget):
         except Exception:  # never break the editor on parse surprises
             return []
 
-    def _run_plugin_lint(self, path: str, text: str) -> list:
+    def _run_plugin_lint(self, path: str, text: str, plugin_id: str | None = None) -> list:
         """Run installed declarative lint packs matching the file name."""
         from hpc_gui.lint.engine import LintError, lint_text
         from hpc_gui.lint.rulepack import load_lint_packs
@@ -513,6 +529,20 @@ class EditorWidget(QWidget):
             packs = load_lint_packs()
         except Exception:
             return diagnostics
+        if plugin_id:
+            # Optional plugin scoping: filter packs owned by this plugin
+            # Lint packs expose .plugin_id via metadata if available; fall back to no filtering if not
+            filtered = []
+            for p in packs:
+                pid = getattr(p, "plugin_id", None) or getattr(p, "plugin", None)
+                if pid is None:
+                    # Try to infer from rule pack source path
+                    pid = getattr(p, "source", None)
+                if pid == plugin_id:
+                    filtered.append(p)
+            # If filtering yields nothing, fall back to generic (no second engine) – but prefer filtered when available
+            if filtered:
+                packs = filtered
         matched = [pack for pack in packs if pack.matches(path)]
         for pack in matched:
             try:
@@ -676,6 +706,42 @@ class EditorWidget(QWidget):
             labels.append(f"[{location}] {severity}: {diagnostic.message} ({diagnostic.rule_id})")
             positions.append(max(0, (diagnostic.line or 1) - 1))
         return labels, positions
+
+    def new_from_template_for_plugin(self, plugin_id: str):
+        """Scoped template flow filtered to one plugin (host-owned)."""
+        templates = self._load_templates_filtered(plugin_id)
+        if not templates:
+            QMessageBox.information(self, t("common.info"), t("templates.none_installed"))
+            return
+        from PySide6.QtWidgets import QDialog
+        from hpc_gui.ui.dialogs.template_browser_dialog import TemplateBrowserDialog
+        provider_template = {}
+        if isinstance(self.session, dict):
+            cfg = self.session.get("cfg")
+            provider_template = getattr(cfg, "provider_template", {}) or {}
+            if isinstance(provider_template, dict):
+                provider_template = dict(provider_template)
+                provider_template["account"] = getattr(cfg, "account", "")
+        dialog = TemplateBrowserDialog(self, templates, provider_template=provider_template)
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return
+        template, values = dialog.result_template, dialog.result_values
+        if template is None:
+            return
+        from hpc_gui.plugins.job_templates import render_template
+        try:
+            rendered = render_template(template, values)
+        except Exception as exc:
+            QMessageBox.warning(self, t("common.error"), str(exc))
+            return
+        suggested = template.file_name or f"{template.id}.txt"
+        self.open_file("", rendered)
+        index = self.document_tabs.currentIndex()
+        if index >= 0:
+            self.document_tabs.setTabText(index, self._tab_title(suggested))
+        document = self._current_document()
+        if document is not None:
+            document.path = ""
 
     def new_from_template(self):
         """Open the plugin-template browser; rendered text opens in a NEW

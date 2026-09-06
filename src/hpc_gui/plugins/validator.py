@@ -37,6 +37,8 @@ MANIFEST_REQUIRED_KEYS = (
     "files",
 )
 
+MANIFEST_OPTIONAL_KEYS = frozenset({"ui_contributions"})
+
 CLUSTER_PROFILE_REQUIRED_KEYS = ("schema_version", "profile_id", "name", "scheduler")
 V2_PROFILE_SECTIONS = frozenset(
     {"description", "metadata", "paths", "commands", "site", "scheduler_hints", "software", "storage", "quota_sources"}
@@ -93,6 +95,12 @@ def validate_manifest_dict(manifest: Any) -> list[str]:
         if key not in manifest:
             errors.append(f"manifest is missing required key '{key}'")
     if errors:
+        return errors
+    # Reject unknown top-level keys except optional ui_contributions
+    allowed_keys = set(MANIFEST_REQUIRED_KEYS) | MANIFEST_OPTIONAL_KEYS
+    unknown = set(manifest) - allowed_keys
+    if unknown:
+        errors.append(f"manifest has unknown properties {sorted(unknown)}")
         return errors
 
     if manifest["schema_version"] != 1:
@@ -172,6 +180,13 @@ def validate_manifest_dict(manifest: Any) -> list[str]:
     engine_id = manifest["entrypoints"].get("engine") if isinstance(manifest["entrypoints"], dict) else None
     if engine_id is not None and engine_id not in TRUSTED_DECLARATIVE_ENGINES:
         errors.append(f"unknown declarative engine ID: {engine_id!r}")
+
+    # Optional ui_contributions validation
+    if "ui_contributions" in manifest:
+        from hpc_gui.plugins.ui_contributions import validate_ui_contributions_dict
+
+        ui_errors = validate_ui_contributions_dict(manifest["ui_contributions"])
+        errors.extend(f"ui_contributions: {e}" for e in ui_errors)
 
     files = manifest["files"]
     if not isinstance(files, list) or not files:

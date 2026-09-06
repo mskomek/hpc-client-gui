@@ -1010,6 +1010,32 @@
     "tool_open_failed": "Could not open the linter tool",
     "tool_not_installed": "The plugin is not installed or is disabled."
   },
+  "menu": {
+    "menu": "Menu",
+    "plugins": "Plugins",
+    "help": "Help",
+    "settings": "Settings...",
+    "check_updates": "Check for Updates...",
+    "command_palette": "Command Palette",
+    "exit": "Exit",
+    "browse_install": "Browse & Install Plugins...",
+    "manage_installed": "Manage Installed Plugins...",
+    "check_plugin_updates": "Check for Plugin Updates...",
+    "request_plugin": "Request a Plugin...",
+    "help_center": "Help Center...",
+    "quick_tour": "Quick Tour...",
+    "send_logs": "Send Logs / Diagnostics...",
+    "about": "About HPC Client GUI..."
+  },
+  "about": {
+    "title": "About HPC Client GUI",
+    "description": "SSH · Slurm · X11 workflow manager for HPC clusters.",
+    "version_label": "Version {version}",
+    "project": "Project Repository",
+    "license": "License",
+    "notices": "Third-Party Notices",
+    "close": "Close"
+  },
   "templates": {
     "dialog_title": "Job Templates",
     "list_label": "Installed templates:",

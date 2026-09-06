@@ -85,6 +85,9 @@ def _build_manifest(raw: Any) -> tuple[PluginManifest | None, str | None]:
         )
         for entry in raw["files"]
     )
+    ui_contributions = raw.get("ui_contributions")
+    if not isinstance(ui_contributions, dict) and ui_contributions is not None:
+        ui_contributions = None
     manifest = PluginManifest(
         schema_version=raw["schema_version"],
         plugin_api=raw["plugin_api"],
@@ -98,6 +101,7 @@ def _build_manifest(raw: Any) -> tuple[PluginManifest | None, str | None]:
         capabilities=tuple(raw["capabilities"]),
         entrypoints=dict(raw.get("entrypoints") or {}),
         files=files,
+        ui_contributions=dict(ui_contributions) if isinstance(ui_contributions, dict) else None,
     )
     return manifest, None
 
@@ -321,6 +325,22 @@ def load_installed_plugins(
                 continue
             linter_engine_raw = {"module": linter_rel}
 
+        # Preserve and validate ui_contributions defensively (never crash)
+        plugin_menu_contribution = None
+        try:
+            from hpc_gui.plugins.ui_contributions import _parse_plugins_menu
+
+            raw_ui = raw_manifest.get("ui_contributions")
+            if isinstance(raw_ui, dict) and isinstance(raw_ui.get("plugins_menu"), dict):
+                contrib, errs = _parse_plugins_menu(raw_ui.get("plugins_menu"), manifest.id, manifest.version)
+                if errs:
+                    logger.warning("Skipping plugin %s ui_contributions: %s", manifest.id, "; ".join(errs))
+                elif contrib:
+                    plugin_menu_contribution = contrib
+        except Exception as exc:
+            logger.warning("Failed to parse ui_contributions for plugin %s: %s", manifest.id, exc, exc_info=exc)
+            plugin_menu_contribution = None
+
         result.plugins.append(
             InstalledPlugin(
                 manifest=manifest,
@@ -329,6 +349,7 @@ def load_installed_plugins(
                 lint_index=lint_index_raw,
                 job_templates_index=templates_index_raw,
                 linter_engine=linter_engine_raw,
+                plugin_menu_contribution=plugin_menu_contribution,
             )
         )
 
