@@ -814,10 +814,15 @@ def test_host_key_mapping(monkeypatch):
             with mock.patch("wx.MessageDialog") as MockDlg:
                 inst = MockDlg.return_value
                 inst.ShowModal.return_value = wx_id
+                inst.Destroy = mock.Mock()
                 result = model.decide_host_key(mock.Mock(hostname="h.example", fingerprint="aa:bb", role="target"))
                 assert result == expected
-        # Changed host keys must not be silently accepted – model defaults to reject
-        assert model.decide_host_key(mock.Mock(hostname="h", fingerprint="changed", role="target")) == "reject"
+        # Changed host keys must not be silently accepted – model defaults to reject (mocked to avoid popup)
+        with mock.patch("wx.MessageDialog") as MockDlg:
+            inst = MockDlg.return_value
+            inst.ShowModal.return_value = wx.ID_CANCEL
+            inst.Destroy = mock.Mock()
+            assert model.decide_host_key(mock.Mock(hostname="h", fingerprint="changed", role="target")) == "reject"
         frame.Destroy()
         for _ in range(3):
             wx.Yield()
