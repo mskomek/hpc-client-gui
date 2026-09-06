@@ -108,8 +108,8 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
     frame.Bind(wx.EVT_MENU, lambda _e: _dispatch("PLUGIN-MANAGE", frame, lifecycle, session_state), act_manage)
     act_plugin_updates = plugins_menu.Append(wx.ID_ANY, t("menu.check_plugin_updates"))
     frame.Bind(wx.EVT_MENU, lambda _e: _dispatch("PLUGIN-UPDATES", frame, lifecycle, session_state), act_plugin_updates)
-    sep_plugins_top = plugins_menu.AppendSeparator()
-    # Dynamic plugin roots will be inserted here (between the two separators)
+    sep_plugins_top = None
+    # Dynamic plugin roots will be inserted here (between the two separators) - top separator created on demand
     sep_plugins_bottom = plugins_menu.AppendSeparator()
     act_request = plugins_menu.Append(wx.ID_ANY, t("menu.request_plugin"))
     frame.Bind(wx.EVT_MENU, lambda _e: _dispatch("PLUGIN-REQUEST", frame, lifecycle, session_state), act_request)
@@ -735,6 +735,31 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
 
     # --- Plugin menu dynamic handling (framework-neutral contribution model) ---
     _wx_plugin_dynamic_items: list = []
+    def _ensure_wx_plugins_top_separator():
+        nonlocal sep_plugins_top
+        if sep_plugins_top is None or sep_plugins_top not in plugins_menu.GetMenuItems():
+            try:
+                items = list(plugins_menu.GetMenuItems())
+                # Find Check for Plugin Updates position
+                try:
+                    idx = items.index(act_plugin_updates) + 1
+                except ValueError:
+                    idx = 3
+                new_sep = plugins_menu.InsertSeparator(idx)
+                sep_plugins_top = new_sep
+                frame._wx_shell_plugins_sep_top = new_sep
+            except Exception:
+                pass
+    def _remove_wx_plugins_top_separator():
+        nonlocal sep_plugins_top
+        if sep_plugins_top is not None:
+            try:
+                plugins_menu.Remove(sep_plugins_top)
+                sep_plugins_top.Destroy()
+            except Exception:
+                pass
+            sep_plugins_top = None
+            frame._wx_shell_plugins_sep_top = None
     def _wx_current_context():
         try:
             from hpc_gui.plugins.ui_contributions import MenuContext
@@ -764,7 +789,7 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
             from hpc_gui.plugins.ui_contributions import MenuContext
             return MenuContext()
     def _wx_rebuild_plugins_menu():
-        nonlocal _wx_plugin_dynamic_items
+        nonlocal _wx_plugin_dynamic_items, sep_plugins_top
         try:
             from hpc_gui.plugins.loader import load_installed_plugins
             from hpc_gui.plugins.ui_contributions import collect_plugin_menu_contributions, evaluate_when, get_display_label
@@ -908,13 +933,18 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
                         root_menu.Destroy()
                     except Exception:
                         pass
-            # Exactly one separator when no visible dynamic roots
+            # Exactly one separator when no visible dynamic roots - top physically present only when needed
             try:
                 has_any = len(_wx_plugin_dynamic_items) > 0
-                sep_plugins_top.Enable(has_any)
-                sep_plugins_bottom.Enable(True)
-                if not has_any:
-                    sep_plugins_top.Enable(False)
+                if has_any:
+                    _ensure_wx_plugins_top_separator()
+                else:
+                    _remove_wx_plugins_top_separator()
+                # Bottom separator always remains
+                try:
+                    sep_plugins_bottom.Enable(True)
+                except Exception:
+                    pass
             except Exception:
                 pass
         except Exception as e:
@@ -970,6 +1000,8 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
         _wx_rebuild_plugins_menu()
     except Exception:
         pass
+
+    frame._wx_rebuild_plugins_menu = _wx_rebuild_plugins_menu
 
     subscribe_language_change(refresh_labels)
 
