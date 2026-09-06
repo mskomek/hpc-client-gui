@@ -9,11 +9,11 @@ from hpc_gui import __version__
 from hpc_gui.core.i18n import subscribe_language_change, t, unsubscribe_language_change
 
 
-STAGES = ("preferences", "helpers", "updates")
+STAGES = ("updates", "preferences", "helpers")
 STAGE_LABELS = {
+    "updates": "Updates",
     "preferences": "Preferences",
     "helpers": "Helpers",
-    "updates": "Updates",
 }
 
 # Visual states for each stage — spec §22
