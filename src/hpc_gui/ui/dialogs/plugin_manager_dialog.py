@@ -103,6 +103,9 @@ class PluginManagerDialog(QDialog):
         header.addStretch(1)
 
         self.status_label = QLabel("")
+        self.status_label.setFixedWidth(110)
+        self.status_label.setAlignment(Qt.AlignCenter)
+        self.status_label.setStyleSheet("color: #666;")
         header.addWidget(self.status_label)
 
         self.search_box = QLineEdit()
