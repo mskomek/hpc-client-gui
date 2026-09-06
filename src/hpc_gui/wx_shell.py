@@ -1113,12 +1113,12 @@ def main() -> int:
     except Exception:
         profiles = []
 
-    # Create splash early to paint before heavy init
+    # Create splash early to paint before heavy init — pure visual splash, auto-continue offline
     splash = None
     try:
-        from hpc_gui.wx_splash import create_startup_splash, STATE_ACTIVE, STATE_COMPLETE, STATE_FAILED, STATE_PENDING
+        from hpc_gui.wx_splash import create_startup_splash, STATE_ACTIVE, STATE_COMPLETE, STATE_PENDING
 
-        splash = create_startup_splash(None, profiles=profiles)
+        splash = create_startup_splash(None, profiles=profiles, pure_splash=True)
         splash.Show()
         try:
             splash.Update()
@@ -1146,148 +1146,32 @@ def main() -> int:
         splash._wx_splash_append_log("Checking for updates...", "")
         app.Yield(True)
         wx.MilliSleep(80)
-        # Best-effort update check without blocking startup (real check happens in main window)
         splash._wx_splash_set_stage("updates", STATE_COMPLETE)
-        # Phase: Session
+        # Phase: Session — offline mode, no connection attempt
         splash._wx_splash_set_stage("session", STATE_ACTIVE)
         splash._wx_splash_set_progress(85, t("splash.loading_session") if t("splash.loading_session") != "[splash.loading_session]" else "Loading connection profiles...")
         splash._wx_splash_append_log("Loading connection profiles...", "OK")
         app.Yield(True)
         wx.MilliSleep(80)
+        splash._wx_splash_set_stage("session", STATE_COMPLETE)
+        splash._wx_splash_set_progress(100, t("common.ready") if t("common.ready") != "[common.ready]" else "Ready")
+        splash._wx_splash_append_log("Starting in offline mode...", "")
+        app.Yield(True)
+        wx.MilliSleep(150)
     except Exception:
-        # Splash is best-effort; continue without it
         splash = None
 
     frame, _lifecycle, _session_state = create_shell_frame(app)
-    # Wire splash connection controls to real session
     if splash is not None:
         try:
-            # Reload
-            reload_btn = splash._wx_splash_controls.get("reload")
-            if reload_btn is not None:
-                def _splash_reload(_evt=None, _splash=splash):
-                    try:
-                        from hpc_gui.config.storage import load_profiles as _lp
-                        new_profiles = _lp()
-                        choice = _splash._wx_splash_controls.get("profile_choice")
-                        if choice is not None and new_profiles:
-                            choice.Clear()
-                            for p in new_profiles:
-                                if p.get("name"):
-                                    choice.Append(str(p.get("name")))
-                            if choice.GetCount():
-                                choice.SetSelection(0)
-                            _splash._wx_splash_append_log("Reloaded connection profiles", "OK")
-                    except Exception as exc:
-                        _splash._wx_splash_append_log(f"Reload failed: {exc}", "")
-                reload_btn.Bind(wx.EVT_BUTTON, _splash_reload)
-
-            # Connect Selected wiring — delegates to connection controller
-            connect_btn = splash._wx_splash_controls.get("connect")
-            if connect_btn is not None:
-                def _splash_connect(_evt=None, _splash=splash, _frame=frame, _lc=_lifecycle, _ss=_session_state):
-                    sel = ""
-                    try:
-                        sel = _splash._wx_splash_controls["profile_choice"].GetStringSelection()
-                    except Exception:
-                        sel = ""
-                    _splash._wx_splash_set_connecting(True, sel)
-                    # Perform connection via shared helper
-                    def worker():
-                        try:
-                            from hpc_gui.config.storage import load_profiles as _lp
-                            profiles_now = _lp()
-                            profile = next((p for p in profiles_now if str(p.get("name")) == sel), None)
-                            if profile is None:
-                                raise RuntimeError(t("login.error"))
-                            # Use WxConnectionModel path
-                            from hpc_gui.wx_connection import WxConnectionModel, connect_profile
-                            model = WxConnectionModel(profiles_now)
-                            model.select(sel)
-                            # Connect using shared logic (may show host-key dialogs parented to splash)
-                            session = connect_profile(profile, model)
-                            def on_done():
-                                try:
-                                    _frame._wx_shell_session_state["session"] = session
-                                    _frame._wx_shell_session_state["generation"] = _frame._wx_shell_session_state.get("generation", 0) + 1
-                                    # sync terminal
-                                    try:
-                                        panel = _frame._wx_shell_session_state.get("_embedded_terminal_panel")
-                                        if panel is not None and hasattr(panel, "_wx_terminal_set_ssh"):
-                                            panel._wx_terminal_set_ssh(session.get("ssh"))
-                                    except Exception:
-                                        pass
-                                    _splash._wx_splash_append_log(f"Connected to {sel}", "OK")
-                                    _splash._wx_splash_set_stage("session", STATE_COMPLETE)
-                                    _splash._wx_splash_set_progress(100, t("common.ready") if t("common.ready") != "[common.ready]" else "Ready")
-                                    wx.CallLater(300, lambda: (_splash.EndModal(wx.ID_OK) if _splash.IsModal() else _splash.Close()))
-                                    _frame.Show()
-                                    _frame.Raise()
-                                except Exception:
-                                    pass
-                            wx.CallAfter(on_done)
-                        except Exception as exc:
-                            def on_err():
-                                _splash._wx_splash_set_connecting(False, sel)
-                                _splash._wx_splash_append_log(f"Connection failed: {exc}", "")
-                                _splash._wx_splash_set_stage("session", STATE_FAILED)
-                            wx.CallAfter(on_err)
-                    Thread(target=worker, daemon=True).start()
-                # Re-bind to our handler (override default no-op)
-                try:
-                    connect_btn.Unbind(wx.EVT_BUTTON)
-                except Exception:
-                    pass
-                connect_btn.Bind(wx.EVT_BUTTON, _splash_connect)
-
-            # Continue Offline wiring
-            offline_btn = splash._wx_splash_controls.get("offline")
-            if offline_btn is not None:
-                def _splash_offline(_evt=None, _splash=splash, _frame=frame):
-                    _splash._wx_splash_set_offline()
-                    _splash._wx_splash_append_log("Starting in offline mode...", "")
-                    def close_splash():
-                        try:
-                            if _splash.IsModal():
-                                _splash.EndModal(wx.ID_CANCEL)
-                            else:
-                                _splash.Close()
-                        except Exception:
-                            pass
-                        _frame.Show()
-                        _frame.Raise()
-                    wx.CallLater(300, close_splash)
-                try:
-                    offline_btn.Unbind(wx.EVT_BUTTON)
-                except Exception:
-                    pass
-                offline_btn.Bind(wx.EVT_BUTTON, _splash_offline)
-
-            # Show dialog modally with connection controls ready; main frame hidden until decision
-            frame.Hide()
-            result = splash.ShowModal()
-            # If splash closed via Connect success, frame already shown; otherwise show frame
-            if not frame.IsShown():
-                frame.Show()
-            try:
-                splash.Destroy()
-            except Exception:
-                pass
-            # Mark Session stage complete or offline as appropriate
-            try:
-                if result == wx.ID_CANCEL:
-                    # Continue Offline path — session remains None, UI shows offline states
-                    pass
-            except Exception:
-                pass
+            splash.Destroy()
         except Exception:
-            try:
-                splash.Destroy()
-            except Exception:
-                pass
-            frame.Show()
-    else:
-        frame.Show()
+            pass
+    frame.Show()
+    try:
+        frame.Raise()
+    except Exception:
+        pass
 
     app.MainLoop()
     return 0
