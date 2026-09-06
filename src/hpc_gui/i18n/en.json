@@ -898,7 +898,16 @@
     "jump_error_connect": "Could not connect to the jump host. Check the address, port and network path.",
     "jump_error_auth": "Jump host authentication failed. This version expects SSH key or agent authentication for the jump host.",
     "jump_error_forwarding": "The jump host refused to forward to the target (direct-tcpip denied). Contact the administrator or use a direct connection.",
-    "test_cluster": "Test Cluster"
+    "test_cluster": "Test Cluster",
+    "saved_profiles": "Saved profiles",
+    "status_failed": "Connection failed",
+    "profile_not_found": "Profile \"{name}\" was not found.",
+    "edit_auth_error": "The profile could not be verified for editing ({error}).",
+    "connect_after_save_failed": "The profile was saved, but connection failed ({error}).",
+    "required_field": "{field} is required for this provider.",
+    "cluster_test_running": "Testing...",
+    "cluster_test_failed": "Cluster test failed ({error}).",
+    "storage_enabled": "Enabled"
   },
   "cluster_self_test": {
     "title": "Cluster Self-Test",

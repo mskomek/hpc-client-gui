@@ -28,6 +28,29 @@ class ProfileSummary:
     provider: str = ""
 
 
+def _provider_template(profile: dict[str, Any]) -> dict[str, Any] | None:
+    candidate = profile.get("provider_template")
+    if isinstance(candidate, dict):
+        return candidate
+    system = profile.get("system")
+    candidate = system.get("provider_template") if isinstance(system, dict) else None
+    return candidate if isinstance(candidate, dict) else None
+
+
+def _provider_name(profile: dict[str, Any]) -> str:
+    template = _provider_template(profile) or {}
+    system = profile.get("system") if isinstance(profile.get("system"), dict) else {}
+    site = template.get("site") if isinstance(template.get("site"), dict) else {}
+    return str(
+        system.get("provider")
+        or template.get("name")
+        or template.get("profile_id")
+        or site.get("name")
+        or system.get("name", "")
+        or ""
+    )
+
+
 def ssh_info_from_profile(profile: dict[str, Any], model: "WxConnectionModel") -> SSHConnInfo:
     """Build the shared SSH request without copying secrets into UI state."""
 
@@ -35,40 +58,39 @@ def ssh_info_from_profile(profile: dict[str, Any], model: "WxConnectionModel") -
         return model.decide_host_key(HostKeyRequest(info.hostname, info.fingerprint, info.role))
 
     def keyboard(title: str, instructions: str, prompts: list[tuple[str, bool]]) -> list[str]:
-        request = KeyboardInteractiveRequest(title, instructions, tuple(prompt for prompt, _echo in prompts))
+        request = KeyboardInteractiveRequest(
+            title,
+            instructions,
+            tuple(prompt for prompt, _echo in prompts),
+            tuple(bool(echo) for _prompt, echo in prompts),
+        )
         return model.answer_keyboard_interactive(request)
 
     # Resolve password securely; wx stored secrets are never in plaintext ``password`` field.
     password = str(profile.get("password", "") or "")
     if not password and profile.get("save_password"):
-        try:
-            from hpc_gui.services.connection_profile_service import decrypt_profile_password
+        from hpc_gui.services.connection_profile_service import decrypt_profile_password as resolve_saved_password
 
-            resolved = decrypt_profile_password(profile, allow_prompt=False)
-            if isinstance(resolved, str) and resolved:
-                password = resolved
-        except Exception:
-            password = ""
+        resolved = resolve_saved_password(profile, allow_prompt=False)
+        if resolved is None and any(
+            profile.get(key)
+            for key in ("password_keychain_ref", "password_dpapi", "password_enc")
+        ):
+            raise RuntimeError("saved_password_unavailable")
+        if isinstance(resolved, str):
+            password = resolved
 
     # Provider auth metadata for keyboard-interactive decision
-    provider_template = profile.get("provider_template") or (profile.get("system") or {}).get("provider_template") if isinstance(profile.get("system"), dict) else None
-    if provider_template is None:
-        provider_template = profile.get("provider_template")
+    provider_template = _provider_template(profile)
     # Check if provider declares keyboard-interactive
     auth_methods: list[str] = []
     if isinstance(provider_template, dict):
         access = provider_template.get("access")
         if isinstance(access, dict):
             auth_methods = list(access.get("auth_methods") or [])
-    # Also check system.settings fallback
-    system = profile.get("system") if isinstance(profile.get("system"), dict) else {}
-    if isinstance(system, dict) and isinstance(system.get("provider_template"), dict):
-        try:
-            access2 = system["provider_template"].get("access") or {}
-            if isinstance(access2, dict):
-                auth_methods = list(access2.get("auth_methods") or auth_methods)
-        except Exception:
-            pass
+    access2 = provider_template.get("access") if isinstance(provider_template, dict) else None
+    if isinstance(access2, dict):
+        auth_methods = list(access2.get("auth_methods") or auth_methods)
     # If keyboard-interactive declared, keep handler, otherwise still provide handler? Qt only provides when needed, but wx can always provide; server will only invoke when needed.
     # Keep behavior: provide handler if keyboard-interactive in methods OR if no provider declares (fallback to always)
     keyboard_handler = keyboard
@@ -101,7 +123,10 @@ def ssh_info_from_profile(profile: dict[str, Any], model: "WxConnectionModel") -
 def connect_profile(profile: dict[str, Any], model: "WxConnectionModel") -> dict[str, Any]:
     """Open the shared SSH/files/Slurm session for one selected profile."""
     output_subscribers: list[Callable[[str], None]] = []
-    ssh = SSHClientWrapper(ssh_info_from_profile(profile, model), shell_output_cb=lambda text: [callback(text) for callback in tuple(output_subscribers)])
+    ssh = SSHClientWrapper(
+        ssh_info_from_profile(profile, model),
+        shell_output_cb=lambda text: [callback(text) for callback in tuple(output_subscribers)],
+    )
     ssh._wx_output_subscribers = output_subscribers  # type: ignore[attr-defined]
     try:
         ssh.connect()
@@ -111,7 +136,8 @@ def connect_profile(profile: dict[str, Any], model: "WxConnectionModel") -> dict
             "files": SSHFilesBackend(ssh),
             "slurm": SSHSlurmBackend(ssh, profile.get("system") or {}),
             "profile_name": str(profile.get("name", "")),
-            "profile": dict(profile),
+            "profile": {**profile, "password": ""},
+            "transfer_parallelism": int(profile.get("transfer_parallelism", 1) or 1),
             "output_subscribers": output_subscribers,
         }
     except Exception:
@@ -130,7 +156,12 @@ class WxConnectionModel:
 
     def summaries(self) -> tuple[ProfileSummary, ...]:
         return tuple(
-            ProfileSummary(str(item.get("name", "")), str(item.get("host", "")), str(item.get("username", "")), str((item.get("system") or {}).get("provider", "") or (item.get("provider_template") or {}).get("name", "") or ""))
+            ProfileSummary(
+                str(item.get("name", "")),
+                str(item.get("host", "")),
+                str(item.get("username", "")),
+                _provider_name(item),
+            )
             for item in self.profiles
             if item.get("name")
         )
@@ -146,7 +177,11 @@ class WxConnectionModel:
         if profile is None or self._connect is None:
             return False
         self.controller.begin_connect()
-        session = self._connect(dict(profile))
+        try:
+            session = self._connect(dict(profile))
+        except Exception:
+            self.controller.fail()
+            raise
         if session is False:
             self.controller.fail()
             return False
@@ -168,11 +203,8 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
         import wx
     except ImportError as exc:
         raise RuntimeError("wxPython is not installed") from exc
-    # ``add_connection`` is now optional; the primary Add flow is owned here.
-    # Keep compatibility with shell-injected callback but never disable Add.
-    external_add = add_connection
-    if external_add is None:
-        external_add = kwargs.get("add_connection") or kwargs.get("on_add_connection") or kwargs.get("on_add") or kwargs.get("add")
+    # ``add_connection`` remains accepted for callers on the old surface, but
+    # profile creation is owned by this panel and never delegated.
     model = WxConnectionModel(profiles, connect=connect)
     if connect is None:
         model._connect = lambda profile: connect_profile(profile, model)
@@ -197,19 +229,7 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
     # Root sizer
     root = wx.BoxSizer(wx.VERTICAL)
 
-    # Header: Saved profiles label
-    header = wx.StaticText(panel, label=t("connection.storage_areas") if False else "Saved profiles")
-    # Use translation key fallback
-    header_label = t("connection.storage_areas")  # not ideal but temporary
-    # Real label for profiles list
-    profiles_label = wx.StaticText(panel, label=t("connection.system_templates") if False else t("tabs.connection") if t("tabs.connection") != "[tabs.connection]" else "Connection")
-    # We will use a more appropriate: "Saved profiles" fallback
-    try:
-        _p_label = t("connection.profile_section")
-        if _p_label != "[connection.profile_section]":
-            profiles_label.SetLabel(_p_label + " — " + t("connection.connection_section") if t("connection.connection_section") != "[connection.connection_section]" else _p_label)
-    except Exception:
-        pass
+    profiles_label = wx.StaticText(panel, label=t("connection.saved_profiles"))
 
     # Profile list + detail
     list_and_detail = wx.BoxSizer(wx.HORIZONTAL)
@@ -224,7 +244,7 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
     # Right: detail panel
     detail_panel = wx.Panel(panel)
     detail_sizer = wx.BoxSizer(wx.VERTICAL)
-    detail_title = wx.StaticText(detail_panel, label=t("common.details") if t("common.details") != "[common.details]" else "Details")
+    detail_title = wx.StaticText(detail_panel, label=t("common.details"))
     detail_title.SetFont(detail_title.GetFont().MakeBold())
     detail_name = wx.StaticText(detail_panel, label="")
     detail_host = wx.StaticText(detail_panel, label="")
@@ -258,7 +278,7 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
     add_button = wx.Button(panel, label=t("login.add_connection"))
     edit_button = wx.Button(panel, label=t("connection.edit_action"))
     duplicate_button = wx.Button(panel, label=t("login.duplicate"))
-    delete_button = wx.Button(panel, label=t("connection.delete_action") if t("connection.delete_action") != "[connection.delete_action]" else "Delete")
+    delete_button = wx.Button(panel, label=t("connection.delete_action"))
     connect_button = wx.Button(panel, label=t("login.connect_selected"))
     # Accessibility: set names
     for btn, name in ((add_button, "AddConnection"), (edit_button, "EditConnection"), (duplicate_button, "DuplicateProfile"), (delete_button, "DeleteProfile"), (connect_button, "ConnectSelected")):
@@ -291,10 +311,12 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
 
     def mfa_dialog(request: KeyboardInteractiveRequest) -> list[str]:
         answers = []
-        for prompt in request.prompts:
-            # Honour echo flag is not in request (prompts are strings); treat as password if prompt hints secret
-            # Provide password style for all prompts containing password-like words, else normal
-            is_secret = any(word in prompt.lower() for word in ("password", "token", "code", "otp", "pin"))
+        for index, prompt in enumerate(request.prompts):
+            echo = request.echo[index] if index < len(request.echo) else None
+            is_secret = echo is False or (
+                echo is None
+                and any(word in prompt.lower() for word in ("password", "token", "code", "otp", "pin"))
+            )
             style = wx.TE_PASSWORD if is_secret else 0
             # Create dialog with appropriate style
             dlg = wx.TextEntryDialog(host, f"{request.instructions}\n\n{prompt}", request.title, style=style)
@@ -355,23 +377,14 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
         user = str(prof.get("username", ""))
         identity = f"{user}@{host_val}" if user and host_val else host_val or user or ""
         provider = ""
-        try:
-            provider = str((prof.get("system") or {}).get("provider", "") or (prof.get("provider_template") or {}).get("name", "") or (prof.get("system") or {}).get("name", "") or "")
-            if not provider and isinstance(prof.get("provider_template"), dict):
-                provider = str(prof["provider_template"].get("name") or prof["provider_template"].get("profile_id") or "")
-        except Exception:
-            provider = ""
+        provider = _provider_name(prof)
         detail_name.SetLabel(f"{t('login.profile_name_label')}: {name}" if t('login.profile_name_label') != "[login.profile_name_label]" else f"Profile: {name}")
         if identity:
             detail_host.SetLabel(f"{t('login.host')}: {identity}" if t('login.host') != "[login.host]" else f"Host: {identity}")
         else:
             detail_host.SetLabel("")
         if provider:
-            lbl = t("connection.provider") if t("connection.provider") != "[connection.provider]" else "Provider"
-            # Fallback to system_templates label
-            if lbl == "Provider" and t("connection.system_templates_menu") != "[connection.system_templates_menu]":
-                lbl = "Provider"
-            detail_provider.SetLabel(f"{lbl}: {provider}")
+            detail_provider.SetLabel(f"{t('connection.provider')}: {provider}")
         else:
             detail_provider.SetLabel("")
         detail_panel.Layout()
@@ -409,7 +422,7 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
             status.SetLabel(t("login.status_connecting"))
             active_label.SetLabel("")
         elif state == "failed":
-            status.SetLabel(t("common.error") + ": " + t("login.error") if t("login.error") != "[login.error]" else "Connection failed")
+            status.SetLabel(t("connection.status_failed"))
             active_label.SetLabel("")
         else:
             status.SetLabel(t("login.status_disconnected"))
@@ -435,8 +448,10 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
         add_button.SetLabel(t("login.add_connection"))
         edit_button.SetLabel(t("connection.edit_action"))
         duplicate_button.SetLabel(t("login.duplicate"))
-        delete_button.SetLabel(t("connection.delete_action") if t("connection.delete_action") != "[connection.delete_action]" else "Delete")
+        delete_button.SetLabel(t("connection.delete_action"))
         connect_button.SetLabel(t("login.connect_selected"))
+        profiles_label.SetLabel(t("connection.saved_profiles"))
+        detail_title.SetLabel(t("common.details"))
         _update_button_states()
         _update_detail()
         if model.controller.state.value == "connected":
@@ -590,7 +605,7 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
         else:
             prof = next((p for p in model.profiles if p.get("name") == initial_name), None)
             if not prof:
-                wx.MessageBox(f"Profile not found: {initial_name}", t("login.err_title"), wx.OK | wx.ICON_WARNING)
+                wx.MessageBox(t("connection.profile_not_found").format(name=initial_name), t("login.err_title"), wx.OK | wx.ICON_WARNING)
                 return
             if mode == "edit":
                 # Authorization check
@@ -605,29 +620,15 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
                         return val, result == wx.ID_OK
                     ask_master_edit = _master_ask_factory()
                     if not verify_edit_authorization(prof, ask_master=ask_master_edit, prompt_verify=prompt_verify):
-                        # verify function already shows error via None? Show generic failure if password mismatch
-                        # For keychain/dpapi failure we already returned False; show message
-                        # Check if it was due to wrong password (keychain/dpapi)
-                        if prof.get("password_keychain_ref") or prof.get("password_dpapi"):
-                            # Only show failure if verification attempted and mismatched
-                            # verify_edit_authorization returns False on mismatch or cancel; for cancel we shouldn't show error
-                            # To distinguish, we attempt to check if expected exists and prompt was ok but mismatch
-                            # Simpler: if prof has keychain and we got here, assume mismatch -> show warning
-                            # But if user cancelled, verify returns False without mismatch; we should not show extra
-                            # For now, only show when mismatch; we can detect via decrypt success but prompt mismatch is ambiguous.
-                            # Let's just show generic failure if profile had keychain/dpapi and verification failed without exception
-                            # Use a heuristic: show warning only if expected password existed
-                            from hpc_gui.services.connection_profile_service import decrypt_profile_password
-                            expected = decrypt_profile_password(prof, allow_prompt=False)
-                            if expected is not None:
-                                # Expected exists, so failure means mismatch
-                                wx.MessageBox(t("connection.edit_auth_failed"), t("login.err_title"), wx.OK | wx.ICON_WARNING)
-                        else:
-                            # master-encrypted failure already handled via None
-                            pass
+                        wx.MessageBox(t("connection.edit_auth_failed"), t("login.err_title"), wx.OK | wx.ICON_WARNING)
                         return
-                except Exception:
-                    pass
+                except Exception as exc:
+                    wx.MessageBox(
+                        t("connection.edit_auth_error").format(error=type(exc).__name__),
+                        t("login.err_title"),
+                        wx.OK | wx.ICON_ERROR,
+                    )
+                    return
                 initial_profile = prof
                 original_name = str(prof.get("name", ""))
             elif mode == "duplicate":
@@ -639,7 +640,8 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
                     return
                 initial_profile = duplicate
                 original_name = None
-                mode = "add"  # duplicate opens as add with copied values
+                # Keep duplicate mode so the shared dialog is still the only
+                # editor while its title/action semantics remain accurate.
 
         # Import dialog lazily to avoid circular
         try:
@@ -655,26 +657,27 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
         def on_save_and_connect(collected: dict[str, Any]) -> bool:
             if not _handle_save(collected, original_name=original_name):
                 return False
-            # After save, connect to the saved profile
+            # Save & Connect owns exactly one save, then starts the normal path.
             saved_name = str(collected.get("name", "")).strip() or str(collected.get("host", ""))
-            # Find saved profile live
             try:
-                live = _load_live_profiles()
-                target = next((p for p in live if p.get("name") == saved_name), None)
-                if not target:
-                    # fallback to collected
-                    target = collected
-                # Set selection and trigger connect
                 _refresh_list(select_name=saved_name)
-                # Trigger async connect
                 connect_selected(None)
-            except Exception:
-                pass
+            except Exception as exc:
+                wx.MessageBox(
+                    t("connection.connect_after_save_failed").format(error=type(exc).__name__),
+                    t("login.err_title"),
+                    wx.OK | wx.ICON_ERROR,
+                )
+                return False
             return True
 
-        dlg = WxConnectionDialog(host, initial_profile=initial_profile, mode=mode if mode != "add" or initial_profile is None else ("duplicate" if mode == "duplicate" else "add"), on_save=on_save, on_save_and_connect=on_save_and_connect)
-        # Check for external add override? If external_add is provided and mode is add, allow fallback?
-        # No, owned flow is primary; external is secondary
+        dlg = WxConnectionDialog(
+            host,
+            initial_profile=initial_profile,
+            mode=mode,
+            on_save=on_save,
+            on_save_and_connect=on_save_and_connect,
+        )
         try:
             result = dlg.ShowModal()
         finally:
@@ -684,18 +687,6 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
     def _add_connection(_event=None):
         # Owned Add – always available
         _open_dialog("add")
-        # Also allow external callback if injected (for legacy tests that inject fake add)
-        if external_add:
-            try:
-                try:
-                    external_add()
-                except TypeError:
-                    try:
-                        external_add(host)
-                    except TypeError:
-                        external_add(panel)
-            except Exception as error:
-                wx.MessageBox(str(error), t("login.err_title"), wx.OK | wx.ICON_ERROR)
 
     def _edit_selected(_event=None):
         _open_dialog("edit", choices.GetStringSelection())
@@ -765,7 +756,7 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
             _update_button_states()
             if error:
                 model.controller.fail()
-                status.SetLabel(t("common.error") if t("common.error") != "[common.error]" else "Error")
+                status.SetLabel(t("connection.status_failed"))
                 # Show useful error, never with secrets
                 try:
                     msg = str(error)
@@ -799,7 +790,7 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
         edit_item = menu.Append(wx.ID_ANY, t("connection.edit_action"))
         dup_item = menu.Append(wx.ID_ANY, t("login.duplicate"))
         menu.AppendSeparator()
-        del_item = menu.Append(wx.ID_ANY, t("connection.delete_action") if t("connection.delete_action") != "[connection.delete_action]" else "Delete")
+        del_item = menu.Append(wx.ID_ANY, t("connection.delete_action"))
         def on_menu_connect(_e): connect_selected()
         def on_menu_edit(_e): _edit_selected()
         def on_menu_dup(_e): _duplicate_selected()
@@ -820,8 +811,22 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
     edit_button.Bind(wx.EVT_BUTTON, _edit_selected)
     duplicate_button.Bind(wx.EVT_BUTTON, _duplicate_selected)
     delete_button.Bind(wx.EVT_BUTTON, _delete_selected)
-    # Also bind right-click listbox context via mouse event for reliability
-    choices.Bind(wx.EVT_RIGHT_DOWN, lambda e: (on_context_menu(e), e.Skip()))
+    # Retarget the selection before opening the menu when the user right-clicks
+    # a different row; visible buttons and menu actions share the same handlers.
+    def on_right_down(event):
+        try:
+            index = choices.HitTest(event.GetPosition())
+            if isinstance(index, tuple):
+                index = index[0]
+            if isinstance(index, int) and index != wx.NOT_FOUND:
+                choices.SetSelection(index)
+                select(None)
+        except (AttributeError, TypeError):
+            pass
+        on_context_menu(event)
+        event.Skip()
+
+    choices.Bind(wx.EVT_RIGHT_DOWN, on_right_down)
 
     subscribe_language_change(refresh_labels)
     host.bind_host_close(lambda event: (unsubscribe_language_change(refresh_labels), event.Skip()))
@@ -853,14 +858,13 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
     host._wx_connection_delete_button = delete_button
     host._wx_connection_model = model
     host._wx_connection_refresh = _refresh_list
+    host._wx_connection_open_dialog = _open_dialog
     finish()
     return host
 
 
 def build_connection_panel(parent, profiles=None, *, connect=None, lifecycle=None, on_connected=None, add_connection=None, **kwargs):
     """Embedded panel factory. Returns the wx.Panel host."""
-    if add_connection is None:
-        add_connection = kwargs.get("add_connection") or kwargs.get("on_add_connection")
     return _build_connection(parent, profiles, connect=connect, lifecycle=lifecycle, on_connected=on_connected, embedded=True, add_connection=add_connection, **kwargs)
 
 
@@ -869,8 +873,6 @@ def show_connection(parent=None, profiles=None, *, connect=None, lifecycle=None,
         import wx
     except ImportError as exc:
         raise RuntimeError("wxPython is not installed") from exc
-    if add_connection is None:
-        add_connection = kwargs.get("add_connection") or kwargs.get("on_add_connection")
     _build_connection(parent, profiles, connect=connect, lifecycle=lifecycle, on_connected=on_connected, embedded=False, add_connection=add_connection, **kwargs)
     return wx.ID_OK
 

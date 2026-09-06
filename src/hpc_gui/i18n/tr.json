@@ -898,7 +898,16 @@
     "jump_error_connect": "Jump sunucusuna bağlanılamadı. Adresi, portu ve ağ yolunu kontrol edin.",
     "jump_error_auth": "Jump sunucuda kimlik doğrulama başarısız. Bu sürüm jump için SSH anahtarı veya ajan bekler.",
     "jump_error_forwarding": "Jump sunucu hedefe yönlendirmeyi reddetti (direct-tcpip reddedildi). Yöneticiyle görüşün veya doğrudan bağlantı kullanın.",
-    "test_cluster": "Kümeyi Test Et"
+    "test_cluster": "Kümeyi Test Et",
+    "saved_profiles": "Kayıtlı profiller",
+    "status_failed": "Bağlantı başarısız",
+    "profile_not_found": "\"{name}\" profili bulunamadı.",
+    "edit_auth_error": "Profil düzenleme için doğrulanamadı ({error}).",
+    "connect_after_save_failed": "Profil kaydedildi ancak bağlantı başarısız ({error}).",
+    "required_field": "Bu sağlayıcı için {field} gereklidir.",
+    "cluster_test_running": "Test ediliyor...",
+    "cluster_test_failed": "Küme testi başarısız ({error}).",
+    "storage_enabled": "Etkin"
   },
   "cluster_self_test": {
     "title": "Küme Öz Testi",

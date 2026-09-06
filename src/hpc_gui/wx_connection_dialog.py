@@ -21,7 +21,7 @@ from hpc_gui.config.system_profile import (
     normalize_system_settings,
     save_user_system_template,
 )
-from hpc_gui.core.i18n import t
+from hpc_gui.core.i18n import subscribe_language_change, t, unsubscribe_language_change
 from hpc_gui.plugins.models import validate_storage_area, validate_storage_policy
 from hpc_gui.plugins.templates import installed_cluster_template_groups
 from hpc_gui.services.quota_monitor import quota_gate
@@ -62,9 +62,7 @@ def _show_storage_area_dialog(parent, existing: dict[str, Any] | None = None) ->
         ctx_choice.SetSelection(contexts.index(cur_ctx))
     else:
         ctx_choice.SetSelection(3)
-    enabled_cb = wx.CheckBox(dlg, label=t("common.ok") if t("common.ok") != "[common.ok]" else "Enabled")
-    # Use explicit label for enabled; fallback to English if key missing
-    enabled_cb.SetLabel("Enabled" if t("common.ok") == "[common.ok]" or True else t("common.ok"))
+    enabled_cb = wx.CheckBox(dlg, label=t("connection.storage_enabled"))
     enabled_cb.SetValue(bool((existing or {}).get("enabled", True)) if isinstance((existing or {}).get("enabled"), bool) else True)
     # Backup policy
     backup_choices = [t("connection.storage_unknown"), t("connection.storage_yes"), t("connection.storage_no")]
@@ -96,7 +94,7 @@ def _show_storage_area_dialog(parent, existing: dict[str, Any] | None = None) ->
     add_row("connection.storage_kind", kind_choice)
     add_row("connection.storage_access_context", ctx_choice)
     # Enabled row
-    enabled_label = wx.StaticText(dlg, label="Enabled")
+    enabled_label = wx.StaticText(dlg, label=t("connection.storage_enabled"))
     form.Add(enabled_label, 0, wx.ALIGN_CENTER_VERTICAL)
     form.Add(enabled_cb, 0, wx.ALIGN_CENTER_VERTICAL)
     add_row("connection.storage_backup", backup_choice)
@@ -224,10 +222,12 @@ class WxConnectionDialog:
         self._initial_profile: dict[str, Any] = dict(initial_profile or {})
         self._on_save = on_save
         self._on_save_and_connect = on_save_and_connect
+        provider_template = self._initial_profile.get("provider_template")
+        if not isinstance(provider_template, dict):
+            system = self._initial_profile.get("system")
+            provider_template = system.get("provider_template") if isinstance(system, dict) else None
         self._provider_template: dict[str, Any] | None = (
-            deepcopy(self._initial_profile.get("provider_template"))
-            if isinstance(self._initial_profile.get("provider_template"), dict)
-            else None
+            deepcopy(provider_template) if isinstance(provider_template, dict) else None
         )
         source = self._initial_profile.get("system_template_source")
         self._system_template_source: dict[str, str] | None = (
@@ -237,12 +237,15 @@ class WxConnectionDialog:
         if self._provider_template is not None and self._provider_origin is None:
             self._provider_origin = "local"
         self._template_action_taken = False
+        self._quota_source_declared = False
         self._legacy_storage_snapshot: dict[str, str] = {}
         self._keepalive_default = coerce_keepalive_interval(self._initial_profile.get("keepalive_interval_seconds", 30))
         self._transfer_parallelism_default = coerce_profile_transfer_parallelism(self._initial_profile.get("transfer_parallelism", 1))
         self._ssh_timeout_default = coerce_profile_ssh_timeout(self._initial_profile.get("ssh_timeout"))
 
         self._build_dialog()
+        self._language_callback = self.retranslate_ui
+        subscribe_language_change(self._language_callback)
 
     # -- UI construction -----------------------------------------------------
 
@@ -343,20 +346,10 @@ class WxConnectionDialog:
         auth_grid.Add(wx.StaticText(scrolled, label=""), 0)
         auth_grid.Add(self.cb_save_password, 0, wx.ALIGN_CENTER_VERTICAL)
         # Prompt policy radios
-        self.rb_prompt_when_needed = wx.RadioButton(scrolled, label=t("connection.password_no_prompt") if False else "Ask when needed", style=wx.RB_GROUP)
+        self.rb_prompt_when_needed = wx.RadioButton(scrolled, label=t("connection.password_prompt_when_needed"), style=wx.RB_GROUP)
         # Qt uses two checkboxes: save password enables edit-only; we'll use radios similarly
         # Actually map: rb.when-needed = Ask when needed (default), rb.edit-only = Do not ask while connecting if secure system storage is available
-        self.rb_prompt_when_needed.SetLabel("Ask when needed")
-        # Try i18n for those; fallback to explicit English for now plus TR keys exist for edit-only
-        # We'll set labels via t()
-        try:
-            # Use existing keys: connection.password_edit_only_tip etc but radio labels should be short
-            # We'll use connection.password_no_prompt for edit-only variant text
-            # Provide readable labels
-            self.rb_prompt_when_needed.SetLabel(t("connection.password_prompt_when_needed") if t("connection.password_prompt_when_needed") != "[connection.password_prompt_when_needed]" else "Ask when needed")
-        except Exception:
-            pass
-        self.rb_prompt_edit_only = wx.RadioButton(scrolled, label=t("connection.password_no_prompt") if t("connection.password_no_prompt") != "[connection.password_no_prompt]" else "Do not ask while connecting if secure system storage is available")
+        self.rb_prompt_edit_only = wx.RadioButton(scrolled, label=t("connection.password_no_prompt"))
         # Layout radios vertically
         radio_sizer = wx.BoxSizer(wx.VERTICAL)
         radio_sizer.Add(self.rb_prompt_when_needed, 0, wx.BOTTOM, 4)
@@ -514,6 +507,7 @@ class WxConnectionDialog:
         self.jump_key_path_ctrl = wx.TextCtrl(self.advanced_panel)
         self.jump_key_path_ctrl.SetHint(t("connection.jump_ssh_key"))
         btn_jump_browse = wx.Button(self.advanced_panel, label=t("login.browse"))
+        self.btn_jump_browse = btn_jump_browse
         jump_key_row = wx.BoxSizer(wx.HORIZONTAL)
         jump_key_row.Add(self.jump_key_path_ctrl, 1, wx.EXPAND | wx.RIGHT, 8)
         jump_key_row.Add(btn_jump_browse, 0)
@@ -682,14 +676,57 @@ class WxConnectionDialog:
             pass
 
     def _set_jump_children_enabled(self, enabled: bool) -> None:
-        for ctrl in (self.jump_host_ctrl, self.sp_jump_port, self.jump_username_ctrl, self.jump_key_path_ctrl, self.cb_jump_host_key_policy):
+        for ctrl in (
+            self.jump_host_ctrl,
+            self.sp_jump_port,
+            self.jump_username_ctrl,
+            self.jump_key_path_ctrl,
+            self.btn_jump_browse,
+            self.cb_jump_host_key_policy,
+        ):
             ctrl.Enable(enabled)
-        # Also browse button is inside sizer but we handle via its parent row; disabling key_path implies browse disabled logically but keep enabled for UI consistency
-        # Find browse button via parent traversal not needed; we keep key path disable sufficient
 
     def _on_save_password_toggle(self, checked: bool) -> None:
         self.rb_prompt_when_needed.Enable(checked)
         self.rb_prompt_edit_only.Enable(checked)
+
+    def retranslate_ui(self, _language: str | None = None) -> None:
+        """Refresh labels that can change while this modal is open."""
+        wx = self._wx
+        self.dlg.SetTitle({
+            "add": t("connection.dialog_title"),
+            "edit": t("connection.edit_dialog_title"),
+            "duplicate": t("login.duplicate"),
+        }.get(self.mode, t("connection.dialog_title")))
+        self.btn_system_templates.SetLabel(t("connection.system_templates_menu"))
+        self.btn_save_system_template.SetLabel(t("connection.save_system_template"))
+        self.rb_prompt_when_needed.SetLabel(t("connection.password_prompt_when_needed"))
+        self.rb_prompt_edit_only.SetLabel(t("connection.password_no_prompt"))
+        self.cb_save_password.SetLabel(t("login.save_password"))
+        self.cluster_toggle.SetLabel(
+            f"{t('connection.system_settings')}  {'▼' if self.cluster_toggle.GetValue() else '▶'}"
+        )
+        self.advanced_toggle.SetLabel(
+            f"{t('connection.advanced_settings')}  {'▼' if self.advanced_toggle.GetValue() else '▶'}"
+        )
+        for button, key in (
+            (self.btn_storage_add, "connection.storage_add"),
+            (self.btn_storage_edit, "connection.storage_edit"),
+            (self.btn_storage_remove, "connection.storage_remove"),
+            (self.btn_test_cluster, "connection.test_cluster"),
+            (self.btn_cancel, "common.cancel"),
+            (self.btn_save, "connection.save"),
+            (self.btn_save_connect, "connection.save_and_connect"),
+        ):
+            button.SetLabel(t(key))
+        self.quota_enabled_cb.SetLabel(t("connection.quota_enable"))
+        self.quota_consent_cb.SetLabel(t("connection.quota_consent"))
+        self.quota_command_ctrl.SetHint(t("connection.quota_command"))
+        self.quota_scope_ctrl.SetHint(t("connection.quota_scope"))
+        self.quota_subject_ctrl.SetHint(t("connection.quota_subject"))
+        self._update_provider_labels()
+        self._update_quota_status()
+        self.dlg.Layout()
 
     def _pick_key(self, target: Any) -> None:
         dlg = self._wx.FileDialog(self.dlg, t("login.ssh_key"), style=self._wx.FD_OPEN | self._wx.FD_FILE_MUST_EXIST)
@@ -735,6 +772,10 @@ class WxConnectionDialog:
             self.provider_info.SetLabel("")
 
     def _update_quota_status(self) -> None:
+        if not self._quota_source_declared:
+            self.quota_status_label.SetLabel(t("connection.quota_status_unconfigured"))
+            self.quota_status_label.Wrap(500)
+            return
         state = quota_gate(
             {
                 "enabled": self.quota_enabled_cb.GetValue(),
@@ -811,14 +852,12 @@ class WxConnectionDialog:
         menu.AppendSeparator()
         more = menu.Append(wx.ID_ANY, t("connection.get_more_plugins"))
         def _more_handler(evt):
-            # Route to plugin manager via callback if parent has shell; otherwise just show info
             try:
-                # Try to dispatch through parent frame if it exposes plugin browse
-                # For tests, this is a no-op but must not raise.
-                pass
-            except Exception:
-                pass
-            wx.MessageBox(t("connection.get_more_plugins"), t("common.info"), wx.OK | wx.ICON_INFORMATION)
+                from hpc_gui.wx_plugins_view import show_plugins
+
+                show_plugins(parent=self.dlg)
+            except (ImportError, RuntimeError) as exc:
+                wx.MessageBox(str(exc), t("common.error"), wx.OK | wx.ICON_ERROR)
         self.dlg.Bind(wx.EVT_MENU, _more_handler, more)
 
         # Popup
@@ -880,6 +919,7 @@ class WxConnectionDialog:
     def _load_quota_widgets(self) -> None:
         sources = (self._provider_template or {}).get("quota_sources", [])
         source = sources[0] if isinstance(sources, list) and sources and isinstance(sources[0], dict) else {}
+        self._quota_source_declared = bool(source)
         self.quota_enabled_cb.SetValue(source.get("enabled") is True)
         self.quota_consent_cb.SetValue(source.get("consent") is True)
         backend_id = str(source.get("backend_id") or "").strip()
@@ -917,9 +957,20 @@ class WxConnectionDialog:
         self.quota_scope_ctrl.SetValue(str(source.get("scope") or ""))
         self.quota_subject_ctrl.SetValue(str(source.get("subject_template") or ""))
         local = self._provider_origin == "local"
+        supported = self._quota_source_declared
+        for ctrl in (
+            self.quota_enabled_cb,
+            self.quota_consent_cb,
+            self.quota_backend_choice,
+            self.quota_command_ctrl,
+            self.quota_scope_ctrl,
+            self.quota_subject_ctrl,
+        ):
+            ctrl.Enable(supported)
+        self.quota_command_label.Enable(supported)
         # Hide quota command/scope/subject when local without backend? Mirror Qt: when local, hide those
         for ctrl in (self.quota_command_label, self.quota_command_ctrl,):
-            ctrl.Show(not local)
+            ctrl.Show(supported and not local)
         # Use 2-col handling: scope/subject labels need to be shown/hidden too
         # For simplicity, disable instead of hide for scope/subject when local
         if local:
@@ -950,7 +1001,12 @@ class WxConnectionDialog:
 
     def _system_form_values(self) -> dict[str, Any]:
         self._sync_structured_editor()
-        values: dict[str, Any] = {
+        values: dict[str, Any] = deepcopy(
+            self._initial_profile.get("system")
+            if isinstance(self._initial_profile.get("system"), dict)
+            else {}
+        )
+        values.update({
             "name": self.system_name_ctrl.GetValue().strip(),
             "scratch_dir": self.scratch_dir_ctrl.GetValue().strip(),
             "home_dir": self.home_dir_ctrl.GetValue().strip(),
@@ -962,7 +1018,7 @@ class WxConnectionDialog:
             "status_command": self.status_cmd_ctrl.GetValue().strip(),
             "active_job_ids_command": self.active_job_ids_ctrl.GetValue().strip(),
             "job_state_command": self.job_state_ctrl.GetValue().strip(),
-        }
+        })
         if self._provider_template is not None:
             values["provider_template"] = {k: v for k, v in self._provider_template.items()}
         return values
@@ -982,12 +1038,16 @@ class WxConnectionDialog:
             self._legacy_storage_snapshot[key] = current
 
     def _sync_structured_editor(self) -> None:
-        feature_used = bool(getattr(self, "storage_rows", [])) or self.quota_enabled_cb.GetValue()
-        feature_used = feature_used or bool(self.quota_scope_ctrl.GetValue().strip())
-        feature_used = feature_used or bool(self.quota_subject_ctrl.GetValue().strip())
+        feature_used = bool(getattr(self, "storage_rows", []))
+        quota_used = self._quota_source_declared and (
+            self.quota_enabled_cb.GetValue()
+            or bool(self.quota_scope_ctrl.GetValue().strip())
+            or bool(self.quota_subject_ctrl.GetValue().strip())
+        )
+        feature_used = feature_used or quota_used
         # Check backend selection non-empty
         sel = self.quota_backend_choice.GetStringSelection() if self.quota_backend_choice.GetSelection() != self._wx.NOT_FOUND else ""
-        if sel and sel != t("connection.quota_status_unconfigured"):
+        if self._quota_source_declared and sel and sel != t("connection.quota_status_unconfigured"):
             feature_used = True
         if self._provider_template is None and not feature_used:
             return
@@ -1006,7 +1066,9 @@ class WxConnectionDialog:
         self._provider_template["storage"] = [dict(row) for row in getattr(self, "storage_rows", [])]
         sources = self._provider_template.get("quota_sources")
         preserved = [dict(item) for item in sources if isinstance(item, dict)] if isinstance(sources, list) else []
-        source = dict(preserved[0]) if preserved else {"id": "local-quota"}
+        if not self._quota_source_declared:
+            return
+        source = dict(preserved[0])
         backend_sel = self.quota_backend_choice.GetStringSelection() if self.quota_backend_choice.GetSelection() != self._wx.NOT_FOUND else ""
         if backend_sel == t("connection.quota_status_unconfigured"):
             backend_sel = ""
@@ -1222,16 +1284,19 @@ class WxConnectionDialog:
                 "host_key_policy": "strict" if self.cb_jump_host_key_policy.GetSelection() == 1 else "accept-new",
             },
         )
-        # Provider-required project/account validation decoratively via provider metadata
-        provider_meta = profile.get("system", {}).get("provider_template") if isinstance(profile.get("system"), dict) else profile.get("provider_template")
-        if provider_meta is None:
-            provider_meta = self._provider_template
+        # Provider-required project/account validation comes only from the
+        # declarative template selected for this profile.
+        provider_meta = self._provider_template
         if isinstance(provider_meta, dict):
             requirements = provider_meta.get("requirements", {}) if isinstance(provider_meta.get("requirements"), dict) else {}
             for key, ctrl, label in (("project", self.project_ctrl, self.project_label), ("account", self.account_ctrl, self.account_label)):
                 rule = requirements.get(key) if isinstance(requirements, dict) else None
                 if isinstance(rule, dict) and rule.get("required") and not ctrl.GetValue().strip():
-                    wx.MessageBox(f"{label.GetLabel().rstrip(' *')} is required for this provider.", t("login.err_title"), wx.OK | wx.ICON_WARNING)
+                    wx.MessageBox(
+                        t("connection.required_field").format(field=label.GetLabel().rstrip(" *")),
+                        t("login.err_title"),
+                        wx.OK | wx.ICON_WARNING,
+                    )
                     ctrl.SetFocus()
                     return None
         # Fallback name handling
@@ -1251,55 +1316,63 @@ class WxConnectionDialog:
             return
         if self._on_save is not None and not self._on_save(profile):
             return
-        self.dlg.EndModal(wx.ID_OK)
+        self.dlg.EndModal(self._wx.ID_OK)
 
     def _save_and_connect_clicked(self) -> None:
         profile = self._collect_profile()
         if profile is None:
             return
-        if self._on_save is not None and not self._on_save(profile):
+        callback = self._on_save_and_connect or self._on_save
+        if callback is not None and not callback(profile):
             return
-        if self._on_save_and_connect is not None and not self._on_save_and_connect(profile):
-            return
-        self.dlg.EndModal(wx.ID_OK)
+        self.dlg.EndModal(self._wx.ID_OK)
 
     def _test_cluster(self) -> None:
         profile = self._collect_profile()
         if profile is None:
             return
-        # wx-native adapter for shared self-test; keep async to not freeze GUI
-        try:
-            from hpc_gui.services.cluster_self_test import run_cluster_self_test
-            from hpc_gui.ssh.client import SSHConnInfo
-            from hpc_gui.config.storage import load_settings
-            # Build minimal SSHConnInfo from profile; password not needed for dry probe
-            info = SSHConnInfo(
-                host=str(profile.get("host", "")),
-                port=int(profile.get("port", 22)),
-                username=str(profile.get("username", "")),
-                password=str(profile.get("password", "")),
-                key_path=str(profile.get("key_path", "")),
-                host_key_policy=str(profile.get("host_key_policy", "accept-new")),
-                x11_forwarding=bool(profile.get("x11_forwarding", False)),
-                timeout=coerce_profile_ssh_timeout(profile.get("ssh_timeout")),
-                keepalive_interval_seconds=coerce_keepalive_interval(profile.get("keepalive_interval_seconds", 30)),
-            )
-            provider = profile.get("provider_template") or profile.get("system", {}).get("provider_template") if isinstance(profile.get("system"), dict) else None
-            # Show simple running dialog then execute sync for now (bounded)
-            # For real implementation this would be threaded; here we run directly with mocked factories in tests
-            result = run_cluster_self_test(info, provider=provider, project=str(profile.get("project", "")), account=str(profile.get("account", "")))
-            # Present results in a wx dialog
-            self._show_self_test_result(result)
-        except Exception as exc:
-            self._wx.MessageBox(str(exc), t("common.error"), self._wx.OK | self._wx.ICON_ERROR)
+        if not self.btn_test_cluster.IsEnabled():
+            return
+        self.btn_test_cluster.Enable(False)
+        self.btn_test_cluster.SetLabel(t("connection.cluster_test_running"))
+
+        def worker() -> None:
+            try:
+                from hpc_gui.services.cluster_self_test import run_cluster_self_test
+                from hpc_gui.wx_connection import WxConnectionModel, ssh_info_from_profile
+
+                info = ssh_info_from_profile(profile, WxConnectionModel())
+                result = run_cluster_self_test(
+                    info,
+                    provider=self._provider_template,
+                    project=str(profile.get("project", "")),
+                    account=str(profile.get("account", "")),
+                )
+                self._wx.CallAfter(self._show_self_test_result, result)
+            except Exception as exc:
+                self._wx.CallAfter(self._show_self_test_error, type(exc).__name__)
+
+        import threading
+        threading.Thread(target=worker, daemon=True).start()
+
+    def _show_self_test_error(self, error_type: str) -> None:
+        self.btn_test_cluster.Enable(True)
+        self.btn_test_cluster.SetLabel(t("connection.test_cluster"))
+        self._wx.MessageBox(
+            t("connection.cluster_test_failed").format(error=error_type),
+            t("common.error"),
+            self._wx.OK | self._wx.ICON_ERROR,
+        )
 
     def _show_self_test_result(self, result) -> None:
         wx = self._wx
-        dlg = wx.Dialog(self.dlg, title=t("cluster_self_test.title") if t("cluster_self_test.title") != "[cluster_self_test.title]" else "Cluster Self-Test", style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER)
+        self.btn_test_cluster.Enable(True)
+        self.btn_test_cluster.SetLabel(t("connection.test_cluster"))
+        dlg = wx.Dialog(self.dlg, title=t("cluster_self_test.title"), style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER)
         dlg.SetMinSize(wx.Size(500, 400))
         sizer = wx.BoxSizer(wx.VERTICAL)
         # Summary
-        status_label = wx.StaticText(dlg, label=t("cluster_self_test.summary").format(status=result.status) if t("cluster_self_test.summary") != "[cluster_self_test.summary]" else f"Result: {result.status}")
+        status_label = wx.StaticText(dlg, label=t("cluster_self_test.summary").format(status=result.status))
         status_label.Wrap(480)
         sizer.Add(status_label, 0, wx.EXPAND | wx.ALL, 12)
         # Sections
@@ -1324,6 +1397,7 @@ class WxConnectionDialog:
         return self.dlg.ShowModal()
 
     def Destroy(self) -> None:
+        unsubscribe_language_change(self._language_callback)
         self.dlg.Destroy()
 
     def GetDialog(self):

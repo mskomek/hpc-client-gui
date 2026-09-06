@@ -1027,6 +1027,7 @@ def _build_local_files(parent, path: str | Path | None = None, *, open_editor=No
     # keep listing pointing to active (preserve contract) plus new buttons
     host._wx_local_controls = {"listing": initial["listing"], "notebook": notebook, "path": path_ctrl, "refresh_btn": btn_refresh, "btn_drives": btn_drives, "btn_back": btn_back, "btn_parent": btn_parent, "btn_refresh": btn_refresh}
     host._wx_local_model = model
+    host._wx_local_refresh = refresh
     host._wx_local_state = state
     host._wx_local_run_action = run_action
     host._wx_local_tabs = tabs
