@@ -118,8 +118,15 @@ def _run_mock_startup(app, wx) -> None:
 def main() -> int:
     import wx
 
-    app = wx.App(False)
-    _run_mock_startup(app, wx)
+    # wx registers a few built-in handlers more than once on Windows; these
+    # startup-only warnings are harmless and should not pollute the console.
+    old_logging = wx.Log.IsEnabled()
+    wx.Log.EnableLogging(False)
+    try:
+        app = wx.App(False)
+        _run_mock_startup(app, wx)
+    finally:
+        wx.Log.EnableLogging(old_logging)
     app.MainLoop()
     return 0
 

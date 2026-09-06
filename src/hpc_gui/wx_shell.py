@@ -141,35 +141,19 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
     frame.Bind(wx.EVT_MENU, lambda _e: _dispatch("APP-ABOUT", frame, lifecycle, session_state), act_about)
     help_items["about"] = act_about
     menubar.Append(help_menu, t("menu.help"))
+    language_menu = wx.Menu()
+    language_items = {}
+    for language, key in (("en", "english"), ("tr", "turkish")):
+        item = language_menu.AppendRadioItem(wx.ID_ANY, t(f"language.{key}"))
+        item.Check(current_language() == language)
+        language_items[language] = item
+        frame.Bind(wx.EVT_MENU, lambda _event, language=language: set_language(language), item)
+    menubar.Append(language_menu, t("help.language"))
+    version_menu = wx.Menu()
+    version_item = version_menu.Append(wx.ID_ANY, f"v{__version__}")
+    version_item.Enable(False)
+    menubar.Append(version_menu, f"v{__version__}")
     frame.SetMenuBar(menubar)
-    # --- Compact utility row below menubar (language + version plain text) ---
-    utility = wx.Panel(panel)
-    utility.SetBackgroundColour(panel.GetBackgroundColour())
-    usizer = wx.BoxSizer(wx.HORIZONTAL)
-    usizer.AddStretchSpacer(1)
-    # Language selector compact
-    lang_choice = wx.Choice(utility, choices=[t("language.english"), t("language.turkish")])
-    try:
-        cur_lang = current_language()
-        lang_choice.SetSelection(1 if cur_lang == "tr" else 0)
-    except Exception:
-        lang_choice.SetSelection(0)
-    def _on_lang_choice(evt):
-        sel = lang_choice.GetSelection()
-        set_language("tr" if sel == 1 else "en")
-    lang_choice.Bind(wx.EVT_CHOICE, _on_lang_choice)
-    usizer.Add(lang_choice, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 4)
-    version_text = wx.StaticText(utility, label=f"v{__version__}")
-    version_text.SetForegroundColour(wx.Colour(85, 85, 85))
-    try:
-        font = version_text.GetFont()
-        font.SetWeight(wx.FONTWEIGHT_BOLD)
-        version_text.SetFont(font)
-    except Exception:
-        pass
-    usizer.Add(version_text, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 4)
-    utility.SetSizer(usizer)
-    root.Add(utility, 0, wx.EXPAND)
     # Keep references for refresh
     frame._wx_shell_menubar = menubar
     frame._wx_shell_menu_menu = menu_menu
@@ -178,13 +162,8 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
     frame._wx_shell_menu_items = menu_items
     frame._wx_shell_help_items = help_items
     frame._wx_shell_plugins_before = sep_plugins_bottom
-    frame._wx_shell_lang_choice = lang_choice
-    frame._wx_shell_version_text = version_text
     # For compatibility with old tests that check COMMAND_REGISTRY usage, keep dummy but not dumping
     command_items = []  # no longer dumping all shell commands under Help
-    language_items = {}  # language now handled via choice in utility row
-    language_menu = wx.Menu()  # dummy for test compatibility
-    version_menu = wx.Menu()
     notebook = wx.Notebook(panel)
     page_controls = {}
 
@@ -663,6 +642,8 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
             menubar.SetMenuLabel(0, t("menu.menu"))
             menubar.SetMenuLabel(1, t("menu.plugins"))
             menubar.SetMenuLabel(2, t("menu.help"))
+            menubar.SetMenuLabel(3, t("help.language"))
+            menubar.SetMenuLabel(4, f"v{__version__}")
             # Update menu items
             if act_settings:
                 menubar.SetLabel(act_settings.GetId(), t("menu.settings"))
@@ -688,15 +669,6 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
                 tour_act = help_items.get("tour")
                 if tour_act:
                     menubar.SetLabel(tour_act.GetId(), t("menu.quick_tour"))
-            except Exception:
-                pass
-            # Update utility row language choice
-            try:
-                cur = current_language()
-                lang_choice.SetString(0, t("language.english"))
-                lang_choice.SetString(1, t("language.turkish"))
-                lang_choice.SetSelection(1 if cur == "tr" else 0)
-                version_text.SetLabel(f"v{__version__}")
             except Exception:
                 pass
             # Refresh dynamic plugin menu labels without restart
@@ -1239,11 +1211,8 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
         lifecycle.set_tray_notifier(tray.notify)
         lifecycle.register_cleanup(destroy_tray)
 
-    # Backward compat dummy variables for old control dict
+    # Backward compat aliases for old control dict
     menu = menu_menu
-    language_menu = wx.Menu()
-    language_items = {}
-    version_menu = wx.Menu()
     command_items = []
     frame._wx_shell_controls = {"menu": menu, "language_menu": language_menu, "language_items": language_items, "version_menu": version_menu, "notebook": notebook, "pages": page_controls}
     frame._wx_shell_chrome_windows = chrome_windows
