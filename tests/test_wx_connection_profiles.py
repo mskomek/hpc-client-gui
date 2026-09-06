@@ -73,26 +73,31 @@ def test_wx_add_opens_dialog(monkeypatch):
         from unittest.mock import patch as mock_patch
 
         frame = wx.Frame(None)
-        # Patch dialog to avoid actually showing
-        called = {}
+        called = {"ctor": 0, "show": 0, "destroy": 0}
 
         class FakeDialog:
             def __init__(self, *a, **kw):
+                called["ctor"] += 1
                 called["opened"] = True
             def ShowModal(self):
+                called["show"] += 1
                 return wx.ID_CANCEL
             def Destroy(self):
-                pass
+                called["destroy"] += 1
 
         with mock_patch("hpc_gui.wx_connection_dialog.WxConnectionDialog", FakeDialog):
             host = build_connection_panel(frame, profiles=[])
             add_btn = host._wx_connection_add_button
-            # Simulate click event
+            assert add_btn.IsEnabled(), "Add must be enabled in normal startup"
+            # Dispatch real wx button event -> production Add handler -> dialog
             evt = wx.CommandEvent(wx.EVT_BUTTON.typeId, add_btn.GetId())
             add_btn.GetEventHandler().ProcessEvent(evt)
-            wx.Yield()
-            # The fake dialog should have been opened via the handler
-            assert called.get("opened") is True or True  # if handler uses lazy import, ensure Add path is wired
+            for _ in range(5):
+                wx.Yield()
+            assert called.get("opened") is True
+            assert called["ctor"] == 1, "dialog constructor called exactly once"
+            assert called["show"] == 1, "ShowModal called exactly once"
+            assert called["destroy"] == 1, "Destroy called exactly once"
         frame.Destroy()
         for _ in range(3):
             wx.Yield()
@@ -813,24 +818,126 @@ def test_action_enable_disable_states(monkeypatch):
         assert ctrls2["duplicate"].IsEnabled()
         assert ctrls2["delete"].IsEnabled()
         assert ctrls2["connect"].IsEnabled()
-        # Connecting -> conflicting disabled (simulate)
-        model = host2._wx_connection_model
-        model.controller.begin_connect()
-        # Need to update button states via internal helper – trigger via refresh
-        # Directly call handler that disables? We check that during connecting, Add is disabled? Actually spec says keep Add enabled unless modal; but during worker we disable Add
-        # Simulate worker disable
-        ctrls2["add_connection"].Disable()
-        assert not ctrls2["add_connection"].IsEnabled()
-        # After done, restore
-        ctrls2["add_connection"].Enable(True)
-        assert ctrls2["add_connection"].IsEnabled()
-        # Ensure Add never remains permanently disabled after failure
-        model.controller.fail()
-        # After fail, Add should be enabled again via _update_button_states logic (we can call refresh)
-        # For this test, manually ensure enabled
-        ctrls2["add_connection"].Enable(True)
-        assert ctrls2["add_connection"].IsEnabled()
+        # Do not manually Disable/Enable – production handler must control states
         frame.Destroy()
+        for _ in range(3):
+            wx.Yield()
+    finally:
+        tmp.cleanup()
+
+
+def test_action_states_during_connection_and_recovery(monkeypatch):
+    """Real production Add/Connect event chain proves button states without manual manipulation."""
+    tmp = _isolated_storage(monkeypatch)
+    try:
+        from hpc_gui.core.i18n import load_language
+        load_language("en")
+        app = wx.App.Get() or wx.App(False)
+        from hpc_gui.wx_connection import build_connection_panel
+        import threading
+
+        storage.upsert_profile({"name": "p1", "host": "h.example", "port": 22, "username": "user"})
+        frame = wx.Frame(None)
+        host = build_connection_panel(frame, profiles=load_profiles())
+        ctrls = host._wx_connection_controls
+        choices = ctrls["choices"]
+        connect_btn = ctrls["connect"]
+        edit_btn = ctrls["edit"]
+        duplicate_btn = ctrls["duplicate"]
+        delete_btn = ctrls["delete"]
+        add_btn = ctrls["add_connection"]
+        status = ctrls["status"] if "status" in ctrls else host._wx_connection_controls["status"]
+        # Select
+        choices.SetStringSelection("p1")
+        evt = wx.CommandEvent(wx.EVT_LISTBOX.typeId, choices.GetId())
+        choices.GetEventHandler().ProcessEvent(evt)
+        for _ in range(3):
+            wx.Yield()
+        assert edit_btn.IsEnabled() and connect_btn.IsEnabled()
+        # Blocking connector
+        block = threading.Event()
+        called = {"connected": 0}
+
+        def blocking_connect(profile):
+            called["connected"] += 1
+            block.wait(timeout=5)
+            return {"connected": True, "profile_name": profile.get("name", "")}
+
+        host._wx_connection_model._connect = blocking_connect
+        # Trigger Connect via real button event
+        evt2 = wx.CommandEvent(wx.EVT_BUTTON.typeId, connect_btn.GetId())
+        connect_btn.GetEventHandler().ProcessEvent(evt2)
+        # Allow worker to start and disable buttons
+        for _ in range(10):
+            wx.Yield()
+            wx.MilliSleep(20)
+        # While blocked, production handler must have disabled conflicting actions
+        assert not connect_btn.IsEnabled(), "Connect must be disabled while connecting"
+        assert not edit_btn.IsEnabled(), "Edit must be disabled while connecting"
+        assert not duplicate_btn.IsEnabled(), "Duplicate must be disabled while connecting"
+        assert not delete_btn.IsEnabled(), "Delete must be disabled while connecting"
+        assert not add_btn.IsEnabled(), "Add must be disabled while connecting per product contract"
+        assert "Connecting" in status.GetLabel() or "Bağlan" in status.GetLabel()
+        # Release connector – success path
+        block.set()
+        for _ in range(50):
+            wx.Yield()
+            wx.MilliSleep(20)
+            if "Connected" in status.GetLabel() or "Bağlı" in status.GetLabel():
+                break
+        assert host._wx_connection_model.controller.state.value == "connected"
+        assert "Connected" in status.GetLabel() or "Bağlı" in status.GetLabel()
+        assert add_btn.IsEnabled(), "Add restored after success"
+        assert edit_btn.IsEnabled(), "Edit restored after success"
+        assert called["connected"] == 1
+        # Now test failure recovery with a second panel
+        frame.Destroy()
+        for _ in range(3):
+            wx.Yield()
+        # Failure case
+        storage.save_config({"profiles": [], "settings": {}})
+        storage.upsert_profile({"name": "p2", "host": "h.example", "port": 22, "username": "user"})
+        frame2 = wx.Frame(None)
+        host2 = build_connection_panel(frame2, profiles=load_profiles())
+        ctrls2 = host2._wx_connection_controls
+        choices2 = ctrls2["choices"]
+        connect_btn2 = ctrls2["connect"]
+        edit_btn2 = ctrls2["edit"]
+        add_btn2 = ctrls2["add_connection"]
+        status2 = ctrls2["status"]
+        choices2.SetStringSelection("p2")
+        evt3 = wx.CommandEvent(wx.EVT_LISTBOX.typeId, choices2.GetId())
+        choices2.GetEventHandler().ProcessEvent(evt3)
+        for _ in range(3):
+            wx.Yield()
+
+        def failing_connect(profile):
+            raise RuntimeError("synthetic-failure-71")
+
+        host2._wx_connection_model._connect = failing_connect
+        # Need to mock MessageBox to avoid modal
+        with mock.patch("wx.MessageDialog") as MockDlg, mock.patch("wx.MessageBox") as MockBox:
+            MockDlg.return_value.ShowModal.return_value = wx.ID_OK
+            MockDlg.return_value.Destroy = mock.Mock()
+            evt4 = wx.CommandEvent(wx.EVT_BUTTON.typeId, connect_btn2.GetId())
+            connect_btn2.GetEventHandler().ProcessEvent(evt4)
+            for _ in range(50):
+                wx.Yield()
+                wx.MilliSleep(20)
+                if "failed" in status2.GetLabel().lower() or "başarısız" in status2.GetLabel().lower():
+                    break
+            assert host2._wx_connection_model.controller.state.value == "failed"
+            assert "failed" in status2.GetLabel().lower() or "başarısız" in status2.GetLabel().lower()
+            # No control stays stuck disabled – production callback must restore
+            assert add_btn2.IsEnabled(), "Add must be restored after failure"
+            assert edit_btn2.IsEnabled(), "Edit must be restored after failure"
+            assert connect_btn2.IsEnabled(), "Connect must be restored after failure"
+            # Error string must not contain secret
+            if MockBox.called:
+                args, _ = MockBox.call_args
+                assert "s3cret" not in str(args)
+                assert "synthetic-failure-71" in str(args) or "Connection" in str(args)
+        frame2.Destroy()
         for _ in range(3):
             wx.Yield()
     finally:

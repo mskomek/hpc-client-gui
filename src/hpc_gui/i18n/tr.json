@@ -907,7 +907,12 @@
     "required_field": "Bu sağlayıcı için {field} gereklidir.",
     "cluster_test_running": "Test ediliyor...",
     "cluster_test_failed": "Küme testi başarısız ({error}).",
-    "storage_enabled": "Etkin"
+    "storage_enabled": "Etkin",
+    "auth_cancelled": "Kimlik doğrulama iptal edildi",
+    "test_credential_error": "Kayıtlı kimlik bilgileri nedeniyle test bağlantısı başarısız oldu",
+    "master_unlock_error": "Ana şifre çözme başarısız oldu",
+    "saved_credential_unavailable": "Kayıtlı kimlik bilgileri çözülemedi. Ana şifrenizi veya işletim sistemi kimlik deposunu kontrol edin.",
+    "credential_unlock_prompt": "Kayıtlı kimlik bilgilerinin kilidini açmak için ana şifreyi girin"
   },
   "cluster_self_test": {
     "title": "Küme Öz Testi",
