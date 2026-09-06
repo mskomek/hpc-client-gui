@@ -1159,7 +1159,7 @@ def main() -> int:
         splash._wx_splash_append_log("Ready — starting offline...", "")
         app.Yield(True)
         splash.Update()
-        wx.MilliSleep(800)
+        wx.MilliSleep(1800)
     except Exception:
         splash = None
 
