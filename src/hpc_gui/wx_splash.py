@@ -91,8 +91,13 @@ def create_startup_splash(parent=None, *, profiles: list[dict] | None = None, li
 
     # --- Progress bar §23: single bar below stages — full on open per request ---
     gauge = wx.Gauge(panel, range=100, style=wx.GA_HORIZONTAL | wx.GA_SMOOTH)
-    gauge.SetMinSize(wx.Size(-1, 12))
+    gauge.SetMinSize(wx.Size(-1, 18))
     gauge.SetValue(100)
+    try:
+        gauge.SetForegroundColour(wx.Colour(37, 99, 235))
+        gauge.SetBackgroundColour(wx.Colour(229, 231, 235))
+    except Exception:
+        pass
     root.Add(gauge, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 12)
 
     # --- Current status §24: one line below progress ---
@@ -188,9 +193,18 @@ def create_startup_splash(parent=None, *, profiles: list[dict] | None = None, li
         try:
             v = max(0, min(100, int(value)))
             gauge.SetValue(v)
+            try:
+                gauge.Refresh()
+                gauge.Update()
+            except Exception:
+                pass
             if message is not None:
                 status_text.SetLabel(str(message))
             panel.Layout()
+            try:
+                panel.Refresh()
+            except Exception:
+                pass
         except Exception:
             pass
 
