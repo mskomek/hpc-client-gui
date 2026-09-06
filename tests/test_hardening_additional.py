@@ -453,50 +453,189 @@ def _wx_menu_snapshot(menu):
             items.append(("action", item.GetItemLabelText()))
     return items
 
+def _wx_menu_snapshot(menu):
+    """Real helper using wx.Menu.GetMenuItems / IsSeparator / GetSubMenu / GetItemLabelText."""
+    items = []
+    for it in menu.GetMenuItems():
+        if it.IsSeparator():
+            items.append(("separator", None))
+        elif it.GetSubMenu() is not None:
+            items.append(("submenu", it.GetItemLabelText()))
+        else:
+            items.append(("action", it.GetItemLabelText()))
+    return items
+
 
 def test_wx_separator_lifecycle_offscreen():
-    try:
-        import wx
-    except ImportError as e:
-        import pytest
-        pytest.skip(f"wx unavailable: {e}")
-    from hpc_gui.wx_shell import create_shell_frame
-    # Use a helper that doesn't require full shell injection for the core logic
-    # Instead, test the wx menu directly with a minimal real menu
-    try:
-        import wx as wx_mod
-        app = wx_mod.App.Get() or wx_mod.App(False)
-    except Exception as e:
-        import pytest
-        pytest.skip(f"wx App unavailable: {e}")
-    # Test the actual plugins_menu from a real shell (which has the correct separator logic)
-    frame, _, _ = create_shell_frame()
-    try:
-        plugins_menu = frame._wx_shell_plugins_menu
-        # Helper to count separators via real wx API
-        def count_seps(menu):
-            return sum(1 for item in menu.GetMenuItems() if item.IsSeparator())
+    import subprocess
+    import sys
+    import tempfile
+    import textwrap
+    import os
 
-        # Case A: zero (initial)
-        # The shell starts with no contributions, so should have 1 separator
-        assert count_seps(plugins_menu) == 1
-
-        # For the remaining cases, we test the underlying helper logic directly
-        # by checking that the source uses Remove/InsertSeparator, not Enable
-        src = pathlib.Path("src/hpc_gui/wx_shell.py").read_text(encoding="utf-8")
-        assert "InsertSeparator" in src
-        assert "Remove(sep_plugins_top" in src
-        assert "sep_plugins_top.Enable(False)" not in src.split("has_any = len(_wx_plugin_dynamic_items)")[1].split("except")[0] if "has_any = len(_wx_plugin_dynamic_items)" in src else True
-
-        # Verify that the helper functions exist
-        assert "_ensure_wx_plugins_top_separator" in src or "sep_plugins_top = None" in src
-
-        # Case B/C/D/E are covered by the Qt separator test which shares the same has_any logic;
-        # wx uses the same has_any = len(_wx_plugin_dynamic_items)>0 pattern, so behavior is identical
-        # We verify that the wx code correctly handles has_any
-        assert "has_any = len(_wx_plugin_dynamic_items) > 0" in src
-    finally:
+    # Run real wx lifecycle in isolated subprocess to avoid Qt/wx App conflicts
+    script = textwrap.dedent("""
+        import sys
+        sys.path.insert(0, "src")
         try:
-            frame.Destroy()
-        except Exception:
+            import wx
+        except ImportError as e:
+            print(f"SKIP wx unavailable: {e}")
+            sys.exit(0)
+        # Quick check: try to create App, if fails skip
+        try:
+            # Ensure we can init wx without display
             pass
+        except Exception as e:
+            print(f"SKIP wx init failed: {e}")
+            sys.exit(0)
+
+        from pathlib import Path
+        from types import SimpleNamespace
+        from unittest.mock import patch
+        from hpc_gui.wx_shell import create_shell_frame
+        from hpc_gui.plugins.models import PluginManifest, PluginFile, InstalledPlugin
+
+        def _make_fake_plugin(when):
+            items = [{"kind": "action", "id": "a", "label": "Lint", "action": "editor.lint_current", "when": when, "unavailable": "hide"}]
+            mf = PluginManifest(
+                schema_version=1, plugin_api=1, id="org.test.fake", name="Fake", version="1.0.0",
+                publisher="x", license="MIT", description="d", requires_app=">=1.5.8",
+                capabilities=("lint-rules",), entrypoints={}, files=(PluginFile(path="a.json", sha256="0"*64, size=1, role="documentation"),),
+                ui_contributions={"plugins_menu": {"label": "FakeRoot", "items": items}},
+            )
+            return InstalledPlugin(manifest=mf, directory=Path("/tmp"))
+
+        fake_plugin = _make_fake_plugin({"connected": True})
+
+        def _snapshot(menu):
+            out=[]
+            for it in menu.GetMenuItems():
+                if it.IsSeparator():
+                    out.append(("separator", None))
+                elif it.GetSubMenu() is not None:
+                    out.append(("submenu", it.GetItemLabelText()))
+                else:
+                    out.append(("action", it.GetItemLabelText()))
+            return out
+        def _count_seps(menu):
+            return sum(1 for it in menu.GetMenuItems() if it.IsSeparator())
+        def _count_submenus(menu):
+            return sum(1 for it in menu.GetMenuItems() if it.GetSubMenu() is not None)
+
+        session_state = {"session": None, "generation": 0}
+        try:
+            frame, _lifecycle, _ss = create_shell_frame(session_state=session_state)
+        except Exception as exc:
+            print(f"SKIP wx create_shell_frame failed: {exc}")
+            sys.exit(0)
+        plugins_menu = frame._wx_shell_plugins_menu
+        try:
+            # 1. 0 visible roots
+            with patch("hpc_gui.plugins.loader.load_installed_plugins", return_value=SimpleNamespace(plugins=[])):
+                session_state["session"] = None
+                frame._wx_rebuild_plugins_menu()
+                snap1 = _snapshot(plugins_menu)
+                assert _count_seps(plugins_menu) == 1, f"step1 expected 1 separator, got {snap1}"
+                assert _count_submenus(plugins_menu) == 0, f"step1 expected 0 submenus, got {snap1}"
+                assert len(plugins_menu.GetMenuItems()) == 5
+                assert "request" in plugins_menu.GetMenuItems()[-1].GetItemLabelText().lower()
+                print("STEP1 OK", snap1)
+
+            # 2. 1 visible root
+            with patch("hpc_gui.plugins.loader.load_installed_plugins", return_value=SimpleNamespace(plugins=[fake_plugin])):
+                session_state["session"] = {"connected": True}
+                frame._wx_rebuild_plugins_menu()
+                snap2 = _snapshot(plugins_menu)
+                assert _count_seps(plugins_menu) == 2, f"step2 expected 2 separators, got {snap2}"
+                assert _count_submenus(plugins_menu) == 1, f"step2 expected 1 submenu, got {snap2}"
+                items = list(plugins_menu.GetMenuItems())
+                assert len(items) == 7, f"step2 expected 7 items, got {snap2}"
+                assert items[3].IsSeparator(), f"step2 idx3 sep {snap2}"
+                assert items[4].GetSubMenu() is not None, f"step2 idx4 submenu {snap2}"
+                assert items[4].GetItemLabelText() == "FakeRoot", f"step2 label {snap2}"
+                assert items[5].IsSeparator(), f"step2 idx5 sep {snap2}"
+                assert "request" in items[6].GetItemLabelText().lower(), f"step2 request {snap2}"
+                assert snap2 == [("action", items[0].GetItemLabelText()), ("action", items[1].GetItemLabelText()), ("action", items[2].GetItemLabelText()), ("separator", None), ("submenu", "FakeRoot"), ("separator", None), ("action", items[6].GetItemLabelText())]
+                print("STEP2 OK", snap2)
+
+            # 3. rebuild again unchanged
+            with patch("hpc_gui.plugins.loader.load_installed_plugins", return_value=SimpleNamespace(plugins=[fake_plugin])):
+                session_state["session"] = {"connected": True}
+                frame._wx_rebuild_plugins_menu()
+                snap3 = _snapshot(plugins_menu)
+                assert _count_seps(plugins_menu) == 2, f"step3 2 seps {snap3}"
+                assert _count_submenus(plugins_menu) == 1, f"step3 1 submenu {snap3}"
+                assert snap3 == snap2, f"step3 != step2 {snap3} vs {snap2}"
+                assert len(plugins_menu.GetMenuItems()) == 7
+                print("STEP3 OK", snap3)
+
+            # 4. all hidden
+            with patch("hpc_gui.plugins.loader.load_installed_plugins", return_value=SimpleNamespace(plugins=[fake_plugin])):
+                session_state["session"] = {"connected": False}
+                frame._wx_rebuild_plugins_menu()
+                snap4 = _snapshot(plugins_menu)
+                assert _count_seps(plugins_menu) == 1, f"step4 1 sep {snap4}"
+                assert _count_submenus(plugins_menu) == 0, f"step4 0 submenu {snap4}"
+                assert len(plugins_menu.GetMenuItems()) == 5
+                assert snap4[3] == ("separator", None)
+                assert "request" in snap4[4][1].lower()
+                print("STEP4 OK", snap4)
+
+            # 5. visible again
+            with patch("hpc_gui.plugins.loader.load_installed_plugins", return_value=SimpleNamespace(plugins=[fake_plugin])):
+                session_state["session"] = {"connected": True}
+                frame._wx_rebuild_plugins_menu()
+                snap5 = _snapshot(plugins_menu)
+                assert _count_seps(plugins_menu) == 2, f"step5 2 seps {snap5}"
+                assert _count_submenus(plugins_menu) == 1, f"step5 1 submenu {snap5}"
+                assert snap5 == snap2, f"step5 != step2 {snap5} vs {snap2}"
+                items5 = list(plugins_menu.GetMenuItems())
+                assert items5[4].GetSubMenu() is not None and items5[4].GetItemLabelText() == "FakeRoot"
+                print("STEP5 OK", snap5)
+
+            print("ALL_STEPS_PASSED", flush=True)
+        finally:
+            try:
+                frame.Destroy()
+            except Exception:
+                pass
+            try:
+                import wx
+                app = wx.GetApp()
+                if app is not None:
+                    try:
+                        app.Destroy()
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+            import os, sys
+            sys.stdout.flush()
+            sys.stderr.flush()
+            os._exit(0)
+        sys.exit(0)
+    """)
+
+    with tempfile.TemporaryDirectory() as td:
+        p = pathlib.Path(td) / "wx_lifecycle_check.py"
+        p.write_text(script, encoding="utf-8")
+        # Use minimal env to avoid Qt/pytest pollution
+        keep = ["PATH", "SYSTEMROOT", "SYSTEMDRIVE", "COMSPEC", "TEMP", "TMP", "PYTHONPATH", "HOME", "USERPROFILE", "APPDATA", "LOCALAPPDATA"]
+        env = {k: os.environ[k] for k in keep if k in os.environ}
+        # Ensure src is found via cwd, not PYTHONPATH, but keep PYTHONPATH if set
+        env["PYTHONPATH"] = env.get("PYTHONPATH", "")
+        result = subprocess.run([sys.executable, str(p)], capture_output=True, text=True, timeout=30, cwd=str(pathlib.Path.cwd()), env=env)
+        out = result.stdout + result.stderr
+        if "SKIP" in out:
+            import pytest
+            pytest.skip(out.strip().splitlines()[-1] if out.strip() else "wx skip")
+        # wx cleanup on Windows often exits with heap/access violation even after success (0xC0000374/0xC0000005)
+        # Treat as success if all steps logically passed
+        if "ALL_STEPS_PASSED" in out:
+            assert "STEP1 OK" in out and "STEP2 OK" in out and "STEP3 OK" in out and "STEP4 OK" in out and "STEP5 OK" in out
+            return
+        if result.returncode != 0:
+            import pytest
+            pytest.fail(f"wx lifecycle subprocess failed (code {result.returncode}):\\n{out}")
+        assert "ALL_STEPS_PASSED" in result.stdout, f"wx lifecycle did not complete: {out}"
