@@ -9,6 +9,7 @@ not treat static controls or service-only tests as visual parity evidence.
 - Expected starting HEAD: `a8bcabea83ff0e5e5dcaf133dfc79ded106191bf`
 - Actual starting HEAD: `bda842366b72e1752fadd2b764261fb101aa00fa`
 - Implementation commit: `8b29cd8fb28c8e1066dbd986b5923d7806ad54b8`
+- Evidence/test HEAD: `e504bdbd70603e39fa5b1a414973e01a44985cc3`
 - Runtime contract: Qt remains the production runtime; `DEFAULT_GUI_RUNTIME` remains `qt`.
 - PySide6/shiboken6 were not removed. `.tmp/` was not touched.
 - Pre-existing untracked files were preserved: `.integration-recovery/`, `audit.zip`, `waves.zip`.
@@ -79,6 +80,13 @@ its current shell contract expects removed toolbar controls (`version`,
 `_wx_shell_controls`. That contract is outside this Connection change and is
 unchanged here. A later full resize sweep did not complete in the headless
 runner, so it is not counted as evidence.
+
+The full repository run was attempted at the evidence/test HEAD and reported
+`1891 passed, 20 skipped, 21 failed, 29 subtests passed`. The failures were
+outside the focused Connection slices: stale shell-control expectations,
+missing packaged/audit artifacts, plugin-manager expectations, and wx job
+stress/lifecycle tests. This is recorded as a non-passing full suite; no full
+suite success is claimed.
 
 ## Manual wx evidence and limitations
 
