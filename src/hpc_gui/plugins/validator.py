@@ -43,6 +43,7 @@ CLUSTER_PROFILE_REQUIRED_KEYS = ("schema_version", "profile_id", "name", "schedu
 V2_PROFILE_SECTIONS = frozenset(
     {"description", "metadata", "paths", "commands", "site", "scheduler_hints", "software", "storage", "quota_sources"}
 )
+V3_PROFILE_SECTIONS = V2_PROFILE_SECTIONS | {"job_outputs", "file_filters"}
 
 KNOWN_SCHEDULERS = frozenset({"slurm"})
 
@@ -245,14 +246,14 @@ def validate_cluster_profile_dict(profile: Any) -> list[str]:
             errors.append(f"cluster profile is missing required key '{key}'")
     if errors:
         return errors
-    if profile["schema_version"] not in (1, 2):
-        errors.append("cluster profile schema_version must be 1 or 2")
+    if profile["schema_version"] not in (1, 2, 3):
+        errors.append("cluster profile schema_version must be 1, 2, or 3")
     if not _is_nonempty_str(profile["profile_id"]):
         errors.append("cluster profile 'profile_id' must be a non-empty string")
     if not _is_nonempty_str(profile["name"]):
         errors.append("cluster profile 'name' must be a non-empty string")
     if profile["scheduler"] not in KNOWN_SCHEDULERS:
-        errors.append(f"unsupported scheduler: {profile['scheduler']!r}")
+        errors.append(f"unsupported scheduler: {profile['schema_version']!r}")
 
     if profile["schema_version"] == 2:
         unknown = set(profile) - set(CLUSTER_PROFILE_REQUIRED_KEYS) - V2_PROFILE_SECTIONS
@@ -272,6 +273,58 @@ def validate_cluster_profile_dict(profile: Any) -> list[str]:
                         continue
                     if not _is_nonempty_str(item.get("id")):
                         errors.append(f"cluster profile '{section_key}[{index}]' needs a non-empty id")
+
+    if profile["schema_version"] == 3:
+        unknown = set(profile) - set(CLUSTER_PROFILE_REQUIRED_KEYS) - V3_PROFILE_SECTIONS
+        errors.extend(f"cluster profile has unknown key '{key}'" for key in sorted(unknown))
+        for section_key in V3_PROFILE_SECTIONS - {"description", "paths", "commands", "storage", "quota_sources", "file_filters"}:
+            section = profile.get(section_key)
+            if section is not None and not isinstance(section, dict):
+                errors.append(f"cluster profile '{section_key}' must be an object")
+        for section_key in ("storage", "quota_sources"):
+            section = profile.get(section_key)
+            if section is not None and not isinstance(section, list):
+                errors.append(f"cluster profile '{section_key}' must be a list")
+            elif isinstance(section, list):
+                for index, item in enumerate(section):
+                    if not isinstance(item, dict):
+                        errors.append(f"cluster profile '{section_key}[{index}]' must be an object")
+                        continue
+                    if not _is_nonempty_str(item.get("id")):
+                        errors.append(f"cluster profile '{section_key}[{index}]' needs a non-empty id")
+        # Validate job_outputs if present
+        job_outputs = profile.get("job_outputs")
+        if job_outputs is not None:
+            if not isinstance(job_outputs, dict):
+                errors.append("cluster profile 'job_outputs' must be an object")
+            else:
+                streams = job_outputs.get("streams")
+                if streams is not None:
+                    if not isinstance(streams, list):
+                        errors.append("cluster profile 'job_outputs.streams' must be a list")
+                    else:
+                        for idx, stream in enumerate(streams):
+                            if not isinstance(stream, dict):
+                                errors.append(f"job_outputs.streams[{idx}] must be an object")
+                                continue
+                            if not _is_nonempty_str(stream.get("id")):
+                                errors.append(f"job_outputs.streams[{idx}] needs a non-empty id")
+                            if stream.get("role") not in ("stdout", "stderr", "custom"):
+                                errors.append(f"job_outputs.streams[{idx}] role must be stdout, stderr, or custom")
+                            if stream.get("resolver") not in ("slurm.stdout", "slurm.stderr", "workdir.relative"):
+                                errors.append(f"job_outputs.streams[{idx}] resolver must be a whitelisted resolver")
+        # Validate file_filters if present
+        file_filters = profile.get("file_filters")
+        if file_filters is not None:
+            if not isinstance(file_filters, list):
+                errors.append("cluster profile 'file_filters' must be a list")
+            else:
+                for idx, ff in enumerate(file_filters):
+                    if not isinstance(ff, dict):
+                        errors.append(f"file_filters[{idx}] must be an object")
+                        continue
+                    if not _is_nonempty_str(ff.get("id")):
+                        errors.append(f"file_filters[{idx}] needs a non-empty id")
                     if section_key == "storage" and not _is_nonempty_str(item.get("label")):
                         errors.append(f"cluster profile 'storage[{index}]' needs a non-empty label")
 
