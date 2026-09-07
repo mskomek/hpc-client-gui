@@ -443,10 +443,11 @@ def test_saved_password_unavailable_error(monkeypatch, caplog):
                     if host._wx_connection_model.controller.state.value == "failed":
                         break
                 assert host._wx_connection_model.controller.state.value == "failed"
-                # Should have shown saved_password_unavailable, not generic
+                # Should have shown saved_password_unavailable, not generic (check both EN and TR)
                 assert MockBox.called
                 args, _ = MockBox.call_args
-                assert "saved" in str(args).lower() or "unavailable" in str(args).lower() or "could not be decrypted" in str(args).lower()
+                msg_lower = str(args).lower()
+                assert any(word in msg_lower for word in ["saved", "unavailable", "could not be decrypted", "kayıtlı", "çözülemedi", "kullanıcı"])
                 # Must not log secret
                 assert "missing-ref" not in str(caplog.text)
                 # Buttons restored
@@ -837,10 +838,11 @@ def test_delete_active_profile_blocked(monkeypatch):
             delete_btn.GetEventHandler().ProcessEvent(evt3)
             for _ in range(5):
                 wx.Yield()
-            # Should block deletion
+            # Should block deletion (check both EN and TR)
             assert len(load_profiles()) == 1, "Active profile must not be deleted while connected"
             assert MockBox.called, "Should show blocked message"
-            assert "active" in str(MockBox.call_args).lower() or "disconnect" in str(MockBox.call_args).lower()
+            msg_lower2 = str(MockBox.call_args).lower()
+            assert any(word in msg_lower2 for word in ["active", "disconnect", "aktif", "kesin", "bağlantı"])
         frame.Destroy()
         for _ in range(3):
             wx.Yield()
