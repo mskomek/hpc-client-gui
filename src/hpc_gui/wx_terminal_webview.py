@@ -128,9 +128,12 @@ class WxTerminalWebViewPanel(wx.Panel if _WX_AVAILABLE else object):  # type: ig
         self._is_parity = False
         self._diagnostic_text = ""
 
-        # Header state (Wave 75 will make these live; Wave 73 keeps them visible but static)
+        # Generation counter for stale-output rejection across reconnects
+        self._generation = 0
+
+        # Header state — live, updated on connect/disconnect/reconnect
         self._status_text = t("login.status_disconnected")
-        self._identity_text = t("login.terminal_protocol_ssh")
+        self._identity_text = ""
         self._dimensions_text = "--"
 
         # Build UI
@@ -725,10 +728,12 @@ class WxTerminalWebViewPanel(wx.Panel if _WX_AVAILABLE else object):  # type: ig
             pass
         if not query or not self._is_parity or self._webview is None:
             return
-        try:
-            self._run_js(f"window.hpcFind && window.hpcFind({_safe_json_dumps(query)});")
-        except Exception:
-            pass
+        # If same query as last time, advance to next match
+        if query == getattr(self, "_last_find_query", None):
+            self.hpc_find_next()
+            return
+        self._last_find_query = query
+        self.hpc_find(query)
 
     def hpc_find(self, query: str):
         """Find text in xterm buffer (test seam)."""
@@ -737,7 +742,28 @@ class WxTerminalWebViewPanel(wx.Panel if _WX_AVAILABLE else object):  # type: ig
         if not self._ready or not self._is_parity or self._webview is None:
             return False
         try:
+            self._last_find_query = query
             self._run_js(f"window.hpcFind && window.hpcFind({_safe_json_dumps(query)});")
+            return True
+        except Exception:
+            return False
+
+    def hpc_find_next(self):
+        """Advance to next match of the last find query."""
+        if self._closed or not self._is_parity or self._webview is None:
+            return False
+        try:
+            self._run_js("window.hpcFindNext && window.hpcFindNext();")
+            return True
+        except Exception:
+            return False
+
+    def hpc_find_prev(self):
+        """Go to previous match of the last find query."""
+        if self._closed or not self._is_parity or self._webview is None:
+            return False
+        try:
+            self._run_js("window.hpcFindPrev && window.hpcFindPrev();")
             return True
         except Exception:
             return False
@@ -750,31 +776,42 @@ class WxTerminalWebViewPanel(wx.Panel if _WX_AVAILABLE else object):  # type: ig
     def _attach_ssh(self, ssh):
         self._ssh = ssh
         if ssh is None:
+            self._update_status("disconnected")
             return
         # Resolve callbacks if not yet set
         if self._send_input is None:
             self._send_input = getattr(ssh, "send_shell_input", None)
         if self._resize_pty is None:
             self._resize_pty = getattr(ssh, "resize_shell_pty", None)
-        # Subscribe to output
+        # Subscribe to output with generation guard
         subs = getattr(ssh, "_wx_output_subscribers", None)
         if subs is not None and isinstance(subs, list):
-            def subscriber(data, _self=self):
-                # route via CallAfter to stay on GUI thread, preserve bytes
+            gen = self._generation
+
+            def subscriber(data, _self=self, _gen=gen):
+                if _self._closed or _gen != _self._generation:
+                    return
                 try:
                     import wx as _wx
-
-                    # Do not log data
-                    _wx.CallAfter(_self.hpc_write, data)
+                    _wx.CallAfter(_self._safe_deliver, _gen, data)
                 except Exception:
                     pass
 
             self._subscriber = subscriber
             self._subscribers_list = subs
             subs.append(subscriber)
+        # Update header status
+        self._update_status("connected")
+        self._update_identity(ssh)
+
+    def _safe_deliver(self, gen, data):
+        """Deliver output only if generation matches (stale output rejection)."""
+        if self._closed or gen != self._generation:
+            return
+        self.hpc_write(data)
 
     def set_ssh(self, new_ssh):
-        # Detach old
+        # Detach old subscriber
         if self._subscriber is not None and self._subscribers_list is not None:
             try:
                 self._subscribers_list.remove(self._subscriber)
@@ -782,6 +819,8 @@ class WxTerminalWebViewPanel(wx.Panel if _WX_AVAILABLE else object):  # type: ig
                 pass
             self._subscriber = None
             self._subscribers_list = None
+        # Increment generation to reject any in-flight stale callbacks
+        self._generation += 1
         self._ssh = new_ssh
         if new_ssh is not None:
             self._send_input = getattr(new_ssh, "send_shell_input", self._send_input)
@@ -790,11 +829,19 @@ class WxTerminalWebViewPanel(wx.Panel if _WX_AVAILABLE else object):  # type: ig
         else:
             self._send_input = None
             self._resize_pty = None
+            self._update_status("disconnected")
+            self._identity_text = ""
+            try:
+                self._identity_label.SetLabel("")
+            except Exception:
+                pass
 
     def close(self):
         if self._closed:
             return
         self._closed = True
+        # Increment generation to cancel any in-flight callbacks
+        self._generation += 1
         try:
             if self._readiness_timer and self._readiness_timer.IsRunning():
                 self._readiness_timer.Stop()
@@ -820,7 +867,43 @@ class WxTerminalWebViewPanel(wx.Panel if _WX_AVAILABLE else object):  # type: ig
             unsubscribe_language_change(self._lang_cb)
         except Exception:
             pass
+        # Reset JS find state
+        if self._is_parity and self._webview is not None:
+            try:
+                self._run_js("window.hpcResetFindState && window.hpcResetFindState();")
+            except Exception:
+                pass
         # Do not call RunScript after closed
+
+    def _update_status(self, state: str):
+        """Update the connection status label. States: disconnected, connecting, connected, reconnecting."""
+        label_map = {
+            "disconnected": t("login.status_disconnected"),
+            "connecting": t("login.status_connecting") if t("login.status_connecting") != "[login.status_connecting]" else "Connecting\u2026",
+            "connected": t("login.status_connected") if t("login.status_connected") != "[login.status_connected]" else "Connected",
+            "reconnecting": t("login.status_reconnecting") if t("login.status_reconnecting") != "[login.status_reconnecting]" else "Reconnecting\u2026",
+        }
+        self._status_text = label_map.get(state, state)
+        try:
+            self._status_label.SetLabel(self._status_text)
+        except Exception:
+            pass
+
+    def _update_identity(self, ssh):
+        """Update the identity label with user@host from SSH, if available."""
+        identity = ""
+        try:
+            user = getattr(ssh, "_username", None) or getattr(ssh, "username", None)
+            host = getattr(ssh, "_hostname", None) or getattr(ssh, "hostname", None) or getattr(ssh, "_host", None)
+            if user and host:
+                identity = f"{user}@{host}"
+        except Exception:
+            pass
+        self._identity_text = identity
+        try:
+            self._identity_label.SetLabel(identity)
+        except Exception:
+            pass
 
     def _on_destroy(self, event):
         self.close()
