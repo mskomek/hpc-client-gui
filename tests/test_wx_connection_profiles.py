@@ -7,7 +7,6 @@ Uses isolated temp storage and mock/fake backends; never hits a real cluster.
 """
 
 import tempfile
-import unittest
 from pathlib import Path
 from unittest import mock
 
@@ -15,17 +14,17 @@ import pytest
 
 # Shared imports
 from hpc_gui.config import storage
-from hpc_gui.config.storage import load_profiles, merge_profile_patch, upsert_profile
+from hpc_gui.config.storage import load_profiles
 from hpc_gui.services.profile_duplicate import duplicate_profile
 from hpc_gui.services.quota_monitor import quota_gate
 from hpc_gui.plugins.models import validate_storage_area
-from hpc_gui.ssh.client import HostKeyInfo, coerce_keepalive_interval
+from hpc_gui.ssh.client import HostKeyInfo
 from hpc_gui.wx_connection import WxConnectionModel, ssh_info_from_profile
 from hpc_gui.config.system_profile import builtin_system_template_groups
 from hpc_gui.plugins.templates import installed_cluster_template_groups
 from hpc_gui.config.system_profile import normalize_system_settings
 from hpc_gui.config.file_manager_profile import normalize_file_manager_settings
-from hpc_gui.config.jump_host_profile import normalize_jump_host_settings, patch_jump_host_settings
+from hpc_gui.config.jump_host_profile import normalize_jump_host_settings
 
 wx = pytest.importorskip("wx", reason="wxPython not installed – skipping wx GUI tests")
 
@@ -311,7 +310,6 @@ def test_delete_requires_confirmation_and_cleans(monkeypatch):
     try:
         app = wx.App.Get() or wx.App(False)
         from hpc_gui.wx_connection import build_connection_panel
-        from hpc_gui.config.storage import delete_profile
 
         # Seed storage with profile
         storage.upsert_profile({"name": "to-delete", "host": "h.example", "port": 22, "username": "user"})
@@ -746,8 +744,6 @@ def test_mfa_order_and_no_log(monkeypatch, caplog):
     assert answers == ["r1", "r2"]
     assert requests[0].echo == (False, True)
     # Ensure no secret in logs
-    import logging
-    logger = logging.getLogger("hpc_gui.wx_connection")
     # Simulate no logging of MFA responses – check that answer not in caplog
     # Our model does not log; verify that responses are not retained on model
     assert not hasattr(model, "r1")
