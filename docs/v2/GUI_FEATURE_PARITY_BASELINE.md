@@ -24,13 +24,13 @@ actions, dialogs, and widget context-menu implementations.
 | GUI-CONN-005 | Linux/macOS X11 forwarding and Windows-compatible SSH process cleanup | login/session integration | P1 | `tests/test_linux_x11.py`, `tests/test_macos_x11.py` | Preserve; optional capability remains unknown when absent |
 | GUI-TERM-001 | Terminal tabs/input, command execution, xterm.js graphics bridge | `TerminalWidget`, `TerminalInput`, terminal assets | P0 | `terminal_widget.py`, `tests/test_terminal*` | Preserve |
 | GUI-TERM-002 | Run selected shell/script from file views or editor in terminal | signals from `FtpWidget`, `DirectoriesWidget`, `EditorWidget` | P1 | `main_window.py`, `tests/test_editor_flow.py` | Preserve |
-| GUI-FILE-001 | Local/remote directory browsing, refresh, navigation and path state | directory panels and remote accordion | P0 | `local_dir_panel.py`, `remote_dir_panel.py`, `tests/test_remote_directory_listing.py` | Preserve |
-| GUI-FILE-002 | Open remote/local files, edit, new-window editor and script submit | directory/editor signal wiring | P0 | `main_window.py`, `tests/test_local_edit_flow.py` | Preserve |
-| GUI-FILE-003 | Context actions for open/edit/download/upload/delete/rename | local/remote panel menus | P0 | `local_dir_panel.py`, `remote_dir_panel.py`, `ftp_widget.py` | Preserve; review action parity |
+| GUI-FILE-001 | Local/remote directory browsing, refresh, navigation and path state | directory panels and remote accordion | P0 | `local_dir_panel.py`, `remote_dir_panel.py`, `tests/test_remote_directory_listing.py` | COVERED |
+| GUI-FILE-002 | Open remote/local files, edit, new-window editor and script submit | directory/editor signal wiring | P0 | `main_window.py`, `tests/test_local_edit_flow.py` | COVERED |
+| GUI-FILE-003 | Context actions for open/edit/download/upload/delete/rename | local/remote panel menus | P0 | `local_dir_panel.py`, `remote_dir_panel.py`, `ftp_widget.py` | COVERED |
 | GUI-XFER-001 | Transfer dialog, conflict handling, progress and cancellation | `TransferDialog`, transfer services | P0 | `transfer_dialog.py`, `tests/test_download_cancel_wire.py` | Preserve |
 | GUI-XFER-002 | Batch transfer and local-transfer safety gate | FTP widget and local provider checks | P0 | `ftp_widget.py`, `tests/test_local_transfer_gate.py` | Preserve; fail closed |
-| GUI-JOBS-001 | Job list, refresh, submit/cancel controls and state display | `JobsWidget`, `JobsOutputsWidget` | P0 | `jobs_widget.py`, `tests/test_job_context.py` | Preserve |
-| GUI-JOBS-002 | Job details, output panes, follow mode and scroll behavior | jobs/output widgets | P0 | `jobs_outputs_widget.py`, `tests/test_jobs_outputs_scroll.py` | Preserve |
+| GUI-JOBS-001 | Job list, refresh, submit/cancel controls and state display | `JobsWidget`, `JobsOutputsWidget` | P0 | `jobs_widget.py`, `tests/test_job_context.py` | COVERED |
+| GUI-JOBS-002 | Job details, output panes, follow mode and scroll behavior | jobs/output widgets | P0 | `jobs_outputs_widget.py`, `tests/test_jobs_outputs_scroll.py` | COVERED |
 | GUI-JOBS-003 | Completed-job history, provenance and reproducibility bundle entry points | history/provenance services plus jobs UI | P1 | `services/`, `tests/test_job_history_dashboard.py` | Preserve; advisory data only |
 | GUI-JOBS-004 | Deterministic walltime suggestion from successful local history | `walltime_suggestions.py` service | P1 | `tests/test_walltime_suggestions.py` | New V2 service; never auto-applies |
 | GUI-EDIT-001 | Syntax-aware script editor, lint results, dirty-state and save flow | `EditorWidget`, lint services | P0 | `editor_widget.py`, `tests/test_editor_v2_lint.py` | Preserve |
@@ -42,6 +42,12 @@ actions, dialogs, and widget context-menu implementations.
 | GUI-HELP-001 | Help center, quick tour, welcome and contextual help affordances | help/quick-tour/welcome dialogs | P1 | `help_dialog.py`, `quick_tour.py`, `tests/test_docs_references.py` | Preserve |
 | GUI-I18N-001 | Turkish/English language menu, flags and runtime label refresh | `i18n` translations and main-window refresh | P0 | `main_window.py`, `tests/test_branding_check.py` | Preserve; new strings require i18n keys |
 | GUI-A11Y-001 | Keyboard focus/tab order, visible labels and non-color state cues | Qt widget defaults plus explicit labels/tooltips | P1 | widget tree review | Review during wx port |
+| GUI-JOBS-005 | Selected-job context (generation-safe, single source of truth) | `SelectedJobContext` + `SelectedJobStore` | P0 | `services/selected_job_context.py`, `tests/test_selected_job_context.py` | COVERED |
+| GUI-JOBS-006 | Jobs table with Job ID/Name/State/Partition/Elapsed columns + filter | wx Jobs table in `wx_jobs.py` | P0 | `wx_jobs.py`, `tests/test_wx_jobs.py` | COVERED |
+| GUI-JOBS-007 | Dynamic 0..N output channels with deduplication | `OutputResolver` + `OutputChannelDefinition` | P0 | `services/output_channel_resolver.py`, `tests/test_output_channel_resolver.py` | COVERED |
+| GUI-JOBS-008 | Shared file filter registry with overlapping-view semantics | `FileFilterRegistry` | P1 | `services/file_filter_registry.py`, `tests/test_file_filter_registry.py` | COVERED |
+| GUI-JOBS-009 | Jobs > Files uses shared remote browser component | `wx_remote_files_view.py` integrated in `wx_jobs.py` | P0 | `wx_jobs.py`, `tests/test_wx_jobs_files_outputs.py` | COVERED |
+| GUI-JOBS-010 | TRUBA provider declares stdout/stderr output channels | `plugins/truba/1.4.0/cluster-profile.json` | P1 | Plugin registry, `tests/test_output_channel_resolver.py` | COVERED |
 
 ## Known inconsistencies to carry explicitly
 
