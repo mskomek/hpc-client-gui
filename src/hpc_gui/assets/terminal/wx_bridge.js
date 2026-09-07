@@ -61,24 +61,97 @@
     } catch (e) {}
   };
 
+  // ── Search state (Find / Find Next / Find Previous) ──
+  let _lastQuery = "";
+  let _lastRow = 0;
+  let _lastCol = 0;
+  let _lastDirection = 1; // 1 = forward, -1 = backward
+
+  function _searchBuffer(query, startRow, startCol, direction) {
+    const buffer = terminal.buffer.active;
+    const totalRows = buffer.baseY + buffer.viewportY + terminal.rows;
+    if (!query || totalRows <= 0) return null;
+    for (let i = 0; i < totalRows; i++) {
+      const idx = direction === 1
+        ? (startRow + i) % totalRows
+        : (startRow - i + totalRows) % totalRows;
+      const line = buffer.getLine(idx);
+      if (!line) continue;
+      const text = line.translateToString(true);
+      const col = direction === 1
+        ? (idx === startRow ? text.indexOf(query, startCol) : text.indexOf(query))
+        : (idx === startRow ? text.lastIndexOf(query, startCol - 1) : text.lastIndexOf(query));
+      if (col >= 0) {
+        const endCol = col + query.length;
+        terminal.select(col, idx, endCol);
+        terminal.scrollLines(idx - terminal.buffer.active.viewportY);
+        return { row: idx, col: col, endCol: endCol };
+      }
+    }
+    return null;
+  }
+
   window.hpcFind = (query) => {
     try {
+      if (!query) return false;
+      _lastQuery = query;
+      _lastDirection = 1;
       const buffer = terminal.buffer.active;
-      const rows = buffer.length;
-      const startY = buffer.cursorY + buffer.viewportY;
-      for (let y = startY; y < rows; y++) {
-        const line = buffer.getLine(y);
-        if (line && line.includes(query)) {
-          terminal.select(y, line.indexOf(query), line.indexOf(query) + query.length);
-          return true;
-        }
+      _lastRow = buffer.cursorY + buffer.viewportY;
+      _lastCol = buffer.cursorX;
+      const result = _searchBuffer(query, _lastRow, _lastCol, 1);
+      if (result) {
+        _lastRow = result.row;
+        _lastCol = result.endCol;
+        return true;
       }
-      for (let y = 0; y < startY; y++) {
-        const line = buffer.getLine(y);
-        if (line && line.includes(query)) {
-          terminal.select(y, line.indexOf(query), line.indexOf(query) + query.length);
-          return true;
-        }
+      return false;
+    } catch (e) {
+      return false;
+    }
+  };
+
+  window.hpcFindNext = () => {
+    try {
+      if (!_lastQuery) return false;
+      _lastDirection = 1;
+      const result = _searchBuffer(_lastQuery, _lastRow, _lastCol, 1);
+      if (result) {
+        _lastRow = result.row;
+        _lastCol = result.endCol;
+        return true;
+      }
+      // Wrap to beginning
+      const wrapped = _searchBuffer(_lastQuery, 0, 0, 1);
+      if (wrapped) {
+        _lastRow = wrapped.row;
+        _lastCol = wrapped.endCol;
+        return true;
+      }
+      return false;
+    } catch (e) {
+      return false;
+    }
+  };
+
+  window.hpcFindPrev = () => {
+    try {
+      if (!_lastQuery) return false;
+      _lastDirection = -1;
+      const result = _searchBuffer(_lastQuery, _lastRow, _lastCol, -1);
+      if (result) {
+        _lastRow = result.row;
+        _lastCol = result.col;
+        return true;
+      }
+      // Wrap to end
+      const buffer = terminal.buffer.active;
+      const totalRows = buffer.baseY + buffer.viewportY + terminal.rows;
+      const wrapped = _searchBuffer(_lastQuery, totalRows, totalRows, -1);
+      if (wrapped) {
+        _lastRow = wrapped.row;
+        _lastCol = wrapped.col;
+        return true;
       }
       return false;
     } catch (e) {
@@ -169,6 +242,25 @@
       });
     } catch (e) {}
   }, 50);
+
+  window.hpcResetFindState = () => {
+    _lastQuery = "";
+    _lastRow = 0;
+    _lastCol = 0;
+    _lastDirection = 1;
+  };
+
+  // Keyboard shortcuts: F3 = find next, Shift+F3 = find previous
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "F3") {
+      e.preventDefault();
+      if (e.shiftKey) {
+        window.hpcFindPrev();
+      } else {
+        window.hpcFindNext();
+      }
+    }
+  });
 
   // Prevent external navigation from xterm content (defense in depth)
   document.addEventListener("click", (e) => {

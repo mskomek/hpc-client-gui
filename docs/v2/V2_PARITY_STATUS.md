@@ -14,7 +14,7 @@ Automated evidence only; manual-only behavior is never marked covered.
 | GUI-CONN-003 | COVERED | connection_dialog.py | wx_connection.py | test_provider_capabilities.py |
 | GUI-CONN-004 | COVERED | quota_monitor.py | wx_connection.py | test_quota_monitor.py |
 | GUI-CONN-005 | COVERED | login_widget.py | wx_connection.py | test_linux_x11.py; test_macos_x11.py |
-| GUI-TERM-001 | PARTIAL | terminal_widget.py; terminal_header.py; terminal_bridge.py; assets/terminal/index.html+bridge.js+xterm.js+addon-fit.js | wx_terminal.py (TextCtrl; gap contract 72) | test_wx_terminal.py; test_wx_embedded_terminal.py — TextCtrl chain PROVEN, xterm chain MISSING per TERMINAL_PARITY_CONTRACT_72.md |
+| GUI-TERM-001 | PARTIAL | terminal_widget.py; terminal_header.py; terminal_bridge.py; assets/terminal/index.html+bridge.js+xterm.js+addon-fit.js | wx_terminal.py; wx_terminal_webview.py | test_wx_terminal.py; test_wx_embedded_terminal.py; test_wx_terminal_webview.py; test_wx_terminal_parity_evidence.py — WebView/xterm.js chain partially proven; alternate screen and packaged WebView2 remain BLOCKED |
 | GUI-TERM-002 | COVERED | main_window.py | wx_shell.py; wx_local_files.py; wx_remote_files_view.py; wx_editor_view.py | test_wx_term002.py; test_wx_terminal.py; test_wx_embedded_terminal.py |
 | GUI-FILE-001 | COVERED | local_dir_panel.py | wx_local_files.py | test_wx_local_files.py |
 | GUI-FILE-002 | COVERED | main_window.py | wx_shell.py; wx_editor_windows.py; wx_editor_view.py; wx_remote_files_view.py | test_wx_editor.py; test_wx_editor_window_parity.py; test_wx_remote_editor_flow.py; test_wx_editor_cross_view_actions.py |

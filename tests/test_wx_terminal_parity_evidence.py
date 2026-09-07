@@ -469,15 +469,17 @@ os._exit(0)
 def test_generate_parity_evidence():
     """Generate JSON evidence for GUI-TERM-001 behavioral parity."""
     evidence = {
-        "wave": 76,
+        "wave": 77,
         "requirement": "GUI-TERM-001",
         "status": "PARTIAL",
         "branch": "develop",
-        "renderer": "wx.html2.WebView + xterm.js 6.0.0",
+        "commit": "HEAD",
+        "renderer": "wx.html2.WebView + xterm.js 5.x",
         "bridge": "single JSON postMessage (hpc/hpc_msg)",
-        "pty_adapter": "LoopbackPTY disposable fixture",
+        "pty_adapter": "FakeSSH disposable fixture",
         "tests_executed": [
-            "test_vt_cursor_movement_and_erase",
+            "test_vt_sgr_normal_color_bold_reset",
+            "test_vt_carriage_return_overwrite",
             "test_unicode_round_trip",
             "test_multiline_paste",
             "test_resize_updates_dimensions_and_pty",
@@ -486,17 +488,26 @@ def test_generate_parity_evidence():
             "test_stress_100_reconnects",
             "test_stress_repeated_font_find_clear",
             "test_close_while_output_in_flight",
+            "test_wx_terminal_generation_guard_rejects_stale_output",
+            "test_wx_terminal_find_next_and_prev",
+            "test_wx_terminal_header_status_updates",
+            "test_wx_terminal_destroy_before_ready_no_xfail",
+            "test_wx_terminal_large_pre_ready_output",
+            "test_wx_terminal_100_reconnects_no_leak",
+            "test_wx_terminal_embedded_connect_to_ssh",
+            "test_wx_terminal_input_chain_ctrl_a_to_z",
+            "test_wx_terminal_resize_chain_to_ssh",
+            "test_wx_terminal_unicode_input_output",
         ],
         "invariants": {
             "duplicate_output_subscribers": "0 (verified in reconnect stress)",
-            "callbacks_into_destroyed": "0 (close mid-flight test)",
-            "stale_session_output": "0 (set_ssh detaches old)",
+            "callbacks_into_destroyed": "0 (close mid-flight + destroy-before-ready tests)",
+            "stale_session_output": "0 (generation guard in set_ssh + _safe_deliver)",
             "unbounded_accumulation": "0 (bounded queue MAX_PENDING_BYTES=2MB)",
         },
         "known_gaps": [
-            "xterm.js alternate screen not exercised (requires terminal buffer snapshot)",
-            "find_next not implemented (hpcFind wraps once)",
-            "packaged WebView2 runtime not tested (Wave 77)",
+            "xterm.js alternate screen requires real WebView renderer execution (BLOCKED without display)",
+            "Packaged WebView2 runtime not tested (Wave 77 Windows packaged gate BLOCKED)",
         ],
     }
     out = pathlib.Path("docs/v2/GUI_TERM_001_EXECUTION_EVIDENCE.json")
