@@ -186,7 +186,7 @@ def test_registry_entry_installs_via_exact_file_protocol(tmp_path: Path):
 
     packs = __import__(
         "hpc_gui.lint.rulepack", fromlist=["load_lint_packs"]
-    ).load_lint_packs(root=tmp_path, app_version="1.4.0")
+    ).load_lint_packs(root=tmp_path, app_version="1.5.8")
     assert [p.linter_id for p in packs] == ["fluent-journal"]
     assert entry["version"] == "0.2.0"
 

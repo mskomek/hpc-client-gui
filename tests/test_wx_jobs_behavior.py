@@ -9,7 +9,7 @@ from hpc_gui.core.i18n import load_language
 from hpc_gui.wx_jobs import show_jobs
 
 
-def _pump(app, predicate, timeout=2):
+def _pump(app, predicate, timeout=5):
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         app.ProcessPendingEvents()

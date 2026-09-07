@@ -356,19 +356,12 @@ def test_plugins_button_exists(qapp):
 
         window = MainWindow()
         try:
-            assert hasattr(window, "_plugins_btn")
-            assert window._plugins_btn.text() == t("plugins.action")
-            # Button sits in the top-right control strip next to Update.
-            parent_chain = []
-            widget = window._plugins_btn.parentWidget()
-            while widget is not None:
-                parent_chain.append(widget)
-                widget = widget.parentWidget()
-            assert any(
-                child is window._update_btn
-                for container in parent_chain
-                for child in container.findChildren(type(window._update_btn))
-            )
+            # Wave 71 redesign moved plugins from top-right button farm to Plugins menu
+            # Old test expected _plugins_btn, new code should have _plugins_menu and actions
+            assert hasattr(window, "_plugins_menu")
+            assert t("menu.plugins") in window._plugins_menu.title() or "Plugins" in window._plugins_menu.title()
+            assert hasattr(window, "_act_plugins_discover")
+            assert hasattr(window, "_act_plugins_installed")
         finally:
             window.graceful_shutdown()
             window.close()
