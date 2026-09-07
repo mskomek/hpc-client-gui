@@ -163,7 +163,8 @@
     "command_palette": "Command Palette",
     "test_cluster": "Test Cluster",
     "new_slurm_script": "New Slurm Script",
-    "ansys_linter": "ANSYS Linter"
+    "ansys_linter": "ANSYS Linter",
+    "filter": "Filter"
   },
   "placeholders": {
     "host": "Server name or IP",
@@ -179,7 +180,16 @@
     "open_output": "Open Output",
     "pause_output": "Pause Live Follow",
     "resume_output": "Resume Live Follow",
-    "job_id": "Job ID"
+    "job_id": "Job ID",
+    "name": "Name",
+    "partition": "Partition",
+    "elapsed": "Elapsed",
+    "nodes": "Nodes",
+    "cpus": "CPUs",
+    "reason": "Reason",
+    "filter_hint": "Filter jobs...",
+    "auto_refresh": "Auto refresh",
+    "select_job_hint": "Select a job to view its details"
   },
   "files": {
     "title": "Outputs",
@@ -389,7 +399,11 @@
     "delete_confirm": "Delete the selected items?",
     "no_file_selected": "No file selected.",
     "no_directory_selected": "No directory selected.",
-    "conflict_message": "The target already exists:\n{path}\n\nWhat would you like to do?"
+    "conflict_message": "The target already exists:\n{path}\n\nWhat would you like to do?",
+    "follow_track": "Follow / Track",
+    "follow_new_tab": "Follow in New Output Tab",
+    "follow_new_window": "Follow in New Window",
+    "follow_existing": "Assign to Existing Follower"
   },
   "jobs_outputs": {
     "auto_scroll": "Auto-scroll",
@@ -438,7 +452,12 @@
     "tail_stopped_message": "Live output tracking stopped.",
     "tail_close_window": "Close window",
     "tail_close_screen": "Close tracking screen",
-    "tracking_stopped_disconnected": "Connection has been unavailable for 30 seconds."
+    "tracking_stopped_disconnected": "Connection has been unavailable for 30 seconds.",
+    "job_details": "Job Details",
+    "raw_scontrol_hint": "Raw scontrol output",
+    "show_raw_scontrol": "Show raw scontrol details",
+    "hide_raw_scontrol": "Hide raw scontrol details",
+    "no_channels": "No output channels defined. Use Files > Follow to track any remote file."
   },
   "putty": {
     "downloading": "Downloading plink.exe...",

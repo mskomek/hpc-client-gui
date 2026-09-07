@@ -1908,7 +1908,7 @@ def _jobs_callbacks(session_state, parent, lifecycle):
         paths = {key: next((part.split("=", 1)[1] for part in metadata.split() if part.startswith(f"{key}=")), "") for key in ("StdOut", "StdErr")}
         return {"stdout": files.read_text(paths["StdOut"]) if paths["StdOut"] else "", "stderr": files.read_text(paths["StdErr"]) if paths["StdErr"] else ""}
 
-    def list_job_files(job_id):
+    def list_job_files(job_id, workdir=""):
         # test seam
         test_files = session_state.get("_test_job_files")
         if test_files is not None:
@@ -1922,20 +1922,20 @@ def _jobs_callbacks(session_state, parent, lifecycle):
         if not slurm or not files or not hasattr(files, "iterdir_entries"):
             return ()
         try:
-            meta = str(slurm.scontrol_show_job(job_id) or "")
-            # try WorkDir, else StdOut dir
-            workdir = ""
-            for part in meta.split():
-                if part.startswith("WorkDir="):
-                    workdir = part.split("=",1)[1]
-                    break
+            # Use provided workdir first (from SelectedJobContext),
+            # fall back to scontrol lookup
             if not workdir:
-                # fallback to StdOut dirname
+                meta = str(slurm.scontrol_show_job(job_id) or "")
                 for part in meta.split():
-                    if part.startswith("StdOut="):
-                        p = part.split("=",1)[1]
-                        workdir = str(PurePosixPath(p).parent) if p else ""
+                    if part.startswith("WorkDir="):
+                        workdir = part.split("=",1)[1]
                         break
+                if not workdir:
+                    for part in meta.split():
+                        if part.startswith("StdOut="):
+                            p = part.split("=",1)[1]
+                            workdir = str(PurePosixPath(p).parent) if p else ""
+                            break
             if not workdir:
                 return ()
             return tuple(files.iterdir_entries(workdir))
