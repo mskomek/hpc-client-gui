@@ -55,6 +55,12 @@
     } catch (e) {}
   };
 
+  window.hpcPaste = (text) => {
+    try {
+      terminal.paste(text);
+    } catch (e) {}
+  };
+
   window.hpcFocus = () => {
     try {
       terminal.focus();
