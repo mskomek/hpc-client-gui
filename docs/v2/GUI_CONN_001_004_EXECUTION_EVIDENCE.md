@@ -1,4 +1,4 @@
-# wx Connection execution evidence (Wave 71 → 71.3)
+# wx Connection execution evidence (Wave 71 → 71.4)
 
 This record reports only checks actually run against the repository. It does
 not treat static controls or service-only tests as visual parity evidence.
@@ -6,8 +6,9 @@ not treat static controls or service-only tests as visual parity evidence.
 ## Repository state
 
 - Branch: `develop`
-- Expected starting HEAD (Wave 71.3 task): `52aa565f3ce775afdc9e6f84f0a131a9d695362d`
-- Exact tested HEAD: `bd7dc118`
+- Starting HEAD (Wave 71.3): `77a5debf467de87a3a25a58e29108a1fcc45b4df`
+- Tested code HEAD: `e810ae09`
+- Evidence record HEAD: (this document)
 - Worktree state: clean (only pre-existing unrelated `.integration-recovery/`, `audit.zip`, `waves.zip`)
 - OS: Windows 11 (win32)
 - Python: 3.12.4
@@ -21,83 +22,92 @@ not treat static controls or service-only tests as visual parity evidence.
 - User authorized enabling CI: NO
 - Workflow file: `.github/workflows/ci.yml` — `push: [main]`, `pull_request: [main]`
 
-## Root causes fixed (Wave 71.1)
+## Root causes fixed (Wave 71.1–71.2)
 
-- Saved master-password connection defect: `ssh_info_from_profile` never prompted for master.
-- Test Cluster saved-credential defect: `_test_cluster` called `_collect_profile()` which popped secret fields.
-- wx password dialog defect: MFA/edit-auth used wrong dialog type.
-- Weak Add test: tautological assertion replaced with strict count.
-- Fake action-state test: replaced with real Connect button events.
-- Save & Connect evidence gap: added full wx event chain.
-
-## Root causes fixed (Wave 71.2)
-
-- Blank-name Save & Connect bug: `_handle_save()` returns authoritative saved profile dict; callers use canonical name.
-- Tautological assertion removed: `assert result is True or result is False` removed.
-- Ruff violations cleaned: unused imports and variables removed.
-- CI develop trigger removed: `develop` removed from push/pull_request triggers.
-- Parity source-of-truth synchronized: `V2_PARITY_STATUS.md` matches `parity_matrix.py`.
-- pyproject.toml: `F841` added to test file ignores (now removed in 71.3).
+- Saved master-password connection defect
+- Test Cluster saved-credential defect
+- wx password dialog defect
+- Blank-name Save & Connect bug
+- Tautological assertions removed
+- Ruff violations cleaned
+- CI develop trigger removed
+- Parity source-of-truth synchronized
 
 ## Root causes fixed (Wave 71.3)
 
-- **Save & Connect async contract**: `on_save_and_connect` returns `True` when save succeeds + connection worker starts. Worker failure is async and does not retroactively change the return value. The connect-after-save failure test now correctly asserts `True` + eventual `controller.failed`.
-- **Production Save & Connect event-chain**: New test uses real `WxConnectionDialog`, real `btn_save_connect` EVT_BUTTON, real production `on_save_and_connect` callback from `wx_connection.py`, real `save_profile()`, real `connect_selected()`, blank-name canonical `alice@login.cluster.edu` path.
-- **Master-password real wx prompt**: New test seeds NO DPAPI cache. Mocks only wx.Dialog/TextCtrl widgets so `_master_ask_factory` creates a real dialog that returns "master123". Real `resolve_password_for_connect` + real `decrypt_with_master` exercised. Prompt invoked exactly once.
-- **Master-password cached path**: Separated into own test. Proves cache optimization works but is NOT evidence for wx prompt chain.
-- **Master-password cancel via wx prompt**: New test with NO cache. wx.Dialog mocked to Cancel. Real resolver. No SSH, buttons restored.
-- **Test Cluster real button event**: New test dispatches real `btn_test_cluster` EVT_BUTTON. Real `_test_cluster()` → real credential resolver → real decrypt → fake self-test. No direct `_test_cluster()` call.
-- **Test Cluster cancel path**: New test with wx.Dialog Cancel. No self-test backend call, button re-enabled, storage unchanged.
-- **Global F841 removed**: `pyproject.toml` no longer ignores F841 for tests. All `app = wx.App.Get()` renamed to `_wx_app = wx.App.Get()` across all Connection test files.
+- Save & Connect async contract: `on_save_and_connect` returns `True` when save succeeds + worker starts
+- Production Save & Connect event-chain test with real WxConnectionDialog
+- Master-password real wx prompt test (no cache, mock wx widgets only)
+- Test Cluster real button EVT_BUTTON test
+- Global F841 test ignore removed
+
+## Root causes fixed (Wave 71.4)
+
+- **`connect_selected()` return contract**: Returns `False` for all synchronous early-return paths (no selection, profile not found, master cancel/wrong/unavailable, credential resolution failure). Returns `True` only after `Thread(target=worker, daemon=True).start()` is successfully invoked, with try/except around Thread.start().
+- **`on_save_and_connect()` consumes return value**: `started = connect_selected(None); return bool(started)`.
+- **Master Remember=false proof**: Settings unchanged, `protect_secret` not called, `update_settings` not called for master persistence, plaintext master never stored.
+- **Master Remember=true proof**: `protect_secret` called with master password, plaintext never stored in profile.
+- **Test Cluster Remember=false proof**: Profiles unchanged, settings unchanged, `protect_secret` not called.
+- **Test Cluster cancel proof**: No self-test backend call, button re-enabled, no settings change.
+- **Save & Connect + master cancel**: Profile saved, no SSH, `on_save_and_connect` returns False.
+- **Save & Connect + wrong master**: No SSH, returns False.
 
 ## Async Save & Connect contract
 
 `on_save_and_connect(...)` returns:
 
-- **True**: save succeeded, canonical saved profile was selected, connection attempt was successfully started (worker thread launched).
-- **False**: save failed, canonical profile could not be selected, or connection could not be started synchronously.
+- **True**: save succeeded, canonical saved profile selected, connection worker successfully launched.
+- **False**: save failed / profile couldn't be selected / credential resolution failed / master prompt cancelled / worker couldn't start.
 
-A later worker/network failure does **not** retroactively change the callback return value. Worker failure is represented by:
-- `controller.state == "failed"`
-- Visible status text shows failure
-- Controls are restored by the production `done()` callback
+Worker failure is async: `controller.state → failed`, visible status updates, buttons restored by production `done()` callback. Does NOT retroactively change the callback return value.
 
-## Real wx event chains exercised (Wave 71.3)
+## Master password persistence
 
-1. **Production Save & Connect (blank-name)**: Real Add button → real WxConnectionDialog (ShowModal subclassed for non-blocking) → real `btn_save_connect` EVT_BUTTON → real `_save_and_connect_clicked()` → real production `on_save_and_connect` → real `save_profile()` → canonical `alice@login.cluster.edu` → real `connect_selected()` → fake backend → Connected.
-2. **Async failure**: Save & Connect → save succeeds → `on_save_and_connect` returns True → worker starts → fake backend raises → controller.failed → profile persists → buttons restored.
-3. **Master-password wx prompt (no cache)**: Saved master-encrypted profile → Connect Selected real wx button → real `resolve_password_for_connect` → real `_master_ask_factory` → wx.Dialog mocked (ShowModal=ID_OK, TextCtrl=master123) → real `decrypt_with_master` → transient password → Connected. Prompt invoked exactly once.
-4. **Master-password cancel (no cache)**: Same chain but wx.Dialog returns Cancel → `master_cancelled` → no SSH, buttons restored.
-5. **Test Cluster real button**: Saved master-encrypted profile → edit dialog → real `btn_test_cluster` EVT_BUTTON → real `_test_cluster()` → real credential resolver → wx.Dialog mocked → real decrypt → fake self-test → storage unchanged.
-6. **Test Cluster cancel**: Same chain but wx.Dialog returns Cancel → no self-test, button re-enabled, storage unchanged.
+```
+Remember=false profile mutation: NO
+Remember=false settings mutation: NO
+Remember=false protect_secret called: NO
+Remember=false update_settings called for master: NO
 
-## Security evidence
+Remember=true protect_secret called: YES (with master password)
+Remember=true plaintext master persisted: NO
+```
 
-- Saved `password` always cleared; only secure reference types survive save.
-- `resolve_password_for_connect` resolution order: typed → keychain → DPAPI → master-encrypted (wx prompt) → "".
-- MFA responses transient, not logged. No secret appears in `MessageBox` or logs.
-- Blank-name produces canonical `username@host` from persistence service.
-- Wrong master never starts SSH; no empty-password fallback; secret never in error messages.
-- Cancel never starts SSH; no persisted profile mutation.
-- Test Cluster never mutates storage.
-- Master password not persisted when Remember checkbox is false.
-- No master password logged.
+## Test Cluster persistence
 
-## Tests actually run (against committed HEAD `bd7dc118`)
+```
+Profile mutation: NO
+Settings mutation with Remember=false: NO
+Secret-store mutation: NO
+Backend call on Cancel: NO
+```
+
+## connect_selected contract
+
+```
+No selection: False
+Master cancel: False
+Wrong master: False
+Saved credential unavailable: False
+Worker started: True
+Worker later failed: True (async)
+```
+
+## Tests actually run (against committed HEAD `e810ae09`)
 
 ### Full Connection suite
 ```
 tests/test_wx_connection.py + tests/test_wx_connection_profiles.py
 + tests/test_wx_connection_hardening.py + tests/test_wx_connection_71_2.py
-+ tests/test_wx_connection_71_3.py
-Result: 71 passed in 23.26s (re-verified against committed HEAD: 71 passed in 40.83s)
++ tests/test_wx_connection_71_3.py + tests/test_wx_connection_71_4.py
+Result: 79 passed in 26.92s
 ```
 
 ### Broader regression
 ```
 tests/test_optional_ssh_credentials.py + test_provider_capabilities.py + test_plugin_v2.py
 + test_quota_monitor.py + test_quota_runtime.py + test_log_redaction.py + test_cluster_self_test.py
-Result: 33 passed, 9 subtests passed in 1.79s
+Result: 33 passed, 9 subtests passed in 1.77s
 ```
 
 ### Ruff
@@ -105,7 +115,7 @@ Result: 33 passed, 9 subtests passed in 1.79s
 python -m ruff check src/hpc_gui/wx_connection.py src/hpc_gui/wx_connection_dialog.py
   src/hpc_gui/services/connection_profile_service.py tests/test_wx_connection.py
   tests/test_wx_connection_profiles.py tests/test_wx_connection_hardening.py
-  tests/test_wx_connection_71_2.py tests/test_wx_connection_71_3.py
+  tests/test_wx_connection_71_2.py tests/test_wx_connection_71_3.py tests/test_wx_connection_71_4.py
 Result: All checks passed (0 errors)
 Global F841 test ignore: REMOVED
 ```
@@ -121,8 +131,8 @@ Global F841 test ignore: REMOVED
 
 | ID | Status | Evidence |
 |---|---|---|
-| GUI-CONN-001 | PARTIAL | Headless wx event chains + production Save & Connect + async contract proven; no desktop screenshot |
-| GUI-CONN-002 | PARTIAL | Real wx prompt path + real decrypt + cancel/wrong paths proven; no live desktop prompt capture |
+| GUI-CONN-001 | PARTIAL | Headless wx event chains + production Save & Connect + async contract + connect_selected return contract proven; no desktop screenshot |
+| GUI-CONN-002 | PARTIAL | Real wx prompt path + real decrypt + cancel/wrong paths + Remember=false/true persistence proofs proven; no live desktop prompt capture |
 | GUI-CONN-003 | PARTIAL | Templates provenance; no desktop capture |
 | GUI-CONN-004 | PARTIAL | Fail-closed quota, nested provider lookup; no real transport |
 | GUI-I18N-001 | PARTIAL | New EN/TR keys verified; no visual language-switch |
