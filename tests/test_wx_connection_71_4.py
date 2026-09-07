@@ -224,7 +224,7 @@ def test_master_password_remember_true_persists_protected(monkeypatch):
              mock.patch("wx.FlexGridSizer", return_value=fake_sizer), \
              mock.patch("wx.MessageBox"), \
              mock.patch("hpc_gui.core.secret_store.protect_secret", return_value="protected-token-714") as mock_protect, \
-             mock.patch("hpc_gui.config.storage.update_settings") as mock_update:
+             mock.patch("hpc_gui.config.storage.update_settings"):
             evt2 = wx.CommandEvent(wx.EVT_BUTTON.typeId, btn.GetId())
             btn.GetEventHandler().ProcessEvent(evt2)
             for _ in range(30):
