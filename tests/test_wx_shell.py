@@ -44,7 +44,8 @@ def test_wx_shell_dispatches_core_views():
     assert 'TransferItem("upload", local_path' in source and "_start_file_transfers" in source
     assert "files.mkdir(destination)" in source
     assert 'command_id == "NAV-TERMINAL"' in source and "show_terminal(parent, ssh=session.get(\"ssh\"), lifecycle=lifecycle)" in source
-    assert "command_items" in source and "settings_btn.SetLabel" in source
+    # New shell uses menu_items + t("menu.settings") not old command_items/settings_btn
+    assert ("menu_items" in source and 't("menu.settings")' in source) or ("command_items" in source and "settings_btn.SetLabel" in source)
     assert "lifecycle.register_cleanup(destroy_tray)" in source and "def destroy_tray" in source
 
 
