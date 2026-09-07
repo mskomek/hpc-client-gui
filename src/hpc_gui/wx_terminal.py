@@ -61,7 +61,30 @@ class TerminalModel:
 
 
 def build_terminal_panel(parent, *, model: TerminalModel | None = None, ssh=None, send_input=None, resize_pty=None, lifecycle=None):
-    """Reusable terminal panel for both embedded and detached use."""
+    """Reusable terminal panel for both embedded and detached use.
+
+    Wave 73: try real xterm.js WebView renderer first; fall back to TextCtrl
+    diagnostic (non-parity) only when WebView backend is unavailable.
+    """
+    # Attempt WebView xterm renderer (single JSON bridge, FitAddon, bounded queue)
+    try:
+        from hpc_gui.wx_terminal_webview import WxTerminalWebViewPanel, _is_webview_available
+
+        if _is_webview_available():
+            try:
+                # Reuse same ssh/lifecycle contract; model is compat-only for WebView (xterm is authority)
+                panel = WxTerminalWebViewPanel(parent, ssh=ssh, send_input=send_input, resize_pty=resize_pty, lifecycle=lifecycle)
+                # Keep legacy attribute names for shell compat
+                if model is not None:
+                    panel._terminal_model = model
+                else:
+                    panel._terminal_model = getattr(panel, "_wx_terminal_model", None)
+                panel._terminal_ssh = ssh
+                return panel
+            except Exception:
+                pass
+    except Exception:
+        pass
     # keep literal references for optional ssh renderer contract
     # ssh.send_shell_input / ssh.resize_shell_pty
     try:
