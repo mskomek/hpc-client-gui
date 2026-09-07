@@ -52,7 +52,7 @@ LOCAL_ACTIONS = (
 REMOTE_ACTIONS = (
     "open", "edit", "edit_new_window", "run_shell", "download", "upload", "rename",
     "delete", "copy", "move", "paste", "copy_path", "refresh", "new_folder",
-    "new_tab",
+    "new_tab", "follow_track",
 )
 
 
@@ -64,7 +64,7 @@ def _eligible(selection: FileContextSelection, remote: bool) -> frozenset[str]:
         actions.discard("cut")
         actions.update({"upload", "move"})
         if selection.one_file:
-            actions.update({"open", "edit", "edit_new_window", "download", "rename"})
+            actions.update({"open", "edit", "edit_new_window", "download", "rename", "follow_track"})
         elif selection.one_dir:
             actions.update({"open", "download", "upload", "new_folder", "new_tab"})
         else:
@@ -110,6 +110,7 @@ FILE_CONTEXT_LABEL_KEYS = {
     "move": "dirs.move", "paste": "dirs.paste", "copy_path": "dirs.copy_path", "refresh": "dirs.refresh",
     "new_tab": "dirs.new_tab", "new_folder": "dirs.new_folder",
     "run_shell": "dirs.run_shell_terminal",
+    "follow_track": "dirs.follow_track",
 }
 
 

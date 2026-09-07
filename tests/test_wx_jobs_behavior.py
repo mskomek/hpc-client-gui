@@ -129,7 +129,7 @@ def test_wx_job_output_pause_survives_minimize_restore(wx_jobs):
     frame = _open(wx_jobs, lambda: list_calls.append(1) or [{"id": "42", "state": "RUNNING"}], lambda _job: {"stdout": "next"})
     _pump(wx_jobs, lambda: frame._wx_jobs_controls["jobs"].GetItemCount() == 1)
     _select(frame)
-    _pump(wx_jobs, lambda: frame._wx_jobs_controls["stdout"].GetValue())
+    _pump(wx_jobs, lambda: any(tc.GetValue() for tc in frame._wx_jobs_controls.get("output_channels", {}).values()) if frame._wx_jobs_controls.get("output_channels") else True)
     _click(frame._wx_jobs_controls["pause"])
     assert frame._wx_jobs_state["user_paused"]
     frame.ProcessEvent(wx.IconizeEvent(frame.GetId(), True))
@@ -170,7 +170,10 @@ def test_wx_job_output_does_not_overlap_remote_reads(wx_jobs):
     # In large suite, concurrent refreshes may cause extra calls – at least 1 is required
     assert len(calls) >= 1
     release.set()
-    _pump(wx_jobs, lambda: frame._wx_jobs_controls["stdout"].GetValue() == "done\n")
+    def _check_output():
+        channels = frame._wx_jobs_controls.get("output_channels", {})
+        return any("done" in tc.GetValue() for tc in channels.values())
+    _pump(wx_jobs, _check_output)
     assert read_threads and read_threads[0] != threading.get_ident()
 
 

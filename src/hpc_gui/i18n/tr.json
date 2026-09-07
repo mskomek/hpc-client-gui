@@ -163,7 +163,8 @@
     "command_palette": "Komut Paleti",
     "test_cluster": "Küme testi",
     "new_slurm_script": "Yeni Slurm betiği",
-    "ansys_linter": "ANSYS Linter"
+    "ansys_linter": "ANSYS Linter",
+    "filter": "Filtre"
   },
   "placeholders": {
     "host": "Sunucu adı veya IP",
@@ -179,7 +180,16 @@
     "open_output": "Çıktıyı Aç",
     "pause_output": "Canlı Takibi Duraklat",
     "resume_output": "Canlı Takibe Devam Et",
-    "job_id": "İş Kimliği"
+    "job_id": "İş Kimliği",
+    "name": "Isim",
+    "partition": "Bolum",
+    "elapsed": "Gecen Sure",
+    "nodes": "Dugumler",
+    "cpus": "CPUs",
+    "reason": "Neden",
+    "filter_hint": "Isleri filtrele...",
+    "auto_refresh": "Otomatik yenile",
+    "select_job_hint": "Detaylari goruntulemek icin bir is secin"
   },
   "files": {
     "title": "Çıktılar",
@@ -389,7 +399,11 @@
     "delete_confirm": "Seçilen öğeler silinsin mi?",
     "no_file_selected": "Dosya seçilmedi.",
     "no_directory_selected": "Dizin seçili değil.",
-    "conflict_message": "Hedefte zaten var:\n{path}\n\nNe yapmak istiyorsunuz?"
+    "conflict_message": "Hedefte zaten var:\n{path}\n\nNe yapmak istiyorsunuz?",
+    "follow_track": "Takip Et",
+    "follow_new_tab": "Yeni Cikti Sekmesinde Takip Et",
+    "follow_new_window": "Yeni Pencerede Takip Et",
+    "follow_existing": "Mevcut Takipciye Ata"
   },
   "jobs_outputs": {
     "auto_scroll": "Otomatik kaydır",
@@ -438,7 +452,12 @@
     "tail_stopped_message": "Canlı çıktı takibi durdu.",
     "tail_close_window": "Pencereyi kapat",
     "tail_close_screen": "Takip ekranını kapat",
-    "tracking_stopped_disconnected": "Bağlantı 30 saniyedir kullanılamıyor."
+    "tracking_stopped_disconnected": "Bağlantı 30 saniyedir kullanılamıyor.",
+    "job_details": "Is Detaylari",
+    "raw_scontrol_hint": "Ham scontrol ciktisi",
+    "show_raw_scontrol": "Ham scontrol detaylarini goster",
+    "hide_raw_scontrol": "Ham scontrol detaylarini gizle",
+    "no_channels": "Cikti kanali tanimlanmamis. Dosyalar > Takip ile uzaktan dosya takibi yapabilirsiniz."
   },
   "putty": {
     "downloading": "plink.exe indiriliyor...",

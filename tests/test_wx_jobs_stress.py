@@ -22,6 +22,12 @@ def _pump(app, predicate, timeout=3):
     assert predicate()
 
 
+def _get_stdout(frame):
+    """Get the stdout TextCtrl from dynamic output channels."""
+    channels = frame._wx_jobs_controls.get("output_channels", {})
+    return channels.get("stdout")
+
+
 def _open(list_jobs=None, read_output=None):
     show_jobs(list_jobs=list_jobs, read_output=read_output)
     frames = [window for window in wx.GetTopLevelWindows() if window.GetTitle() == "Jobs"]
@@ -71,9 +77,9 @@ def test_wx_jobs_stress_rapid_selection_never_shows_stale_output(wx_app):
         _select(frame, selected)
         job_id = str(selected + 1)
         _pump(wx_app, lambda job_id=job_id: frame._wx_jobs_state["selected_job"] == job_id)
-        _pump(wx_app, lambda job_id=job_id: frame._wx_jobs_controls["stdout"].GetValue() == f"output-{job_id}\n")
+        _pump(wx_app, lambda job_id=job_id: _get_stdout(frame).GetValue() == f"output-{job_id}\n")
     assert frame._wx_jobs_state["selected_job"] == "25"
-    assert frame._wx_jobs_controls["stdout"].GetValue() == "output-25\n"
+    assert _get_stdout(frame).GetValue() == "output-25\n"
     _close(frame, wx_app)
 
 
@@ -82,14 +88,14 @@ def test_wx_jobs_stress_repeated_minimize_restore_keeps_polling_lifecycle_stable
     frame = _open(backend.list_jobs, backend.read_output)
     _pump(wx_app, lambda: frame._wx_jobs_controls["jobs"].GetItemCount() == 1)
     _select(frame, 0)
-    _pump(wx_app, lambda: frame._wx_jobs_controls["stdout"].GetValue())
+    _pump(wx_app, lambda: _get_stdout(frame).GetValue())
     for cycle in range(100):
         frame.ProcessEvent(wx.IconizeEvent(frame.GetId(), True))
         before = backend.list_calls
         backend.set_output("1", f"minimized-{cycle}")
         frame._wx_jobs_refresh_jobs()
         frame._wx_jobs_refresh_outputs()
-        _pump(wx_app, lambda cycle=cycle: f"minimized-{cycle}" in frame._wx_jobs_controls["stdout"].GetValue())
+        _pump(wx_app, lambda cycle=cycle: f"minimized-{cycle}" in _get_stdout(frame).GetValue())
         assert backend.list_calls == before
         frame.ProcessEvent(wx.IconizeEvent(frame.GetId(), False))
         _pump(wx_app, lambda: not frame._wx_jobs_state["minimized"])
@@ -105,12 +111,12 @@ def test_wx_jobs_stress_pause_resume_state_never_desynchronizes(wx_app):
     frame = _open(backend.list_jobs, backend.read_output)
     _pump(wx_app, lambda: frame._wx_jobs_controls["jobs"].GetItemCount() == 1)
     _select(frame, 0)
-    _pump(wx_app, lambda: frame._wx_jobs_controls["stdout"].GetValue())
+    _pump(wx_app, lambda: _get_stdout(frame).GetValue())
     for transition in range(100):
         _click(frame._wx_jobs_controls["pause"])
         backend.set_output("1", f"pause-{transition}")
         frame._wx_jobs_refresh_outputs()
-        _pump(wx_app, lambda transition=transition: f"pause-{transition}" in frame._wx_jobs_controls["stdout"].GetValue())
+        _pump(wx_app, lambda transition=transition: f"pause-{transition}" in _get_stdout(frame).GetValue())
         paused = transition % 2 == 0
         assert frame._wx_jobs_state["user_paused"] is paused
         if not paused:
@@ -141,7 +147,7 @@ def test_wx_jobs_stress_out_of_order_output_completions_are_safe(wx_app):
         _pump(wx_app, lambda: started["1"].is_set())
         _select(frame, 1)
         gates["1"].set()
-        _pump(wx_app, lambda: frame._wx_jobs_controls["stdout"].GetValue() == "output-2\n")
+        _pump(wx_app, lambda: _get_stdout(frame).GetValue() == "output-2\n")
         _pump(wx_app, lambda: not frame._wx_jobs_state["output_in_flight"])
     _close(frame, wx_app)
 
@@ -180,7 +186,7 @@ def test_wx_jobs_stress_blocked_reads_never_overlap(wx_app):
             frame._wx_jobs_refresh_outputs()
         assert peak_reads == 1
         gates[index].set()
-        _pump(wx_app, lambda index=index: f"round-{index}" in frame._wx_jobs_controls["stdout"].GetValue())
+        _pump(wx_app, lambda index=index: f"round-{index}" in _get_stdout(frame).GetValue())
         if index < 49:
             frame._wx_jobs_refresh_outputs()
     assert peak_reads == 1
@@ -193,8 +199,8 @@ def test_wx_jobs_stress_large_output_remains_bounded_and_responsive(wx_app):
     frame = _open(backend.list_jobs, backend.read_output)
     _pump(wx_app, lambda: frame._wx_jobs_controls["jobs"].GetItemCount() == 1)
     _select(frame, 0)
-    _pump(wx_app, lambda: "line-99999" in frame._wx_jobs_controls["stdout"].GetValue(), timeout=5)
-    lines = frame._wx_jobs_controls["stdout"].GetValue().splitlines()
+    _pump(wx_app, lambda: "line-99999" in _get_stdout(frame).GetValue(), timeout=5)
+    lines = _get_stdout(frame).GetValue().splitlines()
     assert len(lines) == 5000
     assert lines[0] == "line-95000"
     assert lines[-1] == "line-99999"
