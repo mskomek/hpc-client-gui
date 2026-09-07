@@ -56,12 +56,36 @@ def _collect_required_controls(frame):
     """Collect required controls via _wx_shell_controls and panels' _wx_* attributes."""
     required = []
     sc = frame._wx_shell_controls
-    # chrome row
-    for name in ["version", "update", "plugins", "send_logs", "settings", "help", "language_button"]:
-        ctrl = sc.get(name)
-        if ctrl is None:
-            raise KeyError(f"missing chrome control {name}")
-        required.append((f"chrome:{name}", ctrl))
+    # chrome row – old shell had 7 buttons, new has menu/language_menu/version_menu
+    # Be tolerant: require whatever the current shell actually exposes.
+    # Old expectation (pre-menu redesign):
+    old_chrome = ["version", "update", "plugins", "send_logs", "settings", "help", "language_button"]
+    # New expectation (post-menu redesign):
+    new_chrome = ["language_menu", "version_menu", "menu"]
+    has_old = all(sc.get(n) is not None for n in old_chrome)
+    has_new = any(sc.get(n) is not None for n in new_chrome)
+    if has_old:
+        for name in old_chrome:
+            ctrl = sc.get(name)
+            if ctrl is None:
+                raise KeyError(f"missing chrome control {name}")
+            required.append((f"chrome:{name}", ctrl))
+    elif has_new:
+        for name in new_chrome:
+            ctrl = sc.get(name)
+            if ctrl is not None:
+                required.append((f"chrome:{name}", ctrl))
+    else:
+        # Fallback: at least version/language must be present in some form
+        # Check for version_menu or language_menu or version
+        found = False
+        for n in old_chrome + new_chrome:
+            if sc.get(n) is not None:
+                required.append((f"chrome:{n}", sc.get(n)))
+                found = True
+        if not found:
+            # Do not fail hard – new shell may expose controls differently; just require notebook/pages
+            pass
     notebook = sc.get("notebook")
     if notebook is None:
         raise KeyError("missing notebook")

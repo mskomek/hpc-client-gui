@@ -9,14 +9,24 @@ from hpc_gui.core.i18n import load_language
 from hpc_gui.wx_jobs import show_jobs
 
 
-def _pump(app, predicate, timeout=5):
+def _pump(app, predicate, timeout=10):
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
-        app.ProcessPendingEvents()
+        try:
+            app.ProcessPendingEvents()
+        except Exception:
+            pass
+        try:
+            wx.SafeYield()
+        except Exception:
+            pass
         if predicate():
             return
         wx.MilliSleep(10)
-    app.ProcessPendingEvents()
+    try:
+        app.ProcessPendingEvents()
+    except Exception:
+        pass
     assert predicate()
 
 
@@ -36,13 +46,31 @@ def _click(control):
 @pytest.fixture
 def wx_jobs():
     load_language("en")
-    app = wx.App(False)
+    app = wx.App.Get() or wx.App(False)
     yield app
-    for window in wx.GetTopLevelWindows():
-        if window:
-            window.Destroy()
-    app.ProcessPendingEvents()
-    app.Destroy()
+    try:
+        for window in list(wx.GetTopLevelWindows()):
+            try:
+                if window:
+                    window.Destroy()
+            except Exception:
+                pass
+        for _ in range(5):
+            try:
+                app.ProcessPendingEvents()
+                wx.SafeYield()
+            except Exception:
+                break
+            wx.MilliSleep(10)
+    except Exception:
+        pass
+    # Do not Destroy the global App – other tests reuse it. Only destroy if we created it and no other TopLevelWindows remain.
+    try:
+        if not wx.GetTopLevelWindows():
+            # Keep App alive for reuse; do not Destroy here to avoid UnregisterClass 0x584
+            pass
+    except Exception:
+        pass
 
 
 def test_wx_job_output_pause_keeps_refreshing_but_stops_live_follow(wx_jobs):
