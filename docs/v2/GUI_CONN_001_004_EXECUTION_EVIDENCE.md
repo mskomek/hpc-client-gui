@@ -1,4 +1,4 @@
-# wx Connection execution evidence (Wave 71 → 71.4)
+# wx Connection execution evidence (Wave 71 → 71.5)
 
 This record reports only checks actually run against the repository. It does
 not treat static controls or service-only tests as visual parity evidence.
@@ -6,15 +6,14 @@ not treat static controls or service-only tests as visual parity evidence.
 ## Repository state
 
 - Branch: `develop`
-- Starting HEAD (Wave 71.3): `77a5debf467de87a3a25a58e29108a1fcc45b4df`
-- Tested code HEAD: `e810ae09`
-- Evidence record HEAD: (this document)
+- Starting HEAD (Wave 71.4): `f72692805038e5dfc88305222d6e0a0bd9da3b87`
+- Tested code HEAD: `815cfeb2`
+- Evidence record HEAD: (this document will be committed separately)
 - Worktree state: clean (only pre-existing unrelated `.integration-recovery/`, `audit.zip`, `waves.zip`)
 - OS: Windows 11 (win32)
 - Python: 3.12.4
 - wxPython: available (headless)
 - Runtime contract: Qt remains the production runtime; `DEFAULT_GUI_RUNTIME` remains `qt`.
-- PySide6/shiboken6 were not removed. `.tmp/` was not touched.
 
 ## CI governance
 
@@ -22,7 +21,7 @@ not treat static controls or service-only tests as visual parity evidence.
 - User authorized enabling CI: NO
 - Workflow file: `.github/workflows/ci.yml` — `push: [main]`, `pull_request: [main]`
 
-## Root causes fixed (Wave 71.1–71.2)
+## Root causes fixed (Wave 71.1–71.4)
 
 - Saved master-password connection defect
 - Test Cluster saved-credential defect
@@ -32,82 +31,93 @@ not treat static controls or service-only tests as visual parity evidence.
 - Ruff violations cleaned
 - CI develop trigger removed
 - Parity source-of-truth synchronized
-
-## Root causes fixed (Wave 71.3)
-
-- Save & Connect async contract: `on_save_and_connect` returns `True` when save succeeds + worker starts
-- Production Save & Connect event-chain test with real WxConnectionDialog
-- Master-password real wx prompt test (no cache, mock wx widgets only)
-- Test Cluster real button EVT_BUTTON test
 - Global F841 test ignore removed
+- connect_selected() returns bool
+- on_save_and_connect() consumes connect_selected() result
+- Master Remember=false/true persistence proofs
+- Test Cluster Remember=false/true persistence proofs
+- Save & Connect master-cancel/wrong-master/worker-failure regression tests
 
-## Root causes fixed (Wave 71.4)
+## Root causes fixed (Wave 71.5)
 
-- **`connect_selected()` return contract**: Returns `False` for all synchronous early-return paths (no selection, profile not found, master cancel/wrong/unavailable, credential resolution failure). Returns `True` only after `Thread(target=worker, daemon=True).start()` is successfully invoked, with try/except around Thread.start().
-- **`on_save_and_connect()` consumes return value**: `started = connect_selected(None); return bool(started)`.
-- **Master Remember=false proof**: Settings unchanged, `protect_secret` not called, `update_settings` not called for master persistence, plaintext master never stored.
-- **Master Remember=true proof**: `protect_secret` called with master password, plaintext never stored in profile.
-- **Test Cluster Remember=false proof**: Profiles unchanged, settings unchanged, `protect_secret` not called.
-- **Test Cluster cancel proof**: No self-test backend call, button re-enabled, no settings change.
-- **Save & Connect + master cancel**: Profile saved, no SSH, `on_save_and_connect` returns False.
-- **Save & Connect + wrong master**: No SSH, returns False.
+- **begin_connect() failure recovery**: Previously swallowed with `pass`, leaving controller in `connecting` and buttons disabled. Now aborts synchronously: `controller.fail()`, transient password cleared, status failed, buttons restored, returns `False`.
+- **Thread.start() failure recovery**: Previously returned `False` but left controller in `connecting` and buttons disabled. Now calls `controller.fail()`, clears transient password, sets status failed, restores buttons, returns `False`.
+- **connect_selected() bool contract proven**: Direct assertion of return value via `host._wx_connection_connect_selected()` for no-selection (False) and worker-start (True) cases.
+- **Remember=true settings persistence proven**: `update_settings({"master_password_dpapi": protected_token})` asserted with exact token value, not just `protect_secret` call.
+- **Test Cluster Remember=true persistence proven**: Same strict assertion for Test Cluster path — `protect_secret` + `update_settings` with protected token, profile unchanged, master not in profile.
+- **Save & Connect master-cancel callback result asserted**: `callback_result[0] is False` explicitly verified.
+- **Save & Connect wrong-master rewritten as real Save & Connect**: Not a normal Connect test — uses FakeDialog with `on_save_and_connect`, profile saved via `_handle_save`, master prompt returns wrong master, callback returns False.
+- **Save & Connect Thread.start failure test added**: Save succeeds, Thread.start raises, callback returns False, profile persists.
 
-## Async Save & Connect contract
-
-`on_save_and_connect(...)` returns:
-
-- **True**: save succeeded, canonical saved profile selected, connection worker successfully launched.
-- **False**: save failed / profile couldn't be selected / credential resolution failed / master prompt cancelled / worker couldn't start.
-
-Worker failure is async: `controller.state → failed`, visible status updates, buttons restored by production `done()` callback. Does NOT retroactively change the callback return value.
-
-## Master password persistence
+## Connection start contract
 
 ```
-Remember=false profile mutation: NO
-Remember=false settings mutation: NO
-Remember=false protect_secret called: NO
-Remember=false update_settings called for master: NO
+No selection: False
+Profile missing: False
+Credential failure: False
+Master cancel: False
+Wrong master: False
+begin_connect failure: False
+Thread.start failure: False
+Worker successfully started: True
+Worker later network failure: True (async, controller eventually failed)
+```
 
-Remember=true protect_secret called: YES (with master password)
-Remember=true plaintext master persisted: NO
+## Controller recovery
+
+```
+begin_connect failure final state: failed
+Thread.start failure final state: failed
+Controls restored: YES (on both paths)
+Transient secret cleared: YES (on both paths)
+```
+
+## Master Remember persistence
+
+```
+Remember=false protect_secret: NOT CALLED
+Remember=false settings write: NOT CALLED
+Remember=true protect_secret: CALLED (with master password)
+Remember=true settings write: CALLED (with protected token)
+Plaintext master persisted: NO
 ```
 
 ## Test Cluster persistence
 
 ```
+Remember=false settings mutation: NO
+Remember=true protected settings write: YES (protect_secret + update_settings with protected token)
 Profile mutation: NO
-Settings mutation with Remember=false: NO
-Secret-store mutation: NO
-Backend call on Cancel: NO
+Master used as SSH password: NO
+Cancel backend call: NO
 ```
 
-## connect_selected contract
+## Save & Connect contract
 
 ```
-No selection: False
-Master cancel: False
-Wrong master: False
-Saved credential unavailable: False
-Worker started: True
-Worker later failed: True (async)
+Master cancel result: False
+Wrong master result: False
+Thread.start failure result: False
+Worker starts result: True
+Worker later fails: True (async, controller eventually failed)
 ```
 
-## Tests actually run (against committed HEAD `e810ae09`)
+## Tests actually run (against committed HEAD `815cfeb2`)
 
 ### Full Connection suite
 ```
 tests/test_wx_connection.py + tests/test_wx_connection_profiles.py
 + tests/test_wx_connection_hardening.py + tests/test_wx_connection_71_2.py
 + tests/test_wx_connection_71_3.py + tests/test_wx_connection_71_4.py
-Result: 79 passed in 26.92s
++ tests/test_wx_connection_71_5.py
+Result: 88 passed in 37.19s (re-verified against committed HEAD: 88 passed in 42.36s)
 ```
 
 ### Broader regression
 ```
 tests/test_optional_ssh_credentials.py + test_provider_capabilities.py + test_plugin_v2.py
 + test_quota_monitor.py + test_quota_runtime.py + test_log_redaction.py + test_cluster_self_test.py
-Result: 33 passed, 9 subtests passed in 1.77s
+Result: 33 passed, 9 subtests passed in 2.26s
 ```
 
 ### Ruff
@@ -116,8 +126,8 @@ python -m ruff check src/hpc_gui/wx_connection.py src/hpc_gui/wx_connection_dial
   src/hpc_gui/services/connection_profile_service.py tests/test_wx_connection.py
   tests/test_wx_connection_profiles.py tests/test_wx_connection_hardening.py
   tests/test_wx_connection_71_2.py tests/test_wx_connection_71_3.py tests/test_wx_connection_71_4.py
+  tests/test_wx_connection_71_5.py
 Result: All checks passed (0 errors)
-Global F841 test ignore: REMOVED
 ```
 
 ## Parity synchronization
@@ -131,8 +141,8 @@ Global F841 test ignore: REMOVED
 
 | ID | Status | Evidence |
 |---|---|---|
-| GUI-CONN-001 | PARTIAL | Headless wx event chains + production Save & Connect + async contract + connect_selected return contract proven; no desktop screenshot |
-| GUI-CONN-002 | PARTIAL | Real wx prompt path + real decrypt + cancel/wrong paths + Remember=false/true persistence proofs proven; no live desktop prompt capture |
+| GUI-CONN-001 | PARTIAL | Headless wx event chains + production Save & Connect + async contract + connect_selected bool contract + begin_connect/Thread.start recovery proven; no desktop screenshot |
+| GUI-CONN-002 | PARTIAL | Real wx prompt path + real decrypt + cancel/wrong paths + Remember=false/true persistence proofs (including update_settings assertion) + Test Cluster Remember=true proven; no live desktop prompt capture |
 | GUI-CONN-003 | PARTIAL | Templates provenance; no desktop capture |
 | GUI-CONN-004 | PARTIAL | Fail-closed quota, nested provider lookup; no real transport |
 | GUI-I18N-001 | PARTIAL | New EN/TR keys verified; no visual language-switch |
