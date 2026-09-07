@@ -60,7 +60,7 @@ select = ["E4", "E7", "E9", "F"]
 
 [tool.ruff.lint.per-file-ignores]
 # Tests and scripts intentionally import after sys.path/env setup.
-"tests/**" = ["E402", "F841"]
+"tests/**" = ["E402"]
 "scripts/**" = ["E402"]
 # Platform-guarded modules keep their imports below conditional setup blocks.
 "src/hpc_gui/core/debug_telemetry.py" = ["E402"]

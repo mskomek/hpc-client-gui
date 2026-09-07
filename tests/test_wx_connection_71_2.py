@@ -88,7 +88,7 @@ def test_blank_name_save_and_connect_uses_canonical_name(monkeypatch):
     """Blank profile name must produce alice@login.cluster.edu, not login.cluster.edu."""
     tmp = _isolated_storage(monkeypatch)
     try:
-        app = wx.App.Get() or wx.App(False)
+        _wx_app = wx.App.Get() or wx.App(False)
         frame = wx.Frame(None)
         host = build_connection_panel(frame, profiles=[])
         connect_calls = []
@@ -161,7 +161,7 @@ def test_real_wx_dialog_save_and_connect_button_event(monkeypatch):
 
     tmp = _isolated_storage(monkeypatch)
     try:
-        app = wx.App.Get() or wx.App(False)
+        _wx_app = wx.App.Get() or wx.App(False)
         frame = wx.Frame(None)
         host = build_connection_panel(frame, profiles=[])
 
@@ -252,7 +252,7 @@ def test_master_password_real_wx_chain(monkeypatch):
             "password_salt": enc.salt,
         })
         _seed_master_dpapi_cache(monkeypatch, "master123")
-        app = wx.App.Get() or wx.App(False)
+        _wx_app = wx.App.Get() or wx.App(False)
         frame = wx.Frame(None)
         host = build_connection_panel(frame, profiles=load_profiles())
         captured = {}
@@ -313,7 +313,7 @@ def test_master_password_cancel_blocks_connection(monkeypatch):
             "password_enc": enc.token,
             "password_salt": enc.salt,
         })
-        app = wx.App.Get() or wx.App(False)
+        _wx_app = wx.App.Get() or wx.App(False)
         frame = wx.Frame(None)
         host = build_connection_panel(frame, profiles=load_profiles())
         connect_calls = []
@@ -387,7 +387,7 @@ def test_wrong_master_password_fails_closed(monkeypatch):
         # return "wrong-master" from cache without opening a wx dialog.
         # The real decrypt_with_master("wrong-master", ...) will fail.
         _seed_master_dpapi_cache(monkeypatch, "wrong-master")
-        app = wx.App.Get() or wx.App(False)
+        _wx_app = wx.App.Get() or wx.App(False)
         frame = wx.Frame(None)
         host = build_connection_panel(frame, profiles=load_profiles())
         connect_calls = []
@@ -455,7 +455,7 @@ def test_cluster_self_test_master_password_chain(monkeypatch):
             "password_salt": enc.salt,
         })
         _seed_master_dpapi_cache(monkeypatch, "master123")
-        app = wx.App.Get() or wx.App(False)
+        _wx_app = wx.App.Get() or wx.App(False)
         frame = wx.Frame(None)
         profile = next(p for p in load_profiles() if p["name"] == "m-cluster")
         before = [dict(p) for p in load_profiles()]

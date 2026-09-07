@@ -44,7 +44,7 @@ def _isolated_storage(monkeypatch):
 def test_wx_add_button_enabled_in_normal_startup(monkeypatch):
     tmp = _isolated_storage(monkeypatch)
     try:
-        app = wx.App.Get() or wx.App(False)
+        _wx_app = wx.App.Get() or wx.App(False)
         from hpc_gui.wx_connection import build_connection_panel
 
         frame = wx.Frame(None)
@@ -67,7 +67,7 @@ def test_wx_add_button_enabled_in_normal_startup(monkeypatch):
 def test_wx_add_opens_dialog(monkeypatch):
     tmp = _isolated_storage(monkeypatch)
     try:
-        app = wx.App.Get() or wx.App(False)
+        _wx_app = wx.App.Get() or wx.App(False)
         from hpc_gui.wx_connection import build_connection_panel
         from unittest.mock import patch as mock_patch
 
@@ -308,7 +308,7 @@ def test_duplicate_uses_naming_and_independent_identity(monkeypatch):
 def test_delete_requires_confirmation_and_cleans(monkeypatch):
     tmp = _isolated_storage(monkeypatch)
     try:
-        app = wx.App.Get() or wx.App(False)
+        _wx_app = wx.App.Get() or wx.App(False)
         from hpc_gui.wx_connection import build_connection_panel
 
         # Seed storage with profile
@@ -403,7 +403,7 @@ def test_saved_password_not_autopopulated(monkeypatch):
     tmp = _isolated_storage(monkeypatch)
     try:
         # Ensure wx dialog does not populate password field from encrypted storage
-        app = wx.App.Get() or wx.App(False)
+        _wx_app = wx.App.Get() or wx.App(False)
         from hpc_gui.wx_connection_dialog import WxConnectionDialog
 
         profile = {"name": "sec", "host": "h.example", "username": "user", "save_password": True, "password_enc": "tok", "password_salt": "salt"}
@@ -461,7 +461,7 @@ def test_template_provenance_preserved(monkeypatch):
     tmp = _isolated_storage(monkeypatch)
     try:
         from hpc_gui.wx_connection_dialog import WxConnectionDialog
-        app = wx.App.Get() or wx.App(False)
+        _wx_app = wx.App.Get() or wx.App(False)
         frame = wx.Frame(None)
         # Create profile with plugin provenance
         initial = {
@@ -486,7 +486,7 @@ def test_template_provenance_preserved(monkeypatch):
 def test_provider_required_project_account_validation(monkeypatch):
     tmp = _isolated_storage(monkeypatch)
     try:
-        app = wx.App.Get() or wx.App(False)
+        _wx_app = wx.App.Get() or wx.App(False)
         from hpc_gui.wx_connection_dialog import WxConnectionDialog
         frame = wx.Frame(None)
         # Provider requiring project
@@ -531,7 +531,7 @@ def test_storage_add_edit_remove_and_validation(monkeypatch):
     # Test wx dialog storage helpers – use dialog's storage_rows via WxConnectionDialog
     tmp = _isolated_storage(monkeypatch)
     try:
-        app = wx.App.Get() or wx.App(False)
+        _wx_app = wx.App.Get() or wx.App(False)
         from hpc_gui.wx_connection_dialog import WxConnectionDialog
         frame = wx.Frame(None)
         dlg = WxConnectionDialog(frame, initial_profile={"name": "lab", "host": "h.example"}, mode="add", on_save=lambda p: True)
@@ -600,7 +600,7 @@ def test_quota_states_fail_closed():
 def test_advanced_ssh_persistence(monkeypatch):
     tmp = _isolated_storage(monkeypatch)
     try:
-        app = wx.App.Get() or wx.App(False)
+        _wx_app = wx.App.Get() or wx.App(False)
         from hpc_gui.wx_connection_dialog import WxConnectionDialog
         frame = wx.Frame(None)
         dlg = WxConnectionDialog(frame, initial_profile={"name": "lab", "host": "h.example"}, mode="add", on_save=lambda p: True)
@@ -715,7 +715,7 @@ def test_ssh_info_resolves_secure_password():
 def test_host_key_dialog_mapping(monkeypatch):
     tmp = _isolated_storage(monkeypatch)
     try:
-        app = wx.App.Get() or wx.App(False)
+        _wx_app = wx.App.Get() or wx.App(False)
         from hpc_gui.wx_connection import build_connection_panel
         frame = wx.Frame(None)
         host = build_connection_panel(frame, profiles=[])
@@ -789,7 +789,7 @@ def test_i18n_en_tr_labels():
 def test_action_enable_disable_states(monkeypatch):
     tmp = _isolated_storage(monkeypatch)
     try:
-        app = wx.App.Get() or wx.App(False)
+        _wx_app = wx.App.Get() or wx.App(False)
         from hpc_gui.wx_connection import build_connection_panel
         frame = wx.Frame(None)
         # No profile selected -> Edit/Duplicate/Delete/Connect disabled
@@ -828,7 +828,7 @@ def test_action_states_during_connection_and_recovery(monkeypatch):
     try:
         from hpc_gui.core.i18n import load_language
         load_language("en")
-        app = wx.App.Get() or wx.App(False)
+        _wx_app = wx.App.Get() or wx.App(False)
         from hpc_gui.wx_connection import build_connection_panel
         import threading
 
@@ -943,7 +943,7 @@ def test_action_states_during_connection_and_recovery(monkeypatch):
 def test_dialog_save_and_connect_calls_one_callback(monkeypatch):
     tmp = _isolated_storage(monkeypatch)
     try:
-        app = wx.App.Get() or wx.App(False)
+        _wx_app = wx.App.Get() or wx.App(False)
         from hpc_gui.wx_connection_dialog import WxConnectionDialog
 
         frame = wx.Frame(None)
@@ -969,7 +969,7 @@ def test_dialog_save_and_connect_calls_one_callback(monkeypatch):
 def test_dialog_preserves_unknown_nested_system_fields(monkeypatch):
     tmp = _isolated_storage(monkeypatch)
     try:
-        app = wx.App.Get() or wx.App(False)
+        _wx_app = wx.App.Get() or wx.App(False)
         from hpc_gui.wx_connection_dialog import WxConnectionDialog
 
         frame = wx.Frame(None)

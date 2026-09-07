@@ -85,7 +85,7 @@ def _clean_wx_after():
 def test_keychain_connect_resolves(monkeypatch):
     tmp = _isolated_storage(monkeypatch)
     try:
-        app = wx.App.Get() or wx.App(False)
+        _wx_app = wx.App.Get() or wx.App(False)
         frame = wx.Frame(None)
         # Profile with keychain ref
         storage.upsert_profile({"name": "kc", "host": "h.example", "port": 22, "username": "user", "save_password": True, "password_keychain_ref": "fake-ref"})
@@ -145,7 +145,7 @@ def test_keychain_connect_resolves(monkeypatch):
 def test_dpapi_connect_resolves(monkeypatch):
     tmp = _isolated_storage(monkeypatch)
     try:
-        app = wx.App.Get() or wx.App(False)
+        _wx_app = wx.App.Get() or wx.App(False)
         frame = wx.Frame(None)
         storage.upsert_profile({"name": "dp", "host": "h.example", "port": 22, "username": "user", "save_password": True, "password_dpapi": "fake-token"})
         with mock.patch("hpc_gui.services.connection_profile_service.unprotect_secret", return_value="dpapi-secret"):
@@ -195,7 +195,7 @@ def test_master_encrypted_connect_with_prompt_and_cancel_and_wrong(monkeypatch):
         except RuntimeError as e:
             assert "saved_password_unavailable" in str(e)
         # With GUI thread resolve, transient password should be used
-        app = wx.App.Get() or wx.App(False)
+        _wx_app = wx.App.Get() or wx.App(False)
         frame = wx.Frame(None)
         host = build_connection_panel(frame, profiles=load_profiles())
         captured = {}
@@ -240,7 +240,7 @@ def test_master_encrypted_connect_with_prompt_and_cancel_and_wrong(monkeypatch):
 def test_test_cluster_resolves_keychain_dpapi_master_and_does_not_mutate(monkeypatch):
     tmp = _isolated_storage(monkeypatch)
     try:
-        app = wx.App.Get() or wx.App(False)
+        _wx_app = wx.App.Get() or wx.App(False)
         from hpc_gui.wx_connection_dialog import WxConnectionDialog
         from hpc_gui.core.crypto_master import encrypt_with_master
 
@@ -374,7 +374,7 @@ def test_typed_password_precedence(monkeypatch):
         # Stored secret not overwritten merely by Connect – check storage
         storage.upsert_profile({"name": "p", "host": "h.example", "save_password": True, "password_enc": enc.token, "password_salt": enc.salt})
         # Simulate Connect Selected with typed override via transient
-        app = wx.App.Get() or wx.App(False)
+        _wx_app = wx.App.Get() or wx.App(False)
         frame = wx.Frame(None)
         host = build_connection_panel(frame, profiles=load_profiles())
         # Directly test that transient with typed does not persist
@@ -414,7 +414,7 @@ def test_typed_password_precedence(monkeypatch):
 def test_saved_password_unavailable_error(monkeypatch, caplog):
     tmp = _isolated_storage(monkeypatch)
     try:
-        app = wx.App.Get() or wx.App(False)
+        _wx_app = wx.App.Get() or wx.App(False)
         frame = wx.Frame(None)
         # Profile with keychain ref but keychain will fail
         storage.upsert_profile({"name": "p", "host": "h.example", "port": 22, "username": "user", "save_password": True, "password_keychain_ref": "missing-ref"})
@@ -460,7 +460,7 @@ def test_saved_password_unavailable_error(monkeypatch, caplog):
 def test_mfa_respects_echo_and_not_logged(monkeypatch, caplog):
     tmp = _isolated_storage(monkeypatch)
     try:
-        app = wx.App.Get() or wx.App(False)
+        _wx_app = wx.App.Get() or wx.App(False)
         frame = wx.Frame(None)
         host = build_connection_panel(frame, profiles=[])
         model = host._wx_connection_model
@@ -521,7 +521,7 @@ def test_password_dialogs_use_correct_api(monkeypatch):
 def test_save_and_connect_wx_event_chain(monkeypatch):
     tmp = _isolated_storage(monkeypatch)
     try:
-        app = wx.App.Get() or wx.App(False)
+        _wx_app = wx.App.Get() or wx.App(False)
         frame = wx.Frame(None)
         host = build_connection_panel(frame, profiles=[])
         # We will simulate Add -> Save & Connect via real wx events but with fake dialog
@@ -610,7 +610,7 @@ def test_save_and_connect_wx_event_chain(monkeypatch):
 def test_save_failure_prevents_connect(monkeypatch):
     tmp = _isolated_storage(monkeypatch)
     try:
-        app = wx.App.Get() or wx.App(False)
+        _wx_app = wx.App.Get() or wx.App(False)
         frame = wx.Frame(None)
         host = build_connection_panel(frame, profiles=[])
         # Patch save to fail
@@ -646,7 +646,7 @@ def test_save_failure_prevents_connect(monkeypatch):
 def test_connect_failure_after_save_keeps_profile(monkeypatch):
     tmp = _isolated_storage(monkeypatch)
     try:
-        app = wx.App.Get() or wx.App(False)
+        _wx_app = wx.App.Get() or wx.App(False)
         frame = wx.Frame(None)
         host = build_connection_panel(frame, profiles=[])
         class FakeDialog:
@@ -655,8 +655,8 @@ def test_connect_failure_after_save_keeps_profile(monkeypatch):
                 self._collected = {"name": "persisted", "host": "h.example", "port": 22, "username": "user", "system": {}, "file_manager": {}, "jump_host": {}, "save_password": False, "password_prompt_policy": "when-needed"}
             def ShowModal(self):
                 result = self.on_save_and_connect(self._collected)
-                # Save succeeds but connect fails; contract: return False
-                assert result is False, f"Save & Connect with failed connect must return False, got {result!r}"
+                # Async contract: save succeeded + worker started → True
+                assert result is True, f"Save & Connect async start must return True, got {result!r}"
                 return wx.ID_OK
             def Destroy(self): pass
         # Make connect fail
@@ -668,19 +668,24 @@ def test_connect_failure_after_save_keeps_profile(monkeypatch):
                 add_btn = host._wx_connection_add_button
                 evt = wx.CommandEvent(wx.EVT_BUTTON.typeId, add_btn.GetId())
                 add_btn.GetEventHandler().ProcessEvent(evt)
-                for _ in range(20):
+                for _ in range(50):
                     wx.Yield()
                     wx.MilliSleep(20)
+                    if host._wx_connection_model.controller.state.value == "failed":
+                        break
                 # Saved profile must remain
                 assert len(load_profiles()) == 1
                 assert load_profiles()[0]["name"] == "persisted"
                 # Visible profile remains
                 choices = host._wx_connection_controls["choices"]
                 assert choices.FindString("persisted") != wx.NOT_FOUND
-                # Status failed, buttons restored, no duplicate
-                assert host._wx_connection_model.controller.state.value == "failed" or "failed" in host._wx_connection_controls["status"].GetLabel().lower()
+                # Async: worker failure → controller failed
+                assert host._wx_connection_model.controller.state.value == "failed"
                 # No second save
                 assert len(load_profiles()) == 1
+                # Buttons restored after worker failure
+                assert host._wx_connection_controls["add_connection"].IsEnabled()
+                assert host._wx_connection_controls["connect"].IsEnabled()
         frame.Destroy()
         for _ in range(3):
             wx.Yield()
@@ -712,7 +717,7 @@ def test_controller_transitions_and_second_attempt(monkeypatch):
     # Via wx panel
     tmp = _isolated_storage(monkeypatch)
     try:
-        app = wx.App.Get() or wx.App(False)
+        _wx_app = wx.App.Get() or wx.App(False)
         frame = wx.Frame(None)
         storage.upsert_profile({"name": "p", "host": "h.example", "port": 22, "username": "user"})
         host = build_connection_panel(frame, profiles=load_profiles())
@@ -754,7 +759,7 @@ def test_controller_transitions_and_second_attempt(monkeypatch):
 def test_selected_vs_active_profile(monkeypatch):
     tmp = _isolated_storage(monkeypatch)
     try:
-        app = wx.App.Get() or wx.App(False)
+        _wx_app = wx.App.Get() or wx.App(False)
         frame = wx.Frame(None)
         storage.upsert_profile({"name": "A", "host": "h1.example", "port": 22, "username": "user"})
         storage.upsert_profile({"name": "B", "host": "h2.example", "port": 22, "username": "user"})
@@ -800,7 +805,7 @@ def test_selected_vs_active_profile(monkeypatch):
 def test_delete_active_profile_blocked(monkeypatch):
     tmp = _isolated_storage(monkeypatch)
     try:
-        app = wx.App.Get() or wx.App(False)
+        _wx_app = wx.App.Get() or wx.App(False)
         frame = wx.Frame(None)
         storage.upsert_profile({"name": "active", "host": "h.example", "port": 22, "username": "user"})
         host = build_connection_panel(frame, profiles=load_profiles())
@@ -842,7 +847,7 @@ def test_delete_active_profile_blocked(monkeypatch):
 def test_host_key_mapping(monkeypatch):
     tmp = _isolated_storage(monkeypatch)
     try:
-        app = wx.App.Get() or wx.App(False)
+        _wx_app = wx.App.Get() or wx.App(False)
         frame = wx.Frame(None)
         host = build_connection_panel(frame, profiles=[])
         model = host._wx_connection_model
@@ -929,7 +934,7 @@ def test_storage_metadata_preserved(monkeypatch):
     tmp = _isolated_storage(monkeypatch)
     try:
         from hpc_gui.wx_connection_dialog import WxConnectionDialog
-        app = wx.App.Get() or wx.App(False)
+        _wx_app = wx.App.Get() or wx.App(False)
         frame = wx.Frame(None)
         initial = {"name": "lab", "host": "h.example", "system": {"future_key": {"v": 1}}, "file_manager": {"future_key": 42}}
         dlg = WxConnectionDialog(frame, initial_profile=initial, mode="edit")
