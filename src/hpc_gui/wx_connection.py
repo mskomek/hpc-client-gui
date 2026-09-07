@@ -838,7 +838,17 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
         try:
             model.controller.begin_connect()
         except Exception:
-            pass
+            try:
+                model.controller.fail()
+            except Exception:
+                pass
+            try:
+                transient["password"] = ""
+            except Exception:
+                pass
+            status.SetLabel(t("connection.status_failed"))
+            _update_button_states()
+            return False
         def worker():
             try:
                 # Use the transient profile so ssh_info_from_profile sees the typed password
@@ -898,6 +908,14 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
         try:
             Thread(target=worker, daemon=True).start()
         except Exception:
+            try:
+                model.controller.fail()
+            except Exception:
+                pass
+            try:
+                transient["password"] = ""
+            except Exception:
+                pass
             status.SetLabel(t("connection.status_failed"))
             _update_button_states()
             return False
@@ -992,6 +1010,7 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
     host._wx_connection_model = model
     host._wx_connection_refresh = _refresh_list
     host._wx_connection_open_dialog = _open_dialog
+    host._wx_connection_connect_selected = connect_selected
     finish()
     return host
 
