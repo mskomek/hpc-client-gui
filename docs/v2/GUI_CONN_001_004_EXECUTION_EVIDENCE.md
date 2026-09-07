@@ -8,8 +8,8 @@ not treat static controls or service-only tests as visual parity evidence.
 - Branch: `develop`
 - Expected starting HEAD (Wave 71.1 audit): `da44f6394a4c2cbd82a86f626865ea51b940cf9e`
 - Actual starting HEAD: `da44f6394a4c2cbd82a86f626865ea51b940cf9e`
-- Wave 71.1 implementation commits: `28aa317`, `a1728aa`, `e1fefab` (hardening, host-key popup fix, global wx dialog mock)
-- Evidence/test HEAD: `e1fefab3a61e35018db559400c5c340af201bba4`
+- Wave 71.1 implementation commits: `28aa317`, `a1728aa`, `e1fefab`, `5ca4b80`, `44734c5` (hardening, host-key popup fix, global wx dialog mock, storage/wx isolation, i18n-agnostic checks)
+- Evidence/test HEAD: `44734c57496b15f7e66d9f1a112348ceb30f0787`
 - Runtime contract: Qt remains the production runtime; `DEFAULT_GUI_RUNTIME` remains `qt`.
 - PySide6/shiboken6 were not removed. `.tmp/` was not touched.
 - Pre-existing untracked files were preserved: `.integration-recovery/`, `audit.zip`, `waves.zip`.
@@ -102,9 +102,9 @@ python -m pytest -q tests/test_linux_x11.py tests/test_macos_x11.py tests/test_p
 21 passed in 2.26s
 ```
 
-`python scripts/check_i18n.py` – still FAILED only on pre-existing unrelated missing references (125, e.g. `splash.*`, `updates.*`); no new Connection key is missing.
+`python scripts/check_i18n.py` – still FAILED only on pre-existing unrelated missing references (125, e.g. `splash.*`, `updates.*`); no new Connection key is missing. After Wave 71.1 hardening the large-suite run reports `15 failed, 1779 passed, 20 skipped` (previously 21 failed). The 2 hardening tests that previously failed as part of the large suite (`test_saved_password_unavailable_error`, `test_delete_active_profile_blocked`) were due to language-dependent assertions (`en` vs `tr` – “saved/unavailable” vs “kayıtlı/çözülemedi”, “active/disconnect” vs “aktif/kesin”) and `app_data_dir`/`Path.home` isolation diverging when `tests/conftest.py`’s `tmp_path` and `test_wx_connection_hardening._isolated_storage` used different temp dirs. Fixed by making `test_wx_connection_hardening._isolated_storage` patch `hpc_gui.core.paths.app_data_dir`/`hpc_gui.config.storage.app_data_dir`/`hpc_gui.plugins.storage.app_data_dir` to the same temp dir and by making assertions language-agnostic, plus `tests/conftest.py` `_clean_wx_after` that destroys leaked `wx.TopLevelWindows` after each hardening test. The remaining 15 failures are pre-existing (`test_fluent`, `test_plugin_manager_ui`, `test_wx_jobs_behavior` x4, `test_wx_layout_resize`, `test_wx_packaged_smoke`, `test_wx_semantics`, `test_wx_shell`/`_p0`/`_i18n`).
 
-The full repository run (`python -m pytest -q`) was not completed headlessly in the time available (300s timeout at ~75-81% with ~5 failures, same pre-existing stale expectations as Wave 71). The focused and hardening suites are the honest evidence; no full-suite success is claimed.
+The full repository run (`python -m pytest -q`) still times out at ~75-81% after 200-300s with those 15 pre-existing failures (same stale shell, packaging, plugin expectations as Wave 71). The focused and hardening suites are the honest evidence; no full-suite success is claimed. No test now requires a human to click a popup – all `wx.MessageDialog`/`MessageBox`/`PasswordEntryDialog`/`TextEntryDialog` are auto-mocked via `tests/conftest.py`.
 
 ## Manual wx evidence and limitations
 
