@@ -38,7 +38,7 @@ def _remote_category(entry) -> str:
         return "folders" if getattr(entry, "is_dir", False) else "other"
 
 
-def _build_remote_files(parent, model: WxRemoteDirectoryModel | None = None, *, loader=None, operation=None, read_text=None, open_editor=None, open_editor_new_window=None, run_shell=None, embedded):
+def _build_remote_files(parent, model: WxRemoteDirectoryModel | None = None, *, loader=None, operation=None, read_text=None, open_editor=None, open_editor_new_window=None, run_shell=None, embedded, navigation_store=None):
     try:
         import wx
     except ImportError as exc:
@@ -66,8 +66,59 @@ def _build_remote_files(parent, model: WxRemoteDirectoryModel | None = None, *, 
         toolbar.Add(b, 0, wx.ALL, 3)
     # No panel callback exists for these yet, so they stay visible but disabled.
     btn_new_file.Disable()
-    btn_favorites.Disable()
-    btn_history.Disable()
+    # Wire favorites/history if navigation_store is provided
+    if navigation_store is not None:
+        def _on_favorites(_evt):
+            favs = navigation_store.favorites()
+            menu = wx.Menu()
+            for fav in favs:
+                label = fav.get("label", fav.get("path", "?"))
+                path = fav.get("path", "")
+                item = menu.Append(wx.ID_ANY, label)
+                menu.Bind(wx.EVT_MENU, lambda e, p=path: _navigate_to_path(p), id=item.GetId())
+            if not favs:
+                menu.Append(wx.ID_NONE, t("dirs.favorites_unavailable"))
+            menu.AppendSeparator()
+            menu.Append(wx.ID_ANY, t("dirs.favorite_add"))
+            menu.Bind(wx.EVT_MENU, lambda e: navigation_store.add_favorite(model.current_path, "directory"))
+            panel.PopupMenu(menu)
+            menu.Destroy()
+
+        def _on_history(_evt):
+            hist = navigation_store.history()
+            menu = wx.Menu()
+            for entry in hist[:20]:
+                path = entry.get("path", "")
+                item = menu.Append(wx.ID_ANY, path)
+                menu.Bind(wx.EVT_MENU, lambda e, p=path: _navigate_to_path(p), id=item.GetId())
+            if not hist:
+                menu.Append(wx.ID_NONE, t("dirs.history_unavailable"))
+            menu.AppendSeparator()
+            menu.Append(wx.ID_ANY, t("dirs.history_clear"))
+            menu.Bind(wx.EVT_MENU, lambda e: navigation_store.clear_history())
+            panel.PopupMenu(menu)
+            menu.Destroy()
+
+        def _navigate_to_path(target_path):
+            """Navigate the active tab to a target path."""
+            if not target_path:
+                return
+            try:
+                model.navigate(target_path)
+                # Update path field
+                path.SetValue(target_path)
+                # Reload
+                load()
+            except Exception:
+                pass
+
+        btn_favorites.Enable()
+        btn_history.Enable()
+        btn_favorites.Bind(wx.EVT_BUTTON, _on_favorites)
+        btn_history.Bind(wx.EVT_BUTTON, _on_history)
+    else:
+        btn_favorites.Disable()
+        btn_history.Disable()
     refresh_btn = btn_refresh  # alias for legacy name
     path_label = wx.StaticText(panel, label=t("dirs.path"))
     path = wx.TextCtrl(panel, value=model.current_path, style=wx.TE_PROCESS_ENTER)
@@ -421,6 +472,10 @@ def _build_remote_files(parent, model: WxRemoteDirectoryModel | None = None, *, 
                 wx.TheClipboard.SetData(wx.TextDataObject("\r\n".join(selected)))
                 wx.TheClipboard.Close()
             return
+        if action == "follow_track" and selected:
+            # Follow/Track: create a submenu with output targets
+            _show_follow_menu(selected[0])
+            return
         if action == "undo":
             record = move_history.pop_last()
             if not record:
@@ -510,6 +565,70 @@ def _build_remote_files(parent, model: WxRemoteDirectoryModel | None = None, *, 
                 safe_call_after(done, "", error)
 
         Thread(target=worker, daemon=True).start()
+
+    def _show_follow_menu(remote_path):
+        """Show a Follow/Track submenu for the selected file."""
+        menu = wx.Menu()
+        item_new_tab = menu.Append(wx.ID_ANY, t("dirs.follow_new_tab"))
+        item_new_window = menu.Append(wx.ID_ANY, t("dirs.follow_new_window"))
+        menu.Bind(wx.EVT_MENU, lambda e: _follow_in_new_tab(remote_path), id=item_new_tab.GetId())
+        menu.Bind(wx.EVT_MENU, lambda e: _follow_in_new_window(remote_path), id=item_new_window.GetId())
+        # "Assign to Existing Follower" submenu
+        existing_followers = _get_existing_followers()
+        if existing_followers:
+            menu.AppendSeparator()
+            sub = wx.Menu()
+            for fid, flabel in existing_followers:
+                item = sub.Append(wx.ID_ANY, flabel)
+                menu.Bind(wx.EVT_MENU, lambda e, fp=remote_path, fi=fid: _follow_in_existing(fp, fi), id=item.GetId())
+            menu.AppendSubMenu(sub, t("dirs.follow_existing"))
+        panel.PopupMenu(menu)
+        menu.Destroy()
+
+    def _get_existing_followers():
+        """Get list of (tracking_id, label) for active follower tabs."""
+        # Try to get from the parent Jobs workspace
+        try:
+            # Walk up to find the host with _wx_jobs_controls
+            p = panel.GetParent()
+            while p:
+                controls = getattr(p, "_wx_jobs_controls", None)
+                if controls and "output_channels" in controls:
+                    channels = controls["output_channels"]
+                    result = []
+                    for cid, textCtrl in channels.items():
+                        parent_win = textCtrl.GetParent()
+                        label = parent_win.GetLabel() if parent_win else cid
+                        result.append((cid, label))
+                    return result
+                p = p.GetParent() if hasattr(p, 'GetParent') else None
+        except Exception:
+            pass
+        return []
+
+    def _follow_in_new_tab(remote_path):
+        """Follow a file in a new output channel tab."""
+        follow_cb = getattr(panel, "_follow_callback", None)
+        if follow_cb:
+            follow_cb(remote_path, "new_tab")
+        else:
+            wx.MessageBox(f"Follow: {remote_path}", t("common.info"), wx.OK)
+
+    def _follow_in_new_window(remote_path):
+        """Follow a file in a new output window."""
+        follow_cb = getattr(panel, "_follow_callback", None)
+        if follow_cb:
+            follow_cb(remote_path, "new_window")
+        else:
+            wx.MessageBox(f"Follow window: {remote_path}", t("common.info"), wx.OK)
+
+    def _follow_in_existing(remote_path, follower_id):
+        """Assign a file to an existing follower tab."""
+        follow_cb = getattr(panel, "_follow_callback", None)
+        if follow_cb:
+            follow_cb(remote_path, "existing", follower_id)
+        else:
+            wx.MessageBox(f"Assign to {follower_id}: {remote_path}", t("common.info"), wx.OK)
 
     def run_operation(action, selected, target_dir=None, *, from_paste=False):
         tstate = active_tab_state()
@@ -841,17 +960,17 @@ def _build_remote_files(parent, model: WxRemoteDirectoryModel | None = None, *, 
 
 
 
-def build_remote_files_panel(parent, model: WxRemoteDirectoryModel | None = None, *, loader=None, operation=None, read_text=None, open_editor=None, open_editor_new_window=None, run_shell=None):
+def build_remote_files_panel(parent, model: WxRemoteDirectoryModel | None = None, *, loader=None, operation=None, read_text=None, open_editor=None, open_editor_new_window=None, run_shell=None, navigation_store=None):
     """Embedded panel factory. Returns the wx.Panel host."""
-    return _build_remote_files(parent, model, loader=loader, operation=operation, read_text=read_text, open_editor=open_editor, open_editor_new_window=open_editor_new_window, run_shell=run_shell, embedded=True)
+    return _build_remote_files(parent, model, loader=loader, operation=operation, read_text=read_text, open_editor=open_editor, open_editor_new_window=open_editor_new_window, run_shell=run_shell, embedded=True, navigation_store=navigation_store)
 
 
-def show_remote_files(parent=None, model: WxRemoteDirectoryModel | None = None, *, loader=None, operation=None, read_text=None, open_editor=None, open_editor_new_window=None, run_shell=None) -> int:
+def show_remote_files(parent=None, model: WxRemoteDirectoryModel | None = None, *, loader=None, operation=None, read_text=None, open_editor=None, open_editor_new_window=None, run_shell=None, navigation_store=None) -> int:
     try:
         import wx
     except ImportError as exc:
         raise RuntimeError("wxPython is not installed") from exc
-    _build_remote_files(parent, model, loader=loader, operation=operation, read_text=read_text, open_editor=open_editor, open_editor_new_window=open_editor_new_window, run_shell=run_shell, embedded=False)
+    _build_remote_files(parent, model, loader=loader, operation=operation, read_text=read_text, open_editor=open_editor, open_editor_new_window=open_editor_new_window, run_shell=run_shell, embedded=False, navigation_store=navigation_store)
     return wx.ID_OK
 
 __all__ = ["show_remote_files", "build_remote_files_panel"]
