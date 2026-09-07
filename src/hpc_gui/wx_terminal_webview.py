@@ -705,6 +705,17 @@ class WxTerminalWebViewPanel(wx.Panel if _WX_AVAILABLE else object):  # type: ig
         self._font_size = new_size
         self.hpc_set_font_size(new_size)
 
+    def hpc_paste(self, text: str):
+        """Paste text into xterm via terminal.paste()."""
+        if self._closed or not text:
+            return
+        if not self._ready or not self._is_parity or self._webview is None:
+            return
+        try:
+            self._run_js(f"window.hpcPaste && window.hpcPaste({_safe_json_dumps(text)});")
+        except Exception:
+            pass
+
     def _on_find(self, _evt=None):
         # Wave 75 will implement real xterm find; Wave 73 keeps TextCtrl-style fallback but via xterm placeholder
         # For now, use WebView Find if available? Or notify via status?
