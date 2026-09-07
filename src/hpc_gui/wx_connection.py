@@ -685,16 +685,8 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
                 return False
             # Save & Connect owns exactly one save, then starts the normal path.
             # Use the authoritative canonical name from the saved profile.
-            try:
-                connect_selected(None)
-            except Exception as exc:
-                wx.MessageBox(
-                    t("connection.connect_after_save_failed").format(error=type(exc).__name__),
-                    t("login.err_title"),
-                    wx.OK | wx.ICON_ERROR,
-                )
-                return False
-            return True
+            started = connect_selected(None)
+            return bool(started)
 
         dlg = WxConnectionDialog(
             host,
@@ -753,12 +745,12 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
         except Exception as exc:
             wx.MessageBox(str(exc), t("login.err_title"), wx.OK | wx.ICON_ERROR)
 
-    def connect_selected(_event=None):
+    def connect_selected(_event=None) -> bool:
         sel = choices.GetStringSelection()
         if not sel:
-            return
+            return False
         if not model.select(sel):
-            return
+            return False
         # Resolve credentials on GUI thread before starting worker
         stored = next((p for p in model.profiles if p.get("name") == sel), None)
         if stored is None:
@@ -768,7 +760,7 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
                 stored = None
         if stored is None:
             wx.MessageBox(t("connection.profile_not_found").format(name=sel), t("login.err_title"), wx.OK | wx.ICON_WARNING)
-            return
+            return False
         # Typed password for Connect Selected is empty (wx panel has no typed field);
         # stored["password"] is always empty for persisted profiles, so we rely on
         # shared resolver. For typed-override tests the caller may have set
@@ -786,7 +778,7 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
             if "master_cancelled" in msg:
                 status.SetLabel(t("connection.auth_cancelled") if t("connection.auth_cancelled") != "[connection.auth_cancelled]" else "Authentication cancelled")
                 _update_button_states()
-                return
+                return False
             elif "master_wrong" in msg:
                 wx.MessageBox(t("login.err_master_wrong"), t("login.err_title"), wx.OK | wx.ICON_ERROR)
                 status.SetLabel(t("connection.status_failed"))
@@ -795,7 +787,7 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
                 except Exception:
                     pass
                 _update_button_states()
-                return
+                return False
             elif "saved_password_unavailable" in msg:
                 wx.MessageBox(t("connection.saved_password_unavailable"), t("login.err_title"), wx.OK | wx.ICON_ERROR)
                 status.SetLabel(t("connection.status_failed"))
@@ -804,7 +796,7 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
                 except Exception:
                     pass
                 _update_button_states()
-                return
+                return False
             else:
                 wx.MessageBox(msg, t("login.err_title"), wx.OK | wx.ICON_ERROR)
                 status.SetLabel(t("connection.status_failed"))
@@ -813,7 +805,7 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
                 except Exception:
                     pass
                 _update_button_states()
-                return
+                return False
         except Exception as exc:
             wx.MessageBox(str(exc), t("login.err_title"), wx.OK | wx.ICON_ERROR)
             status.SetLabel(t("connection.status_failed"))
@@ -822,7 +814,7 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
             except Exception:
                 pass
             _update_button_states()
-            return
+            return False
         if resolved_password is None:
             wx.MessageBox(t("connection.saved_password_unavailable"), t("login.err_title"), wx.OK | wx.ICON_ERROR)
             status.SetLabel(t("connection.status_failed"))
@@ -831,7 +823,7 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
             except Exception:
                 pass
             _update_button_states()
-            return
+            return False
         # Build transient profile with resolved password – never persisted
         transient = dict(stored)
         transient["password"] = resolved_password if resolved_password is not None else ""
@@ -903,7 +895,13 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
                 _update_button_states()
                 if on_connected and model.controller.session:
                     on_connected(model.controller.session)
-        Thread(target=worker, daemon=True).start()
+        try:
+            Thread(target=worker, daemon=True).start()
+        except Exception:
+            status.SetLabel(t("connection.status_failed"))
+            _update_button_states()
+            return False
+        return True
 
     # Context menu
     def on_context_menu(event):
