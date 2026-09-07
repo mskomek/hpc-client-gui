@@ -61,6 +61,31 @@
     } catch (e) {}
   };
 
+  window.hpcFind = (query) => {
+    try {
+      const buffer = terminal.buffer.active;
+      const rows = buffer.length;
+      const startY = buffer.cursorY + buffer.viewportY;
+      for (let y = startY; y < rows; y++) {
+        const line = buffer.getLine(y);
+        if (line && line.includes(query)) {
+          terminal.select(y, line.indexOf(query), line.indexOf(query) + query.length);
+          return true;
+        }
+      }
+      for (let y = 0; y < startY; y++) {
+        const line = buffer.getLine(y);
+        if (line && line.includes(query)) {
+          terminal.select(y, line.indexOf(query), line.indexOf(query) + query.length);
+          return true;
+        }
+      }
+      return false;
+    } catch (e) {
+      return false;
+    }
+  };
+
   window.hpcFocus = () => {
     try {
       terminal.focus();

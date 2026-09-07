@@ -717,8 +717,7 @@ class WxTerminalWebViewPanel(wx.Panel if _WX_AVAILABLE else object):  # type: ig
             pass
 
     def _on_find(self, _evt=None):
-        # Wave 75 will implement real xterm find; Wave 73 keeps TextCtrl-style fallback but via xterm placeholder
-        # For now, use WebView Find if available? Or notify via status?
+        """Find text in xterm buffer via hpcFind JS helper."""
         query = ""
         try:
             query = self._find_ctrl.GetValue()
@@ -726,19 +725,22 @@ class WxTerminalWebViewPanel(wx.Panel if _WX_AVAILABLE else object):  # type: ig
             pass
         if not query or not self._is_parity or self._webview is None:
             return
-        # Use WebView's Find (searches rendered DOM, which includes xterm canvas? Not ideal, but placeholder)
-        # Real implementation will vendor search addon. For Wave 73, we keep fallback to model find is not applicable.
-        # We expose a JS helper hpcFind if available.
         try:
             self._run_js(f"window.hpcFind && window.hpcFind({_safe_json_dumps(query)});")
         except Exception:
             pass
-        # Also try WebView FindText as fallback (will search DOM, not xterm buffer, but visible for now)
+
+    def hpc_find(self, query: str):
+        """Find text in xterm buffer (test seam)."""
+        if self._closed or not query:
+            return False
+        if not self._ready or not self._is_parity or self._webview is None:
+            return False
         try:
-            if hasattr(self._webview, "Find"):
-                self._webview.Find(query)
+            self._run_js(f"window.hpcFind && window.hpcFind({_safe_json_dumps(query)});")
+            return True
         except Exception:
-            pass
+            return False
 
     def _on_clear(self, _evt=None):
         self.hpc_clear()
