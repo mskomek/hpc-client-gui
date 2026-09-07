@@ -432,10 +432,6 @@ class WxConnectionDialog:
             sched_grid.Add(lbl, 0, wx.ALIGN_CENTER_VERTICAL)
             sched_grid.Add(ctrl, 1, wx.EXPAND)
         cluster_sizer.Add(sched_grid, 0, wx.EXPAND | wx.ALL, 8)
-        # Save template row inside cluster
-        save_tmpl_row = wx.BoxSizer(wx.HORIZONTAL)
-        # Reuse save template button already in profile? Keep separate add template here
-        # The button added in profile sizer also does save; keep only one – we already have save in profile
         # Add quota group
         quota_box = wx.StaticBox(self.cluster_panel, label=t("connection.quota_settings"))
         if quota_box.GetLabel().startswith("["):
@@ -692,7 +688,6 @@ class WxConnectionDialog:
 
     def retranslate_ui(self, _language: str | None = None) -> None:
         """Refresh labels that can change while this modal is open."""
-        wx = self._wx
         self.dlg.SetTitle({
             "add": t("connection.dialog_title"),
             "edit": t("connection.edit_dialog_title"),
@@ -861,7 +856,6 @@ class WxConnectionDialog:
         self.dlg.Bind(wx.EVT_MENU, _more_handler, more)
 
         # Popup
-        pos = self.btn_system_templates.GetPosition()
         # Need screen position: convert button position to screen
         btn_pos = self.btn_system_templates.ClientToScreen(wx.Point(0, self.btn_system_templates.GetSize().GetHeight()))
         self.dlg.PopupMenu(menu, self.dlg.ScreenToClient(btn_pos))

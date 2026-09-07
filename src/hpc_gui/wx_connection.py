@@ -6,10 +6,7 @@ from dataclasses import dataclass
 from threading import Thread
 from typing import Any, Callable
 
-from hpc_gui.config.file_manager_profile import normalize_file_manager_settings
-from hpc_gui.config.jump_host_profile import normalize_jump_host_settings
-from hpc_gui.config.storage import coerce_profile_ssh_timeout, coerce_profile_transfer_parallelism, load_profiles
-from hpc_gui.config.system_profile import normalize_system_settings
+from hpc_gui.config.storage import coerce_profile_ssh_timeout, load_profiles
 from hpc_gui.core.i18n import subscribe_language_change, t, unsubscribe_language_change
 from hpc_gui.services.connection_controller import ConnectionController, HostKeyRequest, KeyboardInteractiveRequest
 from hpc_gui.ssh.client import HostKeyInfo, SSHConnInfo, coerce_keepalive_interval
@@ -573,14 +570,14 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
         ask_master._cache = cache  # type: ignore
         return ask_master
 
-    def _handle_save(profile: dict[str, Any], original_name: str | None = None) -> bool:
+    def _handle_save(profile: dict[str, Any], original_name: str | None = None) -> dict[str, Any] | None:
         # profile is collected dict from dialog (including password plain)
         # Use shared service
         try:
             from hpc_gui.services.connection_profile_service import save_profile as svc_save
         except Exception as exc:
             wx.MessageBox(str(exc), t("login.err_title"), wx.OK | wx.ICON_ERROR)
-            return False
+            return None
         plain = str(profile.get("password", "") or "")
         save_pw = bool(profile.get("save_password", False))
         prompt_policy = str(profile.get("password_prompt_policy") or "when-needed")
@@ -606,20 +603,20 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
             elif "password_store_failed" in msg:
                 wx.MessageBox(t("connection.password_store_failed").format(error=msg.split(":",1)[-1]), t("login.err_title"), wx.OK | wx.ICON_ERROR)
             elif "master_cancelled" in msg:
-                return False
+                return None
             else:
                 wx.MessageBox(msg, t("login.err_title"), wx.OK | wx.ICON_ERROR)
-            return False
+            return None
         except ValueError as exc:
             wx.MessageBox(str(exc), t("login.err_title"), wx.OK | wx.ICON_WARNING)
-            return False
+            return None
         except Exception as exc:
             wx.MessageBox(str(exc), t("login.err_title"), wx.OK | wx.ICON_ERROR)
-            return False
-        # Refresh
+            return None
+        # Refresh using the canonical saved profile name
         saved_name = str(saved.get("name", ""))
         _refresh_list(select_name=saved_name)
-        return True
+        return saved
 
     def _open_dialog(mode: str, initial_name: str | None = None) -> None:
         if mode in ("edit", "duplicate", "delete") and not initial_name:
@@ -680,15 +677,15 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
 
         # on_save and on_save_and_connect callbacks for dialog
         def on_save(collected: dict[str, Any]) -> bool:
-            return _handle_save(collected, original_name=original_name)
+            return _handle_save(collected, original_name=original_name) is not None
 
         def on_save_and_connect(collected: dict[str, Any]) -> bool:
-            if not _handle_save(collected, original_name=original_name):
+            saved = _handle_save(collected, original_name=original_name)
+            if saved is None:
                 return False
             # Save & Connect owns exactly one save, then starts the normal path.
-            saved_name = str(collected.get("name", "")).strip() or str(collected.get("host", ""))
+            # Use the authoritative canonical name from the saved profile.
             try:
-                _refresh_list(select_name=saved_name)
                 connect_selected(None)
             except Exception as exc:
                 wx.MessageBox(
@@ -707,7 +704,7 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
             on_save_and_connect=on_save_and_connect,
         )
         try:
-            result = dlg.ShowModal()
+            dlg.ShowModal()
         finally:
             dlg.Destroy()
         # If dialog was closed via Save, refresh already done; otherwise no-op

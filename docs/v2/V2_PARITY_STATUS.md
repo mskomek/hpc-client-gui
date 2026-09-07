@@ -9,10 +9,10 @@ Automated evidence only; manual-only behavior is never marked covered.
 | GUI-SHELL-001 | COVERED | app.py | wx_shell.py | test_cli_entrypoint.py |
 | GUI-SHELL-002 | COVERED | main_window.py | wx_lifecycle.py | test_app_updater.py |
 | GUI-SHELL-003 | COVERED | main_window.py | wx_shell.py; wx_jobs.py; wx_lifecycle.py; wx_transfer_workspace.py | test_wx_shell_p0.py; test_wx_shell_p0_stress.py |
-| GUI-CONN-001 | COVERED | login_widget.py | wx_connection.py | test_wx_connection.py |
-| GUI-CONN-002 | COVERED | connection_dialog.py | wx_connection.py | test_optional_ssh_credentials.py |
-| GUI-CONN-003 | COVERED | connection_dialog.py | wx_connection.py | test_provider_capabilities.py |
-| GUI-CONN-004 | COVERED | quota_monitor.py | wx_connection.py | test_quota_monitor.py |
+| GUI-CONN-001 | PARTIAL | login_widget.py | wx_connection.py; wx_connection_dialog.py | test_wx_connection.py; test_wx_connection_profiles.py; test_wx_connection_71_2.py |
+| GUI-CONN-002 | PARTIAL | connection_dialog.py | wx_connection.py; wx_connection_dialog.py | test_wx_connection_profiles.py; test_optional_ssh_credentials.py; test_wx_connection_71_2.py |
+| GUI-CONN-003 | PARTIAL | connection_dialog.py | wx_connection_dialog.py | test_wx_connection_profiles.py; test_provider_capabilities.py; test_plugin_v2.py; test_wx_connection_71_2.py |
+| GUI-CONN-004 | PARTIAL | quota_monitor.py | wx_connection_dialog.py | test_wx_connection_profiles.py; test_quota_monitor.py; test_quota_runtime.py |
 | GUI-CONN-005 | COVERED | login_widget.py | wx_connection.py | test_linux_x11.py; test_macos_x11.py |
 | GUI-TERM-001 | PARTIAL | terminal_widget.py; terminal_header.py; terminal_bridge.py; assets/terminal/index.html+bridge.js+xterm.js+addon-fit.js | wx_terminal.py; wx_terminal_webview.py | test_wx_terminal.py; test_wx_embedded_terminal.py; test_wx_terminal_webview.py; test_wx_terminal_parity_evidence.py — WebView/xterm.js chain partially proven; alternate screen and packaged WebView2 remain BLOCKED |
 | GUI-TERM-002 | COVERED | main_window.py | wx_shell.py; wx_local_files.py; wx_remote_files_view.py; wx_editor_view.py | test_wx_term002.py; test_wx_terminal.py; test_wx_embedded_terminal.py |
@@ -32,5 +32,5 @@ Automated evidence only; manual-only behavior is never marked covered.
 | GUI-SET-001 | COVERED | settings_dialog.py | wx_settings.py | test_wx_settings.py |
 | GUI-LOG-001 | COVERED | logs_widget.py | wx_logs.py | test_wx_logs.py |
 | GUI-HELP-001 | COVERED | help_dialog.py | wx_help.py | test_wx_help.py |
-| GUI-I18N-001 | COVERED | main_window.py | wx_shell.py; wx_jobs.py; wx_local_files.py; wx_remote_files_view.py; wx_transfer_workspace.py | test_wx_shell_i18n.py; test_wx_shell_p0.py; test_wx_shell_p0_stress.py; test_wx_file_context_i18n.py |
-| GUI-A11Y-001 | COVERED | GUI_FEATURE_PARITY_BASELINE.md | wx_shell.py; wx_terminal.py; wx_editor_view.py; wx_jobs.py; audit/A11Y_AUDIT.md | test_wx_a11y.py |
+| GUI-I18N-001 | PARTIAL | main_window.py | wx_shell.py; wx_connection.py; wx_connection_dialog.py | test_wx_connection_profiles.py; test_wx_i18n.py |
+| GUI-A11Y-001 | PARTIAL | GUI_FEATURE_PARITY_BASELINE.md | wx_connection.py; wx_connection_dialog.py | test_wx_a11y.py; test_wx_connection_profiles.py |

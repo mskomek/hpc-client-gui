@@ -9,8 +9,6 @@ All tests use isolated temp storage and mocked backends; no real HPC cluster.
 """
 
 import tempfile
-import threading
-import unittest
 from pathlib import Path
 from unittest import mock
 
@@ -22,12 +20,9 @@ from hpc_gui.config import storage
 from hpc_gui.config.storage import load_profiles
 from hpc_gui.core.i18n import t, load_language
 from hpc_gui.services.connection_profile_service import (
-    decrypt_profile_password,
     resolve_password_for_connect,
-    save_profile,
 )
 from hpc_gui.services.connection_controller import ConnectionController
-from hpc_gui.ssh.client import HostKeyInfo
 from hpc_gui.wx_connection import WxConnectionModel, build_connection_panel, ssh_info_from_profile
 
 
@@ -210,8 +205,6 @@ def test_master_encrypted_connect_with_prompt_and_cancel_and_wrong(monkeypatch):
         host._wx_connection_model._connect = fake_connect
         # Mock master prompt to return correct master via resolve inside connect handler – we need to patch ask_master factory
         # Instead of relying on real dialog, patch _master_ask_factory to return our mock
-        import hpc_gui.wx_connection as wx_conn
-        orig_factory = wx_conn.build_connection_panel
         # We already have host; we need to ensure connect handler uses our mocked master
         # Patch the factory used inside build_connection_panel for connection – we can monkeypatch the service's encrypt/decrypt
         # For this test, we mock resolve to simulate correct master via patching unprotect? No, master path uses ask_master
@@ -473,8 +466,6 @@ def test_mfa_respects_echo_and_not_logged(monkeypatch, caplog):
         model = host._wx_connection_model
         # Mock wx dialogs to capture which dialog type is used
         captured_dialogs = []
-        orig_pwd = wx.PasswordEntryDialog
-        orig_txt = wx.TextEntryDialog
 
         class FakePwd:
             def __init__(self, *a, **kw):
@@ -499,7 +490,7 @@ def test_mfa_respects_echo_and_not_logged(monkeypatch, caplog):
             # Ensure explicit echo wins over heuristic
             captured_dialogs.clear()
             req2 = KeyboardInteractiveRequest("Title", "Instr", ("password prompt",), (True,))
-            answers2 = model.answer_keyboard_interactive(req2)
+            model.answer_keyboard_interactive(req2)
             assert captured_dialogs == ["txt"], "echo True must not be masked even if prompt contains password"
         # No secret in logs
         assert "secret1" not in str(caplog.text)
@@ -536,7 +527,6 @@ def test_save_and_connect_wx_event_chain(monkeypatch):
         # We will simulate Add -> Save & Connect via real wx events but with fake dialog
         # Patch WxConnectionDialog to simulate user entering profile data and clicking Save & Connect
         from unittest.mock import patch
-        saved_profiles = []
         # Create a fake dialog that simulates user input and triggers on_save_and_connect
         class FakeDialog:
             def __init__(self, parent, initial_profile=None, mode="add", on_save=None, on_save_and_connect=None):
@@ -624,7 +614,6 @@ def test_save_failure_prevents_connect(monkeypatch):
         frame = wx.Frame(None)
         host = build_connection_panel(frame, profiles=[])
         # Patch save to fail
-        import hpc_gui.wx_connection as wx_conn
         # Create fake dialog that will attempt save and fail
         class FakeDialogFail:
             def __init__(self, parent, initial_profile=None, mode="add", on_save=None, on_save_and_connect=None):
@@ -666,8 +655,8 @@ def test_connect_failure_after_save_keeps_profile(monkeypatch):
                 self._collected = {"name": "persisted", "host": "h.example", "port": 22, "username": "user", "system": {}, "file_manager": {}, "jump_host": {}, "save_password": False, "password_prompt_policy": "when-needed"}
             def ShowModal(self):
                 result = self.on_save_and_connect(self._collected)
-                # Save succeeds but connect will fail
-                assert result is True or result is False  # connect failure still returns True for save? Check impl: _handle_save returns True, then connect is attempted, if connect fails, _handle_save returns True still? Actually on_save_and_connect returns True even if connect fails? Let's check wx_connection: on_save_and_connect does save, then _refresh, then connect_selected – it catches exception and shows MessageBox but returns False? Need to verify: our current on_save_and_connect in wx_connection does save, then try connect, except shows MessageBox and returns False. So we accept either.
+                # Save succeeds but connect fails; contract: return False
+                assert result is False, f"Save & Connect with failed connect must return False, got {result!r}"
                 return wx.ID_OK
             def Destroy(self): pass
         # Make connect fail
