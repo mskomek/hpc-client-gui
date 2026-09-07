@@ -1,7 +1,8 @@
-# wx Migration Wave Status Ledger — Waves 00–70 (Current HEAD)
+# wx Migration Wave Status Ledger — Waves 00–77 (Current HEAD)
 
-> **Current HEAD:** `e3408fd` (2026-09-05)
+> **Current HEAD:** `da44f639` (2026-09-06) — supersedes `e3408fd`
 > **Branch:** `develop`
+> **Wave 72 note:** Terminal rebaselined — Wave 45 downgraded to PARTIAL per `docs/v2/TERMINAL_PARITY_CONTRACT_72.md`; `GUI-TERM-001` = PARTIAL until Waves 73-76 prove xterm.js chain. Do not mark VERIFIED_COMPLETE before measured evidence.
 > **Rule:** Qt remains production runtime (`DEFAULT_GUI_RUNTIME="qt"`). wx is optional.
 > **Evidence standard:** `PROVEN` requires `real wx event → visible wx control → adapter → controller/service → fake/disposable backend → completion → visible UI result` with lifecycle/generation/stale protection. Model-only, source-string, import-only, or `wx.Yield` loops do NOT count as PROVEN.
 > **Screenshots:** canonical set at `audit/gui-screenshots/{qt,wx}/` with `HASHES.json` SHA256. Windows package smoke must be real artifact, not `src` import.
@@ -10,7 +11,9 @@
 
 `src/hpc_gui/ui/main_window.py:138-157` — 6 embedded `QTabWidget` pages: Connection, Jobs & Outputs, Directories, Files, Script Editor, Logs. Terminal is wx-only primary-tab deviation (documented). Help, Settings, Plugins, ANSYS dialog are top-level.
 
-## 2) Current Authoritative Wave Table (HEAD e3408fd)
+## 2) Current Authoritative Wave Table (HEAD da44f639 → rebaselined via Wave 72)
+
+> **Wave 72 rebaseline (2026-09-06):** Wave 45 was `VERIFIED_COMPLETE` on TextCtrl evidence (`test_wx_terminal` 2 + `test_wx_embedded_terminal` 9 real-button→model→visible TextCtrl). That chain does NOT prove xterm.js parity (see `TERMINAL_PARITY_CONTRACT_72.md` gaps #1-35). Wave 45 is now **PARTIAL**; `GUI-TERM-001` is **PARTIAL** (TextCtrl chain PROVEN, xterm chain MISSING). `GUI-TERM-002` remains COVERED independently. Waves 73–76 must prove the `WebView/xterm → bridge → ssh.send_shell_input/resize_shell_pty` chain before `GUI-TERM-001` may return to COVERED.
 
 Behavioral / visual / platform / packaged / release are separate. `VERIFIED_COMPLETE` only if all acceptance criteria for that wave are met. `PARTIAL` = exists but incomplete. `FAILED_VERIFICATION` = claim does not survive evidence standard. `BLOCKED` = prerequisite/environment absent. `NO-GO` = gate blocks.
 
@@ -19,7 +22,7 @@ Behavioral / visual / platform / packaged / release are separate. `VERIFIED_COMP
 | 42 wx Shell | wx.App/bootstrap, 7-tab notebook, chrome row, language menu, tray, lifecycle | `wx_shell.py:72-900` notebook 7 tabs, chrome row, tray adapter, lifecycle shutdown | PROVEN (shell) + STRUCTURAL (tray) | `test_wx_shell.py`, `test_wx_shell_p0.py`, `test_wx_shell_p0_stress.py` | 24/24 P0 + 50 close PASS; tray notify works, chrome parenting not leaking | **PARTIAL** | Canonical screenshots current HEAD not yet regenerated; DPI 150/200 not proven (resize only) |
 | 43 Help/Command Palette | Help searchable, command palette, shortcut settings | `wx_help.py` present, command_registry wired | PARTIAL | `test_wx_help.py` | Help dialog keyboard accessible, palette wired but visual parity incomplete | **PARTIAL** | Visual parity + shortcut settings wiring proof |
 | 44 Connection | Profile lifecycle, X11, keepalive, provider selection | `wx_connection.py` complete | PROVEN | `test_wx_connection.py` | Real wx event → adapter → fake backend → visible profile list | **VERIFIED_COMPLETE** | Visual parity DPI |
-| 45 Terminal | PTY, Find/Clear/font, Ctrl-C vs copy, i18n, bounded 5000 | `wx_terminal.py:63-260` unified `build_terminal_panel` toolbar Find/Clear/A-/A+ + model resize/PTY; detached `show_terminal` wraps same panel | PROVEN | `test_wx_terminal.py` (2), `test_wx_embedded_terminal.py` (9 PROVEN: real button → model → visible) | All 11 PASS | **VERIFIED_COMPLETE** | — (visual captured) |
+| 45 Terminal (pre-72 TextCtrl) | PTY, Find/Clear/font, Ctrl-C vs copy, i18n, bounded 5000 — TextCtrl only | `wx_terminal.py:16-305` `TerminalModel` + `build_terminal_panel` via `wx.TextCtrl` TE_MULTILINE/TE_RICH2, `splitlines()` 5000, fixed `8x18` estimate, `Ctrl→C/D/Z` only | PROVEN (TextCtrl) but **NOT xterm** | `test_wx_terminal.py` (2 model), `test_wx_embedded_terminal.py` (9 PROVEN real-button→model→visible TextCtrl) | All 11 PASS on TextCtrl, **0 xterm/ANSI/\r/alt-screen/Unicode/paste/PTY-fit evidence** | **PARTIAL** (rebaselined Wave 72) | xterm renderer absent — blocked by Waves 73-76: needs WebView/xterm.js + FitAddon + single JSON bridge + output queue + readiness + navigation/Ctrl/Unicode/paste → real PTY |
 | 46 Local File Browser | tabs, path, drives, sort, columns, menu, Ctrl-C/X/V, middle-click | `wx_local_files.py:50-810` complete | PROVEN | `test_wx_local_files.py`, `test_wx_file_context_matrix.py`, `test_wx_file003_final_stress` | Context matrix + stress 200 retarget PASS | **VERIFIED_COMPLETE** | — |
 | 47 Remote Directory Browser | listing cache, batch, tabs, path state | `wx_remote_files.py` + `wx_remote_files_view.py` | PROVEN | `test_wx_remote_files.py` | Listing with cache, batch, tabs | **VERIFIED_COMPLETE** | — |
 | 48 FTP/Transfer Workspace (sync browsing + compare) | sync roots, guard, compare with generation, visible result | `wx_shell.py:156-560` Files header sync_cb/compare_btn + `services/synchronized_browsing.py`, `services/directory_comparison.py`; generation+stale check, worker thread, visible TextCtrl | PROVEN | `test_wx_files_sync_compare.py` (8 PROVEN: real checkbox/button → service → fake FS → visible) | 8/8 PASS | **VERIFIED_COMPLETE** | DPI/resize |
@@ -49,23 +52,31 @@ Behavioral / visual / platform / packaged / release are separate. `VERIFIED_COMP
 | 68 SBOM/License/Vuln | isolated venv SBOM CycloneDX from lock, direct/transitive + bundled natives (DLL/PYD/EXE/.so/.dylib/frameworks), THIRD_PARTY_NOTICES, vulnerability scan on release closure | `audit/SBOM_68.json` 450 components (up from 100) + bundled inventory per previous commit; `audit/VULN_68.json` 651KB; `audit/LICENSE_INVENTORY_68.md`; `THIRD_PARTY_NOTICES.md` | **PARTIAL** | SBOM file | SBOM now from isolated env (fixed) but bundled binary inventory for actual packaged artifacts (Windows DLL, Linux .so/AppImage, macOS .dylib) still pending Wave 70 packaging | **PARTIAL** | Inspect actual packaged artifact natives and reconcile |
 | 69 Performance Soak | short CI mode + long release mode, measure RSS/CPU/threads/workers/wx windows/USER/GDI/throughput/latency/reconnect/stale over extended duration; repeat tab switch/nav/file/transfer/editor/jobs/terminal/EN_TR/detached/reconnect | `audit/PERFORMANCE_SOAK_69.md` short soak ~136s 65A + 185s file003 = 5 min, leaked 0, USER reclaimed; long soak (hours) BLOCKED | **PARTIAL** | 65A + file003 | Short soak PASS; long soak not run | **PARTIAL** | Add soak runner `scripts/soak_runner.py --duration --iterations` with configurable short/long, report start/peak/end/growth/slope/failures |
 | 70 Release Prep | checklist: Windows/Linux/macOS packages + SHA256, smoke, manual sign-off, updater manifest + signature, notes/migration/rollback, known limits, SBOM/license/vuln/provenance/soak, signing classification SIGNED/UNSIGNED WITH DOCUMENTED POLICY/BLOCKED | `audit/RELEASE_PREP_70.md` Windows package done for old SHA, SBOM/license done, artifact SHA from HASHES.json, updater manifest pending `capture_build_inventory.py`, signing pending | **BLOCKED** | that file | Many items pending packaging + signature | **BLOCKED** | Complete packaging + signatures or documented UNSIGNED policy |
+| 72 Terminal Rebaseline | Audit Qt vs wx, freeze behavioral contract, correct false parity (`quick_command_row` hidden/dead) | `docs/v2/TERMINAL_PARITY_CONTRACT_72.md` + `TERMINAL_PARITY_GAPS_72.json` (35 gaps #1-35), ledger downgrades Wave 45 & `GUI-TERM-001` | STRUCTURAL (docs) | contract gaps measured | 35 behaviors classified; hidden `quick_command_row` `setVisible(False)` documented, no visible UI added to wx | **VERIFIED_COMPLETE** | — |
+| 73 Terminal WebView Renderer | xterm.js inside `wx.html2.WebView` with single JSON bridge, bounded queue, readiness, local-only page | Pending (Wave 73) | — | — | Not started | **BLOCKED** | Requires 72 gate PASS (now satisfied) |
+| 74 Input/Keyboard/Paste/Unicode/PTY | xterm onData → bridge → `send_shell_input`, full Ctrl A-_, nav keys, multiline paste, Unicode, FitAddon PTY re-fit | Pending | — | — | Not started | **BLOCKED** | Requires 73 |
+| 75 Header/Find/Lifecycle | status/identity/dimensions from xterm, Find vs buffer, Clear isolation, font re-fit, embedded+detached same renderer, reconnect invariant, i18n, a11y | Pending | — | — | Not started | **BLOCKED** | Requires 74 |
+| 76 Behavioral Evidence Gate | real wx→WebView→adapter→fake PTY→xterm-visible chain, VT fixture, stress invariants | Pending — gate for `GUI-TERM-001` COVERED | — | — | Not started | **BLOCKED** | Requires 75 |
+| 77 Platform/Packaging | Windows WebView2, macOS WebKit, Linux GTK/WebKit, packaged asset offline, no CDN/log | Pending | — | — | Not started | **BLOCKED** | Requires 76 |
 
-**Summary counts (current HEAD e3408fd):** VERIFIED_COMPLETE 7 (44-48,50-51,54,65A), PARTIAL 11, FAILED_VERIFICATION 0, BLOCKED 8, NO-GO 1 (66), SUPERSEDED 0. **65A now VERIFIED**; remaining >55 VERIFIED requires settings/logs/updater real proofs, visual DPI, packaged evidence, provenance current.
+**Summary counts (current HEAD da44f639 → Wave 72 rebaselined):** VERIFIED_COMPLETE 8 (44,46-48,50-51,54,65A,72), PARTIAL 11 (42-43,45,49,52,55-57,57A,61-62,62A,65 etc.) + `GUI-TERM-001` PARTIAL, BLOCKED 10 (59-60,67-70,73-77), NO-GO 1 (66). **Wave 45 downgraded → PARTIAL**; `GUI-TERM-001` not COVERED until Wave 76 passes.
 
-## 3) Current Blockers (e3408fd)
+## 3) Current Blockers (da44f639, post-72)
 
-1. **55/56/57 real wx event proofs missing** — model-only tests not sufficient (capture global/profile persistence, logs worker thread, updater progress).
-2. **57A visual DPI 150/200 manual + 1366/960 sizes + ansys Qt comparison missing.**
-3. **58 Windows packaged evidence stale** — need real artifact for e3408fd (current smoke is FAIL due to missing artifact, isolated).
-4. **59/60 Linux/macOS BLOCKED** — no runners/credentials (wx has wheel for macOS/Windows 3.14 but Linux requires source build with gtk).
-5. **61 keyboard-only full coverage missing** — Tab/Shift+Tab, visible focus, Alt, F1, Shift+F10, shortcuts not fully proven.
-6. **62A needs regen after downgrades** — 55-57,65A status changed.
-7. **63 manual plan stale (954783e)** — regenerate for e3408fd.
-8. **64 real migration backup not proven** — test creates own .bak, not app's real backup.
-9. **64 real migration backup not proven.**
-10. **65B provenance stale sharealike.**
-11. **68 bundled native inventory pending.**
-12. **69 long soak not run.**
+1. **72 terminal rebaseline done** — `TERMINAL_PARITY_CONTRACT_72.md` + gaps JSON committed; Wave 45 now PARTIAL, `GUI-TERM-001` PARTIAL (xterm missing). Next: Wave 73 renderer.
+2. **73-77 terminal waves BLOCKED until sequentially implemented** — WebView/xterm renderer, input/geometry, header/lifecycle, behavioral evidence gate, platform/packaging must be proven in order before `GUI-TERM-001` may return to COVERED.
+3. **55/56/57 real wx event proofs still missing** — model-only tests not sufficient (capture global/profile persistence, logs worker thread, updater progress).
+4. **57A visual DPI 150/200 manual + 1366/960 sizes + ansys Qt comparison missing.**
+5. **58 Windows packaged evidence stale** — need real artifact for da44f639 (current smoke is FAIL due to missing artifact, isolated).
+6. **59/60 Linux/macOS BLOCKED** — no runners/credentials (wx has wheel for macOS/Windows 3.14 but Linux requires source build with gtk).
+7. **61 keyboard-only full coverage missing** — Tab/Shift+Tab, visible focus, Alt, F1, Shift+F10, shortcuts not fully proven.
+8. **62A needs regen after downgrades** — 55-57,65A,72 (terminal) status changed.
+9. **63 manual plan stale (954783e)** — regenerate for da44f639.
+10. **64 real migration backup not proven** — test creates own .bak, not app's real backup.
+11. **65B provenance stale sharealike.**
+12. **68 bundled native inventory pending.**
+13. **69 long soak not run.**
+14. **45 terminal now correctly PARTIAL** — do not revert to VERIFIED_COMPLETE without xterm chain.
 
 ## 4) Historical Chronology (archived)
 
@@ -86,16 +97,17 @@ Behavioral / visual / platform / packaged / release are separate. `VERIFIED_COMP
 - **8232b8c** Ledger truthfulness: downgrade overclaims, FAILED_VERIFICATION for 65A
 - **8414eee** Packaged smoke real (isolated from src, FAIL due to missing artifact truthful) + visual parity regen for current HEAD duplicate 0
 - **e3408fd** 65A repaired: real wx events for all counts, 442s PASS
+- **da44f639 → Wave 72** terminal rebaseline: 35-gap contract frozen, hidden `quick_command_row` documented as dead, Wave 45 downgraded VERIFIED_COMPLETE→PARTIAL, `GUI-TERM-001` COVERED→PARTIAL, `GUI-TERM-002` kept COVERED (independent)
 
-Previous overclaims found and downgraded: 55,56,57,58,61,62,62A,63,64,65B,68,69,70 statuses lowered to reflect `wx.Yield`/model-only/source-string evidence not sufficient; 65A now repaired to VERIFIED. Wave 66 remains **NO-GO** — Qt stays production runtime until Wave 66 legitimately returns GO (do not start Wave 67).
+Previous overclaims found and downgraded: 45 (terminal TextCtrl ≠ xterm), 55,56,57,58,61,62,62A,63,64,65B,68,69,70 statuses lowered to reflect `wx.Yield`/model-only/source-string evidence not sufficient; 65A now repaired to VERIFIED. Wave 66 remains **NO-GO** — Qt stays production runtime until Wave 66 legitimately returns GO (do not start Wave 67).
 
 ## 5) Integration Evidence
 
-All implementation commits reachable from `develop` (e3408fd). Delegate work not complete until merged. Before merging: `git diff --check`, `python -m ruff check`, `python -m compileall -q src`, focused tests.
+All implementation commits reachable from `develop` (da44f639). Delegate work not complete until merged. Before merging: `git diff --check`, `python -m ruff check`, `python -m compileall -q src`, focused tests. Wave 72: docs-only, no renderer changed; `git diff --check` clean.
 
 ## 6) Acceptance Order
 
-Sequential still: 55 (settings real wx) → 56 (logs real) → 57 (updater real) → 57A visual current → 61 a11y harden → 64 real migration → 65A real integrated stress → wx closure (done) → packaged smoke real → 58 Windows real → 59/60 platform → CI current-SHA → gate harden (done) → provenance regen → SBOM/vuln/soak/release cleanup.
+Sequential: **72 (done: terminal rebaseline, no renderer)** → **73 (WebView/xterm renderer + queue + readiness)** → **74 (input/keyboard/paste/Unicode/PTY fit)** → **75 (header/Find/lifecycle)** → **76 (behavioral evidence gate for `GUI-TERM-001` COVERED)** → **77 (platform/packaged)** → then unrelated: 55 (settings real wx) → 56 (logs real) → 57 (updater real) → 57A visual current → 61 a11y harden → 64 real migration → 65A already VERIFIED → packaged smoke real → 58 Windows real → 59/60 platform → CI current-SHA → provenance regen → SBOM/vuln/soak/release cleanup.
 
 ## 7) Test Evidence Current
 
@@ -140,4 +152,4 @@ Stale files not deleted silently; moved to `audit/archive/<sha>/` or labelled hi
 
 ## 10) Qt Remains Production
 
-`src/hpc_gui/runtime.py:3` `DEFAULT_GUI_RUNTIME="qt"` unchanged. `PySide6`/`shiboken6` remain. No Wave 67 removal until Wave 66 GO.
+`src/hpc_gui/runtime.py:3` `DEFAULT_GUI_RUNTIME="qt"` unchanged. `PySide6`/`shiboken6` remain. No Wave 67 removal until Wave 66 GO. Wave 72 does not change runtime; wx optional.

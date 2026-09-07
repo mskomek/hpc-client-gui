@@ -1,0 +1,31 @@
+{
+  "wave": 76,
+  "requirement": "GUI-TERM-001",
+  "status": "PARTIAL",
+  "branch": "develop",
+  "renderer": "wx.html2.WebView + xterm.js 6.0.0",
+  "bridge": "single JSON postMessage (hpc/hpc_msg)",
+  "pty_adapter": "LoopbackPTY disposable fixture",
+  "tests_executed": [
+    "test_vt_cursor_movement_and_erase",
+    "test_unicode_round_trip",
+    "test_multiline_paste",
+    "test_resize_updates_dimensions_and_pty",
+    "test_stress_500_inputs",
+    "test_stress_500_resizes",
+    "test_stress_100_reconnects",
+    "test_stress_repeated_font_find_clear",
+    "test_close_while_output_in_flight"
+  ],
+  "invariants": {
+    "duplicate_output_subscribers": "0 (verified in reconnect stress)",
+    "callbacks_into_destroyed": "0 (close mid-flight test)",
+    "stale_session_output": "0 (set_ssh detaches old)",
+    "unbounded_accumulation": "0 (bounded queue MAX_PENDING_BYTES=2MB)"
+  },
+  "known_gaps": [
+    "xterm.js alternate screen not exercised (requires terminal buffer snapshot)",
+    "find_next not implemented (hpcFind wraps once)",
+    "packaged WebView2 runtime not tested (Wave 77)"
+  ]
+}
