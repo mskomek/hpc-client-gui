@@ -6,9 +6,9 @@ not treat static controls or service-only tests as visual parity evidence.
 ## Repository state
 
 - Branch: `develop`
-- Starting HEAD (Wave 71.4): `f72692805038e5dfc88305222d6e0a0bd9da3b87`
-- Tested code HEAD: `815cfeb2`
-- Evidence record HEAD: (this document will be committed separately)
+- Starting HEAD (Wave 71.5): `f72692805038e5dfc88305222d6e0a0bd9da3b87`
+- Tested code HEAD: `815cfeb20fcc137740ee1cc56f5700e5c50cbe9e`
+- Evidence record HEAD: `9658ddbbe2a242d4b6dcbb348cc894547c7e7615`
 - Worktree state: clean (only pre-existing unrelated `.integration-recovery/`, `audit.zip`, `waves.zip`)
 - OS: Windows 11 (win32)
 - Python: 3.12.4
@@ -110,7 +110,7 @@ tests/test_wx_connection.py + tests/test_wx_connection_profiles.py
 + tests/test_wx_connection_hardening.py + tests/test_wx_connection_71_2.py
 + tests/test_wx_connection_71_3.py + tests/test_wx_connection_71_4.py
 + tests/test_wx_connection_71_5.py
-Result: 88 passed in 37.19s (re-verified against committed HEAD: 88 passed in 42.36s)
+Result: 88 passed in 37.19s (re-verified against committed HEAD 815cfeb20fcc137740ee1cc56f5700e5c50cbe9e: 88 passed in 42.36s)
 ```
 
 ### Broader regression
