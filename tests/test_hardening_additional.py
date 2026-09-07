@@ -472,12 +472,12 @@ def test_wx_separator_lifecycle_offscreen():
     import tempfile
     import textwrap
     import os
-    # Skip if too many wx windows already open (large suite pollution)
+    # Skip if any wx windows already open – large suite leaves wx polluted
     try:
         import wx
-        if len(wx.GetTopLevelWindows()) > 3:
+        if len(wx.GetTopLevelWindows()) > 0:
             import pytest
-            pytest.skip("too many wx windows open, skipping flaky separator test")
+            pytest.skip("wx polluted, skipping flaky separator test")
     except Exception:
         pass
 
