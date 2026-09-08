@@ -294,7 +294,7 @@ def _matches_filter(row: dict[str, str], query: str) -> bool:
     return False
 
 
-def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, cancel, lifecycle, final_state, generation, embedded, refresh_sacct=None, show_job_details=None, refresh_lssrv=None, list_job_files=None, has_status_capability=None, output_channel_defs=None, **kwargs):
+def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, cancel, lifecycle, final_state, generation, embedded, refresh_sacct=None, show_job_details=None, refresh_lssrv=None, list_job_files=None, output_channel_defs=None, **kwargs):
     """Create the wx Jobs workspace; callbacks are service adapters, never UI IO."""
     try:
         import wx
@@ -404,21 +404,39 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
     accounting_box = wx.StaticBox(details_page, label=f"▾ {t('jobs_outputs.accounting_details')}")
     accounting_sizer = wx.StaticBoxSizer(accounting_box, wx.VERTICAL)
     btn_sacct = wx.Button(accounting_box, label=t("jobs_outputs.refresh_sacct"))
-    accounting_text = wx.TextCtrl(accounting_box, style=wx.TE_MULTILINE | wx.TE_READONLY | wx.HSCROLL)
+    accounting_table = wx.ListCtrl(accounting_box, style=wx.LC_REPORT | wx.LC_HRULES)
+    accounting_table.InsertColumn(0, "Job ID")
+    accounting_table.InsertColumn(1, "State")
+    accounting_table.InsertColumn(2, "Elapsed")
+    accounting_table.InsertColumn(3, "MaxRSS")
+    accounting_table.InsertColumn(4, "AllocTRES")
+    accounting_table.InsertColumn(5, "ExitCode")
+    accounting_table.SetColumnWidth(0, 80)
+    accounting_table.SetColumnWidth(1, 90)
+    accounting_table.SetColumnWidth(2, 90)
+    accounting_table.SetColumnWidth(3, 80)
+    accounting_table.SetColumnWidth(4, 120)
+    accounting_table.SetColumnWidth(5, 80)
+    accounting_raw_text = wx.TextCtrl(accounting_box, style=wx.TE_MULTILINE | wx.TE_READONLY | wx.HSCROLL)
+    accounting_raw_text.Show(False)
     try:
-        accounting_text.SetHint(t("jobs_outputs.accounting_placeholder"))
+        accounting_raw_text.SetHint(t("jobs_outputs.accounting_raw_hint"))
     except Exception:
         pass
     accounting_row = wx.BoxSizer(wx.HORIZONTAL)
     accounting_row.Add(btn_sacct, 0, wx.RIGHT | wx.ALIGN_CENTER_VERTICAL, 6)
+    btn_toggle_raw = wx.Button(accounting_box, label=t("jobs_outputs.show_raw_scontrol"))
+    accounting_row.Add(btn_toggle_raw, 0, wx.RIGHT | wx.ALIGN_CENTER_VERTICAL, 6)
     accounting_row.AddStretchSpacer(1)
     accounting_sizer.Add(accounting_row, 0, wx.EXPAND | wx.ALL, 4)
-    accounting_sizer.Add(accounting_text, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 4)
+    accounting_sizer.Add(accounting_table, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 4)
+    accounting_sizer.Add(accounting_raw_text, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 4)
+    accounting_raw_text.Show(False)
     accounting_sizer.SetMinSize(wx.Size(-1, 90))
     details_sizer.Add(accounting_sizer, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 4)
 
     _accounting_collapsed = {"collapsed": False}
-    _accounting_content_items = [btn_sacct, accounting_text]
+    _accounting_content_items = [btn_sacct, btn_toggle_raw, accounting_table, accounting_raw_text]
 
     # ---- Cancel button row -------------------------------------------------
     cancel_row = wx.BoxSizer(wx.HORIZONTAL)
@@ -775,7 +793,7 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
                 state["in_flight"] = False
             if not state["closed"] and (generation is None or req_gen == generation()):
                 if error:
-                    accounting_text.SetValue(f"[Jobs] {error}")
+                    accounting_raw_text.SetValue(f"[Jobs] {error}")
                 else:
                     items = tuple(result or ())
                     render_items(items)
@@ -793,6 +811,16 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         _apply_filter()
 
     # --- Toggle raw scontrol ------------------------------------------------
+    def _toggle_accounting_raw(_event=None):
+        is_shown = accounting_raw_text.IsShown()
+        accounting_raw_text.Show(not is_shown)
+        accounting_table.Show(is_shown)
+        btn_toggle_raw.SetLabel(
+            t("jobs_outputs.hide_raw_scontrol") if not is_shown
+            else t("jobs_outputs.show_raw_scontrol")
+        )
+        accounting_sizer.Layout()
+
     def _toggle_raw_scontrol(_event=None):
         state["raw_scontrol_visible"] = not state["raw_scontrol_visible"]
         raw_scontrol_text.Show(state["raw_scontrol_visible"])
@@ -835,10 +863,30 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
                 return
             btn_sacct.Enable(bool(refresh_sacct))
             if error:
-                accounting_text.SetValue(str(error))
+                accounting_table.DeleteAllItems()
+                idx = accounting_table.InsertItem(0, t("jobs_outputs.accounting_error"))
+                accounting_table.SetItem(idx, 1, str(error))
+                accounting_raw_text.SetValue(str(error))
             else:
-                text = clean_output(result) if result is not None else ""
-                accounting_text.SetValue(text)
+                text = str(result or "").strip()
+                accounting_raw_text.SetValue(clean_output(result) if text else "")
+                accounting_table.DeleteAllItems()
+                if not text:
+                    idx = accounting_table.InsertItem(0, t("jobs_outputs.accounting_empty"))
+                    return
+                for line in text.splitlines():
+                    line = line.strip()
+                    if not line:
+                        continue
+                    if line.lower().startswith("jobid"):
+                        continue
+                    parts = [p.strip() for p in line.split("|")]
+                    if len(parts) < 2:
+                        continue
+                    idx = accounting_table.InsertItem(accounting_table.GetItemCount(), parts[0])
+                    for ci, val in enumerate(parts[1:], 1):
+                        if ci <= 5:
+                            accounting_table.SetItem(idx, ci, val)
 
         Thread(target=worker, daemon=True).start()
 
@@ -1278,7 +1326,7 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         accounting_box.SetLabel(f"{accounting_prefix} {t('jobs_outputs.accounting_details')}")
         btn_sacct.SetLabel(t("jobs_outputs.refresh_sacct"))
         try:
-            accounting_text.SetHint(t("jobs_outputs.accounting_placeholder"))
+            accounting_raw_text.SetHint(t("jobs_outputs.accounting_raw_hint"))
         except Exception:
             pass
         btn_raw_scontrol.SetLabel(
@@ -1305,6 +1353,7 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
     btn_refresh.Bind(wx.EVT_BUTTON, refresh_jobs)
     btn_cancel.Bind(wx.EVT_BUTTON, cancel_job)
     btn_sacct.Bind(wx.EVT_BUTTON, _refresh_sacct)
+    btn_toggle_raw.Bind(wx.EVT_BUTTON, _toggle_accounting_raw)
     btn_raw_scontrol.Bind(wx.EVT_BUTTON, _toggle_raw_scontrol)
     filter_field.Bind(wx.EVT_TEXT, _on_filter_changed)
     try:
@@ -1441,7 +1490,8 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         "refresh": btn_refresh, "cancel": btn_cancel,
         "notebook": notebook,
         "details_page": details_page, "files_page": files_page, "outputs_page": outputs_page,
-        "accounting_text": accounting_text,
+        "accounting_table": accounting_table,
+        "accounting_raw_text": accounting_raw_text,
         "details_text": details_text,
         "raw_scontrol_text": raw_scontrol_text,
         "btn_raw_scontrol": btn_raw_scontrol,

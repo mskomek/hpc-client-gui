@@ -458,7 +458,10 @@
     "raw_scontrol_hint": "Raw scontrol output",
     "show_raw_scontrol": "Show raw scontrol details",
     "hide_raw_scontrol": "Hide raw scontrol details",
-    "no_channels": "No output channels defined. Use Files > Follow to track any remote file."
+    "no_channels": "No output channels defined. Use Files > Follow to track any remote file.",
+    "accounting_error": "Error",
+    "accounting_empty": "No accounting data",
+    "accounting_raw_hint": "Raw sacct output"
   },
   "putty": {
     "downloading": "Downloading plink.exe...",
