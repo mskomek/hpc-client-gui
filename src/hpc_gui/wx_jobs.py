@@ -645,7 +645,7 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         "raw_scontrol_visible": False,
         "filter_query": "",
         "resolved_channels": [],
-        "output_channel_defs": list(output_channel_defs) if output_channel_defs else [],
+        "output_channel_defs": list(output_channel_defs) if output_channel_defs is not None else None,
     }
     state_lock = Lock()
     timer = wx.Timer(host)
@@ -1098,9 +1098,8 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         ctx = model.selected_job_store.context
         if not ctx.job_id:
             return []
-        # Check for provider-defined channels
-        channel_defs = state.get("output_channel_defs", [])
-        if channel_defs:
+        channel_defs = state.get("output_channel_defs")
+        if channel_defs is not None:
             auto = output_resolver.resolve(
                 channel_defs,
                 job_id=ctx.job_id,
@@ -1109,7 +1108,6 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
                 scontrol_stderr=ctx.stderr_path,
             )
         else:
-            # Legacy: use generic Slurm semantics
             auto = output_resolver.resolve_legacy(
                 job_id=ctx.job_id,
                 workdir=ctx.workdir,
@@ -1241,7 +1239,11 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
                     if not output_channel_follow.get(ch.id, True):
                         continue
                     try:
-                        textCtrl.ShowPosition(textCtrl.GetLastPosition())
+                        last_pos = textCtrl.GetLastPosition()
+                        cur_pos = textCtrl.GetInsertionPoint()
+                        at_bottom = (last_pos - cur_pos) < 200
+                        if at_bottom:
+                            textCtrl.ShowPosition(last_pos)
                     except Exception:
                         pass
 
@@ -1456,6 +1458,7 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         files_workdir_label.SetLabel(f"{t('jobs_outputs.workdir')}: {parent_dir}")
         try:
             files_model.navigate(parent_dir)
+            files_browser._wx_remote_controls["load"]()
         except Exception:
             pass
         notebook.SetSelection(1)
@@ -1487,7 +1490,20 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         refresh_jobs(event)
         try:
             if notebook.GetSelection() == 2:
-                refresh_outputs_tab(event)
+                ctx = model.selected_job_store.context
+                terminal_states = {"COMPLETED", "FAILED", "CANCELLED", "TIMEOUT", "OUT_OF_MEMORY"}
+                is_terminal = ctx.state.upper() in terminal_states if ctx.state else False
+                if is_terminal:
+                    grace = state.get("_terminal_grace", 0)
+                    if grace < 3:
+                        state["_terminal_grace"] = grace + 1
+                        refresh_outputs_tab(event)
+                    elif grace == 3:
+                        state["_terminal_grace"] = grace + 1
+                        refresh_outputs_tab(event, force=True)
+                else:
+                    state["_terminal_grace"] = 0
+                    refresh_outputs_tab(event)
         except Exception:
             pass
 

@@ -7,10 +7,9 @@ used as a public API.
 
 from __future__ import annotations
 
-import re
 import threading
-from dataclasses import dataclass, field
-from typing import Any, Callable, Mapping, Optional, Sequence
+from dataclasses import dataclass
+from typing import Any, Mapping, Sequence
 
 from hpc_gui.services.slurm_script_parser import parse_output_error
 
@@ -129,10 +128,13 @@ class OutputResolver:
                     combined_roles = tuple(
                         dict.fromkeys(existing.roles + (defn.role,))
                     )
+                    combined_label = existing.label
+                    if defn.role not in existing.roles:
+                        combined_label = f"{existing.label} + {defn.label_en}"
                     deduped = ResolvedOutputChannel(
                         id=existing.id,
                         role=existing.role,
-                        label=existing.label,
+                        label=combined_label,
                         path=path,
                         source=source,
                         roles=combined_roles,
@@ -224,7 +226,10 @@ class OutputResolver:
                 resolved = _apply_placeholders(defn.relative_path, job_id)
                 if not resolved.startswith("/"):
                     resolved = posixpath.join(workdir, resolved)
-                return (posixpath.normpath(resolved), "definition")
+                resolved = posixpath.normpath(resolved)
+                if not resolved.startswith(workdir.rstrip("/") + "/") and resolved != workdir.rstrip("/"):
+                    return ("", "")
+                return (resolved, "definition")
         return ("", "")
 
     def _resolve_slurm_stdout(
@@ -309,20 +314,29 @@ def _apply_placeholders(value: str, job_id: str) -> str:
     return value
 
 
+def _apply_placeholders_with_name(value: str, job_id: str, job_name: str = "") -> str:
+    """Apply Slurm-style placeholders including %x (job name)."""
+    value = _apply_placeholders(value, job_id)
+    if job_name:
+        value = value.replace("%x", job_name)
+    return value
+
+
 # ---------------------------------------------------------------------------
 # Provider definitions helpers
 # ---------------------------------------------------------------------------
 
 def definitions_from_provider(
     job_outputs: Mapping[str, Any] | None,
-) -> list[OutputChannelDefinition]:
+) -> list[OutputChannelDefinition] | None:
     """Parse a provider's ``job_outputs`` section into channel definitions.
 
-    Returns an empty list if the field is absent (legacy provider).
+    Returns ``None`` if the field is absent (legacy provider — caller should
+    use resolve_legacy()).
     Returns an empty list if ``streams`` is explicitly empty (no channels).
     """
     if job_outputs is None:
-        return []  # Legacy: caller should use resolve_legacy()
+        return None  # Legacy: caller should use resolve_legacy()
     streams = job_outputs.get("streams")
     if not isinstance(streams, list) or not streams:
         return []  # Explicit zero channels
