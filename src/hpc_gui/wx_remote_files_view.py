@@ -10,9 +10,10 @@ from hpc_gui.core.i18n import subscribe_language_change, t, unsubscribe_language
 from hpc_gui.services.file_context_actions import FILE_CONTEXT_LABEL_KEYS, context_selection, visible_actions
 from hpc_gui.services.file_clipboard import get_file_clipboard
 from hpc_gui.services.remote_move_history import RemoteMoveHistory
+from hpc_gui.services.file_filter_registry import build_core_registry, FileFilter
 from hpc_gui.wx_remote_files import WxRemoteDirectoryModel
 from hpc_gui.wx_host import make_host
-from hpc_gui.ui.models.remote_entry_helpers import category as _shared_category, file_type as _shared_file_type, fmt_mtime as _shared_fmt_mtime
+from hpc_gui.ui.models.remote_entry_helpers import category as _shared_category, file_type as _shared_file_type, fmt_mtime as _shared_fmt_mtime, fmt_size as _shared_fmt_size, natural_sort_key as _shared_natural_sort_key
 
 
 def _entry_name(entry) -> str:
@@ -36,6 +37,10 @@ def _remote_category(entry) -> str:
         return _shared_category(entry)
     except AttributeError:
         return "folders" if getattr(entry, "is_dir", False) else "other"
+
+
+def _fmt_size(entry) -> str:
+    return _shared_fmt_size(getattr(entry, "size", 0))
 
 
 def _build_remote_files(parent, model: WxRemoteDirectoryModel | None = None, *, loader=None, operation=None, read_text=None, open_editor=None, open_editor_new_window=None, run_shell=None, embedded, navigation_store=None):
@@ -131,12 +136,38 @@ def _build_remote_files(parent, model: WxRemoteDirectoryModel | None = None, *, 
     root.Add(notebook, 1, wx.EXPAND | wx.LEFT | wx.RIGHT, 6)
     panel.SetSizer(root)
 
-    # --- remote filter categories (mirrors ui/models/remote_entry_helpers.category) ---
+    # --- File filter registry (replaces hardcoded categories) ---
+    file_filter_registry = build_core_registry()
 
+    def _apply_provider_filters(profile_filter_defs):
+        """Register provider/plugin file filters from cluster profile."""
+        if not isinstance(profile_filter_defs, list):
+            return
+        for ff in profile_filter_defs:
+            if not isinstance(ff, dict):
+                continue
+            fid = str(ff.get("id", "")).strip()
+            if not fid:
+                continue
+            labels = ff.get("labels") or {}
+            globs = tuple(ff.get("globs") or [])
+            suffixes = tuple(ff.get("suffixes") or [])
+            order = int(ff.get("order", 1000))
+            file_filter_registry.register(FileFilter(
+                id=fid,
+                label_en=str(labels.get("en", fid)),
+                label_tr=str(labels.get("tr", labels.get("en", fid))),
+                globs=globs,
+                suffixes=suffixes,
+                order=order,
+                source="provider",
+            ))
 
+    def _registry_filter_ids():
+        return file_filter_registry.visible_filter_ids()
 
-
-    FILTER_CATEGORIES = ["all", "folders", "iso", "archives", "slurm", "shell", "other"]
+    def _registry_matches(entry, filter_id):
+        return file_filter_registry.matches(entry, filter_id)
 
 
 
@@ -199,11 +230,13 @@ def _build_remote_files(parent, model: WxRemoteDirectoryModel | None = None, *, 
                 # update filter tab labels
                 fb = te.get("filter_notebook")
                 if fb is not None:
-                    for idx2, cat in enumerate(FILTER_CATEGORIES):
+                    for idx2, fid in enumerate(_registry_filter_ids()):
                         try:
-                            fb.SetPageText(idx2, t(f"dirs.tab_{cat}"))
+                            fb.SetPageText(idx2, t(f"dirs.tab_{fid}"))
                         except Exception:
-                            pass
+                            filt = file_filter_registry.get(fid)
+                            if filt:
+                                fb.SetPageText(idx2, filt.label_en)
             except RuntimeError:
                 continue
             idx = tabs.index(te)
@@ -216,55 +249,118 @@ def _build_remote_files(parent, model: WxRemoteDirectoryModel | None = None, *, 
         cat = tab_entry.get("filter", "all")
         if cat == "all":
             return list(entries)
-        return [e for e in entries if _remote_category(e) == cat]
+        return [e for e in entries if _registry_matches(e, cat)]
+
+    def _apply_sort(tab_entry):
+        col = tab_entry.get("sort_col", -1)
+        reverse = tab_entry.get("sort_reverse", False)
+        base = list(tab_entry.get("full_entries", []))
+        if col < 0:
+            tab_entry["_sorted_entries"] = base
+            return
+        def _sort_key(entry):
+            name = PurePosixPath(entry.path).name or entry.path
+            if col == 0:
+                return (0, _shared_natural_sort_key(name))
+            elif col == 1:
+                return (0, getattr(entry, "size", 0))
+            elif col == 2:
+                return (0, _type_label(entry).lower())
+            elif col == 3:
+                return (0, getattr(entry, "mtime", 0) or 0)
+            return (0, name)
+        def _is_dir(entry):
+            return bool(getattr(entry, "is_dir", False))
+        base.sort(key=lambda e: (not _is_dir(e), _sort_key(e)), reverse=reverse)
+        tab_entry["_sorted_entries"] = base
+
+    def _populate_listing(listing, entries, tab_entry):
+        listing.DeleteAllItems()
+        for entry in entries:
+            idx = listing.InsertItem(listing.GetItemCount(), PurePosixPath(entry.path).name or entry.path)
+            listing.SetItem(idx, 1, _fmt_size(entry))
+            listing.SetItem(idx, 2, _type_label(entry))
+            listing.SetItem(idx, 3, _format_mtime(getattr(entry, "mtime", None)))
 
     def create_tab(remote_path: str):
         remote_path = str(PurePosixPath(remote_path or "/"))
-        # normalize
         remote_path = remote_path or "/"
         tab_panel = wx.Panel(notebook)
         filter_nb = wx.Notebook(tab_panel)
-        for cat in FILTER_CATEGORIES:
+        filter_ids = _registry_filter_ids()
+        for fid in filter_ids:
+            filt = file_filter_registry.get(fid)
+            label = filt.label_en if filt else fid
             p = wx.Panel(filter_nb)
-            filter_nb.AddPage(p, t(f"dirs.tab_{cat}"))
-        listing = wx.ListCtrl(tab_panel, style=wx.LC_REPORT)
+            filter_nb.AddPage(p, t(f"dirs.tab_{fid}") if f"dirs.tab_{fid}" != f"dirs.tab_{fid}" else label)
+        # Use translated labels for core filters
+        for idx, fid in enumerate(filter_ids):
+            try:
+                filter_nb.SetPageText(idx, t(f"dirs.tab_{fid}"))
+            except Exception:
+                filt = file_filter_registry.get(fid)
+                if filt:
+                    filter_nb.SetPageText(idx, filt.label_en)
+
+        listing = wx.ListCtrl(tab_panel, style=wx.LC_REPORT | wx.LC_SINGLE_SEL | wx.LC_HRULES)
         listing.InsertColumn(0, t("dirs.col_name"))
         listing.InsertColumn(1, t("dirs.col_size"))
         listing.InsertColumn(2, t("dirs.col_type"))
         listing.InsertColumn(3, t("dirs.col_mtime"))
+        listing.SetColumnWidth(0, 250)
+        listing.SetColumnWidth(1, 90)
+        listing.SetColumnWidth(2, 160)
+        listing.SetColumnWidth(3, 120)
+
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.Add(filter_nb, 0, wx.EXPAND)
         sizer.Add(listing, 1, wx.EXPAND)
         tab_panel.SetSizer(sizer)
-        tab_entry = {"id": next_tab_id[0], "path": remote_path, "listing": listing, "panel": tab_panel, "entries": [], "full_entries": [], "filter": "all", "filter_notebook": filter_nb, "view_generation": 0, "listing_request_id": 0, "busy": False, "listing_busy": False, "closed": False}
+        tab_entry = {
+            "id": next_tab_id[0], "path": remote_path, "listing": listing,
+            "panel": tab_panel, "entries": [], "full_entries": [], "filter": "all",
+            "filter_notebook": filter_nb, "view_generation": 0,
+            "listing_request_id": 0, "busy": False, "listing_busy": False,
+            "closed": False, "sort_col": -1, "sort_reverse": False,
+        }
         next_tab_id[0] += 1
         tabs.append(tab_entry)
 
         def _on_filter_changed(evt):
             sel = filter_nb.GetSelection()
-            if sel < 0 or sel >= len(FILTER_CATEGORIES):
+            if sel < 0 or sel >= len(filter_ids):
                 evt.Skip()
                 return
-            tab_entry["filter"] = FILTER_CATEGORIES[sel]
-            # filter already-loaded entries, no remote round-trip
+            tab_entry["filter"] = filter_ids[sel]
             try:
                 base = tab_entry.get("full_entries", tab_entry.get("entries", []))
                 visible = _filtered_entries(tab_entry, base)
                 tab_entry["entries"] = visible
-                lst = tab_entry["listing"]
-                lst.DeleteAllItems()
-                for entry in visible:
-                    idx = lst.InsertItem(lst.GetItemCount(), PurePosixPath(entry.path).name or entry.path)
-                    lst.SetItem(idx, 1, str(entry.size))
-                    lst.SetItem(idx, 2, _type_label(entry))
-                    lst.SetItem(idx, 3, _format_mtime(getattr(entry, "mtime", None)))
+                _populate_listing(listing, visible, tab_entry)
                 if notebook.GetSelection() == tabs.index(tab_entry):
-                    host._wx_remote_controls["listing"] = lst
+                    host._wx_remote_controls["listing"] = listing
             except RuntimeError:
                 pass
             evt.Skip()
 
+        def _on_col_click(evt):
+            col = evt.GetColumn()
+            if col < 0:
+                return
+            if tab_entry["sort_col"] == col:
+                tab_entry["sort_reverse"] = not tab_entry["sort_reverse"]
+            else:
+                tab_entry["sort_col"] = col
+                tab_entry["sort_reverse"] = False
+            _apply_sort(tab_entry)
+            base = tab_entry.get("full_entries", [])
+            visible = _filtered_entries(tab_entry, base)
+            tab_entry["entries"] = visible
+            _populate_listing(listing, visible, tab_entry)
+            evt.Skip()
+
         filter_nb.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGED, _on_filter_changed)
+        listing.Bind(wx.EVT_LIST_COL_CLICK, _on_col_click)
         listing.Bind(wx.EVT_LIST_ITEM_ACTIVATED, activate)
         listing.Bind(wx.EVT_CONTEXT_MENU, context)
         listing.Bind(wx.EVT_KEY_DOWN, key_down)
@@ -293,18 +389,12 @@ def _build_remote_files(parent, model: WxRemoteDirectoryModel | None = None, *, 
             pass
 
     def render_for_tab(tab_entry, entries):
-        # store full unfiltered listing; visible is filtered per current tab filter
         tab_entry["full_entries"] = list(entries)
-        visible = _filtered_entries(tab_entry, entries)
+        _apply_sort(tab_entry)
+        visible = _filtered_entries(tab_entry, tab_entry.get("_sorted_entries", entries))
         tab_entry["entries"] = visible
         try:
-            lst = tab_entry["listing"]
-            lst.DeleteAllItems()
-            for entry in visible:
-                idx = lst.InsertItem(lst.GetItemCount(), PurePosixPath(entry.path).name or entry.path)
-                lst.SetItem(idx, 1, str(entry.size))
-                lst.SetItem(idx, 2, _type_label(entry))
-                lst.SetItem(idx, 3, _format_mtime(getattr(entry, "mtime", None)))
+            _populate_listing(tab_entry["listing"], visible, tab_entry)
         except RuntimeError:
             return
 
@@ -433,7 +523,7 @@ def _build_remote_files(parent, model: WxRemoteDirectoryModel | None = None, *, 
         )
         selected = selection.effective_paths
         menu = wx.Menu()
-        candidate_actions = ("open", "edit", "edit_new_window", "run_shell", "download", "upload", "copy", "move", "rename", "delete", "paste", "copy_path", "refresh", "new_folder", "new_tab")
+        candidate_actions = ("open", "edit", "edit_new_window", "run_shell", "follow_track", "download", "upload", "copy", "move", "rename", "delete", "paste", "copy_path", "refresh", "new_folder", "new_tab")
         allowed = visible_actions(selection, remote=True)
         actions = tuple(action for action in candidate_actions if action in allowed)
         labels = FILE_CONTEXT_LABEL_KEYS

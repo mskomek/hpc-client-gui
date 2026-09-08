@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from pathlib import PurePosixPath
 from threading import Lock, Thread
 from types import SimpleNamespace
 from typing import Any, Callable
@@ -531,16 +532,37 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
     outputs_toolbar.AddStretchSpacer(1)
     outputs_sizer.Add(outputs_toolbar, 0, wx.EXPAND | wx.ALL, 4)
 
+    # Per-channel search bar
+    search_row = wx.BoxSizer(wx.HORIZONTAL)
+    search_label = wx.StaticText(outputs_page, label=f"{t('common.filter')}:")
+    search_field = wx.TextCtrl(outputs_page, style=wx.TE_PROCESS_ENTER)
+    try:
+        search_field.SetHint(t("jobs_outputs.search_hint"))
+    except Exception:
+        pass
+    btn_find_next = wx.Button(outputs_page, label=t("jobs_outputs.find_next"))
+    btn_jump_latest = wx.Button(outputs_page, label=t("jobs_outputs.jump_to_latest"))
+    btn_open_window = wx.Button(outputs_page, label=t("jobs_outputs.open_in_window"))
+    btn_show_files = wx.Button(outputs_page, label=t("jobs_outputs.show_in_files"))
+    search_row.Add(search_label, 0, wx.RIGHT | wx.ALIGN_CENTER_VERTICAL, 4)
+    search_row.Add(search_field, 0, wx.RIGHT | wx.ALIGN_CENTER_VERTICAL, 4)
+    search_row.Add(btn_find_next, 0, wx.RIGHT, 4)
+    search_row.Add(btn_jump_latest, 0, wx.RIGHT, 4)
+    search_row.Add(btn_open_window, 0, wx.RIGHT, 4)
+    search_row.Add(btn_show_files, 0, wx.RIGHT, 4)
+    search_row.AddStretchSpacer(1)
+    outputs_sizer.Add(search_row, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 4)
+
     # Dynamic output channel tabs
     output_channel_notebook = wx.Notebook(outputs_page)
     output_channel_notebook.SetMinSize(wx.Size(-1, 200))
-    # Placeholder for when no channels are resolved
     output_no_channels_label = wx.StaticText(
         output_channel_notebook,
         label=t("jobs_outputs.no_channels"),
     )
     output_channels: dict[str, wx.TextCtrl] = {}
     output_channel_paths: dict[str, wx.TextCtrl] = {}
+    output_channel_paused: dict[str, bool] = {}
     output_resolver = OutputResolver()
     outputs_sizer.Add(output_channel_notebook, 1, wx.EXPAND | wx.ALL, 4)
     outputs_page.SetSizer(outputs_sizer)
@@ -875,20 +897,18 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         """Create or update output channel tabs to match resolved channels."""
         current_ids = set(output_channels.keys())
         new_ids = {c.id for c in channels}
-        # Remove tabs for channels that no longer exist
         for cid in current_ids - new_ids:
             tabCtrl = output_channels.pop(cid, None)
-            pathCtrl = output_channel_paths.pop(cid, None)
+            output_channel_paths.pop(cid, None)
+            output_channel_paused.pop(cid, None)
             try:
                 idx = output_channel_notebook.GetPageIndex(tabCtrl.GetParent() if tabCtrl else None)
                 if idx >= 0:
                     output_channel_notebook.DeletePage(idx)
             except Exception:
                 pass
-        # Add or update tabs for resolved channels
         for ch in channels:
             if ch.id not in output_channels:
-                # Create new tab
                 tab_panel = wx.Panel(output_channel_notebook)
                 tab_sizer = wx.BoxSizer(wx.VERTICAL)
                 path_field = wx.TextCtrl(tab_panel, style=wx.TE_READONLY)
@@ -904,12 +924,11 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
                 output_channel_notebook.AddPage(tab_panel, ch.label)
                 output_channels[ch.id] = text_ctrl
                 output_channel_paths[ch.id] = path_field
+                output_channel_paused[ch.id] = False
             else:
-                # Update path label
                 pathCtrl = output_channel_paths.get(ch.id)
                 if pathCtrl:
                     pathCtrl.SetValue(ch.path)
-        # Show placeholder if no channels
         if not channels:
             if output_channel_notebook.GetPageCount() == 0:
                 output_channel_notebook.AddPage(
@@ -917,7 +936,6 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
                     t("jobs_outputs.outputs_title"),
                 )
         else:
-            # Remove placeholder if present
             try:
                 idx = output_channel_notebook.GetPageIndex(output_no_channels_label)
                 if idx >= 0:
@@ -1197,6 +1215,93 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         pass
     outputs_refresh_btn.Bind(wx.EVT_BUTTON, lambda e: refresh_outputs_tab(force=True))
     outputs_pause_btn.Bind(wx.EVT_BUTTON, toggle_outputs_pause)
+
+    # --- Per-channel search / find / jump / open / show ---------------------
+    def _get_active_channel_textctrl():
+        sel = output_channel_notebook.GetSelection()
+        if sel < 0:
+            return None
+        for cid, tc in output_channels.items():
+            try:
+                if tc.GetParent() and output_channel_notebook.GetPage(output_channel_notebook.GetPageIndex(tc.GetParent())) is not None:
+                    idx = output_channel_notebook.GetPageIndex(tc.GetParent())
+                    if idx == sel:
+                        return tc
+            except Exception:
+                pass
+        return None
+
+    def _on_search(_event=None):
+        query = search_field.GetValue().strip()
+        if not query:
+            return
+        tc = _get_active_channel_textctrl()
+        if not tc:
+            return
+        text = tc.GetValue()
+        pos = text.find(query)
+        if pos >= 0:
+            tc.SetStyle(pos, pos + len(query), wx.TextAttr(wx.RED, wx.YELLOW))
+
+    def _on_find_next(_event=None):
+        query = search_field.GetValue().strip()
+        if not query:
+            return
+        tc = _get_active_channel_textctrl()
+        if not tc:
+            return
+        text = tc.GetValue()
+        pos = tc.GetInsertionPoint() + 1
+        found = text.find(query, pos)
+        if found < 0:
+            found = text.find(query)
+        if found >= 0:
+            tc.SetInsertionPoint(found)
+            tc.SetSelection(found, found + len(query))
+
+    def _on_jump_latest(_event=None):
+        tc = _get_active_channel_textctrl()
+        if tc:
+            tc.ShowPosition(tc.GetLastPosition())
+
+    def _on_open_in_window(_event=None):
+        tc = _get_active_channel_textctrl()
+        if not tc or not state["selected_job"]:
+            return
+        text = tc.GetValue()
+        frame = wx.Frame(host, title=f"{t('jobs_outputs.output')} — {state['selected_job']}", size=(800, 500))
+        out = wx.TextCtrl(frame, style=wx.TE_MULTILINE | wx.TE_READONLY | wx.HSCROLL)
+        out.SetValue(text)
+        out.ShowPosition(out.GetLastPosition())
+        frame.Show()
+
+    def _on_show_in_files(_event=None):
+        tc = _get_active_channel_textctrl()
+        if not tc:
+            return
+        path_val = ""
+        for cid, ctrl in output_channels.items():
+            if ctrl is tc and cid in output_channel_paths:
+                path_val = output_channel_paths[cid].GetValue()
+                break
+        if not path_val:
+            return
+        parent_dir = str(PurePosixPath(path_val).parent) or "/"
+        files_workdir_label.SetLabel(f"{t('jobs_outputs.workdir')}: {parent_dir}")
+        try:
+            files_model.navigate(parent_dir)
+        except Exception:
+            pass
+        notebook.SetSelection(1)
+
+    btn_find_next.Bind(wx.EVT_BUTTON, _on_find_next)
+    btn_jump_latest.Bind(wx.EVT_BUTTON, _on_jump_latest)
+    btn_open_window.Bind(wx.EVT_BUTTON, _on_open_in_window)
+    btn_show_files.Bind(wx.EVT_BUTTON, _on_show_in_files)
+    try:
+        search_field.Bind(wx.EVT_TEXT_ENTER, _on_search)
+    except Exception:
+        pass
 
     def _on_notebook_page_changed(evt):
         try:
