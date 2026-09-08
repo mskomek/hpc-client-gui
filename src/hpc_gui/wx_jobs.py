@@ -616,6 +616,9 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
     output_channel_paths: dict[str, wx.TextCtrl] = {}
     output_channel_paused: dict[str, bool] = {}
     output_channel_follow: dict[str, bool] = {}
+    output_channel_offsets: dict[str, int] = {}
+    output_channel_in_flight: dict[str, bool] = {}
+    output_channel_waiting: dict[str, int] = {}
     output_resolver = OutputResolver()
     outputs_sizer.Add(output_channel_notebook, 1, wx.EXPAND | wx.ALL, 4)
     outputs_page.SetSizer(outputs_sizer)
@@ -1030,6 +1033,9 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
                 output_channel_paths[ch.id] = path_field
                 output_channel_paused[ch.id] = False
                 output_channel_follow[ch.id] = True
+                output_channel_offsets[ch.id] = 0
+                output_channel_in_flight[ch.id] = False
+                output_channel_waiting[ch.id] = 0
 
                 def _on_ch_pause(evt, cid=ch.id):
                     output_channel_paused[cid] = not output_channel_paused[cid]
@@ -1159,19 +1165,25 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
 
         def worker(req_id=request_id, g=gen, channels=resolved):
             results = {}
-            # Read automatic channels via read_output callback
+            auto_result = None
             if read_output:
                 try:
-                    result = read_output(req_id)
-                    if isinstance(result, dict):
-                        results["stdout"] = result.get("stdout", "")
-                        results["stderr"] = result.get("stderr", "")
+                    auto_result = read_output(req_id)
                 except Exception:
-                    pass
-            # Read manually tracked files directly
+                    auto_result = {}
             for ch in channels:
-                if ch.source == "manual" and ch.path:
-                    try:
+                if output_channel_in_flight.get(ch.id, False):
+                    continue
+                output_channel_in_flight[ch.id] = True
+                try:
+                    if auto_result is not None and isinstance(auto_result, dict):
+                        if "stdout" in ch.roles:
+                            results[ch.id] = auto_result.get("stdout", "")
+                        elif "stderr" in ch.roles:
+                            results[ch.id] = auto_result.get("stderr", "")
+                        else:
+                            results[ch.id] = auto_result.get(ch.id, "")
+                    elif ch.path:
                         session = None
                         try:
                             from hpc_gui.wx_shell import _get_session_files
@@ -1179,9 +1191,27 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
                         except Exception:
                             pass
                         if session and hasattr(session, "read_text"):
-                            results[ch.id] = session.read_text(ch.path)
-                    except Exception:
+                            try:
+                                full_text = session.read_text(ch.path)
+                                offset = output_channel_offsets.get(ch.id, 0)
+                                if len(full_text) < offset:
+                                    offset = 0
+                                new_text = full_text[offset:]
+                                output_channel_offsets[ch.id] = len(full_text)
+                                results[ch.id] = new_text
+                                output_channel_waiting[ch.id] = 0
+                            except FileNotFoundError:
+                                w = output_channel_waiting.get(ch.id, 0) + 1
+                                output_channel_waiting[ch.id] = min(w, 5)
+                                results[ch.id] = ""
+                            except Exception:
+                                results[ch.id] = ""
+                        else:
+                            results[ch.id] = ""
+                    else:
                         results[ch.id] = ""
+                finally:
+                    output_channel_in_flight[ch.id] = False
             post(lambda: _done_outputs(results, None, req_id, g, channels))
 
         def _done_outputs(result, err, req_id, g, channels=None):
@@ -1204,16 +1234,17 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
                         continue
                     if output_channel_paused.get(ch.id, False):
                         continue
-                    if ch.id in result:
-                        textCtrl.SetValue(clean_output(result[ch.id]))
-                    elif "stdout" in ch.roles:
-                        textCtrl.SetValue(clean_output(result.get("stdout", "")))
-                    elif "stderr" in ch.roles:
-                        textCtrl.SetValue(clean_output(result.get("stderr", "")))
-                    elif ch.source == "manual":
-                        textCtrl.SetValue(clean_output(result.get(ch.id, "")))
-                    else:
-                        textCtrl.SetValue(clean_output(str(result)))
+                    new_text = result.get(ch.id, "")
+                    waiting_count = output_channel_waiting.get(ch.id, 0)
+                    if not new_text and waiting_count > 0 and ch.source != "manual":
+                        wait_msg = f"[{t('jobs_outputs.waiting_for_output')}...]\n"
+                        textCtrl.SetValue(wait_msg)
+                    elif new_text:
+                        if ch.source == "manual":
+                            existing = textCtrl.GetValue()
+                            textCtrl.SetValue(existing + clean_output(new_text))
+                        else:
+                            textCtrl.SetValue(clean_output(new_text))
             elif isinstance(result, dict):
                 # Fallback: legacy dict with stdout/stderr
                 for ch_id, textCtrl in output_channels.items():

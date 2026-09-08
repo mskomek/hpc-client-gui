@@ -461,7 +461,8 @@
     "no_channels": "Cikti kanali tanimlanmamis. Dosyalar > Takip ile uzaktan dosya takibi yapabilirsiniz.",
     "accounting_error": "Hata",
     "accounting_empty": "Hesaplama verisi yok",
-    "accounting_raw_hint": "Ham sacct ciktisi"
+    "accounting_raw_hint": "Ham sacct ciktisi",
+    "waiting_for_output": "Cikti bekleniyor"
   },
   "putty": {
     "downloading": "plink.exe indiriliyor...",
