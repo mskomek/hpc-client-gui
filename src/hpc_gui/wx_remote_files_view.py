@@ -302,7 +302,7 @@ def _build_remote_files(parent, model: WxRemoteDirectoryModel | None = None, *, 
                 if filt:
                     filter_nb.SetPageText(idx, filt.label_en)
 
-        listing = wx.ListCtrl(tab_panel, style=wx.LC_REPORT | wx.LC_SINGLE_SEL | wx.LC_HRULES)
+        listing = wx.ListCtrl(tab_panel, style=wx.LC_REPORT | wx.LC_HRULES)
         listing.InsertColumn(0, t("dirs.col_name"))
         listing.InsertColumn(1, t("dirs.col_size"))
         listing.InsertColumn(2, t("dirs.col_type"))
@@ -376,9 +376,7 @@ def _build_remote_files(parent, model: WxRemoteDirectoryModel | None = None, *, 
             state["view_generation"] += 1
             tstate["view_generation"] += 1
         model.navigate(str(target))
-        # also update tab's path
         tstate["path"] = model.current_path
-        # sync model tabs
         idx = notebook.GetSelection()
         if 0 <= idx < len(model.tabs):
             model.tabs[idx] = model.current_path
@@ -387,6 +385,11 @@ def _build_remote_files(parent, model: WxRemoteDirectoryModel | None = None, *, 
             notebook.SetPageText(idx, tab_label(model.current_path))
         except Exception:
             pass
+        if navigation_store:
+            try:
+                navigation_store.record_visit(model.current_path)
+            except Exception:
+                pass
 
     def render_for_tab(tab_entry, entries):
         tab_entry["full_entries"] = list(entries)
@@ -523,7 +526,7 @@ def _build_remote_files(parent, model: WxRemoteDirectoryModel | None = None, *, 
         )
         selected = selection.effective_paths
         menu = wx.Menu()
-        candidate_actions = ("open", "edit", "edit_new_window", "run_shell", "follow_track", "download", "upload", "copy", "move", "rename", "delete", "paste", "copy_path", "refresh", "new_folder", "new_tab")
+        candidate_actions = ("open", "edit", "edit_new_window", "run_shell", "follow_track", "download", "upload", "copy", "move", "rename", "delete", "paste", "copy_path", "refresh", "new_folder", "new_file", "chmod", "submit_slurm", "favorite", "new_tab")
         allowed = visible_actions(selection, remote=True)
         actions = tuple(action for action in candidate_actions if action in allowed)
         labels = FILE_CONTEXT_LABEL_KEYS
@@ -614,6 +617,32 @@ def _build_remote_files(parent, model: WxRemoteDirectoryModel | None = None, *, 
             clipboard = get_file_clipboard().get()
             if clipboard:
                 run_operation(clipboard.op, tuple(clipboard.paths), target_dir or tstate["path"], from_paste=True)
+            return
+        if action == "new_file" and operation:
+            dlg = wx.TextEntryDialog(host, t("dirs.new_file_label"), t("dirs.new_file_title"))
+            if dlg.ShowModal() == wx.ID_OK:
+                name = dlg.GetValue().strip()
+                if name and "/" not in name and "\\" not in name:
+                    try:
+                        dest = str(PurePosixPath(tstate["path"]) / name)
+                        operation("new_folder", (), dest)
+                        load()
+                    except Exception as error:
+                        wx.MessageBox(str(error), t("login.err_title"), wx.OK | wx.ICON_ERROR)
+            dlg.Destroy()
+            return
+        if action == "chmod" and selected:
+            wx.MessageBox(t("dirs.permissions_intro").format(name=selected[0].rsplit("/", 1)[-1]),
+                          t("dirs.permissions_title"), wx.OK | wx.ICON_INFORMATION)
+            return
+        if action == "submit_slurm" and selected:
+            wx.MessageBox(t("dirs.submit_sbatch"), t("dirs.submit_sbatch"), wx.OK | wx.ICON_INFORMATION)
+            return
+        if action == "favorite" and navigation_store and tstate:
+            try:
+                navigation_store.add_favorite(tstate["path"], "directory")
+            except Exception:
+                pass
             return
         if action in {"open", "edit"} and open_editor and selected:
             entry = next((item for item in tstate["entries"] if item.path == selected[0]), None)
@@ -1036,7 +1065,7 @@ def _build_remote_files(parent, model: WxRemoteDirectoryModel | None = None, *, 
                 pass
     subscribe_language_change(refresh_labels)
     host.bind_host_close(lambda event: (unsubscribe_language_change(refresh_labels), close(event)))
-    host._wx_remote_controls = {"listing": initial["listing"], "path": path, "notebook": notebook, "toolbar": toolbar, "btn_new_folder": btn_new_folder, "btn_new_file": btn_new_file, "btn_upload": btn_upload, "btn_download": btn_download, "btn_delete": btn_delete, "btn_undo": btn_undo, "btn_favorites": btn_favorites, "btn_history": btn_history, "btn_refresh": btn_refresh, "path_label": path_label}
+    host._wx_remote_controls = {"listing": initial["listing"], "path": path, "notebook": notebook, "toolbar": toolbar, "btn_new_folder": btn_new_folder, "btn_new_file": btn_new_file, "btn_upload": btn_upload, "btn_download": btn_download, "btn_delete": btn_delete, "btn_undo": btn_undo, "btn_favorites": btn_favorites, "btn_history": btn_history, "btn_refresh": btn_refresh, "path_label": path_label, "load": load}
     host._wx_remote_model = model
     host._wx_remote_state = state
     host._wx_remote_run_action = run_action

@@ -52,7 +52,7 @@ LOCAL_ACTIONS = (
 REMOTE_ACTIONS = (
     "open", "edit", "edit_new_window", "run_shell", "download", "upload", "rename",
     "delete", "copy", "move", "paste", "copy_path", "refresh", "new_folder",
-    "new_tab", "follow_track",
+    "new_file", "new_tab", "follow_track", "chmod", "submit_slurm", "favorite",
 )
 
 
@@ -64,9 +64,9 @@ def _eligible(selection: FileContextSelection, remote: bool) -> frozenset[str]:
         actions.discard("cut")
         actions.update({"upload", "move"})
         if selection.one_file:
-            actions.update({"open", "edit", "edit_new_window", "download", "rename", "follow_track"})
+            actions.update({"open", "edit", "edit_new_window", "download", "rename", "follow_track", "chmod", "submit_slurm", "favorite"})
         elif selection.one_dir:
-            actions.update({"open", "download", "upload", "new_folder", "new_tab"})
+            actions.update({"open", "download", "upload", "new_folder", "new_file", "new_tab", "favorite"})
         else:
             actions.update({"download"})
     elif selection.one_file:
@@ -108,9 +108,11 @@ FILE_CONTEXT_LABEL_KEYS = {
     "edit_new_window": "dirs.edit_new_window", "upload": "dirs.upload", "download": "dirs.download",
     "rename": "dirs.rename", "delete": "dirs.delete", "copy": "dirs.copy", "cut": "dirs.move",
     "move": "dirs.move", "paste": "dirs.paste", "copy_path": "dirs.copy_path", "refresh": "dirs.refresh",
-    "new_tab": "dirs.new_tab", "new_folder": "dirs.new_folder",
+    "new_tab": "dirs.new_tab", "new_folder": "dirs.new_folder", "new_file": "dirs.new_file",
     "run_shell": "dirs.run_shell_terminal",
     "follow_track": "dirs.follow_track",
+    "chmod": "dirs.permissions_title", "submit_slurm": "dirs.submit_sbatch",
+    "favorite": "dirs.favorite_add_item",
 }
 
 
