@@ -58,13 +58,26 @@ def _close(frame, app):
 @pytest.fixture
 def wx_app():
     load_language("en")
-    app = wx.App(False)
+    existing = wx.GetApp()
+    if existing is not None:
+        try:
+            for window in wx.GetTopLevelWindows():
+                if window:
+                    window.Destroy()
+            existing.ProcessPendingEvents()
+            existing.Destroy()
+        except Exception:
+            pass
+    app = wx.App(redirect=False)
     yield app
     for window in wx.GetTopLevelWindows():
         if window:
             window.Destroy()
     app.ProcessPendingEvents()
-    app.Destroy()
+    try:
+        app.Destroy()
+    except Exception:
+        pass
 
 
 def test_wx_jobs_stress_rapid_selection_never_shows_stale_output(wx_app):
