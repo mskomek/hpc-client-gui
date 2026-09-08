@@ -291,7 +291,7 @@ def _matches_filter(row: dict[str, str], query: str) -> bool:
     return False
 
 
-def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, cancel, lifecycle, final_state, generation, embedded, refresh_sacct=None, show_job_details=None, refresh_lssrv=None, list_job_files=None, has_status_capability=None, **kwargs):
+def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, cancel, lifecycle, final_state, generation, embedded, refresh_sacct=None, show_job_details=None, refresh_lssrv=None, list_job_files=None, has_status_capability=None, output_channel_defs=None, **kwargs):
     """Create the wx Jobs workspace; callbacks are service adapters, never UI IO."""
     try:
         import wx
@@ -605,7 +605,7 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         "raw_scontrol_visible": False,
         "filter_query": "",
         "resolved_channels": [],
-        "output_channel_defs": [],
+        "output_channel_defs": list(output_channel_defs) if output_channel_defs else [],
     }
     state_lock = Lock()
     timer = wx.Timer(host)
@@ -635,6 +635,9 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
     def _refresh_job_table(filtered):
         jobs.DeleteAllItems()
         selected_still_visible = False
+        if not filtered:
+            index = jobs.InsertItem(jobs.GetItemCount(), t("jobs.no_jobs"))
+            jobs.SetItem(index, 1, "")
         for row, _item in filtered:
             index = jobs.InsertItem(jobs.GetItemCount(), row["job_id"])
             jobs.SetItem(index, 1, row["name"])
@@ -723,6 +726,12 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         script_p = str(item.get("script_path", "")).strip() if isinstance(item, dict) else ""
         if script_p:
             fields.append(f"Script:      {script_p}")
+        nodelist = str(item.get("nodelist", "")).strip() if isinstance(item, dict) else ""
+        if nodelist:
+            fields.append(f"NodeList:    {nodelist}")
+        exit_code = str(item.get("exit_code", "")).strip() if isinstance(item, dict) else ""
+        if exit_code:
+            fields.append(f"ExitCode:    {exit_code}")
         details_text.SetValue("\n".join(fields))
         # Update selected job store with scheduler metadata
         if isinstance(item, dict):
@@ -762,7 +771,7 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
                 state["in_flight"] = False
             if not state["closed"] and (generation is None or req_gen == generation()):
                 if error:
-                    details_text.SetValue(str(error))
+                    accounting_text.SetValue(f"[Jobs] {error}")
                 else:
                     items = tuple(result or ())
                     render_items(items)
@@ -1129,7 +1138,8 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
                 return
             btn_cancel.Enable(True)
             if error:
-                details_text.SetValue(str(error))
+                raw_scontrol_text.SetValue(f"[Cancel] {error}")
+                raw_scontrol_text.Show(True)
 
         Thread(target=worker, daemon=True).start()
 
@@ -1184,6 +1194,8 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         btn_refresh.SetLabel(t("jobs.refresh"))
         cb_auto_refresh.SetLabel(t("jobs.auto_refresh"))
         btn_cancel.SetLabel(t("jobs.cancel"))
+        jobs_prefix = "▸" if _jobs_collapsed["collapsed"] else "▾"
+        jobs_box.SetLabel(f"{jobs_prefix} {t('jobs.title')}")
         for col_idx, col_key in enumerate(_JOB_TABLE_COLUMNS):
             jobs.SetColumn(col_idx, t(_COLUMN_LABEL_KEYS.get(col_key, col_key)))
         try:
@@ -1192,8 +1204,10 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
             notebook.SetPageText(2, t("jobs_outputs.outputs_title"))
         except Exception:
             pass
-        details_box.SetLabel(t("jobs_outputs.job_details"))
-        accounting_box.SetLabel(t("jobs_outputs.accounting_details"))
+        details_prefix = "▸" if _details_collapsed["collapsed"] else "▾"
+        details_box.SetLabel(f"{details_prefix} {t('jobs_outputs.job_details')}")
+        accounting_prefix = "▸" if _accounting_collapsed["collapsed"] else "▾"
+        accounting_box.SetLabel(f"{accounting_prefix} {t('jobs_outputs.accounting_details')}")
         btn_sacct.SetLabel(t("jobs_outputs.refresh_sacct"))
         try:
             accounting_text.SetHint(t("jobs_outputs.accounting_placeholder"))
