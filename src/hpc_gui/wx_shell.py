@@ -195,6 +195,7 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
     # Jobs & Outputs
     _jobs = _jobs_callbacks(session_state, frame, lifecycle)
     jobs_panel = build_jobs_panel(notebook, **_jobs)
+    session_state["_embedded_jobs_panel"] = jobs_panel
     notebook.AddPage(jobs_panel, t("tabs.jobs_outputs"), False)
     page_controls["NAV-JOBS"] = {"page": jobs_panel}
 
@@ -260,6 +261,7 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
     local_panel = build_local_files_panel(top_splitter, **_local)
     session_state["_embedded_local_files_panel"] = local_panel
     remote_panel = build_remote_files_panel(top_splitter, **_remote)
+    session_state["_embedded_remote_files_panel"] = remote_panel
     top_splitter.SplitVertically(local_panel, remote_panel, 340)
     top_splitter.SetMinimumPaneSize(300)
     from hpc_gui.wx_transfer_workspace import build_transfers_panel
@@ -1797,13 +1799,27 @@ def _local_files_callbacks(session_state, parent, lifecycle):
 
 
 def _remote_files_callbacks(session_state, parent, lifecycle):
-    _snapshot_session = (session_state or {}).get("session") or {}
-    _snapshot_files = _snapshot_session.get("files")
     _manager = _get_editor_manager(session_state, parent, lifecycle)
 
+    def _resolve_session():
+        return (session_state or {}).get("session") or {}
+
+    def _resolve_files():
+        return _resolve_session().get("files")
+
+    def _resolve_slurm():
+        return _resolve_session().get("slurm")
+
+    def _resolve_profile():
+        return _resolve_session().get("profile") or {}
+
+    def _resolve_provider_config():
+        profile = _resolve_profile()
+        provider = profile.get("provider_template")
+        return provider if isinstance(provider, dict) else profile
+
     def remote_operation(action, paths, destination=""):
-        session = (session_state or {}).get("session") or {}
-        files = _snapshot_files if _snapshot_files is not None else session.get("files")
+        files = _resolve_files()
         if action == "delete" and files:
             for remote_path in paths:
                 files.remove(remote_path, recursive=True)
@@ -1827,7 +1843,22 @@ def _remote_files_callbacks(session_state, parent, lifecycle):
         if action == "new_folder" and files and destination:
             files.mkdir(destination)
             return
+        if action == "new_file" and files and destination:
+            files.write_text(destination, "")
+            return
         raise RuntimeError(f"Remote action is not available from this view: {action}")
+
+    def chmod(path, mode):
+        files = _resolve_files()
+        if not files or not callable(getattr(files, "chmod", None)):
+            raise RuntimeError(t("dirs.permissions_unavailable"))
+        files.chmod(path, mode if isinstance(mode, int) else int(str(mode), 8))
+
+    def submit_slurm(path):
+        slurm = _resolve_slurm()
+        if not slurm or not callable(getattr(slurm, "sbatch", None)):
+            raise RuntimeError(t("jobs.slurm_unavailable"))
+        return slurm.sbatch(path)
 
     def _editor(path, content="", request_id=None):
         _manager.open_primary(path, content, is_local=False, request_id=request_id)
@@ -1843,15 +1874,13 @@ def _remote_files_callbacks(session_state, parent, lifecycle):
         _manager.open_new_window(path, content, is_local=False)
 
     def _loader(path):
-        session = (session_state or {}).get("session") or {}
-        files = _snapshot_files if _snapshot_files is not None else session.get("files")
+        files = _resolve_files()
         if files and hasattr(files, "iterdir_entries"):
             return files.iterdir_entries(path)
         return ()
 
     def _read_text(path):
-        session = (session_state or {}).get("session") or {}
-        files = _snapshot_files if _snapshot_files is not None else session.get("files")
+        files = _resolve_files()
         if files and hasattr(files, "read_text"):
             return files.read_text(path)
         return ""
@@ -1865,9 +1894,22 @@ def _remote_files_callbacks(session_state, parent, lifecycle):
     def read_text(path):
         return _read_text(path)
 
-    # Only provide loader/read_text if there is a session; otherwise return None-like behavior
-    # The panel will handle None by not loading, but we provide dynamic functions so embedded
-    # panel works after connection. Check session at call time inside loader already.
+    def _navigation_store():
+        from hpc_gui.services.remote_navigation_store import navigation_store_for_profile
+        profile = _resolve_profile()
+        profile_id = str(profile.get("id", profile.get("profile_id", "")))
+        return navigation_store_for_profile(profile_id)
+
+    def _provider_filters():
+        value = _resolve_provider_config().get("file_filters", ())
+        return value if isinstance(value, (list, tuple)) else ()
+
+    def _plugin_filters():
+        # Application plugins are declarative and may contribute through the
+        # session's already-loaded profile metadata when present.
+        value = _resolve_profile().get("application_file_filters", ())
+        return value if isinstance(value, (list, tuple)) else ()
+
     return {
         "loader": loader,
         "read_text": read_text,
@@ -1875,27 +1917,34 @@ def _remote_files_callbacks(session_state, parent, lifecycle):
         "open_editor": _editor,
         "open_editor_new_window": _editor_new_window,
         "run_shell": lambda path: _run_shell_in_terminal(session_state, parent, lifecycle, [path]),
+        "chmod": chmod if callable(getattr(_resolve_files(), "chmod", None)) or _resolve_files() is None else None,
+        "submit_slurm": submit_slurm if callable(getattr(_resolve_slurm(), "sbatch", None)) or _resolve_slurm() is None else None,
+        "operation_supported": lambda: _resolve_files() is not None and callable(getattr(_resolve_files(), "write_text", None)),
+        "chmod_supported": lambda: _resolve_files() is not None and callable(getattr(_resolve_files(), "chmod", None)),
+        "submit_slurm_supported": lambda: _resolve_slurm() is not None and callable(getattr(_resolve_slurm(), "sbatch", None)),
+        "navigation_store": _navigation_store,
+        "provider_filters": _provider_filters,
+        "plugin_filters": _plugin_filters,
     }
 
 
 def _jobs_callbacks(session_state, parent, lifecycle):
-    _snapshot_session = (session_state or {}).get("session") or {}
-    _snapshot_slurm = _snapshot_session.get("slurm")
-    _snapshot_profile = _snapshot_session.get("profile")
-    _snapshot_files = _snapshot_session.get("files")
-
     def _resolve_slurm():
         session = (session_state or {}).get("session") or {}
-        return _snapshot_slurm if _snapshot_slurm is not None else session.get("slurm")
+        return session.get("slurm")
 
     def _resolve_files():
         session = (session_state or {}).get("session") or {}
-        return _snapshot_files if _snapshot_files is not None else session.get("files")
+        return session.get("files")
 
     def _resolve_profile():
         session = (session_state or {}).get("session") or {}
-        return (_snapshot_profile if _snapshot_profile is not None
-                else session.get("profile") or {})
+        return session.get("profile") or {}
+
+    def _resolve_provider_config():
+        profile = _resolve_profile()
+        provider = profile.get("provider_template")
+        return provider if isinstance(provider, dict) else profile
 
     def list_jobs():
         slurm = _resolve_slurm()
@@ -1955,6 +2004,18 @@ def _jobs_callbacks(session_state, parent, lifecycle):
             "stderr": files.read_text(paths["StdErr"]) if paths["StdErr"] else "",
         }
 
+    def read_remote_path(path):
+        files = _resolve_files()
+        if not files or not path:
+            raise FileNotFoundError(path)
+        return files.read_text(path)
+
+    def stat_remote_path(path):
+        files = _resolve_files()
+        if not files or not path:
+            raise FileNotFoundError(path)
+        return files.stat(path)
+
     def list_job_files(job_id, workdir=""):
         test_files = session_state.get("_test_job_files")
         if test_files is not None:
@@ -2003,7 +2064,10 @@ def _jobs_callbacks(session_state, parent, lifecycle):
             return ""
         if not hasattr(slurm, "sacct"):
             return ""
-        return str(slurm.sacct(str(profile.get("username", "")), job_id=job_id) or "")
+        try:
+            return str(slurm.sacct(str(profile.get("username", "")), job_id=job_id) or "")
+        except TypeError:
+            return str(slurm.sacct(str(profile.get("username", ""))) or "")
 
     def _show_job_details(job_id):
         slurm = _resolve_slurm()
@@ -2015,27 +2079,42 @@ def _jobs_callbacks(session_state, parent, lifecycle):
         slurm = _resolve_slurm()
         if not slurm:
             return False
-        return hasattr(slurm, "lssrv")
+        return callable(getattr(slurm, "lssrv", None))
+
+    def _refresh_lssrv(_job_id=""):
+        slurm = _resolve_slurm()
+        if not slurm or not callable(getattr(slurm, "lssrv", None)):
+            raise RuntimeError(t("jobs_outputs.provider_status_unavailable"))
+        return str(slurm.lssrv() or "")
 
     def _resolve_output_defs():
         from hpc_gui.services.output_channel_resolver import definitions_from_provider
         session = (session_state or {}).get("session") or {}
-        profile = _snapshot_profile if _snapshot_profile is not None else session.get("profile") or {}
-        job_outputs = profile.get("job_outputs") if isinstance(profile, dict) else None
+        profile = session.get("profile") or {}
+        provider = profile.get("provider_template") if isinstance(profile, dict) else None
+        config = provider if isinstance(provider, dict) else profile
+        job_outputs = config.get("job_outputs") if isinstance(config, dict) else None
         return definitions_from_provider(job_outputs)
 
     return {
         "list_jobs": list_jobs,
         "read_output": read_output,
+        "read_remote_path": read_remote_path,
+        "stat_remote_path": stat_remote_path,
         "list_job_files": list_job_files,
         "cancel": _cancel,
         "final_state": _final_state,
         "refresh_sacct": _refresh_sacct,
         "show_job_details": _show_job_details,
         "has_status_capability": _has_status_capability,
-        "output_channel_defs": _resolve_output_defs(),
+        "refresh_lssrv": _refresh_lssrv,
+        "output_channel_defs": None,
+        "output_channel_defs_provider": _resolve_output_defs,
+        "provider_filters": lambda: (_resolve_provider_config().get("file_filters", ()) if isinstance(_resolve_provider_config().get("file_filters", ()), (list, tuple)) else ()),
+        "remote_files_callbacks": _remote_files_callbacks(session_state, parent, lifecycle),
         "generation": lambda: session_state.get("generation", 0),
         "lifecycle": lifecycle,
+        "session_state": session_state,
     }
 
 
@@ -2070,6 +2149,20 @@ def _connection_callbacks(session_state, parent, lifecycle):
                 panel._wx_terminal_set_ssh(ssh)
         except Exception:
             pass
+        for panel_key in ("_embedded_jobs_panel", "_embedded_remote_files_panel"):
+            try:
+                panel = session_state.get(panel_key)
+                if panel is not None and hasattr(panel, "_wx_jobs_set_session"):
+                    panel._wx_jobs_set_session(session)
+                if panel is not None and hasattr(panel, "_wx_remote_set_navigation_store"):
+                    panel._wx_remote_set_navigation_store(
+                        _remote_files_callbacks(session_state, parent, lifecycle)["navigation_store"]
+                    )
+                if panel is not None and hasattr(panel, "_wx_remote_set_provider_filters"):
+                    cbs = _remote_files_callbacks(session_state, parent, lifecycle)
+                    panel._wx_remote_set_provider_filters(cbs.get("provider_filters"), cbs.get("plugin_filters"))
+            except Exception:
+                pass
 
     return {"profiles": profiles, "lifecycle": lifecycle, "on_connected": on_connected}
 

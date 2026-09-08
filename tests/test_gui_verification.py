@@ -12,17 +12,16 @@ Exercises the wx Jobs & Outputs workspace with a mock backend to verify:
 - Provider job_outputs resolution
 """
 
-import threading
 import time
 import sys
 
 import wx
 
 from hpc_gui.core.i18n import load_language
-from hpc_gui.wx_jobs import WxJobsModel, show_jobs, clean_output
-from hpc_gui.services.selected_job_context import SelectedJobStore, SelectedJobContext
+from hpc_gui.wx_jobs import show_jobs
+from hpc_gui.services.selected_job_context import SelectedJobStore
 from hpc_gui.services.output_channel_resolver import (
-    OutputResolver, OutputChannelDefinition, definitions_from_provider,
+    OutputResolver, definitions_from_provider,
 )
 from hpc_gui.services.file_filter_registry import build_core_registry
 
@@ -125,8 +124,10 @@ def run_verification():
     # Check 3 vertical sections exist
     controls = frame._wx_jobs_controls
     jobs_ctrl = controls["jobs"]
-    details_text = controls["details_text"]
+    detail_values = controls["detail_values"]
+    detail_labels = controls["detail_labels"]
     accounting_table = controls["accounting_table"]
+    jobs_box = controls["jobs_box"]
     details_box = controls["details_box"]
     accounting_box = controls["accounting_box"]
 
@@ -138,8 +139,10 @@ def run_verification():
             break
 
     check("Jobs ListCtrl exists", jobs_ctrl is not None)
-    check("Details TextCtrl exists", details_text is not None)
+    check("Labelled details values exist", all(value.IsEditable() is False for value in detail_values.values()))
+    check("Details labels are real controls", all(label.GetLabel() for label in detail_labels.values()))
     check("Accounting ListCtrl exists", accounting_table is not None)
+    check("Jobs box has collapse marker", "▾" in jobs_box.GetLabel() or "▸" in jobs_box.GetLabel())
     check("Details box has collapse marker", "▾" in details_box.GetLabel() or "▸" in details_box.GetLabel())
     check("Accounting box has collapse marker", "▾" in accounting_box.GetLabel() or "▸" in accounting_box.GetLabel())
 
@@ -161,6 +164,27 @@ def run_verification():
     ctx = frame._wx_jobs_model.selected_job_store.context
     check("Selected job is 1001", ctx.job_id == "1001", f"got {ctx.job_id}")
     check("Job name is training_job", ctx.name == "training_job", f"got {ctx.name}")
+    for _ in range(30):
+        app.ProcessPendingEvents()
+        wx.MilliSleep(20)
+    check("Details show selected job ID", detail_values["job_id"].GetValue() == "1001")
+    check("Details show selected WorkDir", detail_values["workdir"].GetValue() == "/scratch/user/run1")
+    check("Raw scontrol stays secondary", not controls["raw_scontrol_text"].IsShown())
+
+    # Exercise each real collapse handler and verify its content hides/restores.
+    for key, content_key, state_key in (
+        ("collapse_jobs", "jobs", "jobs_collapsed"),
+        ("collapse_details", "details_fields_panel", "details_collapsed"),
+        ("collapse_accounting", "accounting_table", "accounting_collapsed"),
+    ):
+        before = controls[content_key]
+        before_visible = before.IsShown() if hasattr(before, "IsShown") else all(item.IsShown() for item in before.values())
+        controls[key]()
+        after_hidden = before.IsShown() if hasattr(before, "IsShown") else any(item.IsShown() for item in before.values())
+        check(f"{key} hides section content", before_visible and not after_hidden)
+        controls[key]()
+        after_visible = before.IsShown() if hasattr(before, "IsShown") else all(item.IsShown() for item in before.values())
+        check(f"{key} restores section content", after_visible)
 
     # Select job 1002 — should clear old metadata
     jobs_ctrl.Select(1)
@@ -238,7 +262,13 @@ def run_verification():
 
     # Check absent job_outputs
     absent_defs = definitions_from_provider(None)
-    check("Absent job_outputs returns empty list", len(absent_defs) == 0)
+    check("Absent job_outputs selects legacy fallback", absent_defs is None)
+    percent_x = definitions_from_provider({
+        "streams": [{"id": "custom", "role": "custom", "resolver": "workdir.relative",
+                      "relative_path": "results-%x.log", "labels": {"en": "Results"}, "order": 0}],
+    })
+    percent_x_result = resolver.resolve(percent_x, job_id="12345_17", job_name="fluent_mesh", workdir="/scratch/user")
+    check("Resolver expands %x", percent_x_result[0].path == "/scratch/user/results-fluent_mesh.log")
 
     # --- Stale response protection ---
     print("\n=== Stale Response Protection ===")

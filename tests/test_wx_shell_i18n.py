@@ -48,7 +48,7 @@ def _choose(frame, language):
 def test_wx_shell_language_menu_has_english_turkish_flags_and_check_state(shell_i18n):
     _app, frame, _lifecycle = shell_i18n
     items = frame._wx_shell_controls["language_items"]
-    assert {item.GetItemLabelText() for item in items.values()} == {"English", "Türkçe"}
+    assert {item.GetItemLabelText() for item in items.values()} == {"English", "T\u00fcrk\u00e7e"}
     # Bitmap may be missing in headless/offscreen – do not require IsOk
     # New shell uses language_menu, old used language_button – accept either
     assert items["en"].IsChecked() or items["tr"].IsChecked()

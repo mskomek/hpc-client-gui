@@ -42,12 +42,12 @@ actions, dialogs, and widget context-menu implementations.
 | GUI-HELP-001 | Help center, quick tour, welcome and contextual help affordances | help/quick-tour/welcome dialogs | P1 | `help_dialog.py`, `quick_tour.py`, `tests/test_docs_references.py` | Preserve |
 | GUI-I18N-001 | Turkish/English language menu, flags and runtime label refresh | `i18n` translations and main-window refresh | P0 | `main_window.py`, `tests/test_branding_check.py` | Preserve; new strings require i18n keys |
 | GUI-A11Y-001 | Keyboard focus/tab order, visible labels and non-color state cues | Qt widget defaults plus explicit labels/tooltips | P1 | widget tree review | Review during wx port |
-| GUI-JOBS-005 | Selected-job context (generation-safe, single source of truth) | `SelectedJobContext` + `SelectedJobStore` | P0 | `services/selected_job_context.py`, `tests/test_selected_job_context.py` | COVERED |
-| GUI-JOBS-006 | Jobs table with Job ID/Name/State/Partition/Elapsed columns + filter | wx Jobs table in `wx_jobs.py` | P0 | `wx_jobs.py`, `tests/test_wx_jobs.py` | COVERED |
-| GUI-JOBS-007 | Dynamic 0..N output channels with deduplication | `OutputResolver` + `OutputChannelDefinition` | P0 | `services/output_channel_resolver.py`, `tests/test_output_channel_resolver.py` | COVERED |
-| GUI-JOBS-008 | Shared file filter registry with overlapping-view semantics | `FileFilterRegistry` | P1 | `services/file_filter_registry.py`, `tests/test_file_filter_registry.py` | COVERED |
-| GUI-JOBS-009 | Jobs > Files uses shared remote browser component | `wx_remote_files_view.py` integrated in `wx_jobs.py` | P0 | `wx_jobs.py`, `tests/test_wx_jobs_files_outputs.py` | COVERED |
-| GUI-JOBS-010 | TRUBA provider declares stdout/stderr output channels | `plugins/truba/1.4.0/cluster-profile.json` | P1 | Plugin registry, `tests/test_output_channel_resolver.py` | COVERED |
+| GUI-JOBS-005 | Selected-job context (generation-safe, single source of truth) | `services/selected_job_context.py` + `SelectedJobStore` | P0 | `tests/test_selected_job_context.py`, `tests/test_wx_jobs_files_outputs.py::test_wx_jobs_details_latest_selection_wins_over_slow_scontrol` | COVERED |
+| GUI-JOBS-006 | Jobs table with Job ID/Name/State/Partition/Elapsed columns + filter | wx Jobs table in `src/hpc_gui/wx_jobs.py` | P0 | `tests/test_gui_verification.py` (51/51), `tests/test_wx_jobs_files_outputs.py` | COVERED |
+| GUI-JOBS-007 | Dynamic 0..N output channels with deduplication | `services/output_channel_resolver.py` + `services/output_follower.py` | P0 | `tests/test_output_channel_resolver.py`, `tests/test_output_follower.py`, `tests/test_wx_jobs_files_outputs.py` | COVERED |
+| GUI-JOBS-008 | Shared file filter registry with overlapping-view semantics | `services/file_filter_registry.py` | P1 | `tests/test_file_filter_registry.py`, `tests/test_wx_remote_file_actions_behavior.py` | COVERED |
+| GUI-JOBS-009 | Jobs > Files uses shared remote browser component | `wx_remote_files_view.py` integrated in `wx_jobs.py` | P0 | `tests/test_wx_jobs_files_outputs.py::test_wx_jobs_files_tab_loads_selected_job_files`, `tests/test_wx_jobs_files_outputs.py::test_wx_jobs_files_tab_stale_job_result_ignored` | COVERED |
+| GUI-JOBS-010 | TRUBA provider declares stdout/stderr output channels | `plugins/truba/1.4.0/cluster-profile.json` | P1 | `plugins/truba/1.4.0/cluster-profile.json`, `tests/test_wx_jobs_files_outputs.py::test_wx_jobs_provider_output_definitions_refresh_after_reconnect` | COVERED |
 
 ## Known inconsistencies to carry explicitly
 

@@ -29,6 +29,9 @@ class FileFilter:
     def label(self) -> str:
         return self.label_en
 
+    def label_for(self, language: str = "en") -> str:
+        return self.label_tr if language == "tr" and self.label_tr else self.label_en
+
 
 @dataclass
 class FileFilterRegistry:
@@ -44,17 +47,30 @@ class FileFilterRegistry:
     # -- construction --------------------------------------------------------
 
     def register(self, filt: FileFilter) -> None:
-        """Add a filter.  Core filters with duplicate IDs are replaced."""
+        """Add a filter; collisions fail closed so core/provider IDs cannot be shadowed."""
         if filt.id in self._reserved:
             raise ValueError(f"filter id {filt.id!r} is reserved")
-        # Remove existing with same id (allows updates)
-        self._filters = [f for f in self._filters if f.id != filt.id]
+        existing = next((item for item in self._filters if item.id == filt.id), None)
+        if existing is not None:
+            if existing.source == "core" and filt.id in {"folders", "iso", "archives", "slurm", "shell"}:
+                raise ValueError(f"filter id {filt.id!r} is reserved")
+            if filt.source != "core":
+                raise ValueError(f"filter id {filt.id!r} is already registered")
+            self._filters.remove(existing)
         self._filters.append(filt)
-        self._filters.sort(key=lambda f: (f.order, f.id))
+        source_order = {"core": 0, "provider": 1, "plugin": 2}
+        self._filters.sort(key=lambda f: (source_order.get(f.source, 3), f.order, f.id))
 
     def register_many(self, filters: Sequence[FileFilter]) -> None:
         for f in filters:
             self.register(f)
+
+    def replace_external(self, filters: Sequence[FileFilter]) -> None:
+        core = [f for f in self._filters if f.source == "core"]
+        self._filters = []
+        for filt in core:
+            self.register(filt)
+        self.register_many(filters)
 
     def remove(self, filter_id: str) -> bool:
         before = len(self._filters)
