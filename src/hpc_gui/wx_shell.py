@@ -1818,6 +1818,16 @@ def _remote_files_callbacks(session_state, parent, lifecycle):
         provider = profile.get("provider_template")
         return provider if isinstance(provider, dict) else profile
 
+    def _supports_file_method(files, name):
+        method = getattr(files, name, None) if files is not None else None
+        if not callable(method):
+            return False
+        try:
+            from hpc_gui.services.files_base import FilesBackend
+            return getattr(type(files), name, None) is not getattr(FilesBackend, name, None)
+        except (ImportError, AttributeError):
+            return True
+
     def remote_operation(action, paths, destination=""):
         files = _resolve_files()
         if action == "delete" and files:
@@ -1917,10 +1927,10 @@ def _remote_files_callbacks(session_state, parent, lifecycle):
         "open_editor": _editor,
         "open_editor_new_window": _editor_new_window,
         "run_shell": lambda path: _run_shell_in_terminal(session_state, parent, lifecycle, [path]),
-        "chmod": chmod if callable(getattr(_resolve_files(), "chmod", None)) or _resolve_files() is None else None,
-        "submit_slurm": submit_slurm if callable(getattr(_resolve_slurm(), "sbatch", None)) or _resolve_slurm() is None else None,
+        "chmod": chmod,
+        "submit_slurm": submit_slurm,
         "operation_supported": lambda: _resolve_files() is not None and callable(getattr(_resolve_files(), "write_text", None)),
-        "chmod_supported": lambda: _resolve_files() is not None and callable(getattr(_resolve_files(), "chmod", None)),
+        "chmod_supported": lambda: _supports_file_method(_resolve_files(), "chmod"),
         "submit_slurm_supported": lambda: _resolve_slurm() is not None and callable(getattr(_resolve_slurm(), "sbatch", None)),
         "navigation_store": _navigation_store,
         "provider_filters": _provider_filters,
