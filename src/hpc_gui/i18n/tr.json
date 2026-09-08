@@ -458,7 +458,10 @@
     "raw_scontrol_hint": "Ham scontrol ciktisi",
     "show_raw_scontrol": "Ham scontrol detaylarini goster",
     "hide_raw_scontrol": "Ham scontrol detaylarini gizle",
-    "no_channels": "Cikti kanali tanimlanmamis. Dosyalar > Takip ile uzaktan dosya takibi yapabilirsiniz."
+    "no_channels": "Cikti kanali tanimlanmamis. Dosyalar > Takip ile uzaktan dosya takibi yapabilirsiniz.",
+    "accounting_error": "Hata",
+    "accounting_empty": "Hesaplama verisi yok",
+    "accounting_raw_hint": "Ham sacct ciktisi"
   },
   "putty": {
     "downloading": "plink.exe indiriliyor...",

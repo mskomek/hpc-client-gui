@@ -126,7 +126,7 @@ def run_verification():
     controls = frame._wx_jobs_controls
     jobs_ctrl = controls["jobs"]
     details_text = controls["details_text"]
-    accounting_text = controls["accounting_text"]
+    accounting_table = controls["accounting_table"]
     details_box = controls["details_box"]
     accounting_box = controls["accounting_box"]
 
@@ -139,7 +139,7 @@ def run_verification():
 
     check("Jobs ListCtrl exists", jobs_ctrl is not None)
     check("Details TextCtrl exists", details_text is not None)
-    check("Accounting TextCtrl exists", accounting_text is not None)
+    check("Accounting ListCtrl exists", accounting_table is not None)
     check("Details box has collapse marker", "▾" in details_box.GetLabel() or "▸" in details_box.GetLabel())
     check("Accounting box has collapse marker", "▾" in accounting_box.GetLabel() or "▸" in accounting_box.GetLabel())
 
