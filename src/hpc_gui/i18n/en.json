@@ -461,7 +461,8 @@
     "no_channels": "No output channels defined. Use Files > Follow to track any remote file.",
     "accounting_error": "Error",
     "accounting_empty": "No accounting data",
-    "accounting_raw_hint": "Raw sacct output"
+    "accounting_raw_hint": "Raw sacct output",
+    "waiting_for_output": "Waiting for output"
   },
   "putty": {
     "downloading": "Downloading plink.exe...",
