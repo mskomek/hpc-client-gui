@@ -2017,6 +2017,13 @@ def _jobs_callbacks(session_state, parent, lifecycle):
             return False
         return hasattr(slurm, "lssrv")
 
+    def _resolve_output_defs():
+        from hpc_gui.services.output_channel_resolver import definitions_from_provider
+        session = (session_state or {}).get("session") or {}
+        profile = _snapshot_profile if _snapshot_profile is not None else session.get("profile") or {}
+        job_outputs = profile.get("job_outputs") if isinstance(profile, dict) else None
+        return definitions_from_provider(job_outputs)
+
     return {
         "list_jobs": list_jobs,
         "read_output": read_output,
@@ -2026,6 +2033,7 @@ def _jobs_callbacks(session_state, parent, lifecycle):
         "refresh_sacct": _refresh_sacct,
         "show_job_details": _show_job_details,
         "has_status_capability": _has_status_capability,
+        "output_channel_defs": _resolve_output_defs(),
         "generation": lambda: session_state.get("generation", 0),
         "lifecycle": lifecycle,
     }

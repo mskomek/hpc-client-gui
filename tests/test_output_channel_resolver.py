@@ -210,8 +210,8 @@ class TestArrayJobPlaceholders:
 # ---------------------------------------------------------------------------
 
 class TestDefinitionsFromProvider:
-    def test_absent_job_outputs_returns_empty(self):
-        assert definitions_from_provider(None) == []
+    def test_absent_job_outputs_returns_none(self):
+        assert definitions_from_provider(None) is None
 
     def test_empty_streams_returns_empty(self):
         assert definitions_from_provider({"streams": []}) == []
