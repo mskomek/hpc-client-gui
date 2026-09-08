@@ -495,7 +495,28 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         ctx = model.selected_job_store.context
         if not ctx.job_id:
             return
-        # Create a tracked output
+        if mode == "existing" and follower_id:
+            tracked_outputs = state.get("tracked_outputs", [])
+            for tracked_item in tracked_outputs:
+                if tracked_item.tracking_id == follower_id:
+                    tracked_outputs.remove(tracked_item)
+                    break
+            new_tracked = TrackedOutput(
+                tracking_id=follower_id,
+                channel_id=None,
+                label=remote_path.rsplit("/", 1)[-1],
+                path=remote_path,
+                origin="manual",
+            )
+            tracked_outputs.append(new_tracked)
+            pathCtrl = output_channel_paths.get(follower_id)
+            if pathCtrl:
+                pathCtrl.SetValue(remote_path)
+            textCtrl = output_channels.get(follower_id)
+            if textCtrl:
+                textCtrl.SetValue("")
+            refresh_outputs_tab(force=True)
+            return
         tracking_id = f"manual_{ctx.job_id}_{remote_path.rsplit('/', 1)[-1]}"
         tracked = TrackedOutput(
             tracking_id=tracking_id,
@@ -504,15 +525,7 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
             path=remote_path,
             origin="manual",
         )
-        if mode == "existing" and follower_id:
-            # Assign to existing follower tab - write directly to the tab's TextCtrl
-            textCtrl = output_channels.get(follower_id)
-            if textCtrl:
-                textCtrl.SetValue(f"[Assigned: {remote_path}]\n")
-                return
-        # Add to tracked outputs and create a new tab
         state.setdefault("tracked_outputs", []).append(tracked)
-        # Resolve and refresh output tabs
         refresh_outputs_tab(force=True)
 
     files_browser._follow_callback = _on_follow_file
@@ -988,7 +1001,10 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
                 return
             if state.get("_timer_paused") and not force:
                 return
+            if state["outputs_in_flight"] and state.get("_outputs_job_id") == job_id:
+                return
             state["outputs_in_flight"] = True
+            state["_outputs_job_id"] = job_id
             state["outputs_generation"] += 1
             gen = state["outputs_generation"]
             request_id = job_id
