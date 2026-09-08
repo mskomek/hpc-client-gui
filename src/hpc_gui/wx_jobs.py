@@ -267,7 +267,10 @@ def _parse_job_row(item: dict[str, Any] | str) -> dict[str, str]:
             "reason": str(item.get("reason", item.get("failure_reason", ""))).strip(),
         }
     s = str(item).strip()
-    parts = [p.strip() for p in s.split("|")] if "|" in s else s.split()
+    if "|" in s:
+        parts = [p.strip() for p in s.split("|")]
+    else:
+        parts = s.split(None, 8)
     return {
         "job_id": parts[0] if parts else s,
         "name": parts[2] if len(parts) > 2 else "",
@@ -576,6 +579,7 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
     output_channels: dict[str, wx.TextCtrl] = {}
     output_channel_paths: dict[str, wx.TextCtrl] = {}
     output_channel_paused: dict[str, bool] = {}
+    output_channel_follow: dict[str, bool] = {}
     output_resolver = OutputResolver()
     outputs_sizer.Add(output_channel_notebook, 1, wx.EXPAND | wx.ALL, 4)
     outputs_page.SetSizer(outputs_sizer)
@@ -923,6 +927,7 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
             tabCtrl = output_channels.pop(cid, None)
             output_channel_paths.pop(cid, None)
             output_channel_paused.pop(cid, None)
+            output_channel_follow.pop(cid, None)
             try:
                 idx = output_channel_notebook.GetPageIndex(tabCtrl.GetParent() if tabCtrl else None)
                 if idx >= 0:
@@ -933,20 +938,48 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
             if ch.id not in output_channels:
                 tab_panel = wx.Panel(output_channel_notebook)
                 tab_sizer = wx.BoxSizer(wx.VERTICAL)
+                # Per-channel toolbar
+                ch_toolbar = wx.BoxSizer(wx.HORIZONTAL)
                 path_field = wx.TextCtrl(tab_panel, style=wx.TE_READONLY)
                 path_field.SetValue(ch.path)
+                ch_pause_btn = wx.Button(tab_panel, label=t("jobs.pause_output"), size=(80, -1))
+                ch_refresh_btn = wx.Button(tab_panel, label=t("jobs.refresh"), size=(70, -1))
+                ch_follow_cb = wx.CheckBox(tab_panel, label=t("files.auto_scroll"))
+                ch_follow_cb.SetValue(True)
+                ch_toolbar.Add(path_field, 1, wx.EXPAND | wx.RIGHT, 4)
+                ch_toolbar.Add(ch_pause_btn, 0, wx.RIGHT, 4)
+                ch_toolbar.Add(ch_refresh_btn, 0, wx.RIGHT, 4)
+                ch_toolbar.Add(ch_follow_cb, 0, wx.ALIGN_CENTER_VERTICAL)
                 text_ctrl = wx.TextCtrl(
                     tab_panel,
                     style=wx.TE_MULTILINE | wx.TE_READONLY | wx.HSCROLL,
                 )
                 text_ctrl.SetMinSize(wx.Size(-1, 150))
-                tab_sizer.Add(path_field, 0, wx.EXPAND | wx.ALL, 4)
+                tab_sizer.Add(ch_toolbar, 0, wx.EXPAND | wx.ALL, 4)
                 tab_sizer.Add(text_ctrl, 1, wx.EXPAND | wx.ALL, 4)
                 tab_panel.SetSizer(tab_sizer)
                 output_channel_notebook.AddPage(tab_panel, ch.label)
                 output_channels[ch.id] = text_ctrl
                 output_channel_paths[ch.id] = path_field
                 output_channel_paused[ch.id] = False
+                output_channel_follow[ch.id] = True
+
+                def _on_ch_pause(evt, cid=ch.id):
+                    output_channel_paused[cid] = not output_channel_paused[cid]
+                    ch_pause_btn.SetLabel(
+                        t("jobs.resume_output") if output_channel_paused[cid]
+                        else t("jobs.pause_output")
+                    )
+
+                def _on_ch_refresh(evt, cid=ch.id):
+                    _refresh_single_channel(cid)
+
+                def _on_ch_follow(evt, cid=ch.id):
+                    output_channel_follow[cid] = ch_follow_cb.GetValue()
+
+                ch_pause_btn.Bind(wx.EVT_BUTTON, _on_ch_pause)
+                ch_refresh_btn.Bind(wx.EVT_BUTTON, _on_ch_refresh)
+                ch_follow_cb.Bind(wx.EVT_CHECKBOX, _on_ch_follow)
             else:
                 pathCtrl = output_channel_paths.get(ch.id)
                 if pathCtrl:
@@ -964,6 +997,34 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
                     output_channel_notebook.DeletePage(idx)
             except Exception:
                 pass
+
+    def _refresh_single_channel(channel_id):
+        """Refresh output for a single channel (per-channel refresh button)."""
+        if not read_output:
+            return
+        ctx = model.selected_job_store.context
+        if not ctx.job_id:
+            return
+        textCtrl = output_channels.get(channel_id)
+        if not textCtrl:
+            return
+
+        def worker():
+            try:
+                result = read_output(ctx.job_id)
+                content = ""
+                if isinstance(result, dict):
+                    if channel_id in result:
+                        content = result[channel_id]
+                    elif "stdout" in channel_id:
+                        content = result.get("stdout", "")
+                    elif "stderr" in channel_id:
+                        content = result.get("stderr", "")
+                post(lambda c=content: textCtrl.SetValue(clean_output(c)))
+            except Exception:
+                pass
+
+        Thread(target=worker, daemon=True).start()
 
     def _resolve_output_channels():
         """Resolve output channels for the currently selected job."""
@@ -1072,12 +1133,12 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
                     break
                 return
             if channels and isinstance(result, dict):
-                # Map results to resolved channels
                 for ch in channels:
                     textCtrl = output_channels.get(ch.id)
                     if not textCtrl:
                         continue
-                    # Check if result has a direct key for this channel
+                    if output_channel_paused.get(ch.id, False):
+                        continue
                     if ch.id in result:
                         textCtrl.SetValue(clean_output(result[ch.id]))
                     elif "stdout" in ch.roles:
@@ -1104,7 +1165,14 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
                     textCtrl.SetValue(clean_output(result))
             if outputs_follow.GetValue() and not state["outputs_paused"] and not state["minimized"]:
                 state["follow_calls"] += 1
-                for textCtrl in output_channels.values():
+                for ch in channels:
+                    textCtrl = output_channels.get(ch.id)
+                    if not textCtrl:
+                        continue
+                    if output_channel_paused.get(ch.id, False):
+                        continue
+                    if not output_channel_follow.get(ch.id, True):
+                        continue
                     try:
                         textCtrl.ShowPosition(textCtrl.GetLastPosition())
                     except Exception:
