@@ -363,6 +363,11 @@ def validate_cluster_profile_dict(profile: Any) -> list[str]:
                     unknown_ff = set(ff) - _VALID_FILE_FILTER_KEYS
                     if unknown_ff:
                         errors.append(f"file_filters[{idx}] has unknown properties {sorted(unknown_ff)}")
+                    if _is_nonempty_str(ff.get("id")) and len(ff["id"]) > 64:
+                        errors.append(f"file_filters[{idx}] id exceeds 64 characters")
+                    if isinstance(file_filters, list) and len(file_filters) > 50:
+                        errors.append("cluster profile 'file_filters' exceeds 50 entries")
+                        break
 
     for section_key in ("paths", "commands"):
         section = profile.get(section_key)

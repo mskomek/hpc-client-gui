@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import fnmatch
 from dataclasses import dataclass, field
-from typing import Any, Callable, FrozenSet, Mapping, Optional, Sequence
+from typing import Any, Sequence
 
 
 @dataclass(frozen=True)
@@ -154,7 +154,7 @@ CORE_FILTERS: list[FileFilter] = [
     FileFilter(
         id="folders",
         label_en="Folders",
-        label_tr="Klasorler",
+        label_tr="Klasörler",
         order=10,
         source="core",
     ),
@@ -169,7 +169,7 @@ CORE_FILTERS: list[FileFilter] = [
     FileFilter(
         id="archives",
         label_en="Archives",
-        label_tr="Arsivler",
+        label_tr="Arşivler",
         suffixes=(".zip", ".rar", ".7z", ".tgz", ".tar.gz", ".tar"),
         order=30,
         source="core",

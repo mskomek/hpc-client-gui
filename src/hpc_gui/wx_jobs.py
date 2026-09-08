@@ -503,10 +503,28 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
     except Exception:
         pass
 
-    # Shared remote browser panel
+    # Resolve remote file callbacks (shared with Main Files > Remote)
+    _remote_cbs = {}
+    try:
+        from hpc_gui.wx_shell import _remote_files_callbacks
+        _session_for_remote = None
+        if kwargs.get("session_state") and isinstance(kwargs["session_state"], dict):
+            _session_for_remote = kwargs["session_state"]
+        if _session_for_remote:
+            _remote_cbs = _remote_files_callbacks(_session_for_remote, host, lifecycle)
+    except Exception:
+        pass
+
+    # Shared remote browser panel — reuse same callbacks as Main Files > Remote
     files_browser = build_remote_files_panel(
         files_page,
         model=files_model,
+        loader=_remote_cbs.get("loader"),
+        operation=_remote_cbs.get("operation"),
+        read_text=_remote_cbs.get("read_text"),
+        open_editor=_remote_cbs.get("open_editor"),
+        open_editor_new_window=_remote_cbs.get("open_editor_new_window"),
+        run_shell=_remote_cbs.get("run_shell"),
         navigation_store=_nav_store,
     )
 
@@ -963,6 +981,7 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         files_workdir_label.SetLabel(f"{t('jobs_outputs.workdir')}: {workdir}")
         try:
             files_model.navigate(workdir)
+            files_browser._wx_remote_controls["load"]()
         except Exception:
             pass
 
