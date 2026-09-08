@@ -6,7 +6,7 @@ from threading import Lock, Thread
 from pathlib import PurePosixPath
 
 
-from hpc_gui.core.i18n import subscribe_language_change, t, unsubscribe_language_change
+from hpc_gui.core.i18n import current_language, subscribe_language_change, t, unsubscribe_language_change
 from hpc_gui.services.file_context_actions import FILE_CONTEXT_LABEL_KEYS, context_selection, visible_actions
 from hpc_gui.services.file_clipboard import get_file_clipboard
 from hpc_gui.services.remote_move_history import RemoteMoveHistory
@@ -43,7 +43,7 @@ def _fmt_size(entry) -> str:
     return _shared_fmt_size(getattr(entry, "size", 0))
 
 
-def _build_remote_files(parent, model: WxRemoteDirectoryModel | None = None, *, loader=None, operation=None, read_text=None, open_editor=None, open_editor_new_window=None, run_shell=None, embedded, navigation_store=None):
+def _build_remote_files(parent, model: WxRemoteDirectoryModel | None = None, *, loader=None, operation=None, read_text=None, open_editor=None, open_editor_new_window=None, run_shell=None, chmod=None, submit_slurm=None, operation_supported=None, chmod_supported=None, submit_slurm_supported=None, embedded, navigation_store=None, provider_filters=None, plugin_filters=None):
     try:
         import wx
     except ImportError as exc:
@@ -67,63 +67,75 @@ def _build_remote_files(parent, model: WxRemoteDirectoryModel | None = None, *, 
     btn_favorites = wx.Button(panel, label=t("dirs.favorites"))
     btn_history = wx.Button(panel, label=t("dirs.history"))
     btn_refresh = wx.Button(panel, label=t("dirs.refresh"))
-    for b in (btn_new_folder, btn_new_file, btn_upload, btn_download, btn_delete, btn_undo, btn_favorites, btn_history, btn_refresh):
+    btn_back = wx.Button(panel, label=t("dirs.back"))
+    btn_forward = wx.Button(panel, label=t("dirs.forward"))
+    btn_up = wx.Button(panel, label=t("dirs.up"))
+    for button, key in ((btn_back, "dirs.back"), (btn_forward, "dirs.forward"), (btn_up, "dirs.up")):
+        button.SetToolTip(t(key))
+    for b in (btn_back, btn_forward, btn_up, btn_new_folder, btn_new_file, btn_upload, btn_download, btn_delete, btn_undo, btn_favorites, btn_history, btn_refresh):
         toolbar.Add(b, 0, wx.ALL, 3)
-    # No panel callback exists for these yet, so they stay visible but disabled.
-    btn_new_file.Disable()
-    # Wire favorites/history if navigation_store is provided
-    if navigation_store is not None:
-        def _on_favorites(_evt):
-            favs = navigation_store.favorites()
-            menu = wx.Menu()
-            for fav in favs:
-                label = fav.get("label", fav.get("path", "?"))
-                path = fav.get("path", "")
-                item = menu.Append(wx.ID_ANY, label)
-                menu.Bind(wx.EVT_MENU, lambda e, p=path: _navigate_to_path(p), id=item.GetId())
-            if not favs:
-                menu.Append(wx.ID_NONE, t("dirs.favorites_unavailable"))
-            menu.AppendSeparator()
-            menu.Append(wx.ID_ANY, t("dirs.favorite_add"))
-            menu.Bind(wx.EVT_MENU, lambda e: navigation_store.add_favorite(model.current_path, "directory"))
-            panel.PopupMenu(menu)
-            menu.Destroy()
+    def _available(callback, supported=None):
+        if not callable(callback):
+            return False
+        try:
+            return bool(supported() if callable(supported) else True)
+        except Exception:
+            return False
 
-        def _on_history(_evt):
-            hist = navigation_store.history()
-            menu = wx.Menu()
-            for entry in hist[:20]:
-                path = entry.get("path", "")
-                item = menu.Append(wx.ID_ANY, path)
-                menu.Bind(wx.EVT_MENU, lambda e, p=path: _navigate_to_path(p), id=item.GetId())
-            if not hist:
-                menu.Append(wx.ID_NONE, t("dirs.history_unavailable"))
-            menu.AppendSeparator()
-            menu.Append(wx.ID_ANY, t("dirs.history_clear"))
-            menu.Bind(wx.EVT_MENU, lambda e: navigation_store.clear_history())
-            panel.PopupMenu(menu)
-            menu.Destroy()
+    btn_new_file.Enable(_available(operation, operation_supported))
+    def _current_navigation_store():
+        store = navigation_store() if callable(navigation_store) else navigation_store
+        return store
 
-        def _navigate_to_path(target_path):
-            """Navigate the active tab to a target path."""
-            if not target_path:
-                return
-            try:
-                model.navigate(target_path)
-                # Update path field
-                path.SetValue(target_path)
-                # Reload
-                load()
-            except Exception:
-                pass
+    def _navigate_to_path(target_path, kind="directory"):
+        """Navigate to a stored path, highlighting files after listing."""
+        if not target_path:
+            return
+        target = str(PurePosixPath(target_path).parent) if kind == "file" else str(target_path)
+        navigate(target)
+        if kind == "file":
+            active_tab_state()["highlight_path"] = str(target_path)
+        load()
 
-        btn_favorites.Enable()
-        btn_history.Enable()
-        btn_favorites.Bind(wx.EVT_BUTTON, _on_favorites)
-        btn_history.Bind(wx.EVT_BUTTON, _on_history)
-    else:
+    # Wire favorites/history; the store can be replaced after connection.
+    def _on_favorites(_evt):
+        store = _current_navigation_store()
+        favs = store.favorites() if store is not None else []
+        menu = wx.Menu()
+        for fav in favs:
+            label = fav.get("label", fav.get("path", "?"))
+            path_value = fav.get("path", "")
+            item = menu.Append(wx.ID_ANY, label)
+            menu.Bind(wx.EVT_MENU, lambda e, p=path_value, k=fav.get("kind", "directory"): _navigate_to_path(p, k), id=item.GetId())
+        if not favs:
+            menu.Append(wx.ID_NONE, t("dirs.favorites_unavailable"))
+        menu.AppendSeparator()
+        add_item = menu.Append(wx.ID_ANY, t("dirs.favorite_add"))
+        menu.Bind(wx.EVT_MENU, lambda e: store and store.add_favorite(model.current_path, "directory"), add_item)
+        panel.PopupMenu(menu)
+        menu.Destroy()
+
+    def _on_history(_evt):
+        store = _current_navigation_store()
+        hist = store.history() if store is not None else []
+        menu = wx.Menu()
+        for entry in hist[:20]:
+            path_value = entry.get("path", "")
+            item = menu.Append(wx.ID_ANY, path_value)
+            menu.Bind(wx.EVT_MENU, lambda e, p=path_value: _navigate_to_path(p), id=item.GetId())
+        if not hist:
+            menu.Append(wx.ID_NONE, t("dirs.history_unavailable"))
+        menu.AppendSeparator()
+        clear_item = menu.Append(wx.ID_ANY, t("dirs.history_clear"))
+        menu.Bind(wx.EVT_MENU, lambda e: store and store.clear_history(), clear_item)
+        panel.PopupMenu(menu)
+        menu.Destroy()
+
+    if _current_navigation_store() is None:
         btn_favorites.Disable()
         btn_history.Disable()
+    btn_favorites.Bind(wx.EVT_BUTTON, _on_favorites)
+    btn_history.Bind(wx.EVT_BUTTON, _on_history)
     refresh_btn = btn_refresh  # alias for legacy name
     path_label = wx.StaticText(panel, label=t("dirs.path"))
     path = wx.TextCtrl(panel, value=model.current_path, style=wx.TE_PROCESS_ENTER)
@@ -139,29 +151,78 @@ def _build_remote_files(parent, model: WxRemoteDirectoryModel | None = None, *, 
     # --- File filter registry (replaces hardcoded categories) ---
     file_filter_registry = build_core_registry()
 
-    def _apply_provider_filters(profile_filter_defs):
-        """Register provider/plugin file filters from cluster profile."""
-        if not isinstance(profile_filter_defs, list):
-            return
-        for ff in profile_filter_defs:
-            if not isinstance(ff, dict):
+    def _filter_label(filt):
+        if filt is None:
+            return ""
+        if filt.source == "core":
+            translated = t(f"dirs.tab_{filt.id}")
+            if not translated.startswith("["):
+                return translated
+        return filt.label_for(current_language())
+
+    def _external_filter_defs():
+        result = []
+        for source, provider in (("provider", provider_filters), ("plugin", plugin_filters)):
+            defs = provider() if callable(provider) else provider
+            if not isinstance(defs, (list, tuple)):
                 continue
-            fid = str(ff.get("id", "")).strip()
-            if not fid:
-                continue
-            labels = ff.get("labels") or {}
-            globs = tuple(ff.get("globs") or [])
-            suffixes = tuple(ff.get("suffixes") or [])
-            order = int(ff.get("order", 1000))
-            file_filter_registry.register(FileFilter(
-                id=fid,
-                label_en=str(labels.get("en", fid)),
-                label_tr=str(labels.get("tr", labels.get("en", fid))),
-                globs=globs,
-                suffixes=suffixes,
-                order=order,
-                source="provider",
-            ))
+            for ff in defs:
+                if not isinstance(ff, dict):
+                    continue
+                labels = ff.get("labels") or {}
+                fid = str(ff.get("id", "")).strip()
+                if not fid or not isinstance(labels, dict):
+                    continue
+                try:
+                    order = int(ff.get("order", 1000))
+                except (TypeError, ValueError):
+                    continue
+                result.append(FileFilter(
+                    id=fid,
+                    label_en=str(labels.get("en", fid)),
+                    label_tr=str(labels.get("tr", labels.get("en", fid))),
+                    globs=tuple(str(value) for value in (ff.get("globs") or ())),
+                    suffixes=tuple(str(value) for value in (ff.get("suffixes") or ())),
+                    order=order,
+                    source=source,
+                ))
+        return result
+
+    def _rebuild_filter_pages(tab_entry):
+        filter_nb = tab_entry["filter_notebook"]
+        old_filter = tab_entry.get("filter", "all")
+        filter_nb.DeleteAllPages()
+        filter_ids = _registry_filter_ids()
+        tab_entry["filter_ids"] = filter_ids
+        for fid in filter_ids:
+            filter_nb.AddPage(wx.Panel(filter_nb), _filter_label(file_filter_registry.get(fid)))
+        tab_entry["filter"] = old_filter if old_filter in filter_ids else "all"
+        try:
+            filter_nb.SetSelection(filter_ids.index(tab_entry["filter"]))
+        except (ValueError, RuntimeError):
+            filter_nb.SetSelection(0)
+
+    def refresh_provider_filters(_event=None):
+        try:
+            file_filter_registry.replace_external(_external_filter_defs())
+        except ValueError:
+            # Collision is a trust-boundary failure; retain core filters only.
+            file_filter_registry.replace_external(())
+        for tab_entry in tabs:
+            _rebuild_filter_pages(tab_entry)
+            render_for_tab(tab_entry, tab_entry.get("full_entries", ()))
+        store = _current_navigation_store()
+        btn_favorites.Enable(store is not None)
+        btn_history.Enable(store is not None)
+        btn_back.Enable(bool(active_tab_state() and active_tab_state().get("back_stack")))
+        btn_forward.Enable(bool(active_tab_state() and active_tab_state().get("forward_stack")))
+        btn_up.Enable(bool(active_tab_state() and active_tab_state().get("path", "/") != "/"))
+        btn_new_file.Enable(_available(operation, operation_supported))
+
+    try:
+        file_filter_registry.replace_external(_external_filter_defs())
+    except ValueError:
+        file_filter_registry.replace_external(())
 
     def _registry_filter_ids():
         return file_filter_registry.visible_filter_ids()
@@ -227,16 +288,20 @@ def _build_remote_files(parent, model: WxRemoteDirectoryModel | None = None, *, 
                 te["listing"].SetColumn(1, t("dirs.col_size"))
                 te["listing"].SetColumn(2, t("dirs.col_type"))
                 te["listing"].SetColumn(3, t("dirs.col_mtime"))
+                btn_back.SetLabel(t("dirs.back"))
+                btn_forward.SetLabel(t("dirs.forward"))
+                btn_up.SetLabel(t("dirs.up"))
+                btn_back.SetToolTip(t("dirs.back"))
+                btn_forward.SetToolTip(t("dirs.forward"))
+                btn_up.SetToolTip(t("dirs.up"))
                 # update filter tab labels
                 fb = te.get("filter_notebook")
                 if fb is not None:
-                    for idx2, fid in enumerate(_registry_filter_ids()):
+                    for idx2, fid in enumerate(te.get("filter_ids", _registry_filter_ids())):
                         try:
-                            fb.SetPageText(idx2, t(f"dirs.tab_{fid}"))
+                            fb.SetPageText(idx2, _filter_label(file_filter_registry.get(fid)))
                         except Exception:
-                            filt = file_filter_registry.get(fid)
-                            if filt:
-                                fb.SetPageText(idx2, filt.label_en)
+                            pass
             except RuntimeError:
                 continue
             idx = tabs.index(te)
@@ -271,7 +336,13 @@ def _build_remote_files(parent, model: WxRemoteDirectoryModel | None = None, *, 
             return (0, name)
         def _is_dir(entry):
             return bool(getattr(entry, "is_dir", False))
-        base.sort(key=lambda e: (not _is_dir(e), _sort_key(e)), reverse=reverse)
+        # Group folders independently from the sort direction: reverse name
+        # or size must never move files above directories.
+        directories = [entry for entry in base if _is_dir(entry)]
+        files = [entry for entry in base if not _is_dir(entry)]
+        directories.sort(key=_sort_key, reverse=reverse)
+        files.sort(key=_sort_key, reverse=reverse)
+        base = directories + files
         tab_entry["_sorted_entries"] = base
 
     def _populate_listing(listing, entries, tab_entry):
@@ -281,6 +352,10 @@ def _build_remote_files(parent, model: WxRemoteDirectoryModel | None = None, *, 
             listing.SetItem(idx, 1, _fmt_size(entry))
             listing.SetItem(idx, 2, _type_label(entry))
             listing.SetItem(idx, 3, _format_mtime(getattr(entry, "mtime", None)))
+            if tab_entry.get("highlight_path") and str(entry.path) == tab_entry["highlight_path"]:
+                listing.Select(idx)
+                listing.Focus(idx)
+                listing.EnsureVisible(idx)
 
     def create_tab(remote_path: str):
         remote_path = str(PurePosixPath(remote_path or "/"))
@@ -290,17 +365,8 @@ def _build_remote_files(parent, model: WxRemoteDirectoryModel | None = None, *, 
         filter_ids = _registry_filter_ids()
         for fid in filter_ids:
             filt = file_filter_registry.get(fid)
-            label = filt.label_en if filt else fid
             p = wx.Panel(filter_nb)
-            filter_nb.AddPage(p, t(f"dirs.tab_{fid}") if f"dirs.tab_{fid}" != f"dirs.tab_{fid}" else label)
-        # Use translated labels for core filters
-        for idx, fid in enumerate(filter_ids):
-            try:
-                filter_nb.SetPageText(idx, t(f"dirs.tab_{fid}"))
-            except Exception:
-                filt = file_filter_registry.get(fid)
-                if filt:
-                    filter_nb.SetPageText(idx, filt.label_en)
+            filter_nb.AddPage(p, _filter_label(filt) or fid)
 
         listing = wx.ListCtrl(tab_panel, style=wx.LC_REPORT | wx.LC_HRULES)
         listing.InsertColumn(0, t("dirs.col_name"))
@@ -322,16 +388,19 @@ def _build_remote_files(parent, model: WxRemoteDirectoryModel | None = None, *, 
             "filter_notebook": filter_nb, "view_generation": 0,
             "listing_request_id": 0, "busy": False, "listing_busy": False,
             "closed": False, "sort_col": -1, "sort_reverse": False,
+            "filter_ids": filter_ids, "back_stack": [], "forward_stack": [],
+            "pending_navigation": None, "highlight_path": "",
         }
         next_tab_id[0] += 1
         tabs.append(tab_entry)
 
         def _on_filter_changed(evt):
             sel = filter_nb.GetSelection()
-            if sel < 0 or sel >= len(filter_ids):
+            current_filter_ids = tab_entry.get("filter_ids", ())
+            if sel < 0 or sel >= len(current_filter_ids):
                 evt.Skip()
                 return
-            tab_entry["filter"] = filter_ids[sel]
+            tab_entry["filter"] = current_filter_ids[sel]
             try:
                 base = tab_entry.get("full_entries", tab_entry.get("entries", []))
                 visible = _filtered_entries(tab_entry, base)
@@ -353,8 +422,7 @@ def _build_remote_files(parent, model: WxRemoteDirectoryModel | None = None, *, 
                 tab_entry["sort_col"] = col
                 tab_entry["sort_reverse"] = False
             _apply_sort(tab_entry)
-            base = tab_entry.get("full_entries", [])
-            visible = _filtered_entries(tab_entry, base)
+            visible = _filtered_entries(tab_entry, tab_entry.get("_sorted_entries", tab_entry.get("full_entries", [])))
             tab_entry["entries"] = visible
             _populate_listing(listing, visible, tab_entry)
             evt.Skip()
@@ -367,15 +435,38 @@ def _build_remote_files(parent, model: WxRemoteDirectoryModel | None = None, *, 
         listing.Bind(wx.EVT_MIDDLE_DOWN, middle_click)
         return tab_entry
 
-    def navigate(target):
+    def _update_navigation_buttons():
+        tstate = active_tab_state()
+        btn_back.Enable(bool(tstate and tstate.get("back_stack")))
+        btn_forward.Enable(bool(tstate and tstate.get("forward_stack")))
+        btn_up.Enable(bool(tstate and tstate.get("path", "/") != "/"))
+
+    def navigate(target, *, history_action="new"):
         tstate = active_tab_state()
         if not tstate:
             return
+        target = str(PurePosixPath(str(target or "/"))) or "/"
         tstate_path_before = tstate["path"]
-        if str(target) != tstate_path_before:
+        if target != tstate_path_before:
+            tstate["pending_navigation"] = (
+                tstate_path_before,
+                list(tstate.get("back_stack", ())),
+                list(tstate.get("forward_stack", ())),
+            )
+            if history_action == "new":
+                tstate["back_stack"].append(tstate_path_before)
+                tstate["forward_stack"].clear()
+            elif history_action == "back":
+                if tstate["back_stack"] and tstate["back_stack"][-1] == target:
+                    tstate["back_stack"].pop()
+                tstate["forward_stack"].append(tstate_path_before)
+            elif history_action == "forward":
+                if tstate["forward_stack"] and tstate["forward_stack"][-1] == target:
+                    tstate["forward_stack"].pop()
+                tstate["back_stack"].append(tstate_path_before)
             state["view_generation"] += 1
             tstate["view_generation"] += 1
-        model.navigate(str(target))
+        model.navigate(target)
         tstate["path"] = model.current_path
         idx = notebook.GetSelection()
         if 0 <= idx < len(model.tabs):
@@ -385,11 +476,56 @@ def _build_remote_files(parent, model: WxRemoteDirectoryModel | None = None, *, 
             notebook.SetPageText(idx, tab_label(model.current_path))
         except Exception:
             pass
-        if navigation_store:
+        _update_navigation_buttons()
+        store = _current_navigation_store()
+        if store:
             try:
-                navigation_store.record_visit(model.current_path)
+                store.record_visit(model.current_path)
             except Exception:
                 pass
+
+    def _restore_navigation(tstate):
+        pending = tstate.get("pending_navigation")
+        if not pending:
+            return
+        old_path, back_stack, forward_stack = pending
+        tstate["path"] = old_path
+        tstate["back_stack"] = back_stack
+        tstate["forward_stack"] = forward_stack
+        tstate["pending_navigation"] = None
+        model.navigate(old_path)
+        path.SetValue(old_path)
+        idx = notebook.GetSelection()
+        if 0 <= idx < notebook.GetPageCount():
+            notebook.SetPageText(idx, tab_label(old_path))
+        _update_navigation_buttons()
+
+    def _commit_navigation(tstate):
+        tstate["pending_navigation"] = None
+        tstate["highlight_path"] = tstate.get("highlight_path", "")
+        _update_navigation_buttons()
+
+    def _go_back(_event=None):
+        tstate = active_tab_state()
+        if not tstate or not tstate.get("back_stack"):
+            return
+        target = tstate["back_stack"][-1]
+        navigate(target, history_action="back")
+        load()
+
+    def _go_forward(_event=None):
+        tstate = active_tab_state()
+        if not tstate or not tstate.get("forward_stack"):
+            return
+        target = tstate["forward_stack"][-1]
+        navigate(target, history_action="forward")
+        load()
+
+    def _go_up(_event=None):
+        tstate = active_tab_state()
+        if tstate and tstate.get("path", "/") != "/":
+            navigate(str(PurePosixPath(tstate["path"]).parent))
+            load()
 
     def render_for_tab(tab_entry, entries):
         tab_entry["full_entries"] = list(entries)
@@ -448,10 +584,12 @@ def _build_remote_files(parent, model: WxRemoteDirectoryModel | None = None, *, 
             if not current:
                 return
             if error:
+                _restore_navigation(tab_entry)
                 # only show error if this tab is active
                 if notebook.GetSelection() == tabs.index(tab_entry):
                     wx.MessageBox(str(error), t("login.err_title"), wx.OK | wx.ICON_ERROR)
             else:
+                _commit_navigation(tab_entry)
                 render_for_tab(tab_entry, entries)
 
         def worker():
@@ -528,6 +666,16 @@ def _build_remote_files(parent, model: WxRemoteDirectoryModel | None = None, *, 
         menu = wx.Menu()
         candidate_actions = ("open", "edit", "edit_new_window", "run_shell", "follow_track", "download", "upload", "copy", "move", "rename", "delete", "paste", "copy_path", "refresh", "new_folder", "new_file", "chmod", "submit_slurm", "favorite", "new_tab")
         allowed = visible_actions(selection, remote=True)
+        if not callable(getattr(panel, "_follow_callback", None)):
+            allowed = tuple(action for action in allowed if action != "follow_track")
+        if not _available(chmod, chmod_supported):
+            allowed = tuple(action for action in allowed if action != "chmod")
+        if not _available(submit_slurm, submit_slurm_supported):
+            allowed = tuple(action for action in allowed if action != "submit_slurm")
+        if not _available(operation, operation_supported):
+            allowed = tuple(action for action in allowed if action != "new_file")
+        if _current_navigation_store() is None:
+            allowed = tuple(action for action in allowed if action != "favorite")
         actions = tuple(action for action in candidate_actions if action in allowed)
         labels = FILE_CONTEXT_LABEL_KEYS
         for action in actions:
@@ -625,22 +773,34 @@ def _build_remote_files(parent, model: WxRemoteDirectoryModel | None = None, *, 
                 if name and "/" not in name and "\\" not in name:
                     try:
                         dest = str(PurePosixPath(tstate["path"]) / name)
-                        operation("new_folder", (), dest)
+                        run_operation("new_file", (), dest)
                         load()
                     except Exception as error:
                         wx.MessageBox(str(error), t("login.err_title"), wx.OK | wx.ICON_ERROR)
             dlg.Destroy()
             return
-        if action == "chmod" and selected:
-            wx.MessageBox(t("dirs.permissions_intro").format(name=selected[0].rsplit("/", 1)[-1]),
-                          t("dirs.permissions_title"), wx.OK | wx.ICON_INFORMATION)
-            return
-        if action == "submit_slurm" and selected:
-            wx.MessageBox(t("dirs.submit_sbatch"), t("dirs.submit_sbatch"), wx.OK | wx.ICON_INFORMATION)
-            return
-        if action == "favorite" and navigation_store and tstate:
+        if action == "chmod" and selected and callable(chmod):
+            dlg = wx.TextEntryDialog(host, t("dirs.permissions_mode"), t("dirs.permissions_title"), "644")
             try:
-                navigation_store.add_favorite(tstate["path"], "directory")
+                if dlg.ShowModal() != wx.ID_OK:
+                    return
+                mode = dlg.GetValue().strip()
+                if len(mode) not in (3, 4) or any(char not in "01234567" for char in mode):
+                    wx.MessageBox(t("dirs.permissions_invalid"), t("dirs.permissions_title"), wx.OK | wx.ICON_ERROR)
+                    return
+                run_direct_operation(lambda: chmod(selected[0], int(mode, 8)))
+            finally:
+                dlg.Destroy()
+            return
+        if action == "submit_slurm" and selected and callable(submit_slurm):
+            run_direct_operation(lambda: submit_slurm(selected[0]))
+            return
+        if action == "favorite" and _current_navigation_store() and tstate:
+            try:
+                entry = next((item for item in tstate["entries"] if item.path in selected), None)
+                target = entry.path if entry else tstate["path"]
+                kind = "file" if entry is not None and not entry.is_dir else "directory"
+                _current_navigation_store().toggle_favorite(target, kind)
             except Exception:
                 pass
             return
@@ -655,6 +815,31 @@ def _build_remote_files(parent, model: WxRemoteDirectoryModel | None = None, *, 
             open_in_editor(selected[0], open_editor_new_window)
         else:
             run_operation(action, selected, target_dir or tstate["path"])
+
+    def run_direct_operation(callback):
+        """Run a safe application-owned file action off the GUI thread."""
+        with lock:
+            if state["closed"]:
+                return
+            state["busy"] = True
+        def worker():
+            try:
+                result = callback()
+                safe_call_after(direct_done, None, result)
+            except Exception as error:
+                safe_call_after(direct_done, error, None)
+        def direct_done(error, result):
+            state["busy"] = False
+            if state["closed"]:
+                return
+            if error:
+                wx.MessageBox(str(error), t("login.err_title"), wx.OK | wx.ICON_ERROR)
+            else:
+                model.invalidate()
+                load()
+                if result is not None:
+                    wx.MessageBox(str(result), t("common.info"), wx.OK | wx.ICON_INFORMATION)
+        Thread(target=worker, daemon=True).start()
 
     def open_in_editor(remote_path, callback):
         if not read_text:
@@ -713,13 +898,8 @@ def _build_remote_files(parent, model: WxRemoteDirectoryModel | None = None, *, 
             while p:
                 controls = getattr(p, "_wx_jobs_controls", None)
                 if controls and "output_channels" in controls:
-                    channels = controls["output_channels"]
-                    result = []
-                    for cid, textCtrl in channels.items():
-                        parent_win = textCtrl.GetParent()
-                        label = parent_win.GetLabel() if parent_win else cid
-                        result.append((cid, label))
-                    return result
+                    tracked = getattr(p, "_wx_jobs_state", {}).get("tracked_outputs", ())
+                    return [(item.tracking_id, item.label) for item in tracked]
                 p = p.GetParent() if hasattr(p, 'GetParent') else None
         except Exception:
             pass
@@ -730,36 +910,32 @@ def _build_remote_files(parent, model: WxRemoteDirectoryModel | None = None, *, 
         follow_cb = getattr(panel, "_follow_callback", None)
         if follow_cb:
             follow_cb(remote_path, "new_tab")
-        else:
-            wx.MessageBox(f"Follow: {remote_path}", t("common.info"), wx.OK)
 
     def _follow_in_new_window(remote_path):
         """Follow a file in a new output window."""
         follow_cb = getattr(panel, "_follow_callback", None)
         if follow_cb:
             follow_cb(remote_path, "new_window")
-        else:
-            wx.MessageBox(f"Follow window: {remote_path}", t("common.info"), wx.OK)
 
     def _follow_in_existing(remote_path, follower_id):
         """Assign a file to an existing follower tab."""
         follow_cb = getattr(panel, "_follow_callback", None)
         if follow_cb:
             follow_cb(remote_path, "existing", follower_id)
-        else:
-            wx.MessageBox(f"Assign to {follower_id}: {remote_path}", t("common.info"), wx.OK)
 
     def run_operation(action, selected, target_dir=None, *, from_paste=False):
         tstate = active_tab_state()
         if not tstate:
             return
-        if not operation or action in {"open", "edit", "edit_new_window"} or (not selected and action not in {"new_folder", "upload", "paste"}):
+        if not operation or action in {"open", "edit", "edit_new_window"} or (not selected and action not in {"new_folder", "new_file", "upload", "paste"}):
             return
         if action == "delete" and wx.MessageBox(t("dirs.delete_confirm"), t("dirs.delete"), wx.YES_NO | wx.ICON_WARNING) != wx.YES:
             return
         destination = ""
         operation_paths = selected
-        if action == "new_folder":
+        if action == "new_file":
+            destination = str(target_dir or "")
+        elif action == "new_folder":
             dialog = wx.TextEntryDialog(host, t("dirs.new_folder"), t("dirs.new_folder"))
             try:
                 if dialog.ShowModal() != wx.ID_OK:
@@ -892,6 +1068,19 @@ def _build_remote_files(parent, model: WxRemoteDirectoryModel | None = None, *, 
             te["closed"] = True
         host.Destroy()
 
+    def _set_navigation_store(store):
+        nonlocal navigation_store
+        navigation_store = store
+        current = _current_navigation_store()
+        btn_favorites.Enable(current is not None)
+        btn_history.Enable(current is not None)
+
+    def _set_provider_filters(defs=None, plugins=None):
+        nonlocal provider_filters, plugin_filters
+        provider_filters = defs
+        plugin_filters = plugins
+        refresh_provider_filters()
+
     def key_down(event):
         tstate = active_tab_state()
         if not tstate:
@@ -930,6 +1119,7 @@ def _build_remote_files(parent, model: WxRemoteDirectoryModel | None = None, *, 
             if hasattr(host, "_wx_remote_controls"):
                 host._wx_remote_controls["listing"] = tabs[new_sel]["listing"]
                 host._wx_remote_controls["path"] = path
+            _update_navigation_buttons()
         event.Skip()
 
     notebook.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGED, on_page_changed)
@@ -1043,11 +1233,15 @@ def _build_remote_files(parent, model: WxRemoteDirectoryModel | None = None, *, 
         run_action("undo", sel, tstate["path"] if tstate else "/")
 
     btn_new_folder.Bind(wx.EVT_BUTTON, _on_toolbar_new_folder)
+    btn_back.Bind(wx.EVT_BUTTON, _go_back)
+    btn_forward.Bind(wx.EVT_BUTTON, _go_forward)
+    btn_up.Bind(wx.EVT_BUTTON, _go_up)
     btn_upload.Bind(wx.EVT_BUTTON, _on_toolbar_upload)
     btn_download.Bind(wx.EVT_BUTTON, _on_toolbar_download)
     btn_delete.Bind(wx.EVT_BUTTON, _on_toolbar_delete)
     btn_undo.Bind(wx.EVT_BUTTON, _on_toolbar_undo)
-    # favorites/history remain disabled (no callback); new_file disabled.
+    # Context actions are enabled/disabled at invocation time because the
+    # active session and navigation store can change after construction.
 
     # initial tab
     initial = create_tab(model.current_path)
@@ -1065,31 +1259,34 @@ def _build_remote_files(parent, model: WxRemoteDirectoryModel | None = None, *, 
                 pass
     subscribe_language_change(refresh_labels)
     host.bind_host_close(lambda event: (unsubscribe_language_change(refresh_labels), close(event)))
-    host._wx_remote_controls = {"listing": initial["listing"], "path": path, "notebook": notebook, "toolbar": toolbar, "btn_new_folder": btn_new_folder, "btn_new_file": btn_new_file, "btn_upload": btn_upload, "btn_download": btn_download, "btn_delete": btn_delete, "btn_undo": btn_undo, "btn_favorites": btn_favorites, "btn_history": btn_history, "btn_refresh": btn_refresh, "path_label": path_label, "load": load}
+    host._wx_remote_controls = {"listing": initial["listing"], "path": path, "notebook": notebook, "toolbar": toolbar, "btn_back": btn_back, "btn_forward": btn_forward, "btn_up": btn_up, "btn_new_folder": btn_new_folder, "btn_new_file": btn_new_file, "btn_upload": btn_upload, "btn_download": btn_download, "btn_delete": btn_delete, "btn_undo": btn_undo, "btn_favorites": btn_favorites, "btn_history": btn_history, "btn_refresh": btn_refresh, "path_label": path_label, "load": load, "refresh_provider_filters": refresh_provider_filters, "navigate": navigate}
     host._wx_remote_model = model
     host._wx_remote_state = state
     host._wx_remote_run_action = run_action
     host._wx_remote_tabs = tabs
     host._wx_remote_notebook = notebook
     host._wx_remote_close_tab = close_tab
+    host._wx_remote_set_navigation_store = lambda store: _set_navigation_store(store)
+    host._wx_remote_set_provider_filters = lambda defs=None, plugins=None: _set_provider_filters(defs, plugins)
     load()
+    _update_navigation_buttons()
     finish()
     return host
 
 
 
 
-def build_remote_files_panel(parent, model: WxRemoteDirectoryModel | None = None, *, loader=None, operation=None, read_text=None, open_editor=None, open_editor_new_window=None, run_shell=None, navigation_store=None):
+def build_remote_files_panel(parent, model: WxRemoteDirectoryModel | None = None, *, loader=None, operation=None, read_text=None, open_editor=None, open_editor_new_window=None, run_shell=None, chmod=None, submit_slurm=None, operation_supported=None, chmod_supported=None, submit_slurm_supported=None, navigation_store=None, provider_filters=None, plugin_filters=None):
     """Embedded panel factory. Returns the wx.Panel host."""
-    return _build_remote_files(parent, model, loader=loader, operation=operation, read_text=read_text, open_editor=open_editor, open_editor_new_window=open_editor_new_window, run_shell=run_shell, embedded=True, navigation_store=navigation_store)
+    return _build_remote_files(parent, model, loader=loader, operation=operation, read_text=read_text, open_editor=open_editor, open_editor_new_window=open_editor_new_window, run_shell=run_shell, chmod=chmod, submit_slurm=submit_slurm, operation_supported=operation_supported, chmod_supported=chmod_supported, submit_slurm_supported=submit_slurm_supported, embedded=True, navigation_store=navigation_store, provider_filters=provider_filters, plugin_filters=plugin_filters)
 
 
-def show_remote_files(parent=None, model: WxRemoteDirectoryModel | None = None, *, loader=None, operation=None, read_text=None, open_editor=None, open_editor_new_window=None, run_shell=None, navigation_store=None) -> int:
+def show_remote_files(parent=None, model: WxRemoteDirectoryModel | None = None, *, loader=None, operation=None, read_text=None, open_editor=None, open_editor_new_window=None, run_shell=None, chmod=None, submit_slurm=None, operation_supported=None, chmod_supported=None, submit_slurm_supported=None, navigation_store=None, provider_filters=None, plugin_filters=None) -> int:
     try:
         import wx
     except ImportError as exc:
         raise RuntimeError("wxPython is not installed") from exc
-    _build_remote_files(parent, model, loader=loader, operation=operation, read_text=read_text, open_editor=open_editor, open_editor_new_window=open_editor_new_window, run_shell=run_shell, embedded=False, navigation_store=navigation_store)
+    _build_remote_files(parent, model, loader=loader, operation=operation, read_text=read_text, open_editor=open_editor, open_editor_new_window=open_editor_new_window, run_shell=run_shell, chmod=chmod, submit_slurm=submit_slurm, operation_supported=operation_supported, chmod_supported=chmod_supported, submit_slurm_supported=submit_slurm_supported, embedded=False, navigation_store=navigation_store, provider_filters=provider_filters, plugin_filters=plugin_filters)
     return wx.ID_OK
 
 __all__ = ["show_remote_files", "build_remote_files_panel"]

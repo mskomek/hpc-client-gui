@@ -250,8 +250,12 @@ def validate_cluster_profile_dict(profile: Any) -> list[str]:
         errors.append("cluster profile schema_version must be 1, 2, or 3")
     if not _is_nonempty_str(profile["profile_id"]):
         errors.append("cluster profile 'profile_id' must be a non-empty string")
+    elif not re.fullmatch(r"^[a-z][a-z0-9_-]*$", profile["profile_id"]) or len(profile["profile_id"]) > 64:
+        errors.append("cluster profile 'profile_id' must match ^[a-z][a-z0-9_-]*$ and be at most 64 characters")
     if not _is_nonempty_str(profile["name"]):
         errors.append("cluster profile 'name' must be a non-empty string")
+    elif len(profile["name"]) > 80:
+        errors.append("cluster profile 'name' must be at most 80 characters")
     if profile["scheduler"] not in KNOWN_SCHEDULERS:
         errors.append(f"unsupported scheduler: {profile['scheduler']!r}")
 
@@ -292,82 +296,105 @@ def validate_cluster_profile_dict(profile: Any) -> list[str]:
                         continue
                     if not _is_nonempty_str(item.get("id")):
                         errors.append(f"cluster profile '{section_key}[{index}]' needs a non-empty id")
-        # Validate job_outputs if present
+        _safe_id = re.compile(r"^[a-z][a-z0-9_-]{0,63}$")
+        _reserved_filter_ids = frozenset({"all", "folders", "iso", "archives", "slurm", "shell", "other"})
+
+        def _validate_labels(value, location):
+            if not isinstance(value, dict):
+                errors.append(f"{location} labels must be an object")
+                return
+            unknown_labels = set(value) - {"en", "tr"}
+            if unknown_labels:
+                errors.append(f"{location} labels has unknown properties {sorted(unknown_labels)}")
+            if not _is_nonempty_str(value.get("en")):
+                errors.append(f"{location} labels.en is required")
+            for lang in ("en", "tr"):
+                if lang in value and (not _is_nonempty_str(value[lang]) or len(value[lang]) > 128):
+                    errors.append(f"{location} labels.{lang} must be a non-empty string of at most 128 characters")
+
         job_outputs = profile.get("job_outputs")
         if job_outputs is not None:
             if not isinstance(job_outputs, dict):
                 errors.append("cluster profile 'job_outputs' must be an object")
             else:
+                unknown = set(job_outputs) - {"strategy", "streams"}
+                errors.extend(f"job_outputs has unknown property '{key}'" for key in sorted(unknown))
+                if job_outputs.get("strategy") not in {None, "explicit", "legacy"}:
+                    errors.append("job_outputs.strategy is invalid")
                 streams = job_outputs.get("streams")
-                if streams is not None:
-                    if not isinstance(streams, list):
-                        errors.append("cluster profile 'job_outputs.streams' must be a list")
-                    else:
-                        for idx, stream in enumerate(streams):
-                            if not isinstance(stream, dict):
-                                errors.append(f"job_outputs.streams[{idx}] must be an object")
-                                continue
-                            if not _is_nonempty_str(stream.get("id")):
-                                errors.append(f"job_outputs.streams[{idx}] needs a non-empty id")
-                            if stream.get("role") not in ("stdout", "stderr", "custom"):
-                                errors.append(f"job_outputs.streams[{idx}] role must be stdout, stderr, or custom")
-                            if stream.get("resolver") not in ("slurm.stdout", "slurm.stderr", "workdir.relative"):
-                                errors.append(f"job_outputs.streams[{idx}] resolver must be a whitelisted resolver")
-                            labels = stream.get("labels")
-                            if labels is not None and not isinstance(labels, dict):
-                                errors.append(f"job_outputs.streams[{idx}] labels must be an object")
-                            order = stream.get("order")
-                            if order is not None and (not isinstance(order, int) or isinstance(order, bool)):
-                                errors.append(f"job_outputs.streams[{idx}] order must be an integer")
-        # Validate file_filters if present
+                if not isinstance(streams, list):
+                    errors.append("cluster profile 'job_outputs.streams' must be a list")
+                elif len(streams) > 50:
+                    errors.append("cluster profile 'job_outputs.streams' exceeds 50 entries")
+                else:
+                    seen_stream_ids: set[str] = set()
+                    for idx, stream in enumerate(streams):
+                        location = f"job_outputs.streams[{idx}]"
+                        if not isinstance(stream, dict):
+                            errors.append(f"{location} must be an object")
+                            continue
+                        allowed = {"id", "role", "labels", "resolver", "relative_path", "order"}
+                        errors.extend(f"{location} has unknown property '{key}'" for key in sorted(set(stream) - allowed))
+                        sid = stream.get("id")
+                        if not _is_nonempty_str(sid) or not _safe_id.fullmatch(str(sid)):
+                            errors.append(f"{location}.id must match {_safe_id.pattern}")
+                        elif sid in seen_stream_ids:
+                            errors.append(f"{location} duplicate id {sid!r}")
+                        seen_stream_ids.add(str(sid))
+                        if stream.get("role") not in {"stdout", "stderr", "custom"}:
+                            errors.append(f"{location}.role is invalid")
+                        if stream.get("resolver") not in {"slurm.stdout", "slurm.stderr", "workdir.relative"}:
+                            errors.append(f"{location}.resolver is invalid")
+                        _validate_labels(stream.get("labels"), location)
+                        order = stream.get("order")
+                        if not isinstance(order, int) or isinstance(order, bool) or not 0 <= order <= 100000:
+                            errors.append(f"{location}.order must be a bounded integer")
+                        relative = stream.get("relative_path")
+                        if stream.get("resolver") == "workdir.relative":
+                            if not _is_nonempty_str(relative) or len(relative) > 512 or relative.startswith("/") or "\\" in relative or any(part in {"", ".", ".."} for part in relative.split("/")):
+                                errors.append(f"{location}.relative_path must be a safe relative path")
+                        elif "relative_path" in stream:
+                            errors.append(f"{location}.relative_path is only valid for workdir.relative")
+
         file_filters = profile.get("file_filters")
         if file_filters is not None:
             if not isinstance(file_filters, list):
                 errors.append("cluster profile 'file_filters' must be a list")
+            elif len(file_filters) > 50:
+                errors.append("cluster profile 'file_filters' exceeds 50 entries")
             else:
-                _VALID_FILE_FILTER_KEYS = frozenset({"id", "labels", "globs", "suffixes", "order"})
-                _RESERVED_FILTER_IDS = frozenset({"all", "other"})
-                _KNOWN_FILTER_IDS = {"folders", "iso", "archives", "slurm", "shell"}
                 seen_filter_ids: set[str] = set()
                 for idx, ff in enumerate(file_filters):
+                    location = f"file_filters[{idx}]"
                     if not isinstance(ff, dict):
-                        errors.append(f"file_filters[{idx}] must be an object")
+                        errors.append(f"{location} must be an object")
                         continue
-                    if not _is_nonempty_str(ff.get("id")):
-                        errors.append(f"file_filters[{idx}] needs a non-empty id")
-                    else:
-                        fid = ff["id"].strip()
-                        if fid in _RESERVED_FILTER_IDS:
-                            errors.append(f"file_filters[{idx}] id {fid!r} is reserved")
-                        if fid in seen_filter_ids:
-                            errors.append(f"file_filters[{idx}] duplicate id {fid!r}")
-                        seen_filter_ids.add(fid)
-                    labels = ff.get("labels")
-                    if labels is not None:
-                        if not isinstance(labels, dict):
-                            errors.append(f"file_filters[{idx}] labels must be an object")
-                        elif not _is_nonempty_str(labels.get("en")):
-                            errors.append(f"file_filters[{idx}] labels.en is required")
-                    globs = ff.get("globs")
-                    if globs is not None:
-                        if not isinstance(globs, list):
-                            errors.append(f"file_filters[{idx}] globs must be a list")
-                    suffixes = ff.get("suffixes")
-                    if suffixes is not None:
-                        if not isinstance(suffixes, list):
-                            errors.append(f"file_filters[{idx}] suffixes must be a list")
+                    allowed = {"id", "labels", "globs", "suffixes", "order"}
+                    errors.extend(f"{location} has unknown property '{key}'" for key in sorted(set(ff) - allowed))
+                    fid = ff.get("id")
+                    if not _is_nonempty_str(fid) or not _safe_id.fullmatch(str(fid)):
+                        errors.append(f"{location}.id must match {_safe_id.pattern}")
+                    elif fid in _reserved_filter_ids:
+                        errors.append(f"{location}.id {fid!r} is reserved")
+                    elif fid in seen_filter_ids:
+                        errors.append(f"{location} duplicate id {fid!r}")
+                    seen_filter_ids.add(str(fid))
+                    _validate_labels(ff.get("labels"), location)
+                    rule_count = 0
+                    for key in ("globs", "suffixes"):
+                        values = ff.get(key)
+                        if values is not None and (not isinstance(values, list) or len(values) > 32):
+                            errors.append(f"{location}.{key} must be a bounded list")
+                        elif isinstance(values, list):
+                            rule_count += len(values)
+                            for value in values:
+                                if not _is_nonempty_str(value) or len(value) > 128:
+                                    errors.append(f"{location}.{key} contains an invalid rule")
+                    if rule_count == 0:
+                        errors.append(f"{location} needs at least one glob or suffix")
                     order = ff.get("order")
-                    if order is not None:
-                        if not isinstance(order, int) or isinstance(order, bool):
-                            errors.append(f"file_filters[{idx}] order must be an integer")
-                    unknown_ff = set(ff) - _VALID_FILE_FILTER_KEYS
-                    if unknown_ff:
-                        errors.append(f"file_filters[{idx}] has unknown properties {sorted(unknown_ff)}")
-                    if _is_nonempty_str(ff.get("id")) and len(ff["id"]) > 64:
-                        errors.append(f"file_filters[{idx}] id exceeds 64 characters")
-                    if isinstance(file_filters, list) and len(file_filters) > 50:
-                        errors.append("cluster profile 'file_filters' exceeds 50 entries")
-                        break
+                    if not isinstance(order, int) or isinstance(order, bool) or not 0 <= order <= 100000:
+                        errors.append(f"{location}.order must be a bounded integer")
 
     for section_key in ("paths", "commands"):
         section = profile.get(section_key)

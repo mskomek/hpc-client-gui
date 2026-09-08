@@ -96,8 +96,10 @@ class ClusterProfileDefinition:
     software: Mapping[str, Any] = field(default_factory=dict)
     storage: tuple[Mapping[str, Any], ...] = ()
     quota_sources: tuple[Mapping[str, Any], ...] = ()
+    job_outputs: Mapping[str, Any] | None = None
+    file_filters: tuple[Mapping[str, Any], ...] = ()
 
-    def to_system_settings(self) -> dict[str, str]:
+    def to_system_settings(self) -> dict[str, Any]:
         """Map the declarative profile onto app system-settings keys.
 
         Only known scheduler command keys are transferred; unknown keys are
@@ -114,6 +116,15 @@ class ClusterProfileDefinition:
             value = self.commands.get(key)
             if isinstance(value, str) and value.strip():
                 settings[key] = value
+        provider = {
+            "profile_id": self.profile_id,
+            "name": self.name,
+            "schema_version": self.schema_version,
+            "job_outputs": dict(self.job_outputs) if isinstance(self.job_outputs, Mapping) else None,
+            "file_filters": [dict(item) for item in self.file_filters],
+        }
+        if provider["job_outputs"] is not None or provider["file_filters"]:
+            settings["provider_template"] = provider
         return settings
 
     def visible_storage_areas(self) -> tuple[Mapping[str, Any], ...]:
@@ -146,6 +157,8 @@ def build_cluster_profile(raw: Mapping[str, Any]) -> ClusterProfileDefinition:
         software=dict(raw.get("software") or {}),
         storage=tuple(dict(item) for item in (raw.get("storage") or [])),
         quota_sources=tuple(dict(item) for item in (raw.get("quota_sources") or [])),
+        job_outputs=dict(raw["job_outputs"]) if isinstance(raw.get("job_outputs"), Mapping) else None,
+        file_filters=tuple(dict(item) for item in (raw.get("file_filters") or []) if isinstance(item, Mapping)),
     )
 
 

@@ -184,8 +184,6 @@ def test_wx_files_sync_does_not_loop_recursively(tmp_path: Path):
         wx.Yield()
         # guard should be false after
         assert files_page._sync_state["guard"] is False
-        # no infinite recursion (would have crashed or hung)
-        assert True
     finally:
         _close_shell(frame)
 

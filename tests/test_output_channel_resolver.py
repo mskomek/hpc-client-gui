@@ -5,7 +5,6 @@ from __future__ import annotations
 from hpc_gui.services.output_channel_resolver import (
     OutputChannelDefinition,
     OutputResolver,
-    ResolvedOutputChannel,
     TrackedOutput,
     definitions_from_provider,
 )
@@ -142,6 +141,24 @@ class TestOutputResolverWithDefinitions:
         assert len(channels) == 1
         assert channels[0].label == "Output"
 
+    def test_resolver_expands_all_slurm_placeholders_in_actual_path(self):
+        resolver = OutputResolver()
+        defs = [OutputChannelDefinition(
+            id="custom", role="custom", label_en="Custom",
+            resolver="workdir.relative", relative_path="out-%j-%J-%A-%a-%x.log",
+        )]
+        channels = resolver.resolve(defs, job_id="12345_17", job_name="fluent_mesh", workdir="/work")
+        assert channels[0].path == "/work/out-12345_17-12345_17-12345-17-fluent_mesh.log"
+
+    def test_resolver_rejects_absolute_and_parent_relative_paths(self):
+        resolver = OutputResolver()
+        for relative_path in ("/outside.log", "../outside.log", "nested/../outside.log"):
+            defs = [OutputChannelDefinition(
+                id="custom", role="custom", label_en="Custom",
+                resolver="workdir.relative", relative_path=relative_path,
+            )]
+            assert resolver.resolve(defs, job_id="42", workdir="/work") == []
+
     def test_dedup_with_definitions(self):
         resolver = OutputResolver()
         defs = [
@@ -220,8 +237,8 @@ class TestDefinitionsFromProvider:
     def test_valid_truba_definition(self):
         provider = {
             "streams": [
-                {"id": "stdout", "role": "stdout", "labels": {"en": "Standard Output", "tr": "Standart Cikti"}, "resolver": "slurm.stdout"},
-                {"id": "stderr", "role": "stderr", "labels": {"en": "Standard Error", "tr": "Standart Hata"}, "resolver": "slurm.stderr"},
+                {"id": "stdout", "role": "stdout", "labels": {"en": "Standard Output", "tr": "Standart \u00c7\u0131kt\u0131"}, "resolver": "slurm.stdout", "order": 10},
+                {"id": "stderr", "role": "stderr", "labels": {"en": "Standard Error", "tr": "Standart Hata"}, "resolver": "slurm.stderr", "order": 20},
             ]
         }
         defs = definitions_from_provider(provider)
@@ -230,6 +247,21 @@ class TestDefinitionsFromProvider:
         assert defs[0].resolver == "slurm.stdout"
         assert defs[1].id == "stderr"
         assert defs[1].label_tr == "Standart Hata"
+        assert defs[0].order == 10
+
+    def test_provider_relative_path_survives_to_resolved_remote_path(self):
+        defs = definitions_from_provider({
+            "streams": [{
+                "id": "progress", "role": "custom",
+                "labels": {"en": "Progress", "tr": "Halat"},
+                "resolver": "workdir.relative", "relative_path": "results-%x.log", "order": 7,
+            }],
+        })
+        resolved = OutputResolver().resolve(
+            defs, job_id="12345_17", job_name="fluent_mesh", workdir="/scratch/user",
+        )
+        assert resolved[0].path == "/scratch/user/results-fluent_mesh.log"
+        assert resolved[0].definition.relative_path == "results-%x.log"
 
     def test_invalid_resolver_ignored(self):
         provider = {
@@ -276,63 +308,3 @@ class TestTrackedOutput:
         )
         assert t.channel_id is None
         assert t.origin == "manual"
-
-
-class TestOffsetTracking:
-    def test_offsetTracksGrowth(self):
-        offsets = {}
-        text = "hello world"
-        ch_id = "stdout"
-        offset = offsets.get(ch_id, 0)
-        new_text = text[offset:]
-        offsets[ch_id] = len(text)
-        assert new_text == "hello world"
-        assert offsets[ch_id] == 11
-
-    def test_incrementalRead(self):
-        offsets = {}
-        ch_id = "stdout"
-        text1 = "line1\nline2\n"
-        offset = offsets.get(ch_id, 0)
-        new1 = text1[offset:]
-        offsets[ch_id] = len(text1)
-        assert new1 == "line1\nline2\n"
-        text2 = "line1\nline2\nline3\n"
-        offset2 = offsets.get(ch_id, 0)
-        new2 = text2[offset2:]
-        offsets[ch_id] = len(text2)
-        assert new2 == "line3\n"
-
-    def test_fileShrinkResetsOffset(self):
-        offsets = {}
-        ch_id = "stdout"
-        text1 = "a" * 100
-        offsets[ch_id] = len(text1)
-        text2 = "short"
-        full_text = text2
-        offset = offsets.get(ch_id, 0)
-        if len(full_text) < offset:
-            offset = 0
-        new_text = full_text[offset:]
-        assert new_text == "short"
-        assert offset == 0
-
-    def test_fileDisappearReturnsEmpty(self):
-        results = {}
-        ch_id = "stdout"
-        try:
-            raise FileNotFoundError()
-        except FileNotFoundError:
-            results[ch_id] = ""
-        assert results[ch_id] == ""
-
-    def test_fileReappearStartsFromZero(self):
-        offsets = {}
-        ch_id = "stdout"
-        offsets[ch_id] = 50
-        text = "new content"
-        if len(text) < offsets.get(ch_id, 0):
-            offsets[ch_id] = 0
-        new_text = text[offsets[ch_id]:]
-        assert new_text == "new content"
-        assert offsets[ch_id] == 0

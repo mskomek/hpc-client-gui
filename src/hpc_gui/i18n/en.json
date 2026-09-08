@@ -175,6 +175,9 @@
     "title": "Jobs",
     "state": "State",
     "refresh": "Refresh",
+    "back": "Back",
+    "forward": "Forward",
+    "up": "Up",
     "cancel": "Cancel Job",
     "cancel_confirm": "Cancel job {job_id}?",
     "open_output": "Open Output",
@@ -190,7 +193,16 @@
     "filter_hint": "Filter jobs...",
     "auto_refresh": "Auto refresh",
     "select_job_hint": "Select a job to view its details",
-    "no_jobs": "No jobs found"
+    "no_jobs": "No jobs found",
+    "workdir": "WorkDir",
+    "stdout": "StdOut",
+    "stderr": "StdErr",
+    "script": "Script",
+    "nodelist": "NodeList",
+    "exit_code": "ExitCode",
+    "max_rss": "MaxRSS",
+    "alloc_tres": "AllocTRES",
+    "slurm_unavailable": "Slurm submission is unavailable."
   },
   "files": {
     "title": "Outputs",
@@ -273,6 +285,9 @@
   },
   "dirs": {
     "refresh": "Refresh",
+    "back": "Back",
+    "forward": "Forward",
+    "up": "Up",
     "favorites": "â˜… Favorites",
     "favorite_add": "Add current directory to favorites",
     "favorite_remove": "Remove this directory from favorites",
@@ -290,6 +305,9 @@
     "new_folder_label": "Folder name:",
     "new_file_title": "New File",
     "new_file_label": "File name:",
+    "permissions_mode": "Mode (octal):",
+    "permissions_invalid": "Enter a valid octal mode such as 644.",
+    "permissions_unavailable": "Remote chmod is unavailable.",
     "invalid_new_name": "The name cannot be empty or contain / or \\ characters.",
     "new_item_exists": "A file or folder with this name already exists:\n{path}",
     "delete": "Delete",
@@ -462,7 +480,11 @@
     "accounting_error": "Error",
     "accounting_empty": "No accounting data",
     "accounting_raw_hint": "Raw sacct output",
-    "waiting_for_output": "Waiting for output"
+    "waiting_for_output": "Waiting for output",
+    "provider_status": "Provider Status",
+    "refresh_status": "Refresh Status",
+    "provider_status_unavailable": "Provider status is unavailable.",
+    "remote_reader_unavailable": "Remote file reader is unavailable."
   },
   "putty": {
     "downloading": "Downloading plink.exe...",
@@ -530,7 +552,7 @@
   },
   "language": {
     "menu_title": "Language",
-    "turkish": "TÃ¼rkÃ§e",
+    "turkish": "T\u00fcrk\u00e7e",
     "english": "English"
   },
   "logs": {
@@ -556,7 +578,7 @@
     "search_placeholder": "Search helpâ€¦",
     "language": "Language",
     "english": "English",
-    "turkish": "TÃ¼rkÃ§e",
+    "turkish": "T\u00fcrk\u00e7e",
     "library_label": "Library",
     "library_core": "Core Help",
     "library_truba": "Cluster Playbook",

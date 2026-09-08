@@ -8,8 +8,9 @@ from pathlib import PurePosixPath
 from threading import Lock, Thread
 from types import SimpleNamespace
 from typing import Any, Callable
+from uuid import uuid4
 
-from hpc_gui.core.i18n import subscribe_language_change, t, unsubscribe_language_change
+from hpc_gui.core.i18n import current_language, subscribe_language_change, t, unsubscribe_language_change
 from hpc_gui.services.job_failure_classifier import explain_job_failure
 from hpc_gui.services.job_provenance import JobProvenanceCapture
 from hpc_gui.services.job_tracking_controller import JobTrackingController
@@ -18,6 +19,7 @@ from hpc_gui.services.slurm_models import parse_scontrol
 from hpc_gui.services.output_channel_resolver import (
     OutputResolver, ResolvedOutputChannel, TrackedOutput,
 )
+from hpc_gui.services.output_follower import OutputFollower, OutputFollowerState, retain_last_lines
 from hpc_gui.wx_host import make_host
 
 
@@ -66,6 +68,15 @@ class DetachedOutput:
 def clean_output(text: str, max_lines: int = 5000) -> str:
     lines = str(text or "").splitlines()[-max(1, int(max_lines)):]
     return _ANSI.sub("", "".join(f"{line}\n" for line in lines))
+
+
+def _output_at_bottom(ctrl) -> bool:
+    try:
+        import wx
+        maximum = ctrl.GetScrollRange(wx.VERTICAL)
+        return maximum <= 0 or ctrl.GetScrollPos(wx.VERTICAL) >= maximum - 1
+    except (AttributeError, RuntimeError, ImportError):
+        return True
 
 
 class WxJobsModel:
@@ -185,30 +196,61 @@ class WxJobsModel:
         return True
 
 
-def show_job_output(parent, model: WxJobsModel, view_id: str, *, read_output=None, interval_ms: int = 1000, lifecycle=None) -> int:
-    """Show a bounded detached output view; polling stays in the callback."""
+def show_job_output(parent, model: WxJobsModel, view_id: str, *, read_output=None, read_path=None, stat_path=None, follower=None, interval_ms: int = 1000, lifecycle=None, on_closed=None) -> int:
+    """Show a live detached follower; late callbacks are ignored after close."""
     try:
         import wx
     except ImportError as exc:
         raise RuntimeError("wxPython is not installed") from exc
-    view = next(item for item in model.detached if item.id == str(view_id))
-    frame = wx.Frame(parent, title=f"{t('jobs.open_output')} {view.id}", size=(800, 500))
+    view = next((item for item in model.detached if item.id == str(view_id)), None)
+    frame = wx.Frame(parent, title=f"{t('jobs.open_output')} {view.id if view else view_id}", size=(800, 500))
+    root = wx.BoxSizer(wx.VERTICAL)
+    if follower is not None:
+        root.Add(wx.StaticText(frame, label=follower.state.path), 0, wx.EXPAND | wx.ALL, 6)
     output = wx.TextCtrl(frame, style=wx.TE_MULTILINE | wx.TE_READONLY | wx.HSCROLL)
+    root.Add(output, 1, wx.EXPAND | wx.ALL, 6)
+    controls = wx.BoxSizer(wx.HORIZONTAL)
+    pause = wx.Button(frame, label=t("jobs.pause_output"))
+    auto_scroll = wx.CheckBox(frame, label=t("files.auto_scroll"))
+    auto_scroll.SetValue(True)
+    controls.Add(pause, 0, wx.RIGHT, 6)
+    controls.Add(auto_scroll, 0, wx.ALIGN_CENTER_VERTICAL)
+    root.Add(controls, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 6)
+    frame.SetSizer(root)
+    frame._wx_output_controls = {"output": output, "pause": pause, "auto_scroll": auto_scroll, "follower": follower}
     timer = wx.Timer(frame)
-    state = {"closed": False, "in_flight": False}
+    state = {"closed": False, "in_flight": False, "at_bottom": True}
     state_lock = Lock()
 
+    def toggle_pause(_event=None):
+        paused = follower is not None and follower.state.paused
+        if follower is not None:
+            follower.state.paused = not paused
+        pause.SetLabel(
+            t("jobs.resume_output") if follower is not None and follower.state.paused
+            else t("jobs.pause_output")
+        )
+
     def refresh(_event=None):
-        if not read_output:
+        if follower is None and not read_output:
             return
+        state["at_bottom"] = _output_at_bottom(output)
         with state_lock:
             if state["closed"] or state["in_flight"]:
                 return
             state["in_flight"] = True
+            if follower is not None:
+                follower.state.paused = pause.GetLabel() == t("jobs.resume_output")
+                follower.state.auto_scroll = auto_scroll.GetValue()
 
         def fetch() -> None:
             try:
-                text = model.update_detached(view.id, read_output())
+                if follower is not None:
+                    if not callable(read_path):
+                        raise RuntimeError(t("jobs_outputs.remote_reader_unavailable"))
+                    _chunk, text, _waiting = follower.poll(read_path, stat_path)
+                else:
+                    text = model.update_detached(view.id, read_output())
                 wx.CallAfter(apply, text, None)
             except Exception as error:
                 wx.CallAfter(apply, "", error)
@@ -222,31 +264,42 @@ def show_job_output(parent, model: WxJobsModel, view_id: str, *, read_output=Non
                 output.SetValue(str(error))
             else:
                 output.SetValue(text)
-                output.ShowPosition(output.GetLastPosition())
+                if auto_scroll.GetValue() and state["at_bottom"]:
+                    output.ShowPosition(output.GetLastPosition())
 
         Thread(target=fetch, daemon=True).start()
 
+    pause.Bind(wx.EVT_BUTTON, toggle_pause)
+
     def resized(_event):
-        model.resize_detached(view.id, max(1, output.GetClientSize().width // 8), max(1, output.GetClientSize().height // 16))
+        if view is not None:
+            model.resize_detached(view.id, max(1, output.GetClientSize().width // 8), max(1, output.GetClientSize().height // 16))
         _event.Skip()
 
     def closed(_event=None):
         with state_lock:
+            if state["closed"]:
+                return
             state["closed"] = True
+        if follower is not None:
+            follower.close()
         timer.Stop()
         unsubscribe_language_change(refresh_labels)
+        if callable(on_closed):
+            on_closed()
         frame.Destroy()
 
     def refresh_labels(_language=None):
-        frame.SetTitle(f"{t('jobs.open_output')} {view.id}")
+        frame.SetTitle(f"{t('jobs.open_output')} {view.id if view else view_id}")
 
+    frame._wx_output_refresh = refresh
     frame.Bind(wx.EVT_TIMER, refresh, timer)
     frame.Bind(wx.EVT_SIZE, resized)
     frame.Bind(wx.EVT_CLOSE, closed)
     subscribe_language_change(refresh_labels)
     if lifecycle is not None:
         lifecycle.register_cleanup(closed)
-    if read_output:
+    if follower is not None or read_output:
         timer.Start(max(100, int(interval_ms)))
         refresh()
     frame.Show()
@@ -309,6 +362,7 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         refresh_lssrv = kwargs.get("lssrv") or kwargs.get("lssrv_refresh") or kwargs.get("lssrv_callback") or kwargs.get("refresh_lssrv_callback")
     if list_job_files is None:
         list_job_files = kwargs.get("list_job_files") or kwargs.get("job_files") or kwargs.get("files_callback")
+    has_status_capability = kwargs.get("has_status_capability")
     if refresh_sacct is None and "refresh_sacct" in kwargs:
         refresh_sacct = kwargs["refresh_sacct"]
     if show_job_details is None and "show_job_details" in kwargs:
@@ -323,23 +377,6 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
     host, finish = make_host(parent, title=t("jobs.title"), size=(1000, 700), embedded=embedded)
     panel = wx.Panel(host)
     root = wx.BoxSizer(wx.VERTICAL)
-
-    # --- Filter bar --------------------------------------------------------
-    filter_row = wx.BoxSizer(wx.HORIZONTAL)
-    btn_refresh = wx.Button(panel, label=t("jobs.refresh"))
-    lbl_filter = wx.StaticText(panel, label=f"{t('common.filter')}:")
-    filter_field = wx.TextCtrl(panel, style=wx.TE_PROCESS_ENTER)
-    try:
-        filter_field.SetHint(t("jobs.filter_hint"))
-    except Exception:
-        pass
-    cb_auto_refresh = wx.CheckBox(panel, label=t("jobs.auto_refresh"))
-    cb_auto_refresh.SetValue(True)
-    filter_row.Add(btn_refresh, 0, wx.RIGHT | wx.ALIGN_CENTER_VERTICAL, 6)
-    filter_row.Add(lbl_filter, 0, wx.RIGHT | wx.ALIGN_CENTER_VERTICAL, 4)
-    filter_row.Add(filter_field, 1, wx.RIGHT | wx.ALIGN_CENTER_VERTICAL, 6)
-    filter_row.Add(cb_auto_refresh, 0, wx.ALIGN_CENTER_VERTICAL)
-    root.Add(filter_row, 0, wx.EXPAND | wx.ALL, 6)
 
     # --- Sub-tab notebook ---------------------------------------------------
     notebook = wx.Notebook(panel)
@@ -356,6 +393,20 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
     # ---- Section 1: Jobs list -----------------------------------------------
     jobs_box = wx.StaticBox(details_page, label=f"▾ {t('jobs.title')}")
     jobs_sizer = wx.StaticBoxSizer(jobs_box, wx.VERTICAL)
+    filter_row = wx.BoxSizer(wx.HORIZONTAL)
+    btn_refresh = wx.Button(jobs_box, label=t("jobs.refresh"))
+    lbl_filter = wx.StaticText(jobs_box, label=f"{t('common.filter')}:")
+    filter_field = wx.TextCtrl(jobs_box, style=wx.TE_PROCESS_ENTER)
+    try:
+        filter_field.SetHint(t("jobs.filter_hint"))
+    except Exception:
+        pass
+    cb_auto_refresh = wx.CheckBox(jobs_box, label=t("jobs.auto_refresh"))
+    cb_auto_refresh.SetValue(True)
+    filter_row.Add(btn_refresh, 0, wx.RIGHT | wx.ALIGN_CENTER_VERTICAL, 6)
+    filter_row.Add(lbl_filter, 0, wx.RIGHT | wx.ALIGN_CENTER_VERTICAL, 4)
+    filter_row.Add(filter_field, 1, wx.RIGHT | wx.ALIGN_CENTER_VERTICAL, 6)
+    filter_row.Add(cb_auto_refresh, 0, wx.ALIGN_CENTER_VERTICAL)
     jobs = wx.ListCtrl(jobs_box, style=wx.LC_REPORT | wx.LC_SINGLE_SEL | wx.LC_HRULES)
     for col_idx, col_key in enumerate(_JOB_TABLE_COLUMNS):
         label = t(_COLUMN_LABEL_KEYS.get(col_key, col_key))
@@ -368,22 +419,49 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
     jobs.SetColumnWidth(5, 60)
     jobs.SetColumnWidth(6, 60)
     jobs.SetColumnWidth(7, 120)
+    jobs_sizer.Add(filter_row, 0, wx.EXPAND | wx.ALL, 4)
     jobs_sizer.Add(jobs, 1, wx.EXPAND | wx.ALL, 4)
     details_sizer.Add(jobs_sizer, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 4)
 
     # Collapse state for Jobs section
     _jobs_collapsed = {"collapsed": False}
-    _jobs_content_items = [jobs]
+    _jobs_content_items = [jobs, btn_refresh, lbl_filter, filter_field, cb_auto_refresh]
     _jobs_original_proportions = {}
 
     # ---- Section 2: Job Details ---------------------------------------------
     details_box = wx.StaticBox(details_page, label=f"▾ {t('jobs_outputs.job_details')}")
     details_group_sizer = wx.StaticBoxSizer(details_box, wx.VERTICAL)
-    details_text = wx.TextCtrl(details_box, style=wx.TE_MULTILINE | wx.TE_READONLY | wx.HSCROLL)
-    try:
-        details_text.SetHint(t("jobs.select_job_hint"))
-    except Exception:
-        pass
+    details_fields_panel = wx.Panel(details_box)
+    details_fields = wx.FlexGridSizer(0, 2, 3, 8)
+    details_fields.AddGrowableCol(1, 1)
+    detail_keys = (
+        ("job_id", "jobs.job_id"), ("name", "jobs.name"), ("state", "jobs.state"),
+        ("partition", "jobs.partition"), ("elapsed", "jobs.elapsed"), ("nodes", "jobs.nodes"),
+        ("cpus", "jobs.cpus"), ("reason", "jobs.reason"), ("workdir", "jobs.workdir"),
+        ("stdout_path", "jobs.stdout"), ("stderr_path", "jobs.stderr"), ("script_path", "jobs.script"),
+        ("nodelist", "jobs.nodelist"), ("exit_code", "jobs.exit_code"),
+    )
+    detail_values = {}
+    detail_labels = {}
+    for field_key, label_key in detail_keys:
+        label_control = wx.StaticText(details_fields_panel, label=t(label_key))
+        detail_labels[field_key] = label_control
+        details_fields.Add(label_control, 0, wx.ALIGN_CENTER_VERTICAL)
+        value = wx.TextCtrl(details_fields_panel, style=wx.TE_READONLY | wx.HSCROLL)
+        value.SetValue("—")
+        detail_values[field_key] = value
+        details_fields.Add(value, 1, wx.EXPAND)
+    details_fields_panel.SetSizer(details_fields)
+    provider_status_panel = wx.Panel(details_box)
+    provider_status_row = wx.BoxSizer(wx.HORIZONTAL)
+    provider_status_label = wx.StaticText(provider_status_panel, label=t("jobs_outputs.provider_status"))
+    btn_provider_status = wx.Button(provider_status_panel, label=t("jobs_outputs.refresh_status"))
+    provider_status_text = wx.StaticText(provider_status_panel, label="")
+    provider_status_row.Add(provider_status_label, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 8)
+    provider_status_row.Add(btn_provider_status, 0, wx.RIGHT, 8)
+    provider_status_row.Add(provider_status_text, 1, wx.ALIGN_CENTER_VERTICAL)
+    provider_status_panel.SetSizer(provider_status_row)
+    provider_status_panel.Hide()
     btn_raw_scontrol = wx.Button(details_box, label=t("jobs_outputs.show_raw_scontrol"))
     raw_scontrol_text = wx.TextCtrl(details_box, style=wx.TE_MULTILINE | wx.TE_READONLY | wx.HSCROLL)
     raw_scontrol_text.Show(False)
@@ -391,26 +469,28 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         raw_scontrol_text.SetHint(t("jobs_outputs.raw_scontrol_hint"))
     except Exception:
         pass
-    details_group_sizer.Add(details_text, 1, wx.EXPAND | wx.ALL, 4)
+    details_group_sizer.Add(details_fields_panel, 0, wx.EXPAND | wx.ALL, 4)
+    details_group_sizer.Add(provider_status_panel, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 4)
     details_group_sizer.Add(btn_raw_scontrol, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 4)
     details_group_sizer.Add(raw_scontrol_text, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 4)
     raw_scontrol_text.Show(False)
     details_sizer.Add(details_group_sizer, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 4)
 
     _details_collapsed = {"collapsed": False}
-    _details_content_items = [details_text, btn_raw_scontrol, raw_scontrol_text]
+    _details_content_items = [details_fields_panel, provider_status_panel, btn_raw_scontrol, raw_scontrol_text]
 
     # ---- Section 3: Accounting ----------------------------------------------
     accounting_box = wx.StaticBox(details_page, label=f"▾ {t('jobs_outputs.accounting_details')}")
     accounting_sizer = wx.StaticBoxSizer(accounting_box, wx.VERTICAL)
     btn_sacct = wx.Button(accounting_box, label=t("jobs_outputs.refresh_sacct"))
     accounting_table = wx.ListCtrl(accounting_box, style=wx.LC_REPORT | wx.LC_HRULES)
-    accounting_table.InsertColumn(0, "Job ID")
-    accounting_table.InsertColumn(1, "State")
-    accounting_table.InsertColumn(2, "Elapsed")
-    accounting_table.InsertColumn(3, "MaxRSS")
-    accounting_table.InsertColumn(4, "AllocTRES")
-    accounting_table.InsertColumn(5, "ExitCode")
+    accounting_column_keys = ("job_id", "state", "elapsed", "max_rss", "alloc_tres", "exit_code")
+    accounting_column_labels = {
+        "job_id": "jobs.job_id", "state": "jobs.state", "elapsed": "jobs.elapsed",
+        "max_rss": "jobs.max_rss", "alloc_tres": "jobs.alloc_tres", "exit_code": "jobs.exit_code",
+    }
+    for index, key in enumerate(accounting_column_keys):
+        accounting_table.InsertColumn(index, t(accounting_column_labels[key]))
     accounting_table.SetColumnWidth(0, 80)
     accounting_table.SetColumnWidth(1, 90)
     accounting_table.SetColumnWidth(2, 90)
@@ -503,17 +583,12 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
     except Exception:
         pass
 
-    # Resolve remote file callbacks (shared with Main Files > Remote)
-    _remote_cbs = {}
-    try:
-        from hpc_gui.wx_shell import _remote_files_callbacks
-        _session_for_remote = None
-        if kwargs.get("session_state") and isinstance(kwargs["session_state"], dict):
-            _session_for_remote = kwargs["session_state"]
-        if _session_for_remote:
-            _remote_cbs = _remote_files_callbacks(_session_for_remote, host, lifecycle)
-    except Exception:
-        pass
+    # The shell supplies the same application-owned adapter used by Main Files.
+    # Tests may still pass the individual callbacks directly.
+    _remote_cbs = kwargs.get("remote_files_callbacks") or {}
+
+    _remote_reader = kwargs.get("read_remote_path") or _remote_cbs.get("read_text")
+    _remote_statter = kwargs.get("stat_remote_path")
 
     # Shared remote browser panel — reuse same callbacks as Main Files > Remote
     files_browser = build_remote_files_panel(
@@ -525,7 +600,14 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         open_editor=_remote_cbs.get("open_editor"),
         open_editor_new_window=_remote_cbs.get("open_editor_new_window"),
         run_shell=_remote_cbs.get("run_shell"),
-        navigation_store=_nav_store,
+        chmod=_remote_cbs.get("chmod"),
+        submit_slurm=kwargs.get("submit_slurm") or _remote_cbs.get("submit_slurm"),
+        operation_supported=_remote_cbs.get("operation_supported"),
+        chmod_supported=_remote_cbs.get("chmod_supported"),
+        submit_slurm_supported=_remote_cbs.get("submit_slurm_supported"),
+        navigation_store=_remote_cbs.get("navigation_store") or _nav_store,
+        provider_filters=kwargs.get("provider_filters") or _remote_cbs.get("provider_filters"),
+        plugin_filters=_remote_cbs.get("plugin_filters"),
     )
 
     # Wire follow callback from the Jobs workspace
@@ -534,20 +616,34 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         ctx = model.selected_job_store.context
         if not ctx.job_id:
             return
-        if mode == "existing" and follower_id:
-            tracked_outputs = state.get("tracked_outputs", [])
-            for tracked_item in tracked_outputs:
-                if tracked_item.tracking_id == follower_id:
-                    tracked_outputs.remove(tracked_item)
-                    break
-            new_tracked = TrackedOutput(
-                tracking_id=follower_id,
+        remote_path = str(remote_path)
+        def _new_follower(tracking_id):
+            follower = OutputFollower(OutputFollowerState(
+                tracking_id=tracking_id,
                 channel_id=None,
-                label=remote_path.rsplit("/", 1)[-1],
+                job_id=ctx.job_id,
+                generation=ctx.generation,
+                label=PurePosixPath(remote_path).name or remote_path,
                 path=remote_path,
                 origin="manual",
+                roles=("manual",),
+            ))
+            state.setdefault("followers", {})[tracking_id] = follower
+            return follower
+        if mode == "existing" and follower_id:
+            tracked_outputs = state.get("tracked_outputs", [])
+            old = next((item for item in tracked_outputs if item.tracking_id == follower_id), None)
+            if old is None:
+                return
+            tracked_outputs[tracked_outputs.index(old)] = TrackedOutput(
+                tracking_id=follower_id, channel_id=None,
+                label=PurePosixPath(remote_path).name or remote_path,
+                path=remote_path, origin="manual", job_id=ctx.job_id,
             )
-            tracked_outputs.append(new_tracked)
+            follower = state.setdefault("followers", {}).get(follower_id) or _new_follower(follower_id)
+            follower.assign(channel_id=None, job_id=ctx.job_id, generation=ctx.generation,
+                            label=PurePosixPath(remote_path).name or remote_path,
+                            path=remote_path, origin="manual", roles=("manual",))
             pathCtrl = output_channel_paths.get(follower_id)
             if pathCtrl:
                 pathCtrl.SetValue(remote_path)
@@ -556,15 +652,30 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
                 textCtrl.SetValue("")
             refresh_outputs_tab(force=True)
             return
-        tracking_id = f"manual_{ctx.job_id}_{remote_path.rsplit('/', 1)[-1]}"
+        tracking_id = f"follower-{uuid4().hex}"
         tracked = TrackedOutput(
             tracking_id=tracking_id,
             channel_id=None,
-            label=remote_path.rsplit("/", 1)[-1],
+            label=PurePosixPath(remote_path).name or remote_path,
             path=remote_path,
             origin="manual",
+            job_id=ctx.job_id,
         )
         state.setdefault("tracked_outputs", []).append(tracked)
+        follower = _new_follower(tracking_id)
+        if mode == "new_window":
+            show_job_output(host, model, tracking_id, follower=follower,
+                            read_path=_remote_reader, stat_path=_remote_statter,
+                            lifecycle=lifecycle,
+                            on_closed=lambda fid=tracking_id: _remove_manual_follower(fid))
+        else:
+            refresh_outputs_tab(force=True)
+
+    def _remove_manual_follower(tracking_id):
+        state["tracked_outputs"][:] = [
+            item for item in state.get("tracked_outputs", ()) if item.tracking_id != tracking_id
+        ]
+        state.get("followers", {}).pop(tracking_id, None)
         refresh_outputs_tab(force=True)
 
     files_browser._follow_callback = _on_follow_file
@@ -641,7 +752,15 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         "follow_calls": 0,
         "sacct_in_flight": False,
         "details_in_flight": False,
+        "sacct_requests": 0,
+        "details_requests": 0,
+        "sacct_request_id": 0,
+        "details_request_id": 0,
+        "status_request_id": 0,
+        "status_in_flight": False,
         "outputs_in_flight": False,
+        "outputs_requests": 0,
+        "outputs_request_id": 0,
         "outputs_generation": 0,
         "outputs_paused": False,
         "_timer_paused": False,
@@ -649,6 +768,11 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         "filter_query": "",
         "resolved_channels": [],
         "output_channel_defs": list(output_channel_defs) if output_channel_defs is not None else None,
+        "output_channel_defs_provider": kwargs.get("output_channel_defs_provider"),
+        "tracked_outputs": [],
+        "followers": {},
+        "detached_followers": [],
+        "session": (kwargs.get("session_state") or {}).get("session") if isinstance(kwargs.get("session_state"), dict) else None,
     }
     state_lock = Lock()
     timer = wx.Timer(host)
@@ -733,49 +857,41 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
             _show_parsed_details(row, item)
             failure = model.explain_failure(SimpleNamespace(**item))
             if failure:
-                details_text.SetValue(details_text.GetValue() + "\n" + "\n".join(failure.as_lines()))
+                current_reason = detail_values["reason"].GetValue()
+                detail_values["reason"].SetValue(
+                    f"{current_reason}\n{'; '.join(failure.as_lines())}".strip("—\n")
+                )
         # Trigger accounting refresh for selected job
         _refresh_sacct()
         # Show details (scontrol)
         _show_job_details()
+        _refresh_provider_status()
         # Navigate shared browser to WorkDir
         _navigate_files_to_workdir()
         # Refresh outputs tab
         refresh_outputs_tab()
 
+    def _set_detail(field_key, value):
+        control = detail_values.get(field_key)
+        if control is not None:
+            control.SetValue(str(value or "—"))
+
     def _show_parsed_details(row: dict[str, str], item: dict[str, Any]):
-        """Show labeled detail fields for the selected job."""
-        fields = []
-        fields.append(f"Job ID:      {row['job_id']}")
-        fields.append(f"Name:        {row['name']}")
-        fields.append(f"State:       {row['state']}")
-        fields.append(f"Partition:   {row['partition']}")
-        fields.append(f"Elapsed:     {row['elapsed']}")
-        if row["nodes"]:
-            fields.append(f"Nodes:       {row['nodes']}")
-        if row["cpus"]:
-            fields.append(f"CPUs:        {row['cpus']}")
-        if row["reason"]:
-            fields.append(f"Reason:      {row['reason']}")
+        """Show real labelled detail fields for the selected job."""
+        for field_key in ("job_id", "name", "state", "partition", "elapsed", "nodes", "cpus", "reason"):
+            _set_detail(field_key, row.get(field_key, ""))
         workdir = str(item.get("workdir", "")).strip() if isinstance(item, dict) else ""
-        if workdir:
-            fields.append(f"WorkDir:     {workdir}")
         stdout_p = str(item.get("stdout_path", "")).strip() if isinstance(item, dict) else ""
-        if stdout_p:
-            fields.append(f"StdOut:      {stdout_p}")
         stderr_p = str(item.get("stderr_path", "")).strip() if isinstance(item, dict) else ""
-        if stderr_p:
-            fields.append(f"StdErr:      {stderr_p}")
         script_p = str(item.get("script_path", "")).strip() if isinstance(item, dict) else ""
-        if script_p:
-            fields.append(f"Script:      {script_p}")
         nodelist = str(item.get("nodelist", "")).strip() if isinstance(item, dict) else ""
-        if nodelist:
-            fields.append(f"NodeList:    {nodelist}")
         exit_code = str(item.get("exit_code", "")).strip() if isinstance(item, dict) else ""
-        if exit_code:
-            fields.append(f"ExitCode:    {exit_code}")
-        details_text.SetValue("\n".join(fields))
+        _set_detail("workdir", workdir)
+        _set_detail("stdout_path", stdout_p)
+        _set_detail("stderr_path", stderr_p)
+        _set_detail("script_path", script_p)
+        _set_detail("nodelist", nodelist)
+        _set_detail("exit_code", exit_code)
         # Update selected job store with scheduler metadata
         if isinstance(item, dict):
             update_kwargs: dict[str, str] = {}
@@ -859,8 +975,11 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         if not job_id:
             return
         with state_lock:
-            if state["closed"] or state["sacct_in_flight"]:
+            if state["closed"]:
                 return
+            state["sacct_request_id"] += 1
+            request_id = state["sacct_request_id"]
+            state["sacct_requests"] += 1
             state["sacct_in_flight"] = True
         req_job_id = job_id
         req_gen = model.selected_job_store.generation
@@ -869,20 +988,22 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         def worker():
             try:
                 result = refresh_sacct(req_job_id)
-                post(_done_sacct, result, None)
+                post(_done_sacct, result, None, request_id)
             except Exception as error:
-                post(_done_sacct, "", error)
+                post(_done_sacct, "", error, request_id)
 
-        def _done_sacct(result, error):
+        def _done_sacct(result, error, req_id):
             with state_lock:
-                state["sacct_in_flight"] = False
+                state["sacct_requests"] = max(0, state["sacct_requests"] - 1)
+                state["sacct_in_flight"] = state["sacct_requests"] > 0
             if state["closed"]:
                 return
             if (model.selected_job_store.job_id != req_job_id
-                    or model.selected_job_store.generation != req_gen):
-                btn_sacct.Enable(bool(refresh_sacct))
+                    or model.selected_job_store.generation != req_gen
+                    or req_id != state["sacct_request_id"]):
+                btn_sacct.Enable(state["sacct_requests"] == 0 and bool(refresh_sacct))
                 return
-            btn_sacct.Enable(bool(refresh_sacct))
+            btn_sacct.Enable(state["sacct_requests"] == 0 and bool(refresh_sacct))
             if error:
                 accounting_table.DeleteAllItems()
                 idx = accounting_table.InsertItem(0, t("jobs_outputs.accounting_error"))
@@ -919,8 +1040,11 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         if not job_id:
             return
         with state_lock:
-            if state["closed"] or state["details_in_flight"]:
+            if state["closed"]:
                 return
+            state["details_request_id"] += 1
+            request_id = state["details_request_id"]
+            state["details_requests"] += 1
             state["details_in_flight"] = True
         req_job_id = job_id
         req_gen = model.selected_job_store.generation
@@ -931,17 +1055,19 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
                     result = show_job_details(req_job_id)
                 except TypeError:
                     result = show_job_details()
-                post(_done_details, result, None)
+                post(_done_details, result, None, request_id)
             except Exception as error:
-                post(_done_details, "", error)
+                post(_done_details, "", error, request_id)
 
-        def _done_details(result, error):
+        def _done_details(result, error, req_id):
             with state_lock:
-                state["details_in_flight"] = False
+                state["details_requests"] = max(0, state["details_requests"] - 1)
+                state["details_in_flight"] = state["details_requests"] > 0
             if state["closed"]:
                 return
             if (model.selected_job_store.job_id != req_job_id
-                    or model.selected_job_store.generation != req_gen):
+                    or model.selected_job_store.generation != req_gen
+                    or req_id != state["details_request_id"]):
                 return
             if error:
                 raw_scontrol_text.SetValue(str(error))
@@ -965,13 +1091,66 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
                     update_kwargs["exit_code"] = detail.exit_code
                 if detail.failure_reason:
                     update_kwargs["failure_reason"] = detail.failure_reason
+                _set_detail("workdir", detail.workdir)
+                _set_detail("stdout_path", detail.stdout_path)
+                _set_detail("stderr_path", detail.stderr_path)
+                _set_detail("script_path", detail.script_path)
+                _set_detail("nodelist", detail.nodelist)
+                _set_detail("exit_code", detail.exit_code)
                 if update_kwargs:
                     model.selected_job_store.update(**update_kwargs)
                     model.set_output(
                         model.selected_job_store.context.stdout_path,
                         model.selected_job_store.context.stderr_path,
                     )
+                    refresh_outputs_tab(force=True)
 
+        Thread(target=worker, daemon=True).start()
+
+    def _provider_status_supported():
+        try:
+            return callable(refresh_lssrv) and (bool(has_status_capability()) if callable(has_status_capability) else bool(refresh_lssrv))
+        except Exception:
+            return False
+
+    def _refresh_provider_status(_event=None):
+        if not _provider_status_supported():
+            provider_status_panel.Hide()
+            details_sizer.Layout()
+            return
+        if not model.selected_job_store.context.has_selection:
+            provider_status_panel.Hide()
+            details_sizer.Layout()
+            return
+        provider_status_panel.Show(not _details_collapsed["collapsed"])
+        details_sizer.Layout()
+        ctx = model.selected_job_store.context
+        with state_lock:
+            state["status_request_id"] += 1
+            request_id = state["status_request_id"]
+            state["status_in_flight"] = True
+        btn_provider_status.Enable(False)
+        def worker():
+            try:
+                result = refresh_lssrv(ctx.job_id)
+                post(done, result, None, request_id, ctx.job_id, ctx.generation)
+            except TypeError:
+                try:
+                    result = refresh_lssrv()
+                    post(done, result, None, request_id, ctx.job_id, ctx.generation)
+                except Exception as error:
+                    post(done, "", error, request_id, ctx.job_id, ctx.generation)
+            except Exception as error:
+                post(done, "", error, request_id, ctx.job_id, ctx.generation)
+        def done(result, error, req_id, req_job_id, req_gen):
+            state["status_in_flight"] = False
+            if state["closed"] or req_id != state["status_request_id"]:
+                return
+            if model.selected_job_store.job_id != req_job_id or model.selected_job_store.generation != req_gen:
+                return
+            btn_provider_status.Enable(True)
+            provider_status_text.SetLabel(str(error) if error else str(result or "—").strip() or "—")
+            provider_status_panel.Layout()
         Thread(target=worker, daemon=True).start()
 
     # --- Job files ----------------------------------------------------------
@@ -983,7 +1162,7 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
             return
         files_workdir_label.SetLabel(f"{t('jobs_outputs.workdir')}: {workdir}")
         try:
-            files_model.navigate(workdir)
+            files_browser._wx_remote_controls["navigate"](workdir)
             files_browser._wx_remote_controls["load"]()
         except Exception:
             pass
@@ -998,10 +1177,18 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
             output_channel_paths.pop(cid, None)
             output_channel_paused.pop(cid, None)
             output_channel_follow.pop(cid, None)
+            output_channel_offsets.pop(cid, None)
+            output_channel_in_flight.pop(cid, None)
+            output_channel_waiting.pop(cid, None)
+            old_follower = state.get("followers", {}).pop(cid, None)
+            if old_follower is not None:
+                old_follower.close()
             try:
-                idx = output_channel_notebook.GetPageIndex(tabCtrl.GetParent() if tabCtrl else None)
-                if idx >= 0:
-                    output_channel_notebook.DeletePage(idx)
+                page = tabCtrl.GetParent() if tabCtrl else None
+                for idx in range(output_channel_notebook.GetPageCount()):
+                    if output_channel_notebook.GetPage(idx) is page:
+                        output_channel_notebook.DeletePage(idx)
+                        break
             except Exception:
                 pass
         for ch in channels:
@@ -1036,10 +1223,20 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
                 output_channel_offsets[ch.id] = 0
                 output_channel_in_flight[ch.id] = False
                 output_channel_waiting[ch.id] = 0
+                state.setdefault("followers", {})[ch.id] = OutputFollower(OutputFollowerState(
+                    tracking_id=f"follower-{uuid4().hex}",
+                    channel_id=ch.id,
+                    job_id=model.selected_job_store.job_id,
+                    generation=model.selected_job_store.generation,
+                    label=ch.label,
+                    path=ch.path,
+                    origin="provider" if ch.definition is not None else "legacy_slurm",
+                    roles=ch.roles,
+                ))
 
-                def _on_ch_pause(evt, cid=ch.id):
+                def _on_ch_pause(evt, cid=ch.id, pause_button=ch_pause_btn):
                     output_channel_paused[cid] = not output_channel_paused[cid]
-                    ch_pause_btn.SetLabel(
+                    pause_button.SetLabel(
                         t("jobs.resume_output") if output_channel_paused[cid]
                         else t("jobs.pause_output")
                     )
@@ -1047,8 +1244,8 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
                 def _on_ch_refresh(evt, cid=ch.id):
                     _refresh_single_channel(cid)
 
-                def _on_ch_follow(evt, cid=ch.id):
-                    output_channel_follow[cid] = ch_follow_cb.GetValue()
+                def _on_ch_follow(evt, cid=ch.id, follow_checkbox=ch_follow_cb):
+                    output_channel_follow[cid] = follow_checkbox.GetValue()
 
                 ch_pause_btn.Bind(wx.EVT_BUTTON, _on_ch_pause)
                 ch_refresh_btn.Bind(wx.EVT_BUTTON, _on_ch_refresh)
@@ -1057,6 +1254,17 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
                 pathCtrl = output_channel_paths.get(ch.id)
                 if pathCtrl:
                     pathCtrl.SetValue(ch.path)
+                follower = state.setdefault("followers", {}).get(ch.id)
+                if follower is not None:
+                    follower.assign(
+                        channel_id=ch.id,
+                        job_id=model.selected_job_store.job_id,
+                        generation=model.selected_job_store.generation,
+                        label=ch.label,
+                        path=ch.path,
+                        origin="provider" if ch.definition is not None else "legacy_slurm",
+                        roles=ch.roles,
+                    )
         if not channels:
             if output_channel_notebook.GetPageCount() == 0:
                 output_channel_notebook.AddPage(
@@ -1073,29 +1281,29 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
 
     def _refresh_single_channel(channel_id):
         """Refresh output for a single channel (per-channel refresh button)."""
-        if not read_output:
-            return
         ctx = model.selected_job_store.context
         if not ctx.job_id:
             return
         textCtrl = output_channels.get(channel_id)
-        if not textCtrl:
+        follower = state.get("followers", {}).get(channel_id)
+        if not textCtrl or follower is None:
             return
 
         def worker():
             try:
-                result = read_output(ctx.job_id)
-                content = ""
-                if isinstance(result, dict):
-                    if channel_id in result:
-                        content = result[channel_id]
-                    elif "stdout" in channel_id:
-                        content = result.get("stdout", "")
-                    elif "stderr" in channel_id:
-                        content = result.get("stderr", "")
-                post(lambda c=content: textCtrl.SetValue(clean_output(c)))
-            except Exception:
-                pass
+                follower.state.paused = output_channel_paused.get(channel_id, False)
+                if callable(_remote_reader):
+                    _chunk, content, waiting = follower.poll(_remote_reader, _remote_statter, force=True)
+                elif callable(read_output) and set(follower.state.roles) & {"stdout", "stderr"}:
+                    result = read_output(ctx.job_id)
+                    content = result.get("stdout" if "stdout" in follower.state.roles else "stderr", "") if isinstance(result, dict) else result
+                    content = follower.replace_snapshot(content)
+                    waiting = False
+                else:
+                    raise RuntimeError(t("jobs_outputs.remote_reader_unavailable"))
+                post(lambda c=content, w=waiting: textCtrl.SetValue(f"[{t('jobs_outputs.waiting_for_output')}...]\n" if w and not c else retain_last_lines(c)))
+            except Exception as error:
+                post(lambda e=error: textCtrl.SetValue(str(e)))
 
         Thread(target=worker, daemon=True).start()
 
@@ -1104,7 +1312,9 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         ctx = model.selected_job_store.context
         if not ctx.job_id:
             return []
-        channel_defs = state.get("output_channel_defs")
+        defs_provider = state.get("output_channel_defs_provider")
+        channel_defs = defs_provider() if callable(defs_provider) else state.get("output_channel_defs")
+        state["output_channel_defs"] = channel_defs
         if channel_defs is not None:
             auto = output_resolver.resolve(
                 channel_defs,
@@ -1112,6 +1322,8 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
                 workdir=ctx.workdir,
                 scontrol_stdout=ctx.stdout_path,
                 scontrol_stderr=ctx.stderr_path,
+                job_name=ctx.name,
+                language=current_language(),
             )
         else:
             auto = output_resolver.resolve_legacy(
@@ -1119,11 +1331,13 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
                 workdir=ctx.workdir,
                 scontrol_stdout=ctx.stdout_path,
                 scontrol_stderr=ctx.stderr_path,
+                job_name=ctx.name,
+                language=current_language(),
             )
         # Append manually tracked outputs as additional channels
         tracked = state.get("tracked_outputs", [])
         for tracked_item in tracked:
-            if ctx.job_id and ctx.job_id not in tracked_item.tracking_id:
+            if tracked_item.job_id and tracked_item.job_id != ctx.job_id:
                 continue
             auto.append(ResolvedOutputChannel(
                 id=tracked_item.tracking_id,
@@ -1138,145 +1352,87 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
     def refresh_outputs_tab(_event=None, *, force=False):
         with state_lock:
             job_id = state["selected_job"]
-            if state["closed"] or not job_id:
+            if state["closed"] or not job_id or (state.get("_timer_paused") and not force):
                 return
-            if state.get("_timer_paused") and not force:
-                return
-            if state["outputs_in_flight"] and state.get("_outputs_job_id") == job_id:
+            if state["outputs_in_flight"] and state.get("_outputs_job_id") == job_id and not force:
                 return
             state["outputs_in_flight"] = True
+            state["outputs_requests"] += 1
+            state["outputs_request_id"] += 1
+            output_request_id = state["outputs_request_id"]
             state["_outputs_job_id"] = job_id
             state["outputs_generation"] += 1
             gen = state["outputs_generation"]
-            request_id = job_id
-        outputs_refresh_btn.Enable(False)
-        # Resolve channels for current selection
+            request_id = uuid4().hex
         resolved = _resolve_output_channels()
         state["resolved_channels"] = resolved
-        # Ensure tabs match resolved channels
-        try:
-            wx.CallAfter(_ensure_output_tabs, resolved)
-        except Exception:
-            pass
-        # Read output for each resolved channel
-        if not read_output:
-            outputs_refresh_btn.Enable(True)
-            return
+        _ensure_output_tabs(resolved)
+        readers = _remote_reader
 
-        def worker(req_id=request_id, g=gen, channels=resolved):
+        def worker(req_id=request_id, output_req_id=output_request_id, g=gen, channels=resolved):
             results = {}
-            auto_result = None
-            if read_output:
-                try:
-                    auto_result = read_output(req_id)
-                except Exception:
-                    auto_result = {}
-            for ch in channels:
-                if output_channel_in_flight.get(ch.id, False):
+            for channel in channels:
+                follower = state.get("followers", {}).get(channel.id)
+                if follower is None:
                     continue
-                output_channel_in_flight[ch.id] = True
-                try:
-                    if auto_result is not None and isinstance(auto_result, dict):
-                        if "stdout" in ch.roles:
-                            results[ch.id] = auto_result.get("stdout", "")
-                        elif "stderr" in ch.roles:
-                            results[ch.id] = auto_result.get("stderr", "")
+                if callable(readers) and channel.path:
+                    _chunk, retained, waiting = follower.poll(readers, _remote_statter)
+                    results[channel.id] = (retained, waiting)
+                    continue
+                # Legacy test/adaptor compatibility is restricted to semantic
+                # stdout/stderr channels; arbitrary paths always use readers.
+                content = ""
+                if callable(read_output) and set(channel.roles) & {"stdout", "stderr"}:
+                    try:
+                        legacy = read_output(job_id)
+                        if isinstance(legacy, dict):
+                            content = legacy.get("stdout" if "stdout" in channel.roles else "stderr", "")
+                        elif isinstance(legacy, (tuple, list)):
+                            content = legacy[0 if "stdout" in channel.roles else 1] if legacy else ""
                         else:
-                            results[ch.id] = auto_result.get(ch.id, "")
-                    elif ch.path:
-                        session = None
-                        try:
-                            from hpc_gui.wx_shell import _get_session_files
-                            session = _get_session_files()
-                        except Exception:
-                            pass
-                        if session and hasattr(session, "read_text"):
-                            try:
-                                full_text = session.read_text(ch.path)
-                                offset = output_channel_offsets.get(ch.id, 0)
-                                if len(full_text) < offset:
-                                    offset = 0
-                                new_text = full_text[offset:]
-                                output_channel_offsets[ch.id] = len(full_text)
-                                results[ch.id] = new_text
-                                output_channel_waiting[ch.id] = 0
-                            except FileNotFoundError:
-                                w = output_channel_waiting.get(ch.id, 0) + 1
-                                output_channel_waiting[ch.id] = min(w, 5)
-                                results[ch.id] = ""
-                            except Exception:
-                                results[ch.id] = ""
-                        else:
-                            results[ch.id] = ""
-                    else:
-                        results[ch.id] = ""
-                finally:
-                    output_channel_in_flight[ch.id] = False
-            post(lambda: _done_outputs(results, None, req_id, g, channels))
+                            content = legacy
+                        results[channel.id] = (follower.replace_snapshot(content), False)
+                    except (FileNotFoundError, OSError):
+                        follower.state.waiting_state = min(follower.state.waiting_state + 1, 5)
+                        results[channel.id] = (follower.text, True)
+                else:
+                    results[channel.id] = (follower.text, True)
+            post(_done_outputs, results, None, req_id, output_req_id, g, channels)
 
-        def _done_outputs(result, err, req_id, g, channels=None):
+        def _done_outputs(result, err, req_id, output_req_id, g, channels):
             with state_lock:
-                state["outputs_in_flight"] = False
-                if state["closed"] or g != state["outputs_generation"] or req_id != state["selected_job"]:
-                    outputs_refresh_btn.Enable(True)
-                    return
-            outputs_refresh_btn.Enable(True)
+                state["outputs_requests"] = max(0, state["outputs_requests"] - 1)
+                state["outputs_in_flight"] = state["outputs_requests"] > 0
+                current = (
+                    not state["closed"]
+                    and g == state["outputs_generation"]
+                    and job_id == state["selected_job"]
+                    and output_req_id == state["outputs_request_id"]
+                )
+            if not current:
+                return
             if err:
-                # Show error in first available channel tab
-                for textCtrl in output_channels.values():
-                    textCtrl.SetValue(str(err))
+                for text_ctrl in output_channels.values():
+                    text_ctrl.SetValue(str(err))
                     break
                 return
-            if channels and isinstance(result, dict):
-                for ch in channels:
-                    textCtrl = output_channels.get(ch.id)
-                    if not textCtrl:
-                        continue
-                    if output_channel_paused.get(ch.id, False):
-                        continue
-                    new_text = result.get(ch.id, "")
-                    waiting_count = output_channel_waiting.get(ch.id, 0)
-                    if not new_text and waiting_count > 0 and ch.source != "manual":
-                        wait_msg = f"[{t('jobs_outputs.waiting_for_output')}...]\n"
-                        textCtrl.SetValue(wait_msg)
-                    elif new_text:
-                        if ch.source == "manual":
-                            existing = textCtrl.GetValue()
-                            textCtrl.SetValue(existing + clean_output(new_text))
-                        else:
-                            textCtrl.SetValue(clean_output(new_text))
-            elif isinstance(result, dict):
-                # Fallback: legacy dict with stdout/stderr
-                for ch_id, textCtrl in output_channels.items():
-                    if "stdout" in ch_id:
-                        textCtrl.SetValue(clean_output(result.get("stdout", "")))
-                    elif "stderr" in ch_id:
-                        textCtrl.SetValue(clean_output(result.get("stderr", "")))
-            elif isinstance(result, (tuple, list)):
-                vals = list(result)
-                for i, textCtrl in enumerate(output_channels.values()):
-                    textCtrl.SetValue(clean_output(vals[i] if i < len(vals) else ""))
-            else:
-                for textCtrl in output_channels.values():
-                    textCtrl.SetValue(clean_output(result))
-            if outputs_follow.GetValue() and not state["outputs_paused"] and not state["minimized"]:
-                state["follow_calls"] += 1
-                for ch in channels:
-                    textCtrl = output_channels.get(ch.id)
-                    if not textCtrl:
-                        continue
-                    if output_channel_paused.get(ch.id, False):
-                        continue
-                    if not output_channel_follow.get(ch.id, True):
-                        continue
-                    try:
-                        last_pos = textCtrl.GetLastPosition()
-                        cur_pos = textCtrl.GetInsertionPoint()
-                        at_bottom = (last_pos - cur_pos) < 200
-                        if at_bottom:
-                            textCtrl.ShowPosition(last_pos)
-                    except Exception:
-                        pass
+            for channel in channels:
+                text_ctrl = output_channels.get(channel.id)
+                if not text_ctrl or output_channel_paused.get(channel.id, False):
+                    continue
+                retained, waiting = result.get(channel.id, ("", False))
+                follower = state.get("followers", {}).get(channel.id)
+                at_bottom = _output_at_bottom(text_ctrl)
+                text_ctrl.SetValue(
+                    f"[{t('jobs_outputs.waiting_for_output')}...]\n" if waiting and not retained
+                    else retain_last_lines(retained)
+                )
+                output_channel_offsets[channel.id] = follower.state.offset if follower else 0
+                output_channel_waiting[channel.id] = follower.state.waiting_state if follower else 0
+                if outputs_follow.GetValue() and output_channel_follow.get(channel.id, True) and at_bottom and not state["minimized"]:
+                    state["follow_calls"] += 1
+                    text_ctrl.ShowPosition(text_ctrl.GetLastPosition())
+            outputs_refresh_btn.Enable(True)
 
         Thread(target=worker, daemon=True).start()
 
@@ -1344,6 +1500,49 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         host.Hide()
         host.Destroy()
 
+    def on_destroy(event):
+        # Embedded hosts can be destroyed directly by their parent without
+        # going through the synthetic close callback.
+        if event.GetEventObject() is not host:
+            event.Skip()
+            return
+        state["closed"] = True
+        timer.Stop()
+        for follower in state.get("followers", {}).values():
+            follower.close()
+        unsubscribe_language_change(refresh_labels)
+        event.Skip()
+
+    def set_session(session):
+        """Invalidate selection-dependent work when the active profile changes."""
+        state["session"] = session
+        state["selected_job"] = ""
+        state["outputs_generation"] += 1
+        state["outputs_request_id"] += 1
+        state["sacct_request_id"] += 1
+        state["details_request_id"] += 1
+        state["status_request_id"] += 1
+        for follower in state.get("followers", {}).values():
+            follower.close()
+        state["followers"].clear()
+        state["tracked_outputs"].clear()
+        for follower in state.get("detached_followers", ()):
+            follower.close()
+        state["detached_followers"].clear()
+        model.selected_job_store.clear()
+        _ensure_output_tabs([])
+        set_navigation_store = getattr(files_browser, "_wx_remote_set_navigation_store", None)
+        if callable(set_navigation_store):
+            set_navigation_store(_remote_cbs.get("navigation_store"))
+        refresh_provider_filters = getattr(files_browser, "_wx_remote_set_provider_filters", None)
+        if callable(refresh_provider_filters):
+            try:
+                refresh_provider_filters(_remote_cbs.get("provider_filters") or kwargs.get("provider_filters"), _remote_cbs.get("plugin_filters") or kwargs.get("plugin_filters"))
+            except Exception:
+                pass
+        _refresh_provider_status()
+        refresh_jobs()
+
     # --- Minimize -----------------------------------------------------------
     def iconized(event):
         state["minimized"] = bool(event.IsIconized())
@@ -1365,7 +1564,11 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         jobs_prefix = "▸" if _jobs_collapsed["collapsed"] else "▾"
         jobs_box.SetLabel(f"{jobs_prefix} {t('jobs.title')}")
         for col_idx, col_key in enumerate(_JOB_TABLE_COLUMNS):
-            jobs.SetColumn(col_idx, t(_COLUMN_LABEL_KEYS.get(col_key, col_key)))
+            info = jobs.GetColumn(col_idx)
+            info.Text = t(_COLUMN_LABEL_KEYS.get(col_key, col_key))
+            jobs.SetColumn(col_idx, info)
+        for field_key, label_key in detail_keys:
+            detail_labels[field_key].SetLabel(t(label_key))
         try:
             notebook.SetPageText(0, f"{t('jobs.title')} / {t('common.details')}")
             notebook.SetPageText(1, t("jobs_outputs.files_title"))
@@ -1377,6 +1580,12 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         accounting_prefix = "▸" if _accounting_collapsed["collapsed"] else "▾"
         accounting_box.SetLabel(f"{accounting_prefix} {t('jobs_outputs.accounting_details')}")
         btn_sacct.SetLabel(t("jobs_outputs.refresh_sacct"))
+        for index, key in enumerate(accounting_column_keys):
+            info = accounting_table.GetColumn(index)
+            info.Text = t(accounting_column_labels[key])
+            accounting_table.SetColumn(index, info)
+        provider_status_label.SetLabel(t("jobs_outputs.provider_status"))
+        btn_provider_status.SetLabel(t("jobs_outputs.refresh_status"))
         try:
             accounting_raw_text.SetHint(t("jobs_outputs.accounting_raw_hint"))
         except Exception:
@@ -1392,6 +1601,12 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         outputs_refresh_btn.SetLabel(t("jobs.refresh"))
         outputs_follow.SetLabel(t("files.auto_scroll"))
         outputs_pause_btn.SetLabel(t("jobs.resume_output" if state["outputs_paused"] else "jobs.pause_output"))
+        for cid, text_ctrl in output_channels.items():
+            page = text_ctrl.GetParent()
+            try:
+                output_channel_notebook.SetPageText(output_channel_notebook.GetPageIndex(page), next((ch.label for ch in state.get("resolved_channels", ()) if ch.id == cid), cid))
+            except Exception:
+                pass
         try:
             output_no_channels_label.SetLabel(t("jobs_outputs.no_channels"))
         except Exception:
@@ -1405,6 +1620,7 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
     btn_refresh.Bind(wx.EVT_BUTTON, refresh_jobs)
     btn_cancel.Bind(wx.EVT_BUTTON, cancel_job)
     btn_sacct.Bind(wx.EVT_BUTTON, _refresh_sacct)
+    btn_provider_status.Bind(wx.EVT_BUTTON, _refresh_provider_status)
     btn_toggle_raw.Bind(wx.EVT_BUTTON, _toggle_accounting_raw)
     btn_raw_scontrol.Bind(wx.EVT_BUTTON, _toggle_raw_scontrol)
     filter_field.Bind(wx.EVT_TEXT, _on_filter_changed)
@@ -1418,16 +1634,12 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
     # --- Per-channel search / find / jump / open / show ---------------------
     def _get_active_channel_textctrl():
         sel = output_channel_notebook.GetSelection()
-        if sel < 0:
+        if sel < 0 or sel >= output_channel_notebook.GetPageCount():
             return None
+        page = output_channel_notebook.GetPage(sel)
         for cid, tc in output_channels.items():
-            try:
-                if tc.GetParent() and output_channel_notebook.GetPage(output_channel_notebook.GetPageIndex(tc.GetParent())) is not None:
-                    idx = output_channel_notebook.GetPageIndex(tc.GetParent())
-                    if idx == sel:
-                        return tc
-            except Exception:
-                pass
+            if tc.GetParent() is page:
+                return tc
         return None
 
     def _on_search(_event=None):
@@ -1467,12 +1679,25 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         tc = _get_active_channel_textctrl()
         if not tc or not state["selected_job"]:
             return
-        text = tc.GetValue()
-        frame = wx.Frame(host, title=f"{t('jobs_outputs.output')} — {state['selected_job']}", size=(800, 500))
-        out = wx.TextCtrl(frame, style=wx.TE_MULTILINE | wx.TE_READONLY | wx.HSCROLL)
-        out.SetValue(text)
-        out.ShowPosition(out.GetLastPosition())
-        frame.Show()
+        channel = next((ch for ch in state.get("resolved_channels", ()) if output_channels.get(ch.id) is tc), None)
+        if channel is None:
+            return
+        detached = OutputFollower(OutputFollowerState(
+            tracking_id=f"window-{uuid4().hex}", channel_id=channel.id,
+            job_id=state["selected_job"], generation=model.selected_job_store.generation,
+            label=channel.label, path=channel.path, origin="provider" if channel.definition else "legacy_slurm",
+            roles=channel.roles,
+        ))
+        state.setdefault("detached_followers", []).append(detached)
+        reader = _remote_reader
+        if not callable(reader) and callable(read_output) and set(channel.roles) & {"stdout", "stderr"}:
+            def reader(_path, job_id=state["selected_job"], roles=channel.roles):
+                result = read_output(job_id)
+                return result.get("stdout" if "stdout" in roles else "stderr", "") if isinstance(result, dict) else result
+        if callable(reader):
+            show_job_output(host, model, detached.state.tracking_id, follower=detached,
+                            read_path=reader, stat_path=_remote_statter, lifecycle=lifecycle,
+                            on_closed=lambda item=detached: state["detached_followers"].remove(item) if item in state["detached_followers"] else None)
 
     def _on_show_in_files(_event=None):
         tc = _get_active_channel_textctrl()
@@ -1488,7 +1713,9 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         parent_dir = str(PurePosixPath(path_val).parent) or "/"
         files_workdir_label.SetLabel(f"{t('jobs_outputs.workdir')}: {parent_dir}")
         try:
-            files_model.navigate(parent_dir)
+            active_file_tab = files_browser._wx_remote_tabs[files_browser._wx_remote_notebook.GetSelection()]
+            active_file_tab["highlight_path"] = path_val
+            files_browser._wx_remote_controls["navigate"](parent_dir)
             files_browser._wx_remote_controls["load"]()
         except Exception:
             pass
@@ -1558,7 +1785,13 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         "details_page": details_page, "files_page": files_page, "outputs_page": outputs_page,
         "accounting_table": accounting_table,
         "accounting_raw_text": accounting_raw_text,
-        "details_text": details_text,
+        "details_text": detail_values["job_id"],
+        "detail_values": detail_values,
+        "detail_labels": detail_labels,
+        "details_fields_panel": details_fields_panel,
+        "collapse_jobs": _toggle_jobs,
+        "collapse_details": _toggle_details,
+        "collapse_accounting": _toggle_accounting,
         "raw_scontrol_text": raw_scontrol_text,
         "btn_raw_scontrol": btn_raw_scontrol,
         "btn_sacct": btn_sacct,
@@ -1573,9 +1806,19 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         "outputs_refresh": outputs_refresh_btn,
         "outputs_follow": outputs_follow,
         "outputs_pause": outputs_pause_btn,
+        "output_search": search_field,
+        "output_find_next": btn_find_next,
+        "output_jump_latest": btn_jump_latest,
+        "output_open_window": btn_open_window,
+        "output_show_files": btn_show_files,
         "filter_field": filter_field,
         "cb_auto_refresh": cb_auto_refresh,
         "btn_cancel": btn_cancel,
+        "jobs_box": jobs_box,
+        "provider_status_panel": provider_status_panel,
+        "provider_status_text": provider_status_text,
+        "btn_provider_status": btn_provider_status,
+        "open_output_window": _on_open_in_window,
     }
     host._wx_jobs_model = model
     host._wx_jobs_refresh_jobs = refresh_jobs
@@ -1585,6 +1828,8 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
     host._wx_jobs_notebook = notebook
     host._wx_jobs_navigate_files = _navigate_files_to_workdir
     host._wx_jobs_refresh_outputs_tab = refresh_outputs_tab
+    host._wx_jobs_set_session = set_session
+    host.Bind(wx.EVT_WINDOW_DESTROY, on_destroy)
     refresh_jobs()
     finish()
     return host
