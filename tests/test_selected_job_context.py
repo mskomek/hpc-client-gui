@@ -77,15 +77,32 @@ class TestSelectedJobStore:
         assert ctx.state == "RUNNING"
         assert store.context.job_id == "100"
 
-    def test_select_preserves_previous_values(self):
+    def test_select_preserves_previous_values_same_job(self):
         store = SelectedJobStore()
         store.select(job_id="100", name="a", state="PENDING", workdir="/scratch")
-        ctx2 = store.select(job_id="200")
-        # job_id changed but other fields preserved from previous
-        assert ctx2.job_id == "200"
+        ctx2 = store.select(job_id="100", name="a", state="RUNNING")
+        # Same job_id preserves non-overridden fields
+        assert ctx2.job_id == "100"
         assert ctx2.name == "a"
-        assert ctx2.state == "PENDING"
+        assert ctx2.state == "RUNNING"
         assert ctx2.workdir == "/scratch"
+
+    def test_select_clears_old_metadata_on_new_job(self):
+        store = SelectedJobStore()
+        store.select(job_id="100", name="a", state="PENDING", workdir="/scratch/A", stdout_path="/scratch/A/a.out")
+        ctx2 = store.select(job_id="200")
+        # New job_id clears all enrichable metadata
+        assert ctx2.job_id == "200"
+        assert ctx2.name == ""
+        assert ctx2.state == ""
+        assert ctx2.workdir == ""
+        assert ctx2.stdout_path == ""
+        assert ctx2.stderr_path == ""
+        assert ctx2.raw_scontrol == ""
+        assert ctx2.script_path == ""
+        assert ctx2.nodelist == ""
+        assert ctx2.exit_code == ""
+        assert ctx2.failure_reason == ""
 
     def test_update_does_not_increment_generation(self):
         store = SelectedJobStore()

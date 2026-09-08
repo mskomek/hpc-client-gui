@@ -253,7 +253,7 @@ def validate_cluster_profile_dict(profile: Any) -> list[str]:
     if not _is_nonempty_str(profile["name"]):
         errors.append("cluster profile 'name' must be a non-empty string")
     if profile["scheduler"] not in KNOWN_SCHEDULERS:
-        errors.append(f"unsupported scheduler: {profile['schema_version']!r}")
+        errors.append(f"unsupported scheduler: {profile['scheduler']!r}")
 
     if profile["schema_version"] == 2:
         unknown = set(profile) - set(CLUSTER_PROFILE_REQUIRED_KEYS) - V2_PROFILE_SECTIONS
@@ -313,20 +313,56 @@ def validate_cluster_profile_dict(profile: Any) -> list[str]:
                                 errors.append(f"job_outputs.streams[{idx}] role must be stdout, stderr, or custom")
                             if stream.get("resolver") not in ("slurm.stdout", "slurm.stderr", "workdir.relative"):
                                 errors.append(f"job_outputs.streams[{idx}] resolver must be a whitelisted resolver")
+                            labels = stream.get("labels")
+                            if labels is not None and not isinstance(labels, dict):
+                                errors.append(f"job_outputs.streams[{idx}] labels must be an object")
+                            order = stream.get("order")
+                            if order is not None and (not isinstance(order, int) or isinstance(order, bool)):
+                                errors.append(f"job_outputs.streams[{idx}] order must be an integer")
         # Validate file_filters if present
         file_filters = profile.get("file_filters")
         if file_filters is not None:
             if not isinstance(file_filters, list):
                 errors.append("cluster profile 'file_filters' must be a list")
             else:
+                _VALID_FILE_FILTER_KEYS = frozenset({"id", "labels", "globs", "suffixes", "order"})
+                _RESERVED_FILTER_IDS = frozenset({"all", "other"})
+                _KNOWN_FILTER_IDS = {"folders", "iso", "archives", "slurm", "shell"}
+                seen_filter_ids: set[str] = set()
                 for idx, ff in enumerate(file_filters):
                     if not isinstance(ff, dict):
                         errors.append(f"file_filters[{idx}] must be an object")
                         continue
                     if not _is_nonempty_str(ff.get("id")):
                         errors.append(f"file_filters[{idx}] needs a non-empty id")
-                    if section_key == "storage" and not _is_nonempty_str(item.get("label")):
-                        errors.append(f"cluster profile 'storage[{index}]' needs a non-empty label")
+                    else:
+                        fid = ff["id"].strip()
+                        if fid in _RESERVED_FILTER_IDS:
+                            errors.append(f"file_filters[{idx}] id {fid!r} is reserved")
+                        if fid in seen_filter_ids:
+                            errors.append(f"file_filters[{idx}] duplicate id {fid!r}")
+                        seen_filter_ids.add(fid)
+                    labels = ff.get("labels")
+                    if labels is not None:
+                        if not isinstance(labels, dict):
+                            errors.append(f"file_filters[{idx}] labels must be an object")
+                        elif not _is_nonempty_str(labels.get("en")):
+                            errors.append(f"file_filters[{idx}] labels.en is required")
+                    globs = ff.get("globs")
+                    if globs is not None:
+                        if not isinstance(globs, list):
+                            errors.append(f"file_filters[{idx}] globs must be a list")
+                    suffixes = ff.get("suffixes")
+                    if suffixes is not None:
+                        if not isinstance(suffixes, list):
+                            errors.append(f"file_filters[{idx}] suffixes must be a list")
+                    order = ff.get("order")
+                    if order is not None:
+                        if not isinstance(order, int) or isinstance(order, bool):
+                            errors.append(f"file_filters[{idx}] order must be an integer")
+                    unknown_ff = set(ff) - _VALID_FILE_FILTER_KEYS
+                    if unknown_ff:
+                        errors.append(f"file_filters[{idx}] has unknown properties {sorted(unknown_ff)}")
 
     for section_key in ("paths", "commands"):
         section = profile.get(section_key)

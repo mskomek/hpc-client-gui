@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import threading
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any, Callable
 
 
@@ -91,30 +91,59 @@ class SelectedJobStore:
         Any keyword argument matching a ``SelectedJobContext`` field will be
         applied.  ``generation`` is always incremented automatically – callers
         must *not* pass it.
+
+        When a new ``job_id`` is provided (i.e. the user selected a different
+        job), all enrichable metadata fields are **cleared first** so that
+        stale data from the previous selection cannot leak into the new one.
         """
         with self._lock:
             self._generation += 1
-            current = self._context
-            merged: dict[str, Any] = {
-                "generation": self._generation,
-                "job_id": current.job_id,
-                "name": current.name,
-                "state": current.state,
-                "partition": current.partition,
-                "elapsed": current.elapsed,
-                "nodes": current.nodes,
-                "cpus": current.cpus,
-                "reason": current.reason,
-                "workdir": current.workdir,
-                "stdout_path": current.stdout_path,
-                "stderr_path": current.stderr_path,
-                "raw_scontrol": current.raw_scontrol,
-                "user": current.user,
-                "script_path": current.script_path,
-                "exit_code": current.exit_code,
-                "nodelist": current.nodelist,
-                "failure_reason": current.failure_reason,
-            }
+            new_job_id = str(kwargs.get("job_id", "")).strip()
+            previous_job_id = self._context.job_id
+
+            if new_job_id and new_job_id != previous_job_id:
+                merged: dict[str, Any] = {
+                    "generation": self._generation,
+                    "job_id": new_job_id,
+                    "name": "",
+                    "state": "",
+                    "partition": "",
+                    "elapsed": "",
+                    "nodes": "",
+                    "cpus": "",
+                    "reason": "",
+                    "workdir": "",
+                    "stdout_path": "",
+                    "stderr_path": "",
+                    "raw_scontrol": "",
+                    "user": "",
+                    "script_path": "",
+                    "exit_code": "",
+                    "nodelist": "",
+                    "failure_reason": "",
+                }
+            else:
+                current = self._context
+                merged = {
+                    "generation": self._generation,
+                    "job_id": current.job_id,
+                    "name": current.name,
+                    "state": current.state,
+                    "partition": current.partition,
+                    "elapsed": current.elapsed,
+                    "nodes": current.nodes,
+                    "cpus": current.cpus,
+                    "reason": current.reason,
+                    "workdir": current.workdir,
+                    "stdout_path": current.stdout_path,
+                    "stderr_path": current.stderr_path,
+                    "raw_scontrol": current.raw_scontrol,
+                    "user": current.user,
+                    "script_path": current.script_path,
+                    "exit_code": current.exit_code,
+                    "nodelist": current.nodelist,
+                    "failure_reason": current.failure_reason,
+                }
             merged.update(kwargs)
             self._context = SelectedJobContext(**merged)
             ctx = self._context

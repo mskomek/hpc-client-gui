@@ -1884,56 +1884,98 @@ def _jobs_callbacks(session_state, parent, lifecycle):
     _snapshot_profile = _snapshot_session.get("profile")
     _snapshot_files = _snapshot_session.get("files")
 
-    def list_jobs():
+    def _resolve_slurm():
         session = (session_state or {}).get("session") or {}
-        slurm = _snapshot_slurm if _snapshot_slurm is not None else session.get("slurm")
-        profile = _snapshot_profile if _snapshot_profile is not None else session.get("profile") or {}
+        return _snapshot_slurm if _snapshot_slurm is not None else session.get("slurm")
+
+    def _resolve_files():
+        session = (session_state or {}).get("session") or {}
+        return _snapshot_files if _snapshot_files is not None else session.get("files")
+
+    def _resolve_profile():
+        session = (session_state or {}).get("session") or {}
+        return (_snapshot_profile if _snapshot_profile is not None
+                else session.get("profile") or {})
+
+    def list_jobs():
+        slurm = _resolve_slurm()
+        profile = _resolve_profile()
         if not slurm:
             return ()
         raw = slurm.squeue(str(profile.get("username", "")))
         rows = []
-        for line in str(raw or "").splitlines()[1:]:
-            fields = line.split()
-            if fields:
-                rows.append({"id": fields[0], "state": fields[4] if len(fields) > 4 else "", "name": fields[2] if len(fields) > 2 else ""})
+        for line in str(raw or "").splitlines():
+            stripped = line.strip()
+            if not stripped:
+                continue
+            if stripped.lower().startswith("jobid"):
+                continue
+            parts = [p.strip() for p in stripped.split("|")]
+            if len(parts) < 6:
+                continue
+            job_id = parts[0]
+            partition = parts[1] if len(parts) > 1 else ""
+            name = parts[2] if len(parts) > 2 else ""
+            user = parts[3] if len(parts) > 3 else ""
+            state = parts[4] if len(parts) > 4 else ""
+            elapsed = parts[5] if len(parts) > 5 else ""
+            nodes = parts[6] if len(parts) > 6 else ""
+            cpus = parts[7] if len(parts) > 7 else ""
+            reason = parts[8] if len(parts) > 8 else ""
+            rows.append({
+                "id": job_id,
+                "job_id": job_id,
+                "name": name,
+                "state": state,
+                "partition": partition,
+                "elapsed": elapsed,
+                "nodes": nodes,
+                "cpus": cpus,
+                "reason": reason,
+                "user": user,
+            })
         return rows
 
     def read_output(job_id):
-        session = (session_state or {}).get("session") or {}
-        slurm = _snapshot_slurm if _snapshot_slurm is not None else session.get("slurm")
-        files = _snapshot_files if _snapshot_files is not None else session.get("files")
+        slurm = _resolve_slurm()
+        files = _resolve_files()
         if not slurm or not files:
             return {}
         metadata = str(slurm.scontrol_show_job(job_id) or "")
-        paths = {key: next((part.split("=", 1)[1] for part in metadata.split() if part.startswith(f"{key}=")), "") for key in ("StdOut", "StdErr")}
-        return {"stdout": files.read_text(paths["StdOut"]) if paths["StdOut"] else "", "stderr": files.read_text(paths["StdErr"]) if paths["StdErr"] else ""}
+        paths = {}
+        for key in ("StdOut", "StdErr"):
+            for part in metadata.split():
+                if part.startswith(f"{key}="):
+                    paths[key] = part.split("=", 1)[1]
+                    break
+            else:
+                paths[key] = ""
+        return {
+            "stdout": files.read_text(paths["StdOut"]) if paths["StdOut"] else "",
+            "stderr": files.read_text(paths["StdErr"]) if paths["StdErr"] else "",
+        }
 
     def list_job_files(job_id, workdir=""):
-        # test seam
         test_files = session_state.get("_test_job_files")
         if test_files is not None:
-            # allow per-job mapping or single list
             if isinstance(test_files, dict):
                 return tuple(test_files.get(str(job_id), ()))
             return tuple(test_files)
-        session = (session_state or {}).get("session") or {}
-        slurm = _snapshot_slurm if _snapshot_slurm is not None else session.get("slurm")
-        files = _snapshot_files if _snapshot_files is not None else session.get("files")
+        slurm = _resolve_slurm()
+        files = _resolve_files()
         if not slurm or not files or not hasattr(files, "iterdir_entries"):
             return ()
         try:
-            # Use provided workdir first (from SelectedJobContext),
-            # fall back to scontrol lookup
             if not workdir:
                 meta = str(slurm.scontrol_show_job(job_id) or "")
                 for part in meta.split():
                     if part.startswith("WorkDir="):
-                        workdir = part.split("=",1)[1]
+                        workdir = part.split("=", 1)[1]
                         break
                 if not workdir:
                     for part in meta.split():
                         if part.startswith("StdOut="):
-                            p = part.split("=",1)[1]
+                            p = part.split("=", 1)[1]
                             workdir = str(PurePosixPath(p).parent) if p else ""
                             break
             if not workdir:
@@ -1943,18 +1985,37 @@ def _jobs_callbacks(session_state, parent, lifecycle):
             return ()
 
     def _cancel(job_id):
-        session = (session_state or {}).get("session") or {}
-        slurm = _snapshot_slurm if _snapshot_slurm is not None else session.get("slurm")
+        slurm = _resolve_slurm()
         if slurm and hasattr(slurm, "scancel"):
             return slurm.scancel(job_id)
         return None
 
     def _final_state(job_id):
-        session = (session_state or {}).get("session") or {}
-        slurm = _snapshot_slurm if _snapshot_slurm is not None else session.get("slurm")
+        slurm = _resolve_slurm()
         if slurm and hasattr(slurm, "job_state"):
             return slurm.job_state(job_id)
         return ""
+
+    def _refresh_sacct(job_id):
+        slurm = _resolve_slurm()
+        profile = _resolve_profile()
+        if not slurm:
+            return ""
+        if not hasattr(slurm, "sacct"):
+            return ""
+        return str(slurm.sacct(str(profile.get("username", "")), job_id=job_id) or "")
+
+    def _show_job_details(job_id):
+        slurm = _resolve_slurm()
+        if not slurm:
+            return ""
+        return str(slurm.scontrol_show_job(job_id) or "")
+
+    def _has_status_capability():
+        slurm = _resolve_slurm()
+        if not slurm:
+            return False
+        return hasattr(slurm, "lssrv")
 
     return {
         "list_jobs": list_jobs,
@@ -1962,6 +2023,9 @@ def _jobs_callbacks(session_state, parent, lifecycle):
         "list_job_files": list_job_files,
         "cancel": _cancel,
         "final_state": _final_state,
+        "refresh_sacct": _refresh_sacct,
+        "show_job_details": _show_job_details,
+        "has_status_capability": _has_status_capability,
         "generation": lambda: session_state.get("generation", 0),
         "lifecycle": lifecycle,
     }
