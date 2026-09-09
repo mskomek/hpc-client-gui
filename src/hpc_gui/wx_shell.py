@@ -1939,6 +1939,9 @@ def _remote_files_callbacks(session_state, parent, lifecycle):
 
 
 def _jobs_callbacks(session_state, parent, lifecycle):
+    from hpc_gui.services.adapter_registry import get_adapter
+    from hpc_gui.services.provider_contract import execute_adapter, extract_contract
+
     def _resolve_slurm():
         session = (session_state or {}).get("session") or {}
         return session.get("slurm")
@@ -1955,6 +1958,22 @@ def _jobs_callbacks(session_state, parent, lifecycle):
         profile = _resolve_profile()
         provider = profile.get("provider_template")
         return provider if isinstance(provider, dict) else profile
+
+    def _execute_contract_adapter(section, slurm, job_id=""):
+        contract = extract_contract(_resolve_provider_config())
+        adapter_id = getattr(contract, f"{section}_adapter", None)
+        if not adapter_id:
+            return None
+        if get_adapter(adapter_id) is None:
+            raise RuntimeError(f"Configured provider adapter is unavailable: {adapter_id}")
+        profile = _resolve_profile()
+        return execute_adapter(
+            adapter_id,
+            slurm_backend=slurm,
+            job_id=str(job_id),
+            user=str(profile.get("username", "")),
+            profile=profile,
+        )
 
     def list_jobs():
         slurm = _resolve_slurm()
@@ -2072,6 +2091,9 @@ def _jobs_callbacks(session_state, parent, lifecycle):
         profile = _resolve_profile()
         if not slurm:
             return ""
+        contract_result = _execute_contract_adapter("accounting", slurm, job_id)
+        if contract_result is not None:
+            return contract_result
         sacct_job = getattr(slurm, "sacct_job", None)
         if callable(sacct_job):
             return sacct_job(str(job_id))
@@ -2086,18 +2108,27 @@ def _jobs_callbacks(session_state, parent, lifecycle):
         slurm = _resolve_slurm()
         if not slurm:
             return ""
+        contract_result = _execute_contract_adapter("job_details", slurm, job_id)
+        if contract_result is not None:
+            return contract_result
         return str(slurm.scontrol_show_job(job_id) or "")
 
     def _has_status_capability():
         slurm = _resolve_slurm()
         if not slurm:
             return False
+        contract = extract_contract(_resolve_provider_config())
+        if contract.cluster_status_adapter:
+            return get_adapter(contract.cluster_status_adapter) is not None
         return callable(getattr(slurm, "lssrv", None))
 
     def _refresh_lssrv(_job_id=""):
         slurm = _resolve_slurm()
         if not slurm or not callable(getattr(slurm, "lssrv", None)):
             raise RuntimeError(t("jobs_outputs.provider_status_unavailable"))
+        contract_result = _execute_contract_adapter("cluster_status", slurm, _job_id)
+        if contract_result is not None:
+            return contract_result
         return str(slurm.lssrv() or "")
 
     def _resolve_output_defs():

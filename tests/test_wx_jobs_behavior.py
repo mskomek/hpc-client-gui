@@ -139,7 +139,7 @@ def test_wx_job_output_pause_survives_minimize_restore(wx_jobs):
     frame.ProcessEvent(wx.IconizeEvent(frame.GetId(), False))
     _pump(wx_jobs, lambda: not frame._wx_jobs_state["minimized"])
     assert frame._wx_jobs_state["user_paused"]
-    assert frame._wx_jobs_controls["pause"].GetLabel() == "Resume Live Follow"
+    assert frame._wx_jobs_controls["pause"].GetLabel() == "Resume All"
 
 
 def test_wx_job_output_does_not_overlap_remote_reads(wx_jobs):

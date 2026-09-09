@@ -2,10 +2,18 @@
 
 from __future__ import annotations
 
+from threading import Thread
 from typing import Any, Callable
 
 from hpc_gui.core.i18n import t
 from hpc_gui.services.raw_command_result import RawCommandResult
+
+
+_SOURCE_LABELS = {
+    "scontrol": "Slurm Job Details",
+    "sacct": "Slurm Accounting",
+    "lssrv": "Cluster Server Status",
+}
 
 
 def show_raw_viewer(
@@ -47,7 +55,16 @@ def show_raw_viewer(
         style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER,
     )
 
+    closed = {"value": False}
+    _refresh_in_flight = [False]
+
     root = wx.BoxSizer(wx.VERTICAL)
+
+    # Source display
+    source_label_text = _SOURCE_LABELS.get(result.source_id, result.source_id)
+    if source_label_text:
+        src_label = wx.StaticText(dialog, label=f"{t('raw_viewer.source')}: {source_label_text}")
+        root.Add(src_label, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 8)
 
     # Command display
     cmd_label = wx.StaticText(dialog, label=f"{t('raw_viewer.command')}:")
@@ -69,7 +86,36 @@ def show_raw_viewer(
     )
     root.Add(exit_label, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 8)
 
-    # STDOUT section
+    # STDERR section (dynamically managed)
+    _stderr_state = {"ctrl": None, "label": None}
+
+    def _ensure_stderr(shown: bool = True):
+        """Create or destroy the stderr section dynamically."""
+        if shown and _stderr_state["ctrl"] is None:
+            _stderr_state["label"] = wx.StaticText(dialog, label=t("raw_viewer.stderr"))
+            _stderr_state["ctrl"] = wx.TextCtrl(
+                dialog,
+                value="",
+                style=wx.TE_READONLY | wx.TE_MULTILINE | wx.HSCROLL | wx.TE_RICH2,
+            )
+            _stderr_state["ctrl"].SetFont(wx.Font(wx.FontInfo(10).Family(wx.FONTFAMILY_TELETYPE)))
+            # Insert before the button bar (last item)
+            root.Insert(root.GetItemCount() - 1, _stderr_state["label"], 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 4)
+            root.Insert(root.GetItemCount() - 1, _stderr_state["ctrl"], 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 4)
+        elif not shown and _stderr_state["ctrl"] is not None:
+            try:
+                idx_label = root.GetItemIndex(_stderr_state["label"])
+                idx_ctrl = root.GetItemIndex(_stderr_state["ctrl"])
+                if idx_ctrl >= 0:
+                    root.Remove(idx_ctrl)
+                if idx_label >= 0:
+                    root.Remove(idx_label)
+            except Exception:
+                pass
+            _stderr_state["ctrl"] = None
+            _stderr_state["label"] = None
+
+    # STDOUT section (always present)
     stdout_label = wx.StaticText(dialog, label=t("raw_viewer.stdout"))
     root.Add(stdout_label, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 4)
 
@@ -81,18 +127,10 @@ def show_raw_viewer(
     stdout_text.SetFont(wx.Font(wx.FontInfo(10).Family(wx.FONTFAMILY_TELETYPE)))
     root.Add(stdout_text, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 4)
 
-    # STDERR section (only shown if non-empty)
-    _stderr_state = {"ctrl": None}
+    # Initialize stderr if needed
     if result.stderr:
-        stderr_label = wx.StaticText(dialog, label=t("raw_viewer.stderr"))
-        root.Add(stderr_label, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 4)
-        _stderr_state["ctrl"] = wx.TextCtrl(
-            dialog,
-            value=result.stderr,
-            style=wx.TE_READONLY | wx.TE_MULTILINE | wx.HSCROLL | wx.TE_RICH2,
-        )
-        _stderr_state["ctrl"].SetFont(wx.Font(wx.FontInfo(10).Family(wx.FONTFAMILY_TELETYPE)))
-        root.Add(_stderr_state["ctrl"], 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 4)
+        _ensure_stderr(True)
+        _stderr_state["ctrl"].SetValue(result.stderr)
 
     # Button bar
     btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -117,6 +155,8 @@ def show_raw_viewer(
 
     # --- Event handlers -------------------------------------------------------
     def _on_copy(_event=None):
+        if closed["value"]:
+            return
         parts = [stdout_text.GetValue()]
         if _stderr_state["ctrl"] is not None:
             parts.append(f"\n--- STDERR ---\n{_stderr_state['ctrl'].GetValue()}")
@@ -128,48 +168,63 @@ def show_raw_viewer(
                 wx.TheClipboard.Close()
 
     def _on_select_all(_event=None):
+        if closed["value"]:
+            return
         stdout_text.SetSelection(-1, -1)
         if _stderr_state["ctrl"] is not None:
             _stderr_state["ctrl"].SetSelection(-1, -1)
 
     def _on_refresh(_event=None):
-        if refresh_callback is None:
+        if closed["value"] or refresh_callback is None or _refresh_in_flight[0]:
             return
-        try:
-            new_result = refresh_callback()
-        except Exception:
-            return
-        if new_result is None or not isinstance(new_result, RawCommandResult):
-            return
-        cmd_text.SetValue(new_result.display_command)
-        exit_label.SetLabel(f"{t('raw_viewer.exit_code')}: {new_result.exit_code}")
-        stdout_text.SetValue(new_result.stdout or "")
-        if new_result.stderr:
-            if _stderr_state["ctrl"] is None:
-                stderr_label_new = wx.StaticText(dialog, label=t("raw_viewer.stderr"))
-                root.Insert(root.GetItemCount() - 2, stderr_label_new, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 4)
-                _stderr_state["ctrl"] = wx.TextCtrl(
-                    dialog,
-                    value=new_result.stderr,
-                    style=wx.TE_READONLY | wx.TE_MULTILINE | wx.HSCROLL | wx.TE_RICH2,
-                )
-                _stderr_state["ctrl"].SetFont(wx.Font(wx.FontInfo(10).Family(wx.FONTFAMILY_TELETYPE)))
-                root.Insert(root.GetItemCount() - 2, _stderr_state["ctrl"], 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 4)
-            else:
+        btn_refresh.Enable(False)
+        _refresh_in_flight[0] = True
+
+        def _worker():
+            try:
+                new_result = refresh_callback()
+            except Exception:
+                new_result = None
+            wx.CallAfter(_apply_result, new_result)
+
+        def _apply_result(new_result):
+            if closed["value"]:
+                return
+            _refresh_in_flight[0] = False
+            btn_refresh.Enable(True)
+            if new_result is None or not isinstance(new_result, RawCommandResult):
+                return
+            # Update source label
+            new_source = _SOURCE_LABELS.get(new_result.source_id, new_result.source_id)
+            if new_source:
+                src_label.SetLabel(f"{t('raw_viewer.source')}: {new_source}")
+            cmd_text.SetValue(new_result.display_command)
+            exit_label.SetLabel(f"{t('raw_viewer.exit_code')}: {new_result.exit_code}")
+            stdout_text.SetValue(new_result.stdout or "")
+            # Handle stderr dynamically
+            if new_result.stderr:
+                _ensure_stderr(True)
                 _stderr_state["ctrl"].SetValue(new_result.stderr)
-        dialog.Layout()
+            else:
+                _ensure_stderr(False)
+            dialog.Layout()
+
+        Thread(target=_worker, daemon=True).start()
 
     def _on_close(_event=None):
-        dialog.Close()
+        if closed["value"]:
+            return
+        closed["value"] = True
+        dialog.EndModal(wx.ID_CLOSE)
 
     btn_copy.Bind(wx.EVT_BUTTON, _on_copy)
     btn_select_all.Bind(wx.EVT_BUTTON, _on_select_all)
     btn_refresh.Bind(wx.EVT_BUTTON, _on_refresh)
     btn_close.Bind(wx.EVT_BUTTON, _on_close)
-    dialog.Bind(wx.EVT_CLOSE, lambda _e: dialog.Close())
+    dialog.Bind(wx.EVT_CLOSE, _on_close)
 
     if lifecycle is not None:
-        lifecycle.register_cleanup(lambda: dialog.Close() if dialog else None)
+        lifecycle.register_cleanup(lambda: _on_close() if not closed["value"] else None)
 
     dialog.ShowModal()
     dialog.Destroy()

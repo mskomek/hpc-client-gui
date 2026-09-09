@@ -98,6 +98,10 @@ class ClusterProfileDefinition:
     quota_sources: tuple[Mapping[str, Any], ...] = ()
     job_outputs: Mapping[str, Any] | None = None
     file_filters: tuple[Mapping[str, Any], ...] = ()
+    # v4: declarative provider adapter/parser contracts
+    job_details: Mapping[str, Any] | None = None
+    accounting: Mapping[str, Any] | None = None
+    cluster_status: Mapping[str, Any] | None = None
 
     def to_system_settings(self) -> dict[str, Any]:
         """Map the declarative profile onto app system-settings keys.
@@ -116,14 +120,21 @@ class ClusterProfileDefinition:
             value = self.commands.get(key)
             if isinstance(value, str) and value.strip():
                 settings[key] = value
-        provider = {
+        provider: dict[str, Any] = {
             "profile_id": self.profile_id,
             "name": self.name,
             "schema_version": self.schema_version,
             "job_outputs": dict(self.job_outputs) if isinstance(self.job_outputs, Mapping) else None,
             "file_filters": [dict(item) for item in self.file_filters],
         }
-        if provider["job_outputs"] is not None or provider["file_filters"]:
+        # v4: include provider adapter/parser contracts
+        if self.job_details is not None:
+            provider["job_details"] = dict(self.job_details)
+        if self.accounting is not None:
+            provider["accounting"] = dict(self.accounting)
+        if self.cluster_status is not None:
+            provider["cluster_status"] = dict(self.cluster_status)
+        if provider["job_outputs"] is not None or provider["file_filters"] or provider.get("job_details") or provider.get("accounting") or provider.get("cluster_status"):
             settings["provider_template"] = provider
         return settings
 
@@ -140,7 +151,7 @@ class ClusterProfileDefinition:
 
 
 def build_cluster_profile(raw: Mapping[str, Any]) -> ClusterProfileDefinition:
-    """Build a validated profile without discarding v2 structured sections."""
+    """Build a validated profile without discarding v2/v3/v4 structured sections."""
     return ClusterProfileDefinition(
         profile_id=str(raw["profile_id"]),
         name=str(raw["name"]),
@@ -159,6 +170,9 @@ def build_cluster_profile(raw: Mapping[str, Any]) -> ClusterProfileDefinition:
         quota_sources=tuple(dict(item) for item in (raw.get("quota_sources") or [])),
         job_outputs=dict(raw["job_outputs"]) if isinstance(raw.get("job_outputs"), Mapping) else None,
         file_filters=tuple(dict(item) for item in (raw.get("file_filters") or []) if isinstance(item, Mapping)),
+        job_details=dict(raw["job_details"]) if isinstance(raw.get("job_details"), Mapping) else None,
+        accounting=dict(raw["accounting"]) if isinstance(raw.get("accounting"), Mapping) else None,
+        cluster_status=dict(raw["cluster_status"]) if isinstance(raw.get("cluster_status"), Mapping) else None,
     )
 
 

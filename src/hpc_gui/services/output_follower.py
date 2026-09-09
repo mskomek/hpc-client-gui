@@ -41,6 +41,7 @@ class OutputFollower:
         self.text = ""
         self._retry_at = 0.0
         self._poll_token = 0
+        self._file_identity = None
 
     def assign(
         self,
@@ -57,6 +58,10 @@ class OutputFollower:
             self.state.job_id != str(job_id)
             or self.state.path != str(path)
             or self.state.origin != str(origin)
+            or self.state.channel_id != channel_id
+            or self.state.generation != int(generation)
+            or self.state.label != str(label)
+            or self.state.roles != tuple(roles)
         )
         self.state.channel_id = channel_id
         self.state.job_id = str(job_id)
@@ -73,6 +78,7 @@ class OutputFollower:
             self.state.in_flight = False
             self.text = ""
             self._retry_at = 0.0
+            self._file_identity = None
 
     def replace_snapshot(self, text: str) -> str:
         self._poll_token += 1
@@ -100,8 +106,13 @@ class OutputFollower:
         path = self.state.path
         self.state.in_flight = True
         try:
-            if stat_path is not None:
-                stat_path(path)
+            stat_value = stat_path(path) if stat_path is not None else None
+            identity = self._identity_from_stat(stat_value)
+            if identity is not None and self._file_identity is not None and identity != self._file_identity:
+                self.state.offset = 0
+                self.text = ""
+            if identity is not None:
+                self._file_identity = identity
             full_text = str(read_path(path) or "")
             if token != self._poll_token or path != self.state.path:
                 return "", self.text, False
@@ -125,10 +136,25 @@ class OutputFollower:
             if token == self._poll_token:
                 self.state.in_flight = False
 
+    @staticmethod
+    def _identity_from_stat(value):
+        if value is None:
+            return None
+        for name in ("st_ino", "inode", "identity", "file_id"):
+            candidate = getattr(value, name, None)
+            if candidate is not None:
+                return name, candidate
+        if isinstance(value, dict):
+            for name in ("st_ino", "inode", "identity", "file_id"):
+                if name in value:
+                    return name, value[name]
+        return None
+
     def close(self) -> None:
         self._poll_token += 1
         self.state.closed = True
         self.state.in_flight = False
+        self._file_identity = None
 
 
 __all__ = ["MAX_VISIBLE_LINES", "OutputFollower", "OutputFollowerState", "retain_last_lines"]

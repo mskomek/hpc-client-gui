@@ -22,6 +22,9 @@ from hpc_gui.services.output_channel_resolver import (
 from hpc_gui.services.output_follower import OutputFollower, OutputFollowerState, retain_last_lines
 from hpc_gui.wx_host import make_host
 
+from hpc_gui.services.parser_registry import parse as parse_with_registry
+from hpc_gui.services.provider_contract import extract_contract
+
 
 _ANSI = re.compile(r"\x1b(?:\[[0-?]*[ -/]*[@-~]|\][^\x07]*(?:\x07|\x1b\\))")
 
@@ -592,12 +595,6 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
     accounting_table.SetColumnWidth(3, 80)
     accounting_table.SetColumnWidth(4, 120)
     accounting_table.SetColumnWidth(5, 80)
-    accounting_raw_text = wx.TextCtrl(accounting_box, style=wx.TE_MULTILINE | wx.TE_READONLY | wx.HSCROLL)
-    accounting_raw_text.Show(False)
-    try:
-        accounting_raw_text.SetHint(t("jobs_outputs.accounting_raw_hint"))
-    except Exception:
-        pass
     btn_toggle_raw_acct = wx.Button(accounting_box, label=t("raw_viewer.raw_accounting"))
     accounting_row = wx.BoxSizer(wx.HORIZONTAL)
     accounting_row.Add(btn_sacct, 0, wx.RIGHT | wx.ALIGN_CENTER_VERTICAL, 6)
@@ -605,8 +602,6 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
     accounting_row.AddStretchSpacer(1)
     accounting_sizer.Add(accounting_row, 0, wx.EXPAND | wx.ALL, 4)
     accounting_sizer.Add(accounting_table, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 4)
-    accounting_sizer.Add(accounting_raw_text, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 4)
-    accounting_raw_text.Show(False)
     accounting_sizer.SetMinSize(wx.Size(-1, 90))
     details_content_sizer.Add(accounting_sizer, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 4)
 
@@ -1002,8 +997,8 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         _navigate_files_to_workdir()
         # Refresh outputs tab
         refresh_outputs_tab()
-        # Switch to Details tab
-        notebook.SetSelection(1)
+        # NOTE: Do NOT auto-switch to Details tab.
+        # User stays on Jobs; details content is updated in background.
 
     def _update_summary_header():
         ctx = model.selected_job_store.context
@@ -1080,7 +1075,7 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
                 state["in_flight"] = False
             if not state["closed"] and (generation is None or req_gen == generation()):
                 if error:
-                    accounting_raw_text.SetValue(f"[Jobs] {error}")
+                    pass  # Job listing errors are logged, not shown in accounting
                 else:
                     items = tuple(result or ())
                     render_items(items)
@@ -1097,18 +1092,36 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         state["filter_query"] = filter_field.GetValue().strip()
         _apply_filter()
 
-    # --- Toggle raw accounting (inline) --------------------------------------
-    def _toggle_accounting_raw(_event=None):
-        is_shown = accounting_raw_text.IsShown()
-        accounting_raw_text.Show(not is_shown)
-        accounting_table.Show(is_shown)
-        btn_toggle_raw_acct.SetLabel(
-            t("jobs_outputs.job_details") if not is_shown
-            else t("raw_viewer.raw_accounting")
-        )
-        accounting_sizer.Layout()
-
     # --- Open Raw Job Details viewer ----------------------------------------
+    def _refresh_raw_job_details():
+        job_id = state["selected_job"]
+        if not job_id or not show_job_details:
+            return state.get("raw_details_result")
+        request_generation = model.selected_job_store.generation
+        try:
+            try:
+                result = show_job_details(job_id)
+            except TypeError:
+                result = show_job_details()
+            raw = _raw_result(
+                result,
+                source_id="scontrol",
+                command=f"scontrol show job {job_id}",
+            )
+            if (state["selected_job"] != job_id
+                    or model.selected_job_store.generation != request_generation):
+                return state.get("raw_details_result")
+            state["raw_details_result"] = raw
+            return raw
+        except Exception as exc:
+            raw = RawCommandResult.from_response(
+                source_id="scontrol",
+                command=f"scontrol show job {job_id}",
+                stdout="", stderr=str(exc), exit_code=1,
+            )
+            state["raw_details_result"] = raw
+            return raw
+
     def _open_raw_job_details(_event=None):
         result = state.get("raw_details_result")
         if result is None:
@@ -1116,10 +1129,37 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
                 source_id="scontrol",
                 command=f"scontrol show job {state['selected_job']}",
                 stdout="",
-                stderr="No raw data available yet.",
+                stderr=t("jobs_outputs.raw_not_available"),
                 exit_code=-1,
             )
-        show_raw_viewer(host, result, title=t("raw_viewer.raw_job_details"))
+        show_raw_viewer(host, result, title=t("raw_viewer.raw_job_details"),
+                        refresh_callback=_refresh_raw_job_details)
+
+    def _refresh_raw_accounting():
+        job_id = state["selected_job"]
+        if not job_id or not refresh_sacct:
+            return state.get("raw_accounting_result")
+        request_generation = model.selected_job_store.generation
+        try:
+            result = refresh_sacct(job_id)
+            raw = _raw_result(
+                result,
+                source_id="sacct",
+                command=f"sacct -n -P -j {job_id} --format=JobIDRaw,State,Elapsed,MaxRSS,AllocTRES,ExitCode",
+            )
+            if (state["selected_job"] != job_id
+                    or model.selected_job_store.generation != request_generation):
+                return state.get("raw_accounting_result")
+            state["raw_accounting_result"] = raw
+            return raw
+        except Exception as exc:
+            raw = RawCommandResult.from_response(
+                source_id="sacct",
+                command=f"sacct -n -P -j {job_id}",
+                stdout="", stderr=str(exc), exit_code=1,
+            )
+            state["raw_accounting_result"] = raw
+            return raw
 
     def _open_raw_accounting(_event=None):
         result = state.get("raw_accounting_result")
@@ -1128,10 +1168,34 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
                 source_id="sacct",
                 command=f"sacct -j {state['selected_job']}",
                 stdout="",
-                stderr="No raw accounting data available yet.",
+                stderr=t("jobs_outputs.raw_not_available"),
                 exit_code=-1,
             )
-        show_raw_viewer(host, result, title=t("raw_viewer.raw_accounting"))
+        show_raw_viewer(host, result, title=t("raw_viewer.raw_accounting"),
+                        refresh_callback=_refresh_raw_accounting)
+
+    def _refresh_raw_server_status():
+        if not _provider_status_supported():
+            return state.get("raw_status_result")
+        request_generation = generation() if callable(generation) else None
+        try:
+            try:
+                result = refresh_lssrv()
+            except TypeError:
+                result = refresh_lssrv("")
+            raw = _raw_result(result, source_id="lssrv", command="lssrv")
+            if callable(generation) and generation() != request_generation:
+                return state.get("raw_status_result")
+            state["raw_status_result"] = raw
+            return raw
+        except Exception as exc:
+            raw = RawCommandResult.from_response(
+                source_id="lssrv",
+                command="lssrv",
+                stdout="", stderr=str(exc), exit_code=1,
+            )
+            state["raw_status_result"] = raw
+            return raw
 
     def _open_raw_server_status(_event=None):
         result = state.get("raw_status_result")
@@ -1140,10 +1204,11 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
                 source_id="lssrv",
                 command="lssrv",
                 stdout="",
-                stderr=t("jobs_outputs.provider_status_unavailable"),
+                stderr=t("jobs_outputs.raw_not_available"),
                 exit_code=-1,
             )
-        show_raw_viewer(host, result, title=t("raw_viewer.raw_server_status"))
+        show_raw_viewer(host, result, title=t("raw_viewer.raw_server_status"),
+                        refresh_callback=_refresh_raw_server_status)
 
     # --- Accounting (sacct) for selected job ---------------------------------
     def _refresh_sacct(_event=None):
@@ -1198,27 +1263,50 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
                 accounting_table.DeleteAllItems()
                 idx = accounting_table.InsertItem(0, t("jobs_outputs.accounting_error"))
                 accounting_table.SetItem(idx, 1, raw_error)
-                accounting_raw_text.SetValue(raw.stderr)
             else:
                 text = raw_text
-                accounting_raw_text.SetValue(clean_output(raw.stdout) if text else "")
                 accounting_table.DeleteAllItems()
                 if not text:
                     idx = accounting_table.InsertItem(0, t("jobs_outputs.accounting_empty"))
                     return
-                for line in text.splitlines():
-                    line = line.strip()
-                    if not line:
-                        continue
-                    if line.lower().startswith("jobid"):
-                        continue
-                    parts = [p.strip() for p in line.split("|")]
-                    if len(parts) < 2:
-                        continue
-                    idx = accounting_table.InsertItem(accounting_table.GetItemCount(), parts[0])
-                    for ci, val in enumerate(parts[1:], 1):
-                        if ci <= 5:
-                            accounting_table.SetItem(idx, ci, val)
+                # Try provider-defined parser first, fall back to inline parsing
+                parsed_rows = None
+                try:
+                    session = state.get("session") or {}
+                    profile = session.get("profile") or {}
+                    provider_tpl = profile.get("provider_template") if isinstance(profile, dict) else None
+                    contract = extract_contract(provider_tpl)
+                    if contract.accounting_parser:
+                        pr = parse_with_registry(contract.accounting_parser, text, raw_source_id="sacct")
+                        if pr.ok and hasattr(pr.data, "rows"):
+                            parsed_rows = pr.data.rows
+                        elif pr.error:
+                            state["accounting_parse_error"] = pr.error.message
+                except Exception:
+                    pass
+                if parsed_rows is not None:
+                    for row in parsed_rows:
+                        idx = accounting_table.InsertItem(accounting_table.GetItemCount(), row.job_id)
+                        accounting_table.SetItem(idx, 1, row.state)
+                        accounting_table.SetItem(idx, 2, row.elapsed)
+                        accounting_table.SetItem(idx, 3, row.max_rss)
+                        accounting_table.SetItem(idx, 4, row.alloc_tres)
+                        accounting_table.SetItem(idx, 5, row.exit_code)
+                else:
+                    # Fallback: inline pipe-delimited parsing
+                    for line in text.splitlines():
+                        line = line.strip()
+                        if not line:
+                            continue
+                        if line.lower().startswith("jobid"):
+                            continue
+                        parts = [p.strip() for p in line.split("|")]
+                        if len(parts) < 2:
+                            continue
+                        idx = accounting_table.InsertItem(accounting_table.GetItemCount(), parts[0])
+                        for ci, val in enumerate(parts[1:], 1):
+                            if ci <= 5:
+                                accounting_table.SetItem(idx, ci, val)
 
         Thread(target=worker, daemon=True).start()
 
@@ -1271,13 +1359,27 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
                 return
             text = raw.stdout.strip()
             if text and req_job_id:
+                # Try provider-defined parser first, fall back to hardcoded
+                detail = None
                 try:
-                    detail = parse_scontrol(text, req_job_id)
-                except Exception as parse_error:
-                    # Keep the raw command response available even when the
-                    # structured detail parser cannot understand it.
-                    state["details_parse_error"] = str(parse_error)
-                    return
+                    session = state.get("session") or {}
+                    profile = session.get("profile") or {}
+                    provider_tpl = profile.get("provider_template") if isinstance(profile, dict) else None
+                    contract = extract_contract(provider_tpl)
+                    if contract.job_details_parser:
+                        pr = parse_with_registry(contract.job_details_parser, text, raw_source_id="scontrol")
+                        if pr.ok and hasattr(pr.data, "workdir"):
+                            detail = pr.data
+                        elif pr.error:
+                            state["details_parse_error"] = pr.error.message
+                except Exception:
+                    pass
+                if detail is None:
+                    try:
+                        detail = parse_scontrol(text, req_job_id)
+                    except Exception as parse_error:
+                        state["details_parse_error"] = str(parse_error)
+                        return
                 update_kwargs: dict[str, str] = {}
                 if detail.workdir:
                     update_kwargs["workdir"] = detail.workdir
@@ -1315,8 +1417,12 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         except Exception:
             return False
 
-    def _render_cluster_servers(raw_text: str):
-        rows = _parse_cluster_server_rows(raw_text)
+    def _render_cluster_servers(raw_text: str, parsed_rows=None):
+        rows = (
+            [(item.name, item.state, item.total_cpus, item.free_cpus) for item in parsed_rows]
+            if parsed_rows is not None
+            else _parse_cluster_server_rows(raw_text)
+        )
         cluster_servers_table.DeleteAllItems()
         for server, server_state, cpus, memory in rows:
             index = cluster_servers_table.InsertItem(cluster_servers_table.GetItemCount(), server)
@@ -1340,7 +1446,6 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         cluster_servers_box.Show()
         cluster_servers_sizer.ShowItems(not _cluster_collapsed["collapsed"])
         jobs_page_sizer.Layout()
-        ctx = model.selected_job_store.context
         with state_lock:
             state["status_request_id"] += 1
             request_id = state["status_request_id"]
@@ -1348,17 +1453,15 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         def worker():
             try:
                 try:
-                    result = refresh_lssrv(ctx.job_id)
-                except TypeError:
                     result = refresh_lssrv()
-                post(done, result, None, request_id, ctx.job_id, ctx.generation)
+                except TypeError:
+                    result = refresh_lssrv("")
+                post(done, result, None, request_id)
             except Exception as error:
-                post(done, "", error, request_id, ctx.job_id, ctx.generation)
-        def done(result, error, req_id, req_job_id, req_gen):
+                post(done, "", error, request_id)
+        def done(result, error, req_id):
             state["status_in_flight"] = False
             if state["closed"] or req_id != state["status_request_id"]:
-                return
-            if model.selected_job_store.job_id != req_job_id or model.selected_job_store.generation != req_gen:
                 return
             raw = _raw_result(
                 result,
@@ -1371,7 +1474,25 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
                 cluster_servers_table.DeleteAllItems()
                 cluster_servers_text.SetLabel(raw.stderr.strip() or f"exit code {raw.exit_code}")
             else:
-                _render_cluster_servers(raw.stdout)
+                parsed_rows = None
+                try:
+                    session = state.get("session") or {}
+                    profile = session.get("profile") or {}
+                    provider_tpl = profile.get("provider_template") if isinstance(profile, dict) else None
+                    contract = extract_contract(provider_tpl)
+                    if contract.cluster_status_parser:
+                        parsed = parse_with_registry(
+                            contract.cluster_status_parser,
+                            raw.stdout,
+                            raw_source_id="lssrv",
+                        )
+                        if parsed.ok and isinstance(parsed.data, list):
+                            parsed_rows = parsed.data
+                        elif parsed.error:
+                            state["status_parse_error"] = parsed.error.message
+                except Exception:
+                    pass
+                _render_cluster_servers(raw.stdout, parsed_rows)
             jobs_page_sizer.Layout()
         Thread(target=worker, daemon=True).start()
 
@@ -1811,10 +1932,7 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
             info = accounting_table.GetColumn(index)
             info.Text = t(accounting_column_labels[key])
             accounting_table.SetColumn(index, info)
-        btn_toggle_raw_acct.SetLabel(
-            t("jobs_outputs.job_details") if not accounting_raw_text.IsShown()
-            else t("raw_viewer.raw_accounting")
-        )
+        btn_toggle_raw_acct.SetLabel(t("raw_viewer.raw_accounting"))
         cluster_prefix = "▸" if _cluster_collapsed["collapsed"] else "▾"
         cluster_servers_box.SetLabel(f"{cluster_prefix} {t('jobs.cluster_servers')}")
         btn_refresh_lssrv.SetLabel(t("jobs_outputs.lssrv_refresh"))
@@ -1825,10 +1943,6 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
             cluster_servers_table.SetColumn(index, info)
         advanced_prefix = "▸" if _advanced_collapsed["collapsed"] else "▾"
         advanced_box.SetLabel(f"{advanced_prefix} {t('jobs.advanced')}")
-        try:
-            accounting_raw_text.SetHint(t("jobs_outputs.accounting_raw_hint"))
-        except Exception:
-            pass
         try:
             files_workdir_label.SetLabel(t("jobs.select_job_hint"))
         except Exception:
@@ -1846,16 +1960,12 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
             output_no_channels_label.SetLabel(t("jobs_outputs.no_channels"))
         except Exception:
             pass
-        outputs_refresh_btn.SetLabel(t("jobs.refresh"))
-        outputs_follow.SetLabel(t("files.auto_scroll"))
-        outputs_pause_btn.SetLabel(t("jobs.resume_output" if state["outputs_paused"] else "jobs.pause_output"))
-
     # --- Bind events --------------------------------------------------------
     jobs.Bind(wx.EVT_LIST_ITEM_SELECTED, select_job)
     btn_refresh.Bind(wx.EVT_BUTTON, refresh_jobs)
     btn_cancel.Bind(wx.EVT_BUTTON, cancel_job)
     btn_sacct.Bind(wx.EVT_BUTTON, _refresh_sacct)
-    btn_toggle_raw_acct.Bind(wx.EVT_BUTTON, _toggle_accounting_raw)
+    btn_toggle_raw_acct.Bind(wx.EVT_BUTTON, _open_raw_accounting)
     btn_raw_job_details.Bind(wx.EVT_BUTTON, _open_raw_job_details)
     btn_raw_server_status.Bind(wx.EVT_BUTTON, _open_raw_server_status)
     btn_refresh_lssrv.Bind(wx.EVT_BUTTON, _refresh_provider_status)
@@ -2021,7 +2131,6 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         "jobs_page": jobs_page, "details_page": details_page,
         "files_page": files_page, "outputs_page": outputs_page,
         "accounting_table": accounting_table,
-        "accounting_raw_text": accounting_raw_text,
         "detail_values": detail_values,
         "detail_labels": detail_labels,
         "details_content_panel": details_content_panel,

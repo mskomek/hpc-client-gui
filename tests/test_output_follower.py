@@ -1,4 +1,5 @@
 from threading import Event, Thread
+from types import SimpleNamespace
 
 from hpc_gui.services.output_follower import OutputFollower, OutputFollowerState
 
@@ -111,3 +112,21 @@ def test_follower_reassignment_invalidates_inflight_old_read():
 
     assert waiting is False
     assert retained == "B\n"
+
+
+def test_follower_resets_when_backend_reports_replaced_file():
+    files = {"/work/output.log": "old\n"}
+    inode = {"value": 1}
+    follower = _follower()
+
+    def stat_path(_path):
+        return SimpleNamespace(st_ino=inode["value"])
+
+    follower.poll(lambda path: files[path], stat_path=stat_path)
+    files["/work/output.log"] = "new\n"
+    inode["value"] = 2
+
+    _, retained, waiting = follower.poll(lambda path: files[path], stat_path=stat_path)
+
+    assert waiting is False
+    assert retained == "new\n"

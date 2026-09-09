@@ -226,7 +226,8 @@
     "close": "Kapat",
     "raw_job_details": "Ham İş Detayları",
     "raw_accounting": "Ham Muhasebe",
-    "raw_server_status": "Ham Sunucu Durumu"
+    "raw_server_status": "Ham Sunucu Durumu",
+    "source": "Kaynak"
   },
   "files": {
     "title": "Ã‡Ä±ktÄ±lar",
@@ -443,7 +444,9 @@
     "follow_track": "Takip Et",
     "follow_new_tab": "Yeni Cikti Sekmesinde Takip Et",
     "follow_new_window": "Yeni Pencerede Takip Et",
-    "follow_existing": "Mevcut Takipciye Ata"
+    "follow_existing": "Mevcut Takipçiye Ata",
+    "following": "Takip ediliyor",
+    "not_following": "Takip edilmiyor"
   },
   "jobs_outputs": {
     "auto_scroll": "Otomatik kaydÄ±r",
@@ -505,7 +508,37 @@
     "provider_status": "Sa\u011flay\u0131c\u0131 Durumu",
     "refresh_status": "Durumu Yenile",
     "provider_status_unavailable": "Sa\u011flay\u0131c\u0131 durumu kullan\u0131lam\u0131yor.",
-    "remote_reader_unavailable": "Uzak dosya okuyucu kullan\u0131lam\u0131yor."
+    "remote_reader_unavailable": "Uzak dosya okuyucu kullanılamıyor.",
+    "search": "Ara",
+    "search_hint": "Çıktıda ara...",
+    "find_next": "Sonrakini Bul",
+    "jump_to_latest": "En Sona Git",
+    "open_in_window": "Pencerede Aç",
+    "show_in_files": "Dosyalarda Göster",
+    "path": "Yol",
+    "status": "Durum",
+    "status_following": "Takip Ediliyor",
+    "status_paused": "Duraklatıldı",
+    "status_waiting": "Dosya bekleniyor",
+    "status_disconnected": "Bağlantı kesildi",
+    "status_completed": "Tamamlandı",
+    "status_error": "Hata",
+    "standard_output": "Standart Çıktı",
+    "standard_error": "Standart Hata",
+    "combined_output": "Standart Çıktı + Hata",
+    "no_selected_job": "Hiçbir iş seçilmedi",
+    "no_selected_job_hint": "Çıktıları görüntülemek için İşler sekmesinden bir iş seçin.",
+    "refresh_all": "Tümünü Yenile",
+    "pause_all": "Tümünü Duraklat",
+    "resume_all": "Tümüne Devam Et",
+    "auto_scroll_all": "Tümünde Otomatik Kaydır",
+    "parse_error_details": "İş ayrıntıları işlenemedi. Ham zamanlayıcı yanıtı hâlâ kullanılabilir.",
+    "parse_error_accounting": "Muhasebe verisi işlenemedi. Ham zamanlayıcı yanıtı hâlâ kullanılabilir.",
+    "parse_error_cluster": "Küme sunucusu bilgileri işlenemedi. Ham sağlayıcı yanıtı hâlâ kullanılabilir.",
+    "raw_not_available": "Ham veri henüz mevcut değil.",
+    "refreshing": "Yenileniyor...",
+    "no_active_jobs": "Etkin iş bulunamadı.",
+    "source": "Kaynak"
   },
   "putty": {
     "downloading": "plink.exe indiriliyor...",
