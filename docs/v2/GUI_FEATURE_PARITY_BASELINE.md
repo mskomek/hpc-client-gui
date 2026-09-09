@@ -47,7 +47,7 @@ actions, dialogs, and widget context-menu implementations.
 | GUI-JOBS-007 | Dynamic 0..N output channels with deduplication | `services/output_channel_resolver.py` + `services/output_follower.py` | P0 | `tests/test_output_channel_resolver.py`, `tests/test_output_follower.py`, `tests/test_wx_jobs_files_outputs.py` | COVERED |
 | GUI-JOBS-008 | Shared file filter registry with overlapping-view semantics | `services/file_filter_registry.py` | P1 | `tests/test_file_filter_registry.py`, `tests/test_wx_remote_file_actions_behavior.py` | COVERED |
 | GUI-JOBS-009 | Jobs > Files uses shared remote browser component | `wx_remote_files_view.py` integrated in `wx_jobs.py` | P0 | `tests/test_wx_jobs_files_outputs.py::test_wx_jobs_files_tab_loads_selected_job_files`, `tests/test_wx_jobs_files_outputs.py::test_wx_jobs_files_tab_stale_job_result_ignored` | COVERED |
-| GUI-JOBS-010 | TRUBA provider declares stdout/stderr output channels | `plugins/truba/1.4.0/cluster-profile.json` | P1 | `plugins/truba/1.4.0/cluster-profile.json`, `tests/test_wx_jobs_files_outputs.py::test_wx_jobs_provider_output_definitions_refresh_after_reconnect` | COVERED |
+| GUI-JOBS-010 | TRUBA provider declares stdout/stderr output channels | active provider output definitions | P1 | `src/hpc_gui/services/output_channel_resolver.py`, `tests/test_wx_jobs_files_outputs.py::test_wx_jobs_provider_output_definitions_refresh_after_reconnect` | PARTIAL |
 
 ## Known inconsistencies to carry explicitly
 

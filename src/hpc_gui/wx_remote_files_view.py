@@ -873,6 +873,11 @@ def _build_remote_files(parent, model: WxRemoteDirectoryModel | None = None, *, 
     def _show_follow_menu(remote_path):
         """Show a Follow/Track submenu for the selected file."""
         menu = wx.Menu()
+        # Check if file is already being followed
+        already_following = _is_file_followed(remote_path)
+        if already_following:
+            menu.Append(wx.ID_ANY, t("dirs.following") + " ✓").Enable(False)
+            menu.AppendSeparator()
         item_new_tab = menu.Append(wx.ID_ANY, t("dirs.follow_new_tab"))
         item_new_window = menu.Append(wx.ID_ANY, t("dirs.follow_new_window"))
         menu.Bind(wx.EVT_MENU, lambda e: _follow_in_new_tab(remote_path), id=item_new_tab.GetId())
@@ -904,6 +909,29 @@ def _build_remote_files(parent, model: WxRemoteDirectoryModel | None = None, *, 
         except Exception:
             pass
         return []
+
+    def _is_file_followed(remote_path):
+        """Check if a specific file path is already being followed."""
+        remote_path = str(remote_path)
+        try:
+            p = panel.GetParent()
+            while p:
+                controls = getattr(p, "_wx_jobs_controls", None)
+                if controls and "output_channels" in controls:
+                    tracked = getattr(p, "_wx_jobs_state", {}).get("tracked_outputs", ())
+                    followers = getattr(p, "_wx_jobs_state", {}).get("followers", {})
+                    for item in tracked:
+                        if str(getattr(item, "path", "")) == remote_path:
+                            return True
+                    for follower in followers.values():
+                        fpath = str(getattr(getattr(follower, "state", None), "path", ""))
+                        if fpath == remote_path:
+                            return True
+                    return False
+                p = p.GetParent() if hasattr(p, 'GetParent') else None
+        except Exception:
+            pass
+        return False
 
     def _follow_in_new_tab(remote_path):
         """Follow a file in a new output channel tab."""
@@ -1213,6 +1241,11 @@ def _build_remote_files(parent, model: WxRemoteDirectoryModel | None = None, *, 
         target = tstate["path"] if tstate else "/"
         run_action("new_folder", _sel, target)
 
+    def _on_toolbar_new_file(_evt):
+        _sel, tstate = _selected_paths_for_toolbar()
+        target = tstate["path"] if tstate else "/"
+        run_action("new_file", _sel, target)
+
     def _on_toolbar_upload(_evt):
         sel, tstate = _selected_paths_for_toolbar()
         target = tstate["path"] if tstate else "/"
@@ -1233,6 +1266,7 @@ def _build_remote_files(parent, model: WxRemoteDirectoryModel | None = None, *, 
         run_action("undo", sel, tstate["path"] if tstate else "/")
 
     btn_new_folder.Bind(wx.EVT_BUTTON, _on_toolbar_new_folder)
+    btn_new_file.Bind(wx.EVT_BUTTON, _on_toolbar_new_file)
     btn_back.Bind(wx.EVT_BUTTON, _go_back)
     btn_forward.Bind(wx.EVT_BUTTON, _go_forward)
     btn_up.Bind(wx.EVT_BUTTON, _go_up)
@@ -1252,7 +1286,7 @@ def _build_remote_files(parent, model: WxRemoteDirectoryModel | None = None, *, 
     path.Bind(wx.EVT_TEXT_ENTER, load)
     # disable operation-dependent buttons if no operation callback provided
     if not operation:
-        for b in (btn_new_folder, btn_upload, btn_download, btn_delete, btn_undo):
+        for b in (btn_new_folder, btn_new_file, btn_upload, btn_download, btn_delete, btn_undo):
             try:
                 b.Disable()
             except Exception:

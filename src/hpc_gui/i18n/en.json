@@ -229,7 +229,8 @@
     "close": "Close",
     "raw_job_details": "Raw Job Details",
     "raw_accounting": "Raw Accounting",
-    "raw_server_status": "Raw Server Status"
+    "raw_server_status": "Raw Server Status",
+    "source": "Source"
   },
   "files": {
     "title": "Outputs",
@@ -449,7 +450,9 @@
     "follow_track": "Follow / Track",
     "follow_new_tab": "Follow in New Output Tab",
     "follow_new_window": "Follow in New Window",
-    "follow_existing": "Assign to Existing Follower"
+    "follow_existing": "Assign to Existing Follower",
+    "following": "Following",
+    "not_following": "Not following"
   },
   "jobs_outputs": {
     "auto_scroll": "Auto-scroll",
@@ -511,7 +514,37 @@
     "provider_status": "Provider Status",
     "refresh_status": "Refresh Status",
     "provider_status_unavailable": "Provider status is unavailable.",
-    "remote_reader_unavailable": "Remote file reader is unavailable."
+    "remote_reader_unavailable": "Remote file reader is unavailable.",
+    "search": "Search",
+    "search_hint": "Search in output...",
+    "find_next": "Find Next",
+    "jump_to_latest": "Jump to Latest",
+    "open_in_window": "Open in Window",
+    "show_in_files": "Show in Files",
+    "path": "Path",
+    "status": "Status",
+    "status_following": "Following",
+    "status_paused": "Paused",
+    "status_waiting": "Waiting for file",
+    "status_disconnected": "Disconnected",
+    "status_completed": "Completed",
+    "status_error": "Error",
+    "standard_output": "Standard Output",
+    "standard_error": "Standard Error",
+    "combined_output": "Standard Output + Error",
+    "no_selected_job": "No job selected",
+    "no_selected_job_hint": "Select a job from the Jobs tab to view or follow its outputs.",
+    "refresh_all": "Refresh All",
+    "pause_all": "Pause All",
+    "resume_all": "Resume All",
+    "auto_scroll_all": "Auto-scroll All",
+    "parse_error_details": "Job details could not be parsed. The raw scheduler response is still available.",
+    "parse_error_accounting": "Accounting data could not be parsed. The raw scheduler response is still available.",
+    "parse_error_cluster": "Cluster server information could not be parsed. The raw provider response is still available.",
+    "raw_not_available": "Raw data is not available yet.",
+    "refreshing": "Refreshing...",
+    "no_active_jobs": "No active jobs found.",
+    "source": "Source"
   },
   "putty": {
     "downloading": "Downloading plink.exe...",

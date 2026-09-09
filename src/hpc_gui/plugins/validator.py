@@ -44,14 +44,29 @@ V2_PROFILE_SECTIONS = frozenset(
     {"description", "metadata", "paths", "commands", "site", "scheduler_hints", "software", "storage", "quota_sources"}
 )
 V3_PROFILE_SECTIONS = V2_PROFILE_SECTIONS | {"job_outputs", "file_filters"}
+V4_PROFILE_SECTIONS = V3_PROFILE_SECTIONS | {"job_details", "accounting", "cluster_status"}
 
 KNOWN_SCHEDULERS = frozenset({"slurm"})
+
+# v4: allowlisted adapter and parser IDs
+ALLOWED_ADAPTER_IDS = frozenset({
+    "slurm.scontrol.job",
+    "slurm.sacct.job",
+    "truba.lssrv",
+})
+ALLOWED_PARSER_IDS = frozenset({
+    "slurm.scontrol.v1",
+    "slurm.sacct.pipe.v1",
+    "truba.lssrv.v1",
+    "generic.delimited_table.v1",
+})
 
 _TRUSTED_SLURM_COMMANDS = {
     "squeue_command": 'squeue -h -u {user} -o "%i|%P|%j|%u|%T|%M|%D|%C|%R"',
     "sbatch_command": "cd -- {script_dir_q} && sbatch -- {script_name_q}",
     "scancel_command": "scancel {job_id_q}",
-    "sacct_command": "sacct -u {user} --format=JobID,JobName,State,Elapsed,MaxRSS,AllocTRES",
+    "sacct_command": "sacct -n -P -u {user} --format=JobIDRaw,JobName,State,Elapsed,MaxRSS,AllocTRES,ExitCode",
+    "sacct_job_command": "sacct -n -P -j {job_id_q} --format=JobIDRaw,State,Elapsed,MaxRSS,AllocTRES,ExitCode",
     "scontrol_command": "scontrol show job {job_id_q}",
     "status_command": "lssrv",
     "active_job_ids_command": 'squeue -h -u {user} -o "%A"',
@@ -246,8 +261,8 @@ def validate_cluster_profile_dict(profile: Any) -> list[str]:
             errors.append(f"cluster profile is missing required key '{key}'")
     if errors:
         return errors
-    if profile["schema_version"] not in (1, 2, 3):
-        errors.append("cluster profile schema_version must be 1, 2, or 3")
+    if profile["schema_version"] not in (1, 2, 3, 4):
+        errors.append("cluster profile schema_version must be 1, 2, 3, or 4")
     if not _is_nonempty_str(profile["profile_id"]):
         errors.append("cluster profile 'profile_id' must be a non-empty string")
     elif not re.fullmatch(r"^[a-z][a-z0-9_-]*$", profile["profile_id"]) or len(profile["profile_id"]) > 64:
@@ -395,6 +410,32 @@ def validate_cluster_profile_dict(profile: Any) -> list[str]:
                     order = ff.get("order")
                     if not isinstance(order, int) or isinstance(order, bool) or not 0 <= order <= 100000:
                         errors.append(f"{location}.order must be a bounded integer")
+
+    if profile["schema_version"] == 4:
+        unknown = set(profile) - set(CLUSTER_PROFILE_REQUIRED_KEYS) - V4_PROFILE_SECTIONS
+        errors.extend(f"cluster profile has unknown key '{key}'" for key in sorted(unknown))
+        # Validate v4 provider contract sections
+        for section_key in ("job_details", "accounting", "cluster_status"):
+            section = profile.get(section_key)
+            if section is None:
+                continue
+            if not isinstance(section, dict):
+                errors.append(f"cluster profile '{section_key}' must be an object")
+                continue
+            adapter_id = section.get("adapter")
+            parser_id = section.get("parser")
+            if adapter_id is not None and not isinstance(adapter_id, str):
+                errors.append(f"cluster profile '{section_key}.adapter' must be a string")
+            elif adapter_id is not None and adapter_id not in ALLOWED_ADAPTER_IDS:
+                errors.append(f"cluster profile '{section_key}.adapter' references unknown adapter '{adapter_id}'")
+            if parser_id is not None and not isinstance(parser_id, str):
+                errors.append(f"cluster profile '{section_key}.parser' must be a string")
+            elif parser_id is not None and parser_id not in ALLOWED_PARSER_IDS:
+                errors.append(f"cluster profile '{section_key}.parser' references unknown parser '{parser_id}'")
+            # Reject executable code fields
+            for forbidden in ("source", "import_path", "eval", "exec", "callback", "shell"):
+                if forbidden in section:
+                    errors.append(f"cluster profile '{section_key}' must not contain executable field '{forbidden}'")
 
     for section_key in ("paths", "commands"):
         section = profile.get(section_key)

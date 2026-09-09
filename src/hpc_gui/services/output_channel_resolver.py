@@ -179,10 +179,12 @@ class OutputResolver:
         """Resolve using generic Slurm stdout/stderr semantics (no provider definitions)."""
         stdout_defn = OutputChannelDefinition(
             id="stdout", role="stdout", label_en="Standard Output",
+            label_tr="Standart \u00c7\u0131kt\u0131",
             resolver="slurm.stdout", order=0,
         )
         stderr_defn = OutputChannelDefinition(
             id="stderr", role="stderr", label_en="Standard Error",
+            label_tr="Standart Hata",
             resolver="slurm.stderr", order=1,
         )
         return self.resolve(
