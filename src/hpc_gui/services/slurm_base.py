@@ -13,6 +13,10 @@ class SlurmBackend(ABC):
     @abstractmethod
     def sacct(self, user: str) -> str: ...
 
+    def sacct_job(self, job_id: str) -> str:
+        """Query accounting for a specific job ID. Default falls back to sacct."""
+        return self.sacct("")
+
     @abstractmethod
     def scontrol_show_job(self, job_id: str) -> str: ...
 

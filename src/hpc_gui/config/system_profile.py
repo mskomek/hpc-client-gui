@@ -15,8 +15,12 @@ GENERIC_SLURM_DEFAULTS: dict[str, str] = {
     "sbatch_command": "cd -- {script_dir_q} && sbatch -- {script_name_q}",
     "scancel_command": "scancel {job_id_q}",
     "sacct_command": (
-        "sacct -u {user} "
-        "--format=JobID,JobName,State,Elapsed,MaxRSS,AllocTRES"
+        "sacct -n -P -u {user} "
+        "--format=JobIDRaw,JobName,State,Elapsed,MaxRSS,AllocTRES,ExitCode"
+    ),
+    "sacct_job_command": (
+        "sacct -n -P -j {job_id_q} "
+        "--format=JobIDRaw,State,Elapsed,MaxRSS,AllocTRES,ExitCode"
     ),
     "scontrol_command": "scontrol show job {job_id_q}",
     "status_command": "",

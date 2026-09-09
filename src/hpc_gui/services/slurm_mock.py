@@ -16,9 +16,15 @@ class MockSlurmBackend(SlurmBackend):
 
     def sacct(self, user: str) -> str:
         return (
-            "JobID           JobName    State    Elapsed   MaxRSS\n"
-            "12345           testjob    COMPLETED 00:10:12 1024M\n"
-            "12346           coolrun    PENDING   00:00:00 0K\n"
+            "JobIDRaw|JobName|State|Elapsed|MaxRSS|AllocTRES|ExitCode\n"
+            "12345|testjob|COMPLETED|00:10:12|1024M||0:0\n"
+            "12346|coolrun|PENDING|00:00:00|0K||0:0\n"
+        )
+
+    def sacct_job(self, job_id: str) -> str:
+        return (
+            f"JobIDRaw|State|Elapsed|MaxRSS|AllocTRES|ExitCode\n"
+            f"{job_id}|COMPLETED|00:10:12|1024M||0:0\n"
         )
 
     def scontrol_show_job(self, job_id: str) -> str:

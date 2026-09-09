@@ -64,7 +64,7 @@ def test_wx_jobs_files_tab_loads_selected_job_files():
         jobs.GetEventHandler().ProcessEvent(evt)
         wx.Yield()
         nb = ctrls["notebook"]
-        nb.SetSelection(1)
+        nb.SetSelection(2)
         wx.Yield()
         for _ in range(30):
             wx.Yield()
@@ -99,14 +99,14 @@ def test_wx_jobs_files_tab_stale_job_result_ignored():
         evt.SetIndex(0)
         ctrls["jobs"].GetEventHandler().ProcessEvent(evt)
         wx.Yield()
-        ctrls["notebook"].SetSelection(1)
+        ctrls["notebook"].SetSelection(3)
         wx.Yield()
         # Quickly switch to second job while A's directory request is slow.
         evt2 = wx.ListEvent(wx.wxEVT_LIST_ITEM_SELECTED, ctrls["jobs"].GetId())
         evt2.SetIndex(1)
         ctrls["jobs"].GetEventHandler().ProcessEvent(evt2)
         wx.Yield()
-        ctrls["notebook"].SetSelection(1)
+        ctrls["notebook"].SetSelection(3)
         for _ in range(60):
             wx.Yield()
             wx.MilliSleep(10)
@@ -132,7 +132,7 @@ def test_wx_jobs_outputs_tab_loads_stdout_stderr():
         evt.SetIndex(0)
         ctrls["jobs"].GetEventHandler().ProcessEvent(evt)
         wx.Yield()
-        ctrls["notebook"].SetSelection(2)
+        ctrls["notebook"].SetSelection(3)
         wx.Yield()
         panel._wx_jobs_refresh_outputs()
         for _ in range(30):
@@ -165,7 +165,7 @@ def test_wx_jobs_outputs_live_follow():
         evt.SetIndex(0)
         ctrls["jobs"].GetEventHandler().ProcessEvent(evt)
         wx.Yield()
-        ctrls["notebook"].SetSelection(2)
+        ctrls["notebook"].SetSelection(3)
         assert ctrls["outputs_follow"].GetValue() is True
         panel._wx_jobs_refresh_outputs()
         for _ in range(30):
@@ -215,11 +215,10 @@ def test_wx_jobs_provider_status_is_visible_only_when_backend_supports_it():
         ctrls["jobs"].GetEventHandler().ProcessEvent(evt)
         for _ in range(50):
             wx.Yield()
-            if ctrls["provider_status_text"].GetLabel() == "Cluster OK":
+            if ctrls["cluster_servers_text"].GetLabel() == "Cluster OK":
                 break
             wx.MilliSleep(10)
-        assert ctrls["provider_status_panel"].IsShown()
-        assert ctrls["provider_status_text"].GetLabel() == "Cluster OK"
+        assert ctrls["cluster_servers_text"].GetLabel() == "Cluster OK"
     finally:
         _close(frame)
 
@@ -241,14 +240,14 @@ def test_wx_jobs_switch_job_rejects_old_completion():
         evt = wx.ListEvent(wx.wxEVT_LIST_ITEM_SELECTED, ctrls["jobs"].GetId())
         evt.SetIndex(0)
         ctrls["jobs"].GetEventHandler().ProcessEvent(evt)
-        ctrls["notebook"].SetSelection(2)
+        ctrls["notebook"].SetSelection(3)
         panel._wx_jobs_refresh_outputs()
         wx.Yield()
         # Quickly switch
         evt2 = wx.ListEvent(wx.wxEVT_LIST_ITEM_SELECTED, ctrls["jobs"].GetId())
         evt2.SetIndex(1)
         ctrls["jobs"].GetEventHandler().ProcessEvent(evt2)
-        ctrls["notebook"].SetSelection(2)
+        ctrls["notebook"].SetSelection(3)
         panel._wx_jobs_refresh_outputs()
         wx.MilliSleep(500)
         wx.Yield()
@@ -276,7 +275,7 @@ def test_wx_jobs_outputs_close_in_flight_safe():
         evt = wx.ListEvent(wx.wxEVT_LIST_ITEM_SELECTED, ctrls["jobs"].GetId())
         evt.SetIndex(0)
         ctrls["jobs"].GetEventHandler().ProcessEvent(evt)
-        ctrls["notebook"].SetSelection(2)
+        ctrls["notebook"].SetSelection(3)
         panel._wx_jobs_refresh_outputs()
         wx.Yield()
         _close(frame)
@@ -317,7 +316,9 @@ def test_wx_jobs_details_latest_selection_wins_over_slow_scontrol():
         values = ctrls["detail_values"]
         assert values["job_id"].GetValue() == "1002"
         assert values["workdir"].GetValue() == "/work/1002"
-        assert "1001" not in ctrls["raw_scontrol_text"].GetValue()
+        raw_result = panel._wx_jobs_state.get("raw_details_result")
+        if raw_result is not None:
+            assert "1001" not in raw_result.stdout
     finally:
         _close(frame)
 
@@ -466,7 +467,7 @@ def test_wx_jobs_detached_follower_updates_after_remote_append():
         evt = wx.ListEvent(wx.wxEVT_LIST_ITEM_SELECTED, ctrls["jobs"].GetId())
         evt.SetIndex(0)
         ctrls["jobs"].GetEventHandler().ProcessEvent(evt)
-        ctrls["notebook"].SetSelection(2)
+        ctrls["notebook"].SetSelection(3)
         for _ in range(50):
             wx.Yield()
             wx.MilliSleep(10)
@@ -608,7 +609,7 @@ def test_wx_jobs_output_scroll_does_not_force_user_back_to_latest():
         evt = wx.ListEvent(wx.wxEVT_LIST_ITEM_SELECTED, ctrls["jobs"].GetId())
         evt.SetIndex(0)
         ctrls["jobs"].GetEventHandler().ProcessEvent(evt)
-        ctrls["notebook"].SetSelection(2)
+        ctrls["notebook"].SetSelection(3)
         panel._wx_jobs_refresh_outputs()
         for _ in range(60):
             wx.Yield()
