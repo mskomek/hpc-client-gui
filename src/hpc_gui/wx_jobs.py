@@ -347,12 +347,45 @@ def _matches_filter(row: dict[str, str], query: str) -> bool:
     return False
 
 
+def _parse_cluster_server_rows(text: str) -> list[tuple[str, str, str, str]]:
+    """Parse the allowlisted lssrv table shape for the Jobs page."""
+    rows: list[tuple[str, str, str, str]] = []
+    lines = [line.strip() for line in str(text or "").splitlines() if line.strip()]
+    if not lines:
+        return rows
+    first = lines[0].replace("|", " ").split()
+    has_header = bool(first and first[0].lower() in {"server", "servers", "node", "hostname"})
+    if not has_header:
+        return rows
+    for line in lines[1:]:
+        fields = [part.strip() for part in line.split("|")] if "|" in line else line.split()
+        if len(fields) < (2 if has_header else 3):
+            continue
+        if fields[0].lower() in {"server", "servers", "node", "hostname"}:
+            continue
+        rows.append(tuple((fields + [""] * 4)[:4]))
+    return rows
+
+
 def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, cancel, lifecycle, final_state, generation, embedded, refresh_sacct=None, show_job_details=None, refresh_lssrv=None, list_job_files=None, output_channel_defs=None, **kwargs):
     """Create the wx Jobs workspace; callbacks are service adapters, never UI IO."""
     try:
         import wx
     except ImportError as exc:
         raise RuntimeError("wxPython is not installed") from exc
+    from hpc_gui.services.raw_command_result import RawCommandResult
+    from hpc_gui.wx_raw_viewer import show_raw_viewer
+
+    def _raw_result(value, *, source_id: str, command: str, error=None):
+        if isinstance(value, RawCommandResult):
+            return value
+        return RawCommandResult.from_response(
+            source_id=source_id,
+            command=command,
+            stdout="" if error else str(value or ""),
+            stderr=str(error) if error else "",
+            exit_code=1 if error else 0,
+        )
     # Alias tolerance for caller naming
     if refresh_sacct is None:
         refresh_sacct = kwargs.get("refresh_sacct") or kwargs.get("sacct") or kwargs.get("sacct_callback") or kwargs.get("refresh_accounting")
@@ -378,36 +411,40 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
     panel = wx.Panel(host)
     root = wx.BoxSizer(wx.VERTICAL)
 
-    # --- Sub-tab notebook ---------------------------------------------------
+    # --- Sub-tab notebook: Jobs | Details | Files | Outputs ----------------
     notebook = wx.Notebook(panel)
+    jobs_page = wx.Panel(notebook)
     details_page = wx.Panel(notebook)
     files_page = wx.Panel(notebook)
     outputs_page = wx.Panel(notebook)
-    notebook.AddPage(details_page, f"{t('jobs.title')} / {t('common.details')}")
+    notebook.AddPage(jobs_page, t("jobs.title"))
+    notebook.AddPage(details_page, t("jobs.details"))
     notebook.AddPage(files_page, t("jobs_outputs.files_title"))
     notebook.AddPage(outputs_page, t("jobs_outputs.outputs_title"))
 
-    # --- Details page: 3 vertically stacked collapsible sections -----------
-    details_sizer = wx.BoxSizer(wx.VERTICAL)
+    # ======================================================================
+    # JOBS PAGE — table, filter, auto-refresh, cancel
+    # ======================================================================
+    jobs_page_sizer = wx.BoxSizer(wx.VERTICAL)
 
-    # ---- Section 1: Jobs list -----------------------------------------------
-    jobs_box = wx.StaticBox(details_page, label=f"▾ {t('jobs.title')}")
-    jobs_sizer = wx.StaticBoxSizer(jobs_box, wx.VERTICAL)
-    filter_row = wx.BoxSizer(wx.HORIZONTAL)
-    btn_refresh = wx.Button(jobs_box, label=t("jobs.refresh"))
-    lbl_filter = wx.StaticText(jobs_box, label=f"{t('common.filter')}:")
-    filter_field = wx.TextCtrl(jobs_box, style=wx.TE_PROCESS_ENTER)
+    # -- Toolbar row --------------------------------------------------------
+    jobs_toolbar = wx.BoxSizer(wx.HORIZONTAL)
+    btn_refresh = wx.Button(jobs_page, label=t("jobs.refresh"))
+    lbl_filter = wx.StaticText(jobs_page, label=f"{t('common.filter')}:")
+    filter_field = wx.TextCtrl(jobs_page, style=wx.TE_PROCESS_ENTER)
     try:
         filter_field.SetHint(t("jobs.filter_hint"))
     except Exception:
         pass
-    cb_auto_refresh = wx.CheckBox(jobs_box, label=t("jobs.auto_refresh"))
+    cb_auto_refresh = wx.CheckBox(jobs_page, label=t("jobs.auto_refresh"))
     cb_auto_refresh.SetValue(True)
-    filter_row.Add(btn_refresh, 0, wx.RIGHT | wx.ALIGN_CENTER_VERTICAL, 6)
-    filter_row.Add(lbl_filter, 0, wx.RIGHT | wx.ALIGN_CENTER_VERTICAL, 4)
-    filter_row.Add(filter_field, 1, wx.RIGHT | wx.ALIGN_CENTER_VERTICAL, 6)
-    filter_row.Add(cb_auto_refresh, 0, wx.ALIGN_CENTER_VERTICAL)
-    jobs = wx.ListCtrl(jobs_box, style=wx.LC_REPORT | wx.LC_SINGLE_SEL | wx.LC_HRULES)
+    jobs_toolbar.Add(btn_refresh, 0, wx.RIGHT | wx.ALIGN_CENTER_VERTICAL, 6)
+    jobs_toolbar.Add(lbl_filter, 0, wx.RIGHT | wx.ALIGN_CENTER_VERTICAL, 4)
+    jobs_toolbar.Add(filter_field, 1, wx.RIGHT | wx.ALIGN_CENTER_VERTICAL, 6)
+    jobs_toolbar.Add(cb_auto_refresh, 0, wx.ALIGN_CENTER_VERTICAL)
+
+    # -- Jobs table ---------------------------------------------------------
+    jobs = wx.ListCtrl(jobs_page, style=wx.LC_REPORT | wx.LC_SINGLE_SEL | wx.LC_HRULES)
     for col_idx, col_key in enumerate(_JOB_TABLE_COLUMNS):
         label = t(_COLUMN_LABEL_KEYS.get(col_key, col_key))
         jobs.InsertColumn(col_idx, label)
@@ -419,68 +456,126 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
     jobs.SetColumnWidth(5, 60)
     jobs.SetColumnWidth(6, 60)
     jobs.SetColumnWidth(7, 120)
-    jobs_sizer.Add(filter_row, 0, wx.EXPAND | wx.ALL, 4)
-    jobs_sizer.Add(jobs, 1, wx.EXPAND | wx.ALL, 4)
-    details_sizer.Add(jobs_sizer, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 4)
 
-    # Collapse state for Jobs section
-    _jobs_collapsed = {"collapsed": False}
-    _jobs_content_items = [jobs, btn_refresh, lbl_filter, filter_field, cb_auto_refresh]
-    _jobs_original_proportions = {}
+    # -- Cancel button row --------------------------------------------------
+    cancel_row = wx.BoxSizer(wx.HORIZONTAL)
+    btn_cancel = wx.Button(jobs_page, label=t("jobs.cancel"))
+    btn_cancel.Enable(False)
+    cancel_row.AddStretchSpacer(1)
+    cancel_row.Add(btn_cancel, 0, wx.ALIGN_CENTER_VERTICAL)
 
-    # ---- Section 2: Job Details ---------------------------------------------
-    details_box = wx.StaticBox(details_page, label=f"▾ {t('jobs_outputs.job_details')}")
-    details_group_sizer = wx.StaticBoxSizer(details_box, wx.VERTICAL)
-    details_fields_panel = wx.Panel(details_box)
-    details_fields = wx.FlexGridSizer(0, 2, 3, 8)
-    details_fields.AddGrowableCol(1, 1)
+    # -- Cluster Servers collapsible section (on Jobs page) -----------------
+    cluster_servers_box = wx.StaticBox(jobs_page, label=f"▾ {t('jobs.cluster_servers')}")
+    cluster_servers_sizer = wx.StaticBoxSizer(cluster_servers_box, wx.VERTICAL)
+    cluster_servers_toolbar = wx.BoxSizer(wx.HORIZONTAL)
+    btn_refresh_lssrv = wx.Button(cluster_servers_box, label=t("jobs_outputs.lssrv_refresh"))
+    btn_raw_server_status = wx.Button(cluster_servers_box, label=t("raw_viewer.raw_server_status"))
+    cluster_servers_toolbar.Add(btn_refresh_lssrv, 0, wx.RIGHT, 6)
+    cluster_servers_toolbar.Add(btn_raw_server_status, 0)
+    cluster_servers_text = wx.StaticText(cluster_servers_box, label="")
+    cluster_servers_table = wx.ListCtrl(
+        cluster_servers_box,
+        style=wx.LC_REPORT | wx.LC_HRULES,
+    )
+    for index, key in enumerate(("server", "state", "cpus", "memory")):
+        cluster_servers_table.InsertColumn(index, t(f"jobs.{key}"))
+    for index, width in enumerate((150, 120, 80, 100)):
+        cluster_servers_table.SetColumnWidth(index, width)
+    cluster_servers_toolbar.AddStretchSpacer(1)
+    cluster_servers_sizer.Add(cluster_servers_toolbar, 0, wx.EXPAND | wx.ALL, 4)
+    cluster_servers_sizer.Add(cluster_servers_text, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 4)
+    cluster_servers_sizer.Add(cluster_servers_table, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 4)
+
+    jobs_page_sizer.Add(jobs_toolbar, 0, wx.EXPAND | wx.ALL, 4)
+    jobs_page_sizer.Add(jobs, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 4)
+    jobs_page_sizer.Add(cancel_row, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 8)
+    jobs_page_sizer.Add(cluster_servers_sizer, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 4)
+    jobs_page.SetSizer(jobs_page_sizer)
+
+    _cluster_collapsed = {"collapsed": False}
+
+    def _toggle_cluster_servers(_event=None):
+        _cluster_collapsed["collapsed"] = not _cluster_collapsed["collapsed"]
+        is_collapsed = _cluster_collapsed["collapsed"]
+        state["cluster_collapsed"] = is_collapsed
+        cluster_servers_sizer.ShowItems(not is_collapsed)
+        if is_collapsed:
+            cluster_servers_box.SetLabel(cluster_servers_box.GetLabel().replace("▾", "▸"))
+        else:
+            cluster_servers_box.SetLabel(cluster_servers_box.GetLabel().replace("▸", "▾"))
+        jobs_page_sizer.Layout()
+
+    cluster_servers_box.Bind(wx.EVT_LEFT_DOWN, _toggle_cluster_servers)
+
+    # ======================================================================
+    # DETAILS PAGE — compact summary, raw, accounting, cluster servers, advanced
+    # ======================================================================
+    details_sizer = wx.BoxSizer(wx.VERTICAL)
+
+    # -- No-selection state --------------------------------------------------
+    no_selection_panel = wx.Panel(details_page)
+    no_selection_sizer = wx.BoxSizer(wx.VERTICAL)
+    no_selection_label = wx.StaticText(no_selection_panel, label=t("jobs.no_job_selected"))
+    no_selection_hint = wx.StaticText(no_selection_panel, label=t("jobs.no_job_selected_hint"))
+    btn_go_to_jobs = wx.Button(no_selection_panel, label=t("jobs.go_to_jobs"))
+    no_selection_sizer.AddStretchSpacer(1)
+    no_selection_sizer.Add(no_selection_label, 0, wx.ALIGN_CENTER | wx.BOTTOM, 6)
+    no_selection_sizer.Add(no_selection_hint, 0, wx.ALIGN_CENTER | wx.BOTTOM, 12)
+    no_selection_sizer.Add(btn_go_to_jobs, 0, wx.ALIGN_CENTER)
+    no_selection_sizer.AddStretchSpacer(1)
+    no_selection_panel.SetSizer(no_selection_sizer)
+
+    # -- Selected-job content panel -----------------------------------------
+    details_content_panel = wx.Panel(details_page)
+    details_content_sizer = wx.BoxSizer(wx.VERTICAL)
+
+    # -- Job summary header -------------------------------------------------
+    details_summary_label = wx.StaticText(details_content_panel, label=f"{t('jobs.details_header')} —")
+    details_summary_label.SetFont(wx.Font(wx.FontInfo(11).Bold()))
+    details_content_sizer.Add(details_summary_label, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 8)
+
+    # -- Primary detail fields ----------------------------------------------
     detail_keys = (
         ("job_id", "jobs.job_id"), ("name", "jobs.name"), ("state", "jobs.state"),
-        ("partition", "jobs.partition"), ("elapsed", "jobs.elapsed"), ("nodes", "jobs.nodes"),
-        ("cpus", "jobs.cpus"), ("reason", "jobs.reason"), ("workdir", "jobs.workdir"),
-        ("stdout_path", "jobs.stdout"), ("stderr_path", "jobs.stderr"), ("script_path", "jobs.script"),
-        ("nodelist", "jobs.nodelist"), ("exit_code", "jobs.exit_code"),
+        ("partition", "jobs.partition"), ("elapsed", "jobs.elapsed"),
+        ("nodes", "jobs.nodes"), ("cpus", "jobs.cpus"),
+        ("workdir", "jobs.workdir"), ("stdout_path", "jobs.stdout"), ("stderr_path", "jobs.stderr"),
     )
-    detail_values = {}
-    detail_labels = {}
+    detail_values: dict[str, wx.TextCtrl] = {}
+    detail_labels: dict[str, wx.StaticText] = {}
     for field_key, label_key in detail_keys:
-        label_control = wx.StaticText(details_fields_panel, label=t(label_key))
-        detail_labels[field_key] = label_control
-        details_fields.Add(label_control, 0, wx.ALIGN_CENTER_VERTICAL)
-        value = wx.TextCtrl(details_fields_panel, style=wx.TE_READONLY | wx.HSCROLL)
-        value.SetValue("—")
-        detail_values[field_key] = value
-        details_fields.Add(value, 1, wx.EXPAND)
-    details_fields_panel.SetSizer(details_fields)
-    provider_status_panel = wx.Panel(details_box)
-    provider_status_row = wx.BoxSizer(wx.HORIZONTAL)
-    provider_status_label = wx.StaticText(provider_status_panel, label=t("jobs_outputs.provider_status"))
-    btn_provider_status = wx.Button(provider_status_panel, label=t("jobs_outputs.refresh_status"))
-    provider_status_text = wx.StaticText(provider_status_panel, label="")
-    provider_status_row.Add(provider_status_label, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 8)
-    provider_status_row.Add(btn_provider_status, 0, wx.RIGHT, 8)
-    provider_status_row.Add(provider_status_text, 1, wx.ALIGN_CENTER_VERTICAL)
-    provider_status_panel.SetSizer(provider_status_row)
-    provider_status_panel.Hide()
-    btn_raw_scontrol = wx.Button(details_box, label=t("jobs_outputs.show_raw_scontrol"))
-    raw_scontrol_text = wx.TextCtrl(details_box, style=wx.TE_MULTILINE | wx.TE_READONLY | wx.HSCROLL)
-    raw_scontrol_text.Show(False)
-    try:
-        raw_scontrol_text.SetHint(t("jobs_outputs.raw_scontrol_hint"))
-    except Exception:
-        pass
-    details_group_sizer.Add(details_fields_panel, 0, wx.EXPAND | wx.ALL, 4)
-    details_group_sizer.Add(provider_status_panel, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 4)
-    details_group_sizer.Add(btn_raw_scontrol, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 4)
-    details_group_sizer.Add(raw_scontrol_text, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 4)
-    raw_scontrol_text.Show(False)
-    details_sizer.Add(details_group_sizer, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 4)
+        row_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        lbl = wx.StaticText(details_content_panel, label=t(label_key))
+        lbl.SetMinSize(wx.Size(90, -1))
+        detail_labels[field_key] = lbl
+        val = wx.TextCtrl(details_content_panel, style=wx.TE_READONLY | wx.HSCROLL)
+        val.SetValue("—")
+        detail_values[field_key] = val
+        row_sizer.Add(lbl, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 8)
+        row_sizer.Add(val, 1, wx.EXPAND)
+        details_content_sizer.Add(row_sizer, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 8)
 
-    _details_collapsed = {"collapsed": False}
-    _details_content_items = [details_fields_panel, provider_status_panel, btn_raw_scontrol, raw_scontrol_text]
+    # -- Resources row (computed from nodes + cpus) -------------------------
+    res_row = wx.BoxSizer(wx.HORIZONTAL)
+    res_label = wx.StaticText(details_content_panel, label=t("jobs.resources"))
+    res_label.SetMinSize(wx.Size(90, -1))
+    res_value = wx.TextCtrl(details_content_panel, style=wx.TE_READONLY | wx.HSCROLL)
+    res_value.SetValue("—")
+    detail_labels["resources"] = res_label
+    detail_values["resources"] = res_value
+    res_row.Add(res_label, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 8)
+    res_row.Add(res_value, 1, wx.EXPAND)
+    details_content_sizer.Add(res_row, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 8)
 
-    # ---- Section 3: Accounting ----------------------------------------------
-    accounting_box = wx.StaticBox(details_page, label=f"▾ {t('jobs_outputs.accounting_details')}")
+    # -- Separator ----------------------------------------------------------
+    details_content_sizer.Add(wx.StaticLine(details_content_panel), 0, wx.EXPAND | wx.ALL, 8)
+
+    # -- Raw Job Details button ---------------------------------------------
+    btn_raw_job_details = wx.Button(details_content_panel, label=t("raw_viewer.raw_job_details"))
+    details_content_sizer.Add(btn_raw_job_details, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 8)
+
+    # -- Accounting collapsible section -------------------------------------
+    accounting_box = wx.StaticBox(details_content_panel, label=f"▸ {t('jobs_outputs.accounting_details')}")
     accounting_sizer = wx.StaticBoxSizer(accounting_box, wx.VERTICAL)
     btn_sacct = wx.Button(accounting_box, label=t("jobs_outputs.refresh_sacct"))
     accounting_table = wx.ListCtrl(accounting_box, style=wx.LC_REPORT | wx.LC_HRULES)
@@ -503,71 +598,96 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         accounting_raw_text.SetHint(t("jobs_outputs.accounting_raw_hint"))
     except Exception:
         pass
+    btn_toggle_raw_acct = wx.Button(accounting_box, label=t("raw_viewer.raw_accounting"))
     accounting_row = wx.BoxSizer(wx.HORIZONTAL)
     accounting_row.Add(btn_sacct, 0, wx.RIGHT | wx.ALIGN_CENTER_VERTICAL, 6)
-    btn_toggle_raw = wx.Button(accounting_box, label=t("jobs_outputs.show_raw_scontrol"))
-    accounting_row.Add(btn_toggle_raw, 0, wx.RIGHT | wx.ALIGN_CENTER_VERTICAL, 6)
+    accounting_row.Add(btn_toggle_raw_acct, 0, wx.RIGHT | wx.ALIGN_CENTER_VERTICAL, 6)
     accounting_row.AddStretchSpacer(1)
     accounting_sizer.Add(accounting_row, 0, wx.EXPAND | wx.ALL, 4)
     accounting_sizer.Add(accounting_table, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 4)
     accounting_sizer.Add(accounting_raw_text, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 4)
     accounting_raw_text.Show(False)
     accounting_sizer.SetMinSize(wx.Size(-1, 90))
-    details_sizer.Add(accounting_sizer, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 4)
+    details_content_sizer.Add(accounting_sizer, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 4)
 
-    _accounting_collapsed = {"collapsed": False}
-    _accounting_content_items = [btn_sacct, btn_toggle_raw, accounting_table, accounting_raw_text]
-
-    # ---- Cancel button row -------------------------------------------------
-    cancel_row = wx.BoxSizer(wx.HORIZONTAL)
-    btn_cancel = wx.Button(details_page, label=t("jobs.cancel"))
-    btn_cancel.Enable(False)
-    cancel_row.AddStretchSpacer(1)
-    cancel_row.Add(btn_cancel, 0, wx.ALIGN_CENTER_VERTICAL)
-    details_sizer.Add(cancel_row, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 8)
-
-    details_page.SetSizer(details_sizer)
-
-    # --- Collapse/expand helpers for all three sections ----------------------
-    def _toggle_section(box, sizer, collapsed_state, content_items, _event=None):
-        collapsed_state["collapsed"] = not collapsed_state["collapsed"]
-        is_collapsed = collapsed_state["collapsed"]
-        for item in content_items:
-            try:
-                item.Show(not is_collapsed)
-            except Exception:
-                pass
-        if is_collapsed:
-            box.SetLabel(box.GetLabel().replace("▾", "▸"))
-        else:
-            box.SetLabel(box.GetLabel().replace("▸", "▾"))
-        details_sizer.Layout()
-
-    def _toggle_jobs(_event=None):
-        _toggle_section(jobs_box, jobs_sizer, _jobs_collapsed, _jobs_content_items)
-
-    def _toggle_details(_event=None):
-        _toggle_section(details_box, details_group_sizer, _details_collapsed, _details_content_items)
+    _accounting_collapsed = {"collapsed": True}
+    accounting_sizer.ShowItems(False)
 
     def _toggle_accounting(_event=None):
-        _toggle_section(accounting_box, accounting_sizer, _accounting_collapsed, _accounting_content_items)
+        _accounting_collapsed["collapsed"] = not _accounting_collapsed["collapsed"]
+        is_collapsed = _accounting_collapsed["collapsed"]
+        state["accounting_collapsed"] = is_collapsed
+        accounting_sizer.ShowItems(not is_collapsed)
+        if is_collapsed:
+            accounting_box.SetLabel(accounting_box.GetLabel().replace("▾", "▸"))
+        else:
+            accounting_box.SetLabel(accounting_box.GetLabel().replace("▸", "▾"))
+        details_content_sizer.Layout()
 
-    jobs_box.Bind(wx.EVT_LEFT_DOWN, _toggle_jobs)
-    details_box.Bind(wx.EVT_LEFT_DOWN, _toggle_details)
     accounting_box.Bind(wx.EVT_LEFT_DOWN, _toggle_accounting)
 
-    # --- Files sub-tab: shared remote browser integrated with SelectedJobContext -
+    # -- Advanced collapsible section ---------------------------------------
+    advanced_box = wx.StaticBox(details_content_panel, label=f"▸ {t('jobs.advanced')}")
+    advanced_sizer = wx.StaticBoxSizer(advanced_box, wx.VERTICAL)
+    advanced_keys = (
+        ("reason", "jobs.reason"), ("script_path", "jobs.script"),
+        ("nodelist", "jobs.nodelist"), ("exit_code", "jobs.exit_code"),
+    )
+    for field_key, label_key in advanced_keys:
+        row_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        lbl = wx.StaticText(advanced_box, label=t(label_key))
+        lbl.SetMinSize(wx.Size(90, -1))
+        detail_labels[field_key] = lbl
+        val = wx.TextCtrl(advanced_box, style=wx.TE_READONLY | wx.HSCROLL)
+        val.SetValue("—")
+        detail_values[field_key] = val
+        row_sizer.Add(lbl, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 8)
+        row_sizer.Add(val, 1, wx.EXPAND)
+        advanced_sizer.Add(row_sizer, 0, wx.EXPAND | wx.ALL, 4)
+    advanced_sizer.ShowItems(False)
+    details_content_sizer.Add(advanced_sizer, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 4)
+
+    _advanced_collapsed = {"collapsed": True}
+
+    def _toggle_advanced(_event=None):
+        _advanced_collapsed["collapsed"] = not _advanced_collapsed["collapsed"]
+        is_collapsed = _advanced_collapsed["collapsed"]
+        state["advanced_collapsed"] = is_collapsed
+        advanced_sizer.ShowItems(not is_collapsed)
+        if is_collapsed:
+            advanced_box.SetLabel(advanced_box.GetLabel().replace("▾", "▸"))
+        else:
+            advanced_box.SetLabel(advanced_box.GetLabel().replace("▸", "▾"))
+        details_content_sizer.Layout()
+
+    advanced_box.Bind(wx.EVT_LEFT_DOWN, _toggle_advanced)
+
+    # -- Assemble details page with no-selection / content toggle ------------
+    details_content_panel.SetSizer(details_content_sizer)
+    details_content_panel.Hide()
+
+    details_sizer.Add(no_selection_panel, 1, wx.EXPAND)
+    details_sizer.Add(details_content_panel, 1, wx.EXPAND)
+    details_page.SetSizer(details_sizer)
+
+    # -- Go to Jobs button handler ------------------------------------------
+    def _go_to_jobs(_event=None):
+        notebook.SetSelection(0)
+
+    btn_go_to_jobs.Bind(wx.EVT_BUTTON, _go_to_jobs)
+
+    # ======================================================================
+    # FILES SUB-TAB — shared remote browser
+    # ======================================================================
     from hpc_gui.wx_remote_files_view import build_remote_files_panel
     from hpc_gui.wx_remote_files import WxRemoteDirectoryModel
 
     files_model = WxRemoteDirectoryModel("/")
     files_sizer = wx.BoxSizer(wx.VERTICAL)
 
-    # Job workdir label
     files_workdir_label = wx.StaticText(files_page, label=t("jobs.select_job_hint"))
     files_sizer.Add(files_workdir_label, 0, wx.EXPAND | wx.ALL, 4)
 
-    # Resolve navigation store for favorites/history
     _nav_store = None
     try:
         from hpc_gui.services.remote_navigation_store import navigation_store_for_profile
@@ -583,14 +703,10 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
     except Exception:
         pass
 
-    # The shell supplies the same application-owned adapter used by Main Files.
-    # Tests may still pass the individual callbacks directly.
     _remote_cbs = kwargs.get("remote_files_callbacks") or {}
-
     _remote_reader = kwargs.get("read_remote_path") or _remote_cbs.get("read_text")
     _remote_statter = kwargs.get("stat_remote_path")
 
-    # Shared remote browser panel — reuse same callbacks as Main Files > Remote
     files_browser = build_remote_files_panel(
         files_page,
         model=files_model,
@@ -610,23 +726,16 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         plugin_filters=_remote_cbs.get("plugin_filters"),
     )
 
-    # Wire follow callback from the Jobs workspace
     def _on_follow_file(remote_path, mode="new_tab", follower_id=None):
-        """Handle Follow/Track from the Files context menu."""
         ctx = model.selected_job_store.context
         if not ctx.job_id:
             return
         remote_path = str(remote_path)
         def _new_follower(tracking_id):
             follower = OutputFollower(OutputFollowerState(
-                tracking_id=tracking_id,
-                channel_id=None,
-                job_id=ctx.job_id,
-                generation=ctx.generation,
-                label=PurePosixPath(remote_path).name or remote_path,
-                path=remote_path,
-                origin="manual",
-                roles=("manual",),
+                tracking_id=tracking_id, channel_id=None, job_id=ctx.job_id,
+                generation=ctx.generation, label=PurePosixPath(remote_path).name or remote_path,
+                path=remote_path, origin="manual", roles=("manual",),
             ))
             state.setdefault("followers", {})[tracking_id] = follower
             return follower
@@ -654,12 +763,9 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
             return
         tracking_id = f"follower-{uuid4().hex}"
         tracked = TrackedOutput(
-            tracking_id=tracking_id,
-            channel_id=None,
+            tracking_id=tracking_id, channel_id=None,
             label=PurePosixPath(remote_path).name or remote_path,
-            path=remote_path,
-            origin="manual",
-            job_id=ctx.job_id,
+            path=remote_path, origin="manual", job_id=ctx.job_id,
         )
         state.setdefault("tracked_outputs", []).append(tracked)
         follower = _new_follower(tracking_id)
@@ -682,22 +788,23 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
     files_sizer.Add(files_browser, 1, wx.EXPAND)
     files_page.SetSizer(files_sizer)
 
-    # --- Outputs sub-tab: dynamic 0..N output channels ----------------------
+    # ======================================================================
+    # OUTPUTS SUB-TAB — dynamic 0..N output channels
+    # ======================================================================
     outputs_sizer = wx.BoxSizer(wx.VERTICAL)
     outputs_toolbar = wx.BoxSizer(wx.HORIZONTAL)
-    outputs_refresh_btn = wx.Button(outputs_page, label=t("jobs.refresh"))
-    outputs_follow = wx.CheckBox(outputs_page, label=t("files.auto_scroll"))
+    outputs_refresh_btn = wx.Button(outputs_page, label=t("jobs_outputs.refresh_all"))
+    outputs_follow = wx.CheckBox(outputs_page, label=t("jobs_outputs.auto_scroll_all"))
     outputs_follow.SetValue(True)
-    outputs_pause_btn = wx.Button(outputs_page, label=t("jobs.pause_output"))
+    outputs_pause_btn = wx.Button(outputs_page, label=t("jobs_outputs.pause_all"))
     outputs_toolbar.Add(outputs_refresh_btn, 0, wx.RIGHT, 6)
     outputs_toolbar.Add(outputs_pause_btn, 0, wx.RIGHT, 6)
     outputs_toolbar.Add(outputs_follow, 0, wx.ALIGN_CENTER_VERTICAL)
     outputs_toolbar.AddStretchSpacer(1)
     outputs_sizer.Add(outputs_toolbar, 0, wx.EXPAND | wx.ALL, 4)
 
-    # Per-channel search bar
     search_row = wx.BoxSizer(wx.HORIZONTAL)
-    search_label = wx.StaticText(outputs_page, label=f"{t('common.filter')}:")
+    search_label = wx.StaticText(outputs_page, label=f"{t('jobs_outputs.search')}:")
     search_field = wx.TextCtrl(outputs_page, style=wx.TE_PROCESS_ENTER)
     try:
         search_field.SetHint(t("jobs_outputs.search_hint"))
@@ -716,12 +823,10 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
     search_row.AddStretchSpacer(1)
     outputs_sizer.Add(search_row, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 4)
 
-    # Dynamic output channel tabs
     output_channel_notebook = wx.Notebook(outputs_page)
     output_channel_notebook.SetMinSize(wx.Size(-1, 200))
     output_no_channels_label = wx.StaticText(
-        output_channel_notebook,
-        label=t("jobs_outputs.no_channels"),
+        output_channel_notebook, label=t("jobs_outputs.no_channels"),
     )
     output_channels: dict[str, wx.TextCtrl] = {}
     output_channel_paths: dict[str, wx.TextCtrl] = {}
@@ -737,7 +842,9 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
     root.Add(notebook, 1, wx.EXPAND | wx.ALL, 4)
     panel.SetSizer(root)
 
-    # --- State management --------------------------------------------------
+    # ======================================================================
+    # STATE MANAGEMENT
+    # ======================================================================
     state: dict[str, Any] = {
         "items": [],
         "raw_items": [],
@@ -773,6 +880,14 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         "followers": {},
         "detached_followers": [],
         "session": (kwargs.get("session_state") or {}).get("session") if isinstance(kwargs.get("session_state"), dict) else None,
+        "raw_details_result": None,
+        "raw_accounting_result": None,
+        "raw_status_result": None,
+        "details_parse_error": "",
+        "accounting_parse_error": "",
+        "cluster_collapsed": False,
+        "accounting_collapsed": True,
+        "advanced_collapsed": True,
     }
     state_lock = Lock()
     timer = wx.Timer(host)
@@ -821,6 +936,16 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         if not selected_still_visible and state["selected_job"]:
             btn_cancel.Enable(False)
 
+    # --- Show/hide details page content vs no-selection state ----------------
+    def _show_details_content(show: bool):
+        if show:
+            no_selection_panel.Hide()
+            details_content_panel.Show()
+        else:
+            details_content_panel.Hide()
+            no_selection_panel.Show()
+        details_sizer.Layout()
+
     # --- Job selection handler -----------------------------------------------
     def select_job(event):
         idx = event.GetIndex()
@@ -833,6 +958,10 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
             return
         state["selected_job"] = job_id
         state["selected_generation"] += 1
+        state["raw_details_result"] = None
+        state["raw_accounting_result"] = None
+        state["details_parse_error"] = ""
+        state["accounting_parse_error"] = ""
         model.tracking.select_job(job_id)
         btn_cancel.Enable(True)
         # Publish to the shared selected-job context
@@ -853,7 +982,6 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
             if stdout_p or stderr_p:
                 model.selected_job_store.update(stdout_path=stdout_p, stderr_path=stderr_p)
                 model.set_output(stdout_p, stderr_p)
-            # Show parsed details
             _show_parsed_details(row, item)
             failure = model.explain_failure(SimpleNamespace(**item))
             if failure:
@@ -861,6 +989,10 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
                 detail_values["reason"].SetValue(
                     f"{current_reason}\n{'; '.join(failure.as_lines())}".strip("—\n")
                 )
+        # Show details content (hide no-selection state)
+        _show_details_content(True)
+        # Update summary header
+        _update_summary_header()
         # Trigger accounting refresh for selected job
         _refresh_sacct()
         # Show details (scontrol)
@@ -870,6 +1002,18 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         _navigate_files_to_workdir()
         # Refresh outputs tab
         refresh_outputs_tab()
+        # Switch to Details tab
+        notebook.SetSelection(1)
+
+    def _update_summary_header():
+        ctx = model.selected_job_store.context
+        parts = []
+        if ctx.job_id:
+            parts.append(ctx.job_id)
+        if ctx.name:
+            parts.append(ctx.name)
+        summary = " · ".join(parts) if parts else ""
+        details_summary_label.SetLabel(f"{t('jobs.details_header')} — {summary}" if summary else t('jobs.details_header'))
 
     def _set_detail(field_key, value):
         control = detail_values.get(field_key)
@@ -877,8 +1021,7 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
             control.SetValue(str(value or "—"))
 
     def _show_parsed_details(row: dict[str, str], item: dict[str, Any]):
-        """Show real labelled detail fields for the selected job."""
-        for field_key in ("job_id", "name", "state", "partition", "elapsed", "nodes", "cpus", "reason"):
+        for field_key in ("job_id", "name", "state", "partition", "elapsed", "nodes", "cpus"):
             _set_detail(field_key, row.get(field_key, ""))
         workdir = str(item.get("workdir", "")).strip() if isinstance(item, dict) else ""
         stdout_p = str(item.get("stdout_path", "")).strip() if isinstance(item, dict) else ""
@@ -892,7 +1035,14 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         _set_detail("script_path", script_p)
         _set_detail("nodelist", nodelist)
         _set_detail("exit_code", exit_code)
-        # Update selected job store with scheduler metadata
+        # Compute resources value
+        nodes = row.get("nodes", "")
+        cpus = row.get("cpus", "")
+        if nodes or cpus:
+            res_str = t("jobs.resources_value").format(nodes=nodes or "?", cpus=cpus or "?")
+        else:
+            res_str = "—"
+        _set_detail("resources", res_str)
         if isinstance(item, dict):
             update_kwargs: dict[str, str] = {}
             if workdir:
@@ -947,25 +1097,53 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         state["filter_query"] = filter_field.GetValue().strip()
         _apply_filter()
 
-    # --- Toggle raw scontrol ------------------------------------------------
+    # --- Toggle raw accounting (inline) --------------------------------------
     def _toggle_accounting_raw(_event=None):
         is_shown = accounting_raw_text.IsShown()
         accounting_raw_text.Show(not is_shown)
         accounting_table.Show(is_shown)
-        btn_toggle_raw.SetLabel(
-            t("jobs_outputs.hide_raw_scontrol") if not is_shown
-            else t("jobs_outputs.show_raw_scontrol")
+        btn_toggle_raw_acct.SetLabel(
+            t("jobs_outputs.job_details") if not is_shown
+            else t("raw_viewer.raw_accounting")
         )
         accounting_sizer.Layout()
 
-    def _toggle_raw_scontrol(_event=None):
-        state["raw_scontrol_visible"] = not state["raw_scontrol_visible"]
-        raw_scontrol_text.Show(state["raw_scontrol_visible"])
-        btn_raw_scontrol.SetLabel(
-            t("jobs_outputs.hide_raw_scontrol") if state["raw_scontrol_visible"]
-            else t("jobs_outputs.show_raw_scontrol")
-        )
-        details_sizer.Layout()
+    # --- Open Raw Job Details viewer ----------------------------------------
+    def _open_raw_job_details(_event=None):
+        result = state.get("raw_details_result")
+        if result is None:
+            result = RawCommandResult(
+                source_id="scontrol",
+                command=f"scontrol show job {state['selected_job']}",
+                stdout="",
+                stderr="No raw data available yet.",
+                exit_code=-1,
+            )
+        show_raw_viewer(host, result, title=t("raw_viewer.raw_job_details"))
+
+    def _open_raw_accounting(_event=None):
+        result = state.get("raw_accounting_result")
+        if result is None:
+            result = RawCommandResult(
+                source_id="sacct",
+                command=f"sacct -j {state['selected_job']}",
+                stdout="",
+                stderr="No raw accounting data available yet.",
+                exit_code=-1,
+            )
+        show_raw_viewer(host, result, title=t("raw_viewer.raw_accounting"))
+
+    def _open_raw_server_status(_event=None):
+        result = state.get("raw_status_result")
+        if result is None:
+            result = RawCommandResult(
+                source_id="lssrv",
+                command="lssrv",
+                stdout="",
+                stderr=t("jobs_outputs.provider_status_unavailable"),
+                exit_code=-1,
+            )
+        show_raw_viewer(host, result, title=t("raw_viewer.raw_server_status"))
 
     # --- Accounting (sacct) for selected job ---------------------------------
     def _refresh_sacct(_event=None):
@@ -1004,14 +1182,26 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
                 btn_sacct.Enable(state["sacct_requests"] == 0 and bool(refresh_sacct))
                 return
             btn_sacct.Enable(state["sacct_requests"] == 0 and bool(refresh_sacct))
-            if error:
+            # Store raw result for Raw Accounting viewer
+            raw = _raw_result(
+                result,
+                source_id="sacct",
+                command=f"sacct -j {req_job_id} --format=JobID,State,Elapsed,MaxRSS,AllocTRES,ExitCode",
+                error=error,
+            )
+            state["raw_accounting_result"] = raw
+            raw_text = raw.stdout.strip()
+            raw_error = raw.stderr.strip() if raw.has_error else ""
+            if raw.has_error and not raw_error:
+                raw_error = f"exit code {raw.exit_code}"
+            if raw_error:
                 accounting_table.DeleteAllItems()
                 idx = accounting_table.InsertItem(0, t("jobs_outputs.accounting_error"))
-                accounting_table.SetItem(idx, 1, str(error))
-                accounting_raw_text.SetValue(str(error))
+                accounting_table.SetItem(idx, 1, raw_error)
+                accounting_raw_text.SetValue(raw.stderr)
             else:
-                text = str(result or "").strip()
-                accounting_raw_text.SetValue(clean_output(result) if text else "")
+                text = raw_text
+                accounting_raw_text.SetValue(clean_output(raw.stdout) if text else "")
                 accounting_table.DeleteAllItems()
                 if not text:
                     idx = accounting_table.InsertItem(0, t("jobs_outputs.accounting_empty"))
@@ -1069,13 +1259,25 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
                     or model.selected_job_store.generation != req_gen
                     or req_id != state["details_request_id"]):
                 return
-            if error:
-                raw_scontrol_text.SetValue(str(error))
+            # Store raw result for Raw Job Details viewer
+            raw = _raw_result(
+                result,
+                source_id="scontrol",
+                command=f"scontrol show job {req_job_id}",
+                error=error,
+            )
+            state["raw_details_result"] = raw
+            if raw.has_error:
                 return
-            text = str(result or "").strip()
-            raw_scontrol_text.SetValue(text)
+            text = raw.stdout.strip()
             if text and req_job_id:
-                detail = parse_scontrol(text, req_job_id)
+                try:
+                    detail = parse_scontrol(text, req_job_id)
+                except Exception as parse_error:
+                    # Keep the raw command response available even when the
+                    # structured detail parser cannot understand it.
+                    state["details_parse_error"] = str(parse_error)
+                    return
                 update_kwargs: dict[str, str] = {}
                 if detail.workdir:
                     update_kwargs["workdir"] = detail.workdir
@@ -1113,33 +1315,43 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         except Exception:
             return False
 
+    def _render_cluster_servers(raw_text: str):
+        rows = _parse_cluster_server_rows(raw_text)
+        cluster_servers_table.DeleteAllItems()
+        for server, server_state, cpus, memory in rows:
+            index = cluster_servers_table.InsertItem(cluster_servers_table.GetItemCount(), server)
+            cluster_servers_table.SetItem(index, 1, server_state)
+            cluster_servers_table.SetItem(index, 2, cpus)
+            cluster_servers_table.SetItem(index, 3, memory)
+        cluster_servers_text.SetLabel(
+            str(raw_text or "").strip() if not rows else ""
+        )
+        if not rows and not str(raw_text or "").strip():
+            cluster_servers_text.SetLabel(t("jobs_outputs.lssrv_empty"))
+
     def _refresh_provider_status(_event=None):
         if not _provider_status_supported():
-            provider_status_panel.Hide()
-            details_sizer.Layout()
+            cluster_servers_box.Hide()
+            cluster_servers_sizer.ShowItems(False)
+            jobs_page_sizer.Layout()
             return
-        if not model.selected_job_store.context.has_selection:
-            provider_status_panel.Hide()
-            details_sizer.Layout()
-            return
-        provider_status_panel.Show(not _details_collapsed["collapsed"])
-        details_sizer.Layout()
+        # Cluster Servers visible when connected and provider supports status
+        # (no job selection required)
+        cluster_servers_box.Show()
+        cluster_servers_sizer.ShowItems(not _cluster_collapsed["collapsed"])
+        jobs_page_sizer.Layout()
         ctx = model.selected_job_store.context
         with state_lock:
             state["status_request_id"] += 1
             request_id = state["status_request_id"]
             state["status_in_flight"] = True
-        btn_provider_status.Enable(False)
         def worker():
             try:
-                result = refresh_lssrv(ctx.job_id)
-                post(done, result, None, request_id, ctx.job_id, ctx.generation)
-            except TypeError:
                 try:
+                    result = refresh_lssrv(ctx.job_id)
+                except TypeError:
                     result = refresh_lssrv()
-                    post(done, result, None, request_id, ctx.job_id, ctx.generation)
-                except Exception as error:
-                    post(done, "", error, request_id, ctx.job_id, ctx.generation)
+                post(done, result, None, request_id, ctx.job_id, ctx.generation)
             except Exception as error:
                 post(done, "", error, request_id, ctx.job_id, ctx.generation)
         def done(result, error, req_id, req_job_id, req_gen):
@@ -1148,9 +1360,19 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
                 return
             if model.selected_job_store.job_id != req_job_id or model.selected_job_store.generation != req_gen:
                 return
-            btn_provider_status.Enable(True)
-            provider_status_text.SetLabel(str(error) if error else str(result or "—").strip() or "—")
-            provider_status_panel.Layout()
+            raw = _raw_result(
+                result,
+                source_id="lssrv",
+                command="lssrv",
+                error=error,
+            )
+            state["raw_status_result"] = raw
+            if raw.has_error:
+                cluster_servers_table.DeleteAllItems()
+                cluster_servers_text.SetLabel(raw.stderr.strip() or f"exit code {raw.exit_code}")
+            else:
+                _render_cluster_servers(raw.stdout)
+            jobs_page_sizer.Layout()
         Thread(target=worker, daemon=True).start()
 
     # --- Job files ----------------------------------------------------------
@@ -1461,9 +1683,6 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
             if state["closed"]:
                 return
             btn_cancel.Enable(True)
-            if error:
-                raw_scontrol_text.SetValue(f"[Cancel] {error}")
-                raw_scontrol_text.Show(True)
 
         Thread(target=worker, daemon=True).start()
 
@@ -1472,7 +1691,7 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         state["outputs_paused"] = not state["outputs_paused"]
         state["user_paused"] = state["outputs_paused"]
         state["_timer_paused"] = state["outputs_paused"]
-        outputs_pause_btn.SetLabel(t("jobs.resume_output" if state["outputs_paused"] else "jobs.pause_output"))
+        outputs_pause_btn.SetLabel(t("jobs_outputs.resume_all" if state["outputs_paused"] else "jobs_outputs.pause_all"))
 
     def open_detached(_event):
         job_id = state["selected_job"]
@@ -1514,7 +1733,6 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         event.Skip()
 
     def set_session(session):
-        """Invalidate selection-dependent work when the active profile changes."""
         state["session"] = session
         state["selected_job"] = ""
         state["outputs_generation"] += 1
@@ -1522,6 +1740,9 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         state["sacct_request_id"] += 1
         state["details_request_id"] += 1
         state["status_request_id"] += 1
+        state["raw_details_result"] = None
+        state["raw_accounting_result"] = None
+        state["raw_status_result"] = None
         for follower in state.get("followers", {}).values():
             follower.close()
         state["followers"].clear()
@@ -1531,6 +1752,7 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         state["detached_followers"].clear()
         model.selected_job_store.clear()
         _ensure_output_tabs([])
+        _show_details_content(False)
         set_navigation_store = getattr(files_browser, "_wx_remote_set_navigation_store", None)
         if callable(set_navigation_store):
             set_navigation_store(_remote_cbs.get("navigation_store"))
@@ -1561,22 +1783,27 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         btn_refresh.SetLabel(t("jobs.refresh"))
         cb_auto_refresh.SetLabel(t("jobs.auto_refresh"))
         btn_cancel.SetLabel(t("jobs.cancel"))
-        jobs_prefix = "▸" if _jobs_collapsed["collapsed"] else "▾"
-        jobs_box.SetLabel(f"{jobs_prefix} {t('jobs.title')}")
         for col_idx, col_key in enumerate(_JOB_TABLE_COLUMNS):
             info = jobs.GetColumn(col_idx)
             info.Text = t(_COLUMN_LABEL_KEYS.get(col_key, col_key))
             jobs.SetColumn(col_idx, info)
-        for field_key, label_key in detail_keys:
-            detail_labels[field_key].SetLabel(t(label_key))
         try:
-            notebook.SetPageText(0, f"{t('jobs.title')} / {t('common.details')}")
-            notebook.SetPageText(1, t("jobs_outputs.files_title"))
-            notebook.SetPageText(2, t("jobs_outputs.outputs_title"))
+            notebook.SetPageText(0, t("jobs.title"))
+            notebook.SetPageText(1, t("jobs.details"))
+            notebook.SetPageText(2, t("jobs_outputs.files_title"))
+            notebook.SetPageText(3, t("jobs_outputs.outputs_title"))
         except Exception:
             pass
-        details_prefix = "▸" if _details_collapsed["collapsed"] else "▾"
-        details_box.SetLabel(f"{details_prefix} {t('jobs_outputs.job_details')}")
+        no_selection_label.SetLabel(t("jobs.no_job_selected"))
+        no_selection_hint.SetLabel(t("jobs.no_job_selected_hint"))
+        btn_go_to_jobs.SetLabel(t("jobs.go_to_jobs"))
+        _update_summary_header()
+        for field_key, label_key in detail_keys:
+            if field_key in detail_labels:
+                detail_labels[field_key].SetLabel(t(label_key))
+        if "resources" in detail_labels:
+            detail_labels["resources"].SetLabel(t("jobs.resources"))
+        btn_raw_job_details.SetLabel(t("raw_viewer.raw_job_details"))
         accounting_prefix = "▸" if _accounting_collapsed["collapsed"] else "▾"
         accounting_box.SetLabel(f"{accounting_prefix} {t('jobs_outputs.accounting_details')}")
         btn_sacct.SetLabel(t("jobs_outputs.refresh_sacct"))
@@ -1584,23 +1811,31 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
             info = accounting_table.GetColumn(index)
             info.Text = t(accounting_column_labels[key])
             accounting_table.SetColumn(index, info)
-        provider_status_label.SetLabel(t("jobs_outputs.provider_status"))
-        btn_provider_status.SetLabel(t("jobs_outputs.refresh_status"))
+        btn_toggle_raw_acct.SetLabel(
+            t("jobs_outputs.job_details") if not accounting_raw_text.IsShown()
+            else t("raw_viewer.raw_accounting")
+        )
+        cluster_prefix = "▸" if _cluster_collapsed["collapsed"] else "▾"
+        cluster_servers_box.SetLabel(f"{cluster_prefix} {t('jobs.cluster_servers')}")
+        btn_refresh_lssrv.SetLabel(t("jobs_outputs.lssrv_refresh"))
+        btn_raw_server_status.SetLabel(t("raw_viewer.raw_server_status"))
+        for index, key in enumerate(("server", "state", "cpus", "memory")):
+            info = cluster_servers_table.GetColumn(index)
+            info.Text = t(f"jobs.{key}")
+            cluster_servers_table.SetColumn(index, info)
+        advanced_prefix = "▸" if _advanced_collapsed["collapsed"] else "▾"
+        advanced_box.SetLabel(f"{advanced_prefix} {t('jobs.advanced')}")
         try:
             accounting_raw_text.SetHint(t("jobs_outputs.accounting_raw_hint"))
         except Exception:
             pass
-        btn_raw_scontrol.SetLabel(
-            t("jobs_outputs.hide_raw_scontrol") if state["raw_scontrol_visible"]
-            else t("jobs_outputs.show_raw_scontrol")
-        )
         try:
             files_workdir_label.SetLabel(t("jobs.select_job_hint"))
         except Exception:
             pass
-        outputs_refresh_btn.SetLabel(t("jobs.refresh"))
-        outputs_follow.SetLabel(t("files.auto_scroll"))
-        outputs_pause_btn.SetLabel(t("jobs.resume_output" if state["outputs_paused"] else "jobs.pause_output"))
+        outputs_refresh_btn.SetLabel(t("jobs_outputs.refresh_all"))
+        outputs_follow.SetLabel(t("jobs_outputs.auto_scroll_all"))
+        outputs_pause_btn.SetLabel(t("jobs_outputs.resume_all" if state["outputs_paused"] else "jobs_outputs.pause_all"))
         for cid, text_ctrl in output_channels.items():
             page = text_ctrl.GetParent()
             try:
@@ -1620,9 +1855,10 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
     btn_refresh.Bind(wx.EVT_BUTTON, refresh_jobs)
     btn_cancel.Bind(wx.EVT_BUTTON, cancel_job)
     btn_sacct.Bind(wx.EVT_BUTTON, _refresh_sacct)
-    btn_provider_status.Bind(wx.EVT_BUTTON, _refresh_provider_status)
-    btn_toggle_raw.Bind(wx.EVT_BUTTON, _toggle_accounting_raw)
-    btn_raw_scontrol.Bind(wx.EVT_BUTTON, _toggle_raw_scontrol)
+    btn_toggle_raw_acct.Bind(wx.EVT_BUTTON, _toggle_accounting_raw)
+    btn_raw_job_details.Bind(wx.EVT_BUTTON, _open_raw_job_details)
+    btn_raw_server_status.Bind(wx.EVT_BUTTON, _open_raw_server_status)
+    btn_refresh_lssrv.Bind(wx.EVT_BUTTON, _refresh_provider_status)
     filter_field.Bind(wx.EVT_TEXT, _on_filter_changed)
     try:
         filter_field.Bind(wx.EVT_TEXT_ENTER, _on_filter_changed)
@@ -1719,7 +1955,7 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
             files_browser._wx_remote_controls["load"]()
         except Exception:
             pass
-        notebook.SetSelection(1)
+        notebook.SetSelection(2)
 
     btn_find_next.Bind(wx.EVT_BUTTON, _on_find_next)
     btn_jump_latest.Bind(wx.EVT_BUTTON, _on_jump_latest)
@@ -1733,9 +1969,9 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
     def _on_notebook_page_changed(evt):
         try:
             sel = notebook.GetSelection()
-            if sel == 1:
+            if sel == 2:
                 _navigate_files_to_workdir()
-            elif sel == 2:
+            elif sel == 3:
                 refresh_outputs_tab()
         except Exception:
             pass
@@ -1747,7 +1983,7 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
     def tick(event):
         refresh_jobs(event)
         try:
-            if notebook.GetSelection() == 2:
+            if notebook.GetSelection() == 3:
                 ctx = model.selected_job_store.context
                 terminal_states = {"COMPLETED", "FAILED", "CANCELLED", "TIMEOUT", "OUT_OF_MEMORY"}
                 is_terminal = ctx.state.upper() in terminal_states if ctx.state else False
@@ -1774,7 +2010,7 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         lifecycle.register_cleanup(close)
     subscribe_language_change(refresh_labels)
 
-    # Expose internal state for tests
+    # --- Expose internal state for tests -----------------------------------
     host._wx_jobs_state = state
     host._wx_jobs_model = model
     host._wx_jobs_controls = {
@@ -1782,21 +2018,23 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         "follow": outputs_follow, "pause": outputs_pause_btn,
         "refresh": btn_refresh, "cancel": btn_cancel,
         "notebook": notebook,
-        "details_page": details_page, "files_page": files_page, "outputs_page": outputs_page,
+        "jobs_page": jobs_page, "details_page": details_page,
+        "files_page": files_page, "outputs_page": outputs_page,
         "accounting_table": accounting_table,
         "accounting_raw_text": accounting_raw_text,
-        "details_text": detail_values["job_id"],
         "detail_values": detail_values,
         "detail_labels": detail_labels,
-        "details_fields_panel": details_fields_panel,
-        "collapse_jobs": _toggle_jobs,
-        "collapse_details": _toggle_details,
+        "details_content_panel": details_content_panel,
+        "no_selection_panel": no_selection_panel,
         "collapse_accounting": _toggle_accounting,
-        "raw_scontrol_text": raw_scontrol_text,
-        "btn_raw_scontrol": btn_raw_scontrol,
+        "collapse_cluster_servers": _toggle_cluster_servers,
+        "collapse_advanced": _toggle_advanced,
+        "btn_raw_job_details": btn_raw_job_details,
         "btn_sacct": btn_sacct,
+        "btn_raw_server_status": btn_raw_server_status,
         "accounting_box": accounting_box,
-        "details_box": details_box,
+        "cluster_servers_box": cluster_servers_box,
+        "advanced_box": advanced_box,
         "files_browser": files_browser,
         "files_model": files_model,
         "files_workdir_label": files_workdir_label,
@@ -1814,11 +2052,12 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         "filter_field": filter_field,
         "cb_auto_refresh": cb_auto_refresh,
         "btn_cancel": btn_cancel,
-        "jobs_box": jobs_box,
-        "provider_status_panel": provider_status_panel,
-        "provider_status_text": provider_status_text,
-        "btn_provider_status": btn_provider_status,
+        "cluster_servers_text": cluster_servers_text,
+        "cluster_servers_table": cluster_servers_table,
+        "btn_refresh_lssrv": btn_refresh_lssrv,
         "open_output_window": _on_open_in_window,
+        "go_to_jobs": _go_to_jobs,
+        "show_details_content": _show_details_content,
     }
     host._wx_jobs_model = model
     host._wx_jobs_refresh_jobs = refresh_jobs
@@ -1830,6 +2069,7 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
     host._wx_jobs_refresh_outputs_tab = refresh_outputs_tab
     host._wx_jobs_set_session = set_session
     host.Bind(wx.EVT_WINDOW_DESTROY, on_destroy)
+    _refresh_provider_status()
     refresh_jobs()
     finish()
     return host

@@ -52,6 +52,12 @@ class SSHSlurmBackend(SlurmBackend):
         code, out, err = self.ssh.run(cmd, log_output=False)
         return out if out.strip() else (err or f"[exit={code}]")
 
+    def sacct_job(self, job_id: str) -> str:
+        """Query accounting for a specific job ID using stable pipe format."""
+        cmd = self._command("sacct_job_command", job_id=job_id)
+        code, out, err = self.ssh.run(cmd, log_output=False)
+        return out if out.strip() else (err or f"[exit={code}]")
+
     def scontrol_show_job(self, job_id: str) -> str:
         cmd = self._command("scontrol_command", job_id=job_id)
         code, out, err = self.ssh.run(cmd, log_output=False)

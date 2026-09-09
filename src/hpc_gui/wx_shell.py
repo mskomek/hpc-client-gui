@@ -2072,6 +2072,9 @@ def _jobs_callbacks(session_state, parent, lifecycle):
         profile = _resolve_profile()
         if not slurm:
             return ""
+        sacct_job = getattr(slurm, "sacct_job", None)
+        if callable(sacct_job):
+            return sacct_job(str(job_id))
         if not hasattr(slurm, "sacct"):
             return ""
         try:
