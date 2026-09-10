@@ -483,7 +483,8 @@ class SSHClientWrapper:
         if not self._disconnect_cb:
             return
         try:
-            self._disconnect_cb(reason or "SSH bağlantısı kesildi.")
+            from hpc_gui.core.i18n import t
+            self._disconnect_cb(reason or t("login.ssh_disconnected"))
         except Exception:
             pass
 

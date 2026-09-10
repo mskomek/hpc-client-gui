@@ -86,7 +86,7 @@ class CommandHistoryStore:
 
         items: List[str] = []
         try:
-            with self.path.open("r", encoding="utf-8", errors="ignore") as f:
+            with self.path.open("r", encoding="utf-8", errors="replace") as f:
                 for line in f:
                     line = line.strip()
                     if not line:

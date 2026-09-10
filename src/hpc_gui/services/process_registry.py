@@ -42,7 +42,7 @@ def _read_all() -> Dict[str, Any]:
     try:
         path = _registry_path()
         if path.exists():
-            return json.loads(path.read_text(encoding="utf-8", errors="ignore") or "{}") or {}
+            return json.loads(path.read_text(encoding="utf-8", errors="replace") or "{}") or {}
     except Exception:
         return {}
     return {}

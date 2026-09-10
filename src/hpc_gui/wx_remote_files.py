@@ -15,6 +15,9 @@ class RemoteEntry:
     path: str
     is_dir: bool = False
     size: int = 0
+    name: str = ""  # Optional: for compatibility with files_base.RemoteEntry
+    mtime: int = 0  # Optional: unix epoch seconds
+    mode: int = 0  # Optional: file mode bits
 
 
 @dataclass(frozen=True)
