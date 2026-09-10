@@ -260,7 +260,13 @@ class TestRegression:
         assert d.job_id == "1"
         r = _parse_sacct_pipe_v1("JobIDRaw|State|Elapsed|MaxRSS|AllocTRES|ExitCode\n100|RUNNING|00:01:00|512M||0:0\n", None)
         assert len(r.rows) == 1
-        s = _parse_truba_lssrv_v1("SERVER STATE CPU MEMORY\nnode001 available 32 128G\n", None)
+        s = _parse_truba_lssrv_v1(
+            "Slurm partitions state\n"
+            "Partition CPUs Wait. Jobs Wait. Jobs Nodes Max. Job Time Min. Nodes Max. Nodes Core RAM (MB)\n"
+            "Name (Free) (Total) (Resources) (Total) (Total) (D-HH:MM:SS) per Job per Job per Node per Core\n"
+            "short 8 32 0 1 2 1-00:00:00 1 2 16 4096\n",
+            None,
+        )
         assert len(s) == 1
 
 

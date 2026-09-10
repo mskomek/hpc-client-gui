@@ -35,9 +35,11 @@ class MockSlurmBackend(SlurmBackend):
 
     def lssrv(self) -> str:
         return (
-            "SERVER     STATE     CPU  MEMORY\n"
-            "node001    available  32   128G\n"
-            "node002    busy       64   256G\n"
+            "Slurm partitions state\n"
+            "Partition CPUs Wait. Jobs Wait. Jobs Nodes Max. Job Time Min. Nodes Max. Nodes Core RAM (MB)\n"
+            "Name (Free) (Total) (Resources) (Total) (Total) (D-HH:MM:SS) per Job per Job per Node per Core\n"
+            "short 8 32 0 1 2 1-00:00:00 1 2 16 4096\n"
+            "long 16 64 0 2 4 2-00:00:00 1 4 32 8192\n"
         )
 
     def active_job_ids(self, user: str) -> str:

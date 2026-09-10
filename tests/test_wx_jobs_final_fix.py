@@ -84,6 +84,30 @@ def test_inner_notebook_has_exact_order_and_language_refresh():
         _close(frame)
 
 
+def test_outputs_pause_all_and_accounting_labels_reset_and_localize():
+    app, frame, panel = _build()
+    try:
+        ctrls = panel._wx_jobs_controls
+        pause_all = ctrls["outputs_pause"]
+        ctrls["outputs_follow"].SetValue(False)
+        _click(pause_all)
+        assert pause_all.GetLabel() == t("jobs_outputs.resume_all")
+        panel._wx_jobs_set_session({"id": "new-session"})
+        assert panel._wx_jobs_state["outputs_paused"] is False
+        assert pause_all.GetLabel() == t("jobs_outputs.pause_all")
+        assert ctrls["outputs_follow"].GetValue() is False
+        assert ctrls["accounting_box"].GetLabel() == "▸ Accounting"
+        set_language("tr")
+        wx.Yield()
+        assert pause_all.GetLabel() == "Tümünü Duraklat"
+        _click(pause_all)
+        assert pause_all.GetLabel() == "Tümüne Devam Et"
+        assert ctrls["accounting_box"].GetLabel() == "▸ Muhasebe"
+        set_language("en")
+    finally:
+        _close(frame)
+
+
 def test_cluster_disconnected_and_unsupported_states_are_explicit():
     app, frame, panel = _build()
     try:
@@ -103,14 +127,62 @@ def test_cluster_disconnected_and_unsupported_states_are_explicit():
 def test_cluster_status_needs_no_selected_job_and_uses_real_refresh_event():
     app, frame, panel = _build(
         has_status_capability=lambda: True,
-        refresh_lssrv=lambda: "SERVER|STATE|CPU|MEMORY\nnode01|up|32|128G",
+        refresh_lssrv=lambda: (
+            "Slurm partitions state\n"
+            "Partition CPUs Wait. Jobs Wait. Jobs Nodes Max. Job Time Min. Nodes Max. Nodes Core RAM (MB)\n"
+            "Name (Free) (Total) (Resources) (Total) (Total) (D-HH:MM:SS) per Job per Job per Node per Core\n"
+            "short 8 32 0 1 2 1-00:00:00 1 2 16 4096"
+        ),
     )
     try:
         ctrls = panel._wx_jobs_controls
         _click(ctrls["btn_refresh_lssrv"])
         assert _pump(lambda: ctrls["cluster_servers_table"].GetItemCount() == 1)
         assert panel._wx_jobs_state["selected_job"] == ""
-        assert ctrls["cluster_servers_table"].GetItemText(0, 0) == "node01"
+        assert ctrls["cluster_servers_table"].GetItemText(0, 0) == "short"
+    finally:
+        _close(frame)
+
+
+def test_provider_contract_lssrv_parser_reaches_visible_cluster_cells():
+    raw = (
+        "Slurm partitions state\n"
+        "Partition CPUs Wait. Jobs Wait. Jobs Nodes Max. Job Time Min. Nodes Max. Nodes Core RAM (MB)\n"
+        "Name (Free) (Total) (Resources) (Total) (Total) (D-HH:MM:SS) per Job per Job per Node per Core\n"
+        "short 8 32 0 1 2 1-00:00:00 1 2 16 4096"
+    )
+    app, frame, panel = _build(
+        session_state={
+            "session": {
+                "id": "provider-session",
+                "profile": {"provider_template": {
+                    "cluster_status": {"adapter": "truba.lssrv", "parser": "truba.lssrv.v1"},
+                }},
+            },
+        },
+        has_status_capability=lambda: True,
+        refresh_lssrv=lambda: raw,
+    )
+    try:
+        _click(panel._wx_jobs_controls["btn_refresh_lssrv"])
+        assert _pump(lambda: panel._wx_jobs_controls["cluster_servers_table"].GetItemCount() == 1)
+        table = panel._wx_jobs_controls["cluster_servers_table"]
+        assert [table.GetItemText(0, index) for index in range(4)] == ["short", "8", "32", "4096"]
+    finally:
+        _close(frame)
+
+
+def test_malformed_lssrv_warns_and_preserves_raw_status():
+    raw = "this is not a valid lssrv response"
+    app, frame, panel = _build(
+        has_status_capability=lambda: True,
+        refresh_lssrv=lambda: raw,
+    )
+    try:
+        _click(panel._wx_jobs_controls["btn_refresh_lssrv"])
+        assert _pump(lambda: "could not be parsed" in panel._wx_jobs_controls["cluster_status_text"].GetLabel())
+        assert panel._wx_jobs_controls["cluster_servers_table"].GetItemCount() == 0
+        assert panel._wx_jobs_state["raw_status_result"].stdout == raw
     finally:
         _close(frame)
 
@@ -124,7 +196,12 @@ def test_cluster_result_survives_job_selection_and_reconnect_rejects_old_result(
         calls.append(current)
         if current == "A":
             time.sleep(0.15)
-        return f"SERVER|STATE|CPU|MEMORY\nnode-{current}|up|4|8G"
+        return (
+            "Slurm partitions state\n"
+            "Partition CPUs Wait. Jobs Wait. Jobs Nodes Max. Job Time Min. Nodes Max. Nodes Core RAM (MB)\n"
+            "Name (Free) (Total) (Resources) (Total) (Total) (D-HH:MM:SS) per Job per Job per Node per Core\n"
+            f"part-{current} 2 4 0 1 1 1-00:00:00 1 1 4 2048"
+        )
 
     app, frame, panel = _build(
         session_state={"session": {"id": "A"}},
@@ -135,13 +212,13 @@ def test_cluster_result_survives_job_selection_and_reconnect_rejects_old_result(
         ctrls = panel._wx_jobs_controls
         _select(panel, 0)
         _select(panel, 1)
-        assert _pump(lambda: "node-A" in ctrls["cluster_servers_table"].GetItemText(0, 0), 100)
+        assert _pump(lambda: "part-A" in ctrls["cluster_servers_table"].GetItemText(0, 0), 100)
         provider["value"] = "B"
         panel._wx_jobs_set_session(None)
         panel._wx_jobs_set_session({"id": "B"})
-        assert _pump(lambda: "node-B" in ctrls["cluster_servers_table"].GetItemText(0, 0), 120)
-        assert panel._wx_jobs_state["raw_status_result"].stdout.find("node-B") >= 0
-        assert "node-A" not in panel._wx_jobs_state["raw_status_result"].stdout
+        assert _pump(lambda: "part-B" in ctrls["cluster_servers_table"].GetItemText(0, 0), 120)
+        assert panel._wx_jobs_state["raw_status_result"].stdout.find("part-B") >= 0
+        assert "part-A" not in panel._wx_jobs_state["raw_status_result"].stdout
         assert calls
     finally:
         _close(frame)
@@ -248,7 +325,12 @@ def test_show_in_files_and_raw_buttons_use_real_wx_events():
             output_channel_defs=defs,
             refresh_sacct=lambda _job: "1001|RUNNING|00:05:00|1G|cpu=1|0:0",
             has_status_capability=lambda: True,
-            refresh_lssrv=lambda: "SERVER|STATE|CPU|MEMORY\nnode01|up|4|8G",
+            refresh_lssrv=lambda: (
+                "Slurm partitions state\n"
+                "Partition CPUs Wait. Jobs Wait. Jobs Nodes Max. Job Time Min. Nodes Max. Nodes Core RAM (MB)\n"
+                "Name (Free) (Total) (Resources) (Total) (Total) (D-HH:MM:SS) per Job per Job per Node per Core\n"
+                "short 2 4 0 1 1 1-00:00:00 1 1 4 2048"
+            ),
         )
         try:
             ctrls = panel._wx_jobs_controls
@@ -357,7 +439,12 @@ def test_stale_raw_exceptions_do_not_cross_job_or_provider():
             cluster_started.set()
             cluster_release.wait(2)
             raise RuntimeError("late cluster A")
-        return "SERVER|STATE|CPU|MEMORY\nnode-B|up|4|8G"
+        return (
+            "Slurm partitions state\n"
+            "Partition CPUs Wait. Jobs Wait. Jobs Nodes Max. Job Time Min. Nodes Max. Nodes Core RAM (MB)\n"
+            "Name (Free) (Total) (Resources) (Total) (Total) (D-HH:MM:SS) per Job per Job per Node per Core\n"
+            "part-B 2 4 0 1 1 1-00:00:00 1 1 4 2048"
+        )
 
     app, frame, panel = _build(
         session_state={"session": {"id": "A"}},
@@ -371,8 +458,8 @@ def test_stale_raw_exceptions_do_not_cross_job_or_provider():
         panel._wx_jobs_set_session({"id": "B"})
         cluster_release.set()
         ctrls = panel._wx_jobs_controls
-        assert _pump(lambda: "node-B" in ctrls["cluster_servers_table"].GetItemText(0, 0), 120)
-        assert "node-B" in panel._wx_jobs_state["raw_status_result"].stdout
+        assert _pump(lambda: "part-B" in ctrls["cluster_servers_table"].GetItemText(0, 0), 120)
+        assert "part-B" in panel._wx_jobs_state["raw_status_result"].stdout
     finally:
         cluster_release.set()
         _close(frame)

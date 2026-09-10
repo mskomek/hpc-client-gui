@@ -1,5 +1,7 @@
 """Wave 79 deep audit — edge cases, fallbacks, regressions."""
 
+from pathlib import Path
+
 import pytest
 from hpc_gui.services.parser_registry import (
     parse, register_parser, known_parser_ids, ParseError,
@@ -198,41 +200,61 @@ class TestSacctPipeV1Audit:
 # === truba.lssrv.v1 audit ===
 
 class TestTrubaLssrvV1Audit:
-    def test_valid(self):
-        raw = "SERVER     STATE     CPU  MEMORY\nnode001    available  32   128G\n"
-        r = _parse_truba_lssrv_v1(raw, None)
-        assert len(r) == 1
-        assert isinstance(r[0], ClusterServerStatus)
-        assert r[0].name == "node001"
-        assert r[0].state == "available"
+    VALID_LSSRV = (
+        "Slurm partitions state\n"
+        "Partition CPUs Wait. Jobs Wait. Jobs Nodes Max. Job Time Min. Nodes Max. Nodes Core RAM (MB)\n"
+        "Name (Free) (Total) (Resources) (Total) (Total) (D-HH:MM:SS) per Job per Job per Node per Core\n"
+        "\x1b[37mshort 8 32 0 1 2 1-00:00:00 1 2 16 4096\x1b[0m\n"
+        "long 16 64 0 2 4 2-00:00:00 1 4 32 8192\n"
+        "Last update: 10 Sep 26 10:00\n"
+    )
 
-    def test_spacing_variation(self):
-        raw = "SERVER  STATE  CPU  MEMORY\nnode001  available  32  128G\n"
+    def test_valid_real_lssrv_table(self):
+        raw = self.VALID_LSSRV
+        r = _parse_truba_lssrv_v1(raw, None)
+        assert len(r) == 2
+        assert isinstance(r[0], ClusterServerStatus)
+        assert r[0].name == "short"
+        assert r[0].free_cpus == "8"
+        assert r[0].total_cpus == "32"
+        assert r[0].memory_mb_per_core == "4096"
+
+    def test_documented_box_table_fixture(self):
+        raw = (Path(__file__).parent / "fixtures" / "lssrv" / "truba_partitions_state.txt").read_text(encoding="utf-8")
+        rows = _parse_truba_lssrv_v1(raw, None)
+        assert len(rows) == 9
+        assert rows[0].partition == "single"
+        assert rows[0].free_cpus == "190"
+        assert rows[0].total_cpus == "192"
+        assert rows[0].max_nodes_per_job == "UNLIMITED"
+        assert rows[0].memory_mb_per_core == "9500 MB"
+
+    def test_real_lssrv_spacing_variation(self):
+        raw = (
+            "Slurm partitions state\n"
+            "Partition CPUs Wait. Jobs Wait. Jobs Nodes Max. Job Time Min. Nodes Max. Nodes Core RAM (MB)\n"
+            "Name (Free) (Total) (Resources) (Total) (Total) (D-HH:MM:SS) per Job per Job per Node per Core\n"
+            "  short    8    32    0    1    2    1-00:00:00    1    2    16    4096  \n"
+        )
         r = _parse_truba_lssrv_v1(raw, None)
         assert len(r) == 1
+        assert r[0].total_cpus == "32"
+
+    def test_legacy_server_shape_is_rejected(self):
+        with pytest.raises(ValueError):
+            _parse_truba_lssrv_v1("SERVER STATE CPU MEMORY\nnode001 available 32 128G\n", None)
 
     def test_empty(self):
         r = _parse_truba_lssrv_v1("", None)
         assert r == []
 
     def test_single_column_skipped(self):
-        r = _parse_truba_lssrv_v1("SERVER\nnode001\n", None)
-        assert r == []
+        with pytest.raises(ValueError):
+            _parse_truba_lssrv_v1("SERVER\nnode001\n", None)
 
     def test_malformed_skipped(self):
-        r = _parse_truba_lssrv_v1("onlyoneword\n", None)
-        assert r == []
-
-    def test_pipe_delimited(self):
-        raw = "SERVER|STATE|CPU|MEMORY\nnode001|available|32|128G\n"
-        r = _parse_truba_lssrv_v1(raw, None)
-        assert len(r) == 1 and r[0].name == "node001"
-
-    def test_multiple_servers(self):
-        raw = "SERVER STATE CPU MEMORY\na available 8 16G\nb busy 16 32G\nc drain 4 8G\n"
-        r = _parse_truba_lssrv_v1(raw, None)
-        assert len(r) == 3
-
+        with pytest.raises(ValueError):
+            _parse_truba_lssrv_v1("onlyoneword\n", None)
 
 # === Schema v4 validation audit ===
 

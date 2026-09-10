@@ -143,7 +143,12 @@ def test_accounting_expand_collapse():
 def test_cluster_servers_visible_without_selected_job_when_provider_supports():
     app, frame, panel = _build_panel(
         has_status_capability=lambda: True,
-        refresh_lssrv=lambda _job_id: "SERVER STATE\nnode001 available",
+        refresh_lssrv=lambda _job_id: (
+            "Slurm partitions state\n"
+            "Partition CPUs Wait. Jobs Wait. Jobs Nodes Max. Job Time Min. Nodes Max. Nodes Core RAM (MB)\n"
+            "Name (Free) (Total) (Resources) (Total) (Total) (D-HH:MM:SS) per Job per Job per Node per Core\n"
+            "short 8 32 0 1 2 1-00:00:00 1 2 16 4096"
+        ),
     )
     try:
         ctrls = panel._wx_jobs_controls
@@ -165,9 +170,16 @@ def test_cluster_servers_visible_without_selected_job_when_provider_supports():
 
 
 def test_cluster_servers_table_and_raw_result_are_visible():
+    load_language("en")
     app, frame, panel = _build_panel(
         has_status_capability=lambda: True,
-        refresh_lssrv=lambda _job_id: "SERVER|STATE|CPU|MEMORY\nnode001|available|32|128G\nnode002|busy|64|256G",
+        refresh_lssrv=lambda _job_id: (
+            "Slurm partitions state\n"
+            "Partition CPUs Wait. Jobs Wait. Jobs Nodes Max. Job Time Min. Nodes Max. Nodes Core RAM (MB)\n"
+            "Name (Free) (Total) (Resources) (Total) (Total) (D-HH:MM:SS) per Job per Job per Node per Core\n"
+            "short 8 32 0 1 2 1-00:00:00 1 2 16 4096\n"
+            "long 16 64 0 2 4 2-00:00:00 1 4 32 8192"
+        ),
     )
     try:
         ctrls = panel._wx_jobs_controls
@@ -181,12 +193,16 @@ def test_cluster_servers_table_and_raw_result_are_visible():
             wx.MilliSleep(10)
         table = ctrls["cluster_servers_table"]
         assert table.GetItemCount() == 2
-        assert table.GetItemText(0, 0) == "node001"
-        assert table.GetItemText(0, 1) == "available"
-        assert table.GetItemText(1, 3) == "256G"
+        assert [table.GetColumn(i).GetText() for i in range(4)] == [
+            "Partition", "Free CPUs", "Total CPUs", "RAM (MB) per Core",
+        ]
+        assert table.GetItemText(0, 0) == "short"
+        assert table.GetItemText(0, 1) == "8"
+        assert table.GetItemText(0, 2) == "32"
+        assert table.GetItemText(1, 3) == "8192"
         raw = panel._wx_jobs_state["raw_status_result"]
         assert isinstance(raw, RawCommandResult)
-        assert "node002|busy|64|256G" in raw.stdout
+        assert "long 16 64 0 2 4" in raw.stdout
         assert ctrls["btn_raw_server_status"].IsShown()
     finally:
         _close(frame)
@@ -231,7 +247,12 @@ def test_cluster_servers_hidden_for_unsupported_provider():
 def test_raw_server_status_opens():
     app, frame, panel = _build_panel(
         has_status_capability=lambda: True,
-        refresh_lssrv=lambda _job_id: "SERVER STATE\nnode001 available",
+        refresh_lssrv=lambda _job_id: (
+            "Slurm partitions state\n"
+            "Partition CPUs Wait. Jobs Wait. Jobs Nodes Max. Job Time Min. Nodes Max. Nodes Core RAM (MB)\n"
+            "Name (Free) (Total) (Resources) (Total) (Total) (D-HH:MM:SS) per Job per Job per Node per Core\n"
+            "short 8 32 0 1 2 1-00:00:00 1 2 16 4096"
+        ),
     )
     try:
         ctrls = panel._wx_jobs_controls

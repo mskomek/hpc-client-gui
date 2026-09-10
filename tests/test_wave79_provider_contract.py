@@ -204,9 +204,11 @@ class TestSacctPipeV1:
 
 class TestTrubaLssrvV1:
     VALID_LSSRV = (
-        "SERVER     STATE     CPU  MEMORY\n"
-        "node001    available  32   128G\n"
-        "node002    busy       64   256G\n"
+        "Slurm partitions state\n"
+        "Partition CPUs Wait. Jobs Wait. Jobs Nodes Max. Job Time Min. Nodes Max. Nodes Core RAM (MB)\n"
+        "Name (Free) (Total) (Resources) (Total) (Total) (D-HH:MM:SS) per Job per Job per Node per Core\n"
+        "short 8 32 0 1 2 1-00:00:00 1 2 16 4096\n"
+        "long 16 64 0 2 4 2-00:00:00 1 4 32 8192\n"
     )
 
     def test_valid_lssrv(self):
@@ -215,19 +217,22 @@ class TestTrubaLssrvV1:
         assert isinstance(result.data, list)
         assert len(result.data) == 2
         assert isinstance(result.data[0], ClusterServerStatus)
-        assert result.data[0].name == "node001"
-        assert result.data[0].state == "available"
+        assert result.data[0].name == "short"
+        assert result.data[0].free_cpus == "8"
         assert result.data[0].total_cpus == "32"
+        assert result.data[0].memory_mb_per_core == "4096"
 
     def test_lssrv_spacing_variation(self):
         raw = (
-            "SERVER  STATE  CPU  MEMORY\n"
-            "node001  available  32  128G\n"
+            "Slurm partitions state\n"
+            "Partition CPUs Wait. Jobs Wait. Jobs Nodes Max. Job Time Min. Nodes Max. Nodes Core RAM (MB)\n"
+            "Name (Free) (Total) (Resources) (Total) (Total) (D-HH:MM:SS) per Job per Job per Node per Core\n"
+            "  short    8    32    0    1    2    1-00:00:00    1    2    16    4096  \n"
         )
         result = parse("truba.lssrv.v1", raw)
         assert result.ok
         assert len(result.data) == 1
-        assert result.data[0].name == "node001"
+        assert result.data[0].name == "short"
 
     def test_lssrv_empty(self):
         result = parse("truba.lssrv.v1", "")
@@ -237,14 +242,18 @@ class TestTrubaLssrvV1:
     def test_lssrv_single_column(self):
         raw = "SERVER\nnode001\n"
         result = parse("truba.lssrv.v1", raw)
-        assert result.ok
-        # Single column has < 2 fields, so it's skipped (not valid lssrv)
-        assert result.data == []
+        assert not result.ok
+        assert result.error.kind == "parser_failure"
 
     def test_malformed_lssrv(self):
-        result = parse("truba.lssrv.v1", "")
-        assert result.ok
-        assert result.data == []
+        result = parse("truba.lssrv.v1", "SERVER STATE CPU MEMORY\nnode001 available 32 128G\n")
+        assert not result.ok
+        assert result.error.kind == "parser_failure"
+
+    def test_unrecognized_lssrv_is_typed_failure(self):
+        result = parse("truba.lssrv.v1", "this is not a valid lssrv response")
+        assert not result.ok
+        assert result.error.kind == "parser_failure"
 
 
 # ---------------------------------------------------------------------------
@@ -345,6 +354,7 @@ class TestProductionContractWiring:
         result = callbacks["show_job_details"]("42")
         assert isinstance(result, RawCommandResult)
         assert result.stdout == "JobId=42 JobState=RUNNING"
+        assert result.exit_code == -1
 
 
 # ---------------------------------------------------------------------------
@@ -500,6 +510,11 @@ class TestRawCommandResult:
     def test_display_command_fallback(self):
         r = RawCommandResult(source_id="scontrol", command="", stdout="")
         assert r.display_command == "[scontrol]"
+
+    def test_unknown_exit_code_is_not_reported_as_error(self):
+        r = RawCommandResult.from_response(source_id="scontrol", stdout="legacy callback")
+        assert r.exit_code == -1
+        assert not r.has_error
 
 
 # ---------------------------------------------------------------------------

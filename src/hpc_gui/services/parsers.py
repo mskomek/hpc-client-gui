@@ -221,49 +221,62 @@ def _parse_sacct_pipe_v1(raw_text: str, parser_config: dict[str, Any] | None = N
 # ---------------------------------------------------------------------------
 
 def _parse_truba_lssrv_v1(raw_text: str, parser_config: dict[str, Any] | None = None) -> list[ClusterServerStatus]:
-    """Parse TRUBA lssrv output into normalized ClusterServerStatus models.
+    """Parse the human-readable table emitted by TRUBA's ``lssrv``.
 
-    Expected output format:
-        SERVER     STATE     CPU  MEMORY
-        node001    available  32   128G
-        node002    busy       64   256G
-
-    Tolerant of:
-    - harmless spacing changes
-    - format mismatch produces parse warning (but raw fallback still works)
-    - only includes fields justified by actual output
+    Rows are: partition, free CPUs, total CPUs, waiting jobs (resources),
+    waiting jobs (total), total nodes, maximum job time, minimum/maximum nodes
+    per job, cores per node, and RAM (MB) per core.
     """
-    lines = [line.strip() for line in raw_text.splitlines() if line.strip()]
-    if not lines:
+    text = str(raw_text or "")
+    if not text.strip():
         return []
 
-    # Detect delimiter: pipe or whitespace
-    delimiter = "|" if any("|" in line for line in lines) else None
+    ansi = re.compile(r"\x1b(?:\[[0-?]*[ -/]*[@-~]|\][^\x07]*(?:\x07|\x1b\\))")
+    border = re.compile(r"[┌┐└┘├┤┬┴┼─═╔╗╚╝╠╣╦╩╬┏┓┗┛┣┫┳┻╋╭╮╯╰]")
+    count = re.compile(r"(?:\d+|N/?A|-)", re.IGNORECASE)
+    lines = [ansi.sub("", line) for line in text.splitlines() if ansi.sub("", line).strip()]
+    header = " ".join(lines[:5]).lower()
+    required_header_words = ("partition", "cpus", "wait", "jobs", "nodes", "max", "job", "time", "min", "core", "ram")
+    if not all(word in header for word in required_header_words):
+        raise ValueError("unrecognized lssrv header")
 
     results: list[ClusterServerStatus] = []
-    for line in lines[1:]:  # Skip header
-        if delimiter:
-            fields = [f.strip() for f in line.split(delimiter)]
-        else:
-            fields = line.split()
+    saw_row = False
 
-        if len(fields) < 2:
+    for raw_line in text.splitlines():
+        line = ansi.sub("", raw_line).strip()
+        if not line:
             continue
 
-        name = fields[0] if len(fields) > 0 else ""
-        state = fields[1] if len(fields) > 1 else ""
-        total_cpus = fields[2] if len(fields) > 2 else ""
-        # field 3 is MEMORY in the mock, but we only store what's justified
-        free_cpus = ""  # Not present in actual output yet
+        if any(separator in line for separator in ("|", "│", "┃")):
+            fields = [part.strip() for part in re.split(r"[|│┃]", line) if part.strip()]
+        else:
+            fields = border.sub(" ", line).split()
+        if len(fields) >= 6 and fields[0].lower() not in {"partition", "name"}:
+            saw_row = True
+        if len(fields) == 12 and fields[-1].upper() == "MB":
+            fields[10] = f"{fields[10]} MB"
+            fields.pop()
+        if len(fields) != 11 or not count.fullmatch(fields[1]) or not count.fullmatch(fields[2]):
+            continue
 
         results.append(ClusterServerStatus(
-            name=name,
-            state=state,
-            total_cpus=total_cpus,
-            free_cpus=free_cpus,
-            raw_row=line,
+            partition=fields[0],
+            free_cpus=fields[1],
+            total_cpus=fields[2],
+            wait_jobs_resources=fields[3],
+            wait_jobs_total=fields[4],
+            nodes_total=fields[5],
+            max_job_time=fields[6],
+            min_nodes_per_job=fields[7],
+            max_nodes_per_job=fields[8],
+            cores_per_node=fields[9],
+            memory_mb_per_core=fields[10],
+            raw_row=raw_line,
         ))
 
+    if saw_row and not results:
+        raise ValueError("malformed lssrv row")
     return results
 
 

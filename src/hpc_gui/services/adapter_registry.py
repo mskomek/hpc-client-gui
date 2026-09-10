@@ -33,7 +33,7 @@ def _raw_response(value, *, source_id: str, command: str) -> RawCommandResult:
         command=command,
         stdout=str(value or ""),
         stderr="",
-        exit_code=0,
+        exit_code=-1,
     )
 
 

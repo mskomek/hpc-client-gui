@@ -150,7 +150,12 @@ class TestSec7_RawSourceIsolation:
             return f"JOBID|STATE\n{jid}|RUNNING"
 
         def refresh_lssrv():
-            return "SERVER STATE\nnode001 available"
+            return (
+                "Slurm partitions state\n"
+                "Partition CPUs Wait. Jobs Wait. Jobs Nodes Max. Job Time Min. Nodes Max. Nodes Core RAM (MB)\n"
+                "Name (Free) (Total) (Resources) (Total) (Total) (D-HH:MM:SS) per Job per Job per Node per Core\n"
+                "short 8 32 0 1 2 1-00:00:00 1 2 16 4096"
+            )
 
         app, frame, panel = _build_panel(
             show_job_details=show_details,
@@ -190,7 +195,12 @@ class TestSec11_ClusterStatusIndependence:
         load_language("en")
 
         def refresh_lssrv():
-            return "SERVER STATE\nnode001 available"
+            return (
+                "Slurm partitions state\n"
+                "Partition CPUs Wait. Jobs Wait. Jobs Nodes Max. Job Time Min. Nodes Max. Nodes Core RAM (MB)\n"
+                "Name (Free) (Total) (Resources) (Total) (Total) (D-HH:MM:SS) per Job per Job per Node per Core\n"
+                "short 8 32 0 1 2 1-00:00:00 1 2 16 4096"
+            )
 
         app, frame, panel = _build_panel(
             refresh_lssrv=refresh_lssrv,
@@ -261,7 +271,7 @@ class TestSec27_I18N:
         load_language("en")
         assert "Job details could not be parsed" in t("jobs_outputs.parse_error_details")
         assert "Accounting data could not be parsed" in t("jobs_outputs.parse_error_accounting")
-        assert "Cluster server information could not be parsed" in t("jobs_outputs.parse_error_cluster")
+        assert "Cluster partition information could not be parsed" in t("jobs_outputs.parse_error_cluster")
         assert "raw scheduler response" in t("jobs_outputs.parse_error_details").lower() or "raw" in t("jobs_outputs.parse_error_details").lower()
         load_language("tr")
         assert t("jobs_outputs.parse_error_details") != "[jobs_outputs.parse_error_details]"
@@ -322,7 +332,12 @@ class TestSec41_EmptyJobsClusterStatus:
         panel = build_jobs_panel(
             frame,
             list_jobs=lambda: [],
-            refresh_lssrv=lambda: "SERVER STATE\nnode001 available",
+            refresh_lssrv=lambda: (
+                "Slurm partitions state\n"
+                "Partition CPUs Wait. Jobs Wait. Jobs Nodes Max. Job Time Min. Nodes Max. Nodes Core RAM (MB)\n"
+                "Name (Free) (Total) (Resources) (Total) (Total) (D-HH:MM:SS) per Job per Job per Node per Core\n"
+                "short 8 32 0 1 2 1-00:00:00 1 2 16 4096"
+            ),
             has_status_capability=lambda: True,
         )
         frame.Show()
