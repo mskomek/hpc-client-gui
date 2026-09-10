@@ -56,7 +56,7 @@ class AboutDialog(QDialog):
 
         layout = QVBoxLayout(self)
 
-        title = QLabel("HPC Client GUI")
+        title = QLabel(t("app.title"))
         title.setStyleSheet("font-weight: 700; font-size: 16px;")
         layout.addWidget(title)
 

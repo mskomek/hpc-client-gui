@@ -13,6 +13,12 @@ class ReleaseTestSuiteTests(unittest.TestCase):
         self.assertNotIn("--cov-fail-under=65", commands[-2])
         self.assertIn("--cov-fail-under=65", commands[-1])
 
+    def test_toolkit_boundary_suite_isolated_without_skipping_it(self):
+        commands = build_commands(coverage=False)
+        self.assertIn("tests/test_editor_flow.py", commands[-1])
+        self.assertIn("--ignore", commands[-4])
+        self.assertNotIn("--ignore", commands[-1])
+
 
 if __name__ == "__main__":
     unittest.main()

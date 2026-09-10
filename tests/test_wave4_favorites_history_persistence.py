@@ -138,6 +138,27 @@ class TestSerialization:
         assert len(state_files) == 1
         assert len(list(tmp_path.glob("*.tmp"))) == 0
 
+    def test_event_history_is_utf8_and_atomic(self, tmp_path, monkeypatch):
+        from hpc_gui.core import history
+
+        path = tmp_path / "history.json"
+        monkeypatch.setattr(history, "_history_path", lambda: path)
+        history.append_event({"type": "visit", "path": "/Çalışmalar_日本語"})
+
+        assert json.loads(path.read_text(encoding="utf-8"))[0]["path"] == "/Çalışmalar_日本語"
+        assert list(tmp_path.glob("*.tmp")) == []
+
+    def test_corrupt_event_history_is_backed_up(self, tmp_path, monkeypatch):
+        from hpc_gui.core import history
+
+        path = tmp_path / "history.json"
+        path.write_bytes(b"[corrupt\xff")
+        monkeypatch.setattr(history, "_history_path", lambda: path)
+        history.append_event({"type": "visit", "path": "/日本語"})
+
+        assert (tmp_path / "history.json.bak").read_bytes() == b"[corrupt\xff"
+        assert json.loads(path.read_text(encoding="utf-8"))[0]["path"] == "/日本語"
+
 
 # ---- 5. Profile Isolation ----
 

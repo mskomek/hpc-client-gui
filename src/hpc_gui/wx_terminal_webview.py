@@ -627,11 +627,12 @@ class WxTerminalWebViewPanel(wx.Panel if _WX_AVAILABLE else object):  # type: ig
         if self._closed or not self._is_parity or self._webview is None:
             return
         try:
-            # Use RunScript if available, else RunScriptAsync
-            if hasattr(self._webview, "RunScript"):
-                self._webview.RunScript(code)
-            elif hasattr(self._webview, "RunScriptAsync"):
+            # Fire-and-forget calls must not synchronously back up WebView2's
+            # renderer queue while wx is pumping a burst of terminal output.
+            if hasattr(self._webview, "RunScriptAsync"):
                 self._webview.RunScriptAsync(code)
+            elif hasattr(self._webview, "RunScript"):
+                self._webview.RunScript(code)
         except Exception:
             pass
 

@@ -341,7 +341,6 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e .[test,wx]
           pip install pytest ruff
-        continue-on-error: ${{ runner.os == 'Linux' }}
       - name: Compile check
         run: python -m compileall src/hpc_gui
       - name: Ruff gate (wx)
@@ -349,7 +348,7 @@ jobs:
       - name: Focused wx smoke (headless)
         run: |
           python -m pytest tests/test_wx_shell.py tests/test_wx_65a_stress.py tests/test_wx_windows_audit.py tests/test_wx_terminal.py tests/test_wx_embedded_terminal.py tests/test_wx_terminal_behavioral.py -q --tb=short -rf
-        continue-on-error: ${{ runner.os == 'Linux' }}
+          python -m pytest tests/test_wave2_wx_ui_parity.py tests/test_wx_term002.py -q --tb=short -rf
       - name: Linux display note
         if: runner.os == 'Linux'
         run: echo "Linux wx requires Xvfb/GTK; missing wheel must build from source — BLOCKED if build fails, documented in docs/v2/WX_DEPENDENCY_CLOSURE.md"

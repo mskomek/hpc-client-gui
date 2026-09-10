@@ -49,6 +49,41 @@ def test_wx_shell_dispatches_core_views():
     assert "lifecycle.register_cleanup(destroy_tray)" in source and "def destroy_tray" in source
 
 
+def test_directories_default_download_uses_transfer_queue(monkeypatch, tmp_path):
+    from hpc_gui import wx_directories_view, wx_remote_files_view, wx_shell
+
+    app = wx.GetApp() or wx.App(False)
+    frame = wx.Frame(None)
+    captured = {}
+
+    class Files:
+        pass
+
+    files = Files()
+    state = {"session": {"files": files, "cfg": {"username": "alice"}}}
+
+    def fake_remote_panel(parent, **kwargs):
+        captured["operation"] = kwargs["operation"]
+        return wx.Panel(parent)
+
+    started = []
+    monkeypatch.setattr(wx_remote_files_view, "build_remote_files_panel", fake_remote_panel)
+    monkeypatch.setattr(wx_shell, "_start_file_transfers", lambda *args, **kwargs: started.append((args, kwargs)))
+
+    try:
+        wx_directories_view.build_directories_panel(frame, session_state=state)
+        captured["operation"]("download", ("/remote/İş sonuç.txt",), str(tmp_path))
+        item = started[0][0][2][0]
+        assert (item.op, item.src, item.dst) == (
+            "download",
+            "/remote/İş sonuç.txt",
+            str(tmp_path / "İş sonuç.txt"),
+        )
+    finally:
+        frame.Destroy()
+        app.ProcessPendingEvents()
+
+
 def test_wx_shell_remote_operation_keeps_session_snapshot(monkeypatch):
     from hpc_gui.wx_shell import _remote_files_callbacks
     import hpc_gui.wx_remote_files_view as remote_view

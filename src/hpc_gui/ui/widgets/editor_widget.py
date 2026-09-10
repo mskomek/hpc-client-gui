@@ -442,7 +442,7 @@ class EditorWidget(QWidget):
 
     def open_local_file(self, path: str) -> None:
         """Open a local filesystem file for in-app editing (no session)."""
-        text = Path(path).read_text(encoding="utf-8", errors="replace")
+        text = Path(path).read_text(encoding="utf-8")
         self.open_file(path, text, is_local=True)
 
     def retranslate_ui(self):
@@ -813,10 +813,10 @@ class EditorWidget(QWidget):
         if document is not None and document.is_local:
             path = document.path
             try:
-                content = Path(path).read_text(encoding="utf-8", errors="replace")
+                content = Path(path).read_text(encoding="utf-8")
                 document.text.setPlainText(content)
                 append_event({"type": "editor_load", "path": path})
-            except OSError as e:
+            except (OSError, UnicodeError) as e:
                 show_exception(self, title=t("common.error"), user_message=t("editor.open_failed").format(err=e), exc=e, area="EDITOR")
             return
         if not self.session or not self.session.get("files"):

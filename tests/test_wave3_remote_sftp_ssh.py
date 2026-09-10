@@ -6,9 +6,12 @@ remain Unicode-safe and cannot silently target the wrong object.
 
 from __future__ import annotations
 
+import io
 import pathlib
 import shlex
 import sys
+
+import pytest
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 if str(ROOT / "src") not in sys.path:
@@ -126,6 +129,26 @@ class TestSFTPUnicodePaths:
         # Read it back
         read_content = backend.read_text("/work/test.txt")
         assert read_content == content
+
+    def test_ssh_backend_rejects_invalid_utf8_text(self):
+        """Remote editor reads must not replace bytes before a later save."""
+        from hpc_gui.services.files_ssh import SSHFilesBackend
+
+        class SFTP:
+            def open(self, _path, _mode):
+                return io.BytesIO(b"valid\xff")
+
+            def close(self):
+                pass
+
+        class SSH:
+            def open_transfer_sftp(self):
+                return SFTP()
+
+        backend = SSHFilesBackend.__new__(SSHFilesBackend)
+        backend.ssh = SSH()
+        with pytest.raises(UnicodeDecodeError):
+            backend.read_text("/work/legacy.txt")
 
     def test_mock_backend_unicode_rename(self):
         """Mock backend should rename to/from Unicode names."""
@@ -397,6 +420,13 @@ class TestSFTPChannelManager:
 
 class TestSSHClientUnicode:
     """Verify SSH client handles Unicode correctly."""
+
+    def test_remote_display_decoder_is_explicit_utf8_with_safe_fallback(self):
+        """SSH command/banner display output uses an explicit UTF-8 policy."""
+        from hpc_gui.ssh.client import _decode_remote_text
+
+        assert _decode_remote_text("çıktı 日本語".encode("utf-8")) == "çıktı 日本語"
+        assert _decode_remote_text(b"bad\xff") == "bad\ufffd"
 
     def test_ssh_client_exists(self):
         """SSHClientWrapper should be importable."""

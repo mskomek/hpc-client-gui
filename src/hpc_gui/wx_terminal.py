@@ -175,14 +175,42 @@ def build_terminal_panel(parent, *, model: TerminalModel | None = None, ssh=None
         keycode = event.GetKeyCode()
         if (event.CmdDown() or event.ControlDown()) and keycode in (ord("C"), ord("V")):
             if keycode == ord("V"):
-                text.Paste()
+                if wx.TheClipboard.Open():
+                    try:
+                        clipboard = wx.TextDataObject()
+                        if wx.TheClipboard.GetData(clipboard):
+                            model.key_input(
+                                clipboard.GetText().replace("\r\n", "\n").replace("\r", "\n").replace("\n", "\r")
+                            )
+                    finally:
+                        wx.TheClipboard.Close()
             elif event.CmdDown() or event.ShiftDown():
                 text.Copy()
             else:
                 model.key_input("C")
             return
+        special = {
+            wx.WXK_UP: "\x1b[A",
+            wx.WXK_DOWN: "\x1b[B",
+            wx.WXK_RIGHT: "\x1b[C",
+            wx.WXK_LEFT: "\x1b[D",
+            wx.WXK_HOME: "\x1b[H",
+            wx.WXK_END: "\x1b[F",
+            wx.WXK_DELETE: "\x1b[3~",
+            wx.WXK_INSERT: "\x1b[2~",
+            wx.WXK_PAGEUP: "\x1b[5~",
+            wx.WXK_PAGEDOWN: "\x1b[6~",
+            wx.WXK_BACK: "\x7f",
+            wx.WXK_RETURN: "\r",
+            wx.WXK_NUMPAD_ENTER: "\r",
+            wx.WXK_TAB: "\x1b[Z" if event.ShiftDown() else "\t",
+            wx.WXK_ESCAPE: "\x1b",
+        }
+        if keycode in special:
+            model.key_input(special[keycode])
+            return
         key = event.GetUnicodeKey()
-        if key == wx.WXK_NONE or not (32 <= key <= 126):
+        if key == wx.WXK_NONE:
             key = event.GetKeyCode()
         if key in (3, 4, 26):
             key = {3: "C", 4: "D", 26: "Z"}[key]

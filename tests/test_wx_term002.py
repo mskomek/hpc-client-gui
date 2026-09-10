@@ -49,8 +49,13 @@ def test_file_view_shell_script_runs_in_real_terminal_path(shell):
     script = tmp_path / "hello world.sh"
     script.write_text("echo hello", encoding="utf-8")
 
+    before = set(wx.GetTopLevelWindows())
     _dispatch("NAV-FILES", shell_frame, lifecycle, state)
-    browser = next(window for window in wx.GetTopLevelWindows() if hasattr(window, "_wx_local_run_action"))
+    browser = next(
+        window
+        for window in wx.GetTopLevelWindows()
+        if window not in before and hasattr(window, "_wx_local_run_action")
+    )
     browser._wx_local_tabs[0]["entries"][:] = [LocalEntry(script, False, script.stat().st_size)]
     listing = browser._wx_local_controls["listing"]
     listing.InsertItem(0, script.name)
@@ -74,3 +79,32 @@ def test_editor_run_button_uses_real_wx_event_and_terminal_path(shell):
         wx.MilliSleep(10)
 
     assert ssh.commands == ["bash -- /remote/job.slurm\n"]
+
+
+def test_fallback_terminal_preserves_unicode_and_terminal_keys(monkeypatch):
+    from hpc_gui import wx_terminal_webview
+    from hpc_gui.wx_terminal import TerminalModel, build_terminal_panel
+
+    monkeypatch.setattr(wx_terminal_webview, "_is_webview_available", lambda: False)
+    app = wx.GetApp() or wx.App(False)
+    frame = wx.Frame(None)
+    sent = []
+    panel = build_terminal_panel(frame, model=TerminalModel(sent.append))
+    input_ctrl = panel._wx_terminal_controls["input"]
+
+    def send(keycode, unicode_key, *, shift=False):
+        event = wx.KeyEvent(wx.wxEVT_CHAR)
+        event.SetKeyCode(keycode)
+        event.SetUnicodeKey(unicode_key)
+        if shift:
+            event.SetShiftDown(True)
+        input_ctrl.ProcessEvent(event)
+
+    try:
+        send(ord("ç"), ord("ç"))
+        send(wx.WXK_UP, wx.WXK_NONE)
+        send(wx.WXK_TAB, wx.WXK_NONE, shift=True)
+        assert sent == ["ç", "\x1b[A", "\x1b[Z"]
+    finally:
+        frame.Destroy()
+        app.ProcessPendingEvents()

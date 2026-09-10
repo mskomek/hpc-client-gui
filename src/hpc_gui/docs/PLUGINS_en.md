@@ -111,6 +111,52 @@ uses reviewed application-owned backends, and a local profile cannot define a
 quota command, parser, hook, or executable provider content. With no supported
 backend, storage still works and quota performs no remote work.
 
+## Provider authoring: text, paths, and optional metadata
+
+Provider JSON is UTF-8. All manifest, profile, label, description, and path
+values are textual `str` values inside the application; use names such as
+`Çalışmalar_日本語` directly. `bytes` belongs only at an I/O or integrity
+boundary (for example, downloading a payload or calculating its SHA-256).
+Do not decode and re-encode a path through Latin-1, the Windows code page, or
+an `errors="ignore"`/`errors="replace"` conversion.
+
+Remote paths are data, not shell fragments. Keep them in `paths` or
+`storage[].path_template` and use the documented `{user}`, `{project}`, and
+`{account}` placeholders. The application resolves the placeholders and owns
+quoting for scheduler commands. Provider data must not add `shell`, `exec`,
+`callback`, or arbitrary command fields; only the application's allow-listed
+Slurm templates are accepted.
+
+`storage` is passive display/policy metadata. `quota_sources` is optional:
+omit it or leave it empty when the site has no reviewed quota source. A
+missing quota definition performs no quota request, probe, retry, `df`, `du`,
+or `find` fallback. Never invent quota values or copy a command from another
+site. Labels may be localized with `en` and `tr` values.
+
+Minimal Unicode profile example:
+
+```json
+{
+  "schema_version": 2,
+  "profile_id": "example_unicode",
+  "name": "Çalışma Kümesi 日本語",
+  "scheduler": "slurm",
+  "paths": {
+    "home_dir": "/home/{user}",
+    "scratch_dir": "/scratch/{user}/Çalışmalar_日本語"
+  },
+  "storage": [
+    {
+      "id": "scratch",
+      "label": "Scratch / Çalışmalar 日本語",
+      "kind": "scratch",
+      "path_template": "/scratch/{user}/Çalışmalar_日本語",
+      "access_context": "shared"
+    }
+  ]
+}
+```
+
 ## Job templates and lint
 
 Plugins can deliver job script templates (*New from Template...* in the

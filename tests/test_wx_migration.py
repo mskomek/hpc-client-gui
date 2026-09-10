@@ -1,53 +1,73 @@
-"""Wave 64 migration/rollback tests."""
+"""Existing-user config migration and recovery tests."""
+
+from __future__ import annotations
+
 import json
-import pathlib
-import tempfile
-import pytest
+import zipfile
+from pathlib import Path
 
-def test_v1_to_v2_migration_with_backup(tmp_path, monkeypatch):
-    # Simulate V1 config with old fields
-    from hpc_gui.config import storage
-    # use tmp config dir
+from hpc_gui.config import storage
+
+
+def test_legacy_profile_migration_preserves_unicode_and_is_idempotent(tmp_path, monkeypatch):
     monkeypatch.setattr(storage, "_config_dir", lambda: tmp_path)
     cfg_path = tmp_path / "config.json"
-    v1 = {"profiles": [{"name": "test", "host": "example.com", "username": "user", "old_key": "value"}], "settings": {"old_setting": 1}, "version": 1}
-    cfg_path.write_text(json.dumps(v1), encoding="utf-8")
-    # load via new code (should handle missing version and create backup on save)
-    cfg = storage.load_config()
-    assert "profiles" in cfg
-    # update settings (simulate V2 migration)
-    storage.update_settings({"new_setting": 2})
-    # check that backup was created if corrupted? Actually our load_config creates backup only on corrupted json, not on migration
-    # For this test, we just verify that data is preserved and not destroyed
-    cfg2 = storage.load_config()
-    assert any(p["name"] == "test" for p in cfg2["profiles"])
-    # check that old data still usable
-    assert cfg2["profiles"][0]["host"] == "example.com"
-    # verify that saving creates a valid json
-    assert cfg_path.is_file()
-    # simulate rollback: restore from backup if exists, or just reload V1
-    # For this test, we verify that original V1 data can be restored from a manual backup
-    backup = tmp_path / "config.json.bak"
-    backup.write_text(json.dumps(v1), encoding="utf-8")
-    # restore (remove current before rename)
-    try:
-        cfg_path.unlink()
-    except: pass
-    backup.rename(cfg_path)
-    cfg_restored = storage.load_config()
-    assert cfg_restored["profiles"][0]["old_key"] == "value"
-    assert cfg_path.exists()
+    legacy = {
+        "profiles": [
+            {
+                "name": "Türkçe İş",
+                "host": "levrek1",
+                "username": "işçi",
+                "home_dir": "/home/işçi",
+                "future_field": {"path": "日本語"},
+            }
+        ],
+        "settings": {"transfer_parallelism": 4},
+        "version": 1,
+    }
+    cfg_path.write_text(json.dumps(legacy, ensure_ascii=False), encoding="utf-8")
 
-def test_migration_does_not_expose_secrets(tmp_path, monkeypatch):
-    from hpc_gui.config import storage
+    first = storage.load_profiles()
+    assert first[0]["name"] == "Türkçe İş"
+    assert first[0]["username"] == "işçi"
+    assert first[0]["home_dir"] == "/home/işçi"
+    assert first[0]["future_field"] == {"path": "日本語"}
+    assert first[0]["transfer_parallelism"] == 4
+    first_id = first[0]["id"]
+    saved = cfg_path.read_bytes()
+
+    second = storage.load_profiles()
+    assert second[0]["id"] == first_id
+    assert second[0]["transfer_parallelism"] == 4
+    assert cfg_path.read_bytes() == saved
+
+
+def test_corrupt_config_keeps_unique_recovery_backups(tmp_path, monkeypatch):
     monkeypatch.setattr(storage, "_config_dir", lambda: tmp_path)
     cfg_path = tmp_path / "config.json"
-    # config with password
-    cfg = {"profiles": [{"name": "p", "password": "secret123"}], "settings": {}}
-    cfg_path.write_text(json.dumps(cfg), encoding="utf-8")
-    loaded = storage.load_config()
-    # ensure password not logged (we just check that file still contains it but not exposed via diagnostics)
-    # diagnostics should redact
+
+    first_corrupt = b"{not-json"
+    cfg_path.write_bytes(first_corrupt)
+    assert storage.load_config() == {"profiles": [], "settings": {}}
+    assert (tmp_path / "config.json.bak").read_bytes() == first_corrupt
+
+    second_corrupt = b"[]"
+    cfg_path.write_bytes(second_corrupt)
+    assert storage.load_config() == {"profiles": [], "settings": {}}
+    assert (tmp_path / "config.json.bak.1").read_bytes() == second_corrupt
+
+
+def test_diagnostic_bundle_excludes_saved_profile_secrets(tmp_path, monkeypatch):
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
+    data_dir = tmp_path / ".truba_slurm_gui"
+    data_dir.mkdir()
+    (data_dir / "config.json").write_text(
+        json.dumps({"profiles": [{"password": "secret123"}]}), encoding="utf-8"
+    )
+
     from hpc_gui.core.diagnostics import create_diagnostic_bundle
-    # we don't actually create bundle, just check that load doesn't log secret
-    assert loaded["profiles"][0]["password"] == "secret123"
+
+    bundle = create_diagnostic_bundle(str(tmp_path / "out"))
+    with zipfile.ZipFile(bundle) as archive:
+        assert "config.json" not in archive.namelist()
+        assert all("secret123" not in archive.read(name).decode("utf-8") for name in archive.namelist())

@@ -164,7 +164,7 @@ class SSHFilesBackend(FilesBackend):
         try:
             with sftp.open(remote_path, "rb") as f:
                 data = f.read()
-            return data.decode("utf-8", errors="replace")
+            return data.decode("utf-8")
         finally:
             sftp.close()
 

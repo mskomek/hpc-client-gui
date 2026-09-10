@@ -1945,7 +1945,7 @@ def test_jobs_status_unexpected_exception_exit_one_jobs_prefix(capsys) -> None:
     assert "scheduler exploded" in captured.err
 
 
-_SACCT_COMMAND = "sacct -u alice --format=JobID,JobName,State,Elapsed,MaxRSS,AllocTRES"
+_SACCT_COMMAND = "sacct -n -P -u alice --format=JobIDRaw,JobName,State,Elapsed,MaxRSS,AllocTRES,ExitCode"
 _ACCOUNTING_STDOUT = (
     "JobID     JobName     State    Elapsed     MaxRSS   AllocTRES\n"
     "101       compute.cpu RUNNING  00:10:00        512K c01[1-2]\n"
@@ -1981,7 +1981,7 @@ def test_jobs_accounting_username_falls_back_to_profile(capsys) -> None:
     ):
         assert run_cli(["--profile", "alpha", "jobs", "accounting"]) == 0
     assert fake_ssh.commands == [
-        "sacct -u profileuser --format=JobID,JobName,State,Elapsed,MaxRSS,AllocTRES"
+        "sacct -n -P -u profileuser --format=JobIDRaw,JobName,State,Elapsed,MaxRSS,AllocTRES,ExitCode"
     ]
 
 

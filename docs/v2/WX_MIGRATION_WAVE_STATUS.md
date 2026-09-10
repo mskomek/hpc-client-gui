@@ -59,12 +59,12 @@ Behavioral / visual / platform / packaged / release are separate. `VERIFIED_COMP
 | 76 Behavioral Evidence Gate | real wx→WebView→adapter→fake PTY→xterm-visible chain, VT fixture, stress invariants | `test_wx_terminal_parity_evidence.py` (11 tests) + evidence JSON | **VERIFIED_COMPLETE** | `test_vt_sgr_*`, `test_vt_carriage_return_*`, `test_unicode_round_trip`, `test_multiline_paste`, `test_resize_*`, `test_stress_*`, `test_close_while_output_in_flight`, `test_generate_parity_evidence` | VT SGR, CR overwrite, Unicode, paste, resize, 500 inputs/resizes, 100 reconnects, close-in-flight | **PARTIAL** (alternate screen BLOCKED) | — |
 | 77 Platform/Packaging | Windows WebView2, macOS WebKit, Linux GTK/WebKit, packaged asset offline, no CDN/log | `test_wx_terminal_webview.py` asset tests + `TERMINAL_PACKAGING_CHECKLIST.md` | **PARTIAL** | Asset local tests, source string checks | WebView2 dev verified on Windows; packaged artifact BLOCKED | **BLOCKED** (packaged gate) | Requires 76 |
 
-**Summary counts (current HEAD → Wave 77 parity closure):** VERIFIED_COMPLETE 12 (44,46-48,50-51,54,65A,72-75), PARTIAL 11 (42-43,45,49,52,55-57,57A,61-62,62A,65,76) + `GUI-TERM-001` PARTIAL, BLOCKED 6 (59-60,67-70,77), NO-GO 1 (66). **Waves 73-76 now VERIFIED_COMPLETE**; `GUI-TERM-001` remains PARTIAL until alternate screen and packaged WebView2 proven.
+**Summary counts (current HEAD → Wave 77 parity closure):** VERIFIED_COMPLETE 12 (44,46-48,50-51,54,65A,72-75), PARTIAL 11 (42-43,45,49,52,55-57,57A,61-62,62A,65,76) + `GUI-TERM-001` PARTIAL, BLOCKED 6 (59-60,67-70,77), NO-GO 1 (66). **Waves 73-75 are VERIFIED_COMPLETE; Wave 76 remains PARTIAL** because alternate-screen rendered-state evidence is blocked; `GUI-TERM-001` also remains PARTIAL until that and packaged WebView2 are proven.
 
 ## 3) Current Blockers
 
 1. **72 terminal rebaseline done** — `TERMINAL_PARITY_CONTRACT_72.md` + gaps JSON committed; Wave 45 now PARTIAL, `GUI-TERM-001` PARTIAL.
-2. **73-76 terminal waves now VERIFIED_COMPLETE** — WebView/xterm renderer, input/geometry, header/lifecycle, behavioral evidence gate proven. `GUI-TERM-001` remains PARTIAL due to alternate screen (BLOCKED without real display) and packaged WebView2 (BLOCKED).
+2. **73-75 terminal waves are VERIFIED_COMPLETE; Wave 76 is PARTIAL** — WebView/xterm renderer, input/geometry and header/lifecycle are proven locally; the behavioral evidence gate still lacks alternate-screen rendered-state proof. `GUI-TERM-001` remains PARTIAL due to alternate screen (BLOCKED without real display) and packaged WebView2 (BLOCKED).
 3. **55/56/57 real wx event proofs still missing** — model-only tests not sufficient (capture global/profile persistence, logs worker thread, updater progress).
 4. **57A visual DPI 150/200 manual + 1366/960 sizes + ansys Qt comparison missing.**
 5. **58 Windows packaged evidence stale** — need real artifact for current HEAD (isolated).

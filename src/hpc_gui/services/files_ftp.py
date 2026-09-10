@@ -195,7 +195,7 @@ class FTPFilesBackend(FilesBackend):
     def read_text(self, remote_path: str) -> str:
         chunks: list[bytes] = []
         self.ftp.retrbinary(f"RETR {_norm(remote_path)}", chunks.append)
-        return b"".join(chunks).decode("utf-8", errors="replace")
+        return b"".join(chunks).decode("utf-8")
 
     def write_text(self, remote_path: str, text: str) -> None:
         with tempfile.NamedTemporaryFile(delete=False) as tmp:
