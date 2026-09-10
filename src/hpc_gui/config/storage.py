@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import tempfile
 import uuid
 from pathlib import Path
@@ -53,13 +54,23 @@ def _config_path() -> Path:
     return _config_dir() / "config.json"
 
 
-def _backup_corrupt_config(path: Path) -> None:
+def _next_config_backup(path: Path) -> Path:
     backup = path.with_name(path.name + ".bak")
     index = 1
     while backup.exists():
         backup = path.with_name(f"{path.name}.bak.{index}")
         index += 1
-    path.replace(backup)
+    return backup
+
+
+def _backup_corrupt_config(path: Path) -> None:
+    path.replace(_next_config_backup(path))
+
+
+def _backup_before_migration(path: Path) -> None:
+    """Keep a rollback copy before a migration replaces valid user data."""
+    if path.exists():
+        shutil.copy2(path, _next_config_backup(path))
 
 
 def load_config() -> Dict[str, Any]:
@@ -586,6 +597,7 @@ def load_profiles() -> List[Dict[str, Any]]:
         changed = True
     if changed:
         cfg["profiles"] = profs
+        _backup_before_migration(_config_path())
         save_config(cfg)
     return profs
 

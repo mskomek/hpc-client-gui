@@ -6,6 +6,8 @@ import json
 import zipfile
 from pathlib import Path
 
+import pytest
+
 from hpc_gui.config import storage
 
 
@@ -35,11 +37,33 @@ def test_legacy_profile_migration_preserves_unicode_and_is_idempotent(tmp_path, 
     assert first[0]["transfer_parallelism"] == 4
     first_id = first[0]["id"]
     saved = cfg_path.read_bytes()
+    assert (tmp_path / "config.json.bak").read_bytes() == json.dumps(legacy, ensure_ascii=False).encode("utf-8")
 
     second = storage.load_profiles()
     assert second[0]["id"] == first_id
     assert second[0]["transfer_parallelism"] == 4
     assert cfg_path.read_bytes() == saved
+    assert list(tmp_path.glob("config.json.bak*")) == [tmp_path / "config.json.bak"]
+
+
+def test_migration_save_failure_keeps_original_config_readable(tmp_path, monkeypatch):
+    monkeypatch.setattr(storage, "_config_dir", lambda: tmp_path)
+    cfg_path = tmp_path / "config.json"
+    original = json.dumps(
+        {"profiles": [{"name": "Türkçe İş"}], "settings": {"transfer_parallelism": 4}},
+        ensure_ascii=False,
+    ).encode("utf-8")
+    cfg_path.write_bytes(original)
+
+    def fail_save(_cfg):
+        raise OSError("simulated migration write failure")
+
+    monkeypatch.setattr(storage, "save_config", fail_save)
+    with pytest.raises(OSError, match="simulated migration write failure"):
+        storage.load_profiles()
+
+    assert cfg_path.read_bytes() == original
+    assert (tmp_path / "config.json.bak").read_bytes() == original
 
 
 def test_corrupt_config_keeps_unique_recovery_backups(tmp_path, monkeypatch):
