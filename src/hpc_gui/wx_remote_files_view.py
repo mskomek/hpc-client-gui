@@ -1109,6 +1109,32 @@ def _build_remote_files(parent, model: WxRemoteDirectoryModel | None = None, *, 
         plugin_filters = plugins
         refresh_provider_filters()
 
+    def _reset():
+        """Clear visible listings and invalidate every in-flight directory load."""
+        state["view_generation"] += 1
+        state["listing_request_id"] += 1
+        state["busy"] = False
+        state["listing_busy"] = False
+        model.invalidate()
+        model.current_path = "/"
+        model.tabs = ["/"]
+        model.active_tab = 0
+        while notebook.GetPageCount() > 1:
+            notebook.DeletePage(notebook.GetPageCount() - 1)
+        tabs[:] = [tabs[0]]
+        tab = tabs[0]
+        tab.update({
+            "path": "/", "entries": [], "full_entries": [], "back_stack": [], "forward_stack": [],
+            "highlight_path": "", "pending_navigation": None, "busy": False,
+        })
+        tab["view_generation"] += 1
+        tab["listing_request_id"] += 1
+        tab["listing"].DeleteAllItems()
+        path.SetValue("/")
+        host._wx_remote_controls["listing"] = tab["listing"]
+        host._wx_remote_controls["path"] = path
+        _update_navigation_buttons()
+
     def key_down(event):
         tstate = active_tab_state()
         if not tstate:
@@ -1302,6 +1328,7 @@ def _build_remote_files(parent, model: WxRemoteDirectoryModel | None = None, *, 
     host._wx_remote_close_tab = close_tab
     host._wx_remote_set_navigation_store = lambda store: _set_navigation_store(store)
     host._wx_remote_set_provider_filters = lambda defs=None, plugins=None: _set_provider_filters(defs, plugins)
+    host._wx_remote_reset = _reset
     load()
     _update_navigation_buttons()
     finish()

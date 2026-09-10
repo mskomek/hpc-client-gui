@@ -239,9 +239,10 @@ class TestRegression:
             frames = [w for w in wx.GetTopLevelWindows() if w.GetTitle() == "Jobs"]
             assert frames
             nb = frames[-1]._wx_jobs_controls["notebook"]
-            assert nb.GetPageCount() == 4
+            assert nb.GetPageCount() == 5
             assert nb.GetPageText(0) == "Jobs"
-            assert nb.GetPageText(1) == "Details"
+            assert nb.GetPageText(1) == "Cluster"
+            assert nb.GetPageText(2) == "Details"
         finally:
             for w in list(wx.GetTopLevelWindows()):
                 try:

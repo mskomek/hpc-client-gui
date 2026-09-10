@@ -204,6 +204,7 @@
     "alloc_tres": "AllocTRES",
     "slurm_unavailable": "Slurm submission is unavailable.",
     "details": "Details",
+    "cluster": "Cluster",
     "no_job_selected": "No job selected",
     "no_job_selected_hint": "Select a job from the Jobs tab to view its details.",
     "go_to_jobs": "Go to Jobs",
@@ -543,7 +544,17 @@
     "raw_not_available": "Raw data is not available yet.",
     "refreshing": "Refreshing...",
     "no_active_jobs": "No active jobs found.",
-    "source": "Source"
+    "source": "Source",
+    "cluster_status": "CLUSTER STATUS",
+    "no_cluster_connection": "No cluster connection\nConnect to a cluster to view server status.",
+    "cluster_unsupported": "Cluster status is not available for this provider.",
+    "refreshing_cluster_status": "Refreshing cluster status...",
+    "cluster_status_failed": "Cluster status request failed.",
+    "cluster_status_loaded": "Cluster status loaded.",
+    "no_cluster_status": "No cluster status data returned.",
+    "job_label": "Job",
+    "no_selected_job_files_hint": "Select a job from the Jobs tab to browse its working directory.",
+    "no_selected_job_outputs_hint": "Select a job from the Jobs tab to monitor its outputs."
   },
   "putty": {
     "downloading": "Downloading plink.exe...",
