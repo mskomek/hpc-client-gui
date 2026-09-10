@@ -263,6 +263,10 @@ def test_show_in_files_and_raw_buttons_use_real_wx_events():
             assert viewer.call_count >= 3
             _click(ctrls["output_show_files"])
             assert ctrls["notebook"].GetSelection() == 3
+            file_tab = ctrls["files_browser"]._wx_remote_tabs[
+                ctrls["files_browser"]._wx_remote_notebook.GetSelection()
+            ]
+            assert file_tab["highlight_path"].endswith("/work/1001/out.txt")
         finally:
             _close(frame)
 
