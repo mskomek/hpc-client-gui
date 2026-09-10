@@ -548,6 +548,7 @@
     "cluster_status_loaded": "Küme durumu yüklendi.",
     "no_cluster_status": "Küme durumu verisi döndürülmedi.",
     "job_label": "İş",
+    "open_main_files": "Ana Dosyalar'da Aç",
     "no_selected_job_files_hint": "Çalışma dizininde gezinmek için İşler sekmesinden bir iş seçin.",
     "no_selected_job_outputs_hint": "Çıktıları izlemek için İşler sekmesinden bir iş seçin."
   },

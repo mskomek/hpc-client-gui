@@ -408,6 +408,7 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         refresh_lssrv = kwargs.get("lssrv") or kwargs.get("lssrv_refresh") or kwargs.get("lssrv_callback") or kwargs.get("refresh_lssrv_callback")
     if list_job_files is None:
         list_job_files = kwargs.get("list_job_files") or kwargs.get("job_files") or kwargs.get("files_callback")
+    open_main_files = kwargs.get("open_main_files")
     has_status_capability = kwargs.get("has_status_capability")
     if refresh_sacct is None and "refresh_sacct" in kwargs:
         refresh_sacct = kwargs["refresh_sacct"]
@@ -734,6 +735,10 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
     files_workdir_label = wx.StaticText(files_header, label="")
     files_header_sizer.Add(files_job_header, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 4)
     files_header_sizer.Add(files_workdir_label, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 4)
+    files_open_main_button = None
+    if callable(open_main_files):
+        files_open_main_button = wx.Button(files_header, label=t("jobs_outputs.open_main_files"))
+        files_header_sizer.Add(files_open_main_button, 0, wx.ALIGN_LEFT | wx.LEFT | wx.RIGHT | wx.BOTTOM, 4)
     files_header.SetSizer(files_header_sizer)
     files_header.Hide()
     files_sizer.Add(files_header, 0, wx.EXPAND)
@@ -852,6 +857,11 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
             files_no_selection_panel.Show()
         files_sizer.Layout()
 
+    def _open_in_main_files(_event=None):
+        ctx = model.selected_job_store.context
+        if ctx.job_id and callable(open_main_files):
+            open_main_files(ctx.workdir or "/")
+
     def _reset_files_browser():
         reset = getattr(files_browser, "_wx_remote_reset", None)
         if callable(reset):
@@ -864,6 +874,8 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
                 pass
 
     files_go_to_jobs.Bind(wx.EVT_BUTTON, _go_to_jobs)
+    if files_open_main_button is not None:
+        files_open_main_button.Bind(wx.EVT_BUTTON, _open_in_main_files)
 
     # ======================================================================
     # OUTPUTS SUB-TAB — dynamic 0..N output channels
@@ -2248,6 +2260,8 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         files_no_selection_label.SetLabel(t("jobs_outputs.no_selected_job"))
         files_no_selection_hint.SetLabel(t("jobs_outputs.no_selected_job_files_hint"))
         files_go_to_jobs.SetLabel(t("jobs.go_to_jobs"))
+        if files_open_main_button is not None:
+            files_open_main_button.SetLabel(t("jobs_outputs.open_main_files"))
         outputs_no_selection_label.SetLabel(t("jobs_outputs.no_selected_job"))
         outputs_no_selection_hint.SetLabel(t("jobs_outputs.no_selected_job_outputs_hint"))
         outputs_go_to_jobs.SetLabel(t("jobs.go_to_jobs"))
@@ -2285,6 +2299,7 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         advanced_prefix = "▸" if _advanced_collapsed["collapsed"] else "▾"
         advanced_box.SetLabel(f"{advanced_prefix} {t('jobs.advanced')}")
         _update_files_header()
+        files_header.Layout()
         files_no_selection_panel.Layout()
         outputs_refresh_btn.SetLabel(t("jobs_outputs.refresh_all"))
         outputs_follow.SetLabel(t("jobs_outputs.auto_scroll_all"))
@@ -2498,7 +2513,8 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
             "files_model": files_model,
             "files_no_selection_panel": files_no_selection_panel,
             "files_job_header": files_job_header,
-            "files_workdir_label": files_workdir_label,
+        "files_workdir_label": files_workdir_label,
+        "open_main_files": files_open_main_button,
         "output_channel_notebook": output_channel_notebook,
         "output_no_channels_label": output_no_channels_label,
         "output_channels": output_channels,
