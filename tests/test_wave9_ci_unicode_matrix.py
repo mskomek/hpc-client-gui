@@ -262,6 +262,14 @@ class TestResultsVerification:
         # Should test encoding boundaries
         assert "encode" in content.lower() or "decode" in content.lower() or "encoding" in content.lower()
 
+    def test_wx_unicode_smoke_cannot_fail_open(self):
+        """wx dependency or Unicode smoke failures must fail the matrix job."""
+        workflow = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+        wx_block = workflow.split("  wx-smoke:\n", 1)[1]
+        assert "continue-on-error" not in wx_block
+        assert "tests/test_wave2_wx_ui_parity.py" in wx_block
+        assert "tests/test_wx_term002.py" in wx_block
+
 
 # ---------------------------------------------------------------------------
 # 6. Integration Tests

@@ -72,7 +72,7 @@ TURKISH_CASING = [
 
 # NFC/NFD normalization variants
 NFC_PATH = pathlib.PurePosixPath("café.txt")  # NFC: é = U+00E9
-NFD_PATH = pathlib.PurePosixPath("café.txt")  # NFD: e + combining acute
+NFD_PATH = pathlib.PurePosixPath(unicodedata.normalize("NFD", "café.txt"))  # NFD: e + combining acute
 
 # Mojibake reference
 MOJIBAKE_STAR = "â˜…"
@@ -411,9 +411,8 @@ class TestI18nCompleteness:
         tr_keys = _flatten(tr_data)
         missing_in_tr = en_keys - tr_keys
         missing_in_en = tr_keys - en_keys
-        # Allow small differences for language-specific keys
-        assert len(missing_in_tr) < 10, f"Missing keys in tr.json: {missing_in_tr}"
-        assert len(missing_in_en) < 10, f"Missing keys in en.json: {missing_in_en}"
+        assert not missing_in_tr, f"Missing keys in tr.json: {missing_in_tr}"
+        assert not missing_in_en, f"Missing keys in en.json: {missing_in_en}"
 
     def test_turkish_file_no_mojibake_patterns(self):
         """Check tr.json for common mojibake patterns ( Ã , ÅŸ, Ä±, etc.)."""
@@ -425,10 +424,7 @@ class TestI18nCompleteness:
         for pattern in mojibake_patterns:
             if pattern in content:
                 found.append(pattern)
-        # Document but don't fail — the mojibake exists and is Wave 1 work
-        if found:
-            # Known issue — mojibake exists in tr.json
-            pass
+        assert not found, f"Mojibake patterns in tr.json: {found}"
 
 
 # ---------------------------------------------------------------------------

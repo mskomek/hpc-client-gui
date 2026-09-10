@@ -120,8 +120,16 @@ def _build_directories(parent, *, session_state=None, workspace: WxDirectoriesWo
                     (files.copy if action == "copy" else files.move)(rp, target)
                 return
             if action == "download" and files and destination:
-                # importing _start_file_transfers would need session_state; fallback to direct? keep simple
-                # use generic transfer via files if available, else no-op
+                from pathlib import Path, PurePosixPath
+
+                from hpc_gui.services.transfer_controller import TransferItem
+                from hpc_gui.wx_shell import _start_file_transfers
+
+                items = [
+                    TransferItem("download", remote_path, str(Path(destination) / PurePosixPath(remote_path).name))
+                    for remote_path in paths
+                ]
+                _start_file_transfers(session_state or {}, None, items, files_backend=files, parent=parent)
                 return
             if action == "new_folder" and files and destination:
                 files.mkdir(destination)

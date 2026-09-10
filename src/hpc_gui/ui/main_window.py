@@ -1117,8 +1117,8 @@ class MainWindow(QMainWindow):
         from PySide6.QtWidgets import QMessageBox
 
         try:
-            content = Path(path).read_text(encoding="utf-8", errors="replace")
-        except OSError as exc:
+            content = Path(path).read_text(encoding="utf-8")
+        except (OSError, UnicodeError) as exc:
             logging.getLogger("hpc_gui.ui.main_window").warning(
                 "Could not open local file for editing: %s", path, exc_info=exc
             )

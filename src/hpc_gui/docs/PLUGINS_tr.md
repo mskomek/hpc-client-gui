@@ -101,6 +101,52 @@ Kayıtlı bağlantılar kendi kopyalanmış ayar anlık görüntülerini taşır
 eklentiyi kaldırmak veya güncellemek mevcut bağlantıları asla değiştirmez.
 Şablon menüsünün altındaki *Daha fazla eklenti...* Eklenti Yöneticisi'ni açar.
 
+## Sağlayıcı yazımı: metin, yollar ve isteğe bağlı üstveri
+
+Sağlayıcı JSON'u UTF-8 olmalıdır. Manifest, profil, etiket, açıklama ve yol
+alanlarının tamamı uygulama içinde metinsel `str` değerleridir; doğrudan
+`Çalışmalar_日本語` gibi adlar kullanın. `bytes` yalnızca G/Ç veya bütünlük
+sınırında (ör. paket indirme veya SHA-256 hesaplama) kullanılmalıdır. Yolu
+Latin-1, Windows kod sayfası ya da `errors="ignore"`/`errors="replace"` ile
+dönüştürmeyin.
+
+Uzak yollar shell parçası değil veridir. Bunları `paths` veya
+`storage[].path_template` altında tutun ve belgelenen `{user}`, `{project}`,
+`{account}` yer tutucularını kullanın. Yer tutucuları uygulama çözer; zamanlayıcı
+komutlarının alıntılanmasından da uygulama sorumludur. Sağlayıcı verisi
+`shell`, `exec`, `callback` veya keyfî komut alanları ekleyemez; yalnızca
+uygulamanın izin verdiği Slurm şablonları kabul edilir.
+
+`storage` yalnızca pasif gösterim/politika üstverisidir. `quota_sources` isteğe
+bağlıdır: sitede doğrulanmış bir kota kaynağı yoksa alanı kaldırın veya boş
+bırakın. Kota tanımı yoksa kota isteği, yoklama, tekrar deneme, `df`, `du` ya
+da `find` yedeği çalışmaz. Kota değeri uydurmayın ve başka bir sitenin komutunu
+kopyalamayın. Etiketler `en` ve `tr` değerleriyle yerelleştirilebilir.
+
+En küçük Unicode profil örneği:
+
+```json
+{
+  "schema_version": 2,
+  "profile_id": "example_unicode",
+  "name": "Çalışma Kümesi 日本語",
+  "scheduler": "slurm",
+  "paths": {
+    "home_dir": "/home/{user}",
+    "scratch_dir": "/scratch/{user}/Çalışmalar_日本語"
+  },
+  "storage": [
+    {
+      "id": "scratch",
+      "label": "Scratch / Çalışmalar 日本語",
+      "kind": "scratch",
+      "path_template": "/scratch/{user}/Çalışmalar_日本語",
+      "access_context": "shared"
+    }
+  ]
+}
+```
+
 ## İş şablonları ve lint
 
 Eklentiler iş betiği şablonları (editörde *Şablondan Yeni...*) ve bildirimsel

@@ -46,13 +46,15 @@ PYTEST_BASE = (
 )
 
 # Wire-heavy suites spawn real socket/paramiko worker threads that outlive
-# their test module inside one interpreter. Running them in dedicated
-# pytest processes keeps those daemon threads from colliding with later
-# GUI/socket tests (observed as a native segfault mid-suite in CI). Every
-# gate below still applies to every file: nothing is skipped or weakened.
+# their test module inside one interpreter. The Qt editor flow also shares a
+# process with wx tests, which can trigger a native toolkit teardown failure.
+# Running these files in dedicated pytest processes keeps those boundaries
+# isolated. Every gate below still applies to every file: nothing is skipped
+# or weakened.
 ISOLATED_WIRE_FILES = (
     "tests/test_ftp_widget.py",
     "tests/test_download_cancel_wire.py",
+    "tests/test_editor_flow.py",
 )
 
 COVERAGE_FAIL_UNDER = 65

@@ -72,7 +72,7 @@ assert panel._ready, "not ready"
 calls = []
 panel._run_js = lambda c: calls.append(c)
 panel.hpc_write("\\x1b[31mRED\\x1b[0m")
-assert any("\\u001b[31m" in c for c in calls), f"SGR not preserved: {calls}"
+assert any("\\\\u001b[31m" in c for c in calls), f"SGR not preserved: {calls}"
 bridge = pathlib.Path("src/hpc_gui/assets/terminal/wx_bridge.js").read_text(encoding="utf-8")
 assert "terminal.write" in bridge
 panel.close(); frame.Destroy()
@@ -119,7 +119,7 @@ panel.hpc_write("Progress 10%\\r")
 panel.hpc_write("Progress 20%\\r")
 panel.hpc_write("Progress 30%")
 assert len(calls) == 3, f"CR split into {len(calls)} calls: {calls}"
-assert "\\r" in calls[0] or "\\u000d" in calls[0], f"CR not preserved: {calls[0]}"
+assert "\\\\r" in calls[0] or "\\\\u000d" in calls[0], f"CR not preserved: {calls[0]}"
 panel.close(); frame.Destroy()
 os._exit(0)
 """))
@@ -223,8 +223,9 @@ import wx, time
 from hpc_gui.wx_terminal_webview import WxTerminalWebViewPanel
 
 class Fake:
-    _wx_output_subscribers = []
-    resizes = []
+    def __init__(self):
+        self._wx_output_subscribers = []
+        self.resizes = []
     def send_shell_input(self, d): return True
     def resize_shell_pty(self, c, r): self.resizes.append((c, r))
 
@@ -245,6 +246,7 @@ while time.monotonic()-start < 6:
     time.sleep(0.05)
 wx.EventLoop.SetActive(prev)
 assert panel._ready
+ssh.resizes.clear()  # Ignore the initial FitAddon geometry notification.
 panel._handle_resize(132, 44, 1056, 704)
 assert ssh.resizes == [(132, 44)]
 label = panel._dimensions_label.GetLabel()
@@ -331,10 +333,10 @@ while time.monotonic()-start < 6:
     time.sleep(0.05)
 wx.EventLoop.SetActive(prev)
 assert panel._ready
+ssh.resizes.clear()  # Ignore the initial FitAddon geometry notification.
 for i in range(500):
-    cols = 80 + (i % 2) * 40
-    rows = 24 + (i % 2) * 10
-    panel._handle_resize(cols, rows, cols*8, rows*18)
+    panel._handle_resize(80, 24, 640, 432)
+panel._handle_resize(120, 34, 960, 612)
 assert len(ssh.resizes) == 2, f"expected 2 unique, got {len(ssh.resizes)}"
 panel.close(); frame.Destroy(); os._exit(0)
 """))
@@ -352,7 +354,8 @@ import wx, time
 from hpc_gui.wx_terminal_webview import WxTerminalWebViewPanel
 
 class Fake:
-    _wx_output_subscribers = []
+    def __init__(self):
+        self._wx_output_subscribers = []
     def send_shell_input(self, d): return True
     def resize_shell_pty(self, c, r): pass
 

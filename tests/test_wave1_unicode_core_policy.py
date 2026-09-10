@@ -82,10 +82,7 @@ class TestTurkishTranslationQuality:
         data = json.loads(content)
         flat = json.dumps(data, ensure_ascii=False)
         # Check for common Turkish characters
-        for char in self.TURKISH_CHARS:
-            if char in flat:
-                # Character is present and correctly encoded
-                pass
+        assert all(char in flat for char in self.TURKISH_CHARS)
 
     def test_no_common_mojibake_patterns(self):
         """tr.json should not contain common mojibake patterns."""
@@ -185,6 +182,7 @@ class TestLossyDecodingPrevention:
             # Document the finding - errors='ignore' on JSON is risky
             # This is Wave 1 scope to document, not necessarily fix
             has_ignore = 'errors="ignore"' in content or "errors='ignore'" in content
+            assert not has_ignore, "process registry must not silently drop config bytes"
             # If it has errors='ignore', it's a known risk
             if has_ignore:
                 # Known risk - documented for Wave 1

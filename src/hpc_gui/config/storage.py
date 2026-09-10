@@ -53,16 +53,32 @@ def _config_path() -> Path:
     return _config_dir() / "config.json"
 
 
+def _backup_corrupt_config(path: Path) -> None:
+    backup = path.with_name(path.name + ".bak")
+    index = 1
+    while backup.exists():
+        backup = path.with_name(f"{path.name}.bak.{index}")
+        index += 1
+    path.replace(backup)
+
+
 def load_config() -> Dict[str, Any]:
     p = _config_path()
     if not p.exists():
         return {"profiles": [], "settings": {}}
     try:
-        return json.loads(p.read_text(encoding="utf-8"))
+        loaded = json.loads(p.read_text(encoding="utf-8"))
+        if not isinstance(loaded, dict):
+            raise ValueError("config root must be a JSON object")
+        if not isinstance(loaded.get("profiles", []), list):
+            raise ValueError("config profiles must be a JSON array")
+        if not isinstance(loaded.get("settings", {}), dict):
+            raise ValueError("config settings must be a JSON object")
+        return loaded
     except Exception:
         # corrupted config; keep a backup and start fresh
         try:
-            p.rename(p.with_suffix(".json.bak"))
+            _backup_corrupt_config(p)
         except Exception:
             pass
         return {"profiles": [], "settings": {}}

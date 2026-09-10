@@ -79,6 +79,18 @@ def test_editor_local_reload_reads_disk(qapp, tmp_path):
     assert widget.text.toPlainText() == "second\n"
 
 
+def test_editor_rejects_non_utf8_without_rewriting(qapp, tmp_path):
+    target = tmp_path / "legacy.txt"
+    original = b"\xff\xfelegacy"
+    target.write_bytes(original)
+
+    widget = _make_editor()
+    with pytest.raises(UnicodeDecodeError):
+        widget.open_local_file(str(target))
+
+    assert target.read_bytes() == original
+
+
 def test_editor_remote_save_still_requires_session(qapp, monkeypatch):
     warnings = []
     monkeypatch.setattr(

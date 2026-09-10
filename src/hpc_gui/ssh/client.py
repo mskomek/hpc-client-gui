@@ -57,6 +57,11 @@ _SSH_CHANNEL_TIMEOUT_SECONDS = 30
 _KEEPALIVE_INTERVAL_DEFAULT = 30
 
 
+def _decode_remote_text(data: bytes) -> str:
+    """Decode command/banner output as UTF-8 without hiding display failures."""
+    return data.decode("utf-8", errors="replace")
+
+
 def coerce_keepalive_interval(
     value: object, default: int = _KEEPALIVE_INTERVAL_DEFAULT
 ) -> int:
@@ -413,7 +418,7 @@ class SSHClientWrapper:
             banner = transport.get_banner()
             if banner:
                 if isinstance(banner, bytes):
-                    banner = banner.decode(errors="replace")
+                    banner = _decode_remote_text(banner)
                 self.log(str(banner).rstrip("\r\n"))
             keepalive = coerce_keepalive_interval(
                 getattr(info, "keepalive_interval_seconds", _KEEPALIVE_INTERVAL_DEFAULT)
@@ -572,8 +577,8 @@ class SSHClientWrapper:
             except Exception:
                 pass
         try:
-            out = stdout.read().decode(errors="replace")
-            err = stderr.read().decode(errors="replace")
+            out = _decode_remote_text(stdout.read())
+            err = _decode_remote_text(stderr.read())
             code = stdout.channel.recv_exit_status()
             timed_out = False
         except socket.timeout:

@@ -20,7 +20,7 @@ wx = ["wxPython>=4.3.1"]
 
 [tool.pytest.ini_options]
 markers = [
-    "packaging: builds and inspects a wheel (slow; run with -m packaging)",
+    "packaging: builds or inspects packaged artifacts (slow; run with -m packaging)",
 ]
 
 [build-system]
