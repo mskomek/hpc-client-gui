@@ -553,6 +553,7 @@
     "cluster_status_loaded": "Cluster status loaded.",
     "no_cluster_status": "No cluster status data returned.",
     "job_label": "Job",
+    "open_main_files": "Open in main Files",
     "no_selected_job_files_hint": "Select a job from the Jobs tab to browse its working directory.",
     "no_selected_job_outputs_hint": "Select a job from the Jobs tab to monitor its outputs."
   },

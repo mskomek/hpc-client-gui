@@ -165,6 +165,7 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
     # For compatibility with old tests that check COMMAND_REGISTRY usage, keep dummy but not dumping
     command_items = []  # no longer dumping all shell commands under Help
     notebook = wx.Notebook(panel)
+    session_state["_embedded_main_notebook"] = notebook
     page_controls = {}
 
     # Build embedded panels using shared helpers (panels created once, not lazily)
@@ -275,6 +276,7 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
     transfer_splitter.SetSashGravity(0.7)
     files_sizer.Add(transfer_splitter, 1, wx.EXPAND)
     files_page.SetSizer(files_sizer)
+    session_state["_embedded_files_page"] = files_page
     def _on_transfer_choice(_evt):
         try:
             idx = transfer_choice.GetSelection()
@@ -2140,6 +2142,33 @@ def _jobs_callbacks(session_state, parent, lifecycle):
         job_outputs = config.get("job_outputs") if isinstance(config, dict) else None
         return definitions_from_provider(job_outputs)
 
+    def open_main_files(path="", highlight_path=""):
+        main_notebook = session_state.get("_embedded_main_notebook")
+        files_page = session_state.get("_embedded_files_page")
+        remote_panel = session_state.get("_embedded_remote_files_panel")
+        if main_notebook is None or files_page is None or remote_panel is None:
+            return
+        page_index = next(
+            (index for index in range(main_notebook.GetPageCount())
+             if main_notebook.GetPage(index) is files_page),
+            -1,
+        )
+        if page_index >= 0:
+            main_notebook.SetSelection(page_index)
+        remote_notebook = getattr(remote_panel, "_wx_remote_notebook", None)
+        tabs = getattr(remote_panel, "_wx_remote_tabs", ())
+        if remote_notebook is not None and tabs:
+            active_index = remote_notebook.GetSelection()
+            if 0 <= active_index < len(tabs):
+                tabs[active_index]["highlight_path"] = str(highlight_path or "")
+        controls = getattr(remote_panel, "_wx_remote_controls", {})
+        navigate = controls.get("navigate")
+        load = controls.get("load")
+        if callable(navigate):
+            navigate(str(path or "/"))
+        if callable(load):
+            load()
+
     return {
         "list_jobs": list_jobs,
         "read_output": read_output,
@@ -2154,6 +2183,7 @@ def _jobs_callbacks(session_state, parent, lifecycle):
         "refresh_lssrv": _refresh_lssrv,
         "output_channel_defs": None,
         "output_channel_defs_provider": _resolve_output_defs,
+        "open_main_files": open_main_files,
         "provider_filters": lambda: (_resolve_provider_config().get("file_filters", ()) if isinstance(_resolve_provider_config().get("file_filters", ()), (list, tuple)) else ()),
         "remote_files_callbacks": _remote_files_callbacks(session_state, parent, lifecycle),
         "generation": lambda: session_state.get("generation", 0),

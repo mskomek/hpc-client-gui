@@ -287,6 +287,18 @@ def test_go_to_jobs_buttons_use_real_wx_events():
         _close(frame)
 
 
+def test_open_in_main_files_uses_real_wx_event():
+    opened = []
+    app, frame, panel = _build(open_main_files=opened.append)
+    try:
+        ctrls = panel._wx_jobs_controls
+        _select(panel)
+        _click(ctrls["open_main_files"])
+        assert opened == ["/work/1001"]
+    finally:
+        _close(frame)
+
+
 def test_stale_raw_exceptions_do_not_cross_job_or_provider():
     details_started = threading.Event()
     details_release = threading.Event()
