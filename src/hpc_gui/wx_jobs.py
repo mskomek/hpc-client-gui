@@ -356,24 +356,10 @@ def _matches_filter(row: dict[str, str], query: str) -> bool:
     return False
 
 
-def _parse_cluster_server_rows(text: str) -> list[tuple[str, str, str, str]]:
-    """Parse the allowlisted lssrv table shape for the Jobs page."""
-    rows: list[tuple[str, str, str, str]] = []
-    lines = [line.strip() for line in str(text or "").splitlines() if line.strip()]
-    if not lines:
-        return rows
-    first = lines[0].replace("|", " ").split()
-    has_header = bool(first and first[0].lower() in {"server", "servers", "node", "hostname"})
-    if not has_header:
-        return rows
-    for line in lines[1:]:
-        fields = [part.strip() for part in line.split("|")] if "|" in line else line.split()
-        if len(fields) < (2 if has_header else 3):
-            continue
-        if fields[0].lower() in {"server", "servers", "node", "hostname"}:
-            continue
-        rows.append(tuple((fields + [""] * 4)[:4]))
-    return rows
+def _parse_cluster_server_rows(text: str):
+    """Parse the built-in TRUBA lssrv format when no provider contract exists."""
+    parsed = parse_with_registry("truba.lssrv.v1", str(text or ""), raw_source_id="lssrv")
+    return parsed.data if parsed.ok and isinstance(parsed.data, list) else []
 
 
 def _detail_response_has_fields(text: str) -> bool:
@@ -397,7 +383,7 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
             command=command,
             stdout="" if error else str(value or ""),
             stderr=str(error) if error else "",
-            exit_code=1 if error else 0,
+            exit_code=1 if error else -1,
         )
     # Alias tolerance for caller naming
     if refresh_sacct is None:
@@ -509,7 +495,7 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         cluster_servers_box,
         style=wx.LC_REPORT | wx.LC_HRULES,
     )
-    for index, key in enumerate(("server", "state", "cpus", "memory")):
+    for index, key in enumerate(("partition", "free_cpus", "total_cpus", "memory_per_core")):
         cluster_servers_table.InsertColumn(index, t(f"jobs.{key}"))
     for index, width in enumerate((150, 120, 80, 100)):
         cluster_servers_table.SetColumnWidth(index, width)
@@ -1640,17 +1626,13 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
             return False
 
     def _render_cluster_servers(raw_text: str, parsed_rows=None):
-        rows = (
-            [(item.name, item.state, item.total_cpus, item.free_cpus) for item in parsed_rows]
-            if parsed_rows is not None
-            else _parse_cluster_server_rows(raw_text)
-        )
+        rows = parsed_rows if parsed_rows is not None else _parse_cluster_server_rows(raw_text)
         cluster_servers_table.DeleteAllItems()
-        for server, server_state, cpus, memory in rows:
-            index = cluster_servers_table.InsertItem(cluster_servers_table.GetItemCount(), server)
-            cluster_servers_table.SetItem(index, 1, server_state)
-            cluster_servers_table.SetItem(index, 2, cpus)
-            cluster_servers_table.SetItem(index, 3, memory)
+        for item in rows:
+            index = cluster_servers_table.InsertItem(cluster_servers_table.GetItemCount(), item.partition)
+            cluster_servers_table.SetItem(index, 1, item.free_cpus)
+            cluster_servers_table.SetItem(index, 2, item.total_cpus)
+            cluster_servers_table.SetItem(index, 3, item.memory_mb_per_core)
         cluster_servers_text.SetLabel("")
         if rows:
             state["cluster_status_key"] = "jobs_outputs.cluster_status_loaded"
@@ -1744,6 +1726,7 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
                         if parsed.ok and isinstance(parsed.data, list):
                             parsed_rows = parsed.data
                         elif parsed.error:
+                            parsed_rows = []
                             state["status_parse_error"] = parsed.error.message
                 except Exception:
                     pass
@@ -2201,11 +2184,13 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         for follower in state.get("detached_followers", ()):
             follower.close()
         state["detached_followers"].clear()
+        for cid, button in output_channel_pause_buttons.items():
+            output_channel_paused[cid] = False
+            button.SetLabel(t("jobs.pause_output"))
         model.selected_job_store.clear()
         _ensure_output_tabs([])
         _update_outputs_visibility()
-        for button in output_channel_pause_buttons.values():
-            button.SetLabel(t("jobs.pause_output"))
+        outputs_pause_btn.SetLabel(t("jobs_outputs.pause_all"))
         for cid in output_channel_status:
             _set_output_channel_status(cid, "jobs_outputs.status_disconnected")
         _clear_detail_values()
@@ -2294,7 +2279,7 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         cluster_servers_box.SetLabel(t("jobs.cluster_servers"))
         btn_refresh_lssrv.SetLabel(t("jobs.refresh"))
         btn_raw_server_status.SetLabel(t("raw_viewer.raw_server_status"))
-        for index, key in enumerate(("server", "state", "cpus", "memory")):
+        for index, key in enumerate(("partition", "free_cpus", "total_cpus", "memory_per_core")):
             info = cluster_servers_table.GetColumn(index)
             info.Text = t(f"jobs.{key}")
             cluster_servers_table.SetColumn(index, info)
@@ -2314,6 +2299,10 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
                 pass
             if cid in output_channel_path_labels:
                 output_channel_path_labels[cid].SetLabel(f"{t('jobs_outputs.path')}:")
+            if cid in output_channel_pause_buttons:
+                output_channel_pause_buttons[cid].SetLabel(
+                    t("jobs.resume_output" if output_channel_paused.get(cid, False) else "jobs.pause_output")
+                )
             if cid in output_channel_status:
                 output_channel_status[cid].SetLabel(
                     f"{t('jobs_outputs.status')}: {t(output_channel_status_keys.get(cid, 'jobs_outputs.status_following'))}"

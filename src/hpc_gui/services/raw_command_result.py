@@ -50,7 +50,7 @@ class RawCommandResult:
 
     @property
     def has_error(self) -> bool:
-        return self.exit_code != 0
+        return self.exit_code > 0
 
     @property
     def display_command(self) -> str:

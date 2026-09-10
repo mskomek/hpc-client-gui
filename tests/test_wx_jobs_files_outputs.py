@@ -201,7 +201,12 @@ def test_wx_jobs_outputs_pause_resume():
 def test_wx_jobs_provider_status_is_visible_only_when_backend_supports_it():
     app, frame, panel = _build_panel(
         has_status_capability=lambda: True,
-        refresh_lssrv=lambda _job_id: "SERVER STATE\nnode001 available",
+        refresh_lssrv=lambda _job_id: (
+            "Slurm partitions state\n"
+            "Partition CPUs Wait. Jobs Wait. Jobs Nodes Max. Job Time Min. Nodes Max. Nodes Core RAM (MB)\n"
+            "Name (Free) (Total) (Resources) (Total) (Total) (D-HH:MM:SS) per Job per Job per Node per Core\n"
+            "short 8 32 0 1 2 1-00:00:00 1 2 16 4096"
+        ),
     )
     try:
         ctrls = panel._wx_jobs_controls
