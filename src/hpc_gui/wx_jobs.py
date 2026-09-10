@@ -1900,12 +1900,14 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
                         roles=ch.roles,
                     )
         if not channels:
+            output_no_channels_label.Show()
             if output_channel_notebook.GetPageCount() == 0:
                 output_channel_notebook.AddPage(
                     output_no_channels_label,
                     t("jobs_outputs.outputs_title"),
                 )
         else:
+            output_no_channels_label.Hide()
             try:
                 idx = output_channel_notebook.GetPageIndex(output_no_channels_label)
                 if idx >= 0:

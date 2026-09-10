@@ -210,6 +210,7 @@ def test_outputs_no_job_zero_channels_waiting_and_pause_reset():
         _select(panel)
         assert _pump(lambda: not ctrls["outputs_no_selection_panel"].IsShown())
         assert ctrls["output_channel_notebook"].GetPageCount() == 1
+        assert ctrls["output_no_channels_label"].IsShown()
         assert "No output channels" in ctrls["output_no_channels_label"].GetLabel()
     finally:
         _close(frame)
@@ -223,6 +224,7 @@ def test_outputs_no_job_zero_channels_waiting_and_pause_reset():
         ctrls = panel._wx_jobs_controls
         _select(panel)
         assert _pump(lambda: bool(ctrls["output_channel_status"]))
+        assert not ctrls["output_no_channels_label"].IsShown()
         assert _pump(lambda: "Waiting for file" in next(iter(ctrls["output_channel_status"].values())).GetLabel())
         assert next(iter(ctrls["output_channels"].values())).GetValue() == ""
         _click(ctrls["outputs_pause"])
