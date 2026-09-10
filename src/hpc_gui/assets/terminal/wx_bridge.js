@@ -69,7 +69,7 @@
 
   function _searchBuffer(query, startRow, startCol, direction) {
     const buffer = terminal.buffer.active;
-    const totalRows = buffer.baseY + buffer.viewportY + terminal.rows;
+    const totalRows = buffer.baseY + terminal.rows;
     if (!query || totalRows <= 0) return null;
     for (let i = 0; i < totalRows; i++) {
       const idx = direction === 1
@@ -82,10 +82,10 @@
         ? (idx === startRow ? text.indexOf(query, startCol) : text.indexOf(query))
         : (idx === startRow ? text.lastIndexOf(query, startCol - 1) : text.lastIndexOf(query));
       if (col >= 0) {
-        const endCol = col + query.length;
-        terminal.select(col, idx, endCol);
-        terminal.scrollLines(idx - terminal.buffer.active.viewportY);
-        return { row: idx, col: col, endCol: endCol };
+        const selLen = query.length;
+        terminal.select(col, idx, selLen);
+        terminal.scrollToLine(idx);
+        return { row: idx, col: col, endCol: col + selLen };
       }
     }
     return null;
@@ -221,6 +221,87 @@
       };
     } catch (e) {
       return { cols: terminal.cols, rows: terminal.rows };
+    }
+  };
+
+  // ── Test helpers: read xterm buffer state for behavioral verification ──
+  window.hpcGetLineText = (row) => {
+    try {
+      const buffer = terminal.buffer.active;
+      const line = buffer.getLine(row);
+      if (!line) return null;
+      return line.translateToString(true);
+    } catch (e) {
+      return null;
+    }
+  };
+
+  window.hpcGetBufferText = () => {
+    try {
+      const buffer = terminal.buffer.active;
+      const totalRows = buffer.baseY + terminal.rows;
+      const lines = [];
+      for (let i = 0; i < totalRows; i++) {
+        const line = buffer.getLine(i);
+        if (line) {
+          lines.push(line.translateToString(true));
+        }
+      }
+      return lines.join("\n");
+    } catch (e) {
+      return "";
+    }
+  };
+
+  window.hpcGetScreenState = () => {
+    try {
+      const buffer = terminal.buffer.active;
+      const activeBufferType = buffer.type; // 0 = normal, 1 = alternate
+      const cursorX = buffer.cursorX;
+      const cursorY = buffer.cursorY;
+      const baseY = buffer.baseY;
+      const viewportY = buffer.viewportY;
+      const totalRows = buffer.baseY + terminal.rows;
+      const lines = [];
+      const maxLines = Math.min(totalRows, 500);
+      for (let i = 0; i < maxLines; i++) {
+        const line = buffer.getLine(i);
+        if (line) {
+          const text = line.translateToString(true);
+          const attrs = [];
+          for (let c = 0; c < text.length; c++) {
+            const cell = line.getCell(c);
+            if (cell) {
+              const fg = cell.getFgColor();
+              const bg = cell.getBgColor();
+              const fgMode = cell.isFgDefault() ? "default" : (cell.isFgRgb() ? "rgb" : "color");
+              attrs.push({ ch: text[c], fg, bg, fgMode });
+            }
+          }
+          lines.push({ text, attrs });
+        }
+      }
+      return {
+        cols: terminal.cols,
+        rows: terminal.rows,
+        bufferType: activeBufferType,
+        cursorX,
+        cursorY,
+        baseY,
+        viewportY,
+        totalRows,
+        lines,
+      };
+    } catch (e) {
+      return { error: String(e) };
+    }
+  };
+
+  window.hpcGetAlternateScreenActive = () => {
+    try {
+      return terminal.buffer.active.type === 1;
+    } catch (e) {
+      return false;
     }
   };
 

@@ -38,6 +38,59 @@ MIN_FONT_SIZE = 6
 MAX_FONT_SIZE = 32
 
 
+def _safe_truncate_index(text: str, max_bytes: int) -> int:
+    """Find the last safe truncation index that does not split an ESC sequence or a multi-byte UTF-8 char."""
+    encoded = text.encode("utf-8", errors="replace")
+    if len(encoded) <= max_bytes:
+        return len(text)
+    cut = max_bytes
+    # Walk backward from cut point to find a safe boundary
+    while cut > 0:
+        try:
+            partial = encoded[:cut].decode("utf-8", errors="strict")
+            return len(partial)
+        except UnicodeDecodeError:
+            cut -= 1
+    # If all else fails, find last ESC boundary — do not cut inside an CSI/OSC sequence
+    # ESC sequences: ESC [ ... final_byte, or ESC ] ... ST
+    last_safe = 0
+    i = 0
+    raw = encoded[:max_bytes]
+    while i < len(raw):
+        b = raw[i]
+        if b == 0x1B:  # ESC
+            # Skip entire escape sequence
+            if i + 1 < len(raw):
+                next_b = raw[i + 1]
+                if next_b == 0x5B:  # [ — CSI: ESC [ ... final_byte (0x40-0x7E)
+                    j = i + 2
+                    while j < len(raw) and not (0x40 <= raw[j] <= 0x7E):
+                        j += 1
+                    i = min(j + 1, len(raw))
+                elif next_b == 0x5D:  # ] — OSC: ESC ] ... BEL or ST
+                    j = i + 2
+                    while j < len(raw):
+                        if raw[j] == 0x07:  # BEL
+                            j += 1
+                            break
+                        if raw[j] == 0x9B or (raw[j] == 0x1B and j + 1 < len(raw) and raw[j + 1] == 0x5C):
+                            j += 2
+                            break
+                        j += 1
+                    i = min(j, len(raw))
+                else:
+                    i += 2
+            else:
+                i += 1
+        else:
+            last_safe = i
+            i += 1
+    try:
+        return encoded[:last_safe].decode("utf-8", errors="replace").__len__()
+    except Exception:
+        return len(text) // 2
+
+
 @dataclass(frozen=True)
 class TerminalSize:
     columns: int
@@ -599,18 +652,16 @@ class WxTerminalWebViewPanel(wx.Panel if _WX_AVAILABLE else object):  # type: ig
             # For Wave 73, we keep all pending up to bound; if exceeded, we still keep to avoid silent loss during startup,
             # but we enforce bound by coalescing earlier entries.
             if self._pending_bytes + nb > MAX_PENDING_BYTES or len(self._pending) >= MAX_PENDING_ENTRIES:
-                # Coalesce pending into one entry to free entry count; keep bytes bound by truncating oldest if still over
+                # Coalesce pending into one entry to free entry count
                 combined = "".join(self._pending)
                 self._pending = [combined]
                 self._pending_bytes = len(combined.encode("utf-8", errors="replace"))
-                # If still over, drop oldest N bytes (rare; startup burst should not hit 2MB)
                 if self._pending_bytes + nb > MAX_PENDING_BYTES:
-                    # Drop oldest proportionally, but log to diagnostic (do not expose terminal contents)
-                    # Keep newest data
-                    keep_ratio = max(0.0, (MAX_PENDING_BYTES - nb) / max(1, self._pending_bytes))
-                    keep_chars = int(len(combined) * keep_ratio)
-                    if keep_chars > 0:
-                        self._pending[0] = combined[-keep_chars:]
+                    # Safe truncation: never split ESC sequences or UTF-8 chars
+                    keep_bytes = max(0, MAX_PENDING_BYTES - nb)
+                    safe_idx = _safe_truncate_index(combined, keep_bytes)
+                    if safe_idx > 0:
+                        self._pending[0] = combined[-safe_idx:]
                         self._pending_bytes = len(self._pending[0].encode("utf-8", errors="replace"))
                     else:
                         self._pending.clear()
@@ -770,6 +821,59 @@ class WxTerminalWebViewPanel(wx.Panel if _WX_AVAILABLE else object):  # type: ig
 
     def _on_clear(self, _evt=None):
         self.hpc_clear()
+
+    # ---------- Buffer query helpers (test seam) ----------
+
+    def hpc_get_line_text(self, row: int) -> str | None:
+        """Read a single line from xterm buffer via JS helper."""
+        if self._closed or not self._ready or not self._is_parity or self._webview is None:
+            return None
+        result = [None]
+        def _cb(val):
+            result[0] = val
+        js = f"window.hpcGetLineText && window.hpcGetLineText({int(row)})"
+        try:
+            if hasattr(self._webview, "RunScript"):
+                self._webview.RunScript(js, callback=_cb)
+            elif hasattr(self._webview, "RunScriptAsync"):
+                self._webview.RunScriptAsync(js)
+            # For sync readback, fall back to JS eval return if available
+        except Exception:
+            pass
+        return result[0]
+
+    def hpc_get_buffer_text(self) -> str | None:
+        """Read all visible+scrollback lines from xterm buffer."""
+        if self._closed or not self._ready or not self._is_parity or self._webview is None:
+            return None
+        result = [None]
+        def _cb(val):
+            result[0] = val
+        js = "window.hpcGetBufferText && window.hpcGetBufferText()"
+        try:
+            if hasattr(self._webview, "RunScript"):
+                self._webview.RunScript(js, callback=_cb)
+        except Exception:
+            pass
+        return result[0]
+
+    def hpc_get_screen_state(self) -> dict | None:
+        """Read full screen state (cursor, buffer type, lines) from xterm."""
+        if self._closed or not self._ready or not self._is_parity or self._webview is None:
+            return None
+        result = [None]
+        def _cb(val):
+            result[0] = val
+        js = "JSON.stringify(window.hpcGetScreenState && window.hpcGetScreenState())"
+        try:
+            if hasattr(self._webview, "RunScript"):
+                self._webview.RunScript(js, callback=_cb)
+        except Exception:
+            pass
+        try:
+            return json.loads(result[0]) if result[0] else None
+        except Exception:
+            return None
 
     # ---------- SSH attach / lifecycle ----------
 

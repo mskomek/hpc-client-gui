@@ -334,7 +334,7 @@
     "new_file_title": "New File",
     "new_file_label": "File name:",
     "permissions_mode": "Mode (octal):",
-    "permissions_invalid": "Enter a valid octal mode such as 644.",
+    "permissions_invalid": "Enter a valid octal mode such as 755 or 0644.",
     "permissions_unavailable": "Remote chmod is unavailable.",
     "invalid_new_name": "The name cannot be empty or contain / or \\ characters.",
     "new_item_exists": "A file or folder with this name already exists:\n{path}",
@@ -441,7 +441,6 @@
     "permissions_recurse_all": "Apply to all files and directories",
     "permissions_recurse_files": "Apply to files only",
     "permissions_recurse_dirs": "Apply to directories only",
-    "permissions_invalid": "Enter a valid octal mode such as 755 or 0644.",
     "permissions_failed": "Permission update failed: {err}",
     "delete_confirm": "Delete the selected items?",
     "no_file_selected": "No file selected.",
@@ -612,7 +611,7 @@
   },
   "language": {
     "menu_title": "Language",
-    "turkish": "T\u00fcrk\u00e7e",
+    "turkish": "Türkçe",
     "english": "English"
   },
   "logs": {
@@ -638,7 +637,7 @@
     "search_placeholder": "Search helpâ€¦",
     "language": "Language",
     "english": "English",
-    "turkish": "T\u00fcrk\u00e7e",
+    "turkish": "Türkçe",
     "library_label": "Library",
     "library_core": "Core Help",
     "library_truba": "Cluster Playbook",

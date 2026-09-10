@@ -1,31 +1,42 @@
 {
-  "wave": 76,
+  "wave": 78,
   "requirement": "GUI-TERM-001",
   "status": "PARTIAL",
   "branch": "develop",
-  "renderer": "wx.html2.WebView + xterm.js 6.0.0",
+  "commit": "d8a009ef",
+  "renderer": "wx.html2.WebView + xterm.js (vendored)",
   "bridge": "single JSON postMessage (hpc/hpc_msg)",
-  "pty_adapter": "LoopbackPTY disposable fixture",
+  "pty_adapter": "FakeSSH disposable fixture",
   "tests_executed": [
-    "test_vt_cursor_movement_and_erase",
-    "test_unicode_round_trip",
-    "test_multiline_paste",
-    "test_resize_updates_dimensions_and_pty",
-    "test_stress_500_inputs",
-    "test_stress_500_resizes",
-    "test_stress_100_reconnects",
-    "test_stress_repeated_font_find_clear",
-    "test_close_while_output_in_flight"
+    "test_embedded_connect_to_ssh_via_shell_path",
+    "test_input_chain_through_script_message_handler",
+    "test_paste_chain_through_bridge",
+    "test_stale_output_rejected_after_reconnect",
+    "test_vt_sgr_bytes_reach_xterm",
+    "test_vt_cr_bytes_preserved_through_bridge",
+    "test_vt_cursor_escape_sequences_preserved",
+    "test_vt_erase_sequences_preserved",
+    "test_vt_alternate_screen_sequences_preserved",
+    "test_find_next_prev_advances_through_matches",
+    "test_header_status_identity_dimensions",
+    "test_destroy_before_ready_no_crash",
+    "test_close_while_output_in_flight",
+    "test_100_reconnects_no_leak",
+    "test_font_change_triggers_fit_and_resize",
+    "test_unicode_input_output_roundtrip",
+    "test_large_pre_ready_output_buffered",
+    "test_fallback_panel_sets_non_parity",
+    "test_bridge_has_required_helpers"
   ],
   "invariants": {
-    "duplicate_output_subscribers": "0 (verified in reconnect stress)",
-    "callbacks_into_destroyed": "0 (close mid-flight test)",
-    "stale_session_output": "0 (set_ssh detaches old)",
-    "unbounded_accumulation": "0 (bounded queue MAX_PENDING_BYTES=2MB)"
+    "duplicate_output_subscribers": "0 (verified in 100-reconnect stress)",
+    "callbacks_into_destroyed": "0 (close mid-flight + destroy-before-ready tests)",
+    "stale_session_output": "0 (generation guard in set_ssh + _safe_deliver)",
+    "unbounded_accumulation": "0 (bounded queue MAX_PENDING_BYTES=2MB, safe truncation)"
   },
   "known_gaps": [
-    "xterm.js alternate screen not exercised (requires terminal buffer snapshot)",
-    "find_next not implemented (hpcFind wraps once)",
-    "packaged WebView2 runtime not tested (Wave 77)"
+    "VT buffer state readback blocked by wx.html2.WebView RunScript lack of synchronous return",
+    "Alternate screen buffer state not verified via renderer (sequences preserved structurally)",
+    "Packaged WebView2 runtime not tested (Wave 77 Windows packaged gate BLOCKED)"
   ]
 }

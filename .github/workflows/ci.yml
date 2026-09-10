@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, develop ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, develop ]
 
 # One run per branch/PR: a new push cancels the superseded run for the
 # same ref. Release builds are handled by their own workflow and are never
@@ -348,7 +348,7 @@ jobs:
         run: python -m ruff check src scripts tests
       - name: Focused wx smoke (headless)
         run: |
-          python -m pytest tests/test_wx_shell.py tests/test_wx_65a_stress.py tests/test_wx_windows_audit.py tests/test_wx_terminal.py tests/test_wx_embedded_terminal.py -q --tb=short -rf
+          python -m pytest tests/test_wx_shell.py tests/test_wx_65a_stress.py tests/test_wx_windows_audit.py tests/test_wx_terminal.py tests/test_wx_embedded_terminal.py tests/test_wx_terminal_behavioral.py -q --tb=short -rf
         continue-on-error: ${{ runner.os == 'Linux' }}
       - name: Linux display note
         if: runner.os == 'Linux'
