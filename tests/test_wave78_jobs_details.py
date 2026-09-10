@@ -56,15 +56,16 @@ def _close(frame):
         wx.Yield()
 
 
-def test_top_level_tabs_are_jobs_details_files_outputs():
+def test_inner_tabs_are_jobs_cluster_details_files_outputs():
     app, frame, panel = _build_panel()
     try:
         nb = panel._wx_jobs_controls["notebook"]
-        assert nb.GetPageCount() == 4
+        assert nb.GetPageCount() == 5
         assert nb.GetPageText(0) == t("jobs.title")
-        assert nb.GetPageText(1) == t("jobs.details")
-        assert nb.GetPageText(2) == t("jobs_outputs.files_title")
-        assert nb.GetPageText(3) == t("jobs_outputs.outputs_title")
+        assert nb.GetPageText(1) == t("jobs.cluster")
+        assert nb.GetPageText(2) == t("jobs.details")
+        assert nb.GetPageText(3) == t("jobs_outputs.files_title")
+        assert nb.GetPageText(4) == t("jobs_outputs.outputs_title")
     finally:
         _close(frame)
 
@@ -110,7 +111,7 @@ def test_go_to_jobs_switches_to_jobs_tab():
     try:
         ctrls = panel._wx_jobs_controls
         nb = ctrls["notebook"]
-        nb.SetSelection(1)
+        nb.SetSelection(2)
         wx.Yield()
         ctrls["go_to_jobs"]()
         wx.Yield()
@@ -142,7 +143,7 @@ def test_accounting_expand_collapse():
 def test_cluster_servers_visible_without_selected_job_when_provider_supports():
     app, frame, panel = _build_panel(
         has_status_capability=lambda: True,
-        refresh_lssrv=lambda _job_id: "Cluster OK",
+        refresh_lssrv=lambda _job_id: "SERVER STATE\nnode001 available",
     )
     try:
         ctrls = panel._wx_jobs_controls
@@ -155,10 +156,10 @@ def test_cluster_servers_visible_without_selected_job_when_provider_supports():
         _select_job(panel, 0)
         for _ in range(50):
             wx.Yield()
-            if ctrls["cluster_servers_text"].GetLabel() == "Cluster OK":
+            if ctrls["cluster_status_text"].GetLabel() == t("jobs_outputs.cluster_status_loaded"):
                 break
             wx.MilliSleep(10)
-        assert ctrls["cluster_servers_text"].GetLabel() == "Cluster OK"
+        assert ctrls["cluster_status_text"].GetLabel() == t("jobs_outputs.cluster_status_loaded")
     finally:
         _close(frame)
 
@@ -222,7 +223,7 @@ def test_cluster_servers_hidden_for_unsupported_provider():
     app, frame, panel = _build_panel()
     try:
         ctrls = panel._wx_jobs_controls
-        assert not ctrls["cluster_servers_box"].IsShown()
+        assert ctrls["notebook"].GetPageCount() == 5
     finally:
         _close(frame)
 
@@ -230,7 +231,7 @@ def test_cluster_servers_hidden_for_unsupported_provider():
 def test_raw_server_status_opens():
     app, frame, panel = _build_panel(
         has_status_capability=lambda: True,
-        refresh_lssrv=lambda _job_id: "Cluster server status: OK",
+        refresh_lssrv=lambda _job_id: "SERVER STATE\nnode001 available",
     )
     try:
         ctrls = panel._wx_jobs_controls
@@ -243,10 +244,10 @@ def test_raw_server_status_opens():
         _select_job(panel, 0)
         for _ in range(50):
             wx.Yield()
-            if ctrls["cluster_servers_text"].GetLabel() == "Cluster server status: OK":
+            if ctrls["cluster_status_text"].GetLabel() == t("jobs_outputs.cluster_status_loaded"):
                 break
             wx.MilliSleep(10)
-        assert ctrls["cluster_servers_text"].GetLabel() == "Cluster server status: OK"
+        assert ctrls["cluster_status_text"].GetLabel() == t("jobs_outputs.cluster_status_loaded")
     finally:
         _close(frame)
 
@@ -343,7 +344,8 @@ def test_runtime_language_refresh():
         ctrls = panel._wx_jobs_controls
         nb = ctrls["notebook"]
         assert nb.GetPageText(0) == "Jobs"
-        assert nb.GetPageText(1) == "Details"
+        assert nb.GetPageText(1) == "Cluster"
+        assert nb.GetPageText(2) == "Details"
         set_language("tr")
         for _ in range(20):
             wx.Yield()
@@ -351,7 +353,8 @@ def test_runtime_language_refresh():
             if nb.GetPageText(0) != "Jobs":
                 break
         assert nb.GetPageText(0) == t("jobs.title")
-        assert nb.GetPageText(1) == t("jobs.details")
+        assert nb.GetPageText(1) == t("jobs.cluster")
+        assert nb.GetPageText(2) == t("jobs.details")
         set_language("en")
         wx.Yield()
     finally:

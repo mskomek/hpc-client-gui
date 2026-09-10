@@ -101,7 +101,7 @@ class TestSec3_NoAutoSwitch:
         try:
             ctrls = panel._wx_jobs_controls
             nb = ctrls["notebook"]
-            nb.SetSelection(1)  # Switch to Details manually
+            nb.SetSelection(2)  # Switch to Details manually
             wx.Yield()
             ctrls["go_to_jobs"]()
             wx.Yield()
@@ -212,7 +212,7 @@ class TestSec11_ClusterStatusIndependence:
                 wx.Yield()
                 wx.MilliSleep(20)
             # Cluster servers should be visible
-            assert ctrls["cluster_servers_box"].IsShown()
+            assert ctrls["cluster_status_text"].IsShown()
             # Select job A
             _select_job(panel, 0)
             for _ in range(20):
@@ -222,7 +222,7 @@ class TestSec11_ClusterStatusIndependence:
             for _ in range(20):
                 wx.Yield()
             # Cluster servers should still be visible (not affected by job selection)
-            assert ctrls["cluster_servers_box"].IsShown()
+            assert ctrls["cluster_status_text"].IsShown()
         finally:
             _close(frame)
 
@@ -303,9 +303,9 @@ class TestSec39_SelectionStaysOnJobs:
             assert nb.GetSelection() == 0
             assert panel._wx_jobs_state["selected_job"] == "1001"
             # Now manually switch to Details
-            nb.SetSelection(1)
+            nb.SetSelection(2)
             wx.Yield()
-            assert nb.GetSelection() == 1
+            assert nb.GetSelection() == 2
             assert ctrls["detail_values"]["job_id"].GetValue() == "1001"
         finally:
             _close(frame)
@@ -330,7 +330,7 @@ class TestSec41_EmptyJobsClusterStatus:
         try:
             ctrls = panel._wx_jobs_controls
             # Cluster servers should be visible even with no jobs
-            assert ctrls["cluster_servers_box"].IsShown()
+            assert ctrls["notebook"].GetPageCount() == 5
             # Cancel should be disabled
             assert not ctrls["btn_cancel"].IsEnabled()
         finally:
@@ -348,12 +348,14 @@ class TestSec42_UnsupportedCluster:
         panel = build_jobs_panel(
             frame,
             list_jobs=lambda: _fake_jobs(),
+            provider_connected=True,
         )
         frame.Show()
         wx.Yield()
         try:
             ctrls = panel._wx_jobs_controls
-            assert not ctrls["cluster_servers_box"].IsShown()
+            assert ctrls["notebook"].GetPageCount() == 5
+            assert "not available" in ctrls["cluster_status_text"].GetLabel()
         finally:
             _close(frame)
 
@@ -394,11 +396,12 @@ class TestRegression_FilesOutputs:
         try:
             ctrls = panel._wx_jobs_controls
             nb = ctrls["notebook"]
-            assert nb.GetPageCount() == 4
+            assert nb.GetPageCount() == 5
             assert nb.GetPageText(0) == "Jobs"
-            assert nb.GetPageText(1) == "Details"
-            assert nb.GetPageText(2) == "Files"
-            assert nb.GetPageText(3) == "Outputs"
+            assert nb.GetPageText(1) == "Cluster"
+            assert nb.GetPageText(2) == "Details"
+            assert nb.GetPageText(3) == "Files"
+            assert nb.GetPageText(4) == "Outputs"
             # Files browser exists
             assert hasattr(ctrls["files_browser"], "_wx_remote_controls")
         finally:
@@ -410,7 +413,7 @@ class TestRegression_FilesOutputs:
         try:
             ctrls = panel._wx_jobs_controls
             nb = ctrls["notebook"]
-            nb.SetSelection(3)
+            nb.SetSelection(4)
             wx.Yield()
             # Outputs controls exist
             assert "outputs_refresh" in ctrls
