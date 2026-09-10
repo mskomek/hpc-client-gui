@@ -4,6 +4,7 @@ import contextlib
 import errno
 import os
 import re
+import shlex
 import stat as pystat
 from typing import Iterator, List, Tuple
 
@@ -354,7 +355,6 @@ class SSHFilesBackend(FilesBackend):
     def remove(self, remote_path: str, recursive: bool = False) -> None:
         # Use shell rm to support recursive deletes reliably.
         # remote_path is user-provided via UI; quote defensively.
-        import shlex
         q = shlex.quote(remote_path)
         cmd = f"rm {'-rf' if recursive else '-f'} {q}"
         code, _, err = self.ssh.run(cmd)
@@ -365,7 +365,6 @@ class SSHFilesBackend(FilesBackend):
         self.ssh.sftp.rename(remote_path, new_remote_path)
 
     def mkdir(self, remote_dir: str) -> None:
-        import shlex
         q = shlex.quote(remote_dir)
         code, _, err = self.ssh.run(f"mkdir -p {q}")
         _raise_on_failed_run(code, err, "mkdir")
@@ -376,7 +375,6 @@ class SSHFilesBackend(FilesBackend):
             return
         except Exception:
             pass
-        import shlex
         q = shlex.quote(remote_path)
         code, _, err = self.ssh.run(f"chmod {mode:03o} {q}")
         _raise_on_failed_run(code, err, "chmod")
@@ -390,8 +388,6 @@ class SSHFilesBackend(FilesBackend):
 
     def sha256(self, remote_path: str) -> str:
         """Return the remote file's SHA-256 using the SSH host utility."""
-        import shlex
-
         code, out, err = self.ssh.run(f"sha256sum -- {shlex.quote(remote_path)}")
         _raise_on_failed_run(code, err, "sha256sum", path=remote_path)
         digest = str(out or "").strip().split()[0] if str(out or "").strip() else ""
@@ -407,7 +403,6 @@ class SSHFilesBackend(FilesBackend):
             return False
 
     def copy(self, src_remote_path: str, dst_remote_path: str, recursive: bool = False) -> None:
-        import shlex
         s = shlex.quote(src_remote_path)
         d = shlex.quote(dst_remote_path)
         cmd = f"cp {'-r' if recursive else ''} {s} {d}".strip()
@@ -415,7 +410,6 @@ class SSHFilesBackend(FilesBackend):
         _raise_on_failed_run(code, err, "cp", path=src_remote_path)
 
     def move(self, src_remote_path: str, dst_remote_path: str) -> None:
-        import shlex
         s = shlex.quote(src_remote_path)
         d = shlex.quote(dst_remote_path)
         code, _, err = self.ssh.run(f"mv {s} {d}")

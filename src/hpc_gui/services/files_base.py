@@ -89,3 +89,19 @@ class FilesBackend(ABC):
     def is_dir(self, remote_path: str) -> bool:
         """Return True if remote_path is a directory."""
         raise NotImplementedError
+
+    def stat_entry(self, remote_path: str) -> RemoteEntry:
+        """Return a RemoteEntry with full stat information.
+
+        Optional: backends that support rich stat can override this.
+        Default raises NotImplementedError.
+        """
+        raise NotImplementedError
+
+    def sha256(self, remote_path: str) -> str:
+        """Return the SHA-256 hex digest of the remote file.
+
+        Optional: backends that support integrity checking can override this.
+        Default raises NotImplementedError.
+        """
+        raise NotImplementedError

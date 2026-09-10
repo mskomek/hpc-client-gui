@@ -51,7 +51,7 @@ def stop_x_server_started_by_app(log: Optional[Callable[[str], None]] = None) ->
         pid_path = _pid_path()
         if not pid_path.exists():
             return False
-        pid_s = (pid_path.read_text(encoding="utf-8", errors="ignore") or "").strip()
+        pid_s = (pid_path.read_text(encoding="utf-8", errors="replace") or "").strip()
         pid = int(pid_s)
     except Exception:
         return False

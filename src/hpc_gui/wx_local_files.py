@@ -64,10 +64,17 @@ class LocalBrowserModel:
         self.clipboard: tuple[Path, ...] = ()
         self.clipboard_move = False
         self._history: list[Path] = []
+        self._forward: list[Path] = []
 
     def list_entries(self, path: str | Path | None = None) -> tuple[LocalEntry, ...]:
         current_path = self.current_path if path is None else Path(path).expanduser().resolve()
-        entries = [LocalEntry(item, item.is_dir(), item.stat().st_size if item.is_file() else 0) for item in current_path.iterdir()]
+        entries = []
+        for item in current_path.iterdir():
+            try:
+                stat = item.stat()
+                entries.append(LocalEntry(item, item.is_dir(), stat.st_size if item.is_file() else 0))
+            except (OSError, PermissionError):
+                entries.append(LocalEntry(item, item.is_dir(), 0))
         key = (lambda item: item.path.name.casefold()) if self.sort_key == "name" else (lambda item: item.size)
         return tuple(sorted(entries, key=key, reverse=self.reverse))
 
@@ -77,6 +84,7 @@ class LocalBrowserModel:
             raise NotADirectoryError(str(target))
         if _remember and target != self.current_path:
             self._history.append(self.current_path)
+            self._forward.clear()
         self.current_path = target
         self.tabs[self.active_tab] = target
 
@@ -87,10 +95,21 @@ class LocalBrowserModel:
         if not self._history:
             raise IndexError("no history")
         target = self._history.pop()
+        self._forward.append(self.current_path)
         self.navigate(target, _remember=False)
 
     def can_go_back(self) -> bool:
         return bool(self._history)
+
+    def go_forward(self) -> None:
+        if not self._forward:
+            raise IndexError("no forward history")
+        target = self._forward.pop()
+        self._history.append(self.current_path)
+        self.navigate(target, _remember=False)
+
+    def can_go_forward(self) -> bool:
+        return bool(self._forward)
 
     def new_tab(self, path: str | Path | None = None) -> int:
         target = Path(path or self.current_path).expanduser().resolve()
@@ -114,6 +133,14 @@ class LocalBrowserModel:
             raise ValueError(key)
         self.reverse = self.sort_key == key and not self.reverse
         self.sort_key = key
+
+    def search(self, query: str) -> tuple[LocalEntry, ...]:
+        """Search entries by name (case-insensitive substring match)."""
+        query_lower = query.casefold()
+        return tuple(
+            entry for entry in self.list_entries()
+            if query_lower in entry.path.name.casefold()
+        )
 
     def activate(self, path: str | Path, *, open_editor=None) -> str:
         """Activate an entry without coupling the model to wx widgets."""
