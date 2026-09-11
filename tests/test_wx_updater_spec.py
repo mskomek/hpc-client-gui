@@ -6,13 +6,22 @@ import pytest
 
 wx = pytest.importorskip("wx")
 
-from hpc_gui import __version__
 from hpc_gui.services.app_updater import UpdateRelease
-from hpc_gui.wx_updater_view import WxUpdateDialog, _format_bytes, _parse_whats_new
+from hpc_gui.wx_updater_view import WxUpdateDialog, _format_bytes
 
 
 def _make_release(version="1.9.0", body="- Demo update\n- New features\n- Fixes", size=184*1024*1024):
     return UpdateRelease(version=version, tag=f"v{version}", zip_name="a.zip", zip_url="https://example.com/a.zip", sha_name="a.sha", sha_url="https://example.com/a.sha", html_url="https://example.com", body=body, size=size)
+
+
+@pytest.fixture(autouse=True)
+def _reset_update_language():
+    from hpc_gui.core.i18n import current_language, load_language
+
+    previous = current_language()
+    load_language("en")
+    yield
+    load_language(previous if previous in {"en", "tr"} else "tr")
 
 
 def test_update_available_shows_versions_and_download_size():
@@ -34,6 +43,7 @@ def test_update_available_shows_versions_and_download_size():
                     found = True
         except Exception:
             pass
+    assert found
     # Check via sizer
     # Instead, check that _total is set and download size label exists
     assert dlg._total == 184*1024*1024
@@ -464,7 +474,7 @@ def test_mandatory_update_close_does_not_enter_main_app():
 
 def test_update_runtime_language_switch_en_tr():
     app = wx.App(False)
-    from hpc_gui.core.i18n import set_language, load_language
+    from hpc_gui.core.i18n import load_language, set_language
     load_language("en")
     rel = _make_release()
     dlg = WxUpdateDialog(None, rel)
@@ -480,7 +490,6 @@ def test_update_runtime_language_switch_en_tr():
             pass
     assert en_found
     # Switch to Turkish
-    from hpc_gui.core.i18n import set_language
     set_language("tr")
     app.ProcessPendingEvents()
     # The dialog should have been retranslated if it subscribed, but our dialog does not auto-retranslate on language change
