@@ -8,15 +8,28 @@ import json
 import os
 import platform
 import re
+import shutil
 import subprocess
 import sys
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 
 # Expected checks per gate spec
-REQUIRED_CHECKS = ("process_started", "wx_runtime_started", "main_frame_created", "terminal_readback", "clean_shutdown")
+REQUIRED_CHECKS = (
+    "process_started",
+    "wx_runtime_started",
+    "main_frame_created",
+    "terminal_readback",
+    "files_surface",
+    "editor_surface",
+    "jobs_surface",
+    "plugin_ansys_surface",
+    "diagnostics_updater_surface",
+    "clean_shutdown",
+)
 
 
 def _sha256(path: Path) -> str:
@@ -54,6 +67,7 @@ def run_packaged_smoke(artifact: Path, platform_name: str, output: Path, timeout
         env.pop("PYTHONPATH", None)
         runtime_output = output.with_suffix(".runtime.json")
         runtime_output.unlink(missing_ok=True)
+        runtime_webview_path = Path(tempfile.mkdtemp(prefix="wx-webview-", dir=str(output.parent)))
         try:
             if artifact.suffix == ".py":
                 cmd = [sys.executable, str(artifact), "--wx-smoke"]
@@ -62,6 +76,10 @@ def run_packaged_smoke(artifact: Path, platform_name: str, output: Path, timeout
             else:
                 raise ValueError(f"unsupported artifact type: {artifact.suffix}")
             env["HPC_GUI_PACKAGED_SMOKE_OUTPUT"] = str(runtime_output.resolve())
+            browser_args = env.get("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS", "").strip()
+            env["WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS"] = (
+                f'{browser_args} --user-data-dir="{runtime_webview_path.resolve()}"'
+            ).strip()
             checks["process_started"] = "PASS"
             proc = subprocess.run(
                 cmd,
@@ -75,7 +93,9 @@ def run_packaged_smoke(artifact: Path, platform_name: str, output: Path, timeout
             combined = (proc.stdout or "") + (proc.stderr or "")
             runtime = json.loads(runtime_output.read_text(encoding="utf-8")) if runtime_output.is_file() else {}
             runtime_checks = runtime.get("checks", {}) if isinstance(runtime, dict) else {}
-            for name in ("wx_runtime_started", "main_frame_created", "terminal_readback"):
+            for name in REQUIRED_CHECKS:
+                if name == "process_started" or name == "clean_shutdown":
+                    continue
                 if runtime_checks.get(name) == "PASS":
                     checks[name] = "PASS"
             if not runtime_output.is_file():
@@ -98,6 +118,7 @@ def run_packaged_smoke(artifact: Path, platform_name: str, output: Path, timeout
             details["error"] = f"{type(exc).__name__}: {exc}"
         finally:
             runtime_output.unlink(missing_ok=True)
+            shutil.rmtree(runtime_webview_path, ignore_errors=True)
 
     # Build evidence JSON per spec
     evidence = {

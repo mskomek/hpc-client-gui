@@ -1280,6 +1280,15 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
     return frame, lifecycle, session_state
 
 
+_PACKAGED_SMOKE_SURFACES = {
+    "files_surface": ("hpc_gui.wx_local_files", "hpc_gui.wx_remote_files_view", "hpc_gui.wx_transfer_workspace"),
+    "editor_surface": ("hpc_gui.wx_editor_view",),
+    "jobs_surface": ("hpc_gui.wx_jobs",),
+    "plugin_ansys_surface": ("hpc_gui.wx_plugins_view", "hpc_gui.wx_ansys_view"),
+    "diagnostics_updater_surface": ("hpc_gui.core.diagnostics", "hpc_gui.services.app_updater", "hpc_gui.wx_updater_view"),
+}
+
+
 def _run_packaged_smoke(app, frame, session_state, output_path):
     """Probe the packaged wx terminal without showing the normal startup flow."""
     import time
@@ -1290,6 +1299,7 @@ def _run_packaged_smoke(app, frame, session_state, output_path):
         "main_frame_created": "PASS",
         "terminal_readback": "FAIL",
         "clean_shutdown": "FAIL",
+        **{name: "FAIL" for name in _PACKAGED_SMOKE_SURFACES},
     }
     state = {"phase": 0, "result": "FAIL", "done": False}
     deadline = time.monotonic() + 12
@@ -1332,6 +1342,19 @@ def _run_packaged_smoke(app, frame, session_state, output_path):
         if state["phase"] == 0:
             if not getattr(panel, "_ready", False) or not getattr(panel, "_is_parity", False):
                 retry()
+                return
+            import importlib
+
+            surface_errors = []
+            for check, modules in _PACKAGED_SMOKE_SURFACES.items():
+                try:
+                    for module in modules:
+                        importlib.import_module(module)
+                    checks[check] = "PASS"
+                except Exception as exc:
+                    surface_errors.append(f"{check}:{type(exc).__name__}")
+            if surface_errors:
+                finish(";".join(surface_errors))
                 return
             checks["wx_runtime_started"] = "PASS"
             panel.hpc_clear()
