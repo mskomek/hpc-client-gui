@@ -39,6 +39,33 @@ def test_macos_copies_known_legacy_data_once(monkeypatch, tmp_path: Path):
     assert (legacy / "config.json").exists()
 
 
+def test_macos_copies_every_supported_legacy_store_once(monkeypatch, tmp_path: Path):
+    monkeypatch.setattr(paths, "current_os", lambda: "macos")
+    legacy = paths.legacy_app_data_dir(tmp_path)
+    legacy.mkdir()
+    directory_names = {"plugins", "private", "third_party", "updates", "templates"}
+
+    for name in paths._MIGRATABLE_NAMES:
+        source = legacy / name
+        if name in directory_names:
+            source.mkdir()
+            (source / "İş_日本語.txt").write_text(name, encoding="utf-8")
+        else:
+            source.write_text(f"{name}: Çalışma", encoding="utf-8")
+
+    assert paths.migrate_legacy_app_data(home=tmp_path) is True
+    target = tmp_path / "Library" / "Application Support" / "HPC Client GUI"
+    for name in paths._MIGRATABLE_NAMES:
+        source = legacy / name
+        copied = target / name
+        if source.is_dir():
+            assert (copied / "İş_日本語.txt").read_text(encoding="utf-8") == name
+        else:
+            assert copied.read_text(encoding="utf-8") == f"{name}: Çalışma"
+
+    assert paths.migrate_legacy_app_data(home=tmp_path) is False
+
+
 def test_macos_migration_rejects_symlinked_entries(monkeypatch, tmp_path: Path):
     monkeypatch.setattr(paths, "current_os", lambda: "macos")
     legacy = paths.legacy_app_data_dir(tmp_path)
@@ -53,3 +80,4 @@ def test_macos_migration_rejects_symlinked_entries(monkeypatch, tmp_path: Path):
 
     with pytest.raises(RuntimeError, match="symlinked"):
         paths.migrate_legacy_app_data(home=tmp_path)
+    assert not (tmp_path / "Library" / "Application Support" / "HPC Client GUI").exists()
