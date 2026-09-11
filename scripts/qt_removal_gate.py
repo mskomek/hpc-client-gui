@@ -11,7 +11,27 @@ from pathlib import Path, PurePosixPath
 
 REQUIRED_WX_EVIDENCE_PLATFORMS = ("windows", "linux", "macos")
 PRODUCTION_DEPENDENCY_FILES = ("pyproject.toml", "requirements.txt", "requirements-release.lock")
-PACKAGED_CHECKS = ("process_started", "wx_runtime_started", "main_frame_created", "clean_shutdown")
+PACKAGED_CHECKS = (
+    "process_started",
+    "wx_runtime_started",
+    "main_frame_created",
+    "terminal_readback",
+    "pty_input_output",
+    "pty_resize",
+    "remote_file_roundtrip",
+    "job_roundtrip",
+    "files_surface",
+    "editor_surface",
+    "jobs_surface",
+    "plugin_ansys_surface",
+    "diagnostics_updater_surface",
+    "files_controls",
+    "editor_controls",
+    "jobs_controls",
+    "editor_roundtrip",
+    "transfer_queue_render",
+    "clean_shutdown",
+)
 MANUAL_CHECKS = ("launch", "connection", "terminal", "files", "jobs", "plugins", "shutdown")
 QT_PACKAGING_PREFIXES = ("pyside6", "shiboken6", "qtcore", "qtgui", "qtwidgets", "qtsvg", "qtweb")
 
