@@ -925,7 +925,10 @@ class WxTerminalWebViewPanel(wx.Panel if _WX_AVAILABLE else object):  # type: ig
     def close(self):
         if self._closed:
             return
+        webview = self._webview
         self._closed = True
+        self._webview = None
+        self._is_parity = False
         # Increment generation to cancel any in-flight callbacks
         self._generation += 1
         try:
@@ -953,13 +956,16 @@ class WxTerminalWebViewPanel(wx.Panel if _WX_AVAILABLE else object):  # type: ig
             unsubscribe_language_change(self._lang_cb)
         except Exception:
             pass
-        # Reset JS find state
-        if self._is_parity and self._webview is not None:
+        # Release the native WebView2 controller before its parent panel is destroyed.
+        if webview is not None:
             try:
-                self._run_js("window.hpcResetFindState && window.hpcResetFindState();")
+                webview.Stop()
             except Exception:
                 pass
-        # Do not call RunScript after closed
+            try:
+                webview.Destroy()
+            except Exception:
+                pass
 
     def _update_status(self, state: str):
         """Update the connection status label. States: disconnected, connecting, connected, reconnecting."""
