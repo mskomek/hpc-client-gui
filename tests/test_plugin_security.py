@@ -185,6 +185,22 @@ def test_only_application_owned_slurm_commands_are_accepted():
     assert validate_cluster_profile_dict(profile) == []
 
 
+def test_published_legacy_sacct_command_is_accepted_exactly():
+    profile = {
+        "schema_version": 1,
+        "profile_id": "truba",
+        "name": "TRUBA",
+        "scheduler": "slurm",
+        "commands": {
+            "sacct_command": "sacct -u {user} --format=JobID,JobName,State,Elapsed,MaxRSS,AllocTRES",
+        },
+    }
+    assert validate_cluster_profile_dict(profile) == []
+
+    profile["commands"]["sacct_command"] += " --noheader"
+    assert validate_cluster_profile_dict(profile)
+
+
 # ---------------------------------------------------------------------------
 # Installer-level hostile fixtures
 # ---------------------------------------------------------------------------

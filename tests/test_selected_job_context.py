@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import threading
-from unittest.mock import MagicMock
 
 from hpc_gui.services.selected_job_context import SelectedJobContext, SelectedJobStore
 

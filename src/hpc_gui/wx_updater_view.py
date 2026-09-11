@@ -4,10 +4,7 @@ from __future__ import annotations
 
 import re
 import threading
-import webbrowser
 from dataclasses import dataclass
-from pathlib import Path
-from typing import Callable
 
 from hpc_gui import __version__
 from hpc_gui.core.i18n import t
@@ -71,12 +68,12 @@ def _parse_whats_new(body: str, limit: int = 5) -> list[str]:
                 break
     # clean and limit
     cleaned = []
-    for l in lines:
+    for line in lines:
         # strip markdown links, bold, etc.
-        l = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", l)
-        l = re.sub(r"[*_`#]+", "", l).strip()
-        if l:
-            cleaned.append(l)
+        line = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", line)
+        line = re.sub(r"[*_`#]+", "", line).strip()
+        if line:
+            cleaned.append(line)
         if len(cleaned) >= limit:
             break
     # if still less than 3, pad with generic but real
@@ -803,6 +800,7 @@ class WxUpdateDialog:
         rel = self.release
         zip_path = getattr(self, "_zip_path", None)
         ver = getattr(rel, "version", "") if rel else ""
+        wx = self.wx
         # Close update dialog
         try:
             self._closed = True
@@ -822,41 +820,27 @@ class WxUpdateDialog:
             def install_worker():
                 try:
                     from hpc_gui.services.app_updater import launch_update_installer
-                    if zip_path and rel:
-                        launch_update_installer(zip_path, ver, rel.install_strategy)
-                        def do_quit():
-                            try:
-                                splash.Destroy()
-                            except Exception:
-                                pass
-                            try:
-                                wx_local.GetApp().ExitMainLoop()
-                            except Exception:
-                                pass
-                        wx_local.CallAfter(do_quit)
-                    else:
-                        for pct, phase, fname in [(10, "Preparing installation...", ""), (25, "Backing up current files...", ""), (45, "Copying application files...", "hpc_gui/services/app_updater.py"), (72, "Copying application files...", "hpc_gui/wx_updater_view.py"), (90, "Finalizing installation...", ""), (100, "Verifying installation...", "")]:
-                            def upd(p=pct, ph=phase, f=fname):
-                                try:
-                                    splash._wx_install_update(p, ph, f)
-                                except Exception:
-                                    pass
-                            wx_local.CallAfter(upd)
-                            time.sleep(0.6)
-                        def done():
-                            try:
-                                splash.Destroy()
-                            except Exception:
-                                pass
-                            wx_local.MessageBox(f"Update {ver} installed. Restart required." if ver else "Update installed.", "Updates", wx_local.OK | wx_local.ICON_INFORMATION, self.parent)
-                        wx_local.CallAfter(done)
-                except Exception as e:
+                    if not zip_path or not rel:
+                        raise RuntimeError("Verified update artifact is unavailable.")
+                    launch_update_installer(zip_path, ver, rel.install_strategy)
+                    def do_quit():
+                        try:
+                            splash.Destroy()
+                        except Exception:
+                            pass
+                        try:
+                            wx_local.GetApp().ExitMainLoop()
+                        except Exception:
+                            pass
+                    wx_local.CallAfter(do_quit)
+                except Exception as exc:
+                    error_message = str(exc)
                     def on_fail():
                         try:
                             splash.Destroy()
                         except Exception:
                             pass
-                        show_update_error(self.parent, str(e))
+                        show_update_error(self.parent, error_message)
                     wx_local.CallAfter(on_fail)
             threading.Thread(target=install_worker, daemon=True).start()
         except Exception as e:
@@ -948,17 +932,13 @@ def show_update_dialog(parent, release, *, mandatory: bool = False):
         dlg.Destroy()
     except Exception:
         pass
-    return result == wx.ID_OK
+    return result == dlg.wx.ID_OK
 
 
 # Backward compat wrappers
 
 def show_update_checking(parent=None, lifecycle=None):
     # Return a checking dialog that can be used as before, but now delegates to WxUpdateDialog checking state
-    try:
-        import wx
-    except ImportError as exc:
-        raise RuntimeError("wxPython is not installed") from exc
     dlg = WxUpdateDialog(parent, None)
     dlg._build_for_state(STATE_CHECKING)
     # Don't show modally here, let caller handle
@@ -968,15 +948,10 @@ def show_update_checking(parent=None, lifecycle=None):
     cancelled = {"v": False}
     timer = getattr(dlg, "_pulse_timer", None)
     # Wrap
-    orig_cancel = c.EndModal if hasattr(c, "EndModal") else lambda x: None
     return c, cancelled, timer
 
 
 def show_up_to_date(parent, version: str = __version__):
-    try:
-        import wx
-    except ImportError as exc:
-        raise RuntimeError("wxPython is not installed") from exc
     dlg = WxUpdateDialog(parent, None)
     dlg._build_for_state(STATE_UP_TO_DATE)
     res = dlg.ShowModal()
@@ -989,7 +964,6 @@ def show_update_available(parent, current: str, latest: str, release_info: str =
     from hpc_gui.services.app_updater import UpdateRelease
     # Try to find real release if available, else fake
     try:
-        from hpc_gui.services.app_updater import get_latest_release
         # Don't call network here; just fake for wrapper
         pass
     except Exception:
@@ -1059,10 +1033,10 @@ def show_download_progress(parent, release_version: str, lifecycle=None):
         orig_cancel()
     if dlg._cancel_btn:
         try:
-            dlg._cancel_btn.Unbind(wx.EVT_BUTTON)
+            dlg._cancel_btn.Unbind(dlg.wx.EVT_BUTTON)
         except Exception:
             pass
-        dlg._cancel_btn.Bind(wx.EVT_BUTTON, lambda e: new_cancel())
+        dlg._cancel_btn.Bind(dlg.wx.EVT_BUTTON, lambda e: new_cancel())
     return outer
 
 

@@ -7,6 +7,11 @@
 **Qt runtime:** `src/hpc_gui/runtime.py:3` `DEFAULT_GUI_RUNTIME="qt"` unchanged; Qt remains production runtime. wx remains optional.
 **Rule:** Do not mark `GUI-TERM-001` COVERED until the full `real wx event → WebView/xterm → production adapter → disposable PTY → xterm-visible` chain is demonstrated. This wave freezes the contract only; no renderer is implemented here.
 
+The accompanying `TERMINAL_PARITY_GAPS_72.json` is the Wave 72 historical
+TextCtrl baseline. The current renderer inventory includes
+`src/hpc_gui/wx_terminal_webview.py`; current status and reproducibility are
+tracked in `GUI_TERM_001_EXECUTION_EVIDENCE.json` and remain **PARTIAL**.
+
 ---
 
 ## 1. Qt Reference (authoritative)

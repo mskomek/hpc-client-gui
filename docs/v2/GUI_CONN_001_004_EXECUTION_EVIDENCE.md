@@ -17,9 +17,12 @@ not treat static controls or service-only tests as visual parity evidence.
 
 ## CI governance
 
-- develop automatic CI: DISABLED
-- User authorized enabling CI: NO
-- Workflow file: `.github/workflows/ci.yml` — `push: [main]`, `pull_request: [main]`
+- GitHub Actions CI: intentionally disabled by moving `.github/workflows/ci.yml`
+  to `docs/ci-disabled/ci.yml`.
+- Automatic push/pull_request runs: none.
+- Repository validation: performed locally; see
+  `docs/REMEDIATION_STATUS_2026-09-11.md`.
+- `release.yml` remains manual-only (`workflow_dispatch`).
 
 ## Root causes fixed (Wave 71.1–71.4)
 
@@ -29,7 +32,7 @@ not treat static controls or service-only tests as visual parity evidence.
 - Blank-name Save & Connect bug
 - Tautological assertions removed
 - Ruff violations cleaned
-- CI develop trigger removed
+- CI workflow moved out of GitHub's executable workflow directory
 - Parity source-of-truth synchronized
 - Global F841 test ignore removed
 - connect_selected() returns bool

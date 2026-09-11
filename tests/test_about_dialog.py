@@ -20,7 +20,7 @@ def test_about_instantiates_offscreen():
         pytest.skip(f"PySide6 unavailable: {e}")
     from hpc_gui.ui.dialogs.about_dialog import AboutDialog
     from hpc_gui import __version__
-    app = QApplication.instance() or QApplication([])
+    _app = QApplication.instance() or QApplication([])
     dlg = AboutDialog()
     assert dlg is not None
     assert __version__ in dlg._version_label_ref.text()

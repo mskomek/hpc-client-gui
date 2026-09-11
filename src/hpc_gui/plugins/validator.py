@@ -72,6 +72,13 @@ _TRUSTED_SLURM_COMMANDS = {
     "active_job_ids_command": 'squeue -h -u {user} -o "%A"',
     "job_state_command": "sacct -n -X -j {job_id_q} -o State -P",
 }
+# Published v1 TRUBA profiles use this fixed accounting format. Keep it as an
+# exact compatibility variant; arbitrary command strings remain rejected.
+_TRUSTED_SLURM_COMMAND_VARIANTS = {
+    "sacct_command": frozenset({
+        "sacct -u {user} --format=JobID,JobName,State,Elapsed,MaxRSS,AllocTRES",
+    }),
+}
 
 # Declarative payloads only; anything runnable is forbidden regardless of role.
 ALLOWED_PAYLOAD_SUFFIXES = frozenset({".json", ".md", ".txt", ".tpl"})
@@ -454,7 +461,10 @@ def validate_cluster_profile_dict(profile: Any) -> list[str]:
         for key, value in commands.items():
             if not isinstance(value, str):
                 continue
-            if key not in _TRUSTED_SLURM_COMMANDS or value != _TRUSTED_SLURM_COMMANDS[key]:
+            variants = _TRUSTED_SLURM_COMMAND_VARIANTS.get(key, ())
+            if key not in _TRUSTED_SLURM_COMMANDS or (
+                value != _TRUSTED_SLURM_COMMANDS[key] and value not in variants
+            ):
                 errors.append(f"cluster profile command '{key}' is not an application-owned Slurm operation")
                 continue
             for placeholder in _PLACEHOLDER_RE.findall(value):

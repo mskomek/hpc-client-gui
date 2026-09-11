@@ -16,7 +16,7 @@ def test_command_palette_not_wired_to_help():
     from hpc_gui.core.i18n import load_language
     from hpc_gui.ui.main_window import MainWindow
     load_language("en")
-    app = QApplication.instance() or QApplication([])
+    _app = QApplication.instance() or QApplication([])
     w = MainWindow()
     try:
         assert w._help_menu is not None

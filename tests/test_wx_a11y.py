@@ -41,13 +41,15 @@ def test_wx_a11y_focus_order_and_labels():
     finally:
         try:
             frame.Close()
-        except: pass
+        except Exception:
+            pass
         for _ in range(3):
             wx.Yield()
         try:
             if not frame.IsBeingDeleted():
                 frame.Destroy()
-        except: pass
+        except Exception:
+            pass
         for _ in range(3):
             wx.Yield()
 

@@ -6,7 +6,6 @@ import pytest
 
 from hpc_gui.plugins.linter_tools import LinterTool
 from hpc_gui.services.ansys_tool_presentation import AnsysToolPresentation
-from hpc_gui.wx_ansys import WxAnsysModel
 
 wx = pytest.importorskip("wx")
 
@@ -46,7 +45,7 @@ def test_wx_ansys_view_single_file_lint_shows_grouped_results(monkeypatch):
     frame = build_ansys_frame(None, presentation)
     assert frame.IsShown()
     # simulate user picking file via direct model path: call do_lint_files
-    import tempfile, os
+    import tempfile
     tmp = Path(tempfile.mktemp(suffix=".wbjn"))
     tmp.write_text("journal content", encoding="utf-8")
     try:
@@ -68,7 +67,7 @@ def test_wx_ansys_view_single_file_lint_shows_grouped_results(monkeypatch):
         # trigger manually
         lst.Select(0)
         wx.Yield()
-        detail = frame._wx_ansys_controls["detail"].GetValue()
+        _detail = frame._wx_ansys_controls["detail"].GetValue()
         # after select, detail should contain explanation
         # if not yet, fire handler directly via wx event isn't reliable; check that model grouping works
         assert model.group_results(results)  # grouping by status exists
@@ -86,7 +85,6 @@ def test_wx_ansys_view_empty_and_failed_cases(monkeypatch):
     # broken engine
     broken_mod = "_fake_ansys_broken_view"
     import sys
-    fake_broken = SimpleNamespace(lint_text=lambda text, file_name="": (_ for _ in ()).throw(RuntimeError("boom")))
     # need object with lint_text
     class FB:
         def lint_text(self, text, file_name=""):
@@ -124,7 +122,7 @@ def test_wx_ansys_view_empty_and_failed_cases(monkeypatch):
 def test_wx_ansys_folder_cap(monkeypatch, tmp_path: Path):
     from hpc_gui.wx_ansys_view import build_ansys_frame
 
-    app = wx.App.Get() or wx.App(False)
+    _app = wx.App.Get() or wx.App(False)
     tool = _fake_tool(monkeypatch, "_fake_folder_cap_view")
     presentation = AnsysToolPresentation(tool)
     frame = build_ansys_frame(None, presentation)
@@ -143,10 +141,9 @@ def test_wx_ansys_folder_cap(monkeypatch, tmp_path: Path):
 
 def test_wx_ansys_pick_files_button_real_event(tmp_path: Path):
     from hpc_gui.wx_ansys_view import build_ansys_frame
-    app = wx.App.Get() or wx.App(False)
+    _app = wx.App.Get() or wx.App(False)
     tool = _fake_tool(monkeypatch=None, module_name="_fake_ansys_pick_files")
     # ensure suffix is .wbjn
-    import sys
     # reuse helper but without monkeypatch arg
     presentation = AnsysToolPresentation(tool)
     tmp = tmp_path / "a.wbjn"
@@ -172,7 +169,7 @@ def test_wx_ansys_pick_files_button_real_event(tmp_path: Path):
 
 def test_wx_ansys_pick_folder_button_real_event(tmp_path: Path):
     from hpc_gui.wx_ansys_view import build_ansys_frame
-    app = wx.App.Get() or wx.App(False)
+    _app = wx.App.Get() or wx.App(False)
     tool = _fake_tool(monkeypatch=None, module_name="_fake_ansys_pick_folder")
     presentation = AnsysToolPresentation(tool)
     for i in range(5):
@@ -195,7 +192,7 @@ def test_wx_ansys_pick_folder_button_real_event(tmp_path: Path):
 
 def test_wx_ansys_details_copy_and_docs(tmp_path: Path):
     from hpc_gui.wx_ansys_view import build_ansys_frame
-    app = wx.App.Get() or wx.App(False)
+    _app = wx.App.Get() or wx.App(False)
     tool = _fake_tool(monkeypatch=None, module_name="_fake_ansys_details")
     presentation = AnsysToolPresentation(tool)
     launched = []
@@ -237,7 +234,7 @@ def test_wx_ansys_details_copy_and_docs(tmp_path: Path):
 def test_wx_ansys_close_in_flight_safe(tmp_path: Path):
     from hpc_gui.wx_ansys_view import build_ansys_frame
     import time
-    app = wx.App.Get() or wx.App(False)
+    _app = wx.App.Get() or wx.App(False)
     # slow lint
     from types import SimpleNamespace
     import sys
@@ -278,7 +275,7 @@ def test_wx_ansys_close_in_flight_safe(tmp_path: Path):
 def test_wx_ansys_i18n_refresh():
     from hpc_gui.wx_ansys_view import build_ansys_frame
     from hpc_gui.core.i18n import set_language, current_language
-    app = wx.App.Get() or wx.App(False)
+    _app = wx.App.Get() or wx.App(False)
     tool = _fake_tool(monkeypatch=None, module_name="_fake_ansys_i18n")
     presentation = AnsysToolPresentation(tool)
     frame = build_ansys_frame(None, presentation)

@@ -28,20 +28,12 @@ PYTHONPATH=src QT_QPA_PLATFORM=offscreen python -m pytest tests/ -q
 
 ## Continuous integration
 
-`.github/workflows/ci.yml` runs on pull requests and on pushes to `main`. Every
-job is blocking.
+GitHub Actions CI is intentionally disabled. The former workflow is preserved
+at `docs/ci-disabled/ci.yml`, outside `.github/workflows/`, so normal pushes
+and pull requests do not create CI runs. Repository validation is currently
+performed locally; see `docs/REMEDIATION_STATUS_2026-09-11.md`.
 
-| Job | Runner | What it runs |
-|---|---|---|
-| `cli` | ubuntu | Compile check, i18n drift gate, smoke test, and the CLI test suite |
-| `docs` | ubuntu | The branding string gate and the wiki source gate |
-| `ssh_sftp` | ubuntu | The session, transfer, and transfer-gate suites |
-| `windows` | windows | The Windows boundary tests: safe download, version consistency, startup changelog |
-| `gui` | ubuntu | The full offline suite, including the Qt tests, offscreen |
-
-The `windows` job is deliberately preserved: it covers behavior that only
-differs on Windows, and dropping it would leave the primary target platform
-untested.
+No CI job is claimed to be passing after this change.
 
 ## Release CI
 
