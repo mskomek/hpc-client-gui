@@ -626,6 +626,7 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
     # Script Editor
     _editor_kwargs = {"action_factory": _editor_action_factory(session_state)}
     editor_panel = build_editor_panel(notebook, **_editor_kwargs)
+    session_state["_embedded_editor_panel"] = editor_panel
     notebook.AddPage(editor_panel, t("tabs.editor"), False)
     page_controls["NAV-EDITOR"] = {"page": editor_panel}
 
@@ -1288,6 +1289,20 @@ _PACKAGED_SMOKE_SURFACES = {
     "diagnostics_updater_surface": ("hpc_gui.core.diagnostics", "hpc_gui.services.app_updater", "hpc_gui.wx_updater_view"),
 }
 
+_PACKAGED_SMOKE_CONTROL_SURFACES = {
+    "files_controls": (
+        ("_embedded_local_files_panel", "_wx_local_controls", ("listing", "path", "refresh_btn")),
+        ("_embedded_remote_files_panel", "_wx_remote_controls", ("listing", "path", "btn_refresh")),
+        ("embedded_transfers_panel", "_wx_transfer_controls", ("queue", "failed", "completed", "cancel")),
+    ),
+    "editor_controls": (
+        ("_embedded_editor_panel", "_wx_editor_controls", ("editor", "save", "doc_tabs")),
+    ),
+    "jobs_controls": (
+        ("_embedded_jobs_panel", "_wx_jobs_controls", ("jobs", "refresh", "output_search", "output_find_next")),
+    ),
+}
+
 
 def _run_packaged_smoke(app, frame, session_state, output_path):
     """Probe the packaged wx terminal without showing the normal startup flow."""
@@ -1353,6 +1368,23 @@ def _run_packaged_smoke(app, frame, session_state, output_path):
                     checks[check] = "PASS"
                 except Exception as exc:
                     surface_errors.append(f"{check}:{type(exc).__name__}")
+            for check, requirements in _PACKAGED_SMOKE_CONTROL_SURFACES.items():
+                missing = []
+                for state_key, controls_attr, control_names in requirements:
+                    host = session_state.get(state_key)
+                    controls = getattr(host, controls_attr, None) if host is not None else None
+                    if not isinstance(controls, dict):
+                        missing.append(f"{state_key}:{controls_attr}")
+                        continue
+                    missing.extend(
+                        f"{state_key}:{name}"
+                        for name in control_names
+                        if not callable(getattr(controls.get(name), "GetId", None))
+                    )
+                if missing:
+                    surface_errors.append(f"{check}:{','.join(missing)}")
+                else:
+                    checks[check] = "PASS"
             if surface_errors:
                 finish(";".join(surface_errors))
                 return

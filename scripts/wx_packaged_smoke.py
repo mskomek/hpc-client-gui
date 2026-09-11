@@ -28,6 +28,9 @@ REQUIRED_CHECKS = (
     "jobs_surface",
     "plugin_ansys_surface",
     "diagnostics_updater_surface",
+    "files_controls",
+    "editor_controls",
+    "jobs_controls",
     "clean_shutdown",
 )
 
