@@ -1385,6 +1385,26 @@ def _run_packaged_smoke(app, frame, session_state, output_path):
                     surface_errors.append(f"{check}:{','.join(missing)}")
                 else:
                     checks[check] = "PASS"
+            try:
+                editor = session_state["_embedded_editor_panel"]._wx_editor_controls["editor"]
+                probe_text = "offline-çalışma Ω"
+                editor.ChangeValue(probe_text)
+                if editor.GetValue() == probe_text:
+                    checks["editor_roundtrip"] = "PASS"
+                else:
+                    surface_errors.append("editor_roundtrip:value_mismatch")
+                from hpc_gui.services.transfer_controller import TransferItem
+
+                transfer_panel = session_state["embedded_transfers_panel"]
+                transfer_item = TransferItem("upload", "çalışma.txt", "/remote/çalışma.txt")
+                queue_callback = getattr(transfer_panel, "_wx_transfer_queue", None)
+                if not callable(queue_callback):
+                    surface_errors.append("transfer_queue_render:callback_missing")
+                else:
+                    queue_callback("queued", transfer_item)
+                    state["transfer_item"] = transfer_item
+            except Exception as exc:
+                surface_errors.append(f"offline_ui:{type(exc).__name__}")
             if surface_errors:
                 finish(";".join(surface_errors))
                 return
@@ -1407,6 +1427,13 @@ def _run_packaged_smoke(app, frame, session_state, output_path):
                     state["phase"] = 3
             elif state["phase"] == 3:
                 if screen and screen.get("bufferType") == "normal" and line == "PACKAGED-NORMAL":
+                    transfer_panel = session_state.get("embedded_transfers_panel")
+                    queue = getattr(transfer_panel, "_wx_transfer_controls", {}).get("queue") if transfer_panel else None
+                    item = state.get("transfer_item")
+                    if queue is None or queue.GetItemCount() < 1 or queue.GetItemText(0) != item.src:
+                        retry()
+                        return
+                    checks["transfer_queue_render"] = "PASS"
                     checks["terminal_readback"] = "PASS"
                     state["result"] = "PASS"
                     finish()
