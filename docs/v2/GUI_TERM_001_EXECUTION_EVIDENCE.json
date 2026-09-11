@@ -37,7 +37,7 @@
     "unbounded_accumulation": "0 (bounded queue MAX_PENDING_BYTES=2MB)"
   },
   "known_gaps": [
-    "Packaged wx WebView2 runtime not tested (source WebView alternate-screen readback PASS)",
+    "Windows Python 3.14 packaged wx WebView2 smoke is PASS; full packaged PTY/file/job flow remains manual",
     "Linux/macOS WebKit packaged runtime not tested"
   ]
 }
