@@ -1304,7 +1304,68 @@ _PACKAGED_SMOKE_CONTROL_SURFACES = {
 }
 
 
-def _run_packaged_smoke(app, frame, session_state, output_path):
+def _connect_packaged_smoke_session(session_state, frame, lifecycle):
+    """Attach the parent smoke runner's disposable SSH server to the frame."""
+    host = os.environ.get("HPC_GUI_PACKAGED_SMOKE_SSH_HOST", "").strip()
+    if not host:
+        return None
+    try:
+        port = int(os.environ["HPC_GUI_PACKAGED_SMOKE_SSH_PORT"])
+    except (KeyError, TypeError, ValueError) as exc:
+        raise RuntimeError("packaged smoke SSH port is invalid") from exc
+    username = os.environ.get("HPC_GUI_PACKAGED_SMOKE_SSH_USER", "").strip()
+    password = os.environ.get("HPC_GUI_PACKAGED_SMOKE_SSH_PASSWORD", "")
+    known_hosts = os.environ.get("HPC_GUI_PACKAGED_SMOKE_SSH_KNOWN_HOSTS", "").strip()
+    if not username or not password or not known_hosts:
+        raise RuntimeError("packaged smoke SSH environment is incomplete")
+
+    from hpc_gui.services.files_ssh import SSHFilesBackend
+    from hpc_gui.services.slurm_ssh import SSHSlurmBackend
+    from hpc_gui.ssh.client import SSHClientWrapper, SSHConnInfo
+
+    output_subscribers = []
+    ssh = SSHClientWrapper(
+        SSHConnInfo(
+            host=host,
+            port=port,
+            username=username,
+            password=password,
+            known_hosts_path=known_hosts,
+            host_key_policy="accept-new",
+            host_key_decision=lambda _info: "save",
+        ),
+        shell_output_cb=lambda text: [callback(text) for callback in tuple(output_subscribers)],
+    )
+    ssh._wx_output_subscribers = output_subscribers  # type: ignore[attr-defined]
+    try:
+        ssh.connect(shell_size=(96, 31))
+        profile = {
+            "name": "packaged-smoke",
+            "host": host,
+            "port": port,
+            "username": username,
+            "system": {},
+        }
+        session = {
+            "connected": True,
+            "ssh": ssh,
+            "files": SSHFilesBackend(ssh),
+            "slurm": SSHSlurmBackend(ssh, profile.get("system") or {}),
+            "profile_name": profile["name"],
+            "profile": profile,
+            "output_subscribers": output_subscribers,
+        }
+        session_state["session"] = session
+        session_state["generation"] = session_state.get("generation", 0) + 1
+        _connection_callbacks(session_state, frame, lifecycle)["on_connected"](session)
+        lifecycle.register_cleanup(ssh.close)
+        return session
+    except Exception:
+        ssh.close()
+        raise
+
+
+def _run_packaged_smoke(app, frame, session_state, output_path, lifecycle=None):
     """Probe the packaged wx terminal without showing the normal startup flow."""
     import time
     import wx
@@ -1313,6 +1374,10 @@ def _run_packaged_smoke(app, frame, session_state, output_path):
         "wx_runtime_started": "FAIL",
         "main_frame_created": "PASS",
         "terminal_readback": "FAIL",
+        "pty_input_output": "FAIL",
+        "pty_resize": "FAIL",
+        "remote_file_roundtrip": "FAIL",
+        "job_roundtrip": "FAIL",
         "clean_shutdown": "FAIL",
         **{name: "FAIL" for name in _PACKAGED_SMOKE_SURFACES},
     }
@@ -1327,7 +1392,18 @@ def _run_packaged_smoke(app, frame, session_state, output_path):
             "schema": "wx-packaged-runtime/1",
             "result": state["result"],
             "checks": checks,
+            "phase": state.get("phase"),
+            "last_line": state.get("last_line"),
+            "last_buffer": state.get("last_buffer"),
+            "last_screen": state.get("last_screen"),
+            "queue_count": state.get("queue_count"),
+            "queue_text": state.get("queue_text"),
         }
+        try:
+            payload["wx_app_name"] = app.GetAppName()
+            payload["wx_local_data_dir"] = str(wx.StandardPaths.Get().GetUserLocalDataDir())
+        except Exception:
+            pass
         if error:
             payload["error"] = error
         try:
@@ -1336,6 +1412,12 @@ def _run_packaged_smoke(app, frame, session_state, output_path):
             target.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
         except Exception:
             state["result"] = "FAIL"
+        try:
+            smoke_session = state.get("smoke_session")
+            if smoke_session:
+                smoke_session["ssh"].close()
+        except Exception:
+            pass
         try:
             frame.Close()
         except Exception:
@@ -1357,6 +1439,14 @@ def _run_packaged_smoke(app, frame, session_state, output_path):
         if state["phase"] == 0:
             if not getattr(panel, "_ready", False) or not getattr(panel, "_is_parity", False):
                 retry()
+                return
+            try:
+                state["smoke_session"] = _connect_packaged_smoke_session(session_state, frame, lifecycle)
+                if state["smoke_session"] is None:
+                    finish("packaged smoke SSH environment is missing")
+                    return
+            except Exception as exc:
+                finish(f"loopback_ssh:{type(exc).__name__}")
                 return
             import importlib
 
@@ -1409,27 +1499,69 @@ def _run_packaged_smoke(app, frame, session_state, output_path):
                 finish(";".join(surface_errors))
                 return
             checks["wx_runtime_started"] = "PASS"
+            smoke_ssh = state["smoke_session"]["ssh"]
+            smoke_ssh.resize_shell_pty(123, 45)
+            if not smoke_ssh.send_shell_input("echo PACKAGED-PTY\n"):
+                finish("loopback_ssh:input_failed")
+                return
             panel.hpc_clear()
-            panel.hpc_write("PACKAGED-NORMAL\r\n")
             state["phase"] = 1
             retry()
             return
         try:
             screen = panel.hpc_get_screen_state()
             line = panel.hpc_get_line_text(0)
+            buffer = panel.hpc_get_buffer_text() or ""
+            state["last_line"] = line
+            state["last_buffer"] = buffer[-400:]
+            state["last_screen"] = screen
             if state["phase"] == 1:
-                if screen and screen.get("bufferType") == "normal" and line == "PACKAGED-NORMAL":
-                    panel.hpc_write("\x1b[?1049h\x1b[2J\x1b[HPACKAGED-ALT\r\n")
-                    state["phase"] = 2
+                if "PACKAGED-PTY" not in buffer:
+                    retry()
+                    return
+                checks["pty_input_output"] = "PASS"
+                smoke_session = state["smoke_session"]
+                try:
+                    import tempfile
+
+                    payload = "packaged-çalışma Ω\n"
+                    with tempfile.TemporaryDirectory(prefix="wx-packaged-transfer-") as directory:
+                        source = Path(directory) / "çalışma.txt"
+                        target = Path(directory) / "roundtrip.txt"
+                        source.write_text(payload, encoding="utf-8")
+                        remote = "/packaged-çalışma.txt"
+                        smoke_session["files"].upload(str(source), remote)
+                        smoke_session["files"].download(remote, str(target))
+                        if target.read_text(encoding="utf-8") != payload:
+                            raise RuntimeError("remote file round-trip mismatch")
+                        smoke_session["files"].remove(remote)
+                    checks["remote_file_roundtrip"] = "PASS"
+                    queue = str(smoke_session["slurm"].squeue(smoke_session["profile"]["username"]))
+                    submitted = str(smoke_session["slurm"].sbatch("/packaged-smoke.sh"))
+                    if "12345" not in queue or "12345" not in submitted:
+                        raise RuntimeError("job round-trip mismatch")
+                    checks["job_roundtrip"] = "PASS"
+                except Exception as exc:
+                    finish(f"loopback_ssh:operation:{type(exc).__name__}")
+                    return
+                panel.hpc_clear()
+                panel.hpc_write("PACKAGED-NORMAL\r\n")
+                state["phase"] = 2
             elif state["phase"] == 2:
-                if screen and screen.get("bufferType") == "alternate" and line == "PACKAGED-ALT":
-                    panel.hpc_write("\x1b[?1049l")
+                if screen and screen.get("bufferType") == "normal" and "PACKAGED-NORMAL" in buffer:
+                    panel.hpc_write("\x1b[?1049h\x1b[2J\x1b[HPACKAGED-ALT\r\n")
                     state["phase"] = 3
             elif state["phase"] == 3:
-                if screen and screen.get("bufferType") == "normal" and line == "PACKAGED-NORMAL":
+                if screen and screen.get("bufferType") == "alternate" and "PACKAGED-ALT" in buffer:
+                    panel.hpc_write("\x1b[?1049l")
+                    state["phase"] = 4
+            elif state["phase"] == 4:
+                if screen and screen.get("bufferType") == "normal" and "PACKAGED-NORMAL" in buffer and "PACKAGED-ALT" not in buffer:
                     transfer_panel = session_state.get("embedded_transfers_panel")
                     queue = getattr(transfer_panel, "_wx_transfer_controls", {}).get("queue") if transfer_panel else None
                     item = state.get("transfer_item")
+                    state["queue_count"] = queue.GetItemCount() if queue is not None else None
+                    state["queue_text"] = queue.GetItemText(0) if queue is not None and queue.GetItemCount() else None
                     if queue is None or queue.GetItemCount() < 1 or queue.GetItemText(0) != item.src:
                         retry()
                         return
@@ -1456,9 +1588,14 @@ def main() -> int:
 
     app = wx.App(False)
     if os.environ.get("HPC_GUI_PACKAGED_SMOKE_OUTPUT"):
+        app.SetAppName(
+            os.environ.get("HPC_GUI_PACKAGED_SMOKE_APP_NAME")
+            or f"hpc-client-gui-smoke-{os.getpid()}"
+        )
+    if os.environ.get("HPC_GUI_PACKAGED_SMOKE_OUTPUT"):
         frame, _lifecycle, session_state = create_shell_frame(app)
         frame.Show()
-        smoke_state = _run_packaged_smoke(app, frame, session_state, os.environ["HPC_GUI_PACKAGED_SMOKE_OUTPUT"])
+        smoke_state = _run_packaged_smoke(app, frame, session_state, os.environ["HPC_GUI_PACKAGED_SMOKE_OUTPUT"], _lifecycle)
         app.MainLoop()
         return 0 if smoke_state["result"] == "PASS" else 1
 

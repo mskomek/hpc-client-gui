@@ -12,6 +12,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -23,6 +24,10 @@ REQUIRED_CHECKS = (
     "wx_runtime_started",
     "main_frame_created",
     "terminal_readback",
+    "pty_input_output",
+    "pty_resize",
+    "remote_file_roundtrip",
+    "job_roundtrip",
     "files_surface",
     "editor_surface",
     "jobs_surface",
@@ -35,6 +40,25 @@ REQUIRED_CHECKS = (
     "transfer_queue_render",
     "clean_shutdown",
 )
+
+
+def _start_loopback_ssh(output: Path):
+    """Start the existing disposable SSH/SFTP fixture for the packaged app."""
+    import sys as _sys
+
+    support_root = ROOT / "tests"
+    if str(support_root) not in _sys.path:
+        _sys.path.insert(0, str(support_root))
+    from support.mock_ssh_server import MOCK_PASSWORD, MOCK_USERNAME, MockSSHServer
+
+    root = tempfile.TemporaryDirectory(
+        prefix="wx-packaged-ssh-",
+        dir=str(output.parent),
+        ignore_cleanup_errors=True,
+    )
+    server = MockSSHServer(Path(root.name))
+    server.__enter__()
+    return root, server, MOCK_USERNAME, MOCK_PASSWORD
 
 
 def _sha256(path: Path) -> str:
@@ -60,6 +84,8 @@ def run_packaged_smoke(artifact: Path, platform_name: str, output: Path, timeout
     result = "FAIL"
     details: dict[str, str] = {}
     exit_code = None
+    loopback_root = None
+    loopback_server = None
     output.parent.mkdir(parents=True, exist_ok=True)
 
     if not artifact or not artifact.is_file():
@@ -74,6 +100,7 @@ def run_packaged_smoke(artifact: Path, platform_name: str, output: Path, timeout
         runtime_output.unlink(missing_ok=True)
         runtime_webview_path = Path(tempfile.mkdtemp(prefix="wx-webview-", dir=str(output.parent)))
         try:
+            loopback_root, loopback_server, loopback_user, loopback_password = _start_loopback_ssh(output)
             if artifact.suffix == ".py":
                 cmd = [sys.executable, str(artifact), "--wx-smoke"]
             elif artifact.suffix == ".exe":
@@ -81,9 +108,18 @@ def run_packaged_smoke(artifact: Path, platform_name: str, output: Path, timeout
             else:
                 raise ValueError(f"unsupported artifact type: {artifact.suffix}")
             env["HPC_GUI_PACKAGED_SMOKE_OUTPUT"] = str(runtime_output.resolve())
+            env["HPC_GUI_PACKAGED_SMOKE_SSH_HOST"] = "127.0.0.1"
+            env["HPC_GUI_PACKAGED_SMOKE_SSH_PORT"] = str(loopback_server.port)
+            env["HPC_GUI_PACKAGED_SMOKE_SSH_USER"] = loopback_user
+            env["HPC_GUI_PACKAGED_SMOKE_SSH_PASSWORD"] = loopback_password
+            env["HPC_GUI_PACKAGED_SMOKE_SSH_KNOWN_HOSTS"] = str(Path(loopback_root.name) / "known_hosts")
+            env["HPC_GUI_PACKAGED_SMOKE_APP_NAME"] = f"hpc-client-gui-smoke-{os.getpid()}"
+            # wxPython's Edge backend honors the folder variable directly;
+            # keep the browser-argument fallback for older WebView2 builds.
+            env["WEBVIEW2_USER_DATA_FOLDER"] = str(runtime_webview_path.resolve())
             browser_args = env.get("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS", "").strip()
             env["WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS"] = (
-                f'{browser_args} --user-data-dir="{runtime_webview_path.resolve()}"'
+                f"{browser_args} --disable-gpu --user-data-dir={runtime_webview_path.resolve()}"
             ).strip()
             checks["process_started"] = "PASS"
             proc = subprocess.run(
@@ -98,11 +134,31 @@ def run_packaged_smoke(artifact: Path, platform_name: str, output: Path, timeout
             combined = (proc.stdout or "") + (proc.stderr or "")
             runtime = json.loads(runtime_output.read_text(encoding="utf-8")) if runtime_output.is_file() else {}
             runtime_checks = runtime.get("checks", {}) if isinstance(runtime, dict) else {}
+            if isinstance(runtime, dict):
+                for key in ("wx_app_name", "wx_local_data_dir"):
+                    if runtime.get(key):
+                        details[key] = str(runtime[key])
             for name in REQUIRED_CHECKS:
                 if name == "process_started" or name == "clean_shutdown":
                     continue
                 if runtime_checks.get(name) == "PASS":
                     checks[name] = "PASS"
+            # The packaged process can prove that it requested a resize, but
+            # only the disposable server can prove the resize reached the wire.
+            deadline = time.monotonic() + 2.0
+            while time.monotonic() < deadline:
+                if any(size[0:2] == (123, 45) for size in loopback_server.resize_sizes):
+                    break
+                time.sleep(0.02)
+            if any(size[0:2] == (96, 31) for size in loopback_server.pty_sizes) and any(
+                size[0:2] == (123, 45) for size in loopback_server.resize_sizes
+            ):
+                checks["pty_resize"] = "PASS"
+            else:
+                details["pty_resize"] = {
+                    "pty_sizes": loopback_server.pty_sizes,
+                    "resize_sizes": loopback_server.resize_sizes,
+                }.__repr__()
             if not runtime_output.is_file():
                 details["runtime"] = "artifact exited without packaged runtime evidence"
             elif runtime.get("error"):
@@ -124,6 +180,18 @@ def run_packaged_smoke(artifact: Path, platform_name: str, output: Path, timeout
         finally:
             runtime_output.unlink(missing_ok=True)
             shutil.rmtree(runtime_webview_path, ignore_errors=True)
+            if loopback_server is not None:
+                try:
+                    loopback_server.__exit__(None, None, None)
+                except Exception:
+                    pass
+            if loopback_root is not None:
+                try:
+                    loopback_root.cleanup()
+                except OSError:
+                    # Paramiko's disposable handler can outlive the client by
+                    # a few milliseconds on Windows; preserve the evidence.
+                    pass
 
     # Build evidence JSON per spec
     evidence = {
