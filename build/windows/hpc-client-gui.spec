@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from PyInstaller.utils.hooks import collect_dynamic_libs
+import wx
 
 # PyInstaller provides SPECPATH in spec execution namespace.
 SPEC_PATH = Path(globals().get("SPECPATH", "")).resolve()
@@ -78,6 +79,10 @@ hiddenimports = sorted(
 )
 
 binaries = collect_dynamic_libs("shiboken6")
+_webview2_loader = Path(wx.__file__).resolve().parent / "WebView2Loader.dll"
+if _webview2_loader.is_file():
+    # wxWidgets loads this DLL by bare name; keep it beside the PyInstaller DLL set.
+    binaries.append((str(_webview2_loader), "."))
 
 excludes = [
     "PySide6.scripts.deploy_lib",

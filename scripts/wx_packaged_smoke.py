@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import platform
 import re
 import subprocess
@@ -15,7 +16,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 # Expected checks per gate spec
-REQUIRED_CHECKS = ("process_started", "wx_runtime_started", "main_frame_created", "clean_shutdown")
+REQUIRED_CHECKS = ("process_started", "wx_runtime_started", "main_frame_created", "terminal_readback", "clean_shutdown")
 
 
 def _sha256(path: Path) -> str:
@@ -41,34 +42,27 @@ def run_packaged_smoke(artifact: Path, platform_name: str, output: Path, timeout
     result = "FAIL"
     details: dict[str, str] = {}
     exit_code = None
+    output.parent.mkdir(parents=True, exist_ok=True)
 
     if not artifact or not artifact.is_file():
         details["artifact"] = f"artifact not found: {artifact}"
         checks = {k: "FAIL" for k in REQUIRED_CHECKS}
         result = "FAIL"
     else:
-        # Ensure src is NOT on Python path for artifact isolation
-        env = {k: v for k, v in __import__("os").environ.items()}
-        # Remove PYTHONPATH and ensure src not implicitly added
+        # The artifact owns the runtime probe.  No source import or --help heuristic counts as evidence.
+        env = {k: v for k, v in os.environ.items()}
         env.pop("PYTHONPATH", None)
-        # Also remove current repo src from sys.path isolation check by ensuring artifact does not resolve src
-        # Launch artifact: if it's a .py, run with isolated env; if exe, run directly; if wheel, python -m hpc_gui
-        # For this repo, artifact is expected to be an exe or a python launch script that starts wx shell.
-        # We simulate by launching `python -c "import hpc_gui.wx_shell ..."` with PYTHONPATH stripped and verifying no src import.
-        # If artifact is a PyInstaller exe, it should launch and print markers.
-        # To prove isolation, we check that artifact's stdout does not contain repo src path.
+        runtime_output = output.with_suffix(".runtime.json")
+        runtime_output.unlink(missing_ok=True)
         try:
-            # Check that artifact does not import from src by inspecting file for src strings if it's a wheel/zip
-            # For exe, we just launch it.
-            is_python_artifact = artifact.suffix in {".py", ".whl", ".zip"}
-            if is_python_artifact:
-                # For python artifacts, launch with --help or smoke mode if supported
-                cmd = [sys.executable, str(artifact), "--help"] if artifact.suffix == ".py" else [sys.executable, "-m", "hpc_gui", "--help"]
+            if artifact.suffix == ".py":
+                cmd = [sys.executable, str(artifact), "--wx-smoke"]
+            elif artifact.suffix == ".exe":
+                cmd = [str(artifact), "--wx-smoke"]
             else:
-                cmd = [str(artifact), "--help"] if artifact.suffix == ".exe" else [str(artifact)]
-
+                raise ValueError(f"unsupported artifact type: {artifact.suffix}")
+            env["HPC_GUI_PACKAGED_SMOKE_OUTPUT"] = str(runtime_output.resolve())
             checks["process_started"] = "PASS"
-            # Try to run artifact with isolated env; expect it to start and exit cleanly within timeout
             proc = subprocess.run(
                 cmd,
                 cwd=ROOT,
@@ -79,41 +73,31 @@ def run_packaged_smoke(artifact: Path, platform_name: str, output: Path, timeout
             )
             exit_code = proc.returncode
             combined = (proc.stdout or "") + (proc.stderr or "")
-            # Heuristic checks: wx runtime, main frame, clean shutdown markers
-            # Real artifact should log these; we check for presence of wx indicators
-            if "wx" in combined.lower() or proc.returncode == 0:
-                checks["wx_runtime_started"] = "PASS"
-            else:
-                details["wx_runtime"] = "wx marker not found in artifact output"
-            if "HPC Client GUI" in combined or "main" in combined.lower() or proc.returncode == 0:
-                checks["main_frame_created"] = "PASS"
-            else:
-                details["main_frame"] = "main frame marker not found"
-            # Check isolation: artifact should not have resolved src path
+            runtime = json.loads(runtime_output.read_text(encoding="utf-8")) if runtime_output.is_file() else {}
+            runtime_checks = runtime.get("checks", {}) if isinstance(runtime, dict) else {}
+            for name in ("wx_runtime_started", "main_frame_created", "terminal_readback"):
+                if runtime_checks.get(name) == "PASS":
+                    checks[name] = "PASS"
+            if not runtime_output.is_file():
+                details["runtime"] = "artifact exited without packaged runtime evidence"
+            elif runtime.get("error"):
+                details["runtime"] = str(runtime["error"])
             src_path = str(ROOT / "src")
-            if src_path in combined:
-                details["isolation"] = "artifact resolved repo src path — not isolated"
-                checks["clean_shutdown"] = "FAIL"
-            else:
-                # If process exited 0, consider clean shutdown
-                if proc.returncode == 0:
-                    checks["clean_shutdown"] = "PASS"
-                else:
-                    details["exit_code"] = f"artifact exit {proc.returncode}"
-                    checks["clean_shutdown"] = "FAIL"
-            # Determine overall
-            if all(v == "PASS" for v in checks.values()):
-                result = "PASS"
-            else:
-                result = "FAIL"
+            isolated = src_path not in combined
+            if not isolated:
+                details["isolation"] = "artifact output referenced repo src path"
+            if proc.returncode != 0:
+                details["exit_code"] = f"artifact exit {proc.returncode}"
+            checks["clean_shutdown"] = "PASS" if proc.returncode == 0 and isolated and runtime.get("result") == "PASS" else "FAIL"
+            result = "PASS" if all(value == "PASS" for value in checks.values()) else "FAIL"
+            if result == "FAIL" and combined:
                 details["output_snippet"] = combined[:2000]
         except subprocess.TimeoutExpired:
             details["timeout"] = f"artifact did not exit within {timeout}s"
-            checks["clean_shutdown"] = "FAIL"
-            result = "FAIL"
         except Exception as exc:
             details["error"] = f"{type(exc).__name__}: {exc}"
-            result = "FAIL"
+        finally:
+            runtime_output.unlink(missing_ok=True)
 
     # Build evidence JSON per spec
     evidence = {
@@ -129,7 +113,8 @@ def run_packaged_smoke(artifact: Path, platform_name: str, output: Path, timeout
         "platform_detail": platform.platform(),
         "generated_utc": datetime.now(timezone.utc).isoformat(),
         "exit_code": exit_code,
-        "isolated_from_src": True,
+        "isolated_from_src": "isolation" not in details,
+        "manual_required": ["display", "cluster", "MFA", "X11", "DnD", "transfer-conflict"],
     }
     # Write to build/audit location expected by gate
     output.parent.mkdir(parents=True, exist_ok=True)

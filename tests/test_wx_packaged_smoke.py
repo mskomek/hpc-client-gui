@@ -15,5 +15,6 @@ def test_packaged_wx_smoke_gate_reports_critical_stages():
     assert result.returncode == 0, result.stderr or result.stdout
     report = json.loads(result.stdout)
     assert report["schema"] == "wx-packaged-smoke/1"
-    assert all(value == "PASS" for value in report["stages"].values())
+    assert report["result"] == "PASS"
+    assert all(value == "PASS" for value in report["checks"].values())
     assert "MFA" in report["manual_required"]

@@ -44,7 +44,7 @@ _CLI_COMMANDS = {"--help", "-h", "version", "gui", "commands", "profile", "docto
 
 
 def _is_wx_invocation(argv: list[str]) -> bool:
-    return "--wx" in argv
+    return "--wx" in argv or "--wx-smoke" in argv
 
 
 def _is_cli_invocation(argv: list[str]) -> bool:
@@ -59,7 +59,7 @@ if __package__ is None or __package__ == "":
 
 from hpc_gui.runtime import DEFAULT_GUI_RUNTIME  # noqa: E402
 
-if "--wx" in sys.argv[1:]:
+if _is_wx_invocation(sys.argv[1:]):
     from hpc_gui.wx_shell import main
 elif "--updater-helper" in sys.argv[1:]:
     from hpc_gui.services.updater_helper import run_helper
@@ -75,7 +75,7 @@ if _PERFORMANCE_PROBE is not None:
     _PERFORMANCE_PROBE.mark("application_imports_complete")
 
 if __name__ == "__main__":
-    if "--wx" in sys.argv[1:]:
+    if _is_wx_invocation(sys.argv[1:]):
         raise SystemExit(main())
     if "--updater-helper" in sys.argv[1:]:
         index = sys.argv.index("--updater-helper")

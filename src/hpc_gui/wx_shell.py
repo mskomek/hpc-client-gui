@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import json
 import shlex
 from pathlib import Path
 from pathlib import PurePosixPath
@@ -1279,6 +1280,91 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
     return frame, lifecycle, session_state
 
 
+def _run_packaged_smoke(app, frame, session_state, output_path):
+    """Probe the packaged wx terminal without showing the normal startup flow."""
+    import time
+    import wx
+
+    checks = {
+        "wx_runtime_started": "FAIL",
+        "main_frame_created": "PASS",
+        "terminal_readback": "FAIL",
+        "clean_shutdown": "FAIL",
+    }
+    state = {"phase": 0, "result": "FAIL", "done": False}
+    deadline = time.monotonic() + 12
+
+    def finish(error=None):
+        if state["done"]:
+            return
+        state["done"] = True
+        payload = {
+            "schema": "wx-packaged-runtime/1",
+            "result": state["result"],
+            "checks": checks,
+        }
+        if error:
+            payload["error"] = error
+        try:
+            target = Path(output_path)
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+        except Exception:
+            state["result"] = "FAIL"
+        try:
+            frame.Close()
+        except Exception:
+            pass
+        wx.CallLater(50, app.ExitMainLoop)
+
+    def retry():
+        if not state["done"]:
+            wx.CallLater(250, probe)
+
+    def probe():
+        if time.monotonic() >= deadline:
+            finish("timeout waiting for packaged WebView terminal")
+            return
+        panel = session_state.get("_embedded_terminal_panel")
+        if panel is None:
+            retry()
+            return
+        if state["phase"] == 0:
+            if not getattr(panel, "_ready", False) or not getattr(panel, "_is_parity", False):
+                retry()
+                return
+            checks["wx_runtime_started"] = "PASS"
+            panel.hpc_clear()
+            panel.hpc_write("PACKAGED-NORMAL\r\n")
+            state["phase"] = 1
+            retry()
+            return
+        try:
+            screen = panel.hpc_get_screen_state()
+            line = panel.hpc_get_line_text(0)
+            if state["phase"] == 1:
+                if screen and screen.get("bufferType") == "normal" and line == "PACKAGED-NORMAL":
+                    panel.hpc_write("\x1b[?1049h\x1b[2J\x1b[HPACKAGED-ALT\r\n")
+                    state["phase"] = 2
+            elif state["phase"] == 2:
+                if screen and screen.get("bufferType") == "alternate" and line == "PACKAGED-ALT":
+                    panel.hpc_write("\x1b[?1049l")
+                    state["phase"] = 3
+            elif state["phase"] == 3:
+                if screen and screen.get("bufferType") == "normal" and line == "PACKAGED-NORMAL":
+                    checks["terminal_readback"] = "PASS"
+                    state["result"] = "PASS"
+                    finish()
+                    return
+        except Exception as exc:
+            finish(type(exc).__name__)
+            return
+        retry()
+
+    wx.CallLater(100, probe)
+    return state
+
+
 def main() -> int:
     clean_environment = environment_without_qt_graphics()
     for name in set(os.environ) - set(clean_environment):
@@ -1287,6 +1373,12 @@ def main() -> int:
     import wx
 
     app = wx.App(False)
+    if os.environ.get("HPC_GUI_PACKAGED_SMOKE_OUTPUT"):
+        frame, _lifecycle, session_state = create_shell_frame(app)
+        frame.Show()
+        smoke_state = _run_packaged_smoke(app, frame, session_state, os.environ["HPC_GUI_PACKAGED_SMOKE_OUTPUT"])
+        app.MainLoop()
+        return 0 if smoke_state["result"] == "PASS" else 1
 
     # --- Startup splash: Preferences → Helpers → Updates → Main Window (Session & Profile removed per user request) ---
     from hpc_gui.config.storage import load_profiles
