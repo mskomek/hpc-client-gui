@@ -31,6 +31,8 @@ REQUIRED_CHECKS = (
     "files_controls",
     "editor_controls",
     "jobs_controls",
+    "editor_roundtrip",
+    "transfer_queue_render",
     "clean_shutdown",
 )
 
