@@ -434,6 +434,46 @@ def test_wx_terminal_single_bridge_and_no_splitlines():
     assert "postToPython" in bridge
 
 
+def test_wx_terminal_close_releases_native_webview():
+    from hpc_gui.wx_terminal_webview import WxTerminalWebViewPanel
+
+    class FakeWebView:
+        def __init__(self):
+            self.stopped = 0
+            self.destroyed = 0
+
+        def Stop(self):
+            self.stopped += 1
+
+        def Destroy(self):
+            self.destroyed += 1
+
+    class PanelHarness:
+        close = WxTerminalWebViewPanel.close
+
+    webview = FakeWebView()
+    panel = PanelHarness()
+    panel._closed = False
+    panel._webview = webview
+    panel._is_parity = True
+    panel._generation = 0
+    panel._readiness_timer = None
+    panel._resize_timer = None
+    panel._subscriber = None
+    panel._subscribers_list = None
+    panel._pending = []
+    panel._pending_bytes = 0
+    panel._lang_cb = lambda _language=None: None
+
+    panel.close()
+    panel.close()
+
+    assert webview.stopped == 1
+    assert webview.destroyed == 1
+    assert panel._webview is None
+    assert panel._is_parity is False
+
+
 @pytest.mark.xfail(reason="WebView2 subprocess event-loop timing: ready-flush non-deterministic in subprocess isolation. Behavior verified by test_wx_terminal_large_pre_ready_output.", strict=False)
 def test_wx_terminal_output_ordering_with_many_fragments():
     if not _is_webview_available():
