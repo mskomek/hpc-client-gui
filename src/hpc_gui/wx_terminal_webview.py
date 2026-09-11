@@ -825,54 +825,35 @@ class WxTerminalWebViewPanel(wx.Panel if _WX_AVAILABLE else object):  # type: ig
 
     # ---------- Buffer query helpers (test seam) ----------
 
-    def hpc_get_line_text(self, row: int) -> str | None:
-        """Read a single line from xterm buffer via JS helper."""
+    def _run_js_readback(self, js: str) -> str | None:
+        """Return wx WebView's synchronous JavaScript result for readback helpers."""
         if self._closed or not self._ready or not self._is_parity or self._webview is None:
             return None
-        result = [None]
-        def _cb(val):
-            result[0] = val
-        js = f"window.hpcGetLineText && window.hpcGetLineText({int(row)})"
         try:
-            if hasattr(self._webview, "RunScript"):
-                self._webview.RunScript(js, callback=_cb)
-            elif hasattr(self._webview, "RunScriptAsync"):
-                self._webview.RunScriptAsync(js)
-            # For sync readback, fall back to JS eval return if available
+            result = self._webview.RunScript(js)
         except Exception:
-            pass
-        return result[0]
+            return None
+        if isinstance(result, tuple) and len(result) >= 2:
+            ok, value = result[0], result[1]
+            return str(value) if ok and value is not None else None
+        return result if isinstance(result, str) else None
+
+    def hpc_get_line_text(self, row: int) -> str | None:
+        """Read a single line from xterm buffer via JS helper."""
+        js = f"window.hpcGetLineText && window.hpcGetLineText({int(row)})"
+        return self._run_js_readback(js)
 
     def hpc_get_buffer_text(self) -> str | None:
         """Read all visible+scrollback lines from xterm buffer."""
-        if self._closed or not self._ready or not self._is_parity or self._webview is None:
-            return None
-        result = [None]
-        def _cb(val):
-            result[0] = val
         js = "window.hpcGetBufferText && window.hpcGetBufferText()"
-        try:
-            if hasattr(self._webview, "RunScript"):
-                self._webview.RunScript(js, callback=_cb)
-        except Exception:
-            pass
-        return result[0]
+        return self._run_js_readback(js)
 
     def hpc_get_screen_state(self) -> dict | None:
         """Read full screen state (cursor, buffer type, lines) from xterm."""
-        if self._closed or not self._ready or not self._is_parity or self._webview is None:
-            return None
-        result = [None]
-        def _cb(val):
-            result[0] = val
         js = "JSON.stringify(window.hpcGetScreenState && window.hpcGetScreenState())"
+        result = self._run_js_readback(js)
         try:
-            if hasattr(self._webview, "RunScript"):
-                self._webview.RunScript(js, callback=_cb)
-        except Exception:
-            pass
-        try:
-            return json.loads(result[0]) if result[0] else None
+            return json.loads(result) if result else None
         except Exception:
             return None
 

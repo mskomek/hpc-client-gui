@@ -501,6 +501,7 @@ def test_generate_parity_evidence():
             "test_wx_terminal_input_chain_ctrl_a_to_z",
             "test_wx_terminal_resize_chain_to_ssh",
             "test_wx_terminal_unicode_input_output",
+            "test_wx_terminal_screen_state_readback_and_alternate_buffer",
         ],
         "invariants": {
             "duplicate_output_subscribers": "0 (verified in reconnect stress)",
@@ -509,8 +510,8 @@ def test_generate_parity_evidence():
             "unbounded_accumulation": "0 (bounded queue MAX_PENDING_BYTES=2MB)",
         },
         "known_gaps": [
-            "xterm.js alternate screen requires real WebView renderer execution (BLOCKED without display)",
-            "Packaged WebView2 runtime not tested (Wave 77 Windows packaged gate BLOCKED)",
+            "Packaged wx WebView2 runtime not tested (source WebView alternate-screen readback PASS)",
+            "Linux/macOS WebKit packaged runtime not tested",
         ],
     }
     out = pathlib.Path("docs/v2/GUI_TERM_001_EXECUTION_EVIDENCE.json")
