@@ -2,7 +2,7 @@
 import pytest
 
 wx = pytest.importorskip("wx")
-from hpc_gui.wx_terminal import TerminalModel, build_terminal_panel
+from hpc_gui.wx_terminal import build_terminal_panel
 from hpc_gui.wx_shell import create_shell_frame
 
 
@@ -178,11 +178,11 @@ def test_embedded_terminal_resize_reaches_pty_resize():
 def test_shell_embedded_and_detached_share_implementation():
     # Both use build_terminal_panel internally — check control sets identical
     from hpc_gui.wx_terminal import show_terminal
-    app = wx.App.Get() or wx.App(False)
+    _app = wx.App.Get() or wx.App(False)
     ssh = _fake_ssh()
     # detached
     frame_det = wx.Frame(None)
-    ret = show_terminal(parent=frame_det, ssh=ssh)
+    show_terminal(parent=frame_det, ssh=ssh)
     # detached creates its own frame, not frame_det; find top windows
     # instead build directly
     panel_det = build_terminal_panel(frame_det, ssh=ssh)

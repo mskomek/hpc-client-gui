@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from hpc_gui.wx_terminal import TerminalModel
 
 
@@ -18,11 +20,12 @@ def test_terminal_control_codes_resize_find_clear_and_font():
 
 
 def test_wx_terminal_keeps_ssh_renderer_optional():
-    source = open("src/hpc_gui/wx_terminal.py", encoding="utf-8").read()
+    source = Path("src/hpc_gui/wx_terminal.py").read_text(encoding="utf-8")
+    webview = Path("src/hpc_gui/wx_terminal_webview.py").read_text(encoding="utf-8")
     assert "from PySide6" not in source and "import wx" in source
     assert "ssh.send_shell_input" in source and "ssh.resize_shell_pty" in source
     assert "wx.ID_CANCEL" in source and "status_disconnected" in source
     assert "lifecycle.register_cleanup(close)" in source
-    assert "EVT_CHAR" in source and "render_output" in source
+    assert "render_output" in source
     assert "event.ControlDown()" in source and "text.Copy()" in source
-    assert "text.Paste()" in source and "len(lines) > 5000" in source
+    assert "terminal.write" in webview and "terminal.paste" in webview

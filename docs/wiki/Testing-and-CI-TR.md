@@ -28,20 +28,12 @@ PYTHONPATH=src QT_QPA_PLATFORM=offscreen python -m pytest tests/ -q
 
 ## Sürekli tümleştirme
 
-`.github/workflows/ci.yml`, pull request'lerde ve `main` dalına yapılan
-push'larda çalışır. Her iş engelleyicidir.
+GitHub Actions CI kasıtlı olarak devre dışıdır. Önceki iş akışı
+`.github/workflows/` dışında, `docs/ci-disabled/ci.yml` konumunda korunur; bu
+nedenle normal push ve pull request işlemleri CI çalıştırmaz. Depo doğrulaması
+şimdilik yerel olarak yapılır; bkz. `docs/REMEDIATION_STATUS_2026-09-11.md`.
 
-| İş | Koşucu | Çalıştırdığı |
-|---|---|---|
-| `cli` | ubuntu | Derleme denetimi, i18n sapma kapısı, duman testi ve CLI test paketi |
-| `docs` | ubuntu | Metin bozulması kapısı ve wiki kaynak kapısı |
-| `ssh_sftp` | ubuntu | Oturum, aktarım ve aktarım kapısı paketleri |
-| `windows` | windows | Windows sınır testleri: güvenli indirme, sürüm tutarlılığı, başlangıç değişiklik günlüğü |
-| `gui` | ubuntu | Qt testleri dâhil tüm çevrimdışı paket, offscreen |
-
-`windows` işi bilinçli olarak korunur: yalnızca Windows'ta farklılaşan
-davranışı kapsar ve kaldırılması birincil hedef platformu test edilmemiş
-bırakır.
+Bu değişiklikten sonra hiçbir CI işinin başarılı olduğu iddia edilmez.
 
 ## Sürüm CI'ı
 

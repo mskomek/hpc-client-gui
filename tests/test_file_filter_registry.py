@@ -8,7 +8,6 @@ from hpc_gui.services.file_filter_registry import (
     FileFilter,
     FileFilterRegistry,
     build_core_registry,
-    CORE_FILTERS,
 )
 
 

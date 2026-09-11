@@ -86,10 +86,8 @@ def test_template_api_filtering(tmp_path):
 
 def test_plugin_template_action_uses_explicit_api():
     """plugin menu action must call explicit filtered flow with owning plugin ID."""
-    from unittest.mock import MagicMock
     from hpc_gui.plugins.models import InstalledPlugin, PluginManifest, PluginFile
     from hpc_gui.services.plugin_menu_actions import dispatch_plugin_menu_action
-    from hpc_gui.services.plugin_menu_host import PluginMenuHost
 
     mf = PluginManifest(
         schema_version=1, plugin_api=1, id="org.test.plugina", name="A", version="1.0.0",
@@ -136,7 +134,6 @@ def test_host_adapter_import_boundary():
     assert "QVBoxLayout" not in shared
 
     # Qt host must handle trusted tool, wx host must not open Qt dialog
-    from hpc_gui.services.plugin_menu_host import PluginMenuHost
 
     # Check Qt host exists and imports Qt only there
     qt_host_src = pathlib.Path("src/hpc_gui/ui/plugin_menu_qt_host.py").read_text(encoding="utf-8")
@@ -246,10 +243,9 @@ def test_localized_sort():
 
 def test_plugin_isolation_real(tmp_path):
     """One valid + one malformed plugin: valid still contributes, bad does not crash."""
-    from hpc_gui.plugins.ui_contributions import collect_plugin_menu_contributions, _parse_plugins_menu
-    from hpc_gui.plugins.models import InstalledPlugin, PluginManifest, PluginFile
-    import json, hashlib
-    from pathlib import Path
+    from hpc_gui.plugins.ui_contributions import collect_plugin_menu_contributions
+    import json
+    import hashlib
     from hpc_gui.plugins.storage import write_active_versions
 
     # Valid plugin - use job-template with proper files
@@ -313,7 +309,6 @@ def test_plugin_isolation_real(tmp_path):
     # So we expect valid plugin present, bad plugin in problems, but no crash.
     assert any(p.manifest.id == "org.test.valid" for p in result.plugins)
     # And that valid's contribution is still collectible
-    from hpc_gui.plugins.ui_contributions import collect_plugin_menu_contributions
     contribs = collect_plugin_menu_contributions(result.plugins)
     assert len(contribs) == 1
     assert contribs[0].plugin_id == "org.test.valid"
@@ -330,7 +325,7 @@ def test_menu_qt_smoke_offscreen():
     from hpc_gui.core.i18n import load_language
     from hpc_gui.ui.main_window import MainWindow
     load_language("en")
-    app = QApplication.instance() or QApplication([])
+    _app = QApplication.instance() or QApplication([])
     w = MainWindow()
     try:
         menubar = w.menuBar()
@@ -400,7 +395,7 @@ def test_qt_separator_visibility_offscreen():
     from hpc_gui.core.i18n import load_language
     from hpc_gui.ui.main_window import MainWindow
     load_language("en")
-    app = QApplication.instance() or QApplication([])
+    _app = QApplication.instance() or QApplication([])
     w = MainWindow()
     try:
         # No dynamic roots initially (no plugins with contributions) -> exactly one separator
@@ -416,8 +411,6 @@ def test_qt_separator_visibility_offscreen():
         assert w._plugins_dynamic_before.isVisible() is True
         # Now simulate one visible root
         from hpc_gui.plugins.ui_contributions import PluginMenuContribution, PluginMenuAction
-        from hpc_gui.plugins.models import PluginManifest, PluginFile
-        mf = PluginManifest(schema_version=1, plugin_api=1, id="org.test.fake", name="Fake", version="1.0.0", publisher="x", license="MIT", description="d", requires_app=">=1.5.8", capabilities=("lint-rules",), entrypoints={}, files=(PluginFile(path="a.json", sha256="0"*64, size=1, role="documentation"),))
         contrib = PluginMenuContribution(plugin_id="org.test.fake", plugin_version="1.0.0", label="Fake", labels={}, items=(PluginMenuAction(id="a", label="A", labels={}, action="editor.lint_current", when={}, unavailable="disable"),))
         w._plugin_contributions = [contrib]
         w._rebuild_plugins_menu_dynamic()
@@ -439,10 +432,6 @@ def test_qt_separator_visibility_offscreen():
 
 def _wx_menu_snapshot(menu):
     """Helper returning list of (kind, label, is_separator, sub_menu) for assertions."""
-    try:
-        import wx
-    except ImportError:
-        return []
     items = []
     for item in menu.GetMenuItems():
         if item.IsSeparator():

@@ -3,9 +3,7 @@
 from __future__ import annotations
 
 from threading import Thread
-from typing import Callable
 
-from hpc_gui import __version__
 from hpc_gui.core.i18n import subscribe_language_change, t, unsubscribe_language_change
 
 
@@ -167,8 +165,6 @@ def create_startup_splash(parent=None, *, profiles: list[dict] | None = None, li
     root.Add(log_ctrl, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 12)
 
     # --- Connection controls removed per user request (profile section) ---
-    conn_box = None
-    conn_sizer = None
     profile_choice = None
     reload_btn = None
     offline_btn = None
@@ -429,11 +425,12 @@ def create_startup_splash(parent=None, *, profiles: list[dict] | None = None, li
                 try:
                     on_connect(sel)
                 except Exception as exc:
+                    error_message = str(exc)
                     import wx as _wx
                     def on_err():
                         set_connecting(False, sel)
-                        append_log(f"Connection failed: {exc}", "")
-                        set_status(str(exc))
+                        append_log(f"Connection failed: {error_message}", "")
+                        set_status(error_message)
                     try:
                         _wx.CallAfter(on_err)
                     except Exception:

@@ -14,13 +14,15 @@ def _make_panel():
 def _close_panel(frame):
     try:
         frame.Close()
-    except: pass
+    except Exception:
+        pass
     for _ in range(3):
         wx.Yield()
     try:
         if not frame.IsBeingDeleted():
             frame.Destroy()
-    except: pass
+    except Exception:
+        pass
     for _ in range(3):
         wx.Yield()
 
@@ -225,7 +227,7 @@ def test_wx_editor_reorder_tabs_preserves_document_identity():
         _close_panel(frame)
 
 def test_wx_editor_standalone_window_is_independent():
-    app = wx.App.Get() or wx.App(False)
+    _app = wx.App.Get() or wx.App(False)
     frame = wx.Frame(None)
     panel = build_editor_panel(frame, path="/tmp/a.sh", content="a", is_local=True)
     frame.Show()
@@ -248,5 +250,6 @@ def test_wx_editor_standalone_window_is_independent():
     finally:
         try:
             standalone.Destroy()
-        except: pass
+        except Exception:
+            pass
         _close_panel(frame)

@@ -91,7 +91,6 @@ def _no_wx_modal_popups(monkeypatch):
     """
     try:
         import wx
-        from unittest.mock import MagicMock
     except ImportError:
         yield
         return

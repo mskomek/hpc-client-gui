@@ -15,7 +15,9 @@ Exercises the wx Jobs & Outputs workspace with a mock backend to verify:
 import time
 import sys
 
-import wx
+import pytest
+
+wx = pytest.importorskip("wx")
 
 from hpc_gui.core.i18n import load_language
 from hpc_gui.wx_jobs import show_jobs

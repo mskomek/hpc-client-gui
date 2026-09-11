@@ -265,10 +265,6 @@ def test_host_action_allowlist_enforced():
 
 
 def test_owning_plugin_identity_cannot_be_spoofed():
-    mf_a = PluginManifest(schema_version=1, plugin_api=1, id="org.a", name="A", version="1.0.0", publisher="x", license="MIT", description="d", requires_app=">=1.5.8", capabilities=("lint-rules",), entrypoints={}, files=(PluginFile(path="a.json", sha256="0"*64, size=1, role="documentation"),))
-    mf_b = PluginManifest(schema_version=1, plugin_api=1, id="org.b", name="B", version="1.0.0", publisher="x", license="MIT", description="d", requires_app=">=1.5.8", capabilities=("lint-rules",), entrypoints={}, files=(PluginFile(path="a.json", sha256="0"*64, size=1, role="documentation"),))
-    plug_a = InstalledPlugin(manifest=mf_a, directory=pathlib.Path("/tmp"))
-    plug_b = InstalledPlugin(manifest=mf_b, directory=pathlib.Path("/tmp"))
     import inspect
     sig = inspect.signature(dispatch_plugin_menu_action)
     params = list(sig.parameters.values())

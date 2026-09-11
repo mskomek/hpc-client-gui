@@ -55,10 +55,8 @@ def test_hashes_match_and_no_unexplained_duplicate():
         assert actual == entry["sha256"], f"hash mismatch {entry['file']}"
         # Also check in HASHES file
         assert actual in hashes_text, f"hash not in HASHES.sha256 {entry['file']}"
-    # Check duplicates are documented (intentional_alias) - allow at most 9 duplicate groups as known
-    from collections import Counter
-    counts = Counter(e["sha256"] for e in data["screenshots"])
-    dups = [h for h,c in counts.items() if c>1]
+    # Duplicate screenshot hashes are allowed only within one runtime; the
+    # cross-runtime check below catches accidental reuse.
     # We expect duplicates for main==connection etc. Documented in MANIFEST.md
     # For this audit, allow up to 9 groups but ensure they are qt main/connection or jobs etc, not random
     # No duplicate across qt and wx should be same hash (different runtimes)

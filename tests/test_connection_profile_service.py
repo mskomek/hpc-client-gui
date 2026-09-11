@@ -95,7 +95,7 @@ class ConnectionProfileServiceTests(unittest.TestCase):
             return rid
         with mock.patch("hpc_gui.services.connection_profile_service.keychain_available", return_value=True), \
              mock.patch("hpc_gui.services.connection_profile_service.protect_keychain_secret", side_effect=fake_protect), \
-             mock.patch("hpc_gui.services.connection_profile_service.delete_keychain_secret") as mock_del:
+             mock.patch("hpc_gui.services.connection_profile_service.delete_keychain_secret"):
             saved = save_profile(collected, initial_profile=existing, plain_password="s3cret", save_password=True, prompt_policy="when-needed")
         self.assertIn("password_keychain_ref", saved)
         self.assertNotIn("password_dpapi", saved)
@@ -143,7 +143,8 @@ class ConnectionProfileServiceTests(unittest.TestCase):
         ref = "test-ref"
         with mock.patch("hpc_gui.services.connection_profile_service.keychain_available", return_value=True):
             # Mock keyring
-            import sys, types
+            import sys
+            import types
             entries = {(KEYCHAIN_SERVICE, ref): "secret123"}
             fake = types.SimpleNamespace(
                 get_keyring=lambda: object(),
@@ -153,7 +154,6 @@ class ConnectionProfileServiceTests(unittest.TestCase):
             )
             with mock.patch.dict(sys.modules, {"keyring": fake}):
                 with mock.patch("hpc_gui.core.secret_store.keychain_available", return_value=True):
-                    from hpc_gui.core.secret_store import protect_keychain_secret
                     # Use real protect to ensure we have entry
                     # Already entries has secret
                     profile = {"password_keychain_ref": ref}
