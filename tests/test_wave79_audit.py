@@ -306,7 +306,24 @@ class TestSchemaV4Audit:
         assert any("executable" in e for e in errors)
 
     def test_v4_optional_sections_ok(self):
-        p = {"schema_version": 4, "profile_id": "t", "name": "T", "scheduler": "slurm"}
+        p = {
+            "schema_version": 4,
+            "profile_id": "t",
+            "name": "T",
+            "scheduler": "slurm",
+            "job_details": {
+                "adapter": "slurm.scontrol.job",
+                "parser": "slurm.scontrol.v1",
+            },
+            "accounting": {
+                "adapter": "slurm.sacct.job",
+                "parser": "slurm.sacct.pipe.v1",
+            },
+            "cluster_status": {
+                "adapter": "truba.lssrv",
+                "parser": "truba.lssrv.v1",
+            },
+        }
         assert validate_cluster_profile_dict(p) == []
 
     def test_v4_partial_sections_ok(self):

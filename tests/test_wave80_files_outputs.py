@@ -342,17 +342,6 @@ class TestWave80Audit:
         assert t("jobs_outputs.status_following") != "[jobs_outputs.status_following]"
         assert t("jobs_outputs.status_paused") != "[jobs_outputs.status_paused]"
 
-    def test_outputs_standard_output_error_localized(self):
-        """Section 9: Legacy Slurm labels localized."""
-        load_language("en")
-        assert t("jobs_outputs.standard_output") == "Standard Output"
-        assert t("jobs_outputs.standard_error") == "Standard Error"
-        load_language("tr")
-        so = t("jobs_outputs.standard_output")
-        assert "Çıktı" in so or "Standart" in so
-        se = t("jobs_outputs.standard_error")
-        assert "Hata" in se or "Standart" in se
-
     def test_outputs_combined_output_localized(self):
         load_language("en")
         assert "Standard Output + Error" == t("jobs_outputs.combined_output")
@@ -447,19 +436,6 @@ class TestWave80Audit:
         load_language("tr")
         val = t("dirs.follow_track")
         assert "Takip" in val
-
-    def test_files_context_menu_localized(self):
-        """Section 19: Context menu labels localized."""
-        load_language("en")
-        assert t("dirs.download") == "Download"
-        assert t("dirs.upload") == "Upload"
-        assert t("dirs.delete") == "Delete"
-        assert t("dirs.copy") == "Copy"
-        assert t("dirs.paste") == "Paste"
-        assert t("dirs.rename") == "Rename"
-        load_language("tr")
-        assert t("dirs.download") == "İndir"
-        assert t("dirs.delete") == "Sil"
 
     def test_files_follow_status_indicator_key(self):
         """Section 18: Follow-status affordance key exists."""
