@@ -48,6 +48,8 @@ def _remote(app, backend, operation):
     return frame
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_local_close_while_delete_in_flight_is_safe(wx_app, tmp_path: Path, monkeypatch):
     target = tmp_path / "remove.txt"
     target.write_text("x", encoding="utf-8")
@@ -78,6 +80,8 @@ def test_wx_local_close_while_delete_in_flight_is_safe(wx_app, tmp_path: Path, m
     assert frame._wx_local_state["closed"]
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_local_close_while_paste_in_flight_is_safe(wx_app, tmp_path: Path, monkeypatch):
     source = tmp_path / "source.txt"
     source.write_text("x", encoding="utf-8")
@@ -105,6 +109,8 @@ def test_wx_local_close_while_paste_in_flight_is_safe(wx_app, tmp_path: Path, mo
     assert frame._wx_local_state["closed"]
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_remote_close_while_move_in_flight_is_safe(wx_app, monkeypatch):
     backend = MockRemoteFilesBackend()
     started = threading.Event()
@@ -124,6 +130,8 @@ def test_wx_remote_close_while_move_in_flight_is_safe(wx_app, monkeypatch):
     assert frame._wx_remote_state["closed"]
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_remote_close_while_delete_in_flight_is_safe(wx_app, monkeypatch):
     backend = MockRemoteFilesBackend()
     started = threading.Event()
@@ -143,6 +151,8 @@ def test_wx_remote_close_while_delete_in_flight_is_safe(wx_app, monkeypatch):
     assert frame._wx_remote_state["closed"]
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_local_old_mutation_completion_does_not_overwrite_navigation(wx_app, tmp_path: Path, monkeypatch):
     (tmp_path / "remove.txt").write_text("x", encoding="utf-8")
     destination = tmp_path / "other"
@@ -170,6 +180,8 @@ def test_wx_local_old_mutation_completion_does_not_overwrite_navigation(wx_app, 
     assert frame._wx_local_model.current_path == destination.resolve()
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_local_old_mutation_completion_does_not_overwrite_real_backspace_navigation(wx_app, tmp_path: Path, monkeypatch):
     target = tmp_path / "remove.txt"
     target.write_text("x", encoding="utf-8")
@@ -201,6 +213,8 @@ def test_wx_local_old_mutation_completion_does_not_overwrite_real_backspace_navi
     assert frame._wx_local_model.current_path == parent
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_remote_old_mutation_completion_does_not_overwrite_navigation(wx_app, monkeypatch):
     backend = MockRemoteFilesBackend()
     started = threading.Event()
@@ -222,6 +236,8 @@ def test_wx_remote_old_mutation_completion_does_not_overwrite_navigation(wx_app,
     assert frame._wx_remote_model.current_path == "/"
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_remote_old_mutation_completion_does_not_overwrite_real_backspace_navigation(wx_app, monkeypatch):
     backend = MockRemoteFilesBackend()
     started = threading.Event()
@@ -245,6 +261,8 @@ def test_wx_remote_old_mutation_completion_does_not_overwrite_real_backspace_nav
     assert frame._wx_remote_model.current_path == "/"
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_remote_stale_listing_does_not_overwrite_new_navigation(wx_app):
     started = threading.Event()
     release = threading.Event()
@@ -273,6 +291,8 @@ def test_wx_remote_stale_listing_does_not_overwrite_new_navigation(wx_app):
     assert listing.GetItemText(0) == "current.txt"
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_local_listing_runs_off_gui_thread(wx_app, tmp_path: Path, monkeypatch):
     (tmp_path / "entry.txt").write_text("x", encoding="utf-8")
     thread_ids = []
@@ -288,6 +308,8 @@ def test_wx_local_listing_runs_off_gui_thread(wx_app, tmp_path: Path, monkeypatc
     frame.Close(True)
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_local_stale_listing_does_not_overwrite_new_navigation(wx_app, tmp_path: Path, monkeypatch):
     first = tmp_path / "first"
     first.mkdir()
@@ -335,6 +357,8 @@ def test_wx_local_stale_listing_does_not_overwrite_new_navigation(wx_app, tmp_pa
     assert not any(active.GetItemText(i) == "old.txt" for i in range(active.GetItemCount()))
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_local_listing_completion_after_close_is_safe(wx_app, tmp_path: Path, monkeypatch):
     started = threading.Event()
     release = threading.Event()
@@ -357,6 +381,8 @@ def test_wx_local_listing_completion_after_close_is_safe(wx_app, tmp_path: Path,
     assert frame._wx_local_state["closed"]
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_remote_listing_completion_after_close_is_safe(wx_app):
     started = threading.Event()
     release = threading.Event()
@@ -378,6 +404,8 @@ def test_wx_remote_listing_completion_after_close_is_safe(wx_app):
     assert frame._wx_remote_state["closed"]
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_remote_stale_listing_error_is_ignored_after_navigation(wx_app, monkeypatch):
     started = threading.Event()
     release = threading.Event()
@@ -405,6 +433,8 @@ def test_wx_remote_stale_listing_error_is_ignored_after_navigation(wx_app, monke
     assert errors == []
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_local_stale_listing_error_is_ignored_after_navigation(wx_app, tmp_path: Path, monkeypatch):
     first = tmp_path / "first"
     first.mkdir()
@@ -463,6 +493,8 @@ class _Dialog:
         pass
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_remote_listing_runs_off_gui_thread(wx_app):
     backend = MockRemoteFilesBackend()
     gui_thread = threading.get_ident()

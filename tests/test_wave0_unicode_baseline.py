@@ -4,8 +4,8 @@ Establishes a trustworthy baseline before fixing behavior. Inventories every
 important Unicode/encoding boundary, reproduces the visible mojibake bug,
 and creates reusable test fixtures.
 """
-
 from __future__ import annotations
+import pytest
 
 import json
 import pathlib
@@ -95,14 +95,17 @@ def _norm(p: str) -> str:
 class TestRepositoryBaseline:
     """Verify repository state is real and current."""
 
+    @pytest.mark.contract
     def test_src_directory_exists(self):
         src = ROOT / "src" / "hpc_gui"
         assert src.is_dir(), f"Source directory not found: {src}"
 
+    @pytest.mark.contract
     def test_pyproject_exists(self):
         pyproject = ROOT / "pyproject.toml"
         assert pyproject.is_file(), "pyproject.toml not found"
 
+    @pytest.mark.contract
     def test_qt_is_default_runtime(self):
         runtime_file = ROOT / "src" / "hpc_gui" / "runtime.py"
         assert runtime_file.is_file(), "runtime.py not found"
@@ -111,11 +114,13 @@ class TestRepositoryBaseline:
             "Qt is no longer the default GUI runtime"
         )
 
+    @pytest.mark.contract
     def test_pyside6_in_dependencies(self):
         pyproject = ROOT / "pyproject.toml"
         content = pyproject.read_text(encoding="utf-8")
         assert "PySide6" in content, "PySide6 not in dependencies"
 
+    @pytest.mark.contract
     def test_i18n_files_exist(self):
         i18n_dir = ROOT / "src" / "hpc_gui" / "i18n"
         assert i18n_dir.is_dir(), "i18n directory not found"
@@ -132,6 +137,7 @@ class TestRepositoryBaseline:
 class TestMojibakeReproduction:
     """Reproduce the known ★ Favorites mojibake bug."""
 
+    @pytest.mark.contract
     def test_en_favorites_mojibake_exists(self):
         """The mojibake 'â˜… Favorites' has been fixed to '★ Favorites'."""
         en_path = ROOT / "src" / "hpc_gui" / "i18n" / "en.json"
@@ -142,6 +148,7 @@ class TestMojibakeReproduction:
             f"Expected '★ Favorites', got: {fav!r}"
         )
 
+    @pytest.mark.contract
     def test_tr_favorites_mojibake_exists(self):
         """The mojibake 'â˜… Favoriler' has been fixed to '★ Favoriler'."""
         tr_path = ROOT / "src" / "hpc_gui" / "i18n" / "tr.json"
@@ -152,6 +159,7 @@ class TestMojibakeReproduction:
             f"Expected '★ Favoriler', got: {fav!r}"
         )
 
+    @pytest.mark.contract
     def test_mojibake_is_corrupted_star(self):
         """Demonstrate the corruption chain: ★ → UTF-8 bytes → Windows-1252 decode → re-encode.
 
@@ -169,6 +177,7 @@ class TestMojibakeReproduction:
             f"Mojibake reconstruction failed: {mojibake!r}"
         )
 
+    @pytest.mark.contract
     def test_star_roundtrip(self):
         """★ should survive UTF-8 encode/decode roundtrip."""
         star = CORRECT_STAR
@@ -176,11 +185,13 @@ class TestMojibakeReproduction:
         decoded = encoded.decode("utf-8")
         assert decoded == star
 
+    @pytest.mark.contract
     def test_turkish_chars_roundtrip(self):
         """Turkish characters should survive UTF-8 roundtrip."""
         chars = "çğıöşüİÇĞİÖŞÜ"
         assert chars.encode("utf-8").decode("utf-8") == chars
 
+    @pytest.mark.contract
     def test_japanese_chars_roundtrip(self):
         """Japanese characters should survive UTF-8 roundtrip."""
         chars = "日本語研究計算"
@@ -194,45 +205,54 @@ class TestMojibakeReproduction:
 class TestGoldenFixtures:
     """Verify golden fixtures are well-formed and reusable."""
 
+    @pytest.mark.contract
     def test_turkish_dirs_valid(self):
         for d in TURKISH_DIRS:
             assert isinstance(d, str) and len(d) > 0
             # Must be valid NFC
             assert unicodedata.normalize("NFC", d) == d
 
+    @pytest.mark.contract
     def test_turkish_files_valid(self):
         for f in TURKISH_FILES:
             assert isinstance(f, str) and len(f) > 0
             assert unicodedata.normalize("NFC", f) == f
 
+    @pytest.mark.contract
     def test_japanese_dirs_valid(self):
         for d in JAPANESE_DIRS:
             assert isinstance(d, str) and len(d) > 0
             assert unicodedata.normalize("NFC", d) == d
 
+    @pytest.mark.contract
     def test_japanese_files_valid(self):
         for f in JAPANESE_FILES:
             assert isinstance(f, str) and len(f) > 0
             assert unicodedata.normalize("NFC", f) == f
 
+    @pytest.mark.contract
     def test_mixed_dirs_valid(self):
         for d in MIXED_DIRS:
             assert isinstance(d, str) and len(d) > 0
             assert unicodedata.normalize("NFC", d) == d
 
+    @pytest.mark.contract
     def test_mixed_files_valid(self):
         for f in MIXED_FILES:
             assert isinstance(f, str) and len(f) > 0
             assert unicodedata.normalize("NFC", f) == f
 
+    @pytest.mark.contract
     def test_symbol_files_valid(self):
         for f in SYMBOL_FILES:
             assert isinstance(f, str) and len(f) > 0
 
+    @pytest.mark.contract
     def test_turkish_casing_valid(self):
         for f in TURKISH_CASING:
             assert isinstance(f, str) and len(f) > 0
 
+    @pytest.mark.contract
     def test_nfc_nfd_distinct(self):
         """NFC and NFD forms of 'café' should be distinct byte sequences."""
         nfc = unicodedata.normalize("NFC", "café")
@@ -240,6 +260,7 @@ class TestGoldenFixtures:
         assert nfc != nfd, "NFC and NFD should differ for café"
         assert nfc.encode("utf-8") != nfd.encode("utf-8")
 
+    @pytest.mark.contract
     def test_all_fixtures_survive_json_roundtrip(self):
         """All fixture strings must survive JSON serialization roundtrip."""
         fixtures = (
@@ -262,6 +283,7 @@ class TestGoldenFixtures:
 class TestGoldenFixturesFilesystem:
     """Verify golden fixture names survive filesystem create/read/delete."""
 
+    @pytest.mark.contract
     def test_turkish_file_create_and_read(self, tmp_path):
         for name in TURKISH_FILES:
             p = tmp_path / name
@@ -269,6 +291,7 @@ class TestGoldenFixturesFilesystem:
             assert p.exists()
             assert p.read_text(encoding="utf-8") == "test content"
 
+    @pytest.mark.contract
     def test_japanese_file_create_and_read(self, tmp_path):
         for name in JAPANESE_FILES:
             p = tmp_path / name
@@ -276,6 +299,7 @@ class TestGoldenFixturesFilesystem:
             assert p.exists()
             assert p.read_text(encoding="utf-8") == "テスト内容"
 
+    @pytest.mark.contract
     def test_mixed_file_create_and_read(self, tmp_path):
         for name in MIXED_FILES:
             p = tmp_path / name
@@ -283,6 +307,7 @@ class TestGoldenFixturesFilesystem:
             assert p.exists()
             assert p.read_text(encoding="utf-8") == "mixed content 日本語"
 
+    @pytest.mark.contract
     def test_symbol_file_create_and_read(self, tmp_path):
         for name in SYMBOL_FILES:
             p = tmp_path / name
@@ -290,6 +315,7 @@ class TestGoldenFixturesFilesystem:
             assert p.exists()
             assert p.read_text(encoding="utf-8") == "symbol content"
 
+    @pytest.mark.contract
     def test_turkish_casing_file_create_and_read(self, tmp_path):
         for name in TURKISH_CASING:
             p = tmp_path / name
@@ -297,6 +323,7 @@ class TestGoldenFixturesFilesystem:
             assert p.exists()
             assert p.read_text(encoding="utf-8") == "casing test"
 
+    @pytest.mark.contract
     def test_nfc_nfd_file_create_and_read(self, tmp_path):
         nfc_name = unicodedata.normalize("NFC", "café.txt")
         nfd_name = unicodedata.normalize("NFD", "café.txt")
@@ -307,6 +334,7 @@ class TestGoldenFixturesFilesystem:
         assert p_nfc.read_text(encoding="utf-8") == "NFC content"
         assert p_nfd.read_text(encoding="utf-8") == "NFD content"
 
+    @pytest.mark.contract
     def test_star_file_create_and_read(self, tmp_path):
         p = tmp_path / "★ Favorites.txt"
         p.write_text("star content", encoding="utf-8")
@@ -321,6 +349,7 @@ class TestGoldenFixturesFilesystem:
 class TestEncodingBoundaryInventory:
     """Verify encoding boundary patterns exist and are cataloged."""
 
+    @pytest.mark.contract
     def test_i18n_json_is_utf8(self):
         """Both i18n JSON files should be valid UTF-8."""
         for lang in ("en", "tr"):
@@ -329,6 +358,7 @@ class TestEncodingBoundaryInventory:
             data = json.loads(content)
             assert isinstance(data, dict), f"{lang}.json did not parse as dict"
 
+    @pytest.mark.contract
     def test_config_storage_uses_utf8(self):
         """config/storage.py should use encoding='utf-8' for JSON."""
         storage = ROOT / "src" / "hpc_gui" / "config" / "storage.py"
@@ -336,6 +366,7 @@ class TestEncodingBoundaryInventory:
             content = storage.read_text(encoding="utf-8")
             assert 'encoding="utf-8"' in content or "encoding='utf-8'" in content
 
+    @pytest.mark.contract
     def test_ssh_client_decodes_output(self):
         """ssh/client.py should decode SSH output."""
         client = ROOT / "src" / "hpc_gui" / "ssh" / "client.py"
@@ -343,6 +374,7 @@ class TestEncodingBoundaryInventory:
             content = client.read_text(encoding="utf-8")
             assert "decode(" in content, "SSH client should decode bytes"
 
+    @pytest.mark.contract
     def test_files_ssh_uses_utf8(self):
         """services/files_ssh.py should use UTF-8 for SFTP text operations."""
         ssh_files = ROOT / "src" / "hpc_gui" / "services" / "files_ssh.py"
@@ -350,6 +382,7 @@ class TestEncodingBoundaryInventory:
             content = ssh_files.read_text(encoding="utf-8")
             assert "utf-8" in content.lower(), "SFTP backend should use UTF-8"
 
+    @pytest.mark.contract
     def test_shell_session_uses_utf8_decoder(self):
         """ssh/shell_session.py should use UTF-8 incremental decoder."""
         shell = ROOT / "src" / "hpc_gui" / "ssh" / "shell_session.py"
@@ -357,6 +390,7 @@ class TestEncodingBoundaryInventory:
             content = shell.read_text(encoding="utf-8")
             assert "utf-8" in content.lower(), "Shell session should use UTF-8"
 
+    @pytest.mark.contract
     def test_ensure_ascii_false_in_config(self):
         """Config JSON serialization should use ensure_ascii=False."""
         storage = ROOT / "src" / "hpc_gui" / "config" / "storage.py"
@@ -366,6 +400,7 @@ class TestEncodingBoundaryInventory:
                 "Config storage should use ensure_ascii=False for Turkish support"
             )
 
+    @pytest.mark.contract
     def test_errors_replace_in_ssh(self):
         """SSH output decoding should use errors='replace'."""
         client = ROOT / "src" / "hpc_gui" / "ssh" / "client.py"
@@ -373,6 +408,7 @@ class TestEncodingBoundaryInventory:
             content = client.read_text(encoding="utf-8")
             assert 'errors="replace"' in content or "errors='replace'" in content
 
+    @pytest.mark.contract
     def test_errors_ignore_in_process_registry(self):
         """process_registry.py should not use errors='ignore' on JSON."""
         reg = ROOT / "src" / "hpc_gui" / "services" / "process_registry.py"
@@ -391,6 +427,7 @@ class TestEncodingBoundaryInventory:
 class TestI18nCompleteness:
     """Verify translation key sets are synchronized."""
 
+    @pytest.mark.contract
     def test_en_and_tr_have_same_keys(self):
         en_path = ROOT / "src" / "hpc_gui" / "i18n" / "en.json"
         tr_path = ROOT / "src" / "hpc_gui" / "i18n" / "tr.json"
@@ -414,6 +451,7 @@ class TestI18nCompleteness:
         assert not missing_in_tr, f"Missing keys in tr.json: {missing_in_tr}"
         assert not missing_in_en, f"Missing keys in en.json: {missing_in_en}"
 
+    @pytest.mark.contract
     def test_turkish_file_no_mojibake_patterns(self):
         """Check tr.json for common mojibake patterns ( Ã , ÅŸ, Ä±, etc.)."""
         tr_path = ROOT / "src" / "hpc_gui" / "i18n" / "tr.json"
@@ -434,10 +472,12 @@ class TestI18nCompleteness:
 class TestPluginProviderUnicode:
     """Verify plugin/provider data can handle Unicode."""
 
+    @pytest.mark.contract
     def test_plugin_models_exist(self):
         models = ROOT / "src" / "hpc_gui" / "plugins" / "models.py"
         assert models.is_file(), "Plugin models not found"
 
+    @pytest.mark.audit
     def test_plugin_manifest_supports_unicode(self):
         """Plugin manifest loading should handle Unicode."""
         loader = ROOT / "src" / "hpc_gui" / "plugins" / "loader.py"
@@ -454,6 +494,7 @@ class TestPluginProviderUnicode:
 class TestRiskClassification:
     """Document and verify risk classification of findings."""
 
+    @pytest.mark.contract
     def test_p0_mojibake_documented(self):
         """The mojibake bug was P0 — now fixed at the source."""
         en_path = ROOT / "src" / "hpc_gui" / "i18n" / "en.json"
@@ -463,6 +504,7 @@ class TestRiskClassification:
         # P0: Was visible mojibake, now fixed
         assert fav == "★ Favorites", "Mojibake should be fixed"
 
+    @pytest.mark.contract
     def test_p0_ssh_decode_risks_documented(self):
         """SSH decode with errors='replace' is P0 — data loss boundary."""
         client = ROOT / "src" / "hpc_gui" / "ssh" / "client.py"

@@ -1,4 +1,5 @@
 from __future__ import annotations
+import pytest
 
 import importlib.util
 import json
@@ -23,6 +24,8 @@ def _load_probe_module():
 
 
 class PerformanceProbeTests(unittest.TestCase):
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_qt_event_loop_block_is_detected(self):
         from PySide6.QtCore import QTimer
         from PySide6.QtWidgets import QApplication
@@ -51,6 +54,7 @@ class PerformanceProbeTests(unittest.TestCase):
             # first, so the blocking tick is not necessarily delays[0].
             self.assertGreaterEqual(max(d["delay_ms"] for d in delays), 80)
 
+    @pytest.mark.unit
     def test_slow_event_loop_tick_is_recorded(self):
         module = _load_probe_module()
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -74,6 +78,7 @@ class PerformanceProbeTests(unittest.TestCase):
             self.assertEqual(events[0]["event"], "event_loop_delay")
             self.assertEqual(events[0]["delay_ms"], 250.0)
 
+    @pytest.mark.unit
     def test_fast_event_loop_tick_does_not_write_delay(self):
         module = _load_probe_module()
         with tempfile.TemporaryDirectory() as temp_dir:

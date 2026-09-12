@@ -1,3 +1,5 @@
+
+import pytest
 import os
 import sys
 import unittest
@@ -67,6 +69,7 @@ class EditorFlowTests(unittest.TestCase):
         QApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
         QApplication.processEvents()
 
+    @pytest.mark.unit
     def test_save_submit_emits_job_signal(self):
         QMessageBox.question = staticmethod(lambda *a, **k: QMessageBox.StandardButton.Yes)
         got = []
@@ -80,6 +83,7 @@ class EditorFlowTests(unittest.TestCase):
         self.assertEqual(self.slurm.calls, ["/arf/scratch/user/a.slurm"])
         self.assertEqual(got, [("12345", "/arf/scratch/user/a.slurm")])
 
+    @pytest.mark.integration
     def test_save_non_slurm_does_not_submit(self):
         QMessageBox.question = staticmethod(lambda *a, **k: QMessageBox.StandardButton.Yes)
         self.w.path_in.setText("/arf/scratch/user/readme.txt")
@@ -90,6 +94,7 @@ class EditorFlowTests(unittest.TestCase):
         self.assertEqual(self.files.data["/arf/scratch/user/readme.txt"], "hello")
         self.assertEqual(self.slurm.calls, [])
 
+    @pytest.mark.unit
     def test_save_shell_emits_run_request_after_write(self):
         got = []
         self.w.run_in_terminal_requested.connect(got.append)
@@ -103,6 +108,7 @@ class EditorFlowTests(unittest.TestCase):
         self.assertEqual(got, [path])
         self.assertEqual(self.slurm.calls, [])
 
+    @pytest.mark.unit
     def test_save_action_visibility_follows_script_type(self):
         self.w.show()
         self.w.open_file("/arf/scratch/user/run.sh", "echo ok")
@@ -119,6 +125,7 @@ class EditorFlowTests(unittest.TestCase):
         self.assertFalse(self.w.btn_save_submit.isVisible())
         self.assertFalse(self.w.btn_array.isVisible())
 
+    @pytest.mark.unit
     def test_validation_can_block_save(self):
         QMessageBox.question = staticmethod(lambda *a, **k: QMessageBox.StandardButton.No)
         self.w.path_in.setText("/arf/scratch/user/bad.slurm")
@@ -129,6 +136,7 @@ class EditorFlowTests(unittest.TestCase):
         self.assertNotIn("/arf/scratch/user/bad.slurm", self.files.data)
         self.assertEqual(self.slurm.calls, [])
 
+    @pytest.mark.unit
     def test_opening_multiple_files_creates_tabs_and_reuses_same_path(self):
         self.w.open_file("/arf/scratch/user/a.txt", "alpha")
         self.w.open_file("/arf/scratch/user/b.txt", "beta")
@@ -142,6 +150,7 @@ class EditorFlowTests(unittest.TestCase):
         self.assertEqual(self.w.path_in.text(), "/arf/scratch/user/a.txt")
         self.assertEqual(self.w.text.toPlainText(), "alpha")
 
+    @pytest.mark.unit
     def test_save_targets_active_document(self):
         self.w.open_file("/arf/scratch/user/a.txt", "alpha")
         self.w.open_file("/arf/scratch/user/b.txt", "beta")
@@ -155,6 +164,7 @@ class EditorFlowTests(unittest.TestCase):
         )
         self.assertNotIn("/arf/scratch/user/a.txt", self.files.data)
 
+    @pytest.mark.unit
     def test_document_tabs_are_closable(self):
         self.w.open_file("/arf/scratch/user/a.txt", "alpha")
         self.w.open_file("/arf/scratch/user/b.txt", "beta")
@@ -165,6 +175,7 @@ class EditorFlowTests(unittest.TestCase):
         self.assertEqual(self.w.document_tabs.count(), 1)
         self.assertEqual(self.w.path_in.text(), "/arf/scratch/user/a.txt")
 
+    @pytest.mark.unit
     def test_ctrl_s_saves_active_document(self):
         self.w.open_file("/arf/scratch/user/save.txt", "before")
         self.w.text.setPlainText("after")
@@ -183,6 +194,7 @@ class EditorFlowTests(unittest.TestCase):
             "after",
         )
 
+    @pytest.mark.unit
     def test_undo_redo_and_select_all_shortcuts_target_active_editor(self):
         self.w.open_file("/arf/scratch/user/keys.txt", "")
         self.w.show()
@@ -208,6 +220,7 @@ class EditorFlowTests(unittest.TestCase):
         )
         self.assertTrue(self.w.text.textCursor().hasSelection())
 
+    @pytest.mark.unit
     def test_tab_switch_close_and_find_shortcuts(self):
         self.w.open_file("/arf/scratch/user/a.txt", "alpha needle")
         self.w.open_file("/arf/scratch/user/b.txt", "beta")
@@ -240,6 +253,7 @@ class EditorFlowTests(unittest.TestCase):
         )
         self.assertEqual(self.w.document_tabs.count(), 1)
 
+    @pytest.mark.unit
     def test_find_replace_bar_replaces_current_and_all_matches(self):
         self.w.open_file("/arf/scratch/user/find.txt", "alpha beta alpha")
         self.w.show()
@@ -263,6 +277,7 @@ class EditorFlowTests(unittest.TestCase):
         self.assertEqual(self.w.replace_all(), 1)
         self.assertEqual(self.w.text.toPlainText(), "gamma beta delta")
 
+    @pytest.mark.integration
     def test_ctrl_o_focuses_remote_path_and_enter_opens_it(self):
         self.files.data["/arf/scratch/user/open.txt"] = "opened"
         self.w.show()
@@ -281,6 +296,7 @@ class EditorFlowTests(unittest.TestCase):
         self.assertEqual(self.w.path_in.text(), "/arf/scratch/user/open.txt")
         self.assertEqual(self.w.text.toPlainText(), "opened")
 
+    @pytest.mark.unit
     def test_editor_page_navigation_and_end_work_in_active_tab(self):
         self.w.open_file(
             "/arf/scratch/user/long.txt",

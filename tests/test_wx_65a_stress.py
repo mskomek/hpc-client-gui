@@ -74,6 +74,8 @@ class Probe:
             m["d"] = True
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_65a_integrated_stress(tmp_path: Path, monkeypatch) -> None:
     print("65A real start")
     monkeypatch.setattr(wx, "MessageBox", lambda *a, **k: wx.YES)

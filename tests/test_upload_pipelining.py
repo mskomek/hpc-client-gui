@@ -11,6 +11,7 @@ Runs against in-memory fakes only; no socket, no cluster.
 
 from __future__ import annotations
 
+import pytest
 import os
 import sys
 import tempfile
@@ -85,6 +86,7 @@ def _backend_with(channel: _RecordingChannel) -> SSHFilesBackend:
     return SSHFilesBackend(ssh)
 
 
+@pytest.mark.unit
 class OverwriteUploadTests(unittest.TestCase):
     def test_overwrite_upload_enables_pipelining_once(self) -> None:
         channel = _RecordingChannel(
@@ -111,6 +113,7 @@ class OverwriteUploadTests(unittest.TestCase):
         self.assertTrue(channel.closed)
 
 
+@pytest.mark.unit
 class ResumeUploadTests(unittest.TestCase):
     def test_resume_upload_keeps_pipelining_and_appends_from_remote_size(self) -> None:
         channel = _RecordingChannel(files={"/remote/resume.bin": b"abc"})
@@ -180,6 +183,7 @@ class ResumeUploadTests(unittest.TestCase):
         self.assertTrue(channel.closed)
 
 
+@pytest.mark.unit
 class AtomicUploadTests(unittest.TestCase):
     def test_upload_and_rename_pipelines_the_temporary_target(self) -> None:
         channel = _RecordingChannel()

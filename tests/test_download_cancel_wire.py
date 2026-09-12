@@ -7,8 +7,8 @@ the next plan still listing the folder - was never exercised together.
 
 Runs against the local disposable mock server; no real host or credential.
 """
-
 from __future__ import annotations
+import pytest
 
 import os
 import sys
@@ -126,6 +126,7 @@ class DownloadCancelWireTests(unittest.TestCase):
         self.assertGreater(seen["bytes"], CANCEL_AFTER_BYTES, "cancel never triggered")
         return controller
 
+    @pytest.mark.unit
     def test_cancel_keeps_the_partial_and_leaves_the_session_usable(self) -> None:
         plan, planner = self._plan()
         downloads = [op for op in plan if op.op == "download"]
@@ -177,6 +178,7 @@ class DownloadCancelWireTests(unittest.TestCase):
         self.assertEqual(finished.stat().st_size, BIG_SIZE)
         self.assertFalse((self.target / "DP_41" / f"{BIG_NAME}.part").exists())
 
+    @pytest.mark.unit
     def test_resuming_after_a_cancel_completes_the_file(self) -> None:
         plan, _ = self._plan()
         self._run_until_cancelled(plan)
@@ -187,6 +189,7 @@ class DownloadCancelWireTests(unittest.TestCase):
         self._run_plan_to_completion(retry)
         self._assert_big_file_complete()
 
+    @pytest.mark.unit
     def test_overwriting_a_partial_discards_it_before_downloading(self) -> None:
         plan, _ = self._plan()
         self._run_until_cancelled(plan)
@@ -202,6 +205,7 @@ class DownloadCancelWireTests(unittest.TestCase):
         self._run_plan_to_completion(retry)
         self._assert_big_file_complete()
 
+    @pytest.mark.unit
     def test_skipping_a_partial_leaves_it_alone(self) -> None:
         plan, _ = self._plan()
         self._run_until_cancelled(plan)

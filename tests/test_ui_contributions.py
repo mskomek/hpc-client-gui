@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import pytest
 import json
 import pathlib
 
@@ -82,6 +83,7 @@ VALID_PROFILE_HELPER = {
 }
 
 
+@pytest.mark.contract
 def test_plugin_without_contribution_absent():
     manifest = make_manifest(ui=None)
     # validate passes
@@ -92,6 +94,7 @@ def test_plugin_without_contribution_absent():
     assert contrib is None
 
 
+@pytest.mark.contract
 def test_plugin_with_contribution_present():
     ui = {"plugins_menu": {"label": "Tools", "items": [{"kind": "action", "id": "lint-current", "label": "Lint", "action": "editor.lint_current"}]}}
     manifest = make_manifest(ui=ui)
@@ -104,6 +107,7 @@ def test_plugin_with_contribution_present():
     assert contrib.items[0].id == "lint-current"
 
 
+@pytest.mark.integration
 def test_disabled_absent(tmp_path):
     from hpc_gui.plugins.storage import write_disabled_ids
     _install_helper(tmp_path, VALID_MANIFEST_HELPER, VALID_PROFILE_HELPER)
@@ -112,6 +116,7 @@ def test_disabled_absent(tmp_path):
     assert result.plugins == []
 
 
+@pytest.mark.integration
 def test_incompatible_absent(tmp_path):
     manifest = {**VALID_MANIFEST_HELPER, "requires_app": ">=99.0.0"}
     _install_helper(tmp_path, manifest, VALID_PROFILE_HELPER)
@@ -120,6 +125,7 @@ def test_incompatible_absent(tmp_path):
     assert any("incompatible" in p.reason for p in result.problems)
 
 
+@pytest.mark.unit
 def test_deterministic_ordering():
     from hpc_gui.plugins.ui_contributions import collect_plugin_menu_contributions
     def mk(pid):
@@ -134,6 +140,7 @@ def test_deterministic_ordering():
     assert [c.plugin_id for c in contribs] == ["org.a.plugin", "org.b.plugin"]
 
 
+@pytest.mark.contract
 def test_one_submenu_level():
     ui = {"plugins_menu": {"label": "Root", "items": [
         {"kind": "submenu", "id": "sub", "label": "Sub", "items": [
@@ -149,6 +156,7 @@ def test_one_submenu_level():
     assert len(contrib.items[0].items) == 1
 
 
+@pytest.mark.contract
 def test_too_deep_rejected():
     # Submenu inside submenu should be rejected
     ui = {"plugins_menu": {"label": "Root", "items": [
@@ -167,6 +175,7 @@ def test_too_deep_rejected():
     assert len(contrib.items[0].items) == 0  # deep was rejected, inner empty -> maybe normalized to empty
 
 
+@pytest.mark.contract
 def test_duplicate_ids_rejected():
     ui = {"plugins_menu": {"label": "Root", "items": [
         {"kind": "action", "id": "dup", "label": "A", "action": "editor.lint_current"},
@@ -180,6 +189,7 @@ def test_duplicate_ids_rejected():
     assert contrib.items[0].label == "A"
 
 
+@pytest.mark.contract
 def test_separator_normalization():
     from hpc_gui.plugins.ui_contributions import _normalize_separators, PluginMenuSeparator, PluginMenuAction
     sep = PluginMenuSeparator(id="s1")
@@ -193,6 +203,7 @@ def test_separator_normalization():
     assert len(norm) == 3  # act, sep, act
 
 
+@pytest.mark.contract
 def test_localization_fallback():
     assert get_display_label("Default", {"tr": "Turkish"}, "tr") == "Turkish"
     assert get_display_label("Default", {"tr": "Turkish"}, "en") == "Default"
@@ -205,6 +216,7 @@ def test_localization_fallback():
     assert get_display_label("Tool", labels, ctx_tr.language) == "Araç"
 
 
+@pytest.mark.contract
 def test_unknown_action_safe():
     mf = PluginManifest(schema_version=1, plugin_api=1, id="org.test", name="Test", version="1.0.0", publisher="x", license="MIT", description="d", requires_app=">=1.5.8", capabilities=("lint-rules",), entrypoints={}, files=(PluginFile(path="a.json", sha256="0"*64, size=1, role="documentation"),))
     plug = InstalledPlugin(manifest=mf, directory=pathlib.Path("/tmp"))
@@ -213,6 +225,7 @@ def test_unknown_action_safe():
     assert not dispatch_plugin_menu_action("unknown.action", plug)
 
 
+@pytest.mark.contract
 def test_unknown_condition_safe():
     ctx = MenuContext(connected=True)
     # Unknown condition key should fail safely (return False) and log, not crash
@@ -225,6 +238,7 @@ def test_unknown_condition_safe():
     assert result2 is False
 
 
+@pytest.mark.contract
 def test_condition_disable_hide_behavior():
     ctx_true = MenuContext(connected=True)
     ctx_false = MenuContext(connected=False)
@@ -234,6 +248,7 @@ def test_condition_disable_hide_behavior():
     # Unavailable handling is at rendering, not evaluation; evaluate returns False for unsatisfied
 
 
+@pytest.mark.contract
 def test_capability_condition():
     ctx = MenuContext()
     caps = frozenset(["lint-rules"])
@@ -243,6 +258,7 @@ def test_capability_condition():
     assert evaluate_when({"capability_available": "lint-rules"}, ctx, frozenset()) is False
 
 
+@pytest.mark.contract
 def test_security_no_callable():
     # Manifest must not supply Python import path – dispatcher allowlist must block
     mf = PluginManifest(schema_version=1, plugin_api=1, id="org.test", name="Test", version="1.0.0", publisher="x", license="MIT", description="d", requires_app=">=1.5.8", capabilities=("lint-rules",), entrypoints={}, files=(PluginFile(path="a.json", sha256="0"*64, size=1, role="documentation"),))
@@ -251,6 +267,7 @@ def test_security_no_callable():
     assert not ok
 
 
+@pytest.mark.contract
 def test_host_action_allowlist_enforced():
     mf = PluginManifest(schema_version=1, plugin_api=1, id="org.test", name="Test", version="1.0.0", publisher="x", license="MIT", description="d", requires_app=">=1.5.8", capabilities=("lint-rules",), entrypoints={}, files=(PluginFile(path="a.json", sha256="0"*64, size=1, role="documentation"),))
     plug = InstalledPlugin(manifest=mf, directory=pathlib.Path("/tmp"))
@@ -264,6 +281,7 @@ def test_host_action_allowlist_enforced():
     assert not ok2
 
 
+@pytest.mark.contract
 def test_owning_plugin_identity_cannot_be_spoofed():
     import inspect
     sig = inspect.signature(dispatch_plugin_menu_action)
@@ -273,12 +291,14 @@ def test_owning_plugin_identity_cannot_be_spoofed():
     assert not any(p.name == "plugin_id" for p in params)
 
 
+@pytest.mark.integration
 def test_lifecycle_install_without_restart(tmp_path):
     _install_helper(tmp_path, VALID_MANIFEST_HELPER, VALID_PROFILE_HELPER)
     result = load_installed_plugins(root=tmp_path)
     assert len(result.plugins) == 1
 
 
+@pytest.mark.integration
 def test_version_switch_rebuilds(tmp_path):
     _install_helper(tmp_path, VALID_MANIFEST_HELPER, VALID_PROFILE_HELPER)
     manifest2 = {**VALID_MANIFEST_HELPER, "version": "2.0.0"}
@@ -289,6 +309,7 @@ def test_version_switch_rebuilds(tmp_path):
     assert any(p.manifest.version == "2.0.0" for p in result.plugins)
 
 
+@pytest.mark.contract
 def test_max_label_length_enforced():
     ui = {"plugins_menu": {"label": "X"*65, "items": [{"kind": "action", "id": "a", "label": "A", "action": "editor.lint_current"}]}}
     errors = validate_ui_contributions_dict(ui)
@@ -298,6 +319,7 @@ def test_max_label_length_enforced():
     assert errors2
 
 
+@pytest.mark.contract
 def test_max_nesting_enforced():
     # Real max-depth: Plugins -> plugin root -> submenu -> action is allowed, deeper is rejected
     ui_ok = {"plugins_menu": {"label": "Root", "items": [

@@ -30,6 +30,7 @@ def config(tmp_path: Path, strategy: str, package: Path, target: Path) -> Helper
     return HelperConfig(strategy, package, target, 1, "2.0.0", "x86_64")
 
 
+@pytest.mark.unit
 def test_progress_guard_never_decreases():
     values = []
     guard = ProgressGuard(lambda value, _status: values.append(value))
@@ -39,6 +40,7 @@ def test_progress_guard_never_decreases():
     assert values == [40, 40, 100]
 
 
+@pytest.mark.release
 def test_appimage_copies_bytes_preserves_executable_and_cleans_backup(monkeypatch, tmp_path: Path):
     target = tmp_path / "client.AppImage"
     package = tmp_path / "new.AppImage"
@@ -57,6 +59,7 @@ def test_appimage_copies_bytes_preserves_executable_and_cleans_backup(monkeypatc
     assert values == sorted(values) and values[-1] == 100
 
 
+@pytest.mark.release
 def test_appimage_rolls_back_when_new_process_fails(monkeypatch, tmp_path: Path):
     target = tmp_path / "client.AppImage"
     package = tmp_path / "new.AppImage"
@@ -75,6 +78,7 @@ def test_appimage_rolls_back_when_new_process_fails(monkeypatch, tmp_path: Path)
     assert len(launches) == 2
 
 
+@pytest.mark.release
 def test_deb_delegates_to_pkexec_apt_verifies_and_restarts(tmp_path: Path):
     package = tmp_path / "update.deb"
     target = tmp_path / "hpc-client-gui"
@@ -100,6 +104,7 @@ def test_deb_delegates_to_pkexec_apt_verifies_and_restarts(tmp_path: Path):
     assert launches == [[str(target)]]
 
 
+@pytest.mark.release
 def test_deb_stops_when_packagekit_local_install_is_unavailable(tmp_path: Path):
     package = tmp_path / "update.deb"
     package.write_bytes(b"deb")
@@ -114,6 +119,7 @@ def test_deb_stops_when_packagekit_local_install_is_unavailable(tmp_path: Path):
     assert commands == [["pkcon", "install-local"]]
 
 
+@pytest.mark.release
 def test_deb_authentication_failure_is_not_repaired_manually(tmp_path: Path):
     package = tmp_path / "update.deb"
     package.write_bytes(b"deb")
@@ -129,6 +135,7 @@ def test_deb_authentication_failure_is_not_repaired_manually(tmp_path: Path):
     assert launches == [[str(tmp_path / "app")]]
 
 
+@pytest.mark.release
 def test_flatpak_uses_flatpak_for_bundle_and_restart(monkeypatch, tmp_path: Path):
     package = tmp_path / "update.flatpak"
     package.write_bytes(b"bundle")
@@ -147,6 +154,7 @@ def test_flatpak_uses_flatpak_for_bundle_and_restart(monkeypatch, tmp_path: Path
     assert flatpak_command(cfg, False)[0] == "flatpak"
 
 
+@pytest.mark.release
 def test_flatpak_system_scope_remote_update_uses_manager_only(tmp_path: Path):
     cfg = HelperConfig("linux-flatpak", tmp_path / "missing.flatpak", tmp_path / "ignored", 1, "2.0", "x86_64", "system")
     assert flatpak_command(cfg, False) == [
@@ -154,6 +162,7 @@ def test_flatpak_system_scope_remote_update_uses_manager_only(tmp_path: Path):
     ]
 
 
+@pytest.mark.release
 def test_macos_validates_replaces_rolls_back_and_detaches(monkeypatch, tmp_path: Path):
     target = tmp_path / "HPC Client GUI.app"
     source = tmp_path / "mounted" / "HPC Client GUI.app"
@@ -180,6 +189,7 @@ def test_macos_validates_replaces_rolls_back_and_detaches(monkeypatch, tmp_path:
     assert not target.with_name(target.name + ".backup").exists()
 
 
+@pytest.mark.release
 def test_macos_rolls_back_after_failed_launch(monkeypatch, tmp_path: Path):
     target = tmp_path / "HPC Client GUI.app"
     source = tmp_path / "mounted" / "HPC Client GUI.app"

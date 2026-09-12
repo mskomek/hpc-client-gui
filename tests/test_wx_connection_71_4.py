@@ -107,6 +107,8 @@ def _mock_master_dialog_widgets(master_password="master123", remember=False):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_master_password_remember_false_no_settings_mutation(monkeypatch):
     """Master password prompt → Remember=false → settings unchanged,
     protect_secret not called, update_settings not called for master persistence.
@@ -189,6 +191,8 @@ def test_master_password_remember_false_no_settings_mutation(monkeypatch):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_master_password_remember_true_persists_protected(monkeypatch):
     """Master password prompt → Remember=true → protect_secret called,
     update_settings called with dpapi token, plaintext never stored.
@@ -255,6 +259,8 @@ def test_master_password_remember_true_persists_protected(monkeypatch):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_cluster_self_test_remember_false_no_settings_mutation(monkeypatch):
     """Test Cluster → master dialog → Remember=false → settings unchanged,
     profiles unchanged, no secret-store write.
@@ -336,6 +342,8 @@ def test_cluster_self_test_remember_false_no_settings_mutation(monkeypatch):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_cluster_self_test_cancel_no_mutation(monkeypatch):
     """Test Cluster → master dialog Cancel → no self-test, no settings change."""
     from hpc_gui.wx_connection_dialog import WxConnectionDialog
@@ -407,6 +415,8 @@ def test_cluster_self_test_cancel_no_mutation(monkeypatch):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_connect_selected_no_selection_returns_false(monkeypatch):
     """connect_selected() returns False when no profile is selected."""
     tmp = _isolated_storage(monkeypatch)
@@ -435,6 +445,8 @@ def test_connect_selected_no_selection_returns_false(monkeypatch):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_connect_selected_worker_starts_returns_true(monkeypatch):
     """connect_selected() returns True when worker is successfully launched."""
     tmp = _isolated_storage(monkeypatch)
@@ -477,6 +489,8 @@ def test_connect_selected_worker_starts_returns_true(monkeypatch):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_save_and_connect_master_cancel_returns_false(monkeypatch):
     """Save & Connect → profile saved → master prompt → Cancel →
     on_save_and_connect returns False, no SSH.
@@ -559,6 +573,8 @@ def test_save_and_connect_master_cancel_returns_false(monkeypatch):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_save_and_connect_wrong_master_returns_false(monkeypatch):
     """Save & Connect → profile saved → master prompt → wrong master →
     on_save_and_connect returns False, no SSH.

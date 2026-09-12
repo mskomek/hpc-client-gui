@@ -7,6 +7,7 @@ import json
 import re
 import subprocess
 import sys
+import tomllib
 from pathlib import Path
 from typing import Any
 
@@ -254,6 +255,38 @@ def ratchet_exit_code(result: dict[str, Any]) -> int:
     return 0 if result["passed"] else 1
 
 
+def registered_markers() -> set[str]:
+    """Read pytest's declared custom markers from the repository config."""
+    config = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    entries = config["tool"]["pytest"]["ini_options"]["markers"]
+    return {entry.partition(":")[0].strip() for entry in entries}
+
+
+def build_enforce_report(
+    report: dict[str, Any], registered: set[str]
+) -> dict[str, Any]:
+    known = set(PRIMARY_CATEGORIES) | set(QUALIFIERS)
+    unknown_registered = sorted(registered - known)
+    missing_registered = sorted(known - registered)
+    passed = not (
+        report["zero_primary"]["count"]
+        or report["multi_primary"]["count"]
+        or unknown_registered
+        or missing_registered
+    )
+    return {
+        "schema_version": 1,
+        "mode": "enforce",
+        "repository_sha": report["repository_sha"],
+        "passed": passed,
+        "zero_primary": report["zero_primary"],
+        "multi_primary": report["multi_primary"],
+        "unknown_registered_markers": unknown_registered,
+        "missing_registered_markers": missing_registered,
+        "warnings": report["warnings"],
+    }
+
+
 def _print_report(report: dict[str, Any], json_out: str | None) -> None:
     print(f"Total collected: {report['collection']['total']}")
     for category, count in report["primary_counts"].items():
@@ -294,15 +327,29 @@ def _print_ratchet(result: dict[str, Any], json_out: str | None) -> None:
         print(f"Complete result: {json_out}")
 
 
+def _print_enforce(result: dict[str, Any], json_out: str | None) -> None:
+    print(f"Taxonomy enforce: {'PASS' if result['passed'] else 'FAIL'}")
+    print(f"Zero-primary: {result['zero_primary']['count']}")
+    print(f"Multi-primary: {result['multi_primary']['count']}")
+    print(f"Unknown registered markers: {result['unknown_registered_markers']}")
+    print(f"Missing registered markers: {result['missing_registered_markers']}")
+    for name, entries in result["warnings"].items():
+        print(f"Warning {name}: {len(entries)}")
+    if json_out:
+        print(f"Complete result: {json_out}")
+
+
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Report and ratchet actual pytest taxonomy markers.")
-    parser.add_argument("--mode", required=True, choices=("report", "ratchet"))
+    parser = argparse.ArgumentParser(description="Report, ratchet, or enforce actual pytest taxonomy markers.")
+    parser.add_argument("--mode", required=True, choices=("report", "ratchet", "enforce"))
     parser.add_argument("--json-out", help="write the complete report to this path")
     parser.add_argument("--baseline", help="exact taxonomy baseline required for ratchet mode")
     args = parser.parse_args(argv)
     if args.mode == "ratchet" and not args.baseline:
         parser.error("--baseline is required for ratchet mode")
     if args.mode == "report" and args.baseline:
+        parser.error("--baseline is only valid for ratchet mode")
+    if args.mode == "enforce" and args.baseline:
         parser.error("--baseline is only valid for ratchet mode")
     try:
         records = collect_records()
@@ -320,10 +367,14 @@ def main(argv: list[str] | None = None) -> int:
             result = report
             _print_report(report, args.json_out)
             exit_code = report_exit_code(report)
-        else:
+        elif args.mode == "ratchet":
             result = build_ratchet_report(report, load_ratchet_baseline(args.baseline))
             _print_ratchet(result, args.json_out)
             exit_code = ratchet_exit_code(result)
+        else:
+            result = build_enforce_report(report, registered_markers())
+            _print_enforce(result, args.json_out)
+            exit_code = 0 if result["passed"] else 1
         if args.json_out:
             write_json_report(result, args.json_out)
         return exit_code

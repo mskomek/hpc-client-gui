@@ -1,4 +1,5 @@
 from __future__ import annotations
+import pytest
 
 import subprocess
 import sys
@@ -11,6 +12,7 @@ from hpc_gui.cli.main import _normalize_alias_argv, _parser, _run_script, _run_s
 from hpc_gui.cli.session import CLIConnectionError, CLISession, build_ssh_conn_info
 
 
+@pytest.mark.runtime_smoke
 def test_cli_import_never_pulls_qt_or_webengine() -> None:
     """The CLI must work without Qt/PySide6 installed (headless servers)."""
     import os
@@ -35,17 +37,20 @@ def test_cli_import_never_pulls_qt_or_webengine() -> None:
     assert result.returncode == 0, result.stdout + result.stderr
 
 
+@pytest.mark.runtime_smoke
 def test_console_entry_parser_exposes_masked_password_prompt() -> None:
     args = _parser().parse_args(["--password-prompt", "version"])
     assert args.password_prompt is True
 
 
+@pytest.mark.runtime_smoke
 def test_console_entry_defaults_to_interactive_prompt() -> None:
     with patch("hpc_gui.cli.main._run_interactive", return_value=0) as interactive:
         assert run_cli([], default_group="interactive") == 0
     interactive.assert_called_once()
 
 
+@pytest.mark.runtime_smoke
 def test_password_prompt_rejects_non_interactive_stdin() -> None:
     args = _parser().parse_args(["--host", "example", "--password-prompt", "version"])
     with patch.object(sys, "stdin", StringIO("")), patch.object(sys, "stderr", StringIO()):
@@ -57,6 +62,7 @@ def test_password_prompt_rejects_non_interactive_stdin() -> None:
             raise AssertionError("non-interactive password prompt was accepted")
 
 
+@pytest.mark.runtime_smoke
 def test_root_aliases_normalize_to_canonical_commands() -> None:
     assert _normalize_alias_argv(["--profile", "p", "squeue"]) == [
         "--profile", "p", "jobs", "list"
@@ -66,6 +72,7 @@ def test_root_aliases_normalize_to_canonical_commands() -> None:
     ]
 
 
+@pytest.mark.runtime_smoke
 def test_ftp_transport_selects_existing_backend_without_ssh() -> None:
     args = _parser().parse_args(["--transport", "ftp", "files", "ls", "/"])
     info = SimpleNamespace(host="ftp.example", port=22, username="user", password="pw", key_path="", timeout=5)
@@ -77,6 +84,7 @@ def test_ftp_transport_selects_existing_backend_without_ssh() -> None:
     backend.assert_called_once_with("ftp.example", port=21, username="user", password="pw", timeout=5.0)
 
 
+@pytest.mark.runtime_smoke
 def test_remote_commands_quote_arguments_and_preserve_result(capsys) -> None:
     args = _parser().parse_args(["sh", "--", "printf", "%s", "a b"])
     fake_ssh = SimpleNamespace(run=Mock(return_value=(7, "out", "err")))
@@ -88,6 +96,7 @@ def test_remote_commands_quote_arguments_and_preserve_result(capsys) -> None:
     assert capsys.readouterr().out == "out\n"
 
 
+@pytest.mark.runtime_smoke
 def test_remote_script_uses_bash_and_rejects_control_characters(capsys) -> None:
     args = _parser().parse_args(["run", "/tmp/run.sh", "a b"])
     fake_ssh = SimpleNamespace(run=Mock(return_value=(0, "ok", "")))

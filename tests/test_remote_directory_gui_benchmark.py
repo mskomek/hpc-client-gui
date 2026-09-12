@@ -1,4 +1,5 @@
 from __future__ import annotations
+import pytest
 
 import os
 import sys
@@ -18,6 +19,8 @@ import benchmark_remote_directory_gui  # noqa: E402
 
 
 class RemoteDirectoryGuiBenchmarkGate(unittest.TestCase):
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_small_offscreen_listing_is_exact_and_terminates(self) -> None:
         app = QApplication.instance() or QApplication([])
         started = time.perf_counter()

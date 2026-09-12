@@ -5,6 +5,7 @@ import pytest
 from hpc_gui.services.shortcut_preferences import SCHEMA_VERSION, ShortcutPreferences, migrate_keymap_settings
 
 
+@pytest.mark.unit
 def test_remap_conflict_reset_and_versioned_persistence():
     prefs = ShortcutPreferences("windows")
     prefs.set_binding("FILE-REFRESH", "Ctrl+R")
@@ -19,6 +20,7 @@ def test_remap_conflict_reset_and_versioned_persistence():
     update.assert_called_once()
 
 
+@pytest.mark.contract
 def test_legacy_migration_and_context_scoped_duplicates():
     prefs = ShortcutPreferences("macos", {"shortcut_preferences": {"FILE-FIND": ["Cmd+K"]}})
     assert any(item.command_id == "FILE-FIND" and item.binding == "Cmd+K" for item in prefs.bindings())
@@ -28,6 +30,7 @@ def test_legacy_migration_and_context_scoped_duplicates():
     assert any(item.command_id == "TERM-COPY" and item.binding == "Cmd+C" for item in prefs.bindings())
 
 
+@pytest.mark.contract
 def test_keymap_migration_is_versioned_and_preserves_bindings():
     old = {"shortcut_preferences": {"FILE-FIND": ["Ctrl+K"]}}
     migrated = migrate_keymap_settings(old, "legacy")
@@ -36,6 +39,7 @@ def test_keymap_migration_is_versioned_and_preserves_bindings():
     assert ShortcutPreferences("macos", migrated).serialize()["keymap_mode"] == "legacy"
 
 
+@pytest.mark.contract
 def test_keymap_migration_rejects_unknown_choice():
     with pytest.raises(ValueError, match="unsupported keymap mode"):
         migrate_keymap_settings({}, "other")

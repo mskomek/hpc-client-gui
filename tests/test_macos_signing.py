@@ -13,6 +13,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 import sign_macos_release as signing
 
 
+@pytest.mark.release
 def test_signing_requires_darwin_before_secret_access(monkeypatch, tmp_path):
     monkeypatch.setattr(signing.os.sys, "platform", "win32")
     with mock.patch.object(signing, "_required") as required:

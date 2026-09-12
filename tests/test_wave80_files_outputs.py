@@ -7,6 +7,7 @@ from hpc_gui.core.i18n import load_language, t, set_language
 
 # === i18n Integrity Test (spec section 26) ===
 
+@pytest.mark.contract
 class TestI18nIntegrity:
     """Verify all visible i18n keys exist in both EN and TR (spec section 26)."""
 
@@ -97,6 +98,8 @@ class TestI18nIntegrity:
 # === Outputs behavioral tests (spec sections 4-13) ===
 
 class TestOutputsBehavior:
+    @pytest.mark.wx
+    @pytest.mark.gui
     def test_outputs_tab_exists(self):
         """Outputs tab is present in the notebook."""
         import wx
@@ -123,6 +126,7 @@ class TestOutputsBehavior:
             for _ in range(3):
                 wx.Yield()
 
+    @pytest.mark.contract
     def test_search_label_says_search_not_filter(self):
         """Outputs search uses 'Search' wording, not 'Filter'."""
         load_language("en")
@@ -131,6 +135,7 @@ class TestOutputsBehavior:
         load_language("tr")
         assert "Ara" in t("jobs_outputs.search")
 
+    @pytest.mark.contract
     def test_status_keys_localized(self):
         load_language("en")
         assert t("jobs_outputs.status_following") == "Following"
@@ -142,6 +147,7 @@ class TestOutputsBehavior:
         load_language("tr")
         assert t("jobs_outputs.status_following") != "[jobs_outputs.status_following]"
 
+    @pytest.mark.contract
     def test_standard_output_localized(self):
         load_language("en")
         assert t("jobs_outputs.standard_output") == "Standard Output"
@@ -152,6 +158,7 @@ class TestOutputsBehavior:
         se = t("jobs_outputs.standard_error")
         assert "Hata" in se or "Standart" in se
 
+    @pytest.mark.contract
     def test_empty_state_message(self):
         load_language("en")
         msg = t("jobs_outputs.no_channels")
@@ -160,6 +167,7 @@ class TestOutputsBehavior:
         msg = t("jobs_outputs.no_channels")
         assert "Takip" in msg or "takip" in msg
 
+    @pytest.mark.contract
     def test_no_selected_job_message(self):
         load_language("en")
         assert "No job selected" in t("jobs_outputs.no_selected_job")
@@ -170,6 +178,7 @@ class TestOutputsBehavior:
 # === Files behavioral tests (spec sections 14-21) ===
 
 class TestFilesBehavior:
+    @pytest.mark.contract
     def test_files_toolbar_controls_exist(self):
         """Files toolbar has expected controls."""
         load_language("en")
@@ -180,6 +189,7 @@ class TestFilesBehavior:
         assert t("dirs.new_folder") == "New Folder"
         assert t("dirs.new_file") == "New File"
 
+    @pytest.mark.contract
     def test_filter_labels_localized(self):
         load_language("en")
         assert t("dirs.tab_all") == "All"
@@ -193,12 +203,14 @@ class TestFilesBehavior:
         assert t("dirs.tab_all") == "Tümü"
         assert t("dirs.tab_shell") == "SH"
 
+    @pytest.mark.contract
     def test_follow_wording_localized(self):
         load_language("en")
         assert "Follow" in t("dirs.follow_track") or "Track" in t("dirs.follow_track")
         load_language("tr")
         assert "Takip" in t("dirs.follow_track") or "takip" in t("dirs.follow_track")
 
+    @pytest.mark.wx
     @pytest.mark.gui
     def test_files_toolbar_visible_labels_localized(self):
         """The real Files toolbar updates its visible labels on language change."""
@@ -236,6 +248,7 @@ class TestFilesBehavior:
             frame.Destroy()
             app.ProcessPendingEvents()
 
+    @pytest.mark.contract
     def test_favorites_localized(self):
         load_language("en")
         assert "Favorites" in t("dirs.favorites")
@@ -243,6 +256,7 @@ class TestFilesBehavior:
         val = t("dirs.favorites")
         assert "Favori" in val or "favori" in val
 
+    @pytest.mark.contract
     def test_runtime_language_switch_updates_files(self):
         load_language("en")
         assert t("dirs.back") == "Back"
@@ -255,6 +269,8 @@ class TestFilesBehavior:
 # === Regression: Wave 78/79 still work ===
 
 class TestRegression:
+    @pytest.mark.wx
+    @pytest.mark.gui
     def test_wave78_tabs_still_work(self):
         import wx
         from hpc_gui.wx_jobs import show_jobs
@@ -281,6 +297,7 @@ class TestRegression:
             for _ in range(3):
                 wx.Yield()
 
+    @pytest.mark.contract
     def test_wave79_parsers_still_work(self):
         from hpc_gui.services.parsers import _parse_scontrol_v1, _parse_sacct_pipe_v1, _parse_truba_lssrv_v1
         d = _parse_scontrol_v1("JobId=1 JobState=RUNNING", None)
@@ -302,6 +319,7 @@ class TestRegression:
 class TestWave80Audit:
     """Audit every Wave 80 spec checkbox."""
 
+    @pytest.mark.contract
     def test_details_header_localized(self):
         """Section 3: DETAILS header uses i18n key."""
         load_language("en")
@@ -310,6 +328,7 @@ class TestWave80Audit:
         val = t("jobs.details_header")
         assert val != "[jobs.details_header]"
 
+    @pytest.mark.contract
     def test_outputs_search_uses_search_not_filter(self):
         """Section 7: Search uses Search/Ara wording."""
         load_language("en")
@@ -317,6 +336,7 @@ class TestWave80Audit:
         load_language("tr")
         assert t("jobs_outputs.search") == "Ara"
 
+    @pytest.mark.contract
     def test_outputs_find_next_localized(self):
         """Section 7: Find Next localized."""
         load_language("en")
@@ -324,24 +344,28 @@ class TestWave80Audit:
         load_language("tr")
         assert t("jobs_outputs.find_next") == "Sonrakini Bul"
 
+    @pytest.mark.contract
     def test_outputs_jump_to_latest_localized(self):
         load_language("en")
         assert t("jobs_outputs.jump_to_latest") == "Jump to Latest"
         load_language("tr")
         assert t("jobs_outputs.jump_to_latest") == "En Sona Git"
 
+    @pytest.mark.contract
     def test_outputs_open_in_window_localized(self):
         load_language("en")
         assert t("jobs_outputs.open_in_window") == "Open in Window"
         load_language("tr")
         assert t("jobs_outputs.open_in_window") == "Pencerede Aç"
 
+    @pytest.mark.contract
     def test_outputs_show_in_files_localized(self):
         load_language("en")
         assert t("jobs_outputs.show_in_files") == "Show in Files"
         load_language("tr")
         assert t("jobs_outputs.show_in_files") == "Dosyalarda Göster"
 
+    @pytest.mark.contract
     def test_outputs_path_label_localized(self):
         """Section 5: Path label exists."""
         load_language("en")
@@ -349,6 +373,7 @@ class TestWave80Audit:
         load_language("tr")
         assert t("jobs_outputs.path") == "Yol"
 
+    @pytest.mark.contract
     def test_outputs_status_label_localized(self):
         """Section 5: Status label exists."""
         load_language("en")
@@ -356,6 +381,7 @@ class TestWave80Audit:
         load_language("tr")
         assert t("jobs_outputs.status") == "Durum"
 
+    @pytest.mark.contract
     def test_outputs_follower_status_localized(self):
         """Section 6: All follower status values localized."""
         load_language("en")
@@ -369,6 +395,7 @@ class TestWave80Audit:
         assert t("jobs_outputs.status_following") != "[jobs_outputs.status_following]"
         assert t("jobs_outputs.status_paused") != "[jobs_outputs.status_paused]"
 
+    @pytest.mark.contract
     def test_outputs_combined_output_localized(self):
         load_language("en")
         assert "Standard Output + Error" == t("jobs_outputs.combined_output")
@@ -376,6 +403,7 @@ class TestWave80Audit:
         val = t("jobs_outputs.combined_output")
         assert "Çıktı" in val or "Hata" in val
 
+    @pytest.mark.contract
     def test_outputs_refresh_all_localized(self):
         """Section 4: Global controls disambiguated."""
         load_language("en")
@@ -383,24 +411,28 @@ class TestWave80Audit:
         load_language("tr")
         assert t("jobs_outputs.refresh_all") == "Tümünü Yenile"
 
+    @pytest.mark.contract
     def test_outputs_pause_all_localized(self):
         load_language("en")
         assert t("jobs_outputs.pause_all") == "Pause All"
         load_language("tr")
         assert t("jobs_outputs.pause_all") == "Tümünü Duraklat"
 
+    @pytest.mark.contract
     def test_outputs_resume_all_localized(self):
         load_language("en")
         assert t("jobs_outputs.resume_all") == "Resume All"
         load_language("tr")
         assert t("jobs_outputs.resume_all") == "Tümüne Devam Et"
 
+    @pytest.mark.contract
     def test_outputs_auto_scroll_all_localized(self):
         load_language("en")
         assert t("jobs_outputs.auto_scroll_all") == "Auto-scroll All"
         load_language("tr")
         assert t("jobs_outputs.auto_scroll_all") == "Tümünde Otomatik Kaydır"
 
+    @pytest.mark.contract
     def test_outputs_empty_state_polished(self):
         """Section 11: Empty state uses proper copy."""
         load_language("en")
@@ -412,6 +444,7 @@ class TestWave80Audit:
         assert "Takip" in msg or "takip" in msg
         assert "Dosyalar" in msg or "dosyalar" in msg
 
+    @pytest.mark.contract
     def test_outputs_no_selected_job_polished(self):
         """Section 12: No selected job state uses proper copy."""
         load_language("en")
@@ -420,6 +453,7 @@ class TestWave80Audit:
         val = t("jobs_outputs.no_selected_job")
         assert val != "[jobs_outputs.no_selected_job]"
 
+    @pytest.mark.contract
     def test_outputs_no_selected_job_hint_polished(self):
         load_language("en")
         assert "Select a job" in t("jobs_outputs.no_selected_job_hint")
@@ -427,6 +461,7 @@ class TestWave80Audit:
         val = t("jobs_outputs.no_selected_job_hint")
         assert val != "[jobs_outputs.no_selected_job_hint]"
 
+    @pytest.mark.contract
     def test_files_back_forward_up_localized(self):
         """Section 14: Navigation controls localized."""
         load_language("en")
@@ -436,6 +471,7 @@ class TestWave80Audit:
         load_language("tr")
         assert t("dirs.back") == "Geri"
 
+    @pytest.mark.contract
     def test_files_new_folder_file_localized(self):
         """Section 14: New menu items localized."""
         load_language("en")
@@ -444,6 +480,7 @@ class TestWave80Audit:
         load_language("tr")
         assert t("dirs.new_folder") != "[dirs.new_folder]"
 
+    @pytest.mark.contract
     def test_files_filter_architecture_preserved(self):
         """Section 15: Filter labels preserved."""
         load_language("en")
@@ -455,6 +492,7 @@ class TestWave80Audit:
         assert t("dirs.tab_shell") == "SH"
         assert t("dirs.tab_other") == "Other"
 
+    @pytest.mark.contract
     def test_files_follow_wording_localized(self):
         """Section 16: Follow/Track wording localized."""
         load_language("en")
@@ -464,6 +502,7 @@ class TestWave80Audit:
         val = t("dirs.follow_track")
         assert "Takip" in val
 
+    @pytest.mark.contract
     def test_files_follow_status_indicator_key(self):
         """Section 18: Follow-status affordance key exists."""
         load_language("en")
@@ -472,6 +511,8 @@ class TestWave80Audit:
         load_language("tr")
         assert t("dirs.following") == "Takip ediliyor"
 
+    @pytest.mark.wx
+    @pytest.mark.gui
     def test_files_follow_menu_has_following_check(self):
         """Section 18: following a file creates a visible live channel."""
         import wx
@@ -517,6 +558,8 @@ class TestWave80Audit:
             for _ in range(3):
                 wx.Yield()
 
+    @pytest.mark.wx
+    @pytest.mark.gui
     def test_runtime_language_switch_updates_outputs(self):
         """Visible output-channel tabs follow the selected runtime language."""
         import time
@@ -573,6 +616,8 @@ class TestWave80Audit:
                     pass
             app.ProcessPendingEvents()
 
+    @pytest.mark.wx
+    @pytest.mark.gui
     def test_no_hardcoded_english_in_outputs_controls(self):
         """Verify the visible search control uses the localized hint."""
         import wx
@@ -599,6 +644,8 @@ class TestWave80Audit:
             for _ in range(3):
                 wx.Yield()
 
+    @pytest.mark.wx
+    @pytest.mark.gui
     def test_outputs_controls_use_all_suffix(self):
         """Section 4: Global controls use 'All' suffix."""
         import wx

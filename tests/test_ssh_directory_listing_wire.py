@@ -6,8 +6,8 @@ SFTP subsystem. This runs the real client code against the local disposable
 mock server (``tests/support/mock_ssh_server.py``) - no real host, account,
 or credential is involved.
 """
-
 from __future__ import annotations
+import pytest
 
 import sys
 import tempfile
@@ -51,6 +51,7 @@ class SSHDirectoryListingWireTests(unittest.TestCase):
         self.addCleanup(self.ssh.close)
         self.backend = SSHFilesBackend(self.ssh)
 
+    @pytest.mark.integration
     def test_streams_every_entry_with_correct_metadata(self) -> None:
         entries = list(self.backend.iterdir_entries("/work"))
 
@@ -62,6 +63,7 @@ class SSHDirectoryListingWireTests(unittest.TestCase):
         self.assertEqual(by_name["file0100.txt"].size, 100)
         self.assertGreater(by_name["file0100.txt"].mtime, 0)
 
+    @pytest.mark.integration
     def test_repeated_navigation_reuses_one_listing_channel(self) -> None:
         for _ in range(4):
             self.assertEqual(len(list(self.backend.iterdir_entries("/work"))), 255)
@@ -70,6 +72,7 @@ class SSHDirectoryListingWireTests(unittest.TestCase):
         list(self.backend.iterdir_entries("/work"))
         self.assertIs(self.ssh._listing_sftp, first)
 
+    @pytest.mark.integration
     def test_abandoned_listing_recovers_on_the_next_navigation(self) -> None:
         stream = self.backend.iterdir_entries("/work")
         next(stream)
@@ -80,6 +83,7 @@ class SSHDirectoryListingWireTests(unittest.TestCase):
         self.assertIsNot(self.ssh._listing_sftp, abandoned)
         self.assertEqual(len(list(self.backend.iterdir_entries("/work"))), 255)
 
+    @pytest.mark.integration
     def test_missing_directory_reports_the_path(self) -> None:
         with self.assertRaises(FileNotFoundError) as caught:
             list(self.backend.iterdir_entries("/work/nope"))

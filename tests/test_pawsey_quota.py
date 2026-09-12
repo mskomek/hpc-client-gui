@@ -1,6 +1,8 @@
+import pytest
 from hpc_gui.services.pawsey_quota import parse_pawsey_account_balance
 
 
+@pytest.mark.contract
 def test_pawsey_account_balance_parser_reads_software_usage_and_files():
     result = parse_pawsey_account_balance(
         "Filesystem Usage user Usage project % used Files user % files\n"

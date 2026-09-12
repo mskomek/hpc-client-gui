@@ -1,3 +1,4 @@
+import pytest
 import sys
 import unittest
 from pathlib import Path
@@ -8,6 +9,7 @@ sys.path.insert(0, str(REPO_ROOT / "scripts"))
 import check_branding  # noqa: E402
 
 
+@pytest.mark.audit
 class BrandingCheckTest(unittest.TestCase):
     def test_clean_tree_passes(self):
         self.assertEqual(check_branding.find_corrupt_strings(REPO_ROOT), [])

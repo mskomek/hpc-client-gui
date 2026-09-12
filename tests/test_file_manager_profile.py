@@ -1,6 +1,6 @@
 """FM-01 tests: profile-scoped file-manager settings and local start dir."""
-
 from __future__ import annotations
+import pytest
 
 import os
 import sys
@@ -27,12 +27,14 @@ class NormalizeFileManagerSettingsTests(unittest.TestCase):
     def _expected_defaults(self) -> dict:
         return normalize_file_manager_settings(None)
 
+    @pytest.mark.integration
     def test_missing_file_manager_gives_defaults(self) -> None:
         self.assertEqual(
             normalize_file_manager_settings(None),
             self._expected_defaults(),
         )
 
+    @pytest.mark.integration
     def test_malformed_input_gives_safe_defaults(self) -> None:
         self.assertEqual(
             normalize_file_manager_settings("not-a-dict"),
@@ -43,12 +45,14 @@ class NormalizeFileManagerSettingsTests(unittest.TestCase):
             "",
         )
 
+    @pytest.mark.integration
     def test_local_start_dir_is_stripped(self) -> None:
         self.assertEqual(
             normalize_file_manager_settings({"local_start_dir": "  /tmp/x  "})["local_start_dir"],
             "/tmp/x",
         )
 
+    @pytest.mark.integration
     def test_unknown_nested_keys_are_retained_by_patch(self) -> None:
         patched = patch_file_manager_settings(
             {"local_start_dir": "/old", "sync_root": "/remote"},
@@ -59,10 +63,12 @@ class NormalizeFileManagerSettingsTests(unittest.TestCase):
 
 
 class SSHConfigRuntimeTests(unittest.TestCase):
+    @pytest.mark.integration
     def test_default_runtime_config_has_empty_file_manager_settings(self) -> None:
         cfg = SSHConfig()
         self.assertEqual(cfg.file_manager_settings, {})
 
+    @pytest.mark.integration
     def test_mock_session_carries_file_manager_settings(self) -> None:
         # The mock connection path builds the same SSHConfig dataclass.
         cfg = SSHConfig(
@@ -118,6 +124,8 @@ class FtpWidgetLocalStartTests(unittest.TestCase):
         widget.set_session(session)
         return widget
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_valid_profile_local_folder_navigates_at_session_set(self) -> None:
         with tempfile.TemporaryDirectory() as start:
             cfg = SimpleNamespace(
@@ -131,6 +139,8 @@ class FtpWidgetLocalStartTests(unittest.TestCase):
             widget = self._widget_with_session(cfg)
             self.assertEqual(Path(widget.local_panel.current_dir), Path(start))
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_missing_local_folder_keeps_global_behavior_without_modal(self) -> None:
         cfg = SimpleNamespace(
             username="user",
@@ -144,6 +154,8 @@ class FtpWidgetLocalStartTests(unittest.TestCase):
         widget = self._widget_with_session(cfg)
         self.assertEqual(widget.local_panel.current_dir, global_dir)
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_missing_file_manager_key_is_legacy_behavior(self) -> None:
         cfg = SimpleNamespace(
             username="user",
@@ -156,6 +168,8 @@ class FtpWidgetLocalStartTests(unittest.TestCase):
         widget = self._widget_with_session(cfg)
         self.assertEqual(widget.local_panel.current_dir, os.getcwd())
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_profiles_carry_different_local_start_folders(self) -> None:
         with tempfile.TemporaryDirectory() as dir_a, tempfile.TemporaryDirectory() as dir_b:
             base = {

@@ -33,6 +33,7 @@ def _pyproject_text() -> str:
     return (ROOT / "pyproject.toml").read_text(encoding="utf-8")
 
 
+@pytest.mark.release
 def test_pyproject_declares_packaging_runtime_dependency() -> None:
     text = _pyproject_text()
     match = re.search(r"^dependencies = \[(.*?)^\]", text, re.S | re.M)
@@ -45,11 +46,13 @@ def test_pyproject_declares_packaging_runtime_dependency() -> None:
     assert "**/*.seg" not in text
 
 
+@pytest.mark.release
 def test_requirements_txt_declares_packaging() -> None:
     lines = (ROOT / "requirements.txt").read_text(encoding="utf-8").splitlines()
     assert any(line.strip() == "packaging>=23" for line in lines)
 
 
+@pytest.mark.release
 def test_registry_client_uses_pep440_version_support() -> None:
     # Import in a fresh interpreter without pytest-provided sys.path help to
     # approximate production import behaviour.
@@ -72,6 +75,7 @@ def test_registry_client_uses_pep440_version_support() -> None:
     assert "ok" in result.stdout
 
 
+@pytest.mark.release
 @pytest.mark.packaging
 def test_built_wheel_contains_required_assets(tmp_path: Path) -> None:
     import subprocess

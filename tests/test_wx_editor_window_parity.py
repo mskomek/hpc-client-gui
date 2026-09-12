@@ -40,6 +40,8 @@ def wx_app():
     app.Destroy()
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_local_edit_reuses_primary_editor(wx_app):
     manager = WxEditorWindowManager()
     primary = manager.open_primary("A.sh", "A", is_local=True)
@@ -50,6 +52,8 @@ def test_wx_local_edit_reuses_primary_editor(wx_app):
     _close(primary, wx_app)
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_local_edit_new_window_creates_independent_editor(wx_app, monkeypatch):
     manager = WxEditorWindowManager()
     primary = manager.open_primary("A.sh", "A", is_local=True)
@@ -65,6 +69,8 @@ def test_wx_local_edit_new_window_creates_independent_editor(wx_app, monkeypatch
     _close(primary, wx_app)
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_primary_editor_dirty_cancel_keeps_current_document(wx_app, monkeypatch):
     manager = WxEditorWindowManager()
     primary = manager.open_primary("A.sh", "A", is_local=True)
@@ -77,6 +83,8 @@ def test_wx_primary_editor_dirty_cancel_keeps_current_document(wx_app, monkeypat
     _close(primary, wx_app)
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_primary_editor_dirty_discard_opens_requested_document(wx_app, monkeypatch):
     manager = WxEditorWindowManager()
     primary = manager.open_primary("A.sh", "A", is_local=True)
@@ -88,6 +96,8 @@ def test_wx_primary_editor_dirty_discard_opens_requested_document(wx_app, monkey
     _close(primary, wx_app)
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_primary_editor_dirty_save_then_opens_requested_document(wx_app, monkeypatch):
     events = []
     manager = WxEditorWindowManager(save_remote=lambda path, content: events.append((path, content)))
@@ -102,6 +112,8 @@ def test_wx_primary_editor_dirty_save_then_opens_requested_document(wx_app, monk
     _close(primary, wx_app)
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_primary_editor_failed_save_does_not_replace_document(wx_app, monkeypatch):
     manager = WxEditorWindowManager(save_remote=lambda *_args: (_ for _ in ()).throw(RuntimeError("save failed")))
     primary = manager.open_primary("/remote/A.sh", "A", is_local=False)
@@ -115,6 +127,8 @@ def test_wx_primary_editor_failed_save_does_not_replace_document(wx_app, monkeyp
     _close(primary, wx_app)
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_edit_new_window_supports_multiple_independent_editors(wx_app, monkeypatch):
     manager = WxEditorWindowManager()
     primary = manager.open_primary("A.sh", "A", is_local=True)
@@ -129,6 +143,8 @@ def test_wx_edit_new_window_supports_multiple_independent_editors(wx_app, monkey
     _close(primary, wx_app)
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_closing_standalone_editor_leaves_primary_intact(wx_app):
     manager = WxEditorWindowManager()
     primary = manager.open_primary("A.sh", "A", is_local=True)
@@ -139,6 +155,8 @@ def test_wx_closing_standalone_editor_leaves_primary_intact(wx_app):
     _close(primary, wx_app)
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_primary_editor_recreated_after_close(wx_app):
     manager = WxEditorWindowManager()
     first = manager.open_primary("A.sh", "A", is_local=True)
@@ -149,6 +167,8 @@ def test_wx_primary_editor_recreated_after_close(wx_app):
     _close(second, wx_app)
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_primary_editor_same_file_edit_preserves_dirty_content(wx_app, monkeypatch):
     manager = WxEditorWindowManager()
     primary = manager.open_primary("A.sh", "A", is_local=True)
@@ -159,6 +179,8 @@ def test_wx_primary_editor_same_file_edit_preserves_dirty_content(wx_app, monkey
     _close(primary, wx_app)
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_edit_new_window_allows_same_file_as_primary(wx_app):
     manager = WxEditorWindowManager()
     primary = manager.open_primary("A.sh", "A", is_local=True)
@@ -169,6 +191,8 @@ def test_wx_edit_new_window_allows_same_file_as_primary(wx_app):
     _close(primary, wx_app)
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_editor_window_manager_repeated_open_close_does_not_leak_frames(wx_app):
     manager = WxEditorWindowManager()
     for index in range(25):
@@ -179,6 +203,8 @@ def test_wx_editor_window_manager_repeated_open_close_does_not_leak_frames(wx_ap
     assert not [window for window in wx.GetTopLevelWindows() if window and window.GetTitle().endswith(".sh")]
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_primary_editor_pending_save_replace_cannot_overwrite_newer_edit(wx_app, monkeypatch):
     started, release = threading.Event(), threading.Event()
 
@@ -199,6 +225,8 @@ def test_wx_primary_editor_pending_save_replace_cannot_overwrite_newer_edit(wx_a
     _close(primary, wx_app)
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_shell_reuses_one_editor_manager_for_local_and_remote_views():
     class Lifecycle:
         def __init__(self):

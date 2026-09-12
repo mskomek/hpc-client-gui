@@ -1,15 +1,18 @@
 """Tests for wx shell semantics fixes."""
+import pytest
 
 import pathlib
 
 def read_wx():
     return pathlib.Path("src/hpc_gui/wx_shell.py").read_text(encoding="utf-8")
 
+@pytest.mark.gui
 def test_wx_no_shell_command_dump_under_help():
     src = read_wx()
     # Old code dumped all COMMAND_REGISTRY.by_context("shell") under Help
     assert 'COMMAND_REGISTRY.by_context("shell")' not in src or src.count('COMMAND_REGISTRY.by_context("shell")') == 0
 
+@pytest.mark.gui
 def test_wx_semantic_menus():
     src = read_wx()
     assert 't("menu.menu")' in src
@@ -19,6 +22,7 @@ def test_wx_semantic_menus():
     assert "plugins_menu = wx.Menu()" in src
     assert "help_menu = wx.Menu()" in src
 
+@pytest.mark.gui
 def test_wx_version_plain_text():
     src = read_wx()
     # Version must be visible upper-right, either as StaticText (old) or as disabled menu label (new)
@@ -28,11 +32,13 @@ def test_wx_version_plain_text():
     # Should have version display in some form
     assert 'version_menu' in src or 'version_text' in src
 
+@pytest.mark.gui
 def test_wx_shared_contribution_model():
     src = read_wx()
     assert "collect_plugin_menu_contributions" in src
     assert "ui_contributions" in src or "PluginMenu" in src
 
+@pytest.mark.audit
 def test_wx_no_fake_parity_claims():
     src = read_wx()
     # plugin.open_trusted_tool should be disabled, not claimed working

@@ -29,6 +29,7 @@ class ConnectionProfileServiceTests(unittest.TestCase):
         except Exception:
             pass
 
+    @pytest.mark.unit
     def test_save_patches_without_dropping_unknown_keys(self):
         existing = {
             "id": "stable-id",
@@ -66,6 +67,7 @@ class ConnectionProfileServiceTests(unittest.TestCase):
         self.assertEqual(saved["password_enc"], "token")
         self.assertEqual(saved.get("password"), "")
 
+    @pytest.mark.unit
     def test_disable_save_removes_secret(self):
         existing = {"id": "stable-id", "name": "lab", "host": "h.example", "save_password": True, "password_enc": "token", "password_salt": "salt"}
         storage.upsert_profile(dict(existing))
@@ -77,6 +79,7 @@ class ConnectionProfileServiceTests(unittest.TestCase):
         self.assertNotIn("password_salt", saved)
         self.assertEqual(saved.get("password"), "")
 
+    @pytest.mark.unit
     def test_rename_preserves_id_and_removes_old(self):
         existing = {"id": "stable-id", "name": "lab", "host": "h.example"}
         storage.upsert_profile(dict(existing))
@@ -89,6 +92,7 @@ class ConnectionProfileServiceTests(unittest.TestCase):
         self.assertIsNone(storage.load_profile_by_name("lab") if hasattr(storage, "load_profile_by_name") else next((p for p in storage.load_profiles() if p.get("name")=="lab"), None))
         self.assertIsNotNone(next((p for p in storage.load_profiles() if p.get("name")=="lab-renamed"), None))
 
+    @pytest.mark.unit
     def test_only_one_secret_scheme_survives(self):
         # Simulate saving with keychain available – old dpapi should be removed
         existing = {"name": "lab", "host": "h.example", "password_dpapi": "oldtoken"}
@@ -107,6 +111,7 @@ class ConnectionProfileServiceTests(unittest.TestCase):
         self.assertNotIn("password_dpapi", saved)
         self.assertNotIn("password_enc", saved)
 
+    @pytest.mark.unit
     def test_plaintext_never_persisted(self):
         existing = None
         collected = {"name": "lab", "host": "h.example", "port": 22, "username": "user", "system": {}, "file_manager": {}, "jump_host": {}, "save_password": True, "password_prompt_policy": "when-needed"}
@@ -122,6 +127,7 @@ class ConnectionProfileServiceTests(unittest.TestCase):
         self.assertIn("password_enc", saved)
         self.assertNotIn("mysecret", str(saved))
 
+    @pytest.mark.unit
     def test_mfa_transient_not_stored(self):
         # Ensure save doesn't store keyboard-interactive responses anywhere
         collected = {"name": "lab", "host": "h.example", "port": 22, "username": "user", "system": {}, "file_manager": {}, "jump_host": {}, "save_password": False, "password_prompt_policy": "when-needed"}
@@ -134,6 +140,7 @@ class ConnectionProfileServiceTests(unittest.TestCase):
                 self.assertNotIn("mfa-code", val.lower())
                 self.assertNotIn("otp", val.lower())
 
+    @pytest.mark.unit
     def test_unknown_field_preservation(self):
         existing = {"name": "lab", "host": "h.example", "unknown_future": {"nested": True}, "save_password": False}
         storage.upsert_profile(dict(existing))
@@ -144,6 +151,7 @@ class ConnectionProfileServiceTests(unittest.TestCase):
         self.assertEqual(saved["unknown_future"], {"nested": True})
         self.assertEqual(saved["host"], "newhost.example")
 
+    @pytest.mark.unit
     def test_decrypt_keychain(self):
         # Simulate keychain secret
         ref = "test-ref"

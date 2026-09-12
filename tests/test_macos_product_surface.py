@@ -1,8 +1,10 @@
 from __future__ import annotations
+import pytest
 
 from unittest import mock
 
 
+@pytest.mark.unit
 def test_application_identity_uses_product_name():
     from hpc_gui.app import _configure_application_identity
 
@@ -13,6 +15,7 @@ def test_application_identity_uses_product_name():
     app.setApplicationDisplayName.assert_called_once_with("HPC Client GUI")
 
 
+@pytest.mark.unit
 def test_macos_hides_vcxsrv_exit_setting(monkeypatch):
     from PySide6.QtWidgets import QApplication
     from hpc_gui.ui.dialogs import settings_dialog

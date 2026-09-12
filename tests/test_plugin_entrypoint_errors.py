@@ -29,6 +29,7 @@ class _Dummy:
     _logger = logging.getLogger("test.dummy")
 
 
+@pytest.mark.unit
 def test_open_plugins_surfaces_failure_instead_of_silence(qapp, monkeypatch):
     from hpc_gui.ui import main_window as mw_module
 
@@ -59,6 +60,7 @@ def test_open_plugins_surfaces_failure_instead_of_silence(qapp, monkeypatch):
     assert kwargs["title"]
 
 
+@pytest.mark.unit
 def test_open_plugins_logs_exception(qapp, monkeypatch, caplog):
     from hpc_gui.ui import main_window as mw_module
 

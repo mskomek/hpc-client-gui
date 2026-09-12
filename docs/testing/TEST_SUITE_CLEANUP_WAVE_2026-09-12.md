@@ -91,9 +91,13 @@ See [REPORTING_E2E_REVIEW_K.md](REPORTING_E2E_REVIEW_K.md) for the node ownershi
 
 See [LEGACY_MIGRATION_REVIEW_L.md](LEGACY_MIGRATION_REVIEW_L.md). Qt remains present in production and wx remains an actively exercised optional GUI. The suites are retained by behavior; one test-local writer that overwrote terminal evidence with hard-coded claims was removed, the Wave 10 navigation persistence node was strengthened without changing its nodeid, and Wave 2 wx teardown now drains/asserts window cleanup. The migration ledger remains PARTIAL; no runtime or platform evidence was upgraded.
 
-### M. Full-suite classification — NOT STARTED
+### M. Full-suite classification — DONE
 
-Classify all nodes from audit/archive/12ce7993/test-suite-baseline/inventory-enriched.json using reviewed marker state, not keyword proposals. Resolve ambiguity from behavior and canonical ownership. Preserve the current zero-primary report as actual state until reviewed markers are applied. The heuristic proposed-taxonomy artifact is a proposal only.
+The dirty governance worktree now collects **2,685** nodes with **zero-primary = 0** and **multi-primary = 0**. Classifications are real pytest markers read from `item.iter_markers()`; mixed modules use node-level marks, and class marks are limited to the Wave 2 local-file behavior classes that share one owner. The local report remains non-mutating and emits JSON.
+
+`python scripts/check_test_taxonomy.py --mode enforce` passed: all collected items have exactly one primary, and the configured pytest taxonomy registry matches the checker registry. `python scripts/check_test_taxonomy.py --mode ratchet --baseline audit/archive/54f7376f/test-suite-baseline/taxonomy-ratchet.json` also passed: 12 nodes added, 14 removed since the frozen Packet C marker snapshot, no new zero-primary nodes, no lost prior classifications, and no multi-primary nodes. The additions/removals are intentional Packet D–M behavior-owner changes and are enumerated in the final report; they include the truthful Packet F failing Outputs localization test and remove the hard-coded terminal evidence writer. The two new enforce-mode checker tests are marked `audit`.
+
+Current primary counts: unit 634; integration 294; GUI 899; E2E 1; runtime smoke 36; contract 576; audit 100; reporting 22; release 123. RATCHET remains a developer check and is not wired into automatic CI.
 
 ### N. CI marker migration — NOT STARTED
 

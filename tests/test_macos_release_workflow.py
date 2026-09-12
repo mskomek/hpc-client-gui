@@ -6,8 +6,8 @@ and complete artifact-size reporting) instead of matching brittle full-line
 YAML strings. The workflow must stay honest: unsigned releases can never be
 represented as signed, and publication can never race ahead of verification.
 """
-
 from __future__ import annotations
+import pytest
 
 import re
 from pathlib import Path
@@ -46,6 +46,7 @@ def _needs(block: str) -> list[str]:
     return collected
 
 
+@pytest.mark.release
 def test_inputs_define_explicit_signed_default_and_opt_in_publication():
     inputs_block = TEXT.split("    inputs:", 1)[1].split("\npermissions:", 1)[0]
     publish_block = inputs_block.split("      publish:", 1)[1].split("      macos_mode:", 1)[0]
@@ -58,6 +59,7 @@ def test_inputs_define_explicit_signed_default_and_opt_in_publication():
     assert re.search(r"default: signed", mode_block)
 
 
+@pytest.mark.release
 def test_dry_run_can_never_publish():
     publish = _job_block("publish-release")
     publish_if = next(line.strip() for line in publish.splitlines() if line.strip().startswith("if:"))
@@ -82,6 +84,7 @@ def test_dry_run_can_never_publish():
     assert "softprops/action-gh-release" in publish
 
 
+@pytest.mark.release
 def test_signing_jobs_run_only_in_signed_mode_and_upload_separate_artifacts():
     for arch in ("arm64", "x86_64"):
         sign = _job_block(f"sign-macos-{arch}")
@@ -89,6 +92,7 @@ def test_signing_jobs_run_only_in_signed_mode_and_upload_separate_artifacts():
         assert f"hpc-client-gui-macos-{arch}-signed-" in sign
 
 
+@pytest.mark.release
 def test_build_jobs_always_produce_unsigned_candidates():
     for arch in ("arm64", "x86_64"):
         build = _job_block(f"build-macos-{arch}")
@@ -96,6 +100,7 @@ def test_build_jobs_always_produce_unsigned_candidates():
         assert "-unsigned-" not in build
 
 
+@pytest.mark.release
 def test_signed_publication_is_verified_before_it_can_publish():
     verify = _job_block("verify-macos-signed-candidate")
     assert "inputs.macos_mode == 'signed'" in verify
@@ -106,6 +111,7 @@ def test_signed_publication_is_verified_before_it_can_publish():
     assert "hdiutil attach" in verify
 
 
+@pytest.mark.release
 def test_unsigned_mode_cannot_be_represented_as_signed():
     unsigned_verify = _job_block("verify-unsigned-release")
     assert "inputs.macos_mode == 'unsigned'" in unsigned_verify
@@ -121,6 +127,7 @@ def test_unsigned_mode_cannot_be_represented_as_signed():
     assert "must never claim signing" in publish
 
 
+@pytest.mark.release
 def test_final_gate_rejects_missing_skipped_or_failed_required_jobs():
     gate_script = (ROOT / "scripts" / "release_gate.py").read_text(encoding="utf-8")
     assert '"success" if macos_mode == "signed" else "skipped"' in gate_script
@@ -141,6 +148,7 @@ def test_final_gate_rejects_missing_skipped_or_failed_required_jobs():
         assert result_env in gate_job
 
 
+@pytest.mark.release
 def test_both_mac_architectures_are_required_for_publication():
     publish = _job_block("publish-release")
     for arch in ("arm64", "x86_64"):
@@ -150,6 +158,7 @@ def test_both_mac_architectures_are_required_for_publication():
     assert "hpc-client-gui_macos_x86_64.dmg" in inventory
 
 
+@pytest.mark.release
 def test_final_inventory_contains_windows_linux_and_both_macs():
     publish = _job_block("publish-release")
     assert 'linux", "windows", "macos"' in publish or ('"linux"' in publish and '"macos"' in publish)
@@ -157,6 +166,7 @@ def test_final_inventory_contains_windows_linux_and_both_macs():
     assert "RELEASE_SECURITY.json" in publish
 
 
+@pytest.mark.release
 def test_security_metadata_matches_selected_mode_at_publication():
     publish = _job_block("publish-release")
     assert "expected_mode" in publish
@@ -164,6 +174,7 @@ def test_security_metadata_matches_selected_mode_at_publication():
     assert "requires verified signing claims" in publish
 
 
+@pytest.mark.release
 def test_artifact_size_report_runs_after_every_platform_download():
     for job in ("verify-unsigned-release", "verify-macos-signed-candidate", "publish-release"):
         block = _job_block(job)
@@ -180,6 +191,7 @@ def test_artifact_size_report_runs_after_every_platform_download():
             assert -1 < last_mac < report_pos
 
 
+@pytest.mark.release
 def test_publish_rebuilds_manifest_after_final_artifact_merge():
     publish = _job_block("publish-release")
     manifest = publish.find("Regenerate final release manifest")
@@ -189,6 +201,7 @@ def test_publish_rebuilds_manifest_after_final_artifact_merge():
     assert "scripts/generate_release_manifest.py" in publish[manifest:report]
 
 
+@pytest.mark.release
 def test_release_preflight_shares_the_ci_test_suite():
     shared = (ROOT / "scripts" / "release_test_suite.py").read_text(encoding="utf-8")
     assert '"not packaging"' in shared
@@ -212,6 +225,7 @@ def test_release_preflight_shares_the_ci_test_suite():
         assert (ROOT / "docs" / "ci-disabled" / "ci.yml").is_file()
 
 
+@pytest.mark.release
 def test_release_notes_are_generated_from_the_changelog():
     for job in ("verify-unsigned-release", "verify-macos-signed-candidate"):
         block = _job_block(job)

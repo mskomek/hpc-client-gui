@@ -10,6 +10,7 @@ from hpc_gui.services.transfer_integrity import (
 )
 
 
+@pytest.mark.unit
 def test_streaming_match_and_mismatch(tmp_path):
     path = tmp_path / "data.bin"
     path.write_bytes(b"data" * 1000)
@@ -18,6 +19,7 @@ def test_streaming_match_and_mismatch(tmp_path):
     assert verify_transfer(path, "0" * 64).state is VerificationState.FAILED
 
 
+@pytest.mark.unit
 def test_unsupported_and_cancellable(tmp_path):
     path = tmp_path / "data.bin"
     path.write_bytes(b"data")
@@ -26,6 +28,7 @@ def test_unsupported_and_cancellable(tmp_path):
         sha256_file(path, cancel=lambda: True)
 
 
+@pytest.mark.unit
 def test_large_stream_reports_progress(tmp_path):
     path = tmp_path / "large.bin"
     path.write_bytes(b"x" * (2 * 1024 * 1024 + 1))

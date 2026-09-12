@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import pytest
 import threading
 
 from hpc_gui.services.selected_job_context import SelectedJobContext, SelectedJobStore
@@ -11,6 +12,7 @@ from hpc_gui.services.selected_job_context import SelectedJobContext, SelectedJo
 # SelectedJobContext dataclass tests
 # ---------------------------------------------------------------------------
 
+@pytest.mark.unit
 class TestSelectedJobContext:
     def test_default_fields(self):
         ctx = SelectedJobContext(generation=0, job_id="123")
@@ -51,6 +53,7 @@ class TestSelectedJobContext:
 # SelectedJobStore basic operations
 # ---------------------------------------------------------------------------
 
+@pytest.mark.unit
 class TestSelectedJobStore:
     def test_initial_state(self):
         store = SelectedJobStore()
@@ -150,6 +153,7 @@ class TestSelectedJobStore:
 # ---------------------------------------------------------------------------
 
 class TestSelectedJobStoreThreadSafety:
+    @pytest.mark.unit
     def test_concurrent_selects_do_not_corrupt(self):
         store = SelectedJobStore()
         errors = []
@@ -169,6 +173,7 @@ class TestSelectedJobStoreThreadSafety:
         assert not errors
         assert store.generation == 200
 
+    @pytest.mark.unit
     def test_concurrent_subscribe_and_select(self):
         store = SelectedJobStore()
         rounds = 20
@@ -223,6 +228,7 @@ class TestSelectedJobStoreThreadSafety:
 # Stale-response safety
 # ---------------------------------------------------------------------------
 
+@pytest.mark.unit
 class TestStaleResponseSafety:
     def test_late_response_rejected_by_generation(self):
         store = SelectedJobStore()

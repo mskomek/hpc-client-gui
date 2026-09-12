@@ -1,3 +1,4 @@
+import pytest
 from pathlib import Path
 import unittest
 
@@ -5,6 +6,7 @@ import unittest
 ASSETS = Path(__file__).parents[1] / "src" / "hpc_gui" / "assets" / "terminal"
 
 
+@pytest.mark.audit
 class TerminalAssetsTests(unittest.TestCase):
     def test_terminal_is_fully_local(self):
         page = (ASSETS / "index.html").read_text(encoding="utf-8")

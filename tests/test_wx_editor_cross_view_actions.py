@@ -93,6 +93,8 @@ def _manager(session_state, lifecycle):
     return _get_editor_manager(session_state, None, lifecycle)
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_local_editor_submit_semantics_survive_remote_view_dispatch(wx_app, tmp_path):
     backend = Backend("session")
     state = {"session": {"files": backend, "slurm": backend, "ssh": backend}}
@@ -110,6 +112,8 @@ def test_wx_local_editor_submit_semantics_survive_remote_view_dispatch(wx_app, t
     _close(frame, wx_app)
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_local_editor_run_semantics_survive_remote_view_dispatch(wx_app, tmp_path):
     backend = Backend("session")
     state = {"session": {"files": backend, "slurm": backend, "ssh": backend}}
@@ -126,6 +130,8 @@ def test_wx_local_editor_run_semantics_survive_remote_view_dispatch(wx_app, tmp_
     _close(frame, wx_app)
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_remote_editor_submit_semantics_survive_local_view_dispatch(wx_app):
     gui_thread = threading.get_ident()
     backend = Backend("session")
@@ -142,6 +148,8 @@ def test_wx_remote_editor_submit_semantics_survive_local_view_dispatch(wx_app):
     _close(frame, wx_app)
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_remote_editor_run_semantics_survive_local_view_dispatch(wx_app):
     gui_thread = threading.get_ident()
     backend = Backend("session")
@@ -158,6 +166,9 @@ def test_wx_remote_editor_run_semantics_survive_local_view_dispatch(wx_app):
     _close(frame, wx_app)
 
 
+@pytest.mark.wx
+@pytest.mark.wx
+@pytest.mark.gui
 @pytest.mark.parametrize("is_local", [True, False])
 def test_wx_standalone_editor_actions_survive_cross_view_dispatch(wx_app, tmp_path, is_local):
     backend = Backend("session")
@@ -180,6 +191,8 @@ def test_wx_standalone_editor_actions_survive_cross_view_dispatch(wx_app, tmp_pa
     _close(frame, wx_app)
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_shared_primary_switch_local_to_remote_updates_document_semantics(wx_app, tmp_path):
     backend = Backend("session")
     state = {"session": {"files": backend, "slurm": backend, "ssh": backend}}
@@ -200,6 +213,8 @@ def test_wx_shared_primary_switch_local_to_remote_updates_document_semantics(wx_
     _close(frame, wx_app)
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_existing_editor_uses_new_session_after_reconnect(wx_app, tmp_path):
     first, second = Backend("A"), Backend("B")
     state = {"session": {"files": first, "slurm": first, "ssh": first}}
@@ -215,6 +230,8 @@ def test_wx_existing_editor_uses_new_session_after_reconnect(wx_app, tmp_path):
     _close(frame, wx_app)
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_editor_operation_does_not_mix_sessions_during_reconnect(wx_app, tmp_path):
     first, second = Backend("A", block_upload=True), Backend("B")
     state = {"session": {"files": first, "slurm": first, "ssh": first}}
@@ -235,6 +252,8 @@ def test_wx_editor_operation_does_not_mix_sessions_during_reconnect(wx_app, tmp_
     _close(frame, wx_app)
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_existing_remote_editor_uses_new_session_after_reconnect(wx_app):
     first, second = Backend("A"), Backend("B")
     state = {"session": {"files": first, "slurm": first, "ssh": first}}
@@ -253,6 +272,9 @@ def test_wx_existing_remote_editor_uses_new_session_after_reconnect(wx_app):
     _close(frame, wx_app)
 
 
+@pytest.mark.wx
+@pytest.mark.wx
+@pytest.mark.gui
 @pytest.mark.parametrize("is_local", [True, False])
 def test_wx_standalone_editor_uses_new_session_after_reconnect(wx_app, tmp_path, is_local):
     first, second = Backend("A"), Backend("B")
@@ -270,6 +292,8 @@ def test_wx_standalone_editor_uses_new_session_after_reconnect(wx_app, tmp_path,
     _close(frame, wx_app)
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_shell_real_file_dispatches_preserve_existing_editor_semantics(wx_app, tmp_path, monkeypatch):
     import hpc_gui.wx_local_files as local_view
     import hpc_gui.wx_directories_view as directories_view
@@ -300,6 +324,8 @@ def test_wx_shell_real_file_dispatches_preserve_existing_editor_semantics(wx_app
     _close(frame, wx_app)
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_editor_action_error_uses_current_language(wx_app):
     previous = current_language()
     try:

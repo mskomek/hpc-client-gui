@@ -1,3 +1,4 @@
+import pytest
 from hpc_gui.services.provider_path_resolver import ProviderPathResolver
 
 
@@ -10,6 +11,7 @@ class FakeSSH:
         return self.code, self.output, ""
 
 
+@pytest.mark.unit
 def test_remote_resolver_allowlists_and_caches_fixed_lookup():
     ssh = FakeSSH()
     resolver = ProviderPathResolver(ssh)
@@ -20,6 +22,7 @@ def test_remote_resolver_allowlists_and_caches_fixed_lookup():
     assert len(ssh.calls) == 1
 
 
+@pytest.mark.unit
 def test_remote_resolver_rejects_bad_output_and_invalidates_cache():
     ssh = FakeSSH("relative\n")
     resolver = ProviderPathResolver(ssh)

@@ -1,6 +1,9 @@
+import pytest
+
 from hpc_gui.services.cineca_quota import parse_cineca_cinquota
 
 
+@pytest.mark.contract
 def test_cinquota_parser_reads_work_row_and_file_count():
     result = parse_cineca_cinquota(
         "Filesystem used quota grace files\n"
@@ -13,6 +16,7 @@ def test_cinquota_parser_reads_work_row_and_file_count():
     assert result.used_files == 548665
 
 
+@pytest.mark.contract
 def test_cinquota_parser_rejects_unstructured_output():
     import pytest
 

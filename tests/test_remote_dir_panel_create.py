@@ -1,4 +1,5 @@
 from __future__ import annotations
+import pytest
 
 import os
 import unittest
@@ -44,6 +45,7 @@ class RemoteDirPanelCreateTests(unittest.TestCase):
     def tearDown(self) -> None:
         self.panel.deleteLater()
 
+    @pytest.mark.integration
     def test_create_folder_in_requested_parent(self) -> None:
         with patch(
             "hpc_gui.ui.widgets.remote_dir_panel.QInputDialog.getText",
@@ -53,6 +55,7 @@ class RemoteDirPanelCreateTests(unittest.TestCase):
 
         self.assertIn("/arf/scratch/user/job/results", self.files.paths)
 
+    @pytest.mark.integration
     def test_create_empty_file_in_current_directory(self) -> None:
         with patch(
             "hpc_gui.ui.widgets.remote_dir_panel.QInputDialog.getText",
@@ -65,6 +68,7 @@ class RemoteDirPanelCreateTests(unittest.TestCase):
             [("/arf/scratch/user/notes.txt", "")],
         )
 
+    @pytest.mark.integration
     def test_rejects_path_separators(self) -> None:
         with (
             patch(

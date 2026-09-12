@@ -67,6 +67,7 @@ def compiled(kind="contains", value="x", **kwargs):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 def test_contains_and_not_contains():
     pack = make_pack(
         [
@@ -89,6 +90,7 @@ def test_contains_and_not_contains():
     assert [d.rule_id for d in forbidden_present] == ["FORBIDDEN-GUI"]
 
 
+@pytest.mark.unit
 def test_regex_positions_are_line_and_column_aware():
     pack = make_pack([compiled("regex", r"solve/set\s+(\w+)", id="RX1")])
     text = "line1\n  solve/set pressure\n"
@@ -98,6 +100,7 @@ def test_regex_positions_are_line_and_column_aware():
     assert diags[0].column == 3
 
 
+@pytest.mark.unit
 def test_line_regex_only_matches_within_lines():
     pack = make_pack([compiled("line_regex", r"^#SBATCH --time=\d+", id="SRUN")])
     text = "#SBATCH --time=01:00:00\nx #SBATCH --time=99\n"
@@ -105,6 +108,7 @@ def test_line_regex_only_matches_within_lines():
     assert [d.line for d in diags] == [1]
 
 
+@pytest.mark.unit
 def test_ordered_patterns_reports_when_out_of_order():
     rules = [
         {
@@ -124,6 +128,7 @@ def test_ordered_patterns_reports_when_out_of_order():
     assert bad[0].rule_id == "ORD1"
 
 
+@pytest.mark.unit
 def test_count_primitive():
     raw = {
         "id": "CNT1",
@@ -136,6 +141,7 @@ def test_count_primitive():
     assert len(lint_text("/file/save\n" * 3, file_name="a.jou", rule_pack=pack)) == 1
 
 
+@pytest.mark.contract
 def test_registry_vocabulary_aliases_accepted():
     raw = {
         "id": "TUI1",
@@ -147,6 +153,7 @@ def test_registry_vocabulary_aliases_accepted():
     assert parsed.kind == "not_contains"
 
 
+@pytest.mark.contract
 def test_when_target_version_gating():
     # Required keyword missing -> error only when the target version matches.
     rule = make_rule(
@@ -164,6 +171,7 @@ def test_when_target_version_gating():
     assert lint_text("/display set\n", file_name="a.jou", rule_pack=pack, context=None) == []
 
 
+@pytest.mark.unit
 def test_diagnostics_sorted_stably():
     rules = [
         compiled("not_contains", "b", id="B-rule", message="b"),
@@ -174,6 +182,7 @@ def test_diagnostics_sorted_stably():
     assert [(d.rule_id, d.column) for d in diags] == [("A-rule", 1), ("B-rule", 8)]
 
 
+@pytest.mark.unit
 def test_max_diagnostics_caps():
     rule = compiled("regex", "o", id="MANY")
     pack = make_pack([rule])
@@ -182,6 +191,7 @@ def test_max_diagnostics_caps():
     _ = DEFAULT_MAX_DIAGNOSTICS_PER_RULE
 
 
+@pytest.mark.unit
 def test_oversized_text_rejected():
     pack = make_pack([])
     with pytest.raises(LintError):
@@ -193,6 +203,7 @@ def test_oversized_text_rejected():
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.contract
 @pytest.mark.parametrize(
     "raw",
     [
@@ -211,6 +222,7 @@ def test_malformed_rules_rejected(raw):
         parse_rule(raw, "test")
 
 
+@pytest.mark.unit
 def test_parse_rule_never_executes_values(monkeypatch):
     """A value that looks like code must be treated as plain text."""
     monkeypatch.setattr("builtins.eval", lambda *a, **k: (_ for _ in ()).throw(AssertionError("eval called")))
@@ -220,6 +232,7 @@ def test_parse_rule_never_executes_values(monkeypatch):
     lint_text("nothing here", file_name="a.jou", rule_pack=pack)
 
 
+@pytest.mark.audit
 def test_engine_module_has_no_execution_primitives():
     import hpc_gui.lint.engine as engine_module
 
@@ -307,6 +320,7 @@ def build_lint_plugin(root: Path, *, version="0.1.0", broken=False):
     write_active_versions({"org.hpcclient.fluent": version}, root=root)
 
 
+@pytest.mark.integration
 def test_installed_lint_plugin_contributes_rules(tmp_path: Path):
     build_lint_plugin(tmp_path)
     packs = load_lint_packs(root=tmp_path, app_version="1.4.0")
@@ -322,12 +336,14 @@ def test_installed_lint_plugin_contributes_rules(tmp_path: Path):
     assert [d.rule_id for d in diags] == ["FLUENT002", "FLUENT001"]
 
 
+@pytest.mark.integration
 def test_broken_lint_plugin_is_skipped_silently(tmp_path: Path):
     build_lint_plugin(tmp_path, broken=True)
     packs = load_lint_packs(root=tmp_path, app_version="1.4.0")
     assert packs == []
 
 
+@pytest.mark.integration
 def test_disabled_lint_plugin_contributes_nothing(tmp_path: Path):
     build_lint_plugin(tmp_path)
     from hpc_gui.plugins.state import set_plugin_disabled
@@ -336,6 +352,7 @@ def test_disabled_lint_plugin_contributes_nothing(tmp_path: Path):
     assert load_lint_packs(root=tmp_path, app_version="1.4.0") == []
 
 
+@pytest.mark.integration
 def test_incompatible_lint_plugin_not_loaded(tmp_path: Path):
     build_lint_plugin(tmp_path)
     assert load_lint_packs(root=tmp_path, app_version="0.9.0") == []
@@ -377,6 +394,7 @@ def _make_dialog_with_box_capture():
     return widget, FakeBox, shown
 
 
+@pytest.mark.integration
 def test_editor_without_linter_shows_no_linter_hint(qapp, monkeypatch):
     from hpc_gui.core.i18n import t
 
@@ -392,6 +410,7 @@ def test_editor_without_linter_shows_no_linter_hint(qapp, monkeypatch):
     assert any(t("editor.lint_ok") in str(args) for _, args in shown)
 
 
+@pytest.mark.integration
 def test_editor_runs_installed_linter_for_jou_files(qapp, tmp_path, monkeypatch):
     build_lint_plugin(tmp_path)
     widget, FakeBox, shown = _make_dialog_with_box_capture()
@@ -438,6 +457,7 @@ def test_editor_runs_installed_linter_for_jou_files(qapp, tmp_path, monkeypatch)
     _ = path, issues
 
 
+@pytest.mark.unit
 def test_lint_result_entries_are_line_aware(qapp):
     from hpc_gui.lint.models import Diagnostic
     from hpc_gui.ui.widgets.editor_widget import EditorWidget
@@ -454,6 +474,7 @@ def test_lint_result_entries_are_line_aware(qapp):
     assert positions[1:] == [0, 2]
 
 
+@pytest.mark.integration
 def test_editor_lint_does_not_mutate_file(qapp, tmp_path, monkeypatch):
     target = tmp_path / "case.jou"
     target.write_text("/display set\n", encoding="utf-8")

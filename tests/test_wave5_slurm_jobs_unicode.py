@@ -4,8 +4,8 @@ Preserve Unicode in job scripts, working directories, output/error paths
 and job metadata while distinguishing application correctness from cluster
 policy restrictions.
 """
-
 from __future__ import annotations
+import pytest
 
 import pathlib
 import sys
@@ -22,6 +22,7 @@ if str(ROOT / "src") not in sys.path:
 class TestScriptPaths:
     """Verify Unicode script paths work through the pipeline."""
 
+    @pytest.mark.contract
     def test_parse_job_paths_unicode(self):
         """parse_job_paths should handle Unicode paths."""
         from hpc_gui.services.slurm_script_parser import parse_job_paths
@@ -33,6 +34,7 @@ class TestScriptPaths:
         assert "çalışmalar" in paths.stderr
         assert "日本語" in paths.stderr
 
+    @pytest.mark.contract
     def test_resolve_path_unicode(self):
         """resolve_path should handle Unicode paths."""
         from hpc_gui.services.slurm_script_parser import resolve_path
@@ -42,6 +44,7 @@ class TestScriptPaths:
         assert "日本語" in result
         assert "12345" in result
 
+    @pytest.mark.contract
     def test_storage_area_for_path_unicode(self):
         """storage_area_for_path should match Unicode paths."""
         from hpc_gui.services.slurm_script_parser import storage_area_for_path
@@ -61,6 +64,7 @@ class TestScriptPaths:
 class TestSlurmDirectives:
     """Verify Slurm directives handle Unicode correctly."""
 
+    @pytest.mark.contract
     def test_set_directive_unicode_value(self):
         """set_directive should preserve Unicode values."""
         from hpc_gui.services.slurm_directives import set_directive
@@ -70,6 +74,7 @@ class TestSlurmDirectives:
         assert "ısı_日本語_queue" in result
         assert "#!/bin/bash" in result
 
+    @pytest.mark.contract
     def test_get_directive_unicode_value(self):
         """get_directive should extract Unicode values."""
         from hpc_gui.services.slurm_directives import get_directive
@@ -78,6 +83,7 @@ class TestSlurmDirectives:
         name = get_directive(script, "partition")
         assert name == "isi_日本語"
 
+    @pytest.mark.contract
     def test_set_directive_preserves_shebang(self):
         """set_directive should preserve shebang line."""
         from hpc_gui.services.slurm_directives import set_directive
@@ -87,6 +93,7 @@ class TestSlurmDirectives:
         assert result.startswith("#!/bin/bash")
         assert "echo hello" in result
 
+    @pytest.mark.contract
     def test_directives_roundtrip_unicode(self):
         """Directives should survive set/get roundtrip with Unicode."""
         from hpc_gui.services.slurm_directives import set_directive, get_directive
@@ -108,6 +115,7 @@ class TestSlurmDirectives:
 class TestSlurmModels:
     """Verify Slurm model parsing handles Unicode."""
 
+    @pytest.mark.contract
     def test_parse_squeue_unicode_name(self):
         """parse_squeue should handle Unicode job names."""
         from hpc_gui.services.slurm_models import parse_squeue
@@ -118,6 +126,7 @@ class TestSlurmModels:
         # parse_squeue may parse differently, just verify it doesn't crash
         assert len(jobs) >= 1
 
+    @pytest.mark.contract
     def test_parse_scontrol_unicode_workdir(self):
         """parse_scontrol should handle Unicode workdir."""
         from hpc_gui.services.slurm_models import parse_scontrol
@@ -127,6 +136,7 @@ class TestSlurmModels:
         assert "çalışmalar" in job.workdir
         assert "日本語" in job.workdir
 
+    @pytest.mark.contract
     def test_parse_scontrol_unicode_jobname(self):
         """parse_scontrol should extract Unicode job names."""
         from hpc_gui.services.slurm_models import parse_scontrol
@@ -144,6 +154,7 @@ class TestSlurmModels:
 class TestSSHRSlurmBackend:
     """Verify SSH Slurm backend quotes Unicode paths correctly."""
 
+    @pytest.mark.contract
     def test_sbatch_quotes_unicode_path(self):
         """sbatch passes Unicode and shell metacharacters as two path arguments."""
         import shlex
@@ -167,6 +178,7 @@ class TestSSHRSlurmBackend:
             "計算 $(touch sentinel).slurm",
         ]
 
+    @pytest.mark.contract
     def test_command_template_quotes_values(self):
         """Command templates should quote all values."""
         import shlex
@@ -187,6 +199,7 @@ class TestSSHRSlurmBackend:
 class TestJobNames:
     """Verify job names handle Unicode correctly."""
 
+    @pytest.mark.contract
     def test_parse_job_name_unicode(self):
         """parse_job_name should extract Unicode job names."""
         from hpc_gui.services.slurm_script_parser import parse_job_name
@@ -195,6 +208,7 @@ class TestJobNames:
         name = parse_job_name(script)
         assert name == "isi_transferi_日本語"
 
+    @pytest.mark.contract
     def test_parse_job_name_with_quotes(self):
         """parse_job_name should handle quoted values."""
         from hpc_gui.services.slurm_script_parser import parse_job_name
@@ -203,6 +217,7 @@ class TestJobNames:
         name = parse_job_name(script)
         assert name == "Çalışma Sonucu"
 
+    @pytest.mark.contract
     def test_job_name_roundtrip(self):
         """Job name should survive set/get roundtrip."""
         from hpc_gui.services.slurm_directives import set_directive, get_directive
@@ -220,6 +235,7 @@ class TestJobNames:
 class TestOutputErrorParsing:
     """Verify output/error path parsing handles Unicode."""
 
+    @pytest.mark.contract
     def test_parse_output_pattern_unicode(self):
         """parse_output_error should handle Unicode patterns."""
         from hpc_gui.services.slurm_script_parser import parse_output_error
@@ -229,6 +245,7 @@ class TestOutputErrorParsing:
         assert "çıkış" in stdout
         assert "hata" in stderr
 
+    @pytest.mark.contract
     def test_output_pattern_with_job_id(self):
         """Output pattern should resolve %j placeholder."""
         from hpc_gui.services.slurm_script_parser import parse_output_error
@@ -246,6 +263,7 @@ class TestOutputErrorParsing:
 class TestScriptContent:
     """Verify generated/handled script content preserves Unicode."""
 
+    @pytest.mark.contract
     def test_script_with_unicode_comments(self):
         """Script with Unicode comments should be preserved."""
         script = "#!/bin/bash\n# İş: Isı transferi 日本語\necho 'İş başladı'\n"
@@ -253,12 +271,14 @@ class TestScriptContent:
         assert "日本語" in script
         assert "İş başladı" in script
 
+    @pytest.mark.contract
     def test_script_shebang_before_content(self):
         """Shebang must be the first line."""
         script = "#!/bin/bash\n#SBATCH --job-name=test\n"
         lines = script.split("\n")
         assert lines[0] == "#!/bin/bash"
 
+    @pytest.mark.contract
     def test_no_bom_before_shebang(self):
         """BOM must not appear before shebang."""
         # UTF-8 BOM is \xef\xbb\xbf or \uFEFF
@@ -274,6 +294,7 @@ class TestScriptContent:
 class TestJobTrackingController:
     """Verify job tracking controller handles Unicode metadata."""
 
+    @pytest.mark.contract
     def test_output_metadata_unicode(self):
         """OutputMetadata should preserve Unicode paths."""
         from hpc_gui.services.job_tracking_controller import OutputMetadata
@@ -295,6 +316,7 @@ class TestJobTrackingController:
 class TestIntegration:
     """Integration tests for Unicode in Slurm/jobs workflow."""
 
+    @pytest.mark.release
     def test_full_script_workflow(self):
         """Full workflow: create, edit, parse, resolve with Unicode."""
         from hpc_gui.services.slurm_directives import set_directive, get_directive
@@ -336,6 +358,7 @@ class TestIntegration:
         assert "İş başladı" in echo_line
         assert "日本語" in echo_line
 
+    @pytest.mark.contract
     def test_unicode_scontrol_parsing(self):
         """Unicode scontrol output should be parsed correctly."""
         from hpc_gui.services.slurm_models import parse_scontrol

@@ -43,6 +43,8 @@ def _browser(app, backend, model=None, operation=None):
     return frame
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_remote_move_and_upload_actions_reach_backend_off_gui_thread(wx_app, monkeypatch):
     backend = MockRemoteFilesBackend()
     frame = _browser(wx_app, backend)
@@ -58,6 +60,8 @@ def test_remote_move_and_upload_actions_reach_backend_off_gui_thread(wx_app, mon
     assert all(thread_id != gui_thread for thread_id in backend.thread_ids)
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_remote_download_uses_selected_destination_dialog(wx_app, monkeypatch, tmp_path):
     backend = MockRemoteFilesBackend()
     frame = _browser(wx_app, backend)
@@ -66,6 +70,8 @@ def test_wx_remote_download_uses_selected_destination_dialog(wx_app, monkeypatch
     _pump(wx_app, lambda: ("download", "/work/a.txt", str(tmp_path)) in backend.calls)
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_remote_delete_removes_selected_files_and_directory_only(wx_app, monkeypatch):
     backend = MockRemoteFilesBackend()
     backend.entries.update({"/work/selected-dir": True, "/work/selected-dir/nested.txt": False, "/work/keep.txt": False})
@@ -83,6 +89,8 @@ def test_wx_remote_delete_removes_selected_files_and_directory_only(wx_app, monk
     assert "/work/keep.txt" in backend.entries
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_remote_rename_updates_backend_and_visible_listing(wx_app, monkeypatch):
     backend = MockRemoteFilesBackend()
     frame = _browser(wx_app, backend, WxRemoteDirectoryModel("/work"))
@@ -94,6 +102,8 @@ def test_wx_remote_rename_updates_backend_and_visible_listing(wx_app, monkeypatc
     assert "/work/renamed.txt" in backend.entries
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_remote_rename_conflict_shows_error_and_preserves_source(wx_app, monkeypatch):
     backend = MockRemoteFilesBackend()
     errors = []
@@ -107,6 +117,8 @@ def test_wx_remote_rename_conflict_shows_error_and_preserves_source(wx_app, monk
     assert frame._wx_remote_controls["listing"].IsEnabled()
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_remote_new_folder_uses_clicked_directory_target(wx_app, monkeypatch):
     backend = MockRemoteFilesBackend()
     frame = _browser(wx_app, backend)
@@ -116,6 +128,8 @@ def test_remote_new_folder_uses_clicked_directory_target(wx_app, monkeypatch):
     assert "/work/child" in backend.entries
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_remote_new_folder_rejects_invalid_name(wx_app, monkeypatch):
     backend = MockRemoteFilesBackend()
     errors = []
@@ -128,6 +142,8 @@ def test_wx_remote_new_folder_rejects_invalid_name(wx_app, monkeypatch):
     assert frame._wx_remote_controls["listing"].IsEnabled()
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_remote_new_folder_failure_shows_error_and_recovers(wx_app, monkeypatch):
     backend = MockRemoteFilesBackend()
     errors = []
@@ -144,6 +160,8 @@ def test_wx_remote_new_folder_failure_shows_error_and_recovers(wx_app, monkeypat
     assert frame._wx_remote_controls["listing"].IsEnabled()
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_remote_delete_confirmation_cancel_preserves_selection(wx_app, monkeypatch):
     backend = MockRemoteFilesBackend()
     frame = _browser(wx_app, backend, WxRemoteDirectoryModel("/work"))
@@ -155,6 +173,8 @@ def test_wx_remote_delete_confirmation_cancel_preserves_selection(wx_app, monkey
     assert frame._wx_remote_controls["listing"].IsEnabled()
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_remote_delete_failure_shows_error_and_recovers(wx_app, monkeypatch):
     errors = []
 
@@ -169,6 +189,8 @@ def test_wx_remote_delete_failure_shows_error_and_recovers(wx_app, monkeypatch):
     assert frame._wx_remote_controls["listing"].IsEnabled()
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_remote_move_preserves_multi_item_destinations(wx_app, monkeypatch):
     backend = MockRemoteFilesBackend()
     frame = _browser(wx_app, backend, WxRemoteDirectoryModel("/work"))
@@ -187,6 +209,8 @@ def test_wx_remote_move_preserves_multi_item_destinations(wx_app, monkeypatch):
     assert "/work/b.txt" not in backend.entries
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_remote_keyboard_copy_and_paste_use_shared_clipboard(wx_app):
     backend = MockRemoteFilesBackend()
     backend.entries["/work/dest"] = True
@@ -202,6 +226,8 @@ def test_wx_remote_keyboard_copy_and_paste_use_shared_clipboard(wx_app):
     _pump(wx_app, lambda: ("copy", "/work/a.txt", "/work/dest/a.txt") in backend.calls)
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_remote_multi_item_paste_preserves_all_destinations(wx_app):
     backend = MockRemoteFilesBackend()
     backend.entries["/work/dest"] = True
@@ -217,6 +243,8 @@ def test_wx_remote_multi_item_paste_preserves_all_destinations(wx_app):
     assert len([call for call in backend.calls if call[0] == "copy"]) == 2
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_remote_ctrl_a_selects_all_rows(wx_app):
     backend = MockRemoteFilesBackend()
     backend.entries.update({"/work/folder": True})
@@ -229,6 +257,8 @@ def test_wx_remote_ctrl_a_selects_all_rows(wx_app):
     assert all(listing.IsSelected(index) for index in range(listing.GetItemCount()))
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_remote_copy_path_uses_system_clipboard_without_backend(wx_app):
     backend = MockRemoteFilesBackend()
     frame = _browser(wx_app, backend, WxRemoteDirectoryModel("/work"))
@@ -239,6 +269,8 @@ def test_wx_remote_copy_path_uses_system_clipboard_without_backend(wx_app):
     assert not any(call[0] in {"copy", "move"} for call in backend.calls)
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_remote_copy_path_preserves_multiple_selected_paths(wx_app):
     backend = MockRemoteFilesBackend()
     frame = _browser(wx_app, backend, WxRemoteDirectoryModel("/work"))
@@ -250,6 +282,8 @@ def test_wx_remote_copy_path_preserves_multiple_selected_paths(wx_app):
     assert not backend.calls
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_remote_keyboard_cut_and_undo_leaves_pending_clipboard_untouched(wx_app):
     backend = MockRemoteFilesBackend()
     frame = _browser(wx_app, backend, WxRemoteDirectoryModel("/work"))
@@ -267,6 +301,8 @@ def test_wx_remote_keyboard_cut_and_undo_leaves_pending_clipboard_untouched(wx_a
     assert get_file_clipboard().get().paths == ["/work/a.txt"]
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_remote_backspace_navigates_parent_and_f5_refreshes(wx_app):
     backend = MockRemoteFilesBackend()
     frame = _browser(wx_app, backend, WxRemoteDirectoryModel("/work"))
@@ -283,6 +319,8 @@ def test_wx_remote_backspace_navigates_parent_and_f5_refreshes(wx_app):
     _pump(wx_app, lambda: backend.list_calls > calls)
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_remote_paste_failure_is_visible_and_recovers(wx_app, monkeypatch):
     backend = MockRemoteFilesBackend()
     errors = []
@@ -301,6 +339,8 @@ def test_wx_remote_paste_failure_is_visible_and_recovers(wx_app, monkeypatch):
     assert listing.IsEnabled()
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_remote_background_context_shows_directory_actions(wx_app, monkeypatch):
     backend = MockRemoteFilesBackend()
     frame = _browser(wx_app, backend)
@@ -317,6 +357,8 @@ def test_wx_remote_background_context_shows_directory_actions(wx_app, monkeypatc
     assert "Edit" not in labels and "Rename" not in labels
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_remote_background_upload_targets_current_directory(wx_app, monkeypatch):
     backend = MockRemoteFilesBackend()
     frame = _browser(wx_app, backend)
@@ -336,6 +378,8 @@ def test_wx_remote_background_upload_targets_current_directory(wx_app, monkeypat
     _pump(wx_app, lambda: ("upload", "local.txt", "/") in backend.calls)
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_remote_background_context_paste_targets_current_directory(wx_app):
     backend = MockRemoteFilesBackend()
     frame = _browser(wx_app, backend, WxRemoteDirectoryModel("/work"))
@@ -354,6 +398,8 @@ def test_wx_remote_background_context_paste_targets_current_directory(wx_app):
     _pump(wx_app, lambda: ("copy", "/work/a.txt", "/work/a.txt") in backend.calls)
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_remote_clicked_directory_context_paste_targets_clicked_directory(wx_app):
     backend = MockRemoteFilesBackend()
     backend.entries["/work/dest"] = True
@@ -374,6 +420,8 @@ def test_wx_remote_clicked_directory_context_paste_targets_clicked_directory(wx_
     _pump(wx_app, lambda: ("copy", "/work/a.txt", "/work/dest/a.txt") in backend.calls)
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_remote_clicked_directory_context_cut_paste_moves_to_clicked_directory(wx_app):
     backend = MockRemoteFilesBackend()
     backend.entries["/work/dest"] = True
@@ -404,6 +452,8 @@ def test_wx_remote_clicked_directory_context_cut_paste_moves_to_clicked_director
     assert "/work/dest/a.txt" not in backend.entries
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_remote_navigation_sort_and_provider_filter_are_visible(wx_app):
     backend = MockRemoteFilesBackend()
     backend.entries.update({
@@ -445,6 +495,8 @@ def test_wx_remote_navigation_sort_and_provider_filter_are_visible(wx_app):
     _pump(wx_app, lambda: controls["path"].GetValue() == "/work/sub")
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_remote_new_file_and_chmod_reach_backend(wx_app, monkeypatch):
     class Backend(MockRemoteFilesBackend):
         def write_text(self, path, text):
@@ -477,6 +529,8 @@ def test_wx_remote_new_file_and_chmod_reach_backend(wx_app, monkeypatch):
     _pump(wx_app, lambda: ("chmod", "/work/test.txt", 0o755) in backend.calls)
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_remote_favorite_selected_file_targets_file_path(wx_app):
     class Store:
         def __init__(self):
@@ -500,6 +554,8 @@ def test_wx_remote_favorite_selected_file_targets_file_path(wx_app):
     assert store.items == [{"path": "/work/a.txt", "kind": "file", "label": "a.txt"}]
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_remote_submit_slurm_uses_selected_remote_path(wx_app, monkeypatch):
     backend = MockRemoteFilesBackend()
     submitted = []

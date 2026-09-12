@@ -11,6 +11,7 @@ import pytest
 from hpc_gui.config import storage
 
 
+@pytest.mark.contract
 def test_legacy_profile_migration_preserves_unicode_and_is_idempotent(tmp_path, monkeypatch):
     monkeypatch.setattr(storage, "_config_dir", lambda: tmp_path)
     cfg_path = tmp_path / "config.json"
@@ -46,6 +47,7 @@ def test_legacy_profile_migration_preserves_unicode_and_is_idempotent(tmp_path, 
     assert list(tmp_path.glob("config.json.bak*")) == [tmp_path / "config.json.bak"]
 
 
+@pytest.mark.gui
 def test_migration_save_failure_keeps_original_config_readable(tmp_path, monkeypatch):
     monkeypatch.setattr(storage, "_config_dir", lambda: tmp_path)
     cfg_path = tmp_path / "config.json"
@@ -66,6 +68,7 @@ def test_migration_save_failure_keeps_original_config_readable(tmp_path, monkeyp
     assert (tmp_path / "config.json.bak").read_bytes() == original
 
 
+@pytest.mark.gui
 def test_corrupt_config_keeps_unique_recovery_backups(tmp_path, monkeypatch):
     monkeypatch.setattr(storage, "_config_dir", lambda: tmp_path)
     cfg_path = tmp_path / "config.json"
@@ -81,6 +84,7 @@ def test_corrupt_config_keeps_unique_recovery_backups(tmp_path, monkeypatch):
     assert (tmp_path / "config.json.bak.1").read_bytes() == second_corrupt
 
 
+@pytest.mark.gui
 def test_diagnostic_bundle_excludes_saved_profile_secrets(tmp_path, monkeypatch):
     monkeypatch.setattr(Path, "home", lambda: tmp_path)
     data_dir = tmp_path / ".truba_slurm_gui"

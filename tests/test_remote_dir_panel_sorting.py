@@ -1,4 +1,5 @@
 from __future__ import annotations
+import pytest
 
 import os
 import unittest
@@ -60,6 +61,7 @@ class RemoteDirPanelSortingTests(unittest.TestCase):
         self.assertEqual(set(names[1:3]), {"folder10", "Folder2"})
         self.assertFalse(any(name.startswith("folder") for name in names[3:]))
 
+    @pytest.mark.integration
     def test_name_sorts_naturally_both_directions_with_fixed_groups(self) -> None:
         view = self.panel.views["all"]
 
@@ -74,6 +76,7 @@ class RemoteDirPanelSortingTests(unittest.TestCase):
         self.assertLess(names.index("file10.txt"), names.index("File2.txt"))
         self.assertLess(names.index("archive10.zip"), names.index("archive2.7z"))
 
+    @pytest.mark.integration
     def test_size_uses_raw_bytes_in_both_directions(self) -> None:
         view = self.panel.views["all"]
 
@@ -91,6 +94,7 @@ class RemoteDirPanelSortingTests(unittest.TestCase):
         self.assertLess(names.index("File2.txt"), names.index("file10.txt"))
         self.assertLess(names.index("file10.txt"), names.index("image10.iso"))
 
+    @pytest.mark.integration
     def test_modified_uses_raw_timestamp_in_both_directions(self) -> None:
         view = self.panel.views["all"]
 
@@ -106,6 +110,7 @@ class RemoteDirPanelSortingTests(unittest.TestCase):
         self.assertLess(names.index("archive10.zip"), names.index("archive2.7z"))
         self.assertLess(names.index("file10.txt"), names.index("File2.txt"))
 
+    @pytest.mark.integration
     def test_type_sorts_case_insensitively_naturally_both_directions(self) -> None:
         view = self.panel.views["all"]
 
@@ -121,6 +126,7 @@ class RemoteDirPanelSortingTests(unittest.TestCase):
         self.assertLess(names.index("archive10.zip"), names.index("image2.iso"))
         self.assertLess(names.index("typed10.x10"), names.index("Typed2.X2"))
 
+    @pytest.mark.integration
     def test_header_indicator_and_direction_toggle_for_every_column(self) -> None:
         view = self.panel.views["all"]
         for column in range(4):
@@ -131,6 +137,7 @@ class RemoteDirPanelSortingTests(unittest.TestCase):
             self._click(view, column)
             self.assertEqual(view.header().sortIndicatorOrder(), Qt.SortOrder.DescendingOrder)
 
+    @pytest.mark.integration
     def test_refresh_preserves_sort_and_all_categories_share_behavior(self) -> None:
         all_view = self.panel.views["all"]
         self._click(all_view, 1)

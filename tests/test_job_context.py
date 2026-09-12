@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import pytest
 import inspect
 
 from hpc_gui.lint.job_context import (
@@ -26,6 +27,7 @@ fluent 3ddp -g -t112 -i journal.jou
 """
 
 
+@pytest.mark.contract
 def test_parse_basic_directives():
     context = parse_slurm_context(SBATCH_MATCH)
     assert context is not None
@@ -37,12 +39,14 @@ def test_parse_basic_directives():
     assert context.memory_bytes == 224 * 1024**3
 
 
+@pytest.mark.contract
 def test_short_flags_and_space_forms():
     text = "#!/bin/bash\n#SBATCH -N 2\n#SBATCH -n 4\n#SBATCH -c 8\n"
     context = parse_slurm_context(text)
     assert (context.nodes, context.ntasks, context.cpus_per_task) == (2, 4, 8)
 
 
+@pytest.mark.contract
 def test_last_valid_directive_wins():
     text = (
         "#!/bin/bash\n"
@@ -56,6 +60,7 @@ def test_last_valid_directive_wins():
     assert context.cpus_per_task == 64
 
 
+@pytest.mark.contract
 def test_dynamic_values_are_ignored():
     text = "#!/bin/bash\n#SBATCH --cpus-per-task=$SLURM_CPUS\n#SBATCH --mem=$(calc)\n"
     context = parse_slurm_context(text)
@@ -64,10 +69,12 @@ def test_dynamic_values_are_ignored():
     assert context.memory_bytes is None
 
 
+@pytest.mark.contract
 def test_no_sbatch_returns_none():
     assert parse_slurm_context("fluent 3ddp -t8\n") is None
 
 
+@pytest.mark.contract
 def test_memory_and_time_variants():
     context = parse_slurm_context("#SBATCH --mem=4000M\n#SBATCH --time=2-04:30:00\n")
     assert context.memory_bytes == 4000 * 1024**2
@@ -77,38 +84,45 @@ def test_memory_and_time_variants():
     assert minutes.time_limit_seconds == 90 * 60
 
 
+@pytest.mark.contract
 def test_fluent_launch_dash_t_attached():
     launch = parse_fluent_launch("fluent 3ddp -g -t56 -i run.jou\n")
     assert launch.processes == 56
     assert launch.headless is True
 
 
+@pytest.mark.contract
 def test_fluent_launch_dash_t_separate():
     launch = parse_fluent_launch('"/opt/ansys/fluent" 3ddp -t 112 2>&1 | tee out.log\n')
     assert isinstance(launch, FluentLaunch)
     assert launch.processes == 112
 
 
+@pytest.mark.contract
 def test_quoted_executable_path_is_supported():
     script = '"/usr/local/ansys_inc/v252/fluent" 3ddp -g -t112\n'
     launch = parse_fluent_launch(script)
     assert launch.processes == 112
 
 
+@pytest.mark.contract
 def test_no_fluent_command_returns_none():
     assert parse_fluent_launch("#!/bin/bash\necho hello\n") is None
 
 
+@pytest.mark.contract
 def test_commented_launch_lines_are_ignored():
     assert parse_fluent_launch("# fluent 3ddp -t8\n") is None
 
 
+@pytest.mark.contract
 def test_cpu_match_produces_no_diagnostic():
     context = parse_slurm_context(SBATCH_MATCH)
     launch = parse_fluent_launch(SBATCH_MATCH)
     assert cross_diagnostics(context, launch) == []
 
 
+@pytest.mark.contract
 def test_cpu_mismatch_warns_with_exact_message():
     script = SBATCH_MATCH.replace("-t112", "-t56")
     context = parse_slurm_context(script)
@@ -124,12 +138,14 @@ def test_cpu_mismatch_warns_with_exact_message():
     )
 
 
+@pytest.mark.contract
 def test_unknown_cpus_skip():
     script = "#!/bin/bash\n#SBATCH --partition=long\nfluent 3ddp -g -t56\n"
     diags = cross_diagnostics(parse_slurm_context(script), parse_fluent_launch(script))
     assert diags == []
 
 
+@pytest.mark.contract
 def test_multinode_product_uses_default_ntasks():
     script = (
         "#!/bin/bash\n"
@@ -143,6 +159,7 @@ def test_multinode_product_uses_default_ntasks():
     assert cross_diagnostics(context, parse_fluent_launch(script)) == []
 
 
+@pytest.mark.contract
 def test_fully_explicit_multinode_product_is_used():
     script = (
         "#!/bin/bash\n"
@@ -156,6 +173,7 @@ def test_fully_explicit_multinode_product_is_used():
     assert len(cross_diagnostics(context, parse_fluent_launch(script))) == 0
 
 
+@pytest.mark.contract
 def test_ntasks_per_node_makes_allocation_ambiguous():
     script = (
         "#!/bin/bash\n"
@@ -169,6 +187,7 @@ def test_ntasks_per_node_makes_allocation_ambiguous():
     assert cross_diagnostics(context, parse_fluent_launch(script)) == []
 
 
+@pytest.mark.contract
 def test_no_fluent_command_means_no_cross_diagnostic():
     script = "#!/bin/bash\n#SBATCH --cpus-per-task=112\nsleep 1\n"
     assert cross_diagnostics(
@@ -176,6 +195,7 @@ def test_no_fluent_command_means_no_cross_diagnostic():
     ) == []
 
 
+@pytest.mark.contract
 def test_parser_never_executes_content(tmp_path):
     """Hostile scheduler directives remain inert; source scan is policy evidence."""
     import hpc_gui.lint.job_context as module
@@ -192,6 +212,7 @@ def test_parser_never_executes_content(tmp_path):
     assert not marker.exists()
 
 
+@pytest.mark.audit
 def test_no_truba_constants_in_core_parser():
     import hpc_gui.lint.job_context as module
 

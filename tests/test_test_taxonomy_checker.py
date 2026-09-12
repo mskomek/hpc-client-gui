@@ -84,6 +84,36 @@ def test_report_mode_succeeds_with_taxonomy_debt(monkeypatch, capsys):
 
 
 @pytest.mark.audit
+def test_enforce_rejects_legacy_debt_and_unknown_registry_entry():
+    report = checker.build_report(
+        [
+            {"nodeid": "tests/legacy.py::test_unmarked", "markers": []},
+            {"nodeid": "tests/multi.py::test_multi", "markers": ["unit", "gui"]},
+        ]
+    )
+    result = checker.build_enforce_report(report, {"unit", "gui", "mystery"})
+
+    assert result["passed"] is False
+    assert result["zero_primary"]["count"] == 1
+    assert result["multi_primary"]["count"] == 1
+    assert result["unknown_registered_markers"] == ["mystery"]
+
+
+@pytest.mark.audit
+def test_enforce_accepts_exact_taxonomy_registry():
+    report = checker.build_report(
+        [{"nodeid": "tests/core.py::test_known", "markers": ["unit", "slow"]}]
+    )
+
+    result = checker.build_enforce_report(
+        report, set(checker.PRIMARY_CATEGORIES) | set(checker.QUALIFIERS)
+    )
+
+    assert result["passed"] is True
+    assert result["warnings"] == report["warnings"]
+
+
+@pytest.mark.audit
 def test_collection_failure_returns_nonzero(monkeypatch, capsys):
     def fail_collection():
         raise RuntimeError("synthetic collection failure")

@@ -26,6 +26,8 @@ def _make_panel(ssh=None):
     wx.Yield()
     return app, frame, panel
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_embedded_terminal_find_button_selects_match():
     app, frame, panel = _make_panel()
     try:
@@ -49,6 +51,8 @@ def test_embedded_terminal_find_button_selects_match():
         frame.Destroy()
         wx.Yield()
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_embedded_terminal_clear_button_clears_visible_output_and_model():
     app, frame, panel = _make_panel()
     try:
@@ -68,6 +72,8 @@ def test_embedded_terminal_clear_button_clears_visible_output_and_model():
         frame.Destroy()
         wx.Yield()
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_embedded_terminal_font_decrease_changes_visible_font():
     app, frame, panel = _make_panel()
     try:
@@ -85,6 +91,8 @@ def test_embedded_terminal_font_decrease_changes_visible_font():
         frame.Destroy()
         wx.Yield()
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_embedded_terminal_font_increase_changes_visible_font():
     app, frame, panel = _make_panel()
     try:
@@ -102,6 +110,8 @@ def test_embedded_terminal_font_increase_changes_visible_font():
         frame.Destroy()
         wx.Yield()
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_embedded_terminal_ctrl_c_sends_interrupt_not_copy():
     ssh = _fake_ssh()
     app, frame, panel = _make_panel(ssh=ssh)
@@ -118,6 +128,8 @@ def test_embedded_terminal_ctrl_c_sends_interrupt_not_copy():
         frame.Destroy()
         wx.Yield()
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_embedded_terminal_copy_shortcut_does_not_send_interrupt():
     ssh = _fake_ssh()
     app, frame, panel = _make_panel(ssh=ssh)
@@ -134,6 +146,8 @@ def test_embedded_terminal_copy_shortcut_does_not_send_interrupt():
         frame.Destroy()
         wx.Yield()
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_embedded_terminal_runtime_language_refresh():
     # test standalone panel to avoid shell chrome flag bitmap segfault during language switch
     app, frame, panel = _make_panel()
@@ -157,6 +171,8 @@ def test_embedded_terminal_runtime_language_refresh():
         frame.Destroy()
         wx.Yield()
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_embedded_terminal_resize_reaches_pty_resize():
     ssh = _fake_ssh()
     app, frame, panel = _make_panel(ssh=ssh)
@@ -175,6 +191,8 @@ def test_embedded_terminal_resize_reaches_pty_resize():
         frame.Destroy()
         wx.Yield()
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_shell_embedded_and_detached_share_implementation():
     # Both use build_terminal_panel internally — check control sets identical
     from hpc_gui.wx_terminal import show_terminal

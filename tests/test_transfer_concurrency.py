@@ -85,10 +85,12 @@ def _backend(server) -> FTPFilesBackend:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.contract
 def test_ftp_backend_forces_serial_queueing():
     assert FTPFilesBackend.supports_parallel_transfers is False
 
 
+@pytest.mark.integration
 def test_ftp_transfer_backends_are_isolated_and_close_is_idempotent(ftp_server):
     main = _backend(ftp_server)
     try:
@@ -106,6 +108,7 @@ def test_ftp_transfer_backends_are_isolated_and_close_is_idempotent(ftp_server):
         main.close()
 
 
+@pytest.mark.integration
 def test_two_ftp_transfers_overlap_with_distinct_connections(ftp_server, tmp_path):
     """Two uploads through isolated backends must genuinely overlap."""
     main = _backend(ftp_server)
@@ -228,6 +231,7 @@ def _make_dialog(items, factory):
     )
 
 
+@pytest.mark.unit
 def test_dialog_closes_isolated_backend_on_success(qapp):
     created = []
 
@@ -244,6 +248,7 @@ def test_dialog_closes_isolated_backend_on_success(qapp):
     assert created[0].closed is True
 
 
+@pytest.mark.unit
 def test_dialog_closes_isolated_backend_on_failure(qapp):
     created = []
 
@@ -259,6 +264,7 @@ def test_dialog_closes_isolated_backend_on_failure(qapp):
     assert created[0].closed is True
 
 
+@pytest.mark.release
 def test_cancelled_transfer_releases_isolated_backend(qapp):
     release = threading.Event()
     started = threading.Event()
@@ -309,6 +315,7 @@ def test_cancelled_transfer_releases_isolated_backend(qapp):
         dialog.deleteLater()
 
 
+@pytest.mark.unit
 def test_retry_creates_fresh_backend_resources(qapp):
     class _FlakyFactory:
         def __init__(self):
@@ -334,6 +341,8 @@ def test_retry_creates_fresh_backend_resources(qapp):
     assert factory.backends[1] is not factory.backends[0]
 
 
+@pytest.mark.qt
+@pytest.mark.gui
 def test_effective_limit_label_shows_configured_and_effective(qapp):
     from hpc_gui.core.i18n import load_language, t
     from hpc_gui.ui.dialogs.transfer_dialog import TransferDialog
@@ -356,6 +365,8 @@ def test_effective_limit_label_shows_configured_and_effective(qapp):
         dialog.deleteLater()
 
 
+@pytest.mark.qt
+@pytest.mark.gui
 def test_effective_limit_label_when_matching(qapp):
     from hpc_gui.ui.dialogs.transfer_dialog import TransferDialog
     from hpc_gui.core.i18n import load_language, t
@@ -416,6 +427,7 @@ class _FakeSSHWrapper:
         return channel
 
 
+@pytest.mark.integration
 def test_sftp_parallel_transfers_use_distinct_channels(tmp_path):
     wrapper = _FakeSSHWrapper()
     backend = SSHFilesBackend(wrapper)

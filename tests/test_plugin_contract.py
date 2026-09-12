@@ -65,6 +65,7 @@ def registry(plugins_repo: Path) -> dict:
     return parse_registry((plugins_repo / "registry.json").read_bytes())
 
 
+@pytest.mark.contract
 def test_real_registry_passes_repository_validator(plugins_repo: Path):
     scripts_dir = plugins_repo / "scripts"
     assert (scripts_dir / "validate_registry.py").is_file()
@@ -78,6 +79,7 @@ def test_real_registry_passes_repository_validator(plugins_repo: Path):
         sys.path.remove(str(scripts_dir))
 
 
+@pytest.mark.contract
 def test_all_entries_compatible_with_supported_app_lines(registry: dict):
     """All entries work on the current app; v2 tools stay hidden from old clients."""
     entries = registry["plugins"]
@@ -94,6 +96,7 @@ def test_all_entries_compatible_with_supported_app_lines(registry: dict):
     assert not incompatible, f"incompatible entries: {incompatible}"
 
 
+@pytest.mark.contract
 def test_manifest_hashes_and_identities_match_registry(registry: dict, plugins_repo: Path):
     import hashlib
 
@@ -121,6 +124,7 @@ def _install(local_fetcher, tmp_path: Path, entry: dict):
     )
 
 
+@pytest.mark.integration
 def test_truba_plugin_installs_and_profile_loads(registry, local_fetcher, tmp_path: Path):
     entry = find_registry_entry(
         registry, "org.hpcclient.truba", app_version=CONTRACT_APP_VERSION
@@ -137,6 +141,7 @@ def test_truba_plugin_installs_and_profile_loads(registry, local_fetcher, tmp_pa
     assert profiles[0].scheduler == "slurm"
 
 
+@pytest.mark.integration
 def test_truba_v2_plugin_installs_and_retains_structured_sections(
     registry, local_fetcher, tmp_path: Path
 ):
@@ -158,6 +163,7 @@ def test_truba_v2_plugin_installs_and_retains_structured_sections(
     assert profile.quota_sources[0]["enabled"] is False
 
 
+@pytest.mark.integration
 def test_fluent_latest_compatible_is_0_2_0_and_loads(registry, local_fetcher, tmp_path: Path):
     entry = find_registry_entry(
         registry, "org.hpcclient.fluent", app_version=CONTRACT_APP_VERSION
@@ -175,6 +181,7 @@ def test_fluent_latest_compatible_is_0_2_0_and_loads(registry, local_fetcher, tm
     assert {"lint-rules", "job-template"} <= capabilities
 
 
+@pytest.mark.integration
 def test_fluent_lint_rules_run(registry, local_fetcher, tmp_path: Path):
     from hpc_gui.lint.engine import lint_text
     from hpc_gui.lint.rulepack import load_lint_packs
@@ -200,6 +207,7 @@ def test_fluent_lint_rules_run(registry, local_fetcher, tmp_path: Path):
     assert any(rule_id.startswith("FLUENT") for rule_id in rule_ids), sorted(rule_ids)
 
 
+@pytest.mark.integration
 def test_fluent_slurm_template_is_plain_substitution(
     registry, local_fetcher, tmp_path: Path
 ):
@@ -246,6 +254,7 @@ def test_fluent_slurm_template_is_plain_substitution(
     assert "#!/bin/bash" in rendered
 
 
+@pytest.mark.integration
 def test_fluent_update_then_rollback_preserves_versions(
     registry, local_fetcher, tmp_path: Path
 ):
@@ -276,6 +285,7 @@ def test_fluent_update_then_rollback_preserves_versions(
     assert active_fluent == ["0.1.0"]
 
 
+@pytest.mark.audit
 def test_contract_metadata_documented(plugins_repo: Path):
     readme = (plugins_repo / "README.md").read_text(encoding="utf-8")
     assert "Available plugins" in readme

@@ -3,8 +3,8 @@
 Guarantee plugins/providers can expose Unicode labels, storage names, paths
 and actions, and that Directories consumes them without corruption.
 """
-
 from __future__ import annotations
+import pytest
 
 import pathlib
 import sys
@@ -38,6 +38,7 @@ UNICODE_PROVIDER_DATA = {
 class TestPluginManifestUnicode:
     """Verify plugin manifests handle Unicode correctly."""
 
+    @pytest.mark.reporting
     def test_manifest_name_unicode(self):
         """PluginManifest should accept Unicode names."""
         from hpc_gui.plugins.models import PluginManifest
@@ -59,6 +60,7 @@ class TestPluginManifestUnicode:
         assert manifest.name == "Üniversite Kümesi Plugin"
         assert "hesaplama" in manifest.description.lower()
 
+    @pytest.mark.reporting
     def test_cluster_profile_unicode(self):
         """ClusterProfileDefinition should accept Unicode names."""
         from hpc_gui.plugins.models import ClusterProfileDefinition
@@ -70,6 +72,7 @@ class TestPluginManifestUnicode:
         )
         assert profile.name == "Çalışma Alanı Profili"
 
+    @pytest.mark.reporting
     def test_storage_area_unicode(self):
         """Storage areas should accept Unicode labels and paths."""
         from hpc_gui.plugins.models import ClusterProfileDefinition
@@ -89,6 +92,7 @@ class TestPluginManifestUnicode:
         assert profile.storage[0]["label"] == "Çalışma Alanı"
         assert "çalışmalar" in profile.storage[0]["path"]
 
+    @pytest.mark.reporting
     def test_job_outputs_unicode(self):
         """Job outputs should accept Unicode labels."""
         from hpc_gui.plugins.models import ClusterProfileDefinition
@@ -120,6 +124,7 @@ class TestPluginManifestUnicode:
 class TestPluginValidatorUnicode:
     """Verify plugin validator handles Unicode correctly."""
 
+    @pytest.mark.reporting
     def test_validate_manifest_unicode_name(self):
         """validate_manifest_dict should accept Unicode names."""
         from hpc_gui.plugins.validator import validate_manifest_dict
@@ -143,6 +148,7 @@ class TestPluginValidatorUnicode:
         name_errors = [e for e in errors if "name" in e.lower()]
         assert len(name_errors) == 0
 
+    @pytest.mark.reporting
     def test_validate_cluster_profile_unicode(self):
         """validate_cluster_profile_dict should accept Unicode names."""
         from hpc_gui.plugins.validator import validate_cluster_profile_dict
@@ -165,6 +171,7 @@ class TestPluginValidatorUnicode:
 class TestProviderContractUnicode:
     """Verify provider contract handles Unicode correctly."""
 
+    @pytest.mark.contract
     def test_extract_contract_unicode(self):
         """extract_contract should handle Unicode provider template."""
         from hpc_gui.services.provider_contract import extract_contract
@@ -183,6 +190,7 @@ class TestProviderContractUnicode:
         assert contract.has_job_details is True
         assert contract.has_accounting is True
 
+    @pytest.mark.contract
     def test_extract_contract_empty(self):
         """extract_contract should handle empty template."""
         from hpc_gui.services.provider_contract import extract_contract
@@ -200,6 +208,7 @@ class TestProviderContractUnicode:
 class TestProviderContextUnicode:
     """Verify provider context handles Unicode correctly."""
 
+    @pytest.mark.contract
     def test_resolve_provider_path_unicode(self):
         """resolve_provider_path should handle Unicode paths."""
         from hpc_gui.config.system_profile import (
@@ -218,6 +227,7 @@ class TestProviderContextUnicode:
         assert "çalışma" in result.path
         assert "日本語" in result.path
 
+    @pytest.mark.contract
     def test_resolve_provider_path_missing_context(self):
         """resolve_provider_path should handle missing context gracefully."""
         from hpc_gui.config.system_profile import (
@@ -230,6 +240,7 @@ class TestProviderContextUnicode:
         result = resolve_provider_path(template, context)
         assert result.state == "missing-context"
 
+    @pytest.mark.contract
     def test_resolve_provider_path_unknown_placeholder(self):
         """resolve_provider_path should fail closed on unknown placeholders."""
         from hpc_gui.config.system_profile import (
@@ -250,6 +261,7 @@ class TestProviderContextUnicode:
 class TestPluginUIContributionsUnicode:
     """Verify plugin UI contributions handle Unicode correctly."""
 
+    @pytest.mark.contract
     def test_ui_contributions_label_unicode(self):
         """UI contributions should accept Unicode labels."""
         from hpc_gui.plugins.ui_contributions import validate_ui_contributions_dict
@@ -286,6 +298,7 @@ class TestPluginUIContributionsUnicode:
 class TestIntegration:
     """Integration tests for plugin/provider Unicode."""
 
+    @pytest.mark.contract
     def test_full_plugin_unicode_flow(self):
         """Full flow: create manifest, validate, build profile."""
         from hpc_gui.plugins.models import (
@@ -375,6 +388,7 @@ class TestIntegration:
         assert "name" in settings
         assert settings["name"] == "Çalışma Alanı Profili"
 
+    @pytest.mark.contract
     def test_provider_path_resolution_unicode(self):
         """Unicode paths should resolve correctly through provider context."""
         from hpc_gui.config.system_profile import (
@@ -399,6 +413,7 @@ class TestIntegration:
             assert result.state == "resolved", f"Failed for {template}: {result.state}"
             assert "çalışma" in result.path or "日本語" in result.path
 
+    @pytest.mark.contract
     def test_optional_data_graceful_degradation(self):
         """Missing optional data should degrade gracefully."""
         from hpc_gui.services.provider_contract import extract_contract
@@ -414,6 +429,7 @@ class TestIntegration:
         assert contract2.has_job_details is True
         assert contract2.has_accounting is False
 
+    @pytest.mark.contract
     def test_existing_ascii_compatibility(self):
         """Existing ASCII providers should remain compatible."""
         from hpc_gui.plugins.models import ClusterProfileDefinition
@@ -428,6 +444,7 @@ class TestIntegration:
         assert profile.name == "TRUBA Default"
         assert profile.paths["scratch"] == "/scratch/{user}"
 
+    @pytest.mark.contract
     def test_ui_contributions_unicode_labels(self):
         """UI contributions should render Unicode labels correctly."""
         from hpc_gui.plugins.ui_contributions import validate_ui_contributions_dict

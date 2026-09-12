@@ -51,6 +51,7 @@ ALL_REMOTE_NAMES = TURKISH_REMOTE_NAMES + JAPANESE_REMOTE_NAMES + MIXED_REMOTE_N
 class TestSSHCommandConstruction:
     """Verify SSH commands are safely constructed with proper quoting."""
 
+    @pytest.mark.contract
     def test_shlex_quote_unicode_path(self):
         """shlex.quote should safely quote Unicode paths."""
         paths = [
@@ -69,6 +70,7 @@ class TestSSHCommandConstruction:
             # Quoted path should be safe for shell
             assert quoted.startswith("'") or quoted.startswith('"') or not any(c in path for c in " $&()[]'\"")
 
+    @pytest.mark.contract
     def test_shlex_quote_preserves_unicode(self):
         """shlex.quote should preserve Unicode characters."""
         paths = [
@@ -83,6 +85,7 @@ class TestSSHCommandConstruction:
             unquoted = quoted.strip("'\"")
             assert unquoted == path, f"shlex.quote corrupted path: {path} -> {quoted}"
 
+    @pytest.mark.contract
     def test_ssh_backend_uses_shlex_quote(self):
         """A hostile Unicode path remains one shell argument for remote rm."""
         from types import SimpleNamespace
@@ -110,6 +113,7 @@ class TestSSHCommandConstruction:
 class TestSFTPUnicodePaths:
     """Verify SFTP operations handle Unicode paths correctly."""
 
+    @pytest.mark.integration
     def test_mock_backend_unicode_listdir(self):
         """Mock backend should list Unicode-named entries."""
         from hpc_gui.services.files_mock import MockFilesBackend
@@ -125,6 +129,7 @@ class TestSFTPUnicodePaths:
         assert "Çalışmalar" in entries
         assert "日本語" in entries
 
+    @pytest.mark.integration
     def test_mock_backend_unicode_read_write(self):
         """Mock backend should read/write Unicode content."""
         from hpc_gui.services.files_mock import MockFilesBackend
@@ -140,6 +145,7 @@ class TestSFTPUnicodePaths:
         read_content = backend.read_text("/work/test.txt")
         assert read_content == content
 
+    @pytest.mark.integration
     def test_ssh_backend_rejects_invalid_utf8_text(self):
         """Remote editor reads must not replace bytes before a later save."""
         from hpc_gui.services.files_ssh import SSHFilesBackend
@@ -160,6 +166,7 @@ class TestSFTPUnicodePaths:
         with pytest.raises(UnicodeDecodeError):
             backend.read_text("/work/legacy.txt")
 
+    @pytest.mark.integration
     def test_mock_backend_unicode_rename(self):
         """Mock backend should rename to/from Unicode names."""
         from hpc_gui.services.files_mock import MockFilesBackend
@@ -173,6 +180,7 @@ class TestSFTPUnicodePaths:
         assert "/work/yeniden_adlandır.txt" in backend._files
         assert "/work/old.txt" not in backend._files
 
+    @pytest.mark.integration
     def test_mock_backend_unicode_mkdir(self):
         """Mock backend should create Unicode-named directories."""
         from hpc_gui.services.files_mock import MockFilesBackend
@@ -183,6 +191,7 @@ class TestSFTPUnicodePaths:
         backend.mkdir("/work/日本語_ディレクトリ")
         assert backend.is_dir("/work/日本語_ディレクトリ")
 
+    @pytest.mark.integration
     def test_mock_backend_unicode_remove(self):
         """Mock backend should remove Unicode-named files."""
         from hpc_gui.services.files_mock import MockFilesBackend
@@ -202,6 +211,7 @@ class TestSFTPUnicodePaths:
 class TestRemoteEntryTypes:
     """Verify RemoteEntry types are consistent across layers."""
 
+    @pytest.mark.contract
     def test_files_base_remote_entry_fields(self):
         """files_base.RemoteEntry should have 6 fields."""
         from hpc_gui.services.files_base import RemoteEntry
@@ -221,6 +231,7 @@ class TestRemoteEntryTypes:
         assert entry.mtime == 1234567890
         assert entry.mode == 0o644
 
+    @pytest.mark.contract
     def test_wx_remote_files_entry_fields(self):
         """wx_remote_files.RemoteEntry should have 3 fields."""
         from hpc_gui.wx_remote_files import RemoteEntry
@@ -242,6 +253,7 @@ class TestRemoteEntryTypes:
 class TestRemoteDirectoryController:
     """Verify remote directory controller navigation and generation tracking."""
 
+    @pytest.mark.unit
     def test_navigate_increments_generation(self):
         """navigate() should increment generation counter."""
         from hpc_gui.services.remote_directory_controller import RemoteDirectoryController
@@ -254,6 +266,7 @@ class TestRemoteDirectoryController:
         assert req1.path == "/work/dir1"
         assert req2.path == "/work/dir2"
 
+    @pytest.mark.unit
     def test_is_current_detects_stale(self):
         """is_current() should detect stale listing requests."""
         from hpc_gui.services.remote_directory_controller import RemoteDirectoryController
@@ -267,6 +280,7 @@ class TestRemoteDirectoryController:
         # req2 is current
         assert controller.is_current(req2)
 
+    @pytest.mark.unit
     def test_back_navigates_to_previous(self):
         """back() should navigate to previous directory."""
         from hpc_gui.services.remote_directory_controller import RemoteDirectoryController
@@ -278,6 +292,7 @@ class TestRemoteDirectoryController:
         req = controller.back()
         assert req.path == "/work/dir1"
 
+    @pytest.mark.unit
     def test_normalize_strips_trailing_slash(self):
         """_normalize should strip trailing slashes."""
         from hpc_gui.services.remote_directory_controller import RemoteDirectoryController
@@ -287,6 +302,7 @@ class TestRemoteDirectoryController:
         assert controller._normalize("/work/dir//") == "/work/dir"
         assert controller._normalize("/") == "/"
 
+    @pytest.mark.unit
     def test_normalize_defaults_to_root(self):
         """_normalize should default to '/' for empty/None."""
         from hpc_gui.services.remote_directory_controller import RemoteDirectoryController
@@ -303,6 +319,7 @@ class TestRemoteDirectoryController:
 class TestShellSessionDecoding:
     """Verify shell session handles UTF-8 decoding correctly."""
 
+    @pytest.mark.unit
     def test_incremental_decoder_unicode(self):
         """Incremental decoder should handle Unicode characters."""
         import codecs
@@ -315,6 +332,7 @@ class TestShellSessionDecoding:
         decoded = decoder.decode(encoded, final=True)
         assert decoded == text
 
+    @pytest.mark.unit
     def test_incremental_decoder_split_bytes(self):
         """Incremental decoder should handle split multi-byte sequences."""
         import codecs
@@ -331,6 +349,7 @@ class TestShellSessionDecoding:
             result = part1 + part2
             assert result == text, f"Split at byte {i} failed: {result!r} != {text!r}"
 
+    @pytest.mark.unit
     def test_incremental_decoder_emoji(self):
         """Incremental decoder should handle emoji (4-byte UTF-8)."""
         import codecs
@@ -342,6 +361,7 @@ class TestShellSessionDecoding:
         decoded = decoder.decode(encoded, final=True)
         assert decoded == text
 
+    @pytest.mark.unit
     def test_incremental_decoder_turkish_dotless_i(self):
         """Incremental decoder should handle Turkish dotless i."""
         import codecs
@@ -362,6 +382,7 @@ class TestShellSessionDecoding:
 class TestUnicodeFileContentRoundtrip:
     """Verify file content survives Unicode roundtrip through backends."""
 
+    @pytest.mark.integration
     def test_mock_backend_unicode_content_roundtrip(self):
         """Mock backend should preserve Unicode content through read/write."""
         from hpc_gui.services.files_mock import MockFilesBackend
@@ -383,6 +404,7 @@ class TestUnicodeFileContentRoundtrip:
             read_content = backend.read_text(path)
             assert read_content == content, f"Roundtrip failed for: {content!r}"
 
+    @pytest.mark.integration
     def test_unicode_paths_in_listings(self):
         """Unicode file names should appear correctly in listings."""
         from hpc_gui.services.files_mock import MockFilesBackend
@@ -410,11 +432,13 @@ class TestUnicodeFileContentRoundtrip:
 class TestSFTPChannelManager:
     """Verify SFTP channel manager handles Unicode paths."""
 
+    @pytest.mark.unit
     def test_channel_manager_exists(self):
         """SFTPChannelManager should be importable."""
         from hpc_gui.ssh.sftp_channels import SFTPChannelManager
         assert SFTPChannelManager is not None
 
+    @pytest.mark.unit
     def test_channel_manager_timeouts(self):
         """SFTPChannelManager should have defined timeouts."""
 
@@ -431,6 +455,7 @@ class TestSFTPChannelManager:
 class TestSSHClientUnicode:
     """Verify SSH client handles Unicode correctly."""
 
+    @pytest.mark.contract
     def test_remote_display_decoder_is_explicit_utf8_with_safe_fallback(self):
         """SSH command/banner display output uses an explicit UTF-8 policy."""
         from hpc_gui.ssh.client import _decode_remote_text
@@ -438,11 +463,13 @@ class TestSSHClientUnicode:
         assert _decode_remote_text("çıktı 日本語".encode("utf-8")) == "çıktı 日本語"
         assert _decode_remote_text(b"bad\xff") == "bad\ufffd"
 
+    @pytest.mark.contract
     def test_ssh_client_exists(self):
         """SSHClientWrapper should be importable."""
         from hpc_gui.ssh.client import SSHClientWrapper
         assert SSHClientWrapper is not None
 
+    @pytest.mark.contract
     def test_ssh_conn_info_dataclass(self):
         """SSHConnInfo should be a proper dataclass."""
         from hpc_gui.ssh.client import SSHConnInfo
@@ -464,6 +491,7 @@ class TestSSHClientUnicode:
 class TestRemoteEntryHelpers:
     """Verify remote entry helper functions handle Unicode."""
 
+    @pytest.mark.unit
     def test_file_type_directory(self):
         """file_type should detect directories correctly."""
         from hpc_gui.ui.models.remote_entry_helpers import file_type
@@ -472,6 +500,7 @@ class TestRemoteEntryHelpers:
         # Returns i18n key for "Folder"
         assert "folder" in result.lower() or "dir" in result.lower()
 
+    @pytest.mark.unit
     def test_file_type_file(self):
         """file_type should detect files correctly."""
         from hpc_gui.ui.models.remote_entry_helpers import file_type
@@ -479,6 +508,7 @@ class TestRemoteEntryHelpers:
         result = file_type("test.txt", is_dir=False)
         assert result != "Folder"
 
+    @pytest.mark.unit
     def test_file_type_unicode_name(self):
         """file_type should handle Unicode names."""
         from hpc_gui.ui.models.remote_entry_helpers import file_type
@@ -494,6 +524,7 @@ class TestRemoteEntryHelpers:
 class TestIntegration:
     """Integration tests for Unicode remote operations."""
 
+    @pytest.mark.integration
     def test_unicode_listing_roundtrip(self):
         """Unicode names should survive listing roundtrip."""
         from hpc_gui.services.files_mock import MockFilesBackend
@@ -516,6 +547,7 @@ class TestIntegration:
         for name in ALL_REMOTE_NAMES:
             assert name in entries, f"Name {name!r} missing"
 
+    @pytest.mark.integration
     def test_unicode_crud_operations(self):
         """CRUD operations should preserve Unicode names."""
         from hpc_gui.services.files_mock import MockFilesBackend

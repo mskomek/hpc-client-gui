@@ -6,6 +6,7 @@ behaviour, these tests pin the new owner of the channel lifecycle.
 
 from __future__ import annotations
 
+import pytest
 import sys
 import unittest
 from pathlib import Path
@@ -45,6 +46,7 @@ class _FakeSftp:
         self.closed = True
 
 
+@pytest.mark.unit
 class SFTPChannelManagerTests(unittest.TestCase):
     def setUp(self) -> None:
         _FakeSftp.created = 0

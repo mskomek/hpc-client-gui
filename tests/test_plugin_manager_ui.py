@@ -114,6 +114,8 @@ def _registry_fetch_result(source="network"):
     )
 
 
+@pytest.mark.qt
+@pytest.mark.gui
 def test_first_show_starts_exactly_one_automatic_refresh(qapp, frozen_thread_pool):
     calls = []
 
@@ -152,6 +154,8 @@ def test_first_show_starts_exactly_one_automatic_refresh(qapp, frozen_thread_poo
         dialog.deleteLater()
 
 
+@pytest.mark.qt
+@pytest.mark.gui
 def test_refresh_guard_blocks_duplicate_inflight_requests(qapp, frozen_thread_pool):
     dialog = PluginManagerDialog(fetcher=lambda url, limit: b"{}")
     try:
@@ -177,6 +181,8 @@ def test_refresh_guard_blocks_duplicate_inflight_requests(qapp, frozen_thread_po
         dialog.deleteLater()
 
 
+@pytest.mark.qt
+@pytest.mark.gui
 def test_offline_with_cache_fallback_populates_tabs(qapp, frozen_thread_pool):
     def failing_fetch(**kwargs):
         raise OSError("network down")
@@ -205,6 +211,8 @@ def test_offline_with_cache_fallback_populates_tabs(qapp, frozen_thread_pool):
         dialog.deleteLater()
 
 
+@pytest.mark.qt
+@pytest.mark.gui
 def test_offline_without_cache_shows_offline_state(qapp, frozen_thread_pool):
     def failing_fetch(**kwargs):
         raise OSError("network down")
@@ -228,6 +236,8 @@ def test_offline_without_cache_shows_offline_state(qapp, frozen_thread_pool):
         dialog.deleteLater()
 
 
+@pytest.mark.qt
+@pytest.mark.gui
 def test_closing_during_refresh_is_safe(qapp, frozen_thread_pool):
     dialog = PluginManagerDialog(fetcher=lambda url, limit: b"{}")
     dialog.show()
@@ -242,6 +252,7 @@ def test_closing_during_refresh_is_safe(qapp, frozen_thread_pool):
     dialog.deleteLater()
 
 
+@pytest.mark.unit
 def test_request_plugin_action_targets_dedicated_issue_form(qapp):
     from hpc_gui.ui.dialogs.plugin_manager_dialog import PLUGIN_REQUEST_URL
 
@@ -277,6 +288,8 @@ def test_request_plugin_action_targets_dedicated_issue_form(qapp):
         dialog.deleteLater()
 
 
+@pytest.mark.qt
+@pytest.mark.gui
 def test_capability_badges_use_translated_labels(qapp):
     registry = grouped_registry()
     fluent = next(e for e in registry["plugins"] if e["id"] == "org.hpcclient.fluent")
@@ -299,6 +312,7 @@ def test_capability_badges_use_translated_labels(qapp):
         dialog.deleteLater()
 
 
+@pytest.mark.unit
 def test_install_summary_reports_capability_counts(qapp, frozen_thread_pool):
     dialog = PluginManagerDialog(fetcher=registry_fetcher())
     entry = VALID_REGISTRY["plugins"][0]
@@ -322,6 +336,7 @@ def test_install_summary_reports_capability_counts(qapp, frozen_thread_pool):
     assert generic == t("plugins.install_generic").format(name="TRUBA")
 
 
+@pytest.mark.unit
 def test_details_show_source_and_installed_state(qapp):
     shown = []
 
@@ -348,6 +363,8 @@ def test_details_show_source_and_installed_state(qapp):
         dialog.deleteLater()
 
 
+@pytest.mark.qt
+@pytest.mark.gui
 def test_plugins_button_exists(qapp):
     from unittest.mock import patch
 
@@ -368,6 +385,8 @@ def test_plugins_button_exists(qapp):
             window.deleteLater()
 
 
+@pytest.mark.qt
+@pytest.mark.gui
 def test_dialog_opens_offline_without_cache(qapp):
     with mock.patch(
         "hpc_gui.plugins.registry_client.read_cached_registry", return_value=None
@@ -383,6 +402,8 @@ def test_dialog_opens_offline_without_cache(qapp):
             dialog.deleteLater()
 
 
+@pytest.mark.qt
+@pytest.mark.gui
 def test_mocked_registry_populates_discover(qapp, monkeypatch):
     monkeypatch.setattr(
         "hpc_gui.ui.dialogs.plugin_manager_dialog.read_active_versions",
@@ -415,6 +436,8 @@ def test_mocked_registry_populates_discover(qapp, monkeypatch):
         dialog.deleteLater()
 
 
+@pytest.mark.qt
+@pytest.mark.gui
 def test_cached_status_shown_for_cache_source(qapp):
     dialog = PluginManagerDialog()
     try:
@@ -424,6 +447,8 @@ def test_cached_status_shown_for_cache_source(qapp):
         dialog.deleteLater()
 
 
+@pytest.mark.qt
+@pytest.mark.gui
 def test_successful_install_updates_state_and_emits_signal(qapp, frozen_thread_pool):
     dialog = PluginManagerDialog(fetcher=registry_fetcher())
     emitted = []
@@ -492,6 +517,8 @@ def test_successful_install_updates_state_and_emits_signal(qapp, frozen_thread_p
         assert dialog._install_worker is None
 
 
+@pytest.mark.qt
+@pytest.mark.gui
 def test_failed_install_restores_state_and_shows_error(qapp, frozen_thread_pool, monkeypatch):
     monkeypatch.setattr(
         "hpc_gui.ui.dialogs.plugin_manager_dialog.read_active_versions",
@@ -539,6 +566,8 @@ def test_failed_install_restores_state_and_shows_error(qapp, frozen_thread_pool,
         assert t("plugins.verification_failed").format(name="") in str(shown[0])
 
 
+@pytest.mark.qt
+@pytest.mark.gui
 def test_removal_confirmation_path(qapp):
     dialog = PluginManagerDialog()
     emitted = []
@@ -580,6 +609,8 @@ def test_removal_confirmation_path(qapp):
     assert emitted == [True]
 
 
+@pytest.mark.qt
+@pytest.mark.gui
 def test_removal_cancelled_does_not_remove(qapp):
     dialog = PluginManagerDialog()
     removed = []
@@ -605,6 +636,8 @@ def test_removal_cancelled_does_not_remove(qapp):
     assert removed == []
 
 
+@pytest.mark.qt
+@pytest.mark.gui
 def test_updates_tab_lists_newer_compatible_version(qapp):
     dialog = PluginManagerDialog()
     dialog._registry = json.loads(json.dumps(VALID_REGISTRY))
@@ -627,6 +660,8 @@ def test_updates_tab_lists_newer_compatible_version(qapp):
     assert t("plugins.no_updates") in text
 
 
+@pytest.mark.qt
+@pytest.mark.gui
 def test_search_filter_hides_non_matching_cards(qapp):
     dialog = PluginManagerDialog()
     apply_registry(dialog)
@@ -717,6 +752,8 @@ def _buttons_of_card(dialog: PluginManagerDialog, needle: str):
     return buttons
 
 
+@pytest.mark.qt
+@pytest.mark.gui
 def test_discover_groups_multiple_versions_under_one_card(qapp):
     dialog = PluginManagerDialog()
     try:
@@ -738,6 +775,8 @@ def test_discover_groups_multiple_versions_under_one_card(qapp):
         dialog.deleteLater()
 
 
+@pytest.mark.qt
+@pytest.mark.gui
 def test_discover_selects_latest_compatible_with_incompatible_newer(qapp):
     registry = grouped_registry()
     registry["plugins"].append(
@@ -766,6 +805,8 @@ def test_discover_selects_latest_compatible_with_incompatible_newer(qapp):
         dialog.deleteLater()
 
 
+@pytest.mark.qt
+@pytest.mark.gui
 def test_discover_shows_only_incompatible_state_when_nothing_compatible(qapp):
     registry = {
         **grouped_registry(),
@@ -783,6 +824,8 @@ def test_discover_shows_only_incompatible_state_when_nothing_compatible(qapp):
         dialog.deleteLater()
 
 
+@pytest.mark.qt
+@pytest.mark.gui
 def test_discover_update_detection(qapp):
     dialog = PluginManagerDialog()
     try:
@@ -799,6 +842,8 @@ def test_discover_update_detection(qapp):
         dialog.deleteLater()
 
 
+@pytest.mark.qt
+@pytest.mark.gui
 def test_discover_latest_version_installed_shows_no_update(qapp):
     dialog = PluginManagerDialog()
     try:
@@ -818,6 +863,8 @@ def test_discover_latest_version_installed_shows_no_update(qapp):
         dialog.deleteLater()
 
 
+@pytest.mark.qt
+@pytest.mark.gui
 def test_discover_newer_active_version_gets_no_update_offer(qapp):
     dialog = PluginManagerDialog()
     try:
@@ -834,6 +881,8 @@ def test_discover_newer_active_version_gets_no_update_offer(qapp):
         dialog.deleteLater()
 
 
+@pytest.mark.qt
+@pytest.mark.gui
 def test_discover_disabled_plugin_state(qapp):
     dialog = PluginManagerDialog()
     try:
@@ -850,6 +899,8 @@ def test_discover_disabled_plugin_state(qapp):
         dialog.deleteLater()
 
 
+@pytest.mark.qt
+@pytest.mark.gui
 def test_search_filter_after_grouping(qapp):
     dialog = PluginManagerDialog()
     try:
@@ -874,6 +925,8 @@ def test_search_filter_after_grouping(qapp):
         dialog.deleteLater()
 
 
+@pytest.mark.qt
+@pytest.mark.gui
 def test_updates_tab_uses_grouped_latest(qapp):
     dialog = PluginManagerDialog()
     dialog._registry = grouped_registry()
@@ -891,6 +944,7 @@ def test_updates_tab_uses_grouped_latest(qapp):
     assert t("plugins.no_updates") in text
 
 
+@pytest.mark.unit
 def test_details_shows_cluster_commands_warning(qapp):
     dialog = PluginManagerDialog()
     shown = []
@@ -907,6 +961,7 @@ def test_details_shows_cluster_commands_warning(qapp):
     assert t("plugins.cluster_commands_warning") in text
 
 
+@pytest.mark.contract
 def test_i18n_keys_resolve_in_both_languages():
     for language in ("en", "tr"):
         load_language(language)
@@ -986,6 +1041,8 @@ def _installed_card_widgets(dialog):
     return combos, buttons
 
 
+@pytest.mark.qt
+@pytest.mark.gui
 def test_installed_tab_shows_active_version_and_sorted_versions(qapp):
     dialog = PluginManagerDialog()
     dialog._installed_versions = SimpleNamespace(
@@ -1021,6 +1078,8 @@ def test_installed_tab_shows_active_version_and_sorted_versions(qapp):
     assert items == ["1.10.0", "1.9.0", "1.2.0"]
 
 
+@pytest.mark.qt
+@pytest.mark.gui
 def test_rollback_button_label_depends_on_pep440_order(qapp):
     dialog = _make_installed_dialog(qapp, ["1.9.0", "1.10.0"], active_version="1.10.0")
     _combos, buttons = _installed_card_widgets(dialog)
@@ -1035,6 +1094,8 @@ def test_rollback_button_label_depends_on_pep440_order(qapp):
     assert not rollback_buttons[0].isEnabled()
 
 
+@pytest.mark.qt
+@pytest.mark.gui
 def test_activate_label_for_newer_selected_version(qapp):
     dialog = _make_installed_dialog(qapp, ["1.9.0", "1.10.0"], active_version="1.9.0")
     combo, buttons = _installed_card_widgets(dialog)
@@ -1043,6 +1104,8 @@ def test_activate_label_for_newer_selected_version(qapp):
     assert len(activate_buttons) == 1
 
 
+@pytest.mark.qt
+@pytest.mark.gui
 def test_rollback_requires_confirmation_and_runs_off_gui_thread(qapp, frozen_thread_pool):
     dialog = _make_installed_dialog(qapp, ["1.9.0", "1.10.0"], active_version="1.10.0")
     emitted = []
@@ -1083,6 +1146,8 @@ def test_rollback_requires_confirmation_and_runs_off_gui_thread(qapp, frozen_thr
     assert dialog._version_worker is None
 
 
+@pytest.mark.qt
+@pytest.mark.gui
 def test_rollback_cancelled_keeps_current_version(qapp):
     dialog = _make_installed_dialog(qapp, ["1.9.0", "1.10.0"], active_version="1.10.0")
 
@@ -1103,6 +1168,8 @@ def test_rollback_cancelled_keeps_current_version(qapp):
     assert dialog._version_worker is None
 
 
+@pytest.mark.qt
+@pytest.mark.gui
 def test_failed_activation_preserves_previous_version_message(qapp, frozen_thread_pool):
     dialog = _make_installed_dialog(qapp, ["1.9.0", "1.10.0"], active_version="1.10.0")
     shown = []
@@ -1132,6 +1199,8 @@ def test_failed_activation_preserves_previous_version_message(qapp, frozen_threa
     assert expected in str(shown[0])
 
 
+@pytest.mark.qt
+@pytest.mark.gui
 def test_corrupt_plugin_problem_shows_actionable_message(qapp):
     dialog = PluginManagerDialog()
     dialog._installed_versions = SimpleNamespace(

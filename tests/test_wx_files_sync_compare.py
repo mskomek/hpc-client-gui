@@ -53,6 +53,8 @@ def _close_shell(frame):
         except Exception:
             pass
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_files_sync_browsing_local_to_remote(tmp_path: Path):
     app, frame, lifecycle, session, files_page = _get_files_page()
     try:
@@ -119,6 +121,8 @@ def test_wx_files_sync_browsing_local_to_remote(tmp_path: Path):
     finally:
         _close_shell(frame)
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_files_sync_browsing_remote_to_local(tmp_path: Path):
     app, frame, lifecycle, session, files_page = _get_files_page()
     try:
@@ -157,6 +161,8 @@ def test_wx_files_sync_browsing_remote_to_local(tmp_path: Path):
     finally:
         _close_shell(frame)
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_files_sync_does_not_loop_recursively(tmp_path: Path):
     app, frame, lifecycle, session, files_page = _get_files_page()
     try:
@@ -187,6 +193,8 @@ def test_wx_files_sync_does_not_loop_recursively(tmp_path: Path):
     finally:
         _close_shell(frame)
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_files_sync_failure_recovers_without_wrong_target(tmp_path: Path):
     app, frame, lifecycle, session, files_page = _get_files_page()
     try:
@@ -227,6 +235,8 @@ def test_wx_files_sync_failure_recovers_without_wrong_target(tmp_path: Path):
     finally:
         _close_shell(frame)
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_compare_directories_real_event_shows_result(tmp_path: Path):
     app, frame, lifecycle, session, files_page = _get_files_page()
     try:
@@ -263,6 +273,8 @@ def test_wx_compare_directories_real_event_shows_result(tmp_path: Path):
         session.pop("_test_remote_entries", None)
         _close_shell(frame)
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_compare_directories_mixed_differences(tmp_path: Path):
     app, frame, lifecycle, session, files_page = _get_files_page()
     try:
@@ -299,6 +311,8 @@ def test_wx_compare_directories_mixed_differences(tmp_path: Path):
         session.pop("_test_remote_entries", None)
         _close_shell(frame)
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_compare_stale_completion_is_ignored(tmp_path: Path):
     app, frame, lifecycle, session, files_page = _get_files_page()
     try:
@@ -341,6 +355,8 @@ def test_wx_compare_stale_completion_is_ignored(tmp_path: Path):
         session.pop("_test_compare_delay", None)
         _close_shell(frame)
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_compare_close_in_flight_is_safe(tmp_path: Path):
     app, frame, lifecycle, session, files_page = _get_files_page()
     try:

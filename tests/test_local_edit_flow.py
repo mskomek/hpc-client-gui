@@ -53,6 +53,8 @@ def _make_editor():
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.qt
+@pytest.mark.gui
 def test_editor_local_open_save_roundtrip(qapp, tmp_path, monkeypatch):
     target = tmp_path / "case.jou"
     target.write_text("/display set\n", encoding="utf-8")
@@ -68,6 +70,8 @@ def test_editor_local_open_save_roundtrip(qapp, tmp_path, monkeypatch):
     assert target.read_text(encoding="utf-8") == "/display set\n/exit yes\n"
 
 
+@pytest.mark.qt
+@pytest.mark.gui
 def test_editor_local_reload_reads_disk(qapp, tmp_path):
     target = tmp_path / "notes.txt"
     target.write_text("first\n", encoding="utf-8")
@@ -79,6 +83,8 @@ def test_editor_local_reload_reads_disk(qapp, tmp_path):
     assert widget.text.toPlainText() == "second\n"
 
 
+@pytest.mark.qt
+@pytest.mark.gui
 def test_editor_rejects_non_utf8_without_rewriting(qapp, tmp_path):
     target = tmp_path / "legacy.txt"
     original = b"\xff\xfelegacy"
@@ -91,6 +97,8 @@ def test_editor_rejects_non_utf8_without_rewriting(qapp, tmp_path):
     assert target.read_bytes() == original
 
 
+@pytest.mark.qt
+@pytest.mark.gui
 def test_editor_remote_save_still_requires_session(qapp, monkeypatch):
     warnings = []
     monkeypatch.setattr(
@@ -124,6 +132,8 @@ class _FakeTreeItem:
         return self._value
 
 
+@pytest.mark.qt
+@pytest.mark.gui
 def test_local_panel_edit_signal_emission(qapp, tmp_path, monkeypatch):
     from hpc_gui.ui.widgets.local_dir_panel import LocalDirPanel
 
@@ -144,6 +154,8 @@ def test_local_panel_edit_signal_emission(qapp, tmp_path, monkeypatch):
     ]
 
 
+@pytest.mark.qt
+@pytest.mark.gui
 def test_local_panel_edit_ignores_directories(qapp, tmp_path, monkeypatch):
     from hpc_gui.ui.widgets.local_dir_panel import LocalDirPanel
 
@@ -156,6 +168,8 @@ def test_local_panel_edit_ignores_directories(qapp, tmp_path, monkeypatch):
     assert captured == []
 
 
+@pytest.mark.qt
+@pytest.mark.gui
 def test_folder_contains_supported_file(qapp, tmp_path, monkeypatch):
     from hpc_gui.ui.widgets.local_dir_panel import LocalDirPanel
 
@@ -175,6 +189,8 @@ def test_folder_contains_supported_file(qapp, tmp_path, monkeypatch):
     assert panel._folder_contains_supported_file(str(tmp_path / "other" / "notes.xyz")) is False
 
 
+@pytest.mark.qt
+@pytest.mark.gui
 def test_tools_for_folder_lists_supporting_tools(qapp, tmp_path, monkeypatch):
     from hpc_gui.plugins.linter_tools import LinterTool
     from hpc_gui.ui.widgets.local_dir_panel import LocalDirPanel

@@ -39,6 +39,7 @@ class _Response:
         return False
 
 
+@pytest.mark.unit
 def test_cancelled_update_download_removes_partial_file(monkeypatch, tmp_path: Path):
     monkeypatch.setattr("hpc_gui.services.app_updater._request", lambda *_args, **_kwargs: _Response())
     cancelled = False
@@ -53,6 +54,7 @@ def test_cancelled_update_download_removes_partial_file(monkeypatch, tmp_path: P
     assert not (tmp_path / "update.zip.part").exists()
 
 
+@pytest.mark.unit
 def test_download_reports_transferred_and_total_bytes(monkeypatch, tmp_path: Path):
     monkeypatch.setattr("hpc_gui.services.app_updater._request", lambda *_args, **_kwargs: _Response())
     progress = []
@@ -62,6 +64,7 @@ def test_download_reports_transferred_and_total_bytes(monkeypatch, tmp_path: Pat
     assert progress[-1] == (100, "", 2, 2)
 
 
+@pytest.mark.unit
 def test_download_percentage_is_actual_package_percentage(monkeypatch, tmp_path: Path):
     monkeypatch.setattr("hpc_gui.services.app_updater._request", lambda *_args, **_kwargs: _Response())
     progress = []
@@ -72,6 +75,7 @@ def test_download_percentage_is_actual_package_percentage(monkeypatch, tmp_path:
     assert progress[1] == (100, "", 2, 2)
 
 
+@pytest.mark.unit
 def test_unknown_content_length_reports_bytes_without_fake_percentage(monkeypatch, tmp_path: Path):
     class UnknownLength(_Response):
         headers = {}
@@ -85,6 +89,7 @@ def test_unknown_content_length_reports_bytes_without_fake_percentage(monkeypatc
     assert progress[-1] == (100, "", 2, 0)
 
 
+@pytest.mark.release
 def test_update_reuses_verified_download(monkeypatch, tmp_path: Path):
     release = UpdateRelease(
         "1.4.2", "v1.4.2", "update.zip", "zip", "update.zip.sha256", "sha", "page",
@@ -100,6 +105,7 @@ def test_update_reuses_verified_download(monkeypatch, tmp_path: Path):
     assert download_and_verify_release(release) == archive
 
 
+@pytest.mark.unit
 def test_closing_update_progress_cancels_active_download():
     class Worker:
         cancelled = False
@@ -120,6 +126,7 @@ def test_closing_update_progress_cancels_active_download():
     assert worker.cancelled and window._update_cancelled and closed
 
 
+@pytest.mark.unit
 def test_manual_update_check_shows_splash_before_worker_starts():
     root = Path(__file__).resolve().parents[1]
     env = os.environ.copy()
@@ -197,12 +204,14 @@ app.processEvents()
     assert result.returncode == 0, f"child failed: {result.stdout}\n{result.stderr}"
 
 
+@pytest.mark.unit
 def test_update_splash_formats_binary_units():
     assert UpdateSplash._format_bytes(1024) == "1.0 KB"
     assert UpdateSplash._format_bytes(1024**2) == "1.0 MB"
     assert UpdateSplash._format_bytes(1024**3) == "1.0 GB"
 
 
+@pytest.mark.release
 def test_release_assets_are_platform_specific():
     assert release_asset_names("windows_x86_64")[0].endswith(".zip")
     assert release_asset_names("macos_arm64")[0].endswith("_arm64.dmg")
@@ -213,11 +222,13 @@ def test_release_assets_are_platform_specific():
     assert release_asset_names("linux_x86_64", "linux-flatpak", "1.5.6")[0].endswith(".flatpak")
 
 
+@pytest.mark.release
 def test_unknown_update_platform_is_rejected():
     with pytest.raises(RuntimeError, match="Unsupported update platform"):
         release_asset_names("macos_ppc64")
 
 
+@pytest.mark.release
 def test_unpackaged_app_never_launches_installer(monkeypatch, tmp_path: Path):
     monkeypatch.setattr("hpc_gui.services.app_updater.current_os", lambda: "macos")
 
@@ -225,6 +236,7 @@ def test_unpackaged_app_never_launches_installer(monkeypatch, tmp_path: Path):
         launch_update_installer(tmp_path / "update.dmg", "1.5.0")
 
 
+@pytest.mark.unit
 def test_install_handoff_never_shows_complete_before_helper_starts(monkeypatch):
     import hpc_gui.ui.main_window as main_window
 
@@ -271,6 +283,7 @@ def test_install_handoff_never_shows_complete_before_helper_starts(monkeypatch):
     assert not any(event == ("progress", 100, "installing") for event in events)
 
 
+@pytest.mark.release
 def test_appimage_handoff_runs_helper_from_verified_new_image(monkeypatch, tmp_path: Path):
     current = tmp_path / "current.AppImage"
     package = tmp_path / "new.AppImage"
@@ -298,6 +311,7 @@ def test_appimage_handoff_runs_helper_from_verified_new_image(monkeypatch, tmp_p
     assert commands[0][:2] == [str(package.resolve()), "--updater-helper"]
 
 
+@pytest.mark.release
 def test_updater_selects_arch_specific_dmg_per_platform():
     # arm64 DMG only for Apple Silicon, x86_64 only for Intel Mac.
     assert release_asset_names("macos_arm64")[0] == "hpc-client-gui_macos_arm64.dmg"
@@ -306,6 +320,7 @@ def test_updater_selects_arch_specific_dmg_per_platform():
     assert release_asset_names("linux_x86_64", "source", "1.5.6") is None
 
 
+@pytest.mark.contract
 def test_security_metadata_parsing_matches_modes():
     signed = {
         "macos_mode": "signed-notarized",
@@ -323,16 +338,19 @@ def test_security_metadata_parsing_matches_modes():
     assert parse_release_security(unverified) == app_updater.SECURITY_UNKNOWN
 
 
+@pytest.mark.contract
 def test_missing_security_metadata_defaults_to_unknown():
     release = UpdateRelease("1.5.1", "v1.5.1", "a.zip", "u", "a.sha256", "s", "page")
     assert release.security_status == app_updater.SECURITY_UNKNOWN
 
 
+@pytest.mark.unit
 def test_unknown_installation_is_manual_only():
     context = InstallationContext("unknown", "test", None, "", "", "x86_64", "unsupported", "not identified")
     assert context.capability == "unsupported"
 
 
+@pytest.mark.release
 def test_windows_installer_script_has_independent_real_progress_and_rollback(tmp_path: Path):
     script = build_update_script(
         zip_path=tmp_path / "update.zip",

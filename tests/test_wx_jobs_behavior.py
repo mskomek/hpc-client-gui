@@ -77,6 +77,7 @@ def wx_jobs():
         pass
 
 
+@pytest.mark.wx
 @pytest.mark.gui
 def test_wx_job_output_pause_freezes_and_resume_updates_output(wx_jobs):
     values = [{"stdout": "line 1", "stderr": "err 1"}, {"stdout": "line 1\nline 2", "stderr": "err 2"}, {"stdout": "line 1\nline 2\nline 3", "stderr": "err 3"}]
@@ -109,6 +110,8 @@ def test_wx_job_output_pause_freezes_and_resume_updates_output(wx_jobs):
     _pump(wx_jobs, lambda: _stdout(frame).GetValue() == "line 1\nline 2\nline 3\n")
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_job_output_minimize_suspends_follow_and_restore_resumes_it(wx_jobs):
     list_calls = []
     values = [{"stdout": "output-1"}, {"stdout": "output-2"}, {"stdout": "output-3"}]
@@ -142,6 +145,8 @@ def test_wx_job_output_minimize_suspends_follow_and_restore_resumes_it(wx_jobs):
     assert not frame._wx_jobs_state["user_paused"]
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_job_output_pause_survives_minimize_restore(wx_jobs):
     list_calls = []
     frame = _open(wx_jobs, lambda: list_calls.append(1) or [{"id": "42", "state": "RUNNING"}], lambda _job: {"stdout": "next"})
@@ -160,6 +165,8 @@ def test_wx_job_output_pause_survives_minimize_restore(wx_jobs):
     assert frame._wx_jobs_controls["pause"].GetLabel() == "Resume All"
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_job_output_does_not_overlap_remote_reads(wx_jobs):
     started = threading.Event()
     release = threading.Event()
@@ -210,6 +217,8 @@ def test_wx_job_output_does_not_overlap_remote_reads(wx_jobs):
         release.set()
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_job_output_discards_stale_result_after_job_selection_changes(wx_jobs):
     release_a = threading.Event()
     release_b = threading.Event()

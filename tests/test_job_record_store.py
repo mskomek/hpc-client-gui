@@ -1,8 +1,10 @@
+import pytest
 import sqlite3
 
 from hpc_gui.services.job_record_store import JobRecordStore
 
 
+@pytest.mark.integration
 def test_create_insert_update_query_and_empty_db(tmp_path):
     store = JobRecordStore(tmp_path / "jobs.sqlite3")
     assert store.list() == []
@@ -15,6 +17,7 @@ def test_create_insert_update_query_and_empty_db(tmp_path):
     store.close()
 
 
+@pytest.mark.integration
 def test_migration_and_corruption_fallback(tmp_path):
     path = tmp_path / "jobs.sqlite3"
     db = sqlite3.connect(path)

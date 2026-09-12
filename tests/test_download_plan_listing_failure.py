@@ -9,6 +9,7 @@ is what "cancel, then it never really restarts" looked like from the UI.
 
 from __future__ import annotations
 
+import pytest
 import os
 import tempfile
 import unittest
@@ -38,6 +39,7 @@ class _Files:
         return [RemoteEntry("data.bin", f"{path}/data.bin", False, size=42, mtime=1)]
 
 
+@pytest.mark.integration
 class DownloadPlanListingFailureTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:

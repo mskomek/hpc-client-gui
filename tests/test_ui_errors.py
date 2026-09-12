@@ -1,3 +1,5 @@
+
+import pytest
 import socket
 import unittest
 
@@ -11,10 +13,12 @@ class UiErrorTests(unittest.TestCase):
     def tearDown(self):
         load_language("tr")
 
+    @pytest.mark.unit
     def test_error_code_label_is_translated(self):
         load_language("tr")
         self.assertEqual(t("common.error_code"), "Tanı kodu")
 
+    @pytest.mark.unit
     def test_common_connection_failures_are_actionable(self):
         load_language("tr")
         cases = (
@@ -30,6 +34,7 @@ class UiErrorTests(unittest.TestCase):
                 self.assertIn(expected, message)
                 self.assertIn("Teknik ayrıntı", message)
 
+    @pytest.mark.unit
     def test_unknown_connection_error_keeps_code_as_technical_detail(self):
         load_language("tr")
         message = describe_connection_error(RuntimeError("ssh fbcbbe"))

@@ -1,9 +1,11 @@
+import pytest
 import unittest
 from unittest.mock import patch
 
 from hpc_gui.core.log_redaction import redact_command_args, redact_text
 
 
+@pytest.mark.unit
 class LogRedactionTests(unittest.TestCase):
     def test_redacts_local_and_remote_usernames_and_hosts(self) -> None:
         with patch("getpass.getuser", return_value="mkomek"), patch(

@@ -6,6 +6,7 @@ false confidence from tests that never exercise the real Unicode boundaries.
 
 from __future__ import annotations
 
+import pytest
 import json
 import pathlib
 import sys
@@ -19,6 +20,7 @@ if str(ROOT / "src") not in sys.path:
 # 1. Coverage Inventory
 # ---------------------------------------------------------------------------
 
+@pytest.mark.audit
 class TestCoverageInventory:
     """Verify Unicode test coverage across all domains."""
 
@@ -77,6 +79,7 @@ class TestCoverageInventory:
 # 2. Fixture/Assertion Quality
 # ---------------------------------------------------------------------------
 
+@pytest.mark.audit
 class TestFixtureAssertionQuality:
     """Verify test fixtures use deterministic Unicode coverage."""
 
@@ -127,6 +130,7 @@ class TestFixtureAssertionQuality:
 # 3. Mojibake Regression Detection
 # ---------------------------------------------------------------------------
 
+@pytest.mark.audit
 class TestMojibakeRegression:
     """Verify mojibake patterns are detected and prevented."""
 
@@ -175,6 +179,7 @@ class TestMojibakeRegression:
 # 4. False-Green Prevention
 # ---------------------------------------------------------------------------
 
+@pytest.mark.audit
 class TestFalseGreenPrevention:
     """Verify tests don't give false confidence."""
 
@@ -235,6 +240,7 @@ class TestFalseGreenPrevention:
 class TestResultsVerification:
     """Verify all wave tests pass."""
 
+    @pytest.mark.audit
     def test_all_wave_tests_importable(self):
         """All wave test modules should be importable."""
         wave_modules = [
@@ -254,6 +260,7 @@ class TestResultsVerification:
             test_file = ROOT / "tests" / f"{module}.py"
             assert test_file.exists(), f"Test file {module}.py missing"
 
+    @pytest.mark.audit
     def test_encoding_boundary_inventory_exists(self):
         """Encoding boundary inventory should be documented."""
         # Check that encoding patterns are documented in Wave 0 tests
@@ -262,6 +269,7 @@ class TestResultsVerification:
         # Should test encoding boundaries
         assert "encode" in content.lower() or "decode" in content.lower() or "encoding" in content.lower()
 
+    @pytest.mark.contract
     def test_wx_unicode_smoke_cannot_fail_open(self):
         """wx dependency or Unicode smoke failures must fail the matrix job."""
         workflow_path = ROOT / ".github" / "workflows" / "ci.yml"
@@ -279,6 +287,7 @@ class TestResultsVerification:
 # 6. Integration Tests
 # ---------------------------------------------------------------------------
 
+@pytest.mark.audit
 class TestIntegration:
     """Integration tests for CI/CD and false-green prevention."""
 

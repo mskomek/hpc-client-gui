@@ -46,6 +46,7 @@ def evidence(path, schema, platform, check_names, **extra):
     path.write_text(json.dumps(data), encoding="utf-8")
 
 
+@pytest.mark.audit
 def test_tracked_source_scan_ignores_comments_and_untracked_file(tmp_path):
     root = git_fixture(tmp_path, {"src/hpc_gui/safe.py": '"""PySide6 mention."""\n# import PySide6\n'})
     (root / "src/hpc_gui/local_test.py").write_text("import PySide6\n", encoding="utf-8")
@@ -56,12 +57,14 @@ def test_tracked_source_scan_ignores_comments_and_untracked_file(tmp_path):
     assert [item["import"] for item in production_qt_imports(root)] == ["PySide6.QtWidgets", "PySide6.QtCore"]
 
 
+@pytest.mark.audit
 def test_source_scan_fails_closed_for_tracked_parse_error(tmp_path):
     root = git_fixture(tmp_path, {"src/hpc_gui/broken.py": "import PySide6\ndef (\n"})
     with pytest.raises(SourceScanError, match=r"src/hpc_gui/broken.py.*SyntaxError"):
         production_qt_imports(root)
 
 
+@pytest.mark.audit
 def test_source_scan_fails_closed_for_read_error(tmp_path, monkeypatch):
     root = git_fixture(tmp_path, {"src/hpc_gui/broken.py": "import PySide6\n"})
     original = type((root / "src/hpc_gui/broken.py")).read_text
@@ -76,11 +79,13 @@ def test_source_scan_fails_closed_for_read_error(tmp_path, monkeypatch):
         production_qt_imports(root)
 
 
+@pytest.mark.audit
 def test_git_tracked_enumeration_rejects_git_failure(tmp_path):
     with pytest.raises(Exception):
         git_tracked_files(tmp_path)
 
 
+@pytest.mark.audit
 def test_ignored_lock_does_not_contaminate_dependency_scan(tmp_path):
     root = git_fixture(tmp_path, {"pyproject.toml": "dependencies = ['PySide6']\n", "requirements.txt": "PySide6\n", "requirements-release.lock": "PySide6\n"})
     before = dependency_records(root)
@@ -89,11 +94,13 @@ def test_ignored_lock_does_not_contaminate_dependency_scan(tmp_path):
     assert dependency_records(root) == before
 
 
+@pytest.mark.audit
 def test_dependency_family_is_detected_from_release_lock(tmp_path):
     root = git_fixture(tmp_path, {"requirements-release.lock": "PySide6\nPySide6_Addons\nPySide6_Essentials\nshiboken6\n"})
     assert {item["normalized"] for item in dependency_records(root)} == {"pyside6", "pyside6-addons", "pyside6-essentials", "shiboken6"}
 
 
+@pytest.mark.audit
 def test_ignored_spec_does_not_contaminate_packaging_scan(tmp_path):
     root = git_fixture(tmp_path, {"build/windows/gui.spec": "hiddenimports=['PySide6.QtCore']\n"})
     before = packaging_blockers(root)
@@ -104,18 +111,21 @@ def test_ignored_spec_does_not_contaminate_packaging_scan(tmp_path):
     assert packaging_blockers(root) == before
 
 
+@pytest.mark.audit
 def test_packaging_patterns_and_cli_excludes(tmp_path):
     root = git_fixture(tmp_path, {"build/gui.spec": "hiddenimports = sorted({'PySide6.QtCore'})\nbinaries = collect_dynamic_libs('shiboken6')\nhiddenimports.extend(['PySide6.QtWidgets'])\nAnalysis(hiddenimports=['PySide6.QtGui'])\n", "build/cli.spec": "Analysis(excludes=['PySide6', 'shiboken6'])\n"})
     refs = {item["reference"] for item in packaging_blockers(root)}
     assert refs == {"PySide6.QtCore", "shiboken6", "PySide6.QtWidgets", "PySide6.QtGui"}
 
 
+@pytest.mark.audit
 def test_spec_scan_fails_closed_for_tracked_parse_error(tmp_path):
     root = git_fixture(tmp_path, {"build/windows/broken.spec": "hiddenimports = [\n"})
     with pytest.raises(PackagingScanError, match=r"build/windows/broken.spec.*SyntaxError"):
         packaging_blockers(root)
 
 
+@pytest.mark.audit
 def test_dirty_gate_script_and_staged_changes_block(tmp_path):
     root = git_fixture(tmp_path, {"scripts/qt_removal_gate.py": "print('gate')\n", "notes.txt": "ok\n"})
     gate_script = root / "scripts/qt_removal_gate.py"
@@ -125,6 +135,7 @@ def test_dirty_gate_script_and_staged_changes_block(tmp_path):
     assert "scripts/qt_removal_gate.py" in _relevant_dirty_files(root)
 
 
+@pytest.mark.audit
 def test_untracked_irrelevant_and_ignored_tmp_do_not_block(tmp_path):
     root = git_fixture(tmp_path, {"notes.txt": "ok\n", ".gitignore": "/.tmp/\n"})
     (root / "notes.local").write_text("local\n", encoding="utf-8")
@@ -134,6 +145,7 @@ def test_untracked_irrelevant_and_ignored_tmp_do_not_block(tmp_path):
     assert _relevant_dirty_files(root) == []
 
 
+@pytest.mark.audit
 def test_evidence_validator_matrix(tmp_path):
     missing = tmp_path / "missing.json"
     assert read_packaged_evidence(missing, "windows", SHA)[0] == "MISSING"
@@ -170,6 +182,7 @@ def test_evidence_validator_matrix(tmp_path):
     assert read_packaged_evidence(path, "windows", SHA)[0] == "PASS"
 
 
+@pytest.mark.audit
 def test_manual_evidence_requires_audit_fields(tmp_path):
     path = tmp_path / "manual.json"
     evidence(path, "wx-manual-parity/1", "windows", MANUAL_CHECKS)
@@ -186,6 +199,7 @@ def test_manual_evidence_requires_audit_fields(tmp_path):
     assert read_manual_evidence(path, "windows", SHA)[0] == "INVALID"
 
 
+@pytest.mark.audit
 def test_gate_requires_platforms_runtime_p0_and_clean_tree():
     assert gate(default_runtime="qt")[0] == "NO-GO"
     assert gate(p0={"GUI-TEST-001": "UNVERIFIED"})[0] == "NO-GO"
@@ -193,5 +207,6 @@ def test_gate_requires_platforms_runtime_p0_and_clean_tree():
     assert gate(dirty_relevant=["src/hpc_gui/runtime.py"])[0] == "NO-GO"
 
 
+@pytest.mark.audit
 def test_true_go_fixture():
     assert gate()[0] == "GO"

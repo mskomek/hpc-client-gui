@@ -173,6 +173,7 @@ def recorder():
 # FTP upload
 # --------------------------------------------------------------------------
 
+@pytest.mark.unit
 def test_ftp_upload_overwrite_uses_stor_from_zero(tmp_path):
     backend = ftp_backend({REMOTE_FILE: PARTIAL})
     backend.upload(write_local(tmp_path, SOURCE), REMOTE_FILE)
@@ -180,6 +181,7 @@ def test_ftp_upload_overwrite_uses_stor_from_zero(tmp_path):
     assert bytes(backend.ftp.files[REMOTE_FILE]) == SOURCE
 
 
+@pytest.mark.unit
 def test_ftp_upload_resume_uses_appe_from_remote_size(tmp_path):
     backend = ftp_backend({REMOTE_FILE: PARTIAL})
     backend.resume_upload(write_local(tmp_path, SOURCE), REMOTE_FILE)
@@ -188,6 +190,7 @@ def test_ftp_upload_resume_uses_appe_from_remote_size(tmp_path):
     assert bytes(backend.ftp.files[REMOTE_FILE]) == PARTIAL + SOURCE[len(PARTIAL):]
 
 
+@pytest.mark.unit
 def test_ftp_upload_overwrite_replaces_equal_sized_remote(tmp_path):
     backend = ftp_backend({REMOTE_FILE: b"ZZZZZZ"})
     backend.upload(write_local(tmp_path, SOURCE), REMOTE_FILE)
@@ -195,6 +198,7 @@ def test_ftp_upload_overwrite_replaces_equal_sized_remote(tmp_path):
     assert bytes(backend.ftp.files[REMOTE_FILE]) == SOURCE
 
 
+@pytest.mark.unit
 def test_ftp_upload_resume_equal_size_is_completed_noop(tmp_path):
     backend = ftp_backend({REMOTE_FILE: b"ZZZZZZ"})
     progress, callback = recorder()
@@ -204,6 +208,7 @@ def test_ftp_upload_resume_equal_size_is_completed_noop(tmp_path):
     assert bytes(backend.ftp.files[REMOTE_FILE]) == b"ZZZZZZ"
 
 
+@pytest.mark.unit
 def test_ftp_upload_resume_zero_length_remote_transfers_everything(tmp_path):
     backend = ftp_backend({REMOTE_FILE: b""})
     backend.resume_upload(write_local(tmp_path, SOURCE), REMOTE_FILE)
@@ -211,6 +216,7 @@ def test_ftp_upload_resume_zero_length_remote_transfers_everything(tmp_path):
     assert bytes(backend.ftp.files[REMOTE_FILE]) == SOURCE
 
 
+@pytest.mark.unit
 def test_ftp_resume_upload_rejects_remote_larger_than_local(tmp_path):
     backend = ftp_backend({REMOTE_FILE: SOURCE + b"EXTRA"})
     with pytest.raises(ValueError) as excinfo:
@@ -224,6 +230,7 @@ def test_ftp_resume_upload_rejects_remote_larger_than_local(tmp_path):
 # FTP download
 # --------------------------------------------------------------------------
 
+@pytest.mark.unit
 def test_ftp_download_overwrite_uses_retr_without_rest_and_wb(tmp_path):
     backend = ftp_backend({REMOTE_FILE: SOURCE})
     local = write_local(tmp_path, PARTIAL, "dst.bin")
@@ -234,6 +241,7 @@ def test_ftp_download_overwrite_uses_retr_without_rest_and_wb(tmp_path):
         assert handle.read() == SOURCE
 
 
+@pytest.mark.unit
 def test_ftp_download_resume_uses_rest_and_append(tmp_path):
     backend = ftp_backend({REMOTE_FILE: SOURCE})
     local = write_local(tmp_path, PARTIAL, "dst.bin")
@@ -245,6 +253,7 @@ def test_ftp_download_resume_uses_rest_and_append(tmp_path):
         assert handle.read() == PARTIAL + SOURCE[len(PARTIAL):]
 
 
+@pytest.mark.unit
 def test_ftp_download_overwrite_replaces_equal_sized_local(tmp_path):
     backend = ftp_backend({REMOTE_FILE: SOURCE})
     local = write_local(tmp_path, b"ZZZZZZ", "dst.bin")
@@ -255,6 +264,7 @@ def test_ftp_download_overwrite_replaces_equal_sized_local(tmp_path):
         assert handle.read() == SOURCE
 
 
+@pytest.mark.unit
 def test_ftp_download_resume_equal_size_is_completed_noop(tmp_path):
     backend = ftp_backend({REMOTE_FILE: SOURCE})
     local = write_local(tmp_path, b"ZZZZZZ", "dst.bin")
@@ -266,6 +276,7 @@ def test_ftp_download_resume_equal_size_is_completed_noop(tmp_path):
         assert handle.read() == b"ZZZZZZ"
 
 
+@pytest.mark.unit
 def test_ftp_download_resume_zero_length_local_transfers_everything(tmp_path):
     backend = ftp_backend({REMOTE_FILE: SOURCE})
     local = write_local(tmp_path, b"", "dst.bin")
@@ -275,6 +286,7 @@ def test_ftp_download_resume_zero_length_local_transfers_everything(tmp_path):
         assert handle.read() == SOURCE
 
 
+@pytest.mark.unit
 def test_ftp_resume_download_rejects_local_larger_than_remote(tmp_path):
     backend = ftp_backend({REMOTE_FILE: PARTIAL})
     local = write_local(tmp_path, SOURCE, "dst.bin")
@@ -290,6 +302,7 @@ def test_ftp_resume_download_rejects_local_larger_than_remote(tmp_path):
 # SFTP upload
 # --------------------------------------------------------------------------
 
+@pytest.mark.unit
 def test_ssh_upload_overwrite_truncates_and_writes_from_zero(tmp_path):
     backend, sftp = ssh_backend({REMOTE_FILE: PARTIAL})
     backend.upload(write_local(tmp_path, SOURCE), REMOTE_FILE)
@@ -297,6 +310,7 @@ def test_ssh_upload_overwrite_truncates_and_writes_from_zero(tmp_path):
     assert bytes(sftp.store[REMOTE_FILE]) == SOURCE
 
 
+@pytest.mark.unit
 def test_ssh_upload_resume_starts_at_remote_size(tmp_path):
     backend, sftp = ssh_backend({REMOTE_FILE: PARTIAL})
     backend.resume_upload(write_local(tmp_path, SOURCE), REMOTE_FILE)
@@ -304,6 +318,7 @@ def test_ssh_upload_resume_starts_at_remote_size(tmp_path):
     assert bytes(sftp.store[REMOTE_FILE]) == PARTIAL + SOURCE[len(PARTIAL):]
 
 
+@pytest.mark.unit
 def test_ssh_upload_overwrite_replaces_equal_sized_remote(tmp_path):
     backend, sftp = ssh_backend({REMOTE_FILE: b"ZZZZZZ"})
     backend.upload(write_local(tmp_path, SOURCE), REMOTE_FILE)
@@ -311,6 +326,7 @@ def test_ssh_upload_overwrite_replaces_equal_sized_remote(tmp_path):
     assert bytes(sftp.store[REMOTE_FILE]) == SOURCE
 
 
+@pytest.mark.unit
 def test_ssh_upload_resume_equal_size_is_completed_noop(tmp_path):
     backend, sftp = ssh_backend({REMOTE_FILE: b"ZZZZZZ"})
     progress, callback = recorder()
@@ -320,6 +336,7 @@ def test_ssh_upload_resume_equal_size_is_completed_noop(tmp_path):
     assert bytes(sftp.store[REMOTE_FILE]) == b"ZZZZZZ"
 
 
+@pytest.mark.unit
 def test_ssh_upload_resume_zero_length_remote_transfers_everything(tmp_path):
     backend, sftp = ssh_backend({REMOTE_FILE: b""})
     backend.resume_upload(write_local(tmp_path, SOURCE), REMOTE_FILE)
@@ -327,6 +344,7 @@ def test_ssh_upload_resume_zero_length_remote_transfers_everything(tmp_path):
     assert bytes(sftp.store[REMOTE_FILE]) == SOURCE
 
 
+@pytest.mark.unit
 def test_ssh_resume_upload_rejects_remote_larger_than_local(tmp_path):
     backend, sftp = ssh_backend({REMOTE_FILE: SOURCE + b"EXTRA"})
     with pytest.raises(ValueError) as excinfo:
@@ -340,6 +358,7 @@ def test_ssh_resume_upload_rejects_remote_larger_than_local(tmp_path):
 # SFTP download
 # --------------------------------------------------------------------------
 
+@pytest.mark.unit
 def test_ssh_download_overwrite_replaces_local_file(tmp_path):
     backend, sftp = ssh_backend({REMOTE_FILE: SOURCE})
     local = write_local(tmp_path, PARTIAL, "dst.bin")
@@ -349,6 +368,7 @@ def test_ssh_download_overwrite_replaces_local_file(tmp_path):
         assert handle.read() == SOURCE
 
 
+@pytest.mark.unit
 def test_ssh_download_resume_starts_at_local_size(tmp_path):
     backend, sftp = ssh_backend({REMOTE_FILE: SOURCE})
     local = write_local(tmp_path, PARTIAL, "dst.bin")
@@ -358,6 +378,7 @@ def test_ssh_download_resume_starts_at_local_size(tmp_path):
         assert handle.read() == PARTIAL + SOURCE[len(PARTIAL):]
 
 
+@pytest.mark.unit
 def test_ssh_download_overwrite_replaces_equal_sized_local(tmp_path):
     backend, sftp = ssh_backend({REMOTE_FILE: SOURCE})
     local = write_local(tmp_path, b"ZZZZZZ", "dst.bin")
@@ -367,6 +388,7 @@ def test_ssh_download_overwrite_replaces_equal_sized_local(tmp_path):
         assert handle.read() == SOURCE
 
 
+@pytest.mark.unit
 def test_ssh_download_resume_equal_size_is_completed_noop(tmp_path):
     backend, sftp = ssh_backend({REMOTE_FILE: SOURCE})
     local = write_local(tmp_path, b"ZZZZZZ", "dst.bin")
@@ -378,6 +400,7 @@ def test_ssh_download_resume_equal_size_is_completed_noop(tmp_path):
         assert handle.read() == b"ZZZZZZ"
 
 
+@pytest.mark.unit
 def test_ssh_download_resume_zero_length_local_transfers_everything(tmp_path):
     backend, sftp = ssh_backend({REMOTE_FILE: SOURCE})
     local = write_local(tmp_path, b"", "dst.bin")
@@ -387,6 +410,7 @@ def test_ssh_download_resume_zero_length_local_transfers_everything(tmp_path):
         assert handle.read() == SOURCE
 
 
+@pytest.mark.unit
 def test_ssh_resume_download_rejects_local_larger_than_remote(tmp_path):
     backend, sftp = ssh_backend({REMOTE_FILE: PARTIAL})
     local = write_local(tmp_path, SOURCE, "dst.bin")
@@ -402,6 +426,7 @@ def test_ssh_resume_download_rejects_local_larger_than_remote(tmp_path):
 # Overwrite and Resume must not be interchangeable
 # --------------------------------------------------------------------------
 
+@pytest.mark.unit
 @pytest.mark.parametrize("kind", ["ftp", "ssh"])
 def test_overwrite_and_resume_upload_produce_different_bytes(tmp_path, kind):
     local = write_local(tmp_path, SOURCE)
@@ -424,6 +449,7 @@ def test_overwrite_and_resume_upload_produce_different_bytes(tmp_path, kind):
     assert after_overwrite != after_resume
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize("kind", ["ftp", "ssh"])
 def test_overwrite_and_resume_download_produce_different_bytes(tmp_path, kind):
     overwrite_local = write_local(tmp_path, PARTIAL, "ow.bin")

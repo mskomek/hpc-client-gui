@@ -89,6 +89,7 @@ def _stub_v2_multi(monkeypatch, tool_diags: list[tuple]):
     )
 
 
+@pytest.mark.unit
 def test_run_v2_tool_lint_maps_engine_diag(qapp, monkeypatch):
     from hpc_gui.ui.widgets.editor_widget import EditorWidget
 
@@ -105,6 +106,7 @@ def test_run_v2_tool_lint_maps_engine_diag(qapp, monkeypatch):
     assert "fix it" in converted[0].suggested_fix
 
 
+@pytest.mark.unit
 def test_run_v2_tool_lint_unsupported_suffix_returns_empty(qapp, monkeypatch):
     from hpc_gui.ui.widgets.editor_widget import EditorWidget
 
@@ -114,6 +116,7 @@ def test_run_v2_tool_lint_unsupported_suffix_returns_empty(qapp, monkeypatch):
     assert w._run_v2_tool_lint("notes.xyz", "hello") == []
 
 
+@pytest.mark.unit
 def test_run_v2_tool_lint_broken_engine_is_contained(qapp, monkeypatch):
     from hpc_gui.ui.widgets.editor_widget import EditorWidget
     from hpc_gui.plugins.linter_tools import LinterTool
@@ -144,6 +147,7 @@ def test_run_v2_tool_lint_broken_engine_is_contained(qapp, monkeypatch):
     assert w._run_v2_tool_lint("job.jou", "text") == []
 
 
+@pytest.mark.integration
 def test_run_lint_merges_v2_with_v1(qapp, monkeypatch):
     from hpc_gui.lint.models import Diagnostic, Severity
     from hpc_gui.ui.widgets.editor_widget import EditorWidget
@@ -180,6 +184,7 @@ def test_run_lint_merges_v2_with_v1(qapp, monkeypatch):
     assert "V2_RULE" in codes
 
 
+@pytest.mark.unit
 def test_multi_tool_aggregation_and_prefix(qapp, monkeypatch):
     from hpc_gui.plugins.linter_tools import LinterTool
     from hpc_gui.ui.widgets.editor_widget import EditorWidget
@@ -198,6 +203,7 @@ def test_multi_tool_aggregation_and_prefix(qapp, monkeypatch):
     assert {d.plugin_id for d in converted} == {"org.a", "org.b"}
 
 
+@pytest.mark.unit
 def test_multi_tool_dedup_same_diag(qapp, monkeypatch):
     from hpc_gui.plugins.linter_tools import LinterTool
     from hpc_gui.ui.widgets.editor_widget import EditorWidget
@@ -214,6 +220,7 @@ def test_multi_tool_dedup_same_diag(qapp, monkeypatch):
     assert converted[0].rule_id == "SAME"
 
 
+@pytest.mark.unit
 def test_multi_tool_broken_second_is_contained(qapp, monkeypatch):
     from hpc_gui.plugins.linter_tools import LinterTool
     from hpc_gui.ui.widgets.editor_widget import EditorWidget
@@ -244,6 +251,7 @@ def test_multi_tool_broken_second_is_contained(qapp, monkeypatch):
     assert converted[0].rule_id == "OK_CODE"
 
 
+@pytest.mark.contract
 def test_tools_supporting_all_suffixes_intersection(monkeypatch):
     from hpc_gui.plugins.linter_tools import LinterTool, tools_supporting_all_suffixes
 

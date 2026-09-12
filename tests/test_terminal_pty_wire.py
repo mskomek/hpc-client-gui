@@ -1,3 +1,4 @@
+import pytest
 import tempfile
 import time
 import unittest
@@ -8,6 +9,7 @@ from hpc_gui.ssh.client import SSHClientWrapper, SSHConnInfo
 from support.mock_ssh_server import MOCK_PASSWORD, MOCK_USERNAME, MockSSHServer
 
 
+@pytest.mark.integration
 class TerminalPtyWireTests(unittest.TestCase):
     def test_real_ssh_pty_and_resize_reach_disposable_server(self):
         with tempfile.TemporaryDirectory(prefix="terminal_pty_") as directory:

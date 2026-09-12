@@ -1,3 +1,4 @@
+import pytest
 import plistlib
 from pathlib import Path
 
@@ -10,6 +11,7 @@ def _platform(monkeypatch, os_name: str, executable: Path) -> None:
     monkeypatch.setattr(installation_context, "_executable", lambda: executable.resolve())
 
 
+@pytest.mark.integration
 def test_windows_frozen_uses_explicit_portable_strategy(monkeypatch, tmp_path: Path):
     executable = tmp_path / "hpc-client-gui.exe"
     executable.write_bytes(b"")
@@ -19,6 +21,7 @@ def test_windows_frozen_uses_explicit_portable_strategy(monkeypatch, tmp_path: P
     assert installation_context.detect_installation().capability == "windows-portable"
 
 
+@pytest.mark.integration
 def test_linux_installation_strategies_are_evidence_based(monkeypatch, tmp_path: Path):
     executable = tmp_path / "client.AppImage"
     executable.write_bytes(b"image")
@@ -34,6 +37,7 @@ def test_linux_installation_strategies_are_evidence_based(monkeypatch, tmp_path:
     assert "scope=user" in context.reason
 
 
+@pytest.mark.integration
 def test_appimage_runtime_mount_maps_back_to_original_image(monkeypatch, tmp_path: Path):
     image = tmp_path / "client.AppImage"
     executable = tmp_path / "mount" / "usr" / "bin" / "client"
@@ -49,6 +53,7 @@ def test_appimage_runtime_mount_maps_back_to_original_image(monkeypatch, tmp_pat
     assert context.executable == image.resolve()
 
 
+@pytest.mark.integration
 def test_non_writable_appimage_falls_back_safely(monkeypatch, tmp_path: Path):
     image = tmp_path / "client.AppImage"
     image.write_bytes(b"image")
@@ -59,6 +64,7 @@ def test_non_writable_appimage_falls_back_safely(monkeypatch, tmp_path: Path):
     assert installation_context.detect_installation().capability == "unsupported"
 
 
+@pytest.mark.integration
 def test_deb_and_source_strategies_do_not_guess(monkeypatch, tmp_path: Path):
     executable = tmp_path / "hpc-client-gui"
     executable.write_bytes(b"")
@@ -80,6 +86,7 @@ def test_deb_and_source_strategies_do_not_guess(monkeypatch, tmp_path: Path):
     assert installation_context.detect_installation().capability == "source"
 
 
+@pytest.mark.integration
 def test_unknown_installation_is_unsupported(monkeypatch, tmp_path: Path):
     executable = tmp_path / "client"
     executable.write_bytes(b"")
@@ -88,6 +95,7 @@ def test_unknown_installation_is_unsupported(monkeypatch, tmp_path: Path):
     assert installation_context.detect_installation().capability == "unsupported"
 
 
+@pytest.mark.integration
 def test_macos_bundle_identity_is_read_from_info_plist(monkeypatch, tmp_path: Path):
     bundle = tmp_path / "HPC Client GUI.app"
     executable = bundle / "Contents" / "MacOS" / "hpc-client-gui"

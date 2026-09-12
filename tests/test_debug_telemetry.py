@@ -1,3 +1,5 @@
+
+import pytest
 from unittest.mock import patch
 
 from PySide6.QtCore import QEvent, Qt
@@ -7,6 +9,7 @@ from PySide6.QtWidgets import QApplication, QWidget
 from hpc_gui.core.debug_telemetry import DebugTelemetry
 
 
+@pytest.mark.unit
 def test_key_event_with_keyboard_modifiers_is_logged_without_error() -> None:
     QApplication.instance() or QApplication([])
     telemetry = DebugTelemetry()

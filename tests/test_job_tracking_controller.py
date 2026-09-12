@@ -1,6 +1,8 @@
+import pytest
 from hpc_gui.services.job_tracking_controller import JobTrackingController
 
 
+@pytest.mark.unit
 def test_polling_selection_reconnect_and_output_metadata():
     controller = JobTrackingController()
     session = {"connected": True}
@@ -18,6 +20,7 @@ def test_polling_selection_reconnect_and_output_metadata():
     assert controller.selected_job_id == ""
 
 
+@pytest.mark.audit
 def test_controller_has_no_qt_dependency():
     source = __import__("inspect").getsource(JobTrackingController)
     assert "PySide" not in source

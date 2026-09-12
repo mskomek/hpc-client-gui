@@ -1,7 +1,10 @@
+
+import pytest
 from hpc_gui.ssh.client import HostKeyInfo
 from hpc_gui.wx_connection import HostKeyRequest, KeyboardInteractiveRequest, WxConnectionModel, ssh_info_from_profile
 
 
+@pytest.mark.gui
 def test_profile_management_and_mock_connect():
     profiles = [{"name": "cluster", "host": "hpc.example", "username": "user", "password": "secret", "system": {"provider": "generic"}}]
     connected = []
@@ -13,6 +16,7 @@ def test_profile_management_and_mock_connect():
     assert model.controller.state.value == "connecting"
 
 
+@pytest.mark.gui
 def test_unknown_profile_and_optional_wx_import():
     model = WxConnectionModel([])
     assert not model.select("missing") and not model.connect_selected()
@@ -20,6 +24,7 @@ def test_unknown_profile_and_optional_wx_import():
     assert "from PySide6" not in source and "import wx" in source
 
 
+@pytest.mark.gui
 def test_wx_connection_view_has_async_selection_and_double_click_connect():
     source = open("src/hpc_gui/wx_connection.py", encoding="utf-8").read()
     assert "EVT_LISTBOX_DCLICK" in source
@@ -29,6 +34,7 @@ def test_wx_connection_view_has_async_selection_and_double_click_connect():
     assert "on_connected=None" in source
 
 
+@pytest.mark.gui
 def test_connection_security_callbacks_fail_closed_and_do_not_store_mfa():
     request = HostKeyRequest("hpc.example", "aa:bb")
     mfa = KeyboardInteractiveRequest("MFA", "code", ("Response:",))
@@ -38,18 +44,21 @@ def test_connection_security_callbacks_fail_closed_and_do_not_store_mfa():
     assert not hasattr(model, "one-time")
 
 
+@pytest.mark.gui
 def test_connection_model_enters_connected_state_for_returned_session():
     model = WxConnectionModel([{"name": "cluster"}], connect=lambda _profile: {"connected": True})
     assert model.select("cluster") and model.connect_selected()
     assert model.controller.state.value == "connected"
 
 
+@pytest.mark.gui
 def test_connection_model_rejects_explicit_connector_failure():
     model = WxConnectionModel([{"name": "cluster"}], connect=lambda _profile: False)
     assert model.select("cluster") and not model.connect_selected()
     assert model.controller.state.value == "failed"
 
 
+@pytest.mark.gui
 def test_profile_builds_shared_ssh_info_with_security_callbacks():
     model = WxConnectionModel([], host_key_decision=lambda _request: "once", keyboard_interactive=lambda _request: ["code"])
     info = ssh_info_from_profile({"host": "hpc.example", "port": 2222, "username": "user", "host_key_policy": "accept-new"}, model)
@@ -58,6 +67,7 @@ def test_profile_builds_shared_ssh_info_with_security_callbacks():
     assert info.keyboard_interactive_handler("MFA", "", [("Code", False)]) == ["code"]
 
 
+@pytest.mark.gui
 def test_connection_view_uses_shared_ssh_session_adapters():
     source = open("src/hpc_gui/wx_connection.py", encoding="utf-8").read()
     assert "SSHClientWrapper" in source and "SSHFilesBackend(ssh)" in source

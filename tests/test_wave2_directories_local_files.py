@@ -59,6 +59,7 @@ ALL_UNICODE_NAMES = TURKISH_NAMES + JAPANESE_NAMES + MIXED_NAMES + SYMBOL_NAMES
 # 1. Directory Listing/Navigation
 # ---------------------------------------------------------------------------
 
+@pytest.mark.unit
 class TestDirectoryListingNavigation:
     """Verify directory listing and navigation with Unicode names."""
 
@@ -137,6 +138,7 @@ class TestDirectoryListingNavigation:
 # 2. CRUD/Actions
 # ---------------------------------------------------------------------------
 
+@pytest.mark.unit
 class TestCRUDActions:
     """Verify file operations with Unicode paths."""
 
@@ -227,6 +229,7 @@ class TestCRUDActions:
 # 3. Context Menus
 # ---------------------------------------------------------------------------
 
+@pytest.mark.unit
 class TestContextMenus:
     """Verify context menus are fully wired with Unicode support."""
 
@@ -304,6 +307,7 @@ class TestContextMenus:
 # 4. Clipboard/Pane Operations
 # ---------------------------------------------------------------------------
 
+@pytest.mark.unit
 class TestClipboardOperations:
     """Verify clipboard operations preserve Unicode."""
 
@@ -397,6 +401,7 @@ class TestClipboardOperations:
 # 5. Search/Filter and Ergonomics
 # ---------------------------------------------------------------------------
 
+@pytest.mark.unit
 class TestSearchFilterErgonomics:
     """Verify search/filter behavior with Unicode names."""
 
@@ -463,6 +468,7 @@ class TestSearchFilterErgonomics:
 # 6. URL Encoding
 # ---------------------------------------------------------------------------
 
+@pytest.mark.contract
 class TestURLEncoding:
     """Verify URL encoding preserves Unicode for drag/drop."""
 
@@ -492,6 +498,7 @@ class TestURLEncoding:
 # 7. Path Operations
 # ---------------------------------------------------------------------------
 
+@pytest.mark.unit
 class TestPathOperations:
     """Verify path operations with Unicode names."""
 
@@ -556,6 +563,7 @@ class TestPathOperations:
 # 8. Integration Tests
 # ---------------------------------------------------------------------------
 
+@pytest.mark.integration
 class TestIntegration:
     """Integration tests for Unicode local file operations."""
 
@@ -633,6 +641,7 @@ class TestIntegration:
 # 9. Forward Navigation
 # ---------------------------------------------------------------------------
 
+@pytest.mark.unit
 class TestForwardNavigation:
     """Verify forward navigation works correctly."""
 
@@ -727,6 +736,7 @@ class TestForwardNavigation:
 # 10. Search/Filter
 # ---------------------------------------------------------------------------
 
+@pytest.mark.unit
 class TestSearchFilter:
     """Verify search/filter functionality with Unicode names."""
 
@@ -814,6 +824,7 @@ class TestSearchFilter:
 # 11. Error Handling
 # ---------------------------------------------------------------------------
 
+@pytest.mark.unit
 class TestErrorHandling:
     """Verify error handling for edge cases."""
 
@@ -888,6 +899,7 @@ class TestErrorHandling:
 # 12. Empty/Loading/Error States
 # ---------------------------------------------------------------------------
 
+@pytest.mark.unit
 class TestEmptyLoadingErrorStates:
     """Verify empty, loading, and error states."""
 
@@ -937,6 +949,7 @@ class TestEmptyLoadingErrorStates:
 # 13. Conflict Handling
 # ---------------------------------------------------------------------------
 
+@pytest.mark.unit
 class TestConflictHandling:
     """Verify conflict handling during file operations."""
 

@@ -40,6 +40,7 @@ def _metadata(**overrides):
     return value
 
 
+@pytest.mark.contract
 def test_signed_metadata_requires_known_key_and_valid_signature():
     raw, keys = _signed(_metadata())
     assert verify_signed_metadata(raw, keys)["version"] == "1.6.0"
@@ -51,6 +52,7 @@ def test_signed_metadata_requires_known_key_and_valid_signature():
         verify_signed_metadata(json.dumps(tampered).encode(), keys)
 
 
+@pytest.mark.contract
 def test_metadata_rejects_duplicate_targets_and_non_https_urls():
     metadata = _metadata()
     metadata["artifacts"].append(dict(metadata["artifacts"][0]))
@@ -71,6 +73,7 @@ def test_metadata_rejects_duplicate_targets_and_non_https_urls():
         verify_signed_metadata(raw, keys)
 
 
+@pytest.mark.contract
 def test_artifact_size_and_digest_are_verified(tmp_path):
     path = tmp_path / "app.deb"
     path.write_bytes(b"abc")

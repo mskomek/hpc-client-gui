@@ -78,6 +78,7 @@ def local_fetcher():
     return fetch
 
 
+@pytest.mark.integration
 def test_real_ansys_lint_tool_loads_and_builds_page(installed, qapp):
     from PySide6.QtWidgets import QWidget
 
@@ -88,6 +89,7 @@ def test_real_ansys_lint_tool_loads_and_builds_page(installed, qapp):
     assert isinstance(page, QWidget)
 
 
+@pytest.mark.integration
 def test_real_ansys_lint_engine_lints_offline(installed, qapp, tmp_path: Path):
     """The imported engine lints a journal through the host's module name."""
     journal = tmp_path / "job.jou"
@@ -106,6 +108,7 @@ def test_real_ansys_lint_engine_lints_offline(installed, qapp, tmp_path: Path):
     assert "FLUENT_GUI_IN_HEADLESS" in codes
 
 
+@pytest.mark.integration
 def test_real_ansys_installer_round_trip(local_fetcher, qapp, tmp_path: Path):
     """Install the real registry package, then exercise its real engine."""
     from hpc_gui.plugins.installer import install_plugin_from_registry
@@ -157,6 +160,7 @@ def _fake_ansys_tool(tmp_path: Path, version: str, marker: str, *, broken=False)
     return InstalledPlugin(manifest=manifest, directory=tmp_path / version, linter_engine={"module": "engine/ansys_lint/__init__.py"})
 
 
+@pytest.mark.integration
 def test_trusted_tool_versions_isolate_submodules_and_restore_bytecode_flag(tmp_path: Path):
     first = _fake_ansys_tool(tmp_path, "0.1.0", "VERSION_A")
     second = _fake_ansys_tool(tmp_path, "0.2.0", "VERSION_B")

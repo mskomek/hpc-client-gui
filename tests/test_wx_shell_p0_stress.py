@@ -53,6 +53,8 @@ def _close(app, frame, lifecycle):
     wx.SafeYield()
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_shell_p0_stress_real_wx_paths():
     load_language("en")
     app = wx.App(False)

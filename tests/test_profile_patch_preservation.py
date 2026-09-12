@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import pytest
 import os
 import sys
 import tempfile
@@ -45,6 +46,7 @@ def _existing_profile() -> dict:
     }
 
 
+@pytest.mark.contract
 class MergeProfilePatchTests(unittest.TestCase):
     def test_unknown_top_level_key_survives_an_edit(self) -> None:
         merged = merge_profile_patch(
@@ -73,6 +75,7 @@ class MergeProfilePatchTests(unittest.TestCase):
         self.assertEqual(merged, {"name": "fresh"})
 
 
+@pytest.mark.integration
 class ProfileStoragePreservationTests(unittest.TestCase):
     def setUp(self) -> None:
         self._dir = tempfile.TemporaryDirectory()
@@ -104,6 +107,7 @@ class ProfileStoragePreservationTests(unittest.TestCase):
         self.assertEqual(storage.load_profiles()[0]["id"], first_id)
 
 
+@pytest.mark.gui
 class ConnectionDialogPreservationTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
@@ -116,6 +120,7 @@ class ConnectionDialogPreservationTests(unittest.TestCase):
         finally:
             dialog.deleteLater()
 
+    @pytest.mark.qt
     def test_unrelated_edit_preserves_provenance_file_manager_and_future_keys(self) -> None:
         collected = self._dialog_collect(_existing_profile())
         assert collected is not None
@@ -129,6 +134,7 @@ class ConnectionDialogPreservationTests(unittest.TestCase):
         self.assertNotIn("password_enc", collected)
         self.assertNotIn("password_salt", collected)
 
+    @pytest.mark.qt
     def test_applying_builtin_template_clears_stale_plugin_provenance(self) -> None:
         dialog = ConnectionDialog(initial_profile=_existing_profile())
         try:
@@ -139,6 +145,7 @@ class ConnectionDialogPreservationTests(unittest.TestCase):
         assert collected is not None
         self.assertNotIn("system_template_source", collected)
 
+    @pytest.mark.qt
     def test_no_template_action_preserves_provenance(self) -> None:
         dialog = ConnectionDialog(initial_profile=_existing_profile())
         try:
@@ -149,6 +156,7 @@ class ConnectionDialogPreservationTests(unittest.TestCase):
         assert collected is not None
         self.assertEqual(collected["system_template_source"]["plugin_id"], "org.hpcclient.truba")
 
+    @pytest.mark.qt
     def test_saved_provider_edits_preserve_all_quota_sources(self) -> None:
         profile = _existing_profile()
         profile["provider_template"] = {
@@ -171,17 +179,20 @@ class ConnectionDialogPreservationTests(unittest.TestCase):
         self.assertEqual(sources[1]["command_template"], "keep")
         self.assertEqual(collected["provider_template"]["storage"][0]["path_template"], "/changed/{user}")
 
+    @pytest.mark.qt
     def test_legacy_new_profile_has_blank_local_start(self) -> None:
         collected = self._dialog_collect({"name": "legacy", "host": "h"})
         assert collected is not None
         self.assertEqual(collected["file_manager"].get("local_start_dir", ""), "")
 
 
+@pytest.mark.gui
 class LoginWidgetSaveProfileTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.app = QApplication.instance() or QApplication([])
 
+    @pytest.mark.qt
     def test_save_patches_existing_profile_without_dropping_fields(self) -> None:
         login = LoginWidget()
         try:
@@ -215,6 +226,7 @@ class LoginWidgetSaveProfileTests(unittest.TestCase):
         finally:
             login.deleteLater()
 
+    @pytest.mark.qt
     def test_disable_saved_password_removes_secret_fields_only(self) -> None:
         login = LoginWidget()
         try:
@@ -241,6 +253,7 @@ class LoginWidgetSaveProfileTests(unittest.TestCase):
         finally:
             login.deleteLater()
 
+    @pytest.mark.qt
     def test_rename_preserves_identity_and_removes_old_entry(self) -> None:
         login = LoginWidget()
         try:
@@ -269,6 +282,7 @@ class LoginWidgetSaveProfileTests(unittest.TestCase):
         finally:
             login.deleteLater()
 
+    @pytest.mark.qt
     def test_load_stores_normalized_file_manager_settings_for_runtime(self) -> None:
         login = LoginWidget()
         try:
