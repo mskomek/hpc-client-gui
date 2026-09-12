@@ -7,7 +7,7 @@ wx = pytest.importorskip("wx")
 
 from mock_hpc_jobs import MockHPCJobs
 
-from hpc_gui.core.i18n import load_language
+from hpc_gui.core.i18n import load_language, t
 from hpc_gui.wx_jobs import WxJobsModel, show_jobs
 
 
@@ -135,7 +135,7 @@ def test_wx_jobs_stress_pause_resume_state_never_desynchronizes(wx_app):
         if not paused:
             assert frame._wx_jobs_state["follow_calls"] > 0
     assert not frame._wx_jobs_state["user_paused"]
-    assert frame._wx_jobs_controls["pause"].GetLabel() == "Pause Live Follow"
+    assert frame._wx_jobs_controls["pause"].GetLabel() == t("jobs_outputs.pause_all")
     _close(frame, wx_app)
 
 

@@ -185,7 +185,7 @@ def _build_editor(parent, model: WxEditorModel | None, *, path: str, content: st
 
         def done(error, saved, callback):
             state["in_flight"] = False
-            if state["closed"]:
+            if state["closed"] and callback is None:
                 return
             editor.Enable(True)
             for button in (save, submit, run, btn_open, btn_template, btn_lint):
@@ -388,7 +388,8 @@ def _build_editor(parent, model: WxEditorModel | None, *, path: str, content: st
                     state["closed"] = True
                     unsubscribe_language_change(refresh_labels)
                     notify_destroy()
-                    host.Destroy()
+                    if not host.IsBeingDeleted():
+                        host.Destroy()
 
                 save_document(on_done=destroy_after_save)
                 return

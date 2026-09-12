@@ -143,7 +143,7 @@ def test_wx_shell_completion_states_and_deduplication(shell):
     rows = [[{"id": "123", "state": "RUNNING"}], [{"id": "123", "state": "COMPLETING"}], []]
     jobs, calls = _open_jobs(app, frame, lifecycle, rows, lambda _job: "COMPLETED")
     jobs._wx_jobs_refresh_jobs()
-    _pump(app, lambda: len(calls) >= 2 and jobs._wx_jobs_controls["jobs"].GetItemCount() == 1 and jobs._wx_jobs_controls["jobs"].GetItemText(0, 1) == "COMPLETING")
+    _pump(app, lambda: len(calls) >= 2 and jobs._wx_jobs_controls["jobs"].GetItemCount() == 1 and jobs._wx_jobs_controls["jobs"].GetItemText(0, 2) == "COMPLETING")
     jobs._wx_jobs_refresh_jobs()
     _pump(app, lambda: len(calls) >= 3 and len(tray.messages) == 1)
     for _ in range(5):

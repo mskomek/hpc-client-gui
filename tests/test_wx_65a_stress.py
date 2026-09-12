@@ -223,7 +223,7 @@ def test_wx_65a_integrated_stress(tmp_path: Path, monkeypatch) -> None:
         if item:
             _menu(frame, item.GetId())
             executed["en_tr_switches"] += 1
-            lbl = frame._wx_shell_controls["language_button"].GetLabel()
+            lbl = frame._wx_shell_controls["language_items"][lang].GetItemLabel()
             if "[" in lbl and "]" in lbl:
                 invariants["wrong_language_labels"] += 1
         if i % 50 == 0:

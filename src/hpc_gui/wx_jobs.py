@@ -817,7 +817,8 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
                             lifecycle=lifecycle,
                             on_closed=lambda fid=tracking_id: _remove_manual_follower(fid))
         else:
-            refresh_outputs_tab(force=True)
+            _ensure_output_tabs(_resolve_output_channels())
+            _refresh_single_channel(tracking_id)
             _select_inner_page(outputs_page)
 
     def _remove_manual_follower(tracking_id):
@@ -964,6 +965,7 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         "selected_generation": 0,
         "closed": False,
         "in_flight": False,
+        "refresh_pending": False,
         "output_in_flight": False,
         "cancel_in_flight": False,
         "user_paused": False,
@@ -1213,7 +1215,10 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         if request_generation is not None:
             model.set_monitor_generation(request_generation)
         with state_lock:
-            if state["closed"] or state["in_flight"]:
+            if state["closed"]:
+                return
+            if state["in_flight"]:
+                state["refresh_pending"] = True
                 return
             state["in_flight"] = True
 
@@ -1227,6 +1232,7 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         def done(result, error, req_gen=None):
             with state_lock:
                 state["in_flight"] = False
+                refresh_pending = state.pop("refresh_pending", False)
             if not state["closed"] and (generation is None or req_gen == generation()):
                 if error:
                     pass  # Job listing errors are logged, not shown in accounting
@@ -1238,6 +1244,8 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
                             job_id = str(item.get("id", item.get("job_id", ""))).strip()
                             model._job_states.setdefault(job_id, str(item.get("state", "")).strip().upper())
                     model.poll_active_jobs(items, final_state, generation=req_gen)
+            if refresh_pending and not state["closed"]:
+                post(refresh_jobs)
 
         Thread(target=fetch, daemon=True).start()
 
@@ -1982,7 +1990,7 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
                 return
             if state.get("_timer_paused") and not force:
                 return
-            if state["outputs_in_flight"] and state.get("_outputs_job_id") == job_id and not force:
+            if state["outputs_in_flight"] and state.get("_outputs_job_id") == job_id:
                 return
             state["outputs_in_flight"] = True
             state["outputs_requests"] += 1
@@ -2052,13 +2060,13 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
                     continue
                 retained, waiting = result.get(channel.id, ("", False))
                 follower = state.get("followers", {}).get(channel.id)
-                if output_channel_paused.get(channel.id, False):
-                    _set_output_channel_status(channel.id, "jobs_outputs.status_paused")
-                    continue
                 at_bottom = _output_at_bottom(text_ctrl)
                 text_ctrl.SetValue(retain_last_lines(retained))
                 output_channel_offsets[channel.id] = follower.state.offset if follower else 0
                 output_channel_waiting[channel.id] = follower.state.waiting_state if follower else 0
+                if output_channel_paused.get(channel.id, False):
+                    _set_output_channel_status(channel.id, "jobs_outputs.status_paused")
+                    continue
                 status_key = "jobs_outputs.status_waiting" if waiting else (
                     "jobs_outputs.status_completed"
                     if str(model.selected_job_store.context.state).upper() in {"COMPLETED", "FAILED", "CANCELLED", "TIMEOUT", "OUT_OF_MEMORY"}
