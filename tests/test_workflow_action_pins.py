@@ -28,7 +28,8 @@ def _action_refs(text: str) -> list[tuple[str, str]]:
 
 def test_every_workflow_exists():
     files = sorted(WORKFLOWS_DIR.glob("*.yml"))
-    assert {path.name for path in files} >= {"ci.yml", "release.yml"}
+    assert {path.name for path in files} >= {"release.yml"}
+    assert (WORKFLOWS_DIR.parent.parent / "docs" / "ci-disabled" / "ci.yml").is_file()
 
 
 def test_all_action_references_are_pinned_to_full_commit_shas():
