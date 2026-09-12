@@ -7,7 +7,7 @@ Frozen baseline: 12ce79935bf076e1062c57dc7dbd148bad2bfae1
 Remediation baseline: 54f7376f3e3e1fccd672f121e33b68d2e8df2652
 Remediation collection: 2,678 nodes (five added, zero removed from frozen)
 
-Current packet: H
+Current packet: I
 Dependency: Phase 1 test-suite audit completed
 
 This is an executable cleanup Wave and implementation plan. The repository has no root ACTIVE_WAVE/WAVES execution system; this document does not claim to be its official active Wave ledger.
@@ -67,12 +67,9 @@ Renamed test node: `tests/test_wave80_files_outputs.py::TestFilesBehavior::test_
 
 See [WAVE_OWNERSHIP_REVIEW_G.md](WAVE_OWNERSHIP_REVIEW_G.md) for module-by-module behavior ownership, static versus runtime evidence, and retention rationale. All reviewed owners were retained; no node delta. Wave names alone do not establish obsolete ownership; Waves78–80 are collected though the migration ledger ends at Wave77.
 
-### H. Settings/config isolation — NOT STARTED
+### H. Settings/config isolation — DONE
 
-Start with the known deterministic test-setup hang:
-tests/test_connection_advanced_settings.py::ParallelismSourceOfTruthTests::test_settings_dialog_has_no_global_parallelism_editor
-
-Phase 1 reproduced an infinite loop when the test patches Path.home with a default MagicMock, making Path.exists truthy in src/hpc_gui/config/storage.py::_next_config_backup. Keep the test-setup behavior distinct from a production defect. Review adjacent settings/config ownership in tests/test_connection_advanced_settings.py, tests/test_config_storage_atomic.py, tests/test_profile_transfer_settings.py, and tests/test_transfer_parallelism_migration.py.
+Re-audited `tests/test_connection_advanced_settings.py`, `tests/test_config_storage_atomic.py`, `tests/test_profile_storage_areas.py`, and `tests/test_profile_patch_preservation.py`. The settings-dialog hang setup now returns a concrete `Path(temp_dir)` from `Path.home` inside a temporary-directory context; the bounded isolated run passed in 0.23 seconds (2.19 seconds including the external timeout wrapper). There is no unconfigured `MagicMock` filesystem result in this node. Atomic config tests use `tmp_path`, assert temporary-file cleanup on success and failure, and preserve the previous config on replacement failure. Profile patch storage uses a concrete temporary home and registers cleanup; storage-area tests are pure model checks. No extra negative/cleanup test was needed. All four modules passed: **40 passed**. No Packet H test or production files changed.
 
 ### I. Source-text behavior rewrites — NOT STARTED
 
