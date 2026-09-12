@@ -1,11 +1,11 @@
-"""Wave 76 — Behavioral parity evidence for GUI-TERM-001.
+"""Wave 76 — GUI behavior evidence for GUI-TERM-001.
 
-All tests run in subprocess isolation to avoid WebView2 MainLoop hangs.
-Proves: real wx event -> WebView/xterm -> production adapter -> disposable
-loopback PTY -> output -> adapter -> real xterm renderer -> verifiable state.
+Tests run in subprocesses to isolate WebView event loops. They exercise real
+wx/WebView/xterm code and production bridge callbacks with a fake SSH adapter;
+they do not launch a PTY process, connect to a cluster, or prove packaged
+terminal parity.
 """
 
-import json
 import os
 import pathlib
 import subprocess
@@ -467,54 +467,3 @@ assert panel._closed
 os._exit(0)
 """))
     assert r.returncode == 0, f"failed: {r.stdout}\n{r.stderr}"
-
-
-def test_generate_parity_evidence():
-    """Generate JSON evidence for GUI-TERM-001 behavioral parity."""
-    evidence = {
-        "wave": 77,
-        "requirement": "GUI-TERM-001",
-        "status": "PARTIAL",
-        "branch": "develop",
-        "commit": "HEAD",
-        "renderer": "wx.html2.WebView + xterm.js 5.x",
-        "bridge": "single JSON postMessage (hpc/hpc_msg)",
-        "pty_adapter": "FakeSSH disposable fixture",
-        "tests_executed": [
-            "test_vt_sgr_normal_color_bold_reset",
-            "test_vt_carriage_return_overwrite",
-            "test_unicode_round_trip",
-            "test_multiline_paste",
-            "test_resize_updates_dimensions_and_pty",
-            "test_stress_500_inputs",
-            "test_stress_500_resizes",
-            "test_stress_100_reconnects",
-            "test_stress_repeated_font_find_clear",
-            "test_close_while_output_in_flight",
-            "test_wx_terminal_generation_guard_rejects_stale_output",
-            "test_wx_terminal_find_next_and_prev",
-            "test_wx_terminal_header_status_updates",
-            "test_wx_terminal_destroy_before_ready_no_xfail",
-            "test_wx_terminal_large_pre_ready_output",
-            "test_wx_terminal_100_reconnects_no_leak",
-            "test_wx_terminal_embedded_connect_to_ssh",
-            "test_wx_terminal_input_chain_ctrl_a_to_z",
-            "test_wx_terminal_resize_chain_to_ssh",
-            "test_wx_terminal_unicode_input_output",
-            "test_wx_terminal_screen_state_readback_and_alternate_buffer",
-        ],
-        "invariants": {
-            "duplicate_output_subscribers": "0 (verified in reconnect stress)",
-            "callbacks_into_destroyed": "0 (close mid-flight + destroy-before-ready tests)",
-            "stale_session_output": "0 (generation guard in set_ssh + _safe_deliver)",
-            "unbounded_accumulation": "0 (bounded queue MAX_PENDING_BYTES=2MB)",
-        },
-        "known_gaps": [
-            "Windows Python 3.14 packaged wx WebView2 smoke is PASS; full packaged PTY/file/job flow remains manual",
-            "Linux/macOS WebKit packaged runtime not tested",
-        ],
-    }
-    out = pathlib.Path("docs/v2/GUI_TERM_001_EXECUTION_EVIDENCE.json")
-    out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(json.dumps(evidence, indent=2), encoding="utf-8")
-    assert out.exists()
