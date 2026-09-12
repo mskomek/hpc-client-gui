@@ -1,3 +1,4 @@
+import pytest
 import json
 import tempfile
 import unittest
@@ -7,6 +8,7 @@ from unittest.mock import patch
 from scripts.generate_qt_lgpl_sources import write_sources
 
 
+@pytest.mark.release
 class QtLgplSourcesTests(unittest.TestCase):
     def test_writes_records_only_after_urls_verify(self):
         with tempfile.TemporaryDirectory() as directory:

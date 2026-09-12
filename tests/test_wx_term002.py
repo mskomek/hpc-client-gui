@@ -44,6 +44,8 @@ def shell(tmp_path):
     app.Destroy()
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_file_view_shell_script_runs_in_real_terminal_path(shell):
     _app, shell_frame, lifecycle, state, ssh, tmp_path = shell
     script = tmp_path / "hello world.sh"
@@ -65,6 +67,8 @@ def test_file_view_shell_script_runs_in_real_terminal_path(shell):
     assert ssh.commands == [f"bash -- {shlex.quote(str(script))}\n"]
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_editor_run_button_uses_real_wx_event_and_terminal_path(shell):
     _app, shell_frame, lifecycle, state, ssh, _tmp_path = shell
     _dispatch("NAV-EDITOR", shell_frame, lifecycle, state)
@@ -81,6 +85,7 @@ def test_editor_run_button_uses_real_wx_event_and_terminal_path(shell):
     assert ssh.commands == ["bash -- /remote/job.slurm\n"]
 
 
+@pytest.mark.contract
 def test_fallback_terminal_preserves_unicode_and_terminal_keys(monkeypatch):
     from hpc_gui import wx_terminal_webview
     from hpc_gui.wx_terminal import TerminalModel, build_terminal_panel

@@ -1,6 +1,8 @@
+import pytest
 from hpc_gui.services.slurm_models import parse_sacct, parse_scontrol, parse_squeue
 
 
+@pytest.mark.contract
 def test_parse_squeue_keeps_raw_rows_and_structured_fields() -> None:
     jobs = parse_squeue(
         "JOBID|PARTITION|NAME|USER|ST|TIME\n"
@@ -12,6 +14,7 @@ def test_parse_squeue_keeps_raw_rows_and_structured_fields() -> None:
     assert jobs[0].raw == "123|short|train|alice|R|00:12"
 
 
+@pytest.mark.contract
 def test_parse_sacct_accepts_whitespace_columns_and_empty_output() -> None:
     jobs = parse_sacct(
         "JobID JobName State Elapsed MaxRSS\n"
@@ -23,6 +26,7 @@ def test_parse_sacct_accepts_whitespace_columns_and_empty_output() -> None:
     assert parse_sacct("") == []
 
 
+@pytest.mark.contract
 def test_parse_sacct_reads_observed_scheduler_detail_fields() -> None:
     jobs = parse_sacct(
         "JobID|JobName|State|Elapsed|MaxRSS|ExitCode|NodeList|Reason|Command\n"
@@ -33,6 +37,7 @@ def test_parse_sacct_reads_observed_scheduler_detail_fields() -> None:
     assert jobs[0].failure_reason == "OOM"
     assert jobs[0].script_path == "/home/a/job.slurm"
 
+@pytest.mark.contract
 def test_parse_scontrol_extracts_detail_script_path() -> None:
     from hpc_gui.services.slurm_models import parse_scontrol
 
@@ -51,6 +56,7 @@ def test_parse_scontrol_extracts_detail_script_path() -> None:
     assert job.stderr_path == "/home/a/results/err-123.log"
 
 
+@pytest.mark.contract
 def test_parse_scontrol_keeps_spaces_in_scheduler_paths() -> None:
     job = parse_scontrol(
         "JobId=9 WorkDir=/home/a/my results StdOut=/home/a/my results/out 9.log "

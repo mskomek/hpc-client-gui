@@ -68,6 +68,8 @@ def _close(frame):
         wx.Yield()
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_inner_notebook_has_exact_order_and_language_refresh():
     app, frame, panel = _build()
     try:
@@ -84,6 +86,8 @@ def test_inner_notebook_has_exact_order_and_language_refresh():
         _close(frame)
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_outputs_pause_all_and_accounting_labels_reset_and_localize():
     app, frame, panel = _build()
     try:
@@ -108,6 +112,8 @@ def test_outputs_pause_all_and_accounting_labels_reset_and_localize():
         _close(frame)
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_cluster_disconnected_and_unsupported_states_are_explicit():
     app, frame, panel = _build()
     try:
@@ -124,6 +130,8 @@ def test_cluster_disconnected_and_unsupported_states_are_explicit():
         _close(frame)
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_cluster_status_needs_no_selected_job_and_uses_real_refresh_event():
     app, frame, panel = _build(
         has_status_capability=lambda: True,
@@ -144,6 +152,7 @@ def test_cluster_status_needs_no_selected_job_and_uses_real_refresh_event():
         _close(frame)
 
 
+@pytest.mark.contract
 def test_provider_contract_lssrv_parser_reaches_visible_cluster_cells():
     raw = (
         "Slurm partitions state\n"
@@ -172,6 +181,8 @@ def test_provider_contract_lssrv_parser_reaches_visible_cluster_cells():
         _close(frame)
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_malformed_lssrv_warns_and_preserves_raw_status():
     raw = "this is not a valid lssrv response"
     app, frame, panel = _build(
@@ -187,6 +198,8 @@ def test_malformed_lssrv_warns_and_preserves_raw_status():
         _close(frame)
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_cluster_result_survives_job_selection_and_reconnect_rejects_old_result():
     calls = []
     provider = {"value": "A"}
@@ -224,6 +237,8 @@ def test_cluster_result_survives_job_selection_and_reconnect_rejects_old_result(
         _close(frame)
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_details_compact_fields_and_parse_warning():
     app, frame, panel = _build(show_job_details=lambda _job: "not scheduler output")
     try:
@@ -238,6 +253,8 @@ def test_details_compact_fields_and_parse_warning():
         _close(frame)
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_accounting_parse_warning_keeps_raw_result():
     app, frame, panel = _build(refresh_sacct=lambda _job: "malformed accounting")
     try:
@@ -249,6 +266,8 @@ def test_accounting_parse_warning_keeps_raw_result():
         _close(frame)
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_files_no_selection_reset_and_language_preserve_workdir():
     backend = MockRemoteFilesBackend()
     session = {"session": {"files": backend, "profile": {"profile_id": "final-files"}}}
@@ -272,6 +291,8 @@ def test_files_no_selection_reset_and_language_preserve_workdir():
         _close(frame)
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_outputs_no_job_zero_channels_waiting_and_pause_reset():
     defs = [OutputChannelDefinition(
         id="stdout", role="stdout", label_en="Standard Output",
@@ -315,6 +336,8 @@ def test_outputs_no_job_zero_channels_waiting_and_pause_reset():
         _close(frame)
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_show_in_files_and_raw_buttons_use_real_wx_events():
     defs = [OutputChannelDefinition(
         id="stdout", role="stdout", label_en="Standard Output",
@@ -355,6 +378,8 @@ def test_show_in_files_and_raw_buttons_use_real_wx_events():
             _close(frame)
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_go_to_jobs_buttons_use_real_wx_events():
     app, frame, panel = _build()
     try:
@@ -371,6 +396,8 @@ def test_go_to_jobs_buttons_use_real_wx_events():
         _close(frame)
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_open_in_main_files_uses_real_wx_event():
     opened = []
     app, frame, panel = _build(open_main_files=opened.append)
@@ -383,6 +410,8 @@ def test_open_in_main_files_uses_real_wx_event():
         _close(frame)
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_stale_raw_exceptions_do_not_cross_job_or_provider():
     details_started = threading.Event()
     details_release = threading.Event()

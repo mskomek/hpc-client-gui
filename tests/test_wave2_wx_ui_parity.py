@@ -71,6 +71,7 @@ class _Dialog:
 class TestSelectionPreservation:
     """Verify selection is preserved after rename operations."""
 
+    @pytest.mark.audit
     def test_rename_preserves_selection(self, wx_app, tmp_path):
         """After renaming a file, the renamed file should be selected."""
         files = [
@@ -115,6 +116,8 @@ class TestSelectionPreservation:
         # Verify renamed file exists
         assert "yeniden_adlandır.txt" in new_names
 
+    @pytest.mark.wx
+    @pytest.mark.gui
     def test_rename_error_shows_unicode_filename(self, wx_app, tmp_path, monkeypatch):
         """Error dialog should show the Unicode filename."""
         src = tmp_path / "日本語テスト.txt"
@@ -159,9 +162,11 @@ class TestSelectionPreservation:
 # Prompt 2: Context Menu Event Wiring
 # ---------------------------------------------------------------------------
 
+@pytest.mark.gui
 class TestContextMenuEventWiring:
     """Verify every context menu item has real event wiring."""
 
+    @pytest.mark.wx
     def test_context_menu_open_wired(self, wx_app, tmp_path):
         """Open menu item should trigger file open."""
         (tmp_path / "test.txt").write_text("content", encoding="utf-8")
@@ -176,6 +181,7 @@ class TestContextMenuEventWiring:
         result = model.activate(tmp_path / "test.txt")
         assert result == "edit", "activate should return 'edit' for files"
 
+    @pytest.mark.wx
     def test_context_menu_rename_wired(self, wx_app, tmp_path, monkeypatch):
         """Rename menu item should trigger rename dialog."""
         (tmp_path / "old.txt").write_text("content", encoding="utf-8")
@@ -203,6 +209,7 @@ class TestContextMenuEventWiring:
 
         _pump(wx_app, lambda: (tmp_path / "new.txt").exists())
 
+    @pytest.mark.wx
     def test_context_menu_copy_clipboard(self, wx_app, tmp_path):
         """Copy menu item should put file in clipboard."""
         (tmp_path / "copied.txt").write_text("content", encoding="utf-8")
@@ -231,6 +238,7 @@ class TestContextMenuEventWiring:
         assert model.clipboard[0].name == "copied.txt"
         assert model.clipboard_move is False, "Should be copy, not move"
 
+    @pytest.mark.wx
     def test_context_menu_cut_clipboard(self, wx_app, tmp_path):
         """Cut menu item should put file in clipboard with move=True."""
         (tmp_path / "cut.txt").write_text("content", encoding="utf-8")
@@ -247,6 +255,7 @@ class TestContextMenuEventWiring:
         assert len(model.clipboard) == 1, "Clipboard should have one item"
         assert model.clipboard_move is True, "Should be move (cut)"
 
+    @pytest.mark.wx
     def test_context_menu_copy_path(self, wx_app, tmp_path):
         """Copy Path menu item should copy path to clipboard."""
         (tmp_path / "path_test.txt").write_text("content", encoding="utf-8")
@@ -276,6 +285,7 @@ class TestContextMenuEventWiring:
         if wx.TheClipboard.IsOpened():
             wx.TheClipboard.Close()
 
+    @pytest.mark.wx
     def test_background_new_folder_wired(self, wx_app, tmp_path, monkeypatch):
         """Background New Folder should create folder in current directory."""
         frame = _local(wx_app, tmp_path)
@@ -302,6 +312,7 @@ class TestContextMenuEventWiring:
         _pump(wx_app, lambda: (tmp_path / "new_unicode_フォルダ").is_dir())
         assert (tmp_path / "new_unicode_フォルダ").is_dir()
 
+    @pytest.mark.wx
     def test_background_refresh_wired(self, wx_app, tmp_path):
         """Background Refresh should refresh the listing."""
         frame = _local(wx_app, tmp_path)
@@ -335,9 +346,11 @@ class TestContextMenuEventWiring:
 # Prompt 3: Pane Labels and Roles
 # ---------------------------------------------------------------------------
 
+@pytest.mark.gui
 class TestPaneLabels:
     """Verify pane labels and roles are clear."""
 
+    @pytest.mark.wx
     def test_local_window_title(self, wx_app, tmp_path):
         """Local browser window should have clear title."""
         frame = _local(wx_app, tmp_path)
@@ -347,6 +360,7 @@ class TestPaneLabels:
         # Title should indicate this is a local browser
         assert "local" in title.lower() or "file" in title.lower() or "dizin" in title.lower()
 
+    @pytest.mark.wx
     def test_toolbar_button_tooltips(self, wx_app, tmp_path):
         """Toolbar buttons should have tooltips."""
         frame = _local(wx_app, tmp_path)
@@ -365,9 +379,11 @@ class TestPaneLabels:
 # Prompt 4: Toolbar Alignment
 # ---------------------------------------------------------------------------
 
+@pytest.mark.gui
 class TestToolbarAlignment:
     """Verify toolbar alignment and button states."""
 
+    @pytest.mark.wx
     def test_back_button_disabled_when_no_history(self, wx_app, tmp_path):
         """Back button should be disabled when no history."""
         frame = _local(wx_app, tmp_path)
@@ -378,6 +394,7 @@ class TestToolbarAlignment:
             # Initially no history, back should be disabled
             assert not btn_back.IsEnabled(), "Back button should be disabled initially"
 
+    @pytest.mark.wx
     def test_forward_button_disabled_when_no_forward(self, wx_app, tmp_path):
         """Forward button should be disabled when no forward history."""
         frame = _local(wx_app, tmp_path)
@@ -388,6 +405,7 @@ class TestToolbarAlignment:
             btn_forward = controls["btn_forward"]
             assert not btn_forward.IsEnabled(), "Forward button should be disabled initially"
 
+    @pytest.mark.wx
     def test_up_button_disabled_at_root(self, wx_app, tmp_path):
         """Up button should be disabled at root directory."""
         frame = _local(wx_app, tmp_path)
@@ -400,6 +418,7 @@ class TestToolbarAlignment:
             if model.current_path.parent == model.current_path:
                 assert not btn_parent.IsEnabled(), "Up button should be disabled at root"
 
+    @pytest.mark.wx
     def test_refresh_button_always_enabled(self, wx_app, tmp_path):
         """Refresh button should always be enabled."""
         frame = _local(wx_app, tmp_path)
@@ -414,9 +433,11 @@ class TestToolbarAlignment:
 # Prompt 5: Text Field Labels
 # ---------------------------------------------------------------------------
 
+@pytest.mark.gui
 class TestTextFieldLabels:
     """Verify text fields have clear labels."""
 
+    @pytest.mark.wx
     def test_path_bar_exists(self, wx_app, tmp_path):
         """Path bar should exist and show current directory."""
         frame = _local(wx_app, tmp_path)
@@ -428,6 +449,7 @@ class TestTextFieldLabels:
             path_text = path_ctrl.GetValue() if hasattr(path_ctrl, "GetValue") else str(path_ctrl.GetLabel())
             assert path_text, "Path bar should show current directory"
 
+    @pytest.mark.wx
     def test_path_bar_editable(self, wx_app, tmp_path):
         """Path bar should be editable for direct path entry."""
         frame = _local(wx_app, tmp_path)
@@ -444,9 +466,11 @@ class TestTextFieldLabels:
 # Prompt 6: Status/Progress Feedback
 # ---------------------------------------------------------------------------
 
+@pytest.mark.gui
 class TestStatusFeedback:
     """Verify status bar provides useful feedback."""
 
+    @pytest.mark.wx
     def test_status_bar_exists(self, wx_app, tmp_path):
         """Status bar should exist at the bottom of the window."""
         frame = _local(wx_app, tmp_path)
@@ -464,6 +488,7 @@ class TestStatusFeedback:
         # Status bar existence is optional but recommended
         # Just verify the frame has some status mechanism
 
+    @pytest.mark.wx
     def test_listing_shows_file_count(self, wx_app, tmp_path):
         """After listing, status should show file count or similar info."""
         for i in range(5):

@@ -1,7 +1,10 @@
+
+import pytest
 from hpc_gui.core.i18n import load_language
 from hpc_gui.services.help_catalog import HELP_CATALOG, is_allowed_external_url
 
 
+@pytest.mark.unit
 def test_structured_help_sections_search_and_missing_binding():
     load_language("en")
     topics = HELP_CATALOG.topics()
@@ -11,6 +14,7 @@ def test_structured_help_sections_search_and_missing_binding():
     assert "Unbound" in HELP_CATALOG.render("help.editor", lambda _command_id: None)
 
 
+@pytest.mark.unit
 def test_external_links_are_https_and_allowlisted():
     assert is_allowed_external_url("https://docs.example.test/help", {"docs.example.test"})
     assert not is_allowed_external_url("http://docs.example.test/help", {"docs.example.test"})

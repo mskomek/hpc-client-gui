@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import pytest
 from dataclasses import dataclass
 
 from hpc_gui.services.file_filter_registry import (
@@ -21,6 +22,7 @@ class FakeEntry:
 # Core filter registration
 # ---------------------------------------------------------------------------
 
+@pytest.mark.unit
 class TestCoreFilters:
     def test_all_core_filters_registered(self):
         reg = build_core_registry()
@@ -55,6 +57,7 @@ class TestCoreFilters:
 # Individual core filter matching
 # ---------------------------------------------------------------------------
 
+@pytest.mark.unit
 class TestFilterMatching:
     def test_all_matches_everything(self):
         reg = build_core_registry()
@@ -109,6 +112,7 @@ class TestFilterMatching:
 # ---------------------------------------------------------------------------
 
 class TestOverlappingFilters:
+    @pytest.mark.unit
     def test_file_can_match_multiple_filters(self):
         reg = build_core_registry()
         # Register a custom "logs" filter that matches *.log
@@ -121,6 +125,7 @@ class TestOverlappingFilters:
         # Also matches "all"
         assert reg.matches(entry, "all") is True
 
+    @pytest.mark.contract
     def test_provider_filter_coexists_with_core(self):
         reg = build_core_registry()
         reg.register(FileFilter(
@@ -135,6 +140,7 @@ class TestOverlappingFilters:
         assert reg.matches(entry, "other") is False
         assert reg.matches(entry, "all") is True
 
+    @pytest.mark.unit
     def test_custom_filter_does_not_steal_from_other(self):
         reg = build_core_registry()
         reg.register(FileFilter(id="logs", label_en="Logs", globs=("*.log",), order=100))
@@ -149,6 +155,7 @@ class TestOverlappingFilters:
 # ---------------------------------------------------------------------------
 
 class TestProviderFilters:
+    @pytest.mark.integration
     def test_register_provider_filter(self):
         reg = build_core_registry()
         reg.register(FileFilter(
@@ -162,6 +169,7 @@ class TestProviderFilters:
         assert reg.get("truba_logs") is not None
         assert reg.get("truba_logs").source == "provider"
 
+    @pytest.mark.integration
     def test_remove_filter(self):
         reg = build_core_registry()
         reg.register(FileFilter(id="temp", label_en="Temp", order=200))
@@ -169,6 +177,7 @@ class TestProviderFilters:
         assert reg.remove("temp") is True
         assert reg.get("temp") is None
 
+    @pytest.mark.integration
     def test_register_replaces_existing(self):
         reg = build_core_registry()
         reg.register(FileFilter(id="custom", label_en="V1", order=100))
@@ -182,6 +191,7 @@ class TestProviderFilters:
 # Edge cases
 # ---------------------------------------------------------------------------
 
+@pytest.mark.unit
 class TestEdgeCases:
     def test_empty_name_entry(self):
         reg = build_core_registry()

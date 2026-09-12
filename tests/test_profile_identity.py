@@ -1,3 +1,4 @@
+import pytest
 import json
 import sys
 import tempfile
@@ -11,6 +12,7 @@ from hpc_gui.config import storage  # noqa: E402
 from hpc_gui.services import remote_navigation_store as store_mod  # noqa: E402
 
 
+@pytest.mark.integration
 class ProfileIdentityTests(unittest.TestCase):
     def setUp(self) -> None:
         self._dir = tempfile.TemporaryDirectory()

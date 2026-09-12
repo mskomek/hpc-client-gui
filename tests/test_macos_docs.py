@@ -1,4 +1,5 @@
 from __future__ import annotations
+import pytest
 
 from pathlib import Path
 
@@ -6,6 +7,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 
+@pytest.mark.unit
 def test_macos_install_docs_match_in_both_languages():
     english = (ROOT / "docs/wiki/Installation-macOS.md").read_text(encoding="utf-8")
     turkish = (ROOT / "docs/wiki/Installation-macOS-TR.md").read_text(encoding="utf-8")
@@ -17,6 +19,7 @@ def test_macos_install_docs_match_in_both_languages():
         assert "MANIFEST.json" in text
 
 
+@pytest.mark.unit
 def test_readme_exposes_both_mac_downloads():
     text = (ROOT / "README.md").read_text(encoding="utf-8")
     assert "hpc-client-gui_macos_arm64.dmg" in text

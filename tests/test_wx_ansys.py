@@ -1,3 +1,5 @@
+
+import pytest
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -6,6 +8,7 @@ from hpc_gui.services.ansys_tool_presentation import AnsysToolPresentation
 from hpc_gui.wx_ansys import WxAnsysModel
 
 
+@pytest.mark.gui
 def test_multiple_files_grouping_sources_and_folder_cap(tmp_path: Path, monkeypatch):
     module_name = "_fake_ansys_ui"
     fake = SimpleNamespace(lint_text=lambda text, file_name="": ([], {"source_url": "https://docs.example/rule"})[0])
@@ -19,6 +22,7 @@ def test_multiple_files_grouping_sources_and_folder_cap(tmp_path: Path, monkeypa
     assert model.source_url_allowed("https://docs.example/rule", {"docs.example"})
 
 
+@pytest.mark.gui
 def test_broken_engine_is_contained():
     tool = LinterTool("x", "1", "broken", "", lambda **kwargs: None, "_missing_ansys")
     model = WxAnsysModel(AnsysToolPresentation(tool))

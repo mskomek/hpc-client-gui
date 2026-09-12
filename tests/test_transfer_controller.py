@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import pytest
 import threading
 import time
 
 from hpc_gui.services.transfer_controller import TransferController, TransferItem
 
 
+@pytest.mark.unit
 def test_controller_runs_parallel_and_bounds_history() -> None:
     events = []
 
@@ -27,6 +29,7 @@ def test_controller_runs_parallel_and_bounds_history() -> None:
     assert [event for event, _ in events].count("completed") == 3
 
 
+@pytest.mark.unit
 def test_controller_cancel_keeps_item_failed_without_finalization() -> None:
     cancelled = threading.Event()
 
@@ -49,6 +52,7 @@ def test_controller_cancel_keeps_item_failed_without_finalization() -> None:
     assert controller.completed == []
 
 
+@pytest.mark.unit
 def test_controller_retry_failed_requeues_item() -> None:
     attempts = 0
 
@@ -69,6 +73,7 @@ def test_controller_retry_failed_requeues_item() -> None:
     assert controller.completed == [item]
 
 
+@pytest.mark.unit
 def test_controller_enqueue_adds_work_while_running() -> None:
     started = threading.Event()
     release = threading.Event()

@@ -13,6 +13,7 @@ from hpc_gui.services import process_registry
 from hpc_gui.services.xserver_manager import _vcxsrv_args
 
 
+@pytest.mark.audit
 def test_process_registry_never_persists_password(tmp_path: Path):
     target = tmp_path / "processes.json"
     with patch("hpc_gui.services.process_registry._registry_path", return_value=target):
@@ -20,6 +21,7 @@ def test_process_registry_never_persists_password(tmp_path: Path):
     assert "FakeX11Password" not in target.read_text(encoding="utf-8")
 
 
+@pytest.mark.audit
 def test_x11_launch_has_separate_safe_display_args():
     from hpc_gui.services import x11_system_ssh
 
@@ -31,6 +33,7 @@ def test_x11_launch_has_separate_safe_display_args():
     assert launch.display_args[launch.display_args.index("-pw") + 1] == "<redacted>"
 
 
+@pytest.mark.audit
 def test_python_plugin_payload_and_legacy_engine_fail_closed(tmp_path: Path):
     marker = tmp_path / "executed"
     manifest = {
@@ -46,6 +49,7 @@ def test_python_plugin_payload_and_legacy_engine_fail_closed(tmp_path: Path):
     assert not marker.exists()
 
 
+@pytest.mark.audit
 def test_plugin_runtime_has_no_dynamic_source_execution():
     source = "\n".join(
         path.read_text(encoding="utf-8")
@@ -54,6 +58,7 @@ def test_plugin_runtime_has_no_dynamic_source_execution():
     assert "create_plugin(" in source  # only the approved trusted-tool adapter may call it
 
 
+@pytest.mark.audit
 def test_unknown_declarative_engine_id_fails_closed():
     manifest = {
         "schema_version": 1, "plugin_api": 1, "id": "org.example.rules", "name": "rules",
@@ -65,10 +70,12 @@ def test_unknown_declarative_engine_id_fails_closed():
     assert any("unknown declarative engine" in error for error in validate_manifest_dict(manifest))
 
 
+@pytest.mark.audit
 def test_vcxsrv_does_not_disable_access_control():
     assert "-ac" not in _vcxsrv_args(Path("vcxsrv.exe"), 0)
 
 
+@pytest.mark.audit
 def test_provider_substitution_is_shell_quoted():
     from hpc_gui.services.slurm_ssh import SSHSlurmBackend
 
@@ -76,6 +83,7 @@ def test_provider_substitution_is_shell_quoted():
     assert backend._command("squeue_command", user="user; touch marker") == "squeue -u 'user; touch marker'"
 
 
+@pytest.mark.audit
 def test_plugin_paths_reject_traversal_and_windows_forms():
     from hpc_gui.plugins.models import is_safe_relative_path
 
@@ -83,6 +91,7 @@ def test_plugin_paths_reject_traversal_and_windows_forms():
         assert not is_safe_relative_path(path)
 
 
+@pytest.mark.audit
 def test_plugin_integrity_rejects_symlink_escape(tmp_path: Path):
     import hashlib
     from hpc_gui.plugins.integrity import verify_version_dir
@@ -106,6 +115,7 @@ def test_plugin_integrity_rejects_symlink_escape(tmp_path: Path):
     assert any("symlink" in error for error in verify_version_dir(package))
 
 
+@pytest.mark.audit
 def test_update_download_rejects_untrusted_final_redirect(monkeypatch, tmp_path: Path):
     from hpc_gui.services.app_updater import _download
 
@@ -129,6 +139,7 @@ def test_update_download_rejects_untrusted_final_redirect(monkeypatch, tmp_path:
         _download("https://github.com/x/update.zip", tmp_path / "update.zip", verify_update_host=True)
 
 
+@pytest.mark.release
 def test_unverified_download_cannot_reach_installer(monkeypatch, tmp_path: Path):
     from hpc_gui.services import app_updater
 
@@ -139,6 +150,7 @@ def test_unverified_download_cannot_reach_installer(monkeypatch, tmp_path: Path)
         app_updater.launch_update_installer(payload, "9.9.9")
 
 
+@pytest.mark.audit
 @pytest.mark.skipif(os.name != "posix", reason="POSIX permission semantics")
 def test_sensitive_config_file_is_owner_only(tmp_path: Path):
     from hpc_gui.config import storage

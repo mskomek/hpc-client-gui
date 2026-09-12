@@ -1,4 +1,5 @@
 from __future__ import annotations
+import pytest
 
 import re
 import json
@@ -15,10 +16,12 @@ real_read_text = rl.Path.read_text
 
 
 class ResolveVersionTest(unittest.TestCase):
+    @pytest.mark.release
     def test_sources_agree(self) -> None:
         version = rl.resolve_version()
         self.assertRegex(version, r"^\d+\.\d+\.\d+$")
 
+    @pytest.mark.release
     def test_mismatch_raises(self) -> None:
         # Force the three version sources to disagree and assert a clear error.
         real_read_text = rl.Path.read_text
@@ -39,6 +42,7 @@ class ResolveVersionTest(unittest.TestCase):
             with self.assertRaises(rl.PackagingError):
                 rl.resolve_version()
 
+    @pytest.mark.release
     def test_artifact_name(self) -> None:
         self.assertEqual(
             rl.appimage_artifact_name("1.2.4"),
@@ -47,6 +51,7 @@ class ResolveVersionTest(unittest.TestCase):
 
 
 class UbuntuHostTest(unittest.TestCase):
+    @pytest.mark.release
     def test_ubuntu_host_is_accepted(self) -> None:
         with (
             mock.patch.object(rl.sys, "platform", "linux"),
@@ -54,6 +59,7 @@ class UbuntuHostTest(unittest.TestCase):
         ):
             rl.require_ubuntu_host()
 
+    @pytest.mark.release
     def test_non_ubuntu_host_is_rejected(self) -> None:
         with (
             mock.patch.object(rl.sys, "platform", "linux"),
@@ -62,6 +68,7 @@ class UbuntuHostTest(unittest.TestCase):
         ):
             rl.require_ubuntu_host()
 
+    @pytest.mark.release
     def test_execute_checks_ubuntu_before_building(self) -> None:
         with (
             mock.patch.object(rl, "require_ubuntu_host", side_effect=rl.PackagingError("Ubuntu required")),
@@ -73,6 +80,7 @@ class UbuntuHostTest(unittest.TestCase):
 
 
 class RequiredFilesTest(unittest.TestCase):
+    @pytest.mark.release
     def test_help_files_inventory(self) -> None:
         files = rl.required_release_files()
         names = {p.name for p in files if p.is_file()}
@@ -81,9 +89,11 @@ class RequiredFilesTest(unittest.TestCase):
         self.assertIn("CLI_GUIDE_tr.md", names)
         self.assertIn("CLI_GUIDE_en.md", names)
 
+    @pytest.mark.release
     def test_validate_required_files_passes(self) -> None:
         rl.validate_required_files()
 
+    @pytest.mark.release
     def test_missing_file_raises(self) -> None:
         with mock.patch.object(
             rl, "required_release_files", return_value=[Path("does/not/exist.md")]
@@ -93,6 +103,7 @@ class RequiredFilesTest(unittest.TestCase):
 
 
 class AppImageDefinitionTest(unittest.TestCase):
+    @pytest.mark.release
     def test_desktop_entry_valid(self) -> None:
         rl.validate_desktop_entry()
         text = (rl.APPIMAGE_DEF_DIR / rl.DESKTOP_ENTRY_NAME).read_text(encoding="utf-8")
@@ -101,11 +112,13 @@ class AppImageDefinitionTest(unittest.TestCase):
         self.assertRegex(text, r"(?m)^Exec=\S+$")
         self.assertRegex(text, r"(?m)^Name=")
 
+    @pytest.mark.release
     def test_desktop_entry_has_exec_line(self) -> None:
         text = (rl.APPIMAGE_DEF_DIR / rl.DESKTOP_ENTRY_NAME).read_text(encoding="utf-8")
         match = re.search(r"(?m)^Exec=\S+$", text)
         self.assertIsNotNone(match)
 
+    @pytest.mark.release
     def test_apprun_has_shebang(self) -> None:
         rl.validate_apprun()
         text = (rl.APPIMAGE_DEF_DIR / rl.APPRUN_NAME).read_text(encoding="utf-8")
@@ -113,6 +126,7 @@ class AppImageDefinitionTest(unittest.TestCase):
 
 
 class PlanTest(unittest.TestCase):
+    @pytest.mark.release
     def test_plan_dry_run(self) -> None:
         plan = rl.build_linux_plan("1.2.4")
         self.assertEqual(plan.version, "1.2.4")
@@ -123,37 +137,45 @@ class PlanTest(unittest.TestCase):
         self.assertIn("build-flatpak", names)
         self.assertIn("checksum", names)
 
+    @pytest.mark.release
     def test_plan_rejects_bad_version(self) -> None:
         with self.assertRaises(rl.PackagingError):
             rl.build_linux_plan("not-a-version")
 
+    @pytest.mark.release
     def test_plan_to_dict_has_artifacts(self) -> None:
         data = rl.plan_to_dict(rl.build_linux_plan("1.2.4"))
         self.assertIn("hpc-client-gui-1.2.4-x86_64.AppImage", data["artifacts"])
         self.assertIn("hpc-client-gui_1.2.4_amd64.deb", data["artifacts"])
         self.assertIn("hpc-client-gui-1.2.4.flatpak", data["artifacts"])
 
+    @pytest.mark.release
     def test_main_plan_exit_zero(self) -> None:
         self.assertEqual(rl.main(["--version", "1.2.4", "--json"]), 0)
 
+    @pytest.mark.release
     def test_pip_install_command(self) -> None:
         self.assertEqual(rl.pip_install_command(), ["python", "-m", "pip", "install", "-e", ".[test]"])
 
+    @pytest.mark.release
     def test_validate_pip_metadata_passes(self) -> None:
         rl.validate_pip_metadata()
 
+    @pytest.mark.release
     def test_release_dir_contents(self) -> None:
         contents = rl.release_dir_contents("1.2.4")
         self.assertIn("hpc-client-gui-1.2.4-x86_64.AppImage.sha256", contents)
         self.assertIn("hpc-client-gui_1.2.4_amd64.deb.sha256", contents)
         self.assertIn("hpc-client-gui-1.2.4.flatpak.sha256", contents)
 
+    @pytest.mark.release
     def test_plan_has_release_layout_stage(self) -> None:
         plan = rl.build_linux_plan("1.2.4")
         names = [stage["name"] for stage in plan.stages]
         self.assertIn("validate-pip-source", names)
         self.assertIn("release-layout", names)
 
+    @pytest.mark.release
     def test_sha256(self) -> None:
         import tempfile
 
@@ -167,23 +189,29 @@ class PlanTest(unittest.TestCase):
 
 
 class DebFlatpakTest(unittest.TestCase):
+    @pytest.mark.release
     def test_deb_artifact_name(self) -> None:
         self.assertEqual(rl.deb_artifact_name("1.2.4"), "hpc-client-gui_1.2.4_amd64.deb")
 
+    @pytest.mark.release
     def test_flatpak_artifact_name(self) -> None:
         self.assertEqual(rl.flatpak_artifact_name("1.2.4"), "hpc-client-gui-1.2.4.flatpak")
 
+    @pytest.mark.release
     def test_validate_deb_control_passes(self) -> None:
         rl.validate_deb_control()
 
+    @pytest.mark.release
     def test_validate_flatpak_manifest_passes(self) -> None:
         rl.validate_flatpak_manifest()
 
+    @pytest.mark.release
     def test_flatpak_manifest_ids(self) -> None:
         data = json.loads((rl.FLATPAK_DEF_DIR / f"{rl.FLATPAK_ID}.json").read_text(encoding="utf-8"))
         self.assertEqual(data["app-id"], "io.github.mskomek.HpcClientGui")
         self.assertIn("command", data)
 
+    @pytest.mark.release
     def test_deb_control_missing_version_placeholder_raises(self) -> None:
         real = rl.DEB_DEF_DIR / "DEBIAN" / "control"
 

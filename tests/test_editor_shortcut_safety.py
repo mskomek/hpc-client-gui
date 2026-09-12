@@ -1,3 +1,4 @@
+import pytest
 import os
 import sys
 import unittest
@@ -12,6 +13,7 @@ from PySide6.QtWidgets import QApplication, QMessageBox
 from hpc_gui.ui.widgets.editor_widget import EditorWidget
 
 
+@pytest.mark.gui
 class EditorShortcutSafetyTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -21,6 +23,7 @@ class EditorShortcutSafetyTests(unittest.TestCase):
         self.editor.deleteLater()
         self.app.sendPostedEvents(None, QEvent.Type.DeferredDelete)
 
+    @pytest.mark.qt
     def test_dirty_close_cancel_keeps_document(self):
         self.editor = EditorWidget()
         self.editor.open_file("/remote/dirty.txt", "before")
@@ -30,6 +33,7 @@ class EditorShortcutSafetyTests(unittest.TestCase):
         self.assertEqual(self.editor.document_tabs.count(), 1)
         self.assertTrue(self.editor.document_tabs.tabText(0).endswith(" *"))
 
+    @pytest.mark.qt
     def test_execute_local_shell_saves_and_requests_terminal(self):
         self.editor = EditorWidget()
         self.editor.open_file("C:/work/run.sh", "echo old", is_local=True)

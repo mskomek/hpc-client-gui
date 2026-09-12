@@ -36,6 +36,8 @@ def wx_app():
     app.Destroy()
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_remote_context_menu_reopens_with_turkish_labels(wx_app):
     backend = MockRemoteFilesBackend()
     show_remote_files(
@@ -63,6 +65,8 @@ def test_wx_remote_context_menu_reopens_with_turkish_labels(wx_app):
     assert "Copy" not in labels and "Move" not in labels
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_local_context_menu_reopens_with_turkish_labels(wx_app, tmp_path: Path):
     (tmp_path / "job.slurm").write_text("#!/bin/sh", encoding="utf-8")
     show_local_files(path=tmp_path, upload=lambda _paths: None)
@@ -103,6 +107,8 @@ def _tab_close_labels(app, frame, notebook):
     return captured[-1] if captured else []
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_remote_tab_close_label_follows_runtime_language(wx_app):
     backend = MockRemoteFilesBackend()
     show_remote_files(
@@ -121,6 +127,8 @@ def test_wx_remote_tab_close_label_follows_runtime_language(wx_app):
     assert "Close" in _tab_close_labels(wx_app, frame, notebook)
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_local_tab_close_label_follows_runtime_language(wx_app, tmp_path: Path):
     (tmp_path / "a.txt").write_text("x", encoding="utf-8")
     show_local_files(path=tmp_path)
@@ -148,6 +156,8 @@ def _conflict_labels(parent, files, item):
     return labels
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_transfer_conflict_and_progress_follow_runtime_language(wx_app):
     from hpc_gui.services.transfer_controller import TransferItem
     from hpc_gui.wx_transfer_workspace import create_transfer_progress

@@ -1,9 +1,12 @@
+
+import pytest
 from types import SimpleNamespace
 
 from hpc_gui.services.ansys_tool_presentation import AnsysToolPresentation, approved_tool_manifest
 from hpc_gui.plugins.linter_tools import LinterTool
 
 
+@pytest.mark.unit
 def test_headless_tool_model_and_failure_isolation(monkeypatch):
     module_name = "_fake_ansys_tool"
     fake = SimpleNamespace(lint_text=lambda text, file_name="": [{"line": 1, "message": "warning"}])
@@ -16,5 +19,6 @@ def test_headless_tool_model_and_failure_isolation(monkeypatch):
     assert AnsysToolPresentation(broken).run("text").status == "failed"
 
 
+@pytest.mark.unit
 def test_trusted_tool_allowlist_remains_fail_closed():
     assert approved_tool_manifest({"id": "org.example.bad"}) is False

@@ -11,6 +11,7 @@ instantly with nothing transferred.
 
 from __future__ import annotations
 
+import pytest
 import os
 import threading
 import time
@@ -30,6 +31,7 @@ class _Files:
         return []
 
 
+@pytest.mark.gui
 class TransferKeyReleaseTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
@@ -84,6 +86,7 @@ class TransferKeyReleaseTests(unittest.TestCase):
         self._stop_event = stop
         return execute, started, stop
 
+    @pytest.mark.qt
     def test_cancel_releases_the_keys_so_the_same_files_replan(self) -> None:
         execute, started, stop = self._stalling_executor()
         self.panel._execute_transfer_item = execute  # type: ignore[method-assign]
@@ -114,6 +117,7 @@ class TransferKeyReleaseTests(unittest.TestCase):
             ["download", "download", "mkdir_local"],
         )
 
+    @pytest.mark.qt
     def test_keys_stay_reserved_while_the_queue_is_running(self) -> None:
         execute, started, stop = self._stalling_executor()
         self.panel._execute_transfer_item = execute  # type: ignore[method-assign]

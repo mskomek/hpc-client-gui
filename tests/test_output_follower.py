@@ -1,3 +1,4 @@
+import pytest
 from threading import Event, Thread
 from types import SimpleNamespace
 
@@ -19,6 +20,7 @@ def _follower(path="/work/output.log", max_lines=5):
     )
 
 
+@pytest.mark.unit
 def test_follower_reads_actual_path_and_bounds_repeated_appends():
     files = {"/work/output.log": "line-0\n"}
     follower = _follower()
@@ -34,6 +36,7 @@ def test_follower_reads_actual_path_and_bounds_repeated_appends():
     assert follower.state.path == "/work/output.log"
 
 
+@pytest.mark.unit
 def test_follower_waits_then_resumes_and_handles_truncate():
     files = {}
     follower = _follower()
@@ -60,6 +63,7 @@ def test_follower_waits_then_resumes_and_handles_truncate():
     assert follower.state.offset == len("new\n")
 
 
+@pytest.mark.unit
 def test_follower_reassignment_resets_source_and_offset():
     files = {"/work/a.log": "A\n", "/work/b.log": "B\n"}
     follower = _follower("/work/a.log")
@@ -82,6 +86,7 @@ def test_follower_reassignment_resets_source_and_offset():
     assert follower.state.offset == len("B\n")
 
 
+@pytest.mark.unit
 def test_follower_reassignment_invalidates_inflight_old_read():
     started = Event()
     release = Event()
@@ -114,6 +119,7 @@ def test_follower_reassignment_invalidates_inflight_old_read():
     assert retained == "B\n"
 
 
+@pytest.mark.unit
 def test_follower_resets_when_backend_reports_replaced_file():
     files = {"/work/output.log": "old\n"}
     inode = {"value": 1}

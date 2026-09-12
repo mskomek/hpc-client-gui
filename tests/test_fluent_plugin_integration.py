@@ -61,6 +61,7 @@ def rule_ids(pack, diags):
     return [d.rule_id for d in diags]
 
 
+@pytest.mark.integration
 @requires_plugin_repo
 def test_pack_metadata_and_rules():
     pack = load_published_pack()
@@ -71,6 +72,7 @@ def test_pack_metadata_and_rules():
     assert {"FLUENT001", "FLUENT002", "FLUENT003", "FLUENT010", "FLUENT011"} <= ids
 
 
+@pytest.mark.integration
 @requires_plugin_repo
 def test_clean_fixture_has_no_errors():
     pack = load_published_pack()
@@ -86,6 +88,7 @@ def test_clean_fixture_has_no_errors():
     assert "FLUENT011" in rule_ids(pack, diags)
 
 
+@pytest.mark.integration
 @requires_plugin_repo
 def test_missing_tui_version_detected():
     pack = load_published_pack()
@@ -94,6 +97,7 @@ def test_missing_tui_version_detected():
     assert "FLUENT001" in rule_ids(pack, diags)
 
 
+@pytest.mark.integration
 @requires_plugin_repo
 def test_wrong_declared_version_flagged_only_for_25_2_target():
     pack = load_published_pack()
@@ -111,6 +115,7 @@ def test_wrong_declared_version_flagged_only_for_25_2_target():
     assert "FLUENT002" not in rule_ids(pack, no_context)
 
 
+@pytest.mark.integration
 @requires_plugin_repo
 def test_late_tui_version_is_informational_and_conservative():
     pack = load_published_pack()
@@ -126,6 +131,7 @@ def test_late_tui_version_is_informational_and_conservative():
     )
 
 
+@pytest.mark.integration
 @requires_plugin_repo
 def test_windows_path_warning_is_context_sensitive():
     pack = load_published_pack()
@@ -144,6 +150,7 @@ def test_windows_path_warning_is_context_sensitive():
     assert "FLUENT010" not in rule_ids(pack, local)
 
 
+@pytest.mark.integration
 @requires_plugin_repo
 def test_absolute_linux_path_portability_info():
     pack = load_published_pack()
@@ -154,6 +161,7 @@ def test_absolute_linux_path_portability_info():
     assert all(d.severity is Severity.INFO for d in matching)
 
 
+@pytest.mark.integration
 @requires_plugin_repo
 def test_registry_entry_installs_via_exact_file_protocol(tmp_path: Path):
     """Full installer round-trip using the real published bytes."""
@@ -192,6 +200,7 @@ def test_registry_entry_installs_via_exact_file_protocol(tmp_path: Path):
     assert entry["version"] in ("0.2.0", "0.3.0")
 
 
+@pytest.mark.integration
 @requires_plugin_repo
 def test_latest_fluent_template_renders_after_install(tmp_path: Path):
     from hpc_gui.plugins.installer import install_plugin_from_registry

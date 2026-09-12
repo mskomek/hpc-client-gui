@@ -1,3 +1,4 @@
+import pytest
 from copy import deepcopy
 
 from hpc_gui.plugins.loader import _build_profile
@@ -27,6 +28,7 @@ def _stream(stream_id="stdout", resolver="slurm.stdout", **extra):
     return value
 
 
+@pytest.mark.contract
 def test_v1_v2_v3_profiles_remain_valid():
     assert validate_cluster_profile_dict({
         "schema_version": 1, "profile_id": "legacy", "name": "Legacy", "scheduler": "slurm",
@@ -37,6 +39,7 @@ def test_v1_v2_v3_profiles_remain_valid():
     assert validate_cluster_profile_dict(_profile()) == []
 
 
+@pytest.mark.contract
 def test_v3_empty_and_multiple_job_outputs_preserve_runtime_shape():
     empty = _profile(job_outputs={"streams": []})
     assert validate_cluster_profile_dict(empty) == []
@@ -52,6 +55,7 @@ def test_v3_empty_and_multiple_job_outputs_preserve_runtime_shape():
     assert [item["id"] for item in profile.job_outputs["streams"]] == ["stdout", "stderr", "progress"]
 
 
+@pytest.mark.contract
 def test_v3_file_filters_validate_and_reject_unsafe_fixtures():
     valid = _profile(file_filters=[{
         "id": "fluent", "labels": {"en": "Fluent", "tr": "Fluent"},
@@ -75,6 +79,7 @@ def test_v3_file_filters_validate_and_reject_unsafe_fixtures():
         assert validate_cluster_profile_dict(case), case
 
 
+@pytest.mark.contract
 def test_v3_provider_template_is_preserved_for_connection_runtime():
     raw = _profile(job_outputs={"streams": [_stream()]})
     profile, error = _build_profile(raw)

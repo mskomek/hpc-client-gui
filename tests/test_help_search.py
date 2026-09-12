@@ -1,7 +1,10 @@
+
+import pytest
 from hpc_gui.core.i18n import load_language
 from hpc_gui.services.help_search import HelpSearchIndex
 
 
+@pytest.mark.unit
 def test_cross_type_search_and_context_disambiguation():
     load_language("en")
     index = HelpSearchIndex()
@@ -11,6 +14,7 @@ def test_cross_type_search_and_context_disambiguation():
     assert any(result.id == "editor.execute" for result in index.search("submit", context="editor"))
 
 
+@pytest.mark.unit
 def test_no_results_and_localized_titles():
     index = HelpSearchIndex()
     assert index.search("does-not-exist") == ()

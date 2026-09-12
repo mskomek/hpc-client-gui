@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import pytest
 import os
 import sys
 import tempfile
@@ -29,6 +30,7 @@ def _entry(name: str, *, is_dir: bool = False, size: int = 10, mtime: int = 100)
     return ComparableEntry(name=name, is_dir=is_dir, size=size, mtime=mtime)
 
 
+@pytest.mark.unit
 class PureComparisonTests(unittest.TestCase):
     def test_same_file(self) -> None:
         result = compare_directory_entries(
@@ -216,6 +218,8 @@ class SnapshotAndUiTests(unittest.TestCase):
             widget._comparison_recompute_timer.stop()
             widget._recompute_directory_comparison()
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_enabling_comparison_causes_no_remote_listing(self) -> None:
         files = _FakeFiles()
         with tempfile.TemporaryDirectory() as local_dir:
@@ -227,6 +231,7 @@ class SnapshotAndUiTests(unittest.TestCase):
             self._run_pending_compare_now(widget)
         self.assertEqual(files.listdir_calls, [])
 
+    @pytest.mark.integration
     def test_recompute_uses_existing_snapshots_without_new_calls(self) -> None:
         files = _FakeFiles()
         files.entries = "/arf/scratch/user"
@@ -269,6 +274,7 @@ class SnapshotAndUiTests(unittest.TestCase):
             local_statuses = widget.local_panel._comparison_statuses or {}
             self.assertEqual(local_statuses["same.txt"].value, "same")
 
+    @pytest.mark.unit
     def test_stale_streaming_snapshot_never_becomes_source(self) -> None:
         from hpc_gui.ui.widgets.remote_dir_panel import RemoteDirPanel
 
@@ -292,6 +298,7 @@ class SnapshotAndUiTests(unittest.TestCase):
         finally:
             panel.deleteLater()
 
+    @pytest.mark.integration
     def test_waiting_until_both_identities_match(self) -> None:
         files = _FakeFiles()
         with tempfile.TemporaryDirectory() as local_dir:
@@ -309,6 +316,8 @@ class SnapshotAndUiTests(unittest.TestCase):
                 widget.local_panel._comparison_statuses, None
             )
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_column_visibility_toggle(self) -> None:
         files = _FakeFiles()
         widget = self._make_widget(files=files)
@@ -320,6 +329,7 @@ class SnapshotAndUiTests(unittest.TestCase):
         self.assertTrue(widget.panel_scratch.views["all"].isColumnHidden(4))
         self.assertIsNone(widget.local_panel._comparison_statuses)
 
+    @pytest.mark.unit
     def test_parent_row_blank_and_sort_roles_intact(self) -> None:
         files = _FakeFiles()
         with tempfile.TemporaryDirectory() as local_dir:
@@ -341,6 +351,8 @@ class SnapshotAndUiTests(unittest.TestCase):
             widget.local_panel.tree.apply_sort()
         self.assertTrue(True)
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_profile_switch_clears_statuses(self) -> None:
         files = _FakeFiles()
         widget = self._make_widget(files=files)
@@ -350,6 +362,7 @@ class SnapshotAndUiTests(unittest.TestCase):
         self.assertFalse(widget.btn_compare_directories.isChecked())
         self.assertFalse(widget.btn_compare_directories.isEnabled())
 
+    @pytest.mark.integration
     def test_active_panel_switch_recomputes_with_that_panel(self) -> None:
         files = _FakeFiles()
         with tempfile.TemporaryDirectory() as local_dir:

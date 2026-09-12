@@ -113,6 +113,7 @@ def qapp():
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.integration
 def test_adapter_returns_truba_group_with_provenance(tmp_path: Path):
     install_profile_fixture(tmp_path)
     groups = installed_cluster_template_groups(root=tmp_path, app_version="1.4.0")
@@ -130,12 +131,14 @@ def test_adapter_returns_truba_group_with_provenance(tmp_path: Path):
     }
 
 
+@pytest.mark.integration
 def test_adapter_skips_broken_plugins(tmp_path: Path):
     install_profile_fixture(tmp_path, broken=True)
     groups = installed_cluster_template_groups(root=tmp_path, app_version="1.4.0")
     assert groups == {}
 
 
+@pytest.mark.integration
 def test_multiple_plugins_group_separately(tmp_path: Path):
     install_profile_fixture(tmp_path)
     install_profile_fixture(
@@ -161,6 +164,8 @@ def _menu_texts(menu) -> list[str]:
     return [action.text() for action in menu.actions()]
 
 
+@pytest.mark.qt
+@pytest.mark.gui
 def test_menu_without_plugins_has_builtin_user_and_more(qapp, monkeypatch):
     monkeypatch.setattr(
         "hpc_gui.ui.dialogs.connection_dialog.installed_cluster_template_groups",
@@ -176,6 +181,8 @@ def test_menu_without_plugins_has_builtin_user_and_more(qapp, monkeypatch):
         dialog.deleteLater()
 
 
+@pytest.mark.qt
+@pytest.mark.gui
 def test_menu_lists_installed_truba(qapp, tmp_path: Path):
     install_profile_fixture(tmp_path)
     with mock.patch(
@@ -210,6 +217,8 @@ def test_menu_lists_installed_truba(qapp, tmp_path: Path):
             dialog.deleteLater()
 
 
+@pytest.mark.qt
+@pytest.mark.gui
 def test_apply_then_edit_then_save_persists_edited_values_and_provenance(qapp, tmp_path: Path):
     install_profile_fixture(tmp_path)
     loader_mod = __import__("hpc_gui.plugins.loader", fromlist=["load_installed_plugins"])
@@ -241,6 +250,8 @@ def test_apply_then_edit_then_save_persists_edited_values_and_provenance(qapp, t
     assert profile["system_template_source"]["plugin_id"] == "org.hpcclient.truba"
 
 
+@pytest.mark.qt
+@pytest.mark.gui
 def test_saved_profile_survives_plugin_removal(qapp):
     """Saved values are a snapshot: no plugin needed to reload them."""
     saved_profile = {
@@ -276,6 +287,8 @@ def test_saved_profile_survives_plugin_removal(qapp):
     assert collected["system_template_source"]["plugin_id"] == "org.hpcclient.truba"
 
 
+@pytest.mark.qt
+@pytest.mark.gui
 def test_plugin_update_keeps_old_snapshot_new_uses_new_version(qapp, tmp_path: Path):
     install_profile_fixture(tmp_path, version="1.0.0")
     loader_mod = __import__("hpc_gui.plugins.loader", fromlist=["load_installed_plugins"])
@@ -326,6 +339,8 @@ def test_plugin_update_keeps_old_snapshot_new_uses_new_version(qapp, tmp_path: P
     assert new_source["plugin_version"] == "1.1.0"
 
 
+@pytest.mark.qt
+@pytest.mark.gui
 def test_get_more_plugins_opens_manager(qapp):
     opened = []
 

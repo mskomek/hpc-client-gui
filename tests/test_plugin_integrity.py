@@ -47,6 +47,7 @@ def install(tmp_path: Path, plugin_id: str = "org.hpcclient.truba", version: str
     install_plugin_from_registry(entry, root=tmp_path, app_version="1.4.1", fetcher=make_fetcher(responses))
 
 
+@pytest.mark.integration
 def test_clean_restart_records_trusted_hash_and_loads(tmp_path: Path):
     install(tmp_path)
     state = read_installed_state(tmp_path)
@@ -60,6 +61,7 @@ def test_clean_restart_records_trusted_hash_and_loads(tmp_path: Path):
     assert [p.manifest.version for p in loaded.plugins] == ["1.0.0"]
 
 
+@pytest.mark.integration
 def test_modified_payload_skips_plugin_with_reinstall_hint(tmp_path: Path):
     install(tmp_path)
     payload = plugin_package_dir("org.hpcclient.truba", "1.0.0", tmp_path) / "cluster-profile.json"
@@ -76,6 +78,7 @@ def test_modified_payload_skips_plugin_with_reinstall_hint(tmp_path: Path):
     assert "reinstall" in problem.reason
 
 
+@pytest.mark.integration
 def test_modified_manifest_detected_against_trusted_hash(tmp_path: Path):
     install(tmp_path)
     manifest_path = plugin_package_dir("org.hpcclient.truba", "1.0.0", tmp_path) / "manifest.json"
@@ -91,6 +94,7 @@ def test_modified_manifest_detected_against_trusted_hash(tmp_path: Path):
     assert loaded.problems and "integrity check failed" in loaded.problems[0].reason
 
 
+@pytest.mark.integration
 def test_missing_payload_file_detected(tmp_path: Path):
     install(tmp_path)
     (plugin_package_dir("org.hpcclient.truba", "1.0.0", tmp_path) / "cluster-profile.json").unlink()
@@ -99,6 +103,7 @@ def test_missing_payload_file_detected(tmp_path: Path):
     assert "missing payload file" in loaded.problems[0].reason
 
 
+@pytest.mark.integration
 def test_unexpected_extra_file_rejected(tmp_path: Path):
     install(tmp_path)
     extra = plugin_package_dir("org.hpcclient.truba", "1.0.0", tmp_path) / "extra.txt"
@@ -107,6 +112,7 @@ def test_unexpected_extra_file_rejected(tmp_path: Path):
     assert any("unexpected extra file" in error for error in errors)
 
 
+@pytest.mark.integration
 def test_legacy_record_tofu_migration_is_atomic_and_marked(tmp_path: Path):
     install(tmp_path)
     # Downgrade the record to the legacy v1 layout (no hashes, no flags).
@@ -150,6 +156,7 @@ def test_legacy_record_tofu_migration_is_atomic_and_marked(tmp_path: Path):
     assert ("org.hpcclient.truba", "1.0.0") in migrated
 
 
+@pytest.mark.integration
 def test_tofu_migration_refuses_tampered_legacy_files(tmp_path: Path):
     install(tmp_path)
     state = read_installed_state(tmp_path)
@@ -170,6 +177,7 @@ def test_tofu_migration_refuses_tampered_legacy_files(tmp_path: Path):
     assert read_installed_state(tmp_path)["org.hpcclient.truba"]["manifest_hashes"] == {}
 
 
+@pytest.mark.integration
 def test_atomic_write_failure_keeps_previous_state(tmp_path: Path, monkeypatch):
     install(tmp_path)
     # Downgrade to a legacy record so loading triggers a TOFU write.
@@ -199,6 +207,7 @@ def test_atomic_write_failure_keeps_previous_state(tmp_path: Path, monkeypatch):
     assert "manifest_hashes" not in on_disk["plugins"]["org.hpcclient.truba"]
 
 
+@pytest.mark.integration
 def test_broken_plugin_skipped_while_healthy_plugin_loads(tmp_path: Path):
     install(tmp_path, plugin_id="org.hpcclient.healthy", version="1.0.0")
     install(tmp_path, plugin_id="org.hpcclient.broken", version="2.0.0")
@@ -223,6 +232,7 @@ def test_broken_plugin_skipped_while_healthy_plugin_loads(tmp_path: Path):
     assert (broken_payload.parent / "manifest.json").is_file()
 
 
+@pytest.mark.integration
 def test_rollback_from_corrupt_newest_to_intact_older_version(tmp_path: Path):
     install(tmp_path, version="1.9.0")
     install(tmp_path, version="1.10.0")  # newest, now active

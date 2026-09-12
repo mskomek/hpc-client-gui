@@ -197,6 +197,8 @@ def _rows(listing):
 # Stress A - right-click retarget, 200 real wx.ContextMenuEvent dispatches
 # ==========================================================================
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_stress_a_right_click_retarget(wx_app, monkeypatch):
     import hpc_gui.wx_remote_files_view as view
 
@@ -295,6 +297,8 @@ def _fire_menu_item(control, label, trigger):
     return fired["hit"]
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_stress_b_local_mutations(wx_app, tmp_path: Path, monkeypatch):
     other = tmp_path / "other"
     other.mkdir()
@@ -429,6 +433,8 @@ def test_stress_b_local_mutations(wx_app, tmp_path: Path, monkeypatch):
 # Stress C - 100 remote mutations driven by real key and context-menu events
 # ==========================================================================
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_stress_c_remote_mutations(wx_app, monkeypatch):
     backend = MockRemoteFilesBackend()
     backend.entries["/scratch"] = True
@@ -588,6 +594,8 @@ SENTINELS = {
 }
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_stress_d_target_switches(wx_app):
     listed = {"count": 0}
 
@@ -649,6 +657,8 @@ def _enter_path(frame, value):
     control.ProcessEvent(wx.CommandEvent(wx.wxEVT_TEXT_ENTER, control.GetId()))
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_stress_e_navigate_completion_races(wx_app, tmp_path, monkeypatch):
     dialogs = []
     monkeypatch.setattr(wx, "MessageBox", lambda *a, **k: dialogs.append(a) or wx.YES)
@@ -765,6 +775,8 @@ def _file_browser_windows():
     ]
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_stress_f_browser_open_close(wx_app, tmp_path):
     (tmp_path / "sample.txt").write_text("x", encoding="utf-8")
     baseline = {id(window) for window in _file_browser_windows()}
@@ -848,6 +860,8 @@ def _close_first_tab(notebook):
         notebook.HitTest = original_hit
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_stress_g_blocked_close_in_flight(wx_app, tmp_path, monkeypatch):
     from hpc_gui.services.transfer_controller import TransferItem
     from hpc_gui.wx_local_files import LocalEntry
@@ -1110,6 +1124,8 @@ class _AccountingFiles:
         self._run("resume_download", destination)
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_stress_h_file_transfer_items(wx_app, tmp_path):
     from hpc_gui.services.transfer_controller import TransferItem
     from hpc_gui.wx_shell import _start_file_transfers
@@ -1198,6 +1214,7 @@ def test_stress_h_file_transfer_items(wx_app, tmp_path):
 # Stress I - 50 unicode / space names across local, remote and transfers
 # ==========================================================================
 
+@pytest.mark.contract
 def test_stress_i_unicode_and_space_names(wx_app, tmp_path, monkeypatch):
     from hpc_gui.services.transfer_controller import TransferItem
     from hpc_gui.wx_shell import _start_file_transfers
@@ -1296,6 +1313,8 @@ def test_stress_i_unicode_and_space_names(wx_app, tmp_path, monkeypatch):
 # Reconnect / session snapshot, repeated
 # ==========================================================================
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_reconnect_session_snapshot_repeated(wx_app, tmp_path):
     from hpc_gui.services.transfer_controller import TransferItem
     from hpc_gui.wx_shell import _start_file_transfers
@@ -1356,6 +1375,8 @@ def test_reconnect_session_snapshot_repeated(wx_app, tmp_path):
 # Measured invariant scoreboard
 # ==========================================================================
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_zz_measured_invariants(capsys):
     lines = ["", "GUI-FILE-003 executed stress counts:"]
     for name, (executed, required) in EXECUTED.items():

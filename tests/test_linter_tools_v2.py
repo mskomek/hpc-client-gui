@@ -56,11 +56,13 @@ def _install_stub_engine(monkeypatch, *, api_suffixes=(".jou",), init_attr=None)
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.contract
 def test_supported_suffixes_falls_back_to_api_submodule(monkeypatch):
     _install_stub_engine(monkeypatch)  # attribute only on the .api submodule
     assert supported_suffixes() == frozenset({".jou"})
 
 
+@pytest.mark.contract
 def test_supported_suffixes_prefers_package_attribute(monkeypatch):
     _install_stub_engine(
         monkeypatch, api_suffixes=(".dat",), init_attr={".wbjn", ".JOu"}
@@ -69,6 +71,7 @@ def test_supported_suffixes_prefers_package_attribute(monkeypatch):
     assert supported_suffixes() == frozenset({".jou", ".wbjn"})
 
 
+@pytest.mark.contract
 def test_supported_suffixes_empty_when_no_tool_installed(monkeypatch):
     def raise_missing(*_args, **_kwargs):
         raise ToolLoadError("No linter tool plugin is installed.")
@@ -104,6 +107,7 @@ def _install_fake_module(monkeypatch, module_name, suffixes):
     monkeypatch.setitem(sys.modules, f"{module_name}.api", api)
 
 
+@pytest.mark.contract
 def test_tools_supporting_suffix_filters_tools(monkeypatch):
     from hpc_gui.plugins.linter_tools import tools_supporting_suffix
 
@@ -122,6 +126,7 @@ def test_tools_supporting_suffix_filters_tools(monkeypatch):
     assert tools_supporting_suffix("") == []
 
 
+@pytest.mark.contract
 def test_tools_supporting_suffix_tolerates_broken_engine(monkeypatch):
     from hpc_gui.plugins.linter_tools import tools_supporting_suffix
 
@@ -141,6 +146,7 @@ def test_tools_supporting_suffix_tolerates_broken_engine(monkeypatch):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 def test_temp_copy_preserves_suffix_and_content():
     from hpc_gui.plugins.linter_tools import remove_temp_copy, temp_copy_for_tool
 
@@ -154,6 +160,7 @@ def test_temp_copy_preserves_suffix_and_content():
     assert not temp_path.exists()
 
 
+@pytest.mark.unit
 def test_temp_copy_without_suffix_uses_txt():
     from hpc_gui.plugins.linter_tools import remove_temp_copy, temp_copy_for_tool
 
@@ -197,6 +204,8 @@ def _fix_buttons(dialog):
     ]
 
 
+@pytest.mark.qt
+@pytest.mark.gui
 def test_results_dialog_hides_fix_button_without_callback(qapp):
     from hpc_gui.ui.dialogs.ansys_lint_results_dialog import (
         build_ansys_lint_results_dialog,
@@ -206,6 +215,8 @@ def test_results_dialog_hides_fix_button_without_callback(qapp):
     assert _fix_buttons(dialog) == []
 
 
+@pytest.mark.qt
+@pytest.mark.gui
 def test_results_dialog_fix_button_invokes_callback(qapp):
     from hpc_gui.ui.dialogs.ansys_lint_results_dialog import (
         build_ansys_lint_results_dialog,
@@ -226,6 +237,7 @@ def test_results_dialog_fix_button_invokes_callback(qapp):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.integration
 def test_remote_open_in_tool_temp_copy_lifecycle(qapp, monkeypatch):
     from pathlib import Path
 
@@ -259,6 +271,7 @@ def test_remote_open_in_tool_temp_copy_lifecycle(qapp, monkeypatch):
     assert not temp_path.exists()
 
 
+@pytest.mark.integration
 def test_remote_folder_lint_worker_recurses_only_supported_files(monkeypatch):
     from types import SimpleNamespace
 
@@ -284,6 +297,7 @@ def test_remote_folder_lint_worker_recurses_only_supported_files(monkeypatch):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.contract
 def test_first_linter_tool_raises_actionable_error_without_plugins(tmp_path):
     with pytest.raises(ToolLoadError) as excinfo:
         first_linter_tool(root=tmp_path)
@@ -295,6 +309,7 @@ def test_first_linter_tool_raises_actionable_error_without_plugins(tmp_path):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 def test_lint_text_with_tool_forwards_options(monkeypatch):
     tool = _install_stub_engine(monkeypatch)
     calls = []
@@ -351,6 +366,7 @@ class _FileResult:
         return self._diags
 
 
+@pytest.mark.unit
 def test_format_file_entries_lists_location_fix_and_source():
     from hpc_gui.ui.dialogs.ansys_lint_results_dialog import format_file_entries
 
@@ -364,6 +380,7 @@ def test_format_file_entries_lists_location_fix_and_source():
     assert any("confidence: structural" in ln.lower() for ln in lines)
 
 
+@pytest.mark.unit
 def test_format_run_entries_groups_by_file_and_reports_totals():
     from hpc_gui.ui.dialogs.ansys_lint_results_dialog import format_run_entries
 
@@ -377,6 +394,8 @@ def test_format_run_entries_groups_by_file_and_reports_totals():
     assert any("no findings" in ln for ln in lines)
 
 
+@pytest.mark.qt
+@pytest.mark.gui
 def test_results_dialog_explains_fields_and_actions(qapp, monkeypatch):
     from PySide6.QtCore import Qt
     from PySide6.QtTest import QTest
