@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "remediation_baseline_sha": "54f7376f3e3e1fccd672f121e33b68d2e8df2652",
+  "branch": "test-suite-governance-20260912-v2",
+  "frozen_audit_sha": "12ce79935bf076e1062c57dc7dbd148bad2bfae1",
+  "collection": {
+    "command": "python -m pytest tests --collect-only -q -p no:cacheprovider",
+    "count": 2678,
+    "errors": 0,
+    "duration_seconds": 21.9
+  },
+  "frozen_comparison": {
+    "baseline_count": 2673,
+    "added_count": 5,
+    "added_nodeids": [
+      "tests/test_wx_updater_spec.py::test_install_without_verified_artifact_stays_failed",
+      "tests/test_wx_updater_spec.py::test_show_update_available_wrapper_returns_false_for_cancel",
+      "tests/test_wx_updater_spec.py::test_show_update_available_wrapper_returns_false_for_close",
+      "tests/test_wx_updater_spec.py::test_show_update_available_wrapper_returns_true_when_download_starts",
+      "tests/test_wx_updater_spec.py::test_update_release_notes_preserve_unicode"
+    ],
+    "removed_count": 0,
+    "removed_nodeids": [],
+    "probable_renames": []
+  },
+  "notes": [
+    "The embedded-terminal replacement exists only in the preserved dirty develop worktree and is not included in this committed remediation baseline; no rename equivalence is asserted."
+  ]
+}
