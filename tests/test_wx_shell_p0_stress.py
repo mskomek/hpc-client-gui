@@ -80,12 +80,17 @@ def test_wx_shell_p0_stress_real_wx_paths():
             frame.ProcessEvent(wx.CommandEvent(wx.wxEVT_MENU, item.GetId()))
             if expected not in jobs_frame.GetTitle():
                 metrics["wrong_language_labels"] += 1
-            controls = frame._wx_shell_controls
             labels = [frame.GetTitle()]
-            labels.extend(
-                controls[name].GetLabel()
-                for name in ("update", "plugins", "send_logs", "settings", "help")
-            )
+            menu_bar = frame.GetMenuBar()
+            assert menu_bar is not None and menu_bar.GetMenuCount() > 0
+            for menu_index in range(menu_bar.GetMenuCount()):
+                labels.append(menu_bar.GetMenuLabel(menu_index))
+                menu = menu_bar.GetMenu(menu_index)
+                labels.extend(
+                    item.GetItemLabelText()
+                    for item in menu.GetMenuItems()
+                    if not item.IsSeparator()
+                )
             labels.extend(item.GetItemLabelText() for item in frame._wx_shell_controls["language_items"].values())
             if any("[" in label for label in labels):
                 metrics["missing_translation_labels"] += 1

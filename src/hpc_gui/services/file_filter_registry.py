@@ -133,8 +133,8 @@ class FileFilterRegistry:
 
 def _entry_name(entry: Any) -> str:
     if isinstance(entry, dict):
-        return str(entry.get("name", entry.get("path", "")))
-    return str(getattr(entry, "name", getattr(entry, "path", "")))
+        return str(entry.get("name") or entry.get("path", ""))
+    return str(getattr(entry, "name", None) or getattr(entry, "path", ""))
 
 
 def _entry_is_dir(entry: Any) -> bool:
