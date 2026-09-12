@@ -84,13 +84,23 @@ class TestSSHCommandConstruction:
             assert unquoted == path, f"shlex.quote corrupted path: {path} -> {quoted}"
 
     def test_ssh_backend_uses_shlex_quote(self):
-        """SSH backend should use shlex.quote for shell commands."""
-        # Check that shlex is imported in the module
-        import hpc_gui.services.files_ssh as module
-        # shlex is imported lazily inside methods, so check the source
-        import inspect
-        source = inspect.getsource(module)
-        assert "import shlex" in source or "shlex.quote" in source
+        """A hostile Unicode path remains one shell argument for remote rm."""
+        from types import SimpleNamespace
+
+        from hpc_gui.services.files_ssh import SSHFilesBackend
+
+        commands = []
+        ssh = SimpleNamespace(
+            sftp=object(),
+            run=lambda command: (commands.append(command) or (0, "", "")),
+        )
+        backend = SSHFilesBackend(ssh)
+        remote_path = "/scratch/Çalışma O'Brien/$(touch sentinel).txt"
+
+        backend.remove(remote_path)
+
+        assert commands == [f"rm -f {shlex.quote(remote_path)}"]
+        assert shlex.split(commands[0]) == ["rm", "-f", remote_path]
 
 
 # ---------------------------------------------------------------------------
