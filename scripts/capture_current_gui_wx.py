@@ -155,6 +155,13 @@ def main() -> int:
     nb = frame._wx_shell_controls["notebook"]
     print(f"nb count {nb.GetPageCount()}", flush=True)
 
+    def select_page(nav_id: str) -> None:
+        page = frame._wx_shell_controls["pages"][nav_id]["page"]
+        index = next((i for i in range(nb.GetPageCount()) if nb.GetPage(i) is page), -1)
+        if index < 0:
+            raise RuntimeError(f"page is not in the main notebook: {nav_id}")
+        nb.SetSelection(index)
+
     def grab(name: str):
         print(f"grab start {name}", flush=True)
         frame.Update()
@@ -197,7 +204,7 @@ def main() -> int:
     grab("02-connection-default")
     # Try to show connection menu if any
     # 10 jobs
-    nb.SetSelection(1)
+    select_page("NAV-JOBS")
     wx.SafeYield()
     wx.MilliSleep(400)
     grab("10-jobs-default")
@@ -226,75 +233,25 @@ def main() -> int:
                 n2.SetSelection(0)
             except Exception:
                 pass
-            # context menu - trigger
-            try:
-                rect = jobs_list.GetItemRect(0)
-                pos = jobs_list.ClientToScreen(rect.GetPosition() + wx.Point(5, rect.height//2))
-                evt = wx.ContextMenuEvent(wx.wxEVT_CONTEXT_MENU, jobs_list.GetId())
-                evt.SetPosition(pos)
-                jobs_list.ProcessEvent(evt)
-                wx.SafeYield()
-                wx.MilliSleep(300)
-                grab("15-jobs-context-menu")
-                # Dismiss menu
-                wx.SafeYield()
-            except Exception as e:
-                print(f"jobs context fail {e}")
     except Exception as e:
         print(f"jobs selected fail {e}")
 
     # 20 directories
-    nb.SetSelection(2)
+    select_page("NAV-DIRECTORIES")
     wx.SafeYield()
     wx.MilliSleep(300)
     grab("20-directories-default")
     # Try local/remote selection not deeply
 
     # 30 files
-    nb.SetSelection(3)
+    select_page("NAV-FILES")
     wx.SafeYield()
     wx.MilliSleep(400)
     grab("30-files-default")
     # Try to show transfer panel already visible
     grab("34-files-transfer-panel")
-    # Context menus for files - local
-    try:
-        files_local = frame._wx_shell_controls["pages"]["NAV-FILES"]["local"]
-        # Find listing inside local panel - try to locate ListCtrl
-        # Search children
-        def find_list(ctrl):
-            for c in ctrl.GetChildren():
-                if isinstance(c, wx.ListCtrl):
-                    return c
-                r = find_list(c)
-                if r:
-                    return r
-            return None
-        lst = find_list(files_local)
-        if lst and lst.GetItemCount()>0:
-            rect = lst.GetItemRect(0)
-            pos = lst.ClientToScreen(rect.GetPosition() + wx.Point(5, rect.height//2))
-            evt = wx.ContextMenuEvent(wx.wxEVT_CONTEXT_MENU, lst.GetId())
-            evt.SetPosition(pos)
-            lst.ProcessEvent(evt)
-            wx.SafeYield()
-            wx.MilliSleep(300)
-            grab("39-files-remote-context-single-file")  # approximate
-            wx.SafeYield()
-        # background
-        if lst:
-            pos2 = lst.ClientToScreen(wx.Point(5, lst.GetSize().height-10))
-            evt2 = wx.ContextMenuEvent(wx.wxEVT_CONTEXT_MENU, lst.GetId())
-            evt2.SetPosition(pos2)
-            lst.ProcessEvent(evt2)
-            wx.SafeYield()
-            wx.MilliSleep(300)
-            grab("38-files-local-context-background")
-    except Exception as e:
-        print(f"files context fail {e}")
-
     # 60 editor
-    nb.SetSelection(4)
+    select_page("NAV-EDITOR")
     wx.SafeYield()
     wx.MilliSleep(300)
     grab("60-editor-default")
@@ -327,7 +284,7 @@ def main() -> int:
         print(f"editor fail {e}")
 
     # 70 terminal (wx-only)
-    nb.SetSelection(5)
+    select_page("NAV-TERMINAL")
     wx.SafeYield()
     wx.MilliSleep(300)
     grab("70-terminal-default")
@@ -342,7 +299,7 @@ def main() -> int:
         pass
 
     # 80 logs
-    nb.SetSelection(6)
+    select_page("NAV-LOGS")
     wx.SafeYield()
     wx.MilliSleep(300)
     grab("80-logs-default")

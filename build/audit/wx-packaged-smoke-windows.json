@@ -1,22 +1,71 @@
 {
   "schema": "wx-packaged-smoke/1",
-  "commit": "d2e6455583143e321528d6ca5fca679b368b76e4",
+  "commit": "12ce79935bf076e1062c57dc7dbd148bad2bfae1",
   "platform": "windows",
-  "artifact": "wx-artifact-windows.missing",
-  "artifact_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+  "artifact": "hpc-client-gui.exe",
+  "artifact_sha256": "c83c1b05c157a97b040c705efe722855cd1511ee3b59de19c87341e18a38394f",
   "result": "FAIL",
   "checks": {
-    "process_started": "FAIL",
-    "wx_runtime_started": "FAIL",
-    "main_frame_created": "FAIL",
+    "process_started": "PASS",
+    "wx_runtime_started": "PASS",
+    "main_frame_created": "PASS",
+    "terminal_readback": "FAIL",
+    "pty_input_output": "FAIL",
+    "pty_resize": "PASS",
+    "remote_file_roundtrip": "FAIL",
+    "job_roundtrip": "FAIL",
+    "files_surface": "PASS",
+    "editor_surface": "PASS",
+    "jobs_surface": "PASS",
+    "plugin_ansys_surface": "PASS",
+    "diagnostics_updater_surface": "PASS",
+    "files_controls": "PASS",
+    "editor_controls": "PASS",
+    "jobs_controls": "PASS",
+    "editor_roundtrip": "PASS",
+    "transfer_queue_render": "FAIL",
     "clean_shutdown": "FAIL"
   },
   "details": {
-    "artifact": "artifact not found: D:\\Projeler\\hpc-client-gui\\build\\audit\\wx-artifact-windows.missing"
+    "wx_app_name": "hpc-client-gui-smoke-43364",
+    "wx_local_data_dir": "C:\\Users\\mskomek\\AppData\\Local\\hpc-client-gui-smoke-43364",
+    "runtime_phase": 0,
+    "runtime_input_diagnostic": {
+      "foreground_request_accepted": false,
+      "foreground_matches_frame": false,
+      "wx_focus_type": "WebView",
+      "wx_focus_within_terminal_panel": true,
+      "webview_dom_focus": {
+        "tag": "TEXTAREA",
+        "className": "xterm-helper-textarea",
+        "insideTerminal": true
+      },
+      "bridge_input_chars": 0,
+      "ssh_input_chars": 0,
+      "dom_input_events": {
+        "keydown": 0,
+        "beforeinput": 0,
+        "input": 0
+      }
+    },
+    "runtime_last_line": null,
+    "runtime_last_buffer": null,
+    "runtime_last_screen": null,
+    "runtime": "keyboard_input:foreground_lost",
+    "exit_code": "artifact exit 1",
+    "output_snippet": "Adding duplicate image handler for 'Windows bitmap file'\nAdding duplicate animation handler for '1' type\nAdding duplicate animation handler for '2' type\nAdding duplicate animation handler for '3' type\n"
   },
   "python": "3.12.4",
   "platform_detail": "Windows-11-10.0.26200-SP0",
-  "generated_utc": "2026-09-07T09:29:17.676678+00:00",
-  "exit_code": null,
-  "isolated_from_src": true
+  "generated_utc": "2026-09-12T11:15:18.068650+00:00",
+  "exit_code": 1,
+  "isolated_from_src": true,
+  "manual_required": [
+    "display",
+    "cluster",
+    "MFA",
+    "X11",
+    "DnD",
+    "transfer-conflict"
+  ]
 }
