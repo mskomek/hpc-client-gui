@@ -172,25 +172,46 @@ class TestSelectedJobStoreThreadSafety:
     def test_concurrent_subscribe_and_select(self):
         store = SelectedJobStore()
         received = []
+        subscriptions = []
+        errors = []
+        start = threading.Barrier(6, timeout=5)
 
         def listener(ctx):
             received.append(ctx.generation)
 
         def subscriber():
-            store.subscribe(listener)
+            try:
+                start.wait()
+                subscriptions.append(store.subscribe(listener))
+            except BaseException as exc:
+                errors.append(exc)
 
         def selector():
-            for _ in range(20):
-                store.select(job_id="x")
+            try:
+                start.wait()
+                for _ in range(20):
+                    store.select(job_id="x")
+            except BaseException as exc:
+                errors.append(exc)
 
         threads = [threading.Thread(target=subscriber) for _ in range(3)]
         threads += [threading.Thread(target=selector) for _ in range(3)]
         for t in threads:
             t.start()
         for t in threads:
-            t.join()
-        # No crash = success; generation values may be partial
-        assert store.generation > 0
+            t.join(timeout=5)
+        assert all(not t.is_alive() for t in threads)
+        assert errors == []
+        assert len(subscriptions) == 3
+        assert store.generation == 60
+        assert store.context.job_id == "x"
+        assert received and all(1 <= generation <= 60 for generation in received)
+
+        notifications_before_unsubscribe = len(received)
+        for unsubscribe in subscriptions:
+            unsubscribe()
+        store.select(job_id="after-unsubscribe")
+        assert len(received) == notifications_before_unsubscribe
 
 
 # ---------------------------------------------------------------------------
