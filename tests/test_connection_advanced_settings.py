@@ -236,7 +236,9 @@ class ParallelismSourceOfTruthTests(unittest.TestCase):
         from hpc_gui.ui.dialogs.settings_dialog import SettingsDialog
 
         load_language("en")
-        with mock.patch.object(Path, "home"), tempfile.TemporaryDirectory():
+        with tempfile.TemporaryDirectory() as temp_dir, mock.patch.object(
+            Path, "home", return_value=Path(temp_dir)
+        ):
             dialog = SettingsDialog()
             try:
                 self.assertFalse(hasattr(dialog, "sp_transfer_parallelism"))
