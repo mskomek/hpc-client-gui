@@ -7,7 +7,7 @@ Frozen baseline: 12ce79935bf076e1062c57dc7dbd148bad2bfae1
 Remediation baseline: 54f7376f3e3e1fccd672f121e33b68d2e8df2652
 Remediation collection: 2,678 nodes (five added, zero removed from frozen)
 
-Current packet: C
+Current packet: D
 Dependency: Phase 1 test-suite audit completed
 
 This is an executable cleanup Wave and implementation plan. The repository has no root ACTIVE_WAVE/WAVES execution system; this document does not claim to be its official active Wave ledger.
@@ -42,7 +42,12 @@ Freeze 12ce79935bf076e1062c57dc7dbd148bad2bfae1, collect the baseline nodeids, p
 
 Register primary and qualifier markers; add this architecture specification and the taxonomy REPORT checker with focused tests. Report only actual pytest marker state. Do not add primary markers to existing tests. Do not enable strict markers, change production, edit CI selectors, clean duplicates, or rewrite weak GUI tests.
 
-### C. RATCHET + lane comparison — IN_PROGRESS
+### C. RATCHET + lane comparison — DONE
+  - Frozen the Packet B taxonomy state at `89245cd4`: 2,687 exact nodeids, 2,678 accepted zero-primary nodes, nine classified audit nodes, and zero multi-primary nodes.
+  - `--mode ratchet` passes after Packet C: 2,691 nodes, no new zero-primary nodes, no lost classifications, no multi-primary nodes, and no new catch-all files. Four new ratchet tests each have exactly one primary.
+  - Exact selected-node manifests compare frozen, remediation, and Packet C sets for release suite, packaging, explicit macOS release, macOS developer, compat, CLI, SSH, Windows, and contract lanes. The Windows manifest separately records 13 unittest discovery IDs.
+  - The release suite selection changed only by the 18 reviewed additions (5 updater + 9 REPORT + 4 ratchet nodes); no selected node was removed. Other recorded lane sets are unchanged. Automatic CI remains disabled; no workflow or selector was changed.
+### D. Exact duplicate groups / false gates — IN_PROGRESS
 
 Use the REPORT JSON as the actual-state starting point and compare collected nodes with the existing selectors in scripts/ci.py, scripts/release_test_suite.py, .github/workflows/release.yml, and archived docs/ci-disabled/ci.yml. Keep taxonomy debt and lane membership visible; do not infer a primary from a lane. Review the Phase 1 lane inventory, including the release macOS lists (54 nodes each), shared Linux/Windows release runner, and current ci.py lanes. Define a ratchet only after the baseline and lane coverage are reproducible.
 

@@ -15,3 +15,5 @@ Added node IDs:
 - `tests/test_wx_updater_spec.py::test_update_release_notes_preserve_unicode`
 
 The frozen node list and metadata are preserved in `../../12ce7993/test-suite-baseline/`. The embedded-terminal node change noted in the dirty develop worktree is not included in this committed baseline and is not treated as an established rename. Collection verifies discovery only; it is not a test-result or release-readiness claim.
+
+Packet C records its accepted zero-primary debt in `taxonomy-ratchet.json`, exact lane selections in `lane-manifests.json`, and the 2,691-node Packet C inventory in `nodeids-packet-c.txt`.

@@ -46,6 +46,10 @@ The packaging qualifier is retained from the existing pytest configuration.
 - Deletion gate: do not delete a test until the inventory exists, its unique assertions are recorded, a canonical owner is identified, the replacement passes targeted validation, node references and CI/report references are searched, and the mapping is recorded.
 - No arbitrary count target: do not optimize only to reduce the number of tests.
 
+## Taxonomy debt ratchet
+
+`--mode report` derives categories from actual pytest markers, emits JSON, and remains non-gating for legacy zero-primary debt. `--mode ratchet --baseline <path>` uses the exact recorded nodeids and classification map. Existing zero-primary nodes may remain only when they are listed in that baseline; the zero-primary and multi-primary counts may not increase. Every new node must have exactly one primary, and a previously classified node must keep at least one. Removed nodeids are reported for review but do not fail the ratchet, so approved cleanup can delete tests. A newly detected generic catch-all test filename fails ratchet mode. Filename heuristics never assign a primary category. The ratchet is local and is not wired into automatic CI.
+
 ## Test Plan by Category
 
 Unit:

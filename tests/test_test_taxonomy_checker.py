@@ -125,3 +125,99 @@ def test_catch_all_filename_is_warning_only():
     )
     assert warnings == ["tests/test_final_gaps.py"]
     assert checker.report_exit_code(report) == 0
+
+
+def _ratchet_baseline(report):
+    return {
+        "schema_version": 1,
+        "repository_sha": "baseline-sha",
+        "collection_count": report["collection"]["total"],
+        "nodeids": report["nodeids"],
+        "zero_primary_count": report["zero_primary"]["count"],
+        "zero_primary_nodeids": report["zero_primary"]["nodeids"],
+        "multi_primary_count": report["multi_primary"]["count"],
+        "primary_by_nodeid": report["primary_by_nodeid"],
+        "catch_all_filenames": report["warnings"]["catch_all_filenames"],
+    }
+
+
+@pytest.mark.audit
+def test_ratchet_allows_existing_debt_and_requires_new_tests_classified():
+    baseline_report = checker.build_report(
+        [
+            {"nodeid": "tests/legacy.py::test_old", "markers": []},
+            {"nodeid": "tests/core.py::test_known", "markers": ["unit"]},
+        ]
+    )
+    current_report = checker.build_report(
+        [
+            {"nodeid": "tests/legacy.py::test_old", "markers": []},
+            {"nodeid": "tests/core.py::test_known", "markers": ["unit"]},
+            {"nodeid": "tests/new.py::test_new", "markers": ["audit"]},
+        ],
+        repository_sha="current-sha",
+    )
+
+    result = checker.build_ratchet_report(current_report, _ratchet_baseline(baseline_report))
+
+    assert result["passed"] is True
+    assert result["added_nodeids"] == ["tests/new.py::test_new"]
+    assert result["new_zero_primary_nodeids"] == []
+
+
+@pytest.mark.audit
+def test_ratchet_rejects_new_zero_multi_and_lost_classification():
+    baseline_report = checker.build_report(
+        [
+            {"nodeid": "tests/legacy.py::test_old", "markers": []},
+            {"nodeid": "tests/core.py::test_known", "markers": ["unit"]},
+        ]
+    )
+    current_report = checker.build_report(
+        [
+            {"nodeid": "tests/legacy.py::test_old", "markers": []},
+            {"nodeid": "tests/core.py::test_known", "markers": []},
+            {"nodeid": "tests/new.py::test_unmarked", "markers": []},
+            {"nodeid": "tests/new.py::test_multi", "markers": ["gui", "unit"]},
+        ]
+    )
+
+    result = checker.build_ratchet_report(current_report, _ratchet_baseline(baseline_report))
+
+    assert result["passed"] is False
+    assert result["new_zero_primary_nodeids"] == [
+        "tests/core.py::test_known",
+        "tests/new.py::test_unmarked",
+    ]
+    assert result["lost_classification_nodeids"] == ["tests/core.py::test_known"]
+    assert result["new_nodes_without_exactly_one_primary"] == [
+        "tests/new.py::test_multi",
+        "tests/new.py::test_unmarked",
+    ]
+
+
+@pytest.mark.audit
+def test_ratchet_rejects_new_generic_catch_all_file():
+    baseline_report = checker.build_report([], warnings={"catch_all_filenames": []})
+    current_report = checker.build_report(
+        [{"nodeid": "tests/test_new.py::test_new", "markers": ["audit"]}],
+        warnings={"catch_all_filenames": ["tests/test_final_gaps.py"]},
+    )
+
+    result = checker.build_ratchet_report(current_report, _ratchet_baseline(baseline_report))
+
+    assert result["passed"] is False
+    assert result["new_catch_all_files"] == ["tests/test_final_gaps.py"]
+
+
+@pytest.mark.audit
+def test_ratchet_reports_removed_node_without_blocking_intentional_cleanup():
+    baseline_report = checker.build_report(
+        [{"nodeid": "tests/legacy.py::test_removed", "markers": []}]
+    )
+    current_report = checker.build_report([])
+
+    result = checker.build_ratchet_report(current_report, _ratchet_baseline(baseline_report))
+
+    assert result["passed"] is True
+    assert result["removed_nodeids"] == ["tests/legacy.py::test_removed"]

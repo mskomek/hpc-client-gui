@@ -28,9 +28,12 @@ def build_report(records: list[dict[str, Any]], repository_sha: str = "",
     primary_counts = dict.fromkeys(PRIMARY_CATEGORIES, 0)
     qualifier_counts = dict.fromkeys(QUALIFIERS, 0)
     zero_primary, multi_primary = [], []
+    primary_by_nodeid = {}
     for record in records:
         markers = set(record.get("markers", ()))
         primaries = [name for name in PRIMARY_CATEGORIES if name in markers]
+        if primaries:
+            primary_by_nodeid[record["nodeid"]] = primaries
         for name in primaries:
             primary_counts[name] += 1
         for name in QUALIFIERS:
@@ -45,8 +48,10 @@ def build_report(records: list[dict[str, Any]], repository_sha: str = "",
         "mode": "report",
         "repository_sha": repository_sha,
         "collection": {"total": len(records)},
+        "nodeids": [record["nodeid"] for record in records],
         "primary_counts": primary_counts,
         "qualifier_counts": qualifier_counts,
+        "primary_by_nodeid": primary_by_nodeid,
         "zero_primary": {"count": len(zero_primary), "nodeids": zero_primary},
         "multi_primary": {"count": len(multi_primary), "nodes": multi_primary},
         "warnings": warnings or {"direct_test_calls": [], "catch_all_filenames": []},
@@ -155,6 +160,100 @@ def report_exit_code(report: dict[str, Any]) -> int:
     return 0
 
 
+def build_ratchet_report(report: dict[str, Any], baseline: dict[str, Any]) -> dict[str, Any]:
+    baseline_nodes = set(baseline["nodeids"])
+    baseline_zero = set(baseline["zero_primary_nodeids"])
+    current_nodes = set(report["nodeids"])
+    current_zero = set(report["zero_primary"]["nodeids"])
+    current_primary = report["primary_by_nodeid"]
+    current_multi = report["multi_primary"]["nodes"]
+    new_nodes = current_nodes - baseline_nodes
+    removed_nodes = baseline_nodes - current_nodes
+    new_catch_all = sorted(
+        set(report["warnings"]["catch_all_filenames"])
+        - set(baseline["catch_all_filenames"])
+    )
+    lost_classification = sorted(
+        nodeid for nodeid in baseline["primary_by_nodeid"]
+        if nodeid in current_nodes and nodeid not in current_primary
+    )
+    new_invalid_classification = sorted(
+        nodeid for nodeid in new_nodes
+        if len(current_primary.get(nodeid, ())) != 1
+    )
+    new_zero = sorted(current_zero - baseline_zero)
+    passed = (
+        not new_zero
+        and len(current_zero) <= baseline["zero_primary_count"]
+        and len(current_multi) <= baseline["multi_primary_count"]
+        and not lost_classification
+        and not new_invalid_classification
+        and not new_catch_all
+    )
+    return {
+        "schema_version": 1,
+        "mode": "ratchet",
+        "repository_sha": report["repository_sha"],
+        "baseline_sha": baseline["repository_sha"],
+        "passed": passed,
+        "baseline": {
+            "node_count": len(baseline_nodes),
+            "zero_primary_count": baseline["zero_primary_count"],
+            "multi_primary_count": baseline["multi_primary_count"],
+        },
+        "current": {
+            "node_count": len(current_nodes),
+            "zero_primary_count": len(current_zero),
+            "multi_primary_count": len(current_multi),
+        },
+        "added_nodeids": sorted(new_nodes),
+        "removed_nodeids": sorted(removed_nodes),
+        "new_zero_primary_nodeids": new_zero,
+        "lost_classification_nodeids": lost_classification,
+        "new_nodes_without_exactly_one_primary": new_invalid_classification,
+        "new_catch_all_files": new_catch_all,
+    }
+
+
+def load_ratchet_baseline(path: str | Path) -> dict[str, Any]:
+    baseline = json.loads(Path(path).read_text(encoding="utf-8"))
+    nodeids = baseline.get("nodeids")
+    zero = baseline.get("zero_primary_nodeids")
+    primary = baseline.get("primary_by_nodeid")
+    catch_all = baseline.get("catch_all_filenames")
+    if (
+        baseline.get("schema_version") != 1
+        or not isinstance(baseline.get("repository_sha"), str)
+        or not isinstance(nodeids, list)
+        or not all(isinstance(nodeid, str) for nodeid in nodeids)
+        or len(set(nodeids)) != len(nodeids)
+        or not isinstance(zero, list)
+        or not all(isinstance(nodeid, str) for nodeid in zero)
+        or len(set(zero)) != len(zero)
+        or not set(zero).issubset(nodeids)
+        or baseline.get("zero_primary_count") != len(zero)
+        or baseline.get("collection_count") != len(nodeids)
+        or not isinstance(primary, dict)
+        or any(nodeid not in nodeids for nodeid in primary)
+        or set(zero).intersection(primary)
+        or any(
+            not isinstance(markers, list)
+            or not markers
+            or not all(isinstance(marker, str) and marker in PRIMARY_CATEGORIES for marker in markers)
+            for markers in primary.values()
+        )
+        or not isinstance(catch_all, list)
+        or type(baseline.get("multi_primary_count")) is not int
+        or baseline["multi_primary_count"] < 0
+    ):
+        raise ValueError("invalid taxonomy ratchet baseline")
+    return baseline
+
+
+def ratchet_exit_code(result: dict[str, Any]) -> int:
+    return 0 if result["passed"] else 1
+
+
 def _print_report(report: dict[str, Any], json_out: str | None) -> None:
     print(f"Total collected: {report['collection']['total']}")
     for category, count in report["primary_counts"].items():
@@ -179,11 +278,32 @@ def _print_report(report: dict[str, Any], json_out: str | None) -> None:
             print(f"  {entry}")
 
 
+def _print_ratchet(result: dict[str, Any], json_out: str | None) -> None:
+    print(f"Ratchet: {'PASS' if result['passed'] else 'FAIL'}")
+    print(f"Zero-primary: {result['baseline']['zero_primary_count']} baseline, "
+          f"{result['current']['zero_primary_count']} current")
+    print(f"Multi-primary: {result['baseline']['multi_primary_count']} baseline, "
+          f"{result['current']['multi_primary_count']} current")
+    for key in (
+        "added_nodeids", "removed_nodeids", "new_zero_primary_nodeids",
+        "lost_classification_nodeids", "new_nodes_without_exactly_one_primary",
+        "new_catch_all_files",
+    ):
+        print(f"{key}: {result[key]}")
+    if json_out:
+        print(f"Complete result: {json_out}")
+
+
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Report actual pytest taxonomy markers.")
-    parser.add_argument("--mode", required=True, choices=("report",))
+    parser = argparse.ArgumentParser(description="Report and ratchet actual pytest taxonomy markers.")
+    parser.add_argument("--mode", required=True, choices=("report", "ratchet"))
     parser.add_argument("--json-out", help="write the complete report to this path")
+    parser.add_argument("--baseline", help="exact taxonomy baseline required for ratchet mode")
     args = parser.parse_args(argv)
+    if args.mode == "ratchet" and not args.baseline:
+        parser.error("--baseline is required for ratchet mode")
+    if args.mode == "report" and args.baseline:
+        parser.error("--baseline is only valid for ratchet mode")
     try:
         records = collect_records()
         test_root = ROOT / "tests"
@@ -196,11 +316,18 @@ def main(argv: list[str] | None = None) -> int:
             "catch_all_filenames": catch_all_filename_warnings(test_files),
         }
         report = build_report(records, repository_sha(), warnings)
+        if args.mode == "report":
+            result = report
+            _print_report(report, args.json_out)
+            exit_code = report_exit_code(report)
+        else:
+            result = build_ratchet_report(report, load_ratchet_baseline(args.baseline))
+            _print_ratchet(result, args.json_out)
+            exit_code = ratchet_exit_code(result)
         if args.json_out:
-            write_json_report(report, args.json_out)
-        _print_report(report, args.json_out)
-        return report_exit_code(report)
-    except (OSError, RuntimeError, subprocess.SubprocessError) as exc:
+            write_json_report(result, args.json_out)
+        return exit_code
+    except (OSError, RuntimeError, ValueError, subprocess.SubprocessError) as exc:
         print(f"taxonomy report failed: {exc}", file=sys.stderr)
         return 2
 
