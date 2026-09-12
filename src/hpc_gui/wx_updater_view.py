@@ -71,7 +71,8 @@ def _parse_whats_new(body: str, limit: int = 5) -> list[str]:
     for line in lines:
         # strip markdown links, bold, etc.
         line = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", line)
-        line = re.sub(r"[*_`#]+", "", line).strip()
+        line = re.sub(r"(?<!\w)_|_(?!\w)", "", line)
+        line = re.sub(r"[*`#]+", "", line).strip()
         if line:
             cleaned.append(line)
         if len(cleaned) >= limit:
@@ -126,6 +127,9 @@ class WxUpdateDialog:
         self._worker: threading.Thread | None = None
         self._downloaded = 0
         self._total: int | None = getattr(release, "size", None) if release else None
+        self._pulse_timer = None
+        self._zip_path = None
+        self._artifact_verified = False
         if self._total == 0:
             self._total = None
 
@@ -172,6 +176,13 @@ class WxUpdateDialog:
         self.dlg._wx_update_state = self.state
 
     def _clear_content(self):
+        if self._pulse_timer is not None:
+            try:
+                if self._pulse_timer.IsRunning():
+                    self._pulse_timer.Stop()
+            except Exception:
+                pass
+            self._pulse_timer = None
         # Clear content sizer
         self.content_sizer.Clear(delete_windows=True)
         self.footer_sizer.Clear(delete_windows=True)
@@ -689,6 +700,8 @@ class WxUpdateDialog:
 
     def _start_download(self):
         # Transition to downloading and start worker with real progress
+        self._zip_path = None
+        self._artifact_verified = False
         self._build_for_state(STATE_DOWNLOADING)
         self._downloaded = 0
         self._cancelled = False
@@ -738,9 +751,10 @@ class WxUpdateDialog:
                 zip_path = download_and_verify_release(rel, progress_cb=prog, cancelled=cancelled)
                 if self._cancelled or self._closed:
                     return
+                self._artifact_verified = True
 
                 def on_ok():
-                    if self._closed:
+                    if self._closed or self._cancelled:
                         return
                     try:
                         if hasattr(self, "_pulse_timer"):
@@ -750,7 +764,7 @@ class WxUpdateDialog:
                     self._build_for_state(STATE_VERIFYING)
 
                     def to_ready():
-                        if self._closed:
+                        if self._closed or self._cancelled:
                             return
                         try:
                             if hasattr(self, "_pulse_timer"):
@@ -760,7 +774,7 @@ class WxUpdateDialog:
                         self._build_for_state(STATE_READY_TO_INSTALL)
                         self._zip_path = zip_path
 
-                    wx.CallLater(800, to_ready)
+                    wx.CallAfter(to_ready)
 
                 wx.CallAfter(on_ok)
             except Exception as e:
@@ -801,6 +815,11 @@ class WxUpdateDialog:
         zip_path = getattr(self, "_zip_path", None)
         ver = getattr(rel, "version", "") if rel else ""
         wx = self.wx
+        if not zip_path or not self._artifact_verified:
+            self._error_message = "Verified update artifact is unavailable."
+            self._error_details = self._error_message
+            self._build_for_state(STATE_FAILED)
+            return
         # Close update dialog
         try:
             self._closed = True
@@ -820,8 +839,8 @@ class WxUpdateDialog:
             def install_worker():
                 try:
                     from hpc_gui.services.app_updater import launch_update_installer
-                    if not zip_path or not rel:
-                        raise RuntimeError("Verified update artifact is unavailable.")
+                    if not rel:
+                        raise RuntimeError("Update release metadata is unavailable.")
                     launch_update_installer(zip_path, ver, rel.install_strategy)
                     def do_quit():
                         try:
@@ -927,12 +946,13 @@ def show_update_dialog(parent, release, *, mandatory: bool = False):
     """Entry point for the single-dialog flow. Returns True if update was started (download)."""
     dlg = WxUpdateDialog(parent, release, mandatory=mandatory)
     result = dlg.ShowModal()
+    ok_id = dlg.wx.ID_OK
     # dlg is destroyed inside _start_install or on close
     try:
         dlg.Destroy()
     except Exception:
         pass
-    return result == dlg.wx.ID_OK
+    return result == ok_id
 
 
 # Backward compat wrappers
@@ -960,35 +980,31 @@ def show_up_to_date(parent, version: str = __version__):
 
 
 def show_update_available(parent, current: str, latest: str, release_info: str = ""):
-    # Build a fake release for the dialog
+    """Show the legacy availability dialog and return whether download began.
+
+    The original wrapper returned ``True`` when the user pressed Download and
+    ``False`` for Later or close.  The current dialog continues through the
+    download/install flow, so modal return IDs alone no longer represent that
+    compatibility contract.
+    """
     from hpc_gui.services.app_updater import UpdateRelease
-    # Try to find real release if available, else fake
-    try:
-        # Don't call network here; just fake for wrapper
-        pass
-    except Exception:
-        pass
     fake = UpdateRelease(version=latest or "1.9.0", tag=f"v{latest}", zip_name="hpc-client-gui_windows_onedir.zip", zip_url="https://example.com/fake.zip", sha_name="fake.sha256", sha_url="https://example.com", html_url="https://example.com", body=release_info, size=None)
-    # Use the single dialog
     dlg = WxUpdateDialog(parent, fake)
     dlg._build_for_state(STATE_UPDATE_AVAILABLE)
-    result = dlg.ShowModal()
-    # Need tohandle download if user chose Download — the dialog's _start_download will have been called and will have transitioned to downloading
-    # For wrapper compat, return True if Download was chosen (i.e., dialog ended with OK and started download)
-    # The dialog's Download button now starts download and doesn't immediately close; it transitions to downloading state and stays open
-    # For compat, we consider OK as Download chosen
+    download_requested = False
+    start_download = dlg._start_download
+
+    def track_download_request(*args, **kwargs):
+        nonlocal download_requested
+        download_requested = True
+        return start_download(*args, **kwargs)
+
+    dlg._start_download = track_download_request
     try:
+        dlg.ShowModal()
+    finally:
         dlg.Destroy()
-    except Exception:
-        pass
-    return result == 0  # Actually ShowModal returns ID_OK if Download was chosen and then dialog closed via _start_install? For simple wrapper, return True if OK
-    # The new dialog's Download does not close immediately, it stays in downloading state, so ShowModal will block until download completes or is cancelled
-    # For backward compat where old code expected immediate True/False, we return based on initial choice
-    # To keep simple, we will just return True if the dialog was in downloading state at any point
-    # Instead, we can check dlg state
-    # HACK: return True if dlg was in downloading at any point
-    # For now return result == wx.ID_OK
-    return result == dlg.wx.ID_OK
+    return download_requested
 
 
 def show_download_progress(parent, release_version: str, lifecycle=None):

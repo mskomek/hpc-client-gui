@@ -7,11 +7,59 @@ import pytest
 wx = pytest.importorskip("wx")
 
 from hpc_gui.services.app_updater import UpdateRelease
-from hpc_gui.wx_updater_view import WxUpdateDialog, _format_bytes
+from hpc_gui.wx_updater_view import WxUpdateDialog, _format_bytes, show_update_available
 
 
 def _make_release(version="1.9.0", body="- Demo update\n- New features\n- Fixes", size=184*1024*1024):
     return UpdateRelease(version=version, tag=f"v{version}", zip_name="a.zip", zip_url="https://example.com/a.zip", sha_name="a.sha", sha_url="https://example.com/a.sha", html_url="https://example.com", body=body, size=size)
+
+
+class _WrapperDialog:
+    class _Wx:
+        ID_OK = 5100
+        ID_CANCEL = 5101
+
+    wx = _Wx()
+
+    def __init__(self, _parent, _release):
+        self.destroyed = False
+
+    def _build_for_state(self, _state):
+        pass
+
+    def _start_download(self):
+        pass
+
+    def Destroy(self):
+        self.destroyed = True
+
+
+def test_show_update_available_wrapper_returns_true_when_download_starts(monkeypatch):
+    class DownloadDialog(_WrapperDialog):
+        def ShowModal(self):
+            self._start_download()
+            return self.wx.ID_OK
+
+    monkeypatch.setattr("hpc_gui.wx_updater_view.WxUpdateDialog", DownloadDialog)
+    assert show_update_available(None, "1.0.0", "1.1.0") is True
+
+
+def test_show_update_available_wrapper_returns_false_for_cancel(monkeypatch):
+    class CancelDialog(_WrapperDialog):
+        def ShowModal(self):
+            return self.wx.ID_CANCEL
+
+    monkeypatch.setattr("hpc_gui.wx_updater_view.WxUpdateDialog", CancelDialog)
+    assert show_update_available(None, "1.0.0", "1.1.0") is False
+
+
+def test_show_update_available_wrapper_returns_false_for_close(monkeypatch):
+    class CloseDialog(_WrapperDialog):
+        def ShowModal(self):
+            return self.wx.ID_CANCEL
+
+    monkeypatch.setattr("hpc_gui.wx_updater_view.WxUpdateDialog", CloseDialog)
+    assert show_update_available(None, "1.0.0", "1.1.0") is False
 
 
 @pytest.fixture(autouse=True)
@@ -64,6 +112,16 @@ def test_update_available_shows_versions_and_download_size():
         except Exception:
             pass
     assert found_size, "Download size not visible"
+    dlg.Destroy()
+    app.Destroy()
+
+
+def test_update_release_notes_preserve_unicode():
+    app = wx.App(False)
+    rel = _make_release(body="- Türkçe_日本語\n- 研究 ★ ✓")
+    dlg = WxUpdateDialog(None, rel)
+    assert "Türkçe_日本語" in dlg._changelog_ctrl.GetValue()
+    assert "研究 ★ ✓" in dlg._changelog_ctrl.GetValue()
     dlg.Destroy()
     app.Destroy()
 
@@ -313,6 +371,17 @@ def test_update_ready_requires_install_confirmation():
     app.Destroy()
 
 
+def test_install_without_verified_artifact_stays_failed():
+    app = wx.App(False)
+    dlg = WxUpdateDialog(None, _make_release())
+    dlg._build_for_state("READY_TO_INSTALL")
+    dlg._start_install()
+    assert dlg.state == "FAILED"
+    assert "verified update artifact" in dlg._error_message.lower()
+    dlg.Destroy()
+    app.Destroy()
+
+
 def test_update_install_opens_installation_splash():
     app = wx.App(False)
     rel = _make_release()
@@ -349,6 +418,7 @@ def test_update_install_opens_installation_splash():
     au.launch_update_installer = lambda *a, **kw: None
     # Need to set zip path so install doesn't just simulate
     dlg._zip_path = "/tmp/fake.zip"
+    dlg._artifact_verified = True
     evt = wx.CommandEvent(wx.wxEVT_BUTTON, install_btn.GetId())
     install_btn.GetEventHandler().ProcessEvent(evt)
     app.ProcessPendingEvents()
