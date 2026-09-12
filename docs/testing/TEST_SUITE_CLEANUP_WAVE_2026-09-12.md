@@ -77,18 +77,11 @@ Reviewed the 69 archived source-reading call sites across 59 unique test nodes. 
 
 Removed `tests/test_about_dialog.py::test_about_instantiates_offscreen`, whose construction/version checks are subsumed by the strengthened runtime About test. Renamed `tests/test_macos_signing.py::test_signing_source_has_cleanup_and_no_secret_echo` to `test_signing_cleans_keychain_without_echoing_secrets`; this is a runtime behavior owner, not an equivalent static test. The other rewritten owners kept their nodeids. No production code changed. Focused validation passed: 44 tests, Ruff, and `git diff --check`.
 
-### J. Resource/concurrency cleanup — NOT STARTED
+### J. Resource/concurrency cleanup — DONE
 
-Review real acquisition/release, ordering, ownership, cancellation, and bounded waits in:
-- tests/test_connection_advanced_settings.py::TransferChannelSafetyTests::test_workers_receive_distinct_channels
-- tests/test_selected_job_context.py::TestSelectedJobStoreThreadSafety::test_concurrent_subscribe_and_select
-- tests/test_transfer_concurrency.py::test_two_ftp_transfers_overlap_with_distinct_connections
-- tests/test_transfer_concurrency.py::test_cancelled_transfer_releases_isolated_backend
-- tests/test_ftp_widget.py::FtpWidgetTests::test_transfer_dialog_runs_up_to_parallel_limit
-- tests/test_wx_jobs_stress.py::test_wx_jobs_stress_backend_workers_and_reads_are_bounded
-- tests/test_wx_terminal_webview.py::test_wx_terminal_100_reconnects_no_leak
+See [RESOURCE_CONCURRENCY_REVIEW_J.md](RESOURCE_CONCURRENCY_REVIEW_J.md) for the node-by-node review and evidence. The SFTP ownership check now exercises `SFTPChannelManager`; selected-job listener concurrency verifies every ordered snapshot and unsubscribe boundary; FTP overlap records distinct live connections; dialog cancellation dispatches through the real controller worker and verifies backend cleanup; and the real wire cancellation test triggers from observed progress rather than a polling watcher. Five flaky/polluted skips were removed and their behaviors now pass. The wx Jobs blocked-read stress case uses the normal coalescing path and records worker ownership; the old direct test-double-only node was removed after exact selector-reference search. Terminal reconnect now proves each old subscriber and the final active subscriber are released. The pause/resume stress test was corrected to match the current visible Pause All behavior. No production code changed.
 
-The Phase 1 static scan found 61 literal sleep call sites, 10 hasattr assertions, and 8 thread/process construction sites; inspect call evidence rather than bulk rewriting.
+Removed `tests/test_wx_jobs_stress.py::test_wx_jobs_stress_backend_workers_and_reads_are_bounded`. Renamed `tests/test_wx_jobs_behavior.py::test_wx_job_output_pause_keeps_refreshing_but_stops_live_follow` to `test_wx_job_output_pause_freezes_and_resume_updates_output`; it is classified `gui`. There are no other Packet J node changes. Focused suites, collection (2,684 nodes, zero errors), taxonomy RATCHET, Ruff, and `git diff --check` passed.
 
 ### K. Reporting/E2E reclassification — NOT STARTED
 

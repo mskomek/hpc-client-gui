@@ -1379,17 +1379,21 @@ class FakeSSH:
 
 app = wx.App(False)
 frame = wx.Frame(None, size=(900, 600))
-panel = WxTerminalWebViewPanel(frame, ssh=FakeSSH())
+current_ssh = FakeSSH()
+panel = WxTerminalWebViewPanel(frame, ssh=current_ssh)
 panel._ready = True
 
 initial_gen = panel._generation
 for i in range(100):
     new_ssh = FakeSSH()
     panel.set_ssh(new_ssh)
+    assert current_ssh._wx_output_subscribers == [], f"old subscriber retained at {i}"
     assert panel._generation == initial_gen + i + 1, f"generation mismatch at {i}"
     assert len(new_ssh._wx_output_subscribers) == 1, f"subscriber leak at {i}: {len(new_ssh._wx_output_subscribers)}"
+    current_ssh = new_ssh
 
 panel.close()
+assert current_ssh._wx_output_subscribers == [], "close retained the active SSH subscriber"
 frame.Destroy()
 os._exit(0)
 """

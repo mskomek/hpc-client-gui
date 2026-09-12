@@ -1227,7 +1227,10 @@ class FtpWidgetTests(unittest.TestCase):
         started: list[str] = []
         finished: list[str] = []
         release = threading.Event()
+        two_started = threading.Event()
         lock = threading.Lock()
+        active = 0
+        peak = 0
         items = [
             TransferItem("download", "/remote/a.bin", "a.bin"),
             TransferItem("download", "/remote/b.bin", "b.bin"),
@@ -1235,11 +1238,19 @@ class FtpWidgetTests(unittest.TestCase):
         ]
 
         def run_item(item, _progress=None):
+            nonlocal active, peak
             with lock:
                 started.append(item.src)
-            release.wait(5)
-            with lock:
-                finished.append(item.src)
+                active += 1
+                peak = max(peak, active)
+                if active == 2:
+                    two_started.set()
+            try:
+                release.wait(5)
+            finally:
+                with lock:
+                    active -= 1
+                    finished.append(item.src)
 
         dialog = TransferDialog(
             title="Download",
@@ -1249,16 +1260,12 @@ class FtpWidgetTests(unittest.TestCase):
         )
         try:
             dialog.start()
-            deadline = time.monotonic() + 3
-            while time.monotonic() < deadline:
-                QApplication.processEvents()
-                with lock:
-                    if len(started) >= 2:
-                        break
-                time.sleep(0.01)
+            self.assertTrue(two_started.wait(3), "parallel workers did not start")
             with lock:
                 self.assertEqual(len(started), 2)
                 self.assertEqual(finished, [])
+                self.assertEqual(active, 2)
+                self.assertEqual(peak, 2)
 
             release.set()
             deadline = time.monotonic() + 3
@@ -1269,8 +1276,13 @@ class FtpWidgetTests(unittest.TestCase):
             with lock:
                 self.assertCountEqual(started, [item.src for item in items])
                 self.assertCountEqual(finished, [item.src for item in items])
+                self.assertEqual(peak, 2)
         finally:
+            release.set()
             dialog.cancel_all()
+            worker = getattr(dialog, "_thread", None)
+            if worker is not None:
+                worker._controller.wait(5)
             dialog.deleteLater()
 
     def test_transfer_dialog_finishes_mkdir_before_parallel_transfer_batch(self) -> None:
