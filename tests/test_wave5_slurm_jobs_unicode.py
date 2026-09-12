@@ -145,13 +145,27 @@ class TestSSHRSlurmBackend:
     """Verify SSH Slurm backend quotes Unicode paths correctly."""
 
     def test_sbatch_quotes_unicode_path(self):
-        """sbatch should safely quote Unicode script paths."""
+        """sbatch passes Unicode and shell metacharacters as two path arguments."""
+        import shlex
+        from types import SimpleNamespace
 
-        # Check that shlex.quote is used for paths
-        import hpc_gui.services.slurm_ssh as module
-        import inspect
-        source = inspect.getsource(module)
-        assert "shlex.quote" in source or "shlex" in source
+        from hpc_gui.services.slurm_ssh import SSHSlurmBackend
+
+        commands = []
+        ssh = SimpleNamespace(
+            run=lambda command, **_kwargs: (
+                commands.append(command) or (0, "Submitted batch job 123", "")
+            )
+        )
+        backend = SSHSlurmBackend(ssh)
+        script_path = "/scratch/Çalışma O'Brien/計算 $(touch sentinel).slurm"
+
+        assert backend.sbatch(script_path) == "Submitted batch job 123"
+        assert len(commands) == 1
+        assert shlex.split(commands[0]) == [
+            "cd", "--", "/scratch/Çalışma O'Brien", "&&", "sbatch", "--",
+            "計算 $(touch sentinel).slurm",
+        ]
 
     def test_command_template_quotes_values(self):
         """Command templates should quote all values."""
