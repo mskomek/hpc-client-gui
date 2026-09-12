@@ -5,8 +5,14 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
+import pytest
+
 from hpc_gui.config import storage
-from hpc_gui.services.connection_profile_service import save_profile, decrypt_profile_password
+from hpc_gui.services.connection_profile_service import (
+    decrypt_profile_password,
+    resolve_password_for_connect,
+    save_profile,
+)
 from hpc_gui.core.secret_store import KEYCHAIN_SERVICE
 
 
@@ -159,6 +165,30 @@ class ConnectionProfileServiceTests(unittest.TestCase):
                     profile = {"password_keychain_ref": ref}
                     result = decrypt_profile_password(profile, allow_prompt=False)
                     self.assertEqual(result, "secret123")
+
+    @pytest.mark.unit
+    @pytest.mark.regression
+    def test_typed_password_precedes_saved_secret(self):
+        from hpc_gui.core.crypto_master import encrypt_with_master
+
+        enc = encrypt_with_master("master123", "old-secret")
+        profile = {
+            "name": "p",
+            "host": "h.example",
+            "save_password": True,
+            "password_enc": enc.token,
+            "password_salt": enc.salt,
+        }
+        ask_master = mock.Mock()
+
+        result = resolve_password_for_connect(
+            profile,
+            typed_password="new-temporary-secret",
+            ask_master=ask_master,
+        )
+
+        self.assertEqual(result, "new-temporary-secret")
+        ask_master.assert_not_called()
 
 if __name__ == "__main__":
     unittest.main()

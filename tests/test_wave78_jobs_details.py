@@ -158,13 +158,19 @@ def test_cluster_servers_visible_without_selected_job_when_provider_supports():
             if ctrls["jobs"].GetItemCount() >= 1:
                 break
             wx.MilliSleep(10)
-        _select_job(panel, 0)
+        assert ctrls["jobs"].GetFirstSelected() == -1
+        ctrls["btn_refresh_lssrv"].ProcessEvent(
+            wx.CommandEvent(wx.wxEVT_BUTTON, ctrls["btn_refresh_lssrv"].GetId())
+        )
         for _ in range(50):
             wx.Yield()
             if ctrls["cluster_status_text"].GetLabel() == t("jobs_outputs.cluster_status_loaded"):
                 break
             wx.MilliSleep(10)
         assert ctrls["cluster_status_text"].GetLabel() == t("jobs_outputs.cluster_status_loaded")
+        assert ctrls["jobs"].GetFirstSelected() == -1
+        assert ctrls["cluster_servers_table"].GetItemCount() == 1
+        assert ctrls["cluster_servers_table"].IsShown()
     finally:
         _close(frame)
 
@@ -244,7 +250,15 @@ def test_cluster_servers_hidden_for_unsupported_provider():
         _close(frame)
 
 
-def test_raw_server_status_opens():
+@pytest.mark.gui
+def test_raw_server_status_action_dispatches_raw_result(monkeypatch):
+    from hpc_gui import wx_raw_viewer
+
+    shown = []
+    monkeypatch.setattr(
+        wx_raw_viewer, "show_raw_viewer",
+        lambda parent, result, **kwargs: shown.append((parent, result, kwargs)),
+    )
     app, frame, panel = _build_panel(
         has_status_capability=lambda: True,
         refresh_lssrv=lambda _job_id: (
@@ -262,13 +276,18 @@ def test_raw_server_status_opens():
             if ctrls["jobs"].GetItemCount() >= 1:
                 break
             wx.MilliSleep(10)
-        _select_job(panel, 0)
         for _ in range(50):
             wx.Yield()
             if ctrls["cluster_status_text"].GetLabel() == t("jobs_outputs.cluster_status_loaded"):
                 break
             wx.MilliSleep(10)
         assert ctrls["cluster_status_text"].GetLabel() == t("jobs_outputs.cluster_status_loaded")
+        ctrls["btn_raw_server_status"].ProcessEvent(
+            wx.CommandEvent(wx.wxEVT_BUTTON, ctrls["btn_raw_server_status"].GetId())
+        )
+        assert len(shown) == 1
+        assert shown[0][1].source_id == "lssrv"
+        assert "short 8 32 0 1 2" in shown[0][1].stdout
     finally:
         _close(frame)
 

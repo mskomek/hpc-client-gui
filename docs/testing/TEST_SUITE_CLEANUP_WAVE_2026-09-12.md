@@ -47,38 +47,9 @@ Register primary and qualifier markers; add this architecture specification and 
   - `--mode ratchet` passes after Packet C: 2,691 nodes, no new zero-primary nodes, no lost classifications, no multi-primary nodes, and no new catch-all files. Four new ratchet tests each have exactly one primary.
   - Exact selected-node manifests compare frozen, remediation, and Packet C sets for release suite, packaging, explicit macOS release, macOS developer, compat, CLI, SSH, Windows, and contract lanes. The Windows manifest separately records 13 unittest discovery IDs.
   - The release suite selection changed only by the 18 reviewed additions (5 updater + 9 REPORT + 4 ratchet nodes); no selected node was removed. Other recorded lane sets are unchanged. Automatic CI remains disabled; no workflow or selector was changed.
-### D. Exact duplicate groups / false gates — IN_PROGRESS
+### D. Exact duplicate groups / false gates — DONE
 
-Use the REPORT JSON as the actual-state starting point and compare collected nodes with the existing selectors in scripts/ci.py, scripts/release_test_suite.py, .github/workflows/release.yml, and archived docs/ci-disabled/ci.yml. Keep taxonomy debt and lane membership visible; do not infer a primary from a lane. Review the Phase 1 lane inventory, including the release macOS lists (54 nodes each), shared Linux/Windows release runner, and current ci.py lanes. Define a ratchet only after the baseline and lane coverage are reproducible.
-
-### D. Exact duplicate groups / false gates — NOT STARTED
-
-No D-group cleanup is authorized in Packet B. Apply the deletion gate before any later removal.
-
-D1 — MERGE proposal:
-- tests/test_wave0_unicode_baseline.py::TestEncodingBoundaryInventory::test_errors_replace_in_ssh
-- tests/test_wave1_unicode_core_policy.py::TestEncodingBoundaryJustification::test_ssh_client_decode_justified
-
-D2 — REWRITE canonical byte-preservation behavior first; remove the duplicate only after the deletion gate:
-- tests/test_wave0_unicode_baseline.py::TestRiskClassification::test_p0_sftp_roundtrip_risks_documented
-- tests/test_wave1_unicode_core_policy.py::TestEncodingBoundaryJustification::test_files_ssh_utf8_justified
-
-D3 — The two Wave78 cluster-status candidates:
-- tests/test_wave78_jobs_details.py::test_cluster_servers_visible_without_selected_job_when_provider_supports
-- tests/test_wave78_jobs_details.py::test_raw_server_status_opens
-The first is named as a no-selection test but calls _select_job(panel, 0); rewrite it so the job truly remains unselected.
-
-D4 — tests/test_wave79_audit.py::TestSchemaV4Audit::test_v4_valid and tests/test_wave79_audit.py::TestSchemaV4Audit::test_v4_optional_sections_ok. The second needs input that actually includes optional sections.
-
-D5 — Wave80 Files context-menu localization pair:
-- tests/test_wave80_files_outputs.py::TestFilesBehavior::test_context_menu_labels_localized
-- tests/test_wave80_files_outputs.py::TestWave80Audit::test_files_context_menu_localized
-
-D6 — Wave80 Outputs localization pair:
-- tests/test_wave80_files_outputs.py::TestOutputsBehavior::test_standard_output_localized
-- tests/test_wave80_files_outputs.py::TestWave80Audit::test_outputs_standard_output_error_localized
-
-D7 — tests/test_wx_connection_71_2.py::test_typed_password_precedence and tests/test_wx_connection_71_3.py::test_typed_password_precedence. Proposed canonical destination: tests/test_connection_profile_service.py.
+All D1–D7 owners and mappings are recorded in [DUPLICATE_GROUP_REVIEW_D1-D7.md](DUPLICATE_GROUP_REVIEW_D1-D7.md). Three nodeids were added and eight retired, with no unrelated node delta. The exact node changes, unique assertions, canonical owners, targeted/file/neighborhood results, and CI/script reference search are recorded there. Packet D introduced no production changes. Translation catalog checks remain contract evidence; visible GUI localization is deferred to Packet F.
 
 ### E. Weak lifecycle tests — NOT STARTED
 

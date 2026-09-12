@@ -639,30 +639,3 @@ def test_cluster_self_test_cancel(monkeypatch):
             wx.Yield()
     finally:
         tmp.cleanup()
-
-
-# ---------------------------------------------------------------------------
-# 71.3.8 — Typed password precedence (retained)
-# ---------------------------------------------------------------------------
-
-
-def test_typed_password_precedence(monkeypatch):
-    """Typed password > stored secret for Test Cluster and explicit connect."""
-    from hpc_gui.core.crypto_master import encrypt_with_master
-    from hpc_gui.services.connection_profile_service import resolve_password_for_connect
-
-    enc = encrypt_with_master("master123", "old-secret")
-    profile = {
-        "name": "p",
-        "host": "h.example",
-        "port": 22,
-        "username": "user",
-        "password": "new-temporary-secret",
-        "save_password": True,
-        "password_enc": enc.token,
-        "password_salt": enc.salt,
-    }
-    res = resolve_password_for_connect(
-        profile, typed_password="new-temporary-secret", ask_master=lambda c: "master123"
-    )
-    assert res == "new-temporary-secret"
