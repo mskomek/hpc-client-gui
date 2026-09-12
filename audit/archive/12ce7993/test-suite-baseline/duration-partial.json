@@ -1,0 +1,502 @@
+{
+  "unique_nodeids_with_reports": 225,
+  "nodes_with_call_report": 224,
+  "call_outcome_counts": {
+    "passed": 224
+  },
+  "total_reported_seconds": 25.695666400053597,
+  "completed_call_duration_seconds": 23.26301819999935,
+  "partial_slowest_20": [
+    [
+      "tests/test_branding_check.py::BrandingCheckTest::test_clean_tree_passes",
+      8.78
+    ],
+    [
+      "tests/test_app_updater.py::test_windows_installer_script_has_independent_real_progress_and_rollback",
+      3.767
+    ],
+    [
+      "tests/test_cli_entrypoint.py::test_cli_import_never_pulls_qt_or_webengine",
+      1.171
+    ],
+    [
+      "tests/test_command_palette_regression.py::test_command_palette_not_wired_to_help",
+      0.656
+    ],
+    [
+      "tests/test_connection_advanced_settings.py::LoginWidgetPolicyPropagationTests::test_login_widget_uses_canonical_policy_state",
+      0.375
+    ],
+    [
+      "tests/test_cli.py::test_access_gate_off_exempt_commands_still_succeed",
+      0.334
+    ],
+    [
+      "tests/test_cli.py::test_doctor_environment_json",
+      0.21
+    ],
+    [
+      "tests/test_cli.py::test_access_gate_on_allows_denied_command",
+      0.183
+    ],
+    [
+      "tests/test_cli.py::test_doctor_smoke_text_and_json_expose_identical_stage_set",
+      0.163
+    ],
+    [
+      "tests/test_cli.py::test_doctor_smoke_artifact_written[fixture1-3]",
+      0.159
+    ],
+    [
+      "tests/test_cli.py::test_files_not_a_directory_exit_one_distinct_message",
+      0.133
+    ],
+    [
+      "tests/test_cli.py::test_access_gate_off_blocks_remote_commands[profile-test]",
+      0.112
+    ],
+    [
+      "tests/test_cli_entrypoint.py::test_remote_script_uses_bash_and_rejects_control_characters",
+      0.111
+    ],
+    [
+      "tests/test_cli.py::test_files_access_denied_exit_one_distinct_message",
+      0.111
+    ],
+    [
+      "tests/test_cli.py::test_commands_json_inventory_matches_parser_and_exit_codes",
+      0.11
+    ],
+    [
+      "tests/test_cli.py::test_profile_update_preserves_secrets_and_system_round_trip",
+      0.102
+    ],
+    [
+      "tests/test_cli.py::test_doctor_smoke_artifact_write_failure_returns_operation_failed",
+      0.102
+    ],
+    [
+      "tests/test_cli.py::test_profile_test_missing_exit_one_and_opener_not_called",
+      0.1
+    ],
+    [
+      "tests/test_cli.py::test_profile_test_text_mode_matches_json_payload",
+      0.096
+    ],
+    [
+      "tests/test_cli.py::test_files_checksum_permission_denied_reports_with_path",
+      0.09
+    ]
+  ],
+  "skip_marker_nodeids": [
+    [
+      "tests/test_fluent_plugin_integration.py::test_pack_metadata_and_rules",
+      {
+        "skip": [
+          {
+            "name": "skipif",
+            "args": "(True,)",
+            "kwargs": {
+              "reason": "'sibling hpc-client-gui-plugins checkout not present'"
+            }
+          }
+        ],
+        "xfail": []
+      }
+    ],
+    [
+      "tests/test_fluent_plugin_integration.py::test_clean_fixture_has_no_errors",
+      {
+        "skip": [
+          {
+            "name": "skipif",
+            "args": "(True,)",
+            "kwargs": {
+              "reason": "'sibling hpc-client-gui-plugins checkout not present'"
+            }
+          }
+        ],
+        "xfail": []
+      }
+    ],
+    [
+      "tests/test_fluent_plugin_integration.py::test_missing_tui_version_detected",
+      {
+        "skip": [
+          {
+            "name": "skipif",
+            "args": "(True,)",
+            "kwargs": {
+              "reason": "'sibling hpc-client-gui-plugins checkout not present'"
+            }
+          }
+        ],
+        "xfail": []
+      }
+    ],
+    [
+      "tests/test_fluent_plugin_integration.py::test_wrong_declared_version_flagged_only_for_25_2_target",
+      {
+        "skip": [
+          {
+            "name": "skipif",
+            "args": "(True,)",
+            "kwargs": {
+              "reason": "'sibling hpc-client-gui-plugins checkout not present'"
+            }
+          }
+        ],
+        "xfail": []
+      }
+    ],
+    [
+      "tests/test_fluent_plugin_integration.py::test_late_tui_version_is_informational_and_conservative",
+      {
+        "skip": [
+          {
+            "name": "skipif",
+            "args": "(True,)",
+            "kwargs": {
+              "reason": "'sibling hpc-client-gui-plugins checkout not present'"
+            }
+          }
+        ],
+        "xfail": []
+      }
+    ],
+    [
+      "tests/test_fluent_plugin_integration.py::test_windows_path_warning_is_context_sensitive",
+      {
+        "skip": [
+          {
+            "name": "skipif",
+            "args": "(True,)",
+            "kwargs": {
+              "reason": "'sibling hpc-client-gui-plugins checkout not present'"
+            }
+          }
+        ],
+        "xfail": []
+      }
+    ],
+    [
+      "tests/test_fluent_plugin_integration.py::test_absolute_linux_path_portability_info",
+      {
+        "skip": [
+          {
+            "name": "skipif",
+            "args": "(True,)",
+            "kwargs": {
+              "reason": "'sibling hpc-client-gui-plugins checkout not present'"
+            }
+          }
+        ],
+        "xfail": []
+      }
+    ],
+    [
+      "tests/test_fluent_plugin_integration.py::test_registry_entry_installs_via_exact_file_protocol",
+      {
+        "skip": [
+          {
+            "name": "skipif",
+            "args": "(True,)",
+            "kwargs": {
+              "reason": "'sibling hpc-client-gui-plugins checkout not present'"
+            }
+          }
+        ],
+        "xfail": []
+      }
+    ],
+    [
+      "tests/test_fluent_plugin_integration.py::test_latest_fluent_template_renders_after_install",
+      {
+        "skip": [
+          {
+            "name": "skipif",
+            "args": "(True,)",
+            "kwargs": {
+              "reason": "'sibling hpc-client-gui-plugins checkout not present'"
+            }
+          }
+        ],
+        "xfail": []
+      }
+    ],
+    [
+      "tests/test_job_templates.py::test_real_fluent_template_loads_and_renders",
+      {
+        "skip": [
+          {
+            "name": "skipif",
+            "args": "(True,)",
+            "kwargs": {
+              "reason": "'sibling plugin repo missing'"
+            }
+          }
+        ],
+        "xfail": []
+      }
+    ],
+    [
+      "tests/test_plugin_contract.py::test_real_registry_passes_repository_validator",
+      {
+        "skip": [
+          {
+            "name": "skipif",
+            "args": "(True,)",
+            "kwargs": {
+              "reason": "'HPC_GUI_CONTRACT_REPO does not point to an official plugins checkout'"
+            }
+          }
+        ],
+        "xfail": []
+      }
+    ],
+    [
+      "tests/test_plugin_contract.py::test_all_entries_compatible_with_supported_app_lines",
+      {
+        "skip": [
+          {
+            "name": "skipif",
+            "args": "(True,)",
+            "kwargs": {
+              "reason": "'HPC_GUI_CONTRACT_REPO does not point to an official plugins checkout'"
+            }
+          }
+        ],
+        "xfail": []
+      }
+    ],
+    [
+      "tests/test_plugin_contract.py::test_manifest_hashes_and_identities_match_registry",
+      {
+        "skip": [
+          {
+            "name": "skipif",
+            "args": "(True,)",
+            "kwargs": {
+              "reason": "'HPC_GUI_CONTRACT_REPO does not point to an official plugins checkout'"
+            }
+          }
+        ],
+        "xfail": []
+      }
+    ],
+    [
+      "tests/test_plugin_contract.py::test_truba_plugin_installs_and_profile_loads",
+      {
+        "skip": [
+          {
+            "name": "skipif",
+            "args": "(True,)",
+            "kwargs": {
+              "reason": "'HPC_GUI_CONTRACT_REPO does not point to an official plugins checkout'"
+            }
+          }
+        ],
+        "xfail": []
+      }
+    ],
+    [
+      "tests/test_plugin_contract.py::test_truba_v2_plugin_installs_and_retains_structured_sections",
+      {
+        "skip": [
+          {
+            "name": "skipif",
+            "args": "(True,)",
+            "kwargs": {
+              "reason": "'HPC_GUI_CONTRACT_REPO does not point to an official plugins checkout'"
+            }
+          }
+        ],
+        "xfail": []
+      }
+    ],
+    [
+      "tests/test_plugin_contract.py::test_fluent_latest_compatible_is_0_2_0_and_loads",
+      {
+        "skip": [
+          {
+            "name": "skipif",
+            "args": "(True,)",
+            "kwargs": {
+              "reason": "'HPC_GUI_CONTRACT_REPO does not point to an official plugins checkout'"
+            }
+          }
+        ],
+        "xfail": []
+      }
+    ],
+    [
+      "tests/test_plugin_contract.py::test_fluent_lint_rules_run",
+      {
+        "skip": [
+          {
+            "name": "skipif",
+            "args": "(True,)",
+            "kwargs": {
+              "reason": "'HPC_GUI_CONTRACT_REPO does not point to an official plugins checkout'"
+            }
+          }
+        ],
+        "xfail": []
+      }
+    ],
+    [
+      "tests/test_plugin_contract.py::test_fluent_slurm_template_is_plain_substitution",
+      {
+        "skip": [
+          {
+            "name": "skipif",
+            "args": "(True,)",
+            "kwargs": {
+              "reason": "'HPC_GUI_CONTRACT_REPO does not point to an official plugins checkout'"
+            }
+          }
+        ],
+        "xfail": []
+      }
+    ],
+    [
+      "tests/test_plugin_contract.py::test_fluent_update_then_rollback_preserves_versions",
+      {
+        "skip": [
+          {
+            "name": "skipif",
+            "args": "(True,)",
+            "kwargs": {
+              "reason": "'HPC_GUI_CONTRACT_REPO does not point to an official plugins checkout'"
+            }
+          }
+        ],
+        "xfail": []
+      }
+    ],
+    [
+      "tests/test_plugin_contract.py::test_contract_metadata_documented",
+      {
+        "skip": [
+          {
+            "name": "skipif",
+            "args": "(True,)",
+            "kwargs": {
+              "reason": "'HPC_GUI_CONTRACT_REPO does not point to an official plugins checkout'"
+            }
+          }
+        ],
+        "xfail": []
+      }
+    ],
+    [
+      "tests/test_plugin_v2_integration.py::test_real_ansys_lint_tool_loads_and_builds_page",
+      {
+        "skip": [
+          {
+            "name": "skipif",
+            "args": "(True,)",
+            "kwargs": {
+              "reason": "'HPC_GUI_CONTRACT_REPO does not point to an official plugins checkout'"
+            }
+          }
+        ],
+        "xfail": []
+      }
+    ],
+    [
+      "tests/test_plugin_v2_integration.py::test_real_ansys_lint_engine_lints_offline",
+      {
+        "skip": [
+          {
+            "name": "skipif",
+            "args": "(True,)",
+            "kwargs": {
+              "reason": "'HPC_GUI_CONTRACT_REPO does not point to an official plugins checkout'"
+            }
+          }
+        ],
+        "xfail": []
+      }
+    ],
+    [
+      "tests/test_plugin_v2_integration.py::test_real_ansys_installer_round_trip",
+      {
+        "skip": [
+          {
+            "name": "skipif",
+            "args": "(True,)",
+            "kwargs": {
+              "reason": "'HPC_GUI_CONTRACT_REPO does not point to an official plugins checkout'"
+            }
+          }
+        ],
+        "xfail": []
+      }
+    ],
+    [
+      "tests/test_plugin_v2_integration.py::test_trusted_tool_versions_isolate_submodules_and_restore_bytecode_flag",
+      {
+        "skip": [
+          {
+            "name": "skipif",
+            "args": "(True,)",
+            "kwargs": {
+              "reason": "'HPC_GUI_CONTRACT_REPO does not point to an official plugins checkout'"
+            }
+          }
+        ],
+        "xfail": []
+      }
+    ],
+    [
+      "tests/test_security_hardening_wave.py::test_sensitive_config_file_is_owner_only",
+      {
+        "skip": [
+          {
+            "name": "skipif",
+            "args": "(True,)",
+            "kwargs": {
+              "reason": "'POSIX permission semantics'"
+            }
+          }
+        ],
+        "xfail": []
+      }
+    ]
+  ],
+  "xfail_marker_nodeids": [
+    [
+      "tests/test_wx_terminal_webview.py::test_wx_terminal_pending_output_before_ready_is_buffered_and_ordered",
+      {
+        "skip": [],
+        "xfail": [
+          {
+            "name": "xfail",
+            "args": "()",
+            "kwargs": {
+              "reason": "'WebView2 subprocess event-loop timing: ready-flush non-deterministic in subprocess isolation. Behavior verified by test_wx_terminal_large_pre_ready_output.'",
+              "strict": "False"
+            }
+          }
+        ]
+      }
+    ],
+    [
+      "tests/test_wx_terminal_webview.py::test_wx_terminal_output_ordering_with_many_fragments",
+      {
+        "skip": [],
+        "xfail": [
+          {
+            "name": "xfail",
+            "args": "()",
+            "kwargs": {
+              "reason": "'WebView2 subprocess event-loop timing: ready-flush non-deterministic in subprocess isolation. Behavior verified by test_wx_terminal_large_pre_ready_output.'",
+              "strict": "False"
+            }
+          }
+        ]
+      }
+    ]
+  ]
+}
