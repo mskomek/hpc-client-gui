@@ -4,7 +4,7 @@ Status: IN_PROGRESS
 
 Frozen baseline: 12ce79935bf076e1062c57dc7dbd148bad2bfae1
 
-Current packet: E
+Current packet: F
 Dependency: Phase 1 test-suite audit completed
 
 This is an executable cleanup Wave and implementation plan. The repository has no root ACTIVE_WAVE/WAVES execution system; this document does not claim to be its official active Wave ledger.
@@ -76,20 +76,20 @@ Deletion gate evidence was reviewed for each removal: inventory and assertions a
 
 Collection changed by exactly 7 removals and 2 additions relative to Packet C; no unrelated old node disappeared. The ratchet allowlist was reviewed and reduced by exactly the seven removed legacy nodeids. Packet D did not change production, CI, migration ledgers, or protected guidance.
 
-### E. Weak lifecycle tests — NOT STARTED
+### E. Weak lifecycle tests — DONE
 
-Review these exact high-risk candidates; rewrite only in this packet, after recording their assertion and observable lifecycle:
+The candidates and their concrete trigger/effect checks are recorded here; all eight exact nodeids remain stable.
 
-- tests/test_wx_updater_spec.py::test_update_cancel_prevents_install
-- tests/test_wx_updater_spec.py::test_update_close_in_flight_safe
-- tests/test_wx_updater_spec.py::test_update_late_callback_after_close_safe
-- tests/test_wx_terminal_behavioral.py::test_fallback_panel_sets_non_parity
-- tests/test_wx_terminal_webview.py::test_wx_terminal_fallback_sets_non_parity
-- tests/test_about_dialog.py::test_about_shows_version_and_no_network
-- tests/test_app_updater.py::test_manual_update_check_shows_splash_before_worker_starts
-- tests/test_wx_packaged_smoke.py::test_packaged_wx_smoke_gate_reports_critical_stages
+- `tests/test_wx_updater_spec.py::test_update_cancel_prevents_install`: starts the real dialog worker against a controlled downloader, triggers the visible Cancel button, releases the downloader, and asserts cancellation reached its predicate, the dialog reached `DOWNLOAD_CANCELLED`, no verified zip was retained, and no Install control is exposed.
+- `tests/test_wx_updater_spec.py::test_update_close_in_flight_safe`: invokes the close handler during `DOWNLOADING` with confirmation declined; asserts the event was vetoed, state remains downloading, and neither cancellation nor closure began.
+- `tests/test_wx_updater_spec.py::test_update_late_callback_after_close_safe`: lets the real worker queue a progress callback, marks the dialog closed before dispatch, then dispatches the callback and verifies download/UI state is unchanged and no ready transition or zip path appears.
+- `tests/test_wx_terminal_behavioral.py::test_fallback_panel_sets_non_parity`: with WebView unavailable, exercises the public legacy builder in an isolated GUI process; verifies the visible text surface renders terminal output and its Clear button clears it.
+- `tests/test_wx_terminal_webview.py::test_wx_terminal_fallback_sets_non_parity`: directly constructs the WebView panel with its backend unavailable; verifies it exposes a visible diagnostic surface, no WebView object, and explicit non-parity state.
+- `tests/test_about_dialog.py::test_about_shows_version_and_no_network`: constructs the real Qt dialog in a subprocess with Python socket connection attempts and desktop URL opening intercepted; verifies the version is visible and construction causes no external action, then verifies clicking the repository button requests the expected URL through the intercepted seam.
+- `tests/test_app_updater.py::test_manual_update_check_shows_splash_before_worker_starts`: executes `MainWindow._check_for_updates` against recording splash/worker seams; verifies manual mode calls the checking splash before scheduling the background worker.
+- `tests/test_wx_packaged_smoke.py::test_packaged_wx_smoke_gate_reports_critical_stages`: runs the CLI with an explicitly missing artifact and verifies nonzero exit, exact persisted/printed evidence, and all required smoke stages reported as FAIL. This replaces the baseline's accidental dependency on a locally built artifact with a deterministic fail-closed contract check.
 
-Also carry the Wave78 no-selection node from D3 and tests/test_wave80_files_outputs.py::TestWave80Audit::test_files_context_menu_localized from D5. No rewrite is in scope here.
+Carry-forward review: the Wave78 no-selection test remains the D3 rewrite with no job selection; the canonical Wave80 Files context-menu test remains the D5 owner. Neither was modified in E. No product defect was found, and no production source changed.
 
 ### F. GUI truthfulness — NOT STARTED
 
