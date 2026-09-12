@@ -7,7 +7,7 @@ Frozen baseline: 12ce79935bf076e1062c57dc7dbd148bad2bfae1
 Remediation baseline: 54f7376f3e3e1fccd672f121e33b68d2e8df2652
 Remediation collection: 2,678 nodes (five added, zero removed from frozen)
 
-Current packet: G
+Current packet: H
 Dependency: Phase 1 test-suite audit completed
 
 This is an executable cleanup Wave and implementation plan. The repository has no root ACTIVE_WAVE/WAVES execution system; this document does not claim to be its official active Wave ledger.
@@ -63,9 +63,9 @@ The Outputs localization test was rewritten to select a real job, create visible
 
 Renamed test node: `tests/test_wave80_files_outputs.py::TestFilesBehavior::test_context_menu_labels_localized` → `tests/test_wave80_files_outputs.py::TestFilesBehavior::test_files_toolbar_visible_labels_localized`. This is a change from translation-string assertions to actual visible Files toolbar behavior, not an equivalent context-menu test.
 
-### G. Historical/Wave ownership review — NOT STARTED
+### G. Historical/Wave ownership review — DONE
 
-Review ownership and distinct assertions in tests/test_wave0_unicode_baseline.py, tests/test_wave1_unicode_core_policy.py, tests/test_wave2_directories_local_files.py, tests/test_wave2_wx_ui_parity.py, tests/test_wave3_remote_sftp_ssh.py, tests/test_wave9_ci_unicode_matrix.py, tests/test_wave10_release_gate.py, and the newer tests/test_wave78_jobs_details.py, tests/test_wave79_audit.py, tests/test_wave79_provider_contract.py, and tests/test_wave80_files_outputs.py. Wave names alone do not establish obsolete ownership; Waves78–80 are collected though the migration ledger ends at Wave77.
+See [WAVE_OWNERSHIP_REVIEW_G.md](WAVE_OWNERSHIP_REVIEW_G.md) for module-by-module behavior ownership, static versus runtime evidence, and retention rationale. All reviewed owners were retained; no node delta. Wave names alone do not establish obsolete ownership; Waves78–80 are collected though the migration ledger ends at Wave77.
 
 ### H. Settings/config isolation — NOT STARTED
 
