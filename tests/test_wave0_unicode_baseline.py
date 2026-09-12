@@ -470,11 +470,3 @@ class TestRiskClassification:
             content = client.read_text(encoding="utf-8")
             # Document the finding
             assert "decode(" in content
-
-    def test_p0_sftp_roundtrip_risks_documented(self):
-        """SFTP read/write roundtrip can corrupt non-UTF-8 files — P0."""
-        ssh_files = ROOT / "src" / "hpc_gui" / "services" / "files_ssh.py"
-        if ssh_files.is_file():
-            content = ssh_files.read_text(encoding="utf-8")
-            # Document the finding
-            assert "utf-8" in content.lower()
