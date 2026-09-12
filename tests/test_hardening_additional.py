@@ -456,8 +456,6 @@ def _wx_menu_snapshot(menu):
 
 
 def test_wx_separator_lifecycle_offscreen():
-    import pytest
-    pytest.skip("flaky subprocess heap on Windows – pre-existing, not Connection")
     import subprocess
     import sys
     import tempfile
@@ -472,13 +470,6 @@ def test_wx_separator_lifecycle_offscreen():
             import wx
         except ImportError as e:
             print(f"SKIP wx unavailable: {e}")
-            sys.exit(0)
-        # Quick check: try to create App, if fails skip
-        try:
-            # Ensure we can init wx without display
-            pass
-        except Exception as e:
-            print(f"SKIP wx init failed: {e}")
             sys.exit(0)
 
         from pathlib import Path
@@ -515,11 +506,7 @@ def test_wx_separator_lifecycle_offscreen():
             return sum(1 for it in menu.GetMenuItems() if it.GetSubMenu() is not None)
 
         session_state = {"session": None, "generation": 0}
-        try:
-            frame, _lifecycle, _ss = create_shell_frame(session_state=session_state)
-        except Exception as exc:
-            print(f"SKIP wx create_shell_frame failed: {exc}")
-            sys.exit(0)
+        frame, _lifecycle, _ss = create_shell_frame(session_state=session_state)
         plugins_menu = frame._wx_shell_plugins_menu
         try:
             # 1. 0 visible roots
@@ -621,22 +608,6 @@ def test_wx_separator_lifecycle_offscreen():
         if "SKIP" in out:
             import pytest
             pytest.skip(out.strip().splitlines()[-1] if out.strip() else "wx skip")
-        # wx cleanup on Windows often exits with heap/access violation even after success (0xC0000374/0xC0000005)
-        # Treat as success if all steps logically passed – duplicate handler warnings are harmless
-        if "ALL_STEPS_PASSED" in out:
-            assert "STEP1 OK" in out and "STEP2 OK" in out and "STEP3 OK" in out and "STEP4 OK" in out and "STEP5 OK" in out
-            return
-        # Duplicate handler warnings are harmless and should not fail the test
-        if "duplicate image handler" in out.lower() or "duplicate animation handler" in out.lower():
-            if "STEP1 OK" in out or "STEP2 OK" in out:
-                import pytest
-                pytest.skip(f"wx duplicate handler artefact (code {result.returncode}): {out[:800]}")
-        # 3221226356 = 0xC0000374 heap corruption, 3221225477 = 0xC0000005 access violation – both are wx cleanup artefacts on Windows
-        if result.returncode in (3221226356, -1073740791, 3221225477, -1073741819):
-            if "STEP1 OK" in out:
-                # At least some wx work succeeded; treat as skipped not failed
-                import pytest
-                pytest.skip(f"wx subprocess heap cleanup artefact after partial success (code {result.returncode}): {out[:800]}")
         if result.returncode != 0:
             import pytest
             pytest.fail(f"wx lifecycle subprocess failed (code {result.returncode}):\\n{out}")

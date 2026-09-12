@@ -121,21 +121,52 @@ def test_wx_jobs_stress_repeated_minimize_restore_keeps_polling_lifecycle_stable
 
 def test_wx_jobs_stress_pause_resume_state_never_desynchronizes(wx_app):
     backend = MockHPCJobs(1)
-    frame = _open(backend.list_jobs, backend.read_output)
+    reads = 0
+    read_lock = threading.Lock()
+
+    def read_output(job_id):
+        nonlocal reads
+        result = backend.read_output(job_id)
+        with read_lock:
+            reads += 1
+        return result
+
+    def read_count_advanced(before):
+        with read_lock:
+            return reads > before
+
+    frame = _open(backend.list_jobs, read_output)
     _pump(wx_app, lambda: frame._wx_jobs_controls["jobs"].GetItemCount() == 1)
     _select(frame, 0)
     _pump(wx_app, lambda: _get_stdout(frame).GetValue())
+    last_visible = _get_stdout(frame).GetValue()
     for transition in range(100):
         _click(frame._wx_jobs_controls["pause"])
-        backend.set_output("1", f"pause-{transition}")
-        frame._wx_jobs_refresh_outputs()
-        _pump(wx_app, lambda transition=transition: f"pause-{transition}" in _get_stdout(frame).GetValue())
         paused = transition % 2 == 0
         assert frame._wx_jobs_state["user_paused"] is paused
-        if not paused:
-            assert frame._wx_jobs_state["follow_calls"] > 0
+        backend.set_output("1", f"resume-{transition}")
+        with read_lock:
+            reads_before = reads
+        frame._wx_jobs_refresh_outputs()
+        if paused:
+            _pump(
+                wx_app,
+                lambda: read_count_advanced(reads_before)
+                and frame._wx_jobs_state["outputs_requests"] == 0,
+            )
+            assert _get_stdout(frame).GetValue() == last_visible
+        else:
+            _pump(
+                wx_app,
+                lambda transition=transition: (
+                    read_count_advanced(reads_before)
+                    and f"resume-{transition}" in _get_stdout(frame).GetValue()
+                    and frame._wx_jobs_state["outputs_requests"] == 0
+                ),
+            )
+            last_visible = _get_stdout(frame).GetValue()
     assert not frame._wx_jobs_state["user_paused"]
-    assert frame._wx_jobs_controls["pause"].GetLabel() == "Pause Live Follow"
+    assert frame._wx_jobs_controls["pause"].GetLabel() == "Pause All"
     _close(frame, wx_app)
 
 
@@ -167,6 +198,8 @@ def test_wx_jobs_stress_out_of_order_output_completions_are_safe(wx_app):
 
 def test_wx_jobs_stress_blocked_reads_never_overlap(wx_app):
     backend = MockHPCJobs(1)
+    gui_thread = threading.get_ident()
+    worker_threads = set()
     gates = []
     started = []
     active_reads = 0
@@ -175,6 +208,7 @@ def test_wx_jobs_stress_blocked_reads_never_overlap(wx_app):
 
     def read(_job_id):
         nonlocal active_reads, peak_reads
+        worker_threads.add(threading.get_ident())
         gate = threading.Event()
         with read_lock:
             index = len(gates)
@@ -196,13 +230,14 @@ def test_wx_jobs_stress_blocked_reads_never_overlap(wx_app):
     for index in range(50):
         _pump(wx_app, lambda index=index: len(started) > index and started[index].is_set())
         for _ in range(5):
-            frame._wx_jobs_refresh_outputs()
+            frame._wx_jobs_refresh_outputs_tab()
         assert peak_reads == 1
         gates[index].set()
         _pump(wx_app, lambda index=index: f"round-{index}" in _get_stdout(frame).GetValue())
         if index < 49:
-            frame._wx_jobs_refresh_outputs()
+            frame._wx_jobs_refresh_outputs_tab()
     assert peak_reads == 1
+    assert worker_threads and gui_thread not in worker_threads
     _close(frame, wx_app)
 
 
@@ -284,16 +319,3 @@ def test_wx_jobs_stress_missing_output_recovery_pressure():
             backend.read_output(job_id)
         backend.missing.clear()
         assert backend.read_output(job_id)["stdout"] == "line 1"
-
-
-def test_wx_jobs_stress_backend_workers_and_reads_are_bounded():
-    backend = MockHPCJobs(50)
-    gui_thread = threading.get_ident()
-    for cycle in range(250):
-        backend.transition(str(cycle % 50 + 1), "RUNNING")
-        worker = threading.Thread(target=backend.read_output, args=(str(cycle % 50 + 1),))
-        worker.start()
-        worker.join(2)
-        assert not worker.is_alive()
-    assert backend.peak_reads == 1
-    assert gui_thread not in backend.worker_threads

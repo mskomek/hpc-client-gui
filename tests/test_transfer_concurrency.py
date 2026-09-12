@@ -117,6 +117,7 @@ def test_two_ftp_transfers_overlap_with_distinct_connections(ftp_server, tmp_pat
         sources.append(source)
 
     active = []
+    overlap_connections = set()
     peak = {"value": 0}
     lock = threading.Lock()
     import ftplib
@@ -128,8 +129,9 @@ def test_two_ftp_transfers_overlap_with_distinct_connections(ftp_server, tmp_pat
         with lock:
             active.append(self)
             peak["value"] = max(peak["value"], len(active))
-        if len(active) >= 2:
-            both_running.set()
+            if len(active) >= 2:
+                overlap_connections.update(id(connection) for connection in active)
+                both_running.set()
         try:
             # Give the other worker a real chance to join concurrently.
             both_running.wait(3)
@@ -167,6 +169,7 @@ def test_two_ftp_transfers_overlap_with_distinct_connections(ftp_server, tmp_pat
 
     assert not errors
     assert peak["value"] == 2, "transfers did not overlap"
+    assert len(overlap_connections) == 2, "overlap reused one FTP connection"
     for index in range(2):
         data = (ftp_server.root / f"remote{index}.bin").read_bytes()
         assert hashlib.sha256(data).hexdigest() == hashlib.sha256(
@@ -195,17 +198,11 @@ def qapp():
 
 
 class _FakeBackend:
-    def __init__(self, *, fail=False, hang_until=None):
+    def __init__(self, *, fail=False):
         self.closed = False
         self.fail = fail
-        self.hang_until = hang_until
 
     def upload(self, local_path, remote_path, progress_cb=None):
-        if self.hang_until is not None:
-            if progress_cb:
-                progress_cb(1, 10)
-            self.hang_until.wait(5)
-            raise _SimulatedCancel()
         if self.fail:
             raise OSError("simulated failure")
         if progress_cb:
@@ -213,10 +210,6 @@ class _FakeBackend:
 
     def close(self):
         self.closed = True
-
-
-class _SimulatedCancel(Exception):
-    pass
 
 
 def _make_dialog(items, factory):
@@ -268,35 +261,52 @@ def test_dialog_closes_isolated_backend_on_failure(qapp):
 
 def test_cancelled_transfer_releases_isolated_backend(qapp):
     release = threading.Event()
+    started = threading.Event()
     created = []
 
+    class CancelBackend(_FakeBackend):
+        def upload(self, local_path, remote_path, progress_cb=None):
+            if progress_cb:
+                progress_cb(1, 10)
+            started.set()
+            release.wait(5)
+            if progress_cb:
+                progress_cb(2, 10)
+
     def factory():
-        backend = _FakeBackend(hang_until=release)
+        backend = CancelBackend()
         created.append(backend)
         return backend
 
-    dialog = _make_dialog([TransferItem("upload", "a", "/remote/a")], factory)
+    items = [
+        TransferItem("upload", "a", "/remote/a"),
+        TransferItem("upload", "b", "/remote/b"),
+    ]
+    dialog = _make_dialog(items, factory)
+    dialog.start()
+    try:
+        assert started.wait(3), "the real transfer worker never entered upload"
+        dialog.cancel_all()
+        release.set()
+        deadline = time.monotonic() + 5
+        while time.monotonic() < deadline and dialog._running:
+            qapp.processEvents()
+            time.sleep(0.005)
+        qapp.processEvents()
 
-    outcome: dict = {}
-
-    def run():
-        try:
-            dialog._execute_item(dialog._items[0])
-            outcome["error"] = None
-        except Exception as exc:  # noqa: BLE001 - test assertion below
-            outcome["error"] = exc
-
-    worker = threading.Thread(target=run)
-    worker.start()
-    deadline = time.monotonic() + 5
-    while time.monotonic() < deadline and not created:
-        time.sleep(0.01)
-    time.sleep(0.05)  # let the worker block inside upload
-    release.set()
-    worker.join(timeout=5)
-    assert not worker.is_alive()
-    assert isinstance(outcome.get("error"), _SimulatedCancel)
-    assert created and created[0].closed is True
+        assert not dialog._running
+        assert len(created) == 1 and created[0].closed is True
+        assert dialog._completed == []
+        assert [item.src for item, _error in dialog._errors] == ["a"]
+        assert dialog._pending == []
+    finally:
+        release.set()
+        dialog.cancel_all()
+        worker = getattr(dialog, "_thread", None)
+        if worker is not None:
+            worker._controller.wait(5)
+        qapp.processEvents()
+        dialog.deleteLater()
 
 
 def test_retry_creates_fresh_backend_resources(qapp):
