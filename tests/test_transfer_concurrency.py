@@ -117,6 +117,7 @@ def test_two_ftp_transfers_overlap_with_distinct_connections(ftp_server, tmp_pat
         sources.append(source)
 
     active = []
+    connection_ids = set()
     peak = {"value": 0}
     lock = threading.Lock()
     import ftplib
@@ -127,6 +128,7 @@ def test_two_ftp_transfers_overlap_with_distinct_connections(ftp_server, tmp_pat
     def counting_storbinary(self, command, handle, *args, **kwargs):
         with lock:
             active.append(self)
+            connection_ids.add(id(self))
             peak["value"] = max(peak["value"], len(active))
         if len(active) >= 2:
             both_running.set()
@@ -167,6 +169,7 @@ def test_two_ftp_transfers_overlap_with_distinct_connections(ftp_server, tmp_pat
 
     assert not errors
     assert peak["value"] == 2, "transfers did not overlap"
+    assert len(connection_ids) == 2, "overlapping transfers shared an FTP connection"
     for index in range(2):
         data = (ftp_server.root / f"remote{index}.bin").read_bytes()
         assert hashlib.sha256(data).hexdigest() == hashlib.sha256(
@@ -195,15 +198,18 @@ def qapp():
 
 
 class _FakeBackend:
-    def __init__(self, *, fail=False, hang_until=None):
+    def __init__(self, *, fail=False, hang_until=None, entered=None):
         self.closed = False
         self.fail = fail
         self.hang_until = hang_until
+        self.entered = entered
 
     def upload(self, local_path, remote_path, progress_cb=None):
         if self.hang_until is not None:
             if progress_cb:
                 progress_cb(1, 10)
+            if self.entered is not None:
+                self.entered.set()
             self.hang_until.wait(5)
             raise _SimulatedCancel()
         if self.fail:
@@ -268,10 +274,11 @@ def test_dialog_closes_isolated_backend_on_failure(qapp):
 
 def test_cancelled_transfer_releases_isolated_backend(qapp):
     release = threading.Event()
+    entered = threading.Event()
     created = []
 
     def factory():
-        backend = _FakeBackend(hang_until=release)
+        backend = _FakeBackend(hang_until=release, entered=entered)
         created.append(backend)
         return backend
 
@@ -288,12 +295,11 @@ def test_cancelled_transfer_releases_isolated_backend(qapp):
 
     worker = threading.Thread(target=run)
     worker.start()
-    deadline = time.monotonic() + 5
-    while time.monotonic() < deadline and not created:
-        time.sleep(0.01)
-    time.sleep(0.05)  # let the worker block inside upload
-    release.set()
-    worker.join(timeout=5)
+    try:
+        assert entered.wait(timeout=5), "upload worker did not reach the blocked operation"
+    finally:
+        release.set()
+        worker.join(timeout=5)
     assert not worker.is_alive()
     assert isinstance(outcome.get("error"), _SimulatedCancel)
     assert created and created[0].closed is True

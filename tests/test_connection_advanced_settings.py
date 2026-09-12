@@ -248,24 +248,69 @@ class ParallelismSourceOfTruthTests(unittest.TestCase):
 
 class TransferChannelSafetyTests(unittest.TestCase):
     def test_workers_receive_distinct_channels(self) -> None:
-        """Two concurrent fake workers get distinct channel objects."""
-        channels: list[object] = []
-        barrier = threading.Barrier(2, timeout=5)
+        """The production SFTP manager gives concurrent workers owned channels."""
+        from hpc_gui.ssh.sftp_channels import SFTPChannelManager
+
+        class FakeTransport:
+            @staticmethod
+            def is_active() -> bool:
+                return True
+
+            @staticmethod
+            def is_authenticated() -> bool:
+                return True
 
         class FakeChannel:
-            pass
+            def __init__(self) -> None:
+                self.timeout = None
 
-        def worker():
-            channels.append(FakeChannel())
-            barrier.wait()
+            def settimeout(self, value) -> None:
+                self.timeout = value
 
-        threads = [threading.Thread(target=worker) for _ in range(2)]
-        for thread in threads:
-            thread.start()
-        for thread in threads:
-            thread.join(timeout=5)
+        class FakeSFTP:
+            def __init__(self) -> None:
+                self.channel = FakeChannel()
+                self.closed = False
+
+            def get_channel(self):
+                return self.channel
+
+            def close(self) -> None:
+                self.closed = True
+
+        transport = FakeTransport()
+        manager = SFTPChannelManager(lambda: transport)
+        channels: list[FakeSFTP] = []
+        errors: list[BaseException] = []
+        lock = threading.Lock()
+        barrier = threading.Barrier(2, timeout=5)
+
+        def open_and_hold():
+            try:
+                channel = manager.open_transfer_sftp()
+                with lock:
+                    channels.append(channel)
+                barrier.wait()
+                channel.close()
+            except BaseException as exc:
+                errors.append(exc)
+
+        def make_sftp(_transport):
+            return FakeSFTP()
+
+        with mock.patch("paramiko.SFTPClient.from_transport", side_effect=make_sftp):
+            threads = [threading.Thread(target=open_and_hold) for _ in range(2)]
+            for thread in threads:
+                thread.start()
+            for thread in threads:
+                thread.join(timeout=5)
+
+        self.assertTrue(all(not thread.is_alive() for thread in threads))
+        self.assertEqual(errors, [])
         self.assertEqual(len(channels), 2)
         self.assertIsNot(channels[0], channels[1])
+        self.assertTrue(all(channel.closed for channel in channels))
+        self.assertTrue(all(channel.channel.timeout == 60 for channel in channels))
 
     def test_unsupported_backend_forces_one(self) -> None:
         files = SimpleNamespace(supports_parallel_transfers=False)

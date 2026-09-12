@@ -457,10 +457,16 @@ class TestRemoteEntryHelpers:
     def test_file_type_directory(self):
         """file_type should detect directories correctly."""
         from hpc_gui.ui.models.remote_entry_helpers import file_type
+        from hpc_gui.core.i18n import current_language, load_language, t
 
-        result = file_type("test", is_dir=True)
-        # Returns i18n key for "Folder"
-        assert "folder" in result.lower() or "dir" in result.lower()
+        previous_language = current_language()
+        try:
+            load_language("en")
+            result = file_type("test", is_dir=True)
+            # Returns the localized folder label.
+            assert result == t("dirs.type_folder")
+        finally:
+            load_language(previous_language)
 
     def test_file_type_file(self):
         """file_type should detect files correctly."""

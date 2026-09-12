@@ -34,8 +34,19 @@ class PerformanceProbeTests(unittest.TestCase):
             session = module.PerformanceSession(root, interval_ms=20, slow_ms=30)
             session.start()
             app = QApplication.instance() or QApplication([])
+
+            original_heartbeat = session._heartbeat
+            blocked = False
+
+            def block_after_first_heartbeat():
+                nonlocal blocked
+                original_heartbeat()
+                if not blocked:
+                    blocked = True
+                    time.sleep(0.12)
+
+            session._heartbeat = block_after_first_heartbeat
             session.attach_to_app(app)
-            QTimer.singleShot(40, lambda: time.sleep(0.12))
             QTimer.singleShot(260, app.quit)
 
             app.exec()
