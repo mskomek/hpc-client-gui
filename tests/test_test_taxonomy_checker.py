@@ -13,6 +13,22 @@ if str(ROOT) not in sys.path:
 from scripts import check_test_taxonomy as checker  # noqa: E402
 
 
+def _review_for(records):
+    nodes = []
+    for record in records:
+        markers = set(record["markers"])
+        primary = next(value for value in checker.PRIMARY_CATEGORIES if value in markers)
+        nodes.append({
+            "nodeid": record["nodeid"],
+            "primary": primary,
+            "qualifiers": sorted(value for value in checker.QUALIFIERS if value in markers),
+            "evidence": "Test body exercises the stated boundary and asserts its observable result.",
+            "behavior_id": None,
+            "reviewed": True,
+        })
+    return {"schema_version": 1, "nodes": nodes}
+
+
 @pytest.mark.audit
 def test_unmarked_record_is_zero_primary():
     report = checker.build_report([{"nodeid": "tests/a.py::test_a", "markers": []}])
@@ -106,11 +122,42 @@ def test_enforce_accepts_exact_taxonomy_registry():
     )
 
     result = checker.build_enforce_report(
-        report, set(checker.PRIMARY_CATEGORIES) | set(checker.QUALIFIERS)
+        report, set(checker.PRIMARY_CATEGORIES) | set(checker.QUALIFIERS),
+        checker.build_semantic_review_report(
+            [{"nodeid": "tests/core.py::test_known", "markers": ["unit", "slow"]}],
+            _review_for([{"nodeid": "tests/core.py::test_known", "markers": ["unit", "slow"]}]),
+        ),
     )
 
     assert result["passed"] is True
     assert result["warnings"] == report["warnings"]
+    assert result["semantic_review"]["reviewed_count"] == 1
+
+
+@pytest.mark.audit
+def test_enforce_fails_when_semantic_review_is_missing():
+    report = checker.build_report(
+        [{"nodeid": "tests/core.py::test_known", "markers": ["unit"]}]
+    )
+
+    result = checker.build_enforce_report(
+        report, set(checker.PRIMARY_CATEGORIES) | set(checker.QUALIFIERS)
+    )
+
+    assert result["passed"] is False
+    assert result["semantic_review"]["missing_nodeids"] == ["tests/core.py::test_known"]
+
+
+@pytest.mark.audit
+def test_semantic_review_rejects_primary_marker_mismatch():
+    records = [{"nodeid": "tests/core.py::test_gui", "markers": ["gui", "wx"]}]
+    document = _review_for(records)
+    document["nodes"][0]["primary"] = "unit"
+
+    result = checker.build_semantic_review_report(records, document)
+
+    assert result["passed"] is False
+    assert result["marker_mismatch_nodeids"] == ["tests/core.py::test_gui"]
 
 
 @pytest.mark.audit
