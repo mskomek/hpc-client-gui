@@ -90,3 +90,12 @@ product defect.
 - `tests/test_wx_jobs_stress.py`: **11 passed**.
 - Taxonomy RATCHET and collection passed: **2,684 collected, 0 collection
   errors**, with no unexplained node changes. Ruff and `git diff --check` passed.
+
+### Windows release-suite follow-up
+
+The later Windows release-suite continuation reported both non-strict WebView
+xfails as XPASS. Their subprocess tests passed when run without the xfail
+markers, and the entire module then passed **29 tests** with no xfail or xpass.
+The obsolete non-strict xfail annotations were removed; these two cases now
+fail normally if their ordering assertions regress. This changes no nodeids and
+does not establish packaged keyboard-to-PTY parity.
