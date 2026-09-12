@@ -1332,12 +1332,33 @@ os._exit(0)
     assert result.returncode == 0, f"subprocess failed: {result.stdout}\n{result.stderr}"
 
 
-def test_wx_terminal_fallback_sets_non_parity():
-    """When WebView is unavailable, panel must be marked non-parity."""
-    from hpc_gui.wx_terminal_webview import build_terminal_panel
-    from hpc_gui.wx_terminal_webview import WxTerminalWebViewPanel
-    assert hasattr(WxTerminalWebViewPanel, "__init__"), "WxTerminalWebViewPanel must exist"
-    assert callable(build_terminal_panel), "build_terminal_panel must be callable"
+def test_wx_terminal_fallback_sets_non_parity(monkeypatch):
+    """Unavailable WebView renders its visible diagnostic fallback."""
+    import wx
+    import hpc_gui.wx_terminal_webview as terminal
+
+    app = wx.GetApp() or wx.App(False)
+    monkeypatch.setattr(terminal, "_is_webview_available", lambda: False)
+    frame = wx.Frame(None, size=(900, 600))
+    panel = terminal.WxTerminalWebViewPanel(frame)
+    frame.SetSizer(wx.BoxSizer(wx.VERTICAL))
+    frame.GetSizer().Add(panel, 1, wx.EXPAND)
+    frame.Show()
+    wx.Yield()
+    try:
+        controls = panel._wx_terminal_controls
+        assert panel.IsShownOnScreen()
+        assert panel._error_panel.IsShownOnScreen()
+        assert panel._wx_terminal_is_webview is False
+        assert panel._wx_terminal_is_parity is False
+        assert isinstance(controls["output"], wx.TextCtrl)
+        assert "WebView backend unavailable" in controls["output"].GetValue()
+        assert controls["output"].IsEnabled()
+        assert controls["find_btn"].IsEnabled()
+    finally:
+        panel.close()
+        frame.Destroy()
+        app.ProcessPendingEvents()
 
 
 def test_wx_terminal_100_reconnects_no_leak():
