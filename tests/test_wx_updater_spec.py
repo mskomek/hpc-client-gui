@@ -1,6 +1,7 @@
 """Tests for wx update flow per spec 37 — real wx events, fixed changelog, real progress."""
 
 import time
+from threading import Event
 
 import pytest
 
@@ -312,21 +313,67 @@ def test_update_cancel_reaches_downloader():
     app.Destroy()
 
 
-def test_update_cancel_prevents_install():
+def test_update_cancel_prevents_install(monkeypatch, tmp_path):
+    import hpc_gui.services.app_updater as app_updater
+    import hpc_gui.wx_updater_view as updater_view
+
     app = wx.App(False)
     rel = _make_release()
     dlg = WxUpdateDialog(None, rel)
-    dlg._build_for_state("DOWNLOADING")
-    dlg._cancelled = True
-    # Simulate worker noticing cancel and not proceeding to verifying
-    # The worker should check _cancelled and return without building READY
-    # We can test that _cancelled prevents transition to READY
-    dlg._build_for_state("DOWNLOAD_CANCELLED")
-    assert dlg.state == "DOWNLOAD_CANCELLED"
-    # Ensure no zip path is set
-    assert not hasattr(dlg, "_zip_path") or dlg._zip_path is None or True
-    dlg.Destroy()
-    app.Destroy()
+    download_entered = Event()
+    finish_download = Event()
+    cancel_observed = Event()
+    install_calls = []
+    artifact = tmp_path / "verified-update.zip"
+
+    def fake_download(_release, progress_cb=None, cancelled=None):
+        download_entered.set()
+        if not finish_download.wait(5):
+            return artifact
+        if cancelled():
+            cancel_observed.set()
+        return artifact
+
+    monkeypatch.setattr(app_updater, "download_and_verify_release", fake_download)
+    monkeypatch.setattr(app_updater, "launch_update_installer", lambda *a, **k: install_calls.append(a))
+    monkeypatch.setattr(updater_view, "show_installing_splash", lambda *a, **k: install_calls.append(a))
+    try:
+        dlg.dlg.Show()
+        dlg._start_download()
+        assert download_entered.wait(3), "download worker did not reach the updater seam"
+
+        cancel = dlg._cancel_btn
+        assert cancel is not None
+        event = wx.CommandEvent(wx.wxEVT_BUTTON, cancel.GetId())
+        cancel.GetEventHandler().ProcessEvent(event)
+        assert dlg._cancelled is True
+        finish_download.set()
+        dlg._worker.join(3)
+        assert not dlg._worker.is_alive(), "download worker did not stop"
+
+        deadline = time.monotonic() + 3
+        while dlg.state != "DOWNLOAD_CANCELLED" and time.monotonic() < deadline:
+            app.ProcessPendingEvents()
+            wx.YieldIfNeeded()
+            time.sleep(0.01)
+
+        assert cancel_observed.is_set()
+        assert dlg.state == "DOWNLOAD_CANCELLED"
+        assert dlg._artifact_verified is False
+        assert dlg._zip_path is None
+        labels = []
+        for index in range(dlg.footer_sizer.GetItemCount()):
+            window = dlg.footer_sizer.GetItem(index).GetWindow()
+            if window:
+                labels.append(window.GetLabel())
+        assert not any("Install" in label for label in labels)
+        assert install_calls == []
+    finally:
+        finish_download.set()
+        if dlg._worker is not None:
+            dlg._worker.join(3)
+        dlg.Destroy()
+        app.Destroy()
 
 
 def test_update_verification_state_visible():
@@ -460,47 +507,110 @@ def test_installation_current_item_visible_when_available():
 
 
 def test_update_close_in_flight_safe(monkeypatch):
+    import hpc_gui.services.app_updater as app_updater
+
     app = wx.App(False)
     rel = _make_release()
     dlg = WxUpdateDialog(None, rel)
-    dlg._build_for_state("DOWNLOADING")
-    # Simulate close during download — should not crash, should ask confirmation
-    # We can test that _on_close handles it without exception
-    # Mock MessageBox to return NO (Keep Downloading)
-    orig_mb = wx.MessageBox
-    wx.MessageBox = lambda *a, **kw: wx.NO
-    evt = wx.CloseEvent(wx.wxEVT_CLOSE_WINDOW)
-    # Need to set canVeto
+    download_entered = Event()
+    finish_download = Event()
+    message_responses = []
+
+    def fake_download(_release, progress_cb=None, cancelled=None):
+        download_entered.set()
+        finish_download.wait(5)
+        return None
+
+    def answer_close(*_args, **_kwargs):
+        response = wx.NO if not message_responses else wx.YES
+        message_responses.append(response)
+        return response
+
+    monkeypatch.setattr(app_updater, "download_and_verify_release", fake_download)
+    monkeypatch.setattr(wx, "MessageBox", answer_close)
     try:
-        evt.CanVeto(True)
-    except Exception:
-        pass
-    dlg._on_close(evt)
-    # Should have vetoed and not closed
-    assert dlg.state == "DOWNLOADING"
-    wx.MessageBox = orig_mb
-    dlg.Destroy()
-    app.Destroy()
+        dlg.dlg.Show()
+        dlg._start_download()
+        assert download_entered.wait(3), "download worker did not start"
+
+        # Close() dispatches the dialog's bound wx close event.
+        dlg.dlg.Close()
+        app.ProcessPendingEvents()
+        wx.YieldIfNeeded()
+        assert message_responses == [wx.NO]
+        assert dlg.dlg.IsShown()
+        assert dlg.state == "DOWNLOADING"
+        assert dlg._worker.is_alive(), "declined close must retain worker ownership"
+        assert dlg._cancelled is False
+        assert dlg._closed is False
+
+        dlg.dlg.Close()
+        app.ProcessPendingEvents()
+        wx.YieldIfNeeded()
+        assert message_responses == [wx.NO, wx.YES]
+        assert dlg.dlg.IsShown()
+        assert dlg._cancelled is True
+        finish_download.set()
+        dlg._worker.join(3)
+        assert not dlg._worker.is_alive(), "accepted cancellation did not release worker"
+        deadline = time.monotonic() + 3
+        while dlg.state != "DOWNLOAD_CANCELLED" and time.monotonic() < deadline:
+            app.ProcessPendingEvents()
+            wx.YieldIfNeeded()
+            time.sleep(0.01)
+        assert dlg.state == "DOWNLOAD_CANCELLED"
+    finally:
+        finish_download.set()
+        if dlg._worker is not None:
+            dlg._worker.join(3)
+        dlg.Destroy()
+        app.Destroy()
 
 
-def test_update_late_callback_after_close_safe():
+def test_update_late_callback_after_close_safe(monkeypatch, tmp_path):
+    import hpc_gui.services.app_updater as app_updater
+
     app = wx.App(False)
     rel = _make_release()
     dlg = WxUpdateDialog(None, rel)
-    dlg._build_for_state("DOWNLOADING")
-    # Simulate download worker calling back after dialog closed
-    dlg._closed = True
-    # Try to update progress after close — should not crash and not update UI
+    progress_queued = Event()
+    finish_download = Event()
+    artifact = tmp_path / "verified-update.zip"
+
+    def fake_download(_release, progress_cb=None, cancelled=None):
+        progress_cb(50, "downloading", 50, 100)
+        progress_queued.set()
+        finish_download.wait(5)
+        return artifact
+
+    monkeypatch.setattr(app_updater, "download_and_verify_release", fake_download)
     try:
-        dlg._downloaded = 100
-        if dlg._byte_label:
-            dlg._byte_label.SetLabel("should not happen")
-        # The real worker would check _closed before CallAfter, so no UI write
+        dlg._start_download()
+        assert progress_queued.wait(3), "real progress callback was not queued"
+        finish_download.set()
+        dlg._worker.join(3)
+        assert not dlg._worker.is_alive(), "download worker did not finish"
+        assert dlg._artifact_verified is True
+        assert dlg._downloaded == 0  # queued progress has not run yet
+
+        # Destroy closes the actual wx dialog while the worker's real CallAfter
+        # progress and completion callbacks are still queued in wx.
+        dlg.Destroy()
+        for _ in range(5):
+            app.ProcessPendingEvents()
+            wx.YieldIfNeeded()
+            time.sleep(0.01)
+
         assert dlg._closed is True
-    except Exception as e:
-        assert False, f"late callback crashed: {e}"
-    dlg.Destroy()
-    app.Destroy()
+        assert dlg.state == "DOWNLOADING"
+        assert dlg._downloaded == 0
+        assert dlg._zip_path is None
+    finally:
+        finish_download.set()
+        if dlg._worker is not None:
+            dlg._worker.join(3)
+        dlg.Destroy()
+        app.Destroy()
 
 
 def test_mandatory_update_has_no_later_button():

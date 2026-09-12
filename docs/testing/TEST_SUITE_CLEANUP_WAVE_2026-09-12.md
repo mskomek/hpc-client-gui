@@ -51,22 +51,11 @@ Register primary and qualifier markers; add this architecture specification and 
 
 All D1–D7 owners and mappings are recorded in [DUPLICATE_GROUP_REVIEW_D1-D7.md](DUPLICATE_GROUP_REVIEW_D1-D7.md). Three nodeids were added and eight retired, with no unrelated node delta. The exact node changes, unique assertions, canonical owners, targeted/file/neighborhood results, and CI/script reference search are recorded there. Packet D introduced no production changes. Translation catalog checks remain contract evidence; visible GUI localization is deferred to Packet F.
 
-### E. Weak lifecycle tests — NOT STARTED
+### E. Weak updater lifecycle tests — DONE
 
-Review these exact high-risk candidates; rewrite only in this packet, after recording their assertion and observable lifecycle:
+Rewrote the three updater nodes in `tests/test_wx_updater_spec.py` without production changes. Cancellation uses the real wx cancel event and download worker with the downloader mocked at its external seam; a late successful return after cancel must not verify or expose an installable artifact, and installer/splash seams remain uncalled. Removing the worker cancellation guard makes `_artifact_verified is False` fail. Close behavior dispatches the real dialog close event, exercises both veto and accept paths, and checks visibility, state, and worker ownership. Late progress/completion callbacks are queued through real `wx.CallAfter`, then processed after dialog destruction; closed state and UI model values remain unchanged. All three nodes passed alone; the updater/migration neighborhood passed **63 tests**. No test nodeids changed and Packet C RATCHET remains the gate.
 
-- tests/test_wx_updater_spec.py::test_update_cancel_prevents_install
-- tests/test_wx_updater_spec.py::test_update_close_in_flight_safe
-- tests/test_wx_updater_spec.py::test_update_late_callback_after_close_safe
-- tests/test_wx_terminal_behavioral.py::test_fallback_panel_sets_non_parity
-- tests/test_wx_terminal_webview.py::test_wx_terminal_fallback_sets_non_parity
-- tests/test_about_dialog.py::test_about_shows_version_and_no_network
-- tests/test_app_updater.py::test_manual_update_check_shows_splash_before_worker_starts
-- tests/test_wx_packaged_smoke.py::test_packaged_wx_smoke_gate_reports_critical_stages
-
-Also carry the Wave78 no-selection node from D3 and tests/test_wave80_files_outputs.py::TestWave80Audit::test_files_context_menu_localized from D5. No rewrite is in scope here.
-
-### F. GUI truthfulness — NOT STARTED
+### F. GUI truthfulness — IN_PROGRESS
 
 Audit event-to-visible-result evidence in tests/test_wave80_files_outputs.py, tests/test_wave78_jobs_details.py, tests/test_wx_terminal_webview.py, tests/test_wx_terminal_behavioral.py, tests/test_wx_updater_spec.py, tests/test_about_dialog.py, tests/test_app_updater.py, tests/test_corrective_jobs_details.py, and tests/test_wave2_wx_ui_parity.py. Keep static API-existence checks under audit/contract claims; require a real framework object/action/event and visible state for GUI claims.
 
