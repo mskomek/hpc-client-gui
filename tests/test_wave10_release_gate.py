@@ -208,13 +208,24 @@ class TestReleaseGate:
                 content = path.read_text(encoding="utf-8")
                 assert content == "test content"
 
-    def test_favorites_history_persistence(self):
-        """Favorites/history should persist through save/load cycle."""
-        from hpc_gui.services.remote_navigation_store import RemoteNavigationStore
+    def test_favorites_history_persistence(self, tmp_path, monkeypatch):
+        """Favorites and visited paths survive a new store instance."""
+        from hpc_gui.services import remote_navigation_store as navigation
 
-        # Verify the store can be instantiated
-        # (actual persistence test is in Wave 4)
-        assert RemoteNavigationStore is not None
+        path = tmp_path / "profile.bin"
+        monkeypatch.setattr(navigation, "_state_path", lambda _profile: path)
+        monkeypatch.setattr(navigation, "secret_store", _FakeSecretStore)
+
+        store = navigation.RemoteNavigationStore("existing-user")
+        store.add_favorite("/scratch/日本語/submit.sh", kind="file")
+        store.record_visit("/scratch/日本語")
+
+        reloaded = navigation.RemoteNavigationStore("existing-user")
+        assert [item["path"] for item in reloaded.favorites()] == [
+            "/scratch/日本語/submit.sh"
+        ]
+        assert reloaded.favorites()[0]["kind"] == "file"
+        assert [item["path"] for item in reloaded.history()] == ["/scratch/日本語"]
 
     def test_slurm_unicode_path(self):
         """Slurm should handle Unicode paths."""
