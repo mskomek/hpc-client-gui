@@ -19,6 +19,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -55,7 +56,21 @@ ISOLATED_WIRE_FILES = (
     "tests/test_ftp_widget.py",
     "tests/test_download_cancel_wire.py",
     "tests/test_editor_flow.py",
+    "tests/test_remote_directory_listing.py",
 )
+
+
+def _wx_test_files() -> tuple[str, ...]:
+    """Keep wx and Qt native toolkit lifetimes in separate pytest processes."""
+    files = []
+    for path in sorted((REPO_ROOT / "tests").glob("test_*.py")):
+        source = path.read_text(encoding="utf-8")
+        if (
+            ("import wx" in source or 'importorskip("wx")' in source)
+            and ("def test_" in source or "unittest.TestCase" in source)
+        ):
+            files.append(path.relative_to(REPO_ROOT).as_posix())
+    return tuple(files)
 
 COVERAGE_FAIL_UNDER = 65
 
@@ -75,16 +90,31 @@ COVERAGE_APPEND_ARGS = (
 )
 
 
+def _test_environment() -> dict[str, str]:
+    """Keep Qt tests headless without changing the caller's environment."""
+    environment = os.environ.copy()
+    environment.setdefault("QT_QPA_PLATFORM", "offscreen")
+    return environment
+
+
 def build_commands(*, coverage: bool) -> list[tuple[str, ...]]:
     commands = list(PREFLIGHT_COMMANDS)
+    wx_files = _wx_test_files()
     ignores = tuple(
         argument
-        for path in ISOLATED_WIRE_FILES
+        for path in (*ISOLATED_WIRE_FILES, *wx_files)
         for argument in ("--ignore", path)
     )
     commands.append(
         PYTEST_BASE + ignores + (COVERAGE_ARGS if coverage else ())
     )
+    if wx_files:
+        for path in wx_files:
+            commands.append(
+                PYTEST_BASE[:-1]
+                + (path,)
+                + (COVERAGE_APPEND_ARGS if coverage else ())
+            )
     for index, path in enumerate(ISOLATED_WIRE_FILES):
         coverage_args = COVERAGE_APPEND_ARGS if coverage else ()
         if coverage and index == len(ISOLATED_WIRE_FILES) - 1:
@@ -105,7 +135,7 @@ def main(argv: list[str] | None = None) -> int:
     for command in build_commands(coverage=args.coverage):
         printable = " ".join(str(part) for part in command)
         print(f"[release-test-suite] {printable}", flush=True)
-        result = subprocess.run(command, cwd=REPO_ROOT)
+        result = subprocess.run(command, cwd=REPO_ROOT, env=_test_environment())
         if result.returncode:
             print(
                 f"[release-test-suite] FAILED with exit code {result.returncode}: {printable}",

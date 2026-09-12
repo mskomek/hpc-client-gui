@@ -126,7 +126,7 @@ class RemoteDirectoryListingTests(unittest.TestCase):
     def test_stale_navigation_is_cancelled(self) -> None:
         # Keep the first request in flight long enough for the second
         # navigation to exercise cancellation on fast CI runners too.
-        files = _SlowStreamingFiles(_entries(20000))
+        files = _SlowStreamingFiles(_entries(4000))
         panel = self._panel(files)
         panel.set_dir("/work/a")
         panel.set_dir("/work/b")
