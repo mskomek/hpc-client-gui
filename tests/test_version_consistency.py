@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import pytest
 import re
 from pathlib import Path
 
@@ -16,6 +17,7 @@ def _project_version(path: Path) -> str:
     return match.group(1)
 
 
+@pytest.mark.release
 def test_repository_version_views_match() -> None:
     assert _project_version(ROOT / "pyproject.toml") == __version__
     assert CLI_VERSION == __version__

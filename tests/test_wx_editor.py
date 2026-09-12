@@ -10,6 +10,8 @@ from hpc_gui.wx_editor import WxEditorModel
 from hpc_gui.wx_editor_view import show_editor
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_editor_dirty_save_template_and_lint_aggregation():
     model = WxEditorModel()
     assert model.open("/remote/job.slurm", "old") == 0
@@ -19,6 +21,8 @@ def test_editor_dirty_save_template_and_lint_aggregation():
     assert len(diagnostics) == 2
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_shortcut_routing_and_model_has_no_qt():
     model = WxEditorModel()
     assert model.route_shortcut("Ctrl+C", "editor", text_input=True) is None
@@ -26,6 +30,8 @@ def test_shortcut_routing_and_model_has_no_qt():
     assert "PySide6" not in source and "import wx" not in source
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_editor_view_has_async_remote_save_and_distinct_actions():
     source = open("src/hpc_gui/wx_editor_view.py", encoding="utf-8").read()
     assert "save_remote=None" in source
@@ -75,6 +81,8 @@ def _close(frame, app):
     wx.Yield()
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_remote_save_backend_runs_off_gui_thread(wx_app):
     gui_thread = threading.get_ident()
     save_threads = []
@@ -90,6 +98,8 @@ def test_wx_remote_save_backend_runs_off_gui_thread(wx_app):
     _close(frame, wx_app)
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_remote_save_submit_runs_in_order_off_gui_thread(wx_app):
     gui_thread = threading.get_ident()
     events, threads, contents = [], {}, []
@@ -116,6 +126,8 @@ def test_wx_remote_save_submit_runs_in_order_off_gui_thread(wx_app):
     _close(frame, wx_app)
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_remote_save_run_runs_in_order_off_gui_thread(wx_app):
     gui_thread = threading.get_ident()
     events, threads = [], {}
@@ -132,6 +144,9 @@ def test_wx_remote_save_run_runs_in_order_off_gui_thread(wx_app):
     _close(frame, wx_app)
 
 
+@pytest.mark.wx
+@pytest.mark.wx
+@pytest.mark.gui
 @pytest.mark.parametrize("mode", ["submit", "run"])
 def test_wx_remote_save_failure_prevents_followup(wx_app, mode):
     called = []
@@ -149,6 +164,8 @@ def test_wx_remote_save_failure_prevents_followup(wx_app, mode):
     _close(frame, wx_app)
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_remote_submit_failure_keeps_saved_document_and_surfaces_error(wx_app):
     events = []
     model = WxEditorModel()
@@ -166,6 +183,8 @@ def test_wx_remote_submit_failure_keeps_saved_document_and_surfaces_error(wx_app
     _close(frame, wx_app)
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_remote_save_duplicate_click_is_ignored(wx_app):
     started, release = threading.Event(), threading.Event()
     calls = []
@@ -187,6 +206,8 @@ def test_wx_remote_save_duplicate_click_is_ignored(wx_app):
     _close(frame, wx_app)
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_remote_save_close_while_in_flight_discards_late_ui_callback(wx_app):
     started, release = threading.Event(), threading.Event()
     model = WxEditorModel()
@@ -204,6 +225,8 @@ def test_wx_remote_save_close_while_in_flight_discards_late_ui_callback(wx_app):
     assert not [window for window in wx.GetTopLevelWindows() if window and window.GetTitle() == "job.slurm"]
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_editor_dirty_close_save_changes_popup_saves_then_closes(wx_app, monkeypatch):
     saved = []
     model = WxEditorModel()
@@ -218,6 +241,8 @@ def test_wx_editor_dirty_close_save_changes_popup_saves_then_closes(wx_app, monk
     assert not model.controller.active.dirty
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_remote_submit_without_save_target_does_not_submit(wx_app):
     submit_calls = []
     model = WxEditorModel()
@@ -231,6 +256,8 @@ def test_wx_remote_submit_without_save_target_does_not_submit(wx_app):
     _close(frame, wx_app)
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_remote_run_without_save_backend_does_not_run(wx_app):
     run_calls = []
     model = WxEditorModel()

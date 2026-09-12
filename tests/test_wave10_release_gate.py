@@ -6,6 +6,7 @@ Unicode across real workflows.
 
 from __future__ import annotations
 
+import pytest
 import json
 import pathlib
 import sys
@@ -22,6 +23,7 @@ if str(ROOT / "src") not in sys.path:
 class TestExistingUserUpgrade:
     """Verify existing user data survives upgrade."""
 
+    @pytest.mark.integration
     def test_config_roundtrip_preserves_unicode_and_unknown_fields(self, tmp_path, monkeypatch):
         """Production config I/O preserves legacy and future fields."""
         from hpc_gui.config import storage
@@ -36,6 +38,7 @@ class TestExistingUserUpgrade:
         storage.save_config(payload)
         assert storage.load_config() == payload
 
+    @pytest.mark.integration
     def test_navigation_store_encrypted(self, tmp_path, monkeypatch):
         """Navigation paths are not persisted as plaintext."""
         from hpc_gui.services import remote_navigation_store as navigation
@@ -49,6 +52,7 @@ class TestExistingUserUpgrade:
         assert "/scratch/".encode("utf-8") not in raw
         assert "日本語".encode("utf-8") not in raw
 
+    @pytest.mark.integration
     def test_config_atomic_writes(self, tmp_path, monkeypatch):
         """Config save leaves a complete file and no temporary file."""
         from hpc_gui.config import storage
@@ -59,6 +63,7 @@ class TestExistingUserUpgrade:
         assert json.loads(config_path.read_text(encoding="utf-8"))["settings"]["label"] == "Çalışma"
         assert list(tmp_path.glob("config.json.*.tmp")) == []
 
+    @pytest.mark.contract
     def test_i18n_preserves_unicode(self):
         """i18n files should preserve Unicode through load/save."""
         for lang in ["en", "tr"]:
@@ -70,6 +75,7 @@ class TestExistingUserUpgrade:
             assert data == reparsed
             assert "★" in reserialized or "日本語" in reserialized or "Türkçe" in reserialized
 
+    @pytest.mark.audit
     def test_plugin_developer_docs_cover_unicode_contract(self):
         """Plugin authoring docs state the text/bytes/path safety contract."""
         for language in ("en", "tr"):
@@ -96,6 +102,7 @@ class _FakeSecretStore:
 # 2. Migration Logic
 # ---------------------------------------------------------------------------
 
+@pytest.mark.audit
 class TestMigrationLogic:
     """Verify migration logic is safe and idempotent."""
 
@@ -132,6 +139,7 @@ class TestMigrationLogic:
 class TestReleaseGate:
     """Verify all release gate items pass."""
 
+    @pytest.mark.audit
     def test_no_p0_unicode_bugs(self):
         """Verify no known P0 Unicode bugs in critical paths."""
         # Check critical files for known issues
@@ -146,6 +154,7 @@ class TestReleaseGate:
             content = path.read_text(encoding="utf-8")
             assert "utf-8" in content.lower() or "utf8" in content.lower(), f"No UTF-8 handling in {rel_path}"
 
+    @pytest.mark.audit
     def test_no_visible_mojibake(self):
         """No visible mojibake should exist in i18n files."""
         for lang in ["en", "tr"]:
@@ -155,6 +164,7 @@ class TestReleaseGate:
             for pattern in mojibake:
                 assert pattern not in content, f"Mojibake {pattern!r} in {lang}.json"
 
+    @pytest.mark.runtime_smoke
     def test_turkish_local_roundtrip(self):
         """Turkish local filesystem roundtrip should work."""
         import tempfile
@@ -174,6 +184,7 @@ class TestReleaseGate:
                 content = path.read_text(encoding="utf-8")
                 assert content == "test content"
 
+    @pytest.mark.runtime_smoke
     def test_japanese_local_roundtrip(self):
         """Japanese local filesystem roundtrip should work."""
         import tempfile
@@ -191,6 +202,7 @@ class TestReleaseGate:
                 content = path.read_text(encoding="utf-8")
                 assert content == "test content"
 
+    @pytest.mark.runtime_smoke
     def test_mixed_local_roundtrip(self):
         """Mixed script local filesystem roundtrip should work."""
         import tempfile
@@ -208,6 +220,7 @@ class TestReleaseGate:
                 content = path.read_text(encoding="utf-8")
                 assert content == "test content"
 
+    @pytest.mark.release
     def test_favorites_history_persistence(self, tmp_path, monkeypatch):
         """Favorites and visited paths survive a new store instance."""
         from hpc_gui.services import remote_navigation_store as navigation
@@ -227,6 +240,7 @@ class TestReleaseGate:
         assert reloaded.favorites()[0]["kind"] == "file"
         assert [item["path"] for item in reloaded.history()] == ["/scratch/日本語"]
 
+    @pytest.mark.unit
     def test_slurm_unicode_path(self):
         """Slurm should handle Unicode paths."""
         from hpc_gui.services.slurm_directives import set_directive, get_directive
@@ -235,6 +249,7 @@ class TestReleaseGate:
         script = set_directive(script, "partition", "Çalışma_日本語")
         assert get_directive(script, "partition") == "Çalışma_日本語"
 
+    @pytest.mark.unit
     def test_editor_utf8_roundtrip(self):
         """Editor should handle UTF-8 roundtrip."""
         from hpc_gui.services.editor_controller import DocumentModel
@@ -251,6 +266,7 @@ class TestReleaseGate:
         assert "日本語" in doc.content
         assert "★" in doc.content
 
+    @pytest.mark.audit
     def test_no_lossy_user_path_conversion(self):
         """No lossy user-path conversion should exist."""
         critical_files = [
@@ -268,6 +284,7 @@ class TestReleaseGate:
 # 4. Regression Search
 # ---------------------------------------------------------------------------
 
+@pytest.mark.audit
 class TestRegressionSearch:
     """Verify no new encoding regressions."""
 

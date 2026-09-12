@@ -1,10 +1,12 @@
 from __future__ import annotations
+import pytest
 
 from hpc_gui.config import storage
 from hpc_gui.services.connection_diagnostics import run_connection_diagnostics
 from hpc_gui.ssh.client import SSHConnInfo
 
 
+@pytest.mark.integration
 def test_diagnostics_includes_dns_and_slurm_stages() -> None:
     class Wrapper:
         def supports_transfer_sftp_channels(self):
@@ -25,6 +27,7 @@ def test_diagnostics_includes_dns_and_slurm_stages() -> None:
     assert tuple(payload["stages"]) == ("dns", "port", "auth", "sftp", "slurm", "checksum")
 
 
+@pytest.mark.unit
 def test_profile_conflict_preference_can_be_set_and_reset(monkeypatch, tmp_path) -> None:
     config_path = tmp_path / "config.json"
     monkeypatch.setattr(storage, "_config_path", lambda: config_path)

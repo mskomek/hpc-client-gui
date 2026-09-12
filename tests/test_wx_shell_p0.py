@@ -75,6 +75,8 @@ def _select_menu(frame, language):
     frame.ProcessEvent(event)
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_shell_language_menu_has_flags_and_tracks_selection(shell):
     _app, frame, _lifecycle, _session, _tray = shell
     items = frame._wx_shell_controls["language_items"]
@@ -87,6 +89,8 @@ def test_wx_shell_language_menu_has_flags_and_tracks_selection(shell):
     assert current_language() == "en" and items["en"].IsChecked()
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_shell_switch_retranslates_visible_shell(shell):
     _app, frame, _lifecycle, _session, _tray = shell
     # Old shell had settings button, new has menu – accept either
@@ -122,6 +126,8 @@ def test_wx_shell_switch_retranslates_visible_shell(shell):
         assert frame.GetTitle() == english[0]
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_shell_job_completion_uses_disappeared_job_final_state(shell):
     app, frame, lifecycle, _session, tray = shell
     jobs, calls = _open_jobs(app, frame, lifecycle, [[{"id": "123", "state": "RUNNING"}], []], lambda _job: "COMPLETED")
@@ -130,6 +136,8 @@ def test_wx_shell_job_completion_uses_disappeared_job_final_state(shell):
     assert "123" in tray.messages[0] and "completed" in tray.messages[0].lower()
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_shell_job_failure_emits_translated_notification(shell):
     app, frame, lifecycle, _session, tray = shell
     jobs, calls = _open_jobs(app, frame, lifecycle, [[{"id": "124", "state": "RUNNING"}], []], lambda _job: "TIMEOUT")
@@ -138,6 +146,8 @@ def test_wx_shell_job_failure_emits_translated_notification(shell):
     assert "124" in tray.messages[0] and "TIMEOUT" in tray.messages[0]
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_shell_completion_states_and_deduplication(shell):
     app, frame, lifecycle, _session, tray = shell
     rows = [[{"id": "123", "state": "RUNNING"}], [{"id": "123", "state": "COMPLETING"}], []]
@@ -152,6 +162,8 @@ def test_wx_shell_completion_states_and_deduplication(shell):
     assert len(tray.messages) == 1
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_shell_initial_poll_does_not_notify_existing_jobs(shell):
     app, frame, lifecycle, _session, tray = shell
     jobs, _calls = _open_jobs(app, frame, lifecycle, [[{"id": "100", "state": "COMPLETED"}]], lambda _job: "COMPLETED")
@@ -159,6 +171,8 @@ def test_wx_shell_initial_poll_does_not_notify_existing_jobs(shell):
     assert jobs._wx_jobs_controls["jobs"].GetItemCount() == 1
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_shell_reconnect_ignores_old_session_completion(shell):
     app, frame, lifecycle, session, tray = shell
     started = threading.Event()
@@ -180,6 +194,8 @@ def test_wx_shell_reconnect_ignores_old_session_completion(shell):
     assert tray.messages == []
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_shell_tray_unavailable_keeps_job_tracking(shell):
     app, frame, lifecycle, _session, _tray = shell
     frame.Destroy()
@@ -189,6 +205,8 @@ def test_wx_shell_tray_unavailable_keeps_job_tracking(shell):
     assert not lifecycle.notify_job("ignored", job_id="100")
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_shell_close_is_idempotent_and_cleans_tray(shell):
     app, frame, lifecycle, _session, tray = shell
     calls = []
@@ -200,6 +218,8 @@ def test_wx_shell_close_is_idempotent_and_cleans_tray(shell):
     assert not lifecycle.notify_job("late", job_id="late")
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_job_model_completing_is_not_final():
     events = []
     model = WxJobsModel(completion_notify=lambda job_id, message: events.append((job_id, message)))
@@ -209,6 +229,8 @@ def test_wx_job_model_completing_is_not_final():
     assert len(events) == 1 and "42" in events[0][1]
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_shell_job_notifications_use_current_runtime_language(shell):
     app, frame, lifecycle, _session, tray = shell
     jobs, calls = _open_jobs(app, frame, lifecycle, [[{"id": "en-1", "state": "RUNNING"}], []], lambda _job: "COMPLETED")
@@ -222,6 +244,8 @@ def test_wx_shell_job_notifications_use_current_runtime_language(shell):
     assert "İş başarıyla" in tray.messages[1]
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_shell_open_jobs_window_retranslates_runtime(shell):
     app, frame, lifecycle, _session, _tray = shell
     jobs, _calls = _open_jobs(app, frame, lifecycle, [[{"id": "1", "state": "RUNNING"}]])
@@ -232,6 +256,8 @@ def test_wx_shell_open_jobs_window_retranslates_runtime(shell):
     assert jobs.GetTitle() == "Jobs"
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_shell_close_ignores_blocked_job_poll(shell):
     app, frame, lifecycle, _session, tray = shell
     started = threading.Event()

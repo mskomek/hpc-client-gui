@@ -15,6 +15,8 @@ def qapp():
     return QApplication.instance() or QApplication([])
 
 
+@pytest.mark.qt
+@pytest.mark.gui
 def test_new_connection_lazily_persists_local_structured_storage(qapp):
     dialog = ConnectionDialog()
     try:
@@ -38,6 +40,8 @@ def test_new_connection_lazily_persists_local_structured_storage(qapp):
     assert "system_template_source" not in saved
 
 
+@pytest.mark.qt
+@pytest.mark.gui
 def test_local_quota_never_persists_user_command(qapp):
     dialog = ConnectionDialog()
     try:
@@ -52,6 +56,8 @@ def test_local_quota_never_persists_user_command(qapp):
     assert source["command_template"] == ""
 
 
+@pytest.mark.qt
+@pytest.mark.gui
 def test_local_structured_provider_survives_user_template_round_trip(qapp):
     dialog = ConnectionDialog()
     try:

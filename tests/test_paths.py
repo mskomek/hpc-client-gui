@@ -7,6 +7,7 @@ import pytest
 from hpc_gui.core import paths
 
 
+@pytest.mark.unit
 def test_macos_paths_use_application_support_and_logs(monkeypatch, tmp_path: Path):
     monkeypatch.setattr(paths, "current_os", lambda: "macos")
     monkeypatch.setattr(paths.Path, "home", lambda: tmp_path)
@@ -15,6 +16,7 @@ def test_macos_paths_use_application_support_and_logs(monkeypatch, tmp_path: Pat
     assert paths.app_log_dir() == tmp_path / "Library" / "Logs" / "HPC Client GUI"
 
 
+@pytest.mark.unit
 def test_non_macos_keeps_legacy_path(monkeypatch, tmp_path: Path):
     monkeypatch.setattr(paths, "current_os", lambda: "windows")
     monkeypatch.setattr(paths.Path, "home", lambda: tmp_path)
@@ -22,6 +24,7 @@ def test_non_macos_keeps_legacy_path(monkeypatch, tmp_path: Path):
     assert paths.app_data_dir() == tmp_path / ".truba_slurm_gui"
 
 
+@pytest.mark.integration
 def test_macos_copies_known_legacy_data_once(monkeypatch, tmp_path: Path):
     monkeypatch.setattr(paths, "current_os", lambda: "macos")
     legacy = paths.legacy_app_data_dir(tmp_path)
@@ -39,6 +42,7 @@ def test_macos_copies_known_legacy_data_once(monkeypatch, tmp_path: Path):
     assert (legacy / "config.json").exists()
 
 
+@pytest.mark.integration
 def test_macos_copies_every_supported_legacy_store_once(monkeypatch, tmp_path: Path):
     monkeypatch.setattr(paths, "current_os", lambda: "macos")
     legacy = paths.legacy_app_data_dir(tmp_path)
@@ -66,6 +70,7 @@ def test_macos_copies_every_supported_legacy_store_once(monkeypatch, tmp_path: P
     assert paths.migrate_legacy_app_data(home=tmp_path) is False
 
 
+@pytest.mark.integration
 def test_macos_migration_rejects_symlinked_entries(monkeypatch, tmp_path: Path):
     monkeypatch.setattr(paths, "current_os", lambda: "macos")
     legacy = paths.legacy_app_data_dir(tmp_path)

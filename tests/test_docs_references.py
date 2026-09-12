@@ -7,6 +7,7 @@ relative links and verifies each target exists.
 
 from __future__ import annotations
 
+import pytest
 import re
 import subprocess
 from pathlib import Path
@@ -27,6 +28,7 @@ def _strip_code_blocks(text: str) -> str:
     return re.sub(r"```.*?```", "", text, flags=re.DOTALL)
 
 
+@pytest.mark.audit
 def test_referenced_local_files_exist() -> None:
     errors: list[str] = []
     for path in _tracked_files():
@@ -48,6 +50,7 @@ def test_referenced_local_files_exist() -> None:
     assert not errors, "Referenced local files missing:\n" + "\n".join(errors)
 
 
+@pytest.mark.audit
 def test_agent_guidance_points_at_single_authority() -> None:
     # AGENTS.md is intentionally local-only (gitignored); the public
     # contribution workflow lives in CONTRIBUTING.md.

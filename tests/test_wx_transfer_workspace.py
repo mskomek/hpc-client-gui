@@ -1,8 +1,11 @@
+
+import pytest
 from pathlib import Path
 
 from hpc_gui.wx_transfer_workspace import WxTransferWorkspace
 
 
+@pytest.mark.gui
 def test_transfer_workspace_double_click_clipboard_dnd_and_storage(tmp_path: Path):
     workspace = WxTransferWorkspace(tmp_path)
     upload = workspace.double_click_local(tmp_path / "a.txt", "/remote")
@@ -16,6 +19,7 @@ def test_transfer_workspace_double_click_clipboard_dnd_and_storage(tmp_path: Pat
     assert workspace.storage.available and workspace.conflict_policy == "resume"
 
 
+@pytest.mark.gui
 def test_transfer_workspace_unknown_storage_is_fail_soft():
     workspace = WxTransferWorkspace(".")
     assert not workspace.storage.available and workspace.storage.name == "unknown"

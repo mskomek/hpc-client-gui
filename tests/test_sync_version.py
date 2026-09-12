@@ -1,8 +1,10 @@
+import pytest
 from pathlib import Path
 
 from scripts.sync_version import sync_version
 
 
+@pytest.mark.release
 def test_sync_version_updates_all_runtime_declarations(tmp_path: Path):
     files = {
         "pyproject.toml": 'version = "1.0.0"\n',

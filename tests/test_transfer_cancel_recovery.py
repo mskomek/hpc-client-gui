@@ -9,6 +9,7 @@ batch without reporting those items at all.
 
 from __future__ import annotations
 
+import pytest
 import os
 import threading
 import time
@@ -22,6 +23,7 @@ from hpc_gui.services.transfer_controller import TransferController, TransferIte
 from hpc_gui.ui.dialogs.transfer_dialog import TransferDialog
 
 
+@pytest.mark.unit
 class TransferControllerCancelTests(unittest.TestCase):
     def test_cancel_reports_every_item_of_a_parallel_batch(self) -> None:
         started = threading.Barrier(4, timeout=5)
@@ -58,6 +60,7 @@ class TransferControllerCancelTests(unittest.TestCase):
         )
 
 
+@pytest.mark.integration
 class TransferDialogCancelTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:

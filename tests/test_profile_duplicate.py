@@ -1,6 +1,8 @@
+import pytest
 from hpc_gui.services.profile_duplicate import duplicate_profile
 
 
+@pytest.mark.unit
 def test_duplicate_is_independent_and_drops_credentials():
     original = {"id": "one", "name": "Cluster", "host": "h", "password_dpapi": "x", "provider": {"safe": True, "token": "y"}}
     duplicate = duplicate_profile(original, ["Cluster"])
@@ -12,6 +14,7 @@ def test_duplicate_is_independent_and_drops_credentials():
     assert original["provider"]["safe"] is True
 
 
+@pytest.mark.unit
 def test_duplicate_collision_and_optional_key_path():
     original = {"name": "Cluster", "username": "alice", "private_key_path": "C:/key", "account": "proj"}
     duplicate = duplicate_profile(original, ["Cluster", "Cluster (copy)"])

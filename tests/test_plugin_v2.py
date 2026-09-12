@@ -27,11 +27,13 @@ def _manifest(code: bytes) -> dict:
     }
 
 
+@pytest.mark.contract
 def test_unapproved_python_tool_is_rejected_by_trusted_policy():
     problems = validate_manifest_dict(_manifest(b"raise RuntimeError('must not run')"))
     assert any("unapproved trusted tool" in problem for problem in problems)
 
 
+@pytest.mark.unit
 def test_legacy_plugin_cannot_execute_marker_payload(tmp_path: Path):
     marker = tmp_path / "marker"
     installed = type("Installed", (), {
@@ -44,6 +46,7 @@ def test_legacy_plugin_cannot_execute_marker_payload(tmp_path: Path):
     assert not marker.exists()
 
 
+@pytest.mark.integration
 def test_installer_rejects_legacy_executable_package(tmp_path: Path):
     manifest = _manifest(b"pass\n")
     payload = json.dumps(manifest).encode()

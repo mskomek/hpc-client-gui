@@ -84,6 +84,8 @@ def _clean_wx_after():
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_blank_name_save_and_connect_uses_canonical_name(monkeypatch):
     """Blank profile name must produce alice@login.cluster.edu, not login.cluster.edu."""
     tmp = _isolated_storage(monkeypatch)
@@ -155,6 +157,8 @@ def test_blank_name_save_and_connect_uses_canonical_name(monkeypatch):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_real_wx_dialog_save_and_connect_button_event(monkeypatch):
     """Real WxConnectionDialog -> real Save & Connect wx.Button -> wx.EVT_BUTTON."""
     from hpc_gui.wx_connection_dialog import WxConnectionDialog
@@ -231,6 +235,8 @@ def test_real_wx_dialog_save_and_connect_button_event(monkeypatch):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_master_password_real_wx_chain(monkeypatch):
     """Real resolver: saved master-encrypted profile -> Connect -> ask_master -> decrypt.
 
@@ -293,6 +299,8 @@ def test_master_password_real_wx_chain(monkeypatch):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_master_password_cancel_blocks_connection(monkeypatch):
     """Connect Selected -> master cancel -> no SSH, no connect, status safe.
 
@@ -363,6 +371,8 @@ def test_master_password_cancel_blocks_connection(monkeypatch):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wrong_master_password_fails_closed(monkeypatch):
     """Wrong master -> no SSH, no empty password fallback, safe error.
 
@@ -433,6 +443,8 @@ def test_wrong_master_password_fails_closed(monkeypatch):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_cluster_self_test_master_password_chain(monkeypatch):
     """Test Cluster: saved master-encrypted profile -> edit dialog -> Test Cluster -> real resolver -> decrypt.
 

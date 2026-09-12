@@ -11,6 +11,7 @@ from hpc_gui.services.linux_update_handoff import (
 )
 
 
+@pytest.mark.unit
 def test_appimage_path_requires_real_runtime_file(tmp_path: Path):
     image = tmp_path / "app.AppImage"
     image.write_bytes(b"image")
@@ -18,6 +19,7 @@ def test_appimage_path_requires_real_runtime_file(tmp_path: Path):
     assert appimage_path({}) is None
 
 
+@pytest.mark.unit
 def test_appimage_stages_and_replaces_with_recovery_copy(tmp_path: Path):
     source = tmp_path / "new.AppImage"
     destination = tmp_path / "client.AppImage"
@@ -32,6 +34,7 @@ def test_appimage_stages_and_replaces_with_recovery_copy(tmp_path: Path):
         assert destination.stat().st_mode & 0o111
 
 
+@pytest.mark.unit
 def test_appimage_rejects_symlink_source(tmp_path: Path):
     source = tmp_path / "source.AppImage"
     source.write_bytes(b"image")
@@ -44,6 +47,7 @@ def test_appimage_rejects_symlink_source(tmp_path: Path):
         stage_appimage(link, tmp_path / "destination.AppImage")
 
 
+@pytest.mark.unit
 def test_flatpak_detection_exposes_external_handoff_only():
     class Result:
         returncode = 0

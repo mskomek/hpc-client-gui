@@ -36,6 +36,8 @@ def _fake_tool(monkeypatch, module_name="_fake_ansys_view", suffixes=(".wbjn",))
     return tool
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_ansys_view_single_file_lint_shows_grouped_results(monkeypatch):
     from hpc_gui.wx_ansys_view import build_ansys_frame
 
@@ -78,6 +80,8 @@ def test_wx_ansys_view_single_file_lint_shows_grouped_results(monkeypatch):
         app.ProcessPendingEvents()
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_ansys_view_empty_and_failed_cases(monkeypatch):
     from hpc_gui.wx_ansys_view import build_ansys_frame
 
@@ -119,6 +123,8 @@ def test_wx_ansys_view_empty_and_failed_cases(monkeypatch):
         app.ProcessPendingEvents()
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_ansys_folder_cap(monkeypatch, tmp_path: Path):
     from hpc_gui.wx_ansys_view import build_ansys_frame
 
@@ -139,6 +145,8 @@ def test_wx_ansys_folder_cap(monkeypatch, tmp_path: Path):
     wx.Yield()
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_ansys_pick_files_button_real_event(tmp_path: Path):
     from hpc_gui.wx_ansys_view import build_ansys_frame
     _app = wx.App.Get() or wx.App(False)
@@ -167,6 +175,8 @@ def test_wx_ansys_pick_files_button_real_event(tmp_path: Path):
         wx.Yield()
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_ansys_pick_folder_button_real_event(tmp_path: Path):
     from hpc_gui.wx_ansys_view import build_ansys_frame
     _app = wx.App.Get() or wx.App(False)
@@ -190,6 +200,8 @@ def test_wx_ansys_pick_folder_button_real_event(tmp_path: Path):
         wx.Yield()
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_ansys_details_copy_and_docs(tmp_path: Path):
     from hpc_gui.wx_ansys_view import build_ansys_frame
     _app = wx.App.Get() or wx.App(False)
@@ -231,6 +243,8 @@ def test_wx_ansys_details_copy_and_docs(tmp_path: Path):
         wx.Yield()
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_ansys_close_in_flight_safe(tmp_path: Path):
     from hpc_gui.wx_ansys_view import build_ansys_frame
     import time
@@ -272,6 +286,8 @@ def test_wx_ansys_close_in_flight_safe(tmp_path: Path):
         wx.Yield()
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_ansys_i18n_refresh():
     from hpc_gui.wx_ansys_view import build_ansys_frame
     from hpc_gui.core.i18n import set_language, current_language

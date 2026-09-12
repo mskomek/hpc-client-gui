@@ -10,6 +10,7 @@ No network access, no real scheduler, no credentials.
 
 from __future__ import annotations
 
+import pytest
 import sys
 import unittest
 from pathlib import Path
@@ -34,6 +35,7 @@ def _squeue_row(job_id="100001", partition="defq", name="job", user="researcher"
     return f"{job_id}|{partition}|{name}|{user}|{state}|{elapsed}|{nodes}|{cpus}|{reason}{extra}"
 
 
+@pytest.mark.contract
 class SqueueMatrixTests(unittest.TestCase):
     def test_normal_queue(self) -> None:
         text = "\n".join([SQUEUE_HEADER, _squeue_row(state="RUNNING")])
@@ -99,6 +101,7 @@ class SqueueMatrixTests(unittest.TestCase):
         self.assertEqual({job.job_id for job in jobs}, {"100001", "100002"})
 
 
+@pytest.mark.contract
 class SacctMatrixTests(unittest.TestCase):
     def test_completed_and_failed_states_parse(self) -> None:
         text = "\n".join([
@@ -126,6 +129,7 @@ class SacctMatrixTests(unittest.TestCase):
 
 
 class ScontrolMatrixTests(unittest.TestCase):
+    @pytest.mark.contract
     def test_key_value_fields_are_observed(self) -> None:
         text = "\n".join([
             "JobId=500001 JobName=demo",
@@ -143,6 +147,7 @@ class ScontrolMatrixTests(unittest.TestCase):
         self.assertEqual(job.exit_code, "0:0")
         self.assertEqual(job.script_path, "/home/researcher/run.slurm")
 
+    @pytest.mark.unit
     def test_details_format_lists_only_populated_fields(self) -> None:
         from hpc_gui.services.slurm_models import SlurmJob
 
@@ -152,6 +157,7 @@ class ScontrolMatrixTests(unittest.TestCase):
         self.assertNotIn("Failure reason", rendered)
 
 
+@pytest.mark.integration
 class MissingCapabilityMatrixTests(unittest.TestCase):
     """Sites without sacct/scontrol must surface errors, not fake data."""
 

@@ -80,6 +80,8 @@ def _make_profile(name="p", master=None, secret="s3cret"):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_begin_connect_failure_returns_false(monkeypatch):
     """begin_connect() raises → connect_selected returns False,
     controller not connecting, buttons restored, status failed.
@@ -120,6 +122,8 @@ def test_begin_connect_failure_returns_false(monkeypatch):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_thread_start_failure_returns_false(monkeypatch):
     """Thread.start() raises → connect_selected returns False,
     controller failed, buttons restored, transient password cleared.
@@ -162,6 +166,8 @@ def test_thread_start_failure_returns_false(monkeypatch):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_connect_selected_no_selection_direct_bool(monkeypatch):
     """connect_selected() → False when no profile selected. Direct assertion."""
     tmp = _isolated_storage(monkeypatch)
@@ -188,6 +194,8 @@ def test_connect_selected_no_selection_direct_bool(monkeypatch):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_connect_selected_worker_starts_direct_bool(monkeypatch):
     """connect_selected() → True when worker successfully launched."""
     tmp = _isolated_storage(monkeypatch)
@@ -230,6 +238,8 @@ def test_connect_selected_worker_starts_direct_bool(monkeypatch):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_master_remember_true_update_settings_called(monkeypatch):
     """Remember=true → protect_secret called, update_settings called
     with the protected token (not plaintext master).
@@ -315,6 +325,8 @@ def test_master_remember_true_update_settings_called(monkeypatch):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_cluster_remember_true_persists_protected(monkeypatch):
     """Test Cluster → Remember=true → protect_secret + update_settings
     called with protected token, profile unchanged.
@@ -410,6 +422,8 @@ def test_cluster_remember_true_persists_protected(monkeypatch):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_save_and_connect_master_cancel_asserts_result(monkeypatch):
     """Save & Connect → save succeeds → master cancel →
     on_save_and_connect returns False, no SSH.
@@ -473,6 +487,8 @@ def test_save_and_connect_master_cancel_asserts_result(monkeypatch):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_save_and_connect_wrong_master_real_sac(monkeypatch):
     """Real Save & Connect → save succeeds → master prompt → wrong master →
     on_save_and_connect returns False, no SSH.
@@ -560,6 +576,8 @@ def test_save_and_connect_wrong_master_real_sac(monkeypatch):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_save_and_connect_thread_start_failure(monkeypatch):
     """Save & Connect → save succeeds → Thread.start raises →
     on_save_and_connect returns False, profile persists.

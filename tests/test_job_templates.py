@@ -149,6 +149,7 @@ def greeting_template() -> JobTemplate:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.contract
 def test_load_installed_templates(tmp_path: Path):
     install_template_plugin(tmp_path)
     templates = load_job_templates(root=tmp_path, app_version="1.4.0")
@@ -166,21 +167,25 @@ def test_load_installed_templates(tmp_path: Path):
     assert "{{partition}}" in template.content
 
 
+@pytest.mark.contract
 def test_broken_template_index_is_skipped(tmp_path: Path):
     install_template_plugin(tmp_path, broken_index=True)
     assert load_job_templates(root=tmp_path, app_version="1.4.0") == []
 
 
+@pytest.mark.contract
 def test_content_hash_mismatch_skips_pack(tmp_path: Path):
     install_template_plugin(tmp_path, content_override=b"different")
     assert load_job_templates(root=tmp_path, app_version="1.4.0") == []
 
 
+@pytest.mark.contract
 def test_undeclared_placeholder_in_content_rejected(tmp_path: Path):
     install_template_plugin(tmp_path, body="{{mystery}}\n")
     assert load_job_templates(root=tmp_path, app_version="1.4.0") == []
 
 
+@pytest.mark.contract
 def test_incompatible_plugin_not_loaded(tmp_path: Path):
     install_template_plugin(tmp_path)
     assert load_job_templates(root=tmp_path, app_version="0.9.0") == []
@@ -191,16 +196,19 @@ def test_incompatible_plugin_not_loaded(tmp_path: Path):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 def test_valid_render():
     out = render_template(make_template(), {"greeting": "hello"})
     assert out == "#!/bin/bash\necho hello\n"
 
 
+@pytest.mark.unit
 def test_missing_required_variable_rejected():
     with pytest.raises(JobTemplateError, match="missing required"):
         render_template(greeting_template(), {})
 
 
+@pytest.mark.unit
 def test_integer_constraint_violation():
     template = make_template(
         variables=(
@@ -215,6 +223,7 @@ def test_integer_constraint_violation():
         render_template(template, {"n": "many"})
 
 
+@pytest.mark.unit
 def test_choice_constraint():
     template = make_template(
         variables=(
@@ -227,11 +236,13 @@ def test_choice_constraint():
         render_template(template, {"mode": "z"})
 
 
+@pytest.mark.unit
 def test_unknown_supplied_value_rejected():
     with pytest.raises(JobTemplateError, match="unknown value"):
         render_template(greeting_template(), {"greeting": "hi", "nope": 1})
 
 
+@pytest.mark.unit
 def test_defaults_fill_optional_placeholders():
     template = make_template(
         variables=(TemplateVariable(name="greeting", type="string", default="hi"),)
@@ -239,6 +250,7 @@ def test_defaults_fill_optional_placeholders():
     assert render_template(template, {}).strip().endswith("echo hi")
 
 
+@pytest.mark.unit
 def test_render_never_executes(monkeypatch):
     monkeypatch.setattr(
         "builtins.eval",
@@ -264,6 +276,7 @@ requires_repo = pytest.mark.skipif(
 )
 
 
+@pytest.mark.integration
 @requires_repo
 def test_real_fluent_template_loads_and_renders(tmp_path: Path):
     import shutil

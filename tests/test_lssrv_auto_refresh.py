@@ -1,4 +1,5 @@
 from __future__ import annotations
+import pytest
 
 import os
 import sys
@@ -113,12 +114,14 @@ class LssrvAutoRefreshTests(unittest.TestCase):
             time.sleep(0.01)
         self._app.processEvents()
 
+    @pytest.mark.unit
     def test_connected_session_does_not_start_jobs_timer_when_disabled(self):
         self.widget.set_session(self.session)
 
         self.assertFalse(self.widget._jobs_refresh_timer.isActive())
         self.assertEqual(self.widget._jobs_refresh_timer.interval(), 23000)
 
+    @pytest.mark.unit
     def test_disabled_tick_does_not_refresh_jobs_or_lssrv(self):
         self.widget.set_session(self.session)
         self._wait_for_workers()
@@ -131,12 +134,14 @@ class LssrvAutoRefreshTests(unittest.TestCase):
         self.assertEqual(self.slurm.jobs_calls, initial_jobs)
         self.assertEqual(self.slurm.lssrv_calls, initial_lssrv)
 
+    @pytest.mark.unit
     def test_disabled_tick_does_not_refresh_lssrv_when_page_opens(self):
         self.widget.set_session(self.session)
         self._wait_for_workers()
 
         self.assertEqual(self.slurm.lssrv_calls, 0)
 
+    @pytest.mark.unit
     def test_enabled_tick_refreshes_jobs_and_lssrv(self):
         self.widget.set_session(self.session)
         self._wait_for_workers()
@@ -154,6 +159,7 @@ class LssrvAutoRefreshTests(unittest.TestCase):
         self.assertEqual(self.slurm.sacct_calls, initial_sacct + 1)
         self.assertEqual(self.slurm.lssrv_calls, initial_lssrv + 1)
 
+    @pytest.mark.integration
     def test_disconnected_tick_stops_without_remote_calls(self):
         self.widget.session = {
             "connected": False,
@@ -168,6 +174,7 @@ class LssrvAutoRefreshTests(unittest.TestCase):
         self.assertEqual(self.slurm.jobs_calls, 0)
         self.assertEqual(self.slurm.lssrv_calls, 0)
 
+    @pytest.mark.unit
     def test_hidden_page_stops_jobs_polling_until_visible_again(self):
         self.enabled_mock.return_value = True
         self.squeue_enabled_mock.return_value = True
@@ -188,6 +195,7 @@ class LssrvAutoRefreshTests(unittest.TestCase):
         self.assertTrue(self.widget._jobs_refresh_timer.isActive())
         self.assertGreater(self.slurm.jobs_calls, calls_while_visible)
 
+    @pytest.mark.unit
     def test_outputs_subtab_stops_jobs_polling(self):
         self.widget.set_session(self.session)
         self._wait_for_workers()
@@ -199,6 +207,7 @@ class LssrvAutoRefreshTests(unittest.TestCase):
         self.assertFalse(self.widget._jobs_refresh_timer.isActive())
         self.assertEqual(self.slurm.jobs_calls, calls_before_tick)
 
+    @pytest.mark.unit
     def test_tail_runs_only_while_outputs_subtab_is_visible(self):
         ssh = _FakeSSH()
         self.widget.set_session(self.session)
@@ -225,6 +234,7 @@ class LssrvAutoRefreshTests(unittest.TestCase):
         self.assertTrue(self.widget._live_timer.isActive())
         self.assertGreater(ssh.tail_calls, calls_while_visible)
 
+    @pytest.mark.unit
     def test_busy_query_is_not_started_twice(self):
         self.widget.set_session(self.session)
         self.widget.refresh_jobs()
@@ -233,6 +243,7 @@ class LssrvAutoRefreshTests(unittest.TestCase):
 
         self.assertEqual(self.slurm.jobs_calls, 1)
 
+    @pytest.mark.unit
     def test_jobs_view_shows_unformatted_squeue_response(self):
         raw = "JOBID|PARTITION|NAME|USER|ST|TIME\n123|short|train|alice|R|00:12\n"
         self.slurm.squeue = lambda _user: raw
@@ -244,6 +255,7 @@ class LssrvAutoRefreshTests(unittest.TestCase):
 
         self.assertEqual(self.widget.jobs_text.toPlainText(), raw)
 
+    @pytest.mark.unit
     def test_accounting_and_job_details_show_unformatted_responses(self):
         accounting = "JobID|JobName|State\n123|train|COMPLETED\n"
         details = "JobId=123 JobName=train JobState=COMPLETED\n"
@@ -260,6 +272,7 @@ class LssrvAutoRefreshTests(unittest.TestCase):
         self.widget.show_job_details()
         self._wait_for_workers()
         self.assertEqual(self.widget.meta_text.toPlainText(), details)
+    @pytest.mark.unit
     def test_setting_defaults_to_disabled(self):
         with tempfile.TemporaryDirectory() as temp_dir:
 
@@ -267,6 +280,7 @@ class LssrvAutoRefreshTests(unittest.TestCase):
             with patch.object(storage, "_config_path", return_value=Path(config_path)):
                 self.assertFalse(storage.get_lssrv_auto_refresh_enabled())
 
+    @pytest.mark.unit
     def test_setting_persists_enabled_value(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             config_path = os.path.join(temp_dir, "config.json")

@@ -1,6 +1,6 @@
 """Tests for coordinated menu/plugin-UI redesign."""
-
 from __future__ import annotations
+import pytest
 
 import json
 import pathlib
@@ -10,6 +10,7 @@ def read_main_window() -> str:
     return pathlib.Path("src/hpc_gui/ui/main_window.py").read_text(encoding="utf-8")
 
 
+@pytest.mark.gui
 def test_qt_shell_has_menu_plugins_help():
     src = read_main_window()
     assert 'self._menu_menu = menubar.addMenu(t("menu.menu"))' in src
@@ -19,6 +20,7 @@ def test_qt_shell_has_menu_plugins_help():
     assert 'COMMAND_REGISTRY.by_context("shell")' not in src
 
 
+@pytest.mark.gui
 def test_old_top_right_button_farm_removed():
     src = read_main_window()
     # Old farm buttons must be gone
@@ -33,6 +35,7 @@ def test_old_top_right_button_farm_removed():
     assert "self._help_btn" not in src
 
 
+@pytest.mark.gui
 def test_language_and_version_remain():
     src = read_main_window()
     assert "self._lang_btn" in src
@@ -45,6 +48,7 @@ def test_language_and_version_remain():
     assert 'setMinimumWidth(220)' not in src
 
 
+@pytest.mark.gui
 def test_menu_ownership():
     src = read_main_window()
     # Settings + Check for Updates + Exit in Menu
@@ -65,6 +69,7 @@ def test_menu_ownership():
     # Ensure old duplicate standalone top-right buttons gone (already checked)
 
 
+@pytest.mark.gui
 def test_version_not_only_in_about():
     src = read_main_window()
     # Version label must exist outside About
@@ -72,6 +77,7 @@ def test_version_not_only_in_about():
     assert pathlib.Path("src/hpc_gui/ui/dialogs/about_dialog.py").exists()
 
 
+@pytest.mark.gui
 def test_command_palette_not_miswired():
     src = read_main_window()
     # Command Palette must NOT call HelpDialog
@@ -82,6 +88,7 @@ def test_command_palette_not_miswired():
         assert "_open_help" not in src.split("_act_command_palette")[1][:500]
 
 
+@pytest.mark.gui
 def test_no_hardcoded_ansys_truba_ids():
     src = read_main_window()
     assert 'if plugin.id == "org.hpcclient.fluent"' not in src
@@ -96,6 +103,7 @@ def test_no_hardcoded_ansys_truba_ids():
     assert "org.hpcclient.fluent" not in contrib_src
 
 
+@pytest.mark.gui
 def test_plugin_manager_semantic_tabs():
     src = pathlib.Path("src/hpc_gui/ui/dialogs/plugin_manager_dialog.py").read_text(encoding="utf-8")
     assert "_INITIAL_TAB_MAP" in src
@@ -109,6 +117,7 @@ def test_plugin_manager_semantic_tabs():
     assert "fallback" in src.lower() or "0" in src
 
 
+@pytest.mark.gui
 def test_plugins_changed_emitted_all_paths():
     src = pathlib.Path("src/hpc_gui/ui/dialogs/plugin_manager_dialog.py").read_text(encoding="utf-8")
     # install, remove, toggle, activate version should emit
@@ -118,6 +127,7 @@ def test_plugins_changed_emitted_all_paths():
     assert "def change_plugin_version" in src or "activate_version" in src
 
 
+@pytest.mark.gui
 def test_dynamic_plugin_menu_uses_contributions():
     src = read_main_window()
     assert "collect_plugin_menu_contributions" in src
@@ -126,6 +136,7 @@ def test_dynamic_plugin_menu_uses_contributions():
     assert "evaluate_when" in src
 
 
+@pytest.mark.gui
 def test_i18n_keys_exist():
     en = json.loads(pathlib.Path("src/hpc_gui/i18n/en.json").read_text(encoding="utf-8"))
     tr = json.loads(pathlib.Path("src/hpc_gui/i18n/tr.json").read_text(encoding="utf-8"))
@@ -143,6 +154,7 @@ def test_i18n_keys_exist():
             cur_tr = cur_tr[p]
 
 
+@pytest.mark.gui
 def test_about_dialog_properties():
     src = pathlib.Path("src/hpc_gui/ui/dialogs/about_dialog.py").read_text(encoding="utf-8")
     assert "__version__" in src

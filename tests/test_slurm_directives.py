@@ -1,3 +1,4 @@
+import pytest
 from hpc_gui.services.slurm_directives import (
     get_directive,
     parse_slurm_directives,
@@ -6,6 +7,7 @@ from hpc_gui.services.slurm_directives import (
 )
 
 
+@pytest.mark.contract
 def test_get_set_remove_common_directives():
     text = "#!/bin/bash\n# comment\n#SBATCH --array=1-4%2\n#SBATCH -p short\necho run\n"
     doc = parse_slurm_directives(text)
@@ -17,6 +19,7 @@ def test_get_set_remove_common_directives():
     assert remove_directive(edited, "array").count("--array") == 0
 
 
+@pytest.mark.contract
 def test_unknown_and_body_are_preserved():
     text = "#!/bin/bash\n#SBATCH --comment=keep\n#SBATCH --partition=old\necho '#SBATCH --partition=bad'\n"
     edited = set_directive(text, "partition", "new")
@@ -25,6 +28,7 @@ def test_unknown_and_body_are_preserved():
     assert sum(line.startswith("#SBATCH --partition=") for line in edited.splitlines()) == 1
 
 
+@pytest.mark.contract
 def test_last_duplicate_wins_and_set_collapses_target():
     text = "#SBATCH -p first\n#SBATCH --partition=last\n"
     doc = parse_slurm_directives(text)
@@ -34,6 +38,7 @@ def test_last_duplicate_wins_and_set_collapses_target():
     assert get_directive(edited, "-p") == "new"
 
 
+@pytest.mark.contract
 def test_resources_and_comments_shebang_are_supported():
     text = "#!/bin/bash\n\n# note\n#SBATCH -N 2\n#SBATCH --mem=8G\nrun\n"
     doc = parse_slurm_directives(text)
@@ -44,6 +49,7 @@ def test_resources_and_comments_shebang_are_supported():
     assert len(remove_directive(edited, "resources").splitlines()) == 4
 
 
+@pytest.mark.contract
 def test_malformed_scripts_fail_soft_and_do_not_edit_late_directives():
     text = "#!/bin/bash\n#SBATCH --partition\necho start\n#SBATCH --partition=late\n"
     assert get_directive(text, "partition") == ""
@@ -52,6 +58,7 @@ def test_malformed_scripts_fail_soft_and_do_not_edit_late_directives():
     assert "#SBATCH --partition=late" in edited
 
 
+@pytest.mark.contract
 def test_insert_preserves_shebang_without_trailing_newline():
     edited = set_directive("#!/bin/bash", "partition", "short")
     assert edited == "#!/bin/bash\n#SBATCH --partition=short\n"

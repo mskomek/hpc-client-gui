@@ -1,3 +1,4 @@
+import pytest
 import ast
 import os
 import unittest
@@ -21,15 +22,19 @@ def imports(path: Path) -> set[str]:
 
 
 class TerminalBoundaryTests(unittest.TestCase):
+    @pytest.mark.audit
     def test_terminal_bridge_does_not_depend_on_login_widget(self):
         names = imports(ROOT / "src/hpc_gui/services/terminal_bridge.py")
         self.assertFalse(any("login_widget" in name for name in names))
 
+    @pytest.mark.audit
     def test_terminal_header_does_not_own_ssh_or_profile_logic(self):
         names = imports(ROOT / "src/hpc_gui/ui/widgets/terminal_header.py")
         self.assertFalse(any(name.startswith("hpc_gui.ssh") for name in names))
         self.assertFalse(any("config.storage" in name for name in names))
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_terminal_header_uses_compact_tool_buttons(self):
         from PySide6.QtWidgets import QApplication, QToolButton
         from hpc_gui.ui.widgets.terminal_header import TerminalHeader
@@ -43,6 +48,8 @@ class TerminalBoundaryTests(unittest.TestCase):
             header.font_up_button,
         )))
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_terminal_status_is_plain_single_line_text(self):
         from PySide6.QtWidgets import QApplication
         from PySide6.QtWidgets import QFrame
@@ -54,6 +61,7 @@ class TerminalBoundaryTests(unittest.TestCase):
         self.assertEqual(header.status_label.frameShape(), QFrame.Shape.NoFrame)
         self.assertFalse(header.status_label.wordWrap())
 
+    @pytest.mark.audit
     def test_hostile_remote_output_crosses_webchannel_as_data(self):
         from hpc_gui.services.terminal_bridge import TerminalBridge
 

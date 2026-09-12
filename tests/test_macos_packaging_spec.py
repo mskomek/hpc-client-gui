@@ -1,4 +1,5 @@
 from __future__ import annotations
+import pytest
 
 from pathlib import Path
 
@@ -7,6 +8,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SPEC = ROOT / "build" / "macos" / "hpc-client-gui.spec"
 
 
+@pytest.mark.release
 def test_macos_bundle_spec_declares_native_product_surface():
     text = SPEC.read_text(encoding="utf-8")
     assert 'name="HPC Client GUI.app"' in text

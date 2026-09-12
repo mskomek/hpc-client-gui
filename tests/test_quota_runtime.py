@@ -1,3 +1,4 @@
+import pytest
 from hpc_gui.services.quota_monitor import (
     QuotaBackend, QuotaBackendRegistry, QuotaMonitor, QuotaResult,
     build_production_quota_backend_registry, format_quota_result,
@@ -5,6 +6,7 @@ from hpc_gui.services.quota_monitor import (
 from threading import Event
 
 
+@pytest.mark.unit
 def test_unconfigured_source_never_creates_transport_work():
     calls = []
     monitor = QuotaMonitor(QuotaBackendRegistry(), lambda *args: calls.append(args))
@@ -14,6 +16,7 @@ def test_unconfigured_source_never_creates_transport_work():
     monitor.close()
 
 
+@pytest.mark.integration
 def test_eligible_fake_backend_coalesces_and_parses():
     calls = []
     started = Event()
@@ -38,6 +41,7 @@ def test_eligible_fake_backend_coalesces_and_parses():
     monitor.close()
 
 
+@pytest.mark.contract
 def test_quota_result_supports_file_counts_and_storage_metadata():
     result = QuotaResult("ok", used_bytes=12, soft_limit_bytes=20,
                          used_files=3, soft_limit_files=10,

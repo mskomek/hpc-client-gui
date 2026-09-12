@@ -80,6 +80,8 @@ def wx_app():
         pass
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_jobs_stress_rapid_selection_never_shows_stale_output(wx_app):
     backend = MockHPCJobs(25)
     backend.stdout = {job_id: f"output-{job_id}" for job_id in backend.jobs}
@@ -96,6 +98,8 @@ def test_wx_jobs_stress_rapid_selection_never_shows_stale_output(wx_app):
     _close(frame, wx_app)
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_jobs_stress_repeated_minimize_restore_keeps_polling_lifecycle_stable(wx_app):
     backend = MockHPCJobs(1)
     frame = _open(backend.list_jobs, backend.read_output)
@@ -119,6 +123,8 @@ def test_wx_jobs_stress_repeated_minimize_restore_keeps_polling_lifecycle_stable
     _close(frame, wx_app)
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_jobs_stress_pause_resume_state_never_desynchronizes(wx_app):
     backend = MockHPCJobs(1)
     reads = 0
@@ -170,6 +176,8 @@ def test_wx_jobs_stress_pause_resume_state_never_desynchronizes(wx_app):
     _close(frame, wx_app)
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_jobs_stress_out_of_order_output_completions_are_safe(wx_app):
     backend = MockHPCJobs(3)
     gates = {job_id: threading.Event() for job_id in backend.jobs}
@@ -196,6 +204,8 @@ def test_wx_jobs_stress_out_of_order_output_completions_are_safe(wx_app):
     _close(frame, wx_app)
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_jobs_stress_blocked_reads_never_overlap(wx_app):
     backend = MockHPCJobs(1)
     gui_thread = threading.get_ident()
@@ -241,6 +251,8 @@ def test_wx_jobs_stress_blocked_reads_never_overlap(wx_app):
     _close(frame, wx_app)
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_jobs_stress_large_output_remains_bounded_and_responsive(wx_app):
     backend = MockHPCJobs(1)
     backend.set_output("1", "\n".join(f"line-{index}" for index in range(100_000)))
@@ -255,6 +267,8 @@ def test_wx_jobs_stress_large_output_remains_bounded_and_responsive(wx_app):
     _close(frame, wx_app)
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_jobs_stress_close_while_output_read_in_flight_is_safe(wx_app):
     backend = MockHPCJobs(1)
     started, release = threading.Event(), threading.Event()
@@ -274,6 +288,8 @@ def test_wx_jobs_stress_close_while_output_read_in_flight_is_safe(wx_app):
     assert not [window for window in wx.GetTopLevelWindows() if window and window.GetTitle() == title]
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_jobs_stress_close_during_job_list_refresh_is_safe(wx_app):
     started, release = threading.Event(), threading.Event()
 
@@ -290,6 +306,8 @@ def test_wx_jobs_stress_close_during_job_list_refresh_is_safe(wx_app):
     assert not [window for window in wx.GetTopLevelWindows() if window and window.GetTitle() == title]
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_jobs_stress_open_close_repeatedly_does_not_leak_windows_or_timers(wx_app):
     for _ in range(50):
         frame = _open()
@@ -297,6 +315,8 @@ def test_wx_jobs_stress_open_close_repeatedly_does_not_leak_windows_or_timers(wx
     assert not [window for window in wx.GetTopLevelWindows() if window and window.GetTitle() == "Jobs"]
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_jobs_stress_multi_job_update_pressure():
     backend = MockHPCJobs(50)
     model = WxJobsModel()
@@ -310,6 +330,8 @@ def test_wx_jobs_stress_multi_job_update_pressure():
     assert backend.list_calls == 250
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_jobs_stress_missing_output_recovery_pressure():
     backend = MockHPCJobs(5)
     for cycle in range(50):

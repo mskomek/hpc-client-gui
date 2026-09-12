@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import pytest
 from hpc_gui.services.provider_profile_diff import apply_provider_to_connection, build_provider_profile_diff
 
 
@@ -17,6 +18,7 @@ def _profile(**changes):
     return value
 
 
+@pytest.mark.unit
 def test_no_change_and_semantic_changes():
     same = build_provider_profile_diff(_profile(), _profile(), from_version="1", to_version="1")
     assert not same.changed
@@ -32,6 +34,7 @@ def test_no_change_and_semantic_changes():
     assert "key" not in " ".join(changed.summary()) or "ssh-certificate" in " ".join(changed.summary())
 
 
+@pytest.mark.unit
 def test_snapshot_is_unchanged_until_explicit_apply():
     old = {"name": "saved", "provider_template": {"version": "1"}}
     new = {"version": "2", "secret_token": "must-not-be-copied"}

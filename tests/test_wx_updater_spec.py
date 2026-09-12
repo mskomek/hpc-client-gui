@@ -35,6 +35,7 @@ class _WrapperDialog:
         self.destroyed = True
 
 
+@pytest.mark.unit
 def test_show_update_available_wrapper_returns_true_when_download_starts(monkeypatch):
     class DownloadDialog(_WrapperDialog):
         def ShowModal(self):
@@ -45,6 +46,7 @@ def test_show_update_available_wrapper_returns_true_when_download_starts(monkeyp
     assert show_update_available(None, "1.0.0", "1.1.0") is True
 
 
+@pytest.mark.unit
 def test_show_update_available_wrapper_returns_false_for_cancel(monkeypatch):
     class CancelDialog(_WrapperDialog):
         def ShowModal(self):
@@ -54,6 +56,7 @@ def test_show_update_available_wrapper_returns_false_for_cancel(monkeypatch):
     assert show_update_available(None, "1.0.0", "1.1.0") is False
 
 
+@pytest.mark.unit
 def test_show_update_available_wrapper_returns_false_for_close(monkeypatch):
     class CloseDialog(_WrapperDialog):
         def ShowModal(self):
@@ -73,6 +76,8 @@ def _reset_update_language():
     load_language(previous if previous in {"en", "tr"} else "tr")
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_update_available_shows_versions_and_download_size():
     app = wx.App(False)
     rel = _make_release()
@@ -117,6 +122,8 @@ def test_update_available_shows_versions_and_download_size():
     app.Destroy()
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_update_release_notes_preserve_unicode():
     app = wx.App(False)
     rel = _make_release(body="- Türkçe_日本語\n- 研究 ★ ✓")
@@ -127,6 +134,8 @@ def test_update_release_notes_preserve_unicode():
     app.Destroy()
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_update_changelog_is_fixed_height_scrollable_readonly():
     app = wx.App(False)
     long_body = "\n".join([f"- line {i} with some text that should wrap" for i in range(50)])
@@ -156,6 +165,8 @@ def test_update_changelog_is_fixed_height_scrollable_readonly():
     app.Destroy()
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_long_changelog_does_not_resize_dialog():
     app = wx.App(False)
     long_body = "\n".join([f"* line {i}" for i in range(200)])
@@ -174,6 +185,8 @@ def test_long_changelog_does_not_resize_dialog():
     app.Destroy()
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_update_available_download_button_starts_download(monkeypatch):
     app = wx.App(False)
     rel = _make_release()
@@ -235,6 +248,8 @@ def test_update_available_download_button_starts_download(monkeypatch):
     app.Destroy()
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_update_download_progress_shows_real_bytes_and_percentage():
     app = wx.App(False)
     rel = _make_release(size=184*1024*1024)
@@ -263,6 +278,8 @@ def test_update_download_progress_shows_real_bytes_and_percentage():
     app.Destroy()
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_update_unknown_total_uses_indeterminate_progress():
     app = wx.App(False)
     rel = _make_release(size=None)
@@ -281,6 +298,8 @@ def test_update_unknown_total_uses_indeterminate_progress():
     app.Destroy()
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_update_cancel_reaches_downloader():
     app = wx.App(False)
     rel = _make_release()
@@ -313,6 +332,8 @@ def test_update_cancel_reaches_downloader():
     app.Destroy()
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_update_cancel_prevents_install(monkeypatch, tmp_path):
     import hpc_gui.services.app_updater as app_updater
     import hpc_gui.wx_updater_view as updater_view
@@ -376,6 +397,8 @@ def test_update_cancel_prevents_install(monkeypatch, tmp_path):
         app.Destroy()
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_update_verification_state_visible():
     app = wx.App(False)
     rel = _make_release()
@@ -396,6 +419,8 @@ def test_update_verification_state_visible():
     app.Destroy()
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_update_ready_requires_install_confirmation():
     app = wx.App(False)
     rel = _make_release()
@@ -418,6 +443,8 @@ def test_update_ready_requires_install_confirmation():
     app.Destroy()
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_install_without_verified_artifact_stays_failed():
     app = wx.App(False)
     dlg = WxUpdateDialog(None, _make_release())
@@ -429,6 +456,8 @@ def test_install_without_verified_artifact_stays_failed():
     app.Destroy()
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_update_install_opens_installation_splash():
     app = wx.App(False)
     rel = _make_release()
@@ -478,6 +507,8 @@ def test_update_install_opens_installation_splash():
     app.Destroy()
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_installation_progress_uses_real_backend_progress():
     app = wx.App(False)
     from hpc_gui.wx_updater_view import show_installing_splash
@@ -493,6 +524,8 @@ def test_installation_progress_uses_real_backend_progress():
     app.Destroy()
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_installation_current_item_visible_when_available():
     app = wx.App(False)
     from hpc_gui.wx_updater_view import show_installing_splash
@@ -506,6 +539,8 @@ def test_installation_current_item_visible_when_available():
     app.Destroy()
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_update_close_in_flight_safe(monkeypatch):
     import hpc_gui.services.app_updater as app_updater
 
@@ -567,6 +602,8 @@ def test_update_close_in_flight_safe(monkeypatch):
         app.Destroy()
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_update_late_callback_after_close_safe(monkeypatch, tmp_path):
     import hpc_gui.services.app_updater as app_updater
 
@@ -613,6 +650,8 @@ def test_update_late_callback_after_close_safe(monkeypatch, tmp_path):
         app.Destroy()
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_mandatory_update_has_no_later_button():
     app = wx.App(False)
     rel = _make_release()
@@ -638,6 +677,8 @@ def test_mandatory_update_has_no_later_button():
     app.Destroy()
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_mandatory_update_close_does_not_enter_main_app():
     app = wx.App(False)
     rel = _make_release()
@@ -652,6 +693,8 @@ def test_mandatory_update_close_does_not_enter_main_app():
     app.Destroy()
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_update_runtime_language_switch_en_tr():
     app = wx.App(False)
     from hpc_gui.core.i18n import load_language, set_language

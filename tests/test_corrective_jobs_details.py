@@ -51,7 +51,9 @@ def _close(frame):
 
 # === Sec 3: Single-click does not change notebook page ===
 
+@pytest.mark.gui
 class TestSec3_NoAutoSwitch:
+    @pytest.mark.wx
     def test_single_click_stays_on_jobs(self):
         load_language("en")
         app, frame, panel = _build_panel()
@@ -73,6 +75,7 @@ class TestSec3_NoAutoSwitch:
         finally:
             _close(frame)
 
+    @pytest.mark.wx
     def test_details_updates_in_background(self):
         load_language("en")
         app, frame, panel = _build_panel()
@@ -95,6 +98,7 @@ class TestSec3_NoAutoSwitch:
         finally:
             _close(frame)
 
+    @pytest.mark.wx
     def test_go_to_jobs_works(self):
         load_language("en")
         app, frame, panel = _build_panel()
@@ -112,6 +116,7 @@ class TestSec3_NoAutoSwitch:
 
 # === Sec 6: Raw Accounting button opens viewer ===
 
+@pytest.mark.integration
 class TestSec6_RawAccountingButton:
     def test_raw_accounting_opens_viewer(self):
         load_language("en")
@@ -139,6 +144,7 @@ class TestSec6_RawAccountingButton:
 
 # === Sec 7: Three independent raw sources ===
 
+@pytest.mark.integration
 class TestSec7_RawSourceIsolation:
     def test_raw_sources_are_independent(self):
         load_language("en")
@@ -190,7 +196,9 @@ class TestSec7_RawSourceIsolation:
 
 # === Sec 11: Cluster status not dependent on job selection ===
 
+@pytest.mark.gui
 class TestSec11_ClusterStatusIndependence:
+    @pytest.mark.wx
     def test_cluster_survives_job_selection_change(self):
         load_language("en")
 
@@ -240,6 +248,7 @@ class TestSec11_ClusterStatusIndependence:
 # === Sec 23: Raw viewer close handling ===
 
 class TestSec23_RawViewerClose:
+    @pytest.mark.contract
     def test_raw_viewer_source_label(self):
         """Verify source label is displayed."""
         load_language("en")
@@ -248,6 +257,8 @@ class TestSec23_RawViewerClose:
         assert _SOURCE_LABELS.get("sacct") == "Slurm Accounting"
         assert _SOURCE_LABELS.get("lssrv") == "Cluster Server Status"
 
+    @pytest.mark.wx
+    @pytest.mark.gui
     def test_raw_viewer_refresh_callback_is_called(self):
         """Verify refresh callback is callable and returns RawCommandResult."""
         call_count = [0]
@@ -266,6 +277,7 @@ class TestSec23_RawViewerClose:
 
 # === Sec 27: I18N keys ===
 
+@pytest.mark.contract
 class TestSec27_I18N:
     def test_parse_warning_keys_exist(self):
         load_language("en")
@@ -293,7 +305,9 @@ class TestSec27_I18N:
 
 # === Sec 39: Job selection does not change tab ===
 
+@pytest.mark.gui
 class TestSec39_SelectionStaysOnJobs:
+    @pytest.mark.wx
     def test_select_job_stays_on_jobs_tab(self):
         load_language("en")
         app, frame, panel = _build_panel()
@@ -323,7 +337,9 @@ class TestSec39_SelectionStaysOnJobs:
 
 # === Sec 41: Empty job list + cluster status ===
 
+@pytest.mark.gui
 class TestSec41_EmptyJobsClusterStatus:
+    @pytest.mark.wx
     def test_cluster_visible_with_no_jobs(self):
         load_language("en")
         app = wx.App.Get() or wx.App(False)
@@ -354,7 +370,9 @@ class TestSec41_EmptyJobsClusterStatus:
 
 # === Sec 42: Unsupported cluster provider ===
 
+@pytest.mark.gui
 class TestSec42_UnsupportedCluster:
+    @pytest.mark.wx
     def test_cluster_hidden_when_unsupported(self):
         load_language("en")
         app = wx.App.Get() or wx.App(False)
@@ -378,6 +396,8 @@ class TestSec42_UnsupportedCluster:
 # === Sec 36: Raw source isolation ===
 
 class TestSec36_RawSourceIsolation:
+    @pytest.mark.wx
+    @pytest.mark.gui
     def test_each_viewer_shows_only_its_source(self):
         load_language("en")
         detail_raw = RawCommandResult.from_response(
@@ -405,6 +425,8 @@ class TestSec36_RawSourceIsolation:
 # === Regression: Files/Outputs tab routing ===
 
 class TestRegression_FilesOutputs:
+    @pytest.mark.wx
+    @pytest.mark.gui
     def test_files_tab_untouched(self):
         load_language("en")
         app, frame, panel = _build_panel()
@@ -422,6 +444,7 @@ class TestRegression_FilesOutputs:
         finally:
             _close(frame)
 
+    @pytest.mark.contract
     def test_outputs_tab_untouched(self):
         load_language("en")
         app, frame, panel = _build_panel()

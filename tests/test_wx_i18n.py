@@ -1,9 +1,12 @@
+
+import pytest
 import json
 from pathlib import Path
 
 from hpc_gui.core.i18n import _flatten_keys, load_language, t
 
 
+@pytest.mark.gui
 def test_translation_key_sets_match_for_wx_surfaces():
     root = Path("src/hpc_gui/i18n")
     english = json.loads((root / "en.json").read_text(encoding="utf-8"))

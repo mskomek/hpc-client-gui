@@ -18,6 +18,7 @@ from local_transfer_gate import (
 )
 
 
+@pytest.mark.integration
 def test_turkish_round_trip_passes_with_exact_byte_and_name_equality() -> None:
     result = run_turkish_round_trip()
 
@@ -27,6 +28,7 @@ def test_turkish_round_trip_passes_with_exact_byte_and_name_equality() -> None:
     assert result["bytes_verified"] > 0
 
 
+@pytest.mark.contract
 def test_sftp_smoke_gate_passes_and_saves_artifact_with_schema(tmp_path) -> None:
     version_dir = tmp_path / "v1.0.0"
     version_dir.mkdir()
@@ -44,6 +46,7 @@ def test_sftp_smoke_gate_passes_and_saves_artifact_with_schema(tmp_path) -> None
     assert payload["temp_dir"] == "smoke_dir"
 
 
+@pytest.mark.integration
 def test_save_artifact_refuses_to_overwrite_existing_file(tmp_path) -> None:
     version_dir = tmp_path / "v1.0.0"
     version_dir.mkdir()
@@ -57,6 +60,7 @@ def test_save_artifact_refuses_to_overwrite_existing_file(tmp_path) -> None:
     assert target.read_bytes() == b"ORIGINAL"
 
 
+@pytest.mark.integration
 def test_save_artifact_fails_when_version_directory_is_missing(tmp_path) -> None:
     with pytest.raises(FileNotFoundError):
         save_artifact(

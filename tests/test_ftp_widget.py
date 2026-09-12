@@ -1,4 +1,5 @@
 from __future__ import annotations
+import pytest
 
 import os
 import sys
@@ -254,6 +255,8 @@ class FtpWidgetTests(unittest.TestCase):
         self.type_patch.stop()
         self.state_patch.stop()
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_layout_and_exclusive_remote_sections(self) -> None:
         self.assertEqual(self.widget.splitter.count(), 2)
         self.assertEqual(self.widget.accordion.active_key, "scratch")
@@ -261,6 +264,8 @@ class FtpWidgetTests(unittest.TestCase):
         self.assertEqual(self.widget.active_remote_panel(), self.widget.panel_home)
         self.assertFalse(self.widget.panel_scratch.isVisible())
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_bottom_transfer_activity_tabs_are_visible(self) -> None:
         tabs = self.widget.transfer_activity.tabs
         self.assertEqual(tabs.tabPosition(), tabs.TabPosition.South)
@@ -284,6 +289,8 @@ class FtpWidgetTests(unittest.TestCase):
             ],
         )
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_transfer_activity_records_queue_failed_and_completed(self) -> None:
         item = SimpleNamespace(op="upload", src="a.txt", dst="/remote/a.txt")
 
@@ -300,6 +307,8 @@ class FtpWidgetTests(unittest.TestCase):
         self.widget.transfer_activity.record("completed", [item], "Upload")
         self.assertEqual(self.widget.transfer_activity.completed_list.topLevelItemCount(), 1)
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_multi_folder_download_queue_caps_rows_without_truncating_plan(self) -> None:
         items = [
             TransferItem(
@@ -344,6 +353,8 @@ class FtpWidgetTests(unittest.TestCase):
         finally:
             dialog.deleteLater()
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_transfer_activity_attaches_controller_without_popup(self) -> None:
         dialog = TransferDialog(
             title="Download",
@@ -370,6 +381,8 @@ class FtpWidgetTests(unittest.TestCase):
         finally:
             dialog.deleteLater()
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_transfer_activity_buttons_route_to_live_controller(self) -> None:
         dialog = TransferDialog(
             title="Download",
@@ -389,6 +402,8 @@ class FtpWidgetTests(unittest.TestCase):
         finally:
             dialog.deleteLater()
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_transfer_dialog_process_queue_starts_only_when_no_worker_is_active(self) -> None:
         dialog = TransferDialog(
             title="Download",
@@ -414,6 +429,8 @@ class FtpWidgetTests(unittest.TestCase):
         finally:
             dialog.deleteLater()
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_transfer_activity_process_queue_context_routes_to_controller(self) -> None:
         dialog = TransferDialog(
             title="Download",
@@ -468,6 +485,8 @@ class FtpWidgetTests(unittest.TestCase):
         finally:
             dialog.deleteLater()
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_transfer_activity_queue_context_removes_only_selected_row(self) -> None:
         items = [
             TransferItem("download", f"/remote/{name}.txt", f"{name}.txt")
@@ -526,6 +545,8 @@ class FtpWidgetTests(unittest.TestCase):
         finally:
             dialog.deleteLater()
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_transfer_queue_menu_matches_filezilla_structure(self) -> None:
         load_language("en")
         dialog = TransferDialog(
@@ -609,6 +630,8 @@ class FtpWidgetTests(unittest.TestCase):
         finally:
             dialog.deleteLater()
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_stop_button_cancels_immediately_and_clears_paused_queue(self) -> None:
         items = [
             TransferItem("download", "/remote/a.txt", "a.txt"),
@@ -629,6 +652,8 @@ class FtpWidgetTests(unittest.TestCase):
         finally:
             dialog.deleteLater()
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_priority_reorders_pending_execution_and_priority_column(self) -> None:
         items = [
             TransferItem("download", "/remote/low", "low"),
@@ -659,6 +684,8 @@ class FtpWidgetTests(unittest.TestCase):
             dialog.cancel_all()
             dialog.deleteLater()
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_completion_action_persists_and_never_runs_system_action(self) -> None:
         panel = self.widget.transfer_activity
         with patch(
@@ -678,6 +705,8 @@ class FtpWidgetTests(unittest.TestCase):
         save.assert_called_once_with("shutdown_once")
         self.assertIn("not executed", panel.status_label.text())
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_transfer_activity_failed_and_completed_context_actions_work(self) -> None:
         failed = TransferItem("upload", "failed.txt", "/remote/failed.txt")
         completed = TransferItem("download", "/remote/done.txt", "done.txt")
@@ -738,6 +767,8 @@ class FtpWidgetTests(unittest.TestCase):
         finally:
             dialog.deleteLater()
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_transfer_activity_keeps_overlapping_controllers_visible(self) -> None:
         first_item = TransferItem("download", "/remote/a", "a")
         second_item = TransferItem("download", "/remote/b", "b")
@@ -785,6 +816,8 @@ class FtpWidgetTests(unittest.TestCase):
             first.deleteLater()
             second.deleteLater()
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_clean_accept_keeps_one_clearable_completed_history_row(self) -> None:
         completed = TransferItem("download", "/remote/done.txt", "done.txt")
         dialog = TransferDialog(
@@ -842,6 +875,8 @@ class FtpWidgetTests(unittest.TestCase):
         finally:
             dialog.deleteLater()
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_transfer_activity_renders_active_progress_child_row(self) -> None:
         item = TransferItem("upload", "local.bin", "/remote/local.bin")
         dialog = TransferDialog(
@@ -862,6 +897,8 @@ class FtpWidgetTests(unittest.TestCase):
         finally:
             dialog.deleteLater()
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_transfer_activity_shows_progress_bar_percentage(self) -> None:
         item = TransferItem("download", "/remote/a.bin", "a.bin")
         dialog = TransferDialog(
@@ -884,6 +921,7 @@ class FtpWidgetTests(unittest.TestCase):
         finally:
             dialog.deleteLater()
 
+    @pytest.mark.contract
     def test_transfer_item_trailing_cached_size_keeps_positional_construction(self) -> None:
         plain = TransferItem("download", "/remote/a.txt", "a.txt")
         self.assertIsNone(plain.cached_size)
@@ -897,6 +935,8 @@ class FtpWidgetTests(unittest.TestCase):
         keyword = TransferItem("download", "/remote/b.bin", "b.bin", cached_size=777)
         self.assertEqual(keyword.cached_size, 777)
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_transfer_item_size_prefers_cached_size_without_repeat_stat(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             source = Path(tmp) / "data.bin"
@@ -916,6 +956,8 @@ class FtpWidgetTests(unittest.TestCase):
                     128,
                 )
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_transfer_item_size_falls_back_to_stat_when_unknown(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             source = Path(tmp) / "data.bin"
@@ -923,6 +965,8 @@ class FtpWidgetTests(unittest.TestCase):
             item = TransferItem("upload", str(source), "/remote/data.bin")
             self.assertEqual(self.widget.transfer_activity._item_size(item), 333)
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_download_plan_carries_listed_remote_size(self) -> None:
         files = _CountingFiles()
         panel = self.widget.panel_scratch
@@ -941,6 +985,7 @@ class FtpWidgetTests(unittest.TestCase):
         self.assertEqual(sizes.get("/remote/child/nested.txt"), 6)
         self.assertNotIn("/remote/child", sizes)
 
+    @pytest.mark.unit
     def test_transfer_items_from_plan_preserve_known_size_and_leave_unknown_none(self) -> None:
         plan = [
             _PlannedOp("download", "/remote/a.bin", "a.bin", size=4096),
@@ -953,6 +998,8 @@ class FtpWidgetTests(unittest.TestCase):
         self.assertIsNone(items[1].cached_size)
         self.assertIsNone(items[2].cached_size)
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_progress_updates_use_direct_item_id_row_lookup(self) -> None:
         item = TransferItem("download", "/remote/a.bin", "a.bin")
         dialog = TransferDialog(
@@ -987,6 +1034,8 @@ class FtpWidgetTests(unittest.TestCase):
         finally:
             dialog.deleteLater()
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_transfer_activity_hides_local_housekeeping_rows(self) -> None:
         items = [
             TransferItem("mkdir_local", "", r"D:\target\folder"),
@@ -1001,6 +1050,8 @@ class FtpWidgetTests(unittest.TestCase):
         self.assertEqual(row.text(1), "<--")
         self.assertEqual(row.text(2), "/remote/folder/a.txt")
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_remote_delete_uses_modeless_worker_plan_without_gui_probe(self) -> None:
         class SlowDeleteFiles:
             supports_parallel_transfers = False
@@ -1041,6 +1092,8 @@ class FtpWidgetTests(unittest.TestCase):
             time.sleep(0.01)
         self.assertEqual(files.calls, [("/remote/file.txt", False), ("/remote/folder", True)])
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_transfer_activity_renders_multiple_active_transfers(self) -> None:
         items = [
             TransferItem("download", "/remote/a.bin", "a.bin"),
@@ -1076,6 +1129,8 @@ class FtpWidgetTests(unittest.TestCase):
         finally:
             dialog.deleteLater()
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_transfer_activity_reuses_unaffected_rows_on_status_transition(self) -> None:
         items = [
             TransferItem("download", "/remote/a.bin", "a.bin"),
@@ -1125,6 +1180,8 @@ class FtpWidgetTests(unittest.TestCase):
         finally:
             dialog.deleteLater()
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_transfer_activity_transition_keeps_bounded_cap_and_remaining(self) -> None:
         items = [
             TransferItem("download", f"/remote/{index}.bin", f"{index}.bin")
@@ -1166,6 +1223,8 @@ class FtpWidgetTests(unittest.TestCase):
         finally:
             dialog.deleteLater()
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_transfer_dialog_is_modeless_and_reports_progress(self) -> None:
         transfer_item = TransferItem("download", "/remote/big.bin", "big.bin")
         dialog = TransferDialog(
@@ -1194,6 +1253,8 @@ class FtpWidgetTests(unittest.TestCase):
         finally:
             dialog.deleteLater()
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_transfer_dialog_bounds_and_coalesces_large_queue_publication(self) -> None:
         items = [
             TransferItem("download", f"/remote/{index}.bin", f"{index}.bin")
@@ -1223,6 +1284,8 @@ class FtpWidgetTests(unittest.TestCase):
         finally:
             dialog.deleteLater()
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_transfer_dialog_runs_up_to_parallel_limit(self) -> None:
         started: list[str] = []
         finished: list[str] = []
@@ -1285,6 +1348,8 @@ class FtpWidgetTests(unittest.TestCase):
                 worker._controller.wait(5)
             dialog.deleteLater()
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_transfer_dialog_finishes_mkdir_before_parallel_transfer_batch(self) -> None:
         prepared = threading.Event()
         started_uploads: list[str] = []
@@ -1322,6 +1387,8 @@ class FtpWidgetTests(unittest.TestCase):
             dialog.cancel_all()
             dialog.deleteLater()
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_overwrite_delete_is_followed_by_its_transfer_before_later_items(self) -> None:
         deletion_done = threading.Event()
         first_transfer_done = threading.Event()
@@ -1362,6 +1429,8 @@ class FtpWidgetTests(unittest.TestCase):
             dialog.cancel_all()
             dialog.deleteLater()
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_recursive_plan_prepares_all_mkdirs_before_parallel_upload_phase(self) -> None:
         prepared: list[str] = []
         started: list[str] = []
@@ -1414,6 +1483,7 @@ class FtpWidgetTests(unittest.TestCase):
             dialog.cancel_all()
             dialog.deleteLater()
 
+    @pytest.mark.unit
     def test_mixed_mutation_plan_keeps_original_order(self) -> None:
         items = [
             TransferItem("mkdir_remote", "", "/remote/root"),
@@ -1427,6 +1497,8 @@ class FtpWidgetTests(unittest.TestCase):
         )._WorkerThread(items, lambda _item, _progress=None: None, parallel_limit=3)
         self.assertEqual(worker._items, items)
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_transfer_dialog_never_exceeds_backend_safe_cap(self) -> None:
         dialog = TransferDialog(
             title="Upload",
@@ -1443,6 +1515,8 @@ class FtpWidgetTests(unittest.TestCase):
         finally:
             dialog.deleteLater()
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_resumed_transfer_speed_uses_only_session_bytes(self) -> None:
         transfer_item = TransferItem("upload", "big.bin", "/remote/big.bin")
         dialog = TransferDialog(
@@ -1473,6 +1547,8 @@ class FtpWidgetTests(unittest.TestCase):
         finally:
             dialog.deleteLater()
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_transfer_dialog_coalesces_burst_progress_and_delivers_final(self) -> None:
         item = TransferItem("upload", "burst.bin", "/remote/burst.bin")
         dialog = TransferDialog(title="Upload", items=[item], run_item=lambda _item, _progress=None: None)
@@ -1497,6 +1573,8 @@ class FtpWidgetTests(unittest.TestCase):
         finally:
             dialog.deleteLater()
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_parallel_capable_backend_uses_configured_parallelism_for_new_plan(self) -> None:
         class ParallelFiles:
             supports_parallel_transfers = True
@@ -1557,6 +1635,8 @@ class FtpWidgetTests(unittest.TestCase):
         self.assertTrue(completed.is_set())
         self.assertGreaterEqual(files.max_active, 2)
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_ssh_backend_parallel_uploads_use_isolated_closed_channels(self) -> None:
         class FakeWriter:
             def __init__(self, channel) -> None:
@@ -1673,6 +1753,8 @@ class FtpWidgetTests(unittest.TestCase):
         self.assertTrue(all(channel.closed for channel in transfer_channels))
         self.assertEqual(ssh.assert_modes, ["wb", "wb", "wb"])
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_ssh_backend_without_transfer_channel_capability_clamps_parallelism(self) -> None:
         class UnavailableSSH:
             sftp = object()
@@ -1698,6 +1780,7 @@ class FtpWidgetTests(unittest.TestCase):
         finally:
             dialog.deleteLater()
 
+    @pytest.mark.integration
     def test_ssh_resumed_upload_reports_existing_offset_before_copy(self) -> None:
         class RemoteWriter:
             def __init__(self) -> None:
@@ -1745,6 +1828,8 @@ class FtpWidgetTests(unittest.TestCase):
         self.assertEqual(bytes(channel.writer.data), b"abcdefgh")
         self.assertTrue(channel.closed)
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_upload_preflight_shows_counts_and_source_destination_rows(self) -> None:
         items = [
             TransferItem("mkdir_remote", "", "/remote/folder"),
@@ -1771,6 +1856,8 @@ class FtpWidgetTests(unittest.TestCase):
         finally:
             dialog.deleteLater()
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_upload_preflight_bounds_plan_rows_without_truncating_items(self) -> None:
         items = [
             TransferItem(
@@ -1797,6 +1884,8 @@ class FtpWidgetTests(unittest.TestCase):
         finally:
             dialog.deleteLater()
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_upload_preflight_dont_ask_persists_only_when_accepted(self) -> None:
         panel = self.widget.panel_scratch
         item = TransferItem("upload", "C:/local/a.txt", "/remote/a.txt")
@@ -1842,6 +1931,8 @@ class FtpWidgetTests(unittest.TestCase):
             self.assertFalse(panel._confirm_transfer_plan([item], "Upload", 1))
         persist.assert_not_called()
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_disabled_upload_preflight_skips_dialog(self) -> None:
         panel = self.widget.panel_scratch
         item = TransferItem("mkdir_remote", "", "/remote/empty")
@@ -1854,6 +1945,8 @@ class FtpWidgetTests(unittest.TestCase):
             self.assertTrue(panel._confirm_transfer_plan([item], "Upload", 1))
         dialog.assert_not_called()
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_disabled_upload_preflight_still_executes_local_upload(self) -> None:
         class Files:
             supports_parallel_transfers = False
@@ -1901,6 +1994,8 @@ class FtpWidgetTests(unittest.TestCase):
         self.assertTrue(completed.is_set())
         self.assertEqual(files.created, ["/remote/empty"])
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_upload_preflight_cancel_starts_no_worker_or_activity(self) -> None:
         panel = self.widget.panel_scratch
         panel.session = {"connected": True, "files": _Files()}
@@ -1932,6 +2027,8 @@ class FtpWidgetTests(unittest.TestCase):
             panel._active_transfer_keys,
         )
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_empty_folder_upload_requires_preflight_before_mkdir_worker(self) -> None:
         class EmptyFolderFiles:
             supports_parallel_transfers = False
@@ -2007,6 +2104,8 @@ class FtpWidgetTests(unittest.TestCase):
         self.assertTrue(completed.is_set())
         self.assertEqual(files.created, ["/remote/empty"])
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_single_connection_multi_folder_upload_runs_sequentially(self) -> None:
         class SingleConnectionFiles:
             supports_parallel_transfers = False
@@ -2089,10 +2188,14 @@ class FtpWidgetTests(unittest.TestCase):
             ["/remote/first/input.txt", "/remote/second/input.txt"],
         )
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_ftp_transfers_use_embedded_activity_without_showing_popup(self) -> None:
         self.assertFalse(self.widget.panel_scratch._show_transfer_dialog)
         self.assertFalse(self.widget.panel_home._show_transfer_dialog)
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_conflict_dialog_exposes_requested_actions_and_checks(self) -> None:
         dialog = TransferConflictDialog(
             source=TransferConflictInfo("/source/file.txt", size=10, mtime=2),
@@ -2125,6 +2228,7 @@ class FtpWidgetTests(unittest.TestCase):
         finally:
             dialog.deleteLater()
 
+    @pytest.mark.unit
     def test_conditional_conflict_actions_are_resolved_safely(self) -> None:
         source = TransferConflictInfo("/source", size=10, mtime=20)
         target = TransferConflictInfo("/target", size=10, mtime=10)
@@ -2153,6 +2257,8 @@ class FtpWidgetTests(unittest.TestCase):
             "resume",
         )
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_always_use_conflict_action_lasts_only_for_current_process(self) -> None:
         source = TransferConflictInfo("/source", size=10, mtime=20)
         target = TransferConflictInfo("/target", size=10, mtime=10)
@@ -2185,6 +2291,8 @@ class FtpWidgetTests(unittest.TestCase):
             first_panel.deleteLater()
             second_panel.deleteLater()
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_both_remote_panels_forward_open_and_submit_signals(self) -> None:
         opened = []
         submitted = []
@@ -2209,6 +2317,8 @@ class FtpWidgetTests(unittest.TestCase):
         )
         self.assertEqual(shell_runs, ["/scratch/run.sh"])
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_both_remote_panels_forward_batch_submit_signals(self) -> None:
         batches = []
         shell_batches = []
@@ -2232,6 +2342,7 @@ class FtpWidgetTests(unittest.TestCase):
         )
         self.assertEqual(shell_batches, [["/scratch/Z.sh", "/scratch/a.sh"]])
 
+    @pytest.mark.unit
     def test_batch_submit_candidates_reuse_single_file_rule(self) -> None:
         self.assertEqual(
             RemoteDirPanel._batch_submit_candidates(
@@ -2284,6 +2395,7 @@ class FtpWidgetTests(unittest.TestCase):
             ["/remote/run.sh"],
         )
 
+    @pytest.mark.unit
     def test_submit_candidate_requires_one_slurm_file(self) -> None:
         self.assertEqual(
             RemoteDirPanel._submit_candidate(
@@ -2319,6 +2431,7 @@ class FtpWidgetTests(unittest.TestCase):
             "",
         )
 
+    @pytest.mark.unit
     def test_shell_run_candidate_requires_one_shell_file(self) -> None:
         self.assertEqual(
             RemoteDirPanel._shell_run_candidate(
@@ -2348,12 +2461,15 @@ class FtpWidgetTests(unittest.TestCase):
             "",
         )
 
+    @pytest.mark.contract
     def test_shell_run_worker_quotes_script_command(self) -> None:
         self.assertEqual(
             _ShellRunWorker.command_for("/arf/scratch/alice/my script.sh"),
             "cd /arf/scratch/alice && bash './my script.sh'",
         )
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_shell_run_result_dialog_is_scrollable_and_screen_bounded(self) -> None:
         widget = DirectoriesWidget()
         dialog = None
@@ -2387,6 +2503,8 @@ class FtpWidgetTests(unittest.TestCase):
             widget.shutdown()
             widget.deleteLater()
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_main_window_routes_ftp_actions_to_existing_directories_handlers(self) -> None:
         opened = []
         submitted = []
@@ -2430,6 +2548,8 @@ class FtpWidgetTests(unittest.TestCase):
                 window.graceful_shutdown()
                 window.deleteLater()
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_main_window_batch_shell_uses_login_terminal_order(self) -> None:
         with patch("hpc_gui.ui.main_window.QTimer.singleShot"):
             window = MainWindow()
@@ -2449,6 +2569,8 @@ class FtpWidgetTests(unittest.TestCase):
             window.graceful_shutdown()
             window.deleteLater()
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_batch_submit_worker_orders_sequentially_and_continues_after_failure(self) -> None:
         class RecordingSlurm:
             def __init__(self) -> None:
@@ -2493,6 +2615,8 @@ class FtpWidgetTests(unittest.TestCase):
         )
         self.assertEqual(len(done), 1)
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_main_window_contains_top_level_ftp_tab(self) -> None:
         with patch("hpc_gui.ui.main_window.QTimer.singleShot"):
             window = MainWindow()
@@ -2507,6 +2631,8 @@ class FtpWidgetTests(unittest.TestCase):
             window.graceful_shutdown()
             window.deleteLater()
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_submission_follow_modes_route_to_the_requested_destination(self) -> None:
         with patch("hpc_gui.ui.main_window.QTimer.singleShot"):
             window = MainWindow()
@@ -2538,6 +2664,8 @@ class FtpWidgetTests(unittest.TestCase):
             window.graceful_shutdown()
             window.deleteLater()
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_focus_job_none_still_refreshes_and_binds_script(self) -> None:
         from hpc_gui.ui.widgets.jobs_outputs_widget import JobsOutputsWidget
         jobs_widget = JobsOutputsWidget()
@@ -2565,6 +2693,8 @@ class FtpWidgetTests(unittest.TestCase):
         finally:
             jobs_widget.deleteLater()
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_sbatch_follow_modes_use_existing_follower_helpers(self) -> None:
         from hpc_gui.ui.widgets.jobs_outputs_widget import JobsOutputsWidget
 
@@ -2620,6 +2750,8 @@ class FtpWidgetTests(unittest.TestCase):
             jobs_widget.shutdown()
             jobs_widget.deleteLater()
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_generic_new_window_follower_is_one_single_file_window(self) -> None:
         from hpc_gui.ui.widgets.jobs_outputs_widget import (
             JobsOutputsWidget,
@@ -2645,6 +2777,8 @@ class FtpWidgetTests(unittest.TestCase):
             jobs_widget.shutdown()
             jobs_widget.deleteLater()
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_combined_sbatch_follower_uses_one_clear_output_error_window(self) -> None:
         from hpc_gui.ui.widgets.jobs_outputs_widget import JobsOutputsWidget
 
@@ -2675,6 +2809,8 @@ class FtpWidgetTests(unittest.TestCase):
             jobs_widget.shutdown()
             jobs_widget.deleteLater()
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_sbatch_follow_mode_settings_migrate_and_persist(self) -> None:
         from hpc_gui.config import storage
 
@@ -2692,6 +2828,8 @@ class FtpWidgetTests(unittest.TestCase):
             self.assertEqual(storage.set_sbatch_follow_mode("new_tabs_split"), "new_tabs_split")
             update.assert_called_once_with({"sbatch_follow_mode": "new_tabs_split"})
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_sbatch_follow_mode_settings_have_all_tooltips(self) -> None:
         with patch(
             "hpc_gui.ui.dialogs.settings_dialog.get_sbatch_follow_mode",
@@ -2733,6 +2871,8 @@ class FtpWidgetTests(unittest.TestCase):
         finally:
             dialog.deleteLater()
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_session_uses_configured_scratch_and_home_roots(self) -> None:
         files = _Files()
         cfg = SimpleNamespace(
@@ -2748,6 +2888,8 @@ class FtpWidgetTests(unittest.TestCase):
         self.assertEqual(self.widget.panel_scratch.current_dir, "/arf/scratch/alice")
         self.assertEqual(self.widget.panel_home.current_dir, "/arf/home/alice")
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_context_menu_can_set_current_scratch_as_profile_default(self) -> None:
         cfg = SimpleNamespace(
             username="alice",
@@ -2777,6 +2919,8 @@ class FtpWidgetTests(unittest.TestCase):
             [("/arf/scratch/alice/project", "/arf/home/alice")],
         )
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_settings_edit_and_reset_profile_remote_defaults(self) -> None:
         cfg = SimpleNamespace(
             username="alice",
@@ -2824,6 +2968,8 @@ class FtpWidgetTests(unittest.TestCase):
         finally:
             dialog.deleteLater()
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_settings_apply_persists_without_closing_and_close_rejects(self) -> None:
         dialog = SettingsDialog()
         try:
@@ -2857,6 +3003,8 @@ class FtpWidgetTests(unittest.TestCase):
         finally:
             dialog.deleteLater()
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_settings_controls_upload_preflight_confirmation(self) -> None:
         with patch(
             "hpc_gui.ui.dialogs.settings_dialog.get_upload_preflight_confirmation_enabled",
@@ -2886,6 +3034,8 @@ class FtpWidgetTests(unittest.TestCase):
         finally:
             dialog.deleteLater()
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_profile_remote_controls_disabled_without_active_profile(self) -> None:
         dialog = SettingsDialog()
         try:
@@ -2895,6 +3045,8 @@ class FtpWidgetTests(unittest.TestCase):
         finally:
             dialog.deleteLater()
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_profile_update_preserves_other_fields_and_refreshes_session(self) -> None:
         login = LoginWidget()
         cfg = SimpleNamespace(
@@ -2947,6 +3099,8 @@ class FtpWidgetTests(unittest.TestCase):
         finally:
             login.deleteLater()
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_upload_and_download_route_to_active_remote_panel(self) -> None:
         local_file = Path(__file__).resolve()
         self.widget.panel_scratch.current_dir = "/remote"
@@ -2979,6 +3133,8 @@ class FtpWidgetTests(unittest.TestCase):
             self.assertTrue(self.widget.download_selected())
         download.assert_called_once_with(["/remote/out.txt"], self.widget.local_panel.current_dir)
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_local_context_upload_routes_selected_folder_to_incremental_planner(self) -> None:
         self.widget.panel_scratch.current_dir = "/remote"
         self.widget.session = {"connected": True}
@@ -3001,6 +3157,8 @@ class FtpWidgetTests(unittest.TestCase):
         RemoteDirPanel._instances.pop(self.widget.panel_scratch.panel_id, None)
         RemoteDirPanel._instances.pop(self.widget.panel_home.panel_id, None)
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_local_context_folder_upload_attaches_embedded_controller_after_preflight(self) -> None:
         class Files:
             supports_parallel_transfers = False
@@ -3103,6 +3261,8 @@ class FtpWidgetTests(unittest.TestCase):
         RemoteDirPanel._instances.pop(self.widget.panel_scratch.panel_id, None)
         RemoteDirPanel._instances.pop(self.widget.panel_home.panel_id, None)
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_remote_folder_download_returns_before_planning_finishes(self) -> None:
         files = _CountingFiles()
         panel = self.widget.panel_scratch
@@ -3149,6 +3309,8 @@ class FtpWidgetTests(unittest.TestCase):
                 ],
             )
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_upload_planning_uses_worker_and_returns_before_slow_probe(self) -> None:
         class SlowFiles:
             supports_parallel_transfers = False
@@ -3195,6 +3357,8 @@ class FtpWidgetTests(unittest.TestCase):
                 time.sleep(0.01)
             self.assertTrue(run_plan.called)
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_download_planning_uses_worker_and_returns_before_slow_probe(self) -> None:
         class SlowFiles:
             supports_parallel_transfers = False
@@ -3239,6 +3403,8 @@ class FtpWidgetTests(unittest.TestCase):
                 time.sleep(0.01)
             self.assertTrue(run_plan.called)
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_remote_multi_folder_download_pipeline_stays_off_gui_thread(self) -> None:
         class PipelineFiles:
             supports_parallel_transfers = True
@@ -3338,6 +3504,8 @@ class FtpWidgetTests(unittest.TestCase):
                 dialog.cancel_all()
                 dialog.deleteLater()
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_download_conflict_planning_keeps_remote_probes_off_gui_thread(self) -> None:
         class ProbeGuardingFiles:
             supports_parallel_transfers = False
@@ -3427,6 +3595,8 @@ class FtpWidgetTests(unittest.TestCase):
         finally:
             RemoteDirPanel._session_conflict_action = None
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_transfer_completion_invalidates_upload_target_and_download_sources(self) -> None:
         class Files:
             supports_parallel_transfers = False
@@ -3489,11 +3659,15 @@ class FtpWidgetTests(unittest.TestCase):
         self.assertNotIn("/remote/source", panel._directory_cache)
         self.assertNotIn("/remote/source/folder", panel._directory_cache)
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_ftp_transfer_area_is_resizable_with_directory_area(self) -> None:
         self.assertIs(self.widget.transfer_splitter.widget(0), self.widget.splitter)
         self.assertIs(self.widget.transfer_splitter.widget(1), self.widget.transfer_activity)
         self.assertEqual(self.widget.transfer_splitter.orientation(), Qt.Orientation.Vertical)
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_double_click_activation_routes_to_transfer_targets(self) -> None:
         local_file = Path(__file__).resolve()
         self.widget.panel_scratch.current_dir = "/remote"
@@ -3515,6 +3689,8 @@ class FtpWidgetTests(unittest.TestCase):
             self.widget.panel_scratch.file_activated.emit("/remote/out.txt")
         download.assert_called_once_with(["/remote/out.txt"], self.widget.local_panel.current_dir)
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_double_click_activation_does_not_start_duplicate_upload(self) -> None:
         local_file = Path(__file__).resolve()
         self.widget.panel_scratch.current_dir = "/remote"
@@ -3538,6 +3714,8 @@ class FtpWidgetTests(unittest.TestCase):
         self.assertEqual(upload.call_count, 2)
         upload.assert_called_with([str(local_file)], "/remote")
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_active_upload_plan_is_not_queued_twice(self) -> None:
         panel = self.widget.panel_scratch
         panel.session = {"connected": True, "files": _Files()}
@@ -3558,6 +3736,8 @@ class FtpWidgetTests(unittest.TestCase):
 
         self.assertEqual(events, [])
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_settings_offer_exact_transfer_modes_and_default_auto(self) -> None:
         with patch(
             "hpc_gui.ui.dialogs.settings_dialog.get_ftp_transfer_type",
@@ -3576,6 +3756,8 @@ class FtpWidgetTests(unittest.TestCase):
             finally:
                 dialog.deleteLater()
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_connection_dialog_applies_generic_slurm_template_from_menu(self) -> None:
         dialog = ConnectionDialog()
         try:
@@ -3595,6 +3777,8 @@ class FtpWidgetTests(unittest.TestCase):
         finally:
             dialog.deleteLater()
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_connection_dialog_advanced_settings_collapses_without_losing_values(self) -> None:
         dialog = ConnectionDialog()
         try:
@@ -3613,6 +3797,8 @@ class FtpWidgetTests(unittest.TestCase):
         finally:
             dialog.deleteLater()
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_connection_dialog_round_trips_advanced_profile_values(self) -> None:
         profile = {
             "name": "example",
@@ -3660,6 +3846,8 @@ class FtpWidgetTests(unittest.TestCase):
         finally:
             dialog.deleteLater()
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_connection_dialog_has_room_for_advanced_commands(self) -> None:
         dialog = ConnectionDialog()
         try:
@@ -3667,6 +3855,8 @@ class FtpWidgetTests(unittest.TestCase):
         finally:
             dialog.deleteLater()
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_connection_dialog_can_remember_password_without_connect_prompts(self) -> None:
         dialog = ConnectionDialog()
         try:
@@ -3685,6 +3875,8 @@ class FtpWidgetTests(unittest.TestCase):
         finally:
             dialog.deleteLater()
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_remembered_profile_is_migrated_to_prompt_free_windows_storage(self) -> None:
         legacy_profile = {
             "name": "truba",
@@ -3732,6 +3924,8 @@ class FtpWidgetTests(unittest.TestCase):
         finally:
             login.deleteLater()
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_saved_master_password_is_reused_without_showing_a_prompt(self) -> None:
         login = LoginWidget()
         try:
@@ -3756,6 +3950,8 @@ class FtpWidgetTests(unittest.TestCase):
         finally:
             login.deleteLater()
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_connection_dialog_saves_current_system_as_user_template(self) -> None:
         dialog = ConnectionDialog()
         try:
@@ -3786,6 +3982,8 @@ class FtpWidgetTests(unittest.TestCase):
         finally:
             dialog.deleteLater()
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_system_template_save_syncs_structured_provider_edits(self) -> None:
         dialog = ConnectionDialog()
         try:
@@ -3809,6 +4007,8 @@ class FtpWidgetTests(unittest.TestCase):
         finally:
             dialog.deleteLater()
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_user_system_template_persists_by_name(self) -> None:
         saved_settings = {"system_templates": []}
 
@@ -3848,6 +4048,7 @@ class FtpWidgetTests(unittest.TestCase):
         self.assertEqual(saved_settings["system_templates"][0]["scratch_dir"], "/new/work")
         self.assertGreaterEqual(update.call_count, 2)
 
+    @pytest.mark.unit
     def test_transfer_mode_policy_and_conversion(self) -> None:
         self.assertEqual(resolve_transfer_mode("notes.txt", AUTO), ASCII)
         self.assertEqual(resolve_transfer_mode("archive", AUTO), BINARY)
@@ -3861,6 +4062,7 @@ class FtpWidgetTests(unittest.TestCase):
             ["x", "y"],
         )
 
+    @pytest.mark.integration
     def test_download_with_mode_resumes_from_part_and_replaces_final(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             destination = Path(tmp, "large.bin")
@@ -3880,6 +4082,7 @@ class FtpWidgetTests(unittest.TestCase):
             self.assertEqual(destination.read_bytes(), b"partial-complete")
             self.assertFalse(part.exists())
 
+    @pytest.mark.integration
     def test_resume_rejects_stale_download_part_metadata(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             destination = Path(tmp, "large.bin")
@@ -3894,6 +4097,7 @@ class FtpWidgetTests(unittest.TestCase):
             self.assertEqual(destination.read_bytes(), b"fresh-content")
             self.assertFalse(Path(str(part) + ".meta").exists())
 
+    @pytest.mark.integration
     def test_resume_rejects_stale_upload_part_metadata(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             source = Path(tmp, "payload.bin")
@@ -3909,6 +4113,7 @@ class FtpWidgetTests(unittest.TestCase):
             self.assertEqual(files.read_text("/remote/payload.bin"), "fresh-content")
             self.assertFalse(files.exists("/remote/payload.bin.part.meta"))
 
+    @pytest.mark.integration
     def test_upload_with_mode_forwards_progress_callback(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             source = Path(tmp, "payload.bin")
@@ -3928,6 +4133,8 @@ class FtpWidgetTests(unittest.TestCase):
             self.assertEqual(files.calls, [(str(source), "/remote/payload.bin")])
             self.assertEqual(progress[-1], (source.stat().st_size, source.stat().st_size))
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_local_file_drop_on_remote_panel_uploads_to_current_remote_dir(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             source = Path(tmp, "drop-me.txt")
@@ -3951,6 +4158,8 @@ class FtpWidgetTests(unittest.TestCase):
             self.assertTrue(event.accepted)
             self.assertFalse(event.ignored)
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_directories_widget_accepts_local_file_drop_for_remote_upload(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             source = Path(tmp, "drop-dir.txt")
@@ -3982,6 +4191,8 @@ class FtpWidgetTests(unittest.TestCase):
                 widget.shutdown()
                 widget.deleteLater()
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_remote_panel_accepts_local_file_drop_on_panel_body(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             source = Path(tmp, "panel-drop.txt")
@@ -4005,6 +4216,8 @@ class FtpWidgetTests(unittest.TestCase):
             self.assertTrue(event.accepted)
             self.assertFalse(event.ignored)
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_remote_panel_drop_upload_planning_yields_before_transfer_start(self) -> None:
         class Files:
             supports_parallel_transfers = True
@@ -4038,6 +4251,8 @@ class FtpWidgetTests(unittest.TestCase):
                 30,
             )
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_remote_file_drop_on_local_panel_downloads_after_drop_event(self) -> None:
         panel = self.widget.panel_scratch
         panel.current_dir = "/remote"
@@ -4063,6 +4278,8 @@ class FtpWidgetTests(unittest.TestCase):
         self.assertTrue(event.accepted)
         self.assertFalse(event.ignored)
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_jobs_files_context_menu_restores_output_follow_actions(self) -> None:
         class FakeAction:
             def __init__(self, text: str) -> None:
@@ -4147,6 +4364,8 @@ class FtpWidgetTests(unittest.TestCase):
             FakeMenu.choose_text = "Follow in Output 2"
             panel.deleteLater()
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_remote_context_menu_restores_sbatch_submit_action(self) -> None:
         class FakeAction:
             def __init__(self, text: str) -> None:
@@ -4196,6 +4415,8 @@ class FtpWidgetTests(unittest.TestCase):
         finally:
             panel.deleteLater()
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_remote_context_menu_runs_shell_script_action(self) -> None:
         class FakeAction:
             def __init__(self, text: str) -> None:
@@ -4254,6 +4475,8 @@ class FtpWidgetTests(unittest.TestCase):
         finally:
             panel.deleteLater()
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_remote_context_menu_restores_clipboard_actions(self) -> None:
         from hpc_gui.services.file_clipboard import get_file_clipboard
 
@@ -4314,6 +4537,8 @@ class FtpWidgetTests(unittest.TestCase):
             clipboard.clear()
             panel.deleteLater()
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_remote_ctrl_c_and_ctrl_x_store_selected_paths(self) -> None:
         from hpc_gui.services.file_clipboard import get_file_clipboard
 
@@ -4356,6 +4581,8 @@ class FtpWidgetTests(unittest.TestCase):
             clipboard.clear()
             panel.deleteLater()
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_remote_ctrl_c_then_ctrl_v_in_another_directory_tab_copies_file(self) -> None:
         from hpc_gui.services.file_clipboard import get_file_clipboard
 
@@ -4411,6 +4638,8 @@ class FtpWidgetTests(unittest.TestCase):
             clipboard.clear()
             panel.deleteLater()
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_local_ctrl_v_downloads_remote_clipboard_to_current_local_dir(self) -> None:
         from hpc_gui.services.file_clipboard import get_file_clipboard
 
@@ -4437,6 +4666,7 @@ class FtpWidgetTests(unittest.TestCase):
         finally:
             clipboard.clear()
 
+    @pytest.mark.integration
     def test_mock_backend_exercises_remote_file_operations(self) -> None:
         files = MockFilesBackend()
 
@@ -4467,6 +4697,8 @@ class FtpWidgetTests(unittest.TestCase):
         files.remove("/arf/home/user/moved", recursive=True)
         self.assertFalse(files.exists("/arf/home/user/moved"))
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_local_panel_has_parent_entry_not_selected_for_upload(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             child = Path(tmp, "child")
@@ -4482,6 +4714,8 @@ class FtpWidgetTests(unittest.TestCase):
             local._open_item(parent_item, 0)
             self.assertEqual(Path(local.current_dir), Path(tmp))
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_local_panel_f2_renames_single_selected_file(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             src = Path(tmp, "old.txt")
@@ -4502,6 +4736,8 @@ class FtpWidgetTests(unittest.TestCase):
             self.assertFalse(src.exists())
             self.assertTrue(Path(tmp, "new.txt").exists())
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_remote_panel_f2_uses_rename_action_for_single_selection(self) -> None:
         files = _Files()
         files.remote["/remote/old.txt"] = b"data"
@@ -4526,6 +4762,8 @@ class FtpWidgetTests(unittest.TestCase):
         self.assertNotIn("/remote/old.txt", files.remote)
         self.assertIn("/remote/new.txt", files.remote)
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_remote_path_field_enter_navigates_and_backspace_goes_parent(self) -> None:
         files = _CountingFiles()
         panel = RemoteDirPanel()
@@ -4550,6 +4788,8 @@ class FtpWidgetTests(unittest.TestCase):
         finally:
             panel.deleteLater()
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_local_context_menu_matches_requested_layout(self) -> None:
         self.assertEqual(
             LOCAL_CONTEXT_MENU_LABELS,
@@ -4571,6 +4811,8 @@ class FtpWidgetTests(unittest.TestCase):
             ],
         )
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     @unittest.skipUnless(sys.platform == "win32", "Windows Explorer integration")
     def test_local_context_open_uses_file_explorer_target(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -4587,6 +4829,8 @@ class FtpWidgetTests(unittest.TestCase):
                 self.assertTrue(local.open_selected_in_file_explorer())
             popen.assert_called_once_with(["explorer", str(Path(tmp))])
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_local_context_open_on_linux_invokes_file_manager(self) -> None:
         from unittest import mock
 
@@ -4619,6 +4863,8 @@ class FtpWidgetTests(unittest.TestCase):
                 str(Path(tmp)).replace("\\", "/").rstrip("/"),
             )
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_local_open_with_chooses_program_and_saves_association(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             src = Path(tmp, "job.slurm")
@@ -4651,6 +4897,8 @@ class FtpWidgetTests(unittest.TestCase):
             set_assoc.assert_called_once_with(".slurm", str(program))
             popen.assert_called_once_with([str(program), str(src)])
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_settings_lists_and_clears_file_associations(self) -> None:
         with patch(
             "hpc_gui.ui.dialogs.settings_dialog.get_file_associations",
@@ -4671,6 +4919,8 @@ class FtpWidgetTests(unittest.TestCase):
         finally:
             dialog.deleteLater()
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_local_context_menu_opens_directory_in_new_tab(self) -> None:
         class FakeAction:
             def __init__(self, text: str) -> None:
@@ -4718,6 +4968,8 @@ class FtpWidgetTests(unittest.TestCase):
             self.assertEqual(local.tabs.count(), 2)
             self.assertEqual(Path(local.current_dir), child)
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_local_create_directory_and_enter(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             local = self.widget.local_panel
@@ -4729,6 +4981,8 @@ class FtpWidgetTests(unittest.TestCase):
                 self.assertTrue(local.create_directory(enter=True))
             self.assertEqual(Path(local.current_dir), Path(tmp, "child"))
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_remote_context_menu_matches_requested_layout(self) -> None:
         self.assertEqual(
             REMOTE_CONTEXT_MENU_LABELS,
@@ -4750,6 +5004,8 @@ class FtpWidgetTests(unittest.TestCase):
             ],
         )
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_remote_create_directory_and_enter(self) -> None:
         files = MockFilesBackend()
         panel = self.widget.panel_scratch
@@ -4763,6 +5019,8 @@ class FtpWidgetTests(unittest.TestCase):
         self.assertEqual(panel.current_dir, "/arf/scratch/user/new-job")
         self.assertTrue(files.is_dir("/arf/scratch/user/new-job"))
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_remote_context_menu_opens_directory_in_new_tab(self) -> None:
         class FakeAction:
             def __init__(self, text: str) -> None:
@@ -4815,6 +5073,8 @@ class FtpWidgetTests(unittest.TestCase):
             )
         )
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_remote_context_menu_changes_file_permissions(self) -> None:
         class FakeAction:
             def __init__(self, text: str) -> None:
@@ -4883,6 +5143,8 @@ class FtpWidgetTests(unittest.TestCase):
         )
         self.assertEqual(stat.S_IMODE(entry.mode), 0o600)
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_remote_change_permissions_rejects_invalid_mode(self) -> None:
         files = MockFilesBackend()
         panel = self.widget.panel_scratch
@@ -4919,6 +5181,8 @@ class FtpWidgetTests(unittest.TestCase):
         )
         self.assertEqual(stat.S_IMODE(entry.mode), 0o644)
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_remote_change_permissions_accepts_four_digit_octal_mode(self) -> None:
         files = MockFilesBackend()
         panel = self.widget.panel_scratch
@@ -4954,6 +5218,8 @@ class FtpWidgetTests(unittest.TestCase):
         )
         self.assertEqual(stat.S_IMODE(entry.mode), 0o1755)
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_permissions_dialog_syncs_checkboxes_and_mode_field(self) -> None:
         dialog = _PermissionsDialog(self.widget, 0o640, "example.txt")
         try:
@@ -4987,6 +5253,8 @@ class FtpWidgetTests(unittest.TestCase):
         finally:
             dialog.deleteLater()
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_remote_directory_tabs_sit_above_filter_tabs(self) -> None:
         files = MockFilesBackend()
         panel = self.widget.panel_scratch
@@ -5011,6 +5279,8 @@ class FtpWidgetTests(unittest.TestCase):
             )
         )
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_remote_folder_middle_click_opens_new_directory_tab(self) -> None:
         class FakePosition:
             @staticmethod
@@ -5056,6 +5326,8 @@ class FtpWidgetTests(unittest.TestCase):
         open_tab.assert_called_once_with("/arf/scratch/user/project")
         self.assertTrue(event.accepted)
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_remote_middle_click_ignores_file_parent_and_blank_space(self) -> None:
         class FakePosition:
             @staticmethod
@@ -5109,6 +5381,8 @@ class FtpWidgetTests(unittest.TestCase):
 
         open_tab.assert_not_called()
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_local_folder_middle_click_opens_new_directory_tab(self) -> None:
         class FakePosition:
             @staticmethod
@@ -5155,6 +5429,8 @@ class FtpWidgetTests(unittest.TestCase):
             open_tab.assert_called_once_with(str(folder))
             self.assertTrue(event.accepted)
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_local_middle_click_ignores_file_parent_and_blank_space(self) -> None:
         class FakePosition:
             @staticmethod
@@ -5208,6 +5484,8 @@ class FtpWidgetTests(unittest.TestCase):
 
             open_tab.assert_not_called()
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_remote_directory_cache_reuses_recently_visited_directory(self) -> None:
         files = _CountingFiles()
         panel = self.widget.panel_scratch
@@ -5223,6 +5501,8 @@ class FtpWidgetTests(unittest.TestCase):
 
         self.assertEqual(files.calls, ["/remote", "/remote/child"])
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_remote_directory_cache_force_refresh_bypasses_cache(self) -> None:
         files = _CountingFiles()
         panel = self.widget.panel_scratch
@@ -5238,6 +5518,8 @@ class FtpWidgetTests(unittest.TestCase):
 
         self.assertEqual(files.calls, ["/remote", "/remote"])
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_remote_tree_f5_forces_refresh(self) -> None:
         panel = self.widget.panel_scratch
         view = panel.views["all"]
@@ -5252,6 +5534,8 @@ class FtpWidgetTests(unittest.TestCase):
 
         refresh.assert_called_once_with(force=True)
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_remote_directory_cache_expires_after_ttl(self) -> None:
         files = _CountingFiles()
         panel = self.widget.panel_scratch
@@ -5266,6 +5550,8 @@ class FtpWidgetTests(unittest.TestCase):
 
         self.assertEqual(files.calls, ["/remote", "/remote"])
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_remote_directory_cache_expires_after_its_ttl(self) -> None:
         files = _CountingFiles()
         panel = self.widget.panel_scratch
@@ -5283,6 +5569,8 @@ class FtpWidgetTests(unittest.TestCase):
 
         self.assertEqual(files.calls, ["/remote", "/remote"])
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_remote_copy_move_refreshes_affected_cached_dirs_after_finish(self) -> None:
         files = _CountingFiles()
         source_panel = RemoteDirPanel()
@@ -5319,6 +5607,8 @@ class FtpWidgetTests(unittest.TestCase):
         finally:
             source_panel.deleteLater()
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_remote_panel_shutdown_unregisters_idempotently_and_by_identity(self) -> None:
         panel = RemoteDirPanel()
         panel_id = panel.panel_id
@@ -5338,6 +5628,8 @@ class FtpWidgetTests(unittest.TestCase):
                 RemoteDirPanel._instances.pop(panel_id, None)
             panel.deleteLater()
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_remote_panel_shutdown_waits_once_for_active_thread_without_planning_jobs(self) -> None:
         panel = RemoteDirPanel()
 
@@ -5363,6 +5655,8 @@ class FtpWidgetTests(unittest.TestCase):
         finally:
             panel.deleteLater()
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_remote_panel_shutdown_waits_once_for_active_and_each_planning_thread(self) -> None:
         panel = RemoteDirPanel()
 
@@ -5405,6 +5699,8 @@ class FtpWidgetTests(unittest.TestCase):
         finally:
             panel.deleteLater()
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_remote_panel_shutdown_keeps_still_running_planning_thread_referenced(self) -> None:
         panel = RemoteDirPanel()
 
@@ -5442,6 +5738,8 @@ class FtpWidgetTests(unittest.TestCase):
         finally:
             panel.deleteLater()
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_remote_panel_deferred_delete_unregisters_instance(self) -> None:
         panel = RemoteDirPanel()
         panel_id = panel.panel_id
@@ -5456,6 +5754,8 @@ class FtpWidgetTests(unittest.TestCase):
             if RemoteDirPanel._instances.get(panel_id) is panel:
                 RemoteDirPanel._instances.pop(panel_id, None)
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_remote_panel_deferred_delete_preserves_replacement_identity(self) -> None:
         panel = RemoteDirPanel()
         panel_id = panel.panel_id
@@ -5471,6 +5771,8 @@ class FtpWidgetTests(unittest.TestCase):
             if RemoteDirPanel._instances.get(panel_id) is replacement:
                 RemoteDirPanel._instances.pop(panel_id, None)
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_remote_mutation_removes_panel_that_raises_deleted_qt_error(self) -> None:
         source = RemoteDirPanel()
         stale = RemoteDirPanel()
@@ -5493,6 +5795,8 @@ class FtpWidgetTests(unittest.TestCase):
             source.deleteLater()
             stale.deleteLater()
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_mock_ftp_download_writes_selected_remote_file(self) -> None:
         files = MockFilesBackend()
         cfg = SimpleNamespace(
@@ -5529,6 +5833,8 @@ class FtpWidgetTests(unittest.TestCase):
                 "Mock file content\nline2\n",
             )
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_download_existing_target_uses_conflict_dialog_decision(self) -> None:
         files = _Files()
         files.remote["/remote/existing.txt"] = b"remote"
@@ -5547,6 +5853,8 @@ class FtpWidgetTests(unittest.TestCase):
             self.assertEqual(resolve.call_args.kwargs["src"], "/remote/existing.txt")
             self.assertFalse(run_plan.called)
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_download_resume_keeps_partial_target_and_plans_one_transfer(self) -> None:
         files = _Files()
         files.remote["/remote/existing.txt"] = b"remote"
@@ -5571,6 +5879,8 @@ class FtpWidgetTests(unittest.TestCase):
                 ("download", "/remote/existing.txt", str(target)),
             ])
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_upload_resume_keeps_remote_target_and_plans_one_transfer(self) -> None:
         files = _Files()
         files.remote["/remote/existing.txt"] = b"part"
@@ -5595,6 +5905,8 @@ class FtpWidgetTests(unittest.TestCase):
                 ("upload", str(source), "/remote/existing.txt"),
             ])
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_upload_folder_conflicts_ask_for_each_nested_file_without_apply_all(self) -> None:
         files = _Files()
         files.remote["/remote/folder/a.txt"] = b"old-a"
@@ -5632,6 +5944,8 @@ class FtpWidgetTests(unittest.TestCase):
             ],
         )
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_download_folder_conflicts_ask_for_each_nested_file_without_apply_all(self) -> None:
         class TreeFiles:
             def listdir_entries(self, path: str):
@@ -5687,6 +6001,8 @@ class FtpWidgetTests(unittest.TestCase):
             ],
         )
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_active_download_plan_is_not_queued_twice(self) -> None:
         panel = self.widget.panel_scratch
         panel.session = {"connected": True, "files": _Files()}
@@ -5707,6 +6023,8 @@ class FtpWidgetTests(unittest.TestCase):
 
         self.assertEqual(events, [])
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_mock_ftp_nested_directory_download_and_binary_upload(self) -> None:
         files = MockFilesBackend()
         cfg = SimpleNamespace(
@@ -5774,6 +6092,8 @@ class FtpWidgetTests(unittest.TestCase):
             files.download("/arf/scratch/user/uploads/payload.bin", str(downloaded))
             self.assertEqual(downloaded.read_bytes(), b"\x00\xffraw")
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_ftp_mock_round_trips_turkish_file_and_directory_names(self) -> None:
         files = MockFilesBackend()
         panel = self.widget.panel_scratch
@@ -5823,6 +6143,8 @@ class FtpWidgetTests(unittest.TestCase):
                 content.replace(b"\n", os.linesep.encode("utf-8")),
             )
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_ftp_mock_connection_is_environment_gated(self) -> None:
         with patch.dict(os.environ, {FTP_TEST_MODE_ENV: ""}):
             self.assertFalse(is_ftp_test_mode_enabled())
