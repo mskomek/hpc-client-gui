@@ -82,7 +82,7 @@ def run_packaged_smoke(artifact: Path, platform_name: str, output: Path, timeout
     artifact_sha = _sha256(artifact) if artifact and artifact.is_file() else "0" * 64
     checks = {name: "FAIL" for name in REQUIRED_CHECKS}
     result = "FAIL"
-    details: dict[str, str] = {}
+    details: dict[str, object] = {}
     exit_code = None
     loopback_root = None
     loopback_server = None
@@ -138,6 +138,9 @@ def run_packaged_smoke(artifact: Path, platform_name: str, output: Path, timeout
                 for key in ("wx_app_name", "wx_local_data_dir"):
                     if runtime.get(key):
                         details[key] = str(runtime[key])
+                for key in ("phase", "input_diagnostic", "last_line", "last_buffer", "last_screen"):
+                    if key in runtime:
+                        details[f"runtime_{key}"] = runtime[key]
             for name in REQUIRED_CHECKS:
                 if name == "process_started" or name == "clean_shutdown":
                     continue
@@ -238,6 +241,7 @@ def main() -> int:
     artifact = args.artifact
     if not artifact:
         candidates = [
+            ROOT / "dist" / "hpc-client-gui" / "hpc-client-gui.exe",
             ROOT / "dist" / "hpc-client-gui-wx.exe",
             ROOT / "build" / "wx-artifact" / f"hpc-client-gui-wx-{plat}",
             ROOT / "build" / "audit" / f"wx-artifact-{plat}.exe",

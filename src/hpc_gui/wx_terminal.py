@@ -78,11 +78,13 @@ def build_terminal_panel(parent, *, model: TerminalModel | None = None, ssh=None
                 panel._wx_terminal_set_ssh = panel.set_ssh
                 panel._wx_terminal_close = panel.close
                 panel._wx_terminal_render = panel.hpc_write
-                if model is not None:
-                    panel._terminal_model = model
-                else:
-                    panel._terminal_model = getattr(panel, "_wx_terminal_model", None)
+                if model is None:
+                    send = getattr(ssh, "send_shell_input", send_input) if ssh is not None else send_input
+                    resize = getattr(ssh, "resize_shell_pty", resize_pty) if ssh is not None else resize_pty
+                    model = TerminalModel(send, resize)
+                panel._terminal_model = model
                 panel._terminal_ssh = ssh
+                panel._wx_terminal_model = model
                 return panel
             except Exception:
                 pass

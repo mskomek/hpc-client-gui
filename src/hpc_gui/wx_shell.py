@@ -69,7 +69,7 @@ def _make_tray(wx, frame, tray_factory):
         return None
 
 
-def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_state=None):
+def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_state=None, defer_terminal_webview=False):
     try:
         import wx
     except ImportError as exc:
@@ -188,11 +188,41 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
     from hpc_gui.wx_terminal import build_terminal_panel as _build_terminal_panel
     _term_session = session_state.get("session") or {}
     _term_ssh = _term_session.get("ssh")
-    terminal_page = _build_terminal_panel(notebook, ssh=_term_ssh, lifecycle=lifecycle)
-    session_state["_embedded_terminal_panel"] = terminal_page
-    notebook.AddPage(terminal_page, t("help.section_terminal"), False)
-    _term_controls = getattr(terminal_page, "_wx_terminal_controls", {})
-    page_controls["NAV-TERMINAL"] = {"page": terminal_page, **_term_controls, "output": _term_controls.get("output"), "panel": terminal_page}
+    if defer_terminal_webview:
+        terminal_page = wx.Panel(notebook)
+        terminal_sizer = wx.BoxSizer(wx.VERTICAL)
+        terminal_page.SetSizer(terminal_sizer)
+        terminal_page.SetMinSize(wx.Size(400, 200))
+        notebook.AddPage(terminal_page, t("help.section_terminal"), False)
+        session_state["_embedded_terminal_panel"] = None
+        page_controls["NAV-TERMINAL"] = {"page": terminal_page, "panel": terminal_page}
+
+        def mount_terminal():
+            if terminal_page.IsBeingDeleted():
+                return
+            real_panel = _build_terminal_panel(terminal_page, ssh=_term_ssh, lifecycle=lifecycle)
+            terminal_sizer.Add(real_panel, 1, wx.EXPAND)
+            terminal_page.Layout()
+            session_state["_embedded_terminal_panel"] = real_panel
+            controls = page_controls["NAV-TERMINAL"]
+            term_controls = getattr(real_panel, "_wx_terminal_controls", {})
+            controls.update(term_controls)
+            controls.update({"output": term_controls.get("output"), "panel": real_panel})
+
+            def close_terminal():
+                callback = getattr(real_panel, "_wx_terminal_close", None) or getattr(real_panel, "close", None)
+                if callable(callback):
+                    callback()
+
+            terminal_page._wx_host_close = close_terminal
+
+        wx.CallLater(1000, mount_terminal)
+    else:
+        terminal_page = _build_terminal_panel(notebook, ssh=_term_ssh, lifecycle=lifecycle)
+        session_state["_embedded_terminal_panel"] = terminal_page
+        notebook.AddPage(terminal_page, t("help.section_terminal"), False)
+        _term_controls = getattr(terminal_page, "_wx_terminal_controls", {})
+        page_controls["NAV-TERMINAL"] = {"page": terminal_page, **_term_controls, "output": _term_controls.get("output"), "panel": terminal_page}
 
     # Jobs & Outputs
     _jobs = _jobs_callbacks(session_state, frame, lifecycle)
@@ -1381,18 +1411,38 @@ def _run_packaged_smoke(app, frame, session_state, output_path, lifecycle=None):
         "clean_shutdown": "FAIL",
         **{name: "FAIL" for name in _PACKAGED_SMOKE_SURFACES},
     }
-    state = {"phase": 0, "result": "FAIL", "done": False}
-    deadline = time.monotonic() + 12
+    state = {
+        "phase": 0,
+        "result": "FAIL",
+        "done": False,
+        "deadline": time.monotonic() + 12,
+        "bridge_input_chars": 0,
+        "ssh_input_chars": 0,
+    }
 
     def finish(error=None):
         if state["done"]:
             return
         state["done"] = True
+        panel = session_state.get("_embedded_terminal_panel")
+        if panel is not None and getattr(panel, "_ready", False):
+            diagnostic = state.setdefault("input_diagnostic", {})
+            diagnostic["bridge_input_chars"] = state["bridge_input_chars"]
+            diagnostic["ssh_input_chars"] = state["ssh_input_chars"]
+            raw_events = panel._run_js_readback(
+                "JSON.stringify(window.__hpcSmokeInputEvents || null)"
+            )
+            if raw_events:
+                try:
+                    diagnostic["dom_input_events"] = json.loads(raw_events)
+                except json.JSONDecodeError:
+                    diagnostic["dom_input_events"] = "invalid JSON"
         payload = {
             "schema": "wx-packaged-runtime/1",
             "result": state["result"],
             "checks": checks,
             "phase": state.get("phase"),
+            "input_diagnostic": state.get("input_diagnostic"),
             "last_line": state.get("last_line"),
             "last_buffer": state.get("last_buffer"),
             "last_screen": state.get("last_screen"),
@@ -1429,8 +1479,14 @@ def _run_packaged_smoke(app, frame, session_state, output_path, lifecycle=None):
             wx.CallLater(250, probe)
 
     def probe():
-        if time.monotonic() >= deadline:
-            finish("timeout waiting for packaged WebView terminal")
+        if time.monotonic() >= state["deadline"]:
+            phase = state["phase"]
+            timeout = (
+                "timeout waiting for packaged WebView terminal"
+                if phase == 0
+                else f"timeout in packaged smoke phase {phase}"
+            )
+            finish(timeout)
             return
         panel = session_state.get("_embedded_terminal_panel")
         if panel is None:
@@ -1448,6 +1504,29 @@ def _run_packaged_smoke(app, frame, session_state, output_path, lifecycle=None):
             except Exception as exc:
                 finish(f"loopback_ssh:{type(exc).__name__}")
                 return
+            original_handle_input = panel._handle_input
+
+            def record_bridge_input(data):
+                state["bridge_input_chars"] += len(data)
+                original_handle_input(data)
+
+            panel._handle_input = record_bridge_input
+            original_send_input = panel._send_input
+            if callable(original_send_input):
+                def record_ssh_input(data):
+                    state["ssh_input_chars"] += len(data)
+                    return original_send_input(data)
+
+                panel._send_input = record_ssh_input
+            panel._run_js(
+                "window.__hpcSmokeInputEvents={keydown:0,beforeinput:0,input:0};"
+                "document.addEventListener('keydown',function(){"
+                "window.__hpcSmokeInputEvents.keydown++;},true);"
+                "document.addEventListener('beforeinput',function(){"
+                "window.__hpcSmokeInputEvents.beforeinput++;},true);"
+                "document.addEventListener('input',function(){"
+                "window.__hpcSmokeInputEvents.input++;},true);"
+            )
             import importlib
 
             surface_errors = []
@@ -1501,11 +1580,147 @@ def _run_packaged_smoke(app, frame, session_state, output_path, lifecycle=None):
             checks["wx_runtime_started"] = "PASS"
             smoke_ssh = state["smoke_session"]["ssh"]
             smoke_ssh.resize_shell_pty(123, 45)
-            if not smoke_ssh.send_shell_input("echo PACKAGED-PTY\n"):
-                finish("loopback_ssh:input_failed")
+            notebook = frame._wx_shell_controls["notebook"]
+            terminal_page = frame._wx_shell_controls["pages"]["NAV-TERMINAL"]["page"]
+            terminal_index = notebook.FindPage(terminal_page)
+            if terminal_index < 0:
+                finish("terminal_page_not_in_notebook")
                 return
+            notebook.SetSelection(terminal_index)
+            frame.Raise()
+            try:
+                import ctypes
+
+                state["foreground_request_accepted"] = bool(
+                    ctypes.windll.user32.SetForegroundWindow(frame.GetHandle())
+                )
+            except (AttributeError, OSError):
+                state["foreground_request_accepted"] = False
             panel.hpc_clear()
+            panel.hpc_focus()
+            wx.Yield()
+            try:
+                focus = wx.Window.FindFocus()
+                frame_handle = int(frame.GetHandle())
+                foreground_handle = int(ctypes.windll.user32.GetForegroundWindow())
+                focus_parent = focus
+                while focus_parent is not None and focus_parent is not panel:
+                    focus_parent = focus_parent.GetParent()
+                state["input_diagnostic"] = {
+                    "foreground_request_accepted": state["foreground_request_accepted"],
+                    "foreground_matches_frame": foreground_handle == frame_handle,
+                    "wx_focus_type": type(focus).__name__ if focus else None,
+                    "wx_focus_within_terminal_panel": focus_parent is panel,
+                }
+                dom_focus = panel._run_js_readback(
+                    "JSON.stringify((function(){var e=document.activeElement;return "
+                    "{tag:e&&e.tagName||null,className:e&&typeof e.className==='string'?e.className:'',"
+                    "insideTerminal:!!(e&&e.closest&&e.closest('.xterm'))};})())"
+                )
+                state["input_diagnostic"]["webview_dom_focus"] = (
+                    json.loads(dom_focus) if dom_focus else None
+                )
+            except Exception as exc:
+                state["input_diagnostic"] = {
+                    "foreground_request_accepted": state["foreground_request_accepted"],
+                    "capture_error": f"{type(exc).__name__}: {exc}",
+                }
+            try:
+                if os.name == "nt":
+                    import ctypes
+                    from ctypes import wintypes
+
+                    user32 = ctypes.windll.user32
+                    user32.GetForegroundWindow.restype = wintypes.HWND
+                    if int(user32.GetForegroundWindow()) != frame_handle:
+                        finish("keyboard_input:foreground_lost")
+                        return
+
+                    class _KeyboardInput(ctypes.Structure):
+                        _fields_ = [
+                            ("wVk", wintypes.WORD),
+                            ("wScan", wintypes.WORD),
+                            ("dwFlags", wintypes.DWORD),
+                            ("time", wintypes.DWORD),
+                            ("dwExtraInfo", ctypes.c_size_t),
+                        ]
+
+                    class _MouseInput(ctypes.Structure):
+                        _fields_ = [
+                            ("dx", wintypes.LONG),
+                            ("dy", wintypes.LONG),
+                            ("mouseData", wintypes.DWORD),
+                            ("dwFlags", wintypes.DWORD),
+                            ("time", wintypes.DWORD),
+                            ("dwExtraInfo", ctypes.c_size_t),
+                        ]
+
+                    class _InputUnion(ctypes.Union):
+                        _fields_ = [("mi", _MouseInput), ("ki", _KeyboardInput)]
+
+                    class _Input(ctypes.Structure):
+                        _anonymous_ = ("data",)
+                        _fields_ = [("type", wintypes.DWORD), ("data", _InputUnion)]
+
+                    keyup = 0x0002
+                    unicode_key = 0x0004
+                    events = []
+                    for char in "echo PACKAGED-PTY":
+                        event = _Input(
+                            1,
+                            _InputUnion(ki=_KeyboardInput(0, ord(char), unicode_key, 0, 0)),
+                        )
+                        events.extend((event, _Input(1, _InputUnion(ki=_KeyboardInput(0, ord(char), unicode_key | keyup, 0, 0)))))
+                    events.extend(
+                        (
+                            _Input(1, _InputUnion(ki=_KeyboardInput(wx.WXK_RETURN, 0, 0, 0, 0))),
+                            _Input(1, _InputUnion(ki=_KeyboardInput(wx.WXK_RETURN, 0, keyup, 0, 0))),
+                        )
+                    )
+                    send_input = user32.SendInput
+                    send_input.argtypes = (wintypes.UINT, ctypes.POINTER(_Input), ctypes.c_int)
+                    send_input.restype = wintypes.UINT
+                    size = panel._webview.GetClientSize()
+                    click_point = panel._webview.ClientToScreen(
+                        wx.Point(size.width // 2, size.height // 2)
+                    )
+                    user32.SetCursorPos.argtypes = (wintypes.INT, wintypes.INT)
+                    if not user32.SetCursorPos(click_point.x, click_point.y):
+                        finish("keyboard_input:could_not_position_terminal_click")
+                        return
+                    mouse_events = (_Input * 2)(
+                        _Input(0, _InputUnion(mi=_MouseInput(0, 0, 0, 0x0002, 0, 0))),
+                        _Input(0, _InputUnion(mi=_MouseInput(0, 0, 0, 0x0004, 0, 0))),
+                    )
+                    mouse_sent = send_input(2, mouse_events, ctypes.sizeof(_Input))
+                    if mouse_sent != 2:
+                        finish("keyboard_input:terminal_click_send_failed")
+                        return
+                    wx.Yield()
+                    if int(user32.GetForegroundWindow()) != frame_handle:
+                        finish("keyboard_input:foreground_lost_after_terminal_click")
+                        return
+                    input_array = (_Input * len(events))(*events)
+                    sent = send_input(len(events), input_array, ctypes.sizeof(_Input))
+                    input_sent = sent == len(events)
+                    state["input_diagnostic"]["input_method"] = "Win32 SendInput"
+                    state["input_diagnostic"]["terminal_click"] = [
+                        click_point.x,
+                        click_point.y,
+                    ]
+                    state["input_diagnostic"]["click_events"] = int(mouse_sent)
+                    state["input_diagnostic"]["sendinput_events"] = int(sent)
+                else:
+                    keyboard = wx.UIActionSimulator()
+                    input_sent = keyboard.Text("echo PACKAGED-PTY") and keyboard.Char(wx.WXK_RETURN)
+            except Exception as exc:
+                finish(f"keyboard_input:{type(exc).__name__}:{exc}")
+                return
+            if not input_sent:
+                finish("keyboard_input:SendInput returned a partial/failed event count")
+                return
             state["phase"] = 1
+            state["deadline"] = time.monotonic() + 12
             retry()
             return
         try:
@@ -1593,7 +1808,7 @@ def main() -> int:
             or f"hpc-client-gui-smoke-{os.getpid()}"
         )
     if os.environ.get("HPC_GUI_PACKAGED_SMOKE_OUTPUT"):
-        frame, _lifecycle, session_state = create_shell_frame(app)
+        frame, _lifecycle, session_state = create_shell_frame(app, defer_terminal_webview=True)
         frame.Show()
         smoke_state = _run_packaged_smoke(app, frame, session_state, os.environ["HPC_GUI_PACKAGED_SMOKE_OUTPUT"], _lifecycle)
         app.MainLoop()
@@ -1751,7 +1966,7 @@ def main() -> int:
     except Exception:
         splash = None
 
-    frame, _lifecycle, _session_state = create_shell_frame(app)
+    frame, _lifecycle, _session_state = create_shell_frame(app, defer_terminal_webview=True)
     if splash is not None:
         try:
             splash.Destroy()

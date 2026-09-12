@@ -180,6 +180,8 @@ class WxTerminalWebViewPanel(wx.Panel if _WX_AVAILABLE else object):  # type: ig
         self._webview = None
         self._is_parity = False
         self._diagnostic_text = ""
+        self._webview_failure_stage = "not-created"
+        self._webview_failure_detail = ""
 
         # Generation counter for stale-output rejection across reconnects
         self._generation = 0
@@ -290,10 +292,13 @@ class WxTerminalWebViewPanel(wx.Panel if _WX_AVAILABLE else object):  # type: ig
 
         # WebView path
         self._is_parity = True
+        self._webview_failure_stage = "creating"
         try:
             self._webview = wx.html2.WebView.New(self)
         except Exception as exc:
             # Fallback if creation fails despite availability check
+            self._webview_failure_stage = "creation"
+            self._webview_failure_detail = str(exc)
             self._diagnostic_text = self._build_diagnostic_text(f"WebView creation failed: {exc}")
             err_panel = wx.Panel(self)
             err_sizer = wx.BoxSizer(wx.VERTICAL)
@@ -361,9 +366,11 @@ class WxTerminalWebViewPanel(wx.Panel if _WX_AVAILABLE else object):  # type: ig
         # Load local page
         index_path = _wx_index_path()
         url = index_path.as_uri()
+        self._webview_failure_stage = "navigation"
         try:
             self._webview.LoadURL(url)
         except Exception:
+            self._webview_failure_stage = "navigation-call"
             pass
         # Start readiness timeout
         self._readiness_timer.Start(READINESS_TIMEOUT_MS, oneShot=True)
@@ -457,6 +464,7 @@ class WxTerminalWebViewPanel(wx.Panel if _WX_AVAILABLE else object):  # type: ig
     def _on_loaded(self, event):
         # Page loaded — xterm will post {type:"ready"} when bridge is ready
         self._page_loaded = True
+        self._webview_failure_stage = "page-loaded"
         try:
             event.Skip()
         except Exception:
@@ -465,7 +473,10 @@ class WxTerminalWebViewPanel(wx.Panel if _WX_AVAILABLE else object):  # type: ig
     def _on_error(self, event):
         # Page load failed
         try:
-            self._diagnostic_text = self._build_diagnostic_text(f"WebView load error: {event.GetString() if hasattr(event, 'GetString') else ''}")
+            detail = event.GetString() if hasattr(event, "GetString") else ""
+            self._webview_failure_stage = "navigation-error"
+            self._webview_failure_detail = detail
+            self._diagnostic_text = self._build_diagnostic_text(f"WebView load error: {detail}")
         except Exception:
             pass
         # Show diagnostic in dimensions label?
@@ -531,6 +542,7 @@ class WxTerminalWebViewPanel(wx.Panel if _WX_AVAILABLE else object):  # type: ig
     def _on_bridge_ready(self):
         if self._closed or self._ready:
             return
+        self._webview_failure_stage = "ready"
         self._ready = True
         try:
             if self._readiness_timer and self._readiness_timer.IsRunning():
@@ -544,6 +556,7 @@ class WxTerminalWebViewPanel(wx.Panel if _WX_AVAILABLE else object):  # type: ig
     def _on_readiness_timeout(self, _evt=None):
         if self._closed or self._ready:
             return
+        self._webview_failure_stage = "bridge-timeout"
         # Readiness timeout — show diagnostic but remain functional if ready arrives later
         try:
             self._status_label.SetLabel(t("login.terminal_readiness_timeout") if t("login.terminal_readiness_timeout") != "[login.terminal_readiness_timeout]" else "Terminal did not become ready in time.")
