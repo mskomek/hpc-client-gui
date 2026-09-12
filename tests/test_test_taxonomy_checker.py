@@ -125,3 +125,44 @@ def test_catch_all_filename_is_warning_only():
     )
     assert warnings == ["tests/test_final_gaps.py"]
     assert checker.report_exit_code(report) == 0
+
+
+@pytest.mark.audit
+def test_ratchet_allows_only_recorded_zero_primary_debt():
+    baseline = {
+        "repository_sha": "baseline-sha",
+        "zero_primary_count": 1,
+        "zero_primary_nodeids": ["tests/legacy.py::test_old"],
+    }
+    report = checker.build_report(
+        [
+            {"nodeid": "tests/legacy.py::test_old", "markers": []},
+            {"nodeid": "tests/new.py::test_new", "markers": ["audit"]},
+        ],
+        repository_sha="current-sha",
+    )
+    ratchet = checker.build_ratchet_report(report, baseline)
+    assert ratchet["passed"] is True
+    assert ratchet["new_zero_primary"] == {"count": 0, "nodeids": []}
+
+
+@pytest.mark.audit
+def test_ratchet_rejects_new_zero_primary_and_multi_primary_debt():
+    baseline = {
+        "repository_sha": "baseline-sha",
+        "zero_primary_count": 0,
+        "zero_primary_nodeids": [],
+    }
+    report = checker.build_report(
+        [
+            {"nodeid": "tests/new.py::test_unmarked", "markers": []},
+            {"nodeid": "tests/new.py::test_multi", "markers": ["gui", "unit"]},
+        ],
+        repository_sha="current-sha",
+    )
+    ratchet = checker.build_ratchet_report(report, baseline)
+    assert ratchet["passed"] is False
+    assert ratchet["new_zero_primary"]["nodeids"] == [
+        "tests/new.py::test_unmarked"
+    ]
+    assert ratchet["multi_primary"]["count"] == 1
