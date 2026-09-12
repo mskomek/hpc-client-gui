@@ -87,9 +87,9 @@ Removed `tests/test_wx_jobs_stress.py::test_wx_jobs_stress_backend_workers_and_r
 
 See [REPORTING_E2E_REVIEW_K.md](REPORTING_E2E_REVIEW_K.md) for the node ownership and evidence boundaries. The plugin user lifecycle is E2E; screenshot, reproducibility-bundle, and capability report validators are reporting; the manifest generator is release-specific; Wave 79 tests are split among contract, unit, and integration according to the exercised boundary. The packaged smoke node is an artifact-dependent runtime smoke, not a report-only test. It was not executed because the runner would overwrite the existing Windows FAIL evidence while no discoverable artifact is present. No nodes were added, removed, or renamed.
 
-### L. Legacy static/migration ownership review — NOT STARTED
+### L. Legacy static/migration ownership review — DONE
 
-Review, do not blanket-delete, tests/test_parity_matrix.py, tests/test_gui_feature_parity_baseline.py, tests/test_qt_removal_gate.py, tests/test_wx_terminal_parity_evidence.py, tests/test_wave2_wx_ui_parity.py, tests/test_wave9_ci_unicode_matrix.py, and tests/test_wave10_release_gate.py against the Qt/PySide6 production runtime, actively tested optional wxPython implementation, and docs/v2/WX_MIGRATION_WAVE_STATUS.md. Do not update completion ledgers in unrelated packets.
+See [LEGACY_MIGRATION_REVIEW_L.md](LEGACY_MIGRATION_REVIEW_L.md). Qt remains present in production and wx remains an actively exercised optional GUI. The suites are retained by behavior; one test-local writer that overwrote terminal evidence with hard-coded claims was removed, the Wave 10 navigation persistence node was strengthened without changing its nodeid, and Wave 2 wx teardown now drains/asserts window cleanup. The migration ledger remains PARTIAL; no runtime or platform evidence was upgraded.
 
 ### M. Full-suite classification — NOT STARTED
 
