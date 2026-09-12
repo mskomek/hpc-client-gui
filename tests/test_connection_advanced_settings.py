@@ -248,24 +248,68 @@ class ParallelismSourceOfTruthTests(unittest.TestCase):
 
 class TransferChannelSafetyTests(unittest.TestCase):
     def test_workers_receive_distinct_channels(self) -> None:
-        """Two concurrent fake workers get distinct channel objects."""
-        channels: list[object] = []
+        """The channel manager gives concurrent workers owned bounded channels."""
+        from hpc_gui.ssh.sftp_channels import SFTPChannelManager
+
+        channels = []
+        errors = []
         barrier = threading.Barrier(2, timeout=5)
+        transport = SimpleNamespace(
+            is_active=lambda: True,
+            is_authenticated=lambda: True,
+        )
 
         class FakeChannel:
-            pass
+            timeout = None
 
-        def worker():
-            channels.append(FakeChannel())
-            barrier.wait()
+            def settimeout(self, value):
+                self.timeout = value
 
-        threads = [threading.Thread(target=worker) for _ in range(2)]
-        for thread in threads:
-            thread.start()
-        for thread in threads:
-            thread.join(timeout=5)
+        class FakeSFTP:
+            def __init__(self):
+                self.channel = FakeChannel()
+                self.closed = False
+
+            def get_channel(self):
+                return self.channel
+
+            def close(self):
+                self.closed = True
+
+        def open_fake(_transport):
+            channel = FakeSFTP()
+            channels.append(channel)
+            return channel
+
+        import paramiko
+
+        manager = SFTPChannelManager(lambda: transport)
+        with mock.patch.object(
+            paramiko.SFTPClient, "from_transport", staticmethod(open_fake)
+        ):
+            def worker():
+                channel = None
+                try:
+                    channel = manager.open_transfer_sftp()
+                    barrier.wait()
+                except BaseException as exc:
+                    errors.append(exc)
+                finally:
+                    if channel is not None:
+                        channel.close()
+
+            threads = [threading.Thread(target=worker) for _ in range(2)]
+            for thread in threads:
+                thread.start()
+            for thread in threads:
+                thread.join(timeout=5)
+
+        self.assertFalse(any(thread.is_alive() for thread in threads))
+        self.assertEqual(errors, [])
         self.assertEqual(len(channels), 2)
         self.assertIsNot(channels[0], channels[1])
+        self.assertTrue(all(channel.closed for channel in channels))
+        self.assertTrue(all(channel.channel.timeout == 60 for channel in channels))
 
     def test_unsupported_backend_forces_one(self) -> None:
         files = SimpleNamespace(supports_parallel_transfers=False)

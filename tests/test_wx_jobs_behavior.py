@@ -43,6 +43,10 @@ def _click(control):
     control.ProcessEvent(event)
 
 
+def _stdout(frame):
+    return frame._wx_jobs_controls.get("output_channels", {}).get("stdout")
+
+
 @pytest.fixture
 def wx_jobs():
     load_language("en")
@@ -73,39 +77,53 @@ def wx_jobs():
         pass
 
 
-def test_wx_job_output_pause_keeps_refreshing_but_stops_live_follow(wx_jobs):
-    import pytest
-    pytest.skip("flaky on Windows large suite – pre-existing, not Connection")
+@pytest.mark.gui
+def test_wx_job_output_pause_freezes_and_resume_updates_output(wx_jobs):
     values = [{"stdout": "line 1", "stderr": "err 1"}, {"stdout": "line 1\nline 2", "stderr": "err 2"}, {"stdout": "line 1\nline 2\nline 3", "stderr": "err 3"}]
+    reads = 0
+
+    def read(_job):
+        nonlocal reads
+        value = values[min(reads, len(values) - 1)]
+        reads += 1
+        return value
+
     frame = None
-    frame = _open(wx_jobs, lambda: [{"id": "42", "state": "RUNNING"}], lambda _job: values.pop(0))
+    frame = _open(wx_jobs, lambda: [{"id": "42", "state": "RUNNING"}], read)
     _pump(wx_jobs, lambda: frame._wx_jobs_controls["jobs"].GetItemCount() == 1)
     _select(frame)
-    _pump(wx_jobs, lambda: "line 1" in frame._wx_jobs_controls["stdout"].GetValue())
-    frame._wx_jobs_controls["stdout"].SetInsertionPoint(0)
+    _pump(wx_jobs, lambda: _stdout(frame) is not None and "line 1" in _stdout(frame).GetValue())
+    _stdout(frame).SetInsertionPoint(0)
     _click(frame._wx_jobs_controls["pause"])
     frame._wx_jobs_refresh_outputs()
-    _pump(wx_jobs, lambda: "line 2" in frame._wx_jobs_controls["stdout"].GetValue())
+    _pump(
+        wx_jobs,
+        lambda: reads >= 2 and frame._wx_jobs_state["outputs_requests"] == 0,
+    )
     assert frame._wx_jobs_state["user_paused"]
     assert frame._wx_jobs_state["selected_job"] == "42"
-    assert frame._wx_jobs_controls["stdout"].GetValue().endswith("line 2\n")
-    assert frame._wx_jobs_controls["stdout"].GetInsertionPoint() < frame._wx_jobs_controls["stdout"].GetLastPosition()
-    paused_follow_calls = frame._wx_jobs_state["follow_calls"]
+    assert _stdout(frame).GetValue() == "line 1\n"
+    assert _stdout(frame).GetInsertionPoint() < _stdout(frame).GetLastPosition()
     _click(frame._wx_jobs_controls["pause"])
     frame._wx_jobs_refresh_outputs()
-    _pump(wx_jobs, lambda: "line 3" in frame._wx_jobs_controls["stdout"].GetValue())
-    assert frame._wx_jobs_state["follow_calls"] > paused_follow_calls
+    _pump(wx_jobs, lambda: _stdout(frame).GetValue() == "line 1\nline 2\nline 3\n")
 
 
 def test_wx_job_output_minimize_suspends_follow_and_restore_resumes_it(wx_jobs):
-    import pytest
-    pytest.skip("flaky on Windows large suite – pre-existing")
     list_calls = []
     values = [{"stdout": "output-1"}, {"stdout": "output-2"}, {"stdout": "output-3"}]
-    frame = _open(wx_jobs, lambda: list_calls.append(1) or [{"id": "42", "state": "RUNNING"}], lambda _job: values.pop(0))
+    reads = 0
+
+    def read(_job):
+        nonlocal reads
+        value = values[min(reads, len(values) - 1)]
+        reads += 1
+        return value
+
+    frame = _open(wx_jobs, lambda: list_calls.append(1) or [{"id": "42", "state": "RUNNING"}], read)
     _pump(wx_jobs, lambda: frame._wx_jobs_controls["jobs"].GetItemCount() == 1)
     _select(frame)
-    _pump(wx_jobs, lambda: frame._wx_jobs_controls["stdout"].GetValue() == "output-1\n")
+    _pump(wx_jobs, lambda: _stdout(frame) is not None and _stdout(frame).GetValue() == "output-1\n")
     event = wx.IconizeEvent(frame.GetId(), True)
     frame.ProcessEvent(event)
     assert frame._wx_jobs_state["minimized"]
@@ -113,14 +131,14 @@ def test_wx_job_output_minimize_suspends_follow_and_restore_resumes_it(wx_jobs):
     frame._wx_jobs_refresh_jobs()
     assert len(list_calls) == before
     frame._wx_jobs_refresh_outputs()
-    _pump(wx_jobs, lambda: frame._wx_jobs_controls["stdout"].GetValue() == "output-2\n")
+    _pump(wx_jobs, lambda: _stdout(frame).GetValue() == "output-2\n")
     assert frame._wx_jobs_state["minimized"]
     frame.ProcessEvent(wx.IconizeEvent(frame.GetId(), False))
     assert not frame._wx_jobs_state["minimized"]
     frame._wx_jobs_refresh_jobs()
     _pump(wx_jobs, lambda: len(list_calls) > before)
     frame._wx_jobs_refresh_outputs()
-    _pump(wx_jobs, lambda: frame._wx_jobs_controls["stdout"].GetValue() == "output-3\n")
+    _pump(wx_jobs, lambda: _stdout(frame).GetValue() == "output-3\n")
     assert not frame._wx_jobs_state["user_paused"]
 
 
@@ -143,60 +161,89 @@ def test_wx_job_output_pause_survives_minimize_restore(wx_jobs):
 
 
 def test_wx_job_output_does_not_overlap_remote_reads(wx_jobs):
-    try:
-        import wx
-        if len(wx.GetTopLevelWindows()) > 0:
-            import pytest
-            pytest.skip("wx polluted, skipping flaky jobs test")
-    except Exception:
-        pass
     started = threading.Event()
     release = threading.Event()
     calls = []
     read_threads = []
+    lock = threading.Lock()
+    active = 0
+    peak = 0
 
     def read(_job):
-        calls.append(1)
-        read_threads.append(threading.get_ident())
+        nonlocal active, peak
+        with lock:
+            calls.append(1)
+            read_threads.append(threading.get_ident())
+            active += 1
+            peak = max(peak, active)
         started.set()
-        release.wait(2)
-        return {"stdout": "done"}
+        try:
+            release.wait(3)
+            return {"stdout": "done"}
+        finally:
+            with lock:
+                active -= 1
 
     frame = _open(wx_jobs, lambda: [{"id": "42", "state": "RUNNING"}], read)
     _pump(wx_jobs, lambda: frame._wx_jobs_controls["jobs"].GetItemCount() == 1)
     _select(frame)
     assert started.wait(2)
-    frame._wx_jobs_refresh_outputs()
-    # In large suite, concurrent refreshes may cause extra calls – at least 1 is required
-    assert len(calls) >= 1
-    release.set()
-    def _check_output():
-        channels = frame._wx_jobs_controls.get("output_channels", {})
-        return any("done" in tc.GetValue() for tc in channels.values())
-    _pump(wx_jobs, _check_output)
-    assert read_threads and read_threads[0] != threading.get_ident()
+    try:
+        for _ in range(5):
+            frame._wx_jobs_refresh_outputs_tab()
+        with lock:
+            assert peak == 1
+            assert active == 1
+        release.set()
+
+        def _check_output():
+            channels = frame._wx_jobs_controls.get("output_channels", {})
+            return any("done" in tc.GetValue() for tc in channels.values())
+
+        _pump(wx_jobs, _check_output)
+        with lock:
+            assert peak == 1
+            assert active == 0
+            assert len(calls) >= 1
+            assert read_threads and read_threads[0] != threading.get_ident()
+    finally:
+        release.set()
 
 
 def test_wx_job_output_discards_stale_result_after_job_selection_changes(wx_jobs):
-    import pytest
-    pytest.skip("flaky on Windows large suite – pre-existing")
     release_a = threading.Event()
+    release_b = threading.Event()
+    started_a = threading.Event()
+    started_b = threading.Event()
     calls = []
 
     def read(job_id):
         calls.append(job_id)
         if job_id == "A":
-            release_a.wait(2)
+            started_a.set()
+            release_a.wait(3)
+        else:
+            started_b.set()
+            release_b.wait(3)
         return {"stdout": f"output-{job_id}"}
 
     frame = _open(wx_jobs, lambda: [{"id": "A", "state": "RUNNING"}, {"id": "B", "state": "RUNNING"}], read)
-    _pump(wx_jobs, lambda: frame._wx_jobs_controls["jobs"].GetItemCount() == 2)
-    _select(frame, 0)
-    _pump(wx_jobs, lambda: calls == ["A"])
-    _select(frame, 1)
-    release_a.set()
-    _pump(wx_jobs, lambda: frame._wx_jobs_controls["stdout"].GetValue() == "output-B\n")
-    assert calls[:2] == ["A", "B"]
+    try:
+        _pump(wx_jobs, lambda: frame._wx_jobs_controls["jobs"].GetItemCount() == 2)
+        _select(frame, 0)
+        assert started_a.wait(2)
+        _select(frame, 1)
+        release_a.set()
+        assert started_b.wait(3)
+        wx.SafeYield()
+        assert _stdout(frame) is not None
+        assert _stdout(frame).GetValue() != "output-A\n"
+        release_b.set()
+        _pump(wx_jobs, lambda: _stdout(frame) is not None and _stdout(frame).GetValue() == "output-B\n")
+        assert calls[:2] == ["A", "B"]
+    finally:
+        release_a.set()
+        release_b.set()
 
 
 def _open(app, list_jobs, read_output):

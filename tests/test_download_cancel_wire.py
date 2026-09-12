@@ -14,7 +14,6 @@ import os
 import sys
 import tempfile
 import threading
-import time
 import unittest
 from pathlib import Path
 
@@ -116,21 +115,14 @@ class DownloadCancelWireTests(unittest.TestCase):
             lambda item, progress: self.panel._execute_transfer_item(item, progress_cb=progress),
             parallel_limit=1,
         )
-        controller._on_progress = lambda _item, done, _total: seen.update(bytes=done)
+        def cancel_when_underway(_item, done, _total) -> None:
+            seen["bytes"] = done
+            if done > CANCEL_AFTER_BYTES:
+                controller.cancel_all()
 
-        def cancel_when_underway() -> None:
-            deadline = time.monotonic() + 60
-            while time.monotonic() < deadline:
-                if seen["bytes"] > CANCEL_AFTER_BYTES:
-                    controller.cancel_all()
-                    return
-                time.sleep(0.01)
-
-        watcher = threading.Thread(target=cancel_when_underway, daemon=True)
-        watcher.start()
+        controller._on_progress = cancel_when_underway
         controller.start()
         self.assertTrue(controller.wait(120), "queue never finished")
-        watcher.join(5)
         self.assertGreater(seen["bytes"], CANCEL_AFTER_BYTES, "cancel never triggered")
         return controller
 

@@ -171,26 +171,52 @@ class TestSelectedJobStoreThreadSafety:
 
     def test_concurrent_subscribe_and_select(self):
         store = SelectedJobStore()
-        received = []
+        rounds = 20
+        phase = threading.Barrier(4, timeout=5)
+        received = {worker_id: [] for worker_id in range(3)}
+        selected = []
+        errors = []
 
-        def listener(ctx):
-            received.append(ctx.generation)
+        def subscriber(worker_id):
+            try:
+                for _index in range(rounds):
+                    def listener(ctx, worker_id=worker_id):
+                        received[worker_id].append((ctx.generation, ctx.job_id))
 
-        def subscriber():
-            store.subscribe(listener)
+                    unsubscribe = store.subscribe(listener)
+                    phase.wait()
+                    phase.wait()
+                    unsubscribe()
+            except BaseException as exc:
+                errors.append(exc)
 
         def selector():
-            for _ in range(20):
-                store.select(job_id="x")
+            try:
+                for index in range(rounds):
+                    phase.wait()
+                    selected.append(store.select(job_id=f"job-{index}"))
+                    phase.wait()
+            except BaseException as exc:
+                errors.append(exc)
 
-        threads = [threading.Thread(target=subscriber) for _ in range(3)]
-        threads += [threading.Thread(target=selector) for _ in range(3)]
+        threads = [
+            threading.Thread(target=subscriber, args=(worker_id,))
+            for worker_id in range(3)
+        ]
+        threads.append(threading.Thread(target=selector))
         for t in threads:
             t.start()
         for t in threads:
-            t.join()
-        # No crash = success; generation values may be partial
-        assert store.generation > 0
+            t.join(timeout=10)
+
+        assert not any(t.is_alive() for t in threads)
+        assert errors == []
+        assert [ctx.generation for ctx in selected] == list(range(1, rounds + 1))
+        expected = [(index + 1, f"job-{index}") for index in range(rounds)]
+        assert received == {worker_id: expected for worker_id in range(3)}
+
+        store.select(job_id="after-unsubscribe")
+        assert received == {worker_id: expected for worker_id in range(3)}
 
 
 # ---------------------------------------------------------------------------
