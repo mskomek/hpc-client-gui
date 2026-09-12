@@ -176,12 +176,20 @@ def test_no_fluent_command_means_no_cross_diagnostic():
     ) == []
 
 
-def test_parser_never_executes_content():
+def test_parser_never_executes_content(tmp_path):
+    """Hostile scheduler directives remain inert; source scan is policy evidence."""
     import hpc_gui.lint.job_context as module
 
     source = inspect.getsource(module)
     for forbidden in ("subprocess", "os.system", "Popen", "__import__", "eval(", "exec("):
         assert forbidden not in source
+
+    marker = tmp_path / "executed"
+    payload = f"__import__('pathlib').Path({str(marker)!r}).write_text('executed')"
+    context = parse_slurm_context(f"#SBATCH --cpus-per-task={payload}\n")
+    assert context is not None
+    assert context.cpus_per_task is None
+    assert not marker.exists()
 
 
 def test_no_truba_constants_in_core_parser():

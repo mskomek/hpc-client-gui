@@ -1,8 +1,8 @@
 import hashlib
 import base64
-import inspect
 import os
 import subprocess
+import sys
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -121,9 +121,80 @@ def test_closing_update_progress_cancels_active_download():
 
 
 def test_manual_update_check_shows_splash_before_worker_starts():
-    source = inspect.getsource(MainWindow).split("def _check_for_updates", 1)[1]
-    source = source.split("def _on_release_checked", 1)[0]
-    assert source.index("_show_update_progress") < source.index("_run_update_job")
+    root = Path(__file__).resolve().parents[1]
+    env = os.environ.copy()
+    env["QT_QPA_PLATFORM"] = "offscreen"
+    env["PYTHONPATH"] = str(root / "src")
+    code = r'''
+import threading
+import time
+from PySide6.QtWidgets import QApplication, QMainWindow
+import hpc_gui.ui.main_window as main_window
+
+app = QApplication([])
+events = []
+worker_started = threading.Event()
+callback_finished = threading.Event()
+
+def get_release():
+    events.append("release-check")
+    worker_started.set()
+    return object()
+
+main_window.get_latest_release = get_release
+window = QMainWindow()
+window._update_busy_count = 0
+window._update_manual = False
+window._update_interactive = False
+window._update_cancelled = False
+window._update_progress = None
+window._update_jobs = set()
+window._update_workers = {}
+window._on_update_progress = lambda *_args: None
+window._on_update_error = lambda _error: callback_finished.set()
+window._cancel_update_jobs = lambda: None
+window._on_release_checked = lambda _release: callback_finished.set()
+window._show_update_progress = lambda value, key: main_window.MainWindow._show_update_progress(window, value, key)
+window._run_update_job = lambda fn, done: main_window.MainWindow._run_update_job(window, fn, done)
+window._update_job_finished = lambda thread: main_window.MainWindow._update_job_finished(window, thread)
+
+show_progress = window._show_update_progress
+run_job = window._run_update_job
+def show_spy(value, key):
+    show_progress(value, key)
+    app.processEvents()
+    events.append(("splash", window._update_progress.isVisible()))
+def run_spy(fn, done):
+    events.append(("run", window._update_progress.isVisible()))
+    run_job(fn, done)
+window._show_update_progress = show_spy
+window._run_update_job = run_spy
+
+main_window.MainWindow._check_for_updates(window, manual=True)
+deadline = time.monotonic() + 5
+while (not callback_finished.is_set() or window._update_busy_count) and time.monotonic() < deadline:
+    app.processEvents()
+    worker_started.wait(0.01)
+    time.sleep(0.01)
+assert window._update_manual is True
+assert worker_started.is_set()
+assert callback_finished.is_set()
+assert events == [("splash", True), ("run", True), "release-check"]
+main_window.MainWindow._close_update_progress(window)
+for thread in tuple(window._update_jobs):
+    thread.wait(5000)
+window.close()
+app.processEvents()
+'''
+    result = subprocess.run(
+        [sys.executable, "-c", code],
+        cwd=root,
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=20,
+    )
+    assert result.returncode == 0, f"child failed: {result.stdout}\n{result.stderr}"
 
 
 def test_update_splash_formats_binary_units():
@@ -154,11 +225,50 @@ def test_unpackaged_app_never_launches_installer(monkeypatch, tmp_path: Path):
         launch_update_installer(tmp_path / "update.dmg", "1.5.0")
 
 
-def test_install_handoff_never_shows_complete_before_helper_starts():
-    source = Path("src/hpc_gui/ui/main_window.py").read_text(encoding="utf-8")
-    handoff = source[source.index("def _on_update_downloaded"):source.index("def _on_update_error")]
-    assert '_show_update_progress(100, "installing")' not in handoff
-    assert '_show_update_progress(0, "preparing")' in handoff
+def test_install_handoff_never_shows_complete_before_helper_starts(monkeypatch):
+    import hpc_gui.ui.main_window as main_window
+
+    events = []
+
+    class Buttons:
+        Yes = 1
+        No = 2
+
+    message_box = SimpleNamespace(
+        StandardButton=Buttons,
+        question=lambda *_args: (events.append("confirm"), Buttons.Yes)[1],
+    )
+    application = SimpleNamespace(
+        processEvents=lambda: events.append("paint"),
+        quit=lambda: events.append("quit"),
+    )
+    monkeypatch.setattr(main_window, "QMessageBox", message_box)
+    monkeypatch.setattr(main_window, "QApplication", application)
+    monkeypatch.setattr(
+        main_window,
+        "launch_update_installer",
+        lambda *args: events.append(("installer", *args)),
+    )
+    window = SimpleNamespace(
+        _update_cancelled=False,
+        _close_update_progress=lambda: events.append("close-progress"),
+        _show_update_progress=lambda value, stage: events.append(("progress", value, stage)),
+        _on_update_error=lambda error: events.append(("error", error)),
+    )
+    release = SimpleNamespace(version="2.0.0", install_strategy="windows-inno")
+    package = Path("verified-update.zip")
+
+    main_window.MainWindow._on_update_downloaded(window, (release, package))
+
+    assert events == [
+        "close-progress",
+        "confirm",
+        ("progress", 0, "preparing"),
+        "paint",
+        ("installer", package, "2.0.0", "windows-inno"),
+        "quit",
+    ]
+    assert not any(event == ("progress", 100, "installing") for event in events)
 
 
 def test_appimage_handoff_runs_helper_from_verified_new_image(monkeypatch, tmp_path: Path):
