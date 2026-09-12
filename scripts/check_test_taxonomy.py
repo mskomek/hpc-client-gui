@@ -155,6 +155,49 @@ def report_exit_code(report: dict[str, Any]) -> int:
     return 0
 
 
+def build_ratchet_report(
+    report: dict[str, Any], baseline: dict[str, Any]
+) -> dict[str, Any]:
+    allowed_zero = set(baseline["zero_primary_nodeids"])
+    new_zero = [
+        nodeid for nodeid in report["zero_primary"]["nodeids"]
+        if nodeid not in allowed_zero
+    ]
+    passed = not new_zero and report["multi_primary"]["count"] == 0
+    return {
+        "schema_version": 1,
+        "mode": "ratchet",
+        "repository_sha": report["repository_sha"],
+        "baseline_sha": baseline["repository_sha"],
+        "collection": report["collection"],
+        "baseline": {"zero_primary_count": len(allowed_zero)},
+        "current": {
+            "zero_primary_count": report["zero_primary"]["count"],
+            "multi_primary_count": report["multi_primary"]["count"],
+        },
+        "new_zero_primary": {"count": len(new_zero), "nodeids": new_zero},
+        "multi_primary": report["multi_primary"],
+        "passed": passed,
+    }
+
+
+def load_ratchet_baseline(path: str | Path) -> dict[str, Any]:
+    baseline = json.loads(Path(path).read_text(encoding="utf-8"))
+    if (
+        not isinstance(baseline, dict)
+        or baseline.get("schema_version") != 1
+        or not isinstance(baseline.get("repository_sha"), str)
+        or not baseline["repository_sha"]
+        or not isinstance(baseline.get("zero_primary_nodeids"), list)
+        or not all(isinstance(nodeid, str) for nodeid in baseline["zero_primary_nodeids"])
+        or len(set(baseline["zero_primary_nodeids"])) != len(baseline["zero_primary_nodeids"])
+        or baseline.get("zero_primary_count") != len(baseline["zero_primary_nodeids"])
+        or baseline.get("multi_primary_count") != 0
+    ):
+        raise ValueError(f"invalid taxonomy ratchet baseline: {path}")
+    return baseline
+
+
 def _print_report(report: dict[str, Any], json_out: str | None) -> None:
     print(f"Total collected: {report['collection']['total']}")
     for category, count in report["primary_counts"].items():
@@ -179,11 +222,31 @@ def _print_report(report: dict[str, Any], json_out: str | None) -> None:
             print(f"  {entry}")
 
 
+def _print_ratchet(result: dict[str, Any], json_out: str | None) -> None:
+    status = "PASS" if result["passed"] else "FAIL"
+    print(f"RATCHET: {status}")
+    print(f"Zero-primary baseline: {result['baseline']['zero_primary_count']}")
+    print(f"Zero-primary current: {result['current']['zero_primary_count']}")
+    print(f"New zero-primary: {result['new_zero_primary']['count']}")
+    print(f"Multi-primary: {result['current']['multi_primary_count']}")
+    for nodeid in result["new_zero_primary"]["nodeids"]:
+        print(f"New zero-primary nodeid: {nodeid}")
+    for node in result["multi_primary"]["nodes"]:
+        print(f"Multi-primary nodeid: {node['nodeid']} [{', '.join(node['primaries'])}]")
+    if json_out:
+        print(f"Ratchet result: {json_out}")
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Report actual pytest taxonomy markers.")
-    parser.add_argument("--mode", required=True, choices=("report",))
+    parser.add_argument("--mode", required=True, choices=("report", "ratchet"))
     parser.add_argument("--json-out", help="write the complete report to this path")
+    parser.add_argument("--baseline", help="ratchet baseline JSON (required for ratchet mode)")
     args = parser.parse_args(argv)
+    if args.mode == "ratchet" and not args.baseline:
+        parser.error("--baseline is required for --mode ratchet")
+    if args.mode == "report" and args.baseline:
+        parser.error("--baseline is only valid with --mode ratchet")
     try:
         records = collect_records()
         test_root = ROOT / "tests"
@@ -196,11 +259,18 @@ def main(argv: list[str] | None = None) -> int:
             "catch_all_filenames": catch_all_filename_warnings(test_files),
         }
         report = build_report(records, repository_sha(), warnings)
+        if args.mode == "report":
+            result = report
+            _print_report(report, args.json_out)
+            exit_code = report_exit_code(report)
+        else:
+            result = build_ratchet_report(report, load_ratchet_baseline(args.baseline))
+            _print_ratchet(result, args.json_out)
+            exit_code = 0 if result["passed"] else 1
         if args.json_out:
-            write_json_report(report, args.json_out)
-        _print_report(report, args.json_out)
-        return report_exit_code(report)
-    except (OSError, RuntimeError, subprocess.SubprocessError) as exc:
+            write_json_report(result, args.json_out)
+        return exit_code
+    except (OSError, RuntimeError, ValueError, subprocess.SubprocessError) as exc:
         print(f"taxonomy report failed: {exc}", file=sys.stderr)
         return 2
 

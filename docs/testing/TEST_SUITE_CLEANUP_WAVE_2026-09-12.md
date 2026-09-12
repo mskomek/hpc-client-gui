@@ -4,7 +4,7 @@ Status: IN_PROGRESS
 
 Frozen baseline: 12ce79935bf076e1062c57dc7dbd148bad2bfae1
 
-Current packet: B
+Current packet: D
 Dependency: Phase 1 test-suite audit completed
 
 This is an executable cleanup Wave and implementation plan. The repository has no root ACTIVE_WAVE/WAVES execution system; this document does not claim to be its official active Wave ledger.
@@ -35,9 +35,33 @@ Freeze 12ce79935bf076e1062c57dc7dbd148bad2bfae1, collect the baseline nodeids, p
 
 Register primary and qualifier markers; add this architecture specification and the taxonomy REPORT checker with focused tests. Report only actual pytest marker state. Do not add primary markers to existing tests. Do not enable strict markers, change production, edit CI selectors, clean duplicates, or rewrite weak GUI tests.
 
-### C. RATCHET + lane comparison — NOT STARTED
+### C. RATCHET + lane comparison — DONE
 
-Use the REPORT JSON as the actual-state starting point and compare collected nodes with the existing selectors in scripts/ci.py, scripts/release_test_suite.py, .github/workflows/release.yml, and archived docs/ci-disabled/ci.yml. Keep taxonomy debt and lane membership visible; do not infer a primary from a lane. Review the Phase 1 lane inventory, including the release macOS lists (54 nodes each), shared Linux/Windows release runner, and current ci.py lanes. Define a ratchet only after the baseline and lane coverage are reproducible.
+Add a local `--mode ratchet --baseline audit/archive/12ce7993/test-suite-baseline/taxonomy-ratchet.json` gate. The baseline was captured from the real marker report at Phase B commit `058c83bb3318ddaee85bf98ba430079a4acd4a02`: 2,682 collected, 2,673 zero-primary nodeids, zero multi-primary. RATCHET permits only those exact existing zero-primary nodeids; any new zero-primary nodeid or any multi-primary item fails. After a legacy node is classified, remove its nodeid from the allowlist in the same reviewed change. REPORT remains non-gating. RATCHET is not wired into CI.
+
+The reproducible lane comparison is archived at `audit/archive/12ce7993/test-suite-baseline/lane-comparison-phase2.json`. It uses collected nodeids and actual `iter_markers()` data filtered by each recorded file/marker selector. All frozen lane counts reproduce. The 11 Packet B/C checker tests are the only added nodeids; none were removed. Current broad release selectors collect 2,682 nodes (2,671 frozen non-packaging nodes plus 11 audit nodes); explicit frozen subsets retain their audited counts, including 54 nodes per release macOS architecture list.
+
+| Selector | Frozen nodes | Current nodes | Current zero-primary | Current audit |
+| --- | ---: | ---: | ---: | ---: |
+| `scripts/ci.py packaging` | 1 | 1 | 1 | 0 |
+| `scripts/ci.py compat` | 202 | 202 | 202 | 0 |
+| `scripts/ci.py cli` | 164 | 164 | 164 | 0 |
+| `scripts/ci.py ssh` | 45 | 45 | 45 | 0 |
+| `scripts/ci.py windows` pytest selector | 6 | 6 | 6 | 0 |
+| `scripts/ci.py macos` | 55 | 55 | 55 | 0 |
+| `scripts/ci.py contract` | 10 | 10 | 10 | 0 |
+| shared release suite; release workflow Linux/Windows; archived GUI lane | 2,671 | 2,682 | 2,671 | 11 |
+| release workflow macOS arm64 | 54 | 54 | 54 | 0 |
+| release workflow macOS x86_64 | 54 | 54 | 54 | 0 |
+| archived CI compat / cli / ssh_sftp | 286 / 164 / 45 | 286 / 164 / 45 | same as count | 0 |
+| archived CI macos / windows / contract / packaging / wx-smoke | 69 / 41 / 10 / 1 / 59 | same as frozen | same as count | 0 |
+
+The active `.github/workflows/release.yml` is `workflow_dispatch` only. Its test-job union leaves these two packaging-marked tests outside the collected pytest selectors:
+
+- `tests/test_wheel_packaging.py::test_built_wheel_contains_required_assets`
+- `tests/test_wx_packaged_smoke.py::test_packaged_wx_smoke_gate_reports_critical_stages`
+
+The union of local `scripts/ci.py` pytest selectors and the shared release suite also leaves the packaged wx smoke node above uncovered; `ci.py windows` additionally invokes two `unittest discover` commands, which are outside pytest nodeid comparison. These are recorded lane facts, not permission to change selectors. Automatic PR/push CI remains absent; no CI files or selectors were changed.
 
 ### D. Exact duplicate groups / false gates — NOT STARTED
 
