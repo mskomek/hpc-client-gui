@@ -21,6 +21,32 @@ wx = ["wxPython>=4.3.1"]
 [tool.pytest.ini_options]
 markers = [
     "packaging: builds or inspects packaged artifacts (slow; run with -m packaging)",
+    "unit: isolated logical unit tests",
+    "integration: tests where multiple production components collaborate",
+    "gui: real GUI framework behavior with observable state or effect",
+    "e2e: composed user workflow across major application/runtime boundaries",
+    "runtime_smoke: broad start, import, or execution operability checks",
+    "contract: API, schema, config, import, i18n, or interface compatibility",
+    "audit: static repository, source, architecture, or governance checks",
+    "reporting: evidence, report validator, aggregator, or manifest logic",
+    "release: packaging, build, installer, signing, or release-specific checks",
+    "semantic: asserts user-visible or application meaning",
+    "regression: protects a previously corrected behavior",
+    "performance: measures runtime or resource efficiency",
+    "resource: validates resource acquisition, ownership, or release",
+    "concurrency: validates ordering, ownership, cancellation, or stale-result invariants",
+    "slow: intentionally exceeds the normal fast test budget",
+    "subprocess: launches a child process",
+    "windows: requires Windows-specific behavior",
+    "linux: requires Linux-specific behavior",
+    "macos: requires macOS-specific behavior",
+    "hardware: uses real external hardware",
+    "synthetic_hardware: uses a synthetic hardware adapter or simulator",
+    "license: validates license-specific behavior or policy",
+    "acceptance: validates an acceptance criterion or composed scenario",
+    "artifact_dependent: requires a built or externally supplied artifact",
+    "wx: exercises the optional wxPython implementation",
+    "qt: exercises the PySide6/Qt implementation",
 ]
 
 [build-system]
