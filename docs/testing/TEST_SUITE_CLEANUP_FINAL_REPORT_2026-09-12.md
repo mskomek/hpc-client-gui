@@ -13,7 +13,7 @@
 | Governance snapshot collection | 2,685 nodes; 0 collection errors |
 | Push | None |
 
-The original `D:/Projeler/hpc-client-gui` worktree remains at `54f7376f3e3e1fccd672f121e33b68d2e8df2652` on `develop`, with **21 modified tracked files (all unstaged)** and 11 untracked paths. It was not staged, edited, or cleaned during governance work. The modified files are:
+The original `D:/Projeler/hpc-client-gui` worktree remains at `54f7376f3e3e1fccd672f121e33b68d2e8df2652` on `develop`, with **21 status-reported modified tracked paths (all unstaged)** and 10 untracked paths. Twenty of the modified paths have textual diff hunks; `src/hpc_gui/wx_remote_files_view.py` is reported modified by status but has no current `git diff` hunk. The worktree was not staged, edited, or cleaned during governance work. The status-reported paths are:
 
 ```text
 scripts/wx_packaged_smoke.py
