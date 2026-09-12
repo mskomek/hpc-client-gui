@@ -99,9 +99,9 @@ The dirty governance worktree now collects **2,685** nodes with **zero-primary =
 
 Current primary counts: unit 634; integration 294; GUI 899; E2E 1; runtime smoke 36; contract 576; audit 100; reporting 22; release 123. RATCHET remains a developer check and is not wired into automatic CI.
 
-### N. CI marker migration — NOT STARTED
+### N. Marker-based lane review — DONE; no selector changes
 
-No migration in Packet B. Frozen HEAD has no automatic PR/push CI; .github/workflows/ contains release.yml, and scripts/ci.py plus scripts/release_test_suite.py remain local selectors. Review archived docs/ci-disabled/ci.yml and the lane inventory before any separately authorized CI migration. Do not restore .github/workflows/ci.yml from this plan.
+Exact current selector/candidate node sets are recorded in [MARKER_LANE_REVIEW_N.md](MARKER_LANE_REVIEW_N.md) and `audit/archive/ea1002bc/test-suite-baseline/marker-lane-reconciliation.json`. The release suite's existing `-m "not packaging"` selection remains exact. Removing the packaging lane's file constraint would add the artifact-dependent wx smoke node; category unions for compat/CLI/SSH and the global contract marker do not match their existing file-owned lanes. The macOS and Windows qualifiers currently select no tests, so those selectors cannot migrate by markers. No selector or workflow changed; automatic CI remains disabled and the archived workflow remains archival.
 
 ### O. Reporting integration + closeout — NOT STARTED
 
