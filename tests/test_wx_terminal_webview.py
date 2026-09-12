@@ -162,7 +162,6 @@ def test_wx_terminal_webview_page_loads_and_posts_ready():
 
 @pytest.mark.wx
 @pytest.mark.gui
-@pytest.mark.xfail(reason="WebView2 subprocess event-loop timing: ready-flush non-deterministic in subprocess isolation. Behavior verified by test_wx_terminal_large_pre_ready_output.", strict=False)
 def test_wx_terminal_pending_output_before_ready_is_buffered_and_ordered():
     if not _is_webview_available():
         pytest.skip("WebView backend unavailable")
@@ -491,7 +490,6 @@ def test_wx_terminal_close_releases_native_webview():
 
 @pytest.mark.wx
 @pytest.mark.gui
-@pytest.mark.xfail(reason="WebView2 subprocess event-loop timing: ready-flush non-deterministic in subprocess isolation. Behavior verified by test_wx_terminal_large_pre_ready_output.", strict=False)
 def test_wx_terminal_output_ordering_with_many_fragments():
     if not _is_webview_available():
         pytest.skip("WebView backend unavailable")
