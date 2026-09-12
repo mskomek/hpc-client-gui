@@ -29,6 +29,8 @@ from hpc_gui.services.transfer_controller import TransferController, TransferIte
 from hpc_gui.ssh.client import SSHClientWrapper, SSHConnInfo  # noqa: E402
 from hpc_gui.ui.widgets.remote_dir_panel import RemoteDirPanel  # noqa: E402
 
+pytestmark = [pytest.mark.integration, pytest.mark.concurrency, pytest.mark.resource]
+
 BIG_NAME = "big_result.cas.h5"
 BIG_SIZE = 48 * 1024 * 1024
 CANCEL_AFTER_BYTES = 6 * 1024 * 1024
@@ -66,36 +68,36 @@ class DownloadCancelWireTests(unittest.TestCase):
 
         cls.server = MockSSHServer(cls.root)
         cls.server.__enter__()
-        cls.ssh = SSHClientWrapper()
-        cls.ssh.connect(
-            SSHConnInfo(
-                host="127.0.0.1",
-                port=cls.server.port,
-                username=MOCK_USERNAME,
-                password=MOCK_PASSWORD,
-                host_key_policy="accept-new",
-                known_hosts_path=str(cls.root / "known_hosts"),
-            )
-        )
-        cls.files = SSHFilesBackend(cls.ssh)
 
     @classmethod
     def tearDownClass(cls) -> None:
-        cls.ssh.close()
         cls.server.__exit__()
         cls._temp.cleanup()
 
     def setUp(self) -> None:
-        self.panel = RemoteDirPanel()
-        self.panel.set_session({"connected": True, "files": self.files})
-        self.addCleanup(self.panel.deleteLater)
-        self.target = Path(tempfile.mkdtemp(dir=self.root, prefix="local_"))
-
         # paramiko's prefetch thread dies on the closed channel by design;
         # keep its traceback out of the test output.
         previous = threading.excepthook
         threading.excepthook = lambda args: None
         self.addCleanup(lambda: setattr(threading, "excepthook", previous))
+
+        self.ssh = SSHClientWrapper()
+        self.addCleanup(self.ssh.close)
+        self.ssh.connect(
+            SSHConnInfo(
+                host="127.0.0.1",
+                port=self.server.port,
+                username=MOCK_USERNAME,
+                password=MOCK_PASSWORD,
+                host_key_policy="accept-new",
+                known_hosts_path=str(self.root / "known_hosts"),
+            )
+        )
+        self.files = SSHFilesBackend(self.ssh)
+        self.panel = RemoteDirPanel()
+        self.panel.set_session({"connected": True, "files": self.files})
+        self.addCleanup(self.panel.deleteLater)
+        self.target = Path(tempfile.mkdtemp(dir=self.root, prefix="local_"))
 
     def _plan(self, action: str = "resume") -> tuple[list, _PlanWorker]:
         worker = _PlanWorker(action)
@@ -126,7 +128,6 @@ class DownloadCancelWireTests(unittest.TestCase):
         self.assertGreater(seen["bytes"], CANCEL_AFTER_BYTES, "cancel never triggered")
         return controller
 
-    @pytest.mark.unit
     def test_cancel_keeps_the_partial_and_leaves_the_session_usable(self) -> None:
         plan, planner = self._plan()
         downloads = [op for op in plan if op.op == "download"]
@@ -178,7 +179,6 @@ class DownloadCancelWireTests(unittest.TestCase):
         self.assertEqual(finished.stat().st_size, BIG_SIZE)
         self.assertFalse((self.target / "DP_41" / f"{BIG_NAME}.part").exists())
 
-    @pytest.mark.unit
     def test_resuming_after_a_cancel_completes_the_file(self) -> None:
         plan, _ = self._plan()
         self._run_until_cancelled(plan)
@@ -189,7 +189,6 @@ class DownloadCancelWireTests(unittest.TestCase):
         self._run_plan_to_completion(retry)
         self._assert_big_file_complete()
 
-    @pytest.mark.unit
     def test_overwriting_a_partial_discards_it_before_downloading(self) -> None:
         plan, _ = self._plan()
         self._run_until_cancelled(plan)
@@ -205,7 +204,6 @@ class DownloadCancelWireTests(unittest.TestCase):
         self._run_plan_to_completion(retry)
         self._assert_big_file_complete()
 
-    @pytest.mark.unit
     def test_skipping_a_partial_leaves_it_alone(self) -> None:
         plan, _ = self._plan()
         self._run_until_cancelled(plan)
