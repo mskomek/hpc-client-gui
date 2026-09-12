@@ -5,6 +5,8 @@ import sys
 import unittest
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
@@ -14,6 +16,7 @@ from hpc_gui.services.capability_report import (  # noqa: E402
 )
 
 
+@pytest.mark.reporting
 class CapabilityReportTests(unittest.TestCase):
     def test_all_capabilities_map_to_stable_statuses(self) -> None:
         probes = {key: True for key in CAPABILITY_KEYS}

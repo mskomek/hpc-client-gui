@@ -196,6 +196,8 @@ def find_entry(registry: dict, plugin_id: str) -> dict:
     return next(p for p in registry["plugins"] if p["id"] == plugin_id)
 
 
+@pytest.mark.e2e
+@pytest.mark.acceptance
 def test_full_clean_user_lifecycle(tmp_path: Path, monkeypatch):
     app_root = tmp_path / "app-data"
     app_root.mkdir()
