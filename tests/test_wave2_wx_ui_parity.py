@@ -30,10 +30,16 @@ def wx_app():
     load_language("en")
     app = wx.App(False)
     yield app
-    for w in wx.GetTopLevelWindows():
-        if w:
-            w.Destroy()
-    app.ProcessPendingEvents()
+    for window in list(wx.GetTopLevelWindows()):
+        if window:
+            window.Destroy()
+    for _ in range(10):
+        app.ProcessPendingEvents()
+        wx.SafeYield()
+        if not wx.GetTopLevelWindows():
+            break
+        wx.MilliSleep(10)
+    assert not wx.GetTopLevelWindows(), "wx test windows remained after teardown"
     app.Destroy()
 
 
