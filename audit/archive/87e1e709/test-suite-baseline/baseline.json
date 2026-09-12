@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "remediation_baseline_sha": "87e1e709a879b52300a5eec660bfae04e700ee29",
+  "branch": "develop",
+  "frozen_audit_sha": "12ce79935bf076e1062c57dc7dbd148bad2bfae1",
+  "previous_remediation_sha": "54f7376f3e3e1fccd672f121e33b68d2e8df2652",
+  "collection": {
+    "command": "python -m pytest tests --collect-only -q",
+    "count": 2679,
+    "errors": 0,
+    "duration_seconds": 11.58
+  },
+  "frozen_comparison": {
+    "baseline_count": 2673,
+    "added_count": 7,
+    "added_nodeids": [
+      "tests/test_wx_embedded_terminal.py::test_shell_can_defer_terminal_panel_mount",
+      "tests/test_wx_packaged_smoke.py::test_packaged_wx_smoke_gate_fails_closed_without_artifact",
+      "tests/test_wx_updater_spec.py::test_install_without_verified_artifact_stays_failed",
+      "tests/test_wx_updater_spec.py::test_show_update_available_wrapper_returns_false_for_cancel",
+      "tests/test_wx_updater_spec.py::test_show_update_available_wrapper_returns_false_for_close",
+      "tests/test_wx_updater_spec.py::test_show_update_available_wrapper_returns_true_when_download_starts",
+      "tests/test_wx_updater_spec.py::test_update_release_notes_preserve_unicode"
+    ],
+    "removed_count": 1,
+    "removed_nodeids": [
+      "tests/test_wx_packaged_smoke.py::test_packaged_wx_smoke_gate_reports_critical_stages"
+    ],
+    "behavior_mappings": [
+      {
+        "old_nodeid": "tests/test_wx_packaged_smoke.py::test_packaged_wx_smoke_gate_reports_critical_stages",
+        "new_nodeid": "tests/test_wx_packaged_smoke.py::test_packaged_wx_smoke_gate_fails_closed_without_artifact",
+        "equivalent": false,
+        "reason": "The old false-positive PASS assertion was replaced by a fail-closed reporting test; it does not claim artifact runtime evidence."
+      }
+    ],
+    "probable_renames": []
+  },
+  "previous_remediation_comparison": {
+    "baseline_count": 2678,
+    "added_count": 2,
+    "added_nodeids": [
+      "tests/test_wx_embedded_terminal.py::test_shell_can_defer_terminal_panel_mount",
+      "tests/test_wx_packaged_smoke.py::test_packaged_wx_smoke_gate_fails_closed_without_artifact"
+    ],
+    "removed_count": 1,
+    "removed_nodeids": [
+      "tests/test_wx_packaged_smoke.py::test_packaged_wx_smoke_gate_reports_critical_stages"
+    ]
+  },
+  "notes": [
+    "Embedded-terminal deferred-mount coverage is a new behavior owner; it is not a rename of the shared-controls test.",
+    "Collection verifies discovery only, not execution or release readiness."
+  ]
+}
