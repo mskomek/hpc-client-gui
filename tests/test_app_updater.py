@@ -1,6 +1,5 @@
 import hashlib
 import base64
-import inspect
 import os
 import subprocess
 from pathlib import Path
@@ -21,6 +20,8 @@ from hpc_gui.services.app_updater import (
 from hpc_gui.services.installation_context import InstallationContext
 from hpc_gui.ui.main_window import MainWindow
 from hpc_gui.ui.splash_screen import UpdateSplash
+
+_CHECK_FOR_UPDATES = MainWindow._check_for_updates
 
 
 class _Response:
@@ -121,9 +122,22 @@ def test_closing_update_progress_cancels_active_download():
 
 
 def test_manual_update_check_shows_splash_before_worker_starts():
-    source = inspect.getsource(MainWindow).split("def _check_for_updates", 1)[1]
-    source = source.split("def _on_release_checked", 1)[0]
-    assert source.index("_show_update_progress") < source.index("_run_update_job")
+    events = []
+    window = SimpleNamespace(
+        _update_busy_count=0,
+        _show_update_progress=lambda value, status: events.append(("splash", value, status)),
+        _run_update_job=lambda fn, on_success: events.append(("worker", fn, on_success)),
+        _on_release_checked=lambda release: None,
+    )
+
+    # The autouse fixture disables this startup timer callback for other tests.
+    _CHECK_FOR_UPDATES(window, manual=True)
+
+    assert events[0] == ("splash", 5, "checking")
+    assert events[1][0] == "worker"
+    assert events[1][2] is window._on_release_checked
+    assert window._update_manual is True
+    assert window._update_interactive is True
 
 
 def test_update_splash_formats_binary_units():

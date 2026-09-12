@@ -662,10 +662,32 @@ def test_large_pre_ready_output_buffered():
 # ── Section 16: Fallback non-parity ──
 
 def test_fallback_panel_sets_non_parity():
-    """When WebView unavailable, panel must be marked non-parity."""
-    from hpc_gui.wx_terminal_webview import build_terminal_panel, WxTerminalWebViewPanel
-    assert hasattr(WxTerminalWebViewPanel, "__init__"), "WxTerminalWebViewPanel must exist"
-    assert callable(build_terminal_panel), "build_terminal_panel must be callable"
+    """The public terminal builder falls back to a working text terminal."""
+    code = """
+import os, sys
+sys.path.insert(0, "src")
+import wx
+import hpc_gui.wx_terminal_webview as renderer
+renderer._is_webview_available = lambda: False
+from hpc_gui.wx_terminal import build_terminal_panel
+app = wx.App(False)
+frame = wx.Frame(None, size=(600, 400))
+panel = build_terminal_panel(frame)
+frame.Show()
+wx.Yield()
+controls = panel._wx_terminal_controls
+assert controls["output"].IsShown()
+panel._wx_terminal_render("fallback-output-marker")
+assert controls["output"].GetValue() == "fallback-output-marker"
+clear = controls["clear"]
+clear.GetEventHandler().ProcessEvent(wx.CommandEvent(wx.wxEVT_BUTTON, clear.GetId()))
+assert controls["output"].GetValue() == ""
+panel._wx_terminal_close()
+frame.Destroy()
+os._exit(0)
+"""
+    result = _run(code)
+    assert result.returncode == 0, f"fallback behavior failed: {result.stdout}\n{result.stderr}"
 
 
 # ── Section 17: Bridge has required helpers ──

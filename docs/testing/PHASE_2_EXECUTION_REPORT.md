@@ -1,6 +1,6 @@
 # Test Governance Phase 2 — Execution Report
 
-Status: Packets A, B, C, and D DONE; next packet E is IN_PROGRESS.
+Status: Packets A, B, C, D, and E DONE; next packet F is IN_PROGRESS.
 
 - Frozen baseline: `12ce79935bf076e1062c57dc7dbd148bad2bfae1`
 - Governance branch: `test-suite-governance-20260912`
@@ -89,6 +89,12 @@ There were no other old-node removals. The collection total is now 2,679. Actual
 
 Focused validation passed: the two Wave78 behavior tests, the D1/D2/D4/D5/D6 owner tests, and the D7 service test all passed; taxonomy checker tests passed (11). Ruff passed on changed Python tests. REPORT, RATCHET, full collection (2,679), and `git diff --check` passed. The full suite remains incomplete for the Packet A blockers; no baseline blocker was modified.
 
+## Packet E — weak lifecycle tests
+
+All eight Phase 1 high-risk nodeids were rewritten while preserving their nodeids. The three wx updater cases now drive cancellation, close-veto, and a progress callback queued before close and dispatched afterward. The terminal fallback cases now exercise the visible legacy terminal and the WebView panel's diagnostic/non-parity path. The About dialog test constructs the real Qt object in an isolated subprocess with socket and desktop URL seams intercepted, and verifies version display plus the repository-link action. The manual updater test invokes the real orchestration method with recording scheduling seams. The packaged smoke test now explicitly supplies a missing artifact and verifies the CLI fails closed with persisted JSON listing all required stages as failed; the frozen-baseline missing-artifact failure remains recorded in the archive.
+
+The carry-forward Wave78 no-selection and Wave80 Files canonical localization nodes were not changed in E. All 8 targeted candidates passed together; the About dialog also passed alone after isolation. REPORT remains 2,679 collected with 2 `unit`, 11 `audit`, 2,666 zero-primary, and 0 multi-primary. No new or removed nodeids were introduced by E. RATCHET and full collection are revalidated below.
+
 ## Validation and current state
 
 - `python -m pytest tests/test_test_taxonomy_checker.py -q` — **11 passed** (Packet C/D validation).
@@ -96,8 +102,9 @@ Focused validation passed: the two Wave78 behavior tests, the D1/D2/D4/D5/D6 own
 - `python scripts/check_test_taxonomy.py --mode ratchet --baseline audit/archive/12ce7993/test-suite-baseline/taxonomy-ratchet.json --json-out <path>` — **exit 0, RATCHET PASS**; 0 new zero-primary, 0 multi-primary.
 - `python -m pytest tests --collect-only -q` — **exit 0, 2,679 collected**.
 - Node comparison to the frozen inventory — **13 added, 7 removed** cumulatively; the 7 removals and 2 Packet D additions are listed above, and the other 11 additions are the checker tests. No unrelated node disappeared.
+- Packet E lifecycle candidates — **8 passed**; collection nodeids unchanged from Packet D.
 - `python -m ruff check scripts/check_test_taxonomy.py tests/test_test_taxonomy_checker.py` — **passed**.
 - `git diff --check` — **passed**.
 - Full-suite execution remains incomplete for the Packet A reasons above. The seven isolated failures and the settings-dialog setup hang remain intentionally untouched.
 
-No production files, CI workflow files/selectors, migration completion ledgers, or protected local guidance files changed. Packet E is next; F–O remain NOT STARTED. A Google Docs copy was not created: the Drive connector rejected create calls for missing OAuth scopes, and browser access was denied because the admin-enforced security check could not be verified. This tracked report is the current updateable copy until Docs access is restored.
+No production files, CI workflow files/selectors, migration completion ledgers, or protected local guidance files changed. Packet F is next; G–O remain NOT STARTED. A Google Docs copy was not created: the Drive connector rejected create calls for missing OAuth scopes, and browser access was denied because the admin-enforced security check could not be verified. This tracked report is the current updateable copy until Docs access is restored.

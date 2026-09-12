@@ -1333,11 +1333,30 @@ os._exit(0)
 
 
 def test_wx_terminal_fallback_sets_non_parity():
-    """When WebView is unavailable, panel must be marked non-parity."""
-    from hpc_gui.wx_terminal_webview import build_terminal_panel
-    from hpc_gui.wx_terminal_webview import WxTerminalWebViewPanel
-    assert hasattr(WxTerminalWebViewPanel, "__init__"), "WxTerminalWebViewPanel must exist"
-    assert callable(build_terminal_panel), "build_terminal_panel must be callable"
+    """Direct WebView-panel construction shows a diagnostic fallback as non-parity."""
+    code = """
+import os, sys
+sys.path.insert(0, "src")
+import wx
+import hpc_gui.wx_terminal_webview as renderer
+renderer._is_webview_available = lambda: False
+app = wx.App(False)
+frame = wx.Frame(None, size=(600, 400))
+panel = renderer.WxTerminalWebViewPanel(frame)
+frame.Show()
+wx.Yield()
+controls = panel._wx_terminal_controls
+assert panel._wx_terminal_is_webview is False
+assert panel._wx_terminal_is_parity is False
+assert panel._webview is None
+assert controls["output"].IsShown()
+assert "WebView backend unavailable" in panel._diagnostic_text
+assert "WebView backend unavailable" in controls["output"].GetValue()
+frame.Destroy()
+os._exit(0)
+"""
+    result = _run_subprocess_test(code)
+    assert result.returncode == 0, f"fallback state failed: {result.stdout}\n{result.stderr}"
 
 
 def test_wx_terminal_100_reconnects_no_leak():
