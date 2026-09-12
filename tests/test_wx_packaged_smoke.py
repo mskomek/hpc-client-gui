@@ -6,7 +6,11 @@ from pathlib import Path
 import pytest
 
 
-pytestmark = pytest.mark.packaging
+pytestmark = [
+    pytest.mark.runtime_smoke,
+    pytest.mark.artifact_dependent,
+    pytest.mark.packaging,
+]
 
 
 def test_packaged_wx_smoke_gate_fails_closed_without_artifact(tmp_path):

@@ -83,9 +83,9 @@ See [RESOURCE_CONCURRENCY_REVIEW_J.md](RESOURCE_CONCURRENCY_REVIEW_J.md) for the
 
 Removed `tests/test_wx_jobs_stress.py::test_wx_jobs_stress_backend_workers_and_reads_are_bounded`. Renamed `tests/test_wx_jobs_behavior.py::test_wx_job_output_pause_keeps_refreshing_but_stops_live_follow` to `test_wx_job_output_pause_freezes_and_resume_updates_output`; it is classified `gui`. There are no other Packet J node changes. Focused suites, collection (2,684 nodes, zero errors), taxonomy RATCHET, Ruff, and `git diff --check` passed.
 
-### K. Reporting/E2E reclassification — NOT STARTED
+### K. Reporting/E2E reclassification — DONE
 
-Review the one composed user workflow tests/test_plugin_e2e.py::test_full_clean_user_lifecycle against the E2E definition. Review evidence and validator ownership in tests/test_gui_audit_screenshots.py::test_manifest_exists_and_commit_current, tests/test_gui_audit_screenshots.py::test_hashes_match_and_no_unexplained_duplicate, tests/test_reproducibility_bundle.py::test_offline_export_contains_versioned_job_script_and_readme, tests/test_release_manifest.py, tests/test_capability_report.py, and tests/test_wave79_audit.py. Report evidence does not by itself make a test E2E.
+See [REPORTING_E2E_REVIEW_K.md](REPORTING_E2E_REVIEW_K.md) for the node ownership and evidence boundaries. The plugin user lifecycle is E2E; screenshot, reproducibility-bundle, and capability report validators are reporting; the manifest generator is release-specific; Wave 79 tests are split among contract, unit, and integration according to the exercised boundary. The packaged smoke node is an artifact-dependent runtime smoke, not a report-only test. It was not executed because the runner would overwrite the existing Windows FAIL evidence while no discoverable artifact is present. No nodes were added, removed, or renamed.
 
 ### L. Legacy static/migration ownership review — NOT STARTED
 
