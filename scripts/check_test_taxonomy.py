@@ -12,6 +12,10 @@ from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
+SEMANTIC_REVIEW_PATH = (
+    ROOT / "audit" / "archive" / "87e1e709" / "test-suite-baseline"
+    / "semantic-taxonomy-review.json"
+)
 PRIMARY_CATEGORIES = (
     "unit", "integration", "gui", "e2e", "runtime_smoke",
     "contract", "audit", "reporting", "release",
@@ -263,16 +267,29 @@ def registered_markers() -> set[str]:
 
 
 def build_enforce_report(
-    report: dict[str, Any], registered: set[str]
+    report: dict[str, Any], registered: set[str],
+    semantic_review: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     known = set(PRIMARY_CATEGORIES) | set(QUALIFIERS)
     unknown_registered = sorted(registered - known)
     missing_registered = sorted(known - registered)
+    if semantic_review is None:
+        semantic_review = {
+            "passed": False,
+            "reviewed_count": 0,
+            "missing_nodeids": report["nodeids"],
+            "unknown_nodeids": [],
+            "unreviewed_nodeids": [],
+            "invalid_nodeids": [],
+            "marker_mismatch_nodeids": [],
+            "errors": ["semantic review document was not loaded"],
+        }
     passed = not (
         report["zero_primary"]["count"]
         or report["multi_primary"]["count"]
         or unknown_registered
         or missing_registered
+        or not semantic_review["passed"]
     )
     return {
         "schema_version": 1,
@@ -283,7 +300,85 @@ def build_enforce_report(
         "multi_primary": report["multi_primary"],
         "unknown_registered_markers": unknown_registered,
         "missing_registered_markers": missing_registered,
+        "semantic_review": semantic_review,
         "warnings": report["warnings"],
+    }
+
+
+def build_semantic_review_report(
+    records: list[dict[str, Any]], document: dict[str, Any] | None,
+) -> dict[str, Any]:
+    """Require an evidence-backed review matching every collected marker set."""
+    errors = []
+    entries = document.get("nodes") if isinstance(document, dict) else None
+    if not isinstance(entries, list):
+        entries = []
+        errors.append("review document must contain a nodes array")
+    if not isinstance(document, dict) or document.get("schema_version") != 1:
+        errors.append("review document schema_version must be 1")
+
+    by_nodeid: dict[str, dict[str, Any]] = {}
+    duplicate_entries = set()
+    for entry in entries:
+        if not isinstance(entry, dict) or not isinstance(entry.get("nodeid"), str):
+            errors.append("each review entry must have a string nodeid")
+            continue
+        nodeid = entry["nodeid"]
+        if nodeid in by_nodeid:
+            duplicate_entries.add(nodeid)
+        by_nodeid[nodeid] = entry
+
+    current = {record["nodeid"]: record for record in records}
+    missing = sorted(set(current) - set(by_nodeid))
+    unknown = sorted(set(by_nodeid) - set(current))
+    unreviewed = []
+    invalid = set(duplicate_entries)
+    marker_mismatch = set()
+    for nodeid, entry in by_nodeid.items():
+        if nodeid not in current:
+            continue
+        if entry.get("reviewed") is not True:
+            unreviewed.append(nodeid)
+        if not isinstance(entry.get("evidence"), str) or not entry["evidence"].strip():
+            invalid.add(nodeid)
+        primary = entry.get("primary")
+        qualifiers = entry.get("qualifiers")
+        if (
+            primary not in PRIMARY_CATEGORIES
+            or not isinstance(qualifiers, list)
+            or not all(isinstance(value, str) and value in QUALIFIERS for value in qualifiers)
+            or len(set(qualifiers)) != len(qualifiers)
+        ):
+            invalid.add(nodeid)
+            continue
+        markers = set(current[nodeid].get("markers", ()))
+        actual_primary = [value for value in PRIMARY_CATEGORIES if value in markers]
+        actual_qualifiers = sorted(value for value in QUALIFIERS if value in markers)
+        if actual_primary != [primary] or sorted(qualifiers) != actual_qualifiers:
+            marker_mismatch.add(nodeid)
+        behavior_id = entry.get("behavior_id")
+        if behavior_id is not None and (
+            not isinstance(behavior_id, str) or not behavior_id.strip()
+        ):
+            invalid.add(nodeid)
+
+    reviewed_count = sum(
+        1 for nodeid, entry in by_nodeid.items()
+        if nodeid in current and entry.get("reviewed") is True
+    )
+    passed = not (
+        errors or missing or unknown or unreviewed or invalid or marker_mismatch
+    )
+    return {
+        "passed": passed,
+        "reviewed_count": reviewed_count,
+        "expected_count": len(current),
+        "missing_nodeids": missing,
+        "unknown_nodeids": unknown,
+        "unreviewed_nodeids": sorted(unreviewed),
+        "invalid_nodeids": sorted(invalid),
+        "marker_mismatch_nodeids": sorted(marker_mismatch),
+        "errors": errors,
     }
 
 
@@ -333,6 +428,14 @@ def _print_enforce(result: dict[str, Any], json_out: str | None) -> None:
     print(f"Multi-primary: {result['multi_primary']['count']}")
     print(f"Unknown registered markers: {result['unknown_registered_markers']}")
     print(f"Missing registered markers: {result['missing_registered_markers']}")
+    review = result["semantic_review"]
+    print(f"Semantic review: {'PASS' if review['passed'] else 'FAIL'}")
+    print(f"Semantic review complete: {review['reviewed_count']}/{review['expected_count']}")
+    print(f"Semantic review gaps: missing={len(review['missing_nodeids'])}, "
+          f"unreviewed={len(review['unreviewed_nodeids'])}, "
+          f"invalid={len(review['invalid_nodeids'])}, "
+          f"marker mismatch={len(review['marker_mismatch_nodeids'])}, "
+          f"unknown={len(review['unknown_nodeids'])}")
     for name, entries in result["warnings"].items():
         print(f"Warning {name}: {len(entries)}")
     if json_out:
@@ -344,6 +447,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--mode", required=True, choices=("report", "ratchet", "enforce"))
     parser.add_argument("--json-out", help="write the complete report to this path")
     parser.add_argument("--baseline", help="exact taxonomy baseline required for ratchet mode")
+    parser.add_argument(
+        "--semantic-review", default=str(SEMANTIC_REVIEW_PATH),
+        help="per-node semantic review JSON required by enforce mode",
+    )
     args = parser.parse_args(argv)
     if args.mode == "ratchet" and not args.baseline:
         parser.error("--baseline is required for ratchet mode")
@@ -372,7 +479,12 @@ def main(argv: list[str] | None = None) -> int:
             _print_ratchet(result, args.json_out)
             exit_code = ratchet_exit_code(result)
         else:
-            result = build_enforce_report(report, registered_markers())
+            try:
+                document = json.loads(Path(args.semantic_review).read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                document = None
+            semantic_review = build_semantic_review_report(records, document)
+            result = build_enforce_report(report, registered_markers(), semantic_review)
             _print_enforce(result, args.json_out)
             exit_code = 0 if result["passed"] else 1
         if args.json_out:
