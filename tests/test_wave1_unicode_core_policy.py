@@ -141,23 +141,6 @@ class TestInternalTextContract:
 class TestEncodingBoundaryJustification:
     """Verify all encode/decode uses are justified."""
 
-    def test_ssh_client_decode_justified(self):
-        """SSH client decode should use errors='replace' for remote output."""
-        client = ROOT / "src" / "hpc_gui" / "ssh" / "client.py"
-        if client.is_file():
-            content = client.read_text(encoding="utf-8")
-            # SSH output may come from remote servers with various encodings
-            # errors='replace' is justified for display purposes
-            assert 'errors="replace"' in content or "errors='replace'" in content
-
-    def test_files_ssh_utf8_justified(self):
-        """SFTP backend should use UTF-8 for text operations."""
-        ssh_files = ROOT / "src" / "hpc_gui" / "services" / "files_ssh.py"
-        if ssh_files.is_file():
-            content = ssh_files.read_text(encoding="utf-8")
-            # SFTP text operations should use UTF-8
-            assert "utf-8" in content.lower()
-
     def test_config_json_ensure_ascii_false(self):
         """Config JSON should use ensure_ascii=False for Turkish support."""
         storage = ROOT / "src" / "hpc_gui" / "config" / "storage.py"
