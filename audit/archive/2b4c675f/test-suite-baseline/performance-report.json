@@ -1,0 +1,591 @@
+{
+  "captured_head": "2b4c675f31ae5aba4b1a2cf9b005b919c53be208",
+  "combined_pytest_process_duration_seconds": 1397.37,
+  "duration_basis": "sum of pytest-reported process durations across the release selector and isolated continuation; not wall-clock elapsed time",
+  "per_category_node_duration_sample": {
+    "categories": {
+      "audit": {
+        "median_seconds": 0.043939099999988684,
+        "p95_seconds": 8.779983000000357,
+        "sample_count": 8
+      },
+      "contract": {
+        "median_seconds": 0.0008010000019567087,
+        "p95_seconds": 0.03332149999914691,
+        "sample_count": 7
+      },
+      "gui": {
+        "median_seconds": 0.021462600001541432,
+        "p95_seconds": 0.37523700000019744,
+        "sample_count": 15
+      },
+      "integration": {
+        "median_seconds": 0.0033485999956610613,
+        "p95_seconds": 0.07726109999930486,
+        "sample_count": 25
+      },
+      "release": {
+        "median_seconds": 0.0011704999997164123,
+        "p95_seconds": 3.767308000002231,
+        "sample_count": 7
+      },
+      "reporting": {
+        "median_seconds": 0.0008257500012405217,
+        "p95_seconds": 0.0024791000032564625,
+        "sample_count": 4
+      },
+      "runtime_smoke": {
+        "median_seconds": 0.05012639999767998,
+        "p95_seconds": 0.16262170000118203,
+        "sample_count": 25
+      },
+      "unit": {
+        "median_seconds": 0.04664059999777237,
+        "p95_seconds": 0.10963919999630889,
+        "sample_count": 132
+      }
+    },
+    "not_current_benchmark": true,
+    "of_current_nodes": 2685,
+    "sample_count": 223,
+    "source": "audit/archive/12ce7993/test-suite-baseline/inventory-enriched.json duration_seconds_observed_partial"
+  },
+  "per_process_runs": [
+    {
+      "duration_seconds": 31.68,
+      "exit_code": 1,
+      "result": "1 failed, 11 passed",
+      "selector": "tests/test_hardening_additional.py"
+    },
+    {
+      "duration_seconds": 4.04,
+      "exit_code": 0,
+      "result": "19 passed",
+      "selector": "tests/test_wave2_wx_ui_parity.py"
+    },
+    {
+      "duration_seconds": 16.0,
+      "exit_code": 0,
+      "result": "16 passed",
+      "selector": "tests/test_wave78_jobs_details.py"
+    },
+    {
+      "duration_seconds": 7.05,
+      "exit_code": 1,
+      "result": "1 failed, 44 passed",
+      "selector": "tests/test_wave80_files_outputs.py"
+    },
+    {
+      "duration_seconds": 73.03,
+      "exit_code": 3221226356,
+      "result": "1 failed",
+      "selector": "tests/test_wx_65a_stress.py"
+    },
+    {
+      "duration_seconds": 4.47,
+      "exit_code": 0,
+      "result": "2 passed",
+      "selector": "tests/test_wx_a11y.py"
+    },
+    {
+      "duration_seconds": 3.87,
+      "exit_code": 0,
+      "result": "8 passed",
+      "selector": "tests/test_wx_ansys_view.py"
+    },
+    {
+      "duration_seconds": 0.57,
+      "exit_code": 0,
+      "result": "8 passed",
+      "selector": "tests/test_wx_connection.py"
+    },
+    {
+      "duration_seconds": 3.37,
+      "exit_code": 0,
+      "result": "14 passed",
+      "selector": "tests/test_wx_editor.py"
+    },
+    {
+      "duration_seconds": 3.87,
+      "exit_code": 0,
+      "result": "14 passed",
+      "selector": "tests/test_wx_editor_cross_view_actions.py"
+    },
+    {
+      "duration_seconds": 2.89,
+      "exit_code": 0,
+      "result": "11 passed",
+      "selector": "tests/test_wx_editor_tabs.py"
+    },
+    {
+      "duration_seconds": 15.45,
+      "exit_code": 0,
+      "result": "14 passed",
+      "selector": "tests/test_wx_editor_window_parity.py"
+    },
+    {
+      "duration_seconds": 10.01,
+      "exit_code": 3221226356,
+      "result": "7 failed, 2 passed",
+      "selector": "tests/test_wx_embedded_terminal.py"
+    },
+    {
+      "duration_seconds": 206.26,
+      "exit_code": 0,
+      "result": "11 passed",
+      "selector": "tests/test_wx_file003_final_stress.py"
+    },
+    {
+      "duration_seconds": 2.54,
+      "exit_code": 0,
+      "result": "12 passed",
+      "selector": "tests/test_wx_file_actions_behavior.py"
+    },
+    {
+      "duration_seconds": 5.99,
+      "exit_code": 0,
+      "result": "16 passed",
+      "selector": "tests/test_wx_file_actions_lifecycle.py"
+    },
+    {
+      "duration_seconds": 21.21,
+      "exit_code": 0,
+      "result": "6 passed",
+      "selector": "tests/test_wx_file_actions_stress.py"
+    },
+    {
+      "duration_seconds": 11.3,
+      "exit_code": 0,
+      "result": "26 passed",
+      "selector": "tests/test_wx_file_browser_tabs.py"
+    },
+    {
+      "duration_seconds": 1.35,
+      "exit_code": 0,
+      "result": "5 passed",
+      "selector": "tests/test_wx_file_context_i18n.py"
+    },
+    {
+      "duration_seconds": 2.54,
+      "exit_code": 0,
+      "result": "10 passed",
+      "selector": "tests/test_wx_file_context_matrix.py"
+    },
+    {
+      "duration_seconds": 5.21,
+      "exit_code": 0,
+      "result": "17 passed",
+      "selector": "tests/test_wx_file_keyboard_parity.py"
+    },
+    {
+      "duration_seconds": 1.14,
+      "exit_code": 0,
+      "result": "29 passed",
+      "selector": "tests/test_wx_file_transfer_integration.py"
+    },
+    {
+      "duration_seconds": 22.87,
+      "exit_code": 0,
+      "result": "8 passed",
+      "selector": "tests/test_wx_files_sync_compare.py"
+    },
+    {
+      "duration_seconds": 6.5,
+      "exit_code": 0,
+      "result": "5 passed",
+      "selector": "tests/test_wx_jobs_behavior.py"
+    },
+    {
+      "duration_seconds": 33.91,
+      "exit_code": 0,
+      "result": "16 passed",
+      "selector": "tests/test_wx_jobs_files_outputs.py"
+    },
+    {
+      "duration_seconds": 24.39,
+      "exit_code": 0,
+      "result": "15 passed",
+      "selector": "tests/test_wx_jobs_final_fix.py"
+    },
+    {
+      "duration_seconds": 58.6,
+      "exit_code": 0,
+      "result": "11 passed",
+      "selector": "tests/test_wx_jobs_stress.py"
+    },
+    {
+      "duration_seconds": 432.78,
+      "exit_code": 0,
+      "result": "1 passed",
+      "selector": "tests/test_wx_layout_resize.py"
+    },
+    {
+      "duration_seconds": 1.38,
+      "exit_code": 0,
+      "result": "3 passed",
+      "selector": "tests/test_wx_local_mutation_snapshot.py"
+    },
+    {
+      "duration_seconds": 0.6,
+      "exit_code": 0,
+      "result": "2 passed",
+      "selector": "tests/test_wx_logs.py"
+    },
+    {
+      "duration_seconds": 5.83,
+      "exit_code": 0,
+      "result": "7 passed",
+      "selector": "tests/test_wx_remote_editor_flow.py"
+    },
+    {
+      "duration_seconds": 9.99,
+      "exit_code": 1,
+      "result": "1 failed, 27 passed",
+      "selector": "tests/test_wx_remote_file_actions_behavior.py"
+    },
+    {
+      "duration_seconds": 0.53,
+      "exit_code": 0,
+      "result": "4 passed",
+      "selector": "tests/test_wx_remote_files.py"
+    },
+    {
+      "duration_seconds": 2.76,
+      "exit_code": 0,
+      "result": "6 passed",
+      "selector": "tests/test_wx_remote_move_undo.py"
+    },
+    {
+      "duration_seconds": 0.56,
+      "exit_code": 0,
+      "result": "5 passed",
+      "selector": "tests/test_wx_shell.py"
+    },
+    {
+      "duration_seconds": 12.64,
+      "exit_code": 0,
+      "result": "3 passed",
+      "selector": "tests/test_wx_shell_i18n.py"
+    },
+    {
+      "duration_seconds": 71.12,
+      "exit_code": 1,
+      "result": "1 failed, 12 passed",
+      "selector": "tests/test_wx_shell_p0.py"
+    },
+    {
+      "duration_seconds": 5.24,
+      "exit_code": 1,
+      "result": "1 failed",
+      "selector": "tests/test_wx_shell_p0_stress.py"
+    },
+    {
+      "duration_seconds": 6.41,
+      "exit_code": 0,
+      "result": "3 passed",
+      "selector": "tests/test_wx_term002.py"
+    },
+    {
+      "duration_seconds": 0.33,
+      "exit_code": 0,
+      "result": "2 passed",
+      "selector": "tests/test_wx_terminal.py"
+    },
+    {
+      "duration_seconds": 24.14,
+      "exit_code": 0,
+      "result": "19 passed",
+      "selector": "tests/test_wx_terminal_behavioral.py"
+    },
+    {
+      "duration_seconds": 17.02,
+      "exit_code": 0,
+      "result": "10 passed",
+      "selector": "tests/test_wx_terminal_parity_evidence.py"
+    },
+    {
+      "duration_seconds": 29.49,
+      "exit_code": 0,
+      "result": "29 passed",
+      "selector": "tests/test_wx_terminal_webview.py"
+    },
+    {
+      "duration_seconds": 1.83,
+      "exit_code": 0,
+      "result": "11 passed",
+      "selector": "tests/test_wx_transfer_conflict_ui.py"
+    },
+    {
+      "duration_seconds": 6.61,
+      "exit_code": 0,
+      "result": "14 passed",
+      "selector": "tests/test_wx_transfer_ui_lifecycle.py"
+    },
+    {
+      "duration_seconds": 5.43,
+      "exit_code": 0,
+      "result": "23 passed",
+      "selector": "tests/test_wx_updater_spec.py"
+    },
+    {
+      "duration_seconds": 22.28,
+      "exit_code": 0,
+      "result": "168 passed",
+      "selector": "tests/test_ftp_widget.py"
+    },
+    {
+      "duration_seconds": 18.47,
+      "exit_code": 0,
+      "result": "4 passed",
+      "selector": "tests/test_download_cancel_wire.py"
+    },
+    {
+      "duration_seconds": 0.62,
+      "exit_code": 0,
+      "result": "14 passed",
+      "selector": "tests/test_editor_flow.py"
+    },
+    {
+      "duration_seconds": 12.46,
+      "exit_code": 0,
+      "result": "8 passed",
+      "selector": "tests/test_remote_directory_listing.py"
+    },
+    {
+      "duration_seconds": 128.74,
+      "exit_code": 1,
+      "result": "1904 passed, 3 failed, 21 skipped, 2 deselected",
+      "selector": "release-suite initial broad process"
+    }
+  ],
+  "sampled_e2e_nodes": [],
+  "slowest_20_sampled_nodes": [
+    {
+      "duration_seconds": 8.779983000000357,
+      "nodeid": "tests/test_branding_check.py::BrandingCheckTest::test_clean_tree_passes",
+      "primary": "audit"
+    },
+    {
+      "duration_seconds": 3.767308000002231,
+      "nodeid": "tests/test_app_updater.py::test_windows_installer_script_has_independent_real_progress_and_rollback",
+      "primary": "release"
+    },
+    {
+      "duration_seconds": 1.171490000000631,
+      "nodeid": "tests/test_cli_entrypoint.py::test_cli_import_never_pulls_qt_or_webengine",
+      "primary": "runtime_smoke"
+    },
+    {
+      "duration_seconds": 0.6561750999971991,
+      "nodeid": "tests/test_command_palette_regression.py::test_command_palette_not_wired_to_help",
+      "primary": "unit"
+    },
+    {
+      "duration_seconds": 0.37523700000019744,
+      "nodeid": "tests/test_connection_advanced_settings.py::LoginWidgetPolicyPropagationTests::test_login_widget_uses_canonical_policy_state",
+      "primary": "gui"
+    },
+    {
+      "duration_seconds": 0.33444890000100713,
+      "nodeid": "tests/test_cli.py::test_access_gate_off_exempt_commands_still_succeed",
+      "primary": "unit"
+    },
+    {
+      "duration_seconds": 0.21047619999444578,
+      "nodeid": "tests/test_cli.py::test_doctor_environment_json",
+      "primary": "unit"
+    },
+    {
+      "duration_seconds": 0.1834450000023935,
+      "nodeid": "tests/test_cli.py::test_access_gate_on_allows_denied_command",
+      "primary": "unit"
+    },
+    {
+      "duration_seconds": 0.16262170000118203,
+      "nodeid": "tests/test_cli.py::test_doctor_smoke_text_and_json_expose_identical_stage_set",
+      "primary": "runtime_smoke"
+    },
+    {
+      "duration_seconds": 0.15927610000653658,
+      "nodeid": "tests/test_cli.py::test_doctor_smoke_artifact_written[fixture1-3]",
+      "primary": "runtime_smoke"
+    },
+    {
+      "duration_seconds": 0.13294519999908516,
+      "nodeid": "tests/test_cli.py::test_files_not_a_directory_exit_one_distinct_message",
+      "primary": "unit"
+    },
+    {
+      "duration_seconds": 0.11203540000133216,
+      "nodeid": "tests/test_cli.py::test_access_gate_off_blocks_remote_commands[profile-test]",
+      "primary": "integration"
+    },
+    {
+      "duration_seconds": 0.11061189999600174,
+      "nodeid": "tests/test_cli_entrypoint.py::test_remote_script_uses_bash_and_rejects_control_characters",
+      "primary": "runtime_smoke"
+    },
+    {
+      "duration_seconds": 0.11051790000055917,
+      "nodeid": "tests/test_cli.py::test_files_access_denied_exit_one_distinct_message",
+      "primary": "unit"
+    },
+    {
+      "duration_seconds": 0.10963919999630889,
+      "nodeid": "tests/test_cli.py::test_commands_json_inventory_matches_parser_and_exit_codes",
+      "primary": "unit"
+    },
+    {
+      "duration_seconds": 0.10223850000329548,
+      "nodeid": "tests/test_cli.py::test_profile_update_preserves_secrets_and_system_round_trip",
+      "primary": "unit"
+    },
+    {
+      "duration_seconds": 0.10152909999305848,
+      "nodeid": "tests/test_cli.py::test_doctor_smoke_artifact_write_failure_returns_operation_failed",
+      "primary": "runtime_smoke"
+    },
+    {
+      "duration_seconds": 0.09958860000187997,
+      "nodeid": "tests/test_cli.py::test_profile_test_missing_exit_one_and_opener_not_called",
+      "primary": "unit"
+    },
+    {
+      "duration_seconds": 0.09552589999657357,
+      "nodeid": "tests/test_cli.py::test_profile_test_text_mode_matches_json_payload",
+      "primary": "unit"
+    },
+    {
+      "duration_seconds": 0.0895719000036479,
+      "nodeid": "tests/test_cli.py::test_files_checksum_permission_denied_reports_with_path",
+      "primary": "unit"
+    }
+  ],
+  "slowest_process_runs": [
+    {
+      "duration_seconds": 432.78,
+      "exit_code": 0,
+      "result": "1 passed",
+      "selector": "tests/test_wx_layout_resize.py"
+    },
+    {
+      "duration_seconds": 206.26,
+      "exit_code": 0,
+      "result": "11 passed",
+      "selector": "tests/test_wx_file003_final_stress.py"
+    },
+    {
+      "duration_seconds": 128.74,
+      "exit_code": 1,
+      "result": "1904 passed, 3 failed, 21 skipped, 2 deselected",
+      "selector": "release-suite initial broad process"
+    },
+    {
+      "duration_seconds": 73.03,
+      "exit_code": 3221226356,
+      "result": "1 failed",
+      "selector": "tests/test_wx_65a_stress.py"
+    },
+    {
+      "duration_seconds": 71.12,
+      "exit_code": 1,
+      "result": "1 failed, 12 passed",
+      "selector": "tests/test_wx_shell_p0.py"
+    },
+    {
+      "duration_seconds": 58.6,
+      "exit_code": 0,
+      "result": "11 passed",
+      "selector": "tests/test_wx_jobs_stress.py"
+    },
+    {
+      "duration_seconds": 33.91,
+      "exit_code": 0,
+      "result": "16 passed",
+      "selector": "tests/test_wx_jobs_files_outputs.py"
+    },
+    {
+      "duration_seconds": 31.68,
+      "exit_code": 1,
+      "result": "1 failed, 11 passed",
+      "selector": "tests/test_hardening_additional.py"
+    },
+    {
+      "duration_seconds": 29.49,
+      "exit_code": 0,
+      "result": "29 passed",
+      "selector": "tests/test_wx_terminal_webview.py"
+    },
+    {
+      "duration_seconds": 24.39,
+      "exit_code": 0,
+      "result": "15 passed",
+      "selector": "tests/test_wx_jobs_final_fix.py"
+    },
+    {
+      "duration_seconds": 24.14,
+      "exit_code": 0,
+      "result": "19 passed",
+      "selector": "tests/test_wx_terminal_behavioral.py"
+    },
+    {
+      "duration_seconds": 22.87,
+      "exit_code": 0,
+      "result": "8 passed",
+      "selector": "tests/test_wx_files_sync_compare.py"
+    },
+    {
+      "duration_seconds": 22.28,
+      "exit_code": 0,
+      "result": "168 passed",
+      "selector": "tests/test_ftp_widget.py"
+    },
+    {
+      "duration_seconds": 21.21,
+      "exit_code": 0,
+      "result": "6 passed",
+      "selector": "tests/test_wx_file_actions_stress.py"
+    },
+    {
+      "duration_seconds": 18.47,
+      "exit_code": 0,
+      "result": "4 passed",
+      "selector": "tests/test_download_cancel_wire.py"
+    },
+    {
+      "duration_seconds": 17.02,
+      "exit_code": 0,
+      "result": "10 passed",
+      "selector": "tests/test_wx_terminal_parity_evidence.py"
+    },
+    {
+      "duration_seconds": 16.0,
+      "exit_code": 0,
+      "result": "16 passed",
+      "selector": "tests/test_wave78_jobs_details.py"
+    },
+    {
+      "duration_seconds": 15.45,
+      "exit_code": 0,
+      "result": "14 passed",
+      "selector": "tests/test_wx_editor_window_parity.py"
+    },
+    {
+      "duration_seconds": 12.64,
+      "exit_code": 0,
+      "result": "3 passed",
+      "selector": "tests/test_wx_shell_i18n.py"
+    },
+    {
+      "duration_seconds": 12.46,
+      "exit_code": 0,
+      "result": "8 passed",
+      "selector": "tests/test_remote_directory_listing.py"
+    }
+  ],
+  "slowest_sampled_gui": {
+    "duration_seconds": 0.37523700000019744,
+    "nodeid": "tests/test_connection_advanced_settings.py::LoginWidgetPolicyPropagationTests::test_login_widget_uses_canonical_policy_state",
+    "primary": "gui"
+  }
+}

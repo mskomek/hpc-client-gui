@@ -1,0 +1,20 @@
+{
+  "missing_registered_markers": [],
+  "mode": "enforce",
+  "multi_primary": {
+    "count": 0,
+    "nodes": []
+  },
+  "passed": true,
+  "repository_sha": "2b4c675f31ae5aba4b1a2cf9b005b919c53be208",
+  "schema_version": 1,
+  "unknown_registered_markers": [],
+  "warnings": {
+    "catch_all_filenames": [],
+    "direct_test_calls": []
+  },
+  "zero_primary": {
+    "count": 0,
+    "nodeids": []
+  }
+}
