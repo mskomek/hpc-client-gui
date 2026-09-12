@@ -197,17 +197,41 @@ class TestFilesBehavior:
         load_language("tr")
         assert "Takip" in t("dirs.follow_track") or "takip" in t("dirs.follow_track")
 
-    def test_context_menu_labels_localized(self):
+    def test_files_toolbar_visible_labels_localized(self):
+        """The real Files toolbar updates its visible labels on language change."""
+        import wx
+        from hpc_gui.wx_remote_files import WxRemoteDirectoryModel
+        from hpc_gui.wx_remote_files_view import build_remote_files_panel
+
         load_language("en")
-        assert t("dirs.download") == "Download"
-        assert t("dirs.upload") == "Upload"
-        assert t("dirs.delete") == "Delete"
-        assert t("dirs.copy") == "Copy"
-        assert t("dirs.paste") == "Paste"
-        assert t("dirs.rename") == "Rename"
-        load_language("tr")
-        assert t("dirs.download") == "İndir"
-        assert t("dirs.delete") == "Sil"
+        app = wx.GetApp() or wx.App(False)
+        frame = wx.Frame(None, size=(1000, 700))
+        panel = build_remote_files_panel(
+            frame,
+            model=WxRemoteDirectoryModel(),
+            loader=lambda _path: (),
+            operation=lambda *_args: None,
+        )
+        frame.SetSizer(wx.BoxSizer(wx.VERTICAL))
+        frame.GetSizer().Add(panel, 1, wx.EXPAND)
+        frame.Show()
+        wx.Yield()
+        controls = panel._wx_remote_controls
+        try:
+            assert controls["btn_download"].IsShownOnScreen()
+            assert controls["btn_download"].GetLabel() == "Download selected"
+            assert controls["btn_upload"].GetLabel() == "Upload"
+            set_language("tr")
+            assert controls["btn_download"].GetLabel() == t("dirs.download_selected")
+            assert controls["btn_download"].GetLabel() != "Download selected"
+            assert controls["btn_upload"].GetLabel() == t("dirs.upload")
+            assert controls["btn_upload"].GetLabel() != "Upload"
+        finally:
+            set_language("en")
+            if callable(getattr(panel, "_wx_host_close", None)):
+                panel._wx_host_close()
+            frame.Destroy()
+            app.ProcessPendingEvents()
 
     def test_favorites_localized(self):
         load_language("en")
@@ -491,15 +515,60 @@ class TestWave80Audit:
                 wx.Yield()
 
     def test_runtime_language_switch_updates_outputs(self):
-        """Runtime language switching updates visible controls."""
+        """Visible output-channel tabs follow the selected runtime language."""
+        import time
+        import wx
+        from hpc_gui.wx_jobs import show_jobs
+
         load_language("en")
-        assert t("jobs_outputs.search") == "Search"
-        assert t("jobs_outputs.standard_output") == "Standard Output"
-        set_language("tr")
-        assert t("jobs_outputs.search") == "Ara"
-        assert "Çıktı" in t("jobs_outputs.standard_output")
-        set_language("en")
-        assert t("jobs_outputs.search") == "Search"
+        app = wx.GetApp() or wx.App(False)
+        try:
+            show_jobs(list_jobs=lambda: [{
+                "id": "1", "state": "RUNNING", "name": "job",
+                "stdout_path": "/work/stdout.log", "stderr_path": "/work/stderr.log",
+            }])
+            frames = [window for window in wx.GetTopLevelWindows() if hasattr(window, "_wx_jobs_state")]
+            assert frames
+            frame = frames[-1]
+            controls = frame._wx_jobs_controls
+            deadline = time.monotonic() + 3
+            while controls["jobs"].GetItemCount() == 0 and time.monotonic() < deadline:
+                app.ProcessPendingEvents()
+                wx.MilliSleep(10)
+            assert controls["jobs"].GetItemCount() == 1
+
+            jobs = controls["jobs"]
+            jobs.Select(0)
+            event = wx.ListEvent(wx.wxEVT_LIST_ITEM_SELECTED, jobs.GetId())
+            event.SetIndex(0)
+            jobs.GetEventHandler().ProcessEvent(event)
+            channels = controls["output_channel_notebook"]
+            deadline = time.monotonic() + 3
+            while channels.GetPageCount() < 2 and time.monotonic() < deadline:
+                app.ProcessPendingEvents()
+                wx.MilliSleep(10)
+            assert channels.GetPageCount() == 2
+            controls["notebook"].SetSelection(4)
+            frame.Show()
+            wx.Yield()
+            assert channels.IsShownOnScreen()
+            assert channels.GetPageText(0) == "Standard Output"
+            assert channels.GetPageText(1) == "Standard Error"
+
+            set_language("tr")
+            wx.Yield()
+            assert channels.GetPageText(0) == t("jobs_outputs.standard_output")
+            assert channels.GetPageText(1) == t("jobs_outputs.standard_error")
+        finally:
+            set_language("en")
+            for window in list(wx.GetTopLevelWindows()):
+                try:
+                    if hasattr(window, "_wx_jobs_state"):
+                        window.Hide()
+                        window.Destroy()
+                except Exception:
+                    pass
+            app.ProcessPendingEvents()
 
     def test_no_hardcoded_english_in_outputs_controls(self):
         """Verify the visible search control uses the localized hint."""

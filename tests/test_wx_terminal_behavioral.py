@@ -661,11 +661,34 @@ def test_large_pre_ready_output_buffered():
 
 # ── Section 16: Fallback non-parity ──
 
-def test_fallback_panel_sets_non_parity():
-    """When WebView unavailable, panel must be marked non-parity."""
-    from hpc_gui.wx_terminal_webview import build_terminal_panel, WxTerminalWebViewPanel
-    assert hasattr(WxTerminalWebViewPanel, "__init__"), "WxTerminalWebViewPanel must exist"
-    assert callable(build_terminal_panel), "build_terminal_panel must be callable"
+def test_fallback_panel_sets_non_parity(monkeypatch):
+    """Public terminal composition uses a functional TextCtrl without WebView."""
+    import wx
+    import hpc_gui.wx_terminal_webview as terminal
+
+    app = wx.GetApp() or wx.App(False)
+    monkeypatch.setattr(terminal, "_is_webview_available", lambda: False)
+    frame = wx.Frame(None, size=(900, 600))
+    panel = terminal.build_terminal_panel(frame)
+    frame.SetSizer(wx.BoxSizer(wx.VERTICAL))
+    frame.GetSizer().Add(panel, 1, wx.EXPAND)
+    frame.Show()
+    wx.Yield()
+    try:
+        controls = panel._wx_terminal_controls
+        assert panel.IsShownOnScreen()
+        assert panel._wx_terminal_is_webview is False
+        assert panel._wx_terminal_is_parity is False
+        assert isinstance(controls["output"], wx.TextCtrl)
+        assert controls["output"].IsShownOnScreen()
+        panel._wx_terminal_render("fallback output")
+        assert controls["output"].GetValue() == "fallback output"
+        controls["clear"].ProcessEvent(wx.CommandEvent(wx.wxEVT_BUTTON, controls["clear"].GetId()))
+        assert controls["output"].GetValue() == ""
+    finally:
+        panel._wx_terminal_close()
+        frame.Destroy()
+        app.ProcessPendingEvents()
 
 
 # ── Section 17: Bridge has required helpers ──
