@@ -7,8 +7,7 @@ import pytest
 
 
 pytestmark = [
-    pytest.mark.runtime_smoke,
-    pytest.mark.artifact_dependent,
+    pytest.mark.reporting,
     pytest.mark.packaging,
 ]
 
