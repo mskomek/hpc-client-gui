@@ -1879,6 +1879,9 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
                 pathCtrl = output_channel_paths.get(ch.id)
                 if pathCtrl:
                     pathCtrl.SetValue(ch.path)
+                    page_index = output_channel_notebook.FindPage(pathCtrl.GetParent())
+                    if page_index >= 0:
+                        output_channel_notebook.SetPageText(page_index, ch.label)
                 follower = state.setdefault("followers", {}).get(ch.id)
                 if follower is not None:
                     follower.assign(
@@ -2299,12 +2302,11 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         outputs_refresh_btn.SetLabel(t("jobs_outputs.refresh_all"))
         outputs_follow.SetLabel(t("jobs_outputs.auto_scroll_all"))
         outputs_pause_btn.SetLabel(t("jobs_outputs.resume_all" if state["outputs_paused"] else "jobs_outputs.pause_all"))
+        if state.get("selected_job"):
+            resolved = _resolve_output_channels()
+            state["resolved_channels"] = resolved
+            _ensure_output_tabs(resolved)
         for cid, text_ctrl in output_channels.items():
-            page = text_ctrl.GetParent()
-            try:
-                output_channel_notebook.SetPageText(output_channel_notebook.GetPageIndex(page), next((ch.label for ch in state.get("resolved_channels", ()) if ch.id == cid), cid))
-            except Exception:
-                pass
             if cid in output_channel_path_labels:
                 output_channel_path_labels[cid].SetLabel(f"{t('jobs_outputs.path')}:")
             if cid in output_channel_pause_buttons:
