@@ -1,0 +1,243 @@
+{
+  "scripts/ci.py packaging": {
+    "files": [
+      "tests/test_wheel_packaging.py"
+    ],
+    "nodes": 1,
+    "missing_files": [],
+    "selected_nodeids": [
+      "tests/test_wheel_packaging.py::test_built_wheel_contains_required_assets"
+    ],
+    "deselected_by_marker": 3
+  },
+  "scripts/ci.py compat": {
+    "files": [
+      "tests/test_cli.py",
+      "tests/test_cli_entrypoint.py",
+      "tests/test_config_storage_atomic.py",
+      "tests/test_profile_identity.py",
+      "tests/test_profile_transfer_settings.py",
+      "tests/test_slurm_models.py",
+      "tests/test_slurm_script_parser.py",
+      "tests/test_remote_entry_helpers.py",
+      "tests/test_upload_pipelining.py",
+      "tests/test_version_consistency.py"
+    ],
+    "nodes": 202,
+    "missing_files": []
+  },
+  "scripts/ci.py cli": {
+    "files": [
+      "tests/test_cli.py",
+      "tests/test_cli_entrypoint.py"
+    ],
+    "nodes": 164,
+    "missing_files": []
+  },
+  "scripts/ci.py ssh": {
+    "files": [
+      "tests/test_optional_ssh_credentials.py",
+      "tests/test_slurm_ssh.py",
+      "tests/test_local_transfer_gate.py",
+      "tests/test_transfer_wave17.py",
+      "tests/test_transfer_controller.py",
+      "tests/test_profile_transfer_settings.py"
+    ],
+    "nodes": 45,
+    "missing_files": []
+  },
+  "scripts/ci.py windows": {
+    "files": [
+      "tests/test_safe_download.py",
+      "tests/test_version_consistency.py",
+      "tests/test_startup_changelog.py"
+    ],
+    "nodes": 6,
+    "missing_files": []
+  },
+  "scripts/ci.py macos": {
+    "files": [
+      "tests/test_platform.py",
+      "tests/test_paths.py",
+      "tests/test_app_updater.py",
+      "tests/test_secret_store.py",
+      "tests/test_macos_product_surface.py",
+      "tests/test_macos_x11.py",
+      "tests/test_macos_release.py",
+      "tests/test_macos_packaging_spec.py",
+      "tests/test_version_consistency.py"
+    ],
+    "nodes": 55,
+    "missing_files": []
+  },
+  "scripts/ci.py contract": {
+    "files": [
+      "tests/test_plugin_contract.py"
+    ],
+    "nodes": 10,
+    "missing_files": []
+  },
+  ".github/workflows/release.yml job build-macos-arm64": {
+    "files": [
+      "tests/test_macos_x11.py",
+      "tests/test_app_updater.py",
+      "tests/test_macos_release.py",
+      "tests/test_macos_packaging_spec.py",
+      "tests/test_macos_release_workflow.py",
+      "tests/test_workflow_action_pins.py",
+      "tests/test_version_consistency.py"
+    ],
+    "nodes": 54,
+    "missing_files": []
+  },
+  ".github/workflows/release.yml job build-macos-x86_64": {
+    "files": [
+      "tests/test_macos_x11.py",
+      "tests/test_app_updater.py",
+      "tests/test_macos_release.py",
+      "tests/test_macos_packaging_spec.py",
+      "tests/test_macos_release_workflow.py",
+      "tests/test_workflow_action_pins.py",
+      "tests/test_version_consistency.py"
+    ],
+    "nodes": 54,
+    "missing_files": []
+  },
+  "docs/ci-disabled/ci.yml job compat": {
+    "files": [
+      "tests/test_cli.py",
+      "tests/test_cli_entrypoint.py",
+      "tests/test_config_storage_atomic.py",
+      "tests/test_profile_identity.py",
+      "tests/test_profile_transfer_settings.py",
+      "tests/test_slurm_models.py",
+      "tests/test_slurm_script_parser.py",
+      "tests/test_remote_entry_helpers.py",
+      "tests/test_upload_pipelining.py",
+      "tests/test_version_consistency.py",
+      "tests/test_app_updater.py",
+      "tests/test_installation_context.py",
+      "tests/test_updater_helper.py",
+      "tests/test_security_hardening_wave.py",
+      "tests/test_log_redaction.py",
+      "tests/test_diagnostics.py",
+      "tests/test_update_verification.py",
+      "tests/test_plugin_security.py",
+      "tests/test_terminal_boundaries.py"
+    ],
+    "nodes": 286,
+    "missing_files": []
+  },
+  "docs/ci-disabled/ci.yml job cli": {
+    "files": [
+      "tests/test_cli.py",
+      "tests/test_cli_entrypoint.py"
+    ],
+    "nodes": 164,
+    "missing_files": []
+  },
+  "docs/ci-disabled/ci.yml job ssh_sftp": {
+    "files": [
+      "tests/test_optional_ssh_credentials.py",
+      "tests/test_slurm_ssh.py",
+      "tests/test_local_transfer_gate.py",
+      "tests/test_transfer_wave17.py",
+      "tests/test_transfer_controller.py",
+      "tests/test_profile_transfer_settings.py"
+    ],
+    "nodes": 45,
+    "missing_files": []
+  },
+  "docs/ci-disabled/ci.yml job macos": {
+    "files": [
+      "tests/test_app_updater.py",
+      "tests/test_installation_context.py",
+      "tests/test_updater_helper.py",
+      "tests/test_optional_ssh_credentials.py",
+      "tests/test_slurm_ssh.py",
+      "tests/test_local_transfer_gate.py",
+      "tests/test_profile_transfer_settings.py",
+      "tests/test_plugin_contract.py",
+      "tests/test_macos_packaging_spec.py",
+      "tests/test_terminal_assets.py",
+      "tests/test_terminal_bridge.py"
+    ],
+    "nodes": 69,
+    "missing_files": []
+  },
+  "docs/ci-disabled/ci.yml job windows": {
+    "files": [
+      "tests/test_safe_download.py",
+      "tests/test_version_consistency.py",
+      "tests/test_startup_changelog.py",
+      "tests/test_app_updater.py",
+      "tests/test_installation_context.py",
+      "tests/test_updater_helper.py"
+    ],
+    "nodes": 41,
+    "missing_files": []
+  },
+  "docs/ci-disabled/ci.yml job contract": {
+    "files": [
+      "tests/test_plugin_contract.py"
+    ],
+    "nodes": 10,
+    "missing_files": []
+  },
+  "docs/ci-disabled/ci.yml job packaging": {
+    "files": [
+      "tests/test_wheel_packaging.py"
+    ],
+    "nodes": 1,
+    "missing_files": [],
+    "selected_nodeids": [
+      "tests/test_wheel_packaging.py::test_built_wheel_contains_required_assets"
+    ],
+    "deselected_by_marker": 3
+  },
+  "docs/ci-disabled/ci.yml job wx-smoke": {
+    "files": [
+      "tests/test_wx_shell.py",
+      "tests/test_wx_65a_stress.py",
+      "tests/test_wx_windows_audit.py",
+      "tests/test_wx_terminal.py",
+      "tests/test_wx_embedded_terminal.py",
+      "tests/test_wx_terminal_behavioral.py",
+      "tests/test_wave2_wx_ui_parity.py",
+      "tests/test_wx_term002.py"
+    ],
+    "nodes": 59,
+    "missing_files": []
+  },
+  "scripts/release_test_suite.py shared suite": {
+    "files": [
+      "tests/** minus packaging marker, plus isolated: tests/test_ftp_widget.py, tests/test_download_cancel_wire.py, tests/test_editor_flow.py"
+    ],
+    "nodes": 2671,
+    "missing_files": []
+  },
+  ".github/workflows/release.yml job build-linux": {
+    "selector": "python scripts/ci.py release -> scripts/release_test_suite.py (-m not packaging plus three isolated files)",
+    "files": [
+      "tests/**"
+    ],
+    "nodes": 2671,
+    "missing_files": []
+  },
+  ".github/workflows/release.yml job build-windows": {
+    "selector": "python scripts/ci.py release -> scripts/release_test_suite.py (-m not packaging plus three isolated files)",
+    "files": [
+      "tests/**"
+    ],
+    "nodes": 2671,
+    "missing_files": []
+  },
+  "docs/ci-disabled/ci.yml job gui": {
+    "selector": "python scripts/ci.py gui -> scripts/release_test_suite.py --coverage",
+    "files": [
+      "tests/** minus packaging marker, plus three isolated files"
+    ],
+    "nodes": 2671,
+    "missing_files": []
+  }
+}
