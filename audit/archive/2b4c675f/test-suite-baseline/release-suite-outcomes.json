@@ -1,0 +1,159 @@
+{
+  "captured_head": "2b4c675f31ae5aba4b1a2cf9b005b919c53be208",
+  "combined_selected_items_after_webview_xfail_followup": {
+    "deselected": 2,
+    "failed": 16,
+    "passed": 2646,
+    "selected_executed": 2683,
+    "skipped": 21,
+    "xfail": 0,
+    "xpass": 0
+  },
+  "command": "python scripts/release_test_suite.py plus each remaining process from build_commands(coverage=False)",
+  "coverage_run": {
+    "command": "python scripts/release_test_suite.py --coverage",
+    "coverage_percent": 47,
+    "exit_code": 1,
+    "scope": "broad initial pytest process only; runner stopped on the same three failures before isolated per-file processes"
+  },
+  "failures": [
+    {
+      "classification": "inter_test_state_leak",
+      "detail": "Order-dependent language state: fails in the broad group with Turkish label, passes isolated.",
+      "nodeid": "tests/test_wave3_remote_sftp_ssh.py::TestRemoteEntryHelpers::test_file_type_directory",
+      "primary": "unit",
+      "process_exit_code": 1
+    },
+    {
+      "classification": "assertion_contract_mismatch",
+      "detail": "Exact service matrix omits optional candidate actions returned by visible_actions; unchanged service source; view filters support-dependent actions later.",
+      "nodeid": "tests/test_wx_file_action_policy.py::test_remote_policy_exact_matrix[one_file-selection1-expected1]",
+      "primary": "contract",
+      "process_exit_code": 1
+    },
+    {
+      "classification": "assertion_contract_mismatch",
+      "detail": "Exact service matrix omits optional candidate actions returned by visible_actions; unchanged service source; view filters support-dependent actions later.",
+      "nodeid": "tests/test_wx_file_action_policy.py::test_remote_policy_exact_matrix[one_dir-selection2-expected2]",
+      "primary": "contract",
+      "process_exit_code": 1
+    },
+    {
+      "classification": "subprocess_timeout",
+      "detail": "Child wx lifecycle check exceeded its 30-second subprocess bound; Packet J earlier recorded a pass, so current outcome needs reconciliation.",
+      "nodeid": "tests/test_hardening_additional.py::test_wx_separator_lifecycle_offscreen",
+      "primary": "gui",
+      "process_exit_code": 1
+    },
+    {
+      "classification": "confirmed_product_defect",
+      "detail": "Real selected-job Outputs tab stays English after EN→TR switch; expected Turkish label. Confirmed Packet F product defect at wx_jobs.py:2297.",
+      "nodeid": "tests/test_wave80_files_outputs.py::TestWave80Audit::test_runtime_language_switch_updates_outputs",
+      "primary": "gui",
+      "process_exit_code": 1
+    },
+    {
+      "classification": "gui_assertion_and_native_crash",
+      "detail": "KeyError: language_button in shell control map; process then exited with Windows heap-corruption code 0xC0000374.",
+      "nodeid": "tests/test_wx_65a_stress.py::test_wx_65a_integrated_stress",
+      "primary": "gui",
+      "process_exit_code": 3221226356
+    },
+    {
+      "classification": "gui_assertion",
+      "detail": "After navigating and applying provider filter, real wx listing contained no run.log row.",
+      "nodeid": "tests/test_wx_remote_file_actions_behavior.py::test_wx_remote_navigation_sort_and_provider_filter_are_visible",
+      "primary": "gui",
+      "process_exit_code": 1
+    },
+    {
+      "classification": "gui_assertion",
+      "detail": "Bounded event wait did not observe one COMPLETING row after the job callback.",
+      "nodeid": "tests/test_wx_shell_p0.py::test_wx_shell_completion_states_and_deduplication",
+      "primary": "gui",
+      "process_exit_code": 1
+    },
+    {
+      "classification": "gui_assertion",
+      "detail": "KeyError: update while reading expected shell control labels.",
+      "nodeid": "tests/test_wx_shell_p0_stress.py::test_wx_shell_p0_stress_real_wx_paths",
+      "primary": "gui",
+      "process_exit_code": 1
+    },
+    {
+      "classification": "gui_webview_runtime_failure",
+      "detail": "Embedded WebView2 GUI assertion failed; child emitted WebViewCreated operation-aborted diagnostics and process exited with Windows heap-corruption code 0xC0000374.",
+      "nodeid": "tests/test_wx_embedded_terminal.py::test_embedded_terminal_find_button_selects_match",
+      "primary": "gui",
+      "process_exit_code": 3221226356
+    },
+    {
+      "classification": "gui_webview_runtime_failure",
+      "detail": "Embedded WebView2 GUI assertion failed; child emitted WebViewCreated operation-aborted diagnostics and process exited with Windows heap-corruption code 0xC0000374.",
+      "nodeid": "tests/test_wx_embedded_terminal.py::test_embedded_terminal_clear_button_clears_visible_output_and_model",
+      "primary": "gui",
+      "process_exit_code": 3221226356
+    },
+    {
+      "classification": "gui_webview_runtime_failure",
+      "detail": "Embedded WebView2 GUI assertion failed; child emitted WebViewCreated operation-aborted diagnostics and process exited with Windows heap-corruption code 0xC0000374.",
+      "nodeid": "tests/test_wx_embedded_terminal.py::test_embedded_terminal_font_decrease_changes_visible_font",
+      "primary": "gui",
+      "process_exit_code": 3221226356
+    },
+    {
+      "classification": "gui_webview_runtime_failure",
+      "detail": "Embedded WebView2 GUI assertion failed; child emitted WebViewCreated operation-aborted diagnostics and process exited with Windows heap-corruption code 0xC0000374.",
+      "nodeid": "tests/test_wx_embedded_terminal.py::test_embedded_terminal_font_increase_changes_visible_font",
+      "primary": "gui",
+      "process_exit_code": 3221226356
+    },
+    {
+      "classification": "gui_webview_runtime_failure",
+      "detail": "Embedded WebView2 GUI assertion failed; child emitted WebViewCreated operation-aborted diagnostics and process exited with Windows heap-corruption code 0xC0000374.",
+      "nodeid": "tests/test_wx_embedded_terminal.py::test_embedded_terminal_ctrl_c_sends_interrupt_not_copy",
+      "primary": "gui",
+      "process_exit_code": 3221226356
+    },
+    {
+      "classification": "gui_webview_runtime_failure",
+      "detail": "Embedded WebView2 GUI assertion failed; child emitted WebViewCreated operation-aborted diagnostics and process exited with Windows heap-corruption code 0xC0000374.",
+      "nodeid": "tests/test_wx_embedded_terminal.py::test_embedded_terminal_copy_shortcut_does_not_send_interrupt",
+      "primary": "gui",
+      "process_exit_code": 3221226356
+    },
+    {
+      "classification": "gui_webview_runtime_failure",
+      "detail": "Embedded WebView2 GUI assertion failed; child emitted WebViewCreated operation-aborted diagnostics and process exited with Windows heap-corruption code 0xC0000374.",
+      "nodeid": "tests/test_wx_embedded_terminal.py::test_embedded_terminal_resize_reaches_pty_resize",
+      "primary": "gui",
+      "process_exit_code": 3221226356
+    }
+  ],
+  "notes": [
+    "Two former non-strict WebView xfails were XPASS in continuation; both annotations were removed and the changed module re-ran 29 passed with zero xfail/xpass.",
+    "The combined count reconciles those two nodes from prior XPASS to pass using the subsequent full-module rerun; all other continuation module results are retained from their isolated run.",
+    "Release suite excludes packaging qualifier nodes; packaged artifact smoke was not executed.",
+    "No production files were modified during Packet O validation."
+  ],
+  "preflight": {
+    "check_i18n": "PASS",
+    "collect_only": "PASS, 2685 nodes, 0 errors",
+    "compileall": "PASS",
+    "ruff": "PASS",
+    "smoke_test": "PASS",
+    "taxonomy_enforce": "PASS",
+    "taxonomy_ratchet": "PASS"
+  },
+  "release_runner_current_broad_group": {
+    "deselected": 2,
+    "duration_seconds": 128.74,
+    "failed": 3,
+    "passed": 1904,
+    "skipped": 21,
+    "subtests_passed": 29,
+    "xfail": 0,
+    "xpass": 0
+  },
+  "release_runner_exit_code": 1
+}
