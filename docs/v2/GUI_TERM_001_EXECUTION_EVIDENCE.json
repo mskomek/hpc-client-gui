@@ -36,8 +36,20 @@
     "stale_session_output": "0 (generation guard in set_ssh + _safe_deliver)",
     "unbounded_accumulation": "0 (bounded queue MAX_PENDING_BYTES=2MB)"
   },
+  "historical_evidence": [
+    "An earlier Windows Python 3.14 packaged wx WebView2 smoke was reported PASS; that result belongs to a different artifact and is not current reproducible evidence."
+  ],
+  "current_reproducible_evidence": {
+    "status": "FAIL",
+    "platform": "Windows 11, Python 3.12.4",
+    "base_commit": "12ce79935bf076e1062c57dc7dbd148bad2bfae1",
+    "worktree": "dirty",
+    "artifact_sha256": "c83c1b05c157a97b040c705efe722855cd1511ee3b59de19c87341e18a38394f",
+    "report": "build/audit/wx-packaged-smoke-windows.json",
+    "observation": "The latest guarded attempt could not foreground the tested window and therefore sent no keys; DOM, bridge, and SSH input event counts were zero. A preceding artifact (SHA-256 21141a8b3bb272269234bb18136afefe49927fa5530f85ca8aa5cec64c6c8394) accepted all 36 SendInput events while foreground matched, but produced no terminal output."
+  },
   "known_gaps": [
-    "Windows Python 3.14 packaged wx WebView2 smoke is PASS; full packaged PTY/file/job flow remains manual",
-    "Linux/macOS WebKit packaged runtime not tested"
+    "GUI-TERM-001 remains PARTIAL: current packaged keyboard-to-xterm-to-PTY output is not demonstrated.",
+    "Linux wx/WebKit and macOS packaged runtimes are NOT EVIDENCED."
   ]
 }
