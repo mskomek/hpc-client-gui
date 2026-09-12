@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "baseline_sha": "12ce79935bf076e1062c57dc7dbd148bad2bfae1",
+  "collection": {
+    "count": 2673,
+    "errors": 0
+  },
+  "full_suite": {
+    "completed": false,
+    "passed": null,
+    "failed": null,
+    "skipped": null,
+    "xfailed": null,
+    "xpassed": null,
+    "duration_seconds": null
+  },
+  "known_isolated_failures": [
+    {
+      "nodeid": "tests/test_macos_ci.py::test_macos_ci_matrix_covers_both_native_architectures",
+      "signature": "workflow file missing at frozen baseline"
+    },
+    {
+      "nodeid": "tests/test_macos_ci.py::test_macos_ci_has_no_release_upload_or_signing_step",
+      "signature": "workflow file missing at frozen baseline"
+    },
+    {
+      "nodeid": "tests/test_macos_release_workflow.py::test_release_preflight_shares_the_ci_test_suite",
+      "signature": "workflow file missing at frozen baseline"
+    },
+    {
+      "nodeid": "tests/test_wave9_ci_unicode_matrix.py::TestResultsVerification::test_wx_unicode_smoke_cannot_fail_open",
+      "signature": "workflow file missing at frozen baseline"
+    },
+    {
+      "nodeid": "tests/test_workflow_action_pins.py::test_every_workflow_exists",
+      "signature": "test expects ci.yml and release.yml; only release.yml exists"
+    },
+    {
+      "nodeid": "tests/test_wx_packaged_smoke.py::test_packaged_wx_smoke_gate_reports_critical_stages",
+      "signature": "test expects PASS while smoke reports missing artifact and FAIL"
+    },
+    {
+      "nodeid": "tests/test_gui_audit_screenshots.py::test_manifest_exists_and_commit_current",
+      "signature": "manifest SHA 3a7294079b992d3ddcabc349bbeadf6988312b64 differs from baseline SHA"
+    }
+  ],
+  "known_hangs": [
+    {
+      "nodeid": "tests/test_connection_advanced_settings.py::ParallelismSourceOfTruthTests::test_settings_dialog_has_no_global_parallelism_editor",
+      "signature": "MagicMock Path.home makes exists() truthy in _next_config_backup, causing an infinite loop"
+    }
+  ]
+}
