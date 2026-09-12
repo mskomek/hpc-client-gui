@@ -7,7 +7,7 @@ Status: Packets A, B, and C DONE; next packet D is NOT STARTED.
 - Phase B commit: `058c83bb3318ddaee85bf98ba430079a4acd4a02`
 - Phase C commit: `1b792ffc`
 
-The original checkout at `D:\Projeler\hpc-client-gui` was read-only for this work. It was on `develop` at `12ce79935bf076e1062c57dc7dbd148bad2bfae1` at task start; the final safety check showed it on `develop` at `ccfeb1b81c304b79b426b599d46ebf2b831b15fe`, still dirty. No Phase 2 paths appear in its status, and this work made no writes there. Work was done in the clean governance worktree at `D:\Projeler\hpc-client-gui-test-governance`. No push was performed.
+The original checkout at `D:\Projeler\hpc-client-gui` was read-only for this work. It was on `develop` at `12ce79935bf076e1062c57dc7dbd148bad2bfae1` at task start; successive read-only safety checks during finalization observed it advance to `ccfeb1b81c304b79b426b599d46ebf2b831b15fe`, then `1ff36589da5cb437cb831e12ba9c54304eca6137`, still dirty. No Phase 2 paths appeared in its status, and this work made no writes there. Work was done in the clean governance worktree at `D:\Projeler\hpc-client-gui-test-governance`. No push was performed.
 
 ## Packet A — frozen baseline and inventory
 
