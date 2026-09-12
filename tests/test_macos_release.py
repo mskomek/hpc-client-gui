@@ -12,6 +12,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 import release_macos as rm
 
 
+@pytest.mark.release
 def test_plan_is_stable_and_arch_specific():
     plan = rm.make_plan(rm.resolve_version(), "arm64")
     data = plan.to_dict()
@@ -20,6 +21,7 @@ def test_plan_is_stable_and_arch_specific():
     assert data["commands"][0][-1].endswith("hpc-client-gui.spec")
 
 
+@pytest.mark.release
 def test_execute_refuses_non_macos_before_mutation(monkeypatch):
     plan = rm.make_plan(rm.resolve_version(), "arm64")
     monkeypatch.setattr(rm.sys, "platform", "win32")
@@ -33,12 +35,14 @@ def test_execute_refuses_non_macos_before_mutation(monkeypatch):
     run.assert_not_called()
 
 
+@pytest.mark.release
 def test_main_json_dry_run(capsys):
     assert rm.main(["--version", rm.resolve_version(), "--arch", "x86_64", "--json"]) == 0
     payload = json.loads(capsys.readouterr().out)
     assert payload["artifact"].endswith("_x86_64.dmg")
 
 
+@pytest.mark.release
 def test_smoke_script_is_darwin_gated():
     import macos_release_smoke
 
@@ -50,6 +54,7 @@ def _spec_text() -> str:
     return (rm.REPO_ROOT / "build" / "macos" / "hpc-client-gui.spec").read_text(encoding="utf-8")
 
 
+@pytest.mark.release
 def test_macos_spec_excludes_devtools_like_windows_and_linux():
     text = _spec_text()
     assert "qtwebengine_devtools_resources" in text
@@ -64,11 +69,13 @@ def test_macos_spec_excludes_devtools_like_windows_and_linux():
         assert forbidden not in text.split("EXCLUDED_NAME_PATTERNS", 1)[1].lower()
 
 
+@pytest.mark.release
 def test_dmg_budget_defaults_to_600_mib():
     assert rm.DEFAULT_DMG_BUDGET_MIB == 600
     assert rm.dmg_budget_mib({}) == 600
 
 
+@pytest.mark.release
 def test_dmg_budget_override_is_validated(tmp_path):
     with pytest.raises(rm.PackagingError, match="integer"):
         rm.dmg_budget_mib({rm.DMG_BUDGET_ENV: "big"})
@@ -77,6 +84,7 @@ def test_dmg_budget_override_is_validated(tmp_path):
     assert rm.dmg_budget_mib({rm.DMG_BUDGET_ENV: "750"}) == 750
 
 
+@pytest.mark.release
 def test_dmg_over_budget_is_rejected(tmp_path):
     dmg = tmp_path / "hpc-client-gui_macos_arm64.dmg"
     dmg.write_bytes(b"x" * (601 * 1024 * 1024))
@@ -84,6 +92,7 @@ def test_dmg_over_budget_is_rejected(tmp_path):
         rm.check_dmg_budget(dmg, 600)
 
 
+@pytest.mark.release
 def test_dmg_within_budget_reports_size(tmp_path):
     dmg = tmp_path / "hpc-client-gui_macos_arm64.dmg"
     dmg.write_bytes(b"x" * (2 * 1024 * 1024))
@@ -91,6 +100,7 @@ def test_dmg_within_budget_reports_size(tmp_path):
     assert "2.00 MiB" in line and "budget: 600 MiB" in line
 
 
+@pytest.mark.release
 def test_bundle_report_lists_largest_files(tmp_path):
     app = tmp_path / "HPC Client GUI.app" / "Contents" / "MacOS"
     app.mkdir(parents=True)
@@ -104,6 +114,7 @@ def test_bundle_report_lists_largest_files(tmp_path):
     assert text.index("big.bin") < text.index("small.bin")
 
 
+@pytest.mark.release
 def test_macos_staging_preserves_framework_symlinks():
     release_script = (rm.REPO_ROOT / "scripts" / "release_macos.py").read_text(encoding="utf-8")
     signing_script = (rm.REPO_ROOT / "scripts" / "sign_macos_release.py").read_text(encoding="utf-8")
@@ -111,6 +122,7 @@ def test_macos_staging_preserves_framework_symlinks():
     assert "shutil.copytree(app, stage / app.name, symlinks=True)" in signing_script
 
 
+@pytest.mark.release
 def test_release_lock_keeps_macos_x86_64_cryptography_support():
     lock = (rm.REPO_ROOT / "requirements-release.lock").read_text(encoding="utf-8")
     assert 'cryptography==50.0.0; sys_platform != "darwin" or platform_machine != "x86_64"' in lock

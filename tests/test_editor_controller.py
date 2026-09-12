@@ -1,6 +1,9 @@
+
+import pytest
 from hpc_gui.services.editor_controller import DocumentModel, EditorCommandService, EditorController, LintResult
 
 
+@pytest.mark.integration
 def test_dirty_tracking_local_remote_and_duplicate_paths():
     controller = EditorController()
     index = controller.open(DocumentModel("/remote/a.sh", "old", "old"))
@@ -12,6 +15,7 @@ def test_dirty_tracking_local_remote_and_duplicate_paths():
     assert not controller.active.dirty
 
 
+@pytest.mark.unit
 def test_submit_run_template_and_lint_navigation_data():
     assert EditorCommandService.execute_mode("a.slurm") == "submit"
     assert EditorCommandService.execute_mode("a.sh") == "run"
@@ -21,6 +25,7 @@ def test_submit_run_template_and_lint_navigation_data():
     assert (result.line, result.column) == (3, 4)
 
 
+@pytest.mark.gui
 def test_editor_models_have_no_qt_imports():
     source = __import__("inspect").getsource(EditorController)
     assert "PySide" not in source

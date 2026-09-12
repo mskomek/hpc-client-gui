@@ -133,6 +133,7 @@ def remote_responses(root: Path, entry: dict) -> dict[str, bytes]:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.contract
 @pytest.mark.parametrize(
     "bad_path",
     ["helper.py", "lib.dll", "run.exe", "hook.ps1", "lib.so", "lib.dylib", "run.bat"],
@@ -158,6 +159,7 @@ def test_executable_extensions_rejected(bad_path):
     assert any("forbidden executable-looking extension" in e for e in errors)
 
 
+@pytest.mark.contract
 def test_unknown_command_placeholder_rejected():
     profile = {
         "schema_version": 1,
@@ -170,6 +172,7 @@ def test_unknown_command_placeholder_rejected():
     assert any("not an application-owned Slurm operation" in e for e in errors)
 
 
+@pytest.mark.contract
 def test_only_application_owned_slurm_commands_are_accepted():
     profile = {
         "schema_version": 1,
@@ -185,6 +188,7 @@ def test_only_application_owned_slurm_commands_are_accepted():
     assert validate_cluster_profile_dict(profile) == []
 
 
+@pytest.mark.contract
 def test_published_legacy_sacct_command_is_accepted_exactly():
     profile = {
         "schema_version": 1,
@@ -206,6 +210,7 @@ def test_published_legacy_sacct_command_is_accepted_exactly():
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.integration
 def test_installer_rejects_too_many_files(tmp_path: Path):
     entry = build_plugin(tmp_path)
     manifest_path = tmp_path / entry["manifest_path"]
@@ -232,6 +237,7 @@ def test_installer_rejects_too_many_files(tmp_path: Path):
         )
 
 
+@pytest.mark.integration
 def test_installer_rejects_oversized_file(tmp_path: Path):
     entry = build_plugin(tmp_path)
     big_payload = b"x" * (FILE_MAX_BYTES + 1)
@@ -247,6 +253,7 @@ def test_installer_rejects_oversized_file(tmp_path: Path):
         )
 
 
+@pytest.mark.integration
 def test_exception_midway_leaves_active_pointer_untouched(tmp_path: Path):
     entry = build_plugin(tmp_path)
     responses = remote_responses(tmp_path, entry)
@@ -271,6 +278,7 @@ def test_exception_midway_leaves_active_pointer_untouched(tmp_path: Path):
     assert not staging_root.exists() or not any(staging_root.iterdir())
 
 
+@pytest.mark.integration
 def test_disk_write_failure_keeps_previous_state(tmp_path: Path):
     entry = build_plugin(tmp_path, version="2.0.0")
     responses = remote_responses(tmp_path, entry)
@@ -298,6 +306,7 @@ def test_disk_write_failure_keeps_previous_state(tmp_path: Path):
     assert (packages_dir(install_root) / "org.hpcclient.truba" / "1.0.0" / "manifest.json").is_file()
 
 
+@pytest.mark.integration
 def test_post_activation_validation_failure_triggers_rollback(tmp_path: Path, monkeypatch):
     entry = build_plugin(tmp_path, version="3.0.0")
     responses = remote_responses(tmp_path, entry)
@@ -331,6 +340,7 @@ def test_post_activation_validation_failure_triggers_rollback(tmp_path: Path, mo
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 def test_final_url_policy_allows_only_official_https_hosts():
     from hpc_gui.plugins.registry_client import _final_url_is_allowed
 
@@ -342,6 +352,7 @@ def test_final_url_policy_allows_only_official_https_hosts():
     assert not _final_url_is_allowed("https://raw.githubusercontent.com.evil.com/x")
 
 
+@pytest.mark.unit
 def test_default_fetcher_rejects_redirect_to_unexpected_host(monkeypatch):
     import io
 
@@ -362,6 +373,7 @@ def test_default_fetcher_rejects_redirect_to_unexpected_host(monkeypatch):
         )
 
 
+@pytest.mark.unit
 def test_default_fetcher_rejects_insecure_http_final_url(monkeypatch):
     import io
 
@@ -387,6 +399,7 @@ def test_default_fetcher_rejects_insecure_http_final_url(monkeypatch):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.integration
 def test_disabled_plugin_contributes_no_templates(tmp_path: Path):
     entry = build_plugin(tmp_path)
     install_root = tmp_path / "install"
@@ -408,6 +421,7 @@ def test_disabled_plugin_contributes_no_templates(tmp_path: Path):
     assert installed_cluster_template_groups(root=install_root, app_version="1.4.0")
 
 
+@pytest.mark.integration
 def test_activate_version_only_for_valid_installed_versions(tmp_path: Path):
     entry_v1 = build_plugin(tmp_path, version="1.0.0")
     entry_v2 = build_plugin(tmp_path, version="2.0.0")
@@ -431,6 +445,7 @@ def test_activate_version_only_for_valid_installed_versions(tmp_path: Path):
     assert read_active_versions(install_root) == {"org.hpcclient.truba": "1.0.0"}
 
 
+@pytest.mark.integration
 def test_remove_never_touches_user_templates_or_profiles(tmp_path: Path, monkeypatch):
     entry = build_plugin(tmp_path)
     install_root = tmp_path / "install"
@@ -450,6 +465,7 @@ def test_remove_never_touches_user_templates_or_profiles(tmp_path: Path, monkeyp
     assert user_profile["system"]["status_command"] == "lssrv"
 
 
+@pytest.mark.integration
 def test_logging_on_install_and_activation(tmp_path: Path, caplog):
     entry = build_plugin(tmp_path)
     with caplog.at_level(logging.INFO, logger="hpc_gui.plugins.installer"):

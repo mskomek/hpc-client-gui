@@ -6,6 +6,7 @@ import pytest
 from hpc_gui.services.nersc_quota import parse_nersc_showquota_json
 
 
+@pytest.mark.contract
 def test_nersc_json_parser_reads_space_and_inode_quota():
     output = (Path(__file__).parent / "fixtures/quota/nersc/showquota.json").read_text()
     result = parse_nersc_showquota_json(output)
@@ -15,6 +16,7 @@ def test_nersc_json_parser_reads_space_and_inode_quota():
     assert result.soft_limit_files == 10000000
 
 
+@pytest.mark.contract
 def test_nersc_json_parser_rejects_malformed_or_missing_rows():
     with pytest.raises(ValueError):
         parse_nersc_showquota_json("not json")

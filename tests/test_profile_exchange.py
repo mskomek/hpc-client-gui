@@ -21,6 +21,7 @@ PROFILE = {
 }
 
 
+@pytest.mark.contract
 def test_shareable_export_contains_no_secrets_or_personal_fields():
     exported = export_profile(PROFILE)
     text = str(exported).lower()
@@ -28,6 +29,7 @@ def test_shareable_export_contains_no_secrets_or_personal_fields():
     assert exported["profile"]["host"] == PROFILE["host"]
 
 
+@pytest.mark.contract
 def test_personal_mode_keeps_allowed_identity_but_not_credentials():
     profile = export_profile(PROFILE, mode="personal")["profile"]
     assert profile["username"] == "alice"
@@ -36,6 +38,7 @@ def test_personal_mode_keeps_allowed_identity_but_not_credentials():
     assert "mfa_response" not in str(profile).lower()
 
 
+@pytest.mark.contract
 def test_preview_and_explicit_import_generate_new_id_and_preserve_unknown():
     payload = export_profile(PROFILE, mode="personal")
     preview = preview_profile_import(payload)
@@ -46,6 +49,7 @@ def test_preview_and_explicit_import_generate_new_id_and_preserve_unknown():
     assert saved[0]["id"] != PROFILE["id"]
 
 
+@pytest.mark.contract
 def test_invalid_schema_and_cancelled_preview_do_not_write():
     with pytest.raises(ValueError):
         preview_profile_import({"format": FORMAT, "version": VERSION + 1})

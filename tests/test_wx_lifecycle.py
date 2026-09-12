@@ -1,6 +1,8 @@
+import pytest
 from hpc_gui.wx_lifecycle import WxLifecycleController
 
 
+@pytest.mark.unit
 def test_update_progress_cancel_splash_and_shutdown_cleanup():
     events, cleaned = [], []
     controller = WxLifecycleController(tray_notify=events.append)
@@ -17,11 +19,13 @@ def test_update_progress_cancel_splash_and_shutdown_cleanup():
     assert cleaned == ["transfer", "connection"]
 
 
+@pytest.mark.unit
 def test_tray_unavailable_is_fail_soft():
     controller = WxLifecycleController()
     assert not controller.notify_job("done")
 
 
+@pytest.mark.unit
 def test_tray_notifications_are_connected_late_and_deduplicated():
     events = []
     controller = WxLifecycleController()

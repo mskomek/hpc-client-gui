@@ -8,6 +8,7 @@ import pytest
 from hpc_gui.core import secret_store
 
 
+@pytest.mark.contract
 def test_macos_keychain_uses_opaque_reference(monkeypatch):
     entries: dict[tuple[str, str], str] = {}
     fake = types.SimpleNamespace(
@@ -30,6 +31,7 @@ def test_macos_keychain_uses_opaque_reference(monkeypatch):
         secret_store.unprotect_keychain_secret(reference)
 
 
+@pytest.mark.contract
 def test_keychain_is_unavailable_outside_macos(monkeypatch):
     monkeypatch.setattr(secret_store.sys, "platform", "win32")
     assert secret_store.keychain_available() is False

@@ -1,3 +1,4 @@
+import pytest
 from hpc_gui.services.slurm_script_parser import (
     parse_job_paths,
     parse_output_error,
@@ -5,12 +6,14 @@ from hpc_gui.services.slurm_script_parser import (
 )
 
 
+@pytest.mark.contract
 def test_parse_output_error_accepts_slurm_equals_and_space_forms() -> None:
     assert parse_output_error(
         "#SBATCH --output=run.out\n#SBATCH --error run.err\n"
     ) == ("run.out", "run.err")
 
 
+@pytest.mark.contract
 def test_parse_output_error_accepts_compact_short_forms() -> None:
     assert parse_output_error("#SBATCH -orun.out\n#SBATCH -erun.err\n") == (
         "run.out",
@@ -18,6 +21,7 @@ def test_parse_output_error_accepts_compact_short_forms() -> None:
     )
 
 
+@pytest.mark.contract
 def test_job_paths_use_chdir_and_slurm_default_without_executing_script() -> None:
     paths = parse_job_paths(
         "#!/bin/bash\n"
@@ -34,6 +38,7 @@ def test_job_paths_use_chdir_and_slurm_default_without_executing_script() -> Non
     assert paths.stderr == paths.stdout
 
 
+@pytest.mark.contract
 def test_directives_after_first_executable_line_are_ignored() -> None:
     paths = parse_job_paths(
         "#!/bin/bash\n"
@@ -45,6 +50,7 @@ def test_directives_after_first_executable_line_are_ignored() -> None:
     assert paths.stdout == "/home/alice/slurm-7.out"
 
 
+@pytest.mark.contract
 def test_array_job_placeholders_use_observed_array_id() -> None:
     paths = parse_job_paths(
         "#SBATCH --output=logs/%A_%a_%J_%j.out\n",
@@ -54,6 +60,7 @@ def test_array_job_placeholders_use_observed_array_id() -> None:
     assert paths.stdout == "/home/alice/logs/42_3_42_3_42_3.out"
 
 
+@pytest.mark.contract
 def test_storage_area_matches_path_components_and_prefers_specific_root() -> None:
     roots = {"home": "/data/user", "scratch": "/data/user/scratch"}
     assert storage_area_for_path("/data/user/scratch/run/out.log", roots) == "scratch"

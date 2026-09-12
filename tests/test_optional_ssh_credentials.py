@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import pytest
 import sys
 import tempfile
 import unittest
@@ -88,6 +89,7 @@ class OptionalSSHCredentialsTests(unittest.TestCase):
         app_data.start()
         self.addCleanup(app_data.stop)
 
+    @pytest.mark.contract
     def test_empty_username_and_password_use_ssh_defaults(self):
         fake_client = _SSHClient()
         with patch(
@@ -111,6 +113,7 @@ class OptionalSSHCredentialsTests(unittest.TestCase):
         self.assertEqual(fake_client.connect_kwargs["timeout"], 45)
         self.assertEqual(fake_client.connect_kwargs["banner_timeout"], 45)
 
+    @pytest.mark.contract
     def test_keyboard_interactive_returns_ephemeral_challenge_responses(self):
         seen = {}
 
@@ -132,6 +135,7 @@ class OptionalSSHCredentialsTests(unittest.TestCase):
         self.assertEqual(transport.username, "user")
         self.assertNotIn("otp-response", repr(_KeyboardInteractiveSource("user", handler)))
 
+    @pytest.mark.contract
     def test_private_key_loads_conventional_openssh_certificate(self):
         key_path = Path(self._temp.name) / "id_ed25519"
         cert_path = Path(f"{key_path}-cert.pub")
@@ -147,6 +151,7 @@ class OptionalSSHCredentialsTests(unittest.TestCase):
         self.assertIs(loaded, key)
         self.assertEqual(loaded.certificate_path, str(cert_path))
 
+    @pytest.mark.unit
     def test_preconnected_socket_is_forwarded_to_paramiko(self):
         fake_client = _SSHClient()
         connected_socket = object()
@@ -164,6 +169,7 @@ class OptionalSSHCredentialsTests(unittest.TestCase):
             wrapper.connect()
 
         self.assertIs(fake_client.connect_kwargs["sock"], connected_socket)
+    @pytest.mark.unit
     def test_key_path_forwards_loaded_key_object_without_secret(self):
         fake_client = _SSHClient()
         sentinel_key = object()
@@ -189,6 +195,7 @@ class OptionalSSHCredentialsTests(unittest.TestCase):
         self.assertIs(fake_client.connect_kwargs["pkey"], sentinel_key)
         self.assertNotIn("password", fake_client.connect_kwargs)
 
+    @pytest.mark.contract
     def test_key_path_loads_non_rsa_key_from_disk(self):
         from tempfile import TemporaryDirectory
 
@@ -213,6 +220,7 @@ class OptionalSSHCredentialsTests(unittest.TestCase):
         self.assertIsInstance(fake_client.connect_kwargs["pkey"], paramiko.ECDSAKey)
         self.assertNotIn("password", fake_client.connect_kwargs)
 
+    @pytest.mark.unit
     def test_keepalive_is_bounded_and_applied_to_transport(self):
         for value, expected in ((30, 30), (120, 120), (0, 0), (-10, 0), (999999, 3600), ("oops", 30)):
             with self.subTest(value=value):
@@ -230,6 +238,7 @@ class OptionalSSHCredentialsTests(unittest.TestCase):
                     ).connect()
                 self.assertEqual(fake_client.transport.keepalive_calls, [expected])
 
+    @pytest.mark.contract
     def test_strict_host_key_policy_loads_system_keys_and_applies_reject(self):
         fake_client = _SSHClient()
         with patch(
@@ -248,6 +257,7 @@ class OptionalSSHCredentialsTests(unittest.TestCase):
         self.assertTrue(fake_client.system_host_keys_loaded)
         self.assertIsInstance(fake_client.applied_policy, paramiko.RejectPolicy)
 
+    @pytest.mark.contract
     def test_unknown_host_key_can_save_once_or_cancel(self):
         fake_client = _SSHClient()
         key = paramiko.ECDSAKey.generate()
@@ -279,6 +289,7 @@ class OptionalSSHCredentialsTests(unittest.TestCase):
         self.assertEqual(fake_client.saved_host_keys, [known_hosts])
         self.assertEqual(len(fake_client.host_keys.entries), 1)
 
+    @pytest.mark.contract
     def test_changed_host_key_is_rejected(self):
         fake_client = _SSHClient()
         expected = paramiko.ECDSAKey.generate()

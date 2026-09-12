@@ -1,3 +1,5 @@
+
+import pytest
 import sys
 import tempfile
 import unittest
@@ -24,16 +26,19 @@ def _minimal_wiki(root: Path) -> None:
 
 
 class WikiCheckTest(unittest.TestCase):
+    @pytest.mark.unit
     @unittest.skipUnless(WIKI_ROOT.is_dir(), "docs/wiki is outside the main sync boundary")
     def test_repository_wiki_is_clean(self):
         self.assertEqual(check_wiki.check_wiki(WIKI_ROOT), [])
 
+    @pytest.mark.unit
     def test_minimal_wiki_passes(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             _minimal_wiki(root)
             self.assertEqual(check_wiki.check_wiki(root), [])
 
+    @pytest.mark.unit
     def test_violations_are_reported(self):
         cases = {
             "missing Turkish counterpart": lambda r: (r / "Topic-TR.md").unlink(),

@@ -35,6 +35,8 @@ class _DownloadResumeFiles(_Files):
     def resume_download(self, src, dst):
         self.calls.append(("resume_download", src, dst))
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_conflict_dialog_has_required_buttons(wx_app):
     parent=wx.Frame(None)
     files=_Files(existing={"/dst/file.txt"})
@@ -50,6 +52,8 @@ def test_wx_conflict_dialog_has_required_buttons(wx_app):
     parent.Destroy()
     wx_app.ProcessPendingEvents()
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_conflict_dialog_hides_resume_when_backend_cannot_resume(wx_app):
     parent=wx.Frame(None)
     files=_Files(existing={"/dst/file.txt"})  # generic, no resume
@@ -61,6 +65,8 @@ def test_wx_conflict_dialog_hides_resume_when_backend_cannot_resume(wx_app):
     parent.Destroy()
     wx_app.ProcessPendingEvents()
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_conflict_dialog_shows_resume_only_for_upload_direction(wx_app):
     parent=wx.Frame(None)
     files=_ResumeFiles(existing={"/dst/file.txt"})
@@ -77,6 +83,8 @@ def test_wx_conflict_dialog_shows_resume_only_for_upload_direction(wx_app):
     parent.Destroy()
     wx_app.ProcessPendingEvents()
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_conflict_dialog_shows_resume_only_for_download_direction(wx_app):
     parent=wx.Frame(None)
     files=_DownloadResumeFiles(existing={"/dst/file.txt"})
@@ -92,6 +100,8 @@ def test_wx_conflict_dialog_shows_resume_only_for_download_direction(wx_app):
     parent.Destroy()
     wx_app.ProcessPendingEvents()
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_conflict_rename_flow_validates_and_returns_rename(wx_app, monkeypatch):
     parent=wx.Frame(None)
     files=_Files(existing={"/dst/existing.txt"})
@@ -115,6 +125,8 @@ def test_wx_conflict_rename_flow_validates_and_returns_rename(wx_app, monkeypatc
     parent.Destroy()
     wx_app.ProcessPendingEvents()
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_conflict_rename_rejects_empty_and_shows_error(wx_app, monkeypatch):
     parent=wx.Frame(None)
     files=_Files(existing={"/dst/file.txt"})
@@ -137,6 +149,8 @@ def test_wx_conflict_rename_rejects_empty_and_shows_error(wx_app, monkeypatch):
     parent.Destroy()
     wx_app.ProcessPendingEvents()
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_conflict_rename_rejects_path_separator(wx_app, monkeypatch):
     parent=wx.Frame(None)
     files=_Files(existing={"/dst/file.txt"})
@@ -153,6 +167,8 @@ def test_wx_conflict_rename_rejects_path_separator(wx_app, monkeypatch):
     parent.Destroy()
     wx_app.ProcessPendingEvents()
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_conflict_rename_rejects_existing_destination(wx_app, monkeypatch):
     parent=wx.Frame(None)
     files=_Files(existing={"/dst/file.txt", "/dst/taken.txt"})
@@ -169,6 +185,8 @@ def test_wx_conflict_rename_rejects_existing_destination(wx_app, monkeypatch):
     parent.Destroy()
     wx_app.ProcessPendingEvents()
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_conflict_dialog_hides_resume_without_explicit_backend_capability(wx_app):
     parent=wx.Frame(None)
     # Backend with class name SSHFilesBackend but no explicit supports_resume must NOT trigger resume
@@ -192,6 +210,8 @@ def test_wx_conflict_dialog_hides_resume_without_explicit_backend_capability(wx_
     parent.Destroy()
     wx_app.ProcessPendingEvents()
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_conflict_dialog_ignores_generic_resume_flags(wx_app):
     parent=wx.Frame(None)
     class GenericResume:
@@ -205,6 +225,8 @@ def test_wx_conflict_dialog_ignores_generic_resume_flags(wx_app):
     parent.Destroy()
     wx_app.ProcessPendingEvents()
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_conflict_dialog_overwrite_skip_cancel_return_values(wx_app):
     parent=wx.Frame(None)
     files=_Files()

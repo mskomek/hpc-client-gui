@@ -1,3 +1,4 @@
+import pytest
 import codecs
 import unittest
 
@@ -28,6 +29,7 @@ def _wrapper(channel, output):
     return wrapper
 
 
+@pytest.mark.unit
 class SshTerminalStreamTests(unittest.TestCase):
     def test_utf8_split_at_each_byte_boundary(self):
         value = "Türkçe 🐍 terminal"

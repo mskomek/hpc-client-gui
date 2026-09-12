@@ -1,4 +1,5 @@
 from __future__ import annotations
+import pytest
 
 from pathlib import Path
 
@@ -22,6 +23,7 @@ class _Files:
         self.remote.pop(remote_path, None)
 
 
+@pytest.mark.integration
 def test_speed_test_round_trip_verifies_and_cleans_up(monkeypatch, tmp_path) -> None:
     def named_temporary_file(**_kwargs):
         return (tmp_path / "speed.bin").open("w+b")

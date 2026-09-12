@@ -26,6 +26,8 @@ def _close_panel(frame):
     for _ in range(3):
         wx.Yield()
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_editor_open_second_document_creates_tab():
     app, frame, panel = _make_panel()
     try:
@@ -38,6 +40,8 @@ def test_wx_editor_open_second_document_creates_tab():
     finally:
         _close_panel(frame)
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_editor_open_third_document_preserves_existing_tabs():
     app, frame, panel = _make_panel()
     try:
@@ -53,6 +57,8 @@ def test_wx_editor_open_third_document_preserves_existing_tabs():
     finally:
         _close_panel(frame)
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_editor_switch_tab_updates_active_document():
     app, frame, panel = _make_panel()
     try:
@@ -81,6 +87,8 @@ def test_wx_editor_switch_tab_updates_active_document():
     finally:
         _close_panel(frame)
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_editor_dirty_state_updates_tab_caption():
     app, frame, panel = _make_panel()
     try:
@@ -96,6 +104,8 @@ def test_wx_editor_dirty_state_updates_tab_caption():
     finally:
         _close_panel(frame)
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_editor_save_clears_dirty_marker(monkeypatch):
     app, frame, panel = _make_panel()
     try:
@@ -115,6 +125,8 @@ def test_wx_editor_save_clears_dirty_marker(monkeypatch):
     finally:
         _close_panel(frame)
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_editor_close_dirty_tab_save(monkeypatch):
     app, frame, panel = _make_panel()
     try:
@@ -144,6 +156,8 @@ def test_wx_editor_close_dirty_tab_save(monkeypatch):
     finally:
         _close_panel(frame)
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_editor_close_dirty_tab_discard(monkeypatch):
     app, frame, panel = _make_panel()
     try:
@@ -168,6 +182,8 @@ def test_wx_editor_close_dirty_tab_discard(monkeypatch):
     finally:
         _close_panel(frame)
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_editor_close_dirty_tab_cancel(monkeypatch):
     app, frame, panel = _make_panel()
     try:
@@ -192,6 +208,8 @@ def test_wx_editor_close_dirty_tab_cancel(monkeypatch):
     finally:
         _close_panel(frame)
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_editor_duplicate_path_reuses_existing_tab():
     app, frame, panel = _make_panel()
     try:
@@ -208,6 +226,8 @@ def test_wx_editor_duplicate_path_reuses_existing_tab():
     finally:
         _close_panel(frame)
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_editor_reorder_tabs_preserves_document_identity():
     app, frame, panel = _make_panel()
     try:
@@ -226,6 +246,8 @@ def test_wx_editor_reorder_tabs_preserves_document_identity():
     finally:
         _close_panel(frame)
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_editor_standalone_window_is_independent():
     _app = wx.App.Get() or wx.App(False)
     frame = wx.Frame(None)

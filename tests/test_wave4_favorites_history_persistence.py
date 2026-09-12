@@ -28,6 +28,7 @@ def _make_store(profile, tmp_path, monkeypatch):
 
 # ---- 1. Favorites Rendering ----
 
+@pytest.mark.contract
 class TestFavoritesRendering:
     def test_en_favorites_label(self):
         data = json.loads((ROOT / "src/hpc_gui/i18n/en.json").read_text(encoding="utf-8"))
@@ -49,6 +50,7 @@ class TestFavoritesRendering:
 
 # ---- 2. Navigation Store Favorites ----
 
+@pytest.mark.unit
 class TestFavorites:
     def test_survive_reload(self, tmp_path, monkeypatch):
         s = _make_store("a", tmp_path, monkeypatch)
@@ -79,6 +81,7 @@ class TestFavorites:
 
 # ---- 3. History ----
 
+@pytest.mark.unit
 class TestHistory:
     def test_record_visit(self, tmp_path, monkeypatch):
         s = _make_store("h1", tmp_path, monkeypatch)
@@ -121,6 +124,7 @@ class TestHistory:
 
 # ---- 4. Serialization ----
 
+@pytest.mark.integration
 class TestSerialization:
     def test_unicode_roundtrip(self, tmp_path, monkeypatch):
         s = _make_store("s1", tmp_path, monkeypatch)
@@ -162,6 +166,7 @@ class TestSerialization:
 
 # ---- 5. Profile Isolation ----
 
+@pytest.mark.integration
 class TestProfileIsolation:
     def test_separate_favorites(self, tmp_path, monkeypatch):
         s1 = _make_store("p1", tmp_path, monkeypatch)
@@ -178,6 +183,7 @@ class TestProfileIsolation:
 
 # ---- 6. Encryption ----
 
+@pytest.mark.integration
 class TestEncryption:
     def test_raw_not_readable(self, tmp_path, monkeypatch):
         s = _make_store("e1", tmp_path, monkeypatch)
@@ -199,6 +205,7 @@ class TestEncryption:
 
 # ---- 7. Delete Profile ----
 
+@pytest.mark.integration
 class TestDelete:
     def test_removes_file(self, tmp_path, monkeypatch):
         from hpc_gui.services import remote_navigation_store as rns
@@ -214,6 +221,7 @@ class TestDelete:
 
 # ---- 8. Integration ----
 
+@pytest.mark.integration
 class TestIntegration:
     def test_full_workflow(self, tmp_path, monkeypatch):
         s = _make_store("f1", tmp_path, monkeypatch)

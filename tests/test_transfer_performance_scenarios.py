@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import pytest
 import importlib.util
 import json
 import os
@@ -41,6 +42,8 @@ class TransferPerformanceScenarioTests(unittest.TestCase):
             for index in range(count)
         ]
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_queue_sizes_keep_visible_rows_bounded(self) -> None:
         panel = TransferActivityPanel()
         for count in (100, 1000, 10000):
@@ -50,6 +53,7 @@ class TransferPerformanceScenarioTests(unittest.TestCase):
                 self.assertLessEqual(len(panel._row_by_item_id), 500)
                 self.assertLessEqual(len(panel._progress_bar_by_item_id), 500)
 
+    @pytest.mark.reporting
     def test_render_probe_records_no_slow_deterministic_ticks(self) -> None:
         probe = _load_performance_probe()
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -70,6 +74,7 @@ class TransferPerformanceScenarioTests(unittest.TestCase):
             self.assertFalse([event for event in events if event["event"] == "event_loop_delay"])
             self.assertLessEqual(panel.queue_list.topLevelItemCount(), 501)
 
+    @pytest.mark.unit
     def test_burst_progress_throttles_and_publishes_final_update(self) -> None:
         item = self._items(1)[0]
         dialog = TransferDialog(title="test", items=[item], run_item=lambda _item: None)
@@ -85,6 +90,7 @@ class TransferPerformanceScenarioTests(unittest.TestCase):
                 dialog._on_transfer_progress(item, done, 1000)
         self.assertEqual(published, [(1, 1000), (1000, 1000)])
 
+    @pytest.mark.integration
     def test_four_fake_transfers_finish_without_network(self) -> None:
         items = self._items(4)
         dialog = TransferDialog(

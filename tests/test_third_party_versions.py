@@ -1,3 +1,4 @@
+import pytest
 import sys
 import tempfile
 import types
@@ -8,6 +9,7 @@ from unittest.mock import patch
 from scripts import generate_third_party_versions as manifest
 
 
+@pytest.mark.release
 class ThirdPartyVersionsTests(unittest.TestCase):
     def test_collects_and_writes_deterministic_manifest(self):
         qtcore = types.ModuleType("PySide6.QtCore")

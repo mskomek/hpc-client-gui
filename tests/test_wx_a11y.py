@@ -3,6 +3,8 @@ import pytest
 wx = pytest.importorskip("wx")
 from hpc_gui.wx_shell import create_shell_frame
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_a11y_focus_order_and_labels():
     app = wx.App.Get() or wx.App(False)
     frame, _, _ = create_shell_frame(app)
@@ -53,6 +55,8 @@ def test_wx_a11y_focus_order_and_labels():
         for _ in range(3):
             wx.Yield()
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_a11y_terminal_limits_documented():
     # Document that terminal has limits for screen readers due to custom TextCtrl
     # This is a placeholder to ensure audit doc exists

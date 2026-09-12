@@ -49,6 +49,8 @@ class _Dialog:
     def GetValue(self): return self.value
     def Destroy(self): pass
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_local_context_targets_unselected_row(wx_app, tmp_path: Path):
     for n in ("a.txt","b.txt"):
         (tmp_path/n).write_text(n)
@@ -71,6 +73,8 @@ def test_wx_local_context_targets_unselected_row(wx_app, tmp_path: Path):
     assert sum(1 for i in range(listing.GetItemCount()) if listing.IsSelected(i)) == 1
     listing.PopupMenu=orig_popup
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_local_context_preserves_multiselection(wx_app, tmp_path: Path):
     for n in ("a.txt","b.txt","c.txt"):
         (tmp_path/n).write_text(n)
@@ -92,6 +96,8 @@ def test_wx_local_context_preserves_multiselection(wx_app, tmp_path: Path):
     assert not listing.IsSelected(2)
     listing.PopupMenu=orig
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_local_background_context_targets_active_directory(wx_app, tmp_path: Path, monkeypatch):
     folder=tmp_path / "folder"; folder.mkdir()
     frame=_local(wx_app, tmp_path)
@@ -123,6 +129,8 @@ def test_wx_local_background_context_targets_active_directory(wx_app, tmp_path: 
     # background should target current active tab dir (tmp_path), not stale selected folder
     assert (tmp_path / "child").is_dir()
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_local_keyboard_context_uses_focused_selection(wx_app, tmp_path: Path):
     for n in ("a.txt","b.txt"):
         (tmp_path/n).write_text(n)
@@ -141,6 +149,8 @@ def test_wx_local_keyboard_context_uses_focused_selection(wx_app, tmp_path: Path
     assert listing.IsSelected(1)
     listing.PopupMenu=orig
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_local_context_rename_via_menu(wx_app, tmp_path: Path, monkeypatch):
     src=tmp_path / "old.txt"; src.write_text("x")
     frame=_local(wx_app, tmp_path)
@@ -162,6 +172,8 @@ def test_wx_local_context_rename_via_menu(wx_app, tmp_path: Path, monkeypatch):
     listing.PopupMenu=orig
     _pump(wx_app, lambda: (tmp_path / "new.txt").exists())
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_remote_context_targets_unselected_row(wx_app):
     backend=MockRemoteFilesBackend()
     frame=_remote(wx_app, backend, "/work")
@@ -179,6 +191,8 @@ def test_wx_remote_context_targets_unselected_row(wx_app):
     assert sum(1 for i in range(listing.GetItemCount()) if listing.IsSelected(i)) == 1
     listing.PopupMenu=orig
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_remote_background_context_paste_targets_current_directory(wx_app):
     backend=MockRemoteFilesBackend()
     backend.entries["/work/dest"]=True
@@ -202,6 +216,8 @@ def test_wx_remote_background_context_paste_targets_current_directory(wx_app):
     assert ("copy","/work/a.txt","/work/a.txt") in backend.calls
     assert ("copy","/work/a.txt","/work/dest/a.txt") not in backend.calls
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_remote_context_rename_updates_backend(wx_app, monkeypatch):
     backend=MockRemoteFilesBackend()
     frame=_remote(wx_app, backend, "/work")
@@ -221,6 +237,8 @@ def test_wx_remote_context_rename_updates_backend(wx_app, monkeypatch):
     listing.PopupMenu=orig
     _pump(wx_app, lambda: ("rename","/work/a.txt","/work/renamed.txt") in backend.calls)
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_local_context_new_tab_creates_visible_tab(wx_app, tmp_path: Path):
     a=tmp_path / "A"; a.mkdir(); b=a / "B"; b.mkdir()
     frame=_local(wx_app, a)
@@ -243,6 +261,8 @@ def test_wx_local_context_new_tab_creates_visible_tab(wx_app, tmp_path: Path):
     listing.PopupMenu=orig
     _pump(wx_app, lambda: nb.GetPageCount()==before+1)
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_remote_context_copy_path_writes_clipboard_without_backend(wx_app):
     backend=MockRemoteFilesBackend()
     frame=_remote(wx_app, backend, "/work")

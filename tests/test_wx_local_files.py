@@ -1,9 +1,12 @@
+
+import pytest
 from pathlib import Path
 
 from hpc_gui.services.file_context_actions import context_selection, visible_actions
 from hpc_gui.wx_local_files import LocalBrowserModel, file_url_payload
 
 
+@pytest.mark.gui
 def test_local_browser_paths_sort_tabs_and_context(tmp_path: Path):
     (tmp_path / "á file.txt").write_text("x", encoding="utf-8")
     (tmp_path / "folder").mkdir()
@@ -33,12 +36,14 @@ def test_local_browser_paths_sort_tabs_and_context(tmp_path: Path):
     assert model.current_path == tmp_path.resolve()
 
 
+@pytest.mark.contract
 def test_file_url_clipboard_payload_preserves_spaces_and_unicode(tmp_path: Path):
     path = tmp_path / "space ü.txt"
     payload = file_url_payload([path])
     assert payload.startswith("file:///") and "%20" in payload and "%C3%BC" in payload
 
 
+@pytest.mark.gui
 def test_local_clipboard_copy_and_move_paste(tmp_path: Path):
     source = tmp_path / "source.txt"
     source.write_text("data", encoding="utf-8")
@@ -65,16 +70,19 @@ def test_local_clipboard_copy_and_move_paste(tmp_path: Path):
         raise AssertionError("directory paste into its descendant must be rejected")
 
 
+@pytest.mark.gui
 def test_local_browser_model_has_no_toolkit_import():
     source = open("src/hpc_gui/wx_local_files.py", encoding="utf-8").read()
     assert "from PySide6" not in source
 
 
+@pytest.mark.gui
 def test_local_context_actions_include_safe_navigation_actions():
     actions = LocalBrowserModel.context_actions(True)
     assert "copy_path" in actions and "refresh" in actions and "new_tab" in actions
 
 
+@pytest.mark.gui
 def test_local_view_exposes_keyboard_and_context_actions():
     source = open("src/hpc_gui/wx_local_files.py", encoding="utf-8").read()
     assert "EVT_LIST_ITEM_ACTIVATED" in source
@@ -87,6 +95,7 @@ def test_local_view_exposes_keyboard_and_context_actions():
     assert "except OSError as error" in source and "wx.MessageBox(str(error)" in source
 
 
+@pytest.mark.contract
 def test_local_context_policy_distinguishes_selection_shapes():
     assert visible_actions(context_selection(None, None), remote=False) == ("upload", "paste", "refresh", "new_folder")
     one_file = context_selection("a.txt", False, ("a.txt",), (False,))

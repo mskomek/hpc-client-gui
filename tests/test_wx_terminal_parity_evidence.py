@@ -37,6 +37,8 @@ def _wrap(code):
 # ── Deterministic VT fixture tests (subprocess) ──
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_vt_sgr_normal_color_bold_reset():
     """SGR sequences must be interpreted by xterm, not displayed literally."""
     if not _is_webview_available():
@@ -81,6 +83,8 @@ os._exit(0)
     assert r.returncode == 0, f"failed: {r.stdout}\n{r.stderr}"
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_vt_carriage_return_overwrite():
     """CR (\\r) must overwrite current line, not create new line."""
     if not _is_webview_available():
@@ -126,6 +130,8 @@ os._exit(0)
     assert r.returncode == 0, f"failed: {r.stdout}\n{r.stderr}"
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_unicode_round_trip():
     """Unicode input and output must pass through without ASCII clamp."""
     if not _is_webview_available():
@@ -168,6 +174,8 @@ os._exit(0)
     assert r.returncode == 0, f"failed: {r.stdout}\n{r.stderr}"
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_multiline_paste():
     """Multiline paste must call terminal.paste."""
     if not _is_webview_available():
@@ -212,6 +220,8 @@ os._exit(0)
     assert r.returncode == 0, f"failed: {r.stdout}\n{r.stderr}"
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_resize_updates_dimensions_and_pty():
     """Resize from xterm must update header and call resize_shell_pty."""
     if not _is_webview_available():
@@ -258,6 +268,8 @@ panel.close(); frame.Destroy(); os._exit(0)
     assert r.returncode == 0, f"failed: {r.stdout}\n{r.stderr}"
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_stress_500_inputs():
     """500 input events must not leak or crash."""
     if not _is_webview_available():
@@ -300,6 +312,8 @@ panel.close(); frame.Destroy(); os._exit(0)
     assert r.returncode == 0, f"failed: {r.stdout}\n{r.stderr}"
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_stress_500_resizes():
     """500 resize events must dedup and not crash."""
     if not _is_webview_available():
@@ -343,6 +357,8 @@ panel.close(); frame.Destroy(); os._exit(0)
     assert r.returncode == 0, f"failed: {r.stdout}\n{r.stderr}"
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_stress_100_reconnects():
     """100 reconnects must not leak subscribers."""
     if not _is_webview_available():
@@ -386,6 +402,8 @@ panel.close(); frame.Destroy(); os._exit(0)
     assert r.returncode == 0, f"failed: {r.stdout}\n{r.stderr}"
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_stress_repeated_font_find_clear():
     """Repeated font/find/clear must not crash."""
     if not _is_webview_available():
@@ -427,6 +445,8 @@ panel.close(); frame.Destroy(); os._exit(0)
     assert r.returncode == 0, f"failed: {r.stdout}\n{r.stderr}"
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_close_while_output_in_flight():
     """Closing during output delivery must not crash."""
     if not _is_webview_available():

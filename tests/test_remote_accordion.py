@@ -1,4 +1,5 @@
 from __future__ import annotations
+import pytest
 
 import os
 import unittest
@@ -32,6 +33,7 @@ class RemoteAccordionTests(unittest.TestCase):
     def tearDown(self) -> None:
         self.widget.deleteLater()
 
+    @pytest.mark.integration
     def test_exactly_one_body_is_visible(self) -> None:
         self.assertEqual(self.widget.active_key, "scratch")
         self.assertTrue(self.scratch.isVisible())
@@ -43,6 +45,7 @@ class RemoteAccordionTests(unittest.TestCase):
         self.assertFalse(self.scratch.isVisible())
         self.assertTrue(self.home.isVisible())
 
+    @pytest.mark.integration
     def test_both_headers_remain_visible_and_keyboard_activates(self) -> None:
         scratch_button = self.widget._sections["scratch"][0]
         home_button = self.widget._sections["home"][0]

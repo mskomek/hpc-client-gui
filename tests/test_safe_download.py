@@ -1,3 +1,4 @@
+import pytest
 from pathlib import Path
 from unittest.mock import patch
 
@@ -20,6 +21,7 @@ class Response:
         return b"abcdef"
 
 
+@pytest.mark.integration
 def test_download_publishes_atomically(tmp_path: Path):
     target = tmp_path / "tool.exe"
     with patch("urllib.request.urlopen", return_value=Response()):
@@ -28,6 +30,7 @@ def test_download_publishes_atomically(tmp_path: Path):
     assert not target.with_suffix(".exe.part").exists()
 
 
+@pytest.mark.integration
 def test_download_failure_leaves_existing_target_and_cleans_partial(tmp_path: Path):
     target = tmp_path / "tool.exe"
     target.write_bytes(b"old")

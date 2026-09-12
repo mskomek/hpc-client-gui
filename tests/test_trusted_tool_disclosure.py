@@ -13,6 +13,7 @@ def qapp():
     return QApplication.instance() or QApplication([])
 
 
+@pytest.mark.unit
 def test_trusted_tool_disclosure_is_localized_and_accurate():
     load_language("en")
     assert "not OS-sandboxed" in t("plugins.trusted_tool_disclosure")
@@ -21,6 +22,8 @@ def test_trusted_tool_disclosure_is_localized_and_accurate():
     assert "sandbox" in t("plugins.trusted_tool_disclosure").lower()
 
 
+@pytest.mark.qt
+@pytest.mark.gui
 def test_trusted_tool_card_and_details_are_disclosed(qapp, monkeypatch):
     dialog = PluginManagerDialog(fetcher=lambda *_: b"{}")
     entry = {

@@ -1,6 +1,6 @@
 """FM-05 tests: one-hop SSH jump host with fakes; no real network."""
-
 from __future__ import annotations
+import pytest
 
 import os
 import sys
@@ -171,17 +171,20 @@ def make_connected_wrapper(jump_info: Optional[SSHJumpInfo] = None, **info_kwarg
 
 
 class JumpDisabledBaselineTests(unittest.TestCase):
+    @pytest.mark.integration
     def test_jump_disabled_uses_direct_path(self) -> None:
         wrapper, target, jump, _seq = make_connected_wrapper(None)
         self.assertNotIn("sock", target.connect_kwargs)
         self.assertIsNone(wrapper._jump_connection)
 
+    @pytest.mark.integration
     def test_legacy_profile_without_jump_host_is_direct(self) -> None:
         self.assertIsNone(jump_info_from_settings(None))
         self.assertIsNone(jump_info_from_settings({}))
         settings = normalize_jump_host_settings({"enabled": True, "host": ""})
         self.assertIsNone(jump_info_from_settings(settings))
 
+    @pytest.mark.integration
     def test_socket_like_typing_accepts_fake_channel(self) -> None:
         channel = _FakeChannel()
         info = SSHConnInfo(host="h", port=22, preconnected_socket=channel)
@@ -189,6 +192,7 @@ class JumpDisabledBaselineTests(unittest.TestCase):
 
 
 class JumpSequenceTests(unittest.TestCase):
+    @pytest.mark.integration
     def test_jump_connects_before_target(self) -> None:
         jump_info = SSHJumpInfo(enabled=True, host="gw.example.org", username="gate")
         wrapper, target, jump, sequence = make_connected_wrapper(jump_info)
@@ -199,6 +203,7 @@ class JumpSequenceTests(unittest.TestCase):
         )
         self.assertEqual(jump.connect_count, 1)
 
+    @pytest.mark.integration
     def test_direct_tcpip_targets_exact_host_port(self) -> None:
         jump_info = SSHJumpInfo(enabled=True, host="gw", port=2222)
         info = SSHConnInfo(host="cluster.example.org", port=2222, jump=jump_info)
@@ -216,6 +221,7 @@ class JumpSequenceTests(unittest.TestCase):
         self.assertEqual(kind, "direct-tcpip")
         self.assertEqual(dest, ("cluster.example.org", 2222))
 
+    @pytest.mark.integration
     def test_target_receives_channel_as_sock(self) -> None:
         jump_info = SSHJumpInfo(enabled=True, host="gw")
         wrapper, target, jump, _seq = make_connected_wrapper(jump_info)
@@ -223,16 +229,19 @@ class JumpSequenceTests(unittest.TestCase):
         self.assertIsNotNone(sock)
         self.assertIs(sock, wrapper._jump_connection.channel)
 
+    @pytest.mark.integration
     def test_jump_transport_receives_keepalive(self) -> None:
         jump_info = SSHJumpInfo(enabled=True, host="gw", keepalive_interval_seconds=30)
         wrapper, target, jump, _seq = make_connected_wrapper(jump_info)
         self.assertEqual(jump.transport.keepalive_calls, [30])
 
+    @pytest.mark.integration
     def test_target_transport_remains_active_transport(self) -> None:
         jump_info = SSHJumpInfo(enabled=True, host="gw")
         wrapper, target, jump, _seq = make_connected_wrapper(jump_info)
         self.assertIs(wrapper._active_transport(), target.transport)
 
+    @pytest.mark.integration
     def test_parallel_transfers_do_not_multiply_jump_clients(self) -> None:
         jump_info = SSHJumpInfo(enabled=True, host="gw")
         wrapper, target, jump, _seq = make_connected_wrapper(jump_info)
@@ -257,10 +266,12 @@ class JumpSequenceTests(unittest.TestCase):
 
 
 class PolicyAndPromptRoleTests(unittest.TestCase):
+    @pytest.mark.contract
     def test_hostkeyinfo_role_defaults_to_target(self) -> None:
         info = HostKeyInfo("h", "ssh-ed25519", "aa:bb")
         self.assertEqual(info.role, "target")
 
+    @pytest.mark.contract
     def test_policy_emits_jump_role(self) -> None:
         captured: list[HostKeyInfo] = []
 
@@ -283,6 +294,7 @@ class PolicyAndPromptRoleTests(unittest.TestCase):
         self.assertEqual(captured[0].role, "jump")
         self.assertEqual(captured[0].hostname, "gw")
 
+    @pytest.mark.contract
     def test_policy_default_role_is_target(self) -> None:
         captured: list[HostKeyInfo] = []
 
@@ -304,6 +316,7 @@ class PolicyAndPromptRoleTests(unittest.TestCase):
         policy.missing_host_key(_FakeClient(), "cluster", FakeKey())
         self.assertEqual(captured[0].role, "target")
 
+    @pytest.mark.contract
     def test_policies_independent(self) -> None:
         jump_info = SSHJumpInfo(
             enabled=True, host="gw", host_key_policy="strict"
@@ -338,6 +351,7 @@ class FailureCleanupTests(unittest.TestCase):
                 error = exc
         return error
 
+    @pytest.mark.integration
     def test_jump_auth_failure_never_attempts_target(self) -> None:
         jump_info = SSHJumpInfo(enabled=True, host="gw")
         sequence: list[str] = []
@@ -350,6 +364,7 @@ class FailureCleanupTests(unittest.TestCase):
         self.assertEqual(target_client.connect_count, 0)
         self.assertTrue(jump_client.closed)
 
+    @pytest.mark.integration
     def test_forwarding_denied_is_distinct_error_with_cleanup(self) -> None:
         jump_info = SSHJumpInfo(enabled=True, host="gw")
         sequence: list[str] = []
@@ -362,6 +377,7 @@ class FailureCleanupTests(unittest.TestCase):
         self.assertEqual(target_client.connect_count, 0)
         self.assertTrue(jump_client.closed)
 
+    @pytest.mark.integration
     def test_target_auth_failure_cleans_jump(self) -> None:
         jump_info = SSHJumpInfo(enabled=True, host="gw")
         sequence: list[str] = []
@@ -372,6 +388,7 @@ class FailureCleanupTests(unittest.TestCase):
         self._connect(info, target_client, jump_client)
         self.assertTrue(jump_client.closed)
 
+    @pytest.mark.integration
     def test_target_hostkey_change_cleans_jump(self) -> None:
         jump_info = SSHJumpInfo(enabled=True, host="gw")
         sequence: list[str] = []
@@ -382,6 +399,7 @@ class FailureCleanupTests(unittest.TestCase):
         self._connect(info, target_client, jump_client)
         self.assertTrue(jump_client.closed)
 
+    @pytest.mark.integration
     def test_sftp_init_failure_full_cleanup(self) -> None:
         jump_info = SSHJumpInfo(enabled=True, host="gw")
         sequence: list[str] = []
@@ -393,6 +411,7 @@ class FailureCleanupTests(unittest.TestCase):
         self.assertTrue(target_client.closed)
         self.assertTrue(jump_client.closed)
 
+    @pytest.mark.integration
     def test_close_twice_is_safe(self) -> None:
         jump_info = SSHJumpInfo(enabled=True, host="gw")
         wrapper, target, jump, _seq = make_connected_wrapper(jump_info)
@@ -401,6 +420,7 @@ class FailureCleanupTests(unittest.TestCase):
         self.assertTrue(jump.closed)
         self.assertIsNone(wrapper._jump_connection)
 
+    @pytest.mark.integration
     def test_worker_cancel_style_close_during_partial_stage(self) -> None:
         jump_info = SSHJumpInfo(enabled=True, host="gw")
         wrapper, target, jump, _seq = make_connected_wrapper(jump_info)
@@ -427,6 +447,7 @@ class ProfilePersistenceTests(unittest.TestCase):
         home_patch.start().return_value = Path(self._tmp.name)
         self.addCleanup(home_patch.stop)
 
+    @pytest.mark.integration
     def test_normalization_rules(self) -> None:
         settings = normalize_jump_host_settings(
             {
@@ -450,6 +471,7 @@ class ProfilePersistenceTests(unittest.TestCase):
         self.assertEqual(ok["port"], 2222)
         self.assertEqual(ok["host_key_policy"], "strict")
 
+    @pytest.mark.integration
     def test_round_trip_persists_without_password_key(self) -> None:
         from hpc_gui.config.storage import load_profiles, upsert_profile
 
@@ -468,6 +490,7 @@ class ProfilePersistenceTests(unittest.TestCase):
         self.assertNotIn("password", stored)
         self.assertNotIn("password_enc", stored)
 
+    @pytest.mark.integration
     def test_unrelated_edit_preserves_file_manager_and_jump_state(self) -> None:
         from hpc_gui.config.storage import (
             load_profiles,
@@ -493,6 +516,8 @@ class ProfilePersistenceTests(unittest.TestCase):
         self.assertEqual(saved["jump_host"]["unknown_future"], {"a": 1})
         self.assertTrue(saved["jump_host"]["enabled"])
 
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_dialog_collect_patches_jump_settings(self) -> None:
         from PySide6.QtWidgets import QApplication
         from hpc_gui.core.i18n import load_language

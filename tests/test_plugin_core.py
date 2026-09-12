@@ -34,16 +34,19 @@ from hpc_gui.services.slurm_ssh import SSHSlurmBackend
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 def test_generic_defaults_contain_no_truba_paths():
     joined = json.dumps(GENERIC_SLURM_DEFAULTS)
     assert "/arf" not in joined
 
 
+@pytest.mark.unit
 def test_generic_defaults_have_no_site_status_command():
     assert GENERIC_SLURM_DEFAULTS["status_command"] == ""
     assert "lssrv" not in json.dumps(GENERIC_SLURM_DEFAULTS)
 
 
+@pytest.mark.unit
 def test_generic_defaults_keep_standard_slurm_commands():
     assert 'squeue -h -u {user} -o "%i' in GENERIC_SLURM_DEFAULTS["squeue_command"]
     assert "{script_dir_q}" in GENERIC_SLURM_DEFAULTS["sbatch_command"]
@@ -52,6 +55,7 @@ def test_generic_defaults_keep_standard_slurm_commands():
     assert "sacct" in GENERIC_SLURM_DEFAULTS["job_state_command"]
 
 
+@pytest.mark.unit
 def test_builtin_group_is_generic_slurm_only():
     groups = builtin_system_template_groups()
     assert list(groups) == ["Generic Slurm"]
@@ -67,6 +71,7 @@ class _FakeSSH:
         return 0, "", ""
 
 
+@pytest.mark.unit
 def test_missing_site_status_does_not_crash_backend():
     backend = SSHSlurmBackend(_FakeSSH(), system_settings=None)
     with pytest.raises(RuntimeError, match="No site status command"):
@@ -78,6 +83,7 @@ def test_missing_site_status_does_not_crash_backend():
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.contract
 def test_full_saved_system_dict_is_preserved_verbatim():
     saved = {
         "name": "TRUBA",
@@ -91,6 +97,7 @@ def test_full_saved_system_dict_is_preserved_verbatim():
     assert normalized["status_command"] == "lssrv"
 
 
+@pytest.mark.contract
 def test_partial_old_dict_is_normalized_safely():
     normalized = normalize_system_settings({"name": "Old", "scratch_dir": "/old/scratch"})
     assert normalized["name"] == "Old"
@@ -99,6 +106,7 @@ def test_partial_old_dict_is_normalized_safely():
     assert normalized["squeue_command"] == GENERIC_SLURM_DEFAULTS["squeue_command"]
 
 
+@pytest.mark.contract
 def test_truba_like_saved_profile_stays_truba_like():
     truba_like = {
         "system": {
@@ -115,6 +123,7 @@ def test_truba_like_saved_profile_stays_truba_like():
     }
 
 
+@pytest.mark.unit
 def test_user_templates_are_unaffected_by_default_changes():
     stored = {"system_templates": [{"name": "Mine", "scratch_dir": "/data/{user}", "status_command": ""}]}
     with mock.patch(
@@ -126,6 +135,7 @@ def test_user_templates_are_unaffected_by_default_changes():
     assert templates[0]["scratch_dir"] == "/data/{user}"
 
 
+@pytest.mark.unit
 def test_format_remote_path_handles_empty_template():
     assert format_remote_path("", "alice") == ""
     assert format_remote_path("/arf/home/{user}", "alice") == "/arf/home/alice"
@@ -137,6 +147,7 @@ def test_format_remote_path_handles_empty_template():
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.contract
 @pytest.mark.parametrize(
     ("requires_app", "app_version", "expected"),
     [
@@ -159,6 +170,7 @@ def test_compatibility_matrix(requires_app, app_version, expected):
     assert is_app_compatible(requires_app, app_version) is expected
 
 
+@pytest.mark.contract
 @pytest.mark.parametrize(
     "bad",
     ["", "=1.4.0", ">=banana", "==*", ">=1.4.*,<=2", "1.4.0 !", ",,"],
@@ -173,11 +185,13 @@ def test_unknown_requires_app_syntax_fails_closed(bad):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 def test_plugins_root_override(tmp_path: Path):
     assert plugins_root(tmp_path) == Path(tmp_path)
     assert packages_dir(tmp_path) == Path(tmp_path) / "packages"
 
 
+@pytest.mark.integration
 def test_active_index_round_trip(tmp_path: Path):
     assert read_active_versions(tmp_path) == {}
     write_active_versions({"org.hpcclient.truba": "1.0.0"}, root=tmp_path)
@@ -243,6 +257,7 @@ def install_plugin(root: Path, manifest: dict, profile: dict | None) -> None:
     write_active_versions({manifest["id"]: manifest["version"]}, root=root)
 
 
+@pytest.mark.integration
 def test_valid_local_plugin_loads(tmp_path: Path):
     install_plugin(tmp_path, VALID_MANIFEST, VALID_PROFILE)
     result = load_installed_plugins(root=tmp_path, app_version="1.4.0")
@@ -259,6 +274,7 @@ def test_valid_local_plugin_loads(tmp_path: Path):
     assert settings["status_command"] == "lssrv"
 
 
+@pytest.mark.contract
 def test_unsupported_plugin_api_rejected(tmp_path: Path):
     manifest = {**VALID_MANIFEST, "plugin_api": 99}
     install_plugin(tmp_path, manifest, VALID_PROFILE)
@@ -269,6 +285,7 @@ def test_unsupported_plugin_api_rejected(tmp_path: Path):
     )
 
 
+@pytest.mark.contract
 def test_incompatible_app_rejected(tmp_path: Path):
     manifest = {**VALID_MANIFEST, "requires_app": ">=99.0.0"}
     install_plugin(tmp_path, manifest, VALID_PROFILE)
@@ -277,6 +294,7 @@ def test_incompatible_app_rejected(tmp_path: Path):
     assert any("incompatible" in problem.reason for problem in result.problems)
 
 
+@pytest.mark.contract
 def test_missing_entrypoint_file_rejected(tmp_path: Path):
     install_plugin(tmp_path, VALID_MANIFEST, VALID_PROFILE)
     pkg = tmp_path / "packages" / VALID_MANIFEST["id"] / VALID_MANIFEST["version"]
@@ -291,6 +309,7 @@ def test_missing_entrypoint_file_rejected(tmp_path: Path):
     )
 
 
+@pytest.mark.contract
 def test_malformed_plugin_json_is_isolated(tmp_path: Path):
     broken_pkg = tmp_path / "packages" / "org.hpcclient.broken" / "1.0.0"
     broken_pkg.mkdir(parents=True)
@@ -310,6 +329,7 @@ def test_malformed_plugin_json_is_isolated(tmp_path: Path):
     assert any(p.plugin_id == "org.hpcclient.broken" for p in result.problems)
 
 
+@pytest.mark.contract
 def test_invalid_profile_shape_isolated(tmp_path: Path):
     install_plugin(tmp_path, VALID_MANIFEST, {"schema_version": 1})
     result = load_installed_plugins(root=tmp_path, app_version="1.4.0")
@@ -317,6 +337,7 @@ def test_invalid_profile_shape_isolated(tmp_path: Path):
     assert any("invalid cluster profile" in problem.reason for problem in result.problems)
 
 
+@pytest.mark.integration
 def test_loader_never_executes_payload(tmp_path: Path):
     """No import/execution mechanism may exist in the declarative loader."""
     import inspect
@@ -328,12 +349,14 @@ def test_loader_never_executes_payload(tmp_path: Path):
         assert forbidden not in source, f"loader must not use {forbidden}"
 
 
+@pytest.mark.integration
 def test_zero_installed_plugins_loads_empty():
     result = load_installed_plugins(root=Path("/nonexistent-plugins-root"), app_version="1.4.0")
     assert result.plugins == []
     assert result.problems == []
 
 
+@pytest.mark.unit
 def test_plugin_system_template_groups_conversion():
     install_dir = Path(".")
     from hpc_gui.plugins.models import InstalledPlugin, PluginFile, PluginManifest

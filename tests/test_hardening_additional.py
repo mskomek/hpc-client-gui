@@ -1,11 +1,13 @@
 """Additional hardening tests for menu/plugin task."""
 
 from __future__ import annotations
+import pytest
 
 import json
 import pathlib
 
 
+@pytest.mark.unit
 def test_template_api_filtering(tmp_path):
     """load_job_templates() vs filtered by plugin_id."""
     from hpc_gui.plugins.job_templates import load_job_templates
@@ -84,6 +86,7 @@ def test_template_api_filtering(tmp_path):
     assert zero == []
 
 
+@pytest.mark.unit
 def test_plugin_template_action_uses_explicit_api():
     """plugin menu action must call explicit filtered flow with owning plugin ID."""
     from hpc_gui.plugins.models import InstalledPlugin, PluginManifest, PluginFile
@@ -125,6 +128,7 @@ def test_plugin_template_action_uses_explicit_api():
     assert host2.called_with == "org.test.pluginb"
 
 
+@pytest.mark.contract
 def test_host_adapter_import_boundary():
     """Shared dispatcher must not import PySide6."""
     import pathlib
@@ -145,6 +149,7 @@ def test_host_adapter_import_boundary():
     assert "PySide6" not in wx_host_src
 
 
+@pytest.mark.unit
 def test_condition_validation_strict():
     """Unknown key, wrong bool type, unknown capability, wrong capability type must be rejected."""
     from hpc_gui.plugins.ui_contributions import validate_ui_contributions_dict, _parse_plugins_menu
@@ -197,6 +202,7 @@ def test_condition_validation_strict():
     assert len(contrib5.items) == 1
 
 
+@pytest.mark.unit
 def test_localized_sort():
     """Plugin roots sorted by localized display label, not plugin ID."""
     from hpc_gui.plugins.ui_contributions import _parse_plugins_menu, get_display_label, MenuContext
@@ -241,6 +247,7 @@ def test_localized_sort():
     assert [i.id for i in contrib_ordered.items] == ["b", "a"]
 
 
+@pytest.mark.unit
 def test_plugin_isolation_real(tmp_path):
     """One valid + one malformed plugin: valid still contributes, bad does not crash."""
     from hpc_gui.plugins.ui_contributions import collect_plugin_menu_contributions
@@ -314,6 +321,7 @@ def test_plugin_isolation_real(tmp_path):
     assert contribs[0].plugin_id == "org.test.valid"
 
 
+@pytest.mark.runtime_smoke
 def test_menu_qt_smoke_offscreen():
     try:
         import os
@@ -353,6 +361,8 @@ def test_menu_qt_smoke_offscreen():
         w.deleteLater()
 
 
+@pytest.mark.qt
+@pytest.mark.gui
 def test_wx_dispatch_uses_host():
     src = pathlib.Path("src/hpc_gui/wx_shell.py").read_text(encoding="utf-8")
     assert "WxPluginMenuHost" in src
@@ -361,6 +371,8 @@ def test_wx_dispatch_uses_host():
     assert "dispatch_plugin_menu_action(action, plugin, editor_widget=editor_widget, host_window=frame)" not in src
 
 
+@pytest.mark.qt
+@pytest.mark.gui
 def test_wx_submenu_disable_hide():
     src = pathlib.Path("src/hpc_gui/wx_shell.py").read_text(encoding="utf-8")
     # disable must actually disable children, not just pass
@@ -370,6 +382,8 @@ def test_wx_submenu_disable_hide():
     assert 'if not show and item.unavailable == "hide":' in src
 
 
+@pytest.mark.qt
+@pytest.mark.gui
 def test_dynamic_separators_qt_and_wx():
     import pathlib
     qt_src = pathlib.Path("src/hpc_gui/ui/main_window.py").read_text(encoding="utf-8")
@@ -384,6 +398,8 @@ def test_dynamic_separators_qt_and_wx():
     assert "sep_plugins_top.Enable(False)" not in wx_src or "sep_plugins_top.Enable(False)" not in wx_src.split("has_any = len(_wx_plugin_dynamic_items)")[1].split("except")[0]
 
 
+@pytest.mark.qt
+@pytest.mark.gui
 def test_qt_separator_visibility_offscreen():
     try:
         import os
@@ -455,6 +471,8 @@ def _wx_menu_snapshot(menu):
     return items
 
 
+@pytest.mark.qt
+@pytest.mark.gui
 def test_wx_separator_lifecycle_offscreen():
     import subprocess
     import sys

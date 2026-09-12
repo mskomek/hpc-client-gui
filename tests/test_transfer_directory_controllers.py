@@ -1,8 +1,11 @@
+
+import pytest
 from hpc_gui.services.remote_directory_controller import RemoteDirectoryController
 from hpc_gui.services.transfer_controller import TransferItem
 from hpc_gui.services.transfer_session_controller import TransferSessionController
 
 
+@pytest.mark.integration
 def test_transfer_queue_conflict_checksum_and_status():
     session = TransferSessionController([TransferItem("upload", "a", "b")], lambda item, progress: None)
     assert session.status().queued == 1
@@ -11,6 +14,7 @@ def test_transfer_queue_conflict_checksum_and_status():
     assert session.conflict_policy == "skip" and session.checksum_enabled
 
 
+@pytest.mark.integration
 def test_remote_navigation_favorites_and_stale_listing():
     controller = RemoteDirectoryController()
     first = controller.navigate("/one")
@@ -21,6 +25,7 @@ def test_remote_navigation_favorites_and_stale_listing():
     assert controller.back() is not None
 
 
+@pytest.mark.gui
 def test_controllers_have_no_qt_imports():
     for name in ("hpc_gui.services.transfer_session_controller", "hpc_gui.services.remote_directory_controller"):
         assert "PySide" not in __import__(name, fromlist=["__name"]).__dict__

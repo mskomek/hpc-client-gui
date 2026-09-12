@@ -52,6 +52,8 @@ def _key(code):
     return event
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_remote_ctrl_z_undoes_last_successful_move(wx_app, monkeypatch):
     backend = MockRemoteFilesBackend()
     frame = _frame(wx_app, backend)
@@ -65,6 +67,8 @@ def test_wx_remote_ctrl_z_undoes_last_successful_move(wx_app, monkeypatch):
     assert backend.thread_ids and all(thread_id != gui_thread for thread_id in backend.thread_ids)
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_remote_ctrl_z_is_noop_without_move_history(wx_app):
     backend = MockRemoteFilesBackend()
     frame = _frame(wx_app, backend)
@@ -74,6 +78,8 @@ def test_wx_remote_ctrl_z_is_noop_without_move_history(wx_app):
     assert backend.calls == before
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_remote_ctrl_z_does_not_undo_copy(wx_app):
     backend = MockRemoteFilesBackend()
     frame = _frame(wx_app, backend)
@@ -83,6 +89,8 @@ def test_wx_remote_ctrl_z_does_not_undo_copy(wx_app):
     assert not any(call[0] == "move" for call in backend.calls)
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_remote_multi_move_ctrl_z_restores_original_paths(wx_app, monkeypatch):
     backend = MockRemoteFilesBackend()
     frame = _frame(wx_app, backend)
@@ -94,6 +102,8 @@ def test_wx_remote_multi_move_ctrl_z_restores_original_paths(wx_app, monkeypatch
     assert "/a.txt" not in backend.entries and "/b.txt" not in backend.entries
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_remote_failed_move_is_not_registered_for_undo(wx_app, monkeypatch):
     backend = MockRemoteFilesBackend()
     monkeypatch.setattr(wx, "TextEntryDialog", lambda *_args, **_kwargs: _Dialog("/"))
@@ -111,6 +121,8 @@ def test_wx_remote_failed_move_is_not_registered_for_undo(wx_app, monkeypatch):
     assert not any(call[0] == "move" for call in backend.calls)
 
 
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_remote_ctrl_z_failure_preserves_consistent_history(wx_app, monkeypatch):
     backend = MockRemoteFilesBackend()
     calls = []

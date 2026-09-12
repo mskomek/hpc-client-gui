@@ -1,3 +1,5 @@
+
+import pytest
 import json
 import unittest
 import zipfile
@@ -10,6 +12,7 @@ from hpc_gui.services.cluster_self_test import ClusterSelfTestResult, SelfTestSe
 
 
 class DiagnosticBundleTests(unittest.TestCase):
+    @pytest.mark.unit
     def test_excludes_config_json_and_redacts_included_files(self) -> None:
         with TemporaryDirectory() as home_dir, TemporaryDirectory() as out_dir:
             home = Path(home_dir)
@@ -49,6 +52,7 @@ class DiagnosticBundleTests(unittest.TestCase):
                 manifest = json.loads(zf.read("manifest.json"))
                 self.assertIn("app.log", manifest["included_files"])
 
+    @pytest.mark.unit
     def test_v2_bundle_has_safe_structured_context_and_bounded_logs(self) -> None:
         with TemporaryDirectory() as home_dir, TemporaryDirectory() as out_dir:
             home = Path(home_dir)

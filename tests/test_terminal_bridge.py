@@ -1,3 +1,4 @@
+import pytest
 import unittest
 
 from hpc_gui.services.terminal_bridge import TerminalBridge
@@ -16,6 +17,7 @@ class _FakeSsh:
         self.sizes.append((columns, rows))
 
 
+@pytest.mark.unit
 class TerminalBridgeTests(unittest.TestCase):
     def test_orders_events_and_detach_is_idempotent(self):
         bridge = TerminalBridge()

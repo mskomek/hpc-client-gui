@@ -1,4 +1,5 @@
 from __future__ import annotations
+import pytest
 
 from pathlib import Path
 from unittest import mock
@@ -7,6 +8,7 @@ from hpc_gui.services import x11_runner, xserver_manager, x11_system_ssh
 from hpc_gui.services.x11_system_ssh import build_x11_launch
 
 
+@pytest.mark.unit
 def test_macos_xquartz_preflight_requires_xquartz_and_display(monkeypatch):
     monkeypatch.setattr(xserver_manager, "_is_macos", lambda: True)
     monkeypatch.setattr(Path, "exists", lambda self: True)
@@ -17,6 +19,7 @@ def test_macos_xquartz_preflight_requires_xquartz_and_display(monkeypatch):
     assert "DISPLAY" in messages[-1]
 
 
+@pytest.mark.integration
 def test_macos_x11_preflight_uses_system_ssh_and_never_plink():
     runner = x11_runner.X11Runner(log_cb=lambda _msg: None)
     with (
@@ -30,6 +33,7 @@ def test_macos_x11_preflight_uses_system_ssh_and_never_plink():
     plink.assert_not_called()
 
 
+@pytest.mark.integration
 def test_macos_system_ssh_sets_xauth_location(monkeypatch):
     monkeypatch.setattr(x11_system_ssh.platform, "system", lambda: "Darwin")
     monkeypatch.setattr(Path, "exists", lambda self: True)
@@ -39,6 +43,7 @@ def test_macos_system_ssh_sets_xauth_location(monkeypatch):
     assert "XAuthLocation=/opt/X11/bin/xauth" in launch.args
 
 
+@pytest.mark.unit
 def test_macos_password_x11_is_explicitly_rejected():
     messages: list[str] = []
     runner = x11_runner.X11Runner(log_cb=messages.append)

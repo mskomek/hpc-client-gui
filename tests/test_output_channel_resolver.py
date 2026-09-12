@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import pytest
 from hpc_gui.services.output_channel_resolver import (
     OutputChannelDefinition,
     OutputResolver,
@@ -14,6 +15,7 @@ from hpc_gui.services.output_channel_resolver import (
 # OutputChannelDefinition
 # ---------------------------------------------------------------------------
 
+@pytest.mark.unit
 class TestOutputChannelDefinition:
     def test_basic_fields(self):
         d = OutputChannelDefinition(
@@ -37,6 +39,7 @@ class TestOutputChannelDefinition:
 # OutputResolver - legacy (no provider definitions)
 # ---------------------------------------------------------------------------
 
+@pytest.mark.contract
 class TestOutputResolverLegacy:
     def test_legacy_creates_stdout_stderr(self):
         resolver = OutputResolver()
@@ -106,6 +109,7 @@ class TestOutputResolverLegacy:
 # OutputResolver - with provider definitions
 # ---------------------------------------------------------------------------
 
+@pytest.mark.unit
 class TestOutputResolverWithDefinitions:
     def test_two_channel_definitions(self):
         resolver = OutputResolver()
@@ -194,6 +198,7 @@ class TestOutputResolverWithDefinitions:
 # Array job placeholders
 # ---------------------------------------------------------------------------
 
+@pytest.mark.contract
 class TestArrayJobPlaceholders:
     def test_array_job_resolves_correctly(self):
         resolver = OutputResolver()
@@ -226,6 +231,7 @@ class TestArrayJobPlaceholders:
 # definitions_from_provider
 # ---------------------------------------------------------------------------
 
+@pytest.mark.contract
 class TestDefinitionsFromProvider:
     def test_absent_job_outputs_returns_none(self):
         assert definitions_from_provider(None) is None
@@ -286,6 +292,7 @@ class TestDefinitionsFromProvider:
 # TrackedOutput
 # ---------------------------------------------------------------------------
 
+@pytest.mark.unit
 class TestTrackedOutput:
     def test_basic_fields(self):
         t = TrackedOutput(

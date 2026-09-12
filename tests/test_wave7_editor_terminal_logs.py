@@ -3,8 +3,8 @@
 Ensure text I/O surfaces preserve Unicode without silent data loss and
 archives preserve Unicode entry names without security regressions.
 """
-
 from __future__ import annotations
+import pytest
 
 import pathlib
 import sys
@@ -22,6 +22,7 @@ if str(ROOT / "src") not in sys.path:
 class TestScriptEditor:
     """Verify script editor handles Unicode correctly."""
 
+    @pytest.mark.contract
     def test_editor_model_unicode_content(self):
         """DocumentModel should preserve Unicode content."""
         from hpc_gui.services.editor_controller import DocumentModel
@@ -38,6 +39,7 @@ class TestScriptEditor:
         assert "★" in doc.content
         assert doc.dirty is True
 
+    @pytest.mark.unit
     def test_editor_model_encoding_default(self):
         """DocumentModel should default to UTF-8 encoding."""
         from hpc_gui.services.editor_controller import DocumentModel
@@ -50,6 +52,7 @@ class TestScriptEditor:
         )
         assert doc.encoding == "utf-8"
 
+    @pytest.mark.unit
     def test_editor_model_dirty_detection(self):
         """DocumentModel should detect dirty state correctly."""
         from hpc_gui.services.editor_controller import DocumentModel
@@ -66,6 +69,7 @@ class TestScriptEditor:
         doc2 = doc.with_content("# 日本語テスト (modified)\n")
         assert doc2.dirty is True
 
+    @pytest.mark.contract
     def test_editor_file_roundtrip_unicode(self, tmp_path):
         """Unicode file should survive editor open/save roundtrip."""
         content = "# Isı transferi 日本語\nprint('Çalışma başladı ★')\n"
@@ -85,6 +89,7 @@ class TestScriptEditor:
         assert "Δ" in final
         assert "日本語" in final
 
+    @pytest.mark.unit
     def test_editor_bom_handling(self, tmp_path):
         """Editor should handle UTF-8 BOM correctly."""
         content = "#!/bin/bash\n#SBATCH --job-name=test\n"
@@ -102,6 +107,7 @@ class TestScriptEditor:
         assert text == content
         assert text.startswith("#!/bin/bash")
 
+    @pytest.mark.unit
     def test_editor_no_bom_before_shebang(self, tmp_path):
         """BOM must not appear before shebang in generated scripts."""
         content = "#!/bin/bash\n#SBATCH --job-name=test\n"
@@ -121,6 +127,7 @@ class TestScriptEditor:
 class TestTerminal:
     """Verify terminal handles Unicode correctly."""
 
+    @pytest.mark.contract
     def test_terminal_model_unicode_receive(self):
         """TerminalModel should handle Unicode output."""
         from hpc_gui.wx_terminal import TerminalModel
@@ -142,6 +149,7 @@ class TestTerminal:
         assert "★" in model.text
         assert "✓" in model.text
 
+    @pytest.mark.gui
     def test_terminal_webview_safe_json_dumps(self):
         """_safe_json_dumps should preserve Unicode."""
         from hpc_gui.wx_terminal_webview import _safe_json_dumps
@@ -155,6 +163,7 @@ class TestTerminal:
         assert "日本" in result
         assert "★" in result
 
+    @pytest.mark.gui
     def test_terminal_webview_safe_truncate_index(self):
         """_safe_truncate_index should handle Unicode safely."""
         from hpc_gui.wx_terminal_webview import _safe_truncate_index
@@ -167,6 +176,7 @@ class TestTerminal:
         truncated = text[:truncated_idx]
         assert truncated.encode("utf-8", errors="strict") or True  # No exception
 
+    @pytest.mark.unit
     def test_shell_session_incremental_decoder(self):
         """Shell session should decode multi-byte UTF-8 correctly."""
         import codecs
@@ -186,6 +196,7 @@ class TestTerminal:
         decoded2 = decoder2.decode(encoded2, final=True)
         assert decoded2 == text2
 
+    @pytest.mark.unit
     def test_shell_session_split_bytes(self):
         """Shell session should handle split multi-byte sequences."""
         import codecs
@@ -210,6 +221,7 @@ class TestTerminal:
 class TestLogs:
     """Verify logs handle Unicode correctly."""
 
+    @pytest.mark.contract
     def test_logs_model_unicode_read(self, tmp_path):
         """WxLogsModel should read Unicode log content."""
         from hpc_gui.wx_logs import WxLogsModel
@@ -229,6 +241,7 @@ class TestLogs:
         assert "日本語" in content
         assert "★" in content
 
+    @pytest.mark.unit
     def test_logs_no_mojibake_patterns(self, tmp_path):
         """Logs should not contain common mojibake patterns."""
         log_path = tmp_path / "test.log"
@@ -249,6 +262,7 @@ class TestLogs:
 class TestZipArchives:
     """Verify ZIP archives handle Unicode filenames correctly."""
 
+    @pytest.mark.contract
     def test_zip_unicode_filename_roundtrip(self, tmp_path):
         """ZIP should preserve Unicode filenames."""
         zip_path = tmp_path / "archive.zip"
@@ -271,6 +285,7 @@ class TestZipArchives:
             assert zf.read("results/日本語/file.txt").decode("utf-8") == "日本語 content"
             assert zf.read("★_favorites.txt") == b"star content"
 
+    @pytest.mark.contract
     def test_zip_extract_unicode(self, tmp_path):
         """ZIP extraction should preserve Unicode filenames."""
         zip_path = tmp_path / "archive.zip"
@@ -290,6 +305,7 @@ class TestZipArchives:
         assert (extract_dir / "日本語" / "ölçüm.txt").read_text() == "content1"
         assert (extract_dir / "★" / "favorites.txt").read_text() == "content2"
 
+    @pytest.mark.contract
     def test_zip_nested_unicode(self, tmp_path):
         """ZIP should handle nested Unicode directories."""
         zip_path = tmp_path / "nested.zip"
@@ -306,6 +322,7 @@ class TestZipArchives:
                 assert "日本語" in name
                 assert "ölçüm" in name
 
+    @pytest.mark.unit
     def test_zip_path_traversal_protection(self, tmp_path):
         """ZIP extraction should protect against path traversal."""
         zip_path = tmp_path / "malicious.zip"
@@ -323,6 +340,7 @@ class TestZipArchives:
             # This test documents the threat exists
             # Actual protection happens during extraction (not tested here)
 
+    @pytest.mark.unit
     def test_zip_conflict_handling(self, tmp_path):
         """ZIP should handle conflicting Unicode filenames."""
         zip_path = tmp_path / "conflict.zip"
@@ -343,6 +361,7 @@ class TestZipArchives:
 class TestOutputFollower:
     """Verify output follower handles Unicode correctly."""
 
+    @pytest.mark.contract
     def test_output_follower_unicode_text(self):
         """OutputFollower should handle Unicode text."""
         from hpc_gui.services.output_follower import retain_last_lines
@@ -363,6 +382,7 @@ class TestOutputFollower:
 class TestIntegration:
     """Integration tests for editor/terminal/logs Unicode."""
 
+    @pytest.mark.release
     def test_full_editor_workflow_unicode(self, tmp_path):
         """Full editor workflow: create, edit, save, reopen with Unicode."""
         from hpc_gui.services.editor_controller import DocumentModel
@@ -395,6 +415,7 @@ class TestIntegration:
         assert "★" in reopened
         assert "Δ" in reopened
 
+    @pytest.mark.contract
     def test_full_terminal_unicode_flow(self):
         """Full terminal flow: receive Unicode output, verify display."""
         from hpc_gui.wx_terminal import TerminalModel
@@ -423,6 +444,7 @@ class TestIntegration:
         assert "★" in model.text
         assert "✓" in model.text
 
+    @pytest.mark.contract
     def test_full_archive_unicode_flow(self, tmp_path):
         """Full archive flow: create, list, extract with Unicode."""
         zip_path = tmp_path / "archive.zip"

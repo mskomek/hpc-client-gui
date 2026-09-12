@@ -1,6 +1,9 @@
+
+import pytest
 from hpc_gui.wx_remote_files import RemoteEntry, WxRemoteDirectoryModel
 
 
+@pytest.mark.gui
 def test_large_batched_listing_stale_refresh_and_cache():
     model = WxRemoteDirectoryModel("/home/user", cache_ttl=60)
     entries = tuple(RemoteEntry(f"/home/user/{i}") for i in range(405))
@@ -16,6 +19,7 @@ def test_large_batched_listing_stale_refresh_and_cache():
     assert not model.is_current(first) and model.is_current(second)
 
 
+@pytest.mark.gui
 def test_remote_clipboard_undo_permissions_and_middle_click():
     model = WxRemoteDirectoryModel()
     assert model.clipboard_payload(["/a/space name", "/b"]).startswith("/a/")
@@ -32,11 +36,13 @@ def test_remote_clipboard_undo_permissions_and_middle_click():
     assert model.context_action("rename", ["/a"], "/b").kind == "rename"
 
 
+@pytest.mark.gui
 def test_remote_model_has_no_toolkit_import():
     source = open("src/hpc_gui/wx_remote_files.py", encoding="utf-8").read()
     assert "PySide6" not in source and "import wx" not in source
 
 
+@pytest.mark.gui
 def test_remote_view_runs_operations_off_the_wx_thread():
     source = open("src/hpc_gui/wx_remote_files_view.py", encoding="utf-8").read()
     assert "Thread(target=worker" in source

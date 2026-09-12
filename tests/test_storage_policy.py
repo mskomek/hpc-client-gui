@@ -1,12 +1,15 @@
+import pytest
 from hpc_gui.services.storage_policy import StoragePolicyEvaluator
 
 
+@pytest.mark.unit
 def test_no_metadata_and_outside_root_have_no_warning():
     assert StoragePolicyEvaluator({}).evaluate({"workdir": "/work/a"}) == ()
     provider = {"storage": [{"id": "scratch", "path_template": "/scratch", "policy": {"backup": False}}]}
     assert StoragePolicyEvaluator(provider).evaluate({"workdir": "/home/a"}) == ()
 
 
+@pytest.mark.unit
 def test_backup_retention_and_cleanup_are_provider_driven():
     provider = {
         "storage": [{
@@ -25,6 +28,7 @@ def test_backup_retention_and_cleanup_are_provider_driven():
     assert warnings[0].messages == ("Not backed up", "Retention: 14 days", "Cleanup: remove after download")
 
 
+@pytest.mark.unit
 def test_unresolved_and_unknown_policy_do_not_guess_capacity():
     provider = {"storage": [{"id": "work", "path_template": "/work", "policy": {}}]}
     assert StoragePolicyEvaluator(provider).evaluate({"workdir": None}) == ()

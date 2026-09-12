@@ -7,6 +7,7 @@ profiles that lack a valid profile-specific value.
 
 from __future__ import annotations
 
+import pytest
 import json
 from pathlib import Path
 from unittest.mock import patch
@@ -23,6 +24,7 @@ def _write_config(config: Path, payload: dict) -> None:
     config.write_text(json.dumps(payload), encoding="utf-8")
 
 
+@pytest.mark.contract
 def test_legacy_global_value_copied_into_profiles_missing_field(tmp_path: Path) -> None:
     unpatch, config = _config(tmp_path)
     _write_config(
@@ -42,6 +44,7 @@ def test_legacy_global_value_copied_into_profiles_missing_field(tmp_path: Path) 
     # removed here (removal is not required and history must stay intact).
 
 
+@pytest.mark.contract
 def test_existing_profile_specific_value_wins(tmp_path: Path) -> None:
     unpatch, config = _config(tmp_path)
     _write_config(
@@ -56,6 +59,7 @@ def test_existing_profile_specific_value_wins(tmp_path: Path) -> None:
     assert profiles[0]["transfer_parallelism"] == 7
 
 
+@pytest.mark.contract
 def test_malformed_profile_and_legacy_values_fall_back_to_default(tmp_path: Path) -> None:
     unpatch, config = _config(tmp_path)
     _write_config(
@@ -70,6 +74,7 @@ def test_malformed_profile_and_legacy_values_fall_back_to_default(tmp_path: Path
     assert profiles[0]["transfer_parallelism"] == 1
 
 
+@pytest.mark.contract
 def test_no_legacy_value_uses_safe_default(tmp_path: Path) -> None:
     unpatch, config = _config(tmp_path)
     _write_config(config, {"profiles": [{"name": "a", "id": "1"}], "settings": {}})
@@ -78,6 +83,7 @@ def test_no_legacy_value_uses_safe_default(tmp_path: Path) -> None:
     assert profiles[0]["transfer_parallelism"] == 1
 
 
+@pytest.mark.contract
 def test_out_of_range_values_are_clamped(tmp_path: Path) -> None:
     unpatch, config = _config(tmp_path)
     _write_config(
@@ -92,6 +98,7 @@ def test_out_of_range_values_are_clamped(tmp_path: Path) -> None:
     assert profiles[0]["transfer_parallelism"] == 10
 
 
+@pytest.mark.contract
 def test_multiple_profiles_migrated_in_one_pass(tmp_path: Path) -> None:
     unpatch, config = _config(tmp_path)
     _write_config(
@@ -110,6 +117,7 @@ def test_multiple_profiles_migrated_in_one_pass(tmp_path: Path) -> None:
     assert [p["transfer_parallelism"] for p in profiles] == [5, 3, 5]
 
 
+@pytest.mark.contract
 def test_migration_is_idempotent_across_launches(tmp_path: Path) -> None:
     unpatch, config = _config(tmp_path)
     _write_config(
@@ -130,6 +138,7 @@ def test_migration_is_idempotent_across_launches(tmp_path: Path) -> None:
         assert json.loads(config.read_text(encoding="utf-8")) == on_disk_after_first
 
 
+@pytest.mark.contract
 def test_unknown_encrypted_and_nested_fields_survive(tmp_path: Path) -> None:
     unpatch, config = _config(tmp_path)
     profile = {

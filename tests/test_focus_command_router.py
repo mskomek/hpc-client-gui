@@ -1,6 +1,8 @@
+import pytest
 from hpc_gui.services.focus_command_router import FocusCommandRouter
 
 
+@pytest.mark.unit
 def test_focus_precedence_and_native_keys():
     router = FocusCommandRouter()
     assert router.resolve("Ctrl+Z", "remote_files").id == "FILE-REMOTE-UNDO"
@@ -11,6 +13,7 @@ def test_focus_precedence_and_native_keys():
     assert router.resolve("Ctrl+V", "editor", text_input=True) is None
 
 
+@pytest.mark.unit
 def test_unknown_focus_or_binding_is_not_invented():
     router = FocusCommandRouter()
     assert router.resolve("Ctrl+Q", "local_files") is None

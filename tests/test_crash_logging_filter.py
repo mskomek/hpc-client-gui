@@ -8,11 +8,13 @@ flag, so the next launch reported a crash that never happened.
 
 from __future__ import annotations
 
+import pytest
 import unittest
 
 from hpc_gui.core.logging_setup import _is_paramiko_prefetch_shutdown
 
 
+@pytest.mark.unit
 class PrefetchShutdownFilterTests(unittest.TestCase):
     def test_matches_the_prefetch_socket_close(self) -> None:
         self.assertTrue(
