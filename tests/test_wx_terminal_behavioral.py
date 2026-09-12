@@ -694,7 +694,9 @@ def test_large_pre_ready_output_buffered():
 
 # ── Section 16: Fallback non-parity ──
 
-@pytest.mark.audit
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.regression
 def test_fallback_panel_sets_non_parity(monkeypatch):
     """Public terminal composition uses a functional TextCtrl without WebView."""
     import wx
@@ -727,8 +729,8 @@ def test_fallback_panel_sets_non_parity(monkeypatch):
 
 # ── Section 17: Bridge has required helpers ──
 
+@pytest.mark.contract
 @pytest.mark.wx
-@pytest.mark.gui
 def test_bridge_has_required_helpers():
     """Bridge must expose all required API functions."""
     bridge = (ASSETS / "wx_bridge.js").read_text(encoding="utf-8")

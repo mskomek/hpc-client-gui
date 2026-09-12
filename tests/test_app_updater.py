@@ -126,7 +126,9 @@ def test_closing_update_progress_cancels_active_download():
     assert worker.cancelled and window._update_cancelled and closed
 
 
-@pytest.mark.unit
+@pytest.mark.gui
+@pytest.mark.qt
+@pytest.mark.regression
 def test_manual_update_check_shows_splash_before_worker_starts():
     root = Path(__file__).resolve().parents[1]
     env = os.environ.copy()

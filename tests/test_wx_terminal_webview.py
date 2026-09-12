@@ -71,8 +71,8 @@ def _show_frame_with_panel(frame, panel):
     wx.Yield()
 
 
+@pytest.mark.audit
 @pytest.mark.wx
-@pytest.mark.gui
 def test_wx_terminal_webview_assets_are_local_and_vendored():
     # Wave 73 security: vendored only, no CDN, connect-src 'none'
     page = (ASSETS / "wx_index.html").read_text(encoding="utf-8")
@@ -427,8 +427,8 @@ def test_wx_terminal_external_navigation_blocked():
     wx.Yield()
 
 
+@pytest.mark.audit
 @pytest.mark.wx
-@pytest.mark.gui
 def test_wx_terminal_single_bridge_and_no_splitlines():
     src = pathlib.Path("src/hpc_gui/wx_terminal_webview.py").read_text(encoding="utf-8")
     # One handler
@@ -447,7 +447,9 @@ def test_wx_terminal_single_bridge_and_no_splitlines():
     assert "postToPython" in bridge
 
 
-@pytest.mark.release
+@pytest.mark.unit
+@pytest.mark.wx
+@pytest.mark.resource
 def test_wx_terminal_close_releases_native_webview():
     from hpc_gui.wx_terminal_webview import WxTerminalWebViewPanel
 
@@ -585,8 +587,8 @@ def test_wx_terminal_output_ordering_with_many_fragments():
     assert result.returncode == 0, f"subprocess failed: {result.stdout}\n{result.stderr}"
 
 
+@pytest.mark.audit
 @pytest.mark.wx
-@pytest.mark.gui
 def test_wx_terminal_webview_composition_keeps_qt_out():
     src = pathlib.Path("src/hpc_gui/wx_terminal_webview.py").read_text(encoding="utf-8")
     assert "from PySide6" not in src
@@ -1380,7 +1382,9 @@ os._exit(0)
     assert result.returncode == 0, f"subprocess failed: {result.stdout}\n{result.stderr}"
 
 
-@pytest.mark.audit
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.regression
 def test_wx_terminal_fallback_sets_non_parity(monkeypatch):
     """Unavailable WebView renders its visible diagnostic fallback."""
     import wx
