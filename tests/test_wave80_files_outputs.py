@@ -1,5 +1,7 @@
 """Wave 80: i18n integrity test + behavioral tests for Files/Outputs UX."""
 
+import pytest
+
 from hpc_gui.core.i18n import load_language, t, set_language
 
 
@@ -197,6 +199,7 @@ class TestFilesBehavior:
         load_language("tr")
         assert "Takip" in t("dirs.follow_track") or "takip" in t("dirs.follow_track")
 
+    @pytest.mark.gui
     def test_files_toolbar_visible_labels_localized(self):
         """The real Files toolbar updates its visible labels on language change."""
         import wx
