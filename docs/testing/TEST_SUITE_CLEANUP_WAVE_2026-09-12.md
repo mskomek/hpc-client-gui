@@ -4,7 +4,7 @@ Status: IN_PROGRESS
 
 Frozen baseline: 12ce79935bf076e1062c57dc7dbd148bad2bfae1
 
-Current packet: D
+Current packet: E
 Dependency: Phase 1 test-suite audit completed
 
 This is an executable cleanup Wave and implementation plan. The repository has no root ACTIVE_WAVE/WAVES execution system; this document does not claim to be its official active Wave ledger.
@@ -63,34 +63,18 @@ The active `.github/workflows/release.yml` is `workflow_dispatch` only. Its test
 
 The union of local `scripts/ci.py` pytest selectors and the shared release suite also leaves the packaged wx smoke node above uncovered; `ci.py windows` additionally invokes two `unittest discover` commands, which are outside pytest nodeid comparison. These are recorded lane facts, not permission to change selectors. Automatic PR/push CI remains absent; no CI files or selectors were changed.
 
-### D. Exact duplicate groups / false gates — NOT STARTED
+### D. Exact duplicate groups / false gates — DONE
 
-No D-group cleanup is authorized in Packet B. Apply the deletion gate before any later removal.
+Deletion gate evidence was reviewed for each removal: inventory and assertions are recorded above; the retained or replacement owner is named; node references and CI/report selector references were searched; targeted replacements passed. No CI selector pointed at a removed node. The exact nodeid mapping is in `docs/testing/PHASE_2_EXECUTION_REPORT.md`.
 
-D1 — MERGE proposal:
-- tests/test_wave0_unicode_baseline.py::TestEncodingBoundaryInventory::test_errors_replace_in_ssh
-- tests/test_wave1_unicode_core_policy.py::TestEncodingBoundaryJustification::test_ssh_client_decode_justified
+- D1: removed `TestEncodingBoundaryJustification::test_ssh_client_decode_justified`; retained `TestEncodingBoundaryInventory::test_errors_replace_in_ssh` as canonical owner of the shared `errors="replace"` boundary claim.
+- D2: replaced source-text-only SFTP encoding claims with `tests/test_ssh_files_byte_preservation.py::test_sftp_download_upload_roundtrip_preserves_arbitrary_bytes`. It exercises real `SSHFilesBackend.download` and `upload` behavior through a fake SFTP seam, verifies arbitrary bytes survive, and verifies channel cleanup. Removed both duplicate source-text nodes.
+- D3: `test_cluster_servers_visible_without_selected_job_when_provider_supports` now keeps the job unselected, triggers the refresh action, and verifies visible loaded table state. `test_raw_server_status_opens` independently triggers the raw-status action and checks the `lssrv` result through the viewer seam.
+- D4: `TestSchemaV4Audit::test_v4_optional_sections_ok` now supplies valid job-details, accounting, and cluster-status sections; the minimal-schema case remains in `test_v4_valid`.
+- D5/D6: removed the two Wave80 audit duplicates; retained `TestFilesBehavior::test_context_menu_labels_localized` and `TestOutputsBehavior::test_standard_output_localized` as canonical owners.
+- D7: moved typed-password precedence to marked unit/regression test `tests/test_connection_profile_service.py::ConnectionProfileServiceTests::test_typed_password_precedes_saved_secret`; removed duplicate nodes from 71.2 and 71.3. Retained `tests/test_wx_connection_hardening.py::test_typed_password_precedence`, which additionally covers ssh_info, GUI connection, and storage invariants.
 
-D2 — REWRITE canonical byte-preservation behavior first; remove the duplicate only after the deletion gate:
-- tests/test_wave0_unicode_baseline.py::TestRiskClassification::test_p0_sftp_roundtrip_risks_documented
-- tests/test_wave1_unicode_core_policy.py::TestEncodingBoundaryJustification::test_files_ssh_utf8_justified
-
-D3 — The two Wave78 cluster-status candidates:
-- tests/test_wave78_jobs_details.py::test_cluster_servers_visible_without_selected_job_when_provider_supports
-- tests/test_wave78_jobs_details.py::test_raw_server_status_opens
-The first is named as a no-selection test but calls _select_job(panel, 0); rewrite it so the job truly remains unselected.
-
-D4 — tests/test_wave79_audit.py::TestSchemaV4Audit::test_v4_valid and tests/test_wave79_audit.py::TestSchemaV4Audit::test_v4_optional_sections_ok. The second needs input that actually includes optional sections.
-
-D5 — Wave80 Files context-menu localization pair:
-- tests/test_wave80_files_outputs.py::TestFilesBehavior::test_context_menu_labels_localized
-- tests/test_wave80_files_outputs.py::TestWave80Audit::test_files_context_menu_localized
-
-D6 — Wave80 Outputs localization pair:
-- tests/test_wave80_files_outputs.py::TestOutputsBehavior::test_standard_output_localized
-- tests/test_wave80_files_outputs.py::TestWave80Audit::test_outputs_standard_output_error_localized
-
-D7 — tests/test_wx_connection_71_2.py::test_typed_password_precedence and tests/test_wx_connection_71_3.py::test_typed_password_precedence. Proposed canonical destination: tests/test_connection_profile_service.py.
+Collection changed by exactly 7 removals and 2 additions relative to Packet C; no unrelated old node disappeared. The ratchet allowlist was reviewed and reduced by exactly the seven removed legacy nodeids. Packet D did not change production, CI, migration ledgers, or protected guidance.
 
 ### E. Weak lifecycle tests — NOT STARTED
 

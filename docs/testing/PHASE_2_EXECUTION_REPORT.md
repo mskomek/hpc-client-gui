@@ -1,6 +1,6 @@
 # Test Governance Phase 2 — Execution Report
 
-Status: Packets A, B, and C DONE; next packet D is NOT STARTED.
+Status: Packets A, B, C, and D DONE; next packet E is IN_PROGRESS.
 
 - Frozen baseline: `12ce79935bf076e1062c57dc7dbd148bad2bfae1`
 - Governance branch: `test-suite-governance-20260912`
@@ -57,15 +57,47 @@ The selector comparison is [lane-comparison-phase2.json](../../audit/archive/12c
 
 The active release workflow is `workflow_dispatch` only. Its pytest job union leaves two packaging-marked nodes uncovered: `tests/test_wheel_packaging.py::test_built_wheel_contains_required_assets` and `tests/test_wx_packaged_smoke.py::test_packaged_wx_smoke_gate_reports_critical_stages`. The local `scripts/ci.py` selector union plus the shared release suite leaves the wx packaged smoke node uncovered. The Windows lane also invokes `unittest discover`; those commands are outside this pytest nodeid comparison. No CI files or selectors were changed. Automatic PR/push CI remains absent.
 
+## Packet D — exact duplicates and false gates
+
+The seven duplicate groups were reviewed against their assertions and canonical owners. The cleanup changed only test code and the taxonomy ratchet. No production behavior, CI selector, migration-completion ledger, or protected local guidance changed.
+
+- D1 removed `tests/test_wave1_unicode_core_policy.py::TestEncodingBoundaryJustification::test_ssh_client_decode_justified`; the equivalent canonical owner remains `tests/test_wave0_unicode_baseline.py::TestEncodingBoundaryInventory::test_errors_replace_in_ssh`.
+- D2 removed the two source-text-only SFTP boundary claims. Their runtime owner is the new `tests/test_ssh_files_byte_preservation.py::test_sftp_download_upload_roundtrip_preserves_arbitrary_bytes`, which exercises `SSHFilesBackend.download` and `upload`, checks exact byte preservation, and checks SFTP channel cleanup.
+- D3 corrected `test_cluster_servers_visible_without_selected_job_when_provider_supports` to keep the job unselected while refreshing and asserting visible cluster status. The separate `test_raw_server_status_opens` triggers the raw-status action and checks the `lssrv` result at the viewer seam.
+- D4 now gives `TestSchemaV4Audit::test_v4_optional_sections_ok` actual job-details, accounting, and cluster-status sections; `test_v4_valid` retains the minimal-schema case.
+- D5 and D6 removed the duplicate Wave80 audit nodes while retaining `TestFilesBehavior::test_context_menu_labels_localized` and `TestOutputsBehavior::test_standard_output_localized` as canonical owners.
+- D7 moved typed-password precedence to the marked unit/regression owner `tests/test_connection_profile_service.py::ConnectionProfileServiceTests::test_typed_password_precedes_saved_secret`. Equivalent 71.2 and 71.3 duplicates were removed. The broader `tests/test_wx_connection_hardening.py::test_typed_password_precedence` remains because it also checks ssh_info, GUI connection, and storage invariants.
+
+Relative to Packet C, collection removed exactly these seven legacy nodes and added the two replacement tests:
+
+```text
+REMOVED
+tests/test_wave0_unicode_baseline.py::TestRiskClassification::test_p0_sftp_roundtrip_risks_documented
+tests/test_wave1_unicode_core_policy.py::TestEncodingBoundaryJustification::test_files_ssh_utf8_justified
+tests/test_wave1_unicode_core_policy.py::TestEncodingBoundaryJustification::test_ssh_client_decode_justified
+tests/test_wave80_files_outputs.py::TestWave80Audit::test_files_context_menu_localized
+tests/test_wave80_files_outputs.py::TestWave80Audit::test_outputs_standard_output_error_localized
+tests/test_wx_connection_71_2.py::test_typed_password_precedence
+tests/test_wx_connection_71_3.py::test_typed_password_precedence
+
+ADDED
+tests/test_connection_profile_service.py::ConnectionProfileServiceTests::test_typed_password_precedes_saved_secret
+tests/test_ssh_files_byte_preservation.py::test_sftp_download_upload_roundtrip_preserves_arbitrary_bytes
+```
+
+There were no other old-node removals. The collection total is now 2,679. Actual marker state is 2 `unit`, 11 `audit`, 2,666 zero-primary, and 0 multi-primary; all other primary counts are 0. Qualifier counts are `regression=2`, `packaging=2`, and 0 for the other qualifiers. The ratchet allowlist was reduced by exactly the seven removed zero-primary nodeids and now contains 2,666 entries.
+
+Focused validation passed: the two Wave78 behavior tests, the D1/D2/D4/D5/D6 owner tests, and the D7 service test all passed; taxonomy checker tests passed (11). Ruff passed on changed Python tests. REPORT, RATCHET, full collection (2,679), and `git diff --check` passed. The full suite remains incomplete for the Packet A blockers; no baseline blocker was modified.
+
 ## Validation and current state
 
-- `python -m pytest tests/test_test_taxonomy_checker.py -q` — **11 passed**.
-- `python scripts/check_test_taxonomy.py --mode report --json-out <path>` — **exit 0**; current state is 2,684 collected, 11 `audit`, 2,673 zero-primary, 0 multi-primary; `packaging` qualifier count 2.
+- `python -m pytest tests/test_test_taxonomy_checker.py -q` — **11 passed** (Packet C/D validation).
+- `python scripts/check_test_taxonomy.py --mode report --json-out <path>` — **exit 0**; Packet D state is 2,679 collected, 2 `unit`, 11 `audit`, 2,666 zero-primary, 0 multi-primary.
 - `python scripts/check_test_taxonomy.py --mode ratchet --baseline audit/archive/12ce7993/test-suite-baseline/taxonomy-ratchet.json --json-out <path>` — **exit 0, RATCHET PASS**; 0 new zero-primary, 0 multi-primary.
-- `python -m pytest tests --collect-only -q` — **exit 0, 2,684 collected**.
-- Node comparison to the frozen inventory — **11 added, 0 removed**. Every added node is in `tests/test_test_taxonomy_checker.py`; all have the `audit` primary.
+- `python -m pytest tests --collect-only -q` — **exit 0, 2,679 collected**.
+- Node comparison to the frozen inventory — **13 added, 7 removed** cumulatively; the 7 removals and 2 Packet D additions are listed above, and the other 11 additions are the checker tests. No unrelated node disappeared.
 - `python -m ruff check scripts/check_test_taxonomy.py tests/test_test_taxonomy_checker.py` — **passed**.
 - `git diff --check` — **passed**.
 - Full-suite execution remains incomplete for the Packet A reasons above. The seven isolated failures and the settings-dialog setup hang remain intentionally untouched.
 
-No production files, CI workflow files/selectors, migration completion ledgers, or protected local guidance files changed. Packets D–O remain NOT STARTED. A Google Docs copy was not created: the Drive connector rejected create calls for missing OAuth scopes, and browser access was denied because the admin-enforced security check could not be verified. This tracked report is the current updateable copy until Docs access is restored.
+No production files, CI workflow files/selectors, migration completion ledgers, or protected local guidance files changed. Packet E is next; F–O remain NOT STARTED. A Google Docs copy was not created: the Drive connector rejected create calls for missing OAuth scopes, and browser access was denied because the admin-enforced security check could not be verified. This tracked report is the current updateable copy until Docs access is restored.

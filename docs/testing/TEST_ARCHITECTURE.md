@@ -75,4 +75,4 @@ For each new significant test, document or make clear:
 
 `--mode report` always reports actual collected markers and remains non-gating for zero-primary, multi-primary, and heuristic findings. `--mode ratchet --baseline <path>` is a separate non-regression gate: it permits only the exact zero-primary nodeids already listed in the reviewed baseline and fails on any new zero-primary nodeid or any multi-primary item. Qualifiers never satisfy a primary.
 
-When a legacy node is classified, remove its nodeid from the ratchet allowlist as part of that reviewed change. Do not regenerate the allowlist from an unreviewed report. The ratchet is not wired into CI by this document.
+When a legacy node is classified or deleted after its deletion gate passes, remove its nodeid from the ratchet allowlist as part of that reviewed change. Do not regenerate the allowlist from an unreviewed report. The ratchet is not wired into CI by this document.
