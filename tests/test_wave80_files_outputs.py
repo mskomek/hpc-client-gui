@@ -561,7 +561,7 @@ class TestWave80Audit:
     @pytest.mark.wx
     @pytest.mark.gui
     def test_runtime_language_switch_updates_outputs(self):
-        """Visible output-channel tabs follow the selected runtime language."""
+        """Output tab labels retranslate without changing channel or output state."""
         import time
         import wx
         from hpc_gui.wx_jobs import show_jobs
@@ -572,7 +572,10 @@ class TestWave80Audit:
             show_jobs(list_jobs=lambda: [{
                 "id": "1", "state": "RUNNING", "name": "job",
                 "stdout_path": "/work/stdout.log", "stderr_path": "/work/stderr.log",
-            }])
+            }], read_output=lambda _job_id: {
+                "stdout": "stable stdout",
+                "stderr": "stable stderr",
+            })
             frames = [window for window in wx.GetTopLevelWindows() if hasattr(window, "_wx_jobs_state")]
             assert frames
             frame = frames[-1]
@@ -595,16 +598,48 @@ class TestWave80Audit:
                 wx.MilliSleep(10)
             assert channels.GetPageCount() == 2
             controls["notebook"].SetSelection(4)
+            channels.SetSelection(1)
             frame.Show()
             wx.Yield()
             assert channels.IsShownOnScreen()
             assert channels.GetPageText(0) == "Standard Output"
             assert channels.GetPageText(1) == "Standard Error"
+            channel_ids = tuple(controls["output_channels"])
+            output_text = {
+                channel_id: control.GetValue()
+                for channel_id, control in controls["output_channels"].items()
+            }
+            deadline = time.monotonic() + 3
+            while any(not text for text in output_text.values()) and time.monotonic() < deadline:
+                app.ProcessPendingEvents()
+                wx.MilliSleep(10)
+                output_text = {
+                    channel_id: control.GetValue()
+                    for channel_id, control in controls["output_channels"].items()
+                }
+            assert output_text == {"stdout": "stable stdout\n", "stderr": "stable stderr\n"}
 
             set_language("tr")
             wx.Yield()
             assert channels.GetPageText(0) == t("jobs_outputs.standard_output")
             assert channels.GetPageText(1) == t("jobs_outputs.standard_error")
+            assert channels.GetSelection() == 1
+            assert tuple(controls["output_channels"]) == channel_ids
+            assert {
+                channel_id: control.GetValue()
+                for channel_id, control in controls["output_channels"].items()
+            } == output_text
+
+            set_language("en")
+            wx.Yield()
+            assert channels.GetPageText(0) == "Standard Output"
+            assert channels.GetPageText(1) == "Standard Error"
+            assert channels.GetSelection() == 1
+            assert tuple(controls["output_channels"]) == channel_ids
+            assert {
+                channel_id: control.GetValue()
+                for channel_id, control in controls["output_channels"].items()
+            } == output_text
         finally:
             set_language("en")
             for window in list(wx.GetTopLevelWindows()):
