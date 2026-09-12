@@ -1,13 +1,13 @@
 # Test Suite Cleanup Wave — 2026-09-12
 
-Status: IN_PROGRESS
+Status: DEFECT_FOUND (Packet F stopped; unrelated packets continue)
 
 Frozen baseline: 12ce79935bf076e1062c57dc7dbd148bad2bfae1
 
 Remediation baseline: 54f7376f3e3e1fccd672f121e33b68d2e8df2652
 Remediation collection: 2,678 nodes (five added, zero removed from frozen)
 
-Current packet: D
+Current packet: G
 Dependency: Phase 1 test-suite audit completed
 
 This is an executable cleanup Wave and implementation plan. The repository has no root ACTIVE_WAVE/WAVES execution system; this document does not claim to be its official active Wave ledger.
@@ -55,9 +55,13 @@ All D1–D7 owners and mappings are recorded in [DUPLICATE_GROUP_REVIEW_D1-D7.md
 
 Rewrote the three updater nodes in `tests/test_wx_updater_spec.py` without production changes. Cancellation uses the real wx cancel event and download worker with the downloader mocked at its external seam; a late successful return after cancel must not verify or expose an installable artifact, and installer/splash seams remain uncalled. Removing the worker cancellation guard makes `_artifact_verified is False` fail. Close behavior dispatches the real dialog close event, exercises both veto and accept paths, and checks visibility, state, and worker ownership. Late progress/completion callbacks are queued through real `wx.CallAfter`, then processed after dialog destruction; closed state and UI model values remain unchanged. All three nodes passed alone; the updater/migration neighborhood passed **63 tests**. No test nodeids changed and Packet C RATCHET remains the gate.
 
-### F. GUI truthfulness — IN_PROGRESS
+### F. GUI truthfulness — DEFECT_FOUND
 
-Audit event-to-visible-result evidence in tests/test_wave80_files_outputs.py, tests/test_wave78_jobs_details.py, tests/test_wx_terminal_webview.py, tests/test_wx_terminal_behavioral.py, tests/test_wx_updater_spec.py, tests/test_about_dialog.py, tests/test_app_updater.py, tests/test_corrective_jobs_details.py, and tests/test_wave2_wx_ui_parity.py. Keep static API-existence checks under audit/contract claims; require a real framework object/action/event and visible state for GUI claims.
+Both terminal fallback tests now instantiate their actual wx fallback paths. The WebView diagnostic fallback is visible, reports non-parity, and exposes enabled diagnostic controls; the public composition fallback is a visible TextCtrl, renders output, and clears through its real button event. The Files toolbar localization test creates a real remote-files panel and confirms its visible Download and Upload controls change to Turkish. The Wave78 no-selection/status node continues to prove there is no selected job while refreshing provider status; that node and both fallback tests plus the Files test passed together (4 passed).
+
+The Outputs localization test was rewritten to select a real job, create visible stdout/stderr tabs, and switch the live UI from English to Turkish. It **fails truthfully**: the page remains `Standard Output` while the expected translation is `Standart Çıktı`. Exact command: `python -m pytest tests/test_wave80_files_outputs.py::TestWave80Audit::test_runtime_language_switch_updates_outputs -q -p no:cacheprovider --tb=short` (exit 1, 1 failed). This is new GUI evidence; it is not a reproduced Phase-1 failure. `src/hpc_gui/wx_jobs.py:2297` reuses the cached `ch.label` from `state["resolved_channels"]` when refreshing labels, so existing channel labels do not follow the current language. No production code was changed. The truthful failing test is retained and committed; Packet F stopped here with `DEFECT_FOUND`. Independent Packets G–O may proceed under the execution prompt, and overall status remains `DEFECT_FOUND`.
+
+Renamed test node: `tests/test_wave80_files_outputs.py::TestFilesBehavior::test_context_menu_labels_localized` → `tests/test_wave80_files_outputs.py::TestFilesBehavior::test_files_toolbar_visible_labels_localized`. This is a change from translation-string assertions to actual visible Files toolbar behavior, not an equivalent context-menu test.
 
 ### G. Historical/Wave ownership review — NOT STARTED
 
