@@ -215,7 +215,9 @@ def test_publish_rebuilds_manifest_after_final_artifact_merge():
     assert "scripts/generate_release_manifest.py" in publish[manifest:report]
 
 
-def test_release_preflight_shares_the_ci_test_suite():
+@pytest.mark.release
+@pytest.mark.semantic
+def test_manual_release_jobs_share_the_release_preflight():
     shared = (ROOT / "scripts" / "release_test_suite.py").read_text(encoding="utf-8")
     assert '"not packaging"' in shared
     assert "check_i18n.py" in shared
@@ -231,8 +233,9 @@ def test_release_preflight_shares_the_ci_test_suite():
     for block in (linux, windows):
         assert "python scripts/ci.py release" in block
         assert "unittest discover" not in block
-    ci = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
-    assert "python scripts/ci.py macos" in ci
+    assert "workflow_dispatch:" in TEXT
+    for job in ("build-linux", "build-windows"):
+        assert "python scripts/ci.py release" in _job_block(job)
 
 @pytest.mark.release
 @pytest.mark.semantic
