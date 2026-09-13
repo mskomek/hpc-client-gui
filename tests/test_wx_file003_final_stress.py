@@ -72,14 +72,19 @@ def _settle(app, rounds: int = 6) -> None:
 @pytest.fixture
 def wx_app():
     load_language("en")
-    app = wx.App(False)
+    app = wx.App.Get()
+    owns_app = app is None
+    if owns_app:
+        app = wx.App(False)
+    baseline_windows = {id(window) for window in wx.GetTopLevelWindows()}
     yield app
     for window in wx.GetTopLevelWindows():
-        if window:
+        if window and id(window) not in baseline_windows:
             window.Destroy()
     app.ProcessPendingEvents()
     wx.SafeYield()
-    app.Destroy()
+    if owns_app:
+        app.Destroy()
 
 
 def _browser_windows():
@@ -204,6 +209,7 @@ def _rows(listing):
 def test_stress_a_right_click_retarget(wx_app, monkeypatch):
     import hpc_gui.wx_remote_files_view as view
 
+    assert wx.App.Get() is wx_app
     backend = MockRemoteFilesBackend()
     backend.entries.update({"/work/dir-a": True, "/work/c.txt": False, "/work/d.txt": False})
     frame = _remote_frame(wx_app, backend)
