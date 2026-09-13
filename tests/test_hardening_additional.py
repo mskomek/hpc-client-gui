@@ -7,7 +7,7 @@ import json
 import pathlib
 
 
-@pytest.mark.unit
+@pytest.mark.integration
 def test_template_api_filtering(tmp_path):
     """load_job_templates() vs filtered by plugin_id."""
     from hpc_gui.plugins.job_templates import load_job_templates
@@ -128,7 +128,9 @@ def test_plugin_template_action_uses_explicit_api():
     assert host2.called_with == "org.test.pluginb"
 
 
-@pytest.mark.contract
+@pytest.mark.audit
+@pytest.mark.qt
+@pytest.mark.wx
 def test_host_adapter_import_boundary():
     """Shared dispatcher must not import PySide6."""
     import pathlib
@@ -149,7 +151,7 @@ def test_host_adapter_import_boundary():
     assert "PySide6" not in wx_host_src
 
 
-@pytest.mark.unit
+@pytest.mark.contract
 def test_condition_validation_strict():
     """Unknown key, wrong bool type, unknown capability, wrong capability type must be rejected."""
     from hpc_gui.plugins.ui_contributions import validate_ui_contributions_dict, _parse_plugins_menu
@@ -202,10 +204,11 @@ def test_condition_validation_strict():
     assert len(contrib5.items) == 1
 
 
+@pytest.mark.semantic
 @pytest.mark.unit
-def test_localized_sort():
-    """Plugin roots sorted by localized display label, not plugin ID."""
-    from hpc_gui.plugins.ui_contributions import _parse_plugins_menu, get_display_label, MenuContext
+def test_localized_menu_labels_resolve_per_language():
+    """Localized menu labels resolve without changing plugin-defined item order."""
+    from hpc_gui.plugins.ui_contributions import _parse_plugins_menu, get_display_label
     from hpc_gui.plugins.models import InstalledPlugin, PluginManifest, PluginFile
 
     def mk(pid, label, labels=None):
@@ -218,24 +221,16 @@ def test_localized_sort():
         contrib, _ = _parse_plugins_menu(mf.ui_contributions["plugins_menu"], pid, "1.0.0")
         return InstalledPlugin(manifest=mf, directory=pathlib.Path("/tmp"), plugin_menu_contribution=contrib)
 
-    # IDs deliberately not alphabetical: z, a, m but labels Beta, Alpha, Gamma -> expected Alpha, Beta, Gamma
     p_z = mk("org.z", "Beta")
     p_a = mk("org.a", "Alpha")
     p_m = mk("org.m", "Gamma")
     contribs = [p_z.plugin_menu_contribution, p_a.plugin_menu_contribution, p_m.plugin_menu_contribution]
-    # Simulate sorting as done in main_window: by localized label
-    ctx_en = MenuContext(language="en")
-    sorted_contribs = sorted(contribs, key=lambda c: (get_display_label(c.label, c.labels, ctx_en.language).casefold(), c.label.casefold(), c.plugin_id.casefold()))
-    assert [c.plugin_id for c in sorted_contribs] == ["org.a", "org.z", "org.m"]
-    # Also test Turkish localized labels can change ordering
+    assert [get_display_label(c.label, c.labels, "en") for c in contribs] == ["Beta", "Alpha", "Gamma"]
     p_tr_z = mk("org.z", "Beta", {"tr": "Alfa"})
     p_tr_a = mk("org.a", "Alpha", {"tr": "Beta"})
     p_tr_m = mk("org.m", "Gamma", {"tr": "Gamma"})
     contribs_tr = [p_tr_z.plugin_menu_contribution, p_tr_a.plugin_menu_contribution, p_tr_m.plugin_menu_contribution]
-    ctx_tr = MenuContext(language="tr")
-    sorted_tr = sorted(contribs_tr, key=lambda c: (get_display_label(c.label, c.labels, ctx_tr.language).casefold(), c.label.casefold(), c.plugin_id.casefold()))
-    # In TR, org.z label "Alfa" should come before org.a "Beta"
-    assert [c.plugin_id for c in sorted_tr] == ["org.z", "org.a", "org.m"]
+    assert [get_display_label(c.label, c.labels, "tr") for c in contribs_tr] == ["Alfa", "Beta", "Gamma"]
 
     # Ensure internal item order preserved (plugin-defined items order authoritative)
     from hpc_gui.plugins.ui_contributions import _parse_plugins_menu as pm
@@ -247,7 +242,7 @@ def test_localized_sort():
     assert [i.id for i in contrib_ordered.items] == ["b", "a"]
 
 
-@pytest.mark.unit
+@pytest.mark.integration
 def test_plugin_isolation_real(tmp_path):
     """One valid + one malformed plugin: valid still contributes, bad does not crash."""
     from hpc_gui.plugins.ui_contributions import collect_plugin_menu_contributions
@@ -321,7 +316,8 @@ def test_plugin_isolation_real(tmp_path):
     assert contribs[0].plugin_id == "org.test.valid"
 
 
-@pytest.mark.runtime_smoke
+@pytest.mark.qt
+@pytest.mark.gui
 def test_menu_qt_smoke_offscreen():
     try:
         import os
@@ -361,8 +357,9 @@ def test_menu_qt_smoke_offscreen():
         w.deleteLater()
 
 
+@pytest.mark.wx
 @pytest.mark.qt
-@pytest.mark.gui
+@pytest.mark.audit
 def test_wx_dispatch_uses_host():
     src = pathlib.Path("src/hpc_gui/wx_shell.py").read_text(encoding="utf-8")
     assert "WxPluginMenuHost" in src
@@ -371,8 +368,8 @@ def test_wx_dispatch_uses_host():
     assert "dispatch_plugin_menu_action(action, plugin, editor_widget=editor_widget, host_window=frame)" not in src
 
 
-@pytest.mark.qt
-@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.audit
 def test_wx_submenu_disable_hide():
     src = pathlib.Path("src/hpc_gui/wx_shell.py").read_text(encoding="utf-8")
     # disable must actually disable children, not just pass
@@ -382,8 +379,9 @@ def test_wx_submenu_disable_hide():
     assert 'if not show and item.unavailable == "hide":' in src
 
 
+@pytest.mark.wx
 @pytest.mark.qt
-@pytest.mark.gui
+@pytest.mark.audit
 def test_dynamic_separators_qt_and_wx():
     import pathlib
     qt_src = pathlib.Path("src/hpc_gui/ui/main_window.py").read_text(encoding="utf-8")
@@ -471,8 +469,10 @@ def _wx_menu_snapshot(menu):
     return items
 
 
-@pytest.mark.qt
 @pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.subprocess
+@pytest.mark.resource
 def test_wx_separator_lifecycle_offscreen():
     import subprocess
     import sys

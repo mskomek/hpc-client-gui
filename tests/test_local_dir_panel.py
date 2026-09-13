@@ -41,7 +41,8 @@ class LocalDirPanelTests(unittest.TestCase):
         self.assertTrue(src.is_dir)
         self.assertGreater(pyproject.size, 0)
 
-    @pytest.mark.unit
+    @pytest.mark.gui
+    @pytest.mark.qt
     def test_panel_navigates_and_returns_to_parent(self) -> None:
         self.assertTrue(self.panel.set_dir(str(self.root / "src")))
         self.assertEqual(self.panel.current_dir, str(self.root / "src"))
@@ -77,7 +78,8 @@ class LocalDirPanelTests(unittest.TestCase):
                 return
         self.fail(f"local item not found: {name}")
 
-    @pytest.mark.unit
+    @pytest.mark.gui
+    @pytest.mark.qt
     def test_header_sorting_uses_name_size_type_and_modified_metadata(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -130,7 +132,9 @@ class LocalDirPanelTests(unittest.TestCase):
                 Qt.SortOrder.DescendingOrder,
             )
 
-    @pytest.mark.unit
+    @pytest.mark.gui
+    @pytest.mark.qt
+    @pytest.mark.resource
     def test_keyboard_copy_cut_paste_between_local_directories(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -159,7 +163,8 @@ class LocalDirPanelTests(unittest.TestCase):
             self.assertEqual((target_dir / "move.txt").read_text(encoding="utf-8"), "move")
             self.assertFalse((source_dir / "move.txt").exists())
 
-    @pytest.mark.integration
+    @pytest.mark.gui
+    @pytest.mark.qt
     def test_local_ctrl_v_emits_remote_clipboard_paste_request(self) -> None:
         from hpc_gui.services.file_clipboard import get_file_clipboard
 
@@ -175,14 +180,17 @@ class LocalDirPanelTests(unittest.TestCase):
         finally:
             clipboard.clear()
 
-    @pytest.mark.unit
+    @pytest.mark.gui
+    @pytest.mark.qt
     def test_f5_refreshes_visible_local_directory_tree(self) -> None:
         with patch.object(self.panel, "refresh") as refresh:
             self._press(Qt.Key.Key_F5)
 
         refresh.assert_called_once_with()
 
-    @pytest.mark.unit
+    @pytest.mark.gui
+    @pytest.mark.qt
+    @pytest.mark.resource
     def test_delete_removes_non_empty_local_directory(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -201,7 +209,9 @@ class LocalDirPanelTests(unittest.TestCase):
 
             self.assertFalse(target.exists())
 
-    @pytest.mark.unit
+    @pytest.mark.gui
+    @pytest.mark.qt
+    @pytest.mark.resource
     def test_delete_key_removes_selected_local_item(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

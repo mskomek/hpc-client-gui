@@ -13,6 +13,8 @@ wx = pytest.importorskip("wx")
 from hpc_gui.wx_local_files import show_local_files
 from hpc_gui.core.i18n import load_language
 
+pytestmark = pytest.mark.resource
+
 
 def _pump(app, pred, timeout=2):
     dl = time.monotonic() + timeout
@@ -71,55 +73,64 @@ class _Dialog:
 class TestSelectionPreservation:
     """Verify selection is preserved after rename operations."""
 
-    @pytest.mark.audit
-    def test_rename_preserves_selection(self, wx_app, tmp_path):
-        """After renaming a file, the renamed file should be selected."""
-        files = [
-            "sonuç.txt",
-            "ölçüm_日本語.txt",
-            "standard.txt",
-            "★_Favorites.txt",
-            "research_İstanbul.txt",
-        ]
-        for name in files:
-            (tmp_path / name).write_text(f"content of {name}", encoding="utf-8")
-
+    @pytest.mark.wx
+    @pytest.mark.gui
+    @pytest.mark.regression
+    def test_rename_preserves_selection(self, wx_app, tmp_path, monkeypatch):
+        """Renaming through the visible menu keeps the new row selected."""
+        source_name = "ölçüm_日本語.txt"
+        target_name = "yeniden_adlandır.txt"
+        (tmp_path / source_name).write_text("selected", encoding="utf-8")
+        (tmp_path / "other.txt").write_text("other", encoding="utf-8")
         frame = _local(wx_app, tmp_path)
         listing = frame._wx_local_controls["listing"]
-        _pump(wx_app, lambda: listing.GetItemCount() == len(files))
+        _pump(wx_app, lambda: listing.GetItemCount() == 2)
+        source_index = next(
+            index for index in range(listing.GetItemCount())
+            if listing.GetItemText(index) == source_name
+        )
+        listing.Select(source_index)
+        assert listing.IsSelected(source_index)
+        monkeypatch.setattr(wx, "TextEntryDialog", lambda *a, **k: _Dialog(target_name))
 
-        # Select the 3rd file (ölçüm_日本語.txt)
-        listing.Select(2)
-        assert listing.IsSelected(2)
+        orig = listing.PopupMenu
 
-        # Rename it using the model directly
-        model = frame._wx_local_model
-        old_path = tmp_path / "ölçüm_日本語.txt"
-        model.rename(old_path, "yeniden_adlandır.txt")
+        def choose_rename(menu):
+            for item in menu.GetMenuItems():
+                if item.GetItemLabelText() == "Rename":
+                    listing.ProcessEvent(wx.CommandEvent(wx.wxEVT_MENU, item.GetId()))
+                    return
 
-        # Wait for file system to update
-        _pump(wx_app, lambda: (tmp_path / "yeniden_adlandır.txt").exists())
+        listing.PopupMenu = choose_rename
+        try:
+            point = listing.ClientToScreen(
+                wx.Point(5, listing.GetItemRect(source_index).y + 2)
+            )
+            event = wx.ContextMenuEvent(wx.wxEVT_CONTEXT_MENU, listing.GetId())
+            event.SetPosition(point)
+            listing.ProcessEvent(event)
+        finally:
+            listing.PopupMenu = orig
 
-        # Manually refresh the listing by calling list_entries
-        new_entries = model.list_entries()
-        new_names = [e.path.name for e in new_entries]
-
-        # Verify old name is gone
-        assert "ölçüm_日本語.txt" not in new_names, "Old name should not exist"
-
-        # Verify other files are unaffected
-        assert "sonuç.txt" in new_names
-        assert "standard.txt" in new_names
-        assert "★_Favorites.txt" in new_names
-        assert "research_İstanbul.txt" in new_names
-
-        # Verify renamed file exists
-        assert "yeniden_adlandır.txt" in new_names
+        _pump(
+            wx_app,
+            lambda: any(
+                listing.GetItemText(index) == target_name
+                for index in range(listing.GetItemCount())
+            ),
+        )
+        target_index = next(
+            index for index in range(listing.GetItemCount())
+            if listing.GetItemText(index) == target_name
+        )
+        assert listing.IsSelected(target_index)
 
     @pytest.mark.wx
     @pytest.mark.gui
-    def test_rename_error_shows_unicode_filename(self, wx_app, tmp_path, monkeypatch):
-        """Error dialog should show the Unicode filename."""
+    def test_invalid_rename_shows_error_and_preserves_unicode_source(
+        self, wx_app, tmp_path, monkeypatch,
+    ):
+        """Invalid rename leaves the Unicode source intact and reports an error."""
         src = tmp_path / "日本語テスト.txt"
         src.write_text("content", encoding="utf-8")
 
@@ -154,7 +165,9 @@ class TestSelectionPreservation:
         listing.ProcessEvent(event)
         listing.PopupMenu = orig
 
-        # File should still exist with original name
+        _pump(wx_app, lambda: bool(captured_errors))
+        assert len(captured_errors) == 1
+        assert captured_errors[0]
         assert src.exists(), "File should not be renamed on error"
 
 
@@ -167,8 +180,10 @@ class TestContextMenuEventWiring:
     """Verify every context menu item has real event wiring."""
 
     @pytest.mark.wx
-    def test_context_menu_open_wired(self, wx_app, tmp_path):
+    def test_context_menu_open_wired(self, wx_app, tmp_path, monkeypatch):
         """Open menu item should trigger file open."""
+        from hpc_gui import wx_local_files
+
         (tmp_path / "test.txt").write_text("content", encoding="utf-8")
 
         frame = _local(wx_app, tmp_path)
@@ -176,10 +191,27 @@ class TestContextMenuEventWiring:
         _pump(wx_app, lambda: listing.GetItemCount() == 1)
         listing.Select(0)
 
-        # Use model directly to verify activation works
-        model = frame._wx_local_model
-        result = model.activate(tmp_path / "test.txt")
-        assert result == "edit", "activate should return 'edit' for files"
+        opened = []
+        monkeypatch.setattr(
+            wx_local_files, "reveal_in_file_manager", lambda path: opened.append(path)
+        )
+        orig = listing.PopupMenu
+
+        def choose_open(menu):
+            for item in menu.GetMenuItems():
+                if item.GetItemLabelText() == "Open":
+                    listing.ProcessEvent(wx.CommandEvent(wx.wxEVT_MENU, item.GetId()))
+                    break
+
+        listing.PopupMenu = choose_open
+        try:
+            point = listing.ClientToScreen(wx.Point(5, listing.GetItemRect(0).y + 2))
+            event = wx.ContextMenuEvent(wx.wxEVT_CONTEXT_MENU, listing.GetId())
+            event.SetPosition(point)
+            listing.ProcessEvent(event)
+        finally:
+            listing.PopupMenu = orig
+        assert opened == [tmp_path / "test.txt"]
 
     @pytest.mark.wx
     def test_context_menu_rename_wired(self, wx_app, tmp_path, monkeypatch):
@@ -241,6 +273,8 @@ class TestContextMenuEventWiring:
     @pytest.mark.wx
     def test_context_menu_cut_clipboard(self, wx_app, tmp_path):
         """Cut menu item should put file in clipboard with move=True."""
+        from hpc_gui.core.i18n import t
+
         (tmp_path / "cut.txt").write_text("content", encoding="utf-8")
 
         frame = _local(wx_app, tmp_path)
@@ -248,9 +282,23 @@ class TestContextMenuEventWiring:
         _pump(wx_app, lambda: listing.GetItemCount() == 1)
         listing.Select(0)
 
-        # Use model directly to verify copy/cut works
         model = frame._wx_local_model
-        model.copy([tmp_path / "cut.txt"], move=True)
+        orig = listing.PopupMenu
+
+        def choose_cut(menu):
+            for item in menu.GetMenuItems():
+                if item.GetItemLabelText() == t("dirs.move"):
+                    listing.ProcessEvent(wx.CommandEvent(wx.wxEVT_MENU, item.GetId()))
+                    break
+
+        listing.PopupMenu = choose_cut
+        try:
+            point = listing.ClientToScreen(wx.Point(5, listing.GetItemRect(0).y + 2))
+            event = wx.ContextMenuEvent(wx.wxEVT_CONTEXT_MENU, listing.GetId())
+            event.SetPosition(point)
+            listing.ProcessEvent(event)
+        finally:
+            listing.PopupMenu = orig
 
         assert len(model.clipboard) == 1, "Clipboard should have one item"
         assert model.clipboard_move is True, "Should be move (cut)"
@@ -265,13 +313,16 @@ class TestContextMenuEventWiring:
         _pump(wx_app, lambda: listing.GetItemCount() == 1)
         listing.Select(0)
 
-        if not wx.TheClipboard.IsOpened():
-            wx.TheClipboard.Open()
+        if wx.TheClipboard.IsOpened():
+            wx.TheClipboard.Close()
 
+        chosen = []
         orig = listing.PopupMenu
         def choose_copy_path(menu):
             for item in menu.GetMenuItems():
-                if "Copy Path" in item.GetItemLabelText():
+                label = item.GetItemLabelText()
+                if "copy" in label.casefold() and "path" in label.casefold():
+                    chosen.append(label)
                     listing.ProcessEvent(wx.CommandEvent(wx.wxEVT_MENU, item.GetId()))
                     break
         listing.PopupMenu = choose_copy_path
@@ -282,7 +333,13 @@ class TestContextMenuEventWiring:
         listing.ProcessEvent(event)
         listing.PopupMenu = orig
 
-        if wx.TheClipboard.IsOpened():
+        assert chosen, "Copy Path action was not present in the context menu"
+        assert wx.TheClipboard.Open()
+        try:
+            clipboard_text = wx.TextDataObject()
+            assert wx.TheClipboard.GetData(clipboard_text)
+            assert clipboard_text.GetText() == str(tmp_path / "path_test.txt")
+        finally:
             wx.TheClipboard.Close()
 
     @pytest.mark.wx
@@ -361,18 +418,17 @@ class TestPaneLabels:
         assert "local" in title.lower() or "file" in title.lower() or "dizin" in title.lower()
 
     @pytest.mark.wx
-    def test_toolbar_button_tooltips(self, wx_app, tmp_path):
-        """Toolbar buttons should have tooltips."""
+    def test_toolbar_buttons_have_visible_affordance(self, wx_app, tmp_path):
+        """Each toolbar control is visible and has a tooltip or a text label."""
         frame = _local(wx_app, tmp_path)
         controls = frame._wx_local_controls
 
-        # Check if buttons exist and have tooltips
         for key in ["refresh_btn", "btn_drives", "btn_back", "btn_parent"]:
-            if key in controls and controls[key]:
-                btn = controls[key]
-                tooltip = btn.GetToolTip()
-                # Tooltip should exist or button should have a label
-                assert tooltip or btn.GetLabel(), f"Button {key} should have tooltip or label"
+            button = controls[key]
+            assert button.IsShownOnScreen(), f"Button {key} should be visible"
+            assert button.GetToolTip() or button.GetLabel(), (
+                f"Button {key} should have a tooltip or text label"
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -389,34 +445,21 @@ class TestToolbarAlignment:
         frame = _local(wx_app, tmp_path)
         controls = frame._wx_local_controls
 
-        if "btn_back" in controls and controls["btn_back"]:
-            btn_back = controls["btn_back"]
-            # Initially no history, back should be disabled
-            assert not btn_back.IsEnabled(), "Back button should be disabled initially"
+        assert not controls["btn_back"].IsEnabled()
 
     @pytest.mark.wx
-    def test_forward_button_disabled_when_no_forward(self, wx_app, tmp_path):
-        """Forward button should be disabled when no forward history."""
-        frame = _local(wx_app, tmp_path)
+    def test_parent_button_navigates_to_parent_directory(self, wx_app, tmp_path):
+        """The visible parent button navigates from a nested folder."""
+        parent = tmp_path / "parent"
+        nested = parent / "child"
+        nested.mkdir(parents=True)
+        frame = _local(wx_app, nested)
         controls = frame._wx_local_controls
-
-        # Forward button might not exist yet, check if it does
-        if "btn_forward" in controls and controls["btn_forward"]:
-            btn_forward = controls["btn_forward"]
-            assert not btn_forward.IsEnabled(), "Forward button should be disabled initially"
-
-    @pytest.mark.wx
-    def test_up_button_disabled_at_root(self, wx_app, tmp_path):
-        """Up button should be disabled at root directory."""
-        frame = _local(wx_app, tmp_path)
-        controls = frame._wx_local_controls
-
-        if "btn_parent" in controls and controls["btn_parent"]:
-            btn_parent = controls["btn_parent"]
-            # If we're at root, up should be disabled
-            model = frame._wx_local_model
-            if model.current_path.parent == model.current_path:
-                assert not btn_parent.IsEnabled(), "Up button should be disabled at root"
+        button = controls["btn_parent"]
+        assert button.IsEnabled()
+        button.ProcessEvent(wx.CommandEvent(wx.wxEVT_BUTTON, button.GetId()))
+        _pump(wx_app, lambda: controls["path"].GetValue() == str(parent.resolve()))
+        assert frame._wx_local_model.current_path == parent.resolve()
 
     @pytest.mark.wx
     def test_refresh_button_always_enabled(self, wx_app, tmp_path):
@@ -424,9 +467,7 @@ class TestToolbarAlignment:
         frame = _local(wx_app, tmp_path)
         controls = frame._wx_local_controls
 
-        if "refresh_btn" in controls and controls["refresh_btn"]:
-            btn_refresh = controls["refresh_btn"]
-            assert btn_refresh.IsEnabled(), "Refresh button should always be enabled"
+        assert controls["refresh_btn"].IsEnabled()
 
 
 # ---------------------------------------------------------------------------
@@ -443,11 +484,8 @@ class TestTextFieldLabels:
         frame = _local(wx_app, tmp_path)
         controls = frame._wx_local_controls
 
-        if "path" in controls and controls["path"]:
-            path_ctrl = controls["path"]
-            # Path control should show current directory
-            path_text = path_ctrl.GetValue() if hasattr(path_ctrl, "GetValue") else str(path_ctrl.GetLabel())
-            assert path_text, "Path bar should show current directory"
+        path_ctrl = controls["path"]
+        assert path_ctrl.GetValue() == str(Path(tmp_path).resolve())
 
     @pytest.mark.wx
     def test_path_bar_editable(self, wx_app, tmp_path):
@@ -455,11 +493,7 @@ class TestTextFieldLabels:
         frame = _local(wx_app, tmp_path)
         controls = frame._wx_local_controls
 
-        if "path" in controls and controls["path"]:
-            path_ctrl = controls["path"]
-            # Path control should be editable
-            if hasattr(path_ctrl, "IsEditable"):
-                assert path_ctrl.IsEditable(), "Path bar should be editable"
+        assert controls["path"].IsEditable()
 
 
 # ---------------------------------------------------------------------------
@@ -468,29 +502,11 @@ class TestTextFieldLabels:
 
 @pytest.mark.gui
 class TestStatusFeedback:
-    """Verify status bar provides useful feedback."""
+    """Verify the directory listing renders the expected file count."""
 
     @pytest.mark.wx
-    def test_status_bar_exists(self, wx_app, tmp_path):
-        """Status bar should exist at the bottom of the window."""
-        frame = _local(wx_app, tmp_path)
-
-        # Check if status bar exists
-        status_bar = frame.GetStatusBar() if hasattr(frame, "GetStatusBar") else None
-        # Or check for a status text control
-        if not status_bar:
-            # Look for any status-related control
-            for child in frame.GetChildren():
-                if hasattr(child, "SetStatusText") or hasattr(child, "SetValue"):
-                    status_bar = child
-                    break
-
-        # Status bar existence is optional but recommended
-        # Just verify the frame has some status mechanism
-
-    @pytest.mark.wx
-    def test_listing_shows_file_count(self, wx_app, tmp_path):
-        """After listing, status should show file count or similar info."""
+    def test_listing_renders_all_files(self, wx_app, tmp_path):
+        """The visible listing should contain each file in the directory."""
         for i in range(5):
             (tmp_path / f"file_{i}.txt").write_text(f"content {i}", encoding="utf-8")
 
@@ -500,6 +516,3 @@ class TestStatusFeedback:
 
         # Verify listing shows all files
         assert listing.GetItemCount() == 5
-
-        # Check if there's a status message
-        # This is informational - just verify the listing works

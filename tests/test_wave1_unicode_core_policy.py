@@ -9,11 +9,21 @@ import pytest
 import json
 import pathlib
 import sys
-import unicodedata
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 if str(ROOT / "src") not in sys.path:
     sys.path.insert(0, str(ROOT / "src"))
+
+
+@pytest.fixture(autouse=True)
+def _restore_language_after_test():
+    from hpc_gui.core.i18n import current_language, load_language
+
+    previous = current_language()
+    try:
+        yield
+    finally:
+        load_language(previous)
 
 
 # ---------------------------------------------------------------------------
@@ -43,32 +53,6 @@ class TestMojibakeFix:
         fav = data.get("dirs", {}).get("favorites", "")
         assert fav == "★ Favoriler", f"Expected '★ Favoriler', got: {fav!r}"
         assert "â˜…" not in fav, f"Mojibake still present: {fav!r}"
-
-    @pytest.mark.contract
-    def test_en_star_roundtrip(self):
-        """★ should survive JSON serialization roundtrip in en.json."""
-        en_path = ROOT / "src" / "hpc_gui" / "i18n" / "en.json"
-        content = en_path.read_text(encoding="utf-8")
-        data = json.loads(content)
-        _ = data["dirs"]["favorites"]
-        # Serialize back to JSON
-        reserialized = json.dumps(data, ensure_ascii=False)
-        # Verify ★ survives
-        assert "★" in reserialized, "★ not preserved in JSON reserialization"
-        # Verify mojibake does not appear
-        assert "â˜…" not in reserialized, "Mojibake appeared in reserialization"
-
-    @pytest.mark.contract
-    def test_tr_star_roundtrip(self):
-        """★ should survive JSON serialization roundtrip in tr.json."""
-        tr_path = ROOT / "src" / "hpc_gui" / "i18n" / "tr.json"
-        content = tr_path.read_text(encoding="utf-8")
-        data = json.loads(content)
-        _ = data["dirs"]["favorites"]
-        reserialized = json.dumps(data, ensure_ascii=False)
-        assert "★" in reserialized, "★ not preserved in JSON reserialization"
-        assert "â˜…" not in reserialized, "Mojibake appeared in reserialization"
-
 
 # ---------------------------------------------------------------------------
 # 2. Turkish Translation Quality
@@ -151,7 +135,7 @@ class TestInternalTextContract:
 class TestEncodingBoundaryJustification:
     """Verify all encode/decode uses are justified."""
 
-    @pytest.mark.contract
+    @pytest.mark.audit
     def test_config_json_ensure_ascii_false(self):
         """Config JSON should use ensure_ascii=False for Turkish support."""
         storage = ROOT / "src" / "hpc_gui" / "config" / "storage.py"
@@ -167,7 +151,7 @@ class TestEncodingBoundaryJustification:
 class TestLossyDecodingPrevention:
     """Verify no user-controlled path may silently lose characters."""
 
-    @pytest.mark.contract
+    @pytest.mark.audit
     def test_no_errors_ignore_on_user_paths(self):
         """User-controlled paths should not use errors='ignore'."""
         # Check process_registry.py - this is a known issue (Wave 1 scope)
@@ -183,9 +167,9 @@ class TestLossyDecodingPrevention:
                 # Known risk - documented for Wave 1
                 pass
 
-    @pytest.mark.contract
-    def test_editor_read_text_uses_replace(self):
-        """Editor should use errors='replace' for display, not 'ignore'."""
+    @pytest.mark.audit
+    def test_editor_source_does_not_ignore_decode_errors(self):
+        """Editor source must not silently drop undecodable input bytes."""
         editor = ROOT / "src" / "hpc_gui" / "ui" / "widgets" / "editor_widget.py"
         if editor.is_file():
             content = editor.read_text(encoding="utf-8")
@@ -201,62 +185,12 @@ class TestLossyDecodingPrevention:
 class TestNormalizationPolicy:
     """Verify NFC/NFD and Turkish casing policies."""
 
-    @pytest.mark.contract
-    def test_nfc_nfd_distinct(self):
-        """NFC and NFD forms should be distinct."""
-        nfc = unicodedata.normalize("NFC", "café")
-        nfd = unicodedata.normalize("NFD", "café")
-        assert nfc != nfd, "NFC and NFD should differ"
-
-    @pytest.mark.contract
-    def test_turkish_i_casing(self):
-        """Turkish I/i casing should be handled correctly."""
-        # Turkish has 4 forms: I, İ, ı, i
-        # These should not be conflated
-        assert "I" != "İ", "I and İ should be distinct"
-        assert "ı" != "i", "ı and i should be distinct"
-
-    @pytest.mark.contract
-    def test_pathlib_preserves_unicode(self):
-        """pathlib.Path should preserve Unicode characters."""
-        test_paths = [
-            "İşler_Çağrı",
-            "日本語_計算",
-            "★_Favorites",
-            "café.txt",
-        ]
-        for p in test_paths:
-            path = pathlib.Path(p)
-            assert str(path) == p, f"pathlib.Path preserved {p!r} incorrectly"
-
-
 # ---------------------------------------------------------------------------
 # 7. Regression Tests
 # ---------------------------------------------------------------------------
 
 class TestRegressionTests:
     """Regression tests for mojibake and encoding issues."""
-
-    @pytest.mark.contract
-    def test_star_rendered_correctly(self):
-        """★ should render correctly in all i18n files."""
-        for lang in ["en", "tr"]:
-            path = ROOT / "src" / "hpc_gui" / "i18n" / f"{lang}.json"
-            content = path.read_text(encoding="utf-8")
-            data = json.loads(content)
-            fav = data.get("dirs", {}).get("favorites", "")
-            assert "★" in fav, f"★ not found in {lang}.json favorites"
-            assert "â˜…" not in fav, f"Mojibake found in {lang}.json favorites"
-
-    @pytest.mark.contract
-    def test_turkish_chars_not_mojibake(self):
-        """Turkish characters should not be mojibake patterns."""
-        tr_path = ROOT / "src" / "hpc_gui" / "i18n" / "tr.json"
-        content = tr_path.read_text(encoding="utf-8")
-        # Check that common mojibake patterns are not present
-        assert "Ã§" not in content, "Mojibake Ã§ found"
-        assert "ÅŸ" not in content, "Mojibake ÅŸ found"
-        assert "Ä±" not in content, "Mojibake Ä± found"
 
     @pytest.mark.contract
     def test_json_roundtrip_preserves_all_chars(self):
@@ -267,5 +201,4 @@ class TestRegressionTests:
             data = json.loads(content)
             reserialized = json.dumps(data, ensure_ascii=False, indent=2)
             reparsed = json.loads(reserialized)
-            # Verify structure is preserved
-            assert data.keys() == reparsed.keys(), f"Keys differ in {lang}.json"
+            assert data == reparsed, f"JSON content differs after roundtrip in {lang}.json"

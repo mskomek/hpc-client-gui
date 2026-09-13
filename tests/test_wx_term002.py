@@ -5,7 +5,7 @@ import pytest
 
 wx = pytest.importorskip("wx")
 
-from hpc_gui.core.i18n import load_language
+from hpc_gui.core.i18n import current_language, load_language
 from hpc_gui.wx_local_files import LocalEntry
 from hpc_gui.wx_shell import _dispatch, create_shell_frame
 
@@ -31,6 +31,7 @@ class Files:
 
 @pytest.fixture
 def shell(tmp_path):
+    previous_language = current_language()
     load_language("en")
     app = wx.App(False)
     ssh = SSH()
@@ -40,12 +41,15 @@ def shell(tmp_path):
     lifecycle.shutdown()
     for window in list(wx.GetTopLevelWindows()):
         window.Destroy()
-    app.ProcessPendingEvents()
+    for _ in range(3):
+        app.ProcessPendingEvents()
+        wx.Yield()
     app.Destroy()
+    load_language(previous_language)
 
 
-@pytest.mark.wx
 @pytest.mark.gui
+@pytest.mark.wx
 def test_file_view_shell_script_runs_in_real_terminal_path(shell):
     _app, shell_frame, lifecycle, state, ssh, tmp_path = shell
     script = tmp_path / "hello world.sh"
@@ -67,8 +71,8 @@ def test_file_view_shell_script_runs_in_real_terminal_path(shell):
     assert ssh.commands == [f"bash -- {shlex.quote(str(script))}\n"]
 
 
-@pytest.mark.wx
 @pytest.mark.gui
+@pytest.mark.wx
 def test_editor_run_button_uses_real_wx_event_and_terminal_path(shell):
     _app, shell_frame, lifecycle, state, ssh, _tmp_path = shell
     _dispatch("NAV-EDITOR", shell_frame, lifecycle, state)
@@ -85,7 +89,9 @@ def test_editor_run_button_uses_real_wx_event_and_terminal_path(shell):
     assert ssh.commands == ["bash -- /remote/job.slurm\n"]
 
 
-@pytest.mark.contract
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.regression
 def test_fallback_terminal_preserves_unicode_and_terminal_keys(monkeypatch):
     from hpc_gui import wx_terminal_webview
     from hpc_gui.wx_terminal import TerminalModel, build_terminal_panel
@@ -112,4 +118,6 @@ def test_fallback_terminal_preserves_unicode_and_terminal_keys(monkeypatch):
         assert sent == ["ç", "\x1b[A", "\x1b[Z"]
     finally:
         frame.Destroy()
-        app.ProcessPendingEvents()
+        for _ in range(3):
+            app.ProcessPendingEvents()
+            wx.Yield()

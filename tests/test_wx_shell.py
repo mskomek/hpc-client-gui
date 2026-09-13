@@ -6,15 +6,16 @@ import pytest
 wx = pytest.importorskip("wx")
 
 
-@pytest.mark.runtime_smoke
+@pytest.mark.audit
+@pytest.mark.wx
 def test_wx_shell_is_optional_and_has_migration_entrypoint():
     source = Path("src/hpc_gui/wx_shell.py").read_text(encoding="utf-8")
     assert "import wx" in source and "from PySide6" not in source
     assert "--wx" in Path("src/hpc_gui/__main__.py").read_text(encoding="utf-8")
 
 
+@pytest.mark.audit
 @pytest.mark.wx
-@pytest.mark.gui
 def test_wx_shell_uses_shared_commands_and_responsive_start_size():
     source = Path("src/hpc_gui/wx_shell.py").read_text(encoding="utf-8")
     # Spec §3: recommended default 1440×900, min 1280×760 (accept legacy 960×640 for backward compat)
@@ -22,8 +23,8 @@ def test_wx_shell_uses_shared_commands_and_responsive_start_size():
     assert "TaskBarIcon" in source and "lifecycle.shutdown" in source
 
 
+@pytest.mark.audit
 @pytest.mark.wx
-@pytest.mark.gui
 def test_wx_shell_dispatches_core_views():
     source = Path("src/hpc_gui/wx_shell.py").read_text(encoding="utf-8")
     assert 'command_id == "NAV-FILES"' in source
@@ -54,8 +55,8 @@ def test_wx_shell_dispatches_core_views():
     assert "lifecycle.register_cleanup(destroy_tray)" in source and "def destroy_tray" in source
 
 
+@pytest.mark.integration
 @pytest.mark.wx
-@pytest.mark.gui
 def test_directories_default_download_uses_transfer_queue(monkeypatch, tmp_path):
     from hpc_gui import wx_directories_view, wx_remote_files_view, wx_shell
 
@@ -91,8 +92,8 @@ def test_directories_default_download_uses_transfer_queue(monkeypatch, tmp_path)
         app.ProcessPendingEvents()
 
 
-@pytest.mark.wx
-@pytest.mark.gui
+@pytest.mark.integration
+@pytest.mark.concurrency
 def test_wx_shell_remote_operation_keeps_session_snapshot(monkeypatch):
     from hpc_gui.wx_shell import _remote_files_callbacks
     import hpc_gui.wx_remote_files_view as remote_view

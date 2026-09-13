@@ -55,6 +55,7 @@ def _make_editor():
 
 @pytest.mark.qt
 @pytest.mark.gui
+@pytest.mark.resource
 def test_editor_local_open_save_roundtrip(qapp, tmp_path, monkeypatch):
     target = tmp_path / "case.jou"
     target.write_text("/display set\n", encoding="utf-8")
@@ -72,6 +73,7 @@ def test_editor_local_open_save_roundtrip(qapp, tmp_path, monkeypatch):
 
 @pytest.mark.qt
 @pytest.mark.gui
+@pytest.mark.resource
 def test_editor_local_reload_reads_disk(qapp, tmp_path):
     target = tmp_path / "notes.txt"
     target.write_text("first\n", encoding="utf-8")
@@ -85,6 +87,7 @@ def test_editor_local_reload_reads_disk(qapp, tmp_path):
 
 @pytest.mark.qt
 @pytest.mark.gui
+@pytest.mark.resource
 def test_editor_rejects_non_utf8_without_rewriting(qapp, tmp_path):
     target = tmp_path / "legacy.txt"
     original = b"\xff\xfelegacy"
@@ -133,7 +136,7 @@ class _FakeTreeItem:
 
 
 @pytest.mark.qt
-@pytest.mark.gui
+@pytest.mark.unit
 def test_local_panel_edit_signal_emission(qapp, tmp_path, monkeypatch):
     from hpc_gui.ui.widgets.local_dir_panel import LocalDirPanel
 
@@ -155,7 +158,7 @@ def test_local_panel_edit_signal_emission(qapp, tmp_path, monkeypatch):
 
 
 @pytest.mark.qt
-@pytest.mark.gui
+@pytest.mark.unit
 def test_local_panel_edit_ignores_directories(qapp, tmp_path, monkeypatch):
     from hpc_gui.ui.widgets.local_dir_panel import LocalDirPanel
 
@@ -169,7 +172,8 @@ def test_local_panel_edit_ignores_directories(qapp, tmp_path, monkeypatch):
 
 
 @pytest.mark.qt
-@pytest.mark.gui
+@pytest.mark.unit
+@pytest.mark.resource
 def test_folder_contains_supported_file(qapp, tmp_path, monkeypatch):
     from hpc_gui.ui.widgets.local_dir_panel import LocalDirPanel
 
@@ -190,7 +194,8 @@ def test_folder_contains_supported_file(qapp, tmp_path, monkeypatch):
 
 
 @pytest.mark.qt
-@pytest.mark.gui
+@pytest.mark.unit
+@pytest.mark.resource
 def test_tools_for_folder_lists_supporting_tools(qapp, tmp_path, monkeypatch):
     from hpc_gui.plugins.linter_tools import LinterTool
     from hpc_gui.ui.widgets.local_dir_panel import LocalDirPanel

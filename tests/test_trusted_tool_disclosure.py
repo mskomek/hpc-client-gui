@@ -13,7 +13,7 @@ def qapp():
     return QApplication.instance() or QApplication([])
 
 
-@pytest.mark.unit
+@pytest.mark.contract
 def test_trusted_tool_disclosure_is_localized_and_accurate():
     load_language("en")
     assert "not OS-sandboxed" in t("plugins.trusted_tool_disclosure")

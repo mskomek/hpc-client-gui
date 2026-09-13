@@ -32,7 +32,7 @@ def _run(commands=None, **kwargs):
     return result
 
 
-@pytest.mark.integration
+@pytest.mark.reporting
 def test_self_test_statuses_and_optional_failures():
     result = _run({"command -v sha256sum": 1, "command -v squeue": 1})
     items = {item.id: item for section in result.sections for item in section.items}
@@ -43,7 +43,7 @@ def test_self_test_statuses_and_optional_failures():
     assert items["quota"].status == NOT_CONFIGURED
 
 
-@pytest.mark.integration
+@pytest.mark.reporting
 def test_self_test_critical_failure_and_required_scheduler_tool():
     result = _run({"command -v squeue": 1}, required_scheduler_tools=("squeue",))
     items = {item.id: item for section in result.sections for item in section.items}
@@ -51,7 +51,7 @@ def test_self_test_critical_failure_and_required_scheduler_tool():
     assert result.status == FAIL
 
 
-@pytest.mark.integration
+@pytest.mark.reporting
 def test_self_test_connection_failures_are_critical_and_later_probes_not_tested():
     dns = _run(dns_resolve=lambda *_: (_ for _ in ()).throw(OSError()))
     assert dns.status == FAIL
@@ -72,7 +72,7 @@ def test_self_test_connection_failures_are_critical_and_later_probes_not_tested(
     assert items["checksum"].status == "NOT_TESTED"
 
 
-@pytest.mark.integration
+@pytest.mark.reporting
 def test_self_test_storage_account_and_probe_exception_are_safe():
     result = _run(
         {"command -v squeue": 0},

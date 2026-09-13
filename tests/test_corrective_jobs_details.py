@@ -1,9 +1,12 @@
 """Corrective tests for Jobs + Details tabs — Sections 3-48."""
 
+import threading
+import time
+
 import pytest
 wx = pytest.importorskip("wx")
 
-from hpc_gui.core.i18n import load_language, t
+from hpc_gui.core.i18n import current_language, load_language, t
 from hpc_gui.services.raw_command_result import RawCommandResult
 from hpc_gui.wx_jobs import build_jobs_panel
 
@@ -117,8 +120,9 @@ class TestSec3_NoAutoSwitch:
 # === Sec 6: Raw Accounting button opens viewer ===
 
 @pytest.mark.integration
-class TestSec6_RawAccountingButton:
-    def test_raw_accounting_opens_viewer(self):
+@pytest.mark.wx
+class TestSec6_RawAccountingResult:
+    def test_job_selection_stores_raw_accounting_result(self):
         load_language("en")
         app, frame, panel = _build_panel(
             refresh_sacct=lambda jid: f"JOBID|STATE\n{jid}|RUNNING",
@@ -145,6 +149,7 @@ class TestSec6_RawAccountingButton:
 # === Sec 7: Three independent raw sources ===
 
 @pytest.mark.integration
+@pytest.mark.wx
 class TestSec7_RawSourceIsolation:
     def test_raw_sources_are_independent(self):
         load_language("en")
@@ -259,20 +264,55 @@ class TestSec23_RawViewerClose:
 
     @pytest.mark.wx
     @pytest.mark.gui
-    def test_raw_viewer_refresh_callback_is_called(self):
-        """Verify refresh callback is callable and returns RawCommandResult."""
-        call_count = [0]
+    def test_raw_viewer_refresh_updates_visible_output(self, monkeypatch):
+        previous_language = current_language()
+        load_language("en")
+        app = wx.App.Get() or wx.App(False)
+        frame = wx.Frame(None)
+        called = threading.Event()
 
-        def my_refresh():
-            call_count[0] += 1
+        def refresh():
+            called.set()
             return RawCommandResult.from_response(
                 source_id="scontrol", command="scontrol show job 1001",
-                stdout="refreshed", exit_code=0,
+                stdout="refreshed output", exit_code=0,
             )
-        # Just verify the callback works (don't open modal dialog)
-        result = my_refresh()
-        assert call_count[0] == 1
-        assert result.stdout == "refreshed"
+
+        def show_modal(dialog):
+            button = next(
+                child for child in dialog.GetChildren()
+                if isinstance(child, wx.Button) and child.GetLabel() == "Refresh"
+            )
+            button.ProcessEvent(wx.CommandEvent(wx.wxEVT_BUTTON, button.GetId()))
+            deadline = time.monotonic() + 2
+            while time.monotonic() < deadline:
+                app.ProcessPendingEvents()
+                wx.Yield()
+                if any(
+                    isinstance(child, wx.TextCtrl)
+                    and child.GetValue() == "refreshed output"
+                    for child in dialog.GetChildren()
+                ):
+                    return wx.ID_OK
+                wx.MilliSleep(5)
+            return wx.ID_CANCEL
+
+        monkeypatch.setattr(wx.Dialog, "ShowModal", show_modal)
+        try:
+            from hpc_gui.wx_raw_viewer import show_raw_viewer
+
+            initial = RawCommandResult.from_response(
+                source_id="scontrol", command="scontrol show job 1001",
+                stdout="initial output", exit_code=0,
+            )
+            show_raw_viewer(frame, initial, refresh_callback=refresh)
+            assert called.is_set()
+        finally:
+            frame.Destroy()
+            for _ in range(3):
+                wx.Yield()
+                app.ProcessPendingEvents()
+            load_language(previous_language)
 
 
 # === Sec 27: I18N keys ===
@@ -396,9 +436,8 @@ class TestSec42_UnsupportedCluster:
 # === Sec 36: Raw source isolation ===
 
 class TestSec36_RawSourceIsolation:
-    @pytest.mark.wx
-    @pytest.mark.gui
-    def test_each_viewer_shows_only_its_source(self):
+    @pytest.mark.unit
+    def test_raw_command_result_keeps_source_and_output_pairs(self):
         load_language("en")
         detail_raw = RawCommandResult.from_response(
             source_id="scontrol", command="scontrol show job 1001",
@@ -444,7 +483,8 @@ class TestRegression_FilesOutputs:
         finally:
             _close(frame)
 
-    @pytest.mark.contract
+    @pytest.mark.wx
+    @pytest.mark.gui
     def test_outputs_tab_untouched(self):
         load_language("en")
         app, frame, panel = _build_panel()
@@ -453,8 +493,9 @@ class TestRegression_FilesOutputs:
             nb = ctrls["notebook"]
             nb.SetSelection(4)
             wx.Yield()
-            # Outputs controls exist
-            assert "outputs_refresh" in ctrls
-            assert "outputs_follow" in ctrls
+            assert nb.GetSelection() == 4
+            assert nb.GetPageText(4) == "Outputs"
+            assert ctrls["outputs_refresh"].IsShown()
+            assert ctrls["outputs_follow"].IsShown()
         finally:
             _close(frame)

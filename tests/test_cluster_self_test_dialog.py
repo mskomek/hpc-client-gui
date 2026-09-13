@@ -5,7 +5,7 @@ from hpc_gui.services.cluster_self_test import ClusterSelfTestResult, SelfTestIt
 from hpc_gui.ui.dialogs.cluster_self_test_dialog import format_self_test_result
 
 
-@pytest.mark.gui
+@pytest.mark.reporting
 def test_self_test_copy_format_contains_no_connection_identity():
     result = ClusterSelfTestResult(
         "PASS", (SelfTestSection("Connection", (SelfTestItem("ssh", "PASS", "authenticated"),)),)

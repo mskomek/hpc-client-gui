@@ -60,12 +60,14 @@ class ProfileCompatibilityMatrixTests(unittest.TestCase):
         upsert_profile(merge_profile_patch(stored, edits))
         return next(p for p in load_profiles() if p.get("id") == profile["id"])
 
+    @pytest.mark.resource
     @pytest.mark.contract
     def test_legacy_basic_profile_round_trip(self) -> None:
         saved = self._round_trip(_base_profile("legacy"), {"host": "new"})
         self.assertEqual(saved["id"], "id-legacy")
         self.assertEqual(saved["host"], "new")
 
+    @pytest.mark.resource
     @pytest.mark.contract
     def test_encrypted_password_preserved_unless_disabled(self) -> None:
         profile = _base_profile("enc")
@@ -86,6 +88,7 @@ class ProfileCompatibilityMatrixTests(unittest.TestCase):
         saved = load_profiles()[0]
         self.assertNotIn("password_enc", saved)
 
+    @pytest.mark.resource
     @pytest.mark.contract
     def test_plugin_provenance_survives_unrelated_edit(self) -> None:
         profile = _base_profile("plug")
@@ -93,6 +96,7 @@ class ProfileCompatibilityMatrixTests(unittest.TestCase):
         saved = self._round_trip(profile, {"port": 2222})
         self.assertEqual(saved["system_template_source"]["plugin_id"], "p")
 
+    @pytest.mark.resource
     @pytest.mark.contract
     def test_unknown_top_level_and_nested_keys_survive(self) -> None:
         profile = _base_profile("future")
@@ -111,6 +115,7 @@ class ProfileCompatibilityMatrixTests(unittest.TestCase):
         self.assertEqual(saved["jump_host"]["future_jump_field"], 7)
         self.assertTrue(saved["jump_host"]["enabled"])
 
+    @pytest.mark.resource
     @pytest.mark.contract
     def test_malformed_optional_data_normalizes_without_corruption(self) -> None:
         profile = _base_profile("broken")
@@ -125,6 +130,7 @@ class ProfileCompatibilityMatrixTests(unittest.TestCase):
         # Raw values stay untouched on disk until an intentional save.
         self.assertEqual(stored.get("file_manager"), "not-a-dict")
 
+    @pytest.mark.resource
     @pytest.mark.contract
     def test_comparison_enabled_persists_per_profile(self) -> None:
         upsert_profile(_base_profile("cmp"))
@@ -134,6 +140,7 @@ class ProfileCompatibilityMatrixTests(unittest.TestCase):
         self.assertTrue(updated["comparison_enabled"])
         self.assertTrue(load_profiles()[0]["file_manager"]["comparison_enabled"])
 
+    @pytest.mark.resource
     @pytest.mark.contract
     def test_renamed_profile_keeps_stable_id_and_state(self) -> None:
         profile = _base_profile("old-name")
@@ -150,6 +157,7 @@ class ProfileCompatibilityMatrixTests(unittest.TestCase):
         self.assertEqual(profiles[0]["id"], "id-old-name")
         self.assertEqual(profiles[0]["file_manager"]["local_start_dir"], "/keep")
 
+    @pytest.mark.resource
     @pytest.mark.contract
     def test_merge_never_writes_plaintext_password_from_secrets(self) -> None:
         profile = _base_profile("secret")
@@ -227,6 +235,8 @@ class ProfileSessionIsolationTests(unittest.TestCase):
             ssh_timeout=None,
         )
 
+    @pytest.mark.qt
+    @pytest.mark.resource
     @pytest.mark.integration
     def test_switching_profiles_does_not_leak_state(self) -> None:
         from hpc_gui.ui.widgets.ftp_widget import FtpWidget
@@ -325,6 +335,8 @@ class SyncPlusComparisonOrderingTests(unittest.TestCase):
         widget._comparison_recompute_timer.stop()
         widget._recompute_directory_comparison()
 
+    @pytest.mark.qt
+    @pytest.mark.resource
     @pytest.mark.integration
     def test_navigation_ordering_never_shows_mixed_result(self) -> None:
         with tempfile.TemporaryDirectory() as root_a, tempfile.TemporaryDirectory() as root_b:
@@ -442,6 +454,8 @@ class ZeroExtraNetworkIntegrationTests(unittest.TestCase):
 
         load_language("en")
 
+    @pytest.mark.qt
+    @pytest.mark.resource
     @pytest.mark.integration
     def test_full_scenario_counters(self) -> None:
         with tempfile.TemporaryDirectory() as local_dir:
@@ -513,7 +527,8 @@ class ZeroExtraNetworkIntegrationTests(unittest.TestCase):
 class TransferSourceOfTruthAndSecurityTests(unittest.TestCase):
     """Part F/G spot checks that pin the integrated guarantees."""
 
-    @pytest.mark.integration
+    @pytest.mark.qt
+    @pytest.mark.audit
     def test_global_parallel_setting_is_not_imported_by_remote_panel(self) -> None:
         from hpc_gui.ui.widgets import remote_dir_panel
 
@@ -522,7 +537,7 @@ class TransferSourceOfTruthAndSecurityTests(unittest.TestCase):
             "Remote panel must not consult the deprecated global setting",
         )
 
-    @pytest.mark.contract
+    @pytest.mark.audit
     def test_no_auto_add_policy_anywhere_in_ssh_layer(self) -> None:
         for source in (
             Path("src/hpc_gui/ssh/client.py"),

@@ -22,6 +22,7 @@ class Response:
 
 
 @pytest.mark.integration
+@pytest.mark.resource
 def test_download_publishes_atomically(tmp_path: Path):
     target = tmp_path / "tool.exe"
     with patch("urllib.request.urlopen", return_value=Response()):
@@ -31,6 +32,7 @@ def test_download_publishes_atomically(tmp_path: Path):
 
 
 @pytest.mark.integration
+@pytest.mark.resource
 def test_download_failure_leaves_existing_target_and_cleans_partial(tmp_path: Path):
     target = tmp_path / "tool.exe"
     target.write_bytes(b"old")

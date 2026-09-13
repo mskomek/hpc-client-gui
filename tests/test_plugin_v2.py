@@ -34,12 +34,21 @@ def test_unapproved_python_tool_is_rejected_by_trusted_policy():
 
 
 @pytest.mark.unit
+@pytest.mark.regression
 def test_legacy_plugin_cannot_execute_marker_payload(tmp_path: Path):
     marker = tmp_path / "marker"
+    entrypoint = tmp_path / "engine" / "ansys_lint" / "__init__.py"
+    entrypoint.parent.mkdir(parents=True)
+    entrypoint.write_text(
+        f"from pathlib import Path\nPath({str(marker)!r}).write_text('executed')\n",
+        encoding="utf-8",
+    )
     installed = type("Installed", (), {
-        "manifest": type("Manifest", (), {"id": "org.hpcclient.legacy", "version": "1.0.0"})(),
+        "manifest": type("Manifest", (), {
+            "id": "org.hpcclient.legacy", "version": "1.0.0", "files": (),
+        })(),
         "directory": tmp_path,
-        "linter_engine": {"module": "engine/__init__.py"},
+        "linter_engine": {"module": "engine/ansys_lint/__init__.py"},
     })()
     with pytest.raises(ToolLoadError, match="disabled|declarative"):
         load_tool_for_plugin(installed)

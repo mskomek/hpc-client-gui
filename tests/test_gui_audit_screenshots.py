@@ -16,6 +16,8 @@ WX_DIR = ROOT / "audit" / "current-gui" / "wx"
 def _sha256(p: Path) -> str:
     return hashlib.sha256(p.read_bytes()).hexdigest()
 
+@pytest.mark.subprocess
+@pytest.mark.artifact_dependent
 def test_manifest_exists_and_commit_current():
     assert MANIFEST.is_file(), "MANIFEST.json missing"
     data = json.loads(MANIFEST.read_text(encoding="utf-8"))
@@ -35,6 +37,7 @@ def test_manifest_exists_and_commit_current():
     assert "python -m hpc_gui" in data["qt"]["runtime_command"]
     assert "--wx" in data["wx"]["runtime_command"]
 
+@pytest.mark.artifact_dependent
 def test_screenshots_exist_nonempty_and_png():
     data = json.loads(MANIFEST.read_text(encoding="utf-8"))
     for entry in data["screenshots"]:
@@ -49,6 +52,7 @@ def test_screenshots_exist_nonempty_and_png():
         assert entry["real_runtime"] is True
         assert entry["mock_data"] is True
 
+@pytest.mark.artifact_dependent
 def test_hashes_match_and_no_unexplained_duplicate():
     data = json.loads(MANIFEST.read_text(encoding="utf-8"))
     # Check HASHES.sha256 exists and matches manifest
@@ -71,6 +75,7 @@ def test_hashes_match_and_no_unexplained_duplicate():
     cross = qt_hashes & wx_hashes
     assert not cross, f"cross-runtime duplicate {cross}"
 
+@pytest.mark.artifact_dependent
 def test_no_historical_files_as_current():
     # Ensure we didn't reference old audit/screenshots as current
     data = json.loads(MANIFEST.read_text(encoding="utf-8"))
@@ -79,6 +84,7 @@ def test_no_historical_files_as_current():
         assert not entry["file"].startswith("audit/gui-screenshots/"), "historical path"
         assert entry["file"].startswith("qt/") or entry["file"].startswith("wx/")
 
+@pytest.mark.artifact_dependent
 def test_required_pairs_registered():
     data = json.loads(MANIFEST.read_text(encoding="utf-8"))
     files = {e["file"] for e in data["screenshots"]}

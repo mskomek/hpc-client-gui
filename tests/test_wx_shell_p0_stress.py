@@ -55,6 +55,9 @@ def _close(app, frame, lifecycle):
 
 @pytest.mark.wx
 @pytest.mark.gui
+@pytest.mark.slow
+@pytest.mark.concurrency
+@pytest.mark.resource
 def test_wx_shell_p0_stress_real_wx_paths():
     load_language("en")
     app = wx.App(False)

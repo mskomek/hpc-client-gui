@@ -211,6 +211,7 @@ def test_published_legacy_sacct_command_is_accepted_exactly():
 
 
 @pytest.mark.integration
+@pytest.mark.resource
 def test_installer_rejects_too_many_files(tmp_path: Path):
     entry = build_plugin(tmp_path)
     manifest_path = tmp_path / entry["manifest_path"]
@@ -238,6 +239,7 @@ def test_installer_rejects_too_many_files(tmp_path: Path):
 
 
 @pytest.mark.integration
+@pytest.mark.resource
 def test_installer_rejects_oversized_file(tmp_path: Path):
     entry = build_plugin(tmp_path)
     big_payload = b"x" * (FILE_MAX_BYTES + 1)
@@ -254,6 +256,7 @@ def test_installer_rejects_oversized_file(tmp_path: Path):
 
 
 @pytest.mark.integration
+@pytest.mark.resource
 def test_exception_midway_leaves_active_pointer_untouched(tmp_path: Path):
     entry = build_plugin(tmp_path)
     responses = remote_responses(tmp_path, entry)
@@ -279,6 +282,7 @@ def test_exception_midway_leaves_active_pointer_untouched(tmp_path: Path):
 
 
 @pytest.mark.integration
+@pytest.mark.resource
 def test_disk_write_failure_keeps_previous_state(tmp_path: Path):
     entry = build_plugin(tmp_path, version="2.0.0")
     responses = remote_responses(tmp_path, entry)
@@ -307,6 +311,7 @@ def test_disk_write_failure_keeps_previous_state(tmp_path: Path):
 
 
 @pytest.mark.integration
+@pytest.mark.resource
 def test_post_activation_validation_failure_triggers_rollback(tmp_path: Path, monkeypatch):
     entry = build_plugin(tmp_path, version="3.0.0")
     responses = remote_responses(tmp_path, entry)
@@ -400,6 +405,7 @@ def test_default_fetcher_rejects_insecure_http_final_url(monkeypatch):
 
 
 @pytest.mark.integration
+@pytest.mark.resource
 def test_disabled_plugin_contributes_no_templates(tmp_path: Path):
     entry = build_plugin(tmp_path)
     install_root = tmp_path / "install"
@@ -422,6 +428,7 @@ def test_disabled_plugin_contributes_no_templates(tmp_path: Path):
 
 
 @pytest.mark.integration
+@pytest.mark.resource
 def test_activate_version_only_for_valid_installed_versions(tmp_path: Path):
     entry_v1 = build_plugin(tmp_path, version="1.0.0")
     entry_v2 = build_plugin(tmp_path, version="2.0.0")
@@ -446,7 +453,20 @@ def test_activate_version_only_for_valid_installed_versions(tmp_path: Path):
 
 
 @pytest.mark.integration
+@pytest.mark.resource
 def test_remove_never_touches_user_templates_or_profiles(tmp_path: Path, monkeypatch):
+    from hpc_gui.config import storage
+    from hpc_gui.config.storage import load_profiles, upsert_profile
+    from hpc_gui.config.system_profile import (
+        load_user_system_templates,
+        save_user_system_template,
+    )
+
+    config_path = tmp_path / "user-config.json"
+    monkeypatch.setattr(storage, "_config_path", lambda: config_path)
+    upsert_profile({"name": "Personal cluster", "host": "cluster.example"})
+    save_user_system_template("Personal template", {"home_dir": "/home/{user}"})
+
     entry = build_plugin(tmp_path)
     install_root = tmp_path / "install"
     install_plugin_from_registry(
@@ -456,16 +476,18 @@ def test_remove_never_touches_user_templates_or_profiles(tmp_path: Path, monkeyp
         fetcher=make_fetcher(remote_responses(tmp_path, entry)),
     )
 
-    user_profile = {"name": "lab", "system": {"status_command": "lssrv"}}
     removed = remove_plugin("org.hpcclient.truba", root=install_root)
 
     assert removed == ["1.0.0"]
     assert not (packages_dir(install_root) / "org.hpcclient.truba").exists()
-    # The caller-owned user profile dict is untouched.
-    assert user_profile["system"]["status_command"] == "lssrv"
+    assert [profile["name"] for profile in load_profiles()] == ["Personal cluster"]
+    assert [template["name"] for template in load_user_system_templates()] == [
+        "Personal template"
+    ]
 
 
 @pytest.mark.integration
+@pytest.mark.resource
 def test_logging_on_install_and_activation(tmp_path: Path, caplog):
     entry = build_plugin(tmp_path)
     with caplog.at_level(logging.INFO, logger="hpc_gui.plugins.installer"):

@@ -106,6 +106,7 @@ class PureComparisonTests(unittest.TestCase):
         self.assertEqual(result.local, {})
         self.assertEqual(result.remote, {})
 
+    @pytest.mark.semantic
     def test_spaces_and_unicode(self) -> None:
         result = compare_directory_entries(
             [_entry("dosya adı - kopya.txt", size=3)],
@@ -115,6 +116,7 @@ class PureComparisonTests(unittest.TestCase):
             result.local["dosya adı - kopya.txt"], CompareStatus.SAME
         )
 
+    @pytest.mark.performance
     def test_large_lists_scale_linearly(self) -> None:
         count = 20000
         local = [
@@ -329,11 +331,16 @@ class SnapshotAndUiTests(unittest.TestCase):
         self.assertTrue(widget.panel_scratch.views["all"].isColumnHidden(4))
         self.assertIsNone(widget.local_panel._comparison_statuses)
 
-    @pytest.mark.unit
+    @pytest.mark.qt
+    @pytest.mark.gui
     def test_parent_row_blank_and_sort_roles_intact(self) -> None:
         files = _FakeFiles()
         with tempfile.TemporaryDirectory() as local_dir:
-            (Path(local_dir) / ".." ).exists()
+            root = Path(local_dir)
+            (root / "z-dir").mkdir()
+            (root / "a-dir").mkdir()
+            for name in ("z.txt", "a.txt", "b.txt"):
+                (root / name).write_text(name, encoding="utf-8")
             widget = self._make_widget(files=files)
             widget.local_panel.current_dir = local_dir
             widget.local_panel.refresh()
@@ -344,12 +351,19 @@ class SnapshotAndUiTests(unittest.TestCase):
                 if item.data(0, 0x0100 + 2):  # UserRole + 2 parent flag
                     parent_item = item
                     break
-            if parent_item is not None:
-                self.assertEqual(parent_item.text(4), "")
-            # Column 0 sorting still works after comparison applied.
-            widget.local_panel.tree._sort_column = 0
-            widget.local_panel.tree.apply_sort()
-        self.assertTrue(True)
+            self.assertIsNotNone(parent_item)
+            self.assertEqual(parent_item.text(4), "")
+            tree = widget.local_panel.tree
+            tree._sort_column = 0
+            tree.apply_sort()
+            sorted_names = [
+                tree.topLevelItem(index).data(0, 0x0100 + 10)
+                for index in range(tree.topLevelItemCount())
+            ]
+            self.assertEqual(
+                sorted_names,
+                ["..", "a-dir", "z-dir", "a.txt", "b.txt", "z.txt"],
+            )
 
     @pytest.mark.qt
     @pytest.mark.gui

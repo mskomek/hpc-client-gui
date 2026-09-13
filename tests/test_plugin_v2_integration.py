@@ -24,10 +24,10 @@ from hpc_gui.plugins.models import PluginFile, PluginManifest
 from hpc_gui.plugins.registry_client import OFFICIAL_RAW_BASE, OFFICIAL_REGISTRY_URL
 
 REPO = os.environ.get("HPC_GUI_CONTRACT_REPO", "")
-pytestmark = pytest.mark.skipif(
+pytestmark = [pytest.mark.artifact_dependent, pytest.mark.skipif(
     not REPO or not Path(REPO).is_dir(),
     reason="HPC_GUI_CONTRACT_REPO does not point to an official plugins checkout",
-)
+)]
 
 
 @pytest.fixture

@@ -125,6 +125,7 @@ def test_wx_editor_save_clears_dirty_marker(monkeypatch):
     finally:
         _close_panel(frame)
 
+@pytest.mark.resource
 @pytest.mark.wx
 @pytest.mark.gui
 def test_wx_editor_close_dirty_tab_save(monkeypatch):
@@ -156,6 +157,7 @@ def test_wx_editor_close_dirty_tab_save(monkeypatch):
     finally:
         _close_panel(frame)
 
+@pytest.mark.resource
 @pytest.mark.wx
 @pytest.mark.gui
 def test_wx_editor_close_dirty_tab_discard(monkeypatch):
@@ -182,6 +184,7 @@ def test_wx_editor_close_dirty_tab_discard(monkeypatch):
     finally:
         _close_panel(frame)
 
+@pytest.mark.resource
 @pytest.mark.wx
 @pytest.mark.gui
 def test_wx_editor_close_dirty_tab_cancel(monkeypatch):
@@ -246,6 +249,7 @@ def test_wx_editor_reorder_tabs_preserves_document_identity():
     finally:
         _close_panel(frame)
 
+@pytest.mark.resource
 @pytest.mark.wx
 @pytest.mark.gui
 def test_wx_editor_standalone_window_is_independent():

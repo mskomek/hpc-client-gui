@@ -1,5 +1,6 @@
 """Real wx ANSYS view test — event → model → engine → visible grouped UI."""
 from pathlib import Path
+import threading
 from types import SimpleNamespace
 
 import pytest
@@ -38,7 +39,7 @@ def _fake_tool(monkeypatch, module_name="_fake_ansys_view", suffixes=(".wbjn",))
 
 @pytest.mark.wx
 @pytest.mark.gui
-def test_wx_ansys_view_single_file_lint_shows_grouped_results(monkeypatch):
+def test_wx_ansys_view_single_file_lint_shows_grouped_results(monkeypatch, tmp_path: Path):
     from hpc_gui.wx_ansys_view import build_ansys_frame
 
     app = wx.App.Get() or wx.App(False)
@@ -47,8 +48,7 @@ def test_wx_ansys_view_single_file_lint_shows_grouped_results(monkeypatch):
     frame = build_ansys_frame(None, presentation)
     assert frame.IsShown()
     # simulate user picking file via direct model path: call do_lint_files
-    import tempfile
-    tmp = Path(tempfile.mktemp(suffix=".wbjn"))
+    tmp = tmp_path / "sample.wbjn"
     tmp.write_text("journal content", encoding="utf-8")
     try:
         # use model directly to ensure engine works
@@ -64,17 +64,16 @@ def test_wx_ansys_view_single_file_lint_shows_grouped_results(monkeypatch):
         summary = frame._wx_ansys_controls["summary"].GetLabel()
         assert "1" in summary  # 1 error
         # detail panel should update after selection
+        lst.Select(0)
         evt = wx.ListEvent(wx.wxEVT_LIST_ITEM_SELECTED, lst.GetId())
         evt.SetIndex(0)
-        # trigger manually
-        lst.Select(0)
+        evt.SetEventObject(lst)
+        lst.GetEventHandler().ProcessEvent(evt)
         wx.Yield()
-        _detail = frame._wx_ansys_controls["detail"].GetValue()
-        # after select, detail should contain explanation
-        # if not yet, fire handler directly via wx event isn't reliable; check that model grouping works
+        detail = frame._wx_ansys_controls["detail"].GetValue()
+        assert "why flagged detail" in detail
         assert model.group_results(results)  # grouping by status exists
     finally:
-        tmp.unlink(missing_ok=True)
         frame.Destroy()
         wx.Yield()
         app.ProcessPendingEvents()
@@ -244,17 +243,18 @@ def test_wx_ansys_details_copy_and_docs(tmp_path: Path):
 
 
 @pytest.mark.wx
+@pytest.mark.concurrency
 @pytest.mark.gui
-def test_wx_ansys_close_in_flight_safe(tmp_path: Path):
+def test_wx_ansys_close_in_flight_safe(tmp_path: Path, monkeypatch):
     from hpc_gui.wx_ansys_view import build_ansys_frame
-    import time
     _app = wx.App.Get() or wx.App(False)
-    # slow lint
-    from types import SimpleNamespace
     import sys
     mod = "_fake_ansys_slow"
+    worker_started = threading.Event()
+    release_worker = threading.Event()
     def slow_lint(text, file_name=""):
-        time.sleep(0.3)
+        worker_started.set()
+        release_worker.wait(3)
         return [SimpleNamespace(code="X", message="m", line=1, column=1, severity=SimpleNamespace(value="error"), explanation="e", is_heuristic=False, suggested_fix="", source_url="")]
     fake = SimpleNamespace(SUPPORTED_SUFFIXES=frozenset({".wbjn"}), lint_text=slow_lint)
     sys.modules[mod] = fake
@@ -266,19 +266,32 @@ def test_wx_ansys_close_in_flight_safe(tmp_path: Path):
     tmp = tmp_path / "c.wbjn"
     tmp.write_text("x", encoding="utf-8")
     frame = build_ansys_frame(None, presentation, file_chooser=lambda: [str(tmp)])
+    callbacks = []
+    callback_queued = threading.Event()
+
+    def defer_callback(callback, *args, **kwargs):
+        callbacks.append((callback, args, kwargs))
+        callback_queued.set()
+
+    monkeypatch.setattr(wx, "CallAfter", defer_callback)
     try:
         ctrls = frame._wx_ansys_controls
         evt = wx.CommandEvent(wx.wxEVT_BUTTON)
         ctrls["pick_files"].GetEventHandler().ProcessEvent(evt)
-        wx.Yield()
-        # close immediately while worker in-flight
+        assert worker_started.wait(2), "linter worker did not start"
         frame.Close()
         wx.Yield()
-        wx.MilliSleep(400)
-        wx.Yield()
-        # no crash, closed flag should prevent callbacks
-        assert True
+        with pytest.raises(RuntimeError):
+            frame.IsShown()
+        release_worker.set()
+        assert callback_queued.wait(2), "linter worker did not queue completion"
+        assert len(callbacks) == 1
+        callback, args, kwargs = callbacks[0]
+        callback(*args, **kwargs)
+        with pytest.raises(RuntimeError):
+            frame.IsShown()
     finally:
+        release_worker.set()
         try:
             frame.Destroy()
         except Exception:
@@ -287,28 +300,33 @@ def test_wx_ansys_close_in_flight_safe(tmp_path: Path):
 
 
 @pytest.mark.wx
+@pytest.mark.semantic
 @pytest.mark.gui
-def test_wx_ansys_i18n_refresh():
+def test_wx_ansys_i18n_refresh(monkeypatch, tmp_path: Path):
     from hpc_gui.wx_ansys_view import build_ansys_frame
-    from hpc_gui.core.i18n import set_language, current_language
+    from hpc_gui.core import i18n
     _app = wx.App.Get() or wx.App(False)
+    monkeypatch.setattr(i18n, "app_data_dir", lambda: tmp_path)
     tool = _fake_tool(monkeypatch=None, module_name="_fake_ansys_i18n")
     presentation = AnsysToolPresentation(tool)
     frame = build_ansys_frame(None, presentation)
+    original_language = i18n.current_language()
     try:
-        orig = current_language()
         ctrls = frame._wx_ansys_controls
+        i18n.set_language("en")
         before = ctrls["pick_files"].GetLabel()
-        set_language("tr")
+        i18n.set_language("tr")
         wx.Yield()
         after_tr = ctrls["pick_files"].GetLabel()
-        assert after_tr != "" and after_tr != before or True  # at least not crash
-        set_language("en")
+        assert after_tr == i18n.t("ansyslint.pick_files")
+        assert after_tr != before
+        i18n.set_language("en")
         wx.Yield()
         after_en = ctrls["pick_files"].GetLabel()
-        assert after_en != ""
-        set_language(orig)
-        wx.Yield()
+        assert after_en == i18n.t("ansyslint.pick_files")
+        assert after_en == before
     finally:
+        i18n.set_language(original_language)
+        wx.Yield()
         frame.Destroy()
         wx.Yield()

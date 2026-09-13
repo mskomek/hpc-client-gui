@@ -1,7 +1,8 @@
 """Regression test proving Help remains a separate, visible F1 action."""
 import pytest
 
-@pytest.mark.unit
+@pytest.mark.gui
+@pytest.mark.qt
 def test_command_palette_not_wired_to_help(monkeypatch):
     import os
 

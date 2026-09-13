@@ -1,5 +1,6 @@
 from __future__ import annotations
 import pytest
+pytestmark = pytest.mark.macos
 
 from pathlib import Path
 from unittest import mock
@@ -19,7 +20,7 @@ def test_macos_xquartz_preflight_requires_xquartz_and_display(monkeypatch):
     assert "DISPLAY" in messages[-1]
 
 
-@pytest.mark.integration
+@pytest.mark.unit
 def test_macos_x11_preflight_uses_system_ssh_and_never_plink():
     runner = x11_runner.X11Runner(log_cb=lambda _msg: None)
     with (
@@ -33,7 +34,7 @@ def test_macos_x11_preflight_uses_system_ssh_and_never_plink():
     plink.assert_not_called()
 
 
-@pytest.mark.integration
+@pytest.mark.unit
 def test_macos_system_ssh_sets_xauth_location(monkeypatch):
     monkeypatch.setattr(x11_system_ssh.platform, "system", lambda: "Darwin")
     monkeypatch.setattr(Path, "exists", lambda self: True)

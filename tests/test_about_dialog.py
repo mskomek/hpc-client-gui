@@ -3,6 +3,7 @@ import pytest
 
 @pytest.mark.qt
 @pytest.mark.gui
+@pytest.mark.semantic
 def test_about_shows_version_and_no_network(monkeypatch):
     import os
     from types import SimpleNamespace

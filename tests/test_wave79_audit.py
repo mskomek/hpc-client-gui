@@ -500,8 +500,8 @@ class TestRawCommandResultAudit:
 
 class TestWave78RegressionAudit:
     @pytest.mark.contract
-    def test_wave78_tabs_still_exist(self):
-        """Verify the notebook structure hasn't regressed."""
+    def test_wave78_tab_title_translation_keys_resolve(self):
+        """Verify the labels used by the tabs resolve in the English catalog."""
         from hpc_gui.core.i18n import load_language, t
         load_language("en")
         # Just verify the i18n keys exist

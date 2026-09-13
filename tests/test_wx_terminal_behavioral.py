@@ -101,8 +101,9 @@ class MockScriptEvent:
 
 # ── Section 1: Embedded terminal SSH attachment ──
 
+@pytest.mark.subprocess
 @pytest.mark.wx
-@pytest.mark.gui
+@pytest.mark.integration
 def test_embedded_connect_to_ssh_via_shell_path():
     """Prove: WxTerminalWebViewPanel(ssh=None) -> set_ssh(fake) -> subscriber -> input."""
     if not _is_webview_available():
@@ -148,8 +149,9 @@ def test_embedded_connect_to_ssh_via_shell_path():
 
 # ── Section 2: Real xterm input chain (JS bridge mock) ──
 
+@pytest.mark.subprocess
 @pytest.mark.wx
-@pytest.mark.gui
+@pytest.mark.contract
 def test_input_chain_through_script_message_handler():
     """Prove: JS bridge message -> _on_script_message -> _handle_input -> send_shell_input."""
     if not _is_webview_available():
@@ -200,8 +202,9 @@ def test_input_chain_through_script_message_handler():
 
 # ── Section 3: Real paste chain ──
 
+@pytest.mark.subprocess
 @pytest.mark.wx
-@pytest.mark.gui
+@pytest.mark.contract
 def test_paste_chain_through_bridge():
     """Prove: hpcPaste -> terminal.paste -> terminal.onData -> postToPython -> SSH."""
     if not _is_webview_available():
@@ -236,8 +239,10 @@ def test_paste_chain_through_bridge():
 
 # ── Section 4: Reconnect generation guard ──
 
+@pytest.mark.subprocess
 @pytest.mark.wx
-@pytest.mark.gui
+@pytest.mark.integration
+@pytest.mark.concurrency
 def test_stale_output_rejected_after_reconnect():
     """Prove: SSH A delayed callback -> reconnect to SSH B -> A's callback rejected."""
     if not _is_webview_available():
@@ -277,8 +282,9 @@ def test_stale_output_rejected_after_reconnect():
 
 # ── Section 5: VT escape sequences pass through ──
 
+@pytest.mark.subprocess
 @pytest.mark.wx
-@pytest.mark.gui
+@pytest.mark.contract
 def test_vt_sgr_bytes_reach_xterm():
     """Prove: SGR escape sequences pass through hpc_write without corruption."""
     if not _is_webview_available():
@@ -309,8 +315,9 @@ def test_vt_sgr_bytes_reach_xterm():
 
 # ── Section 6: CR bytes preserved ──
 
+@pytest.mark.subprocess
 @pytest.mark.wx
-@pytest.mark.gui
+@pytest.mark.contract
 def test_vt_cr_bytes_preserved_through_bridge():
     """Prove: CR bytes pass through hpc_write without splitlines corruption."""
     if not _is_webview_available():
@@ -338,8 +345,9 @@ def test_vt_cr_bytes_preserved_through_bridge():
 
 # ── Section 7: Cursor escape sequences preserved ──
 
+@pytest.mark.subprocess
 @pytest.mark.wx
-@pytest.mark.gui
+@pytest.mark.contract
 def test_vt_cursor_escape_sequences_preserved():
     """Prove: cursor movement ESC sequences pass through without corruption."""
     if not _is_webview_available():
@@ -364,8 +372,9 @@ def test_vt_cursor_escape_sequences_preserved():
 
 # ── Section 8: Erase sequences preserved ──
 
+@pytest.mark.subprocess
 @pytest.mark.wx
-@pytest.mark.gui
+@pytest.mark.contract
 def test_vt_erase_sequences_preserved():
     """Prove: erase line/screen ESC sequences pass through without corruption."""
     if not _is_webview_available():
@@ -393,8 +402,9 @@ def test_vt_erase_sequences_preserved():
 
 # ── Section 9: Alternate screen sequences preserved ──
 
+@pytest.mark.subprocess
 @pytest.mark.wx
-@pytest.mark.gui
+@pytest.mark.contract
 def test_vt_alternate_screen_sequences_preserved():
     """Prove: alternate screen ESC sequences pass through to xterm."""
     if not _is_webview_available():
@@ -423,7 +433,7 @@ def test_vt_alternate_screen_sequences_preserved():
 # ── Section 10: Search next/prev with state advancement ──
 
 @pytest.mark.wx
-@pytest.mark.gui
+@pytest.mark.contract
 def test_find_next_prev_advances_through_matches():
     """Prove: hpcFind -> hpcFindNext -> hpcFindPrev all dispatch to JS."""
     if not _is_webview_available():
@@ -468,6 +478,7 @@ def test_find_next_prev_advances_through_matches():
 
 # ── Section 11: Header status and identity ──
 
+@pytest.mark.subprocess
 @pytest.mark.wx
 @pytest.mark.gui
 def test_header_status_identity_dimensions():
@@ -514,8 +525,10 @@ def test_header_status_identity_dimensions():
 
 # ── Section 12: Lifecycle safety ──
 
+@pytest.mark.subprocess
 @pytest.mark.wx
-@pytest.mark.gui
+@pytest.mark.integration
+@pytest.mark.resource
 def test_destroy_before_ready_no_crash():
     """Prove: close before ready clears pending, suppresses callbacks."""
     if not _is_webview_available():
@@ -548,7 +561,8 @@ def test_destroy_before_ready_no_crash():
 
 
 @pytest.mark.wx
-@pytest.mark.gui
+@pytest.mark.integration
+@pytest.mark.resource
 def test_close_while_output_in_flight():
     """Prove: close during output delivery does not crash."""
     if not _is_webview_available():
@@ -576,8 +590,10 @@ def test_close_while_output_in_flight():
     wx.Yield()
 
 
+@pytest.mark.subprocess
 @pytest.mark.wx
-@pytest.mark.gui
+@pytest.mark.integration
+@pytest.mark.resource
 def test_100_reconnects_no_leak():
     """Prove: 100 reconnects don't leak subscribers."""
     if not _is_webview_available():
@@ -602,6 +618,7 @@ def test_100_reconnects_no_leak():
 
 # ── Section 13: Font -> resize chain ──
 
+@pytest.mark.subprocess
 @pytest.mark.wx
 @pytest.mark.gui
 def test_font_change_triggers_fit_and_resize():
@@ -634,7 +651,9 @@ def test_font_change_triggers_fit_and_resize():
 
 # ── Section 14: Unicode I/O ──
 
-@pytest.mark.contract
+@pytest.mark.subprocess
+@pytest.mark.integration
+@pytest.mark.wx
 def test_unicode_input_output_roundtrip():
     """Prove: Unicode passes through input and output without ASCII clamp."""
     if not _is_webview_available():
@@ -666,8 +685,9 @@ def test_unicode_input_output_roundtrip():
 
 # ── Section 15: Large pre-ready output ──
 
+@pytest.mark.subprocess
 @pytest.mark.wx
-@pytest.mark.gui
+@pytest.mark.unit
 def test_large_pre_ready_output_buffered():
     """Prove: 500KB pre-ready output is buffered and preserved in order."""
     if not _is_webview_available():

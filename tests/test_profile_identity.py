@@ -47,6 +47,7 @@ class ProfileIdentityTests(unittest.TestCase):
         self.assertEqual(profiles[0]["id"], original_id)
         self.assertEqual(storage.get_profile_id("TRUBA Ana Hesap"), original_id)
 
+    @pytest.mark.resource
     def test_delete_takes_the_private_state_with_it(self) -> None:
         self._write_legacy_config()
         profile_id = storage.load_profiles()[0]["id"]

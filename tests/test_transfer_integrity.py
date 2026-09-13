@@ -20,6 +20,7 @@ def test_streaming_match_and_mismatch(tmp_path):
 
 
 @pytest.mark.unit
+@pytest.mark.resource
 def test_unsupported_and_cancellable(tmp_path):
     path = tmp_path / "data.bin"
     path.write_bytes(b"data")
@@ -29,6 +30,7 @@ def test_unsupported_and_cancellable(tmp_path):
 
 
 @pytest.mark.unit
+@pytest.mark.resource
 def test_large_stream_reports_progress(tmp_path):
     path = tmp_path / "large.bin"
     path.write_bytes(b"x" * (2 * 1024 * 1024 + 1))

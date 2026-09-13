@@ -34,19 +34,19 @@ from hpc_gui.services.slurm_ssh import SSHSlurmBackend
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.unit
+@pytest.mark.contract
 def test_generic_defaults_contain_no_truba_paths():
     joined = json.dumps(GENERIC_SLURM_DEFAULTS)
     assert "/arf" not in joined
 
 
-@pytest.mark.unit
+@pytest.mark.contract
 def test_generic_defaults_have_no_site_status_command():
     assert GENERIC_SLURM_DEFAULTS["status_command"] == ""
     assert "lssrv" not in json.dumps(GENERIC_SLURM_DEFAULTS)
 
 
-@pytest.mark.unit
+@pytest.mark.contract
 def test_generic_defaults_keep_standard_slurm_commands():
     assert 'squeue -h -u {user} -o "%i' in GENERIC_SLURM_DEFAULTS["squeue_command"]
     assert "{script_dir_q}" in GENERIC_SLURM_DEFAULTS["sbatch_command"]
@@ -55,7 +55,7 @@ def test_generic_defaults_keep_standard_slurm_commands():
     assert "sacct" in GENERIC_SLURM_DEFAULTS["job_state_command"]
 
 
-@pytest.mark.unit
+@pytest.mark.contract
 def test_builtin_group_is_generic_slurm_only():
     groups = builtin_system_template_groups()
     assert list(groups) == ["Generic Slurm"]
@@ -192,6 +192,7 @@ def test_plugins_root_override(tmp_path: Path):
 
 
 @pytest.mark.integration
+@pytest.mark.resource
 def test_active_index_round_trip(tmp_path: Path):
     assert read_active_versions(tmp_path) == {}
     write_active_versions({"org.hpcclient.truba": "1.0.0"}, root=tmp_path)
@@ -337,7 +338,7 @@ def test_invalid_profile_shape_isolated(tmp_path: Path):
     assert any("invalid cluster profile" in problem.reason for problem in result.problems)
 
 
-@pytest.mark.integration
+@pytest.mark.audit
 def test_loader_never_executes_payload(tmp_path: Path):
     """No import/execution mechanism may exist in the declarative loader."""
     import inspect

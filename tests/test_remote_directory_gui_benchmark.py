@@ -21,6 +21,7 @@ import benchmark_remote_directory_gui  # noqa: E402
 class RemoteDirectoryGuiBenchmarkGate(unittest.TestCase):
     @pytest.mark.qt
     @pytest.mark.gui
+    @pytest.mark.performance
     def test_small_offscreen_listing_is_exact_and_terminates(self) -> None:
         app = QApplication.instance() or QApplication([])
         started = time.perf_counter()

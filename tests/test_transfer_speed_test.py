@@ -24,6 +24,8 @@ class _Files:
 
 
 @pytest.mark.integration
+@pytest.mark.performance
+@pytest.mark.resource
 def test_speed_test_round_trip_verifies_and_cleans_up(monkeypatch, tmp_path) -> None:
     def named_temporary_file(**_kwargs):
         return (tmp_path / "speed.bin").open("w+b")

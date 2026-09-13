@@ -4,7 +4,7 @@ import pytest
 from hpc_gui.config import storage
 
 
-@pytest.mark.unit
+@pytest.mark.contract
 def test_live_tracking_warning_interval_defaults_and_allows_disable(monkeypatch, tmp_path) -> None:
     config_path = tmp_path / "config.json"
     monkeypatch.setattr(storage, "_config_path", lambda: config_path)

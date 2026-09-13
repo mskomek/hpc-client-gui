@@ -9,9 +9,11 @@ import pytest
 pytestmark = [
     pytest.mark.reporting,
     pytest.mark.packaging,
+    pytest.mark.windows,
 ]
 
 
+@pytest.mark.subprocess
 def test_packaged_wx_smoke_gate_fails_closed_without_artifact(tmp_path):
     root = Path(__file__).parents[1]
     artifact = tmp_path / "missing.exe"

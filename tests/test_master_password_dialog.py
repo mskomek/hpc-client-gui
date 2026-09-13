@@ -5,11 +5,18 @@ from unittest.mock import patch
 
 from PySide6.QtWidgets import QApplication, QCheckBox, QDialog, QDialogButtonBox, QLabel, QLineEdit
 
-from hpc_gui.core.i18n import load_language, t
+from hpc_gui.core.i18n import current_language, load_language, t
 from hpc_gui.ui.widgets.login_widget import LoginWidget
 
 
 app = QApplication.instance() or QApplication([])
+
+
+@pytest.fixture(autouse=True)
+def _restore_language():
+    previous = current_language()
+    yield
+    load_language(previous)
 
 
 def _inspect_dialog(owner, result=QDialog.DialogCode.Rejected):

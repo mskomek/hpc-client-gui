@@ -33,10 +33,13 @@ PRE_V2_APP_VERSION = "1.4.0"
 V2_APP_FLOOR = "1.5.0"
 
 REPO = os.environ.get("HPC_GUI_CONTRACT_REPO", "")
-pytestmark = pytest.mark.skipif(
-    not REPO or not Path(REPO).is_dir(),
-    reason="HPC_GUI_CONTRACT_REPO does not point to an official plugins checkout",
-)
+pytestmark = [
+    pytest.mark.skipif(
+        not REPO or not Path(REPO).is_dir(),
+        reason="HPC_GUI_CONTRACT_REPO does not point to an official plugins checkout",
+    ),
+    pytest.mark.artifact_dependent,
+]
 
 
 @pytest.fixture(scope="module")
@@ -124,7 +127,8 @@ def _install(local_fetcher, tmp_path: Path, entry: dict):
     )
 
 
-@pytest.mark.integration
+@pytest.mark.e2e
+@pytest.mark.resource
 def test_truba_plugin_installs_and_profile_loads(registry, local_fetcher, tmp_path: Path):
     entry = find_registry_entry(
         registry, "org.hpcclient.truba", app_version=CONTRACT_APP_VERSION
@@ -141,7 +145,8 @@ def test_truba_plugin_installs_and_profile_loads(registry, local_fetcher, tmp_pa
     assert profiles[0].scheduler == "slurm"
 
 
-@pytest.mark.integration
+@pytest.mark.e2e
+@pytest.mark.resource
 def test_truba_v2_plugin_installs_and_retains_structured_sections(
     registry, local_fetcher, tmp_path: Path
 ):
@@ -164,6 +169,7 @@ def test_truba_v2_plugin_installs_and_retains_structured_sections(
 
 
 @pytest.mark.integration
+@pytest.mark.artifact_dependent
 def test_fluent_latest_compatible_is_0_2_0_and_loads(registry, local_fetcher, tmp_path: Path):
     entry = find_registry_entry(
         registry, "org.hpcclient.fluent", app_version=CONTRACT_APP_VERSION
@@ -181,7 +187,8 @@ def test_fluent_latest_compatible_is_0_2_0_and_loads(registry, local_fetcher, tm
     assert {"lint-rules", "job-template"} <= capabilities
 
 
-@pytest.mark.integration
+@pytest.mark.e2e
+@pytest.mark.resource
 def test_fluent_lint_rules_run(registry, local_fetcher, tmp_path: Path):
     from hpc_gui.lint.engine import lint_text
     from hpc_gui.lint.rulepack import load_lint_packs
@@ -207,7 +214,8 @@ def test_fluent_lint_rules_run(registry, local_fetcher, tmp_path: Path):
     assert any(rule_id.startswith("FLUENT") for rule_id in rule_ids), sorted(rule_ids)
 
 
-@pytest.mark.integration
+@pytest.mark.e2e
+@pytest.mark.resource
 def test_fluent_slurm_template_is_plain_substitution(
     registry, local_fetcher, tmp_path: Path
 ):
@@ -254,7 +262,8 @@ def test_fluent_slurm_template_is_plain_substitution(
     assert "#!/bin/bash" in rendered
 
 
-@pytest.mark.integration
+@pytest.mark.e2e
+@pytest.mark.resource
 def test_fluent_update_then_rollback_preserves_versions(
     registry, local_fetcher, tmp_path: Path
 ):

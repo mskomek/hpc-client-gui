@@ -155,7 +155,7 @@ class TestOverlappingFilters:
 # ---------------------------------------------------------------------------
 
 class TestProviderFilters:
-    @pytest.mark.integration
+    @pytest.mark.contract
     def test_register_provider_filter(self):
         reg = build_core_registry()
         reg.register(FileFilter(
@@ -169,7 +169,7 @@ class TestProviderFilters:
         assert reg.get("truba_logs") is not None
         assert reg.get("truba_logs").source == "provider"
 
-    @pytest.mark.integration
+    @pytest.mark.contract
     def test_remove_filter(self):
         reg = build_core_registry()
         reg.register(FileFilter(id="temp", label_en="Temp", order=200))
@@ -177,7 +177,7 @@ class TestProviderFilters:
         assert reg.remove("temp") is True
         assert reg.get("temp") is None
 
-    @pytest.mark.integration
+    @pytest.mark.contract
     def test_register_replaces_existing(self):
         reg = build_core_registry()
         reg.register(FileFilter(id="custom", label_en="V1", order=100))

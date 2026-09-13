@@ -10,6 +10,7 @@ from hpc_gui.config import storage
 
 
 @pytest.mark.integration
+@pytest.mark.resource
 def test_save_config_writes_json_atomically_and_leaves_no_temp(tmp_path: Path) -> None:
     config = tmp_path / "config.json"
     payload = {"profiles": [], "settings": {"name": "TRÜBA", "count": 2}}
@@ -24,6 +25,7 @@ def test_save_config_writes_json_atomically_and_leaves_no_temp(tmp_path: Path) -
 
 
 @pytest.mark.integration
+@pytest.mark.resource
 def test_save_config_failure_preserves_previous_and_cleans_temp(tmp_path: Path) -> None:
     config = tmp_path / "config.json"
     previous = '{"profiles": [], "settings": {"keep": true}}'

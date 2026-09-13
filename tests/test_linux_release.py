@@ -1,5 +1,6 @@
 from __future__ import annotations
 import pytest
+pytestmark = pytest.mark.linux
 
 import re
 import json
@@ -15,6 +16,7 @@ import release_linux as rl
 real_read_text = rl.Path.read_text
 
 
+@pytest.mark.packaging
 class ResolveVersionTest(unittest.TestCase):
     @pytest.mark.release
     def test_sources_agree(self) -> None:
@@ -50,6 +52,7 @@ class ResolveVersionTest(unittest.TestCase):
         )
 
 
+@pytest.mark.packaging
 class UbuntuHostTest(unittest.TestCase):
     @pytest.mark.release
     def test_ubuntu_host_is_accepted(self) -> None:
@@ -79,6 +82,7 @@ class UbuntuHostTest(unittest.TestCase):
         resolve_version.assert_not_called()
 
 
+@pytest.mark.packaging
 class RequiredFilesTest(unittest.TestCase):
     @pytest.mark.release
     def test_help_files_inventory(self) -> None:
@@ -102,6 +106,7 @@ class RequiredFilesTest(unittest.TestCase):
                 rl.validate_required_files()
 
 
+@pytest.mark.packaging
 class AppImageDefinitionTest(unittest.TestCase):
     @pytest.mark.release
     def test_desktop_entry_valid(self) -> None:
@@ -125,6 +130,7 @@ class AppImageDefinitionTest(unittest.TestCase):
         self.assertTrue(text.startswith("#!"))
 
 
+@pytest.mark.packaging
 class PlanTest(unittest.TestCase):
     @pytest.mark.release
     def test_plan_dry_run(self) -> None:
@@ -175,7 +181,7 @@ class PlanTest(unittest.TestCase):
         self.assertIn("validate-pip-source", names)
         self.assertIn("release-layout", names)
 
-    @pytest.mark.release
+    @pytest.mark.unit
     def test_sha256(self) -> None:
         import tempfile
 
@@ -188,6 +194,7 @@ class PlanTest(unittest.TestCase):
             tmp.unlink(missing_ok=True)
 
 
+@pytest.mark.packaging
 class DebFlatpakTest(unittest.TestCase):
     @pytest.mark.release
     def test_deb_artifact_name(self) -> None:

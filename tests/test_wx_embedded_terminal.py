@@ -4,9 +4,6 @@ import pytest
 wx = pytest.importorskip("wx")
 from hpc_gui.wx_terminal import build_terminal_panel
 
-pytestmark = [pytest.mark.gui, pytest.mark.wx]
-
-
 def _fake_ssh():
     class Fake:
         def __init__(self):
@@ -122,7 +119,7 @@ def test_embedded_terminal_font_increase_changes_visible_font():
         wx.Yield()
 
 @pytest.mark.wx
-@pytest.mark.gui
+@pytest.mark.unit
 def test_embedded_terminal_ctrl_c_sends_interrupt_not_copy():
     ssh = _fake_ssh()
     app, frame, panel = _make_panel(ssh=ssh)
@@ -140,7 +137,7 @@ def test_embedded_terminal_ctrl_c_sends_interrupt_not_copy():
         wx.Yield()
 
 @pytest.mark.wx
-@pytest.mark.gui
+@pytest.mark.unit
 def test_embedded_terminal_copy_shortcut_does_not_send_interrupt():
     ssh = _fake_ssh()
     app, frame, panel = _make_panel(ssh=ssh)
@@ -183,7 +180,7 @@ def test_embedded_terminal_runtime_language_refresh():
         wx.Yield()
 
 @pytest.mark.wx
-@pytest.mark.gui
+@pytest.mark.integration
 def test_embedded_terminal_resize_reaches_pty_resize():
     ssh = _fake_ssh()
     app, frame, panel = _make_panel(ssh=ssh)
@@ -202,6 +199,8 @@ def test_embedded_terminal_resize_reaches_pty_resize():
         frame.Destroy()
         wx.Yield()
 
+@pytest.mark.wx
+@pytest.mark.integration
 def test_shell_embedded_and_detached_share_implementation(monkeypatch):
     # Exercise both production surfaces, including the panel actually mounted
     # by the shell. Use the TextCtrl adapter to avoid creating two native
@@ -247,6 +246,8 @@ def test_shell_embedded_and_detached_share_implementation(monkeypatch):
         wx.Yield()
 
 
+@pytest.mark.wx
+@pytest.mark.integration
 def test_shell_can_defer_terminal_panel_mount(monkeypatch):
     import hpc_gui.wx_terminal_webview as webview
     from hpc_gui.wx_shell import create_shell_frame

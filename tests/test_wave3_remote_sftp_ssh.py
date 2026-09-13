@@ -44,6 +44,18 @@ MIXED_REMOTE_NAMES = [
 ALL_REMOTE_NAMES = TURKISH_REMOTE_NAMES + JAPANESE_REMOTE_NAMES + MIXED_REMOTE_NAMES
 
 
+@pytest.fixture(autouse=True)
+def _restore_language_after_test():
+    from hpc_gui.core.i18n import current_language, load_language
+
+    previous_language = current_language()
+    load_language("en")
+    try:
+        yield
+    finally:
+        load_language(previous_language)
+
+
 # ---------------------------------------------------------------------------
 # 1. SSH Command Construction Safety
 # ---------------------------------------------------------------------------
@@ -52,40 +64,7 @@ class TestSSHCommandConstruction:
     """Verify SSH commands are safely constructed with proper quoting."""
 
     @pytest.mark.contract
-    def test_shlex_quote_unicode_path(self):
-        """shlex.quote should safely quote Unicode paths."""
-        paths = [
-            "Çalışmalar/test.txt",
-            "日本語/計算結果.txt",
-            "Türkçe_日本語/file.txt",
-            "O'Brien.txt",
-            "file with spaces.txt",
-            "file$pecial.txt",
-            "file(parentheses).txt",
-            "file[brackets].txt",
-            "file&ampersand.txt",
-        ]
-        for path in paths:
-            quoted = shlex.quote(path)
-            # Quoted path should be safe for shell
-            assert quoted.startswith("'") or quoted.startswith('"') or not any(c in path for c in " $&()[]'\"")
-
-    @pytest.mark.contract
-    def test_shlex_quote_preserves_unicode(self):
-        """shlex.quote should preserve Unicode characters."""
-        paths = [
-            "Çalışma_Sonucu.txt",
-            "日本語_計算結果.txt",
-            "★_Favorites.txt",
-            "İşler_Çağrı.txt",
-        ]
-        for path in paths:
-            quoted = shlex.quote(path)
-            # Remove quotes and verify content preserved
-            unquoted = quoted.strip("'\"")
-            assert unquoted == path, f"shlex.quote corrupted path: {path} -> {quoted}"
-
-    @pytest.mark.contract
+    @pytest.mark.semantic
     def test_ssh_backend_uses_shlex_quote(self):
         """A hostile Unicode path remains one shell argument for remote rm."""
         from types import SimpleNamespace
@@ -98,22 +77,38 @@ class TestSSHCommandConstruction:
             run=lambda command: (commands.append(command) or (0, "", "")),
         )
         backend = SSHFilesBackend(ssh)
-        remote_path = "/scratch/Çalışma O'Brien/$(touch sentinel).txt"
+        remote_paths = [
+            "Çalışmalar/test.txt",
+            "日本語/計算結果.txt",
+            "Türkçe_日本語/file.txt",
+            "O'Brien.txt",
+            "file with spaces.txt",
+            "file$pecial.txt",
+            "file(parentheses).txt",
+            "file[brackets].txt",
+            "file&ampersand.txt",
+            "★_Favorites.txt",
+            "/scratch/Çalışma O'Brien/$(touch sentinel).txt",
+        ]
 
-        backend.remove(remote_path)
+        for remote_path in remote_paths:
+            backend.remove(remote_path)
 
-        assert commands == [f"rm -f {shlex.quote(remote_path)}"]
-        assert shlex.split(commands[0]) == ["rm", "-f", remote_path]
+        assert commands == [f"rm -f {shlex.quote(path)}" for path in remote_paths]
+        assert [shlex.split(command) for command in commands] == [
+            ["rm", "-f", path] for path in remote_paths
+        ]
 
 
 # ---------------------------------------------------------------------------
 # 2. SFTP Unicode Path Handling
 # ---------------------------------------------------------------------------
 
+@pytest.mark.semantic
 class TestSFTPUnicodePaths:
     """Verify SFTP operations handle Unicode paths correctly."""
 
-    @pytest.mark.integration
+    @pytest.mark.unit
     def test_mock_backend_unicode_listdir(self):
         """Mock backend should list Unicode-named entries."""
         from hpc_gui.services.files_mock import MockFilesBackend
@@ -129,7 +124,7 @@ class TestSFTPUnicodePaths:
         assert "Çalışmalar" in entries
         assert "日本語" in entries
 
-    @pytest.mark.integration
+    @pytest.mark.unit
     def test_mock_backend_unicode_read_write(self):
         """Mock backend should read/write Unicode content."""
         from hpc_gui.services.files_mock import MockFilesBackend
@@ -145,7 +140,7 @@ class TestSFTPUnicodePaths:
         read_content = backend.read_text("/work/test.txt")
         assert read_content == content
 
-    @pytest.mark.integration
+    @pytest.mark.contract
     def test_ssh_backend_rejects_invalid_utf8_text(self):
         """Remote editor reads must not replace bytes before a later save."""
         from hpc_gui.services.files_ssh import SSHFilesBackend
@@ -166,7 +161,7 @@ class TestSFTPUnicodePaths:
         with pytest.raises(UnicodeDecodeError):
             backend.read_text("/work/legacy.txt")
 
-    @pytest.mark.integration
+    @pytest.mark.unit
     def test_mock_backend_unicode_rename(self):
         """Mock backend should rename to/from Unicode names."""
         from hpc_gui.services.files_mock import MockFilesBackend
@@ -180,7 +175,7 @@ class TestSFTPUnicodePaths:
         assert "/work/yeniden_adlandır.txt" in backend._files
         assert "/work/old.txt" not in backend._files
 
-    @pytest.mark.integration
+    @pytest.mark.unit
     def test_mock_backend_unicode_mkdir(self):
         """Mock backend should create Unicode-named directories."""
         from hpc_gui.services.files_mock import MockFilesBackend
@@ -191,7 +186,7 @@ class TestSFTPUnicodePaths:
         backend.mkdir("/work/日本語_ディレクトリ")
         assert backend.is_dir("/work/日本語_ディレクトリ")
 
-    @pytest.mark.integration
+    @pytest.mark.unit
     def test_mock_backend_unicode_remove(self):
         """Mock backend should remove Unicode-named files."""
         from hpc_gui.services.files_mock import MockFilesBackend
@@ -316,26 +311,25 @@ class TestRemoteDirectoryController:
 # 5. Shell Session UTF-8 Decoding
 # ---------------------------------------------------------------------------
 
+@pytest.mark.semantic
 class TestShellSessionDecoding:
     """Verify shell session handles UTF-8 decoding correctly."""
 
     @pytest.mark.unit
     def test_incremental_decoder_unicode(self):
         """Incremental decoder should handle Unicode characters."""
-        import codecs
+        from hpc_gui.ssh.shell_session import InteractiveShellSession
 
-        decoder = codecs.getincrementaldecoder("utf-8")("replace")
-
-        # Turkish characters
+        output = []
+        session = InteractiveShellSession(invoke_shell=lambda **_kwargs: None, on_output=output.append)
         text = "İş tamamlandı ✓"
-        encoded = text.encode("utf-8")
-        decoded = decoder.decode(encoded, final=True)
-        assert decoded == text
+        session.decode_bytes(text.encode("utf-8"), final=True)
+        assert "".join(output) == text
 
     @pytest.mark.unit
     def test_incremental_decoder_split_bytes(self):
         """Incremental decoder should handle split multi-byte sequences."""
-        import codecs
+        from hpc_gui.ssh.shell_session import InteractiveShellSession
 
         # Japanese character は (U+540D) is 3 bytes in UTF-8
         text = "日本語"
@@ -343,46 +337,47 @@ class TestShellSessionDecoding:
 
         # Split at each byte boundary
         for i in range(1, len(encoded)):
-            decoder2 = codecs.getincrementaldecoder("utf-8")("replace")
-            part1 = decoder2.decode(encoded[:i], final=False)
-            part2 = decoder2.decode(encoded[i:], final=True)
-            result = part1 + part2
-            assert result == text, f"Split at byte {i} failed: {result!r} != {text!r}"
+            output = []
+            session = InteractiveShellSession(invoke_shell=lambda **_kwargs: None, on_output=output.append)
+            session.decode_bytes(encoded[:i])
+            session.decode_bytes(encoded[i:], final=True)
+            assert "".join(output) == text, f"Split at byte {i} lost output: {output!r}"
 
     @pytest.mark.unit
     def test_incremental_decoder_emoji(self):
         """Incremental decoder should handle emoji (4-byte UTF-8)."""
-        import codecs
+        from hpc_gui.ssh.shell_session import InteractiveShellSession
 
-        decoder = codecs.getincrementaldecoder("utf-8")("replace")
+        output = []
+        session = InteractiveShellSession(invoke_shell=lambda **_kwargs: None, on_output=output.append)
 
         text = "🚀_job.txt"
-        encoded = text.encode("utf-8")
-        decoded = decoder.decode(encoded, final=True)
-        assert decoded == text
+        session.decode_bytes(text.encode("utf-8"), final=True)
+        assert "".join(output) == text
 
     @pytest.mark.unit
     def test_incremental_decoder_turkish_dotless_i(self):
         """Incremental decoder should handle Turkish dotless i."""
-        import codecs
+        from hpc_gui.ssh.shell_session import InteractiveShellSession
 
-        decoder = codecs.getincrementaldecoder("utf-8")("replace")
+        output = []
+        session = InteractiveShellSession(invoke_shell=lambda **_kwargs: None, on_output=output.append)
 
         # Turkish: İ (U+0130) and ı (U+0131)
         text = "İstanbul_ırmak"
-        encoded = text.encode("utf-8")
-        decoded = decoder.decode(encoded, final=True)
-        assert decoded == text
+        session.decode_bytes(text.encode("utf-8"), final=True)
+        assert "".join(output) == text
 
 
 # ---------------------------------------------------------------------------
 # 6. Unicode File Content Roundtrip
 # ---------------------------------------------------------------------------
 
+@pytest.mark.semantic
 class TestUnicodeFileContentRoundtrip:
     """Verify file content survives Unicode roundtrip through backends."""
 
-    @pytest.mark.integration
+    @pytest.mark.unit
     def test_mock_backend_unicode_content_roundtrip(self):
         """Mock backend should preserve Unicode content through read/write."""
         from hpc_gui.services.files_mock import MockFilesBackend
@@ -404,7 +399,7 @@ class TestUnicodeFileContentRoundtrip:
             read_content = backend.read_text(path)
             assert read_content == content, f"Roundtrip failed for: {content!r}"
 
-    @pytest.mark.integration
+    @pytest.mark.unit
     def test_unicode_paths_in_listings(self):
         """Unicode file names should appear correctly in listings."""
         from hpc_gui.services.files_mock import MockFilesBackend
@@ -429,25 +424,6 @@ class TestUnicodeFileContentRoundtrip:
 # 7. SFTP Channel Manager
 # ---------------------------------------------------------------------------
 
-class TestSFTPChannelManager:
-    """Verify SFTP channel manager handles Unicode paths."""
-
-    @pytest.mark.unit
-    def test_channel_manager_exists(self):
-        """SFTPChannelManager should be importable."""
-        from hpc_gui.ssh.sftp_channels import SFTPChannelManager
-        assert SFTPChannelManager is not None
-
-    @pytest.mark.unit
-    def test_channel_manager_timeouts(self):
-        """SFTPChannelManager should have defined timeouts."""
-
-        # Check timeout constants exist
-        import hpc_gui.ssh.sftp_channels as module
-        assert hasattr(module, "_SFTP_TRANSFER_TIMEOUT_SECONDS")
-        assert hasattr(module, "_SFTP_LISTING_TIMEOUT_SECONDS")
-
-
 # ---------------------------------------------------------------------------
 # 8. SSH Client Unicode Handling
 # ---------------------------------------------------------------------------
@@ -456,6 +432,7 @@ class TestSSHClientUnicode:
     """Verify SSH client handles Unicode correctly."""
 
     @pytest.mark.contract
+    @pytest.mark.semantic
     def test_remote_display_decoder_is_explicit_utf8_with_safe_fallback(self):
         """SSH command/banner display output uses an explicit UTF-8 policy."""
         from hpc_gui.ssh.client import _decode_remote_text
@@ -495,32 +472,23 @@ class TestRemoteEntryHelpers:
     def test_file_type_directory(self):
         """file_type should detect directories correctly."""
         from hpc_gui.ui.models.remote_entry_helpers import file_type
-        from hpc_gui.core.i18n import current_language, load_language, t
 
-        previous_language = current_language()
-        try:
-            load_language("en")
-            result = file_type("test", is_dir=True)
-            # Returns the localized folder label.
-            assert result == t("dirs.type_folder")
-        finally:
-            load_language(previous_language)
+        assert file_type("test", is_dir=True) == "Folder"
 
     @pytest.mark.unit
     def test_file_type_file(self):
         """file_type should detect files correctly."""
         from hpc_gui.ui.models.remote_entry_helpers import file_type
 
-        result = file_type("test.txt", is_dir=False)
-        assert result != "Folder"
+        assert file_type("test.txt", is_dir=False) == "TXT File"
 
     @pytest.mark.unit
+    @pytest.mark.semantic
     def test_file_type_unicode_name(self):
         """file_type should handle Unicode names."""
         from hpc_gui.ui.models.remote_entry_helpers import file_type
 
-        result = file_type("日本語.txt", is_dir=False)
-        assert result, "file_type should return a non-empty string"
+        assert file_type("日本語.txt", is_dir=False) == "TXT File"
 
 
 # ---------------------------------------------------------------------------
@@ -530,7 +498,8 @@ class TestRemoteEntryHelpers:
 class TestIntegration:
     """Integration tests for Unicode remote operations."""
 
-    @pytest.mark.integration
+    @pytest.mark.semantic
+    @pytest.mark.unit
     def test_unicode_listing_roundtrip(self):
         """Unicode names should survive listing roundtrip."""
         from hpc_gui.services.files_mock import MockFilesBackend
@@ -553,7 +522,8 @@ class TestIntegration:
         for name in ALL_REMOTE_NAMES:
             assert name in entries, f"Name {name!r} missing"
 
-    @pytest.mark.integration
+    @pytest.mark.semantic
+    @pytest.mark.unit
     def test_unicode_crud_operations(self):
         """CRUD operations should preserve Unicode names."""
         from hpc_gui.services.files_mock import MockFilesBackend

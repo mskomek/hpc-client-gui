@@ -26,7 +26,7 @@ def test_boundary_models_and_fake_adapter():
     assert events == ["ready"]
 
 
-@pytest.mark.contract
+@pytest.mark.audit
 def test_boundary_source_has_no_toolkit_imports():
     source = open("src/hpc_gui/services/presentation_models.py", encoding="utf-8").read()
     assert "PySide" not in source and "wx" not in source

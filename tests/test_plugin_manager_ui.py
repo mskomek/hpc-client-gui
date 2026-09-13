@@ -8,14 +8,16 @@ from __future__ import annotations
 
 import hashlib
 import json
+import threading
 import unittest.mock as mock
 from types import SimpleNamespace
 
+from PySide6.QtCore import QThreadPool
 from PySide6.QtGui import QDesktopServices
 
 import pytest
 
-from hpc_gui.core.i18n import load_language, t
+from hpc_gui.core.i18n import current_language, load_language, t
 from hpc_gui.ui.dialogs.plugin_manager_dialog import PluginManagerDialog
 from hpc_gui.plugins.registry_client import OFFICIAL_RAW_BASE, OFFICIAL_REGISTRY_URL
 
@@ -64,9 +66,10 @@ def qapp():
     from PySide6.QtWidgets import QApplication
 
     app = QApplication.instance() or QApplication([])
+    previous_language = current_language()
     load_language("en")
     yield app
-    load_language("en")
+    load_language(previous_language)
 
 
 def registry_fetcher():
@@ -116,6 +119,7 @@ def _registry_fetch_result(source="network"):
 
 @pytest.mark.qt
 @pytest.mark.gui
+@pytest.mark.concurrency
 def test_first_show_starts_exactly_one_automatic_refresh(qapp, frozen_thread_pool):
     calls = []
 
@@ -156,6 +160,7 @@ def test_first_show_starts_exactly_one_automatic_refresh(qapp, frozen_thread_poo
 
 @pytest.mark.qt
 @pytest.mark.gui
+@pytest.mark.concurrency
 def test_refresh_guard_blocks_duplicate_inflight_requests(qapp, frozen_thread_pool):
     dialog = PluginManagerDialog(fetcher=lambda url, limit: b"{}")
     try:
@@ -238,6 +243,8 @@ def test_offline_without_cache_shows_offline_state(qapp, frozen_thread_pool):
 
 @pytest.mark.qt
 @pytest.mark.gui
+@pytest.mark.concurrency
+@pytest.mark.resource
 def test_closing_during_refresh_is_safe(qapp, frozen_thread_pool):
     dialog = PluginManagerDialog(fetcher=lambda url, limit: b"{}")
     dialog.show()
@@ -290,6 +297,7 @@ def test_request_plugin_action_targets_dedicated_issue_form(qapp):
 
 @pytest.mark.qt
 @pytest.mark.gui
+@pytest.mark.semantic
 def test_capability_badges_use_translated_labels(qapp):
     registry = grouped_registry()
     fluent = next(e for e in registry["plugins"] if e["id"] == "org.hpcclient.fluent")
@@ -962,6 +970,7 @@ def test_details_shows_cluster_commands_warning(qapp):
 
 
 @pytest.mark.contract
+@pytest.mark.semantic
 def test_i18n_keys_resolve_in_both_languages():
     for language in ("en", "tr"):
         load_language(language)
@@ -1106,12 +1115,15 @@ def test_activate_label_for_newer_selected_version(qapp):
 
 @pytest.mark.qt
 @pytest.mark.gui
-def test_rollback_requires_confirmation_and_runs_off_gui_thread(qapp, frozen_thread_pool):
+@pytest.mark.concurrency
+@pytest.mark.resource
+def test_rollback_requires_confirmation_and_runs_off_gui_thread(qapp):
     dialog = _make_installed_dialog(qapp, ["1.9.0", "1.10.0"], active_version="1.10.0")
     emitted = []
     dialog.plugins_changed.connect(lambda: emitted.append(True))
     confirmed = []
     activated = []
+    gui_thread = threading.get_ident()
 
     class FakeBox:
         Yes = 1
@@ -1127,7 +1139,7 @@ def test_rollback_requires_confirmation_and_runs_off_gui_thread(qapp, frozen_thr
             pass
 
     def fake_activate(plugin_id, version):
-        activated.append((plugin_id, version))
+        activated.append((plugin_id, version, threading.get_ident()))
 
     with mock.patch(
         "hpc_gui.plugins.state.activate_version",
@@ -1138,9 +1150,12 @@ def test_rollback_requires_confirmation_and_runs_off_gui_thread(qapp, frozen_thr
         )
         worker = dialog._version_worker
         assert worker is not None
-        worker.run()
+        assert QThreadPool.globalInstance().waitForDone(5000)
+        qapp.processEvents()
 
-    assert activated == [("org.hpcclient.multi", "1.9.0")]
+    assert len(activated) == 1
+    assert activated[0][:2] == ("org.hpcclient.multi", "1.9.0")
+    assert activated[0][2] != gui_thread
     assert len(confirmed) == 1
     assert emitted == [True]
     assert dialog._version_worker is None

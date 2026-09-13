@@ -5,7 +5,7 @@ from pathlib import Path
 
 wx = pytest.importorskip("wx")
 
-from hpc_gui.core.i18n import load_language
+from hpc_gui.core.i18n import current_language, load_language
 from hpc_gui.wx_remote_files import WxRemoteDirectoryModel
 from hpc_gui.wx_remote_files_view import show_remote_files
 from hpc_gui.wx_local_files import show_local_files
@@ -25,19 +25,25 @@ def _pump(app, predicate):
 
 @pytest.fixture
 def wx_app():
+    previous_language = current_language()
     load_language("en")
     app = wx.App(False)
-    yield app
-    load_language("en")
-    for window in wx.GetTopLevelWindows():
-        if window:
-            window.Destroy()
-    app.ProcessPendingEvents()
-    app.Destroy()
+    try:
+        yield app
+    finally:
+        for window in list(wx.GetTopLevelWindows()):
+            if window:
+                window.Destroy()
+        for _ in range(3):
+            app.ProcessPendingEvents()
+            wx.Yield()
+        app.Destroy()
+        load_language(previous_language)
 
 
 @pytest.mark.wx
 @pytest.mark.gui
+@pytest.mark.semantic
 def test_wx_remote_context_menu_reopens_with_turkish_labels(wx_app):
     backend = MockRemoteFilesBackend()
     show_remote_files(
@@ -67,6 +73,7 @@ def test_wx_remote_context_menu_reopens_with_turkish_labels(wx_app):
 
 @pytest.mark.wx
 @pytest.mark.gui
+@pytest.mark.semantic
 def test_wx_local_context_menu_reopens_with_turkish_labels(wx_app, tmp_path: Path):
     (tmp_path / "job.slurm").write_text("#!/bin/sh", encoding="utf-8")
     show_local_files(path=tmp_path, upload=lambda _paths: None)
@@ -109,6 +116,7 @@ def _tab_close_labels(app, frame, notebook):
 
 @pytest.mark.wx
 @pytest.mark.gui
+@pytest.mark.semantic
 def test_wx_remote_tab_close_label_follows_runtime_language(wx_app):
     backend = MockRemoteFilesBackend()
     show_remote_files(
@@ -129,6 +137,7 @@ def test_wx_remote_tab_close_label_follows_runtime_language(wx_app):
 
 @pytest.mark.wx
 @pytest.mark.gui
+@pytest.mark.semantic
 def test_wx_local_tab_close_label_follows_runtime_language(wx_app, tmp_path: Path):
     (tmp_path / "a.txt").write_text("x", encoding="utf-8")
     show_local_files(path=tmp_path)
@@ -158,6 +167,7 @@ def _conflict_labels(parent, files, item):
 
 @pytest.mark.wx
 @pytest.mark.gui
+@pytest.mark.semantic
 def test_wx_transfer_conflict_and_progress_follow_runtime_language(wx_app):
     from hpc_gui.services.transfer_controller import TransferItem
     from hpc_gui.wx_transfer_workspace import create_transfer_progress

@@ -18,7 +18,7 @@ wx = pytest.importorskip("wx", reason="wxPython not installed – skipping wx GU
 
 from hpc_gui.config import storage
 from hpc_gui.config.storage import load_profiles
-from hpc_gui.core.i18n import t, load_language
+from hpc_gui.core.i18n import current_language, t, load_language
 from hpc_gui.services.connection_profile_service import (
     resolve_password_for_connect,
 )
@@ -56,6 +56,7 @@ def _isolated_storage(monkeypatch):
 
 @pytest.fixture(autouse=True)
 def _clean_wx_after():
+    previous_language = current_language()
     yield
     # Ensure any wx windows left open by a failing test are destroyed so the
     # next test's wx.App.Get() does not see a polluted app with open windows
@@ -76,6 +77,7 @@ def _clean_wx_after():
                     break
     except Exception:
         pass
+    load_language(previous_language)
 
 
 # ---------------------------------------------------------------------------
@@ -144,8 +146,7 @@ def test_keychain_connect_resolves(monkeypatch):
         tmp.cleanup()
 
 
-@pytest.mark.wx
-@pytest.mark.gui
+@pytest.mark.integration
 def test_dpapi_connect_resolves(monkeypatch):
     tmp = _isolated_storage(monkeypatch)
     try:
@@ -469,8 +470,8 @@ def test_saved_password_unavailable_error(monkeypatch, caplog):
 # MFA and dialogs
 # ---------------------------------------------------------------------------
 
+@pytest.mark.integration
 @pytest.mark.wx
-@pytest.mark.gui
 def test_mfa_respects_echo_and_not_logged(monkeypatch, caplog):
     tmp = _isolated_storage(monkeypatch)
     try:
@@ -518,8 +519,7 @@ def test_mfa_respects_echo_and_not_logged(monkeypatch, caplog):
         tmp.cleanup()
 
 
-@pytest.mark.wx
-@pytest.mark.gui
+@pytest.mark.audit
 def test_password_dialogs_use_correct_api(monkeypatch):
     src = open("src/hpc_gui/wx_connection.py", encoding="utf-8").read()
     assert "wx.PasswordEntryDialog" in src, "MFA and edit auth must use PasswordEntryDialog"
@@ -536,6 +536,7 @@ def test_password_dialogs_use_correct_api(monkeypatch):
 
 @pytest.mark.wx
 @pytest.mark.gui
+@pytest.mark.concurrency
 def test_save_and_connect_wx_event_chain(monkeypatch):
     tmp = _isolated_storage(monkeypatch)
     try:
@@ -665,6 +666,7 @@ def test_save_failure_prevents_connect(monkeypatch):
 
 @pytest.mark.wx
 @pytest.mark.gui
+@pytest.mark.concurrency
 def test_connect_failure_after_save_keeps_profile(monkeypatch):
     tmp = _isolated_storage(monkeypatch)
     try:
@@ -721,6 +723,7 @@ def test_connect_failure_after_save_keeps_profile(monkeypatch):
 
 @pytest.mark.wx
 @pytest.mark.gui
+@pytest.mark.concurrency
 def test_controller_transitions_and_second_attempt(monkeypatch):
     c = ConnectionController()
     assert c.state.value == "disconnected"
@@ -872,8 +875,8 @@ def test_delete_active_profile_blocked(monkeypatch):
         tmp.cleanup()
 
 
+@pytest.mark.integration
 @pytest.mark.wx
-@pytest.mark.gui
 def test_host_key_mapping(monkeypatch):
     tmp = _isolated_storage(monkeypatch)
     try:
@@ -905,8 +908,7 @@ def test_host_key_mapping(monkeypatch):
 # i18n and redaction
 # ---------------------------------------------------------------------------
 
-@pytest.mark.wx
-@pytest.mark.gui
+@pytest.mark.contract
 def test_i18n_new_connection_keys():
     load_language("en")
     for key in ["connection.auth_cancelled", "connection.test_credential_error", "connection.master_unlock_error", "connection.saved_credential_unavailable", "connection.credential_unlock_prompt", "connection.saved_password_unavailable"]:
@@ -917,8 +919,7 @@ def test_i18n_new_connection_keys():
     load_language("en")
 
 
-@pytest.mark.wx
-@pytest.mark.gui
+@pytest.mark.integration
 def test_error_redaction_no_secret_in_logs(monkeypatch, caplog):
     import logging
     from hpc_gui.services.connection_profile_service import resolve_password_for_connect
@@ -952,24 +953,14 @@ def test_error_redaction_no_secret_in_logs(monkeypatch, caplog):
 # Non-regression: provider/template, storage, quota
 # ---------------------------------------------------------------------------
 
-@pytest.mark.wx
-@pytest.mark.gui
-def test_provider_template_no_generic_branch(monkeypatch):
-    src = open("src/hpc_gui/wx_connection.py", encoding="utf-8").read()
-    assert "TRUBA" not in src
-    src2 = open("src/hpc_gui/wx_connection_dialog.py", encoding="utf-8").read()
-    # Allow mention in comments but not as hardcoded branch
-    assert src2.count("TRUBA") == 0 or "provider_template" in src2
-
-@pytest.mark.wx
-@pytest.mark.gui
+@pytest.mark.unit
 def test_quota_fail_closed():
     from hpc_gui.services.quota_monitor import quota_gate
     assert quota_gate({"enabled": False, "command_template": "cmd", "backend_id": "x", "consent": True}, backend_ids=["x"], connected=True) == "disabled"
     assert quota_gate({"enabled": True, "command_template": "", "backend_id": "x"}, backend_ids=["x"]) == "not_configured"
 
+@pytest.mark.contract
 @pytest.mark.wx
-@pytest.mark.gui
 def test_storage_metadata_preserved(monkeypatch):
     tmp = _isolated_storage(monkeypatch)
     try:

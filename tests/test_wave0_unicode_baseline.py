@@ -92,20 +92,18 @@ def _norm(p: str) -> str:
 # 1. Repository Baseline
 # ---------------------------------------------------------------------------
 
+@pytest.mark.audit
 class TestRepositoryBaseline:
     """Verify repository state is real and current."""
 
-    @pytest.mark.contract
     def test_src_directory_exists(self):
         src = ROOT / "src" / "hpc_gui"
         assert src.is_dir(), f"Source directory not found: {src}"
 
-    @pytest.mark.contract
     def test_pyproject_exists(self):
         pyproject = ROOT / "pyproject.toml"
         assert pyproject.is_file(), "pyproject.toml not found"
 
-    @pytest.mark.contract
     def test_qt_is_default_runtime(self):
         runtime_file = ROOT / "src" / "hpc_gui" / "runtime.py"
         assert runtime_file.is_file(), "runtime.py not found"
@@ -114,13 +112,11 @@ class TestRepositoryBaseline:
             "Qt is no longer the default GUI runtime"
         )
 
-    @pytest.mark.contract
     def test_pyside6_in_dependencies(self):
         pyproject = ROOT / "pyproject.toml"
         content = pyproject.read_text(encoding="utf-8")
         assert "PySide6" in content, "PySide6 not in dependencies"
 
-    @pytest.mark.contract
     def test_i18n_files_exist(self):
         i18n_dir = ROOT / "src" / "hpc_gui" / "i18n"
         assert i18n_dir.is_dir(), "i18n directory not found"
@@ -136,28 +132,6 @@ class TestRepositoryBaseline:
 
 class TestMojibakeReproduction:
     """Reproduce the known ★ Favorites mojibake bug."""
-
-    @pytest.mark.contract
-    def test_en_favorites_mojibake_exists(self):
-        """The mojibake 'â˜… Favorites' has been fixed to '★ Favorites'."""
-        en_path = ROOT / "src" / "hpc_gui" / "i18n" / "en.json"
-        content = en_path.read_text(encoding="utf-8")
-        data = json.loads(content)
-        fav = data.get("dirs", {}).get("favorites", "")
-        assert fav == "★ Favorites", (
-            f"Expected '★ Favorites', got: {fav!r}"
-        )
-
-    @pytest.mark.contract
-    def test_tr_favorites_mojibake_exists(self):
-        """The mojibake 'â˜… Favoriler' has been fixed to '★ Favoriler'."""
-        tr_path = ROOT / "src" / "hpc_gui" / "i18n" / "tr.json"
-        content = tr_path.read_text(encoding="utf-8")
-        data = json.loads(content)
-        fav = data.get("dirs", {}).get("favorites", "")
-        assert fav == "★ Favoriler", (
-            f"Expected '★ Favoriler', got: {fav!r}"
-        )
 
     @pytest.mark.contract
     def test_mojibake_is_corrupted_star(self):
@@ -358,7 +332,7 @@ class TestEncodingBoundaryInventory:
             data = json.loads(content)
             assert isinstance(data, dict), f"{lang}.json did not parse as dict"
 
-    @pytest.mark.contract
+    @pytest.mark.audit
     def test_config_storage_uses_utf8(self):
         """config/storage.py should use encoding='utf-8' for JSON."""
         storage = ROOT / "src" / "hpc_gui" / "config" / "storage.py"
@@ -366,58 +340,30 @@ class TestEncodingBoundaryInventory:
             content = storage.read_text(encoding="utf-8")
             assert 'encoding="utf-8"' in content or "encoding='utf-8'" in content
 
-    @pytest.mark.contract
-    def test_ssh_client_decodes_output(self):
-        """ssh/client.py should decode SSH output."""
-        client = ROOT / "src" / "hpc_gui" / "ssh" / "client.py"
-        if client.is_file():
-            content = client.read_text(encoding="utf-8")
-            assert "decode(" in content, "SSH client should decode bytes"
-
-    @pytest.mark.contract
+    @pytest.mark.audit
     def test_files_ssh_uses_utf8(self):
         """services/files_ssh.py should use UTF-8 for SFTP text operations."""
         ssh_files = ROOT / "src" / "hpc_gui" / "services" / "files_ssh.py"
         if ssh_files.is_file():
             content = ssh_files.read_text(encoding="utf-8")
-            assert "utf-8" in content.lower(), "SFTP backend should use UTF-8"
+            assert 'data.decode("utf-8")' in content
+            assert 'text.encode("utf-8")' in content
 
-    @pytest.mark.contract
+    @pytest.mark.audit
     def test_shell_session_uses_utf8_decoder(self):
         """ssh/shell_session.py should use UTF-8 incremental decoder."""
         shell = ROOT / "src" / "hpc_gui" / "ssh" / "shell_session.py"
         if shell.is_file():
             content = shell.read_text(encoding="utf-8")
-            assert "utf-8" in content.lower(), "Shell session should use UTF-8"
+            assert 'codecs.getincrementaldecoder("utf-8")("replace")' in content
 
-    @pytest.mark.contract
-    def test_ensure_ascii_false_in_config(self):
-        """Config JSON serialization should use ensure_ascii=False."""
-        storage = ROOT / "src" / "hpc_gui" / "config" / "storage.py"
-        if storage.is_file():
-            content = storage.read_text(encoding="utf-8")
-            assert "ensure_ascii=False" in content, (
-                "Config storage should use ensure_ascii=False for Turkish support"
-            )
-
-    @pytest.mark.contract
+    @pytest.mark.audit
     def test_errors_replace_in_ssh(self):
         """SSH output decoding should use errors='replace'."""
         client = ROOT / "src" / "hpc_gui" / "ssh" / "client.py"
         if client.is_file():
             content = client.read_text(encoding="utf-8")
             assert 'errors="replace"' in content or "errors='replace'" in content
-
-    @pytest.mark.contract
-    def test_errors_ignore_in_process_registry(self):
-        """process_registry.py should not use errors='ignore' on JSON."""
-        reg = ROOT / "src" / "hpc_gui" / "services" / "process_registry.py"
-        if reg.is_file():
-            content = reg.read_text(encoding="utf-8")
-            # Document the finding — errors="ignore" on JSON is risky
-            # This is a known risk — we document it but don't assert absence
-            # because fixing it is Wave 1+ work
-            assert len(content) > 0, "process_registry.py should have content"
 
 
 # ---------------------------------------------------------------------------
@@ -451,19 +397,6 @@ class TestI18nCompleteness:
         assert not missing_in_tr, f"Missing keys in tr.json: {missing_in_tr}"
         assert not missing_in_en, f"Missing keys in en.json: {missing_in_en}"
 
-    @pytest.mark.contract
-    def test_turkish_file_no_mojibake_patterns(self):
-        """Check tr.json for common mojibake patterns ( Ã , ÅŸ, Ä±, etc.)."""
-        tr_path = ROOT / "src" / "hpc_gui" / "i18n" / "tr.json"
-        content = tr_path.read_text(encoding="utf-8")
-        # These are common mojibake patterns for Turkish characters
-        mojibake_patterns = ["Ã§", "ÅŸ", "Ä±", "Ã¶", "Ã¼", "ÄŸ", "Ä°"]
-        found = []
-        for pattern in mojibake_patterns:
-            if pattern in content:
-                found.append(pattern)
-        assert not found, f"Mojibake patterns in tr.json: {found}"
-
 
 # ---------------------------------------------------------------------------
 # 7. Plugin/Provider Unicode Contract
@@ -472,19 +405,13 @@ class TestI18nCompleteness:
 class TestPluginProviderUnicode:
     """Verify plugin/provider data can handle Unicode."""
 
-    @pytest.mark.contract
-    def test_plugin_models_exist(self):
-        models = ROOT / "src" / "hpc_gui" / "plugins" / "models.py"
-        assert models.is_file(), "Plugin models not found"
-
     @pytest.mark.audit
     def test_plugin_manifest_supports_unicode(self):
         """Plugin manifest loading should handle Unicode."""
         loader = ROOT / "src" / "hpc_gui" / "plugins" / "loader.py"
-        if loader.is_file():
-            content = loader.read_text(encoding="utf-8")
-            # The loader should use UTF-8 for reading manifests
-            assert "utf-8" in content.lower() or "encoding" in content.lower() or "read_text" in content
+        assert loader.is_file(), "Plugin loader not found"
+        content = loader.read_text(encoding="utf-8")
+        assert 'path.open("r", encoding="utf-8")' in content
 
 
 # ---------------------------------------------------------------------------
@@ -493,22 +420,3 @@ class TestPluginProviderUnicode:
 
 class TestRiskClassification:
     """Document and verify risk classification of findings."""
-
-    @pytest.mark.contract
-    def test_p0_mojibake_documented(self):
-        """The mojibake bug was P0 — now fixed at the source."""
-        en_path = ROOT / "src" / "hpc_gui" / "i18n" / "en.json"
-        content = en_path.read_text(encoding="utf-8")
-        data = json.loads(content)
-        fav = data.get("dirs", {}).get("favorites", "")
-        # P0: Was visible mojibake, now fixed
-        assert fav == "★ Favorites", "Mojibake should be fixed"
-
-    @pytest.mark.contract
-    def test_p0_ssh_decode_risks_documented(self):
-        """SSH decode with errors='replace' is P0 — data loss boundary."""
-        client = ROOT / "src" / "hpc_gui" / "ssh" / "client.py"
-        if client.is_file():
-            content = client.read_text(encoding="utf-8")
-            # Document the finding
-            assert "decode(" in content

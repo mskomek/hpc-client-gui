@@ -9,7 +9,7 @@ wx = pytest.importorskip("wx")
 
 from hpc_gui import wx_local_files
 from hpc_gui.wx_local_files import show_local_files
-from hpc_gui.core.i18n import load_language
+from hpc_gui.core.i18n import current_language, load_language
 
 
 def _pump(app, predicate, timeout=2):
@@ -25,14 +25,20 @@ def _pump(app, predicate, timeout=2):
 
 @pytest.fixture
 def wx_app():
+    previous_language = current_language()
     load_language("en")
     app = wx.App(False)
-    yield app
-    for window in wx.GetTopLevelWindows():
-        if window:
-            window.Destroy()
-    app.ProcessPendingEvents()
-    app.Destroy()
+    try:
+        yield app
+    finally:
+        for window in wx.GetTopLevelWindows():
+            if window:
+                window.Destroy()
+        for _ in range(3):
+            wx.Yield()
+            app.ProcessPendingEvents()
+        app.Destroy()
+        load_language(previous_language)
 
 
 def _browser(wx_app, path, **callbacks):
@@ -162,9 +168,9 @@ class _Dialog:
         pass
 
 
+@pytest.mark.windows
 @pytest.mark.wx
-@pytest.mark.wx
-@pytest.mark.gui
+@pytest.mark.integration
 @pytest.mark.parametrize("is_dir", [False, True])
 def test_reveal_file_manager_windows_uses_parent_or_directory(monkeypatch, tmp_path: Path, is_dir):
     target = tmp_path / ("folder" if is_dir else "file.txt")
@@ -176,9 +182,9 @@ def test_reveal_file_manager_windows_uses_parent_or_directory(monkeypatch, tmp_p
     assert opened == [str(target if is_dir else target.parent)]
 
 
+@pytest.mark.macos
 @pytest.mark.wx
-@pytest.mark.wx
-@pytest.mark.gui
+@pytest.mark.integration
 @pytest.mark.parametrize("is_dir", [False, True])
 def test_reveal_file_manager_macos_uses_finder_semantics(monkeypatch, tmp_path: Path, is_dir):
     target = tmp_path / ("folder" if is_dir else "file.txt")
@@ -191,9 +197,9 @@ def test_reveal_file_manager_macos_uses_finder_semantics(monkeypatch, tmp_path: 
     assert calls == [["open", str(target)] if is_dir else ["open", "-R", str(target)]]
 
 
+@pytest.mark.linux
 @pytest.mark.wx
-@pytest.mark.wx
-@pytest.mark.gui
+@pytest.mark.integration
 @pytest.mark.parametrize("is_dir", [False, True])
 def test_reveal_file_manager_linux_opens_parent_or_directory(monkeypatch, tmp_path: Path, is_dir):
     target = tmp_path / ("folder" if is_dir else "file.txt")

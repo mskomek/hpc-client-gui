@@ -11,6 +11,7 @@ verification per explicit user direction.
 """
 from __future__ import annotations
 import pytest
+pytestmark = pytest.mark.subprocess
 
 import json
 import subprocess
@@ -88,7 +89,7 @@ class MockClusterRoundTripTests(unittest.TestCase):
             timeout=30,
         )
 
-    @pytest.mark.integration
+    @pytest.mark.e2e
     def test_files_round_trip_over_real_ssh_wire(self) -> None:
         local_source = self.root_dir.parent / "local_upload.txt"
         local_source.write_text("mock-cluster-round-trip-payload", encoding="utf-8")
@@ -124,7 +125,7 @@ class MockClusterRoundTripTests(unittest.TestCase):
         rm_proc = self._run_cli("files", "rm", "roundtrip", "--recursive", "--yes")
         self.assertEqual(rm_proc.returncode, 0, rm_proc.stderr)
 
-    @pytest.mark.integration
+    @pytest.mark.e2e
     def test_jobs_commands_round_trip_over_real_ssh_wire(self) -> None:
         list_proc = self._run_cli("jobs", "list")
         self.assertEqual(list_proc.returncode, 0, list_proc.stderr)

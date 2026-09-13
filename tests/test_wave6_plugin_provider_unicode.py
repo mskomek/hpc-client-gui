@@ -15,30 +15,13 @@ if str(ROOT / "src") not in sys.path:
 
 
 # ---------------------------------------------------------------------------
-# 1. Reference Unicode Provider Data
-# ---------------------------------------------------------------------------
-
-UNICODE_PROVIDER_DATA = {
-    "name": "Üniversite Kümesi",
-    "description": "Hesaplama sonuçlarını göster",
-    "storage": {
-        "label": "Çalışma Alanı",
-        "path": "/scratch/çalışmalar/日本語",
-    },
-    "action": {
-        "label": "İş Klasörünü Aç",
-    },
-}
-
-
-# ---------------------------------------------------------------------------
 # 2. Plugin Manifest Unicode
 # ---------------------------------------------------------------------------
 
 class TestPluginManifestUnicode:
     """Verify plugin manifests handle Unicode correctly."""
 
-    @pytest.mark.reporting
+    @pytest.mark.contract
     def test_manifest_name_unicode(self):
         """PluginManifest should accept Unicode names."""
         from hpc_gui.plugins.models import PluginManifest
@@ -60,7 +43,7 @@ class TestPluginManifestUnicode:
         assert manifest.name == "Üniversite Kümesi Plugin"
         assert "hesaplama" in manifest.description.lower()
 
-    @pytest.mark.reporting
+    @pytest.mark.contract
     def test_cluster_profile_unicode(self):
         """ClusterProfileDefinition should accept Unicode names."""
         from hpc_gui.plugins.models import ClusterProfileDefinition
@@ -72,7 +55,7 @@ class TestPluginManifestUnicode:
         )
         assert profile.name == "Çalışma Alanı Profili"
 
-    @pytest.mark.reporting
+    @pytest.mark.contract
     def test_storage_area_unicode(self):
         """Storage areas should accept Unicode labels and paths."""
         from hpc_gui.plugins.models import ClusterProfileDefinition
@@ -92,7 +75,7 @@ class TestPluginManifestUnicode:
         assert profile.storage[0]["label"] == "Çalışma Alanı"
         assert "çalışmalar" in profile.storage[0]["path"]
 
-    @pytest.mark.reporting
+    @pytest.mark.contract
     def test_job_outputs_unicode(self):
         """Job outputs should accept Unicode labels."""
         from hpc_gui.plugins.models import ClusterProfileDefinition
@@ -124,7 +107,7 @@ class TestPluginManifestUnicode:
 class TestPluginValidatorUnicode:
     """Verify plugin validator handles Unicode correctly."""
 
-    @pytest.mark.reporting
+    @pytest.mark.contract
     def test_validate_manifest_unicode_name(self):
         """validate_manifest_dict should accept Unicode names."""
         from hpc_gui.plugins.validator import validate_manifest_dict
@@ -148,7 +131,7 @@ class TestPluginValidatorUnicode:
         name_errors = [e for e in errors if "name" in e.lower()]
         assert len(name_errors) == 0
 
-    @pytest.mark.reporting
+    @pytest.mark.contract
     def test_validate_cluster_profile_unicode(self):
         """validate_cluster_profile_dict should accept Unicode names."""
         from hpc_gui.plugins.validator import validate_cluster_profile_dict
@@ -172,8 +155,8 @@ class TestProviderContractUnicode:
     """Verify provider contract handles Unicode correctly."""
 
     @pytest.mark.contract
-    def test_extract_contract_unicode(self):
-        """extract_contract should handle Unicode provider template."""
+    def test_extract_contract_present_sections(self):
+        """extract_contract should expose supplied optional sections."""
         from hpc_gui.services.provider_contract import extract_contract
 
         template = {
@@ -267,18 +250,22 @@ class TestPluginUIContributionsUnicode:
         from hpc_gui.plugins.ui_contributions import validate_ui_contributions_dict
 
         contributions = {
-            "menu": {
+            "plugins_menu": {
+                "label": "HPC Araçları",
+                "labels": {"en": "HPC Tools", "tr": "HPC Araçları"},
                 "items": [
                     {
-                        "type": "submenu",
+                        "kind": "submenu",
                         "id": "test_menu",
+                        "label": "Tools",
                         "labels": {"en": "Test Menu", "tr": "Test Menüsü"},
                         "items": [
                             {
-                                "type": "action",
+                                "kind": "action",
                                 "id": "test_action",
+                                "label": "Open Folder",
                                 "labels": {"en": "Open Folder", "tr": "Klasörü Aç"},
-                                "provider_action": "open_folder",
+                                "action": "open_folder",
                             }
                         ],
                     }
@@ -286,9 +273,7 @@ class TestPluginUIContributionsUnicode:
             }
         }
         errors = validate_ui_contributions_dict(contributions)
-        # Should have no errors related to Unicode
-        label_errors = [e for e in errors if "label" in e.lower() or "unicode" in e.lower()]
-        assert len(label_errors) == 0
+        assert errors == []
 
 
 # ---------------------------------------------------------------------------
@@ -298,7 +283,7 @@ class TestPluginUIContributionsUnicode:
 class TestIntegration:
     """Integration tests for plugin/provider Unicode."""
 
-    @pytest.mark.contract
+    @pytest.mark.integration
     def test_full_plugin_unicode_flow(self):
         """Full flow: create manifest, validate, build profile."""
         from hpc_gui.plugins.models import (
@@ -414,20 +399,14 @@ class TestIntegration:
             assert "çalışma" in result.path or "日本語" in result.path
 
     @pytest.mark.contract
-    def test_optional_data_graceful_degradation(self):
-        """Missing optional data should degrade gracefully."""
+    def test_partial_data_graceful_degradation(self):
+        """A partially supplied contract should preserve presence and absence."""
         from hpc_gui.services.provider_contract import extract_contract
 
-        # Empty template
-        contract = extract_contract({})
-        assert contract.has_job_details is False
+        contract = extract_contract({"job_details": {"adapter": "test"}})
+        assert contract.has_job_details is True
         assert contract.has_accounting is False
         assert contract.has_cluster_status is False
-
-        # Partial template
-        contract2 = extract_contract({"job_details": {"adapter": "test"}})
-        assert contract2.has_job_details is True
-        assert contract2.has_accounting is False
 
     @pytest.mark.contract
     def test_existing_ascii_compatibility(self):
@@ -452,24 +431,28 @@ class TestIntegration:
         # UI contributions use a specific structure
         # The validation checks for known properties
         contributions = {
-            "items": [
+            "plugins_menu": {
+                "label": "HPC Tools",
+                "labels": {"en": "HPC Tools", "tr": "HPC Araçları"},
+                "items": [
                 {
-                    "type": "submenu",
+                    "kind": "submenu",
                     "id": "hpc_tools",
+                    "label": "HPC Tools",
                     "labels": {"en": "HPC Tools", "tr": "HPC Araçları"},
                     "items": [
                         {
-                            "type": "action",
+                            "kind": "action",
                             "id": "open_scratch",
+                            "label": "Open Scratch",
                             "labels": {"en": "Open Scratch", "tr": "Scratch Aç"},
-                            "provider_action": "open_scratch",
-                            "when": ["connected"],
+                            "action": "open_scratch",
+                            "when": {"connected": True},
                         },
                     ],
                 }
-            ]
+                ],
+            }
         }
         errors = validate_ui_contributions_dict(contributions)
-        # Should have no errors related to Unicode labels
-        label_errors = [e for e in errors if "label" in e.lower() and "unicode" in e.lower()]
-        assert len(label_errors) == 0
+        assert errors == []

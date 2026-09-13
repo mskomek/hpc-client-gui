@@ -11,13 +11,21 @@ from hpc_gui.core.i18n import load_language, set_language, t
 
 @pytest.fixture
 def wx_app():
+    from hpc_gui.core.i18n import current_language
+
+    previous_language = current_language()
     load_language("en")
     app=wx.App(False)
-    yield app
-    for w in wx.GetTopLevelWindows():
-        if w: w.Destroy()
-    app.ProcessPendingEvents()
-    app.Destroy()
+    try:
+        yield app
+    finally:
+        for w in list(wx.GetTopLevelWindows()):
+            if w: w.Destroy()
+        for _ in range(3):
+            wx.Yield()
+            app.ProcessPendingEvents()
+        app.Destroy()
+        load_language(previous_language)
 
 class _Files:
     def __init__(self): self.calls=[]
@@ -46,6 +54,8 @@ class _Lifecycle:
 
 @pytest.mark.wx
 @pytest.mark.gui
+@pytest.mark.concurrency
+@pytest.mark.resource
 def test_wx_transfer_window_close_cancels_inflight_transfer(wx_app):
     parent=wx.Frame(None)
     files=_BlockingFiles()
@@ -68,7 +78,10 @@ def test_wx_transfer_window_close_cancels_inflight_transfer(wx_app):
     parent.Destroy()
     wx_app.ProcessPendingEvents()
 
-@pytest.mark.release
+@pytest.mark.integration
+@pytest.mark.wx
+@pytest.mark.concurrency
+@pytest.mark.resource
 def test_wx_transfer_window_close_releases_session(wx_app):
     parent=wx.Frame(None)
     files=_BlockingFiles()
@@ -89,6 +102,7 @@ def test_wx_transfer_window_close_releases_session(wx_app):
 
 @pytest.mark.wx
 @pytest.mark.gui
+@pytest.mark.resource
 def test_wx_transfer_progress_callback_after_close_is_ignored(wx_app):
     parent=wx.Frame(None)
     window=create_transfer_progress(parent)
@@ -108,6 +122,7 @@ def test_wx_transfer_progress_callback_after_close_is_ignored(wx_app):
 
 @pytest.mark.wx
 @pytest.mark.gui
+@pytest.mark.resource
 def test_wx_transfer_finish_callback_after_close_is_ignored(wx_app):
     parent=wx.Frame(None)
     window=create_transfer_progress(parent)
@@ -122,6 +137,7 @@ def test_wx_transfer_finish_callback_after_close_is_ignored(wx_app):
 
 @pytest.mark.wx
 @pytest.mark.gui
+@pytest.mark.resource
 def test_wx_transfer_failure_callback_after_close_is_ignored(wx_app):
     parent=wx.Frame(None)
     window=create_transfer_progress(parent)
@@ -140,6 +156,8 @@ def test_wx_transfer_failure_callback_after_close_is_ignored(wx_app):
 
 @pytest.mark.wx
 @pytest.mark.gui
+@pytest.mark.concurrency
+@pytest.mark.resource
 def test_wx_transfer_close_does_not_touch_destroyed_controls(wx_app):
     parent=wx.Frame(None)
     files=_BlockingFiles()
@@ -163,6 +181,7 @@ def test_wx_transfer_close_does_not_touch_destroyed_controls(wx_app):
 
 @pytest.mark.wx
 @pytest.mark.gui
+@pytest.mark.resource
 def test_wx_transfer_success_visible_state(wx_app):
     parent=wx.Frame(None)
     files=_Files()
@@ -189,6 +208,7 @@ def test_wx_transfer_success_visible_state(wx_app):
 
 @pytest.mark.wx
 @pytest.mark.gui
+@pytest.mark.resource
 def test_wx_transfer_failure_visible_state(wx_app):
     parent=wx.Frame(None)
     files=_FailingFiles()
@@ -213,6 +233,8 @@ def test_wx_transfer_failure_visible_state(wx_app):
 
 @pytest.mark.wx
 @pytest.mark.gui
+@pytest.mark.concurrency
+@pytest.mark.resource
 def test_wx_transfer_cancel_visible_state(wx_app):
     parent=wx.Frame(None)
     files=_BlockingFiles()
@@ -240,6 +262,7 @@ def test_wx_transfer_cancel_visible_state(wx_app):
 
 @pytest.mark.wx
 @pytest.mark.gui
+@pytest.mark.semantic
 def test_wx_transfer_progress_retranslates_runtime(wx_app):
     parent=wx.Frame(None)
     window=create_transfer_progress(parent)
@@ -251,12 +274,15 @@ def test_wx_transfer_progress_retranslates_runtime(wx_app):
     wx_app.ProcessPendingEvents()
     wx.MilliSleep(20)
     wx_app.ProcessPendingEvents()
-    assert controls["title"].GetLabel() != orig_title or controls["cancel"].GetLabel() != orig_cancel
+    assert controls["title"].GetLabel() == t("transfer.ftp_activity_title")
+    assert controls["cancel"].GetLabel() == t("transfer.cancel")
     # progress should be preserved at 0
     assert controls["gauge"].GetValue()>=0
     # cleanup revert
     set_language("en")
     wx_app.ProcessPendingEvents()
+    assert controls["title"].GetLabel() == orig_title
+    assert controls["cancel"].GetLabel() == orig_cancel
     window.Close(True)
     parent.Destroy()
     wx_app.ProcessPendingEvents()

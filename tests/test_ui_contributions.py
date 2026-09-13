@@ -108,6 +108,7 @@ def test_plugin_with_contribution_present():
 
 
 @pytest.mark.integration
+@pytest.mark.resource
 def test_disabled_absent(tmp_path):
     from hpc_gui.plugins.storage import write_disabled_ids
     _install_helper(tmp_path, VALID_MANIFEST_HELPER, VALID_PROFILE_HELPER)
@@ -117,6 +118,7 @@ def test_disabled_absent(tmp_path):
 
 
 @pytest.mark.integration
+@pytest.mark.resource
 def test_incompatible_absent(tmp_path):
     manifest = {**VALID_MANIFEST_HELPER, "requires_app": ">=99.0.0"}
     _install_helper(tmp_path, manifest, VALID_PROFILE_HELPER)
@@ -203,7 +205,7 @@ def test_separator_normalization():
     assert len(norm) == 3  # act, sep, act
 
 
-@pytest.mark.contract
+@pytest.mark.unit
 def test_localization_fallback():
     assert get_display_label("Default", {"tr": "Turkish"}, "tr") == "Turkish"
     assert get_display_label("Default", {"tr": "Turkish"}, "en") == "Default"
@@ -292,6 +294,7 @@ def test_owning_plugin_identity_cannot_be_spoofed():
 
 
 @pytest.mark.integration
+@pytest.mark.resource
 def test_lifecycle_install_without_restart(tmp_path):
     _install_helper(tmp_path, VALID_MANIFEST_HELPER, VALID_PROFILE_HELPER)
     result = load_installed_plugins(root=tmp_path)
@@ -299,6 +302,7 @@ def test_lifecycle_install_without_restart(tmp_path):
 
 
 @pytest.mark.integration
+@pytest.mark.resource
 def test_version_switch_rebuilds(tmp_path):
     _install_helper(tmp_path, VALID_MANIFEST_HELPER, VALID_PROFILE_HELPER)
     manifest2 = {**VALID_MANIFEST_HELPER, "version": "2.0.0"}

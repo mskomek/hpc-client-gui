@@ -2,7 +2,19 @@
 
 import pytest
 
-from hpc_gui.core.i18n import load_language, t, set_language
+from hpc_gui.core.i18n import current_language, load_language, t, set_language
+
+
+@pytest.fixture(autouse=True)
+def _restore_language_after_test(monkeypatch, tmp_path):
+    from hpc_gui.core import i18n
+
+    previous = current_language()
+    monkeypatch.setattr(i18n, "app_data_dir", lambda: tmp_path)
+    try:
+        yield
+    finally:
+        load_language(previous)
 
 
 # === i18n Integrity Test (spec section 26) ===
@@ -100,6 +112,7 @@ class TestI18nIntegrity:
 class TestOutputsBehavior:
     @pytest.mark.wx
     @pytest.mark.gui
+    @pytest.mark.semantic
     def test_outputs_tab_exists(self):
         """Outputs tab is present in the notebook."""
         import wx
@@ -212,6 +225,7 @@ class TestFilesBehavior:
 
     @pytest.mark.wx
     @pytest.mark.gui
+    @pytest.mark.semantic
     def test_files_toolbar_visible_labels_localized(self):
         """The real Files toolbar updates its visible labels on language change."""
         import wx
@@ -257,7 +271,7 @@ class TestFilesBehavior:
         assert "Favori" in val or "favori" in val
 
     @pytest.mark.contract
-    def test_runtime_language_switch_updates_files(self):
+    def test_dirs_back_translation_key_updates_between_languages(self):
         load_language("en")
         assert t("dirs.back") == "Back"
         set_language("tr")
@@ -271,6 +285,8 @@ class TestFilesBehavior:
 class TestRegression:
     @pytest.mark.wx
     @pytest.mark.gui
+    @pytest.mark.semantic
+    @pytest.mark.regression
     def test_wave78_tabs_still_work(self):
         import wx
         from hpc_gui.wx_jobs import show_jobs
@@ -513,7 +529,8 @@ class TestWave80Audit:
 
     @pytest.mark.wx
     @pytest.mark.gui
-    def test_files_follow_menu_has_following_check(self):
+    @pytest.mark.semantic
+    def test_following_file_adds_visible_output_channel(self):
         """Section 18: following a file creates a visible live channel."""
         import wx
         from hpc_gui.wx_jobs import show_jobs
@@ -560,6 +577,8 @@ class TestWave80Audit:
 
     @pytest.mark.wx
     @pytest.mark.gui
+    @pytest.mark.semantic
+    @pytest.mark.regression
     def test_runtime_language_switch_updates_outputs(self):
         """Output tab labels retranslate without changing channel or output state."""
         import time
@@ -649,10 +668,13 @@ class TestWave80Audit:
                         window.Destroy()
                 except Exception:
                     pass
-            app.ProcessPendingEvents()
+            for _ in range(3):
+                wx.Yield()
+                app.ProcessPendingEvents()
 
     @pytest.mark.wx
     @pytest.mark.gui
+    @pytest.mark.semantic
     def test_no_hardcoded_english_in_outputs_controls(self):
         """Verify the visible search control uses the localized hint."""
         import wx
@@ -681,6 +703,7 @@ class TestWave80Audit:
 
     @pytest.mark.wx
     @pytest.mark.gui
+    @pytest.mark.semantic
     def test_outputs_controls_use_all_suffix(self):
         """Section 4: Global controls use 'All' suffix."""
         import wx

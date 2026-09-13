@@ -39,10 +39,12 @@ def _close(frame, app):
 def wx_app():
     app = wx.App(False)
     yield app
-    for window in wx.GetTopLevelWindows():
+    for window in list(wx.GetTopLevelWindows()):
         if window:
             window.Destroy()
-    app.ProcessPendingEvents()
+    for _ in range(3):
+        app.ProcessPendingEvents()
+        wx.Yield()
     app.Destroy()
 
 
@@ -159,9 +161,13 @@ def test_wx_remote_browser_new_window_read_failure_creates_no_editor(wx_app, mon
 
 
 @pytest.mark.wx
+@pytest.mark.resource
+@pytest.mark.concurrency
 @pytest.mark.gui
-def test_wx_remote_browser_close_during_editor_read_discards_result(wx_app):
+def test_wx_remote_browser_close_during_editor_read_discards_result(wx_app, monkeypatch):
     started, release = threading.Event(), threading.Event()
+    callback_queued = threading.Event()
+    callbacks = []
     manager = WxEditorWindowManager()
 
     def read(_path):
@@ -171,15 +177,24 @@ def test_wx_remote_browser_close_during_editor_read_discards_result(wx_app):
 
     browser = _browser(manager, read)
     _pump(wx_app, lambda: browser._wx_remote_controls["listing"].GetItemCount() == 2)
+    def queue_callback(callback, *args, **kwargs):
+        callbacks.append((callback, args, kwargs))
+        callback_queued.set()
+
+    monkeypatch.setattr(wx, "CallAfter", queue_callback)
     _activate(browser, 0)
     assert started.wait(1)
     _close(browser, wx_app)
     release.set()
-    wx_app.ProcessPendingEvents()
+    assert callback_queued.wait(2), "late editor-read callback was not queued"
+    assert len(callbacks) == 1
+    callback, args, kwargs = callbacks[0]
+    callback(*args, **kwargs)
     assert manager.primary_frame is None
 
 
 @pytest.mark.wx
+@pytest.mark.concurrency
 @pytest.mark.gui
 def test_wx_remote_browser_stale_read_does_not_overwrite_newer_edit(wx_app):
     a_started, release_a = threading.Event(), threading.Event()

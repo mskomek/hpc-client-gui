@@ -10,13 +10,16 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 
-pytestmark = pytest.mark.release
-
 import generate_release_manifest as gen  # noqa: E402
 
 
 class ReleaseManifestTests(unittest.TestCase):
+    @pytest.mark.reporting
+    @pytest.mark.windows
+    @pytest.mark.linux
+    @pytest.mark.macos
     def test_manifest_inventories_artifacts_with_hashes(self) -> None:
+        import hashlib
         import tempfile
 
         with tempfile.TemporaryDirectory() as tmp:
@@ -44,6 +47,15 @@ class ReleaseManifestTests(unittest.TestCase):
             },
         )
         by_name = {entry["file"]: entry for entry in manifest["artifacts"]}
+        expected_contents = {
+            "hpc-client-gui_windows_onedir.zip": b"win",
+            "hpc-client-gui-1.0.0-x86_64.AppImage": b"app",
+            "hpc-client-gui_macos_arm64.dmg": b"dmg",
+        }
+        for name, content in expected_contents.items():
+            self.assertEqual(
+                by_name[name]["sha256"], hashlib.sha256(content).hexdigest()
+            )
         self.assertEqual(by_name["hpc-client-gui_windows_onedir.zip"]["platform"], "windows")
         self.assertEqual(by_name["hpc-client-gui_windows_onedir.zip"]["format"], "zip")
         self.assertEqual(by_name["hpc-client-gui-1.0.0-x86_64.AppImage"]["platform"], "linux")
@@ -52,6 +64,7 @@ class ReleaseManifestTests(unittest.TestCase):
         self.assertEqual(by_name["hpc-client-gui_macos_arm64.dmg"]["format"], "dmg")
         self.assertEqual(by_name["hpc-client-gui_windows_onedir.zip.sha256"]["format"], "checksum")
 
+    @pytest.mark.unit
     def test_sha256_matches_hashlib_for_known_content(self) -> None:
         import hashlib
         import tempfile
@@ -61,6 +74,7 @@ class ReleaseManifestTests(unittest.TestCase):
             path.write_bytes(b"deterministic-bytes")
             self.assertEqual(gen.sha256_file(path), hashlib.sha256(b"deterministic-bytes").hexdigest())
 
+    @pytest.mark.reporting
     def test_json_output_is_stable_and_secret_free(self) -> None:
         import tempfile
 

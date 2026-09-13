@@ -4,6 +4,7 @@ from hpc_gui.services.job_record_store import JobRecordStore
 
 
 @pytest.mark.integration
+@pytest.mark.resource
 def test_successful_submit_and_later_completion(tmp_path):
     store = JobRecordStore(tmp_path / "jobs.sqlite3")
     capture = JobProvenanceCapture(store)
@@ -18,6 +19,7 @@ def test_successful_submit_and_later_completion(tmp_path):
 
 
 @pytest.mark.integration
+@pytest.mark.resource
 def test_array_parent_identity_and_restart(tmp_path):
     path = tmp_path / "jobs.sqlite3"
     first = JobRecordStore(path)

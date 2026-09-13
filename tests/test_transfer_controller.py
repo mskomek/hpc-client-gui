@@ -8,6 +8,7 @@ from hpc_gui.services.transfer_controller import TransferController, TransferIte
 
 
 @pytest.mark.unit
+@pytest.mark.concurrency
 def test_controller_runs_parallel_and_bounds_history() -> None:
     events = []
 
@@ -30,6 +31,7 @@ def test_controller_runs_parallel_and_bounds_history() -> None:
 
 
 @pytest.mark.unit
+@pytest.mark.concurrency
 def test_controller_cancel_keeps_item_failed_without_finalization() -> None:
     cancelled = threading.Event()
 
@@ -53,6 +55,7 @@ def test_controller_cancel_keeps_item_failed_without_finalization() -> None:
 
 
 @pytest.mark.unit
+@pytest.mark.concurrency
 def test_controller_retry_failed_requeues_item() -> None:
     attempts = 0
 
@@ -74,6 +77,7 @@ def test_controller_retry_failed_requeues_item() -> None:
 
 
 @pytest.mark.unit
+@pytest.mark.concurrency
 def test_controller_enqueue_adds_work_while_running() -> None:
     started = threading.Event()
     release = threading.Event()

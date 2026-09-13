@@ -1,5 +1,6 @@
 from __future__ import annotations
 import pytest
+pytestmark = pytest.mark.macos
 
 from pathlib import Path
 
@@ -8,8 +9,8 @@ WORKFLOW = Path(__file__).resolve().parents[1] / ".github" / "workflows" / "ci.y
 ARCHIVED_WORKFLOW = Path(__file__).resolve().parents[1] / "docs" / "ci-disabled" / "ci.yml"
 
 
-@pytest.mark.release
-def test_macos_ci_matrix_covers_both_native_architectures():
+@pytest.mark.audit
+def test_active_macos_ci_matrix_or_archived_ci_contract():
     if not WORKFLOW.exists():
         assert ARCHIVED_WORKFLOW.is_file()
         return
@@ -23,8 +24,8 @@ def test_macos_ci_matrix_covers_both_native_architectures():
     assert "python scripts/ci.py macos" in text
 
 
-@pytest.mark.release
-def test_macos_ci_has_no_release_upload_or_signing_step():
+@pytest.mark.audit
+def test_active_macos_ci_has_no_release_signing_step_or_is_archived():
     if not WORKFLOW.exists():
         assert ARCHIVED_WORKFLOW.is_file()
         return

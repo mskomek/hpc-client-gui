@@ -1,5 +1,6 @@
 from __future__ import annotations
 import pytest
+pytestmark = pytest.mark.linux
 
 import os
 import subprocess

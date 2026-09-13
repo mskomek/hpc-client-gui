@@ -6,7 +6,7 @@ import pytest
 wx = pytest.importorskip("wx")
 
 from mock_hpc_files import MockRemoteFilesBackend
-from hpc_gui.core.i18n import load_language
+from hpc_gui.core.i18n import current_language, load_language
 from hpc_gui.wx_remote_files import WxRemoteDirectoryModel
 from hpc_gui.wx_remote_files_view import show_remote_files
 
@@ -24,14 +24,18 @@ def _pump(app, predicate, timeout=2):
 
 @pytest.fixture
 def wx_app():
+    previous_language = current_language()
     load_language("en")
     app = wx.App(False)
     yield app
-    for window in wx.GetTopLevelWindows():
+    for window in list(wx.GetTopLevelWindows()):
         if window:
             window.Destroy()
-    app.ProcessPendingEvents()
+    for _ in range(3):
+        app.ProcessPendingEvents()
+        wx.Yield()
     app.Destroy()
+    load_language(previous_language)
 
 
 def _frame(app, backend, operation=None):
@@ -139,12 +143,18 @@ def test_wx_remote_ctrl_z_failure_preserves_consistent_history(wx_app, monkeypat
     frame._wx_remote_run_action("move", ("/work/a.txt",), "/")
     _pump(wx_app, lambda: not frame._wx_remote_state["busy"])
     assert "/a.txt" in backend.entries
+    assert "/work/a.txt" not in backend.entries
     frame._wx_remote_controls["listing"].ProcessEvent(_key(ord("Z")))
     _pump(wx_app, lambda: not frame._wx_remote_state["busy"])
     assert "/a.txt" in backend.entries
     frame._wx_remote_controls["listing"].ProcessEvent(_key(ord("Z")))
     _pump(wx_app, lambda: not frame._wx_remote_state["busy"])
-    assert "/a.txt" in backend.entries
+    assert calls == [
+        ("move", ("/work/a.txt",), "/"),
+        ("move", ("/a.txt",), "/work"),
+        ("move", ("/a.txt",), "/work"),
+    ]
+    assert "/a.txt" in backend.entries and "/work/a.txt" not in backend.entries
 
 
 class _Dialog:

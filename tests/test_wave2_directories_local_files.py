@@ -152,20 +152,6 @@ class TestCRUDActions:
         target = tmp_path / "İşler_Çağrı"
         assert target.is_dir()
 
-    def test_create_file_unicode(self, tmp_path):
-        """Creating a Unicode-named file should work."""
-        from hpc_gui.wx_local_files import LocalBrowserModel
-
-        model = LocalBrowserModel(tmp_path)
-        # Create directory first
-        model.new_folder("研究")
-        target_dir = tmp_path / "研究"
-
-        # Create file inside
-        test_file = target_dir / "計算結果.txt"
-        test_file.write_text("content", encoding="utf-8")
-        assert test_file.exists()
-
     def test_rename_unicode_roundtrip(self, tmp_path):
         """Rename should preserve Unicode names through roundtrip."""
         from hpc_gui.wx_local_files import LocalBrowserModel
@@ -392,9 +378,9 @@ class TestClipboardOperations:
 
         # Try to paste into same directory
         model.copy([src], move=False)
-        # paste_into should handle this gracefully (skip or error)
-        # The model checks `source in dest.parents` which won't match same dir
-        # so it will try to copy (which will fail on overwrite or succeed)
+        with pytest.raises(FileExistsError, match="file.txt"):
+            model.paste_into(tmp_path, model.clipboard, move=False)
+        assert src.read_text(encoding="utf-8") == "test"
 
 
 # ---------------------------------------------------------------------------
@@ -563,10 +549,10 @@ class TestPathOperations:
 # 8. Integration Tests
 # ---------------------------------------------------------------------------
 
-@pytest.mark.integration
 class TestIntegration:
     """Integration tests for Unicode local file operations."""
 
+    @pytest.mark.integration
     def test_full_workflow_unicode(self, tmp_path):
         """Full workflow: create, list, rename, copy, delete with Unicode names."""
         from hpc_gui.wx_local_files import LocalBrowserModel
@@ -615,6 +601,7 @@ class TestIntegration:
         model.parent()
         assert model.current_path.resolve() == tmp_path.resolve()
 
+    @pytest.mark.unit
     def test_unicode_directory_listing(self, tmp_path):
         """Listing a directory with many Unicode names should work."""
         from hpc_gui.services.local_files import list_local_entries
@@ -828,20 +815,29 @@ class TestSearchFilter:
 class TestErrorHandling:
     """Verify error handling for edge cases."""
 
-    def test_list_entries_permission_error(self, tmp_path):
+    def test_list_entries_permission_error(self, tmp_path, monkeypatch):
         """list_entries should handle permission errors gracefully."""
         from hpc_gui.wx_local_files import LocalBrowserModel
 
         model = LocalBrowserModel(tmp_path)
 
-        # Create a file and a directory
-        (tmp_path / "file.txt").write_text("test", encoding="utf-8")
-        subdir = tmp_path / "subdir"
-        subdir.mkdir()
+        readable = tmp_path / "readable.txt"
+        unreadable = tmp_path / "unreadable.txt"
+        readable.write_text("test", encoding="utf-8")
+        unreadable.write_text("secret", encoding="utf-8")
+        original_stat = pathlib.Path.stat
 
-        # list_entries should not crash even if stat() fails for some entries
+        def stat(path, *args, **kwargs):
+            if path == unreadable:
+                raise PermissionError("simulated metadata denial")
+            return original_stat(path, *args, **kwargs)
+
+        monkeypatch.setattr(pathlib.Path, "stat", stat)
         entries = model.list_entries()
-        assert len(entries) >= 2
+        by_name = {entry.path.name: entry for entry in entries}
+        assert set(by_name) == {"readable.txt", "unreadable.txt"}
+        assert by_name["readable.txt"].size == 4
+        assert by_name["unreadable.txt"].size == 0
 
     def test_navigate_nonexistent_directory(self, tmp_path):
         """navigate should raise NotADirectoryError for non-existent paths."""

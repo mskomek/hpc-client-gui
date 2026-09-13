@@ -9,7 +9,7 @@ import pytest
 
 wx = pytest.importorskip("wx")
 
-from hpc_gui.core.i18n import load_language, set_language, t
+from hpc_gui.core.i18n import current_language, load_language, set_language, t
 from hpc_gui.wx_shell import create_shell_frame
 
 METRICS = Counter()
@@ -24,6 +24,32 @@ ZERO_INVARIANTS = (
 )
 
 ACCEPTANCE_SIZES = [(960, 640), (1200, 800), (1366, 768), (1440, 900), (1920, 1080)]
+
+
+@pytest.fixture(autouse=True)
+def _restore_locale_and_wx_resources(monkeypatch, tmp_path):
+    from hpc_gui.core import i18n
+
+    previous_language = current_language()
+    previous_app = wx.GetApp()
+    previous_windows = set(wx.GetTopLevelWindows()) if previous_app else set()
+    monkeypatch.setattr(i18n, "app_data_dir", lambda: tmp_path)
+    try:
+        yield
+    finally:
+        app = wx.GetApp()
+        for window in list(wx.GetTopLevelWindows()):
+            if window not in previous_windows:
+                try:
+                    window.Destroy()
+                except Exception:
+                    pass
+        if app is not None and app is not previous_app:
+            for _ in range(3):
+                app.ProcessPendingEvents()
+                wx.SafeYield()
+            app.Destroy()
+        load_language(previous_language)
 
 
 def _record(name: str, executed: int, required: int) -> None:
@@ -365,6 +391,8 @@ def _close(app, frame, lifecycle):
 
 
 @pytest.mark.wx
+@pytest.mark.slow
+@pytest.mark.resource
 @pytest.mark.gui
 def test_wx_layout_resize():
     load_language("en")

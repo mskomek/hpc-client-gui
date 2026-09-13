@@ -50,7 +50,7 @@ class TestFavoritesRendering:
 
 # ---- 2. Navigation Store Favorites ----
 
-@pytest.mark.unit
+@pytest.mark.integration
 class TestFavorites:
     def test_survive_reload(self, tmp_path, monkeypatch):
         s = _make_store("a", tmp_path, monkeypatch)
@@ -62,15 +62,6 @@ class TestFavorites:
         assert len(s2.favorites()) == 4
         assert {f["path"] for f in s2.favorites()} == {"/scratch/Çalışmalar", "/scratch/日本語", "/scratch/Türkçe_日本語", "/work/★"}
 
-    def test_duplicate_ignored(self, tmp_path, monkeypatch):
-        """toggle_favorite toggles: add then remove."""
-        s = _make_store("b", tmp_path, monkeypatch)
-        s.toggle_favorite("/work/test", kind="directory")
-        assert len(s.favorites()) == 1
-        s.toggle_favorite("/work/test", kind="directory")
-        # toggle removes existing
-        assert len(s.favorites()) == 0
-
     def test_toggle_removes(self, tmp_path, monkeypatch):
         s = _make_store("c", tmp_path, monkeypatch)
         s.toggle_favorite("/work/test", kind="directory")
@@ -81,7 +72,7 @@ class TestFavorites:
 
 # ---- 3. History ----
 
-@pytest.mark.unit
+@pytest.mark.integration
 class TestHistory:
     def test_record_visit(self, tmp_path, monkeypatch):
         s = _make_store("h1", tmp_path, monkeypatch)

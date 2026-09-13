@@ -8,7 +8,7 @@ from hpc_gui.wx_remote_files import WxRemoteDirectoryModel
 from hpc_gui.wx_remote_files_view import show_remote_files
 from mock_hpc_files import MockRemoteFilesBackend
 from support.wx_clipboard import read_clipboard_text
-from hpc_gui.core.i18n import load_language
+from hpc_gui.core.i18n import current_language, load_language
 from hpc_gui.services.file_clipboard import get_file_clipboard
 
 def _pump(app, pred, timeout=2):
@@ -22,13 +22,17 @@ def _pump(app, pred, timeout=2):
 
 @pytest.fixture
 def wx_app():
+    original_language = current_language()
     load_language("en")
     app=wx.App(False)
     yield app
-    for w in wx.GetTopLevelWindows():
+    for w in list(wx.GetTopLevelWindows()):
         if w: w.Destroy()
-    app.ProcessPendingEvents()
+    for _ in range(3):
+        app.ProcessPendingEvents()
+        wx.Yield()
     app.Destroy()
+    load_language(original_language)
 
 def _local(app, path):
     show_local_files(path=path)

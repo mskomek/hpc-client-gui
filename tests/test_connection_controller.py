@@ -30,10 +30,14 @@ def test_host_key_mfa_jump_requests_are_framework_neutral():
     assert host_key.role == "jump" and mfa.prompts == ("Code:",)
 
 
-@pytest.mark.gui
-def test_secret_cleanup_and_no_qt_import():
+@pytest.mark.unit
+def test_wipe_secret_overwrites_mutable_buffer():
     secret = bytearray(b"secret")
     wipe_secret(secret)
     assert secret == bytearray(6)
+
+
+@pytest.mark.audit
+def test_connection_controller_has_no_qt_import():
     source = __import__("inspect").getsource(ConnectionController)
     assert "PySide" not in source

@@ -45,6 +45,7 @@ class RemoteNavigationStoreTests(unittest.TestCase):
         return store_mod.RemoteNavigationStore(profile_id)
 
     @pytest.mark.integration
+    @pytest.mark.resource
     def test_favorites_survive_a_reload(self):
         store = self._store()
         store.add_favorite("/arf/scratch/mkomek/", "directory")
@@ -55,6 +56,7 @@ class RemoteNavigationStoreTests(unittest.TestCase):
         self.assertEqual(reloaded.favorites()[1]["kind"], "file")
 
     @pytest.mark.integration
+    @pytest.mark.resource
     def test_duplicate_favorite_is_ignored_and_toggle_removes(self):
         store = self._store()
         store.add_favorite("/work/project")
@@ -64,6 +66,7 @@ class RemoteNavigationStoreTests(unittest.TestCase):
         self.assertEqual(store.favorites(), [])
 
     @pytest.mark.integration
+    @pytest.mark.resource
     def test_history_dedupes_newest_first_and_caps(self):
         store = self._store()
         for index in range(store_mod.MAX_HISTORY + 5):
@@ -75,6 +78,7 @@ class RemoteNavigationStoreTests(unittest.TestCase):
         self.assertEqual(len(set(history)), len(history))
 
     @pytest.mark.integration
+    @pytest.mark.resource
     def test_clear_history_keeps_favorites(self):
         store = self._store()
         store.add_favorite("/keep/me")
@@ -84,11 +88,13 @@ class RemoteNavigationStoreTests(unittest.TestCase):
         self.assertEqual(len(self._store().favorites()), 1)
 
     @pytest.mark.integration
+    @pytest.mark.resource
     def test_profiles_do_not_share_state(self):
         self._store("profile-a").add_favorite("/arf/scratch/mkomek")
         self.assertEqual(self._store("profile-b").favorites(), [])
 
     @pytest.mark.integration
+    @pytest.mark.resource
     def test_remote_paths_are_not_readable_on_disk(self):
         store = self._store()
         store.add_favorite("/arf/scratch/mkomek/secret-project")
@@ -98,6 +104,7 @@ class RemoteNavigationStoreTests(unittest.TestCase):
         self.assertNotIn(b"secret-project", raw)
 
     @pytest.mark.integration
+    @pytest.mark.resource
     def test_tampered_file_does_not_leak_or_crash(self):
         store = self._store()
         store.add_favorite("/arf/scratch/mkomek")
@@ -106,6 +113,7 @@ class RemoteNavigationStoreTests(unittest.TestCase):
         self.assertEqual(self._store().favorites(), [])
 
     @pytest.mark.integration
+    @pytest.mark.resource
     def test_plaintext_state_is_never_accepted(self):
         path = store_mod._state_path("profile-a")
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -113,6 +121,7 @@ class RemoteNavigationStoreTests(unittest.TestCase):
         self.assertEqual(self._store().favorites(), [])
 
     @pytest.mark.integration
+    @pytest.mark.resource
     def test_delete_removes_the_state_file(self):
         store = self._store()
         store.add_favorite("/arf/scratch/mkomek")

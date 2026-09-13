@@ -4,17 +4,24 @@ wx = pytest.importorskip("wx")
 from hpc_gui.services.transfer_controller import TransferItem
 from hpc_gui.services.transfer_session_controller import TransferSessionController
 from hpc_gui.wx_transfer_workspace import create_transfer_conflict_dialog
-from hpc_gui.core.i18n import load_language
+from hpc_gui.core.i18n import current_language, load_language
 
 @pytest.fixture
 def wx_app():
+    previous_language = current_language()
     load_language("en")
-    app=wx.App(False)
-    yield app
-    for w in wx.GetTopLevelWindows():
-        if w: w.Destroy()
-    app.ProcessPendingEvents()
-    app.Destroy()
+    app = wx.App(False)
+    try:
+        yield app
+    finally:
+        for window in wx.GetTopLevelWindows():
+            if window:
+                window.Destroy()
+        for _ in range(3):
+            wx.Yield()
+            app.ProcessPendingEvents()
+        app.Destroy()
+        load_language(previous_language)
 
 class _Files:
     def __init__(self, existing=None):
