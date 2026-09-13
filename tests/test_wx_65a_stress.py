@@ -15,7 +15,7 @@ import pytest
 
 wx = pytest.importorskip("wx")
 
-from hpc_gui.core.i18n import current_language, set_language
+from hpc_gui.core.i18n import current_language, set_language, t
 from hpc_gui.wx_shell import create_shell_frame
 
 
@@ -226,8 +226,8 @@ def test_wx_65a_integrated_stress(tmp_path: Path, monkeypatch) -> None:
         if item:
             _menu(frame, item.GetId())
             executed["en_tr_switches"] += 1
-            lbl = frame._wx_shell_controls["language_button"].GetLabel()
-            if "[" in lbl and "]" in lbl:
+            language_label = lang_items[lang].GetItemLabelText()
+            if language_label != t("help.english" if lang == "en" else "help.turkish"):
                 invariants["wrong_language_labels"] += 1
         if i % 50 == 0:
             _yield(1)
