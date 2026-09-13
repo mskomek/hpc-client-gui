@@ -1141,3 +1141,56 @@ Final checkpoint state: Packet F DONE; Packet M IN_PROGRESS with those two truth
 ### Push checkpoint — 2026-09-13
 
 At the user's direction, the partial Wave checkpoint was committed as `9121f447b2645d46534b74befb6d51268fbc3393` (`test: checkpoint wave with exposed product defects`) and pushed to `origin/test-suite-governance-20260912`. The remote governance branch now matches that commit. Remote `develop` remains at the frozen baseline; no direct update to `develop` was made. The governance worktree was clean after the push. The commit documents Packet M as in progress and retains both truthful failing defect tests.
+
+
+## Packet M checkpoint — Defect 1 Jobs output serialization
+
+The user authorized focused production remediation for the Jobs output overlap. Before editing, the unchanged truthful node `tests/test_wx_jobs_behavior.py::test_wx_job_output_does_not_overlap_remote_reads` failed with `max_active_reads == 2` (expected 1). Root causes were: forced refresh bypassed the in-flight guard; redundant selection of the already-selected row advanced selection generations; the legacy output adapter mutated the shared follower from worker threads before stale-generation validation; and worker exceptions could leave request state reserved.
+
+`src/hpc_gui/wx_jobs.py` now reserves one reader per selected job/output owner, coalesces requests during an active read into one follow-up, applies legacy snapshots only after the UI completion verifies the owner is still current, and releases the reservation through normal, error, and thread-start failure paths. A same-job selection event no longer invalidates a valid in-flight owner. The existing stale A→B test now also checks that A cannot overwrite B's follower state. Coverage was added for coalescing, the production remote follower path, read-error recovery, and close with a queued refresh. The contradictory pause/resume stress assertion was rewritten to verify 100 real pause/freeze and resume/catch-up transitions and the correct all-output button labels.
+
+Validation: the four Jobs modules (`test_wx_jobs_behavior.py`, `test_wx_jobs_files_outputs.py`, `test_wx_jobs_final_fix.py`, `test_wx_jobs_stress.py`) passed 50 tests in 82.66s; the focused seven-node set passed; Ruff passed on the touched files; `git diff --check` and `py_compile` passed. Taxonomy REPORT collected 2,656 tests: unit 760, integration 362, gui 671, e2e 7, runtime_smoke 6, contract 566, audit 156, reporting 21, release 101; zero-primary 6 and multi-primary 0. RATCHET passed with 6 allowed baseline exceptions, 0 new zero-primary, and 0 multi-primary; direct-test-call and catch-all filename warnings are both 0. Four new test nodes cover coalescing, the production remote follower path, read-error recovery, and close with a queued refresh. Defect 1 verdict: PASS. Defect 2 remains IN_PROGRESS and has not yet been edited.
+
+
+## Packet M checkpoint — Defect 2 wx plugin menu lifecycle
+
+The lifecycle subprocess originally failed before reaching the menu transition because its `Path` import was nested below `sys.exit()` in the `ImportError` branch. After moving that import to the normal path, the exact test reproduced the connected→hidden rebuild timeout twice: Steps 1–3 completed, Step 4 entered `_wx_rebuild_plugins_menu()`, and the child exceeded its existing 15-second bound. Temporary trace points narrowed the failure to rebuilding after an attached submenu had been removed and destroyed.
+
+The root cause was wx menu ownership misuse: the rebuild called `wx.Menu.Remove`, which detaches but retains the C++ `MenuItem`, then separately destroyed its submenu and discarded the item reference. wxPython documents `DestroyItem` as deleting a menu item and its submenu; rebuild now uses that single operation. It also uses the documented `Menu.Insert(pos, id, text, submenu)` path instead of manually constructing a `MenuItem` and setting its submenu twice. Dynamic frame-level action handlers are tracked and unbound before old menus are destroyed, preventing stale handlers from accumulating across rebuilds. These API semantics are documented by [wx.Menu](https://docs.wxpython.org/wx.Menu.html).
+
+The existing lifecycle node was strengthened in place: it now checks 25 visible/hidden cycles, Unicode root/action labels (`Çalışma Araçları`, `日本語ツール`, `İş_日本語`), stable root ordering, no duplicate separators or roots, correct `hide` and `disable` conditions, and normal shell-close teardown with no open top-level windows or `UnregisterClass` warning. The original node passed twice in isolation (3.20s and 3.12s). `tests/test_hardening_additional.py` passed 12 tests; plugin contribution/menu modules passed 75 tests; Ruff and `git diff --check` passed. RATCHET passed: 6 current allowed baseline exceptions, 0 new zero-primary, 0 multi-primary. Defect 2 verdict: PASS. Packet M remains IN_PROGRESS pending sequential wx resource sweep and final registry/report reconciliation.
+
+
+## Packet M closeout — 2026-09-13
+
+### Defect 1 — Jobs output overlap
+
+The unchanged truthful node `tests/test_wx_jobs_behavior.py::test_wx_job_output_does_not_overlap_remote_reads` reproduced `max_active_reads == 2` before the production edit. The wx refresh path previously started another output worker while a prior read for the same selected-job generation was active. It also allowed redundant same-row selection to invalidate a valid generation, and the legacy adapter could mutate follower state before stale-owner validation. `src/hpc_gui/wx_jobs.py` now reserves one in-flight read for the active output owner, coalesces refreshes into one pending read, validates the owner before applying output, rejects stale A→B results, and clears reservations on normal completion, errors, thread-start failures, and close.
+
+The original overlap node now passes and retains its max-active-read assertion. The four Jobs modules passed 50 tests; the focused concurrency/error/close set passed; RUFF passed. The pause/resume stress node was rewritten to check freeze while paused and catch-up after resume. Four new Jobs nodes cover coalescing, the remote follower path, error recovery, and close with queued refresh. Defect 1: PASS.
+
+### Defect 2 — Plugin menu connected→hidden hang
+
+The exact bounded subprocess test reproduced the hang twice at Step 4. Root cause was wx menu ownership: `Menu.Remove` detached but retained the native `MenuItem`, then code separately destroyed its submenu and discarded the item reference. Rebuild now destroys the dynamic item through `DestroyItem`, inserts submenu items through `Menu.Insert(..., submenu)`, and unbinds tracked dynamic action handlers before replacing the menu.
+
+The unchanged lifecycle node now checks 25 connected/hidden/visible cycles, exact Unicode labels and root order, `hide`/`disable` conditions, duplicate separators/roots, and shell teardown. It passed twice in isolation; the full hardening module passed 12, plugin contribution/menu modules passed 75, and RUFF passed. Defect 2: PASS.
+
+### Sequential wx resource sweep
+
+The seven required modules ran in one non-overlapping pytest process: `test_wx_jobs_behavior.py`, `test_hardening_additional.py`, `test_wx_file_context_i18n.py`, `test_wx_remote_move_undo.py`, `test_wx_shell_i18n.py`, `test_wx_term002.py`, and `test_wx_transfer_ui_lifecycle.py`. Result: **52 passed**, no warning output, and no `UnregisterClass`/open-window teardown warning. `tests/test_jobs_outputs_scroll.py` also passes alone (20 passed, 4 subtests passed); it exhibits an order-dependent Windows native access violation when reached inside the broad release suite, recorded below without attributing it to product behavior.
+
+### Actual taxonomy and baseline comparison
+
+REPORT at taxonomy snapshot `6cad198dca6c0f69bc8196f5030a7aebcba9d696` collects **2,656** nodes: unit 760, integration 362, gui 671, e2e 7, runtime_smoke 6, contract 566, audit 156, reporting 21, release 101. It records **6 zero-primary** and **0 multi-primary**; direct test-call and catch-all filename warnings are both zero. Qualifiers are semantic 958, regression 161, performance 17, resource 118, concurrency 119, slow 14, subprocess 57, windows 4, linux 0, macos 0, hardware 0, synthetic_hardware 0, license 2, acceptance 1, artifact_dependent 25, wx 569, qt 270, packaging 4.
+
+The six zero-primary nodeids exactly match the disposition registry and RATCHET allowlist: five `ARCHIVED_BASELINE_FAILURE` entries and one `SUPPLEMENTAL_BASELINE_FAILURE`. None is passing or unreviewed evidence. RATCHET passes with six allowed, zero new zero-primary, and zero multi-primary. Full collection passes at 2,656. Against the frozen 2,673-node list, current collection has **36 added nodeids** (17 new and 19 renamed) and **53 removed old nodeids** (19 renamed and 34 deleted). The exact per-node mapping, replacement owners, deletion reasons, active selector search, and 64 test-body rewrites are in `audit/test-taxonomy/taxonomy-final-mapping.json`.
+
+### Full-suite limitation and failure classification
+
+`pytest-cov` is installed. The official `python scripts/release_test_suite.py --coverage` run passed its compile, i18n, and smoke preflight, then its broad pytest child terminated with Windows native exit code `3221226525` while entering `tests/test_jobs_outputs_scroll.py::JobsOutputsScrollTests::setUp`. The same native fatal occurs in the official uninstrumented release-suite run. The affected module passes alone, so this is recorded as an **order-dependent native test-process failure**, not as an archived baseline failure or a proven product defect. The interrupted full run produced no authoritative suite totals.
+
+A fail-fast diagnostic after repairing a separate test-owned `wx.App` lifetime setup passed **345**, skipped **1**, deselected **4**, then reproduced the archived `tests/test_gui_audit_screenshots.py::test_manifest_exists_and_commit_current` failure (`manifest commit 3a729407... != current HEAD`), matching its known stale-manifest assertion. The callback test itself now passes alone and the whole `test_corrective_jobs_details.py` module passes 17 tests. This diagnostic is not a full-suite result. The seven archived baseline failures and original settings-dialog setup-hang evidence remain preserved; the settings test’s MagicMock-home setup was repaired in Packet H and no longer hangs. No full-suite PASS is claimed.
+
+### Packet M verdict
+
+Both authorized product defects are fixed; the truthful defect tests pass; the sequential wx resource sweep is clean; the exact six exceptions match the baseline registry and allowlist; REPORT and RATCHET reconcile; and no marker was added to hide a false gate. Packet M: **DONE**. The broad release suite remains incomplete due to the separately reported order-dependent native failure and known archived baseline failure. Packet N remains **NOT APPLICABLE**.
