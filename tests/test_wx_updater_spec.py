@@ -56,24 +56,17 @@ def test_show_update_available_wrapper_returns_false_for_cancel(monkeypatch):
     assert show_update_available(None, "1.0.0", "1.1.0") is False
 
 
-@pytest.mark.unit
-def test_show_update_available_wrapper_returns_false_for_close(monkeypatch):
-    class CloseDialog(_WrapperDialog):
-        def ShowModal(self):
-            return self.wx.ID_CANCEL
-
-    monkeypatch.setattr("hpc_gui.wx_updater_view.WxUpdateDialog", CloseDialog)
-    assert show_update_available(None, "1.0.0", "1.1.0") is False
-
-
 @pytest.fixture(autouse=True)
-def _reset_update_language():
-    from hpc_gui.core.i18n import current_language, load_language
+def _reset_update_language(monkeypatch, tmp_path):
+    from hpc_gui.core import i18n
 
-    previous = current_language()
-    load_language("en")
-    yield
-    load_language(previous if previous in {"en", "tr"} else "tr")
+    previous = i18n.current_language()
+    monkeypatch.setattr(i18n, "app_data_dir", lambda: tmp_path)
+    i18n.load_language("en")
+    try:
+        yield
+    finally:
+        i18n.load_language(previous if previous in {"en", "tr"} else "tr")
 
 
 @pytest.mark.wx
@@ -187,6 +180,8 @@ def test_long_changelog_does_not_resize_dialog():
 
 @pytest.mark.wx
 @pytest.mark.gui
+@pytest.mark.concurrency
+@pytest.mark.resource
 def test_update_available_download_button_starts_download(monkeypatch):
     app = wx.App(False)
     rel = _make_release()
@@ -208,99 +203,120 @@ def test_update_available_download_button_starts_download(monkeypatch):
         except Exception:
             pass
     assert dl_btn is not None
-    # Mock download to avoid network
-    called = {"hit": False}
-    orig_download = None
+    download_entered = Event()
+    release_worker = Event()
     try:
-        import hpc_gui.wx_updater_view as mod
-        orig_download = mod.threading.Thread
-        # Patch download_and_verify to not actually download
         import hpc_gui.services.app_updater as au
-        orig_fn = au.download_and_verify_release
 
-        def fake_download(release, progress_cb=None, cancelled=None):
-            called["hit"] = True
-            # Simulate progress
-            if progress_cb:
-                progress_cb(50, "downloading", 90*1024*1024, 184*1024*1024)
-            # Don't actually download, just return a fake path
-            return au.app_data_dir() / "updates" / f"v{release.version}" / release.zip_name
+        def fake_download(_release, progress_cb=None, cancelled=None):
+            download_entered.set()
+            release_worker.wait(5)
+            return None
 
         monkeypatch.setattr(au, "download_and_verify_release", fake_download)
         # Click download via real wx event
         evt = wx.CommandEvent(wx.wxEVT_BUTTON, dl_btn.GetId())
         dl_btn.GetEventHandler().ProcessEvent(evt)
-        wx.CallAfter(lambda: None)
         app.ProcessPendingEvents()
-        time.sleep(0.3)
-        app.ProcessPendingEvents()
-        # Check that state transitioned to DOWNLOADING
-        assert dlg.state == "DOWNLOADING" or called["hit"]
+        assert download_entered.wait(3), "download button did not start updater worker"
+        assert dlg.state == "DOWNLOADING"
     finally:
-        if orig_download:
-            pass
-        try:
-            import hpc_gui.services.app_updater as au2
-            au2.download_and_verify_release = orig_fn
-        except Exception:
-            pass
-    dlg.Destroy()
-    app.Destroy()
+        dlg.Destroy()
+        release_worker.set()
+        if dlg._worker is not None:
+            dlg._worker.join(3)
+        app.Destroy()
 
 
 @pytest.mark.wx
 @pytest.mark.gui
-def test_update_download_progress_shows_real_bytes_and_percentage():
+@pytest.mark.concurrency
+def test_update_download_progress_shows_real_bytes_and_percentage(monkeypatch):
+    import hpc_gui.services.app_updater as app_updater
+
     app = wx.App(False)
-    rel = _make_release(size=184*1024*1024)
+    rel = _make_release(size=184 * 1024 * 1024)
     dlg = WxUpdateDialog(None, rel)
-    dlg._build_for_state("DOWNLOADING")
-    # Simulate progress update
-    dlg._downloaded = 68*1024*1024
-    dlg._total = 184*1024*1024
-    # Manually trigger update via prog callback
-    # Find the byte label and percent
-    assert dlg._byte_label is not None
-    assert dlg._percent_label is not None
-    assert dlg._gauge is not None
-    # Simulate a progress call
-    dlg._byte_label.SetLabel(f"{_format_bytes(68*1024*1024)} / {_format_bytes(184*1024*1024)}")
-    pct = int(68*1024*1024 * 100 / (184*1024*1024))
-    dlg._gauge.SetValue(pct)
-    dlg._percent_label.SetLabel(f"{pct}%")
-    assert "68" in dlg._byte_label.GetLabel()
-    assert "184" in dlg._byte_label.GetLabel()
-    assert dlg._gauge.GetValue() == pct
-    assert dlg._percent_label.GetLabel() == f"{pct}%"
-    # Invariant percentage == downloaded/total
-    assert pct == int(68*1024*1024 / (184*1024*1024) * 100)
-    dlg.Destroy()
-    app.Destroy()
+    progress_queued = Event()
+    release_worker = Event()
+
+    def fake_download(_release, progress_cb=None, cancelled=None):
+        progress_cb(37, "downloading", 68 * 1024 * 1024, 184 * 1024 * 1024)
+        progress_queued.set()
+        release_worker.wait(5)
+        return None
+
+    monkeypatch.setattr(app_updater, "download_and_verify_release", fake_download)
+    try:
+        dlg.dlg.Show()
+        dlg._start_download()
+        assert progress_queued.wait(3), "download worker did not publish progress"
+
+        deadline = time.monotonic() + 3
+        while dlg._downloaded != 68 * 1024 * 1024 and time.monotonic() < deadline:
+            app.ProcessPendingEvents()
+            wx.YieldIfNeeded()
+            time.sleep(0.01)
+
+        pct = int(68 * 1024 * 1024 * 100 / (184 * 1024 * 1024))
+        assert dlg._byte_label.GetLabel() == (
+            f"{_format_bytes(68 * 1024 * 1024)} / {_format_bytes(184 * 1024 * 1024)}"
+        )
+        assert dlg._gauge.GetValue() == pct
+        assert dlg._percent_label.GetLabel() == f"{pct}%"
+    finally:
+        dlg.Destroy()
+        release_worker.set()
+        if dlg._worker is not None:
+            dlg._worker.join(3)
+        app.Destroy()
 
 
 @pytest.mark.wx
 @pytest.mark.gui
-def test_update_unknown_total_uses_indeterminate_progress():
+@pytest.mark.concurrency
+@pytest.mark.resource
+def test_update_unknown_total_uses_indeterminate_progress(monkeypatch):
+    import hpc_gui.services.app_updater as app_updater
+
     app = wx.App(False)
     rel = _make_release(size=None)
-    # Force total None
     dlg = WxUpdateDialog(None, rel)
-    dlg._total = None
-    dlg._build_for_state("DOWNLOADING")
-    # Should be indeterminate (Pulse)
-    assert dlg._gauge is not None
-    # Check that byte label shows downloaded without total
-    dlg._downloaded = 68*1024*1024
-    dlg._byte_label.SetLabel(f"{_format_bytes(68*1024*1024)} downloaded")
-    assert "downloaded" in dlg._byte_label.GetLabel()
-    assert "%" not in dlg._percent_label.GetLabel() or dlg._percent_label.GetLabel() == ""
-    dlg.Destroy()
-    app.Destroy()
+    progress_queued = Event()
+    release_worker = Event()
+
+    def fake_download(_release, progress_cb=None, cancelled=None):
+        progress_cb(0, "downloading", 68 * 1024 * 1024, 0)
+        progress_queued.set()
+        release_worker.wait(5)
+        return None
+
+    monkeypatch.setattr(app_updater, "download_and_verify_release", fake_download)
+    try:
+        dlg.dlg.Show()
+        dlg._start_download()
+        assert progress_queued.wait(3), "download worker did not publish progress"
+
+        deadline = time.monotonic() + 3
+        while dlg._downloaded != 68 * 1024 * 1024 and time.monotonic() < deadline:
+            app.ProcessPendingEvents()
+            wx.YieldIfNeeded()
+            time.sleep(0.01)
+
+        assert dlg._byte_label.GetLabel() == f"{_format_bytes(68 * 1024 * 1024)} downloaded"
+        assert dlg._percent_label.GetLabel() == ""
+        assert dlg._pulse_timer.IsRunning()
+    finally:
+        dlg.Destroy()
+        release_worker.set()
+        if dlg._worker is not None:
+            dlg._worker.join(3)
+        app.Destroy()
 
 
 @pytest.mark.wx
 @pytest.mark.gui
-def test_update_cancel_reaches_downloader():
+def test_update_cancel_button_transitions_to_cancelled_state():
     app = wx.App(False)
     rel = _make_release()
     dlg = WxUpdateDialog(None, rel)
@@ -334,6 +350,8 @@ def test_update_cancel_reaches_downloader():
 
 @pytest.mark.wx
 @pytest.mark.gui
+@pytest.mark.concurrency
+@pytest.mark.resource
 def test_update_cancel_prevents_install(monkeypatch, tmp_path):
     import hpc_gui.services.app_updater as app_updater
     import hpc_gui.wx_updater_view as updater_view
@@ -421,7 +439,7 @@ def test_update_verification_state_visible():
 
 @pytest.mark.wx
 @pytest.mark.gui
-def test_update_ready_requires_install_confirmation():
+def test_ready_to_install_exposes_primary_install_action():
     app = wx.App(False)
     rel = _make_release()
     dlg = WxUpdateDialog(None, rel)
@@ -444,7 +462,7 @@ def test_update_ready_requires_install_confirmation():
 
 
 @pytest.mark.wx
-@pytest.mark.gui
+@pytest.mark.unit
 def test_install_without_verified_artifact_stays_failed():
     app = wx.App(False)
     dlg = WxUpdateDialog(None, _make_release())
@@ -541,6 +559,8 @@ def test_installation_current_item_visible_when_available():
 
 @pytest.mark.wx
 @pytest.mark.gui
+@pytest.mark.concurrency
+@pytest.mark.resource
 def test_update_close_in_flight_safe(monkeypatch):
     import hpc_gui.services.app_updater as app_updater
 
@@ -604,6 +624,8 @@ def test_update_close_in_flight_safe(monkeypatch):
 
 @pytest.mark.wx
 @pytest.mark.gui
+@pytest.mark.concurrency
+@pytest.mark.resource
 def test_update_late_callback_after_close_safe(monkeypatch, tmp_path):
     import hpc_gui.services.app_updater as app_updater
 
@@ -678,8 +700,8 @@ def test_mandatory_update_has_no_later_button():
 
 
 @pytest.mark.wx
-@pytest.mark.gui
-def test_mandatory_update_close_does_not_enter_main_app():
+@pytest.mark.unit
+def test_mandatory_dialog_close_marks_dialog_closed():
     app = wx.App(False)
     rel = _make_release()
     dlg = WxUpdateDialog(None, rel, mandatory=True)
@@ -695,34 +717,34 @@ def test_mandatory_update_close_does_not_enter_main_app():
 
 @pytest.mark.wx
 @pytest.mark.gui
-def test_update_runtime_language_switch_en_tr():
+def test_new_update_dialog_uses_current_runtime_language():
     app = wx.App(False)
     from hpc_gui.core.i18n import load_language, set_language
+
     load_language("en")
     rel = _make_release()
     dlg = WxUpdateDialog(None, rel)
     dlg._build_for_state("UPDATE_AVAILABLE")
-    # Check English
-    en_found = False
-    for idx in range(dlg.footer_sizer.GetItemCount()):
-        try:
-            win = dlg.footer_sizer.GetItem(idx).GetWindow()
-            if win and "Later" in win.GetLabel():
-                en_found = True
-        except Exception:
-            pass
-    assert en_found
-    # Switch to Turkish
+    dlg.dlg.Show()
+    english_labels = [
+        dlg.footer_sizer.GetItem(index).GetWindow().GetLabel()
+        for index in range(dlg.footer_sizer.GetItemCount())
+        if dlg.footer_sizer.GetItem(index).GetWindow()
+    ]
+    assert "Later" in english_labels
+
     set_language("tr")
-    app.ProcessPendingEvents()
-    # The dialog should have been retranslated if it subscribed, but our dialog does not auto-retranslate on language change
-    # Instead, we can check that set_language works and that new dialogs use Turkish
     dlg2 = WxUpdateDialog(None, rel)
     dlg2._build_for_state("UPDATE_AVAILABLE")
-    # In Turkish, Later should be "Daha sonra" or similar — check that label is not English if translation exists
-    # We don't enforce exact translation, just that it doesn't crash
-    assert dlg2.dlg.GetTitle()  # should have title
-    set_language("en")
+    dlg2.dlg.Show()
+    turkish_labels = [
+        dlg2.footer_sizer.GetItem(index).GetWindow().GetLabel()
+        for index in range(dlg2.footer_sizer.GetItemCount())
+        if dlg2.footer_sizer.GetItem(index).GetWindow()
+    ]
+    assert "Daha sonra" in turkish_labels
+    assert dlg2.dlg.IsShown()
+
     dlg.Destroy()
     dlg2.Destroy()
     app.Destroy()
