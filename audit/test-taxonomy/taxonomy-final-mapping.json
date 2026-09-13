@@ -4,9 +4,9 @@
     "sha": "12ce79935bf076e1062c57dc7dbd148bad2bfae1",
     "collected": 2673
   },
-  "taxonomy_snapshot_sha": "6cad198dca6c0f69bc8196f5030a7aebcba9d696",
+  "taxonomy_snapshot_sha": "d83b76beff24ae9810f3db64611eab351bd93a02",
   "collection": {
-    "total": 2656,
+    "total": 2658,
     "primary_counts": {
       "audit": 156,
       "contract": 566,
@@ -16,7 +16,7 @@
       "release": 101,
       "reporting": 21,
       "runtime_smoke": 6,
-      "unit": 760
+      "unit": 762
     },
     "zero_primary_count": 6,
     "multi_primary_count": 0,
@@ -31,9 +31,9 @@
       "packaging": 4,
       "performance": 17,
       "qt": 270,
-      "regression": 161,
+      "regression": 162,
       "resource": 118,
-      "semantic": 958,
+      "semantic": 959,
       "slow": 14,
       "subprocess": 57,
       "synthetic_hardware": 0,
@@ -46,10 +46,10 @@
     }
   },
   "comparison": {
-    "added_count": 36,
+    "added_count": 38,
     "removed_count": 53,
     "renamed_count": 19,
-    "net_delta": -17,
+    "net_delta": -15,
     "unchanged_count": 2620
   },
   "items": [
@@ -4164,6 +4164,19 @@
       "exception_class": null,
       "packet_owner": "M (final taxonomy census)",
       "historical_origin": "frozen baseline"
+    },
+    {
+      "nodeid": "tests/test_file_filter_registry.py::TestEdgeCases::test_empty_remote_name_falls_back_to_path_basename",
+      "original_frozen_nodeid": null,
+      "primary": "unit",
+      "qualifiers": [
+        "regression"
+      ],
+      "canonical_owner": "tests/test_file_filter_registry.py::TestEdgeCases::test_empty_remote_name_falls_back_to_path_basename",
+      "status": "ADDED",
+      "exception_class": null,
+      "packet_owner": "Integration-readiness remediation",
+      "historical_origin": "Added during integration-readiness remediation"
     },
     {
       "nodeid": "tests/test_file_filter_registry.py::TestEdgeCases::test_tar_gz_suffix",
@@ -14623,6 +14636,19 @@
       "exception_class": null,
       "packet_owner": "M (final taxonomy census)",
       "historical_origin": "frozen baseline"
+    },
+    {
+      "nodeid": "tests/test_release_test_suite.py::ReleaseTestSuiteTests::test_runner_finishes_other_pytest_partitions_after_failure",
+      "original_frozen_nodeid": null,
+      "primary": "unit",
+      "qualifiers": [
+        "semantic"
+      ],
+      "canonical_owner": "tests/test_release_test_suite.py::ReleaseTestSuiteTests::test_runner_finishes_other_pytest_partitions_after_failure",
+      "status": "ADDED",
+      "exception_class": null,
+      "packet_owner": "Integration-readiness remediation",
+      "historical_origin": "Added during integration-readiness remediation"
     },
     {
       "nodeid": "tests/test_release_test_suite.py::ReleaseTestSuiteTests::test_toolkit_boundary_suite_isolated_without_skipping_it",
@@ -33196,6 +33222,18 @@
       "owner_packet": "D"
     },
     {
+      "nodeid": "tests/test_file_filter_registry.py::TestEdgeCases::test_empty_remote_name_falls_back_to_path_basename",
+      "reason": "Covers remote filter matching when the entry name is blank and the populated path supplies the filename.",
+      "canonical_owner": "tests/test_file_filter_registry.py::TestEdgeCases::test_empty_remote_name_falls_back_to_path_basename",
+      "owner_packet": "Integration-readiness remediation"
+    },
+    {
+      "nodeid": "tests/test_release_test_suite.py::ReleaseTestSuiteTests::test_runner_finishes_other_pytest_partitions_after_failure",
+      "reason": "Ensures the release runner executes remaining isolated pytest partitions after a test partition fails.",
+      "canonical_owner": "tests/test_release_test_suite.py::ReleaseTestSuiteTests::test_runner_finishes_other_pytest_partitions_after_failure",
+      "owner_packet": "Integration-readiness remediation"
+    },
+    {
       "nodeid": "tests/test_ssh_files_byte_preservation.py::test_sftp_download_upload_roundtrip_preserves_arbitrary_bytes",
       "reason": "Real SFTP arbitrary-byte round trip and channel cleanup; primary integration/regression.",
       "canonical_owner": "tests/test_ssh_files_byte_preservation.py::test_sftp_download_upload_roundtrip_preserves_arbitrary_bytes",
@@ -34401,7 +34439,7 @@
       "exception_class": "SUPPLEMENTAL_BASELINE_FAILURE"
     }
   ],
-  "governance_head_note": "Taxonomy snapshot SHA identifies the exact collected-marker state. The final closeout branch-tip SHA is provided in the final execution response and same status document after push.",
+  "governance_head_note": "taxonomy_snapshot_sha identifies the collected marker state; current and final governance branch HEADs are reported separately in the execution report.",
   "rewritten_nodes": [
     {
       "frozen_nodeid": "tests/test_about_dialog.py::test_about_shows_version_and_no_network",
