@@ -5,20 +5,24 @@ import unittest
 
 import paramiko
 
-from hpc_gui.core.i18n import load_language, t
+from hpc_gui.core.i18n import current_language, load_language, t
+
+
+@pytest.fixture(autouse=True)
+def _restore_language():
+    previous = current_language()
+    yield
+    load_language(previous)
 from hpc_gui.core.ui_errors import describe_connection_error
 
 
 class UiErrorTests(unittest.TestCase):
-    def tearDown(self):
-        load_language("tr")
-
-    @pytest.mark.unit
+    @pytest.mark.contract
     def test_error_code_label_is_translated(self):
         load_language("tr")
         self.assertEqual(t("common.error_code"), "Tanı kodu")
 
-    @pytest.mark.unit
+    @pytest.mark.contract
     def test_common_connection_failures_are_actionable(self):
         load_language("tr")
         cases = (
@@ -34,7 +38,7 @@ class UiErrorTests(unittest.TestCase):
                 self.assertIn(expected, message)
                 self.assertIn("Teknik ayrıntı", message)
 
-    @pytest.mark.unit
+    @pytest.mark.contract
     def test_unknown_connection_error_keeps_code_as_technical_detail(self):
         load_language("tr")
         message = describe_connection_error(RuntimeError("ssh fbcbbe"))

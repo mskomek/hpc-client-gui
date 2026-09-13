@@ -3,6 +3,7 @@ from hpc_gui.wx_lifecycle import WxLifecycleController
 
 
 @pytest.mark.unit
+@pytest.mark.resource
 def test_update_progress_cancel_splash_and_shutdown_cleanup():
     events, cleaned = [], []
     controller = WxLifecycleController(tray_notify=events.append)

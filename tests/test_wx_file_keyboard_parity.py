@@ -8,7 +8,7 @@ from hpc_gui.wx_remote_files import WxRemoteDirectoryModel
 from hpc_gui.wx_remote_files_view import show_remote_files
 from mock_hpc_files import MockRemoteFilesBackend
 from hpc_gui.services.file_clipboard import get_file_clipboard
-from hpc_gui.core.i18n import load_language
+from hpc_gui.core.i18n import current_language, load_language
 
 def _pump(app, pred, timeout=2):
     dl=time.monotonic()+timeout
@@ -21,13 +21,24 @@ def _pump(app, pred, timeout=2):
 
 @pytest.fixture
 def wx_app():
+    previous_language = current_language()
+    clipboard = get_file_clipboard()
+    previous_clipboard = clipboard.get()
     load_language("en")
     app=wx.App(False)
-    yield app
-    for w in wx.GetTopLevelWindows():
-        if w: w.Destroy()
-    app.ProcessPendingEvents()
-    app.Destroy()
+    try:
+        yield app
+    finally:
+        for w in wx.GetTopLevelWindows():
+            if w: w.Destroy()
+        for _ in range(3):
+            wx.Yield()
+            app.ProcessPendingEvents()
+        app.Destroy()
+        clipboard.clear()
+        if previous_clipboard:
+            clipboard.set(previous_clipboard.op, previous_clipboard.paths)
+        load_language(previous_language)
 
 def _local(app, path):
     show_local_files(path=path)
@@ -44,6 +55,7 @@ def _remote(app, backend, path="/work"):
 # Local tests
 @pytest.mark.wx
 @pytest.mark.gui
+@pytest.mark.semantic
 def test_wx_local_ctrl_a_selects_all_active_tab_rows(wx_app, tmp_path: Path):
     for n in ("a.txt","b.txt","c.txt"):
         (tmp_path/n).write_text("x")
@@ -58,6 +70,7 @@ def test_wx_local_ctrl_a_selects_all_active_tab_rows(wx_app, tmp_path: Path):
 
 @pytest.mark.wx
 @pytest.mark.gui
+@pytest.mark.semantic
 def test_wx_local_ctrl_c_copies_selected_paths(wx_app, tmp_path: Path):
     src=tmp_path / "src.txt"
     src.write_text("x")
@@ -74,6 +87,8 @@ def test_wx_local_ctrl_c_copies_selected_paths(wx_app, tmp_path: Path):
 
 @pytest.mark.wx
 @pytest.mark.gui
+@pytest.mark.semantic
+@pytest.mark.resource
 def test_wx_local_ctrl_x_then_ctrl_v_moves_selected_file(wx_app, tmp_path: Path):
     src_dir=tmp_path / "src"; src_dir.mkdir()
     dst_dir=src_dir / "dst"; dst_dir.mkdir()
@@ -109,6 +124,8 @@ def test_wx_local_ctrl_x_then_ctrl_v_moves_selected_file(wx_app, tmp_path: Path)
 
 @pytest.mark.wx
 @pytest.mark.gui
+@pytest.mark.semantic
+@pytest.mark.resource
 def test_wx_local_ctrl_c_then_ctrl_v_copies_selected_file(wx_app, tmp_path: Path):
     src_dir=tmp_path / "src2"; src_dir.mkdir()
     dst_dir=src_dir / "dst2"; dst_dir.mkdir()
@@ -138,6 +155,8 @@ def test_wx_local_ctrl_c_then_ctrl_v_copies_selected_file(wx_app, tmp_path: Path
 
 @pytest.mark.wx
 @pytest.mark.gui
+@pytest.mark.semantic
+@pytest.mark.resource
 def test_wx_local_f2_renames_selected_file(wx_app, tmp_path: Path, monkeypatch):
     src=tmp_path / "old.txt"
     src.write_text("x")
@@ -154,6 +173,8 @@ def test_wx_local_f2_renames_selected_file(wx_app, tmp_path: Path, monkeypatch):
 
 @pytest.mark.wx
 @pytest.mark.gui
+@pytest.mark.semantic
+@pytest.mark.resource
 def test_wx_local_f2_renames_selected_directory(wx_app, tmp_path: Path, monkeypatch):
     d=tmp_path / "olddir"; d.mkdir()
     frame=_local(wx_app, tmp_path)
@@ -169,6 +190,8 @@ def test_wx_local_f2_renames_selected_directory(wx_app, tmp_path: Path, monkeypa
 
 @pytest.mark.wx
 @pytest.mark.gui
+@pytest.mark.semantic
+@pytest.mark.resource
 def test_wx_local_delete_key_deletes_selected_file(wx_app, tmp_path: Path, monkeypatch):
     t=tmp_path / "del.txt"; t.write_text("x")
     frame=_local(wx_app, tmp_path)
@@ -183,6 +206,8 @@ def test_wx_local_delete_key_deletes_selected_file(wx_app, tmp_path: Path, monke
 
 @pytest.mark.wx
 @pytest.mark.gui
+@pytest.mark.semantic
+@pytest.mark.resource
 def test_wx_local_delete_key_handles_multiselection(wx_app, tmp_path: Path, monkeypatch):
     for n in ("a.txt","b.txt","c.txt"):
         (tmp_path / n).write_text("x")
@@ -198,6 +223,7 @@ def test_wx_local_delete_key_handles_multiselection(wx_app, tmp_path: Path, monk
 
 @pytest.mark.wx
 @pytest.mark.gui
+@pytest.mark.semantic
 def test_wx_local_f5_refreshes_active_tab_only(wx_app, tmp_path: Path):
     a=tmp_path / "A"; a.mkdir(); b=a / "B"; b.mkdir()
     (a / "fileA.txt").write_text("a")
@@ -236,6 +262,7 @@ def test_wx_local_f5_refreshes_active_tab_only(wx_app, tmp_path: Path):
 
 @pytest.mark.wx
 @pytest.mark.gui
+@pytest.mark.semantic
 def test_wx_local_backspace_does_not_navigate_parent(wx_app, tmp_path: Path):
     sub=tmp_path / "sub"; sub.mkdir()
     frame=_local(wx_app, sub)
@@ -251,6 +278,7 @@ def test_wx_local_backspace_does_not_navigate_parent(wx_app, tmp_path: Path):
 # Remote keyboard
 @pytest.mark.wx
 @pytest.mark.gui
+@pytest.mark.semantic
 def test_wx_remote_ctrl_a_selects_all_rows(wx_app):
     backend=MockRemoteFilesBackend()
     frame=_remote(wx_app, backend, "/work")
@@ -262,19 +290,27 @@ def test_wx_remote_ctrl_a_selects_all_rows(wx_app):
 
 @pytest.mark.wx
 @pytest.mark.gui
+@pytest.mark.semantic
+@pytest.mark.resource
 def test_wx_remote_ctrl_v_pastes_into_active_tab(wx_app):
     backend=MockRemoteFilesBackend()
     backend.entries["/work/dest"]=True
     frame=_remote(wx_app, backend, "/work")
+    frame._wx_remote_run_action("new_tab", ("/work/dest",), "/work/dest")
+    _pump(wx_app, lambda: frame._wx_remote_notebook.GetPageCount()==2)
+    _pump(wx_app, lambda: frame._wx_remote_controls["listing"].GetItemCount()>=0)
     get_file_clipboard().set("copy", ["/work/a.txt"])
     listing=frame._wx_remote_controls["listing"]
     event=wx.KeyEvent(wx.wxEVT_KEY_DOWN)
     event.SetKeyCode(ord("V")); event.SetControlDown(True)
     listing.ProcessEvent(event)
-    _pump(wx_app, lambda: ("copy","/work/a.txt","/work/dest/a.txt") in backend.calls or ("copy","/work/a.txt","/work/a.txt") in backend.calls)
+    _pump(wx_app, lambda: ("copy","/work/a.txt","/work/dest/a.txt") in backend.calls)
+    assert backend.entries["/work/dest/a.txt"] is False
 
 @pytest.mark.wx
 @pytest.mark.gui
+@pytest.mark.semantic
+@pytest.mark.resource
 def test_wx_remote_f2_renames_selected_file(wx_app, monkeypatch):
     backend=MockRemoteFilesBackend()
     frame=_remote(wx_app, backend, "/work")
@@ -287,6 +323,8 @@ def test_wx_remote_f2_renames_selected_file(wx_app, monkeypatch):
 
 @pytest.mark.wx
 @pytest.mark.gui
+@pytest.mark.semantic
+@pytest.mark.resource
 def test_wx_remote_f2_renames_selected_directory(wx_app, monkeypatch):
     backend=MockRemoteFilesBackend()
     backend.entries["/work/mydir"]=True
@@ -302,6 +340,8 @@ def test_wx_remote_f2_renames_selected_directory(wx_app, monkeypatch):
 
 @pytest.mark.wx
 @pytest.mark.gui
+@pytest.mark.semantic
+@pytest.mark.resource
 def test_wx_remote_delete_key_deletes_selected_entries(wx_app, monkeypatch):
     backend=MockRemoteFilesBackend()
     frame=_remote(wx_app, backend, "/work")
@@ -314,6 +354,7 @@ def test_wx_remote_delete_key_deletes_selected_entries(wx_app, monkeypatch):
 
 @pytest.mark.wx
 @pytest.mark.gui
+@pytest.mark.semantic
 def test_wx_remote_keyboard_actions_only_affect_active_tab(wx_app, monkeypatch):
     backend=MockRemoteFilesBackend()
     backend.entries["/scratch"]=True
@@ -340,6 +381,8 @@ def test_wx_remote_keyboard_actions_only_affect_active_tab(wx_app, monkeypatch):
 
 @pytest.mark.wx
 @pytest.mark.gui
+@pytest.mark.semantic
+@pytest.mark.resource
 def test_wx_remote_ctrl_z_undoes_latest_successful_move_after_tab_switch(wx_app, monkeypatch):
     backend=MockRemoteFilesBackend()
     backend.entries["/work/dest"]=True

@@ -1,5 +1,6 @@
 from __future__ import annotations
 import pytest
+pytestmark = pytest.mark.linux
 
 import os
 import unittest
@@ -15,7 +16,7 @@ def _runner() -> X11Runner:
 
 
 class LinuxX11PreflightTest(unittest.TestCase):
-    @pytest.mark.integration
+    @pytest.mark.unit
     def test_linux_preflight_requires_ssh(self) -> None:
         with mock.patch.object(x11_runner, "_is_windows", return_value=False):
             with mock.patch.object(x11_runner.shutil, "which", return_value=None):
@@ -29,7 +30,7 @@ class LinuxX11PreflightTest(unittest.TestCase):
                 with mock.patch.object(x11_runner, "ensure_x_server_running", return_value=False):
                     self.assertFalse(_runner().preflight(enabled=True))
 
-    @pytest.mark.integration
+    @pytest.mark.unit
     def test_linux_preflight_passes_with_ssh_and_display(self) -> None:
         with mock.patch.object(x11_runner, "_is_windows", return_value=False):
             with mock.patch.object(x11_runner.shutil, "which", return_value="/usr/bin/ssh"):

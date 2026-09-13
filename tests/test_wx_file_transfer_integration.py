@@ -62,7 +62,8 @@ class _BlockingFiles(_Files):
 
 
 @pytest.mark.wx
-@pytest.mark.gui
+@pytest.mark.integration
+@pytest.mark.concurrency
 def test_wx_file_transfer_uses_operation_session_snapshot():
     files_a = _BlockingFiles()
     files_b = _Files()
@@ -110,7 +111,8 @@ def _run_conflict(policy, resolver=None):
     return files.calls
 
 
-@pytest.mark.contract
+@pytest.mark.integration
+@pytest.mark.wx
 def test_file_context_transfer_uses_transfer_session_boundary():
     files = _Files()
     lifecycle = _Lifecycle()
@@ -122,7 +124,8 @@ def test_file_context_transfer_uses_transfer_session_boundary():
 
 
 @pytest.mark.wx
-@pytest.mark.gui
+@pytest.mark.integration
+@pytest.mark.resource
 def test_wx_file_transfer_session_removed_after_success():
     files = _Files()
     state = {"session": {"files": files}}
@@ -135,7 +138,8 @@ def test_wx_file_transfer_session_removed_after_success():
 
 
 @pytest.mark.wx
-@pytest.mark.gui
+@pytest.mark.integration
+@pytest.mark.resource
 def test_wx_file_transfer_session_removed_after_failure():
     state = {"session": {"files": _FailingFiles()}}
     controller = _start_file_transfers(state, _Lifecycle(), [TransferItem("upload", "a.txt", "/a.txt")])
@@ -147,7 +151,9 @@ def test_wx_file_transfer_session_removed_after_failure():
 
 
 @pytest.mark.wx
-@pytest.mark.gui
+@pytest.mark.integration
+@pytest.mark.resource
+@pytest.mark.concurrency
 def test_wx_file_transfer_session_removed_after_cancel():
     files = _BlockingFiles()
     state = {"session": {"files": files}}
@@ -164,7 +170,9 @@ def test_wx_file_transfer_session_removed_after_cancel():
 
 
 @pytest.mark.wx
-@pytest.mark.gui
+@pytest.mark.integration
+@pytest.mark.resource
+@pytest.mark.concurrency
 def test_wx_file_transfer_lifecycle_shutdown_cleans_active_session():
     files = _BlockingFiles()
     lifecycle = _Lifecycle()
@@ -182,7 +190,7 @@ def test_wx_file_transfer_lifecycle_shutdown_cleans_active_session():
 
 
 @pytest.mark.wx
-@pytest.mark.gui
+@pytest.mark.integration
 def test_wx_file_context_transfer_reaches_progress_callback():
     files = _Files()
     progress = []
@@ -197,32 +205,33 @@ def test_wx_file_context_transfer_reaches_progress_callback():
     assert progress == [("a.txt", 1, 1)]
 
 
+@pytest.mark.integration
 @pytest.mark.wx
-@pytest.mark.gui
 def test_wx_file_transfer_conflict_ask_overwrite():
     assert _run_conflict("ask", lambda _item: "overwrite") == [("upload", "a.txt", "/work/a.txt")]
 
 
+@pytest.mark.integration
 @pytest.mark.wx
-@pytest.mark.gui
 def test_wx_file_transfer_conflict_ask_skip():
     assert _run_conflict("ask", lambda _item: "skip") == []
 
 
+@pytest.mark.integration
 @pytest.mark.wx
-@pytest.mark.gui
 def test_wx_file_transfer_conflict_ask_rename():
     assert _run_conflict("ask", lambda _item: ("rename", "/work/a-1.txt")) == [("upload", "a.txt", "/work/a-1.txt")]
 
 
+@pytest.mark.integration
 @pytest.mark.wx
-@pytest.mark.gui
 def test_wx_file_transfer_conflict_ask_cancel():
     assert _run_conflict("ask", lambda _item: "cancel") == []
 
 
 @pytest.mark.wx
-@pytest.mark.gui
+@pytest.mark.integration
+@pytest.mark.resource
 def test_wx_file_transfer_resume_uses_direction_specific_backend_method(tmp_path):
     upload_files = _ResumableFiles("upload")
     upload_state = {"session": {"files": upload_files}, "conflict_policy": "ask"}
@@ -250,23 +259,26 @@ def test_wx_file_transfer_resume_uses_direction_specific_backend_method(tmp_path
     assert download_files.calls == [("resume_download", "/remote/item", str(local_destination))]
 
 
-@pytest.mark.contract
+@pytest.mark.integration
+@pytest.mark.wx
 def test_wx_file_transfer_policy_overwrite():
     assert _run_conflict("overwrite") == [("upload", "a.txt", "/work/a.txt")]
 
 
-@pytest.mark.contract
+@pytest.mark.integration
+@pytest.mark.wx
 def test_wx_file_transfer_policy_skip():
     assert _run_conflict("skip") == []
 
 
-@pytest.mark.contract
+@pytest.mark.integration
+@pytest.mark.wx
 def test_wx_file_transfer_policy_rename():
     assert _run_conflict("rename", lambda _item: ("rename", "/work/a-1.txt")) == [("upload", "a.txt", "/work/a-1.txt")]
 
 
 @pytest.mark.wx
-@pytest.mark.gui
+@pytest.mark.integration
 def test_wx_file_transfer_conflict_ask_uses_gui_decision_seam(monkeypatch):
     wx = pytest.importorskip("wx")
     app = wx.App(False)
@@ -301,7 +313,8 @@ def test_wx_file_transfer_conflict_ask_uses_gui_decision_seam(monkeypatch):
     app.Destroy()
 
 
-@pytest.mark.contract
+@pytest.mark.integration
+@pytest.mark.wx
 def test_wx_file_transfer_rename_policy_generates_available_destination():
     wx = pytest.importorskip("wx")
     app = wx.App(False)
@@ -321,9 +334,8 @@ def test_wx_file_transfer_rename_policy_generates_available_destination():
     app.Destroy()
 
 
+@pytest.mark.integration
 @pytest.mark.wx
-@pytest.mark.wx
-@pytest.mark.gui
 @pytest.mark.parametrize("choice", ["no", "cancel"])
 def test_wx_file_transfer_conflict_gui_decline_does_not_upload(monkeypatch, choice):
     wx = pytest.importorskip("wx")
@@ -364,6 +376,7 @@ def test_wx_file_transfer_conflict_gui_decline_does_not_upload(monkeypatch, choi
 
 @pytest.mark.wx
 @pytest.mark.gui
+@pytest.mark.resource
 def test_wx_file_transfer_opens_visible_progress_surface():
     wx = pytest.importorskip("wx")
     app = wx.App(False)
@@ -395,6 +408,7 @@ def test_wx_file_transfer_opens_visible_progress_surface():
 
 @pytest.mark.wx
 @pytest.mark.gui
+@pytest.mark.resource
 def test_wx_file_transfer_cancel_button_cancels_controller():
     wx = pytest.importorskip("wx")
     app = wx.App(False)
@@ -447,9 +461,9 @@ def _run_decision(files, item, decision):
     return controller
 
 
+@pytest.mark.integration
+@pytest.mark.resource
 @pytest.mark.wx
-@pytest.mark.wx
-@pytest.mark.gui
 @pytest.mark.parametrize("decision,expected", [
     ("overwrite", SOURCE),
     ("resume", PARTIAL + SOURCE[len(PARTIAL):]),
@@ -463,9 +477,9 @@ def test_conflict_decision_drives_ftp_upload_bytes(tmp_path, decision, expected)
     assert files.ftp.transfer_commands == (["STOR"] if decision == "overwrite" else ["APPE"])
 
 
+@pytest.mark.integration
+@pytest.mark.resource
 @pytest.mark.wx
-@pytest.mark.wx
-@pytest.mark.gui
 @pytest.mark.parametrize("decision,expected", [
     ("overwrite", SOURCE),
     ("resume", PARTIAL + SOURCE[len(PARTIAL):]),
@@ -479,9 +493,9 @@ def test_conflict_decision_drives_ssh_upload_bytes(tmp_path, decision, expected)
     assert sftp.modes(REMOTE_FILE) == (["wb"] if decision == "overwrite" else ["ab"])
 
 
+@pytest.mark.integration
+@pytest.mark.resource
 @pytest.mark.wx
-@pytest.mark.wx
-@pytest.mark.gui
 @pytest.mark.parametrize("decision,expected", [
     ("overwrite", SOURCE),
     ("resume", PARTIAL + SOURCE[len(PARTIAL):]),
@@ -495,9 +509,9 @@ def test_conflict_decision_drives_ssh_download_bytes(tmp_path, decision, expecte
     assert sftp.seeks(REMOTE_FILE) == ([] if decision == "overwrite" else [len(PARTIAL)])
 
 
+@pytest.mark.integration
+@pytest.mark.resource
 @pytest.mark.wx
-@pytest.mark.wx
-@pytest.mark.gui
 @pytest.mark.parametrize("decision,expected", [
     ("overwrite", SOURCE),
     ("resume", PARTIAL + SOURCE[len(PARTIAL):]),

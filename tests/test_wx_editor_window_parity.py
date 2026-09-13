@@ -52,6 +52,7 @@ def test_wx_local_edit_reuses_primary_editor(wx_app):
     _close(primary, wx_app)
 
 
+@pytest.mark.resource
 @pytest.mark.wx
 @pytest.mark.gui
 def test_wx_local_edit_new_window_creates_independent_editor(wx_app, monkeypatch):
@@ -127,6 +128,7 @@ def test_wx_primary_editor_failed_save_does_not_replace_document(wx_app, monkeyp
     _close(primary, wx_app)
 
 
+@pytest.mark.resource
 @pytest.mark.wx
 @pytest.mark.gui
 def test_wx_edit_new_window_supports_multiple_independent_editors(wx_app, monkeypatch):
@@ -143,6 +145,7 @@ def test_wx_edit_new_window_supports_multiple_independent_editors(wx_app, monkey
     _close(primary, wx_app)
 
 
+@pytest.mark.resource
 @pytest.mark.wx
 @pytest.mark.gui
 def test_wx_closing_standalone_editor_leaves_primary_intact(wx_app):
@@ -155,6 +158,7 @@ def test_wx_closing_standalone_editor_leaves_primary_intact(wx_app):
     _close(primary, wx_app)
 
 
+@pytest.mark.resource
 @pytest.mark.wx
 @pytest.mark.gui
 def test_wx_primary_editor_recreated_after_close(wx_app):
@@ -179,6 +183,7 @@ def test_wx_primary_editor_same_file_edit_preserves_dirty_content(wx_app, monkey
     _close(primary, wx_app)
 
 
+@pytest.mark.resource
 @pytest.mark.wx
 @pytest.mark.gui
 def test_wx_edit_new_window_allows_same_file_as_primary(wx_app):
@@ -191,6 +196,7 @@ def test_wx_edit_new_window_allows_same_file_as_primary(wx_app):
     _close(primary, wx_app)
 
 
+@pytest.mark.resource
 @pytest.mark.wx
 @pytest.mark.gui
 def test_wx_editor_window_manager_repeated_open_close_does_not_leak_frames(wx_app):
@@ -203,6 +209,7 @@ def test_wx_editor_window_manager_repeated_open_close_does_not_leak_frames(wx_ap
     assert not [window for window in wx.GetTopLevelWindows() if window and window.GetTitle().endswith(".sh")]
 
 
+@pytest.mark.concurrency
 @pytest.mark.wx
 @pytest.mark.gui
 def test_wx_primary_editor_pending_save_replace_cannot_overwrite_newer_edit(wx_app, monkeypatch):
@@ -226,7 +233,7 @@ def test_wx_primary_editor_pending_save_replace_cannot_overwrite_newer_edit(wx_a
 
 
 @pytest.mark.wx
-@pytest.mark.gui
+@pytest.mark.unit
 def test_wx_shell_reuses_one_editor_manager_for_local_and_remote_views():
     class Lifecycle:
         def __init__(self):

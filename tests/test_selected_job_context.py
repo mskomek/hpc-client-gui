@@ -154,6 +154,7 @@ class TestSelectedJobStore:
 
 class TestSelectedJobStoreThreadSafety:
     @pytest.mark.unit
+    @pytest.mark.concurrency
     def test_concurrent_selects_do_not_corrupt(self):
         store = SelectedJobStore()
         errors = []
@@ -174,6 +175,7 @@ class TestSelectedJobStoreThreadSafety:
         assert store.generation == 200
 
     @pytest.mark.unit
+    @pytest.mark.concurrency
     def test_concurrent_subscribe_and_select(self):
         store = SelectedJobStore()
         rounds = 20
@@ -230,7 +232,7 @@ class TestSelectedJobStoreThreadSafety:
 
 @pytest.mark.unit
 class TestStaleResponseSafety:
-    def test_late_response_rejected_by_generation(self):
+    def test_generation_increments_between_job_selections(self):
         store = SelectedJobStore()
         store.select(job_id="A")
         gen_a = store.generation
@@ -240,7 +242,7 @@ class TestStaleResponseSafety:
         assert store.generation == gen_b
         assert gen_a != gen_b
 
-    def test_workdir_not_overwritten_by_stale(self):
+    def test_new_job_selection_clears_previous_workdir(self):
         store = SelectedJobStore()
         store.select(job_id="A", workdir="/work/A")
         store.select(job_id="B", workdir="/work/B")
@@ -248,7 +250,7 @@ class TestStaleResponseSafety:
         assert store.context.workdir == "/work/B"
         assert store.context.job_id == "B"
 
-    def test_stdout_stderr_not_overwritten_by_stale(self):
+    def test_new_job_selection_clears_previous_output_paths(self):
         store = SelectedJobStore()
         store.select(job_id="A", stdout_path="/a.out", stderr_path="/a.err")
         store.select(job_id="B", stdout_path="/b.out", stderr_path="/b.err")

@@ -24,6 +24,7 @@ def test_shortcut_changes_and_legacy_qt_setting_ignored():
 
 
 @pytest.mark.contract
+@pytest.mark.macos
 def test_settings_use_native_macos_shortcuts():
     model = WxSettingsModel(platform="macos")
     assert any(item.binding == "Cmd+," for item in model.shortcuts.bindings())

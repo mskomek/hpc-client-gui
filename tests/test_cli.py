@@ -114,7 +114,7 @@ def test_profile_show_never_prints_sensitive_field_values(capsys) -> None:
         assert secret not in output
 
 
-@pytest.mark.unit
+@pytest.mark.integration
 def test_profile_create_round_trips_to_config_path(capsys, tmp_path: Path) -> None:
     config = tmp_path / "config.json"
     with patch("hpc_gui.config.storage._config_path", return_value=config):
@@ -161,7 +161,7 @@ def test_profile_create_empty_name_maps_to_usage_exit_two(capsys) -> None:
     assert "profile name is required" in captured.err
 
 
-@pytest.mark.unit
+@pytest.mark.integration
 def test_profile_update_preserves_secrets_and_system_round_trip(capsys, tmp_path: Path) -> None:
     config = tmp_path / "config.json"
     existing = {
@@ -385,7 +385,7 @@ def test_operation_failure_exit_one(capsys) -> None:
     assert "disk exploded" in captured.err
 
 
-@pytest.mark.audit
+@pytest.mark.contract
 def test_json_error_parity_on_failed_remote_op(capsys) -> None:
     class FakeFiles:
         def listdir_entries(self, path):
@@ -653,7 +653,7 @@ def test_verbose_debug_only_with_flag_and_key_path_redacted(capsys) -> None:
     assert "private_place" not in verbose.out + verbose.err
 
 
-@pytest.mark.audit
+@pytest.mark.integration
 def test_files_stat_metadata_parity_with_ls(capsys) -> None:
     attr = SimpleNamespace(filename="data.bin", st_mode=0o100644, st_size=42, st_mtime=987654321)
     fake_sftp = SimpleNamespace(
@@ -718,6 +718,7 @@ def test_files_not_found_exit_one_distinct_message(capsys) -> None:
 
 
 @pytest.mark.unit
+@pytest.mark.resource
 def test_profile_test_success_json_payload_and_session_closed(capsys) -> None:
     closed: list[bool] = []
 
@@ -784,7 +785,7 @@ def test_profile_test_missing_exit_one_and_opener_not_called(capsys) -> None:
     session_open.assert_not_called()
 
 
-@pytest.mark.unit
+@pytest.mark.contract
 def test_profile_test_text_mode_matches_json_payload(capsys) -> None:
     class FakeSession:
         profile_name = "alpha"
@@ -796,11 +797,15 @@ def test_profile_test_text_mode_matches_json_payload(capsys) -> None:
     with patch("hpc_gui.cli.session.load_profiles", return_value=profiles), patch(
         "hpc_gui.cli.main.CLISession.open", return_value=FakeSession()
     ):
+        assert run_cli(["--format", "json", "profile", "test", "alpha"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    with patch("hpc_gui.cli.session.load_profiles", return_value=profiles), patch(
+        "hpc_gui.cli.main.CLISession.open", return_value=FakeSession()
+    ):
         assert run_cli(["profile", "test", "alpha"]) == 0
-    captured = capsys.readouterr()
-    assert "status: PASS" in captured.out
-    assert "profile: alpha" in captured.out
-    assert "sftp: True" in captured.out
+    text = capsys.readouterr().out
+    for name, value in payload.items():
+        assert f"{name}: {value}" in text
 
 
 @pytest.mark.unit
@@ -840,7 +845,7 @@ def test_files_operation_timeout_exit_124(capsys) -> None:
     assert "Operation timed out" in captured.err
 
 
-@pytest.mark.integration
+@pytest.mark.unit
 def test_files_ssh_run_124_maps_to_timeout_error() -> None:
     fake_ssh = SimpleNamespace(
         sftp=object(),
@@ -909,7 +914,7 @@ def test_files_stat_permission_denied_sftp_reports_with_path(capsys) -> None:
     assert "Not found:" not in captured.err
 
 
-@pytest.mark.unit
+@pytest.mark.integration
 def test_files_checksum_permission_denied_reports_with_path(capsys) -> None:
     fake_ssh = SimpleNamespace(
         sftp=object(),
@@ -924,7 +929,7 @@ def test_files_checksum_permission_denied_reports_with_path(capsys) -> None:
     assert "Not found:" not in captured.err
 
 
-@pytest.mark.unit
+@pytest.mark.integration
 def test_files_download_permission_denied_reports_with_path(capsys, tmp_path: Path) -> None:
     class TransferSftp:
         def stat(self, path):
@@ -949,7 +954,7 @@ def test_files_download_permission_denied_reports_with_path(capsys, tmp_path: Pa
     assert "Not found:" not in captured.err
 
 
-@pytest.mark.unit
+@pytest.mark.integration
 def test_files_cp_permission_denied_reports_quoted_destination(capsys) -> None:
     fake_ssh = SimpleNamespace(
         sftp=_errno_sftp_raiser(lambda: OSError(errno.EACCES, "Permission denied")),
@@ -966,7 +971,7 @@ def test_files_cp_permission_denied_reports_quoted_destination(capsys) -> None:
     assert "Not found:" not in captured.err
 
 
-@pytest.mark.unit
+@pytest.mark.integration
 def test_files_mv_permission_denied_reports_quoted_source(capsys) -> None:
     fake_ssh = SimpleNamespace(
         sftp=object(),
@@ -981,7 +986,7 @@ def test_files_mv_permission_denied_reports_quoted_source(capsys) -> None:
     assert "Not found:" not in captured.err
 
 
-@pytest.mark.unit
+@pytest.mark.integration
 def test_files_rm_permission_denied_reports_quoted_path(capsys) -> None:
     fake_ssh = SimpleNamespace(
         sftp=object(),
@@ -996,7 +1001,7 @@ def test_files_rm_permission_denied_reports_quoted_path(capsys) -> None:
     assert "Not found:" not in captured.err
 
 
-@pytest.mark.unit
+@pytest.mark.integration
 def test_files_rm_missing_reports_not_found_with_path(capsys) -> None:
     fake_ssh = SimpleNamespace(
         sftp=object(),
@@ -1011,7 +1016,7 @@ def test_files_rm_missing_reports_not_found_with_path(capsys) -> None:
     assert "Permission denied:" not in captured.err
 
 
-@pytest.mark.unit
+@pytest.mark.integration
 def test_files_ls_existing_empty_directory_returns_empty_list(capsys) -> None:
     fake_sftp = SimpleNamespace(listdir_attr=lambda path: [])
     backend = _errno_backend(SimpleNamespace(sftp=fake_sftp, supports_transfer_sftp_channels=lambda: False))
@@ -1020,7 +1025,7 @@ def test_files_ls_existing_empty_directory_returns_empty_list(capsys) -> None:
     assert json.loads(capsys.readouterr().out) == []
 
 
-@pytest.mark.unit
+@pytest.mark.integration
 def test_files_mkdir_shell_failure_stays_generic(capsys) -> None:
     fake_ssh = SimpleNamespace(
         sftp=object(),
@@ -1176,7 +1181,7 @@ def _run_files(args, files) -> int:
         return run_cli(args)
 
 
-@pytest.mark.unit
+@pytest.mark.contract
 def test_files_ls_turkish_directory_json_keeps_type_and_name(capsys) -> None:
     class FakeFiles:
         def listdir_entries(self, path):
@@ -1203,7 +1208,7 @@ def test_files_ls_turkish_directory_json_keeps_type_and_name(capsys) -> None:
     assert payload[0]["path"] == "/uzak/klasör/klasör_yeni"
 
 
-@pytest.mark.unit
+@pytest.mark.contract
 def test_files_ls_turkish_text_keeps_name_and_type_keys(capsys) -> None:
     class FakeFiles:
         def listdir_entries(self, path):
@@ -1243,7 +1248,7 @@ def test_files_ls_turkish_text_keeps_name_and_type_keys(capsys) -> None:
     assert "'type': 'directory'" in out
 
 
-@pytest.mark.unit
+@pytest.mark.contract
 def test_files_stat_turkish_json_six_keys_and_name_preserved(capsys) -> None:
     class FakeFiles:
         def stat_entry(self, path):
@@ -1265,7 +1270,7 @@ def test_files_stat_turkish_json_six_keys_and_name_preserved(capsys) -> None:
     assert payload["type"] == "file"
 
 
-@pytest.mark.unit
+@pytest.mark.contract
 def test_files_stat_turkish_text_keeps_name(capsys) -> None:
     class FakeFiles:
         def stat_entry(self, path):
@@ -1284,7 +1289,7 @@ def test_files_stat_turkish_text_keeps_name(capsys) -> None:
     assert "/uzak/klasör/ş_veri.txt" in out
 
 
-@pytest.mark.audit
+@pytest.mark.contract
 def test_files_json_not_found_turkish_detail_parity(capsys) -> None:
     class FakeFiles:
         def listdir_entries(self, path):
@@ -1297,7 +1302,7 @@ def test_files_json_not_found_turkish_detail_parity(capsys) -> None:
     assert payload["error"]["exit_code"] == 1
 
 
-@pytest.mark.audit
+@pytest.mark.contract
 def test_files_json_permission_denied_parity(capsys) -> None:
     class FakeFiles:
         def listdir_entries(self, path):
@@ -1310,7 +1315,7 @@ def test_files_json_permission_denied_parity(capsys) -> None:
     assert payload["error"]["exit_code"] == 1
 
 
-@pytest.mark.audit
+@pytest.mark.contract
 def test_files_json_not_a_directory_parity(capsys) -> None:
     class FakeFiles:
         def listdir_entries(self, path):
@@ -1323,7 +1328,7 @@ def test_files_json_not_a_directory_parity(capsys) -> None:
     assert payload["error"]["exit_code"] == 1
 
 
-@pytest.mark.audit
+@pytest.mark.contract
 def test_files_json_timeout_parity(capsys) -> None:
     class FakeFiles:
         def listdir_entries(self, path):
@@ -1335,7 +1340,7 @@ def test_files_json_timeout_parity(capsys) -> None:
     assert payload["error"]["exit_code"] == 124
 
 
-@pytest.mark.unit
+@pytest.mark.contract
 def test_files_ls_empty_directory_text_prints_nothing(capsys) -> None:
     class FakeFiles:
         def listdir_entries(self, path):
@@ -1347,7 +1352,7 @@ def test_files_ls_empty_directory_text_prints_nothing(capsys) -> None:
     assert captured.err == ""
 
 
-@pytest.mark.integration
+@pytest.mark.unit
 def test_upload_skip_existing_remote_is_noop(capsys, tmp_path: Path) -> None:
     source = tmp_path / "data.txt"
     source.write_bytes(b"new")
@@ -1464,7 +1469,7 @@ def test_upload_rename_verify_checks_effective_destination(capsys, tmp_path: Pat
     assert files.calls["sha256"] == ["/remote/data (1).txt"]
 
 
-@pytest.mark.unit
+@pytest.mark.contract
 def test_upload_skip_text_matches_json_noop(capsys, tmp_path: Path) -> None:
     source = tmp_path / "data.txt"
     source.write_bytes(b"new")
@@ -1546,7 +1551,7 @@ def test_diagnostics_auth_fail_after_port_pass() -> None:
     assert payload["status"] == "FAIL"
 
 
-@pytest.mark.integration
+@pytest.mark.unit
 def test_diagnostics_sftp_probe_fail_after_auth_pass() -> None:
     class Wrapper:
         def supports_transfer_sftp_channels(self):
@@ -1625,7 +1630,7 @@ def test_diagnostics_all_stages_pass_and_wrapper_closed() -> None:
     assert received_sockets == [connected_socket]
 
 
-@pytest.mark.unit
+@pytest.mark.contract
 def test_doctor_connection_all_pass_exit_zero_json_four_stages(capsys) -> None:
     fixture = _diag_fixture({"port": "PASS", "auth": "PASS", "sftp": "PASS", "checksum": "PASS"})
     with patch("hpc_gui.cli.main.run_connection_diagnostics", return_value=fixture):
@@ -1635,7 +1640,7 @@ def test_doctor_connection_all_pass_exit_zero_json_four_stages(capsys) -> None:
     assert set(payload["stages"]) == {"port", "auth", "sftp", "checksum"}
 
 
-@pytest.mark.unit
+@pytest.mark.contract
 def test_doctor_connection_any_fail_exit_three_json_four_stages(capsys) -> None:
     fixture = _diag_fixture(
         {"port": "PASS", "auth": "FAIL", "sftp": "not_attempted", "checksum": "not_attempted"}
@@ -1647,7 +1652,7 @@ def test_doctor_connection_any_fail_exit_three_json_four_stages(capsys) -> None:
     assert set(payload["stages"]) == {"port", "auth", "sftp", "checksum"}
 
 
-@pytest.mark.unit
+@pytest.mark.contract
 def test_doctor_connection_text_exposes_same_stage_names(capsys) -> None:
     fixture = _diag_fixture(
         {"port": "PASS", "auth": "PASS", "sftp": "PASS", "checksum": "FAIL"}
@@ -1709,7 +1714,7 @@ class _DownloadCorruptFiles(FakeFiles):
         Path(local_path).write_bytes(b"corrupted")
 
 
-@pytest.mark.runtime_smoke
+@pytest.mark.unit
 def test_smoke_all_stages_pass_fixed_order_and_content_round_trip() -> None:
     files = FakeFiles()
     payload = run_sftp_smoke(files, temp_dir_name=lambda: "smoke_dir")
@@ -1725,7 +1730,7 @@ def test_smoke_all_stages_pass_fixed_order_and_content_round_trip() -> None:
     assert files.calls["remove"] == ["smoke_dir"]
 
 
-@pytest.mark.runtime_smoke
+@pytest.mark.unit
 def test_smoke_mkdir_fail_marks_later_stages_not_attempted() -> None:
     payload = run_sftp_smoke(_MkdirFailFiles(), temp_dir_name=lambda: "smoke_dir")
     assert payload["status"] == "FAIL"
@@ -1737,7 +1742,7 @@ def test_smoke_mkdir_fail_marks_later_stages_not_attempted() -> None:
     assert "denied" not in payload["stages"]["temp_dir"]["detail"]
 
 
-@pytest.mark.runtime_smoke
+@pytest.mark.unit
 def test_smoke_upload_fail_marks_list_download_not_attempted() -> None:
     payload = run_sftp_smoke(_UploadFailFiles(), temp_dir_name=lambda: "smoke_dir")
     assert payload["status"] == "FAIL"
@@ -1750,7 +1755,7 @@ def test_smoke_upload_fail_marks_list_download_not_attempted() -> None:
     assert "denied" not in payload["stages"]["upload"]["detail"]
 
 
-@pytest.mark.runtime_smoke
+@pytest.mark.unit
 def test_smoke_list_omits_file_marks_download_not_attempted() -> None:
     payload = run_sftp_smoke(_ListOmitFiles(), temp_dir_name=lambda: "smoke_dir")
     assert payload["status"] == "FAIL"
@@ -1763,7 +1768,7 @@ def test_smoke_list_omits_file_marks_download_not_attempted() -> None:
     assert payload["stages"]["cleanup"]["status"] == "PASS"
 
 
-@pytest.mark.runtime_smoke
+@pytest.mark.unit
 @pytest.mark.parametrize(
     "backend_cls",
     [_DownloadFailFiles, _DownloadCorruptFiles],
@@ -1780,7 +1785,7 @@ def test_smoke_download_fail_preserves_completed_passes(backend_cls) -> None:
     assert payload["stages"]["cleanup"]["status"] == "PASS"
 
 
-@pytest.mark.runtime_smoke
+@pytest.mark.unit
 def test_smoke_checksum_mismatch_fails_but_runs_cleanup() -> None:
     class _ChecksumMismatchFiles(FakeFiles):
         def sha256(self, path):
@@ -1799,7 +1804,7 @@ class _RemoveFailFiles(FakeFiles):
         raise OSError("remove denied")
 
 
-@pytest.mark.runtime_smoke
+@pytest.mark.unit
 @pytest.mark.parametrize(
     ("files", "cleanup_flag", "status", "detail"),
     [
@@ -1842,7 +1847,7 @@ class _FakeSmokeSession:
         pass
 
 
-@pytest.mark.runtime_smoke
+@pytest.mark.unit
 @pytest.mark.parametrize(
     ("extra_args", "expected_cleanup"),
     [([], True), (["--keep"], False)],
@@ -1857,7 +1862,7 @@ def test_doctor_smoke_keep_flag_controls_cleanup(extra_args, expected_cleanup, c
     assert payload["cleanup_requested"] is expected_cleanup
 
 
-@pytest.mark.runtime_smoke
+@pytest.mark.reporting
 @pytest.mark.parametrize(
     ("fixture", "expected_exit"),
     [(_smoke_all_pass(), 0), (_smoke_fixture(_PARTIAL), 3)],
@@ -1876,7 +1881,7 @@ def test_doctor_smoke_artifact_written(tmp_path, capsys, fixture, expected_exit)
     assert list(data["stages"]) == list(SMOKE_STAGES)
 
 
-@pytest.mark.runtime_smoke
+@pytest.mark.reporting
 def test_doctor_smoke_artifact_write_failure_returns_operation_failed(tmp_path, capsys) -> None:
     with patch("hpc_gui.cli.main.run_sftp_smoke", return_value=_smoke_all_pass()), patch(
         "hpc_gui.cli.main.CLISession.open", return_value=_FakeSmokeSession()
@@ -1888,7 +1893,7 @@ def test_doctor_smoke_artifact_write_failure_returns_operation_failed(tmp_path, 
     assert "smoke artifact" in capsys.readouterr().err
 
 
-@pytest.mark.runtime_smoke
+@pytest.mark.contract
 def test_doctor_smoke_text_and_json_expose_identical_stage_set(capsys) -> None:
     fixture = _smoke_fixture(_PARTIAL)
     with patch("hpc_gui.cli.main.run_sftp_smoke", return_value=fixture), patch(
@@ -1906,7 +1911,7 @@ def test_doctor_smoke_text_and_json_expose_identical_stage_set(capsys) -> None:
         assert f'"{name}"' in text_out
 
 
-@pytest.mark.runtime_smoke
+@pytest.mark.unit
 def test_doctor_smoke_closes_session(capsys) -> None:
     closed: list[bool] = []
 
@@ -1923,7 +1928,7 @@ def test_doctor_smoke_closes_session(capsys) -> None:
     assert closed == [True]
 
 
-@pytest.mark.runtime_smoke
+@pytest.mark.unit
 def test_doctor_smoke_never_leaks_sensitive_detail(capsys) -> None:
     secret = "TOP-SECRET-CREDENTIAL-9f4a"
 
@@ -1979,7 +1984,7 @@ def test_jobs_help_lists_all_four_subcommands(capsys) -> None:
         assert name in out
 
 
-@pytest.mark.unit
+@pytest.mark.integration
 def test_jobs_list_text_uses_default_squeue_template(capsys) -> None:
     fake_ssh = _FakeJobsSSH((0, "JOBID STATE\n  123 RUNNING\n", ""))
     with patch("hpc_gui.cli.main.CLISession.open", return_value=_fake_jobs_session(fake_ssh)):
@@ -1990,7 +1995,7 @@ def test_jobs_list_text_uses_default_squeue_template(capsys) -> None:
     assert "123 RUNNING" in out
 
 
-@pytest.mark.unit
+@pytest.mark.contract
 def test_jobs_list_json_envelope_matches_stdout(capsys) -> None:
     fake_ssh = _FakeJobsSSH((0, "JOBID STATE\n  123 RUNNING\n", ""))
     with patch("hpc_gui.cli.main.CLISession.open", return_value=_fake_jobs_session(fake_ssh)):
@@ -2000,7 +2005,7 @@ def test_jobs_list_json_envelope_matches_stdout(capsys) -> None:
     assert payload == {"result": "JOBID STATE\n  123 RUNNING\n"}
 
 
-@pytest.mark.unit
+@pytest.mark.integration
 def test_jobs_list_username_falls_back_to_profile(capsys) -> None:
     profiles = [{"name": "alpha", "host": "cluster.example", "username": "profileuser"}]
     fake_ssh = _FakeJobsSSH((0, "JOBID STATE\n", ""))
@@ -2011,7 +2016,7 @@ def test_jobs_list_username_falls_back_to_profile(capsys) -> None:
     assert fake_ssh.commands == ['squeue -h -u profileuser -o "%i|%P|%j|%u|%T|%M|%D|%C|%R"']
 
 
-@pytest.mark.unit
+@pytest.mark.integration
 def test_jobs_status_uses_default_scontrol_template(capsys) -> None:
     fake_ssh = _FakeJobsSSH((0, "JobId=123 JobName=test State=RUNNING\n", ""))
     with patch("hpc_gui.cli.main.CLISession.open", return_value=_fake_jobs_session(fake_ssh)):
@@ -2041,7 +2046,7 @@ def test_jobs_list_connection_failure_exit_three(capsys) -> None:
     assert "host unreachable" in captured.err
 
 
-@pytest.mark.unit
+@pytest.mark.integration
 def test_jobs_status_unexpected_exception_exit_one_jobs_prefix(capsys) -> None:
     class BoomSSH(_FakeJobsSSH):
         def run(self, command, **kwargs):
@@ -2063,7 +2068,7 @@ _ACCOUNTING_STDOUT = (
 _LSSRV_STDOUT = "Login node         CPUs    Load\nnode1                32    0.12\n"
 
 
-@pytest.mark.unit
+@pytest.mark.integration
 def test_jobs_accounting_text_uses_default_sacct_template(capsys) -> None:
     fake_ssh = _FakeJobsSSH((0, _ACCOUNTING_STDOUT, ""))
     with patch("hpc_gui.cli.main.CLISession.open", return_value=_fake_jobs_session(fake_ssh)):
@@ -2074,7 +2079,7 @@ def test_jobs_accounting_text_uses_default_sacct_template(capsys) -> None:
     assert "102       solver.gpu  FAILED" in out
 
 
-@pytest.mark.unit
+@pytest.mark.contract
 def test_jobs_accounting_json_envelope_matches_stdout(capsys) -> None:
     fake_ssh = _FakeJobsSSH((0, _ACCOUNTING_STDOUT, ""))
     with patch("hpc_gui.cli.main.CLISession.open", return_value=_fake_jobs_session(fake_ssh)):
@@ -2084,7 +2089,7 @@ def test_jobs_accounting_json_envelope_matches_stdout(capsys) -> None:
     assert payload == {"result": _ACCOUNTING_STDOUT}
 
 
-@pytest.mark.unit
+@pytest.mark.integration
 def test_jobs_accounting_username_falls_back_to_profile(capsys) -> None:
     profiles = [{"name": "alpha", "host": "cluster.example", "username": "profileuser"}]
     fake_ssh = _FakeJobsSSH((0, "Account line\n", ""))
@@ -2109,7 +2114,7 @@ def test_jobs_accounting_connection_failure_exit_three(capsys) -> None:
     assert "host unreachable" in captured.err
 
 
-@pytest.mark.unit
+@pytest.mark.integration
 def test_jobs_lssrv_uses_configured_status_template(capsys) -> None:
     fake_ssh = _FakeJobsSSH((0, _LSSRV_STDOUT, ""))
     from hpc_gui.services.slurm_ssh import SSHSlurmBackend
@@ -2124,7 +2129,7 @@ def test_jobs_lssrv_uses_configured_status_template(capsys) -> None:
     assert "node1                32    0.12" in out
 
 
-@pytest.mark.unit
+@pytest.mark.integration
 def test_jobs_lssrv_json_envelope_matches_stdout(capsys) -> None:
     fake_ssh = _FakeJobsSSH((0, _LSSRV_STDOUT, ""))
     from hpc_gui.services.slurm_ssh import SSHSlurmBackend
@@ -2139,7 +2144,7 @@ def test_jobs_lssrv_json_envelope_matches_stdout(capsys) -> None:
     assert payload == {"result": _LSSRV_STDOUT}
 
 
-@pytest.mark.unit
+@pytest.mark.integration
 def test_jobs_lssrv_without_site_status_command_fails_cleanly(capsys) -> None:
     fake_ssh = _FakeJobsSSH((0, "", ""))
     with patch("hpc_gui.cli.main.CLISession.open", return_value=_fake_jobs_session(fake_ssh)):
@@ -2161,7 +2166,7 @@ def test_jobs_lssrv_connection_failure_exit_three(capsys) -> None:
     assert "host unreachable" in captured.err
 
 
-@pytest.mark.unit
+@pytest.mark.integration
 def test_jobs_lssrv_nonzero_exit_maps_to_operation_failed(capsys) -> None:
     fake_ssh = _FakeJobsSSH((1, "", "lssrv: command not found"))
     from hpc_gui.services.slurm_ssh import SSHSlurmBackend
@@ -2176,7 +2181,7 @@ def test_jobs_lssrv_nonzero_exit_maps_to_operation_failed(capsys) -> None:
     assert "lssrv: command not found" in captured.err
 
 
-@pytest.mark.unit
+@pytest.mark.integration
 def test_jobs_submit_yes_submits_script_and_exits_zero(capsys) -> None:
     fake_ssh = _FakeJobsSSH((0, "Submitted batch job 12347\n", ""))
     with patch("hpc_gui.cli.main.CLISession.open", return_value=_fake_jobs_session(fake_ssh)):
@@ -2195,7 +2200,7 @@ def test_jobs_submit_without_yes_exits_usage_no_session(capsys) -> None:
     assert "Refusing to submit a job without --yes." in captured.err
 
 
-@pytest.mark.unit
+@pytest.mark.contract
 def test_jobs_submit_yes_json_envelope_has_result_key(capsys) -> None:
     fake_ssh = _FakeJobsSSH((0, "Submitted batch job 12347\n", ""))
     with patch("hpc_gui.cli.main.CLISession.open", return_value=_fake_jobs_session(fake_ssh)):
@@ -2205,7 +2210,7 @@ def test_jobs_submit_yes_json_envelope_has_result_key(capsys) -> None:
     assert payload == {"result": "Submitted batch job 12347\n"}
 
 
-@pytest.mark.unit
+@pytest.mark.integration
 def test_jobs_cancel_yes_cancels_job_and_exits_zero(capsys) -> None:
     fake_ssh = _FakeJobsSSH((0, "scancel: Terminated job 12345\n", ""))
     with patch("hpc_gui.cli.main.CLISession.open", return_value=_fake_jobs_session(fake_ssh)):
@@ -2236,7 +2241,7 @@ def test_jobs_cancel_unsafe_job_id_exits_usage_no_session(capsys) -> None:
     assert "Invalid job ID: 12345; rm -rf /" in captured.err
 
 
-@pytest.mark.unit
+@pytest.mark.integration
 def test_jobs_cancel_array_task_id_accepted(capsys) -> None:
     fake_ssh = _FakeJobsSSH((0, "scancel: Terminated job 12345_3\n", ""))
     with patch("hpc_gui.cli.main.CLISession.open", return_value=_fake_jobs_session(fake_ssh)):
@@ -2245,7 +2250,7 @@ def test_jobs_cancel_array_task_id_accepted(capsys) -> None:
     assert "scancel: Terminated job 12345_3" in capsys.readouterr().out
 
 
-@pytest.mark.unit
+@pytest.mark.contract
 def test_jobs_cancel_yes_json_envelope_has_result_key(capsys) -> None:
     fake_ssh = _FakeJobsSSH((0, "scancel: Terminated job 12345\n", ""))
     with patch("hpc_gui.cli.main.CLISession.open", return_value=_fake_jobs_session(fake_ssh)):
@@ -2255,7 +2260,7 @@ def test_jobs_cancel_yes_json_envelope_has_result_key(capsys) -> None:
     assert payload == {"result": "scancel: Terminated job 12345"}
 
 
-@pytest.mark.unit
+@pytest.mark.integration
 def test_cli_settings_round_trip_and_defaults(tmp_path: Path) -> None:
     from hpc_gui.config.storage import (
         get_cli_default_profile,
@@ -2289,7 +2294,7 @@ def _run_gate_blocked(argv: list[str], capsys) -> int:
     return code
 
 
-@pytest.mark.integration
+@pytest.mark.unit
 @pytest.mark.parametrize(
     "argv",
     [
@@ -2305,7 +2310,7 @@ def test_access_gate_off_blocks_remote_commands(capsys, argv) -> None:
     assert _run_gate_blocked(argv, capsys) == int(ExitCode.OPERATION_FAILED)
 
 
-@pytest.mark.unit
+@pytest.mark.contract
 def test_access_gate_off_blocked_command_json(capsys) -> None:
     with patch("hpc_gui.cli.main.CLISession.open") as session_open, patch(
         "hpc_gui.cli.main.get_cli_external_access_enabled", return_value=False
@@ -2473,7 +2478,7 @@ def test_jobs_username_explicit_profile_beats_default() -> None:
         assert _jobs_username(args) == "explicituser"
 
 
-@pytest.mark.unit
+@pytest.mark.contract
 def test_commands_json_inventory_matches_parser_and_exit_codes(capsys) -> None:
     assert run_cli(["--format", "json", "commands"]) == 0
     payload = json.loads(capsys.readouterr().out)

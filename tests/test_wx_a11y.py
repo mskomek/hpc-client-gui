@@ -25,11 +25,24 @@ def test_wx_a11y_focus_order_and_labels():
         # Check that main panels have accessible names via labels
         # Files header
         files_page = frame._wx_shell_controls["pages"]["NAV-FILES"]["page"]
-        assert files_page.IsShown() or True
+        files_page_index = next(
+            (i for i in range(nb.GetPageCount()) if nb.GetPage(i).GetId() == files_page.GetId()),
+            wx.NOT_FOUND,
+        )
+        assert files_page_index != wx.NOT_FOUND
+        nb.SetSelection(files_page_index)
+        wx.Yield()
+        assert files_page.IsShown()
         # Terminal panel should have find/clear buttons with labels
         term_panel = frame._wx_shell_controls["pages"]["NAV-TERMINAL"]["page"]
-        # it is a panel with controls
-        assert term_panel is not None
+        term_index = next(
+            (i for i in range(nb.GetPageCount()) if nb.GetPage(i).GetId() == term_panel.GetId()),
+            wx.NOT_FOUND,
+        )
+        assert term_index != wx.NOT_FOUND
+        nb.SetSelection(term_index)
+        wx.Yield()
+        assert term_panel.IsShown()
         # Check that no major control relies on color alone (we check for labels)
         # Simulate keyboard traversal: try to set focus to each tab
         for i in range(nb.GetPageCount()):
@@ -55,8 +68,7 @@ def test_wx_a11y_focus_order_and_labels():
         for _ in range(3):
             wx.Yield()
 
-@pytest.mark.wx
-@pytest.mark.gui
+@pytest.mark.audit
 def test_wx_a11y_terminal_limits_documented():
     # Document that terminal has limits for screen readers due to custom TextCtrl
     # This is a placeholder to ensure audit doc exists

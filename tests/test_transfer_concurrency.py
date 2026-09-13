@@ -91,6 +91,7 @@ def test_ftp_backend_forces_serial_queueing():
 
 
 @pytest.mark.integration
+@pytest.mark.resource
 def test_ftp_transfer_backends_are_isolated_and_close_is_idempotent(ftp_server):
     main = _backend(ftp_server)
     try:
@@ -109,6 +110,9 @@ def test_ftp_transfer_backends_are_isolated_and_close_is_idempotent(ftp_server):
 
 
 @pytest.mark.integration
+@pytest.mark.concurrency
+@pytest.mark.resource
+@pytest.mark.regression
 def test_two_ftp_transfers_overlap_with_distinct_connections(ftp_server, tmp_path):
     """Two uploads through isolated backends must genuinely overlap."""
     main = _backend(ftp_server)
@@ -247,6 +251,7 @@ def _make_dialog(items, factory):
 
 
 @pytest.mark.unit
+@pytest.mark.resource
 def test_dialog_closes_isolated_backend_on_success(qapp):
     created = []
 
@@ -264,6 +269,7 @@ def test_dialog_closes_isolated_backend_on_success(qapp):
 
 
 @pytest.mark.unit
+@pytest.mark.resource
 def test_dialog_closes_isolated_backend_on_failure(qapp):
     created = []
 
@@ -280,6 +286,8 @@ def test_dialog_closes_isolated_backend_on_failure(qapp):
 
 
 @pytest.mark.unit
+@pytest.mark.concurrency
+@pytest.mark.resource
 def test_execute_cancelled_transfer_releases_isolated_backend(qapp):
     release = threading.Event()
     entered = threading.Event()
@@ -371,6 +379,7 @@ def test_dialog_cancel_releases_backend_without_completing_item(qapp):
 
 
 @pytest.mark.unit
+@pytest.mark.resource
 def test_retry_creates_fresh_backend_resources(qapp):
     class _FlakyFactory:
         def __init__(self):

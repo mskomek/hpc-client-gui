@@ -37,11 +37,17 @@ test servers or fakes; no live cluster or user resource is used.
 
 ## wx ownership and skip review
 
+Updater progress coverage now drives the real wx callback from a patched
+download seam and checks the resulting byte label, gauge, and percentage. The
+unknown-length case checks the visible indeterminate state. The download-button
+test waits for the actual worker entry, and cancellation/close/late-callback
+tests assert worker ownership and cleanup rather than only internal state.
+
 Five tests previously skipped as “flaky” or “polluted” are now exercised:
 
 | Previous skip | Current evidence | Result |
 | --- | --- | --- |
-| `tests/test_wx_jobs_behavior.py::test_wx_job_output_pause_keeps_refreshing_but_stops_live_follow` | Renamed to `test_wx_job_output_pause_freezes_and_resume_updates_output`; checks visible output stays unchanged while Pause All is active and updates after resume. It carries `gui`. | Pass |
+| `tests/test_wx_jobs_behavior.py::test_wx_job_output_pause_keeps_refreshing_but_stops_live_follow` | Current related node `test_wx_job_output_manual_refresh_updates_while_follow_is_paused` checks that an explicit refresh updates output while live follow is paused. It does not prove automatic polling is stopped. Companion `test_pause_suppresses_regular_output_refresh_until_resume` verifies the normal non-forced refresh path is suppressed while paused and works after resume. | Pass |
 | `tests/test_wx_jobs_behavior.py::test_wx_job_output_minimize_suspends_follow_and_restore_resumes_it` | Exercises minimize/restore events and visible output/polling state. | Pass |
 | `tests/test_wx_jobs_behavior.py::test_wx_job_output_does_not_overlap_remote_reads` | Removed the global-window-count skip. Calls the normal coalesced refresh path while a read is blocked and asserts peak reads is one and the worker is off the GUI thread. | Pass |
 | `tests/test_wx_jobs_behavior.py::test_wx_job_output_discards_stale_result_after_job_selection_changes` | Uses separate gates for jobs A and B; after A is released, asserts its stale output is not displayed while B is blocked, then verifies B is displayed. | Pass |
@@ -50,9 +56,11 @@ Five tests previously skipped as “flaky” or “polluted” are now exercised
 The failed stress assertion encountered while unskipping these cases was also
 reviewed. `tests/test_wx_jobs_stress.py::test_wx_jobs_stress_pause_resume_state_never_desynchronizes`
 expected “Pause All” to keep replacing visible output and expected the stale
-label “Pause Live Follow”. The runtime contract is that paused output is frozen
-and refreshed again on resume; the test now checks that behavior through 100
-pause/resume transitions.
+label “Pause Live Follow”. The current contract distinguishes automatic live
+follow from an explicit refresh: the former is suppressed while paused, while
+the latter remains available. The behavior module now checks the regular
+refresh guard and explicit refresh path separately; the stress test exercises
+100 pause/resume transitions through explicit refreshes.
 
 `tests/test_wx_jobs_stress.py::test_wx_jobs_stress_blocked_reads_never_overlap`
 uses the normal coalesced refresh callback rather than a forced refresh helper.
@@ -99,3 +107,81 @@ markers, and the entire module then passed **29 tests** with no xfail or xpass.
 The obsolete non-strict xfail annotations were removed; these two cases now
 fail normally if their ordering assertions regress. This changes no nodeids and
 does not establish packaged keyboard-to-PTY parity.
+
+### Current governance-base re-evaluation (2026-09-13)
+
+The historical Packet J result for
+`tests/test_hardening_additional.py::test_wx_separator_lifecycle_offscreen`
+is superseded for current-state reporting. Its later isolated subprocess run on
+the reconciled governance worktree exceeded the 30-second bound. This is an
+unresolved native wx lifecycle timeout; the earlier pass remains historical
+evidence only. No product defect has been confirmed from this timeout, and it
+must not be counted as a current pass.
+
+### Re-evaluation on the v3 reconciled worktree (2026-09-13)
+
+- `tests/test_wx_65a_stress.py::test_wx_65a_integrated_stress`: an earlier run
+  passed in **214.57s**; the later isolated run passed in **133.20s**. The
+  measured test invariants were zero. WebView2 logged
+  `WebViewCreated` operation-aborted diagnostics during rapid detached-shell
+  cycles, but neither run reported heap corruption.
+- `tests/test_wx_shell_p0_stress.py::test_wx_shell_p0_stress_real_wx_paths`:
+  the test assertions passed in **176.31s**, but an asynchronous remote-files
+  completion callback raised `RuntimeError: wrapped C/C++ object of type
+  Notebook has been deleted` in `wx_remote_files_view.py` while reading
+  `notebook.GetSelection()`. This is a confirmed product lifecycle defect;
+  no production change was made.
+- `tests/test_hardening_additional.py::test_wx_separator_lifecycle_offscreen`:
+  **failed** because its child process exceeded the explicit 30-second timeout
+  (`subprocess.TimeoutExpired`). This remains an unresolved native lifecycle
+  timeout and is not reclassified as flaky or passing.
+- `tests/test_wx_embedded_terminal.py`: **10 passed**; the formerly reported
+  find-button node passed alone, and the entire isolated-panel module passed.
+- `tests/test_wx_terminal_behavioral.py`: **19 passed**, including the former
+  find-next/previous WebView close node.
+- `tests/test_wx_terminal_parity_evidence.py`: **10 passed** in child-process
+  isolation; no native crash reproduced in this run. These adapter/bridge
+  results do not establish packaged terminal parity.
+- `tests/test_wx_remote_file_actions_behavior.py`: **28 passed** after its
+  fixture began restoring both global language and shared clipboard state and
+  yielding through deferred wx destruction. The module no longer emitted the
+  prior `UnregisterClass` shutdown warning.
+
+### Additional reconciled wx evidence (2026-09-13)
+
+- `tests/test_wx_files_sync_compare.py`: **8 passed in 18.11s** after removing
+  direct-handler shortcuts from the normal navigation cases and replacing two
+  vacuous `or True` assertions with exact recovery and queued-callback checks.
+- `tests/test_wx_file_context_matrix.py`: **10 passed in 2.32s**;
+  `tests/test_wx_file_actions_stress.py`: **5 passed in 14.43s**. Their wx
+  fixtures now restore the prior language and drain deferred window teardown;
+  neither module emitted the prior `UnregisterClass` warning.
+- `tests/test_wx_ansys_view.py`: **8 passed in 2.72s**, including a queued
+  linter completion invoked after frame destruction and exact visible
+  English/Turkish/English button-label refresh checks.
+- `tests/test_wx_a11y.py`: **2 passed in 2.90s** after asserting real Files
+  and Terminal page visibility rather than accepting an unconditional true.
+- `tests/test_wx_embedded_terminal.py`: **10 passed in 4.00s** with primary
+  categories split by behavior: visible panel actions are GUI tests, direct
+  key-input rules are unit tests, and shell/PTY composition is integration.
+- `tests/test_lssrv_auto_refresh.py`: **13 passed**; the two raw-output tests
+  assert the actual visible controls are shown before checking their contents.
+- `tests/test_wx_jobs_stress.py`: **10 passed in 35.74s** after removal of the
+  fake-only recovery node; its visible Jobs owner is separately exercised by
+  `test_wx_jobs_final_fix.py::test_outputs_no_job_zero_channels_waiting_and_pause_reset`.
+- `tests/test_wx_file003_final_stress.py`: **11 passed in 183.43s**. The run
+  completed all recorded local/remote mutation, navigation/completion race,
+  transfer, reconnect, and close-in-flight counts; wrong targets, stale UI
+  overwrites, destroyed-control callbacks, leaked workers/windows, and lost or
+  duplicate transfers were all zero. Peak local/remote mutation concurrency
+  remained one.
+- `tests/test_wx_layout_resize.py::test_wx_layout_resize`: **1 passed in
+  139.35s**. It completed 400 English/Turkish resize cases and 2,800 tab
+  selections with all measured geometry, clipping, overflow, layout-exception,
+  and detached-window invariants at zero. Its locale persistence is redirected
+  to temporary storage, and locale/wx resources are restored by fixture even
+  if the long sweep fails.
+- `tests/test_wx_separator_lifecycle_offscreen` has a current module run with
+  **11 passes and 1 subprocess failure**: the child exited with Windows status
+  `0xC0000374` (heap corruption). This supersedes its earlier isolated pass and
+  timeout as unresolved native-runtime evidence; it is not a test pass.

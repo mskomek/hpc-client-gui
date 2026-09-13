@@ -17,6 +17,7 @@ def test_unconfigured_source_never_creates_transport_work():
 
 
 @pytest.mark.integration
+@pytest.mark.concurrency
 def test_eligible_fake_backend_coalesces_and_parses():
     calls = []
     started = Event()

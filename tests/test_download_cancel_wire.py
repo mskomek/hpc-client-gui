@@ -29,7 +29,7 @@ from hpc_gui.services.transfer_controller import TransferController, TransferIte
 from hpc_gui.ssh.client import SSHClientWrapper, SSHConnInfo  # noqa: E402
 from hpc_gui.ui.widgets.remote_dir_panel import RemoteDirPanel  # noqa: E402
 
-pytestmark = [pytest.mark.integration, pytest.mark.concurrency, pytest.mark.resource]
+pytestmark = [pytest.mark.e2e, pytest.mark.concurrency, pytest.mark.resource]
 
 BIG_NAME = "big_result.cas.h5"
 BIG_SIZE = 48 * 1024 * 1024

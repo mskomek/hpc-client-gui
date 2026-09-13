@@ -3,7 +3,7 @@ import pytest
 from hpc_gui.wx_directories import WxDirectoriesWorkspace
 
 
-@pytest.mark.release
+@pytest.mark.unit
 def test_dynamic_storage_and_directory_workflows():
     opened, submitted, shell = [], [], []
     workspace = WxDirectoriesWorkspace(
@@ -21,9 +21,14 @@ def test_dynamic_storage_and_directory_workflows():
     assert workspace.double_click("/scratch/user", is_dir=True) == "navigate"
 
 
-@pytest.mark.gui
-def test_batch_submit_is_deterministic_and_model_has_no_qt():
+@pytest.mark.unit
+def test_batch_submit_is_deterministic():
     workspace = WxDirectoriesWorkspace(({"id": "x", "path": "/x"},))
     assert workspace.batch_submit(("/x/b.slurm", "/x/a.slurm"))[1].index == 2
+
+
+@pytest.mark.audit
+@pytest.mark.wx
+def test_directories_model_has_no_qt_import():
     source = open("src/hpc_gui/wx_directories.py", encoding="utf-8").read()
     assert "PySide6" not in source and "wx" in source

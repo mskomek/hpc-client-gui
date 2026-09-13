@@ -19,7 +19,7 @@ import pytest
 
 wx = pytest.importorskip("wx")
 
-from hpc_gui.core.i18n import load_language
+from hpc_gui.core.i18n import current_language, load_language
 from hpc_gui.wx_local_files import LocalBrowserModel, show_local_files
 from hpc_gui.wx_remote_files import RemoteEntry, WxRemoteDirectoryModel
 from hpc_gui.wx_remote_files_view import show_remote_files
@@ -70,15 +70,20 @@ def _settle(app, rounds: int = 6) -> None:
 
 @pytest.fixture
 def wx_app():
+    previous_language = current_language()
     load_language("en")
     app = wx.App(False)
-    yield app
-    for window in wx.GetTopLevelWindows():
-        if window:
-            window.Destroy()
-    app.ProcessPendingEvents()
-    wx.SafeYield()
-    app.Destroy()
+    try:
+        yield app
+    finally:
+        for window in wx.GetTopLevelWindows():
+            if window:
+                window.Destroy()
+        for _ in range(3):
+            app.ProcessPendingEvents()
+            wx.SafeYield()
+        app.Destroy()
+        load_language(previous_language)
 
 
 def _browser_windows():
@@ -297,6 +302,7 @@ def _fire_menu_item(control, label, trigger):
     return fired["hit"]
 
 
+@pytest.mark.concurrency
 @pytest.mark.wx
 @pytest.mark.gui
 def test_stress_b_local_mutations(wx_app, tmp_path: Path, monkeypatch):
@@ -433,6 +439,7 @@ def test_stress_b_local_mutations(wx_app, tmp_path: Path, monkeypatch):
 # Stress C - 100 remote mutations driven by real key and context-menu events
 # ==========================================================================
 
+@pytest.mark.concurrency
 @pytest.mark.wx
 @pytest.mark.gui
 def test_stress_c_remote_mutations(wx_app, monkeypatch):
@@ -594,6 +601,7 @@ SENTINELS = {
 }
 
 
+@pytest.mark.concurrency
 @pytest.mark.wx
 @pytest.mark.gui
 def test_stress_d_target_switches(wx_app):
@@ -657,6 +665,7 @@ def _enter_path(frame, value):
     control.ProcessEvent(wx.CommandEvent(wx.wxEVT_TEXT_ENTER, control.GetId()))
 
 
+@pytest.mark.concurrency
 @pytest.mark.wx
 @pytest.mark.gui
 def test_stress_e_navigate_completion_races(wx_app, tmp_path, monkeypatch):
@@ -775,6 +784,7 @@ def _file_browser_windows():
     ]
 
 
+@pytest.mark.resource
 @pytest.mark.wx
 @pytest.mark.gui
 def test_stress_f_browser_open_close(wx_app, tmp_path):
@@ -860,6 +870,8 @@ def _close_first_tab(notebook):
         notebook.HitTest = original_hit
 
 
+@pytest.mark.concurrency
+@pytest.mark.resource
 @pytest.mark.wx
 @pytest.mark.gui
 def test_stress_g_blocked_close_in_flight(wx_app, tmp_path, monkeypatch):
@@ -1124,8 +1136,10 @@ class _AccountingFiles:
         self._run("resume_download", destination)
 
 
+@pytest.mark.concurrency
+@pytest.mark.resource
 @pytest.mark.wx
-@pytest.mark.gui
+@pytest.mark.integration
 def test_stress_h_file_transfer_items(wx_app, tmp_path):
     from hpc_gui.services.transfer_controller import TransferItem
     from hpc_gui.wx_shell import _start_file_transfers
@@ -1214,7 +1228,9 @@ def test_stress_h_file_transfer_items(wx_app, tmp_path):
 # Stress I - 50 unicode / space names across local, remote and transfers
 # ==========================================================================
 
-@pytest.mark.contract
+@pytest.mark.semantic
+@pytest.mark.wx
+@pytest.mark.gui
 def test_stress_i_unicode_and_space_names(wx_app, tmp_path, monkeypatch):
     from hpc_gui.services.transfer_controller import TransferItem
     from hpc_gui.wx_shell import _start_file_transfers
@@ -1313,8 +1329,9 @@ def test_stress_i_unicode_and_space_names(wx_app, tmp_path, monkeypatch):
 # Reconnect / session snapshot, repeated
 # ==========================================================================
 
+@pytest.mark.concurrency
 @pytest.mark.wx
-@pytest.mark.gui
+@pytest.mark.integration
 def test_reconnect_session_snapshot_repeated(wx_app, tmp_path):
     from hpc_gui.services.transfer_controller import TransferItem
     from hpc_gui.wx_shell import _start_file_transfers
@@ -1376,7 +1393,7 @@ def test_reconnect_session_snapshot_repeated(wx_app, tmp_path):
 # ==========================================================================
 
 @pytest.mark.wx
-@pytest.mark.gui
+@pytest.mark.reporting
 def test_zz_measured_invariants(capsys):
     lines = ["", "GUI-FILE-003 executed stress counts:"]
     for name, (executed, required) in EXECUTED.items():

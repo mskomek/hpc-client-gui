@@ -9,6 +9,7 @@ from hpc_gui.ui.widgets.jobs_outputs_widget import (
 
 
 @pytest.mark.unit
+@pytest.mark.resource
 def test_output_buffer_keeps_newest_lines_and_bound_marker() -> None:
     value = "\n".join(f"line-{index}" for index in range(_OUTPUT_MAX_LINES + 20))
     bounded = _bounded_output_text(value)
@@ -19,6 +20,7 @@ def test_output_buffer_keeps_newest_lines_and_bound_marker() -> None:
 
 
 @pytest.mark.unit
+@pytest.mark.resource
 def test_output_buffer_preserves_active_ansi_state_after_truncation() -> None:
     value = "\x1b[31m" + "\n".join(f"line-{index}" for index in range(_OUTPUT_MAX_LINES + 2))
     bounded = _bounded_output_text(value)

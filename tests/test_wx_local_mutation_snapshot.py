@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 wx = pytest.importorskip("wx")
 from hpc_gui.wx_local_files import LocalBrowserModel, show_local_files
-from hpc_gui.core.i18n import load_language
+from hpc_gui.core.i18n import current_language, load_language
 
 def _pump(app, pred, timeout=2):
     dl=time.monotonic()+timeout
@@ -18,13 +18,17 @@ def _pump(app, pred, timeout=2):
 
 @pytest.fixture
 def wx_app():
+    previous_language = current_language()
     load_language("en")
     app=wx.App(False)
     yield app
-    for w in wx.GetTopLevelWindows():
+    for w in list(wx.GetTopLevelWindows()):
         if w: w.Destroy()
-    app.ProcessPendingEvents()
+    for _ in range(3):
+        app.ProcessPendingEvents()
+        wx.Yield()
     app.Destroy()
+    load_language(previous_language)
 
 def _local(app, path):
     show_local_files(path=path)
@@ -33,6 +37,7 @@ def _local(app, path):
     return frame
 
 @pytest.mark.wx
+@pytest.mark.concurrency
 @pytest.mark.gui
 def test_wx_local_paste_uses_origin_tab_snapshot_after_tab_switch(wx_app, tmp_path: Path, monkeypatch):
     a=tmp_path / "A"; a.mkdir(); b=a / "B"; b.mkdir()
@@ -66,6 +71,7 @@ def test_wx_local_paste_uses_origin_tab_snapshot_after_tab_switch(wx_app, tmp_pa
     assert not (b / "src.txt").exists()
 
 @pytest.mark.wx
+@pytest.mark.concurrency
 @pytest.mark.gui
 def test_wx_local_rename_uses_origin_tab_snapshot_after_tab_switch(wx_app, tmp_path: Path, monkeypatch):
     a=tmp_path / "A"; a.mkdir(); b=a / "B"; b.mkdir()
@@ -99,6 +105,7 @@ def test_wx_local_rename_uses_origin_tab_snapshot_after_tab_switch(wx_app, tmp_p
     assert not target.exists()
 
 @pytest.mark.wx
+@pytest.mark.concurrency
 @pytest.mark.gui
 def test_wx_local_delete_uses_origin_tab_snapshot_after_tab_switch(wx_app, tmp_path: Path, monkeypatch):
     a=tmp_path / "A"; a.mkdir(); b=a / "B"; b.mkdir()

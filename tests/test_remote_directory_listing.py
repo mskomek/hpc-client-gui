@@ -85,7 +85,8 @@ class RemoteDirectoryListingTests(unittest.TestCase):
         for _ in range(50):
             self.app.processEvents()
 
-    @pytest.mark.integration
+    @pytest.mark.gui
+    @pytest.mark.qt
     def test_streaming_listing_clears_once_and_renders_every_entry(self) -> None:
         entries = _entries(1500)
         files = _StreamingFiles(entries)
@@ -106,7 +107,8 @@ class RemoteDirectoryListingTests(unittest.TestCase):
         self.assertEqual(clears, ["/work"])
         self.assertEqual(files.iter_calls, 1)
 
-    @pytest.mark.integration
+    @pytest.mark.gui
+    @pytest.mark.qt
     def test_default_sort_groups_folders_before_files(self) -> None:
         panel = self._panel(_StreamingFiles(_entries(30)))
         panel.set_dir("/work")
@@ -126,7 +128,10 @@ class RemoteDirectoryListingTests(unittest.TestCase):
         ]
         self.assertEqual(names, sorted(names))
 
-    @pytest.mark.integration
+    @pytest.mark.gui
+    @pytest.mark.qt
+    @pytest.mark.concurrency
+    @pytest.mark.resource
     def test_stale_navigation_is_cancelled(self) -> None:
         # Keep the first request in flight long enough for the second
         # navigation to exercise cancellation on fast CI runners too.
@@ -142,7 +147,10 @@ class RemoteDirectoryListingTests(unittest.TestCase):
         self.assertGreaterEqual(files.abandoned, 1)
         self.assertIsNone(panel._listing_worker)
 
-    @pytest.mark.integration
+    @pytest.mark.gui
+    @pytest.mark.qt
+    @pytest.mark.concurrency
+    @pytest.mark.resource
     def test_navigation_burst_only_lists_the_first_and_last_target(self) -> None:
         # A->B->C->D: A is already on the wire, D is what the user wants, and
         # B and C must never reach the backend at all.
@@ -162,7 +170,9 @@ class RemoteDirectoryListingTests(unittest.TestCase):
         self.assertIsNone(panel._listing_worker)
         self.assertIsNone(panel._pending_listing)
 
-    @pytest.mark.integration
+    @pytest.mark.gui
+    @pytest.mark.qt
+    @pytest.mark.performance
     def test_only_the_visible_category_is_sorted_up_front(self) -> None:
         panel = self._panel(_StreamingFiles(_entries(30)))
         panel.set_dir("/work")
@@ -173,7 +183,9 @@ class RemoteDirectoryListingTests(unittest.TestCase):
         panel.tabs.setCurrentWidget(panel.views["slurm"])
         self.assertNotIn("slurm", panel._dirty_views)
 
-    @pytest.mark.integration
+    @pytest.mark.gui
+    @pytest.mark.qt
+    @pytest.mark.performance
     def test_cached_directory_skips_the_network(self) -> None:
         files = _StreamingFiles(_entries(10))
         panel = self._panel(files)
@@ -231,6 +243,7 @@ class ListingChannelTests(unittest.TestCase):
         return backend
 
     @pytest.mark.integration
+    @pytest.mark.resource
     def test_channel_is_reused_across_completed_listings(self) -> None:
         ssh, opened = self._wrapper()
         backend = self._backend(ssh, opened)
@@ -242,6 +255,7 @@ class ListingChannelTests(unittest.TestCase):
         self.assertEqual(entries[0].path, "/work/dir")
 
     @pytest.mark.integration
+    @pytest.mark.resource
     def test_abandoned_listing_drops_the_channel(self) -> None:
         ssh, opened = self._wrapper()
         backend = self._backend(ssh, opened)

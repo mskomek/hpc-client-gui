@@ -40,6 +40,7 @@ class _Files:
 
 
 @pytest.mark.integration
+@pytest.mark.regression
 class DownloadPlanListingFailureTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:

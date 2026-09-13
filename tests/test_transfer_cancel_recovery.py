@@ -24,6 +24,7 @@ from hpc_gui.ui.dialogs.transfer_dialog import TransferDialog
 
 
 @pytest.mark.unit
+@pytest.mark.concurrency
 class TransferControllerCancelTests(unittest.TestCase):
     def test_cancel_reports_every_item_of_a_parallel_batch(self) -> None:
         started = threading.Barrier(4, timeout=5)
@@ -61,6 +62,8 @@ class TransferControllerCancelTests(unittest.TestCase):
 
 
 @pytest.mark.integration
+@pytest.mark.concurrency
+@pytest.mark.qt
 class TransferDialogCancelTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:

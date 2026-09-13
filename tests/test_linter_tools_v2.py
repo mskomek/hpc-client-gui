@@ -17,6 +17,7 @@ import pytest
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
+from hpc_gui.core.i18n import current_language, load_language
 from hpc_gui.plugins.linter_tools import (
     LinterTool,
     ToolLoadError,
@@ -24,6 +25,16 @@ from hpc_gui.plugins.linter_tools import (
     lint_text_with_tool,
     supported_suffixes,
 )
+
+
+@pytest.fixture(autouse=True)
+def _english_language():
+    previous_language = current_language()
+    load_language("en")
+    try:
+        yield
+    finally:
+        load_language(previous_language)
 
 
 def _install_stub_engine(monkeypatch, *, api_suffixes=(".jou",), init_attr=None):
@@ -147,6 +158,7 @@ def test_tools_supporting_suffix_tolerates_broken_engine(monkeypatch):
 
 
 @pytest.mark.unit
+@pytest.mark.resource
 def test_temp_copy_preserves_suffix_and_content():
     from hpc_gui.plugins.linter_tools import remove_temp_copy, temp_copy_for_tool
 
@@ -161,6 +173,7 @@ def test_temp_copy_preserves_suffix_and_content():
 
 
 @pytest.mark.unit
+@pytest.mark.resource
 def test_temp_copy_without_suffix_uses_txt():
     from hpc_gui.plugins.linter_tools import remove_temp_copy, temp_copy_for_tool
 
@@ -181,10 +194,18 @@ def qapp():
     from PySide6.QtWidgets import QApplication
 
     app = QApplication.instance() or QApplication([])
-    from hpc_gui.core.i18n import load_language
+    from hpc_gui.core.i18n import current_language, load_language
 
+    previous_language = current_language()
     load_language("en")
-    yield app
+    try:
+        yield app
+    finally:
+        for widget in app.topLevelWidgets():
+            widget.close()
+            widget.deleteLater()
+        app.processEvents()
+        load_language(previous_language)
 
 
 def _fake_run():
@@ -238,6 +259,8 @@ def test_results_dialog_fix_button_invokes_callback(qapp):
 
 
 @pytest.mark.integration
+@pytest.mark.qt
+@pytest.mark.resource
 def test_remote_open_in_tool_temp_copy_lifecycle(qapp, monkeypatch):
     from pathlib import Path
 

@@ -33,7 +33,7 @@ class StartupChangelogTests(unittest.TestCase):
             window.graceful_shutdown()
             window.close()
 
-    @pytest.mark.runtime_smoke
+    @pytest.mark.unit
     def test_changelog_sections_are_rendered_newest_first(self) -> None:
         text = "\n".join(
             [
@@ -51,7 +51,7 @@ class StartupChangelogTests(unittest.TestCase):
 
         self.assertLess(rendered.index("## v1.1.0"), rendered.index("## v1.0.0"))
 
-    @pytest.mark.runtime_smoke
+    @pytest.mark.unit
     def test_startup_changelog_is_shown_once_per_version(self) -> None:
         stored_versions: list[str] = []
 

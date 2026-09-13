@@ -277,6 +277,7 @@ requires_repo = pytest.mark.skipif(
 
 
 @pytest.mark.integration
+@pytest.mark.artifact_dependent
 @requires_repo
 def test_real_fluent_template_loads_and_renders(tmp_path: Path):
     import shutil

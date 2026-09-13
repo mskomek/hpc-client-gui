@@ -242,7 +242,7 @@ class JumpSequenceTests(unittest.TestCase):
         self.assertIs(wrapper._active_transport(), target.transport)
 
     @pytest.mark.integration
-    def test_parallel_transfers_do_not_multiply_jump_clients(self) -> None:
+    def test_multiple_transfer_channels_reuse_jump_connection(self) -> None:
         jump_info = SSHJumpInfo(enabled=True, host="gw")
         wrapper, target, jump, _seq = make_connected_wrapper(jump_info)
         from hpc_gui.ssh import sftp_channels as sftp_module
@@ -352,6 +352,7 @@ class FailureCleanupTests(unittest.TestCase):
         return error
 
     @pytest.mark.integration
+    @pytest.mark.resource
     def test_jump_auth_failure_never_attempts_target(self) -> None:
         jump_info = SSHJumpInfo(enabled=True, host="gw")
         sequence: list[str] = []
@@ -365,6 +366,7 @@ class FailureCleanupTests(unittest.TestCase):
         self.assertTrue(jump_client.closed)
 
     @pytest.mark.integration
+    @pytest.mark.resource
     def test_forwarding_denied_is_distinct_error_with_cleanup(self) -> None:
         jump_info = SSHJumpInfo(enabled=True, host="gw")
         sequence: list[str] = []
@@ -378,6 +380,7 @@ class FailureCleanupTests(unittest.TestCase):
         self.assertTrue(jump_client.closed)
 
     @pytest.mark.integration
+    @pytest.mark.resource
     def test_target_auth_failure_cleans_jump(self) -> None:
         jump_info = SSHJumpInfo(enabled=True, host="gw")
         sequence: list[str] = []
@@ -389,6 +392,7 @@ class FailureCleanupTests(unittest.TestCase):
         self.assertTrue(jump_client.closed)
 
     @pytest.mark.integration
+    @pytest.mark.resource
     def test_target_hostkey_change_cleans_jump(self) -> None:
         jump_info = SSHJumpInfo(enabled=True, host="gw")
         sequence: list[str] = []
@@ -400,6 +404,7 @@ class FailureCleanupTests(unittest.TestCase):
         self.assertTrue(jump_client.closed)
 
     @pytest.mark.integration
+    @pytest.mark.resource
     def test_sftp_init_failure_full_cleanup(self) -> None:
         jump_info = SSHJumpInfo(enabled=True, host="gw")
         sequence: list[str] = []
@@ -412,6 +417,7 @@ class FailureCleanupTests(unittest.TestCase):
         self.assertTrue(jump_client.closed)
 
     @pytest.mark.integration
+    @pytest.mark.resource
     def test_close_twice_is_safe(self) -> None:
         jump_info = SSHJumpInfo(enabled=True, host="gw")
         wrapper, target, jump, _seq = make_connected_wrapper(jump_info)
@@ -421,7 +427,8 @@ class FailureCleanupTests(unittest.TestCase):
         self.assertIsNone(wrapper._jump_connection)
 
     @pytest.mark.integration
-    def test_worker_cancel_style_close_during_partial_stage(self) -> None:
+    @pytest.mark.resource
+    def test_close_releases_partial_jump_stage_resources(self) -> None:
         jump_info = SSHJumpInfo(enabled=True, host="gw")
         wrapper, target, jump, _seq = make_connected_wrapper(jump_info)
         # Simulate a cancel while only the jump stage has resources.
@@ -447,7 +454,7 @@ class ProfilePersistenceTests(unittest.TestCase):
         home_patch.start().return_value = Path(self._tmp.name)
         self.addCleanup(home_patch.stop)
 
-    @pytest.mark.integration
+    @pytest.mark.contract
     def test_normalization_rules(self) -> None:
         settings = normalize_jump_host_settings(
             {
@@ -472,6 +479,7 @@ class ProfilePersistenceTests(unittest.TestCase):
         self.assertEqual(ok["host_key_policy"], "strict")
 
     @pytest.mark.integration
+    @pytest.mark.resource
     def test_round_trip_persists_without_password_key(self) -> None:
         from hpc_gui.config.storage import load_profiles, upsert_profile
 
@@ -491,6 +499,7 @@ class ProfilePersistenceTests(unittest.TestCase):
         self.assertNotIn("password_enc", stored)
 
     @pytest.mark.integration
+    @pytest.mark.resource
     def test_unrelated_edit_preserves_file_manager_and_jump_state(self) -> None:
         from hpc_gui.config.storage import (
             load_profiles,
@@ -517,7 +526,7 @@ class ProfilePersistenceTests(unittest.TestCase):
         self.assertTrue(saved["jump_host"]["enabled"])
 
     @pytest.mark.qt
-    @pytest.mark.gui
+    @pytest.mark.integration
     def test_dialog_collect_patches_jump_settings(self) -> None:
         from PySide6.QtWidgets import QApplication
         from hpc_gui.core.i18n import load_language

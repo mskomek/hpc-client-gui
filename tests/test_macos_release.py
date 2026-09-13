@@ -6,6 +6,7 @@ from pathlib import Path
 from unittest import mock
 
 import pytest
+pytestmark = pytest.mark.macos
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 
@@ -54,7 +55,7 @@ def _spec_text() -> str:
     return (rm.REPO_ROOT / "build" / "macos" / "hpc-client-gui.spec").read_text(encoding="utf-8")
 
 
-@pytest.mark.release
+@pytest.mark.audit
 def test_macos_spec_excludes_devtools_like_windows_and_linux():
     text = _spec_text()
     assert "qtwebengine_devtools_resources" in text
@@ -100,7 +101,7 @@ def test_dmg_within_budget_reports_size(tmp_path):
     assert "2.00 MiB" in line and "budget: 600 MiB" in line
 
 
-@pytest.mark.release
+@pytest.mark.reporting
 def test_bundle_report_lists_largest_files(tmp_path):
     app = tmp_path / "HPC Client GUI.app" / "Contents" / "MacOS"
     app.mkdir(parents=True)
@@ -114,7 +115,7 @@ def test_bundle_report_lists_largest_files(tmp_path):
     assert text.index("big.bin") < text.index("small.bin")
 
 
-@pytest.mark.release
+@pytest.mark.audit
 def test_macos_staging_preserves_framework_symlinks():
     release_script = (rm.REPO_ROOT / "scripts" / "release_macos.py").read_text(encoding="utf-8")
     signing_script = (rm.REPO_ROOT / "scripts" / "sign_macos_release.py").read_text(encoding="utf-8")
@@ -122,7 +123,7 @@ def test_macos_staging_preserves_framework_symlinks():
     assert "shutil.copytree(app, stage / app.name, symlinks=True)" in signing_script
 
 
-@pytest.mark.release
+@pytest.mark.contract
 def test_release_lock_keeps_macos_x86_64_cryptography_support():
     lock = (rm.REPO_ROOT / "requirements-release.lock").read_text(encoding="utf-8")
     assert 'cryptography==50.0.0; sys_platform != "darwin" or platform_machine != "x86_64"' in lock

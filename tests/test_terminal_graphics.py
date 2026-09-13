@@ -20,6 +20,7 @@ def test_flag_matching_is_token_based():
 
 
 @pytest.mark.unit
+@pytest.mark.linux
 def test_gbm_tracker_requires_three_recent_linux_warnings(monkeypatch):
     monkeypatch.setattr(graphics.sys, "platform", "linux")
     tracker = graphics.GbmWarningTracker(threshold=3, window_seconds=30)
@@ -31,6 +32,7 @@ def test_gbm_tracker_requires_three_recent_linux_warnings(monkeypatch):
 
 
 @pytest.mark.unit
+@pytest.mark.linux
 def test_gbm_tracker_drops_expired_warnings(monkeypatch):
     monkeypatch.setattr(graphics.sys, "platform", "linux")
     tracker = graphics.GbmWarningTracker(threshold=3, window_seconds=30)

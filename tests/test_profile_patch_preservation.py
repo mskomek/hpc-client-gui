@@ -47,6 +47,7 @@ def _existing_profile() -> dict:
 
 
 @pytest.mark.contract
+@pytest.mark.regression
 class MergeProfilePatchTests(unittest.TestCase):
     def test_unknown_top_level_key_survives_an_edit(self) -> None:
         merged = merge_profile_patch(
@@ -76,6 +77,8 @@ class MergeProfilePatchTests(unittest.TestCase):
 
 
 @pytest.mark.integration
+@pytest.mark.resource
+@pytest.mark.regression
 class ProfileStoragePreservationTests(unittest.TestCase):
     def setUp(self) -> None:
         self._dir = tempfile.TemporaryDirectory()
@@ -108,6 +111,7 @@ class ProfileStoragePreservationTests(unittest.TestCase):
 
 
 @pytest.mark.gui
+@pytest.mark.regression
 class ConnectionDialogPreservationTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
@@ -187,6 +191,7 @@ class ConnectionDialogPreservationTests(unittest.TestCase):
 
 
 @pytest.mark.gui
+@pytest.mark.regression
 class LoginWidgetSaveProfileTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:

@@ -12,11 +12,11 @@ import check_release_surface  # noqa: E402
 
 
 class ReleaseSurfaceCheckTest(unittest.TestCase):
-    @pytest.mark.release
+    @pytest.mark.audit
     def test_repository_surface_is_clean(self) -> None:
         self.assertEqual(check_release_surface.check_release_surface(ROOT), [])
 
-    @pytest.mark.release
+    @pytest.mark.audit
     def test_stale_tag_link_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

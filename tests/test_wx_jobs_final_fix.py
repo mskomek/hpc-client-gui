@@ -68,8 +68,19 @@ def _close(frame):
         wx.Yield()
 
 
+@pytest.fixture(autouse=True)
+def _isolate_global_language(monkeypatch, tmp_path):
+    from hpc_gui.core import i18n
+
+    previous = i18n.current_language()
+    monkeypatch.setattr(i18n, "app_data_dir", lambda: tmp_path)
+    yield
+    i18n.load_language(previous)
+
+
 @pytest.mark.wx
 @pytest.mark.gui
+@pytest.mark.semantic
 def test_inner_notebook_has_exact_order_and_language_refresh():
     app, frame, panel = _build()
     try:
@@ -88,6 +99,7 @@ def test_inner_notebook_has_exact_order_and_language_refresh():
 
 @pytest.mark.wx
 @pytest.mark.gui
+@pytest.mark.semantic
 def test_outputs_pause_all_and_accounting_labels_reset_and_localize():
     app, frame, panel = _build()
     try:
@@ -152,7 +164,9 @@ def test_cluster_status_needs_no_selected_job_and_uses_real_refresh_event():
         _close(frame)
 
 
-@pytest.mark.contract
+@pytest.mark.wx
+@pytest.mark.gui
+@pytest.mark.semantic
 def test_provider_contract_lssrv_parser_reaches_visible_cluster_cells():
     raw = (
         "Slurm partitions state\n"
@@ -200,6 +214,7 @@ def test_malformed_lssrv_warns_and_preserves_raw_status():
 
 @pytest.mark.wx
 @pytest.mark.gui
+@pytest.mark.concurrency
 def test_cluster_result_survives_job_selection_and_reconnect_rejects_old_result():
     calls = []
     provider = {"value": "A"}
@@ -268,6 +283,7 @@ def test_accounting_parse_warning_keeps_raw_result():
 
 @pytest.mark.wx
 @pytest.mark.gui
+@pytest.mark.semantic
 def test_files_no_selection_reset_and_language_preserve_workdir():
     backend = MockRemoteFilesBackend()
     session = {"session": {"files": backend, "profile": {"profile_id": "final-files"}}}
@@ -412,6 +428,7 @@ def test_open_in_main_files_uses_real_wx_event():
 
 @pytest.mark.wx
 @pytest.mark.gui
+@pytest.mark.concurrency
 def test_stale_raw_exceptions_do_not_cross_job_or_provider():
     details_started = threading.Event()
     details_release = threading.Event()

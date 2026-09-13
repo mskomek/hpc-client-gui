@@ -87,6 +87,7 @@ def test_follower_reassignment_resets_source_and_offset():
 
 
 @pytest.mark.unit
+@pytest.mark.concurrency
 def test_follower_reassignment_invalidates_inflight_old_read():
     started = Event()
     release = Event()

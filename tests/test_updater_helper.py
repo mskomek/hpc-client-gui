@@ -41,6 +41,9 @@ def test_progress_guard_never_decreases():
 
 
 @pytest.mark.release
+@pytest.mark.packaging
+@pytest.mark.linux
+@pytest.mark.resource
 def test_appimage_copies_bytes_preserves_executable_and_cleans_backup(monkeypatch, tmp_path: Path):
     target = tmp_path / "client.AppImage"
     package = tmp_path / "new.AppImage"
@@ -60,6 +63,9 @@ def test_appimage_copies_bytes_preserves_executable_and_cleans_backup(monkeypatc
 
 
 @pytest.mark.release
+@pytest.mark.packaging
+@pytest.mark.linux
+@pytest.mark.resource
 def test_appimage_rolls_back_when_new_process_fails(monkeypatch, tmp_path: Path):
     target = tmp_path / "client.AppImage"
     package = tmp_path / "new.AppImage"
@@ -79,6 +85,8 @@ def test_appimage_rolls_back_when_new_process_fails(monkeypatch, tmp_path: Path)
 
 
 @pytest.mark.release
+@pytest.mark.packaging
+@pytest.mark.linux
 def test_deb_delegates_to_pkexec_apt_verifies_and_restarts(tmp_path: Path):
     package = tmp_path / "update.deb"
     target = tmp_path / "hpc-client-gui"
@@ -105,6 +113,8 @@ def test_deb_delegates_to_pkexec_apt_verifies_and_restarts(tmp_path: Path):
 
 
 @pytest.mark.release
+@pytest.mark.packaging
+@pytest.mark.linux
 def test_deb_stops_when_packagekit_local_install_is_unavailable(tmp_path: Path):
     package = tmp_path / "update.deb"
     package.write_bytes(b"deb")
@@ -120,6 +130,8 @@ def test_deb_stops_when_packagekit_local_install_is_unavailable(tmp_path: Path):
 
 
 @pytest.mark.release
+@pytest.mark.packaging
+@pytest.mark.linux
 def test_deb_authentication_failure_is_not_repaired_manually(tmp_path: Path):
     package = tmp_path / "update.deb"
     package.write_bytes(b"deb")
@@ -136,6 +148,8 @@ def test_deb_authentication_failure_is_not_repaired_manually(tmp_path: Path):
 
 
 @pytest.mark.release
+@pytest.mark.packaging
+@pytest.mark.linux
 def test_flatpak_uses_flatpak_for_bundle_and_restart(monkeypatch, tmp_path: Path):
     package = tmp_path / "update.flatpak"
     package.write_bytes(b"bundle")
@@ -155,6 +169,8 @@ def test_flatpak_uses_flatpak_for_bundle_and_restart(monkeypatch, tmp_path: Path
 
 
 @pytest.mark.release
+@pytest.mark.packaging
+@pytest.mark.linux
 def test_flatpak_system_scope_remote_update_uses_manager_only(tmp_path: Path):
     cfg = HelperConfig("linux-flatpak", tmp_path / "missing.flatpak", tmp_path / "ignored", 1, "2.0", "x86_64", "system")
     assert flatpak_command(cfg, False) == [
@@ -163,6 +179,9 @@ def test_flatpak_system_scope_remote_update_uses_manager_only(tmp_path: Path):
 
 
 @pytest.mark.release
+@pytest.mark.packaging
+@pytest.mark.macos
+@pytest.mark.resource
 def test_macos_validates_replaces_rolls_back_and_detaches(monkeypatch, tmp_path: Path):
     target = tmp_path / "HPC Client GUI.app"
     source = tmp_path / "mounted" / "HPC Client GUI.app"
@@ -190,6 +209,9 @@ def test_macos_validates_replaces_rolls_back_and_detaches(monkeypatch, tmp_path:
 
 
 @pytest.mark.release
+@pytest.mark.packaging
+@pytest.mark.macos
+@pytest.mark.resource
 def test_macos_rolls_back_after_failed_launch(monkeypatch, tmp_path: Path):
     target = tmp_path / "HPC Client GUI.app"
     source = tmp_path / "mounted" / "HPC Client GUI.app"

@@ -5,7 +5,7 @@ import pytest
 
 wx = pytest.importorskip("wx")
 
-from hpc_gui.core.i18n import load_language
+from hpc_gui.core.i18n import current_language, load_language
 from hpc_gui.wx_jobs import show_jobs
 
 
@@ -49,32 +49,23 @@ def _stdout(frame):
 
 @pytest.fixture
 def wx_jobs():
+    previous_language = current_language()
     load_language("en")
     app = wx.App.Get() or wx.App(False)
-    yield app
     try:
+        yield app
+    finally:
         for window in list(wx.GetTopLevelWindows()):
             try:
                 if window:
                     window.Destroy()
             except Exception:
                 pass
-        for _ in range(5):
-            try:
-                app.ProcessPendingEvents()
-                wx.SafeYield()
-            except Exception:
-                break
+        for _ in range(3):
+            app.ProcessPendingEvents()
+            wx.SafeYield()
             wx.MilliSleep(10)
-    except Exception:
-        pass
-    # Do not Destroy the global App – other tests reuse it. Only destroy if we created it and no other TopLevelWindows remain.
-    try:
-        if not wx.GetTopLevelWindows():
-            # Keep App alive for reuse; do not Destroy here to avoid UnregisterClass 0x584
-            pass
-    except Exception:
-        pass
+        load_language(previous_language)
 
 
 @pytest.mark.wx
@@ -108,6 +99,48 @@ def test_wx_job_output_manual_refresh_updates_while_follow_is_paused(wx_jobs):
     _click(frame._wx_jobs_controls["pause"])
     frame._wx_jobs_refresh_outputs()
     _pump(wx_jobs, lambda: _stdout(frame).GetValue() == "line 1\nline 2\nline 3\n")
+
+
+@pytest.mark.wx
+@pytest.mark.gui
+@pytest.mark.semantic
+@pytest.mark.regression
+def test_pause_suppresses_regular_output_refresh_until_resume(wx_jobs):
+    reads = []
+
+    def read(_job):
+        reads.append(len(reads) + 1)
+        return {"stdout": f"output-{reads[-1]}"}
+
+    frame = _open(wx_jobs, lambda: [{"id": "42", "state": "RUNNING"}], read)
+    _pump(wx_jobs, lambda: frame._wx_jobs_controls["jobs"].GetItemCount() == 1)
+    _select(frame)
+    frame._wx_jobs_controls["notebook"].SetSelection(4)
+    _pump(
+        wx_jobs,
+        lambda: bool(reads)
+        and _stdout(frame) is not None
+        and frame._wx_jobs_state["outputs_requests"] == 0,
+    )
+    before_pause = len(reads)
+    paused_text = _stdout(frame).GetValue()
+
+    _click(frame._wx_jobs_controls["pause"])
+    frame._wx_jobs_refresh_outputs_tab()
+    wx_jobs.ProcessPendingEvents()
+    assert frame._wx_jobs_state["user_paused"]
+    assert len(reads) == before_pause
+    assert _stdout(frame).GetValue() == paused_text
+
+    _click(frame._wx_jobs_controls["pause"])
+    frame._wx_jobs_refresh_outputs_tab()
+    _pump(
+        wx_jobs,
+        lambda: len(reads) > before_pause
+        and frame._wx_jobs_state["outputs_requests"] == 0
+        and _stdout(frame).GetValue() != paused_text,
+    )
+    assert not frame._wx_jobs_state["user_paused"]
 
 
 @pytest.mark.wx
@@ -152,7 +185,7 @@ def test_wx_job_output_pause_survives_minimize_restore(wx_jobs):
     frame = _open(wx_jobs, lambda: list_calls.append(1) or [{"id": "42", "state": "RUNNING"}], lambda _job: {"stdout": "next"})
     _pump(wx_jobs, lambda: frame._wx_jobs_controls["jobs"].GetItemCount() == 1)
     _select(frame)
-    _pump(wx_jobs, lambda: any(tc.GetValue() for tc in frame._wx_jobs_controls.get("output_channels", {}).values()) if frame._wx_jobs_controls.get("output_channels") else True)
+    _pump(wx_jobs, lambda: _stdout(frame) is not None and bool(_stdout(frame).GetValue()))
     _click(frame._wx_jobs_controls["pause"])
     assert frame._wx_jobs_state["user_paused"]
     frame.ProcessEvent(wx.IconizeEvent(frame.GetId(), True))
@@ -167,6 +200,7 @@ def test_wx_job_output_pause_survives_minimize_restore(wx_jobs):
 
 @pytest.mark.wx
 @pytest.mark.gui
+@pytest.mark.concurrency
 def test_wx_job_output_does_not_overlap_remote_reads(wx_jobs):
     started = threading.Event()
     release = threading.Event()
@@ -219,6 +253,7 @@ def test_wx_job_output_does_not_overlap_remote_reads(wx_jobs):
 
 @pytest.mark.wx
 @pytest.mark.gui
+@pytest.mark.concurrency
 def test_wx_job_output_discards_stale_result_after_job_selection_changes(wx_jobs):
     release_a = threading.Event()
     release_b = threading.Event()

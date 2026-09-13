@@ -76,6 +76,9 @@ class Probe:
 
 @pytest.mark.wx
 @pytest.mark.gui
+@pytest.mark.slow
+@pytest.mark.concurrency
+@pytest.mark.resource
 def test_wx_65a_integrated_stress(tmp_path: Path, monkeypatch) -> None:
     print("65A real start")
     monkeypatch.setattr(wx, "MessageBox", lambda *a, **k: wx.YES)

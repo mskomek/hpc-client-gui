@@ -281,6 +281,8 @@ class ParallelismSourceOfTruthTests(unittest.TestCase):
 
 class TransferChannelSafetyTests(unittest.TestCase):
     @pytest.mark.integration
+    @pytest.mark.concurrency
+    @pytest.mark.resource
     def test_workers_receive_distinct_channels(self) -> None:
         """The production SFTP manager gives concurrent workers owned channels."""
         from hpc_gui.ssh.sftp_channels import SFTPChannelManager

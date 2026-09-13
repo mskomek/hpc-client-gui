@@ -25,15 +25,21 @@ def _pump(app, pred, timeout=5):
 
 @pytest.fixture
 def wx_app():
-    from hpc_gui.core.i18n import load_language
+    from hpc_gui.core.i18n import current_language, load_language
+    previous_language = current_language()
     load_language("en")
     app = wx.App(False)
-    yield app
-    for w in wx.GetTopLevelWindows():
-        if w:
-            w.Destroy()
-    app.ProcessPendingEvents()
-    app.Destroy()
+    try:
+        yield app
+    finally:
+        for w in wx.GetTopLevelWindows():
+            if w:
+                w.Destroy()
+        for _ in range(3):
+            wx.Yield()
+            app.ProcessPendingEvents()
+        app.Destroy()
+        load_language(previous_language)
 
 
 def _local(app, path):
@@ -117,6 +123,7 @@ def test_wx_local_switch_tabs_restores_visible_directory(wx_app, tmp_path: Path)
 
 @pytest.mark.wx
 @pytest.mark.gui
+@pytest.mark.resource
 def test_wx_local_close_active_tab_selects_remaining_tab(wx_app, tmp_path: Path):
     a = tmp_path / "A"
     a.mkdir()
@@ -152,6 +159,7 @@ def test_wx_local_close_active_tab_selects_remaining_tab(wx_app, tmp_path: Path)
 
 @pytest.mark.wx
 @pytest.mark.gui
+@pytest.mark.resource
 def test_wx_local_close_inactive_tab_preserves_active_tab(wx_app, tmp_path: Path):
     a = tmp_path / "A"
     a.mkdir()
@@ -192,6 +200,8 @@ def test_wx_local_close_inactive_tab_preserves_active_tab(wx_app, tmp_path: Path
 
 @pytest.mark.wx
 @pytest.mark.gui
+@pytest.mark.concurrency
+@pytest.mark.resource
 def test_wx_local_closed_tab_ignores_listing_completion(wx_app, tmp_path: Path, monkeypatch):
     a = tmp_path / "A"
     a.mkdir()
@@ -237,6 +247,7 @@ def test_wx_local_closed_tab_ignores_listing_completion(wx_app, tmp_path: Path, 
 
 @pytest.mark.wx
 @pytest.mark.gui
+@pytest.mark.concurrency
 def test_wx_local_stale_listing_cannot_render_into_other_tab(wx_app, tmp_path: Path, monkeypatch):
     first = tmp_path / "first"
     first.mkdir()
@@ -325,6 +336,8 @@ def test_wx_remote_switch_tabs_restores_correct_remote_path(wx_app):
 
 @pytest.mark.wx
 @pytest.mark.gui
+@pytest.mark.concurrency
+@pytest.mark.resource
 def test_wx_remote_closed_tab_ignores_late_listing_completion(wx_app):
     started = threading.Event()
     release = threading.Event()
@@ -362,7 +375,9 @@ def test_wx_remote_closed_tab_ignores_late_listing_completion(wx_app):
     wx.MilliSleep(50)
     assert frame._wx_remote_tabs[0]["path"] == "/scratch"
 
-@pytest.mark.contract
+@pytest.mark.wx
+@pytest.mark.gui
+@pytest.mark.concurrency
 def test_wx_remote_stale_listing_cannot_cross_tab_boundary(wx_app):
     started=threading.Event()
     release=threading.Event()
@@ -403,6 +418,7 @@ def test_wx_remote_tab_switch_does_not_create_new_backend_session(wx_app):
 
 @pytest.mark.wx
 @pytest.mark.gui
+@pytest.mark.concurrency
 def test_wx_remote_listing_worker_uses_captured_tab_path(wx_app):
     # regression for P0-1: worker must use captured path, not current_path
     calls = []
@@ -538,6 +554,7 @@ def test_wx_remote_middle_click_background_noop(wx_app):
 
 @pytest.mark.wx
 @pytest.mark.gui
+@pytest.mark.resource
 def test_wx_local_user_close_tab_closes_visible_tab(wx_app, tmp_path: Path):
     a = tmp_path / "A"; a.mkdir(); b = a / "B"; b.mkdir()
     frame = _local(wx_app, a)
@@ -563,6 +580,7 @@ def test_wx_local_user_close_tab_closes_visible_tab(wx_app, tmp_path: Path):
 
 @pytest.mark.wx
 @pytest.mark.gui
+@pytest.mark.resource
 def test_wx_remote_user_close_tab_closes_visible_tab(wx_app):
     backend = MockRemoteFilesBackend()
     frame = _remote(wx_app, backend, "/work")
@@ -584,6 +602,7 @@ def test_wx_remote_user_close_tab_closes_visible_tab(wx_app):
 
 @pytest.mark.wx
 @pytest.mark.gui
+@pytest.mark.resource
 def test_wx_local_user_cannot_close_last_tab(wx_app, tmp_path: Path):
     a = tmp_path / "A"; a.mkdir()
     frame = _local(wx_app, a)
@@ -606,6 +625,7 @@ def test_wx_local_user_cannot_close_last_tab(wx_app, tmp_path: Path):
 
 @pytest.mark.wx
 @pytest.mark.gui
+@pytest.mark.resource
 def test_wx_remote_user_cannot_close_last_tab(wx_app):
     backend = MockRemoteFilesBackend()
     frame = _remote(wx_app, backend, "/work")
@@ -627,6 +647,8 @@ def test_wx_remote_user_cannot_close_last_tab(wx_app):
 
 @pytest.mark.wx
 @pytest.mark.gui
+@pytest.mark.concurrency
+@pytest.mark.resource
 def test_wx_local_user_close_inflight_tab_ignores_completion(wx_app, tmp_path: Path, monkeypatch):
     a = tmp_path / "A"; a.mkdir(); b = a / "B"; b.mkdir()
     started = threading.Event()
@@ -668,6 +690,8 @@ def test_wx_local_user_close_inflight_tab_ignores_completion(wx_app, tmp_path: P
 
 @pytest.mark.wx
 @pytest.mark.gui
+@pytest.mark.concurrency
+@pytest.mark.resource
 def test_wx_remote_user_close_inflight_tab_ignores_completion(wx_app):
     started = threading.Event()
     release = threading.Event()

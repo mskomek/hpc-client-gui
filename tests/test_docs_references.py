@@ -29,6 +29,7 @@ def _strip_code_blocks(text: str) -> str:
 
 
 @pytest.mark.audit
+@pytest.mark.subprocess
 def test_referenced_local_files_exist() -> None:
     errors: list[str] = []
     for path in _tracked_files():

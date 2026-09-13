@@ -16,6 +16,15 @@ if str(ROOT / "src") not in sys.path:
     sys.path.insert(0, str(ROOT / "src"))
 
 
+@pytest.fixture(autouse=True)
+def restore_i18n_language():
+    from hpc_gui.core.i18n import current_language, load_language
+
+    original = current_language()
+    yield
+    load_language(original)
+
+
 # ---------------------------------------------------------------------------
 # 1. i18n Translation Completeness
 # ---------------------------------------------------------------------------
@@ -23,7 +32,7 @@ if str(ROOT / "src") not in sys.path:
 class TestI18nCompleteness:
     """Verify translation key sets are synchronized."""
 
-    @pytest.mark.unit
+    @pytest.mark.contract
     def test_en_tr_same_keys(self):
         """en.json and tr.json should have same key sets."""
         en_path = ROOT / "src" / "hpc_gui" / "i18n" / "en.json"
@@ -52,7 +61,7 @@ class TestI18nCompleteness:
         assert len(missing_in_tr) < 10, f"Missing in tr.json: {missing_in_tr}"
         assert len(missing_in_en) < 10, f"Missing in en.json: {missing_in_en}"
 
-    @pytest.mark.unit
+    @pytest.mark.contract
     def test_no_mojibake_in_translations(self):
         """Translation files should not contain mojibake patterns."""
         for lang in ["en", "tr"]:
@@ -64,7 +73,7 @@ class TestI18nCompleteness:
             for pattern in mojibake_patterns:
                 assert pattern not in content, f"Mojibake {pattern!r} in {lang}.json"
 
-    @pytest.mark.unit
+    @pytest.mark.contract
     def test_favorites_label_correct(self):
         """Favorites label should be correct in both languages."""
         for lang in ["en", "tr"]:
@@ -82,7 +91,7 @@ class TestI18nCompleteness:
 class TestI18nPlaceholders:
     """Verify translation placeholders are consistent."""
 
-    @pytest.mark.unit
+    @pytest.mark.contract
     def test_placeholders_match(self):
         """Placeholders should match between en and tr."""
         en_path = ROOT / "src" / "hpc_gui" / "i18n" / "en.json"
@@ -116,7 +125,7 @@ class TestI18nPlaceholders:
                     f"Placeholder mismatch in {key}: en={en_placeholders}, tr={tr_placeholders}"
                 )
 
-    @pytest.mark.unit
+    @pytest.mark.contract
     def test_no_unclosed_placeholders(self):
         """Translations should not have unclosed placeholders."""
         for lang in ["en", "tr"]:
@@ -192,7 +201,7 @@ class TestI18nFunction:
 class TestHardcodedStrings:
     """Verify no hardcoded English strings in wx UI."""
 
-    @pytest.mark.gui
+    @pytest.mark.audit
     def test_wx_editor_no_hardcoded_strings(self):
         """wx_editor_view.py should use t() for user-visible strings."""
         editor_path = ROOT / "src" / "hpc_gui" / "wx_editor_view.py"
@@ -201,7 +210,7 @@ class TestHardcodedStrings:
             # Should use t() for labels
             assert "t(" in content, "wx_editor_view.py should use t() for labels"
 
-    @pytest.mark.gui
+    @pytest.mark.audit
     def test_wx_logs_no_hardcoded_strings(self):
         """wx_logs_view.py should use t() for user-visible strings."""
         logs_path = ROOT / "src" / "hpc_gui" / "wx_logs_view.py"
@@ -209,7 +218,7 @@ class TestHardcodedStrings:
             content = logs_path.read_text(encoding="utf-8")
             assert "t(" in content, "wx_logs_view.py should use t() for labels"
 
-    @pytest.mark.gui
+    @pytest.mark.audit
     def test_wx_directories_no_hardcoded_strings(self):
         """wx_directories_view.py should use t() for user-visible strings."""
         dirs_path = ROOT / "src" / "hpc_gui" / "wx_directories_view.py"
@@ -225,7 +234,7 @@ class TestHardcodedStrings:
 class TestTranslationResources:
     """Verify translation resources are valid JSON."""
 
-    @pytest.mark.unit
+    @pytest.mark.contract
     def test_en_json_valid(self):
         """en.json should be valid JSON."""
         path = ROOT / "src" / "hpc_gui" / "i18n" / "en.json"
@@ -233,7 +242,7 @@ class TestTranslationResources:
         data = json.loads(content)
         assert isinstance(data, dict)
 
-    @pytest.mark.unit
+    @pytest.mark.contract
     def test_tr_json_valid(self):
         """tr.json should be valid JSON."""
         path = ROOT / "src" / "hpc_gui" / "i18n" / "tr.json"
@@ -241,7 +250,7 @@ class TestTranslationResources:
         data = json.loads(content)
         assert isinstance(data, dict)
 
-    @pytest.mark.unit
+    @pytest.mark.contract
     def test_translation_files_utf8(self):
         """Translation files should be UTF-8 encoded."""
         for lang in ["en", "tr"]:
@@ -258,7 +267,7 @@ class TestTranslationResources:
 class TestUILabelAudit:
     """Verify UI labels are clear and accessible."""
 
-    @pytest.mark.unit
+    @pytest.mark.contract
     def test_common_labels_present(self):
         """Common UI labels should be present in translations."""
         for lang in ["en", "tr"]:
@@ -273,7 +282,7 @@ class TestUILabelAudit:
             assert "error" in data["common"], f"Missing 'common.error' in {lang}.json"
             assert "warning" in data["common"], f"Missing 'common.warning' in {lang}.json"
 
-    @pytest.mark.unit
+    @pytest.mark.contract
     def test_tab_labels_present(self):
         """Tab labels should be present in translations."""
         for lang in ["en", "tr"]:
@@ -286,7 +295,7 @@ class TestUILabelAudit:
             assert "editor" in tabs, f"Missing 'tabs.editor' in {lang}.json"
             assert "jobs_outputs" in tabs, f"Missing 'tabs.jobs_outputs' in {lang}.json"
 
-    @pytest.mark.unit
+    @pytest.mark.contract
     def test_directories_labels_present(self):
         """Directories labels should be present in translations."""
         for lang in ["en", "tr"]:
@@ -309,7 +318,8 @@ class TestUILabelAudit:
 class TestIntegration:
     """Integration tests for i18n/UI ergonomics."""
 
-    @pytest.mark.release
+    @pytest.mark.integration
+    @pytest.mark.semantic
     def test_full_i18n_workflow(self):
         """Full i18n workflow: load, switch, verify."""
         from hpc_gui.core.i18n import t, load_language
@@ -332,6 +342,7 @@ class TestIntegration:
         assert "12345" in result
 
     @pytest.mark.contract
+    @pytest.mark.semantic
     def test_unicode_in_translations(self):
         """Translations should preserve Unicode correctly."""
         for lang in ["en", "tr"]:

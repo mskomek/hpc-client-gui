@@ -15,7 +15,10 @@ def test_application_identity_uses_product_name():
     app.setApplicationDisplayName.assert_called_once_with("HPC Client GUI")
 
 
-@pytest.mark.unit
+@pytest.mark.gui
+@pytest.mark.qt
+@pytest.mark.macos
+@pytest.mark.semantic
 def test_macos_hides_vcxsrv_exit_setting(monkeypatch):
     from PySide6.QtWidgets import QApplication
     from hpc_gui.ui.dialogs import settings_dialog

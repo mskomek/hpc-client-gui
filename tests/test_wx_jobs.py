@@ -5,7 +5,7 @@ from types import SimpleNamespace
 from hpc_gui.wx_jobs import WxJobsModel, clean_output
 
 
-@pytest.mark.gui
+@pytest.mark.unit
 def test_jobs_polling_ansi_detached_minimize_and_cancel():
     cancelled = []
     model = WxJobsModel(notify=cancelled.append)
@@ -21,7 +21,7 @@ def test_jobs_polling_ansi_detached_minimize_and_cancel():
     assert not model.tracking.should_follow_output(True)
 
 
-@pytest.mark.gui
+@pytest.mark.unit
 def test_failure_backoff_and_provenance_hook():
     model = WxJobsModel()
     assert model.record_tail_failure() == 1
@@ -31,7 +31,7 @@ def test_failure_backoff_and_provenance_hook():
     assert explanation.category == "oom"
 
 
-@pytest.mark.gui
+@pytest.mark.unit
 def test_job_completion_notifies_once_per_terminal_state():
     events = []
     model = WxJobsModel(completion_notify=lambda job_id, message: events.append((job_id, message)))
@@ -41,13 +41,15 @@ def test_job_completion_notifies_once_per_terminal_state():
     assert events == [("42", "done")]
 
 
-@pytest.mark.gui
+@pytest.mark.audit
+@pytest.mark.wx
 def test_jobs_model_has_no_qt_import():
     source = open("src/hpc_gui/wx_jobs.py", encoding="utf-8").read()
     assert "PySide6" not in source and "def show_job_output" in source
 
 
-@pytest.mark.gui
+@pytest.mark.audit
+@pytest.mark.wx
 def test_job_output_view_has_live_timer_and_resize_hooks():
     source = open("src/hpc_gui/wx_jobs.py", encoding="utf-8").read()
     assert "EVT_TIMER" in source and "EVT_SIZE" in source and "update_detached" in source

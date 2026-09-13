@@ -222,7 +222,7 @@ def test_malformed_rules_rejected(raw):
         parse_rule(raw, "test")
 
 
-@pytest.mark.unit
+@pytest.mark.contract
 def test_parse_rule_never_executes_values(monkeypatch):
     """A value that looks like code must be treated as plain text."""
     monkeypatch.setattr("builtins.eval", lambda *a, **k: (_ for _ in ()).throw(AssertionError("eval called")))

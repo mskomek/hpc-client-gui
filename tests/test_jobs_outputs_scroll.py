@@ -18,7 +18,6 @@ from hpc_gui.ui.widgets.jobs_outputs_widget import (
 )
 
 
-@pytest.mark.gui
 class JobsOutputsScrollTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
@@ -39,6 +38,7 @@ class JobsOutputsScrollTests(unittest.TestCase):
     def _lines(count: int) -> str:
         return "\n".join(f"line {index}" for index in range(count))
 
+    @pytest.mark.gui
     @pytest.mark.qt
     def test_live_follow_scrolls_to_latest_line(self) -> None:
         JobsOutputsWidget._set_live_text(
@@ -56,6 +56,7 @@ class JobsOutputsScrollTests(unittest.TestCase):
         scrollbar = self.editor.verticalScrollBar()
         self.assertEqual(scrollbar.value(), scrollbar.maximum())
 
+    @pytest.mark.gui
     @pytest.mark.qt
     def test_refresh_without_follow_preserves_scroll_position(self) -> None:
         self.editor.setPlainText(self._lines(200))
@@ -73,6 +74,7 @@ class JobsOutputsScrollTests(unittest.TestCase):
         self.assertEqual(scrollbar.value(), 25)
         self.assertLess(scrollbar.value(), scrollbar.maximum())
 
+    @pytest.mark.gui
     @pytest.mark.qt
     def test_refresh_preserves_horizontal_position_when_following_latest(self) -> None:
         long_line = "x" * 240
@@ -94,6 +96,7 @@ class JobsOutputsScrollTests(unittest.TestCase):
         self.assertEqual(vertical_scrollbar.value(), vertical_scrollbar.maximum())
         self.assertEqual(horizontal_scrollbar.value(), 40)
 
+    @pytest.mark.gui
     @pytest.mark.qt
     def test_bottom_state_controls_follow_per_refresh(self) -> None:
         self.editor.setPlainText(self._lines(200))
@@ -121,6 +124,7 @@ class JobsOutputsScrollTests(unittest.TestCase):
         self.app.processEvents()
         self.assertEqual(scrollbar.value(), previous)
 
+    @pytest.mark.gui
     @pytest.mark.qt
     def test_page_navigation_and_end_update_scroll_position(self) -> None:
         self.editor.setPlainText(self._lines(300))
@@ -142,6 +146,7 @@ class JobsOutputsScrollTests(unittest.TestCase):
         self.app.processEvents()
         self.assertEqual(scrollbar.value(), scrollbar.maximum())
 
+    @pytest.mark.gui
     @pytest.mark.qt
     def test_pause_changes_scrolling_without_stopping_refresh_timer(self) -> None:
         widget = JobsOutputsWidget()
@@ -219,6 +224,7 @@ class JobsOutputsScrollTests(unittest.TestCase):
             self.assertEqual(vertical.value(), previous_positions[path], path)
             self.assertEqual(horizontal.value(), 35, path)
 
+    @pytest.mark.gui
     @pytest.mark.qt
     def test_all_follow_windows_preserve_fake_tail_scroll_positions(self) -> None:
         cases = (
@@ -258,6 +264,7 @@ class JobsOutputsScrollTests(unittest.TestCase):
                     widget.deleteLater()
                     self.app.processEvents()
 
+    @pytest.mark.gui
     @pytest.mark.qt
     def test_ssh_poll_requests_last_200_lines_for_both_outputs(self) -> None:
         class FakeSSH:
@@ -287,6 +294,7 @@ class JobsOutputsScrollTests(unittest.TestCase):
         widget.shutdown()
         widget.deleteLater()
 
+    @pytest.mark.gui
     @pytest.mark.qt
     def test_file_fallback_displays_only_last_200_lines(self) -> None:
         class FakeFiles:
@@ -311,6 +319,7 @@ class JobsOutputsScrollTests(unittest.TestCase):
         widget.shutdown()
         widget.deleteLater()
 
+    @pytest.mark.gui
     @pytest.mark.qt
     def test_minimized_main_outputs_page_pauses_and_restores_live_follow(self) -> None:
         widget = JobsOutputsWidget()
@@ -336,6 +345,7 @@ class JobsOutputsScrollTests(unittest.TestCase):
         widget.shutdown()
         widget.deleteLater()
 
+    @pytest.mark.gui
     @pytest.mark.qt
     def test_minimized_follower_pauses_and_restores_live_follow(self) -> None:
         follower = _OutputFollowerWidget()
@@ -359,6 +369,7 @@ class JobsOutputsScrollTests(unittest.TestCase):
         follower.shutdown()
         follower.deleteLater()
 
+    @pytest.mark.unit
     @pytest.mark.qt
     def test_minimized_follower_does_not_advance_idle_or_retry_countdowns(self) -> None:
         follower = _OutputFollowerWidget()
@@ -388,6 +399,7 @@ class JobsOutputsScrollTests(unittest.TestCase):
         follower.shutdown()
         follower.deleteLater()
 
+    @pytest.mark.unit
     @pytest.mark.qt
     def test_minimized_main_follower_does_not_advance_idle_or_retry_countdowns(self) -> None:
         widget = JobsOutputsWidget()
@@ -413,6 +425,7 @@ class JobsOutputsScrollTests(unittest.TestCase):
         widget.shutdown()
         widget.deleteLater()
 
+    @pytest.mark.unit
     @pytest.mark.qt
     def test_reset_live_tail_state_clears_previous_connection_countdown(self) -> None:
         widget = JobsOutputsWidget()
@@ -424,6 +437,7 @@ class JobsOutputsScrollTests(unittest.TestCase):
         widget.shutdown()
         widget.deleteLater()
 
+    @pytest.mark.gui
     @pytest.mark.qt
     def test_missing_live_output_uses_backoff_then_resets_after_success(self) -> None:
         class FakeSSH:
@@ -456,6 +470,8 @@ class JobsOutputsScrollTests(unittest.TestCase):
         widget.shutdown()
         widget.deleteLater()
 
+    @pytest.mark.resource
+    @pytest.mark.unit
     @pytest.mark.qt
     def test_live_text_helpers_ignore_deleted_editor(self) -> None:
         editor = _NavigableTextEdit()
@@ -469,6 +485,7 @@ class JobsOutputsScrollTests(unittest.TestCase):
             follow_latest=True,
         )
 
+    @pytest.mark.gui
     @pytest.mark.qt
     def test_follow_window_output1_then_assigns_output2(self) -> None:
         widget = JobsOutputsWidget()
@@ -501,6 +518,7 @@ class JobsOutputsScrollTests(unittest.TestCase):
             widget.deleteLater()
             self.app.processEvents()
 
+    @pytest.mark.gui
     @pytest.mark.qt
     def test_follow_tab_output2_then_assigns_output1_and_is_closable(self) -> None:
         widget = JobsOutputsWidget()
@@ -536,6 +554,7 @@ class JobsOutputsScrollTests(unittest.TestCase):
             widget.deleteLater()
             self.app.processEvents()
 
+    @pytest.mark.gui
     @pytest.mark.qt
     def test_main_output_address_enter_switches_follow_target(self) -> None:
         widget = JobsOutputsWidget()
@@ -554,6 +573,7 @@ class JobsOutputsScrollTests(unittest.TestCase):
             widget.deleteLater()
             self.app.processEvents()
 
+    @pytest.mark.gui
     @pytest.mark.qt
     def test_single_file_follow_window_address_accepts_typing_and_enter(self) -> None:
         widget = JobsOutputsWidget()

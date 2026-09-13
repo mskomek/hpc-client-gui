@@ -25,7 +25,7 @@ def test_submit_run_template_and_lint_navigation_data():
     assert (result.line, result.column) == (3, 4)
 
 
-@pytest.mark.gui
+@pytest.mark.audit
 def test_editor_models_have_no_qt_imports():
     source = __import__("inspect").getsource(EditorController)
     assert "PySide" not in source

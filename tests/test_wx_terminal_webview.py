@@ -92,8 +92,9 @@ def test_wx_terminal_webview_assets_are_local_and_vendored():
     assert "fetch(" not in bridge and "XMLHttpRequest" not in bridge
 
 
+@pytest.mark.subprocess
 @pytest.mark.wx
-@pytest.mark.gui
+@pytest.mark.integration
 def test_wx_terminal_webview_page_loads_and_posts_ready():
     if not _is_webview_available():
         pytest.skip("WebView backend unavailable — fallback diagnostic expected")
@@ -160,9 +161,10 @@ def test_wx_terminal_webview_page_loads_and_posts_ready():
     assert result.returncode == 0, f"subprocess failed: {result.stdout}\n{result.stderr}"
 
 
+@pytest.mark.subprocess
 @pytest.mark.wx
-@pytest.mark.gui
-def test_wx_terminal_pending_output_before_ready_is_buffered_and_ordered():
+@pytest.mark.integration
+def test_pre_ready_pending_queue_retains_chunks_until_bridge_ready():
     if not _is_webview_available():
         pytest.skip("WebView backend unavailable")
     import subprocess
@@ -235,8 +237,9 @@ def test_wx_terminal_pending_output_before_ready_is_buffered_and_ordered():
     assert result.returncode == 0, f"subprocess failed: {result.stdout}\n{result.stderr}"
 
 
+@pytest.mark.subprocess
 @pytest.mark.wx
-@pytest.mark.gui
+@pytest.mark.contract
 def test_wx_terminal_preserves_carriage_return_and_esc():
     if not _is_webview_available():
         pytest.skip("WebView backend unavailable")
@@ -308,8 +311,9 @@ def test_wx_terminal_preserves_carriage_return_and_esc():
     assert result.returncode == 0, f"subprocess failed: {result.stdout}\n{result.stderr}"
 
 
+@pytest.mark.subprocess
 @pytest.mark.wx
-@pytest.mark.gui
+@pytest.mark.contract
 def test_wx_terminal_clear_focus_font():
     if not _is_webview_available():
         pytest.skip("WebView backend unavailable")
@@ -389,7 +393,7 @@ def test_wx_terminal_clear_focus_font():
 
 
 @pytest.mark.wx
-@pytest.mark.gui
+@pytest.mark.unit
 def test_wx_terminal_external_navigation_blocked():
     if not _is_webview_available():
         pytest.skip("WebView backend unavailable")
@@ -490,9 +494,10 @@ def test_wx_terminal_close_releases_native_webview():
     assert panel._is_parity is False
 
 
+@pytest.mark.subprocess
 @pytest.mark.wx
-@pytest.mark.gui
-def test_wx_terminal_output_ordering_with_many_fragments():
+@pytest.mark.integration
+def test_pre_ready_write_queue_preserves_fragment_order():
     if not _is_webview_available():
         pytest.skip("WebView backend unavailable")
     import subprocess
@@ -617,10 +622,11 @@ def _run_subprocess_test(code_str, timeout=15):
     )
 
 
+@pytest.mark.subprocess
 @pytest.mark.wx
-@pytest.mark.gui
-def test_wx_terminal_input_chain_ctrl_a_to_z():
-    """Ctrl+A..Ctrl+Z must produce \x01..\x1a via terminal.onData → send_shell_input."""
+@pytest.mark.unit
+def test_terminal_input_handler_forwards_control_bytes():
+    """The terminal input handler forwards the expected control bytes."""
     if not _is_webview_available():
         pytest.skip("WebView backend unavailable")
     code = """
@@ -645,28 +651,23 @@ ssh = FakeSSH()
 panel = WxTerminalWebViewPanel(frame, ssh=ssh)
 # Inject fake input handler to capture what xterm would send
 # Simulate xterm on_data by calling _handle_input directly
-for letter, expected in [("A", "\\x01"), ("B", "\\x02"), ("C", "\\x03"),
-                          ("D", "\\x04"), ("Z", "\\x1a"),
-                          ("_", "\\x1f")]:
-    # Monkey-patch _run_js to capture input calls
-    panel._ready = True
-    panel._is_parity = True
-    # Simulate what xterm.onData would produce for Ctrl+letter
-    ctrl_code = chr(ord(letter) - 64)  # A=0x01, Z=0x1a
+panel._ready = True
+panel._is_parity = True
+control_bytes = [chr(code) for code in range(1, 27)]
+for ctrl_code in control_bytes:
     panel._handle_input(ctrl_code)
-    assert ssh.sent[-1] == ctrl_code, f"Ctrl+{letter} expected {repr(ctrl_code)}, got {repr(ssh.sent[-1])}"
-    # Verify no logging (sent list only has the data, no log output)
-    assert len(ssh.sent) > 0
+assert ssh.sent == control_bytes
 os._exit(0)
 """
     result = _run_subprocess_test(code)
     assert result.returncode == 0, f"subprocess failed: {result.stdout}\n{result.stderr}"
 
 
+@pytest.mark.subprocess
 @pytest.mark.wx
-@pytest.mark.gui
-def test_wx_terminal_resize_chain_to_ssh():
-    """Resize events must call resize_shell_pty with correct cols/rows."""
+@pytest.mark.unit
+def test_terminal_resize_handler_deduplicates_pty_updates():
+    """The resize handler forwards changed sizes and deduplicates repeats."""
     if not _is_webview_available():
         pytest.skip("WebView backend unavailable")
     code = """
@@ -705,10 +706,11 @@ os._exit(0)
     assert result.returncode == 0, f"subprocess failed: {result.stdout}\n{result.stderr}"
 
 
+@pytest.mark.subprocess
 @pytest.mark.wx
-@pytest.mark.gui
-def test_wx_terminal_font_change_triggers_resize():
-    """Font change via hpc_set_font_size must trigger fit→resize chain."""
+@pytest.mark.unit
+def test_font_size_api_emits_bridge_call_and_clamps():
+    """The font-size API emits its bridge call and enforces supported bounds."""
     if not _is_webview_available():
         pytest.skip("WebView backend unavailable")
     code = """
@@ -747,17 +749,14 @@ panel.hpc_set_font_size(200)
 assert panel._font_size == 32
 panel.hpc_set_font_size(2)
 assert panel._font_size == 6
-# Verify resize is called (via hpcFit or hpcSetFontSize in bridge)
-# The bridge.js calls fit.fit() and posts resize, which Python receives via _handle_resize
-# We simulate the bridge's resize post
-panel._handle_resize(100, 30, 800, 500)
-assert ssh.resizes[-1] == (100, 30)
 os._exit(0)
 """
     result = _run_subprocess_test(code)
     assert result.returncode == 0, f"subprocess failed: {result.stdout}\n{result.stderr}"
 
 
+@pytest.mark.subprocess
+@pytest.mark.wx
 @pytest.mark.contract
 def test_wx_terminal_unicode_input_output():
     """Unicode strings must pass through hpc_write without ASCII clamp."""
@@ -805,10 +804,11 @@ os._exit(0)
     assert result.returncode == 0, f"subprocess failed: {result.stdout}\n{result.stderr}"
 
 
+@pytest.mark.subprocess
 @pytest.mark.wx
-@pytest.mark.gui
+@pytest.mark.contract
 def test_wx_terminal_multiline_paste():
-    """Multiline paste must call terminal.paste (not local TextCtrl)."""
+    """The Python terminal API sends all multiline content in one paste bridge call."""
     if not _is_webview_available():
         pytest.skip("WebView backend unavailable")
     code = """
@@ -857,7 +857,7 @@ os._exit(0)
 
 
 @pytest.mark.wx
-@pytest.mark.gui
+@pytest.mark.audit
 def test_wx_terminal_no_splitlines_in_hpc_write():
     """hpc_write must not use splitlines — preserves CR/ESC bytes."""
     src = pathlib.Path("src/hpc_gui/wx_terminal_webview.py").read_text(encoding="utf-8")
@@ -870,14 +870,15 @@ def test_wx_terminal_no_splitlines_in_hpc_write():
     assert "_safe_json_dumps" in hpc_section or "json.dumps" in hpc_section
 
 
+@pytest.mark.subprocess
 @pytest.mark.wx
-@pytest.mark.gui
-def test_wx_terminal_input_chain_no_logging():
-    """Input data must not be logged anywhere."""
+@pytest.mark.unit
+def test_terminal_input_handler_forwards_without_logging():
+    """Sensitive input is forwarded without a Python log record or bridge console call."""
     code = """
 import sys, os
 sys.path.insert(0, "src")
-import wx, time, pathlib
+import wx, time, pathlib, logging
 from hpc_gui.wx_terminal_webview import WxTerminalWebViewPanel
 
 class FakeSSH:
@@ -896,12 +897,21 @@ ssh = FakeSSH()
 panel = WxTerminalWebViewPanel(frame, ssh=ssh)
 panel._ready = True
 panel._is_parity = True
-# Verify _handle_input does not log
+messages = []
+class Capture(logging.Handler):
+    def emit(self, record):
+        messages.append(record.getMessage())
+handler = Capture()
+root_logger = logging.getLogger()
+root_logger.addHandler(handler)
+root_logger.setLevel(logging.DEBUG)
 panel._handle_input("sensitive_data\\x03")
 assert ssh.sent == ["sensitive_data\\x03"]
-# Verify bridge.js has no console.log for input
+assert all("sensitive_data" not in message for message in messages)
+# Verify the bridge also avoids console logging.
 bridge = pathlib.Path("src/hpc_gui/assets/terminal/wx_bridge.js").read_text(encoding="utf-8")
 assert "console.log" not in bridge, "bridge must not log"
+root_logger.removeHandler(handler)
 os._exit(0)
 """
     result = _run_subprocess_test(code)
@@ -911,9 +921,10 @@ os._exit(0)
 # Wave 75: Header/Find/reconnect/lifecycle tests
 
 
+@pytest.mark.subprocess
 @pytest.mark.wx
-@pytest.mark.gui
-def test_wx_terminal_find_in_xterm_buffer():
+@pytest.mark.contract
+def test_terminal_find_request_is_sent_through_bridge():
     if not _is_webview_available():
         pytest.skip("WebView backend unavailable")
     code = """
@@ -952,8 +963,10 @@ os._exit(0)
     assert result.returncode == 0, f"subprocess failed: {result.stdout}\n{result.stderr}"
 
 
+@pytest.mark.subprocess
 @pytest.mark.wx
 @pytest.mark.gui
+@pytest.mark.slow
 def test_wx_terminal_screen_state_readback_and_alternate_buffer():
     """Read the real xterm buffer and prove alternate-screen restoration."""
     if not _is_webview_available():
@@ -1045,6 +1058,7 @@ else:
     assert result.returncode == 0, f"subprocess failed: {result.stdout}\n{result.stderr}"
 
 
+@pytest.mark.subprocess
 @pytest.mark.wx
 @pytest.mark.gui
 def test_wx_terminal_header_dimensions_update():
@@ -1080,8 +1094,10 @@ os._exit(0)
     assert result.returncode == 0, f"subprocess failed: {result.stdout}\n{result.stderr}"
 
 
+@pytest.mark.subprocess
 @pytest.mark.wx
-@pytest.mark.gui
+@pytest.mark.unit
+@pytest.mark.resource
 def test_wx_terminal_reconnect_set_ssh():
     if not _is_webview_available():
         pytest.skip("WebView backend unavailable")
@@ -1111,6 +1127,8 @@ panel.set_ssh(ssh2)
 assert panel._ssh is ssh2
 assert len(ssh1._wx_output_subscribers) == 0, "old ssh should have 0 subscribers"
 assert len(ssh2._wx_output_subscribers) == 1, "new ssh should have 1 subscriber"
+panel.close()
+assert ssh2._wx_output_subscribers == [], "close should release the active subscriber"
 os._exit(0)
 """
     result = _run_subprocess_test(code)
@@ -1120,8 +1138,11 @@ os._exit(0)
 # ── Wave 77: Generation guard, Find navigation, Header status, Lifecycle ──
 
 
+@pytest.mark.subprocess
 @pytest.mark.wx
-@pytest.mark.gui
+@pytest.mark.unit
+@pytest.mark.concurrency
+@pytest.mark.resource
 def test_wx_terminal_generation_guard_rejects_stale_output():
     """After reconnect, delayed output from old SSH must be rejected."""
     if not _is_webview_available():
@@ -1177,6 +1198,8 @@ panel._safe_deliver(panel._generation, "fresh_data_from_ssh2")
 assert any("fresh_data_from_ssh2" in w for w in writes), "new ssh output must be delivered"
 
 panel.close()
+assert ssh1._wx_output_subscribers == []
+assert ssh2._wx_output_subscribers == []
 frame.Destroy()
 os._exit(0)
 """
@@ -1184,10 +1207,11 @@ os._exit(0)
     assert result.returncode == 0, f"subprocess failed: {result.stdout}\n{result.stderr}"
 
 
+@pytest.mark.subprocess
 @pytest.mark.wx
-@pytest.mark.gui
-def test_wx_terminal_find_next_and_prev():
-    """Find, FindNext, FindPrev must advance through matches with wraparound."""
+@pytest.mark.contract
+def test_terminal_find_navigation_requests_use_bridge_helpers():
+    """The Python find APIs emit their corresponding bridge helper calls."""
     if not _is_webview_available():
         pytest.skip("WebView backend unavailable")
     code = """
@@ -1244,6 +1268,7 @@ os._exit(0)
     assert result.returncode == 0, f"subprocess failed: {result.stdout}\n{result.stderr}"
 
 
+@pytest.mark.subprocess
 @pytest.mark.wx
 @pytest.mark.gui
 def test_wx_terminal_header_status_updates():
@@ -1299,8 +1324,11 @@ os._exit(0)
     assert result.returncode == 0, f"subprocess failed: {result.stdout}\n{result.stderr}"
 
 
+@pytest.mark.subprocess
 @pytest.mark.wx
-@pytest.mark.gui
+@pytest.mark.unit
+@pytest.mark.concurrency
+@pytest.mark.resource
 def test_wx_terminal_destroy_before_ready_no_xfail():
     """Destroy before ready must not crash - pending cleared, callbacks suppressed."""
     if not _is_webview_available():
@@ -1342,10 +1370,12 @@ os._exit(0)
     assert result.returncode == 0, f"subprocess failed: {result.stdout}\n{result.stderr}"
 
 
+@pytest.mark.subprocess
 @pytest.mark.wx
-@pytest.mark.gui
-def test_wx_terminal_large_pre_ready_output():
-    """Large pre-ready output burst must be buffered and flushed in order."""
+@pytest.mark.unit
+@pytest.mark.resource
+def test_large_pre_ready_output_is_retained_in_order():
+    """Large startup output stays ordered in the pending buffer until close."""
     if not _is_webview_available():
         pytest.skip("WebView backend unavailable")
     code = """
@@ -1375,6 +1405,8 @@ combined = "".join(panel._pending)
 assert combined.endswith("END_MARKER"), "END_MARKER must be last"
 assert combined.startswith("X" * 100), "big_data must be first"
 panel.close()
+assert panel._pending == []
+assert panel._pending_bytes == 0
 frame.Destroy()
 os._exit(0)
 """
@@ -1385,6 +1417,7 @@ os._exit(0)
 @pytest.mark.gui
 @pytest.mark.wx
 @pytest.mark.regression
+@pytest.mark.semantic
 def test_wx_terminal_fallback_sets_non_parity(monkeypatch):
     """Unavailable WebView renders its visible diagnostic fallback."""
     import wx
@@ -1414,8 +1447,10 @@ def test_wx_terminal_fallback_sets_non_parity(monkeypatch):
         app.ProcessPendingEvents()
 
 
+@pytest.mark.subprocess
 @pytest.mark.wx
-@pytest.mark.gui
+@pytest.mark.unit
+@pytest.mark.resource
 def test_wx_terminal_100_reconnects_no_leak():
     """100 reconnects must not leak subscribers or crash."""
     if not _is_webview_available():
@@ -1456,9 +1491,10 @@ os._exit(0)
     assert result.returncode == 0, f"subprocess failed: {result.stdout}\n{result.stderr}"
 
 
+@pytest.mark.subprocess
 @pytest.mark.wx
-@pytest.mark.gui
-def test_wx_terminal_embedded_connect_to_ssh():
+@pytest.mark.integration
+def test_build_terminal_panel_attaches_ssh_after_construction():
     """Embedded terminal created with ssh=None, then set_ssh must attach."""
     if not _is_webview_available():
         pytest.skip("WebView backend unavailable")

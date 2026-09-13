@@ -2,6 +2,7 @@ from pathlib import Path
 import os
 
 import pytest
+pytestmark = pytest.mark.linux
 
 from hpc_gui.services.deb_installer import (
     build_packagekit_command,
@@ -11,6 +12,7 @@ from hpc_gui.services.deb_installer import (
 
 
 @pytest.mark.release
+@pytest.mark.packaging
 def test_packagekit_probe_distinguishes_local_install_support():
     class Result:
         returncode = 1
@@ -28,6 +30,8 @@ def test_packagekit_probe_distinguishes_local_install_support():
 
 
 @pytest.mark.release
+@pytest.mark.packaging
+@pytest.mark.resource
 def test_stage_is_private_and_rejects_symlink(tmp_path: Path):
     source = tmp_path / "update.deb"
     source.write_bytes(b"deb")

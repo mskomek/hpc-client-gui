@@ -4,7 +4,7 @@ from pathlib import Path
 import re
 
 
-@pytest.mark.contract
+@pytest.mark.audit
 def test_pointer_contract_ids_are_unique_and_map_to_baseline():
     root = Path(__file__).parents[1]
     contract = (root / "docs" / "v2" / "GUI_POINTER_INTERACTION_CONTRACT.md").read_text(encoding="utf-8")

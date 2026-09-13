@@ -35,19 +35,25 @@ def _pump(app, predicate, timeout=3):
 
 @pytest.fixture
 def shell():
+    previous_language = current_language()
     load_language("en")
     app = wx.App(False)
     tray = Tray(None)
     frame, lifecycle, session = create_shell_frame(app, tray_factory=lambda _parent: tray)
     frame.Show()
-    yield app, frame, lifecycle, session, tray
-    if frame:
-        frame.Destroy()
-    for window in wx.GetTopLevelWindows():
-        if window:
-            window.Destroy()
-    app.ProcessPendingEvents()
-    app.Destroy()
+    try:
+        yield app, frame, lifecycle, session, tray
+    finally:
+        if frame:
+            frame.Destroy()
+        for window in wx.GetTopLevelWindows():
+            if window:
+                window.Destroy()
+        for _ in range(3):
+            wx.Yield()
+            app.ProcessPendingEvents()
+        app.Destroy()
+        load_language(previous_language)
 
 
 def _open_jobs(app, frame, lifecycle, rows, final_state=None, generation=None):
@@ -75,9 +81,10 @@ def _select_menu(frame, language):
     frame.ProcessEvent(event)
 
 
+@pytest.mark.semantic
 @pytest.mark.wx
 @pytest.mark.gui
-def test_wx_shell_language_menu_has_flags_and_tracks_selection(shell):
+def test_wx_shell_language_menu_lists_locales_and_tracks_selection(shell):
     _app, frame, _lifecycle, _session, _tray = shell
     items = frame._wx_shell_controls["language_items"]
     assert {item.GetItemLabelText() for item in items.values()} == {"English", "Türkçe"}
@@ -89,6 +96,7 @@ def test_wx_shell_language_menu_has_flags_and_tracks_selection(shell):
     assert current_language() == "en" and items["en"].IsChecked()
 
 
+@pytest.mark.semantic
 @pytest.mark.wx
 @pytest.mark.gui
 def test_wx_shell_switch_retranslates_visible_shell(shell):
@@ -136,6 +144,7 @@ def test_wx_shell_job_completion_uses_disappeared_job_final_state(shell):
     assert "123" in tray.messages[0] and "completed" in tray.messages[0].lower()
 
 
+@pytest.mark.semantic
 @pytest.mark.wx
 @pytest.mark.gui
 def test_wx_shell_job_failure_emits_translated_notification(shell):
@@ -171,6 +180,7 @@ def test_wx_shell_initial_poll_does_not_notify_existing_jobs(shell):
     assert jobs._wx_jobs_controls["jobs"].GetItemCount() == 1
 
 
+@pytest.mark.concurrency
 @pytest.mark.wx
 @pytest.mark.gui
 def test_wx_shell_reconnect_ignores_old_session_completion(shell):
@@ -205,6 +215,7 @@ def test_wx_shell_tray_unavailable_keeps_job_tracking(shell):
     assert not lifecycle.notify_job("ignored", job_id="100")
 
 
+@pytest.mark.resource
 @pytest.mark.wx
 @pytest.mark.gui
 def test_wx_shell_close_is_idempotent_and_cleans_tray(shell):
@@ -219,7 +230,7 @@ def test_wx_shell_close_is_idempotent_and_cleans_tray(shell):
 
 
 @pytest.mark.wx
-@pytest.mark.gui
+@pytest.mark.unit
 def test_wx_job_model_completing_is_not_final():
     events = []
     model = WxJobsModel(completion_notify=lambda job_id, message: events.append((job_id, message)))
@@ -229,6 +240,7 @@ def test_wx_job_model_completing_is_not_final():
     assert len(events) == 1 and "42" in events[0][1]
 
 
+@pytest.mark.semantic
 @pytest.mark.wx
 @pytest.mark.gui
 def test_wx_shell_job_notifications_use_current_runtime_language(shell):
@@ -244,6 +256,7 @@ def test_wx_shell_job_notifications_use_current_runtime_language(shell):
     assert "İş başarıyla" in tray.messages[1]
 
 
+@pytest.mark.semantic
 @pytest.mark.wx
 @pytest.mark.gui
 def test_wx_shell_open_jobs_window_retranslates_runtime(shell):
@@ -256,22 +269,27 @@ def test_wx_shell_open_jobs_window_retranslates_runtime(shell):
     assert jobs.GetTitle() == "Jobs"
 
 
+@pytest.mark.concurrency
+@pytest.mark.resource
 @pytest.mark.wx
 @pytest.mark.gui
 def test_wx_shell_close_ignores_blocked_job_poll(shell):
     app, frame, lifecycle, _session, tray = shell
     started = threading.Event()
     release = threading.Event()
+    finished = threading.Event()
 
     def list_jobs():
         started.set()
         release.wait(2)
+        finished.set()
         return [{"id": "late", "state": "COMPLETED"}]
 
     show_jobs(frame, lifecycle=lifecycle, list_jobs=list_jobs)
     _pump(app, started.is_set)
     frame.Close()
     release.set()
+    assert finished.wait(2)
     _pump(app, lambda: lifecycle.shutdown_started)
     app.ProcessPendingEvents()
     assert tray.messages == []

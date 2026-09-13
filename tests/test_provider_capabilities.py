@@ -9,7 +9,7 @@ def _items(view):
     return {item.id: item for item in view.capabilities}
 
 
-@pytest.mark.unit
+@pytest.mark.reporting
 def test_rich_provider_keeps_declared_and_observed_separate():
     view = build_provider_capability_view(
         {
@@ -30,7 +30,7 @@ def test_rich_provider_keeps_declared_and_observed_separate():
     assert items["account"].observed == NOT_CONFIGURED
 
 
-@pytest.mark.unit
+@pytest.mark.reporting
 def test_generic_profile_and_declared_or_observed_only_capabilities():
     generic = _items(build_provider_capability_view())
     assert all(item.declared == NOT_DECLARED for item in generic.values())

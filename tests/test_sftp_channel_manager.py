@@ -89,6 +89,7 @@ class SFTPChannelManagerTests(unittest.TestCase):
         sftp = manager.open_transfer_sftp()
         self.assertEqual(sftp.channel.timeout, 60)
 
+    @pytest.mark.resource
     def test_listing_channel_is_reused_when_clean(self) -> None:
         manager, _ = self._manager(_transport())
         with manager.listing_sftp() as first:
@@ -99,6 +100,7 @@ class SFTPChannelManagerTests(unittest.TestCase):
         self.assertEqual(len(self.opened), 1)
         self.assertEqual(first.channel.timeout, 15)
 
+    @pytest.mark.resource
     def test_abandoned_listing_context_drops_channel(self) -> None:
         manager, _ = self._manager(_transport())
         try:
@@ -111,6 +113,7 @@ class SFTPChannelManagerTests(unittest.TestCase):
             self.assertIsNot(second, first)
         self.assertEqual(len(self.opened), 2)
 
+    @pytest.mark.resource
     def test_clean_listing_retains_channel(self) -> None:
         manager, _ = self._manager(_transport())
         with manager.listing_sftp() as handle:
@@ -118,6 +121,7 @@ class SFTPChannelManagerTests(unittest.TestCase):
         self.assertFalse(handle.closed)
         self.assertIs(manager.listing_channel, handle)
 
+    @pytest.mark.resource
     def test_close_is_idempotent(self) -> None:
         manager, _ = self._manager(_transport())
         with manager.listing_sftp():
@@ -127,6 +131,7 @@ class SFTPChannelManagerTests(unittest.TestCase):
         self.assertIsNone(manager.listing_channel)
         self.assertTrue(self.opened[0].closed)
 
+    @pytest.mark.resource
     def test_capability_probe_closes_its_temporary_channel(self) -> None:
         manager, _ = self._manager(_transport())
         self.assertTrue(manager.supports_transfer_sftp_channels())

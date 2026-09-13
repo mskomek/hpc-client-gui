@@ -19,6 +19,7 @@ wx = pytest.importorskip("wx")
 from hpc_gui.wx_terminal_webview import _is_webview_available
 
 ASSETS = pathlib.Path(__file__).parents[1] / "src" / "hpc_gui" / "assets" / "terminal"
+pytestmark = pytest.mark.subprocess
 
 
 def _run(code, timeout=15):
@@ -38,7 +39,7 @@ def _wrap(code):
 
 
 @pytest.mark.wx
-@pytest.mark.gui
+@pytest.mark.contract
 def test_vt_sgr_normal_color_bold_reset():
     """SGR sequences must be interpreted by xterm, not displayed literally."""
     if not _is_webview_available():
@@ -84,7 +85,7 @@ os._exit(0)
 
 
 @pytest.mark.wx
-@pytest.mark.gui
+@pytest.mark.contract
 def test_vt_carriage_return_overwrite():
     """CR (\\r) must overwrite current line, not create new line."""
     if not _is_webview_available():
@@ -131,9 +132,9 @@ os._exit(0)
 
 
 @pytest.mark.wx
-@pytest.mark.gui
-def test_unicode_round_trip():
-    """Unicode input and output must pass through without ASCII clamp."""
+@pytest.mark.contract
+def test_unicode_output_reaches_terminal_bridge():
+    """Unicode output must pass through without an ASCII clamp."""
     if not _is_webview_available():
         pytest.skip("WebView backend unavailable")
     r = _run(_wrap("""
@@ -175,7 +176,7 @@ os._exit(0)
 
 
 @pytest.mark.wx
-@pytest.mark.gui
+@pytest.mark.contract
 def test_multiline_paste():
     """Multiline paste must call terminal.paste."""
     if not _is_webview_available():
@@ -269,7 +270,7 @@ panel.close(); frame.Destroy(); os._exit(0)
 
 
 @pytest.mark.wx
-@pytest.mark.gui
+@pytest.mark.contract
 def test_stress_500_inputs():
     """500 input events must not leak or crash."""
     if not _is_webview_available():
@@ -313,7 +314,7 @@ panel.close(); frame.Destroy(); os._exit(0)
 
 
 @pytest.mark.wx
-@pytest.mark.gui
+@pytest.mark.contract
 def test_stress_500_resizes():
     """500 resize events must dedup and not crash."""
     if not _is_webview_available():
@@ -358,7 +359,8 @@ panel.close(); frame.Destroy(); os._exit(0)
 
 
 @pytest.mark.wx
-@pytest.mark.gui
+@pytest.mark.integration
+@pytest.mark.resource
 def test_stress_100_reconnects():
     """100 reconnects must not leak subscribers."""
     if not _is_webview_available():
@@ -403,7 +405,7 @@ panel.close(); frame.Destroy(); os._exit(0)
 
 
 @pytest.mark.wx
-@pytest.mark.gui
+@pytest.mark.runtime_smoke
 def test_stress_repeated_font_find_clear():
     """Repeated font/find/clear must not crash."""
     if not _is_webview_available():
@@ -446,7 +448,8 @@ panel.close(); frame.Destroy(); os._exit(0)
 
 
 @pytest.mark.wx
-@pytest.mark.gui
+@pytest.mark.runtime_smoke
+@pytest.mark.resource
 def test_close_while_output_in_flight():
     """Closing during output delivery must not crash."""
     if not _is_webview_available():

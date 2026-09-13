@@ -78,6 +78,7 @@ class LocalMappingTests(unittest.TestCase):
         self.assertIsNone(local_to_remote(r"C:\Other\dir", self.WINDOWS_ROOTS))
 
     @pytest.mark.unit
+    @pytest.mark.windows
     def test_windows_case_insensitive_containment_preserves_text(self) -> None:
         if os.name != "nt":
             self.skipTest("Windows-only case rule")
@@ -85,6 +86,7 @@ class LocalMappingTests(unittest.TestCase):
         self.assertEqual(mapped, "/arf/scratch/user/new_dpler/Case")
 
     @pytest.mark.unit
+    @pytest.mark.windows
     def test_different_drives_return_none(self) -> None:
         if os.name != "nt":
             self.skipTest("Windows-only drive rule")
@@ -241,9 +243,11 @@ class SynchronizationOrchestrationTests(unittest.TestCase):
         cls.app = QApplication.instance() or QApplication([])
 
     def setUp(self) -> None:
-        from hpc_gui.core.i18n import load_language
+        from hpc_gui.core.i18n import current_language, load_language
 
+        previous_language = current_language()
         load_language("en")
+        self.addCleanup(load_language, previous_language)
         state_patch = patch(
             "hpc_gui.ui.widgets.ftp_widget.get_ftp_state",
             return_value={
@@ -401,17 +405,25 @@ class SynchronizationOrchestrationTests(unittest.TestCase):
 
     @pytest.mark.qt
     @pytest.mark.gui
-    def test_no_remote_preflight_on_gui_thread(self) -> None:
+    def test_local_sync_navigation_does_not_preflight_remote_files(self) -> None:
         with tempfile.TemporaryDirectory() as root:
             widget = self._make_widget(self._saved_cfg(root, "/remote/root", False))
+            preflight_calls = []
             files = SimpleNamespace(supports_progressive_listing=False)
-            for forbidden in ("stat", "exists", "listdir"):
-                setattr(files, forbidden, None)
+            for operation in ("stat", "exists", "listdir"):
+                setattr(
+                    files,
+                    operation,
+                    lambda *args, operation=operation: preflight_calls.append(operation),
+                )
             widget.session["files"] = files
             panel = _CountingRemotePanel()
             with patch.object(widget, "active_remote_panel", return_value=panel):
                 widget.btn_sync_browsing.setChecked(True)
                 widget.local_panel.directoryChanged.emit(root)
+            self.assertEqual(preflight_calls, [])
+            self.assertEqual(panel.set_dir_calls, ["/remote/root"])
+            self.assertFalse(widget._sync_navigation_guard)
 
     @pytest.mark.qt
     @pytest.mark.gui
@@ -463,12 +475,15 @@ class ResetRootsTests(unittest.TestCase):
 
     @pytest.mark.qt
     @pytest.mark.gui
+    @pytest.mark.resource
     def test_reset_persists_new_pair_after_confirmation(self) -> None:
-        from hpc_gui.core.i18n import load_language
+        from hpc_gui.core.i18n import current_language, load_language
         from hpc_gui.config.storage import load_profiles
         from hpc_gui.ui.widgets.ftp_widget import FtpWidget
         from unittest import mock
 
+        previous_language = current_language()
+        self.addCleanup(load_language, previous_language)
         load_language("en")
         stored = {
             "name": "lab",

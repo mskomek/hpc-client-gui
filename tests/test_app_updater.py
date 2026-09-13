@@ -40,6 +40,7 @@ class _Response:
 
 
 @pytest.mark.unit
+@pytest.mark.resource
 def test_cancelled_update_download_removes_partial_file(monkeypatch, tmp_path: Path):
     monkeypatch.setattr("hpc_gui.services.app_updater._request", lambda *_args, **_kwargs: _Response())
     cancelled = False
@@ -126,9 +127,12 @@ def test_closing_update_progress_cancels_active_download():
     assert worker.cancelled and window._update_cancelled and closed
 
 
+@pytest.mark.subprocess
 @pytest.mark.gui
 @pytest.mark.qt
 @pytest.mark.regression
+@pytest.mark.semantic
+@pytest.mark.concurrency
 def test_manual_update_check_shows_splash_before_worker_starts():
     root = Path(__file__).resolve().parents[1]
     env = os.environ.copy()
@@ -214,6 +218,9 @@ def test_update_splash_formats_binary_units():
 
 
 @pytest.mark.release
+@pytest.mark.windows
+@pytest.mark.macos
+@pytest.mark.linux
 def test_release_assets_are_platform_specific():
     assert release_asset_names("windows_x86_64")[0].endswith(".zip")
     assert release_asset_names("macos_arm64")[0].endswith("_arm64.dmg")
@@ -286,6 +293,7 @@ def test_install_handoff_never_shows_complete_before_helper_starts(monkeypatch):
 
 
 @pytest.mark.release
+@pytest.mark.linux
 def test_appimage_handoff_runs_helper_from_verified_new_image(monkeypatch, tmp_path: Path):
     current = tmp_path / "current.AppImage"
     package = tmp_path / "new.AppImage"
@@ -314,6 +322,9 @@ def test_appimage_handoff_runs_helper_from_verified_new_image(monkeypatch, tmp_p
 
 
 @pytest.mark.release
+@pytest.mark.windows
+@pytest.mark.macos
+@pytest.mark.linux
 def test_updater_selects_arch_specific_dmg_per_platform():
     # arm64 DMG only for Apple Silicon, x86_64 only for Intel Mac.
     assert release_asset_names("macos_arm64")[0] == "hpc-client-gui_macos_arm64.dmg"
@@ -352,7 +363,9 @@ def test_unknown_installation_is_manual_only():
     assert context.capability == "unsupported"
 
 
+@pytest.mark.subprocess
 @pytest.mark.release
+@pytest.mark.windows
 def test_windows_installer_script_has_independent_real_progress_and_rollback(tmp_path: Path):
     script = build_update_script(
         zip_path=tmp_path / "update.zip",
@@ -366,6 +379,9 @@ def test_windows_installer_script_has_independent_real_progress_and_rollback(tmp
     assert "$extractDone += $read" in script
     assert "$copyDone += $read" in script
     assert "[Math]::Max($script:lastProgress" in script
+    assert "$target = [System.IO.Path]::GetFullPath((Join-Path $stagingDir $entry.FullName))" in script
+    assert "StartsWith($stagingRoot, [System.StringComparison]::OrdinalIgnoreCase)" in script
+    assert 'throw "Unsafe archive path"' in script
     assert "Rollback started" in script
     assert "New process healthy" in script
     assert "Copy-Item -Path (Join-Path $stagingDir" not in script

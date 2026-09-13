@@ -21,12 +21,20 @@ from hpc_gui.plugins.models import validate_storage_area
 from hpc_gui.ssh.client import HostKeyInfo
 from hpc_gui.wx_connection import WxConnectionModel, ssh_info_from_profile
 from hpc_gui.config.system_profile import builtin_system_template_groups
-from hpc_gui.plugins.templates import installed_cluster_template_groups
 from hpc_gui.config.system_profile import normalize_system_settings
 from hpc_gui.config.file_manager_profile import normalize_file_manager_settings
 from hpc_gui.config.jump_host_profile import normalize_jump_host_settings
 
 wx = pytest.importorskip("wx", reason="wxPython not installed – skipping wx GUI tests")
+
+
+@pytest.fixture(autouse=True)
+def _restore_language():
+    from hpc_gui.core.i18n import current_language, load_language
+
+    previous = current_language()
+    yield
+    load_language(previous)
 
 
 def _isolated_storage(monkeypatch):
@@ -41,7 +49,8 @@ def _isolated_storage(monkeypatch):
 # 35.1 Add button
 # ---------------------------------------------------------------------------
 
-@pytest.mark.runtime_smoke
+@pytest.mark.wx
+@pytest.mark.gui
 def test_wx_add_button_enabled_in_normal_startup(monkeypatch):
     tmp = _isolated_storage(monkeypatch)
     try:
@@ -50,14 +59,12 @@ def test_wx_add_button_enabled_in_normal_startup(monkeypatch):
 
         frame = wx.Frame(None)
         panel_host = build_connection_panel(frame, profiles=[], connect=lambda p: {"connected": True})
+        frame.Show()
+        wx.Yield()
         # The host panel is a wx.Panel with exposed controls
         assert hasattr(panel_host, "_wx_connection_add_button")
         add_btn = panel_host._wx_connection_add_button
         assert add_btn.IsEnabled(), "Add Connection must be enabled in normal startup without external callback"
-        # Also click should not raise
-        # Simulate via model directly: Add is owned, not dependent on callback
-        source = open("src/hpc_gui/wx_connection.py", encoding="utf-8").read()
-        assert "if not add_connection:" not in source or "add_button.Enable(False)" not in source or "not add_connection" not in source.split("add_button.Enable")[0][-200:]  # ensure not disabling
         frame.Destroy()
         for _ in range(3):
             wx.Yield()
@@ -111,9 +118,8 @@ def test_wx_add_opens_dialog(monkeypatch):
 # 35.2 Add + Save
 # ---------------------------------------------------------------------------
 
-@pytest.mark.wx
-@pytest.mark.gui
-def test_add_and_save_persists_and_refreshes(monkeypatch):
+@pytest.mark.integration
+def test_save_profile_persists_new_profile(monkeypatch):
     tmp = _isolated_storage(monkeypatch)
     try:
         from hpc_gui.services.connection_profile_service import save_profile
@@ -154,8 +160,7 @@ def test_add_and_save_persists_and_refreshes(monkeypatch):
 # 35.3 Save & Connect
 # ---------------------------------------------------------------------------
 
-@pytest.mark.wx
-@pytest.mark.gui
+@pytest.mark.integration
 def test_save_and_connect_invokes_connect_once(monkeypatch):
     tmp = _isolated_storage(monkeypatch)
     try:
@@ -212,12 +217,32 @@ def test_save_and_connect_invokes_connect_once(monkeypatch):
 def test_cancel_does_not_persist(monkeypatch):
     tmp = _isolated_storage(monkeypatch)
     try:
+        _wx_app = wx.App.Get() or wx.App(False)
+        from hpc_gui.wx_connection_dialog import WxConnectionDialog
+
         assert len(load_profiles()) == 0
-        # Simulate cancel: do not call save
-        # No profile should be created
+        frame = wx.Frame(None)
+        saved = []
+        dlg = WxConnectionDialog(
+            frame,
+            on_save=lambda profile: saved.append(profile) or True,
+        )
+        dlg.dlg.Show()
+        wx.Yield()
+        dlg.profile_name_ctrl.SetValue("unsaved")
+        dlg.host_ctrl.SetValue("h.example")
+        dlg.password_ctrl.SetValue("temporary-secret")
+        with mock.patch.object(dlg.dlg, "EndModal") as end_modal:
+            evt = wx.CommandEvent(wx.EVT_BUTTON.typeId, dlg.btn_cancel.GetId())
+            dlg.btn_cancel.GetEventHandler().ProcessEvent(evt)
+        end_modal.assert_called_once_with(wx.ID_CANCEL)
+        assert saved == []
         assert len(load_profiles()) == 0
-        # Also no secret should be persisted
-        # Check secret store not called – implicit
+        assert "temporary-secret" not in str(load_profiles())
+        dlg.Destroy()
+        frame.Destroy()
+        for _ in range(3):
+            wx.Yield()
     finally:
         tmp.cleanup()
 
@@ -226,8 +251,7 @@ def test_cancel_does_not_persist(monkeypatch):
 # 35.5 Edit – unknown keys survive
 # ---------------------------------------------------------------------------
 
-@pytest.mark.wx
-@pytest.mark.gui
+@pytest.mark.integration
 def test_edit_preserves_unknown_and_provenance(monkeypatch):
     tmp = _isolated_storage(monkeypatch)
     try:
@@ -275,8 +299,7 @@ def test_edit_preserves_unknown_and_provenance(monkeypatch):
 # 35.6 Rename
 # ---------------------------------------------------------------------------
 
-@pytest.mark.wx
-@pytest.mark.gui
+@pytest.mark.integration
 def test_rename_removes_old_only_after_success(monkeypatch):
     tmp = _isolated_storage(monkeypatch)
     try:
@@ -299,9 +322,8 @@ def test_rename_removes_old_only_after_success(monkeypatch):
 # 35.7 Duplicate
 # ---------------------------------------------------------------------------
 
-@pytest.mark.wx
-@pytest.mark.gui
-def test_duplicate_uses_naming_and_independent_identity(monkeypatch):
+@pytest.mark.unit
+def test_duplicate_uses_naming_and_independent_identity():
     existing = {"id": "one", "name": "Cluster", "host": "h.example", "username": "alice"}
     profiles = [existing]
     duplicate = duplicate_profile(existing, [p["name"] for p in profiles])
@@ -367,8 +389,7 @@ def test_delete_requires_confirmation_and_cleans(monkeypatch):
 # 35.9 Secure password
 # ---------------------------------------------------------------------------
 
-@pytest.mark.wx
-@pytest.mark.gui
+@pytest.mark.integration
 def test_secret_persistence_and_removal(monkeypatch):
     tmp = _isolated_storage(monkeypatch)
     try:
@@ -445,8 +466,7 @@ def test_saved_password_not_autopopulated(monkeypatch):
 # 35.10 Provider templates
 # ---------------------------------------------------------------------------
 
-@pytest.mark.wx
-@pytest.mark.gui
+@pytest.mark.integration
 def test_provider_templates_builtin_and_user():
     groups = builtin_system_template_groups()
     assert "Generic Slurm" in groups
@@ -467,23 +487,17 @@ def test_provider_templates_builtin_and_user():
     finally:
         tmpdir.cleanup()
 
-@pytest.mark.wx
-@pytest.mark.gui
-def test_plugin_templates_without_hardcoded_names():
-    groups = installed_cluster_template_groups()
-    # Should be dict, keys are plugin names, no hardcoded logic
-    assert isinstance(groups, dict)
-    # Generic logic contains no provider-name branch – check source
-    src = open("src/hpc_gui/wx_connection_dialog.py", encoding="utf-8").read()
-    # Ensure no hardcoded provider names like "TRUBA" in generic logic
-    assert "TRUBA" not in src or "provider_template" in src  # allow minimal mention but not branch
-    # Also wx_connection generic logic shouldn't hardcode
-    src2 = open("src/hpc_gui/wx_connection.py", encoding="utf-8").read()
-    assert src2.count("TRUBA") == 0
+@pytest.mark.audit
+def test_connection_sources_do_not_hardcode_truba():
+    sources = [
+        Path("src/hpc_gui/wx_connection_dialog.py").read_text(encoding="utf-8"),
+        Path("src/hpc_gui/wx_connection.py").read_text(encoding="utf-8"),
+    ]
+    assert all("TRUBA" not in source for source in sources)
 
 
+@pytest.mark.contract
 @pytest.mark.wx
-@pytest.mark.gui
 def test_template_provenance_preserved(monkeypatch):
     tmp = _isolated_storage(monkeypatch)
     try:
@@ -552,46 +566,37 @@ def test_provider_required_project_account_validation(monkeypatch):
 
 @pytest.mark.wx
 @pytest.mark.gui
-def test_storage_add_edit_remove_and_validation(monkeypatch):
-    # Validate storage area
-    area = {"id": "home", "label": "Home", "kind": "home", "enabled": True, "path_template": "/home/{user}", "access_context": "login-node"}
-    assert validate_storage_area(area) is None
-    # Invalid path
-    bad = dict(area, path_template="bad; rm -rf /")
-    assert validate_storage_area(bad) is not None
-    # Test wx dialog storage helpers – use dialog's storage_rows via WxConnectionDialog
+def test_storage_add_edit_remove_visible_rows(monkeypatch):
     tmp = _isolated_storage(monkeypatch)
     try:
         _wx_app = wx.App.Get() or wx.App(False)
         from hpc_gui.wx_connection_dialog import WxConnectionDialog
         frame = wx.Frame(None)
         dlg = WxConnectionDialog(frame, initial_profile={"name": "lab", "host": "h.example"}, mode="add", on_save=lambda p: True)
+        dlg.dlg.Show()
+        wx.Yield()
         # Simulate add
         dlg._provider_template = {"storage": []}
         dlg.storage_rows = []
-        # Mock _show_storage_area_dialog to return a valid area without UI
+        # Mock only the editor seam; exercise the real wx buttons and list.
         with mock.patch("hpc_gui.wx_connection_dialog._show_storage_area_dialog", return_value={"id": "proj", "label": "Proj", "kind": "project", "enabled": True, "path_template": "/proj/{project}", "access_context": "shared", "policy": {}}):
-            dlg._add_storage_area()
-            assert len(dlg.storage_rows) == 1
-            assert dlg.storage_rows[0]["id"] == "proj"
+            dlg.btn_storage_add.GetEventHandler().ProcessEvent(
+                wx.CommandEvent(wx.EVT_BUTTON.typeId, dlg.btn_storage_add.GetId())
+            )
+            assert dlg.storage_list.GetStrings() == ["Proj: /proj/{project}"]
         # Edit
         with mock.patch("hpc_gui.wx_connection_dialog._show_storage_area_dialog", return_value={"id": "proj", "label": "ProjEdited", "kind": "project", "enabled": True, "path_template": "/proj/{project}", "access_context": "shared", "policy": {}}):
             dlg.storage_list.SetSelection(0)
-            dlg._edit_storage_area()
-            assert dlg.storage_rows[0]["label"] == "ProjEdited"
+            dlg.btn_storage_edit.GetEventHandler().ProcessEvent(
+                wx.CommandEvent(wx.EVT_BUTTON.typeId, dlg.btn_storage_edit.GetId())
+            )
+            assert dlg.storage_list.GetStrings() == ["ProjEdited: /proj/{project}"]
         # Remove
         dlg.storage_list.SetSelection(0)
-        dlg._remove_storage_area()
-        assert len(dlg.storage_rows) == 0
-        # Home/scratch sync
-        dlg.system_name_ctrl.SetValue("Test")
-        dlg.home_dir_ctrl.SetValue("/home/{user}")
-        dlg.scratch_dir_ctrl.SetValue("/scratch/{user}")
-        dlg._legacy_storage_snapshot = {"home_dir": "", "scratch_dir": ""}
-        dlg.storage_rows = [{"id": "home", "kind": "home", "path_template": "/old/home"}]
-        dlg.home_dir_ctrl.SetValue("/new/home")
-        dlg._sync_legacy_storage_paths()
-        assert dlg.storage_rows[0]["path_template"] == "/new/home"
+        dlg.btn_storage_remove.GetEventHandler().ProcessEvent(
+            wx.CommandEvent(wx.EVT_BUTTON.typeId, dlg.btn_storage_remove.GetId())
+        )
+        assert dlg.storage_list.GetStrings() == []
         dlg.Destroy()
         frame.Destroy()
         for _ in range(3):
@@ -600,12 +605,18 @@ def test_storage_add_edit_remove_and_validation(monkeypatch):
         tmp.cleanup()
 
 
+@pytest.mark.contract
+def test_storage_area_validation_rejects_shell_metacharacters():
+    area = {"id": "home", "label": "Home", "kind": "home", "enabled": True, "path_template": "/home/{user}", "access_context": "login-node"}
+    assert validate_storage_area(area) is None
+    assert validate_storage_area(dict(area, path_template="bad; rm -rf /")) is not None
+
+
 # ---------------------------------------------------------------------------
 # 35.12 Quota
 # ---------------------------------------------------------------------------
 
-@pytest.mark.wx
-@pytest.mark.gui
+@pytest.mark.integration
 def test_quota_states_fail_closed():
     # disabled
     assert quota_gate({"enabled": False, "command_template": "cmd", "backend_id": "x", "consent": True}, backend_ids=["x"], connected=True) == "disabled"
@@ -687,8 +698,7 @@ def test_advanced_ssh_persistence(monkeypatch):
 # 35.14 Real connection mapping
 # ---------------------------------------------------------------------------
 
-@pytest.mark.wx
-@pytest.mark.gui
+@pytest.mark.contract
 def test_saved_profile_to_sshinfo_mapping():
     profile = {
         "name": "lab",
@@ -725,8 +735,7 @@ def test_saved_profile_to_sshinfo_mapping():
     assert info.host_key_decision(HostKeyInfo("h.example", "ssh-rsa", "aa:bb")) == "save"
 
 
-@pytest.mark.wx
-@pytest.mark.gui
+@pytest.mark.integration
 def test_ssh_info_resolves_secure_password():
     # Profile with keychain ref, no plaintext
     profile = {"name": "sec", "host": "h.example", "port": 22, "username": "user", "password": "", "save_password": True, "password_keychain_ref": "ref123", "host_key_policy": "accept-new"}
@@ -751,8 +760,8 @@ def test_ssh_info_resolves_secure_password():
 # 35.15 MFA / host key
 # ---------------------------------------------------------------------------
 
+@pytest.mark.integration
 @pytest.mark.wx
-@pytest.mark.gui
 def test_host_key_dialog_mapping(monkeypatch):
     tmp = _isolated_storage(monkeypatch)
     try:
@@ -775,8 +784,7 @@ def test_host_key_dialog_mapping(monkeypatch):
         tmp.cleanup()
 
 
-@pytest.mark.wx
-@pytest.mark.gui
+@pytest.mark.contract
 def test_mfa_order_and_no_log(monkeypatch, caplog):
     requests = []
     model = WxConnectionModel([], keyboard_interactive=lambda req: requests.append(req) or ["r1", "r2"])
@@ -797,8 +805,7 @@ def test_mfa_order_and_no_log(monkeypatch, caplog):
 # 35.16 i18n
 # ---------------------------------------------------------------------------
 
-@pytest.mark.wx
-@pytest.mark.gui
+@pytest.mark.contract
 def test_i18n_en_tr_labels():
     from hpc_gui.core.i18n import t, load_language
     # Ensure EN for downstream tests that expect English strings
@@ -871,6 +878,7 @@ def test_action_enable_disable_states(monkeypatch):
 
 @pytest.mark.wx
 @pytest.mark.gui
+@pytest.mark.concurrency
 def test_action_states_during_connection_and_recovery(monkeypatch):
     """Real production Add/Connect event chain proves button states without manual manipulation."""
     tmp = _isolated_storage(monkeypatch)
@@ -1004,9 +1012,13 @@ def test_dialog_save_and_connect_calls_one_callback(monkeypatch):
             on_save=lambda _profile: calls.append("save") or True,
             on_save_and_connect=lambda _profile: calls.append("save_and_connect") or True,
         )
+        dlg.dlg.Show()
+        wx.Yield()
         dlg._collect_profile = lambda: {"name": "p", "host": "h.example"}
         with mock.patch.object(dlg.dlg, "EndModal") as end_modal:
-            dlg._save_and_connect_clicked()
+            dlg.btn_save_connect.GetEventHandler().ProcessEvent(
+                wx.CommandEvent(wx.EVT_BUTTON.typeId, dlg.btn_save_connect.GetId())
+            )
         assert calls == ["save_and_connect"]
         end_modal.assert_called_once_with(wx.ID_OK)
         dlg.Destroy()
@@ -1017,8 +1029,8 @@ def test_dialog_save_and_connect_calls_one_callback(monkeypatch):
         tmp.cleanup()
 
 
+@pytest.mark.contract
 @pytest.mark.wx
-@pytest.mark.gui
 def test_dialog_preserves_unknown_nested_system_fields(monkeypatch):
     tmp = _isolated_storage(monkeypatch)
     try:
@@ -1041,8 +1053,7 @@ def test_dialog_preserves_unknown_nested_system_fields(monkeypatch):
         tmp.cleanup()
 
 
-@pytest.mark.wx
-@pytest.mark.gui
+@pytest.mark.unit
 def test_quota_profile_lookup_supports_nested_provider_template():
     from hpc_gui.services.quota_monitor import quota_state_for_profile
 

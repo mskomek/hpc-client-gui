@@ -7,6 +7,7 @@ false confidence from tests that never exercise the real Unicode boundaries.
 from __future__ import annotations
 
 import pytest
+import ast
 import json
 import pathlib
 import sys
@@ -130,10 +131,10 @@ class TestFixtureAssertionQuality:
 # 3. Mojibake Regression Detection
 # ---------------------------------------------------------------------------
 
-@pytest.mark.audit
 class TestMojibakeRegression:
     """Verify mojibake patterns are detected and prevented."""
 
+    @pytest.mark.contract
     def test_en_json_no_mojibake(self):
         """en.json should not contain mojibake patterns."""
         path = ROOT / "src" / "hpc_gui" / "i18n" / "en.json"
@@ -144,6 +145,7 @@ class TestMojibakeRegression:
         for pattern in mojibake:
             assert pattern not in content, f"Mojibake {pattern!r} in en.json"
 
+    @pytest.mark.contract
     def test_tr_json_no_mojibake(self):
         """tr.json should not contain mojibake patterns."""
         path = ROOT / "src" / "hpc_gui" / "i18n" / "tr.json"
@@ -154,6 +156,7 @@ class TestMojibakeRegression:
         for pattern in mojibake:
             assert pattern not in content, f"Mojibake {pattern!r} in tr.json"
 
+    @pytest.mark.contract
     def test_star_favorites_correct(self):
         """★ Favorites should be correct, not â˜… Favorites."""
         for lang in ["en", "tr"]:
@@ -163,6 +166,7 @@ class TestMojibakeRegression:
             assert "★" in fav, f"★ missing in {lang}.json"
             assert "â˜…" not in fav, f"Mojibake â˜… in {lang}.json"
 
+    @pytest.mark.audit
     def test_no_bom_in_source_files(self):
         """Source files should not have BOM."""
         src_dir = ROOT / "src" / "hpc_gui"
@@ -241,8 +245,8 @@ class TestResultsVerification:
     """Verify all wave tests pass."""
 
     @pytest.mark.audit
-    def test_all_wave_tests_importable(self):
-        """All wave test modules should be importable."""
+    def test_all_wave_test_module_paths_exist(self):
+        """All expected wave test module paths should exist."""
         wave_modules = [
             "test_wave0_unicode_baseline",
             "test_wave1_unicode_core_policy",
@@ -305,18 +309,30 @@ class TestIntegration:
     def test_no_false_green_patterns(self):
         """Tests should not use false-green patterns."""
         wave_files = list((ROOT / "tests").glob("test_wave*.py"))
+        false_green = []
 
         for wave_file in wave_files:
-            content = wave_file.read_text(encoding="utf-8")
-            # Should not have tests that only assert True
-            lines = content.split("\n")
-            for i, line in enumerate(lines):
-                if "def test_" in line:
-                    # Look at the next few lines for assertions
-                    next_lines = lines[i:i+10]
-                    has_assert = any("assert" in line for line in next_lines)
-                    # Allow pass-only tests if they have a comment explaining why
-                    if not has_assert:
-                        # Check if there's a comment
-                        _ = any("#" in line for line in next_lines)
-                        # This is OK if documented
+            tree = ast.parse(wave_file.read_text(encoding="utf-8"))
+            for node in ast.walk(tree):
+                if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    continue
+                if not node.name.startswith("test_"):
+                    continue
+                checks = [child for child in ast.walk(node) if isinstance(child, ast.Assert)]
+                meaningful_assert = any(
+                    not (isinstance(check.test, ast.Constant) and check.test.value is True)
+                    for check in checks
+                )
+                expects_error = any(
+                    isinstance(child, ast.Call)
+                    and (
+                        isinstance(child.func, ast.Attribute)
+                        and child.func.attr in {"raises", "assertRaises", "assertRaisesRegex"}
+                        or isinstance(child.func, ast.Name)
+                        and child.func.id == "_pump"
+                    )
+                    for child in ast.walk(node)
+                )
+                if not meaningful_assert and not expects_error:
+                    false_green.append(f"{wave_file.name}::{node.name}")
+        assert not false_green, f"Tests without an effective assertion: {false_green}"

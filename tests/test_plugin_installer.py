@@ -297,7 +297,7 @@ def test_post_release_sorts_after_release():
     assert found["version"] == "0.2.0.post1"
 
 
-@pytest.mark.unit
+@pytest.mark.contract
 def test_duplicate_id_version_records_rejected():
     registry = fluent_registry(
         make_fluent_entry("0.1.0"), make_fluent_entry("0.1.0")
@@ -347,6 +347,7 @@ def test_payload_url_requires_official_https_base():
 
 
 @pytest.mark.unit
+@pytest.mark.resource
 def test_download_exact_file_verifies_hash_and_size(tmp_path: Path):
     payload = b'{"hello": "world"}'
     fetcher = make_fetcher(
@@ -405,7 +406,7 @@ def full_install_responses(**overrides) -> dict[str, bytes]:
     }, manifest, manifest_bytes
 
 
-@pytest.mark.integration
+@pytest.mark.e2e
 def test_valid_install_end_to_end(tmp_path: Path):
     responses, manifest, manifest_bytes = full_install_responses()
     entry = make_registry_entry(manifest, manifest_bytes)
@@ -442,6 +443,7 @@ def test_only_declared_files_are_downloaded(tmp_path: Path):
 
 
 @pytest.mark.integration
+@pytest.mark.resource
 def test_bad_manifest_hash_aborts_install(tmp_path: Path):
     responses, manifest, _ = full_install_responses()
     entry = make_registry_entry(manifest, b"{}" * 10)
@@ -456,6 +458,7 @@ def test_bad_manifest_hash_aborts_install(tmp_path: Path):
 
 
 @pytest.mark.integration
+@pytest.mark.resource
 def test_bad_file_hash_aborts_and_cleans_staging(tmp_path: Path):
     responses, manifest, manifest_bytes = full_install_responses()
     base = f"plugins/{manifest['id'].split('.')[-1]}/{manifest['version']}"
@@ -472,6 +475,7 @@ def test_bad_file_hash_aborts_and_cleans_staging(tmp_path: Path):
 
 
 @pytest.mark.integration
+@pytest.mark.resource
 def test_missing_file_aborts_install(tmp_path: Path):
     responses, manifest, manifest_bytes = full_install_responses()
     base = f"plugins/{manifest['id'].split('.')[-1]}/{manifest['version']}"
@@ -516,6 +520,7 @@ def test_unsupported_plugin_api_rejected(tmp_path: Path):
 
 
 @pytest.mark.integration
+@pytest.mark.resource
 def test_second_install_of_same_version_is_idempotent(tmp_path: Path):
     responses, manifest, manifest_bytes = full_install_responses()
     entry = make_registry_entry(manifest, manifest_bytes)
@@ -533,6 +538,7 @@ def test_second_install_of_same_version_is_idempotent(tmp_path: Path):
 
 
 @pytest.mark.integration
+@pytest.mark.resource
 def test_interrupted_install_keeps_previous_state(tmp_path: Path):
     responses, manifest, manifest_bytes = full_install_responses()
     entry = make_registry_entry(manifest, manifest_bytes)
@@ -571,6 +577,7 @@ def _assert_no_staging_or_part_leftovers(tmp_path: Path) -> None:
 
 
 @pytest.mark.integration
+@pytest.mark.resource
 def test_conflicting_same_version_payload_is_rejected(tmp_path: Path):
     responses, manifest, manifest_bytes = full_install_responses()
     entry = make_registry_entry(manifest, manifest_bytes)
@@ -611,6 +618,7 @@ def test_conflicting_same_version_payload_is_rejected(tmp_path: Path):
 
 
 @pytest.mark.integration
+@pytest.mark.resource
 def test_corrupted_existing_version_is_not_overwritten(tmp_path: Path):
     responses, manifest, manifest_bytes = full_install_responses()
     entry = make_registry_entry(manifest, manifest_bytes)
@@ -628,6 +636,7 @@ def test_corrupted_existing_version_is_not_overwritten(tmp_path: Path):
 
 
 @pytest.mark.integration
+@pytest.mark.resource
 def test_idempotent_reinstall_leaves_directory_untouched(tmp_path: Path):
     responses, manifest, manifest_bytes = full_install_responses()
     entry = make_registry_entry(manifest, manifest_bytes)
@@ -655,6 +664,7 @@ def test_idempotent_reinstall_leaves_directory_untouched(tmp_path: Path):
 
 
 @pytest.mark.integration
+@pytest.mark.resource
 def test_update_from_older_to_newer_version(tmp_path: Path):
     responses_old, manifest_old, bytes_old = full_install_responses(version="0.1.0")
     entry_old = make_registry_entry(manifest_old, bytes_old)
@@ -680,6 +690,7 @@ def test_update_from_older_to_newer_version(tmp_path: Path):
 
 
 @pytest.mark.integration
+@pytest.mark.resource
 def test_failed_update_preserves_previous_version(tmp_path: Path):
     responses_old, manifest_old, bytes_old = full_install_responses(version="0.1.0")
     entry_old = make_registry_entry(manifest_old, bytes_old)
@@ -704,6 +715,7 @@ def test_failed_update_preserves_previous_version(tmp_path: Path):
 
 
 @pytest.mark.integration
+@pytest.mark.resource
 def test_failure_before_activation_preserves_previous_active(tmp_path: Path, monkeypatch):
     import hpc_gui.plugins.installer as installer_module
 
@@ -737,6 +749,7 @@ def test_failure_before_activation_preserves_previous_active(tmp_path: Path, mon
 
 
 @pytest.mark.integration
+@pytest.mark.resource
 def test_post_activation_loader_failure_rolls_back(tmp_path: Path, monkeypatch):
     import hpc_gui.plugins.loader as loader_module
 

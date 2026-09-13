@@ -26,14 +26,14 @@ def _action_refs(text: str) -> list[tuple[str, str]]:
     return refs
 
 
-@pytest.mark.release
+@pytest.mark.audit
 def test_every_workflow_exists():
     files = sorted(WORKFLOWS_DIR.glob("*.yml"))
     assert {path.name for path in files} >= {"release.yml"}
     assert (WORKFLOWS_DIR.parent.parent / "docs" / "ci-disabled" / "ci.yml").is_file()
 
 
-@pytest.mark.release
+@pytest.mark.audit
 def test_all_action_references_are_pinned_to_full_commit_shas():
     violations: list[str] = []
     for path in sorted(WORKFLOWS_DIR.glob("*.yml")):
@@ -48,7 +48,7 @@ def test_all_action_references_are_pinned_to_full_commit_shas():
     assert not violations, "unpinned action references:\n" + "\n".join(violations)
 
 
-@pytest.mark.release
+@pytest.mark.audit
 def test_pins_keep_a_version_comment():
     for path in sorted(WORKFLOWS_DIR.glob("*.yml")):
         text = path.read_text(encoding="utf-8")
@@ -58,7 +58,7 @@ def test_pins_keep_a_version_comment():
             assert "# v" in line, f"{path.name}: pin lacks version comment: {line.strip()}"
 
 
-@pytest.mark.release
+@pytest.mark.audit
 def test_release_workflow_publish_step_is_pinned():
     text = (WORKFLOWS_DIR / "release.yml").read_text(encoding="utf-8")
     assert re.search(

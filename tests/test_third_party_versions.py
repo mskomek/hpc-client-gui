@@ -10,6 +10,7 @@ from scripts import generate_third_party_versions as manifest
 
 
 @pytest.mark.release
+@pytest.mark.packaging
 class ThirdPartyVersionsTests(unittest.TestCase):
     def test_collects_and_writes_deterministic_manifest(self):
         qtcore = types.ModuleType("PySide6.QtCore")

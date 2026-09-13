@@ -87,6 +87,7 @@ class TransferKeyReleaseTests(unittest.TestCase):
         return execute, started, stop
 
     @pytest.mark.qt
+    @pytest.mark.concurrency
     def test_cancel_releases_the_keys_so_the_same_files_replan(self) -> None:
         execute, started, stop = self._stalling_executor()
         self.panel._execute_transfer_item = execute  # type: ignore[method-assign]
@@ -118,6 +119,7 @@ class TransferKeyReleaseTests(unittest.TestCase):
         )
 
     @pytest.mark.qt
+    @pytest.mark.concurrency
     def test_keys_stay_reserved_while_the_queue_is_running(self) -> None:
         execute, started, stop = self._stalling_executor()
         self.panel._execute_transfer_item = execute  # type: ignore[method-assign]
