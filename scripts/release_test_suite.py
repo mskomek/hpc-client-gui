@@ -1,9 +1,7 @@
 """Run the shared release preflight test suite.
 
-The release workflow and the CI ``gui`` job must never drift apart: a
-release must not be publishable when the source revision's required test
-suite is red. This module is the single definition of that suite; both
-workflows invoke it instead of maintaining two separate test lists.
+The manual release workflow and local release gate use this same test
+definition, so a release cannot be published when its required suite is red.
 
 The suite mirrors the CI gates:
 
@@ -25,8 +23,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
-# Keep this list identical to the checks the CI gui job runs. When adding a
-# new repository-wide gate, extend it here so releases inherit it.
+# Keep these checks aligned with the local release gate in scripts/ci.py.
 PREFLIGHT_COMMANDS: tuple[tuple[str, ...], ...] = (
     (sys.executable, "-m", "compileall", "-q", str(REPO_ROOT / "src" / "hpc_gui")),
     (sys.executable, str(REPO_ROOT / "scripts" / "check_i18n.py")),
@@ -57,6 +54,18 @@ ISOLATED_WIRE_FILES = (
     "tests/test_editor_flow.py",
 )
 
+# When combined in one process, this wx module creates and tears down a real
+# wx.App before the Qt Jobs-scroll widget; the sequence terminates Windows
+# with 0xC000041D despite no live wx windows or worker threads. The WebView2
+# module passes alone but heap-corrupts (0xC0000374) after mixed-GUI tests.
+# Keep both proven native boundaries process-scoped.
+ISOLATED_NATIVE_GUI_FILES = (
+    "tests/test_corrective_jobs_details.py",
+    "tests/test_wx_terminal_webview.py",
+)
+
+ISOLATED_FILES = ISOLATED_WIRE_FILES + ISOLATED_NATIVE_GUI_FILES
+
 COVERAGE_FAIL_UNDER = 65
 
 COVERAGE_ARGS = (
@@ -79,15 +88,15 @@ def build_commands(*, coverage: bool) -> list[tuple[str, ...]]:
     commands = list(PREFLIGHT_COMMANDS)
     ignores = tuple(
         argument
-        for path in ISOLATED_WIRE_FILES
+        for path in ISOLATED_FILES
         for argument in ("--ignore", path)
     )
     commands.append(
         PYTEST_BASE + ignores + (COVERAGE_ARGS if coverage else ())
     )
-    for index, path in enumerate(ISOLATED_WIRE_FILES):
+    for index, path in enumerate(ISOLATED_FILES):
         coverage_args = COVERAGE_APPEND_ARGS if coverage else ()
-        if coverage and index == len(ISOLATED_WIRE_FILES) - 1:
+        if coverage and index == len(ISOLATED_FILES) - 1:
             coverage_args += (f"--cov-fail-under={COVERAGE_FAIL_UNDER}",)
         commands.append(PYTEST_BASE[:-1] + (path,) + coverage_args)
     return commands
