@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from types import SimpleNamespace
 
 import pytest
 
@@ -196,6 +197,17 @@ class TestEdgeCases:
         reg = build_core_registry()
         assert reg.matches(FakeEntry(""), "all") is True
         assert reg.matches(FakeEntry(""), "other") is True
+
+    @pytest.mark.regression
+    def test_empty_remote_name_falls_back_to_path_basename(self):
+        reg = build_core_registry()
+        reg.register(FileFilter(id="logs", label_en="Logs", suffixes=(".log",)))
+        assert reg.matches(
+            SimpleNamespace(name="", path="/var/log/run.log", is_dir=False), "logs"
+        )
+        assert reg.matches(
+            {"name": " ", "path": r"\work\字 1.log", "is_dir": False}, "logs"
+        )
 
     def test_dict_entry(self):
         reg = build_core_registry()
