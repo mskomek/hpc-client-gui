@@ -185,3 +185,9 @@ must not be counted as a current pass.
   **11 passes and 1 subprocess failure**: the child exited with Windows status
   `0xC0000374` (heap corruption). This supersedes its earlier isolated pass and
   timeout as unresolved native-runtime evidence; it is not a test pass.
+
+### v4 governance revalidation (2026-09-13)
+
+The v4 branch is based on remediation SHA `1de2dce3aa8af037033882b26029fb33f39f9f57` and its source tree matches the fully reviewed v3 tree. The exact updater module passed **22/22** in an isolated child; terminal WebView passed **29/29** in a separate bounded child, including both ordering tests and visible fallback checks. About's real dialog/no-network node passed alone (1/1), while a combined Qt/WebView process raised a Windows native access violation at that node after the two preceding modules; this is order-dependent/native instability evidence, not a pass for the combined run. The separator lifecycle node remains unresolved: the timing sweep recorded a 30-second child timeout and a later module run recorded `0xC0000374` heap corruption. Do not label it flaky or passing.
+
+The authoritative v4 release runner's current product failure is `tests/test_wave2_directories_local_files.py::TestErrorHandling::test_list_entries_permission_error`; its repeated `stat` through `Path.is_dir()` escapes the intended permission-error handling. The coverage runner reaches the same failure and reports 46% partial coverage before stopping. Full current outcomes are in `audit/archive/794226e/test-suite-final/release-suite-outcomes.json`.

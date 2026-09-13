@@ -1,279 +1,257 @@
-# Test-suite cleanup execution report — 2026-09-12
+# Test-suite cleanup final report — 2026-09-12
 
-**Overall status: DEFECT_FOUND.** Packet F's truthful Outputs localization test demonstrates a product defect. The full governance program is also not complete: the governance branch was created from the committed remediation SHA while the original `develop` worktree still contains uncommitted, overlapping wx/terminal remediation changes. Those changes were not incorporated into this branch or its validation. The results below are an accurate record of the governance branch snapshot, not a completed reconciliation of the current dirty `develop` tree.
+**Continuation snapshot: 2026-09-13. Overall status: DEFECT_FOUND.** Taxonomy and ownership cleanup are complete, but the authoritative release runner is blocked by a confirmed local-file permission-handling product defect. Two additional wx product defects remain confirmed, and native lifecycle failures remain unresolved. This report supersedes earlier v2/v3 checkpoints where noted.
 
-## Repository state and scope
+## Repository state and reconciliation
 
-| Item | Value |
+| Item | SHA / state |
 | --- | --- |
-| Frozen audit SHA | `12ce79935bf076e1062c57dc7dbd148bad2bfae1` |
-| Committed remediation SHA used as governance base | `54f7376f3e3e1fccd672f121e33b68d2e8df2652` |
-| Governance branch | `test-suite-governance-20260912-v2` |
-| Governance snapshot SHA for machine evidence | `2b4c675f31ae5aba4b1a2cf9b005b919c53be208` |
-| Governance snapshot collection | 2,685 nodes; 0 collection errors |
+| Frozen audit baseline | `12ce79935bf076e1062c57dc7dbd148bad2bfae1` |
+| Previous committed remediation base | `54f7376f3e3e1fccd672f121e33b68d2e8df2652` |
+| New remediation base | `1de2dce3aa8af037033882b26029fb33f39f9f57` |
+| Previous governance snapshot | `2b4c675f31ae5aba4b1a2cf9b005b919c53be208` |
+| v4 validated test tree | `fe1943dbf18c3fb46f8510f1c5667cb5204361ba` (identical to v3 SHA `2a24d1d0b3ef4d5f91e4b46e0a92306916c18d7c`) |
+| Governance branch | `test-suite-governance-20260912-v4` |
 | Push | None |
+| Automatic CI | Intentionally disabled; no workflow was restored |
 
-The original `D:/Projeler/hpc-client-gui` worktree remains at `54f7376f3e3e1fccd672f121e33b68d2e8df2652` on `develop`, with **21 status-reported modified tracked paths (all unstaged)** and 10 untracked paths. Twenty of the modified paths have textual diff hunks; `src/hpc_gui/wx_remote_files_view.py` is reported modified by status but has no current `git diff` hunk. The worktree was not staged, edited, or cleaned during governance work. The status-reported paths are:
+The original `develop` worktree was `87e1e709…` and had two modified tracked files at reconciliation start. `tests/test_wx_terminal_webview.py` contained only removals of two resolved non-strict xfails; both nodes passed on develop. The change was committed as `1de2dce3 test: remove resolved terminal WebView xfails` and did not change collection. `tests/test_wx_terminal_parity_evidence.py` contained an obsolete test-local generator that writes hardcoded packaged-runtime evidence; it was left untouched. Recovery patches and state capture were saved outside the repository under `C:\Users\mskomek\AppData\Local\Temp\hpc-client-gui-continuation-recovery-20260913`. Ten untracked local paths were also left untouched: `.integration-recovery/`, `audit.zip`, `docs/TEST_SUITE_AUDIT_REPORT_12ce7993.md`, `scripts/check_keys.py`, `scripts/check_line.py`, `scripts/find_mojibake.py`, `scripts/fix_missing_keys.py`, `scripts/fix_mojibake.py`, `tests/WAVE2_REMAINING_TEST_PROMPTS.md`, and `waves.zip`.
 
-```text
-scripts/wx_packaged_smoke.py
-src/hpc_gui/services/file_filter_registry.py
-src/hpc_gui/wx_editor_view.py
-src/hpc_gui/wx_jobs.py
-src/hpc_gui/wx_remote_files_view.py
-src/hpc_gui/wx_shell.py
-src/hpc_gui/wx_terminal.py
-src/hpc_gui/wx_terminal_webview.py
-tests/test_connection_advanced_settings.py
-tests/test_performance_probe.py
-tests/test_selected_job_context.py
-tests/test_transfer_concurrency.py
-tests/test_wave3_remote_sftp_ssh.py
-tests/test_wx_65a_stress.py
-tests/test_wx_embedded_terminal.py
-tests/test_wx_file_action_policy.py
-tests/test_wx_jobs_stress.py
-tests/test_wx_shell_p0.py
-tests/test_wx_shell_p0_stress.py
-tests/test_wx_terminal_parity_evidence.py
-tests/test_wx_terminal_webview.py
-```
+The v4 governance branch was created from the new remediation base. Governance-only commits were cherry-picked; the duplicate xfail-removal patch was omitted because it is now in the base. Conflicts were resolved semantically: WebView retained `wx`/`gui` markers and no xfail; concurrency history retained both sides' evidence. The resulting tree exactly matches v3, and the release run plus focused checks below were executed on v4.
 
-The untracked paths left untouched are `.integration-recovery/`, `audit.zip`, `waves.zip`, `docs/TEST_SUITE_AUDIT_REPORT_12ce7993.md`, `tests/WAVE2_REMAINING_TEST_PROMPTS.md`, and `scripts/check_keys.py`, `scripts/check_line.py`, `scripts/find_mojibake.py`, `scripts/fix_missing_keys.py`, `scripts/fix_mojibake.py`.
+## Collection evolution
 
-Several modified paths overlap remediation and governance ownership, including `wx_shell.py`, `wx_jobs.py`, terminal source/evidence, the settings test, and wx stress/action tests. For example, the uncommitted shell change adds deferred terminal WebView construction; the governance branch's release continuation was run without it. The unchanged `develop` worktree is valuable user work, but its uncommitted changes prevent this branch from being treated as the fully remediated test-governance base. No report below upgrades results from that dirty tree to PASS.
+| Baseline | Nodes | Collection errors |
+| --- | ---: | ---: |
+| Frozen audit `12ce7993` | 2,673 | 0 |
+| Previous remediation `54f7376f` | 2,678 | 0 |
+| New remediation `1de2dce3` | 2,679 | 0 |
+| Previous governance `2b4c675f` | 2,685 | 0 |
+| Current v4 governance | 2,649 | 0 |
 
-The committed remediation history available on `develop` consists of:
+The archived exact list for intermediate SHA `87e1e709` and a fresh clean-worktree collection both contain 2,679 nodes; an earlier summary field incorrectly said 2,678. From frozen audit to remediation base: +7 / −1, net +6. From new remediation base to current governance: +89 / −119, net −30. Frozen to current: +95 / −119, net −24. Exact node sets and comparisons are in `audit/archive/794226e/test-suite-final/nodeid-delta.json`; the new remediation baseline and list are under `audit/archive/1de2dce3/test-suite-baseline/`.
 
-| Commit | Purpose | Validation recorded |
+Significant mappings: the old packaged-smoke false-positive reporting node was replaced by a fail-closed missing-artifact report check (not equivalent runtime evidence); D2 byte-preservation source assertions were replaced by a byte-roundtrip owner; D3 raw server status gained a truthful action owner and is not an equivalent rename of the old selected-job test; D7 precedence has a canonical service owner plus a broader wx owner. The embedded-shell shared-implementation test remains. The dirty develop `test_embedded_and_detached_share_terminal_controls` alternative was not committed or treated as equivalent. Detailed behavior mappings are recorded in `DUPLICATE_GROUP_REVIEW_D1-D7.md` and Packet review documents.
+
+## Confirmed Outputs localization fix
+
+Root cause: output-channel state retained a resolved localized display label. On runtime locale change it kept the old English label even though semantic channel identity remained `stdout`. The wx Jobs view now preserves channel identity and resolves the visible label with current localization at render/update time; no Turkish label was hardcoded. `tests/test_wave80_files_outputs.py::TestWave80Audit::test_runtime_language_switch_updates_outputs` exercises visible language refresh and stable output state. It passed on v4 as part of **62 passed** across the taxonomy checker and Wave80 module; the complete Wave80 module's focused result is **45 passed**. English→Turkish now renders `Standart Çıktı`; output content, selection, and channel identity remain stable. Reusing the old translated label would fail the test.
+
+## Re-evaluated findings
+
+| Finding / node | Current result and classification | Action |
 | --- | --- | --- |
-| `ccfeb1b8` | Stabilize settings config isolation | Settings hang node passed in 0.23 s; the four settings/config modules were recorded as 40 passed. |
-| `2c808f41` | Isolate release-suite process groups | Targeted release-runner and remote-directory tests were updated and exercised; this is not a full release-suite PASS for the final dirty tree. |
-| `1ff36589` | Harden updater artifact lifecycle | Updater/migration selection recorded as 63 passed. |
-| `a0b57b8e` | Align workflow contracts with intentionally disabled CI | Four workflow-contract modules were validated; automatic CI remained disabled. |
-| `9e7e2ce1` | Reconcile remediation evidence | Evidence and screenshot tooling changes; Windows packaged evidence remains FAIL and GUI-TERM-001 remains PARTIAL. |
-| `54f7376f` | Record remediation audit reconciliation | Documentation only; this is the committed base used by governance. |
-
-This series does **not** contain the 21 tracked working-tree edits listed above. They were not forced into commits. The original dirty tree also has no staged hunks at the time of this report. A new recovery patch was not written because no index or worktree mutation was performed on `develop`.
-
-## Packet status
-
-| Packet | Status | Result |
-| --- | --- | --- |
-| A | PASS | Frozen and remediation node inventories retained. Current governance snapshot node IDs and exact deltas are in `audit/archive/2b4c675f/test-suite-baseline/`. |
-| B | PASS | Marker registry, architecture document, report checker, and checker tests added. |
-| C | PASS | Exact-node RATCHET and lane manifests implemented; no automatic CI was enabled. |
-| D | PASS | D1–D7 reviewed; mappings and validations are in `DUPLICATE_GROUP_REVIEW_D1-D7.md`. |
-| E | PASS | Three updater lifecycle tests rewritten and passed their targeted suite. |
-| F | DEFECT_FOUND | Real Outputs label fails to update after an English-to-Turkish switch. Truthful test retained; production code untouched. |
-| G | PASS | Wave ownership reviewed; unique historical and policy evidence retained. |
-| H | PASS | Settings/config isolation reviewed; former hang setup now uses a concrete temporary home. |
-| I | PASS | Runtime claims replaced with behavior evidence where appropriate; static architecture/security checks retained. |
-| J | PASS with follow-up | Five suspicious skip cases were exercised; two WebView non-strict xfails were removed after XPASS and the module passed 29 tests. A later release continuation timed out in the separator lifecycle subprocess, so current full-suite status remains unresolved. |
-| K | PASS | Reporting, artifact-dependent smoke, runtime smoke, and E2E ownership separated. |
-| L | PASS | Qt/wx migration evidence retained by behavior; historical hard-coded evidence writer removed. |
-| M | PARTIAL | Structural ENFORCE passes, but category semantic review is incomplete (see below). |
-| N | PASS | Exact lane comparisons completed; no selector migration was safe, so selectors/workflows were not changed. |
-| O | PARTIAL / BLOCKED | Branch-specific results and this closeout are recorded, but the original dirty remediation work was not incorporated into the governance base. Do not treat this as completion of the requested full program. |
+| `tests/test_wave2_directories_local_files.py::TestErrorHandling::test_list_entries_permission_error` | **CONFIRMED_PRODUCT_DEFECT**; authoritative release runner fails. After catching `Path.stat()` permission denial, `src/hpc_gui/wx_local_files.py:77` calls `item.is_dir()`, which repeats `stat()` and leaks the error. | Truthful failing assertion retained; not fixed. |
+| `tests/test_wave2_wx_ui_parity.py::TestSelectionPreservation::test_rename_preserves_selection` | **CONFIRMED_PRODUCT_DEFECT** in the current diagnostic sweep: the refreshed renamed row is not selected. | Test retained; not fixed. |
+| `tests/test_wx_shell_p0_stress.py::test_wx_shell_p0_stress_real_wx_paths` | Assertions passed in the current timing run, but a real async completion callback was observed raising `RuntimeError` after the wx `Notebook` was destroyed (`wx_remote_files_view.py`, `GetSelection()`). **CONFIRMED_PRODUCT_DEFECT** despite a later passing run. | Evidence retained; not fixed. |
+| `tests/test_hardening_additional.py::test_wx_separator_lifecycle_offscreen` | **NATIVE_RUNTIME_FAILURE / UNRESOLVED**: isolated child exceeded 30 seconds; later module run exited `0xC0000374` heap corruption. | Not called flaky or passing. |
+| About dialog/no-network runtime test | Isolated child passed 1/1. A combined Qt/WebView process produced Windows access violation at this node after the updater and WebView modules. **ORDER_DEPENDENCE / NATIVE_RUNTIME_FAILURE**; not a confirmed product defect. | No retry in main process; native lifecycle evidence retained. |
+| `tests/test_wave3_remote_sftp_ssh.py::TestRemoteEntryHelpers::test_file_type_directory` | **RESOLVED_BY_REMEDIATION**; scoped locale save/restore fixture, Wave3 module 28 passed. | No further change. |
+| `test_remote_policy_exact_matrix` (two cases) | **RESOLVED_BY_REMEDIATION**; current policy module 16 passed. | Service candidate and visible-menu filtering remain separate owners. |
+| `tests/test_wx_65a_stress.py::test_wx_65a_integrated_stress` | Passed current isolated diagnostic in 160.02s; measured invariants were zero. Earlier WebView abort diagnostics did not reproduce as heap corruption in that run. | No skip or retry added. |
+| Remote navigation/sort/provider-filter visible test | Current behavior module 28 passed. | Visible behavior evidence retained. |
+| Shell P0 completion/deduplication tests | Current module 13 passed. | Retained. |
+| Embedded-terminal/WebView close and ordering cases | WebView module 29 and embedded module 10 passed in bounded runs; earlier native abort did not reproduce. | Historical abort remains historical evidence; no packaged parity claim. |
+| `tests/test_performance_probe.py::test_qt_event_loop_block_is_detected` | Rewritten to schedule an explicit blocking callback and test the actual heartbeat; it passed alone, the module, and the authoritative release run. | Resolved by test remediation. |
 
 ## Test taxonomy
 
-The remediation baseline had 2,678 nodes before taxonomy work. Packet B's marker-report snapshot had 2,687 nodes: 2,678 zero-primary legacy nodes, nine classified audit checker nodes, and zero multi-primary nodes. The governance snapshot collected 2,685 nodes and reports zero zero-primary and zero multi-primary nodes.
+Every collected node has exactly one actual pytest primary marker. The semantic review used test bodies and evidence paths, not filename heuristics. Machine review records `reviewed=true` for **2,649/2,649** nodes at `audit/archive/794226e/test-suite-final/semantic-taxonomy-review.json`.
 
-| Primary category | Before taxonomy markers | Governance snapshot |
-| --- | ---: | ---: |
-| unit | 0 | 634 |
-| integration | 0 | 294 |
-| gui | 0 | 899 |
-| e2e | 0 | 1 |
-| runtime_smoke | 0 | 36 |
-| contract | 0 | 576 |
-| audit | 9 | 100 |
-| reporting | 0 | 22 |
-| release | 0 | 123 |
-| zero-primary | 2,678 | 0 |
-| multi-primary | 0 | 0 |
-| total at respective snapshot | 2,687 | 2,685 |
+| Primary | Count |
+| --- | ---: |
+| unit | 659 | 18.917 | 0.0090 | 0.0447 |
+| integration | 387 | 38.776 | 0.0237 | 0.4142 |
+| gui | 654 | 950.536 | 0.1651 | 2.0764 |
+| e2e | 15 | 25.247 | 0.1116 | 7.0437 |
+| runtime_smoke | 4 | 2.884 | 0.7855 | 1.2086 |
+| contract | 621 | 25.897 | 0.0079 | 0.0361 |
+| audit | 175 | 9.725 | 0.0086 | 0.3345 |
+| reporting | 47 | 1.266 | 0.0076 | 0.0426 |
+| release | 87 | 21.749 | 0.0060 | 0.0697 |
+| **Total** | **2,649** |
 
-Governance-snapshot qualifier counts: `semantic 0`, `regression 3`, `performance 0`, `resource 0`, `concurrency 0`, `slow 0`, `subprocess 0`, `windows 0`, `linux 0`, `macos 0`, `hardware 0`, `synthetic_hardware 0`, `license 0`, `acceptance 1`, `artifact_dependent 1`, `wx 541`, `qt 288`, `packaging 2`.
+Taxonomy ENFORCE passes: zero-primary 0, multi-primary 0, unknown registered markers 0, missing markers 0, semantic-review gaps 0. Checker warnings for direct test calls and generic catch-all filenames are both zero.
 
-`--mode enforce` and the exact-node ratchet both pass structurally. However, most legacy tests received primary markers from the archived `proposed_primary` heuristic field, which the archive labels heuristic-only. Selected mixed/high-risk modules were reviewed and corrected from source evidence, but a semantic fidelity review of the remaining categories was not completed. Marker cardinality is not proof of category correctness; therefore zero-primary/multi-primary = 0 does not satisfy Packet M's semantic completion gate.
+| Qualifier | Count | Qualifier | Count |
+| --- | ---: | ---: | ---: |
+| semantic | 92 | regression | 62 |
+| performance | 20 | resource | 289 |
+| concurrency | 157 | slow | 4 |
+| subprocess | 61 | windows | 13 |
+| linux | 61 | macos | 52 |
+| hardware | 0 | synthetic_hardware | 0 |
+| license | 1 | acceptance | 1 |
+| artifact_dependent | 29 | wx | 558 |
+| qt | 349 | packaging | 50 |
 
-The checker reports JSON and derives classification from real pytest markers. It does not use filename heuristics as category truth. No generic catch-all filename or direct-test-call warning was reported. The actual category report and enforcement records are preserved under `audit/archive/2b4c675f/test-suite-baseline/`.
+Hardware and synthetic-hardware qualifiers are both zero; fake SSH/Slurm providers are not described as real hardware evidence.
 
-## Test outcomes and release selection
+## Cleanup status
 
-The normal release runner stopped after its broad pytest group failed:
+- D1–D7 were re-audited and remain resolved on v4. Focused owners passed 4/4 static/service, 4/4 Wave78/visible Files, and 3/3 Outputs/D7 wx tests.
+- Three updater lifecycle tests exercise cancellation, in-flight close, and queued late completion behavior. Updater spec module passed 22/22 in a bounded child.
+- Terminal fallback cases create visible fallback UI and assert non-parity; WebView module passed 29/29. This is not packaged WebView parity evidence.
+- About and updater ordering claims now use runtime behavior. About isolated passed 1/1; updater ordering isolated passed 1/1. Mixed-process native access violation is recorded above.
+- Wave80 Files/Outputs visible localization evidence passed; the Outputs defect is fixed.
+- Source-text runtime claims were rewritten to runtime evidence; legitimate audit/contract checks remain static.
+- Packaged smoke is a fail-closed reporting gate and does not count as packaged-runtime or E2E evidence. Plugin E2E remains because it crosses the expected boundaries.
+- Five suspicious skip sites were reviewed; none was converted into a pass merely because of flakiness. The two resolved non-strict WebView xfails were removed. Current timing sweep and authoritative release summary report xfail 0 / xpass 0.
+- Catch-all ownership has no current warning. Migration and historical evidence remain documented rather than deleted by filename.
 
-```text
-python scripts/release_test_suite.py — exit 1
-1,904 passed, 3 failed, 21 skipped, 2 deselected; 29 subtests passed; 128.74 s
-```
+## Lane comparison (Packet N)
 
-The coverage invocation also exited 1 on the same three broad failures and reported 47% coverage for that partial broad group; the runner stopped before its isolated per-file phase. To continue the selected work, the remaining 51 process groups were run manually. After the WebView xfail follow-up (both XPASS nodes reran as passing), the assembled selected-item result is:
+| Lane | Existing | Marker candidate | Added / removed | Exact |
+| --- | ---: | ---: | ---: | :---: |
+| cli | 164 | 1671 | 1510 / 3 | no |
+| compat | 202 | 1667 | 1470 / 5 | no |
+| contract | 10 | 621 | 618 / 7 | no |
+| macos_explicit | 55 | 52 | 28 / 31 | no |
+| packaging | 3 | 50 | 47 / 0 | no |
+| release_suite | 2599 | 2599 | 0 / 0 | yes |
+| ssh | 45 | 1008 | 975 / 12 | no |
+| windows_pytest | 6 | 13 | 13 / 6 | no |
 
-```text
-2,646 passed
-16 failed
-21 skipped
-0 xfail
-0 xpass
-2 deselected
-2,683 selected items executed from 2,685 collected
-```
-
-This aggregate reconciles the runner's initial process with isolated continuations; it is not a single uninterrupted successful release-runner invocation. The two packaging-marked nodes were deselected, and no packaged artifact runtime test was run.
-
-| Failing node | Recorded result |
-| --- | --- |
-| `tests/test_wave3_remote_sftp_ssh.py::TestRemoteEntryHelpers::test_file_type_directory` | Order-dependent language-state leak: broad run sees Turkish text where English is expected; isolated test passes. |
-| `tests/test_wx_file_action_policy.py::test_remote_policy_exact_matrix[one_file-selection1-expected1]` | Service-matrix expected list omits optional candidate actions; service/view contract expectation needs review. |
-| `tests/test_wx_file_action_policy.py::test_remote_policy_exact_matrix[one_dir-selection2-expected2]` | Same optional-action contract mismatch. |
-| `tests/test_hardening_additional.py::test_wx_separator_lifecycle_offscreen` | Subprocess timed out at its 30-second bound; this conflicts with the earlier focused PASS and needs rerun/reconciliation. |
-| `tests/test_wave80_files_outputs.py::TestWave80Audit::test_runtime_language_switch_updates_outputs` | **Confirmed product defect:** the visible output tab remains English after switching to Turkish. `src/hpc_gui/wx_jobs.py:2297` reuses the cached channel label. Keep the failing test; do not change production code under this task. |
-| `tests/test_wx_65a_stress.py::test_wx_65a_integrated_stress` | `KeyError: language_button`, followed by Windows heap-corruption exit `0xC0000374`. |
-| `tests/test_wx_remote_file_actions_behavior.py::test_wx_remote_navigation_sort_and_provider_filter_are_visible` | Visible listing has no expected `run.log` row. |
-| `tests/test_wx_shell_p0.py::test_wx_shell_completion_states_and_deduplication` | Bounded event wait did not observe the expected COMPLETING row. |
-| `tests/test_wx_shell_p0_stress.py::test_wx_shell_p0_stress_real_wx_paths` | `KeyError: update` while reading expected shell control labels. |
-| `tests/test_wx_embedded_terminal.py::test_embedded_terminal_find_button_selects_match` | WebView2 `WebViewCreated` operation-aborted diagnostics; child process exited with `0xC0000374`. |
-| `tests/test_wx_embedded_terminal.py::test_embedded_terminal_clear_button_clears_visible_output_and_model` | Same WebView2/native process failure. |
-| `tests/test_wx_embedded_terminal.py::test_embedded_terminal_font_decrease_changes_visible_font` | Same WebView2/native process failure. |
-| `tests/test_wx_embedded_terminal.py::test_embedded_terminal_font_increase_changes_visible_font` | Same WebView2/native process failure. |
-| `tests/test_wx_embedded_terminal.py::test_embedded_terminal_ctrl_c_sends_interrupt_not_copy` | Same WebView2/native process failure. |
-| `tests/test_wx_embedded_terminal.py::test_embedded_terminal_copy_shortcut_does_not_send_interrupt` | Same WebView2/native process failure. |
-| `tests/test_wx_embedded_terminal.py::test_embedded_terminal_resize_reaches_pty_resize` | Same WebView2/native process failure. |
-
-Only the Outputs localization issue is confirmed here as a product defect. The remaining failures are preserved as observed failures, timeouts, assertion mismatches, or native runtime failures; they are not silently recast as product defects or passes.
-
-## Duplicate groups and weak-test cleanup
-
-| Group | Current governance-branch state |
-| --- | --- |
-| D1 — SSH decode policy | Duplicate source-policy owner removed; retained Wave0 audit owner is static policy evidence. |
-| D2 — SFTP byte preservation | Replaced ineffective source-text assertions with an arbitrary-byte SFTP roundtrip behavior owner. |
-| D3 — Wave78 selection/status | No-selection node now asserts no selected job; raw-status node triggers its action and checks the result reaches the viewer seam. The retired raw-status node is not treated as a rename. |
-| D4 — optional schema sections | Same node now supplies optional sections; minimal schema remains owned separately. |
-| D5 — Files localization | Duplicate catalog assertions merged; a separate visible toolbar localization behavior test was added. |
-| D6 — Outputs localization | Duplicate catalog assertions merged; a real visible language-switch test now exposes the defect above. |
-| D7 — typed password precedence | Service-domain owner added; broader wx owner retained for its additional SSH, GUI, and storage assertions. |
-
-The three updater lifecycle nodes were rewritten to exercise cancellation, close events, worker ownership, and late callbacks; focused tests passed. The settings hang was changed to use a concrete temporary home and its isolated node passed in 0.23 seconds. Both terminal fallback tests now instantiate the fallback and assert visible, usable, non-parity behavior. About dialog and updater ordering source-text claims were replaced with runtime evidence. Five previously suspicious skip cases were exercised in focused runs; two WebView non-strict xfails were removed after XPASS and the WebView module then passed 29 tests. One separator subprocess later timed out in the broad continuation, so current full-suite stability is not established.
-
-The embedded-terminal node in the committed governance branch is still `tests/test_wx_embedded_terminal.py::test_shell_embedded_and_detached_share_implementation` in both the frozen and remediation inventories. The dirty `develop` worktree has an uncommitted replacement named `test_embedded_and_detached_share_terminal_controls`; its equivalence is **not proven**, and it was not incorporated into this governance branch. No rename equivalence is claimed.
-
-## Collection delta and behavior-owner mapping
-
-```text
-Frozen baseline:       2,673
-Remediation baseline:  2,678  (+5 / -0 from frozen)
-Governance snapshot:   2,685  (+21 / -14 from remediation; +26 / -14 from frozen)
-Collection errors:     0
-```
-
-The exact added and removed IDs are in `audit/archive/2b4c675f/test-suite-baseline/node-delta-from-frozen.json` and `node-delta-from-remediation.json`; the current full inventory is `nodeids.txt`.
-
-Removed behavior owners and disposition:
-
-1. `tests/test_about_dialog.py::test_about_instantiates_offscreen` — construction/version assertion is covered by the strengthened runtime `test_about_shows_version_and_no_network`.
-2. `tests/test_macos_signing.py::test_signing_source_has_cleanup_and_no_secret_echo` — replaced by runtime `test_signing_cleans_keychain_without_echoing_secrets`; not an equivalent static check.
-3. `tests/test_wave0_unicode_baseline.py::TestRiskClassification::test_p0_sftp_roundtrip_risks_documented` — risk-documentation inventory assertion retired; no runtime behavior equivalence claimed.
-4. `tests/test_wave1_unicode_core_policy.py::TestEncodingBoundaryJustification::test_files_ssh_utf8_justified` — static justification assertion retired; byte-preservation behavior is now owned by the SFTP arbitrary-byte roundtrip test.
-5. `tests/test_wave1_unicode_core_policy.py::TestEncodingBoundaryJustification::test_ssh_client_decode_justified` — duplicate SSH decode policy assertion retired; the retained Wave0 policy audit remains static policy evidence.
-6. `tests/test_wave78_jobs_details.py::test_raw_server_status_opens` — replaced by the differently named action-dispatch behavior node; visual raw-window rendering is not claimed.
-7. `tests/test_wave80_files_outputs.py::TestFilesBehavior::test_context_menu_labels_localized` — duplicate catalog-value owner; visible toolbar localization has separate GUI evidence, but this does not prove context-menu rendering.
-8. `tests/test_wave80_files_outputs.py::TestWave80Audit::test_files_context_menu_localized` — duplicate catalog-value owner, retired with the same limitation above.
-9. `tests/test_wave80_files_outputs.py::TestWave80Audit::test_outputs_standard_output_error_localized` — duplicate catalog-value owner; the live Outputs language-switch owner now exercises visible tabs and fails truthfully.
-10. `tests/test_wx_connection_71_2.py::test_typed_password_precedence` — duplicate service assertion replaced by `ConnectionProfileServiceTests::test_typed_password_precedes_saved_secret`.
-11. `tests/test_wx_connection_71_3.py::test_typed_password_precedence` — same service owner; broader wx hardening owner remains for extra invariants.
-12. `tests/test_wx_jobs_behavior.py::test_wx_job_output_pause_keeps_refreshing_but_stops_live_follow` — renamed/strengthened as `test_wx_job_output_pause_freezes_and_resume_updates_output`.
-13. `tests/test_wx_jobs_stress.py::test_wx_jobs_stress_backend_workers_and_reads_are_bounded` — direct test-double-only node removed; production-path blocked-read ownership is in Jobs behavior tests.
-14. `tests/test_wx_terminal_parity_evidence.py::test_generate_parity_evidence` — hard-coded evidence writer removed; historical JSON is retained and no test writes fabricated runtime PASS evidence.
-
-The five updater remediation nodes added before governance are listed in the remediation baseline README. The 21 governance additions (including checker tests and new behavior owners) are preserved in the machine-readable delta; no probable renames are asserted by the delta generator.
+Only release suite has exact parity. Existing file selectors remain; automatic CI was not re-enabled.
 
 ## Validation
 
-| Command | Exit / result |
-| --- | --- |
-| `python -m compileall -q src/hpc_gui` | PASS (preflight on governance snapshot) |
-| `python -m ruff check src scripts tests` | PASS (preflight on governance snapshot) |
-| `python scripts/check_i18n.py` | PASS (preflight on governance snapshot) |
-| `python scripts/smoke_test.py` | PASS (preflight on governance snapshot) |
-| `python -m pytest tests --collect-only -q` | PASS; 2,685 nodes, 0 errors |
-| `python -m pytest tests/test_test_taxonomy_checker.py -q` | PASS; 15 passed |
-| `python scripts/check_test_taxonomy.py --mode enforce` | PASS; zero/multi-primary 0, no unknown markers |
-| `python scripts/check_test_taxonomy.py --mode ratchet --baseline audit/archive/54f7376f/test-suite-baseline/taxonomy-ratchet.json` | PASS; 12 added and 14 removed from Packet C inventory, no new debt or lost prior classifications |
-| `python scripts/release_test_suite.py` | FAIL; broad group 1,904 passed, 3 failed, 21 skipped, 2 deselected; runner stopped |
-| `python scripts/release_test_suite.py --coverage` | FAIL; same broad failures; 47% partial coverage before runner stopped |
-| Remaining selector process groups | Manually continued; combined reconciled outcome 2,646 passed, 16 failed, 21 skipped, 0 xfail/xpass, 2 deselected |
-| Packaged artifact smoke | Not run in Packet K/O; existing artifact evidence remains FAIL |
+| Command | Exit | Result |
+| --- | ---: | --- |
+| `python -m compileall -q src/hpc_gui` | 0 | PASS |
+| `python -m ruff check src scripts tests` | 0 | PASS |
+| `python scripts/check_i18n.py` | 0 | PASS |
+| `python scripts/smoke_test.py` | 0 | PASS |
+| `python scripts/check_test_taxonomy.py --mode report` | 0 | 2,649 nodes reported |
+| `python scripts/check_test_taxonomy.py --mode enforce --semantic-review ...` | 0 | PASS, 2,649/2,649 reviewed |
+| `python -m pytest tests --collect-only -q` | 0 | 2,649 collected; 0 errors |
+| Taxonomy checker + Wave80 module | 0 | 62 passed in 8.85s |
+| D1/D2/D4/D7 service-focused owners | 0 | 4 passed |
+| Wave78 status + visible Files locale owners | 0 | 4 passed |
+| Outputs contract/runtime + wx password owner | 0 | 3 passed |
+| `tests/test_wx_updater_spec.py` isolated | 0 | 22 passed in 3.08s |
+| `tests/test_wx_terminal_webview.py` isolated | 0 | 29 passed in 22.88s |
+| About no-network node isolated | 0 | 1 passed; mixed-process access violation recorded separately |
+| Updater splash-before-worker node isolated | 0 | 1 passed |
+| `python scripts/release_test_suite.py` | 1 | 1 failed, 1,825 passed, 19 skipped, 50 deselected; confirmed product defect above |
+| `python scripts/release_test_suite.py --coverage` | 1 | Same defect; coverage 46%, partial gate |
+| `git diff --check` | 0 | PASS before documentation commit |
 
-The taxonomy and release outcome JSON record the exact governance snapshot SHA `2b4c675f31ae5aba4b1a2cf9b005b919c53be208`. The suite was not rerun against the uncommitted `develop` tree listed above.
+Authoritative release result is not green. It stopped at the permission-denial failure before later isolated groups. Coverage reached 46% in the same failed group and did not complete downstream coverage gates.
 
-## Duration report
+## Outcomes and performance
 
-The sum of reported pytest process durations across the broad release process and 51 isolated continuations was **1,397.37 seconds** (23m 17s). This is a sum of process-reported durations, not wall-clock elapsed time. Slow module runs included `tests/test_wx_layout_resize.py` 432.78 s (1 passed), `tests/test_wx_file003_final_stress.py` 206.26 s (11 passed), the broad release process 128.74 s, `tests/test_wx_65a_stress.py` 73.03 s before native crash, `tests/test_wx_shell_p0.py` 71.12 s (1 failed, 12 passed), and `tests/test_wx_jobs_stress.py` 58.60 s (11 passed).
+Authoritative release-suite group: passed 1,825; failed 1; skipped 19; xfail 0; xpass 0; deselected 50; 29 subtests passed. Pytest time 95.06s; runner wall time 101.03s. Coverage run: same test outcomes, 46%, pytest 167.93s, runner 175.55s, incomplete. Separate 2,649-node process-group timing sweep: 2,625 passed, 3 failed, 21 skipped, 0 xfail/xpass; this is diagnostic and is not combined with the release result.
 
-The following per-node sample is **partial timing data from the frozen audit inventory**, not current benchmark data. It contains 223 of 2,685 current node IDs; no E2E duration sample exists.
+The timing report covers all 2,649 nodes and the exact validated source tree. It sums test body work (not one-process wall time): **1094.998s**. Category totals, median, and p95:
 
-| Primary | Samples | Median seconds | p95 seconds |
-| --- | ---: | ---: | ---: |
-| audit | 8 | 0.0439 | 8.7800 |
-| contract | 7 | 0.0008 | 0.0333 |
-| gui | 15 | 0.0215 | 0.3752 |
-| integration | 25 | 0.0033 | 0.0773 |
-| release | 7 | 0.0012 | 3.7673 |
-| reporting | 4 | 0.0008 | 0.0025 |
-| runtime_smoke | 25 | 0.0501 | 0.1626 |
-| unit | 132 | 0.0466 | 0.1096 |
-| e2e | 0 | — | — |
+| Category | Count | Sum (s) | Median (s) | p95 (s) |
+| --- | ---: | ---: | ---: | ---: |
+| unit | 659 | 18.917 | 0.0090 | 0.0447 |
+| integration | 387 | 38.776 | 0.0237 | 0.4142 |
+| gui | 654 | 950.536 | 0.1651 | 2.0764 |
+| e2e | 15 | 25.247 | 0.1116 | 7.0437 |
+| runtime_smoke | 4 | 2.884 | 0.7855 | 1.2086 |
+| contract | 621 | 25.897 | 0.0079 | 0.0361 |
+| audit | 175 | 9.725 | 0.0086 | 0.3345 |
+| reporting | 47 | 1.266 | 0.0076 | 0.0426 |
+| release | 87 | 21.749 | 0.0060 | 0.0697 |
 
-Slowest 20 nodes in that partial sample:
+Slowest 20 test nodes:
 
-| # | Seconds | Category | Node |
+| # | Seconds | Node | Outcome |
 | ---: | ---: | --- | --- |
-| 1 | 8.7800 | audit | `tests/test_branding_check.py::BrandingCheckTest::test_clean_tree_passes` |
-| 2 | 3.7673 | release | `tests/test_app_updater.py::test_windows_installer_script_has_independent_real_progress_and_rollback` |
-| 3 | 1.1715 | runtime_smoke | `tests/test_cli_entrypoint.py::test_cli_import_never_pulls_qt_or_webengine` |
-| 4 | 0.6562 | unit | `tests/test_command_palette_regression.py::test_command_palette_not_wired_to_help` |
-| 5 | 0.3752 | gui | `tests/test_connection_advanced_settings.py::LoginWidgetPolicyPropagationTests::test_login_widget_uses_canonical_policy_state` |
-| 6 | 0.3344 | unit | `tests/test_cli.py::test_access_gate_off_exempt_commands_still_succeed` |
-| 7 | 0.2105 | unit | `tests/test_cli.py::test_doctor_environment_json` |
-| 8 | 0.1834 | unit | `tests/test_cli.py::test_access_gate_on_allows_denied_command` |
-| 9 | 0.1626 | runtime_smoke | `tests/test_cli.py::test_doctor_smoke_text_and_json_expose_identical_stage_set` |
-| 10 | 0.1593 | runtime_smoke | `tests/test_cli.py::test_doctor_smoke_artifact_written[fixture1-3]` |
-| 11 | 0.1329 | unit | `tests/test_cli.py::test_files_not_a_directory_exit_one_distinct_message` |
-| 12 | 0.1120 | integration | `tests/test_cli.py::test_access_gate_off_blocks_remote_commands[profile-test]` |
-| 13 | 0.1106 | runtime_smoke | `tests/test_cli_entrypoint.py::test_remote_script_uses_bash_and_rejects_control_characters` |
-| 14 | 0.1105 | unit | `tests/test_cli.py::test_files_access_denied_exit_one_distinct_message` |
-| 15 | 0.1096 | unit | `tests/test_cli.py::test_commands_json_inventory_matches_parser_and_exit_codes` |
-| 16 | 0.1022 | unit | `tests/test_cli.py::test_profile_update_preserves_secrets_and_system_round_trip` |
-| 17 | 0.1015 | runtime_smoke | `tests/test_cli.py::test_doctor_smoke_artifact_write_failure_returns_operation_failed` |
-| 18 | 0.0996 | unit | `tests/test_cli.py::test_profile_test_missing_exit_one_and_opener_not_called` |
-| 19 | 0.0955 | unit | `tests/test_cli.py::test_profile_test_text_mode_matches_json_payload` |
-| 20 | 0.0896 | unit | `tests/test_cli.py::test_files_checksum_permission_denied_reports_with_path` |
+| 1 | 195.588 | `tests/test_wx_shell_p0_stress.py::test_wx_shell_p0_stress_real_wx_paths` | passed |
+| 2 | 160.020 | `tests/test_wx_65a_stress.py::test_wx_65a_integrated_stress` | passed |
+| 3 | 132.980 | `tests/test_wx_layout_resize.py::test_wx_layout_resize` | passed |
+| 4 | 37.933 | `tests/test_wx_file003_final_stress.py::test_stress_e_navigate_completion_races` | passed |
+| 5 | 30.055 | `tests/test_hardening_additional.py::test_wx_separator_lifecycle_offscreen` | failed |
+| 6 | 29.126 | `tests/test_wx_file003_final_stress.py::test_stress_b_local_mutations` | passed |
+| 7 | 27.599 | `tests/test_wx_file003_final_stress.py::test_stress_c_remote_mutations` | passed |
+| 8 | 26.842 | `tests/test_wx_file003_final_stress.py::test_stress_i_unicode_and_space_names` | passed |
+| 9 | 22.833 | `tests/test_wx_jobs_stress.py::test_wx_jobs_stress_open_close_repeatedly_does_not_leak_windows_or_timers` | passed |
+| 10 | 21.389 | `tests/test_wx_file003_final_stress.py::test_stress_d_target_switches` | passed |
+| 11 | 19.759 | `tests/test_wheel_packaging.py::test_built_wheel_contains_required_assets` | passed |
+| 12 | 13.542 | `tests/test_wx_file003_final_stress.py::test_stress_f_browser_open_close` | passed |
+| 13 | 10.960 | `tests/test_wx_terminal_webview.py::test_wx_terminal_screen_state_readback_and_alternate_buffer` | passed |
+| 14 | 9.873 | `tests/test_wx_file003_final_stress.py::test_stress_g_blocked_close_in_flight` | passed |
+| 15 | 7.050 | `tests/test_wx_editor_window_parity.py::test_wx_editor_window_manager_repeated_open_close_does_not_leak_frames` | passed |
+| 16 | 7.044 | `tests/test_mock_cluster_roundtrip.py::MockClusterRoundTripTests::test_files_round_trip_over_real_ssh_wire` | passed |
+| 17 | 6.461 | `tests/test_wx_file_actions_stress.py::test_wx_local_mutation_stress_uses_real_actions` | passed |
+| 18 | 5.609 | `tests/test_wx_file_actions_stress.py::test_wx_remote_mutation_stress_uses_real_actions` | passed |
+| 19 | 5.265 | `tests/test_download_cancel_wire.py::DownloadCancelWireTests::test_overwriting_a_partial_discards_it_before_downloading` | passed |
+| 20 | 4.660 | `tests/test_mock_cluster_roundtrip.py::MockClusterRoundTripTests::test_jobs_commands_round_trip_over_real_ssh_wire` | passed |
 
-Slowest sampled GUI node: `tests/test_connection_advanced_settings.py::LoginWidgetPolicyPropagationTests::test_login_widget_uses_canonical_policy_state` at 0.3752 s. No sampled E2E node is available. Full machine-readable timing data is `audit/archive/2b4c675f/test-suite-baseline/performance-report.json`.
+Slowest GUI nodes:
 
-## Product defect and release truth
+| # | Seconds | Node |
+| ---: | ---: | --- |
+| 1 | 195.588 | `tests/test_wx_shell_p0_stress.py::test_wx_shell_p0_stress_real_wx_paths` |
+| 2 | 160.020 | `tests/test_wx_65a_stress.py::test_wx_65a_integrated_stress` |
+| 3 | 132.980 | `tests/test_wx_layout_resize.py::test_wx_layout_resize` |
+| 4 | 37.933 | `tests/test_wx_file003_final_stress.py::test_stress_e_navigate_completion_races` |
+| 5 | 30.055 | `tests/test_hardening_additional.py::test_wx_separator_lifecycle_offscreen` |
+| 6 | 29.126 | `tests/test_wx_file003_final_stress.py::test_stress_b_local_mutations` |
+| 7 | 27.599 | `tests/test_wx_file003_final_stress.py::test_stress_c_remote_mutations` |
+| 8 | 26.842 | `tests/test_wx_file003_final_stress.py::test_stress_i_unicode_and_space_names` |
+| 9 | 22.833 | `tests/test_wx_jobs_stress.py::test_wx_jobs_stress_open_close_repeatedly_does_not_leak_windows_or_timers` |
+| 10 | 21.389 | `tests/test_wx_file003_final_stress.py::test_stress_d_target_switches` |
 
-**Confirmed defect:** `tests/test_wave80_files_outputs.py::TestWave80Audit::test_runtime_language_switch_updates_outputs` changes the live GUI language from English to Turkish while a real selected job's stdout/stderr tabs are visible. The stdout tab remains `Standard Output`, not `Standart Çıktı`. The assertion is truthful. The likely product area is `src/hpc_gui/wx_jobs.py:2297`, where a cached resolved-channel label is reused. Production code was not changed. This packet's test is retained; no downstream work may convert this result to PASS by weakening evidence.
+Slowest E2E nodes:
 
-Release and external evidence remain separate from test-suite outcomes:
+| # | Seconds | Node |
+| ---: | ---: | --- |
+| 1 | 7.044 | `tests/test_mock_cluster_roundtrip.py::MockClusterRoundTripTests::test_files_round_trip_over_real_ssh_wire` |
+| 2 | 5.265 | `tests/test_download_cancel_wire.py::DownloadCancelWireTests::test_overwriting_a_partial_discards_it_before_downloading` |
+| 3 | 4.660 | `tests/test_mock_cluster_roundtrip.py::MockClusterRoundTripTests::test_jobs_commands_round_trip_over_real_ssh_wire` |
+| 4 | 4.089 | `tests/test_download_cancel_wire.py::DownloadCancelWireTests::test_resuming_after_a_cancel_completes_the_file` |
+| 5 | 2.032 | `tests/test_download_cancel_wire.py::DownloadCancelWireTests::test_cancel_keeps_the_partial_and_leaves_the_session_usable` |
+| 6 | 1.746 | `tests/test_download_cancel_wire.py::DownloadCancelWireTests::test_skipping_a_partial_leaves_it_alone` |
+| 7 | 0.181 | `tests/test_plugin_e2e.py::test_full_clean_user_lifecycle` |
+| 8 | 0.112 | `tests/test_fluent_plugin_integration.py::test_registry_entry_installs_via_exact_file_protocol` |
+| 9 | 0.077 | `tests/test_fluent_plugin_integration.py::test_latest_fluent_template_renders_after_install` |
+| 10 | 0.042 | `tests/test_plugin_installer.py::test_valid_install_end_to_end` |
 
-| Evidence area | Current truth |
+Full phase durations, diagnostic outcomes, lane node sets, taxonomy reports, exact node deltas, and authoritative release outcomes are archived under `audit/archive/794226e/test-suite-final/`.
+
+## Release truth
+
+| Evidence area | Status |
 | --- | --- |
-| Automatic GitHub CI | Intentionally disabled; `.github/workflows/ci.yml` remains absent; `docs/ci-disabled/ci.yml` remains archival. Manual release workflow remains. |
-| Windows packaged smoke | **FAIL** in `build/audit/wx-packaged-smoke-windows.json`; artifact-owned runtime evidence remains fail. |
-| GUI-TERM-001 parity | **PARTIAL**; current packaged keyboard-to-xterm-to-PTY output not demonstrated. |
-| Linux packaged runtime | Qt-only offscreen smoke was limited PASS; full Linux wx/WebKit packaged runtime is NOT EVIDENCED. |
-| macOS packaged runtime | NOT EVIDENCED. |
-| Live cluster / production transport | NOT EVIDENCED. No live cluster was exercised. |
-| Manual packaged GUI sign-off | NOT EVIDENCED. Source screenshots with mock data are not sign-off. |
-| Real/synthetic hardware | No hardware-qualified or synthetic-hardware-qualified tests are currently classified; neither evidence class is claimed as passed. |
+| Automatic GitHub CI | Intentionally disabled |
+| Windows packaged smoke | FAIL |
+| GUI-TERM-001 packaged terminal parity | PARTIAL |
+| Linux packaged wx/WebKit runtime | NOT EVIDENCED |
+| macOS packaged runtime | NOT EVIDENCED |
+| Live-cluster evidence | NOT EVIDENCED |
+| Manual GUI sign-off | NOT EVIDENCED |
+| Test taxonomy correctness | PASS |
+| Release readiness | NO-GO while confirmed defects and evidence gaps remain |
 
-Static/audit/reporting success does not grant runtime coverage. The packaged-smoke reporting validator is not packaged artifact execution evidence. The plugin service-level E2E owner does not claim GUI or live-cluster coverage.
+## Packet status
 
-## Safe continuation
+| Packet | Status |
+| --- | --- |
+| A — baseline and inventory | PASS; corrected 2,679 remediation count |
+| B — taxonomy/report checker | PASS |
+| C — ratchet/lane manifests | PASS |
+| D — D1–D7 duplicates | PASS |
+| E — updater lifecycle | PASS |
+| F — GUI truthfulness | PASS; authorized Outputs product defect fixed |
+| G — wave ownership | PASS |
+| H — settings isolation | PASS |
+| I — source-text behavior rewrites | PASS |
+| J — resource/concurrency | PARTIAL; unresolved separator native failure and callback defect evidence |
+| K — reporting/E2E reclassification | PASS |
+| L — static/migration ownership | PASS |
+| M — semantic full-suite taxonomy | PASS, 2,649/2,649 |
+| N — lane migration | KEEP current selectors; exact marker parity unavailable for seven lanes |
+| O — reporting integration/closeout | DEFECT_FOUND; report is truthful, authoritative release gate fails |
 
-The remaining safe path is to create the required recovery copies outside the original repository, review and commit the 21 existing `develop` worktree changes in their logical remediation groups, validate their exact combined tree, and then recreate or safely advance governance from that resulting SHA. Only after reconciling that new base can Packet A–O results be treated as the requested end-to-end run. Keep the 11 unknown/untracked original paths untouched. Do not push.
+## Remaining issues
+
+1. Confirmed product defects: permission-denied local directory listing, renamed-row selection preservation, and an asynchronous wx callback accessing a destroyed Notebook. None was modified here except the separately authorized Outputs localization defect.
+2. Native wx separator lifecycle timeout/heap corruption remains unresolved. The About dialog node passes alone but had one combined-process native access violation.
+3. Windows packaged terminal parity remains FAIL/PARTIAL; Linux/macOS packaged runtime and live-cluster evidence are absent.
+
+No push was performed.

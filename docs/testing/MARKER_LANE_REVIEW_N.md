@@ -22,3 +22,20 @@ cannot drop its file restriction because another node also carries
 `packaging`. All other selectors remain unchanged. In particular,
 `.github/workflows/ci.yml` remains absent, `docs/ci-disabled/ci.yml` remains
 archival, and the manual release workflow remains the only active workflow.
+
+## Reconciled v4 recheck (2026-09-13)
+
+This section supersedes the earlier 2,683-node snapshot above. The final governance test tree is `fe1943dbf18c3fb46f8510f1c5667cb5204361ba`, collected at 2,649 nodes. Exact selected nodeids are archived at `audit/archive/794226e/test-suite-final/marker-lane-reconciliation.json`.
+
+| Lane | Existing selector | Marker candidate | Added / removed | Exact | Decision |
+| --- | ---: | ---: | ---: | :---: | --- |
+| Release suite | 2,599 | 2,599 | 0 / 0 | yes | Keep current runner selector. |
+| Packaging | 3 | 50 | 47 / 0 | no | Keep file restriction plus marker. |
+| macOS explicit | 55 | 52 | 28 / 31 | no | Keep explicit selection. |
+| Compat | 202 | 1,667 | 1,470 / 5 | no | Keep file-based selection. |
+| CLI | 164 | 1,671 | 1,510 / 3 | no | Keep file-based selection. |
+| SSH | 45 | 1,008 | 975 / 12 | no | Keep file-based selection. |
+| Windows pytest | 6 | 13 | 13 / 6 | no | Keep file selection and separate unittest discovery. |
+| Contract | 10 | 621 | 618 / 7 | no | Keep explicit module selector. |
+
+Only the existing release suite has exact marker parity. No selector or workflow was changed. Automatic GitHub CI remains disabled; `docs/ci-disabled/ci.yml` remains archival.

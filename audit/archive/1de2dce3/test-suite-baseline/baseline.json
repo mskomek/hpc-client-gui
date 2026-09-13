@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "remediation_baseline_sha": "1de2dce3aa8af037033882b26029fb33f39f9f57",
+  "branch": "develop",
+  "frozen_audit_sha": "12ce79935bf076e1062c57dc7dbd148bad2bfae1",
+  "previous_remediation_sha": "54f7376f3e3e1fccd672f121e33b68d2e8df2652",
+  "intermediate_reconciled_sha": "87e1e709a879b52300a5eec660cbfae04e700ee29",
+  "collection": {
+    "command": "python -m pytest tests --collect-only -q",
+    "count": 2679,
+    "errors": 0,
+    "duration_seconds": 2.5
+  },
+  "frozen_comparison": {
+    "baseline_count": 2673,
+    "current_count": 2679,
+    "added_count": 7,
+    "added_nodeids": [
+      "tests/test_wx_embedded_terminal.py::test_shell_can_defer_terminal_panel_mount",
+      "tests/test_wx_packaged_smoke.py::test_packaged_wx_smoke_gate_fails_closed_without_artifact",
+      "tests/test_wx_updater_spec.py::test_install_without_verified_artifact_stays_failed",
+      "tests/test_wx_updater_spec.py::test_show_update_available_wrapper_returns_false_for_cancel",
+      "tests/test_wx_updater_spec.py::test_show_update_available_wrapper_returns_false_for_close",
+      "tests/test_wx_updater_spec.py::test_show_update_available_wrapper_returns_true_when_download_starts",
+      "tests/test_wx_updater_spec.py::test_update_release_notes_preserve_unicode"
+    ],
+    "removed_count": 1,
+    "removed_nodeids": [
+      "tests/test_wx_packaged_smoke.py::test_packaged_wx_smoke_gate_reports_critical_stages"
+    ]
+  },
+  "previous_remediation_comparison": {
+    "baseline_count": 2678,
+    "current_count": 2679,
+    "added_count": 2,
+    "added_nodeids": [
+      "tests/test_wx_embedded_terminal.py::test_shell_can_defer_terminal_panel_mount",
+      "tests/test_wx_packaged_smoke.py::test_packaged_wx_smoke_gate_fails_closed_without_artifact"
+    ],
+    "removed_count": 1,
+    "removed_nodeids": [
+      "tests/test_wx_packaged_smoke.py::test_packaged_wx_smoke_gate_reports_critical_stages"
+    ]
+  },
+  "intermediate_comparison": {
+    "baseline_count": 2679,
+    "current_count": 2679,
+    "added_count": 0,
+    "added_nodeids": [],
+    "removed_count": 0,
+    "removed_nodeids": []
+  },
+  "behavior_mappings": [
+    {
+      "old_nodeid": "tests/test_wx_packaged_smoke.py::test_packaged_wx_smoke_gate_reports_critical_stages",
+      "new_nodeid": "tests/test_wx_packaged_smoke.py::test_packaged_wx_smoke_gate_fails_closed_without_artifact",
+      "equivalent": false,
+      "reason": "False-positive reporting gate replaced by fail-closed reporting behavior; no packaged artifact runtime evidence."
+    }
+  ],
+  "notes": [
+    "The two WebView xfail annotations were removed in 1de2dce3; this changes outcomes but not collected nodeids.",
+    "The collected node list at intermediate 87e1e709 and new 1de2dce3 is identical.",
+    "The earlier Packet A summary reported 2678 for 87e1e709; its archived nodeids contain 2679 and fresh collection confirms 2679.",
+    "The dirty develop alternative test_embedded_and_detached_share_terminal_controls is not part of this baseline and is not considered equivalent to test_shell_embedded_and_detached_share_implementation.",
+    "Collection verifies discovery only, not execution or release readiness."
+  ]
+}

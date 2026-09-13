@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "captured_test_code_sha": "794226e7339be439486100a859d5703967c78002",
+  "captured_test_tree_sha": "fe1943dbf18c3fb46f8510f1c5667cb5204361ba",
+  "automatic_ci": "intentionally disabled",
+  "preflight": {
+    "compileall": 0,
+    "ruff": 0,
+    "check_i18n": 0,
+    "smoke_test": 0
+  },
+  "release_suite": {
+    "command": "python scripts/release_test_suite.py",
+    "exit_code": 1,
+    "runner_elapsed_seconds": 101.03,
+    "pytest_elapsed_seconds": 95.06,
+    "complete": false,
+    "passed": 1825,
+    "failed": 1,
+    "skipped": 19,
+    "deselected": 50,
+    "xfail": 0,
+    "xpass": 0,
+    "warnings": 1,
+    "subtests_passed": 29,
+    "failed_nodeids": [
+      "tests/test_wave2_directories_local_files.py::TestErrorHandling::test_list_entries_permission_error"
+    ],
+    "failure_classification": "CONFIRMED_PRODUCT_DEFECT",
+    "failure_evidence": "PermissionError from Path.stat is caught, then src/hpc_gui/wx_local_files.py:77 calls item.is_dir(), which repeats stat and leaks PermissionError."
+  },
+  "release_suite_coverage": {
+    "command": "python scripts/release_test_suite.py --coverage",
+    "exit_code": 1,
+    "runner_elapsed_seconds": 175.55,
+    "pytest_elapsed_seconds": 167.93,
+    "complete": false,
+    "coverage_percent": 46,
+    "passed": 1825,
+    "failed": 1,
+    "skipped": 19,
+    "deselected": 50,
+    "xfail": 0,
+    "xpass": 0,
+    "warnings": 1,
+    "subtests_passed": 29,
+    "same_failed_nodeids": [
+      "tests/test_wave2_directories_local_files.py::TestErrorHandling::test_list_entries_permission_error"
+    ],
+    "note": "Runner stopped at the failing release core group; downstream isolated wire group and its coverage threshold were not reached."
+  },
+  "diagnostic_full_collection_sweep": {
+    "timed_node_count": 2649,
+    "passed": 2625,
+    "failed": 3,
+    "skipped": 21,
+    "xfail": 0,
+    "xpass": 0,
+    "authoritative_release_result": false,
+    "failures": [
+      "tests/test_wave2_directories_local_files.py::TestErrorHandling::test_list_entries_permission_error",
+      "tests/test_wave2_wx_ui_parity.py::TestSelectionPreservation::test_rename_preserves_selection",
+      "tests/test_hardening_additional.py::test_wx_separator_lifecycle_offscreen"
+    ],
+    "note": "Process-group timing sweep; performance-probe node was re-run after stabilization and passed. This aggregate is not the release-suite result."
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "captured_head": "794226e7339be439486100a859d5703967c78002",
+  "captured_test_tree_sha": "fe1943dbf18c3fb46f8510f1c5667cb5204361ba",
+  "evidence_origin_commit": "2a24d1d0b3ef4d5f91e4b46e0a92306916c18d7c",
+  "collection_count": 2649,
+  "collection_errors": 0,
+  "frozen_audit_sha": "12ce79935bf076e1062c57dc7dbd148bad2bfae1",
+  "frozen_audit_count": 2673,
+  "previous_remediation_sha": "54f7376f3e3e1fccd672f121e33b68d2e8df2652",
+  "previous_remediation_count": 2678,
+  "intermediate_remediation_sha": "87e1e709a879b52300a5eec660cbfae04e700ee29",
+  "intermediate_remediation_count": 2679,
+  "new_remediation_base_sha": "1de2dce3aa8af037033882b26029fb33f39f9f57",
+  "new_remediation_base_count": 2679,
+  "previous_governance_sha": "2b4c675f31ae5aba4b1a2cf9b005b919c53be208",
+  "previous_governance_count": 2685,
+  "current_sha_count": 2649,
+  "delta_from_frozen": {
+    "added": 95,
+    "removed": 119,
+    "net": -24
+  },
+  "timing_report": "timing-report.json",
+  "lane_report": "marker-lane-reconciliation.json",
+  "semantic_review": "semantic-taxonomy-review.json"
+}
