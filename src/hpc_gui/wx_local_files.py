@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import shutil
+import stat as stat_module
 import subprocess
 import sys
 from threading import Lock, Thread
@@ -71,10 +72,13 @@ class LocalBrowserModel:
         entries = []
         for item in current_path.iterdir():
             try:
-                stat = item.stat()
-                entries.append(LocalEntry(item, item.is_dir(), stat.st_size if item.is_file() else 0))
-            except (OSError, PermissionError):
-                entries.append(LocalEntry(item, item.is_dir(), 0))
+                metadata = item.stat()
+            except OSError:
+                entries.append(LocalEntry(item, False, 0))
+            else:
+                is_dir = stat_module.S_ISDIR(metadata.st_mode)
+                size = metadata.st_size if stat_module.S_ISREG(metadata.st_mode) else 0
+                entries.append(LocalEntry(item, is_dir, size))
         key = (lambda item: item.path.name.casefold()) if self.sort_key == "name" else (lambda item: item.size)
         return tuple(sorted(entries, key=key, reverse=self.reverse))
 
