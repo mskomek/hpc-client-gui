@@ -4,7 +4,7 @@ import time
 import pytest
 wx = pytest.importorskip("wx")
 
-from hpc_gui.core.i18n import load_language, set_language, t
+from hpc_gui.core.i18n import current_language, load_language, set_language, t
 from hpc_gui.services.raw_command_result import RawCommandResult
 from hpc_gui.wx_jobs import build_jobs_panel
 
@@ -54,6 +54,18 @@ def _close(frame):
         pass
     for _ in range(3):
         wx.Yield()
+
+
+@pytest.fixture(autouse=True)
+def _restore_language_after_test(monkeypatch, tmp_path):
+    from hpc_gui.core import i18n
+
+    language = current_language()
+    monkeypatch.setattr(i18n, "app_data_dir", lambda: tmp_path)
+    try:
+        yield
+    finally:
+        load_language(language)
 
 
 @pytest.mark.wx
@@ -121,7 +133,8 @@ def test_go_to_jobs_switches_to_jobs_tab():
         nb = ctrls["notebook"]
         nb.SetSelection(2)
         wx.Yield()
-        ctrls["go_to_jobs"]()
+        button = ctrls["details_go_to_jobs"]
+        button.ProcessEvent(wx.CommandEvent(wx.wxEVT_BUTTON, button.GetId()))
         wx.Yield()
         assert nb.GetSelection() == 0
     finally:
@@ -136,16 +149,22 @@ def test_accounting_expand_collapse():
         ctrls = panel._wx_jobs_controls
         _select_job(panel, 0)
         wx.Yield()
-        # Accounting starts collapsed
+        box = ctrls["accounting_box"]
+        raw_button = ctrls["btn_raw_accounting"]
         assert panel._wx_jobs_state["accounting_collapsed"] is True
+        assert not raw_button.IsShown()
         # Toggle expand
-        ctrls["collapse_accounting"]()
+        box.GetEventHandler().ProcessEvent(wx.MouseEvent(wx.wxEVT_LEFT_DOWN))
         wx.Yield()
         assert panel._wx_jobs_state["accounting_collapsed"] is False
+        assert raw_button.IsShown()
+        assert "▾" in box.GetLabel()
         # Toggle collapse
-        ctrls["collapse_accounting"]()
+        box.GetEventHandler().ProcessEvent(wx.MouseEvent(wx.wxEVT_LEFT_DOWN))
         wx.Yield()
         assert panel._wx_jobs_state["accounting_collapsed"] is True
+        assert not raw_button.IsShown()
+        assert "▸" in box.GetLabel()
     finally:
         _close(frame)
 
@@ -264,6 +283,9 @@ def test_cluster_servers_hidden_for_unsupported_provider():
     try:
         ctrls = panel._wx_jobs_controls
         assert ctrls["notebook"].GetPageCount() == 5
+        assert not ctrls["cluster_servers_box"].IsShown()
+        assert not ctrls["btn_refresh_lssrv"].IsEnabled()
+        assert not ctrls["btn_raw_server_status"].IsEnabled()
     finally:
         _close(frame)
 
@@ -313,44 +335,83 @@ def test_raw_server_status_action_dispatches_raw_result(monkeypatch):
 
 @pytest.mark.wx
 @pytest.mark.gui
-def test_raw_job_details_opens():
+def test_raw_job_details_button_opens_viewer_with_selected_job_result(monkeypatch):
+    from hpc_gui import wx_raw_viewer
+
+    shown = []
+    monkeypatch.setattr(
+        wx_raw_viewer, "show_raw_viewer",
+        lambda parent, result, **kwargs: shown.append((result, kwargs)),
+    )
     app, frame, panel = _build_panel(
         show_job_details=lambda jid: f"JobId={jid} JobName=test WorkDir=/work/{jid}",
     )
     try:
         _select_job(panel, 0)
-        for _ in range(50):
+        for _ in range(60):
             wx.Yield()
+            if panel._wx_jobs_state.get("raw_details_result") is not None:
+                break
             wx.MilliSleep(10)
         raw = panel._wx_jobs_state.get("raw_details_result")
         assert raw is not None
         assert isinstance(raw, RawCommandResult)
-        assert "1001" in raw.stdout or raw.stdout == ""
+        assert raw.stdout == "JobId=1001 JobName=test WorkDir=/work/1001"
+
+        button = panel._wx_jobs_controls["btn_raw_job_details"]
+        button.ProcessEvent(wx.CommandEvent(wx.wxEVT_BUTTON, button.GetId()))
+        assert len(shown) == 1
+        assert shown[0][0] is raw
+        assert shown[0][1]["title"] == t("raw_viewer.raw_job_details")
     finally:
         _close(frame)
 
 
 @pytest.mark.wx
 @pytest.mark.gui
-def test_raw_accounting_opens():
+def test_raw_accounting_button_opens_viewer_with_selected_job_result(monkeypatch):
+    from hpc_gui import wx_raw_viewer
+
+    shown = []
+    monkeypatch.setattr(
+        wx_raw_viewer, "show_raw_viewer",
+        lambda parent, result, **kwargs: shown.append((result, kwargs)),
+    )
     app, frame, panel = _build_panel(
         refresh_sacct=lambda jid: f"JOBID|STATE|ELAPSED\n{jid}|RUNNING|00:05:00",
     )
     try:
         _select_job(panel, 0)
-        for _ in range(50):
+        for _ in range(60):
             wx.Yield()
+            if panel._wx_jobs_state.get("raw_accounting_result") is not None:
+                break
             wx.MilliSleep(10)
         raw = panel._wx_jobs_state.get("raw_accounting_result")
         assert raw is not None
         assert isinstance(raw, RawCommandResult)
-        assert "1001" in raw.stdout or raw.stdout == ""
+        assert raw.stdout == "JOBID|STATE|ELAPSED\n1001|RUNNING|00:05:00"
+
+        button = panel._wx_jobs_controls["btn_raw_accounting"]
+        button.ProcessEvent(wx.CommandEvent(wx.wxEVT_BUTTON, button.GetId()))
+        assert len(shown) == 1
+        assert shown[0][0] is raw
+        assert shown[0][1]["title"] == t("raw_viewer.raw_accounting")
     finally:
         _close(frame)
 
 
-@pytest.mark.integration
-def test_parser_failure_leaves_raw_viewer_usable():
+@pytest.mark.wx
+@pytest.mark.gui
+def test_raw_accounting_error_can_be_opened_from_gui(monkeypatch):
+    from hpc_gui import wx_raw_viewer
+
+    shown = []
+    monkeypatch.setattr(
+        wx_raw_viewer, "show_raw_viewer",
+        lambda parent, result, **kwargs: shown.append((result, kwargs)),
+    )
+
     def failing_sacct(_jid):
         raise RuntimeError("sacct failed")
 
@@ -364,12 +425,19 @@ def test_parser_failure_leaves_raw_viewer_usable():
         assert raw is not None
         assert raw.has_error
         assert "sacct failed" in raw.stderr
+        button = panel._wx_jobs_controls["btn_raw_accounting"]
+        button.ProcessEvent(wx.CommandEvent(wx.wxEVT_BUTTON, button.GetId()))
+        assert len(shown) == 1
+        assert shown[0][0] is raw
+        assert "sacct failed" in shown[0][0].stderr
     finally:
         _close(frame)
 
 
-@pytest.mark.integration
-def test_ab_stale_raw_details_result_rejected():
+@pytest.mark.wx
+@pytest.mark.gui
+@pytest.mark.concurrency
+def test_stale_details_callback_cannot_replace_newer_selection():
     slow_details = []
 
     def show_details(job_id):
@@ -398,13 +466,17 @@ def test_ab_stale_raw_details_result_rejected():
         raw = panel._wx_jobs_state.get("raw_details_result")
         assert raw is not None
         assert "1002" in raw.stdout
+        assert panel._wx_jobs_controls["detail_values"]["workdir"].GetValue() == "/new/1002"
     finally:
         _close(frame)
 
 
 @pytest.mark.wx
 @pytest.mark.gui
-def test_runtime_language_refresh():
+def test_runtime_language_refresh(monkeypatch, tmp_path):
+    from hpc_gui.core import i18n
+
+    monkeypatch.setattr(i18n, "app_data_dir", lambda: tmp_path)
     load_language("en")
     app, frame, panel = _build_panel()
     try:
