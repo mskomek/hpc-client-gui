@@ -28,9 +28,13 @@ def _action_refs(text: str) -> list[tuple[str, str]]:
     return refs
 
 
-def test_every_workflow_exists():
+@pytest.mark.audit
+@pytest.mark.semantic
+def test_manual_release_exists_and_automatic_ci_remains_archived():
     files = sorted(WORKFLOWS_DIR.glob("*.yml"))
-    assert {path.name for path in files} >= {"ci.yml", "release.yml"}
+    assert {path.name for path in files} == {"release.yml"}
+    root = WORKFLOWS_DIR.parents[1]
+    assert (root / "docs" / "ci-disabled" / "ci.yml").is_file()
 
 @pytest.mark.audit
 @pytest.mark.semantic

@@ -9,7 +9,8 @@ import pytest
 pytestmark = pytest.mark.packaging
 
 
-def test_packaged_wx_smoke_gate_reports_critical_stages(tmp_path):
+@pytest.mark.reporting
+def test_missing_artifact_report_fails_critical_stages(tmp_path):
     root = Path(__file__).parents[1]
     artifact = tmp_path / "missing-wx-artifact.exe"
     output = tmp_path / "smoke-evidence.json"
