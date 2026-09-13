@@ -1,6 +1,8 @@
 # Test Suite Cleanup Wave — 2026-09-12
 
-Status: COMPLETE
+Governance Wave status: COMPLETE
+
+Integration-readiness remediation: IN_PROGRESS — current verdict NOT READY TO MERGE pending final normal/coverage release validation.
 
 Frozen baseline: `12ce79935bf076e1062c57dc7dbd148bad2bfae1`
 
@@ -67,3 +69,13 @@ Wave verdict: **COMPLETE**. This records completion of the governance work and d
 - `audit/test-taxonomy/` — actual REPORT, zero-primary registry, and final node mapping.
 
 Automatic GitHub Actions CI remains disabled. Packet O is complete; the broad-suite limitation and separate **NOT READY TO MERGE** recommendation remain explicit in the final report.
+
+## Post-Wave integration-readiness remediation — 2026-09-13
+
+The order-dependent native termination was reproduced around the Qt→wx→Qt sequence and removed by running the entire `tests/test_corrective_jobs_details.py` module in a separate pytest process. The ordered reproducer passed 3/3. A separate real product defect in remote Logs filtering was fixed: blank remote entry names now fall back to the basename of the remote path. Its registry test and the 28-test remote file-action module pass without teardown warnings.
+
+Current actual taxonomy REPORT at snapshot `d83b76beff24ae9810f3db64611eab351bd93a02` collects **2,658** nodes: unit 762, integration 362, gui 671, e2e 7, runtime_smoke 6, contract 566, audit 156, reporting 21, release 101. The same six baseline zero-primary exceptions remain; multi-primary 0; RATCHET PASS. The final mapping reconciles all nodeids: 38 current additions, 53 frozen removals, 19 renamed mappings.
+
+The most recent completed broad release attempt was before the remote-filter fix and reported 23 failures, 2,406 passed, 20 skipped, 5 deselected, and 29 subtests passed; it completed without the earlier native termination. A fresh full normal/coverage validation, full 65A stress rerun, packaged smoke, and independent final audit are still pending because wx test batches from other worktrees repeatedly overlapped. Their results are excluded. This integration remediation remains **NOT READY TO MERGE** until the required validation completes. Automatic GitHub Actions CI remains **DISABLED** and no workflow, selector, or `develop` branch changes are included.
+
+Latest normal-suite attempt (2026-09-13) started on local HEAD `70e6005d` and passed compile/i18n/smoke preflight, but a second release suite started in another worktree during the run. The local execution ended at 78% with exit `-1` and no pytest summary/native exception code. Treat it as incomplete contaminated evidence; no suite totals are claimed.

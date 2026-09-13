@@ -1,11 +1,11 @@
 # Test Taxonomy Final Report
 
-Status: FINAL — Packet O DONE; independent audit PASS WITH FOLLOW-UP; governance branch push pending.
+Status: GOVERNANCE CLOSEOUT FINAL; integration-readiness remediation IN_PROGRESS; NOT READY TO MERGE.
 
 Frozen baseline: `12ce79935bf076e1062c57dc7dbd148bad2bfae1`
-Taxonomy snapshot SHA: `6cad198dca6c0f69bc8196f5030a7aebcba9d696`
+Taxonomy snapshot SHA: `d83b76beff24ae9810f3db64611eab351bd93a02`
 Governance branch: `test-suite-governance-20260912`
-Final governance HEAD: reported after the closeout commit in the execution response and same status document.
+Integration-remediation starting HEAD: `70e6005d`. At that checkpoint, `origin/test-suite-governance-20260912` was `18e59fff3d8ebfa47666347a0d9cfc4d137b43c1` and `origin/develop` was at the frozen baseline. The earlier governance push was complete; the subsequent local remediation commits were pending push.
 
 This report uses actual pytest collection and `iter_markers()` data. It does not use the Phase 1 heuristic proposal as marker truth. The per-node machine mapping, exact removal evidence, and all marker/qualifier values are in [`taxonomy-final-mapping.json`](../../audit/test-taxonomy/taxonomy-final-mapping.json).
 
@@ -21,9 +21,9 @@ This report uses actual pytest collection and `iter_markers()` data. It does not
 | `release` | 101 |
 | `reporting` | 21 |
 | `runtime_smoke` | 6 |
-| `unit` | 760 |
+| `unit` | 762 |
 
-Total collected: **2,656**
+Total collected: **2,658**
 Zero-primary: **6**
 Multi-primary: **0**
 Direct test-calling-test warnings: **0**
@@ -41,9 +41,9 @@ Qualifier counts:
 - `packaging`: 4
 - `performance`: 17
 - `qt`: 270
-- `regression`: 161
+- `regression`: 162
 - `resource`: 118
-- `semantic`: 958
+- `semantic`: 959
 - `slow`: 14
 - `subprocess`: 57
 - `synthetic_hardware`: 0
@@ -57,20 +57,22 @@ The six zero-primary nodes are retained baseline-failure exceptions. No marker w
 | Measure | Count |
 | --- | ---: |
 | Frozen baseline nodes | 2,673 |
-| Final nodes | 2,656 |
-| Current additions (includes renamed successors) | 36 |
+| Final nodes | 2,658 |
+| Current additions (includes renamed successors) | 38 |
 | Frozen nodes absent by exact nodeid (includes renamed predecessors) | 53 |
 | Explicit old→current rename mappings | 19 |
 | Unchanged exact nodeids | 2,620 |
-| Net collection change | -17 |
+| Net collection change | -15 |
 
-The 36 current additions comprise 17 new nodes plus 19 renamed successors. The 53 absent frozen nodeids comprise 19 renamed predecessors plus 34 deletions. The full baseline list remains [`nodeids.txt`](../../audit/archive/12ce7993/test-suite-baseline/nodeids.txt).
+The 38 current additions comprise 19 new nodes plus 19 renamed successors. The 53 absent frozen nodeids comprise 19 renamed predecessors plus 34 deletions. The full baseline list remains [`nodeids.txt`](../../audit/archive/12ce7993/test-suite-baseline/nodeids.txt).
 
 ### Added nodes
 
 | Nodeid | Primary | Qualifiers | Owner packet | Purpose / canonical owner |
 | --- | --- | --- | --- | --- |
 | `tests/test_connection_profile_service.py::ConnectionProfileServiceTests::test_typed_password_precedes_saved_secret` | `unit` | `regression` | D | Canonical saved-secret versus typed-password precedence service behavior; primary unit/regression. |
+| `tests/test_file_filter_registry.py::TestEdgeCases::test_empty_remote_name_falls_back_to_path_basename` | `unit` | `regression` | Integration-readiness remediation | Confirms suffix filters use the path basename when a remote entry's name is empty; canonical registry behavior owner. |
+| `tests/test_release_test_suite.py::ReleaseTestSuiteTests::test_runner_finishes_other_pytest_partitions_after_failure` | `unit` | `semantic` | Integration-readiness remediation | Verifies the release runner completes later isolated partitions after one pytest partition fails. |
 | `tests/test_ssh_files_byte_preservation.py::test_sftp_download_upload_roundtrip_preserves_arbitrary_bytes` | `unit` | `regression` | D | Isolated SFTP backend byte-preservation behavior and channel cleanup; primary unit/regression. |
 | `tests/test_test_taxonomy_checker.py::test_catch_all_filename_is_warning_only` | `audit` | — | B | Focused synthetic-record tests for actual-marker reporting, warning heuristics, infrastructure errors, and ratchet logic; primary audit. |
 | `tests/test_test_taxonomy_checker.py::test_collection_failure_returns_nonzero` | `audit` | — | B | Focused synthetic-record tests for actual-marker reporting, warning heuristics, infrastructure errors, and ratchet logic; primary audit. |
@@ -216,6 +218,7 @@ The original deterministic settings-dialog test-setup hang is also preserved in 
 
 - **Jobs output overlap:** the actual wx refresh path started a second remote read during an active read for the same selected-job/output generation. `src/hpc_gui/wx_jobs.py` now serializes by owner generation, coalesces requests, preserves one pending refresh, validates stale results, and releases state on errors/close. The truthful no-overlap test passes; four focused new tests cover coalescing/follower/error/close. Commit: `38ada4c7`.
 - **Plugin menu hang:** dynamic rebuild detached a menu item with `Remove`, then destroyed its submenu separately. The code now deletes items through `DestroyItem`, inserts the submenu once through the documented overload, and unbinds stale dynamic handlers. The exact lifecycle test passes twice and covers 25 Unicode visible/hidden cycles. Commit: `b083d67d`.
+- **Remote Logs filter:** the broad release test exposed empty results when an entry had `name=""` and a valid remote `path`. `_entry_name` now falls back to the normalized path basename; an object/dict unit regression passes, and the full remote file-action module passes 28 tests without an `UnregisterClass` warning. The frozen exact behavior test had the same failure, confirming a latent product defect that was hidden in baseline evidence. Commit: `515a6d48`.
 
 ### Environment/order-dependent native test-run failure
 
@@ -233,6 +236,8 @@ A separate test-harness error in `test_raw_viewer_refresh_callback_is_called` wa
 - The interrupted full suite does not provide authoritative total skip/xfail counts. Other conditional WebView/platform skips therefore remain uncounted here.
 
 ## Validation
+
+The table below records the Packet O closeout snapshot at 2,656 nodes. The current taxonomy snapshot and integration-readiness checks below supersede its collection totals.
 
 | Command | Result | Pass | Fail | Skip | XFail | XPass | Notes |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | --- |
@@ -267,4 +272,18 @@ At closeout review, `origin/develop` is the frozen baseline and the governance b
 
 Develop integration recommendation: **NOT READY TO MERGE** until a supported broad release-suite run completes. The governance Wave can close with the full-suite limitation recorded; this report does not claim that the interrupted suite passed.
 
-Wave verdict: **WAVE COMPLETE**. The final commit SHA and post-push remote verification are recorded in the execution response; the taxonomy snapshot remains `6cad198dca6c0f69bc8196f5030a7aebcba9d696`.
+Wave verdict at Packet O closeout: **WAVE COMPLETE**. Its taxonomy snapshot was `6cad198dca6c0f69bc8196f5030a7aebcba9d696`; the later current snapshot is recorded below.
+
+## Integration-readiness remediation progress — 2026-09-13
+
+At the start of integration-readiness remediation, local governance HEAD was `70e6005d`; it was 25 commits ahead and 0 behind `origin/develop` at `12ce79935bf076e1062c57dc7dbd148bad2bfae1`. At that checkpoint, the governance remote was `18e59fff3d8ebfa47666347a0d9cfc4d137b43c1` and remediation commits were not pushed. The original dirty `develop` checkout remains separate and untouched. The `docs/v2/GUI_TERM_001_EXECUTION_EVIDENCE.json` working-tree modification is pre-existing and excluded from this work.
+
+The current actual-marker snapshot is `d83b76beff24ae9810f3db64611eab351bd93a02`: **2,658 collected**, unit 762, integration 362, gui 671, e2e 7, runtime_smoke 6, contract 566, audit 156, reporting 21, release 101. Qualifiers include regression 162 and semantic 959. There are **6** exact zero-primary baseline exceptions, **0** multi-primary, **0** direct-test-call warnings, and **0** catch-all filename warnings. RATCHET passes with six allowlisted exceptions and zero new debt. The updated mapping exactly matches all 2,658 collected nodeids: 38 current-only nodeids (19 new plus 19 renamed), 53 frozen-only nodeids (19 renamed predecessors plus 34 deletions), and 19 rename mappings. The two new nodes are the release-runner continuation regression and the remote empty-name/path fallback regression.
+
+The release-runner module-isolation change stopped the previously reproduced Qt→wx→Qt native termination in three ordered repetitions. An earlier official normal run on the governance branch completed all partitions without that native termination but reported 23 failures, 2,406 passed, 20 skipped, 5 deselected, and 29 subtests passed in 1,231.71 seconds; this preceded the locale cleanup and remote Logs-filter fix and is not final validation. The confirmed remote Logs-filter product defect is fixed: its unit test and full 28-test remote file-action module pass, and the module emits no UnregisterClass warning. Runner tests pass 3/3, the release-runner command is lint-clean, and compileall, full Ruff, i18n, smoke, taxonomy REPORT/RATCHET, and collection pass.
+
+The full 65A stress node and a fresh official release run have not completed on this final code state. Independent worktrees repeatedly started wx batches during the available validation windows, so overlapping GUI results were stopped and excluded. The revised 65A cleanup helper passed a direct real-wx-frame lifecycle check, but that does not replace the stress node. Coverage has not been run after a successful normal suite. Package smoke and the final read-only audit remain pending. Integration is **NOT READY TO MERGE** until the normal and coverage release checks and the remaining focused GUI/resource checks complete under non-overlapping conditions.
+
+Automatic GitHub Actions CI remains **DISABLED**; this remediation has not changed workflow files, local selectors, or the manual release workflow. No merge or push to `develop` has occurred.
+
+Latest normal-suite attempt: started on local governance HEAD `70e6005dcd6cec35cdf02438adc24f3c0a577372` at 22:32:45 +03:00; compile/i18n/smoke preflight passed. Another broad release run started in a separate worktree during this attempt. The local run stopped at 78% with execution-session exit `-1`, no pytest summary, and no recorded Windows native exception code. This overlapping attempt is **INCOMPLETE** and cannot establish a product failure or a passing full suite. A clean rerun and coverage run remain required; merge readiness remains **NOT READY TO MERGE**.
