@@ -8,6 +8,8 @@ across all workflow files, so the claim can never silently regress.
 
 from __future__ import annotations
 
+import pytest
+
 import re
 from pathlib import Path
 
@@ -30,6 +32,8 @@ def test_every_workflow_exists():
     files = sorted(WORKFLOWS_DIR.glob("*.yml"))
     assert {path.name for path in files} >= {"ci.yml", "release.yml"}
 
+@pytest.mark.audit
+@pytest.mark.semantic
 
 def test_all_action_references_are_pinned_to_full_commit_shas():
     violations: list[str] = []
@@ -44,6 +48,8 @@ def test_all_action_references_are_pinned_to_full_commit_shas():
                 violations.append(f"{path.name}: floating ref '{ref}': {line.strip()}")
     assert not violations, "unpinned action references:\n" + "\n".join(violations)
 
+@pytest.mark.audit
+@pytest.mark.semantic
 
 def test_pins_keep_a_version_comment():
     for path in sorted(WORKFLOWS_DIR.glob("*.yml")):
@@ -53,6 +59,8 @@ def test_pins_keep_a_version_comment():
                 continue
             assert "# v" in line, f"{path.name}: pin lacks version comment: {line.strip()}"
 
+@pytest.mark.audit
+@pytest.mark.semantic
 
 def test_release_workflow_publish_step_is_pinned():
     text = (WORKFLOWS_DIR / "release.yml").read_text(encoding="utf-8")

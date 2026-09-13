@@ -1,5 +1,7 @@
 """Wave 48 sync browsing + compare directories real-event tests."""
 import os
+import threading
+import time
 from pathlib import Path
 
 import pytest
@@ -53,6 +55,9 @@ def _close_shell(frame):
         except Exception:
             pass
 
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
 def test_wx_files_sync_browsing_local_to_remote(tmp_path: Path):
     app, frame, lifecycle, session, files_page = _get_files_page()
     try:
@@ -119,6 +124,9 @@ def test_wx_files_sync_browsing_local_to_remote(tmp_path: Path):
     finally:
         _close_shell(frame)
 
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
 def test_wx_files_sync_browsing_remote_to_local(tmp_path: Path):
     app, frame, lifecycle, session, files_page = _get_files_page()
     try:
@@ -157,6 +165,9 @@ def test_wx_files_sync_browsing_remote_to_local(tmp_path: Path):
     finally:
         _close_shell(frame)
 
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
 def test_wx_files_sync_does_not_loop_recursively(tmp_path: Path):
     app, frame, lifecycle, session, files_page = _get_files_page()
     try:
@@ -187,6 +198,9 @@ def test_wx_files_sync_does_not_loop_recursively(tmp_path: Path):
     finally:
         _close_shell(frame)
 
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
 def test_wx_files_sync_failure_recovers_without_wrong_target(tmp_path: Path):
     app, frame, lifecycle, session, files_page = _get_files_page()
     try:
@@ -227,6 +241,9 @@ def test_wx_files_sync_failure_recovers_without_wrong_target(tmp_path: Path):
     finally:
         _close_shell(frame)
 
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
 def test_wx_compare_directories_real_event_shows_result(tmp_path: Path):
     app, frame, lifecycle, session, files_page = _get_files_page()
     try:
@@ -263,6 +280,9 @@ def test_wx_compare_directories_real_event_shows_result(tmp_path: Path):
         session.pop("_test_remote_entries", None)
         _close_shell(frame)
 
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
 def test_wx_compare_directories_mixed_differences(tmp_path: Path):
     app, frame, lifecycle, session, files_page = _get_files_page()
     try:
@@ -299,6 +319,9 @@ def test_wx_compare_directories_mixed_differences(tmp_path: Path):
         session.pop("_test_remote_entries", None)
         _close_shell(frame)
 
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
 def test_wx_compare_stale_completion_is_ignored(tmp_path: Path):
     app, frame, lifecycle, session, files_page = _get_files_page()
     try:
@@ -341,8 +364,16 @@ def test_wx_compare_stale_completion_is_ignored(tmp_path: Path):
         session.pop("_test_compare_delay", None)
         _close_shell(frame)
 
-def test_wx_compare_close_in_flight_is_safe(tmp_path: Path):
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.concurrency
+@pytest.mark.resource
+def test_wx_compare_close_in_flight_is_safe(monkeypatch, tmp_path: Path):
     app, frame, lifecycle, session, files_page = _get_files_page()
+    started = threading.Event()
+    release = threading.Event()
+    callback_queued = threading.Event()
+    pending_callbacks = []
     try:
         (tmp_path / "x.txt").write_text("x", encoding="utf-8")
         local_panel = frame._wx_shell_controls["pages"]["NAV-FILES"]["local"]
@@ -352,19 +383,44 @@ def test_wx_compare_close_in_flight_is_safe(tmp_path: Path):
         wx.Yield()
         session["_test_remote_entries"] = [ComparableEntry("x.txt", False, 1, 1000)]
         session["_test_compare_delay"] = 0.3
+
+        original_sleep = time.sleep
+
+        def block_compare(delay):
+            if delay == 0.3:
+                started.set()
+                assert release.wait(5), "test did not release the comparison worker"
+                return
+            original_sleep(delay)
+
+        monkeypatch.setattr(time, "sleep", block_compare)
         compare_btn = frame._wx_shell_controls["pages"]["NAV-FILES"]["compare_btn"]
         evt = wx.CommandEvent(wx.wxEVT_BUTTON)
         evt.SetEventObject(compare_btn)
         compare_btn.GetEventHandler().ProcessEvent(evt)
-        wx.Yield()
-        # close while in flight
+        assert started.wait(5), "comparison worker did not reach the barrier"
         frame.Close()
         wx.Yield()
-        wx.MilliSleep(400)
-        wx.Yield()
-        # should not crash, closed flag set
-        assert files_page._compare_state.get("closed") is True or True
+        assert files_page._compare_state["closed"] is True
+        assert all(window is not frame for window in wx.GetTopLevelWindows())
+
+        original_call_after = wx.CallAfter
+
+        def capture_worker_callback(callback, *args, **kwargs):
+            if threading.current_thread() is threading.main_thread():
+                return original_call_after(callback, *args, **kwargs)
+            pending_callbacks.append((callback, args, kwargs))
+            callback_queued.set()
+
+        monkeypatch.setattr(wx, "CallAfter", capture_worker_callback)
+        release.set()
+        assert callback_queued.wait(5), "comparison result callback was not queued"
+        assert len(pending_callbacks) == 1
+        callback, args, kwargs = pending_callbacks[0]
+        callback(*args, **kwargs)
+        assert files_page._compare_state["closed"] is True
     finally:
+        release.set()
         session.pop("_test_compare_delay", None)
         try:
             frame.Destroy()

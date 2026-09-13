@@ -9,6 +9,8 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
+import pytest
+
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
@@ -45,6 +47,8 @@ def _existing_profile() -> dict:
     }
 
 
+@pytest.mark.contract
+@pytest.mark.regression
 class MergeProfilePatchTests(unittest.TestCase):
     def test_unknown_top_level_key_survives_an_edit(self) -> None:
         merged = merge_profile_patch(
@@ -73,6 +77,8 @@ class MergeProfilePatchTests(unittest.TestCase):
         self.assertEqual(merged, {"name": "fresh"})
 
 
+@pytest.mark.integration
+@pytest.mark.regression
 class ProfileStoragePreservationTests(unittest.TestCase):
     def setUp(self) -> None:
         self._dir = tempfile.TemporaryDirectory()
@@ -104,6 +110,10 @@ class ProfileStoragePreservationTests(unittest.TestCase):
         self.assertEqual(storage.load_profiles()[0]["id"], first_id)
 
 
+@pytest.mark.gui
+@pytest.mark.qt
+@pytest.mark.semantic
+@pytest.mark.regression
 class ConnectionDialogPreservationTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
@@ -177,6 +187,10 @@ class ConnectionDialogPreservationTests(unittest.TestCase):
         self.assertEqual(collected["file_manager"].get("local_start_dir", ""), "")
 
 
+@pytest.mark.gui
+@pytest.mark.qt
+@pytest.mark.semantic
+@pytest.mark.regression
 class LoginWidgetSaveProfileTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:

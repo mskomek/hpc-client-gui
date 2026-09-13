@@ -1,7 +1,11 @@
 import unittest
 from unittest.mock import patch
 
+import pytest
+
 from hpc_gui.core.log_redaction import redact_command_args, redact_text
+
+pytestmark = [pytest.mark.unit, pytest.mark.semantic]
 
 
 class LogRedactionTests(unittest.TestCase):

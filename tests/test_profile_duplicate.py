@@ -1,4 +1,8 @@
+import pytest
+
 from hpc_gui.services.profile_duplicate import duplicate_profile
+
+pytestmark = [pytest.mark.unit, pytest.mark.semantic]
 
 
 def test_duplicate_is_independent_and_drops_credentials():

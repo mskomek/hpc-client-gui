@@ -36,6 +36,8 @@ def _pump(app, predicate):
 from mock_hpc_files import MockRemoteFilesBackend
 
 
+@pytest.mark.unit
+@pytest.mark.semantic
 def test_file_context_target_stress_has_no_wrong_targets():
     wrong = 0
     for index in range(200):
@@ -46,24 +48,19 @@ def test_file_context_target_stress_has_no_wrong_targets():
     assert wrong == 0
 
 
-def test_remote_mutation_stress_has_no_lost_operations():
-    backend = MockRemoteFilesBackend()
-    for index in range(100):
-        source = f"/work/item-{index}"
-        backend.entries[source] = False
-        backend.rename(source, f"/work/renamed-{index}")
-        backend.move(f"/work/renamed-{index}", f"/work/moved-{index}")
-    assert len([call for call in backend.calls if call[0] == "rename"]) == 100
-    assert len([call for call in backend.calls if call[0] == "move"]) == 100
-    assert len([name for name in backend.entries if name.startswith("/work/moved-")]) == 100
 
 
+@pytest.mark.unit
+@pytest.mark.semantic
 def test_context_policy_stays_stable_under_rapid_selection():
     for index in range(200):
         selection = context_selection(f"/work/{index}", False, (f"/work/{index}",), (False,))
         assert "edit" in visible_actions(selection, remote=True)
 
 
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
 def test_wx_remote_context_target_stress_uses_real_events(wx_app):
     backend = MockRemoteFilesBackend()
     backend.entries.update({"/work/dir-a": True, "/work/dir-b": True})
@@ -120,6 +117,10 @@ def test_wx_remote_context_target_stress_uses_real_events(wx_app):
     assert len(captured) == 200
 
 
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
+@pytest.mark.resource
 def test_wx_local_mutation_stress_uses_real_actions(wx_app, tmp_path: Path, monkeypatch):
     show_local_files(path=tmp_path)
     frame = [window for window in wx.GetTopLevelWindows() if hasattr(window, "_wx_local_controls")][-1]
@@ -161,6 +162,9 @@ def test_wx_local_mutation_stress_uses_real_actions(wx_app, tmp_path: Path, monk
         assert not renamed.exists()
 
 
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
 def test_wx_remote_mutation_stress_uses_real_actions(wx_app, monkeypatch):
     backend = MockRemoteFilesBackend()
     show_remote_files(

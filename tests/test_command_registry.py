@@ -4,6 +4,7 @@ from hpc_gui.core.i18n import load_language
 from hpc_gui.services.command_registry import COMMAND_REGISTRY, CommandDefinition, CommandRegistry
 
 
+@pytest.mark.contract
 def test_registry_ids_labels_queries_and_serialization():
     load_language("tr")
     commands = COMMAND_REGISTRY.all()
@@ -15,6 +16,7 @@ def test_registry_ids_labels_queries_and_serialization():
     assert COMMAND_REGISTRY.serialize()[0]["id"] == commands[0].id
 
 
+@pytest.mark.contract
 def test_unknown_and_duplicate_commands_fail():
     with pytest.raises(KeyError, match="unknown command"):
         COMMAND_REGISTRY.get("missing")

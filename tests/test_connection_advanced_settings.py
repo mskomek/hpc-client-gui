@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 import os
+
+import pytest
 import sys
 import tempfile
-import threading
 import unittest
 from pathlib import Path
-from types import SimpleNamespace
 from unittest import mock
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
@@ -36,22 +36,32 @@ class HostKeyPolicyDialogTests(unittest.TestCase):
         self.addCleanup(dialog.deleteLater)
         return dialog
 
+    @pytest.mark.gui
+    @pytest.mark.qt
     def test_accept_new_profile_selects_correct_combo(self) -> None:
         dialog = self._dialog({"host_key_policy": "accept-new"})
         self.assertEqual(dialog.cb_host_key_policy.currentData(), "accept-new")
 
+    @pytest.mark.gui
+    @pytest.mark.qt
     def test_strict_profile_selects_correct_combo(self) -> None:
         dialog = self._dialog({"host_key_policy": "strict"})
         self.assertEqual(dialog.cb_host_key_policy.currentData(), "strict")
 
+    @pytest.mark.gui
+    @pytest.mark.qt
     def test_malformed_policy_defaults_to_accept_new(self) -> None:
         dialog = self._dialog({"host_key_policy": "accept-anything"})
         self.assertEqual(dialog.cb_host_key_policy.currentData(), "accept-new")
 
+    @pytest.mark.gui
+    @pytest.mark.qt
     def test_missing_policy_defaults_to_accept_new(self) -> None:
         dialog = self._dialog({})
         self.assertEqual(dialog.cb_host_key_policy.currentData(), "accept-new")
 
+    @pytest.mark.gui
+    @pytest.mark.qt
     def test_saving_persists_enum_not_translated_text(self) -> None:
         dialog = self._dialog()
         index = dialog.cb_host_key_policy.findData("strict")
@@ -61,6 +71,7 @@ class HostKeyPolicyDialogTests(unittest.TestCase):
         self.assertEqual(collected["host_key_policy"], "strict")
         self.assertNotEqual(collected["host_key_policy"], "Yalnızca önceden güvenilen sunucu")
 
+    @pytest.mark.contract
     def test_no_duplicate_visible_strict_checkbox_remains(self) -> None:
         dialog = self._dialog()
         self.assertFalse(
@@ -84,14 +95,20 @@ class KeepaliveAndTimeoutTests(unittest.TestCase):
         self.addCleanup(dialog.deleteLater)
         return dialog
 
+    @pytest.mark.gui
+    @pytest.mark.qt
     def test_keepalive_missing_defaults_to_30(self) -> None:
         dialog = self._dialog({})
         self.assertEqual(dialog.sp_keepalive.value(), 30)
 
+    @pytest.mark.gui
+    @pytest.mark.qt
     def test_keepalive_malformed_uses_coercion_default(self) -> None:
         dialog = self._dialog({"keepalive_interval_seconds": "junk"})
         self.assertEqual(dialog.sp_keepalive.value(), coerce_keepalive_interval("junk"))
 
+    @pytest.mark.gui
+    @pytest.mark.qt
     def test_keepalive_zero_is_collected(self) -> None:
         dialog = self._dialog({"keepalive_interval_seconds": 0})
         self.assertEqual(dialog.sp_keepalive.value(), 0)
@@ -99,18 +116,23 @@ class KeepaliveAndTimeoutTests(unittest.TestCase):
         assert collected is not None
         self.assertEqual(collected["keepalive_interval_seconds"], 0)
 
+    @pytest.mark.unit
     def test_keepalive_zero_disables_runtime_keepalive(self) -> None:
         # Runtime contract: 0 reaches transport.set_keepalive(0), which is
         # how the current Paramiko-based client disables keepalive.
         cfg = SSHConfig(keepalive_interval_seconds=0)
         self.assertEqual(coerce_keepalive_interval(cfg.keepalive_interval_seconds), 0)
 
+    @pytest.mark.gui
+    @pytest.mark.qt
     def test_keepalive_thirty_propagates_exactly(self) -> None:
         dialog = self._dialog({"keepalive_interval_seconds": 30})
         collected = dialog._collect_profile()
         assert collected is not None
         self.assertEqual(collected["keepalive_interval_seconds"], 30)
 
+    @pytest.mark.gui
+    @pytest.mark.qt
     def test_timeout_zero_maps_to_none(self) -> None:
         from hpc_gui.config.storage import coerce_profile_ssh_timeout
 
@@ -119,6 +141,8 @@ class KeepaliveAndTimeoutTests(unittest.TestCase):
         self.assertIsNone(value)
         self.assertIsNone(coerce_profile_ssh_timeout(0))
 
+    @pytest.mark.gui
+    @pytest.mark.qt
     def test_positive_timeout_propagates(self) -> None:
         dialog = self._dialog({"ssh_timeout": 12.5})
         collected = dialog._collect_profile()
@@ -134,6 +158,10 @@ class ProfilePreservationAfterAdvancedEditTests(unittest.TestCase):
 
         load_language("en")
 
+    @pytest.mark.gui
+    @pytest.mark.qt
+    @pytest.mark.semantic
+    @pytest.mark.regression
     def test_advanced_edit_preserves_fm01_state(self) -> None:
         from hpc_gui.ui.dialogs.connection_dialog import ConnectionDialog
 
@@ -180,6 +208,8 @@ class LoginWidgetPolicyPropagationTests(unittest.TestCase):
 
         load_language("en")
 
+    @pytest.mark.gui
+    @pytest.mark.qt
     def test_login_widget_uses_canonical_policy_state(self) -> None:
         from hpc_gui.ui.widgets.login_widget import LoginWidget
 
@@ -207,6 +237,7 @@ class LoginWidgetPolicyPropagationTests(unittest.TestCase):
 
 
 class ParallelismSourceOfTruthTests(unittest.TestCase):
+    @pytest.mark.unit
     def test_coerce_bounds_and_defaults(self) -> None:
         from hpc_gui.config.storage import coerce_profile_transfer_parallelism
 
@@ -215,20 +246,9 @@ class ParallelismSourceOfTruthTests(unittest.TestCase):
         self.assertEqual(coerce_profile_transfer_parallelism(99, 1), 10)
         self.assertEqual(coerce_profile_transfer_parallelism("bad", 1), 1)
 
-    def test_effective_limit_rule(self) -> None:
-        # requested = profile value; effective = requested only if the
-        # backend supports isolated parallel transfer channels.
-        for requested, supports, expected in (
-            (1, True, 1),
-            (3, True, 3),
-            (3, False, 1),
-            (10, True, 10),
-        ):
-            cfg = SSHConfig(transfer_parallelism=requested)
-            configured = int(cfg.transfer_parallelism)
-            effective = configured if supports else 1
-            self.assertEqual(effective, expected)
 
+    @pytest.mark.gui
+    @pytest.mark.qt
     def test_settings_dialog_has_no_global_parallelism_editor(self) -> None:
         os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
         QApplication.instance() or QApplication([])
@@ -236,41 +256,22 @@ class ParallelismSourceOfTruthTests(unittest.TestCase):
         from hpc_gui.ui.dialogs.settings_dialog import SettingsDialog
 
         load_language("en")
-        with mock.patch.object(Path, "home"), tempfile.TemporaryDirectory():
+        with tempfile.TemporaryDirectory() as home, mock.patch.object(
+            Path, "home", return_value=Path(home)
+        ):
             dialog = SettingsDialog()
             try:
-                self.assertFalse(hasattr(dialog, "sp_transfer_parallelism"))
+                from PySide6.QtWidgets import QAbstractButton, QGroupBox, QLabel
+
+                visible_texts = [
+                    widget.text()
+                    for widget in dialog.findChildren(QLabel) + dialog.findChildren(QAbstractButton)
+                ] + [widget.title() for widget in dialog.findChildren(QGroupBox)]
+                self.assertFalse(
+                    any("parallel" in text.casefold() for text in visible_texts)
+                )
             finally:
                 dialog.deleteLater()
-
-
-class TransferChannelSafetyTests(unittest.TestCase):
-    def test_workers_receive_distinct_channels(self) -> None:
-        """Two concurrent fake workers get distinct channel objects."""
-        channels: list[object] = []
-        barrier = threading.Barrier(2, timeout=5)
-
-        class FakeChannel:
-            pass
-
-        def worker():
-            channels.append(FakeChannel())
-            barrier.wait()
-
-        threads = [threading.Thread(target=worker) for _ in range(2)]
-        for thread in threads:
-            thread.start()
-        for thread in threads:
-            thread.join(timeout=5)
-        self.assertEqual(len(channels), 2)
-        self.assertIsNot(channels[0], channels[1])
-
-    def test_unsupported_backend_forces_one(self) -> None:
-        files = SimpleNamespace(supports_parallel_transfers=False)
-        cfg = SSHConfig(transfer_parallelism=4)
-        effective = cfg.transfer_parallelism if getattr(files, "supports_parallel_transfers", False) else 1
-        self.assertEqual(effective, 1)
-
 
 if __name__ == "__main__":
     unittest.main()

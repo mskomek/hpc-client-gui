@@ -8,6 +8,8 @@ import pytest
 
 from hpc_gui.config import storage
 
+pytestmark = [pytest.mark.integration, pytest.mark.resource]
+
 
 def test_save_config_writes_json_atomically_and_leaves_no_temp(tmp_path: Path) -> None:
     config = tmp_path / "config.json"

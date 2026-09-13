@@ -5,6 +5,8 @@ import pytest
 
 wx = pytest.importorskip("wx")
 
+pytestmark = [pytest.mark.gui, pytest.mark.wx]
+
 from mock_hpc_files import MockRemoteFilesBackend
 from support.wx_clipboard import read_clipboard_text
 from hpc_gui.services.file_clipboard import get_file_clipboard
@@ -43,6 +45,7 @@ def _browser(app, backend, model=None, operation=None):
     return frame
 
 
+@pytest.mark.concurrency
 def test_remote_move_and_upload_actions_reach_backend_off_gui_thread(wx_app, monkeypatch):
     backend = MockRemoteFilesBackend()
     frame = _browser(wx_app, backend)

@@ -7,6 +7,8 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
+import pytest
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 
 import linux_release_smoke as smoke
@@ -21,10 +23,14 @@ def _ok_proc(returncode: int = 0, stdout: str = "", stderr: str = ""):
 
 
 class LinuxReleaseSmokeTest(unittest.TestCase):
+    @pytest.mark.release
+    @pytest.mark.semantic
     def test_missing_binary_returns_1(self) -> None:
         with mock.patch.object(smoke, "print"):
             self.assertEqual(smoke.main(["--binary", "does/not/exist"]), 1)
 
+    @pytest.mark.release
+    @pytest.mark.semantic
     def test_cli_surface_passes(self) -> None:
         # A fake binary file so the X_OK check passes, then subprocess is mocked.
         with mock.patch.object(smoke, "print"):
@@ -41,6 +47,8 @@ class LinuxReleaseSmokeTest(unittest.TestCase):
         self.assertIn("--help", labels)
         self.assertIn("version", labels)
 
+    @pytest.mark.release
+    @pytest.mark.semantic
     def test_nonzero_exit_fails(self) -> None:
         with mock.patch.object(smoke, "print"):
             with mock.patch.object(
@@ -53,6 +61,8 @@ class LinuxReleaseSmokeTest(unittest.TestCase):
                 ):
                     self.assertEqual(smoke.main(["--binary", "/tmp/fail-bin"]), 1)
 
+    @pytest.mark.release
+    @pytest.mark.semantic
     def test_gui_waits_then_terminates(self) -> None:
         with mock.patch.object(smoke, "print"):
             proc = mock.Mock()

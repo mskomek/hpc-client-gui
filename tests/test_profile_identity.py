@@ -5,12 +5,15 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
+import pytest
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from hpc_gui.config import storage  # noqa: E402
 from hpc_gui.services import remote_navigation_store as store_mod  # noqa: E402
 
 
+@pytest.mark.integration
 class ProfileIdentityTests(unittest.TestCase):
     def setUp(self) -> None:
         self._dir = tempfile.TemporaryDirectory()
@@ -45,6 +48,7 @@ class ProfileIdentityTests(unittest.TestCase):
         self.assertEqual(profiles[0]["id"], original_id)
         self.assertEqual(storage.get_profile_id("TRUBA Ana Hesap"), original_id)
 
+    @pytest.mark.resource
     def test_delete_takes_the_private_state_with_it(self) -> None:
         self._write_legacy_config()
         profile_id = storage.load_profiles()[0]["id"]

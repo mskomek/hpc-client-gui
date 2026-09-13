@@ -6,6 +6,8 @@ import pytest
 
 wx = pytest.importorskip("wx")
 
+pytestmark = [pytest.mark.gui, pytest.mark.wx, pytest.mark.concurrency]
+
 from hpc_gui.wx_local_files import LocalBrowserModel, LocalEntry, show_local_files
 from hpc_gui.wx_remote_files import RemoteEntry, WxRemoteDirectoryModel
 from hpc_gui.wx_remote_files_view import show_remote_files
@@ -30,6 +32,8 @@ def wx_app():
     for window in wx.GetTopLevelWindows():
         if window:
             window.Destroy()
+    app.ProcessPendingEvents()
+    wx.YieldIfNeeded()
     app.ProcessPendingEvents()
     app.Destroy()
 

@@ -4,6 +4,10 @@ from pathlib import Path
 import hashlib
 import json
 
+import pytest
+
+pytestmark = pytest.mark.reporting
+
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / "audit" / "current-gui" / "MANIFEST.json"
 HASHES = ROOT / "audit" / "current-gui" / "HASHES.sha256"

@@ -3,6 +3,7 @@ import time
 from pathlib import Path
 import pytest
 wx = pytest.importorskip("wx")
+pytestmark = [pytest.mark.gui, pytest.mark.wx]
 from hpc_gui.wx_local_files import show_local_files
 from hpc_gui.wx_remote_files import WxRemoteDirectoryModel
 from hpc_gui.wx_remote_files_view import show_remote_files

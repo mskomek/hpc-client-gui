@@ -14,6 +14,8 @@ import threading
 import time
 import unittest
 
+import pytest
+
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from PySide6.QtWidgets import QApplication
@@ -23,6 +25,8 @@ from hpc_gui.ui.dialogs.transfer_dialog import TransferDialog
 
 
 class TransferControllerCancelTests(unittest.TestCase):
+    @pytest.mark.unit
+    @pytest.mark.concurrency
     def test_cancel_reports_every_item_of_a_parallel_batch(self) -> None:
         started = threading.Barrier(4, timeout=5)
         events: list[tuple[str, str]] = []
@@ -82,6 +86,8 @@ class TransferDialogCancelTests(unittest.TestCase):
             time.sleep(0.005)
         self.app.processEvents()
 
+    @pytest.mark.integration
+    @pytest.mark.concurrency
     def test_cancelled_item_leaves_the_active_list_and_can_be_restarted(self) -> None:
         attempts: list[str] = []
 
@@ -115,6 +121,8 @@ class TransferDialogCancelTests(unittest.TestCase):
         self._pump(lambda: len(attempts) >= 2)
         self.assertEqual(attempts, ["/remote/big.bin", "/remote/big.bin"])
 
+    @pytest.mark.integration
+    @pytest.mark.concurrency
     def test_cancel_does_not_wedge_process_queue(self) -> None:
         def run(item, progress=None):
             if progress is None:

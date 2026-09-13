@@ -1,4 +1,8 @@
+import pytest
+
 from hpc_gui.config.storage import resolve_provider_overrides
+
+pytestmark = pytest.mark.contract
 
 
 def test_provider_override_missing_key_inherits():

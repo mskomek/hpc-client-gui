@@ -47,6 +47,8 @@ def _close(frame):
     for _ in range(3):
         wx.Yield()
 
+@pytest.mark.gui
+@pytest.mark.wx
 def test_wx_jobs_files_tab_loads_selected_job_files():
     backend = MockRemoteFilesBackend()
     app, frame, panel = _build_panel(session_state={"session": {"files": backend, "profile": {"profile_id": "jobs-files-test"}}})
@@ -77,6 +79,9 @@ def test_wx_jobs_files_tab_loads_selected_job_files():
     finally:
         _close(frame)
 
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.concurrency
 def test_wx_jobs_files_tab_stale_job_result_ignored():
     class DelayedBackend(MockRemoteFilesBackend):
         def iterdir_entries(self, path):
@@ -119,6 +124,8 @@ def test_wx_jobs_files_tab_stale_job_result_ignored():
     finally:
         _close(frame)
 
+@pytest.mark.gui
+@pytest.mark.wx
 def test_wx_jobs_outputs_tab_loads_stdout_stderr():
     app, frame, panel = _build_panel()
     try:
@@ -151,6 +158,8 @@ def test_wx_jobs_outputs_tab_loads_stdout_stderr():
     finally:
         _close(frame)
 
+@pytest.mark.gui
+@pytest.mark.wx
 def test_wx_jobs_outputs_live_follow():
     contents = {"value": "first\n"}
     app, frame, panel = _build_panel(read_output=lambda _job: {"stdout": contents["value"], "stderr": ""})
@@ -182,6 +191,8 @@ def test_wx_jobs_outputs_live_follow():
     finally:
         _close(frame)
 
+@pytest.mark.gui
+@pytest.mark.wx
 def test_wx_jobs_outputs_pause_resume():
     app, frame, panel = _build_panel()
     try:
@@ -198,6 +209,8 @@ def test_wx_jobs_outputs_pause_resume():
     finally:
         _close(frame)
 
+@pytest.mark.gui
+@pytest.mark.wx
 def test_wx_jobs_provider_status_is_visible_only_when_backend_supports_it():
     app, frame, panel = _build_panel(
         has_status_capability=lambda: True,
@@ -228,6 +241,9 @@ def test_wx_jobs_provider_status_is_visible_only_when_backend_supports_it():
     finally:
         _close(frame)
 
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.concurrency
 def test_wx_jobs_switch_job_rejects_old_completion():
     def slow_output(job_id):
         if job_id == "1001":
@@ -265,6 +281,8 @@ def test_wx_jobs_switch_job_rejects_old_completion():
     finally:
         _close(frame)
 
+@pytest.mark.gui
+@pytest.mark.wx
 def test_wx_jobs_outputs_close_in_flight_safe():
     def slow_output(job_id):
         time.sleep(0.3)
@@ -296,6 +314,9 @@ def test_wx_jobs_outputs_close_in_flight_safe():
         wx.Yield()
 
 
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.concurrency
 def test_wx_jobs_details_latest_selection_wins_over_slow_scontrol():
     def show_details(job_id):
         if job_id == "1001":
@@ -329,6 +350,9 @@ def test_wx_jobs_details_latest_selection_wins_over_slow_scontrol():
         _close(frame)
 
 
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.concurrency
 def test_wx_jobs_accounting_latest_selection_wins_over_slow_sacct():
     def refresh_sacct(job_id):
         if job_id == "1001":
@@ -360,6 +384,8 @@ def test_wx_jobs_accounting_latest_selection_wins_over_slow_sacct():
         _close(frame)
 
 
+@pytest.mark.gui
+@pytest.mark.wx
 def test_wx_jobs_provider_output_definitions_refresh_after_reconnect():
     definitions = [{
         "streams": [{
@@ -415,6 +441,8 @@ def test_wx_jobs_provider_output_definitions_refresh_after_reconnect():
         _close(frame)
 
 
+@pytest.mark.gui
+@pytest.mark.wx
 def test_wx_jobs_manual_follow_reads_its_arbitrary_path():
     contents = {
         "/work/stdout.log": "STDOUT DATA\n",
@@ -453,6 +481,8 @@ def test_wx_jobs_manual_follow_reads_its_arbitrary_path():
         _close(frame)
 
 
+@pytest.mark.gui
+@pytest.mark.wx
 def test_wx_jobs_detached_follower_updates_after_remote_append():
     contents = {"/work/stdout.log": "first\n"}
     jobs = [{"id": "1001", "state": "RUNNING", "name": "solver", "workdir": "/work",
@@ -508,6 +538,8 @@ def test_wx_jobs_detached_follower_updates_after_remote_append():
         _close(frame)
 
 
+@pytest.mark.gui
+@pytest.mark.wx
 def test_wx_jobs_existing_follower_reassigns_to_new_remote_path():
     contents = {"/work/a.log": "A DATA\n", "/work/b.log": "B DATA\n"}
     jobs = [{"id": "1001", "state": "RUNNING", "name": "solver", "workdir": "/work"}]
@@ -548,6 +580,8 @@ def test_wx_jobs_existing_follower_reassigns_to_new_remote_path():
         _close(frame)
 
 
+@pytest.mark.gui
+@pytest.mark.wx
 def test_wx_jobs_manual_follow_new_window_is_live():
     contents = {"/work/solver.log": "first\n"}
     jobs = [{"id": "1001", "state": "RUNNING", "name": "solver", "workdir": "/work"}]
@@ -597,6 +631,8 @@ def test_wx_jobs_manual_follow_new_window_is_live():
         _close(frame)
 
 
+@pytest.mark.gui
+@pytest.mark.wx
 def test_wx_jobs_output_scroll_does_not_force_user_back_to_latest():
     contents = {"/work/stdout.log": "".join(f"line-{index}\n" for index in range(300))}
     jobs = [{"id": "1001", "state": "RUNNING", "name": "solver", "workdir": "/work",

@@ -364,6 +364,10 @@ def _close(app, frame, lifecycle):
         wx.MilliSleep(2)
 
 
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
+@pytest.mark.slow
 def test_wx_layout_resize():
     load_language("en")
     app = wx.App(False)

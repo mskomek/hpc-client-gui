@@ -82,6 +82,9 @@ def _clean_wx_after():
 # Secure secret connection mapping
 # ---------------------------------------------------------------------------
 
+@pytest.mark.integration
+@pytest.mark.wx
+@pytest.mark.semantic
 def test_keychain_connect_resolves(monkeypatch):
     tmp = _isolated_storage(monkeypatch)
     try:
@@ -142,6 +145,8 @@ def test_keychain_connect_resolves(monkeypatch):
         tmp.cleanup()
 
 
+@pytest.mark.integration
+@pytest.mark.semantic
 def test_dpapi_connect_resolves(monkeypatch):
     tmp = _isolated_storage(monkeypatch)
     try:
@@ -165,6 +170,9 @@ def test_dpapi_connect_resolves(monkeypatch):
         tmp.cleanup()
 
 
+@pytest.mark.integration
+@pytest.mark.wx
+@pytest.mark.semantic
 def test_master_encrypted_connect_with_prompt_and_cancel_and_wrong(monkeypatch):
     tmp = _isolated_storage(monkeypatch)
     try:
@@ -237,6 +245,9 @@ def test_master_encrypted_connect_with_prompt_and_cancel_and_wrong(monkeypatch):
 # Test Cluster credential matrix
 # ---------------------------------------------------------------------------
 
+@pytest.mark.integration
+@pytest.mark.wx
+@pytest.mark.semantic
 def test_test_cluster_resolves_keychain_dpapi_master_and_does_not_mutate(monkeypatch):
     tmp = _isolated_storage(monkeypatch)
     try:
@@ -358,6 +369,10 @@ def test_test_cluster_resolves_keychain_dpapi_master_and_does_not_mutate(monkeyp
         tmp.cleanup()
 
 
+@pytest.mark.integration
+@pytest.mark.wx
+@pytest.mark.semantic
+@pytest.mark.regression
 def test_typed_password_precedence(monkeypatch):
     tmp = _isolated_storage(monkeypatch)
     try:
@@ -411,6 +426,9 @@ def test_typed_password_precedence(monkeypatch):
         tmp.cleanup()
 
 
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
 def test_saved_password_unavailable_error(monkeypatch, caplog):
     tmp = _isolated_storage(monkeypatch)
     try:
@@ -457,6 +475,8 @@ def test_saved_password_unavailable_error(monkeypatch, caplog):
 # MFA and dialogs
 # ---------------------------------------------------------------------------
 
+@pytest.mark.unit
+@pytest.mark.wx
 def test_mfa_respects_echo_and_not_logged(monkeypatch, caplog):
     tmp = _isolated_storage(monkeypatch)
     try:
@@ -504,6 +524,8 @@ def test_mfa_respects_echo_and_not_logged(monkeypatch, caplog):
         tmp.cleanup()
 
 
+@pytest.mark.audit
+@pytest.mark.wx
 def test_password_dialogs_use_correct_api(monkeypatch):
     src = open("src/hpc_gui/wx_connection.py", encoding="utf-8").read()
     assert "wx.PasswordEntryDialog" in src, "MFA and edit auth must use PasswordEntryDialog"
@@ -518,6 +540,8 @@ def test_password_dialogs_use_correct_api(monkeypatch):
 # Save & Connect event chain
 # ---------------------------------------------------------------------------
 
+@pytest.mark.gui
+@pytest.mark.wx
 def test_save_and_connect_wx_event_chain(monkeypatch):
     tmp = _isolated_storage(monkeypatch)
     try:
@@ -607,6 +631,8 @@ def test_save_and_connect_wx_event_chain(monkeypatch):
         tmp.cleanup()
 
 
+@pytest.mark.gui
+@pytest.mark.wx
 def test_save_failure_prevents_connect(monkeypatch):
     tmp = _isolated_storage(monkeypatch)
     try:
@@ -643,6 +669,9 @@ def test_save_failure_prevents_connect(monkeypatch):
         tmp.cleanup()
 
 
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.regression
 def test_connect_failure_after_save_keeps_profile(monkeypatch):
     tmp = _isolated_storage(monkeypatch)
     try:
@@ -697,6 +726,8 @@ def test_connect_failure_after_save_keeps_profile(monkeypatch):
 # Controller, selection, host-key
 # ---------------------------------------------------------------------------
 
+@pytest.mark.gui
+@pytest.mark.wx
 def test_controller_transitions_and_second_attempt(monkeypatch):
     c = ConnectionController()
     assert c.state.value == "disconnected"
@@ -756,6 +787,8 @@ def test_controller_transitions_and_second_attempt(monkeypatch):
         tmp.cleanup()
 
 
+@pytest.mark.gui
+@pytest.mark.wx
 def test_selected_vs_active_profile(monkeypatch):
     tmp = _isolated_storage(monkeypatch)
     try:
@@ -802,6 +835,8 @@ def test_selected_vs_active_profile(monkeypatch):
         tmp.cleanup()
 
 
+@pytest.mark.gui
+@pytest.mark.wx
 def test_delete_active_profile_blocked(monkeypatch):
     tmp = _isolated_storage(monkeypatch)
     try:
@@ -844,6 +879,8 @@ def test_delete_active_profile_blocked(monkeypatch):
         tmp.cleanup()
 
 
+@pytest.mark.unit
+@pytest.mark.wx
 def test_host_key_mapping(monkeypatch):
     tmp = _isolated_storage(monkeypatch)
     try:
@@ -875,6 +912,7 @@ def test_host_key_mapping(monkeypatch):
 # i18n and redaction
 # ---------------------------------------------------------------------------
 
+@pytest.mark.contract
 def test_i18n_new_connection_keys():
     load_language("en")
     for key in ["connection.auth_cancelled", "connection.test_credential_error", "connection.master_unlock_error", "connection.saved_credential_unavailable", "connection.credential_unlock_prompt", "connection.saved_password_unavailable"]:
@@ -885,6 +923,8 @@ def test_i18n_new_connection_keys():
     load_language("en")
 
 
+@pytest.mark.integration
+@pytest.mark.semantic
 def test_error_redaction_no_secret_in_logs(monkeypatch, caplog):
     import logging
     from hpc_gui.services.connection_profile_service import resolve_password_for_connect
@@ -918,6 +958,8 @@ def test_error_redaction_no_secret_in_logs(monkeypatch, caplog):
 # Non-regression: provider/template, storage, quota
 # ---------------------------------------------------------------------------
 
+@pytest.mark.audit
+@pytest.mark.wx
 def test_provider_template_no_generic_branch(monkeypatch):
     src = open("src/hpc_gui/wx_connection.py", encoding="utf-8").read()
     assert "TRUBA" not in src
@@ -925,11 +967,14 @@ def test_provider_template_no_generic_branch(monkeypatch):
     # Allow mention in comments but not as hardcoded branch
     assert src2.count("TRUBA") == 0 or "provider_template" in src2
 
+@pytest.mark.unit
 def test_quota_fail_closed():
     from hpc_gui.services.quota_monitor import quota_gate
     assert quota_gate({"enabled": False, "command_template": "cmd", "backend_id": "x", "consent": True}, backend_ids=["x"], connected=True) == "disabled"
     assert quota_gate({"enabled": True, "command_template": "", "backend_id": "x"}, backend_ids=["x"]) == "not_configured"
 
+@pytest.mark.contract
+@pytest.mark.wx
 def test_storage_metadata_preserved(monkeypatch):
     tmp = _isolated_storage(monkeypatch)
     try:

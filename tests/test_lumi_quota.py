@@ -1,6 +1,10 @@
 from pathlib import Path
 
+import pytest
+
 from hpc_gui.services.lumi_quota import parse_lumi_quota
+
+pytestmark = pytest.mark.contract
 
 
 def test_lumi_quota_parser_reads_project_storage_and_file_limits():

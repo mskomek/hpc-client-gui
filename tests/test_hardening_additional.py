@@ -5,7 +5,11 @@ from __future__ import annotations
 import json
 import pathlib
 
+import pytest
 
+
+@pytest.mark.integration
+@pytest.mark.semantic
 def test_template_api_filtering(tmp_path):
     """load_job_templates() vs filtered by plugin_id."""
     from hpc_gui.plugins.job_templates import load_job_templates
@@ -84,6 +88,8 @@ def test_template_api_filtering(tmp_path):
     assert zero == []
 
 
+@pytest.mark.unit
+@pytest.mark.semantic
 def test_plugin_template_action_uses_explicit_api():
     """plugin menu action must call explicit filtered flow with owning plugin ID."""
     from hpc_gui.plugins.models import InstalledPlugin, PluginManifest, PluginFile
@@ -125,6 +131,9 @@ def test_plugin_template_action_uses_explicit_api():
     assert host2.called_with == "org.test.pluginb"
 
 
+@pytest.mark.audit
+@pytest.mark.wx
+@pytest.mark.qt
 def test_host_adapter_import_boundary():
     """Shared dispatcher must not import PySide6."""
     import pathlib
@@ -145,6 +154,9 @@ def test_host_adapter_import_boundary():
     assert "PySide6" not in wx_host_src
 
 
+@pytest.mark.contract
+@pytest.mark.semantic
+@pytest.mark.regression
 def test_condition_validation_strict():
     """Unknown key, wrong bool type, unknown capability, wrong capability type must be rejected."""
     from hpc_gui.plugins.ui_contributions import validate_ui_contributions_dict, _parse_plugins_menu
@@ -197,6 +209,8 @@ def test_condition_validation_strict():
     assert len(contrib5.items) == 1
 
 
+@pytest.mark.unit
+@pytest.mark.semantic
 def test_localized_sort():
     """Plugin roots sorted by localized display label, not plugin ID."""
     from hpc_gui.plugins.ui_contributions import _parse_plugins_menu, get_display_label, MenuContext
@@ -241,6 +255,8 @@ def test_localized_sort():
     assert [i.id for i in contrib_ordered.items] == ["b", "a"]
 
 
+@pytest.mark.integration
+@pytest.mark.semantic
 def test_plugin_isolation_real(tmp_path):
     """One valid + one malformed plugin: valid still contributes, bad does not crash."""
     from hpc_gui.plugins.ui_contributions import collect_plugin_menu_contributions
@@ -314,6 +330,9 @@ def test_plugin_isolation_real(tmp_path):
     assert contribs[0].plugin_id == "org.test.valid"
 
 
+@pytest.mark.gui
+@pytest.mark.qt
+@pytest.mark.semantic
 def test_menu_qt_smoke_offscreen():
     try:
         import os
@@ -353,6 +372,8 @@ def test_menu_qt_smoke_offscreen():
         w.deleteLater()
 
 
+@pytest.mark.audit
+@pytest.mark.wx
 def test_wx_dispatch_uses_host():
     src = pathlib.Path("src/hpc_gui/wx_shell.py").read_text(encoding="utf-8")
     assert "WxPluginMenuHost" in src
@@ -361,6 +382,8 @@ def test_wx_dispatch_uses_host():
     assert "dispatch_plugin_menu_action(action, plugin, editor_widget=editor_widget, host_window=frame)" not in src
 
 
+@pytest.mark.audit
+@pytest.mark.wx
 def test_wx_submenu_disable_hide():
     src = pathlib.Path("src/hpc_gui/wx_shell.py").read_text(encoding="utf-8")
     # disable must actually disable children, not just pass
@@ -370,6 +393,9 @@ def test_wx_submenu_disable_hide():
     assert 'if not show and item.unavailable == "hide":' in src
 
 
+@pytest.mark.audit
+@pytest.mark.wx
+@pytest.mark.qt
 def test_dynamic_separators_qt_and_wx():
     import pathlib
     qt_src = pathlib.Path("src/hpc_gui/ui/main_window.py").read_text(encoding="utf-8")
@@ -384,6 +410,10 @@ def test_dynamic_separators_qt_and_wx():
     assert "sep_plugins_top.Enable(False)" not in wx_src or "sep_plugins_top.Enable(False)" not in wx_src.split("has_any = len(_wx_plugin_dynamic_items)")[1].split("except")[0]
 
 
+@pytest.mark.gui
+@pytest.mark.qt
+@pytest.mark.semantic
+@pytest.mark.regression
 def test_qt_separator_visibility_offscreen():
     try:
         import os
@@ -455,9 +485,12 @@ def _wx_menu_snapshot(menu):
     return items
 
 
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.subprocess
+@pytest.mark.semantic
+@pytest.mark.regression
 def test_wx_separator_lifecycle_offscreen():
-    import pytest
-    pytest.skip("flaky subprocess heap on Windows – pre-existing, not Connection")
     import subprocess
     import sys
     import tempfile
@@ -473,15 +506,7 @@ def test_wx_separator_lifecycle_offscreen():
         except ImportError as e:
             print(f"SKIP wx unavailable: {e}")
             sys.exit(0)
-        # Quick check: try to create App, if fails skip
-        try:
-            # Ensure we can init wx without display
-            pass
-        except Exception as e:
-            print(f"SKIP wx init failed: {e}")
-            sys.exit(0)
-
-        from pathlib import Path
+            from pathlib import Path
         from types import SimpleNamespace
         from unittest.mock import patch
         from hpc_gui.wx_shell import create_shell_frame
@@ -515,11 +540,7 @@ def test_wx_separator_lifecycle_offscreen():
             return sum(1 for it in menu.GetMenuItems() if it.GetSubMenu() is not None)
 
         session_state = {"session": None, "generation": 0}
-        try:
-            frame, _lifecycle, _ss = create_shell_frame(session_state=session_state)
-        except Exception as exc:
-            print(f"SKIP wx create_shell_frame failed: {exc}")
-            sys.exit(0)
+        frame, _lifecycle, _ss = create_shell_frame(session_state=session_state)
         plugins_menu = frame._wx_shell_plugins_menu
         try:
             # 1. 0 visible roots
@@ -562,9 +583,12 @@ def test_wx_separator_lifecycle_offscreen():
                 print("STEP3 OK", snap3)
 
             # 4. all hidden
+            print("STEP4 BEGIN", flush=True)
             with patch("hpc_gui.plugins.loader.load_installed_plugins", return_value=SimpleNamespace(plugins=[fake_plugin])):
                 session_state["session"] = {"connected": False}
+                print("STEP4 CALL", flush=True)
                 frame._wx_rebuild_plugins_menu()
+                print("STEP4 RETURN", flush=True)
                 snap4 = _snapshot(plugins_menu)
                 assert _count_seps(plugins_menu) == 1, f"step4 1 sep {snap4}"
                 assert _count_submenus(plugins_menu) == 0, f"step4 0 submenu {snap4}"
@@ -616,28 +640,27 @@ def test_wx_separator_lifecycle_offscreen():
         env = {k: os.environ[k] for k in keep if k in os.environ}
         # Ensure src is found via cwd, not PYTHONPATH, but keep PYTHONPATH if set
         env["PYTHONPATH"] = env.get("PYTHONPATH", "")
-        result = subprocess.run([sys.executable, str(p)], capture_output=True, text=True, timeout=30, cwd=str(pathlib.Path.cwd()), env=env)
+        try:
+            result = subprocess.run(
+                [sys.executable, "-u", str(p)],
+                capture_output=True,
+                text=True,
+                timeout=15,
+                cwd=str(pathlib.Path.cwd()),
+                env=env,
+            )
+        except subprocess.TimeoutExpired as exc:
+            stdout = exc.stdout.decode(errors="replace") if isinstance(exc.stdout, bytes) else (exc.stdout or "")
+            stderr = exc.stderr.decode(errors="replace") if isinstance(exc.stderr, bytes) else (exc.stderr or "")
+            pytest.fail(f"wx lifecycle subprocess timed out; stdout={stdout!r}; stderr={stderr!r}")
         out = result.stdout + result.stderr
-        if "SKIP" in out:
-            import pytest
-            pytest.skip(out.strip().splitlines()[-1] if out.strip() else "wx skip")
-        # wx cleanup on Windows often exits with heap/access violation even after success (0xC0000374/0xC0000005)
-        # Treat as success if all steps logically passed – duplicate handler warnings are harmless
+        if "SKIP wx unavailable:" in out:
+            pytest.skip("wxPython is not installed in the child process")
+        # Duplicate handler warnings do not substitute for completed lifecycle assertions.
         if "ALL_STEPS_PASSED" in out:
+            assert result.returncode == 0
             assert "STEP1 OK" in out and "STEP2 OK" in out and "STEP3 OK" in out and "STEP4 OK" in out and "STEP5 OK" in out
             return
-        # Duplicate handler warnings are harmless and should not fail the test
-        if "duplicate image handler" in out.lower() or "duplicate animation handler" in out.lower():
-            if "STEP1 OK" in out or "STEP2 OK" in out:
-                import pytest
-                pytest.skip(f"wx duplicate handler artefact (code {result.returncode}): {out[:800]}")
-        # 3221226356 = 0xC0000374 heap corruption, 3221225477 = 0xC0000005 access violation – both are wx cleanup artefacts on Windows
-        if result.returncode in (3221226356, -1073740791, 3221225477, -1073741819):
-            if "STEP1 OK" in out:
-                # At least some wx work succeeded; treat as skipped not failed
-                import pytest
-                pytest.skip(f"wx subprocess heap cleanup artefact after partial success (code {result.returncode}): {out[:800]}")
         if result.returncode != 0:
-            import pytest
             pytest.fail(f"wx lifecycle subprocess failed (code {result.returncode}):\\n{out}")
         assert "ALL_STEPS_PASSED" in result.stdout, f"wx lifecycle did not complete: {out}"

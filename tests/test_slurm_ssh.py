@@ -4,6 +4,8 @@ import sys
 import unittest
 from pathlib import Path
 
+import pytest
+
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
@@ -21,6 +23,8 @@ class _FakeSSH:
 
 
 class SSHSlurmBackendTests(unittest.TestCase):
+    @pytest.mark.unit
+    @pytest.mark.semantic
     def test_sbatch_runs_from_script_parent_directory(self):
         ssh = _FakeSSH((0, "Submitted batch job 123\n", ""))
 
@@ -34,6 +38,8 @@ class SSHSlurmBackendTests(unittest.TestCase):
         )
         self.assertEqual(result, "Submitted batch job 123\n")
 
+    @pytest.mark.unit
+    @pytest.mark.semantic
     def test_sbatch_quotes_directory_and_basename(self):
         ssh = _FakeSSH((0, "Submitted batch job 124", ""))
 
@@ -49,6 +55,8 @@ class SSHSlurmBackendTests(unittest.TestCase):
             ],
         )
 
+    @pytest.mark.unit
+    @pytest.mark.semantic
     def test_sbatch_preserves_stderr_fallback(self):
         ssh = _FakeSSH((1, "", "submission failed"))
 
@@ -56,6 +64,8 @@ class SSHSlurmBackendTests(unittest.TestCase):
 
         self.assertEqual(result, "submission failed")
 
+    @pytest.mark.unit
+    @pytest.mark.semantic
     def test_sbatch_preserves_exit_code_fallback(self):
         ssh = _FakeSSH((2, "", ""))
 
@@ -63,6 +73,8 @@ class SSHSlurmBackendTests(unittest.TestCase):
 
         self.assertEqual(result, "[exit=2]")
 
+    @pytest.mark.unit
+    @pytest.mark.semantic
     def test_custom_system_commands_are_used(self):
         ssh = _FakeSSH((0, "ok", ""))
         backend = SSHSlurmBackend(

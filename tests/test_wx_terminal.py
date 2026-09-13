@@ -1,8 +1,13 @@
 from pathlib import Path
 
+import pytest
+
 from hpc_gui.wx_terminal import TerminalModel
 
 
+@pytest.mark.unit
+@pytest.mark.wx
+@pytest.mark.semantic
 def test_terminal_control_codes_resize_find_clear_and_font():
     sent, sizes = [], []
     model = TerminalModel(sent.append, lambda columns, rows: sizes.append((columns, rows)))
@@ -19,6 +24,8 @@ def test_terminal_control_codes_resize_find_clear_and_font():
     assert model.text == ""
 
 
+@pytest.mark.audit
+@pytest.mark.wx
 def test_wx_terminal_keeps_ssh_renderer_optional():
     source = Path("src/hpc_gui/wx_terminal.py").read_text(encoding="utf-8")
     webview = Path("src/hpc_gui/wx_terminal_webview.py").read_text(encoding="utf-8")

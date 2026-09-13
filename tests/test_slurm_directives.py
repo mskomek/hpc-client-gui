@@ -1,9 +1,13 @@
+import pytest
+
 from hpc_gui.services.slurm_directives import (
     get_directive,
     parse_slurm_directives,
     remove_directive,
     set_directive,
 )
+
+pytestmark = pytest.mark.contract
 
 
 def test_get_set_remove_common_directives():

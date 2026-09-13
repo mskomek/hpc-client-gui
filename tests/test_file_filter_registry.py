@@ -4,12 +4,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+import pytest
+
 from hpc_gui.services.file_filter_registry import (
     FileFilter,
     FileFilterRegistry,
     build_core_registry,
 )
-
 
 @dataclass
 class FakeEntry:
@@ -21,6 +22,7 @@ class FakeEntry:
 # Core filter registration
 # ---------------------------------------------------------------------------
 
+@pytest.mark.unit
 class TestCoreFilters:
     def test_all_core_filters_registered(self):
         reg = build_core_registry()
@@ -55,6 +57,7 @@ class TestCoreFilters:
 # Individual core filter matching
 # ---------------------------------------------------------------------------
 
+@pytest.mark.unit
 class TestFilterMatching:
     def test_all_matches_everything(self):
         reg = build_core_registry()
@@ -109,6 +112,7 @@ class TestFilterMatching:
 # ---------------------------------------------------------------------------
 
 class TestOverlappingFilters:
+    @pytest.mark.unit
     def test_file_can_match_multiple_filters(self):
         reg = build_core_registry()
         # Register a custom "logs" filter that matches *.log
@@ -121,6 +125,7 @@ class TestOverlappingFilters:
         # Also matches "all"
         assert reg.matches(entry, "all") is True
 
+    @pytest.mark.contract
     def test_provider_filter_coexists_with_core(self):
         reg = build_core_registry()
         reg.register(FileFilter(
@@ -135,6 +140,7 @@ class TestOverlappingFilters:
         assert reg.matches(entry, "other") is False
         assert reg.matches(entry, "all") is True
 
+    @pytest.mark.unit
     def test_custom_filter_does_not_steal_from_other(self):
         reg = build_core_registry()
         reg.register(FileFilter(id="logs", label_en="Logs", globs=("*.log",), order=100))
@@ -149,6 +155,8 @@ class TestOverlappingFilters:
 # ---------------------------------------------------------------------------
 
 class TestProviderFilters:
+    pytestmark = pytest.mark.contract
+
     def test_register_provider_filter(self):
         reg = build_core_registry()
         reg.register(FileFilter(
@@ -182,6 +190,7 @@ class TestProviderFilters:
 # Edge cases
 # ---------------------------------------------------------------------------
 
+@pytest.mark.unit
 class TestEdgeCases:
     def test_empty_name_entry(self):
         reg = build_core_registry()

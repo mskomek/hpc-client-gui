@@ -1,8 +1,7 @@
-"""Wave 76 — Behavioral parity evidence for GUI-TERM-001.
+"""Wave 76 — wx terminal panel bridge checks for GUI-TERM-001.
 
-All tests run in subprocess isolation to avoid WebView2 MainLoop hangs.
-Proves: real wx event -> WebView/xterm -> production adapter -> disposable
-loopback PTY -> output -> adapter -> real xterm renderer -> verifiable state.
+Subprocesses isolate WebView2; fake SSH and a captured JS runner expose the
+panel's bridge payloads without claiming that xterm rendered visible output.
 """
 
 import json
@@ -15,6 +14,8 @@ import textwrap
 import pytest
 
 wx = pytest.importorskip("wx")
+
+pytestmark = [pytest.mark.wx, pytest.mark.subprocess]
 
 from hpc_gui.wx_terminal_webview import _is_webview_available
 
@@ -34,11 +35,13 @@ def _wrap(code):
     return textwrap.dedent(code)
 
 
-# ── Deterministic VT fixture tests (subprocess) ──
+# ── Terminal bridge contract/unit checks (subprocess) ──
 
 
-def test_vt_sgr_normal_color_bold_reset():
-    """SGR sequences must be interpreted by xterm, not displayed literally."""
+@pytest.mark.contract
+@pytest.mark.semantic
+def test_panel_sends_sgr_payload_to_terminal_bridge():
+    """The wx panel preserves an SGR sequence for the terminal bridge."""
     if not _is_webview_available():
         pytest.skip("WebView backend unavailable")
     r = _run(_wrap("""
@@ -81,8 +84,10 @@ os._exit(0)
     assert r.returncode == 0, f"failed: {r.stdout}\n{r.stderr}"
 
 
-def test_vt_carriage_return_overwrite():
-    """CR (\\r) must overwrite current line, not create new line."""
+@pytest.mark.contract
+@pytest.mark.semantic
+def test_panel_preserves_carriage_return_bridge_payload():
+    """The panel preserves CR in each output payload sent to the bridge."""
     if not _is_webview_available():
         pytest.skip("WebView backend unavailable")
     r = _run(_wrap("""
@@ -126,8 +131,10 @@ os._exit(0)
     assert r.returncode == 0, f"failed: {r.stdout}\n{r.stderr}"
 
 
-def test_unicode_round_trip():
-    """Unicode input and output must pass through without ASCII clamp."""
+@pytest.mark.contract
+@pytest.mark.semantic
+def test_panel_preserves_unicode_output_payload():
+    """The panel sends Unicode output through the terminal bridge unchanged."""
     if not _is_webview_available():
         pytest.skip("WebView backend unavailable")
     r = _run(_wrap("""
@@ -168,8 +175,10 @@ os._exit(0)
     assert r.returncode == 0, f"failed: {r.stdout}\n{r.stderr}"
 
 
-def test_multiline_paste():
-    """Multiline paste must call terminal.paste."""
+@pytest.mark.contract
+@pytest.mark.semantic
+def test_panel_sends_multiline_paste_to_bridge():
+    """The panel serializes multiline paste to the terminal bridge."""
     if not _is_webview_available():
         pytest.skip("WebView backend unavailable")
     r = _run(_wrap("""
@@ -212,8 +221,10 @@ os._exit(0)
     assert r.returncode == 0, f"failed: {r.stdout}\n{r.stderr}"
 
 
-def test_resize_updates_dimensions_and_pty():
-    """Resize from xterm must update header and call resize_shell_pty."""
+@pytest.mark.unit
+@pytest.mark.semantic
+def test_panel_forwards_resize_to_ssh_seam():
+    """The panel forwards changed dimensions once to its SSH adapter."""
     if not _is_webview_available():
         pytest.skip("WebView backend unavailable")
     r = _run(_wrap("""
@@ -258,8 +269,10 @@ panel.close(); frame.Destroy(); os._exit(0)
     assert r.returncode == 0, f"failed: {r.stdout}\n{r.stderr}"
 
 
-def test_stress_500_inputs():
-    """500 input events must not leak or crash."""
+@pytest.mark.unit
+@pytest.mark.semantic
+def test_repeated_input_forwarding_preserves_order():
+    """Repeated panel input calls reach the SSH adapter in order."""
     if not _is_webview_available():
         pytest.skip("WebView backend unavailable")
     r = _run(_wrap("""
@@ -300,8 +313,10 @@ panel.close(); frame.Destroy(); os._exit(0)
     assert r.returncode == 0, f"failed: {r.stdout}\n{r.stderr}"
 
 
-def test_stress_500_resizes():
-    """500 resize events must dedup and not crash."""
+@pytest.mark.unit
+@pytest.mark.semantic
+def test_repeated_resize_requests_are_deduplicated():
+    """Repeated equal resize calls are coalesced before SSH forwarding."""
     if not _is_webview_available():
         pytest.skip("WebView backend unavailable")
     r = _run(_wrap("""
@@ -343,8 +358,11 @@ panel.close(); frame.Destroy(); os._exit(0)
     assert r.returncode == 0, f"failed: {r.stdout}\n{r.stderr}"
 
 
-def test_stress_100_reconnects():
-    """100 reconnects must not leak subscribers."""
+@pytest.mark.unit
+@pytest.mark.resource
+@pytest.mark.semantic
+def test_reconnect_replaces_output_subscriber():
+    """Replacing SSH adapters detaches the old and retains one new subscriber."""
     if not _is_webview_available():
         pytest.skip("WebView backend unavailable")
     r = _run(_wrap("""
@@ -386,8 +404,10 @@ panel.close(); frame.Destroy(); os._exit(0)
     assert r.returncode == 0, f"failed: {r.stdout}\n{r.stderr}"
 
 
-def test_stress_repeated_font_find_clear():
-    """Repeated font/find/clear must not crash."""
+@pytest.mark.unit
+@pytest.mark.semantic
+def test_repeated_font_find_clear_bridge_calls_stay_bounded():
+    """Repeated font, find, and clear commands remain within font limits."""
     if not _is_webview_available():
         pytest.skip("WebView backend unavailable")
     r = _run(_wrap("""
@@ -427,8 +447,11 @@ panel.close(); frame.Destroy(); os._exit(0)
     assert r.returncode == 0, f"failed: {r.stdout}\n{r.stderr}"
 
 
-def test_close_while_output_in_flight():
-    """Closing during output delivery must not crash."""
+@pytest.mark.unit
+@pytest.mark.resource
+@pytest.mark.semantic
+def test_close_after_queued_output_is_idempotent():
+    """Closing after output calls leaves the panel closed and is idempotent."""
     if not _is_webview_available():
         pytest.skip("WebView backend unavailable")
     r = _run(_wrap("""
@@ -469,6 +492,7 @@ os._exit(0)
     assert r.returncode == 0, f"failed: {r.stdout}\n{r.stderr}"
 
 
+@pytest.mark.reporting
 def test_generate_parity_evidence():
     """Generate JSON evidence for GUI-TERM-001 behavioral parity."""
     evidence = {
@@ -481,16 +505,16 @@ def test_generate_parity_evidence():
         "bridge": "single JSON postMessage (hpc/hpc_msg)",
         "pty_adapter": "FakeSSH disposable fixture",
         "tests_executed": [
-            "test_vt_sgr_normal_color_bold_reset",
-            "test_vt_carriage_return_overwrite",
-            "test_unicode_round_trip",
-            "test_multiline_paste",
-            "test_resize_updates_dimensions_and_pty",
-            "test_stress_500_inputs",
-            "test_stress_500_resizes",
-            "test_stress_100_reconnects",
-            "test_stress_repeated_font_find_clear",
-            "test_close_while_output_in_flight",
+            "test_panel_sends_sgr_payload_to_terminal_bridge",
+            "test_panel_preserves_carriage_return_bridge_payload",
+            "test_panel_preserves_unicode_output_payload",
+            "test_panel_sends_multiline_paste_to_bridge",
+            "test_panel_forwards_resize_to_ssh_seam",
+            "test_repeated_input_forwarding_preserves_order",
+            "test_repeated_resize_requests_are_deduplicated",
+            "test_reconnect_replaces_output_subscriber",
+            "test_repeated_font_find_clear_bridge_calls_stay_bounded",
+            "test_close_after_queued_output_is_idempotent",
             "test_wx_terminal_generation_guard_rejects_stale_output",
             "test_wx_terminal_find_next_and_prev",
             "test_wx_terminal_header_status_updates",

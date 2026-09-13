@@ -1,4 +1,8 @@
+import pytest
+
 from hpc_gui.services.geometry_policy import Rect, recover_geometry
+
+pytestmark = pytest.mark.unit
 
 
 def test_geometry_clamps_and_recovers_removed_monitor():

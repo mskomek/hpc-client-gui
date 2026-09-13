@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import os
+
+import pytest
 import sys
 import tempfile
 import time
@@ -30,6 +32,7 @@ def _entry(name: str, *, is_dir: bool = False, size: int = 10, mtime: int = 100)
 
 
 class PureComparisonTests(unittest.TestCase):
+    @pytest.mark.unit
     def test_same_file(self) -> None:
         result = compare_directory_entries(
             [_entry("a.txt", size=5, mtime=50)],
@@ -38,6 +41,7 @@ class PureComparisonTests(unittest.TestCase):
         self.assertEqual(result.local["a.txt"], CompareStatus.SAME)
         self.assertEqual(result.remote, {})
 
+    @pytest.mark.unit
     def test_local_only_and_remote_only(self) -> None:
         result = compare_directory_entries(
             [_entry("local.txt")],
@@ -48,6 +52,7 @@ class PureComparisonTests(unittest.TestCase):
         self.assertEqual(result.remote["remote.txt"], CompareStatus.REMOTE_ONLY)
         self.assertEqual(result.remote.get("local.txt"), None)
 
+    @pytest.mark.unit
     def test_type_mismatch(self) -> None:
         result = compare_directory_entries(
             [_entry("thing", is_dir=True)],
@@ -55,6 +60,7 @@ class PureComparisonTests(unittest.TestCase):
         )
         self.assertEqual(result.local["thing"], CompareStatus.TYPE_MISMATCH)
 
+    @pytest.mark.unit
     def test_size_mismatch(self) -> None:
         result = compare_directory_entries(
             [_entry("a.bin", size=10)],
@@ -62,6 +68,7 @@ class PureComparisonTests(unittest.TestCase):
         )
         self.assertEqual(result.local["a.bin"], CompareStatus.SIZE_DIFFERENT)
 
+    @pytest.mark.unit
     def test_local_newer_beyond_tolerance(self) -> None:
         result = compare_directory_entries(
             [_entry("a.txt", size=5, mtime=200)],
@@ -69,6 +76,7 @@ class PureComparisonTests(unittest.TestCase):
         )
         self.assertEqual(result.local["a.txt"], CompareStatus.LOCAL_NEWER)
 
+    @pytest.mark.unit
     def test_remote_newer_beyond_tolerance(self) -> None:
         result = compare_directory_entries(
             [_entry("a.txt", size=5, mtime=100)],
@@ -76,6 +84,7 @@ class PureComparisonTests(unittest.TestCase):
         )
         self.assertEqual(result.local["a.txt"], CompareStatus.REMOTE_NEWER)
 
+    @pytest.mark.unit
     def test_mtime_within_tolerance_is_same(self) -> None:
         result = compare_directory_entries(
             [_entry("a.txt", size=5, mtime=101)],
@@ -84,6 +93,7 @@ class PureComparisonTests(unittest.TestCase):
         )
         self.assertEqual(result.local["a.txt"], CompareStatus.SAME)
 
+    @pytest.mark.unit
     def test_both_directories_are_same(self) -> None:
         result = compare_directory_entries(
             [_entry("sub", is_dir=True, mtime=1)],
@@ -91,6 +101,7 @@ class PureComparisonTests(unittest.TestCase):
         )
         self.assertEqual(result.local["sub"], CompareStatus.SAME)
 
+    @pytest.mark.unit
     def test_case_sensitive_names_are_separate(self) -> None:
         result = compare_directory_entries(
             [_entry("Readme.TXT")],
@@ -99,11 +110,13 @@ class PureComparisonTests(unittest.TestCase):
         self.assertEqual(result.local["Readme.TXT"], CompareStatus.LOCAL_ONLY)
         self.assertEqual(result.remote["readme.txt"], CompareStatus.REMOTE_ONLY)
 
+    @pytest.mark.unit
     def test_empty_dirs(self) -> None:
         result = compare_directory_entries([], [])
         self.assertEqual(result.local, {})
         self.assertEqual(result.remote, {})
 
+    @pytest.mark.unit
     def test_spaces_and_unicode(self) -> None:
         result = compare_directory_entries(
             [_entry("dosya adı - kopya.txt", size=3)],
@@ -113,6 +126,8 @@ class PureComparisonTests(unittest.TestCase):
             result.local["dosya adı - kopya.txt"], CompareStatus.SAME
         )
 
+    @pytest.mark.unit
+    @pytest.mark.performance
     def test_large_lists_scale_linearly(self) -> None:
         count = 20000
         local = [
@@ -216,6 +231,8 @@ class SnapshotAndUiTests(unittest.TestCase):
             widget._comparison_recompute_timer.stop()
             widget._recompute_directory_comparison()
 
+    @pytest.mark.gui
+    @pytest.mark.qt
     def test_enabling_comparison_causes_no_remote_listing(self) -> None:
         files = _FakeFiles()
         with tempfile.TemporaryDirectory() as local_dir:
@@ -227,6 +244,8 @@ class SnapshotAndUiTests(unittest.TestCase):
             self._run_pending_compare_now(widget)
         self.assertEqual(files.listdir_calls, [])
 
+    @pytest.mark.integration
+    @pytest.mark.qt
     def test_recompute_uses_existing_snapshots_without_new_calls(self) -> None:
         files = _FakeFiles()
         files.entries = "/arf/scratch/user"
@@ -269,6 +288,8 @@ class SnapshotAndUiTests(unittest.TestCase):
             local_statuses = widget.local_panel._comparison_statuses or {}
             self.assertEqual(local_statuses["same.txt"].value, "same")
 
+    @pytest.mark.unit
+    @pytest.mark.qt
     def test_stale_streaming_snapshot_never_becomes_source(self) -> None:
         from hpc_gui.ui.widgets.remote_dir_panel import RemoteDirPanel
 
@@ -292,6 +313,8 @@ class SnapshotAndUiTests(unittest.TestCase):
         finally:
             panel.deleteLater()
 
+    @pytest.mark.integration
+    @pytest.mark.qt
     def test_waiting_until_both_identities_match(self) -> None:
         files = _FakeFiles()
         with tempfile.TemporaryDirectory() as local_dir:
@@ -309,6 +332,8 @@ class SnapshotAndUiTests(unittest.TestCase):
                 widget.local_panel._comparison_statuses, None
             )
 
+    @pytest.mark.gui
+    @pytest.mark.qt
     def test_column_visibility_toggle(self) -> None:
         files = _FakeFiles()
         widget = self._make_widget(files=files)
@@ -320,6 +345,9 @@ class SnapshotAndUiTests(unittest.TestCase):
         self.assertTrue(widget.panel_scratch.views["all"].isColumnHidden(4))
         self.assertIsNone(widget.local_panel._comparison_statuses)
 
+    @pytest.mark.gui
+    @pytest.mark.qt
+    @pytest.mark.semantic
     def test_parent_row_blank_and_sort_roles_intact(self) -> None:
         files = _FakeFiles()
         with tempfile.TemporaryDirectory() as local_dir:
@@ -341,6 +369,8 @@ class SnapshotAndUiTests(unittest.TestCase):
             widget.local_panel.tree.apply_sort()
         self.assertTrue(True)
 
+    @pytest.mark.gui
+    @pytest.mark.qt
     def test_profile_switch_clears_statuses(self) -> None:
         files = _FakeFiles()
         widget = self._make_widget(files=files)
@@ -350,6 +380,8 @@ class SnapshotAndUiTests(unittest.TestCase):
         self.assertFalse(widget.btn_compare_directories.isChecked())
         self.assertFalse(widget.btn_compare_directories.isEnabled())
 
+    @pytest.mark.integration
+    @pytest.mark.qt
     def test_active_panel_switch_recomputes_with_that_panel(self) -> None:
         files = _FakeFiles()
         with tempfile.TemporaryDirectory() as local_dir:

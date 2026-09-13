@@ -3,6 +3,8 @@ import sys
 import unittest
 from unittest.mock import patch
 
+import pytest
+
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 sys.path.insert(0, os.path.abspath("src"))
 
@@ -12,6 +14,9 @@ from PySide6.QtWidgets import QApplication, QMessageBox
 from hpc_gui.ui.widgets.editor_widget import EditorWidget
 
 
+@pytest.mark.gui
+@pytest.mark.qt
+@pytest.mark.semantic
 class EditorShortcutSafetyTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
