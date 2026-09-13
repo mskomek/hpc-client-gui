@@ -49,20 +49,18 @@ def _cleanup_wx_test(app, existing_windows, original_language) -> None:
     set_language(original_language)
     created_windows = [window for window in wx.GetTopLevelWindows() if window not in existing_windows]
     for window in created_windows:
-        try:
+        if window in wx.GetTopLevelWindows():
             window.Close()
-        except Exception:
-            pass
     for _ in range(3):
         app.ProcessPendingEvents()
         _yield(1)
-    for window in created_windows:
-        try:
-            if not window.IsBeingDeleted():
-                window.Destroy()
-        except Exception:
-            pass
+    for window in wx.GetTopLevelWindows():
+        if window not in existing_windows:
+            window.Destroy()
     app.ProcessPendingEvents()
+    wx.Yield()
+    remaining = [window for window in wx.GetTopLevelWindows() if window not in existing_windows]
+    assert not remaining, "wx top-level windows survived test cleanup"
 
 
 class Probe:
