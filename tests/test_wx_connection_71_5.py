@@ -18,6 +18,7 @@ wx = pytest.importorskip("wx", reason="wxPython not installed")
 
 from hpc_gui.config import storage
 from hpc_gui.config.storage import load_profiles
+from hpc_gui.core.i18n import current_language, set_language
 from hpc_gui.wx_connection import build_connection_panel
 
 
@@ -42,22 +43,27 @@ def _isolated_storage(monkeypatch):
 
 @pytest.fixture(autouse=True)
 def _clean_wx_after():
+    original_language = current_language()
+    set_language("en")
     yield
     try:
-        app = wx.GetApp()
-        if app is not None:
-            for win in list(wx.GetTopLevelWindows()):
-                try:
-                    win.Destroy()
-                except Exception:
-                    pass
-            for _ in range(5):
-                try:
-                    wx.Yield()
-                except Exception:
-                    break
-    except Exception:
-        pass
+        set_language(original_language)
+    finally:
+        try:
+            app = wx.GetApp()
+            if app is not None:
+                for win in list(wx.GetTopLevelWindows()):
+                    try:
+                        win.Destroy()
+                    except Exception:
+                        pass
+                for _ in range(5):
+                    try:
+                        wx.Yield()
+                    except Exception:
+                        break
+        except Exception:
+            pass
 
 
 def _make_profile(name="p", master=None, secret="s3cret"):
