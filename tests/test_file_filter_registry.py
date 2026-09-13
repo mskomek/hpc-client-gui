@@ -196,6 +196,9 @@ class TestEdgeCases:
         reg = build_core_registry()
         assert reg.matches(FakeEntry(""), "all") is True
         assert reg.matches(FakeEntry(""), "other") is True
+        reg.register(FileFilter(id="logs", label_en="Logs", suffixes=(".log",)))
+        assert reg.matches({"name": "", "path": "/var/log/run.log"}, "logs") is True
+        assert reg.matches({"name": "   ", "path": r"\work\字 1.log"}, "logs") is True
 
     def test_dict_entry(self):
         reg = build_core_registry()
