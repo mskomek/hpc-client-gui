@@ -101,7 +101,7 @@ The runner stopped after the broad child failed. It did not execute the five lat
 | `python -m ruff check src tests scripts` | Exit 0 after correcting two lint findings in the closeout tests. |
 | `python scripts/check_i18n.py` | Exit 0. |
 | `python scripts/smoke_test.py` | Exit 0. |
-| `git diff --check` | Exit 0 before the final report edits; rerun on the committed closeout. |
+| `git diff --cached --check` | Exit 0 for each staged changeset before its commit. |
 | Screenshot audit suite | 5 passed. |
 | Release-runner selector tests | 2 passed. |
 | Archived Wave 9 wx smoke contract | 1 passed. |
