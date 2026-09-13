@@ -31,10 +31,18 @@ def wx_app():
     load_language("en")
     app = wx.App(False)
     yield app
-    for window in wx.GetTopLevelWindows():
-        if window:
+    for window in list(wx.GetTopLevelWindows()):
+        if window and not window.IsBeingDeleted():
+            window.Close()
+    for _ in range(3):
+        app.ProcessPendingEvents()
+        wx.Yield()
+    for window in list(wx.GetTopLevelWindows()):
+        if window and not window.IsBeingDeleted():
             window.Destroy()
     app.ProcessPendingEvents()
+    wx.Yield()
+    assert not wx.GetTopLevelWindows(), "wx top-level windows survived fixture teardown"
     app.Destroy()
 
 
