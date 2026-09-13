@@ -1,6 +1,8 @@
 # Test Taxonomy Final Report
 
-Status: FINAL — Packet O DONE; independent audit PASS WITH FOLLOW-UP; governance branch push pending.
+Status: Packet O DONE. Integration-closeout census on 2026-09-13: 2,657 collected; every collected node has exactly one primary category; zero-primary 0; multi-primary 0; strict zero-debt ratchet PASS. The release suite still has two failures, so this taxonomy result does not establish integration or release readiness.
+
+This closeout census supersedes the historical 2,656-node / six-exception snapshot below. The prior packet record is retained as history. See [TEST_SUITE_INTEGRATION_CLOSEOUT_2026-09-13.md](TEST_SUITE_INTEGRATION_CLOSEOUT_2026-09-13.md) and [the strict ratchet baseline](../../audit/test-governance/integration-closeout-20260913/taxonomy-ratchet-strict.json) for current evidence.
 
 Frozen baseline: `12ce79935bf076e1062c57dc7dbd148bad2bfae1`
 Taxonomy snapshot SHA: `6cad198dca6c0f69bc8196f5030a7aebcba9d696`

@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "governance_start_sha": "18e59fff3d8ebfa47666347a0d9cfc4d137b43c1",
+  "cases": [
+    {
+      "owner": "Jobs-scroll wx/native lifecycle",
+      "candidate_predecessor_set": [
+        "tests/test_corrective_jobs_details.py::TestSec3_NoAutoSwitch::test_single_click_stays_on_jobs"
+      ],
+      "target": "tests/test_jobs_outputs_scroll.py",
+      "result": "Combined in one interpreter previously terminated; each owner passes alone.",
+      "exit_code_hex": "0xC000041D",
+      "native_exception": "Windows callback exception during wx/Qt mixed GUI teardown",
+      "duration_seconds": null,
+      "minimized": false,
+      "runner_action": "The reproduced predecessor candidate justifies separate release-runner processes; no tests are excluded."
+    },
+    {
+      "owner": "wx.html2 WebView2 heap corruption",
+      "candidate_predecessor_set": [
+        "broad mixed-GUI pytest process before tests/test_wx_terminal_webview.py"
+      ],
+      "target": "tests/test_wx_terminal_webview.py::test_wx_terminal_external_navigation_blocked",
+      "result": "Broad mixed-GUI process previously corrupted heap; exact node and full WebView module pass in isolated processes.",
+      "exit_code_hex": "0xC0000374",
+      "native_exception": "STATUS_HEAP_CORRUPTION from wx WebView2 teardown",
+      "duration_seconds": 288,
+      "minimized": false,
+      "runner_action": "Full WebView2 test file is isolated as its own process; all 29 tests remain selected."
+    },
+    {
+      "owner": "Embedded terminal fallback controls and detached-frame cleanup",
+      "candidate_predecessor_set": [],
+      "target": "tests/test_wx_embedded_terminal.py::test_shell_embedded_and_detached_share_implementation",
+      "result": "Explicit fallback selection plus closing the actual detached frame removes the prior model=None assertions and isolated heap-corruption exit; full module passes.",
+      "exit_code_hex": "0x00000000",
+      "native_exception": null,
+      "duration_seconds": 3.33,
+      "minimized": true,
+      "runner_action": "Kept in the broad process; full module verified 9 passed."
+    },
+    {
+      "owner": "wx App state before file-sync close-in-flight test",
+      "candidate_predecessor_set": [
+        "broad release process through tests/test_wx_files_sync_compare.py"
+      ],
+      "target": "tests/test_wx_files_sync_compare.py::test_wx_compare_close_in_flight_is_safe",
+      "result": "Fails in broad process with PyNoAppError while constructing a wx panel; file-sync module alone passes 8, and editor plus file-sync sequence passes 22. Exact polluting predecessor is not yet minimized.",
+      "exit_code_hex": "0x00000001",
+      "native_exception": null,
+      "duration_seconds": 1401.99,
+      "minimized": false,
+      "runner_action": "Unresolved order-dependent test infrastructure failure; do not hide with an unproven selector change."
+    }
+  ],
+  "latest_authoritative_release": {
+    "command": "python -X faulthandler scripts/release_test_suite.py",
+    "exit_code": 1,
+    "result": "The broad child reached 100%; no native process termination. It reported two failures: the wx App order-dependent failure above and the confirmed remote provider Logs-filter product defect.",
+    "duration_seconds": 1401.99
+  }
+}

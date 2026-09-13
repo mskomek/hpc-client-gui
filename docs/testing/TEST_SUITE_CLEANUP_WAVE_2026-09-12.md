@@ -1,6 +1,6 @@
 # Test Suite Cleanup Wave — 2026-09-12
 
-Status: COMPLETE
+Status: COMPLETE as a governance Wave. Integration closeout on 2026-09-13 is `DEFECT_FOUND` / NOT READY TO MERGE; the authoritative release runner completed its broad child with two failures. See [the integration closeout report](TEST_SUITE_INTEGRATION_CLOSEOUT_2026-09-13.md).
 
 Frozen baseline: `12ce79935bf076e1062c57dc7dbd148bad2bfae1`
 
