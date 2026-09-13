@@ -2,8 +2,15 @@
 import pytest
 
 wx = pytest.importorskip("wx")
+import hpc_gui.wx_terminal_webview as terminal_webview
 from hpc_gui.wx_terminal import build_terminal_panel
 from hpc_gui.wx_shell import create_shell_frame
+
+
+@pytest.fixture(autouse=True)
+def _use_text_ctrl_terminal_renderer(monkeypatch):
+    """These controls test the explicit non-WebView terminal fallback."""
+    monkeypatch.setattr(terminal_webview, "_is_webview_available", lambda: False)
 
 
 def _fake_ssh():
@@ -210,19 +217,27 @@ def test_shell_embedded_and_detached_share_implementation():
     from hpc_gui.wx_terminal import show_terminal
     _app = wx.App.Get() or wx.App(False)
     ssh = _fake_ssh()
-    # detached
-    frame_det = wx.Frame(None)
-    show_terminal(parent=frame_det, ssh=ssh)
-    # detached creates its own frame, not frame_det; find top windows
-    # instead build directly
-    panel_det = build_terminal_panel(frame_det, ssh=ssh)
-    # embedded via shell
-    shell_frame, _, sess = create_shell_frame()
-    panel_emb = sess.get("_embedded_terminal_panel")
-    det_keys = set(panel_det._wx_terminal_controls.keys())
-    emb_keys = set(panel_emb._wx_terminal_controls.keys())
-    assert det_keys == emb_keys
-    assert "find_btn" in det_keys and "clear" in det_keys
-    frame_det.Destroy()
-    shell_frame.Destroy()
-    wx.Yield()
+    existing = {id(window) for window in wx.GetTopLevelWindows()}
+    detached_frame = None
+    shell_frame = None
+    try:
+        assert show_terminal(ssh=ssh) == wx.ID_OK
+        detached_frame = next(
+            window for window in wx.GetTopLevelWindows()
+            if id(window) not in existing
+        )
+        shell_frame, _, sess = create_shell_frame()
+        panel_emb = sess.get("_embedded_terminal_panel")
+        det_keys = set(detached_frame._wx_terminal_controls)
+        emb_keys = set(panel_emb._wx_terminal_controls)
+        assert det_keys == emb_keys
+        assert "find_btn" in det_keys and "clear" in det_keys
+    finally:
+        for frame in (detached_frame, shell_frame):
+            if frame:
+                frame.Close()
+        wx.SafeYield()
+        for frame in wx.GetTopLevelWindows():
+            if frame and id(frame) not in existing:
+                frame.Destroy()
+        wx.SafeYield()
