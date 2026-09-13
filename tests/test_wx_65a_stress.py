@@ -45,6 +45,26 @@ def _menu(frame, mid: int) -> None:
     frame.GetEventHandler().ProcessEvent(evt)
 
 
+def _cleanup_wx_test(app, existing_windows, original_language) -> None:
+    set_language(original_language)
+    created_windows = [window for window in wx.GetTopLevelWindows() if window not in existing_windows]
+    for window in created_windows:
+        try:
+            window.Close()
+        except Exception:
+            pass
+    for _ in range(3):
+        app.ProcessPendingEvents()
+        _yield(1)
+    for window in created_windows:
+        try:
+            if not window.IsBeingDeleted():
+                window.Destroy()
+        except Exception:
+            pass
+    app.ProcessPendingEvents()
+
+
 class Probe:
     def __init__(self) -> None:
         self.count = 0
@@ -77,7 +97,7 @@ class Probe:
 @pytest.mark.gui
 @pytest.mark.wx
 @pytest.mark.semantic
-def test_wx_65a_integrated_stress(tmp_path: Path, monkeypatch) -> None:
+def test_wx_65a_integrated_stress(tmp_path: Path, monkeypatch, request) -> None:
     print("65A real start")
     monkeypatch.setattr(wx, "MessageBox", lambda *a, **k: wx.YES)
     monkeypatch.setattr(
@@ -127,8 +147,11 @@ def test_wx_65a_integrated_stress(tmp_path: Path, monkeypatch) -> None:
     probe = Probe()
     closed = {"v": False}
 
+    existing_windows = set(wx.GetTopLevelWindows())
     app = wx.App.Get() or wx.App(False)
     frame, lifecycle, session = create_shell_frame(app)
+    orig_lang = current_language()
+    request.addfinalizer(lambda: _cleanup_wx_test(app, existing_windows, orig_lang))
     frame.Show()
     _yield(2)
     print("frame shown")
@@ -163,7 +186,6 @@ def test_wx_65a_integrated_stress(tmp_path: Path, monkeypatch) -> None:
     probe.watch(logs_text)
 
     lang_items = frame._wx_shell_controls["language_items"]
-    orig_lang = current_language()
 
     executed = {
         "main_tab_switches": 0,
@@ -220,19 +242,20 @@ def test_wx_65a_integrated_stress(tmp_path: Path, monkeypatch) -> None:
     print(f"embedded refreshes {executed['embedded_refreshes']}")
 
     # 200 EN/TR via real menu
-    for i in range(200):
-        lang = "tr" if i % 2 == 0 else "en"
-        item = lang_items.get(lang)
-        if item:
-            _menu(frame, item.GetId())
-            executed["en_tr_switches"] += 1
-            lbl = frame._wx_shell_controls["language_button"].GetLabel()
-            if "[" in lbl and "]" in lbl:
-                invariants["wrong_language_labels"] += 1
-        if i % 50 == 0:
-            _yield(1)
-    set_language(orig_lang)
-    _yield(1)
+    try:
+        for i in range(200):
+            lang = "tr" if i % 2 == 0 else "en"
+            item = lang_items.get(lang)
+            if item:
+                _menu(frame, item.GetId())
+                executed["en_tr_switches"] += 1
+                if current_language() != lang or not item.IsChecked():
+                    invariants["wrong_language_labels"] += 1
+            if i % 50 == 0:
+                _yield(1)
+    finally:
+        set_language(orig_lang)
+        _yield(1)
     print(f"en/tr {executed['en_tr_switches']}")
 
     # 200 resizes
