@@ -10,7 +10,7 @@ pytestmark = [pytest.mark.gui, pytest.mark.wx, pytest.mark.concurrency]
 
 from hpc_gui.wx_local_files import LocalBrowserModel, LocalEntry, show_local_files
 from hpc_gui.wx_remote_files import RemoteEntry, WxRemoteDirectoryModel
-from hpc_gui.wx_remote_files_view import show_remote_files
+from hpc_gui.wx_remote_files_view import build_remote_files_panel, show_remote_files
 from mock_hpc_files import MockRemoteFilesBackend
 
 
@@ -380,6 +380,60 @@ def test_wx_remote_listing_completion_after_close_is_safe(wx_app):
     assert finished.wait(2)
     wx_app.ProcessPendingEvents()
     assert frame._wx_remote_state["closed"]
+
+
+@pytest.mark.semantic
+@pytest.mark.regression
+@pytest.mark.resource
+def test_wx_embedded_remote_callback_after_notebook_destroy_is_ignored(wx_app, monkeypatch):
+    started = threading.Event()
+    release = threading.Event()
+    callback_queued = threading.Event()
+    pending_callbacks = []
+    parent = wx.Frame(None)
+    notebook = wx.Notebook(parent)
+
+    def loader(_path):
+        started.set()
+        release.wait(2)
+        return ()
+
+    host = build_remote_files_panel(
+        notebook,
+        model=WxRemoteDirectoryModel("/work"),
+        loader=loader,
+        operation=lambda *_args: None,
+    )
+    notebook.AddPage(host, "Remote files")
+    parent.Show()
+    original_call_after = wx.CallAfter
+
+    def capture_completion(callback, *args, **kwargs):
+        if getattr(callback, "__name__", "") == "done":
+            pending_callbacks.append((callback, args, kwargs))
+            callback_queued.set()
+            return None
+        return original_call_after(callback, *args, **kwargs)
+
+    monkeypatch.setattr(wx, "CallAfter", capture_completion)
+    try:
+        assert started.wait(2)
+        release.set()
+        assert callback_queued.wait(2)
+        state = host._wx_remote_state
+
+        # Destroying the parent models shell/page teardown, which does not send
+        # an EVT_CLOSE event to each embedded panel.
+        parent.Destroy()
+        wx.SafeYield()
+        assert state["closed"]
+        assert len(pending_callbacks) == 1
+
+        callback, args, kwargs = pending_callbacks[0]
+        callback(*args, **kwargs)
+        assert state["closed"]
+    finally:
+        release.set()
 
 
 def test_wx_remote_stale_listing_error_is_ignored_after_navigation(wx_app, monkeypatch):
