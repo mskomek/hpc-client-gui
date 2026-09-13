@@ -1,6 +1,6 @@
 {
   "collection": {
-    "total": 2656
+    "total": 2658
   },
   "mode": "report",
   "multi_primary": {
@@ -16,7 +16,7 @@
     "release": 101,
     "reporting": 21,
     "runtime_smoke": 6,
-    "unit": 760
+    "unit": 762
   },
   "qualifier_counts": {
     "acceptance": 1,
@@ -29,16 +29,16 @@
     "packaging": 4,
     "performance": 17,
     "qt": 270,
-    "regression": 161,
+    "regression": 162,
     "resource": 118,
-    "semantic": 958,
+    "semantic": 959,
     "slow": 14,
     "subprocess": 57,
     "synthetic_hardware": 0,
     "windows": 4,
     "wx": 569
   },
-  "repository_sha": "6cad198dca6c0f69bc8196f5030a7aebcba9d696",
+  "repository_sha": "d83b76beff24ae9810f3db64611eab351bd93a02",
   "schema_version": 1,
   "warnings": {
     "catch_all_filenames": [],
