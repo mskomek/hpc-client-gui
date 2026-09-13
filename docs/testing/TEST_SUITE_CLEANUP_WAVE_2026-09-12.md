@@ -1,6 +1,6 @@
 # Test Suite Cleanup Wave — 2026-09-12
 
-Status: IN_PROGRESS
+Status: COMPLETE
 
 Frozen baseline: `12ce79935bf076e1062c57dc7dbd148bad2bfae1`
 
@@ -36,7 +36,7 @@ This is an executable cleanup Wave and implementation plan. The repository has n
 | L | DONE | Legacy static/migration ownership review |
 | M | DONE | Two latent wx product defects fixed; actual taxonomy and six baseline exceptions reconciled |
 | N | NOT APPLICABLE | Explicit local/release selectors remain clearer; no selector or workflow migration |
-| O | IN_PROGRESS | Final mapping, closeout evidence, independent audit, and integration-readiness review |
+| O | DONE | Final mapping, closeout evidence, independent audit, and integration-readiness review |
 
 ## Packet M closeout
 
@@ -50,12 +50,13 @@ Actual REPORT snapshot `6cad198dca6c0f69bc8196f5030a7aebcba9d696`: **2,656** col
 
 The official release suite was attempted with and without coverage. `pytest-cov` is installed and compile, i18n, and smoke preflight pass. The broad pytest child terminates with Windows native exit `3221226525` while entering `tests/test_jobs_outputs_scroll.py::JobsOutputsScrollTests::setUp`; that module passes by itself (20 passed, 4 subtests). A fail-fast diagnostic reproduced the archived screenshot-manifest failure at its stale-commit assertion. Neither interrupted run has authoritative full-suite totals, and no full-suite PASS is claimed. These findings remain separate from the two fixed product defects and the seven archived baseline failures.
 
-## Packet O remaining work
+## Packet O closeout
 
-- Commit the final machine-readable mapping at `audit/test-taxonomy/taxonomy-final-mapping.json`, with actual primary/qualifier markers, frozen/current ownership, all additions/removals/renames, deletion evidence, and the six exception classes.
-- Publish the human-readable summary at `docs/testing/TEST_TAXONOMY_FINAL_REPORT.md` and reconcile this Wave with it.
-- Perform the independent read-only audit and record its verdict. Do not mark the Wave complete unless the audit supports it.
-- Compare the governance branch with `develop`, record ahead/behind and changed paths, and recommend integration. Do not merge or push to `develop`.
+The final machine mapping is `audit/test-taxonomy/taxonomy-final-mapping.json`; the human summary is `docs/testing/TEST_TAXONOMY_FINAL_REPORT.md`. The independent read-only audit verdict is **PASS WITH FOLLOW-UP**. Its two documentation findings were corrected: the native process exit is reported without assigning an unsupported failure type, and the archived ratchet’s 2,654 collection count is labeled as historical snapshot metadata. The current collection and report reconcile at 2,656.
+
+The governance branch is based on `develop` at frozen SHA `12ce79935bf076e1062c57dc7dbd148bad2bfae1`. At closeout review it is 14 commits ahead and 0 behind `origin/develop`; the governance remote was at `7a45496b4929a578db9a77b8a051e822fadc9011` before the Packet O push. The diff contains 267 test files, 3 production files (the explicitly authorized Packet F and M fixes), 6 documentation files, 13 audit files, one script, and `pyproject.toml`; no workflow, migration/parity ledger, protected guidance, CI selector, or `.tmp/` changes are included. Recommend **NOT READY TO MERGE** until a supported broad release-suite run completes; do not merge or push to `develop` in this Wave.
+
+Wave verdict: **COMPLETE**. This records completion of the governance work and does not claim that the interrupted full suite passed.
 
 ## Evidence and history
 
@@ -65,4 +66,4 @@ The official release suite was attempted with and without coverage. `pytest-cov`
 - [`TEST_SUITE_CLEANUP_WAVE_2026-09-12_HISTORY.md`](TEST_SUITE_CLEANUP_WAVE_2026-09-12_HISTORY.md) — preserved prior long-form Wave journal and packet candidate details.
 - `audit/test-taxonomy/` — actual REPORT, zero-primary registry, and final node mapping.
 
-Wave remains **IN_PROGRESS** until Packet O, the independent audit, and develop-readiness review are complete.
+Automatic GitHub Actions CI remains disabled. Packet O is complete; the broad-suite limitation and separate **NOT READY TO MERGE** recommendation remain explicit in the final report.

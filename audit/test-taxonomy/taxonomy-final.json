@@ -1,0 +1,58 @@
+{
+  "collection": {
+    "total": 2656
+  },
+  "mode": "report",
+  "multi_primary": {
+    "count": 0,
+    "nodes": []
+  },
+  "primary_counts": {
+    "audit": 156,
+    "contract": 566,
+    "e2e": 7,
+    "gui": 671,
+    "integration": 362,
+    "release": 101,
+    "reporting": 21,
+    "runtime_smoke": 6,
+    "unit": 760
+  },
+  "qualifier_counts": {
+    "acceptance": 1,
+    "artifact_dependent": 25,
+    "concurrency": 119,
+    "hardware": 0,
+    "license": 2,
+    "linux": 0,
+    "macos": 0,
+    "packaging": 4,
+    "performance": 17,
+    "qt": 270,
+    "regression": 161,
+    "resource": 118,
+    "semantic": 958,
+    "slow": 14,
+    "subprocess": 57,
+    "synthetic_hardware": 0,
+    "windows": 4,
+    "wx": 569
+  },
+  "repository_sha": "6cad198dca6c0f69bc8196f5030a7aebcba9d696",
+  "schema_version": 1,
+  "warnings": {
+    "catch_all_filenames": [],
+    "direct_test_calls": []
+  },
+  "zero_primary": {
+    "count": 6,
+    "nodeids": [
+      "tests/test_macos_ci.py::test_macos_ci_matrix_covers_both_native_architectures",
+      "tests/test_macos_ci.py::test_macos_ci_has_no_release_upload_or_signing_step",
+      "tests/test_macos_release_workflow.py::test_release_preflight_shares_the_ci_test_suite",
+      "tests/test_workflow_action_pins.py::test_every_workflow_exists",
+      "tests/test_wx_packaged_smoke.py::test_packaged_wx_smoke_gate_reports_critical_stages",
+      "tests/test_wx_shell_p0_stress.py::test_wx_shell_p0_stress_real_wx_paths"
+    ]
+  }
+}
