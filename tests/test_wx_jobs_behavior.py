@@ -226,6 +226,200 @@ def test_wx_job_output_does_not_overlap_remote_reads(wx_jobs):
     with lock:
         assert max_active_reads == 1
 
+
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.concurrency
+@pytest.mark.resource
+@pytest.mark.semantic
+@pytest.mark.regression
+def test_wx_job_output_coalesces_pending_refreshes(wx_jobs):
+    first_started = threading.Event()
+    release_first = threading.Event()
+    probe_done = threading.Event()
+    lock = threading.Lock()
+    calls = 0
+    active_reads = 0
+    max_active_reads = 0
+
+    def read(_job):
+        nonlocal calls, active_reads, max_active_reads
+        with lock:
+            calls += 1
+            call_number = calls
+            active_reads += 1
+            max_active_reads = max(max_active_reads, active_reads)
+        try:
+            if call_number == 1:
+                first_started.set()
+                release_first.wait(5)
+            return {"stdout": f"stdout-{call_number}", "stderr": f"stderr-{call_number}"}
+        finally:
+            with lock:
+                active_reads -= 1
+
+    frame = _open(wx_jobs, lambda: [{"id": "42", "state": "RUNNING"}], read)
+    _pump(wx_jobs, lambda: frame._wx_jobs_controls["jobs"].GetItemCount() == 1)
+    _select(frame)
+    assert first_started.wait(5)
+
+    frame._wx_jobs_refresh_outputs()
+    frame._wx_jobs_refresh_outputs()
+    frame._wx_jobs_refresh_outputs()
+    wx.CallAfter(probe_done.set)
+    _pump(wx_jobs, probe_done.is_set)
+    with lock:
+        assert calls == 1
+        assert active_reads == 1
+        assert max_active_reads == 1
+
+    release_first.set()
+    _pump(wx_jobs, lambda: frame._wx_jobs_state["outputs_requests"] == 0)
+    with lock:
+        assert calls == 2
+        assert max_active_reads == 1
+    assert "stdout-2" in _output_text(frame)
+
+
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.concurrency
+@pytest.mark.resource
+@pytest.mark.semantic
+@pytest.mark.regression
+def test_wx_job_remote_follower_coalesces_reads(wx_jobs):
+    first_started = threading.Event()
+    release_first = threading.Event()
+    lock = threading.Lock()
+    calls = 0
+    active_reads = 0
+    max_active_reads = 0
+
+    def read_path(_path):
+        nonlocal calls, active_reads, max_active_reads
+        with lock:
+            calls += 1
+            call_number = calls
+            active_reads += 1
+            max_active_reads = max(max_active_reads, active_reads)
+        try:
+            if call_number == 1:
+                first_started.set()
+                release_first.wait(5)
+                return "line-1\n"
+            return "line-1\nline-2\n"
+        finally:
+            with lock:
+                active_reads -= 1
+
+    frame = _open(
+        wx_jobs,
+        lambda: [{
+            "id": "42",
+            "state": "RUNNING",
+            "stdout_path": "/work/42.out",
+            "stderr_path": "/work/42.out",
+        }],
+        lambda _job: pytest.fail("remote follower should use read_remote_path"),
+        read_remote_path=read_path,
+    )
+    _pump(wx_jobs, lambda: frame._wx_jobs_controls["jobs"].GetItemCount() == 1)
+    _select(frame)
+    assert first_started.wait(5)
+
+    frame._wx_jobs_refresh_outputs()
+    frame._wx_jobs_refresh_outputs()
+    _pump(wx_jobs, lambda: frame._wx_jobs_state["outputs_requests"] == 1)
+    with lock:
+        assert calls == 1
+        assert active_reads == 1
+        assert max_active_reads == 1
+
+    release_first.set()
+    _pump(
+        wx_jobs,
+        lambda: "line-2" in _output_text(frame)
+        and frame._wx_jobs_state["outputs_requests"] == 0,
+    )
+    with lock:
+        assert calls == 2
+        assert max_active_reads == 1
+
+
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.concurrency
+@pytest.mark.resource
+@pytest.mark.regression
+def test_wx_job_output_read_error_releases_in_flight_state(wx_jobs):
+    lock = threading.Lock()
+    calls = 0
+
+    def read(_job):
+        nonlocal calls
+        with lock:
+            calls += 1
+            call_number = calls
+        if call_number == 1:
+            raise RuntimeError("remote output read failed")
+        return {"stdout": "recovered", "stderr": "recovered"}
+
+    frame = _open(wx_jobs, lambda: [{"id": "42", "state": "RUNNING"}], read)
+    _pump(wx_jobs, lambda: frame._wx_jobs_controls["jobs"].GetItemCount() == 1)
+    _select(frame)
+    _pump(wx_jobs, lambda: frame._wx_jobs_state["outputs_requests"] == 0)
+    assert not frame._wx_jobs_state["outputs_in_flight"]
+
+    frame._wx_jobs_refresh_outputs()
+    _pump(
+        wx_jobs,
+        lambda: "recovered" in _output_text(frame)
+        and frame._wx_jobs_state["outputs_requests"] == 0,
+    )
+    with lock:
+        assert calls == 2
+    assert not frame._wx_jobs_state["outputs_in_flight"]
+
+
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.concurrency
+@pytest.mark.resource
+@pytest.mark.regression
+def test_wx_job_output_close_discards_pending_refresh(wx_jobs):
+    first_started = threading.Event()
+    release_first = threading.Event()
+    lock = threading.Lock()
+    calls = 0
+
+    def read(_job):
+        nonlocal calls
+        with lock:
+            calls += 1
+            call_number = calls
+        if call_number == 1:
+            first_started.set()
+            release_first.wait(5)
+        return {"stdout": "output", "stderr": "output"}
+
+    frame = _open(wx_jobs, lambda: [{"id": "42", "state": "RUNNING"}], read)
+    _pump(wx_jobs, lambda: frame._wx_jobs_controls["jobs"].GetItemCount() == 1)
+    _select(frame)
+    assert first_started.wait(5)
+    frame._wx_jobs_refresh_outputs()
+    state = frame._wx_jobs_state
+
+    frame.Close()
+    _pump(wx_jobs, lambda: state["closed"])
+    release_first.set()
+    _pump(wx_jobs, lambda: state["outputs_requests"] == 0)
+
+    with lock:
+        assert calls == 1
+    assert not state["outputs_in_flight"]
+    assert not state["outputs_pending_generations"]
+
+
 @pytest.mark.gui
 @pytest.mark.wx
 @pytest.mark.concurrency
@@ -250,12 +444,14 @@ def test_wx_job_output_discards_stale_result_after_job_selection_changes(wx_jobs
     assert started_b.wait(5)
     release_a.set()
     _pump(wx_jobs, lambda: "output-B" in _output_text(frame))
+    _pump(wx_jobs, lambda: frame._wx_jobs_state["outputs_requests"] == 0)
     assert "output-A" not in _output_text(frame)
+    assert frame._wx_jobs_state["followers"]["stdout"].text == "output-B\n"
     assert calls[:2] == ["A", "B"]
 
 
-def _open(app, list_jobs, read_output):
-    show_jobs(list_jobs=list_jobs, read_output=read_output)
+def _open(app, list_jobs, read_output, **kwargs):
+    show_jobs(list_jobs=list_jobs, read_output=read_output, **kwargs)
     frames = [window for window in wx.GetTopLevelWindows() if window.GetTitle() == "Jobs"]
     assert frames
     return frames[-1]

@@ -138,16 +138,22 @@ def test_wx_jobs_stress_pause_resume_state_never_desynchronizes(wx_app):
     _select(frame, 0)
     _pump(wx_app, lambda: _get_stdout(frame).GetValue())
     for transition in range(100):
+        should_pause = transition % 2 == 0
+        visible_before = _get_stdout(frame).GetValue()
         _click(frame._wx_jobs_controls["pause"])
+        assert frame._wx_jobs_state["user_paused"] is should_pause
+        assert frame._wx_jobs_controls["pause"].GetLabel() == (
+            "Resume All" if should_pause else "Pause All"
+        )
         backend.set_output("1", f"pause-{transition}")
         frame._wx_jobs_refresh_outputs()
-        _pump(wx_app, lambda transition=transition: f"pause-{transition}" in _get_stdout(frame).GetValue())
-        paused = transition % 2 == 0
-        assert frame._wx_jobs_state["user_paused"] is paused
-        if not paused:
-            assert frame._wx_jobs_state["follow_calls"] > 0
+        _pump(wx_app, lambda: frame._wx_jobs_state["outputs_requests"] == 0)
+        if should_pause:
+            assert _get_stdout(frame).GetValue() == visible_before
+        else:
+            _pump(wx_app, lambda transition=transition: f"pause-{transition}" in _get_stdout(frame).GetValue())
     assert not frame._wx_jobs_state["user_paused"]
-    assert frame._wx_jobs_controls["pause"].GetLabel() == "Pause Live Follow"
+    assert frame._wx_jobs_controls["pause"].GetLabel() == "Pause All"
     _close(frame, wx_app)
 
 

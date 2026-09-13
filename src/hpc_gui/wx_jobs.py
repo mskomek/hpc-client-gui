@@ -982,6 +982,8 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         "outputs_requests": 0,
         "outputs_request_id": 0,
         "outputs_generation": 0,
+        "outputs_active_generations": set(),
+        "outputs_pending_generations": {},
         "outputs_paused": False,
         "_timer_paused": False,
         "raw_scontrol_visible": False,
@@ -1013,6 +1015,51 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
                 wx.CallAfter(callback, *args)
         except BaseException:
             pass
+
+    def _output_owner(job_id):
+        return (
+            str(job_id),
+            state["selected_generation"],
+            model.selected_job_store.generation,
+            state["provider_generation"],
+            generation() if callable(generation) else None,
+        )
+
+    def _output_owner_is_current(owner):
+        job_id, selected_generation, store_generation, provider_generation, session_generation = owner
+        return (
+            not state["closed"]
+            and state["selected_job"] == job_id
+            and state["selected_generation"] == selected_generation
+            and model.selected_job_store.generation == store_generation
+            and state["provider_generation"] == provider_generation
+            and (not callable(generation) or generation() == session_generation)
+        )
+
+    def _begin_output_request(owner, force):
+        with state_lock:
+            if state["closed"]:
+                return None
+            active = state["outputs_active_generations"]
+            if owner in active:
+                pending = state["outputs_pending_generations"]
+                pending[owner] = pending.get(owner, False) or force
+                return None
+            active.add(owner)
+            state["outputs_requests"] = len(active)
+            state["outputs_in_flight"] = True
+            state["outputs_request_id"] += 1
+            state["outputs_generation"] += 1
+            return state["outputs_request_id"], state["outputs_generation"]
+
+    def _finish_output_request(owner):
+        with state_lock:
+            state["outputs_active_generations"].discard(owner)
+            state["outputs_requests"] = len(state["outputs_active_generations"])
+            state["outputs_in_flight"] = bool(state["outputs_active_generations"])
+            pending_force = state["outputs_pending_generations"].pop(owner, None)
+            owner_current = _output_owner_is_current(owner)
+        return owner_current, pending_force
 
     # --- Jobs table rendering with filtering --------------------------------
     def render_items(items):
@@ -1103,6 +1150,8 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         row = _parse_job_row(item)
         job_id = row["job_id"]
         if not job_id:
+            return
+        if job_id == state["selected_job"]:
             return
         state["selected_job"] = job_id
         state["selected_generation"] += 1
@@ -1907,6 +1956,38 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         follower = state.get("followers", {}).get(channel_id)
         if not textCtrl or follower is None:
             return
+        owner = _output_owner(ctx.job_id)
+        request = _begin_output_request(owner, True)
+        if request is None:
+            return
+        request_id, output_generation = request
+
+        def done(content, waiting, error, snapshot=False, missing=False):
+            owner_current, pending_force = _finish_output_request(owner)
+            current = (
+                owner_current
+                and request_id == state["outputs_request_id"]
+                and output_generation == state["outputs_generation"]
+            )
+            if current:
+                if error is not None:
+                    _set_output_channel_status(channel_id, "jobs_outputs.status_error")
+                else:
+                    if snapshot:
+                        content = follower.replace_snapshot(content)
+                    elif missing:
+                        follower.state.waiting_state = min(follower.state.waiting_state + 1, 5)
+                        content = follower.text
+                    try:
+                        textCtrl.SetValue(retain_last_lines(content))
+                    except RuntimeError:
+                        pass
+                    _set_output_channel_status(
+                        channel_id,
+                        "jobs_outputs.status_waiting" if waiting else "jobs_outputs.status_following",
+                    )
+            if owner_current and pending_force is not None:
+                refresh_outputs_tab(force=pending_force)
 
         def worker():
             try:
@@ -1916,18 +1997,18 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
                 elif callable(read_output) and set(follower.state.roles) & {"stdout", "stderr"}:
                     result = read_output(ctx.job_id)
                     content = result.get("stdout" if "stdout" in follower.state.roles else "stderr", "") if isinstance(result, dict) else result
-                    content = follower.replace_snapshot(content)
-                    waiting = False
+                    post(done, content, False, None, True)
+                    return
                 else:
                     raise RuntimeError(t("jobs_outputs.remote_reader_unavailable"))
-                post(lambda c=content, w=waiting: (textCtrl.SetValue(retain_last_lines(c)), _set_output_channel_status(
-                    channel_id,
-                    "jobs_outputs.status_waiting" if w else "jobs_outputs.status_following",
-                )))
+                post(done, content, waiting, None)
             except Exception as error:
-                post(lambda e=error: _set_output_channel_status(channel_id, "jobs_outputs.status_error"))
+                post(done, "", False, error)
 
-        Thread(target=worker, daemon=True).start()
+        try:
+            Thread(target=worker, daemon=True).start()
+        except Exception as error:
+            done("", False, error)
 
     def _resolve_output_channels():
         """Resolve output channels for the currently selected job."""
@@ -1982,95 +2063,111 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
                 return
             if state.get("_timer_paused") and not force:
                 return
-            if state["outputs_in_flight"] and state.get("_outputs_job_id") == job_id and not force:
-                return
-            state["outputs_in_flight"] = True
-            state["outputs_requests"] += 1
-            state["outputs_request_id"] += 1
-            output_request_id = state["outputs_request_id"]
-            state["_outputs_job_id"] = job_id
-            state["outputs_generation"] += 1
-            gen = state["outputs_generation"]
-            request_id = uuid4().hex
-        resolved = _resolve_output_channels()
-        state["resolved_channels"] = resolved
-        _ensure_output_tabs(resolved)
+        owner = _output_owner(job_id)
+        request = _begin_output_request(owner, force)
+        if request is None:
+            return
+        output_request_id, gen = request
+        try:
+            resolved = _resolve_output_channels()
+            state["resolved_channels"] = resolved
+            _ensure_output_tabs(resolved)
+        except Exception as error:
+            owner_current, pending_force = _finish_output_request(owner)
+            if owner_current:
+                for text_ctrl in output_channels.values():
+                    text_ctrl.SetValue(str(error))
+                    break
+                for channel in state.get("resolved_channels", ()):
+                    _set_output_channel_status(channel.id, "jobs_outputs.status_error")
+            if owner_current and pending_force is not None:
+                refresh_outputs_tab(force=pending_force)
+            return
         readers = _remote_reader
 
-        def worker(req_id=request_id, output_req_id=output_request_id, g=gen, channels=resolved):
+        def worker(g=gen, channels=resolved, active_owner=owner, req_id=output_request_id):
             results = {}
-            for channel in channels:
-                follower = state.get("followers", {}).get(channel.id)
-                if follower is None:
-                    continue
-                if callable(readers) and channel.path:
-                    _chunk, retained, waiting = follower.poll(readers, _remote_statter)
-                    results[channel.id] = (retained, waiting)
-                    continue
-                # Legacy test/adaptor compatibility is restricted to semantic
-                # stdout/stderr channels; arbitrary paths always use readers.
-                content = ""
-                if callable(read_output) and set(channel.roles) & {"stdout", "stderr"}:
-                    try:
-                        legacy = read_output(job_id)
-                        if isinstance(legacy, dict):
-                            content = legacy.get("stdout" if "stdout" in channel.roles else "stderr", "")
-                        elif isinstance(legacy, (tuple, list)):
-                            content = legacy[0 if "stdout" in channel.roles else 1] if legacy else ""
-                        else:
-                            content = legacy
-                        results[channel.id] = (follower.replace_snapshot(content), False)
-                    except (FileNotFoundError, OSError):
-                        follower.state.waiting_state = min(follower.state.waiting_state + 1, 5)
-                        results[channel.id] = (follower.text, True)
-                else:
-                    results[channel.id] = (follower.text, True)
-            post(_done_outputs, results, None, req_id, output_req_id, g, channels)
-
-        def _done_outputs(result, err, req_id, output_req_id, g, channels):
-            with state_lock:
-                state["outputs_requests"] = max(0, state["outputs_requests"] - 1)
-                state["outputs_in_flight"] = state["outputs_requests"] > 0
-                current = (
-                    not state["closed"]
-                    and g == state["outputs_generation"]
-                    and job_id == state["selected_job"]
-                    and output_req_id == state["outputs_request_id"]
-                )
-            if not current:
-                return
-            if err:
-                for text_ctrl in output_channels.values():
-                    text_ctrl.SetValue(str(err))
-                    break
+            try:
                 for channel in channels:
-                    _set_output_channel_status(channel.id, "jobs_outputs.status_error")
-                return
-            for channel in channels:
-                text_ctrl = output_channels.get(channel.id)
-                if not text_ctrl:
-                    continue
-                retained, waiting = result.get(channel.id, ("", False))
-                follower = state.get("followers", {}).get(channel.id)
-                if output_channel_paused.get(channel.id, False):
-                    _set_output_channel_status(channel.id, "jobs_outputs.status_paused")
-                    continue
-                at_bottom = _output_at_bottom(text_ctrl)
-                text_ctrl.SetValue(retain_last_lines(retained))
-                output_channel_offsets[channel.id] = follower.state.offset if follower else 0
-                output_channel_waiting[channel.id] = follower.state.waiting_state if follower else 0
-                status_key = "jobs_outputs.status_waiting" if waiting else (
-                    "jobs_outputs.status_completed"
-                    if str(model.selected_job_store.context.state).upper() in {"COMPLETED", "FAILED", "CANCELLED", "TIMEOUT", "OUT_OF_MEMORY"}
-                    else "jobs_outputs.status_following"
-                )
-                _set_output_channel_status(channel.id, status_key)
-                if outputs_follow.GetValue() and output_channel_follow.get(channel.id, True) and at_bottom and not state["minimized"]:
-                    state["follow_calls"] += 1
-                    text_ctrl.ShowPosition(text_ctrl.GetLastPosition())
-            outputs_refresh_btn.Enable(True)
+                    follower = state.get("followers", {}).get(channel.id)
+                    if follower is None:
+                        continue
+                    if callable(readers) and channel.path:
+                        _chunk, retained, waiting = follower.poll(readers, _remote_statter)
+                        results[channel.id] = (retained, waiting, False, False)
+                        continue
+                    # Legacy test/adaptor compatibility is restricted to semantic
+                    # stdout/stderr channels; arbitrary paths always use readers.
+                    content = ""
+                    if callable(read_output) and set(channel.roles) & {"stdout", "stderr"}:
+                        try:
+                            legacy = read_output(active_owner[0])
+                            if isinstance(legacy, dict):
+                                content = legacy.get("stdout" if "stdout" in channel.roles else "stderr", "")
+                            elif isinstance(legacy, (tuple, list)):
+                                content = legacy[0 if "stdout" in channel.roles else 1] if legacy else ""
+                            else:
+                                content = legacy
+                            results[channel.id] = (content, False, True, False)
+                        except (FileNotFoundError, OSError):
+                            results[channel.id] = (None, True, False, True)
+                    else:
+                        results[channel.id] = (follower.text, True, False, False)
+            except Exception as error:
+                post(_done_outputs, results, error, req_id, g, channels, active_owner)
+            else:
+                post(_done_outputs, results, None, req_id, g, channels, active_owner)
 
-        Thread(target=worker, daemon=True).start()
+        def _done_outputs(result, err, req_id, request_generation, channels, active_owner):
+            owner_current, pending_force = _finish_output_request(active_owner)
+            current = (
+                owner_current
+                and request_generation == state["outputs_generation"]
+                and req_id == state["outputs_request_id"]
+            )
+            if current:
+                if err:
+                    for text_ctrl in output_channels.values():
+                        text_ctrl.SetValue(str(err))
+                        break
+                    for channel in channels:
+                        _set_output_channel_status(channel.id, "jobs_outputs.status_error")
+                else:
+                    for channel in channels:
+                        text_ctrl = output_channels.get(channel.id)
+                        if not text_ctrl:
+                            continue
+                        retained, waiting, snapshot, missing = result.get(channel.id, ("", False, False, False))
+                        follower = state.get("followers", {}).get(channel.id)
+                        if follower is not None and snapshot:
+                            retained = follower.replace_snapshot(retained)
+                        elif follower is not None and missing:
+                            follower.state.waiting_state = min(follower.state.waiting_state + 1, 5)
+                            retained = follower.text
+                        if output_channel_paused.get(channel.id, False):
+                            _set_output_channel_status(channel.id, "jobs_outputs.status_paused")
+                            continue
+                        at_bottom = _output_at_bottom(text_ctrl)
+                        text_ctrl.SetValue(retain_last_lines(retained))
+                        output_channel_offsets[channel.id] = follower.state.offset if follower else 0
+                        output_channel_waiting[channel.id] = follower.state.waiting_state if follower else 0
+                        status_key = "jobs_outputs.status_waiting" if waiting else (
+                            "jobs_outputs.status_completed"
+                            if str(model.selected_job_store.context.state).upper() in {"COMPLETED", "FAILED", "CANCELLED", "TIMEOUT", "OUT_OF_MEMORY"}
+                            else "jobs_outputs.status_following"
+                        )
+                        _set_output_channel_status(channel.id, status_key)
+                        if outputs_follow.GetValue() and output_channel_follow.get(channel.id, True) and at_bottom and not state["minimized"]:
+                            state["follow_calls"] += 1
+                            text_ctrl.ShowPosition(text_ctrl.GetLastPosition())
+                    outputs_refresh_btn.Enable(True)
+            if owner_current and pending_force is not None:
+                refresh_outputs_tab(force=pending_force)
+
+        try:
+            Thread(target=worker, daemon=True).start()
+        except Exception as error:
+            _done_outputs({}, error, output_request_id, gen, resolved, owner)
 
     # --- Cancel with confirmation -------------------------------------------
     def cancel_job(_event):
@@ -2132,9 +2229,11 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
 
     # --- Shutdown -----------------------------------------------------------
     def close(_event=None):
-        if state["closed"]:
-            return
-        state["closed"] = True
+        with state_lock:
+            if state["closed"]:
+                return
+            state["closed"] = True
+            state["outputs_pending_generations"].clear()
         timer.Stop()
         unsubscribe_language_change(refresh_labels)
         host.Hide()
@@ -2146,7 +2245,9 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         if event.GetEventObject() is not host:
             event.Skip()
             return
-        state["closed"] = True
+        with state_lock:
+            state["closed"] = True
+            state["outputs_pending_generations"].clear()
         timer.Stop()
         for follower in state.get("followers", {}).values():
             follower.close()
@@ -2172,7 +2273,9 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         state["outputs_paused"] = False
         state["user_paused"] = False
         state["_timer_paused"] = False
-        state["outputs_in_flight"] = False
+        state["outputs_pending_generations"].clear()
+        state["outputs_requests"] = len(state["outputs_active_generations"])
+        state["outputs_in_flight"] = bool(state["outputs_active_generations"])
         filter_field.SetValue("")
         search_field.SetValue("")
         model.tracking.set_session(session)
