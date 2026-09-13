@@ -1,5 +1,5 @@
 {
-  "collection_total": 2652,
+  "collection_total": 2656,
   "dispositions": [
     {
       "action": "KEEP_EXCEPTION",
@@ -81,7 +81,7 @@
     }
   ],
   "frozen_baseline_sha": "12ce79935bf076e1062c57dc7dbd148bad2bfae1",
-  "repository_sha": "13f1f9a8bd3a093c76e5034ef56e3140fd50d878",
   "schema_version": 1,
+  "taxonomy_snapshot_sha": "6cad198dca6c0f69bc8196f5030a7aebcba9d696",
   "zero_primary_count": 6
 }
