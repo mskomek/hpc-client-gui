@@ -58,8 +58,23 @@ Root cause: output-channel state retained a resolved localized display label. On
 
 Every collected node has exactly one actual pytest primary marker. The semantic review used test bodies and evidence paths, not filename heuristics. Machine review records `reviewed=true` for **2,649/2,649** nodes at `audit/archive/794226e/test-suite-final/semantic-taxonomy-review.json`.
 
-| Primary | Count |
-| --- | ---: |
+The previous 2,685-node governance snapshot had structural zero-primary 0 and multi-primary 0, but its semantic review was incomplete. Its category counts below are the prior marker assignment distribution, not accepted semantic truth.
+
+| Primary | Previous snapshot (unverified) | Final reviewed |
+| --- | ---: | ---: |
+| unit | 634 | 659 |
+| integration | 294 | 387 |
+| gui | 899 | 654 |
+| e2e | 1 | 15 |
+| runtime_smoke | 36 | 4 |
+| contract | 576 | 621 |
+| audit | 100 | 175 |
+| reporting | 22 | 47 |
+| release | 123 | 87 |
+| **Total** | **2,685** | **2,649** |
+
+| Category | Count | Total node work (s) | Median (s) | p95 (s) |
+| --- | ---: | ---: | ---: | ---: |
 | unit | 659 | 18.917 | 0.0090 | 0.0447 |
 | integration | 387 | 38.776 | 0.0237 | 0.4142 |
 | gui | 654 | 950.536 | 0.1651 | 2.0764 |
@@ -69,7 +84,7 @@ Every collected node has exactly one actual pytest primary marker. The semantic 
 | audit | 175 | 9.725 | 0.0086 | 0.3345 |
 | reporting | 47 | 1.266 | 0.0076 | 0.0426 |
 | release | 87 | 21.749 | 0.0060 | 0.0697 |
-| **Total** | **2,649** |
+| **Total** | **2,649** | **1,094.998** | — | — |
 
 Taxonomy ENFORCE passes: zero-primary 0, multi-primary 0, unknown registered markers 0, missing markers 0, semantic-review gaps 0. Checker warnings for direct test calls and generic catch-all filenames are both zero.
 
