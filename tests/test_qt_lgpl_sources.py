@@ -10,6 +10,7 @@ from scripts.generate_qt_lgpl_sources import write_sources
 
 @pytest.mark.release
 class QtLgplSourcesTests(unittest.TestCase):
+    @pytest.mark.license
     def test_writes_records_only_after_urls_verify(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

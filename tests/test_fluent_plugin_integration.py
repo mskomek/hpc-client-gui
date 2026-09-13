@@ -14,6 +14,8 @@ from pathlib import Path
 
 import pytest
 
+pytestmark = pytest.mark.artifact_dependent
+
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from hpc_gui.lint.engine import lint_text
@@ -61,7 +63,7 @@ def rule_ids(pack, diags):
     return [d.rule_id for d in diags]
 
 
-@pytest.mark.integration
+@pytest.mark.contract
 @requires_plugin_repo
 def test_pack_metadata_and_rules():
     pack = load_published_pack()
@@ -74,6 +76,7 @@ def test_pack_metadata_and_rules():
 
 @pytest.mark.integration
 @requires_plugin_repo
+@pytest.mark.semantic
 def test_clean_fixture_has_no_errors():
     pack = load_published_pack()
     text = (FIXTURES / "clean_25_2.jou").read_text(encoding="utf-8")
@@ -90,6 +93,7 @@ def test_clean_fixture_has_no_errors():
 
 @pytest.mark.integration
 @requires_plugin_repo
+@pytest.mark.semantic
 def test_missing_tui_version_detected():
     pack = load_published_pack()
     text = "/display set-lsd-bc\n/solve/initialize/hyb-initialization\n"
@@ -99,6 +103,7 @@ def test_missing_tui_version_detected():
 
 @pytest.mark.integration
 @requires_plugin_repo
+@pytest.mark.semantic
 def test_wrong_declared_version_flagged_only_for_25_2_target():
     pack = load_published_pack()
     text = '/file/set-tui-version "24.1"\n/display set-lsd-bc\n'
@@ -117,6 +122,7 @@ def test_wrong_declared_version_flagged_only_for_25_2_target():
 
 @pytest.mark.integration
 @requires_plugin_repo
+@pytest.mark.semantic
 def test_late_tui_version_is_informational_and_conservative():
     pack = load_published_pack()
     text = (FIXTURES / "late_tui_version.jou").read_text(encoding="utf-8")
@@ -133,6 +139,7 @@ def test_late_tui_version_is_informational_and_conservative():
 
 @pytest.mark.integration
 @requires_plugin_repo
+@pytest.mark.semantic
 def test_windows_path_warning_is_context_sensitive():
     pack = load_published_pack()
     text = (FIXTURES / "windows_path.jou").read_text(encoding="utf-8")
@@ -152,6 +159,7 @@ def test_windows_path_warning_is_context_sensitive():
 
 @pytest.mark.integration
 @requires_plugin_repo
+@pytest.mark.semantic
 def test_absolute_linux_path_portability_info():
     pack = load_published_pack()
     text = (FIXTURES / "absolute_linux_path.jou").read_text(encoding="utf-8")
@@ -161,8 +169,9 @@ def test_absolute_linux_path_portability_info():
     assert all(d.severity is Severity.INFO for d in matching)
 
 
-@pytest.mark.integration
+@pytest.mark.e2e
 @requires_plugin_repo
+@pytest.mark.resource
 def test_registry_entry_installs_via_exact_file_protocol(tmp_path: Path):
     """Full installer round-trip using the real published bytes."""
     from hpc_gui.plugins.installer import install_plugin_from_registry
@@ -200,8 +209,10 @@ def test_registry_entry_installs_via_exact_file_protocol(tmp_path: Path):
     assert entry["version"] in ("0.2.0", "0.3.0")
 
 
-@pytest.mark.integration
+@pytest.mark.e2e
 @requires_plugin_repo
+@pytest.mark.resource
+@pytest.mark.semantic
 def test_latest_fluent_template_renders_after_install(tmp_path: Path):
     from hpc_gui.plugins.installer import install_plugin_from_registry
     from hpc_gui.plugins.job_templates import load_job_templates, render_template
