@@ -271,7 +271,7 @@ class TestSec23_RawViewerClose:
         import threading
         from hpc_gui.wx_raw_viewer import show_raw_viewer
 
-        wx.App.Get() or wx.App(False)
+        _app = wx.App.Get() or wx.App(False)
         parent = wx.Frame(None)
         refreshed = []
         callback_queued = threading.Event()
