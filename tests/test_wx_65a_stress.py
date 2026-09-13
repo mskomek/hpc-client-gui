@@ -45,6 +45,28 @@ def _menu(frame, mid: int) -> None:
     frame.GetEventHandler().ProcessEvent(evt)
 
 
+def _cleanup_wx_test(app, existing_windows, original_language) -> None:
+    set_language(original_language)
+    created_windows = [window for window in wx.GetTopLevelWindows() if window not in existing_windows]
+    for window in created_windows:
+        try:
+            window.Close()
+        except Exception:
+            pass
+    for _ in range(3):
+        app.ProcessPendingEvents()
+        _yield(1)
+    for window in created_windows:
+        try:
+            if not window.IsBeingDeleted():
+                window.Destroy()
+        except Exception:
+            pass
+    app.ProcessPendingEvents()
+    remaining = [window for window in wx.GetTopLevelWindows() if window not in existing_windows]
+    assert not remaining, "wx top-level windows survived test cleanup"
+
+
 class Probe:
     def __init__(self) -> None:
         self.count = 0
@@ -77,7 +99,7 @@ class Probe:
 @pytest.mark.gui
 @pytest.mark.wx
 @pytest.mark.semantic
-def test_wx_65a_integrated_stress(tmp_path: Path, monkeypatch) -> None:
+def test_wx_65a_integrated_stress(tmp_path: Path, monkeypatch, request) -> None:
     print("65A real start")
     monkeypatch.setattr(wx, "MessageBox", lambda *a, **k: wx.YES)
     monkeypatch.setattr(
@@ -127,7 +149,10 @@ def test_wx_65a_integrated_stress(tmp_path: Path, monkeypatch) -> None:
     probe = Probe()
     closed = {"v": False}
 
+    original_language = current_language()
     app = wx.App.Get() or wx.App(False)
+    existing_windows = set(wx.GetTopLevelWindows())
+    request.addfinalizer(lambda: _cleanup_wx_test(app, existing_windows, original_language))
     frame, lifecycle, session = create_shell_frame(app)
     frame.Show()
     _yield(2)
