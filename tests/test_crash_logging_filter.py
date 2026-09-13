@@ -10,7 +10,11 @@ from __future__ import annotations
 
 import unittest
 
+import pytest
+
 from hpc_gui.core.logging_setup import _is_paramiko_prefetch_shutdown
+
+pytestmark = [pytest.mark.unit, pytest.mark.regression]
 
 
 class PrefetchShutdownFilterTests(unittest.TestCase):

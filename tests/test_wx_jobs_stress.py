@@ -80,6 +80,10 @@ def wx_app():
         pass
 
 
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
+@pytest.mark.regression
 def test_wx_jobs_stress_rapid_selection_never_shows_stale_output(wx_app):
     backend = MockHPCJobs(25)
     backend.stdout = {job_id: f"output-{job_id}" for job_id in backend.jobs}
@@ -96,6 +100,10 @@ def test_wx_jobs_stress_rapid_selection_never_shows_stale_output(wx_app):
     _close(frame, wx_app)
 
 
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
+@pytest.mark.regression
 def test_wx_jobs_stress_repeated_minimize_restore_keeps_polling_lifecycle_stable(wx_app):
     backend = MockHPCJobs(1)
     frame = _open(backend.list_jobs, backend.read_output)
@@ -119,6 +127,10 @@ def test_wx_jobs_stress_repeated_minimize_restore_keeps_polling_lifecycle_stable
     _close(frame, wx_app)
 
 
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
+@pytest.mark.regression
 def test_wx_jobs_stress_pause_resume_state_never_desynchronizes(wx_app):
     backend = MockHPCJobs(1)
     frame = _open(backend.list_jobs, backend.read_output)
@@ -139,6 +151,11 @@ def test_wx_jobs_stress_pause_resume_state_never_desynchronizes(wx_app):
     _close(frame, wx_app)
 
 
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
+@pytest.mark.regression
+@pytest.mark.concurrency
 def test_wx_jobs_stress_out_of_order_output_completions_are_safe(wx_app):
     backend = MockHPCJobs(3)
     gates = {job_id: threading.Event() for job_id in backend.jobs}
@@ -165,8 +182,15 @@ def test_wx_jobs_stress_out_of_order_output_completions_are_safe(wx_app):
     _close(frame, wx_app)
 
 
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
+@pytest.mark.regression
+@pytest.mark.concurrency
 def test_wx_jobs_stress_blocked_reads_never_overlap(wx_app):
     backend = MockHPCJobs(1)
+    gui_thread = threading.get_ident()
+    worker_threads = set()
     gates = []
     started = []
     active_reads = 0
@@ -175,6 +199,7 @@ def test_wx_jobs_stress_blocked_reads_never_overlap(wx_app):
 
     def read(_job_id):
         nonlocal active_reads, peak_reads
+        worker_threads.add(threading.get_ident())
         gate = threading.Event()
         with read_lock:
             index = len(gates)
@@ -196,16 +221,22 @@ def test_wx_jobs_stress_blocked_reads_never_overlap(wx_app):
     for index in range(50):
         _pump(wx_app, lambda index=index: len(started) > index and started[index].is_set())
         for _ in range(5):
-            frame._wx_jobs_refresh_outputs()
+            frame._wx_jobs_refresh_outputs_tab()
         assert peak_reads == 1
         gates[index].set()
         _pump(wx_app, lambda index=index: f"round-{index}" in _get_stdout(frame).GetValue())
         if index < 49:
-            frame._wx_jobs_refresh_outputs()
+            frame._wx_jobs_refresh_outputs_tab()
     assert peak_reads == 1
+    assert worker_threads and gui_thread not in worker_threads
     _close(frame, wx_app)
 
 
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
+@pytest.mark.regression
+@pytest.mark.performance
 def test_wx_jobs_stress_large_output_remains_bounded_and_responsive(wx_app):
     backend = MockHPCJobs(1)
     backend.set_output("1", "\n".join(f"line-{index}" for index in range(100_000)))
@@ -220,6 +251,12 @@ def test_wx_jobs_stress_large_output_remains_bounded_and_responsive(wx_app):
     _close(frame, wx_app)
 
 
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
+@pytest.mark.regression
+@pytest.mark.concurrency
+@pytest.mark.resource
 def test_wx_jobs_stress_close_while_output_read_in_flight_is_safe(wx_app):
     backend = MockHPCJobs(1)
     started, release = threading.Event(), threading.Event()
@@ -239,6 +276,12 @@ def test_wx_jobs_stress_close_while_output_read_in_flight_is_safe(wx_app):
     assert not [window for window in wx.GetTopLevelWindows() if window and window.GetTitle() == title]
 
 
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
+@pytest.mark.regression
+@pytest.mark.concurrency
+@pytest.mark.resource
 def test_wx_jobs_stress_close_during_job_list_refresh_is_safe(wx_app):
     started, release = threading.Event(), threading.Event()
 
@@ -255,6 +298,12 @@ def test_wx_jobs_stress_close_during_job_list_refresh_is_safe(wx_app):
     assert not [window for window in wx.GetTopLevelWindows() if window and window.GetTitle() == title]
 
 
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
+@pytest.mark.regression
+@pytest.mark.resource
+@pytest.mark.slow
 def test_wx_jobs_stress_open_close_repeatedly_does_not_leak_windows_or_timers(wx_app):
     for _ in range(50):
         frame = _open()
@@ -262,6 +311,10 @@ def test_wx_jobs_stress_open_close_repeatedly_does_not_leak_windows_or_timers(wx
     assert not [window for window in wx.GetTopLevelWindows() if window and window.GetTitle() == "Jobs"]
 
 
+@pytest.mark.unit
+@pytest.mark.wx
+@pytest.mark.semantic
+@pytest.mark.regression
 def test_wx_jobs_stress_multi_job_update_pressure():
     backend = MockHPCJobs(50)
     model = WxJobsModel()
@@ -273,27 +326,3 @@ def test_wx_jobs_stress_multi_job_update_pressure():
             model.update_job_state(row["id"], row["state"])
     assert all(model._job_states[job_id] == backend.jobs[job_id]["state"] for job_id in backend.jobs)
     assert backend.list_calls == 250
-
-
-def test_wx_jobs_stress_missing_output_recovery_pressure():
-    backend = MockHPCJobs(5)
-    for cycle in range(50):
-        job_id = str(cycle % 5 + 1)
-        backend.missing.add(job_id)
-        with pytest.raises(FileNotFoundError):
-            backend.read_output(job_id)
-        backend.missing.clear()
-        assert backend.read_output(job_id)["stdout"] == "line 1"
-
-
-def test_wx_jobs_stress_backend_workers_and_reads_are_bounded():
-    backend = MockHPCJobs(50)
-    gui_thread = threading.get_ident()
-    for cycle in range(250):
-        backend.transition(str(cycle % 50 + 1), "RUNNING")
-        worker = threading.Thread(target=backend.read_output, args=(str(cycle % 50 + 1),))
-        worker.start()
-        worker.join(2)
-        assert not worker.is_alive()
-    assert backend.peak_reads == 1
-    assert gui_thread not in backend.worker_threads

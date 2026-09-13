@@ -1,6 +1,9 @@
 """Wave 51 multi-document real-event tests."""
 import pytest
 wx = pytest.importorskip("wx")
+
+pytestmark = [pytest.mark.gui, pytest.mark.wx]
+
 from hpc_gui.wx_editor_view import build_editor_panel
 
 def _make_panel():

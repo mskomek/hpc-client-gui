@@ -1,4 +1,8 @@
+import pytest
+
 from hpc_gui.services.slurm_models import parse_sacct, parse_scontrol, parse_squeue
+
+pytestmark = pytest.mark.contract
 
 
 def test_parse_squeue_keeps_raw_rows_and_structured_fields() -> None:

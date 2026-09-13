@@ -2,6 +2,8 @@ import pytest
 
 from hpc_gui.services.file_context_actions import context_selection, visible_actions
 
+pytestmark = [pytest.mark.unit, pytest.mark.semantic]
+
 
 def test_context_click_on_unselected_item_becomes_effective_target():
     selection = context_selection("b.txt", False, ("a.txt",), (False,))

@@ -3,11 +3,14 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+import pytest
+
 from hpc_gui import __version__
 from hpc_gui.cli.main import CLI_VERSION
 
 
 ROOT = Path(__file__).parents[1]
+pytestmark = pytest.mark.release
 
 
 def _project_version(path: Path) -> str:

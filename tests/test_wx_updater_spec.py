@@ -6,6 +6,7 @@ from threading import Event
 import pytest
 
 wx = pytest.importorskip("wx")
+pytestmark = [pytest.mark.gui, pytest.mark.wx]
 
 from hpc_gui.services.app_updater import UpdateRelease
 from hpc_gui.wx_updater_view import WxUpdateDialog, _format_bytes
@@ -255,6 +256,7 @@ def test_update_cancel_reaches_downloader():
     app.Destroy()
 
 
+@pytest.mark.concurrency
 def test_update_cancel_prevents_install(monkeypatch, tmp_path):
     app = wx.App(False)
     rel = _make_release()
@@ -423,6 +425,8 @@ def test_installation_current_item_visible_when_available():
     app.Destroy()
 
 
+@pytest.mark.concurrency
+@pytest.mark.resource
 def test_update_close_in_flight_safe(monkeypatch):
     app = wx.App(False)
     rel = _make_release()
@@ -453,6 +457,8 @@ def test_update_close_in_flight_safe(monkeypatch):
         app.Destroy()
 
 
+@pytest.mark.concurrency
+@pytest.mark.resource
 def test_update_late_callback_after_close_safe(monkeypatch, tmp_path):
     import hpc_gui.services.app_updater as app_updater
 

@@ -26,6 +26,9 @@ def _make_panel(ssh=None):
     wx.Yield()
     return app, frame, panel
 
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
 def test_embedded_terminal_find_button_selects_match():
     app, frame, panel = _make_panel()
     try:
@@ -49,6 +52,9 @@ def test_embedded_terminal_find_button_selects_match():
         frame.Destroy()
         wx.Yield()
 
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
 def test_embedded_terminal_clear_button_clears_visible_output_and_model():
     app, frame, panel = _make_panel()
     try:
@@ -68,6 +74,9 @@ def test_embedded_terminal_clear_button_clears_visible_output_and_model():
         frame.Destroy()
         wx.Yield()
 
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
 def test_embedded_terminal_font_decrease_changes_visible_font():
     app, frame, panel = _make_panel()
     try:
@@ -85,6 +94,9 @@ def test_embedded_terminal_font_decrease_changes_visible_font():
         frame.Destroy()
         wx.Yield()
 
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
 def test_embedded_terminal_font_increase_changes_visible_font():
     app, frame, panel = _make_panel()
     try:
@@ -102,6 +114,9 @@ def test_embedded_terminal_font_increase_changes_visible_font():
         frame.Destroy()
         wx.Yield()
 
+@pytest.mark.unit
+@pytest.mark.wx
+@pytest.mark.semantic
 def test_embedded_terminal_ctrl_c_sends_interrupt_not_copy():
     ssh = _fake_ssh()
     app, frame, panel = _make_panel(ssh=ssh)
@@ -118,6 +133,9 @@ def test_embedded_terminal_ctrl_c_sends_interrupt_not_copy():
         frame.Destroy()
         wx.Yield()
 
+@pytest.mark.unit
+@pytest.mark.wx
+@pytest.mark.semantic
 def test_embedded_terminal_copy_shortcut_does_not_send_interrupt():
     ssh = _fake_ssh()
     app, frame, panel = _make_panel(ssh=ssh)
@@ -134,29 +152,38 @@ def test_embedded_terminal_copy_shortcut_does_not_send_interrupt():
         frame.Destroy()
         wx.Yield()
 
-def test_embedded_terminal_runtime_language_refresh():
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
+@pytest.mark.regression
+def test_embedded_terminal_runtime_language_refresh(monkeypatch, tmp_path):
     # test standalone panel to avoid shell chrome flag bitmap segfault during language switch
+    from hpc_gui.core.i18n import current_language, set_language, t
+
+    original_language = current_language()
+    monkeypatch.setattr("hpc_gui.core.i18n.app_data_dir", lambda: tmp_path)
+    set_language("en")
     app, frame, panel = _make_panel()
     try:
         ctrls = panel._wx_terminal_controls
-        from hpc_gui.core.i18n import set_language, current_language
-        orig = current_language()
-        # ensure labels start non-empty
-        assert ctrls["find_btn"].GetLabel() != ""
+        english_find = t("login.terminal_find")
+        english_clear = t("login.terminal_clear")
+        assert ctrls["find_btn"].GetLabel() == english_find
+        assert ctrls["clear"].GetLabel() == english_clear
         set_language("tr")
         wx.Yield()
-        # find button should still be labeled (Turkish or fallback)
-        assert ctrls["find_btn"].GetLabel() != ""
-        assert ctrls["clear"].GetLabel() != ""
-        set_language("en")
-        wx.Yield()
-        assert ctrls["find_btn"].GetLabel() != ""
-        set_language(orig)
-        wx.Yield()
+        assert ctrls["find_btn"].GetLabel() == t("login.terminal_find")
+        assert ctrls["clear"].GetLabel() == t("login.terminal_clear")
+        assert ctrls["find_btn"].GetLabel() != english_find
+        assert ctrls["clear"].GetLabel() != english_clear
     finally:
         frame.Destroy()
         wx.Yield()
+        set_language(original_language)
 
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
 def test_embedded_terminal_resize_reaches_pty_resize():
     ssh = _fake_ssh()
     app, frame, panel = _make_panel(ssh=ssh)
@@ -175,6 +202,9 @@ def test_embedded_terminal_resize_reaches_pty_resize():
         frame.Destroy()
         wx.Yield()
 
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
 def test_shell_embedded_and_detached_share_implementation():
     # Both use build_terminal_panel internally — check control sets identical
     from hpc_gui.wx_terminal import show_terminal

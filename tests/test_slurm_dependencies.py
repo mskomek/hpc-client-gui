@@ -9,6 +9,8 @@ from hpc_gui.services.slurm_dependencies import (
     set_dependency,
 )
 
+pytestmark = pytest.mark.contract
+
 
 @pytest.mark.parametrize("kind", list(DependencyType))
 def test_all_dependency_types_render(kind):

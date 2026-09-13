@@ -1,5 +1,7 @@
 import pytest
 
+pytestmark = pytest.mark.contract
+
 from hpc_gui.services.profile_exchange import (
     FORMAT,
     VERSION,

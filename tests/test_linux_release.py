@@ -7,6 +7,8 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
+import pytest
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 
 import release_linux as rl
@@ -15,6 +17,8 @@ real_read_text = rl.Path.read_text
 
 
 class ResolveVersionTest(unittest.TestCase):
+    pytestmark = [pytest.mark.release, pytest.mark.semantic]
+
     def test_sources_agree(self) -> None:
         version = rl.resolve_version()
         self.assertRegex(version, r"^\d+\.\d+\.\d+$")
@@ -47,6 +51,8 @@ class ResolveVersionTest(unittest.TestCase):
 
 
 class UbuntuHostTest(unittest.TestCase):
+    pytestmark = [pytest.mark.release, pytest.mark.semantic]
+
     def test_ubuntu_host_is_accepted(self) -> None:
         with (
             mock.patch.object(rl.sys, "platform", "linux"),
@@ -73,6 +79,8 @@ class UbuntuHostTest(unittest.TestCase):
 
 
 class RequiredFilesTest(unittest.TestCase):
+    pytestmark = [pytest.mark.release, pytest.mark.semantic]
+
     def test_help_files_inventory(self) -> None:
         files = rl.required_release_files()
         names = {p.name for p in files if p.is_file()}
@@ -93,6 +101,8 @@ class RequiredFilesTest(unittest.TestCase):
 
 
 class AppImageDefinitionTest(unittest.TestCase):
+    pytestmark = [pytest.mark.release, pytest.mark.semantic]
+
     def test_desktop_entry_valid(self) -> None:
         rl.validate_desktop_entry()
         text = (rl.APPIMAGE_DEF_DIR / rl.DESKTOP_ENTRY_NAME).read_text(encoding="utf-8")
@@ -113,6 +123,8 @@ class AppImageDefinitionTest(unittest.TestCase):
 
 
 class PlanTest(unittest.TestCase):
+    pytestmark = [pytest.mark.release, pytest.mark.semantic]
+
     def test_plan_dry_run(self) -> None:
         plan = rl.build_linux_plan("1.2.4")
         self.assertEqual(plan.version, "1.2.4")
@@ -167,6 +179,8 @@ class PlanTest(unittest.TestCase):
 
 
 class DebFlatpakTest(unittest.TestCase):
+    pytestmark = [pytest.mark.release, pytest.mark.semantic]
+
     def test_deb_artifact_name(self) -> None:
         self.assertEqual(rl.deb_artifact_name("1.2.4"), "hpc-client-gui_1.2.4_amd64.deb")
 

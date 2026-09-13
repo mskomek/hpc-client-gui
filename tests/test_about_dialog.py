@@ -7,7 +7,13 @@ import sys
 import textwrap
 from pathlib import Path
 
+import pytest
 
+
+@pytest.mark.gui
+@pytest.mark.qt
+@pytest.mark.subprocess
+@pytest.mark.semantic
 def test_about_shows_version_and_no_network():
     root = Path(__file__).resolve().parents[1]
     code = textwrap.dedent(
@@ -50,6 +56,8 @@ def test_about_shows_version_and_no_network():
     )
     assert result.returncode == 0, f"About dialog behavior failed: {result.stdout}\n{result.stderr}"
 
+@pytest.mark.gui
+@pytest.mark.qt
 def test_about_instantiates_offscreen():
     try:
         import os

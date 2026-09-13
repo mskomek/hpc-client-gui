@@ -14,6 +14,10 @@ import tempfile
 import unittest
 from pathlib import Path
 
+import pytest
+
+pytestmark = [pytest.mark.integration, pytest.mark.semantic]
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from support.mock_ssh_server import MOCK_PASSWORD, MOCK_USERNAME, MockSSHServer  # noqa: E402
 
@@ -62,6 +66,7 @@ class SSHDirectoryListingWireTests(unittest.TestCase):
         self.assertEqual(by_name["file0100.txt"].size, 100)
         self.assertGreater(by_name["file0100.txt"].mtime, 0)
 
+    @pytest.mark.resource
     def test_repeated_navigation_reuses_one_listing_channel(self) -> None:
         for _ in range(4):
             self.assertEqual(len(list(self.backend.iterdir_entries("/work"))), 255)
@@ -70,6 +75,7 @@ class SSHDirectoryListingWireTests(unittest.TestCase):
         list(self.backend.iterdir_entries("/work"))
         self.assertIs(self.ssh._listing_sftp, first)
 
+    @pytest.mark.resource
     def test_abandoned_listing_recovers_on_the_next_navigation(self) -> None:
         stream = self.backend.iterdir_entries("/work")
         next(stream)

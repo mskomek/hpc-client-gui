@@ -5,6 +5,8 @@ import pytest
 
 wx = pytest.importorskip("wx")
 
+pytestmark = [pytest.mark.gui, pytest.mark.wx]
+
 from hpc_gui.wx_shell import _get_editor_manager
 from hpc_gui.core.i18n import current_language, set_language, t
 
@@ -93,6 +95,7 @@ def _manager(session_state, lifecycle):
     return _get_editor_manager(session_state, None, lifecycle)
 
 
+@pytest.mark.concurrency
 def test_wx_local_editor_submit_semantics_survive_remote_view_dispatch(wx_app, tmp_path):
     backend = Backend("session")
     state = {"session": {"files": backend, "slurm": backend, "ssh": backend}}
@@ -126,6 +129,7 @@ def test_wx_local_editor_run_semantics_survive_remote_view_dispatch(wx_app, tmp_
     _close(frame, wx_app)
 
 
+@pytest.mark.concurrency
 def test_wx_remote_editor_submit_semantics_survive_local_view_dispatch(wx_app):
     gui_thread = threading.get_ident()
     backend = Backend("session")
@@ -142,6 +146,7 @@ def test_wx_remote_editor_submit_semantics_survive_local_view_dispatch(wx_app):
     _close(frame, wx_app)
 
 
+@pytest.mark.concurrency
 def test_wx_remote_editor_run_semantics_survive_local_view_dispatch(wx_app):
     gui_thread = threading.get_ident()
     backend = Backend("session")
@@ -215,6 +220,7 @@ def test_wx_existing_editor_uses_new_session_after_reconnect(wx_app, tmp_path):
     _close(frame, wx_app)
 
 
+@pytest.mark.concurrency
 def test_wx_editor_operation_does_not_mix_sessions_during_reconnect(wx_app, tmp_path):
     first, second = Backend("A", block_upload=True), Backend("B")
     state = {"session": {"files": first, "slurm": first, "ssh": first}}
@@ -235,6 +241,7 @@ def test_wx_editor_operation_does_not_mix_sessions_during_reconnect(wx_app, tmp_
     _close(frame, wx_app)
 
 
+@pytest.mark.concurrency
 def test_wx_existing_remote_editor_uses_new_session_after_reconnect(wx_app):
     first, second = Backend("A"), Backend("B")
     state = {"session": {"files": first, "slurm": first, "ssh": first}}

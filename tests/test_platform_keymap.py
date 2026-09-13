@@ -3,6 +3,8 @@ import pytest
 from hpc_gui.services.platform_keymap import bindings_for, conflicts, display_binding
 
 
+@pytest.mark.contract
+@pytest.mark.semantic
 def test_windows_linux_defaults_and_terminal_boundary():
     for platform in ("windows", "win32", "linux"):
         bindings = bindings_for(platform)
@@ -13,6 +15,8 @@ def test_windows_linux_defaults_and_terminal_boundary():
         assert not conflicts(bindings)
 
 
+@pytest.mark.contract
+@pytest.mark.semantic
 def test_optional_aliases_and_unsupported_platform():
     bindings = bindings_for("linux")
     assert sum(item.command_id == "FILE-LOCATION" for item in bindings) == 2
@@ -21,6 +25,8 @@ def test_optional_aliases_and_unsupported_platform():
         bindings_for("freebsd")
 
 
+@pytest.mark.contract
+@pytest.mark.semantic
 def test_macos_uses_command_and_preserves_terminal_interrupt():
     bindings = bindings_for("macos")
     pairs = {(item.command_id, item.binding, item.context) for item in bindings}

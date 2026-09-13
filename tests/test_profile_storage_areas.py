@@ -1,4 +1,8 @@
+import pytest
+
 from hpc_gui.plugins.models import ClusterProfileDefinition
+
+pytestmark = pytest.mark.unit
 
 
 def test_storage_cards_keep_valid_paths_without_quota():

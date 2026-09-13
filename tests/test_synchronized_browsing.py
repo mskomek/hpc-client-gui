@@ -11,6 +11,8 @@ from types import SimpleNamespace
 from unittest import mock
 from unittest.mock import patch
 
+import pytest
+
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
@@ -31,6 +33,8 @@ from hpc_gui.services.synchronized_browsing import (  # noqa: E402
 
 
 class LocalMappingTests(unittest.TestCase):
+    pytestmark = [pytest.mark.unit, pytest.mark.semantic]
+
     WINDOWS_ROOTS = SyncRoots(
         local_root=r"C:\CFD\new_dpler",
         remote_root="/arf/scratch/user/new_dpler",
@@ -72,12 +76,14 @@ class LocalMappingTests(unittest.TestCase):
     def test_outside_root_returns_none(self) -> None:
         self.assertIsNone(local_to_remote(r"C:\Other\dir", self.WINDOWS_ROOTS))
 
+    @pytest.mark.windows
     def test_windows_case_insensitive_containment_preserves_text(self) -> None:
         if os.name != "nt":
             self.skipTest("Windows-only case rule")
         mapped = local_to_remote(r"c:\cfd\NEW_DPLER\Case", self.WINDOWS_ROOTS)
         self.assertEqual(mapped, "/arf/scratch/user/new_dpler/Case")
 
+    @pytest.mark.windows
     def test_different_drives_return_none(self) -> None:
         if os.name != "nt":
             self.skipTest("Windows-only drive rule")
@@ -118,6 +124,8 @@ class LocalMappingTests(unittest.TestCase):
 
 
 class RemoteMappingTests(unittest.TestCase):
+    pytestmark = [pytest.mark.unit, pytest.mark.semantic]
+
     ROOTS = SyncRoots(
         local_root=r"C:\CFD\new_dpler",
         remote_root="/arf/scratch/user",
@@ -172,6 +180,8 @@ class RemoteMappingTests(unittest.TestCase):
 
 
 class SyncSchemaTests(unittest.TestCase):
+    pytestmark = [pytest.mark.contract, pytest.mark.semantic]
+
     def test_malformed_sync_gives_defaults(self) -> None:
         settings = normalize_file_manager_settings({"sync": "junk"})
         sync = settings["sync"]
@@ -213,6 +223,8 @@ class _CountingRemotePanel:
 
 
 class SynchronizationOrchestrationTests(unittest.TestCase):
+    pytestmark = [pytest.mark.qt, pytest.mark.semantic]
+
     @classmethod
     def setUpClass(cls) -> None:
         cls.app = QApplication.instance() or QApplication([])
@@ -287,6 +299,7 @@ class SynchronizationOrchestrationTests(unittest.TestCase):
             ),
         )
 
+    @pytest.mark.gui
     def test_existing_valid_roots_enable_without_navigation_or_rewrite(self) -> None:
         with tempfile.TemporaryDirectory() as root:
             widget = self._make_widget(self._saved_cfg(root, "/remote/root", False))
@@ -296,6 +309,7 @@ class SynchronizationOrchestrationTests(unittest.TestCase):
             self.assertTrue(widget.btn_sync_browsing.isChecked())
             self.assertEqual(panel.set_dir_calls, [])
 
+    @pytest.mark.gui
     def test_invalid_saved_local_root_does_not_enable(self) -> None:
         panel = _CountingRemotePanel()
         widget = self._make_widget(
@@ -307,6 +321,7 @@ class SynchronizationOrchestrationTests(unittest.TestCase):
         self.assertNotEqual(widget._sync_status_reason, "")
         self.assertEqual(panel.set_dir_calls, [])
 
+    @pytest.mark.gui
     def test_local_navigation_causes_exactly_one_remote_navigation(self) -> None:
         with tempfile.TemporaryDirectory() as root:
             os.makedirs(os.path.join(root, "sub"))
@@ -320,6 +335,7 @@ class SynchronizationOrchestrationTests(unittest.TestCase):
             self.assertEqual(panel.set_dir_calls, ["/remote/root/sub"])
             self.assertFalse(widget._sync_navigation_guard)
 
+    @pytest.mark.gui
     def test_guard_prevents_ping_pong(self) -> None:
         with tempfile.TemporaryDirectory() as root:
             os.makedirs(os.path.join(root, "sub"))
@@ -338,6 +354,7 @@ class SynchronizationOrchestrationTests(unittest.TestCase):
             self.assertEqual(panel.set_dir_calls, [])
             self.assertEqual(len(widget.local_panel._history), navigations_before)
 
+    @pytest.mark.unit
     def test_inactive_remote_panel_signal_ignored(self) -> None:
         with tempfile.TemporaryDirectory() as root:
             widget = self._make_widget(self._saved_cfg(root, "/remote/root", False))
@@ -349,6 +366,7 @@ class SynchronizationOrchestrationTests(unittest.TestCase):
             self.assertEqual(inactive_panel.set_dir_calls, [])
             self.assertEqual(active_panel.set_dir_calls, [])
 
+    @pytest.mark.gui
     def test_missing_local_counterpart_does_not_navigate_or_create(self) -> None:
         with tempfile.TemporaryDirectory() as root:
             missing_target = os.path.join(root, "does-not-exist")
@@ -364,6 +382,7 @@ class SynchronizationOrchestrationTests(unittest.TestCase):
             self.assertFalse(Path(missing_target).exists())
             self.assertEqual(panel.set_dir_calls, [])
 
+    @pytest.mark.gui
     def test_no_remote_preflight_on_gui_thread(self) -> None:
         with tempfile.TemporaryDirectory() as root:
             widget = self._make_widget(self._saved_cfg(root, "/remote/root", False))
@@ -376,6 +395,7 @@ class SynchronizationOrchestrationTests(unittest.TestCase):
                 widget.btn_sync_browsing.setChecked(True)
                 widget.local_panel.directoryChanged.emit(root)
 
+    @pytest.mark.gui
     def test_disconnect_clears_transient_state_but_not_roots(self) -> None:
         with tempfile.TemporaryDirectory() as root:
             widget = self._make_widget(self._saved_cfg(root, "/remote/root", True))
@@ -397,6 +417,7 @@ class SynchronizationOrchestrationTests(unittest.TestCase):
             self.assertTrue(widget.btn_sync_browsing.isChecked())
             self.assertEqual(widget._sync_roots.local_root, root)
 
+    @pytest.mark.gui
     def test_profile_change_reloads_state(self) -> None:
         with tempfile.TemporaryDirectory() as root_a, tempfile.TemporaryDirectory() as root_b:
             cfg_a = self._saved_cfg(root_a, "/remote/a", True)
@@ -416,6 +437,8 @@ class SynchronizationOrchestrationTests(unittest.TestCase):
 
 
 class ResetRootsTests(unittest.TestCase):
+    pytestmark = [pytest.mark.gui, pytest.mark.qt, pytest.mark.semantic]
+
     @classmethod
     def setUpClass(cls) -> None:
         cls.app = QApplication.instance() or QApplication([])

@@ -4,6 +4,10 @@ from hpc_gui.config.system_profile import (
     resolve_provider_path,
 )
 
+import pytest
+
+pytestmark = pytest.mark.contract
+
 
 def test_provider_context_resolves_all_application_placeholders():
     result = resolve_provider_path(

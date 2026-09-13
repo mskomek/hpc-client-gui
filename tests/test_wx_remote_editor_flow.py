@@ -63,6 +63,9 @@ def _browser(manager, read_text):
     return frame
 
 
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
 def test_wx_remote_browser_edit_opens_visible_primary_editor(wx_app):
     gui_thread = threading.get_ident()
     reads = []
@@ -82,6 +85,9 @@ def test_wx_remote_browser_edit_opens_visible_primary_editor(wx_app):
     _close(manager.primary_frame, wx_app)
 
 
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
 def test_wx_remote_browser_edit_reuses_primary_editor(wx_app):
     manager = WxEditorWindowManager()
     browser = _browser(manager, lambda path: f"content-{path.rsplit('/', 1)[-1]}")
@@ -97,6 +103,9 @@ def test_wx_remote_browser_edit_reuses_primary_editor(wx_app):
     _close(primary, wx_app)
 
 
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
 def test_wx_remote_browser_edit_new_window_creates_visible_independent_editor(wx_app):
     manager = WxEditorWindowManager()
     browser = _browser(manager, lambda path: f"content-{path.rsplit('/', 1)[-1]}")
@@ -114,6 +123,9 @@ def test_wx_remote_browser_edit_new_window_creates_visible_independent_editor(wx
     _close(primary, wx_app)
 
 
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
 def test_wx_remote_browser_read_failure_preserves_existing_primary_editor(wx_app, monkeypatch):
     manager = WxEditorWindowManager()
     calls = []
@@ -137,6 +149,9 @@ def test_wx_remote_browser_read_failure_preserves_existing_primary_editor(wx_app
     _close(primary, wx_app)
 
 
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
 def test_wx_remote_browser_new_window_read_failure_creates_no_editor(wx_app, monkeypatch):
     manager = WxEditorWindowManager()
     browser = _browser(manager, lambda _path: (_ for _ in ()).throw(RuntimeError("read failed")))
@@ -148,6 +163,10 @@ def test_wx_remote_browser_new_window_read_failure_creates_no_editor(wx_app, mon
     _close(browser, wx_app)
 
 
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
+@pytest.mark.concurrency
 def test_wx_remote_browser_close_during_editor_read_discards_result(wx_app):
     started, release = threading.Event(), threading.Event()
     manager = WxEditorWindowManager()
@@ -167,6 +186,10 @@ def test_wx_remote_browser_close_during_editor_read_discards_result(wx_app):
     assert manager.primary_frame is None
 
 
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
+@pytest.mark.concurrency
 def test_wx_remote_browser_stale_read_does_not_overwrite_newer_edit(wx_app):
     a_started, release_a = threading.Event(), threading.Event()
     manager = WxEditorWindowManager()

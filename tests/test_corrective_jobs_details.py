@@ -52,6 +52,8 @@ def _close(frame):
 # === Sec 3: Single-click does not change notebook page ===
 
 class TestSec3_NoAutoSwitch:
+    @pytest.mark.gui
+    @pytest.mark.wx
     def test_single_click_stays_on_jobs(self):
         load_language("en")
         app, frame, panel = _build_panel()
@@ -73,6 +75,8 @@ class TestSec3_NoAutoSwitch:
         finally:
             _close(frame)
 
+    @pytest.mark.gui
+    @pytest.mark.wx
     def test_details_updates_in_background(self):
         load_language("en")
         app, frame, panel = _build_panel()
@@ -95,6 +99,8 @@ class TestSec3_NoAutoSwitch:
         finally:
             _close(frame)
 
+    @pytest.mark.gui
+    @pytest.mark.wx
     def test_go_to_jobs_works(self):
         load_language("en")
         app, frame, panel = _build_panel()
@@ -113,6 +119,8 @@ class TestSec3_NoAutoSwitch:
 # === Sec 6: Raw Accounting button opens viewer ===
 
 class TestSec6_RawAccountingButton:
+    @pytest.mark.integration
+    @pytest.mark.wx
     def test_raw_accounting_opens_viewer(self):
         load_language("en")
         app, frame, panel = _build_panel(
@@ -140,6 +148,8 @@ class TestSec6_RawAccountingButton:
 # === Sec 7: Three independent raw sources ===
 
 class TestSec7_RawSourceIsolation:
+    @pytest.mark.integration
+    @pytest.mark.wx
     def test_raw_sources_are_independent(self):
         load_language("en")
 
@@ -191,6 +201,8 @@ class TestSec7_RawSourceIsolation:
 # === Sec 11: Cluster status not dependent on job selection ===
 
 class TestSec11_ClusterStatusIndependence:
+    @pytest.mark.gui
+    @pytest.mark.wx
     def test_cluster_survives_job_selection_change(self):
         load_language("en")
 
@@ -240,6 +252,8 @@ class TestSec11_ClusterStatusIndependence:
 # === Sec 23: Raw viewer close handling ===
 
 class TestSec23_RawViewerClose:
+    @pytest.mark.contract
+    @pytest.mark.wx
     def test_raw_viewer_source_label(self):
         """Verify source label is displayed."""
         load_language("en")
@@ -248,25 +262,72 @@ class TestSec23_RawViewerClose:
         assert _SOURCE_LABELS.get("sacct") == "Slurm Accounting"
         assert _SOURCE_LABELS.get("lssrv") == "Cluster Server Status"
 
-    def test_raw_viewer_refresh_callback_is_called(self):
-        """Verify refresh callback is callable and returns RawCommandResult."""
-        call_count = [0]
+    @pytest.mark.gui
+    @pytest.mark.wx
+    @pytest.mark.semantic
+    @pytest.mark.regression
+    def test_raw_viewer_refresh_callback_is_called(self, monkeypatch):
+        """Refresh button invokes its callback and replaces visible output."""
+        import threading
+        from hpc_gui.wx_raw_viewer import show_raw_viewer
 
-        def my_refresh():
-            call_count[0] += 1
+        wx.App.Get() or wx.App(False)
+        parent = wx.Frame(None)
+        refreshed = []
+        callback_queued = threading.Event()
+        pending_callbacks = []
+        original_call_after = wx.CallAfter
+
+        def refresh():
+            refreshed.append(True)
             return RawCommandResult.from_response(
                 source_id="scontrol", command="scontrol show job 1001",
-                stdout="refreshed", exit_code=0,
+                stdout="new scheduler response", exit_code=0,
             )
-        # Just verify the callback works (don't open modal dialog)
-        result = my_refresh()
-        assert call_count[0] == 1
-        assert result.stdout == "refreshed"
+
+        def capture_worker_callback(callback, *args, **kwargs):
+            if threading.current_thread() is threading.main_thread():
+                return original_call_after(callback, *args, **kwargs)
+            pending_callbacks.append((callback, args, kwargs))
+            callback_queued.set()
+
+        def show_and_refresh(dialog):
+            output = next(
+                control for control in dialog.GetChildren()
+                if isinstance(control, wx.TextCtrl) and control.GetValue() == "old scheduler response"
+            )
+            refresh_button = next(
+                control for control in dialog.GetChildren()
+                if isinstance(control, wx.Button) and control.GetLabel() == t("raw_viewer.refresh")
+            )
+            event = wx.CommandEvent(wx.wxEVT_BUTTON, refresh_button.GetId())
+            refresh_button.GetEventHandler().ProcessEvent(event)
+            assert callback_queued.wait(5), "refresh result was not queued"
+            assert len(pending_callbacks) == 1
+            callback, args, kwargs = pending_callbacks[0]
+            callback(*args, **kwargs)
+            assert output.GetValue() == "new scheduler response"
+            assert refresh_button.IsEnabled()
+            return wx.ID_CLOSE
+
+        try:
+            monkeypatch.setattr(wx, "CallAfter", capture_worker_callback)
+            monkeypatch.setattr(wx.Dialog, "ShowModal", show_and_refresh)
+            initial = RawCommandResult.from_response(
+                source_id="scontrol", command="scontrol show job 1001",
+                stdout="old scheduler response", exit_code=0,
+            )
+            show_raw_viewer(parent, initial, refresh_callback=refresh)
+            assert refreshed == [True]
+        finally:
+            parent.Destroy()
+            wx.Yield()
 
 
 # === Sec 27: I18N keys ===
 
 class TestSec27_I18N:
+    @pytest.mark.contract
     def test_parse_warning_keys_exist(self):
         load_language("en")
         assert "Job details could not be parsed" in t("jobs_outputs.parse_error_details")
@@ -278,12 +339,14 @@ class TestSec27_I18N:
         assert t("jobs_outputs.parse_error_accounting") != "[jobs_outputs.parse_error_accounting]"
         assert t("jobs_outputs.parse_error_cluster") != "[jobs_outputs.parse_error_cluster]"
 
+    @pytest.mark.contract
     def test_raw_viewer_source_key(self):
         load_language("en")
         assert t("raw_viewer.source") == "Source"
         load_language("tr")
         assert t("raw_viewer.source") == "Kaynak"
 
+    @pytest.mark.contract
     def test_raw_not_available_key(self):
         load_language("en")
         assert "not available" in t("jobs_outputs.raw_not_available").lower()
@@ -294,6 +357,8 @@ class TestSec27_I18N:
 # === Sec 39: Job selection does not change tab ===
 
 class TestSec39_SelectionStaysOnJobs:
+    @pytest.mark.gui
+    @pytest.mark.wx
     def test_select_job_stays_on_jobs_tab(self):
         load_language("en")
         app, frame, panel = _build_panel()
@@ -324,6 +389,8 @@ class TestSec39_SelectionStaysOnJobs:
 # === Sec 41: Empty job list + cluster status ===
 
 class TestSec41_EmptyJobsClusterStatus:
+    @pytest.mark.gui
+    @pytest.mark.wx
     def test_cluster_visible_with_no_jobs(self):
         load_language("en")
         app = wx.App.Get() or wx.App(False)
@@ -355,6 +422,8 @@ class TestSec41_EmptyJobsClusterStatus:
 # === Sec 42: Unsupported cluster provider ===
 
 class TestSec42_UnsupportedCluster:
+    @pytest.mark.gui
+    @pytest.mark.wx
     def test_cluster_hidden_when_unsupported(self):
         load_language("en")
         app = wx.App.Get() or wx.App(False)
@@ -378,6 +447,8 @@ class TestSec42_UnsupportedCluster:
 # === Sec 36: Raw source isolation ===
 
 class TestSec36_RawSourceIsolation:
+    @pytest.mark.unit
+    @pytest.mark.semantic
     def test_each_viewer_shows_only_its_source(self):
         load_language("en")
         detail_raw = RawCommandResult.from_response(
@@ -405,6 +476,8 @@ class TestSec36_RawSourceIsolation:
 # === Regression: Files/Outputs tab routing ===
 
 class TestRegression_FilesOutputs:
+    @pytest.mark.gui
+    @pytest.mark.wx
     def test_files_tab_untouched(self):
         load_language("en")
         app, frame, panel = _build_panel()
@@ -422,6 +495,8 @@ class TestRegression_FilesOutputs:
         finally:
             _close(frame)
 
+    @pytest.mark.contract
+    @pytest.mark.wx
     def test_outputs_tab_untouched(self):
         load_language("en")
         app, frame, panel = _build_panel()

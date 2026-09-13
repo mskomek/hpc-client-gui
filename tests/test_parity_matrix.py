@@ -1,5 +1,7 @@
 import pytest
 
+pytestmark = pytest.mark.reporting
+
 from hpc_gui.services.parity_matrix import Evidence, render_status
 
 

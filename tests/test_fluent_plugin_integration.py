@@ -62,6 +62,8 @@ def rule_ids(pack, diags):
 
 
 @requires_plugin_repo
+@pytest.mark.integration
+@pytest.mark.artifact_dependent
 def test_pack_metadata_and_rules():
     pack = load_published_pack()
     assert pack.linter_id == "fluent-journal"
@@ -72,6 +74,8 @@ def test_pack_metadata_and_rules():
 
 
 @requires_plugin_repo
+@pytest.mark.integration
+@pytest.mark.artifact_dependent
 def test_clean_fixture_has_no_errors():
     pack = load_published_pack()
     text = (FIXTURES / "clean_25_2.jou").read_text(encoding="utf-8")
@@ -87,6 +91,8 @@ def test_clean_fixture_has_no_errors():
 
 
 @requires_plugin_repo
+@pytest.mark.integration
+@pytest.mark.artifact_dependent
 def test_missing_tui_version_detected():
     pack = load_published_pack()
     text = "/display set-lsd-bc\n/solve/initialize/hyb-initialization\n"
@@ -95,6 +101,8 @@ def test_missing_tui_version_detected():
 
 
 @requires_plugin_repo
+@pytest.mark.integration
+@pytest.mark.artifact_dependent
 def test_wrong_declared_version_flagged_only_for_25_2_target():
     pack = load_published_pack()
     text = '/file/set-tui-version "24.1"\n/display set-lsd-bc\n'
@@ -112,6 +120,8 @@ def test_wrong_declared_version_flagged_only_for_25_2_target():
 
 
 @requires_plugin_repo
+@pytest.mark.integration
+@pytest.mark.artifact_dependent
 def test_late_tui_version_is_informational_and_conservative():
     pack = load_published_pack()
     text = (FIXTURES / "late_tui_version.jou").read_text(encoding="utf-8")
@@ -127,6 +137,8 @@ def test_late_tui_version_is_informational_and_conservative():
 
 
 @requires_plugin_repo
+@pytest.mark.integration
+@pytest.mark.artifact_dependent
 def test_windows_path_warning_is_context_sensitive():
     pack = load_published_pack()
     text = (FIXTURES / "windows_path.jou").read_text(encoding="utf-8")
@@ -145,6 +157,8 @@ def test_windows_path_warning_is_context_sensitive():
 
 
 @requires_plugin_repo
+@pytest.mark.integration
+@pytest.mark.artifact_dependent
 def test_absolute_linux_path_portability_info():
     pack = load_published_pack()
     text = (FIXTURES / "absolute_linux_path.jou").read_text(encoding="utf-8")
@@ -155,6 +169,8 @@ def test_absolute_linux_path_portability_info():
 
 
 @requires_plugin_repo
+@pytest.mark.integration
+@pytest.mark.artifact_dependent
 def test_registry_entry_installs_via_exact_file_protocol(tmp_path: Path):
     """Full installer round-trip using the real published bytes."""
     from hpc_gui.plugins.installer import install_plugin_from_registry
@@ -193,6 +209,8 @@ def test_registry_entry_installs_via_exact_file_protocol(tmp_path: Path):
 
 
 @requires_plugin_repo
+@pytest.mark.integration
+@pytest.mark.artifact_dependent
 def test_latest_fluent_template_renders_after_install(tmp_path: Path):
     from hpc_gui.plugins.installer import install_plugin_from_registry
     from hpc_gui.plugins.job_templates import load_job_templates, render_template

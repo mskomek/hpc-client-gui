@@ -10,6 +10,8 @@ from hpc_gui.services.update_verification import (
     verify_signed_metadata,
 )
 
+pytestmark = pytest.mark.contract
+
 
 def _signed(metadata):
     private = Ed25519PrivateKey.generate()

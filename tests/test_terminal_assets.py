@@ -1,6 +1,10 @@
 from pathlib import Path
 import unittest
 
+import pytest
+
+pytestmark = pytest.mark.audit
+
 
 ASSETS = Path(__file__).parents[1] / "src" / "hpc_gui" / "assets" / "terminal"
 

@@ -11,6 +11,8 @@ import pathlib
 import re
 import sys
 
+import pytest
+
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 if str(ROOT / "src") not in sys.path:
     sys.path.insert(0, str(ROOT / "src"))
@@ -20,6 +22,8 @@ if str(ROOT / "src") not in sys.path:
 # 1. i18n Translation Completeness
 # ---------------------------------------------------------------------------
 
+@pytest.mark.contract
+@pytest.mark.semantic
 class TestI18nCompleteness:
     """Verify translation key sets are synchronized."""
 
@@ -76,6 +80,8 @@ class TestI18nCompleteness:
 # 2. i18n Placeholder Handling
 # ---------------------------------------------------------------------------
 
+@pytest.mark.contract
+@pytest.mark.semantic
 class TestI18nPlaceholders:
     """Verify translation placeholders are consistent."""
 
@@ -137,6 +143,8 @@ class TestI18nPlaceholders:
 # 3. i18n t() Function
 # ---------------------------------------------------------------------------
 
+@pytest.mark.unit
+@pytest.mark.semantic
 class TestI18nFunction:
     """Verify i18n t() function works correctly."""
 
@@ -180,6 +188,7 @@ class TestI18nFunction:
 # 4. Hardcoded Strings Audit
 # ---------------------------------------------------------------------------
 
+@pytest.mark.audit
 class TestHardcodedStrings:
     """Verify no hardcoded English strings in wx UI."""
 
@@ -210,6 +219,8 @@ class TestHardcodedStrings:
 # 5. Translation Resource Validation
 # ---------------------------------------------------------------------------
 
+@pytest.mark.contract
+@pytest.mark.semantic
 class TestTranslationResources:
     """Verify translation resources are valid JSON."""
 
@@ -240,6 +251,8 @@ class TestTranslationResources:
 # 6. UI Label Audit
 # ---------------------------------------------------------------------------
 
+@pytest.mark.contract
+@pytest.mark.semantic
 class TestUILabelAudit:
     """Verify UI labels are clear and accessible."""
 
@@ -288,6 +301,8 @@ class TestUILabelAudit:
 # 7. Integration Tests
 # ---------------------------------------------------------------------------
 
+@pytest.mark.unit
+@pytest.mark.semantic
 class TestIntegration:
     """Integration tests for i18n/UI ergonomics."""
 

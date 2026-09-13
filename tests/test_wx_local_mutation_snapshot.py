@@ -24,6 +24,8 @@ def wx_app():
     for w in wx.GetTopLevelWindows():
         if w: w.Destroy()
     app.ProcessPendingEvents()
+    wx.YieldIfNeeded()
+    app.ProcessPendingEvents()
     app.Destroy()
 
 def _local(app, path):
@@ -32,6 +34,11 @@ def _local(app, path):
     _pump(app, lambda: frame._wx_local_controls["listing"].GetItemCount()>=0)
     return frame
 
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
+@pytest.mark.concurrency
+@pytest.mark.resource
 def test_wx_local_paste_uses_origin_tab_snapshot_after_tab_switch(wx_app, tmp_path: Path, monkeypatch):
     a=tmp_path / "A"; a.mkdir(); b=a / "B"; b.mkdir()
     src=tmp_path / "src.txt"; src.write_text("data")
@@ -63,6 +70,11 @@ def test_wx_local_paste_uses_origin_tab_snapshot_after_tab_switch(wx_app, tmp_pa
     assert (a / "src.txt").exists()
     assert not (b / "src.txt").exists()
 
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
+@pytest.mark.concurrency
+@pytest.mark.resource
 def test_wx_local_rename_uses_origin_tab_snapshot_after_tab_switch(wx_app, tmp_path: Path, monkeypatch):
     a=tmp_path / "A"; a.mkdir(); b=a / "B"; b.mkdir()
     target=a / "old.txt"; target.write_text("x")
@@ -94,6 +106,11 @@ def test_wx_local_rename_uses_origin_tab_snapshot_after_tab_switch(wx_app, tmp_p
     assert not (b / "new.txt").exists()
     assert not target.exists()
 
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
+@pytest.mark.concurrency
+@pytest.mark.resource
 def test_wx_local_delete_uses_origin_tab_snapshot_after_tab_switch(wx_app, tmp_path: Path, monkeypatch):
     a=tmp_path / "A"; a.mkdir(); b=a / "B"; b.mkdir()
     t=a / "del.txt"; t.write_text("x")

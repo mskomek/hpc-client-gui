@@ -1,9 +1,13 @@
 import unittest
 
+import pytest
+
 from scripts.release_test_suite import build_commands
 
 
 class ReleaseTestSuiteTests(unittest.TestCase):
+    @pytest.mark.unit
+    @pytest.mark.semantic
     def test_coverage_commands_are_flat_argument_lists(self):
         commands = build_commands(coverage=True)
 
@@ -13,6 +17,8 @@ class ReleaseTestSuiteTests(unittest.TestCase):
         self.assertNotIn("--cov-fail-under=65", commands[-2])
         self.assertIn("--cov-fail-under=65", commands[-1])
 
+    @pytest.mark.unit
+    @pytest.mark.semantic
     def test_toolkit_boundary_suite_isolated_without_skipping_it(self):
         commands = build_commands(coverage=False)
         self.assertIn("tests/test_editor_flow.py", commands[-1])

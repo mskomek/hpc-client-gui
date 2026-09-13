@@ -19,6 +19,7 @@ from hpc_gui.plugins.models import build_cluster_profile
 
 # === ParserRegistry audit ===
 
+@pytest.mark.contract
 class TestParserRegistryAudit:
     def test_fail_closed_unknown(self):
         r = parse("nonexistent.parser", "data")
@@ -63,6 +64,7 @@ class TestParserRegistryAudit:
 
 # === slurm.scontrol.v1 audit ===
 
+@pytest.mark.contract
 class TestScontrolV1Audit:
     def test_valid_full(self):
         raw = (
@@ -128,6 +130,7 @@ class TestScontrolV1Audit:
 
 # === slurm.sacct.pipe.v1 audit ===
 
+@pytest.mark.contract
 class TestSacctPipeV1Audit:
     def test_valid_pipe(self):
         raw = "JobIDRaw|State|Elapsed|MaxRSS|AllocTRES|ExitCode\n12345|COMPLETED|00:10:12|1024M||0:0\n"
@@ -199,6 +202,7 @@ class TestSacctPipeV1Audit:
 
 # === truba.lssrv.v1 audit ===
 
+@pytest.mark.contract
 class TestTrubaLssrvV1Audit:
     VALID_LSSRV = (
         "Slurm partitions state\n"
@@ -258,6 +262,7 @@ class TestTrubaLssrvV1Audit:
 
 # === Schema v4 validation audit ===
 
+@pytest.mark.contract
 class TestSchemaV4Audit:
     def test_v4_valid(self):
         p = {"schema_version": 4, "profile_id": "t", "name": "T", "scheduler": "slurm"}
@@ -351,6 +356,7 @@ class TestSchemaV4Audit:
 
 # === Backward compatibility audit ===
 
+@pytest.mark.contract
 class TestBackwardCompatAudit:
     def test_v1_loads(self):
         raw = {"schema_version": 1, "profile_id": "t", "name": "T", "scheduler": "slurm"}
@@ -397,6 +403,7 @@ class TestBackwardCompatAudit:
 
 # === ProviderContract audit ===
 
+@pytest.mark.contract
 class TestProviderContractAudit:
     def test_full_contract(self):
         t = {
@@ -436,6 +443,7 @@ class TestProviderContractAudit:
 
 # === ParserErrorUX audit ===
 
+@pytest.mark.unit
 class TestParserErrorUXAudit:
     def test_backend_failure_format(self):
         err = ParseError(kind="backend_failure", message="SSH timeout")
@@ -465,6 +473,7 @@ class TestParserErrorUXAudit:
 
 # === RawCommandResult audit ===
 
+@pytest.mark.unit
 class TestRawCommandResultAudit:
     def test_from_response(self):
         r = RawCommandResult.from_response(source_id="s", command="c", stdout="out", exit_code=0)
@@ -490,6 +499,7 @@ class TestRawCommandResultAudit:
 # === Wave 78 regression check ===
 
 class TestWave78RegressionAudit:
+    @pytest.mark.contract
     def test_wave78_tabs_still_exist(self):
         """Verify the notebook structure hasn't regressed."""
         from hpc_gui.core.i18n import load_language, t
@@ -500,15 +510,18 @@ class TestWave78RegressionAudit:
         assert t("jobs_outputs.files_title") == "Files"
         assert t("jobs_outputs.outputs_title") == "Outputs"
 
+    @pytest.mark.unit
     def test_wave78_raw_command_result_still_works(self):
         r = RawCommandResult.from_response(source_id="test", stdout="data")
         assert r.stdout == "data"
 
+    @pytest.mark.contract
     def test_wave78_no_job_selected_key(self):
         from hpc_gui.core.i18n import load_language, t
         load_language("en")
         assert t("jobs.no_job_selected") == "No job selected"
 
+    @pytest.mark.contract
     def test_wave78_go_to_jobs_key(self):
         from hpc_gui.core.i18n import load_language, t
         load_language("en")

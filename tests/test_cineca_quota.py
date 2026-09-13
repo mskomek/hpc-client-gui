@@ -1,4 +1,8 @@
+import pytest
+
 from hpc_gui.services.cineca_quota import parse_cineca_cinquota
+
+pytestmark = pytest.mark.contract
 
 
 def test_cinquota_parser_reads_work_row_and_file_count():

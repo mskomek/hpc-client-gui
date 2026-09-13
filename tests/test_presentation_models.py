@@ -1,8 +1,13 @@
 import gc
 
+import pytest
+
 from hpc_gui.services.presentation_models import EventBus, ProgressViewModel, StatusViewModel
 
 
+@pytest.mark.unit
+@pytest.mark.semantic
+@pytest.mark.resource
 def test_boundary_models_and_fake_adapter():
     assert StatusViewModel("connected", "Connected").state == "connected"
     assert ProgressViewModel(2, 4).total == 4
@@ -23,6 +28,7 @@ def test_boundary_models_and_fake_adapter():
     assert events == ["ready"]
 
 
+@pytest.mark.audit
 def test_boundary_source_has_no_toolkit_imports():
     source = open("src/hpc_gui/services/presentation_models.py", encoding="utf-8").read()
     assert "PySide" not in source and "wx" not in source

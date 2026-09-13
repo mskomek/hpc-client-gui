@@ -32,6 +32,8 @@ def wx_app():
         if window:
             window.Destroy()
     app.ProcessPendingEvents()
+    wx.YieldIfNeeded()
+    app.ProcessPendingEvents()
     app.Destroy()
 
 
@@ -42,6 +44,8 @@ def _browser(wx_app, path, **callbacks):
     return frame
 
 
+@pytest.mark.gui
+@pytest.mark.wx
 def test_local_double_click_routes_file_to_editor_and_folder_to_visible_navigation(wx_app, tmp_path: Path):
     (tmp_path / "job.slurm").write_text("#!/bin/bash\n", encoding="utf-8")
     (tmp_path / "results").mkdir()
@@ -60,6 +64,8 @@ def test_local_double_click_routes_file_to_editor_and_folder_to_visible_navigati
     _pump(wx_app, lambda: frame._wx_local_controls["listing"].GetItemCount() == 0)
 
 
+@pytest.mark.gui
+@pytest.mark.wx
 def test_local_context_event_targets_unselected_row_without_dropping_target(wx_app, tmp_path: Path):
     for name in ("a.txt", "b.txt"):
         (tmp_path / name).write_text(name, encoding="utf-8")
@@ -77,6 +83,8 @@ def test_local_context_event_targets_unselected_row_without_dropping_target(wx_a
     assert "Edit" in seen
 
 
+@pytest.mark.gui
+@pytest.mark.wx
 def test_local_delete_key_runs_async_and_refreshes_visible_rows(wx_app, tmp_path: Path, monkeypatch):
     target = tmp_path / "remove.txt"
     target.write_text("x", encoding="utf-8")
@@ -90,6 +98,8 @@ def test_local_delete_key_runs_async_and_refreshes_visible_rows(wx_app, tmp_path
     _pump(wx_app, lambda: not target.exists() and listing.GetItemCount() == 0)
 
 
+@pytest.mark.gui
+@pytest.mark.wx
 def test_wx_local_f5_refreshes_without_a_selection(wx_app, tmp_path: Path):
     frame = _browser(wx_app, tmp_path)
     listing = frame._wx_local_controls["listing"]
@@ -102,6 +112,8 @@ def test_wx_local_f5_refreshes_without_a_selection(wx_app, tmp_path: Path):
     assert listing.GetItemText(0) == "new.txt"
 
 
+@pytest.mark.gui
+@pytest.mark.wx
 def test_wx_local_delete_removes_selected_files_and_directories_only(wx_app, tmp_path: Path, monkeypatch):
     (tmp_path / "a.txt").write_text("a", encoding="utf-8")
     (tmp_path / "b.txt").write_text("b", encoding="utf-8")
@@ -124,6 +136,8 @@ def test_wx_local_delete_removes_selected_files_and_directories_only(wx_app, tmp
     assert untouched.exists()
 
 
+@pytest.mark.gui
+@pytest.mark.wx
 def test_local_directory_context_creates_folder_under_clicked_directory(wx_app, tmp_path: Path, monkeypatch):
     folder = tmp_path / "folder"
     folder.mkdir()
@@ -151,6 +165,7 @@ class _Dialog:
 
 
 @pytest.mark.parametrize("is_dir", [False, True])
+@pytest.mark.unit
 def test_reveal_file_manager_windows_uses_parent_or_directory(monkeypatch, tmp_path: Path, is_dir):
     target = tmp_path / ("folder" if is_dir else "file.txt")
     target.mkdir() if is_dir else target.write_text("x", encoding="utf-8")
@@ -162,6 +177,7 @@ def test_reveal_file_manager_windows_uses_parent_or_directory(monkeypatch, tmp_p
 
 
 @pytest.mark.parametrize("is_dir", [False, True])
+@pytest.mark.unit
 def test_reveal_file_manager_macos_uses_finder_semantics(monkeypatch, tmp_path: Path, is_dir):
     target = tmp_path / ("folder" if is_dir else "file.txt")
     target.mkdir() if is_dir else target.write_text("x", encoding="utf-8")
@@ -174,6 +190,7 @@ def test_reveal_file_manager_macos_uses_finder_semantics(monkeypatch, tmp_path: 
 
 
 @pytest.mark.parametrize("is_dir", [False, True])
+@pytest.mark.unit
 def test_reveal_file_manager_linux_opens_parent_or_directory(monkeypatch, tmp_path: Path, is_dir):
     target = tmp_path / ("folder" if is_dir else "file.txt")
     target.mkdir() if is_dir else target.write_text("x", encoding="utf-8")
