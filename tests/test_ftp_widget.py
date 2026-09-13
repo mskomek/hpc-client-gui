@@ -403,7 +403,8 @@ class FtpWidgetTests(unittest.TestCase):
             dialog.deleteLater()
 
     @pytest.mark.qt
-    @pytest.mark.gui
+    @pytest.mark.unit
+    @pytest.mark.concurrency
     def test_transfer_dialog_process_queue_starts_only_when_no_worker_is_active(self) -> None:
         dialog = TransferDialog(
             title="Download",
@@ -545,8 +546,7 @@ class FtpWidgetTests(unittest.TestCase):
         finally:
             dialog.deleteLater()
 
-    @pytest.mark.qt
-    @pytest.mark.gui
+    @pytest.mark.unit
     def test_transfer_queue_menu_matches_filezilla_structure(self) -> None:
         load_language("en")
         dialog = TransferDialog(
@@ -632,6 +632,7 @@ class FtpWidgetTests(unittest.TestCase):
 
     @pytest.mark.qt
     @pytest.mark.gui
+    @pytest.mark.concurrency
     def test_stop_button_cancels_immediately_and_clears_paused_queue(self) -> None:
         items = [
             TransferItem("download", "/remote/a.txt", "a.txt"),
@@ -654,6 +655,7 @@ class FtpWidgetTests(unittest.TestCase):
 
     @pytest.mark.qt
     @pytest.mark.gui
+    @pytest.mark.concurrency
     def test_priority_reorders_pending_execution_and_priority_column(self) -> None:
         items = [
             TransferItem("download", "/remote/low", "low"),
@@ -769,6 +771,7 @@ class FtpWidgetTests(unittest.TestCase):
 
     @pytest.mark.qt
     @pytest.mark.gui
+    @pytest.mark.concurrency
     def test_transfer_activity_keeps_overlapping_controllers_visible(self) -> None:
         first_item = TransferItem("download", "/remote/a", "a")
         second_item = TransferItem("download", "/remote/b", "b")
@@ -936,7 +939,8 @@ class FtpWidgetTests(unittest.TestCase):
         self.assertEqual(keyword.cached_size, 777)
 
     @pytest.mark.qt
-    @pytest.mark.gui
+    @pytest.mark.unit
+    @pytest.mark.performance
     def test_transfer_item_size_prefers_cached_size_without_repeat_stat(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             source = Path(tmp) / "data.bin"
@@ -957,7 +961,7 @@ class FtpWidgetTests(unittest.TestCase):
                 )
 
     @pytest.mark.qt
-    @pytest.mark.gui
+    @pytest.mark.unit
     def test_transfer_item_size_falls_back_to_stat_when_unknown(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             source = Path(tmp) / "data.bin"
@@ -966,7 +970,7 @@ class FtpWidgetTests(unittest.TestCase):
             self.assertEqual(self.widget.transfer_activity._item_size(item), 333)
 
     @pytest.mark.qt
-    @pytest.mark.gui
+    @pytest.mark.integration
     def test_download_plan_carries_listed_remote_size(self) -> None:
         files = _CountingFiles()
         panel = self.widget.panel_scratch
@@ -1050,8 +1054,10 @@ class FtpWidgetTests(unittest.TestCase):
         self.assertEqual(row.text(1), "<--")
         self.assertEqual(row.text(2), "/remote/folder/a.txt")
 
-    @pytest.mark.qt
-    @pytest.mark.gui
+
+    @pytest.mark.integration
+    @pytest.mark.concurrency
+    @pytest.mark.performance
     def test_remote_delete_uses_modeless_worker_plan_without_gui_probe(self) -> None:
         class SlowDeleteFiles:
             supports_parallel_transfers = False
@@ -1285,7 +1291,9 @@ class FtpWidgetTests(unittest.TestCase):
             dialog.deleteLater()
 
     @pytest.mark.qt
-    @pytest.mark.gui
+    @pytest.mark.integration
+    @pytest.mark.concurrency
+    @pytest.mark.resource
     def test_transfer_dialog_runs_up_to_parallel_limit(self) -> None:
         started: list[str] = []
         finished: list[str] = []
@@ -1349,7 +1357,8 @@ class FtpWidgetTests(unittest.TestCase):
             dialog.deleteLater()
 
     @pytest.mark.qt
-    @pytest.mark.gui
+    @pytest.mark.integration
+    @pytest.mark.concurrency
     def test_transfer_dialog_finishes_mkdir_before_parallel_transfer_batch(self) -> None:
         prepared = threading.Event()
         started_uploads: list[str] = []
@@ -1388,7 +1397,8 @@ class FtpWidgetTests(unittest.TestCase):
             dialog.deleteLater()
 
     @pytest.mark.qt
-    @pytest.mark.gui
+    @pytest.mark.integration
+    @pytest.mark.concurrency
     def test_overwrite_delete_is_followed_by_its_transfer_before_later_items(self) -> None:
         deletion_done = threading.Event()
         first_transfer_done = threading.Event()
@@ -1430,7 +1440,8 @@ class FtpWidgetTests(unittest.TestCase):
             dialog.deleteLater()
 
     @pytest.mark.qt
-    @pytest.mark.gui
+    @pytest.mark.integration
+    @pytest.mark.concurrency
     def test_recursive_plan_prepares_all_mkdirs_before_parallel_upload_phase(self) -> None:
         prepared: list[str] = []
         started: list[str] = []
@@ -1548,7 +1559,7 @@ class FtpWidgetTests(unittest.TestCase):
             dialog.deleteLater()
 
     @pytest.mark.qt
-    @pytest.mark.gui
+    @pytest.mark.unit
     def test_transfer_dialog_coalesces_burst_progress_and_delivers_final(self) -> None:
         item = TransferItem("upload", "burst.bin", "/remote/burst.bin")
         dialog = TransferDialog(title="Upload", items=[item], run_item=lambda _item, _progress=None: None)
@@ -1573,8 +1584,9 @@ class FtpWidgetTests(unittest.TestCase):
         finally:
             dialog.deleteLater()
 
-    @pytest.mark.qt
-    @pytest.mark.gui
+
+    @pytest.mark.integration
+    @pytest.mark.concurrency
     def test_parallel_capable_backend_uses_configured_parallelism_for_new_plan(self) -> None:
         class ParallelFiles:
             supports_parallel_transfers = True
@@ -1635,8 +1647,10 @@ class FtpWidgetTests(unittest.TestCase):
         self.assertTrue(completed.is_set())
         self.assertGreaterEqual(files.max_active, 2)
 
-    @pytest.mark.qt
-    @pytest.mark.gui
+
+    @pytest.mark.integration
+    @pytest.mark.concurrency
+    @pytest.mark.resource
     def test_ssh_backend_parallel_uploads_use_isolated_closed_channels(self) -> None:
         class FakeWriter:
             def __init__(self, channel) -> None:
@@ -1753,8 +1767,8 @@ class FtpWidgetTests(unittest.TestCase):
         self.assertTrue(all(channel.closed for channel in transfer_channels))
         self.assertEqual(ssh.assert_modes, ["wb", "wb", "wb"])
 
-    @pytest.mark.qt
-    @pytest.mark.gui
+
+    @pytest.mark.integration
     def test_ssh_backend_without_transfer_channel_capability_clamps_parallelism(self) -> None:
         class UnavailableSSH:
             sftp = object()
@@ -1885,7 +1899,7 @@ class FtpWidgetTests(unittest.TestCase):
             dialog.deleteLater()
 
     @pytest.mark.qt
-    @pytest.mark.gui
+    @pytest.mark.unit
     def test_upload_preflight_dont_ask_persists_only_when_accepted(self) -> None:
         panel = self.widget.panel_scratch
         item = TransferItem("upload", "C:/local/a.txt", "/remote/a.txt")
@@ -1932,7 +1946,7 @@ class FtpWidgetTests(unittest.TestCase):
         persist.assert_not_called()
 
     @pytest.mark.qt
-    @pytest.mark.gui
+    @pytest.mark.unit
     def test_disabled_upload_preflight_skips_dialog(self) -> None:
         panel = self.widget.panel_scratch
         item = TransferItem("mkdir_remote", "", "/remote/empty")
@@ -1946,7 +1960,7 @@ class FtpWidgetTests(unittest.TestCase):
         dialog.assert_not_called()
 
     @pytest.mark.qt
-    @pytest.mark.gui
+    @pytest.mark.integration
     def test_disabled_upload_preflight_still_executes_local_upload(self) -> None:
         class Files:
             supports_parallel_transfers = False
@@ -1995,7 +2009,8 @@ class FtpWidgetTests(unittest.TestCase):
         self.assertEqual(files.created, ["/remote/empty"])
 
     @pytest.mark.qt
-    @pytest.mark.gui
+    @pytest.mark.unit
+    @pytest.mark.concurrency
     def test_upload_preflight_cancel_starts_no_worker_or_activity(self) -> None:
         panel = self.widget.panel_scratch
         panel.session = {"connected": True, "files": _Files()}
@@ -2028,7 +2043,8 @@ class FtpWidgetTests(unittest.TestCase):
         )
 
     @pytest.mark.qt
-    @pytest.mark.gui
+    @pytest.mark.integration
+    @pytest.mark.concurrency
     def test_empty_folder_upload_requires_preflight_before_mkdir_worker(self) -> None:
         class EmptyFolderFiles:
             supports_parallel_transfers = False
@@ -2105,7 +2121,8 @@ class FtpWidgetTests(unittest.TestCase):
         self.assertEqual(files.created, ["/remote/empty"])
 
     @pytest.mark.qt
-    @pytest.mark.gui
+    @pytest.mark.integration
+    @pytest.mark.concurrency
     def test_single_connection_multi_folder_upload_runs_sequentially(self) -> None:
         class SingleConnectionFiles:
             supports_parallel_transfers = False
@@ -2189,8 +2206,8 @@ class FtpWidgetTests(unittest.TestCase):
         )
 
     @pytest.mark.qt
-    @pytest.mark.gui
-    def test_ftp_transfers_use_embedded_activity_without_showing_popup(self) -> None:
+    @pytest.mark.unit
+    def test_remote_panels_default_to_embedded_transfer_mode(self) -> None:
         self.assertFalse(self.widget.panel_scratch._show_transfer_dialog)
         self.assertFalse(self.widget.panel_home._show_transfer_dialog)
 
@@ -2258,7 +2275,7 @@ class FtpWidgetTests(unittest.TestCase):
         )
 
     @pytest.mark.qt
-    @pytest.mark.gui
+    @pytest.mark.unit
     def test_always_use_conflict_action_lasts_only_for_current_process(self) -> None:
         source = TransferConflictInfo("/source", size=10, mtime=20)
         target = TransferConflictInfo("/target", size=10, mtime=10)
@@ -2569,8 +2586,8 @@ class FtpWidgetTests(unittest.TestCase):
             window.graceful_shutdown()
             window.deleteLater()
 
-    @pytest.mark.qt
-    @pytest.mark.gui
+
+    @pytest.mark.unit
     def test_batch_submit_worker_orders_sequentially_and_continues_after_failure(self) -> None:
         class RecordingSlurm:
             def __init__(self) -> None:
@@ -2694,7 +2711,7 @@ class FtpWidgetTests(unittest.TestCase):
             jobs_widget.deleteLater()
 
     @pytest.mark.qt
-    @pytest.mark.gui
+    @pytest.mark.unit
     def test_sbatch_follow_modes_use_existing_follower_helpers(self) -> None:
         from hpc_gui.ui.widgets.jobs_outputs_widget import JobsOutputsWidget
 
@@ -2809,8 +2826,7 @@ class FtpWidgetTests(unittest.TestCase):
             jobs_widget.shutdown()
             jobs_widget.deleteLater()
 
-    @pytest.mark.qt
-    @pytest.mark.gui
+    @pytest.mark.contract
     def test_sbatch_follow_mode_settings_migrate_and_persist(self) -> None:
         from hpc_gui.config import storage
 
@@ -3046,7 +3062,7 @@ class FtpWidgetTests(unittest.TestCase):
             dialog.deleteLater()
 
     @pytest.mark.qt
-    @pytest.mark.gui
+    @pytest.mark.integration
     def test_profile_update_preserves_other_fields_and_refreshes_session(self) -> None:
         login = LoginWidget()
         cfg = SimpleNamespace(
@@ -3311,6 +3327,8 @@ class FtpWidgetTests(unittest.TestCase):
 
     @pytest.mark.qt
     @pytest.mark.gui
+    @pytest.mark.concurrency
+    @pytest.mark.performance
     def test_upload_planning_uses_worker_and_returns_before_slow_probe(self) -> None:
         class SlowFiles:
             supports_parallel_transfers = False
@@ -3359,6 +3377,8 @@ class FtpWidgetTests(unittest.TestCase):
 
     @pytest.mark.qt
     @pytest.mark.gui
+    @pytest.mark.concurrency
+    @pytest.mark.performance
     def test_download_planning_uses_worker_and_returns_before_slow_probe(self) -> None:
         class SlowFiles:
             supports_parallel_transfers = False
@@ -3405,6 +3425,8 @@ class FtpWidgetTests(unittest.TestCase):
 
     @pytest.mark.qt
     @pytest.mark.gui
+    @pytest.mark.concurrency
+    @pytest.mark.performance
     def test_remote_multi_folder_download_pipeline_stays_off_gui_thread(self) -> None:
         class PipelineFiles:
             supports_parallel_transfers = True
@@ -3505,7 +3527,9 @@ class FtpWidgetTests(unittest.TestCase):
                 dialog.deleteLater()
 
     @pytest.mark.qt
-    @pytest.mark.gui
+    @pytest.mark.integration
+    @pytest.mark.concurrency
+    @pytest.mark.performance
     def test_download_conflict_planning_keeps_remote_probes_off_gui_thread(self) -> None:
         class ProbeGuardingFiles:
             supports_parallel_transfers = False
@@ -3596,7 +3620,8 @@ class FtpWidgetTests(unittest.TestCase):
             RemoteDirPanel._session_conflict_action = None
 
     @pytest.mark.qt
-    @pytest.mark.gui
+    @pytest.mark.integration
+    @pytest.mark.concurrency
     def test_transfer_completion_invalidates_upload_target_and_download_sources(self) -> None:
         class Files:
             supports_parallel_transfers = False
@@ -3691,6 +3716,7 @@ class FtpWidgetTests(unittest.TestCase):
 
     @pytest.mark.qt
     @pytest.mark.gui
+    @pytest.mark.concurrency
     def test_double_click_activation_does_not_start_duplicate_upload(self) -> None:
         local_file = Path(__file__).resolve()
         self.widget.panel_scratch.current_dir = "/remote"
@@ -3716,6 +3742,7 @@ class FtpWidgetTests(unittest.TestCase):
 
     @pytest.mark.qt
     @pytest.mark.gui
+    @pytest.mark.concurrency
     def test_active_upload_plan_is_not_queued_twice(self) -> None:
         panel = self.widget.panel_scratch
         panel.session = {"connected": True, "files": _Files()}
@@ -3925,7 +3952,7 @@ class FtpWidgetTests(unittest.TestCase):
             login.deleteLater()
 
     @pytest.mark.qt
-    @pytest.mark.gui
+    @pytest.mark.unit
     def test_saved_master_password_is_reused_without_showing_a_prompt(self) -> None:
         login = LoginWidget()
         try:
@@ -4007,8 +4034,7 @@ class FtpWidgetTests(unittest.TestCase):
         finally:
             dialog.deleteLater()
 
-    @pytest.mark.qt
-    @pytest.mark.gui
+    @pytest.mark.contract
     def test_user_system_template_persists_by_name(self) -> None:
         saved_settings = {"system_templates": []}
 
@@ -4218,6 +4244,7 @@ class FtpWidgetTests(unittest.TestCase):
 
     @pytest.mark.qt
     @pytest.mark.gui
+    @pytest.mark.concurrency
     def test_remote_panel_drop_upload_planning_yields_before_transfer_start(self) -> None:
         class Files:
             supports_parallel_transfers = True
@@ -4788,8 +4815,7 @@ class FtpWidgetTests(unittest.TestCase):
         finally:
             panel.deleteLater()
 
-    @pytest.mark.qt
-    @pytest.mark.gui
+    @pytest.mark.contract
     def test_local_context_menu_matches_requested_layout(self) -> None:
         self.assertEqual(
             LOCAL_CONTEXT_MENU_LABELS,
@@ -4814,6 +4840,7 @@ class FtpWidgetTests(unittest.TestCase):
     @pytest.mark.qt
     @pytest.mark.gui
     @unittest.skipUnless(sys.platform == "win32", "Windows Explorer integration")
+    @pytest.mark.windows
     def test_local_context_open_uses_file_explorer_target(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             src = Path(tmp, "old.txt")
@@ -4831,6 +4858,7 @@ class FtpWidgetTests(unittest.TestCase):
 
     @pytest.mark.qt
     @pytest.mark.gui
+    @pytest.mark.linux
     def test_local_context_open_on_linux_invokes_file_manager(self) -> None:
         from unittest import mock
 
@@ -4981,8 +5009,7 @@ class FtpWidgetTests(unittest.TestCase):
                 self.assertTrue(local.create_directory(enter=True))
             self.assertEqual(Path(local.current_dir), Path(tmp, "child"))
 
-    @pytest.mark.qt
-    @pytest.mark.gui
+    @pytest.mark.contract
     def test_remote_context_menu_matches_requested_layout(self) -> None:
         self.assertEqual(
             REMOTE_CONTEXT_MENU_LABELS,
@@ -5608,7 +5635,7 @@ class FtpWidgetTests(unittest.TestCase):
             source_panel.deleteLater()
 
     @pytest.mark.qt
-    @pytest.mark.gui
+    @pytest.mark.unit
     def test_remote_panel_shutdown_unregisters_idempotently_and_by_identity(self) -> None:
         panel = RemoteDirPanel()
         panel_id = panel.panel_id
@@ -5629,7 +5656,9 @@ class FtpWidgetTests(unittest.TestCase):
             panel.deleteLater()
 
     @pytest.mark.qt
-    @pytest.mark.gui
+    @pytest.mark.unit
+    @pytest.mark.concurrency
+    @pytest.mark.resource
     def test_remote_panel_shutdown_waits_once_for_active_thread_without_planning_jobs(self) -> None:
         panel = RemoteDirPanel()
 
@@ -5656,7 +5685,9 @@ class FtpWidgetTests(unittest.TestCase):
             panel.deleteLater()
 
     @pytest.mark.qt
-    @pytest.mark.gui
+    @pytest.mark.unit
+    @pytest.mark.concurrency
+    @pytest.mark.resource
     def test_remote_panel_shutdown_waits_once_for_active_and_each_planning_thread(self) -> None:
         panel = RemoteDirPanel()
 
@@ -5700,7 +5731,9 @@ class FtpWidgetTests(unittest.TestCase):
             panel.deleteLater()
 
     @pytest.mark.qt
-    @pytest.mark.gui
+    @pytest.mark.unit
+    @pytest.mark.concurrency
+    @pytest.mark.resource
     def test_remote_panel_shutdown_keeps_still_running_planning_thread_referenced(self) -> None:
         panel = RemoteDirPanel()
 
@@ -5739,7 +5772,8 @@ class FtpWidgetTests(unittest.TestCase):
             panel.deleteLater()
 
     @pytest.mark.qt
-    @pytest.mark.gui
+    @pytest.mark.unit
+    @pytest.mark.resource
     def test_remote_panel_deferred_delete_unregisters_instance(self) -> None:
         panel = RemoteDirPanel()
         panel_id = panel.panel_id
@@ -5755,7 +5789,8 @@ class FtpWidgetTests(unittest.TestCase):
                 RemoteDirPanel._instances.pop(panel_id, None)
 
     @pytest.mark.qt
-    @pytest.mark.gui
+    @pytest.mark.unit
+    @pytest.mark.resource
     def test_remote_panel_deferred_delete_preserves_replacement_identity(self) -> None:
         panel = RemoteDirPanel()
         panel_id = panel.panel_id
@@ -5772,7 +5807,9 @@ class FtpWidgetTests(unittest.TestCase):
                 RemoteDirPanel._instances.pop(panel_id, None)
 
     @pytest.mark.qt
-    @pytest.mark.gui
+    @pytest.mark.unit
+    @pytest.mark.concurrency
+    @pytest.mark.resource
     def test_remote_mutation_removes_panel_that_raises_deleted_qt_error(self) -> None:
         source = RemoteDirPanel()
         stale = RemoteDirPanel()
@@ -5834,7 +5871,7 @@ class FtpWidgetTests(unittest.TestCase):
             )
 
     @pytest.mark.qt
-    @pytest.mark.gui
+    @pytest.mark.integration
     def test_download_existing_target_uses_conflict_dialog_decision(self) -> None:
         files = _Files()
         files.remote["/remote/existing.txt"] = b"remote"
@@ -5854,7 +5891,7 @@ class FtpWidgetTests(unittest.TestCase):
             self.assertFalse(run_plan.called)
 
     @pytest.mark.qt
-    @pytest.mark.gui
+    @pytest.mark.integration
     def test_download_resume_keeps_partial_target_and_plans_one_transfer(self) -> None:
         files = _Files()
         files.remote["/remote/existing.txt"] = b"remote"
@@ -5880,7 +5917,7 @@ class FtpWidgetTests(unittest.TestCase):
             ])
 
     @pytest.mark.qt
-    @pytest.mark.gui
+    @pytest.mark.integration
     def test_upload_resume_keeps_remote_target_and_plans_one_transfer(self) -> None:
         files = _Files()
         files.remote["/remote/existing.txt"] = b"part"
@@ -5906,7 +5943,7 @@ class FtpWidgetTests(unittest.TestCase):
             ])
 
     @pytest.mark.qt
-    @pytest.mark.gui
+    @pytest.mark.integration
     def test_upload_folder_conflicts_ask_for_each_nested_file_without_apply_all(self) -> None:
         files = _Files()
         files.remote["/remote/folder/a.txt"] = b"old-a"
@@ -5945,7 +5982,7 @@ class FtpWidgetTests(unittest.TestCase):
         )
 
     @pytest.mark.qt
-    @pytest.mark.gui
+    @pytest.mark.integration
     def test_download_folder_conflicts_ask_for_each_nested_file_without_apply_all(self) -> None:
         class TreeFiles:
             def listdir_entries(self, path: str):
@@ -6002,7 +6039,8 @@ class FtpWidgetTests(unittest.TestCase):
         )
 
     @pytest.mark.qt
-    @pytest.mark.gui
+    @pytest.mark.unit
+    @pytest.mark.concurrency
     def test_active_download_plan_is_not_queued_twice(self) -> None:
         panel = self.widget.panel_scratch
         panel.session = {"connected": True, "files": _Files()}
