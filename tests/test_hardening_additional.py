@@ -506,23 +506,23 @@ def test_wx_separator_lifecycle_offscreen():
         except ImportError as e:
             print(f"SKIP wx unavailable: {e}")
             sys.exit(0)
-            from pathlib import Path
+        from pathlib import Path
         from types import SimpleNamespace
         from unittest.mock import patch
         from hpc_gui.wx_shell import create_shell_frame
         from hpc_gui.plugins.models import PluginManifest, PluginFile, InstalledPlugin
 
-        def _make_fake_plugin(when):
-            items = [{"kind": "action", "id": "a", "label": "Lint", "action": "editor.lint_current", "when": when, "unavailable": "hide"}]
+        def _make_fake_plugin(plugin_id, label, item_label, when, unavailable="hide"):
+            items = [{"kind": "action", "id": "lint", "label": item_label, "action": "editor.lint_current", "when": when, "unavailable": unavailable}]
             mf = PluginManifest(
-                schema_version=1, plugin_api=1, id="org.test.fake", name="Fake", version="1.0.0",
+                schema_version=1, plugin_api=1, id=plugin_id, name=label, version="1.0.0",
                 publisher="x", license="MIT", description="d", requires_app=">=1.5.8",
                 capabilities=("lint-rules",), entrypoints={}, files=(PluginFile(path="a.json", sha256="0"*64, size=1, role="documentation"),),
-                ui_contributions={"plugins_menu": {"label": "FakeRoot", "items": items}},
+                ui_contributions={"plugins_menu": {"label": label, "items": items}},
             )
             return InstalledPlugin(manifest=mf, directory=Path("/tmp"))
 
-        fake_plugin = _make_fake_plugin({"connected": True})
+        fake_plugin = _make_fake_plugin("org.test.fake", "FakeRoot", "Lint", {"connected": True})
 
         def _snapshot(menu):
             out=[]
@@ -609,22 +609,59 @@ def test_wx_separator_lifecycle_offscreen():
                 assert items5[4].GetSubMenu() is not None and items5[4].GetItemLabelText() == "FakeRoot"
                 print("STEP5 OK", snap5)
 
+            # 6. Unicode roots, hide/disable conditions, order and repeated lifecycle.
+            hide_plugin = _make_fake_plugin(
+                "org.test.hide", "Çalışma Araçları", "İş_日本語", {"connected": True}, "hide"
+            )
+            disable_plugin = _make_fake_plugin(
+                "org.test.disable", "日本語ツール", "Çalışma araçları", {"connected": True}, "disable"
+            )
+            visible_plugins = [hide_plugin, disable_plugin]
+            expected_roots = sorted(
+                [hide_plugin.manifest.name, disable_plugin.manifest.name],
+                key=str.casefold,
+            )
+            for cycle in range(25):
+                session_state["session"] = {"connected": True}
+                with patch("hpc_gui.plugins.loader.load_installed_plugins", return_value=SimpleNamespace(plugins=visible_plugins)):
+                    frame._wx_rebuild_plugins_menu()
+                menu_items = list(plugins_menu.GetMenuItems())
+                roots = [item for item in menu_items if item.GetSubMenu() is not None]
+                root_labels = [item.GetItemLabelText() for item in roots]
+                assert root_labels == expected_roots, f"cycle {cycle}: roots {root_labels}"
+                assert len(root_labels) == len(set(root_labels))
+                assert _count_seps(plugins_menu) == 2
+                actions = {
+                    item.GetItemLabelText(): list(item.GetSubMenu().GetMenuItems())
+                    for item in roots
+                }
+                assert actions["Çalışma Araçları"][0].GetItemLabelText() == "İş_日本語"
+                assert actions["日本語ツール"][0].GetItemLabelText() == "Çalışma araçları"
+                assert all(items[0].IsEnabled() for items in actions.values())
+
+                session_state["session"] = {"connected": False}
+                with patch("hpc_gui.plugins.loader.load_installed_plugins", return_value=SimpleNamespace(plugins=visible_plugins)):
+                    frame._wx_rebuild_plugins_menu()
+                menu_items = list(plugins_menu.GetMenuItems())
+                roots = [item for item in menu_items if item.GetSubMenu() is not None]
+                assert [item.GetItemLabelText() for item in roots] == ["日本語ツール"]
+                assert _count_seps(plugins_menu) == 2
+                disabled_action = roots[0].GetSubMenu().GetMenuItems()[0]
+                assert disabled_action.GetItemLabelText() == "Çalışma araçları"
+                assert not disabled_action.IsEnabled()
+            print("STEP6 OK 25 cycles; Unicode labels and hide/disable conditions")
+
             print("ALL_STEPS_PASSED", flush=True)
         finally:
-            try:
-                frame.Destroy()
-            except Exception:
-                pass
-            try:
-                import wx
-                app = wx.GetApp()
-                if app is not None:
-                    try:
-                        app.Destroy()
-                    except Exception:
-                        pass
-            except Exception:
-                pass
+            import wx
+            app = wx.GetApp()
+            frame.Close()
+            app.ProcessPendingEvents()
+            wx.Yield()
+            app.ProcessPendingEvents()
+            assert not wx.GetTopLevelWindows(), "wx top-level windows remain after frame teardown"
+            app.Destroy()
+            print("TEARDOWN_OK", flush=True)
             import os, sys
             sys.stdout.flush()
             sys.stderr.flush()
@@ -660,6 +697,8 @@ def test_wx_separator_lifecycle_offscreen():
         if "ALL_STEPS_PASSED" in out:
             assert result.returncode == 0
             assert "STEP1 OK" in out and "STEP2 OK" in out and "STEP3 OK" in out and "STEP4 OK" in out and "STEP5 OK" in out
+            assert "STEP6 OK 25 cycles" in out and "TEARDOWN_OK" in out
+            assert "UnregisterClass" not in out and "open windows" not in out
             return
         if result.returncode != 0:
             pytest.fail(f"wx lifecycle subprocess failed (code {result.returncode}):\\n{out}")
