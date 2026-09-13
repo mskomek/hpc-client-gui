@@ -8,7 +8,7 @@ wx = pytest.importorskip("wx")
 from mock_hpc_files import MockRemoteFilesBackend
 from support.wx_clipboard import read_clipboard_text
 from hpc_gui.services.file_clipboard import get_file_clipboard
-from hpc_gui.core.i18n import load_language
+from hpc_gui.core.i18n import current_language, load_language
 from hpc_gui.wx_remote_files import WxRemoteDirectoryModel
 from hpc_gui.wx_remote_files_view import show_remote_files
 
@@ -26,14 +26,25 @@ def _pump(app, predicate, timeout=2):
 
 @pytest.fixture
 def wx_app():
+    previous_language = current_language()
+    clipboard = get_file_clipboard()
+    previous_clipboard = clipboard.get()
     load_language("en")
     app = wx.App(False)
-    yield app
-    for window in wx.GetTopLevelWindows():
-        if window:
-            window.Destroy()
-    app.ProcessPendingEvents()
-    app.Destroy()
+    try:
+        yield app
+    finally:
+        for window in wx.GetTopLevelWindows():
+            if window:
+                window.Destroy()
+        app.ProcessPendingEvents()
+        wx.SafeYield()
+        app.Destroy()
+        if previous_clipboard is None:
+            clipboard.clear()
+        else:
+            clipboard.set(previous_clipboard.op, previous_clipboard.paths)
+        load_language(previous_language)
 
 
 def _browser(app, backend, model=None, operation=None):
@@ -44,7 +55,8 @@ def _browser(app, backend, model=None, operation=None):
 
 
 @pytest.mark.wx
-@pytest.mark.gui
+@pytest.mark.integration
+@pytest.mark.concurrency
 def test_remote_move_and_upload_actions_reach_backend_off_gui_thread(wx_app, monkeypatch):
     backend = MockRemoteFilesBackend()
     frame = _browser(wx_app, backend)
@@ -61,7 +73,7 @@ def test_remote_move_and_upload_actions_reach_backend_off_gui_thread(wx_app, mon
 
 
 @pytest.mark.wx
-@pytest.mark.gui
+@pytest.mark.integration
 def test_wx_remote_download_uses_selected_destination_dialog(wx_app, monkeypatch, tmp_path):
     backend = MockRemoteFilesBackend()
     frame = _browser(wx_app, backend)
@@ -71,7 +83,7 @@ def test_wx_remote_download_uses_selected_destination_dialog(wx_app, monkeypatch
 
 
 @pytest.mark.wx
-@pytest.mark.gui
+@pytest.mark.integration
 def test_wx_remote_delete_removes_selected_files_and_directory_only(wx_app, monkeypatch):
     backend = MockRemoteFilesBackend()
     backend.entries.update({"/work/selected-dir": True, "/work/selected-dir/nested.txt": False, "/work/keep.txt": False})
@@ -118,7 +130,7 @@ def test_wx_remote_rename_conflict_shows_error_and_preserves_source(wx_app, monk
 
 
 @pytest.mark.wx
-@pytest.mark.gui
+@pytest.mark.integration
 def test_remote_new_folder_uses_clicked_directory_target(wx_app, monkeypatch):
     backend = MockRemoteFilesBackend()
     frame = _browser(wx_app, backend)
@@ -165,12 +177,16 @@ def test_wx_remote_new_folder_failure_shows_error_and_recovers(wx_app, monkeypat
 def test_wx_remote_delete_confirmation_cancel_preserves_selection(wx_app, monkeypatch):
     backend = MockRemoteFilesBackend()
     frame = _browser(wx_app, backend, WxRemoteDirectoryModel("/work"))
+    listing = frame._wx_remote_controls["listing"]
+    row = next(index for index in range(listing.GetItemCount()) if listing.GetItemText(index) == "a.txt")
+    listing.Select(row)
     monkeypatch.setattr(wx, "MessageBox", lambda *_args, **_kwargs: wx.NO)
     frame._wx_remote_run_action("delete", ("/work/a.txt",), "/work")
     wx_app.ProcessPendingEvents()
     assert "/work/a.txt" in backend.entries
     assert not backend.calls
-    assert frame._wx_remote_controls["listing"].IsEnabled()
+    assert listing.IsSelected(row)
+    assert listing.IsEnabled()
 
 
 @pytest.mark.wx
@@ -190,7 +206,7 @@ def test_wx_remote_delete_failure_shows_error_and_recovers(wx_app, monkeypatch):
 
 
 @pytest.mark.wx
-@pytest.mark.gui
+@pytest.mark.integration
 def test_wx_remote_move_preserves_multi_item_destinations(wx_app, monkeypatch):
     backend = MockRemoteFilesBackend()
     frame = _browser(wx_app, backend, WxRemoteDirectoryModel("/work"))
@@ -227,7 +243,7 @@ def test_wx_remote_keyboard_copy_and_paste_use_shared_clipboard(wx_app):
 
 
 @pytest.mark.wx
-@pytest.mark.gui
+@pytest.mark.integration
 def test_wx_remote_multi_item_paste_preserves_all_destinations(wx_app):
     backend = MockRemoteFilesBackend()
     backend.entries["/work/dest"] = True
@@ -358,7 +374,7 @@ def test_wx_remote_background_context_shows_directory_actions(wx_app, monkeypatc
 
 
 @pytest.mark.wx
-@pytest.mark.gui
+@pytest.mark.integration
 def test_wx_remote_background_upload_targets_current_directory(wx_app, monkeypatch):
     backend = MockRemoteFilesBackend()
     frame = _browser(wx_app, backend)
@@ -379,7 +395,7 @@ def test_wx_remote_background_upload_targets_current_directory(wx_app, monkeypat
 
 
 @pytest.mark.wx
-@pytest.mark.gui
+@pytest.mark.integration
 def test_wx_remote_background_context_paste_targets_current_directory(wx_app):
     backend = MockRemoteFilesBackend()
     frame = _browser(wx_app, backend, WxRemoteDirectoryModel("/work"))
@@ -399,7 +415,7 @@ def test_wx_remote_background_context_paste_targets_current_directory(wx_app):
 
 
 @pytest.mark.wx
-@pytest.mark.gui
+@pytest.mark.integration
 def test_wx_remote_clicked_directory_context_paste_targets_clicked_directory(wx_app):
     backend = MockRemoteFilesBackend()
     backend.entries["/work/dest"] = True
@@ -496,7 +512,7 @@ def test_wx_remote_navigation_sort_and_provider_filter_are_visible(wx_app):
 
 
 @pytest.mark.wx
-@pytest.mark.gui
+@pytest.mark.integration
 def test_wx_remote_new_file_and_chmod_reach_backend(wx_app, monkeypatch):
     class Backend(MockRemoteFilesBackend):
         def write_text(self, path, text):
@@ -530,7 +546,7 @@ def test_wx_remote_new_file_and_chmod_reach_backend(wx_app, monkeypatch):
 
 
 @pytest.mark.wx
-@pytest.mark.gui
+@pytest.mark.integration
 def test_wx_remote_favorite_selected_file_targets_file_path(wx_app):
     class Store:
         def __init__(self):
@@ -555,7 +571,7 @@ def test_wx_remote_favorite_selected_file_targets_file_path(wx_app):
 
 
 @pytest.mark.wx
-@pytest.mark.gui
+@pytest.mark.integration
 def test_wx_remote_submit_slurm_uses_selected_remote_path(wx_app, monkeypatch):
     backend = MockRemoteFilesBackend()
     submitted = []
