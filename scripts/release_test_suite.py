@@ -56,6 +56,12 @@ ISOLATED_WIRE_FILES = (
     "tests/test_download_cancel_wire.py",
     "tests/test_editor_flow.py",
 )
+ISOLATED_GUI_FILES = ("tests/test_corrective_jobs_details.py",)
+# Keep the real WebView navigation behavior test but isolate its native state;
+# Windows recorded process heap corruption when it ran after the broad GUI set.
+ISOLATED_TEST_NODES = (
+    "tests/test_wx_terminal_webview.py::test_wx_terminal_external_navigation_blocked",
+)
 
 COVERAGE_FAIL_UNDER = 65
 
@@ -79,17 +85,27 @@ def build_commands(*, coverage: bool) -> list[tuple[str, ...]]:
     commands = list(PREFLIGHT_COMMANDS)
     ignores = tuple(
         argument
-        for path in ISOLATED_WIRE_FILES
+        for path in (*ISOLATED_WIRE_FILES, *ISOLATED_GUI_FILES)
         for argument in ("--ignore", path)
     )
-    commands.append(
-        PYTEST_BASE + ignores + (COVERAGE_ARGS if coverage else ())
+    deselects = tuple(
+        argument
+        for nodeid in ISOLATED_TEST_NODES
+        for argument in ("--deselect", nodeid)
     )
-    for index, path in enumerate(ISOLATED_WIRE_FILES):
+    commands.append(
+        PYTEST_BASE + ignores + deselects + (COVERAGE_ARGS if coverage else ())
+    )
+    isolated_selectors = (
+        *ISOLATED_TEST_NODES,
+        *ISOLATED_GUI_FILES,
+        *ISOLATED_WIRE_FILES,
+    )
+    for index, selector in enumerate(isolated_selectors):
         coverage_args = COVERAGE_APPEND_ARGS if coverage else ()
-        if coverage and index == len(ISOLATED_WIRE_FILES) - 1:
+        if coverage and index == len(isolated_selectors) - 1:
             coverage_args += (f"--cov-fail-under={COVERAGE_FAIL_UNDER}",)
-        commands.append(PYTEST_BASE[:-1] + (path,) + coverage_args)
+        commands.append(PYTEST_BASE[:-1] + (selector,) + coverage_args)
     return commands
 
 
@@ -102,7 +118,8 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
-    for command in build_commands(coverage=args.coverage):
+    failed_test_partition = 0
+    for index, command in enumerate(build_commands(coverage=args.coverage)):
         printable = " ".join(str(part) for part in command)
         print(f"[release-test-suite] {printable}", flush=True)
         result = subprocess.run(command, cwd=REPO_ROOT)
@@ -111,7 +128,12 @@ def main(argv: list[str] | None = None) -> int:
                 f"[release-test-suite] FAILED with exit code {result.returncode}: {printable}",
                 file=sys.stderr,
             )
-            return result.returncode
+            if index < len(PREFLIGHT_COMMANDS):
+                return result.returncode
+            if not failed_test_partition:
+                failed_test_partition = result.returncode
+    if failed_test_partition:
+        return failed_test_partition
     print("[release-test-suite] all release preflight gates passed")
     return 0
 
