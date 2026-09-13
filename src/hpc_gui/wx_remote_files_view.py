@@ -241,6 +241,9 @@ def _build_remote_files(parent, model: WxRemoteDirectoryModel | None = None, *, 
 
     def safe_call_after(callback, *args):
         try:
+            with lock:
+                if state["closed"]:
+                    return
             if wx.GetApp() is None:
                 return
             wx.CallAfter(callback, *args)
@@ -1091,10 +1094,22 @@ def _build_remote_files(parent, model: WxRemoteDirectoryModel | None = None, *, 
         Thread(target=worker, daemon=True).start()
 
     def close(_event):
-        state["closed"] = True
-        for te in tabs:
-            te["closed"] = True
+        _mark_closed()
         host.Destroy()
+
+    def _mark_closed():
+        with lock:
+            state["closed"] = True
+            for te in tabs:
+                te["closed"] = True
+
+    def on_host_destroy(event):
+        if event.GetEventObject() is host:
+            unsubscribe_language_change(refresh_labels)
+            _mark_closed()
+        event.Skip()
+
+    host.Bind(wx.EVT_WINDOW_DESTROY, on_host_destroy)
 
     def _set_navigation_store(store):
         nonlocal navigation_store
