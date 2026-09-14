@@ -1,6 +1,8 @@
 # Test Governance Phase 2 — Execution Report
 
-Latest status: Packets A–M DONE; N NOT APPLICABLE; O DONE; Wave COMPLETE. The broad release suite remains incomplete, so develop integration is NOT READY TO MERGE.
+Latest status: Packets A–M DONE; N NOT APPLICABLE; O DONE; Wave COMPLETE. The 2026-09-13 integration closeout remains `DEFECT_FOUND` and NOT READY TO MERGE: the authoritative runner reached the end of its broad child but found two failures, and therefore did not run later isolated groups or coverage.
+
+The closeout worktree is `D:\Projeler\hpc-client-gui-integration-closeout` on `test-suite-governance-integration-closeout-20260913`, based on governance SHA `18e59fff3d8ebfa47666347a0d9cfc4d137b43c1`. Its current collection is 2,657, with zero-primary 0 and multi-primary 0. The exact closeout evidence, failure classification, and merge decision are in [TEST_SUITE_INTEGRATION_CLOSEOUT_2026-09-13.md](TEST_SUITE_INTEGRATION_CLOSEOUT_2026-09-13.md).
 
 - Frozen baseline: `12ce79935bf076e1062c57dc7dbd148bad2bfae1`
 - Governance branch: `test-suite-governance-20260912`

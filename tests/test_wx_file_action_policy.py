@@ -59,5 +59,5 @@ def test_local_policy_exact_matrix(name, selection, expected):
         ("mixed", context_selection("/d", True, ("/a", "/d"), (False, True)), {"download", "upload", "delete", "copy", "move", "paste", "copy_path", "refresh"}),
     ],
 )
-def test_remote_policy_exact_matrix(name, selection, expected):
+def test_remote_candidate_policy_exact_matrix(name, selection, expected):
     assert set(visible_actions(selection, remote=True)) == expected, name

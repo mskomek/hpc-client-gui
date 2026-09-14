@@ -36,6 +36,7 @@ def _pump(app, predicate, timeout=3):
 
 @pytest.fixture
 def shell():
+    previous_language = current_language()
     load_language("en")
     app = wx.App(False)
     tray = Tray(None)
@@ -50,6 +51,7 @@ def shell():
     app.ProcessPendingEvents()
     wx.SafeYield()
     app.Destroy()
+    load_language(previous_language)
 
 
 def _open_jobs(app, frame, lifecycle, rows, final_state=None, generation=None):

@@ -87,13 +87,15 @@ def wx_app():
 @pytest.fixture(autouse=True)
 def _cleanup_windows_after_test(wx_app):
     load_language("en")
+    baseline = {id(window) for window in wx.GetTopLevelWindows()}
     yield
-    _destroy_windows(wx_app)
+    _destroy_windows(wx_app, baseline)
 
 
-def _destroy_windows(app):
+def _destroy_windows(app, baseline=None):
+    baseline = baseline or set()
     for window in wx.GetTopLevelWindows():
-        if window:
+        if window and id(window) not in baseline:
             window.Destroy()
     _settle(app)
 
@@ -220,6 +222,7 @@ def _rows(listing):
 def test_stress_a_right_click_retarget(wx_app, monkeypatch):
     import hpc_gui.wx_remote_files_view as view
 
+    assert wx.App.Get() is wx_app
     backend = MockRemoteFilesBackend()
     backend.entries.update({"/work/dir-a": True, "/work/c.txt": False, "/work/d.txt": False})
     frame = _remote_frame(wx_app, backend)

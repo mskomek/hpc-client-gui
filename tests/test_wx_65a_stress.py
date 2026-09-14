@@ -15,7 +15,7 @@ import pytest
 
 wx = pytest.importorskip("wx")
 
-from hpc_gui.core.i18n import current_language, set_language
+from hpc_gui.core.i18n import current_language, set_language, t
 from hpc_gui.wx_shell import create_shell_frame
 
 
@@ -49,16 +49,22 @@ def _cleanup_wx_test(app, existing_windows, original_language) -> None:
     set_language(original_language)
     created_windows = [window for window in wx.GetTopLevelWindows() if window not in existing_windows]
     for window in created_windows:
-        if window in wx.GetTopLevelWindows():
+        try:
             window.Close()
+        except Exception:
+            pass
     for _ in range(3):
         app.ProcessPendingEvents()
         _yield(1)
-    for window in wx.GetTopLevelWindows():
-        if window not in existing_windows:
-            window.Destroy()
-    app.ProcessPendingEvents()
-    wx.Yield()
+    for window in created_windows:
+        try:
+            if not window.IsBeingDeleted():
+                window.Destroy()
+        except Exception:
+            pass
+    for _ in range(2):
+        app.ProcessPendingEvents()
+        _yield(1)
     remaining = [window for window in wx.GetTopLevelWindows() if window not in existing_windows]
     assert not remaining, "wx top-level windows survived test cleanup"
 
@@ -145,11 +151,11 @@ def test_wx_65a_integrated_stress(tmp_path: Path, monkeypatch, request) -> None:
     probe = Probe()
     closed = {"v": False}
 
-    existing_windows = set(wx.GetTopLevelWindows())
+    original_language = current_language()
     app = wx.App.Get() or wx.App(False)
+    existing_windows = set(wx.GetTopLevelWindows())
+    request.addfinalizer(lambda: _cleanup_wx_test(app, existing_windows, original_language))
     frame, lifecycle, session = create_shell_frame(app)
-    orig_lang = current_language()
-    request.addfinalizer(lambda: _cleanup_wx_test(app, existing_windows, orig_lang))
     frame.Show()
     _yield(2)
     print("frame shown")
@@ -247,12 +253,15 @@ def test_wx_65a_integrated_stress(tmp_path: Path, monkeypatch, request) -> None:
             if item:
                 _menu(frame, item.GetId())
                 executed["en_tr_switches"] += 1
+                expected_label = t("help.english" if lang == "en" else "help.turkish")
+                if item.GetItemLabelText() != expected_label:
+                    invariants["wrong_language_labels"] += 1
                 if current_language() != lang or not item.IsChecked():
                     invariants["wrong_language_labels"] += 1
             if i % 50 == 0:
                 _yield(1)
     finally:
-        set_language(orig_lang)
+        set_language(original_language)
         _yield(1)
     print(f"en/tr {executed['en_tr_switches']}")
 

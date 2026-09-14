@@ -429,35 +429,30 @@ def test_vt_alternate_screen_sequences_preserved():
 # ── Section 10: Search next/prev with state advancement ──
 
 @pytest.mark.contract
-def test_find_next_prev_advances_through_matches():
-    """Prove: hpcFind -> hpcFindNext -> hpcFindPrev all dispatch to JS."""
-    if not _is_webview_available():
-        pytest.skip("WebView backend unavailable")
+def test_find_next_prev_commands_match_webview_bridge_contract():
+    """Verify bridge commands without starting native WebView2."""
     from hpc_gui.wx_terminal_webview import WxTerminalWebViewPanel
 
-    class FakeSSH:
-        _wx_output_subscribers = []
-        def send_shell_input(self, d): return True
-        def resize_shell_pty(self, c, r): pass
-
-    _app = wx.App(False)
-    frame = wx.Frame(None, size=(900, 600))
-    panel = WxTerminalWebViewPanel(frame, ssh=FakeSSH())
-    panel._ready = True
-    panel._is_parity = True
-
     calls = []
-    panel._run_js = lambda c: calls.append(c)
+    class PanelSeam:
+        _closed = False
+        _ready = True
+        _is_parity = True
+        _webview = object()
 
-    panel.hpc_find("aaa")
+        def _run_js(self, code):
+            calls.append(code)
+
+    panel = PanelSeam()
+    assert WxTerminalWebViewPanel.hpc_find(panel, "aaa")
     assert any("hpcFind" in c and '"aaa"' in c for c in calls), f"hpcFind not called: {calls}"
     calls.clear()
 
-    panel.hpc_find_next()
+    assert WxTerminalWebViewPanel.hpc_find_next(panel)
     assert any("hpcFindNext" in c for c in calls), f"hpcFindNext not called: {calls}"
     calls.clear()
 
-    panel.hpc_find_prev()
+    assert WxTerminalWebViewPanel.hpc_find_prev(panel)
     assert any("hpcFindPrev" in c for c in calls), f"hpcFindPrev not called: {calls}"
 
     bridge = (ASSETS / "wx_bridge.js").read_text(encoding="utf-8")
@@ -466,9 +461,6 @@ def test_find_next_prev_advances_through_matches():
     assert "translateToString" in bridge, "must use translateToString"
     assert "scrollToLine" in bridge, "scrollToLine missing"
 
-    panel.close()
-    frame.Destroy()
-    wx.Yield()
 
 
 # ── Section 11: Header status and identity ──

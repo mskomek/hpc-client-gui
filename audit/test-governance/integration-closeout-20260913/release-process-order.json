@@ -1,0 +1,1616 @@
+{
+  "repository_sha": "18e59fff3d8ebfa47666347a0d9cfc4d137b43c1",
+  "worktree_note": "Closeout working tree based on repository_sha; actual final test selectors are scripts/release_test_suite.py.",
+  "selected_node_count": 2653,
+  "groups": 6,
+  "files": [
+    {
+      "group": "broad-pytest",
+      "position": 1,
+      "file": "tests/test_about_dialog.py",
+      "node_count": 2
+    },
+    {
+      "group": "broad-pytest",
+      "position": 2,
+      "file": "tests/test_ansys_tool_presentation.py",
+      "node_count": 2
+    },
+    {
+      "group": "broad-pytest",
+      "position": 3,
+      "file": "tests/test_app_updater.py",
+      "node_count": 18
+    },
+    {
+      "group": "broad-pytest",
+      "position": 4,
+      "file": "tests/test_async_call.py",
+      "node_count": 1
+    },
+    {
+      "group": "broad-pytest",
+      "position": 5,
+      "file": "tests/test_branding_check.py",
+      "node_count": 2
+    },
+    {
+      "group": "broad-pytest",
+      "position": 6,
+      "file": "tests/test_capability_report.py",
+      "node_count": 4
+    },
+    {
+      "group": "broad-pytest",
+      "position": 7,
+      "file": "tests/test_cineca_quota.py",
+      "node_count": 2
+    },
+    {
+      "group": "broad-pytest",
+      "position": 8,
+      "file": "tests/test_cli.py",
+      "node_count": 156
+    },
+    {
+      "group": "broad-pytest",
+      "position": 9,
+      "file": "tests/test_cli_entrypoint.py",
+      "node_count": 8
+    },
+    {
+      "group": "broad-pytest",
+      "position": 10,
+      "file": "tests/test_cluster_self_test.py",
+      "node_count": 4
+    },
+    {
+      "group": "broad-pytest",
+      "position": 11,
+      "file": "tests/test_cluster_self_test_dialog.py",
+      "node_count": 1
+    },
+    {
+      "group": "broad-pytest",
+      "position": 12,
+      "file": "tests/test_command_palette.py",
+      "node_count": 2
+    },
+    {
+      "group": "broad-pytest",
+      "position": 13,
+      "file": "tests/test_command_palette_regression.py",
+      "node_count": 1
+    },
+    {
+      "group": "broad-pytest",
+      "position": 14,
+      "file": "tests/test_command_registry.py",
+      "node_count": 2
+    },
+    {
+      "group": "broad-pytest",
+      "position": 15,
+      "file": "tests/test_config_storage_atomic.py",
+      "node_count": 2
+    },
+    {
+      "group": "broad-pytest",
+      "position": 16,
+      "file": "tests/test_connection_advanced_settings.py",
+      "node_count": 17
+    },
+    {
+      "group": "broad-pytest",
+      "position": 17,
+      "file": "tests/test_connection_controller.py",
+      "node_count": 3
+    },
+    {
+      "group": "broad-pytest",
+      "position": 18,
+      "file": "tests/test_connection_profile_service.py",
+      "node_count": 9
+    },
+    {
+      "group": "broad-pytest",
+      "position": 19,
+      "file": "tests/test_crash_logging_filter.py",
+      "node_count": 4
+    },
+    {
+      "group": "broad-pytest",
+      "position": 20,
+      "file": "tests/test_deb_installer.py",
+      "node_count": 2
+    },
+    {
+      "group": "broad-pytest",
+      "position": 21,
+      "file": "tests/test_debug_telemetry.py",
+      "node_count": 1
+    },
+    {
+      "group": "broad-pytest",
+      "position": 22,
+      "file": "tests/test_diagnostics.py",
+      "node_count": 2
+    },
+    {
+      "group": "broad-pytest",
+      "position": 23,
+      "file": "tests/test_directory_comparison.py",
+      "node_count": 20
+    },
+    {
+      "group": "broad-pytest",
+      "position": 24,
+      "file": "tests/test_docs_references.py",
+      "node_count": 2
+    },
+    {
+      "group": "broad-pytest",
+      "position": 25,
+      "file": "tests/test_download_plan_listing_failure.py",
+      "node_count": 2
+    },
+    {
+      "group": "broad-pytest",
+      "position": 26,
+      "file": "tests/test_editor_controller.py",
+      "node_count": 3
+    },
+    {
+      "group": "broad-pytest",
+      "position": 27,
+      "file": "tests/test_editor_shortcut_safety.py",
+      "node_count": 2
+    },
+    {
+      "group": "broad-pytest",
+      "position": 28,
+      "file": "tests/test_editor_v2_lint.py",
+      "node_count": 8
+    },
+    {
+      "group": "broad-pytest",
+      "position": 29,
+      "file": "tests/test_file_filter_registry.py",
+      "node_count": 22
+    },
+    {
+      "group": "broad-pytest",
+      "position": 30,
+      "file": "tests/test_file_manager_profile.py",
+      "node_count": 10
+    },
+    {
+      "group": "broad-pytest",
+      "position": 31,
+      "file": "tests/test_fluent_plugin_integration.py",
+      "node_count": 9
+    },
+    {
+      "group": "broad-pytest",
+      "position": 32,
+      "file": "tests/test_focus_command_router.py",
+      "node_count": 2
+    },
+    {
+      "group": "broad-pytest",
+      "position": 33,
+      "file": "tests/test_geometry_policy.py",
+      "node_count": 2
+    },
+    {
+      "group": "broad-pytest",
+      "position": 34,
+      "file": "tests/test_gesture_help.py",
+      "node_count": 2
+    },
+    {
+      "group": "broad-pytest",
+      "position": 35,
+      "file": "tests/test_gui_audit_screenshots.py",
+      "node_count": 5
+    },
+    {
+      "group": "broad-pytest",
+      "position": 36,
+      "file": "tests/test_gui_feature_parity_baseline.py",
+      "node_count": 1
+    },
+    {
+      "group": "broad-pytest",
+      "position": 37,
+      "file": "tests/test_gui_keyboard_interaction_contract.py",
+      "node_count": 2
+    },
+    {
+      "group": "broad-pytest",
+      "position": 38,
+      "file": "tests/test_gui_pointer_interaction_contract.py",
+      "node_count": 1
+    },
+    {
+      "group": "broad-pytest",
+      "position": 39,
+      "file": "tests/test_hardening_additional.py",
+      "node_count": 12
+    },
+    {
+      "group": "broad-pytest",
+      "position": 40,
+      "file": "tests/test_help_catalog.py",
+      "node_count": 2
+    },
+    {
+      "group": "broad-pytest",
+      "position": 41,
+      "file": "tests/test_help_search.py",
+      "node_count": 2
+    },
+    {
+      "group": "broad-pytest",
+      "position": 42,
+      "file": "tests/test_help_shortcut_reference.py",
+      "node_count": 2
+    },
+    {
+      "group": "broad-pytest",
+      "position": 43,
+      "file": "tests/test_installation_context.py",
+      "node_count": 7
+    },
+    {
+      "group": "broad-pytest",
+      "position": 44,
+      "file": "tests/test_job_context.py",
+      "node_count": 20
+    },
+    {
+      "group": "broad-pytest",
+      "position": 45,
+      "file": "tests/test_job_failure_classifier.py",
+      "node_count": 10
+    },
+    {
+      "group": "broad-pytest",
+      "position": 46,
+      "file": "tests/test_job_history_dashboard.py",
+      "node_count": 4
+    },
+    {
+      "group": "broad-pytest",
+      "position": 47,
+      "file": "tests/test_job_provenance.py",
+      "node_count": 2
+    },
+    {
+      "group": "broad-pytest",
+      "position": 48,
+      "file": "tests/test_job_record_store.py",
+      "node_count": 2
+    },
+    {
+      "group": "broad-pytest",
+      "position": 49,
+      "file": "tests/test_job_templates.py",
+      "node_count": 13
+    },
+    {
+      "group": "broad-pytest",
+      "position": 50,
+      "file": "tests/test_job_tracking_controller.py",
+      "node_count": 2
+    },
+    {
+      "group": "broad-pytest",
+      "position": 51,
+      "file": "tests/test_jobs_outputs_scroll.py",
+      "node_count": 20
+    },
+    {
+      "group": "broad-pytest",
+      "position": 52,
+      "file": "tests/test_lint_engine.py",
+      "node_count": 28
+    },
+    {
+      "group": "broad-pytest",
+      "position": 53,
+      "file": "tests/test_linter_tools_v2.py",
+      "node_count": 16
+    },
+    {
+      "group": "broad-pytest",
+      "position": 54,
+      "file": "tests/test_linux_release.py",
+      "node_count": 27
+    },
+    {
+      "group": "broad-pytest",
+      "position": 55,
+      "file": "tests/test_linux_release_smoke.py",
+      "node_count": 4
+    },
+    {
+      "group": "broad-pytest",
+      "position": 56,
+      "file": "tests/test_linux_update_handoff.py",
+      "node_count": 4
+    },
+    {
+      "group": "broad-pytest",
+      "position": 57,
+      "file": "tests/test_linux_x11.py",
+      "node_count": 6
+    },
+    {
+      "group": "broad-pytest",
+      "position": 58,
+      "file": "tests/test_live_tracking_settings.py",
+      "node_count": 1
+    },
+    {
+      "group": "broad-pytest",
+      "position": 59,
+      "file": "tests/test_local_dir_panel.py",
+      "node_count": 9
+    },
+    {
+      "group": "broad-pytest",
+      "position": 60,
+      "file": "tests/test_local_edit_flow.py",
+      "node_count": 8
+    },
+    {
+      "group": "broad-pytest",
+      "position": 61,
+      "file": "tests/test_local_provider_storage.py",
+      "node_count": 3
+    },
+    {
+      "group": "broad-pytest",
+      "position": 62,
+      "file": "tests/test_local_transfer_gate.py",
+      "node_count": 4
+    },
+    {
+      "group": "broad-pytest",
+      "position": 63,
+      "file": "tests/test_log_redaction.py",
+      "node_count": 5
+    },
+    {
+      "group": "broad-pytest",
+      "position": 64,
+      "file": "tests/test_lssrv_auto_refresh.py",
+      "node_count": 13
+    },
+    {
+      "group": "broad-pytest",
+      "position": 65,
+      "file": "tests/test_lumi_quota.py",
+      "node_count": 1
+    },
+    {
+      "group": "broad-pytest",
+      "position": 66,
+      "file": "tests/test_luna_fm_integration.py",
+      "node_count": 14
+    },
+    {
+      "group": "broad-pytest",
+      "position": 67,
+      "file": "tests/test_macos_ci.py",
+      "node_count": 2
+    },
+    {
+      "group": "broad-pytest",
+      "position": 68,
+      "file": "tests/test_macos_docs.py",
+      "node_count": 2
+    },
+    {
+      "group": "broad-pytest",
+      "position": 69,
+      "file": "tests/test_macos_packaging_spec.py",
+      "node_count": 1
+    },
+    {
+      "group": "broad-pytest",
+      "position": 70,
+      "file": "tests/test_macos_product_surface.py",
+      "node_count": 2
+    },
+    {
+      "group": "broad-pytest",
+      "position": 71,
+      "file": "tests/test_macos_release.py",
+      "node_count": 10
+    },
+    {
+      "group": "broad-pytest",
+      "position": 72,
+      "file": "tests/test_macos_release_workflow.py",
+      "node_count": 14
+    },
+    {
+      "group": "broad-pytest",
+      "position": 73,
+      "file": "tests/test_macos_signing.py",
+      "node_count": 2
+    },
+    {
+      "group": "broad-pytest",
+      "position": 74,
+      "file": "tests/test_macos_x11.py",
+      "node_count": 4
+    },
+    {
+      "group": "broad-pytest",
+      "position": 75,
+      "file": "tests/test_manual_gui_plan.py",
+      "node_count": 1
+    },
+    {
+      "group": "broad-pytest",
+      "position": 76,
+      "file": "tests/test_master_password_dialog.py",
+      "node_count": 4
+    },
+    {
+      "group": "broad-pytest",
+      "position": 77,
+      "file": "tests/test_menu_redesign.py",
+      "node_count": 12
+    },
+    {
+      "group": "broad-pytest",
+      "position": 78,
+      "file": "tests/test_mock_cluster_roundtrip.py",
+      "node_count": 2
+    },
+    {
+      "group": "broad-pytest",
+      "position": 79,
+      "file": "tests/test_nersc_quota.py",
+      "node_count": 2
+    },
+    {
+      "group": "broad-pytest",
+      "position": 80,
+      "file": "tests/test_optional_ssh_credentials.py",
+      "node_count": 10
+    },
+    {
+      "group": "broad-pytest",
+      "position": 81,
+      "file": "tests/test_output_channel_resolver.py",
+      "node_count": 25
+    },
+    {
+      "group": "broad-pytest",
+      "position": 82,
+      "file": "tests/test_output_follower.py",
+      "node_count": 5
+    },
+    {
+      "group": "broad-pytest",
+      "position": 83,
+      "file": "tests/test_parity_matrix.py",
+      "node_count": 3
+    },
+    {
+      "group": "broad-pytest",
+      "position": 84,
+      "file": "tests/test_paths.py",
+      "node_count": 5
+    },
+    {
+      "group": "broad-pytest",
+      "position": 85,
+      "file": "tests/test_pawsey_quota.py",
+      "node_count": 1
+    },
+    {
+      "group": "broad-pytest",
+      "position": 86,
+      "file": "tests/test_performance_probe.py",
+      "node_count": 3
+    },
+    {
+      "group": "broad-pytest",
+      "position": 87,
+      "file": "tests/test_platform.py",
+      "node_count": 10
+    },
+    {
+      "group": "broad-pytest",
+      "position": 88,
+      "file": "tests/test_platform_keymap.py",
+      "node_count": 3
+    },
+    {
+      "group": "broad-pytest",
+      "position": 89,
+      "file": "tests/test_plugin_contract.py",
+      "node_count": 10
+    },
+    {
+      "group": "broad-pytest",
+      "position": 90,
+      "file": "tests/test_plugin_core.py",
+      "node_count": 41
+    },
+    {
+      "group": "broad-pytest",
+      "position": 91,
+      "file": "tests/test_plugin_e2e.py",
+      "node_count": 1
+    },
+    {
+      "group": "broad-pytest",
+      "position": 92,
+      "file": "tests/test_plugin_entrypoint_errors.py",
+      "node_count": 2
+    },
+    {
+      "group": "broad-pytest",
+      "position": 93,
+      "file": "tests/test_plugin_installer.py",
+      "node_count": 48
+    },
+    {
+      "group": "broad-pytest",
+      "position": 94,
+      "file": "tests/test_plugin_integrity.py",
+      "node_count": 10
+    },
+    {
+      "group": "broad-pytest",
+      "position": 95,
+      "file": "tests/test_plugin_manager_ui.py",
+      "node_count": 37
+    },
+    {
+      "group": "broad-pytest",
+      "position": 96,
+      "file": "tests/test_plugin_profile_v2.py",
+      "node_count": 3
+    },
+    {
+      "group": "broad-pytest",
+      "position": 97,
+      "file": "tests/test_plugin_profile_v3.py",
+      "node_count": 4
+    },
+    {
+      "group": "broad-pytest",
+      "position": 98,
+      "file": "tests/test_plugin_security.py",
+      "node_count": 22
+    },
+    {
+      "group": "broad-pytest",
+      "position": 99,
+      "file": "tests/test_plugin_template_integration.py",
+      "node_count": 9
+    },
+    {
+      "group": "broad-pytest",
+      "position": 100,
+      "file": "tests/test_plugin_v2.py",
+      "node_count": 3
+    },
+    {
+      "group": "broad-pytest",
+      "position": 101,
+      "file": "tests/test_plugin_v2_integration.py",
+      "node_count": 4
+    },
+    {
+      "group": "broad-pytest",
+      "position": 102,
+      "file": "tests/test_presentation_models.py",
+      "node_count": 2
+    },
+    {
+      "group": "broad-pytest",
+      "position": 103,
+      "file": "tests/test_profile_duplicate.py",
+      "node_count": 2
+    },
+    {
+      "group": "broad-pytest",
+      "position": 104,
+      "file": "tests/test_profile_exchange.py",
+      "node_count": 4
+    },
+    {
+      "group": "broad-pytest",
+      "position": 105,
+      "file": "tests/test_profile_identity.py",
+      "node_count": 3
+    },
+    {
+      "group": "broad-pytest",
+      "position": 106,
+      "file": "tests/test_profile_patch_preservation.py",
+      "node_count": 15
+    },
+    {
+      "group": "broad-pytest",
+      "position": 107,
+      "file": "tests/test_profile_storage_areas.py",
+      "node_count": 3
+    },
+    {
+      "group": "broad-pytest",
+      "position": 108,
+      "file": "tests/test_profile_transfer_settings.py",
+      "node_count": 2
+    },
+    {
+      "group": "broad-pytest",
+      "position": 109,
+      "file": "tests/test_provider_capabilities.py",
+      "node_count": 2
+    },
+    {
+      "group": "broad-pytest",
+      "position": 110,
+      "file": "tests/test_provider_context.py",
+      "node_count": 3
+    },
+    {
+      "group": "broad-pytest",
+      "position": 111,
+      "file": "tests/test_provider_overrides.py",
+      "node_count": 3
+    },
+    {
+      "group": "broad-pytest",
+      "position": 112,
+      "file": "tests/test_provider_path_resolver.py",
+      "node_count": 2
+    },
+    {
+      "group": "broad-pytest",
+      "position": 113,
+      "file": "tests/test_provider_profile_diff.py",
+      "node_count": 2
+    },
+    {
+      "group": "broad-pytest",
+      "position": 114,
+      "file": "tests/test_qt_lgpl_sources.py",
+      "node_count": 1
+    },
+    {
+      "group": "broad-pytest",
+      "position": 115,
+      "file": "tests/test_qt_removal_gate.py",
+      "node_count": 15
+    },
+    {
+      "group": "broad-pytest",
+      "position": 116,
+      "file": "tests/test_quota_monitor.py",
+      "node_count": 6
+    },
+    {
+      "group": "broad-pytest",
+      "position": 117,
+      "file": "tests/test_quota_runtime.py",
+      "node_count": 3
+    },
+    {
+      "group": "broad-pytest",
+      "position": 118,
+      "file": "tests/test_release_gate.py",
+      "node_count": 13
+    },
+    {
+      "group": "broad-pytest",
+      "position": 119,
+      "file": "tests/test_release_manifest.py",
+      "node_count": 3
+    },
+    {
+      "group": "broad-pytest",
+      "position": 120,
+      "file": "tests/test_release_surface.py",
+      "node_count": 2
+    },
+    {
+      "group": "broad-pytest",
+      "position": 121,
+      "file": "tests/test_release_test_suite.py",
+      "node_count": 2
+    },
+    {
+      "group": "broad-pytest",
+      "position": 122,
+      "file": "tests/test_remote_accordion.py",
+      "node_count": 2
+    },
+    {
+      "group": "broad-pytest",
+      "position": 123,
+      "file": "tests/test_remote_dir_panel_create.py",
+      "node_count": 3
+    },
+    {
+      "group": "broad-pytest",
+      "position": 124,
+      "file": "tests/test_remote_dir_panel_sorting.py",
+      "node_count": 6
+    },
+    {
+      "group": "broad-pytest",
+      "position": 125,
+      "file": "tests/test_remote_directory_gui_benchmark.py",
+      "node_count": 1
+    },
+    {
+      "group": "broad-pytest",
+      "position": 126,
+      "file": "tests/test_remote_directory_listing.py",
+      "node_count": 8
+    },
+    {
+      "group": "broad-pytest",
+      "position": 127,
+      "file": "tests/test_remote_entry_helpers.py",
+      "node_count": 12
+    },
+    {
+      "group": "broad-pytest",
+      "position": 128,
+      "file": "tests/test_remote_navigation_store.py",
+      "node_count": 11
+    },
+    {
+      "group": "broad-pytest",
+      "position": 129,
+      "file": "tests/test_reproducibility_bundle.py",
+      "node_count": 3
+    },
+    {
+      "group": "broad-pytest",
+      "position": 130,
+      "file": "tests/test_safe_download.py",
+      "node_count": 2
+    },
+    {
+      "group": "broad-pytest",
+      "position": 131,
+      "file": "tests/test_sbom.py",
+      "node_count": 2
+    },
+    {
+      "group": "broad-pytest",
+      "position": 132,
+      "file": "tests/test_secret_store.py",
+      "node_count": 2
+    },
+    {
+      "group": "broad-pytest",
+      "position": 133,
+      "file": "tests/test_security_hardening_wave.py",
+      "node_count": 11
+    },
+    {
+      "group": "broad-pytest",
+      "position": 134,
+      "file": "tests/test_selected_job_context.py",
+      "node_count": 21
+    },
+    {
+      "group": "broad-pytest",
+      "position": 135,
+      "file": "tests/test_sftp_channel_manager.py",
+      "node_count": 9
+    },
+    {
+      "group": "broad-pytest",
+      "position": 136,
+      "file": "tests/test_shortcut_preferences.py",
+      "node_count": 4
+    },
+    {
+      "group": "broad-pytest",
+      "position": 137,
+      "file": "tests/test_slurm_arrays.py",
+      "node_count": 7
+    },
+    {
+      "group": "broad-pytest",
+      "position": 138,
+      "file": "tests/test_slurm_compat_matrix.py",
+      "node_count": 15
+    },
+    {
+      "group": "broad-pytest",
+      "position": 139,
+      "file": "tests/test_slurm_dependencies.py",
+      "node_count": 7
+    },
+    {
+      "group": "broad-pytest",
+      "position": 140,
+      "file": "tests/test_slurm_directives.py",
+      "node_count": 6
+    },
+    {
+      "group": "broad-pytest",
+      "position": 141,
+      "file": "tests/test_slurm_models.py",
+      "node_count": 5
+    },
+    {
+      "group": "broad-pytest",
+      "position": 142,
+      "file": "tests/test_slurm_script_parser.py",
+      "node_count": 6
+    },
+    {
+      "group": "broad-pytest",
+      "position": 143,
+      "file": "tests/test_slurm_ssh.py",
+      "node_count": 5
+    },
+    {
+      "group": "broad-pytest",
+      "position": 144,
+      "file": "tests/test_ssh_directory_listing_wire.py",
+      "node_count": 4
+    },
+    {
+      "group": "broad-pytest",
+      "position": 145,
+      "file": "tests/test_ssh_files_byte_preservation.py",
+      "node_count": 1
+    },
+    {
+      "group": "broad-pytest",
+      "position": 146,
+      "file": "tests/test_ssh_jump_host.py",
+      "node_count": 24
+    },
+    {
+      "group": "broad-pytest",
+      "position": 147,
+      "file": "tests/test_ssh_terminal_stream.py",
+      "node_count": 5
+    },
+    {
+      "group": "broad-pytest",
+      "position": 148,
+      "file": "tests/test_startup_changelog.py",
+      "node_count": 3
+    },
+    {
+      "group": "broad-pytest",
+      "position": 149,
+      "file": "tests/test_startup_i18n.py",
+      "node_count": 1
+    },
+    {
+      "group": "broad-pytest",
+      "position": 150,
+      "file": "tests/test_storage_policy.py",
+      "node_count": 3
+    },
+    {
+      "group": "broad-pytest",
+      "position": 151,
+      "file": "tests/test_storage_policy_validation.py",
+      "node_count": 3
+    },
+    {
+      "group": "broad-pytest",
+      "position": 152,
+      "file": "tests/test_sync_version.py",
+      "node_count": 1
+    },
+    {
+      "group": "broad-pytest",
+      "position": 153,
+      "file": "tests/test_synchronized_browsing.py",
+      "node_count": 33
+    },
+    {
+      "group": "broad-pytest",
+      "position": 154,
+      "file": "tests/test_terminal_assets.py",
+      "node_count": 1
+    },
+    {
+      "group": "broad-pytest",
+      "position": 155,
+      "file": "tests/test_terminal_boundaries.py",
+      "node_count": 5
+    },
+    {
+      "group": "broad-pytest",
+      "position": 156,
+      "file": "tests/test_terminal_bridge.py",
+      "node_count": 1
+    },
+    {
+      "group": "broad-pytest",
+      "position": 157,
+      "file": "tests/test_terminal_graphics.py",
+      "node_count": 5
+    },
+    {
+      "group": "broad-pytest",
+      "position": 158,
+      "file": "tests/test_terminal_pty_wire.py",
+      "node_count": 1
+    },
+    {
+      "group": "broad-pytest",
+      "position": 159,
+      "file": "tests/test_test_taxonomy_checker.py",
+      "node_count": 11
+    },
+    {
+      "group": "broad-pytest",
+      "position": 160,
+      "file": "tests/test_third_party_versions.py",
+      "node_count": 1
+    },
+    {
+      "group": "broad-pytest",
+      "position": 161,
+      "file": "tests/test_transfer_cancel_recovery.py",
+      "node_count": 3
+    },
+    {
+      "group": "broad-pytest",
+      "position": 162,
+      "file": "tests/test_transfer_concurrency.py",
+      "node_count": 10
+    },
+    {
+      "group": "broad-pytest",
+      "position": 163,
+      "file": "tests/test_transfer_controller.py",
+      "node_count": 4
+    },
+    {
+      "group": "broad-pytest",
+      "position": 164,
+      "file": "tests/test_transfer_directory_controllers.py",
+      "node_count": 3
+    },
+    {
+      "group": "broad-pytest",
+      "position": 165,
+      "file": "tests/test_transfer_integrity.py",
+      "node_count": 3
+    },
+    {
+      "group": "broad-pytest",
+      "position": 166,
+      "file": "tests/test_transfer_key_release.py",
+      "node_count": 2
+    },
+    {
+      "group": "broad-pytest",
+      "position": 167,
+      "file": "tests/test_transfer_parallelism_migration.py",
+      "node_count": 8
+    },
+    {
+      "group": "broad-pytest",
+      "position": 168,
+      "file": "tests/test_transfer_performance_scenarios.py",
+      "node_count": 4
+    },
+    {
+      "group": "broad-pytest",
+      "position": 169,
+      "file": "tests/test_transfer_resume_semantics.py",
+      "node_count": 28
+    },
+    {
+      "group": "broad-pytest",
+      "position": 170,
+      "file": "tests/test_transfer_speed_test.py",
+      "node_count": 1
+    },
+    {
+      "group": "broad-pytest",
+      "position": 171,
+      "file": "tests/test_transfer_wave17.py",
+      "node_count": 20
+    },
+    {
+      "group": "broad-pytest",
+      "position": 172,
+      "file": "tests/test_trusted_tool_disclosure.py",
+      "node_count": 2
+    },
+    {
+      "group": "broad-pytest",
+      "position": 173,
+      "file": "tests/test_ui_contributions.py",
+      "node_count": 21
+    },
+    {
+      "group": "broad-pytest",
+      "position": 174,
+      "file": "tests/test_ui_errors.py",
+      "node_count": 3
+    },
+    {
+      "group": "broad-pytest",
+      "position": 175,
+      "file": "tests/test_update_verification.py",
+      "node_count": 3
+    },
+    {
+      "group": "broad-pytest",
+      "position": 176,
+      "file": "tests/test_updater_helper.py",
+      "node_count": 10
+    },
+    {
+      "group": "broad-pytest",
+      "position": 177,
+      "file": "tests/test_upload_pipelining.py",
+      "node_count": 7
+    },
+    {
+      "group": "broad-pytest",
+      "position": 178,
+      "file": "tests/test_version_consistency.py",
+      "node_count": 1
+    },
+    {
+      "group": "broad-pytest",
+      "position": 179,
+      "file": "tests/test_walltime_suggestions.py",
+      "node_count": 3
+    },
+    {
+      "group": "broad-pytest",
+      "position": 180,
+      "file": "tests/test_wave0_unicode_baseline.py",
+      "node_count": 42
+    },
+    {
+      "group": "broad-pytest",
+      "position": 181,
+      "file": "tests/test_wave10_release_gate.py",
+      "node_count": 16
+    },
+    {
+      "group": "broad-pytest",
+      "position": 182,
+      "file": "tests/test_wave1_unicode_core_policy.py",
+      "node_count": 16
+    },
+    {
+      "group": "broad-pytest",
+      "position": 183,
+      "file": "tests/test_wave2_directories_local_files.py",
+      "node_count": 48
+    },
+    {
+      "group": "broad-pytest",
+      "position": 184,
+      "file": "tests/test_wave2_wx_ui_parity.py",
+      "node_count": 17
+    },
+    {
+      "group": "broad-pytest",
+      "position": 185,
+      "file": "tests/test_wave37_diagnostics.py",
+      "node_count": 2
+    },
+    {
+      "group": "broad-pytest",
+      "position": 186,
+      "file": "tests/test_wave37_output_buffer.py",
+      "node_count": 2
+    },
+    {
+      "group": "broad-pytest",
+      "position": 187,
+      "file": "tests/test_wave3_remote_sftp_ssh.py",
+      "node_count": 32
+    },
+    {
+      "group": "broad-pytest",
+      "position": 188,
+      "file": "tests/test_wave4_favorites_history_persistence.py",
+      "node_count": 20
+    },
+    {
+      "group": "broad-pytest",
+      "position": 189,
+      "file": "tests/test_wave5_slurm_jobs_unicode.py",
+      "node_count": 23
+    },
+    {
+      "group": "broad-pytest",
+      "position": 190,
+      "file": "tests/test_wave6_plugin_provider_unicode.py",
+      "node_count": 17
+    },
+    {
+      "group": "broad-pytest",
+      "position": 191,
+      "file": "tests/test_wave78_jobs_details.py",
+      "node_count": 16
+    },
+    {
+      "group": "broad-pytest",
+      "position": 192,
+      "file": "tests/test_wave79_audit.py",
+      "node_count": 73
+    },
+    {
+      "group": "broad-pytest",
+      "position": 193,
+      "file": "tests/test_wave79_provider_contract.py",
+      "node_count": 53
+    },
+    {
+      "group": "broad-pytest",
+      "position": 194,
+      "file": "tests/test_wave7_editor_terminal_logs.py",
+      "node_count": 10
+    },
+    {
+      "group": "broad-pytest",
+      "position": 195,
+      "file": "tests/test_wave80_files_outputs.py",
+      "node_count": 45
+    },
+    {
+      "group": "broad-pytest",
+      "position": 196,
+      "file": "tests/test_wave8_i18n_ui_ergonomics.py",
+      "node_count": 20
+    },
+    {
+      "group": "broad-pytest",
+      "position": 197,
+      "file": "tests/test_wave9_ci_unicode_matrix.py",
+      "node_count": 28
+    },
+    {
+      "group": "broad-pytest",
+      "position": 198,
+      "file": "tests/test_wheel_packaging.py",
+      "node_count": 3
+    },
+    {
+      "group": "broad-pytest",
+      "position": 199,
+      "file": "tests/test_wiki_docs.py",
+      "node_count": 3
+    },
+    {
+      "group": "broad-pytest",
+      "position": 200,
+      "file": "tests/test_workflow_action_pins.py",
+      "node_count": 4
+    },
+    {
+      "group": "broad-pytest",
+      "position": 201,
+      "file": "tests/test_wx_65a_stress.py",
+      "node_count": 1
+    },
+    {
+      "group": "broad-pytest",
+      "position": 202,
+      "file": "tests/test_wx_a11y.py",
+      "node_count": 2
+    },
+    {
+      "group": "broad-pytest",
+      "position": 203,
+      "file": "tests/test_wx_ansys.py",
+      "node_count": 2
+    },
+    {
+      "group": "broad-pytest",
+      "position": 204,
+      "file": "tests/test_wx_ansys_view.py",
+      "node_count": 7
+    },
+    {
+      "group": "broad-pytest",
+      "position": 205,
+      "file": "tests/test_wx_connection.py",
+      "node_count": 8
+    },
+    {
+      "group": "broad-pytest",
+      "position": 206,
+      "file": "tests/test_wx_connection_71_2.py",
+      "node_count": 6
+    },
+    {
+      "group": "broad-pytest",
+      "position": 207,
+      "file": "tests/test_wx_connection_71_3.py",
+      "node_count": 7
+    },
+    {
+      "group": "broad-pytest",
+      "position": 208,
+      "file": "tests/test_wx_connection_71_4.py",
+      "node_count": 8
+    },
+    {
+      "group": "broad-pytest",
+      "position": 209,
+      "file": "tests/test_wx_connection_71_5.py",
+      "node_count": 9
+    },
+    {
+      "group": "broad-pytest",
+      "position": 210,
+      "file": "tests/test_wx_connection_hardening.py",
+      "node_count": 20
+    },
+    {
+      "group": "broad-pytest",
+      "position": 211,
+      "file": "tests/test_wx_connection_profiles.py",
+      "node_count": 27
+    },
+    {
+      "group": "broad-pytest",
+      "position": 212,
+      "file": "tests/test_wx_directories.py",
+      "node_count": 2
+    },
+    {
+      "group": "broad-pytest",
+      "position": 213,
+      "file": "tests/test_wx_editor.py",
+      "node_count": 14
+    },
+    {
+      "group": "broad-pytest",
+      "position": 214,
+      "file": "tests/test_wx_editor_cross_view_actions.py",
+      "node_count": 14
+    },
+    {
+      "group": "broad-pytest",
+      "position": 215,
+      "file": "tests/test_wx_editor_tabs.py",
+      "node_count": 11
+    },
+    {
+      "group": "broad-pytest",
+      "position": 216,
+      "file": "tests/test_wx_editor_window_parity.py",
+      "node_count": 14
+    },
+    {
+      "group": "broad-pytest",
+      "position": 217,
+      "file": "tests/test_wx_embedded_terminal.py",
+      "node_count": 9
+    },
+    {
+      "group": "broad-pytest",
+      "position": 218,
+      "file": "tests/test_wx_file003_final_stress.py",
+      "node_count": 11
+    },
+    {
+      "group": "broad-pytest",
+      "position": 219,
+      "file": "tests/test_wx_file_action_policy.py",
+      "node_count": 16
+    },
+    {
+      "group": "broad-pytest",
+      "position": 220,
+      "file": "tests/test_wx_file_actions_behavior.py",
+      "node_count": 12
+    },
+    {
+      "group": "broad-pytest",
+      "position": 221,
+      "file": "tests/test_wx_file_actions_lifecycle.py",
+      "node_count": 17
+    },
+    {
+      "group": "broad-pytest",
+      "position": 222,
+      "file": "tests/test_wx_file_actions_stress.py",
+      "node_count": 5
+    },
+    {
+      "group": "broad-pytest",
+      "position": 223,
+      "file": "tests/test_wx_file_browser_tabs.py",
+      "node_count": 26
+    },
+    {
+      "group": "broad-pytest",
+      "position": 224,
+      "file": "tests/test_wx_file_context_i18n.py",
+      "node_count": 5
+    },
+    {
+      "group": "broad-pytest",
+      "position": 225,
+      "file": "tests/test_wx_file_context_matrix.py",
+      "node_count": 10
+    },
+    {
+      "group": "broad-pytest",
+      "position": 226,
+      "file": "tests/test_wx_file_keyboard_parity.py",
+      "node_count": 17
+    },
+    {
+      "group": "broad-pytest",
+      "position": 227,
+      "file": "tests/test_wx_file_transfer_integration.py",
+      "node_count": 29
+    },
+    {
+      "group": "broad-pytest",
+      "position": 228,
+      "file": "tests/test_wx_files_sync_compare.py",
+      "node_count": 8
+    },
+    {
+      "group": "broad-pytest",
+      "position": 229,
+      "file": "tests/test_wx_help.py",
+      "node_count": 6
+    },
+    {
+      "group": "broad-pytest",
+      "position": 230,
+      "file": "tests/test_wx_i18n.py",
+      "node_count": 1
+    },
+    {
+      "group": "broad-pytest",
+      "position": 231,
+      "file": "tests/test_wx_jobs.py",
+      "node_count": 5
+    },
+    {
+      "group": "broad-pytest",
+      "position": 232,
+      "file": "tests/test_wx_jobs_behavior.py",
+      "node_count": 9
+    },
+    {
+      "group": "broad-pytest",
+      "position": 233,
+      "file": "tests/test_wx_jobs_files_outputs.py",
+      "node_count": 16
+    },
+    {
+      "group": "broad-pytest",
+      "position": 234,
+      "file": "tests/test_wx_jobs_final_fix.py",
+      "node_count": 15
+    },
+    {
+      "group": "broad-pytest",
+      "position": 235,
+      "file": "tests/test_wx_jobs_stress.py",
+      "node_count": 10
+    },
+    {
+      "group": "broad-pytest",
+      "position": 236,
+      "file": "tests/test_wx_layout_resize.py",
+      "node_count": 1
+    },
+    {
+      "group": "broad-pytest",
+      "position": 237,
+      "file": "tests/test_wx_lifecycle.py",
+      "node_count": 3
+    },
+    {
+      "group": "broad-pytest",
+      "position": 238,
+      "file": "tests/test_wx_linux_audit.py",
+      "node_count": 1
+    },
+    {
+      "group": "broad-pytest",
+      "position": 239,
+      "file": "tests/test_wx_local_files.py",
+      "node_count": 7
+    },
+    {
+      "group": "broad-pytest",
+      "position": 240,
+      "file": "tests/test_wx_local_mutation_snapshot.py",
+      "node_count": 3
+    },
+    {
+      "group": "broad-pytest",
+      "position": 241,
+      "file": "tests/test_wx_logs.py",
+      "node_count": 2
+    },
+    {
+      "group": "broad-pytest",
+      "position": 242,
+      "file": "tests/test_wx_macos_audit.py",
+      "node_count": 1
+    },
+    {
+      "group": "broad-pytest",
+      "position": 243,
+      "file": "tests/test_wx_migration.py",
+      "node_count": 4
+    },
+    {
+      "group": "broad-pytest",
+      "position": 244,
+      "file": "tests/test_wx_plugins.py",
+      "node_count": 3
+    },
+    {
+      "group": "broad-pytest",
+      "position": 245,
+      "file": "tests/test_wx_remote_editor_flow.py",
+      "node_count": 7
+    },
+    {
+      "group": "broad-pytest",
+      "position": 246,
+      "file": "tests/test_wx_remote_file_actions_behavior.py",
+      "node_count": 28
+    },
+    {
+      "group": "broad-pytest",
+      "position": 247,
+      "file": "tests/test_wx_remote_files.py",
+      "node_count": 4
+    },
+    {
+      "group": "broad-pytest",
+      "position": 248,
+      "file": "tests/test_wx_remote_move_undo.py",
+      "node_count": 6
+    },
+    {
+      "group": "broad-pytest",
+      "position": 249,
+      "file": "tests/test_wx_semantics.py",
+      "node_count": 5
+    },
+    {
+      "group": "broad-pytest",
+      "position": 250,
+      "file": "tests/test_wx_settings.py",
+      "node_count": 3
+    },
+    {
+      "group": "broad-pytest",
+      "position": 251,
+      "file": "tests/test_wx_shell.py",
+      "node_count": 5
+    },
+    {
+      "group": "broad-pytest",
+      "position": 252,
+      "file": "tests/test_wx_shell_i18n.py",
+      "node_count": 3
+    },
+    {
+      "group": "broad-pytest",
+      "position": 253,
+      "file": "tests/test_wx_shell_p0.py",
+      "node_count": 13
+    },
+    {
+      "group": "broad-pytest",
+      "position": 254,
+      "file": "tests/test_wx_shell_p0_stress.py",
+      "node_count": 1
+    },
+    {
+      "group": "broad-pytest",
+      "position": 255,
+      "file": "tests/test_wx_term002.py",
+      "node_count": 3
+    },
+    {
+      "group": "broad-pytest",
+      "position": 256,
+      "file": "tests/test_wx_terminal.py",
+      "node_count": 2
+    },
+    {
+      "group": "broad-pytest",
+      "position": 257,
+      "file": "tests/test_wx_terminal_behavioral.py",
+      "node_count": 19
+    },
+    {
+      "group": "broad-pytest",
+      "position": 258,
+      "file": "tests/test_wx_terminal_parity_evidence.py",
+      "node_count": 11
+    },
+    {
+      "group": "broad-pytest",
+      "position": 259,
+      "file": "tests/test_wx_transfer_conflict_ui.py",
+      "node_count": 11
+    },
+    {
+      "group": "broad-pytest",
+      "position": 260,
+      "file": "tests/test_wx_transfer_ui_lifecycle.py",
+      "node_count": 14
+    },
+    {
+      "group": "broad-pytest",
+      "position": 261,
+      "file": "tests/test_wx_transfer_workspace.py",
+      "node_count": 2
+    },
+    {
+      "group": "broad-pytest",
+      "position": 262,
+      "file": "tests/test_wx_updater_spec.py",
+      "node_count": 18
+    },
+    {
+      "group": "broad-pytest",
+      "position": 263,
+      "file": "tests/test_wx_windows_audit.py",
+      "node_count": 1
+    },
+    {
+      "group": "isolated:tests/test_ftp_widget.py",
+      "position": 1,
+      "file": "tests/test_ftp_widget.py",
+      "node_count": 168
+    },
+    {
+      "group": "isolated:tests/test_download_cancel_wire.py",
+      "position": 1,
+      "file": "tests/test_download_cancel_wire.py",
+      "node_count": 4
+    },
+    {
+      "group": "isolated:tests/test_editor_flow.py",
+      "position": 1,
+      "file": "tests/test_editor_flow.py",
+      "node_count": 14
+    },
+    {
+      "group": "isolated:tests/test_corrective_jobs_details.py",
+      "position": 1,
+      "file": "tests/test_corrective_jobs_details.py",
+      "node_count": 17
+    },
+    {
+      "group": "isolated:tests/test_wx_terminal_webview.py",
+      "position": 1,
+      "file": "tests/test_wx_terminal_webview.py",
+      "node_count": 29
+    }
+  ]
+}
