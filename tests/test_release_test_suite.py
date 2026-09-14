@@ -35,17 +35,35 @@ class ReleaseTestSuiteTests(unittest.TestCase):
             "tests/test_wx_terminal_webview.py::"
             "test_wx_terminal_external_navigation_blocked"
         )
+        remote_context_node = (
+            "tests/test_wx_file_actions_stress.py::"
+            "test_wx_remote_context_target_stress_uses_real_events"
+        )
+        shell_stress_node = (
+            "tests/test_wx_shell_p0_stress.py::"
+            "test_wx_shell_p0_stress_real_wx_paths"
+        )
         corrective_module = "tests/test_corrective_jobs_details.py"
-        self.assertEqual(ISOLATED_TEST_NODES, (webview_node,))
-        self.assertEqual(ISOLATED_GUI_FILES, (corrective_module,))
+        jobs_modules = (
+            "tests/test_wx_jobs_files_outputs.py",
+            "tests/test_wx_jobs_final_fix.py",
+            "tests/test_wx_jobs_stress.py",
+        )
+        isolated_nodes = (webview_node, remote_context_node, shell_stress_node)
+        self.assertEqual(ISOLATED_TEST_NODES, isolated_nodes)
+        self.assertEqual(ISOLATED_GUI_FILES, (corrective_module, *jobs_modules))
         self.assertIn("--deselect", commands[3])
-        self.assertIn(webview_node, commands[3])
-        self.assertEqual(commands[4][-1], webview_node)
-        self.assertNotIn("--deselect", commands[4])
+        for index, nodeid in enumerate(isolated_nodes, start=4):
+            self.assertIn(nodeid, commands[3])
+            self.assertEqual(commands[index][-1], nodeid)
+            self.assertNotIn("--deselect", commands[index])
         self.assertIn("--ignore", commands[3])
         self.assertIn(corrective_module, commands[3])
-        self.assertEqual(commands[5][-1], corrective_module)
-        self.assertNotIn("--deselect", commands[5])
+        self.assertEqual(commands[7][-1], corrective_module)
+        self.assertNotIn("--deselect", commands[7])
+        for index, module in enumerate(jobs_modules, start=8):
+            self.assertIn(module, commands[3])
+            self.assertEqual(commands[index][-1], module)
         self.assertIn("tests/test_editor_flow.py", commands[-1])
         self.assertNotIn("--ignore", commands[-1])
 

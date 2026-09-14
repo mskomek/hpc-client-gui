@@ -963,6 +963,7 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         "selected_job": "",
         "selected_generation": 0,
         "closed": False,
+        "files_browser_closed": False,
         "in_flight": False,
         "output_in_flight": False,
         "cancel_in_flight": False,
@@ -2228,12 +2229,21 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         show_job_output(host, model, view.id, read_output=read_stdout, lifecycle=lifecycle)
 
     # --- Shutdown -----------------------------------------------------------
+    def _close_files_browser():
+        if state["files_browser_closed"]:
+            return
+        state["files_browser_closed"] = True
+        close_browser = getattr(files_browser, "_wx_host_close", None)
+        if callable(close_browser):
+            close_browser()
+
     def close(_event=None):
         with state_lock:
             if state["closed"]:
                 return
             state["closed"] = True
             state["outputs_pending_generations"].clear()
+        _close_files_browser()
         timer.Stop()
         unsubscribe_language_change(refresh_labels)
         host.Hide()
@@ -2248,6 +2258,7 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         with state_lock:
             state["closed"] = True
             state["outputs_pending_generations"].clear()
+        _close_files_browser()
         timer.Stop()
         for follower in state.get("followers", {}).values():
             follower.close()

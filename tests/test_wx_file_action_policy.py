@@ -52,8 +52,8 @@ def test_local_policy_exact_matrix(name, selection, expected):
     ("name", "selection", "expected"),
     [
         ("none", context_selection(None, None), {"paste", "refresh", "upload", "new_folder"}),
-        ("one_file", context_selection("/a", False, ("/a",), (False,)), {"open", "edit", "edit_new_window", "download", "upload", "rename", "delete", "copy", "move", "paste", "copy_path", "refresh"}),
-        ("one_dir", context_selection("/d", True, ("/d",), (True,)), {"open", "download", "upload", "delete", "copy", "move", "paste", "copy_path", "refresh", "new_folder", "new_tab"}),
+        ("one_file", context_selection("/a", False, ("/a",), (False,)), {"open", "edit", "edit_new_window", "download", "upload", "rename", "delete", "copy", "move", "paste", "copy_path", "refresh", "follow_track", "chmod", "submit_slurm", "favorite"}),
+        ("one_dir", context_selection("/d", True, ("/d",), (True,)), {"open", "download", "upload", "delete", "copy", "move", "paste", "copy_path", "refresh", "new_folder", "new_file", "new_tab", "favorite"}),
         ("multi_files", context_selection("/b", False, ("/a", "/b"), (False, False)), {"download", "upload", "delete", "copy", "move", "paste", "copy_path", "refresh"}),
         ("multi_dirs", context_selection("/a", True, ("/a", "/b"), (True, True)), {"download", "upload", "delete", "copy", "move", "paste", "copy_path", "refresh"}),
         ("mixed", context_selection("/d", True, ("/a", "/d"), (False, True)), {"download", "upload", "delete", "copy", "move", "paste", "copy_path", "refresh"}),

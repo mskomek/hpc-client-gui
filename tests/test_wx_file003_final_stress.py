@@ -12,6 +12,8 @@ from __future__ import annotations
 
 import threading
 import time
+import subprocess
+import sys
 from collections import Counter
 from pathlib import Path
 
@@ -69,17 +71,31 @@ def _settle(app, rounds: int = 6) -> None:
     wx.SafeYield()
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def wx_app():
     load_language("en")
-    app = wx.App(False)
+    app = wx.App.Get()
+    owns_app = app is None
+    if owns_app:
+        app = wx.App(False)
     yield app
+    _destroy_windows(app)
+    if owns_app:
+        app.Destroy()
+
+
+@pytest.fixture(autouse=True)
+def _cleanup_windows_after_test(wx_app):
+    load_language("en")
+    yield
+    _destroy_windows(wx_app)
+
+
+def _destroy_windows(app):
     for window in wx.GetTopLevelWindows():
         if window:
             window.Destroy()
-    app.ProcessPendingEvents()
-    wx.SafeYield()
-    app.Destroy()
+    _settle(app)
 
 
 def _browser_windows():
@@ -1435,3 +1451,26 @@ def test_zz_measured_invariants(capsys):
         assert METRICS[name] == 0, "%s = %d" % (name, METRICS[name])
     assert METRICS["peak_local_mutation_concurrency"] <= 1
     assert METRICS["peak_remote_mutation_concurrency"] <= 1
+
+
+@pytest.mark.gui
+@pytest.mark.subprocess
+@pytest.mark.regression
+def test_editor_wx_lifecycle_predecessor_preserves_context_menu_runtime():
+    root = Path(__file__).resolve().parents[1]
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "pytest",
+            "tests/test_wx_editor_window_parity.py",
+            "tests/test_wx_embedded_terminal.py",
+            "tests/test_wx_file003_final_stress.py::test_stress_a_right_click_retarget",
+            "-q",
+        ],
+        cwd=root,
+        capture_output=True,
+        text=True,
+        timeout=90,
+    )
+    assert result.returncode == 0, f"child failed {result.returncode}:\n{result.stdout}\n{result.stderr}"

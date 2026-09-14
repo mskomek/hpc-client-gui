@@ -1,9 +1,30 @@
 """Wave 45 embedded terminal real-event tests."""
+from pathlib import Path
+import subprocess
+import sys
+from unittest.mock import patch
+
 import pytest
 
 wx = pytest.importorskip("wx")
 from hpc_gui.wx_terminal import build_terminal_panel
 from hpc_gui.wx_shell import create_shell_frame
+
+
+@pytest.fixture(scope="module", autouse=True)
+def _wx_app_lifecycle():
+    app = wx.App.Get()
+    owns_app = app is None
+    if owns_app:
+        app = wx.App(False)
+    yield app
+    for window in wx.GetTopLevelWindows():
+        if window:
+            window.Destroy()
+    app.ProcessPendingEvents()
+    wx.SafeYield()
+    if owns_app:
+        app.Destroy()
 
 
 def _fake_ssh():
@@ -21,7 +42,9 @@ def _fake_ssh():
 def _make_panel(ssh=None):
     app = wx.App.Get() or wx.App(False)
     frame = wx.Frame(None)
-    panel = build_terminal_panel(frame, ssh=ssh or _fake_ssh())
+    # These tests cover the TextCtrl fallback; WebView behavior has its own suite.
+    with patch("hpc_gui.wx_terminal_webview._is_webview_available", return_value=False):
+        panel = build_terminal_panel(frame, ssh=ssh or _fake_ssh())
     frame.Show()
     wx.Yield()
     return app, frame, panel
@@ -207,22 +230,45 @@ def test_embedded_terminal_resize_reaches_pty_resize():
 @pytest.mark.semantic
 def test_shell_embedded_and_detached_share_implementation():
     # Both use build_terminal_panel internally — check control sets identical
-    from hpc_gui.wx_terminal import show_terminal
+    from hpc_gui.wx_terminal import build_terminal_panel
     _app = wx.App.Get() or wx.App(False)
     ssh = _fake_ssh()
-    # detached
     frame_det = wx.Frame(None)
-    show_terminal(parent=frame_det, ssh=ssh)
-    # detached creates its own frame, not frame_det; find top windows
-    # instead build directly
-    panel_det = build_terminal_panel(frame_det, ssh=ssh)
-    # embedded via shell
-    shell_frame, _, sess = create_shell_frame()
-    panel_emb = sess.get("_embedded_terminal_panel")
-    det_keys = set(panel_det._wx_terminal_controls.keys())
-    emb_keys = set(panel_emb._wx_terminal_controls.keys())
-    assert det_keys == emb_keys
-    assert "find_btn" in det_keys and "clear" in det_keys
-    frame_det.Destroy()
-    shell_frame.Destroy()
-    wx.Yield()
+    shell_frame = None
+    try:
+        # Keep this shared-builder test on the fallback path; WebView lifecycle
+        # is exercised in the isolated tests in test_wx_terminal_webview.py.
+        with patch("hpc_gui.wx_terminal_webview._is_webview_available", return_value=False):
+            panel_det = build_terminal_panel(frame_det, ssh=ssh)
+            shell_frame, _, session = create_shell_frame()
+        panel_emb = session.get("_embedded_terminal_panel")
+        det_keys = set(panel_det._wx_terminal_controls)
+        emb_keys = set(panel_emb._wx_terminal_controls)
+        assert det_keys == emb_keys
+        assert "find_btn" in det_keys and "clear" in det_keys
+    finally:
+        if shell_frame is not None and not shell_frame.IsBeingDeleted():
+            shell_frame.Close()
+        if not frame_det.IsBeingDeleted():
+            frame_det.Destroy()
+        wx.Yield()
+
+
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.subprocess
+@pytest.mark.regression
+def test_embedded_terminal_builder_child_exits_cleanly():
+    nodeid = (
+        "tests/test_wx_embedded_terminal.py::"
+        "test_shell_embedded_and_detached_share_implementation"
+    )
+    result = subprocess.run(
+        [sys.executable, "-X", "faulthandler", "-m", "pytest", nodeid, "-q"],
+        cwd=Path(__file__).resolve().parents[1],
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    assert result.returncode == 0, f"child exited {result.returncode}:\n{result.stdout}\n{result.stderr}"
+    assert "Traceback (most recent call last)" not in result.stderr, result.stderr

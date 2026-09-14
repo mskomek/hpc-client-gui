@@ -56,11 +56,18 @@ ISOLATED_WIRE_FILES = (
     "tests/test_download_cancel_wire.py",
     "tests/test_editor_flow.py",
 )
-ISOLATED_GUI_FILES = ("tests/test_corrective_jobs_details.py",)
+ISOLATED_GUI_FILES = (
+    "tests/test_corrective_jobs_details.py",
+    "tests/test_wx_jobs_files_outputs.py",
+    "tests/test_wx_jobs_final_fix.py",
+    "tests/test_wx_jobs_stress.py",
+)
 # Keep the real WebView navigation behavior test but isolate its native state;
 # Windows recorded process heap corruption when it ran after the broad GUI set.
 ISOLATED_TEST_NODES = (
     "tests/test_wx_terminal_webview.py::test_wx_terminal_external_navigation_blocked",
+    "tests/test_wx_file_actions_stress.py::test_wx_remote_context_target_stress_uses_real_events",
+    "tests/test_wx_shell_p0_stress.py::test_wx_shell_p0_stress_real_wx_paths",
 )
 
 COVERAGE_FAIL_UNDER = 65
