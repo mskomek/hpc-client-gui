@@ -15,7 +15,9 @@ from hpc_gui.wx_local_files import show_local_files
 @pytest.fixture
 def wx_app():
     load_language("en")
-    app = wx.App(False)
+    app = wx.App.Get()
+    if app is None:
+        app = wx.App(False)
     yield app
     for window in wx.GetTopLevelWindows():
         if window:

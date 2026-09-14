@@ -26,7 +26,9 @@ def _pump(app, predicate):
 @pytest.fixture
 def wx_app():
     load_language("en")
-    app = wx.App(False)
+    app = wx.App.Get()
+    if app is None:
+        app = wx.App(False)
     yield app
     load_language("en")
     for window in list(wx.GetTopLevelWindows()):

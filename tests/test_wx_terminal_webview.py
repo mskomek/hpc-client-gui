@@ -109,7 +109,9 @@ def test_wx_terminal_webview_page_loads_and_posts_ready():
         import wx, time
         from hpc_gui.wx_terminal_webview import WxTerminalWebViewPanel, _is_webview_available
         assert _is_webview_available()
-        app = wx.App(False)
+        app = wx.App.Get()
+        if app is None:
+            app = wx.App(False)
         frame = wx.Frame(None, size=(900,600))
         class Fake:
             _wx_output_subscribers = []
@@ -176,7 +178,9 @@ def test_wx_terminal_pending_output_before_ready_is_buffered_and_ordered():
         sys.path.insert(0, 'src')
         import wx, time
         from hpc_gui.wx_terminal_webview import WxTerminalWebViewPanel
-        app = wx.App(False)
+        app = wx.App.Get()
+        if app is None:
+            app = wx.App(False)
         frame = wx.Frame(None, size=(900,600))
         class Fake:
             _wx_output_subscribers = []
@@ -252,7 +256,9 @@ def test_wx_terminal_preserves_carriage_return_and_esc():
         sys.path.insert(0, 'src')
         import wx, time, pathlib
         from hpc_gui.wx_terminal_webview import WxTerminalWebViewPanel
-        app = wx.App(False)
+        app = wx.App.Get()
+        if app is None:
+            app = wx.App(False)
         frame = wx.Frame(None, size=(900,600))
         class Fake:
             _wx_output_subscribers = []
@@ -325,7 +331,9 @@ def test_wx_terminal_clear_focus_font():
         sys.path.insert(0, 'src')
         import wx, time
         from hpc_gui.wx_terminal_webview import WxTerminalWebViewPanel
-        app = wx.App(False)
+        app = wx.App.Get()
+        if app is None:
+            app = wx.App(False)
         frame = wx.Frame(None, size=(900,600))
         class Fake:
             _wx_output_subscribers = []
@@ -505,7 +513,9 @@ def test_wx_terminal_output_ordering_with_many_fragments():
         sys.path.insert(0, 'src')
         import wx, time
         from hpc_gui.wx_terminal_webview import WxTerminalWebViewPanel
-        app = wx.App(False)
+        app = wx.App.Get()
+        if app is None:
+            app = wx.App(False)
         frame = wx.Frame(None, size=(900,600))
         class Fake:
             _wx_output_subscribers = []
@@ -639,7 +649,9 @@ class FakeSSH:
     def resize_shell_pty(self, c, r):
         pass
 
-app = wx.App(False)
+app = wx.App.Get()
+if app is None:
+    app = wx.App(False)
 frame = wx.Frame(None, size=(900, 600))
 ssh = FakeSSH()
 panel = WxTerminalWebViewPanel(frame, ssh=ssh)
@@ -684,7 +696,9 @@ class FakeSSH:
     def resize_shell_pty(self, cols, rows):
         self.resizes.append((cols, rows))
 
-app = wx.App(False)
+app = wx.App.Get()
+if app is None:
+    app = wx.App(False)
 frame = wx.Frame(None, size=(900, 600))
 ssh = FakeSSH()
 panel = WxTerminalWebViewPanel(frame, ssh=ssh)
@@ -726,7 +740,9 @@ class FakeSSH:
     def resize_shell_pty(self, c, r):
         self.resizes.append((c, r))
 
-app = wx.App(False)
+app = wx.App.Get()
+if app is None:
+    app = wx.App(False)
 frame = wx.Frame(None, size=(900, 600))
 ssh = FakeSSH()
 panel = WxTerminalWebViewPanel(frame, ssh=ssh)
@@ -781,7 +797,9 @@ class FakeSSH:
     def resize_shell_pty(self, c, r):
         pass
 
-app = wx.App(False)
+app = wx.App.Get()
+if app is None:
+    app = wx.App(False)
 frame = wx.Frame(None, size=(900, 600))
 ssh = FakeSSH()
 panel = WxTerminalWebViewPanel(frame, ssh=ssh)
@@ -830,7 +848,9 @@ class FakeSSH:
     def resize_shell_pty(self, c, r):
         pass
 
-app = wx.App(False)
+app = wx.App.Get()
+if app is None:
+    app = wx.App(False)
 frame = wx.Frame(None, size=(900, 600))
 ssh = FakeSSH()
 panel = WxTerminalWebViewPanel(frame, ssh=ssh)
@@ -893,7 +913,9 @@ class FakeSSH:
     def resize_shell_pty(self, c, r):
         pass
 
-app = wx.App(False)
+app = wx.App.Get()
+if app is None:
+    app = wx.App(False)
 frame = wx.Frame(None, size=(900, 600))
 ssh = FakeSSH()
 panel = WxTerminalWebViewPanel(frame, ssh=ssh)
@@ -934,7 +956,9 @@ class FakeSSH:
     def resize_shell_pty(self, c, r):
         pass
 
-app = wx.App(False)
+app = wx.App.Get()
+if app is None:
+    app = wx.App(False)
 frame = wx.Frame(None, size=(900, 600))
 ssh = FakeSSH()
 panel = WxTerminalWebViewPanel(frame, ssh=ssh)
@@ -976,7 +1000,9 @@ class FakeSSH:
     def resize_shell_pty(self, cols, rows):
         pass
 
-app = wx.App(False)
+app = wx.App.Get()
+if app is None:
+    app = wx.App(False)
 frame = wx.Frame(None, size=(1000, 700))
 panel = WxTerminalWebViewPanel(frame, ssh=FakeSSH())
 sizer = wx.BoxSizer(wx.VERTICAL)
@@ -1070,7 +1096,9 @@ class FakeSSH:
     def resize_shell_pty(self, c, r):
         self.resizes.append((c, r))
 
-app = wx.App(False)
+app = wx.App.Get()
+if app is None:
+    app = wx.App(False)
 frame = wx.Frame(None, size=(900, 600))
 ssh = FakeSSH()
 panel = WxTerminalWebViewPanel(frame, ssh=ssh)
@@ -1105,7 +1133,9 @@ class FakeSSH:
     def resize_shell_pty(self, c, r):
         pass
 
-app = wx.App(False)
+app = wx.App.Get()
+if app is None:
+    app = wx.App(False)
 frame = wx.Frame(None, size=(900, 600))
 ssh1 = FakeSSH("ssh1")
 ssh2 = FakeSSH("ssh2")
@@ -1145,7 +1175,9 @@ class FakeSSH:
     def send_shell_input(self, d): return True
     def resize_shell_pty(self, c, r): pass
 
-app = wx.App(False)
+app = wx.App.Get()
+if app is None:
+    app = wx.App(False)
 frame = wx.Frame(None, size=(900, 600))
 ssh1 = FakeSSH("ssh1")
 ssh2 = FakeSSH("ssh2")
@@ -1208,7 +1240,9 @@ class FakeSSH:
     def send_shell_input(self, d): return True
     def resize_shell_pty(self, c, r): pass
 
-app = wx.App(False)
+app = wx.App.Get()
+if app is None:
+    app = wx.App(False)
 frame = wx.Frame(None, size=(900, 600))
 current_ssh = FakeSSH()
 panel = WxTerminalWebViewPanel(frame, ssh=current_ssh)
@@ -1271,7 +1305,9 @@ class FakeSSH:
     def send_shell_input(self, d): return True
     def resize_shell_pty(self, c, r): pass
 
-app = wx.App(False)
+app = wx.App.Get()
+if app is None:
+    app = wx.App(False)
 frame = wx.Frame(None, size=(900, 600))
 # Start without SSH
 panel = WxTerminalWebViewPanel(frame, ssh=None)
@@ -1325,7 +1361,9 @@ class FakeSSH:
     def send_shell_input(self, d): return True
     def resize_shell_pty(self, c, r): pass
 
-app = wx.App(False)
+app = wx.App.Get()
+if app is None:
+    app = wx.App(False)
 frame = wx.Frame(None, size=(900, 600))
 panel = WxTerminalWebViewPanel(frame, ssh=FakeSSH())
 # Write before ready
@@ -1369,7 +1407,9 @@ class FakeSSH:
     def send_shell_input(self, d): return True
     def resize_shell_pty(self, c, r): pass
 
-app = wx.App(False)
+app = wx.App.Get()
+if app is None:
+    app = wx.App(False)
 frame = wx.Frame(None, size=(900, 600))
 panel = WxTerminalWebViewPanel(frame, ssh=FakeSSH())
 # Write 500KB of data before ready
@@ -1402,7 +1442,9 @@ sys.path.insert(0, "src")
 import wx
 import hpc_gui.wx_terminal_webview as renderer
 renderer._is_webview_available = lambda: False
-app = wx.App(False)
+app = wx.App.Get()
+if app is None:
+    app = wx.App(False)
 frame = wx.Frame(None, size=(600, 400))
 panel = renderer.WxTerminalWebViewPanel(frame)
 frame.Show()
@@ -1440,7 +1482,9 @@ class FakeSSH:
     def send_shell_input(self, d): return True
     def resize_shell_pty(self, c, r): pass
 
-app = wx.App(False)
+app = wx.App.Get()
+if app is None:
+    app = wx.App(False)
 frame = wx.Frame(None, size=(900, 600))
 current_ssh = FakeSSH()
 panel = WxTerminalWebViewPanel(frame, ssh=current_ssh)
@@ -1487,7 +1531,9 @@ class FakeSSH:
     def resize_shell_pty(self, c, r):
         self.resizes.append((c, r))
 
-app = wx.App(False)
+app = wx.App.Get()
+if app is None:
+    app = wx.App(False)
 frame = wx.Frame(None, size=(900, 600))
 panel = build_terminal_panel(frame, ssh=None, lifecycle=None)
 sizer = wx.BoxSizer(wx.VERTICAL)

@@ -24,7 +24,9 @@ def _pump(app, predicate):
 @pytest.fixture
 def shell_i18n():
     load_language("en")
-    app = wx.App(False)
+    app = wx.App.Get()
+    if app is None:
+        app = wx.App(False)
     frame, lifecycle, _session = create_shell_frame(app, tray_factory=lambda _parent: None)
     frame.Show()
     show_jobs(frame, lifecycle=lifecycle, list_jobs=lambda: [{"id": "1", "state": "RUNNING"}])

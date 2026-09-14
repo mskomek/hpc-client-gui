@@ -27,7 +27,9 @@ def _reset_update_language():
 
 
 def test_update_available_shows_versions_and_download_size():
-    app = wx.App(False)
+    app = wx.App.Get()
+    if app is None:
+        app = wx.App(False)
     rel = _make_release()
     dlg = WxUpdateDialog(None, rel)
     # Check versions are visible
@@ -71,7 +73,9 @@ def test_update_available_shows_versions_and_download_size():
 
 
 def test_update_changelog_is_fixed_height_scrollable_readonly():
-    app = wx.App(False)
+    app = wx.App.Get()
+    if app is None:
+        app = wx.App(False)
     long_body = "\n".join([f"- line {i} with some text that should wrap" for i in range(50)])
     rel = _make_release(body=long_body)
     dlg = WxUpdateDialog(None, rel)
@@ -100,7 +104,9 @@ def test_update_changelog_is_fixed_height_scrollable_readonly():
 
 
 def test_long_changelog_does_not_resize_dialog():
-    app = wx.App(False)
+    app = wx.App.Get()
+    if app is None:
+        app = wx.App(False)
     long_body = "\n".join([f"* line {i}" for i in range(200)])
     rel = _make_release(body=long_body)
     dlg = WxUpdateDialog(None, rel)
@@ -118,7 +124,9 @@ def test_long_changelog_does_not_resize_dialog():
 
 
 def test_update_available_download_button_starts_download(monkeypatch):
-    app = wx.App(False)
+    app = wx.App.Get()
+    if app is None:
+        app = wx.App(False)
     rel = _make_release()
     dlg = WxUpdateDialog(None, rel)
     # Find Download button
@@ -179,7 +187,9 @@ def test_update_available_download_button_starts_download(monkeypatch):
 
 
 def test_update_download_progress_shows_real_bytes_and_percentage():
-    app = wx.App(False)
+    app = wx.App.Get()
+    if app is None:
+        app = wx.App(False)
     rel = _make_release(size=184*1024*1024)
     dlg = WxUpdateDialog(None, rel)
     dlg._build_for_state("DOWNLOADING")
@@ -207,7 +217,9 @@ def test_update_download_progress_shows_real_bytes_and_percentage():
 
 
 def test_update_unknown_total_uses_indeterminate_progress():
-    app = wx.App(False)
+    app = wx.App.Get()
+    if app is None:
+        app = wx.App(False)
     rel = _make_release(size=None)
     # Force total None
     dlg = WxUpdateDialog(None, rel)
@@ -225,7 +237,9 @@ def test_update_unknown_total_uses_indeterminate_progress():
 
 
 def test_update_cancel_reaches_downloader():
-    app = wx.App(False)
+    app = wx.App.Get()
+    if app is None:
+        app = wx.App(False)
     rel = _make_release()
     dlg = WxUpdateDialog(None, rel)
     dlg._build_for_state("DOWNLOADING")
@@ -258,7 +272,9 @@ def test_update_cancel_reaches_downloader():
 
 @pytest.mark.concurrency
 def test_update_cancel_prevents_install(monkeypatch, tmp_path):
-    app = wx.App(False)
+    app = wx.App.Get()
+    if app is None:
+        app = wx.App(False)
     rel = _make_release()
     dlg = WxUpdateDialog(None, rel)
     downloader_entered = Event()
@@ -308,7 +324,9 @@ def test_update_cancel_prevents_install(monkeypatch, tmp_path):
 
 
 def test_update_verification_state_visible():
-    app = wx.App(False)
+    app = wx.App.Get()
+    if app is None:
+        app = wx.App(False)
     rel = _make_release()
     dlg = WxUpdateDialog(None, rel)
     dlg._build_for_state("VERIFYING")
@@ -328,7 +346,9 @@ def test_update_verification_state_visible():
 
 
 def test_update_ready_requires_install_confirmation():
-    app = wx.App(False)
+    app = wx.App.Get()
+    if app is None:
+        app = wx.App(False)
     rel = _make_release()
     dlg = WxUpdateDialog(None, rel)
     dlg._build_for_state("READY_TO_INSTALL")
@@ -350,7 +370,9 @@ def test_update_ready_requires_install_confirmation():
 
 
 def test_update_install_opens_installation_splash():
-    app = wx.App(False)
+    app = wx.App.Get()
+    if app is None:
+        app = wx.App(False)
     rel = _make_release()
     dlg = WxUpdateDialog(None, rel)
     dlg._build_for_state("READY_TO_INSTALL")
@@ -398,7 +420,9 @@ def test_update_install_opens_installation_splash():
 
 
 def test_installation_progress_uses_real_backend_progress():
-    app = wx.App(False)
+    app = wx.App.Get()
+    if app is None:
+        app = wx.App(False)
     from hpc_gui.wx_updater_view import show_installing_splash
     dlg = show_installing_splash(None, "1.9.0")
     assert dlg._wx_install_controls["gauge"] is not None
@@ -413,7 +437,9 @@ def test_installation_progress_uses_real_backend_progress():
 
 
 def test_installation_current_item_visible_when_available():
-    app = wx.App(False)
+    app = wx.App.Get()
+    if app is None:
+        app = wx.App(False)
     from hpc_gui.wx_updater_view import show_installing_splash
     dlg = show_installing_splash(None, "1.9.0")
     dlg._wx_install_update(45, "Copying application files...", "hpc_gui/wx_updater_view.py")
@@ -428,7 +454,9 @@ def test_installation_current_item_visible_when_available():
 @pytest.mark.concurrency
 @pytest.mark.resource
 def test_update_close_in_flight_safe(monkeypatch):
-    app = wx.App(False)
+    app = wx.App.Get()
+    if app is None:
+        app = wx.App(False)
     rel = _make_release()
     dlg = WxUpdateDialog(None, rel)
     dlg._build_for_state("DOWNLOADING")
@@ -462,7 +490,9 @@ def test_update_close_in_flight_safe(monkeypatch):
 def test_update_late_callback_after_close_safe(monkeypatch, tmp_path):
     import hpc_gui.services.app_updater as app_updater
 
-    app = wx.App(False)
+    app = wx.App.Get()
+    if app is None:
+        app = wx.App(False)
     rel = _make_release()
     dlg = WxUpdateDialog(None, rel)
     progress_queued = Event()
@@ -507,7 +537,9 @@ def test_update_late_callback_after_close_safe(monkeypatch, tmp_path):
 
 
 def test_mandatory_update_has_no_later_button():
-    app = wx.App(False)
+    app = wx.App.Get()
+    if app is None:
+        app = wx.App(False)
     rel = _make_release()
     dlg = WxUpdateDialog(None, rel, mandatory=True)
     dlg._build_for_state("UPDATE_AVAILABLE")
@@ -532,7 +564,9 @@ def test_mandatory_update_has_no_later_button():
 
 
 def test_mandatory_update_close_does_not_enter_main_app():
-    app = wx.App(False)
+    app = wx.App.Get()
+    if app is None:
+        app = wx.App(False)
     rel = _make_release()
     dlg = WxUpdateDialog(None, rel, mandatory=True)
     dlg._build_for_state("UPDATE_AVAILABLE")
@@ -546,7 +580,9 @@ def test_mandatory_update_close_does_not_enter_main_app():
 
 
 def test_update_runtime_language_switch_en_tr():
-    app = wx.App(False)
+    app = wx.App.Get()
+    if app is None:
+        app = wx.App(False)
     from hpc_gui.core.i18n import load_language, set_language
     load_language("en")
     rel = _make_release()
