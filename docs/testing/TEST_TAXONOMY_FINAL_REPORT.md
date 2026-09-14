@@ -1,8 +1,8 @@
 # Test Taxonomy Final Report
 
-Status: Packet O DONE; integration-closeout and remediation lines consolidated. A final post-consolidation census is pending; the last closeout-line census on 2026-09-13 collected 2,657 nodes with exactly one primary category each, zero-primary 0, multi-primary 0, and a strict zero-debt ratchet PASS. Earlier release runs still had failures, so no taxonomy result here establishes integration or release readiness.
+Status: Packet O DONE; the integration-closeout and remediation lines were consolidated and finally validated on 2026-09-14. Post-consolidation census: **2,661 collected**, every node with exactly one primary category, **zero-primary 0**, **multi-primary 0**, warnings 0, and strict zero-debt RATCHET PASS. Both the normal and coverage release suites exit 0 on this state (see the post-consolidation section at the end). The historical 2,656-node / six-exception and 2,657/2,658 census sections below are retained as history.
 
-The closeout census supersedes the historical 2,656-node / six-exception snapshot below, which is retained as history. See [TEST_SUITE_INTEGRATION_CLOSEOUT_2026-09-13.md](TEST_SUITE_INTEGRATION_CLOSEOUT_2026-09-13.md) and [the strict ratchet baseline](../../audit/test-governance/integration-closeout-20260913/taxonomy-ratchet-strict.json) for closeout evidence; the post-consolidation report is recorded at the end of this document once final validation completes.
+See [TEST_SUITE_INTEGRATION_CLOSEOUT_2026-09-13.md](TEST_SUITE_INTEGRATION_CLOSEOUT_2026-09-13.md) and [the strict ratchet baseline](../../audit/test-governance/integration-closeout-20260913/taxonomy-ratchet-strict.json) for the closeout evidence and the post-consolidation report artifact.
 
 Frozen baseline: `12ce79935bf076e1062c57dc7dbd148bad2bfae1`
 Taxonomy snapshot SHA: `d83b76beff24ae9810f3db64611eab351bd93a02`
@@ -290,3 +290,27 @@ The full 65A stress node and a fresh official release run have not completed on 
 Automatic GitHub Actions CI remains **DISABLED**; this remediation has not changed workflow files, local selectors, or the manual release workflow. No merge or push to `develop` has occurred.
 
 Latest normal-suite attempt: local branch `test-suite-governance-final-local-20260913`, starting HEAD `108cf4e8a9f65cce143ad49542b28a9dde9b2465`. It ran 17m 26s and passed compile/i18n/smoke preflight, but the broad pytest child stopped near 90% with exit `4294967295` (`0xFFFFFFFF`) and no pytest summary. The collected order places it in the wx Jobs cluster, but the exact node/phase is unknown. The release runner continued its isolated partitions (1 WebView, 17 corrective Jobs, 168 FTP, 4 download-cancel, 14 editor tests passed) and returned `-1`. A brief unrelated Python process appeared near the end, so possible interference cannot be excluded. This is a **FAIL with incomplete broad-partition totals**, not a PASS. Coverage and the focused Jobs lifecycle diagnosis remain pending; merge readiness remains **NOT READY TO MERGE**.
+
+## Post-consolidation census — 2026-09-14
+
+The closeout branch was merged into `test-suite-governance-20260912` (`006982d0`) after the governance lifecycle hardening was committed (`bee43f44`), followed by single-App fixture ownership (`01225f59`) and the stabilized Qt event-loop delay probe (`b018f10b`).
+
+| Primary category | Count |
+| --- | ---: |
+| `audit` | 159 |
+| `contract` | 566 |
+| `e2e` | 7 |
+| `gui` | 675 |
+| `integration` | 362 |
+| `release` | 102 |
+| `reporting` | 22 |
+| `runtime_smoke` | 6 |
+| `unit` | 762 |
+
+Total collected: **2,661**. Zero-primary: **0**. Multi-primary: **0**. Direct test-calling-test warnings: **0**. Catch-all filename warnings: **0**. RATCHET (strict zero-debt baseline, empty allowlist): **PASS** — zero-primary baseline 0, current 0, new 0, multi 0.
+
+Qualifiers: semantic 965, regression 166, performance 17, resource 120, concurrency 121, slow 15, subprocess 59, windows 4, linux 0, macos 0, hardware 0, synthetic_hardware 0, license 2, acceptance 1, artifact_dependent 25, wx 573, qt 270, packaging 4.
+
+The six prior zero-primary baseline exceptions were directly resolved: their workflow/evidence successors now pass with exactly one primary marker and are no longer exempted. The machine-readable post-consolidation census is `audit/test-governance/integration-closeout-20260913/taxonomy-report-post-consolidation.json`.
+
+Release validation on this exact census: normal suite exit 0 (broad 2,352 passed, 0 failed, 20 skipped, 6 deselected, 29 subtests in 899.04 s; all isolated partitions passed) and coverage suite exit 0 (`Required test coverage of 65% reached. Total coverage: 66.41%`). No Windows `python.exe` Application Error events or new crash dumps occurred during the final runs. Integration verdict: **READY TO MERGE INTO DEVELOP**; release readiness remains a separate NO-GO for packaged/cross-platform/cluster/manual evidence.

@@ -1,6 +1,8 @@
 # Test Suite Integration Closeout — 2026-09-13
 
-Status: **DEFECT_FOUND — NOT READY TO MERGE INTO DEVELOP.** The governance Wave is complete. The current release runner reached the end of its broad pytest process without a native process termination, but that process reported an unresolved wx application-order failure and a confirmed remote Logs-filter product defect. Since the broad process failed, the runner did not execute its later isolated groups. Coverage was therefore not run.
+Status: **SUPERSEDED BY THE POST-CONSOLIDATION VALIDATION ON 2026-09-14 (below).** The 2026-09-13 state recorded in this document — DEFECT_FOUND, NOT READY TO MERGE — was accurate for that day's closeout branch: the runner reached the end of its broad pytest process without a native process termination, but that process reported an unresolved wx application-order failure and a confirmed remote Logs-filter product defect, and coverage had not been run.
+
+For the current state see [Post-consolidation final validation — 2026-09-14](#post-consolidation-final-validation--2026-09-14).
 
 The work was performed on `test-suite-governance-integration-closeout-20260913`, in `D:/Projeler/hpc-client-gui-integration-closeout`, from governance SHA `18e59fff3d8ebfa47666347a0d9cfc4d137b43c1`. The completed governance worktree and the original dirty `develop` worktree were left untouched. This report describes closeout evidence and readiness, not merge or publication status.
 
@@ -125,3 +127,32 @@ No current category median or p95 timing distribution was captured. The latest b
 | Manual packaged GUI sign-off | NOT EVIDENCED. |
 
 **Merge readiness: NOT READY TO MERGE INTO DEVELOP.** The confirmed provider-filter defect and the broad-process wx App failure prevent an authoritative release-suite pass; coverage is not complete. Release readiness remains a separate NO-GO because packaged, cross-platform, cluster, and manual GUI evidence is incomplete.
+
+## Post-consolidation final validation — 2026-09-14
+
+The closeout branch (`test-suite-governance-integration-closeout-20260913`, tip `09a4c014`) was merged into `test-suite-governance-20260912` (merge commit `006982d0`), combining the closeout product fixes, workflow/evidence contracts, and native boundaries with the governance remediation commits and its uncommitted lifecycle hardening (committed as `bee43f44`). Follow-up commits on the governance branch: `39ae798c` (order-sensitive owners isolated; layout app ownership fixed), `01225f59` (single-App fixture ownership across 31 test modules), `b018f10b` (Qt event-loop delay probe stabilized). All local; `origin/develop` remains at the frozen baseline.
+
+### Root cause of the roaming `PyNoAppError`
+
+The broad mixed-GUI process failed with `wx._core.PyNoAppError` in different modules across runs (`test_wx_jobs_behavior`, `test_wx_layout_resize`, then `test_wx_files_sync_compare`). The mechanism was reproduced in isolation: creating a second `wx.App` while one is alive, then destroying or garbage-collecting the non-global App, invalidates the global app (`wx.App.Get()` becomes `None`) even though the global Python object still exists. Any later widget creation then raises `PyNoAppError`. Thirty-one test modules had fixtures that unconditionally created `wx.App(False)`; they now adopt the existing App and create one only if none exists, so a single App exists at any time. `tests/test_wx_layout_resize.py` additionally no longer destroys an app it did not create. The Jobs-behavior and layout-owner modules remain process-isolated in the release runner as documented order-sensitive GUI boundaries; every node still runs.
+
+### Final local results
+
+| Run | Result | Detail |
+| --- | --- | --- |
+| `python -X faulthandler scripts/release_test_suite.py` | **PASS (exit 0)** | Broad pytest: **2,352 passed, 0 failed**, 20 skipped, 6 deselected, 29 subtests in 899.04 s. Isolated partitions: file-actions node 1, shell-p0 stress node 1 (258.87 s), corrective Jobs details 17, WebView 29, jobs behavior 9, layout resize 1 (158.60 s), jobs files outputs 16, jobs final fix 15, jobs stress 10, FTP 168, download-cancel wire 4, editor flow 14. |
+| `python -X faulthandler scripts/release_test_suite.py --coverage` | **PASS (exit 0)** | Broad pytest: **2,352 passed, 0 failed**, 20 skipped, 6 deselected, 29 subtests in 778.73 s; `Required test coverage of 65% reached. Total coverage: 66.41%`. |
+| Windows native events | None | No `python.exe` Application Error events and no new crash dumps during the final runs (2026-09-14 14:34–15:39). The earlier signatures (`0xC000041D`, `0xC0000005`, `0xC0000374`) did not recur. |
+| `python -m compileall -q src/hpc_gui` | PASS | exit 0. |
+| `python -m ruff check src tests scripts` | PASS | exit 0. |
+| `python scripts/check_i18n.py` | PASS | all three checks OK. |
+| `python scripts/smoke_test.py` | PASS | exit 0. |
+| Taxonomy REPORT | PASS | **2,661 collected** (unit 762, integration 362, gui 675, e2e 7, runtime_smoke 6, contract 566, audit 159, reporting 22, release 102); **zero-primary 0**, multi-primary 0, warnings 0. Artifact: `audit/test-governance/integration-closeout-20260913/taxonomy-report-post-consolidation.json`. |
+| Taxonomy RATCHET (strict zero-debt baseline) | PASS | zero-primary baseline 0, current 0, new 0, multi 0. |
+| Full collection | PASS | 2,661 collected in 4.26 s. |
+
+The six prior zero-primary baseline exceptions were directly resolved: their workflow/evidence successors now pass with exactly one primary marker and are no longer exempted, so the strict zero-debt ratchet applies.
+
+### Decision
+
+**Integration verdict: READY TO MERGE INTO DEVELOP** for the test-suite governance and remediation work on `test-suite-governance-20260912`. Release readiness remains a separate NO-GO: packaged smoke, Linux/macOS packaged runtime, live-cluster, and manual packaged GUI evidence are still not evidenced, as in the table above. No merge to `develop` was performed.

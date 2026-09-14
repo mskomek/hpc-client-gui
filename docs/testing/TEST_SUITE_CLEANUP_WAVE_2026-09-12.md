@@ -2,7 +2,7 @@
 
 Governance Wave status: COMPLETE
 
-Integration-readiness remediation: IN_PROGRESS — current verdict NOT READY TO MERGE pending final normal/coverage release validation. The 2026-09-13 integration-closeout census and the remediation line were consolidated on `test-suite-governance-20260912`; see [the integration closeout report](TEST_SUITE_INTEGRATION_CLOSEOUT_2026-09-13.md).
+Integration-readiness remediation: **DONE — READY TO MERGE INTO DEVELOP** (2026-09-14). The 2026-09-13 integration-closeout census and the remediation line were consolidated on `test-suite-governance-20260912`; the normal and coverage release suites both exit 0 and the strict zero-debt taxonomy ratchet passes. See [the integration closeout report](TEST_SUITE_INTEGRATION_CLOSEOUT_2026-09-13.md). Release readiness (packaged/cross-platform/cluster/manual evidence) remains a separate NO-GO.
 
 Frozen baseline: `12ce79935bf076e1062c57dc7dbd148bad2bfae1`
 
