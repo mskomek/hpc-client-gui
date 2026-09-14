@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "previous_governance_collection": 2656,
+  "current_collection": 2657,
+  "net_delta": 1,
+  "renamed_nodes": [
+    {
+      "old": "tests/test_gui_audit_screenshots.py::test_manifest_exists_and_commit_current",
+      "current": "tests/test_gui_audit_screenshots.py::test_manifest_records_historical_commit"
+    },
+    {
+      "old": "tests/test_macos_ci.py::test_macos_ci_has_no_release_upload_or_signing_step",
+      "current": "tests/test_macos_ci.py::test_archived_macos_job_has_no_release_upload_or_signing_step"
+    },
+    {
+      "old": "tests/test_macos_ci.py::test_macos_ci_matrix_covers_both_native_architectures",
+      "current": "tests/test_macos_ci.py::test_archived_macos_matrix_covers_both_native_architectures"
+    },
+    {
+      "old": "tests/test_macos_release_workflow.py::test_release_preflight_shares_the_ci_test_suite",
+      "current": "tests/test_macos_release_workflow.py::test_manual_release_jobs_share_the_release_preflight"
+    },
+    {
+      "old": "tests/test_release_test_suite.py::ReleaseTestSuiteTests::test_toolkit_boundary_suite_isolated_without_skipping_it",
+      "current": "tests/test_release_test_suite.py::ReleaseTestSuiteTests::test_native_toolkit_boundary_suites_are_isolated_without_skipping_them"
+    },
+    {
+      "old": "tests/test_wave9_ci_unicode_matrix.py::TestResultsVerification::test_wx_unicode_smoke_cannot_fail_open",
+      "current": "tests/test_wave9_ci_unicode_matrix.py::TestResultsVerification::test_archived_wx_unicode_smoke_definition_is_explicit"
+    },
+    {
+      "old": "tests/test_workflow_action_pins.py::test_every_workflow_exists",
+      "current": "tests/test_workflow_action_pins.py::test_manual_release_exists_and_automatic_ci_remains_archived"
+    },
+    {
+      "old": "tests/test_wx_file_action_policy.py::test_remote_policy_exact_matrix[mixed-selection5-expected5]",
+      "current": "tests/test_wx_file_action_policy.py::test_remote_candidate_policy_exact_matrix[mixed-selection5-expected5]"
+    },
+    {
+      "old": "tests/test_wx_file_action_policy.py::test_remote_policy_exact_matrix[multi_dirs-selection4-expected4]",
+      "current": "tests/test_wx_file_action_policy.py::test_remote_candidate_policy_exact_matrix[multi_dirs-selection4-expected4]"
+    },
+    {
+      "old": "tests/test_wx_file_action_policy.py::test_remote_policy_exact_matrix[multi_files-selection3-expected3]",
+      "current": "tests/test_wx_file_action_policy.py::test_remote_candidate_policy_exact_matrix[multi_files-selection3-expected3]"
+    },
+    {
+      "old": "tests/test_wx_file_action_policy.py::test_remote_policy_exact_matrix[none-selection0-expected0]",
+      "current": "tests/test_wx_file_action_policy.py::test_remote_candidate_policy_exact_matrix[none-selection0-expected0]"
+    },
+    {
+      "old": "tests/test_wx_file_action_policy.py::test_remote_policy_exact_matrix[one_dir-selection2-expected2]",
+      "current": "tests/test_wx_file_action_policy.py::test_remote_candidate_policy_exact_matrix[one_dir-selection2-expected2]"
+    },
+    {
+      "old": "tests/test_wx_file_action_policy.py::test_remote_policy_exact_matrix[one_file-selection1-expected1]",
+      "current": "tests/test_wx_file_action_policy.py::test_remote_candidate_policy_exact_matrix[one_file-selection1-expected1]"
+    },
+    {
+      "old": "tests/test_wx_packaged_smoke.py::test_packaged_wx_smoke_gate_reports_critical_stages",
+      "current": "tests/test_wx_packaged_smoke.py::test_missing_artifact_report_fails_critical_stages"
+    },
+    {
+      "old": "tests/test_wx_terminal_behavioral.py::test_find_next_prev_advances_through_matches",
+      "current": "tests/test_wx_terminal_behavioral.py::test_find_next_prev_commands_match_webview_bridge_contract"
+    }
+  ],
+  "added_nodes": [
+    "tests/test_wx_file_actions_lifecycle.py::test_wx_embedded_remote_callback_after_notebook_destroy_is_ignored"
+  ],
+  "unmapped_removed_nodes": []
+}

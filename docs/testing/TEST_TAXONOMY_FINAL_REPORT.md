@@ -1,6 +1,8 @@
 # Test Taxonomy Final Report
 
-Status: GOVERNANCE CLOSEOUT FINAL; integration-readiness remediation IN_PROGRESS; NOT READY TO MERGE.
+Status: Packet O DONE; integration-closeout and remediation lines consolidated. A final post-consolidation census is pending; the last closeout-line census on 2026-09-13 collected 2,657 nodes with exactly one primary category each, zero-primary 0, multi-primary 0, and a strict zero-debt ratchet PASS. Earlier release runs still had failures, so no taxonomy result here establishes integration or release readiness.
+
+The closeout census supersedes the historical 2,656-node / six-exception snapshot below, which is retained as history. See [TEST_SUITE_INTEGRATION_CLOSEOUT_2026-09-13.md](TEST_SUITE_INTEGRATION_CLOSEOUT_2026-09-13.md) and [the strict ratchet baseline](../../audit/test-governance/integration-closeout-20260913/taxonomy-ratchet-strict.json) for closeout evidence; the post-consolidation report is recorded at the end of this document once final validation completes.
 
 Frozen baseline: `12ce79935bf076e1062c57dc7dbd148bad2bfae1`
 Taxonomy snapshot SHA: `d83b76beff24ae9810f3db64611eab351bd93a02`

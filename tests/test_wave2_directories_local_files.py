@@ -843,7 +843,7 @@ class TestErrorHandling:
 
     """Verify error handling for edge cases."""
 
-    def test_list_entries_permission_error(self, tmp_path):
+    def test_list_entries_permission_error(self, tmp_path, monkeypatch):
         """list_entries should handle permission errors gracefully."""
         from hpc_gui.wx_local_files import LocalBrowserModel
 
@@ -853,10 +853,27 @@ class TestErrorHandling:
         (tmp_path / "file.txt").write_text("test", encoding="utf-8")
         subdir = tmp_path / "subdir"
         subdir.mkdir()
+        denied = tmp_path / "denied.txt"
+        denied.write_text("secret", encoding="utf-8")
 
-        # list_entries should not crash even if stat() fails for some entries
+        original_stat = pathlib.Path.stat
+        denied_stat_calls = []
+
+        def permission_denied(path, *args, **kwargs):
+            if path == denied:
+                denied_stat_calls.append(path)
+                raise PermissionError("metadata access denied")
+            return original_stat(path, *args, **kwargs)
+
+        monkeypatch.setattr(pathlib.Path, "stat", permission_denied)
         entries = model.list_entries()
-        assert len(entries) >= 2
+
+        by_name = {entry.path.name: entry for entry in entries}
+        assert by_name["file.txt"].size == 4
+        assert by_name["subdir"].is_dir
+        assert by_name["denied.txt"].size == 0
+        assert not by_name["denied.txt"].is_dir
+        assert denied_stat_calls == [denied]
 
     def test_navigate_nonexistent_directory(self, tmp_path):
         """navigate should raise NotADirectoryError for non-existent paths."""

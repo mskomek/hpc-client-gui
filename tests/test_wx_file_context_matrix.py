@@ -9,7 +9,7 @@ from hpc_gui.wx_remote_files import WxRemoteDirectoryModel
 from hpc_gui.wx_remote_files_view import show_remote_files
 from mock_hpc_files import MockRemoteFilesBackend
 from support.wx_clipboard import read_clipboard_text
-from hpc_gui.core.i18n import load_language
+from hpc_gui.core.i18n import load_language, t
 from hpc_gui.services.file_clipboard import get_file_clipboard
 
 def _pump(app, pred, timeout=2):
@@ -29,6 +29,7 @@ def wx_app():
     for w in wx.GetTopLevelWindows():
         if w: w.Destroy()
     app.ProcessPendingEvents()
+    wx.SafeYield()
     app.Destroy()
 
 def _local(app, path):
@@ -169,7 +170,9 @@ def test_wx_remote_context_targets_unselected_row(wx_app):
     listing=frame._wx_remote_controls["listing"]
     listing.Select(0)
     orig=listing.PopupMenu
-    def cap(menu): pass
+    visible_labels=[]
+    def cap(menu):
+        visible_labels.extend(item.GetItemLabelText() for item in menu.GetMenuItems())
     listing.PopupMenu=cap
     idx=1
     point=listing.ClientToScreen(wx.Point(5, listing.GetItemRect(idx).y+2))
@@ -178,6 +181,10 @@ def test_wx_remote_context_targets_unselected_row(wx_app):
     assert not listing.IsSelected(0)
     assert listing.IsSelected(idx)
     assert sum(1 for i in range(listing.GetItemCount()) if listing.IsSelected(i)) == 1
+    assert t("dirs.follow_track") not in visible_labels
+    assert t("dirs.permissions_title") not in visible_labels
+    assert t("dirs.submit_sbatch") not in visible_labels
+    assert t("dirs.favorite_add_item") not in visible_labels
     listing.PopupMenu=orig
 
 def test_wx_remote_background_context_paste_targets_current_directory(wx_app):

@@ -2,7 +2,7 @@
 
 Governance Wave status: COMPLETE
 
-Integration-readiness remediation: IN_PROGRESS — current verdict NOT READY TO MERGE pending final normal/coverage release validation.
+Integration-readiness remediation: IN_PROGRESS — current verdict NOT READY TO MERGE pending final normal/coverage release validation. The 2026-09-13 integration-closeout census and the remediation line were consolidated on `test-suite-governance-20260912`; see [the integration closeout report](TEST_SUITE_INTEGRATION_CLOSEOUT_2026-09-13.md).
 
 Frozen baseline: `12ce79935bf076e1062c57dc7dbd148bad2bfae1`
 

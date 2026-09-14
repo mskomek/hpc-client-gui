@@ -7,6 +7,7 @@ from unittest.mock import patch
 import pytest
 
 wx = pytest.importorskip("wx")
+import hpc_gui.wx_terminal_webview as terminal_webview
 from hpc_gui.wx_terminal import build_terminal_panel
 from hpc_gui.wx_shell import create_shell_frame
 
@@ -25,6 +26,12 @@ def _wx_app_lifecycle():
     wx.SafeYield()
     if owns_app:
         app.Destroy()
+
+
+@pytest.fixture(autouse=True)
+def _use_text_ctrl_terminal_renderer(monkeypatch):
+    """These controls test the explicit non-WebView terminal fallback."""
+    monkeypatch.setattr(terminal_webview, "_is_webview_available", lambda: False)
 
 
 def _fake_ssh():
@@ -230,28 +237,33 @@ def test_embedded_terminal_resize_reaches_pty_resize():
 @pytest.mark.semantic
 def test_shell_embedded_and_detached_share_implementation():
     # Both use build_terminal_panel internally — check control sets identical
-    from hpc_gui.wx_terminal import build_terminal_panel
+    from hpc_gui.wx_terminal import show_terminal
     _app = wx.App.Get() or wx.App(False)
     ssh = _fake_ssh()
-    frame_det = wx.Frame(None)
+    existing = {id(window) for window in wx.GetTopLevelWindows()}
+    detached_frame = None
     shell_frame = None
     try:
-        # Keep this shared-builder test on the fallback path; WebView lifecycle
-        # is exercised in the isolated tests in test_wx_terminal_webview.py.
-        with patch("hpc_gui.wx_terminal_webview._is_webview_available", return_value=False):
-            panel_det = build_terminal_panel(frame_det, ssh=ssh)
-            shell_frame, _, session = create_shell_frame()
-        panel_emb = session.get("_embedded_terminal_panel")
-        det_keys = set(panel_det._wx_terminal_controls)
+        assert show_terminal(ssh=ssh) == wx.ID_OK
+        detached_frame = next(
+            window for window in wx.GetTopLevelWindows()
+            if id(window) not in existing
+        )
+        shell_frame, _, sess = create_shell_frame()
+        panel_emb = sess.get("_embedded_terminal_panel")
+        det_keys = set(detached_frame._wx_terminal_controls)
         emb_keys = set(panel_emb._wx_terminal_controls)
         assert det_keys == emb_keys
         assert "find_btn" in det_keys and "clear" in det_keys
     finally:
-        if shell_frame is not None and not shell_frame.IsBeingDeleted():
-            shell_frame.Close()
-        if not frame_det.IsBeingDeleted():
-            frame_det.Destroy()
-        wx.Yield()
+        for frame in (detached_frame, shell_frame):
+            if frame:
+                frame.Close()
+        wx.SafeYield()
+        for frame in wx.GetTopLevelWindows():
+            if frame and id(frame) not in existing:
+                frame.Destroy()
+        wx.SafeYield()
 
 
 @pytest.mark.gui
