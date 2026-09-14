@@ -1021,8 +1021,11 @@ class ConnectionDialog(QDialog):
         profile = self._collect_profile()
         if profile is None:
             return
-        if self._on_save is not None and not self._on_save(profile):
-            return
-        if self._on_connect is not None and not self._on_connect(profile):
+        # One logical Save & Connect action performs exactly one save. The
+        # connect handler owns persistence (so the transient typed password is
+        # used for this connection attempt); calling the plain save callback as
+        # well would persist the profile twice and duplicate the saved event.
+        handler = self._on_connect or self._on_save
+        if handler is not None and not handler(profile):
             return
         self.accept()
