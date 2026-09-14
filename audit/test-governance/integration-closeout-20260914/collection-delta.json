@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-09-14",
+  "previous_closeout_collection": 2657,
+  "current_collection": 2658,
+  "net_delta": 1,
+  "added_nodes": [
+    {
+      "node": "tests/test_wx_files_sync_compare.py::test_wx_files_sync_app_survives_forced_collection",
+      "purpose": "Ownership regression for the broad-process PyNoAppError: the module-owned wx.App must survive a forced garbage collection.",
+      "primary": "gui",
+      "qualifiers": ["regression", "resource", "semantic", "wx"]
+    }
+  ],
+  "removed_nodes": [],
+  "renamed_nodes": [],
+  "taxonomy": {
+    "primary_counts": {
+      "unit": 760,
+      "integration": 362,
+      "gui": 674,
+      "e2e": 7,
+      "runtime_smoke": 6,
+      "contract": 566,
+      "audit": 159,
+      "reporting": 22,
+      "release": 102
+    },
+    "zero_primary": 0,
+    "multi_primary": 0,
+    "semantic": 965,
+    "regression": 164,
+    "resource": 121,
+    "ratchet": "PASS"
+  },
+  "explanation": "Only the ownership regression node was added. No node was removed or renamed in the continuation."
+}

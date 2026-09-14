@@ -1,0 +1,117 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-09-14",
+  "branch": "test-suite-governance-integration-closeout-20260913",
+  "governance_start_sha": "18e59fff3d8ebfa47666347a0d9cfc4d137b43c1",
+  "closeout_start_sha": "21ff7d5562f8f82d8cedaff2c2ef449e921ebc6d",
+  "predecessors": [],
+  "target": "tests/test_wx_files_sync_compare.py",
+  "exit_code": 0,
+  "py_no_app_error": false,
+  "duration_seconds": 1484.25,
+  "broad_failure_history": [
+    {
+      "run": "2026-09-13 authoritative broad child",
+      "result": "2399 passed, 2 failed, 20 skipped, 4 deselected, 29 subtests passed",
+      "failing_nodes": [
+        "tests/test_wx_files_sync_compare.py::test_wx_compare_close_in_flight_is_safe",
+        "tests/test_wx_remote_file_actions_behavior.py::test_wx_remote_navigation_sort_and_provider_filter_are_visible"
+      ]
+    },
+    {
+      "run": "2026-09-14 02:11 broad child (after the remote-filter fix)",
+      "result": "2400 passed, 1 failed, 20 skipped, 4 deselected, 29 subtests passed",
+      "failing_nodes": [
+        "tests/test_wx_files_sync_compare.py::test_wx_compare_close_in_flight_is_safe"
+      ]
+    },
+    {
+      "run": "2026-09-14 10:56 instrumented broad child",
+      "result": "2400 passed, 1 failed, 20 skipped, 4 deselected, 29 subtests passed",
+      "failing_nodes": [
+        "tests/test_wx_files_sync_compare.py::test_wx_compare_stale_completion_is_ignored"
+      ],
+      "note": "The failing node moved because the tear-down timing changes which test drives the allocation that triggers the collection pass."
+    },
+    {
+      "run": "2026-09-14 target-module fixture only (no suite guard)",
+      "result": "2400 passed, 2 failed, 1 error, 20 skipped, 4 deselected, 29 subtests passed",
+      "failing_nodes": [
+        "tests/test_wx_file_actions_lifecycle.py::test_wx_local_listing_completion_after_close_is_safe",
+        "tests/test_wx_file_actions_stress.py::test_wx_remote_context_target_stress_uses_real_events"
+      ],
+      "classification": "SUITE_WIDE_POLLUTION: the abandoned-app deallocation can tear down whichever application is current, so fixing only the target module moved the failure to other modules."
+    }
+  ],
+  "failure_signature": "wx._core.PyNoAppError: The wx.App object must be created first! raised while constructing a panel, button, or menu inside create_shell_frame / wx_remote_files_view",
+  "trace_evidence": {
+    "plugin": "wx_app_trace_enhanced (temporary diagnostic, not committed)",
+    "log": "%TEMP%\\hpc-closeout-trace-20260914.log",
+    "findings": [
+      "The application was created by tests/test_wx_files_sync_compare.py inside _get_files_page and was only reachable through shell frames and garbage cycles.",
+      "SETUP for the failing test reported current=App@226b72bb650; TEARDOWN reported current=None, with no APP_DESTROY/STALE_DESTROY event in between.",
+      "The application wrapper was deallocated by a garbage collection pass, and wxPython's deallocation destroys the process-global application even when a newer app exists.",
+      "The trace recorded two replacement events where a new wx.App was created while an older app was still current (old_destroyed=False); those abandoned wrappers are the suite-wide time bombs."
+    ],
+    "deterministic_mechanism_probe": {
+      "description": "Creating a second wx.App replaces the first. Deallocating any wx.App wrapper (garbage collection) destroys the process-global application, and the next wx.Panel/wx.Button raises PyNoAppError. Destroying the current app before creating its replacement keeps the process clean.",
+      "evidence": [
+        "gc.collect() after dropping the last reference to a replaced wx.App wrapper -> wx.App.Get() returns None and wx.Panel raises PyNoAppError",
+        "keep an owner reference -> gc.collect() leaves wx.App.Get() valid and shell construction succeeds",
+        "raw probes: one_app_shell exits 0xC0000374 at shutdown while one_app_shell_destroy exits 0; multi-app replacement without ownership kills the live app"
+      ]
+    }
+  },
+  "minimal_polluter": {
+    "owners": [
+      "tests/test_wx_files_sync_compare.py (target module created its app ad hoc and left it unowned)",
+      "every module that created a wx.App while an earlier app was current and did not destroy the replaced app (abandoned wrapper time bombs)"
+    ],
+    "defect": "The C++ wxApp is process-global. wxPython deallocates that global object when any wx.App wrapper is garbage collected, even if a newer app replaced it. An unowned or abandoned wrapper therefore destroys whichever application is current at an arbitrary later collection pass.",
+    "minimized": true,
+    "minimal_reproduction": {
+      "script": "create wx.App A; create wx.App B (replaces A); del A; gc.collect(); wx.Panel(...)",
+      "result": "PyNoAppError; with an owning reference the same sequence succeeds"
+    }
+  },
+  "fix": {
+    "suite_guard": "tests/conftest.py: before a new wx.App is constructed, destroy the app that is about to be replaced while it is still the current app. This keeps at most one live native application and removes abandoned-wrapper time bombs without skipping or weakening any test.",
+    "owner_fix": [
+      "tests/test_wx_files_sync_compare.py: module-scoped autouse wx_app fixture owns and destroys the application for the module and cleans up windows created during the module",
+      "tests/test_wx_files_sync_compare.py: _get_files_page now requires the fixture-owned application instead of creating an unowned one"
+    ],
+    "regression": {
+      "node": "tests/test_wx_files_sync_compare.py::test_wx_files_sync_app_survives_forced_collection",
+      "primary": "gui",
+      "qualifiers": ["regression", "resource", "semantic", "wx"],
+      "evidence": "Builds a shell, closes it, drops every strong reference, forces gc.collect(), asserts the module-owned application is still current, then builds a second shell. Passed alone, with an aggressive GC plugin, and inside the broad process.",
+      "mutation_expectation": "Removing the module wx_app fixture restores ad-hoc creation and the ownership regression fails."
+    }
+  },
+  "authoritative_release": {
+    "command": "python -X faulthandler scripts/release_test_suite.py",
+    "exit_code": 0,
+    "result": "all release preflight gates passed",
+    "preflight": "compileall, check_i18n, smoke_test all exit 0",
+    "broad_child": {
+      "command": "python -m pytest -q --tb=short -rf -m \"not packaging\" tests --ignore <five isolated files>",
+      "passed": 2402,
+      "failed": 0,
+      "skipped": 20,
+      "deselected": 4,
+      "subtests_passed": 29,
+      "duration_seconds": 1484.25
+    },
+    "isolated_groups": [
+      {"file": "tests/test_ftp_widget.py", "passed": 168, "duration_seconds": 14.63},
+      {"file": "tests/test_download_cancel_wire.py", "passed": 4, "duration_seconds": 13.39},
+      {"file": "tests/test_editor_flow.py", "passed": 14, "duration_seconds": 0.50},
+      {"file": "tests/test_corrective_jobs_details.py", "passed": 17, "duration_seconds": 8.67},
+      {"file": "tests/test_wx_terminal_webview.py", "passed": 29, "duration_seconds": 24.14}
+    ]
+  },
+  "notes": [
+    "Earlier attempts to validate the guard were run while a second full release suite ran concurrently in another worktree; those runs produced native access violations at different points with and without the guard and were discarded. The final authoritative run above was executed on a quiet machine.",
+    "tests/conftest.py had no ownership guard at the governance baseline; the guard is the only product-behavior change in test infrastructure."
+  ]
+}
