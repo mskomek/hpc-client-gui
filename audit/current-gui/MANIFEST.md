@@ -1,4 +1,6 @@
-# Current GUI Manifest — Human Readable (3a72940)
+# Historical GUI Manifest — Human Readable (3a72940)
+
+This screenshot set records the application at commit `3a7294079b992d3ddcabc349bbeadf6988312b64`. It is archived visual evidence and does not describe the current checkout.
 
 **Commit:** `3a7294079b992d3ddcabc349bbeadf6988312b64` (product source) / same for capture  
 **Branch:** `develop`  

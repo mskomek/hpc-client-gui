@@ -1,4 +1,8 @@
+import pytest
+
 from hpc_gui.services.pawsey_quota import parse_pawsey_account_balance
+
+pytestmark = pytest.mark.contract
 
 
 def test_pawsey_account_balance_parser_reads_software_usage_and_files():

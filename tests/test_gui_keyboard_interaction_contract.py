@@ -1,5 +1,6 @@
 from pathlib import Path
 import re
+import pytest
 
 from PySide6.QtCore import Qt
 
@@ -22,6 +23,9 @@ class _KeyEvent:
         return self._modifiers
 
 
+@pytest.mark.unit
+@pytest.mark.qt
+@pytest.mark.semantic
 def test_terminal_control_and_navigation_sequences_are_stable():
     ctrl = Qt.KeyboardModifier.ControlModifier
     assert LoginWidget._terminal_key_sequence(None, _KeyEvent(Qt.Key.Key_C, "c", ctrl)) == "\x03"
@@ -29,6 +33,7 @@ def test_terminal_control_and_navigation_sequences_are_stable():
     assert LoginWidget._terminal_key_sequence(None, _KeyEvent(Qt.Key.Key_Delete, "")) == "\x1b[3~"
 
 
+@pytest.mark.audit
 def test_keyboard_contract_ids_are_unique_and_map_to_baseline():
     root = Path(__file__).parents[1]
     contract = (root / "docs" / "v2" / "GUI_KEYBOARD_INTERACTION_CONTRACT.md").read_text(encoding="utf-8")

@@ -2,6 +2,8 @@ import pytest
 
 from hpc_gui.services.file_context_actions import context_selection, visible_actions
 
+pytestmark = [pytest.mark.unit, pytest.mark.semantic]
+
 
 def test_context_click_on_unselected_item_becomes_effective_target():
     selection = context_selection("b.txt", False, ("a.txt",), (False,))
@@ -57,5 +59,5 @@ def test_local_policy_exact_matrix(name, selection, expected):
         ("mixed", context_selection("/d", True, ("/a", "/d"), (False, True)), {"download", "upload", "delete", "copy", "move", "paste", "copy_path", "refresh"}),
     ],
 )
-def test_remote_policy_exact_matrix(name, selection, expected):
+def test_remote_candidate_policy_exact_matrix(name, selection, expected):
     assert set(visible_actions(selection, remote=True)) == expected, name

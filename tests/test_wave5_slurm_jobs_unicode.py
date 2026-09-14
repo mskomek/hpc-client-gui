@@ -10,6 +10,8 @@ from __future__ import annotations
 import pathlib
 import sys
 
+import pytest
+
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 if str(ROOT / "src") not in sys.path:
     sys.path.insert(0, str(ROOT / "src"))
@@ -21,6 +23,8 @@ if str(ROOT / "src") not in sys.path:
 
 class TestScriptPaths:
     """Verify Unicode script paths work through the pipeline."""
+
+    pytestmark = [pytest.mark.unit, pytest.mark.semantic, pytest.mark.regression]
 
     def test_parse_job_paths_unicode(self):
         """parse_job_paths should handle Unicode paths."""
@@ -60,6 +64,8 @@ class TestScriptPaths:
 
 class TestSlurmDirectives:
     """Verify Slurm directives handle Unicode correctly."""
+
+    pytestmark = [pytest.mark.unit, pytest.mark.semantic, pytest.mark.regression]
 
     def test_set_directive_unicode_value(self):
         """set_directive should preserve Unicode values."""
@@ -108,6 +114,8 @@ class TestSlurmDirectives:
 class TestSlurmModels:
     """Verify Slurm model parsing handles Unicode."""
 
+    pytestmark = [pytest.mark.unit, pytest.mark.semantic, pytest.mark.regression]
+
     def test_parse_squeue_unicode_name(self):
         """parse_squeue should handle Unicode job names."""
         from hpc_gui.services.slurm_models import parse_squeue
@@ -144,6 +152,7 @@ class TestSlurmModels:
 class TestSSHRSlurmBackend:
     """Verify SSH Slurm backend quotes Unicode paths correctly."""
 
+    @pytest.mark.audit
     def test_sbatch_quotes_unicode_path(self):
         """sbatch should safely quote Unicode script paths."""
 
@@ -153,6 +162,9 @@ class TestSSHRSlurmBackend:
         source = inspect.getsource(module)
         assert "shlex.quote" in source or "shlex" in source
 
+    @pytest.mark.unit
+    @pytest.mark.semantic
+    @pytest.mark.regression
     def test_command_template_quotes_values(self):
         """Command templates should quote all values."""
         import shlex
@@ -172,6 +184,8 @@ class TestSSHRSlurmBackend:
 
 class TestJobNames:
     """Verify job names handle Unicode correctly."""
+
+    pytestmark = [pytest.mark.unit, pytest.mark.semantic, pytest.mark.regression]
 
     def test_parse_job_name_unicode(self):
         """parse_job_name should extract Unicode job names."""
@@ -206,6 +220,8 @@ class TestJobNames:
 class TestOutputErrorParsing:
     """Verify output/error path parsing handles Unicode."""
 
+    pytestmark = [pytest.mark.unit, pytest.mark.semantic, pytest.mark.regression]
+
     def test_parse_output_pattern_unicode(self):
         """parse_output_error should handle Unicode patterns."""
         from hpc_gui.services.slurm_script_parser import parse_output_error
@@ -231,6 +247,8 @@ class TestOutputErrorParsing:
 
 class TestScriptContent:
     """Verify generated/handled script content preserves Unicode."""
+
+    pytestmark = [pytest.mark.unit, pytest.mark.semantic]
 
     def test_script_with_unicode_comments(self):
         """Script with Unicode comments should be preserved."""
@@ -260,6 +278,8 @@ class TestScriptContent:
 class TestJobTrackingController:
     """Verify job tracking controller handles Unicode metadata."""
 
+    pytestmark = [pytest.mark.contract, pytest.mark.semantic]
+
     def test_output_metadata_unicode(self):
         """OutputMetadata should preserve Unicode paths."""
         from hpc_gui.services.job_tracking_controller import OutputMetadata
@@ -281,6 +301,9 @@ class TestJobTrackingController:
 class TestIntegration:
     """Integration tests for Unicode in Slurm/jobs workflow."""
 
+    @pytest.mark.integration
+    @pytest.mark.semantic
+    @pytest.mark.regression
     def test_full_script_workflow(self):
         """Full workflow: create, edit, parse, resolve with Unicode."""
         from hpc_gui.services.slurm_directives import set_directive, get_directive
@@ -322,6 +345,9 @@ class TestIntegration:
         assert "İş başladı" in echo_line
         assert "日本語" in echo_line
 
+    @pytest.mark.unit
+    @pytest.mark.semantic
+    @pytest.mark.regression
     def test_unicode_scontrol_parsing(self):
         """Unicode scontrol output should be parsed correctly."""
         from hpc_gui.services.slurm_models import parse_scontrol

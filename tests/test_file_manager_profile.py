@@ -10,6 +10,8 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
+import pytest
+
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
@@ -23,6 +25,7 @@ from hpc_gui.config.file_manager_profile import (  # noqa: E402
 from hpc_gui.config.models import SSHConfig  # noqa: E402
 
 
+@pytest.mark.contract
 class NormalizeFileManagerSettingsTests(unittest.TestCase):
     def _expected_defaults(self) -> dict:
         return normalize_file_manager_settings(None)
@@ -58,6 +61,7 @@ class NormalizeFileManagerSettingsTests(unittest.TestCase):
         self.assertEqual(patched["sync_root"], "/remote")
 
 
+@pytest.mark.contract
 class SSHConfigRuntimeTests(unittest.TestCase):
     def test_default_runtime_config_has_empty_file_manager_settings(self) -> None:
         cfg = SSHConfig()
@@ -72,6 +76,8 @@ class SSHConfigRuntimeTests(unittest.TestCase):
         self.assertEqual(cfg.file_manager_settings["local_start_dir"], "/tmp/work")
 
 
+@pytest.mark.gui
+@pytest.mark.qt
 class FtpWidgetLocalStartTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:

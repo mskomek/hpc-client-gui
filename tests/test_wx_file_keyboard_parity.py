@@ -3,6 +3,7 @@ import time
 from pathlib import Path
 import pytest
 wx = pytest.importorskip("wx")
+pytestmark = [pytest.mark.gui, pytest.mark.wx]
 from hpc_gui.wx_local_files import show_local_files
 from hpc_gui.wx_remote_files import WxRemoteDirectoryModel
 from hpc_gui.wx_remote_files_view import show_remote_files
@@ -22,7 +23,9 @@ def _pump(app, pred, timeout=2):
 @pytest.fixture
 def wx_app():
     load_language("en")
-    app=wx.App(False)
+    app = wx.App.Get()
+    if app is None:
+        app = wx.App(False)
     yield app
     for w in wx.GetTopLevelWindows():
         if w: w.Destroy()

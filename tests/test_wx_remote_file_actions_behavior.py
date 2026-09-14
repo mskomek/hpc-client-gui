@@ -5,6 +5,8 @@ import pytest
 
 wx = pytest.importorskip("wx")
 
+pytestmark = [pytest.mark.gui, pytest.mark.wx]
+
 from mock_hpc_files import MockRemoteFilesBackend
 from support.wx_clipboard import read_clipboard_text
 from hpc_gui.services.file_clipboard import get_file_clipboard
@@ -27,12 +29,22 @@ def _pump(app, predicate, timeout=2):
 @pytest.fixture
 def wx_app():
     load_language("en")
-    app = wx.App(False)
+    app = wx.App.Get()
+    if app is None:
+        app = wx.App(False)
     yield app
-    for window in wx.GetTopLevelWindows():
-        if window:
+    for window in list(wx.GetTopLevelWindows()):
+        if window and not window.IsBeingDeleted():
+            window.Close()
+    for _ in range(3):
+        app.ProcessPendingEvents()
+        wx.Yield()
+    for window in list(wx.GetTopLevelWindows()):
+        if window and not window.IsBeingDeleted():
             window.Destroy()
     app.ProcessPendingEvents()
+    wx.Yield()
+    assert not wx.GetTopLevelWindows(), "wx top-level windows survived fixture teardown"
     app.Destroy()
 
 
@@ -43,6 +55,7 @@ def _browser(app, backend, model=None, operation=None):
     return frame
 
 
+@pytest.mark.concurrency
 def test_remote_move_and_upload_actions_reach_backend_off_gui_thread(wx_app, monkeypatch):
     backend = MockRemoteFilesBackend()
     frame = _browser(wx_app, backend)

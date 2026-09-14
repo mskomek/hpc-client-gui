@@ -12,6 +12,8 @@ import pathlib
 import sys
 import unicodedata
 
+import pytest
+
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 if str(ROOT / "src") not in sys.path:
     sys.path.insert(0, str(ROOT / "src"))
@@ -95,14 +97,17 @@ def _norm(p: str) -> str:
 class TestRepositoryBaseline:
     """Verify repository state is real and current."""
 
+    @pytest.mark.audit
     def test_src_directory_exists(self):
         src = ROOT / "src" / "hpc_gui"
         assert src.is_dir(), f"Source directory not found: {src}"
 
+    @pytest.mark.audit
     def test_pyproject_exists(self):
         pyproject = ROOT / "pyproject.toml"
         assert pyproject.is_file(), "pyproject.toml not found"
 
+    @pytest.mark.contract
     def test_qt_is_default_runtime(self):
         runtime_file = ROOT / "src" / "hpc_gui" / "runtime.py"
         assert runtime_file.is_file(), "runtime.py not found"
@@ -111,11 +116,13 @@ class TestRepositoryBaseline:
             "Qt is no longer the default GUI runtime"
         )
 
+    @pytest.mark.contract
     def test_pyside6_in_dependencies(self):
         pyproject = ROOT / "pyproject.toml"
         content = pyproject.read_text(encoding="utf-8")
         assert "PySide6" in content, "PySide6 not in dependencies"
 
+    @pytest.mark.audit
     def test_i18n_files_exist(self):
         i18n_dir = ROOT / "src" / "hpc_gui" / "i18n"
         assert i18n_dir.is_dir(), "i18n directory not found"
@@ -132,6 +139,9 @@ class TestRepositoryBaseline:
 class TestMojibakeReproduction:
     """Reproduce the known ★ Favorites mojibake bug."""
 
+    @pytest.mark.contract
+    @pytest.mark.semantic
+    @pytest.mark.regression
     def test_en_favorites_mojibake_exists(self):
         """The mojibake 'â˜… Favorites' has been fixed to '★ Favorites'."""
         en_path = ROOT / "src" / "hpc_gui" / "i18n" / "en.json"
@@ -142,6 +152,9 @@ class TestMojibakeReproduction:
             f"Expected '★ Favorites', got: {fav!r}"
         )
 
+    @pytest.mark.contract
+    @pytest.mark.semantic
+    @pytest.mark.regression
     def test_tr_favorites_mojibake_exists(self):
         """The mojibake 'â˜… Favoriler' has been fixed to '★ Favoriler'."""
         tr_path = ROOT / "src" / "hpc_gui" / "i18n" / "tr.json"
@@ -152,6 +165,9 @@ class TestMojibakeReproduction:
             f"Expected '★ Favoriler', got: {fav!r}"
         )
 
+    @pytest.mark.unit
+    @pytest.mark.semantic
+    @pytest.mark.regression
     def test_mojibake_is_corrupted_star(self):
         """Demonstrate the corruption chain: ★ → UTF-8 bytes → Windows-1252 decode → re-encode.
 
@@ -169,6 +185,9 @@ class TestMojibakeReproduction:
             f"Mojibake reconstruction failed: {mojibake!r}"
         )
 
+    @pytest.mark.unit
+    @pytest.mark.semantic
+    @pytest.mark.regression
     def test_star_roundtrip(self):
         """★ should survive UTF-8 encode/decode roundtrip."""
         star = CORRECT_STAR
@@ -176,11 +195,17 @@ class TestMojibakeReproduction:
         decoded = encoded.decode("utf-8")
         assert decoded == star
 
+    @pytest.mark.unit
+    @pytest.mark.semantic
+    @pytest.mark.regression
     def test_turkish_chars_roundtrip(self):
         """Turkish characters should survive UTF-8 roundtrip."""
         chars = "çğıöşüİÇĞİÖŞÜ"
         assert chars.encode("utf-8").decode("utf-8") == chars
 
+    @pytest.mark.unit
+    @pytest.mark.semantic
+    @pytest.mark.regression
     def test_japanese_chars_roundtrip(self):
         """Japanese characters should survive UTF-8 roundtrip."""
         chars = "日本語研究計算"
@@ -193,6 +218,8 @@ class TestMojibakeReproduction:
 
 class TestGoldenFixtures:
     """Verify golden fixtures are well-formed and reusable."""
+
+    pytestmark = [pytest.mark.unit, pytest.mark.semantic]
 
     def test_turkish_dirs_valid(self):
         for d in TURKISH_DIRS:
@@ -233,6 +260,7 @@ class TestGoldenFixtures:
         for f in TURKISH_CASING:
             assert isinstance(f, str) and len(f) > 0
 
+    @pytest.mark.regression
     def test_nfc_nfd_distinct(self):
         """NFC and NFD forms of 'café' should be distinct byte sequences."""
         nfc = unicodedata.normalize("NFC", "café")
@@ -240,6 +268,7 @@ class TestGoldenFixtures:
         assert nfc != nfd, "NFC and NFD should differ for café"
         assert nfc.encode("utf-8") != nfd.encode("utf-8")
 
+    @pytest.mark.regression
     def test_all_fixtures_survive_json_roundtrip(self):
         """All fixture strings must survive JSON serialization roundtrip."""
         fixtures = (
@@ -261,6 +290,8 @@ class TestGoldenFixtures:
 
 class TestGoldenFixturesFilesystem:
     """Verify golden fixture names survive filesystem create/read/delete."""
+
+    pytestmark = [pytest.mark.contract, pytest.mark.semantic, pytest.mark.regression]
 
     def test_turkish_file_create_and_read(self, tmp_path):
         for name in TURKISH_FILES:
@@ -321,6 +352,9 @@ class TestGoldenFixturesFilesystem:
 class TestEncodingBoundaryInventory:
     """Verify encoding boundary patterns exist and are cataloged."""
 
+    @pytest.mark.contract
+    @pytest.mark.semantic
+    @pytest.mark.regression
     def test_i18n_json_is_utf8(self):
         """Both i18n JSON files should be valid UTF-8."""
         for lang in ("en", "tr"):
@@ -329,6 +363,7 @@ class TestEncodingBoundaryInventory:
             data = json.loads(content)
             assert isinstance(data, dict), f"{lang}.json did not parse as dict"
 
+    @pytest.mark.audit
     def test_config_storage_uses_utf8(self):
         """config/storage.py should use encoding='utf-8' for JSON."""
         storage = ROOT / "src" / "hpc_gui" / "config" / "storage.py"
@@ -336,6 +371,7 @@ class TestEncodingBoundaryInventory:
             content = storage.read_text(encoding="utf-8")
             assert 'encoding="utf-8"' in content or "encoding='utf-8'" in content
 
+    @pytest.mark.audit
     def test_ssh_client_decodes_output(self):
         """ssh/client.py should decode SSH output."""
         client = ROOT / "src" / "hpc_gui" / "ssh" / "client.py"
@@ -343,6 +379,7 @@ class TestEncodingBoundaryInventory:
             content = client.read_text(encoding="utf-8")
             assert "decode(" in content, "SSH client should decode bytes"
 
+    @pytest.mark.audit
     def test_files_ssh_uses_utf8(self):
         """services/files_ssh.py should use UTF-8 for SFTP text operations."""
         ssh_files = ROOT / "src" / "hpc_gui" / "services" / "files_ssh.py"
@@ -350,6 +387,7 @@ class TestEncodingBoundaryInventory:
             content = ssh_files.read_text(encoding="utf-8")
             assert "utf-8" in content.lower(), "SFTP backend should use UTF-8"
 
+    @pytest.mark.audit
     def test_shell_session_uses_utf8_decoder(self):
         """ssh/shell_session.py should use UTF-8 incremental decoder."""
         shell = ROOT / "src" / "hpc_gui" / "ssh" / "shell_session.py"
@@ -357,6 +395,7 @@ class TestEncodingBoundaryInventory:
             content = shell.read_text(encoding="utf-8")
             assert "utf-8" in content.lower(), "Shell session should use UTF-8"
 
+    @pytest.mark.audit
     def test_ensure_ascii_false_in_config(self):
         """Config JSON serialization should use ensure_ascii=False."""
         storage = ROOT / "src" / "hpc_gui" / "config" / "storage.py"
@@ -366,6 +405,7 @@ class TestEncodingBoundaryInventory:
                 "Config storage should use ensure_ascii=False for Turkish support"
             )
 
+    @pytest.mark.audit
     def test_errors_replace_in_ssh(self):
         """SSH output decoding should use errors='replace'."""
         client = ROOT / "src" / "hpc_gui" / "ssh" / "client.py"
@@ -373,6 +413,7 @@ class TestEncodingBoundaryInventory:
             content = client.read_text(encoding="utf-8")
             assert 'errors="replace"' in content or "errors='replace'" in content
 
+    @pytest.mark.audit
     def test_errors_ignore_in_process_registry(self):
         """process_registry.py should not use errors='ignore' on JSON."""
         reg = ROOT / "src" / "hpc_gui" / "services" / "process_registry.py"
@@ -390,6 +431,8 @@ class TestEncodingBoundaryInventory:
 
 class TestI18nCompleteness:
     """Verify translation key sets are synchronized."""
+
+    pytestmark = [pytest.mark.contract, pytest.mark.semantic, pytest.mark.regression]
 
     def test_en_and_tr_have_same_keys(self):
         en_path = ROOT / "src" / "hpc_gui" / "i18n" / "en.json"
@@ -434,6 +477,8 @@ class TestI18nCompleteness:
 class TestPluginProviderUnicode:
     """Verify plugin/provider data can handle Unicode."""
 
+    pytestmark = pytest.mark.audit
+
     def test_plugin_models_exist(self):
         models = ROOT / "src" / "hpc_gui" / "plugins" / "models.py"
         assert models.is_file(), "Plugin models not found"
@@ -454,6 +499,9 @@ class TestPluginProviderUnicode:
 class TestRiskClassification:
     """Document and verify risk classification of findings."""
 
+    @pytest.mark.contract
+    @pytest.mark.semantic
+    @pytest.mark.regression
     def test_p0_mojibake_documented(self):
         """The mojibake bug was P0 — now fixed at the source."""
         en_path = ROOT / "src" / "hpc_gui" / "i18n" / "en.json"
@@ -463,6 +511,7 @@ class TestRiskClassification:
         # P0: Was visible mojibake, now fixed
         assert fav == "★ Favorites", "Mojibake should be fixed"
 
+    @pytest.mark.audit
     def test_p0_ssh_decode_risks_documented(self):
         """SSH decode with errors='replace' is P0 — data loss boundary."""
         client = ROOT / "src" / "hpc_gui" / "ssh" / "client.py"
@@ -470,11 +519,3 @@ class TestRiskClassification:
             content = client.read_text(encoding="utf-8")
             # Document the finding
             assert "decode(" in content
-
-    def test_p0_sftp_roundtrip_risks_documented(self):
-        """SFTP read/write roundtrip can corrupt non-UTF-8 files — P0."""
-        ssh_files = ROOT / "src" / "hpc_gui" / "services" / "files_ssh.py"
-        if ssh_files.is_file():
-            content = ssh_files.read_text(encoding="utf-8")
-            # Document the finding
-            assert "utf-8" in content.lower()

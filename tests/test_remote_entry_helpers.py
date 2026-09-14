@@ -6,6 +6,8 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
+
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -13,6 +15,8 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from hpc_gui.services.files_base import RemoteEntry  # noqa: E402
 from hpc_gui.ui.models import remote_entry_helpers as helpers  # noqa: E402
+
+pytestmark = [pytest.mark.unit, pytest.mark.semantic]
 
 
 class FmtSizeTests(unittest.TestCase):

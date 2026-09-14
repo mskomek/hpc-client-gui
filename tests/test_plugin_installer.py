@@ -139,6 +139,7 @@ def make_fetcher(responses: dict[str, bytes]):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.contract
 def test_parse_registry_accepts_valid_payload():
     registry = parse_registry(json.dumps(VALID_REGISTRY).encode())
     assert registry["schema_version"] == 1
@@ -153,6 +154,7 @@ def test_parse_registry_accepts_valid_payload():
         {"plugins": [{"id": "x"}]},
     ],
 )
+@pytest.mark.contract
 def test_parse_registry_rejects_invalid_payloads(mutation):
     bad = json.loads(json.dumps(VALID_REGISTRY))
     bad.update(mutation)
@@ -160,12 +162,14 @@ def test_parse_registry_rejects_invalid_payloads(mutation):
         parse_registry(json.dumps(bad).encode())
 
 
+@pytest.mark.contract
 def test_registry_size_limit_constant():
     assert REGISTRY_MAX_BYTES == 1024 * 1024
     assert MANIFEST_MAX_BYTES == 256 * 1024
     assert FILE_MAX_BYTES == 5 * 1024 * 1024
 
 
+@pytest.mark.integration
 def test_network_fetch_then_cache_fallback(tmp_path: Path):
     payload = json.dumps(VALID_REGISTRY).encode()
     fetcher = make_fetcher({OFFICIAL_REGISTRY_URL: payload})
@@ -186,6 +190,7 @@ def test_network_fetch_then_cache_fallback(tmp_path: Path):
         fetch_registry_with_cache(root=tmp_path / "empty", fetcher=broken_fetch)
 
 
+@pytest.mark.integration
 def test_corrupt_cache_is_not_trusted(tmp_path: Path):
     (Path(tmp_path) / "cache").mkdir(parents=True)
     (Path(tmp_path) / "cache" / "registry.json").write_text("{corrupt", encoding="utf-8")
@@ -197,6 +202,7 @@ def test_corrupt_cache_is_not_trusted(tmp_path: Path):
         fetch_registry_with_cache(root=tmp_path, fetcher=broken_fetch)
 
 
+@pytest.mark.unit
 def test_find_registry_entry_latest_and_specific():
     manifest, manifest_bytes, _ = make_plugin_files()
     entry_v1 = make_registry_entry(manifest, manifest_bytes)
@@ -232,18 +238,21 @@ def fluent_registry(*entries) -> dict:
     return {**VALID_REGISTRY, "plugins": list(entries)}
 
 
+@pytest.mark.unit
 def test_latest_resolution_ascending_order():
     registry = fluent_registry(make_fluent_entry("0.1.0"), make_fluent_entry("0.2.0"))
     found = find_registry_entry(registry, "org.hpcclient.fluent")
     assert found["version"] == "0.2.0"
 
 
+@pytest.mark.unit
 def test_latest_resolution_reversed_order():
     registry = fluent_registry(make_fluent_entry("0.2.0"), make_fluent_entry("0.1.0"))
     found = find_registry_entry(registry, "org.hpcclient.fluent")
     assert found["version"] == "0.2.0"
 
 
+@pytest.mark.unit
 def test_latest_resolution_with_app_version_guarantee():
     registry = fluent_registry(make_fluent_entry("0.1.0"), make_fluent_entry("0.2.0"))
     found = find_registry_entry(
@@ -252,6 +261,7 @@ def test_latest_resolution_with_app_version_guarantee():
     assert found["version"] == "0.2.0"
 
 
+@pytest.mark.unit
 def test_explicit_version_selection():
     registry = fluent_registry(make_fluent_entry("0.1.0"), make_fluent_entry("0.2.0"))
     found = find_registry_entry(registry, "org.hpcclient.fluent", version="0.1.0")
@@ -260,6 +270,7 @@ def test_explicit_version_selection():
         find_registry_entry(registry, "org.hpcclient.fluent", version="9.9.9")
 
 
+@pytest.mark.unit
 def test_incompatible_newer_version_is_skipped():
     registry = fluent_registry(
         make_fluent_entry("0.1.0", ">=1.4.0"),
@@ -275,12 +286,14 @@ def test_incompatible_newer_version_is_skipped():
     assert explicit["version"] == "0.2.0"
 
 
+@pytest.mark.unit
 def test_no_compatible_version_raises():
     registry = fluent_registry(make_fluent_entry("0.2.0", ">=99.0.0"))
     with pytest.raises(RegistryError):
         find_registry_entry(registry, "org.hpcclient.fluent", app_version="1.4.0")
 
 
+@pytest.mark.unit
 def test_prerelease_does_not_shadow_stable_release():
     registry = fluent_registry(
         make_fluent_entry("0.2.0"), make_fluent_entry("0.3.0rc1")
@@ -289,6 +302,7 @@ def test_prerelease_does_not_shadow_stable_release():
     assert found["version"] == "0.2.0"
 
 
+@pytest.mark.unit
 def test_post_release_sorts_after_release():
     registry = fluent_registry(
         make_fluent_entry("0.2.0"), make_fluent_entry("0.2.0.post1")
@@ -297,6 +311,7 @@ def test_post_release_sorts_after_release():
     assert found["version"] == "0.2.0.post1"
 
 
+@pytest.mark.unit
 def test_duplicate_id_version_records_rejected():
     registry = fluent_registry(
         make_fluent_entry("0.1.0"), make_fluent_entry("0.1.0")
@@ -306,6 +321,7 @@ def test_duplicate_id_version_records_rejected():
 
 
 @pytest.mark.parametrize("bad", ["not-a-version", "", "1.0.0.0.0-final.broken"])
+@pytest.mark.contract
 def test_invalid_versions_fail_validation(bad):
     registry = fluent_registry(make_fluent_entry(bad))
     with pytest.raises(RegistryError):
@@ -330,11 +346,13 @@ def test_invalid_versions_fail_validation(bad):
         "a//b.json",
     ],
 )
+@pytest.mark.contract
 def test_unsafe_payload_paths_rejected(bad):
     with pytest.raises(DownloadError):
         validate_payload_rel_path(bad)
 
 
+@pytest.mark.contract
 def test_payload_url_requires_official_https_base():
     url = payload_url("plugins/truba/1.0.0/cluster-profile.json")
     assert url.startswith("https://raw.githubusercontent.com/")
@@ -342,6 +360,7 @@ def test_payload_url_requires_official_https_base():
         payload_url("x.json", raw_base="http://insecure.example/")
 
 
+@pytest.mark.unit
 def test_download_exact_file_verifies_hash_and_size(tmp_path: Path):
     payload = b'{"hello": "world"}'
     fetcher = make_fetcher(
@@ -375,6 +394,7 @@ def test_download_exact_file_verifies_hash_and_size(tmp_path: Path):
         )
 
 
+@pytest.mark.unit
 def test_download_missing_file_raises(tmp_path: Path):
     with pytest.raises(DownloadError):
         download_exact_file(
@@ -399,6 +419,7 @@ def full_install_responses(**overrides) -> dict[str, bytes]:
     }, manifest, manifest_bytes
 
 
+@pytest.mark.integration
 def test_valid_install_end_to_end(tmp_path: Path):
     responses, manifest, manifest_bytes = full_install_responses()
     entry = make_registry_entry(manifest, manifest_bytes)
@@ -420,6 +441,7 @@ def test_valid_install_end_to_end(tmp_path: Path):
     assert loaded.plugins[0].cluster_profiles[0].profile_id == "truba"
 
 
+@pytest.mark.integration
 def test_only_declared_files_are_downloaded(tmp_path: Path):
     responses, manifest, manifest_bytes = full_install_responses()
 
@@ -433,6 +455,7 @@ def test_only_declared_files_are_downloaded(tmp_path: Path):
     )
 
 
+@pytest.mark.integration
 def test_bad_manifest_hash_aborts_install(tmp_path: Path):
     responses, manifest, _ = full_install_responses()
     entry = make_registry_entry(manifest, b"{}" * 10)
@@ -446,6 +469,7 @@ def test_bad_manifest_hash_aborts_install(tmp_path: Path):
     assert read_active_versions(tmp_path) == {}
 
 
+@pytest.mark.integration
 def test_bad_file_hash_aborts_and_cleans_staging(tmp_path: Path):
     responses, manifest, manifest_bytes = full_install_responses()
     base = f"plugins/{manifest['id'].split('.')[-1]}/{manifest['version']}"
@@ -461,6 +485,7 @@ def test_bad_file_hash_aborts_and_cleans_staging(tmp_path: Path):
     assert read_active_versions(tmp_path) == {}
 
 
+@pytest.mark.integration
 def test_missing_file_aborts_install(tmp_path: Path):
     responses, manifest, manifest_bytes = full_install_responses()
     base = f"plugins/{manifest['id'].split('.')[-1]}/{manifest['version']}"
@@ -474,6 +499,7 @@ def test_missing_file_aborts_install(tmp_path: Path):
     assert read_active_versions(tmp_path) == {}
 
 
+@pytest.mark.contract
 def test_incompatible_app_rejected_before_download(tmp_path: Path):
     responses, manifest, manifest_bytes = full_install_responses(requires_app=">=99.0.0")
 
@@ -487,6 +513,7 @@ def test_incompatible_app_rejected_before_download(tmp_path: Path):
         )
 
 
+@pytest.mark.contract
 def test_unsupported_plugin_api_rejected(tmp_path: Path):
     responses, manifest, manifest_bytes = full_install_responses()
     manifest_dict = json.loads(responses[OFFICIAL_RAW_BASE + "plugins/truba/1.0.0/manifest.json"])
@@ -502,6 +529,7 @@ def test_unsupported_plugin_api_rejected(tmp_path: Path):
         )
 
 
+@pytest.mark.integration
 def test_second_install_of_same_version_is_idempotent(tmp_path: Path):
     responses, manifest, manifest_bytes = full_install_responses()
     entry = make_registry_entry(manifest, manifest_bytes)
@@ -518,6 +546,7 @@ def test_second_install_of_same_version_is_idempotent(tmp_path: Path):
     assert read_active_versions(tmp_path) == {"org.hpcclient.truba": "1.0.0"}
 
 
+@pytest.mark.integration
 def test_interrupted_install_keeps_previous_state(tmp_path: Path):
     responses, manifest, manifest_bytes = full_install_responses()
     entry = make_registry_entry(manifest, manifest_bytes)
@@ -555,6 +584,7 @@ def _assert_no_staging_or_part_leftovers(tmp_path: Path) -> None:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.integration
 def test_conflicting_same_version_payload_is_rejected(tmp_path: Path):
     responses, manifest, manifest_bytes = full_install_responses()
     entry = make_registry_entry(manifest, manifest_bytes)
@@ -594,6 +624,7 @@ def test_conflicting_same_version_payload_is_rejected(tmp_path: Path):
     _assert_no_staging_or_part_leftovers(tmp_path)
 
 
+@pytest.mark.integration
 def test_corrupted_existing_version_is_not_overwritten(tmp_path: Path):
     responses, manifest, manifest_bytes = full_install_responses()
     entry = make_registry_entry(manifest, manifest_bytes)
@@ -610,6 +641,7 @@ def test_corrupted_existing_version_is_not_overwritten(tmp_path: Path):
     _assert_no_staging_or_part_leftovers(tmp_path)
 
 
+@pytest.mark.integration
 def test_idempotent_reinstall_leaves_directory_untouched(tmp_path: Path):
     responses, manifest, manifest_bytes = full_install_responses()
     entry = make_registry_entry(manifest, manifest_bytes)
@@ -636,6 +668,7 @@ def test_idempotent_reinstall_leaves_directory_untouched(tmp_path: Path):
     _assert_no_staging_or_part_leftovers(tmp_path)
 
 
+@pytest.mark.integration
 def test_update_from_older_to_newer_version(tmp_path: Path):
     responses_old, manifest_old, bytes_old = full_install_responses(version="0.1.0")
     entry_old = make_registry_entry(manifest_old, bytes_old)
@@ -660,6 +693,7 @@ def test_update_from_older_to_newer_version(tmp_path: Path):
     ]
 
 
+@pytest.mark.integration
 def test_failed_update_preserves_previous_version(tmp_path: Path):
     responses_old, manifest_old, bytes_old = full_install_responses(version="0.1.0")
     entry_old = make_registry_entry(manifest_old, bytes_old)
@@ -683,6 +717,7 @@ def test_failed_update_preserves_previous_version(tmp_path: Path):
     _assert_no_staging_or_part_leftovers(tmp_path)
 
 
+@pytest.mark.integration
 def test_failure_before_activation_preserves_previous_active(tmp_path: Path, monkeypatch):
     import hpc_gui.plugins.installer as installer_module
 
@@ -715,6 +750,7 @@ def test_failure_before_activation_preserves_previous_active(tmp_path: Path, mon
     _assert_no_staging_or_part_leftovers(tmp_path)
 
 
+@pytest.mark.integration
 def test_post_activation_loader_failure_rolls_back(tmp_path: Path, monkeypatch):
     import hpc_gui.plugins.loader as loader_module
 
@@ -754,6 +790,7 @@ def test_post_activation_loader_failure_rolls_back(tmp_path: Path, monkeypatch):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.integration
 def test_schema3_floor_below_schema_capability_is_rejected(tmp_path: Path):
     """A schema-3 payload declaring >=1.5.8 (the released schema-1/2 app) is a
     false compatibility claim and must fail closed before activation."""
@@ -772,6 +809,7 @@ def test_schema3_floor_below_schema_capability_is_rejected(tmp_path: Path):
     _assert_no_staging_or_part_leftovers(tmp_path)
 
 
+@pytest.mark.integration
 def test_schema3_floor_capable_app_installs(tmp_path: Path):
     """The first schema-3 capable application installs the same payload when
     the declared floor is honest."""
@@ -792,6 +830,7 @@ def test_schema3_floor_capable_app_installs(tmp_path: Path):
     assert [p.manifest.version for p in loaded.plugins] == ["1.0.0"]
 
 
+@pytest.mark.integration
 def test_unsupported_future_schema_error_names_supported_schemas(tmp_path: Path):
     """Unknown future schemas stay rejected with an actionable message and the
     strict validation detail is preserved."""

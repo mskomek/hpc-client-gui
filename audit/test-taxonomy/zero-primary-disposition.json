@@ -1,0 +1,87 @@
+{
+  "collection_total": 2656,
+  "dispositions": [
+    {
+      "action": "KEEP_EXCEPTION",
+      "baseline_class": "ARCHIVED_BASELINE_FAILURE",
+      "baseline_comparison_required": true,
+      "category": "KNOWN_BASELINE_FAILURE",
+      "deletion_allowed": false,
+      "final_status": "CONFIRMED_ARCHIVED_BASELINE_FAILURE",
+      "nodeid": "tests/test_macos_ci.py::test_macos_ci_matrix_covers_both_native_architectures",
+      "owner_packet": "A/M",
+      "reason": "workflow file missing at frozen baseline",
+      "rewrite_required": false,
+      "source_file": "tests/test_macos_ci.py"
+    },
+    {
+      "action": "KEEP_EXCEPTION",
+      "baseline_class": "ARCHIVED_BASELINE_FAILURE",
+      "baseline_comparison_required": true,
+      "category": "KNOWN_BASELINE_FAILURE",
+      "deletion_allowed": false,
+      "final_status": "CONFIRMED_ARCHIVED_BASELINE_FAILURE",
+      "nodeid": "tests/test_macos_ci.py::test_macos_ci_has_no_release_upload_or_signing_step",
+      "owner_packet": "A/M",
+      "reason": "workflow file missing at frozen baseline",
+      "rewrite_required": false,
+      "source_file": "tests/test_macos_ci.py"
+    },
+    {
+      "action": "KEEP_EXCEPTION",
+      "baseline_class": "ARCHIVED_BASELINE_FAILURE",
+      "baseline_comparison_required": true,
+      "category": "KNOWN_BASELINE_FAILURE",
+      "deletion_allowed": false,
+      "final_status": "CONFIRMED_ARCHIVED_BASELINE_FAILURE",
+      "nodeid": "tests/test_macos_release_workflow.py::test_release_preflight_shares_the_ci_test_suite",
+      "owner_packet": "A/M",
+      "reason": "workflow file missing at frozen baseline",
+      "rewrite_required": false,
+      "source_file": "tests/test_macos_release_workflow.py"
+    },
+    {
+      "action": "KEEP_EXCEPTION",
+      "baseline_class": "ARCHIVED_BASELINE_FAILURE",
+      "baseline_comparison_required": true,
+      "category": "KNOWN_BASELINE_FAILURE",
+      "deletion_allowed": false,
+      "final_status": "CONFIRMED_ARCHIVED_BASELINE_FAILURE",
+      "nodeid": "tests/test_workflow_action_pins.py::test_every_workflow_exists",
+      "owner_packet": "A/M",
+      "reason": "test expects ci.yml and release.yml; only release.yml exists",
+      "rewrite_required": false,
+      "source_file": "tests/test_workflow_action_pins.py"
+    },
+    {
+      "action": "KEEP_EXCEPTION",
+      "baseline_class": "ARCHIVED_BASELINE_FAILURE",
+      "baseline_comparison_required": true,
+      "category": "KNOWN_BASELINE_FAILURE",
+      "deletion_allowed": false,
+      "final_status": "CONFIRMED_ARCHIVED_BASELINE_FAILURE",
+      "nodeid": "tests/test_wx_packaged_smoke.py::test_packaged_wx_smoke_gate_reports_critical_stages",
+      "owner_packet": "A/M",
+      "reason": "test expects PASS while smoke reports missing artifact and FAIL",
+      "rewrite_required": false,
+      "source_file": "tests/test_wx_packaged_smoke.py"
+    },
+    {
+      "action": "KEEP_EXCEPTION",
+      "baseline_class": "SUPPLEMENTAL_BASELINE_FAILURE",
+      "baseline_comparison_required": true,
+      "category": "KNOWN_BASELINE_FAILURE",
+      "deletion_allowed": false,
+      "final_status": "CONFIRMED_SUPPLEMENTAL_BASELINE_FAILURE",
+      "nodeid": "tests/test_wx_shell_p0_stress.py::test_wx_shell_p0_stress_real_wx_paths",
+      "owner_packet": "M",
+      "reason": "The frozen baseline reproduces KeyError: 'update' before the stress assertions; it is supplemental to Packet A's seven archived failures.",
+      "rewrite_required": false,
+      "source_file": "tests/test_wx_shell_p0_stress.py"
+    }
+  ],
+  "frozen_baseline_sha": "12ce79935bf076e1062c57dc7dbd148bad2bfae1",
+  "schema_version": 1,
+  "taxonomy_snapshot_sha": "6cad198dca6c0f69bc8196f5030a7aebcba9d696",
+  "zero_primary_count": 6
+}

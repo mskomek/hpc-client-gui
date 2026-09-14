@@ -1,7 +1,11 @@
 from threading import Event, Thread
 from types import SimpleNamespace
 
+import pytest
+
 from hpc_gui.services.output_follower import OutputFollower, OutputFollowerState
+
+pytestmark = pytest.mark.unit
 
 
 def _follower(path="/work/output.log", max_lines=5):
@@ -82,6 +86,7 @@ def test_follower_reassignment_resets_source_and_offset():
     assert follower.state.offset == len("B\n")
 
 
+@pytest.mark.concurrency
 def test_follower_reassignment_invalidates_inflight_old_read():
     started = Event()
     release = Event()

@@ -4,6 +4,8 @@ import pytest
 
 from hpc_gui.core import platform as app_platform
 
+pytestmark = pytest.mark.contract
+
 
 @pytest.mark.parametrize(
     ("platform_name", "expected"),

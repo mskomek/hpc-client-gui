@@ -1,10 +1,12 @@
 """Tests for wx update flow per spec 37 — real wx events, fixed changelog, real progress."""
 
 import time
+from threading import Event
 
 import pytest
 
 wx = pytest.importorskip("wx")
+pytestmark = [pytest.mark.gui, pytest.mark.wx]
 
 from hpc_gui.services.app_updater import UpdateRelease
 from hpc_gui.wx_updater_view import WxUpdateDialog, _format_bytes, show_update_available
@@ -73,7 +75,9 @@ def _reset_update_language():
 
 
 def test_update_available_shows_versions_and_download_size():
-    app = wx.App(False)
+    app = wx.App.Get()
+    if app is None:
+        app = wx.App(False)
     rel = _make_release()
     dlg = WxUpdateDialog(None, rel)
     # Check versions are visible
@@ -127,7 +131,9 @@ def test_update_release_notes_preserve_unicode():
 
 
 def test_update_changelog_is_fixed_height_scrollable_readonly():
-    app = wx.App(False)
+    app = wx.App.Get()
+    if app is None:
+        app = wx.App(False)
     long_body = "\n".join([f"- line {i} with some text that should wrap" for i in range(50)])
     rel = _make_release(body=long_body)
     dlg = WxUpdateDialog(None, rel)
@@ -156,7 +162,9 @@ def test_update_changelog_is_fixed_height_scrollable_readonly():
 
 
 def test_long_changelog_does_not_resize_dialog():
-    app = wx.App(False)
+    app = wx.App.Get()
+    if app is None:
+        app = wx.App(False)
     long_body = "\n".join([f"* line {i}" for i in range(200)])
     rel = _make_release(body=long_body)
     dlg = WxUpdateDialog(None, rel)
@@ -174,7 +182,9 @@ def test_long_changelog_does_not_resize_dialog():
 
 
 def test_update_available_download_button_starts_download(monkeypatch):
-    app = wx.App(False)
+    app = wx.App.Get()
+    if app is None:
+        app = wx.App(False)
     rel = _make_release()
     dlg = WxUpdateDialog(None, rel)
     # Find Download button
@@ -235,7 +245,9 @@ def test_update_available_download_button_starts_download(monkeypatch):
 
 
 def test_update_download_progress_shows_real_bytes_and_percentage():
-    app = wx.App(False)
+    app = wx.App.Get()
+    if app is None:
+        app = wx.App(False)
     rel = _make_release(size=184*1024*1024)
     dlg = WxUpdateDialog(None, rel)
     dlg._build_for_state("DOWNLOADING")
@@ -263,7 +275,9 @@ def test_update_download_progress_shows_real_bytes_and_percentage():
 
 
 def test_update_unknown_total_uses_indeterminate_progress():
-    app = wx.App(False)
+    app = wx.App.Get()
+    if app is None:
+        app = wx.App(False)
     rel = _make_release(size=None)
     # Force total None
     dlg = WxUpdateDialog(None, rel)
@@ -281,7 +295,9 @@ def test_update_unknown_total_uses_indeterminate_progress():
 
 
 def test_update_cancel_reaches_downloader():
-    app = wx.App(False)
+    app = wx.App.Get()
+    if app is None:
+        app = wx.App(False)
     rel = _make_release()
     dlg = WxUpdateDialog(None, rel)
     dlg._build_for_state("DOWNLOADING")
@@ -312,25 +328,63 @@ def test_update_cancel_reaches_downloader():
     app.Destroy()
 
 
-def test_update_cancel_prevents_install():
-    app = wx.App(False)
+@pytest.mark.concurrency
+def test_update_cancel_prevents_install(monkeypatch, tmp_path):
+    app = wx.App.Get()
+    if app is None:
+        app = wx.App(False)
     rel = _make_release()
     dlg = WxUpdateDialog(None, rel)
-    dlg._build_for_state("DOWNLOADING")
-    dlg._cancelled = True
-    # Simulate worker noticing cancel and not proceeding to verifying
-    # The worker should check _cancelled and return without building READY
-    # We can test that _cancelled prevents transition to READY
-    dlg._build_for_state("DOWNLOAD_CANCELLED")
-    assert dlg.state == "DOWNLOAD_CANCELLED"
-    # Ensure no zip path is set
-    assert not hasattr(dlg, "_zip_path") or dlg._zip_path is None or True
-    dlg.Destroy()
-    app.Destroy()
+    downloader_entered = Event()
+    continue_download = Event()
+    cancel_observed = Event()
+
+    def fake_download(_release, progress_cb=None, cancelled=None):
+        downloader_entered.set()
+        assert continue_download.wait(2), "test did not release downloader"
+        if cancelled():
+            cancel_observed.set()
+            raise RuntimeError("cancelled")
+        return tmp_path / "unexpected.zip"
+
+    monkeypatch.setattr("hpc_gui.services.app_updater.download_and_verify_release", fake_download)
+    try:
+        dlg._start_download()
+        assert downloader_entered.wait(2), "download worker did not start"
+        cancel = dlg._cancel_btn
+        cancel.GetEventHandler().ProcessEvent(wx.CommandEvent(wx.wxEVT_BUTTON, cancel.GetId()))
+        assert dlg._cancelled is True
+        continue_download.set()
+        dlg._worker.join(2)
+        assert not dlg._worker.is_alive(), "download worker did not stop"
+
+        deadline = time.monotonic() + 2
+        while dlg.state != "DOWNLOAD_CANCELLED" and time.monotonic() < deadline:
+            app.ProcessPendingEvents()
+            wx.Yield()
+            time.sleep(0.01)
+
+        assert cancel_observed.is_set()
+        assert dlg.state == "DOWNLOAD_CANCELLED"
+        assert not hasattr(dlg, "_zip_path")
+        labels = [
+            dlg.footer_sizer.GetItem(i).GetWindow().GetLabel()
+            for i in range(dlg.footer_sizer.GetItemCount())
+            if dlg.footer_sizer.GetItem(i).GetWindow()
+        ]
+        assert not any("Install" in label for label in labels)
+    finally:
+        continue_download.set()
+        if hasattr(dlg, "_worker"):
+            dlg._worker.join(2)
+        dlg.Destroy()
+        app.Destroy()
 
 
 def test_update_verification_state_visible():
-    app = wx.App(False)
+    app = wx.App.Get()
+    if app is None:
+        app = wx.App(False)
     rel = _make_release()
     dlg = WxUpdateDialog(None, rel)
     dlg._build_for_state("VERIFYING")
@@ -350,7 +404,9 @@ def test_update_verification_state_visible():
 
 
 def test_update_ready_requires_install_confirmation():
-    app = wx.App(False)
+    app = wx.App.Get()
+    if app is None:
+        app = wx.App(False)
     rel = _make_release()
     dlg = WxUpdateDialog(None, rel)
     dlg._build_for_state("READY_TO_INSTALL")
@@ -383,7 +439,9 @@ def test_install_without_verified_artifact_stays_failed():
 
 
 def test_update_install_opens_installation_splash():
-    app = wx.App(False)
+    app = wx.App.Get()
+    if app is None:
+        app = wx.App(False)
     rel = _make_release()
     dlg = WxUpdateDialog(None, rel)
     dlg._build_for_state("READY_TO_INSTALL")
@@ -432,7 +490,9 @@ def test_update_install_opens_installation_splash():
 
 
 def test_installation_progress_uses_real_backend_progress():
-    app = wx.App(False)
+    app = wx.App.Get()
+    if app is None:
+        app = wx.App(False)
     from hpc_gui.wx_updater_view import show_installing_splash
     dlg = show_installing_splash(None, "1.9.0")
     assert dlg._wx_install_controls["gauge"] is not None
@@ -447,7 +507,9 @@ def test_installation_progress_uses_real_backend_progress():
 
 
 def test_installation_current_item_visible_when_available():
-    app = wx.App(False)
+    app = wx.App.Get()
+    if app is None:
+        app = wx.App(False)
     from hpc_gui.wx_updater_view import show_installing_splash
     dlg = show_installing_splash(None, "1.9.0")
     dlg._wx_install_update(45, "Copying application files...", "hpc_gui/wx_updater_view.py")
@@ -459,52 +521,95 @@ def test_installation_current_item_visible_when_available():
     app.Destroy()
 
 
+@pytest.mark.concurrency
+@pytest.mark.resource
 def test_update_close_in_flight_safe(monkeypatch):
-    app = wx.App(False)
+    app = wx.App.Get()
+    if app is None:
+        app = wx.App(False)
     rel = _make_release()
     dlg = WxUpdateDialog(None, rel)
     dlg._build_for_state("DOWNLOADING")
-    # Simulate close during download — should not crash, should ask confirmation
-    # We can test that _on_close handles it without exception
-    # Mock MessageBox to return NO (Keep Downloading)
-    orig_mb = wx.MessageBox
-    wx.MessageBox = lambda *a, **kw: wx.NO
-    evt = wx.CloseEvent(wx.wxEVT_CLOSE_WINDOW)
-    # Need to set canVeto
+    monkeypatch.setattr(wx, "MessageBox", lambda *args, **kwargs: wx.NO)
+
+    class CloseEvent:
+        vetoed = False
+        skipped = False
+
+        def Veto(self):
+            self.vetoed = True
+
+        def Skip(self):
+            self.skipped = True
+
+    evt = CloseEvent()
     try:
-        evt.CanVeto(True)
-    except Exception:
-        pass
-    dlg._on_close(evt)
-    # Should have vetoed and not closed
-    assert dlg.state == "DOWNLOADING"
-    wx.MessageBox = orig_mb
-    dlg.Destroy()
-    app.Destroy()
+        dlg._on_close(evt)
+        assert evt.vetoed is True
+        assert evt.skipped is False
+        assert dlg.state == "DOWNLOADING"
+        assert dlg._cancelled is False
+        assert dlg._closed is False
+    finally:
+        dlg.Destroy()
+        app.Destroy()
 
 
-def test_update_late_callback_after_close_safe():
-    app = wx.App(False)
+@pytest.mark.concurrency
+@pytest.mark.resource
+def test_update_late_callback_after_close_safe(monkeypatch, tmp_path):
+    import hpc_gui.services.app_updater as app_updater
+
+    app = wx.App.Get()
+    if app is None:
+        app = wx.App(False)
     rel = _make_release()
     dlg = WxUpdateDialog(None, rel)
-    dlg._build_for_state("DOWNLOADING")
-    # Simulate download worker calling back after dialog closed
-    dlg._closed = True
-    # Try to update progress after close — should not crash and not update UI
+    progress_queued = Event()
+    allow_worker_to_finish = Event()
+    queued_callbacks = []
+    before = None
+
+    def queue_call_after(callback, *args):
+        queued_callbacks.append((callback, args))
+
+    def fake_download(_release, progress_cb=None, cancelled=None):
+        progress_cb(100, "downloading", 100, 100)
+        progress_queued.set()
+        assert allow_worker_to_finish.wait(2), "test did not release downloader"
+        return tmp_path / "verified.zip"
+
+    monkeypatch.setattr(dlg.wx, "CallAfter", queue_call_after)
+    monkeypatch.setattr(app_updater, "download_and_verify_release", fake_download)
     try:
-        dlg._downloaded = 100
-        if dlg._byte_label:
-            dlg._byte_label.SetLabel("should not happen")
-        # The real worker would check _closed before CallAfter, so no UI write
-        assert dlg._closed is True
-    except Exception as e:
-        assert False, f"late callback crashed: {e}"
-    dlg.Destroy()
-    app.Destroy()
+        dlg._start_download()
+        before = dlg._byte_label.GetLabel()
+        assert progress_queued.wait(2), "download progress was not queued"
+        dlg._closed = True
+        allow_worker_to_finish.set()
+        dlg._worker.join(2)
+        assert not dlg._worker.is_alive(), "download worker did not stop"
+
+        assert queued_callbacks
+        for callback, args in queued_callbacks:
+            callback(*args)
+
+        assert dlg._downloaded == 0
+        assert dlg._byte_label.GetLabel() == before
+        assert dlg.state == "DOWNLOADING"
+        assert not hasattr(dlg, "_zip_path")
+    finally:
+        allow_worker_to_finish.set()
+        if hasattr(dlg, "_worker"):
+            dlg._worker.join(2)
+        dlg.Destroy()
+        app.Destroy()
 
 
 def test_mandatory_update_has_no_later_button():
-    app = wx.App(False)
+    app = wx.App.Get()
+    if app is None:
+        app = wx.App(False)
     rel = _make_release()
     dlg = WxUpdateDialog(None, rel, mandatory=True)
     dlg._build_for_state("UPDATE_AVAILABLE")
@@ -529,7 +634,9 @@ def test_mandatory_update_has_no_later_button():
 
 
 def test_mandatory_update_close_does_not_enter_main_app():
-    app = wx.App(False)
+    app = wx.App.Get()
+    if app is None:
+        app = wx.App(False)
     rel = _make_release()
     dlg = WxUpdateDialog(None, rel, mandatory=True)
     dlg._build_for_state("UPDATE_AVAILABLE")
@@ -543,7 +650,9 @@ def test_mandatory_update_close_does_not_enter_main_app():
 
 
 def test_update_runtime_language_switch_en_tr():
-    app = wx.App(False)
+    app = wx.App.Get()
+    if app is None:
+        app = wx.App(False)
     from hpc_gui.core.i18n import load_language, set_language
     load_language("en")
     rel = _make_release()

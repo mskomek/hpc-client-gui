@@ -1,5 +1,9 @@
+import pytest
+
 from hpc_gui.config.models import SSHConfig
 from hpc_gui.config.storage import coerce_profile_ssh_timeout, coerce_profile_transfer_parallelism
+
+pytestmark = pytest.mark.unit
 
 
 def test_profile_transfer_settings_are_bounded() -> None:

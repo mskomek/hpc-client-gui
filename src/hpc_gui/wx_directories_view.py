@@ -328,7 +328,16 @@ def _build_directories(parent, *, session_state=None, workspace: WxDirectoriesWo
         btn_new_slurm.SetLabel(t("dirs.new_slurm_edit"))
 
     subscribe_language_change(refresh_labels)
-    host.bind_host_close(lambda event: (unsubscribe_language_change(refresh_labels), event.Skip()))
+
+    def close(event):
+        unsubscribe_language_change(refresh_labels)
+        for remote_panel in (scratch_panel, home_panel):
+            close_remote = getattr(remote_panel, "_wx_host_close", None)
+            if callable(close_remote):
+                close_remote()
+        event.Skip()
+
+    host.bind_host_close(close)
 
     host._wx_dirs_controls = {
         "splitter": splitter,

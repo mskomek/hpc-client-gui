@@ -16,6 +16,8 @@ from hpc_gui.services.files_base import RESUME_DEST_LARGER
 from hpc_gui.services.files_ftp import FTPFilesBackend
 from hpc_gui.services.files_ssh import SSHFilesBackend
 
+pytestmark = [pytest.mark.unit, pytest.mark.semantic]
+
 REMOTE_DIR = "/remote"
 REMOTE_FILE = "/remote/dst.bin"
 SOURCE = b"ABCDEF"

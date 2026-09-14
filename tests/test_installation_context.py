@@ -1,7 +1,11 @@
 import plistlib
 from pathlib import Path
 
+import pytest
+
 from hpc_gui.services import installation_context
+
+pytestmark = pytest.mark.integration
 
 
 def _platform(monkeypatch, os_name: str, executable: Path) -> None:

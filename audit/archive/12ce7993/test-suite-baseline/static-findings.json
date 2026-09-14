@@ -1,0 +1,876 @@
+{
+  "test_file_count": 268,
+  "test_function_count": 2575,
+  "test_calling_test": [],
+  "exact_body_duplicate_groups": [
+    [
+      {
+        "nodeid": "tests/test_wave0_unicode_baseline.py::TestEncodingBoundaryInventory.test_errors_replace_in_ssh",
+        "line": 369,
+        "source": "def test_errors_replace_in_ssh(self):\n        \"\"\"SSH output decoding should use errors='replace'.\"\"\"\n        client = ROOT / \"src\" / \"hpc_gui\" / \"ssh\" / \"client.py\"\n        if client.is_file():\n            content = client.read_text(encoding=\"utf-8\")\n            assert 'errors=\"replace\"' in content or \"errors='replace'\" in content"
+      },
+      {
+        "nodeid": "tests/test_wave1_unicode_core_policy.py::TestEncodingBoundaryJustification.test_ssh_client_decode_justified",
+        "line": 144,
+        "source": "def test_ssh_client_decode_justified(self):\n        \"\"\"SSH client decode should use errors='replace' for remote output.\"\"\"\n        client = ROOT / \"src\" / \"hpc_gui\" / \"ssh\" / \"client.py\"\n        if client.is_file():\n            content = client.read_text(encoding=\"utf-8\")\n            # SSH output may come from remote servers with various encodings\n            # errors='replace' is justified for display purposes\n            assert 'errors=\"replace\"' in content or \"errors='replace'\" in content"
+      }
+    ],
+    [
+      {
+        "nodeid": "tests/test_wave0_unicode_baseline.py::TestRiskClassification.test_p0_sftp_roundtrip_risks_documented",
+        "line": 474,
+        "source": "def test_p0_sftp_roundtrip_risks_documented(self):\n        \"\"\"SFTP read/write roundtrip can corrupt non-UTF-8 files \u2014 P0.\"\"\"\n        ssh_files = ROOT / \"src\" / \"hpc_gui\" / \"services\" / \"files_ssh.py\"\n        if ssh_files.is_file():\n            content = ssh_files.read_text(encoding=\"utf-8\")\n            # Document the finding\n            assert \"utf-8\" in content.lower()"
+      },
+      {
+        "nodeid": "tests/test_wave1_unicode_core_policy.py::TestEncodingBoundaryJustification.test_files_ssh_utf8_justified",
+        "line": 153,
+        "source": "def test_files_ssh_utf8_justified(self):\n        \"\"\"SFTP backend should use UTF-8 for text operations.\"\"\"\n        ssh_files = ROOT / \"src\" / \"hpc_gui\" / \"services\" / \"files_ssh.py\"\n        if ssh_files.is_file():\n            content = ssh_files.read_text(encoding=\"utf-8\")\n            # SFTP text operations should use UTF-8\n            assert \"utf-8\" in content.lower()"
+      }
+    ],
+    [
+      {
+        "nodeid": "tests/test_wave78_jobs_details.py::test_cluster_servers_visible_without_selected_job_when_provider_supports",
+        "line": 143,
+        "source": "def test_cluster_servers_visible_without_selected_job_when_provider_supports():\n    app, frame, panel = _build_panel(\n        has_status_capability=lambda: True,\n        refresh_lssrv=lambda _job_id: (\n            \"Slurm partitions state\\n\"\n            \"Partition CPUs Wait. Jobs Wait. Jobs Nodes Max. Job Time Min. Nodes Max. Nodes Core RAM (MB)\\n\"\n            \"Name (Free) (Total) (Resources) (Total) (Total) (D-HH:MM:SS) per Job per Job per Node per Core\\n\"\n            \"short 8 32 0 1 2 1-00:00:00 1 2 16 4096\"\n        ),\n    )\n    try:\n        ctrls = panel._wx_jobs_controls\n        panel._wx_jobs_refresh_jobs()\n        for _ in range(30):\n            wx.Yield()\n            if ctrls[\"jobs\"].GetItemCount() >= 1:\n                break\n            wx.MilliSleep(10)\n        _select_job(panel, 0)\n        for _ in range(50):\n            wx.Yield()\n            if ctrls[\"cluster_status_text\"].GetLabel() == t(\"jobs_outputs.cluster_status_loaded\"):\n                break\n            wx.MilliSleep(10)\n        assert ctrls[\"cluster_status_text\"].GetLabel() == t(\"jobs_outputs.cluster_status_loaded\")\n    finally:\n        _close(frame)"
+      },
+      {
+        "nodeid": "tests/test_wave78_jobs_details.py::test_raw_server_status_opens",
+        "line": 247,
+        "source": "def test_raw_server_status_opens():\n    app, frame, panel = _build_panel(\n        has_status_capability=lambda: True,\n        refresh_lssrv=lambda _job_id: (\n            \"Slurm partitions state\\n\"\n            \"Partition CPUs Wait. Jobs Wait. Jobs Nodes Max. Job Time Min. Nodes Max. Nodes Core RAM (MB)\\n\"\n            \"Name (Free) (Total) (Resources) (Total) (Total) (D-HH:MM:SS) per Job per Job per Node per Core\\n\"\n            \"short 8 32 0 1 2 1-00:00:00 1 2 16 4096\"\n        ),\n    )\n    try:\n        ctrls = panel._wx_jobs_controls\n        panel._wx_jobs_refresh_jobs()\n        for _ in range(30):\n            wx.Yield()\n            if ctrls[\"jobs\"].GetItemCount() >= 1:\n                break\n            wx.MilliSleep(10)\n        _select_job(panel, 0)\n        for _ in range(50):\n            wx.Yield()\n            if ctrls[\"cluster_status_text\"].GetLabel() == t(\"jobs_outputs.cluster_status_loaded\"):\n                break\n            wx.MilliSleep(10)\n        assert ctrls[\"cluster_status_text\"].GetLabel() == t(\"jobs_outputs.cluster_status_loaded\")\n    finally:\n        _close(frame)"
+      }
+    ],
+    [
+      {
+        "nodeid": "tests/test_wave79_audit.py::TestSchemaV4Audit.test_v4_valid",
+        "line": 262,
+        "source": "def test_v4_valid(self):\n        p = {\"schema_version\": 4, \"profile_id\": \"t\", \"name\": \"T\", \"scheduler\": \"slurm\"}\n        assert validate_cluster_profile_dict(p) == []"
+      },
+      {
+        "nodeid": "tests/test_wave79_audit.py::TestSchemaV4Audit.test_v4_optional_sections_ok",
+        "line": 308,
+        "source": "def test_v4_optional_sections_ok(self):\n        p = {\"schema_version\": 4, \"profile_id\": \"t\", \"name\": \"T\", \"scheduler\": \"slurm\"}\n        assert validate_cluster_profile_dict(p) == []"
+      }
+    ],
+    [
+      {
+        "nodeid": "tests/test_wave80_files_outputs.py::TestFilesBehavior.test_context_menu_labels_localized",
+        "line": 200,
+        "source": "def test_context_menu_labels_localized(self):\n        load_language(\"en\")\n        assert t(\"dirs.download\") == \"Download\"\n        assert t(\"dirs.upload\") == \"Upload\"\n        assert t(\"dirs.delete\") == \"Delete\"\n        assert t(\"dirs.copy\") == \"Copy\"\n        assert t(\"dirs.paste\") == \"Paste\"\n        assert t(\"dirs.rename\") == \"Rename\"\n        load_language(\"tr\")\n        assert t(\"dirs.download\") == \"\u0130ndir\"\n        assert t(\"dirs.delete\") == \"Sil\""
+      },
+      {
+        "nodeid": "tests/test_wave80_files_outputs.py::TestWave80Audit.test_files_context_menu_localized",
+        "line": 451,
+        "source": "def test_files_context_menu_localized(self):\n        \"\"\"Section 19: Context menu labels localized.\"\"\"\n        load_language(\"en\")\n        assert t(\"dirs.download\") == \"Download\"\n        assert t(\"dirs.upload\") == \"Upload\"\n        assert t(\"dirs.delete\") == \"Delete\"\n        assert t(\"dirs.copy\") == \"Copy\"\n        assert t(\"dirs.paste\") == \"Paste\"\n        assert t(\"dirs.rename\") == \"Rename\"\n        load_language(\"tr\")\n        assert t(\"dirs.download\") == \"\u0130ndir\"\n        assert t(\"dirs.delete\") == \"Sil\""
+      }
+    ],
+    [
+      {
+        "nodeid": "tests/test_wave80_files_outputs.py::TestOutputsBehavior.test_standard_output_localized",
+        "line": 143,
+        "source": "def test_standard_output_localized(self):\n        load_language(\"en\")\n        assert t(\"jobs_outputs.standard_output\") == \"Standard Output\"\n        assert t(\"jobs_outputs.standard_error\") == \"Standard Error\"\n        load_language(\"tr\")\n        so = t(\"jobs_outputs.standard_output\")\n        assert \"\u00c7\u0131kt\u0131\" in so or \"Standart\" in so\n        se = t(\"jobs_outputs.standard_error\")\n        assert \"Hata\" in se or \"Standart\" in se"
+      },
+      {
+        "nodeid": "tests/test_wave80_files_outputs.py::TestWave80Audit.test_outputs_standard_output_error_localized",
+        "line": 345,
+        "source": "def test_outputs_standard_output_error_localized(self):\n        \"\"\"Section 9: Legacy Slurm labels localized.\"\"\"\n        load_language(\"en\")\n        assert t(\"jobs_outputs.standard_output\") == \"Standard Output\"\n        assert t(\"jobs_outputs.standard_error\") == \"Standard Error\"\n        load_language(\"tr\")\n        so = t(\"jobs_outputs.standard_output\")\n        assert \"\u00c7\u0131kt\u0131\" in so or \"Standart\" in so\n        se = t(\"jobs_outputs.standard_error\")\n        assert \"Hata\" in se or \"Standart\" in se"
+      }
+    ],
+    [
+      {
+        "nodeid": "tests/test_wx_connection_71_2.py::test_typed_password_precedence",
+        "line": 503,
+        "source": "def test_typed_password_precedence(monkeypatch):\n    \"\"\"Typed password > stored secret for Test Cluster and explicit connect.\"\"\"\n    from hpc_gui.core.crypto_master import encrypt_with_master\n    from hpc_gui.services.connection_profile_service import resolve_password_for_connect\n\n    enc = encrypt_with_master(\"master123\", \"old-secret\")\n    profile = {\n        \"name\": \"p\",\n        \"host\": \"h.example\",\n        \"port\": 22,\n        \"username\": \"user\",\n        \"password\": \"new-temporary-secret\",\n        \"save_password\": True,\n        \"password_enc\": enc.token,\n        \"password_salt\": enc.salt,\n    }\n    # Typed takes precedence\n    res = resolve_password_for_connect(\n        profile, typed_password=\"new-temporary-secret\", ask_master=lambda c: \"master123\"\n    )\n    assert res == \"new-temporary-secret\""
+      },
+      {
+        "nodeid": "tests/test_wx_connection_71_3.py::test_typed_password_precedence",
+        "line": 649,
+        "source": "def test_typed_password_precedence(monkeypatch):\n    \"\"\"Typed password > stored secret for Test Cluster and explicit connect.\"\"\"\n    from hpc_gui.core.crypto_master import encrypt_with_master\n    from hpc_gui.services.connection_profile_service import resolve_password_for_connect\n\n    enc = encrypt_with_master(\"master123\", \"old-secret\")\n    profile = {\n        \"name\": \"p\",\n        \"host\": \"h.example\",\n        \"port\": 22,\n        \"username\": \"user\",\n        \"password\": \"new-temporary-secret\",\n        \"save_password\": True,\n        \"password_enc\": enc.token,\n        \"password_salt\": enc.salt,\n    }\n    res = resolve_password_for_connect(\n        profile, typed_password=\"new-temporary-secret\", ask_master=lambda c: \"master123\"\n    )\n    assert res == \"new-temporary-secret\""
+      }
+    ]
+  ],
+  "source_text_candidates": [
+    {
+      "nodeid": "tests/test_about_dialog.py::test_about_shows_version_and_no_network",
+      "line": 5,
+      "call": "pathlib.Path(\"src/hpc_gui/ui/dialogs/about_dialog.py\").read_text(encoding=\"utf-8\")"
+    },
+    {
+      "nodeid": "tests/test_app_updater.py::test_manual_update_check_shows_splash_before_worker_starts",
+      "line": 124,
+      "call": "inspect.getsource(MainWindow)"
+    },
+    {
+      "nodeid": "tests/test_app_updater.py::test_install_handoff_never_shows_complete_before_helper_starts",
+      "line": 158,
+      "call": "Path(\"src/hpc_gui/ui/main_window.py\").read_text(encoding=\"utf-8\")"
+    },
+    {
+      "nodeid": "tests/test_command_palette_regression.py::test_command_palette_not_wired_to_help",
+      "line": 5,
+      "call": "pathlib.Path(\"src/hpc_gui/ui/main_window.py\").read_text(encoding=\"utf-8\")"
+    },
+    {
+      "nodeid": "tests/test_connection_controller.py::test_secret_cleanup_and_no_qt_import",
+      "line": 33,
+      "call": "__import__(\"inspect\").getsource(ConnectionController)"
+    },
+    {
+      "nodeid": "tests/test_editor_controller.py::test_editor_models_have_no_qt_imports",
+      "line": 25,
+      "call": "__import__(\"inspect\").getsource(EditorController)"
+    },
+    {
+      "nodeid": "tests/test_hardening_additional.py::test_host_adapter_import_boundary",
+      "line": 131,
+      "call": "pathlib.Path(\"src/hpc_gui/services/plugin_menu_actions.py\").read_text(encoding=\"utf-8\")"
+    },
+    {
+      "nodeid": "tests/test_hardening_additional.py::test_host_adapter_import_boundary",
+      "line": 139,
+      "call": "pathlib.Path(\"src/hpc_gui/ui/plugin_menu_qt_host.py\").read_text(encoding=\"utf-8\")"
+    },
+    {
+      "nodeid": "tests/test_hardening_additional.py::test_host_adapter_import_boundary",
+      "line": 143,
+      "call": "pathlib.Path(\"src/hpc_gui/services/wx_plugin_menu_host.py\").read_text(encoding=\"utf-8\")"
+    },
+    {
+      "nodeid": "tests/test_hardening_additional.py::test_wx_dispatch_uses_host",
+      "line": 357,
+      "call": "pathlib.Path(\"src/hpc_gui/wx_shell.py\").read_text(encoding=\"utf-8\")"
+    },
+    {
+      "nodeid": "tests/test_hardening_additional.py::test_wx_submenu_disable_hide",
+      "line": 365,
+      "call": "pathlib.Path(\"src/hpc_gui/wx_shell.py\").read_text(encoding=\"utf-8\")"
+    },
+    {
+      "nodeid": "tests/test_hardening_additional.py::test_dynamic_separators_qt_and_wx",
+      "line": 375,
+      "call": "pathlib.Path(\"src/hpc_gui/ui/main_window.py\").read_text(encoding=\"utf-8\")"
+    },
+    {
+      "nodeid": "tests/test_hardening_additional.py::test_dynamic_separators_qt_and_wx",
+      "line": 376,
+      "call": "pathlib.Path(\"src/hpc_gui/wx_shell.py\").read_text(encoding=\"utf-8\")"
+    },
+    {
+      "nodeid": "tests/test_job_context.py::test_parser_never_executes_content",
+      "line": 182,
+      "call": "inspect.getsource(module)"
+    },
+    {
+      "nodeid": "tests/test_job_context.py::test_no_truba_constants_in_core_parser",
+      "line": 190,
+      "call": "inspect.getsource(module)"
+    },
+    {
+      "nodeid": "tests/test_job_tracking_controller.py::test_controller_has_no_qt_dependency",
+      "line": 22,
+      "call": "__import__(\"inspect\").getsource(JobTrackingController)"
+    },
+    {
+      "nodeid": "tests/test_lint_engine.py::test_engine_module_has_no_execution_primitives",
+      "line": 226,
+      "call": "inspect.getsource(engine_module)"
+    },
+    {
+      "nodeid": "tests/test_lumi_quota.py::test_lumi_quota_parser_reads_project_storage_and_file_limits",
+      "line": 7,
+      "call": "(Path(__file__).parent / \"fixtures/quota/lumi/quota.txt\").read_text()"
+    },
+    {
+      "nodeid": "tests/test_luna_fm_integration.py::TransferSourceOfTruthAndSecurityTests.test_no_auto_add_policy_anywhere_in_ssh_layer",
+      "line": 518,
+      "call": "source.read_text(encoding=\"utf-8\")"
+    },
+    {
+      "nodeid": "tests/test_macos_signing.py::test_signing_source_has_cleanup_and_no_secret_echo",
+      "line": 25,
+      "call": "Path(signing.__file__).read_text(encoding=\"utf-8\")"
+    },
+    {
+      "nodeid": "tests/test_menu_redesign.py::test_no_hardcoded_ansys_truba_ids",
+      "line": 91,
+      "call": "pathlib.Path(\"src/hpc_gui/services/plugin_menu_actions.py\").read_text(encoding=\"utf-8\")"
+    },
+    {
+      "nodeid": "tests/test_menu_redesign.py::test_no_hardcoded_ansys_truba_ids",
+      "line": 95,
+      "call": "pathlib.Path(\"src/hpc_gui/plugins/ui_contributions.py\").read_text(encoding=\"utf-8\")"
+    },
+    {
+      "nodeid": "tests/test_menu_redesign.py::test_plugin_manager_semantic_tabs",
+      "line": 100,
+      "call": "pathlib.Path(\"src/hpc_gui/ui/dialogs/plugin_manager_dialog.py\").read_text(encoding=\"utf-8\")"
+    },
+    {
+      "nodeid": "tests/test_menu_redesign.py::test_plugins_changed_emitted_all_paths",
+      "line": 113,
+      "call": "pathlib.Path(\"src/hpc_gui/ui/dialogs/plugin_manager_dialog.py\").read_text(encoding=\"utf-8\")"
+    },
+    {
+      "nodeid": "tests/test_menu_redesign.py::test_i18n_keys_exist",
+      "line": 130,
+      "call": "pathlib.Path(\"src/hpc_gui/i18n/en.json\").read_text(encoding=\"utf-8\")"
+    },
+    {
+      "nodeid": "tests/test_menu_redesign.py::test_i18n_keys_exist",
+      "line": 131,
+      "call": "pathlib.Path(\"src/hpc_gui/i18n/tr.json\").read_text(encoding=\"utf-8\")"
+    },
+    {
+      "nodeid": "tests/test_menu_redesign.py::test_about_dialog_properties",
+      "line": 147,
+      "call": "pathlib.Path(\"src/hpc_gui/ui/dialogs/about_dialog.py\").read_text(encoding=\"utf-8\")"
+    },
+    {
+      "nodeid": "tests/test_nersc_quota.py::test_nersc_json_parser_reads_space_and_inode_quota",
+      "line": 10,
+      "call": "(Path(__file__).parent / \"fixtures/quota/nersc/showquota.json\").read_text()"
+    },
+    {
+      "nodeid": "tests/test_plugin_core.py::test_loader_never_executes_payload",
+      "line": 326,
+      "call": "inspect.getsource(loader_module)"
+    },
+    {
+      "nodeid": "tests/test_presentation_models.py::test_boundary_source_has_no_toolkit_imports",
+      "line": 27,
+      "call": "open(\"src/hpc_gui/services/presentation_models.py\", encoding=\"utf-8\")"
+    },
+    {
+      "nodeid": "tests/test_sync_version.py::test_sync_version_updates_all_runtime_declarations",
+      "line": 22,
+      "call": "(tmp_path / \"src/hpc_gui/__init__.py\").read_text()"
+    },
+    {
+      "nodeid": "tests/test_sync_version.py::test_sync_version_updates_all_runtime_declarations",
+      "line": 23,
+      "call": "(tmp_path / \"src/hpc_gui/cli/main.py\").read_text()"
+    },
+    {
+      "nodeid": "tests/test_terminal_boundaries.py::TerminalBoundaryTests.test_hostile_remote_output_crosses_webchannel_as_data",
+      "line": 66,
+      "call": "(ROOT / \"src/hpc_gui/ui/widgets/terminal_widget.py\").read_text(encoding=\"utf-8\")"
+    },
+    {
+      "nodeid": "tests/test_version_consistency.py::test_repository_version_views_match",
+      "line": 22,
+      "call": "(ROOT / \"src/hpc_gui/docs/CHANGELOG.md\").read_text(encoding=\"utf-8\")"
+    },
+    {
+      "nodeid": "tests/test_wave3_remote_sftp_ssh.py::TestSSHCommandConstruction.test_ssh_backend_uses_shlex_quote",
+      "line": 92,
+      "call": "inspect.getsource(module)"
+    },
+    {
+      "nodeid": "tests/test_wave4_favorites_history_persistence.py::TestFavoritesRendering.test_en_favorites_label",
+      "line": 33,
+      "call": "(ROOT / \"src/hpc_gui/i18n/en.json\").read_text(encoding=\"utf-8\")"
+    },
+    {
+      "nodeid": "tests/test_wave4_favorites_history_persistence.py::TestFavoritesRendering.test_tr_favorites_label",
+      "line": 38,
+      "call": "(ROOT / \"src/hpc_gui/i18n/tr.json\").read_text(encoding=\"utf-8\")"
+    },
+    {
+      "nodeid": "tests/test_wave4_favorites_history_persistence.py::TestFavoritesRendering.test_favorites_survives_roundtrip",
+      "line": 44,
+      "call": "(ROOT / f\"src/hpc_gui/i18n/{lang}.json\").read_text(encoding=\"utf-8\")"
+    },
+    {
+      "nodeid": "tests/test_wave5_slurm_jobs_unicode.py::TestSSHRSlurmBackend.test_sbatch_quotes_unicode_path",
+      "line": 153,
+      "call": "inspect.getsource(module)"
+    },
+    {
+      "nodeid": "tests/test_wave79_audit.py::TestTrubaLssrvV1Audit.test_documented_box_table_fixture",
+      "line": 223,
+      "call": "(Path(__file__).parent / \"fixtures\" / \"lssrv\" / \"truba_partitions_state.txt\").read_text(encoding=\"utf-8\")"
+    },
+    {
+      "nodeid": "tests/test_wx_connection.py::test_unknown_profile_and_optional_wx_import",
+      "line": 19,
+      "call": "open(\"src/hpc_gui/wx_connection.py\", encoding=\"utf-8\")"
+    },
+    {
+      "nodeid": "tests/test_wx_connection.py::test_wx_connection_view_has_async_selection_and_double_click_connect",
+      "line": 24,
+      "call": "open(\"src/hpc_gui/wx_connection.py\", encoding=\"utf-8\")"
+    },
+    {
+      "nodeid": "tests/test_wx_connection.py::test_connection_view_uses_shared_ssh_session_adapters",
+      "line": 62,
+      "call": "open(\"src/hpc_gui/wx_connection.py\", encoding=\"utf-8\")"
+    },
+    {
+      "nodeid": "tests/test_wx_connection_hardening.py::test_password_dialogs_use_correct_api",
+      "line": 508,
+      "call": "open(\"src/hpc_gui/wx_connection.py\", encoding=\"utf-8\")"
+    },
+    {
+      "nodeid": "tests/test_wx_connection_hardening.py::test_provider_template_no_generic_branch",
+      "line": 922,
+      "call": "open(\"src/hpc_gui/wx_connection.py\", encoding=\"utf-8\")"
+    },
+    {
+      "nodeid": "tests/test_wx_connection_hardening.py::test_provider_template_no_generic_branch",
+      "line": 924,
+      "call": "open(\"src/hpc_gui/wx_connection_dialog.py\", encoding=\"utf-8\")"
+    },
+    {
+      "nodeid": "tests/test_wx_connection_profiles.py::test_wx_add_button_enabled_in_normal_startup",
+      "line": 58,
+      "call": "open(\"src/hpc_gui/wx_connection.py\", encoding=\"utf-8\")"
+    },
+    {
+      "nodeid": "tests/test_wx_connection_profiles.py::test_plugin_templates_without_hardcoded_names",
+      "line": 452,
+      "call": "open(\"src/hpc_gui/wx_connection_dialog.py\", encoding=\"utf-8\")"
+    },
+    {
+      "nodeid": "tests/test_wx_connection_profiles.py::test_plugin_templates_without_hardcoded_names",
+      "line": 456,
+      "call": "open(\"src/hpc_gui/wx_connection.py\", encoding=\"utf-8\")"
+    },
+    {
+      "nodeid": "tests/test_wx_directories.py::test_batch_submit_is_deterministic_and_model_has_no_qt",
+      "line": 24,
+      "call": "open(\"src/hpc_gui/wx_directories.py\", encoding=\"utf-8\")"
+    },
+    {
+      "nodeid": "tests/test_wx_editor.py::test_shortcut_routing_and_model_has_no_qt",
+      "line": 25,
+      "call": "open(\"src/hpc_gui/wx_editor.py\", encoding=\"utf-8\")"
+    },
+    {
+      "nodeid": "tests/test_wx_editor.py::test_wx_editor_view_has_async_remote_save_and_distinct_actions",
+      "line": 30,
+      "call": "open(\"src/hpc_gui/wx_editor_view.py\", encoding=\"utf-8\")"
+    },
+    {
+      "nodeid": "tests/test_wx_help.py::test_wx_help_model_is_toolkit_free",
+      "line": 16,
+      "call": "open(\"src/hpc_gui/wx_help.py\", encoding=\"utf-8\")"
+    },
+    {
+      "nodeid": "tests/test_wx_jobs.py::test_jobs_model_has_no_qt_import",
+      "line": 40,
+      "call": "open(\"src/hpc_gui/wx_jobs.py\", encoding=\"utf-8\")"
+    },
+    {
+      "nodeid": "tests/test_wx_jobs.py::test_job_output_view_has_live_timer_and_resize_hooks",
+      "line": 45,
+      "call": "open(\"src/hpc_gui/wx_jobs.py\", encoding=\"utf-8\")"
+    },
+    {
+      "nodeid": "tests/test_wx_local_files.py::test_local_browser_model_has_no_toolkit_import",
+      "line": 69,
+      "call": "open(\"src/hpc_gui/wx_local_files.py\", encoding=\"utf-8\")"
+    },
+    {
+      "nodeid": "tests/test_wx_local_files.py::test_local_view_exposes_keyboard_and_context_actions",
+      "line": 79,
+      "call": "open(\"src/hpc_gui/wx_local_files.py\", encoding=\"utf-8\")"
+    },
+    {
+      "nodeid": "tests/test_wx_logs.py::test_missing_log_is_empty_and_model_has_no_qt",
+      "line": 20,
+      "call": "open(\"src/hpc_gui/wx_logs.py\", encoding=\"utf-8\")"
+    },
+    {
+      "nodeid": "tests/test_wx_remote_files.py::test_remote_model_has_no_toolkit_import",
+      "line": 36,
+      "call": "open(\"src/hpc_gui/wx_remote_files.py\", encoding=\"utf-8\")"
+    },
+    {
+      "nodeid": "tests/test_wx_remote_files.py::test_remote_view_runs_operations_off_the_wx_thread",
+      "line": 41,
+      "call": "open(\"src/hpc_gui/wx_remote_files_view.py\", encoding=\"utf-8\")"
+    },
+    {
+      "nodeid": "tests/test_wx_shell.py::test_wx_shell_is_optional_and_has_migration_entrypoint",
+      "line": 10,
+      "call": "Path(\"src/hpc_gui/wx_shell.py\").read_text(encoding=\"utf-8\")"
+    },
+    {
+      "nodeid": "tests/test_wx_shell.py::test_wx_shell_is_optional_and_has_migration_entrypoint",
+      "line": 12,
+      "call": "Path(\"src/hpc_gui/__main__.py\").read_text(encoding=\"utf-8\")"
+    },
+    {
+      "nodeid": "tests/test_wx_shell.py::test_wx_shell_uses_shared_commands_and_responsive_start_size",
+      "line": 16,
+      "call": "Path(\"src/hpc_gui/wx_shell.py\").read_text(encoding=\"utf-8\")"
+    },
+    {
+      "nodeid": "tests/test_wx_shell.py::test_wx_shell_dispatches_core_views",
+      "line": 23,
+      "call": "Path(\"src/hpc_gui/wx_shell.py\").read_text(encoding=\"utf-8\")"
+    },
+    {
+      "nodeid": "tests/test_wx_terminal.py::test_wx_terminal_keeps_ssh_renderer_optional",
+      "line": 23,
+      "call": "Path(\"src/hpc_gui/wx_terminal.py\").read_text(encoding=\"utf-8\")"
+    },
+    {
+      "nodeid": "tests/test_wx_terminal.py::test_wx_terminal_keeps_ssh_renderer_optional",
+      "line": 24,
+      "call": "Path(\"src/hpc_gui/wx_terminal_webview.py\").read_text(encoding=\"utf-8\")"
+    },
+    {
+      "nodeid": "tests/test_wx_terminal_webview.py::test_wx_terminal_single_bridge_and_no_splitlines",
+      "line": 420,
+      "call": "pathlib.Path(\"src/hpc_gui/wx_terminal_webview.py\").read_text(encoding=\"utf-8\")"
+    },
+    {
+      "nodeid": "tests/test_wx_terminal_webview.py::test_wx_terminal_webview_composition_keeps_qt_out",
+      "line": 574,
+      "call": "pathlib.Path(\"src/hpc_gui/wx_terminal_webview.py\").read_text(encoding=\"utf-8\")"
+    },
+    {
+      "nodeid": "tests/test_wx_terminal_webview.py::test_wx_terminal_no_splitlines_in_hpc_write",
+      "line": 833,
+      "call": "pathlib.Path(\"src/hpc_gui/wx_terminal_webview.py\").read_text(encoding=\"utf-8\")"
+    }
+  ],
+  "file_exists_in_integration_named_tests": [
+    {
+      "nodeid": "tests/test_wave2_directories_local_files.py::TestIntegration.test_full_workflow_unicode",
+      "line": 595,
+      "call": "(tmp_path / \"\u0130\u015fler\" / \"\u00f6l\u00e7\u00fcm.txt\").exists()"
+    },
+    {
+      "nodeid": "tests/test_wave2_directories_local_files.py::TestIntegration.test_full_workflow_unicode",
+      "line": 600,
+      "call": "(tmp_path / \"\u7814\u7a76\" / \"\u00f6l\u00e7\u00fcm.txt\").exists()"
+    },
+    {
+      "nodeid": "tests/test_wave2_directories_local_files.py::TestIntegration.test_full_workflow_unicode",
+      "line": 604,
+      "call": "(tmp_path / \"\u0130\u015fler\" / \"\u00f6l\u00e7\u00fcm.txt\").exists()"
+    }
+  ],
+  "hasattr_asserts": [
+    {
+      "nodeid": "tests/test_corrective_jobs_details.py::TestRegression_FilesOutputs.test_files_tab_untouched",
+      "line": 421,
+      "assertion": "assert hasattr(ctrls[\"files_browser\"], \"_wx_remote_controls\")"
+    },
+    {
+      "nodeid": "tests/test_plugin_manager_ui.py::test_plugins_button_exists",
+      "line": 361,
+      "assertion": "assert hasattr(window, \"_plugins_menu\")"
+    },
+    {
+      "nodeid": "tests/test_plugin_manager_ui.py::test_plugins_button_exists",
+      "line": 363,
+      "assertion": "assert hasattr(window, \"_act_plugins_discover\")"
+    },
+    {
+      "nodeid": "tests/test_plugin_manager_ui.py::test_plugins_button_exists",
+      "line": 364,
+      "assertion": "assert hasattr(window, \"_act_plugins_installed\")"
+    },
+    {
+      "nodeid": "tests/test_wave3_remote_sftp_ssh.py::TestSFTPChannelManager.test_channel_manager_timeouts",
+      "line": 413,
+      "assertion": "assert hasattr(module, \"_SFTP_TRANSFER_TIMEOUT_SECONDS\")"
+    },
+    {
+      "nodeid": "tests/test_wave3_remote_sftp_ssh.py::TestSFTPChannelManager.test_channel_manager_timeouts",
+      "line": 414,
+      "assertion": "assert hasattr(module, \"_SFTP_LISTING_TIMEOUT_SECONDS\")"
+    },
+    {
+      "nodeid": "tests/test_wx_connection_profiles.py::test_wx_add_button_enabled_in_normal_startup",
+      "line": 53,
+      "assertion": "assert hasattr(panel_host, \"_wx_connection_add_button\")"
+    },
+    {
+      "nodeid": "tests/test_wx_files_sync_compare.py::test_wx_files_sync_browsing_local_to_remote",
+      "line": 60,
+      "assertion": "assert hasattr(files_page, \"_sync_state\")"
+    },
+    {
+      "nodeid": "tests/test_wx_terminal_behavioral.py::test_fallback_panel_sets_non_parity",
+      "line": 667,
+      "assertion": "assert hasattr(WxTerminalWebViewPanel, \"__init__\"), \"WxTerminalWebViewPanel must exist\""
+    },
+    {
+      "nodeid": "tests/test_wx_terminal_webview.py::test_wx_terminal_fallback_sets_non_parity",
+      "line": 1339,
+      "assertion": "assert hasattr(WxTerminalWebViewPanel, \"__init__\"), \"WxTerminalWebViewPanel must exist\""
+    }
+  ],
+  "fixed_sleep_calls": [
+    {
+      "nodeid": "tests/test_ftp_widget.py::FtpWidgetTests.test_priority_reorders_pending_execution_and_priority_column",
+      "line": 655,
+      "call": "time.sleep(0.01)"
+    },
+    {
+      "nodeid": "tests/test_ftp_widget.py::FtpWidgetTests.test_remote_delete_uses_modeless_worker_plan_without_gui_probe",
+      "line": 1017,
+      "call": "time.sleep(0.05)"
+    },
+    {
+      "nodeid": "tests/test_ftp_widget.py::FtpWidgetTests.test_remote_delete_uses_modeless_worker_plan_without_gui_probe",
+      "line": 1041,
+      "call": "time.sleep(0.01)"
+    },
+    {
+      "nodeid": "tests/test_ftp_widget.py::FtpWidgetTests.test_transfer_dialog_runs_up_to_parallel_limit",
+      "line": 1258,
+      "call": "time.sleep(0.01)"
+    },
+    {
+      "nodeid": "tests/test_ftp_widget.py::FtpWidgetTests.test_transfer_dialog_runs_up_to_parallel_limit",
+      "line": 1267,
+      "call": "time.sleep(0.01)"
+    },
+    {
+      "nodeid": "tests/test_ftp_widget.py::FtpWidgetTests.test_transfer_dialog_finishes_mkdir_before_parallel_transfer_batch",
+      "line": 1288,
+      "call": "time.sleep(0.03)"
+    },
+    {
+      "nodeid": "tests/test_ftp_widget.py::FtpWidgetTests.test_transfer_dialog_finishes_mkdir_before_parallel_transfer_batch",
+      "line": 1306,
+      "call": "time.sleep(0.01)"
+    },
+    {
+      "nodeid": "tests/test_ftp_widget.py::FtpWidgetTests.test_overwrite_delete_is_followed_by_its_transfer_before_later_items",
+      "line": 1329,
+      "call": "time.sleep(0.05)"
+    },
+    {
+      "nodeid": "tests/test_ftp_widget.py::FtpWidgetTests.test_overwrite_delete_is_followed_by_its_transfer_before_later_items",
+      "line": 1346,
+      "call": "time.sleep(0.01)"
+    },
+    {
+      "nodeid": "tests/test_ftp_widget.py::FtpWidgetTests.test_recursive_plan_prepares_all_mkdirs_before_parallel_upload_phase",
+      "line": 1390,
+      "call": "time.sleep(0.01)"
+    },
+    {
+      "nodeid": "tests/test_ftp_widget.py::FtpWidgetTests.test_recursive_plan_prepares_all_mkdirs_before_parallel_upload_phase",
+      "line": 1398,
+      "call": "time.sleep(0.01)"
+    },
+    {
+      "nodeid": "tests/test_ftp_widget.py::FtpWidgetTests.test_parallel_capable_backend_uses_configured_parallelism_for_new_plan",
+      "line": 1501,
+      "call": "time.sleep(0.03)"
+    },
+    {
+      "nodeid": "tests/test_ftp_widget.py::FtpWidgetTests.test_parallel_capable_backend_uses_configured_parallelism_for_new_plan",
+      "line": 1540,
+      "call": "time.sleep(0.01)"
+    },
+    {
+      "nodeid": "tests/test_ftp_widget.py::FtpWidgetTests.test_ssh_backend_parallel_uploads_use_isolated_closed_channels",
+      "line": 1644,
+      "call": "time.sleep(0.01)"
+    },
+    {
+      "nodeid": "tests/test_ftp_widget.py::FtpWidgetTests.test_ssh_backend_parallel_uploads_use_isolated_closed_channels",
+      "line": 1651,
+      "call": "time.sleep(0.01)"
+    },
+    {
+      "nodeid": "tests/test_ftp_widget.py::FtpWidgetTests.test_disabled_upload_preflight_still_executes_local_upload",
+      "line": 1886,
+      "call": "time.sleep(0.01)"
+    },
+    {
+      "nodeid": "tests/test_ftp_widget.py::FtpWidgetTests.test_empty_folder_upload_requires_preflight_before_mkdir_worker",
+      "line": 1993,
+      "call": "time.sleep(0.01)"
+    },
+    {
+      "nodeid": "tests/test_ftp_widget.py::FtpWidgetTests.test_single_connection_multi_folder_upload_runs_sequentially",
+      "line": 2030,
+      "call": "time.sleep(0.01)"
+    },
+    {
+      "nodeid": "tests/test_ftp_widget.py::FtpWidgetTests.test_single_connection_multi_folder_upload_runs_sequentially",
+      "line": 2071,
+      "call": "time.sleep(0.01)"
+    },
+    {
+      "nodeid": "tests/test_ftp_widget.py::FtpWidgetTests.test_local_context_folder_upload_attaches_embedded_controller_after_preflight",
+      "line": 3073,
+      "call": "time.sleep(0.01)"
+    },
+    {
+      "nodeid": "tests/test_ftp_widget.py::FtpWidgetTests.test_remote_folder_download_returns_before_planning_finishes",
+      "line": 3125,
+      "call": "time.sleep(0.01)"
+    },
+    {
+      "nodeid": "tests/test_ftp_widget.py::FtpWidgetTests.test_upload_planning_uses_worker_and_returns_before_slow_probe",
+      "line": 3183,
+      "call": "time.sleep(0.01)"
+    },
+    {
+      "nodeid": "tests/test_ftp_widget.py::FtpWidgetTests.test_download_planning_uses_worker_and_returns_before_slow_probe",
+      "line": 3227,
+      "call": "time.sleep(0.01)"
+    },
+    {
+      "nodeid": "tests/test_ftp_widget.py::FtpWidgetTests.test_remote_multi_folder_download_pipeline_stays_off_gui_thread",
+      "line": 3302,
+      "call": "time.sleep(0.01)"
+    },
+    {
+      "nodeid": "tests/test_ftp_widget.py::FtpWidgetTests.test_remote_multi_folder_download_pipeline_stays_off_gui_thread",
+      "line": 3321,
+      "call": "time.sleep(0.01)"
+    },
+    {
+      "nodeid": "tests/test_ftp_widget.py::FtpWidgetTests.test_download_conflict_planning_keeps_remote_probes_off_gui_thread",
+      "line": 3398,
+      "call": "time.sleep(0.01)"
+    },
+    {
+      "nodeid": "tests/test_ftp_widget.py::FtpWidgetTests.test_transfer_completion_invalidates_upload_target_and_download_sources",
+      "line": 3464,
+      "call": "time.sleep(0.01)"
+    },
+    {
+      "nodeid": "tests/test_ftp_widget.py::FtpWidgetTests.test_remote_panel_drop_upload_planning_yields_before_transfer_start",
+      "line": 4020,
+      "call": "time.sleep(0.01)"
+    },
+    {
+      "nodeid": "tests/test_ftp_widget.py::FtpWidgetTests.test_mock_ftp_download_writes_selected_remote_file",
+      "line": 5513,
+      "call": "time.sleep(0.01)"
+    },
+    {
+      "nodeid": "tests/test_performance_probe.py::PerformanceProbeTests.test_qt_event_loop_block_is_detected",
+      "line": 38,
+      "call": "time.sleep(0.12)"
+    },
+    {
+      "nodeid": "tests/test_terminal_pty_wire.py::TerminalPtyWireTests.test_real_ssh_pty_and_resize_reach_disposable_server",
+      "line": 30,
+      "call": "time.sleep(0.01)"
+    },
+    {
+      "nodeid": "tests/test_transfer_cancel_recovery.py::TransferControllerCancelTests.test_cancel_reports_every_item_of_a_parallel_batch",
+      "line": 37,
+      "call": "time.sleep(0.001)"
+    },
+    {
+      "nodeid": "tests/test_transfer_cancel_recovery.py::TransferDialogCancelTests.test_cancelled_item_leaves_the_active_list_and_can_be_restarted",
+      "line": 96,
+      "call": "time.sleep(0.005)"
+    },
+    {
+      "nodeid": "tests/test_transfer_cancel_recovery.py::TransferDialogCancelTests.test_cancel_does_not_wedge_process_queue",
+      "line": 124,
+      "call": "time.sleep(0.005)"
+    },
+    {
+      "nodeid": "tests/test_transfer_concurrency.py::test_cancelled_transfer_releases_isolated_backend",
+      "line": 293,
+      "call": "time.sleep(0.01)"
+    },
+    {
+      "nodeid": "tests/test_transfer_concurrency.py::test_cancelled_transfer_releases_isolated_backend",
+      "line": 294,
+      "call": "time.sleep(0.05)"
+    },
+    {
+      "nodeid": "tests/test_transfer_controller.py::test_controller_cancel_keeps_item_failed_without_finalization",
+      "line": 36,
+      "call": "time.sleep(0.001)"
+    },
+    {
+      "nodeid": "tests/test_transfer_controller.py::test_controller_cancel_keeps_item_failed_without_finalization",
+      "line": 44,
+      "call": "time.sleep(0.02)"
+    },
+    {
+      "nodeid": "tests/test_transfer_performance_scenarios.py::TransferPerformanceScenarioTests.test_four_fake_transfers_finish_without_network",
+      "line": 100,
+      "call": "time.sleep(0.005)"
+    },
+    {
+      "nodeid": "tests/test_wave78_jobs_details.py::test_ab_stale_raw_details_result_rejected",
+      "line": 334,
+      "call": "time.sleep(0.3)"
+    },
+    {
+      "nodeid": "tests/test_wx_ansys_view.py::test_wx_ansys_close_in_flight_safe",
+      "line": 243,
+      "call": "time.sleep(0.3)"
+    },
+    {
+      "nodeid": "tests/test_wx_file003_final_stress.py::test_reconnect_session_snapshot_repeated",
+      "line": 1328,
+      "call": "time.sleep(0.005)"
+    },
+    {
+      "nodeid": "tests/test_wx_file_transfer_integration.py::test_wx_file_transfer_session_removed_after_success",
+      "line": 128,
+      "call": "time.sleep(0.01)"
+    },
+    {
+      "nodeid": "tests/test_wx_file_transfer_integration.py::test_wx_file_transfer_session_removed_after_failure",
+      "line": 138,
+      "call": "time.sleep(0.01)"
+    },
+    {
+      "nodeid": "tests/test_wx_file_transfer_integration.py::test_wx_file_transfer_session_removed_after_cancel",
+      "line": 153,
+      "call": "time.sleep(0.01)"
+    },
+    {
+      "nodeid": "tests/test_wx_file_transfer_integration.py::test_wx_file_transfer_lifecycle_shutdown_cleans_active_session",
+      "line": 169,
+      "call": "time.sleep(0.01)"
+    },
+    {
+      "nodeid": "tests/test_wx_jobs_files_outputs.py::test_wx_jobs_files_tab_stale_job_result_ignored",
+      "line": 84,
+      "call": "time.sleep(0.25)"
+    },
+    {
+      "nodeid": "tests/test_wx_jobs_files_outputs.py::test_wx_jobs_switch_job_rejects_old_completion",
+      "line": 234,
+      "call": "time.sleep(0.3)"
+    },
+    {
+      "nodeid": "tests/test_wx_jobs_files_outputs.py::test_wx_jobs_outputs_close_in_flight_safe",
+      "line": 270,
+      "call": "time.sleep(0.3)"
+    },
+    {
+      "nodeid": "tests/test_wx_jobs_files_outputs.py::test_wx_jobs_details_latest_selection_wins_over_slow_scontrol",
+      "line": 302,
+      "call": "time.sleep(0.25)"
+    },
+    {
+      "nodeid": "tests/test_wx_jobs_files_outputs.py::test_wx_jobs_accounting_latest_selection_wins_over_slow_sacct",
+      "line": 335,
+      "call": "time.sleep(0.25)"
+    },
+    {
+      "nodeid": "tests/test_wx_jobs_final_fix.py::test_cluster_result_survives_job_selection_and_reconnect_rejects_old_result",
+      "line": 198,
+      "call": "time.sleep(0.15)"
+    },
+    {
+      "nodeid": "tests/test_wx_transfer_ui_lifecycle.py::test_wx_transfer_window_close_cancels_inflight_transfer",
+      "line": 63,
+      "call": "time.sleep(0.01)"
+    },
+    {
+      "nodeid": "tests/test_wx_transfer_ui_lifecycle.py::test_wx_transfer_window_close_releases_session",
+      "line": 81,
+      "call": "time.sleep(0.01)"
+    },
+    {
+      "nodeid": "tests/test_wx_transfer_ui_lifecycle.py::test_wx_transfer_success_visible_state",
+      "line": 170,
+      "call": "time.sleep(0.01)"
+    },
+    {
+      "nodeid": "tests/test_wx_transfer_ui_lifecycle.py::test_wx_transfer_failure_visible_state",
+      "line": 192,
+      "call": "time.sleep(0.01)"
+    },
+    {
+      "nodeid": "tests/test_wx_transfer_ui_lifecycle.py::test_wx_transfer_cancel_visible_state",
+      "line": 217,
+      "call": "time.sleep(0.01)"
+    },
+    {
+      "nodeid": "tests/test_wx_updater_spec.py::test_update_available_download_button_starts_download",
+      "line": 163,
+      "call": "time.sleep(0.3)"
+    },
+    {
+      "nodeid": "tests/test_wx_updater_spec.py::test_update_cancel_reaches_downloader",
+      "line": 244,
+      "call": "time.sleep(0.2)"
+    },
+    {
+      "nodeid": "tests/test_wx_updater_spec.py::test_update_cancel_reaches_downloader",
+      "line": 250,
+      "call": "time.sleep(0.3)"
+    },
+    {
+      "nodeid": "tests/test_wx_updater_spec.py::test_update_install_opens_installation_splash",
+      "line": 355,
+      "call": "time.sleep(0.3)"
+    }
+  ],
+  "network_calls": [
+    {
+      "nodeid": "tests/test_wx_connection_profiles.py::test_mfa_order_and_no_log",
+      "line": 739,
+      "call": "requests.append(req)"
+    }
+  ],
+  "random_calls": [
+    {
+      "nodeid": "tests/test_wx_layout_resize.py::test_wx_layout_resize",
+      "line": 392,
+      "call": "random.Random"
+    },
+    {
+      "nodeid": "tests/test_wx_layout_resize.py::test_wx_layout_resize",
+      "line": 474,
+      "call": "random.Random"
+    }
+  ],
+  "home_calls": [],
+  "thread_process_constructs": [
+    {
+      "nodeid": "tests/test_connection_advanced_settings.py::TransferChannelSafetyTests.test_workers_receive_distinct_channels",
+      "line": 260,
+      "call": "threading.Thread"
+    },
+    {
+      "nodeid": "tests/test_selected_job_context.py::TestSelectedJobStoreThreadSafety.test_concurrent_selects_do_not_corrupt",
+      "line": 164,
+      "call": "threading.Thread"
+    },
+    {
+      "nodeid": "tests/test_selected_job_context.py::TestSelectedJobStoreThreadSafety.test_concurrent_subscribe_and_select",
+      "line": 186,
+      "call": "threading.Thread"
+    },
+    {
+      "nodeid": "tests/test_selected_job_context.py::TestSelectedJobStoreThreadSafety.test_concurrent_subscribe_and_select",
+      "line": 187,
+      "call": "threading.Thread"
+    },
+    {
+      "nodeid": "tests/test_transfer_concurrency.py::test_two_ftp_transfers_overlap_with_distinct_connections",
+      "line": 157,
+      "call": "threading.Thread"
+    },
+    {
+      "nodeid": "tests/test_transfer_concurrency.py::test_cancelled_transfer_releases_isolated_backend",
+      "line": 289,
+      "call": "threading.Thread"
+    },
+    {
+      "nodeid": "tests/test_wx_jobs_stress.py::test_wx_jobs_stress_backend_workers_and_reads_are_bounded",
+      "line": 294,
+      "call": "threading.Thread"
+    },
+    {
+      "nodeid": "tests/test_wx_shell.py::test_wx_shell_remote_operation_keeps_session_snapshot",
+      "line": 124,
+      "call": "threading.Thread"
+    }
+  ]
+}

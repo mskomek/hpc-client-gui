@@ -1,6 +1,10 @@
 from pathlib import Path
 import re
 
+import pytest
+
+pytestmark = pytest.mark.audit
+
 
 def test_gui_feature_parity_ids_are_unique_and_cover_required_surfaces():
     path = Path(__file__).parents[1] / "docs" / "v2" / "GUI_FEATURE_PARITY_BASELINE.md"

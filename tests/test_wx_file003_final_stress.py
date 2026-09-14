@@ -12,12 +12,15 @@ from __future__ import annotations
 
 import threading
 import time
+import subprocess
+import sys
 from collections import Counter
 from pathlib import Path
 
 import pytest
 
 wx = pytest.importorskip("wx")
+pytestmark = [pytest.mark.wx]
 
 from hpc_gui.core.i18n import load_language
 from hpc_gui.wx_local_files import LocalBrowserModel, show_local_files
@@ -68,17 +71,35 @@ def _settle(app, rounds: int = 6) -> None:
     wx.SafeYield()
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def wx_app():
     load_language("en")
-    app = wx.App(False)
+    app = wx.App.Get()
+    owns_app = app is None
+    if owns_app:
+        app = wx.App.Get()
+        if app is None:
+            app = wx.App(False)
     yield app
+    _destroy_windows(app)
+    if owns_app:
+        app.Destroy()
+
+
+@pytest.fixture(autouse=True)
+def _cleanup_windows_after_test(wx_app):
+    load_language("en")
+    baseline = {id(window) for window in wx.GetTopLevelWindows()}
+    yield
+    _destroy_windows(wx_app, baseline)
+
+
+def _destroy_windows(app, baseline=None):
+    baseline = baseline or set()
     for window in wx.GetTopLevelWindows():
-        if window:
+        if window and id(window) not in baseline:
             window.Destroy()
-    app.ProcessPendingEvents()
-    wx.SafeYield()
-    app.Destroy()
+    _settle(app)
 
 
 def _browser_windows():
@@ -197,9 +218,13 @@ def _rows(listing):
 # Stress A - right-click retarget, 200 real wx.ContextMenuEvent dispatches
 # ==========================================================================
 
+@pytest.mark.gui
+@pytest.mark.semantic
+@pytest.mark.regression
 def test_stress_a_right_click_retarget(wx_app, monkeypatch):
     import hpc_gui.wx_remote_files_view as view
 
+    assert wx.App.Get() is wx_app
     backend = MockRemoteFilesBackend()
     backend.entries.update({"/work/dir-a": True, "/work/c.txt": False, "/work/d.txt": False})
     frame = _remote_frame(wx_app, backend)
@@ -295,6 +320,11 @@ def _fire_menu_item(control, label, trigger):
     return fired["hit"]
 
 
+@pytest.mark.gui
+@pytest.mark.semantic
+@pytest.mark.regression
+@pytest.mark.concurrency
+@pytest.mark.slow
 def test_stress_b_local_mutations(wx_app, tmp_path: Path, monkeypatch):
     other = tmp_path / "other"
     other.mkdir()
@@ -429,6 +459,11 @@ def test_stress_b_local_mutations(wx_app, tmp_path: Path, monkeypatch):
 # Stress C - 100 remote mutations driven by real key and context-menu events
 # ==========================================================================
 
+@pytest.mark.gui
+@pytest.mark.semantic
+@pytest.mark.regression
+@pytest.mark.concurrency
+@pytest.mark.slow
 def test_stress_c_remote_mutations(wx_app, monkeypatch):
     backend = MockRemoteFilesBackend()
     backend.entries["/scratch"] = True
@@ -588,6 +623,11 @@ SENTINELS = {
 }
 
 
+@pytest.mark.gui
+@pytest.mark.semantic
+@pytest.mark.regression
+@pytest.mark.concurrency
+@pytest.mark.slow
 def test_stress_d_target_switches(wx_app):
     listed = {"count": 0}
 
@@ -649,6 +689,11 @@ def _enter_path(frame, value):
     control.ProcessEvent(wx.CommandEvent(wx.wxEVT_TEXT_ENTER, control.GetId()))
 
 
+@pytest.mark.gui
+@pytest.mark.semantic
+@pytest.mark.regression
+@pytest.mark.concurrency
+@pytest.mark.slow
 def test_stress_e_navigate_completion_races(wx_app, tmp_path, monkeypatch):
     dialogs = []
     monkeypatch.setattr(wx, "MessageBox", lambda *a, **k: dialogs.append(a) or wx.YES)
@@ -765,6 +810,11 @@ def _file_browser_windows():
     ]
 
 
+@pytest.mark.gui
+@pytest.mark.semantic
+@pytest.mark.regression
+@pytest.mark.resource
+@pytest.mark.slow
 def test_stress_f_browser_open_close(wx_app, tmp_path):
     (tmp_path / "sample.txt").write_text("x", encoding="utf-8")
     baseline = {id(window) for window in _file_browser_windows()}
@@ -848,6 +898,12 @@ def _close_first_tab(notebook):
         notebook.HitTest = original_hit
 
 
+@pytest.mark.gui
+@pytest.mark.semantic
+@pytest.mark.regression
+@pytest.mark.concurrency
+@pytest.mark.resource
+@pytest.mark.slow
 def test_stress_g_blocked_close_in_flight(wx_app, tmp_path, monkeypatch):
     from hpc_gui.services.transfer_controller import TransferItem
     from hpc_gui.wx_local_files import LocalEntry
@@ -1110,6 +1166,11 @@ class _AccountingFiles:
         self._run("resume_download", destination)
 
 
+@pytest.mark.integration
+@pytest.mark.semantic
+@pytest.mark.regression
+@pytest.mark.concurrency
+@pytest.mark.resource
 def test_stress_h_file_transfer_items(wx_app, tmp_path):
     from hpc_gui.services.transfer_controller import TransferItem
     from hpc_gui.wx_shell import _start_file_transfers
@@ -1198,6 +1259,10 @@ def test_stress_h_file_transfer_items(wx_app, tmp_path):
 # Stress I - 50 unicode / space names across local, remote and transfers
 # ==========================================================================
 
+@pytest.mark.gui
+@pytest.mark.semantic
+@pytest.mark.regression
+@pytest.mark.slow
 def test_stress_i_unicode_and_space_names(wx_app, tmp_path, monkeypatch):
     from hpc_gui.services.transfer_controller import TransferItem
     from hpc_gui.wx_shell import _start_file_transfers
@@ -1296,6 +1361,10 @@ def test_stress_i_unicode_and_space_names(wx_app, tmp_path, monkeypatch):
 # Reconnect / session snapshot, repeated
 # ==========================================================================
 
+@pytest.mark.integration
+@pytest.mark.semantic
+@pytest.mark.regression
+@pytest.mark.concurrency
 def test_reconnect_session_snapshot_repeated(wx_app, tmp_path):
     from hpc_gui.services.transfer_controller import TransferItem
     from hpc_gui.wx_shell import _start_file_transfers
@@ -1356,6 +1425,8 @@ def test_reconnect_session_snapshot_repeated(wx_app, tmp_path):
 # Measured invariant scoreboard
 # ==========================================================================
 
+@pytest.mark.reporting
+@pytest.mark.semantic
 def test_zz_measured_invariants(capsys):
     lines = ["", "GUI-FILE-003 executed stress counts:"]
     for name, (executed, required) in EXECUTED.items():
@@ -1385,3 +1456,26 @@ def test_zz_measured_invariants(capsys):
         assert METRICS[name] == 0, "%s = %d" % (name, METRICS[name])
     assert METRICS["peak_local_mutation_concurrency"] <= 1
     assert METRICS["peak_remote_mutation_concurrency"] <= 1
+
+
+@pytest.mark.gui
+@pytest.mark.subprocess
+@pytest.mark.regression
+def test_editor_wx_lifecycle_predecessor_preserves_context_menu_runtime():
+    root = Path(__file__).resolve().parents[1]
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "pytest",
+            "tests/test_wx_editor_window_parity.py",
+            "tests/test_wx_embedded_terminal.py",
+            "tests/test_wx_file003_final_stress.py::test_stress_a_right_click_retarget",
+            "-q",
+        ],
+        cwd=root,
+        capture_output=True,
+        text=True,
+        timeout=90,
+    )
+    assert result.returncode == 0, f"child failed {result.returncode}:\n{result.stdout}\n{result.stderr}"

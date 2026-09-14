@@ -748,6 +748,7 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
 
     # --- Plugin menu dynamic handling (framework-neutral contribution model) ---
     _wx_plugin_dynamic_items: list = []
+    _wx_plugin_action_bindings: list = []
     def _ensure_wx_plugins_top_separator():
         nonlocal sep_plugins_top
         if sep_plugins_top is None or sep_plugins_top not in plugins_menu.GetMenuItems():
@@ -802,22 +803,17 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
             from hpc_gui.plugins.ui_contributions import MenuContext
             return MenuContext()
     def _wx_rebuild_plugins_menu():
-        nonlocal _wx_plugin_dynamic_items, sep_plugins_top
+        nonlocal _wx_plugin_dynamic_items, _wx_plugin_action_bindings, sep_plugins_top
         try:
             from hpc_gui.plugins.loader import load_installed_plugins
             from hpc_gui.plugins.ui_contributions import collect_plugin_menu_contributions, evaluate_when, get_display_label
             from hpc_gui.services.plugin_menu_actions import can_execute_action
             # Clear previous dynamic
+            for item_id, handler in _wx_plugin_action_bindings:
+                frame.Unbind(wx.EVT_MENU, handler=handler, id=item_id)
+            _wx_plugin_action_bindings = []
             for item in list(_wx_plugin_dynamic_items):
-                try:
-                    plugins_menu.Remove(item)
-                    if hasattr(item, "GetSubMenu") and item.GetSubMenu():
-                        try:
-                            item.GetSubMenu().Destroy()
-                        except Exception:
-                            pass
-                except Exception:
-                    pass
+                plugins_menu.DestroyItem(item)
             _wx_plugin_dynamic_items = []
             # Insertion point is before the stored bottom separator
             sep_before_request = sep_plugins_bottom
@@ -870,7 +866,9 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
                                         def handler(_evt):
                                             _wx_dispatch_plugin_action(action, pid)
                                         return handler
-                                    frame.Bind(wx.EVT_MENU, make_handler(), act)
+                                    handler = make_handler()
+                                    frame.Bind(wx.EVT_MENU, handler, act)
+                                    _wx_plugin_action_bindings.append((act.GetId(), handler))
                                 sub_has = True
                                 has_visible = True
                         if sub_has:
@@ -909,38 +907,19 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
                                 def handler(_evt):
                                     _wx_dispatch_plugin_action(action, pid)
                                 return handler
-                            frame.Bind(wx.EVT_MENU, make_handler(), act)
+                            handler = make_handler()
+                            frame.Bind(wx.EVT_MENU, handler, act)
+                            _wx_plugin_action_bindings.append((act.GetId(), handler))
                         has_visible = True
                 if has_visible:
                     # Insert before bottom separator
-                    try:
-                        if sep_before_request:
-                            items_now = list(plugins_menu.GetMenuItems())
-                            idx = items_now.index(sep_before_request)
-                            try:
-                                mi = wx.MenuItem(plugins_menu, wx.ID_ANY, root_label, "", wx.ITEM_NORMAL, root_menu)
-                                try:
-                                    mi.SetSubMenu(root_menu)
-                                except Exception:
-                                    pass
-                                plugins_menu.Insert(idx, mi)
-                                _wx_plugin_dynamic_items.append(mi)
-                            except Exception:
-                                plugins_menu.Insert(idx, wx.ID_ANY, root_label, root_menu)
-                                inserted = list(plugins_menu.GetMenuItems())[idx]
-                                _wx_plugin_dynamic_items.append(inserted)
-                        else:
-                            it = plugins_menu.AppendSubMenu(root_menu, root_label)
-                            _wx_plugin_dynamic_items.append(it)
-                    except Exception:
-                        try:
-                            it = plugins_menu.AppendSubMenu(root_menu, root_label)
-                            _wx_plugin_dynamic_items.append(it)
-                        except Exception:
-                            try:
-                                root_menu.Destroy()
-                            except Exception:
-                                pass
+                    if sep_before_request:
+                        items_now = list(plugins_menu.GetMenuItems())
+                        idx = items_now.index(sep_before_request)
+                        inserted = plugins_menu.Insert(idx, wx.ID_ANY, root_label, root_menu)
+                    else:
+                        inserted = plugins_menu.AppendSubMenu(root_menu, root_label)
+                    _wx_plugin_dynamic_items.append(inserted)
                 else:
                     try:
                         root_menu.Destroy()

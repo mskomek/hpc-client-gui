@@ -1,0 +1,16 @@
+{
+  "collection_total": 2654,
+  "multi_primary_count": 0,
+  "purpose": "Exact remaining actual zero-primary nodeids after Packet M behavioral review. All six are confirmed frozen-baseline failures; five are archived Packet A cases and one is the separately confirmed supplemental wx shell failure.",
+  "repository_sha": "13f1f9a8bd3a093c76e5034ef56e3140fd50d878",
+  "schema_version": 1,
+  "zero_primary_count": 6,
+  "zero_primary_nodeids": [
+    "tests/test_macos_ci.py::test_macos_ci_matrix_covers_both_native_architectures",
+    "tests/test_macos_ci.py::test_macos_ci_has_no_release_upload_or_signing_step",
+    "tests/test_macos_release_workflow.py::test_release_preflight_shares_the_ci_test_suite",
+    "tests/test_workflow_action_pins.py::test_every_workflow_exists",
+    "tests/test_wx_packaged_smoke.py::test_packaged_wx_smoke_gate_reports_critical_stages",
+    "tests/test_wx_shell_p0_stress.py::test_wx_shell_p0_stress_real_wx_paths"
+  ]
+}

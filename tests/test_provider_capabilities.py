@@ -1,7 +1,11 @@
 from __future__ import annotations
 
+import pytest
+
 from hpc_gui.services.cluster_self_test import NOT_CONFIGURED, NOT_TESTED, PASS, WARNING
 from hpc_gui.services.provider_capabilities import DECLARED, NOT_DECLARED, build_provider_capability_view
+
+pytestmark = pytest.mark.unit
 
 
 def _items(view):

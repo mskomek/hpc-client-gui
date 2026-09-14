@@ -3,6 +3,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
+import pytest
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "scripts"))
 
@@ -24,16 +26,19 @@ def _minimal_wiki(root: Path) -> None:
 
 
 class WikiCheckTest(unittest.TestCase):
+    @pytest.mark.audit
     @unittest.skipUnless(WIKI_ROOT.is_dir(), "docs/wiki is outside the main sync boundary")
     def test_repository_wiki_is_clean(self):
         self.assertEqual(check_wiki.check_wiki(WIKI_ROOT), [])
 
+    @pytest.mark.audit
     def test_minimal_wiki_passes(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             _minimal_wiki(root)
             self.assertEqual(check_wiki.check_wiki(root), [])
 
+    @pytest.mark.audit
     def test_violations_are_reported(self):
         cases = {
             "missing Turkish counterpart": lambda r: (r / "Topic-TR.md").unlink(),

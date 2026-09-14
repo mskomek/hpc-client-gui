@@ -1,4 +1,8 @@
+import pytest
+
 from hpc_gui.services.storage_policy import StoragePolicyEvaluator
+
+pytestmark = [pytest.mark.unit, pytest.mark.semantic]
 
 
 def test_no_metadata_and_outside_root_have_no_warning():

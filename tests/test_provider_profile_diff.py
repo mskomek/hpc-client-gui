@@ -1,6 +1,10 @@
 from __future__ import annotations
 
+import pytest
+
 from hpc_gui.services.provider_profile_diff import apply_provider_to_connection, build_provider_profile_diff
+
+pytestmark = [pytest.mark.unit, pytest.mark.semantic]
 
 
 def _profile(**changes):

@@ -18,6 +18,7 @@ wx = pytest.importorskip("wx", reason="wxPython not installed")
 
 from hpc_gui.config import storage
 from hpc_gui.config.storage import load_profiles
+from hpc_gui.core.i18n import current_language, set_language
 from hpc_gui.wx_connection import build_connection_panel
 
 
@@ -42,22 +43,27 @@ def _isolated_storage(monkeypatch):
 
 @pytest.fixture(autouse=True)
 def _clean_wx_after():
+    original_language = current_language()
+    set_language("en")
     yield
     try:
-        app = wx.GetApp()
-        if app is not None:
-            for win in list(wx.GetTopLevelWindows()):
-                try:
-                    win.Destroy()
-                except Exception:
-                    pass
-            for _ in range(5):
-                try:
-                    wx.Yield()
-                except Exception:
-                    break
-    except Exception:
-        pass
+        set_language(original_language)
+    finally:
+        try:
+            app = wx.GetApp()
+            if app is not None:
+                for win in list(wx.GetTopLevelWindows()):
+                    try:
+                        win.Destroy()
+                    except Exception:
+                        pass
+                for _ in range(5):
+                    try:
+                        wx.Yield()
+                    except Exception:
+                        break
+        except Exception:
+            pass
 
 
 def _make_profile(name="p", master=None, secret="s3cret"):
@@ -80,6 +86,9 @@ def _make_profile(name="p", master=None, secret="s3cret"):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
 def test_begin_connect_failure_returns_false(monkeypatch):
     """begin_connect() raises → connect_selected returns False,
     controller not connecting, buttons restored, status failed.
@@ -120,6 +129,9 @@ def test_begin_connect_failure_returns_false(monkeypatch):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
 def test_thread_start_failure_returns_false(monkeypatch):
     """Thread.start() raises → connect_selected returns False,
     controller failed, buttons restored, transient password cleared.
@@ -162,6 +174,9 @@ def test_thread_start_failure_returns_false(monkeypatch):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
 def test_connect_selected_no_selection_direct_bool(monkeypatch):
     """connect_selected() → False when no profile selected. Direct assertion."""
     tmp = _isolated_storage(monkeypatch)
@@ -188,6 +203,9 @@ def test_connect_selected_no_selection_direct_bool(monkeypatch):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
 def test_connect_selected_worker_starts_direct_bool(monkeypatch):
     """connect_selected() → True when worker successfully launched."""
     tmp = _isolated_storage(monkeypatch)
@@ -230,6 +248,9 @@ def test_connect_selected_worker_starts_direct_bool(monkeypatch):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
 def test_master_remember_true_update_settings_called(monkeypatch):
     """Remember=true → protect_secret called, update_settings called
     with the protected token (not plaintext master).
@@ -315,6 +336,9 @@ def test_master_remember_true_update_settings_called(monkeypatch):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
 def test_cluster_remember_true_persists_protected(monkeypatch):
     """Test Cluster → Remember=true → protect_secret + update_settings
     called with protected token, profile unchanged.
@@ -410,6 +434,9 @@ def test_cluster_remember_true_persists_protected(monkeypatch):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
 def test_save_and_connect_master_cancel_asserts_result(monkeypatch):
     """Save & Connect → save succeeds → master cancel →
     on_save_and_connect returns False, no SSH.
@@ -473,6 +500,9 @@ def test_save_and_connect_master_cancel_asserts_result(monkeypatch):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
 def test_save_and_connect_wrong_master_real_sac(monkeypatch):
     """Real Save & Connect → save succeeds → master prompt → wrong master →
     on_save_and_connect returns False, no SSH.
@@ -560,6 +590,9 @@ def test_save_and_connect_wrong_master_real_sac(monkeypatch):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
 def test_save_and_connect_thread_start_failure(monkeypatch):
     """Save & Connect → save succeeds → Thread.start raises →
     on_save_and_connect returns False, profile persists.

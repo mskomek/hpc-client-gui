@@ -1,0 +1,738 @@
+{
+  "active_release_workflow": {
+    "test_jobs": [
+      ".github/workflows/release.yml job build-macos-arm64",
+      ".github/workflows/release.yml job build-macos-x86_64",
+      ".github/workflows/release.yml job build-linux",
+      ".github/workflows/release.yml job build-windows"
+    ],
+    "trigger": "workflow_dispatch only; no automatic PR/push workflow at frozen HEAD",
+    "uncovered_nodeids": [
+      "tests/test_wheel_packaging.py::test_built_wheel_contains_required_assets",
+      "tests/test_wx_packaged_smoke.py::test_packaged_wx_smoke_gate_reports_critical_stages"
+    ],
+    "union_count": 2682
+  },
+  "collection": {
+    "added": 11,
+    "added_nodeids": [
+      "tests/test_test_taxonomy_checker.py::test_catch_all_filename_is_warning_only",
+      "tests/test_test_taxonomy_checker.py::test_collection_failure_returns_nonzero",
+      "tests/test_test_taxonomy_checker.py::test_direct_test_call_warning_finds_imported_test_function",
+      "tests/test_test_taxonomy_checker.py::test_json_keeps_exact_nodeids",
+      "tests/test_test_taxonomy_checker.py::test_qualifiers_do_not_count_as_primaries",
+      "tests/test_test_taxonomy_checker.py::test_ratchet_allows_only_recorded_zero_primary_debt",
+      "tests/test_test_taxonomy_checker.py::test_ratchet_rejects_new_zero_primary_and_multi_primary_debt",
+      "tests/test_test_taxonomy_checker.py::test_report_mode_succeeds_with_taxonomy_debt",
+      "tests/test_test_taxonomy_checker.py::test_single_primary_is_counted_once",
+      "tests/test_test_taxonomy_checker.py::test_two_primary_markers_are_reported",
+      "tests/test_test_taxonomy_checker.py::test_unmarked_record_is_zero_primary"
+    ],
+    "current": 2684,
+    "frozen": 2673,
+    "removed": 0,
+    "removed_nodeids": []
+  },
+  "lanes": {
+    ".github/workflows/release.yml job build-linux": {
+      "added_nodeids": [
+        "tests/test_test_taxonomy_checker.py::test_catch_all_filename_is_warning_only",
+        "tests/test_test_taxonomy_checker.py::test_collection_failure_returns_nonzero",
+        "tests/test_test_taxonomy_checker.py::test_direct_test_call_warning_finds_imported_test_function",
+        "tests/test_test_taxonomy_checker.py::test_json_keeps_exact_nodeids",
+        "tests/test_test_taxonomy_checker.py::test_qualifiers_do_not_count_as_primaries",
+        "tests/test_test_taxonomy_checker.py::test_ratchet_allows_only_recorded_zero_primary_debt",
+        "tests/test_test_taxonomy_checker.py::test_ratchet_rejects_new_zero_primary_and_multi_primary_debt",
+        "tests/test_test_taxonomy_checker.py::test_report_mode_succeeds_with_taxonomy_debt",
+        "tests/test_test_taxonomy_checker.py::test_single_primary_is_counted_once",
+        "tests/test_test_taxonomy_checker.py::test_two_primary_markers_are_reported",
+        "tests/test_test_taxonomy_checker.py::test_unmarked_record_is_zero_primary"
+      ],
+      "current_count": 2682,
+      "current_nodeids_sha256_sorted": "b5d868ea5feba7932e8dfc990b5d99f259579d94307768bcf738785e012f8931",
+      "delta_from_frozen": 11,
+      "frozen_inventory_count": 2671,
+      "frozen_inventory_reproduced": true,
+      "frozen_recollected_count": 2671,
+      "multi_primary_count": 0,
+      "primary_counts": {
+        "audit": 11,
+        "contract": 0,
+        "e2e": 0,
+        "gui": 0,
+        "integration": 0,
+        "release": 0,
+        "reporting": 0,
+        "runtime_smoke": 0,
+        "unit": 0
+      },
+      "removed_nodeids": [],
+      "selector": [
+        "tests/**"
+      ],
+      "zero_primary_count": 2671
+    },
+    ".github/workflows/release.yml job build-macos-arm64": {
+      "added_nodeids": [],
+      "current_count": 54,
+      "current_nodeids_sha256_sorted": "38e3e7f7b0225d1e0d3cc085f09a90f7027757688c0565ed467099af7d1d5949",
+      "delta_from_frozen": 0,
+      "frozen_inventory_count": 54,
+      "frozen_inventory_reproduced": true,
+      "frozen_recollected_count": 54,
+      "multi_primary_count": 0,
+      "primary_counts": {
+        "audit": 0,
+        "contract": 0,
+        "e2e": 0,
+        "gui": 0,
+        "integration": 0,
+        "release": 0,
+        "reporting": 0,
+        "runtime_smoke": 0,
+        "unit": 0
+      },
+      "removed_nodeids": [],
+      "selector": [
+        "tests/test_macos_x11.py",
+        "tests/test_app_updater.py",
+        "tests/test_macos_release.py",
+        "tests/test_macos_packaging_spec.py",
+        "tests/test_macos_release_workflow.py",
+        "tests/test_workflow_action_pins.py",
+        "tests/test_version_consistency.py"
+      ],
+      "zero_primary_count": 54
+    },
+    ".github/workflows/release.yml job build-macos-x86_64": {
+      "added_nodeids": [],
+      "current_count": 54,
+      "current_nodeids_sha256_sorted": "38e3e7f7b0225d1e0d3cc085f09a90f7027757688c0565ed467099af7d1d5949",
+      "delta_from_frozen": 0,
+      "frozen_inventory_count": 54,
+      "frozen_inventory_reproduced": true,
+      "frozen_recollected_count": 54,
+      "multi_primary_count": 0,
+      "primary_counts": {
+        "audit": 0,
+        "contract": 0,
+        "e2e": 0,
+        "gui": 0,
+        "integration": 0,
+        "release": 0,
+        "reporting": 0,
+        "runtime_smoke": 0,
+        "unit": 0
+      },
+      "removed_nodeids": [],
+      "selector": [
+        "tests/test_macos_x11.py",
+        "tests/test_app_updater.py",
+        "tests/test_macos_release.py",
+        "tests/test_macos_packaging_spec.py",
+        "tests/test_macos_release_workflow.py",
+        "tests/test_workflow_action_pins.py",
+        "tests/test_version_consistency.py"
+      ],
+      "zero_primary_count": 54
+    },
+    ".github/workflows/release.yml job build-windows": {
+      "added_nodeids": [
+        "tests/test_test_taxonomy_checker.py::test_catch_all_filename_is_warning_only",
+        "tests/test_test_taxonomy_checker.py::test_collection_failure_returns_nonzero",
+        "tests/test_test_taxonomy_checker.py::test_direct_test_call_warning_finds_imported_test_function",
+        "tests/test_test_taxonomy_checker.py::test_json_keeps_exact_nodeids",
+        "tests/test_test_taxonomy_checker.py::test_qualifiers_do_not_count_as_primaries",
+        "tests/test_test_taxonomy_checker.py::test_ratchet_allows_only_recorded_zero_primary_debt",
+        "tests/test_test_taxonomy_checker.py::test_ratchet_rejects_new_zero_primary_and_multi_primary_debt",
+        "tests/test_test_taxonomy_checker.py::test_report_mode_succeeds_with_taxonomy_debt",
+        "tests/test_test_taxonomy_checker.py::test_single_primary_is_counted_once",
+        "tests/test_test_taxonomy_checker.py::test_two_primary_markers_are_reported",
+        "tests/test_test_taxonomy_checker.py::test_unmarked_record_is_zero_primary"
+      ],
+      "current_count": 2682,
+      "current_nodeids_sha256_sorted": "b5d868ea5feba7932e8dfc990b5d99f259579d94307768bcf738785e012f8931",
+      "delta_from_frozen": 11,
+      "frozen_inventory_count": 2671,
+      "frozen_inventory_reproduced": true,
+      "frozen_recollected_count": 2671,
+      "multi_primary_count": 0,
+      "primary_counts": {
+        "audit": 11,
+        "contract": 0,
+        "e2e": 0,
+        "gui": 0,
+        "integration": 0,
+        "release": 0,
+        "reporting": 0,
+        "runtime_smoke": 0,
+        "unit": 0
+      },
+      "removed_nodeids": [],
+      "selector": [
+        "tests/**"
+      ],
+      "zero_primary_count": 2671
+    },
+    "docs/ci-disabled/ci.yml job cli": {
+      "added_nodeids": [],
+      "current_count": 164,
+      "current_nodeids_sha256_sorted": "c9e3623d7cb8fd03316bcadcccd5a58e875bdf073f1c1a70783d1e27085a4a74",
+      "delta_from_frozen": 0,
+      "frozen_inventory_count": 164,
+      "frozen_inventory_reproduced": true,
+      "frozen_recollected_count": 164,
+      "multi_primary_count": 0,
+      "primary_counts": {
+        "audit": 0,
+        "contract": 0,
+        "e2e": 0,
+        "gui": 0,
+        "integration": 0,
+        "release": 0,
+        "reporting": 0,
+        "runtime_smoke": 0,
+        "unit": 0
+      },
+      "removed_nodeids": [],
+      "selector": [
+        "tests/test_cli.py",
+        "tests/test_cli_entrypoint.py"
+      ],
+      "zero_primary_count": 164
+    },
+    "docs/ci-disabled/ci.yml job compat": {
+      "added_nodeids": [],
+      "current_count": 286,
+      "current_nodeids_sha256_sorted": "838afeca07a5d63a29722fae19ba241c0df62ad0338a9be33e450fb3b3b10596",
+      "delta_from_frozen": 0,
+      "frozen_inventory_count": 286,
+      "frozen_inventory_reproduced": true,
+      "frozen_recollected_count": 286,
+      "multi_primary_count": 0,
+      "primary_counts": {
+        "audit": 0,
+        "contract": 0,
+        "e2e": 0,
+        "gui": 0,
+        "integration": 0,
+        "release": 0,
+        "reporting": 0,
+        "runtime_smoke": 0,
+        "unit": 0
+      },
+      "removed_nodeids": [],
+      "selector": [
+        "tests/test_cli.py",
+        "tests/test_cli_entrypoint.py",
+        "tests/test_config_storage_atomic.py",
+        "tests/test_profile_identity.py",
+        "tests/test_profile_transfer_settings.py",
+        "tests/test_slurm_models.py",
+        "tests/test_slurm_script_parser.py",
+        "tests/test_remote_entry_helpers.py",
+        "tests/test_upload_pipelining.py",
+        "tests/test_version_consistency.py",
+        "tests/test_app_updater.py",
+        "tests/test_installation_context.py",
+        "tests/test_updater_helper.py",
+        "tests/test_security_hardening_wave.py",
+        "tests/test_log_redaction.py",
+        "tests/test_diagnostics.py",
+        "tests/test_update_verification.py",
+        "tests/test_plugin_security.py",
+        "tests/test_terminal_boundaries.py"
+      ],
+      "zero_primary_count": 286
+    },
+    "docs/ci-disabled/ci.yml job contract": {
+      "added_nodeids": [],
+      "current_count": 10,
+      "current_nodeids_sha256_sorted": "869821198536faa9a5f0125c60e2ff5f505102dc570cd55c1d383a5b08c540ac",
+      "delta_from_frozen": 0,
+      "frozen_inventory_count": 10,
+      "frozen_inventory_reproduced": true,
+      "frozen_recollected_count": 10,
+      "multi_primary_count": 0,
+      "primary_counts": {
+        "audit": 0,
+        "contract": 0,
+        "e2e": 0,
+        "gui": 0,
+        "integration": 0,
+        "release": 0,
+        "reporting": 0,
+        "runtime_smoke": 0,
+        "unit": 0
+      },
+      "removed_nodeids": [],
+      "selector": [
+        "tests/test_plugin_contract.py"
+      ],
+      "zero_primary_count": 10
+    },
+    "docs/ci-disabled/ci.yml job gui": {
+      "added_nodeids": [
+        "tests/test_test_taxonomy_checker.py::test_catch_all_filename_is_warning_only",
+        "tests/test_test_taxonomy_checker.py::test_collection_failure_returns_nonzero",
+        "tests/test_test_taxonomy_checker.py::test_direct_test_call_warning_finds_imported_test_function",
+        "tests/test_test_taxonomy_checker.py::test_json_keeps_exact_nodeids",
+        "tests/test_test_taxonomy_checker.py::test_qualifiers_do_not_count_as_primaries",
+        "tests/test_test_taxonomy_checker.py::test_ratchet_allows_only_recorded_zero_primary_debt",
+        "tests/test_test_taxonomy_checker.py::test_ratchet_rejects_new_zero_primary_and_multi_primary_debt",
+        "tests/test_test_taxonomy_checker.py::test_report_mode_succeeds_with_taxonomy_debt",
+        "tests/test_test_taxonomy_checker.py::test_single_primary_is_counted_once",
+        "tests/test_test_taxonomy_checker.py::test_two_primary_markers_are_reported",
+        "tests/test_test_taxonomy_checker.py::test_unmarked_record_is_zero_primary"
+      ],
+      "current_count": 2682,
+      "current_nodeids_sha256_sorted": "b5d868ea5feba7932e8dfc990b5d99f259579d94307768bcf738785e012f8931",
+      "delta_from_frozen": 11,
+      "frozen_inventory_count": 2671,
+      "frozen_inventory_reproduced": true,
+      "frozen_recollected_count": 2671,
+      "multi_primary_count": 0,
+      "primary_counts": {
+        "audit": 11,
+        "contract": 0,
+        "e2e": 0,
+        "gui": 0,
+        "integration": 0,
+        "release": 0,
+        "reporting": 0,
+        "runtime_smoke": 0,
+        "unit": 0
+      },
+      "removed_nodeids": [],
+      "selector": [
+        "tests/** minus packaging marker, plus three isolated files"
+      ],
+      "zero_primary_count": 2671
+    },
+    "docs/ci-disabled/ci.yml job macos": {
+      "added_nodeids": [],
+      "current_count": 69,
+      "current_nodeids_sha256_sorted": "a0b463c8c8897914043ca4f3d9dd861447ba131053121e3d738b21a8f007c65e",
+      "delta_from_frozen": 0,
+      "frozen_inventory_count": 69,
+      "frozen_inventory_reproduced": true,
+      "frozen_recollected_count": 69,
+      "multi_primary_count": 0,
+      "primary_counts": {
+        "audit": 0,
+        "contract": 0,
+        "e2e": 0,
+        "gui": 0,
+        "integration": 0,
+        "release": 0,
+        "reporting": 0,
+        "runtime_smoke": 0,
+        "unit": 0
+      },
+      "removed_nodeids": [],
+      "selector": [
+        "tests/test_app_updater.py",
+        "tests/test_installation_context.py",
+        "tests/test_updater_helper.py",
+        "tests/test_optional_ssh_credentials.py",
+        "tests/test_slurm_ssh.py",
+        "tests/test_local_transfer_gate.py",
+        "tests/test_profile_transfer_settings.py",
+        "tests/test_plugin_contract.py",
+        "tests/test_macos_packaging_spec.py",
+        "tests/test_terminal_assets.py",
+        "tests/test_terminal_bridge.py"
+      ],
+      "zero_primary_count": 69
+    },
+    "docs/ci-disabled/ci.yml job packaging": {
+      "added_nodeids": [],
+      "current_count": 1,
+      "current_nodeids_sha256_sorted": "c0b0a0f7dd0edcaee8dbb720908a3c5d2b65e235fb122459bcb7f8f26c105820",
+      "delta_from_frozen": 0,
+      "frozen_inventory_count": 1,
+      "frozen_inventory_reproduced": true,
+      "frozen_recollected_count": 1,
+      "multi_primary_count": 0,
+      "primary_counts": {
+        "audit": 0,
+        "contract": 0,
+        "e2e": 0,
+        "gui": 0,
+        "integration": 0,
+        "release": 0,
+        "reporting": 0,
+        "runtime_smoke": 0,
+        "unit": 0
+      },
+      "removed_nodeids": [],
+      "selector": [
+        "tests/test_wheel_packaging.py"
+      ],
+      "zero_primary_count": 1
+    },
+    "docs/ci-disabled/ci.yml job ssh_sftp": {
+      "added_nodeids": [],
+      "current_count": 45,
+      "current_nodeids_sha256_sorted": "286981bbc052e926df65ce2fb1630f4857ffc48c9a71a8d87d3c80ed12dac727",
+      "delta_from_frozen": 0,
+      "frozen_inventory_count": 45,
+      "frozen_inventory_reproduced": true,
+      "frozen_recollected_count": 45,
+      "multi_primary_count": 0,
+      "primary_counts": {
+        "audit": 0,
+        "contract": 0,
+        "e2e": 0,
+        "gui": 0,
+        "integration": 0,
+        "release": 0,
+        "reporting": 0,
+        "runtime_smoke": 0,
+        "unit": 0
+      },
+      "removed_nodeids": [],
+      "selector": [
+        "tests/test_optional_ssh_credentials.py",
+        "tests/test_slurm_ssh.py",
+        "tests/test_local_transfer_gate.py",
+        "tests/test_transfer_wave17.py",
+        "tests/test_transfer_controller.py",
+        "tests/test_profile_transfer_settings.py"
+      ],
+      "zero_primary_count": 45
+    },
+    "docs/ci-disabled/ci.yml job windows": {
+      "added_nodeids": [],
+      "current_count": 41,
+      "current_nodeids_sha256_sorted": "740a97e572880c42a6711f475113a323cdd483ce0c59ecae80f40045cf27045a",
+      "delta_from_frozen": 0,
+      "frozen_inventory_count": 41,
+      "frozen_inventory_reproduced": true,
+      "frozen_recollected_count": 41,
+      "multi_primary_count": 0,
+      "primary_counts": {
+        "audit": 0,
+        "contract": 0,
+        "e2e": 0,
+        "gui": 0,
+        "integration": 0,
+        "release": 0,
+        "reporting": 0,
+        "runtime_smoke": 0,
+        "unit": 0
+      },
+      "removed_nodeids": [],
+      "selector": [
+        "tests/test_safe_download.py",
+        "tests/test_version_consistency.py",
+        "tests/test_startup_changelog.py",
+        "tests/test_app_updater.py",
+        "tests/test_installation_context.py",
+        "tests/test_updater_helper.py"
+      ],
+      "zero_primary_count": 41
+    },
+    "docs/ci-disabled/ci.yml job wx-smoke": {
+      "added_nodeids": [],
+      "current_count": 59,
+      "current_nodeids_sha256_sorted": "6c7ecc79833fd84eddb9ef895bab14a6ae57d6e8d61a76cde7b5420e6dd9cdeb",
+      "delta_from_frozen": 0,
+      "frozen_inventory_count": 59,
+      "frozen_inventory_reproduced": true,
+      "frozen_recollected_count": 59,
+      "multi_primary_count": 0,
+      "primary_counts": {
+        "audit": 0,
+        "contract": 0,
+        "e2e": 0,
+        "gui": 0,
+        "integration": 0,
+        "release": 0,
+        "reporting": 0,
+        "runtime_smoke": 0,
+        "unit": 0
+      },
+      "removed_nodeids": [],
+      "selector": [
+        "tests/test_wx_shell.py",
+        "tests/test_wx_65a_stress.py",
+        "tests/test_wx_windows_audit.py",
+        "tests/test_wx_terminal.py",
+        "tests/test_wx_embedded_terminal.py",
+        "tests/test_wx_terminal_behavioral.py",
+        "tests/test_wave2_wx_ui_parity.py",
+        "tests/test_wx_term002.py"
+      ],
+      "zero_primary_count": 59
+    },
+    "scripts/ci.py cli": {
+      "added_nodeids": [],
+      "current_count": 164,
+      "current_nodeids_sha256_sorted": "c9e3623d7cb8fd03316bcadcccd5a58e875bdf073f1c1a70783d1e27085a4a74",
+      "delta_from_frozen": 0,
+      "frozen_inventory_count": 164,
+      "frozen_inventory_reproduced": true,
+      "frozen_recollected_count": 164,
+      "multi_primary_count": 0,
+      "primary_counts": {
+        "audit": 0,
+        "contract": 0,
+        "e2e": 0,
+        "gui": 0,
+        "integration": 0,
+        "release": 0,
+        "reporting": 0,
+        "runtime_smoke": 0,
+        "unit": 0
+      },
+      "removed_nodeids": [],
+      "selector": [
+        "tests/test_cli.py",
+        "tests/test_cli_entrypoint.py"
+      ],
+      "zero_primary_count": 164
+    },
+    "scripts/ci.py compat": {
+      "added_nodeids": [],
+      "current_count": 202,
+      "current_nodeids_sha256_sorted": "b5211d42f6040dac286d6a609dcebf3ff15285c39403f0893c89d8fb5192a5ca",
+      "delta_from_frozen": 0,
+      "frozen_inventory_count": 202,
+      "frozen_inventory_reproduced": true,
+      "frozen_recollected_count": 202,
+      "multi_primary_count": 0,
+      "primary_counts": {
+        "audit": 0,
+        "contract": 0,
+        "e2e": 0,
+        "gui": 0,
+        "integration": 0,
+        "release": 0,
+        "reporting": 0,
+        "runtime_smoke": 0,
+        "unit": 0
+      },
+      "removed_nodeids": [],
+      "selector": [
+        "tests/test_cli.py",
+        "tests/test_cli_entrypoint.py",
+        "tests/test_config_storage_atomic.py",
+        "tests/test_profile_identity.py",
+        "tests/test_profile_transfer_settings.py",
+        "tests/test_slurm_models.py",
+        "tests/test_slurm_script_parser.py",
+        "tests/test_remote_entry_helpers.py",
+        "tests/test_upload_pipelining.py",
+        "tests/test_version_consistency.py"
+      ],
+      "zero_primary_count": 202
+    },
+    "scripts/ci.py contract": {
+      "added_nodeids": [],
+      "current_count": 10,
+      "current_nodeids_sha256_sorted": "869821198536faa9a5f0125c60e2ff5f505102dc570cd55c1d383a5b08c540ac",
+      "delta_from_frozen": 0,
+      "frozen_inventory_count": 10,
+      "frozen_inventory_reproduced": true,
+      "frozen_recollected_count": 10,
+      "multi_primary_count": 0,
+      "primary_counts": {
+        "audit": 0,
+        "contract": 0,
+        "e2e": 0,
+        "gui": 0,
+        "integration": 0,
+        "release": 0,
+        "reporting": 0,
+        "runtime_smoke": 0,
+        "unit": 0
+      },
+      "removed_nodeids": [],
+      "selector": [
+        "tests/test_plugin_contract.py"
+      ],
+      "zero_primary_count": 10
+    },
+    "scripts/ci.py macos": {
+      "added_nodeids": [],
+      "current_count": 55,
+      "current_nodeids_sha256_sorted": "7657ee5081bac4c4de14d781b4b143f53a07400a5499f5d5fa6699ef474426e4",
+      "delta_from_frozen": 0,
+      "frozen_inventory_count": 55,
+      "frozen_inventory_reproduced": true,
+      "frozen_recollected_count": 55,
+      "multi_primary_count": 0,
+      "primary_counts": {
+        "audit": 0,
+        "contract": 0,
+        "e2e": 0,
+        "gui": 0,
+        "integration": 0,
+        "release": 0,
+        "reporting": 0,
+        "runtime_smoke": 0,
+        "unit": 0
+      },
+      "removed_nodeids": [],
+      "selector": [
+        "tests/test_platform.py",
+        "tests/test_paths.py",
+        "tests/test_app_updater.py",
+        "tests/test_secret_store.py",
+        "tests/test_macos_product_surface.py",
+        "tests/test_macos_x11.py",
+        "tests/test_macos_release.py",
+        "tests/test_macos_packaging_spec.py",
+        "tests/test_version_consistency.py"
+      ],
+      "zero_primary_count": 55
+    },
+    "scripts/ci.py packaging": {
+      "added_nodeids": [],
+      "current_count": 1,
+      "current_nodeids_sha256_sorted": "c0b0a0f7dd0edcaee8dbb720908a3c5d2b65e235fb122459bcb7f8f26c105820",
+      "delta_from_frozen": 0,
+      "frozen_inventory_count": 1,
+      "frozen_inventory_reproduced": true,
+      "frozen_recollected_count": 1,
+      "multi_primary_count": 0,
+      "primary_counts": {
+        "audit": 0,
+        "contract": 0,
+        "e2e": 0,
+        "gui": 0,
+        "integration": 0,
+        "release": 0,
+        "reporting": 0,
+        "runtime_smoke": 0,
+        "unit": 0
+      },
+      "removed_nodeids": [],
+      "selector": [
+        "tests/test_wheel_packaging.py"
+      ],
+      "zero_primary_count": 1
+    },
+    "scripts/ci.py ssh": {
+      "added_nodeids": [],
+      "current_count": 45,
+      "current_nodeids_sha256_sorted": "286981bbc052e926df65ce2fb1630f4857ffc48c9a71a8d87d3c80ed12dac727",
+      "delta_from_frozen": 0,
+      "frozen_inventory_count": 45,
+      "frozen_inventory_reproduced": true,
+      "frozen_recollected_count": 45,
+      "multi_primary_count": 0,
+      "primary_counts": {
+        "audit": 0,
+        "contract": 0,
+        "e2e": 0,
+        "gui": 0,
+        "integration": 0,
+        "release": 0,
+        "reporting": 0,
+        "runtime_smoke": 0,
+        "unit": 0
+      },
+      "removed_nodeids": [],
+      "selector": [
+        "tests/test_optional_ssh_credentials.py",
+        "tests/test_slurm_ssh.py",
+        "tests/test_local_transfer_gate.py",
+        "tests/test_transfer_wave17.py",
+        "tests/test_transfer_controller.py",
+        "tests/test_profile_transfer_settings.py"
+      ],
+      "zero_primary_count": 45
+    },
+    "scripts/ci.py windows": {
+      "added_nodeids": [],
+      "current_count": 6,
+      "current_nodeids_sha256_sorted": "6c08d0cedf83495c22d9a54f941fc1f9a71db816431635a99621646b7aa35602",
+      "delta_from_frozen": 0,
+      "frozen_inventory_count": 6,
+      "frozen_inventory_reproduced": true,
+      "frozen_recollected_count": 6,
+      "multi_primary_count": 0,
+      "primary_counts": {
+        "audit": 0,
+        "contract": 0,
+        "e2e": 0,
+        "gui": 0,
+        "integration": 0,
+        "release": 0,
+        "reporting": 0,
+        "runtime_smoke": 0,
+        "unit": 0
+      },
+      "removed_nodeids": [],
+      "selector": [
+        "tests/test_safe_download.py",
+        "tests/test_version_consistency.py",
+        "tests/test_startup_changelog.py"
+      ],
+      "zero_primary_count": 6
+    },
+    "scripts/release_test_suite.py shared suite": {
+      "added_nodeids": [
+        "tests/test_test_taxonomy_checker.py::test_catch_all_filename_is_warning_only",
+        "tests/test_test_taxonomy_checker.py::test_collection_failure_returns_nonzero",
+        "tests/test_test_taxonomy_checker.py::test_direct_test_call_warning_finds_imported_test_function",
+        "tests/test_test_taxonomy_checker.py::test_json_keeps_exact_nodeids",
+        "tests/test_test_taxonomy_checker.py::test_qualifiers_do_not_count_as_primaries",
+        "tests/test_test_taxonomy_checker.py::test_ratchet_allows_only_recorded_zero_primary_debt",
+        "tests/test_test_taxonomy_checker.py::test_ratchet_rejects_new_zero_primary_and_multi_primary_debt",
+        "tests/test_test_taxonomy_checker.py::test_report_mode_succeeds_with_taxonomy_debt",
+        "tests/test_test_taxonomy_checker.py::test_single_primary_is_counted_once",
+        "tests/test_test_taxonomy_checker.py::test_two_primary_markers_are_reported",
+        "tests/test_test_taxonomy_checker.py::test_unmarked_record_is_zero_primary"
+      ],
+      "current_count": 2682,
+      "current_nodeids_sha256_sorted": "b5d868ea5feba7932e8dfc990b5d99f259579d94307768bcf738785e012f8931",
+      "delta_from_frozen": 11,
+      "frozen_inventory_count": 2671,
+      "frozen_inventory_reproduced": true,
+      "frozen_recollected_count": 2671,
+      "multi_primary_count": 0,
+      "primary_counts": {
+        "audit": 11,
+        "contract": 0,
+        "e2e": 0,
+        "gui": 0,
+        "integration": 0,
+        "release": 0,
+        "reporting": 0,
+        "runtime_smoke": 0,
+        "unit": 0
+      },
+      "removed_nodeids": [],
+      "selector": [
+        "tests/** minus packaging marker, plus isolated: tests/test_ftp_widget.py, tests/test_download_cancel_wire.py, tests/test_editor_flow.py"
+      ],
+      "zero_primary_count": 2671
+    }
+  },
+  "manual_ci_selectors": {
+    "lanes": [
+      "scripts/ci.py packaging",
+      "scripts/ci.py compat",
+      "scripts/ci.py cli",
+      "scripts/ci.py ssh",
+      "scripts/ci.py windows",
+      "scripts/ci.py macos",
+      "scripts/ci.py contract",
+      "scripts/release_test_suite.py shared suite"
+    ],
+    "uncovered_nodeids": [
+      "tests/test_wx_packaged_smoke.py::test_packaged_wx_smoke_gate_reports_critical_stages"
+    ],
+    "union_count": 2683
+  },
+  "schema_version": 1,
+  "source": {
+    "frozen_baseline_sha": "12ce79935bf076e1062c57dc7dbd148bad2bfae1",
+    "method": "pytest collection records and iter_markers, filtered by recorded explicit file/marker selectors; no filename-based primary inference",
+    "note": "The release suite and Linux/Windows release jobs exclude packaging markers. ci.py windows also has unittest discovery commands, which are outside pytest nodeid comparison.",
+    "ratchet_baseline_sha": "058c83bb3318ddaee85bf98ba430079a4acd4a02"
+  }
+}

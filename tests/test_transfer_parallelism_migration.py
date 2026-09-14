@@ -11,7 +11,11 @@ import json
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
+
 from hpc_gui.config import storage
+
+pytestmark = [pytest.mark.contract, pytest.mark.regression]
 
 
 def _config(tmp_path: Path):

@@ -18,6 +18,8 @@ import time
 import unittest
 from pathlib import Path
 
+import pytest
+
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -33,6 +35,13 @@ from hpc_gui.ui.widgets.remote_dir_panel import RemoteDirPanel  # noqa: E402
 BIG_NAME = "big_result.cas.h5"
 BIG_SIZE = 48 * 1024 * 1024
 CANCEL_AFTER_BYTES = 6 * 1024 * 1024
+
+pytestmark = [
+    pytest.mark.e2e,
+    pytest.mark.semantic,
+    pytest.mark.concurrency,
+    pytest.mark.slow,
+]
 
 
 class _PlanWorker:
@@ -134,6 +143,7 @@ class DownloadCancelWireTests(unittest.TestCase):
         self.assertGreater(seen["bytes"], CANCEL_AFTER_BYTES, "cancel never triggered")
         return controller
 
+    @pytest.mark.resource
     def test_cancel_keeps_the_partial_and_leaves_the_session_usable(self) -> None:
         plan, planner = self._plan()
         downloads = [op for op in plan if op.op == "download"]

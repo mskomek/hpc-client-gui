@@ -60,6 +60,8 @@ ALL_UNICODE_NAMES = TURKISH_NAMES + JAPANESE_NAMES + MIXED_NAMES + SYMBOL_NAMES
 # ---------------------------------------------------------------------------
 
 class TestDirectoryListingNavigation:
+    pytestmark = pytest.mark.unit
+
     """Verify directory listing and navigation with Unicode names."""
 
     def test_list_entries_returns_unicode_names(self, tmp_path):
@@ -138,6 +140,8 @@ class TestDirectoryListingNavigation:
 # ---------------------------------------------------------------------------
 
 class TestCRUDActions:
+    pytestmark = pytest.mark.unit
+
     """Verify file operations with Unicode paths."""
 
     def test_create_directory_unicode(self, tmp_path):
@@ -228,6 +232,8 @@ class TestCRUDActions:
 # ---------------------------------------------------------------------------
 
 class TestContextMenus:
+    pytestmark = pytest.mark.unit
+
     """Verify context menus are fully wired with Unicode support."""
 
     def test_context_actions_for_file(self):
@@ -307,6 +313,7 @@ class TestContextMenus:
 class TestClipboardOperations:
     """Verify clipboard operations preserve Unicode."""
 
+    @pytest.mark.unit
     def test_copy_paste_unicode_file(self, tmp_path):
         """Copy/paste should preserve Unicode file names."""
         from hpc_gui.wx_local_files import LocalBrowserModel
@@ -329,6 +336,7 @@ class TestClipboardOperations:
         assert dest_file.exists()
         assert dest_file.read_text(encoding="utf-8") == "content"
 
+    @pytest.mark.unit
     def test_cut_paste_unicode_file(self, tmp_path):
         """Cut/paste should preserve Unicode file names and remove source."""
         from hpc_gui.wx_local_files import LocalBrowserModel
@@ -352,6 +360,7 @@ class TestClipboardOperations:
         assert dest_file.read_text(encoding="utf-8") == "content"
         assert not src.exists()
 
+    @pytest.mark.unit
     def test_copy_paste_multiple_unicode_files(self, tmp_path):
         """Copy/paste multiple Unicode files should work."""
         from hpc_gui.wx_local_files import LocalBrowserModel
@@ -376,21 +385,24 @@ class TestClipboardOperations:
         for name in files:
             assert (dest_dir / name).exists(), f"File {name!r} not pasted"
 
-    def test_paste_into_itself_guard(self, tmp_path):
-        """Pasting into source directory should be blocked."""
+    @pytest.mark.unit
+    @pytest.mark.semantic
+    @pytest.mark.regression
+    def test_paste_directory_into_itself_is_rejected(self, tmp_path):
+        """Pasting a directory into itself must not create recursive copies."""
         from hpc_gui.wx_local_files import LocalBrowserModel
 
         model = LocalBrowserModel(tmp_path)
+        source = tmp_path / "source"
+        source.mkdir()
+        (source / "payload.txt").write_text("content", encoding="utf-8")
+        model.copy([source], move=False)
 
-        # Create file
-        src = tmp_path / "file.txt"
-        src.write_text("test", encoding="utf-8")
+        with pytest.raises(ValueError, match="cannot paste a directory into itself"):
+            model.paste_into(source, model.clipboard, move=False)
 
-        # Try to paste into same directory
-        model.copy([src], move=False)
-        # paste_into should handle this gracefully (skip or error)
-        # The model checks `source in dest.parents` which won't match same dir
-        # so it will try to copy (which will fail on overwrite or succeed)
+        assert (source / "payload.txt").read_text(encoding="utf-8") == "content"
+        assert not (source / "source").exists()
 
 
 # ---------------------------------------------------------------------------
@@ -398,6 +410,8 @@ class TestClipboardOperations:
 # ---------------------------------------------------------------------------
 
 class TestSearchFilterErgonomics:
+    pytestmark = pytest.mark.unit
+
     """Verify search/filter behavior with Unicode names."""
 
     def test_sort_turkish_names(self, tmp_path):
@@ -464,6 +478,8 @@ class TestSearchFilterErgonomics:
 # ---------------------------------------------------------------------------
 
 class TestURLEncoding:
+    pytestmark = pytest.mark.contract
+
     """Verify URL encoding preserves Unicode for drag/drop."""
 
     def test_url_payload_unicode(self, tmp_path):
@@ -493,6 +509,8 @@ class TestURLEncoding:
 # ---------------------------------------------------------------------------
 
 class TestPathOperations:
+    pytestmark = pytest.mark.unit
+
     """Verify path operations with Unicode names."""
 
     def test_navigate_unicode_directory(self, tmp_path):
@@ -559,6 +577,7 @@ class TestPathOperations:
 class TestIntegration:
     """Integration tests for Unicode local file operations."""
 
+    @pytest.mark.integration
     def test_full_workflow_unicode(self, tmp_path):
         """Full workflow: create, list, rename, copy, delete with Unicode names."""
         from hpc_gui.wx_local_files import LocalBrowserModel
@@ -607,6 +626,7 @@ class TestIntegration:
         model.parent()
         assert model.current_path.resolve() == tmp_path.resolve()
 
+    @pytest.mark.unit
     def test_unicode_directory_listing(self, tmp_path):
         """Listing a directory with many Unicode names should work."""
         from hpc_gui.services.local_files import list_local_entries
@@ -634,6 +654,8 @@ class TestIntegration:
 # ---------------------------------------------------------------------------
 
 class TestForwardNavigation:
+    pytestmark = pytest.mark.unit
+
     """Verify forward navigation works correctly."""
 
     def test_forward_navigation_basic(self, tmp_path):
@@ -728,6 +750,8 @@ class TestForwardNavigation:
 # ---------------------------------------------------------------------------
 
 class TestSearchFilter:
+    pytestmark = pytest.mark.unit
+
     """Verify search/filter functionality with Unicode names."""
 
     def test_search_turkish_names(self, tmp_path):
@@ -815,9 +839,11 @@ class TestSearchFilter:
 # ---------------------------------------------------------------------------
 
 class TestErrorHandling:
+    pytestmark = pytest.mark.unit
+
     """Verify error handling for edge cases."""
 
-    def test_list_entries_permission_error(self, tmp_path):
+    def test_list_entries_permission_error(self, tmp_path, monkeypatch):
         """list_entries should handle permission errors gracefully."""
         from hpc_gui.wx_local_files import LocalBrowserModel
 
@@ -827,10 +853,27 @@ class TestErrorHandling:
         (tmp_path / "file.txt").write_text("test", encoding="utf-8")
         subdir = tmp_path / "subdir"
         subdir.mkdir()
+        denied = tmp_path / "denied.txt"
+        denied.write_text("secret", encoding="utf-8")
 
-        # list_entries should not crash even if stat() fails for some entries
+        original_stat = pathlib.Path.stat
+        denied_stat_calls = []
+
+        def permission_denied(path, *args, **kwargs):
+            if path == denied:
+                denied_stat_calls.append(path)
+                raise PermissionError("metadata access denied")
+            return original_stat(path, *args, **kwargs)
+
+        monkeypatch.setattr(pathlib.Path, "stat", permission_denied)
         entries = model.list_entries()
-        assert len(entries) >= 2
+
+        by_name = {entry.path.name: entry for entry in entries}
+        assert by_name["file.txt"].size == 4
+        assert by_name["subdir"].is_dir
+        assert by_name["denied.txt"].size == 0
+        assert not by_name["denied.txt"].is_dir
+        assert denied_stat_calls == [denied]
 
     def test_navigate_nonexistent_directory(self, tmp_path):
         """navigate should raise NotADirectoryError for non-existent paths."""
@@ -889,6 +932,8 @@ class TestErrorHandling:
 # ---------------------------------------------------------------------------
 
 class TestEmptyLoadingErrorStates:
+    pytestmark = pytest.mark.unit
+
     """Verify empty, loading, and error states."""
 
     def test_empty_directory(self, tmp_path):
@@ -938,6 +983,8 @@ class TestEmptyLoadingErrorStates:
 # ---------------------------------------------------------------------------
 
 class TestConflictHandling:
+    pytestmark = pytest.mark.unit
+
     """Verify conflict handling during file operations."""
 
     def test_rename_conflict(self, tmp_path):

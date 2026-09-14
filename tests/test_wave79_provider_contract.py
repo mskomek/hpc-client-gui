@@ -1,6 +1,9 @@
 """Wave 79: Provider Adapter/Parser Contract + TRUBA Parser Integration tests."""
 
 from types import SimpleNamespace
+
+import pytest
+
 from hpc_gui.services.parser_registry import (
     ParseResult, parse, register_parser, known_parser_ids,
 )
@@ -25,6 +28,7 @@ from hpc_gui.plugins.validator import validate_cluster_profile_dict
 # ParserRegistry tests
 # ---------------------------------------------------------------------------
 
+@pytest.mark.contract
 class TestParserRegistry:
     def test_known_parsers_registered(self):
         ids = known_parser_ids()
@@ -68,6 +72,7 @@ class TestParserRegistry:
 # slurm.scontrol.v1 parser tests
 # ---------------------------------------------------------------------------
 
+@pytest.mark.contract
 class TestScontrolV1:
     VALID_SCONTROL = (
         "JobId=12345 JobName=testjob UserId=user(1000) "
@@ -139,6 +144,7 @@ class TestScontrolV1:
 # slurm.sacct.pipe.v1 parser tests
 # ---------------------------------------------------------------------------
 
+@pytest.mark.contract
 class TestSacctPipeV1:
     VALID_SACCT = (
         "JobIDRaw|State|Elapsed|MaxRSS|AllocTRES|ExitCode\n"
@@ -202,6 +208,7 @@ class TestSacctPipeV1:
 # truba.lssrv.v1 parser tests
 # ---------------------------------------------------------------------------
 
+@pytest.mark.contract
 class TestTrubaLssrvV1:
     VALID_LSSRV = (
         "Slurm partitions state\n"
@@ -260,6 +267,7 @@ class TestTrubaLssrvV1:
 # ProviderContract tests
 # ---------------------------------------------------------------------------
 
+@pytest.mark.contract
 class TestProviderContract:
     def test_extract_full_contract(self):
         template = {
@@ -312,10 +320,12 @@ class TestProviderContract:
 
 
 class TestProductionContractWiring:
+    @pytest.mark.contract
     def test_builtin_registry_is_available_without_parser_module_import(self):
         assert {"slurm.scontrol.job", "slurm.sacct.job", "truba.lssrv"} <= known_adapter_ids()
         assert {"slurm.scontrol.v1", "slurm.sacct.pipe.v1", "truba.lssrv.v1"} <= known_parser_ids()
 
+    @pytest.mark.contract
     def test_adapter_preserves_raw_command_result(self):
         class Backend:
             def scontrol_show_job(self, job_id):
@@ -328,6 +338,7 @@ class TestProductionContractWiring:
         assert result.stdout == "JobId=42"
         assert result.command == "trusted"
 
+    @pytest.mark.integration
     def test_production_jobs_callback_uses_declared_adapter(self):
         class Backend:
             def scontrol_show_job(self, job_id):
@@ -361,6 +372,7 @@ class TestProductionContractWiring:
 # ParserErrorUX tests
 # ---------------------------------------------------------------------------
 
+@pytest.mark.unit
 class TestParserErrorUX:
     def test_format_backend_error(self):
         from hpc_gui.services.parser_registry import ParseError
@@ -400,6 +412,7 @@ class TestParserErrorUX:
 # Schema v4 validation tests
 # ---------------------------------------------------------------------------
 
+@pytest.mark.contract
 class TestSchemaV4Validation:
     def test_v4_valid(self):
         profile = {
@@ -483,6 +496,7 @@ class TestSchemaV4Validation:
 # RawCommandResult tests
 # ---------------------------------------------------------------------------
 
+@pytest.mark.unit
 class TestRawCommandResult:
     def test_from_response(self):
         r = RawCommandResult.from_response(
@@ -521,6 +535,7 @@ class TestRawCommandResult:
 # Backward compatibility tests
 # ---------------------------------------------------------------------------
 
+@pytest.mark.contract
 class TestBackwardCompatibility:
     def test_v1_profile_loads(self):
         from hpc_gui.plugins.models import build_cluster_profile

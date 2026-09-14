@@ -5,6 +5,8 @@ import hashlib
 import json
 import pytest
 
+pytestmark = pytest.mark.reporting
+
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / "audit" / "current-gui" / "MANIFEST.json"
 HASHES = ROOT / "audit" / "current-gui" / "HASHES.sha256"
@@ -14,19 +16,24 @@ WX_DIR = ROOT / "audit" / "current-gui" / "wx"
 def _sha256(p: Path) -> str:
     return hashlib.sha256(p.read_bytes()).hexdigest()
 
-def test_manifest_exists_and_commit_current():
+def test_manifest_records_historical_commit():
     assert MANIFEST.is_file(), "MANIFEST.json missing"
     data = json.loads(MANIFEST.read_text(encoding="utf-8"))
     assert data.get("schema") == "gui-visual-audit/2"
+    assert data.get("evidence_status") == "historical"
     commit = data.get("commit")
     assert isinstance(commit, str) and len(commit)==40 and all(c in "0123456789abcdef" for c in commit.lower()), "commit must be 40 hex"
-    # Must match current HEAD
     import subprocess
-    head = subprocess.run(["git","rev-parse","HEAD"], capture_output=True, text=True, cwd=ROOT).stdout.strip()
-    if commit.lower() != head.lower():
-        pytest.skip(
-            f"historical visual-audit manifest {commit}; current screenshots were not reproduced for {head}"
-        )
+    historical_object = subprocess.run(
+        ["git", "cat-file", "-e", f"{commit}^{{commit}}"],
+        capture_output=True,
+        text=True,
+        cwd=ROOT,
+    )
+    assert historical_object.returncode == 0, f"historical commit {commit} is unavailable"
+    human_manifest = (MANIFEST.parent / "MANIFEST.md").read_text(encoding="utf-8")
+    assert "Historical GUI Manifest" in human_manifest
+    assert f"`{commit}`" in human_manifest
     assert data.get("branch") == "develop"
     assert data.get("platform") == "Windows"
     # Check runtime commands are real
