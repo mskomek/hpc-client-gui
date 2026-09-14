@@ -1,6 +1,11 @@
+import pytest
+
 from hpc_gui.wx_directories import WxDirectoriesWorkspace
 
 
+@pytest.mark.unit
+@pytest.mark.wx
+@pytest.mark.semantic
 def test_dynamic_storage_and_directory_workflows():
     opened, submitted, shell = [], [], []
     workspace = WxDirectoriesWorkspace(
@@ -18,6 +23,9 @@ def test_dynamic_storage_and_directory_workflows():
     assert workspace.double_click("/scratch/user", is_dir=True) == "navigate"
 
 
+@pytest.mark.unit
+@pytest.mark.wx
+@pytest.mark.semantic
 def test_batch_submit_is_deterministic_and_model_has_no_qt():
     workspace = WxDirectoriesWorkspace(({"id": "x", "path": "/x"},))
     assert workspace.batch_submit(("/x/b.slurm", "/x/a.slurm"))[1].index == 2

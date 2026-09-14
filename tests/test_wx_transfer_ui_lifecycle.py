@@ -4,6 +4,7 @@ import threading
 from pathlib import Path
 import pytest
 wx = pytest.importorskip("wx")
+pytestmark = pytest.mark.wx
 from hpc_gui.services.transfer_controller import TransferItem
 from hpc_gui.wx_shell import _start_file_transfers
 from hpc_gui.wx_transfer_workspace import create_transfer_progress
@@ -12,11 +13,17 @@ from hpc_gui.core.i18n import load_language, set_language, t
 @pytest.fixture
 def wx_app():
     load_language("en")
-    app=wx.App(False)
+    app = wx.App.Get()
+    if app is None:
+        app = wx.App(False)
     yield app
-    for w in wx.GetTopLevelWindows():
-        if w: w.Destroy()
-    app.ProcessPendingEvents()
+    for window in list(wx.GetTopLevelWindows()):
+        if window:
+            window.Destroy()
+    for _ in range(3):
+        app.ProcessPendingEvents()
+        wx.YieldIfNeeded()
+    assert not wx.GetTopLevelWindows()
     app.Destroy()
 
 class _Files:
@@ -44,6 +51,9 @@ class _Lifecycle:
     def __init__(self): self.cleanups=[]
     def register_cleanup(self, cb): self.cleanups.append(cb)
 
+@pytest.mark.gui
+@pytest.mark.concurrency
+@pytest.mark.resource
 def test_wx_transfer_window_close_cancels_inflight_transfer(wx_app):
     parent=wx.Frame(None)
     files=_BlockingFiles()
@@ -66,6 +76,9 @@ def test_wx_transfer_window_close_cancels_inflight_transfer(wx_app):
     parent.Destroy()
     wx_app.ProcessPendingEvents()
 
+@pytest.mark.gui
+@pytest.mark.concurrency
+@pytest.mark.resource
 def test_wx_transfer_window_close_releases_session(wx_app):
     parent=wx.Frame(None)
     files=_BlockingFiles()
@@ -84,6 +97,8 @@ def test_wx_transfer_window_close_releases_session(wx_app):
     parent.Destroy()
     wx_app.ProcessPendingEvents()
 
+@pytest.mark.gui
+@pytest.mark.resource
 def test_wx_transfer_progress_callback_after_close_is_ignored(wx_app):
     parent=wx.Frame(None)
     window=create_transfer_progress(parent)
@@ -101,6 +116,8 @@ def test_wx_transfer_progress_callback_after_close_is_ignored(wx_app):
     parent.Destroy()
     wx_app.ProcessPendingEvents()
 
+@pytest.mark.gui
+@pytest.mark.resource
 def test_wx_transfer_finish_callback_after_close_is_ignored(wx_app):
     parent=wx.Frame(None)
     window=create_transfer_progress(parent)
@@ -113,6 +130,8 @@ def test_wx_transfer_finish_callback_after_close_is_ignored(wx_app):
     parent.Destroy()
     wx_app.ProcessPendingEvents()
 
+@pytest.mark.gui
+@pytest.mark.resource
 def test_wx_transfer_failure_callback_after_close_is_ignored(wx_app):
     parent=wx.Frame(None)
     window=create_transfer_progress(parent)
@@ -129,6 +148,8 @@ def test_wx_transfer_failure_callback_after_close_is_ignored(wx_app):
     parent.Destroy()
     wx_app.ProcessPendingEvents()
 
+@pytest.mark.gui
+@pytest.mark.resource
 def test_wx_transfer_close_does_not_touch_destroyed_controls(wx_app):
     parent=wx.Frame(None)
     files=_BlockingFiles()
@@ -150,6 +171,8 @@ def test_wx_transfer_close_does_not_touch_destroyed_controls(wx_app):
     parent.Destroy()
     wx_app.ProcessPendingEvents()
 
+@pytest.mark.gui
+@pytest.mark.resource
 def test_wx_transfer_success_visible_state(wx_app):
     parent=wx.Frame(None)
     files=_Files()
@@ -174,6 +197,8 @@ def test_wx_transfer_success_visible_state(wx_app):
     parent.Destroy()
     wx_app.ProcessPendingEvents()
 
+@pytest.mark.gui
+@pytest.mark.resource
 def test_wx_transfer_failure_visible_state(wx_app):
     parent=wx.Frame(None)
     files=_FailingFiles()
@@ -196,6 +221,9 @@ def test_wx_transfer_failure_visible_state(wx_app):
     parent.Destroy()
     wx_app.ProcessPendingEvents()
 
+@pytest.mark.gui
+@pytest.mark.concurrency
+@pytest.mark.resource
 def test_wx_transfer_cancel_visible_state(wx_app):
     parent=wx.Frame(None)
     files=_BlockingFiles()
@@ -221,6 +249,7 @@ def test_wx_transfer_cancel_visible_state(wx_app):
     parent.Destroy()
     wx_app.ProcessPendingEvents()
 
+@pytest.mark.gui
 def test_wx_transfer_progress_retranslates_runtime(wx_app):
     parent=wx.Frame(None)
     window=create_transfer_progress(parent)
@@ -242,6 +271,7 @@ def test_wx_transfer_progress_retranslates_runtime(wx_app):
     parent.Destroy()
     wx_app.ProcessPendingEvents()
 
+@pytest.mark.gui
 def test_wx_transfer_direct_upload_reaches_visible_transfer(wx_app, tmp_path: Path):
     parent=wx.Frame(None)
     files=_Files()
@@ -261,6 +291,7 @@ def test_wx_transfer_direct_upload_reaches_visible_transfer(wx_app, tmp_path: Pa
     parent.Destroy()
     wx_app.ProcessPendingEvents()
 
+@pytest.mark.gui
 def test_wx_transfer_direct_download_reaches_visible_transfer(wx_app, tmp_path: Path):
     parent=wx.Frame(None)
     files=_Files()
@@ -279,6 +310,7 @@ def test_wx_transfer_direct_download_reaches_visible_transfer(wx_app, tmp_path: 
     parent.Destroy()
     wx_app.ProcessPendingEvents()
 
+@pytest.mark.gui
 def test_wx_local_browser_upload_reaches_visible_transfer_and_backend(wx_app, tmp_path: Path, monkeypatch):
     from hpc_gui.wx_local_files import show_local_files
     parent=wx.Frame(None)
@@ -331,6 +363,7 @@ def test_wx_local_browser_upload_reaches_visible_transfer_and_backend(wx_app, tm
     parent.Destroy()
     wx_app.ProcessPendingEvents()
 
+@pytest.mark.gui
 def test_wx_remote_browser_download_reaches_visible_transfer_and_backend(wx_app, tmp_path: Path, monkeypatch):
     from hpc_gui.wx_remote_files_view import show_remote_files
     from hpc_gui.wx_remote_files import WxRemoteDirectoryModel

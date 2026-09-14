@@ -1,4 +1,8 @@
+import pytest
+
 from hpc_gui.services.provider_path_resolver import ProviderPathResolver
+
+pytestmark = pytest.mark.unit
 
 
 class FakeSSH:

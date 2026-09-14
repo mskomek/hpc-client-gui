@@ -24,7 +24,9 @@ def _pump(app, predicate):
 @pytest.fixture
 def shell_i18n():
     load_language("en")
-    app = wx.App(False)
+    app = wx.App.Get()
+    if app is None:
+        app = wx.App(False)
     frame, lifecycle, _session = create_shell_frame(app, tray_factory=lambda _parent: None)
     frame.Show()
     show_jobs(frame, lifecycle=lifecycle, list_jobs=lambda: [{"id": "1", "state": "RUNNING"}])
@@ -33,10 +35,13 @@ def shell_i18n():
     if not lifecycle.shutdown_started:
         frame.Close()
     _pump(app, lambda: lifecycle.shutdown_started)
-    for window in wx.GetTopLevelWindows():
+    for window in list(wx.GetTopLevelWindows()):
         if window:
             window.Destroy()
-    app.ProcessPendingEvents()
+    for _ in range(3):
+        app.ProcessPendingEvents()
+        wx.YieldIfNeeded()
+    assert not wx.GetTopLevelWindows()
     app.Destroy()
 
 
@@ -45,6 +50,9 @@ def _choose(frame, language):
     frame.ProcessEvent(wx.CommandEvent(wx.wxEVT_MENU, item.GetId()))
 
 
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
 def test_wx_shell_language_menu_has_english_turkish_flags_and_check_state(shell_i18n):
     _app, frame, _lifecycle = shell_i18n
     items = frame._wx_shell_controls["language_items"]
@@ -58,6 +66,9 @@ def test_wx_shell_language_menu_has_english_turkish_flags_and_check_state(shell_
     assert current_language() == "en" and items["en"].IsChecked()
 
 
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
 def test_wx_shell_language_selection_retranslates_open_jobs_window(shell_i18n):
     _app, frame, _lifecycle = shell_i18n
     jobs = next((w for w in wx.GetTopLevelWindows() if hasattr(w, "_wx_jobs_state") and w.GetParent() is frame), None)
@@ -76,6 +87,9 @@ def test_wx_shell_language_selection_retranslates_open_jobs_window(shell_i18n):
     assert jobs.GetTitle() == "Jobs"
 
 
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
 def test_wx_shell_exposes_navigation_tabs_and_terminal(shell_i18n):
     _app, frame, _lifecycle = shell_i18n
     controls = frame._wx_shell_controls

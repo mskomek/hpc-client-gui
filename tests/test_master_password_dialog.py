@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from unittest.mock import patch
 
+import pytest
+
 from PySide6.QtWidgets import QApplication, QCheckBox, QDialog, QDialogButtonBox, QLabel, QLineEdit
 
 from hpc_gui.core.i18n import load_language, t
@@ -22,6 +24,9 @@ def _inspect_dialog(owner, result=QDialog.DialogCode.Rejected):
     return captured, fake_exec
 
 
+@pytest.mark.gui
+@pytest.mark.qt
+@pytest.mark.semantic
 def test_master_dialog_is_fully_localized_for_create_and_unlock():
     login = LoginWidget()
     try:
@@ -73,6 +78,9 @@ def test_master_dialog_is_fully_localized_for_create_and_unlock():
         login.deleteLater()
 
 
+@pytest.mark.gui
+@pytest.mark.qt
+@pytest.mark.semantic
 def test_master_dialog_validates_create_passwords_in_one_form():
     load_language("en")
     login = LoginWidget()
@@ -98,6 +106,9 @@ def test_master_dialog_validates_create_passwords_in_one_form():
         login.deleteLater()
 
 
+@pytest.mark.gui
+@pytest.mark.qt
+@pytest.mark.semantic
 def test_master_dialog_rejects_empty_and_mismatched_values_without_saving():
     load_language("en")
     login = LoginWidget()
@@ -128,6 +139,9 @@ def test_master_dialog_rejects_empty_and_mismatched_values_without_saving():
         login.deleteLater()
 
 
+@pytest.mark.gui
+@pytest.mark.qt
+@pytest.mark.semantic
 def test_windows_remember_option_is_visible_and_unchecked():
     load_language("en")
     login = LoginWidget()

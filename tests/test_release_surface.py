@@ -5,15 +5,21 @@ import tempfile
 import unittest
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 import check_release_surface  # noqa: E402
 
 
 class ReleaseSurfaceCheckTest(unittest.TestCase):
+    @pytest.mark.audit
+    @pytest.mark.semantic
     def test_repository_surface_is_clean(self) -> None:
         self.assertEqual(check_release_surface.check_release_surface(ROOT), [])
 
+    @pytest.mark.unit
+    @pytest.mark.semantic
     def test_stale_tag_link_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

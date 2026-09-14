@@ -1,6 +1,7 @@
 # ruff: noqa
 import pytest
 wx = pytest.importorskip("wx")
+pytestmark = [pytest.mark.gui, pytest.mark.wx]
 from hpc_gui.services.transfer_controller import TransferItem
 from hpc_gui.services.transfer_session_controller import TransferSessionController
 from hpc_gui.wx_transfer_workspace import create_transfer_conflict_dialog
@@ -9,7 +10,9 @@ from hpc_gui.core.i18n import load_language
 @pytest.fixture
 def wx_app():
     load_language("en")
-    app=wx.App(False)
+    app = wx.App.Get()
+    if app is None:
+        app = wx.App(False)
     yield app
     for w in wx.GetTopLevelWindows():
         if w: w.Destroy()
@@ -92,6 +95,7 @@ def test_wx_conflict_dialog_shows_resume_only_for_download_direction(wx_app):
     parent.Destroy()
     wx_app.ProcessPendingEvents()
 
+@pytest.mark.semantic
 def test_wx_conflict_rename_flow_validates_and_returns_rename(wx_app, monkeypatch):
     parent=wx.Frame(None)
     files=_Files(existing={"/dst/existing.txt"})
@@ -115,6 +119,7 @@ def test_wx_conflict_rename_flow_validates_and_returns_rename(wx_app, monkeypatc
     parent.Destroy()
     wx_app.ProcessPendingEvents()
 
+@pytest.mark.semantic
 def test_wx_conflict_rename_rejects_empty_and_shows_error(wx_app, monkeypatch):
     parent=wx.Frame(None)
     files=_Files(existing={"/dst/file.txt"})
@@ -137,6 +142,7 @@ def test_wx_conflict_rename_rejects_empty_and_shows_error(wx_app, monkeypatch):
     parent.Destroy()
     wx_app.ProcessPendingEvents()
 
+@pytest.mark.semantic
 def test_wx_conflict_rename_rejects_path_separator(wx_app, monkeypatch):
     parent=wx.Frame(None)
     files=_Files(existing={"/dst/file.txt"})
@@ -153,6 +159,7 @@ def test_wx_conflict_rename_rejects_path_separator(wx_app, monkeypatch):
     parent.Destroy()
     wx_app.ProcessPendingEvents()
 
+@pytest.mark.semantic
 def test_wx_conflict_rename_rejects_existing_destination(wx_app, monkeypatch):
     parent=wx.Frame(None)
     files=_Files(existing={"/dst/file.txt", "/dst/taken.txt"})
@@ -205,6 +212,7 @@ def test_wx_conflict_dialog_ignores_generic_resume_flags(wx_app):
     parent.Destroy()
     wx_app.ProcessPendingEvents()
 
+@pytest.mark.semantic
 def test_wx_conflict_dialog_overwrite_skip_cancel_return_values(wx_app):
     parent=wx.Frame(None)
     files=_Files()

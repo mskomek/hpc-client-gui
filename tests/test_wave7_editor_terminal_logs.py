@@ -8,7 +8,8 @@ from __future__ import annotations
 
 import pathlib
 import sys
-import zipfile
+
+import pytest
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 if str(ROOT / "src") not in sys.path:
@@ -22,6 +23,8 @@ if str(ROOT / "src") not in sys.path:
 class TestScriptEditor:
     """Verify script editor handles Unicode correctly."""
 
+    @pytest.mark.unit
+    @pytest.mark.semantic
     def test_editor_model_unicode_content(self):
         """DocumentModel should preserve Unicode content."""
         from hpc_gui.services.editor_controller import DocumentModel
@@ -38,6 +41,8 @@ class TestScriptEditor:
         assert "★" in doc.content
         assert doc.dirty is True
 
+    @pytest.mark.unit
+    @pytest.mark.semantic
     def test_editor_model_encoding_default(self):
         """DocumentModel should default to UTF-8 encoding."""
         from hpc_gui.services.editor_controller import DocumentModel
@@ -50,6 +55,8 @@ class TestScriptEditor:
         )
         assert doc.encoding == "utf-8"
 
+    @pytest.mark.unit
+    @pytest.mark.semantic
     def test_editor_model_dirty_detection(self):
         """DocumentModel should detect dirty state correctly."""
         from hpc_gui.services.editor_controller import DocumentModel
@@ -66,52 +73,8 @@ class TestScriptEditor:
         doc2 = doc.with_content("# 日本語テスト (modified)\n")
         assert doc2.dirty is True
 
-    def test_editor_file_roundtrip_unicode(self, tmp_path):
-        """Unicode file should survive editor open/save roundtrip."""
-        content = "# Isı transferi 日本語\nprint('Çalışma başladı ★')\n"
-        script_path = tmp_path / "test_script.py"
-        script_path.write_text(content, encoding="utf-8")
 
-        # Read back
-        read_content = script_path.read_text(encoding="utf-8")
-        assert read_content == content
 
-        # Modify and save
-        modified = read_content + "# Δ added\n"
-        script_path.write_text(modified, encoding="utf-8")
-
-        # Read again
-        final = script_path.read_text(encoding="utf-8")
-        assert "Δ" in final
-        assert "日本語" in final
-
-    def test_editor_bom_handling(self, tmp_path):
-        """Editor should handle UTF-8 BOM correctly."""
-        content = "#!/bin/bash\n#SBATCH --job-name=test\n"
-        bom_path = tmp_path / "bom_script.sh"
-
-        # Write with BOM
-        bom_path.write_bytes(b"\xef\xbb\xbf" + content.encode("utf-8"))
-
-        # Read back - BOM should be handled
-        raw = bom_path.read_bytes()
-        assert raw.startswith(b"\xef\xbb\xbf")
-
-        # Strip BOM for content
-        text = raw.decode("utf-8-sig")
-        assert text == content
-        assert text.startswith("#!/bin/bash")
-
-    def test_editor_no_bom_before_shebang(self, tmp_path):
-        """BOM must not appear before shebang in generated scripts."""
-        content = "#!/bin/bash\n#SBATCH --job-name=test\n"
-        script_path = tmp_path / "test.sh"
-        script_path.write_text(content, encoding="utf-8")
-
-        # Verify no BOM
-        raw = script_path.read_bytes()
-        assert not raw.startswith(b"\xef\xbb\xbf"), "BOM before shebang"
-        assert raw.startswith(b"#!/bin/bash"), "Shebang must be first"
 
 
 # ---------------------------------------------------------------------------
@@ -121,6 +84,8 @@ class TestScriptEditor:
 class TestTerminal:
     """Verify terminal handles Unicode correctly."""
 
+    @pytest.mark.unit
+    @pytest.mark.semantic
     def test_terminal_model_unicode_receive(self):
         """TerminalModel should handle Unicode output."""
         from hpc_gui.wx_terminal import TerminalModel
@@ -142,6 +107,8 @@ class TestTerminal:
         assert "★" in model.text
         assert "✓" in model.text
 
+    @pytest.mark.contract
+    @pytest.mark.semantic
     def test_terminal_webview_safe_json_dumps(self):
         """_safe_json_dumps should preserve Unicode."""
         from hpc_gui.wx_terminal_webview import _safe_json_dumps
@@ -155,6 +122,8 @@ class TestTerminal:
         assert "日本" in result
         assert "★" in result
 
+    @pytest.mark.unit
+    @pytest.mark.semantic
     def test_terminal_webview_safe_truncate_index(self):
         """_safe_truncate_index should handle Unicode safely."""
         from hpc_gui.wx_terminal_webview import _safe_truncate_index
@@ -167,40 +136,7 @@ class TestTerminal:
         truncated = text[:truncated_idx]
         assert truncated.encode("utf-8", errors="strict") or True  # No exception
 
-    def test_shell_session_incremental_decoder(self):
-        """Shell session should decode multi-byte UTF-8 correctly."""
-        import codecs
 
-        decoder = codecs.getincrementaldecoder("utf-8")("replace")
-
-        # Turkish characters
-        text = "İş tamamlandı ✓"
-        encoded = text.encode("utf-8")
-        decoded = decoder.decode(encoded, final=True)
-        assert decoded == text
-
-        # Japanese characters
-        decoder2 = codecs.getincrementaldecoder("utf-8")("replace")
-        text2 = "計算完了 日本語"
-        encoded2 = text2.encode("utf-8")
-        decoded2 = decoder2.decode(encoded2, final=True)
-        assert decoded2 == text2
-
-    def test_shell_session_split_bytes(self):
-        """Shell session should handle split multi-byte sequences."""
-        import codecs
-
-        # Japanese character は (U+540D) is 3 bytes in UTF-8
-        text = "日本語"
-        encoded = text.encode("utf-8")
-
-        # Split at each byte boundary
-        for i in range(1, len(encoded)):
-            decoder = codecs.getincrementaldecoder("utf-8")("replace")
-            part1 = decoder.decode(encoded[:i], final=False)
-            part2 = decoder.decode(encoded[i:], final=True)
-            result = part1 + part2
-            assert result == text, f"Split at byte {i} failed"
 
 
 # ---------------------------------------------------------------------------
@@ -210,131 +146,27 @@ class TestTerminal:
 class TestLogs:
     """Verify logs handle Unicode correctly."""
 
+    @pytest.mark.unit
+    @pytest.mark.wx
+    @pytest.mark.semantic
+    @pytest.mark.regression
     def test_logs_model_unicode_read(self, tmp_path):
-        """WxLogsModel should read Unicode log content."""
+        """The production log model reads and exposes Unicode log text."""
         from hpc_gui.wx_logs import WxLogsModel
 
-        # Create a log file with Unicode content
         log_path = tmp_path / "test.log"
-        log_content = "2024-01-01 İş başlatıldı\n2024-01-01 日本語ログ\n2024-01-01 ★五星\n"
-        log_path.write_text(log_content, encoding="utf-8")
+        content = "Log entry: İşlem tamamlandı 日本語 ★\n"
+        log_path.write_text(content, encoding="utf-8")
 
-        model = WxLogsModel.__new__(WxLogsModel)
-        model._log_path = log_path
-        model._max_lines = 5000
+        model = WxLogsModel(log_path)
+        assert model.refresh() == content
+        assert model.text == content
 
-        # Read log content
-        content = log_path.read_text(encoding="utf-8", errors="replace")
-        assert "İş" in content
-        assert "日本語" in content
-        assert "★" in content
-
-    def test_logs_no_mojibake_patterns(self, tmp_path):
-        """Logs should not contain common mojibake patterns."""
-        log_path = tmp_path / "test.log"
-        log_content = "Test log entry\n"
-        log_path.write_text(log_content, encoding="utf-8")
-
-        content = log_path.read_text(encoding="utf-8")
-        # Check for common mojibake patterns
-        mojibake_patterns = ["Ã§", "ÅŸ", "Ä±", "Ã¶", "Ã¼", "ÄŸ", "Ã‡", "Ä°", "Ãœ"]
-        for pattern in mojibake_patterns:
-            assert pattern not in content, f"Mojibake pattern {pattern!r} found"
 
 
 # ---------------------------------------------------------------------------
 # 4. ZIP/TAR Archives
 # ---------------------------------------------------------------------------
-
-class TestZipArchives:
-    """Verify ZIP archives handle Unicode filenames correctly."""
-
-    def test_zip_unicode_filename_roundtrip(self, tmp_path):
-        """ZIP should preserve Unicode filenames."""
-        zip_path = tmp_path / "archive.zip"
-
-        # Create ZIP with Unicode filenames
-        with zipfile.ZipFile(zip_path, "w") as zf:
-            zf.writestr("results/Çalışmalar/日本語/ölçüm.txt", "test content")
-            zf.writestr("results/日本語/file.txt", "日本語 content")
-            zf.writestr("★_favorites.txt", "star content")
-
-        # Verify ZIP contents
-        with zipfile.ZipFile(zip_path, "r") as zf:
-            names = zf.namelist()
-            assert "results/Çalışmalar/日本語/ölçüm.txt" in names
-            assert "results/日本語/file.txt" in names
-            assert "★_favorites.txt" in names
-
-            # Verify content
-            assert zf.read("results/Çalışmalar/日本語/ölçüm.txt") == b"test content"
-            assert zf.read("results/日本語/file.txt").decode("utf-8") == "日本語 content"
-            assert zf.read("★_favorites.txt") == b"star content"
-
-    def test_zip_extract_unicode(self, tmp_path):
-        """ZIP extraction should preserve Unicode filenames."""
-        zip_path = tmp_path / "archive.zip"
-        extract_dir = tmp_path / "extracted"
-        extract_dir.mkdir()
-
-        # Create ZIP
-        with zipfile.ZipFile(zip_path, "w") as zf:
-            zf.writestr("日本語/ölçüm.txt", "content1")
-            zf.writestr("★/favorites.txt", "content2")
-
-        # Extract
-        with zipfile.ZipFile(zip_path, "r") as zf:
-            zf.extractall(extract_dir)
-
-        # Verify extracted files
-        assert (extract_dir / "日本語" / "ölçüm.txt").read_text() == "content1"
-        assert (extract_dir / "★" / "favorites.txt").read_text() == "content2"
-
-    def test_zip_nested_unicode(self, tmp_path):
-        """ZIP should handle nested Unicode directories."""
-        zip_path = tmp_path / "nested.zip"
-
-        with zipfile.ZipFile(zip_path, "w") as zf:
-            for i in range(5):
-                name = f"日本語_ディレクトリ_{i}/ölçüm_{i}.txt"
-                zf.writestr(name, f"content {i}")
-
-        with zipfile.ZipFile(zip_path, "r") as zf:
-            names = zf.namelist()
-            assert len(names) == 5
-            for name in names:
-                assert "日本語" in name
-                assert "ölçüm" in name
-
-    def test_zip_path_traversal_protection(self, tmp_path):
-        """ZIP extraction should protect against path traversal."""
-        zip_path = tmp_path / "malicious.zip"
-
-        # Create ZIP with path traversal attempt
-        with zipfile.ZipFile(zip_path, "w") as zf:
-            zf.writestr("../../../etc/passwd", "malicious content")
-            zf.writestr("normal/file.txt", "safe content")
-
-        # Verify path traversal exists in archive (this is the threat)
-        with zipfile.ZipFile(zip_path, "r") as zf:
-            names = zf.namelist()
-            # The malicious entry exists in the archive
-            _ = any(".." in name for name in names)
-            # This test documents the threat exists
-            # Actual protection happens during extraction (not tested here)
-
-    def test_zip_conflict_handling(self, tmp_path):
-        """ZIP should handle conflicting Unicode filenames."""
-        zip_path = tmp_path / "conflict.zip"
-
-        # Create ZIP with same filename (last wins)
-        with zipfile.ZipFile(zip_path, "w") as zf:
-            zf.writestr("test.txt", "first")
-            zf.writestr("test.txt", "second")
-
-        with zipfile.ZipFile(zip_path, "r") as zf:
-            assert zf.read("test.txt") == b"second"
-
 
 # ---------------------------------------------------------------------------
 # 5. Output Follower
@@ -343,6 +175,8 @@ class TestZipArchives:
 class TestOutputFollower:
     """Verify output follower handles Unicode correctly."""
 
+    @pytest.mark.unit
+    @pytest.mark.semantic
     def test_output_follower_unicode_text(self):
         """OutputFollower should handle Unicode text."""
         from hpc_gui.services.output_follower import retain_last_lines
@@ -363,6 +197,8 @@ class TestOutputFollower:
 class TestIntegration:
     """Integration tests for editor/terminal/logs Unicode."""
 
+    @pytest.mark.unit
+    @pytest.mark.semantic
     def test_full_editor_workflow_unicode(self, tmp_path):
         """Full editor workflow: create, edit, save, reopen with Unicode."""
         from hpc_gui.services.editor_controller import DocumentModel
@@ -395,6 +231,8 @@ class TestIntegration:
         assert "★" in reopened
         assert "Δ" in reopened
 
+    @pytest.mark.unit
+    @pytest.mark.semantic
     def test_full_terminal_unicode_flow(self):
         """Full terminal flow: receive Unicode output, verify display."""
         from hpc_gui.wx_terminal import TerminalModel
@@ -422,29 +260,3 @@ class TestIntegration:
         assert "Δ" in model.text
         assert "★" in model.text
         assert "✓" in model.text
-
-    def test_full_archive_unicode_flow(self, tmp_path):
-        """Full archive flow: create, list, extract with Unicode."""
-        zip_path = tmp_path / "archive.zip"
-        extract_dir = tmp_path / "extracted"
-        extract_dir.mkdir()
-
-        # 1. Create archive
-        with zipfile.ZipFile(zip_path, "w") as zf:
-            zf.writestr("results/Çalışmalar/日本語/ölçüm.txt", "content1")
-            zf.writestr("results/日本語/file.txt", "content2")
-            zf.writestr("★_favorites.txt", "content3")
-
-        # 2. List contents
-        with zipfile.ZipFile(zip_path, "r") as zf:
-            names = zf.namelist()
-            assert len(names) == 3
-
-        # 3. Extract
-        with zipfile.ZipFile(zip_path, "r") as zf:
-            zf.extractall(extract_dir)
-
-        # 4. Verify extracted files
-        assert (extract_dir / "results" / "Çalışmalar" / "日本語" / "ölçüm.txt").read_text() == "content1"
-        assert (extract_dir / "results" / "日本語" / "file.txt").read_text() == "content2"
-        assert (extract_dir / "★_favorites.txt").read_text() == "content3"

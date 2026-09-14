@@ -18,6 +18,8 @@ import unittest
 from pathlib import Path
 from types import SimpleNamespace
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
@@ -86,6 +88,8 @@ def _backend_with(channel: _RecordingChannel) -> SSHFilesBackend:
 
 
 class OverwriteUploadTests(unittest.TestCase):
+    @pytest.mark.unit
+    @pytest.mark.resource
     def test_overwrite_upload_enables_pipelining_once(self) -> None:
         channel = _RecordingChannel(
             files={"/remote/out.bin": b"stale-data-longer-than-the-new-payload"}
@@ -112,6 +116,8 @@ class OverwriteUploadTests(unittest.TestCase):
 
 
 class ResumeUploadTests(unittest.TestCase):
+    @pytest.mark.unit
+    @pytest.mark.resource
     def test_resume_upload_keeps_pipelining_and_appends_from_remote_size(self) -> None:
         channel = _RecordingChannel(files={"/remote/resume.bin": b"abc"})
         backend = _backend_with(channel)
@@ -133,6 +139,8 @@ class ResumeUploadTests(unittest.TestCase):
         self.assertEqual(progress, [(3, 8), (8, 8)])
         self.assertTrue(channel.closed)
 
+    @pytest.mark.unit
+    @pytest.mark.resource
     def test_equal_sizes_are_a_reported_no_op(self) -> None:
         channel = _RecordingChannel(files={"/remote/same.bin": b"1234"})
         backend = _backend_with(channel)
@@ -151,6 +159,8 @@ class ResumeUploadTests(unittest.TestCase):
         self.assertEqual(progress, [(4, 4)])
         self.assertTrue(channel.closed)
 
+    @pytest.mark.unit
+    @pytest.mark.resource
     def test_remote_larger_falls_back_to_overwrite(self) -> None:
         channel = _RecordingChannel(files={"/remote/big.bin": b"0123456789"})
         backend = _backend_with(channel)
@@ -164,6 +174,8 @@ class ResumeUploadTests(unittest.TestCase):
         self.assertEqual(bytes(channel.opened_files[0].data), b"xy")
         self.assertTrue(channel.closed)
 
+    @pytest.mark.unit
+    @pytest.mark.resource
     def test_zero_byte_file_uploads_without_writes(self) -> None:
         channel = _RecordingChannel()
         backend = _backend_with(channel)
@@ -181,6 +193,7 @@ class ResumeUploadTests(unittest.TestCase):
 
 
 class AtomicUploadTests(unittest.TestCase):
+    @pytest.mark.unit
     def test_upload_and_rename_pipelines_the_temporary_target(self) -> None:
         channel = _RecordingChannel()
         backend = _backend_with(channel)
@@ -204,6 +217,7 @@ class AtomicUploadTests(unittest.TestCase):
         self.assertEqual(progress[-1], (12, 12))
         self.assertTrue(channel.closed)
 
+    @pytest.mark.unit
     def test_progress_reaches_exact_total_on_atomic_path(self) -> None:
         channel = _RecordingChannel()
         backend = _backend_with(channel)

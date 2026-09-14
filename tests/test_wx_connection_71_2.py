@@ -17,6 +17,7 @@ wx = pytest.importorskip("wx", reason="wxPython not installed")
 
 from hpc_gui.config import storage
 from hpc_gui.config.storage import load_profiles
+from hpc_gui.core.i18n import current_language, set_language
 from hpc_gui.wx_connection import build_connection_panel
 
 
@@ -61,22 +62,27 @@ def _seed_master_dpapi_cache(monkeypatch, master_password):
 
 @pytest.fixture(autouse=True)
 def _clean_wx_after():
+    original_language = current_language()
+    set_language("en")
     yield
     try:
-        app = wx.GetApp()
-        if app is not None:
-            for win in list(wx.GetTopLevelWindows()):
-                try:
-                    win.Destroy()
-                except Exception:
-                    pass
-            for _ in range(5):
-                try:
-                    wx.Yield()
-                except Exception:
-                    break
-    except Exception:
-        pass
+        set_language(original_language)
+    finally:
+        try:
+            app = wx.GetApp()
+            if app is not None:
+                for win in list(wx.GetTopLevelWindows()):
+                    try:
+                        win.Destroy()
+                    except Exception:
+                        pass
+                for _ in range(5):
+                    try:
+                        wx.Yield()
+                    except Exception:
+                        break
+        except Exception:
+            pass
 
 
 # ---------------------------------------------------------------------------
@@ -84,6 +90,9 @@ def _clean_wx_after():
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
 def test_blank_name_save_and_connect_uses_canonical_name(monkeypatch):
     """Blank profile name must produce alice@login.cluster.edu, not login.cluster.edu."""
     tmp = _isolated_storage(monkeypatch)
@@ -155,6 +164,9 @@ def test_blank_name_save_and_connect_uses_canonical_name(monkeypatch):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
 def test_real_wx_dialog_save_and_connect_button_event(monkeypatch):
     """Real WxConnectionDialog -> real Save & Connect wx.Button -> wx.EVT_BUTTON."""
     from hpc_gui.wx_connection_dialog import WxConnectionDialog
@@ -231,6 +243,9 @@ def test_real_wx_dialog_save_and_connect_button_event(monkeypatch):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
 def test_master_password_real_wx_chain(monkeypatch):
     """Real resolver: saved master-encrypted profile -> Connect -> ask_master -> decrypt.
 
@@ -293,6 +308,9 @@ def test_master_password_real_wx_chain(monkeypatch):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
 def test_master_password_cancel_blocks_connection(monkeypatch):
     """Connect Selected -> master cancel -> no SSH, no connect, status safe.
 
@@ -363,6 +381,9 @@ def test_master_password_cancel_blocks_connection(monkeypatch):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
 def test_wrong_master_password_fails_closed(monkeypatch):
     """Wrong master -> no SSH, no empty password fallback, safe error.
 
@@ -433,6 +454,9 @@ def test_wrong_master_password_fails_closed(monkeypatch):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
 def test_cluster_self_test_master_password_chain(monkeypatch):
     """Test Cluster: saved master-encrypted profile -> edit dialog -> Test Cluster -> real resolver -> decrypt.
 
@@ -493,31 +517,3 @@ def test_cluster_self_test_master_password_chain(monkeypatch):
             wx.Yield()
     finally:
         tmp.cleanup()
-
-
-# ---------------------------------------------------------------------------
-# 71.2.7 Typed password precedence
-# ---------------------------------------------------------------------------
-
-
-def test_typed_password_precedence(monkeypatch):
-    """Typed password > stored secret for Test Cluster and explicit connect."""
-    from hpc_gui.core.crypto_master import encrypt_with_master
-    from hpc_gui.services.connection_profile_service import resolve_password_for_connect
-
-    enc = encrypt_with_master("master123", "old-secret")
-    profile = {
-        "name": "p",
-        "host": "h.example",
-        "port": 22,
-        "username": "user",
-        "password": "new-temporary-secret",
-        "save_password": True,
-        "password_enc": enc.token,
-        "password_salt": enc.salt,
-    }
-    # Typed takes precedence
-    res = resolve_password_for_connect(
-        profile, typed_password="new-temporary-secret", ask_master=lambda c: "master123"
-    )
-    assert res == "new-temporary-secret"

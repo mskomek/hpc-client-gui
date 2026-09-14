@@ -133,8 +133,13 @@ class FileFilterRegistry:
 
 def _entry_name(entry: Any) -> str:
     if isinstance(entry, dict):
-        return str(entry.get("name") or entry.get("path", ""))
-    return str(getattr(entry, "name", None) or getattr(entry, "path", ""))
+        name, path = entry.get("name"), entry.get("path", "")
+    else:
+        name, path = getattr(entry, "name", None), getattr(entry, "path", "")
+    name = "" if name is None else str(name)
+    if name.strip():
+        return name
+    return str(path or "").replace("\\", "/").rstrip("/").rsplit("/", 1)[-1]
 
 
 def _entry_is_dir(entry: Any) -> bool:

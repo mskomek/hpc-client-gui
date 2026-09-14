@@ -1,15 +1,63 @@
 """About dialog tests."""
 
-def test_about_shows_version_and_no_network():
-    import pathlib
-    src = pathlib.Path("src/hpc_gui/ui/dialogs/about_dialog.py").read_text(encoding="utf-8")
-    assert "__version__" in src
-    assert "is_frozen_exe" in src or "frozen" in src
-    assert "https://github.com/mskomek/hpc-client-gui" in src
-    # Must not require network to instantiate (no requests, no url fetch at init)
-    assert "requests" not in src.lower()
-    assert "urllib.request.urlopen" not in src
 
+import os
+import subprocess
+import sys
+import textwrap
+from pathlib import Path
+
+import pytest
+
+
+@pytest.mark.gui
+@pytest.mark.qt
+@pytest.mark.subprocess
+@pytest.mark.semantic
+def test_about_shows_version_and_no_network():
+    root = Path(__file__).resolve().parents[1]
+    code = textwrap.dedent(
+        """
+        import os
+        import socket
+        os.environ["QT_QPA_PLATFORM"] = "offscreen"
+        from PySide6.QtGui import QDesktopServices
+        from PySide6.QtWidgets import QApplication
+        from hpc_gui import __version__
+        from hpc_gui.ui.dialogs.about_dialog import AboutDialog
+
+        app = QApplication.instance() or QApplication([])
+        opened = []
+        def deny_network(*args, **kwargs):
+            raise AssertionError("About dialog attempted a network connection")
+        socket.create_connection = deny_network
+        socket.socket.connect = deny_network
+        QDesktopServices.openUrl = staticmethod(lambda url: opened.append(url) or True)
+        dialog = AboutDialog()
+        assert __version__ in dialog._version_label_ref.text()
+        assert dialog._repo_btn.text()
+        assert dialog._license_btn.text()
+        assert opened == []
+        dialog._repo_btn.click()
+        assert len(opened) == 1
+        assert opened[0].toString() == "https://github.com/mskomek/hpc-client-gui"
+        dialog.hide()
+        print("about-dialog-behavior=PASS", flush=True)
+        os._exit(0)
+        """
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", code],
+        cwd=root,
+        env={**os.environ, "QT_QPA_PLATFORM": "offscreen", "PYTHONPATH": str(root / "src")},
+        capture_output=True,
+        text=True,
+        timeout=15,
+    )
+    assert result.returncode == 0, f"About dialog behavior failed: {result.stdout}\n{result.stderr}"
+
+@pytest.mark.gui
+@pytest.mark.qt
 def test_about_instantiates_offscreen():
     try:
         import os

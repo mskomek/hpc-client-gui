@@ -10,6 +10,8 @@ from hpc_gui.services.deb_installer import (
 )
 
 
+@pytest.mark.release
+@pytest.mark.semantic
 def test_packagekit_probe_distinguishes_local_install_support():
     class Result:
         returncode = 1
@@ -26,6 +28,9 @@ def test_packagekit_probe_distinguishes_local_install_support():
     assert not probe_packagekit(lambda *args, **kwargs: Unsupported()).local_install
 
 
+@pytest.mark.release
+@pytest.mark.semantic
+@pytest.mark.resource
 def test_stage_is_private_and_rejects_symlink(tmp_path: Path):
     source = tmp_path / "update.deb"
     source.write_bytes(b"deb")

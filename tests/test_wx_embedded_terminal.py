@@ -1,8 +1,35 @@
 """Wave 45 embedded terminal real-event tests."""
+from unittest.mock import patch
+
 import pytest
 
 wx = pytest.importorskip("wx")
+import hpc_gui.wx_terminal_webview as terminal_webview
 from hpc_gui.wx_terminal import build_terminal_panel
+
+
+@pytest.fixture(scope="module", autouse=True)
+def _wx_app_lifecycle():
+    app = wx.App.Get()
+    owns_app = app is None
+    if owns_app:
+        app = wx.App.Get()
+        if app is None:
+            app = wx.App(False)
+    yield app
+    for window in wx.GetTopLevelWindows():
+        if window:
+            window.Destroy()
+    app.ProcessPendingEvents()
+    wx.SafeYield()
+    if owns_app:
+        app.Destroy()
+
+
+@pytest.fixture(autouse=True)
+def _use_text_ctrl_terminal_renderer(monkeypatch):
+    """These controls test the explicit non-WebView terminal fallback."""
+    monkeypatch.setattr(terminal_webview, "_is_webview_available", lambda: False)
 
 
 def _fake_ssh():
@@ -20,21 +47,16 @@ def _fake_ssh():
 def _make_panel(ssh=None):
     app = wx.App.Get() or wx.App(False)
     frame = wx.Frame(None)
-    # These compatibility tests exercise the legacy TextCtrl adapter. The
-    # native WebView/xterm path is covered by the dedicated WebView tests and
-    # must not be initialized twice in this one wx process.
-    import hpc_gui.wx_terminal_webview as webview
-
-    webview_available = webview._is_webview_available
-    webview._is_webview_available = lambda: False
-    try:
+    # These tests cover the TextCtrl fallback; WebView behavior has its own suite.
+    with patch("hpc_gui.wx_terminal_webview._is_webview_available", return_value=False):
         panel = build_terminal_panel(frame, ssh=ssh or _fake_ssh())
-    finally:
-        webview._is_webview_available = webview_available
     frame.Show()
     wx.Yield()
     return app, frame, panel
 
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
 def test_embedded_terminal_find_button_selects_match():
     app, frame, panel = _make_panel()
     try:
@@ -58,6 +80,9 @@ def test_embedded_terminal_find_button_selects_match():
         frame.Destroy()
         wx.Yield()
 
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
 def test_embedded_terminal_clear_button_clears_visible_output_and_model():
     app, frame, panel = _make_panel()
     try:
@@ -77,6 +102,9 @@ def test_embedded_terminal_clear_button_clears_visible_output_and_model():
         frame.Destroy()
         wx.Yield()
 
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
 def test_embedded_terminal_font_decrease_changes_visible_font():
     app, frame, panel = _make_panel()
     try:
@@ -94,6 +122,9 @@ def test_embedded_terminal_font_decrease_changes_visible_font():
         frame.Destroy()
         wx.Yield()
 
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
 def test_embedded_terminal_font_increase_changes_visible_font():
     app, frame, panel = _make_panel()
     try:
@@ -111,6 +142,9 @@ def test_embedded_terminal_font_increase_changes_visible_font():
         frame.Destroy()
         wx.Yield()
 
+@pytest.mark.unit
+@pytest.mark.wx
+@pytest.mark.semantic
 def test_embedded_terminal_ctrl_c_sends_interrupt_not_copy():
     ssh = _fake_ssh()
     app, frame, panel = _make_panel(ssh=ssh)
@@ -127,6 +161,9 @@ def test_embedded_terminal_ctrl_c_sends_interrupt_not_copy():
         frame.Destroy()
         wx.Yield()
 
+@pytest.mark.unit
+@pytest.mark.wx
+@pytest.mark.semantic
 def test_embedded_terminal_copy_shortcut_does_not_send_interrupt():
     ssh = _fake_ssh()
     app, frame, panel = _make_panel(ssh=ssh)
@@ -143,29 +180,38 @@ def test_embedded_terminal_copy_shortcut_does_not_send_interrupt():
         frame.Destroy()
         wx.Yield()
 
-def test_embedded_terminal_runtime_language_refresh():
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
+@pytest.mark.regression
+def test_embedded_terminal_runtime_language_refresh(monkeypatch, tmp_path):
     # test standalone panel to avoid shell chrome flag bitmap segfault during language switch
+    from hpc_gui.core.i18n import current_language, set_language, t
+
+    original_language = current_language()
+    monkeypatch.setattr("hpc_gui.core.i18n.app_data_dir", lambda: tmp_path)
+    set_language("en")
     app, frame, panel = _make_panel()
     try:
         ctrls = panel._wx_terminal_controls
-        from hpc_gui.core.i18n import set_language, current_language
-        orig = current_language()
-        # ensure labels start non-empty
-        assert ctrls["find_btn"].GetLabel() != ""
+        english_find = t("login.terminal_find")
+        english_clear = t("login.terminal_clear")
+        assert ctrls["find_btn"].GetLabel() == english_find
+        assert ctrls["clear"].GetLabel() == english_clear
         set_language("tr")
         wx.Yield()
-        # find button should still be labeled (Turkish or fallback)
-        assert ctrls["find_btn"].GetLabel() != ""
-        assert ctrls["clear"].GetLabel() != ""
-        set_language("en")
-        wx.Yield()
-        assert ctrls["find_btn"].GetLabel() != ""
-        set_language(orig)
-        wx.Yield()
+        assert ctrls["find_btn"].GetLabel() == t("login.terminal_find")
+        assert ctrls["clear"].GetLabel() == t("login.terminal_clear")
+        assert ctrls["find_btn"].GetLabel() != english_find
+        assert ctrls["clear"].GetLabel() != english_clear
     finally:
         frame.Destroy()
         wx.Yield()
+        set_language(original_language)
 
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
 def test_embedded_terminal_resize_reaches_pty_resize():
     ssh = _fake_ssh()
     app, frame, panel = _make_panel(ssh=ssh)
@@ -184,6 +230,9 @@ def test_embedded_terminal_resize_reaches_pty_resize():
         frame.Destroy()
         wx.Yield()
 
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
 def test_shell_embedded_and_detached_share_implementation(monkeypatch):
     # Exercise both production surfaces, including the panel actually mounted
     # by the shell. Use the TextCtrl adapter to avoid creating two native
@@ -229,6 +278,8 @@ def test_shell_embedded_and_detached_share_implementation(monkeypatch):
         wx.Yield()
 
 
+@pytest.mark.gui
+@pytest.mark.wx
 def test_shell_can_defer_terminal_panel_mount(monkeypatch):
     import hpc_gui.wx_terminal_webview as webview
     from hpc_gui.wx_shell import create_shell_frame

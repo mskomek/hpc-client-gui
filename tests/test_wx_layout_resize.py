@@ -364,9 +364,16 @@ def _close(app, frame, lifecycle):
         wx.MilliSleep(2)
 
 
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
+@pytest.mark.slow
 def test_wx_layout_resize():
     load_language("en")
-    app = wx.App(False)
+    app = wx.App.Get()
+    owns_app = app is None
+    if owns_app:
+        app = wx.App(False)
     frame, lifecycle, session = create_shell_frame(app, tray_factory=lambda _parent: None)
     frame.Show()
     _pump(app, rounds=6)
@@ -567,6 +574,7 @@ def test_wx_layout_resize():
                     pass
         app.ProcessPendingEvents()
         wx.SafeYield()
-        app.Destroy()
+        if owns_app:
+            app.Destroy()
     except Exception:
         pass

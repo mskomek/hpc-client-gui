@@ -1,7 +1,12 @@
 from __future__ import annotations
 
+import pytest
+
 from hpc_gui.services.cluster_self_test import FAIL, NOT_CONFIGURED, PASS, WARNING, run_cluster_self_test
 from hpc_gui.ssh.client import SSHConnInfo
+
+
+pytestmark = pytest.mark.unit
 
 
 class _Wrapper:

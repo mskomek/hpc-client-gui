@@ -1,7 +1,11 @@
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
+
 from hpc_gui.services.safe_download import download_atomic
+
+pytestmark = [pytest.mark.integration, pytest.mark.resource]
 
 
 class Response:

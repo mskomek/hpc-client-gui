@@ -3,6 +3,9 @@ import pytest
 wx = pytest.importorskip("wx")
 from hpc_gui.wx_shell import create_shell_frame
 
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
 def test_wx_a11y_focus_order_and_labels():
     app = wx.App.Get() or wx.App(False)
     frame, _, _ = create_shell_frame(app)
@@ -53,11 +56,13 @@ def test_wx_a11y_focus_order_and_labels():
         for _ in range(3):
             wx.Yield()
 
+@pytest.mark.audit
+@pytest.mark.regression
 def test_wx_a11y_terminal_limits_documented():
-    # Document that terminal has limits for screen readers due to custom TextCtrl
-    # This is a placeholder to ensure audit doc exists
     import pathlib
     p = pathlib.Path("audit/A11Y_AUDIT.md")
     assert p.is_file(), "A11Y audit doc should exist"
     text = p.read_text(encoding="utf-8")
-    assert "terminal" in text.lower()
+    assert "Terminal uses `wx.TextCtrl` with custom `EVT_CHAR` handling for PTY" in text
+    assert "Full screen-reader semantics for ANSI colors are limited" in text
+    assert "Core workflows (input, Find, Clear, Font) are keyboard operable." in text

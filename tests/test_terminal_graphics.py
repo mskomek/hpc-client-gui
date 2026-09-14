@@ -2,7 +2,11 @@ from __future__ import annotations
 
 import importlib
 
+import pytest
+
 import hpc_gui.core.terminal_graphics as graphics
+
+pytestmark = pytest.mark.unit
 
 
 def test_invalid_policy_falls_back_to_auto():

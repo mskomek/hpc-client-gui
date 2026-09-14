@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import shutil
+import stat as stat_module
 import subprocess
 import sys
 from threading import Lock, Thread
@@ -71,10 +72,13 @@ class LocalBrowserModel:
         entries = []
         for item in current_path.iterdir():
             try:
-                stat = item.stat()
-                entries.append(LocalEntry(item, item.is_dir(), stat.st_size if item.is_file() else 0))
-            except (OSError, PermissionError):
-                entries.append(LocalEntry(item, item.is_dir(), 0))
+                metadata = item.stat()
+            except OSError:
+                entries.append(LocalEntry(item, False, 0))
+            else:
+                is_dir = stat_module.S_ISDIR(metadata.st_mode)
+                size = metadata.st_size if stat_module.S_ISREG(metadata.st_mode) else 0
+                entries.append(LocalEntry(item, is_dir, size))
         key = (lambda item: item.path.name.casefold()) if self.sort_key == "name" else (lambda item: item.size)
         return tuple(sorted(entries, key=key, reverse=self.reverse))
 
@@ -355,7 +359,23 @@ def _build_local_files(parent, path: str | Path | None = None, *, open_editor=No
         if 0 <= idx < len(tabs):
             notebook.SetPageText(idx, tab_label(tabs[idx]["path"]))
 
-    def refresh() -> None:
+    def render_entries(tab_entry, entries, selected_paths=()) -> None:
+        selected_paths = set(selected_paths)
+        tab_entry["entries"][:] = entries
+        listing = tab_entry["listing"]
+        try:
+            listing.DeleteAllItems()
+            for entry in tab_entry["entries"]:
+                index = listing.InsertItem(listing.GetItemCount(), entry.path.name)
+                listing.SetItem(index, 1, str(entry.size))
+                listing.SetItem(index, 2, _type_label(entry))
+                listing.SetItem(index, 3, _format_mtime(getattr(entry, "mtime", None)))
+                if entry.path in selected_paths:
+                    listing.Select(index)
+        except RuntimeError:
+            return
+
+    def refresh(selected_paths=()) -> None:
         tstate = active_tab_state()
         if not tstate:
             return
@@ -409,19 +429,8 @@ def _build_local_files(parent, path: str | Path | None = None, *, open_editor=No
                     pass
             except Exception:
                 pass
-            tab_entry["entries"][:] = result
             # Only render if tab still valid; but we update that tab's listing regardless of active
-            lst = tab_entry["listing"]
-            try:
-                lst.DeleteAllItems()
-                for entry in tab_entry["entries"]:
-                    idx = lst.InsertItem(lst.GetItemCount(), entry.path.name)
-                    lst.SetItem(idx, 1, str(entry.size))
-                    lst.SetItem(idx, 2, _type_label(entry))
-                    lst.SetItem(idx, 3, _format_mtime(getattr(entry, "mtime", None)))
-            except RuntimeError:
-                # control destroyed
-                return
+            render_entries(tab_entry, result, selected_paths)
 
         def worker():
             try:
@@ -577,7 +586,7 @@ def _build_local_files(parent, path: str | Path | None = None, *, open_editor=No
         entries = tstate["entries"]
         return [entry for idx2, entry in enumerate(entries) if listing.IsSelected(idx2)]
 
-    def mutate(operation) -> None:
+    def mutate(operation, *, selection_after=()) -> None:
         tstate = active_tab_state()
         if not tstate:
             return
@@ -614,7 +623,7 @@ def _build_local_files(parent, path: str | Path | None = None, *, open_editor=No
                 # need to refresh that specific tab; temporarily make it active concept? just refresh logic for that tab directly
                 # if that tab is active, use normal refresh; else do targeted refresh
                 if notebook.GetSelection() == tabs.index(tab_entry):
-                    refresh()
+                    refresh(selection_after)
                 else:
                     # targeted refresh for non-active tab
                     # we could directly call refresh for that tab entry
@@ -635,16 +644,7 @@ def _build_local_files(parent, path: str | Path | None = None, *, open_editor=No
                                 return
                         if err:
                             return
-                        te["entries"][:] = result
-                        try:
-                            te["listing"].DeleteAllItems()
-                            for en in te["entries"]:
-                                ii = te["listing"].InsertItem(te["listing"].GetItemCount(), en.path.name)
-                                te["listing"].SetItem(ii, 1, str(en.size))
-                                te["listing"].SetItem(ii, 2, _type_label(en))
-                                te["listing"].SetItem(ii, 3, _format_mtime(getattr(en, "mtime", None)))
-                        except RuntimeError:
-                            return
+                        render_entries(te, result, selection_after)
                     def wk2():
                         try:
                             safe_call_after(done2, model.list_entries(req_path), None)
@@ -749,7 +749,14 @@ def _build_local_files(parent, path: str | Path | None = None, *, open_editor=No
                     new_name = dialog.GetValue()
                     origin_snapshot = tstate["path"]
                     src_snapshot = entry.path
-                    mutate(lambda: model.rename_at(src_snapshot, new_name, origin_snapshot))
+                    selected_after = tuple(
+                        src_snapshot.with_name(new_name) if item.path == src_snapshot else item.path
+                        for item in selected
+                    )
+                    mutate(
+                        lambda: model.rename_at(src_snapshot, new_name, origin_snapshot),
+                        selection_after=selected_after,
+                    )
             except Exception as error:
                 wx.MessageBox(str(error), t("login.err_title"), wx.OK | wx.ICON_ERROR)
             finally:

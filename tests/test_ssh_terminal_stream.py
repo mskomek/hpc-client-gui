@@ -1,6 +1,8 @@
 import codecs
 import unittest
 
+import pytest
+
 from hpc_gui.ssh.client import SSHClientWrapper
 
 
@@ -28,6 +30,8 @@ def _wrapper(channel, output):
     return wrapper
 
 
+@pytest.mark.unit
+@pytest.mark.semantic
 class SshTerminalStreamTests(unittest.TestCase):
     def test_utf8_split_at_each_byte_boundary(self):
         value = "Türkçe 🐍 terminal"

@@ -15,6 +15,8 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
+
 from hpc_gui.services.transfer_mode import (
     ASCII,
     AUTO,
@@ -24,6 +26,8 @@ from hpc_gui.services.transfer_mode import (
     resolve_transfer_mode,
     upload_with_mode,
 )
+
+pytestmark = [pytest.mark.unit, pytest.mark.semantic]
 
 
 class _MemFiles:
@@ -101,6 +105,7 @@ class DatSemanticsTests(unittest.TestCase):
         self.assertEqual(effective, BINARY)
         self.assertEqual(files.remote["/remote/input.dat"], data)
 
+    @pytest.mark.regression
     def test_explicit_ascii_rejects_binary_content(self) -> None:
         with self.assertRaises(ValueError):
             resolve_transfer_mode("file.txt", ASCII, b"ok\x00binary")
@@ -119,6 +124,7 @@ class StreamingConversionTests(unittest.TestCase):
         self.assertEqual(effective, ASCII)
         self.assertEqual(files.remote["/remote/text.txt"], b"a\nb\nc\n")
 
+    @pytest.mark.resource
     def test_ascii_download_normalizes_line_endings_to_local(self) -> None:
         files = _MemFiles(rename_capable=False)
         files.remote["/remote/text.txt"] = b"a\r\nb\nc\r"
@@ -160,6 +166,7 @@ class StreamingConversionTests(unittest.TestCase):
             upload_with_mode(files, str(source), "/remote/utf8.txt", ASCII)
         self.assertEqual(files.remote["/remote/utf8.txt"], content.encode("utf-8"))
 
+    @pytest.mark.regression
     def test_ascii_upload_rejects_late_invalid_utf8(self) -> None:
         data = b"a" * CHUNK_SIZE + b"\xff\xfe bad\n"
         with tempfile.TemporaryDirectory() as tmp:
@@ -170,6 +177,7 @@ class StreamingConversionTests(unittest.TestCase):
                 upload_with_mode(files, str(source), "/remote/bad.txt", ASCII)
         self.assertNotIn("/remote/bad.txt", files.remote)
 
+    @pytest.mark.regression
     def test_ascii_upload_rejects_truncated_utf8_at_eof(self) -> None:
         data = b"a" * CHUNK_SIZE + b"\xc3"
         with tempfile.TemporaryDirectory() as tmp:
@@ -180,6 +188,7 @@ class StreamingConversionTests(unittest.TestCase):
                 upload_with_mode(files, str(source), "/remote/bad.txt", ASCII)
         self.assertNotIn("/remote/bad.txt", files.remote)
 
+    @pytest.mark.regression
     def test_ascii_download_rejects_invalid_utf8_and_keeps_final(self) -> None:
         files = _MemFiles(rename_capable=False)
         files.remote["/remote/bad.txt"] = b"a" * CHUNK_SIZE + b"\xff"
@@ -193,6 +202,8 @@ class StreamingConversionTests(unittest.TestCase):
 
 
 class DroppedConnectionTests(unittest.TestCase):
+    @pytest.mark.regression
+    @pytest.mark.resource
     def test_mid_download_drop_preserves_final_and_partial(self) -> None:
         class Dropped(_MemFiles):
             def download(self, _remote_path, local_path, progress_cb=None):
@@ -208,6 +219,8 @@ class DroppedConnectionTests(unittest.TestCase):
             self.assertEqual(destination.read_bytes(), b"ORIGINAL")
             self.assertEqual(Path(str(destination) + ".part").read_bytes(), b"partial")
 
+    @pytest.mark.regression
+    @pytest.mark.resource
     def test_mid_upload_drop_preserves_final_and_partial(self) -> None:
         class Dropped(_MemFiles):
             def upload(self, local_path, remote_path, progress_cb=None):
@@ -224,6 +237,7 @@ class DroppedConnectionTests(unittest.TestCase):
         self.assertEqual(files.remote["/remote/data.bin"], b"ORIGINAL")
         self.assertEqual(files.remote["/remote/data.bin.part"], b"NEW CON")
 
+@pytest.mark.performance
 class BoundedReadTests(unittest.TestCase):
     def test_ascii_upload_reads_source_in_bounded_chunks(self) -> None:
         data = b"line\r\n" * 3000
@@ -281,6 +295,7 @@ class DownloadIntegrityTests(unittest.TestCase):
                 )
             self.assertEqual(destination.read_bytes(), b"ORIGINAL")
 
+    @pytest.mark.resource
     def test_download_replaces_final_only_after_success(self) -> None:
         data = b"complete payload"
         files = _MemFiles(rename_capable=False)
@@ -295,6 +310,7 @@ class DownloadIntegrityTests(unittest.TestCase):
             self.assertEqual(destination.read_bytes(), data)
             self.assertFalse(Path(str(destination) + ".part").exists())
 
+    @pytest.mark.resource
     def test_download_resumes_from_existing_part(self) -> None:
         data = b"complete payload"
         files = _MemFiles(rename_capable=False)
@@ -319,6 +335,7 @@ class DownloadIntegrityTests(unittest.TestCase):
 
 
 class UploadIntegrityTests(unittest.TestCase):
+    @pytest.mark.resource
     def test_upload_with_rename_uses_temp_name_then_renames(self) -> None:
         data = b"\x00\x01payload"
         with tempfile.TemporaryDirectory() as tmp:
@@ -346,6 +363,7 @@ class UploadIntegrityTests(unittest.TestCase):
         self.assertEqual(files.upload_calls, [(str(source), "/remote/data.bin")])
         self.assertEqual(files.remote.get("/remote/data.bin"), data)
 
+    @pytest.mark.resource
     def test_ascii_upload_with_rename_uploads_converted_temp_then_renames(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             source = Path(tmp, "text.txt")

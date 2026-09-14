@@ -1,6 +1,10 @@
 from pathlib import Path
 
+import pytest
+
 from hpc_gui.services.gesture_help import load_gesture_help
+
+pytestmark = pytest.mark.contract
 
 
 def test_gesture_help_is_generated_from_contract():

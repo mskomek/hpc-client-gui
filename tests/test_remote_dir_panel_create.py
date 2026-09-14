@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import os
 import unittest
+
+import pytest
 from unittest.mock import patch
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
@@ -44,6 +46,8 @@ class RemoteDirPanelCreateTests(unittest.TestCase):
     def tearDown(self) -> None:
         self.panel.deleteLater()
 
+    @pytest.mark.unit
+    @pytest.mark.qt
     def test_create_folder_in_requested_parent(self) -> None:
         with patch(
             "hpc_gui.ui.widgets.remote_dir_panel.QInputDialog.getText",
@@ -53,6 +57,8 @@ class RemoteDirPanelCreateTests(unittest.TestCase):
 
         self.assertIn("/arf/scratch/user/job/results", self.files.paths)
 
+    @pytest.mark.unit
+    @pytest.mark.qt
     def test_create_empty_file_in_current_directory(self) -> None:
         with patch(
             "hpc_gui.ui.widgets.remote_dir_panel.QInputDialog.getText",
@@ -65,6 +71,8 @@ class RemoteDirPanelCreateTests(unittest.TestCase):
             [("/arf/scratch/user/notes.txt", "")],
         )
 
+    @pytest.mark.unit
+    @pytest.mark.qt
     def test_rejects_path_separators(self) -> None:
         with (
             patch(

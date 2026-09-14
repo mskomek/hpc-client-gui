@@ -17,8 +17,12 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from PySide6.QtWidgets import QApplication
 
+import pytest
+
 from hpc_gui.services.files_base import RemoteEntry
 from hpc_gui.ui.widgets.remote_dir_panel import RemoteDirPanel
+
+pytestmark = [pytest.mark.integration, pytest.mark.qt]
 
 
 class _Worker:

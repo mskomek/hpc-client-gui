@@ -73,6 +73,7 @@ def registry(plugins_repo: Path) -> dict:
     return parse_registry((plugins_repo / "registry.json").read_bytes())
 
 
+@pytest.mark.contract
 def test_real_registry_passes_repository_validator(plugins_repo: Path):
     scripts_dir = plugins_repo / "scripts"
     assert (scripts_dir / "validate_registry.py").is_file()
@@ -86,6 +87,7 @@ def test_real_registry_passes_repository_validator(plugins_repo: Path):
         sys.path.remove(str(scripts_dir))
 
 
+@pytest.mark.contract
 def test_plugin_repository_schema_matrix_matches_application(plugins_repo: Path):
     """Drift guard: the independently validatable plugin-side matrix must
     equal the application's canonical capability contract."""
@@ -98,6 +100,7 @@ def test_plugin_repository_schema_matrix_matches_application(plugins_repo: Path)
     assert module.MIN_APP_VERSION_FOR_SCHEMA == MIN_APP_VERSION_FOR_SCHEMA
 
 
+@pytest.mark.contract
 def test_every_plugin_id_resolves_on_current_app(registry: dict):
     ids = sorted({entry["id"] for entry in registry["plugins"]})
     assert ids, "official registry must not be empty"
@@ -109,6 +112,7 @@ def test_every_plugin_id_resolves_on_current_app(registry: dict):
         )
 
 
+@pytest.mark.contract
 def test_manifest_hashes_and_identities_match_registry(registry: dict, plugins_repo: Path):
     import hashlib
 
@@ -127,6 +131,7 @@ def test_manifest_hashes_and_identities_match_registry(registry: dict, plugins_r
         assert manifest["plugin_api"] == 1
 
 
+@pytest.mark.contract
 def test_published_payload_schema_floors_are_honest(registry: dict, plugins_repo: Path):
     """The exact regression gate: no published payload may claim an app
     release older than the first one implementing its schema."""
@@ -156,6 +161,7 @@ def _install(local_fetcher, tmp_path: Path, entry: dict, app_version: str = CONT
     )
 
 
+@pytest.mark.integration
 def test_truba_latest_resolves_and_profile_loads(registry, local_fetcher, tmp_path: Path):
     entry = find_registry_entry(
         registry, "org.hpcclient.truba", app_version=CONTRACT_APP_VERSION
@@ -174,6 +180,7 @@ def test_truba_latest_resolves_and_profile_loads(registry, local_fetcher, tmp_pa
     assert profiles[0].schema_version == 4
 
 
+@pytest.mark.integration
 def test_released_1_5_8_gets_latest_compatible_truba(registry, local_fetcher, tmp_path: Path):
     """v1.5.8 supports schemas 1-2 only; TRUBA 1.3.0 is the fallback."""
     entry = find_registry_entry(
@@ -190,6 +197,7 @@ def test_released_1_5_8_gets_latest_compatible_truba(registry, local_fetcher, tm
     assert result.installed.cluster_profiles[0].schema_version == 2
 
 
+@pytest.mark.integration
 def test_truba_1_4_0_rejected_on_released_1_5_8(registry, local_fetcher, tmp_path: Path):
     entry = find_registry_entry(
         registry,
@@ -206,6 +214,7 @@ def test_truba_1_4_0_rejected_on_released_1_5_8(registry, local_fetcher, tmp_pat
         )
 
 
+@pytest.mark.integration
 def test_truba_1_4_0_installs_on_schema3_capable_release(
     registry, local_fetcher, tmp_path: Path
 ):
@@ -221,6 +230,7 @@ def test_truba_1_4_0_installs_on_schema3_capable_release(
     assert result.installed.cluster_profiles[0].job_outputs is not None
 
 
+@pytest.mark.integration
 def test_truba_v2_plugin_installs_and_retains_structured_sections(
     registry, local_fetcher, tmp_path: Path
 ):
@@ -242,6 +252,7 @@ def test_truba_v2_plugin_installs_and_retains_structured_sections(
     assert profile.quota_sources[0]["enabled"] is False
 
 
+@pytest.mark.contract
 def test_oldest_supported_app_line_still_resolves_a_version(registry: dict):
     for plugin_id in sorted({entry["id"] for entry in registry["plugins"]}):
         entry = find_registry_entry(
@@ -252,6 +263,7 @@ def test_oldest_supported_app_line_still_resolves_a_version(registry: dict):
         )
 
 
+@pytest.mark.integration
 def test_fluent_latest_compatible_and_loads(registry, local_fetcher, tmp_path: Path):
     entry = find_registry_entry(
         registry, "org.hpcclient.fluent", app_version=CONTRACT_APP_VERSION
@@ -269,6 +281,7 @@ def test_fluent_latest_compatible_and_loads(registry, local_fetcher, tmp_path: P
     assert {"lint-rules", "job-template"} <= capabilities
 
 
+@pytest.mark.integration
 def test_fluent_lint_rules_run(registry, local_fetcher, tmp_path: Path):
     from hpc_gui.lint.engine import lint_text
     from hpc_gui.lint.rulepack import load_lint_packs
@@ -294,6 +307,7 @@ def test_fluent_lint_rules_run(registry, local_fetcher, tmp_path: Path):
     assert any(rule_id.startswith("FLUENT") for rule_id in rule_ids), sorted(rule_ids)
 
 
+@pytest.mark.integration
 def test_fluent_slurm_template_is_plain_substitution(
     registry, local_fetcher, tmp_path: Path
 ):
@@ -340,6 +354,7 @@ def test_fluent_slurm_template_is_plain_substitution(
     assert "#!/bin/bash" in rendered
 
 
+@pytest.mark.integration
 def test_fluent_update_then_rollback_preserves_versions(
     registry, local_fetcher, tmp_path: Path
 ):
@@ -370,6 +385,7 @@ def test_fluent_update_then_rollback_preserves_versions(
     assert active_fluent == ["0.1.0"]
 
 
+@pytest.mark.audit
 def test_contract_metadata_documented(plugins_repo: Path):
     readme = (plugins_repo / "README.md").read_text(encoding="utf-8")
     assert "Available plugins" in readme

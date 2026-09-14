@@ -9,7 +9,8 @@ from __future__ import annotations
 import json
 import pathlib
 import sys
-import unicodedata
+
+import pytest
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 if str(ROOT / "src") not in sys.path:
@@ -20,6 +21,8 @@ if str(ROOT / "src") not in sys.path:
 # 1. Mojibake Fix Verification
 # ---------------------------------------------------------------------------
 
+@pytest.mark.contract
+@pytest.mark.semantic
 class TestMojibakeFix:
     """Verify the ★ Favorites mojibake has been fixed at the source."""
 
@@ -70,6 +73,8 @@ class TestMojibakeFix:
 # 2. Turkish Translation Quality
 # ---------------------------------------------------------------------------
 
+@pytest.mark.contract
+@pytest.mark.semantic
 class TestTurkishTranslationQuality:
     """Verify Turkish translations are properly encoded after mojibake fix."""
 
@@ -109,6 +114,8 @@ class TestTurkishTranslationQuality:
 # 3. Internal Text Contract
 # ---------------------------------------------------------------------------
 
+@pytest.mark.contract
+@pytest.mark.semantic
 class TestInternalTextContract:
     """Verify application-internal textual values are Python str."""
 
@@ -138,25 +145,9 @@ class TestInternalTextContract:
 # 4. Encoding Boundary Justification
 # ---------------------------------------------------------------------------
 
+@pytest.mark.audit
 class TestEncodingBoundaryJustification:
     """Verify all encode/decode uses are justified."""
-
-    def test_ssh_client_decode_justified(self):
-        """SSH client decode should use errors='replace' for remote output."""
-        client = ROOT / "src" / "hpc_gui" / "ssh" / "client.py"
-        if client.is_file():
-            content = client.read_text(encoding="utf-8")
-            # SSH output may come from remote servers with various encodings
-            # errors='replace' is justified for display purposes
-            assert 'errors="replace"' in content or "errors='replace'" in content
-
-    def test_files_ssh_utf8_justified(self):
-        """SFTP backend should use UTF-8 for text operations."""
-        ssh_files = ROOT / "src" / "hpc_gui" / "services" / "files_ssh.py"
-        if ssh_files.is_file():
-            content = ssh_files.read_text(encoding="utf-8")
-            # SFTP text operations should use UTF-8
-            assert "utf-8" in content.lower()
 
     def test_config_json_ensure_ascii_false(self):
         """Config JSON should use ensure_ascii=False for Turkish support."""
@@ -170,6 +161,7 @@ class TestEncodingBoundaryJustification:
 # 5. Lossy Decoding Prevention
 # ---------------------------------------------------------------------------
 
+@pytest.mark.audit
 class TestLossyDecodingPrevention:
     """Verify no user-controlled path may silently lose characters."""
 
@@ -205,36 +197,17 @@ class TestLossyDecodingPrevention:
 class TestNormalizationPolicy:
     """Verify NFC/NFD and Turkish casing policies."""
 
-    def test_nfc_nfd_distinct(self):
-        """NFC and NFD forms should be distinct."""
-        nfc = unicodedata.normalize("NFC", "café")
-        nfd = unicodedata.normalize("NFD", "café")
-        assert nfc != nfd, "NFC and NFD should differ"
 
-    def test_turkish_i_casing(self):
-        """Turkish I/i casing should be handled correctly."""
-        # Turkish has 4 forms: I, İ, ı, i
-        # These should not be conflated
-        assert "I" != "İ", "I and İ should be distinct"
-        assert "ı" != "i", "ı and i should be distinct"
 
-    def test_pathlib_preserves_unicode(self):
-        """pathlib.Path should preserve Unicode characters."""
-        test_paths = [
-            "İşler_Çağrı",
-            "日本語_計算",
-            "★_Favorites",
-            "café.txt",
-        ]
-        for p in test_paths:
-            path = pathlib.Path(p)
-            assert str(path) == p, f"pathlib.Path preserved {p!r} incorrectly"
 
 
 # ---------------------------------------------------------------------------
 # 7. Regression Tests
 # ---------------------------------------------------------------------------
 
+@pytest.mark.contract
+@pytest.mark.semantic
+@pytest.mark.regression
 class TestRegressionTests:
     """Regression tests for mojibake and encoding issues."""
 

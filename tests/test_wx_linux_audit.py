@@ -1,8 +1,12 @@
 import os
+import pytest
 
 from hpc_gui.wx_runtime import environment_without_qt_graphics
 
 
+@pytest.mark.unit
+@pytest.mark.wx
+@pytest.mark.semantic
 def test_wx_runtime_drops_legacy_qt_graphics_environment():
     env = environment_without_qt_graphics(
         {**os.environ, "QTWEBENGINE_CHROMIUM_FLAGS": "--disable-gpu", "QTWEBENGINE_DISABLE_GPU": "1"}

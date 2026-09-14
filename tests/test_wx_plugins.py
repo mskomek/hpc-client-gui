@@ -3,6 +3,7 @@ import pytest
 from hpc_gui.wx_plugins import WxPluginManagerModel
 
 
+@pytest.mark.unit
 def test_plugin_cache_install_disable_enable_and_trusted_tool():
     installed = []
     model = WxPluginManagerModel(install=installed.append)
@@ -16,12 +17,14 @@ def test_plugin_cache_install_disable_enable_and_trusted_tool():
     assert opened and opened[0]["id"] == "org.hpcclient.ansyslint"
 
 
+@pytest.mark.unit
 def test_trusted_tool_rejection_is_fail_closed():
     model = WxPluginManagerModel()
     with pytest.raises(PermissionError):
         model.open_trusted_tool({"id": "org.example.bad"}, lambda value: value)
 
 
+@pytest.mark.unit
 def test_plugin_lifecycle_actions(monkeypatch):
     calls = []
     monkeypatch.setattr("hpc_gui.wx_plugins.activate_version", lambda *args, **kwargs: calls.append(("rollback", args)))

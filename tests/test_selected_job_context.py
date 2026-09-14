@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 import threading
 
 from hpc_gui.services.selected_job_context import SelectedJobContext, SelectedJobStore
@@ -12,6 +14,7 @@ from hpc_gui.services.selected_job_context import SelectedJobContext, SelectedJo
 # ---------------------------------------------------------------------------
 
 class TestSelectedJobContext:
+    @pytest.mark.unit
     def test_default_fields(self):
         ctx = SelectedJobContext(generation=0, job_id="123")
         assert ctx.job_id == "123"
@@ -22,22 +25,27 @@ class TestSelectedJobContext:
         assert ctx.stdout_path == ""
         assert ctx.stderr_path == ""
 
+    @pytest.mark.unit
     def test_has_selection_true(self):
         ctx = SelectedJobContext(generation=1, job_id="123")
         assert ctx.has_selection is True
 
+    @pytest.mark.unit
     def test_has_selection_false_when_empty(self):
         ctx = SelectedJobContext(generation=1, job_id="")
         assert ctx.has_selection is False
 
+    @pytest.mark.unit
     def test_display_name_prefers_name(self):
         ctx = SelectedJobContext(generation=1, job_id="123", name="my_job")
         assert ctx.display_name == "my_job"
 
+    @pytest.mark.unit
     def test_display_name_falls_back_to_job_id(self):
         ctx = SelectedJobContext(generation=1, job_id="123")
         assert ctx.display_name == "123"
 
+    @pytest.mark.unit
     def test_frozen(self):
         ctx = SelectedJobContext(generation=1, job_id="123")
         try:
@@ -52,6 +60,7 @@ class TestSelectedJobContext:
 # ---------------------------------------------------------------------------
 
 class TestSelectedJobStore:
+    @pytest.mark.unit
     def test_initial_state(self):
         store = SelectedJobStore()
         assert store.generation == 0
@@ -59,6 +68,7 @@ class TestSelectedJobStore:
         assert store.workdir == ""
         assert store.context.job_id == ""
 
+    @pytest.mark.unit
     def test_select_increments_generation(self):
         store = SelectedJobStore()
         ctx1 = store.select(job_id="100", name="job_a")
@@ -68,6 +78,7 @@ class TestSelectedJobStore:
         assert ctx2.generation == 2
         assert store.generation == 2
 
+    @pytest.mark.unit
     def test_select_publishes_context(self):
         store = SelectedJobStore()
         ctx = store.select(job_id="100", name="test", state="RUNNING")
@@ -76,6 +87,7 @@ class TestSelectedJobStore:
         assert ctx.state == "RUNNING"
         assert store.context.job_id == "100"
 
+    @pytest.mark.unit
     def test_select_preserves_previous_values_same_job(self):
         store = SelectedJobStore()
         store.select(job_id="100", name="a", state="PENDING", workdir="/scratch")
@@ -86,6 +98,7 @@ class TestSelectedJobStore:
         assert ctx2.state == "RUNNING"
         assert ctx2.workdir == "/scratch"
 
+    @pytest.mark.unit
     def test_select_clears_old_metadata_on_new_job(self):
         store = SelectedJobStore()
         store.select(job_id="100", name="a", state="PENDING", workdir="/scratch/A", stdout_path="/scratch/A/a.out")
@@ -103,6 +116,7 @@ class TestSelectedJobStore:
         assert ctx2.exit_code == ""
         assert ctx2.failure_reason == ""
 
+    @pytest.mark.unit
     def test_update_does_not_increment_generation(self):
         store = SelectedJobStore()
         ctx1 = store.select(job_id="100")
@@ -112,6 +126,7 @@ class TestSelectedJobStore:
         assert store.generation == gen
         assert ctx2.workdir == "/new/path"
 
+    @pytest.mark.unit
     def test_clear_resets_selection(self):
         store = SelectedJobStore()
         store.select(job_id="100", name="test")
@@ -119,6 +134,7 @@ class TestSelectedJobStore:
         assert store.job_id == ""
         assert store.generation == 2  # clear() calls select() once
 
+    @pytest.mark.unit
     def test_subscribe_receives_notifications(self):
         store = SelectedJobStore()
         received = []
@@ -129,6 +145,7 @@ class TestSelectedJobStore:
         assert received[0].job_id == "1"
         assert received[1].job_id == "2"
 
+    @pytest.mark.unit
     def test_unsubscribe_stops_notifications(self):
         store = SelectedJobStore()
         received = []
@@ -138,6 +155,7 @@ class TestSelectedJobStore:
         store.select(job_id="2")
         assert len(received) == 1
 
+    @pytest.mark.unit
     def test_double_unsubscribe_is_safe(self):
         store = SelectedJobStore()
         unsub = store.subscribe(lambda ctx: None)
@@ -150,6 +168,7 @@ class TestSelectedJobStore:
 # ---------------------------------------------------------------------------
 
 class TestSelectedJobStoreThreadSafety:
+    @pytest.mark.unit
     def test_concurrent_selects_do_not_corrupt(self):
         store = SelectedJobStore()
         errors = []
@@ -169,6 +188,7 @@ class TestSelectedJobStoreThreadSafety:
         assert not errors
         assert store.generation == 200
 
+    @pytest.mark.unit
     def test_concurrent_subscribe_and_select(self):
         store = SelectedJobStore()
         received = []
@@ -219,6 +239,7 @@ class TestSelectedJobStoreThreadSafety:
 # ---------------------------------------------------------------------------
 
 class TestStaleResponseSafety:
+    @pytest.mark.unit
     def test_late_response_rejected_by_generation(self):
         store = SelectedJobStore()
         store.select(job_id="A")
@@ -229,6 +250,7 @@ class TestStaleResponseSafety:
         assert store.generation == gen_b
         assert gen_a != gen_b
 
+    @pytest.mark.unit
     def test_workdir_not_overwritten_by_stale(self):
         store = SelectedJobStore()
         store.select(job_id="A", workdir="/work/A")
@@ -237,6 +259,7 @@ class TestStaleResponseSafety:
         assert store.context.workdir == "/work/B"
         assert store.context.job_id == "B"
 
+    @pytest.mark.unit
     def test_stdout_stderr_not_overwritten_by_stale(self):
         store = SelectedJobStore()
         store.select(job_id="A", stdout_path="/a.out", stderr_path="/a.err")

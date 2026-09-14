@@ -32,18 +32,27 @@ class Files:
 @pytest.fixture
 def shell(tmp_path):
     load_language("en")
-    app = wx.App(False)
+    app = wx.App.Get()
+    if app is None:
+        app = wx.App(False)
     ssh = SSH()
     state = {"session": {"ssh": ssh, "files": Files()}, "generation": 0}
     frame, lifecycle, state = create_shell_frame(app, tray_factory=lambda _parent: None, session_state=state)
     yield app, frame, lifecycle, state, ssh, tmp_path
     lifecycle.shutdown()
     for window in list(wx.GetTopLevelWindows()):
-        window.Destroy()
-    app.ProcessPendingEvents()
+        if window:
+            window.Destroy()
+    for _ in range(3):
+        app.ProcessPendingEvents()
+        wx.YieldIfNeeded()
+    assert not wx.GetTopLevelWindows()
     app.Destroy()
 
 
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
 def test_file_view_shell_script_runs_in_real_terminal_path(shell):
     _app, shell_frame, lifecycle, state, ssh, tmp_path = shell
     script = tmp_path / "hello world.sh"
@@ -65,6 +74,9 @@ def test_file_view_shell_script_runs_in_real_terminal_path(shell):
     assert ssh.commands == [f"bash -- {shlex.quote(str(script))}\n"]
 
 
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
 def test_editor_run_button_uses_real_wx_event_and_terminal_path(shell):
     _app, shell_frame, lifecycle, state, ssh, _tmp_path = shell
     _dispatch("NAV-EDITOR", shell_frame, lifecycle, state)
@@ -81,6 +93,9 @@ def test_editor_run_button_uses_real_wx_event_and_terminal_path(shell):
     assert ssh.commands == ["bash -- /remote/job.slurm\n"]
 
 
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
 def test_fallback_terminal_preserves_unicode_and_terminal_keys(monkeypatch):
     from hpc_gui import wx_terminal_webview
     from hpc_gui.wx_terminal import TerminalModel, build_terminal_panel

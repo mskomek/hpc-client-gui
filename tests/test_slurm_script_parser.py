@@ -1,8 +1,12 @@
+import pytest
+
 from hpc_gui.services.slurm_script_parser import (
     parse_job_paths,
     parse_output_error,
     storage_area_for_path,
 )
+
+pytestmark = pytest.mark.contract
 
 
 def test_parse_output_error_accepts_slurm_equals_and_space_forms() -> None:

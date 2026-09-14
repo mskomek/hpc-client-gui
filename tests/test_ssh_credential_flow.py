@@ -85,6 +85,8 @@ def _secret_keys(profile: dict) -> dict:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.gui
+@pytest.mark.qt
 def test_ssh_1_save_and_connect_uses_typed_password_without_persisting(qt_app, monkeypatch):
     login = LoginWidget()
     try:
@@ -122,6 +124,8 @@ def test_ssh_1_save_and_connect_uses_typed_password_without_persisting(qt_app, m
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.gui
+@pytest.mark.qt
 def test_ssh_2_save_and_connect_saved_password_uses_secure_store(qt_app, monkeypatch):
     login = LoginWidget()
     try:
@@ -152,6 +156,8 @@ def test_ssh_2_save_and_connect_saved_password_uses_secure_store(qt_app, monkeyp
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.gui
+@pytest.mark.qt
 def test_ssh_3_save_only_does_not_connect_and_does_not_persist(qt_app, monkeypatch):
     login = LoginWidget()
     try:
@@ -177,6 +183,8 @@ def test_ssh_3_save_only_does_not_connect_and_does_not_persist(qt_app, monkeypat
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.gui
+@pytest.mark.qt
 def test_ssh_4_existing_saved_secret_reaches_ssh(qt_app, monkeypatch):
     login = LoginWidget()
     try:
@@ -201,6 +209,8 @@ def test_ssh_4_existing_saved_secret_reaches_ssh(qt_app, monkeypatch):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.gui
+@pytest.mark.qt
 def test_ssh_5_profile_without_saved_password_prompts_and_uses_transient(qt_app, monkeypatch):
     login = LoginWidget()
     try:
@@ -220,6 +230,8 @@ def test_ssh_5_profile_without_saved_password_prompts_and_uses_transient(qt_app,
         login.deleteLater()
 
 
+@pytest.mark.gui
+@pytest.mark.qt
 def test_ssh_6_prompt_cancellation_aborts_without_ssh(qt_app, monkeypatch):
     login = LoginWidget()
     try:
@@ -242,6 +254,8 @@ def test_ssh_6_prompt_cancellation_aborts_without_ssh(qt_app, monkeypatch):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.gui
+@pytest.mark.qt
 def test_ssh_7_key_only_profile_never_prompts(qt_app, monkeypatch):
     login = LoginWidget()
     try:
@@ -260,6 +274,8 @@ def test_ssh_7_key_only_profile_never_prompts(qt_app, monkeypatch):
         login.deleteLater()
 
 
+@pytest.mark.gui
+@pytest.mark.qt
 def test_ssh_7b_password_only_provider_prompts_but_key_provider_does_not(qt_app, monkeypatch):
     login = LoginWidget()
     try:
@@ -295,6 +311,7 @@ class _FakeAgent:
         return self._keys
 
 
+@pytest.mark.unit
 def test_ssh_8_custom_strategy_preserves_agent_and_key_discovery(monkeypatch):
     agent_key = object()
     monkeypatch.setattr(
@@ -331,6 +348,7 @@ def test_ssh_8_custom_strategy_preserves_agent_and_key_discovery(monkeypatch):
     assert sources == []
 
 
+@pytest.mark.unit
 def test_ssh_8b_partial_authentication_continues_to_next_source():
     calls: list[str] = []
 
@@ -353,6 +371,7 @@ def test_ssh_8b_partial_authentication_continues_to_next_source():
     assert len(result) == 2
 
 
+@pytest.mark.unit
 def test_ssh_8c_connect_paths_forward_agent_and_key_flags(monkeypatch):
     import hpc_gui.ssh.client as client_module
 
@@ -428,6 +447,7 @@ def _run_worker(monkeypatch, cfg_kwargs: dict) -> SSHConnInfo:
     return recorded["conn"]
 
 
+@pytest.mark.unit
 def test_ssh_9_keyboard_interactive_metadata_reaches_conn_info(monkeypatch):
     settings = {
         "provider_template": {"access": {"auth_methods": ["keyboard-interactive"]}}
@@ -437,6 +457,7 @@ def test_ssh_9_keyboard_interactive_metadata_reaches_conn_info(monkeypatch):
     assert normalize_auth_methods(settings) == ("keyboard-interactive",)
 
 
+@pytest.mark.unit
 def test_ssh_10_password_plus_keyboard_interactive_available(monkeypatch):
     settings = {
         "provider_template": {
@@ -452,6 +473,7 @@ def test_ssh_10_password_plus_keyboard_interactive_available(monkeypatch):
     assert _KeyboardInteractiveSource in kinds
 
 
+@pytest.mark.unit
 def test_ssh_11_unknown_auth_methods_are_ignored_and_not_executable(monkeypatch):
     settings = {
         "provider_template": {
@@ -471,6 +493,8 @@ def test_ssh_11_unknown_auth_methods_are_ignored_and_not_executable(monkeypatch)
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.gui
+@pytest.mark.qt
 def test_ssh_9b_plugin_access_metadata_survives_dialog_to_login_chain(qt_app):
     """Provider access metadata must survive the full Path:
     plugin template -> ConnectionDialog provider_template -> profile -> login
@@ -511,6 +535,7 @@ def test_ssh_9b_plugin_access_metadata_survives_dialog_to_login_chain(qt_app):
         login.deleteLater()
 
 
+@pytest.mark.unit
 def test_ssh_12_secret_never_appears_in_reprs():
     info = SSHConnInfo(host="h", port=22, username="alice", password="secret")
     assert "secret" not in repr(info)
@@ -559,6 +584,7 @@ def _connect_with_error(monkeypatch, error, info: SSHConnInfo):
     return excinfo.value
 
 
+@pytest.mark.unit
 def test_no_credential_failure_is_classified_distinctly(monkeypatch):
     error = paramiko.SSHException("No authentication methods available")
     info = SSHConnInfo(host="h", port=22, username="alice")
@@ -572,6 +598,7 @@ def test_no_credential_failure_is_classified_distinctly(monkeypatch):
     assert "connection.error_authentication" not in message
 
 
+@pytest.mark.unit
 def test_rejected_credential_is_not_reclassified(monkeypatch):
     error = paramiko.AuthenticationException("Authentication failed.")
     info = SSHConnInfo(host="h", port=22, username="alice", password="wrong")
@@ -585,6 +612,8 @@ def test_rejected_credential_is_not_reclassified(monkeypatch):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.gui
+@pytest.mark.qt
 def test_save_and_connect_dialog_invokes_exactly_one_save_callback(qt_app):
     saved: list[dict] = []
     connected: list[dict] = []
@@ -602,6 +631,8 @@ def test_save_and_connect_dialog_invokes_exactly_one_save_callback(qt_app):
         dialog.deleteLater()
 
 
+@pytest.mark.gui
+@pytest.mark.qt
 def test_save_and_connect_dialog_falls_back_to_save_handler(qt_app):
     saved: list[dict] = []
     dialog = ConnectionDialog(on_save=lambda profile: saved.append(profile) or True)
@@ -614,6 +645,8 @@ def test_save_and_connect_dialog_falls_back_to_save_handler(qt_app):
         dialog.deleteLater()
 
 
+@pytest.mark.gui
+@pytest.mark.qt
 def test_one_logical_save_emits_one_canonical_event(qt_app, monkeypatch):
     login = LoginWidget()
     try:

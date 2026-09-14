@@ -5,6 +5,7 @@ from pathlib import Path, PurePosixPath
 
 import pytest
 wx = pytest.importorskip("wx")
+pytestmark = [pytest.mark.gui, pytest.mark.wx]
 
 from hpc_gui.wx_local_files import LocalBrowserModel, LocalEntry, show_local_files
 from hpc_gui.wx_remote_files import RemoteEntry, WxRemoteDirectoryModel
@@ -27,11 +28,15 @@ def _pump(app, pred, timeout=5):
 def wx_app():
     from hpc_gui.core.i18n import load_language
     load_language("en")
-    app = wx.App(False)
+    app = wx.App.Get()
+    if app is None:
+        app = wx.App(False)
     yield app
     for w in wx.GetTopLevelWindows():
         if w:
             w.Destroy()
+    app.ProcessPendingEvents()
+    wx.YieldIfNeeded()
     app.ProcessPendingEvents()
     app.Destroy()
 
@@ -223,6 +228,7 @@ def test_wx_local_closed_tab_ignores_listing_completion(wx_app, tmp_path: Path, 
     assert frame._wx_local_tabs[0]["path"] == a.resolve()
     assert nb.GetPageCount() == 1
 
+@pytest.mark.concurrency
 def test_wx_local_stale_listing_cannot_render_into_other_tab(wx_app, tmp_path: Path, monkeypatch):
     first = tmp_path / "first"
     first.mkdir()
@@ -340,6 +346,7 @@ def test_wx_remote_closed_tab_ignores_late_listing_completion(wx_app):
     wx.MilliSleep(50)
     assert frame._wx_remote_tabs[0]["path"] == "/scratch"
 
+@pytest.mark.concurrency
 def test_wx_remote_stale_listing_cannot_cross_tab_boundary(wx_app):
     started=threading.Event()
     release=threading.Event()
@@ -376,6 +383,7 @@ def test_wx_remote_tab_switch_does_not_create_new_backend_session(wx_app):
     wx_app.ProcessPendingEvents()
     assert len(backend.calls)==before
 
+@pytest.mark.concurrency
 def test_wx_remote_listing_worker_uses_captured_tab_path(wx_app):
     # regression for P0-1: worker must use captured path, not current_path
     calls = []

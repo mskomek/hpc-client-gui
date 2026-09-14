@@ -8,6 +8,8 @@ import time
 import unittest
 from pathlib import Path
 
+import pytest
+
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
@@ -23,8 +25,11 @@ def _load_probe_module():
 
 
 class PerformanceProbeTests(unittest.TestCase):
+    @pytest.mark.unit
+    @pytest.mark.semantic
+    @pytest.mark.performance
     def test_qt_event_loop_block_is_detected(self):
-        from PySide6.QtCore import QTimer
+        from PySide6.QtCore import QEventLoop, QTimer
         from PySide6.QtWidgets import QApplication
 
         module = _load_probe_module()
@@ -35,21 +40,20 @@ class PerformanceProbeTests(unittest.TestCase):
             session.start()
             app = QApplication.instance() or QApplication([])
 
-            original_heartbeat = session._heartbeat
             blocked = False
 
-            def block_after_first_heartbeat():
+            def block_event_loop():
                 nonlocal blocked
-                original_heartbeat()
-                if not blocked:
-                    blocked = True
-                    time.sleep(0.12)
+                blocked = True
+                time.sleep(0.12)
+                session._heartbeat()
 
-            session._heartbeat = block_after_first_heartbeat
             session.attach_to_app(app)
-            QTimer.singleShot(260, app.quit)
+            loop = QEventLoop()
+            QTimer.singleShot(60, block_event_loop)
+            QTimer.singleShot(260, loop.quit)
 
-            app.exec()
+            loop.exec()
             session.finish(0)
 
             events = [
@@ -57,11 +61,15 @@ class PerformanceProbeTests(unittest.TestCase):
                 for line in session.report_path.read_text(encoding="utf-8").splitlines()
             ]
             delays = [event for event in events if event["event"] == "event_loop_delay"]
+            self.assertTrue(blocked)
             self.assertTrue(delays)
             # Loaded CI runners record their own startup jitter above slow_ms
             # first, so the blocking tick is not necessarily delays[0].
             self.assertGreaterEqual(max(d["delay_ms"] for d in delays), 80)
 
+    @pytest.mark.unit
+    @pytest.mark.semantic
+    @pytest.mark.performance
     def test_slow_event_loop_tick_is_recorded(self):
         module = _load_probe_module()
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -85,6 +93,9 @@ class PerformanceProbeTests(unittest.TestCase):
             self.assertEqual(events[0]["event"], "event_loop_delay")
             self.assertEqual(events[0]["delay_ms"], 250.0)
 
+    @pytest.mark.unit
+    @pytest.mark.semantic
+    @pytest.mark.performance
     def test_fast_event_loop_tick_does_not_write_delay(self):
         module = _load_probe_module()
         with tempfile.TemporaryDirectory() as temp_dir:

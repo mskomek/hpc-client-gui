@@ -10,6 +10,8 @@ from hpc_gui.services.slurm_arrays import (
 )
 from hpc_gui.services.slurm_script_parser import parse_job_paths
 
+pytestmark = pytest.mark.contract
+
 
 @pytest.mark.parametrize(
     ("value", "expected"),

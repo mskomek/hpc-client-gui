@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import os
 from pathlib import Path
 from unittest.mock import patch
@@ -13,6 +14,9 @@ from hpc_gui.services import process_registry
 from hpc_gui.services.xserver_manager import _vcxsrv_args
 
 
+@pytest.mark.integration
+@pytest.mark.semantic
+@pytest.mark.regression
 def test_process_registry_never_persists_password(tmp_path: Path):
     target = tmp_path / "processes.json"
     with patch("hpc_gui.services.process_registry._registry_path", return_value=target):
@@ -20,6 +24,9 @@ def test_process_registry_never_persists_password(tmp_path: Path):
     assert "FakeX11Password" not in target.read_text(encoding="utf-8")
 
 
+@pytest.mark.unit
+@pytest.mark.semantic
+@pytest.mark.regression
 def test_x11_launch_has_separate_safe_display_args():
     from hpc_gui.services import x11_system_ssh
 
@@ -31,29 +38,38 @@ def test_x11_launch_has_separate_safe_display_args():
     assert launch.display_args[launch.display_args.index("-pw") + 1] == "<redacted>"
 
 
+@pytest.mark.integration
+@pytest.mark.semantic
+@pytest.mark.regression
 def test_python_plugin_payload_and_legacy_engine_fail_closed(tmp_path: Path):
     marker = tmp_path / "executed"
+    payload = tmp_path / "engine" / "__init__.py"
+    payload.parent.mkdir()
+    payload.write_text(
+        f"from pathlib import Path\nPath({str(marker)!r}).touch()\n",
+        encoding="utf-8",
+    )
     manifest = {
         "schema_version": 1, "plugin_api": 2, "id": "org.example.bad", "name": "bad",
         "version": "1.0.0", "publisher": "test", "license": "MIT", "description": "bad",
         "requires_app": ">=1.0.0", "capabilities": ["linter-tool"],
         "entrypoints": {"linter_engine": "engine/__init__.py"},
-        "files": [{"path": "engine/__init__.py", "sha256": "a" * 64, "size": 1, "role": "linter-engine"}],
+        "files": [{
+            "path": "engine/__init__.py",
+            "sha256": hashlib.sha256(payload.read_bytes()).hexdigest(),
+            "size": payload.stat().st_size,
+            "role": "linter-engine",
+        }],
     }
     assert validate_manifest_dict(manifest)
     with pytest.raises(ToolLoadError, match="disabled|declarative"):
-        load_tool_for_plugin(type("Installed", (), {"directory": tmp_path, "manifest": type("M", (), {"id": "x", "version": "1"})()})())
+        load_tool_for_plugin(type("Installed", (), {"directory": tmp_path, "manifest": manifest})())
     assert not marker.exists()
 
 
-def test_plugin_runtime_has_no_dynamic_source_execution():
-    source = "\n".join(
-        path.read_text(encoding="utf-8")
-        for path in Path("src/hpc_gui/plugins").glob("*.py")
-    )
-    assert "create_plugin(" in source  # only the approved trusted-tool adapter may call it
-
-
+@pytest.mark.contract
+@pytest.mark.semantic
+@pytest.mark.regression
 def test_unknown_declarative_engine_id_fails_closed():
     manifest = {
         "schema_version": 1, "plugin_api": 1, "id": "org.example.rules", "name": "rules",
@@ -65,10 +81,16 @@ def test_unknown_declarative_engine_id_fails_closed():
     assert any("unknown declarative engine" in error for error in validate_manifest_dict(manifest))
 
 
+@pytest.mark.unit
+@pytest.mark.semantic
+@pytest.mark.regression
 def test_vcxsrv_does_not_disable_access_control():
     assert "-ac" not in _vcxsrv_args(Path("vcxsrv.exe"), 0)
 
 
+@pytest.mark.unit
+@pytest.mark.semantic
+@pytest.mark.regression
 def test_provider_substitution_is_shell_quoted():
     from hpc_gui.services.slurm_ssh import SSHSlurmBackend
 
@@ -76,6 +98,9 @@ def test_provider_substitution_is_shell_quoted():
     assert backend._command("squeue_command", user="user; touch marker") == "squeue -u 'user; touch marker'"
 
 
+@pytest.mark.unit
+@pytest.mark.semantic
+@pytest.mark.regression
 def test_plugin_paths_reject_traversal_and_windows_forms():
     from hpc_gui.plugins.models import is_safe_relative_path
 
@@ -83,6 +108,9 @@ def test_plugin_paths_reject_traversal_and_windows_forms():
         assert not is_safe_relative_path(path)
 
 
+@pytest.mark.integration
+@pytest.mark.semantic
+@pytest.mark.regression
 def test_plugin_integrity_rejects_symlink_escape(tmp_path: Path):
     import hashlib
     from hpc_gui.plugins.integrity import verify_version_dir
@@ -106,6 +134,9 @@ def test_plugin_integrity_rejects_symlink_escape(tmp_path: Path):
     assert any("symlink" in error for error in verify_version_dir(package))
 
 
+@pytest.mark.unit
+@pytest.mark.semantic
+@pytest.mark.regression
 def test_update_download_rejects_untrusted_final_redirect(monkeypatch, tmp_path: Path):
     from hpc_gui.services.app_updater import _download
 
@@ -129,6 +160,9 @@ def test_update_download_rejects_untrusted_final_redirect(monkeypatch, tmp_path:
         _download("https://github.com/x/update.zip", tmp_path / "update.zip", verify_update_host=True)
 
 
+@pytest.mark.unit
+@pytest.mark.semantic
+@pytest.mark.regression
 def test_unverified_download_cannot_reach_installer(monkeypatch, tmp_path: Path):
     from hpc_gui.services import app_updater
 
@@ -140,6 +174,9 @@ def test_unverified_download_cannot_reach_installer(monkeypatch, tmp_path: Path)
 
 
 @pytest.mark.skipif(os.name != "posix", reason="POSIX permission semantics")
+@pytest.mark.integration
+@pytest.mark.semantic
+@pytest.mark.regression
 def test_sensitive_config_file_is_owner_only(tmp_path: Path):
     from hpc_gui.config import storage
 

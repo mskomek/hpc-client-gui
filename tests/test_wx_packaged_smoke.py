@@ -9,10 +9,11 @@ import pytest
 pytestmark = pytest.mark.packaging
 
 
-def test_packaged_wx_smoke_gate_fails_closed_without_artifact(tmp_path):
+@pytest.mark.reporting
+def test_missing_artifact_report_fails_critical_stages(tmp_path):
     root = Path(__file__).parents[1]
-    artifact = tmp_path / "missing.exe"
-    output = tmp_path / "report.json"
+    artifact = tmp_path / "missing-wx-artifact.exe"
+    output = tmp_path / "smoke-evidence.json"
     result = subprocess.run(
         [
             sys.executable,
@@ -31,8 +32,9 @@ def test_packaged_wx_smoke_gate_fails_closed_without_artifact(tmp_path):
     assert result.returncode == 1, result.stderr or result.stdout
     report = json.loads(result.stdout)
     assert report["schema"] == "wx-packaged-smoke/1"
+    assert report == json.loads(output.read_text(encoding="utf-8"))
     assert report["result"] == "FAIL"
-    assert report["checks"]["process_started"] == "FAIL"
+    assert {"process_started", "wx_runtime_started", "main_frame_created", "clean_shutdown"} <= report["checks"].keys()
+    assert set(report["checks"].values()) == {"FAIL"}
     assert "artifact not found" in report["details"]["artifact"]
-    assert json.loads(output.read_text(encoding="utf-8")) == report
     assert "MFA" in report["manual_required"]

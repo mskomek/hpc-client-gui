@@ -7,6 +7,8 @@ TRUBA 1.4.0 / v1.5.8 regression from recurring (PLUGIN-3/4/5/7/8).
 
 from __future__ import annotations
 
+import pytest
+
 from hpc_gui import __version__
 from hpc_gui.plugins.compatibility import (
     is_app_compatible,
@@ -35,6 +37,7 @@ FIRST_SCHEMA3_RELEASE = "1.5.9"
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.contract
 def test_plugin_1_released_1_5_8_supports_schemas_1_and_2():
     """Historical release facts are not rewritten by newer code."""
     assert MIN_APP_VERSION_FOR_SCHEMA[1] == "1.4.0"
@@ -49,6 +52,7 @@ def test_plugin_1_released_1_5_8_supports_schemas_1_and_2():
     assert parse_version(MIN_APP_VERSION_FOR_SCHEMA[3]) > released
 
 
+@pytest.mark.contract
 def test_plugin_2_current_release_supports_schema_3_and_4():
     assert MIN_APP_VERSION_FOR_SCHEMA[3] == FIRST_SCHEMA3_RELEASE
     assert MIN_APP_VERSION_FOR_SCHEMA[4] == FIRST_SCHEMA3_RELEASE
@@ -61,10 +65,12 @@ def test_plugin_2_current_release_supports_schema_3_and_4():
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.contract
 def test_plugin_3_truba_1_4_0_is_incompatible_with_released_1_5_8():
     assert is_app_compatible(">=1.5.9", RELEASED_1_5_8) is False
 
 
+@pytest.mark.contract
 def test_plugin_4_truba_1_4_0_requires_first_schema3_release():
     for requires_app in (">=1.5.9", ">=1.5.9,<2.0.0"):
         assert is_app_compatible(requires_app, FIRST_SCHEMA3_RELEASE) is True
@@ -105,6 +111,7 @@ def _synthetic_registry() -> dict:
     }
 
 
+@pytest.mark.contract
 def test_plugin_5_latest_compatible_fallback_per_app_line():
     registry = _synthetic_registry()
     assert find_registry_entry(
@@ -123,6 +130,7 @@ def test_plugin_5_latest_compatible_fallback_per_app_line():
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.contract
 def test_app_version_supports_schema_question_is_answerable():
     assert app_supports_schema("1.5.8", 3) is False
     assert app_supports_schema("1.5.8", 2) is True
@@ -135,6 +143,7 @@ def test_app_version_supports_schema_question_is_answerable():
     assert app_supports_schema("not-a-version", 1) is False
 
 
+@pytest.mark.contract
 def test_plugin_7_schema_floor_violations_are_detected():
     # The exact published regression: schema 3 claimed against >=1.5.8.
     assert schema_floor_error(3, ">=1.5.8") is not None
@@ -147,6 +156,7 @@ def test_plugin_7_schema_floor_violations_are_detected():
     assert schema_floor_error(1, ">=1.3.0") is None
 
 
+@pytest.mark.contract
 def test_plugin_7_floor_uses_the_lowest_admitted_version():
     assert minimum_admitted_version(">=1.4.0,<2.0.0") == (1, 4, 0)
     assert minimum_admitted_version(">1.5.8") == (1, 5, 9)
@@ -160,6 +170,7 @@ def test_plugin_7_floor_uses_the_lowest_admitted_version():
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.contract
 def test_plugin_8_future_schema_is_rejected():
     base = {"profile_id": "truba", "name": "TRUBA", "scheduler": "slurm"}
     problems = validate_cluster_profile_dict({"schema_version": 999, **base})
@@ -168,6 +179,7 @@ def test_plugin_8_future_schema_is_rejected():
         assert validate_cluster_profile_dict({"schema_version": version, **base}) == []
 
 
+@pytest.mark.contract
 def test_unsupported_schema_message_is_actionable():
     message = unsupported_schema_message(999, app_version="1.5.9")
     assert "schema 999" in message
@@ -176,5 +188,6 @@ def test_unsupported_schema_message_is_actionable():
     assert "Install a newer application release" in message
 
 
+@pytest.mark.contract
 def test_plugin_infrastructure_baseline_is_release_fact():
     assert PLUGIN_INFRASTRUCTURE_VERSION == "1.4.0"
