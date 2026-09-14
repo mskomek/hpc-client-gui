@@ -1,9 +1,22 @@
 # Zero-Primary Dispositions
 
+## Current state — 2026-09-14 (post-consolidation)
+
+Current collected nodes: **2661**
+Current zero-primary nodes: **0**
+Current multi-primary nodes: **0**
+RATCHET (strict zero-debt baseline, empty allowlist): **PASS**
+
+All six prior zero-primary exceptions were directly resolved on the consolidated `test-suite-governance-20260912` line. Their successors are truthful, passing tests with exactly one primary marker: `test_archived_macos_matrix_covers_both_native_architectures` and `test_archived_macos_job_has_no_release_upload_or_signing_step` (archived-workflow semantics), `test_manual_release_jobs_share_the_release_preflight`, `test_manual_release_exists_and_automatic_ci_remains_archived`, `test_missing_artifact_report_fails_critical_stages` (the old node expected PASS while the smoke gate truthfully reports FAIL), and `test_wx_shell_p0_stress_real_wx_paths`. No allowlisted exception remains, so no test is exempted on the current tree. The machine-readable census is `audit/test-governance/integration-closeout-20260913/taxonomy-report-post-consolidation.json`.
+
+The section below is the historical frozen-baseline disposition (taxonomy snapshot `6cad198d`, 2,656 nodes, six exceptions) and is retained as history.
+
+## Historical frozen-baseline disposition
+
 Frozen baseline: 12ce79935bf076e1062c57dc7dbd148bad2bfae1
 Taxonomy snapshot SHA: 6cad198dca6c0f69bc8196f5030a7aebcba9d696
-Current collected nodes: 2656
-Current zero-primary nodes: 6
+Collected nodes at that snapshot: 2656
+Zero-primary nodes at that snapshot: 6
 
 These six nodes remain unclassified because Packet A reproduced their failures on the frozen baseline. The first five are among the seven archived isolated failures. The wx shell stress case is a separately confirmed supplemental baseline-signature failure. They are explicit exceptions, not successful coverage, and are preserved in the ratchet allowlist.
 
