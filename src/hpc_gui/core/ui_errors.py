@@ -18,13 +18,18 @@ def describe_connection_error(exc: BaseException, fallback: str = "") -> str:
     lowered = text.lower()
 
     # Jump-host stages get distinct, actionable messages.
+    from hpc_gui.ssh.client import NoAuthenticationCredentialError
     from hpc_gui.ssh.jump import (
         JumpAuthenticationError,
         JumpConnectionError,
         JumpForwardingDeniedError,
     )
 
-    if isinstance(exc, JumpAuthenticationError):
+    if isinstance(exc, NoAuthenticationCredentialError):
+        # Missing credential, not a rejected one: never report this as
+        # "wrong password".
+        key = "connection.error_no_credential"
+    elif isinstance(exc, JumpAuthenticationError):
         key = "connection.jump_error_auth"
     elif isinstance(exc, JumpForwardingDeniedError):
         key = "connection.jump_error_forwarding"

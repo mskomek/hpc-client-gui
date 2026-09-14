@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import contextlib
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Callable, Optional, Protocol, Tuple
 
@@ -11,7 +11,15 @@ import socket
 from hpc_gui.core.debug_support import timed
 
 import paramiko
-from paramiko.auth_strategy import AuthSource, AuthStrategy, InMemoryPrivateKey
+from paramiko.auth_strategy import (
+    AuthFailure,
+    AuthResult,
+    AuthSource,
+    AuthStrategy,
+    InMemoryPrivateKey,
+    OnDiskPrivateKey,
+    SourceResult,
+)
 
 from hpc_gui.core.logging import get_logger
 from hpc_gui.core.paths import app_data_dir
@@ -94,9 +102,28 @@ class HostKeyRejectedError(paramiko.SSHException):
         super().__init__(f"Unknown host key rejected for {hostname}.")
 
 
-def load_private_key_with_certificate(key_path: str):
+class NoAuthenticationCredentialError(paramiko.SSHException):
+    """No credential/source was available to authenticate at all.
+
+    This is deliberately distinct from "the supplied credential was rejected":
+    the server never received anything to validate. The raw Paramiko failure
+    stays attached as ``__cause__`` for diagnostics.
+    """
+
+    def __init__(self) -> None:
+        super().__init__(
+            "No authentication credential is available for this connection. "
+            "Enter a password, configure an SSH key, or enable an applicable "
+            "authentication method."
+        )
+
+
+def load_private_key_with_certificate(key_path: str, password: str | None = None):
     """Load a private key and its conventional sibling OpenSSH certificate."""
-    pkey = paramiko.PKey.from_path(key_path)
+    if password:
+        pkey = paramiko.PKey.from_path(key_path, password)
+    else:
+        pkey = paramiko.PKey.from_path(key_path)
     certificate_path = Path(key_path).with_name(Path(key_path).name + "-cert.pub")
     if certificate_path.is_file():
         pkey.load_certificate(str(certificate_path))
@@ -136,7 +163,8 @@ class SSHConnInfo:
     host: str
     port: int
     username: str = ""
-    password: str = ""
+    # Never include the plaintext secret in a repr that may reach logs.
+    password: str = field(default="", repr=False)
     key_path: str = ""
     host_key_policy: str = "accept-new"  # accept-new | strict
     x11_forwarding: bool = False  # UI flag; actual X11 is handled separately
@@ -147,6 +175,44 @@ class SSHConnInfo:
     preconnected_socket: Optional[SocketLike] = None
     jump: Optional["SSHJumpInfo"] = None
     keyboard_interactive_handler: Optional[Callable[[str, str, list[tuple[str, bool]]], list[str]]] = None
+    # Auth-source switches that must survive every code path (including the
+    # custom keyboard-interactive strategy) exactly like Paramiko defaults.
+    allow_agent: bool = True
+    look_for_keys: bool = True
+
+
+def _agent_key_sources(username: str):
+    """Yield in-memory sources for keys offered by a running ssh-agent."""
+    try:
+        agent = paramiko.Agent()
+        keys = list(agent.get_keys())
+    except Exception:
+        return
+    for key in keys:
+        yield InMemoryPrivateKey(username, key)
+
+
+def _discoverable_key_sources(username: str, password: str):
+    """Yield sources for conventional ~/.ssh id_* keys Paramiko would find.
+
+    ``password`` is only used as a key passphrase, mirroring Paramiko's
+    ``_auth`` behavior; unreadable/encrypted keys are skipped.
+    """
+    candidates: list[Path] = []
+    for directory in (".ssh", "ssh"):  # ~/ssh/ is the Windows convention
+        for name in ("id_rsa", "id_ecdsa", "id_ed25519"):
+            candidates.append(Path.home() / directory / name)
+    seen: set[str] = set()
+    for key_path in candidates:
+        path_key = str(key_path)
+        if path_key in seen or not key_path.is_file():
+            continue
+        seen.add(path_key)
+        try:
+            pkey = load_private_key_with_certificate(path_key, password or None)
+        except Exception:
+            continue
+        yield OnDiskPrivateKey(username, "implicit-home", key_path, pkey)
 
 
 class _KeyboardInteractiveSource(AuthSource):
@@ -162,6 +228,16 @@ class _KeyboardInteractiveSource(AuthSource):
 
 
 class _ConnectionAuthStrategy(AuthStrategy):
+    """Explicit auth order that preserves Paramiko's default source set.
+
+    ``SSHClient.connect(auth_strategy=...)`` bypasses Paramiko's built-in
+    ``_auth`` discovery, so the strategy must itself offer the configured key,
+    ssh-agent keys, discoverable ``~/.ssh`` keys, the password, and the
+    keyboard-interactive handler. Unlike the base implementation, partial
+    authentication (multi-step servers) continues with the remaining sources
+    instead of being mistaken for success.
+    """
+
     def __init__(self, info: SSHConnInfo, pkey=None):
         super().__init__(ssh_config=None)
         self.info = info
@@ -171,12 +247,31 @@ class _ConnectionAuthStrategy(AuthStrategy):
         username = self.info.username
         if self.pkey is not None:
             yield InMemoryPrivateKey(username, self.pkey)
+        if getattr(self.info, "allow_agent", True):
+            yield from _agent_key_sources(username)
+        if getattr(self.info, "look_for_keys", True):
+            yield from _discoverable_key_sources(username, self.info.password)
         if self.info.password:
             yield _PasswordSource(username, lambda: self.info.password)
         if self.info.keyboard_interactive_handler is not None:
             yield _KeyboardInteractiveSource(
                 username, self.info.keyboard_interactive_handler
             )
+
+    def authenticate(self, transport):
+        overall_result = AuthResult(strategy=self)
+        for source in self.get_sources():
+            try:
+                result = source.authenticate(transport)
+            except Exception as exc:  # noqa: BLE001 - recorded, not swallowed
+                overall_result.append(SourceResult(source, exc))
+                continue
+            overall_result.append(SourceResult(source, result))
+            if not result:
+                return overall_result
+            # Non-empty result means partial authentication: the server wants
+            # another method (for example publickey followed by password).
+        raise AuthFailure(result=overall_result)
 
 
 class _PasswordSource(AuthSource):
@@ -232,6 +327,17 @@ class SSHClientWrapper:
     def _active_transport(self):
         """Active Paramiko transport for the channel manager (may be None)."""
         return self.client.get_transport() if self.client else None
+
+    def _discard_partial_client(self) -> None:
+        """Drop a partially connected target client and all jump resources."""
+        try:
+            if self.client is not None:
+                close = getattr(self.client, "close", None)
+                if callable(close):
+                    close()
+        finally:
+            self.client = None
+        self._close_jump_connection()
 
     # ---------- interactive shell facade ----------
     # The lifecycle lives in InteractiveShellSession; these bridges keep the
@@ -345,7 +451,9 @@ class SSHClientWrapper:
             pkey = None
             if info.key_path:
                 self.log("SSH: using configured key")
-                pkey = load_private_key_with_certificate(info.key_path)
+                pkey = load_private_key_with_certificate(
+                    info.key_path, info.password or None
+                )
             auth_strategy = None
             if info.keyboard_interactive_handler is not None:
                 auth_strategy = _ConnectionAuthStrategy(info, pkey)
@@ -371,8 +479,8 @@ class SSHClientWrapper:
                     banner_timeout=banner_timeout,
                     auth_timeout=auth_timeout,
                     channel_timeout=channel_timeout,
-                    allow_agent=True,
-                    look_for_keys=True,
+                    allow_agent=info.allow_agent,
+                    look_for_keys=info.look_for_keys,
                     **connection_kwargs,
                 )
             else:
@@ -385,33 +493,32 @@ class SSHClientWrapper:
                     banner_timeout=banner_timeout,
                     auth_timeout=auth_timeout,
                     channel_timeout=channel_timeout,
-                    allow_agent=True,
-                    look_for_keys=True,
+                    allow_agent=info.allow_agent,
+                    look_for_keys=info.look_for_keys,
                     **connection_kwargs,
                 )
         except paramiko.BadHostKeyException as exc:
             # Target host-key change: drop the partial target client and
             # all jump resources before propagating.
-            try:
-                if self.client is not None:
-                    close = getattr(self.client, "close", None)
-                    if callable(close):
-                        close()
-            finally:
-                self.client = None
-            self._close_jump_connection()
+            self._discard_partial_client()
             raise HostKeyChangedError(exc.hostname) from exc
-        except Exception:
+        except paramiko.SSHException as exc:
             # Target connect/auth failure after a jump channel exists:
             # drop the partial target client and all jump resources.
-            try:
-                if self.client is not None:
-                    close = getattr(self.client, "close", None)
-                    if callable(close):
-                        close()
-            finally:
-                self.client = None
-            self._close_jump_connection()
+            self._discard_partial_client()
+            if (
+                "no authentication methods" in str(exc).lower()
+                and not info.password
+                and not info.key_path
+                and info.keyboard_interactive_handler is None
+            ):
+                # Truthful classification: nothing was ever offered to the
+                # server, so this is a missing-credential failure, not a
+                # rejected credential.
+                raise NoAuthenticationCredentialError() from exc
+            raise
+        except Exception:
+            self._discard_partial_client()
             raise
         transport = self.client.get_transport()
         if transport is not None:

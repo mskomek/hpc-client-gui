@@ -34,6 +34,10 @@ from hpc_gui.config.jump_host_profile import (
 )
 from hpc_gui.ssh.jump import jump_info_from_settings
 from hpc_gui.services.connection_controller import ConnectionController
+from hpc_gui.services.connection_profile_service import (
+    normalize_auth_methods,
+    password_prompt_recommended,
+)
 from hpc_gui.config.system_profile import normalize_system_settings
 from hpc_gui.core.history import append_event
 from hpc_gui.core.logging import append_log
@@ -154,9 +158,7 @@ class _ConnectionWorker(QObject):
 
     def run(self) -> None:
         try:
-            auth_methods = ((self._cfg.system_settings or {}).get("access") or {}).get(
-                "auth_methods", []
-            )
+            auth_methods = normalize_auth_methods(self._cfg.system_settings)
             conn = SSHConnInfo(
                 host=self._cfg.host,
                 port=self._cfg.port,
@@ -1023,6 +1025,25 @@ class LoginWidget(QWidget):
             return self._decrypt_saved_password(prof)
         return ""
 
+    def _should_prompt_for_password(self, prof: dict | None) -> bool:
+        """Whether Connect should ask for a transient password.
+
+        Key/agent profiles and providers that declare their own key or
+        keyboard-interactive source are never forced through a password
+        prompt.  Profiles that explicitly opted out of connect-time prompts
+        ("edit-only") are also left alone; the SSH layer then reports the
+        missing credential truthfully.
+        """
+        if self._password_prompt_policy == "edit-only":
+            return False
+        key_path = self.key_path.text().strip()
+        if not key_path and isinstance(prof, dict):
+            key_path = str(prof.get("key_path") or "").strip()
+        return password_prompt_recommended(
+            self._profile_system_settings,
+            has_key_path=bool(key_path),
+        )
+
     def pick_key(self) -> None:
         path, _ = QFileDialog.getOpenFileName(self, t("login.ssh_key"))
         if path:
@@ -1197,10 +1218,19 @@ class LoginWidget(QWidget):
         return self.save_profile()
 
     def _save_and_connect_from_dialog(self, profile: dict) -> bool:
-        self._load_profile_into_fields(profile)
-        if not self.save_profile():
+        # The typed password is a transient connection credential: it is used
+        # for this connection attempt but only persisted when the dialog's
+        # "save password" option is on.  It is passed explicitly instead of
+        # being routed back through the password field, which may be cleared
+        # while loading a profile.
+        transient_password = (
+            profile.get("password")
+            if isinstance(profile.get("password"), str)
+            else ""
+        )
+        if not self._save_profile_from_dialog(profile):
             return False
-        return self.connect_clicked()
+        return self.connect_clicked(transient_password=transient_password)
 
     def connect_selected_profile(self) -> bool:
         name = self._selected_profile_name()
@@ -1440,7 +1470,7 @@ class LoginWidget(QWidget):
         append_event({"type": "connect", "host": cfg.host, "user": cfg.username, "dry_run": True})
         self.session_changed.emit(self._session)
 
-    def connect_clicked(self) -> bool:
+    def connect_clicked(self, transient_password: str = "") -> bool:
         try:
             port = int(self.port.text().strip() or "22")
         except ValueError:
@@ -1458,21 +1488,36 @@ class LoginWidget(QWidget):
                 widget.setFocus()
                 return False
 
-        # If password is not typed, resolve the saved secret according to the profile policy.
-        password = self.password.text()
-        if not password:
-            name = (self.profile_name.text() or "").strip()
-            if name:
-                prof = next((p for p in load_profiles() if p.get("name") == name), None)
-                if prof and prof.get("save_password"):
-                    password = self._decrypt_profile_password(
-                        prof,
-                        allow_prompt=True,
-                    )
-                    if password is None:
-                        return False
-
+        # Resolve the credential for this attempt.  The typed field wins, then
+        # the transient credential passed by Save & Connect, then a securely
+        # saved secret, then a prompt.  Cancelling the prompt aborts before any
+        # SSH connection is attempted.
         use_ftp_mock = is_ftp_test_mode_enabled() and is_ftp_mock_host(self.host.text())
+        password = self.password.text() or str(transient_password or "")
+        name = (self.profile_name.text() or "").strip()
+        prof = next(
+            (p for p in load_profiles() if p.get("name") == name),
+            None,
+        )
+        if not password and prof and prof.get("save_password"):
+            password = self._decrypt_profile_password(
+                prof,
+                allow_prompt=True,
+            )
+            if password is None:
+                return False
+        if not password and not use_ftp_mock and self._should_prompt_for_password(prof):
+            entered, ok = QInputDialog.getText(
+                self,
+                t("connection.password_prompt_title"),
+                t("connection.password_prompt_message"),
+                QLineEdit.EchoMode.Password,
+            )
+            if not ok:
+                self.append_console(t("connection.auth_cancelled"))
+                return False
+            password = entered or ""
+
         cfg = SSHConfig(
             host=self.host.text().strip(),
             port=port,
