@@ -56,6 +56,11 @@ from hpc_gui.plugins.registry_client import (
     RegistryError,
     default_fetcher,
 )
+from hpc_gui.plugins.schema_compat import (
+    SUPPORTED_CLUSTER_PROFILE_SCHEMAS,
+    cluster_profile_floor_errors,
+    unsupported_schema_message,
+)
 from hpc_gui.plugins.state import read_active_versions, record_installed_version
 from hpc_gui.plugins.trusted_tools import trusted_tool_error
 from hpc_gui.plugins.storage import (
@@ -135,7 +140,11 @@ def _build_manifest(raw: dict[str, Any]) -> PluginManifest:
     )
 
 
-def _check_entrypoint_payloads(staging_dir: Path, manifest: PluginManifest) -> tuple[ClusterProfileDefinition, ...]:
+def _check_entrypoint_payloads(
+    staging_dir: Path,
+    manifest: PluginManifest,
+    app_version: str = __version__,
+) -> tuple[ClusterProfileDefinition, ...]:
     profiles: list[ClusterProfileDefinition] = []
     cluster_entrypoints = manifest.entrypoints.get("cluster_profiles")
     declared = {entry.path for entry in manifest.files}
@@ -152,6 +161,23 @@ def _check_entrypoint_payloads(staging_dir: Path, manifest: PluginManifest) -> t
             raise InstallError(f"Cannot read cluster profile '{rel}': {exc}") from exc
         problems = validate_cluster_profile_dict(raw_profile)
         if problems:
+            schema_version = (
+                raw_profile.get("schema_version")
+                if isinstance(raw_profile, dict)
+                else None
+            )
+            if (
+                isinstance(schema_version, int)
+                and schema_version not in SUPPORTED_CLUSTER_PROFILE_SCHEMAS
+            ):
+                # Keep the strict validation detail, but lead with the
+                # actionable compatibility explanation.
+                raise InstallError(
+                    unsupported_schema_message(schema_version, app_version=app_version)
+                    + " (Validation detail: "
+                    + "; ".join(problems)
+                    + ")"
+                )
             raise InstallError(f"Invalid cluster profile '{rel}': " + "; ".join(problems))
         profiles.append(build_cluster_profile(raw_profile))
     return tuple(profiles)
@@ -333,7 +359,15 @@ def install_plugin_from_registry(
             if compute_local_sha256(staged) != file_entry.sha256:
                 raise InstallError(f"Staged SHA-256 mismatch: {file_entry.path}")
 
-        profiles = _check_entrypoint_payloads(staging_dir, manifest)
+        profiles = _check_entrypoint_payloads(staging_dir, manifest, app_version)
+        floor_problems = cluster_profile_floor_errors(profiles, manifest.requires_app)
+        if floor_problems:
+            # The payload schema demands a newer application than the manifest
+            # declares; fail closed instead of advertising a broken install.
+            raise InstallError(
+                "Plugin compatibility claim is inconsistent: "
+                + "; ".join(floor_problems)
+            )
         linter_engine = _check_linter_entrypoint(staging_dir, manifest)
 
         # Step 8: publish staging into the immutable version directory.

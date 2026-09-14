@@ -56,16 +56,30 @@ def make_plugin_files(
     plugin_id: str = "org.hpcclient.truba",
     version: str = "1.0.0",
     requires_app: str = ">=1.3.0",
+    schema_version: int = 1,
 ) -> tuple[dict, bytes, bytes]:
     """Build a self-consistent manifest + cluster profile pair."""
     profile = {
-        "schema_version": 1,
+        "schema_version": schema_version,
         "profile_id": "truba",
         "name": "TRUBA",
         "scheduler": "slurm",
         "paths": {"home_dir": "/arf/home/{user}", "scratch_dir": "/arf/scratch/{user}"},
         "commands": {"status_command": "lssrv"},
     }
+    if schema_version >= 3:
+        profile["job_outputs"] = {
+            "strategy": "explicit",
+            "streams": [
+                {
+                    "id": "stdout",
+                    "role": "stdout",
+                    "labels": {"en": "Standard Output"},
+                    "resolver": "slurm.stdout",
+                    "order": 10,
+                }
+            ],
+        }
     profile_bytes = json.dumps(profile).encode("utf-8")
     manifest = {
         "schema_version": 1,
@@ -733,3 +747,67 @@ def test_post_activation_loader_failure_rolls_back(tmp_path: Path, monkeypatch):
 
     assert read_active_versions(tmp_path) == {"org.hpcclient.truba": "0.1.0"}
     _assert_no_staging_or_part_leftovers(tmp_path)
+
+
+# ---------------------------------------------------------------------------
+# Cluster-profile schema capability floors
+# ---------------------------------------------------------------------------
+
+
+def test_schema3_floor_below_schema_capability_is_rejected(tmp_path: Path):
+    """A schema-3 payload declaring >=1.5.8 (the released schema-1/2 app) is a
+    false compatibility claim and must fail closed before activation."""
+    responses, manifest, manifest_bytes = full_install_responses(
+        schema_version=3, requires_app=">=1.5.8"
+    )
+    entry = make_registry_entry(manifest, manifest_bytes)
+    with pytest.raises(InstallError, match="first requires app 1.5.9"):
+        install_plugin_from_registry(
+            entry,
+            root=tmp_path,
+            app_version="1.5.9",
+            fetcher=make_fetcher(responses),
+        )
+    assert not (packages_dir(tmp_path) / "org.hpcclient.truba").exists()
+    _assert_no_staging_or_part_leftovers(tmp_path)
+
+
+def test_schema3_floor_capable_app_installs(tmp_path: Path):
+    """The first schema-3 capable application installs the same payload when
+    the declared floor is honest."""
+    responses, manifest, manifest_bytes = full_install_responses(
+        schema_version=3, requires_app=">=1.5.9"
+    )
+    entry = make_registry_entry(manifest, manifest_bytes)
+    result = install_plugin_from_registry(
+        entry,
+        root=tmp_path,
+        app_version="1.5.9",
+        fetcher=make_fetcher(responses),
+    )
+    assert result.activated is True
+    assert result.installed.cluster_profiles[0].schema_version == 3
+
+    loaded = load_installed_plugins(root=tmp_path, app_version="1.5.9")
+    assert [p.manifest.version for p in loaded.plugins] == ["1.0.0"]
+
+
+def test_unsupported_future_schema_error_names_supported_schemas(tmp_path: Path):
+    """Unknown future schemas stay rejected with an actionable message and the
+    strict validation detail is preserved."""
+    responses, manifest, manifest_bytes = full_install_responses(
+        schema_version=999, requires_app=">=1.5.9"
+    )
+    entry = make_registry_entry(manifest, manifest_bytes)
+    with pytest.raises(InstallError) as excinfo:
+        install_plugin_from_registry(
+            entry,
+            root=tmp_path,
+            app_version="1.5.9",
+            fetcher=make_fetcher(responses),
+        )
+    text = str(excinfo.value)
+    assert "cluster-profile schema 999" in text
+    assert "supports schemas 1, 2, 3, 4" in text
+    assert "Install a newer application release" in text
+    assert "must be one of" in text  # strict validation detail retained

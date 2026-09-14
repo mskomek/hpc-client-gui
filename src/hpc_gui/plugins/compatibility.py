@@ -109,3 +109,47 @@ def is_app_compatible(requires_app: str, app_version: str) -> bool:
             if order < 0 or _compare(current[:prefix_length], target[:prefix_length]) != 0:
                 return False
     return True
+
+
+def _bump_last(version: tuple[int, ...]) -> tuple[int, ...]:
+    return version[:-1] + (version[-1] + 1,)
+
+
+def minimum_admitted_version(requires_app: str) -> tuple[int, ...] | None:
+    """Lowest version the range admits, as a comparable tuple.
+
+    Returns ``None`` when the range is invalid or uses syntax outside the
+    supported subset. A range with no lower bound (for example ``<2.0.0``)
+    admits arbitrarily old releases and returns ``(0, 0, 0)``.
+    """
+    if validate_requires_app(requires_app):
+        return None
+    try:
+        clauses = _parse_clauses(requires_app)
+    except ValueError:
+        return None
+    floor: tuple[int, ...] | None = None
+    for operator, version_text in clauses:
+        if "*" in version_text:
+            prefix = tuple(
+                int(part) for part in version_text.rstrip("*").rstrip(".").split(".")
+            )
+            candidate = prefix + (0,) * max(0, 3 - len(prefix))
+        else:
+            candidate = parse_version(version_text)
+            if candidate is None:
+                return None
+        if operator in (">=", ">", "==", "~="):
+            if operator == ">":
+                candidate = _bump_last(candidate)
+            if floor is None or _compare(candidate, floor) > 0:
+                floor = candidate
+    return floor if floor is not None else (0, 0, 0)
+
+
+__all__ = [
+    "is_app_compatible",
+    "minimum_admitted_version",
+    "parse_version",
+    "validate_requires_app",
+]

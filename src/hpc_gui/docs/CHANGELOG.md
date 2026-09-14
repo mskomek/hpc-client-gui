@@ -2,6 +2,32 @@
 
 ## Unreleased
 
+## v1.5.9
+
+### SSH authentication
+- Preserved a typed password for the current connection attempt when "remember
+  password" is off; the transient credential is used for that connection only
+  and is never persisted.
+- Profiles without a saved credential now prompt for a transient password when
+  password authentication is relevant, and cancelling the prompt aborts before
+  any SSH connection is attempted.
+- Propagated plugin/provider `keyboard-interactive` metadata through the whole
+  provider-to-SSH chain, with an allow-listed auth-method subset.
+- Kept ssh-agent and `look_for_keys` discovery active when the custom
+  keyboard-interactive authentication strategy is selected, and handled
+  multi-step (partial) authentication.
+- Distinguished "no credential available" from "credential rejected" in
+  connection errors.
+- Made one logical Save & Connect action emit exactly one saved-profile event.
+
+### Plugin compatibility
+- Centralized the cluster-profile schema capability contract: schema 1 needs
+  app 1.4.0, schema 2 needs app 1.5.5, and schemas 3/4 need app 1.5.9.
+- Install failures for unsupported cluster-profile schemas now name the
+  running application and the schemas it supports.
+- Plugin compatibility claims whose `requires_app` floor predates the payload
+  schema are rejected instead of advertised.
+
 ## v1.5.8
 
 ### Security hardening
