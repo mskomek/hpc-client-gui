@@ -11,6 +11,10 @@ from pathlib import PurePosixPath
 from typing import Any
 
 from hpc_gui.plugins.compatibility import validate_requires_app
+from hpc_gui.plugins.schema_compat import (
+    SUPPORTED_CLUSTER_PROFILE_SCHEMAS,
+    supported_schemas_label,
+)
 from hpc_gui.plugins.trusted_tools import trusted_tool_error
 from hpc_gui.plugins.models import (
     CAPABILITY_LINTER_TOOL,
@@ -268,8 +272,11 @@ def validate_cluster_profile_dict(profile: Any) -> list[str]:
             errors.append(f"cluster profile is missing required key '{key}'")
     if errors:
         return errors
-    if profile["schema_version"] not in (1, 2, 3, 4):
-        errors.append("cluster profile schema_version must be 1, 2, 3, or 4")
+    if profile["schema_version"] not in SUPPORTED_CLUSTER_PROFILE_SCHEMAS:
+        errors.append(
+            "cluster profile schema_version must be one of: "
+            + supported_schemas_label()
+        )
     if not _is_nonempty_str(profile["profile_id"]):
         errors.append("cluster profile 'profile_id' must be a non-empty string")
     elif not re.fullmatch(r"^[a-z][a-z0-9_-]*$", profile["profile_id"]) or len(profile["profile_id"]) > 64:

@@ -41,6 +41,7 @@ from hpc_gui.plugins.storage import (
     read_active_versions,
     read_disabled_ids,
 )
+from hpc_gui.plugins.schema_compat import cluster_profile_floor_errors
 from hpc_gui.plugins.validator import validate_cluster_profile_dict, validate_manifest_dict
 from hpc_gui.plugins.trusted_tools import trusted_tool_error
 
@@ -231,6 +232,17 @@ def load_installed_plugins(
             profiles.append(profile)
 
         if profile_failed:
+            continue
+
+        floor_problems = cluster_profile_floor_errors(profiles, manifest.requires_app)
+        if floor_problems:
+            result.problems.append(
+                PluginProblem(
+                    plugin_id,
+                    version,
+                    "compatibility claim inconsistent: " + "; ".join(floor_problems),
+                )
+            )
             continue
 
         # Optional lint index entrypoint: a malformed pack is recorded as a

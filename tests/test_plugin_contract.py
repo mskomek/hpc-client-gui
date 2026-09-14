@@ -10,6 +10,7 @@ GitHub token are needed at test time.
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import os
 import sys
@@ -18,7 +19,7 @@ from pathlib import Path
 import pytest
 
 from hpc_gui.plugins.compatibility import is_app_compatible
-from hpc_gui.plugins.installer import install_plugin_from_registry
+from hpc_gui.plugins.installer import InstallError, install_plugin_from_registry
 from hpc_gui.plugins.loader import load_installed_plugins
 from hpc_gui.plugins.registry_client import (
     OFFICIAL_RAW_BASE,
@@ -26,11 +27,18 @@ from hpc_gui.plugins.registry_client import (
     find_registry_entry,
     parse_registry,
 )
+from hpc_gui.plugins.schema_compat import (
+    MIN_APP_VERSION_FOR_SCHEMA,
+    schema_floor_error,
+)
 from hpc_gui.plugins.state import activate_version
 
-CONTRACT_APP_VERSION = "1.5.8"
-PRE_V2_APP_VERSION = "1.4.0"
-V2_APP_FLOOR = "1.5.0"
+# Current application release line under test (first schema-3/4 capable).
+CONTRACT_APP_VERSION = "1.5.9"
+# Published release with cluster-profile schemas 1-2 only.
+RELEASED_APP_VERSION = "1.5.8"
+# Oldest registry-served application line.
+OLDEST_SUPPORTED_APP_VERSION = "1.5.5"
 
 REPO = os.environ.get("HPC_GUI_CONTRACT_REPO", "")
 pytestmark = pytest.mark.skipif(
@@ -78,20 +86,27 @@ def test_real_registry_passes_repository_validator(plugins_repo: Path):
         sys.path.remove(str(scripts_dir))
 
 
-def test_all_entries_compatible_with_supported_app_lines(registry: dict):
-    """All entries work on the current app; v2 tools stay hidden from old clients."""
-    entries = registry["plugins"]
-    assert entries, "official registry must not be empty"
-    incompatible = [
-        f"{entry['id']}@{entry['version']}"
-        for entry in entries
-        if not is_app_compatible(str(entry["requires_app"]), CONTRACT_APP_VERSION)
-        and (
-            entry.get("plugin_api") != 2
-            or not is_app_compatible(str(entry["requires_app"]), V2_APP_FLOOR)
+def test_plugin_repository_schema_matrix_matches_application(plugins_repo: Path):
+    """Drift guard: the independently validatable plugin-side matrix must
+    equal the application's canonical capability contract."""
+    matrix_path = plugins_repo / "scripts" / "schema_compatibility.py"
+    assert matrix_path.is_file()
+    spec = importlib.util.spec_from_file_location("plugin_schema_compatibility", matrix_path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    assert module.MIN_APP_VERSION_FOR_SCHEMA == MIN_APP_VERSION_FOR_SCHEMA
+
+
+def test_every_plugin_id_resolves_on_current_app(registry: dict):
+    ids = sorted({entry["id"] for entry in registry["plugins"]})
+    assert ids, "official registry must not be empty"
+    for plugin_id in ids:
+        entry = find_registry_entry(registry, plugin_id, app_version=CONTRACT_APP_VERSION)
+        assert is_app_compatible(str(entry["requires_app"]), CONTRACT_APP_VERSION), (
+            f"{plugin_id} resolved to {entry['version']} which excludes "
+            f"{CONTRACT_APP_VERSION}"
         )
-    ]
-    assert not incompatible, f"incompatible entries: {incompatible}"
 
 
 def test_manifest_hashes_and_identities_match_registry(registry: dict, plugins_repo: Path):
@@ -105,26 +120,47 @@ def test_manifest_hashes_and_identities_match_registry(registry: dict, plugins_r
         manifest = json.loads(payload)
         assert manifest["id"] == entry["id"]
         assert manifest["version"] == entry["version"]
+        assert manifest["requires_app"] == entry["requires_app"]
         if manifest["plugin_api"] == 2:
             assert "linter-tool" in manifest["capabilities"]
             continue
         assert manifest["plugin_api"] == 1
-        assert is_app_compatible(str(manifest["requires_app"]), CONTRACT_APP_VERSION)
 
 
-def _install(local_fetcher, tmp_path: Path, entry: dict):
+def test_published_payload_schema_floors_are_honest(registry: dict, plugins_repo: Path):
+    """The exact regression gate: no published payload may claim an app
+    release older than the first one implementing its schema."""
+    problems = []
+    for entry in registry["plugins"]:
+        manifest_path = plugins_repo / entry["manifest_path"]
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        for file_entry in manifest.get("files", []):
+            if file_entry.get("role") != "cluster-profile":
+                continue
+            profile_path = manifest_path.parent / file_entry["path"]
+            profile = json.loads(profile_path.read_text(encoding="utf-8"))
+            error = schema_floor_error(
+                profile.get("schema_version"), str(manifest.get("requires_app", ""))
+            )
+            if error:
+                problems.append(f"{entry['id']}@{entry['version']}: {error}")
+    assert not problems, "\n".join(problems)
+
+
+def _install(local_fetcher, tmp_path: Path, entry: dict, app_version: str = CONTRACT_APP_VERSION):
     return install_plugin_from_registry(
         entry,
         root=tmp_path,
-        app_version=CONTRACT_APP_VERSION,
+        app_version=app_version,
         fetcher=local_fetcher,
     )
 
 
-def test_truba_plugin_installs_and_profile_loads(registry, local_fetcher, tmp_path: Path):
+def test_truba_latest_resolves_and_profile_loads(registry, local_fetcher, tmp_path: Path):
     entry = find_registry_entry(
         registry, "org.hpcclient.truba", app_version=CONTRACT_APP_VERSION
     )
+    assert entry["version"] == "1.5.0"  # first schema-4 capable release
     result = _install(local_fetcher, tmp_path, entry)
     assert result.activated
 
@@ -135,6 +171,54 @@ def test_truba_plugin_installs_and_profile_loads(registry, local_fetcher, tmp_pa
     assert len(profiles) == 1
     assert profiles[0].profile_id == "truba"
     assert profiles[0].scheduler == "slurm"
+    assert profiles[0].schema_version == 4
+
+
+def test_released_1_5_8_gets_latest_compatible_truba(registry, local_fetcher, tmp_path: Path):
+    """v1.5.8 supports schemas 1-2 only; TRUBA 1.3.0 is the fallback."""
+    entry = find_registry_entry(
+        registry, "org.hpcclient.truba", app_version=RELEASED_APP_VERSION
+    )
+    assert entry["version"] == "1.3.0"
+    result = install_plugin_from_registry(
+        entry,
+        root=tmp_path,
+        app_version=CONTRACT_APP_VERSION,
+        fetcher=local_fetcher,
+    )
+    assert result.activated
+    assert result.installed.cluster_profiles[0].schema_version == 2
+
+
+def test_truba_1_4_0_rejected_on_released_1_5_8(registry, local_fetcher, tmp_path: Path):
+    entry = find_registry_entry(
+        registry,
+        "org.hpcclient.truba",
+        version="1.4.0",
+        app_version=CONTRACT_APP_VERSION,
+    )
+    with pytest.raises(InstallError, match="requires app >=1.5.9"):
+        install_plugin_from_registry(
+            entry,
+            root=tmp_path,
+            app_version=RELEASED_APP_VERSION,
+            fetcher=local_fetcher,
+        )
+
+
+def test_truba_1_4_0_installs_on_schema3_capable_release(
+    registry, local_fetcher, tmp_path: Path
+):
+    entry = find_registry_entry(
+        registry,
+        "org.hpcclient.truba",
+        version="1.4.0",
+        app_version=CONTRACT_APP_VERSION,
+    )
+    result = _install(local_fetcher, tmp_path, entry)
+    assert result.activated
+    assert result.installed.cluster_profiles[0].schema_version == 3
+    assert result.installed.cluster_profiles[0].job_outputs is not None
 
 
 def test_truba_v2_plugin_installs_and_retains_structured_sections(
@@ -158,11 +242,21 @@ def test_truba_v2_plugin_installs_and_retains_structured_sections(
     assert profile.quota_sources[0]["enabled"] is False
 
 
-def test_fluent_latest_compatible_is_0_2_0_and_loads(registry, local_fetcher, tmp_path: Path):
+def test_oldest_supported_app_line_still_resolves_a_version(registry: dict):
+    for plugin_id in sorted({entry["id"] for entry in registry["plugins"]}):
+        entry = find_registry_entry(
+            registry, plugin_id, app_version=OLDEST_SUPPORTED_APP_VERSION
+        )
+        assert is_app_compatible(
+            str(entry["requires_app"]), OLDEST_SUPPORTED_APP_VERSION
+        )
+
+
+def test_fluent_latest_compatible_and_loads(registry, local_fetcher, tmp_path: Path):
     entry = find_registry_entry(
         registry, "org.hpcclient.fluent", app_version=CONTRACT_APP_VERSION
     )
-    assert entry["version"] == "0.2.0"
+    assert entry["version"] == "0.3.0"
     # Explicit selection still resolves exactly.
     old = find_registry_entry(
         registry, "org.hpcclient.fluent", version="0.1.0", app_version=CONTRACT_APP_VERSION
@@ -170,7 +264,7 @@ def test_fluent_latest_compatible_is_0_2_0_and_loads(registry, local_fetcher, tm
     assert old["version"] == "0.1.0"
 
     result = _install(local_fetcher, tmp_path, entry)
-    assert result.installed.manifest.version == "0.2.0"
+    assert result.installed.manifest.version == "0.3.0"
     capabilities = set(result.installed.manifest.capabilities)
     assert {"lint-rules", "job-template"} <= capabilities
 
