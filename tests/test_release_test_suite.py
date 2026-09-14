@@ -63,7 +63,7 @@ class ReleaseTestSuiteTests(unittest.TestCase):
         ):
             self.assertEqual(commands[index][-1], nodeid)
             self.assertNotIn("--deselect", commands[index])
-        self.assertIn("tests/test_editor_flow.py", commands[-1])
+        self.assertIn(ISOLATED_WIRE_FILES[-1], commands[-1])
         self.assertNotIn("--ignore", commands[-1])
 
     @pytest.mark.unit

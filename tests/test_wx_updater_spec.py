@@ -366,7 +366,7 @@ def test_update_cancel_prevents_install(monkeypatch, tmp_path):
 
         assert cancel_observed.is_set()
         assert dlg.state == "DOWNLOAD_CANCELLED"
-        assert not hasattr(dlg, "_zip_path")
+        assert getattr(dlg, "_zip_path", None) is None
         labels = [
             dlg.footer_sizer.GetItem(i).GetWindow().GetLabel()
             for i in range(dlg.footer_sizer.GetItemCount())
@@ -597,7 +597,7 @@ def test_update_late_callback_after_close_safe(monkeypatch, tmp_path):
         assert dlg._downloaded == 0
         assert dlg._byte_label.GetLabel() == before
         assert dlg.state == "DOWNLOADING"
-        assert not hasattr(dlg, "_zip_path")
+        assert getattr(dlg, "_zip_path", None) is None
     finally:
         allow_worker_to_finish.set()
         if hasattr(dlg, "_worker"):
