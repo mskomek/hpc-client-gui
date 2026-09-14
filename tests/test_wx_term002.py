@@ -32,7 +32,9 @@ class Files:
 @pytest.fixture
 def shell(tmp_path):
     load_language("en")
-    app = wx.App(False)
+    app = wx.App.Get()
+    if app is None:
+        app = wx.App(False)
     ssh = SSH()
     state = {"session": {"ssh": ssh, "files": Files()}, "generation": 0}
     frame, lifecycle, state = create_shell_frame(app, tray_factory=lambda _parent: None, session_state=state)

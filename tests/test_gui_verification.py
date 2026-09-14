@@ -91,7 +91,9 @@ class MockSlurm:
 
 def run_verification():
     load_language("en")
-    app = wx.App(redirect=False)
+    app = wx.App.Get()
+    if app is None:
+        app = wx.App(redirect=False)
     slurm = MockSlurm()
 
     results = []

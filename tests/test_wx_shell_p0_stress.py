@@ -26,7 +26,9 @@ class _Tray:
 @pytest.fixture
 def wx_shell_runtime():
     previous_language = current_language()
-    app = wx.App(False)
+    app = wx.App.Get()
+    if app is None:
+        app = wx.App(False)
     yield app
     if wx.GetApp() is not None:
         for window in list(wx.GetTopLevelWindows()):

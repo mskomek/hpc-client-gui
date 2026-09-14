@@ -72,7 +72,9 @@ _SETUP = textwrap.dedent("""\
         def resize_shell_pty(self, c, r):
             self.resizes.append((c, r))
 
-    app = wx.App(False)
+    app = wx.App.Get()
+    if app is None:
+        app = wx.App(False)
     frame = wx.Frame(None, size=(900, 600))
     ssh = FakeSSH()
     panel = WxTerminalWebViewPanel(frame, ssh=ssh)
@@ -557,7 +559,9 @@ def test_close_while_output_in_flight():
         def send_shell_input(self, d): return True
         def resize_shell_pty(self, c, r): pass
 
-    _app = wx.App(False)
+    _app = wx.App.Get()
+    if _app is None:
+        _app = wx.App(False)
     frame = wx.Frame(None, size=(900, 600))
     panel = WxTerminalWebViewPanel(frame, ssh=FakeSSH())
     panel._ready = True
@@ -705,7 +709,9 @@ import wx
 import hpc_gui.wx_terminal_webview as renderer
 renderer._is_webview_available = lambda: False
 from hpc_gui.wx_terminal import build_terminal_panel
-app = wx.App(False)
+app = wx.App.Get()
+if app is None:
+    app = wx.App(False)
 frame = wx.Frame(None, size=(600, 400))
 panel = build_terminal_panel(frame)
 frame.Show()

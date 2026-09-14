@@ -77,7 +77,9 @@ def wx_app():
     app = wx.App.Get()
     owns_app = app is None
     if owns_app:
-        app = wx.App(False)
+        app = wx.App.Get()
+        if app is None:
+            app = wx.App(False)
     yield app
     _destroy_windows(app)
     if owns_app:

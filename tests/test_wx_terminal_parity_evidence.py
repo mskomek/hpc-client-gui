@@ -55,7 +55,9 @@ class Fake:
     def send_shell_input(self, d): return True
     def resize_shell_pty(self, c, r): pass
 
-app = wx.App(False)
+app = wx.App.Get()
+if app is None:
+    app = wx.App(False)
 frame = wx.Frame(None, size=(900,600))
 panel = WxTerminalWebViewPanel(frame, ssh=Fake())
 sizer = wx.BoxSizer(wx.VERTICAL); sizer.Add(panel,1,wx.EXPAND)
@@ -101,7 +103,9 @@ class Fake:
     def send_shell_input(self, d): return True
     def resize_shell_pty(self, c, r): pass
 
-app = wx.App(False)
+app = wx.App.Get()
+if app is None:
+    app = wx.App(False)
 frame = wx.Frame(None, size=(900,600))
 panel = WxTerminalWebViewPanel(frame, ssh=Fake())
 sizer = wx.BoxSizer(wx.VERTICAL); sizer.Add(panel,1,wx.EXPAND)
@@ -148,7 +152,9 @@ class Fake:
     def send_shell_input(self, d): return True
     def resize_shell_pty(self, c, r): pass
 
-app = wx.App(False)
+app = wx.App.Get()
+if app is None:
+    app = wx.App(False)
 frame = wx.Frame(None, size=(900,600))
 panel = WxTerminalWebViewPanel(frame, ssh=Fake())
 sizer = wx.BoxSizer(wx.VERTICAL); sizer.Add(panel,1,wx.EXPAND)
@@ -192,7 +198,9 @@ class Fake:
     def send_shell_input(self, d): return True
     def resize_shell_pty(self, c, r): pass
 
-app = wx.App(False)
+app = wx.App.Get()
+if app is None:
+    app = wx.App(False)
 frame = wx.Frame(None, size=(900,600))
 panel = WxTerminalWebViewPanel(frame, ssh=Fake())
 sizer = wx.BoxSizer(wx.VERTICAL); sizer.Add(panel,1,wx.EXPAND)
@@ -240,7 +248,10 @@ class Fake:
     def send_shell_input(self, d): return True
     def resize_shell_pty(self, c, r): self.resizes.append((c, r))
 
-app = wx.App(False); frame = wx.Frame(None, size=(900,600))
+app = wx.App.Get()
+if app is None:
+    app = wx.App(False)
+frame = wx.Frame(None, size=(900,600))
 ssh = Fake()
 panel = WxTerminalWebViewPanel(frame, ssh=ssh)
 sizer = wx.BoxSizer(wx.VERTICAL); sizer.Add(panel,1,wx.EXPAND)
@@ -287,7 +298,10 @@ class Fake:
     def send_shell_input(self, d): self.inputs.append(d); return True
     def resize_shell_pty(self, c, r): pass
 
-app = wx.App(False); frame = wx.Frame(None, size=(900,600))
+app = wx.App.Get()
+if app is None:
+    app = wx.App(False)
+frame = wx.Frame(None, size=(900,600))
 ssh = Fake()
 panel = WxTerminalWebViewPanel(frame, ssh=ssh)
 sizer = wx.BoxSizer(wx.VERTICAL); sizer.Add(panel,1,wx.EXPAND)
@@ -331,7 +345,10 @@ class Fake:
     def send_shell_input(self, d): return True
     def resize_shell_pty(self, c, r): self.resizes.append((c, r))
 
-app = wx.App(False); frame = wx.Frame(None, size=(900,600))
+app = wx.App.Get()
+if app is None:
+    app = wx.App(False)
+frame = wx.Frame(None, size=(900,600))
 ssh = Fake()
 panel = WxTerminalWebViewPanel(frame, ssh=ssh)
 sizer = wx.BoxSizer(wx.VERTICAL); sizer.Add(panel,1,wx.EXPAND)
@@ -377,7 +394,10 @@ class Fake:
     def send_shell_input(self, d): return True
     def resize_shell_pty(self, c, r): pass
 
-app = wx.App(False); frame = wx.Frame(None, size=(900,600))
+app = wx.App.Get()
+if app is None:
+    app = wx.App(False)
+frame = wx.Frame(None, size=(900,600))
 ssh = Fake()
 panel = WxTerminalWebViewPanel(frame, ssh=ssh)
 sizer = wx.BoxSizer(wx.VERTICAL); sizer.Add(panel,1,wx.EXPAND)
@@ -421,7 +441,10 @@ class Fake:
     def send_shell_input(self, d): return True
     def resize_shell_pty(self, c, r): pass
 
-app = wx.App(False); frame = wx.Frame(None, size=(900,600))
+app = wx.App.Get()
+if app is None:
+    app = wx.App(False)
+frame = wx.Frame(None, size=(900,600))
 panel = WxTerminalWebViewPanel(frame, ssh=Fake())
 sizer = wx.BoxSizer(wx.VERTICAL); sizer.Add(panel,1,wx.EXPAND)
 frame.SetSizer(sizer); frame.Layout(); frame.Show()
@@ -465,7 +488,10 @@ class Fake:
     def send_shell_input(self, d): return True
     def resize_shell_pty(self, c, r): pass
 
-app = wx.App(False); frame = wx.Frame(None, size=(900,600))
+app = wx.App.Get()
+if app is None:
+    app = wx.App(False)
+frame = wx.Frame(None, size=(900,600))
 panel = WxTerminalWebViewPanel(frame, ssh=Fake())
 sizer = wx.BoxSizer(wx.VERTICAL); sizer.Add(panel,1,wx.EXPAND)
 frame.SetSizer(sizer); frame.Layout(); frame.Show()

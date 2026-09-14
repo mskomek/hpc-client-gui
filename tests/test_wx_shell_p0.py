@@ -38,7 +38,9 @@ def _pump(app, predicate, timeout=3):
 def shell():
     previous_language = current_language()
     load_language("en")
-    app = wx.App(False)
+    app = wx.App.Get()
+    if app is None:
+        app = wx.App(False)
     tray = Tray(None)
     frame, lifecycle, session = create_shell_frame(app, tray_factory=lambda _parent: tray)
     frame.Show()

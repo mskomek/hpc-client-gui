@@ -13,7 +13,9 @@ from hpc_gui.core.i18n import load_language, set_language, t
 @pytest.fixture
 def wx_app():
     load_language("en")
-    app=wx.App(False)
+    app = wx.App.Get()
+    if app is None:
+        app = wx.App(False)
     yield app
     for window in list(wx.GetTopLevelWindows()):
         if window:

@@ -17,7 +17,9 @@ def _wx_app_lifecycle():
     app = wx.App.Get()
     owns_app = app is None
     if owns_app:
-        app = wx.App(False)
+        app = wx.App.Get()
+        if app is None:
+            app = wx.App(False)
     yield app
     for window in wx.GetTopLevelWindows():
         if window:

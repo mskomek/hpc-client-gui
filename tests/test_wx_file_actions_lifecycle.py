@@ -27,7 +27,9 @@ def _pump(app, predicate, timeout=2):
 
 @pytest.fixture
 def wx_app():
-    app = wx.App(False)
+    app = wx.App.Get()
+    if app is None:
+        app = wx.App(False)
     yield app
     for window in wx.GetTopLevelWindows():
         if window:

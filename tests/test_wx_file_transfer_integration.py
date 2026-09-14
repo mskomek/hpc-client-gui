@@ -275,7 +275,9 @@ def test_wx_file_transfer_policy_rename():
 @pytest.mark.semantic
 def test_wx_file_transfer_conflict_ask_uses_gui_decision_seam(monkeypatch):
     wx = pytest.importorskip("wx")
-    app = wx.App(False)
+    app = wx.App.Get()
+    if app is None:
+        app = wx.App(False)
     parent = wx.Frame(None)
     files = _ConflictFiles()
     state = {"session": {"files": files}, "conflict_policy": "ask"}
@@ -311,7 +313,9 @@ def test_wx_file_transfer_conflict_ask_uses_gui_decision_seam(monkeypatch):
 @pytest.mark.semantic
 def test_wx_file_transfer_rename_policy_generates_available_destination():
     wx = pytest.importorskip("wx")
-    app = wx.App(False)
+    app = wx.App.Get()
+    if app is None:
+        app = wx.App(False)
     parent = wx.Frame(None)
     files = _ConflictFiles()
     state = {"session": {"files": files}, "conflict_policy": "rename"}
@@ -333,7 +337,9 @@ def test_wx_file_transfer_rename_policy_generates_available_destination():
 @pytest.mark.semantic
 def test_wx_file_transfer_conflict_gui_decline_does_not_upload(monkeypatch, choice):
     wx = pytest.importorskip("wx")
-    app = wx.App(False)
+    app = wx.App.Get()
+    if app is None:
+        app = wx.App(False)
     parent = wx.Frame(None)
     files = _ConflictFiles()
     state = {"session": {"files": files}, "conflict_policy": "ask"}
@@ -371,7 +377,9 @@ def test_wx_file_transfer_conflict_gui_decline_does_not_upload(monkeypatch, choi
 @pytest.mark.gui
 def test_wx_file_transfer_opens_visible_progress_surface():
     wx = pytest.importorskip("wx")
-    app = wx.App(False)
+    app = wx.App.Get()
+    if app is None:
+        app = wx.App(False)
     parent = wx.Frame(None)
     files = _Files()
     state = {"session": {"files": files}}
@@ -403,7 +411,9 @@ def test_wx_file_transfer_opens_visible_progress_surface():
 @pytest.mark.resource
 def test_wx_file_transfer_cancel_button_cancels_controller():
     wx = pytest.importorskip("wx")
-    app = wx.App(False)
+    app = wx.App.Get()
+    if app is None:
+        app = wx.App(False)
     parent = wx.Frame(None)
     files = _BlockingFiles()
     state = {"session": {"files": files}}

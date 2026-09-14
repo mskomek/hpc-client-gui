@@ -54,7 +54,9 @@ def _click(control):
 
 @pytest.fixture
 def wx_app():
-    app = wx.App(False)
+    app = wx.App.Get()
+    if app is None:
+        app = wx.App(False)
     yield app
     for window in wx.GetTopLevelWindows():
         if window:

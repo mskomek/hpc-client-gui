@@ -68,7 +68,9 @@ def wx_app():
             existing.Destroy()
         except Exception:
             pass
-    app = wx.App(redirect=False)
+    app = wx.App.Get()
+    if app is None:
+        app = wx.App(redirect=False)
     yield app
     for window in wx.GetTopLevelWindows():
         if window:

@@ -29,7 +29,9 @@ def _pump(app, predicate, timeout=2):
 @pytest.fixture
 def wx_app():
     load_language("en")
-    app = wx.App(False)
+    app = wx.App.Get()
+    if app is None:
+        app = wx.App(False)
     yield app
     for window in list(wx.GetTopLevelWindows()):
         if window and not window.IsBeingDeleted():
