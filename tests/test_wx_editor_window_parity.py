@@ -23,21 +23,33 @@ def _pump(app, predicate, timeout=2):
 def _close(frame, app):
     frame.Close()
     app.ProcessPendingEvents()
-    wx.Yield()
+    wx.SafeYield()
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def wx_app():
-    app = wx.App(False)
+    app = wx.App.Get()
+    owns_app = app is None
+    if owns_app:
+        app = wx.App(False)
     yield app
+    _destroy_top_level_windows(app)
+    if owns_app:
+        app.Destroy()
+
+
+@pytest.fixture(autouse=True)
+def _cleanup_windows_after_test(wx_app):
+    yield
+    _destroy_top_level_windows(wx_app)
+
+
+def _destroy_top_level_windows(app):
     for window in wx.GetTopLevelWindows():
         if window:
             window.Destroy()
     app.ProcessPendingEvents()
-    # Destroy() is deferred; without this yield the pending deletes survive the
-    # fixture and accumulate across the module until window creation fails.
     wx.SafeYield()
-    app.Destroy()
 
 
 @pytest.mark.gui

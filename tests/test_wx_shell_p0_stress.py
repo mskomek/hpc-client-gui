@@ -41,6 +41,20 @@ def _shell(app):
     return frame, lifecycle, session, tray
 
 
+def _shell_menu_labels(frame):
+    menubar = frame.GetMenuBar()
+    labels = [frame.GetTitle()]
+    for index in range(menubar.GetMenuCount()):
+        labels.append(menubar.GetMenuLabel(index))
+        menu = menubar.GetMenu(index)
+        labels.extend(
+            item.GetItemLabelText()
+            for item in menu.GetMenuItems()
+            if not item.IsSeparator()
+        )
+    return labels
+
+
 def _close(app, frame, lifecycle):
     frame.Close()
     _pump(app, lambda: lifecycle.shutdown_started)
@@ -80,13 +94,7 @@ def test_wx_shell_p0_stress_real_wx_paths():
             frame.ProcessEvent(wx.CommandEvent(wx.wxEVT_MENU, item.GetId()))
             if expected not in jobs_frame.GetTitle():
                 metrics["wrong_language_labels"] += 1
-            controls = frame._wx_shell_controls
-            labels = [frame.GetTitle()]
-            labels.extend(
-                controls[name].GetLabel()
-                for name in ("update", "plugins", "send_logs", "settings", "help")
-            )
-            labels.extend(item.GetItemLabelText() for item in frame._wx_shell_controls["language_items"].values())
+            labels = _shell_menu_labels(frame)
             if any("[" in label for label in labels):
                 metrics["missing_translation_labels"] += 1
     _close(app, frame, lifecycle)

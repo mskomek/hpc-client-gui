@@ -21,6 +21,7 @@ def wx_app():
         if window:
             window.Destroy()
     app.ProcessPendingEvents()
+    wx.SafeYield()
     app.Destroy()
 
 
