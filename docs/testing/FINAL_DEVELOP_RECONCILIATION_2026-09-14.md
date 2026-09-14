@@ -169,3 +169,59 @@ repository test suite:
 * macOS packaged runtime — separate evidence.
 * Live cluster verification — separate evidence.
 * Manual GUI sign-off — separate evidence.
+
+## Appendix — local merge, merged-tree validation, remote push
+
+### Merge
+
+| Item | Value |
+| --- | --- |
+| Merge type | `--no-ff` merge commit |
+| Integration worktree | `D:/Projeler/hpc-client-gui-develop-integration` |
+| Integration branch | `develop-integration-20260914` (based on `origin/develop` `37eebc17`) |
+| Merged branch | `test-suite-final-develop-reconcile-20260914` (`77251152`) |
+| Merge commit | `06430042b7adae3a78d7abe798a17009389f95d8` |
+| Conflicts | none |
+| Force operations | none |
+
+A dedicated integration worktree was used because the local `develop` branch is
+checked out in the primary worktree `D:/Projeler/hpc-client-gui` with
+pre-existing uncommitted user work, including a modification to
+`tests/test_wx_terminal_parity_evidence.py` that the incoming develop commits
+also change. That checkout was not disturbed, reset, cleaned or stashed.
+
+### Merged-tree validation
+
+| Command | Exit | Result |
+| --- | --- | --- |
+| `python -m pytest tests --collect-only -q` | 0 | 2710 collected, 0 errors |
+| `python scripts/check_test_taxonomy.py --mode report` | 0 | zero-primary 0, multi-primary 0, 0 warnings |
+| `python scripts/check_test_taxonomy.py --mode ratchet --baseline .../taxonomy-ratchet-strict.json` | 0 | RATCHET: PASS |
+| `python -m compileall -q src/hpc_gui` | 0 | PASS |
+| `python -m ruff check src tests scripts` | 0 | PASS |
+| `python scripts/check_i18n.py` | 0 | PASS |
+| `python scripts/smoke_test.py` | 0 | PASS |
+| `git diff --check` | 0 | clean |
+| `python -X faulthandler scripts/release_test_suite.py` | 0 | all release preflight gates passed, 1263s |
+| `python scripts/release_test_suite.py --coverage` | 0 | 66.76% >= 65%, 1759s |
+
+Merged-tree release totals: 2680 passed, 0 failed, 26 skipped, 6 deselected,
+0 xfail, 0 xpass, 29 subtests passed. No native termination.
+
+### Remote push
+
+| Item | Value |
+| --- | --- |
+| Old `origin/develop` | `37eebc17f6ca5db947cb51c50c6c17b67f089475` |
+| New `origin/develop` | `06430042b7adae3a78d7abe798a17009389f95d8` |
+| Push result | `37eebc17..06430042  HEAD -> develop`, exit 0 |
+| Force used | NO |
+| Pre-push race check | `origin/develop` unchanged at `37eebc17`; merge commit is a descendant |
+
+### Develop synchronisation
+
+The pushed state is `06430042`. The shared repository's local `develop` ref is
+still `454aee42` because that branch is checked out in the primary worktree with
+uncommitted user work; updating it would have required touching that work. Once
+the user has saved or reviewed those changes, `develop` fast-forwards to
+`origin/develop` with no merge.
