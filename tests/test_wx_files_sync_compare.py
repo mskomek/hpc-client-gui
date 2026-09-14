@@ -1,4 +1,5 @@
 """Wave 48 sync browsing + compare directories real-event tests."""
+import gc
 import os
 import threading
 import time
@@ -10,10 +11,34 @@ wx = pytest.importorskip("wx")
 from hpc_gui.services.directory_comparison import ComparableEntry
 from hpc_gui.wx_shell import create_shell_frame
 
+
+@pytest.fixture(scope="module", autouse=True)
+def wx_app():
+    """Own a single wx.App for the module.
+
+    The shell helpers below build real windows, so the module needs an
+    application that survives every test. Owning it here keeps a strong
+    reference for the whole module and only destroys the app this fixture
+    created; an app that belonged to an earlier owner is left untouched.
+    """
+    app = wx.App.Get()
+    owns_app = app is None
+    if owns_app:
+        app = wx.App(False)
+    baseline_windows = {id(window) for window in wx.GetTopLevelWindows()}
+    yield app
+    for window in wx.GetTopLevelWindows():
+        if window and id(window) not in baseline_windows:
+            window.Destroy()
+    wx.Yield()
+    if owns_app and wx.App.Get() is app:
+        app.Destroy()
+
+
 def _get_files_page():
     app = wx.App.Get()
     if app is None:
-        app = wx.App(False)
+        raise RuntimeError("the module wx_app fixture must own the application before this helper runs")
     frame, lifecycle, session = create_shell_frame(app)
     frame.Show()
     wx.Yield()
@@ -54,6 +79,33 @@ def _close_shell(frame):
             wx.Yield()
         except Exception:
             pass
+
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.regression
+@pytest.mark.semantic
+@pytest.mark.resource
+def test_wx_files_sync_app_survives_forced_collection(wx_app):
+    """Ownership regression for the broad-process PyNoAppError.
+
+    The module used to create its wx.App inside ``_get_files_page`` without
+    keeping an owner. When the shell frames were destroyed, the wrapper was
+    only reachable through garbage cycles; a collection pass during a later
+    test deallocated it, tore down the process-global application, and
+    ``create_shell_frame`` failed with
+    ``PyNoAppError: The wx.App object must be created first!``. The module
+    fixture owns the application for the whole module, so collection cannot
+    remove it while the tests still need it.
+    """
+    app, frame, lifecycle, session, files_page = _get_files_page()
+    _close_shell(frame)
+    del app, frame, lifecycle, session, files_page
+    gc.collect()
+    assert wx.App.Get() is wx_app
+    app, frame, lifecycle, session, files_page = _get_files_page()
+    _close_shell(frame)
+    assert wx.App.Get() is wx_app
+
 
 @pytest.mark.gui
 @pytest.mark.wx
