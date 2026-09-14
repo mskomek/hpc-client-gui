@@ -33,6 +33,18 @@ class ReleaseTestSuiteTests(unittest.TestCase):
     @pytest.mark.semantic
     def test_native_toolkit_boundary_suites_are_isolated_without_skipping_them(self):
         commands = build_commands(coverage=False)
+        self.assertEqual(
+            ISOLATED_NATIVE_GUI_FILES,
+            (
+                "tests/test_corrective_jobs_details.py",
+                "tests/test_wx_terminal_webview.py",
+                "tests/test_wx_jobs_behavior.py",
+                "tests/test_wx_layout_resize.py",
+                "tests/test_wx_jobs_files_outputs.py",
+                "tests/test_wx_jobs_final_fix.py",
+                "tests/test_wx_jobs_stress.py",
+            ),
+        )
         broad = next(command for command in commands if "--ignore" in command)
         self.assertIn("--deselect", broad)
         for nodeid in ISOLATED_TEST_NODES:

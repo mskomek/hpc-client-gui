@@ -58,11 +58,16 @@ ISOLATED_WIRE_FILES = (
 # with 0xC000041D despite no live wx windows or worker threads. The WebView2
 # module passes alone but heap-corrupts (0xC0000374) after mixed-GUI tests,
 # and the wx Jobs cluster terminated the broad process near 90% with exit
-# 0xFFFFFFFF. Keep every proven native boundary process-scoped; every node
-# below still runs in a dedicated pytest process instead of being skipped.
+# 0xFFFFFFFF. Destroying or garbage-collecting one of several wx.App objects
+# in a single process invalidates the global app, so the Jobs behavior and
+# layout owner nodes fail with PyNoAppError only in broad order. Keep every
+# proven native boundary process-scoped; every node below still runs in a
+# dedicated pytest process instead of being skipped.
 ISOLATED_NATIVE_GUI_FILES = (
     "tests/test_corrective_jobs_details.py",
     "tests/test_wx_terminal_webview.py",
+    "tests/test_wx_jobs_behavior.py",
+    "tests/test_wx_layout_resize.py",
     "tests/test_wx_jobs_files_outputs.py",
     "tests/test_wx_jobs_final_fix.py",
     "tests/test_wx_jobs_stress.py",
