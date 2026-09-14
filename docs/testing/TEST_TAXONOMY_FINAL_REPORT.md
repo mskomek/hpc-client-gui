@@ -2,6 +2,8 @@
 
 Status: Packet O DONE. Integration-closeout census on 2026-09-13: 2,657 collected; every collected node has exactly one primary category; zero-primary 0; multi-primary 0; strict zero-debt ratchet PASS. The release suite still has two failures, so this taxonomy result does not establish integration or release readiness.
 
+Continuation update — 2026-09-14: both release-suite failures were resolved and the authoritative release suite and coverage gate now exit 0. The final continuation collection is 2,658 (+1 ownership regression); zero-primary 0 and multi-primary 0 still hold and the zero-debt ratchet still passes. Evidence and the updated decision are in the continuation section of [TEST_SUITE_INTEGRATION_CLOSEOUT_2026-09-13.md](TEST_SUITE_INTEGRATION_CLOSEOUT_2026-09-13.md#continuation--2026-09-14).
+
 This closeout census supersedes the historical 2,656-node / six-exception snapshot below. The prior packet record is retained as history. See [TEST_SUITE_INTEGRATION_CLOSEOUT_2026-09-13.md](TEST_SUITE_INTEGRATION_CLOSEOUT_2026-09-13.md) and [the strict ratchet baseline](../../audit/test-governance/integration-closeout-20260913/taxonomy-ratchet-strict.json) for current evidence.
 
 Frozen baseline: `12ce79935bf076e1062c57dc7dbd148bad2bfae1`

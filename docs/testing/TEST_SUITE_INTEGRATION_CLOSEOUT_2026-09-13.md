@@ -2,6 +2,8 @@
 
 Status: **DEFECT_FOUND — NOT READY TO MERGE INTO DEVELOP.** The governance Wave is complete. The current release runner reached the end of its broad pytest process without a native process termination, but that process reported an unresolved wx application-order failure and a confirmed remote Logs-filter product defect. Since the broad process failed, the runner did not execute its later isolated groups. Coverage was therefore not run.
 
+*Historical status. Superseded by [Continuation — 2026-09-14](#continuation--2026-09-14).*
+
 The work was performed on `test-suite-governance-integration-closeout-20260913`, in `D:/Projeler/hpc-client-gui-integration-closeout`, from governance SHA `18e59fff3d8ebfa47666347a0d9cfc4d137b43c1`. The completed governance worktree and the original dirty `develop` worktree were left untouched. This report describes closeout evidence and readiness, not merge or publication status.
 
 ## Native process findings
@@ -125,3 +127,107 @@ No current category median or p95 timing distribution was captured. The latest b
 | Manual packaged GUI sign-off | NOT EVIDENCED. |
 
 **Merge readiness: NOT READY TO MERGE INTO DEVELOP.** The confirmed provider-filter defect and the broad-process wx App failure prevent an authoritative release-suite pass; coverage is not complete. Release readiness remains a separate NO-GO because packaged, cross-platform, cluster, and manual GUI evidence is incomplete.
+
+## Continuation — 2026-09-14
+
+Status: **READY TO MERGE INTO DEVELOP.** Both closeout blockers are resolved, the authoritative release suite and the coverage gate both exit 0, and the previously fixed defects are revalidated on the continuation HEAD. Release readiness remains a separate NO-GO (see below).
+
+The continuation resumed the interrupted closeout on `test-suite-governance-integration-closeout-20260913` in `D:\Projeler\hpc-client-gui-integration-closeout`. Three commits were inherited from the interrupted run before this continuation started: `d47d04f9` (remote name fallback), `31a2aca4` (stress app ownership), and `09a4c014` (stress window cleanup). The historical sections above are preserved as recorded; the facts below supersede their decision.
+
+### Remote provider Logs filter (resolved)
+
+`_entry_name` in `src/hpc_gui/services/file_filter_registry.py` now returns a meaningful non-empty name when one exists and otherwise derives the display/filter name from the entry path (backslash-normalized, trailing slashes trimmed, basename only). Empty and whitespace-only names fall back to the path; Unicode and spaces are preserved and directory semantics are unchanged. The failing node was not modified and no special case was added for `run.log` or the Logs filter. `tests/test_file_filter_registry.py` adds dict-entry assertions for `{"name": "", "path": "/var/log/run.log"}` and a whitespace-name Windows path with a space and Unicode. The targeted node passes and all four broad/isolated release runs since include it in the passing set.
+
+### wx application ownership (resolved)
+
+Root cause: the C++ `wxApp` is process-global, and wxPython destroys that global object when any `wx.App` wrapper is deallocated by garbage collection, even when a newer app has replaced it. `tests/test_wx_files_sync_compare.py` created its app inside `_get_files_page()` without any owner, so the wrapper survived only through shell-frame cycles; a collection pass during a later test deallocated it, the live application was torn down, and `create_shell_frame` raised `wx._core.PyNoAppError: The wx.App object must be created first!`. An instrumented broad run recorded the application present at test setup and gone at teardown with no `wx.App.Destroy` call between, confirming the deallocation path. The interrupted run's stress-test ownership commits were necessary but not sufficient because they never gave the target module an owner; a run with only the target-module fixture still failed in two other modules, proving the pollution is suite-wide.
+
+Fix, all in test infrastructure:
+
+- `tests/conftest.py`: before a new `wx.App` is constructed, the app that is about to be replaced is destroyed while it is still the current app. This keeps at most one live native application and removes the abandoned-wrapper time bomb. No test is skipped, renamed, retried, or weakened.
+- `tests/test_wx_files_sync_compare.py`: a module-scoped autouse `wx_app` fixture owns and destroys the application for the module and cleans up module-created windows; `_get_files_page()` requires the fixture-owned application instead of creating an unowned one.
+- Regression node `tests/test_wx_files_sync_compare.py::test_wx_files_sync_app_survives_forced_collection` (`gui` primary; `regression`, `resource`, `semantic`, `wx` qualifiers) builds a shell, closes it, drops every strong reference, forces `gc.collect()`, asserts the module-owned application is still current, then builds a second shell. Removing the module fixture restores ad-hoc creation and fails the ownership regression. Evidence is in [`wx-app-order-minimization.json`](../../audit/test-governance/integration-closeout-20260914/wx-app-order-minimization.json).
+
+### Previously confirmed defects revalidated on continuation HEAD
+
+| Defect | Owner run | Result |
+| --- | --- | --- |
+| Local directory permission handling | `test_list_entries_permission_error` (+ rename selection and destroyed-Notebook callback) | 3 passed, exit 0 |
+| Rename selection preservation | same focused run | 3 passed, exit 0 |
+| Callback after destroyed remote Notebook | same focused run | 3 passed, exit 0 |
+| Jobs remote-read overlap | `test_wx_jobs_behavior`, `test_wx_jobs_files_outputs`, `test_wx_jobs_final_fix`, `test_wx_jobs_stress` | 50 passed, exit 0 |
+| Plugin-menu rebuild hang | `tests/test_hardening_additional.py` (includes the 25-cycle rebuild owner) | 12 passed, exit 0 |
+| Remote empty-name filtering | targeted node + `tests/test_file_filter_registry.py` | 23 passed, exit 0 |
+
+### Latest authoritative release attempt (continuation)
+
+Command:
+
+```text
+python -X faulthandler scripts/release_test_suite.py
+```
+
+Exit **0**; `[release-test-suite] all release preflight gates passed`. Preflight: `compileall`, `check_i18n.py`, `smoke_test.py` all exit 0.
+
+| Group | Result |
+| --- | --- |
+| Broad pytest (`-m "not packaging"`, five isolated files ignored) | **2,402 passed, 0 failed, 20 skipped, 4 deselected, 29 subtests passed** in 1,484.25 s (24m 44s) |
+| `tests/test_ftp_widget.py` | 168 passed in 14.63 s |
+| `tests/test_download_cancel_wire.py` | 4 passed in 13.39 s |
+| `tests/test_editor_flow.py` | 14 passed in 0.50 s |
+| `tests/test_corrective_jobs_details.py` | 17 passed in 8.67 s |
+| `tests/test_wx_terminal_webview.py` | 29 passed in 24.14 s |
+
+### Authoritative coverage (continuation)
+
+Command:
+
+```text
+python scripts/release_test_suite.py --coverage
+```
+
+Exit **0**; `Required test coverage of 65% reached. Total coverage: 66.38%`. Broad child: 2,402 passed, 0 failed, 20 skipped, 4 deselected, 29 subtests passed in 1,470.31 s; isolated groups passed with coverage appended (168 / 4 / 14 / 17 / 29). Coverage artifacts `coverage.json` and `coverage.xml` were written by the runner.
+
+### Collection and taxonomy (continuation)
+
+| Measure | Count |
+| --- | ---: |
+| 2026-09-13 closeout collection | 2,657 |
+| 2026-09-14 continuation collection | 2,658 |
+| Net delta | +1 |
+| Zero-primary | 0 |
+| Multi-primary | 0 |
+| Semantic qualifier | 965 |
+| Collection errors | 0 |
+
+The only added node is the ownership regression described above; nothing was removed or renamed. The zero-debt ratchet against [`taxonomy-ratchet-strict.json`](../../audit/test-governance/integration-closeout-20260913/taxonomy-ratchet-strict.json) passes. The exact delta is in [`collection-delta.json`](../../audit/test-governance/integration-closeout-20260914/collection-delta.json).
+
+### Validation evidence (continuation)
+
+| Command or owner | Result |
+| --- | --- |
+| `python -m pytest tests --collect-only -q` | Exit 0; 2,658 collected in 2.69 s. |
+| `python scripts/check_test_taxonomy.py --mode report` | Exit 0; zero-primary 0, multi-primary 0, warnings 0. |
+| `python scripts/check_test_taxonomy.py --mode ratchet --baseline audit/test-governance/integration-closeout-20260913/taxonomy-ratchet-strict.json` | Exit 0; RATCHET: PASS. |
+| `python -m compileall -q src/hpc_gui` | Exit 0. |
+| `python -m ruff check src tests scripts` | Exit 0; all checks passed. |
+| `python scripts/check_i18n.py` | Exit 0. |
+| `python scripts/smoke_test.py` | Exit 0. |
+| `git diff --check` | Exit 0. |
+| Ownership regression with aggressive GC plugin | 9 passed, exit 0 (target module). |
+| Affected-module neighborhood with the suite guard | 78 passed, exit 0. |
+
+### Release truth and decision (continuation)
+
+| Evidence area | Status |
+| --- | --- |
+| Automatic CI | Disabled intentionally; not restored. |
+| Manual release workflow | Present, `workflow_dispatch` only. |
+| Windows packaged smoke | FAIL/PARTIAL; no new artifact run. |
+| GUI-TERM-001 parity | PARTIAL. |
+| Linux packaged runtime | NOT EVIDENCED. |
+| macOS packaged runtime | NOT EVIDENCED. |
+| Live cluster | NOT EVIDENCED. |
+| Manual packaged GUI sign-off | NOT EVIDENCED. |
+
+**Merge readiness: READY TO MERGE INTO DEVELOP.** The authoritative release suite exits 0, the coverage gate exits 0 at 66.38% against the 65% threshold, collection is clean with zero-primary 0 and multi-primary 0, both closeout blockers are fixed with regression evidence, and all previously confirmed defects remain fixed on the continuation HEAD. Release readiness remains a separate NO-GO because packaged, cross-platform, cluster, and manual GUI evidence is still incomplete.

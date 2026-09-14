@@ -2,7 +2,9 @@
 
 Latest status: Packets A–M DONE; N NOT APPLICABLE; O DONE; Wave COMPLETE. The 2026-09-13 integration closeout remains `DEFECT_FOUND` and NOT READY TO MERGE: the authoritative runner reached the end of its broad child but found two failures, and therefore did not run later isolated groups or coverage.
 
-The closeout worktree is `D:\Projeler\hpc-client-gui-integration-closeout` on `test-suite-governance-integration-closeout-20260913`, based on governance SHA `18e59fff3d8ebfa47666347a0d9cfc4d137b43c1`. Its current collection is 2,657, with zero-primary 0 and multi-primary 0. The exact closeout evidence, failure classification, and merge decision are in [TEST_SUITE_INTEGRATION_CLOSEOUT_2026-09-13.md](TEST_SUITE_INTEGRATION_CLOSEOUT_2026-09-13.md).
+The closeout worktree is `D:\Projeler\hpc-client-gui-integration-closeout` on `test-suite-governance-integration-closeout-20260913`, based on governance SHA `18e59fff3d8ebfa47666347a0d9cfc4d137b43c1`. Its 2026-09-13 collection was 2,657, with zero-primary 0 and multi-primary 0. The exact closeout evidence, failure classification, and merge decision are in [TEST_SUITE_INTEGRATION_CLOSEOUT_2026-09-13.md](TEST_SUITE_INTEGRATION_CLOSEOUT_2026-09-13.md).
+
+Continuation update — 2026-09-14: the interrupted closeout was resumed and both blockers were resolved. Current collection is 2,658 with zero-primary 0 and multi-primary 0; the authoritative release suite and the coverage gate both exit 0 (66.38% against the 65% threshold). The continuation section of [TEST_SUITE_INTEGRATION_CLOSEOUT_2026-09-13.md](TEST_SUITE_INTEGRATION_CLOSEOUT_2026-09-13.md#continuation--2026-09-14) records the evidence and the updated merge decision.
 
 - Frozen baseline: `12ce79935bf076e1062c57dc7dbd148bad2bfae1`
 - Governance branch: `test-suite-governance-20260912`
