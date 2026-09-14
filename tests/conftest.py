@@ -33,9 +33,24 @@ else:
     # wx.App installs a GUI log target, so any wx error (a clipboard another
     # process momentarily holds, a destroyed control) opens a modal dialog that
     # blocks the run until someone clicks it. Tests want the text, not a dialog.
+    #
+    # The C++ wxApp is process-global: creating a second wx.App replaces the
+    # first without destroying it, and destroying any app wrapper clears the
+    # global. A module that abandons its replaced app therefore leaves a time
+    # bomb; a later garbage collection pass deallocates that wrapper, tears down
+    # the live application, and the next wx control raises PyNoAppError.
+    # Destroy an app that is about to be replaced while it is still the current
+    # app, before the new app exists. That keeps at most one live application
+    # and removes the abandonment time bomb.
     _wx_app_init = wx.App.__init__
 
     def _wx_app_init_without_modal_logging(self, *args, **kwargs):
+        previous = wx.App.Get()
+        if previous is not None and previous is not self:
+            try:
+                previous.Destroy()
+            except Exception:
+                pass
         _wx_app_init(self, *args, **kwargs)
         wx.Log.SetActiveTarget(wx.LogStderr())
 
