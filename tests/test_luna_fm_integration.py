@@ -11,6 +11,8 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest import mock
 
+import pytest
+
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
@@ -42,6 +44,7 @@ def _base_profile(name: str) -> dict:
     }
 
 
+@pytest.mark.integration
 class ProfileCompatibilityMatrixTests(unittest.TestCase):
     """Part A: fixture matrix survives edit/save round trips."""
 
@@ -181,6 +184,8 @@ class _WidgetHarness:
             patcher.stop()
 
 
+@pytest.mark.integration
+@pytest.mark.qt
 class ProfileSessionIsolationTests(unittest.TestCase):
     """Part B: A -> disconnect -> B -> disconnect -> A leaks nothing."""
 
@@ -302,6 +307,8 @@ class _FakeActivePanel:
         self.applied = dict(statuses)
 
 
+@pytest.mark.integration
+@pytest.mark.qt
 class SyncPlusComparisonOrderingTests(unittest.TestCase):
     """Part C critical scenario: never render B(local) vs A(remote)."""
 
@@ -422,6 +429,8 @@ class SyncPlusComparisonOrderingTests(unittest.TestCase):
                 )
 
 
+@pytest.mark.integration
+@pytest.mark.qt
 class ZeroExtraNetworkIntegrationTests(unittest.TestCase):
     """Part E: comparison never causes extra SFTP traffic end-to-end."""
 
@@ -502,6 +511,7 @@ class ZeroExtraNetworkIntegrationTests(unittest.TestCase):
 class TransferSourceOfTruthAndSecurityTests(unittest.TestCase):
     """Part F/G spot checks that pin the integrated guarantees."""
 
+    @pytest.mark.audit
     def test_global_parallel_setting_is_not_imported_by_remote_panel(self) -> None:
         from hpc_gui.ui.widgets import remote_dir_panel
 
@@ -510,6 +520,7 @@ class TransferSourceOfTruthAndSecurityTests(unittest.TestCase):
             "Remote panel must not consult the deprecated global setting",
         )
 
+    @pytest.mark.audit
     def test_no_auto_add_policy_anywhere_in_ssh_layer(self) -> None:
         for source in (
             Path("src/hpc_gui/ssh/client.py"),
@@ -518,6 +529,7 @@ class TransferSourceOfTruthAndSecurityTests(unittest.TestCase):
             text = source.read_text(encoding="utf-8")
             self.assertNotIn("AutoAddPolicy", text)
 
+    @pytest.mark.contract
     def test_jump_profile_schema_has_no_password_key(self) -> None:
         settings = normalize_jump_host_settings(
             {"enabled": True, "host": "gw", "password": "should-not-survive"}

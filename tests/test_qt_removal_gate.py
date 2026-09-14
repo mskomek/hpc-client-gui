@@ -3,6 +3,8 @@ import subprocess
 
 import pytest
 
+pytestmark = pytest.mark.audit
+
 from scripts.qt_removal_gate import (
     MANUAL_CHECKS,
     PACKAGED_CHECKS,

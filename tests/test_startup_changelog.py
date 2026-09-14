@@ -4,6 +4,8 @@ import os
 import unittest
 from unittest.mock import patch
 
+import pytest
+
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from PySide6.QtCore import QRect
@@ -16,6 +18,10 @@ from hpc_gui.ui.main_window import MainWindow
 
 
 class StartupChangelogTests(unittest.TestCase):
+    @pytest.mark.gui
+    @pytest.mark.qt
+    @pytest.mark.semantic
+    @pytest.mark.resource
     def test_main_window_starts_normal_and_fits_small_screen(self) -> None:
         app = QApplication.instance() or QApplication([])
         window = MainWindow()
@@ -31,6 +37,8 @@ class StartupChangelogTests(unittest.TestCase):
             window.graceful_shutdown()
             window.close()
 
+    @pytest.mark.unit
+    @pytest.mark.semantic
     def test_changelog_sections_are_rendered_newest_first(self) -> None:
         text = "\n".join(
             [
@@ -48,6 +56,8 @@ class StartupChangelogTests(unittest.TestCase):
 
         self.assertLess(rendered.index("## v1.1.0"), rendered.index("## v1.0.0"))
 
+    @pytest.mark.unit
+    @pytest.mark.semantic
     def test_startup_changelog_is_shown_once_per_version(self) -> None:
         stored_versions: list[str] = []
 

@@ -1,4 +1,8 @@
+import pytest
+
 from hpc_gui.services.focus_command_router import FocusCommandRouter
+
+pytestmark = pytest.mark.unit
 
 
 def test_focus_precedence_and_native_keys():

@@ -6,6 +6,8 @@ import time
 import unittest
 from pathlib import Path
 
+import pytest
+
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -18,6 +20,10 @@ import benchmark_remote_directory_gui  # noqa: E402
 
 
 class RemoteDirectoryGuiBenchmarkGate(unittest.TestCase):
+    @pytest.mark.gui
+    @pytest.mark.qt
+    @pytest.mark.semantic
+    @pytest.mark.performance
     def test_small_offscreen_listing_is_exact_and_terminates(self) -> None:
         app = QApplication.instance() or QApplication([])
         started = time.perf_counter()

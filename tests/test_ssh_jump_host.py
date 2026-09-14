@@ -10,6 +10,8 @@ from pathlib import Path
 from typing import Any, Optional
 from unittest import mock
 
+import pytest
+
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
@@ -171,17 +173,20 @@ def make_connected_wrapper(jump_info: Optional[SSHJumpInfo] = None, **info_kwarg
 
 
 class JumpDisabledBaselineTests(unittest.TestCase):
+    @pytest.mark.integration
     def test_jump_disabled_uses_direct_path(self) -> None:
         wrapper, target, jump, _seq = make_connected_wrapper(None)
         self.assertNotIn("sock", target.connect_kwargs)
         self.assertIsNone(wrapper._jump_connection)
 
+    @pytest.mark.contract
     def test_legacy_profile_without_jump_host_is_direct(self) -> None:
         self.assertIsNone(jump_info_from_settings(None))
         self.assertIsNone(jump_info_from_settings({}))
         settings = normalize_jump_host_settings({"enabled": True, "host": ""})
         self.assertIsNone(jump_info_from_settings(settings))
 
+    @pytest.mark.contract
     def test_socket_like_typing_accepts_fake_channel(self) -> None:
         channel = _FakeChannel()
         info = SSHConnInfo(host="h", port=22, preconnected_socket=channel)
@@ -189,6 +194,8 @@ class JumpDisabledBaselineTests(unittest.TestCase):
 
 
 class JumpSequenceTests(unittest.TestCase):
+    pytestmark = pytest.mark.integration
+
     def test_jump_connects_before_target(self) -> None:
         jump_info = SSHJumpInfo(enabled=True, host="gw.example.org", username="gate")
         wrapper, target, jump, sequence = make_connected_wrapper(jump_info)
@@ -257,6 +264,8 @@ class JumpSequenceTests(unittest.TestCase):
 
 
 class PolicyAndPromptRoleTests(unittest.TestCase):
+    pytestmark = pytest.mark.contract
+
     def test_hostkeyinfo_role_defaults_to_target(self) -> None:
         info = HostKeyInfo("h", "ssh-ed25519", "aa:bb")
         self.assertEqual(info.role, "target")
@@ -318,6 +327,8 @@ class PolicyAndPromptRoleTests(unittest.TestCase):
 
 
 class FailureCleanupTests(unittest.TestCase):
+    pytestmark = [pytest.mark.integration, pytest.mark.resource]
+
     @staticmethod
     def _connect(info, target_client, jump_client, *, shell=True):
         """Run wrapper.connect with ordered fake clients; returns the error."""
@@ -427,6 +438,7 @@ class ProfilePersistenceTests(unittest.TestCase):
         home_patch.start().return_value = Path(self._tmp.name)
         self.addCleanup(home_patch.stop)
 
+    @pytest.mark.contract
     def test_normalization_rules(self) -> None:
         settings = normalize_jump_host_settings(
             {
@@ -450,6 +462,8 @@ class ProfilePersistenceTests(unittest.TestCase):
         self.assertEqual(ok["port"], 2222)
         self.assertEqual(ok["host_key_policy"], "strict")
 
+    @pytest.mark.integration
+    @pytest.mark.regression
     def test_round_trip_persists_without_password_key(self) -> None:
         from hpc_gui.config.storage import load_profiles, upsert_profile
 
@@ -468,6 +482,8 @@ class ProfilePersistenceTests(unittest.TestCase):
         self.assertNotIn("password", stored)
         self.assertNotIn("password_enc", stored)
 
+    @pytest.mark.integration
+    @pytest.mark.regression
     def test_unrelated_edit_preserves_file_manager_and_jump_state(self) -> None:
         from hpc_gui.config.storage import (
             load_profiles,
@@ -493,6 +509,7 @@ class ProfilePersistenceTests(unittest.TestCase):
         self.assertEqual(saved["jump_host"]["unknown_future"], {"a": 1})
         self.assertTrue(saved["jump_host"]["enabled"])
 
+    @pytest.mark.integration
     def test_dialog_collect_patches_jump_settings(self) -> None:
         from PySide6.QtWidgets import QApplication
         from hpc_gui.core.i18n import load_language

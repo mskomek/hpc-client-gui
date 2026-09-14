@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from hpc_gui.services import transfer_speed_test
 from hpc_gui.services.transfer_speed_test import run_transfer_speed_test
 
@@ -22,6 +24,9 @@ class _Files:
         self.remote.pop(remote_path, None)
 
 
+@pytest.mark.integration
+@pytest.mark.semantic
+@pytest.mark.resource
 def test_speed_test_round_trip_verifies_and_cleans_up(monkeypatch, tmp_path) -> None:
     def named_temporary_file(**_kwargs):
         return (tmp_path / "speed.bin").open("w+b")

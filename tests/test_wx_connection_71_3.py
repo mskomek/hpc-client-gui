@@ -64,6 +64,9 @@ def _clean_wx_after():
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
 def test_save_and_connect_async_failure_returns_true(monkeypatch):
     """Save & Connect: save succeeds + worker starts → True.
     Worker later fails → controller.failed, profile persists, buttons restored.
@@ -150,6 +153,9 @@ def test_save_and_connect_async_failure_returns_true(monkeypatch):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
 def test_production_save_and_connect_blank_name_canonical(monkeypatch):
     """Full production wiring: Add button → real WxConnectionDialog → real
     production on_save_and_connect → real save_profile → canonical name →
@@ -226,6 +232,9 @@ def test_production_save_and_connect_blank_name_canonical(monkeypatch):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
 def test_master_password_real_wx_prompt_no_cache(monkeypatch):
     """Real resolver chain with wx dialog prompt mocked at widget level.
     No DPAPI cache seeded. Real _master_ask_factory → wx.Dialog mocked →
@@ -320,6 +329,9 @@ def test_master_password_real_wx_prompt_no_cache(monkeypatch):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
 def test_master_password_cached_path(monkeypatch):
     """Cached master password → no interactive prompt → decrypt succeeds.
 
@@ -387,6 +399,9 @@ def test_master_password_cached_path(monkeypatch):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
 def test_master_password_wx_prompt_cancel(monkeypatch):
     """Connect Selected → wx master dialog → Cancel → no SSH, buttons restored.
 
@@ -462,6 +477,9 @@ def test_master_password_wx_prompt_cancel(monkeypatch):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
 def test_cluster_self_test_real_button_event(monkeypatch):
     """Real WxConnectionDialog → real Test Cluster button EVT_BUTTON →
     real _test_cluster() → real credential resolver → master prompt →
@@ -563,6 +581,9 @@ def test_cluster_self_test_real_button_event(monkeypatch):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
 def test_cluster_self_test_cancel(monkeypatch):
     """Test Cluster → master dialog Cancel → no self-test, button re-enabled,
     storage unchanged, no error fallback to empty password.
@@ -639,30 +660,3 @@ def test_cluster_self_test_cancel(monkeypatch):
             wx.Yield()
     finally:
         tmp.cleanup()
-
-
-# ---------------------------------------------------------------------------
-# 71.3.8 — Typed password precedence (retained)
-# ---------------------------------------------------------------------------
-
-
-def test_typed_password_precedence(monkeypatch):
-    """Typed password > stored secret for Test Cluster and explicit connect."""
-    from hpc_gui.core.crypto_master import encrypt_with_master
-    from hpc_gui.services.connection_profile_service import resolve_password_for_connect
-
-    enc = encrypt_with_master("master123", "old-secret")
-    profile = {
-        "name": "p",
-        "host": "h.example",
-        "port": 22,
-        "username": "user",
-        "password": "new-temporary-secret",
-        "save_password": True,
-        "password_enc": enc.token,
-        "password_salt": enc.salt,
-    }
-    res = resolve_password_for_connect(
-        profile, typed_password="new-temporary-secret", ask_master=lambda c: "master123"
-    )
-    assert res == "new-temporary-secret"

@@ -7,6 +7,8 @@ import pytest
 from hpc_gui.config.system_profile import save_user_system_template
 from hpc_gui.ui.dialogs.connection_dialog import ConnectionDialog
 
+pytestmark = [pytest.mark.gui, pytest.mark.qt]
+
 
 @pytest.fixture
 def qapp():

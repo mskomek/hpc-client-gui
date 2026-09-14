@@ -1,9 +1,7 @@
 """Run the shared release preflight test suite.
 
-The release workflow and the CI ``gui`` job must never drift apart: a
-release must not be publishable when the source revision's required test
-suite is red. This module is the single definition of that suite; both
-workflows invoke it instead of maintaining two separate test lists.
+The manual release workflow and local release gate use this same test
+definition, so a release cannot be published when its required suite is red.
 
 The suite mirrors the CI gates:
 
@@ -25,8 +23,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
-# Keep this list identical to the checks the CI gui job runs. When adding a
-# new repository-wide gate, extend it here so releases inherit it.
+# Keep these checks aligned with the local release gate in scripts/ci.py.
 PREFLIGHT_COMMANDS: tuple[tuple[str, ...], ...] = (
     (sys.executable, "-m", "compileall", "-q", str(REPO_ROOT / "src" / "hpc_gui")),
     (sys.executable, str(REPO_ROOT / "scripts" / "check_i18n.py")),
@@ -56,6 +53,30 @@ ISOLATED_WIRE_FILES = (
     "tests/test_download_cancel_wire.py",
     "tests/test_editor_flow.py",
 )
+# When combined in one process, these wx modules create and tear down a real
+# wx.App before the Qt Jobs-scroll widget; the sequence terminates Windows
+# with 0xC000041D despite no live wx windows or worker threads. The WebView2
+# module passes alone but heap-corrupts (0xC0000374) after mixed-GUI tests,
+# and the wx Jobs cluster terminated the broad process near 90% with exit
+# 0xFFFFFFFF. Destroying or garbage-collecting one of several wx.App objects
+# in a single process invalidates the global app, so the Jobs behavior and
+# layout owner nodes fail with PyNoAppError only in broad order. Keep every
+# proven native boundary process-scoped; every node below still runs in a
+# dedicated pytest process instead of being skipped.
+ISOLATED_NATIVE_GUI_FILES = (
+    "tests/test_corrective_jobs_details.py",
+    "tests/test_wx_terminal_webview.py",
+    "tests/test_wx_jobs_behavior.py",
+    "tests/test_wx_layout_resize.py",
+    "tests/test_wx_jobs_files_outputs.py",
+    "tests/test_wx_jobs_final_fix.py",
+    "tests/test_wx_jobs_stress.py",
+)
+ISOLATED_TEST_NODES = (
+    "tests/test_wx_file_actions_stress.py::test_wx_remote_context_target_stress_uses_real_events",
+    "tests/test_wx_shell_p0_stress.py::test_wx_shell_p0_stress_real_wx_paths",
+)
+ISOLATED_FILES = ISOLATED_WIRE_FILES + ISOLATED_NATIVE_GUI_FILES
 
 COVERAGE_FAIL_UNDER = 65
 
@@ -79,17 +100,27 @@ def build_commands(*, coverage: bool) -> list[tuple[str, ...]]:
     commands = list(PREFLIGHT_COMMANDS)
     ignores = tuple(
         argument
-        for path in ISOLATED_WIRE_FILES
+        for path in ISOLATED_FILES
         for argument in ("--ignore", path)
     )
-    commands.append(
-        PYTEST_BASE + ignores + (COVERAGE_ARGS if coverage else ())
+    deselects = tuple(
+        argument
+        for nodeid in ISOLATED_TEST_NODES
+        for argument in ("--deselect", nodeid)
     )
-    for index, path in enumerate(ISOLATED_WIRE_FILES):
+    commands.append(
+        PYTEST_BASE + ignores + deselects + (COVERAGE_ARGS if coverage else ())
+    )
+    isolated_selectors = (
+        *ISOLATED_TEST_NODES,
+        *ISOLATED_NATIVE_GUI_FILES,
+        *ISOLATED_WIRE_FILES,
+    )
+    for index, selector in enumerate(isolated_selectors):
         coverage_args = COVERAGE_APPEND_ARGS if coverage else ()
-        if coverage and index == len(ISOLATED_WIRE_FILES) - 1:
+        if coverage and index == len(isolated_selectors) - 1:
             coverage_args += (f"--cov-fail-under={COVERAGE_FAIL_UNDER}",)
-        commands.append(PYTEST_BASE[:-1] + (path,) + coverage_args)
+        commands.append(PYTEST_BASE[:-1] + (selector,) + coverage_args)
     return commands
 
 
@@ -102,7 +133,8 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
-    for command in build_commands(coverage=args.coverage):
+    failed_test_partition = 0
+    for index, command in enumerate(build_commands(coverage=args.coverage)):
         printable = " ".join(str(part) for part in command)
         print(f"[release-test-suite] {printable}", flush=True)
         result = subprocess.run(command, cwd=REPO_ROOT)
@@ -111,7 +143,12 @@ def main(argv: list[str] | None = None) -> int:
                 f"[release-test-suite] FAILED with exit code {result.returncode}: {printable}",
                 file=sys.stderr,
             )
-            return result.returncode
+            if index < len(PREFLIGHT_COMMANDS):
+                return result.returncode
+            if not failed_test_partition:
+                failed_test_partition = result.returncode
+    if failed_test_partition:
+        return failed_test_partition
     print("[release-test-suite] all release preflight gates passed")
     return 0
 

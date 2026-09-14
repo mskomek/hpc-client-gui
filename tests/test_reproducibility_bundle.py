@@ -1,7 +1,11 @@
 import json
 import zipfile
 
+import pytest
+
 from hpc_gui.services.reproducibility_bundle import export_job_bundle
+
+pytestmark = pytest.mark.reporting
 
 
 def test_offline_export_contains_versioned_job_script_and_readme(tmp_path):

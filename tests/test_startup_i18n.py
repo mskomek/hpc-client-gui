@@ -1,6 +1,8 @@
 from pathlib import Path
 
+import pytest
 
+@pytest.mark.audit
 def test_splash_text_never_depends_on_translation_catalog():
     root = Path(__file__).resolve().parents[1]
     source = (root / "src" / "hpc_gui" / "app.py").read_text(encoding="utf-8")

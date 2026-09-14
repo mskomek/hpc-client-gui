@@ -9,6 +9,8 @@ from __future__ import annotations
 import pathlib
 import sys
 
+import pytest
+
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 if str(ROOT / "src") not in sys.path:
     sys.path.insert(0, str(ROOT / "src"))
@@ -35,6 +37,8 @@ UNICODE_PROVIDER_DATA = {
 # 2. Plugin Manifest Unicode
 # ---------------------------------------------------------------------------
 
+@pytest.mark.unit
+@pytest.mark.semantic
 class TestPluginManifestUnicode:
     """Verify plugin manifests handle Unicode correctly."""
 
@@ -117,6 +121,8 @@ class TestPluginManifestUnicode:
 # 3. Plugin Validator Unicode
 # ---------------------------------------------------------------------------
 
+@pytest.mark.contract
+@pytest.mark.semantic
 class TestPluginValidatorUnicode:
     """Verify plugin validator handles Unicode correctly."""
 
@@ -162,6 +168,8 @@ class TestPluginValidatorUnicode:
 # 4. Provider Contract Unicode
 # ---------------------------------------------------------------------------
 
+@pytest.mark.contract
+@pytest.mark.semantic
 class TestProviderContractUnicode:
     """Verify provider contract handles Unicode correctly."""
 
@@ -197,6 +205,8 @@ class TestProviderContractUnicode:
 # 5. Provider Context Unicode
 # ---------------------------------------------------------------------------
 
+@pytest.mark.unit
+@pytest.mark.semantic
 class TestProviderContextUnicode:
     """Verify provider context handles Unicode correctly."""
 
@@ -230,6 +240,7 @@ class TestProviderContextUnicode:
         result = resolve_provider_path(template, context)
         assert result.state == "missing-context"
 
+    @pytest.mark.regression
     def test_resolve_provider_path_unknown_placeholder(self):
         """resolve_provider_path should fail closed on unknown placeholders."""
         from hpc_gui.config.system_profile import (
@@ -250,6 +261,8 @@ class TestProviderContextUnicode:
 class TestPluginUIContributionsUnicode:
     """Verify plugin UI contributions handle Unicode correctly."""
 
+    @pytest.mark.contract
+    @pytest.mark.semantic
     def test_ui_contributions_label_unicode(self):
         """UI contributions should accept Unicode labels."""
         from hpc_gui.plugins.ui_contributions import validate_ui_contributions_dict
@@ -286,6 +299,8 @@ class TestPluginUIContributionsUnicode:
 class TestIntegration:
     """Integration tests for plugin/provider Unicode."""
 
+    @pytest.mark.integration
+    @pytest.mark.semantic
     def test_full_plugin_unicode_flow(self):
         """Full flow: create manifest, validate, build profile."""
         from hpc_gui.plugins.models import (
@@ -375,6 +390,8 @@ class TestIntegration:
         assert "name" in settings
         assert settings["name"] == "Çalışma Alanı Profili"
 
+    @pytest.mark.unit
+    @pytest.mark.semantic
     def test_provider_path_resolution_unicode(self):
         """Unicode paths should resolve correctly through provider context."""
         from hpc_gui.config.system_profile import (
@@ -399,6 +416,8 @@ class TestIntegration:
             assert result.state == "resolved", f"Failed for {template}: {result.state}"
             assert "çalışma" in result.path or "日本語" in result.path
 
+    @pytest.mark.contract
+    @pytest.mark.semantic
     def test_optional_data_graceful_degradation(self):
         """Missing optional data should degrade gracefully."""
         from hpc_gui.services.provider_contract import extract_contract
@@ -414,6 +433,9 @@ class TestIntegration:
         assert contract2.has_job_details is True
         assert contract2.has_accounting is False
 
+    @pytest.mark.unit
+    @pytest.mark.semantic
+    @pytest.mark.regression
     def test_existing_ascii_compatibility(self):
         """Existing ASCII providers should remain compatible."""
         from hpc_gui.plugins.models import ClusterProfileDefinition
@@ -428,6 +450,8 @@ class TestIntegration:
         assert profile.name == "TRUBA Default"
         assert profile.paths["scratch"] == "/scratch/{user}"
 
+    @pytest.mark.contract
+    @pytest.mark.semantic
     def test_ui_contributions_unicode_labels(self):
         """UI contributions should render Unicode labels correctly."""
         from hpc_gui.plugins.ui_contributions import validate_ui_contributions_dict

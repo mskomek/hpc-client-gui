@@ -5,7 +5,7 @@ import pytest
 
 wx = pytest.importorskip("wx")
 
-from hpc_gui.core.i18n import load_language
+from hpc_gui.core.i18n import current_language, load_language, t
 from hpc_gui.services.transfer_controller import TransferItem
 from hpc_gui.wx_jobs import WxJobsModel, show_jobs
 from hpc_gui.wx_shell import _start_file_transfers, create_shell_frame
@@ -21,6 +21,31 @@ class _Tray:
 
     def destroy(self):
         self.destroyed += 1
+
+
+@pytest.fixture
+def wx_shell_runtime():
+    previous_language = current_language()
+    app = wx.App.Get()
+    if app is None:
+        app = wx.App(False)
+    yield app
+    if wx.GetApp() is not None:
+        for window in list(wx.GetTopLevelWindows()):
+            if window:
+                try:
+                    window.Close(True)
+                except RuntimeError:
+                    pass
+        for _ in range(5):
+            app.ProcessPendingEvents()
+            wx.Yield()
+        for window in list(wx.GetTopLevelWindows()):
+            if window:
+                window.Destroy()
+        app.ProcessPendingEvents()
+        app.Destroy()
+    load_language(previous_language)
 
 
 def _pump(app, predicate, timeout=3):
@@ -41,6 +66,20 @@ def _shell(app):
     return frame, lifecycle, session, tray
 
 
+def _shell_menu_labels(frame):
+    menubar = frame.GetMenuBar()
+    labels = [frame.GetTitle()]
+    for index in range(menubar.GetMenuCount()):
+        labels.append(menubar.GetMenuLabel(index))
+        menu = menubar.GetMenu(index)
+        labels.extend(
+            item.GetItemLabelText()
+            for item in menu.GetMenuItems()
+            if not item.IsSeparator()
+        )
+    return labels
+
+
 def _close(app, frame, lifecycle):
     frame.Close()
     _pump(app, lambda: lifecycle.shutdown_started)
@@ -53,42 +92,61 @@ def _close(app, frame, lifecycle):
     wx.SafeYield()
 
 
-def test_wx_shell_p0_stress_real_wx_paths():
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
+@pytest.mark.regression
+@pytest.mark.resource
+@pytest.mark.concurrency
+@pytest.mark.slow
+def test_wx_shell_p0_stress_real_wx_paths(wx_shell_runtime):
     load_language("en")
-    app = wx.App(False)
+    app = wx_shell_runtime
     metrics = {
         "duplicate_job_notifications": 0,
         "missed_final_notifications": 0,
         "stale_session_notifications": 0,
         "post_close_tray_notifications": 0,
         "duplicate_cleanups": 0,
-        "destroyed_control_callbacks": 0,
         "leaked_shell_windows": 0,
         "leaked_transfer_sessions": 0,
         "wrong_language_labels": 0,
         "missing_translation_labels": 0,
-        "post_close_language_callbacks": 0,
     }
 
     frame, lifecycle, session, tray = _shell(app)
     show_jobs(frame, lifecycle=lifecycle, list_jobs=lambda: [{"id": "stress", "state": "RUNNING"}])
     _pump(app, lambda: any(hasattr(w, "_wx_jobs_state") and w.GetParent() is frame for w in wx.GetTopLevelWindows()))
     jobs_frame = next(w for w in wx.GetTopLevelWindows() if hasattr(w, "_wx_jobs_state") and w.GetParent() is frame)
+    menu_bar = frame.GetMenuBar()
     for _ in range(100):
         for language, expected in (("tr", "İş"), ("en", "Jobs")):
             item = frame._wx_shell_controls["language_items"][language]
             frame.ProcessEvent(wx.CommandEvent(wx.wxEVT_MENU, item.GetId()))
             if expected not in jobs_frame.GetTitle():
                 metrics["wrong_language_labels"] += 1
-            controls = frame._wx_shell_controls
-            labels = [frame.GetTitle()]
+            labels = _shell_menu_labels(frame)
+            status_bar = frame.GetStatusBar()
+            if status_bar is not None:
+                labels.append(status_bar.GetStatusText())
             labels.extend(
-                controls[name].GetLabel()
-                for name in ("update", "plugins", "send_logs", "settings", "help")
+                item.GetItemLabelText()
+                for item in (*frame._wx_shell_menu_items.values(), *frame._wx_shell_help_items.values())
+                if item is not None
             )
-            labels.extend(item.GetItemLabelText() for item in frame._wx_shell_controls["language_items"].values())
             if any("[" in label for label in labels):
                 metrics["missing_translation_labels"] += 1
+            expected_menu_labels = (
+                "menu.menu",
+                "menu.plugins",
+                "menu.help",
+                "help.language",
+            )
+            if any(
+                menu_bar.GetMenuLabel(index) != t(key)
+                for index, key in enumerate(expected_menu_labels)
+            ):
+                metrics["wrong_language_labels"] += 1
     _close(app, frame, lifecycle)
     frame = None
     for _ in range(50):
@@ -180,7 +238,6 @@ def test_wx_shell_p0_stress_real_wx_paths():
     metrics["leaked_shell_windows"] = len(visible_windows)
     if visible_windows:
         print(f"  visible windows after stress: {visible_windows}")
-    metrics["post_close_language_callbacks"] = 0
     print("\nGUI P0 stress counts:")
     for name, count in {
         "job terminal transitions": 100,

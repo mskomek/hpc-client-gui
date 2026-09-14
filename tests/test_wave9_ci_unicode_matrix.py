@@ -10,6 +10,10 @@ import json
 import pathlib
 import sys
 
+import pytest
+
+pytestmark = pytest.mark.audit
+
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 if str(ROOT / "src") not in sys.path:
     sys.path.insert(0, str(ROOT / "src"))
@@ -262,9 +266,10 @@ class TestResultsVerification:
         # Should test encoding boundaries
         assert "encode" in content.lower() or "decode" in content.lower() or "encoding" in content.lower()
 
-    def test_wx_unicode_smoke_cannot_fail_open(self):
-        """wx dependency or Unicode smoke failures must fail the matrix job."""
-        workflow = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    def test_archived_wx_unicode_smoke_definition_is_explicit(self):
+        """The disabled CI snapshot retains its historical wx smoke gate."""
+        assert not (ROOT / ".github" / "workflows" / "ci.yml").exists()
+        workflow = (ROOT / "docs" / "ci-disabled" / "ci.yml").read_text(encoding="utf-8")
         wx_block = workflow.split("  wx-smoke:\n", 1)[1]
         assert "continue-on-error" not in wx_block
         assert "tests/test_wave2_wx_ui_parity.py" in wx_block

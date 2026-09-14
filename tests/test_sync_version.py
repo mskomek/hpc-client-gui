@@ -1,6 +1,10 @@
 from pathlib import Path
 
+import pytest
+
 from scripts.sync_version import sync_version
+
+pytestmark = pytest.mark.release
 
 
 def test_sync_version_updates_all_runtime_declarations(tmp_path: Path):

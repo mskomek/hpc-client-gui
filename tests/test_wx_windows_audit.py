@@ -1,6 +1,10 @@
 from hpc_gui.wx_windows_audit import run_audit
+import pytest
 
 
+@pytest.mark.audit
+@pytest.mark.wx
+@pytest.mark.windows
 def test_windows_audit_core_checks():
     results = {result.name: result for result in run_audit()}
     assert results["geometry matrix"].passed

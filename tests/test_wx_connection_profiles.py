@@ -41,6 +41,8 @@ def _isolated_storage(monkeypatch):
 # 35.1 Add button
 # ---------------------------------------------------------------------------
 
+@pytest.mark.gui
+@pytest.mark.wx
 def test_wx_add_button_enabled_in_normal_startup(monkeypatch):
     tmp = _isolated_storage(monkeypatch)
     try:
@@ -64,6 +66,8 @@ def test_wx_add_button_enabled_in_normal_startup(monkeypatch):
         tmp.cleanup()
 
 
+@pytest.mark.gui
+@pytest.mark.wx
 def test_wx_add_opens_dialog(monkeypatch):
     tmp = _isolated_storage(monkeypatch)
     try:
@@ -108,6 +112,7 @@ def test_wx_add_opens_dialog(monkeypatch):
 # 35.2 Add + Save
 # ---------------------------------------------------------------------------
 
+@pytest.mark.integration
 def test_add_and_save_persists_and_refreshes(monkeypatch):
     tmp = _isolated_storage(monkeypatch)
     try:
@@ -149,6 +154,7 @@ def test_add_and_save_persists_and_refreshes(monkeypatch):
 # 35.3 Save & Connect
 # ---------------------------------------------------------------------------
 
+@pytest.mark.unit
 def test_save_and_connect_invokes_connect_once(monkeypatch):
     tmp = _isolated_storage(monkeypatch)
     try:
@@ -200,23 +206,14 @@ def test_save_and_connect_invokes_connect_once(monkeypatch):
 # 35.4 Cancel
 # ---------------------------------------------------------------------------
 
-def test_cancel_does_not_persist(monkeypatch):
-    tmp = _isolated_storage(monkeypatch)
-    try:
-        assert len(load_profiles()) == 0
-        # Simulate cancel: do not call save
-        # No profile should be created
-        assert len(load_profiles()) == 0
-        # Also no secret should be persisted
-        # Check secret store not called – implicit
-    finally:
-        tmp.cleanup()
 
 
 # ---------------------------------------------------------------------------
 # 35.5 Edit – unknown keys survive
 # ---------------------------------------------------------------------------
 
+@pytest.mark.integration
+@pytest.mark.regression
 def test_edit_preserves_unknown_and_provenance(monkeypatch):
     tmp = _isolated_storage(monkeypatch)
     try:
@@ -264,6 +261,8 @@ def test_edit_preserves_unknown_and_provenance(monkeypatch):
 # 35.6 Rename
 # ---------------------------------------------------------------------------
 
+@pytest.mark.integration
+@pytest.mark.regression
 def test_rename_removes_old_only_after_success(monkeypatch):
     tmp = _isolated_storage(monkeypatch)
     try:
@@ -286,6 +285,7 @@ def test_rename_removes_old_only_after_success(monkeypatch):
 # 35.7 Duplicate
 # ---------------------------------------------------------------------------
 
+@pytest.mark.unit
 def test_duplicate_uses_naming_and_independent_identity(monkeypatch):
     existing = {"id": "one", "name": "Cluster", "host": "h.example", "username": "alice"}
     profiles = [existing]
@@ -305,6 +305,8 @@ def test_duplicate_uses_naming_and_independent_identity(monkeypatch):
 # 35.8 Delete
 # ---------------------------------------------------------------------------
 
+@pytest.mark.gui
+@pytest.mark.wx
 def test_delete_requires_confirmation_and_cleans(monkeypatch):
     tmp = _isolated_storage(monkeypatch)
     try:
@@ -350,6 +352,8 @@ def test_delete_requires_confirmation_and_cleans(monkeypatch):
 # 35.9 Secure password
 # ---------------------------------------------------------------------------
 
+@pytest.mark.integration
+@pytest.mark.semantic
 def test_secret_persistence_and_removal(monkeypatch):
     tmp = _isolated_storage(monkeypatch)
     try:
@@ -399,6 +403,9 @@ def test_secret_persistence_and_removal(monkeypatch):
         tmp.cleanup()
 
 
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
 def test_saved_password_not_autopopulated(monkeypatch):
     tmp = _isolated_storage(monkeypatch)
     try:
@@ -424,6 +431,7 @@ def test_saved_password_not_autopopulated(monkeypatch):
 # 35.10 Provider templates
 # ---------------------------------------------------------------------------
 
+@pytest.mark.contract
 def test_provider_templates_builtin_and_user():
     groups = builtin_system_template_groups()
     assert "Generic Slurm" in groups
@@ -444,6 +452,8 @@ def test_provider_templates_builtin_and_user():
     finally:
         tmpdir.cleanup()
 
+@pytest.mark.audit
+@pytest.mark.wx
 def test_plugin_templates_without_hardcoded_names():
     groups = installed_cluster_template_groups()
     # Should be dict, keys are plugin names, no hardcoded logic
@@ -457,6 +467,9 @@ def test_plugin_templates_without_hardcoded_names():
     assert src2.count("TRUBA") == 0
 
 
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.regression
 def test_template_provenance_preserved(monkeypatch):
     tmp = _isolated_storage(monkeypatch)
     try:
@@ -483,6 +496,8 @@ def test_template_provenance_preserved(monkeypatch):
         tmp.cleanup()
 
 
+@pytest.mark.gui
+@pytest.mark.wx
 def test_provider_required_project_account_validation(monkeypatch):
     tmp = _isolated_storage(monkeypatch)
     try:
@@ -521,6 +536,8 @@ def test_provider_required_project_account_validation(monkeypatch):
 # 35.11 Storage
 # ---------------------------------------------------------------------------
 
+@pytest.mark.unit
+@pytest.mark.wx
 def test_storage_add_edit_remove_and_validation(monkeypatch):
     # Validate storage area
     area = {"id": "home", "label": "Home", "kind": "home", "enabled": True, "path_template": "/home/{user}", "access_context": "login-node"}
@@ -573,6 +590,7 @@ def test_storage_add_edit_remove_and_validation(monkeypatch):
 # 35.12 Quota
 # ---------------------------------------------------------------------------
 
+@pytest.mark.integration
 def test_quota_states_fail_closed():
     # disabled
     assert quota_gate({"enabled": False, "command_template": "cmd", "backend_id": "x", "consent": True}, backend_ids=["x"], connected=True) == "disabled"
@@ -597,6 +615,8 @@ def test_quota_states_fail_closed():
 # 35.13 Advanced SSH
 # ---------------------------------------------------------------------------
 
+@pytest.mark.gui
+@pytest.mark.wx
 def test_advanced_ssh_persistence(monkeypatch):
     tmp = _isolated_storage(monkeypatch)
     try:
@@ -652,6 +672,7 @@ def test_advanced_ssh_persistence(monkeypatch):
 # 35.14 Real connection mapping
 # ---------------------------------------------------------------------------
 
+@pytest.mark.contract
 def test_saved_profile_to_sshinfo_mapping():
     profile = {
         "name": "lab",
@@ -688,6 +709,7 @@ def test_saved_profile_to_sshinfo_mapping():
     assert info.host_key_decision(HostKeyInfo("h.example", "ssh-rsa", "aa:bb")) == "save"
 
 
+@pytest.mark.unit
 def test_ssh_info_resolves_secure_password():
     # Profile with keychain ref, no plaintext
     profile = {"name": "sec", "host": "h.example", "port": 22, "username": "user", "password": "", "save_password": True, "password_keychain_ref": "ref123", "host_key_policy": "accept-new"}
@@ -712,6 +734,8 @@ def test_ssh_info_resolves_secure_password():
 # 35.15 MFA / host key
 # ---------------------------------------------------------------------------
 
+@pytest.mark.unit
+@pytest.mark.wx
 def test_host_key_dialog_mapping(monkeypatch):
     tmp = _isolated_storage(monkeypatch)
     try:
@@ -734,6 +758,7 @@ def test_host_key_dialog_mapping(monkeypatch):
         tmp.cleanup()
 
 
+@pytest.mark.unit
 def test_mfa_order_and_no_log(monkeypatch, caplog):
     requests = []
     model = WxConnectionModel([], keyboard_interactive=lambda req: requests.append(req) or ["r1", "r2"])
@@ -754,6 +779,7 @@ def test_mfa_order_and_no_log(monkeypatch, caplog):
 # 35.16 i18n
 # ---------------------------------------------------------------------------
 
+@pytest.mark.contract
 def test_i18n_en_tr_labels():
     from hpc_gui.core.i18n import t, load_language
     # Ensure EN for downstream tests that expect English strings
@@ -786,6 +812,8 @@ def test_i18n_en_tr_labels():
 # 35.17 Action-state tests
 # ---------------------------------------------------------------------------
 
+@pytest.mark.gui
+@pytest.mark.wx
 def test_action_enable_disable_states(monkeypatch):
     tmp = _isolated_storage(monkeypatch)
     try:
@@ -822,6 +850,8 @@ def test_action_enable_disable_states(monkeypatch):
         tmp.cleanup()
 
 
+@pytest.mark.gui
+@pytest.mark.wx
 def test_action_states_during_connection_and_recovery(monkeypatch):
     """Real production Add/Connect event chain proves button states without manual manipulation."""
     tmp = _isolated_storage(monkeypatch)
@@ -940,6 +970,8 @@ def test_action_states_during_connection_and_recovery(monkeypatch):
         tmp.cleanup()
 
 
+@pytest.mark.gui
+@pytest.mark.wx
 def test_dialog_save_and_connect_calls_one_callback(monkeypatch):
     tmp = _isolated_storage(monkeypatch)
     try:
@@ -966,6 +998,8 @@ def test_dialog_save_and_connect_calls_one_callback(monkeypatch):
         tmp.cleanup()
 
 
+@pytest.mark.contract
+@pytest.mark.wx
 def test_dialog_preserves_unknown_nested_system_fields(monkeypatch):
     tmp = _isolated_storage(monkeypatch)
     try:
@@ -988,6 +1022,7 @@ def test_dialog_preserves_unknown_nested_system_fields(monkeypatch):
         tmp.cleanup()
 
 
+@pytest.mark.contract
 def test_quota_profile_lookup_supports_nested_provider_template():
     from hpc_gui.services.quota_monitor import quota_state_for_profile
 

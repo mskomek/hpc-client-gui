@@ -1,5 +1,6 @@
 {
   "schema": "gui-visual-audit/2",
+  "evidence_status": "historical",
   "commit": "3a7294079b992d3ddcabc349bbeadf6988312b64",
   "branch": "develop",
   "platform": "Windows",

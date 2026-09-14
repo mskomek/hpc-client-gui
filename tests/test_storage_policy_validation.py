@@ -1,4 +1,8 @@
+import pytest
+
 from hpc_gui.plugins.models import validate_storage_area, validate_storage_policy
+
+pytestmark = pytest.mark.contract
 
 
 def test_storage_policy_accepts_unknown_or_nonnegative_retention():

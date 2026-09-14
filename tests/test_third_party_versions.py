@@ -5,7 +5,11 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
+
 from scripts import generate_third_party_versions as manifest
+
+pytestmark = [pytest.mark.release, pytest.mark.license]
 
 
 class ThirdPartyVersionsTests(unittest.TestCase):

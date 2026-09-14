@@ -3,10 +3,14 @@ import tempfile
 import unittest
 from pathlib import Path
 
+import pytest
+
 from scripts.generate_sbom import read_lock, write_sbom
 
 
 class SbomTests(unittest.TestCase):
+    @pytest.mark.unit
+    @pytest.mark.semantic
     def test_generates_sorted_purls_from_pinned_lock(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -18,6 +22,8 @@ class SbomTests(unittest.TestCase):
             self.assertEqual([item["name"] for item in data["components"]], ["Alpha_Pkg", "zeta"])
             self.assertEqual(data["components"][0]["purl"], "pkg:pypi/alpha-pkg@1.0")
 
+    @pytest.mark.unit
+    @pytest.mark.semantic
     def test_selects_platform_markers_for_mac_intel_lock(self):
         with tempfile.TemporaryDirectory() as directory:
             lock = Path(directory) / "requirements.lock"

@@ -3,6 +3,8 @@ import sys
 import unittest
 from unittest.mock import patch
 
+import pytest
+
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 sys.path.insert(0, os.path.abspath("src"))
 
@@ -11,6 +13,8 @@ from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QMessageBox
 
 from hpc_gui.ui.widgets.editor_widget import EditorWidget
+
+pytestmark = [pytest.mark.gui, pytest.mark.qt]
 
 
 class _FakeFiles:
@@ -142,18 +146,19 @@ class EditorFlowTests(unittest.TestCase):
         self.assertEqual(self.w.path_in.text(), "/arf/scratch/user/a.txt")
         self.assertEqual(self.w.text.toPlainText(), "alpha")
 
+    @pytest.mark.semantic
+    @pytest.mark.regression
     def test_save_targets_active_document(self):
-        self.w.open_file("/arf/scratch/user/a.txt", "alpha")
-        self.w.open_file("/arf/scratch/user/b.txt", "beta")
-        self.w.text.setPlainText("beta changed")
+        path_a = "/arf/scratch/user/a.txt"
+        path_b = "/arf/scratch/user/İş_日本語.txt"
+        self.w.open_file(path_a, "alpha")
+        self.w.open_file(path_b, "başlangıç ★ 日本語")
+        self.w.text.setPlainText("sonuç Δ 日本語")
 
         self.w.save_path()
 
-        self.assertEqual(
-            self.files.data["/arf/scratch/user/b.txt"],
-            "beta changed",
-        )
-        self.assertNotIn("/arf/scratch/user/a.txt", self.files.data)
+        self.assertEqual(self.files.data[path_b], "sonuç Δ 日本語")
+        self.assertNotIn(path_a, self.files.data)
 
     def test_document_tabs_are_closable(self):
         self.w.open_file("/arf/scratch/user/a.txt", "alpha")

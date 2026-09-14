@@ -12,6 +12,7 @@ import time
 import pytest
 
 wx = pytest.importorskip("wx")
+pytestmark = pytest.mark.wx
 
 from hpc_gui.wx_terminal_webview import WxTerminalWebViewPanel, _is_webview_available
 
@@ -71,6 +72,7 @@ def _show_frame_with_panel(frame, panel):
     wx.Yield()
 
 
+@pytest.mark.contract
 def test_wx_terminal_webview_assets_are_local_and_vendored():
     # Wave 73 security: vendored only, no CDN, connect-src 'none'
     page = (ASSETS / "wx_index.html").read_text(encoding="utf-8")
@@ -90,6 +92,8 @@ def test_wx_terminal_webview_assets_are_local_and_vendored():
     assert "fetch(" not in bridge and "XMLHttpRequest" not in bridge
 
 
+@pytest.mark.gui
+@pytest.mark.subprocess
 def test_wx_terminal_webview_page_loads_and_posts_ready():
     if not _is_webview_available():
         pytest.skip("WebView backend unavailable — fallback diagnostic expected")
@@ -105,7 +109,9 @@ def test_wx_terminal_webview_page_loads_and_posts_ready():
         import wx, time
         from hpc_gui.wx_terminal_webview import WxTerminalWebViewPanel, _is_webview_available
         assert _is_webview_available()
-        app = wx.App(False)
+        app = wx.App.Get()
+        if app is None:
+            app = wx.App(False)
         frame = wx.Frame(None, size=(900,600))
         class Fake:
             _wx_output_subscribers = []
@@ -156,7 +162,9 @@ def test_wx_terminal_webview_page_loads_and_posts_ready():
     assert result.returncode == 0, f"subprocess failed: {result.stdout}\n{result.stderr}"
 
 
-@pytest.mark.xfail(reason="WebView2 subprocess event-loop timing: ready-flush non-deterministic in subprocess isolation. Behavior verified by test_wx_terminal_large_pre_ready_output.", strict=False)
+@pytest.mark.gui
+@pytest.mark.subprocess
+@pytest.mark.semantic
 def test_wx_terminal_pending_output_before_ready_is_buffered_and_ordered():
     if not _is_webview_available():
         pytest.skip("WebView backend unavailable")
@@ -170,7 +178,9 @@ def test_wx_terminal_pending_output_before_ready_is_buffered_and_ordered():
         sys.path.insert(0, 'src')
         import wx, time
         from hpc_gui.wx_terminal_webview import WxTerminalWebViewPanel
-        app = wx.App(False)
+        app = wx.App.Get()
+        if app is None:
+            app = wx.App(False)
         frame = wx.Frame(None, size=(900,600))
         class Fake:
             _wx_output_subscribers = []
@@ -230,6 +240,9 @@ def test_wx_terminal_pending_output_before_ready_is_buffered_and_ordered():
     assert result.returncode == 0, f"subprocess failed: {result.stdout}\n{result.stderr}"
 
 
+@pytest.mark.contract
+@pytest.mark.subprocess
+@pytest.mark.semantic
 def test_wx_terminal_preserves_carriage_return_and_esc():
     if not _is_webview_available():
         pytest.skip("WebView backend unavailable")
@@ -243,7 +256,9 @@ def test_wx_terminal_preserves_carriage_return_and_esc():
         sys.path.insert(0, 'src')
         import wx, time, pathlib
         from hpc_gui.wx_terminal_webview import WxTerminalWebViewPanel
-        app = wx.App(False)
+        app = wx.App.Get()
+        if app is None:
+            app = wx.App(False)
         frame = wx.Frame(None, size=(900,600))
         class Fake:
             _wx_output_subscribers = []
@@ -301,6 +316,8 @@ def test_wx_terminal_preserves_carriage_return_and_esc():
     assert result.returncode == 0, f"subprocess failed: {result.stdout}\n{result.stderr}"
 
 
+@pytest.mark.gui
+@pytest.mark.subprocess
 def test_wx_terminal_clear_focus_font():
     if not _is_webview_available():
         pytest.skip("WebView backend unavailable")
@@ -314,7 +331,9 @@ def test_wx_terminal_clear_focus_font():
         sys.path.insert(0, 'src')
         import wx, time
         from hpc_gui.wx_terminal_webview import WxTerminalWebViewPanel
-        app = wx.App(False)
+        app = wx.App.Get()
+        if app is None:
+            app = wx.App(False)
         frame = wx.Frame(None, size=(900,600))
         class Fake:
             _wx_output_subscribers = []
@@ -379,6 +398,7 @@ def test_wx_terminal_clear_focus_font():
     assert result.returncode == 0, f"subprocess failed: {result.stdout}\n{result.stderr}"
 
 
+@pytest.mark.gui
 def test_wx_terminal_external_navigation_blocked():
     if not _is_webview_available():
         pytest.skip("WebView backend unavailable")
@@ -416,6 +436,7 @@ def test_wx_terminal_external_navigation_blocked():
     wx.Yield()
 
 
+@pytest.mark.audit
 def test_wx_terminal_single_bridge_and_no_splitlines():
     src = pathlib.Path("src/hpc_gui/wx_terminal_webview.py").read_text(encoding="utf-8")
     # One handler
@@ -434,6 +455,8 @@ def test_wx_terminal_single_bridge_and_no_splitlines():
     assert "postToPython" in bridge
 
 
+@pytest.mark.unit
+@pytest.mark.resource
 def test_wx_terminal_close_releases_native_webview():
     from hpc_gui.wx_terminal_webview import WxTerminalWebViewPanel
 
@@ -474,7 +497,9 @@ def test_wx_terminal_close_releases_native_webview():
     assert panel._is_parity is False
 
 
-@pytest.mark.xfail(reason="WebView2 subprocess event-loop timing: ready-flush non-deterministic in subprocess isolation. Behavior verified by test_wx_terminal_large_pre_ready_output.", strict=False)
+@pytest.mark.gui
+@pytest.mark.subprocess
+@pytest.mark.semantic
 def test_wx_terminal_output_ordering_with_many_fragments():
     if not _is_webview_available():
         pytest.skip("WebView backend unavailable")
@@ -488,7 +513,9 @@ def test_wx_terminal_output_ordering_with_many_fragments():
         sys.path.insert(0, 'src')
         import wx, time
         from hpc_gui.wx_terminal_webview import WxTerminalWebViewPanel
-        app = wx.App(False)
+        app = wx.App.Get()
+        if app is None:
+            app = wx.App(False)
         frame = wx.Frame(None, size=(900,600))
         class Fake:
             _wx_output_subscribers = []
@@ -570,6 +597,7 @@ def test_wx_terminal_output_ordering_with_many_fragments():
     assert result.returncode == 0, f"subprocess failed: {result.stdout}\n{result.stderr}"
 
 
+@pytest.mark.audit
 def test_wx_terminal_webview_composition_keeps_qt_out():
     src = pathlib.Path("src/hpc_gui/wx_terminal_webview.py").read_text(encoding="utf-8")
     assert "from PySide6" not in src
@@ -598,6 +626,9 @@ def _run_subprocess_test(code_str, timeout=15):
     )
 
 
+@pytest.mark.gui
+@pytest.mark.subprocess
+@pytest.mark.semantic
 def test_wx_terminal_input_chain_ctrl_a_to_z():
     """Ctrl+A..Ctrl+Z must produce \x01..\x1a via terminal.onData → send_shell_input."""
     if not _is_webview_available():
@@ -618,7 +649,9 @@ class FakeSSH:
     def resize_shell_pty(self, c, r):
         pass
 
-app = wx.App(False)
+app = wx.App.Get()
+if app is None:
+    app = wx.App(False)
 frame = wx.Frame(None, size=(900, 600))
 ssh = FakeSSH()
 panel = WxTerminalWebViewPanel(frame, ssh=ssh)
@@ -642,6 +675,8 @@ os._exit(0)
     assert result.returncode == 0, f"subprocess failed: {result.stdout}\n{result.stderr}"
 
 
+@pytest.mark.gui
+@pytest.mark.subprocess
 def test_wx_terminal_resize_chain_to_ssh():
     """Resize events must call resize_shell_pty with correct cols/rows."""
     if not _is_webview_available():
@@ -661,7 +696,9 @@ class FakeSSH:
     def resize_shell_pty(self, cols, rows):
         self.resizes.append((cols, rows))
 
-app = wx.App(False)
+app = wx.App.Get()
+if app is None:
+    app = wx.App(False)
 frame = wx.Frame(None, size=(900, 600))
 ssh = FakeSSH()
 panel = WxTerminalWebViewPanel(frame, ssh=ssh)
@@ -682,6 +719,8 @@ os._exit(0)
     assert result.returncode == 0, f"subprocess failed: {result.stdout}\n{result.stderr}"
 
 
+@pytest.mark.gui
+@pytest.mark.subprocess
 def test_wx_terminal_font_change_triggers_resize():
     """Font change via hpc_set_font_size must trigger fit→resize chain."""
     if not _is_webview_available():
@@ -701,7 +740,9 @@ class FakeSSH:
     def resize_shell_pty(self, c, r):
         self.resizes.append((c, r))
 
-app = wx.App(False)
+app = wx.App.Get()
+if app is None:
+    app = wx.App(False)
 frame = wx.Frame(None, size=(900, 600))
 ssh = FakeSSH()
 panel = WxTerminalWebViewPanel(frame, ssh=ssh)
@@ -733,6 +774,9 @@ os._exit(0)
     assert result.returncode == 0, f"subprocess failed: {result.stdout}\n{result.stderr}"
 
 
+@pytest.mark.gui
+@pytest.mark.subprocess
+@pytest.mark.semantic
 def test_wx_terminal_unicode_input_output():
     """Unicode strings must pass through hpc_write without ASCII clamp."""
     if not _is_webview_available():
@@ -753,7 +797,9 @@ class FakeSSH:
     def resize_shell_pty(self, c, r):
         pass
 
-app = wx.App(False)
+app = wx.App.Get()
+if app is None:
+    app = wx.App(False)
 frame = wx.Frame(None, size=(900, 600))
 ssh = FakeSSH()
 panel = WxTerminalWebViewPanel(frame, ssh=ssh)
@@ -779,6 +825,9 @@ os._exit(0)
     assert result.returncode == 0, f"subprocess failed: {result.stdout}\n{result.stderr}"
 
 
+@pytest.mark.gui
+@pytest.mark.subprocess
+@pytest.mark.semantic
 def test_wx_terminal_multiline_paste():
     """Multiline paste must call terminal.paste (not local TextCtrl)."""
     if not _is_webview_available():
@@ -799,7 +848,9 @@ class FakeSSH:
     def resize_shell_pty(self, c, r):
         pass
 
-app = wx.App(False)
+app = wx.App.Get()
+if app is None:
+    app = wx.App(False)
 frame = wx.Frame(None, size=(900, 600))
 ssh = FakeSSH()
 panel = WxTerminalWebViewPanel(frame, ssh=ssh)
@@ -828,6 +879,7 @@ os._exit(0)
     assert result.returncode == 0, f"subprocess failed: {result.stdout}\n{result.stderr}"
 
 
+@pytest.mark.contract
 def test_wx_terminal_no_splitlines_in_hpc_write():
     """hpc_write must not use splitlines — preserves CR/ESC bytes."""
     src = pathlib.Path("src/hpc_gui/wx_terminal_webview.py").read_text(encoding="utf-8")
@@ -840,6 +892,9 @@ def test_wx_terminal_no_splitlines_in_hpc_write():
     assert "_safe_json_dumps" in hpc_section or "json.dumps" in hpc_section
 
 
+@pytest.mark.gui
+@pytest.mark.subprocess
+@pytest.mark.semantic
 def test_wx_terminal_input_chain_no_logging():
     """Input data must not be logged anywhere."""
     code = """
@@ -858,7 +913,9 @@ class FakeSSH:
     def resize_shell_pty(self, c, r):
         pass
 
-app = wx.App(False)
+app = wx.App.Get()
+if app is None:
+    app = wx.App(False)
 frame = wx.Frame(None, size=(900, 600))
 ssh = FakeSSH()
 panel = WxTerminalWebViewPanel(frame, ssh=ssh)
@@ -879,6 +936,9 @@ os._exit(0)
 # Wave 75: Header/Find/reconnect/lifecycle tests
 
 
+@pytest.mark.gui
+@pytest.mark.subprocess
+@pytest.mark.semantic
 def test_wx_terminal_find_in_xterm_buffer():
     if not _is_webview_available():
         pytest.skip("WebView backend unavailable")
@@ -896,7 +956,9 @@ class FakeSSH:
     def resize_shell_pty(self, c, r):
         pass
 
-app = wx.App(False)
+app = wx.App.Get()
+if app is None:
+    app = wx.App(False)
 frame = wx.Frame(None, size=(900, 600))
 ssh = FakeSSH()
 panel = WxTerminalWebViewPanel(frame, ssh=ssh)
@@ -918,6 +980,9 @@ os._exit(0)
     assert result.returncode == 0, f"subprocess failed: {result.stdout}\n{result.stderr}"
 
 
+@pytest.mark.gui
+@pytest.mark.subprocess
+@pytest.mark.semantic
 def test_wx_terminal_screen_state_readback_and_alternate_buffer():
     """Read the real xterm buffer and prove alternate-screen restoration."""
     if not _is_webview_available():
@@ -935,7 +1000,9 @@ class FakeSSH:
     def resize_shell_pty(self, cols, rows):
         pass
 
-app = wx.App(False)
+app = wx.App.Get()
+if app is None:
+    app = wx.App(False)
 frame = wx.Frame(None, size=(1000, 700))
 panel = WxTerminalWebViewPanel(frame, ssh=FakeSSH())
 sizer = wx.BoxSizer(wx.VERTICAL)
@@ -1009,6 +1076,8 @@ else:
     assert result.returncode == 0, f"subprocess failed: {result.stdout}\n{result.stderr}"
 
 
+@pytest.mark.gui
+@pytest.mark.subprocess
 def test_wx_terminal_header_dimensions_update():
     if not _is_webview_available():
         pytest.skip("WebView backend unavailable")
@@ -1027,7 +1096,9 @@ class FakeSSH:
     def resize_shell_pty(self, c, r):
         self.resizes.append((c, r))
 
-app = wx.App(False)
+app = wx.App.Get()
+if app is None:
+    app = wx.App(False)
 frame = wx.Frame(None, size=(900, 600))
 ssh = FakeSSH()
 panel = WxTerminalWebViewPanel(frame, ssh=ssh)
@@ -1042,6 +1113,8 @@ os._exit(0)
     assert result.returncode == 0, f"subprocess failed: {result.stdout}\n{result.stderr}"
 
 
+@pytest.mark.gui
+@pytest.mark.subprocess
 def test_wx_terminal_reconnect_set_ssh():
     if not _is_webview_available():
         pytest.skip("WebView backend unavailable")
@@ -1060,7 +1133,9 @@ class FakeSSH:
     def resize_shell_pty(self, c, r):
         pass
 
-app = wx.App(False)
+app = wx.App.Get()
+if app is None:
+    app = wx.App(False)
 frame = wx.Frame(None, size=(900, 600))
 ssh1 = FakeSSH("ssh1")
 ssh2 = FakeSSH("ssh2")
@@ -1080,6 +1155,9 @@ os._exit(0)
 # ── Wave 77: Generation guard, Find navigation, Header status, Lifecycle ──
 
 
+@pytest.mark.gui
+@pytest.mark.subprocess
+@pytest.mark.concurrency
 def test_wx_terminal_generation_guard_rejects_stale_output():
     """After reconnect, delayed output from old SSH must be rejected."""
     if not _is_webview_available():
@@ -1097,7 +1175,9 @@ class FakeSSH:
     def send_shell_input(self, d): return True
     def resize_shell_pty(self, c, r): pass
 
-app = wx.App(False)
+app = wx.App.Get()
+if app is None:
+    app = wx.App(False)
 frame = wx.Frame(None, size=(900, 600))
 ssh1 = FakeSSH("ssh1")
 ssh2 = FakeSSH("ssh2")
@@ -1142,6 +1222,9 @@ os._exit(0)
     assert result.returncode == 0, f"subprocess failed: {result.stdout}\n{result.stderr}"
 
 
+@pytest.mark.gui
+@pytest.mark.subprocess
+@pytest.mark.semantic
 def test_wx_terminal_find_next_and_prev():
     """Find, FindNext, FindPrev must advance through matches with wraparound."""
     if not _is_webview_available():
@@ -1157,9 +1240,12 @@ class FakeSSH:
     def send_shell_input(self, d): return True
     def resize_shell_pty(self, c, r): pass
 
-app = wx.App(False)
+app = wx.App.Get()
+if app is None:
+    app = wx.App(False)
 frame = wx.Frame(None, size=(900, 600))
-panel = WxTerminalWebViewPanel(frame, ssh=FakeSSH())
+current_ssh = FakeSSH()
+panel = WxTerminalWebViewPanel(frame, ssh=current_ssh)
 panel._ready = True
 panel._is_parity = True
 
@@ -1200,6 +1286,8 @@ os._exit(0)
     assert result.returncode == 0, f"subprocess failed: {result.stdout}\n{result.stderr}"
 
 
+@pytest.mark.gui
+@pytest.mark.subprocess
 def test_wx_terminal_header_status_updates():
     """Header must show Disconnected/Connected based on SSH attachment state."""
     if not _is_webview_available():
@@ -1217,7 +1305,9 @@ class FakeSSH:
     def send_shell_input(self, d): return True
     def resize_shell_pty(self, c, r): pass
 
-app = wx.App(False)
+app = wx.App.Get()
+if app is None:
+    app = wx.App(False)
 frame = wx.Frame(None, size=(900, 600))
 # Start without SSH
 panel = WxTerminalWebViewPanel(frame, ssh=None)
@@ -1253,6 +1343,9 @@ os._exit(0)
     assert result.returncode == 0, f"subprocess failed: {result.stdout}\n{result.stderr}"
 
 
+@pytest.mark.gui
+@pytest.mark.subprocess
+@pytest.mark.resource
 def test_wx_terminal_destroy_before_ready_no_xfail():
     """Destroy before ready must not crash - pending cleared, callbacks suppressed."""
     if not _is_webview_available():
@@ -1268,7 +1361,9 @@ class FakeSSH:
     def send_shell_input(self, d): return True
     def resize_shell_pty(self, c, r): pass
 
-app = wx.App(False)
+app = wx.App.Get()
+if app is None:
+    app = wx.App(False)
 frame = wx.Frame(None, size=(900, 600))
 panel = WxTerminalWebViewPanel(frame, ssh=FakeSSH())
 # Write before ready
@@ -1294,6 +1389,9 @@ os._exit(0)
     assert result.returncode == 0, f"subprocess failed: {result.stdout}\n{result.stderr}"
 
 
+@pytest.mark.gui
+@pytest.mark.subprocess
+@pytest.mark.semantic
 def test_wx_terminal_large_pre_ready_output():
     """Large pre-ready output burst must be buffered and flushed in order."""
     if not _is_webview_available():
@@ -1309,7 +1407,9 @@ class FakeSSH:
     def send_shell_input(self, d): return True
     def resize_shell_pty(self, c, r): pass
 
-app = wx.App(False)
+app = wx.App.Get()
+if app is None:
+    app = wx.App(False)
 frame = wx.Frame(None, size=(900, 600))
 panel = WxTerminalWebViewPanel(frame, ssh=FakeSSH())
 # Write 500KB of data before ready
@@ -1332,14 +1432,40 @@ os._exit(0)
     assert result.returncode == 0, f"subprocess failed: {result.stdout}\n{result.stderr}"
 
 
+@pytest.mark.gui
+@pytest.mark.subprocess
 def test_wx_terminal_fallback_sets_non_parity():
-    """When WebView is unavailable, panel must be marked non-parity."""
-    from hpc_gui.wx_terminal_webview import build_terminal_panel
-    from hpc_gui.wx_terminal_webview import WxTerminalWebViewPanel
-    assert hasattr(WxTerminalWebViewPanel, "__init__"), "WxTerminalWebViewPanel must exist"
-    assert callable(build_terminal_panel), "build_terminal_panel must be callable"
+    """Direct WebView-panel construction shows a diagnostic fallback as non-parity."""
+    code = """
+import os, sys
+sys.path.insert(0, "src")
+import wx
+import hpc_gui.wx_terminal_webview as renderer
+renderer._is_webview_available = lambda: False
+app = wx.App.Get()
+if app is None:
+    app = wx.App(False)
+frame = wx.Frame(None, size=(600, 400))
+panel = renderer.WxTerminalWebViewPanel(frame)
+frame.Show()
+wx.Yield()
+controls = panel._wx_terminal_controls
+assert panel._wx_terminal_is_webview is False
+assert panel._wx_terminal_is_parity is False
+assert panel._webview is None
+assert controls["output"].IsShown()
+assert "WebView backend unavailable" in panel._diagnostic_text
+assert "WebView backend unavailable" in controls["output"].GetValue()
+frame.Destroy()
+os._exit(0)
+"""
+    result = _run_subprocess_test(code)
+    assert result.returncode == 0, f"fallback state failed: {result.stdout}\n{result.stderr}"
 
 
+@pytest.mark.gui
+@pytest.mark.subprocess
+@pytest.mark.resource
 def test_wx_terminal_100_reconnects_no_leak():
     """100 reconnects must not leak subscribers or crash."""
     if not _is_webview_available():
@@ -1356,19 +1482,25 @@ class FakeSSH:
     def send_shell_input(self, d): return True
     def resize_shell_pty(self, c, r): pass
 
-app = wx.App(False)
+app = wx.App.Get()
+if app is None:
+    app = wx.App(False)
 frame = wx.Frame(None, size=(900, 600))
-panel = WxTerminalWebViewPanel(frame, ssh=FakeSSH())
+current_ssh = FakeSSH()
+panel = WxTerminalWebViewPanel(frame, ssh=current_ssh)
 panel._ready = True
 
 initial_gen = panel._generation
 for i in range(100):
     new_ssh = FakeSSH()
     panel.set_ssh(new_ssh)
+    assert current_ssh._wx_output_subscribers == [], f"old subscriber retained at {i}"
     assert panel._generation == initial_gen + i + 1, f"generation mismatch at {i}"
     assert len(new_ssh._wx_output_subscribers) == 1, f"subscriber leak at {i}: {len(new_ssh._wx_output_subscribers)}"
+    current_ssh = new_ssh
 
 panel.close()
+assert current_ssh._wx_output_subscribers == [], "close retained the active SSH subscriber"
 frame.Destroy()
 os._exit(0)
 """
@@ -1376,6 +1508,8 @@ os._exit(0)
     assert result.returncode == 0, f"subprocess failed: {result.stdout}\n{result.stderr}"
 
 
+@pytest.mark.gui
+@pytest.mark.subprocess
 def test_wx_terminal_embedded_connect_to_ssh():
     """Embedded terminal created with ssh=None, then set_ssh must attach."""
     if not _is_webview_available():
@@ -1397,7 +1531,9 @@ class FakeSSH:
     def resize_shell_pty(self, c, r):
         self.resizes.append((c, r))
 
-app = wx.App(False)
+app = wx.App.Get()
+if app is None:
+    app = wx.App(False)
 frame = wx.Frame(None, size=(900, 600))
 panel = build_terminal_panel(frame, ssh=None, lifecycle=None)
 sizer = wx.BoxSizer(wx.VERTICAL)

@@ -56,6 +56,8 @@ def _close(frame):
         wx.Yield()
 
 
+@pytest.mark.gui
+@pytest.mark.wx
 def test_inner_tabs_are_jobs_cluster_details_files_outputs():
     app, frame, panel = _build_panel()
     try:
@@ -70,6 +72,8 @@ def test_inner_tabs_are_jobs_cluster_details_files_outputs():
         _close(frame)
 
 
+@pytest.mark.gui
+@pytest.mark.wx
 def test_selecting_a_job_updates_details():
     app, frame, panel = _build_panel()
     try:
@@ -93,6 +97,8 @@ def test_selecting_a_job_updates_details():
         _close(frame)
 
 
+@pytest.mark.gui
+@pytest.mark.wx
 def test_no_selection_state_shows_empty_state():
     app, frame, panel = _build_panel()
     try:
@@ -106,6 +112,8 @@ def test_no_selection_state_shows_empty_state():
         _close(frame)
 
 
+@pytest.mark.gui
+@pytest.mark.wx
 def test_go_to_jobs_switches_to_jobs_tab():
     app, frame, panel = _build_panel()
     try:
@@ -120,6 +128,8 @@ def test_go_to_jobs_switches_to_jobs_tab():
         _close(frame)
 
 
+@pytest.mark.gui
+@pytest.mark.wx
 def test_accounting_expand_collapse():
     app, frame, panel = _build_panel()
     try:
@@ -140,6 +150,8 @@ def test_accounting_expand_collapse():
         _close(frame)
 
 
+@pytest.mark.gui
+@pytest.mark.wx
 def test_cluster_servers_visible_without_selected_job_when_provider_supports():
     app, frame, panel = _build_panel(
         has_status_capability=lambda: True,
@@ -158,17 +170,25 @@ def test_cluster_servers_visible_without_selected_job_when_provider_supports():
             if ctrls["jobs"].GetItemCount() >= 1:
                 break
             wx.MilliSleep(10)
-        _select_job(panel, 0)
+        assert ctrls["jobs"].GetFirstSelected() == -1
+        ctrls["btn_refresh_lssrv"].ProcessEvent(
+            wx.CommandEvent(wx.wxEVT_BUTTON, ctrls["btn_refresh_lssrv"].GetId())
+        )
         for _ in range(50):
             wx.Yield()
             if ctrls["cluster_status_text"].GetLabel() == t("jobs_outputs.cluster_status_loaded"):
                 break
             wx.MilliSleep(10)
         assert ctrls["cluster_status_text"].GetLabel() == t("jobs_outputs.cluster_status_loaded")
+        assert ctrls["jobs"].GetFirstSelected() == -1
+        assert ctrls["cluster_servers_table"].GetItemCount() == 1
+        assert ctrls["cluster_servers_table"].IsShown()
     finally:
         _close(frame)
 
 
+@pytest.mark.gui
+@pytest.mark.wx
 def test_cluster_servers_table_and_raw_result_are_visible():
     load_language("en")
     app, frame, panel = _build_panel(
@@ -208,6 +228,8 @@ def test_cluster_servers_table_and_raw_result_are_visible():
         _close(frame)
 
 
+@pytest.mark.gui
+@pytest.mark.wx
 def test_raw_result_callback_is_parsed_and_preserved_for_details_and_accounting():
     app, frame, panel = _build_panel(
         show_job_details=lambda jid: RawCommandResult.from_response(
@@ -235,6 +257,9 @@ def test_raw_result_callback_is_parsed_and_preserved_for_details_and_accounting(
         _close(frame)
 
 
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
 def test_cluster_servers_hidden_for_unsupported_provider():
     app, frame, panel = _build_panel()
     try:
@@ -244,7 +269,16 @@ def test_cluster_servers_hidden_for_unsupported_provider():
         _close(frame)
 
 
-def test_raw_server_status_opens():
+@pytest.mark.gui
+@pytest.mark.wx
+def test_raw_server_status_opens(monkeypatch):
+    from hpc_gui import wx_raw_viewer
+
+    shown = []
+    monkeypatch.setattr(
+        wx_raw_viewer, "show_raw_viewer",
+        lambda parent, result, **kwargs: shown.append((parent, result, kwargs)),
+    )
     app, frame, panel = _build_panel(
         has_status_capability=lambda: True,
         refresh_lssrv=lambda _job_id: (
@@ -262,17 +296,24 @@ def test_raw_server_status_opens():
             if ctrls["jobs"].GetItemCount() >= 1:
                 break
             wx.MilliSleep(10)
-        _select_job(panel, 0)
         for _ in range(50):
             wx.Yield()
             if ctrls["cluster_status_text"].GetLabel() == t("jobs_outputs.cluster_status_loaded"):
                 break
             wx.MilliSleep(10)
         assert ctrls["cluster_status_text"].GetLabel() == t("jobs_outputs.cluster_status_loaded")
+        ctrls["btn_raw_server_status"].ProcessEvent(
+            wx.CommandEvent(wx.wxEVT_BUTTON, ctrls["btn_raw_server_status"].GetId())
+        )
+        assert len(shown) == 1
+        assert shown[0][1].source_id == "lssrv"
+        assert "short 8 32 0 1 2" in shown[0][1].stdout
     finally:
         _close(frame)
 
 
+@pytest.mark.gui
+@pytest.mark.wx
 def test_raw_job_details_opens():
     app, frame, panel = _build_panel(
         show_job_details=lambda jid: f"JobId={jid} JobName=test WorkDir=/work/{jid}",
@@ -290,6 +331,8 @@ def test_raw_job_details_opens():
         _close(frame)
 
 
+@pytest.mark.gui
+@pytest.mark.wx
 def test_raw_accounting_opens():
     app, frame, panel = _build_panel(
         refresh_sacct=lambda jid: f"JOBID|STATE|ELAPSED\n{jid}|RUNNING|00:05:00",
@@ -307,6 +350,8 @@ def test_raw_accounting_opens():
         _close(frame)
 
 
+@pytest.mark.integration
+@pytest.mark.wx
 def test_parser_failure_leaves_raw_viewer_usable():
     def failing_sacct(_jid):
         raise RuntimeError("sacct failed")
@@ -325,6 +370,9 @@ def test_parser_failure_leaves_raw_viewer_usable():
         _close(frame)
 
 
+@pytest.mark.integration
+@pytest.mark.wx
+@pytest.mark.concurrency
 def test_ab_stale_raw_details_result_rejected():
     slow_details = []
 
@@ -358,6 +406,8 @@ def test_ab_stale_raw_details_result_rejected():
         _close(frame)
 
 
+@pytest.mark.gui
+@pytest.mark.wx
 def test_runtime_language_refresh():
     load_language("en")
     app, frame, panel = _build_panel()
@@ -382,6 +432,7 @@ def test_runtime_language_refresh():
         _close(frame)
 
 
+@pytest.mark.unit
 def test_raw_command_result_model():
     r = RawCommandResult.from_response(
         source_id="scontrol",

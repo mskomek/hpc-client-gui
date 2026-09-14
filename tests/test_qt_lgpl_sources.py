@@ -4,7 +4,11 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
+
 from scripts.generate_qt_lgpl_sources import write_sources
+
+pytestmark = [pytest.mark.release, pytest.mark.license]
 
 
 class QtLgplSourcesTests(unittest.TestCase):

@@ -5,6 +5,8 @@ import pytest
 
 from hpc_gui.services.nersc_quota import parse_nersc_showquota_json
 
+pytestmark = pytest.mark.contract
+
 
 def test_nersc_json_parser_reads_space_and_inode_quota():
     output = (Path(__file__).parent / "fixtures/quota/nersc/showquota.json").read_text()
