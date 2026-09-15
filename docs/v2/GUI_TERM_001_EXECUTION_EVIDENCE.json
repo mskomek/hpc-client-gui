@@ -2,42 +2,117 @@
   "wave": 77,
   "requirement": "GUI-TERM-001",
   "status": "PARTIAL",
-  "branch": "develop",
-  "commit": "HEAD",
-  "renderer": "wx.html2.WebView + xterm.js 5.x",
+  "status_rule": "COVERED requires every canonical category below to be proven at the packaged layer against the current artifact. Source/runtime evidence alone is never COVERED.",
+  "recorded_utc": "2026-09-15",
+  "application_commit": "55eb70920f5cac27722ce76a435f0a318716c5c2",
+  "renderer": "wx.html2.WebView (WebView2 on Windows) + xterm.js 5.x",
   "bridge": "single JSON postMessage (hpc/hpc_msg)",
-  "pty_adapter": "FakeSSH disposable fixture",
-  "tests_executed": [
-    "test_panel_sends_sgr_payload_to_terminal_bridge",
-    "test_panel_preserves_carriage_return_bridge_payload",
-    "test_panel_preserves_unicode_output_payload",
-    "test_panel_sends_multiline_paste_to_bridge",
-    "test_panel_forwards_resize_to_ssh_seam",
-    "test_repeated_input_forwarding_preserves_order",
-    "test_repeated_resize_requests_are_deduplicated",
-    "test_reconnect_replaces_output_subscriber",
-    "test_repeated_font_find_clear_bridge_calls_stay_bounded",
-    "test_close_after_queued_output_is_idempotent",
-    "test_wx_terminal_generation_guard_rejects_stale_output",
-    "test_wx_terminal_find_next_and_prev",
-    "test_wx_terminal_header_status_updates",
-    "test_wx_terminal_destroy_before_ready_no_xfail",
-    "test_wx_terminal_large_pre_ready_output",
-    "test_wx_terminal_100_reconnects_no_leak",
-    "test_wx_terminal_embedded_connect_to_ssh",
-    "test_wx_terminal_input_chain_ctrl_a_to_z",
-    "test_wx_terminal_resize_chain_to_ssh",
-    "test_wx_terminal_unicode_input_output",
-    "test_wx_terminal_screen_state_readback_and_alternate_buffer"
-  ],
-  "invariants": {
+  "pty_adapter": "FakeSSH / MockSSHServer disposable fixtures",
+  "evidence_layers": {
+    "source_runtime": "pytest against the source tree with a real wx.App and a real WebView; the production adapter and controller are exercised, the backend is a disposable SSH/PTY fixture.",
+    "packaged_current": "scripts/wx_packaged_smoke.py driven against the artifact built from this commit.",
+    "packaged_historical": "Superseded. Evidence from an earlier artifact is not evidence for the current one and is not carried forward here."
+  },
+  "current_packaged_artifact": {
+    "path": "dist/hpc-client-gui/hpc-client-gui.exe",
+    "sha256": "b8fb56d79a086482b2c9714b19be8eebb4966c674366bcf539b0d6afa2a9cf2e",
+    "file_version": "1.5.9",
+    "built_from_commit": "55eb70920f5cac27722ce76a435f0a318716c5c2",
+    "published": false,
+    "smoke_run": "INCOMPLETE",
+    "smoke_run_note": "Three runs on 2026-09-15. The furthest run aborted at the terminal keyboard stage with runtime='keyboard_input:foreground_lost'; two later runs timed out in phase 1. Both are environment guards, not observed product failures: the smoke drives real keyboard input into the packaged window and requires an interactive desktop session that keeps it in the foreground. No run completed, so no packaged check below is claimed as a current PASS."
+  },
+  "canonical_categories": {
+    "A_source_runtime_terminal_tests": {
+      "status": "PASS",
+      "layer": "source_runtime",
+      "tests": [
+        "tests/test_wx_terminal_parity_evidence.py (11 tests)",
+        "tests/test_wx_terminal_webview.py (20 tests)",
+        "tests/test_wx_terminal_behavioral.py",
+        "tests/test_terminal_bridge.py",
+        "tests/test_terminal_pty_wire.py"
+      ]
+    },
+    "B_packaged_webview2_initialization": {
+      "status": "PARTIAL",
+      "note": "wx_runtime_started and main_frame_created reached PASS in the furthest run before it aborted; the run did not complete, so this is not recorded as a current PASS.",
+      "gap": "A completed packaged smoke run on the current artifact."
+    },
+    "C_packaged_keyboard_to_backend": {
+      "status": "NOT EVIDENCED",
+      "packaged_check": "pty_input_output",
+      "gap": "Interactive Windows desktop session that keeps the packaged window in the foreground for the duration of the smoke."
+    },
+    "D_backend_output_to_rendered_readback": {
+      "status": "NOT EVIDENCED",
+      "packaged_check": "terminal_readback",
+      "source_runtime": "PASS (tests/test_wx_terminal_webview.py::test_wx_terminal_screen_state_readback_and_alternate_buffer)",
+      "gap": "Same as C."
+    },
+    "E_unicode_turkish_japanese": {
+      "status": "PARTIAL",
+      "source_runtime": "PASS (tests/test_wx_terminal_webview.py::test_wx_terminal_unicode_input_output, tests/test_wx_terminal_parity_evidence.py::test_panel_preserves_unicode_output_payload)",
+      "packaged": "NOT EVIDENCED",
+      "gap": "scripts/wx_packaged_smoke.py has no Unicode terminal check; Turkish and Japanese packaged terminal I/O is unproven at the packaged layer."
+    },
+    "F_resize": {
+      "status": "PARTIAL",
+      "source_runtime": "PASS (test_panel_forwards_resize_to_ssh_seam, test_repeated_resize_requests_are_deduplicated, test_wx_terminal_resize_chain_to_ssh)",
+      "packaged": "pty_resize reached PASS in the aborted run; not claimed, because the run did not complete."
+    },
+    "G_clipboard_paste": {
+      "status": "PARTIAL",
+      "source_runtime": "PASS (test_panel_sends_multiline_paste_to_bridge, test_wx_terminal_multiline_paste)",
+      "packaged": "NOT EVIDENCED",
+      "gap": "No packaged smoke check exists for clipboard/paste."
+    },
+    "H_find_search": {
+      "status": "PARTIAL",
+      "source_runtime": "PASS (test_wx_terminal_find_in_xterm_buffer, test_wx_terminal_find_next_and_prev, test_repeated_font_find_clear_bridge_calls_stay_bounded)",
+      "packaged": "NOT EVIDENCED",
+      "gap": "No packaged smoke check exists for find/search."
+    },
+    "I_alternate_screen": {
+      "status": "PARTIAL",
+      "source_runtime": "PASS (test_wx_terminal_screen_state_readback_and_alternate_buffer)",
+      "packaged": "NOT EVIDENCED",
+      "gap": "No packaged smoke check exists for the alternate buffer."
+    },
+    "J_reconnect": {
+      "status": "PARTIAL",
+      "source_runtime": "PASS (test_reconnect_replaces_output_subscriber, test_wx_terminal_100_reconnects_no_leak)",
+      "packaged": "NOT EVIDENCED",
+      "gap": "No packaged smoke check exists for reconnect."
+    },
+    "K_close_reopen": {
+      "status": "PARTIAL",
+      "source_runtime": "PASS (test_wx_terminal_close_releases_native_webview, test_close_after_queued_output_is_idempotent, test_wx_terminal_destroy_before_ready_no_xfail)",
+      "packaged": "NOT EVIDENCED",
+      "gap": "No packaged smoke check exists for terminal close/reopen."
+    },
+    "L_resource_cleanup": {
+      "status": "PARTIAL",
+      "source_runtime": "PASS (bounded pending queue, generation guard, no duplicate subscribers, no callbacks into destroyed controls)",
+      "packaged": "NOT EVIDENCED",
+      "gap": "clean_shutdown never ran to completion on the current artifact."
+    }
+  },
+  "invariants_source_runtime": {
     "duplicate_output_subscribers": "0 (verified in reconnect stress)",
     "callbacks_into_destroyed": "0 (close mid-flight + destroy-before-ready tests)",
     "stale_session_output": "0 (generation guard in set_ssh + _safe_deliver)",
     "unbounded_accumulation": "0 (bounded queue MAX_PENDING_BYTES=2MB)"
   },
-  "known_gaps": [
-    "Windows Python 3.14 packaged wx WebView2 smoke is PASS; full packaged PTY/file/job flow remains manual",
-    "Linux/macOS WebKit packaged runtime not tested"
+  "exact_remaining_gaps": [
+    "A completed scripts/wx_packaged_smoke.py run against artifact b8fb56d7..., on an interactive Windows desktop session that keeps the packaged window in the foreground. This alone would close B, C, D, F, and L.",
+    "Packaged-layer Unicode terminal check (Turkish and Japanese input and rendered read-back). No such check exists in the packaged smoke today.",
+    "Packaged-layer checks for clipboard/paste, find/search, alternate screen, and terminal close/reopen. No such checks exist in the packaged smoke today.",
+    "Linux and macOS packaged WebKit runtime: no build or run attempted; no environment available."
+  ],
+  "explicitly_not_claimed": [
+    "Windows packaged application overall is NOT PASS for this artifact: no smoke run completed.",
+    "A packaged WebView2 smoke PASS from an earlier artifact is not evidence for this artifact and is not reused.",
+    "Full packaged PTY terminal parity is NOT proven; the source/runtime layer proves the chain, the packaged layer does not."
   ]
 }
