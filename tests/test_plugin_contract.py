@@ -18,7 +18,11 @@ from pathlib import Path
 
 import pytest
 
-from hpc_gui.plugins.compatibility import is_app_compatible
+from hpc_gui.plugins.compatibility import (
+    effective_requires_app,
+    is_app_compatible,
+    validate_compatibility_override,
+)
 from hpc_gui.plugins.installer import InstallError, install_plugin_from_registry
 from hpc_gui.plugins.loader import load_installed_plugins
 from hpc_gui.plugins.registry_client import (
@@ -33,6 +37,7 @@ from hpc_gui.plugins.schema_compat import (
     schema_floor_error,
 )
 from hpc_gui.plugins.state import activate_version
+from hpc_gui.plugins.validator import validate_registry_dict
 
 # Current application release line under test (first schema-3/4 capable).
 CONTRACT_APP_VERSION = "1.5.9"
@@ -86,6 +91,71 @@ def test_real_registry_passes_repository_validator(plugins_repo: Path):
         assert not errors, f"registry validation failed: {errors}"
     finally:
         sys.path.remove(str(scripts_dir))
+
+
+@pytest.mark.contract
+def test_override_contract_agrees_across_both_repositories(plugins_repo: Path, registry: dict):
+    """Both sides must compute the same effective compatibility range.
+
+    The registry's own helper and the application's helper are separate
+    implementations behind a trust boundary; a drift between them would let
+    one repository honour a correction the other ignores.
+    """
+    scripts_dir = plugins_repo / "scripts"
+    sys.path.insert(0, str(scripts_dir))
+    try:
+        import schema_compatibility  # noqa: PLC0415
+
+        for entry in registry["plugins"]:
+            assert schema_compatibility.effective_requires_app(
+                entry
+            ) == effective_requires_app(entry)
+
+        corrected = dict(registry["plugins"][0])
+        corrected["compatibility_override"] = {
+            "requires_app": ">=99.0.0",
+            "reason": "contract check: narrowing correction",
+            "recorded": "2026-09-15",
+        }
+        assert schema_compatibility.override_error(corrected) is None
+        assert validate_compatibility_override(corrected) == []
+        assert (
+            schema_compatibility.effective_requires_app(corrected)
+            == effective_requires_app(corrected)
+            == ">=99.0.0"
+        )
+
+        widening = dict(registry["plugins"][0])
+        widening["compatibility_override"] = {
+            "requires_app": ">=0.1.0",
+            "reason": "contract check: illegal widening",
+        }
+        assert schema_compatibility.override_error(widening) is not None
+        assert validate_compatibility_override(widening) != []
+        assert effective_requires_app(widening) is None
+    finally:
+        sys.path.remove(str(scripts_dir))
+
+
+@pytest.mark.contract
+def test_real_registry_resolution_honours_a_narrowing_override(registry: dict):
+    """The production resolver, on the real registry, obeys an override."""
+    baseline = find_registry_entry(
+        registry, "org.hpcclient.truba", app_version=CONTRACT_APP_VERSION
+    )
+    patched = json.loads(json.dumps(registry))
+    for entry in patched["plugins"]:
+        if entry["id"] == "org.hpcclient.truba" and entry["version"] == baseline["version"]:
+            entry["compatibility_override"] = {
+                "requires_app": ">=99.0.0",
+                "reason": "contract check: withdraw the newest version",
+                "recorded": "2026-09-15",
+            }
+    assert validate_registry_dict(patched) == []
+    resolved = find_registry_entry(
+        patched, "org.hpcclient.truba", app_version=CONTRACT_APP_VERSION
+    )
+    assert resolved["version"] != baseline["version"]
 
 
 @pytest.mark.contract
