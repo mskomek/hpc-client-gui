@@ -22,7 +22,7 @@ from urllib.parse import urlsplit
 from packaging.version import InvalidVersion, Version
 
 from hpc_gui import __version__
-from hpc_gui.plugins.compatibility import is_app_compatible
+from hpc_gui.plugins.compatibility import entry_is_app_compatible
 from hpc_gui.plugins.storage import plugins_root
 from hpc_gui.plugins.validator import validate_registry_dict
 
@@ -178,9 +178,11 @@ def find_registry_entry(
     With ``version`` the exactly matching entry is returned. Without a
     version, the highest semantic version wins (PEP 440 ordering via
     ``packaging.version.Version``); registry order never matters. When
-    ``app_version`` is supplied, entries whose ``requires_app`` range does
-    not admit that release are skipped so a newer incompatible version
-    never shadows an older compatible one.
+    ``app_version`` is supplied, entries whose *effective* registry range
+    does not admit that release are skipped so a newer incompatible version
+    never shadows an older compatible one. Effective means a valid narrowing
+    ``compatibility_override`` wins over the published ``requires_app``; a
+    malformed or widening override makes the entry fail closed.
     """
     matches = [
         entry
@@ -211,7 +213,7 @@ def find_registry_entry(
     def _compatible(entry: dict[str, Any]) -> bool:
         if app_version is None:
             return True
-        return is_app_compatible(str(entry.get("requires_app", "")), app_version)
+        return entry_is_app_compatible(entry, app_version)
 
     if version is not None:
         found = by_version.get(version)
