@@ -34,7 +34,10 @@ from PySide6.QtWidgets import (
 
 from hpc_gui import __version__
 from hpc_gui.core.i18n import t
-from hpc_gui.plugins.compatibility import is_app_compatible
+from hpc_gui.plugins.compatibility import (
+    effective_requires_app,
+    entry_is_app_compatible,
+)
 from hpc_gui.plugins.installer import install_plugin_from_registry
 from hpc_gui.plugins.loader import load_installed_plugins
 from hpc_gui.plugins.registry_client import (
@@ -331,7 +334,7 @@ class PluginManagerDialog(QDialog):
             with_versions = [item for item in parsed if item[0] is not None]
             pool = (
                 [item for item in with_versions
-                 if is_app_compatible(str(item[1].get("requires_app", "")), self._app_version)]
+                 if entry_is_app_compatible(item[1], self._app_version)]
                 or with_versions
                 or parsed
             )
@@ -384,12 +387,11 @@ class PluginManagerDialog(QDialog):
         title.setStyleSheet("font-weight: 600;")
         grid.addWidget(title, 0, 0)
 
-        compatible = is_app_compatible(
-            str(entry.get("requires_app", "")), self._app_version
-        )
+        compatible = entry_is_app_compatible(entry, self._app_version)
         meta_bits = [
             f"{t('plugins.publisher')}: {entry.get('publisher', '')}",
-            f"{t('plugins.requires_app_label')} {entry.get('requires_app', '')}",
+            f"{t('plugins.requires_app_label')} "
+            f"{effective_requires_app(entry) or entry.get('requires_app', '')}",
             (
                 t("plugins.compatible_with_running")
                 if compatible
@@ -771,7 +773,7 @@ class PluginManagerDialog(QDialog):
             current = active.get(plugin_id)
             if not current or current == entry.get("version"):
                 continue
-            if not is_app_compatible(str(entry.get("requires_app", "")), self._app_version):
+            if not entry_is_app_compatible(entry, self._app_version):
                 continue
             if self._is_newer_version(str(entry.get("version", "")), current):
                 updates.append(entry)
@@ -814,7 +816,8 @@ class PluginManagerDialog(QDialog):
             f"{t('plugins.publisher')}: {entry.get('publisher', '')}",
             f"{t('plugins.version')}: {entry.get('version', '')}",
             f"{t('plugins.license')}: {entry.get('license', '—')}",
-            f"{t('plugins.requires_app_label')}: {entry.get('requires_app', '')}",
+            f"{t('plugins.requires_app_label')}: "
+            f"{effective_requires_app(entry) or entry.get('requires_app', '')}",
             (
                 f"{t('plugins.capabilities')}: "
                 + ", ".join(

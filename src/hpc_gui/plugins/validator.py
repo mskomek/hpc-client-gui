@@ -10,7 +10,10 @@ import re
 from pathlib import PurePosixPath
 from typing import Any
 
-from hpc_gui.plugins.compatibility import validate_requires_app
+from hpc_gui.plugins.compatibility import (
+    validate_compatibility_override,
+    validate_requires_app,
+)
 from hpc_gui.plugins.schema_compat import (
     SUPPORTED_CLUSTER_PROFILE_SCHEMAS,
     supported_schemas_label,
@@ -573,6 +576,13 @@ def validate_registry_dict(registry: Any) -> list[str]:
             errors.append(f"{label}: 'official' must be a boolean")
         errors.extend(
             f"{label}: {problem}" for problem in validate_requires_app(entry["requires_app"])
+        )
+        # Registry-level compatibility correction for an immutable published
+        # package. The application validates the field itself: the registry
+        # is a separate trust boundary, and an override that widens
+        # compatibility would advertise an install the app must refuse.
+        errors.extend(
+            f"{label}: {problem}" for problem in validate_compatibility_override(entry)
         )
         identity = (str(entry["id"]), str(entry["version"]))
         if identity in seen:
