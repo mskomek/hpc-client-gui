@@ -126,13 +126,7 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
     act_help = help_menu.Append(wx.ID_HELP, t("menu.help_center"))
     frame.Bind(wx.EVT_MENU, lambda _e: _dispatch("APP-HELP", frame, lifecycle, session_state), act_help)
     help_items["help"] = act_help
-    try:
-        from hpc_gui.wx_help import show_help as _show_help_check  # noqa: F401
-        act_tour = help_menu.Append(wx.ID_ANY, t("menu.quick_tour"))
-        frame.Bind(wx.EVT_MENU, lambda _e: _dispatch("APP-QUICKTOUR", frame, lifecycle, session_state), act_tour)
-        help_items["tour"] = act_tour
-    except Exception:
-        help_items["tour"] = None
+    help_items["tour"] = None
     help_menu.AppendSeparator()
     act_logs = help_menu.Append(wx.ID_ANY, t("menu.send_logs"))
     frame.Bind(wx.EVT_MENU, lambda _e: _dispatch("APP-SEND-LOGS", frame, lifecycle, session_state), act_logs)
@@ -2796,16 +2790,9 @@ def _dispatch(command_id: str, parent=None, lifecycle=None, session_state=None) 
         except Exception:
             pass
     elif command_id == "APP-ABOUT":
+        from hpc_gui.wx_about import show_about
         try:
-            import wx
-            from hpc_gui import __version__
-            wx.MessageBox(f"HPC Client GUI\nv{__version__}\nSSH · Slurm · X11 workflow manager", "About HPC Client GUI", wx.OK | wx.ICON_INFORMATION, parent)
-        except Exception:
-            pass
-    elif command_id == "APP-QUICKTOUR":
-        try:
-            # wx quick tour not implemented – safe no-op, do not claim parity
-            pass
+            show_about(parent=parent)
         except Exception:
             pass
     elif command_id in {"PLUGIN-BROWSE", "PLUGIN-MANAGE", "PLUGIN-UPDATES"}:
