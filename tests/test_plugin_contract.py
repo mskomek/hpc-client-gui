@@ -29,6 +29,7 @@ from hpc_gui.plugins.registry_client import (
 )
 from hpc_gui.plugins.schema_compat import (
     MIN_APP_VERSION_FOR_SCHEMA,
+    app_supports_schema,
     schema_floor_error,
 )
 from hpc_gui.plugins.state import activate_version
@@ -215,6 +216,40 @@ def test_truba_1_4_0_rejected_on_released_1_5_8(registry, local_fetcher, tmp_pat
 
 
 @pytest.mark.integration
+def test_registry_compatibility_claim_cannot_bypass_schema_rejection(
+    registry, local_fetcher, tmp_path: Path
+):
+    """Registry metadata never widens what the installer will accept.
+
+    A registry entry that claims (or is corrected by a registry-level
+    compatibility override to claim) an older floor still cannot make a
+    schema-3 payload installable on a release that validates schemas 1-2.
+    The installer's schema capability check is the final authority and
+    fails closed.
+    """
+    entry = dict(
+        find_registry_entry(
+            registry,
+            "org.hpcclient.truba",
+            version="1.4.0",
+            app_version=CONTRACT_APP_VERSION,
+        )
+    )
+    entry["requires_app"] = f">={RELEASED_APP_VERSION}"
+    with pytest.raises(InstallError, match="requires app >=1.5.9"):
+        install_plugin_from_registry(
+            entry,
+            root=tmp_path,
+            app_version=RELEASED_APP_VERSION,
+            fetcher=local_fetcher,
+        )
+    # The capability matrix agrees independently of any registry claim: the
+    # released 1.5.8 line never validates a schema-3 payload.
+    assert not app_supports_schema(RELEASED_APP_VERSION, 3)
+    assert app_supports_schema(CONTRACT_APP_VERSION, 3)
+
+
+@pytest.mark.integration
 def test_truba_1_4_0_installs_on_schema3_capable_release(
     registry, local_fetcher, tmp_path: Path
 ):
@@ -253,8 +288,24 @@ def test_truba_v2_plugin_installs_and_retains_structured_sections(
 
 
 @pytest.mark.contract
-def test_oldest_supported_app_line_still_resolves_a_version(registry: dict):
+def test_current_app_line_resolves_every_published_plugin(registry: dict):
+    """Nothing published may be unreachable by the current application line."""
     for plugin_id in sorted({entry["id"] for entry in registry["plugins"]}):
+        entry = find_registry_entry(
+            registry, plugin_id, app_version=CONTRACT_APP_VERSION
+        )
+        assert is_app_compatible(str(entry["requires_app"]), CONTRACT_APP_VERSION)
+
+
+@pytest.mark.contract
+def test_oldest_supported_app_line_still_resolves_a_version(registry: dict):
+    """Plugins that already shipped for the oldest served line keep one.
+
+    Plugins first published for a later release (the community cluster
+    providers declare ``>=1.5.8``) legitimately have no version for an older
+    line; that is a publication date, not a compatibility regression.
+    """
+    for plugin_id in ("org.hpcclient.truba", "org.hpcclient.fluent"):
         entry = find_registry_entry(
             registry, plugin_id, app_version=OLDEST_SUPPORTED_APP_VERSION
         )
