@@ -520,13 +520,20 @@ os._exit(0)
 
 @pytest.mark.reporting
 def test_generate_parity_evidence():
-    """Generate JSON evidence for GUI-TERM-001 behavioral parity."""
+    """Generate the source/runtime evidence record for GUI-TERM-001.
+
+    This is one evidence *layer*, not the requirement's status. It used to
+    overwrite ``GUI_TERM_001_EXECUTION_EVIDENCE.json`` on every run, which is
+    how that curated cross-layer record came to assert a packaged WebView2
+    PASS it had never observed. The cross-layer record is maintained by hand
+    and states packaged evidence per artifact; this test writes beside it.
+    """
     evidence = {
         "wave": 77,
         "requirement": "GUI-TERM-001",
-        "status": "PARTIAL",
+        "evidence_layer": "source_runtime",
+        "status": "source/runtime PASS; says nothing about any packaged artifact",
         "branch": "develop",
-        "commit": "HEAD",
         "renderer": "wx.html2.WebView + xterm.js 5.x",
         "bridge": "single JSON postMessage (hpc/hpc_msg)",
         "pty_adapter": "FakeSSH disposable fixture",
@@ -559,12 +566,15 @@ def test_generate_parity_evidence():
             "stale_session_output": "0 (generation guard in set_ssh + _safe_deliver)",
             "unbounded_accumulation": "0 (bounded queue MAX_PENDING_BYTES=2MB)",
         },
-        "known_gaps": [
-            "Windows Python 3.14 packaged wx WebView2 smoke is PASS; full packaged PTY/file/job flow remains manual",
-            "Linux/macOS WebKit packaged runtime not tested",
-        ],
+        "scope_note": (
+            "Every entry above is a source-tree run with a real wx.App and a "
+            "real WebView against a disposable SSH/PTY fixture. No packaged "
+            "artifact is exercised here, so nothing in this file is packaged "
+            "evidence. Packaged status per artifact lives in "
+            "docs/v2/GUI_TERM_001_EXECUTION_EVIDENCE.json."
+        ),
     }
-    out = pathlib.Path("docs/v2/GUI_TERM_001_EXECUTION_EVIDENCE.json")
+    out = pathlib.Path("docs/v2/GUI_TERM_001_SOURCE_RUNTIME_EVIDENCE.json")
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(evidence, indent=2), encoding="utf-8")
     assert out.exists()

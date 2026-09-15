@@ -1,0 +1,40 @@
+{
+  "wave": 77,
+  "requirement": "GUI-TERM-001",
+  "evidence_layer": "source_runtime",
+  "status": "source/runtime PASS; says nothing about any packaged artifact",
+  "branch": "develop",
+  "renderer": "wx.html2.WebView + xterm.js 5.x",
+  "bridge": "single JSON postMessage (hpc/hpc_msg)",
+  "pty_adapter": "FakeSSH disposable fixture",
+  "tests_executed": [
+    "test_panel_sends_sgr_payload_to_terminal_bridge",
+    "test_panel_preserves_carriage_return_bridge_payload",
+    "test_panel_preserves_unicode_output_payload",
+    "test_panel_sends_multiline_paste_to_bridge",
+    "test_panel_forwards_resize_to_ssh_seam",
+    "test_repeated_input_forwarding_preserves_order",
+    "test_repeated_resize_requests_are_deduplicated",
+    "test_reconnect_replaces_output_subscriber",
+    "test_repeated_font_find_clear_bridge_calls_stay_bounded",
+    "test_close_after_queued_output_is_idempotent",
+    "test_wx_terminal_generation_guard_rejects_stale_output",
+    "test_wx_terminal_find_next_and_prev",
+    "test_wx_terminal_header_status_updates",
+    "test_wx_terminal_destroy_before_ready_no_xfail",
+    "test_wx_terminal_large_pre_ready_output",
+    "test_wx_terminal_100_reconnects_no_leak",
+    "test_wx_terminal_embedded_connect_to_ssh",
+    "test_wx_terminal_input_chain_ctrl_a_to_z",
+    "test_wx_terminal_resize_chain_to_ssh",
+    "test_wx_terminal_unicode_input_output",
+    "test_wx_terminal_screen_state_readback_and_alternate_buffer"
+  ],
+  "invariants": {
+    "duplicate_output_subscribers": "0 (verified in reconnect stress)",
+    "callbacks_into_destroyed": "0 (close mid-flight + destroy-before-ready tests)",
+    "stale_session_output": "0 (generation guard in set_ssh + _safe_deliver)",
+    "unbounded_accumulation": "0 (bounded queue MAX_PENDING_BYTES=2MB)"
+  },
+  "scope_note": "Every entry above is a source-tree run with a real wx.App and a real WebView against a disposable SSH/PTY fixture. No packaged artifact is exercised here, so nothing in this file is packaged evidence. Packaged status per artifact lives in docs/v2/GUI_TERM_001_EXECUTION_EVIDENCE.json."
+}
