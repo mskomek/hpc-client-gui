@@ -132,6 +132,13 @@ def load_installed_plugins(
         return result
 
     disabled = read_disabled_ids(root)
+    # Cluster-profile identity is global: two plugins claiming the same
+    # profile_id must not silently shadow each other. Iteration below is
+    # sorted by plugin id, so the winner is deterministic and the loser is
+    # diagnosed instead of quietly dropped. A colliding plugin is rejected
+    # whole rather than half-registered, so no profile set is ever partially
+    # applied; the same rule catches a plugin colliding with itself.
+    claimed_profile_ids: dict[str, str] = {}
     id_pattern = re.compile(r"^[a-z][a-z0-9]*(?:\.[a-z0-9]+)+$")
     for plugin_id, version in sorted(active.items()):
         if plugin_id in disabled:
@@ -228,6 +235,21 @@ def load_installed_plugins(
             if error or profile is None:
                 profile_failed = True
                 result.problems.append(PluginProblem(plugin_id, version, f"invalid cluster profile: {error}"))
+                break
+            owner = claimed_profile_ids.get(profile.profile_id) or (
+                f"{plugin_id}@{version}"
+                if any(seen.profile_id == profile.profile_id for seen in profiles)
+                else None
+            )
+            if owner is not None:
+                profile_failed = True
+                result.problems.append(
+                    PluginProblem(
+                        plugin_id,
+                        version,
+                        f"duplicate cluster profile id {profile.profile_id!r} already provided by {owner}",
+                    )
+                )
                 break
             profiles.append(profile)
 
@@ -352,6 +374,11 @@ def load_installed_plugins(
         except Exception as exc:
             logger.warning("Failed to parse ui_contributions for plugin %s: %s", manifest.id, exc, exc_info=exc)
             plugin_menu_contribution = None
+
+        # Claim the profile ids only once every gate has passed, so a plugin
+        # that is rejected later cannot reserve an id it never registers.
+        for profile in profiles:
+            claimed_profile_ids[profile.profile_id] = f"{plugin_id}@{version}"
 
         result.plugins.append(
             InstalledPlugin(
