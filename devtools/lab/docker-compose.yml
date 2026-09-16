@@ -1,0 +1,28 @@
+# Local HPC lab — one command to get a real SSH/SFTP/Slurm target.
+#
+#   docker compose -f devtools/lab/docker-compose.yml up -d --build
+#   ssh -p 2222 hpctest@127.0.0.1        # password: hpctest
+#   docker compose -f devtools/lab/docker-compose.yml down -v
+#
+# Bound to 127.0.0.1 on purpose: this fixture has fixed test-only credentials
+# and must never be reachable from outside the machine.
+services:
+  hpclab:
+    build:
+      context: .
+    image: hpc-client-gui-lab:latest
+    container_name: hpclab
+    hostname: hpclab
+    ports:
+      - "127.0.0.1:2222:22"
+    # Slurm needs to send signals across the process tree it tracks.
+    cap_add:
+      - SYS_PTRACE
+    tmpfs:
+      - /run
+    healthcheck:
+      test: ["CMD-SHELL", "sinfo -h -o %T | grep -q idle && pgrep -x sshd >/dev/null"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 40s

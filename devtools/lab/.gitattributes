@@ -1,0 +1,6 @@
+# The container runs these verbatim; CRLF breaks the shebang.
+*.sh text eol=lf
+entrypoint.sh text eol=lf
+Dockerfile text eol=lf
+*.conf text eol=lf
+*.yml text eol=lf
