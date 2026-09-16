@@ -46,7 +46,7 @@ Open P1: `W01-PLUGIN-PIN-001` — live plugin revision is known from `git ls-rem
 
 Open P2/P3: 0 new W01 closure defects.
 
-Pending: successful plugin `develop` fetch/pin and a normal pytest run with a writable temp root. The host's pytest temp-root locks are currently denied. A retry of the plugin fetch was rejected by the execution approval usage limit.
+Pending: successful plugin `develop` fetch/pin. The normal W01 pytest run is now green with an explicit writable temp root. A retry of the plugin fetch was rejected by the execution approval usage limit.
 
 Last exact commands:
 
@@ -105,11 +105,11 @@ The controlled current-source launch observed `WX_RUNTIME=wx`, `FRAME=Frame`, `N
 
 | Evidence | Command | Exit | Result | Does not prove |
 |---|---|---:|---|---|
-| `EV-W01-TEST-001` | `pytest -q tests/test_wx_shell_w01_truth.py tests/test_w01_sensitivity.py` | 1 | 19 setup errors from denied pytest temp-root locks | product regression result |
+| `EV-W01-TEST-001` | `python -m pytest -q --basetemp=.w01-pytest-run tests/test_wx_shell_w01_truth.py tests/test_w01_sensitivity.py` | 0 | 19 passed, 0 failed, 0 skipped | only the dedicated W01 suite |
 | `EV-W01-TEST-002` | direct invocation of all actual W01 test functions after restoration | 0 | 19 assertions pass | pytest fixture integration |
 | `EV-W01-R5-002/003` | controlled real wx runtime probes | 0 | shell/About runtime passed | packaged/external behavior |
 
-No assertion, skip, or xfail was weakened. The pytest failure is recorded as an environment failure, not relabelled as a product pass.
+No assertion, skip, or xfail was weakened. The earlier temp-root failure is superseded by EV-W01-TEST-001; the explicit writable-root rerun is the current test evidence.
 
 ## 5. Cross-document and downstream consistency
 
@@ -136,7 +136,7 @@ No assertion, skip, or xfail was weakened. The pytest failure is recorded as an 
 | FIX-W01-001 detector and sensitivity | VERIFIED |
 | FIX-W01-002 detector and sensitivity | VERIFIED |
 | About visible GUI/runtime proof | VERIFIED |
-| Exact test counts recorded | VERIFIED per command |
+| Exact test counts recorded | VERIFIED: 19 passed, 0 failed, 0 skipped |
 | Exactly one canonical report | VERIFIED |
 | Historical reports superseded | VERIFIED |
 | SHA/evidence identity | PARTIAL — report-only closure is identified; plugin fetch blocked |
