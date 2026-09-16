@@ -258,6 +258,28 @@
 | `application-tools` | Plugin manifest | SUPPORTED |
 | `linter-tool` | Plugin manifest (trusted tool) | SUPPORTED |
 
+### 6f. W02 Addendum — Evidence-Backed Provider Capability States
+
+Added by Wave 02 (`docs/wave-reports/v2/WAVE_V2_FINAL_02_REPORT.md`). The W01
+rows above stay in the ledger unchanged; this table records the verification
+owner and the evidence class that actually backs each provider-dependent state.
+
+| Capability / surface | W01 state | W02 verified state | Evidence class | Evidence | Verification owner |
+|---|---|---|---|---|---|
+| Provider template reaches runtime intact | not classified | VERIFIED | source contract + integration test | `EV-W02-AFTER-001` (`test_stored_plugin_template_keeps_contract_and_capabilities`) | W02 |
+| Cluster-profile identity uniqueness | not classified | VERIFIED | integration test | `EV-W02-AFTER-001` (`test_duplicate_profile_id_is_rejected_deterministically`) | W02 |
+| Plugin load failure isolation | not classified | VERIFIED | integration test | `EV-W02-AFTER-001` (`test_duplicate_rejection_does_not_disable_unrelated_plugins`) | W02 |
+| Quota controls (per provider) | SUPPORTED | SUPPORTED (declaration + gate only) | source contract + unit test | `quota_monitor.quota_gate` six-state contract; TRUBA 1.5.0 declares quota disabled | W02 declaration; **W03** live probe |
+| Cluster self-test button | REQUIRES_EXTERNAL_VALIDATION | unchanged | — | — | **W03** |
+| `slurm.scontrol.job` adapter | REQUIRES_EXTERNAL_VALIDATION | reachable from a saved profile (was silently unreachable) | source contract + integration test | `EV-W02-AFTER-001` | W02 reachability; **W03** execution |
+| `slurm.sacct.job` adapter | REQUIRES_EXTERNAL_VALIDATION | reachable from a saved profile | source contract + integration test | `EV-W02-AFTER-001` | W02 reachability; **W03** execution |
+| `truba.lssrv` adapter | REQUIRES_EXTERNAL_VALIDATION | reachable from a saved profile | source contract + integration test | `EV-W02-AFTER-001` | W02 reachability; **W03** execution |
+| Plugin capabilities (`cluster-profile` …) | SUPPORTED | SUPPORTED | schema/registry tests | `EV-W02-AFTER-002` | W02 declaration; **W08** packaged discovery |
+
+No W01 row was removed, hidden, or re-stated. Surfaces whose truthful state
+still needs runtime, packaged or real-cluster proof keep their external
+verification owner.
+
 ---
 
 ## 7. Runtime Capability Report Keys

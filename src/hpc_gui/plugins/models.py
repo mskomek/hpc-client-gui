@@ -103,6 +103,37 @@ class ClusterProfileDefinition:
     accounting: Mapping[str, Any] | None = None
     cluster_status: Mapping[str, Any] | None = None
 
+    def to_provider_template(self) -> dict[str, Any]:
+        """Return the canonical provider template for this profile.
+
+        This is the single serialization every consumer sees. Producing two
+        partial shapes (one for system settings, one for the connection
+        dialog) silently dropped declared sections, so capability probes and
+        the declarative adapter/parser contract disagreed about the same
+        provider. Empty sections are still emitted so "declared but empty" is
+        distinguishable from "not declared at all".
+        """
+        return {
+            "profile_id": self.profile_id,
+            "name": self.name,
+            "schema_version": self.schema_version,
+            "scheduler": self.scheduler,
+            "commands": dict(self.commands),
+            "metadata": dict(self.metadata),
+            "site": dict(self.site),
+            "access": dict(self.access),
+            "requirements": dict(self.requirements),
+            "scheduler_hints": dict(self.scheduler_hints),
+            "software": dict(self.software),
+            "storage": [dict(item) for item in self.storage],
+            "quota_sources": [dict(item) for item in self.quota_sources],
+            "job_outputs": dict(self.job_outputs) if isinstance(self.job_outputs, Mapping) else None,
+            "file_filters": [dict(item) for item in self.file_filters],
+            "job_details": dict(self.job_details) if isinstance(self.job_details, Mapping) else None,
+            "accounting": dict(self.accounting) if isinstance(self.accounting, Mapping) else None,
+            "cluster_status": dict(self.cluster_status) if isinstance(self.cluster_status, Mapping) else None,
+        }
+
     def to_system_settings(self) -> dict[str, Any]:
         """Map the declarative profile onto app system-settings keys.
 
@@ -120,22 +151,7 @@ class ClusterProfileDefinition:
             value = self.commands.get(key)
             if isinstance(value, str) and value.strip():
                 settings[key] = value
-        provider: dict[str, Any] = {
-            "profile_id": self.profile_id,
-            "name": self.name,
-            "schema_version": self.schema_version,
-            "job_outputs": dict(self.job_outputs) if isinstance(self.job_outputs, Mapping) else None,
-            "file_filters": [dict(item) for item in self.file_filters],
-        }
-        # v4: include provider adapter/parser contracts
-        if self.job_details is not None:
-            provider["job_details"] = dict(self.job_details)
-        if self.accounting is not None:
-            provider["accounting"] = dict(self.accounting)
-        if self.cluster_status is not None:
-            provider["cluster_status"] = dict(self.cluster_status)
-        if provider["job_outputs"] is not None or provider["file_filters"] or provider.get("job_details") or provider.get("accounting") or provider.get("cluster_status"):
-            settings["provider_template"] = provider
+        settings["provider_template"] = self.to_provider_template()
         return settings
 
     def visible_storage_areas(self) -> tuple[Mapping[str, Any], ...]:

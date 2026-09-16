@@ -44,17 +44,7 @@ def installed_cluster_template_groups(
                         "plugin_version": installed.manifest.version,
                         "profile_id": profile.profile_id,
                     },
-                    structured={
-                        "schema_version": profile.schema_version,
-                        "metadata": dict(profile.metadata),
-                        "site": dict(profile.site),
-                        "access": dict(profile.access),
-                        "requirements": dict(profile.requirements),
-                        "scheduler_hints": dict(profile.scheduler_hints),
-                        "software": dict(profile.software),
-                        "storage": [dict(item) for item in profile.storage],
-                        "quota_sources": [dict(item) for item in profile.quota_sources],
-                    },
+                    structured=profile.to_provider_template(),
                 )
             )
     return groups
