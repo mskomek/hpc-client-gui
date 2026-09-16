@@ -5,8 +5,8 @@
 | Wave | W02 — Provider and Capability Contract Audit / Expansion |
 | Canonical report path | `docs/wave-reports/v2/WAVE_V2_FINAL_02_REPORT.md` |
 | Baseline SHA (main) | `731357c6a9e69da121f6783e07d5d65ad3a8539c` |
-| Tested implementation SHA (main) | _pending commit — see §14_ |
-| Current HEAD (main) | `731357c6a9e69da121f6783e07d5d65ad3a8539c` at session start |
+| Tested implementation SHA (main) | `a2fb5d26` (this report is inside that same commit) |
+| Current HEAD (main) | `a2fb5d26` (session start: `731357c6`) |
 | Plugin repo SHA (read-only pin) | checkout `main` = `602e904bfd4120b3bd65b3f172d14638fe817f50`; `origin/develop` = `f0abb7e7037e66ab451d463c699fecf4e00c89eb` |
 | First started | 2026-09-16 |
 | Last updated | 2026-09-16 |
