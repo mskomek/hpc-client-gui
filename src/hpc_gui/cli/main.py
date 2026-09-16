@@ -853,18 +853,34 @@ def _run_jobs(args: argparse.Namespace) -> int:
     try:
         session = CLISession.open(args)
         backend = jobs_backend(session, system_settings=_profile_system_settings(args))
+        # Keep the scheduler's exit status: a failed command must not be
+        # reported as a successful result with the error text in its place.
+        command_result = None
         if args.jobs_command == "list":
-            result = backend.squeue(_jobs_username(args))
+            command_result = backend.squeue_result(_jobs_username(args))
         elif args.jobs_command == "status":
-            result = backend.scontrol_show_job(args.job_id)
+            command_result = backend.scontrol_show_job_result(args.job_id)
         elif args.jobs_command == "accounting":
-            result = backend.sacct(_jobs_username(args))
+            command_result = backend.sacct_result(_jobs_username(args))
         elif args.jobs_command == "submit":
-            result = backend.sbatch(str(args.script))
+            command_result = backend.sbatch_result(str(args.script))
         elif args.jobs_command == "cancel":
-            result = backend.scancel(str(args.job_id))
+            command_result = backend.scancel_result(str(args.job_id))
         else:
             result = backend.lssrv()
+
+        if command_result is not None:
+            if not command_result.ok:
+                emit_error(
+                    command_result.message,
+                    exit_code=ExitCode.OPERATION_FAILED,
+                    output_format=args.format,
+                )
+                return ExitCode.OPERATION_FAILED
+            if args.jobs_command == "cancel":
+                result = command_result.stdout.strip() or "OK"
+            else:
+                result = command_result.text
         return emit_job_result(result, output_format=args.format, quiet=args.quiet)
     except CLIConnectionError as exc:
         emit_error(str(exc), exit_code=ExitCode.CONNECTION, output_format=args.format)
@@ -898,7 +914,29 @@ def _normalize_alias_argv(argv: Sequence[str]) -> list[str]:
     return values
 
 
+def _force_utf8_output() -> None:
+    """Emit UTF-8 regardless of the console code page.
+
+    Remote paths, job names and error text are routinely non-ASCII. On a
+    Windows console still using a legacy code page (cp1254, cp857, ...) the
+    default stream encoding cannot represent them, so simply listing a
+    directory that holds a Turkish filename raised UnicodeEncodeError and the
+    command failed -- even though the remote operation had succeeded.
+    """
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is None:
+            continue
+        try:
+            reconfigure(encoding="utf-8", errors="replace")
+        except (ValueError, OSError):
+            # A redirected or already-detached stream stays as it is; the CLI
+            # must never fail because it could not retune its own output.
+            continue
+
+
 def run_cli(argv: Sequence[str] | None = None, *, default_group: str | None = None) -> int:
+    _force_utf8_output()
     raw_argv = list(argv) if argv is not None else sys.argv[1:]
     args = _parser().parse_args(_normalize_alias_argv(raw_argv))
     if args.group is None and default_group is not None:
