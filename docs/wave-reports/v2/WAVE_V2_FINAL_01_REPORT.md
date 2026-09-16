@@ -9,8 +9,8 @@
 | Original baseline SHA | `eb86dea6afe830fa0c11962836bb5ecc00761fa9` |
 | Current remediation baseline SHA | `2c1c7ce9b18e6e4bf81365ef8ef571182bfed745` |
 | Tested implementation SHA | `2c1c7ce9b18e6e4bf81365ef8ef571182bfed745` |
-| Evidence/report-only closure SHA | pending; report is not self-referential evidence |
-| Current HEAD | `2c1c7ce9b18e6e4bf81365ef8ef571182bfed745` |
+| Evidence/report-only closure SHA | `4d609cd59ce5a09e4aa53784360dbc467861098c` |
+| Current HEAD | `4d609cd59ce5a09e4aa53784360dbc467861098c` |
 | Main remote develop | `468cc4f4dd683cd3c280cf5d2bf78559c8eec80a` (direct `ls-remote`; fetch failed) |
 | Plugin checkout | `main` at `602e904bfd4120b3bd65b3f172d14638fe817f50` |
 | Plugin develop pin | `f0abb7e7037e66ab451d463c699fecf4e00c89eb` (direct `ls-remote`; checkout is not develop) |
@@ -46,7 +46,7 @@ Open P1: `W01-PLUGIN-PIN-001` — live plugin revision is known from `git ls-rem
 
 Open P2/P3: 0 new W01 closure defects.
 
-Pending: successful plugin `develop` fetch/pin and a normal pytest run with a writable temp root. The host's pytest temp-root locks are currently denied.
+Pending: successful plugin `develop` fetch/pin and a normal pytest run with a writable temp root. The host's pytest temp-root locks are currently denied. A retry of the plugin fetch was rejected by the execution approval usage limit.
 
 Last exact commands:
 
@@ -66,7 +66,7 @@ Evidence identities: `EV-W01-R5-001` repo pins; `EV-W01-R5-002` wx launch; `EV-W
 
 ## 1. Authority and repository truth
 
-The R5 package was applied over the historical W01 `GO`; that decision was treated as stale. Main fetch failed because the linked worktree uses a shared Git directory whose `FETCH_HEAD` is permission-denied; direct `git ls-remote` returned the live remote revision. The plugin checkout is `main`, while its live `develop` pin is recorded separately. This is a blocker, not a successful fetch claim. Existing W02/W03 product and lab work was preserved and not executed or closed.
+The R5 package was applied over the historical W01 `GO`; that decision was treated as stale. Main fetch failed because the linked worktree uses a shared Git directory whose `FETCH_HEAD` is permission-denied; direct `git ls-remote` returned the live remote revision. The plugin checkout is `main`, while its live `develop` pin is recorded separately. A retry was rejected by the execution approval usage limit. This is a blocker, not a successful fetch claim. Existing W02/W03 product and lab work was preserved and not executed or closed.
 
 ## 2. Reconciled findings
 
@@ -139,7 +139,7 @@ No assertion, skip, or xfail was weakened. The pytest failure is recorded as an 
 | Exact test counts recorded | VERIFIED per command |
 | Exactly one canonical report | VERIFIED |
 | Historical reports superseded | VERIFIED |
-| SHA/evidence identity | PARTIAL — closure commit pending; plugin fetch blocked |
+| SHA/evidence identity | PARTIAL — report-only closure is identified; plugin fetch blocked |
 | Cross-document consistency | VERIFIED |
 | Open W01 P0 | 0 |
 | Open W01 P1 | 1 blocked prerequisite gate |
