@@ -1,316 +1,168 @@
-# WAVE 01 SESSION REPORT
-
-## 1. Scope
-TARGET_WAVE: W01 — Live Inventory, Feature Truth Map, and Support Freeze
-TARGET_WAVE_FILE: `waves/waiting/WAVE_V2_FINAL_01.md`
-Session scope lock respected: YES
-Main SHA: `fd47a78f76b24feebdf94effd2cb4531d0157156`
-Plugin SHA: Not fetched (no plugin changes in W01 scope)
-Baseline working tree: Untracked files only (`.integration-recovery/`, `audit.zip`, `docs.zip`, `temp_waves/`, `waves.zip`, `scripts/*.py`, `tests/WAVE2_REMAINING_TEST_PROMPTS.md`)
-
----
-
-## 2. Entry criteria
-
-| Criterion | Status |
-|---|---|
-| Main repo `develop` fetched and pinned | YES (`fd47a78f`) |
-| Plugin repo fetched and pinned | N/A (no plugin changes) |
-| Application can launch in development environment | YES (tests pass) |
-| No destructive repository cleanup needed | YES |
-
----
-
-## 3. Discovery
-
-### Current files/symbols
-
-| Category | Count |
-|---|---|
-| `wx_*.py` source files | 34 |
-| wx test files | 67 |
-| Total test files | 273 |
-
-### Key wx source modules discovered
-
-```
-src/hpc_gui/wx_shell.py              — main shell frame, menus, notebook tabs, dispatch
-src/hpc_gui/wx_connection.py         — connection panel
-src/hpc_gui/wx_connection_dialog.py  — profile editor dialog
-src/hpc_gui/wx_terminal.py           — terminal panel
-src/hpc_gui/wx_jobs.py               — jobs panel
-src/hpc_gui/wx_local_files.py        — local files panel
-src/hpc_gui/wx_remote_files_view.py  — remote files panel
-src/hpc_gui/wx_directories_view.py   — directories panel
-src/hpc_gui/wx_editor_view.py        — editor panel
-src/hpc_gui/wx_logs_view.py          — logs panel
-src/hpc_gui/wx_plugins.py            — plugin manager model
-src/hpc_gui/wx_plugins_view.py       — plugin manager view
-src/hpc_gui/wx_settings.py           — settings model
-src/hpc_gui/wx_settings_view.py      — settings dialog
-src/hpc_gui/wx_help.py               — help center
-src/hpc_gui/wx_about.py              — about dialog (FIX-W01-002)
-src/hpc_gui/wx_updater_view.py       — updater dialog
-src/hpc_gui/wx_transfer_workspace.py — transfers panel
-src/hpc_gui/wx_send_logs_view.py     — send logs
-src/hpc_gui/wx_ansys.py              — ANSYS lint model
-src/hpc_gui/wx_ansys_view.py         — ANSYS lint view
-src/hpc_gui/wx_runtime.py            — runtime Qt detection
-src/hpc_gui/wx_lifecycle.py          — lifecycle controller
-src/hpc_gui/wx_splash.py             — splash screen
-src/hpc_gui/wx_host.py               — host utilities
-src/hpc_gui/wx_raw_viewer.py         — raw viewer
-src/hpc_gui/wx_macos_audit.py        — macOS audit
-src/hpc_gui/wx_windows_audit.py      — Windows audit
-```
-
-### Architecture path
-
-```
-wx_shell.py:create_shell_frame()
-  → menubar (Menu | Plugins | Help | Language | Version)
-  → notebook (Connection | Terminal | Jobs | Directories | Files | Editor | Logs)
-  → _dispatch(command_id)
-      → wx_*_view.py show_*() functions
-      → wx dialogs (about, settings, help, plugins, updater)
-  → status bar
-  → system tray
-```
-
-### Spec/plan conflicts
-
-None discovered.
-
----
-
-## 4. Findings table
-
-| Finding ID | Severity | Surface | Evidence | Root cause | User/system impact | Candidate fix | Countable? | Status |
-|---|---|---|---|---|---|---|---|---|
-| DEF-W01-001 | P1 | Help > Quick Tour menu item | `wx_shell.py:129` (`help_items["tour"] = None`), no `Append` call | Menu item created unconditionally; wx Quick Tour not implemented; dispatch was `pass` | User clicks "Quick Tour", nothing happens | Remove the visible no-op menu item | YES | FIXED |
-| DEF-W01-002 | P1 | Help > About menu item | `wx_shell.py:2792-2797` (wx_about.show_about), `wx_about.py` (148 lines) | APP-ABOUT dispatch used plain wx.MessageBox | Missing repo URL, license, notices in wx About | Create proper wx About dialog | YES | FIXED |
-| DEF-W01-003 | P1 | Test suite | `tests/test_wx_shell_w01_truth.py` (new) | No regression test for FIX-A | Regressions undetectable | Add dedicated regression test | YES | FIXED |
-| DEF-W01-004 | P1 | Test suite | `tests/test_wx_shell_w01_truth.py` (new) | No regression test for FIX-B | Regressions undetectable | Add dedicated regression test | YES | FIXED |
-
----
-
-## 5. FIX-A — Ghost Quick Tour Control Removed
+# WAVE V2 FINAL 01 — R5 Remediation and Strict Re-Audit
 
 | Field | Value |
 |---|---|
-| Fix ID | FIX-W01-001 |
-| Defect ID | DEF-W01-001 |
-| Severity | P1 |
-| Independent root cause | Quick Tour menu item visible but dispatches to `pass` |
-| Before behavior | User clicks Help > Quick Tour, nothing happens |
-| Before evidence | `wx_shell.py:131-133` (menu creation), `wx_shell.py:2805-2810` (dispatch = `pass`) |
-| Files changed | `src/hpc_gui/wx_shell.py` |
-| Behavioral contract changed | "Quick Tour" menu item no longer appears in Help menu |
-| Regression test | `test_wx_shell_w01_truth.py::TestQuickTourGhostRemoval` (5 tests) |
-| Sensitivity proof | `test_w01_sensitivity.py::test_fix_a_sensitivity_tour_append_detected` — confirms test detects reintroduced bug |
-| Narrow-suite result | 47 passed, 0 failed |
-| Broader-suite result | 66 passed, 0 failed |
-| Residual risk | Quick Tour feature remains unimplemented in wx; may need future implementation if scope demands it |
+| Wave | W01 — Live Inventory, Feature Truth Map, and Support Freeze |
+| Canonical report path | `docs/wave-reports/v2/WAVE_V2_FINAL_01_REPORT.md` |
+| Repository | `mskomek/hpc-client-gui` |
+| Branch | `develop` |
+| Original baseline SHA | `eb86dea6afe830fa0c11962836bb5ecc00761fa9` |
+| Current remediation baseline SHA | `2c1c7ce9b18e6e4bf81365ef8ef571182bfed745` |
+| Tested implementation SHA | `2c1c7ce9b18e6e4bf81365ef8ef571182bfed745` |
+| Evidence/report-only closure SHA | pending; report is not self-referential evidence |
+| Current HEAD | `2c1c7ce9b18e6e4bf81365ef8ef571182bfed745` |
+| Main remote develop | `468cc4f4dd683cd3c280cf5d2bf78559c8eec80a` (direct `ls-remote`; fetch failed) |
+| Plugin checkout | `main` at `602e904bfd4120b3bd65b3f172d14638fe817f50` |
+| Plugin develop pin | `f0abb7e7037e66ab451d463c699fecf4e00c89eb` (direct `ls-remote`; checkout is not develop) |
+| First started | 2026-09-16 |
+| Last updated | 2026-09-16 |
+| Session status | Remediation complete; mandatory cross-repository fetch gate blocked |
+| Wave decision | **BLOCKED / NO-GO** |
 
-### Implementation
-
-```python
-# BEFORE (wx_shell.py lines 129-135):
-help_items["tour"] = None
-
-# AFTER:
-help_items["tour"] = None
+```text
+TARGET_WAVE: W01
+SESSION_TYPE: REMEDIATION + RE-AUDIT
+SESSION_SCOPE_LOCKED: YES
+W02_EXECUTED: NO
+W03_EXECUTED: NO
 ```
 
-The dead `APP-QUICKTOUR` dispatch branch (lines 2805-2810) was also removed.
+## Resume state
 
----
+Completed and verified:
 
-## 6. FIX-B — Proper wx About Dialog Created
+- Read current R5 planning authority (`V2-FINAL-PLAN-R5-2026-09-15`).
+- Reconciled the current wx inventory and W01 evidence.
+- Updated `artifacts/v2-final/W01/SUPPORT_MATRIX.md` with Quick Tour disposition, evidence classes, verification owners, open gaps, and exact freeze totals.
+- Marked historical reports `SUPERSEDED` and pointed them here.
+- Revalidated both historical fixes with real temporary production reverts and actual regression assertions.
+- Ran real wx shell launch/shutdown and About-dialog runtime probes.
 
-| Field | Value |
-|---|---|
-| Fix ID | FIX-W01-002 |
-| Defect ID | DEF-W01-002 |
-| Severity | P1 |
-| Independent root cause | APP-ABOUT dispatch used plain wx.MessageBox instead of proper dialog |
-| Before behavior | Help > About shows a plain MessageBox with minimal text |
-| Before evidence | `wx_shell.py:2798-2804` (MessageBox), `about_dialog.py` (Qt QDialog exists) |
-| Files changed | `src/hpc_gui/wx_about.py` (NEW, 148 lines), `src/hpc_gui/wx_shell.py` |
-| Behavioral contract changed | About dialog now shows version, description, repository URL, license, third-party notices |
-| Regression test | `test_wx_shell_w01_truth.py::TestWxAboutDialog` (11 tests) |
-| Sensitivity proof | `test_w01_sensitivity.py::test_fix_b_sensitivity_messagebox_detected` — confirms test detects reintroduced MessageBox |
-| Narrow-suite result | 47 passed, 0 failed |
-| Broader-suite result | 66 passed, 0 failed |
-| Residual risk | wx About dialog not yet tested with automated GUI test (headless); should be verified in W10/W11 |
+In progress: none locally.
 
-### Implementation
+Open P0: 0.
 
-Created `src/hpc_gui/wx_about.py` with `show_about()` function:
-- `wx.Dialog` with version label, description, repository URL button, license button, third-party notices button, close button
-- Platform-aware file opening (win32 `os.startfile`, macOS `open`, fallback to `webbrowser.open`)
-- Same path resolution as Qt `AboutDialog` for LICENSE and THIRD_PARTY_NOTICES.md
+Open P1: `W01-PLUGIN-PIN-001` — live plugin revision is known from `git ls-remote`, but `git fetch` could not complete in this linked-worktree/network environment; checkout remains `main`, not `develop`.
 
-Updated `_dispatch("APP-ABOUT")` in `wx_shell.py`:
-```python
-# BEFORE:
-wx.MessageBox(f"HPC Client GUI\nv{__version__}\nSSH · Slurm · X11 workflow manager", ...)
+Open P2/P3: 0 new W01 closure defects.
 
-# AFTER:
-from hpc_gui.wx_about import show_about
-show_about(parent=parent)
+Pending: successful plugin `develop` fetch/pin and a normal pytest run with a writable temp root. The host's pytest temp-root locks are currently denied.
+
+Last exact commands:
+
+```text
+git status --short --branch
+git rev-parse HEAD
+git ls-remote origin refs/heads/develop
+git -C ..\hpc-client-gui-plugins ls-remote origin refs/heads/develop refs/heads/main
+pytest -q tests/test_wx_shell_w01_truth.py tests/test_w01_sensitivity.py
+PYTHONPATH=src python -c "...create_shell_frame(...); ...MainLoop(); ..."
+PYTHONPATH=src python -u -c "...show_about(...); ...EndModal(...); ...MainLoop()"
 ```
 
----
+Next action: re-run this W01 audit after plugin `develop` is fetched/pinned; do not start W02 or W03.
 
-## 7. Additional remediation
+Evidence identities: `EV-W01-R5-001` repo pins; `EV-W01-R5-002` wx launch; `EV-W01-R5-003` About runtime; `EV-W01-R5-004/005` real sensitivity; `EV-W01-R5-006` inventory/support freeze.
 
-None — two independent fixes with dedicated regression tests satisfy the minimum-two gate.
+## 1. Authority and repository truth
 
----
+The R5 package was applied over the historical W01 `GO`; that decision was treated as stale. Main fetch failed because the linked worktree uses a shared Git directory whose `FETCH_HEAD` is permission-denied; direct `git ls-remote` returned the live remote revision. The plugin checkout is `main`, while its live `develop` pin is recorded separately. This is a blocker, not a successful fetch claim. Existing W02/W03 product and lab work was preserved and not executed or closed.
 
-## 8. Test ledger
+## 2. Reconciled findings
 
-| Evidence ID | Command | Exit | Pass | Fail | Skip | What it proves |
-|---|---|---|---|---|---|---|
-| EV-W01-REG-001 | `pytest tests/test_wx_shell_w01_truth.py -v` | 0 | 16 | 0 | 0 | FIX-A regression (5 tests) + FIX-B regression (11 tests) |
-| EV-W01-REG-002 | `pytest tests/test_w01_sensitivity.py -v` | 0 | 3 | 0 | 0 | Sensitivity proof for both fixes |
-| EV-W01-REG-003 | `pytest tests/test_menu_redesign.py tests/test_about_dialog.py tests/test_command_registry.py tests/test_wx_shell.py tests/test_wx_settings.py tests/test_wx_plugins.py tests/test_wx_shell_p0.py tests/test_wx_shell_i18n.py tests/test_parity_matrix.py tests/test_gui_feature_parity_baseline.py -v` | 0 | 47 | 0 | 0 | Broader W01-related suite unaffected |
-| EV-W01-REG-004 | `pytest tests/test_wx_shell_w01_truth.py tests/test_w01_sensitivity.py tests/test_menu_redesign.py tests/test_about_dialog.py tests/test_command_registry.py tests/test_wx_shell.py tests/test_wx_settings.py tests/test_wx_plugins.py tests/test_wx_shell_p0.py tests/test_wx_shell_i18n.py tests/test_parity_matrix.py tests/test_gui_feature_parity_baseline.py -v` | 0 | 66 | 0 | 0 | Combined W01 regression suite |
-| EV-W01-LINT-001 | `python -m ruff check tests/test_wx_shell_w01_truth.py tests/test_w01_sensitivity.py` | 0 | - | 0 | 0 | Lint clean |
-
-**What remains unproven:**
-- No automated GUI-level test (headless wx.App + real dialog render) for wx About dialog content
-- No packaged-artifact test for About dialog
-
----
-
-## 9. Runtime/package/external evidence
-
-NOT APPLICABLE — W01 fixes are source-level truth corrections and test additions, not runtime/packaging behavior.
-
----
-
-## 10. Cross-Wave impact
-
-| Field | Value |
-|---|---|
-| Changes | Added `tests/test_wx_shell_w01_truth.py` (16 tests), `tests/test_w01_sensitivity.py` (3 tests) |
-| Invalidated evidence | None (new tests only) |
-| Blockers | None |
-| Later retests | W10/W11 should verify About dialog renders correctly in packaged artifact |
-
----
-
-## 11. POST_GREEN_REVIEW
-
-| Field | Value |
-|---|---|
-| Areas checked | Duplicate path, alternate entry, stale state, identity, cleanup, dead branch, hardcoded logic, error messaging, package paths |
-| New findings | None |
-| Fixes performed | None needed |
-| Retests | N/A |
-| Result | PASS |
-
----
-
-## 12. W01 Inventory Deliverables
-
-### 12a. Visible-Surface Inventory
-
-| Surface | Evidence File | Status |
-|---|---|---|
-| Menu bar (5 menus, ~20 items) | `SUPPORT_MATRIX.md §1` | VERIFIED |
-| Notebook tabs (7 tabs, canonical order) | `SUPPORT_MATRIX.md §2` | VERIFIED |
-| Files page header controls (6 controls) | `SUPPORT_MATRIX.md §3` | VERIFIED |
-| Status bar | `SUPPORT_MATRIX.md §1` | VERIFIED |
-| System tray | `EV-W01-004_CONTEXT_MENU_INVENTORY.md §10` | VERIFIED |
-
-### 12b. Context-Menu Inventory
-
-| Surface | Stack | Items | Evidence File | Status |
-|---|---|---|---|---|
-| Local file listing | wx | 15 | `EV-W01-004 §1` | VERIFIED |
-| Local notebook tabs | wx | 1 | `EV-W01-004 §2` | VERIFIED |
-| Remote file listing | wx | 20 | `EV-W01-004 §3` | VERIFIED |
-| Remote favorites dropdown | wx | dynamic | `EV-W01-004 §4` | VERIFIED |
-| Remote history dropdown | wx | dynamic | `EV-W01-004 §5` | VERIFIED |
-| Remote follow/track submenu | wx | 3-4 | `EV-W01-004 §6` | VERIFIED |
-| Remote notebook tabs | wx | 1 | `EV-W01-004 §7` | VERIFIED |
-| Connection profile list | wx | 4 | `EV-W01-004 §8` | VERIFIED |
-| System templates popup | wx | dynamic | `EV-W01-004 §9` | VERIFIED |
-| System tray | wx | 1 | `EV-W01-004 §10` | VERIFIED |
-| Language picker | wx | 2 | `EV-W01-004 §11` | VERIFIED |
-| Dynamic plugin menus | wx | plugin-defined | `EV-W01-004 §13` | VERIFIED |
-| Local file tree | Qt | 14+ | `EV-W01-004 §14` | VERIFIED |
-| Remote file tree | Qt | 30+ | `EV-W01-004 §15` | VERIFIED |
-| Connection profiles | Qt | 3 | `EV-W01-004 §16` | VERIFIED |
-| FTP scratch/home panel | Qt | 1 | `EV-W01-004 §17` | VERIFIED |
-| Transfer activity lists | Qt | 6-11 | `EV-W01-004 §18` | VERIFIED |
-| Transfer errors list | Qt | 1 | `EV-W01-004 §19` | VERIFIED |
-
-### 12c. Settings Drift Audit
-
-| Drift Class | Items | Evidence File | Status |
+| Finding | Severity | R5 result | Evidence |
 |---|---|---|---|
-| Orphan settings | 2 (`transfer_parallelism` global, `focus_jobs_outputs_after_submission_enabled`) | `EV-W01-005 §1` | VERIFIED |
-| Ghost controls | 1 (Quick Tour — FIXED) | `EV-W01-005 §2` | VERIFIED |
-| Hidden capabilities | 3 (`transfer_completion_action`, `last_seen_changelog_version`, `master_password_dpapi`) | `EV-W01-005 §3` | VERIFIED |
-| UI preferences drift | 2 (`ui.show_welcome`, `ui.show_tour`) | `EV-W01-005 §4` | VERIFIED |
-| WxSettingsModel mapping | 8 keys mapped | `EV-W01-005 §5` | VERIFIED |
-| Legacy ignored keys | 2 (`terminal_graphics_auto_compatibility`, `qt_webengine_gpu`) | `EV-W01-005 §5` | VERIFIED |
+| `W01-REM-001` plugin not pinned | P1 | BLOCKED pending permitted fetch | EV-W01-R5-001 |
+| `W01-REM-002` launch inferred from tests | P1 | FIXED / VERIFIED locally | EV-W01-R5-002 |
+| `W01-REM-003` Quick Tour disappeared | P1 | FIXED; explicit `NOT-IN-V2` row | EV-W01-R5-006 |
+| `W01-REM-004` optimistic support matrix | P1 | REPAIRED with evidence/owner fields | EV-W01-R5-006 |
+| `W01-REM-005` self-referential sensitivity | P1 | REPAIRED with real temporary reverts | EV-W01-R5-004/005 |
+| `W01-REM-006` About lacked GUI proof | P1 | FIXED / VERIFIED by wx runtime | EV-W01-R5-003 |
+| `W01-REM-007` stale SHA model | P1 | REPAIRED in this report | EV-W01-R5-001 |
+| `W01-REM-008` competing reports | P1 | REPAIRED; historical reports superseded | EV-W01-R5-006 |
+| `W01-REM-009` report not resumable | P1 | FIXED in this report | this report |
 
-### 12d. Provider/Plugin Surface Inventory
+## 3. Historical fixes and sensitivity
 
-| Surface | Count | Disconnected | Evidence File | Status |
-|---|---|---|---|---|
-| Provider UI surfaces | 18 | 16 | `SUPPORT_MATRIX.md §6a` | VERIFIED |
-| Plugin Manager UI | 12 | 10 | `SUPPORT_MATRIX.md §6b` | VERIFIED |
-| ANSYS Lint UI | 13 | 12 | `SUPPORT_MATRIX.md §6c` | VERIFIED |
-| Adapter/Parser registry | 6 | 0 | `SUPPORT_MATRIX.md §6d` | VERIFIED |
-| Plugin capabilities | 5 | 5 | `SUPPORT_MATRIX.md §6e` | VERIFIED |
+FIX-W01-001 keeps `help_items["tour"] = None`, omits the menu append and dead dispatch, and now has ledger row `APP-QUICKTOUR`, disposition `NOT-IN-V2`, decision `DEC-W01-QUICKTOUR`, owner W01.
 
-### 12e. Support Matrix
+FIX-W01-002 routes APP-ABOUT to `wx_about.show_about`. The About probe constructed a real `wx.Dialog`, observed version/description and four buttons for repository, license, third-party notices and close, then closed cleanly.
 
-| Classification | Count | Evidence File |
-|---|---|---|
-| SUPPORTED | ~95 | `SUPPORT_MATRIX.md §8` |
-| REQUIRES_EXTERNAL_VALIDATION | ~15 | `SUPPORT_MATRIX.md §8` |
-| DEPRECATED | 2 | `SUPPORT_MATRIX.md §8` |
-| NOT-IN-V2 | 0 | `SUPPORT_MATRIX.md §8` |
+The historical `tests/test_w01_sensitivity.py` remains historical self-check evidence only; its mutation helpers do not close the R5 gate. The acceptance proof ran the actual W01 regression assertions against temporary production defects, then restored the tree:
 
----
+| Evidence | Temporary defect | Actual assertion | Result |
+|---|---|---|---|
+| `EV-W01-R5-004` | Restored old Quick Tour `help_menu.Append(...)` | `TestQuickTourGhostRemoval` | exit 1, expected assertion failure, restored |
+| `EV-W01-R5-005` | Restored old `wx.MessageBox(...)` APP-ABOUT branch | `TestWxAboutDialog.test_dispatch_about_not_messagebox` | exit 1, expected assertion failure, restored |
 
-## 13. Final Wave Audit
+The About detector was tightened to inspect the actual APP-ABOUT branch. Test purpose IDs are `REG-W01-001` and `GUI-W01-001`.
+
+## 4. Runtime and test evidence
+
+Evidence class: **DEVELOPMENT WX RUNTIME**.
+
+The controlled current-source launch observed `WX_RUNTIME=wx`, `FRAME=Frame`, `NOTEBOOK_PAGES=7`, `MENUS=5`, `STATUS=True`, `SHUTDOWN=controlled`, exit 0. Native image-handler warnings and a WebView abort during teardown were observed; no startup exception occurred. The About probe observed `ABOUT_DIALOG=Dialog`, three static-text labels, four buttons, `ABOUT_RETURN=closed`, `ABOUT_SHUTDOWN=controlled`, exit 0. This is not packaged evidence.
+
+| Evidence | Command | Exit | Result | Does not prove |
+|---|---|---:|---|---|
+| `EV-W01-TEST-001` | `pytest -q tests/test_wx_shell_w01_truth.py tests/test_w01_sensitivity.py` | 1 | 19 setup errors from denied pytest temp-root locks | product regression result |
+| `EV-W01-TEST-002` | direct invocation of all actual W01 test functions after restoration | 0 | 19 assertions pass | pytest fixture integration |
+| `EV-W01-R5-002/003` | controlled real wx runtime probes | 0 | shell/About runtime passed | packaged/external behavior |
+
+No assertion, skip, or xfail was weakened. The pytest failure is recorded as an environment failure, not relabelled as a product pass.
+
+## 5. Cross-document and downstream consistency
+
+- This is the only authoritative W01 final report.
+- `SUPPORT_MATRIX.md` §11 is the authoritative R5 support-freeze table.
+- Quick Tour is `NOT-IN-V2` in the current ledger and report.
+- Historical reports are `SUPERSEDED` and contain no competing decision.
+- Counts are P0 `0`, P1 `1` blocked prerequisite gate, P2 `0`, P3 `0`.
+- Downstream invalidation: **NO**. W02/W03 evidence was not altered or closed; this session changed only W01 evidence/support/test governance.
+
+## 6. Final W01 audit from zero
 
 | Gate | Result |
 |---|---|
-| FIX-A independence/substance | YES — ghost control removal, independent root cause |
-| FIX-B independence/substance | YES — dialog upgrade, independent root cause |
-| Two-fix gate | PASS |
-| Regression-sensitivity gate | PASS (test_w01_sensitivity.py proves both tests detect reintroduced bugs) |
-| Negative-path gate | N/A (no error paths involved in W01 fixes) |
-| Lifecycle/race gate | N/A (modal dialog, no async) |
-| Test-quality gate | PASS (16 regression tests + 3 sensitivity tests, no skip/xfail/weakening) |
-| Package gate | NOT APPLICABLE |
-| External gate | NOT APPLICABLE |
-| Evidence-identity gate | PASS (all evidence traces to current SHA fd47a78f) |
-| Diff-hygiene gate | PASS (only 2 new test files, no unrelated changes, no secrets) |
-| TODO-leakage gate | PASS (no W01 TODOs remain unresolved) |
-| Inventory completeness | VERIFIED (all W01 acceptance criteria met) |
-| Open P0 | 0 |
-| Open P1 | 0 |
-| Open P2 | 0 |
-| Open P3 | 0 |
-| Audit iterations | 1 |
-| Final audit result | **GO** |
+| Main repository identity captured | VERIFIED |
+| Main remote fetch completed | BLOCKED |
+| Plugin develop fetched and pinned | BLOCKED |
+| Actual wx launch/shutdown | VERIFIED |
+| Complete visible inventory reconciled | VERIFIED |
+| Removed/hidden features retain disposition | VERIFIED |
+| Quick Tour final disposition | VERIFIED (`NOT-IN-V2`) |
+| Support matrix has owners/evidence/gaps | VERIFIED |
+| Support states match evidence class | VERIFIED for R5 freeze groups |
+| FIX-W01-001 detector and sensitivity | VERIFIED |
+| FIX-W01-002 detector and sensitivity | VERIFIED |
+| About visible GUI/runtime proof | VERIFIED |
+| Exact test counts recorded | VERIFIED per command |
+| Exactly one canonical report | VERIFIED |
+| Historical reports superseded | VERIFIED |
+| SHA/evidence identity | PARTIAL — closure commit pending; plugin fetch blocked |
+| Cross-document consistency | VERIFIED |
+| Open W01 P0 | 0 |
+| Open W01 P1 | 1 blocked prerequisite gate |
+| Final W01 audit | **BLOCKED** |
 
----
-
-## 14. Decision
+## 7. Decision
 
 | Field | Value |
 |---|---|
-| Wave decision | **GO** |
-| Reason | Two independent substantive truth corrections delivered (FIX-A: ghost Quick Tour control removed; FIX-B: proper wx About dialog created). Both fixes now have dedicated regression tests with sensitivity proof (16 tests in test_wx_shell_w01_truth.py, 3 tests in test_w01_sensitivity.py). Full W01 support-matrix inventory completed: 5 menus, 7 tabs, 19 context menus, 75 settings, 85 provider/plugin surfaces — all inventoried with support classifications. All acceptance criteria met. 66/66 tests pass. |
-| Recommended next session target | W02 — Provider and Capability Contract Audit |
+| W01 remediation result | **BLOCKED / NO-GO** |
+| Historical FIX-A | REPAIRED |
+| Historical FIX-B | REPAIRED |
+| New P0 | 0 |
+| New P1 | `W01-PLUGIN-PIN-001` |
+| New P2 | 0 |
+| New P3 | 0 |
+| Actual wx launch | PASS |
+| Regression sensitivity | PASS |
+| Support matrix reconciliation | PASS |
+| Canonical-report uniqueness | PASS |
+| Evidence identity | PARTIAL |
+| Cross-document consistency | PASS |
+| Downstream W02/W03 evidence invalidated | NO |
+| Next recommended session | W01 pin revalidation only; then a fresh W01 audit. Do not start W02/W03. |
+
+The historical two-fix floor is satisfied, but R5 does not permit `GO` while the mandatory current plugin pin/fetch gate and evidence-identity prerequisite remain blocked.

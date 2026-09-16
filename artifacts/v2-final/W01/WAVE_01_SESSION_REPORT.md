@@ -1,3 +1,6 @@
+> SUPERSEDED — historical W01 session report. The only authoritative report is
+> `docs/wave-reports/v2/WAVE_V2_FINAL_01_REPORT.md`.
+
 # WAVE 01 SESSION REPORT
 
 **Date:** 2026-09-15

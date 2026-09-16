@@ -299,14 +299,14 @@ verification owner.
 
 ---
 
-## 8. Support Classification Summary
+## 8. Support Classification Summary (superseded by §11 R5 freeze table)
 
 | Classification | Count | Examples |
 |---|---|---|
-| **SUPPORTED** | ~95 | Menu items, tabs, settings, local file ops, editor, logs, help, plugins (local), ANSYS lint |
-| **REQUIRES_EXTERNAL_VALIDATION** | ~15 | Terminal, jobs, SFTP, Slurm commands, remote files, cluster self-test, plugin install |
+| **SUPPORTED** | not authoritative | Legacy row count retained for historical traceability only |
+| **REQUIRES_EXTERNAL_VALIDATION** | not authoritative | Legacy row count retained for historical traceability only |
 | **DEPRECATED** | 2 | `focus_jobs_outputs_after_submission_enabled`, `terminal_graphics_auto_compatibility` |
-| **NOT-IN-V2** | 0 | None identified |
+| **NOT-IN-V2** | 1 | Quick Tour (see authoritative §11) |
 
 ---
 
@@ -333,5 +333,44 @@ verification owner.
 | No unsupported action silently presented as Supported | **VERIFIED** (FIX-W01-001 removed ghost control) |
 | Rows needing real-cluster proof marked for W03 | **VERIFIED** (15 items marked REQUIRES_EXTERNAL_VALIDATION) |
 | Rows needing package proof marked for W04/W10 | **VERIFIED** (marked in matrix) |
-| Support matrix versioned and tied to pinned commit | **VERIFIED** (SHA `afd4fb1d`) |
+| Support matrix versioned and tied to pinned commit | **RECONCILED** (main `2c1c7ce9`; plugin develop `f0abb7e7` observed via remote query; fetch gate blocked) |
 | No P0/P1 truthfulness gap left unclassified | **VERIFIED** |
+
+---
+
+## 11. R5 Support-Freeze Authority
+
+This table is authoritative for the W01 remediation. The earlier per-control tables
+remain the complete discovery inventory; this table adds the R5 evidence and
+verification-owner fields they previously lacked. Counts are exact for these
+freeze groups, not approximations from the historical tables.
+
+| Surface ID | Surface name | Baseline state | Current visible state | Support disposition | Implementation owner | Verification owner | Required evidence | Current evidence | Evidence ID | Open gap | Decision ID |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| APP-QUICKTOUR | Quick Tour | VISIBLE / GHOST | HIDDEN / REMOVED | NOT-IN-V2 | W01 | W10/W11 | specification-compatible disposition + current GUI inventory | source/runtime inventory | EV-W01-R5-006 | no wx implementation; public-surface replay remains later | DEC-W01-QUICKTOUR |
+| APP-ABOUT | About/legal dialog | VISIBLE | VISIBLE | SUPPORTED | W01 | W10/W11 | wx event → real dialog → close + legal controls | real wx dialog runtime | EV-W01-R5-003 | packaged proof belongs to W04/W10 | DEC-W01-ABOUT |
+| SHELL-MAIN | Menus, notebook, status bar | VISIBLE | VISIBLE | SUPPORTED | W01 | W10/W11 | real wx launch and navigation inventory | real wx shell runtime | EV-W01-R5-002 | full journey replay later | DEC-W01-SHELL |
+| SHELL-LANGUAGE | English/Turkish language menu | VISIBLE | VISIBLE | EXPERIMENTAL | W01 | W09/W10 | runtime relabel/persistence evidence | source/event trace only | EV-W01-R5-006 | current-language runtime replay | DEC-W01-LANGUAGE |
+| SHELL-SETTINGS | Settings dialog/actions | VISIBLE | VISIBLE | EXPERIMENTAL | W01 | W09/W10 | settings mutation/persistence/runtime effect | source/event trace only | EV-W01-R5-006 | persistence and restart proof | DEC-W01-SETTINGS |
+| SHELL-HELP | Help Center / Send Logs | VISIBLE | VISIBLE | EXPERIMENTAL | W01 | W10/W11 | visible action outcome and support bundle proof | source/event trace only | EV-W01-R5-006 | runtime/public-surface replay | DEC-W01-HELP |
+| NAV-TERMINAL | Terminal | VISIBLE | VISIBLE | REQUIRES_EXTERNAL_VALIDATION | W01 | W03/W05/W10 | real SSH/PTY and GUI evidence | source/event trace | EV-W01-R5-007 | real backend and journey proof | DEC-W01-TERMINAL |
+| NAV-JOBS | Jobs & Outputs | VISIBLE | VISIBLE | REQUIRES_EXTERNAL_VALIDATION | W01 | W03/W07/W10 | real Slurm job lifecycle evidence | source/event trace | EV-W01-R5-008 | real Slurm proof | DEC-W01-JOBS |
+| NAV-DIRECTORIES | Directories | VISIBLE | VISIBLE | REQUIRES_EXTERNAL_VALIDATION | W01 | W03/W06/W10 | real remote filesystem lifecycle | source/event trace | EV-W01-R5-009 | real SSH/SFTP proof | DEC-W01-DIRECTORIES |
+| NAV-FILES | Files/transfers | VISIBLE | VISIBLE | REQUIRES_EXTERNAL_VALIDATION | W01 | W03/W06/W10 | local + real SFTP transfer proof | local/runtime source trace | EV-W01-R5-010 | remote transfer proof | DEC-W01-FILES |
+| NAV-EDITOR | Editor | VISIBLE | VISIBLE | EXPERIMENTAL | W01 | W06/W07/W10 | editor lifecycle and provider/template proof | source/event trace | EV-W01-R5-011 | integrated remote/plugin paths | DEC-W01-EDITOR |
+| NAV-LOGS | Logs | VISIBLE | VISIBLE | EXPERIMENTAL | W01 | W09/W10 | lifecycle, redaction, diagnostics proof | source/event trace | EV-W01-R5-012 | persistence/redaction replay | DEC-W01-LOGS |
+| PLUGIN-MANAGER | Browse/install/manage/update plugins | VISIBLE | VISIBLE | REQUIRES_EXTERNAL_VALIDATION | W01 | W02/W08/W10 | current plugin pin + real install/discovery lifecycle | source/event trace; plugin remote pin | EV-W01-R5-013 | fetch/checkout pin and lifecycle proof | DEC-W01-PLUGIN-MANAGER |
+| PROVIDER-TEMPLATES | provider/template selector | VISIBLE | VISIBLE | REQUIRES_EXTERNAL_VALIDATION | W01 | W02/W03/W08 | cross-repo schema + real provider proof | source trace; plugin develop SHA | EV-W01-R5-014 | live/provider/package validation | DEC-W01-PROVIDER |
+| PROVIDER-CAPABILITIES | adapter/parser/capability surfaces | VISIBLE | VISIBLE | REQUIRES_EXTERNAL_VALIDATION | W01 | W02/W03/W08 | declared vs observed + real backend | source trace; plugin develop SHA | EV-W01-R5-015 | live capability and packaged discovery proof | DEC-W01-CAPABILITIES |
+| SETTINGS-LEGACY | migration-only settings | PERSISTED | NOT USER-FACING | DEPRECATED | W01 | W09 | migration/read compatibility proof | source drift audit | EV-W01-R5-016 | migration closeout | DEC-W01-LEGACY-SETTINGS |
+
+### Exact R5 freeze-group totals
+
+| Disposition | Count |
+|---|---:|
+| SUPPORTED | 2 |
+| EXPERIMENTAL | 5 |
+| REQUIRES_EXTERNAL_VALIDATION | 7 |
+| DEPRECATED | 1 |
+| NOT-IN-V2 | 1 |
+| **Total** | **16** |

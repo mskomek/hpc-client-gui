@@ -1,3 +1,6 @@
+> SUPERSEDED — historical W01 completion report. The only authoritative report is
+> `docs/wave-reports/v2/WAVE_V2_FINAL_01_REPORT.md`.
+
 # W01 COMPLETION REPORT
 
 **Wave:** W01 — Live Inventory, Feature Truth Map, and Support Freeze

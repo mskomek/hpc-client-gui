@@ -1,5 +1,7 @@
 """W01 regression tests — ghost control removal and wx About dialog.
 
+Purpose IDs: REG-W01-001 (Quick Tour), GUI-W01-001 (About contract).
+
 These tests prove that FIX-W01-001 (Quick Tour ghost control removal) and
 FIX-W01-002 (wx About dialog) remain correct.  If either defect returns,
 these tests MUST fail for the right reason.
@@ -122,16 +124,10 @@ class TestWxAboutDialog:
     def test_dispatch_about_not_messagebox(self):
         """APP-ABOUT dispatch must NOT use wx.MessageBox."""
         src = pathlib.Path("src/hpc_gui/wx_shell.py").read_text(encoding="utf-8")
-        # Find the APP-ABOUT block and verify no MessageBox
-        about_idx = src.find('"APP-ABOUT"')
-        if about_idx == -1:
-            about_idx = src.find("'APP-ABOUT'")
-        if about_idx != -1:
-            # Get ~500 chars around the dispatch
-            block = src[about_idx:about_idx + 500]
-            assert "wx.MessageBox" not in block, (
-                "APP-ABOUT dispatch still uses wx.MessageBox"
-            )
+        start = src.index('elif command_id == "APP-ABOUT":')
+        end = src.index("\n    elif ", start + 1)
+        block = src[start:end]
+        assert "wx.MessageBox" not in block, "APP-ABOUT dispatch still uses wx.MessageBox"
 
     def test_wx_about_no_network_dependency(self):
         """wx About dialog must not require network to instantiate."""
