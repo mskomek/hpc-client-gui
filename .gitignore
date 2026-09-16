@@ -84,6 +84,9 @@ tools/ai/deepseek-models.local.psd1
 /tools/
 /devtools/*
 !/devtools/performance_probe.py
+# The local HPC lab is a shared test fixture, not a personal scratch tool.
+!/devtools/lab/
+!/devtools/lab/**
 /MAIN_SYNC_PROTOCOL.md
 /docs/DEEPSEEK_*
 /docs/OPENCODE_*
