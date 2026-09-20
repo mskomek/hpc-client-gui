@@ -45,7 +45,7 @@ usermod -d /srv/hpc/home/hpctest hpctest
 chown hpctest:hpctest /srv/hpc/home/hpctest/.ssh /srv/hpc/home/hpctest/.ssh/authorized_keys
 chmod 0700 /srv/hpc/home/hpctest/.ssh
 chmod 0600 /srv/hpc/home/hpctest/.ssh/authorized_keys
-sed -i '\#login-control01:/srv/hpc/\(home\|scratch\|project\) /\(home\|scratch\|project\) #d' /etc/fstab
+sed -i '\#^login-control01:/srv/hpc/.* nfs4 #d' /etc/fstab
 for old_mount in /home /scratch /project; do
   mountpoint -q "$old_mount" && umount "$old_mount"
 done

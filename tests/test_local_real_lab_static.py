@@ -42,6 +42,12 @@ def test_local_real_provisioning_order_and_single_sources():
     assert "sftp -q -b -" in LAB_TEST
     assert "sftp_content_match" in LAB_TEST
     assert "scontrol show nodes compute[01-02]" in LAB_TEST
+    assert "munge -n | unmunge'" in LAB_TEST
+    assert "grep -q STATUS:0" not in LAB_TEST
+    assert "srun --nodes=2 --ntasks=2 --ntasks-per-node=1" in LAB_TEST
+    assert "test \"$(wc -l < .local-real-job/result)\" -eq 2" in LAB_TEST
+    assert "^compute01 /srv/hpc/home/hpctest/.local-real-job$" in LAB_TEST
+    assert "^compute02 /srv/hpc/home/hpctest/.local-real-job$" in LAB_TEST
     assert "canonical_paths_same" in LAB_TEST
     assert "identity_same" in LAB_TEST
     assert "shared_home_job" in LAB_TEST
@@ -56,6 +62,7 @@ def test_local_real_shared_identity_and_mounts():
     assert "login-control01:/srv/hpc/scratch /srv/hpc/scratch" in COMPUTE
     assert "login-control01:/srv/hpc/project /srv/hpc/project" in COMPUTE
     assert "login-control01:/srv/hpc/home /home" not in COMPUTE
+    assert "sed -i '\\#^login-control01:/srv/hpc/.* nfs4 #d' /etc/fstab" in COMPUTE
     assert "HPCTEST_UID" in COMPUTE and "SLURM_UID" in COMPUTE
 
 
