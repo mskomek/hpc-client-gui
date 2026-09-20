@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 : "${SLURM_DB_PASSWORD:?set SLURM_DB_PASSWORD in the provisioning environment}"
+: "${SLURM_COMPUTE_CPUS:?set SLURM_COMPUTE_CPUS in the provisioning environment}"
 
 export DEBIAN_FRONTEND=noninteractive
 apt-get update
@@ -13,7 +14,7 @@ chown -R hpctest:hpctest /srv/hpc/home/hpctest
 usermod -d /srv/hpc/home/hpctest hpctest
 printf '/srv/hpc/home  *(rw,sync,no_subtree_check,no_root_squash)\n/srv/hpc/scratch *(rw,sync,no_subtree_check,no_root_squash)\n/srv/hpc/project *(rw,sync,no_subtree_check,no_root_squash)\n' >/etc/exports
 exportfs -rav
-systemctl enable --now ssh mariadb munge nfs-server
+systemctl enable --now ssh mariadb nfs-server
 
 if [ ! -s /etc/munge/munge.key ]; then
   create-munge-key || /usr/sbin/mungekey
@@ -38,7 +39,7 @@ SelectTypeParameters=CR_Core
 SchedulerType=sched/backfill
 AccountingStorageType=accounting_storage/slurmdbd
 AccountingStorageHost=login-control01
-NodeName=compute[01-02] CPUs=2 RealMemory=1800 State=UNKNOWN
+NodeName=compute[01-02] CPUs=$SLURM_COMPUTE_CPUS RealMemory=1800 State=UNKNOWN
 PartitionName=debug Nodes=compute[01-02] Default=YES MaxTime=INFINITE State=UP
 EOF
 mkdir -p /var/lib/slurm/slurmctld /var/lib/slurm/slurmd

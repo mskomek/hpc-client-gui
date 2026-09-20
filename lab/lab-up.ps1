@@ -10,6 +10,8 @@ $image = Join-Path $StateRoot $Config.image.file; $baseVhdx = Join-Path $StateRo
 if (-not (Test-Path $image)) { Invoke-WebRequest $Config.image.url -OutFile $image }
 if (-not (Test-Path $baseVhdx)) { $source = (wsl.exe wslpath -a ((Resolve-Path $image).Path -replace '\','/')).Trim(); $dest = (wsl.exe wslpath -a ((Resolve-Path $StateRoot).Path -replace '\','/')).Trim() + '/ubuntu-base.vhdx'; Invoke-Checked wsl.exe @('bash','-lc',"qemu-img convert -p -O vhdx '$source' '$dest'") }
 $public = Get-PublicKey
+$computeCpus = @($Config.nodes | Where-Object role -eq 'compute' | Select-Object -ExpandProperty cpus -Unique)
+if ($computeCpus.Count -ne 1 -or $computeCpus[0] -lt 1) { throw 'All compute nodes must define the same positive cpus value.' }
 foreach ($node in $Config.nodes) {
   $vmPath = Join-Path $StateRoot $node.name; New-Item -ItemType Directory -Force $vmPath | Out-Null
   $disk = Join-Path $vmPath "$($node.name).vhdx"
@@ -24,13 +26,23 @@ foreach ($node in $Config.nodes) {
   Invoke-Checked wsl.exe @('bash','-lc',"genisoimage -output '$isoWsl' -volid cidata -joliet -rock '$seedWsl'")
   if (-not (Get-VM -Name $node.name -ErrorAction SilentlyContinue)) { New-VM -Name $node.name -Generation 2 -MemoryStartupBytes ($node.memory_mb * 1MB) -VHDPath $disk -SwitchName $Config.switch | Out-Null; Add-VMDvdDrive -VMName $node.name -Path $iso | Out-Null; Set-VM -Name $node.name -AutomaticStopAction ShutDown }
   $vm = Get-VM -Name $node.name
-  if ($vm.State -eq 'Running') { throw "VM must be stopped before lab-up configures Secure Boot: $($node.name)" }
-  Set-VMFirmware -VMName $node.name -EnableSecureBoot On -SecureBootTemplate 'MicrosoftUEFICertificateAuthority'
-  Start-VM $node.name | Out-Null
+  $firmware = Get-VMFirmware -VMName $node.name
+  $processor = Get-VMProcessor -VMName $node.name
+  $hardwareOk = $firmware.SecureBoot -eq 'On' -and $firmware.SecureBootTemplate -eq 'MicrosoftUEFICertificateAuthority' -and $processor.Count -eq $node.cpus
+  if ($vm.State -eq 'Running' -and -not $hardwareOk) {
+    Stop-VM -Name $node.name
+    for ($wait = 0; $wait -lt 30 -and (Get-VM -Name $node.name).State -ne 'Off'; $wait++) { Start-Sleep 1 }
+    if ((Get-VM -Name $node.name).State -ne 'Off') { throw "VM did not stop for required hardware reconfiguration: $($node.name)" }
+  }
+  if ((Get-VM -Name $node.name).State -ne 'Running') {
+    Set-VMFirmware -VMName $node.name -EnableSecureBoot On -SecureBootTemplate 'MicrosoftUEFICertificateAuthority'
+    Set-VMProcessor -VMName $node.name -Count $node.cpus
+    Start-VM $node.name | Out-Null
+  }
 }
 foreach ($node in $Config.nodes) { $ready = $false; for ($i=0; $i -lt 60; $i++) { if (Test-NetConnection $node.ip -Port 22 -InformationLevel Quiet) { $ready = $true; break }; Start-Sleep 2 }; if (-not $ready) { throw "SSH did not become ready: $($node.name)" } }
 function Send-Script($host,$path,$env='') { $b64 = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes((Get-Content $path -Raw))); Invoke-LabSsh $host "echo '$b64' | base64 -d | sudo $env bash -s" | Out-Null }
-$dbPassword = [guid]::NewGuid().ToString('N'); Send-Script (Get-Node login-control01).ip (Join-Path $PSScriptRoot 'provision/controller.sh') "env SLURM_DB_PASSWORD=$dbPassword"
+$dbPassword = [guid]::NewGuid().ToString('N'); Send-Script (Get-Node login-control01).ip (Join-Path $PSScriptRoot 'provision/controller.sh') "env SLURM_DB_PASSWORD=$dbPassword SLURM_COMPUTE_CPUS=$($computeCpus[0])"
 foreach ($node in @($Config.nodes | Where-Object role -eq 'compute')) { Send-Script $node.ip (Join-Path $PSScriptRoot 'provision/compute.sh') }
 $slurmConf = Invoke-LabSshCapture (Get-Node login-control01).ip 'sudo base64 -w0 /etc/slurm/slurm.conf'
 if ($slurmConf.exit_code -ne 0 -or [string]::IsNullOrWhiteSpace($slurmConf.output)) { throw 'Controller did not provide /etc/slurm/slurm.conf' }

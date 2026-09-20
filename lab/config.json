@@ -11,8 +11,8 @@
     "port": 22
   },
   "nodes": [
-    {"name": "login-control01", "ip": "192.168.250.11", "memory_mb": 4096, "disk_gb": 40, "role": "controller"},
-    {"name": "compute01", "ip": "192.168.250.12", "memory_mb": 2048, "disk_gb": 20, "role": "compute"},
-    {"name": "compute02", "ip": "192.168.250.13", "memory_mb": 2048, "disk_gb": 20, "role": "compute"}
+    {"name": "login-control01", "ip": "192.168.250.11", "memory_mb": 4096, "disk_gb": 40, "cpus": 2, "role": "controller"},
+    {"name": "compute01", "ip": "192.168.250.12", "memory_mb": 2048, "disk_gb": 20, "cpus": 2, "role": "compute"},
+    {"name": "compute02", "ip": "192.168.250.13", "memory_mb": 2048, "disk_gb": 20, "cpus": 2, "role": "compute"}
   ]
 }
