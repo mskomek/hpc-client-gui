@@ -19,7 +19,6 @@ login-control01:/srv/hpc/home /home nfs4 _netdev,auto 0 0
 login-control01:/srv/hpc/scratch /scratch nfs4 _netdev,auto 0 0
 login-control01:/srv/hpc/project /project nfs4 _netdev,auto 0 0
 EOF
-systemctl enable --now ssh munge
+systemctl enable --now ssh
 install -d /var/lib/slurm/slurmd
 chown -R slurm:slurm /var/lib/slurm
-systemctl enable --now slurmd

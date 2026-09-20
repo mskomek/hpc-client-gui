@@ -4,7 +4,7 @@ set -euo pipefail
 
 export DEBIAN_FRONTEND=noninteractive
 apt-get update
-apt-get install -y openssh-server openssh-client sftp munge slurm-wlm slurmctld slurmdbd mariadb-server nfs-kernel-server
+apt-get install -y openssh-server openssh-client munge slurm-wlm slurmctld slurmdbd mariadb-server nfs-kernel-server
 
 id hpctest >/dev/null 2>&1 || useradd --create-home --shell /bin/bash hpctest
 install -d -m 0755 /srv/hpc/{home,scratch,project}
@@ -44,7 +44,7 @@ EOF
 mkdir -p /var/lib/slurm/slurmctld /var/lib/slurm/slurmd
 chown -R slurm:slurm /var/lib/slurm
 
-cat >/etc/slurm/slurmdbd.conf <<'EOF'
+cat >/etc/slurm/slurmdbd.conf <<EOF
 AuthType=auth/munge
 DbdHost=login-control01
 SlurmUser=slurm
@@ -52,13 +52,21 @@ StorageType=accounting_storage/mysql
 StorageHost=localhost
 StorageUser=slurm
 StorageLoc=slurm_acct_db
-StoragePass=${SLURM_DB_PASSWORD}
+StoragePass=$SLURM_DB_PASSWORD
 LogFile=/var/log/slurm/slurmdbd.log
 PidFile=/run/slurmdbd.pid
 EOF
 chmod 600 /etc/slurm/slurmdbd.conf
-mysql -e "CREATE DATABASE IF NOT EXISTS slurm_acct_db; CREATE USER IF NOT EXISTS 'slurm'@'localhost' IDENTIFIED BY '${SLURM_DB_PASSWORD}'; ALTER USER 'slurm'@'localhost' IDENTIFIED BY '${SLURM_DB_PASSWORD}'; GRANT ALL ON slurm_acct_db.* TO 'slurm'@'localhost'; FLUSH PRIVILEGES;"
+mysql <<SQL
+CREATE DATABASE IF NOT EXISTS slurm_acct_db;
+CREATE USER IF NOT EXISTS 'slurm'@'localhost' IDENTIFIED BY '$SLURM_DB_PASSWORD';
+ALTER USER 'slurm'@'localhost' IDENTIFIED BY '$SLURM_DB_PASSWORD';
+GRANT ALL ON slurm_acct_db.* TO 'slurm'@'localhost';
+FLUSH PRIVILEGES;
+SQL
+unset SLURM_DB_PASSWORD
 install -d -o slurm -g slurm /var/log/slurm
-systemctl enable --now slurmdbd slurmctld
+systemctl enable --now slurmdbd
+systemctl enable --now slurmctld
 scontrol update NodeName=compute01 State=RESUME || true
 scontrol update NodeName=compute02 State=RESUME || true
