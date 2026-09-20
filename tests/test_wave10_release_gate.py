@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import pathlib
+import re
 import sys
 
 import pytest
@@ -109,14 +110,27 @@ class TestMigrationLogic:
 
     def test_no_global_latin1_reinterpretation(self):
         """No global Latin-1→UTF-8 reinterpretation should exist."""
+        # Flag actual codec *usage* (decode/encode calls, encoding= arguments,
+        # codecs helpers, str()/bytes() conversions). A bare mention of a code
+        # page number in prose -- e.g. documenting that a legacy console uses
+        # cp1254 -- is not a reinterpretation and must not fail this gate.
+        usage = re.compile(
+            r"(?i)(\.decode\s*\(\s*['\"]|\.encode\s*\(\s*['\"]"
+            r"|encoding\s*=\s*['\"]|codecs\s*\.\s*\w+\s*\([^)]*['\"]"
+            r"|str\s*\([^,]+,\s*['\"]|bytes\s*\([^,]+,\s*['\"])"
+            r"(latin-?1|cp125\d*)"
+        )
         src_dir = ROOT / "src" / "hpc_gui"
         for py_file in src_dir.rglob("*.py"):
             if py_file.name.startswith("__"):
                 continue
-            content = py_file.read_text(encoding="utf-8")
-            assert "latin-1" not in content.lower()
-            assert "latin1" not in content.lower()
-            assert "cp125" not in content.lower()
+            for lineno, line in enumerate(
+                py_file.read_text(encoding="utf-8").splitlines(), 1
+            ):
+                assert not usage.search(line), (
+                    f"Latin-1/cp125 reinterpretation in "
+                    f"{py_file.name}:{lineno}: {line.strip()}"
+                )
 
     def test_no_errors_ignore_on_user_paths(self):
         """errors='ignore' should not be used on user-controlled paths."""

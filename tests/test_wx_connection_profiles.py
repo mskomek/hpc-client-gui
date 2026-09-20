@@ -800,7 +800,8 @@ def test_i18n_en_tr_labels():
     # No missing keys for new UI
     for key in ["connection.profile_section", "connection.auth_section", "connection.cluster_settings", "connection.advanced_settings",
                 "connection.delete_confirm_title", "connection.delete_confirm_message", "connection.host_key_prompt_title",
-                "connection.storage_areas", "connection.quota_settings", "connection.jump_enable", "connection.host_key_verification"]:
+                "connection.storage_areas", "connection.quota_settings", "connection.jump_enable", "connection.host_key_verification",
+                "connection.rename_name_taken"]:
         load_language("en")
         assert t(key) != f"[{key}]"
         load_language("tr")
@@ -1028,3 +1029,147 @@ def test_quota_profile_lookup_supports_nested_provider_template():
 
     profile = {"system": {"provider_template": {"quota_sources": [{"enabled": False, "command_template": "quota"}]}}}
     assert quota_state_for_profile(profile) == "disabled"
+
+
+# ---------------------------------------------------------------------------
+# W17.1 Rename-collision guard (DEF-W17-001) — real wx dialog + real service
+# ---------------------------------------------------------------------------
+
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
+def test_real_dialog_rename_onto_existing_name_rejected(monkeypatch):
+    """Real WxConnectionDialog (edit beta -> rename alpha) -> real Save button -> rejected."""
+    from hpc_gui.core.i18n import t, load_language
+    from hpc_gui.services.connection_profile_service import save_profile as svc_save
+    from hpc_gui.wx_connection_dialog import WxConnectionDialog
+
+    load_language("en")
+    expected = 'Profile name "alpha" is already used by another profile. Choose a different name.'
+    assert t("connection.rename_name_taken").format(name="alpha") == expected
+    tmp = _isolated_storage(monkeypatch)
+    try:
+        _wx_app = wx.App.Get() or wx.App(False)
+        storage.upsert_profile({"name": "alpha", "host": "h1.example", "port": 22, "username": "u1"})
+        storage.upsert_profile({"name": "beta", "host": "h2.example", "port": 22, "username": "u2"})
+        beta = next(p for p in load_profiles() if p.get("name") == "beta")
+
+        frame = wx.Frame(None)
+        shown = []
+
+        def panel_like_on_save(collected):
+            # Mirrors build_connection_panel._handle_save for the edit path.
+            plain = str(collected.get("password", "") or "")
+            save_pw = bool(collected.get("save_password", False))
+            prompt_policy = str(collected.get("password_prompt_policy") or "when-needed")
+            initial = next((p for p in load_profiles() if p.get("name") == "beta"), None)
+            try:
+                svc_save(
+                    collected,
+                    initial_profile=initial,
+                    plain_password=plain,
+                    save_password=save_pw,
+                    prompt_policy=prompt_policy,
+                    ask_master=None,
+                    original_name_override="beta",
+                )
+            except ValueError as exc:
+                msg = str(exc)
+                if msg.startswith("profile_name_taken:"):
+                    taken = msg.split(":", 1)[1].strip()
+                    msg = t("connection.rename_name_taken").format(name=taken)
+                shown.append(msg)
+                return False
+            return True
+
+        dlg = WxConnectionDialog(
+            frame,
+            initial_profile=beta,
+            mode="edit",
+            on_save=panel_like_on_save,
+        )
+        assert dlg.profile_name_ctrl.GetValue() == "beta"
+        dlg.profile_name_ctrl.SetValue("alpha")
+
+        with mock.patch.object(dlg.dlg, "EndModal") as end_modal:
+            btn = dlg.btn_save
+            evt = wx.CommandEvent(wx.EVT_BUTTON.typeId, btn.GetId())
+            btn.GetEventHandler().ProcessEvent(evt)
+            for _ in range(10):
+                wx.Yield()
+
+        end_modal.assert_not_called()
+        assert shown == [expected]
+        rows = load_profiles()
+        assert len([p for p in rows if p.get("name") == "alpha"]) == 1
+        assert len([p for p in rows if p.get("name") == "beta"]) == 1
+        assert next(p for p in rows if p.get("name") == "beta")["host"] == "h2.example"
+        dlg.Destroy()
+        frame.Destroy()
+        for _ in range(3):
+            wx.Yield()
+    finally:
+        tmp.cleanup()
+
+
+# ---------------------------------------------------------------------------
+# W17.2 Rename-collision guard — real panel _handle_save mapping
+# ---------------------------------------------------------------------------
+
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
+def test_panel_save_maps_rename_conflict_to_warning(monkeypatch):
+    """Real build_connection_panel._handle_save rejects a rename-onto-existing save."""
+    from hpc_gui.core.i18n import t, load_language
+    from hpc_gui.wx_connection import build_connection_panel
+
+    load_language("en")
+    expected = 'Profile name "alpha" is already used by another profile. Choose a different name.'
+    assert t("connection.rename_name_taken").format(name="alpha") == expected
+    tmp = _isolated_storage(monkeypatch)
+    try:
+        _wx_app = wx.App.Get() or wx.App(False)
+        storage.upsert_profile({"name": "alpha", "host": "h1.example", "port": 22, "username": "u1"})
+        storage.upsert_profile({"name": "beta", "host": "h2.example", "port": 22, "username": "u2"})
+
+        frame = wx.Frame(None)
+        host = build_connection_panel(frame, profiles=load_profiles())
+
+        conflicting = {
+            "name": "alpha",
+            "host": "h2x.example",
+            "port": 22,
+            "username": "u2",
+            "password": "",
+            "save_password": False,
+            "password_prompt_policy": "when-needed",
+        }
+
+        class FakeDialog:
+            def __init__(self, parent, initial_profile=None, mode="add", on_save=None, on_save_and_connect=None):
+                assert mode == "edit"
+                self._result = on_save(conflicting) if on_save else False
+
+            def ShowModal(self):
+                return wx.ID_CANCEL
+
+            def Destroy(self):
+                pass
+
+        shown = []
+        with mock.patch("hpc_gui.wx_connection_dialog.WxConnectionDialog", FakeDialog):
+            with mock.patch.object(wx, "MessageBox", side_effect=lambda msg, *a, **k: shown.append(msg) or wx.ID_OK):
+                host._wx_connection_open_dialog("edit", "beta")
+                for _ in range(5):
+                    wx.Yield()
+
+        assert shown == [expected]
+        rows = load_profiles()
+        assert sorted(p["name"] for p in rows) == ["alpha", "beta"]
+        assert next(p for p in rows if p.get("name") == "beta")["host"] == "h2.example"
+        frame.Destroy()
+        for _ in range(3):
+            wx.Yield()
+    finally:
+        tmp.cleanup()

@@ -1,0 +1,30 @@
+============================= test session starts =============================
+platform win32 -- Python 3.12.4, pytest-9.0.2, pluggy-1.6.0 -- D:\Python\Python312\python.exe
+cachedir: .pytest_cache
+rootdir: D:\Projeler\hpc-client-gui
+configfile: pyproject.toml
+plugins: anyio-4.12.1, cov-7.1.0
+collecting ... collected 20 items
+
+tests/test_w19_connection_lifecycle.py::test_repeated_connect_supersedes_without_conflict PASSED [  5%]
+tests/test_w19_connection_lifecycle.py::test_model_cancel_while_connecting_returns_to_safe_state PASSED [ 10%]
+tests/test_w19_connection_lifecycle.py::test_stale_transport_callback_cannot_fail_new_session PASSED [ 15%]
+tests/test_w19_connection_lifecycle.py::test_matching_transport_callback_fails_and_invalidates PASSED [ 20%]
+tests/test_w19_connection_lifecycle.py::test_transport_callback_without_live_session_is_dropped PASSED [ 25%]
+tests/test_w19_connection_lifecycle.py::test_reconnect_mints_fresh_session_identity PASSED [ 30%]
+tests/test_w19_connection_lifecycle.py::test_close_session_is_best_effort PASSED [ 35%]
+tests/test_w19_connection_lifecycle.py::test_panel_cancel_control_cancels_slow_connect_safely PASSED [ 40%]
+tests/test_w19_connection_lifecycle.py::test_recoverable_failure_keeps_app_alive_and_rearms PASSED [ 45%]
+tests/test_w19_connection_lifecycle.py::test_panel_disconnect_clears_session_and_gates_remote PASSED [ 50%]
+tests/test_w19_connection_lifecycle.py::test_shell_disconnect_rebinds_terminal_and_bumps_generation PASSED [ 55%]
+tests/test_w19_connection_lifecycle.py::test_terminal_detaches_stale_output_subscriber PASSED [ 60%]
+tests/test_w19_connection_lifecycle.py::test_dialogs_marshal_to_gui_thread PASSED [ 65%]
+tests/test_w19_connection_lifecycle.py::test_host_key_prompt_from_worker_thread_uses_gui_thread PASSED [ 70%]
+tests/test_w19_connection_lifecycle.py::test_transport_loss_updates_panel_indicator PASSED [ 75%]
+tests/test_w19_connection_lifecycle.py::test_shell_tab_order_is_canonical PASSED [ 80%]
+tests/test_w19_connection_lifecycle.py::test_nav_actions_route_to_embedded_pages PASSED [ 85%]
+tests/test_w19_connection_lifecycle.py::test_keyboard_tab_navigation_and_focus_restoration PASSED [ 90%]
+tests/test_w19_connection_lifecycle.py::test_reconnect_rebinds_all_domains_through_canonical_session PASSED [ 95%]
+tests/test_w19_connection_lifecycle.py::test_profile_switch_invalidates_navigation_and_filters PASSED [100%]
+
+============================= 20 passed in 7.09s ==============================

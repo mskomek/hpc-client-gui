@@ -9,7 +9,7 @@ def test_windows_linux_defaults_and_terminal_boundary():
     for platform in ("windows", "win32", "linux"):
         bindings = bindings_for(platform)
         assert ("APP-SETTINGS", "Ctrl+,") in {(item.command_id, item.binding) for item in bindings}
-        assert ("APP-COMMAND-PALETTE", "Ctrl+Shift+P") in {(item.command_id, item.binding) for item in bindings}
+        assert not any(item.command_id == "APP-COMMAND-PALETTE" for item in bindings)
         assert ("TERM-COPY", "Ctrl+Shift+C") in {(item.command_id, item.binding) for item in bindings}
         assert not any(item.context == "terminal" and item.binding in {"Ctrl+C", "Ctrl+Z"} for item in bindings)
         assert not conflicts(bindings)

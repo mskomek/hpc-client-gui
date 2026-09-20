@@ -111,7 +111,13 @@ def _build_profile(raw: Any) -> tuple[ClusterProfileDefinition | None, str | Non
     errors = validate_cluster_profile_dict(raw)
     if errors:
         return None, "; ".join(errors)
-    return build_cluster_profile(raw), None
+    try:
+        return build_cluster_profile(raw), None
+    except Exception as exc:
+        # Fail closed: no validated-but-unbuildable shape may escape into the
+        # loader and take down host startup (SCHEMA-009). The plugin is
+        # recorded as a problem and skipped like any other malformed payload.
+        return None, f"invalid cluster profile: {exc}"
 
 
 def load_installed_plugins(

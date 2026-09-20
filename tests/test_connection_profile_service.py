@@ -234,5 +234,82 @@ class ConnectionProfileServiceTests(unittest.TestCase):
         self.assertEqual(result, "new-temporary-secret")
         ask_master.assert_not_called()
 
+    @pytest.mark.unit
+    @pytest.mark.regression
+    @pytest.mark.semantic
+    def test_rename_onto_existing_name_raises_and_preserves_both(self):
+        # DEF-W17-001: renaming beta -> alpha must not create duplicate rows.
+        storage.upsert_profile({"name": "alpha", "host": "h1.example", "port": 22, "username": "u1"})
+        storage.upsert_profile({"name": "beta", "host": "h2.example", "port": 22, "username": "u2"})
+        beta = next(p for p in storage.load_profiles() if p.get("name") == "beta")
+        alpha_before = next(p for p in storage.load_profiles() if p.get("name") == "alpha")
+        collected = {
+            "name": "alpha",
+            "host": "h2x.example",
+            "port": 22,
+            "username": "u2",
+            "save_password": False,
+            "password_prompt_policy": "when-needed",
+        }
+        with self.assertRaises(ValueError):
+            save_profile(
+                collected,
+                initial_profile=beta,
+                plain_password="",
+                save_password=False,
+                prompt_policy="when-needed",
+                original_name_override="beta",
+            )
+        rows = storage.load_profiles()
+        self.assertEqual(len([p for p in rows if p.get("name") == "alpha"]), 1)
+        self.assertEqual(len([p for p in rows if p.get("name") == "beta"]), 1)
+        alpha_after = next(p for p in rows if p.get("name") == "alpha")
+        beta_after = next(p for p in rows if p.get("name") == "beta")
+        self.assertEqual(alpha_after["host"], "h1.example")
+        self.assertEqual(alpha_after["id"], alpha_before["id"])
+        self.assertEqual(beta_after["host"], "h2.example")
+        self.assertEqual(beta_after["id"], beta["id"])
+
+    @pytest.mark.unit
+    @pytest.mark.regression
+    @pytest.mark.semantic
+    def test_add_duplicate_name_upserts_in_place_by_design(self):
+        # FIND-W17-003 lock-in: Add-path upsert-by-name stays allowed and
+        # converges to exactly one row with a stable id (Qt parity).
+        first = save_profile(
+            {"name": "alpha", "host": "h1.example", "port": 22, "username": "u1"},
+            plain_password="",
+            save_password=False,
+        )
+        second = save_profile(
+            {"name": "alpha", "host": "h9.example", "port": 22, "username": "u9"},
+            initial_profile=None,
+            plain_password="",
+            save_password=False,
+        )
+        rows = storage.load_profiles()
+        self.assertEqual(len([p for p in rows if p.get("name") == "alpha"]), 1)
+        survivor = next(p for p in rows if p.get("name") == "alpha")
+        self.assertEqual(survivor["host"], "h9.example")
+        self.assertEqual(survivor["id"], first["id"])
+        self.assertEqual(second["id"], first["id"])
+
+    @pytest.mark.unit
+    @pytest.mark.regression
+    @pytest.mark.semantic
+    def test_add_returns_stored_stable_id(self):
+        # DEF-W17-002: the Add path must return the same stable identity that
+        # is persisted on disk (edit callers already receive it via merge).
+        saved = save_profile(
+            {"name": "fresh", "host": "h.example", "port": 22, "username": "user"},
+            initial_profile=None,
+            plain_password="",
+            save_password=False,
+        )
+        self.assertTrue(saved.get("id"))
+        stored = next(p for p in storage.load_profiles() if p.get("name") == "fresh")
+        self.assertEqual(saved["id"], stored["id"])
+        self.assertEqual(storage.get_last_profile_name(), "fresh")
+
 if __name__ == "__main__":
     unittest.main()

@@ -1,0 +1,93 @@
+{
+  "schema": "wx-fresh-user-smoke/1",
+  "procedure": "PKG-GJ-01",
+  "identity_header": "Artifact: hpc-client-gui.exe\nSHA256: cc4fd2409819b8a2557f2a7ca0283f082f1fab4da66f72ca243487e8fe4b44f8\nMain SHA: 0f8902a023bac76071527232c2287af96478ed2b\nPlugin SHA: f0abb7e7037e66ab451d463c699fecf4e00c89eb\nVersion: 1.5.9\nOS/arch: windows/amd64",
+  "commit": "0f8902a023bac76071527232c2287af96478ed2b",
+  "platform": "windows",
+  "artifact": "hpc-client-gui.exe",
+  "artifact_sha256": "cc4fd2409819b8a2557f2a7ca0283f082f1fab4da66f72ca243487e8fe4b44f8",
+  "result": "PASS",
+  "checks": {
+    "fresh_config_root": "PASS",
+    "first_run_empty_state": "PASS",
+    "profile_via_visible_controls": "PASS",
+    "loopback_success_via_controls": "PASS",
+    "safe_visible_failure": "PASS",
+    "persisted_nonsecret_state": "PASS",
+    "no_src_leakage": "PASS",
+    "clean_shutdown": "PASS",
+    "relaunch_state_present": "PASS",
+    "relaunch_no_src_leakage": "PASS"
+  },
+  "details": {
+    "fresh_root": "C:\\Users\\mskomek\\AppData\\Local\\Temp\\hpc-fresh-user-4yrpd1vq\\config",
+    "workdir": "C:\\Users\\mskomek\\AppData\\Local\\Temp\\hpc-fresh-user-4yrpd1vq\\work",
+    "workdir_outside_repo": true,
+    "run1_exit": "artifact exit 1",
+    "run1_output": "Adding duplicate image handler for 'Windows bitmap file'\nAdding duplicate animation handler for '1' type\nAdding duplicate animation handler for '2' type\nAdding duplicate animation handler for '3' type\nElement wxStaticText@000001CB61CC7FC0 (\"Quota monitoring is off.\", HWND=00000000013019B6) of wxStaticBoxSizer should be created as child of its wxStaticBox and not of wxPanel@000001CB61ED4800 (\"panel\", HWND=000000000038043C).\nElement wxCheckBox@000001CB655A55E0 (\"Enable X11 forwarding (for GUI apps)\", HWND=00000000010C18A8) of wxStaticBoxSizer should be created as child of its wxStaticBox and not of wxPanel@000001CB61ED7740 (\"panel\", HWND=00000000015C10CA).\nElement wxCheckBox@000001CB655A5000 (\"Allow this connection to be used from the CLI\", HWND=0000000000470A30) of wxStaticBoxSizer should be created as child of its wxStaticBox and not of wxPanel@000001CB61ED7740 (\"panel\", HWND=00000000015C10CA).\nElement wxStaticText@000001CB61CCA790 (\"Default local folder\", HWND=0000000002DD137E) of wxStaticBoxSizer should be created as child of its wxStaticBox and not of wxPanel@000001CB61ED7740 (\"panel\", HWND=00000000015C10CA).\nElement wxStaticText@000001CB61CC6120 (\"Profile name\", HWND=0000000001240568) of wxStaticBoxSizer should be created as child of its wxStaticBox and not of wxScrolledWindow@000001CB61EC5740 (\"panel\", HWND=00000000009A04AC).\nElement wxStaticText@000001CB61CC48A0 (\"Host / IP\", HWND=000000000157053C) of wxStaticBoxSizer should be created as child of its wxStaticBox and not of wxScrolledWindow@000001CB61EC5740 (\"panel\", HWND=00000000009A04AC).\nElement wxStaticText@000001CB61CC26F0 (\"Password (optional)\", HWND=0000000000C40DA6) of wxStaticBoxSizer should be created as child of its wxStaticBox and not of wxScrolledWindow@000001CB61EC5740 (\"panel\", HWND=00000000009A04AC).\n..\\..\\src\\msw\\window.cpp(539): 'SetFocus' failed with error 0x00000057 (The parameter is incorrect.).\n..\\..\\src\\msw\\webview_edge.cpp(609): 'WebView2::WebViewCreated' failed with error 0x80004004 (O",
+    "run2_exit": "artifact exit 1",
+    "run2_output": "Adding duplicate image handler for 'Windows bitmap file'\nAdding duplicate animation handler for '1' type\nAdding duplicate animation handler for '2' type\nAdding duplicate animation handler for '3' type\n",
+    "fresh_parent_kept": "C:\\Users\\mskomek\\AppData\\Local\\Temp\\hpc-fresh-user-4yrpd1vq"
+  },
+  "runs": {
+    "run1": {
+      "exit_code": 1,
+      "runtime": {
+        "schema": "wx-fresh-user-runtime/1",
+        "result": "FAIL",
+        "checks": {
+          "fresh_config_root": "PASS",
+          "first_run_empty_state": "PASS",
+          "profile_via_visible_controls": "PASS",
+          "loopback_success_via_controls": "PASS",
+          "safe_visible_failure": "PASS",
+          "persisted_nonsecret_state": "PASS",
+          "no_src_leakage": "PASS",
+          "clean_shutdown": "PASS"
+        },
+        "details": {
+          "fresh_root": "C:\\Users\\mskomek\\AppData\\Local\\Temp\\hpc-fresh-user-4yrpd1vq\\config",
+          "app_data_dir": "C:\\Users\\mskomek\\AppData\\Local\\Temp\\hpc-fresh-user-4yrpd1vq\\config",
+          "frozen": true,
+          "executable": "D:\\Projeler\\hpc-client-gui\\dist\\hpc-client-gui\\hpc-client-gui.exe"
+        },
+        "run": "1"
+      }
+    },
+    "run2": {
+      "exit_code": 1,
+      "runtime": {
+        "schema": "wx-fresh-user-runtime/1",
+        "result": "FAIL",
+        "checks": {
+          "relaunch_state_present": "PASS",
+          "relaunch_no_src_leakage": "PASS",
+          "clean_shutdown": "PASS"
+        },
+        "details": {
+          "fresh_root": "C:\\Users\\mskomek\\AppData\\Local\\Temp\\hpc-fresh-user-4yrpd1vq\\config",
+          "app_data_dir": "C:\\Users\\mskomek\\AppData\\Local\\Temp\\hpc-fresh-user-4yrpd1vq\\config",
+          "frozen": true,
+          "executable": "D:\\Projeler\\hpc-client-gui\\dist\\hpc-client-gui\\hpc-client-gui.exe"
+        },
+        "run": "2"
+      }
+    }
+  },
+  "exit_codes": [
+    1,
+    1
+  ],
+  "python": "3.12.4",
+  "platform_detail": "Windows-11-10.0.26200-SP0",
+  "generated_utc": "2026-09-19T19:17:54.119410+00:00",
+  "isolated_from_src": true,
+  "manual_required": [
+    "display",
+    "cluster",
+    "MFA",
+    "X11",
+    "DnD",
+    "transfer-conflict"
+  ]
+}

@@ -1,0 +1,92 @@
+{
+  "wave": "W17",
+  "config_root": "C:\\Users\\mskomek\\AppData\\Local\\Temp\\w17gui_dd9315_a",
+  "results": [
+    {
+      "step": "first-run-empty-add-enabled",
+      "ok": true,
+      "detail": "profiles=0"
+    },
+    {
+      "step": "add-dialog-save",
+      "ok": true,
+      "detail": "rows=[('alpha', 'h1.example')]"
+    },
+    {
+      "step": "add-list-refresh",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "secret-hygiene-add",
+      "ok": true,
+      "detail": "no plaintext password in stored JSON"
+    },
+    {
+      "step": "validation-neg",
+      "ok": true,
+      "detail": "warnings=['Port must be numeric.', 'Host / IP is required. Username and password are optional.'] profiles=1"
+    },
+    {
+      "step": "rename-collision-neg",
+      "ok": true,
+      "detail": "msgs=['Profile name \"alpha\" is already used by another profile. Choose a different name.']"
+    },
+    {
+      "step": "edit-save",
+      "ok": true,
+      "detail": "host=h2new.example"
+    },
+    {
+      "step": "duplicate-unique-fresh-id",
+      "ok": true,
+      "detail": "new=['beta (copy)']"
+    },
+    {
+      "step": "select-detail",
+      "ok": true,
+      "detail": "selected=alpha"
+    },
+    {
+      "step": "provider-selection-state",
+      "ok": true,
+      "detail": "label='Provider: Truba'"
+    },
+    {
+      "step": "connect-A",
+      "ok": true,
+      "detail": "state=connected"
+    },
+    {
+      "step": "A-to-B-no-stale",
+      "ok": true,
+      "detail": "closed=['alpha'] active=beta"
+    },
+    {
+      "step": "reconnect-from-disk",
+      "ok": true,
+      "detail": "disk=['alpha', 'beta', 'beta (copy)', 'prov']"
+    },
+    {
+      "step": "delete-active-blocked",
+      "ok": true,
+      "detail": "msgs=['Cannot delete the active connected profile. Disconnect first.']"
+    },
+    {
+      "step": "delete-no-keeps",
+      "ok": true,
+      "detail": "rows=4"
+    },
+    {
+      "step": "delete-yes-removes",
+      "ok": true,
+      "detail": "rows=3 (was 4)"
+    },
+    {
+      "step": "secret-hygiene-final",
+      "ok": true,
+      "detail": "profiles=3"
+    }
+  ],
+  "overall": true
+}

@@ -1,0 +1,502 @@
+{
+  "schema": "wx-packaged-runtime/1",
+  "result": "PASS",
+  "checks": {
+    "wx_runtime_started": "PASS",
+    "main_frame_created": "PASS",
+    "settings_opened": "PASS",
+    "terminal_readback": "PASS",
+    "pty_input_output": "PASS",
+    "pty_resize": "FAIL",
+    "remote_file_roundtrip": "PASS",
+    "job_roundtrip": "PASS",
+    "clean_shutdown": "FAIL",
+    "files_surface": "PASS",
+    "editor_surface": "PASS",
+    "jobs_surface": "PASS",
+    "plugin_ansys_surface": "PASS",
+    "diagnostics_updater_surface": "PASS",
+    "files_controls": "PASS",
+    "editor_controls": "PASS",
+    "jobs_controls": "PASS",
+    "editor_roundtrip": "PASS",
+    "transfer_queue_render": "PASS"
+  },
+  "phase": 4,
+  "input_diagnostic": {
+    "foreground_request_accepted": false,
+    "foreground_matches_frame": false,
+    "wx_focus_type": "WebView",
+    "wx_focus_within_terminal_panel": true,
+    "webview_dom_focus": {
+      "tag": "TEXTAREA",
+      "className": "xterm-helper-textarea",
+      "insideTerminal": true
+    },
+    "input_method": "Win32 SendInput",
+    "terminal_click": [
+      850,
+      614
+    ],
+    "click_events": 2,
+    "sendinput_events": 36,
+    "bridge_input_chars": 18,
+    "ssh_input_chars": 18,
+    "dom_input_events": {
+      "keydown": 18,
+      "beforeinput": 11,
+      "input": 11
+    }
+  },
+  "last_line": "            virtual-truba$ PACKAGED-NORMAL",
+  "last_buffer": "            virtual-truba$ PACKAGED-NORMAL\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+  "last_screen": {
+    "cols": 165,
+    "rows": 45,
+    "bufferType": "normal",
+    "cursorX": 0,
+    "cursorY": 1,
+    "baseY": 0,
+    "viewportY": 0,
+    "totalRows": 45,
+    "lines": [
+      {
+        "text": "            virtual-truba$ PACKAGED-NORMAL",
+        "attrs": [
+          {
+            "ch": " ",
+            "fg": -1,
+            "bg": -1,
+            "fgMode": "default"
+          },
+          {
+            "ch": " ",
+            "fg": -1,
+            "bg": -1,
+            "fgMode": "default"
+          },
+          {
+            "ch": " ",
+            "fg": -1,
+            "bg": -1,
+            "fgMode": "default"
+          },
+          {
+            "ch": " ",
+            "fg": -1,
+            "bg": -1,
+            "fgMode": "default"
+          },
+          {
+            "ch": " ",
+            "fg": -1,
+            "bg": -1,
+            "fgMode": "default"
+          },
+          {
+            "ch": " ",
+            "fg": -1,
+            "bg": -1,
+            "fgMode": "default"
+          },
+          {
+            "ch": " ",
+            "fg": -1,
+            "bg": -1,
+            "fgMode": "default"
+          },
+          {
+            "ch": " ",
+            "fg": -1,
+            "bg": -1,
+            "fgMode": "default"
+          },
+          {
+            "ch": " ",
+            "fg": -1,
+            "bg": -1,
+            "fgMode": "default"
+          },
+          {
+            "ch": " ",
+            "fg": -1,
+            "bg": -1,
+            "fgMode": "default"
+          },
+          {
+            "ch": " ",
+            "fg": -1,
+            "bg": -1,
+            "fgMode": "default"
+          },
+          {
+            "ch": " ",
+            "fg": -1,
+            "bg": -1,
+            "fgMode": "default"
+          },
+          {
+            "ch": "v",
+            "fg": -1,
+            "bg": -1,
+            "fgMode": "default"
+          },
+          {
+            "ch": "i",
+            "fg": -1,
+            "bg": -1,
+            "fgMode": "default"
+          },
+          {
+            "ch": "r",
+            "fg": -1,
+            "bg": -1,
+            "fgMode": "default"
+          },
+          {
+            "ch": "t",
+            "fg": -1,
+            "bg": -1,
+            "fgMode": "default"
+          },
+          {
+            "ch": "u",
+            "fg": -1,
+            "bg": -1,
+            "fgMode": "default"
+          },
+          {
+            "ch": "a",
+            "fg": -1,
+            "bg": -1,
+            "fgMode": "default"
+          },
+          {
+            "ch": "l",
+            "fg": -1,
+            "bg": -1,
+            "fgMode": "default"
+          },
+          {
+            "ch": "-",
+            "fg": -1,
+            "bg": -1,
+            "fgMode": "default"
+          },
+          {
+            "ch": "t",
+            "fg": -1,
+            "bg": -1,
+            "fgMode": "default"
+          },
+          {
+            "ch": "r",
+            "fg": -1,
+            "bg": -1,
+            "fgMode": "default"
+          },
+          {
+            "ch": "u",
+            "fg": -1,
+            "bg": -1,
+            "fgMode": "default"
+          },
+          {
+            "ch": "b",
+            "fg": -1,
+            "bg": -1,
+            "fgMode": "default"
+          },
+          {
+            "ch": "a",
+            "fg": -1,
+            "bg": -1,
+            "fgMode": "default"
+          },
+          {
+            "ch": "$",
+            "fg": -1,
+            "bg": -1,
+            "fgMode": "default"
+          },
+          {
+            "ch": " ",
+            "fg": -1,
+            "bg": -1,
+            "fgMode": "default"
+          },
+          {
+            "ch": "P",
+            "fg": -1,
+            "bg": -1,
+            "fgMode": "default"
+          },
+          {
+            "ch": "A",
+            "fg": -1,
+            "bg": -1,
+            "fgMode": "default"
+          },
+          {
+            "ch": "C",
+            "fg": -1,
+            "bg": -1,
+            "fgMode": "default"
+          },
+          {
+            "ch": "K",
+            "fg": -1,
+            "bg": -1,
+            "fgMode": "default"
+          },
+          {
+            "ch": "A",
+            "fg": -1,
+            "bg": -1,
+            "fgMode": "default"
+          },
+          {
+            "ch": "G",
+            "fg": -1,
+            "bg": -1,
+            "fgMode": "default"
+          },
+          {
+            "ch": "E",
+            "fg": -1,
+            "bg": -1,
+            "fgMode": "default"
+          },
+          {
+            "ch": "D",
+            "fg": -1,
+            "bg": -1,
+            "fgMode": "default"
+          },
+          {
+            "ch": "-",
+            "fg": -1,
+            "bg": -1,
+            "fgMode": "default"
+          },
+          {
+            "ch": "N",
+            "fg": -1,
+            "bg": -1,
+            "fgMode": "default"
+          },
+          {
+            "ch": "O",
+            "fg": -1,
+            "bg": -1,
+            "fgMode": "default"
+          },
+          {
+            "ch": "R",
+            "fg": -1,
+            "bg": -1,
+            "fgMode": "default"
+          },
+          {
+            "ch": "M",
+            "fg": -1,
+            "bg": -1,
+            "fgMode": "default"
+          },
+          {
+            "ch": "A",
+            "fg": -1,
+            "bg": -1,
+            "fgMode": "default"
+          },
+          {
+            "ch": "L",
+            "fg": -1,
+            "bg": -1,
+            "fgMode": "default"
+          }
+        ]
+      },
+      {
+        "text": "",
+        "attrs": []
+      },
+      {
+        "text": "",
+        "attrs": []
+      },
+      {
+        "text": "",
+        "attrs": []
+      },
+      {
+        "text": "",
+        "attrs": []
+      },
+      {
+        "text": "",
+        "attrs": []
+      },
+      {
+        "text": "",
+        "attrs": []
+      },
+      {
+        "text": "",
+        "attrs": []
+      },
+      {
+        "text": "",
+        "attrs": []
+      },
+      {
+        "text": "",
+        "attrs": []
+      },
+      {
+        "text": "",
+        "attrs": []
+      },
+      {
+        "text": "",
+        "attrs": []
+      },
+      {
+        "text": "",
+        "attrs": []
+      },
+      {
+        "text": "",
+        "attrs": []
+      },
+      {
+        "text": "",
+        "attrs": []
+      },
+      {
+        "text": "",
+        "attrs": []
+      },
+      {
+        "text": "",
+        "attrs": []
+      },
+      {
+        "text": "",
+        "attrs": []
+      },
+      {
+        "text": "",
+        "attrs": []
+      },
+      {
+        "text": "",
+        "attrs": []
+      },
+      {
+        "text": "",
+        "attrs": []
+      },
+      {
+        "text": "",
+        "attrs": []
+      },
+      {
+        "text": "",
+        "attrs": []
+      },
+      {
+        "text": "",
+        "attrs": []
+      },
+      {
+        "text": "",
+        "attrs": []
+      },
+      {
+        "text": "",
+        "attrs": []
+      },
+      {
+        "text": "",
+        "attrs": []
+      },
+      {
+        "text": "",
+        "attrs": []
+      },
+      {
+        "text": "",
+        "attrs": []
+      },
+      {
+        "text": "",
+        "attrs": []
+      },
+      {
+        "text": "",
+        "attrs": []
+      },
+      {
+        "text": "",
+        "attrs": []
+      },
+      {
+        "text": "",
+        "attrs": []
+      },
+      {
+        "text": "",
+        "attrs": []
+      },
+      {
+        "text": "",
+        "attrs": []
+      },
+      {
+        "text": "",
+        "attrs": []
+      },
+      {
+        "text": "",
+        "attrs": []
+      },
+      {
+        "text": "",
+        "attrs": []
+      },
+      {
+        "text": "",
+        "attrs": []
+      },
+      {
+        "text": "",
+        "attrs": []
+      },
+      {
+        "text": "",
+        "attrs": []
+      },
+      {
+        "text": "",
+        "attrs": []
+      },
+      {
+        "text": "",
+        "attrs": []
+      },
+      {
+        "text": "",
+        "attrs": []
+      },
+      {
+        "text": "",
+        "attrs": []
+      }
+    ]
+  },
+  "queue_count": 1,
+  "queue_text": "\u00e7al\u0131\u015fma.txt",
+  "wx_app_name": "hpc-client-gui-smoke-9332",
+  "wx_local_data_dir": "C:\\Users\\mskomek\\AppData\\Local\\hpc-client-gui-smoke-9332"
+}

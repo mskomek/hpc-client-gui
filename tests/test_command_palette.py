@@ -12,7 +12,7 @@ def test_palette_search_ranking_and_required_commands():
     assert palette.search("refresh")[0].command.id == "FILE-REFRESH"
     ids = {item.command.id for item in palette.search("cluster")}
     assert "JOB-TEST-CLUSTER" in ids
-    assert {"APP-COMMAND-PALETTE", "JOB-TEST-CLUSTER", "EDITOR-NEW-SLURM", "PLUGIN-ANSYS-LINTER"} <= {item.command.id for item in palette.items()}
+    assert {"JOB-TEST-CLUSTER", "EDITOR-NEW-SLURM", "PLUGIN-ANSYS-LINTER"} <= {item.command.id for item in palette.items()}
 
 
 @pytest.mark.unit

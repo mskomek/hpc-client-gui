@@ -1,3 +1,9 @@
+> SUPERSEDED (W05, 2026-09-18) — historical R5 remediation snapshot (decision
+> BLOCKED/NO-GO on stale pins). The single canonical W01 report is
+> `docs/wave-reports/v2/opencode/W01_WAVE_REPORT.md` (decision PASS at main
+> `0f8902a0` / plugin `f0abb7e7`). This file carries no competing decision;
+> history preserved.
+
 # WAVE V2 FINAL 01 — R5 Remediation and Strict Re-Audit
 
 | Field | Value |

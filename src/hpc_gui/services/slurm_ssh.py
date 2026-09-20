@@ -31,8 +31,17 @@ class SlurmCommandResult:
 
     @property
     def text(self) -> str:
-        """The legacy single-string rendering, unchanged."""
-        return self.stdout if self.stdout.strip() else (self.stderr or f"[exit={self.code}]")
+        """The legacy single-string rendering.
+
+        Successful commands with empty output render as ``""`` (there is
+        nothing to show for an empty queue), while failures keep the exact
+        legacy fallback so an error is never mistaken for empty data.
+        """
+        if self.stdout.strip():
+            return self.stdout
+        if self.ok:
+            return ""
+        return self.stderr or f"[exit={self.code}]"
 
     @property
     def message(self) -> str:

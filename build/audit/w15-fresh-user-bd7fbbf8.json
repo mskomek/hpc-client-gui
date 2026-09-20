@@ -1,0 +1,94 @@
+{
+  "schema": "wx-fresh-user-smoke/1",
+  "procedure": "PKG-GJ-01",
+  "identity_header": "Artifact: hpc-client-gui.exe\nSHA256: bd7fbbf892fabb7fb8849ac46aa58fadb8327612689856bf8f48540dda0570f2\nMain SHA: 0f8902a023bac76071527232c2287af96478ed2b\nPlugin SHA: f0abb7e7037e66ab451d463c699fecf4e00c89eb\nVersion: 1.5.9\nOS/arch: windows/amd64",
+  "commit": "0f8902a023bac76071527232c2287af96478ed2b",
+  "platform": "windows",
+  "artifact": "hpc-client-gui.exe",
+  "artifact_sha256": "bd7fbbf892fabb7fb8849ac46aa58fadb8327612689856bf8f48540dda0570f2",
+  "result": "FAIL",
+  "checks": {
+    "fresh_config_root": "PASS",
+    "first_run_empty_state": "PASS",
+    "profile_via_visible_controls": "PASS",
+    "loopback_success_via_controls": "PASS",
+    "safe_visible_failure": "FAIL",
+    "persisted_nonsecret_state": "FAIL",
+    "no_src_leakage": "PASS",
+    "clean_shutdown": "PASS",
+    "relaunch_state_present": "PASS",
+    "relaunch_no_src_leakage": "PASS"
+  },
+  "details": {
+    "fresh_root": "C:\\Users\\mskomek\\AppData\\Local\\Temp\\hpc-fresh-user-flb0vri6\\config",
+    "workdir": "C:\\Users\\mskomek\\AppData\\Local\\Temp\\hpc-fresh-user-flb0vri6\\work",
+    "workdir_outside_repo": true,
+    "run1_exit": "artifact exit 1",
+    "run1_output": "Adding duplicate image handler for 'Windows bitmap file'\nAdding duplicate animation handler for '1' type\nAdding duplicate animation handler for '2' type\nAdding duplicate animation handler for '3' type\nElement wxStaticText@00000257CD1C8F90 (\"Quota monitoring is off.\", HWND=0000000001D00216) of wxStaticBoxSizer should be created as child of its wxStaticBox and not of wxPanel@00000257D1DDA060 (\"panel\", HWND=00000000022E0872).\nElement wxCheckBox@00000257D1DCBB30 (\"Enable X11 forwarding (for GUI apps)\", HWND=0000000001170D46) of wxStaticBoxSizer should be created as child of its wxStaticBox and not of wxPanel@00000257D1DDB560 (\"panel\", HWND=0000000000E40260).\nElement wxCheckBox@00000257D1DCC110 (\"Allow this connection to be used from the CLI\", HWND=00000000010014F6) of wxStaticBoxSizer should be created as child of its wxStaticBox and not of wxPanel@00000257D1DDB560 (\"panel\", HWND=0000000000E40260).\nElement wxStaticText@00000257CD1C95B0 (\"Default local folder\", HWND=00000000021C0D1A) of wxStaticBoxSizer should be created as child of its wxStaticBox and not of wxPanel@00000257D1DDB560 (\"panel\", HWND=0000000000E40260).\nElement wxStaticText@00000257CD1E4270 (\"Profile name\", HWND=0000000000FE1768) of wxStaticBoxSizer should be created as child of its wxStaticBox and not of wxScrolledWindow@00000257CCF10F60 (\"panel\", HWND=00000000025E423E).\nElement wxStaticText@00000257CD1E1790 (\"Host / IP\", HWND=00000000019A1846) of wxStaticBoxSizer should be created as child of its wxStaticBox and not of wxScrolledWindow@00000257CCF10F60 (\"panel\", HWND=00000000025E423E).\nElement wxStaticText@00000257CD1E5E00 (\"Password (optional)\", HWND=00000000009A0AE0) of wxStaticBoxSizer should be created as child of its wxStaticBox and not of wxScrolledWindow@00000257CCF10F60 (\"panel\", HWND=00000000025E423E).\n..\\..\\src\\msw\\window.cpp(539): 'SetFocus' failed with error 0x00000057 (The parameter is incorrect.).\n..\\..\\src\\msw\\webview_edge.cpp(609): 'WebView2::WebViewCreated' failed with error 0x80004004 (O",
+    "fresh_parent_kept": "C:\\Users\\mskomek\\AppData\\Local\\Temp\\hpc-fresh-user-flb0vri6"
+  },
+  "runs": {
+    "run1": {
+      "exit_code": 1,
+      "runtime": {
+        "schema": "wx-fresh-user-runtime/1",
+        "result": "FAIL",
+        "checks": {
+          "fresh_config_root": "PASS",
+          "first_run_empty_state": "PASS",
+          "profile_via_visible_controls": "PASS",
+          "loopback_success_via_controls": "PASS",
+          "safe_visible_failure": "FAIL",
+          "persisted_nonsecret_state": "FAIL",
+          "no_src_leakage": "PASS",
+          "clean_shutdown": "PASS"
+        },
+        "details": {
+          "fresh_root": "C:\\Users\\mskomek\\AppData\\Local\\Temp\\hpc-fresh-user-flb0vri6\\config",
+          "error": "NameError: name 'build_connection_panel' is not defined",
+          "app_data_dir": "C:\\Users\\mskomek\\AppData\\Local\\Temp\\hpc-fresh-user-flb0vri6\\config",
+          "frozen": true,
+          "executable": "D:\\Projeler\\hpc-client-gui\\dist\\hpc-client-gui\\hpc-client-gui.exe"
+        },
+        "run": "1"
+      },
+      "output_tail": "578 (Invalid window handle.).\n..\\..\\src\\msw\\window.cpp(432): 'DestroyWindow' failed with error 0x00000578 (Invalid window handle.).\n..\\..\\src\\msw\\window.cpp(432): 'DestroyWindow' failed with error 0x00000578 (Invalid window handle.).\n..\\..\\src\\msw\\window.cpp(432): 'DestroyWindow' failed with error 0x00000578 (Invalid window handle.).\n..\\..\\src\\msw\\window.cpp(432): 'DestroyWindow' failed with error 0x00000578 (Invalid window handle.).\n..\\..\\src\\msw\\window.cpp(432): 'DestroyWindow' failed with error 0x00000578 (Invalid window handle.).\n..\\..\\src\\msw\\window.cpp(432): 'DestroyWindow' failed with error 0x00000578 (Invalid window handle.).\n..\\..\\src\\msw\\window.cpp(432): 'DestroyWindow' failed with error 0x00000005 (Access is denied.).\n..\\..\\src\\msw\\window.cpp(432): 'DestroyWindow' failed with error 0x00000005 (Access is denied.).\n..\\..\\src\\msw\\window.cpp(432): 'DestroyWindow' failed with error 0x00000005 (Access is denied.).\n..\\..\\src\\msw\\window.cpp(432): 'DestroyWindow' failed with error 0x00000005 (Access is denied.).\n..\\..\\src\\msw\\window.cpp(432): 'DestroyWindow' failed with error 0x00000005 (Access is denied.).\n..\\..\\src\\msw\\window.cpp(432): 'DestroyWindow' failed with error 0x00000005 (Access is denied.).\n..\\..\\src\\msw\\window.cpp(432): 'DestroyWindow' failed with error 0x00000005 (Access is denied.).\n..\\..\\src\\msw\\window.cpp(432): 'DestroyWindow' failed with error 0x00000005 (Access is denied.).\n..\\..\\src\\msw\\window.cpp(432): 'DestroyWindow' failed with error 0x00000005 (Access is denied.).\n..\\..\\src\\msw\\window.cpp(432): 'DestroyWindow' failed with error 0x00000005 (Access is denied.).\n..\\..\\src\\msw\\window.cpp(432): 'DestroyWindow' failed with error 0x00000005 (Access is denied.).\n..\\..\\src\\msw\\window.cpp(432): 'DestroyWindow' failed with error 0x00000005 (Access is denied.).\n..\\..\\src\\msw\\window.cpp(432): 'DestroyWindow' failed with error 0x00000005 (Access is denied.).\n..\\..\\src\\msw\\window.cpp(432): 'DestroyWindow' failed with error 0x00000005 (Access is denied.).\n"
+    },
+    "run2": {
+      "exit_code": 0,
+      "runtime": {
+        "schema": "wx-fresh-user-runtime/1",
+        "result": "PASS",
+        "checks": {
+          "relaunch_state_present": "PASS",
+          "relaunch_no_src_leakage": "PASS",
+          "clean_shutdown": "PASS"
+        },
+        "details": {
+          "fresh_root": "C:\\Users\\mskomek\\AppData\\Local\\Temp\\hpc-fresh-user-flb0vri6\\config",
+          "app_data_dir": "C:\\Users\\mskomek\\AppData\\Local\\Temp\\hpc-fresh-user-flb0vri6\\config",
+          "frozen": true,
+          "executable": "D:\\Projeler\\hpc-client-gui\\dist\\hpc-client-gui\\hpc-client-gui.exe"
+        },
+        "run": "2"
+      },
+      "output_tail": "Adding duplicate image handler for 'Windows bitmap file'\nAdding duplicate animation handler for '1' type\nAdding duplicate animation handler for '2' type\nAdding duplicate animation handler for '3' type\n"
+    }
+  },
+  "exit_codes": [
+    1,
+    0
+  ],
+  "python": "3.12.4",
+  "platform_detail": "Windows-11-10.0.26200-SP0",
+  "generated_utc": "2026-09-19T19:44:45.698921+00:00",
+  "isolated_from_src": true,
+  "manual_required": [
+    "display",
+    "cluster",
+    "MFA",
+    "X11",
+    "DnD",
+    "transfer-conflict"
+  ]
+}

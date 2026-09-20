@@ -1,5 +1,7 @@
-> SUPERSEDED — historical W01 completion report. The only authoritative report is
-> `docs/wave-reports/v2/WAVE_V2_FINAL_01_REPORT.md`.
+> SUPERSEDED (W05, 2026-09-18) — historical W01 completion report. The single
+> canonical W01 report is `docs/wave-reports/v2/opencode/W01_WAVE_REPORT.md`
+> (decision PASS at main `0f8902a0` / plugin `f0abb7e7`). This file carries no
+> competing decision; history preserved.
 
 # W01 COMPLETION REPORT
 

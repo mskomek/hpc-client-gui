@@ -1,0 +1,11 @@
+W19-EXTERNAL timestamp=2026-09-20T01:50:35+03:00
+E1 connect state CONNECTED: PASS
+E1 echo round trip: PASS (exit=0)
+E2 graceful disconnect: PASS
+E3 reconnect same profile fresh identity: PASS (gen 1 -> 2)
+E4 profile switch supersedes: PASS (gen 2 -> 3)
+E5 transport loss fails visibly: PASS (op raised SSHException)
+E6 stale callback dropped: PASS
+E7 wrong password visible failure: PASS (AuthFailure)
+cleanup sessions closed: PASS
+W19-EXTERNAL DONE

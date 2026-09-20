@@ -33,6 +33,7 @@ from hpc_gui.core.i18n import subscribe_language_change, t, unsubscribe_language
 READINESS_TIMEOUT_MS = 5000
 MAX_PENDING_BYTES = 2 * 1024 * 1024
 MAX_PENDING_ENTRIES = 5000
+MAX_PENDING_PASTE_BYTES = 256 * 1024
 DEFAULT_FONT_SIZE = 14
 MIN_FONT_SIZE = 6
 MAX_FONT_SIZE = 32
@@ -173,6 +174,12 @@ class WxTerminalWebViewPanel(wx.Panel if _WX_AVAILABLE else object):  # type: ig
         self._closed = False
         self._pending: list[str] = []
         self._pending_bytes = 0
+        # Pre-ready paste queue (W20 TERM-019 lifecycle): user paste issued
+        # before the xterm bridge is ready must not be silently lost.
+        self._pending_paste: list[str] = []
+        self._pending_paste_bytes = 0
+        # True while the header shows the transient write-failure diagnostic.
+        self._write_failure_shown = False
         self._font_size = DEFAULT_FONT_SIZE
         self._last_resize: tuple[int, int] | None = None
         self._resize_timer = None
@@ -550,6 +557,7 @@ class WxTerminalWebViewPanel(wx.Panel if _WX_AVAILABLE else object):  # type: ig
         except Exception:
             pass
         self._flush_pending()
+        self._flush_pending_paste()
         # Initial fit after ready
         self._schedule_fit()
 
@@ -566,18 +574,63 @@ class WxTerminalWebViewPanel(wx.Panel if _WX_AVAILABLE else object):  # type: ig
 
     # ---------- Input / Resize ----------
 
-    def _handle_input(self, data: str):
-        if self._closed or not data:
+    def _write_failure_text(self) -> str:
+        msg = t("login.terminal_write_failed")
+        if msg == "[login.terminal_write_failed]":
+            return "Terminal input could not be sent."
+        return msg
+
+    def _show_write_failure(self):
+        """Surface a failed input write truthfully (W20 TERM-007).
+
+        A write that the transport rejects (False) or that raises must not
+        look like success while the header still claims "Connected".
+        The connection truth in _status_text is preserved; the diagnostic
+        is transient and restored on the next successful write.
+        """
+        self._write_failure_shown = True
+        try:
+            self._status_label.SetLabel(self._write_failure_text())
+        except Exception:
+            pass
+
+    def _clear_write_failure(self):
+        if not self._write_failure_shown:
             return
+        self._write_failure_shown = False
+        try:
+            self._status_label.SetLabel(self._status_text)
+        except Exception:
+            pass
+
+    def _handle_input(self, data: str) -> bool:
+        """Forward bridge input to the shell; return True when accepted.
+
+        Returns False (with a visible header diagnostic) when there is no
+        usable write path or the transport rejects/raises — the failure
+        must never look like a successful send.
+        """
+        if self._closed or not data:
+            return False
         # Production SSH adapter — do not log data
         cb = self._send_input
         if cb is None and self._ssh is not None:
             cb = getattr(self._ssh, "send_shell_input", None)
-        if cb is not None:
-            try:
-                cb(data)
-            except Exception:
-                pass
+        if cb is None:
+            self._show_write_failure()
+            return False
+        try:
+            accepted = cb(data)
+        except Exception:
+            self._show_write_failure()
+            return False
+        # The SSH contract returns False when the shell is unavailable;
+        # None (plain callbacks) and True mean accepted.
+        if accepted is False:
+            self._show_write_failure()
+            return False
+        self._clear_write_failure()
+        return True
 
     def _handle_resize(self, cols: int, rows: int, _pw: int = 0, _ph: int = 0):
         if self._closed:
@@ -773,16 +826,42 @@ class WxTerminalWebViewPanel(wx.Panel if _WX_AVAILABLE else object):  # type: ig
         self._font_size = new_size
         self.hpc_set_font_size(new_size)
 
-    def hpc_paste(self, text: str):
-        """Paste text into xterm via terminal.paste()."""
+    def hpc_paste(self, text: str) -> bool:
+        """Paste text into xterm via terminal.paste().
+
+        Paste issued before the bridge is ready is queued (bounded) and
+        delivered in order on ready instead of being silently lost
+        (W20 TERM-019 lifecycle). Returns True when delivered or queued,
+        False when dropped (closed, non-parity fallback, or over-cap).
+        """
         if self._closed or not text:
-            return
+            return False
         if not self._ready or not self._is_parity or self._webview is None:
-            return
+            if not self._is_parity or self._webview is None:
+                return False
+            nb = len(text.encode("utf-8", errors="replace"))
+            if self._pending_paste_bytes + nb > MAX_PENDING_PASTE_BYTES:
+                return False
+            self._pending_paste.append(text)
+            self._pending_paste_bytes += nb
+            return True
         try:
             self._run_js(f"window.hpcPaste && window.hpcPaste({_safe_json_dumps(text)});")
+            return True
         except Exception:
-            pass
+            return False
+
+    def _flush_pending_paste(self):
+        """Deliver pre-ready queued paste in original order (called on ready)."""
+        if self._closed or not self._ready or not self._pending_paste:
+            return
+        if not self._is_parity or self._webview is None:
+            return
+        combined = "".join(self._pending_paste)
+        self._pending_paste.clear()
+        self._pending_paste_bytes = 0
+        if combined:
+            self.hpc_paste(combined)
 
     def _on_find(self, _evt=None):
         """Find text in xterm buffer via hpcFind JS helper."""
@@ -921,6 +1000,10 @@ class WxTerminalWebViewPanel(wx.Panel if _WX_AVAILABLE else object):  # type: ig
         # Increment generation to reject any in-flight stale callbacks
         self._generation += 1
         self._ssh = new_ssh
+        try:
+            self._terminal_ssh = new_ssh
+        except Exception:
+            pass
         if new_ssh is not None:
             self._send_input = getattr(new_ssh, "send_shell_input", self._send_input)
             self._resize_pty = getattr(new_ssh, "resize_shell_pty", self._resize_pty)
@@ -928,6 +1011,15 @@ class WxTerminalWebViewPanel(wx.Panel if _WX_AVAILABLE else object):  # type: ig
         else:
             self._send_input = None
             self._resize_pty = None
+            # The compat model is not the xterm input path, but it must not
+            # retain a stale send callback to a dead transport either.
+            try:
+                compat = getattr(self, "_terminal_model", None)
+                if compat is not None:
+                    compat._send_input = None
+                    compat._resize_pty = None
+            except Exception:
+                pass
             self._update_status("disconnected")
             self._identity_text = ""
             try:
@@ -965,20 +1057,36 @@ class WxTerminalWebViewPanel(wx.Panel if _WX_AVAILABLE else object):  # type: ig
         # Clear pending
         self._pending.clear()
         self._pending_bytes = 0
+        self._pending_paste.clear()
+        self._pending_paste_bytes = 0
+        self._write_failure_shown = False
         try:
             unsubscribe_language_change(self._lang_cb)
         except Exception:
             pass
-        # Release the native WebView2 controller before its parent panel is destroyed.
+        # Release the native WebView2 controller. When wx is already tearing
+        # down this panel (IsBeingDeleted), an explicit Destroy races the
+        # native WebView2 teardown and is a known access-violation source
+        # (HPC-W05-TODO-LIFECYCLE-NATIVE-002): stop the loader best-effort,
+        # detach our reference, and let the parent destroy the child.
+        # Destroy explicitly only while the panel is not being deleted.
+        being_deleted = False
+        try:
+            is_being_deleted = getattr(self, "IsBeingDeleted", None)
+            if callable(is_being_deleted):
+                being_deleted = bool(is_being_deleted())
+        except Exception:
+            being_deleted = False
         if webview is not None:
             try:
                 webview.Stop()
             except Exception:
                 pass
-            try:
-                webview.Destroy()
-            except Exception:
-                pass
+            if not being_deleted:
+                try:
+                    webview.Destroy()
+                except Exception:
+                    pass
 
     def _update_status(self, state: str):
         """Update the connection status label. States: disconnected, connecting, connected, reconnecting."""

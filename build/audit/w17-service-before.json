@@ -1,0 +1,8 @@
+A ret id: None
+B ret id: None
+C ret id: None
+PROBE1 count: 2 rows: [('alpha', 'EVIL', 'f0f7ba95'), ('beta', 'h2', 'e5ca944f')]
+D ret id: e5ca944f-7629-4671-8245-197645470084
+PROBE2 count: 2 rows: [('alpha', 'EVIL', 'f0f7ba95'), ('alpha', 'h2x', 'e5ca944f')]
+PROBE2 last_profile: alpha
+ROOT: C:\Users\mskomek\AppData\Local\Temp\w17probe_slb6qhdl

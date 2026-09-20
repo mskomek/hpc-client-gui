@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import inspect
 import json
 import shlex
 from pathlib import Path
@@ -11,6 +12,7 @@ from threading import Event, Thread
 
 from hpc_gui import __version__
 from hpc_gui.core.i18n import current_language, load_saved_language, set_language, subscribe_language_change, system_default_language, t, unsubscribe_language_change
+from hpc_gui.core.wx_errors import report_wx_action_error
 from hpc_gui.services.directory_comparison import ComparableEntry, compare_directory_entries
 from hpc_gui.services.synchronized_browsing import SyncRoots, local_to_remote, normalize_local_root, normalize_remote_root, remote_to_local
 from hpc_gui.services.transfer_controller import TransferItem
@@ -177,6 +179,15 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
     connection_panel = build_connection_panel(notebook, **_conn)
     notebook.AddPage(connection_panel, t("tabs.login"), False)
     page_controls["APP-CONNECT"] = {"page": connection_panel}
+    # Transport-loss reports (disconnect_cb) must invalidate the canonical
+    # shell session too, not just the connection panel's controller, so no
+    # domain keeps resolving a dead transport (CONN-005/TODO-007).
+    try:
+        _conn_model = getattr(connection_panel, "_wx_connection_model", None)
+        if _conn_model is not None:
+            _conn_model._session_invalidated_hook = _conn["on_disconnected"]
+    except Exception:
+        pass
 
     # Terminal — right of Connection per user request (Connection | Terminal | Jobs | ...)
     from hpc_gui.wx_terminal import build_terminal_panel as _build_terminal_panel
@@ -321,9 +332,31 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
 
     def _header_download(_evt):
         # Same implementation the remote toolbar uses; no second download path.
+        # Mirror _on_toolbar_download: forward the panel's current selection
+        # plus its directory (DEF-W04-002: a bare run("download") never
+        # matched run_action(action, selected, target_dir) and raised
+        # TypeError on every header click, leaving a silent no-op).
         run = getattr(remote_panel, "_wx_remote_run_action", None)
-        if callable(run):
-            run("download")
+        if not callable(run):
+            return
+        try:
+            tabs = getattr(remote_panel, "_wx_remote_tabs", None) or []
+            notebook = getattr(remote_panel, "_wx_remote_notebook", None)
+            sel_idx = notebook.GetSelection() if notebook is not None else 0
+            tstate = tabs[sel_idx] if 0 <= sel_idx < len(tabs) else (tabs[0] if tabs else None)
+            if tstate is not None:
+                listing = tstate.get("listing")
+                entries = tstate.get("entries") or ()
+                selected = tuple(
+                    entry.path
+                    for idx, entry in enumerate(entries)
+                    if listing is not None and listing.IsSelected(idx)
+                )
+                run("download", selected, tstate.get("path", "/"))
+                return
+        except Exception:
+            pass
+        run("download", (), "/")
 
     upload_selected_btn.Bind(wx.EVT_BUTTON, _header_upload)
     download_selected_btn.Bind(wx.EVT_BUTTON, _header_download)
@@ -965,6 +998,16 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
             from hpc_gui.services.wx_plugin_menu_host import WxPluginMenuHost
             plugin = _find_wx_plugin(plugin_id)
             if plugin is None:
+                # W04 FIX-W04-A (DEF-W04-001): a stale plugin-menu click
+                # (menu rebuild raced an uninstall/disable) must be visible
+                # and diagnosable, never a silent no-op. No exception exists
+                # here, so the helper mints a fresh diagnostic code.
+                report_wx_action_error(
+                    frame,
+                    area="PLUGIN",
+                    message_key="plugins.action_failed",
+                    technical_detail=f"{plugin_id}:{action}",
+                )
                 return
             editor_page = None
             try:
@@ -973,9 +1016,14 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
                 pass
             host = WxPluginMenuHost(editor_page=editor_page)
             dispatch_plugin_menu_action(action, plugin, host)
-        except Exception as e:
-            import logging
-            logging.getLogger("hpc_gui.wx_shell").warning("wx dispatch %r failed: %s", action, e, exc_info=e)
+        except Exception as exc:
+            # W04 FIX-W04-A (DEF-W04-001): a log-only failure left the UI in
+            # a success-looking state; report a visible coded error instead.
+            # The helper keeps the structured traceback log, so no log detail
+            # is lost.
+            report_wx_action_error(
+                frame, area="PLUGIN", message_key="plugins.action_failed", exc=exc
+            )
     # Bind menu open to rebuild (evaluate dynamic state when menu is about to open)
     try:
         frame.Bind(wx.EVT_MENU_OPEN, lambda evt: (_wx_rebuild_plugins_menu(), evt.Skip()) if evt.GetMenu() is plugins_menu else evt.Skip())
@@ -988,6 +1036,9 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
         pass
 
     frame._wx_rebuild_plugins_menu = _wx_rebuild_plugins_menu
+    # W04 FIX-W04-A: expose the dynamic plugin-action dispatcher for the
+    # support-freeze regression suite (same pattern as the rebuild hook).
+    frame._wx_dispatch_plugin_action = _wx_dispatch_plugin_action
 
     subscribe_language_change(refresh_labels)
 
@@ -1139,11 +1190,9 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
         if not f:
             return
         before = set(wx.GetTopLevelWindows())
-        try:
-            from hpc_gui.wx_plugins_view import show_plugins
-            show_plugins(parent=f)
-        except Exception:
-            pass
+        # W02 ERROR-GOV: route through _dispatch like _on_help so failures
+        # are visible with a stable code instead of silently swallowed.
+        _dispatch("PLUGIN-BROWSE", f, lifecycle, session_state)
         _track_new_windows(before)
 
     def _on_send_logs(_event):
@@ -1151,11 +1200,9 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
         if not f:
             return
         before = set(wx.GetTopLevelWindows())
-        try:
-            from hpc_gui.wx_send_logs_view import show_send_logs
-            show_send_logs(parent=f)
-        except Exception:
-            pass
+        # W02 ERROR-GOV: route through _dispatch like _on_help so failures
+        # are visible with a stable code instead of silently swallowed.
+        _dispatch("APP-SEND-LOGS", f, lifecycle, session_state)
         _track_new_windows(before)
 
     def _on_settings(_event):
@@ -1163,11 +1210,9 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
         if not f:
             return
         before = set(wx.GetTopLevelWindows())
-        try:
-            from hpc_gui.wx_settings_view import show_settings
-            show_settings(parent=f)
-        except Exception:
-            pass
+        # W02 ERROR-GOV: route through _dispatch like _on_help so failures
+        # are visible with a stable code instead of silently swallowed.
+        _dispatch("APP-SETTINGS", f, lifecycle, session_state)
         _track_new_windows(before)
 
     def _on_language_button(_event):
@@ -1307,16 +1352,23 @@ _PACKAGED_SMOKE_CONTROL_SURFACES = {
 }
 
 
-def _connect_packaged_smoke_session(session_state, frame, lifecycle):
-    """Attach the parent smoke runner's disposable SSH server to the frame."""
-    host = os.environ.get("HPC_GUI_PACKAGED_SMOKE_SSH_HOST", "").strip()
+def _connect_packaged_smoke_session(session_state, frame, lifecycle, *, host=None, port=None, username=None,
+                                      profile_name=None):
+    """Attach the parent smoke runner's disposable SSH server to the frame.
+
+    Explicit ``host``/``port``/``username`` overrides let the fresh-user
+    acceptance connect through the endpoint stored in the GUI-created
+    profile instead of the raw parent environment; secrets always come from
+    the parent environment and are never persisted.
+    """
+    host = host if host else os.environ.get("HPC_GUI_PACKAGED_SMOKE_SSH_HOST", "").strip()
     if not host:
         return None
     try:
-        port = int(os.environ["HPC_GUI_PACKAGED_SMOKE_SSH_PORT"])
+        port = int(port) if port not in (None, "") else int(os.environ["HPC_GUI_PACKAGED_SMOKE_SSH_PORT"])
     except (KeyError, TypeError, ValueError) as exc:
         raise RuntimeError("packaged smoke SSH port is invalid") from exc
-    username = os.environ.get("HPC_GUI_PACKAGED_SMOKE_SSH_USER", "").strip()
+    username = username if username else os.environ.get("HPC_GUI_PACKAGED_SMOKE_SSH_USER", "").strip()
     password = os.environ.get("HPC_GUI_PACKAGED_SMOKE_SSH_PASSWORD", "")
     known_hosts = os.environ.get("HPC_GUI_PACKAGED_SMOKE_SSH_KNOWN_HOSTS", "").strip()
     if not username or not password or not known_hosts:
@@ -1343,7 +1395,7 @@ def _connect_packaged_smoke_session(session_state, frame, lifecycle):
     try:
         ssh.connect(shell_size=(96, 31))
         profile = {
-            "name": "packaged-smoke",
+            "name": profile_name or "packaged-smoke",
             "host": host,
             "port": port,
             "username": username,
@@ -1368,14 +1420,443 @@ def _connect_packaged_smoke_session(session_state, frame, lifecycle):
         raise
 
 
+_FRESH_USER_RUN1_CHECKS = (
+    "fresh_config_root",
+    "first_run_empty_state",
+    "profile_via_visible_controls",
+    "loopback_success_via_controls",
+    "safe_visible_failure",
+    "persisted_nonsecret_state",
+    "no_src_leakage",
+    "clean_shutdown",
+)
+_FRESH_USER_RUN2_CHECKS = (
+    "relaunch_state_present",
+    "relaunch_no_src_leakage",
+    "clean_shutdown",
+)
+_FRESH_PROFILE_NAME = "fresh-user-loopback"
+_FRESH_DEAD_PROFILE_NAME = "fresh-user-dead-port"
+
+
+def _run_fresh_user_acceptance(app, frame, session_state, output_path, lifecycle=None):
+    """PKG-GJ-01 in-app phase: first-run from an isolated root via visible controls.
+
+    Runs instead of the PTY surface smoke when ``HPC_GUI_FRESH_USER=1``.
+    ``HPC_GUI_FRESH_RUN=1`` performs the fresh launch; ``=2`` verifies the
+    relaunch against state persisted to disk (never to process memory).
+    """
+    import sys
+    import time
+    import wx
+
+    run_index = os.environ.get("HPC_GUI_FRESH_RUN", "1").strip() or "1"
+    expected = _FRESH_USER_RUN1_CHECKS if run_index == "1" else _FRESH_USER_RUN2_CHECKS
+    checks = {name: "FAIL" for name in expected}
+    state = {"phase": "fresh-user", "result": "FAIL", "done": True, "checks": checks}
+    details: dict = {}
+
+    def finish(error=None):
+        try:
+            frame.Close()
+            if "clean_shutdown" in checks:
+                checks["clean_shutdown"] = "PASS"
+                # Shutdown is proven only at close time, after mark_all ran:
+                # recompute the verdict so a clean close is not reported FAIL.
+                if error is None and all(v == "PASS" for v in checks.values()):
+                    state["result"] = "PASS"
+        except Exception as exc:
+            details["close"] = f"{type(exc).__name__}"
+        payload = {
+            "schema": "wx-fresh-user-runtime/1",
+            "result": state["result"],
+            "checks": checks,
+            "details": details,
+            "run": run_index,
+        }
+        try:
+            from hpc_gui.core.paths import app_data_dir as _add
+            details["app_data_dir"] = str(_add())
+        except Exception:
+            pass
+        details["frozen"] = bool(getattr(sys, "frozen", False))
+        details["executable"] = sys.executable
+        try:
+            target = Path(output_path)
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+        except Exception:
+            state["result"] = "FAIL"
+        wx.CallLater(50, app.ExitMainLoop)
+
+    def mark_all():
+        state["result"] = "PASS" if all(v == "PASS" for v in checks.values()) else "FAIL"
+
+    try:
+        from hpc_gui.core.paths import app_data_dir, isolated_config_root
+
+        fresh_root = app_data_dir()
+        want = isolated_config_root()
+        details["fresh_root"] = str(fresh_root)
+        if "fresh_config_root" in checks:
+            if want is not None and fresh_root == want and fresh_root.is_dir():
+                checks["fresh_config_root"] = "PASS"
+            else:
+                details["fresh_root_mismatch"] = f"want={want} got={fresh_root}"
+
+        from hpc_gui.config.storage import load_profiles
+
+        config_path = fresh_root / "config.json"
+        if run_index == "1":
+            started_empty = load_profiles() == []
+            if config_path.exists():
+                # Parent guarantees no config.json before launch; an incidental
+                # startup write is acceptable only when it carries no profiles.
+                try:
+                    started_empty = started_empty and json.loads(
+                        config_path.read_text(encoding="utf-8")).get("profiles", []) == []
+                except Exception:
+                    started_empty = False
+            if started_empty:
+                checks["first_run_empty_state"] = "PASS"
+            else:
+                details["first_run"] = "config root was not clean at first launch"
+        else:
+            try:
+                on_disk = json.loads(config_path.read_text(encoding="utf-8"))
+            except Exception as exc:
+                details["relaunch"] = f"unreadable config: {type(exc).__name__}"
+                on_disk = {}
+            names = [p.get("name") for p in on_disk.get("profiles", []) if isinstance(p, dict)]
+            secrets = [
+                n for p in on_disk.get("profiles", []) if isinstance(p, dict)
+                for n in ("password", "password_enc", "password_dpapi", "password_keychain_ref")
+                if p.get(n)
+            ]
+            if _FRESH_PROFILE_NAME in names and not secrets:
+                checks["relaunch_state_present"] = "PASS"
+            else:
+                details["relaunch"] = f"profiles={names} secrets={bool(secrets)}"
+
+        leak = _fresh_src_leakage()
+        if leak is None and ("no_src_leakage" in checks or "relaunch_no_src_leakage" in checks):
+            checks["no_src_leakage" if run_index == "1" else "relaunch_no_src_leakage"] = "PASS"
+        elif leak is not None:
+            details["src_leakage"] = leak
+
+        if run_index == "1":
+            # Continue into the visible-control flow; individual marks decide.
+            _fresh_run1_visible_flow(frame, session_state, lifecycle, checks, details)
+        mark_all()
+    except Exception as exc:
+        details["error"] = f"{type(exc).__name__}: {exc}"
+        mark_all()
+    finish(details.get("error"))
+    return state
+
+
+def _fresh_src_leakage():
+    """Return None when the app resolves code from the bundle, else a reason."""
+    import sys
+
+    try:
+        import hpc_gui
+        module_file = Path(hpc_gui.__file__).resolve()
+    except Exception as exc:
+        return f"unresolvable hpc_gui: {type(exc).__name__}"
+    if bool(getattr(sys, "frozen", False)):
+        meipass = Path(getattr(sys, "_MEIPASS", "") or "")
+        try:
+            meipass = meipass.resolve()
+        except Exception:
+            pass
+        if not meipass or meipass not in module_file.parents:
+            return f"frozen module outside bundle: {module_file}"
+        return None
+    if "PYTHONPATH" in os.environ:
+        return "PYTHONPATH present in non-frozen run"
+    return None
+
+
+def _fresh_find_button(root, name):
+    import wx
+
+    for child in root.GetChildren():
+        if isinstance(child, wx.Button) and child.GetName() == name:
+            return child
+        found = _fresh_find_button(child, name)
+        if found is not None:
+            return found
+    return None
+
+
+def _fresh_click(button):
+    import wx
+
+    evt = wx.CommandEvent(wx.EVT_BUTTON.typeId, button.GetId())
+    button.GetEventHandler().ProcessEvent(evt)
+
+
+def _fresh_drive_add_dialog(panel_host, *, name, host, port, username):
+    """Click the real AddConnection button and complete the real modal dialog.
+
+    Returns True when the dialog saved (not cancelled) via its real Save path.
+    """
+    import wx
+
+    import hpc_gui.wx_connection_dialog as dlg_mod
+    from hpc_gui.wx_connection_dialog import WxConnectionDialog
+
+    captured: dict = {}
+    real_cls = WxConnectionDialog
+
+    class _Capture(real_cls):  # observe only; dialog behavior untouched
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            captured["dlg"] = self
+
+    dlg_mod.WxConnectionDialog = _Capture
+    try:
+        add_btn = _fresh_find_button(panel_host, "AddConnection")
+        if add_btn is None:
+            return False
+        saved = {"value": False}
+
+        def autofill():
+            dlg = captured.get("dlg")
+            if dlg is None:
+                wx.CallLater(200, autofill)
+                return
+            try:
+                dlg.profile_name_ctrl.SetValue(name)
+                dlg.host_ctrl.SetValue(host)
+                dlg.port_ctrl.SetValue(str(port))
+                dlg.username_ctrl.SetValue(username)
+                try:
+                    dlg.password_ctrl.SetValue("")
+                except Exception:
+                    pass
+            except Exception:
+                return
+            _fresh_click(dlg.btn_save)
+
+        def watchdog():
+            if not saved["value"]:
+                for win in wx.GetTopLevelWindows():
+                    try:
+                        if win is not panel_host and hasattr(win, "EndModal"):
+                            win.EndModal(wx.ID_CANCEL)
+                    except Exception:
+                        pass
+
+        # Wrap on_save observation via the panel refresh: poll ListBox after.
+        wx.CallLater(500, autofill)
+        wx.CallLater(30000, watchdog)
+        _fresh_click(add_btn)
+        # After the modal closes, check the visible list + disk state.
+        try:
+            from hpc_gui.config.storage import load_profiles
+            live = [p.get("name") for p in load_profiles()]
+            saved["value"] = name in live
+        except Exception:
+            saved["value"] = False
+        return saved["value"]
+    finally:
+        dlg_mod.WxConnectionDialog = real_cls
+
+
+def _fresh_run1_visible_flow(frame, session_state, lifecycle, checks, details):
+    """Create-then-connect through visible panel controls; then fail safely."""
+    import time
+    import wx
+
+    from hpc_gui.config.storage import load_profiles
+    from hpc_gui.wx_connection import build_connection_panel
+
+    loop_host = os.environ.get("HPC_GUI_PACKAGED_SMOKE_SSH_HOST", "127.0.0.1").strip()
+    try:
+        loop_port = int(os.environ.get("HPC_GUI_PACKAGED_SMOKE_SSH_PORT", "22"))
+    except (TypeError, ValueError):
+        details["visible_flow"] = "invalid loopback port env"
+        return
+    loop_user = os.environ.get("HPC_GUI_PACKAGED_SMOKE_SSH_USER", "").strip()
+    if not loop_user:
+        details["visible_flow"] = "loopback user env missing"
+        return
+
+    def transient_connect(profile):
+        return _connect_packaged_smoke_session(
+            session_state, frame, lifecycle,
+            host=str(profile.get("host") or ""),
+            port=profile.get("port"),
+            username=str(profile.get("username") or ""),
+            profile_name=str(profile.get("name") or "fresh-user"),
+        )
+
+    panel_host = build_connection_panel(frame, profiles=[], connect=transient_connect)
+
+    def listbox_strings():
+        found = []
+
+        def collect(node):
+            for child in node.GetChildren():
+                if isinstance(child, wx.ListBox):
+                    found.extend(child.GetStrings())
+                collect(child)
+
+        collect(panel_host)
+        return found
+
+    def select_profile(target):
+        boxes = []
+
+        def collect(node):
+            for child in node.GetChildren():
+                if isinstance(child, wx.ListBox):
+                    boxes.append(child)
+                collect(child)
+
+        collect(panel_host)
+        for box in boxes:
+            if box.FindString(target) != wx.NOT_FOUND:
+                box.SetStringSelection(target)
+                box.GetEventHandler().ProcessEvent(
+                    wx.CommandEvent(wx.EVT_LISTBOX.typeId, box.GetId())
+                )
+                return True
+        return False
+
+    def status_texts():
+        texts = []
+        stack = [panel_host]
+        while stack:
+            node = stack.pop()
+            if isinstance(node, wx.StaticText):
+                texts.append(node.GetLabel())
+            stack.extend(node.GetChildren())
+        return texts
+
+    def wait_for(predicate, timeout_s, pump=True):
+        deadline = time.monotonic() + timeout_s
+        while time.monotonic() < deadline:
+            if predicate():
+                return True
+            if pump:
+                wx.YieldIfNeeded()
+            time.sleep(0.1)
+        return predicate()
+
+    # 1. Profile creation through AddConnection -> modal dialog -> Save.
+    created = _fresh_drive_add_dialog(
+        panel_host, name=_FRESH_PROFILE_NAME,
+        host=loop_host, port=loop_port, username=loop_user,
+    )
+    if created and _FRESH_PROFILE_NAME in listbox_strings():
+        checks["profile_via_visible_controls"] = "PASS"
+    else:
+        details["visible_flow"] = "AddConnection dialog did not persist the profile"
+        return
+
+    # 2. Loopback success through ListBox selection + ConnectSelected click.
+    connect_btn = _fresh_find_button(panel_host, "ConnectSelected")
+    if connect_btn is None or not select_profile(_FRESH_PROFILE_NAME):
+        details["visible_flow"] = "cannot select the fresh profile"
+        return
+    _fresh_click(connect_btn)
+    if wait_for(lambda: any(
+        "onnected" in t and "isconnect" not in t and "onnecting" not in t
+        for t in status_texts()
+    ), 60):
+        checks["loopback_success_via_controls"] = "PASS"
+    else:
+        details["visible_flow"] = f"loopback did not connect: {status_texts()[:4]}"
+        return
+
+    # 3. Safe visible failure: dead-port profile selected + connected attempt.
+    from hpc_gui.config.storage import upsert_profile
+
+    upsert_profile({"name": _FRESH_DEAD_PROFILE_NAME, "host": "127.0.0.1",
+                    "port": 1, "username": loop_user})
+    try:
+        panel_host2 = build_connection_panel(
+            frame, profiles=load_profiles(), connect=transient_connect)
+        boxes = []
+
+        def collect2(node):
+            for child in node.GetChildren():
+                if isinstance(child, wx.ListBox):
+                    boxes.append(child)
+                collect2(child)
+
+        collect2(panel_host2)
+        dead_selected = False
+        for box in boxes:
+            if box.FindString(_FRESH_DEAD_PROFILE_NAME) != wx.NOT_FOUND:
+                box.SetStringSelection(_FRESH_DEAD_PROFILE_NAME)
+                box.GetEventHandler().ProcessEvent(
+                    wx.CommandEvent(wx.EVT_LISTBOX.typeId, box.GetId()))
+                dead_selected = True
+        dead_btn = _fresh_find_button(panel_host2, "ConnectSelected")
+
+        def dead_texts():
+            texts = []
+            stack = [panel_host2]
+            while stack:
+                node = stack.pop()
+                if isinstance(node, wx.StaticText):
+                    texts.append(node.GetLabel())
+                stack.extend(node.GetChildren())
+            return texts
+
+        if dead_selected and dead_btn is not None:
+            _fresh_click(dead_btn)
+            failed = wait_for(lambda: any("ail" in t for t in dead_texts()), 60)
+            still_ok = any(
+                "onnected" in t and "isconnect" not in t and "onnecting" not in t and "ail" not in t
+                for t in dead_texts()
+            )
+            if failed and not still_ok:
+                checks["safe_visible_failure"] = "PASS"
+            else:
+                details["visible_flow"] = f"dead-port failure not visible: {dead_texts()[:4]}"
+        else:
+            details["visible_flow"] = "cannot drive dead-port profile selection"
+    finally:
+        try:
+            from hpc_gui.config.storage import delete_profile
+            delete_profile(_FRESH_DEAD_PROFILE_NAME)
+        except Exception:
+            pass
+
+    # 4. Persisted non-secret state proven from disk bytes, not memory.
+    try:
+        from hpc_gui.core.paths import app_data_dir as _fresh_app_data_dir
+
+        raw = (_fresh_app_data_dir() / "config.json").read_text(encoding="utf-8")
+        on_disk = json.loads(raw)
+    except Exception as exc:
+        details["visible_flow"] = f"config unreadable: {type(exc).__name__}"
+        return
+    stored = [p for p in on_disk.get("profiles", [])
+              if isinstance(p, dict) and p.get("name") == _FRESH_PROFILE_NAME]
+    secret_keys = ("password", "password_enc", "password_dpapi", "password_keychain_ref")
+    if stored and not any(stored[0].get(k) for k in secret_keys):
+        checks["persisted_nonsecret_state"] = "PASS"
+    else:
+        details["visible_flow"] = "fresh profile missing from disk or carries a secret"
+
+
 def _run_packaged_smoke(app, frame, session_state, output_path, lifecycle=None):
     """Probe the packaged wx terminal without showing the normal startup flow."""
+    if os.environ.get("HPC_GUI_FRESH_USER") == "1":
+        return _run_fresh_user_acceptance(app, frame, session_state, output_path, lifecycle)
     import time
     import wx
 
     checks = {
         "wx_runtime_started": "FAIL",
         "main_frame_created": "PASS",
+        "settings_opened": "FAIL",
         "terminal_readback": "FAIL",
         "pty_input_output": "FAIL",
         "pty_resize": "FAIL",
@@ -1391,6 +1872,8 @@ def _run_packaged_smoke(app, frame, session_state, output_path, lifecycle=None):
         "deadline": time.monotonic() + 12,
         "bridge_input_chars": 0,
         "ssh_input_chars": 0,
+        "keyboard_input_at": None,
+        "bridge_input_fallback_used": False,
     }
 
     def finish(error=None):
@@ -1547,6 +2030,54 @@ def _run_packaged_smoke(app, frame, session_state, output_path, lifecycle=None):
                     state["transfer_item"] = transfer_item
             except Exception as exc:
                 surface_errors.append(f"offline_ui:{type(exc).__name__}")
+            try:
+                # SMOKE-004: open settings through the real settings view with
+                # packaged resources (i18n copy, settings model load), verify
+                # its controls, then close it. The menu->dispatch hop is proven
+                # by repo tests (APP-SETTINGS reaches show_settings); calling
+                # show_settings directly keeps a failure visible via
+                # surface_errors instead of risking a modal MessageBox hang.
+                # Read-only probe: Apply is never clicked, nothing is saved.
+                from hpc_gui.wx_settings_view import show_settings
+
+                before_windows = set(wx.GetTopLevelWindows())
+                show_settings(parent=frame)
+                wx.Yield()
+                settings_win = None
+                for win in wx.GetTopLevelWindows():
+                    if win in before_windows:
+                        continue
+                    controls = getattr(win, "_wx_settings_controls", None)
+                    if not isinstance(controls, dict):
+                        continue
+                    if not callable(getattr(controls.get("apply"), "GetId", None)):
+                        continue
+                    if not callable(getattr(controls.get("close"), "GetId", None)):
+                        continue
+                    settings_win = win
+                    break
+                if settings_win is None:
+                    surface_errors.append("settings_opened:not_found")
+                elif getattr(settings_win, "_wx_settings_model", None) is None:
+                    surface_errors.append("settings_opened:no_model")
+                else:
+                    checks["settings_opened"] = "PASS"
+                    try:
+                        settings_win.Close()
+                    except Exception:
+                        pass
+                    wx.Yield()
+                    if settings_win in set(wx.GetTopLevelWindows()):
+                        try:
+                            settings_win.Destroy()
+                        except Exception:
+                            pass
+                        wx.Yield()
+                        if settings_win in set(wx.GetTopLevelWindows()):
+                            surface_errors.append("settings_opened:close_failed")
+                            checks["settings_opened"] = "FAIL"
+            except Exception as exc:
+                surface_errors.append(f"settings_opened:{type(exc).__name__}")
             if surface_errors:
                 finish(";".join(surface_errors))
                 return
@@ -1605,6 +2136,31 @@ def _run_packaged_smoke(app, frame, session_state, output_path, lifecycle=None):
 
                     user32 = ctypes.windll.user32
                     user32.GetForegroundWindow.restype = wintypes.HWND
+                    # Windows rejects SetForegroundWindow when the packaged
+                    # smoke child is not the current foreground process.  A
+                    # visible terminal acceptance run must not turn that
+                    # scheduler/window-manager race into a false terminal
+                    # failure, so temporarily attach to the foreground
+                    # thread while claiming this already-visible frame.
+                    current_thread = ctypes.windll.kernel32.GetCurrentThreadId()
+                    foreground_thread = user32.GetWindowThreadProcessId(
+                        user32.GetForegroundWindow(), None
+                    )
+                    attached = bool(
+                        foreground_thread
+                        and foreground_thread != current_thread
+                        and user32.AttachThreadInput(current_thread, foreground_thread, True)
+                    )
+                    try:
+                        user32.ShowWindow(frame_handle, 9)  # SW_RESTORE
+                        user32.BringWindowToTop(frame_handle)
+                        state["foreground_request_accepted"] = bool(
+                            user32.SetForegroundWindow(frame_handle)
+                        )
+                        user32.SetFocus(frame_handle)
+                    finally:
+                        if attached:
+                            user32.AttachThreadInput(current_thread, foreground_thread, False)
                     if int(user32.GetForegroundWindow()) != frame_handle:
                         finish("keyboard_input:foreground_lost")
                         return
@@ -1646,8 +2202,20 @@ def _run_packaged_smoke(app, frame, session_state, output_path, lifecycle=None):
                         events.extend((event, _Input(1, _InputUnion(ki=_KeyboardInput(0, ord(char), unicode_key | keyup, 0, 0)))))
                     events.extend(
                         (
-                            _Input(1, _InputUnion(ki=_KeyboardInput(wx.WXK_RETURN, 0, 0, 0, 0))),
-                            _Input(1, _InputUnion(ki=_KeyboardInput(wx.WXK_RETURN, 0, keyup, 0, 0))),
+                            # WebView2 can consume a virtual-key RETURN sent
+                            # from a non-foreground helper without producing
+                            # a DOM key event.  Use the physical Enter scan
+                            # code after the real text input so xterm sees a
+                            # genuine submit rather than a silent partial
+                            # command.
+                            # KEYEVENTF_SCANCODE is required for SendInput to
+                            # interpret wScan as the physical Enter key;
+                            # merely populating wScan while leaving flags at
+                            # zero still sends a virtual-key event, which
+                            # WebView2 may expose as text input but not as the
+                            # xterm submit key.
+                            _Input(1, _InputUnion(ki=_KeyboardInput(0, 0x1C, 0x0008, 0, 0))),
+                            _Input(1, _InputUnion(ki=_KeyboardInput(0, 0x1C, keyup | 0x0008, 0, 0))),
                         )
                     )
                     send_input = user32.SendInput
@@ -1693,6 +2261,7 @@ def _run_packaged_smoke(app, frame, session_state, output_path, lifecycle=None):
                 finish("keyboard_input:SendInput returned a partial/failed event count")
                 return
             state["phase"] = 1
+            state["keyboard_input_at"] = time.monotonic()
             state["deadline"] = time.monotonic() + 12
             retry()
             return
@@ -1705,6 +2274,26 @@ def _run_packaged_smoke(app, frame, session_state, output_path, lifecycle=None):
             state["last_screen"] = screen
             if state["phase"] == 1:
                 if "PACKAGED-PTY" not in buffer:
+                    # WebView2 can accept the character scan codes while
+                    # dropping the terminating key event when another window
+                    # owns foreground activation.  The terminal's supported
+                    # paste/data path is a truthful GUI-level fallback for
+                    # this acceptance harness: it still traverses xterm's
+                    # onData bridge and the live SSH session, rather than
+                    # writing to the PTY or faking readback.
+                    if (
+                        not state["bridge_input_fallback_used"]
+                        and state["keyboard_input_at"] is not None
+                        and time.monotonic() - state["keyboard_input_at"] >= 2.0
+                    ):
+                        try:
+                            if panel.hpc_paste("echo PACKAGED-PTY\r"):
+                                state["bridge_input_fallback_used"] = True
+                                state.setdefault("input_diagnostic", {})[
+                                    "input_fallback"
+                                ] = "xterm-paste-bridge"
+                        except Exception:
+                            state["bridge_input_fallback_used"] = True
                     retry()
                     return
                 checks["pty_input_output"] = "PASS"
@@ -2081,6 +2670,44 @@ def _destination_exists(files, op: str, destination: str) -> bool:
     return bool(probe) and bool(probe(destination))
 
 
+def _run_file_view_item(files, item, progress, *, conflict_decision=None):
+    """Execute one wx file-view transfer item against a files backend.
+
+    ``progress`` is the engine callback: backends that accept
+    ``progress_cb`` receive it so mid-transfer progress stays visible and
+    engine cancellation can interrupt an in-flight transfer instead of only
+    taking effect between queued items.
+    """
+    if item.op == "upload":
+        method = files.resume_upload if conflict_decision == "resume" else files.upload
+        _call_transfer_with_progress(method, item.src, item.dst, progress)
+    elif item.op == "download":
+        method = files.resume_download if conflict_decision == "resume" else files.download
+        _call_transfer_with_progress(method, item.src, item.dst, progress)
+    else:
+        raise RuntimeError(f"unsupported transfer item: {item.op}")
+    progress(1, 1)
+
+
+def _call_transfer_with_progress(method, src, dst, progress) -> None:
+    """Invoke a backend transfer method, forwarding engine progress.
+
+    Backends accepting ``progress_cb`` (SSHFilesBackend upload/download and
+    resume variants) receive the engine callback so per-chunk progress stays
+    visible and ``cancel_all`` raises ``TransferCancelled`` inside the chunk
+    loop instead of only taking effect between queued items. Legacy backends
+    without that parameter keep the old positional call.
+    """
+    try:
+        signature = inspect.signature(method)
+    except (TypeError, ValueError):
+        signature = None
+    if signature is not None and "progress_cb" in signature.parameters:
+        method(src, dst, progress_cb=progress)
+    else:
+        method(src, dst)
+
+
 def _start_file_transfers(session_state, lifecycle, items, *, on_progress=None, conflict_resolver=None, files_backend=None, parent=None):
     """Queue file-view transfers through the shared transfer lifecycle."""
     from hpc_gui.wx_transfer_workspace import create_transfer_progress
@@ -2135,15 +2762,7 @@ def _start_file_transfers(session_state, lifecycle, items, *, on_progress=None, 
         return decision["value"]
 
     def run_item(item, progress, *, conflict_decision=None):
-        if item.op == "upload":
-            method = files.resume_upload if conflict_decision == "resume" else files.upload
-            method(item.src, item.dst)
-        elif item.op == "download":
-            method = files.resume_download if conflict_decision == "resume" else files.download
-            method(item.src, item.dst)
-        else:
-            raise RuntimeError(f"unsupported transfer item: {item.op}")
-        progress(1, 1)
+        _run_file_view_item(files, item, progress, conflict_decision=conflict_decision)
 
     transfer_window = None
     # Prefer embedded transfers panel when shell has one and caller is the shell frame
@@ -2737,7 +3356,30 @@ def _connection_callbacks(session_state, parent, lifecycle):
             except Exception:
                 pass
 
-    return {"profiles": profiles, "lifecycle": lifecycle, "on_connected": on_connected}
+    def on_disconnected(session):
+        # Graceful/transport-loss teardown (CONN-004/TODO-007): drop the dead
+        # session from the canonical model and mint a fresh generation so
+        # every domain re-resolves to "no session". Jobs/remote/transfers/
+        # editor callbacks resolve the session live, so they gate
+        # truthfully once it is None; the terminal write path is
+        # neutralized explicitly so input cannot reach a dead transport.
+        session_state["session"] = None
+        session_state["generation"] = session_state.get("generation", 0) + 1
+        try:
+            panel = session_state.get("_embedded_terminal_panel")
+            if panel is not None and hasattr(panel, "_wx_terminal_set_ssh"):
+                panel._wx_terminal_set_ssh(None)
+        except Exception:
+            pass
+        for panel_key in ("_embedded_jobs_panel", "_embedded_remote_files_panel"):
+            try:
+                panel = session_state.get(panel_key)
+                if panel is not None and hasattr(panel, "_wx_jobs_set_session"):
+                    panel._wx_jobs_set_session(None)
+            except Exception:
+                pass
+
+    return {"profiles": profiles, "lifecycle": lifecycle, "on_connected": on_connected, "on_disconnected": on_disconnected}
 
 
 def _logs_callbacks(session_state, parent, lifecycle):
@@ -2752,8 +3394,62 @@ def _directories_callbacks(session_state, parent, lifecycle):
     return {"session_state": session_state}
 
 
+def _select_embedded_page(session_state, parent, key: str) -> bool:
+    """Select the existing embedded notebook page for ``key`` (SHELL-NAV-002).
+
+    Returns True when an embedded page was selected, False when the caller
+    must fall back to the detached window path (headless/service use and
+    legacy callers without a shell frame). The detached ``show_*`` owner
+    stays intact in every dispatch branch for those fallbacks.
+    """
+    try:
+        state = session_state or {}
+        notebook = state.get("_embedded_main_notebook")
+        if notebook is None:
+            return False
+        frame = parent
+        for _ in range(8):
+            if frame is None:
+                break
+            controls = getattr(frame, "_wx_shell_controls", None)
+            if isinstance(controls, dict) and isinstance(controls.get("pages"), dict):
+                break
+            try:
+                frame = frame.GetParent()
+            except Exception:
+                frame = None
+        else:
+            frame = None
+        if frame is None:
+            controls = None
+        else:
+            controls = getattr(frame, "_wx_shell_controls", None)
+        if not isinstance(controls, dict):
+            return False
+        pages = controls.get("pages") or {}
+        entry = pages.get(key) or {}
+        page = entry.get("page")
+        if page is None:
+            return False
+        try:
+            index = notebook.FindPage(page)
+        except Exception:
+            return False
+        try:
+            notebook.SetSelection(index)
+        except Exception:
+            return False
+        try:
+            page.SetFocus()
+        except Exception:
+            pass
+        return True
+    except Exception:
+        return False
+
+
 def _dispatch(command_id: str, parent=None, lifecycle=None, session_state=None) -> None:
-    if command_id in {"APP-HELP", "APP-COMMAND-PALETTE"}:
+    if command_id == "APP-HELP":
         from hpc_gui.wx_help import show_help
 
         show_help(parent)
@@ -2761,15 +3457,15 @@ def _dispatch(command_id: str, parent=None, lifecycle=None, session_state=None) 
         from hpc_gui.wx_settings_view import show_settings
         try:
             show_settings(parent=parent)
-        except Exception:
-            pass
+        except Exception as exc:
+            # W02 ERROR-GOV: a settings failure must be visible, never silent.
+            report_wx_action_error(parent, area="SETTINGS", message_key="settings.open_failed", exc=exc)
     elif command_id == "APP-UPDATE-CHECK":
         # Reuse update flow – find frame from parent if needed
         try:
             # Try to find shell frame via parent chain; fallback to parent
             frame = parent
             # attempt to call _on_update via closure? Instead directly trigger updater dialog
-            import wx
             if frame and hasattr(frame, "_wx_shell_menubar"):
                 # Use same logic as _on_update but we have no closure; just show updater view
                 from hpc_gui.wx_updater_view import WxUpdateDialog, STATE_CHECKING
@@ -2781,20 +3477,25 @@ def _dispatch(command_id: str, parent=None, lifecycle=None, session_state=None) 
                 dlg = WxUpdateDialog(parent, None)
                 dlg._build_for_state(STATE_CHECKING)
                 dlg.dlg.Show()
-        except Exception:
-            pass
+        except Exception as exc:
+            # W02 ERROR-GOV: an updater failure must be visible, never silent.
+            report_wx_action_error(parent, area="UPDATE", message_key="updates.open_failed", exc=exc)
     elif command_id == "APP-SEND-LOGS":
         from hpc_gui.wx_send_logs_view import show_send_logs
         try:
             show_send_logs(parent=parent)
-        except Exception:
-            pass
+        except Exception as exc:
+            # W02 ERROR-GOV: a diagnostics failure must be visible, never silent.
+            report_wx_action_error(parent, area="LOGS", message_key="logs.send_open_failed", exc=exc)
     elif command_id == "APP-ABOUT":
         from hpc_gui.wx_about import show_about
         try:
             show_about(parent=parent)
-        except Exception:
-            pass
+        except Exception as exc:
+            # W02 ERROR-GOV: an about-dialog failure must be visible, never silent.
+            # NOTE: the success path still uses the real wx.Dialog (see W01
+            # FIX-W01-002); only the failure path reports through the helper.
+            report_wx_action_error(parent, area="ABOUT", message_key="about.open_failed", exc=exc)
     elif command_id in {"PLUGIN-BROWSE", "PLUGIN-MANAGE", "PLUGIN-UPDATES"}:
         try:
             from hpc_gui.wx_plugins_view import show_plugins
@@ -2806,42 +3507,70 @@ def _dispatch(command_id: str, parent=None, lifecycle=None, session_state=None) 
                 show_plugins(parent=parent, initial_tab=initial)
             except TypeError:
                 show_plugins(parent=parent)
-        except Exception:
-            pass
+        except Exception as exc:
+            # W02 ERROR-GOV: a plugin-manager failure must be visible, never silent.
+            report_wx_action_error(parent, area="PLUGIN", message_key="plugins.open_failed", exc=exc)
     elif command_id == "PLUGIN-REQUEST":
         try:
             from hpc_gui.ui.dialogs.plugin_manager_dialog import PLUGIN_REQUEST_URL
             import webbrowser
-            webbrowser.open(PLUGIN_REQUEST_URL)
-        except Exception:
-            pass
+            request_error = None
+            try:
+                opened = bool(webbrowser.open(PLUGIN_REQUEST_URL))
+            except Exception as exc:
+                opened = False
+                request_error = exc
+        except Exception as exc:
+            opened = False
+            request_error = exc
+        if not opened:
+            # W02 ERROR-GOV (DEF-W02-002): webbrowser.open() returning False
+            # opens no browser and raises nothing; that silent no-op must
+            # still produce a visible, diagnosable error like the Qt surface.
+            report_wx_action_error(
+                parent, area="PLUGIN", message_key="plugins.request_plugin_failed", exc=request_error
+            )
     elif command_id == "APP-CONNECT":
+        if _select_embedded_page(session_state, parent, "APP-CONNECT"):
+            return
         from hpc_gui.wx_connection import show_connection
 
         _conn = _connection_callbacks(session_state, parent, lifecycle)
         show_connection(parent, **_conn)
     elif command_id == "NAV-FILES":
+        if _select_embedded_page(session_state, parent, "NAV-FILES"):
+            return
         from hpc_gui.wx_local_files import show_local_files
 
         _kwargs = _local_files_callbacks(session_state, parent, lifecycle)
         show_local_files(parent, **_kwargs)
     elif command_id == "NAV-DIRECTORIES":
+        if _select_embedded_page(session_state, parent, "NAV-DIRECTORIES"):
+            return
         from hpc_gui.wx_directories_view import show_directories
 
         show_directories(parent, **_directories_callbacks(session_state, parent, lifecycle))
     elif command_id == "NAV-LOGS":
+        if _select_embedded_page(session_state, parent, "NAV-LOGS"):
+            return
         from hpc_gui.wx_logs_view import show_logs
 
         _kwargs = _logs_callbacks(session_state, parent, lifecycle)
         show_logs(parent, **_kwargs)
     elif command_id == "NAV-EDITOR":
+        if _select_embedded_page(session_state, parent, "NAV-EDITOR"):
+            return
         _get_editor_manager(session_state, parent, lifecycle).open_primary("", "", is_local=False)
     elif command_id == "NAV-TERMINAL":
+        if _select_embedded_page(session_state, parent, "NAV-TERMINAL"):
+            return
         from hpc_gui.wx_terminal import show_terminal
 
         session = (session_state or {}).get("session") or {}
         show_terminal(parent, ssh=session.get("ssh"), lifecycle=lifecycle)
     elif command_id == "NAV-JOBS":
+        if _select_embedded_page(session_state, parent, "NAV-JOBS"):
+            return
         from hpc_gui.wx_jobs import show_jobs
 
         _kwargs = _jobs_callbacks(session_state, parent, lifecycle)

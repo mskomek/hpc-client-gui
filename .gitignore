@@ -102,3 +102,6 @@ coverage.json
 # Wheel build output
 /build/lib/
 /waves/
+
+# FreeFileSync local sync database
+/sync.ffs_db

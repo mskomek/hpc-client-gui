@@ -1,0 +1,46 @@
+{
+  "schema": "wx-packaged-smoke/1",
+  "identity_header": "Artifact: hpc_client_gui-1.5.9-py3-none-any.whl\nSHA256: 3b2849b7916741455aaff47625043ee343b32a921cfb713e8c80bb8c66fcda48\nMain SHA: 0f8902a023bac76071527232c2287af96478ed2b\nPlugin SHA: f0abb7e7037e66ab451d463c699fecf4e00c89eb\nVersion: 1.5.9\nOS/arch: windows/amd64",
+  "commit": "0f8902a023bac76071527232c2287af96478ed2b",
+  "platform": "windows",
+  "artifact": "hpc_client_gui-1.5.9-py3-none-any.whl",
+  "artifact_sha256": "3b2849b7916741455aaff47625043ee343b32a921cfb713e8c80bb8c66fcda48",
+  "result": "FAIL",
+  "checks": {
+    "process_started": "FAIL",
+    "wx_runtime_started": "FAIL",
+    "main_frame_created": "FAIL",
+    "terminal_readback": "FAIL",
+    "pty_input_output": "FAIL",
+    "pty_resize": "FAIL",
+    "remote_file_roundtrip": "FAIL",
+    "job_roundtrip": "FAIL",
+    "files_surface": "FAIL",
+    "editor_surface": "FAIL",
+    "jobs_surface": "FAIL",
+    "plugin_ansys_surface": "FAIL",
+    "diagnostics_updater_surface": "FAIL",
+    "files_controls": "FAIL",
+    "editor_controls": "FAIL",
+    "jobs_controls": "FAIL",
+    "editor_roundtrip": "FAIL",
+    "transfer_queue_render": "FAIL",
+    "clean_shutdown": "FAIL"
+  },
+  "details": {
+    "error": "ValueError: unsupported artifact type: .whl"
+  },
+  "python": "3.12.4",
+  "platform_detail": "Windows-11-10.0.26200-SP0",
+  "generated_utc": "2026-09-19T18:12:42.283999+00:00",
+  "exit_code": null,
+  "isolated_from_src": true,
+  "manual_required": [
+    "display",
+    "cluster",
+    "MFA",
+    "X11",
+    "DnD",
+    "transfer-conflict"
+  ]
+}

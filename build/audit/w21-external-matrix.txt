@@ -1,0 +1,19 @@
+INFO healthy-before :: healthy
+PASS E1 connect transport active
+PASS E2 echo round trip
+PASS E2b unicode output intact
+PASS E3 multiline ordered
+PASS E4 burst 500 complete+ordered
+PASS E5 live resize applied :: (100, 30)
+PASS E5b tiny resize clamped :: (1, 1)
+PASS E5c shell answers after resize
+PASS E-loss transport death leaves CONNECTED :: failed
+PASS E-reconnect-same fresh session answers
+PASS E-stale-drop superseded callback ignored
+PASS E-profile-B live after switch
+PASS E6 send after close is False
+PASS E6b panel input after disconnect False
+PASS E6c failure diagnostic visible :: Terminal input could not be sent.
+PASS E7 subscriber detached on close
+INFO healthy-after :: healthy
+INFO W21-EXTERNAL DONE :: panel-section-ok

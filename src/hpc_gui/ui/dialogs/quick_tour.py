@@ -85,11 +85,6 @@ class QuickTourOverlay(QWidget):
             return active_binding(command, current_os()) or t("help.unbound_command")
         return [
             TourStep(
-                title=t("tour.s1_title"),
-                body=t("tour.s1_body").format(binding=binding("APP-COMMAND-PALETTE")),
-                target_getter=lambda: getattr(m, "_help_btn", None),
-            ),
-            TourStep(
                 title=t("tour.s2_title"),
                 body=t("tour.s2_body").format(binding=binding("FILE-NEW-FOLDER")),
                 target_getter=lambda: getattr(getattr(m.directories, "panel_scratch", None), "btn_new_folder", None),

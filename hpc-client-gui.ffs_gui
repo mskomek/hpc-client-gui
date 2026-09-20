@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FreeFileSync XmlType="GUI" XmlFormat="23">
+    <Notes/>
+    <Compare>
+        <Variant>TimeAndSize</Variant>
+        <Symlinks>Exclude</Symlinks>
+        <IgnoreTimeShift/>
+    </Compare>
+    <Synchronize>
+        <Changes>
+            <Left Create="right" Update="right" Delete="right"/>
+            <Right Create="left" Update="left" Delete="left"/>
+        </Changes>
+        <DeletionPolicy>RecycleBin</DeletionPolicy>
+        <VersioningFolder Style="Replace"/>
+    </Synchronize>
+    <Filter>
+        <Include>
+            <Item>*</Item>
+        </Include>
+        <Exclude>
+            <Item>\System Volume Information\</Item>
+            <Item>\$Recycle.Bin\</Item>
+            <Item>\RECYCLE?\</Item>
+            <Item>\Recovery\</Item>
+            <Item>*\thumbs.db</Item>
+            <Item>*\.venv\</Item>
+            <Item>*\node_modules\</Item>
+            <Item>*\__pycache__\</Item>
+            <Item>*\.pytest_cache\</Item>
+            <Item>*\.mypy_cache\</Item>
+            <Item>*\.ruff_cache\</Item>
+            <Item>*\.venv314\</Item>
+            <Item>*\.wave385-audit\</Item>
+            <Item>*\.tmp\</Item>
+            <Item>*.agent-runs</Item>
+            <Item>\dist\</Item>
+            <Item>\.tmp-pytest-update04\</Item>
+            <Item>\.tmp-pytest-merge8\</Item>
+            <Item>\.cache\</Item>
+            <Item>\TrubaGUI\.tmp-release-153\</Item>
+            <Item>\TrubaGUI\dist\</Item>
+            <Item>\TrubaGUI\.cache\</Item>
+            <Item>\TrubaGUI\.tmp-release-154-artifacts\</Item>
+            <Item>\TrubaGUI\.venv-linux\</Item>
+            <Item>\TrubaGUI\.tmp-app-tests\</Item>
+            <Item>\TrubaGUI\.tmp-pytest-graphics-full\</Item>
+            <Item>\TrubaGUI\.tmp-pytest-graphics-full2\</Item>
+            <Item>\TrubaGUI\.flatpak-builder\</Item>
+            <Item>\crypto-ai-bot\</Item>
+            <Item>\sharpEmu\</Item>
+            <Item>\bildiri\</Item>
+            <Item>\ai_agent\</Item>
+            <Item>*\.legacy_env\</Item>
+            <Item>\hpc-client-gui\dist\</Item>
+            <Item>\hpc-client-gui\.tmp-pytest-update04\</Item>
+            <Item>\hpc-client-gui\.tmp-pytest-merge8\</Item>
+            <Item>*\dist\</Item>
+            <Item>*\sync..ffs_db</Item>
+        </Exclude>
+        <SizeMin Unit="None">0</SizeMin>
+        <SizeMax Unit="None">0</SizeMax>
+        <TimeSpan Type="None">0</TimeSpan>
+    </Filter>
+    <FolderPairs>
+        <Pair>
+            <Left>D:\Projeler\hpc-client-gui</Left>
+            <Right>D:\MyDrive\Projeler\hpc-client-gui</Right>
+        </Pair>
+    </FolderPairs>
+    <Errors Ignore="false" Retry="0" Delay="5"/>
+    <PostSyncCommand Condition="Completion"/>
+    <LogFolder/>
+    <EmailNotification Condition="Always"/>
+    <GridViewType>Action</GridViewType>
+</FreeFileSync>

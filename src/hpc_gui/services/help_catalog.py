@@ -51,7 +51,7 @@ _TOPICS = (
     HelpTopic("help.plugins", "help.section_plugins", "plugins", ("plugin", "template"), ("PLUGIN-MANAGER",), "generic"),
     HelpTopic("help.ansys", "help.section_ansys", "ansys", ("trusted tool", "journal"), ("PLUGIN-ANSYS-LINTER",), "generic"),
     HelpTopic("help.troubleshooting", "help.section_troubleshooting", "troubleshooting", ("diagnostic", "error"), ("DIAGNOSTICS-EXPORT",), "core"),
-    HelpTopic("help.keyboard-shortcuts", "help.section_keyboard_shortcuts", "keyboard-shortcuts", ("shortcut", "key"), ("APP-HELP", "APP-COMMAND-PALETTE"), "core"),
+    HelpTopic("help.keyboard-shortcuts", "help.section_keyboard_shortcuts", "keyboard-shortcuts", ("shortcut", "key"), ("APP-HELP",), "core"),
     HelpTopic("help.mouse-gestures", "help.section_mouse_gestures", "mouse-gestures", ("click", "drag", "gesture"), (), "core"),
 )
 

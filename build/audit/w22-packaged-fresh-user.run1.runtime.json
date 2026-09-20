@@ -1,0 +1,22 @@
+{
+  "schema": "wx-fresh-user-runtime/1",
+  "result": "FAIL",
+  "checks": {
+    "fresh_config_root": "PASS",
+    "first_run_empty_state": "PASS",
+    "profile_via_visible_controls": "PASS",
+    "loopback_success_via_controls": "FAIL",
+    "safe_visible_failure": "FAIL",
+    "persisted_nonsecret_state": "FAIL",
+    "no_src_leakage": "PASS",
+    "clean_shutdown": "PASS"
+  },
+  "details": {
+    "fresh_root": "C:\\Users\\mskomek\\AppData\\Local\\Temp\\hpc-fresh-user-t_ljji9y\\config",
+    "error": "wxAssertionError: C++ assertion \"m_flag > 0\" failed at C:\\Users\\runneradmin\\AppData\\Local\\Temp\\pip-req-build-b5c880w1\\ext\\wxWidgets\\include\\wx/recguard.h(36) in ~wxRecursionGuard(): unbalanced wxRecursionGuards!?",
+    "app_data_dir": "C:\\Users\\mskomek\\AppData\\Local\\Temp\\hpc-fresh-user-t_ljji9y\\config",
+    "frozen": true,
+    "executable": "D:\\Projeler\\hpc-client-gui\\dist\\hpc-client-gui\\hpc-client-gui.exe"
+  },
+  "run": "1"
+}

@@ -1,0 +1,91 @@
+{
+  "schema": "wx-fresh-user-smoke/1",
+  "procedure": "PKG-GJ-01",
+  "identity_header": "Artifact: hpc-client-gui.exe\nSHA256: d2aab99d998a1dd0d912098f319f9bbf6c227ba0b4b82c9db9303bcf6c863cfd\nMain SHA: 0f8902a023bac76071527232c2287af96478ed2b\nPlugin SHA: f0abb7e7037e66ab451d463c699fecf4e00c89eb\nVersion: 1.5.9\nOS/arch: windows/amd64",
+  "commit": "0f8902a023bac76071527232c2287af96478ed2b",
+  "platform": "windows",
+  "artifact": "hpc-client-gui.exe",
+  "artifact_sha256": "d2aab99d998a1dd0d912098f319f9bbf6c227ba0b4b82c9db9303bcf6c863cfd",
+  "result": "PASS",
+  "checks": {
+    "fresh_config_root": "PASS",
+    "first_run_empty_state": "PASS",
+    "profile_via_visible_controls": "PASS",
+    "loopback_success_via_controls": "PASS",
+    "safe_visible_failure": "PASS",
+    "persisted_nonsecret_state": "PASS",
+    "no_src_leakage": "PASS",
+    "clean_shutdown": "PASS",
+    "relaunch_state_present": "PASS",
+    "relaunch_no_src_leakage": "PASS"
+  },
+  "details": {
+    "fresh_root": "C:\\Users\\mskomek\\AppData\\Local\\Temp\\.ctx-mode-bjkwh8\\hpc-fresh-user-r9_ocgy4\\config",
+    "workdir": "C:\\Users\\mskomek\\AppData\\Local\\Temp\\.ctx-mode-bjkwh8\\hpc-fresh-user-r9_ocgy4\\work",
+    "workdir_outside_repo": true,
+    "fresh_parent_kept": "C:\\Users\\mskomek\\AppData\\Local\\Temp\\.ctx-mode-bjkwh8\\hpc-fresh-user-r9_ocgy4"
+  },
+  "runs": {
+    "run1": {
+      "exit_code": 0,
+      "runtime": {
+        "schema": "wx-fresh-user-runtime/1",
+        "result": "PASS",
+        "checks": {
+          "fresh_config_root": "PASS",
+          "first_run_empty_state": "PASS",
+          "profile_via_visible_controls": "PASS",
+          "loopback_success_via_controls": "PASS",
+          "safe_visible_failure": "PASS",
+          "persisted_nonsecret_state": "PASS",
+          "no_src_leakage": "PASS",
+          "clean_shutdown": "PASS"
+        },
+        "details": {
+          "fresh_root": "C:\\Users\\mskomek\\AppData\\Local\\Temp\\.ctx-mode-bjkwh8\\hpc-fresh-user-r9_ocgy4\\config",
+          "app_data_dir": "C:\\Users\\mskomek\\AppData\\Local\\Temp\\.ctx-mode-bjkwh8\\hpc-fresh-user-r9_ocgy4\\config",
+          "frozen": true,
+          "executable": "D:\\Projeler\\hpc-client-gui\\dist\\hpc-client-gui\\hpc-client-gui.exe"
+        },
+        "run": "1"
+      },
+      "output_tail": "578 (Invalid window handle.).\n..\\..\\src\\msw\\window.cpp(432): 'DestroyWindow' failed with error 0x00000578 (Invalid window handle.).\n..\\..\\src\\msw\\window.cpp(432): 'DestroyWindow' failed with error 0x00000578 (Invalid window handle.).\n..\\..\\src\\msw\\window.cpp(432): 'DestroyWindow' failed with error 0x00000578 (Invalid window handle.).\n..\\..\\src\\msw\\window.cpp(432): 'DestroyWindow' failed with error 0x00000578 (Invalid window handle.).\n..\\..\\src\\msw\\window.cpp(432): 'DestroyWindow' failed with error 0x00000578 (Invalid window handle.).\n..\\..\\src\\msw\\window.cpp(432): 'DestroyWindow' failed with error 0x00000578 (Invalid window handle.).\n..\\..\\src\\msw\\window.cpp(432): 'DestroyWindow' failed with error 0x00000005 (Access is denied.).\n..\\..\\src\\msw\\window.cpp(432): 'DestroyWindow' failed with error 0x00000005 (Access is denied.).\n..\\..\\src\\msw\\window.cpp(432): 'DestroyWindow' failed with error 0x00000005 (Access is denied.).\n..\\..\\src\\msw\\window.cpp(432): 'DestroyWindow' failed with error 0x00000005 (Access is denied.).\n..\\..\\src\\msw\\window.cpp(432): 'DestroyWindow' failed with error 0x00000005 (Access is denied.).\n..\\..\\src\\msw\\window.cpp(432): 'DestroyWindow' failed with error 0x00000005 (Access is denied.).\n..\\..\\src\\msw\\window.cpp(432): 'DestroyWindow' failed with error 0x00000005 (Access is denied.).\n..\\..\\src\\msw\\window.cpp(432): 'DestroyWindow' failed with error 0x00000005 (Access is denied.).\n..\\..\\src\\msw\\window.cpp(432): 'DestroyWindow' failed with error 0x00000005 (Access is denied.).\n..\\..\\src\\msw\\window.cpp(432): 'DestroyWindow' failed with error 0x00000005 (Access is denied.).\n..\\..\\src\\msw\\window.cpp(432): 'DestroyWindow' failed with error 0x00000005 (Access is denied.).\n..\\..\\src\\msw\\window.cpp(432): 'DestroyWindow' failed with error 0x00000005 (Access is denied.).\n..\\..\\src\\msw\\window.cpp(432): 'DestroyWindow' failed with error 0x00000005 (Access is denied.).\n..\\..\\src\\msw\\window.cpp(432): 'DestroyWindow' failed with error 0x00000005 (Access is denied.).\n"
+    },
+    "run2": {
+      "exit_code": 0,
+      "runtime": {
+        "schema": "wx-fresh-user-runtime/1",
+        "result": "PASS",
+        "checks": {
+          "relaunch_state_present": "PASS",
+          "relaunch_no_src_leakage": "PASS",
+          "clean_shutdown": "PASS"
+        },
+        "details": {
+          "fresh_root": "C:\\Users\\mskomek\\AppData\\Local\\Temp\\.ctx-mode-bjkwh8\\hpc-fresh-user-r9_ocgy4\\config",
+          "app_data_dir": "C:\\Users\\mskomek\\AppData\\Local\\Temp\\.ctx-mode-bjkwh8\\hpc-fresh-user-r9_ocgy4\\config",
+          "frozen": true,
+          "executable": "D:\\Projeler\\hpc-client-gui\\dist\\hpc-client-gui\\hpc-client-gui.exe"
+        },
+        "run": "2"
+      },
+      "output_tail": "Adding duplicate image handler for 'Windows bitmap file'\nAdding duplicate animation handler for '1' type\nAdding duplicate animation handler for '2' type\nAdding duplicate animation handler for '3' type\n"
+    }
+  },
+  "exit_codes": [
+    0,
+    0
+  ],
+  "python": "3.12.4",
+  "platform_detail": "Windows-11-10.0.26200-SP0",
+  "generated_utc": "2026-09-19T20:20:48.374368+00:00",
+  "isolated_from_src": true,
+  "manual_required": [
+    "display",
+    "cluster",
+    "MFA",
+    "X11",
+    "DnD",
+    "transfer-conflict"
+  ]
+}

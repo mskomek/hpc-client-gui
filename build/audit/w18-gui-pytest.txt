@@ -1,0 +1,24 @@
+============================= test session starts =============================
+platform win32 -- Python 3.12.4, pytest-9.0.2, pluggy-1.6.0 -- D:\Python\Python312\python.exe
+cachedir: .pytest_cache
+rootdir: D:\Projeler\hpc-client-gui
+configfile: pyproject.toml
+plugins: anyio-4.12.1, cov-7.1.0
+collecting ... collected 14 items
+
+tests/test_w18_auth_hostkey.py::test_wrong_password_maps_to_actionable_auth_message PASSED [  7%]
+tests/test_w18_auth_hostkey.py::test_missing_key_maps_to_key_file_guidance PASSED [ 14%]
+tests/test_w18_auth_hostkey.py::test_host_key_changed_uses_translated_security_message PASSED [ 21%]
+tests/test_w18_auth_hostkey.py::test_host_key_rejected_uses_translated_security_message PASSED [ 28%]
+tests/test_w18_auth_hostkey.py::test_no_credential_not_reported_as_wrong_password PASSED [ 35%]
+tests/test_w18_auth_hostkey.py::test_saved_secret_states_keep_their_messages PASSED [ 42%]
+tests/test_w18_auth_hostkey.py::test_secret_never_echoed_in_failure_message PASSED [ 50%]
+tests/test_w18_auth_hostkey.py::test_host_key_request_carries_key_type PASSED [ 57%]
+tests/test_w18_auth_hostkey.py::test_host_key_prompt_identifies_type_host_and_fingerprint PASSED [ 64%]
+tests/test_w18_auth_hostkey.py::test_keyboard_handler_gating_matches_provider_contract PASSED [ 71%]
+tests/test_w18_auth_hostkey.py::test_gui_unknown_host_prompt_accept_reject_cancel PASSED [ 78%]
+tests/test_w18_auth_hostkey.py::test_gui_wrong_password_fails_visibly_with_actionable_message PASSED [ 85%]
+tests/test_w18_auth_hostkey.py::test_gui_missing_key_actionable_and_changed_key_hard_fail PASSED [ 92%]
+tests/test_w18_auth_hostkey.py::test_gui_master_cancel_returns_to_safe_state PASSED [100%]
+
+============================= 14 passed in 0.58s ==============================

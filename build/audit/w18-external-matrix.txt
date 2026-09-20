@@ -1,0 +1,11 @@
+W18-EXTERNAL timestamp=2026-09-20T01:21:58+03:00
+E1 password-auth success + echo round trip: PASS
+E2 wrong password visible failure: PASS (AuthenticationException)
+E3 reconnect-after-accept (known host success): PASS
+E4 changed-key hard fail: PASS (Host key changed for 127.0.0.1; connection cancelled.)
+E5 unknown-host reject: PASS (HostKeyRejectedError)
+E6 strict unknown reject: PASS (SSHException)
+E7 missing-key FileNotFoundError: PASS ([Errno 2] No such file or directory: 'C:\\Users\\mskomek\\AppData\\Local\\Temp\\w18ext_ze0uvaah\\no-such-key')
+E8 agent-absent default-discovery connect: PASS
+cleanup: temp known_hosts removed: PASS
+W18-EXTERNAL DONE

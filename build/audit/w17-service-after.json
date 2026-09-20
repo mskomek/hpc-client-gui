@@ -1,0 +1,32 @@
+{
+  "wave": "W17",
+  "id": "EV-W17-002",
+  "kind": "after-fix service probe",
+  "steps": [
+    {
+      "add_ids": [
+        true,
+        true
+      ]
+    },
+    {
+      "rename_collision": "rejected: profile_name_taken:alpha"
+    },
+    {
+      "rows": [
+        [
+          "alpha",
+          "h1"
+        ],
+        [
+          "beta",
+          "h2"
+        ]
+      ]
+    },
+    {
+      "last_profile": "beta"
+    }
+  ],
+  "overall": true
+}

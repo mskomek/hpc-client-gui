@@ -486,6 +486,9 @@ def test_wx_terminal_close_releases_native_webview():
     panel._subscribers_list = None
     panel._pending = []
     panel._pending_bytes = 0
+    panel._pending_paste = []
+    panel._pending_paste_bytes = 0
+    panel._write_failure_shown = False
     panel._lang_cb = lambda _language=None: None
 
     panel.close()

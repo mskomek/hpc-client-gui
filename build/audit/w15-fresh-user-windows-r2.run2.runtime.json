@@ -1,0 +1,16 @@
+{
+  "schema": "wx-fresh-user-runtime/1",
+  "result": "PASS",
+  "checks": {
+    "relaunch_state_present": "PASS",
+    "relaunch_no_src_leakage": "PASS",
+    "clean_shutdown": "PASS"
+  },
+  "details": {
+    "fresh_root": "C:\\Users\\mskomek\\AppData\\Local\\Temp\\hpc-fresh-user-m6o5_hxr\\config",
+    "app_data_dir": "C:\\Users\\mskomek\\AppData\\Local\\Temp\\hpc-fresh-user-m6o5_hxr\\config",
+    "frozen": true,
+    "executable": "D:\\Projeler\\hpc-client-gui\\dist\\hpc-client-gui\\hpc-client-gui.exe"
+  },
+  "run": "2"
+}

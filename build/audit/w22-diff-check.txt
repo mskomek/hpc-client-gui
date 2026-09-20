@@ -1,0 +1,14 @@
+warning: in the working copy of 'artifacts/v2-final/W01/W01_COMPLETION_REPORT.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'artifacts/v2-final/W01/WAVE_01_SESSION_REPORT.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/hpc_gui/i18n/en.json', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/hpc_gui/i18n/tr.json', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/hpc_gui/services/help_catalog.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/hpc_gui/services/platform_keymap.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/hpc_gui/ui/dialogs/quick_tour.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/hpc_gui/wx_shell.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/hpc_gui/wx_terminal.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/hpc_gui/wx_terminal_webview.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/test_command_palette.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/test_platform_keymap.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/test_wx_help.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/test_wx_packaged_smoke.py', LF will be replaced by CRLF the next time Git touches it

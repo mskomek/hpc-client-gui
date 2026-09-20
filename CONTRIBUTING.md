@@ -8,6 +8,14 @@ GitHub's Private Vulnerability Reporting, described in [SECURITY.md](SECURITY.md
 
 ## Getting set up
 
+Python 3.14.x is required — verify `python --version` reports 3.14.x
+before creating the environment. On Windows with the Python launcher:
+
+```powershell
+py -3.14 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+```
+
 ```bash
 python -m venv .venv
 . .venv/bin/activate        # Windows: .\.venv\Scripts\Activate.ps1
@@ -17,7 +25,7 @@ pre-commit install --hook-type pre-push
 python -m hpc_gui
 ```
 
-Python 3.14.x is required. On Linux you also need the Qt platform libraries
+On Linux you also need the Qt platform libraries
 PySide6 loads at startup (`libegl1` on Ubuntu/Debian).
 
 ## Push öncesi kontrol
@@ -73,9 +81,8 @@ Repository Settings → Rules → Rulesets altında `Protect main` adlı aktif
 branch ruleset uygulanmalıdır:
 
 - `main` branch hedefi ve pull request zorunluluğu
-- required status checks: `Quality (Python 3.11)`,
-  `Compatibility (Python 3.10)`, `Compatibility (Python 3.12)`, `macOS (arm64)`,
-  `macOS (x86_64)`, `Windows`, `Plugin API contract`
+- required status checks: `Quality (Python 3.14)`,
+  `macOS (arm64)`, `macOS (x86_64)`, `Windows`, `Plugin API contract`
 - merge öncesi branch’in güncel olması ve conversation resolution
 - force push ve branch deletion engeli
 - doğrudan `main` push engeli

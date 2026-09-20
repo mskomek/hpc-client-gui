@@ -9,6 +9,12 @@ from hpc_gui.core.platform import current_os
 
 _LEGACY_DIRNAME = ".truba_slurm_gui"
 _MAC_APP_NAME = "HPC Client GUI"
+
+#: Environment variable naming an isolated per-run config root. When set to a
+#: non-blank directory, all per-user state (config, logs, history, third-party
+#: downloads) lives under it instead of the real home directory, so fresh-user
+#: packaged acceptance never touches a developer profile (PKG-GJ-01).
+ISOLATED_CONFIG_ROOT_ENV = "HPC_GUI_CONFIG_ROOT"
 _MIGRATABLE_NAMES = {
     "config.json",
     "language.json",
@@ -38,7 +44,36 @@ def _mac_log_dir(home: Path) -> Path:
     return home / "Library" / "Logs" / _MAC_APP_NAME
 
 
+def isolated_config_root() -> Path | None:
+    """Return the isolated per-run config root, or ``None`` for default.
+
+    A non-blank ``HPC_GUI_CONFIG_ROOT`` redirects every per-user location so
+    a packaged first-run can be proven without hand-editing hidden config or
+    contaminating the developer profile. The directory is created on demand;
+    a path that cannot be created raises instead of silently falling back.
+    """
+    raw = os.environ.get(ISOLATED_CONFIG_ROOT_ENV, "")
+    if not raw.strip():
+        return None
+    root = Path(raw.strip()).expanduser()
+    try:
+        root.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        raise RuntimeError(f"Cannot create isolated config root: {exc}") from exc
+    if os.name == "posix":
+        try:
+            root.chmod(0o700)
+        except OSError:
+            pass
+    return root
+
+
 def app_log_dir(home: Path | None = None) -> Path:
+    override = isolated_config_root()
+    if override is not None:
+        path = override / "logs"
+        path.mkdir(parents=True, exist_ok=True)
+        return path
     root = home or Path.home()
     path = _mac_log_dir(root) if current_os() == "macos" else legacy_app_data_dir(root)
     path.mkdir(parents=True, exist_ok=True)
@@ -83,7 +118,9 @@ def migrate_legacy_app_data(*, home: Path | None = None) -> bool:
 
 def app_data_dir() -> Path:
     """Per-user app data directory used for logs/config/3rd-party downloads."""
-
+    override = isolated_config_root()
+    if override is not None:
+        return override
     home = Path.home()
     if current_os() == "macos":
         migrate_legacy_app_data(home=home)

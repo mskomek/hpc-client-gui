@@ -31,7 +31,6 @@ _COMMANDS = (
     CommandDefinition("APP-DISCONNECT", "login.disconnect", "application", "session", "login.disconnect"),
     CommandDefinition("APP-SETTINGS", "settings.action", "application", "shell", "settings.dialog_title"),
     CommandDefinition("APP-HELP", "help.open_help", "application", "shell", "help.open_help", ("F1",)),
-    CommandDefinition("APP-COMMAND-PALETTE", "common.command_palette", "application", "shell", "common.command_palette", ("Ctrl+Shift+P",)),
     CommandDefinition("NAV-JOBS", "tabs.jobs_outputs", "navigation", "shell", "tabs.jobs_outputs"),
     CommandDefinition("NAV-DIRECTORIES", "tabs.directories", "navigation", "shell", "tabs.directories"),
     CommandDefinition("NAV-FILES", "tabs.ftp", "navigation", "shell", "tabs.ftp"),

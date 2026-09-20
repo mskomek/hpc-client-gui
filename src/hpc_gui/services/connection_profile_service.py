@@ -17,6 +17,7 @@ from typing import Any, Callable
 
 from hpc_gui.config.storage import (
     delete_profile as storage_delete_profile,
+    get_profile_id,
     load_profiles,
     merge_profile_patch,
     upsert_profile,
@@ -334,6 +335,25 @@ def save_profile(
     if initial_profile is None:
         existing = None
 
+    # Identity guard: renaming onto a name owned by a *different* profile
+    # would create duplicate-named rows and make every name-keyed lookup
+    # (select/connect/delete/last_profile) ambiguous. The upsert below
+    # matches by id, so it can never detect this collision itself.
+    # (Saving under an untouched name — including the Add-path upsert of an
+    # existing name — is the designed upsert semantic and stays allowed.)
+    editing_id = str((existing or {}).get("id") or "").strip()
+    if editing_id and original_name and original_name != name:
+        clash = next(
+            (
+                p
+                for p in load_profiles()
+                if p.get("name") == name and str(p.get("id") or "").strip() != editing_id
+            ),
+            None,
+        )
+        if clash is not None:
+            raise ValueError(f"profile_name_taken:{name}")
+
     # Prepare secret fragment.
     secret_patch, remove_keys, old_ref, _ = _prepare_secret_fragment(
         existing=existing,
@@ -402,6 +422,12 @@ def save_profile(
         # just removing secret.
 
     upsert_profile(prof)
+    # Sync the stored stable identity back onto the returned record. Edit
+    # callers already receive it via the merge; without this, Add callers get
+    # an identity-less dict (id None) for a profile that does have one on disk.
+    stored_id = get_profile_id(name)
+    if stored_id:
+        prof["id"] = stored_id
     # Rename handling: remove old entry after successful upsert.
     if original_name and original_name != name:
         # Only delete old after new is safely persisted.

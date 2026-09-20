@@ -14,7 +14,6 @@ class KeyBinding:
 
 _COMMON = (
     KeyBinding("APP-SETTINGS", "Ctrl+,", "shell"),
-    KeyBinding("APP-COMMAND-PALETTE", "Ctrl+Shift+P", "shell"),
     KeyBinding("APP-HELP", "F1", "shell"),
     KeyBinding("FILE-COPY", "Ctrl+C", "files"),
     KeyBinding("FILE-CUT", "Ctrl+X", "files"),
@@ -45,7 +44,6 @@ _COMMON = (
 
 _MACOS = (
     KeyBinding("APP-SETTINGS", "Cmd+,", "shell"),
-    KeyBinding("APP-COMMAND-PALETTE", "Cmd+Shift+P", "shell"),
     KeyBinding("FILE-COPY", "Cmd+C", "files"),
     KeyBinding("FILE-CUT", "Cmd+X", "files"),
     KeyBinding("FILE-PASTE", "Cmd+V", "files"),

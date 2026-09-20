@@ -38,6 +38,32 @@ class TerminalPtyWireTests(unittest.TestCase):
                 finally:
                     ssh.close()
 
+    def test_terminal_enter_is_executed_by_disposable_pty_server(self):
+        """The WebView's CR submit must produce real shell readback."""
+        with tempfile.TemporaryDirectory(prefix="terminal_pty_") as directory:
+            root = Path(directory)
+            output = []
+            with MockSSHServer(root) as server:
+                ssh = SSHClientWrapper(
+                    SSHConnInfo(
+                        host="127.0.0.1",
+                        port=server.port,
+                        username=MOCK_USERNAME,
+                        password=MOCK_PASSWORD,
+                        known_hosts_path=str(root / "known_hosts"),
+                    ),
+                    shell_output_cb=output.append,
+                )
+                try:
+                    ssh.connect(shell_size=(96, 31))
+                    self.assertTrue(ssh.send_shell_input("echo PACKAGED-PTY\r"))
+                    deadline = time.monotonic() + 2
+                    while time.monotonic() < deadline and "PACKAGED-PTY" not in "".join(output):
+                        time.sleep(0.01)
+                    self.assertIn("PACKAGED-PTY", "".join(output))
+                finally:
+                    ssh.close()
+
 
 if __name__ == "__main__":
     unittest.main()

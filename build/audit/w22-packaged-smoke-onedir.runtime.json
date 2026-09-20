@@ -1,0 +1,51 @@
+{
+  "schema": "wx-packaged-runtime/1",
+  "result": "FAIL",
+  "checks": {
+    "wx_runtime_started": "PASS",
+    "main_frame_created": "PASS",
+    "settings_opened": "PASS",
+    "terminal_readback": "FAIL",
+    "pty_input_output": "FAIL",
+    "pty_resize": "FAIL",
+    "remote_file_roundtrip": "FAIL",
+    "job_roundtrip": "FAIL",
+    "clean_shutdown": "FAIL",
+    "files_surface": "PASS",
+    "editor_surface": "PASS",
+    "jobs_surface": "PASS",
+    "plugin_ansys_surface": "PASS",
+    "diagnostics_updater_surface": "PASS",
+    "files_controls": "PASS",
+    "editor_controls": "PASS",
+    "jobs_controls": "PASS",
+    "editor_roundtrip": "PASS"
+  },
+  "phase": 0,
+  "input_diagnostic": {
+    "foreground_request_accepted": false,
+    "foreground_matches_frame": false,
+    "wx_focus_type": "WebView",
+    "wx_focus_within_terminal_panel": true,
+    "webview_dom_focus": {
+      "tag": "TEXTAREA",
+      "className": "xterm-helper-textarea",
+      "insideTerminal": true
+    },
+    "bridge_input_chars": 0,
+    "ssh_input_chars": 0,
+    "dom_input_events": {
+      "keydown": 0,
+      "beforeinput": 0,
+      "input": 0
+    }
+  },
+  "last_line": null,
+  "last_buffer": null,
+  "last_screen": null,
+  "queue_count": null,
+  "queue_text": null,
+  "wx_app_name": "hpc-client-gui-smoke-11668",
+  "wx_local_data_dir": "C:\\Users\\mskomek\\AppData\\Local\\hpc-client-gui-smoke-11668",
+  "error": "keyboard_input:AttributeError:function 'GetCurrentThreadId' not found"
+}

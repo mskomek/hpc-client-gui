@@ -1,0 +1,272 @@
+{
+  "schema": "wx-packaged-smoke/1",
+  "identity_header": "Artifact: hpc-client-gui.exe\nSHA256: b7f32a8a28cd8d536f2a8bbe08f8e9ddeb12e50d3df5ae8243044a4ef07c2f99\nMain SHA: 0f8902a023bac76071527232c2287af96478ed2b\nPlugin SHA: f0abb7e7037e66ab451d463c699fecf4e00c89eb\nVersion: 1.5.9\nOS/arch: windows/amd64",
+  "commit": "0f8902a023bac76071527232c2287af96478ed2b",
+  "platform": "windows",
+  "artifact": "hpc-client-gui.exe",
+  "artifact_sha256": "b7f32a8a28cd8d536f2a8bbe08f8e9ddeb12e50d3df5ae8243044a4ef07c2f99",
+  "result": "FAIL",
+  "checks": {
+    "process_started": "PASS",
+    "wx_runtime_started": "PASS",
+    "main_frame_created": "PASS",
+    "settings_opened": "PASS",
+    "terminal_readback": "FAIL",
+    "pty_input_output": "FAIL",
+    "pty_resize": "PASS",
+    "remote_file_roundtrip": "FAIL",
+    "job_roundtrip": "FAIL",
+    "files_surface": "PASS",
+    "editor_surface": "PASS",
+    "jobs_surface": "PASS",
+    "plugin_ansys_surface": "PASS",
+    "diagnostics_updater_surface": "PASS",
+    "files_controls": "PASS",
+    "editor_controls": "PASS",
+    "jobs_controls": "PASS",
+    "editor_roundtrip": "PASS",
+    "transfer_queue_render": "FAIL",
+    "clean_shutdown": "FAIL"
+  },
+  "details": {
+    "workdir_outside_repo": true,
+    "wx_app_name": "hpc-client-gui-smoke-49488",
+    "wx_local_data_dir": "C:\\Users\\mskomek\\AppData\\Local\\hpc-client-gui-smoke-49488",
+    "runtime_phase": 1,
+    "runtime_input_diagnostic": {
+      "foreground_request_accepted": false,
+      "foreground_matches_frame": false,
+      "wx_focus_type": "WebView",
+      "wx_focus_within_terminal_panel": true,
+      "webview_dom_focus": {
+        "tag": "TEXTAREA",
+        "className": "xterm-helper-textarea",
+        "insideTerminal": true
+      },
+      "input_method": "Win32 SendInput",
+      "terminal_click": [
+        850,
+        614
+      ],
+      "click_events": 2,
+      "sendinput_events": 36,
+      "bridge_input_chars": 18,
+      "ssh_input_chars": 18,
+      "dom_input_events": {
+        "keydown": 18,
+        "beforeinput": 11,
+        "input": 11
+      }
+    },
+    "runtime_last_line": "",
+    "runtime_last_buffer": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+    "runtime_last_screen": {
+      "cols": 165,
+      "rows": 45,
+      "bufferType": "normal",
+      "cursorX": 0,
+      "cursorY": 0,
+      "baseY": 0,
+      "viewportY": 0,
+      "totalRows": 45,
+      "lines": [
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        }
+      ]
+    },
+    "runtime": "timeout in packaged smoke phase 1",
+    "exit_code": "artifact exit 1",
+    "output_snippet": "Adding duplicate image handler for 'Windows bitmap file'\nAdding duplicate animation handler for '1' type\nAdding duplicate animation handler for '2' type\nAdding duplicate animation handler for '3' type\n"
+  },
+  "python": "3.14.0",
+  "platform_detail": "Windows-11-10.0.26200-SP0",
+  "generated_utc": "2026-09-20T17:26:27.436984+00:00",
+  "exit_code": 1,
+  "isolated_from_src": true,
+  "manual_required": [
+    "display",
+    "cluster",
+    "MFA",
+    "X11",
+    "DnD",
+    "transfer-conflict"
+  ]
+}

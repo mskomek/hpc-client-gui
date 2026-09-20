@@ -206,7 +206,13 @@ class _ServerInterface(paramiko.ServerInterface):
                 return
             if not data:
                 return
-            buffer += data
+            # A real PTY line discipline presents the terminal's Enter/CR
+            # input as a line terminator to the shell.  Paramiko delivers the
+            # raw byte to this disposable server, so normalize it here before
+            # applying the shell command framing.  Without this, the exact
+            # packaged WebView path can send input successfully while the
+            # fixture never executes the command or produces readback.
+            buffer += data.replace(b"\r", b"\n")
             while b"\n" in buffer:
                 raw, buffer = buffer.split(b"\n", 1)
                 command = raw.decode("utf-8", errors="replace").strip()

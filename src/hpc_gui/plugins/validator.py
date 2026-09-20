@@ -48,7 +48,7 @@ MANIFEST_OPTIONAL_KEYS = frozenset({"ui_contributions"})
 
 CLUSTER_PROFILE_REQUIRED_KEYS = ("schema_version", "profile_id", "name", "scheduler")
 V2_PROFILE_SECTIONS = frozenset(
-    {"description", "metadata", "paths", "commands", "site", "scheduler_hints", "software", "storage", "quota_sources"}
+    {"description", "metadata", "paths", "commands", "site", "access", "requirements", "scheduler_hints", "software", "storage", "quota_sources"}
 )
 V3_PROFILE_SECTIONS = V2_PROFILE_SECTIONS | {"job_outputs", "file_filters"}
 V4_PROFILE_SECTIONS = V3_PROFILE_SECTIONS | {"job_details", "accounting", "cluster_status"}
@@ -113,6 +113,29 @@ _PLACEHOLDER_RE = re.compile(r"\{([A-Za-z_][A-Za-z0-9_]*)\}")
 
 def _is_nonempty_str(value: Any) -> bool:
     return isinstance(value, str) and bool(value.strip())
+
+
+def _validate_storage_and_quota_sections(profile: Any, errors: list[str]) -> None:
+    """Enforce the storage/quota_sources list-of-objects shape.
+
+    v2/v3 historically enforced this while v1/v4 skipped it, so a malformed
+    section passed validation and later crashed the loader (which assumes a
+    list of mappings). Every schema version that can carry these sections
+    must enforce the same shape: fail closed at validation, never at startup.
+    """
+    for section_key in ("storage", "quota_sources"):
+        section = profile.get(section_key)
+        if section is None:
+            continue
+        if not isinstance(section, list):
+            errors.append(f"cluster profile '{section_key}' must be a list")
+            continue
+        for index, item in enumerate(section):
+            if not isinstance(item, dict):
+                errors.append(f"cluster profile '{section_key}[{index}]' must be an object")
+                continue
+            if not _is_nonempty_str(item.get("id")):
+                errors.append(f"cluster profile '{section_key}[{index}]' needs a non-empty id")
 
 
 def validate_manifest_dict(manifest: Any) -> list[str]:
@@ -291,6 +314,12 @@ def validate_cluster_profile_dict(profile: Any) -> list[str]:
     if profile["scheduler"] not in KNOWN_SCHEDULERS:
         errors.append(f"unsupported scheduler: {profile['scheduler']!r}")
 
+    if profile["schema_version"] == 1:
+        # v1 predates structured sections but tolerates them when present, so
+        # enforce the shared shape instead of letting a malformed section
+        # reach the loader.
+        _validate_storage_and_quota_sections(profile, errors)
+
     if profile["schema_version"] == 2:
         unknown = set(profile) - set(CLUSTER_PROFILE_REQUIRED_KEYS) - V2_PROFILE_SECTIONS
         errors.extend(f"cluster profile has unknown key '{key}'" for key in sorted(unknown))
@@ -298,17 +327,7 @@ def validate_cluster_profile_dict(profile: Any) -> list[str]:
             section = profile.get(section_key)
             if section is not None and not isinstance(section, dict):
                 errors.append(f"cluster profile '{section_key}' must be an object")
-        for section_key in ("storage", "quota_sources"):
-            section = profile.get(section_key)
-            if section is not None and not isinstance(section, list):
-                errors.append(f"cluster profile '{section_key}' must be a list")
-            elif isinstance(section, list):
-                for index, item in enumerate(section):
-                    if not isinstance(item, dict):
-                        errors.append(f"cluster profile '{section_key}[{index}]' must be an object")
-                        continue
-                    if not _is_nonempty_str(item.get("id")):
-                        errors.append(f"cluster profile '{section_key}[{index}]' needs a non-empty id")
+        _validate_storage_and_quota_sections(profile, errors)
 
     if profile["schema_version"] == 3:
         unknown = set(profile) - set(CLUSTER_PROFILE_REQUIRED_KEYS) - V3_PROFILE_SECTIONS
@@ -317,17 +336,7 @@ def validate_cluster_profile_dict(profile: Any) -> list[str]:
             section = profile.get(section_key)
             if section is not None and not isinstance(section, dict):
                 errors.append(f"cluster profile '{section_key}' must be an object")
-        for section_key in ("storage", "quota_sources"):
-            section = profile.get(section_key)
-            if section is not None and not isinstance(section, list):
-                errors.append(f"cluster profile '{section_key}' must be a list")
-            elif isinstance(section, list):
-                for index, item in enumerate(section):
-                    if not isinstance(item, dict):
-                        errors.append(f"cluster profile '{section_key}[{index}]' must be an object")
-                        continue
-                    if not _is_nonempty_str(item.get("id")):
-                        errors.append(f"cluster profile '{section_key}[{index}]' needs a non-empty id")
+        _validate_storage_and_quota_sections(profile, errors)
         _safe_id = re.compile(r"^[a-z][a-z0-9_-]{0,63}$")
         _reserved_filter_ids = frozenset({"all", "folders", "iso", "archives", "slurm", "shell", "other"})
 
@@ -431,6 +440,7 @@ def validate_cluster_profile_dict(profile: Any) -> list[str]:
     if profile["schema_version"] == 4:
         unknown = set(profile) - set(CLUSTER_PROFILE_REQUIRED_KEYS) - V4_PROFILE_SECTIONS
         errors.extend(f"cluster profile has unknown key '{key}'" for key in sorted(unknown))
+        _validate_storage_and_quota_sections(profile, errors)
         # Validate v4 provider contract sections
         for section_key in ("job_details", "accounting", "cluster_status"):
             section = profile.get(section_key)

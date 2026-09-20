@@ -335,7 +335,8 @@ git clone https://github.com/mskomek/hpc-client-gui.git
 cd hpc-client-gui
 ```
 
-Create a virtual environment:
+Create a virtual environment (the `python` used here must be 3.14.x —
+check with `python --version`; on Windows `py -3.14 -m venv .venv`):
 
 ```bash
 python -m venv .venv

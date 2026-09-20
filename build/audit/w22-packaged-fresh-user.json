@@ -1,0 +1,48 @@
+{
+  "schema": "wx-fresh-user-smoke/1",
+  "procedure": "PKG-GJ-01",
+  "identity_header": "Artifact: hpc-client-gui.exe\nSHA256: df92b7385e2eef4c9513e1f19253914aa23249d23ef20f6f179f7f24e16bf41d\nMain SHA: 0f8902a023bac76071527232c2287af96478ed2b\nPlugin SHA: f0abb7e7037e66ab451d463c699fecf4e00c89eb\nVersion: 1.5.9\nOS/arch: windows/amd64",
+  "commit": "0f8902a023bac76071527232c2287af96478ed2b",
+  "platform": "windows",
+  "artifact": "hpc-client-gui.exe",
+  "artifact_sha256": "df92b7385e2eef4c9513e1f19253914aa23249d23ef20f6f179f7f24e16bf41d",
+  "result": "FAIL",
+  "checks": {
+    "fresh_config_root": "FAIL",
+    "first_run_empty_state": "FAIL",
+    "profile_via_visible_controls": "FAIL",
+    "loopback_success_via_controls": "FAIL",
+    "safe_visible_failure": "FAIL",
+    "persisted_nonsecret_state": "FAIL",
+    "no_src_leakage": "FAIL",
+    "clean_shutdown": "FAIL",
+    "relaunch_state_present": "FAIL",
+    "relaunch_no_src_leakage": "FAIL"
+  },
+  "details": {
+    "fresh_root": "C:\\Users\\mskomek\\AppData\\Local\\Temp\\hpc-fresh-user-t_ljji9y\\config",
+    "workdir": "C:\\Users\\mskomek\\AppData\\Local\\Temp\\hpc-fresh-user-t_ljji9y\\work",
+    "workdir_outside_repo": true,
+    "run1_timeout": "artifact did not exit within 240s",
+    "run1_killed": true,
+    "fresh_parent_kept": "C:\\Users\\mskomek\\AppData\\Local\\Temp\\hpc-fresh-user-t_ljji9y"
+  },
+  "runs": {
+    "run1": {
+      "error": "timeout"
+    }
+  },
+  "exit_codes": [],
+  "python": "3.14.0",
+  "platform_detail": "Windows-11-10.0.26200-SP0",
+  "generated_utc": "2026-09-20T11:32:34.351599+00:00",
+  "isolated_from_src": true,
+  "manual_required": [
+    "display",
+    "cluster",
+    "MFA",
+    "X11",
+    "DnD",
+    "transfer-conflict"
+  ]
+}

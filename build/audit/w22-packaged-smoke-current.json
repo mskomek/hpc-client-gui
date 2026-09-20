@@ -1,0 +1,522 @@
+{
+  "schema": "wx-packaged-smoke/1",
+  "identity_header": "Artifact: hpc-client-gui.exe\nSHA256: ff050baf26fd73f59d46c6a7ed5290913e1669b67cecbbfa13bb29e5c0122876\nMain SHA: 0f8902a023bac76071527232c2287af96478ed2b\nPlugin SHA: f0abb7e7037e66ab451d463c699fecf4e00c89eb\nVersion: 1.5.9\nOS/arch: windows/amd64",
+  "commit": "0f8902a023bac76071527232c2287af96478ed2b",
+  "platform": "windows",
+  "artifact": "hpc-client-gui.exe",
+  "artifact_sha256": "ff050baf26fd73f59d46c6a7ed5290913e1669b67cecbbfa13bb29e5c0122876",
+  "result": "PASS",
+  "checks": {
+    "process_started": "PASS",
+    "wx_runtime_started": "PASS",
+    "main_frame_created": "PASS",
+    "settings_opened": "PASS",
+    "terminal_readback": "PASS",
+    "pty_input_output": "PASS",
+    "pty_resize": "PASS",
+    "remote_file_roundtrip": "PASS",
+    "job_roundtrip": "PASS",
+    "files_surface": "PASS",
+    "editor_surface": "PASS",
+    "jobs_surface": "PASS",
+    "plugin_ansys_surface": "PASS",
+    "diagnostics_updater_surface": "PASS",
+    "files_controls": "PASS",
+    "editor_controls": "PASS",
+    "jobs_controls": "PASS",
+    "editor_roundtrip": "PASS",
+    "transfer_queue_render": "PASS",
+    "clean_shutdown": "PASS"
+  },
+  "details": {
+    "workdir_outside_repo": true,
+    "wx_app_name": "hpc-client-gui-smoke-9332",
+    "wx_local_data_dir": "C:\\Users\\mskomek\\AppData\\Local\\hpc-client-gui-smoke-9332",
+    "runtime_phase": 4,
+    "runtime_input_diagnostic": {
+      "foreground_request_accepted": false,
+      "foreground_matches_frame": false,
+      "wx_focus_type": "WebView",
+      "wx_focus_within_terminal_panel": true,
+      "webview_dom_focus": {
+        "tag": "TEXTAREA",
+        "className": "xterm-helper-textarea",
+        "insideTerminal": true
+      },
+      "input_method": "Win32 SendInput",
+      "terminal_click": [
+        850,
+        614
+      ],
+      "click_events": 2,
+      "sendinput_events": 36,
+      "bridge_input_chars": 18,
+      "ssh_input_chars": 18,
+      "dom_input_events": {
+        "keydown": 18,
+        "beforeinput": 11,
+        "input": 11
+      }
+    },
+    "runtime_last_line": "            virtual-truba$ PACKAGED-NORMAL",
+    "runtime_last_buffer": "            virtual-truba$ PACKAGED-NORMAL\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+    "runtime_last_screen": {
+      "cols": 165,
+      "rows": 45,
+      "bufferType": "normal",
+      "cursorX": 0,
+      "cursorY": 1,
+      "baseY": 0,
+      "viewportY": 0,
+      "totalRows": 45,
+      "lines": [
+        {
+          "text": "            virtual-truba$ PACKAGED-NORMAL",
+          "attrs": [
+            {
+              "ch": " ",
+              "fg": -1,
+              "bg": -1,
+              "fgMode": "default"
+            },
+            {
+              "ch": " ",
+              "fg": -1,
+              "bg": -1,
+              "fgMode": "default"
+            },
+            {
+              "ch": " ",
+              "fg": -1,
+              "bg": -1,
+              "fgMode": "default"
+            },
+            {
+              "ch": " ",
+              "fg": -1,
+              "bg": -1,
+              "fgMode": "default"
+            },
+            {
+              "ch": " ",
+              "fg": -1,
+              "bg": -1,
+              "fgMode": "default"
+            },
+            {
+              "ch": " ",
+              "fg": -1,
+              "bg": -1,
+              "fgMode": "default"
+            },
+            {
+              "ch": " ",
+              "fg": -1,
+              "bg": -1,
+              "fgMode": "default"
+            },
+            {
+              "ch": " ",
+              "fg": -1,
+              "bg": -1,
+              "fgMode": "default"
+            },
+            {
+              "ch": " ",
+              "fg": -1,
+              "bg": -1,
+              "fgMode": "default"
+            },
+            {
+              "ch": " ",
+              "fg": -1,
+              "bg": -1,
+              "fgMode": "default"
+            },
+            {
+              "ch": " ",
+              "fg": -1,
+              "bg": -1,
+              "fgMode": "default"
+            },
+            {
+              "ch": " ",
+              "fg": -1,
+              "bg": -1,
+              "fgMode": "default"
+            },
+            {
+              "ch": "v",
+              "fg": -1,
+              "bg": -1,
+              "fgMode": "default"
+            },
+            {
+              "ch": "i",
+              "fg": -1,
+              "bg": -1,
+              "fgMode": "default"
+            },
+            {
+              "ch": "r",
+              "fg": -1,
+              "bg": -1,
+              "fgMode": "default"
+            },
+            {
+              "ch": "t",
+              "fg": -1,
+              "bg": -1,
+              "fgMode": "default"
+            },
+            {
+              "ch": "u",
+              "fg": -1,
+              "bg": -1,
+              "fgMode": "default"
+            },
+            {
+              "ch": "a",
+              "fg": -1,
+              "bg": -1,
+              "fgMode": "default"
+            },
+            {
+              "ch": "l",
+              "fg": -1,
+              "bg": -1,
+              "fgMode": "default"
+            },
+            {
+              "ch": "-",
+              "fg": -1,
+              "bg": -1,
+              "fgMode": "default"
+            },
+            {
+              "ch": "t",
+              "fg": -1,
+              "bg": -1,
+              "fgMode": "default"
+            },
+            {
+              "ch": "r",
+              "fg": -1,
+              "bg": -1,
+              "fgMode": "default"
+            },
+            {
+              "ch": "u",
+              "fg": -1,
+              "bg": -1,
+              "fgMode": "default"
+            },
+            {
+              "ch": "b",
+              "fg": -1,
+              "bg": -1,
+              "fgMode": "default"
+            },
+            {
+              "ch": "a",
+              "fg": -1,
+              "bg": -1,
+              "fgMode": "default"
+            },
+            {
+              "ch": "$",
+              "fg": -1,
+              "bg": -1,
+              "fgMode": "default"
+            },
+            {
+              "ch": " ",
+              "fg": -1,
+              "bg": -1,
+              "fgMode": "default"
+            },
+            {
+              "ch": "P",
+              "fg": -1,
+              "bg": -1,
+              "fgMode": "default"
+            },
+            {
+              "ch": "A",
+              "fg": -1,
+              "bg": -1,
+              "fgMode": "default"
+            },
+            {
+              "ch": "C",
+              "fg": -1,
+              "bg": -1,
+              "fgMode": "default"
+            },
+            {
+              "ch": "K",
+              "fg": -1,
+              "bg": -1,
+              "fgMode": "default"
+            },
+            {
+              "ch": "A",
+              "fg": -1,
+              "bg": -1,
+              "fgMode": "default"
+            },
+            {
+              "ch": "G",
+              "fg": -1,
+              "bg": -1,
+              "fgMode": "default"
+            },
+            {
+              "ch": "E",
+              "fg": -1,
+              "bg": -1,
+              "fgMode": "default"
+            },
+            {
+              "ch": "D",
+              "fg": -1,
+              "bg": -1,
+              "fgMode": "default"
+            },
+            {
+              "ch": "-",
+              "fg": -1,
+              "bg": -1,
+              "fgMode": "default"
+            },
+            {
+              "ch": "N",
+              "fg": -1,
+              "bg": -1,
+              "fgMode": "default"
+            },
+            {
+              "ch": "O",
+              "fg": -1,
+              "bg": -1,
+              "fgMode": "default"
+            },
+            {
+              "ch": "R",
+              "fg": -1,
+              "bg": -1,
+              "fgMode": "default"
+            },
+            {
+              "ch": "M",
+              "fg": -1,
+              "bg": -1,
+              "fgMode": "default"
+            },
+            {
+              "ch": "A",
+              "fg": -1,
+              "bg": -1,
+              "fgMode": "default"
+            },
+            {
+              "ch": "L",
+              "fg": -1,
+              "bg": -1,
+              "fgMode": "default"
+            }
+          ]
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        },
+        {
+          "text": "",
+          "attrs": []
+        }
+      ]
+    }
+  },
+  "python": "3.14.0",
+  "platform_detail": "Windows-11-10.0.26200-SP0",
+  "generated_utc": "2026-09-20T18:01:37.465930+00:00",
+  "exit_code": 0,
+  "isolated_from_src": true,
+  "manual_required": [
+    "display",
+    "cluster",
+    "MFA",
+    "X11",
+    "DnD",
+    "transfer-conflict"
+  ]
+}

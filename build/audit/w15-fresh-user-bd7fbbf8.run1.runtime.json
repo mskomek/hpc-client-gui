@@ -1,0 +1,22 @@
+{
+  "schema": "wx-fresh-user-runtime/1",
+  "result": "FAIL",
+  "checks": {
+    "fresh_config_root": "PASS",
+    "first_run_empty_state": "PASS",
+    "profile_via_visible_controls": "PASS",
+    "loopback_success_via_controls": "PASS",
+    "safe_visible_failure": "FAIL",
+    "persisted_nonsecret_state": "FAIL",
+    "no_src_leakage": "PASS",
+    "clean_shutdown": "PASS"
+  },
+  "details": {
+    "fresh_root": "C:\\Users\\mskomek\\AppData\\Local\\Temp\\hpc-fresh-user-flb0vri6\\config",
+    "error": "NameError: name 'build_connection_panel' is not defined",
+    "app_data_dir": "C:\\Users\\mskomek\\AppData\\Local\\Temp\\hpc-fresh-user-flb0vri6\\config",
+    "frozen": true,
+    "executable": "D:\\Projeler\\hpc-client-gui\\dist\\hpc-client-gui\\hpc-client-gui.exe"
+  },
+  "run": "1"
+}

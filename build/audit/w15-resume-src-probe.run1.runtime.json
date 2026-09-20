@@ -1,0 +1,21 @@
+{
+  "schema": "wx-fresh-user-runtime/1",
+  "result": "PASS",
+  "checks": {
+    "fresh_config_root": "PASS",
+    "first_run_empty_state": "PASS",
+    "profile_via_visible_controls": "PASS",
+    "loopback_success_via_controls": "PASS",
+    "safe_visible_failure": "PASS",
+    "persisted_nonsecret_state": "PASS",
+    "no_src_leakage": "PASS",
+    "clean_shutdown": "PASS"
+  },
+  "details": {
+    "fresh_root": "C:\\Users\\mskomek\\AppData\\Local\\Temp\\hpc-src-probe-ijyp74a6\\config",
+    "app_data_dir": "C:\\Users\\mskomek\\AppData\\Local\\Temp\\hpc-src-probe-ijyp74a6\\config",
+    "frozen": false,
+    "executable": "D:\\Python\\Python312\\python.exe"
+  },
+  "run": "1"
+}

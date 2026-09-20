@@ -168,7 +168,25 @@ def build_terminal_panel(parent, *, model: TerminalModel | None = None, ssh=None
     font_down_btn.Bind(wx.EVT_BUTTON, do_font(-1))
     font_up_btn.Bind(wx.EVT_BUTTON, do_font(1))
 
-    def render_output(data):
+    closed = {"v": False}
+    # Generation guard mirroring the WebView path (LIFE-066/068): every
+    # close/reconnect mints a fresh generation so already-queued output from
+    # the previous session is dropped instead of rendering into the new one.
+    generation = {"v": 0}
+
+    def render_output(data, _gen=None):
+        # Lifecycle guard mirroring the WebView path (LIFE-066/068):
+        # output queued before close/reconnect must neither touch a dead
+        # control nor render stale bytes into the superseded view.
+        if closed["v"]:
+            return
+        if _gen is not None and _gen != generation["v"]:
+            return
+        try:
+            if text.IsBeingDeleted():
+                return
+        except Exception:
+            pass
         model.receive(data)
         text.ChangeValue("\n".join(model.text.splitlines()[-5000:]))
         text.ShowPosition(text.GetLastPosition())
@@ -238,17 +256,25 @@ def build_terminal_panel(parent, *, model: TerminalModel | None = None, ssh=None
     panel.Bind(wx.EVT_SIZE, on_size)
 
     subscriber = None
+    # Keep ownership of every transport subscription made by this panel.  A
+    # reconnect replaces the callback and transport, so removing only the
+    # original closure would leak callbacks on intermediate sessions.
+    subscription_refs = []
     subscribers = getattr(ssh, "_wx_output_subscribers", None) if ssh is not None else None
     if subscribers is not None:
-        def subscriber(data):
+        # Pin the subscription-time generation: output queued under the old
+        # session must be dropped after a reconnect mints a new one.
+        _sub_gen = generation["v"]
+
+        def subscriber(data, _gen=_sub_gen):
             try:
                 import wx as _wx2
-                _wx2.CallAfter(render_output, data)
+                _wx2.CallAfter(render_output, data, _gen)
             except Exception:
                 pass
         subscribers.append(subscriber)
+        subscription_refs.append((subscribers, subscriber))
 
-    closed = {"v": False}
     def refresh_labels(_language=None):
         try:
             find_ctrl.SetHint(t("login.terminal_find"))
@@ -267,11 +293,15 @@ def build_terminal_panel(parent, *, model: TerminalModel | None = None, ssh=None
         if closed["v"]:
             return
         closed["v"] = True
-        if subscriber is not None and subscribers is not None:
+        # Mint a fresh generation so already-queued output can no longer
+        # render into the closed view.
+        generation["v"] += 1
+        for registered_subscribers, registered_callback in subscription_refs:
             try:
-                subscribers.remove(subscriber)
-            except ValueError:
+                registered_subscribers.remove(registered_callback)
+            except (ValueError, AttributeError):
                 pass
+        subscription_refs.clear()
         try:
             unsubscribe_language_change(refresh_labels)
         except Exception:
@@ -280,25 +310,47 @@ def build_terminal_panel(parent, *, model: TerminalModel | None = None, ssh=None
     def set_ssh(new_ssh):
         # swap underlying PTY callbacks; keep same model/text so find/clear persist
         panel._terminal_ssh = new_ssh
+        # Every swap mints a fresh generation: output queued under the old
+        # session must not render into the new one (LIFE-066 stale-output).
+        generation["v"] += 1
+        if new_ssh is None:
+            # Disconnected: neutralize the write path so keystrokes can no
+            # longer reach the dead transport (CONN-020), and detach the
+            # previous session's output subscriber so late output cannot
+            # render into the disconnected view (RECON-006).
+            model._send_input = None
+            model._resize_pty = None
+            for registered_subscribers, registered_callback in subscription_refs:
+                try:
+                    registered_subscribers.remove(registered_callback)
+                except (ValueError, AttributeError):
+                    pass
+            subscription_refs.clear()
+            panel._terminal_subscriber = None
+            return
         if new_ssh is not None:
             model._send_input = getattr(new_ssh, "send_shell_input", model._send_input)
             model._resize_pty = getattr(new_ssh, "resize_shell_pty", model._resize_pty)
             # re-subscribe
             subs = getattr(new_ssh, "_wx_output_subscribers", None)
             if subs is not None:
-                def new_sub(data):
+                _new_gen = generation["v"]
+                def new_sub(data, _gen=_new_gen):
                     try:
                         import wx as _wx3
-                        _wx3.CallAfter(render_output, data)
+                        _wx3.CallAfter(render_output, data, _gen)
                     except Exception:
                         pass
-                # remove old if present
-                if subscriber is not None and subscribers is not None:
+                # Remove every callback owned by this panel before attaching
+                # the replacement, including callbacks from prior swaps.
+                for registered_subscribers, registered_callback in subscription_refs:
                     try:
-                        subscribers.remove(subscriber)
-                    except Exception:
+                        registered_subscribers.remove(registered_callback)
+                    except (ValueError, AttributeError):
                         pass
+                subscription_refs.clear()
                 subs.append(new_sub)
+                subscription_refs.append((subs, new_sub))
                 panel._terminal_subscriber = new_sub
                 panel._terminal_subscribers = subs
 
@@ -306,7 +358,13 @@ def build_terminal_panel(parent, *, model: TerminalModel | None = None, ssh=None
     panel._wx_terminal_controls = {"find": find_ctrl, "find_btn": find_btn, "clear": clear_btn, "font_down": font_down_btn, "font_up": font_up_btn, "output": text, "input": text, "model": model}
     panel._wx_terminal_close = close
     panel._wx_terminal_set_ssh = set_ssh
-    panel._wx_terminal_render = render_output
+
+    def render_guarded(data):
+        # Direct renders target the current generation; post-close renders
+        # are dropped by the closed guard inside render_output.
+        render_output(data)
+
+    panel._wx_terminal_render = render_guarded
     panel._wx_terminal_model = model
     subscribe_language_change(refresh_labels)
     if lifecycle is not None:

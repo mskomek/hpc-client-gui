@@ -1,0 +1,74 @@
+{
+  "schema": "wx-packaged-smoke/1",
+  "identity_header": "Artifact: hpc-client-gui.exe\nSHA256: 4b00302261d09f158464b3641fa5878912ec08087e093297b4818727df051271\nMain SHA: 0f8902a023bac76071527232c2287af96478ed2b\nPlugin SHA: f0abb7e7037e66ab451d463c699fecf4e00c89eb\nVersion: 1.5.9\nOS/arch: windows/amd64",
+  "commit": "0f8902a023bac76071527232c2287af96478ed2b",
+  "platform": "windows",
+  "artifact": "hpc-client-gui.exe",
+  "artifact_sha256": "4b00302261d09f158464b3641fa5878912ec08087e093297b4818727df051271",
+  "result": "FAIL",
+  "checks": {
+    "process_started": "PASS",
+    "wx_runtime_started": "PASS",
+    "main_frame_created": "PASS",
+    "settings_opened": "PASS",
+    "terminal_readback": "FAIL",
+    "pty_input_output": "FAIL",
+    "pty_resize": "PASS",
+    "remote_file_roundtrip": "FAIL",
+    "job_roundtrip": "FAIL",
+    "files_surface": "PASS",
+    "editor_surface": "PASS",
+    "jobs_surface": "PASS",
+    "plugin_ansys_surface": "PASS",
+    "diagnostics_updater_surface": "PASS",
+    "files_controls": "PASS",
+    "editor_controls": "PASS",
+    "jobs_controls": "PASS",
+    "editor_roundtrip": "PASS",
+    "transfer_queue_render": "FAIL",
+    "clean_shutdown": "FAIL"
+  },
+  "details": {
+    "workdir_outside_repo": true,
+    "wx_app_name": "hpc-client-gui-smoke-11668",
+    "wx_local_data_dir": "C:\\Users\\mskomek\\AppData\\Local\\hpc-client-gui-smoke-11668",
+    "runtime_phase": 0,
+    "runtime_input_diagnostic": {
+      "foreground_request_accepted": false,
+      "foreground_matches_frame": false,
+      "wx_focus_type": "WebView",
+      "wx_focus_within_terminal_panel": true,
+      "webview_dom_focus": {
+        "tag": "TEXTAREA",
+        "className": "xterm-helper-textarea",
+        "insideTerminal": true
+      },
+      "bridge_input_chars": 0,
+      "ssh_input_chars": 0,
+      "dom_input_events": {
+        "keydown": 0,
+        "beforeinput": 0,
+        "input": 0
+      }
+    },
+    "runtime_last_line": null,
+    "runtime_last_buffer": null,
+    "runtime_last_screen": null,
+    "runtime": "keyboard_input:AttributeError:function 'GetCurrentThreadId' not found",
+    "exit_code": "artifact exit 1",
+    "output_snippet": "Adding duplicate image handler for 'Windows bitmap file'\nAdding duplicate animation handler for '1' type\nAdding duplicate animation handler for '2' type\nAdding duplicate animation handler for '3' type\n"
+  },
+  "python": "3.14.0",
+  "platform_detail": "Windows-11-10.0.26200-SP0",
+  "generated_utc": "2026-09-20T16:58:09.051996+00:00",
+  "exit_code": 1,
+  "isolated_from_src": true,
+  "manual_required": [
+    "display",
+    "cluster",
+    "MFA",
+    "X11",
+    "DnD",
+    "transfer-conflict"
+  ]
+}

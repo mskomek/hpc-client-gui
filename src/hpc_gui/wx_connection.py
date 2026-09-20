@@ -3,13 +3,19 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from threading import Thread
+from threading import Event, Thread
 from typing import Any, Callable
 
 from hpc_gui.config.storage import coerce_profile_ssh_timeout, load_profiles
 from hpc_gui.core.i18n import subscribe_language_change, t, unsubscribe_language_change
-from hpc_gui.services.connection_controller import ConnectionController, HostKeyRequest, KeyboardInteractiveRequest
-from hpc_gui.ssh.client import HostKeyInfo, SSHConnInfo, coerce_keepalive_interval
+from hpc_gui.services.connection_controller import ConnectionController, HostKeyRequest, KeyboardInteractiveRequest, close_session
+from hpc_gui.ssh.client import (
+    HostKeyChangedError,
+    HostKeyInfo,
+    HostKeyRejectedError,
+    SSHConnInfo,
+    coerce_keepalive_interval,
+)
 from hpc_gui.services.files_ssh import SSHFilesBackend
 from hpc_gui.services.slurm_ssh import SSHSlurmBackend
 from hpc_gui.ssh.client import SSHClientWrapper
@@ -23,6 +29,104 @@ class ProfileSummary:
     host: str
     username: str
     provider: str = ""
+
+
+def _invoke_on_gui_thread(call: Callable[[], Any]) -> Any:
+    """Run ``call`` on the wx GUI thread and return its result.
+
+    Transport/host-key/MFA callbacks execute on the SSH worker thread, but
+    wx dialogs must live on the GUI thread (OBS-W18-004). When already on
+    the GUI thread — or when no live wx application exists (headless model
+    tests) — the callable runs inline. Otherwise the call is marshalled via
+    ``wx.CallAfter`` and the worker blocks until the GUI thread completes
+    it. If the application disappears while waiting, a ``RuntimeError`` is
+    raised so the worker fails visibly instead of hanging forever.
+    """
+    try:
+        import wx
+    except ImportError:
+        return call()
+    try:
+        app_alive = wx.App.Get() is not None
+    except Exception:
+        app_alive = False
+    if not app_alive:
+        return call()
+    try:
+        if wx.IsMainThread():
+            return call()
+    except Exception:
+        return call()
+    box: dict[str, Any] = {}
+    finished = Event()
+
+    def _run() -> None:
+        try:
+            box["value"] = call()
+        except Exception as exc:  # never strand the worker thread
+            box["error"] = exc
+        finally:
+            finished.set()
+
+    try:
+        wx.CallAfter(_run)
+    except Exception as exc:
+        raise RuntimeError("cannot marshal dialog to the GUI thread") from exc
+    while not finished.wait(timeout=0.2):
+        try:
+            if wx.App.Get() is None:
+                raise RuntimeError("GUI thread unavailable while waiting for dialog")
+        except RuntimeError:
+            raise
+        except Exception:
+            break
+    if "error" in box:
+        raise box["error"]
+    return box.get("value")
+
+
+def format_host_key_prompt(request: HostKeyRequest) -> str:
+    """Render the unknown-host security prompt without exposing secrets.
+
+    The request carries only public key material (hostname, key type,
+    fingerprint); the caller must never attach passwords or tokens to it.
+    """
+    role_label = t("connection.host_key_role_jump") if request.role == "jump" else t("connection.host_key_role_target")
+    key_type = request.key_type or "SSH"
+    return t("connection.host_key_prompt_message").format(
+        role=role_label, host=request.hostname, key_type=key_type, fingerprint=request.fingerprint
+    )
+
+
+def describe_wx_connect_failure(error: BaseException, *, resolved_password: str = "") -> str:
+    """Map a connect failure to the translated actionable message.
+
+    Mirrors the Qt ``login_widget._on_connect_failed`` contract so both shells
+    stay truthful for the same failure: host-key decisions keep their
+    dedicated security messages, saved-secret/master states keep theirs, and
+    everything else goes through the shared
+    ``core.ui_errors.describe_connection_error`` classifier. Any accidental
+    secret content is redacted before the text reaches a dialog or log.
+    """
+    from hpc_gui.core.ui_errors import describe_connection_error
+
+    if isinstance(error, HostKeyChangedError):
+        message = t("connection.host_key_changed").format(host=error.hostname)
+    elif isinstance(error, HostKeyRejectedError):
+        message = t("connection.host_key_rejected").format(host=error.hostname)
+    else:
+        raw = str(error)
+        if "saved_password_unavailable" in raw:
+            message = t("connection.saved_password_unavailable")
+        elif "master_wrong" in raw:
+            message = t("login.err_master_wrong")
+        elif "master_cancelled" in raw:
+            message = t("connection.auth_cancelled")
+        else:
+            message = describe_connection_error(error, raw)
+        if resolved_password and resolved_password in message:
+            message = message.replace(resolved_password, "<redacted>")
+    return message
 
 
 def _provider_template(profile: dict[str, Any]) -> dict[str, Any] | None:
@@ -63,7 +167,9 @@ def ssh_info_from_profile(profile: dict[str, Any], model: "WxConnectionModel") -
     """
 
     def host_key(info: HostKeyInfo) -> str:
-        return model.decide_host_key(HostKeyRequest(info.hostname, info.fingerprint, info.role))
+        return model.decide_host_key(
+            HostKeyRequest(info.hostname, info.fingerprint, info.role, info.key_type)
+        )
 
     def keyboard(title: str, instructions: str, prompts: list[tuple[str, bool]]) -> list[str]:
         request = KeyboardInteractiveRequest(
@@ -139,13 +245,83 @@ def ssh_info_from_profile(profile: dict[str, Any], model: "WxConnectionModel") -
     )
 
 
+def _controller_disconnect_cb(
+    model: "WxConnectionModel",
+    session_probe: Callable[[], Any] | None = None,
+) -> Callable[[str], None]:
+    """Build the transport-failure callback for sessions owned by ``model``.
+
+    The SSH wrapper invokes this when its shell reader observes an
+    unexpected transport death (idle or mid-operation). The controller must
+    leave ``CONNECTED`` so the status indicator can never masquerade a dead
+    transport as a live session. A stale callback from a superseded session
+    (RECON-006/007) is dropped: it only fails the controller when the
+    controller's current session still owns the reporting transport.
+    Delivery is marshalled to the GUI thread when wx is available;
+    otherwise the controller fails synchronously (headless/service use).
+    """
+    def _on_transport_failure(_reason: str) -> None:
+        controller = getattr(model, "controller", None)
+        if controller is None:
+            return
+        if session_probe is not None:
+            try:
+                current = controller.session
+                if current is None:
+                    # No live session (connecting or already torn down):
+                    # the connect worker's done() owns the outcome.
+                    return
+                owner = current.get("ssh") if isinstance(current, dict) else None
+                if owner is not session_probe():
+                    # Stale callback from a previous generation; never fail
+                    # the new session for the old transport's death.
+                    return
+            except Exception:
+                return
+        # Marshal to the GUI thread only when a live wx application
+        # exists; otherwise fail synchronously (headless/service use and
+        # contexts where CallAfter could never be dispatched). The shell
+        # invalidation hook (if any) runs in the same unit so the session
+        # model, terminal, and domain panels all observe the loss together.
+        def _apply() -> None:
+            try:
+                controller.fail()
+            except Exception:
+                pass
+            hook = getattr(model, "_session_invalidated_hook", None)
+            if callable(hook):
+                try:
+                    hook()
+                except Exception:
+                    pass
+
+        try:
+            import wx
+
+            app_alive = wx.App.Get() is not None
+        except Exception:
+            app_alive = False
+        try:
+            if app_alive:
+                wx.CallAfter(_apply)
+            else:
+                _apply()
+        except Exception:
+            pass
+
+    return _on_transport_failure
+
+
 def connect_profile(profile: dict[str, Any], model: "WxConnectionModel") -> dict[str, Any]:
     """Open the shared SSH/files/Slurm session for one selected profile."""
     output_subscribers: list[Callable[[str], None]] = []
+    holder: dict[str, Any] = {}
     ssh = SSHClientWrapper(
         ssh_info_from_profile(profile, model),
         shell_output_cb=lambda text: [callback(text) for callback in tuple(output_subscribers)],
+        disconnect_cb=_controller_disconnect_cb(model, lambda: holder.get("ssh")),
     )
+    holder["ssh"] = ssh
     ssh._wx_output_subscribers = output_subscribers  # type: ignore[attr-defined]
     try:
         ssh.connect()
@@ -172,6 +348,10 @@ class WxConnectionModel:
         self._connect = connect
         self._host_key_decision = host_key_decision
         self._keyboard_interactive = keyboard_interactive
+        # Monotonic connect-attempt identity. The threaded panel worker tags
+        # each attempt so a late/cancelled worker can never apply a stale
+        # result over a newer attempt's state (CONN-002/CONN-003).
+        self._wx_attempt = 0
 
     def summaries(self) -> tuple[ProfileSummary, ...]:
         return tuple(
@@ -195,12 +375,28 @@ class WxConnectionModel:
         profile = next((item for item in self.profiles if item.get("name") == self.selected_name), None)
         if profile is None or self._connect is None:
             return False
+        # A reconnect supersedes the previous live session: tear it down
+        # first so no orphaned transport/shell/SFTP outlives the new
+        # attempt and no queued action can execute against the old session.
+        # If the new attempt then fails, the honest end state is FAILED /
+        # DISCONNECTED rather than a silently revived stale session.
+        if self.controller.session is not None:
+            close_session(self.controller.session)
+            self.controller.session = None
+        self._wx_attempt += 1
         self.controller.begin_connect()
         try:
             session = self._connect(dict(profile))
         except Exception:
             self.controller.fail()
             raise
+        if self.controller.cancel_token.is_set():
+            # Cancelled while connecting: never resurrect the just-opened
+            # session; return to the safe DISCONNECTED state (CONN-003).
+            if isinstance(session, dict):
+                close_session(session)
+            self.controller.cancel_connect()
+            return False
         if session is False:
             self.controller.fail()
             return False
@@ -217,7 +413,7 @@ class WxConnectionModel:
         return list(self._keyboard_interactive(request)) if self._keyboard_interactive else []
 
 
-def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, embedded, add_connection=None, **kwargs):
+def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, embedded, add_connection=None, on_disconnected=None, **kwargs):
     try:
         import wx
     except ImportError as exc:
@@ -299,8 +495,10 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
     duplicate_button = wx.Button(panel, label=t("login.duplicate"))
     delete_button = wx.Button(panel, label=t("connection.delete_action"))
     connect_button = wx.Button(panel, label=t("login.connect_selected"))
+    cancel_button = wx.Button(panel, label=t("common.cancel"))
+    disconnect_button = wx.Button(panel, label=t("login.disconnect"))
     # Accessibility: set names
-    for btn, name in ((add_button, "AddConnection"), (edit_button, "EditConnection"), (duplicate_button, "DuplicateProfile"), (delete_button, "DeleteProfile"), (connect_button, "ConnectSelected")):
+    for btn, name in ((add_button, "AddConnection"), (edit_button, "EditConnection"), (duplicate_button, "DuplicateProfile"), (delete_button, "DeleteProfile"), (connect_button, "ConnectSelected"), (cancel_button, "CancelConnect"), (disconnect_button, "DisconnectSession")):
         try:
             btn.SetName(name)
         except Exception:
@@ -310,48 +508,55 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
     button_row.Add(duplicate_button, 0, wx.RIGHT, 8)
     button_row.Add(delete_button, 0, wx.RIGHT, 8)
     button_row.AddStretchSpacer(1)
+    button_row.Add(cancel_button, 0, wx.RIGHT, 8)
+    button_row.Add(disconnect_button, 0, wx.RIGHT, 8)
     button_row.Add(connect_button, 0)
     root.Add(button_row, 0, wx.EXPAND | wx.ALL, 12)
 
     panel.SetSizer(root)
 
-    # Host-key and MFA dialogs (model callbacks)
+    # Host-key and MFA dialogs (model callbacks). These callbacks execute on
+    # the SSH worker thread; wx dialogs must run on the GUI thread, so both
+    # rendezvous through _invoke_on_gui_thread (OBS-W18-004).
     def host_key_dialog(request: HostKeyRequest) -> str:
-        role_label = t("connection.host_key_role_jump") if request.role == "jump" else t("connection.host_key_role_target")
-        message = t("connection.host_key_prompt_message").format(
-            role=role_label, host=request.hostname, key_type="SSH", fingerprint=request.fingerprint
-        )
-        dialog = wx.MessageDialog(host, message, t("connection.host_key_prompt_title"), wx.YES_NO | wx.CANCEL | wx.ICON_WARNING)
-        try:
-            result = dialog.ShowModal()
-        finally:
-            dialog.Destroy()
-        return "save" if result == wx.ID_YES else "once" if result == wx.ID_NO else "reject"
+        def _ask() -> str:
+            message = format_host_key_prompt(request)
+            dialog = wx.MessageDialog(host, message, t("connection.host_key_prompt_title"), wx.YES_NO | wx.CANCEL | wx.ICON_WARNING)
+            try:
+                result = dialog.ShowModal()
+            finally:
+                dialog.Destroy()
+            return "save" if result == wx.ID_YES else "once" if result == wx.ID_NO else "reject"
+
+        return _invoke_on_gui_thread(_ask)
 
     def mfa_dialog(request: KeyboardInteractiveRequest) -> list[str]:
-        answers = []
-        for index, prompt in enumerate(request.prompts):
-            echo = request.echo[index] if index < len(request.echo) else None
-            # Explicit echo wins; fallback heuristic only when echo is None
-            if echo is True:
-                is_secret = False
-            elif echo is False:
-                is_secret = True
-            else:
-                is_secret = any(word in prompt.lower() for word in ("password", "token", "code", "otp", "pin"))
-            # Use robust wx API: PasswordEntryDialog for secret, TextEntryDialog for visible
-            message = f"{request.instructions}\n\n{prompt}" if request.instructions else prompt
-            if is_secret:
-                dlg = wx.PasswordEntryDialog(host, message, request.title)
-            else:
-                dlg = wx.TextEntryDialog(host, message, request.title)
-            try:
-                if dlg.ShowModal() != wx.ID_OK:
-                    return []
-                answers.append(dlg.GetValue())
-            finally:
-                dlg.Destroy()
-        return answers
+        def _ask() -> list[str]:
+            answers = []
+            for index, prompt in enumerate(request.prompts):
+                echo = request.echo[index] if index < len(request.echo) else None
+                # Explicit echo wins; fallback heuristic only when echo is None
+                if echo is True:
+                    is_secret = False
+                elif echo is False:
+                    is_secret = True
+                else:
+                    is_secret = any(word in prompt.lower() for word in ("password", "token", "code", "otp", "pin"))
+                # Use robust wx API: PasswordEntryDialog for secret, TextEntryDialog for visible
+                message = f"{request.instructions}\n\n{prompt}" if request.instructions else prompt
+                if is_secret:
+                    dlg = wx.PasswordEntryDialog(host, message, request.title)
+                else:
+                    dlg = wx.TextEntryDialog(host, message, request.title)
+                try:
+                    if dlg.ShowModal() != wx.ID_OK:
+                        return []
+                    answers.append(dlg.GetValue())
+                finally:
+                    dlg.Destroy()
+            return answers
+
+        return _invoke_on_gui_thread(_ask)
 
     model._host_key_decision = host_key_dialog
     model._keyboard_interactive = mfa_dialog
@@ -417,7 +622,16 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
     def _update_button_states() -> None:
         has_selection = bool(choices.GetStringSelection())
         is_connecting = model.controller.state.value == "connecting"
+        is_connected = model.controller.state.value == "connected"
         edit_button.Enable(has_selection and not is_connecting)
+        duplicate_button.Enable(has_selection and not is_connecting)
+        # Delete handling: if active is same as selected, may disable if connected? Wave says handle safely; we allow but warn.
+        delete_button.Enable(has_selection and not is_connecting)
+        connect_button.Enable(has_selection and not is_connecting)
+        # Mid-connect Cancel is only meaningful while connecting (CONN-003);
+        # graceful Disconnect only while a live session exists (CONN-004).
+        cancel_button.Enable(is_connecting)
+        disconnect_button.Enable(is_connected)
         duplicate_button.Enable(has_selection and not is_connecting)
         # Delete handling: if active is same as selected, may disable if connected? Wave says handle safely; we allow but warn.
         delete_button.Enable(has_selection and not is_connecting)
@@ -456,6 +670,25 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
     def _update_status_from_controller():
         _update_button_states()
 
+    # Controller transitions (including background transport-failure
+    # reports via disconnect_cb) must repaint the status indicator even
+    # when they originate off the GUI thread; otherwise the panel can
+    # keep showing "Connected" for a dead transport.
+    def _emit_to_status(_state) -> None:
+        # Never touch wx controls off the GUI thread: queue the repaint
+        # and drop it (rather than risk a cross-thread UI call) if the
+        # application object is unavailable.
+        try:
+            import wx as _wx
+
+            if _wx.App.Get() is None:
+                return
+            _wx.CallAfter(_update_status_from_controller)
+        except Exception:
+            pass
+
+    model.controller._emit = _emit_to_status
+
     # Wire selection
     def select(_event):
         sel = choices.GetStringSelection()
@@ -475,6 +708,8 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
         duplicate_button.SetLabel(t("login.duplicate"))
         delete_button.SetLabel(t("connection.delete_action"))
         connect_button.SetLabel(t("login.connect_selected"))
+        cancel_button.SetLabel(t("common.cancel"))
+        disconnect_button.SetLabel(t("login.disconnect"))
         profiles_label.SetLabel(t("connection.saved_profiles"))
         detail_title.SetLabel(t("common.details"))
         _update_button_states()
@@ -483,6 +718,8 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
             status.SetLabel(t("login.status_connected"))
         elif model.controller.state.value == "connecting":
             status.SetLabel(t("login.status_connecting"))
+        elif model.controller.state.value == "failed":
+            status.SetLabel(t("connection.status_failed"))
         else:
             status.SetLabel(t("login.status_disconnected"))
 
@@ -608,7 +845,11 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
                 wx.MessageBox(msg, t("login.err_title"), wx.OK | wx.ICON_ERROR)
             return None
         except ValueError as exc:
-            wx.MessageBox(str(exc), t("login.err_title"), wx.OK | wx.ICON_WARNING)
+            msg = str(exc)
+            if msg.startswith("profile_name_taken:"):
+                taken = msg.split(":", 1)[1].strip()
+                msg = t("connection.rename_name_taken").format(name=taken)
+            wx.MessageBox(msg, t("login.err_title"), wx.OK | wx.ICON_WARNING)
             return None
         except Exception as exc:
             wx.MessageBox(str(exc), t("login.err_title"), wx.OK | wx.ICON_ERROR)
@@ -745,6 +986,54 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
         except Exception as exc:
             wx.MessageBox(str(exc), t("login.err_title"), wx.OK | wx.ICON_ERROR)
 
+    def _cancel_connect(_event=None):
+        # Mid-connect Cancel (CONN-003): invalidate this attempt so the late
+        # worker result is dropped, signal the controller back to the safe
+        # DISCONNECTED state, and keep the app alive with a visible status.
+        # The worker itself may still be blocked in transport/host-key/MFA;
+        # its eventual result is discarded via the attempt tag in done().
+        try:
+            model._wx_attempt += 1
+        except Exception:
+            pass
+        try:
+            model.controller.cancel_connect()
+        except Exception:
+            pass
+        cancelled_msg = t("connection.auth_cancelled") if t("connection.auth_cancelled") != "[connection.auth_cancelled]" else "Authentication cancelled"
+        status.SetLabel(cancelled_msg)
+        _update_button_states()
+
+    def _disconnect_session(_event=None):
+        # Graceful disconnect (CONN-004/RECON-001): tear down the live
+        # transport, return the controller to DISCONNECTED, and notify the
+        # shell so every domain rebinds to "no session" instead of showing
+        # stale connected state or hitting a dead transport.
+        session = model.controller.session
+        if session is None and model.controller.state.value != "connected":
+            return False
+        if isinstance(session, dict):
+            try:
+                close_session(session)
+            except Exception:
+                pass
+        try:
+            model.controller.begin_disconnect()
+        except Exception:
+            pass
+        try:
+            model.controller.finish_disconnect()
+        except Exception:
+            pass
+        status.SetLabel(t("login.status_disconnected"))
+        _update_button_states()
+        if on_disconnected is not None:
+            try:
+                on_disconnected(session)
+            except Exception:
+                pass
+        return True
+
     def connect_selected(_event=None) -> bool:
         sel = choices.GetStringSelection()
         if not sel:
@@ -827,12 +1116,20 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
         # Build transient profile with resolved password – never persisted
         transient = dict(stored)
         transient["password"] = resolved_password if resolved_password is not None else ""
+        # A reconnect supersedes the previous live session (same guarantee
+        # as WxConnectionModel.connect_selected): tear it down up-front so
+        # no orphaned transport outlives the new attempt.
+        if model.controller.session is not None:
+            close_session(model.controller.session)
+            model.controller.session = None
         # Disable conflicting while connecting
         connect_button.Enable(False)
         edit_button.Enable(False)
         duplicate_button.Enable(False)
         delete_button.Enable(False)
         add_button.Enable(False)
+        disconnect_button.Enable(False)
+        cancel_button.Enable(True)
         status.SetLabel(t("login.status_connecting"))
         active_label.SetLabel("")
         try:
@@ -849,6 +1146,10 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
             status.SetLabel(t("connection.status_failed"))
             _update_button_states()
             return False
+        # Tag this attempt: a late worker from a cancelled or superseded
+        # attempt must never apply its result over newer state (CONN-002/003).
+        model._wx_attempt += 1
+        attempt = model._wx_attempt
         def worker():
             try:
                 # Use the transient profile so ssh_info_from_profile sees the typed password
@@ -864,17 +1165,48 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
                 session = connect_fn(dict(transient))
                 if session is False:
                     raise RuntimeError(t("login.error") if t("login.error") != "[login.error]" else "Connection failed")
-                if isinstance(session, dict):
-                    model.controller.finish(session)
-                wx.CallAfter(done, None)
+                # Never finish the controller on the worker thread: the GUI
+                # thread owns the attempt check in done(), so a stale or
+                # cancelled attempt can be dropped before it touches state.
+                wx.CallAfter(done, None, attempt, session)
             except Exception as error:
-                wx.CallAfter(done, error)
-        def done(error):
+                wx.CallAfter(done, error, attempt, None)
+        def done(error, tag, session):
             # Clear transient password from memory best-effort
             try:
                 transient["password"] = ""
             except Exception:
                 pass
+            if tag != model._wx_attempt:
+                # Superseded attempt: drop the stale result without touching
+                # newer state; tear down anything the stale worker opened.
+                if error is None and isinstance(session, dict):
+                    try:
+                        close_session(session)
+                    except Exception:
+                        pass
+                return
+            if model.controller.cancel_token.is_set():
+                # Cancelled while connecting: close anything the worker
+                # opened and stay visibly cancelled, never failed (CONN-003).
+                try:
+                    if isinstance(session, dict):
+                        close_session(session)
+                except Exception:
+                    pass
+                try:
+                    model.controller.cancel_connect()
+                except Exception:
+                    pass
+                cancelled_msg = t("connection.auth_cancelled") if t("connection.auth_cancelled") != "[connection.auth_cancelled]" else "Authentication cancelled"
+                status.SetLabel(cancelled_msg)
+                _update_button_states()
+                return
+            if error is None and isinstance(session, dict):
+                try:
+                    model.controller.finish(session)
+                except Exception as finish_error:
+                    error = finish_error
             if error:
                 try:
                     model.controller.fail()
@@ -882,23 +1214,28 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
                     pass
                 status.SetLabel(t("connection.status_failed"))
                 _update_button_states()
-                # Show useful error, never with secrets
+                # Actionable, translated failure text shared with the Qt path;
+                # secrets are redacted inside the helper, never shown or logged.
                 try:
-                    msg = str(error)
-                    # Redact any accidental secret (defensive)
-                    if resolved_password and resolved_password in msg:
-                        msg = msg.replace(resolved_password, "<redacted>")
+                    msg = describe_wx_connect_failure(error, resolved_password=resolved_password or "")
                 except Exception:
                     msg = "Connection failed"
                 # Map safe known errors to translated messages
-                if "saved_password_unavailable" in msg:
-                    msg = t("connection.saved_password_unavailable")
-                elif "master_cancelled" in msg:
+                if "master_cancelled" in str(error):
                     msg = t("connection.auth_cancelled") if t("connection.auth_cancelled") != "[connection.auth_cancelled]" else "Authentication cancelled"
-                    status.SetLabel(msg)
+                    # The controller.fail() repaint is already queued via
+                    # CallAfter; write the cancel status after it so the
+                    # cancellation stays visibly distinct from a failure.
+                    def _show_cancelled():
+                        try:
+                            status.SetLabel(msg)
+                        except Exception:
+                            pass
+                    try:
+                        wx.CallAfter(_show_cancelled)
+                    except Exception:
+                        status.SetLabel(msg)
                     return
-                elif "master_wrong" in msg:
-                    msg = t("login.err_master_wrong")
                 wx.MessageBox(msg, t("login.err_title"), wx.OK | wx.ICON_ERROR)
             else:
                 status.SetLabel(t("login.status_connected"))
@@ -962,6 +1299,8 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
     edit_button.Bind(wx.EVT_BUTTON, _edit_selected)
     duplicate_button.Bind(wx.EVT_BUTTON, _duplicate_selected)
     delete_button.Bind(wx.EVT_BUTTON, _delete_selected)
+    cancel_button.Bind(wx.EVT_BUTTON, _cancel_connect)
+    disconnect_button.Bind(wx.EVT_BUTTON, _disconnect_session)
     # Retarget the selection before opening the menu when the user right-clicks
     # a different row; visible buttons and menu actions share the same handlers.
     def on_right_down(event):
@@ -1001,9 +1340,13 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
         "edit": edit_button,
         "duplicate": duplicate_button,
         "delete": delete_button,
+        "cancel": cancel_button,
+        "disconnect": disconnect_button,
     }
     host._wx_connection_add_button = add_button
     host._wx_connection_connect_button = connect_button
+    host._wx_connection_cancel_button = cancel_button
+    host._wx_connection_disconnect_button = disconnect_button
     host._wx_connection_edit_button = edit_button
     host._wx_connection_duplicate_button = duplicate_button
     host._wx_connection_delete_button = delete_button
@@ -1011,22 +1354,24 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
     host._wx_connection_refresh = _refresh_list
     host._wx_connection_open_dialog = _open_dialog
     host._wx_connection_connect_selected = connect_selected
+    host._wx_connection_cancel = _cancel_connect
+    host._wx_connection_disconnect = _disconnect_session
     finish()
     return host
 
 
-def build_connection_panel(parent, profiles=None, *, connect=None, lifecycle=None, on_connected=None, add_connection=None, **kwargs):
+def build_connection_panel(parent, profiles=None, *, connect=None, lifecycle=None, on_connected=None, on_disconnected=None, add_connection=None, **kwargs):
     """Embedded panel factory. Returns the wx.Panel host."""
-    return _build_connection(parent, profiles, connect=connect, lifecycle=lifecycle, on_connected=on_connected, embedded=True, add_connection=add_connection, **kwargs)
+    return _build_connection(parent, profiles, connect=connect, lifecycle=lifecycle, on_connected=on_connected, on_disconnected=on_disconnected, embedded=True, add_connection=add_connection, **kwargs)
 
 
-def show_connection(parent=None, profiles=None, *, connect=None, lifecycle=None, on_connected=None, add_connection=None, **kwargs) -> int:
+def show_connection(parent=None, profiles=None, *, connect=None, lifecycle=None, on_connected=None, on_disconnected=None, add_connection=None, **kwargs) -> int:
     try:
         import wx
     except ImportError as exc:
         raise RuntimeError("wxPython is not installed") from exc
-    _build_connection(parent, profiles, connect=connect, lifecycle=lifecycle, on_connected=on_connected, embedded=False, add_connection=add_connection, **kwargs)
+    _build_connection(parent, profiles, connect=connect, lifecycle=lifecycle, on_connected=on_connected, on_disconnected=on_disconnected, embedded=False, add_connection=add_connection, **kwargs)
     return wx.ID_OK
 
 
-__all__ = ["HostKeyRequest", "KeyboardInteractiveRequest", "ProfileSummary", "WxConnectionModel", "connect_profile", "show_connection", "build_connection_panel", "ssh_info_from_profile"]
+__all__ = ["HostKeyRequest", "KeyboardInteractiveRequest", "ProfileSummary", "WxConnectionModel", "connect_profile", "show_connection", "build_connection_panel", "ssh_info_from_profile", "describe_wx_connect_failure", "format_host_key_prompt"]

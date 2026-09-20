@@ -1,0 +1,14 @@
+PASS E1 connect transport active
+PASS E2 echo round trip
+PASS E2b unicode output intact
+PASS E3 multiline ordered
+PASS E4 burst complete+ordered
+PASS E5 resize applied :: (100, 30)
+PASS E5b tiny resize clamped :: (1, 1)
+PASS E5c shell answers after resize
+PASS E6 send after close is False
+PASS E6b panel input after disconnect is False
+PASS E6c failure diagnostic visible :: Terminal input could not be sent.
+..\..\src\msw\webview_edge.cpp(609): 'WebView2::WebViewCreated' failed with error 0x80004004 (Operation aborted).
+PASS E7 subscriber detached on close
+W20-EXTERNAL DONE

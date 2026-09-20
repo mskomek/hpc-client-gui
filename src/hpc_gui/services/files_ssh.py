@@ -232,35 +232,37 @@ class SSHFilesBackend(FilesBackend):
             if resume and 0 < local_size < remote_size:
                 if progress_cb is not None:
                     progress_cb(local_size, remote_size)
-                with sftp.open(remote_path, "rb") as rf:
-                    rf.seek(local_size)
-                    _enable_sftp_read_ahead(rf, remote_size)
-                    os.makedirs(os.path.dirname(local_path) or ".", exist_ok=True)
-                    with open(local_path, "ab") as lf:
-                        while True:
-                            chunk = rf.read(_SFTP_CHUNK_SIZE)
-                            if not chunk:
-                                break
-                            lf.write(chunk)
-                            local_size += len(chunk)
-                            if progress_cb is not None:
-                                progress_cb(local_size, remote_size)
+                os.makedirs(os.path.dirname(local_path) or ".", exist_ok=True)
+                with _translate_remote_errors(remote_path):
+                    with sftp.open(remote_path, "rb") as rf:
+                        rf.seek(local_size)
+                        _enable_sftp_read_ahead(rf, remote_size)
+                        with open(local_path, "ab") as lf:
+                            while True:
+                                chunk = rf.read(_SFTP_CHUNK_SIZE)
+                                if not chunk:
+                                    break
+                                lf.write(chunk)
+                                local_size += len(chunk)
+                                if progress_cb is not None:
+                                    progress_cb(local_size, remote_size)
                 return
 
             # Full transfer from byte zero (overwrite, or resume with no partial data).
             os.makedirs(os.path.dirname(local_path) or ".", exist_ok=True)
             downloaded = 0
-            with sftp.open(remote_path, "rb") as rf:
-                _enable_sftp_read_ahead(rf, remote_size)
-                with open(local_path, "wb") as lf:
-                    while True:
-                        chunk = rf.read(_SFTP_CHUNK_SIZE)
-                        if not chunk:
-                            break
-                        lf.write(chunk)
-                        downloaded += len(chunk)
-                        if progress_cb is not None:
-                            progress_cb(downloaded, remote_size)
+            with _translate_remote_errors(remote_path):
+                with sftp.open(remote_path, "rb") as rf:
+                    _enable_sftp_read_ahead(rf, remote_size)
+                    with open(local_path, "wb") as lf:
+                        while True:
+                            chunk = rf.read(_SFTP_CHUNK_SIZE)
+                            if not chunk:
+                                break
+                            lf.write(chunk)
+                            downloaded += len(chunk)
+                            if progress_cb is not None:
+                                progress_cb(downloaded, remote_size)
         finally:
             try:
                 sftp.close()
@@ -305,31 +307,33 @@ class SSHFilesBackend(FilesBackend):
                     progress_cb(remote_size, local_size)
                 with open(local_path, "rb") as lf:
                     lf.seek(remote_size)
-                    with sftp.open(remote_path, "ab") as rf:
+                    with _translate_remote_errors(remote_path):
+                        with sftp.open(remote_path, "ab") as rf:
+                            _enable_sftp_pipelining(rf)
+                            while True:
+                                chunk = lf.read(1024 * 1024)
+                                if not chunk:
+                                    break
+                                rf.write(chunk)
+                                remote_size += len(chunk)
+                                if progress_cb is not None:
+                                    progress_cb(remote_size, local_size)
+                return
+
+            # Full transfer from byte zero (overwrite, or resume with no partial data).
+            sent = 0
+            with open(local_path, "rb") as lf:
+                with _translate_remote_errors(remote_path):
+                    with sftp.open(remote_path, "wb") as rf:
                         _enable_sftp_pipelining(rf)
                         while True:
                             chunk = lf.read(1024 * 1024)
                             if not chunk:
                                 break
                             rf.write(chunk)
-                            remote_size += len(chunk)
+                            sent += len(chunk)
                             if progress_cb is not None:
-                                progress_cb(remote_size, local_size)
-                return
-
-            # Full transfer from byte zero (overwrite, or resume with no partial data).
-            sent = 0
-            with open(local_path, "rb") as lf:
-                with sftp.open(remote_path, "wb") as rf:
-                    _enable_sftp_pipelining(rf)
-                    while True:
-                        chunk = lf.read(1024 * 1024)
-                        if not chunk:
-                            break
-                        rf.write(chunk)
-                        sent += len(chunk)
-                        if progress_cb is not None:
-                            progress_cb(sent, local_size)
+                                progress_cb(sent, local_size)
         finally:
             try:
                 sftp.close()
@@ -361,8 +365,12 @@ class SSHFilesBackend(FilesBackend):
         _raise_on_failed_run(code, err, "rm", path=remote_path)
 
     def rename(self, remote_path: str, new_remote_path: str) -> None:
-        # Prefer SFTP rename (atomic on many servers)
-        self.ssh.sftp.rename(remote_path, new_remote_path)
+        # Prefer SFTP rename (atomic on many servers). Translate failures so
+        # a missing/denied source carries its path in `.filename` like every
+        # other backend read path (W12: rename used to surface paramiko's
+        # bare "[Errno N] ..." text with no attributable path).
+        with _translate_remote_errors(remote_path):
+            self.ssh.sftp.rename(remote_path, new_remote_path)
 
     def mkdir(self, remote_dir: str) -> None:
         q = shlex.quote(remote_dir)

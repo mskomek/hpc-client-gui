@@ -62,29 +62,38 @@ def _build_settings(parent, model: WxSettingsModel | None = None, *, settings=No
     state = {"closed": False}
 
     def apply_settings(_event=None):
+        # W02 error governance (HPC-W01-TODO-018 / HPC-W01-TODO-020): staging
+        # failures must not be swallowed and must never end in an "OK" dialog.
+        set_errors: list[tuple[str, Exception]] = []
         try:
             model.set_global("remote_directory_cache", bool(cb_remote_cache.GetValue()))
-        except Exception:
-            pass
+        except Exception as exc:
+            set_errors.append(("remote_directory_cache", exc))
         try:
             model.set_global("transfer_checksum", bool(cb_checksum.GetValue()))
-        except Exception:
-            pass
+        except Exception as exc:
+            set_errors.append(("transfer_checksum", exc))
         try:
             model.set_profile("transfer_parallelism", int(sp_parallel.GetValue()))
-        except Exception:
-            pass
+        except Exception as exc:
+            set_errors.append(("transfer_parallelism", exc))
         try:
             model.set_profile("ssh_timeout", int(sp_timeout.GetValue()))
-        except Exception:
-            pass
+        except Exception as exc:
+            set_errors.append(("ssh_timeout", exc))
 
-        def worker():
+        def worker(pending=set_errors):
             try:
+                if pending:
+                    names = ", ".join(name for name, _exc in pending)
+                    raise RuntimeError(f"settings rejected ({names}): {pending[0][1]}") from pending[0][1]
                 model.apply()
                 wx.CallAfter(lambda: wx.MessageBox(t("common.ok"), t("settings.dialog_title"), wx.OK | wx.ICON_INFORMATION, host) if not state["closed"] else None)
             except Exception as exc:
-                wx.CallAfter(lambda exc=exc: wx.MessageBox(str(exc), t("common.error"), wx.OK | wx.ICON_ERROR, host) if not state["closed"] else None)
+                # Visible, diagnosable error with a stable code; "OK" is only
+                # shown on the success path above, never after a failure.
+                from hpc_gui.core.wx_errors import report_wx_action_error
+                wx.CallAfter(lambda exc=exc: report_wx_action_error(host, area="SETTINGS", message_key="settings.apply_failed", exc=exc) if not state["closed"] else None)
 
         Thread(target=worker, daemon=True).start()
 

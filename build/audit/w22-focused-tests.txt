@@ -1,0 +1,20 @@
+
+> .venv\Scripts\python.exe -m pytest tests/test_w19_connection_lifecycle.py -q
+....................                                                     [100%]
+20 passed in 10.59s
+exit=0
+
+> .venv\Scripts\python.exe -m pytest tests/test_w20_terminal_io.py -q
+....                                                                     [100%]
+4 passed in 2.15s
+exit=0
+
+> .venv\Scripts\python.exe -m pytest tests/test_w21_terminal_lifecycle.py -q
+........                                                                 [100%]
+8 passed in 3.88s
+exit=0
+
+> .venv\Scripts\python.exe -m pytest tests/test_wx_terminal_webview.py -q
+.............................                                            [100%]
+29 passed in 28.97s
+exit=0

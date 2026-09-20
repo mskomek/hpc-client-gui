@@ -34,6 +34,17 @@ def _observed_fields(raw: str) -> dict[str, str]:
         fields[match.group("key")] = match.group("value").strip().strip('"')
     return fields
 
+def _looks_like_job_id(value: str) -> bool:
+    """True when the leading field resembles a scheduler job ID.
+
+    Structured scheduler formats always lead with the ID (``4``,
+    ``123.batch``, ``123_4``), which always contains a digit. Human
+    error/display text (``slurm_load_jobs error: ...``) never does, so it
+    must not become a phantom job row.
+    """
+    return any(char.isascii() and char.isdigit() for char in value)
+
+
 def _rows(text: str) -> list[tuple[str, list[str]]]:
     lines = [line.strip() for line in text.splitlines() if line.strip()]
     if not lines:
@@ -41,13 +52,35 @@ def _rows(text: str) -> list[tuple[str, list[str]]]:
     # Banners/MOTD noise can precede scheduler output, so the delimiter is
     # detected from the whole response rather than only the first line.
     delimiter = "|" if any("|" in line for line in lines) else None
-    return [(line, [part.strip() for part in line.split(delimiter)]) for line in lines[1:]]
+
+    def _parts(line: str) -> list[str]:
+        if delimiter:
+            return [part.strip() for part in line.split(delimiter)]
+        return line.split()
+
+    def _is_header(line: str) -> bool:
+        fields = _parts(line)
+        return bool(fields) and fields[0].lower() == "jobid"
+
+    # The shipped scheduler commands request headerless output (``squeue -h``,
+    # ``sacct -n -P``), so the first line is data unless it is a header row.
+    # A single banner/MOTD line ahead of the header is still tolerated.
+    # Previously the first line was always dropped, which silently discarded
+    # the only (or first) real job row of every headerless response.
+    start = 0
+    if _is_header(lines[0]):
+        start = 1
+    elif len(lines) > 1 and _is_header(lines[1]):
+        start = 2
+    return [(line, _parts(line)) for line in lines[start:]]
 
 
 def parse_squeue(text: str) -> list[SlurmJob]:
     jobs = []
     for raw, fields in _rows(text):
         if len(fields) < 6 or fields[0].lower() == "jobid":
+            continue
+        if not _looks_like_job_id(fields[0]):
             continue
         job_id, partition, name, user, state, elapsed = (fields + [""] * 6)[:6]
         nodes = fields[6] if len(fields) > 6 else ""
@@ -64,6 +97,8 @@ def parse_sacct(text: str) -> list[SlurmJob]:
     jobs = []
     for raw, fields in _rows(text):
         if len(fields) < 3 or fields[0].lower() == "jobid":
+            continue
+        if not _looks_like_job_id(fields[0]):
             continue
         fields += [""] * (5 - len(fields))
         job_id, name, state, elapsed, max_rss = fields[:5]
