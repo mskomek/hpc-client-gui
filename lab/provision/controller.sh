@@ -9,7 +9,7 @@ apt-get install -y openssh-server openssh-client munge slurm-wlm slurmctld slurm
 
 id hpctest >/dev/null 2>&1 || useradd --create-home --shell /bin/bash hpctest
 install -d -m 0755 /srv/hpc/{home,scratch,project}
-install -d -m 0700 -o hpctest -g hpctest /srv/hpc/home/hpctest
+install -d -m 0700 -o hpctest -g hpctest /srv/hpc/home/hpctest /srv/hpc/scratch/hpctest /srv/hpc/project/hpctest
 install -d -m 0700 -o hpctest -g hpctest /srv/hpc/home/hpctest/.ssh
 key_tmp=$(mktemp)
 for key_file in /home/hpctest/.ssh/authorized_keys /srv/hpc/home/hpctest/.ssh/authorized_keys; do
@@ -29,7 +29,7 @@ if [ ! -s /etc/munge/munge.key ]; then
   chown munge:munge /etc/munge/munge.key
   chmod 0400 /etc/munge/munge.key
 fi
-systemctl restart munge
+systemctl enable --now munge
 
 cat >/etc/slurm/slurm.conf <<EOF
 ClusterName=local-real

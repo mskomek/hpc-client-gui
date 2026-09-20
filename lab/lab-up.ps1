@@ -64,6 +64,6 @@ $munge = Invoke-LabSshCapture (Get-Node login-control01).ip 'sudo base64 -w0 /et
 if ($munge.exit_code -ne 0 -or [string]::IsNullOrWhiteSpace($munge.output)) { throw 'Controller did not provide /etc/munge/munge.key' }
 foreach ($node in @($Config.nodes | Where-Object role -eq 'compute')) { Invoke-LabSsh $node.ip "echo '$($slurmConf.output)' | base64 -d | sudo install -o root -g root -m 0644 /dev/stdin /etc/slurm/slurm.conf; echo '$($munge.output)' | base64 -d | sudo install -o munge -g munge -m 0400 /dev/stdin /etc/munge/munge.key; sudo systemctl enable --now munge slurmd" | Out-Null }
 $controller = Get-Node login-control01
-$profile = [ordered]@{ name='LOCAL_REAL'; host=$controller.ip; port=22; username='hpctest'; key_path=(Get-KeyPath); host_key_policy='accept-new'; system=@{slurm=$true}; provider_template=@{name='generic-local-real'; storage=@(@{id='home';path_template='/srv/hpc/home/{user}'},@{id='scratch';path_template='/srv/hpc/scratch/{user}'},@{id='project';path_template='/srv/hpc/project'})} }
+$profile = [ordered]@{ name='LOCAL_REAL'; host=$controller.ip; port=22; username='hpctest'; key_path=(Get-KeyPath); host_key_policy='accept-new'; system=@{slurm=$true}; provider_template=@{name='generic-local-real'; storage=@(@{id='home';path_template='/srv/hpc/home/{user}'},@{id='scratch';path_template='/srv/hpc/scratch/{user}'},@{id='project';path_template='/srv/hpc/project/{user}'})} }
 Write-Json $profile (Join-Path $StateRoot 'hpc-client-profile.json')
 & (Join-Path $PSScriptRoot 'lab-status.ps1')

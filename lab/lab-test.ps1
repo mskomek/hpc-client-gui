@@ -13,6 +13,10 @@ $identityProbes = @($Config.nodes | ForEach-Object { Invoke-LabSshCapture $_.ip 
 $results.identity = $identityProbes
 $results.identity_same = (@($identityProbes | ForEach-Object { $_.output.Trim() } | Select-Object -Unique).Count -eq 1)
 $results.identity_ok = (@($identityProbes | Where-Object exit_code -ne 0).Count -eq 0) -and $results.identity_same
+$storageProbes = @($Config.nodes | ForEach-Object { Invoke-LabSshCapture $_.ip 'set -eu; for path in /srv/hpc/home/hpctest /srv/hpc/scratch/hpctest /srv/hpc/project/hpctest; do test -d "$path"; file="$path/.local-real-storage-roundtrip"; printf LOCAL_REAL_STORAGE > "$file"; test "$(cat "$file")" = LOCAL_REAL_STORAGE; rm -f "$file"; test ! -e "$file"; done; printf "home=/srv/hpc/home/hpctest scratch=/srv/hpc/scratch/hpctest project=/srv/hpc/project/hpctest\n"' })
+$results.storage = $storageProbes
+$results.storage_same = (@($storageProbes | ForEach-Object { $_.output.Trim() } | Select-Object -Unique).Count -eq 1)
+$results.storage_ok = (@($storageProbes | Where-Object exit_code -ne 0).Count -eq 0) -and $results.storage_same
 $sftpPath = Join-Path $StateRoot 'hostname.copy'; $sftpBatchPath = $sftpPath -replace '\','/'; $sftpOutput = ("get /etc/hostname $sftpBatchPath`n" | & sftp -q -b - -o StrictHostKeyChecking=no -o UserKnownHostsFile=NUL -i (Get-KeyPath) "$($Config.ssh.user)@$($controller.ip)" 2>&1); $results.sftp_exit=$LASTEXITCODE; $results.sftp_file_exists=Test-Path $sftpPath; $results.sftp_content_match=$false; if ($results.sftp_file_exists) { $remoteHostname = Invoke-LabSshCapture $controller.ip 'cat /etc/hostname'; $results.sftp_content_match=((Get-Content $sftpPath -Raw).Trim() -eq $remoteHostname.output.Trim()) }; $results.sftp_output=($sftpOutput -join "`n")
 $results.munge = Invoke-LabSshCapture $controller.ip 'munge -n | unmunge'
 $results.srun = Invoke-LabSshCapture $controller.ip 'srun -N2 -n2 hostname | sort -u'
@@ -22,7 +26,6 @@ $results.scontrol = Invoke-LabSshCapture $controller.ip 'scontrol show nodes com
 $results.sbatch = Invoke-LabSshCapture $controller.ip 'printf "#!/bin/sh\necho LOCAL_REAL_SBATCH\nsleep 2\n" | sbatch --parsable --wait'
 $job = ($results.sbatch.output -split '\s+')[0]; $results.sacct = Invoke-LabSshCapture $controller.ip "sacct -n -P -j $job --format=JobIDRaw,State,ExitCode"
 $results.shared_home_job = Invoke-LabSshCapture $controller.ip 'cd /srv/hpc/home/hpctest && rm -rf .local-real-job && mkdir .local-real-job && srun --nodes=2 --ntasks=2 --ntasks-per-node=1 --chdir=/srv/hpc/home/hpctest/.local-real-job /bin/sh -c ''printf "%s %s\n" "$(hostname)" "$PWD" >> /srv/hpc/home/hpctest/.local-real-job/result'' && test "$(wc -l < .local-real-job/result)" -eq 2 && test "$(grep -c "^compute01 /srv/hpc/home/hpctest/.local-real-job$" .local-real-job/result)" -eq 1 && test "$(grep -c "^compute02 /srv/hpc/home/hpctest/.local-real-job$" .local-real-job/result)" -eq 1'
-$results.shared_fs = Invoke-LabSshCapture $controller.ip 'touch /srv/hpc/project/local-real-proof && test -f /srv/hpc/project/local-real-proof'
 $pass = ($results.GetEnumerator() | ForEach-Object { if ($_.Value -is [bool]) {$_.Value} elseif ($_.Value -is [int]) {$_.Value -eq 0} elseif ($_.Value.PSObject.Properties['exit_code']) {$_.Value.exit_code -eq 0} else {$true} }) -notcontains $false
 $report = [pscustomobject]@{ status=if ($pass) {'LOCAL_REAL_READY'} else {'FAIL'}; tests=$results; generated_at=(Get-Date).ToUniversalTime().ToString('o'); note='Laboratory evidence only; not W22 PASS.' }
 Write-Json $report (Join-Path $EvidenceRoot 'LOCAL_REAL_TEST.json'); $report | ConvertTo-Json -Depth 12

@@ -20,10 +20,11 @@ def test_local_real_provisioning_order_and_single_sources():
     assert "Resize-VHD -Path $disk -SizeBytes $diskBytes" in UP
     assert "Get-VHD -Path $disk" in UP
     assert "systemctl enable --now ssh mariadb munge nfs-server" not in CONTROLLER
-    assert "systemctl restart munge" in CONTROLLER
+    assert "systemctl enable --now munge" in CONTROLLER
+    assert "systemctl restart munge" not in CONTROLLER
     assert "create-munge-key" not in CONTROLLER
     assert "runuser -u munge -- /usr/sbin/mungekey --create" in CONTROLLER
-    assert CONTROLLER.index("chown munge:munge /etc/munge/munge.key") < CONTROLLER.index("systemctl restart munge")
+    assert CONTROLLER.index("chown munge:munge /etc/munge/munge.key") < CONTROLLER.index("systemctl enable --now munge")
     assert "cat >/etc/slurm/slurmdbd.conf <<EOF" in CONTROLLER
     assert "StoragePass=$SLURM_DB_PASSWORD" in CONTROLLER
     assert "systemctl enable --now slurmd" not in COMPUTE
@@ -53,6 +54,9 @@ def test_local_real_provisioning_order_and_single_sources():
     assert "shared_home_job" in LAB_TEST
     assert "ssh_key_login" in LAB_TEST
     assert "ssh_key_login_ok" in LAB_TEST
+    assert "storage_same" in LAB_TEST
+    assert "storage_ok" in LAB_TEST
+    assert "LOCAL_REAL_STORAGE" in LAB_TEST
 
 
 def test_local_real_shared_identity_and_mounts():
@@ -64,6 +68,11 @@ def test_local_real_shared_identity_and_mounts():
     assert "login-control01:/srv/hpc/home /home" not in COMPUTE
     assert "sed -i '\\#^login-control01:/srv/hpc/.* nfs4 #d' /etc/fstab" in COMPUTE
     assert "HPCTEST_UID" in COMPUTE and "SLURM_UID" in COMPUTE
+    assert "/srv/hpc/scratch/hpctest" in CONTROLLER
+    assert "/srv/hpc/project/hpctest" in CONTROLLER
+    assert "/srv/hpc/scratch/hpctest" in COMPUTE
+    assert "/srv/hpc/project/hpctest" in COMPUTE
+    assert "path_template='/srv/hpc/project/{user}'" in UP
 
 
 def test_local_real_fault_recovery_is_role_aware_and_resettable():

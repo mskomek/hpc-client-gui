@@ -33,6 +33,7 @@ install -d /srv/hpc/home /srv/hpc/scratch /srv/hpc/project
 mountpoint -q /srv/hpc/home || mount -t nfs4 login-control01:/srv/hpc/home /srv/hpc/home
 mountpoint -q /srv/hpc/scratch || mount -t nfs4 login-control01:/srv/hpc/scratch /srv/hpc/scratch
 mountpoint -q /srv/hpc/project || mount -t nfs4 login-control01:/srv/hpc/project /srv/hpc/project
+install -d -m 0700 -o hpctest -g hpctest /srv/hpc/home/hpctest /srv/hpc/scratch/hpctest /srv/hpc/project/hpctest
 install -d -m 0700 -o hpctest -g hpctest /srv/hpc/home/hpctest/.ssh
 key_tmp=$(mktemp)
 for key_file in /home/hpctest/.ssh/authorized_keys /srv/hpc/home/hpctest/.ssh/authorized_keys; do
