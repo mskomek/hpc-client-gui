@@ -10,6 +10,13 @@ apt-get install -y openssh-server openssh-client munge slurm-wlm slurmctld slurm
 id hpctest >/dev/null 2>&1 || useradd --create-home --shell /bin/bash hpctest
 install -d -m 0755 /srv/hpc/{home,scratch,project}
 install -d -m 0700 -o hpctest -g hpctest /srv/hpc/home/hpctest
+install -d -m 0700 -o hpctest -g hpctest /srv/hpc/home/hpctest/.ssh
+key_tmp=$(mktemp)
+for key_file in /home/hpctest/.ssh/authorized_keys /srv/hpc/home/hpctest/.ssh/authorized_keys; do
+  [ -f "$key_file" ] && cat "$key_file"
+done | awk 'NF && !seen[$0]++' >"$key_tmp"
+install -o hpctest -g hpctest -m 0600 "$key_tmp" /srv/hpc/home/hpctest/.ssh/authorized_keys
+rm -f "$key_tmp"
 chown -R hpctest:hpctest /srv/hpc/home/hpctest
 usermod -d /srv/hpc/home/hpctest hpctest
 printf '/srv/hpc/home  *(rw,sync,no_subtree_check,no_root_squash)\n/srv/hpc/scratch *(rw,sync,no_subtree_check,no_root_squash)\n/srv/hpc/project *(rw,sync,no_subtree_check,no_root_squash)\n' >/etc/exports
@@ -17,7 +24,8 @@ exportfs -rav
 systemctl enable --now ssh mariadb nfs-server
 
 if [ ! -s /etc/munge/munge.key ]; then
-  create-munge-key || /usr/sbin/mungekey
+  install -d -m 0700 -o munge -g munge /etc/munge
+  runuser -u munge -- /usr/sbin/mungekey --create
   chown munge:munge /etc/munge/munge.key
   chmod 0400 /etc/munge/munge.key
 fi

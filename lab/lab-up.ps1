@@ -53,7 +53,11 @@ foreach ($node in $Config.nodes) {
 foreach ($node in $Config.nodes) { $ready = $false; for ($i=0; $i -lt 60; $i++) { if (Test-NetConnection $node.ip -Port 22 -InformationLevel Quiet) { $ready = $true; break }; Start-Sleep 2 }; if (-not $ready) { throw "SSH did not become ready: $($node.name)" } }
 function Send-Script($host,$path,$env='') { $b64 = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes((Get-Content $path -Raw))); Invoke-LabSsh $host "echo '$b64' | base64 -d | sudo $env bash -s" | Out-Null }
 $dbPassword = [guid]::NewGuid().ToString('N'); Send-Script (Get-Node login-control01).ip (Join-Path $PSScriptRoot 'provision/controller.sh') "env SLURM_DB_PASSWORD=$dbPassword SLURM_COMPUTE_CPUS=$($computeCpus[0])"
-foreach ($node in @($Config.nodes | Where-Object role -eq 'compute')) { Send-Script $node.ip (Join-Path $PSScriptRoot 'provision/compute.sh') }
+$identity = Invoke-LabSshCapture (Get-Node login-control01).ip 'printf "%s %s %s %s\n" "$(id -u hpctest)" "$(id -g hpctest)" "$(id -u slurm)" "$(id -g slurm)"'
+if ($identity.exit_code -ne 0 -or $identity.output.Trim() -notmatch '^\d+\s+\d+\s+\d+\s+\d+$') { throw 'Controller did not provide canonical user/group IDs' }
+$identityIds = $identity.output.Trim() -split '\s+'
+$computeEnv = "env HPCTEST_UID=$($identityIds[0]) HPCTEST_GID=$($identityIds[1]) SLURM_UID=$($identityIds[2]) SLURM_GID=$($identityIds[3])"
+foreach ($node in @($Config.nodes | Where-Object role -eq 'compute')) { Send-Script $node.ip (Join-Path $PSScriptRoot 'provision/compute.sh') $computeEnv }
 $slurmConf = Invoke-LabSshCapture (Get-Node login-control01).ip 'sudo base64 -w0 /etc/slurm/slurm.conf'
 if ($slurmConf.exit_code -ne 0 -or [string]::IsNullOrWhiteSpace($slurmConf.output)) { throw 'Controller did not provide /etc/slurm/slurm.conf' }
 $munge = Invoke-LabSshCapture (Get-Node login-control01).ip 'sudo base64 -w0 /etc/munge/munge.key'

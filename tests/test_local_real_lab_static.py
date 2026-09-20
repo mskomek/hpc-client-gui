@@ -21,6 +21,8 @@ def test_local_real_provisioning_order_and_single_sources():
     assert "Get-VHD -Path $disk" in UP
     assert "systemctl enable --now ssh mariadb munge nfs-server" not in CONTROLLER
     assert "systemctl restart munge" in CONTROLLER
+    assert "create-munge-key" not in CONTROLLER
+    assert "runuser -u munge -- /usr/sbin/mungekey --create" in CONTROLLER
     assert CONTROLLER.index("chown munge:munge /etc/munge/munge.key") < CONTROLLER.index("systemctl restart munge")
     assert "cat >/etc/slurm/slurmdbd.conf <<EOF" in CONTROLLER
     assert "StoragePass=$SLURM_DB_PASSWORD" in CONTROLLER
@@ -40,6 +42,21 @@ def test_local_real_provisioning_order_and_single_sources():
     assert "sftp -q -b -" in LAB_TEST
     assert "sftp_content_match" in LAB_TEST
     assert "scontrol show nodes compute[01-02]" in LAB_TEST
+    assert "canonical_paths_same" in LAB_TEST
+    assert "identity_same" in LAB_TEST
+    assert "shared_home_job" in LAB_TEST
+    assert "ssh_key_login" in LAB_TEST
+    assert "ssh_key_login_ok" in LAB_TEST
+
+
+def test_local_real_shared_identity_and_mounts():
+    assert "usermod -d /srv/hpc/home/hpctest hpctest" in CONTROLLER
+    assert "usermod -d /srv/hpc/home/hpctest hpctest" in COMPUTE
+    assert "login-control01:/srv/hpc/home /srv/hpc/home" in COMPUTE
+    assert "login-control01:/srv/hpc/scratch /srv/hpc/scratch" in COMPUTE
+    assert "login-control01:/srv/hpc/project /srv/hpc/project" in COMPUTE
+    assert "login-control01:/srv/hpc/home /home" not in COMPUTE
+    assert "HPCTEST_UID" in COMPUTE and "SLURM_UID" in COMPUTE
 
 
 def test_local_real_fault_recovery_is_role_aware_and_resettable():
