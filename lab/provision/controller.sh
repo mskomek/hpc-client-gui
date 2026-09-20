@@ -23,7 +23,7 @@ if [ ! -s /etc/munge/munge.key ]; then
 fi
 systemctl restart munge
 
-cat >/etc/slurm/slurm.conf <<'EOF'
+cat >/etc/slurm/slurm.conf <<EOF
 ClusterName=local-real
 SlurmctldHost=login-control01
 SlurmUser=slurm

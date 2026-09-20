@@ -14,10 +14,14 @@ def test_local_real_provisioning_order_and_single_sources():
     assert CONFIG.count('"cpus": 2') == 3
     assert "Set-VMProcessor" in UP
     assert "CPUs=$SLURM_COMPUTE_CPUS" in CONTROLLER
+    assert "SLURM_COMPUTE_CPUS=$($computeCpus[0])" in UP
+    assert "cat >/etc/slurm/slurm.conf <<EOF" in CONTROLLER
+    assert "cat >/etc/slurm/slurm.conf <<'EOF'" not in CONTROLLER
+    assert "Resize-VHD -Path $disk -SizeBytes $diskBytes" in UP
+    assert "Get-VHD -Path $disk" in UP
     assert "systemctl enable --now ssh mariadb munge nfs-server" not in CONTROLLER
     assert "systemctl restart munge" in CONTROLLER
     assert CONTROLLER.index("chown munge:munge /etc/munge/munge.key") < CONTROLLER.index("systemctl restart munge")
-    assert "cat >/etc/slurm/slurm.conf <<'EOF'" in CONTROLLER
     assert "cat >/etc/slurm/slurmdbd.conf <<EOF" in CONTROLLER
     assert "StoragePass=$SLURM_DB_PASSWORD" in CONTROLLER
     assert "systemctl enable --now slurmd" not in COMPUTE
@@ -36,3 +40,18 @@ def test_local_real_provisioning_order_and_single_sources():
     assert "sftp -q -b -" in LAB_TEST
     assert "sftp_content_match" in LAB_TEST
     assert "scontrol show nodes compute[01-02]" in LAB_TEST
+
+
+def test_local_real_fault_recovery_is_role_aware_and_resettable():
+    fault = (ROOT / "lab/lab-fault.ps1").read_text(encoding="utf-8")
+    reset = (ROOT / "lab/lab-reset.ps1").read_text(encoding="utf-8")
+    assert "systemd-run --unit=$unit --on-active=${RecoveryDelaySeconds}s /bin/systemctl start ssh" in fault
+    assert "Invoke-LabSsh $controller.ip 'sudo systemctl stop ssh'" not in fault
+    assert "sudo systemctl start ssh munge slurmdbd slurmctld" in fault
+    assert "sudo systemctl start ssh munge slurmd" in fault
+    assert "NodeName=$Node State=RESUME" in fault
+    assert "NodeName=login-control01" not in fault
+    assert "Start-VM -Name $node.name" in reset
+    assert "Test-NetConnection $node.ip -Port 22" in reset
+    assert "$controllerServices = 'sudo systemctl start ssh munge mariadb nfs-server slurmdbd slurmctld'" in reset
+    assert "sudo systemctl start ssh munge slurmd" in reset

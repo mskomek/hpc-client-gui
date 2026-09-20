@@ -15,7 +15,17 @@ if ($computeCpus.Count -ne 1 -or $computeCpus[0] -lt 1) { throw 'All compute nod
 foreach ($node in $Config.nodes) {
   $vmPath = Join-Path $StateRoot $node.name; New-Item -ItemType Directory -Force $vmPath | Out-Null
   $disk = Join-Path $vmPath "$($node.name).vhdx"
+  $diskBytes = [int64]$node.disk_gb * 1GB
+  $vm = Get-VM -Name $node.name -ErrorAction SilentlyContinue
   if (-not (Test-Path $disk)) { New-VHD -Path $disk -ParentPath $baseVhdx -Differencing | Out-Null }
+  $diskInfo = Get-VHD -Path $disk
+  if ($diskInfo.Size -lt $diskBytes -and $vm -and $vm.State -eq 'Running') {
+    Stop-VM -Name $node.name
+    for ($wait = 0; $wait -lt 30 -and (Get-VM -Name $node.name).State -ne 'Off'; $wait++) { Start-Sleep 1 }
+    if ((Get-VM -Name $node.name).State -ne 'Off') { throw "VM did not stop for disk resize: $($node.name)" }
+  }
+  if ($diskInfo.Size -lt $diskBytes) { Resize-VHD -Path $disk -SizeBytes $diskBytes }
+  elseif ($diskInfo.Size -gt $diskBytes) { throw "Existing VM disk exceeds configured disk_gb; use lab-reset/lab-down before reducing it: $($node.name)" }
   $seed = Join-Path $vmPath seed; New-Item -ItemType Directory -Force $seed | Out-Null
   $hosts = ($Config.nodes | ForEach-Object { "      $($_.ip) $($_.name)" }) -join "`n"
   $userData = @('#cloud-config','users:',"  - name: $($Config.ssh.user)",'    sudo: ALL=(ALL) NOPASSWD:ALL','    shell: /bin/bash','    ssh_authorized_keys:',"      - $public",'ssh_pwauth: false','write_files:','  - path: /etc/hosts','    append: true','    content: |',$hosts,'runcmd:','  - systemctl enable --now ssh')
