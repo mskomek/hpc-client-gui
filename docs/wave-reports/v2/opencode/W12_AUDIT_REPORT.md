@@ -1,60 +1,58 @@
 # W12 Audit Report
 
-**Decision: PASS**
+**Decision: REOPEN**
 
-Audited exactly `W12` against `waves/pending/W12.md` in fresh context. The
-pending definition is present and unambiguous; no `waves/bak/` material was
-used.
+Audited exactly `W12` against canonical `waves/pending/W12.md` and
+`.opencode/prompts/30_AUDIT_WAVE.md`. The pending definition is present and
+unambiguous; `waves/bak/` was not used.
 
-## Authority and scope
+## Authority and current truth
 
-- Read `CORE_EXECUTION_RULES.md`, `W12.md`, and `30_AUDIT_WAVE.md`.
-- Read all 15 owned registry rows `HPC-W03-SFTP-001..015`, the W12 index
-  entries, and confirmed W12 owns no TODO rows.
-- Read Workstream B of `WAVE_V2_FINAL_03.md` (SFTP steps 1–13 and hash
-  requirement).
-- Cross-Wave boundary is respected: SSH lifecycle remains W11 and Slurm
-  remains W13; no W13 work was started.
+- Read the core rules, W12 contract, all 15 owned registry rows
+  `HPC-W03-SFTP-001..015`, the W12 index, mandatory Workstream B, W12
+  report/audit, current source/tests, dependency report, and current diff.
+- Main repository: `develop`, HEAD
+  `f94adb640136181dbaafa84f62c753b013f0b94e`.
+- The W12 report and prior audit claim tested/current SHA
+  `0f8902a023bac76071527232c2287af96478ed2b`. W12 implementation and tests
+  were subsequently committed in snapshot `f3680984`; the current HEAD is
+  later still. Prior audit/evidence therefore cannot be accepted as current.
+- Current focused checks pass: `python -m pytest
+  tests/test_w12_sftp_semantics.py -q` → **13 passed**; W12 + W11 focused
+  checks → **27 passed**. These do not refresh external evidence.
+- The working tree is dirty with unrelated changes. No product/test change
+  was made by this audit.
 
-## Repository/plugin and diff audit
+## Findings
 
-- Main: `develop`, HEAD
-  `0f8902a023bac76071527232c2287af96478ed2b`.
-- Plugin: `develop`,
-  `f0abb7e7037e66ab451d463c699fecf4e00c89eb`; only the pre-existing
-  untracked social-preview image is present there.
-- Existing unrelated working-tree changes were preserved. The W12 product
-  changes are limited to the SFTP error-translation paths in
-  `services/files_ssh.py` and wx file-view progress forwarding in `wx_shell.py`;
-  the W12 regression module is `tests/test_w12_sftp_semantics.py`.
-- Full relevant diff was inspected; `git diff --check` is clean. No secrets,
-  generated/binary noise, weakened tests, skips, or xfails were found.
+### REOPEN-W12-001 — external evidence uses the wrong environment
 
-## Verification
+`EV-W12-EXT-001` was run against `127.0.0.1:2222`, a containerized `hpclab`
+environment. `.opencode/protocol/LOCAL_REAL_HPC_LAB.md` requires LOCAL_REAL
+by default for this generic real SFTP requirement: `LOCAL_REAL_HYPERV`,
+controller `192.168.250.11:22`, profile/provider `local-real`, and SSH-key
+authentication. The emitted profile JSON was inspected for identity only;
+private-key bytes were not read.
 
-- Focused regression suite rerun: `python -m pytest tests/test_w12_sftp_semantics.py -q`
-  → **13 passed** (including real wx `App`/`Frame` button-event tests).
-- External evidence independently rerun against authorized `hpclab` at
-  `127.0.0.1:2222` using the product `SSHFilesBackend`: **14/14 PASS**.
-  The run covered all 15 rows, including real permission/missing-path
-  filename attribution, overwrite/cancel byte preservation, Unicode/space
-  paths, hash equality (`82f100670e8176a0`), and forced mid-transfer
-  disconnect (`OSError` after callbacks, no false success).
-- Lab identity was checked (`healthy`, `sinfo` idle node, `slurmctld UP`). The
-  disposable W12 fixture was removed and verified absent; the pre-existing
-  container remained healthy. The fixture password was not recorded in the
-  report/evidence.
-- The report’s baseline, sensitivity, broader regression, GUI, and diff
-  evidence was re-read. The two claimed P1 fixes each have pre-fix failure and
-  post-fix success proof; the reported native/timing flakes were rerun green
-  and are outside the touched behavior.
+Current `lab-status.ps1` independently reports LOCAL_REAL `PASS`, healthy
+services, idle compute nodes, valid image pin, and a valid emitted profile.
+That proves the environment is available, but does not prove W12. No current
+W12 raw evidence artifact proves all 15 requirements against LOCAL_REAL or
+binds the run to current HEAD/worktree identity. Re-run the complete W12
+GUI/EXTERNAL acceptance against LOCAL_REAL, recording exact requirement IDs,
+identity, and cleanup, then audit again.
 
-## Requirement trace verdict
+### REOPEN-W12-002 — stale report and dependency identity
 
-`HPC-W03-SFTP-001..015` each has a live implementation owner, behavioral test
-or proof, and current matrix/external evidence in `W12_WAVE_REPORT.md`.
-GUI evidence is real wx runtime/event evidence, not static-only inspection;
-external evidence is real infrastructure, not a mock substitution. No owned
-P0/P1/P2/P3 finding remains, and no cross-Wave ownership escape was identified.
+The W12 report, prior audit, and W11 dependency report retain the obsolete
+`0f8902a...` identity while repository truth is `f94adb6...`. Reconcile the
+canonical W12 report and evidence provenance after the LOCAL_REAL replay.
 
-W12 satisfies its GUI and EXTERNAL evidence classes and is ready for closeout.
+## Verdict
+
+The implementation-focused tests are green and no new product defect was
+asserted. Mandatory EXTERNAL evidence is stale, uses the wrong environment
+identity, and is not bound to current repository truth. W12 is not eligible
+for closeout until evidence/report refresh and a fresh independent audit.
+
+WAVE_PHASE_STATUS: REOPEN

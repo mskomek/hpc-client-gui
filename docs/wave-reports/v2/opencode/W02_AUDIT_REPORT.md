@@ -2,62 +2,73 @@
 
 ## Decision
 
-**PASS**
-
-Fresh-context post-repair audit completed for exactly W02. The pending contract
-is present and unambiguous, and the prior stale-accounting finding is resolved.
+**BLOCKED** — W02's owned implementation and focused checks are green, but its
+canonical dependency W01 is currently `REOPEN`; W02 cannot be accepted while
+that prerequisite remains unresolved.
 
 ## Authority and identity
 
-- Executable authority: `waves/pending/W02.md` only; `waves/pending/` contains
-  exactly W01-W61 (61 files), with one W02 definition. `waves/bak/` was not
-  used.
+- Audited exactly `waves/pending/W02.md`; it is present and unambiguous. No
+  Wave definition was read from `waves/bak/`.
+- Re-read `.opencode/prompts/30_AUDIT_WAVE.md`,
+  `.opencode/protocol/CORE_EXECUTION_RULES.md`, the W02 registry/TODO rows,
+  and Workstream B of `opencode/sources/WAVE_V2_FINAL_01.md` (§218–226).
+- Owned IDs: `HPC-W01-TRACE-001`, `HPC-W01-TODO-ERROR-GOV-001`,
+  `HPC-W01-TODO-018`, `HPC-W01-TODO-ERROR-GOV-002`, and
+  `HPC-W01-TODO-020`.
 - Main repository: branch `develop`, HEAD
-  `0f8902a023bac76071527232c2287af96478ed2b`.
-- Plugin repository: `../hpc-client-gui-plugins`, branch `develop`, SHA
-  `f0abb7e7037e66ab451d463c699fecf4e00c89eb`; its only working-tree item is
-  the pre-existing untracked `.github/social-preview.jpg`, preserved and not
-  used as W02 implementation.
-- Re-read: core execution rules, W02, its owned registry/TODO rows, the
-  requirement-wave index, TODO ownership map, and mandatory Workstream B source
-  section. Owned IDs are `HPC-W01-TRACE-001`,
-  `HPC-W01-TODO-ERROR-GOV-001`, `HPC-W01-TODO-018`,
-  `HPC-W01-TODO-ERROR-GOV-002`, and `HPC-W01-TODO-020`.
+  `f94adb640136181dbaafa84f62c753b013f0b94e`.
+- Dependency truth: the current canonical `W01_AUDIT_REPORT.md` is
+  `REOPEN`, with open current-tree identity/evidence findings. The W02 wave
+  report's assertion that W01 is `PASS` is stale and cannot override the
+  independent dependency audit.
+- Read-only plugin identity remains `develop` /
+  `f0abb7e7037e66ab451d463c699fecf4e00c89eb`; no W02 plugin change is needed.
 
-## Requirement and evidence review
+## Independent verification
 
-The canonical W02 report provides the required action ownership map, keeps local
-and remote editor-save semantics separate, routes cross-Wave work explicitly,
-and records the repaired dispatch/browser failure paths. The focused evidence
-was independently rerun: `tests/test_wx_dispatch_error_gov.py`,
-`tests/test_wx_shell_w01_truth.py`, and `tests/test_w01_sensitivity.py` passed
-56/56. The GUI-filtered run passed 1/1 and exercises a real wx menu event into
-the coded failure dialog. No owned blocking defect remains.
+- Focused command rerun:
+  `$env:PYTHONPATH='src'; .venv\Scripts\python.exe -m pytest -q --basetemp="$env:LOCALAPPDATA\Temp\opencode\w02-audit-independent-20260921-r3" tests/test_wx_dispatch_error_gov.py tests/test_wx_shell_w01_truth.py tests/test_w01_sensitivity.py tests/test_wx_shell.py`
+  — **61 passed**, exit 0.
+- Current source, tests, and `artifacts/v2-final/W02/OWNERSHIP_MAP.md` were
+  reviewed. The map traces the dispatch routes and keeps local and remote
+  editor saves separate; its implementation pin matches HEAD.
+- W02 requires GUI evidence only. EXTERNAL, PACKAGE, LOCAL_REAL, and final
+  package-artifact SHA evidence are not applicable.
 
-## Diff, hygiene, secrets, and routing review
+## Current diff and evidence review
 
-- Current main-tree accounting matches the canonical report: 14 tracked
-  modified entries, 12 top-level untracked entries, and tracked diff stat
-  277 insertions / 83 deletions. The full tracked diff was inspected.
-- W02 changes are limited to the wx error helper/tests, dispatch and i18n
-  hunks; concurrent and cross-Wave changes are explicitly attributed and were
-  preserved. The untracked overlay report directory contains the canonical
-  Wave reports and was not edited except for this W02 audit report.
-- `git diff --check` is clean; only normal LF/CRLF conversion warnings appear.
-  Secret review found no credentials, private keys, tokens, `.env`, or signing
-  material in the W02 implementation, evidence, or reports. Local FFSync
-  sidecars and other untracked artifacts remain untouched.
-- Cross-Wave observations remain routed to their true owners; W02 does not
-  absorb Settings Apply, plugin schema, lifecycle, package, or external-system
-  work.
+- Immediately before this report update, `git status --porcelain` showed 25
+  entries: 23 tracked modifications and 2 untracked paths. The existing
+  W02 report's 23-entry/21-modified inventory is therefore stale.
+- The current diff and `git diff --check` were reviewed; the latter exits 0
+  with only normal line-ending conversion warnings. Existing lab, report,
+  sync-sidecar, and local-script changes were preserved and are not credited
+  to W02. No product/test finding was fixed by this audit.
+- No private-key bytes or credential contents were read.
 
-## Findings
+## Requirement disposition
 
-Prior `AUDIT-W02-001` (stale canonical working-tree/diff accounting) is closed:
-the refreshed report records the current status, diff stat/numstat, clean
-diff-check, ownership attribution, and preserved unrelated changes. No new
-W02 finding was identified.
+- `HPC-W01-TRACE-001`: **PROVISIONALLY PASS** — ownership map and route tests
+  satisfy the owned trace at the current implementation SHA.
+- `HPC-W01-TODO-ERROR-GOV-001`: **PROVISIONALLY PASS** — mandatory dispatch
+  failures are not silently swallowed; residual guards are routed or
+  justified.
+- `HPC-W01-TODO-018`: **PROVISIONALLY PASS** — typed, visible, structured
+  handling is present for the owned failure paths.
+- `HPC-W01-TODO-ERROR-GOV-002`: **PROVISIONALLY PASS** — mandatory visible
+  failures carry stable diagnostic IDs and structured logging.
+- `HPC-W01-TODO-020`: **PROVISIONALLY PASS** — focused GUI/error tests verify
+  that failures do not leave a success-looking UI.
 
-## Final status
+## Findings and blocker routing
 
-`PASS` — W02 is ready for close. No downstream Wave was started.
+| Finding | Severity | Owner/state |
+|---|---|---|
+| `W02-AUDIT-001`: canonical dependency W01 is `REOPEN` for stale report/evidence identity at the same HEAD. W02's dependency claim is contradictory to current dependency truth. | P1 | W01 report/evidence reconciliation; BLOCKING |
+| `W02-AUDIT-002`: W02 report records 23 status entries / 21 tracked paths, while the independently measured current tree has 25 / 23. | P1 | W02 report refresh; OPEN, but this audit may update only the audit artifact |
+
+No W02 product/test repair is authorized or performed. A fresh W02 audit is
+required after W01 is accepted and the W02 report/diff inventory is reconciled.
+
+WAVE_PHASE_STATUS: BLOCKED

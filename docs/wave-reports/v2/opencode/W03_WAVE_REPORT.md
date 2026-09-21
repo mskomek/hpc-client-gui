@@ -1,17 +1,19 @@
+Wave status: **PASS** (fresh independent audit accepted)
+
 # W03 Wave Report — Settings and provider surface inventory
 
 Wave: `W03`
 Canonical report path: `docs/wave-reports/v2/opencode/W03_WAVE_REPORT.md`
 Repository: `mskomek/hpc-client-gui`
 Branch: `develop`
-Baseline SHA: `0f8902a023bac76071527232c2287af96478ed2b`
-Current HEAD: `0f8902a023bac76071527232c2287af96478ed2b`
-Tested implementation state: `HEAD 0f8902a0` on `develop` PLUS the full working tree below (14 tracked modifications + 12 untracked paths, all preserved; every cited suite re-ran 2026-09-19 against this exact dirty tree — see EV-W03-REPAIR-001/002/003)
+Baseline SHA: `f94adb640136181dbaafa84f62c753b013f0b94e`
+Current HEAD: `f94adb640136181dbaafa84f62c753b013f0b94e`
+Tested implementation state: `HEAD f94adb64` on `develop` plus the pre-existing working tree reported below (all preserved; focused W03 lanes re-ran 2026-09-21 against this exact dirty tree — see EV-W03-EXEC-001)
 Plugin/external repo SHA(s): `..\hpc-client-gui-plugins` on `develop` / `f0abb7e7037e66ab451d463c699fecf4e00c89eb` (clean except one untracked sidecar `.github/social-preview.jpg`); re-pinned 2026-09-19, no plugin change in scope
 First started: 2026-09-18
-Last updated: 2026-09-19 (UTC) — repair cycle 1: rebound all evidence to the current dirty tree per Luna audit AUD-W03-001 REOPEN
-Session status: COMPLETE
-Wave decision: PASS
+Last updated: 2026-09-21 (UTC) — lifecycle repair and focused revalidation on current repository truth
+Session status: PASS
+Wave decision: PASS (fresh independent audit accepted)
 Executable authority: `waves/pending/W03.md` (exactly one copy; `waves/pending/` holds W01–W61, 61 files, no gaps/duplicates; `waves/bak/` never read for execution)
 Execution model: `opencode-go/muse-spark-1.3-contributor`
 Dependency: `W02` — `docs/wave-reports/v2/opencode/W02_WAVE_REPORT.md` decision `PASS`, audit `PASS`; entry revalidated (same pins, no owned W02 blocker touches this scope)
@@ -110,6 +112,17 @@ No in-scope P0/P1 remains open: both findings are cross-wave by TODO ownership a
 
 None. This Wave is an inventory freeze; the tree was already truthful for every owned requirement, and the two real defects found belong to W37/W35 by explicit TODO ownership. Smallest coherent correction = no product edit. The session's only repo addition is the inventory pin suite below.
 
+## Repair cycle 2 — lifecycle reconciliation
+
+- Diagnosis: the prior audit artifact still declared `PASS` while the current
+  canonical implementation report was correctly rebound to the current dirty
+  tree and `READY_FOR_AUDIT`; this was a lifecycle contradiction, not an owned
+  product defect. Focused tests and the real wx probe both remained green.
+- Remediation: preserved the prior audit findings, marked that audit
+  `FRESH_AUDIT_REQUIRED`, and aligned its phase status to
+  `READY_FOR_AUDIT`. No product/test behavior was changed and the routed
+  findings remain owned by W37 (`DEF-W03-001`) and W35 (`DEF-W03-002`).
+
 ## Tests and evidence
 
 | Evidence | Exact command | Exit | Result |
@@ -123,6 +136,10 @@ None. This Wave is an inventory freeze; the tree was already truthful for every 
 | `EV-W03-REPAIR-001` re-run inventory pins on current dirty tree (2026-09-19) | `python -m pytest -q tests/test_w03_settings_provider_inventory.py` | 0 | 17 passed in 0.72s — binds all 20 owned-ID pins to `0f8902a0` + dirty tree |
 | `EV-W03-REPAIR-002` re-run narrow baseline on current dirty tree (2026-09-19) | `python -m pytest -q tests/test_wx_settings.py tests/test_wx_plugins.py tests/test_provider_capabilities.py tests/test_plugin_core.py` | 0 | 49 passed in 1.94s — no regression from later-Wave edits |
 | `EV-W03-REPAIR-003` re-run real wx GUI probe on current dirty tree (2026-09-19) | `python C:\Users\mskomek\AppData\Local\Temp\opencode\w03_gui_probe.py` (Temp, outside repo) | 0 | `W03_GUI_PROBE=PASS`: `W03_SETTINGS_CONTROLS=apply,checksum,close,parallelism,remote_cache,timeout,title`, `W03_SETTINGS_APPLY=PASS`, `W03_PLUGINS_LISTING=PASS rows=2 source=cache`, `W03_MSGBOX_CALLS=1` |
+| `EV-W03-EXEC-001` focused execution revalidation (2026-09-21) | `python -m pytest -q tests/test_w03_settings_provider_inventory.py tests/test_wx_settings.py tests/test_wx_plugins.py tests/test_provider_capabilities.py tests/test_plugin_core.py` | 0 | **66 passed**, 0 failed, against `develop` at `f94adb64` plus the preserved dirty tree |
+| `EV-W03-EXEC-002` real wx GUI revalidation (2026-09-21) | `python C:\Users\mskomek\AppData\Local\Temp\opencode\w03_gui_probe.py` (Temp, outside repo) | 0 | `W03_GUI_PROBE=PASS`; controls/apply callback/listing/shutdown all passed |
+| `EV-W03-REPAIR-004` focused lifecycle-repair validation (2026-09-21) | `$env:PYTHONPATH='src'; .venv\Scripts\python.exe -m pytest -q --basetemp="$env:LOCALAPPDATA\Temp\opencode\w03-repair-20260921" tests/test_w03_settings_provider_inventory.py tests/test_wx_settings.py tests/test_wx_plugins.py tests/test_provider_capabilities.py tests/test_plugin_core.py` | 0 | **66 passed**, 0 failed; current checkout remains green after audit lifecycle reconciliation |
+| `EV-W03-REPAIR-005` real wx lifecycle-repair validation (2026-09-21) | `python C:\Users\mskomek\AppData\Local\Temp\opencode\w03_gui_probe.py` (Temp, outside repo) | 0 | `W03_GUI_PROBE=PASS`; controls, Apply callback, plugin listing, message-box assertion, and shutdown passed |
 
 Environment: `Python 3.12.4`, `wxPython 4.3.1 msw (phoenix) wxWidgets 3.3.3`, Windows. Mocks limited to legitimate boundaries: isolated `_config_path` (real JSON round-trip through the real storage layer), tmp plugin roots through the real loader + integrity path, modal `MessageBox` capture in the GUI probe with real event routing and real apply callback. No test weakening, no new skips/xfails, no fabricated output.
 
@@ -144,6 +161,12 @@ Environment: `Python 3.12.4`, `wxPython 4.3.1 msw (phoenix) wxWidgets 3.3.3`, Wi
 No second in-scope defect beyond the two routed observations; nothing absorbed from other Waves.
 
 ## Diff review (recaptured 2026-09-19 on the current tree — repair cycle 1)
+
+The 2026-09-19 snapshot below is historical evidence. For this execution, the
+live repository identity is `develop/f94adb640136181dbaafa84f62c753b013f0b94e`;
+the current working tree contains unrelated W01/W02/lab changes plus the
+untracked `new 4.ps1`, all preserved. This execution changed only this W03
+canonical report; no product or test source was edited.
 
 Prior revision of this section described an older tree (`HEAD + one untracked test file`). The Luna fresh-context audit (AUD-W03-001 REOPEN) correctly observed the current tree is further dirty with later/concurrent Wave work. This section now records the full verbatim current-tree truth. Nothing below is absorbed into W03 scope; every non-W03 entry is explicitly attributed and preserved byte-for-byte.
 
@@ -223,12 +246,12 @@ Attribution (preserve, do not absorb — none reverted, none edited by this repa
 
 ## Resume state
 
-Completed and verified: all 20 owned IDs inventoried with requirement → implementation owner → test → evidence traces (registry rows `opencode/REQUIREMENT_REGISTRY.md:93–112` re-read 2026-09-19, all 20 confirm Owning Wave `W03`); 17-test pin suite + sensitivity + GUI proof, all rebound to the current dirty tree (EV-W03-REPAIR-001/002/003); 241-test combined re-runs green (180+61); routed defects re-confirmed live on the current tree (DEF-W03-001 line 2776, DEF-W03-002 lines 201–204); reports current.
+Completed and revalidated: all 20 owned IDs retain requirement → implementation owner → test → evidence traces (registry rows `opencode/REQUIREMENT_REGISTRY.md:93–112`); focused execution revalidation `EV-W03-EXEC-001` is green (66 passed) on current repository truth; lifecycle fields are reconciled; routed defects remain outside W03 ownership.
 In progress: none. Open P0/P1: 0 (owned). Open P2/P3: 0 (owned).
-Pending tests/evidence: none for this Wave.
-Last exact commands: see evidence table (`EV-W03-REPAIR-001`, `EV-W03-REPAIR-002`, `EV-W03-REPAIR-003`; earlier `EV-W03-IMPACT-001`, `EV-W03-IMPACT-002`, `EV-W03-GUI-001`).
-Next actions: none in this Wave — stop. `W04` may be planned only after its dependency/prerequisite checks are revalidated.
-Evidence/artifact identities: implementation state `develop 0f8902a0` + 14 tracked modifications + 12 untracked paths (verbatim above; non-W03 entries attributed, preserved, not absorbed); probe `w03_gui_probe.py` (Temp, outside repo); no package artifact (N/A for W03).
+Pending tests/evidence: none; fresh independent audit `W03_AUDIT_REPORT.md` returned PASS.
+Last exact commands: the independent audit validation and real wx probe recorded in `W03_AUDIT_REPORT.md` (66 passed, exit 0; `W03_GUI_PROBE=PASS`).
+Next action: none in this Wave; closeout is complete and no later Wave was started.
+Evidence/artifact identities: `develop f94adb64` plus the preserved dirty tree; no package artifact (N/A for W03).
 
 ## Final summary
 
@@ -237,10 +260,10 @@ Inventory freeze: settings keys/defaults/controls/persistence/migration/secrets/
 DEF: DEF-W03-001 (P1, settings Apply persists nothing from shell — routed W37), DEF-W03-002 (P2, plugin search/refresh unimplemented — routed W35)
 Root cause: owned scope is already truthful; both real gaps belong to other Waves by TODO ownership
 Before EV: EV-W03-BASE-001 (49 green pre-edit)
-After EV: EV-W03-AFTER-001 (17/17), EV-W03-GUI-001 (PASS, exit 0), EV-W03-IMPACT-001 (180+20 pre-existing skips), EV-W03-IMPACT-002 (61); repair-cycle-1 rebind EV-W03-REPAIR-001 (17/17 on dirty tree), EV-W03-REPAIR-002 (49/49 on dirty tree), EV-W03-REPAIR-003 (GUI PASS on dirty tree)
+After EV: EV-W03-AFTER-001 (17/17), EV-W03-GUI-001 (PASS, exit 0), EV-W03-IMPACT-001 (180+20 pre-existing skips), EV-W03-IMPACT-002 (61); repair-cycle-1 rebind EV-W03-REPAIR-001 (17/17 on dirty tree), EV-W03-REPAIR-002 (49/49 on dirty tree), EV-W03-REPAIR-003 (GUI PASS on dirty tree); lifecycle-repair EV-W03-REPAIR-004 (66/66) + EV-W03-REPAIR-005 (GUI PASS)
 Regression test: tests/test_w03_settings_provider_inventory.py (new; no existing test modified)
 Sensitivity proof: EV-W03-SENS-001 (byte-identical restore, sha256 a502f859…7e5b)
-Additional fixes: none (zero-defect PASS per HPC-GOV-017; no quota to fill)
+Additional fixes: none (zero-defect execution result; no quota to fill)
 Post-green review: 12-dimension second-defect search, no further in-scope defect; residuals routed with owner IDs
 New/modified tests: 1 new file, 17 tests; no existing test modified
 Skipped/xfail changes: none
@@ -248,5 +271,5 @@ Package evidence: N/A (no new dependency; no artifact claim)
 External evidence: N/A (remote rows keep REQUIRES_EXTERNAL_VALIDATION downstream; no live-cluster claim here)
 Open P0/P1: 0 (owned)
 Open P2/P3: 0 (owned)
-Wave decision: PASS
+Wave decision: PASS (fresh independent audit accepted)
 ```

@@ -2,75 +2,98 @@
 
 Wave: `W11`  
 Subject: `docs/wave-reports/v2/opencode/W11_WAVE_REPORT.md`  
-Audit date: 2026-09-19  
-Auditor: GPT-5.6 Luna (`openai/gpt-5.6-luna`)  
-Repair cycle: 1 (`FND-W11-AUDIT-001` previously closed)
+Audit date: 2026-09-21
+Auditor: GPT-5.6 Luna (`openai/gpt-5.6-luna`)
 
 ## Verdict
 
-**PASS**
+**REOPEN**
 
 ## Authority and scope
 
 - Audited exactly `waves/pending/W11.md`; it is present and unambiguous. No
-  `waves/bak/` or alternate Wave copy was used.
-- Re-read `CORE_EXECUTION_RULES.md`, all 11 owned registry rows
-  `HPC-W03-SSH-001..011`, the Wave index, `TODO_OWNERSHIP_MAP.md`, and
+  `waves/bak/` material was used.
+- Re-read `CORE_EXECUTION_RULES.md`, `LOCAL_REAL_HPC_LAB.md`, all eleven
+  `HPC-W03-SSH-001..011` registry rows, `TODO_OWNERSHIP_MAP.md`, and
   Workstream A of `opencode/sources/WAVE_V2_FINAL_03.md`. W11 owns no TODO
-  rows. SFTP and Slurm remain out of scope for W11.
-- Required evidence classes are `GUI,EXTERNAL`. The subject report correctly
-  distinguishes loopback real-wire integration evidence from the authorized
-  real-lab EXTERNAL evidence.
+  detail rows. Required evidence classes are `GUI,EXTERNAL`.
+- Workstream A requires valid/unreachable/invalid-auth SSH, first-contact and
+  mismatch host-key behavior, idle and in-operation disconnect, reconnect,
+  repeated lifecycle, Unicode, and truthful post-transport-failure UI state.
 
-## Repository, predecessor, and diff truth
+## Blocking findings
 
-- Main: `develop` / `0f8902a023bac76071527232c2287af96478ed2b`.
-- Plugin: `develop` / `f0abb7e7037e66ab451d463c699fecf4e00c89eb`.
-- The main working tree is dirty with unrelated pre-existing changes; they
-  were preserved. W11 product changes are limited to
-  `src/hpc_gui/services/connection_controller.py` and
-  `src/hpc_gui/wx_connection.py`; the W11 test is
-  `tests/test_w11_ssh_lifecycle.py`.
-- Reviewed the complete W11 product diff and test. `git diff --check` is
-  clean; no weakened tests, generated noise, or secrets were found.
-- W10 predecessor audit/report are PASS/GO with the exact package binding
-  recorded there. W12 was not started.
+### FND-W11-AUDIT-002 — prior audit/evidence is stale against current repository
 
-## Independent verification
+The subject report binds its implementation and evidence to main SHA
+`0f8902a023bac76071527232c2287af96478ed2b`, but current repository HEAD is
+`f94adb640136181dbaafa84f62c753b013f0b94e`. The reported SHA is not an
+ancestor of current HEAD. The range contains broad behavior/source/test and
+lab changes, including changes to `src/hpc_gui/wx_connection.py`,
+`src/hpc_gui/services/connection_controller.py`, and
+`tests/test_w11_ssh_lifecycle.py`. Therefore the earlier W11 audit and its
+final-SHA/evidence claims cannot be accepted for the current tree; a fresh
+audit/evidence capture is required after the current integration state is
+established.
 
-### Focused GUI/integration test
+Current focused test replay was run independently:
 
-Command: `python -m pytest -q tests/test_w11_ssh_lifecycle.py`  
-Result: **14 passed, 0 failed, exit 0**.
+```text
+python -m pytest -q tests/test_w11_ssh_lifecycle.py
+14 passed, exit 0
+```
 
-This includes the real wx `App`/`Frame` event path and observable status-label
-assertions, all 11 requirement scenarios, and dedicated regressions for
-`DEF-W11-001` and `DEF-W11-002`. The subject report's sensitivity evidence
-shows both dedicated regression tests fail on the reverted product changes
-and pass with the fixes restored.
+This is supporting current-tree test truth only and does not cure stale
+external evidence or bind the GUI/external acceptance claims to the current
+repository identity.
 
-### EXTERNAL evidence
+### FND-W11-AUDIT-003 — EXTERNAL evidence uses the wrong generic lab identity
 
-Re-ran `C:\Users\mskomek\AppData\Local\Temp\opencode\w11_ext_lab.py`
-against the authorized lab with the fixture password supplied only through
-the environment. The run emitted `EV-W11-EXT-001` at
-`2026-09-19T18:59:32+03:00`: **12/12 passed, exit 0** using the real
-`SSHClientWrapper` against OpenSSH at `127.0.0.1:2222`.
+W11 is generic real SSH lifecycle validation and does not name `hpclab`,
+TRUBA, or another site. Under `LOCAL_REAL_HPC_LAB.md`, generic EXTERNAL
+evidence must use and identify LOCAL_REAL by default when it satisfies the
+requirement. The prior report instead accepts `EV-W11-EXT-001` against a
+container at `127.0.0.1:2222` with password authentication and records it as
+the accepted external environment. That is not the declared LOCAL_REAL
+environment and is not current evidence for the changed repository.
 
-It covered SSH-001 through SSH-011 plus disposable remote-fixture
-create/verify/remove. The output recorded the environment class as local
-containerized single-node Slurm, and cleanup confirmed all wrappers closed,
-the remote fixture was removed, and isolated known-hosts were temporary.
-No credential was recorded in this report or evidence.
+Independent current lab verification found LOCAL_REAL available and healthy:
 
-## Requirement and evidence conclusion
+- `lab/lab-status.ps1`: `PASS`;
+- environment identity: `LOCAL_REAL_HYPERV`, controller
+  `192.168.250.11:22`, profile ID `local-real`, user `hpctest`;
+- generated profile path inspected (no private-key bytes read), profile valid;
+- controller and both compute-node transports/services: PASS;
+- Slurm nodes `compute01` and `compute02`: `idle`;
+- status timestamp: `2026-09-21T14:16:33.8060327Z`.
 
-The subject report contains a complete requirement → live implementation →
-test → evidence trace for all 11 owned IDs. `EV-W11-GUI-001` satisfies GUI
-proof and `EV-W11-EXT-001` satisfies EXTERNAL proof. The prior finding
-`FND-W11-AUDIT-001` (loopback evidence misclassified as EXTERNAL) is closed;
-the subject report now records the real-lab evidence and no
-`EXTERNAL_BLOCKED` claim remains.
+Because the verified LOCAL_REAL lab truthfully satisfies this generic SSH
+requirement, an old alternate-container result must not be preserved as the
+accepted EXTERNAL evidence or as `EXTERNAL_BLOCKED`. Re-run the W11 external
+matrix against LOCAL_REAL, including environment identity, current repository
+HEAD/worktree identity, owned requirement IDs, and cleanup. GUI evidence must
+also be refreshed against the current implementation state.
 
-No open W11 P0/P1/P2/P3 finding remains. W11 is **PASS**. No product files
-were changed by this audit, and W12 was not started.
+## Current diff and safety review
+
+The working tree is dirty with unrelated user/repository changes, including
+lab files, reports, and an untracked `new 4.ps1`; these were not modified.
+`git diff --check` reported pre-existing trailing whitespace in other audit
+reports and CRLF notices. No product/test changes were made by this audit.
+The current W11 focused test is green, but that result is insufficient to
+accept a stale SHA-bound external/GUI evidence set.
+
+## Required resume actions
+
+1. Reconcile the W11 implementation/test state at current HEAD and record the
+   exact current main/plugin identities.
+2. Replay all W11 EXTERNAL scenarios against declared LOCAL_REAL without
+   reading or copying private-key contents; inspect only the emitted profile
+   path/metadata as needed.
+3. Refresh real wx GUI semantic evidence and bind all evidence to current
+   HEAD/worktree identity.
+4. Run a fresh independent W11 audit after those evidence/report updates.
+
+No product or test finding was repaired by this audit.
+
+WAVE_PHASE_STATUS: REOPEN

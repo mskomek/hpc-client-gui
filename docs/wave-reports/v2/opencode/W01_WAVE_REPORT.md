@@ -1,11 +1,19 @@
 # W01 Wave Report — Visible UI inventory
 
-## Current resume refresh (2026-09-20)
+## Current execution refresh (2026-09-21)
+
+- Executed exactly the canonical `waves/pending/W01.md`; no file under `waves/bak/` was used and no other Wave was started. Pending authority check: 61 definitions (`W01.md`–`W61.md`) and exactly one `W01.md`.
+- Current repository truth: branch `develop`, HEAD `f94adb640136181dbaafa84f62c753b013f0b94e`; working tree has 20 status entries, 18 tracked diff paths, 1,433 insertions, and 278 deletions, plus 2 untracked paths. These are unrelated lab/FFS changes and remain preserved without credit to W01.
+- Required focused verification: `.venv\Scripts\python.exe -m pytest -q --basetemp="$env:LOCALAPPDATA\Temp\opencode\w01-resume-20260921" tests/test_w04_support_freeze.py tests/test_wx_shell_w01_truth.py tests/test_w01_sensitivity.py tests/test_wx_help.py tests/test_command_palette.py tests/test_command_palette_regression.py tests/test_help_shortcut_reference.py tests/test_about_dialog.py tests/test_wx_shell.py tests/test_help_search.py tests/test_help_catalog.py tests/test_platform_keymap.py` → **72 passed**, exit 0. The external basetemp was removed afterward.
+- `git diff --check` was previously clean for the current unrelated changes (only normal LF/CRLF conversion warnings). No W01 product implementation change was required in this execution.
+- The prior audit report records an older repository SHA and is stale for this current working tree; a fresh independent audit is required. W01 is **READY_FOR_AUDIT**. No next Wave was started.
+
+## Prior resume refresh (2026-09-20)
 
 - Resumed only from `waves/pending/W01.md` using `opencode/prompts/40_RESUME_WAVE.md`; no other Wave was loaded for execution and `waves/bak/` was not used.
 - Current repository truth is unchanged: branch `develop`, HEAD `0f8902a023bac76071527232c2287af96478ed2b`, 150 status entries, 34 tracked diff paths, 2,426 insertions, and 310 deletions. Unrelated working-tree changes remain preserved.
 - Pending authority check: exactly 61 definitions (`W01.md`–`W61.md`) and exactly one `W01.md`.
-- Current focused verification: `.venv\Scripts\python.exe -m pytest -q --basetemp="$env:LOCALAPPDATA\Temp\opencode\w01-resume-current" tests/test_w04_support_freeze.py tests/test_wx_shell_w01_truth.py tests/test_w01_sensitivity.py tests/test_wx_help.py tests/test_command_palette.py tests/test_command_palette_regression.py tests/test_help_shortcut_reference.py tests/test_about_dialog.py tests/test_wx_shell.py tests/test_help_search.py tests/test_help_catalog.py tests/test_platform_keymap.py` → **72 passed**, exit 0. The external basetemp was removed afterward.
+- Historical focused verification: `.venv\Scripts\python.exe -m pytest -q --basetemp="$env:LOCALAPPDATA\Temp\opencode\w01-resume-current" tests/test_w04_support_freeze.py tests/test_wx_shell_w01_truth.py tests/test_w01_sensitivity.py tests/test_wx_help.py tests/test_command_palette.py tests/test_command_palette_regression.py tests/test_help_shortcut_reference.py tests/test_about_dialog.py tests/test_wx_shell.py tests/test_help_search.py tests/test_help_catalog.py tests/test_platform_keymap.py` → **72 passed**, exit 0. The external basetemp was removed afterward.
 - `git diff --check` exited 0 with only normal LF/CRLF conversion warnings. No product implementation change was required during this resume.
 - Existing canonical audit remains the latest audit evidence (`PASS`); this resume leaves W01 **READY_FOR_AUDIT** and does not start W02.
 

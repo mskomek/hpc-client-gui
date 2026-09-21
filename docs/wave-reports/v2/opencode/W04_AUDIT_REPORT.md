@@ -2,77 +2,74 @@
 
 Wave: `W04`  
 Implementation report: `docs/wave-reports/v2/opencode/W04_WAVE_REPORT.md`  
-Audit date: 2026-09-19 UTC  
-Decision: **PASS**
+Audit date: 2026-09-21 UTC
+Decision: **BLOCKED**
 
 ## Authority and identity
 
 - Audited exactly `waves/pending/W04.md`; it is present and unambiguous. No
   `waves/bak/` material was used.
-- Re-read `opencode/protocol/CORE_EXECUTION_RULES.md`,
-  `opencode/prompts/30_AUDIT_WAVE.md`, all 34 owned registry/index rows
-  (`HPC-W01-TRUTH-047…072`, `076…083`), all 3 owned TODO rows, and every
-  mandatory `WAVE_V2_FINAL_01.md` section named by W04.
-- Main: `develop` / `0f8902a023bac76071527232c2287af96478ed2b`.
-- Plugin: `develop` / `f0abb7e7037e66ab451d463c699fecf4e00c89eb`; working tree
-  has only the pre-existing untracked `.github/social-preview.jpg`.
-- Runtime: Windows, Python 3.12.4, wxPython 4.3.1 msw / wxWidgets 3.3.3.
+- Re-read `.opencode/prompts/30_AUDIT_WAVE.md`,
+  `.opencode/protocol/CORE_EXECUTION_RULES.md`, the W04-owned registry rows
+  `HPC-W01-TRUTH-047…072` and `076…083`, all three W04 TODO rows, and the
+  mandatory source sections in `opencode/sources/WAVE_V2_FINAL_01.md`.
+- Current repository: branch `develop`, HEAD
+  `f94adb640136181dbaafa84f62c753b013f0b94e`.
+- The W04 implementation report and its prior audit are bound to
+  `0f8902a023bac76071527232c2287af96478ed2b`, not the current HEAD. The
+  checkout is dirty with unrelated W01/W02/W03/report, LOCAL_REAL lab, FFSync,
+  and `new 4.ps1` changes. No private-key bytes or other secret material were
+  read.
+- W04 requires `GUI` evidence only; no LOCAL_REAL/EXTERNAL replay is required
+  for this Wave.
 
-## Requirement and implementation trace
+## Requirement and live-evidence review
 
-The canonical W04 report and `artifacts/v2-final/W04/SUPPORT_MATRIX_FREEZE.md`
-trace all 34 requirements and 3 TODO details requirement → live owner → test
-→ evidence. The freeze contains 56 unique rows with exact totals
-`SUPPORTED 24 / EXPERIMENTAL 17 / REQUIRES_EXTERNAL_VALIDATION 11 /
-DEPRECATED 2 / NOT-IN-V2 2 / HIDDEN 0 / UNSUPPORTED 0`; required evidence and
-verification-owner columns are distinct. W01-C/W01-D/W01-E ledger, ownership,
-absence, routing, contract, and sensitivity claims are pinned by the dedicated
-tests. Package and external claims remain honestly deferred/N/A.
+- Re-read `W04_WAVE_REPORT.md`, `artifacts/v2-final/W04/SUPPORT_MATRIX_FREEZE.md`,
+  current W04 test source, and the relevant live wx implementation. The report
+  traces all 34 owned requirements and three TODO details to the 56-row freeze,
+  tests, and GUI evidence, and records both prior W04 findings as closed.
+- Independently reran the focused W04 suite against the current checkout:
+  `python -m pytest tests/test_w04_support_freeze.py -q -p no:cacheprovider`
+  — **28 passed**, exit 0.
+- This green result does not clear the Wave: the cited W04 GUI/evidence and
+  implementation identity are recorded against the older SHA/working-tree
+  state, so the prior PASS cannot be inherited as current final-SHA evidence.
+  A fresh acceptance/audit is required after dependency reconciliation and
+  evidence rebinding to the actual current state.
 
-`DEF-W04-001` remains closed: live `wx_shell.py`, `wx_errors.py`, and en/tr
-bundles visibly report coded plugin failures for stale and exception paths.
+## Dependency truth
 
-`DEF-W04-002` is closed and independently re-verified. `_header_download`
-forwards the selected entries and current directory to the same remote
-`run_action` path as the toolbar, with an empty-selection fallback that
-terminates. The test helper only auto-cancels native `FileDialog`/`DirDialog`
-at the OS-modal boundary; real wx button events, panels, run-action wrappers,
-and routing assertions remain under test. No assertion was weakened and no
-skip/xfail was added.
+- W04 declares dependency `W03`.
+- The current canonical `docs/wave-reports/v2/opencode/W03_AUDIT_REPORT.md`
+  is independently **BLOCKED** because W03's dependency W02 is BLOCKED, and
+  W02 in turn has an unresolved W01 REOPEN/dependency reconciliation finding.
+- W04's report assertion that W03 is PASS is therefore stale and cannot be
+  used as dependency acceptance. W04 is blocked pending truthful W01/W02/W03
+  reconciliation, fresh audits, and revalidation of any invalidated evidence.
 
-## Fresh evidence
+## Diff, safety, and routing review
 
-| Check | Exact command / identity | Result |
+- Re-read current `git status`, `git diff --stat`, `git diff --check`, and the
+  relevant current diff. `git diff --check` has no whitespace errors beyond
+  normal line-ending conversion warnings.
+- No product or test finding was fixed by this audit. The only permitted file
+  update is this canonical W04 audit artifact.
+- The current HEAD differs from the SHA named by the W04 report; this is an
+  identity/evidence freshness blocker even though the focused W04 suite is
+  green. No package artifact or final package SHA is applicable to W04.
+
+## Findings and ownership routing
+
+| Finding | Severity | Owner/state |
 |---|---|---|
-| Isolated termination pin | `python -m pytest tests/test_w04_support_freeze.py -q -p no:cacheprovider -k header_upload_download` | **1 passed in 1.90s** |
-| Full W04 pin suite | `python -m pytest tests/test_w04_support_freeze.py -q -p no:cacheprovider` | **28 passed in 18.28s** |
-| GUI proof | `python C:\Users\mskomek\AppData\Local\Temp\opencode\w04_gui_probe.py` | **exit 0; W04_GUI_PROBE=PASS** — 5 menus, 7 tabs, `Ready`, real About dialog contract, stale plugin coded error |
-| Dispatch/release lanes | `python -m pytest tests/test_wx_dispatch_error_gov.py tests/test_wave10_release_gate.py -q -p no:cacheprovider` | **53 passed in 4.53s** |
-| Shell/truth/sensitivity lanes | `python -m pytest tests/test_wx_shell.py tests/test_wx_shell_w01_truth.py tests/test_w01_sensitivity.py -q -p no:cacheprovider` | **24 passed in 0.89s** |
+| `W04-AUDIT-001`: canonical dependency W03 is independently BLOCKED through W02/W01; W04 cannot be accepted from the stale dependency PASS claim. | P1 | W01/W02/W03 reconciliation and fresh audits; BLOCKING |
+| `W04-AUDIT-002`: W04 report/evidence identity is bound to `0f8902a0`, while current repository HEAD is `f94adb64`; prior audit/evidence cannot be inherited without fresh SHA-bound acceptance. | P1 | W04 evidence/report refresh and fresh independent audit; BLOCKING |
 
-The GUI probe emitted known wx duplicate-image-handler/WebView diagnostic
-noise but terminated successfully with its explicit PASS result. The isolated
-pin now terminates; the prior REOPEN condition is not present.
+## Resume state
 
-## Diff, routing, and safety review
+Re-audit W04 only after the dependency chain is truthfully accepted and the
+W04 GUI evidence/report is refreshed or explicitly rebound to the current
+implementation identity. Do not close W04 from the 28-test result alone.
 
-- Re-read the full relevant `wx_shell.py` diff and the complete untracked W04
-  test file. FIX-W04-B is the claimed handler change plus the native-modal test
-  boundary; FIX-W04-A/W02 changes are already carried working-tree changes and
-  were not misattributed. `git diff --check` is clean apart from normal
-  pre-existing CRLF warnings.
-- Current checkout remains dirty with unrelated/concurrent files and
-  untracked artifacts/tests; all were preserved. This audit changed only this
-  canonical audit report and did not edit product files.
-- Header upload/download routing is single-path and the diagnostic probe plus
-  fresh pin confirm termination and dispatch. Cross-wave gaps remain routed to
-  W35/W37/W08/W10 and are not absorbed by W04.
-- No credentials, tokens, `.env`, private keys, PEM/P12/PFX, `.ssh` material,
-  or signing secrets were exposed in the reviewed diff, tests, reports, or
-  GUI evidence. No package artifact or external-cluster claim is made.
-
-## Final decision
-
-**PASS** — all W04-owned requirements/TODO details are traced, current GUI and
-termination evidence is reproducible, both W04 defects are closed, routing and
-secret checks are clean, and no owned blocker remains. No next Wave was started.
+WAVE_PHASE_STATUS: BLOCKED

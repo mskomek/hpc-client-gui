@@ -4,7 +4,8 @@
   "gateway": "192.168.250.1",
   "image": {
     "url": "https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img",
-    "file": "ubuntu-24.04-server-cloudimg-amd64.img"
+    "file": "ubuntu-24.04-server-cloudimg-amd64.img",
+    "sha256": "612b2c0cc1bc413a6cb8c38fd611794caf0f2b436c50013d8b3794db12ad7354"
   },
   "ssh": {
     "user": "hpctest",

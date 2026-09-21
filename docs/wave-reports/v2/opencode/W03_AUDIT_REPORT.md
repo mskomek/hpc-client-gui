@@ -1,50 +1,68 @@
 # W03 Audit Report
 
-Wave: `W03`  
-Verdict: **PASS**  
-Auditor: GPT-5.6 Luna (`openai` / `gpt-5.6-luna`)  
-Audit mode: fresh post-repair re-audit
+## Decision
+
+**BLOCKED** — W03-owned checks are green, but its canonical dependency W02 is
+currently blocked by the independent W02 audit and cannot be treated as PASS.
 
 ## Authority and identity
 
-- Sole executable contract: `waves/pending/W03.md`; present exactly once.
-- `waves/pending/` contains 61 unique files (`W01`–`W61`), with no gaps.
-- Owned authority re-read: registry rows `HPC-W01-TRUTH-027` through
-  `HPC-W01-TRUTH-046` (20 rows), wave index, TODO ownership map, and source
-  sections Workstream C/D in `opencode/sources/WAVE_V2_FINAL_01.md`.
+- Audited exactly `waves/pending/W03.md`; it is present and unambiguous.
+  `waves/bak/` was not read for execution.
+- Re-read `.opencode/prompts/30_AUDIT_WAVE.md`,
+  `.opencode/protocol/CORE_EXECUTION_RULES.md`, all 20 owned registry rows
+  `HPC-W01-TRUTH-027` through `HPC-W01-TRUTH-046`, the W03 wave index and TODO
+  ownership map, and Workstreams C/D in
+  `opencode/sources/WAVE_V2_FINAL_01.md`. No TODO rows are owned by W03.
 - Main repository: branch `develop`, HEAD
-  `0f8902a023bac76071527232c2287af96478ed2b`.
-- Plugin repository: branch `develop`, HEAD
-  `f0abb7e7037e66ab451d463c699fecf4e00c89eb`; only the reported untracked
-  `.github/social-preview.jpg` is present there.
-- Current main status matches the resumed report: 14 tracked modifications and
-  12 untracked paths. `git diff --check` is clean apart from Git's stated
-  pre-existing CRLF conversion warnings.
+  `f94adb640136181dbaafa84f62c753b013f0b94e`.
+- W03 requires `GUI` evidence only. No package artifact, EXTERNAL, LOCAL_REAL,
+  or final-artifact SHA claim is applicable; private-key bytes were not read.
+- Recorded plugin identity: `develop /
+  f0abb7e7037e66ab451d463c699fecf4e00c89eb`.
 
-## Verification
+## Dependency truth
 
-- Current canonical W03 wave report was re-read, including all 20 traces,
-  evidence, diff/numstat, attribution, routed findings, and resume state.
-- Full current diff was inspected. Non-W03 changes are attributable to later
-  or concurrent Waves; no W03 product repair is incorrectly claimed.
-- Focused re-run: `python -m pytest -q tests/test_w03_settings_provider_inventory.py tests/test_wx_settings.py tests/test_wx_plugins.py tests/test_provider_capabilities.py tests/test_plugin_core.py`
+- W03 declares dependency `W02`.
+- The current canonical `docs/wave-reports/v2/opencode/W02_AUDIT_REPORT.md`
+  is `BLOCKED`, not PASS. It identifies W02's unresolved dependency on W01
+  (`W01_AUDIT_REPORT.md` is `REOPEN`) and a stale W02 report/diff inventory.
+- The W03 wave report's assertion that W02 is PASS is therefore stale and is
+  overridden by the independent current W02 audit. W03 cannot be accepted
+  until W02 is reconciled and freshly audited.
+
+## Independent verification
+
+- Focused validation rerun against the current dirty tree:
+  `$env:PYTHONPATH='src'; .venv\Scripts\python.exe -m pytest -q --basetemp="$env:LOCALAPPDATA\Temp\opencode\w03-audit-independent-20260921-r2" tests/test_w03_settings_provider_inventory.py tests/test_wx_settings.py tests/test_wx_plugins.py tests/test_provider_capabilities.py tests/test_plugin_core.py`
   — **66 passed**, exit 0.
-- Real wx probe rerun from approved Temp path — **PASS**:
-  settings controls and Apply event passed, plugin listing `rows=2`, one
-  message-box call, exit 0.
-- No secret material, credentials, private keys, or secret-bearing files were
-  found in the reviewed diff/evidence.
+- The current W03 report's real wx runtime/event evidence was re-read:
+  `W03_GUI_PROBE=PASS`, including settings controls/Apply callback, plugin
+  listing, message-box assertion, and shutdown.
+- Live report/source/test review supports the settings inventory and provider/
+  plugin surface traces for all 20 owned IDs. The two recorded observations
+  remain routed outside W03: `DEF-W03-001` to W37 and `DEF-W03-002` to W35.
+
+## Current diff and evidence review
+
+- Re-read current status, diff statistics, full W03 report/audit diff, and
+  `git diff --check`. The checkout is dirty with unrelated W01/W02/report,
+  LOCAL_REAL lab, FFS, and `new 4.ps1` changes. They were not attributed to
+  W03 and were not modified.
+- `git diff --check` has no whitespace errors beyond normal line-ending
+  conversion warnings. No weakened tests, fabricated evidence, or secret
+  material was found.
+- No sync, merge, integration, or W03 behavior-affecting change was made by
+  this audit. The prior W03 PASS claim is not accepted because dependency truth
+  is unresolved.
 
 ## Findings and routing
 
-No owned blocking finding. The two live observations remain correctly routed:
+| Finding | Severity | Owner/state |
+|---|---|---|
+| `W03-AUDIT-001`: canonical dependency W02 is independently `BLOCKED` while W02 depends on W01 `REOPEN`; W03's dependency PASS claim is stale. | P1 | W01/W02 report-evidence reconciliation and fresh audits; BLOCKING |
 
-- `DEF-W03-001` → W37 / `HPC-W11-TODO-SETTINGS-PERSIST-001`.
-- `DEF-W03-002` → W35 / `PLUGIN-SEARCH-001` and `PLUGIN-REFRESH-001`.
+No W03 product or test finding was fixed. Re-audit W03 after W02 is truthfully
+accepted and any invalidated evidence is refreshed.
 
-They are not absorbed into W03. Evidence is current and the 20 owned
-requirements have requirement → implementation → test → evidence traces.
-
-## Decision
-
-**PASS** — W03 satisfies its pending contract; no repair is requested.
+WAVE_PHASE_STATUS: BLOCKED

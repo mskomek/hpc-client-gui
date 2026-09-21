@@ -1,51 +1,46 @@
-# W08 Audit Report
+# W08 Fresh-Context Audit Report
 
 Wave: `W08`  
-Decision: **PASS**  
-Auditor: GPT-5.6 Luna (`openai/gpt-5.6-luna`)  
-Date: 2026-09-19
+Executable authority: `waves/pending/W08.md` only
+Audit date: 2026-09-21 UTC
+Auditor: `openai/gpt-5.6-luna`
 
 ## Authority and scope
 
-- Executable contract read: `waves/pending/W08.md`; exactly one pending W08 definition was used. `waves/bak/` was not used.
-- Core rules, all 14 owned registry rows, the W08 index rows, and the W08 mandatory source sections (Workstreams C, D and E) were reread.
-- TODO map was checked by its `Owning Wave` column: zero TODO-detail rows are owned by W08.
-- Dependency `W07` was revalidated from its canonical report as PASS.
+- Re-read the canonical pending W08 contract, audit prompt, core protocol, all 14 owned `HPC-W02-SCHEMA-*` registry rows, W08 index rows, TODO ownership, and Workstreams C, D and E of `WAVE_V2_FINAL_02.md`.
+- Exactly one canonical W08 target was audited. `waves/bak/` was not read.
+- W08 requires GUI evidence; no EXTERNAL/LOCAL_REAL, package, or private-key evidence is required by this contract.
 
-## Repository and evidence identity
+## Current repository and dependency truth
 
-- Main repository: `develop`, `0f8902a023bac76071527232c2287af96478ed2b`.
-- W08 implementation is present as the documented working-tree changes in `validator.py`, `loader.py`, and `tests/test_w08_schema_isolation.py`; unrelated pre-existing changes were preserved.
-- Plugin repository: `D:\Projeler\hpc-client-gui-plugins`, `develop`, `f0abb7e7037e66ab451d463c699fecf4e00c89eb`; no plugin change was required.
-- Required GUI evidence was independently rerun with the real wx probe: `W08-WX: 12/12 PASS`.
+- Main checkout: `develop`, HEAD `f94adb640136181dbaafa84f62c753b013f0b94e`.
+- Plugin checkout: `D:\Projeler\hpc-client-gui-plugins`, `develop`, `f0abb7e7037e66ab451d463c699fecf4e00c89eb`; only disclosed plugin working-tree item is untracked `.github/social-preview.jpg`.
+- The canonical W08 report and its evidence bind the implementation to `0f8902a023bac76071527232c2287af96478ed2b`, not current HEAD. The intervening history includes provider/plugin validation and loader behavior changes. That stale identity cannot be inherited.
+- The required dependency W07 is currently `BLOCKED` in its canonical audit: its report/evidence is also stale at `0f8902a0`, and W06 is blocked. W08 cannot inherit dependency acceptance.
+- The working tree has unrelated dirty lab/report/test changes and untracked files. `git diff --check` also reports pre-existing trailing whitespace in `W04_AUDIT_REPORT.md`; no unrelated change was modified.
 
-## Requirement audit
+## Independent current checks
 
-All 14 owned IDs (`HPC-W02-SCHEMA-001` through `HPC-W02-SCHEMA-014`) are traced in `W08_WAVE_REPORT.md` to live owners, behavioral tests, and evidence. The implementation and focused tests confirm:
+- `python -m pytest tests/test_w08_schema_isolation.py -q -p no:cacheprovider` → **15 passed**, exit 0.
+- With `HPC_GUI_CONTRACT_REPO=D:\Projeler\hpc-client-gui-plugins`, `python -m pytest tests/test_plugin_contract.py -q -p no:cacheprovider` → **20 passed**, exit 0.
+- Real wx probe `C:\Users\mskomek\AppData\Local\Temp\opencode\w08_wx_probe.py` → **12/12 PASS**, exit 0.
+- Current source contains the shared storage/quota validator, isolated loader paths, deterministic discovery, and the W08 regression suite. These fresh checks support the claimed behavior but do not repair stale canonical evidence identity or the blocked W07 dependency.
 
-- optional quota absence, failure, zero, disabled, and invalid states remain distinct;
-- storage/quota shape validation covers schema versions 1–4;
-- malformed plugins are diagnosed and isolated without startup failure;
-- unknown keys, placeholders, path handling, provider leakage, and secret-safe diagnostics are checked;
-- optional linter failure, duplicate IDs, incompatible APIs, shadowing, and deterministic discovery are covered.
+## Requirement and evidence assessment
 
-No owned requirement is missing, superseded without disposition, or unsupported by the reviewed evidence.
-
-## Re-executed checks
-
-- Focused W08 plus baseline provider/plugin suites: **95 passed**, exit 0.
-- Main/plugin contract suite against the pinned checkout: **20 passed**, exit 0.
-- Real wx runtime probe: **12/12 PASS**, exit 0.
-- `git diff --check`: clean for the W08 implementation/test paths.
-
-The canonical report’s evidence identities and reported results are consistent with the current implementation state. Package and external evidence are correctly N/A for this Wave. No fabricated evidence, weakened tests, or new skips/xfails were found.
+The W08 report traces all 14 owned requirements to live owners, tests, and evidence, and the current focused checks exercise the principal schema/isolation and GUI paths. The prior closed `DEF-W08-001` finding is consistent with current source behavior. No new product/test finding was fixed by this audit.
 
 ## Findings
 
-- `DEF-W08-001` (P1): **CLOSED**. The validator gap and unguarded profile-build path are corrected and covered by regression and runtime evidence.
-- `OBS-W08-001` (P3): **OPEN, non-blocking cleanup**. Loader comment/code mismatch is in the fail-safe direction and is outside the required behavioral closure; it does not prevent PASS.
-- New audit findings: **none**.
+| Finding | Severity | Owner/state |
+|---|---|---|
+| `W08-AUDIT-001`: canonical W08 report/evidence is bound to `0f8902a0`, while current main is `f94adb64`; intervening behavior-affecting provider/plugin history invalidates the prior audit/evidence identity. | P1 | W08 report/evidence refresh required; BLOCKING |
+| `W08-AUDIT-002`: required dependency W07 is canonically `BLOCKED` because its evidence is stale and W06 is blocked. | P1 | Earlier dependency reconciliation; BLOCKING |
+
+No package or EXTERNAL claim was accepted. No private-key bytes were read. No product or test files were changed.
 
 ## Verdict
 
-**PASS** — all mandatory W08 requirements and required GUI evidence are current and truthful; no owned P0/P1 blocker remains. No product files were changed by this audit.
+W08 cannot be accepted until its evidence/report is rebound to current HEAD and the W07 dependency chain is truthfully accepted. Fresh focused tests and GUI runtime checks pass, but they do not clear these lifecycle blockers.
+
+WAVE_PHASE_STATUS: BLOCKED

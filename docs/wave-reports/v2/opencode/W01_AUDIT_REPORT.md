@@ -2,39 +2,62 @@
 
 ## Decision
 
-**PASS** — independent audit of exactly `W01` against `waves/pending/W01.md`.
+**REOPEN** — the current implementation and focused GUI checks are green, but
+the canonical W01 report is not current for the repository truth it claims.
 
-## Authority and truth re-read
+## Authority and repository truth
 
-- `waves/pending/W01.md` is present, unambiguous, and unique; `waves/pending/` contains 61 definitions (`W01.md`–`W61.md`). `waves/bak/` was not used.
-- Re-read `opencode/protocol/CORE_EXECUTION_RULES.md`, all owned registry rows (`HPC-W01-INV-001` through `HPC-W01-INV-021`), all eight W01-owned TODO-detail rows, the W01 rows in `REQUIREMENT_WAVE_INDEX.md` and `TODO_OWNERSHIP_MAP.md`, and the mandatory source sections A0, TASK-W01-002, and TASK-W01-003 in `opencode/sources/WAVE_V2_FINAL_01.md`.
-- Re-read `W01_WAVE_REPORT.md`, the prior audit, the W01 completion/evidence artifacts, current W01 implementation and tests, current repository/plugin truth, and the full current diff.
-- Main repository: `develop`, `0f8902a023bac76071527232c2287af96478ed2b`; current status count 150; tracked diff 34 paths, 2,426 insertions, 310 deletions.
-- Plugin repository: `develop`, `f0abb7e7037e66ab451d463c699fecf4e00c89eb`, matching `origin/develop`; only unrelated `.github/social-preview.jpg` is untracked.
+- Audited exactly `waves/pending/W01.md`; it is present and unambiguous. No file
+  under `waves/bak/` was read, and no other Wave was audited or started.
+- Re-read `CORE_EXECUTION_RULES.md`, all 21 W01 registry rows, the eight
+  directly W01-owned TODO rows, the ownership map, source sections A0,
+  `TASK-W01-002`, and `TASK-W01-003`, plus the canonical W01 report and raw
+  W01 evidence files.
+- Branch/SHA: `develop` / `f94adb640136181dbaafa84f62c753b013f0b94e`.
+- Pending authority check: 61 definitions (`W01.md`–`W61.md`), exactly one
+  `W01.md`; W01 dependencies are `None`.
+- Independently measured working tree: 25 status entries, 23 tracked modified
+  paths, 1,662 insertions and 408 deletions in the tracked diff, plus two
+  untracked paths. The canonical W01 report instead records 20 entries, 18
+  tracked paths, 1,433 insertions and 278 deletions.
+- Plugin repository identity: `develop` /
+  `f0abb7e7037e66ab451d463c699fecf4e00c89eb`; only unrelated
+  `.github/social-preview.jpg` is untracked. No package/final artifact SHA is
+  applicable to this GUI-inventory Wave.
 
-## Verification and evidence
+## Independent verification
 
-- Focused current-tree command, using an external basetemp:
-  `.venv\Scripts\python.exe -m pytest -q --basetemp="$env:LOCALAPPDATA\Temp\opencode\w01-audit-current" tests/test_w04_support_freeze.py tests/test_wx_shell_w01_truth.py tests/test_w01_sensitivity.py tests/test_wx_help.py tests/test_command_palette.py tests/test_command_palette_regression.py tests/test_help_shortcut_reference.py tests/test_about_dialog.py tests/test_wx_shell.py tests/test_help_search.py tests/test_help_catalog.py tests/test_platform_keymap.py`
-  — **72 passed**, exit 0.
-- Actual wx runtime probe at current HEAD exited 0: 7 notebook pages in canonical order, 5 menus, `Ready` status, real About dialog with repository/license/notices/Close buttons, and controlled shutdown. Observed duplicate-image/WebView2 teardown messages are non-fatal and did not affect launch or shutdown.
-- `git diff --check` exited 0; only normal LF/CRLF conversion warnings were emitted.
-- GUI evidence is actual wx runtime/event evidence, not static-only or controller-only substitution. No package or external evidence class is required by the W01 contract.
-
-## Requirement and TODO disposition
-
-- `HPC-W01-INV-001`–`HPC-W01-INV-014`: verified by the current visible-surface/user-journey inventory and runtime launch/shutdown proof.
-- `HPC-W01-INV-015`: verified by the dispatch/event reachability map; no owned visible action is classified Supported from an empty, logs-only, placeholder, TODO, or always-disabled handler.
-- `HPC-W01-INV-016`–`HPC-W01-INV-021`: verified by the separate local, remote, transfer, job, editor, and conditional plugin/provider context-surface inventory. Conditional rows have explicit N/A/ownership treatment where applicable.
-- `HPC-W01-TODO-TOOLBAR-CONTRACT-001`, `HPC-W01-TODO-011`, `HPC-W01-TODO-012`, `HPC-W01-TODO-013`, `HPC-W01-TODO-QUICKTOUR-SCOPE-001`, `HPC-W01-TODO-COMMAND-PALETTE-SCOPE-001`, `HPC-W01-TODO-ABOUT-PARITY-001`, and `HPC-W01-TODO-021`: verified closed. Quick Tour and standalone Command Palette are not advertised as visible wx V2 surfaces; About remains a real wx dialog; toolbar controls have stable acceptance keys and transfer headers use the truthful panel path.
-- Cross-Wave error-governance changes and unrelated dirty-tree changes were reviewed as preserved/out of scope, not credited to W01.
+- Focused command:
+  `.venv\Scripts\python.exe -m pytest -q --basetemp="$env:LOCALAPPDATA\Temp\opencode\w01-audit-20260921-final" tests/test_w04_support_freeze.py tests/test_wx_shell_w01_truth.py tests/test_w01_sensitivity.py tests/test_wx_help.py tests/test_command_palette.py tests/test_command_palette_regression.py tests/test_help_shortcut_reference.py tests/test_about_dialog.py tests/test_wx_shell.py tests/test_help_search.py tests/test_help_catalog.py tests/test_platform_keymap.py`
+  — **72 passed**, exit 0; temporary output was removed.
+- Fresh wx runtime probe at the current checkout exited 0: 7 pages in the
+  required order, 5 menus, `Ready` status, real About dialog/buttons, and
+  controlled shutdown. Non-fatal duplicate-image/WebView2 teardown messages
+  were observed.
+- Source/test checks confirm the reported W01 surface decisions, dispatch
+  reachability, stable `page_controls`, context-menu bindings, and absence of
+  an advertised standalone command palette.
+- `git diff --check` exited 0 apart from normal LF/CRLF conversion warnings.
+  The current diff was reviewed for scope, secrets, generated noise, and test
+  weakening; the changed paths are unrelated lab/FFS/evidence/report work and
+  no W01 product/test change is credited.
 
 ## Findings
 
-No open W01 finding. The prior stale-status finding is closed: the current status count is 150 and matches the canonical implementation report. No product or test changes were made by this audit.
+| Finding | Severity | Owner/state |
+|---|---|---|
+| `W01-AUDIT-005`: `W01_WAVE_REPORT.md` current-execution identity is stale: it records 20 status entries / 18 tracked paths / 1,433 insertions / 278 deletions, while the current checkout has 25 / 23 / 1,662 / 408. Its “report current” and diff-review claims therefore cannot be accepted for close. | P1 | W01 report refresh required; OPEN |
+| `W01-AUDIT-006`: retained raw artifacts `EV-W01-001`–`EV-W01-005` are pinned to historical SHA `afd4fb1d6ed3d0bbd87b9b6db6115eb159f63a87`, not current HEAD `f94adb640136181dbaafa84f62c753b013f0b94e`. Current runtime/test commands are independently green, but the canonical evidence identity must be reconciled before close. | P1 | W01/W05 report-evidence reconciliation; OPEN |
 
-## Audit scope result
+The owned GUI requirements and TODO decisions otherwise pass the independent
+source, test, and runtime checks. W01 requires GUI evidence only; LOCAL_REAL
+HPC lab protocol is not applicable because no W01 row requires `EXTERNAL`
+evidence.
 
-All mandatory W01 requirements and owned TODO details are implemented or already valid, current GUI evidence is truthful, the plugin pin is current, the diff is reviewed, and no owned blocking defect remains. W02 was not started.
+## Final result
 
-WAVE_PHASE_STATUS: PASS
+Do not close W01 until the canonical report/evidence identity is refreshed to
+the current tree and a fresh independent audit is run afterward. No product or
+test files were changed by this audit.
+
+WAVE_PHASE_STATUS: REOPEN

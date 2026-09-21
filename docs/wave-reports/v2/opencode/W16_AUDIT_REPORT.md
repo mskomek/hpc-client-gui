@@ -2,82 +2,81 @@
 
 ```text
 Wave: W16
-Audit cycle: 1 (0 debug cycles)
-Decision: PASS
+Audit cycle: 2
+Decision: REOPEN
 Auditor: GPT-5.6 Luna (openai/gpt-5.6-luna), reasoning medium
-Date: 2026-09-20
+Audit date: 2026-09-21 UTC
+Authority: waves/pending/W16.md only
 ```
 
-## Authority and gate verification
+## Scope and authority read
 
-Fresh-context audit used only `waves/pending/W16.md` as the executable Wave
-contract; no `waves/bak/` material was used. Re-read:
-`CORE_EXECUTION_RULES.md`, all 49 W16 registry rows, W16 index rows, zero W16
-TODO rows, and the required `WAVE_V2_FINAL_04.md` entry, Workstreams C/D,
-tests, acceptance, STOP/GO, evidence, rollback, handoff, and protocol
-sections. W15 canonical audit is `PASS`, with no later REOPEN/BLOCKED state;
-the W15 accepted executable is superseded for W16 as required.
+Audited exactly the canonical `waves/pending/W16.md`; it is present and
+unambiguous. Re-read `30_AUDIT_WAVE.md`, `CORE_EXECUTION_RULES.md`, the 49
+W16 registry rows, the W16 index, zero W16 TODO rows, and every mandatory
+`WAVE_V2_FINAL_04.md` section named by the Wave. Re-read the W16 report,
+existing audit, current implementation/tests, raw evidence, current diff/HEAD,
+plugin identity, and dependency W15. The LOCAL_REAL protocol was also read;
+W16 requires GUI/PACKAGE, while its remote replay is conditional, so no
+LOCAL_REAL replay was claimed. No `waves/bak/` material was used. No product or
+test finding was fixed; only this audit artifact was written.
 
-## Identity, artifact, and hygiene
+## Current repository and dependency truth
 
-- Main `develop` HEAD and `origin/develop`: `0f8902a023bac76071527232c2287af96478ed2b`.
-- Plugin `develop` HEAD and `origin/develop`:
-  `f0abb7e7037e66ab451d463c699fecf4e00c89eb`.
-- Main and plugin working-tree changes were preserved; no reset, clean, push,
-  or unrelated-change removal was performed. Main pre-existing W01-W15 state
-  remains present; plugin's only untracked item is the pre-existing social
-  preview file.
-- `git diff --check` exited 0 (only existing CRLF conversion warnings).
-  No W16 test weakening, skips, xfails, secret material, or fabricated output
-  was found.
-- Independent disk check:
-  `dist/hpc-client-gui/hpc-client-gui.exe` = `7,415,251` bytes,
-  SHA-256
-  `cb69c1ceeca7861c922371a2827dea2526baa27381594cfd80d16a49153c0899`.
-  The staged candidate copy has the same size and SHA.
+- Main repository is `develop`, current HEAD
+  `f94adb640136181dbaafa84f62c753b013f0b94e`; `origin/develop` is the same.
+  The working tree contains unrelated lab/report changes and untracked files.
+- Plugin repository is `develop` at
+  `f0abb7e7037e66ab451d463c699fecf4e00c89eb`, with its pre-existing untracked
+  social-preview file.
+- W16 depends on W15. The current canonical W15 audit is `REOPEN` because its
+  GUI/PACKAGE evidence is stale and W14 is reopened. W16 therefore cannot close
+  until dependency truth is repaired and downstream evidence is refreshed.
+- `git diff --check` was run; reported whitespace is in unrelated existing
+  files. The focused W16 suite currently passes: `25 passed`.
 
-## Evidence verification
+## Independent evidence verification
 
-All cited W16 evidence was re-read and is current, timestamped, and bound to
-the same artifact SHA, main SHA, and plugin SHA:
+The cited W16 manifest and evidence all identify main SHA
+`0f8902a023bac76071527232c2287af96478ed2b` and artifact SHA
+`cb69c1ceeca7861c922371a2827dea2526baa27381594cfd80d16a49153c0899`.
+Independent current disk hashing gives
+`dist/hpc-client-gui/hpc-client-gui.exe` SHA
+`ff050baf26fd73f59d46c6a7ed5290913e1669b67cecbbfa13bb29e5c0122876`
+(7,573,876 bytes), not the manifest/evidence SHA (7,415,251 bytes). The
+candidate package therefore is not the current exact artifact, and its
+GUI/PACKAGE evidence cannot establish W16 acceptance against current HEAD.
 
-- `build/audit/w16-package-content-windows.json`: PASS, 8/8 checks, exit 0,
-  generated `2026-09-19T20:56:36.459796+00:00`.
-- `build/audit/w16-packaged-smoke-windows.json`: exact SHA, process/wx/frame,
-  settings, surfaces, plugin/provider, editor, and authoritative PTY resize
-  checks pass. Exit 1 and 14/20 are truthful: the six remaining foreground
-  keyboard/PTY/remote/transfer/shutdown phases report
-  `keyboard_input:foreground_lost`, with `foreground_request_accepted:false`
-  and raw runtime evidence retained. This is an interactive desktop
-  environment block, not a mocked or greenwashed product PASS.
-- `build/audit/w16-packaged-smoke-windows.runtime.json`: preserved raw runtime
-  payload, same run identity, `keyboard_input:foreground_lost`; its child-side
-  PTY result is correctly subordinate to the server-side wire proof.
-- `build/audit/w16-fresh-user-windows.json` plus `.run1.runtime.json` and
-  `.run2.runtime.json`: PKG-GJ-01 PASS, 10/10, frozen executable, outside-repo
-  workdir, zero secrets persisted, and exit codes `[0, 0]`.
-- `dist/releases/w16-candidate/MANIFEST.json`: artifact size/SHA match, and
-  main/plugin/build UTC/version/runtime/packager/OS-arch/command/lock fields
-  are present. Manifest artifact copy independently matches the disk SHA.
-- SMOKE-010/HARNESS-021 is honestly `EXTERNAL-deferred`: no authorized
-  external infrastructure was available; loopback was not represented as
-  remote evidence. Manual display/cluster/MFA/X11/DnD requirements are listed
-  in the evidence.
+The package-content JSON remains internally consistent for the old artifact
+(8/8 PASS). The packaged smoke JSON truthfully records 14/20 with six
+foreground-blocked phases, and the fresh-user JSON records 10/10 PASS, but
+both are bound to the obsolete identity. The conditional remote replay remains
+honestly deferred and was not substituted with loopback evidence.
 
-## Test and scope verification
+## Findings
 
-Re-ran the focused suite:
+### REOPEN-W16-001 — Exact artifact and final-SHA evidence are stale
 
-```text
-python -m pytest -q tests/test_wx_package_content.py tests/test_wx_packaged_smoke.py
-25 passed in 15.43s
-```
+W16 requires exact main-SHA binding, package SHA binding, and GUI/PACKAGE
+acceptance. The evidence is bound to main SHA `0f8902a...` and artifact SHA
+`cb69c1ce...`, while live repository truth is main SHA `f94adb64...` and the
+available package hashes to `ff050baf...`. Rebuild/package from the current
+accepted identities, regenerate the manifest, rerun required package-content,
+packaged GUI smoke, and fresh-user evidence, and independently verify matching
+hashes before close.
 
-The report's impacted-suite counts (106 and 169 passed, zero skips/xfails) are
-consistent with the cited implementation report. FIX-A through FIX-D are
-covered by additive contract/negative tests, and the report's sensitivity
-claims are supported by the test evidence and code diff. No blocking owned
-finding remains; the generic GUI environment failures and conditional remote
-deferral are explicitly justified with raw evidence.
+### REOPEN-W16-002 — Declared dependency W15 is reopened
 
-**PASS — W16 is ready for close. No downstream Wave was started.**
+W15's current canonical audit is `REOPEN`, and its required evidence is stale
+against current identity; W14 is also reopened. W16 cannot close while its
+declared dependency is not accepted. After dependency repair, refresh any
+invalidated W16 evidence and perform a fresh independent audit.
+
+## Verdict
+
+The focused W16 tests are green and the old evidence is internally coherent,
+but mandatory package identity/final-SHA proof is stale against current
+repository truth and the declared dependency is reopened. These are
+repository/evidence findings, not unavailable external authority.
+
+WAVE_PHASE_STATUS: REOPEN

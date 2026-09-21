@@ -1,44 +1,59 @@
-# W05 Fresh-Context Audit Report (post-repair re-audit)
+# W05 Fresh-Context Audit Report
 
 Wave: `W05`  
 Implementation report: `docs/wave-reports/v2/opencode/W05_WAVE_REPORT.md`  
-Executable authority: `waves/pending/W05.md` only; `waves/bak/` not used  
-Audit date: 2026-09-19 (UTC)  
+Executable authority: `waves/pending/W05.md` only; `waves/bak/` was not used
+Audit date: 2026-09-21 UTC
 Model: `openai/gpt-5.6-luna`
 
 ## Authority and coverage
 
-The pending contract is present and unambiguous. Re-read: core execution rules,
-the W05 contract, all owned registry/TODO rows, the wave index and ownership map,
-and every mandatory source section. Current W04 dependency is recorded PASS with
-PASS audit. The canonical W05 report covers all 37 source-derived IDs and 7
-TODO-detail IDs, with the two superseded IDs explicitly identified.
+The canonical pending W05 contract is present and unambiguous. Re-read the audit
+prompt, core protocol, all 37 W05-owned registry rows, all 7 W05-owned TODO
+rows, the wave index/ownership map, and every mandatory W01 source section named
+by W05. The W05 report traces the owned requirements and TODO details and
+requires `GUI` evidence only; no W05 `EXTERNAL` or LOCAL_REAL acceptance is
+required. Private-key bytes were not read.
 
-## Independent checks
+## Current repository and dependency truth
 
-- Main repository: `develop` / `0f8902a023bac76071527232c2287af96478ed2b`; `origin/develop` matches.
-- Plugin repository: `develop` / `f0abb7e7037e66ab451d463c699fecf4e00c89eb`; plugin `origin/develop` matches; only disclosed untracked `.github/social-preview.jpg` exists.
-- Main tree independently recaptured as 14 tracked modifications, 301 insertions/85 deletions, with the report's per-entry attribution; `git diff --numstat` and `git diff --check` agree. Only line-ending advisories were emitted by `diff --check`; no whitespace errors.
-- Real wx runtime probe `w05_repair1_probe.py`: exit 0; 5 menus, 7 tabs, `Ready`, About PASS, `W05_GUI_PROBE=PASS`. Duplicate image-handler and teardown diagnostics were non-fatal.
-- `python -m pytest tests/test_w04_support_freeze.py -q -p no:cacheprovider -k "matrix__"`: 8 passed, 20 deselected.
-- `python -m pytest tests/test_cli.py tests/test_cli_entrypoint.py -q -p no:cacheprovider`: 164 passed.
-- Freeze inventory remains 56 rows with counts `24/17/11/2/2/0/0`; CLI parity and exact exit-code claims are consistent with the report.
-- Diff and report review found no credentials, tokens, private keys, `.env`, PEM/PFX, `.ssh` material, or secret directories. Foreign-Wave changes remain attributed and were not absorbed.
+- Main repository is `develop` at
+  `f94adb640136181dbaafa84f62c753b013f0b94e`; plugin repository is `develop` at
+  `f0abb7e7037e66ab451d463c699fecf4e00c89eb`, with only the disclosed
+  untracked `.github/social-preview.jpg` in the plugin tree.
+- The W05 implementation report and its prior audit are bound to main SHA
+  `0f8902a023bac76071527232c2287af96478ed2b`, not the current HEAD. The current
+  checkout has 24 tracked modifications and one untracked path, including
+  current W01-W04 audit/report and LOCAL_REAL lab changes. Its `git diff --stat`
+  is 1,699 insertions / 478 deletions. Therefore the prior W05 evidence and
+  PASS cannot be inherited; a fresh W05 evidence rebind would be required.
+- W05 depends on W04. The current canonical `W04_AUDIT_REPORT.md` is
+  **BLOCKED**: W04's dependency W03 is blocked through W02/W01, and W04's
+  implementation/evidence identity is stale at `0f8902a0` versus current
+  `f94adb64`. W05's report assertion that W04 is PASS is contradictory to this
+  current independent dependency truth.
 
-## Finding review
+## Independent verification
 
-The prior `DEF-W05-001` REOPEN finding is closed truthfully in the canonical
-report: its stale seven-modification snapshot was replaced by the current
-14-modification recapture, and freeze, GUI, CLI, and impact evidence was rebound
-to that tree. The canonical-report closeout marks the three historical W01
-documents `SUPERSEDED` and points to the single adopted canonical W01 report;
-there is no competing active decision. No new owned P0/P1 or routing defect was
-found. Package and external claims are honestly bounded as N/A/deferred rather
-than substituted with weaker evidence.
+- `python -m pytest tests/test_w04_support_freeze.py -q -p no:cacheprovider`
+  — **28 passed**, exit 0. This green focused result does not clear the stale
+  W05 identity or blocked dependency.
+- `python -m pytest tests/test_cli.py tests/test_cli_entrypoint.py -q
+  -p no:cacheprovider` — **164 passed**, exit 0.
+- Current diff and relevant W01-W04 report/lab changes were reviewed. `git
+  diff --check` reports only line-ending conversion warnings plus one existing
+  trailing-whitespace error in the current W04 audit artifact; no repair was
+  made. No W05 product/test finding was fixed, and no secrets or private-key
+  bytes were exposed.
 
-## Verdict
+## Findings and routing
 
-**PASS** — W05 requirements, evidence identity, repository/plugin pins, trace,
-tests, secrets review, diff review, and ownership routing are current and
-truthful. No product files were changed by this audit and no subsequent Wave was
-started.
+| Finding | Severity | Owner/state |
+|---|---|---|
+| `W05-AUDIT-001`: canonical dependency W04 is independently `BLOCKED` through W03/W02/W01; W05 cannot be accepted from its stale dependency PASS claim. | P1 | W01/W02/W03/W04 reconciliation and fresh audits; BLOCKING |
+| `W05-AUDIT-002`: W05 report/evidence is bound to `0f8902a0`, while current repository HEAD is `f94adb64`; prior GUI/CLI/freeze evidence cannot be inherited without fresh SHA-bound W05 acceptance. | P1 | W05 report/evidence refresh and fresh independent audit; BLOCKING |
+
+No product or test finding was fixed. Re-audit W05 only after W04 is truthfully
+accepted and W05 report/evidence is rebound to the current implementation state.
+
+WAVE_PHASE_STATUS: BLOCKED

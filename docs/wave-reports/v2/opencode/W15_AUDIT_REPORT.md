@@ -2,60 +2,83 @@
 
 ```text
 Wave: W15
-Decision: PASS
+Decision: REOPEN
 Auditor: GPT-5.6 Luna (openai/gpt-5.6-luna), reasoning medium
-Date: 2026-09-19
+Audit date: 2026-09-21 UTC
+Authority: waves/pending/W15.md only
 ```
 
-## Scope and authority
+## Scope and authority read
 
-Fresh-context audit performed against `CORE_EXECUTION_RULES.md`, canonical
-`waves/pending/W15.md`, all 14 W15 registry rows, W15 index rows and zero TODO
-rows, Workstream C0 and Workstream E, live main/plugin truth, W14 predecessor
-PASS, the canonical W15 report, and current evidence. No `waves/bak/` material
-was used. Only this audit report was written; product and implementation
-report files were not changed.
+Audited exactly the canonical `waves/pending/W15.md`; it is present and
+unambiguous. Re-read `30_AUDIT_WAVE.md`, `CORE_EXECUTION_RULES.md`, all 14
+W15 registry rows, the W15 index slice, zero W15 TODO rows, Workstream C0 and
+Workstream E, the W15 report and raw evidence, current source/tests, current
+diff/HEAD, plugin identity, and dependency W14. No `waves/bak/` material was
+used. No product or test finding was fixed; only this audit artifact was
+written.
 
-## Identity and hygiene
+## Current repository and dependency truth
 
-- Main `develop`: `0f8902a023bac76071527232c2287af96478ed2b`; `origin/develop`
-  matches. Plugin `develop`: `f0abb7e7037e66ab451d463c699fecf4e00c89eb`;
-  plugin origin matches. W14 predecessor report is `PASS`.
-- Main tree remains dirty with the inventoried W01-W15/unrelated changes and
-  W15 evidence/helpers; no reset, clean, or destructive operation was used.
-  Plugin has only pre-existing untracked `.github/social-preview.jpg`.
-- Main `git diff --check` exits 0 (only pre-existing CRLF warnings); no
-  W15-scope secrets, weakened assertions, added skips, or xfails found.
+- Main repository is `develop`, current HEAD
+  `f94adb640136181dbaafa84f62c753b013f0b94e`; the working tree is dirty with
+  unrelated lab/report changes and untracked files. Plugin repository is on
+  `develop` at `f0abb7e7037e66ab451d463c699fecf4e00c89eb`.
+- W15 declares dependency `W14`. The canonical current W14 audit is
+  `REOPEN`; it reports stale package/final-SHA evidence and an unresolved W13
+  dependency. W15 is therefore not dependency-eligible for close.
+- The W15 report/evidence are bound to main SHA
+  `0f8902a023bac76071527232c2287af96478ed2b`, not current HEAD. W15-owned
+  implementation/test paths differ between that identity and current HEAD
+  (`git diff 0f8902a..HEAD` shows changes in `paths.py`, `wx_shell.py`,
+  `wx_packaged_smoke.py`, and `test_w15_fresh_user_startup.py`). This is a
+  behavior-affecting history change and invalidates the prior audit/evidence.
 
-## Verification
+## Independent verification
 
 - `python -m pytest tests/test_w15_fresh_user_startup.py -q` → **11 passed**.
-- Current artifact exists at the cited path and independently hashes to
-  `d2aab99d998a1dd0d912098f319f9bbf6c227ba0b4b82c9db9303bcf6c863cfd`, size
-  `7,414,472` bytes, matching `build/audit/w15-fresh-user-windows.json`.
-  `build/hpc-client-gui/PYZ-00.toc` contains `hpc_gui.core.paths` and
-  `hpc_gui.wx_shell`.
-- Canonical evidence is `build/audit/w15-fresh-user-windows.json`:
-  `result=PASS`, all 10 checks PASS, exit codes `[0,0]`, both runtime payloads
-  PASS, generated `2026-09-19T20:20:48.374368+00:00`, isolated root,
-  outside-repo workdir, frozen execution, and `isolated_from_src=true`.
-  GUI and PACKAGE claims are therefore bound to one exact available SHA.
-- Superseded evidence was re-read and is not current acceptance evidence:
-  `a2a0f079...` solo/r2 PASS files are explicitly superseded with unavailable
-  bytes; sibling `cc4fd240...` has runtime FAIL and exits `[1,1]`; `bd7fbbf8...`
-  is honest FAIL with `[1,0]` and `NameError`. The current report removes all
-  corroboration claims and cites only `d2aab99d...`.
-- External evidence is **N/A**: W15 requires GUI and PACKAGE; the acceptance
-  uses a documented loopback fixture, not an external cluster. Manual-only
-  capabilities are listed in the evidence and are not misrepresented.
+  This does not substitute for current exact-package GUI/PACKAGE proof.
+- The cited evidence file exists and reports `result=PASS`, 10/10 checks,
+  exit codes `[0,0]`, and artifact SHA
+  `d2aab99d998a1dd0d912098f319f9bbf6c227ba0b4b82c9db9303bcf6c863cfd`, but its
+  identity header remains bound to obsolete main SHA `0f8902a...`.
+- Independent current disk hashing gives the available
+  `dist/hpc-client-gui/hpc-client-gui.exe` SHA
+  `ff050baf26fd73f59d46c6a7ed5290913e1669b67cecbbfa13bb29e5c0122876`,
+  which does not match the evidence SHA. The accepted artifact is therefore
+  not the current exact artifact and final-SHA/package parity is not proven.
+- W15 requires GUI and PACKAGE only. Its loopback fixture is not EXTERNAL
+  evidence, so `LOCAL_REAL_HPC_LAB.md` is not applicable; no private-key bytes
+  were read.
+- `git diff --check` was run; existing trailing whitespace is present in
+  unrelated prior audit reports. No W15 test weakening, skip, or xfail was
+  accepted.
 
-## Prior findings
+## Findings
 
-- `REOPEN-W15-001` is truthfully closed: a new solo executable was rebuilt,
-  accepted, retained, and hash-verified at the cited path.
-- `REOPEN-W15-002` is truthfully closed: failed sibling evidence is labeled
-  superseded pre-fix failure and is excluded from acceptance/corroboration.
+### REOPEN-W15-001 — PACKAGE/GUI evidence is stale against current identity
 
-No new blocking finding remains. W15 meets its 14 owned requirements and the
-GUI/PACKAGE evidence gates. **PASS — ready for close; no downstream Wave was
-started.**
+The sole accepted PKG-GJ-01 evidence is bound to main SHA `0f8902a...` and
+artifact SHA `d2aab99d...`, while live repository truth is
+`f94adb640136181dbaafa84f62c753b013f0b94e` and the artifact currently present
+on disk hashes to `ff050baf...`. W15-owned behavior paths also changed after
+the evidence identity. Rebuild the exact package from the current accepted
+main/plugin identities, rerun the required solo GUI fresh-user flow, and
+produce fresh evidence with matching artifact and final-SHA identity.
+
+### REOPEN-W15-002 — Dependency W14 is currently reopened
+
+W15 depends on W14, whose canonical audit is currently `REOPEN` for stale
+package/final-SHA evidence and an unresolved prerequisite chain. W15 cannot
+close until dependency truth is repaired and freshly audited; downstream
+evidence must then be revalidated as needed.
+
+## Verdict
+
+The focused W15 unit suite is green, but the mandatory GUI/PACKAGE evidence is
+not current or bound to the live final identity, and the declared dependency is
+reopened. These are repository/evidence findings, not unavailable external
+authority. Do not close W15 until the findings are repaired and a fresh
+independent audit is performed.
+
+WAVE_PHASE_STATUS: REOPEN

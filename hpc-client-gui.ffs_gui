@@ -57,6 +57,14 @@
             <Item>\hpc-client-gui\.tmp-pytest-merge8\</Item>
             <Item>*\dist\</Item>
             <Item>*\sync..ffs_db</Item>
+            <Item>*\sync.ffs_lock</Item>
+            <Item>\lab\state\</Item>
+            <Item>\lab\evidence\</Item>
+            <Item>\lab\.pytest-tmp\</Item>
+            <Item>\lab\*.bak</Item>
+            <Item>\lab\*.vhdx</Item>
+            <Item>\lab\*.iso</Item>
+            <Item>\lab\*.img</Item>
         </Exclude>
         <SizeMin Unit="None">0</SizeMin>
         <SizeMax Unit="None">0</SizeMax>

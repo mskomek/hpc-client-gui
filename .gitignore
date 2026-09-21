@@ -105,3 +105,4 @@ coverage.json
 
 # FreeFileSync local sync database
 /sync.ffs_db
+/sync.ffs_lock

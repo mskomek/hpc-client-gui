@@ -2,79 +2,97 @@
 
 ```text
 Wave: W18
-Audit cycle: 1
-Decision: PASS
+Audit cycle: 2
+Decision: REOPEN
 Auditor: GPT-5.6 Luna (openai/gpt-5.6-luna), reasoning medium
-Date: 2026-09-20
+Audit date: 2026-09-21 UTC
+Authority: waves/pending/W18.md only
 ```
 
-## Authority and dependency
+## Authority, scope, and dependency
 
-Fresh-context audit re-read `opencode/protocol/CORE_EXECUTION_RULES.md`, the
-sole executable `waves/pending/W18.md`, all 16 mandatory W18 registry/index
-rows, the zero-row W18 TODO ownership result, and Workstreams 0.1 and 0.2 of
-`opencode/sources/WAVE_V2_FINAL_05.md`. `waves/bak/` was not used. W17
-predecessor truth is `W17_AUDIT_REPORT.md` cycle 3, Decision PASS, with no later
-REOPEN/BLOCKED evidence found.
+Re-read `30_AUDIT_WAVE.md`, `CORE_EXECUTION_RULES.md`, the sole canonical
+`waves/pending/W18.md`, all 16 W18 registry/index rows, the zero-row TODO
+ownership result, and both mandatory sections of
+`opencode/sources/WAVE_V2_FINAL_05.md`. `waves/bak/` was not read. Re-read the
+W18 report, audit/evidence artifacts, live SSH/wx/controller code and tests,
+current diff/HEAD, and the dependency audit chain. No product or test code was
+changed; only this audit artifact is being updated.
 
-## Identity and working tree
+W18 depends on W17. The current canonical W17 audit is cycle 4 `REOPEN` because
+its dependency W16 is reopened and its GUI evidence is bound to the obsolete
+`0f8902a...` identity. W18 therefore cannot close while that repository-owned
+dependency chain remains unresolved.
+
+## Current identity and diff
 
 - Branch: `develop`
-- HEAD: `0f8902a023bac76071527232c2287af96478ed2b`
-- `origin/develop`: same SHA
-- Plugin: `develop`, `f0abb7e7037e66ab451d463c699fecf4e00c89eb`
-- Working tree is dirty with preserved unrelated W01/W15/W17 and other
-  changes; no reset, clean, destructive operation, or push was performed.
-- `git diff --check` exited 0. This audit writes only this canonical audit
-  report.
+- HEAD and `origin/develop`: `f94adb640136181dbaafa84f62c753b013f0b94e`
+- W18 report/audit and cited evidence identify
+  `0f8902a023bac76071527232c2287af96478ed2b`.
+- The repository advanced through LOCAL_REAL/lab commits after that identity;
+  the prior W18 audit/evidence is consequently stale under the final-SHA and
+  behavior-affecting-change rules.
+- Working tree is dirty with unrelated lab, report, and untracked changes;
+  no reset, clean, push, or destructive operation was performed. `git diff
+  --check` was run; existing whitespace findings are outside W18.
+- No package/final-artifact claim is applicable to W18. Private-key bytes were
+  not read; only the emitted profile path and non-secret lab status identity
+  were inspected.
 
 ## Re-verification
 
-The canonical W18 report, GUI evidence, and external matrix were read in full.
-The GUI log records 14/14 passed and exit 0, including wrong-password,
-missing-key, changed-key, unknown-host YES/NO/CANCEL, cancellation-safe state,
-and no-secret-echo cases. The external log records E1-E8 PASS, cleanup PASS,
-and no secret values. Its real hpclab identity/healthy-before-and-after claim
-is consistent with the recorded matrix; no package claim is required by W18.
+Live source review still finds plausible coverage for all 16 requirements:
+password/key/certificate/agent discovery, provider-gated keyboard-interactive,
+visible classified failures, secret-redacted messages, explicit host-key
+accept-new/strict/reject/mismatch behavior, key-type/fingerprint/role prompt
+data, and safe cancellation. The W18 test file has meaningful assertions and
+no skip/xfail.
 
-Live source review confirmed:
-
-- password, configured key/certificate, agent/home-key discovery, and
-  provider-gated keyboard-interactive paths remain wired through the shared SSH
-  transport;
-- `accept-new` prompts and persists only on save, `once` does not persist,
-  reject raises, and strict mode uses Paramiko `RejectPolicy`;
-- `BadHostKeyException` becomes a hard `HostKeyChangedError`;
-- `HostKeyRequest.key_type` is populated from the offered transport key and is
-  rendered with host, fingerprint, and role;
-- wx failures use the shared classifier and cancellation is deferred after the
-  controller repaint, avoiding a false success/ambiguous failure state;
-- no secret is included in `SSHConnInfo` repr or the reviewed evidence, and
-  the evidence/test scan found no actual password, token, or key material.
-
-The W18 test file has meaningful assertions, no skip/xfail, and mocks only
-transport/dialog boundaries as documented. The fresh focused rerun passed:
+Fresh current focused execution:
 
 ```text
 python -m pytest tests/test_w18_auth_hostkey.py -v -p no:randomly
-14 passed in 0.53s
-
-python -m pytest tests/test_w18_auth_hostkey.py tests/test_ssh_credential_flow.py tests/test_optional_ssh_credentials.py tests/test_connection_controller.py -q
-48 passed, 9 subtests passed in 1.46s
+14 passed in 1.12s
 ```
 
-The canonical report's before-evidence and fault-injection sensitivity claims
-were checked against its recorded FIX-W18-001/FIX-W18-002 traces; the live
-post-fix tests are green. The implementation diff is limited to the reported
-wx mapping/cancel and host-key type plumbing (plus the reported controller
-support), with W17-owned pre-existing hunks retained. No silent host-key
-mismatch acceptance, test weakening, fabricated PASS, or in-scope unresolved
-finding was identified. The W19-owned mid-connect-cancel and worker-thread
-modal observations are correctly routed out of W18.
+The recorded GUI artifact reports 14/14, but it is not freshly bound to the
+current HEAD. More importantly, `build/audit/w18-external-matrix.txt` is a
+loopback/mock-style `127.0.0.1` matrix from 2026-09-20, not LOCAL_REAL evidence
+and not bound to the current repository identity. The LOCAL_REAL protocol
+explicitly disallows loopback support evidence as a substitute for required
+real external evidence.
+
+Current `lab-status.ps1` independently returned `PASS` with identity
+`LOCAL_REAL_HYPERV`, controller `192.168.250.11:22`, valid emitted profile path,
+and healthy controller/compute/Slurm services. That health result does not by
+itself prove the W18 authentication/host-key GUI journey; a fresh W18
+LOCAL_REAL external replay and current-identity evidence artifact are still
+required. The lab is available, so this is not an external-authority BLOCKED
+condition.
+
+## Findings
+
+### REOPEN-W18-001 — W18 GUI/EXTERNAL evidence is stale and externally invalid
+
+The accepted evidence is tied to `0f8902a...`, while live HEAD is
+`f94adb64...`. The external matrix also uses loopback rather than the verified
+LOCAL_REAL environment required by `.opencode/protocol/LOCAL_REAL_HPC_LAB.md`.
+Refresh the required GUI and real LOCAL_REAL authentication/host-key matrix,
+bind it to the current repository HEAD and environment/profile identity, scan
+for secret leakage, and run a fresh independent audit.
+
+### REOPEN-W18-002 — W18 predecessor dependency is reopened
+
+W17 currently has canonical decision `REOPEN` for its reopened W16 dependency
+and stale GUI evidence. W18 cannot close until W16/W17 are repaired and
+re-audited, with any invalidated downstream evidence refreshed.
 
 ## Verdict
 
-**PASS.** All 16 mandatory W18 requirements have live implementation traces,
-current GUI and real external evidence, clean focused verification, and no
-owned blocking defect. W19 must not be started automatically; its dependency
-checks remain required when explicitly planned.
+The current focused test is green and the live implementation remains
+consistent with the owned behavior, but stale/misclassified required evidence
+and the reopened W17 dependency prevent acceptance. Findings route to the true
+owner through resume/repair; no product/test repair was performed.
+
+WAVE_PHASE_STATUS: REOPEN
