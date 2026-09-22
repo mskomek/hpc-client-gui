@@ -79,6 +79,13 @@ def ensure_temp_layout(repo: Path, profile: dict[str, Any]) -> Path:
 def configure_temp_environment(repo: Path, profile: dict[str, Any], run_id: str) -> Path:
     root = ensure_temp_layout(repo, profile) / 'os' / run_id
     root.mkdir(parents=True, exist_ok=True)
+    try:
+        probe = root / f'.write-probe-{os.getpid()}'
+        probe.write_text('', encoding='utf-8')
+        probe.unlink()
+    except OSError:
+        root = root.parent / f'{run_id}-{os.getpid()}'
+        root.mkdir(parents=True, exist_ok=True)
     os.environ['TEMP'] = str(root)
     os.environ['TMP'] = str(root)
     os.environ['TMPDIR'] = str(root)
