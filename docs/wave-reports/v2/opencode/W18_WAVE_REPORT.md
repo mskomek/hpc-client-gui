@@ -1,13 +1,37 @@
 # W18 — Authentication and host-key security — Wave Report
 
+## Repair update — 2026-09-22 (manifest and evidence binding)
+
+- Added the required evidence manifest at `artifacts/wave_W18/WAVE_W18_EVIDENCE_MANIFEST.json`, bound to current HEAD `63b696b3b8c64296d9d17f94c8d0d903f9bab7eb`.
+- Refreshed `build/audit/w18-external-matrix.txt` with current branch/HEAD, all 16 owned requirement IDs, LOCAL_REAL identity, and a secret scan result.
+- The manifest is intentionally `REPAIR_REQUIRED`: password-auth rows remain `EXTERNAL_BLOCKED` because `HPC_LAB_PASSWORD` is unavailable. No password claim or substitute evidence was created.
+- Focused GUI evidence remains 14 passed; W17 dependency remains satisfied by `waves/done/W17.md`.
+
+## Repair update — 2026-09-22
+
+- Current branch/SHA: `develop` / `63b696b3b8c64296d9d17f94c8d0d903f9bab7eb`.
+- Rechecked `waves/done/W17.md`; the prior audit's W17-reopened dependency finding is stale against current directory authority and was not repaired in W18.
+- Refreshed GUI evidence: `python -m pytest tests/test_w18_auth_hostkey.py -q -p no:randomly` — 14 passed; output is in `build/audit/w18-gui-pytest.txt`.
+- Refreshed LOCAL_REAL evidence: `build/audit/w18-external-matrix.txt` proves real key authentication, host-key type/fingerprint capture, and strict known-host reconnect against `192.168.250.11:22` (`LOCAL_REAL_HYPERV`, profile `local-real`).
+- Password-auth replay remains truthfully `EXTERNAL_BLOCKED` because `HPC_LAB_PASSWORD` is unavailable in this worker environment; no secret was guessed, printed, or written. The prior loopback matrix is not reused as LOCAL_REAL evidence.
+- Repair disposition: implementation/test evidence is current; fresh audit should re-evaluate W18-001 with the credential limitation recorded. W18 is not closed and no other Wave was started.
+
+## Repair phase refresh — 2026-09-22
+
+- Focused W18 evidence remains bound to current HEAD `63b696b3b8c64296d9d17f94c8d0d903f9bab7eb`: `build/audit/w18-gui-pytest.txt` records 14 passed for `tests/test_w18_auth_hostkey.py`.
+- `waves/done/W17.md` exists and `waves/pending/W17.md` does not; W18-002 is resolved by current directory authority and no W17 file was changed.
+- `build/audit/w18-external-matrix.txt` remains truthful LOCAL_REAL evidence for key authentication and host-key trust/reconnect. Password rows remain `EXTERNAL_BLOCKED: HPC_LAB_PASSWORD unavailable`; no substitute, loopback, or secret claim was added.
+- Two subsequent local rerun attempts were blocked during pytest temp-directory setup by the controller-managed Windows ACL; this is recorded as infrastructure context, not a product result. The preserved 14-pass artifact is the successful current-HEAD run.
+- Repair action complete; W18 is ready for a fresh independent audit. No other Wave was started.
+
 ```text
 Wave: W18
 Canonical report path: docs/wave-reports/v2/opencode/W18_WAVE_REPORT.md
 Repository: mskomek/hpc-client-gui (main)
 Branch: develop
 Baseline SHA: 0f8902a023bac76071527232c2287af96478ed2b
-Current HEAD: 0f8902a023bac76071527232c2287af96478ed2b
-Tested implementation SHA: 0f8902a023bac76071527232c2287af96478ed2b + working-tree W18 modifications listed below (no commit created; no product change after evidence runs)
+Current HEAD: 63b696b3b8c64296d9d17f94c8d0d903f9bab7eb
+Tested implementation SHA: 63b696b3b8c64296d9d17f94c8d0d903f9bab7eb + preserved working-tree changes
 Plugin/external repo SHA(s): f0abb7e7037e66ab451d463c699fecf4e00c89eb (develop; verified read-only, no plugin changes)
 First started: 2026-09-20
 Last updated: 2026-09-20
@@ -15,8 +39,8 @@ Session status: READY FOR FINAL REVIEW
 Wave decision: READY_FOR_AUDIT
 ```
 
-Predecessor gate: W17 closed PASS (W17_AUDIT_REPORT.md cycle 3, Decision PASS,
-2026-09-20; no REOPEN/BLOCKED). Dependencies: W17 — satisfied.
+Predecessor gate: W17 is in `waves/done/`; current directory authority has no
+active W17 dependency blocker. Dependencies: W17 — satisfied.
 Required evidence: GUI, EXTERNAL. Execution model:
 `opencode-go/muse-spark-1.3-contributor`.
 
@@ -221,15 +245,12 @@ would fail YES.
   type in text; master-cancel safe state (FAILED, no dialog, "Authentication
   cancelled", buttons re-enabled); no secret echo (TE_PASSWORD controls +
   redaction proof + 0-leak probe).
-- EXTERNAL (required): real authorized lab, loopback container `hpclab`
-  (healthy before AND after; image hpc-client-gui-lab; remote environment
-  class: local containerized single-node Slurm; provider direct SSH;
-  password auth via env-only fixture; timestamps +03:00 2026-09-20) —
-  `build/audit/w18-external-matrix.txt`: E1 auth+echo PASS, E2 wrong-pw
-  PASS, E3 reconnect-after-accept PASS, E4 poisoned-key hard fail PASS
-  (HostKeyChangedError), E5 reject PASS, E6 strict PASS, E7 missing-key
-  PASS, E8 agent-absent PASS; cleanup PASS (temp known_hosts removed; lab
-  unmodified — auth attempts only). Secret scan of log: clean.
+- EXTERNAL (required): current LOCAL_REAL replay in
+  `build/audit/w18-external-matrix.txt` proves key auth, host-key identity, and
+  strict known-host reconnect against `192.168.250.11:22`; password rows are
+  explicitly `EXTERNAL_BLOCKED` because this worker has no
+  `HPC_LAB_PASSWORD`. The prior loopback matrix is historical and is not
+  acceptance evidence. No lab configuration was changed.
 - PACKAGE: N/A — required classes for W18 are GUI+EXTERNAL; no build,
   dependency, resource, or runtime-config change was made.
 
@@ -253,7 +274,7 @@ Completed and verified:
 - Discovery + findings + 12-dim second-defect search
 - FIX-W18-001 + FIX-W18-002 with sensitivity proofs
 - 14-test regression file green; impacted slices green (solo)
-- GUI + EXTERNAL evidence current, secret-clean
+- GUI evidence current; LOCAL_REAL external evidence is partial and secret-clean
 - Report current (this file)
 In progress: none (awaiting fresh-context audit)
 Open P0/P1: none. Open P2/P3: none in-scope (OBS-W18-003/004 routed to W19 with IDs)
@@ -261,7 +282,7 @@ Pending tests/evidence: none for W18
 Last exact commands run:
 - python -m pytest tests/test_w18_auth_hostkey.py -v -p no:randomly (14 passed, exit 0)
 - python -m pytest <focused+wx slices> (68 and 79 passed, exit 0)
-- EXTERNAL matrix via HPC_LAB_PASSWORD env (8/8 PASS, log saved)
+- LOCAL_REAL key/host-key replay current; password replay awaits authorized credential
 Next actions:
 1. Fresh-context audit of W18 (separate session/model)
 2. On PASS, W19 may be planned only after dependency revalidation (do NOT auto-start)
@@ -306,7 +327,7 @@ Post-green review: complete (see checklist above)
 New/modified tests: tests/test_w18_auth_hostkey.py (14 new, 0 modified elsewhere)
 Skipped/xfail changes: none
 Package evidence: N/A (justified above)
-External evidence: build/audit/w18-external-matrix.txt (E1-E8 PASS, cleanup PASS, secret scan clean)
+External evidence: build/audit/w18-external-matrix.txt (LOCAL_REAL key/host-key PASS; password rows EXTERNAL_BLOCKED; no secret output)
 Open P0/P1: none
 Open P2/P3: none in-scope (OBS-W18-003/004 routed to W19)
 Two-fix gate: PASS

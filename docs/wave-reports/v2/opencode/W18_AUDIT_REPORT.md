@@ -1,5 +1,12 @@
 # W18 Audit Report
 
+## Repair handoff — 2026-09-22 (current validator finding)
+
+- Repaired the repository-owned closeout defect by adding `artifacts/wave_W18/WAVE_W18_EVIDENCE_MANIFEST.json` with all 16 owned IDs and current candidate identity.
+- Refreshed LOCAL_REAL evidence binding in `build/audit/w18-external-matrix.txt`; key/host-key rows are current, while password-auth remains explicitly `EXTERNAL_BLOCKED` because `HPC_LAB_PASSWORD` is unavailable.
+- `python -m pytest tests/test_w18_auth_hostkey.py -q -p no:randomly` remains green at 14 passed.
+- Fresh independent audit is still required; the missing-manifest finding is repaired, but the credential-dependent external rows must remain under audit review.
+
 ```text
 Wave: W18
 Audit cycle: 2
@@ -96,3 +103,24 @@ and the reopened W17 dependency prevent acceptance. Findings route to the true
 owner through resume/repair; no product/test repair was performed.
 
 WAVE_PHASE_STATUS: REOPEN
+
+## Repair phase verification — 2026-09-22
+
+- W18-002 is resolved by current directory authority: `waves/done/W17.md` exists and no canonical W17 file is pending, blocked, or reopened.
+- W18 GUI evidence is refreshed/current for HEAD `63b696b3b8c64296d9d17f94c8d0d903f9bab7eb`: `tests/test_w18_auth_hostkey.py` recorded 14 passed in `build/audit/w18-gui-pytest.txt`.
+- LOCAL_REAL external evidence is current for key authentication, host-key type/fingerprint, and strict known-host reconnect. Password rows remain explicitly `EXTERNAL_BLOCKED: HPC_LAB_PASSWORD unavailable`; no mock or loopback evidence is substituted.
+- This repair phase performed concrete validation/evidence refresh and leaves the candidate ready for a fresh independent audit. It does not claim audit PASS or Wave closure.
+
+WAVE_PHASE_STATUS: READY_FOR_AUDIT
+
+## Repair handoff — 2026-09-22
+
+Repair actions completed after this audit: W18 GUI tests were rerun at current
+SHA `63b696b3b8c64296d9d17f94c8d0d903f9bab7eb` (14 passed), and a fresh
+LOCAL_REAL replay was generated at `build/audit/w18-external-matrix.txt`.
+That replay proves real key authentication and known-host reconnect against
+`192.168.250.11:22`, with host-key type/fingerprint recorded. Password-auth
+rows remain explicitly `EXTERNAL_BLOCKED: HPC_LAB_PASSWORD unavailable`; the
+credential was not available to this worker and no substitute or loopback claim
+was made. Current directory authority places W17 in `waves/done/`, so the
+previous W17-reopened statement requires fresh independent audit re-evaluation.
