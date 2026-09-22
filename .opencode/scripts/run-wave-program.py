@@ -274,6 +274,31 @@ def effective_audit_status(path: Path | None) -> str | None:
     return None
 
 
+def audit_receipt_valid(repo: Path, profile: dict[str, Any], target: str,
+                        state: dict[str, Any], content_identity: str) -> bool:
+    """Accept only the controller's fresh, content-bound audit receipt.
+
+    Reports are append-only human context.  The normalized result written by
+    this controller is the close handoff authority.
+    """
+    if str(state.get("audit_status", "")).upper() != "PASS":
+        return False
+    if str(state.get("tested_wave", "")).upper() != str(target).upper():
+        return False
+    if state.get("tested_content_identity") != content_identity:
+        return False
+    result_path = state.get("audit_result_path")
+    if not isinstance(result_path, str) or not result_path.strip():
+        return False
+    path = repo / result_path
+    result = read_json_file(path)
+    if not isinstance(result, dict) or str(result.get("status", "")).upper() != "PASS":
+        return False
+    code, head = git(repo, "rev-parse", "HEAD")
+    recorded_head = str(state.get("audit_candidate_sha", "")).strip()
+    return code == 0 and bool(head) and recorded_head == head
+
+
 def infer_reconcile_phase(repo: Path, project: str, target: str) -> str:
     report, audit = artifact_paths(repo, project, target)
     audit_status = effective_audit_status(audit)
@@ -337,7 +362,8 @@ def phase_schema(run_dir: Path) -> Path:
 
 
 def build_phase_prompt(repo: Path, project: str, target: str, wave_path: Path, phase: str,
-                       canonical: str | None, findings_path: Path | None, no_progress: bool) -> str:
+                       canonical: str | None, findings_path: Path | None, no_progress: bool,
+                       audit_receipt: dict[str, Any] | None = None) -> str:
     finding_note = ""
     if findings_path and findings_path.exists():
         finding_note = f"\nCurrent routed findings are in: {findings_path.relative_to(repo)}. Read them before acting."
@@ -378,7 +404,17 @@ THIS IS A NON-TERMINAL REPAIR PHASE. Consume the current audit/validator/finding
 FRESH INDEPENDENT AUDIT. Do not edit product, tests, lifecycle, reports, or evidence. Re-read the frozen/current candidate and required proof. Run read-only validation where possible. Return PASS only if this target can proceed to close under its own contract; otherwise REOPEN/BLOCKED with concrete finding IDs and owners. Do not repair.
 """
     if phase == "close":
-        return common + """
+        receipt = audit_receipt or {}
+        receipt_note = f"""
+Controller audit gate (authoritative; do not infer this from report markdown):
+- fresh independent audit: {receipt.get('audit_status', 'MISSING')}
+- tested Wave: {receipt.get('tested_wave', 'MISSING')}
+- tested content identity: {receipt.get('tested_content_identity', 'MISSING')}
+- audit candidate SHA: {receipt.get('audit_candidate_sha', 'MISSING')}
+- normalized audit result: {receipt.get('audit_result_path', 'MISSING')}
+Historical READY_FOR_AUDIT/BLOCKED/REOPEN prose in retained reports is context only and must not reopen this Wave when the controller audit gate is valid.
+"""
+        return common + receipt_note + """
 SERIAL CLOSEOUT phase. Close only after a fresh audit PASS. Run required closeout validator(s), verify candidate/final-SHA/evidence truth, then perform authorized lifecycle bookkeeping. If a validator is red or evidence is stale/missing, return REOPEN/BLOCKED with concrete findings; do not fake PASS. PASS means the target was actually closed and repository truth advanced.
 """
     raise ValueError(phase)
@@ -435,11 +471,12 @@ def codex_exec_args(run_dir: Path, sandbox: str, model: str | None) -> list[str]
 
 def codex_exec(repo: Path, run_dir: Path, project: str, target: str, wave_path: Path, phase: str,
                canonical: str | None, findings_path: Path | None, model: str | None,
-               no_progress: bool, seq: int) -> dict[str, Any]:
+               no_progress: bool, seq: int, state: dict[str, Any] | None = None) -> dict[str, Any]:
     result_path = run_dir / f"{seq:04d}-{target}-{phase}-result.json"
     log_path = run_dir / f"{seq:04d}-{target}-{phase}.log"
     prompt_path = run_dir / f"{seq:04d}-{target}-{phase}.prompt.md"
-    prompt = build_phase_prompt(repo, project, target, wave_path, phase, canonical, findings_path, no_progress)
+    prompt = build_phase_prompt(repo, project, target, wave_path, phase, canonical, findings_path, no_progress,
+                                state if phase == "close" else None)
     prompt_path.write_text(prompt, encoding="utf-8")
     sandbox = "read-only" if phase in {"reconcile", "plan", "audit"} else "workspace-write"
 
@@ -900,10 +937,18 @@ def main() -> int:
                       "content_identity":content_identity})
         save_state(run_dir,state)
 
-        if phase == "close" and state.get("tested_content_identity") and state.get("tested_content_identity") != content_identity:
-            append_event(run_dir,{"event":"evidence_stale_before_close","target":target,
-                                  "tested_content_identity":state.get("tested_content_identity"),"current_content_identity":content_identity})
+        receipt_valid = audit_receipt_valid(repo, profile, target, state, content_identity)
+        if phase == "close" and not receipt_valid:
+            append_event(run_dir,{"event":"audit_receipt_invalid_before_close","target":target,
+                                  "tested_content_identity":state.get("tested_content_identity"),
+                                  "current_content_identity":content_identity,
+                                  "audit_result_path":state.get("audit_result_path")})
             phase="audit"; state["phase"]=phase; save_state(run_dir,state); continue
+        if phase == "reconcile" and receipt_valid:
+            append_event(run_dir,{"event":"fresh_audit_receipt_precedes_historical_report","target":target,
+                                  "audit_result_path":state.get("audit_result_path"),
+                                  "tested_content_identity":content_identity})
+            phase="close"; state["phase"]=phase; save_state(run_dir,state); continue
 
         seq += 1; state["seq"] = seq
         print(f"\n[program] target={target} phase={phase} backend={args.backend}\n", flush=True)
@@ -921,7 +966,7 @@ def main() -> int:
             phase=inferred; state["phase"]=phase; save_state(run_dir,state); continue
 
         if args.backend == "codex":
-            result = codex_exec(repo,run_dir,project,target,wave_path,phase,canonical,findings_path,args.model,no_progress,seq)
+            result = codex_exec(repo,run_dir,project,target,wave_path,phase,canonical,findings_path,args.model,no_progress,seq,state)
         else:
             if phase == "reconcile":
                 inferred=infer_reconcile_phase(repo,project,target)
@@ -966,6 +1011,9 @@ def main() -> int:
             os.execv(sys.executable, [sys.executable, *sys.argv])
 
         status=str(result.get("status","")).upper()
+        if phase == "audit" and status != "PASS":
+            for key in ("audit_status", "audit_result_path", "audit_candidate_sha", "audit_passed_at"):
+                state.pop(key, None)
         if status in {"MISSING_STATUS","ORCHESTRATION_RECOVERY_REQUIRED"}:
             append_event(run_dir,{"event":"orchestration_recovery","target":target,"phase":phase,"reason":result.get("summary")})
             state["phase"]=phase; state["findings_path"]=str(findings_path.relative_to(repo)) if findings_path else None
@@ -1046,6 +1094,10 @@ def main() -> int:
             state["tested_content_identity"] = implementation_identity(repo,profile)
             state["tested_wave"] = target
             state["audit_passed_at"] = utcnow()
+            state["audit_status"] = "PASS"
+            state["audit_result_path"] = str(normalized.relative_to(repo))
+            code, head = git(repo, "rev-parse", "HEAD")
+            state["audit_candidate_sha"] = head if code == 0 else None
             if state.get("target_override") == target and target_state == "done":
                 frame=state.get("owner_stack",[]).pop() if state.get("owner_stack") else None
                 append_event(run_dir,{"event":"historical_owner_revalidated","owner":target,"return_target":frame.get("blocked_target") if isinstance(frame,dict) else None})
