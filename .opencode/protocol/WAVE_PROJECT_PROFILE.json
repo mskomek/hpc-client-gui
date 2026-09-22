@@ -208,7 +208,10 @@
       "artifacts/",
       "build/audit/",
       ".tmp/",
-      "waves/"
+      "waves/",
+      ".opencode/scripts/run-wave-program.py",
+      ".opencode/protocol/WAVE_PROJECT_PROFILE.json",
+      "tests/test_wave_controller_regressions.py"
     ],
     "required_manifest_fields": [
       "spec_profile_id",
