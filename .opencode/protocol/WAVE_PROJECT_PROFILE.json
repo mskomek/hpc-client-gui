@@ -206,6 +206,7 @@
     "allowed_closeout_only_paths": [
       "docs/wave-reports/",
       "artifacts/",
+      "build/audit/",
       ".tmp/",
       "waves/"
     ],

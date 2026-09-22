@@ -45,6 +45,10 @@ TRANSIENT_RE = re.compile(
     r"queue|rate.?limit|429|5\d\d|broken pipe|epipe|gateway|dns|failed to fetch)"
 )
 CONFIG_RE = re.compile(r"(?i)(unknown option|unknown flag|unexpected argument|invalid option|model .*not found|parse error)")
+FINDING_ID_RE = re.compile(
+    r"\b(?:REOPEN-)?(?:W\d{2}-\d{3}|HPC-[A-Z0-9]+-[A-Z]+-\d{3}|[A-Z]+-\d{3})\b",
+    re.I,
+)
 
 RESULT_SCHEMA = {
     "type": "object",
@@ -570,11 +574,20 @@ def human_deferred_is_real(result: dict[str, Any]) -> bool:
 
 
 def result_fingerprint(target: str, phase: str, result: dict[str, Any]) -> str:
+    raw_findings = [str(x) for x in (result.get("findings") or [])]
+    finding_ids = sorted({m.group(0).upper() for text in raw_findings for m in FINDING_ID_RE.finditer(text)})
+    if finding_ids:
+        findings = finding_ids
+    else:
+        findings = sorted(
+            re.sub(r"\b[0-9a-f]{40}\b", "<sha>", text, flags=re.I).strip()
+            for text in raw_findings
+        )
     data = {
         "target": target,
         "phase": phase,
         "status": result.get("status"),
-        "findings": sorted(str(x) for x in (result.get("findings") or [])),
+        "findings": findings,
     }
     import hashlib
     return hashlib.sha256(json.dumps(data, sort_keys=True).encode("utf-8")).hexdigest()
@@ -972,9 +985,24 @@ def main() -> int:
         if count>=3:
             append_event(run_dir,{"event":"NO_PROGRESS_CYCLE","target":target,"phase":phase,"semantic_finding":semantic,
                                   "content_identity":content_identity,"count":count})
-            # Do not execute the identical operation again. Reconcile routing/state first.
-            if phase != "reconcile":
-                phase="reconcile"; state["phase"]=phase; save_state(run_dir,state); continue
+            # Do not execute the identical repair/audit cycle again.  Stop at
+            # a resumable controller boundary instead of burning retries.
+            payload = {
+                "status": "NO_PROGRESS",
+                "summary": "The same finding repeated without a content-identity change; controller stopped the cycle.",
+                "findings": ["Changed repository evidence or implementation is required before retrying this finding."],
+                "changed_files": [],
+                "next_action": "reconcile",
+            }
+            state.update({"terminal": True, "terminal_class": "PROGRAM_NO_PROGRESS", "phase": "reconcile",
+                          "last_phase_result": str(normalized.relative_to(repo))})
+            normalized.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+            save_state(run_dir, state)
+            append_event(run_dir, {"event": "program_no_progress", "target": target, "count": count})
+            print("PROGRAM_NO_PROGRESS")
+            print(json.dumps(payload, ensure_ascii=False, indent=2))
+            lock.release()
+            return 40
         save_state(run_dir,state)
 
         next_phase=choose_after(phase,result)

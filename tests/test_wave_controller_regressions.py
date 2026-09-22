@@ -72,3 +72,20 @@ def test_generic_lab_capability_findings_are_not_human_only():
     authority = "interactive authorization required: provider returned 401 unauthorized"
     assert not any(router.HUMAN_RE.search(text) for text in generic)
     assert router.HUMAN_RE.search(authority)
+
+
+def test_no_progress_key_spans_repair_audit_cycle():
+    first = controller.no_progress_key("W18", "repair", "same finding", "same tree")
+    second = controller.no_progress_key("W18", "audit", "same finding", "same tree")
+    assert first == second
+    assert first != controller.no_progress_key("W18", "audit", "same finding", "changed tree")
+
+
+def test_result_fingerprint_ignores_report_prose_for_stable_finding_ids():
+    first = controller.result_fingerprint(
+        "W18", "audit", {"status": "REOPEN", "findings": ["W18-001: old report text at 63b696b3b8c64296d9d17f94c8d0d903f9bab7eb"]}
+    )
+    second = controller.result_fingerprint(
+        "W18", "audit", {"status": "REOPEN", "findings": ["W18-001: appended report text at e51572de3e6018bef4f4f97cc25531c19fb2c4ac"]}
+    )
+    assert first == second
