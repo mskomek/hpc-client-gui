@@ -13,9 +13,8 @@ SSH/SFTP/Slurm/filesystem/job/connection evidence and do not explicitly require
 a named production/site-specific system.
 
 
-LOCAL_REAL is real external infrastructure for acceptance purposes. It is not:
+`LOCAL_REAL_HYPERV` is real external infrastructure for acceptance purposes. It is not:
 - a mock server;
-- an in-process loopback fixture;
 - a fake scheduler;
 - a substitute identity for TRUBA;
 - evidence for a site-specific requirement that explicitly names another system.
@@ -44,11 +43,13 @@ be used as password-auth evidence.
 For generic password-auth requirements, the maintained secondary target is
 `LOCAL_PASSWORD_REAL`: the disposable OpenSSH/Slurm fixture defined by
 `docs/testing/LOCAL_HPC_LAB.md` and `devtools/lab/docker-compose.yml`. It is
-bound to `127.0.0.1` only, uses documented throwaway fixture input supplied
-through stdin or an equivalent secure input channel, and is authoritative only
-for generic password success/failure and invalid-password rejection. It is not
-TRUBA/site-specific evidence and its password must never appear in logs,
-reports, manifests, or evidence.
+bound to `127.0.0.1` only, uses a real containerized OpenSSH/Slurm runtime
+(not an in-process mock), and uses documented throwaway fixture input supplied
+through stdin or an equivalent secure input channel. It is authoritative only
+for generic password success/failure and invalid-password rejection. It does
+not replace `LOCAL_REAL_HYPERV` for key, host-key, Slurm, SFTP, storage, or
+site-specific claims. Its password must never appear in logs, reports,
+manifests, or evidence.
 
 
 ## Verified baseline
@@ -129,9 +130,11 @@ For PACKAGE claims:
 
 
 For EXTERNAL claims:
-- bind evidence to LOCAL_REAL environment identity, target/profile identity,
-  current repository HEAD/worktree identity, and exact Wave requirement IDs;
-- mock/loopback support evidence cannot replace required LOCAL_REAL evidence.
+- bind evidence to the selected real target's environment identity,
+  target/profile identity, current repository HEAD/worktree identity, and exact
+  Wave requirement IDs;
+- in-process mocks cannot replace real target evidence. `LOCAL_PASSWORD_REAL`
+  is authoritative only for its declared generic password scope.
 
 
 ## Shared-state and parallelism
