@@ -77,15 +77,12 @@ def ensure_temp_layout(repo: Path, profile: dict[str, Any]) -> Path:
 
 
 def configure_temp_environment(repo: Path, profile: dict[str, Any], run_id: str) -> Path:
-    root = ensure_temp_layout(repo, profile) / 'os' / run_id
-    root.mkdir(parents=True, exist_ok=True)
-    try:
-        probe = root / f'.write-probe-{os.getpid()}'
-        probe.write_text('', encoding='utf-8')
-        probe.unlink()
-    except OSError:
-        root = root.parent / f'{run_id}-{os.getpid()}'
-        root.mkdir(parents=True, exist_ok=True)
+    # A resumed controller process must never reuse the previous process' OS temp
+    # directory. On Windows, stale pytest/child-process handles or inherited ACLs
+    # can make an old basetemp undeletable and trap the controller in recovery.
+    boot_id = f'{os.getpid()}-{time.time_ns()}'
+    root = ensure_temp_layout(repo, profile) / 'os' / run_id / boot_id
+    root.mkdir(parents=True, exist_ok=False)
     os.environ['TEMP'] = str(root)
     os.environ['TMP'] = str(root)
     os.environ['TMPDIR'] = str(root)
@@ -198,12 +195,16 @@ def wave_metadata(path: Path, profile: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def wave_targets_in_folder(repo: Path, profile: dict[str, Any], state: str) -> list[tuple[str, Path]]:
+def wave_targets_in_folder(repo: Path, profile: dict[str, Any], state: str, *,
+                           scheduled_only: bool = False) -> list[tuple[str, Path]]:
     rel = profile['paths'][state]
     folder = repo / str(rel)
     if not folder.is_dir():
         return []
     out: list[tuple[str, Path, int]] = []
+    wave_cfg = profile.get('wave') or {}
+    lower = int(wave_cfg.get('min', -10**18))
+    upper = int(wave_cfg.get('max', 10**18))
     for p in folder.iterdir():
         if not p.is_file():
             continue
@@ -211,7 +212,13 @@ def wave_targets_in_folder(repo: Path, profile: dict[str, Any], state: str) -> l
         if not m:
             continue
         meta = wave_metadata(p, profile)
-        out.append((str(meta['wave_id']), p, int(meta['wave_number'])))
+        number = int(meta['wave_number'])
+        # Canonical/source-owner Waves may intentionally live beside scheduled
+        # execution Waves. They remain addressable through wave_location(), but
+        # profile bounds decide which Waves may enter the scheduling frontier.
+        if scheduled_only and not (lower <= number <= upper):
+            continue
+        out.append((str(meta['wave_id']), p, number))
     out.sort(key=lambda x: (x[2], x[0]))
     return [(a,b) for a,b,_ in out]
 
@@ -237,12 +244,143 @@ def wave_location(repo: Path, profile: dict[str, Any], target: str) -> tuple[Pat
 
 
 def pending_targets(repo: Path, profile: dict[str, Any]) -> list[tuple[str, Path]]:
-    done_ids = {wid.lower() for wid,_ in wave_targets_in_folder(repo, profile, 'done')}
+    # Scheduler enumeration is strictly bounded by profile.wave.min/max.
+    # Explicit owner lookup remains unbounded through wave_location().
+    done_ids = {wid.lower() for wid,_ in wave_targets_in_folder(repo, profile, 'done', scheduled_only=True)}
     result: list[tuple[str,Path]] = []
-    for wid,path in wave_targets_in_folder(repo, profile, 'pending'):
+    for wid,path in wave_targets_in_folder(repo, profile, 'pending', scheduled_only=True):
         if wid.lower() in done_ids:
             continue
         result.append((wid,path))
+    return result
+
+
+
+def lifecycle_authority_ids(profile: dict[str, Any]) -> set[str]:
+    scheduler = profile.get('scheduler') or {}
+    wave = profile.get('wave') or {}
+    ids = {str(x) for x in (scheduler.get('scheduled_wave_ids') or [])}
+    if not ids and isinstance(wave.get('min'), int) and isinstance(wave.get('max'), int):
+        ids.update(_format_wave_id(n, profile) for n in range(int(wave['min']), int(wave['max']) + 1))
+    aggregate = profile.get('aggregate') or {}
+    ids.update(str(x) for x in (aggregate.get('owner_wave_ids') or []))
+    cmin, cmax = aggregate.get('canonical_min'), aggregate.get('canonical_max')
+    if isinstance(cmin, int) and isinstance(cmax, int) and cmin <= cmax:
+        ids.update(_format_wave_id(n, profile) for n in range(cmin, cmax + 1))
+    return ids
+
+
+def lifecycle_entries(repo: Path, profile: dict[str, Any]) -> dict[str, list[tuple[str, Path]]]:
+    scope = {x.lower() for x in lifecycle_authority_ids(profile)}
+    out: dict[str, list[tuple[str, Path]]] = {}
+    for state in ('pending', 'done', 'blocked', 'postponed'):
+        for wid, path in wave_targets_in_folder(repo, profile, state):
+            if scope and wid.lower() not in scope:
+                continue
+            out.setdefault(wid, []).append((state, path))
+    return out
+
+
+def lifecycle_conflicts(repo: Path, profile: dict[str, Any]) -> dict[str, list[tuple[str, Path]]]:
+    return {wid: entries for wid, entries in lifecycle_entries(repo, profile).items() if len(entries) > 1}
+
+
+def _lifecycle_quarantine_root(repo: Path, profile: dict[str, Any]) -> Path:
+    parents: list[Path] = []
+    for state in ('pending', 'done', 'blocked', 'postponed'):
+        raw = (profile.get('paths') or {}).get(state)
+        if raw:
+            parents.append((repo / str(raw)).resolve().parent)
+    if not parents:
+        return repo / '.tmp' / 'ac-lifecycle-quarantine'
+    try:
+        common = Path(os.path.commonpath([str(x) for x in parents]))
+    except ValueError:
+        common = repo
+    try:
+        common.relative_to(repo.resolve())
+    except ValueError:
+        common = repo
+    return common / 'bak' / 'auto-quarantine'
+
+
+def safe_repair_lifecycle(repo: Path, profile: dict[str, Any], *, apply: bool = False,
+                          reason: str = 'preflight') -> dict[str, Any]:
+    conflicts = lifecycle_conflicts(repo, profile)
+    repair_id = time.strftime('%Y%m%dT%H%M%SZ', time.gmtime()) + f'-{os.getpid()}-{time.time_ns()}'
+    repairs: list[dict[str, Any]] = []
+    unresolved: list[dict[str, Any]] = []
+    quarantine_root = _lifecycle_quarantine_root(repo, profile) / repair_id
+
+    for wid in sorted(conflicts):
+        entries = conflicts[wid]
+        done_entries = [(state, path) for state, path in entries if state == 'done']
+        if (profile.get('scheduler') or {}).get('closed_wave_policy') == 'immutable' and len(done_entries) == 1:
+            authoritative = done_entries[0][1]
+            for state, path in entries:
+                if state == 'done':
+                    continue
+                item = {
+                    'wave_id': wid,
+                    'authoritative_state': 'done',
+                    'authoritative_path': authoritative.relative_to(repo).as_posix(),
+                    'stale_state': state,
+                    'stale_path': path.relative_to(repo).as_posix(),
+                    'sha256': hashlib.sha256(path.read_bytes()).hexdigest(),
+                    'reason': 'immutable-done-authority',
+                }
+                if apply:
+                    destination = quarantine_root / state / path.name
+                    destination.parent.mkdir(parents=True, exist_ok=True)
+                    if destination.exists():
+                        destination = destination.with_name(destination.stem + '-' + item['sha256'][:12] + destination.suffix)
+                    path.replace(destination)
+                    item['quarantine_path'] = destination.relative_to(repo).as_posix()
+                repairs.append(item)
+        else:
+            unresolved.append({
+                'wave_id': wid,
+                'locations': [f'{state}:{path.relative_to(repo).as_posix()}' for state, path in entries],
+                'reason': 'ambiguous-lifecycle-authority',
+            })
+
+    receipt_rel = None
+    if apply and (repairs or unresolved):
+        receipt_dir = ensure_temp_layout(repo, profile) / 'ac-lifecycle-repair'
+        receipt_dir.mkdir(parents=True, exist_ok=True)
+        receipt = receipt_dir / f'{repair_id}.json'
+        payload = {
+            'schema_version': 1,
+            'repair_id': repair_id,
+            'reason': reason,
+            'closed_wave_policy': (profile.get('scheduler') or {}).get('closed_wave_policy'),
+            'repairs': repairs,
+            'unresolved': unresolved,
+        }
+        tmp = receipt.with_suffix('.json.tmp')
+        tmp.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+        os.replace(tmp, receipt)
+        receipt_rel = receipt.relative_to(repo).as_posix()
+
+    remaining = lifecycle_conflicts(repo, profile) if apply else conflicts
+    return {
+        'status': 'AMBIGUOUS' if unresolved else ('REPAIRED' if repairs else 'PASS'),
+        'repair_id': repair_id if repairs or unresolved else None,
+        'repairs': repairs,
+        'unresolved': unresolved,
+        'remaining_conflicts': {
+            wid: [f'{state}:{path.relative_to(repo).as_posix()}' for state, path in entries]
+            for wid, entries in remaining.items()
+        },
+        'receipt': receipt_rel,
+    }
+
+
+def ensure_lifecycle_integrity(repo: Path, profile: dict[str, Any], *, apply_safe: bool = True,
+                               reason: str = 'controller') -> dict[str, Any]:
+    result = safe_repair_lifecycle(repo, profile, apply=apply_safe, reason=reason)
+    if result['unresolved'] or result['remaining_conflicts']:
+        raise RuntimeError('Ambiguous Wave lifecycle conflict: ' + json.dumps(result, ensure_ascii=False))
     return result
 
 
@@ -253,6 +391,95 @@ def current_target(repo: Path, profile: dict[str, Any]) -> tuple[str | None, Pat
     # blocked/postponed remain lifecycle-visible but normal scheduler does not silently
     # reinterpret them as pending; caller may explicitly route/repair them.
     return None, None
+
+
+def reconcile_active_wave_tracker(repo: Path, profile: dict[str, Any], *, reason: str) -> dict[str, str] | None:
+    """Reconcile the configured active-Wave tracker from lifecycle truth atomically.
+
+    Lifecycle directories remain the authority. The tracker is derived state only and
+    must never become a second scheduler authority.
+    """
+    rel = (profile.get('paths') or {}).get('active_wave_tracker')
+    if not rel:
+        return None
+    tracker = repo / str(rel)
+    if not tracker.is_file():
+        raise RuntimeError(f'Configured active Wave tracker is missing: {tracker}')
+    target, wave_path = current_target(repo, profile)
+    values = {
+        'current_wave': target or 'complete',
+        'status': 'PENDING' if target else 'COMPLETE',
+        'wave_file': wave_path.relative_to(repo).as_posix() if wave_path else '',
+        'reason': reason,
+        'gate': f'Wave {target} is the next pending execution wave.' if target else 'No pending execution Wave remains.',
+    }
+    lines = tracker.read_text(encoding='utf-8-sig').splitlines()
+    for key, value in values.items():
+        for index, line in enumerate(lines):
+            if line.startswith(f'{key}:'):
+                lines[index] = f'{key}: {value}'
+                break
+        else:
+            lines.append(f'{key}: {value}')
+    payload = '\n'.join(lines) + '\n'
+    tmp = tracker.with_name(f'.{tracker.name}.tmp-{os.getpid()}-{time.time_ns()}')
+    try:
+        tmp.write_text(payload, encoding='utf-8')
+        os.replace(tmp, tracker)
+    finally:
+        tmp.unlink(missing_ok=True)
+    return values
+
+
+def waves_index_missing(repo: Path, profile: dict[str, Any]) -> list[tuple[str, Path]]:
+    """Scheduled done Waves without a `Wave <id> COMPLETE` entry in the configured index.
+
+    Scoped to the scheduled program (scheduled_wave_ids, else wave.min..max) exactly
+    like validate-wave-orchestration; legacy done files are never back-filled.
+    """
+    rel = (profile.get('paths') or {}).get('waves_index')
+    if not rel or not bool((profile.get('capabilities') or {}).get('waves_index')):
+        return []
+    scheduled = {str(x) for x in (profile.get('scheduler') or {}).get('scheduled_wave_ids') or []}
+    wave = profile.get('wave') or {}
+    if not scheduled and isinstance(wave.get('min'), int) and isinstance(wave.get('max'), int):
+        scheduled = {_format_wave_id(n, profile) for n in range(wave['min'], wave['max'] + 1)}
+    text = _read_text(repo / str(rel))
+    return [(str(target), path) for target, path in wave_targets_in_folder(repo, profile, 'done')
+            if str(target) in scheduled and not re.search(rf'\bWave {re.escape(str(target))} COMPLETE\b', text)]
+
+
+def reconcile_waves_index(repo: Path, profile: dict[str, Any]) -> list[str]:
+    """Append factual entries for done Waves the index is missing.
+
+    Entries derive only from lifecycle truth (done file, its H1 title, the Git
+    commit that archived it) and never claim audit/test results. The index is a
+    derived log, never scheduler authority.
+    """
+    missing = waves_index_missing(repo, profile)
+    if not missing:
+        return []
+    index = repo / str(profile['paths']['waves_index'])
+    lines = []
+    for target, path in missing:
+        rel = path.relative_to(repo).as_posix()
+        heading = re.search(r'(?m)^#\s+(.+)$', _read_text(path))
+        title = re.sub(rf'^Wave\s+{re.escape(target)}\s*[—:-]\s*', '', heading.group(1).strip()) if heading else path.stem
+        code, log = _git(repo, 'log', '--diff-filter=A', '--format=%as %H', '--', rel)
+        first = log.splitlines()[-1].split() if code == 0 and log.strip() else []
+        day = first[0] if first else time.strftime('%Y-%m-%d', time.gmtime())
+        commit = f'`{first[1]}`' if len(first) > 1 else 'not yet committed'
+        lines.append(f'{day} Wave {target} COMPLETE: {title}; archived to `{rel}`; archive commit {commit} '
+                     f'(controller index reconciliation from lifecycle truth).')
+    existing = _read_text(index)
+    payload = existing.rstrip('\n') + ('\n\n' if existing.strip() else '') + '\n'.join(lines) + '\n'
+    tmp = index.with_name(f'.{index.name}.tmp-{os.getpid()}-{time.time_ns()}')
+    try:
+        tmp.write_text(payload, encoding='utf-8')
+        os.replace(tmp, index)
+    finally:
+        tmp.unlink(missing_ok=True)
+    return [target for target, _ in missing]
 
 
 def aggregate_validation_required(profile: dict[str, Any], meta: dict[str, Any], phase: str) -> bool:
@@ -421,6 +648,10 @@ def _process_start_marker(pid: int) -> str | None:
         return None
 
 
+def _lock_retryable(exc: OSError) -> bool:
+    return isinstance(exc, PermissionError) or getattr(exc, 'winerror', None) in {5, 32, 33}
+
+
 @dataclass
 class ControllerLock:
     path: Path
@@ -440,8 +671,19 @@ class ControllerLock:
             'repository_identity':identity['repo_root'],'branch':identity['branch'],
             'program':program,'heartbeat':time.time(),'created_at':time.time(),
         }
-        for _ in range(2):
+        tmp_path = path.with_suffix('.lock.tmp')
+        for attempt in range(5):
             try:
+                if tmp_path.exists():
+                    try:
+                        os.replace(tmp_path, root / f'{path.name}.stale-{os.getpid()}-{time.time_ns()}.tmp')
+                    except FileNotFoundError:
+                        pass
+                    except OSError as exc:
+                        if not _lock_retryable(exc) or attempt == 4:
+                            raise RuntimeError(f'Unable to quarantine stale temporary lock after bounded retries: {tmp_path}') from exc
+                        time.sleep(0.05 * (attempt + 1))
+                        continue
                 fd = os.open(path, os.O_CREAT|os.O_EXCL|os.O_WRONLY)
                 with os.fdopen(fd,'w',encoding='utf-8') as fh:
                     json.dump(payload,fh,indent=2); fh.write('\n')
@@ -457,9 +699,18 @@ class ControllerLock:
                 if same_process and same_repo and same_program:
                     raise RuntimeError(f'Live Wave controller lock exists: {path} run_id={existing.get("run_id")} pid={ep}')
                 # stale/PID-reused/foreign lock at the same repo path: safe takeover
-                try: path.unlink()
-                except FileNotFoundError: pass
-        raise RuntimeError(f'Unable to acquire Wave controller lock: {path}')
+                quarantine = root / f'{path.name}.stale-{os.getpid()}-{time.time_ns()}'
+                try:
+                    os.replace(path, quarantine)
+                except FileNotFoundError:
+                    pass
+                except OSError as exc:
+                    if not _lock_retryable(exc) or attempt == 4:
+                        raise RuntimeError(
+                            f'Unable to quarantine stale Wave controller lock after bounded retries: {path}'
+                        ) from exc
+                    time.sleep(0.05 * (attempt + 1))
+        raise RuntimeError(f'Unable to acquire Wave controller lock after bounded retries: {path}')
 
     def heartbeat(self) -> None:
         if self.released: return

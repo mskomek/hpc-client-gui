@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+
 import argparse
 import atexit
+import hashlib
 import json
 import os
 import re
@@ -14,20 +16,76 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+
+SCRIPT_ROOT = Path(__file__).resolve().parent
+AC_MAX_TRANSPORT_ATTEMPTS = 5
+AC_MAX_IDENTICAL_RECOVERY = 3
+
+
 from wave_state_engine import (
     ControllerLock, aggregate_validation_required, configure_temp_environment,
     current_target as engine_current_target, discover_unfinished_run,
-    ensure_temp_layout, load_profile, no_progress_key, pending_targets as engine_pending_targets,
+    ensure_lifecycle_integrity, ensure_temp_layout, load_profile, no_progress_key, pending_targets as engine_pending_targets,
+    reconcile_active_wave_tracker as engine_reconcile_active_wave_tracker,
+    reconcile_waves_index as engine_reconcile_waves_index,
     program_run_root, repo_identity, repository_content_identity, resume_classification,
     semantic_finding_key, wave_location as engine_wave_location, wave_metadata,
     wave_targets_in_folder as engine_wave_targets_in_folder, legacy_program_roots,
 )
+from phase_job import job_matches, mark_result as mark_phase_job_result, process_start_marker, read_job as read_phase_job, start_job as start_phase_job, wait_job as wait_phase_job
+
 
 for _stream in (sys.stdout, sys.stderr):
     if hasattr(_stream, "reconfigure"):
         _stream.reconfigure(encoding="utf-8", errors="replace")
 
-STATUS_RE = re.compile(r"WAVE_PHASE_STATUS:\s*([A-Z_]+)", re.I)
+
+# Machine-result authority is strictly block-scoped. Whole-output
+# WAVE_PHASE_STATUS counting is NOT authority: quoted reports, evidence,
+# prior phase output, grep/Select-String output, WAVE_PHASE_STATUS_EVIDENCE,
+# and historical markers outside the single complete block are ignored.
+# Legacy whole-output regexes were removed; only MACHINE_* below is authority.
+REPAIR_HYPOTHESIS_RE = re.compile(r"(?im)^\s*WAVE_REPAIR_HYPOTHESIS:\s*([A-Za-z0-9][A-Za-z0-9._:-]{0,127})\s*$")
+
+ANSI_RE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
+
+MACHINE_BLOCK_RE = re.compile(r"(?ms)^\s*AC_WAVE_MACHINE_RESULT_BEGIN\s*$\r?\n(?P<body>.*?)^\s*AC_WAVE_MACHINE_RESULT_END\s*$")
+MACHINE_STATUS_RE = re.compile(r"(?im)^\s*WAVE_PHASE_STATUS:\s*([A-Z_]+)\s*$")
+MACHINE_HYPOTHESIS_RE = re.compile(r"(?im)^\s*WAVE_REPAIR_HYPOTHESIS:\s*([A-Za-z0-9][A-Za-z0-9._:-]{0,127})\s*$")
+
+
+def _strip_ansi_for_machine(text: str) -> str:
+    return ANSI_RE.sub("", text or "")
+
+
+# Bounded legacy planner aliases; opencode_phase() maps them to READY.
+LEGACY_STATUS_ALIASES = {"PLANNED": "READY", "PLAN_COMPLETE": "READY", "READY_FOR_RUN": "READY"}
+
+
+def parse_machine_result(output: str, phase: str) -> dict[str, str]:
+    # Strip ANSI so colorized stdout still parses; only the single complete
+    # machine-result block is authority. Everything outside is prose/evidence.
+    clean = _strip_ansi_for_machine(output or "")
+    blocks = list(MACHINE_BLOCK_RE.finditer(clean))
+    if len(blocks) != 1:
+        raise ValueError(f"expected exactly one complete machine-result block, found {len(blocks)}")
+    body = blocks[0].group("body")
+    statuses = list(MACHINE_STATUS_RE.finditer(body))
+    if len(statuses) != 1:
+        raise ValueError(f"expected exactly one machine-result status, found {len(statuses)}")
+    hypotheses = list(MACHINE_HYPOTHESIS_RE.finditer(body))
+    if phase == "repair" and len(hypotheses) != 1 and statuses[0].group(1).upper() != "ORCHESTRATION_RECOVERY_REQUIRED":
+        raise ValueError(f"expected exactly one repair hypothesis, found {len(hypotheses)}")
+    if phase != "repair" and hypotheses:
+        raise ValueError("non-repair machine-result contains a repair hypothesis")
+    result = {"status": statuses[0].group(1).upper()}
+    # Report/requirement dispositions (NOT_APPLICABLE_ACCEPTED, DEFERRED_CLEAN,
+    # AWAITING_INPUT, IMPLEMENT, ...) are never machine status. Fail closed.
+    if result["status"] not in RESULT_SCHEMA["properties"]["status"]["enum"] and result["status"] not in LEGACY_STATUS_ALIASES:
+        raise ValueError(f"machine-result status outside canonical schema: {result['status']}")
+    if hypotheses:
+        result["repair_hypothesis"] = hypotheses[0].group(1)
+    return result
 LIFECYCLE_RE = re.compile(
     r"(?im)^\s*(WAVE_PHASE_STATUS|WAVE_REPAIR_STATUS):\s*([A-Z_]+)\s*$"
 )
@@ -46,9 +104,10 @@ TRANSIENT_RE = re.compile(
 )
 CONFIG_RE = re.compile(r"(?i)(unknown option|unknown flag|unexpected argument|invalid option|model .*not found|parse error)")
 FINDING_ID_RE = re.compile(
-    r"\b(?:REOPEN-)?(?:W\d{2}-\d{3}|HPC-[A-Z0-9]+-[A-Z]+-\d{3}|[A-Z]+-\d{3})\b",
+    r"\b(?:REOPEN-)?[A-Z][A-Z0-9]*(?:-[A-Z0-9]+){1,}\b",
     re.I,
 )
+
 
 RESULT_SCHEMA = {
     "type": "object",
@@ -64,6 +123,7 @@ RESULT_SCHEMA = {
         "summary": {"type": "string"},
         "findings": {"type": "array", "items": {"type": "string"}},
         "changed_files": {"type": "array", "items": {"type": "string"}},
+        "repair_hypothesis": {"type": "string"},
         "next_action": {
             "type": "string",
             "enum": ["plan", "run", "repair", "audit", "close", "reconcile", "next_wave", "none"],
@@ -74,8 +134,12 @@ RESULT_SCHEMA = {
 }
 
 
+
+
 def utcnow() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
 
 
 def read_text(path: Path) -> str:
@@ -85,9 +149,13 @@ def read_text(path: Path) -> str:
         return ""
 
 
+
+
 def write_json(path: Path, data: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
 
 
 def record_controller_error(run_dir: Path | None, category: str, detail: str) -> None:
@@ -106,6 +174,8 @@ def record_controller_error(run_dir: Path | None, category: str, detail: str) ->
     write_json(path, data)
 
 
+
+
 def parse_kv_file(path: Path) -> dict[str, str]:
     out: dict[str, str] = {}
     for raw in read_text(path).splitlines():
@@ -114,6 +184,8 @@ def parse_kv_file(path: Path) -> dict[str, str]:
         k, v = raw.split(":", 1)
         out[k.strip()] = v.strip()
     return out
+
+
 
 
 def run_stream(args: list[str], cwd: Path, stdin_text: str | None = None, log_path: Path | None = None) -> tuple[int, str]:
@@ -156,25 +228,37 @@ def run_stream(args: list[str], cwd: Path, stdin_text: str | None = None, log_pa
     return proc.wait(), "".join(lines)
 
 
+
+
 def git(repo: Path, *args: str) -> tuple[int, str]:
     cp = subprocess.run(["git", "-C", str(repo), *args], capture_output=True, text=True, encoding="utf-8", errors="replace")
     return cp.returncode, (cp.stdout + cp.stderr).strip()
+
+
 
 
 def detect_project(repo: Path) -> str:
     return str(load_profile(repo)["project_id"])
 
 
+
+
 def _wave_targets_in_folder(repo: Path, project: str, state: str) -> list[tuple[str, Path]]:
     return engine_wave_targets_in_folder(repo, load_profile(repo), state)
+
+
 
 
 def pending_targets(repo: Path, project: str) -> list[tuple[str, Path]]:
     return engine_pending_targets(repo, load_profile(repo))
 
 
+
+
 def wave_location(repo: Path, project: str, target: str) -> tuple[Path | None, str | None]:
     return engine_wave_location(repo, load_profile(repo), target)
+
+
 
 
 def canonical_from_wave(project: str, path: Path | None, repo: Path | None = None) -> str | None:
@@ -184,6 +268,8 @@ def canonical_from_wave(project: str, path: Path | None, repo: Path | None = Non
     profile = load_profile(base)
     value = wave_metadata(path, profile).get("canonical_source")
     return str(value) if value else None
+
+
 
 
 def current_target(repo: Path, project: str, override: str | None = None, *, allow_closed_owner_repair: bool = False) -> tuple[str | None, Path | None, str | None]:
@@ -203,6 +289,8 @@ def current_target(repo: Path, project: str, override: str | None = None, *, all
     return target, path, str(meta.get("canonical_source") or "") or None
 
 
+
+
 def artifact_paths(repo: Path, project: str, target: str) -> tuple[Path | None, Path | None]:
     """Resolve canonical implementation/audit reports before historical fallbacks."""
     roots = [
@@ -212,7 +300,11 @@ def artifact_paths(repo: Path, project: str, target: str) -> tuple[Path | None, 
         repo / "reports",
     ]
     candidates: list[Path] = []
-    prefixes = (f"{target}_", f"{target}-") if project == "HPC" else (f"WAVE_{target}_", f"{target}_")
+    prefixes_cfg = (load_profile(repo).get("artifacts") or {}).get("report_prefixes")
+    if isinstance(prefixes_cfg, list) and prefixes_cfg:
+        prefixes = tuple(str(x).format(wave_id=target) for x in prefixes_cfg)
+    else:
+        prefixes = (f"{target}_", f"{target}-", f"WAVE_{target}_", f"WAVE-{target}-")
     upper_prefixes = tuple(x.upper() for x in prefixes)
     for root in roots:
         if not root.is_dir():
@@ -226,11 +318,15 @@ def artifact_paths(repo: Path, project: str, target: str) -> tuple[Path | None, 
     return report, audit
 
 
+
+
 def read_json_file(path: Path) -> Any:
     try:
         return json.loads(read_text(path))
     except (FileNotFoundError, json.JSONDecodeError):
         return None
+
+
 
 
 def routed_owner(findings_path: Path | None, current: str) -> str | None:
@@ -244,15 +340,139 @@ def routed_owner(findings_path: Path | None, current: str) -> str | None:
         if not isinstance(finding, dict) or finding.get("human_only"):
             continue
         owner = str(finding.get("execution_owner") or "").strip()
-        owner_state = str(finding.get("owner_state") or "").lower()
-        if owner_state == "done":
-            continue
+        # CLOSED owners are valid repair targets when a fresh current finding
+        # explicitly routes to them. Lifecycle placement stays DONE; the
+        # controller opens a bounded closed-owner repair transaction instead of
+        # silently suppressing the route.
         if owner and owner != current and owner not in owners:
             owners.append(owner)
     def key(owner: str) -> tuple[int, str]:
         m = re.search(r"(\d+)", owner)
         return (int(m.group(1)) if m else 10**9, owner)
     return sorted(owners, key=key)[0] if owners else None
+
+
+
+
+def progress_no_progress_key(target: str, phase: str, semantic: str, content_identity: str, progress_epoch: int) -> str:
+    """Bound identical retries within one routing epoch, not across real owner progress.
+
+
+    A true-owner transition (including a CLOSED-owner repair transaction) is
+    semantic program progress even when implementation bytes are unchanged.
+    Encoding the epoch prevents a legitimate repair -> return -> re-audit cycle
+    from being mistaken for the same stuck operation.
+    """
+    scoped_semantic = f"{semantic}|progress_epoch={int(progress_epoch)}"
+    return no_progress_key(target, phase, scoped_semantic, content_identity)
+
+
+# Forward lifecycle edge per phase. A result is forward progress only when
+# choose_after() routes it along this edge, so the bypass can never drift from
+# the controller's real routing table.
+FORWARD_LIFECYCLE_EDGE: dict[str, str] = {
+    "plan": "run", "run": "audit", "repair": "audit", "audit": "close", "close": "reconcile",
+}
+
+
+def phase_result_bypasses_no_progress(phase: str, status: str) -> bool:
+    """Successful forward handoffs must not consume identical-retry budget.
+
+    `close:PASS` is authorization for the controller-owned pending -> done
+    transition. Likewise `plan:READY/PASS`, `run/repair:READY_FOR_AUDIT`
+    (and canonical READY/PASS aliases), and `audit:PASS` are forward
+    lifecycle commits, not recovery attempts. Counting them as identical
+    no-progress retries falsely stalls a clean Wave (for example plan READY
+    followed by run READY_FOR_AUDIT followed by audit PASS with unchanged
+    content identity reaching count 3 before close).
+
+    Non-forward results (BLOCKED, REOPEN, FAIL, NO_PROGRESS, etc.) never
+    bypass, so a real repair to audit to repair blocker loop with the same
+    semantic and content identity still reaches identical_no_progress_cycle.
+    Phase alone never bypasses: only (phase, status, choose_after(...)) on the
+    forward edge.
+    """
+    phase = str(phase or "").lower()
+    edge = FORWARD_LIFECYCLE_EDGE.get(phase)
+    return edge is not None and choose_after(phase, {"status": str(status or "").upper(), "next_action": "none"}) == edge
+
+
+EXPECTED_CANONICAL_SHA_RE = re.compile(r"(?im)^\*\*Expected canonical SHA-256:\*\*\s*`([0-9a-f]{64})`")
+CANONICAL_SNAPSHOT_RE = re.compile(r"(?im)^\*\*Canonical source snapshot:\*\*\s*`([^`]+)`")
+
+
+def canonical_content_sha256(data: bytes) -> str:
+    """Canonical source fingerprint: SHA-256 of BOM-stripped, LF-normalized bytes.
+
+    This equals the committed Git blob content, so a CRLF checkout
+    (core.autocrlf=true) never reads as spec drift. Wave generation and
+    validators must use this same algorithm.
+    """
+    if data.startswith(b"\xef\xbb\xbf"):
+        data = data[3:]
+    return hashlib.sha256(data.replace(b"\r\n", b"\n").replace(b"\r", b"\n")).hexdigest()
+
+
+def canonical_fingerprint_blocker(repo: Path, wave_path: Path) -> str | None:
+    """Machine-enforced Stop Condition: spec fingerprint mismatch -> BLOCKED.
+
+    Never left to worker prose. Waves that declare neither field are exempt.
+    """
+    text = read_text(wave_path)
+    expected, snapshot = EXPECTED_CANONICAL_SHA_RE.search(text), CANONICAL_SNAPSHOT_RE.search(text)
+    if not expected and not snapshot:
+        return None
+    if not expected or not snapshot:
+        return "CANONICAL_FINGERPRINT_MISMATCH: Wave declares only one of snapshot / expected SHA-256"
+    source = repo / snapshot.group(1)
+    if not source.is_file():
+        return f"CANONICAL_FINGERPRINT_MISMATCH: canonical snapshot missing: {snapshot.group(1)}"
+    actual = canonical_content_sha256(source.read_bytes())
+    if actual != expected.group(1).lower():
+        return f"CANONICAL_FINGERPRINT_MISMATCH: {snapshot.group(1)} expected {expected.group(1).lower()} actual {actual}"
+    return None
+
+
+
+
+def bump_progress_epoch(state: dict[str, Any], reason: str | None = None) -> int:
+    state["progress_epoch"] = int(state.get("progress_epoch", 0)) + 1
+    if reason:
+        state["progress_reason"] = reason
+    return int(state["progress_epoch"])
+
+
+
+
+def final_repair_owner(repo: Path, profile: dict[str, Any], failed_wave: str | None, state: dict[str, Any]) -> str | None:
+    """Resolve a repository-owned final-validation failure back into the Wave graph."""
+    if failed_wave:
+        direct, _ = engine_wave_location(repo, profile, str(failed_wave))
+        if direct is not None:
+            return str(failed_wave)
+        needle = re.search(r"(\d+)", str(failed_wave))
+        if needle:
+            canonical_num = needle.group(1)
+            candidates: list[tuple[int, str]] = []
+            for state_name in ("pending", "blocked", "postponed", "done"):
+                for target, wave_path in engine_wave_targets_in_folder(repo, profile, state_name):
+                    meta = wave_metadata(wave_path, profile)
+                    source = str(meta.get("canonical_source") or "")
+                    sm = re.search(r"(\d+)", source)
+                    if sm and sm.group(1) == canonical_num:
+                        # Aggregate/exit owner first, then deterministic numeric order.
+                        rank = 0 if bool(meta.get("aggregate_close_owner")) else 1
+                        candidates.append((rank, str(target)))
+            if candidates:
+                candidates.sort(key=lambda item: (item[0], int(re.search(r"(\d+)", item[1]).group(1)) if re.search(r"(\d+)", item[1]) else 10**9, item[1]))
+                return candidates[0][1]
+    last = str(state.get("last_closed_wave") or "").strip()
+    if last and engine_wave_location(repo, profile, last)[0] is not None:
+        return last
+    done = engine_wave_targets_in_folder(repo, profile, "done")
+    return str(done[-1][0]) if done else None
+
+
 
 
 def effective_audit_status(path: Path | None) -> str | None:
@@ -274,9 +494,12 @@ def effective_audit_status(path: Path | None) -> str | None:
     return None
 
 
+
+
 def audit_receipt_valid(repo: Path, profile: dict[str, Any], target: str,
                         state: dict[str, Any], content_identity: str) -> bool:
     """Accept only the controller's fresh, content-bound audit receipt.
+
 
     Reports are append-only human context.  The normalized result written by
     this controller is the close handoff authority.
@@ -299,9 +522,12 @@ def audit_receipt_valid(repo: Path, profile: dict[str, Any], target: str,
     return code == 0 and bool(head) and recorded_head == head
 
 
+
+
 def recover_allowlisted_audit_receipt(repo: Path, run_dir: Path, profile: dict[str, Any],
                                       target: str, content_identity: str) -> dict[str, Any] | None:
     """Recover a real PASS when only allowlisted closeout files changed.
+
 
     This is a restart/handoff recovery path, not a report parser: it consumes
     normalized audit receipts and requires the candidate-to-HEAD diff to be
@@ -331,6 +557,8 @@ def recover_allowlisted_audit_receipt(repo: Path, run_dir: Path, profile: dict[s
     return None
 
 
+
+
 def infer_reconcile_phase(repo: Path, project: str, target: str) -> str:
     report, audit = artifact_paths(repo, project, target)
     audit_status = effective_audit_status(audit)
@@ -350,15 +578,20 @@ def infer_reconcile_phase(repo: Path, project: str, target: str) -> str:
         return "run"
     return "plan"
 
+
 def append_event(run_dir: Path, event: dict[str, Any]) -> None:
     event = {"utc": utcnow(), **event}
     with (run_dir / "events.ndjson").open("a", encoding="utf-8") as fh:
         fh.write(json.dumps(event, ensure_ascii=False) + "\n")
 
 
+
+
 def save_state(run_dir: Path, state: dict[str, Any]) -> None:
     state["updated_at"] = utcnow()
     write_json(run_dir / "state.json", state)
+
+
 
 
 def self_heal(repo: Path) -> None:
@@ -371,6 +604,8 @@ def self_heal(repo: Path) -> None:
     ], repo)
     if code != 0 or "CODEX_SKILL_HEALTH=PASS" not in output:
         raise RuntimeError("repair-wave-skills.ps1 did not reach CODEX_SKILL_HEALTH=PASS")
+
+
 
 
 def validate_orchestration(repo: Path) -> None:
@@ -386,6 +621,8 @@ def validate_orchestration(repo: Path) -> None:
         raise RuntimeError("validate-wave-orchestration.py failed")
 
 
+
+
 def phase_schema(run_dir: Path) -> Path:
     p = run_dir / "phase-result.schema.json"
     if not p.exists():
@@ -393,9 +630,12 @@ def phase_schema(run_dir: Path) -> Path:
     return p
 
 
+
+
 def build_phase_prompt(repo: Path, project: str, target: str, wave_path: Path, phase: str,
                        canonical: str | None, findings_path: Path | None, no_progress: bool,
-                       audit_receipt: dict[str, Any] | None = None) -> str:
+                       audit_receipt: dict[str, Any] | None = None,
+                       content_identity: str = "unknown") -> str:
     finding_note = ""
     if findings_path and findings_path.exists():
         finding_note = f"\nCurrent routed findings are in: {findings_path.relative_to(repo)}. Read them before acting."
@@ -411,7 +651,9 @@ Canonical Wave file: {wave_path.relative_to(repo)}
 Canonical source wave: {canonical or 'n/a'}
 Phase: {phase}
 
-Read AGENTS.md, .agents/skills/wave-codex-core/SKILL.md, the target Wave, repository rules, and only the authority/evidence files needed for THIS phase. Preserve unrelated user changes. Never ask the user whether to continue. Never schedule another Wave. Return only the structured result required by the provided output schema.{finding_note}{deeper}
+
+Read AGENTS.md, .agents/skills/ac-wave-core/SKILL.md, the target Wave, repository rules, and only the authority/evidence files needed for THIS phase. Preserve unrelated user changes. Never ask the user whether to continue. Never schedule another Wave. Return only the structured result required by the provided output schema.{finding_note}{deeper}
+
 
 On Windows, canonical text SHA-256 comparisons MUST use LF-normalized UTF-8 bytes; raw CRLF hashes are not evidence of a spec mismatch.
 """
@@ -429,13 +671,14 @@ EXECUTE the target Wave's owned implementation/evidence work now. Run focused va
 """
     if phase == "repair":
         return common + """
-THIS IS A NON-TERMINAL REPAIR PHASE. Consume the current audit/validator/findings, resolve true ownership, and actually perform at least one concrete repository-owned repair/evidence-generation/routing action. For an aggregate validator can_close=false, enumerate failing IDs/reasons and repair the current/declared owner; do not stop after writing a status report. Run focused validation and refresh invalidated evidence. Finish READY_FOR_AUDIT when ready for a fresh audit. HUMAN_DEFERRED is allowed only for genuine unavailable authority.
+THIS IS A NON-TERMINAL REPAIR PHASE. Consume the current audit/validator/findings, resolve true ownership, and actually perform at least one concrete repository-owned repair/evidence-generation/routing action. For an aggregate validator can_close=false, enumerate failing IDs/reasons and repair the current/declared owner; do not stop after writing a status report. Run focused validation and refresh invalidated evidence. Set repair_hypothesis to a concise stable diagnosis ID; reuse it while testing the same diagnosis and change it only when the repair hypothesis materially changes. Finish READY_FOR_AUDIT when ready for a fresh audit. HUMAN_DEFERRED is allowed only for genuine unavailable authority.
 """
     if phase == "audit":
         return common + f"""
 FRESH INDEPENDENT AUDIT. Do not edit product, tests, lifecycle, reports, or evidence. Re-read the frozen/current candidate and required proof. Run read-only validation where possible. Return PASS only if this target can proceed to close under its own contract; otherwise REOPEN/BLOCKED with concrete finding IDs and owners. Do not repair.
 
-Controller identity handoff: current implementation content identity is {implementation_identity(repo, profile)}. The profile's allowed closeout-only paths are authoritative; controller/profile/regression-test changes on the candidate-to-HEAD diff do not invalidate the tested Wave implementation. Existing evidence/report working-tree edits are Wave closeout artifacts and must be judged by the canonical validator, not treated as product-content drift. A prior executed GUI probe path under .tmp is disposable runtime scratch, not required persisted evidence; the manifest, exact test receipt, and validator are the authoritative proof.
+
+Controller identity handoff: current implementation content identity is {content_identity}. The profile's allowed closeout-only paths are authoritative; controller/profile/regression-test changes on the candidate-to-HEAD diff do not invalidate the tested Wave implementation. Existing evidence/report working-tree edits are Wave closeout artifacts and must be judged by the canonical validator, not treated as product-content drift. A prior executed GUI probe path under .tmp is disposable runtime scratch, not required persisted evidence; the manifest, exact test receipt, and validator are the authoritative proof.
 """
     if phase == "close":
         receipt = audit_receipt or {}
@@ -452,6 +695,8 @@ Historical READY_FOR_AUDIT/BLOCKED/REOPEN prose in retained reports is context o
 SERIAL CLOSEOUT phase. The controller has already established the fresh audit PASS above. Do not return READY_FOR_AUDIT or reopen because of retained report prose or a disposable .tmp probe path. Run the closeout validator; when it is green, return PASS so the controller can perform the authorized close transaction. If a validator is red or evidence is substantively missing, return REOPEN/BLOCKED with concrete findings; do not fake PASS.
 """
     raise ValueError(phase)
+
+
 
 
 def codex_exec_help() -> str:
@@ -471,11 +716,14 @@ def codex_exec_help() -> str:
     return blob
 
 
+
+
 def codex_exec_args(run_dir: Path, sandbox: str, model: str | None) -> list[str]:
     """Build the Codex exec command from the installed CLI's actual option surface."""
     help_text = codex_exec_help()
     exe = shutil.which("codex") or "codex"
     args = [exe, "exec"]
+
 
     if "--ephemeral" in help_text:
         args.append("--ephemeral")
@@ -483,6 +731,7 @@ def codex_exec_args(run_dir: Path, sandbox: str, model: str | None) -> list[str]
         args += ["--sandbox", sandbox]
     if "--ask-for-approval" in help_text:
         args += ["--ask-for-approval", "never"]
+
 
     required = ["--output-schema", "--output-last-message"]
     missing = [flag for flag in required if flag not in help_text]
@@ -496,11 +745,14 @@ def codex_exec_args(run_dir: Path, sandbox: str, model: str | None) -> list[str]
         "--output-last-message", str(run_dir / "__RESULT_PATH_PLACEHOLDER__"),
     ]
 
+
     if model:
         if "--model" not in help_text and " -m" not in help_text:
             raise RuntimeError("A model override was requested but this Codex CLI does not advertise --model")
         args += ["--model", model]
     return args
+
+
 
 
 def codex_exec(repo: Path, run_dir: Path, project: str, target: str, wave_path: Path, phase: str,
@@ -510,9 +762,11 @@ def codex_exec(repo: Path, run_dir: Path, project: str, target: str, wave_path: 
     log_path = run_dir / f"{seq:04d}-{target}-{phase}.log"
     prompt_path = run_dir / f"{seq:04d}-{target}-{phase}.prompt.md"
     prompt = build_phase_prompt(repo, project, target, wave_path, phase, canonical, findings_path, no_progress,
-                                state if phase == "close" else None)
+                                state if phase == "close" else None,
+                                state.get("content_identity", "unknown") if state else "unknown")
     prompt_path.write_text(prompt, encoding="utf-8")
     sandbox = "read-only" if phase in {"reconcile", "plan", "audit"} else "workspace-write"
+
 
     try:
         args = codex_exec_args(run_dir, sandbox, model)
@@ -525,12 +779,14 @@ def codex_exec(repo: Path, run_dir: Path, project: str, target: str, wave_path: 
             "next_action": "repair",
         }
 
+
     placeholder = str(run_dir / "__RESULT_PATH_PLACEHOLDER__")
     args = [str(result_path) if x == placeholder else x for x in args]
     args += ["-"]
 
+
     attempt = 0
-    while True:
+    while attempt < AC_MAX_TRANSPORT_ATTEMPTS:
         attempt += 1
         append_event(run_dir, {"event": "codex_phase_start", "phase": phase, "target": target, "attempt": attempt})
         code, output = run_stream(args, repo, stdin_text=prompt, log_path=log_path)
@@ -548,46 +804,297 @@ def codex_exec(repo: Path, run_dir: Path, project: str, target: str, wave_path: 
         delay = min(60, 2 ** min(attempt, 6))
         if not TRANSIENT_RE.search(blob) and attempt >= 3:
             delay = 60
-        print(f"[program] codex exec retry phase={phase} attempt={attempt} delay={delay}s", flush=True)
+        print(f"[program] codex exec retry phase={phase} attempt={attempt}/{AC_MAX_TRANSPORT_ATTEMPTS} delay={delay}s", flush=True)
         time.sleep(delay)
+    return {"status":"ORCHESTRATION_RECOVERY_REQUIRED","summary":"Codex transport retries exhausted",
+            "findings":[f"phase={phase} target={target} retries={AC_MAX_TRANSPORT_ATTEMPTS}"],
+            "changed_files":[],"next_action":"reconcile"}
 
 
-def opencode_phase(repo: Path, target: str, phase: str, seq: int, run_dir: Path, program: str) -> dict[str, Any]:
-    luna_family = program in {"wave-a-end-l", "wave-a-end-l-p"}
-    script_name = "run-wave-l-phase.ps1" if luna_family else "run-wave-phase.ps1"
-    script = repo / ".opencode" / "scripts" / script_name
+
+
+ROLE_BY_PHASE = {"doctor": "controller", "reopen": "controller", "plan": "planner", "run": "executor",
+                 "resume": "executor", "repair": "executor", "audit": "auditor", "close": "closer"}
+# Mirrors the per-family bridge routing; the bridge's dispatch record is the
+# effective truth and any divergence is surfaced, never silent.
+LUNA_MODEL = {"audit": "openai/gpt-5.6-luna#high"}
+LUNA_DEFAULT_MODEL = "openai/gpt-5.6-luna#medium"
+
+
+def program_family(program: str) -> str | None:
+    for family in ("luna-openai", "opencode", "hybrid"):
+        if program.startswith(f"ac-wave-{family}-"):
+            return family
+    return None
+
+
+def split_model_thinking(model: str | None) -> tuple[str, str]:
+    """`provider/model#variant` -> (model, variant); no variant is backend-default, never guessed."""
+    if not model:
+        return "unknown", "unknown"
+    base, _, variant = str(model).partition("#")
+    return base.strip() or "unknown", variant.strip() or "backend-default"
+
+
+def resolve_phase_route(repo: Path, program: str, phase: str, backend: str = "opencode",
+                        codex_model: str | None = None) -> dict[str, str]:
+    """Requested (configured) route for a phase dispatch, from structured config only."""
+    role = ROLE_BY_PHASE.get(phase, "unknown")
+    if backend == "codex":
+        model, thinking = split_model_thinking(codex_model)
+        return {"role": role, "backend": "codex", "family": "codex", "agent": "codex-exec",
+                "model": model, "thinking": thinking}
+    family = program_family(program) or "unknown"
+    raw = read_text(repo / "opencode.jsonc") if (repo / "opencode.jsonc").is_file() else ""
+    match = re.search(r"""(?m)["']model["']\s*:\s*["']([^"']+)["']""", raw)
+    project_model = match.group(1).strip() if match else None
+    if family == "luna-openai":
+        requested = LUNA_MODEL.get(phase, LUNA_DEFAULT_MODEL)
+    elif family == "hybrid":
+        requested = LUNA_MODEL.get(phase, project_model)
+    else:
+        requested = project_model
+    model, thinking = split_model_thinking(requested)
+    return {"role": role, "backend": "opencode", "family": family, "agent": f"ac-wave-{family}-{role}",
+            "model": model, "thinking": thinking}
+
+
+def route_divergence(requested: dict[str, str], record: dict[str, Any] | None) -> tuple[dict[str, str], list[dict[str, str]]]:
+    """Effective route from the launcher's dispatch record plus visible fallback/override notices."""
+    if not isinstance(record, dict):
+        return {**requested, "model": "unknown", "thinking": "unknown"}, [
+            {"event": "MODEL_FALLBACK", "requested": requested["model"], "effective": "unknown",
+             "reason": "launcher dispatch record missing"}]
+    effective = {**requested, "model": str(record.get("effective_model") or "unknown"),
+                 "thinking": str(record.get("effective_thinking") or "unknown")}
+    notices = []
+    if effective["model"] != requested["model"]:
+        notices.append({"event": "MODEL_FALLBACK", "requested": requested["model"], "effective": effective["model"],
+                        "reason": str(record.get("reason") or "launcher selected a different model")})
+    if effective["thinking"] != requested["thinking"]:
+        notices.append({"event": "THINKING_OVERRIDE", "requested": requested["thinking"], "effective": effective["thinking"],
+                        "reason": str(record.get("reason") or "launcher selected a different thinking level")})
+    return effective, notices
+
+
+def format_route(route: dict[str, str]) -> str:
+    return f"role={route['role']} | backend={route['backend']} | model={route['model']} | thinking={route['thinking']}"
+
+
+def print_program_routing(repo: Path, program: str, backend: str, codex_model: str | None) -> None:
+    print(f"[routing] program={program} backend={backend}", flush=True)
+    for phase in ("doctor", "plan", "run", "audit", "close"):
+        route = resolve_phase_route(repo, program, phase, backend, codex_model)
+        print(f"[routing] {route['role']:<10} | agent={route['agent']} | model={route['model']} | thinking={route['thinking']}", flush=True)
+
+
+def models_used_lines(history: list[dict[str, Any]]) -> list[str]:
+    counts: dict[tuple[str, str, str, bool], int] = {}
+    for item in history or []:
+        key = (str(item.get("role")), str(item.get("model")), str(item.get("thinking")), bool(item.get("fallback")))
+        counts[key] = counts.get(key, 0) + 1
+    return [f"[models-used] {role}: {model} / thinking={thinking}: {n} dispatch{'es' if n != 1 else ''}{' (fallback)' if fb else ''}"
+            for (role, model, thinking, fb), n in sorted(counts.items())]
+
+
+def opencode_phase(repo: Path, target: str, phase: str, seq: int, run_dir: Path, program: str,
+                   state: dict[str, Any], controller_context_path: Path | None = None) -> dict[str, Any]:
+    if program.startswith("ac-wave-luna-openai-"):
+        script_name = "run-ac-wave-luna-openai-phase.ps1"
+        family = "Luna/OpenAI-only"
+    elif program.startswith("ac-wave-opencode-"):
+        script_name = "run-ac-wave-opencode-phase.ps1"
+        family = "OpenCode-only"
+    elif program.startswith("ac-wave-hybrid-"):
+        script_name = "run-ac-wave-hybrid-phase.ps1"
+        family = "Hybrid"
+    else:
+        raise RuntimeError(f"Unsupported Agent Core program family: {program}")
+    script = SCRIPT_ROOT / script_name
     if not script.exists():
-        family = "Luna-only" if luna_family else "mixed-model"
         raise RuntimeError(f"Missing {family} OpenCode phase runner: {script}")
+
     log_path = run_dir / f"{seq:04d}-{target}-{phase}-opencode.log"
-    code, output = run_stream([
-        "powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(script), phase, target
-    ], repo, log_path=log_path)
-    m = list(STATUS_RE.finditer(output))
-    missing_status = code == 68 or "WAVE_L_PHASE_MISSING_STATUS" in output
-    if missing_status:
-        return {
-            "status": "MISSING_STATUS",
+    job_path = run_dir / f"{seq:04d}-{target}-{phase}-job.json"
+    proc = None
+    active_rel = state.get("active_phase_job")
+    if isinstance(active_rel, str) and active_rel.strip():
+        candidate = repo / active_rel
+        job = read_phase_job(candidate)
+        if job_matches(job, target=target, phase=phase, program=program):
+            job_path = candidate
+            logged = str(job.get("log_path") or "").strip()
+            if logged:
+                log_path = Path(logged)
+            append_event(run_dir, {"event":"managed_phase_job_resume","target":target,"phase":phase,
+                                   "job":str(job_path.relative_to(repo)),"pid":job.get("pid")})
+        else:
+            state.pop("active_phase_job", None)
+            state.pop("active_phase_pid", None)
+            active_rel = None
+
+    requested = resolve_phase_route(repo, program, phase)
+    dispatch_path = job_path.with_name(job_path.name.replace("-job.json", "-dispatch.json"))
+    state["active_route"] = {**requested, "wave": target, "phase": phase, "dispatch_id": dispatch_path.name,
+                             "started_at": (state.get("active_route") or {}).get("started_at") if active_rel else utcnow()}
+    print(f"[dispatch] {target} {phase.upper()} {'reattached' if active_rel else 'started'} | {format_route(requested)}", flush=True)
+    if not active_rel:
+        exe = shutil.which("powershell") or "powershell"
+        args = [exe, "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(script),
+                phase, target, "-RepoRoot", str(repo), "-DispatchRecordPath", str(dispatch_path)]
+        if controller_context_path is not None and controller_context_path.exists():
+            args += ["-ControllerContextPath", str(controller_context_path)]
+        append_event(run_dir, {"event": "phase_dispatch", "run_id": run_dir.name, "dispatch_id": dispatch_path.name,
+                               "wave": target, "phase": phase, "role": requested["role"], "backend": requested["backend"],
+                               "agent": requested["agent"], "requested_model": requested["model"],
+                               "requested_thinking": requested["thinking"]})
+        proc = start_phase_job(
+            args=args, cwd=repo, log_path=log_path, job_path=job_path,
+            metadata={"seq":seq,"target":target,"phase":phase,"program":program,
+                      "backend":"opencode","controller_pid":os.getpid()},
+        )
+        state["active_phase_job"] = str(job_path.relative_to(repo))
+        state["active_phase_pid"] = int(proc.pid)
+        save_state(run_dir, state)
+        append_event(run_dir, {"event":"managed_phase_job_start","target":target,"phase":phase,
+                               "job":str(job_path.relative_to(repo)),"pid":proc.pid})
+
+    code, output = wait_phase_job(job_path=job_path, log_path=log_path, proc=proc)
+    effective, notices = route_divergence(requested, read_json_file(dispatch_path) if dispatch_path.exists() else None)
+    for notice in notices:
+        print(f"{notice['event']} requested={notice['requested']} effective={notice['effective']} reason={notice['reason']}", flush=True)
+        append_event(run_dir, {**notice, "wave": target, "phase": phase, "role": requested["role"], "dispatch_id": dispatch_path.name})
+    append_event(run_dir, {"event": "phase_dispatch_effective", "run_id": run_dir.name, "dispatch_id": dispatch_path.name,
+                           "wave": target, "phase": phase, "role": requested["role"], "backend": requested["backend"],
+                           "requested_model": requested["model"], "effective_model": effective["model"],
+                           "requested_thinking": requested["thinking"], "effective_thinking": effective["thinking"]})
+    state.setdefault("route_history", []).append({"role": effective["role"], "model": effective["model"],
+                                                  "thinking": effective["thinking"], "fallback": bool(notices)})
+    state["active_route"] = None
+    try:
+        machine = parse_machine_result(output, phase)
+    except ValueError as exc:
+        status = "ORCHESTRATION_RECOVERY_REQUIRED"
+        result = {
+            "status": status,
             "summary": output[-3000:],
-            "findings": ["OpenCode child exited without a terminal WAVE_PHASE_STATUS marker; orchestration recovery must rerun the same phase."],
+            "findings": [str(exc)],
             "changed_files": [],
             "next_action": "reconcile",
+            "phase_log_path": str(log_path.relative_to(repo)),
         }
-    status = m[-1].group(1).upper() if m else ("FAIL" if code else "READY")
-    if "HUMAN" in status or HUMAN_RE.search(output):
-        status = "HUMAN_DEFERRED"
+        mark_phase_job_result(job_path, status=status)
+        return result
+
+    raw_status = machine["status"]
+    status = "HUMAN_DEFERRED" if "HUMAN" in raw_status else raw_status
     mapping = {
-        "READY": "READY", "READY_FOR_AUDIT": "READY_FOR_AUDIT", "PASS": "PASS",
-        "REOPEN": "REOPEN", "BLOCKED": "BLOCKED", "FAIL": "FAIL", "HUMAN_DEFERRED": "HUMAN_DEFERRED"
+        "READY":"READY", **LEGACY_STATUS_ALIASES,
+        "READY_FOR_AUDIT":"READY_FOR_AUDIT", "PASS":"PASS", "REOPEN":"REOPEN",
+        "BLOCKED":"BLOCKED", "FAIL":"FAIL", "HUMAN_DEFERRED":"HUMAN_DEFERRED",
+        "ORCHESTRATION_RECOVERY_REQUIRED":"ORCHESTRATION_RECOVERY_REQUIRED",
     }
-    status = mapping.get(status, "FAIL" if code else "READY")
-    return {
-        "status": status,
-        "summary": output[-3000:],
-        "findings": [output[-1600:]] if status in {"REOPEN", "BLOCKED", "FAIL", "HUMAN_DEFERRED"} else [],
-        "changed_files": [],
-        "next_action": "none",
+    status = mapping.get(status, "FAIL")
+    result = {
+        "status":status, "summary":output[-3000:],
+        "findings":[output[-1600:]] if status in {"REOPEN","BLOCKED","FAIL","HUMAN_DEFERRED"} else [],
+        "changed_files":[],
+        "next_action":"reconcile" if status == "ORCHESTRATION_RECOVERY_REQUIRED" else "none",
+        "phase_log_path": str(log_path.relative_to(repo)),
     }
+    if "repair_hypothesis" in machine:
+        result["repair_hypothesis"] = machine["repair_hypothesis"]
+    mark_phase_job_result(job_path, status=status)
+    return result
+
+
+def phase_controller_context(repo: Path, run_dir: Path, seq: int, target: str, phase: str,
+                             content_identity: str, state: dict[str, Any], findings_path: Path | None) -> Path:
+    path = run_dir / f"{seq:04d}-{target}-{phase}-controller-context.json"
+    payload = {
+        "target": target,
+        "phase": phase,
+        "content_identity": content_identity,
+        "findings_path": str(findings_path.relative_to(repo)) if findings_path and findings_path.exists() else None,
+        "audit_receipt": {
+            "audit_status": state.get("audit_status"),
+            "tested_wave": state.get("tested_wave"),
+            "tested_content_identity": state.get("tested_content_identity"),
+            "audit_candidate_sha": state.get("audit_candidate_sha"),
+            "audit_result_path": state.get("audit_result_path"),
+            "audit_passed_at": state.get("audit_passed_at"),
+            "audit_report_path": state.get("audit_report_path"),
+        },
+    }
+    write_json(path, payload)
+    return path
+
+
+def _strip_ansi(text: str) -> str:
+    return re.sub(r"\x1b\[[0-?]*[ -/]*[@-~]", "", text)
+
+
+def persist_fresh_audit_report(repo: Path, project: str, target: str, result: dict[str, Any],
+                               normalized_path: Path) -> Path | None:
+    """Persist the independent auditor output without granting the auditor product write authority.
+
+    OpenCode audit agents may intentionally run with edit denied. The controller owns the durable
+    handoff artifact: it copies the already-completed auditor phase log into the canonical audit
+    report location and binds it to the normalized receipt. This is closeout evidence only.
+    """
+    if str(result.get("status", "")).upper() != "PASS":
+        return None
+    log_rel = result.get("phase_log_path")
+    if not isinstance(log_rel, str) or not log_rel.strip():
+        return None
+    log_path = repo / log_rel
+    if not log_path.exists():
+        return None
+    _report, audit = artifact_paths(repo, project, target)
+    if audit is None:
+        audit = repo / "artifacts" / "opencode" / f"wave_{target}" / f"WAVE_{target}_AUDIT_REPORT.md"
+    audit.parent.mkdir(parents=True, exist_ok=True)
+    raw = _strip_ansi(read_text(log_path)).strip()
+    envelope = (
+        f"\n\n## Controller-persisted fresh independent audit — {utcnow()}\n\n"
+        f"- Wave: `{target}`\n"
+        f"- Normalized receipt: `{normalized_path.relative_to(repo)}`\n"
+        f"- Phase log: `{log_path.relative_to(repo)}`\n"
+        f"- Controller receipt status: `PASS`\n\n"
+        "The auditor executed independently; controller persistence is the durable artifact handoff.\n\n"
+        "```text\n" + raw + "\n```\n\n"
+        "WAVE_PHASE_STATUS: PASS\n"
+    )
+    if audit.exists():
+        with audit.open("a", encoding="utf-8", newline="\n") as fh:
+            fh.write(envelope)
+    else:
+        audit.write_text(f"# Wave {target} Audit Report\n" + envelope.lstrip(), encoding="utf-8", newline="\n")
+    return audit
+
+
+def print_phase_result_summary(target: str, phase: str, result: dict[str, Any], normalized: Path, repo: Path) -> None:
+    status = str(result.get("status", "UNKNOWN")).upper()
+    summary = re.sub(r"\s+", " ", str(result.get("summary") or "")).strip()
+    if len(summary) > 500:
+        summary = summary[-500:]
+    print(f"[phase-result] target={target} phase={phase} status={status}", flush=True)
+    if result.get("repair_hypothesis"):
+        print(f"[phase-result] repair_hypothesis={result['repair_hypothesis']}", flush=True)
+    if summary:
+        print(f"[phase-result] summary={summary}", flush=True)
+    print(f"[phase-result] normalized={normalized.relative_to(repo)}", flush=True)
+
+
+def print_terminal_summary(state: dict[str, Any], run_dir: Path) -> None:
+    print("AC_WAVE_PROGRAM_TERMINAL", flush=True)
+    print(f"TERMINAL_CLASS={state.get('terminal_class') or 'UNKNOWN'}", flush=True)
+    print(f"CURRENT_WAVE={state.get('current_wave') or ''}", flush=True)
+    print(f"PHASE={state.get('phase') or ''}", flush=True)
+    print(f"STALL_REASON={state.get('stall_reason') or ''}", flush=True)
+    for line in models_used_lines(state.get("route_history") or []):
+        print(line, flush=True)
+    print(f"RUN_DIR={run_dir}", flush=True)
 
 
 def run_validator(repo: Path, profile: dict[str, Any], canonical: str | None, run_dir: Path, seq: int) -> Path | None:
@@ -611,10 +1118,12 @@ def run_validator(repo: Path, profile: dict[str, Any], canonical: str | None, ru
     return out_path
 
 
+
+
 def route_findings(repo: Path, run_dir: Path, target: str, canonical: str | None,
                    audit_path: Path | None, validator_path: Path | None, seq: int,
                    phase_result: Path | None = None) -> Path:
-    router = repo / ".opencode" / "scripts" / "route-wave-findings.py"
+    router = SCRIPT_ROOT / "route-wave-findings.py"
     out_path = run_dir / f"{seq:04d}-{target}-findings.json"
     if not router.exists():
         write_json(out_path, {"wave": target, "finding_count": 0, "human_only": False, "findings": []})
@@ -637,11 +1146,15 @@ def route_findings(repo: Path, run_dir: Path, target: str, canonical: str | None
     return out_path
 
 
+
+
 def human_deferred_is_real(result: dict[str, Any]) -> bool:
     findings = result.get("findings") or []
     if not findings:
         return False
     return all(HUMAN_RE.search(str(x)) for x in findings)
+
+
 
 
 def result_fingerprint(target: str, phase: str, result: dict[str, Any]) -> str:
@@ -654,19 +1167,24 @@ def result_fingerprint(target: str, phase: str, result: dict[str, Any]) -> str:
             re.sub(r"\b[0-9a-f]{40}\b", "<sha>", text, flags=re.I).strip()
             for text in raw_findings
         )
+    # Phase/status are routing state, not the semantic blocker identity.
+    # Keep the same finding stable across repair -> audit -> close loops.
     data = {
         "target": target,
-        "phase": phase,
-        "status": result.get("status"),
         "findings": findings,
+        "repair_hypothesis": str(result.get("repair_hypothesis") or "").strip().lower(),
     }
     import hashlib
     return hashlib.sha256(json.dumps(data, sort_keys=True).encode("utf-8")).hexdigest()
 
 
+
+
 def implementation_identity(repo: Path, profile: dict[str, Any]) -> str:
     ignored = profile.get("evidence", {}).get("allowed_closeout_only_paths", [])
     return repository_content_identity(repo, ignored)
+
+
 
 
 def validator_can_close(path: Path | None) -> tuple[bool, list[str]]:
@@ -681,6 +1199,8 @@ def validator_can_close(path: Path | None) -> tuple[bool, list[str]]:
     return bool(data.get("can_close")), [str(x) for x in reasons]
 
 
+
+
 def controller_runtime_fingerprint(repo: Path, profile: dict[str, Any]) -> str:
     import hashlib
     h = hashlib.sha256()
@@ -693,6 +1213,8 @@ def controller_runtime_fingerprint(repo: Path, profile: dict[str, Any]) -> str:
             h.update(b"<missing>")
         h.update(b"\0")
     return h.hexdigest()
+
+
 
 
 def final_program_validation(repo: Path, profile: dict[str, Any], run_dir: Path, seq: int) -> tuple[bool, list[str], Path, str | None]:
@@ -731,6 +1253,8 @@ def final_program_validation(repo: Path, profile: dict[str, Any], run_dir: Path,
     return not failures, failures, out, first_failed
 
 
+
+
 def run_postrun_checks(repo: Path, profile: dict[str, Any], run_dir: Path, seq: int) -> tuple[bool, list[str], Path]:
     out = run_dir / f"{seq:04d}-postrun-checks.json"
     failures: list[str] = []; results: list[dict[str, Any]] = []
@@ -746,6 +1270,8 @@ def run_postrun_checks(repo: Path, profile: dict[str, Any], run_dir: Path, seq: 
     return not failures, failures, out
 
 
+
+
 def find_run_state(repo: Path, profile: dict[str, Any], program: str, run_id: str) -> tuple[Path | None, str | None]:
     canonical = program_run_root(repo, profile, program) / run_id / "state.json"
     if canonical.is_file():
@@ -757,7 +1283,10 @@ def find_run_state(repo: Path, profile: dict[str, Any], program: str, run_id: st
     return None, None
 
 
+
+
 def controller_close_wave(repo: Path, profile: dict[str, Any], project: str, target: str) -> None:
+    ensure_lifecycle_integrity(repo, profile, apply_safe=True, reason=f"before-close:{target}")
     path, state = engine_wave_location(repo, profile, target)
     if state == "done":
         return
@@ -769,6 +1298,7 @@ def controller_close_wave(repo: Path, profile: dict[str, Any], project: str, tar
     if destination.exists() and destination.resolve() != path.resolve():
         raise RuntimeError(f"Cannot close {target}: canonical done copy already exists")
     path.replace(destination)
+    ensure_lifecycle_integrity(repo, profile, apply_safe=True, reason=f"after-close:{target}")
 
 
 def choose_after(phase: str, result: dict[str, Any]) -> str:
@@ -795,30 +1325,42 @@ def choose_after(phase: str, result: dict[str, Any]) -> str:
     return "repair"
 
 
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Deterministic unattended Wave program controller")
     ap.add_argument("--repo", default=".")
     ap.add_argument("--backend", choices=["codex", "opencode"], default="codex")
-    ap.add_argument("--program", choices=["wave-auto-end", "wave-auto-parallel", "wave-a-end-l", "wave-a-end-l-p"], default="wave-a-end-l-p")
+    ap.add_argument("--program", choices=[
+        "ac-wave-luna-openai-auto","ac-wave-luna-openai-end","ac-wave-luna-openai-parallel",
+        "ac-wave-opencode-auto","ac-wave-opencode-end","ac-wave-opencode-parallel",
+        "ac-wave-hybrid-auto","ac-wave-hybrid-end","ac-wave-hybrid-parallel"
+    ], default="ac-wave-hybrid-end")
     ap.add_argument("--model", help="Optional Codex model override; omit to use CLI/default config")
     ap.add_argument("--preflight-only", action="store_true")
     ap.add_argument("--resume-run-id", help="Manual/debug override. Normal invocation auto-resumes.")
     ap.add_argument("--new-run", action="store_true", help="Explicitly ignore unfinished runs and start from repository truth")
-    ap.add_argument("--max-iterations", type=int, default=0, help="0 = unlimited; intended only for diagnostics")
+    ap.add_argument("--max-iterations", type=int, default=0, help="0 = use profile/default hard safety ceiling")
     args = ap.parse_args()
     if args.new_run and args.resume_run_id:
         raise SystemExit("--new-run and --resume-run-id are mutually exclusive")
+
 
     repo = Path(args.repo).resolve()
     if not (repo / ".git").exists() and not (repo / ".git").is_file():
         raise SystemExit(f"Not a Git repository root: {repo}")
 
+
     self_heal(repo)
-    validate_orchestration(repo)
     profile = load_profile(repo)
+    lifecycle_preflight = ensure_lifecycle_integrity(repo, profile, apply_safe=True, reason="controller-preflight")
+    if lifecycle_preflight.get("repairs"):
+        print(f"[lifecycle-self-heal] repaired={len(lifecycle_preflight['repairs'])} receipt={lifecycle_preflight.get('receipt')}", flush=True)
+    validate_orchestration(repo)
     project = str(profile["project_id"])
     ensure_temp_layout(repo, profile)
     program = args.program
+
 
     source_path: Path | None = None
     source_kind: str | None = None
@@ -829,8 +1371,10 @@ def main() -> int:
     elif not args.new_run and bool(profile.get("scheduler", {}).get("auto_resume", True)):
         source_path, source_kind = discover_unfinished_run(repo, profile, program)
 
+
     saved = read_json_file(source_path) if source_path else None
     classification, truth_target, truth_phase = resume_classification(repo, profile, saved if isinstance(saved, dict) else None, source_kind)
+
 
     if source_path is not None and source_kind == "canonical" and not args.new_run:
         run_dir = source_path.parent
@@ -845,16 +1389,19 @@ def main() -> int:
             state["migrated_from"] = str(source_path.parent.relative_to(repo))
             state["legacy_run_id"] = source_path.parent.name
 
+
     configure_temp_environment(repo, profile, run_id)
     lock = ControllerLock.acquire(repo, profile, program, run_id)
     atexit.register(lock.release)
+
 
     identity = repo_identity(repo)
     defaults = {
         "run_id": run_id, "backend": args.backend, "project": project, "started_at": utcnow(),
         "updated_at": utcnow(), "iteration": 0, "current_wave": None, "phase": "reconcile",
-        "terminal": False, "terminal_class": None, "fingerprints": {}, "owner_stack": [],
+        "terminal": False, "terminal_class": None, "fingerprints": {}, "recovery_counts": {}, "owner_stack": [],
         "target_override": None, "findings_path": None, "seq": 0, "closed_owner_repair": False,
+        "progress_epoch": 0, "active_phase_job": None, "active_phase_pid": None,
     }
     defaults.update(state)
     state = defaults
@@ -863,21 +1410,28 @@ def main() -> int:
         "terminal_class": None, "resume_classification": classification,
         "repository_identity": identity["repo_root"], "branch": identity["branch"],
         "saved_head": state.get("current_head") or state.get("saved_head"), "current_head": identity["head"],
+        "controller_pid": os.getpid(), "controller_process_start_marker": process_start_marker(os.getpid()),
+        "parallel_strategy": "serial_fallback" if program.endswith("-parallel") else None,
     })
     state.setdefault("fingerprints", {})
     state.setdefault("owner_stack", [])
 
+
     # Repository truth beats stale run routing. A CLOSED Wave remains lifecycle-CLOSED;
-    # the controller may nevertheless run an explicit current-compliance repair transaction.
+    # the controller may nevertheless resume an explicit bounded repair transaction.
     override = state.get("target_override")
+    active_closed_owner_transaction = False
     if override:
         _, override_state = engine_wave_location(repo, profile, str(override))
-        if override_state == "done" and not state.get("closed_owner_repair"):
+        active_closed_owner_transaction = bool(override_state == "done" and state.get("closed_owner_repair"))
+        if override_state == "done" and not active_closed_owner_transaction:
             append_event(run_dir, {"event": "stale_closed_owner_route_discarded", "owner": override})
             state["target_override"] = None
             state["owner_stack"] = []
             classification = "RECONCILE_FORWARD"
-    if classification in {"RECONCILE_FORWARD", "STALE_RUN", "NEW_RUN_FROM_REPO_TRUTH"}:
+        elif active_closed_owner_transaction:
+            classification = "RESUME_CLOSED_OWNER_REPAIR"
+    if classification in {"RECONCILE_FORWARD", "STALE_RUN", "NEW_RUN_FROM_REPO_TRUTH"} and not active_closed_owner_transaction:
         state["current_wave"] = truth_target
         state["phase"] = "reconcile"
         state["target_override"] = None
@@ -887,11 +1441,16 @@ def main() -> int:
         state["current_wave"] = truth_target
         state["phase"] = truth_phase
 
+
     event_name = "program_resume" if source_path else "program_start"
     append_event(run_dir, {"event": event_name, "backend": args.backend, "project": project, "classification": classification,
                            "source": str(source_path.parent.relative_to(repo)) if source_path else None})
+    if program.endswith("-parallel"):
+        append_event(run_dir, {"event": "parallel_serial_fallback", "reason": "no project-declared managed parallel task graph"})
+    print_program_routing(repo, program, args.backend, args.model)
     save_state(run_dir, state)
     write_json(run_dir / "phase-result.schema.json", RESULT_SCHEMA)
+
 
     if args.preflight_only:
         target, wave_path, canonical = current_target(repo, project, state.get("target_override"), allow_closed_owner_repair=bool(state.get("closed_owner_repair")))
@@ -902,6 +1461,13 @@ def main() -> int:
         lock.release()
         return 0
 
+
+    controller_cfg = profile.get("controller") or {}
+    safety_iteration_limit = args.max_iterations if args.max_iterations and args.max_iterations > 0 else int(controller_cfg.get("max_iterations", 1000))
+    if safety_iteration_limit < 1:
+        safety_iteration_limit = 1000
+
+
     phase = str(state.get("phase") or "reconcile")
     target_cache: str | None = state.get("current_wave") if state.get("target_override") else None
     stored_findings = state.get("findings_path")
@@ -910,11 +1476,40 @@ def main() -> int:
     seq = int(state.get("seq", 0))
     controller_boot_fingerprint = controller_runtime_fingerprint(repo, profile)
 
+
     while True:
         lock.heartbeat()
+        try:
+            lifecycle_guard = ensure_lifecycle_integrity(repo, profile, apply_safe=True, reason="controller-iteration")
+        except RuntimeError as exc:
+            detail = str(exc)
+            key = "lifecycle_integrity::" + detail
+            recovery_counts = state.setdefault("recovery_counts", {})
+            recovery_counts[key] = int(recovery_counts.get(key, 0)) + 1
+            append_event(run_dir, {"event":"LIFECYCLE_INTEGRITY_CONFLICT","detail":detail,
+                                   "count":recovery_counts[key]})
+            print(f"[lifecycle-conflict] {detail}", flush=True)
+            if recovery_counts[key] >= AC_MAX_IDENTICAL_RECOVERY:
+                state.update({"terminal":True,"terminal_class":"PROGRAM_TECHNICAL_STALLED","phase":"stalled",
+                              "stall_reason":"ambiguous_lifecycle_authority"})
+                save_state(run_dir,state)
+                append_event(run_dir,{"event":"PROGRAM_TECHNICAL_STALLED","reason":"ambiguous_lifecycle_authority",
+                                      "count":recovery_counts[key]})
+                print("PROGRAM_TECHNICAL_STALLED"); print_terminal_summary(state, run_dir); lock.release(); return 30
+            save_state(run_dir,state); time.sleep(1); continue
+        if lifecycle_guard.get("repairs"):
+            append_event(run_dir, {"event":"lifecycle_self_heal","repairs":lifecycle_guard.get("repairs"),
+                                   "receipt":lifecycle_guard.get("receipt")})
+            print(f"[lifecycle-self-heal] repaired={len(lifecycle_guard['repairs'])} receipt={lifecycle_guard.get('receipt')}", flush=True)
         state["iteration"] = int(state.get("iteration",0)) + 1
-        if args.max_iterations and state["iteration"] > args.max_iterations:
-            raise RuntimeError("Diagnostic max-iterations reached; normal unattended runs should use 0/unlimited.")
+        if state["iteration"] > safety_iteration_limit:
+            state.update({"terminal":True,"terminal_class":"PROGRAM_TECHNICAL_STALLED","phase":"stalled",
+                          "stall_reason":"controller_iteration_safety_ceiling"})
+            save_state(run_dir,state)
+            append_event(run_dir,{"event":"PROGRAM_TECHNICAL_STALLED","reason":"controller_iteration_safety_ceiling",
+                                  "limit":safety_iteration_limit})
+            print("PROGRAM_TECHNICAL_STALLED"); print_terminal_summary(state, run_dir); lock.release(); return 30
+
 
         override = state.get("target_override")
         if override:
@@ -924,6 +1519,7 @@ def main() -> int:
                 state["target_override"] = None; state["owner_stack"] = []; override = None; phase = "reconcile"
             elif override_state == "done":
                 append_event(run_dir, {"event":"closed_owner_repair_transaction","owner":override,"lifecycle_state":"done"})
+
 
         target, wave_path, canonical = current_target(repo, project, override, allow_closed_owner_repair=bool(state.get("closed_owner_repair")))
         if target is None or wave_path is None:
@@ -936,32 +1532,56 @@ def main() -> int:
                                   "postrun_output":str(post_path.relative_to(repo)),
                                   "validator_output":str(final_path.relative_to(repo)),"reasons":all_reasons})
             if not (post_ok and ok):
-                if failed_wave:
+                repair_owner = final_repair_owner(repo, profile, failed_wave, state)
+                if repair_owner:
+                    _owner_path, owner_state = engine_wave_location(repo, profile, repair_owner)
                     state.update({"terminal":False,"terminal_class":"PROGRAM_FINAL_VALIDATION_BLOCKED",
-                                  "target_override":failed_wave,"closed_owner_repair":True,"current_wave":failed_wave,
-                                  "phase":"repair","final_validation_path":str(final_path.relative_to(repo))})
-                    findings_path = run_dir / f"{seq:04d}-{failed_wave}-final-validation-findings.json"
-                    write_json(findings_path,{"blocked_wave":failed_wave,"canonical_source":failed_wave,"findings":[
-                        {"finding_id":f"FINAL_VALIDATION::{failed_wave}","execution_owner":failed_wave,"owner_state":"done",
-                         "classification":"repository-owned","human_only":False,"summary":r}
-                        for r in final_reasons if r.startswith(failed_wave+":")
-                    ]})
-                    state["findings_path"] = str(findings_path.relative_to(repo)); target_cache=None; phase="repair"
-                    save_state(run_dir,state); continue
-                state.update({"terminal":True,"terminal_class":"PROGRAM_FINAL_VALIDATION_BLOCKED","current_wave":None,
+                                  "target_override":repair_owner,"closed_owner_repair":owner_state == "done",
+                                  "current_wave":repair_owner,"phase":"repair",
+                                  "final_validation_path":str(final_path.relative_to(repo))})
+                    findings_path = run_dir / f"{seq:04d}-{repair_owner}-final-validation-findings.json"
+                    write_json(findings_path,{"blocked_wave":repair_owner,"canonical_source":failed_wave,
+                        "findings":[{"finding_id":f"FINAL_VALIDATION::{failed_wave or repair_owner}",
+                                     "execution_owner":repair_owner,"owner_state":owner_state or "unknown",
+                                     "classification":"repository-owned","human_only":False,"summary":r}
+                                    for r in all_reasons]})
+                    state["findings_path"] = str(findings_path.relative_to(repo))
+                    bump_progress_epoch(state, "final_validation_owner_route")
+                    target_cache=None; phase="repair"; save_state(run_dir,state); continue
+                # A repository-owned final-validation defect is never a program terminal.
+                # With no resolvable Wave owner, keep the controller alive at a
+                # reconciliation boundary and require deeper controller diagnosis.
+                append_event(run_dir,{"event":"FINAL_VALIDATION_OWNER_UNRESOLVED","reasons":all_reasons})
+                key = "final_validation_owner_unresolved::" + repository_content_identity(repo, profile) + "::" + "|".join(sorted(all_reasons))
+                recovery_counts = state.setdefault("recovery_counts", {})
+                recovery_counts[key] = int(recovery_counts.get(key, 0)) + 1
+                if recovery_counts[key] >= AC_MAX_IDENTICAL_RECOVERY:
+                    state.update({"terminal":True,"terminal_class":"PROGRAM_TECHNICAL_STALLED","current_wave":None,
+                                  "phase":"stalled","final_validation_path":str(final_path.relative_to(repo)),
+                                  "stall_reason":"final_validation_owner_unresolved"})
+                    save_state(run_dir,state); append_event(run_dir,{"event":"PROGRAM_TECHNICAL_STALLED","key":key,"count":recovery_counts[key]})
+                    print("PROGRAM_TECHNICAL_STALLED"); print_terminal_summary(state, run_dir); lock.release(); return 30
+                bump_progress_epoch(state, "final_validation_owner_unresolved")
+                state.update({"terminal":False,"terminal_class":"PROGRAM_FINAL_VALIDATION_BLOCKED","current_wave":None,
                               "phase":"reconcile","final_validation_path":str(final_path.relative_to(repo))})
-                save_state(run_dir,state); print("PROGRAM_FINAL_VALIDATION_BLOCKED")
-                print(json.dumps({"can_close":False,"failure_reasons":all_reasons},ensure_ascii=False,indent=2))
-                lock.release(); return 30
+                save_state(run_dir,state); time.sleep(1); continue
             state.update({"terminal":True,"terminal_class":"PROGRAM_COMPLETE","current_wave":None,"phase":"done",
                           "final_validation_path":str(final_path.relative_to(repo))})
             save_state(run_dir,state); append_event(run_dir,{"event":"program_complete","final_validation":str(final_path.relative_to(repo))})
-            print("PROGRAM_COMPLETE"); lock.release(); return 0
+            print("PROGRAM_COMPLETE"); print_terminal_summary(state, run_dir); lock.release(); return 0
+
 
         if target_cache != target:
-            target_cache = target; phase = "reconcile"
+            target_cache = target
+            preserve_direct_owner_repair = bool(
+                state.get("target_override") and state.get("closed_owner_repair")
+                and phase == "repair" and findings_path is not None
+            )
+            if not preserve_direct_owner_repair:
+                phase = "reconcile"
             if not state.get("target_override"): findings_path = None
             no_progress = False
+
 
         _canonical_path, target_state = wave_location(repo, project, target)
         meta = wave_metadata(wave_path, profile)
@@ -970,6 +1590,7 @@ def main() -> int:
                       "canonical_source_wave":canonical,"phase":phase,"target_cache":target_cache,
                       "content_identity":content_identity})
         save_state(run_dir,state)
+
 
         receipt_valid = audit_receipt_valid(repo, profile, target, state, content_identity)
         if not receipt_valid and phase == "reconcile":
@@ -992,8 +1613,24 @@ def main() -> int:
                                   "tested_content_identity":content_identity})
             phase="close"; state["phase"]=phase; save_state(run_dir,state); continue
 
-        seq += 1; state["seq"] = seq
+
+        active_job = {}
+        active_rel = state.get("active_phase_job")
+        if isinstance(active_rel, str) and active_rel.strip():
+            active_job = read_phase_job(repo / active_rel)
+        if job_matches(active_job, target=target, phase=phase, program=program):
+            seq = int(active_job.get("seq") or state.get("seq") or seq)
+            state["seq"] = seq
+            append_event(run_dir,{"event":"managed_phase_job_attach","target":target,"phase":phase,
+                                  "job":active_rel,"pid":active_job.get("pid")})
+        else:
+            if active_rel:
+                state["active_phase_job"] = None
+                state["active_phase_pid"] = None
+            seq += 1; state["seq"] = seq
+        save_state(run_dir, state)
         print(f"\n[program] target={target} phase={phase} backend={args.backend}\n", flush=True)
+
 
         if phase == "reconcile" and state.get("target_override"):
             inferred = infer_reconcile_phase(repo, project, target)
@@ -1007,7 +1644,25 @@ def main() -> int:
                 state["phase"]="reconcile"; save_state(run_dir,state); continue
             phase=inferred; state["phase"]=phase; save_state(run_dir,state); continue
 
-        if args.backend == "codex":
+
+        fingerprint_blocker = (None if phase in {"repair", "reconcile"}
+                               or job_matches(active_job, target=target, phase=phase, program=program)
+                               else canonical_fingerprint_blocker(repo, wave_path))
+        if fingerprint_blocker:
+            # Fail closed before any worker runs: no model can report READY/PASS over spec drift.
+            append_event(run_dir,{"event":"canonical_fingerprint_preflight_blocked","target":target,"phase":phase,"detail":fingerprint_blocker})
+            result={"status":"BLOCKED","summary":"Canonical source fingerprint preflight failed",
+                    "findings":[fingerprint_blocker],"changed_files":[],"next_action":"repair"}
+        elif args.backend == "codex":
+            # Codex model is passed explicitly (--model) or is the CLI default, reported as unknown.
+            codex_route = resolve_phase_route(repo, program, phase, "codex", args.model)
+            print(f"[dispatch] {target} {phase.upper()} started | {format_route(codex_route)}", flush=True)
+            append_event(run_dir, {"event": "phase_dispatch", "run_id": run_dir.name, "wave": target, "phase": phase,
+                                   "role": codex_route["role"], "backend": "codex",
+                                   "requested_model": codex_route["model"], "effective_model": codex_route["model"],
+                                   "requested_thinking": codex_route["thinking"], "effective_thinking": codex_route["thinking"]})
+            state.setdefault("route_history", []).append({"role": codex_route["role"], "model": codex_route["model"],
+                                                          "thinking": codex_route["thinking"], "fallback": False})
             result = codex_exec(repo,run_dir,project,target,wave_path,phase,canonical,findings_path,args.model,no_progress,seq,state)
         else:
             if phase == "reconcile":
@@ -1022,7 +1677,11 @@ def main() -> int:
                     state["phase"]=phase; save_state(run_dir,state); continue
                 phase="plan" if inferred=="reconcile" else inferred
                 state["phase"]=phase; save_state(run_dir,state); continue
-            result=opencode_phase(repo,target,phase,seq,run_dir,program)
+            controller_context_path = phase_controller_context(
+                repo, run_dir, seq, target, phase, content_identity, state, findings_path
+            )
+            result=opencode_phase(repo,target,phase,seq,run_dir,program,state,controller_context_path)
+
 
         aggregate_validator: Path | None = None
         if phase == "close" and str(result.get("status","")).upper() == "PASS" and aggregate_validation_required(profile,meta,phase):
@@ -1033,6 +1692,7 @@ def main() -> int:
                 result={"status":"BLOCKED","summary":"Controller aggregate validator rejected source closeout",
                         "findings":reasons or ["aggregate validator can_close=false"],"changed_files":[],"next_action":"repair"}
 
+
         if phase == "close" and str(result.get("status","")).upper() == "PASS":
             post_identity=implementation_identity(repo,profile)
             if state.get("tested_content_identity") and post_identity != state.get("tested_content_identity"):
@@ -1040,9 +1700,27 @@ def main() -> int:
                         "findings":["tested_content_identity no longer matches current implementation content"],
                         "changed_files":result.get("changed_files",[]),"next_action":"audit"}
 
+
         append_event(run_dir,{"event":"phase_result","target":target,"phase":phase,"result":result})
         normalized=run_dir/f"{seq:04d}-{target}-{phase}-normalized.json"
         normalized.write_text(json.dumps(result,ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
+        if phase == "audit" and str(result.get("status", "")).upper() == "PASS":
+            audit_report = persist_fresh_audit_report(repo, project, target, result, normalized)
+            if audit_report is not None:
+                state["audit_report_path"] = str(audit_report.relative_to(repo))
+                append_event(run_dir,{"event":"audit_report_persisted","target":target,
+                                      "path":state["audit_report_path"],
+                                      "normalized":str(normalized.relative_to(repo))})
+                save_state(run_dir,state)
+        print_phase_result_summary(target, phase, result, normalized, repo)
+        active_rel = state.get("active_phase_job")
+        if isinstance(active_rel, str) and active_rel.strip():
+            mark_phase_job_result(repo / active_rel, status=str(result.get("status", "FAIL")),
+                                  result_path=str(normalized.relative_to(repo)), consumed=True)
+            state["active_phase_job"] = None
+            state["active_phase_pid"] = None
+            save_state(run_dir, state)
+
 
         current_controller_fingerprint = controller_runtime_fingerprint(repo, profile)
         if current_controller_fingerprint != controller_boot_fingerprint:
@@ -1052,48 +1730,71 @@ def main() -> int:
             lock.release()
             os.execv(sys.executable, [sys.executable, *sys.argv])
 
+
+        post_phase_identity = implementation_identity(repo, profile)
+        if post_phase_identity != content_identity:
+            prior_identity = content_identity
+            content_identity = post_phase_identity
+            state["content_identity"] = post_phase_identity
+            bump_progress_epoch(state, "content_change")
+            append_event(run_dir,{"event":"content_identity_progress","target":target,"phase":phase,
+                                  "before":prior_identity,"after":post_phase_identity,
+                                  "progress_epoch":int(state.get("progress_epoch",0))})
+            save_state(run_dir,state)
+
         status=str(result.get("status","")).upper()
         if phase == "audit" and status != "PASS":
             for key in ("audit_status", "audit_result_path", "audit_candidate_sha", "audit_passed_at"):
                 state.pop(key, None)
         if status in {"MISSING_STATUS","ORCHESTRATION_RECOVERY_REQUIRED"}:
             append_event(run_dir,{"event":"orchestration_recovery","target":target,"phase":phase,"reason":result.get("summary")})
+            recovery_key = f"transport::{target}::{phase}::{content_identity}::{status}"
+            recovery_counts = state.setdefault("recovery_counts", {})
+            recovery_counts[recovery_key] = int(recovery_counts.get(recovery_key, 0)) + 1
+            if recovery_counts[recovery_key] >= AC_MAX_IDENTICAL_RECOVERY:
+                state.update({"terminal":True,"terminal_class":"PROGRAM_TECHNICAL_STALLED","phase":"stalled",
+                              "stall_reason":status,"current_wave":target})
+                save_state(run_dir,state); append_event(run_dir,{"event":"PROGRAM_TECHNICAL_STALLED","key":recovery_key,"count":recovery_counts[recovery_key]})
+                print("PROGRAM_TECHNICAL_STALLED"); print_terminal_summary(state, run_dir); lock.release(); return 30
             state["phase"]=phase; state["findings_path"]=str(findings_path.relative_to(repo)) if findings_path else None
             save_state(run_dir,state); continue
+
 
         if status == "HUMAN_DEFERRED":
             if human_deferred_is_real(result):
                 state.update({"terminal":True,"terminal_class":"PROGRAM_HUMAN_DEFERRED","phase":phase}); save_state(run_dir,state)
-                print("PROGRAM_HUMAN_DEFERRED"); print(json.dumps(result,ensure_ascii=False,indent=2)); lock.release(); return 20
+                print("PROGRAM_HUMAN_DEFERRED"); print(json.dumps(result,ensure_ascii=False,indent=2)); print_terminal_summary(state, run_dir); lock.release(); return 20
             result["status"]="BLOCKED"; status="BLOCKED"
             result.setdefault("findings",[]).append("Human deferral lacked a concrete external-authority dependency; keep as repository-owned repair.")
 
-        semantic = result_fingerprint(target, phase, result)
-        fp=no_progress_key(target,phase,semantic,content_identity)
-        count=int(state["fingerprints"].get(fp,0))+1; state["fingerprints"][fp]=count
-        no_progress=count>=2
-        if count>=3:
-            append_event(run_dir,{"event":"NO_PROGRESS_CYCLE","target":target,"phase":phase,"semantic_finding":semantic,
-                                  "content_identity":content_identity,"count":count})
-            # Do not execute the identical repair/audit cycle again.  Stop at
-            # a resumable controller boundary instead of burning retries.
-            payload = {
-                "status": "NO_PROGRESS",
-                "summary": "The same finding repeated without a content-identity change; controller stopped the cycle.",
-                "findings": ["Changed repository evidence or implementation is required before retrying this finding."],
-                "changed_files": [],
-                "next_action": "reconcile",
-            }
-            state.update({"terminal": True, "terminal_class": "PROGRAM_NO_PROGRESS", "phase": "reconcile",
-                          "last_phase_result": str(normalized.relative_to(repo))})
-            normalized.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-            save_state(run_dir, state)
-            append_event(run_dir, {"event": "program_no_progress", "target": target, "count": count})
-            print("PROGRAM_NO_PROGRESS")
-            print(json.dumps(payload, ensure_ascii=False, indent=2))
-            lock.release()
-            return 40
-        save_state(run_dir,state)
+
+        if phase_result_bypasses_no_progress(phase, status):
+            no_progress = False
+            append_event(run_dir,{"event":"NO_PROGRESS_BYPASS_FOR_LIFECYCLE_COMMIT",
+                                  "target":target,"phase":phase,"status":status,
+                                  "progress_epoch":int(state.get("progress_epoch",0))})
+            save_state(run_dir,state)
+        else:
+            semantic = result_fingerprint(target, phase, result)
+            fp=progress_no_progress_key(target,phase,semantic,content_identity,int(state.get("progress_epoch",0)))
+            count=int(state["fingerprints"].get(fp,0))+1; state["fingerprints"][fp]=count
+            no_progress=count>=2
+            if count>=2:
+                append_event(run_dir,{"event":"NO_PROGRESS_CYCLE","target":target,"phase":phase,"semantic_finding":semantic,
+                                      "content_identity":content_identity,"count":count,
+                                      "progress_epoch":int(state.get("progress_epoch",0))})
+                no_progress = True
+                state["last_no_progress"] = {"target":target,"phase":phase,"semantic_finding":semantic,
+                                             "content_identity":content_identity,"count":count}
+            if count >= AC_MAX_IDENTICAL_RECOVERY:
+                state.update({"terminal":True,"terminal_class":"PROGRAM_TECHNICAL_STALLED","phase":"stalled",
+                              "stall_reason":"identical_no_progress_cycle","current_wave":target})
+                save_state(run_dir,state)
+                append_event(run_dir,{"event":"PROGRAM_TECHNICAL_STALLED","target":target,"phase":phase,
+                                      "semantic_finding":semantic,"content_identity":content_identity,"count":count})
+                print("PROGRAM_TECHNICAL_STALLED"); print_terminal_summary(state, run_dir); lock.release(); return 30
+            save_state(run_dir,state)
+
 
         next_phase=choose_after(phase,result)
         routed=False
@@ -1105,6 +1806,7 @@ def main() -> int:
             report,audit=artifact_paths(repo,project,target)
             findings_path=route_findings(repo,run_dir,target,canonical,audit,None,seq,normalized)
             next_phase="repair"; routed=True
+
 
         if routed:
             data=read_json_file(findings_path) if findings_path else {}
@@ -1118,18 +1820,26 @@ def main() -> int:
                 owner_path,owner_state=wave_location(repo,project,owner)
                 if owner_path is None:
                     append_event(run_dir,{"event":"owner_route_unresolved","target":target,"owner":owner})
-                elif owner_state == "done":
-                    append_event(run_dir,{"event":"closed_owner_route_suppressed","target":target,"owner":owner})
                 else:
                     stack=state.setdefault("owner_stack",[])
                     active_owners={str(frame.get("owner")) for frame in stack if isinstance(frame,dict)}
                     if owner == state.get("target_override") or owner in active_owners:
                         append_event(run_dir,{"event":"owner_route_cycle_guard","target":target,"owner":owner})
                     else:
-                        stack.append({"blocked_target":target,"owner":owner,"findings_path":str(findings_path.relative_to(repo)) if findings_path else None,"blocked_phase":phase})
-                        state["target_override"]=owner; state["findings_path"]=str(findings_path.relative_to(repo)) if findings_path else None
-                        append_event(run_dir,{"event":"true_owner_route","from":target,"to":owner,"findings":state["findings_path"]})
-                        phase="reconcile"; state["phase"]=phase; target_cache=None; save_state(run_dir,state); continue
+                        prior_closed = bool(state.get("closed_owner_repair"))
+                        stack.append({"blocked_target":target,"owner":owner,
+                                      "findings_path":str(findings_path.relative_to(repo)) if findings_path else None,
+                                      "blocked_phase":phase,"prior_closed_owner_repair":prior_closed})
+                        state["target_override"]=owner
+                        state["closed_owner_repair"] = prior_closed or owner_state == "done"
+                        state["findings_path"]=str(findings_path.relative_to(repo)) if findings_path else None
+                        bump_progress_epoch(state, "closed_owner_route" if owner_state == "done" else "true_owner_route")
+                        append_event(run_dir,{"event":"closed_owner_true_route" if owner_state == "done" else "true_owner_route",
+                                              "from":target,"to":owner,"owner_state":owner_state,
+                                              "findings":state["findings_path"]})
+                        phase="repair" if owner_state == "done" else "reconcile"
+                        state["phase"]=phase; target_cache=None; save_state(run_dir,state); continue
+
 
         if phase == "plan" and status in {"READY","PASS"}: state["last_planned_wave"]=target
         if phase == "audit" and status == "PASS":
@@ -1145,18 +1855,34 @@ def main() -> int:
                 append_event(run_dir,{"event":"historical_owner_revalidated","owner":target,"return_target":frame.get("blocked_target") if isinstance(frame,dict) else None})
                 remaining=state.get("owner_stack",[])
                 state["target_override"]=(frame.get("blocked_target") if isinstance(frame,dict) and remaining else None)
-                if state.get("closed_owner_repair") and not state["target_override"]:
-                    state["closed_owner_repair"] = False
+                state["closed_owner_repair"] = bool(frame.get("prior_closed_owner_repair")) if isinstance(frame,dict) else False
+                bump_progress_epoch(state, "owner_audit_pass_return")
                 target_cache=None
                 findings_path=(repo/frame["findings_path"]) if isinstance(frame,dict) and frame.get("findings_path") else None
                 state["findings_path"]=str(findings_path.relative_to(repo)) if findings_path else None
                 phase="reconcile"; state["phase"]=phase; save_state(run_dir,state); continue
 
+
         if phase == "close" and status == "PASS":
-            controller_close_wave(repo,profile,project,target)
+            try:
+                controller_close_wave(repo,profile,project,target)
+            except RuntimeError as exc:
+                append_event(run_dir,{"event":"close_lifecycle_guard_rejected","target":target,"detail":str(exc)})
+                state["phase"]="reconcile"
+                state["stall_reason"]="close_lifecycle_integrity_conflict"
+                save_state(run_dir,state)
+                phase="reconcile"
+                time.sleep(1)
+                continue
             _, closed_state=wave_location(repo,project,target)
             if closed_state != "done":
                 raise RuntimeError(f"Close PASS for {target} did not produce canonical CLOSED/done lifecycle state")
+            engine_reconcile_active_wave_tracker(
+                repo, profile, reason=f"Wave {target} closed; next pending execution wave."
+            )
+            indexed = engine_reconcile_waves_index(repo, profile)
+            if indexed:
+                append_event(run_dir,{"event":"waves_index_reconciled","target":target,"added":indexed})
             state["last_closed_wave"]=target
             state["closure_content_identity"]=implementation_identity(repo,profile)
             _, closure_sha=git(repo,"rev-parse","HEAD"); state["closure_commit_sha"]=closure_sha or None
@@ -1164,14 +1890,19 @@ def main() -> int:
                 frame=state.get("owner_stack",[]).pop() if state.get("owner_stack") else None
                 remaining=state.get("owner_stack",[])
                 state["target_override"]=(frame.get("blocked_target") if isinstance(frame,dict) and remaining else None)
+                state["closed_owner_repair"] = bool(frame.get("prior_closed_owner_repair")) if isinstance(frame,dict) else False
                 findings_path=(repo/frame["findings_path"]) if isinstance(frame,dict) and frame.get("findings_path") else None
             else:
                 findings_path=None
+            bump_progress_epoch(state, "wave_close_pass")
             target_cache=None; next_phase="reconcile"
+
 
         phase=next_phase
         state["phase"]=phase; state["findings_path"]=str(findings_path.relative_to(repo)) if findings_path else None
         state["target_cache"]=target_cache; state["seq"]=seq; save_state(run_dir,state)
+
+
 
 
 if __name__ == "__main__":
