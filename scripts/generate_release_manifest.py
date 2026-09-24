@@ -75,6 +75,16 @@ def sha256_file(path: Path) -> str:
 
 def _git_head(repo: Path) -> str:
     try:
+        top = subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"],
+            cwd=repo,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=15,
+        )
+        if top.returncode != 0 or Path(top.stdout.strip()).resolve() != repo.resolve():
+            return UNKNOWN
         proc = subprocess.run(
             ["git", "rev-parse", "HEAD"], cwd=repo, capture_output=True, text=True, check=False, timeout=15
         )

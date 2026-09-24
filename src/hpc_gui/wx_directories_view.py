@@ -11,6 +11,33 @@ from hpc_gui.wx_host import make_host
 from hpc_gui.wx_remote_files import WxRemoteDirectoryModel
 
 
+def _pinned_remote_identity(session_state) -> dict:
+    """Connection pin for remote editor opens (W26 HPC-W06-EDIT-012/016).
+
+    Local mirror of the shell editor identity so directories-view editor
+    opens carry the same Save-target guard without a shell import cycle.
+    """
+    try:
+        session = (session_state or {}).get("session") or {}
+        profile = session.get("profile") or {}
+        provider = profile.get("provider_template")
+        provider_name = provider.get("name") if isinstance(provider, dict) else ""
+        parts = (
+            str(session.get("profile_name") or profile.get("name") or ""),
+            str(profile.get("host") or ""),
+            str(profile.get("port") or ""),
+            str(profile.get("username") or ""),
+        )
+        key = "|".join(parts)
+        return {
+            "provider": str(provider_name or ""),
+            "profile": str(parts[0]),
+            "session_key": key if any(parts) else "",
+        }
+    except Exception:
+        return {"provider": "", "profile": "", "session_key": ""}
+
+
 def _resolve_scratch_home(session_state) -> tuple[str, str]:
     """Derive scratch/home paths from session, never hardcode."""
     session = None
@@ -61,6 +88,94 @@ def _resolve_scratch_home(session_state) -> tuple[str, str]:
     return scratch_dir, home_dir
 
 
+def _resolve_live_files(session_state, snapshot_files=None):
+    """Return the CURRENT session files backend (live-first rebind contract).
+
+    W24 DIR-008 / SESSION-REBIND-002: a profile/provider switch or reconnect
+    must replace the directories backend. A build-time snapshot may only serve
+    as a fallback when no live backend exists; it must never shadow live state.
+    """
+    sess = (session_state or {}).get("session") or {} if isinstance(session_state, dict) else {}
+    live = sess.get("files") if isinstance(sess, dict) else None
+    if live is not None:
+        return live
+    return snapshot_files
+
+
+def _resolve_new_slurm_target(session_state, name: str) -> str:
+    """Resolve a New-Slurm destination at click time from CURRENT storage.
+
+    W24 DIR-SESSION-002: never reuse a panel-build-time ``scratch_dir``
+    capture; derive the scratch root live via :func:`_resolve_scratch_home`.
+    """
+    live_scratch, _home = _resolve_scratch_home(session_state)
+    clean = (name or "").strip()
+    return live_scratch.rstrip("/") + "/" + clean
+
+
+def rebind_directories_storage(host, session_state) -> dict:
+    """Rebind directories panes to the CURRENT session (W24 DIR-SESSION-001).
+
+    Recomputes scratch/home from the live session, updates semantic labels,
+    navigates both models, and invalidates stale listing caches. Returns the
+    resolved ``{"scratch": ..., "home": ...}`` paths.
+    """
+    live_scratch, live_home = _resolve_scratch_home(session_state)
+    models = getattr(host, "_wx_dirs_models", None) or {}
+    controls = getattr(host, "_wx_dirs_controls", None) or {}
+    for key, path in (("scratch", live_scratch), ("home", live_home)):
+        model = models.get(key)
+        if model is not None:
+            try:
+                model.invalidate()
+            except Exception:
+                pass
+            # W24 TODO-006 / DIR-008: a provider switch starts a new navigation
+            # context; provider-A history entries must not linger. Favorites
+            # are explicit user saves and persist by design.
+            try:
+                if isinstance(getattr(model, "history", None), list):
+                    model.history.clear()
+            except Exception:
+                pass
+            try:
+                model.navigate(path)
+            except Exception:
+                pass
+    semantic = {"scratch": "Scratch", "home": "Home"}
+    for key, path in (("scratch", live_scratch), ("home", live_home)):
+        label = controls.get(f"{key}_label")
+        if label is not None:
+            try:
+                label.SetLabel(f"{semantic[key]} — {path}")
+            except Exception:
+                pass
+    return {"scratch": live_scratch, "home": live_home}
+
+
+def mark_directories_disconnected(host) -> None:
+    """Show explicit disconnected state (W24 SESSION-DISCONNECT-001 / DIR-009).
+
+    Labels become distinguishable from loading/error, and stale listing
+    caches are dropped so no dead-backend listing is presented as valid.
+    """
+    controls = getattr(host, "_wx_dirs_controls", None) or {}
+    models = getattr(host, "_wx_dirs_models", None) or {}
+    for key, semantic in (("scratch", "Scratch"), ("home", "Home")):
+        model = models.get(key)
+        if model is not None:
+            try:
+                model.invalidate()
+            except Exception:
+                pass
+        label = controls.get(f"{key}_label")
+        if label is not None:
+            try:
+                label.SetLabel(f"{semantic} — disconnected")
+            except Exception:
+                pass
+
+
 def _build_directories(parent, *, session_state=None, workspace: WxDirectoriesWorkspace | None = None, loader=None, operation=None, read_text=None, open_editor=None, open_editor_new_window=None, run_shell=None, submit=None, embedded):
     try:
         import wx
@@ -84,9 +199,7 @@ def _build_directories(parent, *, session_state=None, workspace: WxDirectoriesWo
     snapshot_files = snapshot_session.get("files") if isinstance(snapshot_session, dict) else None
 
     def _files():
-        sess = (session_state or {}).get("session") or {} if isinstance(session_state, dict) else {}
-        f = snapshot_files if snapshot_files is not None else (sess.get("files") if isinstance(sess, dict) else None)
-        return f
+        return _resolve_live_files(session_state, snapshot_files)
 
     # Default loader/operation/read_text if not supplied – delegate to files backend dynamically
     if loader is None:
@@ -145,9 +258,9 @@ def _build_directories(parent, *, session_state=None, workspace: WxDirectoriesWo
                     try:
                         # choose primary
                         if request_id is not None:
-                            mgr.open_primary(path, content, is_local=False, request_id=request_id)
+                            mgr.open_primary(path, content, is_local=False, request_id=request_id, **_pinned_remote_identity(session_state))
                         else:
-                            mgr.open_primary(path, content, is_local=False)
+                            mgr.open_primary(path, content, is_local=False, **_pinned_remote_identity(session_state))
                         return
                     except Exception:
                         pass
@@ -158,7 +271,7 @@ def _build_directories(parent, *, session_state=None, workspace: WxDirectoriesWo
                 mgr = session_state.get("editor_manager")
                 if mgr:
                     try:
-                        mgr.open_new_window(path, content, is_local=False)
+                        mgr.open_new_window(path, content, is_local=False, **_pinned_remote_identity(session_state))
                         return
                     except Exception:
                         pass
@@ -170,14 +283,14 @@ def _build_directories(parent, *, session_state=None, workspace: WxDirectoriesWo
         _mgr = (session_state or {}).get("editor_manager") if isinstance(session_state, dict) else None
         if _mgr is not None:
             def _editor(path, content="", request_id=None):
-                _mgr.open_primary(path, content, is_local=False, request_id=request_id)
+                _mgr.open_primary(path, content, is_local=False, request_id=request_id, **_pinned_remote_identity(session_state))
             _editor._wx_request_aware = True
             def _started():
                 return _mgr.begin_primary_request()
             _editor._wx_request_started = _started
             open_editor = _editor
             def _editor_new(path, content=""):
-                _mgr.open_new_window(path, content, is_local=False)
+                _mgr.open_new_window(path, content, is_local=False, **_pinned_remote_identity(session_state))
             open_editor_new_window = _editor_new
         else:
             # keep original but mark if possible
@@ -199,11 +312,11 @@ def _build_directories(parent, *, session_state=None, workspace: WxDirectoriesWo
     scratch_model = WxRemoteDirectoryModel(scratch_dir)
     home_model = WxRemoteDirectoryModel(home_dir)
 
-    # Each pane shows its path as a title above the listing (Qt parity: directories_widget.py:216-219)
-    # Use already-derived scratch_dir/home_dir; no new derivation or hardcoded paths.
+    # Each pane shows a semantic title plus its path (W24 TODO-020: meaningful
+    # pane titles instead of raw path-only headings).
     scratch_container = wx.Panel(splitter)
     scratch_sizer = wx.BoxSizer(wx.VERTICAL)
-    scratch_label = wx.StaticText(scratch_container, label=scratch_dir)
+    scratch_label = wx.StaticText(scratch_container, label=f"Scratch — {scratch_dir}")
     scratch_sizer.Add(scratch_label, 0, wx.EXPAND | wx.ALL, 4)
     scratch_panel = build_remote_files_panel(
         scratch_container,
@@ -220,7 +333,7 @@ def _build_directories(parent, *, session_state=None, workspace: WxDirectoriesWo
 
     home_container = wx.Panel(splitter)
     home_sizer = wx.BoxSizer(wx.VERTICAL)
-    home_label = wx.StaticText(home_container, label=home_dir)
+    home_label = wx.StaticText(home_container, label=f"Home — {home_dir}")
     home_sizer.Add(home_label, 0, wx.EXPAND | wx.ALL, 4)
     home_panel = build_remote_files_panel(
         home_container,
@@ -235,7 +348,10 @@ def _build_directories(parent, *, session_state=None, workspace: WxDirectoriesWo
     home_sizer.Add(home_panel, 1, wx.EXPAND)
     home_container.SetSizer(home_sizer)
 
-    splitter.SplitVertically(scratch_container, home_container, 460)
+    # W24 TODO-019: balanced ~50/50 initial layout (host is 1000px wide) with
+    # sash gravity so user movement is preserved proportionally on resize.
+    splitter.SetSashGravity(0.5)
+    splitter.SplitVertically(scratch_container, home_container, 500)
     splitter.SetMinimumPaneSize(260)
     root.Add(splitter, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 8)
     panel.SetSizer(root)
@@ -269,9 +385,11 @@ def _build_directories(parent, *, session_state=None, workspace: WxDirectoriesWo
             return
         if not name.lower().endswith((".slurm", ".sbatch")):
             name += ".slurm"
-        target_path = scratch_dir.rstrip("/") + "/" + name
+        # W24 DIR-SESSION-002: resolve destination at click time from CURRENT
+        # provider storage, never the panel-build-time scratch_dir capture.
+        target_path = _resolve_new_slurm_target(session_state, name)
 
-        files = sess.get("files")
+        files = _resolve_live_files(session_state, sess.get("files"))
         if files is not None:
             try:
                 exists = bool(files.exists(target_path))
@@ -351,6 +469,8 @@ def _build_directories(parent, *, session_state=None, workspace: WxDirectoriesWo
     }
     host._wx_dirs_workspace = workspace
     host._wx_dirs_models = {"scratch": scratch_model, "home": home_model}
+    host._wx_dirs_rebind = lambda state=None: rebind_directories_storage(host, session_state if state is None else state)
+    host._wx_dirs_disconnected = lambda: mark_directories_disconnected(host)
 
     finish()
     return host
@@ -394,4 +514,4 @@ def show_directories(parent=None, *, session_state=None, workspace: WxDirectorie
     return wx.ID_OK
 
 
-__all__ = ["build_directories_panel", "show_directories"]
+__all__ = ["_resolve_live_files", "_resolve_new_slurm_target", "_resolve_scratch_home", "build_directories_panel", "mark_directories_disconnected", "rebind_directories_storage", "show_directories"]

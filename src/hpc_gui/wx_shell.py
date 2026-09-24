@@ -241,6 +241,7 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
     directories_panel = build_directories_panel(notebook, **_dirs)
     notebook.AddPage(directories_panel, t("tabs.directories"), False)
     page_controls["NAV-DIRECTORIES"] = {"page": directories_panel}
+    session_state["_embedded_directories_panel"] = directories_panel
 
     # Files (header row + splitter with local left, remote right + transfers bottom)
     files_page = wx.Panel(notebook)
@@ -301,6 +302,9 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
     session_state["_embedded_remote_files_panel"] = remote_panel
     top_splitter.SplitVertically(local_panel, remote_panel, 340)
     top_splitter.SetMinimumPaneSize(300)
+    # TODO-031: keep the Local/Remote split proportionally balanced on resize
+    # instead of pinning the local pane to the fixed 340px initial sash.
+    top_splitter.SetSashGravity(0.5)
     from hpc_gui.wx_transfer_workspace import build_transfers_panel
 
     transfers_panel = build_transfers_panel(transfer_splitter)
@@ -2544,19 +2548,70 @@ def main() -> int:
     return 0
 
 
+def _editor_session_key(session_state):
+    """Pinned connection identity for remote editor documents.
+
+    W26 (HPC-W06-EDIT-012/016): a remote document records this key at open;
+    saves compare it against the live session so a connection/profile switch
+    can never redirect Save to the wrong host/path.
+    """
+    try:
+        session = (session_state or {}).get("session") or {}
+        profile = session.get("profile") or {}
+        parts = (
+            str(session.get("profile_name") or profile.get("name") or ""),
+            str(profile.get("host") or ""),
+            str(profile.get("port") or ""),
+            str(profile.get("username") or ""),
+        )
+        key = "|".join(parts)
+        return key if any(parts) else ""
+    except Exception:
+        return ""
+
+
 def _editor_action_factory(session_state):
+    # HPC-W06-XFER-018 explicit remote-save conflict policy: remote saves are
+    # last-writer-wins.  The backend offers no versioned compare-and-swap, so
+    # a remote document changed externally since it was opened is overwritten
+    # without detection.  Users must re-open before editing when another
+    # writer may be active.  Failed saves keep the document dirty/recoverable;
+    # Save As to an existing remote target prompts via `target_exists`.
     def callbacks(document):
         session = session_state.get("session") or {}
         files = session.get("files")
         slurm = session.get("slurm")
         ssh = session.get("ssh")
 
+        def _require_pinned_session(document):
+            # HPC-W06-EDIT-016: a remote document pinned to a previous
+            # connection must not save through the new session.  Refuse
+            # visibly so the user re-opens from the current connection.
+            try:
+                pinned = str(getattr(document, "session_key", "") or "")
+            except Exception:
+                pinned = ""
+            if pinned and not getattr(document, "is_local", True):
+                current = _editor_session_key(session_state)
+                if current and current != pinned:
+                    message = t("editor.session_changed_reopen")
+                    if not message or message.startswith("[editor.session_changed_reopen]"):
+                        message = (
+                            "Connection changed since this file was opened. "
+                            "Re-open it from the current connection before saving "
+                            "to avoid writing to the wrong host."
+                        )
+                    raise RuntimeError(message)
+            return True
+
         def save_remote(path, content):
+            _require_pinned_session(document)
             if not files:
                 raise RuntimeError(t("editor.remote_file_service_unavailable"))
             files.write_text(path, content)
 
         def submit(current):
+            _require_pinned_session(current)
             if not current.path:
                 raise RuntimeError(t("editor.document_path_required"))
             if current.is_local:
@@ -2571,6 +2626,7 @@ def _editor_action_factory(session_state):
                 slurm.sbatch(current.path)
 
         def run(current):
+            _require_pinned_session(current)
             if not current.path:
                 raise RuntimeError(t("editor.document_path_required"))
             if current.is_local:
@@ -2594,6 +2650,7 @@ def _editor_action_factory(session_state):
 
         return {
             "save_remote": save_remote if files else None,
+            "target_exists": (lambda path: files.exists(path)) if files and callable(getattr(files, "exists", None)) else None,
             "on_submit": submit,
             "on_run": run,
         }
@@ -2706,6 +2763,80 @@ def _call_transfer_with_progress(method, src, dst, progress) -> None:
         method(src, dst, progress_cb=progress)
     else:
         method(src, dst)
+
+
+def _cancel_transfer_sessions(session_state) -> int:
+    """Cancel every in-flight file-transfer session (HPC-W06-XFER-013).
+
+    A disconnect must invalidate remote transfers predictably instead of
+    leaving them blocked on a dead transport until a socket timeout.  Returns
+    the number of sessions cancelled.  Never raises.
+    """
+    cancelled = 0
+    try:
+        sessions = list((session_state or {}).get("transfer_sessions") or ())
+    except Exception:
+        return 0
+    for session in sessions:
+        try:
+            cancel = getattr(session, "cancel", None)
+            if callable(cancel):
+                cancel()
+                cancelled += 1
+            else:
+                engine = getattr(session, "engine", None)
+                fallback = getattr(engine, "cancel_all", None) if engine is not None else None
+                if callable(fallback):
+                    fallback()
+                    cancelled += 1
+        except Exception:
+            continue
+    return cancelled
+
+
+def _verify_transfer_item(files, item):
+    """Opt-in post-transfer SHA-256 verification (HPC-W06-TODO-043).
+
+    Mirrors the Qt ``remote_dir_panel._verify_transfer_item`` semantics for
+    the wx file-view path: disabled unless the stored
+    ``transfer_checksum_verification_enabled`` setting is true; backends
+    without a ``sha256`` probe (or a failing probe) yield an ``UNSUPPORTED``
+    passthrough; a digest mismatch raises so the engine records ``FAILED``
+    instead of success.  Returns the :class:`VerificationState`.
+    """
+    from hpc_gui.services.transfer_integrity import VerificationState, verify_transfer
+
+    try:
+        from hpc_gui.config.storage import get_transfer_checksum_verification_enabled
+        enabled = bool(get_transfer_checksum_verification_enabled())
+    except Exception:
+        enabled = False
+    if not enabled:
+        return VerificationState.OFF
+    remote_hash = getattr(files, "sha256", None)
+    if not callable(remote_hash):
+        return VerificationState.UNSUPPORTED
+    local_path = item.src if item.op == "upload" else item.dst
+    remote_path = item.dst if item.op == "upload" else item.src
+    try:
+        remote_digest = remote_hash(remote_path)
+    except Exception:
+        return VerificationState.UNSUPPORTED
+    result = verify_transfer(local_path, remote_digest)
+    if result.state is VerificationState.FAILED:
+        raise RuntimeError(
+            f"SHA-256 verification failed for {remote_path}: "
+            f"local={result.local_digest}, remote={result.remote_digest}"
+        )
+    return result.state
+
+
+def _transfer_checksum_requested() -> bool:
+    try:
+        from hpc_gui.config.storage import get_transfer_checksum_verification_enabled
+        return bool(get_transfer_checksum_verification_enabled())
+    except Exception:
+        return False
 
 
 def _start_file_transfers(session_state, lifecycle, items, *, on_progress=None, conflict_resolver=None, files_backend=None, parent=None):
@@ -2831,9 +2962,12 @@ def _start_file_transfers(session_state, lifecycle, items, *, on_progress=None, 
         parallel_limit=parallel_limit,
         conflict_check=lambda item: _destination_exists(files, item.op, item.dst),
         conflict_resolver=conflict_resolver or session_state.get("conflict_resolver") or (wx_conflict_resolver if parent else None),
+        verify=lambda item: _verify_transfer_item(files, item),
         on_queue=queue_event,
         on_progress=progress_event,
     )
+    if _transfer_checksum_requested():
+        controller.set_checksum_enabled(True)
     if transfer_window:
         transfer_window._wx_transfer_set_controller(controller)
     if session_state.get("conflict_policy"):
@@ -2991,7 +3125,22 @@ def _remote_files_callbacks(session_state, parent, lifecycle):
         return slurm.sbatch(path)
 
     def _editor(path, content="", request_id=None):
-        _manager.open_primary(path, content, is_local=False, request_id=request_id)
+        try:
+            _session = _resolve_session()
+            _profile = _resolve_profile()
+            _prov_cfg = _resolve_provider_config()
+            _prov = _prov_cfg.get("name") if isinstance(_prov_cfg, dict) else ""
+        except Exception:
+            _session, _profile, _prov = {}, {}, ""
+        _manager.open_primary(
+            path,
+            content,
+            is_local=False,
+            request_id=request_id,
+            provider=str(_prov or ""),
+            profile=str(_profile.get("name") or ""),
+            session_key=_editor_session_key(session_state),
+        )
 
     _editor._wx_request_aware = True
 
@@ -3001,7 +3150,20 @@ def _remote_files_callbacks(session_state, parent, lifecycle):
     _editor._wx_request_started = _editor_request_started
 
     def _editor_new_window(path, content=""):
-        _manager.open_new_window(path, content, is_local=False)
+        try:
+            _profile = _resolve_profile()
+            _prov_cfg = _resolve_provider_config()
+            _prov = _prov_cfg.get("name") if isinstance(_prov_cfg, dict) else ""
+        except Exception:
+            _profile, _prov = {}, ""
+        _manager.open_new_window(
+            path,
+            content,
+            is_local=False,
+            provider=str(_prov or ""),
+            profile=str(_profile.get("name") or ""),
+            session_key=_editor_session_key(session_state),
+        )
 
     def _loader(path):
         files = _resolve_files()
@@ -3355,6 +3517,14 @@ def _connection_callbacks(session_state, parent, lifecycle):
                     panel._wx_remote_set_provider_filters(cbs.get("provider_filters"), cbs.get("plugin_filters"))
             except Exception:
                 pass
+        # W24 DIR-SESSION-001 / SESSION-REBIND-001: rebind directories storage
+        # roots from the CURRENT session after connect.
+        try:
+            dirs_panel = session_state.get("_embedded_directories_panel")
+            if dirs_panel is not None and hasattr(dirs_panel, "_wx_dirs_rebind"):
+                dirs_panel._wx_dirs_rebind(session_state)
+        except Exception:
+            pass
 
     def on_disconnected(session):
         # Graceful/transport-loss teardown (CONN-004/TODO-007): drop the dead
@@ -3378,6 +3548,17 @@ def _connection_callbacks(session_state, parent, lifecycle):
                     panel._wx_jobs_set_session(None)
             except Exception:
                 pass
+        # W24 SESSION-DISCONNECT-001 / DIR-009: explicit disconnected state,
+        # never a stale listing or placeholder root presented as valid.
+        try:
+            dirs_panel = session_state.get("_embedded_directories_panel")
+            if dirs_panel is not None and hasattr(dirs_panel, "_wx_dirs_disconnected"):
+                dirs_panel._wx_dirs_disconnected()
+        except Exception:
+            pass
+        # W25 XFER-013: invalidate in-flight remote transfers predictably on
+        # disconnect instead of leaving them parked on a dead transport.
+        _cancel_transfer_sessions(session_state)
 
     return {"profiles": profiles, "lifecycle": lifecycle, "on_connected": on_connected, "on_disconnected": on_disconnected}
 

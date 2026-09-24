@@ -37,7 +37,7 @@ class WxEditorWindowManager:
             self._pending_primary_request = None
         self.standalone_frames.discard(frame)
 
-    def open_primary(self, path, content="", *, is_local=False, request_id=None):
+    def open_primary(self, path, content="", *, is_local=False, request_id=None, provider: str = "", profile: str = "", session_key: str = "", encoding: str = "utf-8", newline=None, version: str = ""):
         import wx
 
         frame = self.primary_frame
@@ -47,11 +47,12 @@ class WxEditorWindowManager:
         self._primary_request_generation = request_id
         if frame is None or frame.IsBeingDeleted():
             model = WxEditorModel()
-            frame = show_editor(self.parent, model=model, path=path, content=content, is_local=is_local, on_destroy=self._forget, action_factory=self.action_factory, **self._callbacks())
+            frame = show_editor(self.parent, model=model, path=path, content=content, is_local=is_local, on_destroy=self._forget, action_factory=self.action_factory, provider=provider, profile=profile, session_key=session_key, encoding=encoding, newline=newline, version=version, **self._callbacks())
             self.primary_frame, self.primary_model = frame, model
             return frame
         active = self.primary_model.controller.active
-        request = (request_id, str(path), content, is_local)
+        identity = (provider, profile, session_key, encoding, newline, version)
+        request = (request_id, str(path), content, is_local, identity)
         if active and active.path == str(path) and active.dirty:
             return frame
         if frame._wx_editor_state["in_flight"]:
@@ -69,7 +70,7 @@ class WxEditorWindowManager:
                 self._pending_primary_request = request
                 frame._wx_editor_save_for_replacement(lambda: self._finish_replacement(frame, request))
                 return frame
-        self._replace_primary(frame, path, content, is_local)
+        self._replace_primary(frame, path, content, is_local, provider=provider, profile=profile, session_key=session_key, encoding=encoding, newline=newline, version=version)
         return frame
 
     def _finish_replacement(self, frame, requested):
@@ -77,15 +78,16 @@ class WxEditorWindowManager:
         self._pending_primary_request = None
         target = pending or requested
         if target[0] == self._primary_request_generation and frame is self.primary_frame and not frame._wx_editor_state["closed"]:
-            self._replace_primary(frame, target[1], target[2], target[3])
+            _prov, _prof, _skey, _enc, _nl, _ver = target[4] if len(target) > 4 else ("", "", "", "utf-8", None, "")
+            self._replace_primary(frame, target[1], target[2], target[3], provider=_prov, profile=_prof, session_key=_skey, encoding=_enc, newline=_nl, version=_ver)
 
     @staticmethod
-    def _replace_primary(frame, path, content, is_local):
-        frame._wx_editor_load_document(path, content, is_local=is_local)
+    def _replace_primary(frame, path, content, is_local, **identity):
+        frame._wx_editor_load_document(path, content, is_local=is_local, **identity)
 
-    def open_new_window(self, path, content="", *, is_local=False):
+    def open_new_window(self, path, content="", *, is_local=False, provider: str = "", profile: str = "", session_key: str = "", encoding: str = "utf-8", newline=None, version: str = ""):
         model = WxEditorModel()
-        frame = show_editor(self.parent, model=model, path=path, content=content, is_local=is_local, on_destroy=self._forget, action_factory=self.action_factory, **self._callbacks())
+        frame = show_editor(self.parent, model=model, path=path, content=content, is_local=is_local, on_destroy=self._forget, action_factory=self.action_factory, provider=provider, profile=profile, session_key=session_key, encoding=encoding, newline=newline, version=version, **self._callbacks())
         self.standalone_frames.add(frame)
         return frame
 

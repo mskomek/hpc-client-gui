@@ -36,9 +36,14 @@ class WxDirectoriesWorkspace:
     def storage(self, storage_id: str) -> StoragePane:
         return next(item for item in self.storages if item.id == storage_id)
 
-    def double_click(self, path: str, *, is_dir: bool = False) -> str:
+    def double_click(self, path: str, *, is_dir: bool = False, storage_id: str = "") -> str:
         if is_dir and self.remote:
-            self.remote[next(iter(self.remote))].navigate(path)
+            # W24 DIR-005: directory navigation must target the selected
+            # storage area, never silently collapse onto the first pane.
+            target = self.remote.get(storage_id) if storage_id else None
+            if target is None:
+                target = self.remote.get(next(iter(self.remote)))
+            target.navigate(path)
             return "navigate"
         if self._open_editor:
             self._open_editor(path)

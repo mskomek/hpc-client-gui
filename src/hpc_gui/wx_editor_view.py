@@ -2,24 +2,70 @@
 
 from __future__ import annotations
 
+import codecs
+import os
+from dataclasses import replace
 from pathlib import Path
 from threading import Thread
 
 from hpc_gui.core.i18n import subscribe_language_change, t, unsubscribe_language_change
 from hpc_gui.services.editor_controller import EditorCommandService
 from hpc_gui.services.editor_controller import DocumentModel
+from hpc_gui.services.editor_controller import detect_newline, normalize_newlines_for_save
 from hpc_gui.wx_editor import WxEditorModel
 from hpc_gui.wx_host import make_host
 
 
-def _build_editor(parent, model: WxEditorModel | None, *, path: str, content: str, is_local, save_remote, on_submit, on_run, action_factory, on_destroy, embedded, on_open=None, on_new_template=None, on_lint=None):
+# W26 (HPC-W06-EDIT-007): opening a clearly binary file as text, or a file
+# beyond the practical editable threshold, must not freeze or corrupt it.
+# The editor refuses with a visible diagnostic instead of opening it for edit.
+BINARY_GUARD_SIZE_BYTES = 2 * 1024 * 1024
+
+
+def editor_binary_guard_reason(path: str, content: str) -> str | None:
+    """Return a human-readable refusal reason, or ``None`` when editable."""
+    try:
+        text = content or ""
+        if "\x00" in text:
+            return f"Binary file not opened as text: {path or 'untitled'}"
+        if len(text.encode("utf-8", "ignore")) > BINARY_GUARD_SIZE_BYTES:
+            return f"File too large to edit safely (>2 MiB): {path or 'untitled'}"
+    except Exception:
+        return None
+    return None
+
+
+def _write_local_text(path: str, content: str, encoding: str) -> None:
+    """Write editor content to a local path without host newline translation.
+
+    The codec is looked up before the file is opened so an unknown encoding
+    fails without truncating the existing file (HPC-W06-EDIT-021).
+    """
+    codecs.lookup(encoding)
+    with open(path, "w", encoding=encoding, newline="") as handle:
+        handle.write(content)
+
+
+def _disk_baseline(path: str):
+    """``(mtime_ns, size)`` snapshot of a local path, or ``None`` when the
+    path is empty, absent, or unstatable."""
+    try:
+        if not path:
+            return None
+        st = os.stat(path)
+        return (st.st_mtime_ns, st.st_size)
+    except OSError:
+        return None
+
+
+def _build_editor(parent, model: WxEditorModel | None, *, path: str, content: str, is_local, save_remote, on_submit, on_run, action_factory, on_destroy, embedded, on_open=None, on_new_template=None, on_lint=None, provider: str = "", profile: str = "", session_key: str = "", encoding: str = "utf-8", newline: str | None = None, version: str = ""):
     try:
         import wx
     except ImportError as exc:
         raise RuntimeError("wxPython is not installed") from exc
     model = model or WxEditorModel()
     if model.controller.active is None:
-        model.open(path, content, is_local=bool(path and Path(path).exists()) if is_local is None else is_local)
+        model.open(path, content, is_local=bool(path and Path(path).exists()) if is_local is None else is_local, provider=provider, profile=profile, session_key=session_key, encoding=encoding, newline=newline, version=version)
     host, finish = make_host(parent, title=EditorCommandService.suggested_filename(path or "untitled.sh"), size=(900, 650), embedded=embedded)
     panel = wx.Panel(host)
     root = wx.BoxSizer(wx.VERTICAL)
@@ -84,7 +130,21 @@ def _build_editor(parent, model: WxEditorModel | None, *, path: str, content: st
     root.Add(buttons, 0, wx.ALIGN_RIGHT | wx.LEFT | wx.RIGHT | wx.BOTTOM, 8)
     root.Add(status, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 8)
     panel.SetSizer(root)
-    state = {"closed": False, "in_flight": False, "destroy_notified": False}
+    state = {"closed": False, "in_flight": False, "destroy_notified": False, "disk_baseline": {}}
+
+    def _note_disk_baseline(doc) -> None:
+        """Record the at-open disk state for later external-change detection
+        (HPC-W06-XFER-017).  Only local documents participate."""
+        try:
+            if doc is not None and getattr(doc, "is_local", False) and doc.path:
+                state["disk_baseline"][doc.path] = _disk_baseline(doc.path)
+        except Exception:
+            pass
+
+    try:
+        _note_disk_baseline(model.controller.active)
+    except Exception:
+        pass
 
     def notify_destroy():
         if on_destroy is not None and not state["destroy_notified"]:
@@ -141,37 +201,117 @@ def _build_editor(parent, model: WxEditorModel | None, *, path: str, content: st
         dlg.ShowModal()
         dlg.Destroy()
 
+    def _ask_overwrite(title_key: str, message: str) -> bool:
+        """Modal Yes/No overwrite prompt.  No/closed means cancel-safe abort."""
+        try:
+            title = t(title_key)
+            if title == f"[{title_key}]":
+                title = title_key
+            return wx.MessageBox(message, title, wx.YES_NO | wx.ICON_WARNING, host) == wx.ID_YES
+        except Exception:
+            return False
+
+    def _confirm_save_as(target: str, is_local: bool, target_exists) -> bool:
+        """HPC-W06-XFER-019: Save As to an existing target needs an explicit
+        prompt; declining is side-effect free (document and disk unchanged)."""
+        exists = False
+        if is_local:
+            try:
+                exists = os.path.exists(target)
+            except Exception:
+                exists = False
+        elif callable(target_exists):
+            try:
+                exists = bool(target_exists(target))
+            except Exception:
+                exists = False
+        if not exists:
+            return True
+        message = t("editor.save_as_exists").format(path=target)
+        return _ask_overwrite("editor.save_as_title", message)
+
+    def _confirm_external_change(path: str, saved_content: str, new_content: str) -> bool:
+        """HPC-W06-XFER-017: detect a local file changed externally *since it
+        was opened* (at-open stat baseline).  Opening a document whose passed
+        content already differs from disk is not an external change.
+        Declining preserves both disk and edits."""
+        baseline = state["disk_baseline"].get(path, _disk_baseline(path))
+        if path not in state["disk_baseline"]:
+            # First sight of this path (defensive): adopt current stat so a
+            # pre-existing file is never misreported as externally changed.
+            state["disk_baseline"][path] = baseline
+            return True
+        current = _disk_baseline(path)
+        if current == baseline:
+            return True  # untouched since open (covers still-absent new files)
+        if current is None:
+            # Existed at open, gone now -> externally deleted.
+            if baseline is not None and saved_content:
+                message = t("editor.external_deleted_message").format(path=path)
+                return _ask_overwrite("editor.external_change_title", message)
+            return True
+        if baseline is None:
+            # Appeared after open beneath a plain save -> confirm like Save As.
+            message = t("editor.save_as_exists").format(path=path)
+            return _ask_overwrite("editor.save_as_title", message)
+        try:
+            if os.path.getsize(path) > 10 * 1024 * 1024:
+                return True  # bounded: skip detection for very large files
+            disk = Path(path).read_text(encoding="utf-8")
+        except (OSError, UnicodeError, ValueError):
+            return True  # undecodable/unstatable: do not block the save
+        if disk == saved_content or disk == new_content:
+            return True
+        message = t("editor.external_change_message").format(path=path)
+        return _ask_overwrite("editor.external_change_title", message)
+
     def save_document(mode="save", on_done=None):
         if state["closed"] or state["in_flight"]:
             return
-        # sync path from header field into model before saving
+        # The header path field doubles as Save As: editing it before Save
+        # redirects this save to the new target (HPC-W06-XFER-019).
         try:
             hdr_path = remote_path.GetValue().strip()
-            if hdr_path and model.controller.active and hdr_path != model.controller.active.path:
-                # update active path metadata (keep content)
-                # we don't have direct set path, so we will update via load_document path later; for save we use hdr_path
-                # mark path temporarily for save operation
-                pass
         except Exception:
-            pass
+            hdr_path = ""
         active = model.controller.update_content(editor.GetValue())
+        snapshot = active
+        target = hdr_path or snapshot.path
+        save_as = bool(hdr_path and hdr_path != (snapshot.path or ""))
         operation_callbacks = action_factory(active) if action_factory else None
         operation_save_remote = operation_callbacks["save_remote"] if operation_callbacks else save_remote
+        operation_target_exists = operation_callbacks.get("target_exists") if isinstance(operation_callbacks, dict) else None
         operation_submit = operation_callbacks["on_submit"] if operation_callbacks else on_submit
         operation_run = operation_callbacks["on_run"] if operation_callbacks else on_run
+        if save_as and target:
+            # The saved/submitted document follows the new target.
+            snapshot = replace(snapshot, path=target)
+            if not _confirm_save_as(target, snapshot.is_local, operation_target_exists):
+                status.SetLabel(t("editor.save_as_cancelled"))
+                return
+        elif snapshot.is_local and snapshot.path and target:
+            if not _confirm_external_change(snapshot.path, snapshot.saved_content, snapshot.content):
+                status.SetLabel(t("editor.external_change_cancelled"))
+                return
         state["in_flight"] = True
         editor.Enable(False)
         for button in (save, submit, run, btn_open, btn_template, btn_lint):
             button.Enable(False)
 
-        def worker(snapshot=active):
+        def worker(snapshot=snapshot):
             saved = False
             try:
                 if snapshot.is_local and snapshot.path:
-                    Path(snapshot.path).write_text(snapshot.content, encoding=snapshot.encoding)
+                    # W26 (HPC-W06-EDIT-013/021): preserve the on-open
+                    # newline style exactly (newline="" disables host
+                    # translation) and validate the encoding before the
+                    # file is truncated so failures stay visible and the
+                    # document keeps its dirty/recoverable state.
+                    payload = normalize_newlines_for_save(snapshot.content, snapshot.newline)
+                    _write_local_text(snapshot.path, payload, snapshot.encoding)
                     saved = True
                 elif operation_save_remote and snapshot.path:
-                    operation_save_remote(snapshot.path, snapshot.content)
+                    operation_save_remote(snapshot.path, normalize_newlines_for_save(snapshot.content, snapshot.newline))
                     saved = True
                 if mode in {"submit", "run"} and not saved:
                     raise RuntimeError(t("editor.action_requires_save"))
@@ -193,7 +333,29 @@ def _build_editor(parent, model: WxEditorModel | None, *, path: str, content: st
             # reapply disabled state for buttons with no callback
             _update_header_enabled()
             if saved:
-                model.controller.mark_saved(active.content)
+                if save_as and target:
+                    # Adopt the Save As target as the document identity so the
+                    # next save goes to the new path (HPC-W06-XFER-019).
+                    try:
+                        idx = model.controller.active_index
+                        if 0 <= idx < len(model.controller.documents):
+                            model.controller.documents[idx] = replace(
+                                model.controller.documents[idx], path=target
+                            )
+                        try:
+                            remote_path.SetValue(target)
+                        except Exception:
+                            pass
+                    except Exception:
+                        pass
+                model.controller.mark_saved(snapshot.content)
+                # Refresh the at-open baseline so a later save only prompts
+                # for changes made after this save (HPC-W06-XFER-017).
+                try:
+                    if snapshot.is_local and snapshot.path:
+                        state["disk_baseline"][snapshot.path] = _disk_baseline(snapshot.path)
+                except Exception:
+                    pass
             if error:
                 status.SetLabel(str(error))
                 return
@@ -425,12 +587,24 @@ def _build_editor(parent, model: WxEditorModel | None, *, path: str, content: st
         _update_header_enabled()
         _refresh_tabs()
 
-    def load_document(new_path, new_content, *, is_local=False):
-        # duplicate suppression: normalize path for comparison
-        norm_new = str(new_path or "").strip()
+    def load_document(new_path, new_content, *, is_local=False, provider: str = "", profile: str = "", session_key: str = "", encoding: str = "utf-8", newline: str | None = None, version: str = ""):
+        # W26 (HPC-W06-EDIT-007): binary/oversize content is refused with a
+        # visible diagnostic instead of opening an editable tab.
+        guard_reason = editor_binary_guard_reason(new_path, new_content)
+        if guard_reason:
+            try:
+                status.SetLabel(guard_reason)
+            except Exception:
+                pass
+            return
+        # duplicate suppression on the canonical identity (local vs remote,
+        # connection, path): the same path on another connection is a
+        # distinct document (HPC-W06-EDIT-010/012/016).
+        style = newline if newline in ("\n", "\r\n") else detect_newline(new_content)
+        probe = DocumentModel(new_path, new_content, new_content, is_local, encoding, suggested_filename=EditorCommandService.suggested_filename(new_path), provider=provider, profile=profile, session_key=session_key, newline=style, version=version)
         # check existing docs
         for idx, doc in enumerate(model.controller.documents):
-            if str(doc.path).strip() == norm_new and norm_new:
+            if doc.canonical_key == probe.canonical_key and probe.canonical_key[4]:
                 # activate existing
                 try:
                     model.controller.active_index = idx
@@ -440,12 +614,15 @@ def _build_editor(parent, model: WxEditorModel | None, *, path: str, content: st
                     except Exception:
                         pass
                     host.set_host_title(EditorCommandService.suggested_filename(doc.path or "untitled.sh"))
+                    _note_disk_baseline(doc)
                     _refresh_tabs()
                 except Exception:
                     pass
                 return
         # handle stale: if in-flight, queue? For now direct open
-        model.controller.open(DocumentModel(new_path, new_content, new_content, is_local, suggested_filename=EditorCommandService.suggested_filename(new_path)))
+        opened = probe
+        model.controller.open(opened)
+        _note_disk_baseline(opened)
         editor.ChangeValue(new_content)
         try:
             remote_path.SetValue(new_path)
@@ -522,13 +699,13 @@ def _build_editor(parent, model: WxEditorModel | None, *, path: str, content: st
     return host
 
 
-def build_editor_panel(parent, model: WxEditorModel | None = None, *, path: str = "", content: str = "", is_local=None, save_remote=None, on_submit=None, on_run=None, action_factory=None, on_destroy=None, on_open=None, on_new_template=None, on_lint=None):
+def build_editor_panel(parent, model: WxEditorModel | None = None, *, path: str = "", content: str = "", is_local=None, save_remote=None, on_submit=None, on_run=None, action_factory=None, on_destroy=None, on_open=None, on_new_template=None, on_lint=None, provider: str = "", profile: str = "", session_key: str = "", encoding: str = "utf-8", newline: str | None = None, version: str = ""):
     """Embedded panel factory. Returns the wx.Panel host."""
-    return _build_editor(parent, model, path=path, content=content, is_local=is_local, save_remote=save_remote, on_submit=on_submit, on_run=on_run, action_factory=action_factory, on_destroy=on_destroy, on_open=on_open, on_new_template=on_new_template, on_lint=on_lint, embedded=True)
+    return _build_editor(parent, model, path=path, content=content, is_local=is_local, save_remote=save_remote, on_submit=on_submit, on_run=on_run, action_factory=action_factory, on_destroy=on_destroy, on_open=on_open, on_new_template=on_new_template, on_lint=on_lint, embedded=True, provider=provider, profile=profile, session_key=session_key, encoding=encoding, newline=newline, version=version)
 
 
-def show_editor(parent=None, model: WxEditorModel | None = None, *, path: str = "", content: str = "", is_local=None, save_remote=None, on_submit=None, on_run=None, action_factory=None, on_destroy=None, on_open=None, on_new_template=None, on_lint=None):
-    return _build_editor(parent, model, path=path, content=content, is_local=is_local, save_remote=save_remote, on_submit=on_submit, on_run=on_run, action_factory=action_factory, on_destroy=on_destroy, on_open=on_open, on_new_template=on_new_template, on_lint=on_lint, embedded=False)
+def show_editor(parent=None, model: WxEditorModel | None = None, *, path: str = "", content: str = "", is_local=None, save_remote=None, on_submit=None, on_run=None, action_factory=None, on_destroy=None, on_open=None, on_new_template=None, on_lint=None, provider: str = "", profile: str = "", session_key: str = "", encoding: str = "utf-8", newline: str | None = None, version: str = ""):
+    return _build_editor(parent, model, path=path, content=content, is_local=is_local, save_remote=save_remote, on_submit=on_submit, on_run=on_run, action_factory=action_factory, on_destroy=on_destroy, on_open=on_open, on_new_template=on_new_template, on_lint=on_lint, embedded=False, provider=provider, profile=profile, session_key=session_key, encoding=encoding, newline=newline, version=version)
 
 
-__all__ = ["show_editor", "build_editor_panel"]
+__all__ = ["show_editor", "build_editor_panel", "editor_binary_guard_reason", "BINARY_GUARD_SIZE_BYTES"]

@@ -18,6 +18,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 
+
+def _outside_repo(path: Path) -> bool:
+    return not path.resolve().is_relative_to(ROOT.resolve())
+
 sys.path.insert(0, str(ROOT / "scripts"))
 try:
     from artifact_identity import format_artifact_identity
@@ -171,7 +175,10 @@ def run_packaged_smoke(artifact: Path, platform_name: str, output: Path, timeout
             # checkout as its working directory (HPC-W04-HARNESS-025). System
             # temp is outside the repo by construction.
             workdir = Path(tempfile.mkdtemp(prefix="wx-packaged-cwd-"))
-            details["workdir_outside_repo"] = str(ROOT) not in str(workdir.resolve())
+            # Controller-managed TEMP may live under the repository's .tmp/
+            # area; the contract is isolation from the source tree, not from
+            # the controller's own temporary bookkeeping.
+            details["workdir_outside_repo"] = _outside_repo(workdir)
             returncode, child_stdout, child_stderr, timed_out = _run_child(
                 cmd,
                 cwd=str(workdir),
@@ -368,7 +375,7 @@ def run_fresh_user_smoke(artifact: Path, platform_name: str, output: Path, timeo
             else:
                 details["fresh_root"] = str(fresh_root)
                 details["workdir"] = str(workdir)
-                details["workdir_outside_repo"] = str(ROOT) not in str(workdir.resolve())
+                details["workdir_outside_repo"] = _outside_repo(workdir)
                 try:
                     loopback_root, loopback_server, loopback_user, loopback_password = _start_loopback_ssh(output)
                     runtime_webview = Path(tempfile.mkdtemp(prefix="wx-webview-", dir=str(fresh_parent)))

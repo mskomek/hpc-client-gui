@@ -344,6 +344,13 @@
     "remote": "Remote:",
     "open_failed": "Could not open file: {err}",
     "save_failed": "Could not save file: {err}",
+    "save_as_title": "Save As",
+    "save_as_exists": "Target already exists:\n{path}\nOverwrite?",
+    "save_as_cancelled": "Save As cancelled; the document is unchanged.",
+    "external_change_title": "File changed externally",
+    "external_change_message": "The file on disk differs from the last saved version:\n{path}\nOverwrite the external changes?",
+    "external_deleted_message": "The file no longer exists on disk:\n{path}\nRecreate it?",
+    "external_change_cancelled": "Save cancelled; your edits are preserved.",
     "action_requires_save": "Cannot submit or run because the document could not be saved.",
     "remote_file_service_unavailable": "Remote file service is unavailable.",
     "document_path_required": "Document path is required.",
@@ -360,7 +367,8 @@
     "replace": "Replace",
     "replace_all": "Replace all",
     "lint_no_linter": "No linter is installed for this file type. Install a lint plugin from the Plugin Manager.",
-    "lint_results_title": "Lint results"
+    "lint_results_title": "Lint results",
+    "session_changed_reopen": "Connection changed since this file was opened. Re-open it from the current connection before saving to avoid writing to the wrong host."
   },
   "dirs": {
     "refresh": "Refresh",
@@ -502,7 +510,8 @@
     "follow_new_window": "Follow in New Window",
     "follow_existing": "Assign to Existing Follower",
     "following": "Following",
-    "not_following": "Not following"
+    "not_following": "Not following",
+    "delete_confirm_detail": "Delete {count} selected item(s) from {location}?\n{names}"
   },
   "jobs_outputs": {
     "auto_scroll": "Auto-scroll",
@@ -847,7 +856,8 @@
     "cmp_local_newer": "Local newer",
     "cmp_remote_newer": "Remote newer",
     "waiting_local_folder": "Waiting for local folder",
-    "waiting_remote_folder": "Waiting for remote folder"
+    "waiting_remote_folder": "Waiting for remote folder",
+    "forward": "Forward"
   },
   "transfer": {
     "ftp_activity_title": "Transfers",

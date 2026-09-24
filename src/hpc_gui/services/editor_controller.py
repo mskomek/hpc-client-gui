@@ -5,6 +5,38 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 
 
+def detect_newline(content: str) -> str:
+    """Return the dominant newline style of *content* (``"\\r\\n"`` or ``"\\n"``).
+
+    W26 (HPC-W06-EDIT-013) preserves the on-open newline style across saves
+    instead of silently normalizing line endings.
+    """
+    try:
+        text = content or ""
+        if "\r\n" in text:
+            # Dominant-style vote: CRLF wins ties so mixed content opened
+            # from a Windows-authored file keeps CRLF.
+            if text.count("\r\n") * 2 >= text.count("\n"):
+                return "\r\n"
+        return "\n"
+    except Exception:
+        return "\n"
+
+
+def normalize_newlines_for_save(content: str, newline: str) -> str:
+    """Render *content* with the document's pinned newline style."""
+    try:
+        text = content or ""
+        # Collapse first (wx TextCtrl on Windows may surface lone or doubled
+        # carriage returns), then render the pinned style exactly once.
+        text = text.replace("\r\n", "\n").replace("\r", "\n")
+        if newline == "\r\n":
+            return text.replace("\n", "\r\n")
+        return text
+    except Exception:
+        return content
+
+
 @dataclass(frozen=True)
 class DocumentModel:
     path: str = ""
@@ -13,10 +45,33 @@ class DocumentModel:
     is_local: bool = False
     encoding: str = "utf-8"
     suggested_filename: str = ""
+    # W26 document identity (HPC-W06-EDIT-010..016): remote documents pin the
+    # connection they were opened from so a later connection/profile switch
+    # cannot redirect Save to the wrong host/path (HPC-W06-EDIT-016).
+    provider: str = ""
+    profile: str = ""
+    session_key: str = ""
+    # W26 preservation metadata (HPC-W06-EDIT-013/015).
+    newline: str = "\n"
+    version: str = ""
 
     @property
     def dirty(self) -> bool:
         return self.content != self.saved_content
+
+    @property
+    def canonical_key(self) -> tuple:
+        """Identity key distinguishing local vs remote, connection, and path."""
+        norm_path = str(self.path or "").strip().replace("\\", "/")
+        if self.is_local:
+            return (True, "", "", "", norm_path.lower())
+        return (
+            False,
+            str(self.provider or ""),
+            str(self.profile or ""),
+            str(self.session_key or ""),
+            norm_path,
+        )
 
     def with_content(self, content: str) -> "DocumentModel":
         return replace(self, content=content)
@@ -40,8 +95,9 @@ class EditorController:
         self.active_index = -1
 
     def open(self, document: DocumentModel) -> int:
+        key = document.canonical_key
         for index, current in enumerate(self.documents):
-            if document.path and current.path == document.path:
+            if current.canonical_key == key and key[4]:
                 self.active_index = index
                 return index
         self.documents.append(document)

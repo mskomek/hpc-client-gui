@@ -50,9 +50,40 @@ def list_local_entries(directory: str) -> List[LocalEntry]:
     return entries
 
 
+def _is_source_checkout(path_value: str) -> bool:
+    """True when a directory looks like a development/source checkout (TODO-025)."""
+    try:
+        root = Path(os.path.expanduser(path_value)).resolve()
+    except Exception:
+        return False
+    try:
+        if (root / "src" / "hpc_gui").is_dir():
+            return True
+        marker = root / "pyproject.toml"
+        if marker.is_file():
+            try:
+                text = marker.read_text(encoding="utf-8", errors="ignore")
+            except OSError:
+                return False
+            return "hpc-client-gui" in text or "hpc_gui" in text
+        return False
+    except OSError:
+        return False
+
+
 def safe_initial_local_directory(saved: str = "") -> str:
-    candidates = [saved, str(Path.home()), os.getcwd()]
+    home = str(Path.home())
+    cwd = os.getcwd()
+    # Order: last valid user location -> user home -> safe cwd -> platform fallback.
+    # A development/source checkout is never a safe cwd default (TODO-025).
+    candidates = [saved, home, cwd]
     for candidate in candidates:
-        if candidate and os.path.isdir(os.path.expanduser(candidate)):
-            return os.path.abspath(os.path.expanduser(candidate))
+        if not candidate:
+            continue
+        expanded = os.path.expanduser(candidate)
+        if not os.path.isdir(expanded):
+            continue
+        if candidate == cwd and _is_source_checkout(expanded):
+            continue
+        return os.path.abspath(expanded)
     return os.path.abspath(os.sep)

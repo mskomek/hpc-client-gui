@@ -17,10 +17,21 @@ class TransferStatus:
 
 
 class TransferSessionController:
-    def __init__(self, items: Iterable[TransferItem], run_item, *, conflict_check=None, conflict_resolver=None, **kwargs) -> None:
+    """Framework-neutral transfer-session state around the transfer engine.
+
+    ``verify`` is an optional post-transfer integrity hook
+    (``HPC-W06-TODO-043``): ``verify(item)`` runs after the backend reports
+    success and only when ``checksum_enabled`` is true.  It must raise on a
+    digest mismatch (the engine then records ``FAILED`` instead of success)
+    and return normally for ``VERIFIED``/``UNSUPPORTED`` outcomes.  The
+    default ``None`` preserves the historical run-without-verify behavior.
+    """
+
+    def __init__(self, items: Iterable[TransferItem], run_item, *, conflict_check=None, conflict_resolver=None, verify=None, **kwargs) -> None:
         self._run_item_backend = run_item
         self._conflict_check = conflict_check
         self._conflict_resolver = conflict_resolver
+        self._verify = verify
         parameters = inspect.signature(run_item).parameters
         self._run_item_accepts_decision = "conflict_decision" in parameters or any(
             parameter.kind is parameter.VAR_KEYWORD for parameter in parameters.values()
@@ -51,6 +62,8 @@ class TransferSessionController:
             self._run_item_backend(item, progress, conflict_decision=decision)
         else:
             self._run_item_backend(item, progress)
+        if self.checksum_enabled and self._verify is not None and item.op in {"upload", "download"}:
+            self._verify(item)
 
     def status(self) -> TransferStatus:
         return TransferStatus(len(self.engine.pending), len(self.engine.failed), len(self.engine.completed))

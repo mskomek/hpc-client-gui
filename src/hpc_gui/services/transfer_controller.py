@@ -116,6 +116,11 @@ class TransferController:
             self.items = list(self._pending)
         self._cancel.clear()
         self._stop_after_current.clear()
+        # HPC-W06-XFER-010: a retry is a new clear operation state.  Re-announce
+        # restored items as queued (mirroring enqueue) so subscribers clear
+        # their failed/completed rows instead of showing the item twice.
+        for item in restored:
+            self._emit_queue("queued", item)
         return len(restored)
 
     def clear_pending(self) -> None:

@@ -278,9 +278,14 @@ def _controller_disconnect_cb(
                     return
             except Exception:
                 return
-        # Marshal to the GUI thread only when a live wx application
-        # exists; otherwise fail synchronously (headless/service use and
-        # contexts where CallAfter could never be dispatched). The shell
+        # Marshal to the GUI thread only when invoked off the GUI thread
+        # while a live wx application exists; otherwise fail synchronously
+        # (headless/service use, unit tests already on the main thread, and
+        # contexts where CallAfter could never be dispatched). This mirrors
+        # _invoke_on_gui_thread: background SSH reader threads still marshal
+        # via CallAfter, while main-thread callers apply inline so unit
+        # ordering (wx.App alive from an earlier GUI fixture) cannot leave
+        # the controller visibly CONNECTED on a dead transport. The shell
         # invalidation hook (if any) runs in the same unit so the session
         # model, terminal, and domain panels all observe the loss together.
         def _apply() -> None:
@@ -299,10 +304,15 @@ def _controller_disconnect_cb(
             import wx
 
             app_alive = wx.App.Get() is not None
+            try:
+                on_main_thread = bool(wx.IsMainThread())
+            except Exception:
+                on_main_thread = True
         except Exception:
             app_alive = False
+            on_main_thread = True
         try:
-            if app_alive:
+            if app_alive and not on_main_thread:
                 wx.CallAfter(_apply)
             else:
                 _apply()

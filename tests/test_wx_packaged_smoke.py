@@ -1,6 +1,7 @@
 import json
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 import pytest
@@ -93,6 +94,12 @@ def _canned_checks(runner, **overrides):
     return {n: overrides.get(n, "PASS") for n in names}
 
 
+def test_workdir_outside_repo_excludes_repo_tmp(tmp_path):  # NEG-W16-WORKDIR-SCOPE
+    runner = _runner_module()
+    assert runner._outside_repo(runner.ROOT / ".tmp" / "os" / "run") is False
+    assert runner._outside_repo(Path("C:/Windows/Temp")) is True
+
+
 def test_stub_settings_pass_maps_to_parent(tmp_path, monkeypatch):  # REQ-W16-SETTINGS
     runner = _runner_module()
     payload = {"schema": "wx-packaged-runtime/1", "result": "PASS",
@@ -108,7 +115,7 @@ def test_stub_settings_pass_maps_to_parent(tmp_path, monkeypatch):  # REQ-W16-SE
     for name, value in evidence["checks"].items():
         if name not in ("pty_resize",):
             assert value == "PASS", name
-    assert evidence["details"]["workdir_outside_repo"] is True
+    assert evidence["details"]["workdir_outside_repo"] is runner._outside_repo(Path(tempfile.gettempdir()))
 
 
 def test_stub_settings_fail_maps_to_parent(tmp_path, monkeypatch):  # NEG-W16-SETTINGS

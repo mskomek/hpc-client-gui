@@ -179,7 +179,7 @@ def _build_transfers(parent, controller=None, embedded=False):
         layout.Add(notebook, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 6)
         layout.Add(btn_sizer, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 6)
         panel.SetSizer(layout)
-        state = {"closed": False, "controller": controller, "queue_map": {}, "failed_map": {}, "completed_map": {}}
+        state = {"closed": False, "controller": controller, "queue_map": {}, "failed_map": {}, "completed_map": {}, "row_token": {}, "row_seq": 0}
         controls = {
             "status": status,
             "notebook": notebook,
@@ -314,9 +314,10 @@ def _build_transfers(parent, controller=None, embedded=False):
                         if iid not in state["queue_map"]:
                             state["queue_map"][iid] = it
                             found = False
+                            token = _row_token(it)
                             for idx in range(queue_list.GetItemCount()):
                                 try:
-                                    if queue_list.GetItemData(idx) == iid:
+                                    if queue_list.GetItemData(idx) == token:
                                         found = True
                                         break
                                 except Exception:
@@ -329,7 +330,7 @@ def _build_transfers(parent, controller=None, embedded=False):
                                     queue_list.SetItem(row, 2, "Queued")
                                     queue_list.SetItem(row, 3, "")
                                     queue_list.SetItem(row, 4, str(getattr(it, "priority", "Normal")))
-                                    queue_list.SetItemData(row, iid)
+                                    queue_list.SetItemData(row, _row_token(it))
                                 except RuntimeError:
                                     pass
                 except Exception:
@@ -353,10 +354,29 @@ def _build_transfers(parent, controller=None, embedded=False):
                 pass
 
     # --- embedded specific helpers ---
+    def _row_token(item) -> int:
+        """Stable small row token for a transfer item.
+
+        ``wx.ListCtrl.SetItemData`` truncates 64-bit ``id()`` values on
+        platforms where C ``long`` is 32 bits (Windows), so ``_find_row``
+        could never match a row again and queue rows were never removed or
+        updated (HPC-W06-XFER-001/003/012).  Tokens are small sequence
+        numbers; ``state`` keeps the owning item references alive, so the
+        ``id()`` keys cannot be recycled while tracked.
+        """
+        iid = id(item)
+        token = state["row_token"].get(iid)
+        if token is None:
+            state["row_seq"] = state.get("row_seq", 0) + 1
+            token = state["row_seq"]
+            state["row_token"][iid] = token
+        return token
+
     def _find_row(lst, iid):
+        token = state["row_token"].get(iid, iid)
         for idx in range(lst.GetItemCount()):
             try:
-                if lst.GetItemData(idx) == iid:
+                if lst.GetItemData(idx) == token:
                     return idx
             except Exception:
                 continue
@@ -378,7 +398,7 @@ def _build_transfers(parent, controller=None, embedded=False):
         lst.SetItem(idx, 5, str(getattr(item, "priority", "") or ""))
         lst.SetItem(idx, 6, status_text)
         try:
-            lst.SetItemData(idx, id(item))
+            lst.SetItemData(idx, _row_token(item))
         except Exception:
             pass
         return idx
@@ -391,6 +411,19 @@ def _build_transfers(parent, controller=None, embedded=False):
             try:
                 iid = id(item)
                 if event in ("queued", "started"):
+                    # HPC-W06-XFER-010: a retry reuses the same item identity,
+                    # so evict its stale failed/completed rows first; otherwise
+                    # the retried operation shows in two lists at once and the
+                    # failed list never clears.
+                    for _map_name, _list in (("failed_map", failed_list), ("completed_map", completed_list)):
+                        if iid in state[_map_name]:
+                            state[_map_name].pop(iid, None)
+                            _row = _find_row(_list, iid)
+                            if _row != -1:
+                                try:
+                                    _list.DeleteItem(_row)
+                                except Exception:
+                                    pass
                     try:
                         status.SetLabel(t("transfer.active_item").format(item=item.label()))
                     except Exception:

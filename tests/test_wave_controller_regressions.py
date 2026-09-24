@@ -90,6 +90,18 @@ def test_result_fingerprint_ignores_report_prose_for_stable_finding_ids():
     )
     assert first == second
 
+def test_result_fingerprint_spans_real_repair_audit_status_cycle():
+    repair = controller.result_fingerprint(
+        "426", "repair", {"status": "BLOCKED", "findings": ["W426-HARD-005 exact wx semantic readback"]}
+    )
+    audit = controller.result_fingerprint(
+        "426", "audit", {"status": "REOPEN", "findings": ["W426-HARD-005 exact wx semantic readback"]}
+    )
+    assert repair == audit
+    first = controller.no_progress_key("426", "repair", repair, "content-1")
+    second = controller.no_progress_key("426", "audit", audit, "content-1")
+    assert first == second
+
 
 def _audit_receipt(tmp_path: Path, *, status="PASS", identity="content-1", wave="W18"):
     result = tmp_path / ".tmp" / "audit-normalized.json"
@@ -143,3 +155,86 @@ def test_status_order_without_receipt_remains_repair_then_audit(tmp_path: Path):
     assert controller.effective_audit_status(report) == "BLOCKED"
     report.write_text("WAVE_REPAIR_STATUS: BLOCKED\nWAVE_REPAIR_STATUS: READY_FOR_AUDIT\n", encoding="utf-8")
     assert controller.effective_audit_status(report) == "READY_FOR_AUDIT"
+
+
+def _write_hpc_profile(root: Path) -> None:
+    for state in ("pending", "done", "blocked", "postponed"):
+        (root / "waves" / state).mkdir(parents=True, exist_ok=True)
+    (root / ".opencode" / "protocol").mkdir(parents=True, exist_ok=True)
+    profile = {
+        "schema_version": 1,
+        "project_id": "HPC",
+        "wave": {"file_regex": r"^W(?P<number>\d{2})\.md$", "id_format": "W{number:02d}", "min": 1, "max": 61},
+        "paths": {"pending": "waves/pending", "done": "waves/done", "blocked": "waves/blocked", "postponed": "waves/postponed", "active_wave_tracker": None, "waves_index": None},
+        "capabilities": {"active_wave_tracker": False, "waves_index": False, "canonical_source_closeout": False},
+        "scheduler": {"authority": "wave_directories", "auto_resume": True, "closed_wave_policy": "immutable"},
+        "aggregate": {"validator_script": None},
+        "temp_root": ".tmp",
+        "legacy_run_roots": [".agent-runs"],
+        "global_state_owner": "controller",
+        "evidence": {"identity": "content", "allowed_closeout_only_paths": ["docs/wave-reports/", "artifacts/", ".tmp/", "waves/"]},
+    }
+    (root / ".opencode" / "protocol" / "WAVE_PROJECT_PROFILE.json").write_text(json.dumps(profile), encoding="utf-8")
+
+
+def test_closed_owner_is_selectable_for_bounded_repair(tmp_path: Path):
+    _write_hpc_profile(tmp_path)
+    done = tmp_path / "waves" / "done" / "W21.md"
+    done.write_text("# W21\n", encoding="utf-8")
+    pending = tmp_path / "waves" / "pending" / "W22.md"
+    pending.write_text("# W22\n", encoding="utf-8")
+
+    try:
+        controller.current_target(tmp_path, "HPC", "W21")
+    except RuntimeError:
+        pass
+    else:
+        raise AssertionError("closed owner must not become a normal active lifecycle target")
+
+    target, path, _ = controller.current_target(
+        tmp_path, "HPC", "W21", allow_closed_owner_repair=True
+    )
+    assert target == "W21"
+    assert path == done
+    assert done.exists()
+    assert pending.exists()
+
+
+def test_routed_owner_includes_done_owner(tmp_path: Path):
+    findings = tmp_path / "findings.json"
+    findings.write_text(json.dumps({
+        "findings": [{
+            "finding_id": "HPC-W05-LIFE-065",
+            "execution_owner": "W21",
+            "owner_state": "done",
+            "human_only": False,
+        }]
+    }), encoding="utf-8")
+    assert controller.routed_owner(findings, "W22") == "W21"
+
+
+def test_progress_epoch_distinguishes_owner_round_trip():
+    base = controller.progress_no_progress_key("W22", "repair", "same finding", "same tree", 0)
+    repeated = controller.progress_no_progress_key("W22", "audit", "same finding", "same tree", 0)
+    advanced = controller.progress_no_progress_key("W22", "audit", "same finding", "same tree", 1)
+    assert base == repeated
+    assert advanced != base
+
+
+def test_repository_owned_no_progress_is_not_a_program_terminal():
+    source = (ROOT / ".opencode" / "scripts" / "run-wave-program.py").read_text(encoding="utf-8")
+    assert 'terminal_class":"PROGRAM_NO_PROGRESS"' not in source
+    assert 'print("PROGRAM_NO_PROGRESS")' not in source
+    assert 'terminal_class":"PROGRAM_FINAL_VALIDATION_BLOCKED"' not in source
+    assert "closed_owner_route_suppressed" not in source
+
+def test_human_deferral_denial_prose_stays_repository_owned():
+    denial = "No human deferral: no missing MFA/credential/authority; this is repository-owned technical repair state."
+    assert controller.human_deferred_is_real({"findings": [denial]}) is False
+
+
+def test_human_deferral_genuine_authority_blocker_is_real():
+    genuine = "blocked: MFA device authorization required; user must approve in authenticator app"
+    assert controller.human_deferred_is_real({"findings": [genuine]}) is True
+    assert controller.human_deferred_is_real({"findings": ["validator can_close=false"]}) is False
+    assert controller.human_deferred_is_real({"findings": []}) is False

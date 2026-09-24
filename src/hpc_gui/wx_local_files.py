@@ -13,7 +13,7 @@ from pathlib import Path
 from urllib.parse import quote
 
 from hpc_gui.core.i18n import subscribe_language_change, t, unsubscribe_language_change
-from hpc_gui.services.file_context_actions import FILE_CONTEXT_LABEL_KEYS, context_selection, visible_actions
+from hpc_gui.services.file_context_actions import FILE_CONTEXT_LABEL_KEYS, context_selection, delete_confirm_message, summarize_delete_targets, visible_actions
 from hpc_gui.services.local_files import list_windows_drives
 from hpc_gui.wx_host import make_host
 
@@ -25,6 +25,24 @@ class LocalEntry:
     path: Path
     is_dir: bool
     size: int
+    mtime: float = 0.0
+
+
+def format_local_size(entry: LocalEntry) -> str:
+    """Human-readable size; blank/unknown for directories (TODO-027/028)."""
+    if entry.is_dir:
+        return ""
+    try:
+        n = int(entry.size)
+    except Exception:
+        return ""
+    units = ["B", "KB", "MB", "GB", "TB"]
+    v = float(n)
+    i = 0
+    while v >= 1024 and i < len(units) - 1:
+        v /= 1024.0
+        i += 1
+    return f"{v:.1f} {units[i]}" if i else f"{int(v)} {units[i]}"
 
 
 def file_url_payload(paths: list[Path]) -> str:
@@ -74,11 +92,12 @@ class LocalBrowserModel:
             try:
                 metadata = item.stat()
             except OSError:
-                entries.append(LocalEntry(item, False, 0))
+                entries.append(LocalEntry(item, False, 0, 0.0))
             else:
                 is_dir = stat_module.S_ISDIR(metadata.st_mode)
                 size = metadata.st_size if stat_module.S_ISREG(metadata.st_mode) else 0
-                entries.append(LocalEntry(item, is_dir, size))
+                mtime = float(getattr(metadata, "st_mtime", 0.0) or 0.0)
+                entries.append(LocalEntry(item, is_dir, size, mtime))
         key = (lambda item: item.path.name.casefold()) if self.sort_key == "name" else (lambda item: item.size)
         return tuple(sorted(entries, key=key, reverse=self.reverse))
 
@@ -272,6 +291,20 @@ def _format_mtime(mtime_val) -> str:
     return _shared_fmt_mtime(mtime_val)
 
 
+def _delete_confirm_text(names, location) -> str:
+    """W23 FILE-035/036: confirmation names the actual target (path + items)."""
+    count, where, shown = summarize_delete_targets(names, location)
+    if count <= 0:
+        return t("dirs.delete_confirm")
+    template = t("dirs.delete_confirm_detail")
+    if template.startswith("[dirs.delete_confirm_detail]"):
+        return delete_confirm_message(names, location)
+    try:
+        return template.format(count=count, location=where, names=shown)
+    except Exception:
+        return delete_confirm_message(names, location)
+
+
 def _type_label(entry) -> str:
     return _shared_file_type(_entry_name(entry), bool(getattr(entry, "is_dir", False)))
 
@@ -281,18 +314,21 @@ def _build_local_files(parent, path: str | Path | None = None, *, open_editor=No
         import wx
     except ImportError as exc:
         raise RuntimeError("wxPython is not installed") from exc
-    model = LocalBrowserModel(path or Path.cwd())
+    from hpc_gui.services.local_files import safe_initial_local_directory
+    model = LocalBrowserModel(path or safe_initial_local_directory(""))
     host, finish = make_host(parent, title=t("tabs.ftp"), size=(900, 600), embedded=embedded)
     toolbar_sizer = wx.BoxSizer(wx.HORIZONTAL)
     btn_drives = wx.Button(host, label=t("ftp.drives"))
     btn_back = wx.Button(host, label=t("ftp.back"))
+    btn_forward = wx.Button(host, label=t("ftp.forward"))
     btn_parent = wx.Button(host, label=t("ftp.parent"))
     btn_refresh = wx.Button(host, label=t("dirs.refresh"))
-    for _b in (btn_drives, btn_back, btn_parent, btn_refresh):
+    for _b in (btn_drives, btn_back, btn_forward, btn_parent, btn_refresh):
         toolbar_sizer.Add(_b, 0, wx.ALL, 4)
-    # Back uses real history; disabled when empty
+    # Back/Forward use real history; disabled when empty (TODO-030 deterministic state)
     try:
         btn_back.Disable()
+        btn_forward.Disable()
     except Exception:
         pass
     path_ctrl = wx.TextCtrl(host, value=str(model.current_path), style=wx.TE_PROCESS_ENTER)
@@ -367,7 +403,7 @@ def _build_local_files(parent, path: str | Path | None = None, *, open_editor=No
             listing.DeleteAllItems()
             for entry in tab_entry["entries"]:
                 index = listing.InsertItem(listing.GetItemCount(), entry.path.name)
-                listing.SetItem(index, 1, str(entry.size))
+                listing.SetItem(index, 1, format_local_size(entry))
                 listing.SetItem(index, 2, _type_label(entry))
                 listing.SetItem(index, 3, _format_mtime(getattr(entry, "mtime", None)))
                 if entry.path in selected_paths:
@@ -394,43 +430,57 @@ def _build_local_files(parent, path: str | Path | None = None, *, open_editor=No
 
         def done(result, error):
             # re-check lifetime in callback (post-queue safety)
-            with threading_lock:
-                # find tab by id (may have been closed)
-                tab_entry = next((tt for tt in tabs if tt["id"] == tab_id), None)
-                if not tab_entry or tab_entry.get("closed"):
-                    return
-                current = (
-                    not state["closed"]
-                    and request_id == tab_entry["listing_request_id"]
-                    and request_generation == tab_entry["view_generation"]
-                    and requested_path == tab_entry["path"]
-                )
-            if not current:
-                return
-            if error:
-                # only show error if this tab is active, otherwise silently ignore? Spec says no error should show in other tab, but stale check above already filters.
-                # If tab is not active, still don't show message box (avoid cross-tab).
-                if notebook.GetSelection() == tabs.index(tab_entry):
-                    wx.MessageBox(str(error), t("login.err_title"), wx.OK | wx.ICON_ERROR)
-                return
-            # verify controls still alive
+            # LIFECYCLE-NATIVE-001 class: drop stale completions after destroy.
             try:
-                if not tab_entry["listing"] or not tab_entry["listing"].IsShownOnScreen() and False:
+                with threading_lock:
+                    # find tab by id (may have been closed)
+                    tab_entry = next((tt for tt in tabs if tt["id"] == tab_id), None)
+                    if not tab_entry or tab_entry.get("closed"):
+                        return
+                    current = (
+                        not state["closed"]
+                        and request_id == tab_entry["listing_request_id"]
+                        and request_generation == tab_entry["view_generation"]
+                        and requested_path == tab_entry["path"]
+                    )
+                if not current:
+                    return
+                try:
+                    notebook.GetSelection()
+                except Exception:
+                    return
+                if error:
+                    # only show error if this tab is active, otherwise silently ignore? Spec says no error should show in other tab, but stale check above already filters.
+                    # If tab is not active, still don't show message box (avoid cross-tab).
+                    try:
+                        if notebook.GetSelection() == tabs.index(tab_entry):
+                            wx.MessageBox(str(error), t("login.err_title"), wx.OK | wx.ICON_ERROR)
+                    except Exception:
+                        return
+                    return
+                # verify controls still alive
+                try:
+                    if not tab_entry["listing"] or not tab_entry["listing"].IsShownOnScreen() and False:
+                        pass
+                    # Accessing destroyed control raises exception; check via wx
+                    if not tab_entry["listing"]:
+                        return
+                except Exception:
+                    return
+                try:
+                    # Check if window still exists
+                    if not wx.Window.FindWindowById(tab_entry["listing"].GetId()):
+                        # fallback: check closed flag already
+                        pass
+                except Exception:
                     pass
-                # Accessing destroyed control raises exception; check via wx
-                if not tab_entry["listing"]:
+                # Only render if tab still valid; but we update that tab's listing regardless of active
+                try:
+                    render_entries(tab_entry, result, selected_paths)
+                except Exception:
                     return
             except Exception:
                 return
-            try:
-                # Check if window still exists
-                if not wx.Window.FindWindowById(tab_entry["listing"].GetId()):
-                    # fallback: check closed flag already
-                    pass
-            except Exception:
-                pass
-            # Only render if tab still valid; but we update that tab's listing regardless of active
-            render_entries(tab_entry, result, selected_paths)
 
         def worker():
             try:
@@ -761,7 +811,7 @@ def _build_local_files(parent, path: str | Path | None = None, *, open_editor=No
                 wx.MessageBox(str(error), t("login.err_title"), wx.OK | wx.ICON_ERROR)
             finally:
                 dialog.Destroy()
-        elif action == "delete" and wx.MessageBox(t("dirs.delete_confirm"), t("dirs.delete"), wx.YES_NO | wx.ICON_WARNING) == wx.YES:
+        elif action == "delete" and wx.MessageBox(_delete_confirm_text([item.path.name for item in selected], str(tstate["path"])), t("dirs.delete"), wx.YES_NO | wx.ICON_WARNING) == wx.YES:
             paths = tuple(item.path for item in selected)
             origin_snapshot = tstate["path"]
             mutate(lambda: model.delete_at(list(paths), origin_snapshot))
@@ -935,6 +985,7 @@ def _build_local_files(parent, path: str | Path | None = None, *, open_editor=No
     def _update_back_button():
         try:
             btn_back.Enable(bool(model._history))
+            btn_forward.Enable(bool(model._forward))
         except Exception:
             pass
 
@@ -1001,6 +1052,29 @@ def _build_local_files(parent, path: str | Path | None = None, *, open_editor=No
         _update_back_button()
         refresh()
 
+    def go_forward_view():
+        if not model.can_go_forward():
+            return
+        try:
+            model.go_forward()
+        except Exception as error:
+            wx.MessageBox(str(error), t("login.err_title"), wx.OK | wx.ICON_ERROR)
+            return
+        tstate = active_tab_state()
+        if not tstate:
+            return
+        idx = notebook.GetSelection()
+        tstate["path"] = model.current_path
+        if 0 <= idx < len(model.tabs):
+            model.tabs[idx] = model.current_path
+        try:
+            path_ctrl.SetValue(str(model.current_path))
+        except Exception:
+            pass
+        refresh_active_tab_label(idx)
+        _update_back_button()
+        refresh()
+
     def go_parent_view():
         tstate = active_tab_state()
         if not tstate:
@@ -1027,6 +1101,7 @@ def _build_local_files(parent, path: str | Path | None = None, *, open_editor=No
     btn_refresh.Bind(wx.EVT_BUTTON, lambda _e: refresh())
     btn_drives.Bind(wx.EVT_BUTTON, lambda _e: show_drives())
     btn_back.Bind(wx.EVT_BUTTON, lambda _e: go_back_view())
+    btn_forward.Bind(wx.EVT_BUTTON, lambda _e: go_forward_view())
     btn_parent.Bind(wx.EVT_BUTTON, lambda _e: go_parent_view())
 
     def refresh_labels(_language=None):
@@ -1034,6 +1109,7 @@ def _build_local_files(parent, path: str | Path | None = None, *, open_editor=No
         try:
             btn_drives.SetLabel(t("ftp.drives"))
             btn_back.SetLabel(t("ftp.back"))
+            btn_forward.SetLabel(t("ftp.forward"))
             btn_parent.SetLabel(t("ftp.parent"))
             btn_refresh.SetLabel(t("dirs.refresh"))
             path_label.SetLabel(t("dirs.path"))
@@ -1059,7 +1135,7 @@ def _build_local_files(parent, path: str | Path | None = None, *, open_editor=No
     _update_back_button()
     # expose for tests
     # keep listing pointing to active (preserve contract) plus new buttons
-    host._wx_local_controls = {"listing": initial["listing"], "notebook": notebook, "path": path_ctrl, "refresh_btn": btn_refresh, "btn_drives": btn_drives, "btn_back": btn_back, "btn_parent": btn_parent, "btn_refresh": btn_refresh}
+    host._wx_local_controls = {"listing": initial["listing"], "notebook": notebook, "path": path_ctrl, "refresh_btn": btn_refresh, "btn_drives": btn_drives, "btn_back": btn_back, "btn_forward": btn_forward, "btn_parent": btn_parent, "btn_refresh": btn_refresh}
     host._wx_local_model = model
     host._wx_local_refresh = refresh
     host._wx_local_state = state

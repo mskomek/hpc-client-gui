@@ -88,6 +88,14 @@ def _build_settings(parent, model: WxSettingsModel | None = None, *, settings=No
                     names = ", ".join(name for name, _exc in pending)
                     raise RuntimeError(f"settings rejected ({names}): {pending[0][1]}") from pending[0][1]
                 model.apply()
+                # W25 TODO-013: persist the checksum checkbox to the stored
+                # verification setting so it is a real control, not a
+                # decorative toggle.  Failures surface, never silent-OK.
+                try:
+                    from hpc_gui.wx_settings import persist_transfer_checksum_to_storage
+                    persist_transfer_checksum_to_storage(model)
+                except Exception as exc:
+                    raise RuntimeError(f"settings persist rejected (transfer_checksum): {exc}") from exc
                 wx.CallAfter(lambda: wx.MessageBox(t("common.ok"), t("settings.dialog_title"), wx.OK | wx.ICON_INFORMATION, host) if not state["closed"] else None)
             except Exception as exc:
                 # Visible, diagnosable error with a stable code; "OK" is only

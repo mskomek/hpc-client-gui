@@ -39,6 +39,16 @@ UNKNOWN = "unknown"
 
 def _run_git(args: list[str], cwd: Path) -> str | None:
     try:
+        top = subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"],
+            cwd=cwd,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=15,
+        )
+        if top.returncode != 0 or Path(top.stdout.strip()).resolve() != cwd.resolve():
+            return None
         proc = subprocess.run(
             ["git", *args], cwd=cwd, capture_output=True, text=True, check=False, timeout=15
         )

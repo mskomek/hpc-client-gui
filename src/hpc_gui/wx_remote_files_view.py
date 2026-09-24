@@ -7,7 +7,7 @@ from pathlib import PurePosixPath
 
 
 from hpc_gui.core.i18n import current_language, subscribe_language_change, t, unsubscribe_language_change
-from hpc_gui.services.file_context_actions import FILE_CONTEXT_LABEL_KEYS, context_selection, visible_actions
+from hpc_gui.services.file_context_actions import FILE_CONTEXT_LABEL_KEYS, context_selection, delete_confirm_message, summarize_delete_targets, visible_actions
 from hpc_gui.services.file_clipboard import get_file_clipboard
 from hpc_gui.services.remote_move_history import RemoteMoveHistory
 from hpc_gui.services.file_filter_registry import build_core_registry, FileFilter
@@ -30,6 +30,23 @@ def _format_mtime(mtime_val) -> str:
 
 def _type_label(entry) -> str:
     return _shared_file_type(_entry_name(entry), bool(getattr(entry, "is_dir", False)))
+
+
+def _delete_confirm_text(names, location) -> str:
+    """W23 FILE-035/036: confirmation names the actual target (path + items)."""
+    from hpc_gui.services.file_context_actions import delete_confirm_message as _fallback
+    from hpc_gui.services.file_context_actions import summarize_delete_targets as _summarize
+
+    count, where, shown = _summarize(names, location)
+    if count <= 0:
+        return t("dirs.delete_confirm")
+    template = t("dirs.delete_confirm_detail")
+    if template.startswith("[dirs.delete_confirm_detail]"):
+        return _fallback(names, location)
+    try:
+        return template.format(count=count, location=where, names=shown)
+    except Exception:
+        return _fallback(names, location)
 
 
 def _remote_category(entry) -> str:
@@ -571,29 +588,52 @@ def _build_remote_files(parent, model: WxRemoteDirectoryModel | None = None, *, 
             tab_id = tstate["id"]
 
         def done(entries, error):
-            with lock:
-                tab_entry = next((tt for tt in tabs if tt["id"] == tab_id), None)
-                if not tab_entry or tab_entry.get("closed"):
+            # LIFECYCLE-NATIVE-001: completion may arrive after the Notebook
+            # was destroyed (host close/disconnect race). Never touch wx
+            # objects once closed/destroyed; stale results are dropped.
+            try:
+                with lock:
+                    tab_entry = next((tt for tt in tabs if tt["id"] == tab_id), None)
+                    if not tab_entry or tab_entry.get("closed"):
+                        return
+                    current = (
+                        not state["closed"]
+                        and request_id == tab_entry["listing_request_id"]
+                        and request_generation == tab_entry["view_generation"]
+                        and requested_path == tab_entry["path"]
+                    )
+                    if current:
+                        tab_entry["listing_busy"] = False
+                        state["listing_busy"] = False
+                if not current:
                     return
-                current = (
-                    not state["closed"]
-                    and request_id == tab_entry["listing_request_id"]
-                    and request_generation == tab_entry["view_generation"]
-                    and requested_path == tab_entry["path"]
-                )
-                if current:
-                    tab_entry["listing_busy"] = False
-                    state["listing_busy"] = False
-            if not current:
+                try:
+                    alive = notebook and not state["closed"]
+                    if alive:
+                        try:
+                            notebook.GetSelection()
+                        except Exception:
+                            return
+                    else:
+                        return
+                except Exception:
+                    return
+                if error:
+                    _restore_navigation(tab_entry)
+                    # only show error if this tab is active
+                    try:
+                        if notebook.GetSelection() == tabs.index(tab_entry):
+                            wx.MessageBox(str(error), t("login.err_title"), wx.OK | wx.ICON_ERROR)
+                    except Exception:
+                        return
+                else:
+                    _commit_navigation(tab_entry)
+                    try:
+                        render_for_tab(tab_entry, entries)
+                    except Exception:
+                        return
+            except Exception:
                 return
-            if error:
-                _restore_navigation(tab_entry)
-                # only show error if this tab is active
-                if notebook.GetSelection() == tabs.index(tab_entry):
-                    wx.MessageBox(str(error), t("login.err_title"), wx.OK | wx.ICON_ERROR)
-            else:
-                _commit_navigation(tab_entry)
-                render_for_tab(tab_entry, entries)
 
         def worker():
             try:
@@ -960,7 +1000,7 @@ def _build_remote_files(parent, model: WxRemoteDirectoryModel | None = None, *, 
             return
         if not operation or action in {"open", "edit", "edit_new_window"} or (not selected and action not in {"new_folder", "new_file", "upload", "paste"}):
             return
-        if action == "delete" and wx.MessageBox(t("dirs.delete_confirm"), t("dirs.delete"), wx.YES_NO | wx.ICON_WARNING) != wx.YES:
+        if action == "delete" and wx.MessageBox(_delete_confirm_text([_entry_name(item) for item in selected], str(tstate["path"])), t("dirs.delete"), wx.YES_NO | wx.ICON_WARNING) != wx.YES:
             return
         destination = ""
         operation_paths = selected

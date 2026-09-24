@@ -344,6 +344,13 @@
     "remote": "Uzak:",
     "open_failed": "Dosya açılamadı: {err}",
     "save_failed": "Dosya kaydedilemedi: {err}",
+    "save_as_title": "Farklı Kaydet",
+    "save_as_exists": "Hedef zaten var:\n{path}\nÜzerine yazılsın mı?",
+    "save_as_cancelled": "Farklı kaydetme iptal edildi; belge değişmedi.",
+    "external_change_title": "Dosya dışarıdan değişti",
+    "external_change_message": "Diskteki dosya son kaydedilen sürümden farklı:\n{path}\nDışarıdaki değişikliklerin üzerine yazılsın mı?",
+    "external_deleted_message": "Dosya diskte artık yok:\n{path}\nYeniden oluşturulsun mu?",
+    "external_change_cancelled": "Kaydetme iptal edildi; düzenlemeleriniz korundu.",
     "action_requires_save": "Belge kaydedilemediği için gönderilemez veya çalıştırılamaz.",
     "remote_file_service_unavailable": "Uzak dosya hizmeti kullanılamıyor.",
     "document_path_required": "Belge yolu gerekli.",
@@ -360,7 +367,8 @@
     "replace": "Değiştir",
     "replace_all": "Tümünü değiştir",
     "lint_no_linter": "Bu dosya türü için kurulu bir linter yok. Eklenti Yöneticisi'nden bir lint eklentisi kurun.",
-    "lint_results_title": "Lint sonuçları"
+    "lint_results_title": "Lint sonuçları",
+    "session_changed_reopen": "Bu dosya acildiktan sonra baglanti degisti. Yanlis anabilgisayara yazmamak icin guncel baglantidan yeniden acip kaydedin."
   },
   "dirs": {
     "refresh": "Yenile",
@@ -502,7 +510,8 @@
     "following": "Takip ediliyor",
     "not_following": "Takip edilmiyor",
     "permissions_mode": "Mod (oktal):",
-    "permissions_unavailable": "Uzak chmod kullanılamıyor."
+    "permissions_unavailable": "Uzak chmod kullanılamıyor.",
+    "delete_confirm_detail": "Secili {count} oge {location} konumundan silinsin mi?\n{names}"
   },
   "jobs_outputs": {
     "auto_scroll": "Otomatik kaydır",
@@ -847,7 +856,8 @@
     "cmp_local_newer": "Yerel daha yeni",
     "cmp_remote_newer": "Uzak daha yeni",
     "waiting_local_folder": "Yerel klasör bekleniyor",
-    "waiting_remote_folder": "Uzak klasör bekleniyor"
+    "waiting_remote_folder": "Uzak klasör bekleniyor",
+    "forward": "İleri"
   },
   "transfer": {
     "ftp_activity_title": "Aktarımlar",

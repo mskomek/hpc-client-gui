@@ -116,4 +116,30 @@ FILE_CONTEXT_LABEL_KEYS = {
 }
 
 
-__all__ = ["FILE_CONTEXT_LABEL_KEYS", "FileContextSelection", "context_selection", "visible_actions"]
+def summarize_delete_targets(names, location, *, max_names: int = 5):
+    """Framework-neutral delete-target summary (W23 FILE-035/036).
+
+    Returns (count, location_text, names_text) with at most ``max_names``
+    item names listed and a "+N more" suffix when truncated. Empty names
+    yield an empty names_text; callers fall back to the generic confirm.
+    """
+    items = [str(name) for name in (names or []) if str(name)]
+    where = str(location or "")
+    if not items:
+        return (0, where, "")
+    shown = items[: max(1, int(max_names))]
+    suffix = "" if len(items) <= len(shown) else f" (+{len(items) - len(shown)} more)"
+    return (len(items), where, ", ".join(shown) + suffix)
+
+
+def delete_confirm_message(names, location, *, max_names: int = 5) -> str:
+    """English fallback delete-confirmation text naming the actual target."""
+    count, where, shown = summarize_delete_targets(names, location, max_names=max_names)
+    if count <= 0:
+        return "Delete the selected items?"
+    if where:
+        return f"Delete {count} selected item(s) from {where}?\n{shown}"
+    return f"Delete {count} selected item(s)?\n{shown}"
+
+
+__all__ = ["FILE_CONTEXT_LABEL_KEYS", "FileContextSelection", "context_selection", "visible_actions", "summarize_delete_targets", "delete_confirm_message"]

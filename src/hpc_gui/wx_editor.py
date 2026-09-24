@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Iterable
 
-from hpc_gui.services.editor_controller import DocumentModel, EditorCommandService, EditorController, LintResult
+from hpc_gui.services.editor_controller import DocumentModel, EditorCommandService, EditorController, LintResult, detect_newline
 from hpc_gui.services.focus_command_router import FocusCommandRouter
 from hpc_gui.plugins.job_templates import JobTemplate, render_template
 
@@ -21,8 +21,9 @@ class WxEditorModel:
         self.controller = EditorController()
         self.diagnostics: tuple[Diagnostic, ...] = ()
 
-    def open(self, path: str, content: str, *, is_local: bool = False) -> int:
-        return self.controller.open(DocumentModel(path, content, content, is_local, suggested_filename=EditorCommandService.suggested_filename(path)))
+    def open(self, path: str, content: str, *, is_local: bool = False, provider: str = "", profile: str = "", session_key: str = "", encoding: str = "utf-8", newline: str | None = None, version: str = "") -> int:
+        style = newline if newline in ("\n", "\r\n") else detect_newline(content)
+        return self.controller.open(DocumentModel(path, content, content, is_local, encoding, suggested_filename=EditorCommandService.suggested_filename(path), provider=provider, profile=profile, session_key=session_key, newline=style, version=version))
 
     def save_target(self, *, submit: bool = False, run: bool = False) -> str:
         active = self.controller.active

@@ -51,4 +51,21 @@ class WxSettingsModel:
         return {**self.global_settings, **self.profile_settings, "shortcut_preferences": self.shortcuts.serialize()}
 
 
-__all__ = ["LEGACY_IGNORED_KEYS", "SettingsSnapshot", "WxSettingsModel"]
+def persist_transfer_checksum_to_storage(model: WxSettingsModel) -> bool:
+    """Bridge the wx ``transfer_checksum`` checkbox to the stored
+    ``transfer_checksum_verification_enabled`` setting consumed by both the
+    Qt and wx transfer verify paths (W25 TODO-013/TODO-043).
+
+    Without this bridge the wx checkbox only flips in-memory model state
+    that no transfer path reads.  Returns the stored value.
+    """
+    from hpc_gui.config.storage import set_transfer_checksum_verification_enabled
+
+    return bool(
+        set_transfer_checksum_verification_enabled(
+            bool(model.global_settings.get("transfer_checksum", False))
+        )
+    )
+
+
+__all__ = ["LEGACY_IGNORED_KEYS", "SettingsSnapshot", "WxSettingsModel", "persist_transfer_checksum_to_storage"]
