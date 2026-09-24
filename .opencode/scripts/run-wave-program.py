@@ -20,6 +20,15 @@ from typing import Any
 SCRIPT_ROOT = Path(__file__).resolve().parent
 AC_MAX_TRANSPORT_ATTEMPTS = 5
 AC_MAX_IDENTICAL_RECOVERY = 3
+# Provider quota waits are external, not recovery attempts. Bounded total wait;
+# override with AC_MAX_PROVIDER_WAIT_SECONDS to match the provider's reset window.
+AC_MAX_PROVIDER_WAIT_SECONDS = int(os.environ.get("AC_MAX_PROVIDER_WAIT_SECONDS", str(6 * 3600)))
+PROVIDER_QUOTA_MARKER = "AC_WAVE_PROVIDER_QUOTA:"
+
+
+def provider_wait_delay(attempt: int) -> int:
+    """60s, 120s, 240s ... capped at 15 minutes."""
+    return min(900, 60 * 2 ** max(0, attempt))
 
 
 from wave_state_engine import (
@@ -983,6 +992,8 @@ def opencode_phase(repo: Path, target: str, phase: str, seq: int, run_dir: Path,
             "next_action": "reconcile",
             "phase_log_path": str(log_path.relative_to(repo)),
         }
+        if PROVIDER_QUOTA_MARKER in output:
+            result["provider_quota"] = True
         mark_phase_job_result(job_path, status=status)
         return result
 
@@ -1746,6 +1757,20 @@ def main() -> int:
         if phase == "audit" and status != "PASS":
             for key in ("audit_status", "audit_result_path", "audit_candidate_sha", "audit_passed_at"):
                 state.pop(key, None)
+        if result.get("provider_quota"):
+            # External provider quota/rate limit: wait, never spend the identical-recovery budget.
+            wait = state.setdefault("provider_wait", {"attempts": 0, "waited": 0})
+            delay = provider_wait_delay(int(wait["attempts"]))
+            if int(wait["waited"]) + delay > AC_MAX_PROVIDER_WAIT_SECONDS:
+                state.update({"terminal":True,"terminal_class":"PROGRAM_HUMAN_DEFERRED","phase":phase,
+                              "stall_reason":"provider_quota_exhausted","current_wave":target})
+                save_state(run_dir,state); append_event(run_dir,{"event":"PROVIDER_QUOTA_EXHAUSTED","target":target,"phase":phase,"waited":wait["waited"]})
+                print("PROGRAM_HUMAN_DEFERRED"); print_terminal_summary(state, run_dir); lock.release(); return 20
+            wait["attempts"] = int(wait["attempts"]) + 1; wait["waited"] = int(wait["waited"]) + delay
+            append_event(run_dir,{"event":"provider_quota_wait","target":target,"phase":phase,"attempt":wait["attempts"],"delay":delay})
+            print(f"[provider-wait] {target} {phase.upper()} provider quota/rate limit | retry in {delay}s | waited={wait['waited']}s/{AC_MAX_PROVIDER_WAIT_SECONDS}s", flush=True)
+            state["phase"]=phase; save_state(run_dir,state); time.sleep(delay); continue
+        state.pop("provider_wait", None)
         if status in {"MISSING_STATUS","ORCHESTRATION_RECOVERY_REQUIRED"}:
             append_event(run_dir,{"event":"orchestration_recovery","target":target,"phase":phase,"reason":result.get("summary")})
             recovery_key = f"transport::{target}::{phase}::{content_identity}::{status}"

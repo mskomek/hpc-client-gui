@@ -652,6 +652,17 @@ def _lock_retryable(exc: OSError) -> bool:
     return isinstance(exc, PermissionError) or getattr(exc, 'winerror', None) in {5, 32, 33}
 
 
+def live_controller_locks(repo: Path, profile: dict[str, Any]) -> list[str]:
+    """Controller locks whose recorded process is still the same live process."""
+    live = []
+    for path in sorted((repo / str(profile.get('temp_root') or '.tmp') / 'locks').glob('*.lock')):
+        data = _read_state(path) or {}
+        start = _process_start_marker(int(data.get('pid') or 0))
+        if start and start == str(data.get('process_start_time') or ''):
+            live.append(f"{path.name} run_id={data.get('run_id')} pid={data.get('pid')}")
+    return live
+
+
 @dataclass
 class ControllerLock:
     path: Path
