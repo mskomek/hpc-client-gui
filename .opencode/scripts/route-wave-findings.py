@@ -149,7 +149,26 @@ def dependency_ids(repo: Path, profile: dict[str, Any], current_wave: str) -> li
         deps = [deps]
     return [str(x) for x in deps if str(x).strip()]
 
+CHAIN_RE = re.compile(r"previous Wave (\d+) validator not PASS", re.I)
+
+
+def aggregate_owner_of(repo: Path, profile: dict[str, Any], canonical: str) -> str | None:
+    """The aggregate_close_owner Wave (any lifecycle state) for a canonical source."""
+    for state in ("done", "pending", "blocked", "postponed"):
+        for wid, path in wave_targets_in_folder(repo, profile, state, scheduled_only=False):
+            meta = wave_metadata(path, profile)
+            if str(meta.get("canonical_source") or "").strip('"') == canonical and str(meta.get("aggregate_close_owner")).lower() == "true":
+                return str(wid)
+    return None
+
+
 def infer_lifecycle_owner(repo: Path, profile: dict[str, Any], current_wave: str, finding_id: str, text: str) -> str | None:
+    # Canonical chain gate: the defect lives in the previous canonical source's aggregate owner.
+    chain = CHAIN_RE.search(text)
+    if chain:
+        owner = aggregate_owner_of(repo, profile, chain.group(1))
+        if owner and owner != current_wave:
+            return owner
     deps = dependency_ids(repo, profile, current_wave)
     low = text.lower()
     if any(word in low for word in ("dependency", "predecessor", "prerequisite")):
@@ -182,7 +201,7 @@ def main() -> int:
             rows.extend((rid, "phase-result", blob[:1600]) for rid in (ids or ["UNSCOPED"]))
     findings=[]
     for rid, source, text in dedupe(rows):
-        owner=owner_index.get(rid)
+        owner=None if CHAIN_RE.search(text) else owner_index.get(rid)
         inferred=infer_lifecycle_owner(repo, profile, args.wave, rid, text) if not owner else None
         if inferred:
             _, state=wave_location(repo, profile, inferred); owner=(inferred, state or "current_or_unresolved")

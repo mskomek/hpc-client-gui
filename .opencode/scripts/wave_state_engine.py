@@ -638,14 +638,34 @@ def _process_start_marker(pid: int) -> str | None:
                 os.kill(pid,0); return 'alive-unknown-start'
             except OSError:
                 return None
-    # Windows: PowerShell creation time gives PID-reuse protection without extra deps.
+    # Windows: kernel creation time gives PID-reuse protection. Spawning PowerShell here
+    # timed out under load and made live controllers look dead (lock takeover risk).
+    return _windows_start_ticks(pid)
+
+
+def _windows_start_ticks(pid: int) -> str | None:
+    """Process creation time as .NET UTC ticks (same value PowerShell StartTime...Ticks gave)."""
+    import ctypes
+    from ctypes import wintypes
     try:
-        cp = subprocess.run(['powershell','-NoProfile','-Command',
-                             f"$p=Get-Process -Id {pid} -ErrorAction Stop; $p.StartTime.ToUniversalTime().Ticks"],
-                            capture_output=True,text=True,timeout=5)
-        return cp.stdout.strip() if cp.returncode == 0 and cp.stdout.strip() else None
-    except Exception:
+        k = ctypes.WinDLL('kernel32', use_last_error=True)
+        k.OpenProcess.restype = wintypes.HANDLE
+        k.OpenProcess.argtypes = (wintypes.DWORD, wintypes.BOOL, wintypes.DWORD)
+        h = k.OpenProcess(0x1000, False, int(pid))  # PROCESS_QUERY_LIMITED_INFORMATION
+    except (OSError, AttributeError):
         return None
+    if not h:
+        return None
+    try:
+        code = wintypes.DWORD()
+        if not k.GetExitCodeProcess(h, ctypes.byref(code)) or code.value != 259:  # STILL_ACTIVE
+            return None
+        c, e, kt, ut = (wintypes.FILETIME() for _ in range(4))
+        if not k.GetProcessTimes(h, ctypes.byref(c), ctypes.byref(e), ctypes.byref(kt), ctypes.byref(ut)):
+            return None
+        return str(((c.dwHighDateTime << 32) | c.dwLowDateTime) + 504911232000000000)  # FILETIME -> .NET ticks
+    finally:
+        k.CloseHandle(h)
 
 
 def _lock_retryable(exc: OSError) -> bool:

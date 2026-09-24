@@ -71,6 +71,18 @@ def _strip_ansi_for_machine(text: str) -> str:
 LEGACY_STATUS_ALIASES = {"PLANNED": "READY", "PLAN_COMPLETE": "READY", "READY_FOR_RUN": "READY"}
 
 
+BRIDGE_STDOUT_SENTINEL = "AC_WAVE_BRIDGE_STDOUT_BEGIN"
+
+
+def bridge_authoritative_output(output: str) -> str:
+    """The job log merges the worker transcript (stderr, may quote old machine
+    blocks) with the bridge-validated stdout. Only text after the bridge's last
+    sentinel is machine authority; logs from older bridges are used whole."""
+    text = output or ""
+    positions = [m.end() for m in re.finditer(rf"(?m)^\s*{BRIDGE_STDOUT_SENTINEL}\s*$", text)]
+    return text[positions[-1]:] if positions else text
+
+
 def parse_machine_result(output: str, phase: str) -> dict[str, str]:
     # Strip ANSI so colorized stdout still parses; only the single complete
     # machine-result block is authority. Everything outside is prose/evidence.
@@ -981,7 +993,7 @@ def opencode_phase(repo: Path, target: str, phase: str, seq: int, run_dir: Path,
                                                   "thinking": effective["thinking"], "fallback": bool(notices)})
     state["active_route"] = None
     try:
-        machine = parse_machine_result(output, phase)
+        machine = parse_machine_result(bridge_authoritative_output(output), phase)
     except ValueError as exc:
         status = "ORCHESTRATION_RECOVERY_REQUIRED"
         result = {
@@ -1159,11 +1171,24 @@ def route_findings(repo: Path, run_dir: Path, target: str, canonical: str | None
 
 
 
+NEGATION_RE = re.compile(r"\b(?:no|not|without|never|none|nor)\b|n't\b", re.I)
+
+
+def _affirmed_human_blocker(text: str) -> bool:
+    """A human-authority keyword counts only when not negated earlier in the same clause
+    ("No human deferral: no missing MFA/credential" is repository-owned prose, not a blocker)."""
+    for match in HUMAN_RE.finditer(text):
+        clause = re.split(r"[.;:\n]", text[:match.start()])[-1]
+        if not NEGATION_RE.search(clause):
+            return True
+    return False
+
+
 def human_deferred_is_real(result: dict[str, Any]) -> bool:
     findings = result.get("findings") or []
     if not findings:
         return False
-    return all(HUMAN_RE.search(str(x)) for x in findings)
+    return all(_affirmed_human_blocker(str(x)) for x in findings)
 
 
 
@@ -1310,6 +1335,24 @@ def controller_close_wave(repo: Path, profile: dict[str, Any], project: str, tar
         raise RuntimeError(f"Cannot close {target}: canonical done copy already exists")
     path.replace(destination)
     ensure_lifecycle_integrity(repo, profile, apply_safe=True, reason=f"after-close:{target}")
+
+
+def owner_route_key(target: str, owner: str, findings: dict[str, Any] | None) -> str:
+    """Identity of a target->owner route: the finding IDs routed to that owner."""
+    ids = sorted({str(f.get("finding_id")) for f in (findings or {}).get("findings", [])
+                  if isinstance(f, dict) and str(f.get("execution_owner")) == str(owner)})
+    return f"{target}->{owner}::" + hashlib.sha256("|".join(ids).encode("utf-8")).hexdigest()[:16]
+
+
+def revert_worker_lifecycle_mutation(repo: Path, project: str, target: str, phase: str, status: str,
+                                     pre_state: str | None, pre_path: Path | None) -> dict[str, str] | None:
+    """Only controller_close_wave may archive a Wave: undo a worker's move to done made during this phase."""
+    moved_path, moved_state = wave_location(repo, project, target)
+    if (pre_state == "done" or moved_state != "done" or moved_path is None or pre_path is None
+            or (phase == "close" and status.upper() == "PASS")):
+        return None
+    moved_path.replace(pre_path)
+    return {"from": str(moved_path.relative_to(repo)), "to": str(pre_path.relative_to(repo))}
 
 
 def choose_after(phase: str, result: dict[str, Any]) -> str:
@@ -1704,6 +1747,24 @@ def main() -> int:
                         "findings":reasons or ["aggregate validator can_close=false"],"changed_files":[],"next_action":"repair"}
 
 
+        if (phase == "audit" and str(result.get("status","")).upper() == "PASS" and target_state == "done"
+                and state.get("target_override") == target and aggregate_validation_required(profile, meta, "close")):
+            # A closed aggregate owner hands control back only when its canonical source is green;
+            # audit prose alone would re-route the blocked Wave back here forever.
+            aggregate_validator = run_validator(repo, profile, canonical, run_dir, seq)
+            gate_ok, gate_reasons = validator_can_close(aggregate_validator)
+            append_event(run_dir,{"event":"closed_owner_aggregate_gate","owner":target,"canonical":canonical,"can_close":gate_ok,"reasons":gate_reasons})
+            if not gate_ok:
+                result={"status":"REOPEN","summary":"Closed aggregate owner audit PASS but canonical aggregate validator is red",
+                        "findings":gate_reasons or ["aggregate validator can_close=false"],"changed_files":[],"next_action":"repair"}
+
+
+        reverted = revert_worker_lifecycle_mutation(repo, project, target, phase, str(result.get("status","")), target_state, wave_path)
+        if reverted:
+            append_event(run_dir,{"event":"worker_lifecycle_mutation_reverted","target":target,"phase":phase,**reverted})
+            print(f"[lifecycle] {target} {phase.upper()} worker moved the Wave to done; reverted (controller-owned transition)", flush=True)
+
+
         if phase == "close" and str(result.get("status","")).upper() == "PASS":
             post_identity=implementation_identity(repo,profile)
             if state.get("tested_content_identity") and post_identity != state.get("tested_content_identity"):
@@ -1851,6 +1912,18 @@ def main() -> int:
                     if owner == state.get("target_override") or owner in active_owners:
                         append_event(run_dir,{"event":"owner_route_cycle_guard","target":target,"owner":owner})
                     else:
+                        # Each route bumps the epoch, so bound identical owner round trips separately:
+                        # the same target->owner route with an unchanged finding set is no progress.
+                        route_key = owner_route_key(target, owner, data)
+                        route_counts = state.setdefault("owner_route_counts", {})
+                        route_counts[route_key] = int(route_counts.get(route_key, 0)) + 1
+                        if route_counts[route_key] >= AC_MAX_IDENTICAL_RECOVERY:
+                            state.update({"terminal":True,"terminal_class":"PROGRAM_TECHNICAL_STALLED","phase":"stalled",
+                                          "stall_reason":"owner_route_no_progress","current_wave":target})
+                            save_state(run_dir,state)
+                            append_event(run_dir,{"event":"PROGRAM_TECHNICAL_STALLED","target":target,"owner":owner,
+                                                  "route_key":route_key,"count":route_counts[route_key]})
+                            print("PROGRAM_TECHNICAL_STALLED"); print_terminal_summary(state, run_dir); lock.release(); return 30
                         prior_closed = bool(state.get("closed_owner_repair"))
                         stack.append({"blocked_target":target,"owner":owner,
                                       "findings_path":str(findings_path.relative_to(repo)) if findings_path else None,

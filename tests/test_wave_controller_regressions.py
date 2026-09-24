@@ -61,7 +61,11 @@ Canonical requirement IDs owned: HPC-W05-PROF-001
 """
     (tmp_path / "waves" / "done" / "W17.md").write_text(body, encoding="utf-8")
     (tmp_path / "waves" / "pending" / "W17.md").write_text(body, encoding="utf-8")
-    assert router.build_owner_index(tmp_path)["HPC-W05-PROF-001"] == ("W17", "done")
+    profile = {
+        "wave": {"file_regex": r"^W(?P<number>\d{2})\.md$", "id_format": "W{number:02d}"},
+        "paths": {"pending": "waves/pending", "done": "waves/done", "blocked": "waves/blocked", "postponed": "waves/postponed"},
+    }
+    assert router.build_owner_index(tmp_path, profile)["HPC-W05-PROF-001"] == ("W17", "done")
 
 
 def test_generic_lab_capability_findings_are_not_human_only():
@@ -225,7 +229,13 @@ def test_repository_owned_no_progress_is_not_a_program_terminal():
     source = (ROOT / ".opencode" / "scripts" / "run-wave-program.py").read_text(encoding="utf-8")
     assert 'terminal_class":"PROGRAM_NO_PROGRESS"' not in source
     assert 'print("PROGRAM_NO_PROGRESS")' not in source
-    assert 'terminal_class":"PROGRAM_FINAL_VALIDATION_BLOCKED"' not in source
+    # A repository-owned final-validation block is a non-terminal state label; it must never be terminal.
+    import re as _re
+    blocks = _re.findall(r"state\.update\(\{[^}]*PROGRAM_FINAL_VALIDATION_BLOCKED[^}]*\}\)", source)
+    assert blocks, "final-validation block state label not found"
+    for block in blocks:
+        assert '"terminal":False' in block.replace(" ", "")
+        assert '"terminal":True' not in block.replace(" ", "")
     assert "closed_owner_route_suppressed" not in source
 
 def test_human_deferral_denial_prose_stays_repository_owned():
