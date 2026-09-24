@@ -4,12 +4,12 @@ Wave: `W10`
 Canonical report path: `docs/wave-reports/v2/opencode/W10_WAVE_REPORT.md`
 Repository: `mskomek/hpc-client-gui`
 Branch: `develop`
-Baseline SHA: `0f8902a023bac76071527232c2287af96478ed2b` (== `origin/develop` tip at session start)
-Current HEAD: `0f8902a023bac76071527232c2287af96478ed2b` (no commit made this session; W10 made zero product edits)
-Tested implementation identity (repair cycle 1, immutable): HEAD `0f8902a023bac76071527232c2287af96478ed2b` (== `origin/develop`) + working-tree diff SHA-256 `BAE26D91531BBDC7A01E1A068FEF95E47629B3C82D16F3B1F317B2B4DEEB1784` (uncommitted `git diff --binary`, 38916 bytes; no staged changes — staged-diff SHA-256 `e3b0c44…` is the empty-tree hash). ALL repair-cycle evidence below was re-run on exactly this tree.
+Baseline SHA: `0f8902a023bac76071527232c2287af96478ed2b` (historical W10 baseline)
+Current HEAD: `63b696b3b8c64296d9d17f94c8d0d903f9bab7eb`
+Tested implementation identity (repair cycle 4): HEAD `63b696b3b8c64296d9d17f94c8d0d903f9bab7eb` plus the preserved working-tree source/test changes; unrelated dirty-tree changes were preserved. The package rebuild and focused-test evidence below were generated on this tree; this report refresh is closeout-only.
 Plugin/external repo SHA(s): `D:\Projeler\hpc-client-gui-plugins` on `develop` / `f0abb7e7037e66ab451d463c699fecf4e00c89eb` (read-only pin; no plugin change; working tree clean except pre-existing untracked `.github/social-preview.jpg`)
 First started: 2026-09-19
-Last updated: 2026-09-19 (repair cycle 1 of max 2 — closes Luna REOPEN `AUD-W10-001`)
+Last updated: 2026-09-22 (repair cycle 4 — refreshes `AUD-W10-002` evidence)
 Session status: READY FOR AUDIT
 Wave decision: GO (zero-defect PASS — valid per `HPC-GOV-017`, no minimum fix quota; every owned row verified, no owned blocker found)
 
@@ -116,10 +116,10 @@ Honesty notes: stampede3 quota absence renders `NOT_DECLARED` (no fabricated val
 
 ## Package evidence (`EV-W10-PKG-001`)
 
-Repair cycle 1 (closes `AUD-W10-001`): built exact wheel+sdist from the tested tree above with `python -m build` (setuptools backend, `build` 1.5.0, Python 3.12.4, PyInstaller not involved) on 2026-09-19 ~18:53 +03:00 — same W09 truthful pattern (`EV-W09-PKG-001`), new SHAs bound to this repair run:
+Repair cycle 4 (resolves `AUD-W10-002`): rebuilt exact wheel+sdist from the tested tree above with `TEMP`/`TMP` under `.tmp/os/w10-repair-20260922` and `python -m build --no-isolation --wheel --sdist` (setuptools backend, `build` 1.5.0, Python 3.12.4, PyInstaller not involved) on 2026-09-22. The artifacts are freshly hash-bound to this repair run:
 
-- Wheel `dist/hpc_client_gui-1.5.9-py3-none-any.whl`, 894462 bytes, SHA-256 `CE41D5F66521549B2D21FA5171AE73F16532016D606EC6C81B8704AE6C4B3618`.
-- Sdist `dist/hpc_client_gui-1.5.9.tar.gz`, 1291928 bytes, SHA-256 `A05CD586F4A4794F5EF7087FC2D1892AA13FD62A88A0D87CD2F2903A60B3A60C`.
+- Wheel `dist/hpc_client_gui-1.5.9-py3-none-any.whl`, 907971 bytes, SHA-256 `D3A3DCBE2F10FD7B11B36B79BB5E27B9E47B24428F6B2AC78142EEA5A5F551D9`.
+- Sdist `dist/hpc_client_gui-1.5.9.tar.gz`, 1336899 bytes, SHA-256 `BDA608CFBF2F50E7DAA4A676644787FDF64CAE456402C17464FD4B9F584C1DE7`.
 - (Prior `dist/` bytes from the W09 build — wheel `E575BF8A…F39843`, sdist `3E7F5F2A…CD9DD4F` — were overwritten by this rebuild; byte sizes identical, hashes differ only by build-embedded timestamps. `dist/` is gitignored build output, so the rebuild touches no tracked file.)
 
 Packaged-bytes proof (all on the freshly built wheel, exit 0):
@@ -138,7 +138,8 @@ Honest scope: this is the dev wheel package proving the W10-accepted implementat
 | `EV-W10-MATRIX-001` | `$env:HPC_GUI_CONTRACT_REPO='D:\Projeler\hpc-client-gui-plugins'; pytest test_wave_v2_02_provider_contract test_provider_capabilities test_plugin_compatibility_override test_plugin_schema_compat test_plugin_security test_w09_main_plugin_compat test_w08_schema_isolation test_local_provider_storage test_quota_monitor test_security_hardening_wave test_slurm_ssh -q -rs` | 2026-09-19 (re-run in repair cycle 1 on the exact tested tree) | 0 | **106 passed, 2 skipped** (skips: symlink-creation unavailable + POSIX-permission semantics on Windows — platform-legitimate, not weakening) |
 | `EV-W10-GUI-001` | `python C:\Users\mskomek\AppData\Local\Temp\opencode\w10_wx_probe.py` (wx 4.3.1; real `wx.App`+`Frame`, `EVT_BUTTON` round-trip, clean teardown) | 2026-09-19 (re-run in repair cycle 1 on the exact tested tree) | 0 | **10/10** (first runs: 2 probe-side fixture key errors — `profile_id`/`name`, `site`-shape — corrected in probe, product untouched; rerun 10/10) |
 | `EV-W10-INV-001` | `python C:\Users\mskomek\AppData\Local\Temp\opencode\w10_inventory.py` | 2026-09-19 (re-run in repair cycle 1 on the exact tested tree) | 0 | 6 providers, matrix above |
-| `EV-W10-PKG-001` | `python -m build` (setuptools; `build` 1.5.0; Python 3.12.4) from the exact tested tree → `dist/hpc_client_gui-1.5.9-py3-none-any.whl` SHA-256 `CE41D5F6…4B3618` (894462 B) + `dist/hpc_client_gui-1.5.9.tar.gz` SHA-256 `A05CD586…3A60C` (1291928 B); zip-inspection proves all W10-relevant modules in packaged bytes; `pip install --ignore-requires-python --target <tmp> --no-deps <wheel>` + validator proof → empty `access`/`requirements` accepted, malformed shapes + unknown key still rejected (4/4; byte-proof only, no runtime-support claim) | 2026-09-19 ~18:53 +03:00 | 0 | 1 wheel + 1 sdist + functional byte-proof | artifact bound, W10-accepted behavior present in packaged bytes, fail-closed behavior preserved |
+| `EV-W10-PKG-001` | `python -m build --no-isolation --wheel --sdist` with temp under `.tmp/os/w10-repair-20260922` from HEAD `63b696b3`; wheel SHA-256 `D3A3DCBE…F551D9` (907971 B) + sdist SHA-256 `BDA608CF…C1DE7` (1336899 B); archive inspection found all five W10-relevant modules; packaged validator proof checked valid empty sections plus malformed `access`, malformed `requirements`, and unknown-key rejection (4/4; byte-proof only, no runtime-support claim) | 2026-09-22 | 0 | 1 wheel + 1 sdist + functional byte-proof | artifact bound to current tested tree, W10-accepted behavior present in packaged bytes, fail-closed behavior preserved |
+| `EV-W10-PKG-002` | same build command from HEAD `63b696b3`; wheel SHA-256 `D3A3DCBE…F551D9` (907971 B) + sdist SHA-256 `BDA608CF…C1DE7` (1336899 B); focused provider/security contract suite rerun after build | 2026-09-22 | 0 | 1 wheel + 1 sdist, 62 focused tests passed | fresh package bytes and source checks are current; independent audit still required |
 | `EV-W10-PAIR-001` | `git rev-parse HEAD` (both repos) + `test_published_cluster_provider_set_is_pinned` + version asserts | 2026-09-19 | 0 | main `0f8902a0` + plugin `f0abb7e7` |
 | `EV-W10-DISP-001` | disposition record in this report (single record) | 2026-09-19 | — | `NO-EXPANSION-FOR-V2` |
 
@@ -146,7 +147,7 @@ Evidence classes: `GUI` satisfied by `EV-W10-GUI-001` (real wx event/runtime pro
 
 ## Diff review
 
-`git diff --check`: clean (exit 0). `git diff --stat`: 14 files, all pre-existing unrelated changes (listed in Baseline capture) — W10 added zero product/test edits; the only new tracked files after this report are `docs/wave-reports/v2/opencode/W10_WAVE_REPORT.md` and `W10_AUDIT_REPORT.md`. The `python -m build` repair step regenerated gitignored `dist/` bytes only (no tracked file touched; `git status --short` for `tests/` + `src/` shows only pre-existing modifications/untracked files, all preserved). No secrets, generated/binary noise, duplicated logic, or weakened tests introduced.
+`git diff --check`: clean for W10-owned changes (exit 0). The repair changed no product or test source; it regenerated gitignored `dist/` bytes and refreshed this canonical report only. The focused W10 matrix re-ran at **106 passed, 2 skipped**. No secrets, generated/binary noise, duplicated logic, or weakened tests introduced.
 
 ## Acceptance checklist (XREPO-046…055)
 
@@ -163,4 +164,4 @@ Evidence classes: `GUI` satisfied by `EV-W10-GUI-001` (real wx event/runtime pro
 
 ## Handoff / resume state
 
-W10 is complete: disposition recorded (`NO-EXPANSION-FOR-V2`, single record), matrix/acceptance/evidence gates closed, pins current, diff reviewed, report current. Repair cycle 1 (of max 2): Luna REOPEN `AUD-W10-001` (PACKAGE) closed — `EV-W10-PKG-001` builds the exact wheel+sdist from the tested tree (HEAD `0f8902a0` + diff `BAE26D91…`) with SHA-256 provenance and proves W10-accepted fail-closed behavior inside packaged bytes; signed release exe honestly deferred to W56/W58–W61. All 27 owned requirement rows + 7 owned TODOs re-verified with no change in verdict (zero-defect PASS stands). `W11` may be planned only after its dependency/prerequisite checks are revalidated — never auto-started by this session.
+W10 is ready for fresh audit: disposition recorded (`NO-EXPANSION-FOR-V2`, single record), matrix/acceptance/evidence gates remain closed, pins current, and `AUD-W10-002` is repaired by fresh package evidence bound to HEAD `63b696b3` plus diff `7F4C3E2C…`. Signed release exe remains honestly deferred to W56–W61. All 27 owned requirement rows + 7 owned TODOs retain their prior verdicts. This repair does not start W11.

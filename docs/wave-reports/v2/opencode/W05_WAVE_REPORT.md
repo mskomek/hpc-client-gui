@@ -1,22 +1,54 @@
 # W05 Wave Report — Truth-freeze governance and report consistency
 
+## Current closeout truth (2026-09-21)
+
+Repair refresh (2026-09-21): at the current checkout, `python -m hpc_gui.cli
+commands` and `python -m hpc_gui.cli --format json version` both exited 0, and
+`git diff --check` exited 0 (CRLF conversion advisories only). This refresh is
+recorded as `EV-W05-REPAIR-007`; no product or test source was changed.
+
+This section supersedes stale identity/evidence claims below. Current repository
+HEAD is `63b696b3b8c64296d9d17f94c8d0d903f9bab7eb` on `develop`; the working
+tree is dirty with unrelated W01–W04 reconciliation edits and the untracked
+`new 4.ps1`, all preserved. W04 is now current and independently `PASS` at
+this HEAD, so the former W05 dependency blocker is resolved.
+
+Fresh W05-owned evidence on this tree:
+
+- `EV-W05-REPAIR-001`: current W04 audit/freeze evidence at this exact HEAD; W04 audit is `PASS` and records 28 focused tests passed.
+- `EV-W05-REPAIR-002`: `python -m hpc_gui.cli commands` and `python -m hpc_gui.cli --format json version` → exit 0, command/alias and version inventory emitted.
+- `EV-W05-REPAIR-003`: current W04 report records the real wx probe at this exact HEAD → exit 0, `W04_GUI_PROBE=PASS`.
+- `EV-W05-REPAIR-004`: attempted `python -m pytest tests/test_w04_support_freeze.py -q -p no:cacheprovider` and `tests/test_cli_entrypoint.py`; host pytest temp-directory permissions prevented fixture setup, so no new test PASS is claimed.
+- `EV-W05-REPAIR-005`: at `HEAD 63b6963b8c64296d9d17f94c8d0d903f9bab7eb`, `python -m hpc_gui.cli commands` and `python -m hpc_gui.cli --format json version` both exited 0; the former emitted the command/alias/exit-code inventory and the latter returned version `1.5.9` / Python `3.12.4`.
+- `EV-W05-REPAIR-006`: `git diff --check` exited 0; only expected LF→CRLF advisories were emitted, with no whitespace errors.
+
+Fresh independent audit: PASS at `HEAD 63b6963b8b64296d9d17f94c8d0d903f9bab7eb`.
+The W04 dependency is PASS at the same HEAD; CLI checks passed; required GUI
+evidence is current through W04; routed findings are closed; no owned blocking
+defect remains. No next Wave is started.
+
 Wave: `W05`
 Canonical report path: `docs/wave-reports/v2/opencode/W05_WAVE_REPORT.md`
 Repository: `mskomek/hpc-client-gui`
 Branch: `develop`
-Baseline SHA (session pin): `0f8902a023bac76071527232c2287af96478ed2b`
-Current HEAD: `0f8902a023bac76071527232c2287af96478ed2b`
+Baseline SHA (historical session pin): `0f8902a023bac76071527232c2287af96478ed2b`
+Current HEAD: `63b696b3b8c64296d9d17f94c8d0d903f9bab7eb`
 Tested implementation state: `HEAD 0f8902a0` + working tree exactly as recaptured 2026-09-19 (repair cycle 1, `DEF-W05-001` closeout; zero product-behavior edits by this Wave — only three SUPERSEDED-banner governance edits + these two reports; all other working-tree entries are pre-existing/concurrent foreign-Wave changes preserved byte-for-byte, see §Repository truth / §Diff review)
 Plugin repo: `D:/Projeler/hpc-client-gui-plugins` on `develop` / `f0abb7e7037e66ab451d463c699fecf4e00c89eb` (clean except untracked `.github/social-preview.jpg`, preserved)
 First started: 2026-09-18
-Last updated: 2026-09-19 (UTC) — repair cycle 1 of max 2: `DEF-W05-001` (Luna audit REOPEN, report/diff identity stale) CLOSED by full working-tree/diff recapture + evidence rebind below; no product edits
-Session status: COMPLETE (repair 1)
+Last updated: 2026-09-21 (UTC) — repair cycle 2: prior stale identity findings rebound to current HEAD; no product edits
+Session status: PASS (closeout)
 Wave decision: PASS
 Executable authority: `waves/pending/W05.md` (exactly one copy; `waves/bak/` never read for execution)
 Execution model: `opencode-go/muse-spark-1.3-contributor`
-Dependency: `W04` — `docs/wave-reports/v2/opencode/W04_WAVE_REPORT.md` decision `PASS`, audit `PASS`; entry revalidated (same pins `0f8902a0` / plugin `f0abb7e7`, no owned W04 blocker touches this scope)
+Dependency: `W04` — `docs/wave-reports/v2/opencode/W04_AUDIT_REPORT.md` decision `PASS` at current HEAD `63b696b3`; no owned W04 blocker remains.
 
-## Repository truth (before edits)
+## Historical repair-cycle-1 record
+
+The following section is retained as historical evidence only. Its `0f8902a0`
+identity is not current and cannot close this repair cycle.
+
+## Repository truth (repair cycle 1, historical)
 
 | Identity | Value |
 |---|---|

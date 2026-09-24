@@ -1,7 +1,7 @@
 # W04 — Frozen Support Classification and Evidence Matrix
 
 **Wave:** `W04` (executable authority: `waves/pending/W04.md`; `waves/bak/` never read)
-**Pinned main HEAD:** `0f8902a023bac76071527232c2287af96478ed2b` (`develop`)
+**Pinned main HEAD:** `63b696b3b8c64296d9d17f94c8d0d903f9bab7eb` (`develop`)
 **Carried plugin pin (read-only, not re-pinned here):** `..\hpc-client-gui-plugins` on `develop` / `f0abb7e7037e66ab451d463c699fecf4e00c89eb`
 **Supersedes (as current truth, history preserved):** `artifacts/v2-final/W01/SUPPORT_MATRIX.md` (pinned at `afd4fb1d…`; counts there marked non-authoritative by its own §8)
 **Owned requirements:** `HPC-W01-TRUTH-047…072`, `076…083` + TODOs `HPC-W01-TODO-W01-DISPOSITION-001`, `HPC-W01-TODO-W01-SUPPORT-EVIDENCE-001`, `HPC-W01-TODO-W01-GUI-PROOF-001`

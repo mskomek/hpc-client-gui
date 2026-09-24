@@ -3,19 +3,20 @@
 ```text
 Wave: W17
 Canonical report path: docs/wave-reports/v2/opencode/W17_WAVE_REPORT.md
-Repository: mskomek/hpc-client-gui (main)
+Repository: mskomek/hpc-client-gui (develop checkout)
 Branch: develop
 Baseline SHA: 0f8902a023bac76071527232c2287af96478ed2b
-Current HEAD: 0f8902a023bac76071527232c2287af96478ed2b
+Current HEAD: 63b696b3b8c64296d9d17f94c8d0d903f9bab7eb
 Plugin/external repo SHA(s): f0abb7e7037e66ab451d463c699fecf4e00c89eb (pinned baseline per wave order; no plugin changes planned, no plugin claims made)
 First started: 2026-09-20
-Last updated: 2026-09-20
-Session status: READY FOR FINAL REVIEW
+Last updated: 2026-09-22
+Session status: READY FOR AUDIT
 Wave decision: READY_FOR_AUDIT
 ```
 
-Predecessor gate: W16 closed PASS (READY_FOR_AUDIT + AUDIT PASS + CLOSE PASS per wave order).
-Dependencies: W16 — satisfied. Required evidence: GUI. Execution model:
+Predecessor reference: W16 is a non-blocking integration reference under W17's
+execution-independence contract; its current audit state does not gate W17.
+Dependencies: W16 — non-blocking. Required evidence: GUI. Execution model:
 `opencode-go/muse-spark-1.3-contributor`.
 
 ## Baseline capture
@@ -291,8 +292,25 @@ Next actions:
 Evidence/artifact identities:
 - EV-W17-001 build/audit/w17-service-before.json; EV-W17-002 build/audit/w17-service-after.json
 - EV-W17-RT01 build/audit/w17-gui-runtime.json + w17-gui-runtime.stderr.txt
-- Tested implementation SHA: 0f8902a023bac76071527232c2287af96478ed2b + uncommitted W17 diff (product+tests only)
+- Tested implementation SHA: 63b696b3b8c64296d9d17f94c8d0d903f9bab7eb
+  (current HEAD; working tree remains dirty with unrelated user changes)
 ```
+
+## Repair cycle 3 — current-identity evidence refresh (2026-09-22)
+
+The prior audit finding `REOPEN-W17-002` was W17-owned: the report and GUI evidence
+were bound to an obsolete repository identity. Current repository truth is
+`63b696b3b8c64296d9d17f94c8d0d903f9bab7eb`. Focused W17 validation was rerun on
+that identity and passed 61/61 tests, including the maintained real-wx profile
+dialog/panel suite. Fresh machine-readable evidence is
+`build/audit/w17-current-validation.json`.
+
+`REOPEN-W17-001` is routed to W16/controller because it concerns W16's own
+reopened package/final-SHA evidence. W17's execution contract makes predecessor
+state non-blocking for W17 acceptance, so it is not a W17 implementation defect
+or a reason to wait in this repair phase.
+
+Repair status: READY_FOR_AUDIT. A fresh independent audit is required.
 
 ## Final summary
 

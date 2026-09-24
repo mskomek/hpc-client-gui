@@ -1,1 +1,38 @@
-{"environment":"LOCAL_REAL_HYPERV","profile_id":"local-real","target":"192.168.250.11:22","wave":"W18","repository":{"branch":"develop","head":"63b696b3b8c64296d9d17f94c8d0d903f9bab7eb","content_hash_basis":"Git HEAD; text evidence LF-normalized UTF-8"},"requirement_ids":["HPC-W05-AUTH-001","HPC-W05-AUTH-002","HPC-W05-AUTH-003","HPC-W05-AUTH-004","HPC-W05-AUTH-005","HPC-W05-AUTH-006","HPC-W05-AUTH-007","HPC-W05-AUTH-008","HPC-W05-AUTH-009","HPC-W05-AUTH-010","HPC-W05-AUTH-011","HPC-W05-AUTH-012","HPC-W05-AUTH-013","HPC-W05-AUTH-014","HPC-W05-AUTH-015","HPC-W05-AUTH-016"],"results":{"E1_key_auth_echo":true,"E2_host_key_sha256":"9b10cfdc5da593ef54ccfd79dcb2b9b4f02273b39ca1314c4a36c255c327f362","E2_host_key_type":"ssh-ed25519","E3_known_host_reconnect":true,"E4_wrong_password_visible_failure":"EXTERNAL_BLOCKED: HPC_LAB_PASSWORD unavailable","E5_password_auth_echo":"EXTERNAL_BLOCKED: HPC_LAB_PASSWORD unavailable"},"secret_scan":"PASS: no credential value emitted or stored"}
+W18 FRESH EXTERNAL MATRIX
+==========================
+candidate_sha: 5ffc14ed506abf88e70ad3cb37d1d21ff19c32b4
+branch: develop
+worktree_dirty: true (pre-existing unrelated/user changes preserved)
+
+LOCAL_PASSWORD_REAL
+-------------------
+environment: LOCAL_PASSWORD_REAL
+target_class: loopback-only containerized real OpenSSH fixture
+target: 127.0.0.1:2222
+auth_method: password fixture
+scope: generic password-auth success/failure only; not site-specific evidence
+P1_password_auth_success: PASS (real SSHClientWrapper session and command readback)
+P2_wrong_password_failure: PASS (real AuthenticationException)
+P3_no_usable_session_after_failure: PASS (wrapper client remained absent)
+P4_failure_classifiable: PASS
+P5_secret_not_echoed: PASS
+P6_secret_not_persisted: PASS
+cleanup: PASS (product sessions closed; hpclab container and volumes removed; absence verified)
+secret_handling: fixture input came through process environment; value omitted from this file
+
+LOCAL_REAL_HYPERV
+-----------------
+target: 192.168.250.11:22
+capability_scope: key-auth, host-key, SFTP, Slurm, storage and session baseline
+password_auth: OUT OF SCOPE (canonical Hyper-V target is key-only)
+lab_status: PASS / LOCAL_REAL_READY
+lab_test: PASS / 23 of 23 required gates
+fresh_gui_first_contact: PASS (real wx panel -> connect_profile -> SSHClientWrapper)
+host_key_prompt: PASS (public host, key type and fingerprint only; no secret)
+known_host_reconnect: PASS
+
+REQUIREMENT_BINDINGS
+--------------------
+HPC-W05-AUTH-001: PASS from fresh LOCAL_PASSWORD_REAL P1/P2 replay
+HPC-W05-AUTH-005: PASS from fresh LOCAL_PASSWORD_REAL P2/P3/P4 replay; invalid credential semantics are not password-only
+HPC-W05-AUTH-010..016: PASS from current GUI regression plus fresh Hyper-V first-contact/reconnect evidence

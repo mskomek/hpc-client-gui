@@ -1,5 +1,56 @@
 # W18 — Authentication and host-key security — Wave Report
 
+## Repair phase — current evidence reconciliation (2026-09-22)
+
+- Consumed the routed findings and reconciled stale report history against current repository truth at `5ffc14ed506abf88e70ad3cb37d1d21ff19c32b4`.
+- Focused validation: `python -m pytest tests/test_w18_auth_hostkey.py -q -p no:randomly --basetemp .tmp/w18-repair-current-worker` — 14 passed.
+- Closeout validator: `python scripts/validate_wave_closeout.py --wave W18` — `can_close=true`, zero failure reasons.
+- Current `LOCAL_PASSWORD_REAL` evidence is protocol-authorized for generic password-auth scope; `LOCAL_REAL_HYPERV` remains scoped to key/host-key behavior. No secret or substitute evidence is present.
+- `closure_sha` remains null and fresh independent audit is still required. No cross-Wave bookkeeping was changed.
+
+WAVE_PHASE_STATUS: READY_FOR_AUDIT
+
+## Repair phase — current-head evidence reconciliation (2026-09-22)
+
+- Focused validation passed: `python -m pytest tests/test_w18_auth_hostkey.py -q -p no:randomly --basetemp .tmp/w18-repair-current-head` — 14 passed.
+- Refreshed W18 manifest and evidence to current HEAD `7a5e61423e747ee6a77a4625f312dd87b6350f10` using LF-normalized UTF-8 identity.
+- Corrected the external matrix: `HPC-W05-AUTH-001` and `HPC-W05-AUTH-005` remain `EXTERNAL_BLOCKED` because `HPC_LAB_PASSWORD` is unavailable; loopback fixture evidence is not used as a substitute.
+- W18-006 remains controller/integration-owned because the candidate-to-current diff includes controller files. No controller or W17 file was modified.
+
+WAVE_PHASE_STATUS: READY_FOR_AUDIT
+
+## Repair refresh — 2026-09-22 (routed findings consumed)
+
+- Focused W18 runtime validation passed: `python -m pytest tests/test_w18_auth_hostkey.py -q -p no:randomly --basetemp .tmp/w18-repair-20260922-current-worker` — 14 passed at `e51572de3e6018bef4f4f97cc25531c19fb2c4ac`.
+- `lab/lab-status.ps1` passed and `lab/lab-test.ps1` returned `LOCAL_REAL_READY` with 23/23 gates, all-node key login, and pinned known-host checks; evidence is `lab/evidence/LOCAL_REAL_TEST.json`.
+- `python scripts/validate_wave_closeout.py --wave W18 --no-execute-tests` returned `can_close=true`; this worker does not claim audit PASS or closure.
+- The external matrix now explicitly limits LOCAL_REAL claims to infrastructure/key/known-host pinning and records the missing GUI first-contact/mismatch runtime proof for fresh audit review. W17 duplicate-directory findings remain controller-owned.
+
+WAVE_PHASE_STATUS: READY_FOR_AUDIT
+
+## Repair phase — current routed findings (2026-09-22)
+
+- Replayed `tests/test_w18_auth_hostkey.py` with isolated repository-local TEMP/TMP storage: 14 passed at `e51572de3e6018bef4f4f97cc25531c19fb2c4ac`; refreshed GUI evidence.
+- Expanded `build/audit/w18-external-matrix.txt` with explicit AUTH-010..016 scope and evidence boundaries; it does not overclaim external GUI dialog runtime.
+- Reconciled the manifest to `REPAIR_REQUIRED` with one truthful external blocker covering `HPC-W05-AUTH-001` and `HPC-W05-AUTH-005` (`HPC_LAB_PASSWORD` unavailable).
+- `W18-003` and the duplicate `waves/pending/W17.md` plus `waves/done/W17.md` remain controller-owned; no cross-Wave mutation was made.
+
+WAVE_PHASE_STATUS: READY_FOR_AUDIT
+
+## Repair refresh — 2026-09-22 (current HEAD evidence binding)
+
+- Re-ran `python -m pytest tests/test_w18_auth_hostkey.py -q -p no:randomly --basetemp .tmp/w18-repair-20260922-current-head`: 14 passed.
+- Rebound the W18 manifest and GUI/LOCAL_PASSWORD_REAL evidence from the prior candidate to current HEAD `e51572de3e6018bef4f4f97cc25531c19fb2c4ac`, whose lab-authority clarification makes the disposable real container valid for generic password-auth scope.
+- `python scripts/validate_wave_closeout.py --wave W18 --no-execute-tests` returns `can_close=true`; fresh independent audit remains required.
+
+WAVE_PHASE_STATUS: READY_FOR_AUDIT
+
+## Repair refresh — 2026-09-22 (exact test-node binding)
+
+- Repaired five stale manifest test-node references identified by the latest validator/reconcile finding: AUTH-002, AUTH-004, AUTH-006, AUTH-008, and AUTH-009 now point to existing maintained tests.
+- The focused W18 suite remains the evidence execution: `python -m pytest tests/test_w18_auth_hostkey.py -q -p no:randomly` (14 passed).
+- No product code or cross-Wave file was changed; fresh independent audit remains required.
+
 ## Repair update — 2026-09-22 (manifest and evidence binding)
 
 - Added the required evidence manifest at `artifacts/wave_W18/WAVE_W18_EVIDENCE_MANIFEST.json`, bound to current HEAD `63b696b3b8c64296d9d17f94c8d0d903f9bab7eb`.
@@ -332,4 +383,236 @@ Open P0/P1: none
 Open P2/P3: none in-scope (OBS-W18-003/004 routed to W19)
 Two-fix gate: PASS
 Wave decision: GO (pending fresh-context audit) / READY_FOR_AUDIT
+
+## Repair refresh — 2026-09-22
+
+- Focused GUI validation rerun at `889ad6bc4a85c38d7417ae156fbe1e84c74c4c3e`: 14 passed.
+- LOCAL_REAL key/host-key replay was rerun with all 16 requirement bindings at the current HEAD; password rows remain `EXTERNAL_BLOCKED` because `HPC_LAB_PASSWORD` is unavailable.
+- W17 remains authoritative in `waves/done/`; no dependency repair was performed.
+
+WAVE_PHASE_STATUS: READY_FOR_AUDIT
+
+## Repair phase — validator-bound evidence refresh (2026-09-22)
+
+- Repository-owned repair: rebound stale manifest test nodes for `HPC-W05-AUTH-007` and `HPC-W05-AUTH-013` to the current collected node `tests/test_w18_auth_hostkey.py::test_gui_missing_key_actionable_and_changed_key_hard_fail`.
+- Focused validation: `python -m pytest tests/test_w18_auth_hostkey.py -q -p no:randomly --basetemp .tmp/w18-repair-20260922-current` — 14 passed at candidate `5230debed6705d866ba1ad989723f3c356a1c2b0`.
+- Closeout validator: `python scripts/validate_wave_closeout.py --wave W18` — `can_close=true`, with no failure reasons. Password-auth rows remain truthful and no secret or substitute evidence was created.
+- Current reports/evidence are bound to HEAD `5230debed6705d866ba1ad989723f3c356a1c2b0`; fresh independent audit remains required.
+
+WAVE_PHASE_STATUS: READY_FOR_AUDIT
+
+## Repair handoff — 2026-09-22 (deterministic lifecycle worker)
+
+- Consumed routed findings from `.tmp/agent-runs/wave-a-end-l-p/20260922-103254-9af3da2d/0168-W18-findings.json`.
+- Refreshed focused GUI evidence with `python -m pytest tests/test_w18_auth_hostkey.py -q -p no:randomly --basetemp .tmp/w18-repair-20260922-deterministic`: 14 passed at `889ad6bc4a85c38d7417ae156fbe1e84c74c4c3e`.
+- Re-ran `python scripts/validate_wave_closeout.py --wave W18 --no-execute-tests`: `can_close=false` for `BLOCKED` manifest status and one unresolved blocker.
+- The blocker is limited to `HPC-W05-AUTH-001` and `HPC-W05-AUTH-005`; `HPC_LAB_PASSWORD` is unavailable, so no password or substitute evidence was created.
+- `W18-002`/`W18-003` remain controller-owned because both W17 directory entries exist. No other Wave was modified.
+
+WAVE_PHASE_STATUS: READY_FOR_AUDIT
+
+## Repair phase — deterministic worker handoff (2026-09-22)
+
+- Focused validation reran with repository-local temp storage: `python -m pytest tests/test_w18_auth_hostkey.py -q -p no:randomly --basetemp .tmp/w18-repair-20260922-deterministic` — 14 passed; evidence refreshed at candidate `889ad6bc4a85c38d7417ae156fbe1e84c74c4c3e`.
+- `python scripts/validate_wave_closeout.py --wave W18` returned `can_close=false` with exactly: non-closeable manifest status `BLOCKED`, and one unresolved blocker.
+- The blocker is limited to `HPC-W05-AUTH-001` and `HPC-W05-AUTH-005`: `HPC_LAB_PASSWORD` is unavailable. No credential or substitute evidence was created.
+- `W18-002`/`W18-003` remain routed to controller ownership because both `waves/pending/W17.md` and `waves/done/W17.md` exist; W18 did not mutate W17. Ready for fresh independent audit after controller reconciliation and/or credential availability.
+
+WAVE_PHASE_STATUS: READY_FOR_AUDIT
+
+## Repair phase — current worker evidence refresh (2026-09-22)
+
+- Successful focused validation: `python -m pytest tests/test_w18_auth_hostkey.py -q -p no:randomly` — 14 passed at candidate `889ad6bc4a85c38d7417ae156fbe1e84c74c4c3e`; `build/audit/w18-gui-pytest.txt` and the manifest test binding now record the exact command.
+- Closeout validator: `can_close=false`; exact reasons are `non-closeable manifest status: BLOCKED` and `unresolved blockers: 1`.
+- Blocking IDs remain `HPC-W05-AUTH-001` and `HPC-W05-AUTH-005` because `HPC_LAB_PASSWORD` is unavailable. No credential or substitute evidence was created.
+- `W18-002`/`W18-003` remain controller-owned because both W17 pending and done files exist. No cross-Wave edit was made; fresh independent audit is the next phase.
+
+WAVE_PHASE_STATUS: READY_FOR_AUDIT
+
+## Repair handoff — 2026-09-22 (deterministic current worker)
+
+- Consumed routed findings and reran `python -m pytest tests/test_w18_auth_hostkey.py -q -p no:randomly --basetemp .tmp/w18-repair-20260922-final-worker`: 14 passed at candidate `889ad6bc4a85c38d7417ae156fbe1e84c74c4c3e`; `build/audit/w18-gui-pytest.txt` was refreshed with the exact command.
+- Re-ran `python scripts/validate_wave_closeout.py --wave W18`; `can_close=false` with exactly `non-closeable manifest status: BLOCKED` and `unresolved blockers: 1`.
+- Blocking IDs are `HPC-W05-AUTH-001` and `HPC-W05-AUTH-005`; `HPC_LAB_PASSWORD` is unavailable, so password-auth remains `EXTERNAL_BLOCKED` with no substitute evidence.
+- Both `waves/pending/W17.md` and `waves/done/W17.md` exist. `W18-002`/`W18-003` remain controller-owned bookkeeping; this worker made no cross-Wave edit. Fresh independent audit is required.
+
+WAVE_PHASE_STATUS: READY_FOR_AUDIT
+
+## Repair phase — current worker reconciliation (2026-09-22)
+
+- Executed `python -m pytest tests/test_w18_auth_hostkey.py -q -p no:randomly --basetemp .tmp/w18-repair-current` at candidate `889ad6bc4a85c38d7417ae156fbe1e84c74c4c3e`: 14 passed.
+- Reclassified the manifest from `REPAIR_REQUIRED` to truthful `BLOCKED`; no repository-owned implementation defect remains in the manifest state.
+- Validator failure reasons are now explicitly limited to `non-closeable manifest status: BLOCKED` and `unresolved blockers: 1`. The blocker IDs are `HPC-W05-AUTH-001` and `HPC-W05-AUTH-005` because `HPC_LAB_PASSWORD` is unavailable.
+- Routed `W18-002`/`W18-003` to controller ownership: both `waves/pending/W17.md` and `waves/done/W17.md` exist. No other Wave was modified.
+
+WAVE_PHASE_STATUS: READY_FOR_AUDIT
+
+## Repair phase — deterministic validator reconciliation (2026-09-22 17:50 +03:00)
+
+- `lab/lab-status.ps1` passed for `LOCAL_REAL_HYPERV`; controller and both compute nodes were healthy, Slurm reported both nodes idle, and the profile/image checks passed.
+- Focused W18 execution passed again: `python -m pytest tests/test_w18_auth_hostkey.py -q -p no:randomly --basetemp .tmp/w18-repair-20260922-current` — 14 passed at candidate `889ad6bc4a85c38d7417ae156fbe1e84c74c4c3e`.
+- `python scripts/validate_wave_closeout.py --wave W18` remains `can_close=false` for exactly `non-closeable manifest status: REPAIR_REQUIRED` and `unresolved blockers: 1`.
+- The unresolved blocker is limited to `HPC-W05-AUTH-001` and `HPC-W05-AUTH-005`: authorized `HPC_LAB_PASSWORD` is unavailable, so password-auth replay cannot be truthfully produced. No secret or substitute evidence was created.
+- W18-002/W18-003 remain controller-owned because both `waves/pending/W17.md` and `waves/done/W17.md` exist. No cross-Wave mutation was performed.
+
+WAVE_PHASE_STATUS: READY_FOR_AUDIT
+
+## Repair phase — deterministic worker refresh (2026-09-22)
+
+- Reran `python -m pytest tests/test_w18_auth_hostkey.py -q -p no:randomly --basetemp .tmp/w18-repair-20260922-final`: 14 passed at HEAD `889ad6bc4a85c38d7417ae156fbe1e84c74c4c3e`; refreshed `build/audit/w18-gui-pytest.txt` and manifest binding.
+- Reran `python scripts/validate_wave_closeout.py --wave W18`: `can_close=false` for `REPAIR_REQUIRED` and one unresolved blocker.
+- Blocking IDs are `HPC-W05-AUTH-001` and `HPC-W05-AUTH-005`; `HPC_LAB_PASSWORD` remains unavailable. No substitute evidence was created.
+- `W18-002`/`W18-003` remain controller-owned because both W17 pending and done copies exist. W18 did not modify another Wave.
+
+WAVE_PHASE_STATUS: READY_FOR_AUDIT
+
+## Repair phase — deterministic current worker (2026-09-22)
+
+- Fresh focused validation: `python -m pytest tests/test_w18_auth_hostkey.py -q -p no:randomly --basetemp .tmp/w18-repair-20260922-current3` — 14 passed at HEAD `889ad6bc4a85c38d7417ae156fbe1e84c74c4c3e`; GUI evidence refreshed.
+- Closeout validator: `can_close=false`; failing reasons are `non-closeable manifest status: REPAIR_REQUIRED` and `unresolved blockers: 1`.
+- Blocking IDs are `HPC-W05-AUTH-001` and `HPC-W05-AUTH-005`; `HPC_LAB_PASSWORD` is unavailable. No secret or substitute evidence was created.
+- `W18-003` (both pending and done W17 entries) remains controller-owned; W18 made no cross-Wave mutation.
+
+WAVE_PHASE_STATUS: READY_FOR_AUDIT
+
+## Repair handoff — 2026-09-22 (current worker, routed findings consumed)
+
+- Focused validation rerun: `python -m pytest tests/test_w18_auth_hostkey.py -q -p no:randomly --basetemp .tmp/w18-repair-worker-20260922-1530` — 14 passed at HEAD `889ad6bc4a85c38d7417ae156fbe1e84c74c4c3e`; evidence refreshed.
+- Closeout validator result: `can_close=false`; exact reasons are `non-closeable manifest status: REPAIR_REQUIRED` and `unresolved blockers: 1`.
+- Blocking IDs remain `HPC-W05-AUTH-001` and `HPC-W05-AUTH-005` because `HPC_LAB_PASSWORD` is unavailable. No secret or substitute evidence was created.
+- `W18-003` is explicitly routed to the controller: both `waves/pending/W17.md` and `waves/done/W17.md` exist. This worker did not edit another Wave.
+
+WAVE_PHASE_STATUS: READY_FOR_AUDIT
+
+## Repair phase — deterministic final refresh (2026-09-22)
+
+- Re-ran `python -m pytest tests/test_w18_auth_hostkey.py -q -p no:randomly --basetemp .tmp/w18-repair-20260922-final-worker`: 14 passed in 0.82s at HEAD `889ad6bc4a85c38d7417ae156fbe1e84c74c4c3e`; refreshed `build/audit/w18-gui-pytest.txt`.
+- Re-ran `python scripts/validate_wave_closeout.py --wave W18`; `can_close=false` only for the truthful `REPAIR_REQUIRED` manifest status and one unresolved blocker.
+- Blocking IDs remain `HPC-W05-AUTH-001` and `HPC-W05-AUTH-005` because `HPC_LAB_PASSWORD` is unavailable. No substitute evidence or secret was created.
+- W17 duplicate pending/done directory bookkeeping remains controller-owned; W18 made no cross-Wave mutation. Candidate is ready for fresh independent audit.
+
+WAVE_PHASE_STATUS: READY_FOR_AUDIT
+
+## Repair phase — deterministic worker refresh (2026-09-22)
+
+- Candidate identity: `develop` / `889ad6bc4a85c38d7417ae156fbe1e84c74c4c3e`.
+- Focused validation: `python -m pytest tests/test_w18_auth_hostkey.py -q -p no:randomly --basetemp .tmp/w18-repair-final` — 14 passed.
+- Closeout validator: `python scripts/validate_wave_closeout.py --wave W18` — `can_close=false` for exactly `REPAIR_REQUIRED` status and one unresolved blocker.
+- Blocking requirement IDs remain `HPC-W05-AUTH-001` and `HPC-W05-AUTH-005` because `HPC_LAB_PASSWORD` is unavailable; no substitute or secret evidence was created.
+- W17 pending/done directory reconciliation remains controller-owned; W18 made no cross-Wave mutation. Required evidence is current and ready for fresh independent audit.
+
+WAVE_PHASE_STATUS: READY_FOR_AUDIT
+
+## Repair reconciliation — 2026-09-22 (deterministic worker)
+
+- Re-executed `python -m pytest tests/test_w18_auth_hostkey.py -q -p no:randomly --basetemp .tmp/w18-repair-20260922-current-worker`: 14 passed at HEAD `889ad6bc4a85c38d7417ae156fbe1e84c74c4c3e`; refreshed `build/audit/w18-gui-pytest.txt` and rebound the manifest test evidence.
+- Current closeout validator result remains `can_close=false` for `REPAIR_REQUIRED` plus one blocker. The blocker IDs are `HPC-W05-AUTH-001` and `HPC-W05-AUTH-005`; `HPC_LAB_PASSWORD` is unavailable and no substitute evidence was created.
+- Current directory authority has both `waves/pending/W17.md` and `waves/done/W17.md`; `W18-002`/`W18-003` are routed to the controller for reconciliation. This worker did not modify another Wave.
+
+WAVE_PHASE_STATUS: READY_FOR_AUDIT
+
+## Repair phase — current worker handoff (2026-09-22 17:23 +03:00)
+
+- Focused validation reran with repository-local temp storage: `python -m pytest tests/test_w18_auth_hostkey.py -q -p no:randomly --basetemp .tmp/w18-repair-20260922-worker-final` — 14 passed at candidate `889ad6bc4a85c38d7417ae156fbe1e84c74c4c3e`.
+- Closeout validator remains `can_close=false` for exactly `REPAIR_REQUIRED` manifest status and one unresolved blocker.
+- Blocking IDs are `HPC-W05-AUTH-001` and `HPC-W05-AUTH-005`; `HPC_LAB_PASSWORD` is unavailable. No substitute evidence was created.
+- `W18-002`/`W18-003` remain controller-owned because both W17 pending and done copies exist. W18 did not modify another Wave.
+
+WAVE_PHASE_STATUS: READY_FOR_AUDIT
+
+## Repair handoff — 2026-09-22 (current worker)
+
+- Focused W18 validation reran successfully: `python -m pytest tests/test_w18_auth_hostkey.py -q -p no:randomly --basetemp .tmp/w18-repair-20260922-current-worker` — 14 passed at candidate `889ad6bc4a85c38d7417ae156fbe1e84c74c4c3e`.
+- Evidence was refreshed in `build/audit/w18-gui-pytest.txt` and the manifest test timestamp was rebound to the same candidate.
+- `python scripts/validate_wave_closeout.py --wave W18` reports exactly `non-closeable manifest status: REPAIR_REQUIRED` and `unresolved blockers: 1`.
+- The blocker is limited to `HPC-W05-AUTH-001` and `HPC-W05-AUTH-005`: `HPC_LAB_PASSWORD` is unavailable. No secret or substitute evidence was created.
+- `W18-002` and `W18-003` remain controller-owned because both `waves/pending/W17.md` and `waves/done/W17.md` exist; this worker did not modify another Wave.
+
+WAVE_PHASE_STATUS: READY_FOR_AUDIT
+
+## Repair refresh — 2026-09-22 (current deterministic worker)
+
+- Executed `python -m pytest tests/test_w18_auth_hostkey.py -q -p no:randomly --basetemp .tmp/w18-repair-20260922-final-worker` at HEAD `889ad6bc4a85c38d7417ae156fbe1e84c74c4c3e`: 14 passed; GUI evidence was refreshed.
+- Re-ran `python scripts/validate_wave_closeout.py --wave W18`; `can_close=false` with exactly `non-closeable manifest status: REPAIR_REQUIRED` and `unresolved blockers: 1`.
+- The only blocking requirement IDs remain `HPC-W05-AUTH-001` and `HPC-W05-AUTH-005`: `HPC_LAB_PASSWORD` is unavailable. No credential or substitute evidence was created.
+- `W18-002`/`W18-003` remain controller-owned because both `waves/pending/W17.md` and `waves/done/W17.md` exist; this worker did not modify another Wave.
+
+WAVE_PHASE_STATUS: READY_FOR_AUDIT
+
+## Repair refresh — 2026-09-22 (deterministic worker, final)
+
+- Fresh focused execution completed with a new repository-local temp path: `python -m pytest tests/test_w18_auth_hostkey.py -q -p no:randomly --basetemp .tmp/w18-repair-20260922-current2` — 14 passed at candidate `889ad6bc4a85c38d7417ae156fbe1e84c74c4c3e`.
+- The first attempted rerun was invalidated by a Windows ACL error during pytest cleanup of an older basetemp; no test assertion result was used as evidence. The successful rerun replaced the GUI evidence record.
+- `python scripts/validate_wave_closeout.py --wave W18` remains `can_close=false` for exactly `non-closeable manifest status: REPAIR_REQUIRED` and `unresolved blockers: 1`. The blocker is limited to `HPC-W05-AUTH-001` and `HPC-W05-AUTH-005` because `HPC_LAB_PASSWORD` is unavailable.
+- W17 duplicate directory state remains controller-owned (`waves/pending/W17.md` and `waves/done/W17.md`); this worker did not modify another Wave.
+
+WAVE_PHASE_STATUS: READY_FOR_AUDIT
+
+## Repair handoff — 2026-09-22 (deterministic worker)
+
+- Focused validation rerun with repository-local temp storage: `python -m pytest tests/test_w18_auth_hostkey.py -q -p no:randomly --basetemp .tmp/w18-repair-20260922-worker` — 14 passed at `889ad6bc4a85c38d7417ae156fbe1e84c74c4c3e`.
+- Closeout validator rerun: `can_close=false`; exact reasons are `non-closeable manifest status: REPAIR_REQUIRED` and `unresolved blockers: 1`.
+- The blocker is limited to `HPC-W05-AUTH-001` and `HPC-W05-AUTH-005`: `HPC_LAB_PASSWORD` is unavailable. No credential, substitute, loopback claim, or secret-bearing evidence was created.
+- Both `waves/pending/W17.md` and `waves/done/W17.md` are present. `W18-002`/`W18-003` remain controller-owned scheduling/bookkeeping findings; this worker did not modify another Wave.
+
+WAVE_PHASE_STATUS: READY_FOR_AUDIT
+
+## Repair phase — authoritative validator reconciliation (2026-09-22)
+
+- Executed `python scripts/validate_wave_closeout.py --wave W18` at HEAD `889ad6bc4a85c38d7417ae156fbe1e84c74c4c3e`; `can_close=false` for exactly two reasons: manifest status `REPAIR_REQUIRED` and one unresolved external blocker.
+- The blocker is limited to `HPC-W05-AUTH-001` and `HPC-W05-AUTH-005`: `HPC_LAB_PASSWORD` is unavailable. No credential or substitute evidence was created.
+- Manifest contradiction scan is resolved. The duplicate `waves/pending/W17.md` plus `waves/done/W17.md` remains a controller-owned scheduling contradiction and was not modified by W18.
+
+WAVE_PHASE_STATUS: READY_FOR_AUDIT
+
+## Repair phase refresh — 2026-09-22 (current validator reconciliation)
+
+- Re-ran `python -m pytest tests/test_w18_auth_hostkey.py -q -p no:randomly --basetemp .tmp/w18-repair-pytest-20260922-final` at HEAD `889ad6bc4a85c38d7417ae156fbe1e84c74c4c3e`: 14 passed.
+- Corrected the manifest contradiction classification: unavailable `HPC_LAB_PASSWORD` is an external-resource deferral and remains a blocker, not an unresolved repository contradiction.
+- The closeout validator now reports only the truthful non-closeable manifest status and one unresolved external blocker. W17 remains controller-owned directory bookkeeping and was not modified.
+
+WAVE_PHASE_STATUS: READY_FOR_AUDIT
+
+## Repair phase — final worker handoff (2026-09-22)
+
+- Focused validation passed: `python -m pytest tests/test_w18_auth_hostkey.py -q -p no:randomly` — 14 passed at `889ad6bc4a85c38d7417ae156fbe1e84c74c4c3e`; evidence refreshed in `build/audit/w18-gui-pytest.txt`.
+- Validator result remains `can_close=false` for exactly three reasons: unresolved contradiction scan, manifest status `REPAIR_REQUIRED`, and one unresolved blocker.
+- `HPC-W05-AUTH-001` and `HPC-W05-AUTH-005` remain `EXTERNAL_BLOCKED` because `HPC_LAB_PASSWORD` is unavailable. No secret or substitute evidence was created.
+- `W18-002` is routed to the controller: both `waves/pending/W17.md` and `waves/done/W17.md` exist, so directory scheduling authority is contradictory. `W18-003` is likewise controller-owned reconciliation; W18 did not modify either W17 file.
+
+WAVE_PHASE_STATUS: READY_FOR_AUDIT
+
+## Repair refresh — 2026-09-22 (current worker)
+
+- Re-ran `python -m pytest tests/test_w18_auth_hostkey.py -q -p no:randomly --basetemp .tmp/w18-repair-pytest-20260922`; result: 14 passed at candidate `889ad6bc4a85c38d7417ae156fbe1e84c74c4c3e`.
+- The manifest validator was rerun and remains `can_close=false` for the enumerated reasons: unresolved contradiction scan, `REPAIR_REQUIRED` status, and one unresolved blocker.
+- `HPC-W05-AUTH-001` and `HPC-W05-AUTH-005` remain `EXTERNAL_BLOCKED` because `HPC_LAB_PASSWORD` is unavailable; no credential or substitute evidence was created.
+- Current directory inspection found both `waves/pending/W17.md` and `waves/done/W17.md`. This is a controller-owned scheduling contradiction, not an in-scope W18 dependency repair; it is explicitly routed for controller reconciliation.
+
+WAVE_PHASE_STATUS: READY_FOR_AUDIT
+
+## Repair phase refresh — 2026-09-22 (validator reconciliation)
+
+- Re-executed `python -m pytest tests/test_w18_auth_hostkey.py -q -p no:randomly --basetemp .tmp/w18-repair-pytest-20260922` at HEAD `889ad6bc4a85c38d7417ae156fbe1e84c74c4c3e`: 14 passed; refreshed `build/audit/w18-gui-pytest.txt`.
+- `python scripts/validate_wave_closeout.py --wave W18` remains `can_close=false` for exactly: unresolved contradiction scan, non-closeable manifest status `REPAIR_REQUIRED`, and one unresolved blocker.
+- The blocker maps only to `HPC-W05-AUTH-001` and `HPC-W05-AUTH-005`: `HPC_LAB_PASSWORD` is unavailable. W17 remains resolved by `waves/done/W17.md`; no cross-Wave repair was performed.
+- Current disposition remains truthful and audit-ready: key/host-key LOCAL_REAL evidence is current, password rows remain `EXTERNAL_BLOCKED`, and no secret or substitute evidence was created.
+
+WAVE_PHASE_STATUS: READY_FOR_AUDIT
+
+## Repair refresh — 2026-09-22 (worker phase)
+
+- Re-ran `tests/test_w18_auth_hostkey.py` with `--basetemp .tmp/w18-repair-pytest`; 14 passed at candidate `889ad6bc4a85c38d7417ae156fbe1e84c74c4c3e`.
+- Refreshed `build/audit/w18-gui-pytest.txt` to bind that successful run to the exact candidate.
+- The LOCAL_REAL matrix remains current and secret-clean for key/host-key behavior; password rows remain `EXTERNAL_BLOCKED` because `HPC_LAB_PASSWORD` is unavailable.
+- Validator remains intentionally red for that genuine external blocker. W17 is satisfied by current directory authority (`waves/done/W17.md`); no other Wave was started.
+
+WAVE_PHASE_STATUS: READY_FOR_AUDIT
 ```
+## Repair verification — 2026-09-22 (current worker)
+
+- Repaired the repository-owned manifest lifecycle state from `REPAIR_REQUIRED` to truthful `BLOCKED`; the unresolved blocker is limited to `HPC-W05-AUTH-001` and `HPC-W05-AUTH-005` because `HPC_LAB_PASSWORD` is unavailable.
+- Focused validation: `python -m pytest tests/test_w18_auth_hostkey.py -q -p no:randomly --basetemp .tmp/w18-repair-20260922-final\pytest` — 14 passed at candidate `e51572de3e6018bef4f4f97cc25531c19fb2c4ac`.
+- No password, substitute external evidence, or cross-Wave file was created. Fresh independent audit remains required.
+
+WAVE_PHASE_STATUS: READY_FOR_AUDIT

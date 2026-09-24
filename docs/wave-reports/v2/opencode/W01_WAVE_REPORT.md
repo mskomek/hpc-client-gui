@@ -3,10 +3,11 @@
 ## Current execution refresh (2026-09-21)
 
 - Executed exactly the canonical `waves/pending/W01.md`; no file under `waves/bak/` was used and no other Wave was started. Pending authority check: 61 definitions (`W01.md`–`W61.md`) and exactly one `W01.md`.
-- Current repository truth: branch `develop`, HEAD `f94adb640136181dbaafa84f62c753b013f0b94e`; working tree has 20 status entries, 18 tracked diff paths, 1,433 insertions, and 278 deletions, plus 2 untracked paths. These are unrelated lab/FFS changes and remain preserved without credit to W01.
+- Current repository truth: branch `develop`, HEAD `63b696b3b8c64296d9d17f94c8d0d903f9bab7eb`; working tree has nine tracked W01 evidence/report files changed (44 insertions, 46 deletions) plus one unrelated untracked path (`new 4.ps1`). The tracked changes are this identity refresh only; no product/test behavior changed.
 - Required focused verification: `.venv\Scripts\python.exe -m pytest -q --basetemp="$env:LOCALAPPDATA\Temp\opencode\w01-resume-20260921" tests/test_w04_support_freeze.py tests/test_wx_shell_w01_truth.py tests/test_w01_sensitivity.py tests/test_wx_help.py tests/test_command_palette.py tests/test_command_palette_regression.py tests/test_help_shortcut_reference.py tests/test_about_dialog.py tests/test_wx_shell.py tests/test_help_search.py tests/test_help_catalog.py tests/test_platform_keymap.py` → **72 passed**, exit 0. The external basetemp was removed afterward.
-- `git diff --check` was previously clean for the current unrelated changes (only normal LF/CRLF conversion warnings). No W01 product implementation change was required in this execution.
-- The prior audit report records an older repository SHA and is stale for this current working tree; a fresh independent audit is required. W01 is **READY_FOR_AUDIT**. No next Wave was started.
+- `git diff --check` is clean. No W01 product implementation change was required in this execution.
+- Raw W01 evidence identity was refreshed to HEAD `63b696b3b8c64296d9d17f94c8d0d903f9bab7eb`; the inventory content is unchanged because the current checkout has no W01 product diff. The unrelated `new 4.ps1` remains outside W01 scope.
+- Fresh independent audit PASS confirms the report/evidence identity at current HEAD. W01 is **AUDIT_PASS** and eligible for serial close. No next Wave was started.
 
 ## Prior resume refresh (2026-09-20)
 

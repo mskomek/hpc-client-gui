@@ -6,11 +6,11 @@ Canonical report path: docs/wave-reports/v2/opencode/W19_WAVE_REPORT.md
 Repository: mskomek/hpc-client-gui (main)
 Branch: develop
 Baseline SHA: 0f8902a023bac76071527232c2287af96478ed2b
-Current HEAD: 0f8902a023bac76071527232c2287af96478ed2b
-Tested implementation SHA: 0f8902a023bac76071527232c2287af96478ed2b + working-tree W19 changes listed below (no commit created; 1-line fix by this session, remainder pre-existing stacked work preserved byte-for-byte)
+Current HEAD: ccaf871ffc139973db826363859ca2933b216e9c
+Tested implementation SHA: ccaf871ffc139973db826363859ca2933b216e9c (focused evidence refreshed during repair; unrelated stacked work preserved)
 Plugin/external repo SHA(s): f0abb7e7037e66ab451d463c699fecf4e00c89eb (develop; verified read-only, no plugin changes)
 First started: 2026-09-20
-Last updated: 2026-09-20
+Last updated: 2026-09-22
 Session status: READY FOR FINAL REVIEW
 Wave decision: READY_FOR_AUDIT
 ```
@@ -26,8 +26,8 @@ attempt 2; attempt 1 failed before any repo change with a provider
 
 ```text
 git branch --show-current: develop
-git rev-parse HEAD: 0f8902a023bac76071527232c2287af96478ed2b
-git rev-parse origin/develop: 0f8902a023bac76071527232c2287af96478ed2b (equal; no divergence)
+git rev-parse HEAD: ccaf871ffc139973db826363859ca2933b216e9c
+git rev-parse origin/develop: 0f8902a023bac76071527232c2287af96478ed2b (local HEAD is ahead; no push performed)
 git diff --check: clean (only pre-existing CRLF warnings on unrelated files)
 git status: dirty — large pre-existing working-tree stack preserved byte-for-byte
   (CONTRIBUTING.md, README.md, W01 artefacts/reports, scripts, core/paths.py,
@@ -248,7 +248,7 @@ Completed and verified:
 - 12-dimension second-defect search
 - GUI + EXTERNAL evidence current, secret-clean
 - Report current (this file)
-In progress: none (awaiting fresh-context audit)
+In progress: fresh-context independent audit required; repair validation is green
 Open P0/P1: none. Open P2/P3: none in-scope (all five discovery items closed or verified-already-valid)
 Pending tests/evidence: none for W19
 Last exact commands run:
@@ -261,9 +261,10 @@ Next actions:
 1. Fresh-context audit of W19 (separate session/model)
 2. On PASS, W20 may be planned only after dependency revalidation (do NOT auto-start)
 Evidence/artifact identities:
-- main 0f8902a023bac76071527232c2287af96478ed2b (develop == origin/develop)
+- main ccaf871ffc139973db826363859ca2933b216e9c (develop ahead of origin/develop; no push performed)
 - plugin f0abb7e7037e66ab451d463c699fecf4e00c89eb
 - build/audit/w19-gui-pytest.txt, build/audit/w19-external-matrix.txt
+- artifacts/wave_W19/WAVE_W19_EVIDENCE_MANIFEST.json (current HEAD-bound manifest)
 ```
 
 ## Final adversarial self-audit

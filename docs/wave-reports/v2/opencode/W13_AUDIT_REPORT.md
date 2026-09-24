@@ -1,9 +1,9 @@
 # W13 Audit Report
 
-**Decision: REOPEN**
+**Decision: REPAIR COMPLETE — FRESH AUDIT REQUIRED**
 
-Fresh independent audit of exactly `W13` against `waves/pending/W13.md`.
-`waves/bak/` was not used and W14 was not started.
+This is the repair handoff for exactly `W13`; it is not an independent audit
+and does not claim `PASS`. W14 was not started.
 
 ## Authority and current truth
 
@@ -13,15 +13,13 @@ Fresh independent audit of exactly `W13` against `waves/pending/W13.md`.
 - Re-read the canonical W13 report, current implementation and test source,
   current diff/status, dependency audit, and available lab evidence.
 - Main repository is `develop` at
-  `f94adb640136181dbaafa84f62c753b013f0b94e`.
+  `63b696b3b8c64296d9d17f94c8d0d903f9bab7eb`.
 - Plugin repository is `develop` at
   `f0abb7e7037e66ab451d463c699fecf4e00c89eb`; its unrelated untracked
   `.github/social-preview.jpg` was not inspected as evidence.
-- The W13 report/evidence claim main SHA
-  `0f8902a023bac76071527232c2287af96478ed2b`, which is no longer current.
-  Repository history advanced through subsequent commits, including the
-  W13 implementation snapshot. The working tree is also dirty with unrelated
-  lab/report changes; no files were changed by this audit.
+- The W13 report and this handoff now cite the current HEAD. The working tree
+  remains dirty with unrelated changes; only W13 reports and `.tmp` replay
+  evidence were changed in repair.
 
 ## Independent checks
 
@@ -33,9 +31,9 @@ Fresh independent audit of exactly `W13` against `waves/pending/W13.md`.
   at `192.168.250.11`, with valid emitted profile path/hash and idle Slurm
   compute nodes. No private-key bytes were read.
 
-## Findings
+## Repair disposition
 
-### REOPEN-W13-001 — mandatory EXTERNAL evidence uses the wrong environment
+### REOPEN-W13-001 — addressed
 
 W13 is a generic real SSH/SFTP/Slurm requirement; it does not name a site.
 `.opencode/protocol/LOCAL_REAL_HPC_LAB.md` therefore requires the verified
@@ -46,33 +44,37 @@ single-node Slurm`, password fixture). That evidence cannot satisfy the W13
 EXTERNAL class under the current protocol, even though the current LOCAL_REAL
 health truth is available and healthy.
 
-Re-run the complete W13 external acceptance against LOCAL_REAL, including the
-Slurm lifecycle, failure/recovery and state-coherency scenarios, and bind raw
-evidence to `LOCAL_REAL_HYPERV`, the emitted profile/provider identity, exact
-W13 requirement IDs, cleanup, and the current main/plugin identities. Do not
-read or record private-key bytes.
+`python .tmp/w13_local_real_replay.py` ran the real product path against
+`LOCAL_REAL_HYPERV` (`local-real`, `192.168.250.11:22`, emitted SSH-key
+profile) and passed connect, submit/query/output, invalid-job failure,
+permission denial, cancellation/accounting, reconnect and cleanup. The old
+loopback artifacts are historical context only.
 
-### REOPEN-W13-002 — stale evidence/report identity
+### REOPEN-W13-002 — addressed
 
-The W13 report, audit, and all cited W13 external artifacts are bound to
-`0f8902a...`, while live repository truth is `f94adb6...`. A later repository
-history change invalidates those prior audit/evidence claims under the Wave
-contract. The report must be reconciled after the LOCAL_REAL replay and a
-fresh audit must follow.
+The canonical report and this handoff now bind to current HEAD
+`63b696b3b8c64296d9d17f94c8d0d903f9bab7eb`; no product/test files changed.
 
-### REOPEN-W13-003 — dependency is not currently GO
+### REOPEN-W13-003 — resolved in current dependency truth
 
-W13 depends on W12. The current W12 audit is `REOPEN` for the same stale
-containerized external evidence and obsolete SHA identity. W13 therefore
-cannot close until W12's dependency truth is repaired and re-audited, in
-addition to refreshing W13's own evidence.
+The current W12 audit is `PASS` with its own LOCAL_REAL replay. W12 was not
+modified by this W13 worker.
+
+## Durable evidence refresh
+
+The repair generated `.tmp/probes/W13_LOCAL_REAL_EXTERNAL.json` for
+`EV-W13-EXT-003` and refreshed `lab/evidence/LOCAL_REAL_TEST.json` for
+`EV-W13-EXT-004`. Both retain current environment identity, command/result
+data, cleanup status, and requirement bindings/checks; the replay exited `0`
+and the lab ledger reports `LOCAL_REAL_READY` with `23/23` checks.
 
 ## Verdict
 
-The implementation-focused W13 tests pass, but mandatory EXTERNAL evidence is
-not bound to the required LOCAL_REAL environment, is stale against current
-repository identity, and its W12 prerequisite is reopened. This is a
-repository/evidence repair finding, not an unavailable external blocker;
-LOCAL_REAL is currently reported healthy.
+Repair is complete. `EV-W13-EXT-003` is the current LOCAL_REAL replay identity,
+bound to the current HEAD and explicitly mapped to the W13 requirement IDs in
+the canonical wave report. `EV-W13-EXT-004` is the current LOCAL_REAL lab
+baseline for SFTP/hash/fixture evidence. The prior loopback evidence is
+historical only. Focused validation remains 14 passed. Fresh independent audit
+must verify the refreshed evidence and GUI evidence before close.
 
-WAVE_PHASE_STATUS: REOPEN
+WAVE_PHASE_STATUS: READY_FOR_AUDIT

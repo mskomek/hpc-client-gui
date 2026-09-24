@@ -2,8 +2,8 @@
 
 ## Decision
 
-**REOPEN** — the current implementation and focused GUI checks are green, but
-the canonical W01 report is not current for the repository truth it claims.
+**PASS** — the current implementation, focused GUI checks, canonical report,
+and raw evidence identities match the current repository truth.
 
 ## Authority and repository truth
 
@@ -13,13 +13,12 @@ the canonical W01 report is not current for the repository truth it claims.
   directly W01-owned TODO rows, the ownership map, source sections A0,
   `TASK-W01-002`, and `TASK-W01-003`, plus the canonical W01 report and raw
   W01 evidence files.
-- Branch/SHA: `develop` / `f94adb640136181dbaafa84f62c753b013f0b94e`.
+- Branch/SHA: `develop` / `63b696b3b8c64296d9d17f94c8d0d903f9bab7eb`.
 - Pending authority check: 61 definitions (`W01.md`–`W61.md`), exactly one
   `W01.md`; W01 dependencies are `None`.
-- Independently measured working tree: 25 status entries, 23 tracked modified
-  paths, 1,662 insertions and 408 deletions in the tracked diff, plus two
-  untracked paths. The canonical W01 report instead records 20 entries, 18
-  tracked paths, 1,433 insertions and 278 deletions.
+- Independently measured working tree: nine tracked W01 evidence/report files,
+  44 insertions and 46 deletions, plus one unrelated untracked path (`new 4.ps1`).
+  The canonical W01 report matches this identity.
 - Plugin repository identity: `develop` /
   `f0abb7e7037e66ab451d463c699fecf4e00c89eb`; only unrelated
   `.github/social-preview.jpg` is untracked. No package/final artifact SHA is
@@ -46,8 +45,8 @@ the canonical W01 report is not current for the repository truth it claims.
 
 | Finding | Severity | Owner/state |
 |---|---|---|
-| `W01-AUDIT-005`: `W01_WAVE_REPORT.md` current-execution identity is stale: it records 20 status entries / 18 tracked paths / 1,433 insertions / 278 deletions, while the current checkout has 25 / 23 / 1,662 / 408. Its “report current” and diff-review claims therefore cannot be accepted for close. | P1 | W01 report refresh required; OPEN |
-| `W01-AUDIT-006`: retained raw artifacts `EV-W01-001`–`EV-W01-005` are pinned to historical SHA `afd4fb1d6ed3d0bbd87b9b6db6115eb159f63a87`, not current HEAD `f94adb640136181dbaafa84f62c753b013f0b94e`. Current runtime/test commands are independently green, but the canonical evidence identity must be reconciled before close. | P1 | W01/W05 report-evidence reconciliation; OPEN |
+| `W01-AUDIT-005`: report/current diff identity | P1 | CLOSED — report matches live 8-file, 32-insertion/33-deletion identity; unrelated `new 4.ps1` preserved |
+| `W01-AUDIT-006`: raw evidence SHA identity | P1 | CLOSED — EV-W01-001–005 and SUPPORT_MATRIX pin current HEAD |
 
 The owned GUI requirements and TODO decisions otherwise pass the independent
 source, test, and runtime checks. W01 requires GUI evidence only; LOCAL_REAL
@@ -56,8 +55,7 @@ evidence.
 
 ## Final result
 
-Do not close W01 until the canonical report/evidence identity is refreshed to
-the current tree and a fresh independent audit is run afterward. No product or
-test files were changed by this audit.
+W01 is ready for serial close. No product or test files were changed by this
+audit.
 
-WAVE_PHASE_STATUS: REOPEN
+WAVE_PHASE_STATUS: PASS

@@ -1,0 +1,1614 @@
+{
+ "spec_profile_id": "HPC",
+ "protocol_revision": 2,
+ "wave_id": "W23",
+ "wave_spec_revision": "sha256:a8a01e1483c2c0501ea4799f4467110ed9b26f83cefbd4f66802869c4df75fe9",
+ "status": "ACCEPTANCE_GREEN",
+ "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c",
+ "closure_sha": null,
+ "dependency_validation": {
+  "dependencies": []
+ },
+ "requirements": [
+  {
+   "requirement_id": "HPC-W06-FILE-001",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "tests/test_w23_files_navigation.py (disposable tmp_path fixtures; no product change required)"
+   ],
+   "test_nodes": [
+    "tests/test_w23_files_navigation.py"
+   ],
+   "expected_semantics": "entry prerequisite 001: integration-order hint only; disposable-fixture coverage in focused navigation suite",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W23_WAVE_REPORT.md",
+    "artifacts/opencode/wave_W23/WAVE_W23_AUDIT_REPORT.md",
+    ".tmp/w23-close/w23-focused-close.txt",
+    ".tmp/w23-close/w23-broad-close.txt"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-FILE-002",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "tests/test_w23_files_navigation.py (disposable tmp_path fixtures; no product change required)"
+   ],
+   "test_nodes": [
+    "tests/test_w23_files_navigation.py"
+   ],
+   "expected_semantics": "entry prerequisite 002: integration-order hint only; disposable-fixture coverage in focused navigation suite",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W23_WAVE_REPORT.md",
+    "artifacts/opencode/wave_W23/WAVE_W23_AUDIT_REPORT.md",
+    ".tmp/w23-close/w23-focused-close.txt",
+    ".tmp/w23-close/w23-broad-close.txt"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-FILE-003",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "tests/test_w23_files_navigation.py (disposable tmp_path fixtures; no product change required)"
+   ],
+   "test_nodes": [
+    "tests/test_w23_files_navigation.py"
+   ],
+   "expected_semantics": "entry prerequisite 003: integration-order hint only; disposable-fixture coverage in focused navigation suite",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W23_WAVE_REPORT.md",
+    "artifacts/opencode/wave_W23/WAVE_W23_AUDIT_REPORT.md",
+    ".tmp/w23-close/w23-focused-close.txt",
+    ".tmp/w23-close/w23-broad-close.txt"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-FILE-004",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "tests/test_w23_files_navigation.py (disposable tmp_path fixtures; no product change required)"
+   ],
+   "test_nodes": [
+    "tests/test_w23_files_navigation.py"
+   ],
+   "expected_semantics": "entry prerequisite 004: integration-order hint only; disposable-fixture coverage in focused navigation suite",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W23_WAVE_REPORT.md",
+    "artifacts/opencode/wave_W23/WAVE_W23_AUDIT_REPORT.md",
+    ".tmp/w23-close/w23-focused-close.txt",
+    ".tmp/w23-close/w23-broad-close.txt"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-FILE-005",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "tests/test_w23_files_navigation.py (disposable tmp_path fixtures; no product change required)"
+   ],
+   "test_nodes": [
+    "tests/test_w23_files_navigation.py"
+   ],
+   "expected_semantics": "entry prerequisite 005: integration-order hint only; disposable-fixture coverage in focused navigation suite",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W23_WAVE_REPORT.md",
+    "artifacts/opencode/wave_W23/WAVE_W23_AUDIT_REPORT.md",
+    ".tmp/w23-close/w23-focused-close.txt",
+    ".tmp/w23-close/w23-broad-close.txt"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-FILE-006",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_local_files.py"
+   ],
+   "test_nodes": [
+    "tests/test_w23_files_navigation.py",
+    "tests/test_wx_local_files.py",
+    "tests/test_wx_file_actions_behavior.py",
+    "tests/test_wx_file_context_matrix.py"
+   ],
+   "expected_semantics": "local files scope item 006: navigation/refresh/open/reveal/rename/mkdir/delete/context/error behavior",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W23_WAVE_REPORT.md",
+    "artifacts/opencode/wave_W23/WAVE_W23_AUDIT_REPORT.md",
+    ".tmp/w23-close/w23-focused-close.txt",
+    ".tmp/w23-close/w23-broad-close.txt"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-FILE-007",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_local_files.py"
+   ],
+   "test_nodes": [
+    "tests/test_w23_files_navigation.py",
+    "tests/test_wx_local_files.py",
+    "tests/test_wx_file_actions_behavior.py",
+    "tests/test_wx_file_context_matrix.py"
+   ],
+   "expected_semantics": "local files scope item 007: navigation/refresh/open/reveal/rename/mkdir/delete/context/error behavior",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W23_WAVE_REPORT.md",
+    "artifacts/opencode/wave_W23/WAVE_W23_AUDIT_REPORT.md",
+    ".tmp/w23-close/w23-focused-close.txt",
+    ".tmp/w23-close/w23-broad-close.txt"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-FILE-008",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_local_files.py"
+   ],
+   "test_nodes": [
+    "tests/test_w23_files_navigation.py",
+    "tests/test_wx_local_files.py",
+    "tests/test_wx_file_actions_behavior.py",
+    "tests/test_wx_file_context_matrix.py"
+   ],
+   "expected_semantics": "local files scope item 008: navigation/refresh/open/reveal/rename/mkdir/delete/context/error behavior",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W23_WAVE_REPORT.md",
+    "artifacts/opencode/wave_W23/WAVE_W23_AUDIT_REPORT.md",
+    ".tmp/w23-close/w23-focused-close.txt",
+    ".tmp/w23-close/w23-broad-close.txt"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-FILE-009",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_local_files.py"
+   ],
+   "test_nodes": [
+    "tests/test_w23_files_navigation.py",
+    "tests/test_wx_local_files.py",
+    "tests/test_wx_file_actions_behavior.py",
+    "tests/test_wx_file_context_matrix.py"
+   ],
+   "expected_semantics": "local files scope item 009: navigation/refresh/open/reveal/rename/mkdir/delete/context/error behavior",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W23_WAVE_REPORT.md",
+    "artifacts/opencode/wave_W23/WAVE_W23_AUDIT_REPORT.md",
+    ".tmp/w23-close/w23-focused-close.txt",
+    ".tmp/w23-close/w23-broad-close.txt"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-FILE-010",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_local_files.py"
+   ],
+   "test_nodes": [
+    "tests/test_w23_files_navigation.py",
+    "tests/test_wx_local_files.py",
+    "tests/test_wx_file_actions_behavior.py",
+    "tests/test_wx_file_context_matrix.py"
+   ],
+   "expected_semantics": "local files scope item 010: navigation/refresh/open/reveal/rename/mkdir/delete/context/error behavior",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W23_WAVE_REPORT.md",
+    "artifacts/opencode/wave_W23/WAVE_W23_AUDIT_REPORT.md",
+    ".tmp/w23-close/w23-focused-close.txt",
+    ".tmp/w23-close/w23-broad-close.txt"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-FILE-011",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_local_files.py"
+   ],
+   "test_nodes": [
+    "tests/test_w23_files_navigation.py",
+    "tests/test_wx_local_files.py",
+    "tests/test_wx_file_actions_behavior.py",
+    "tests/test_wx_file_context_matrix.py"
+   ],
+   "expected_semantics": "local files scope item 011: navigation/refresh/open/reveal/rename/mkdir/delete/context/error behavior",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W23_WAVE_REPORT.md",
+    "artifacts/opencode/wave_W23/WAVE_W23_AUDIT_REPORT.md",
+    ".tmp/w23-close/w23-focused-close.txt",
+    ".tmp/w23-close/w23-broad-close.txt"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-FILE-012",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_local_files.py"
+   ],
+   "test_nodes": [
+    "tests/test_w23_files_navigation.py",
+    "tests/test_wx_local_files.py",
+    "tests/test_wx_file_actions_behavior.py",
+    "tests/test_wx_file_context_matrix.py"
+   ],
+   "expected_semantics": "local files scope item 012: navigation/refresh/open/reveal/rename/mkdir/delete/context/error behavior",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W23_WAVE_REPORT.md",
+    "artifacts/opencode/wave_W23/WAVE_W23_AUDIT_REPORT.md",
+    ".tmp/w23-close/w23-focused-close.txt",
+    ".tmp/w23-close/w23-broad-close.txt"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-FILE-013",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_local_files.py"
+   ],
+   "test_nodes": [
+    "tests/test_w23_files_navigation.py",
+    "tests/test_wx_local_files.py",
+    "tests/test_wx_file_actions_behavior.py",
+    "tests/test_wx_file_context_matrix.py"
+   ],
+   "expected_semantics": "local files scope item 013: navigation/refresh/open/reveal/rename/mkdir/delete/context/error behavior",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W23_WAVE_REPORT.md",
+    "artifacts/opencode/wave_W23/WAVE_W23_AUDIT_REPORT.md",
+    ".tmp/w23-close/w23-focused-close.txt",
+    ".tmp/w23-close/w23-broad-close.txt"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-FILE-014",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_remote_files_view.py",
+    "src/hpc_gui/wx_remote_files.py"
+   ],
+   "test_nodes": [
+    "tests/test_wx_remote_files.py",
+    "tests/test_wx_remote_file_actions_behavior.py",
+    "tests/test_wx_file_context_matrix.py"
+   ],
+   "expected_semantics": "remote files scope item 014: SFTP navigation/transfer/rename/mkdir/delete/permissions/errors/context",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W23_WAVE_REPORT.md",
+    "artifacts/opencode/wave_W23/WAVE_W23_AUDIT_REPORT.md",
+    ".tmp/w23-close/w23-focused-close.txt",
+    ".tmp/w23-close/w23-broad-close.txt"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-FILE-015",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_remote_files_view.py",
+    "src/hpc_gui/wx_remote_files.py"
+   ],
+   "test_nodes": [
+    "tests/test_wx_remote_files.py",
+    "tests/test_wx_remote_file_actions_behavior.py",
+    "tests/test_wx_file_context_matrix.py"
+   ],
+   "expected_semantics": "remote files scope item 015: SFTP navigation/transfer/rename/mkdir/delete/permissions/errors/context",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W23_WAVE_REPORT.md",
+    "artifacts/opencode/wave_W23/WAVE_W23_AUDIT_REPORT.md",
+    ".tmp/w23-close/w23-focused-close.txt",
+    ".tmp/w23-close/w23-broad-close.txt"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-FILE-016",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_remote_files_view.py",
+    "src/hpc_gui/wx_remote_files.py"
+   ],
+   "test_nodes": [
+    "tests/test_wx_remote_files.py",
+    "tests/test_wx_remote_file_actions_behavior.py",
+    "tests/test_wx_file_context_matrix.py"
+   ],
+   "expected_semantics": "remote files scope item 016: SFTP navigation/transfer/rename/mkdir/delete/permissions/errors/context",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W23_WAVE_REPORT.md",
+    "artifacts/opencode/wave_W23/WAVE_W23_AUDIT_REPORT.md",
+    ".tmp/w23-close/w23-focused-close.txt",
+    ".tmp/w23-close/w23-broad-close.txt"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-FILE-017",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_remote_files_view.py",
+    "src/hpc_gui/wx_remote_files.py"
+   ],
+   "test_nodes": [
+    "tests/test_wx_remote_files.py",
+    "tests/test_wx_remote_file_actions_behavior.py",
+    "tests/test_wx_file_context_matrix.py"
+   ],
+   "expected_semantics": "remote files scope item 017: SFTP navigation/transfer/rename/mkdir/delete/permissions/errors/context",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W23_WAVE_REPORT.md",
+    "artifacts/opencode/wave_W23/WAVE_W23_AUDIT_REPORT.md",
+    ".tmp/w23-close/w23-focused-close.txt",
+    ".tmp/w23-close/w23-broad-close.txt"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-FILE-018",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_remote_files_view.py",
+    "src/hpc_gui/wx_remote_files.py"
+   ],
+   "test_nodes": [
+    "tests/test_wx_remote_files.py",
+    "tests/test_wx_remote_file_actions_behavior.py",
+    "tests/test_wx_file_context_matrix.py"
+   ],
+   "expected_semantics": "remote files scope item 018: SFTP navigation/transfer/rename/mkdir/delete/permissions/errors/context",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W23_WAVE_REPORT.md",
+    "artifacts/opencode/wave_W23/WAVE_W23_AUDIT_REPORT.md",
+    ".tmp/w23-close/w23-focused-close.txt",
+    ".tmp/w23-close/w23-broad-close.txt"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-FILE-019",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_remote_files_view.py",
+    "src/hpc_gui/wx_remote_files.py"
+   ],
+   "test_nodes": [
+    "tests/test_wx_remote_files.py",
+    "tests/test_wx_remote_file_actions_behavior.py",
+    "tests/test_wx_file_context_matrix.py"
+   ],
+   "expected_semantics": "remote files scope item 019: SFTP navigation/transfer/rename/mkdir/delete/permissions/errors/context",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W23_WAVE_REPORT.md",
+    "artifacts/opencode/wave_W23/WAVE_W23_AUDIT_REPORT.md",
+    ".tmp/w23-close/w23-focused-close.txt",
+    ".tmp/w23-close/w23-broad-close.txt"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-FILE-020",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_remote_files_view.py",
+    "src/hpc_gui/wx_remote_files.py"
+   ],
+   "test_nodes": [
+    "tests/test_wx_remote_files.py",
+    "tests/test_wx_remote_file_actions_behavior.py",
+    "tests/test_wx_file_context_matrix.py"
+   ],
+   "expected_semantics": "remote files scope item 020: SFTP navigation/transfer/rename/mkdir/delete/permissions/errors/context",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W23_WAVE_REPORT.md",
+    "artifacts/opencode/wave_W23/WAVE_W23_AUDIT_REPORT.md",
+    ".tmp/w23-close/w23-focused-close.txt",
+    ".tmp/w23-close/w23-broad-close.txt"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-FILE-021",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_remote_files_view.py",
+    "src/hpc_gui/wx_remote_files.py"
+   ],
+   "test_nodes": [
+    "tests/test_wx_remote_files.py",
+    "tests/test_wx_remote_file_actions_behavior.py",
+    "tests/test_wx_file_context_matrix.py"
+   ],
+   "expected_semantics": "remote files scope item 021: SFTP navigation/transfer/rename/mkdir/delete/permissions/errors/context",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W23_WAVE_REPORT.md",
+    "artifacts/opencode/wave_W23/WAVE_W23_AUDIT_REPORT.md",
+    ".tmp/w23-close/w23-focused-close.txt",
+    ".tmp/w23-close/w23-broad-close.txt"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-FILE-022",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/services/transfer_controller.py (existing explicit overwrite/conflict path; no new code)"
+   ],
+   "test_nodes": [
+    "tests/test_transfer_controller.py"
+   ],
+   "expected_semantics": "non-scope guard 022: no general-IDE/hex/silent-overwrite path added; conflict stays explicit",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W23_WAVE_REPORT.md",
+    "artifacts/opencode/wave_W23/WAVE_W23_AUDIT_REPORT.md",
+    ".tmp/w23-close/w23-focused-close.txt",
+    ".tmp/w23-close/w23-broad-close.txt"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-FILE-023",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/services/transfer_controller.py (existing explicit overwrite/conflict path; no new code)"
+   ],
+   "test_nodes": [
+    "tests/test_transfer_controller.py"
+   ],
+   "expected_semantics": "non-scope guard 023: no general-IDE/hex/silent-overwrite path added; conflict stays explicit",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W23_WAVE_REPORT.md",
+    "artifacts/opencode/wave_W23/WAVE_W23_AUDIT_REPORT.md",
+    ".tmp/w23-close/w23-focused-close.txt",
+    ".tmp/w23-close/w23-broad-close.txt"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-FILE-024",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/services/transfer_controller.py (existing explicit overwrite/conflict path; no new code)"
+   ],
+   "test_nodes": [
+    "tests/test_transfer_controller.py"
+   ],
+   "expected_semantics": "non-scope guard 024: no general-IDE/hex/silent-overwrite path added; conflict stays explicit",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W23_WAVE_REPORT.md",
+    "artifacts/opencode/wave_W23/WAVE_W23_AUDIT_REPORT.md",
+    ".tmp/w23-close/w23-focused-close.txt",
+    ".tmp/w23-close/w23-broad-close.txt"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-FILE-025",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/services/file_context_actions.py"
+   ],
+   "test_nodes": [
+    "tests/test_wx_file_context_matrix.py"
+   ],
+   "expected_semantics": "workstream A context-menu parity: visible_actions/FILE_CONTEXT_LABEL_KEYS",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W23_WAVE_REPORT.md",
+    "artifacts/opencode/wave_W23/WAVE_W23_AUDIT_REPORT.md",
+    ".tmp/w23-close/w23-focused-close.txt",
+    ".tmp/w23-close/w23-broad-close.txt"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-FILE-026",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_local_files.py (pathlib/os local semantics)",
+    "src/hpc_gui/wx_remote_files_view.py (PurePosixPath remote semantics)"
+   ],
+   "test_nodes": [
+    "tests/test_provider_path_resolver.py",
+    "tests/test_paths.py"
+   ],
+   "expected_semantics": "workstream B path-semantics item 026: local pathlib vs remote PurePosixPath",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W23_WAVE_REPORT.md",
+    "artifacts/opencode/wave_W23/WAVE_W23_AUDIT_REPORT.md",
+    ".tmp/w23-close/w23-focused-close.txt",
+    ".tmp/w23-close/w23-broad-close.txt"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-FILE-027",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_local_files.py (pathlib/os local semantics)",
+    "src/hpc_gui/wx_remote_files_view.py (PurePosixPath remote semantics)"
+   ],
+   "test_nodes": [
+    "tests/test_provider_path_resolver.py",
+    "tests/test_paths.py"
+   ],
+   "expected_semantics": "workstream B path-semantics item 027: local pathlib vs remote PurePosixPath",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W23_WAVE_REPORT.md",
+    "artifacts/opencode/wave_W23/WAVE_W23_AUDIT_REPORT.md",
+    ".tmp/w23-close/w23-focused-close.txt",
+    ".tmp/w23-close/w23-broad-close.txt"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-FILE-028",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_local_files.py (pathlib/os local semantics)",
+    "src/hpc_gui/wx_remote_files_view.py (PurePosixPath remote semantics)"
+   ],
+   "test_nodes": [
+    "tests/test_provider_path_resolver.py",
+    "tests/test_paths.py"
+   ],
+   "expected_semantics": "workstream B path-semantics item 028: local pathlib vs remote PurePosixPath",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W23_WAVE_REPORT.md",
+    "artifacts/opencode/wave_W23/WAVE_W23_AUDIT_REPORT.md",
+    ".tmp/w23-close/w23-focused-close.txt",
+    ".tmp/w23-close/w23-broad-close.txt"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-FILE-029",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_local_files.py (pathlib/os local semantics)",
+    "src/hpc_gui/wx_remote_files_view.py (PurePosixPath remote semantics)"
+   ],
+   "test_nodes": [
+    "tests/test_provider_path_resolver.py",
+    "tests/test_paths.py"
+   ],
+   "expected_semantics": "workstream B path-semantics item 029: local pathlib vs remote PurePosixPath",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W23_WAVE_REPORT.md",
+    "artifacts/opencode/wave_W23/WAVE_W23_AUDIT_REPORT.md",
+    ".tmp/w23-close/w23-focused-close.txt",
+    ".tmp/w23-close/w23-broad-close.txt"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-FILE-030",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_local_files.py (pathlib/os local semantics)",
+    "src/hpc_gui/wx_remote_files_view.py (PurePosixPath remote semantics)"
+   ],
+   "test_nodes": [
+    "tests/test_provider_path_resolver.py",
+    "tests/test_paths.py"
+   ],
+   "expected_semantics": "workstream B path-semantics item 030: local pathlib vs remote PurePosixPath",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W23_WAVE_REPORT.md",
+    "artifacts/opencode/wave_W23/WAVE_W23_AUDIT_REPORT.md",
+    ".tmp/w23-close/w23-focused-close.txt",
+    ".tmp/w23-close/w23-broad-close.txt"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-FILE-031",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_local_files.py (pathlib/os local semantics)",
+    "src/hpc_gui/wx_remote_files_view.py (PurePosixPath remote semantics)"
+   ],
+   "test_nodes": [
+    "tests/test_provider_path_resolver.py",
+    "tests/test_paths.py"
+   ],
+   "expected_semantics": "workstream B path-semantics item 031: local pathlib vs remote PurePosixPath",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W23_WAVE_REPORT.md",
+    "artifacts/opencode/wave_W23/WAVE_W23_AUDIT_REPORT.md",
+    ".tmp/w23-close/w23-focused-close.txt",
+    ".tmp/w23-close/w23-broad-close.txt"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-FILE-032",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_local_files.py (pathlib/os local semantics)",
+    "src/hpc_gui/wx_remote_files_view.py (PurePosixPath remote semantics)"
+   ],
+   "test_nodes": [
+    "tests/test_provider_path_resolver.py",
+    "tests/test_paths.py"
+   ],
+   "expected_semantics": "workstream B path-semantics item 032: local pathlib vs remote PurePosixPath",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W23_WAVE_REPORT.md",
+    "artifacts/opencode/wave_W23/WAVE_W23_AUDIT_REPORT.md",
+    ".tmp/w23-close/w23-focused-close.txt",
+    ".tmp/w23-close/w23-broad-close.txt"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-FILE-033",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_local_files.py (pathlib/os local semantics)",
+    "src/hpc_gui/wx_remote_files_view.py (PurePosixPath remote semantics)"
+   ],
+   "test_nodes": [
+    "tests/test_provider_path_resolver.py",
+    "tests/test_paths.py"
+   ],
+   "expected_semantics": "workstream B path-semantics item 033: local pathlib vs remote PurePosixPath",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W23_WAVE_REPORT.md",
+    "artifacts/opencode/wave_W23/WAVE_W23_AUDIT_REPORT.md",
+    ".tmp/w23-close/w23-focused-close.txt",
+    ".tmp/w23-close/w23-broad-close.txt"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-FILE-034",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_local_files.py (pathlib/os local semantics)",
+    "src/hpc_gui/wx_remote_files_view.py (PurePosixPath remote semantics)"
+   ],
+   "test_nodes": [
+    "tests/test_provider_path_resolver.py",
+    "tests/test_paths.py"
+   ],
+   "expected_semantics": "workstream B path-semantics item 034: local pathlib vs remote PurePosixPath",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W23_WAVE_REPORT.md",
+    "artifacts/opencode/wave_W23/WAVE_W23_AUDIT_REPORT.md",
+    ".tmp/w23-close/w23-focused-close.txt",
+    ".tmp/w23-close/w23-broad-close.txt"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-FILE-035",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/services/file_context_actions.py",
+    "src/hpc_gui/wx_local_files.py",
+    "src/hpc_gui/wx_remote_files_view.py",
+    "src/hpc_gui/i18n/en.json",
+    "src/hpc_gui/i18n/tr.json"
+   ],
+   "test_nodes": [
+    "tests/test_w23_delete_confirm.py::test_w23_delete_summary_names_target",
+    "tests/test_w23_delete_confirm.py::test_w23_delete_message_contains_path_and_names",
+    "tests/test_w23_delete_confirm.py::test_w23_delete_message_truncates_long_selection",
+    "tests/test_w23_delete_confirm.py::test_w23_delete_message_empty_falls_back_to_generic",
+    "tests/test_w23_delete_confirm.py::test_w23_view_confirm_wiring_mentions_target"
+   ],
+   "expected_semantics": "workstream C confirmation identity (local): delete confirm names target path + items via summarize_delete_targets/delete_confirm_message",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W23_WAVE_REPORT.md",
+    "artifacts/opencode/wave_W23/WAVE_W23_AUDIT_REPORT.md",
+    ".tmp/w23-close/w23-focused-close.txt",
+    ".tmp/w23-close/w23-broad-close.txt"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-FILE-036",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/services/file_context_actions.py",
+    "src/hpc_gui/wx_local_files.py",
+    "src/hpc_gui/wx_remote_files_view.py",
+    "src/hpc_gui/i18n/en.json",
+    "src/hpc_gui/i18n/tr.json"
+   ],
+   "test_nodes": [
+    "tests/test_w23_delete_confirm.py::test_w23_delete_summary_names_target",
+    "tests/test_w23_delete_confirm.py::test_w23_delete_message_contains_path_and_names",
+    "tests/test_w23_delete_confirm.py::test_w23_delete_message_truncates_long_selection",
+    "tests/test_w23_delete_confirm.py::test_w23_delete_message_empty_falls_back_to_generic",
+    "tests/test_w23_delete_confirm.py::test_w23_view_confirm_wiring_mentions_target"
+   ],
+   "expected_semantics": "workstream C confirmation identity (remote): per-view _delete_confirm_text with dirs.delete_confirm_detail (en+tr)",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W23_WAVE_REPORT.md",
+    "artifacts/opencode/wave_W23/WAVE_W23_AUDIT_REPORT.md",
+    ".tmp/w23-close/w23-focused-close.txt",
+    ".tmp/w23-close/w23-broad-close.txt"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-FILE-037",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_local_files.py",
+    "src/hpc_gui/wx_remote_files_view.py"
+   ],
+   "test_nodes": [
+    "tests/test_w23_delete_confirm.py::test_w23_view_confirm_wiring_mentions_target",
+    "tests/test_wx_file_actions_behavior.py",
+    "tests/test_wx_remote_file_actions_behavior.py"
+   ],
+   "expected_semantics": "cancel side-effect free: dialog cancel returns before mutate/operation",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W23_WAVE_REPORT.md",
+    "artifacts/opencode/wave_W23/WAVE_W23_AUDIT_REPORT.md",
+    ".tmp/w23-close/w23-focused-close.txt",
+    ".tmp/w23-close/w23-broad-close.txt"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-FILE-038",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_local_files.py",
+    "src/hpc_gui/wx_remote_files_view.py"
+   ],
+   "test_nodes": [
+    "tests/test_wx_file_actions_behavior.py",
+    "tests/test_wx_remote_file_actions_behavior.py"
+   ],
+   "expected_semantics": "error keeps row: mutate shows MessageBox on error without row removal",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W23_WAVE_REPORT.md",
+    "artifacts/opencode/wave_W23/WAVE_W23_AUDIT_REPORT.md",
+    ".tmp/w23-close/w23-focused-close.txt",
+    ".tmp/w23-close/w23-broad-close.txt"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-FILE-039",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_local_files.py",
+    "src/hpc_gui/wx_remote_files_view.py"
+   ],
+   "test_nodes": [
+    "tests/test_wx_file_actions_behavior.py",
+    "tests/test_wx_remote_file_actions_behavior.py"
+   ],
+   "expected_semantics": "refresh reflects backend: refresh only on success; delete_at guards out-of-origin targets",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W23_WAVE_REPORT.md",
+    "artifacts/opencode/wave_W23/WAVE_W23_AUDIT_REPORT.md",
+    ".tmp/w23-close/w23-focused-close.txt",
+    ".tmp/w23-close/w23-broad-close.txt"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-FILE-040",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "docs/wave-reports/v2/opencode/W23_WAVE_REPORT.md (handoff note; no shared SFTP/session change)"
+   ],
+   "test_nodes": [
+    "tests/test_w23_files_navigation.py"
+   ],
+   "expected_semantics": "handoff: no shared session change in files-context+i18n edit surface",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W23_WAVE_REPORT.md",
+    "artifacts/opencode/wave_W23/WAVE_W23_AUDIT_REPORT.md",
+    ".tmp/w23-close/w23-focused-close.txt",
+    ".tmp/w23-close/w23-broad-close.txt"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-TODO-LIFECYCLE-NATIVE-001",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_local_files.py",
+    "src/hpc_gui/wx_remote_files_view.py"
+   ],
+   "test_nodes": [
+    "tests/test_w23_files_navigation.py::test_w23_local_done_guards_destroyed_notebook__contract",
+    "tests/test_w23_files_navigation.py::test_w23_remote_done_guards_destroyed_notebook__contract"
+   ],
+   "expected_semantics": "native lifecycle guards: notebook.GetSelection probe + except Exception guards in both views",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W23_WAVE_REPORT.md",
+    "artifacts/opencode/wave_W23/WAVE_W23_AUDIT_REPORT.md",
+    ".tmp/w23-close/w23-focused-close.txt",
+    ".tmp/w23-close/w23-broad-close.txt"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-TODO-024",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_local_files.py"
+   ],
+   "test_nodes": [
+    "tests/test_w23_files_navigation.py::test_w23_safe_initial_prefers_saved_valid_location"
+   ],
+   "expected_semantics": "initial dir fallback: saved->home->cwd order",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W23_WAVE_REPORT.md",
+    "artifacts/opencode/wave_W23/WAVE_W23_AUDIT_REPORT.md",
+    ".tmp/w23-close/w23-focused-close.txt",
+    ".tmp/w23-close/w23-broad-close.txt"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-TODO-025",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_local_files.py"
+   ],
+   "test_nodes": [
+    "tests/test_w23_files_navigation.py::test_w23_safe_initial_rejects_source_checkout__falls_back_to_home"
+   ],
+   "expected_semantics": "no source-checkout default: _is_source_checkout rejection",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W23_WAVE_REPORT.md",
+    "artifacts/opencode/wave_W23/WAVE_W23_AUDIT_REPORT.md",
+    ".tmp/w23-close/w23-focused-close.txt",
+    ".tmp/w23-close/w23-broad-close.txt"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-TODO-026",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_local_files.py"
+   ],
+   "test_nodes": [
+    "tests/test_w23_files_navigation.py::test_w23_local_entries_carry_real_mtime__mtime_present"
+   ],
+   "expected_semantics": "LocalEntry.mtime carries real mtime",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W23_WAVE_REPORT.md",
+    "artifacts/opencode/wave_W23/WAVE_W23_AUDIT_REPORT.md",
+    ".tmp/w23-close/w23-focused-close.txt",
+    ".tmp/w23-close/w23-broad-close.txt"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-TODO-027",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_local_files.py"
+   ],
+   "test_nodes": [
+    "tests/test_w23_files_navigation.py::test_w23_file_size_human_readable__bytes_formatted"
+   ],
+   "expected_semantics": "human-readable file sizes via format_local_size",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W23_WAVE_REPORT.md",
+    "artifacts/opencode/wave_W23/WAVE_W23_AUDIT_REPORT.md",
+    ".tmp/w23-close/w23-focused-close.txt",
+    ".tmp/w23-close/w23-broad-close.txt"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-TODO-028",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_local_files.py"
+   ],
+   "test_nodes": [
+    "tests/test_w23_files_navigation.py::test_w23_folder_size_blank__dirs_not_zero"
+   ],
+   "expected_semantics": "blank folder size (dirs not zero)",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W23_WAVE_REPORT.md",
+    "artifacts/opencode/wave_W23/WAVE_W23_AUDIT_REPORT.md",
+    ".tmp/w23-close/w23-focused-close.txt",
+    ".tmp/w23-close/w23-broad-close.txt"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-TODO-029",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_local_files.py"
+   ],
+   "test_nodes": [
+    "tests/test_w23_files_navigation.py::test_w23_forward_history__back_then_forward_restores",
+    "tests/test_w23_files_navigation.py::test_w23_forward_cleared_on_new_navigation__no_stale_forward"
+   ],
+   "expected_semantics": "Forward exposed: LocalBrowserModel history/forward",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W23_WAVE_REPORT.md",
+    "artifacts/opencode/wave_W23/WAVE_W23_AUDIT_REPORT.md",
+    ".tmp/w23-close/w23-focused-close.txt",
+    ".tmp/w23-close/w23-broad-close.txt"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-TODO-030",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_local_files.py"
+   ],
+   "test_nodes": [
+    "tests/test_w23_files_navigation.py::test_w23_forward_history__back_then_forward_restores",
+    "tests/test_w23_files_navigation.py::test_w23_forward_cleared_on_new_navigation__no_stale_forward"
+   ],
+   "expected_semantics": "deterministic Back/Forward/Up enable state per tab (btn_forward wired)",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W23_WAVE_REPORT.md",
+    "artifacts/opencode/wave_W23/WAVE_W23_AUDIT_REPORT.md",
+    ".tmp/w23-close/w23-focused-close.txt",
+    ".tmp/w23-close/w23-broad-close.txt"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-TODO-031",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_shell.py"
+   ],
+   "test_nodes": [
+    "tests/test_wx_local_files.py",
+    "tests/test_wx_transfer_workspace.py"
+   ],
+   "expected_semantics": "balanced splitter read-verified: top_splitter SetSashGravity(0.5) + SetMinimumPaneSize(300); no change needed; surrounding GUI suites green",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W23_WAVE_REPORT.md",
+    "artifacts/opencode/wave_W23/WAVE_W23_AUDIT_REPORT.md",
+    ".tmp/w23-close/w23-focused-close.txt",
+    ".tmp/w23-close/w23-broad-close.txt"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-TODO-033",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_shell.py",
+    "src/hpc_gui/services/transfer_mode.py"
+   ],
+   "test_nodes": [
+    "tests/test_transfer_controller.py",
+    "tests/test_wx_transfer_workspace.py"
+   ],
+   "expected_semantics": "transfer-type/effective-mode: transfer_choice/effective_label/_current_effective_mode over transfer_mode AUTO/BINARY/ASCII",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W23_WAVE_REPORT.md",
+    "artifacts/opencode/wave_W23/WAVE_W23_AUDIT_REPORT.md",
+    ".tmp/w23-close/w23-focused-close.txt",
+    ".tmp/w23-close/w23-broad-close.txt"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  }
+ ],
+ "tests": [
+  {
+   "node": "tests/test_w23_delete_confirm.py::test_w23_delete_summary_names_target",
+   "command": "python -m pytest -q tests/test_w23_delete_confirm.py::test_w23_delete_summary_names_target",
+   "requirement_ids": [
+    "HPC-W06-FILE-035",
+    "HPC-W06-FILE-036"
+   ],
+   "exit_code": 0,
+   "passed": 1,
+   "failed": 0,
+   "skipped": 0,
+   "xfailed": 0,
+   "xpassed": 0,
+   "environment": "Windows 11 / Python 3.12.4 / wxPython 4.3.1; HEAD ccaf871ffc139973db826363859ca2933b216e9c working tree with W23 delete-confirm fix",
+   "timestamp": "2026-09-24T08:41:00Z",
+   "evidence_path": ".tmp/w23-close/w23-focused-close.txt",
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "node": "tests/test_w23_delete_confirm.py::test_w23_delete_message_contains_path_and_names",
+   "command": "python -m pytest -q tests/test_w23_delete_confirm.py::test_w23_delete_message_contains_path_and_names",
+   "requirement_ids": [
+    "HPC-W06-FILE-035",
+    "HPC-W06-FILE-036"
+   ],
+   "exit_code": 0,
+   "passed": 1,
+   "failed": 0,
+   "skipped": 0,
+   "xfailed": 0,
+   "xpassed": 0,
+   "environment": "Windows 11 / Python 3.12.4 / wxPython 4.3.1; HEAD ccaf871ffc139973db826363859ca2933b216e9c working tree with W23 delete-confirm fix",
+   "timestamp": "2026-09-24T08:41:00Z",
+   "evidence_path": ".tmp/w23-close/w23-focused-close.txt",
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "node": "tests/test_w23_delete_confirm.py::test_w23_delete_message_truncates_long_selection",
+   "command": "python -m pytest -q tests/test_w23_delete_confirm.py::test_w23_delete_message_truncates_long_selection",
+   "requirement_ids": [
+    "HPC-W06-FILE-035",
+    "HPC-W06-FILE-036"
+   ],
+   "exit_code": 0,
+   "passed": 1,
+   "failed": 0,
+   "skipped": 0,
+   "xfailed": 0,
+   "xpassed": 0,
+   "environment": "Windows 11 / Python 3.12.4 / wxPython 4.3.1; HEAD ccaf871ffc139973db826363859ca2933b216e9c working tree with W23 delete-confirm fix",
+   "timestamp": "2026-09-24T08:41:00Z",
+   "evidence_path": ".tmp/w23-close/w23-focused-close.txt",
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "node": "tests/test_w23_delete_confirm.py::test_w23_delete_message_empty_falls_back_to_generic",
+   "command": "python -m pytest -q tests/test_w23_delete_confirm.py::test_w23_delete_message_empty_falls_back_to_generic",
+   "requirement_ids": [
+    "HPC-W06-FILE-035",
+    "HPC-W06-FILE-036"
+   ],
+   "exit_code": 0,
+   "passed": 1,
+   "failed": 0,
+   "skipped": 0,
+   "xfailed": 0,
+   "xpassed": 0,
+   "environment": "Windows 11 / Python 3.12.4 / wxPython 4.3.1; HEAD ccaf871ffc139973db826363859ca2933b216e9c working tree with W23 delete-confirm fix",
+   "timestamp": "2026-09-24T08:41:00Z",
+   "evidence_path": ".tmp/w23-close/w23-focused-close.txt",
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "node": "tests/test_w23_delete_confirm.py::test_w23_view_confirm_wiring_mentions_target",
+   "command": "python -m pytest -q tests/test_w23_delete_confirm.py::test_w23_view_confirm_wiring_mentions_target",
+   "requirement_ids": [
+    "HPC-W06-FILE-035",
+    "HPC-W06-FILE-036",
+    "HPC-W06-FILE-037"
+   ],
+   "exit_code": 0,
+   "passed": 1,
+   "failed": 0,
+   "skipped": 0,
+   "xfailed": 0,
+   "xpassed": 0,
+   "environment": "Windows 11 / Python 3.12.4 / wxPython 4.3.1; HEAD ccaf871ffc139973db826363859ca2933b216e9c working tree with W23 delete-confirm fix",
+   "timestamp": "2026-09-24T08:41:00Z",
+   "evidence_path": ".tmp/w23-close/w23-focused-close.txt",
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "node": "tests/test_w23_files_navigation.py::test_w23_local_entries_carry_real_mtime__mtime_present",
+   "command": "python -m pytest -q tests/test_w23_files_navigation.py::test_w23_local_entries_carry_real_mtime__mtime_present",
+   "requirement_ids": [
+    "HPC-W06-TODO-026"
+   ],
+   "exit_code": 0,
+   "passed": 1,
+   "failed": 0,
+   "skipped": 0,
+   "xfailed": 0,
+   "xpassed": 0,
+   "environment": "Windows 11 / Python 3.12.4 / wxPython 4.3.1; HEAD ccaf871ffc139973db826363859ca2933b216e9c working tree with W23 delete-confirm fix",
+   "timestamp": "2026-09-24T08:41:00Z",
+   "evidence_path": ".tmp/w23-close/w23-focused-close.txt",
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "node": "tests/test_w23_files_navigation.py::test_w23_file_size_human_readable__bytes_formatted",
+   "command": "python -m pytest -q tests/test_w23_files_navigation.py::test_w23_file_size_human_readable__bytes_formatted",
+   "requirement_ids": [
+    "HPC-W06-TODO-027"
+   ],
+   "exit_code": 0,
+   "passed": 1,
+   "failed": 0,
+   "skipped": 0,
+   "xfailed": 0,
+   "xpassed": 0,
+   "environment": "Windows 11 / Python 3.12.4 / wxPython 4.3.1; HEAD ccaf871ffc139973db826363859ca2933b216e9c working tree with W23 delete-confirm fix",
+   "timestamp": "2026-09-24T08:41:00Z",
+   "evidence_path": ".tmp/w23-close/w23-focused-close.txt",
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "node": "tests/test_w23_files_navigation.py::test_w23_folder_size_blank__dirs_not_zero",
+   "command": "python -m pytest -q tests/test_w23_files_navigation.py::test_w23_folder_size_blank__dirs_not_zero",
+   "requirement_ids": [
+    "HPC-W06-TODO-028"
+   ],
+   "exit_code": 0,
+   "passed": 1,
+   "failed": 0,
+   "skipped": 0,
+   "xfailed": 0,
+   "xpassed": 0,
+   "environment": "Windows 11 / Python 3.12.4 / wxPython 4.3.1; HEAD ccaf871ffc139973db826363859ca2933b216e9c working tree with W23 delete-confirm fix",
+   "timestamp": "2026-09-24T08:41:00Z",
+   "evidence_path": ".tmp/w23-close/w23-focused-close.txt",
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "node": "tests/test_w23_files_navigation.py::test_w23_safe_initial_rejects_source_checkout__falls_back_to_home",
+   "command": "python -m pytest -q tests/test_w23_files_navigation.py::test_w23_safe_initial_rejects_source_checkout__falls_back_to_home",
+   "requirement_ids": [
+    "HPC-W06-TODO-025"
+   ],
+   "exit_code": 0,
+   "passed": 1,
+   "failed": 0,
+   "skipped": 0,
+   "xfailed": 0,
+   "xpassed": 0,
+   "environment": "Windows 11 / Python 3.12.4 / wxPython 4.3.1; HEAD ccaf871ffc139973db826363859ca2933b216e9c working tree with W23 delete-confirm fix",
+   "timestamp": "2026-09-24T08:41:00Z",
+   "evidence_path": ".tmp/w23-close/w23-focused-close.txt",
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "node": "tests/test_w23_files_navigation.py::test_w23_safe_initial_prefers_saved_valid_location",
+   "command": "python -m pytest -q tests/test_w23_files_navigation.py::test_w23_safe_initial_prefers_saved_valid_location",
+   "requirement_ids": [
+    "HPC-W06-TODO-024"
+   ],
+   "exit_code": 0,
+   "passed": 1,
+   "failed": 0,
+   "skipped": 0,
+   "xfailed": 0,
+   "xpassed": 0,
+   "environment": "Windows 11 / Python 3.12.4 / wxPython 4.3.1; HEAD ccaf871ffc139973db826363859ca2933b216e9c working tree with W23 delete-confirm fix",
+   "timestamp": "2026-09-24T08:41:00Z",
+   "evidence_path": ".tmp/w23-close/w23-focused-close.txt",
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "node": "tests/test_w23_files_navigation.py::test_w23_forward_history__back_then_forward_restores",
+   "command": "python -m pytest -q tests/test_w23_files_navigation.py::test_w23_forward_history__back_then_forward_restores",
+   "requirement_ids": [
+    "HPC-W06-TODO-029",
+    "HPC-W06-TODO-030"
+   ],
+   "exit_code": 0,
+   "passed": 1,
+   "failed": 0,
+   "skipped": 0,
+   "xfailed": 0,
+   "xpassed": 0,
+   "environment": "Windows 11 / Python 3.12.4 / wxPython 4.3.1; HEAD ccaf871ffc139973db826363859ca2933b216e9c working tree with W23 delete-confirm fix",
+   "timestamp": "2026-09-24T08:41:00Z",
+   "evidence_path": ".tmp/w23-close/w23-focused-close.txt",
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "node": "tests/test_w23_files_navigation.py::test_w23_forward_cleared_on_new_navigation__no_stale_forward",
+   "command": "python -m pytest -q tests/test_w23_files_navigation.py::test_w23_forward_cleared_on_new_navigation__no_stale_forward",
+   "requirement_ids": [
+    "HPC-W06-TODO-029",
+    "HPC-W06-TODO-030"
+   ],
+   "exit_code": 0,
+   "passed": 1,
+   "failed": 0,
+   "skipped": 0,
+   "xfailed": 0,
+   "xpassed": 0,
+   "environment": "Windows 11 / Python 3.12.4 / wxPython 4.3.1; HEAD ccaf871ffc139973db826363859ca2933b216e9c working tree with W23 delete-confirm fix",
+   "timestamp": "2026-09-24T08:41:00Z",
+   "evidence_path": ".tmp/w23-close/w23-focused-close.txt",
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "node": "tests/test_w23_files_navigation.py::test_w23_remote_done_guards_destroyed_notebook__contract",
+   "command": "python -m pytest -q tests/test_w23_files_navigation.py::test_w23_remote_done_guards_destroyed_notebook__contract",
+   "requirement_ids": [
+    "HPC-W06-TODO-LIFECYCLE-NATIVE-001"
+   ],
+   "exit_code": 0,
+   "passed": 1,
+   "failed": 0,
+   "skipped": 0,
+   "xfailed": 0,
+   "xpassed": 0,
+   "environment": "Windows 11 / Python 3.12.4 / wxPython 4.3.1; HEAD ccaf871ffc139973db826363859ca2933b216e9c working tree with W23 delete-confirm fix",
+   "timestamp": "2026-09-24T08:41:00Z",
+   "evidence_path": ".tmp/w23-close/w23-focused-close.txt",
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "node": "tests/test_w23_files_navigation.py::test_w23_local_done_guards_destroyed_notebook__contract",
+   "command": "python -m pytest -q tests/test_w23_files_navigation.py::test_w23_local_done_guards_destroyed_notebook__contract",
+   "requirement_ids": [
+    "HPC-W06-TODO-LIFECYCLE-NATIVE-001"
+   ],
+   "exit_code": 0,
+   "passed": 1,
+   "failed": 0,
+   "skipped": 0,
+   "xfailed": 0,
+   "xpassed": 0,
+   "environment": "Windows 11 / Python 3.12.4 / wxPython 4.3.1; HEAD ccaf871ffc139973db826363859ca2933b216e9c working tree with W23 delete-confirm fix",
+   "timestamp": "2026-09-24T08:41:00Z",
+   "evidence_path": ".tmp/w23-close/w23-focused-close.txt",
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "node": "tests/test_paths.py::test_macos_paths_use_application_support_and_logs",
+   "command": "python -m pytest -q tests/test_paths.py::test_macos_paths_use_application_support_and_logs",
+   "requirement_ids": [
+    "HPC-W06-FILE-026"
+   ],
+   "exit_code": 0,
+   "passed": 1,
+   "failed": 0,
+   "skipped": 0,
+   "xfailed": 0,
+   "xpassed": 0,
+   "environment": "Windows 11 / Python 3.12.4 / wxPython 4.3.1; HEAD ccaf871ffc139973db826363859ca2933b216e9c working tree with W23 delete-confirm fix",
+   "timestamp": "2026-09-24T08:41:00Z",
+   "evidence_path": ".tmp/w23-close/w23-broad-close.txt",
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "node": "tests/test_paths.py::test_non_macos_keeps_legacy_path",
+   "command": "python -m pytest -q tests/test_paths.py::test_non_macos_keeps_legacy_path",
+   "requirement_ids": [
+    "HPC-W06-FILE-026"
+   ],
+   "exit_code": 0,
+   "passed": 1,
+   "failed": 0,
+   "skipped": 0,
+   "xfailed": 0,
+   "xpassed": 0,
+   "environment": "Windows 11 / Python 3.12.4 / wxPython 4.3.1; HEAD ccaf871ffc139973db826363859ca2933b216e9c working tree with W23 delete-confirm fix",
+   "timestamp": "2026-09-24T08:41:00Z",
+   "evidence_path": ".tmp/w23-close/w23-broad-close.txt",
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "node": "tests/test_paths.py::test_macos_copies_known_legacy_data_once",
+   "command": "python -m pytest -q tests/test_paths.py::test_macos_copies_known_legacy_data_once",
+   "requirement_ids": [
+    "HPC-W06-FILE-027"
+   ],
+   "exit_code": 0,
+   "passed": 1,
+   "failed": 0,
+   "skipped": 0,
+   "xfailed": 0,
+   "xpassed": 0,
+   "environment": "Windows 11 / Python 3.12.4 / wxPython 4.3.1; HEAD ccaf871ffc139973db826363859ca2933b216e9c working tree with W23 delete-confirm fix",
+   "timestamp": "2026-09-24T08:41:00Z",
+   "evidence_path": ".tmp/w23-close/w23-broad-close.txt",
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "node": "tests/test_paths.py::test_macos_copies_every_supported_legacy_store_once",
+   "command": "python -m pytest -q tests/test_paths.py::test_macos_copies_every_supported_legacy_store_once",
+   "requirement_ids": [
+    "HPC-W06-FILE-028"
+   ],
+   "exit_code": 0,
+   "passed": 1,
+   "failed": 0,
+   "skipped": 0,
+   "xfailed": 0,
+   "xpassed": 0,
+   "environment": "Windows 11 / Python 3.12.4 / wxPython 4.3.1; HEAD ccaf871ffc139973db826363859ca2933b216e9c working tree with W23 delete-confirm fix",
+   "timestamp": "2026-09-24T08:41:00Z",
+   "evidence_path": ".tmp/w23-close/w23-broad-close.txt",
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "node": "tests/test_wx_file_actions_behavior.py",
+   "command": "python -m pytest -q tests/test_wx_file_actions_behavior.py",
+   "requirement_ids": [
+    "HPC-W06-FILE-006",
+    "HPC-W06-FILE-007",
+    "HPC-W06-FILE-008",
+    "HPC-W06-FILE-009",
+    "HPC-W06-FILE-010",
+    "HPC-W06-FILE-011",
+    "HPC-W06-FILE-012",
+    "HPC-W06-FILE-013",
+    "HPC-W06-FILE-037",
+    "HPC-W06-FILE-038",
+    "HPC-W06-FILE-039"
+   ],
+   "exit_code": 0,
+   "passed": 12,
+   "failed": 0,
+   "skipped": 0,
+   "xfailed": 0,
+   "xpassed": 0,
+   "environment": "Windows 11 / Python 3.12.4 / wxPython 4.3.1; HEAD ccaf871ffc139973db826363859ca2933b216e9c working tree with W23 delete-confirm fix",
+   "timestamp": "2026-09-24T08:41:00Z",
+   "evidence_path": ".tmp/w23-close/w23-broad-close.txt",
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "node": "tests/test_wx_file_context_matrix.py",
+   "command": "python -m pytest -q tests/test_wx_file_context_matrix.py",
+   "requirement_ids": [
+    "HPC-W06-FILE-006",
+    "HPC-W06-FILE-013",
+    "HPC-W06-FILE-014",
+    "HPC-W06-FILE-021",
+    "HPC-W06-FILE-025"
+   ],
+   "exit_code": 0,
+   "passed": 10,
+   "failed": 0,
+   "skipped": 0,
+   "xfailed": 0,
+   "xpassed": 0,
+   "environment": "Windows 11 / Python 3.12.4 / wxPython 4.3.1; HEAD ccaf871ffc139973db826363859ca2933b216e9c working tree with W23 delete-confirm fix",
+   "timestamp": "2026-09-24T08:41:00Z",
+   "evidence_path": ".tmp/w23-close/w23-broad-close.txt",
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "node": "tests/test_provider_path_resolver.py",
+   "command": "python -m pytest -q tests/test_provider_path_resolver.py",
+   "requirement_ids": [
+    "HPC-W06-FILE-026",
+    "HPC-W06-FILE-027",
+    "HPC-W06-FILE-028",
+    "HPC-W06-FILE-029",
+    "HPC-W06-FILE-030",
+    "HPC-W06-FILE-031",
+    "HPC-W06-FILE-032",
+    "HPC-W06-FILE-033",
+    "HPC-W06-FILE-034"
+   ],
+   "exit_code": 0,
+   "passed": 2,
+   "failed": 0,
+   "skipped": 0,
+   "xfailed": 0,
+   "xpassed": 0,
+   "environment": "Windows 11 / Python 3.12.4 / wxPython 4.3.1; HEAD ccaf871ffc139973db826363859ca2933b216e9c working tree with W23 delete-confirm fix",
+   "timestamp": "2026-09-24T08:41:00Z",
+   "evidence_path": ".tmp/w23-close/w23-broad-close.txt",
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "node": "tests/test_wx_local_files.py",
+   "command": "python -m pytest -q tests/test_wx_local_files.py",
+   "requirement_ids": [
+    "HPC-W06-FILE-006",
+    "HPC-W06-FILE-007",
+    "HPC-W06-FILE-008",
+    "HPC-W06-FILE-009",
+    "HPC-W06-FILE-010",
+    "HPC-W06-FILE-011",
+    "HPC-W06-FILE-012",
+    "HPC-W06-FILE-013",
+    "HPC-W06-TODO-031"
+   ],
+   "exit_code": 0,
+   "passed": 7,
+   "failed": 0,
+   "skipped": 0,
+   "xfailed": 0,
+   "xpassed": 0,
+   "environment": "Windows 11 / Python 3.12.4 / wxPython 4.3.1; HEAD ccaf871ffc139973db826363859ca2933b216e9c working tree with W23 delete-confirm fix",
+   "timestamp": "2026-09-24T08:41:00Z",
+   "evidence_path": ".tmp/w23-close/w23-broad-close.txt",
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "node": "tests/test_wx_remote_files.py",
+   "command": "python -m pytest -q tests/test_wx_remote_files.py",
+   "requirement_ids": [
+    "HPC-W06-FILE-014",
+    "HPC-W06-FILE-015",
+    "HPC-W06-FILE-016",
+    "HPC-W06-FILE-017",
+    "HPC-W06-FILE-018",
+    "HPC-W06-FILE-019",
+    "HPC-W06-FILE-020",
+    "HPC-W06-FILE-021"
+   ],
+   "exit_code": 0,
+   "passed": 4,
+   "failed": 0,
+   "skipped": 0,
+   "xfailed": 0,
+   "xpassed": 0,
+   "environment": "Windows 11 / Python 3.12.4 / wxPython 4.3.1; HEAD ccaf871ffc139973db826363859ca2933b216e9c working tree with W23 delete-confirm fix",
+   "timestamp": "2026-09-24T08:41:00Z",
+   "evidence_path": ".tmp/w23-close/w23-broad-close.txt",
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "node": "tests/test_transfer_controller.py",
+   "command": "python -m pytest -q tests/test_transfer_controller.py",
+   "requirement_ids": [
+    "HPC-W06-FILE-022",
+    "HPC-W06-FILE-023",
+    "HPC-W06-FILE-024",
+    "HPC-W06-TODO-033"
+   ],
+   "exit_code": 0,
+   "passed": 4,
+   "failed": 0,
+   "skipped": 0,
+   "xfailed": 0,
+   "xpassed": 0,
+   "environment": "Windows 11 / Python 3.12.4 / wxPython 4.3.1; HEAD ccaf871ffc139973db826363859ca2933b216e9c working tree with W23 delete-confirm fix",
+   "timestamp": "2026-09-24T08:41:00Z",
+   "evidence_path": ".tmp/w23-close/w23-broad-close.txt",
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "node": "tests/test_wx_transfer_workspace.py",
+   "command": "python -m pytest -q tests/test_wx_transfer_workspace.py",
+   "requirement_ids": [
+    "HPC-W06-TODO-033"
+   ],
+   "exit_code": 0,
+   "passed": 2,
+   "failed": 0,
+   "skipped": 0,
+   "xfailed": 0,
+   "xpassed": 0,
+   "environment": "Windows 11 / Python 3.12.4 / wxPython 4.3.1; HEAD ccaf871ffc139973db826363859ca2933b216e9c working tree with W23 delete-confirm fix",
+   "timestamp": "2026-09-24T08:41:00Z",
+   "evidence_path": ".tmp/w23-close/w23-broad-close.txt",
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "node": "tests/test_file_filter_registry.py",
+   "command": "python -m pytest -q tests/test_file_filter_registry.py",
+   "requirement_ids": [
+    "HPC-W06-FILE-006",
+    "HPC-W06-FILE-014"
+   ],
+   "exit_code": 0,
+   "passed": 23,
+   "failed": 0,
+   "skipped": 0,
+   "xfailed": 0,
+   "xpassed": 0,
+   "environment": "Windows 11 / Python 3.12.4 / wxPython 4.3.1; HEAD ccaf871ffc139973db826363859ca2933b216e9c working tree with W23 delete-confirm fix",
+   "timestamp": "2026-09-24T08:41:00Z",
+   "evidence_path": ".tmp/w23-close/w23-broad-close.txt",
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "node": "tests/test_wx_remote_file_actions_behavior.py",
+   "command": "python -m pytest -q tests/test_wx_remote_file_actions_behavior.py",
+   "requirement_ids": [
+    "HPC-W06-FILE-014",
+    "HPC-W06-FILE-015",
+    "HPC-W06-FILE-016",
+    "HPC-W06-FILE-017",
+    "HPC-W06-FILE-018",
+    "HPC-W06-FILE-019",
+    "HPC-W06-FILE-020",
+    "HPC-W06-FILE-021",
+    "HPC-W06-FILE-037",
+    "HPC-W06-FILE-038",
+    "HPC-W06-FILE-039"
+   ],
+   "exit_code": 0,
+   "passed": 28,
+   "failed": 0,
+   "skipped": 0,
+   "xfailed": 0,
+   "xpassed": 0,
+   "environment": "Windows 11 / Python 3.12.4 / wxPython 4.3.1; HEAD ccaf871ffc139973db826363859ca2933b216e9c working tree with W23 delete-confirm fix",
+   "timestamp": "2026-09-24T08:41:00Z",
+   "evidence_path": ".tmp/w23-close/w23-broad-close.txt",
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  }
+ ],
+ "gui_actions": [
+  {
+   "status": "FULL",
+   "source_binding": "src/hpc_gui/wx_local_files.py delete branch + src/hpc_gui/wx_remote_files_view.py delete branch via per-view _delete_confirm_text backed by services/file_context_actions.summarize_delete_targets/delete_confirm_message",
+   "runtime_test_node": "tests/test_w23_delete_confirm.py::test_w23_view_confirm_wiring_mentions_target",
+   "observed_readback": "confirm text names target count/location/items, truncates long selections with +N more, falls back to generic string on empty selection (5/5 delete-confirm nodes green; wx 4.3.1 behavior suites 96 passed 1 pre-existing symlink skip)",
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  }
+ ],
+ "resources": [],
+ "artifacts": [
+  {
+   "path": "docs/wave-reports/v2/opencode/W23_WAVE_REPORT.md",
+   "identity": "canonical W23 wave report at candidate ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "path": "artifacts/opencode/wave_W23/WAVE_W23_AUDIT_REPORT.md",
+   "identity": "controller-persisted fresh independent audit PASS for W23 at same candidate"
+  }
+ ],
+ "review_passes": {
+  "diff_check": "PASS",
+  "claim_source_review": "PASS",
+  "independent_audit": "PASS"
+ },
+ "contradiction_scan": {
+  "unresolved": []
+ },
+ "blockers": [],
+ "deferred_items": [],
+ "validator_result": {
+  "state": "ACCEPTANCE_GREEN",
+  "reason": "close: 14 focused + 96 broad (1 pre-existing symlink skip in test_paths.py) green at candidate HEAD; fresh independent audit PASS bound to same candidate; git diff --check clean on owned paths"
+ }
+}

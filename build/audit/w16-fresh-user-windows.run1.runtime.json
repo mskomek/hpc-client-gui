@@ -12,8 +12,8 @@
     "clean_shutdown": "PASS"
   },
   "details": {
-    "fresh_root": "C:\\Users\\mskomek\\AppData\\Local\\Temp\\hpc-fresh-user-dpcf2fnb\\config",
-    "app_data_dir": "C:\\Users\\mskomek\\AppData\\Local\\Temp\\hpc-fresh-user-dpcf2fnb\\config",
+    "fresh_root": "D:\\Projeler\\hpc-client-gui\\.tmp\\os\\20260922-103254-9af3da2d\\hpc-fresh-user-doeup7e1\\config",
+    "app_data_dir": "D:\\Projeler\\hpc-client-gui\\.tmp\\os\\20260922-103254-9af3da2d\\hpc-fresh-user-doeup7e1\\config",
     "frozen": true,
     "executable": "D:\\Projeler\\hpc-client-gui\\dist\\hpc-client-gui\\hpc-client-gui.exe"
   },

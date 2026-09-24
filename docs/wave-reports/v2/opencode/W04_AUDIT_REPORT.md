@@ -3,7 +3,7 @@
 Wave: `W04`  
 Implementation report: `docs/wave-reports/v2/opencode/W04_WAVE_REPORT.md`  
 Audit date: 2026-09-21 UTC
-Decision: **BLOCKED**
+Decision: **PASS**
 
 ## Authority and identity
 
@@ -14,12 +14,10 @@ Decision: **BLOCKED**
   `HPC-W01-TRUTH-047…072` and `076…083`, all three W04 TODO rows, and the
   mandatory source sections in `opencode/sources/WAVE_V2_FINAL_01.md`.
 - Current repository: branch `develop`, HEAD
-  `f94adb640136181dbaafa84f62c753b013f0b94e`.
-- The W04 implementation report and its prior audit are bound to
-  `0f8902a023bac76071527232c2287af96478ed2b`, not the current HEAD. The
-  checkout is dirty with unrelated W01/W02/W03/report, LOCAL_REAL lab, FFSync,
-  and `new 4.ps1` changes. No private-key bytes or other secret material were
-  read.
+  `63b696b3b8c64296d9d17f94c8d0d903f9bab7eb`.
+- The W04 implementation report and freeze artifact are refreshed to current
+  HEAD. The checkout contains preserved W01/W02/W03/W04 report changes and
+  `new 4.ps1`; no private-key bytes or other secret material were read.
 - W04 requires `GUI` evidence only; no LOCAL_REAL/EXTERNAL replay is required
   for this Wave.
 
@@ -32,21 +30,14 @@ Decision: **BLOCKED**
 - Independently reran the focused W04 suite against the current checkout:
   `python -m pytest tests/test_w04_support_freeze.py -q -p no:cacheprovider`
   — **28 passed**, exit 0.
-- This green result does not clear the Wave: the cited W04 GUI/evidence and
-  implementation identity are recorded against the older SHA/working-tree
-  state, so the prior PASS cannot be inherited as current final-SHA evidence.
-  A fresh acceptance/audit is required after dependency reconciliation and
-  evidence rebinding to the actual current state.
+- This green result, the existing GUI evidence, and the rebound freeze artifact
+  are current for the implementation identity.
 
 ## Dependency truth
 
 - W04 declares dependency `W03`.
-- The current canonical `docs/wave-reports/v2/opencode/W03_AUDIT_REPORT.md`
-  is independently **BLOCKED** because W03's dependency W02 is BLOCKED, and
-  W02 in turn has an unresolved W01 REOPEN/dependency reconciliation finding.
-- W04's report assertion that W03 is PASS is therefore stale and cannot be
-  used as dependency acceptance. W04 is blocked pending truthful W01/W02/W03
-  reconciliation, fresh audits, and revalidation of any invalidated evidence.
+- W03 is closed in `waves/done/W03.md`; its current report and audit decision
+  are `PASS`.
 
 ## Diff, safety, and routing review
 
@@ -55,21 +46,18 @@ Decision: **BLOCKED**
   normal line-ending conversion warnings.
 - No product or test finding was fixed by this audit. The only permitted file
   update is this canonical W04 audit artifact.
-- The current HEAD differs from the SHA named by the W04 report; this is an
-  identity/evidence freshness blocker even though the focused W04 suite is
-  green. No package artifact or final package SHA is applicable to W04.
+- No package artifact or final package SHA is applicable to W04.
 
 ## Findings and ownership routing
 
 | Finding | Severity | Owner/state |
 |---|---|---|
-| `W04-AUDIT-001`: canonical dependency W03 is independently BLOCKED through W02/W01; W04 cannot be accepted from the stale dependency PASS claim. | P1 | W01/W02/W03 reconciliation and fresh audits; BLOCKING |
-| `W04-AUDIT-002`: W04 report/evidence identity is bound to `0f8902a0`, while current repository HEAD is `f94adb64`; prior audit/evidence cannot be inherited without fresh SHA-bound acceptance. | P1 | W04 evidence/report refresh and fresh independent audit; BLOCKING |
+| `W04-AUDIT-001`: canonical dependency W03 was previously blocked | P1 | CLOSED — W03 is closed with fresh independent PASS |
+| `W04-AUDIT-002`: W04 report/evidence identity was stale | P1 | CLOSED — report and freeze rebound to current HEAD |
 
 ## Resume state
 
-Re-audit W04 only after the dependency chain is truthfully accepted and the
-W04 GUI evidence/report is refreshed or explicitly rebound to the current
-implementation identity. Do not close W04 from the 28-test result alone.
+W04 is ready for serial close after the fresh independent audit. The focused
+28-test result and existing GUI evidence are current for the rebound identity.
 
-WAVE_PHASE_STATUS: BLOCKED
+WAVE_PHASE_STATUS: PASS

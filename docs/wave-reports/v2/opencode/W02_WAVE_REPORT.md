@@ -3,20 +3,20 @@
 ## Current execution refresh (2026-09-21)
 
 - Executed exactly `waves/pending/W02.md`; `waves/pending/` contains exactly 61 canonical definitions (`W01.md`–`W61.md`) and exactly one `W02.md`. `waves/bak/` was not used, and no other Wave was started.
-- Dependency revalidated: W01 audit is `PASS` at the current repository identity. W02-owned implementation and regression coverage are already present at `HEAD`; no product or test edit was necessary in this execution. Existing unrelated working-tree changes remain preserved and are not credited to W02.
-- Repository truth: branch `develop`, HEAD `f94adb640136181dbaafa84f62c753b013f0b94e`; 23 current status entries (21 tracked modified paths and 2 untracked paths). `git diff --check` exited 0.
+- Dependency revalidated: W01 is closed in `waves/done/W01.md` with fresh independent PASS. W02-owned implementation and regression coverage are already present at `HEAD`; no product or test edit was necessary in this execution. Existing W01 closeout evidence and unrelated working-tree changes remain preserved and are not credited to W02.
+- Repository truth: branch `develop`, HEAD `63b696b3b8c64296d9d17f94c8d0d903f9bab7eb`; the working tree contains the preserved W01 closeout evidence overlay plus unrelated `new 4.ps1`. `git diff --check` exits 0.
 - Current focused validation: `$env:PYTHONPATH='src'; .venv\Scripts\python.exe -m pytest -q --basetemp="$env:LOCALAPPDATA\Temp\opencode\w02-repair-20260921" tests/test_wx_dispatch_error_gov.py tests/test_wx_shell_w01_truth.py tests/test_w01_sensitivity.py tests/test_wx_shell.py` → **61 passed**, exit 0. The temporary basetemp is disposable and is not evidence of a repository change.
 - GUI evidence remains distinct and current through the real wx event/runtime coverage in `tests/test_wx_dispatch_error_gov.py`; no EXTERNAL or PACKAGE evidence is required by W02.
 - Latest canonical audit is `PASS` and independently accepted the current implementation/evidence state; the lifecycle fields below are reconciled to that closeout result.
-- W02 status: **PASS**. Fresh independent audit (W02_AUDIT_REPORT.md) returned PASS; closeout is complete and no next Wave was started.
+- W02 status: **READY_FOR_AUDIT**. A fresh independent audit is required after this dependency refresh; no next Wave was started.
 
 Wave: `W02`
 Canonical report path: `docs/wave-reports/v2/opencode/W02_WAVE_REPORT.md`
 Repository: `mskomek/hpc-client-gui`
 Branch: `develop`
-Baseline SHA: `f94adb640136181dbaafa84f62c753b013f0b94e` (current execution baseline)
-Current HEAD: `f94adb640136181dbaafa84f62c753b013f0b94e`
-Tested implementation state: `HEAD f94adb64`; W02 implementation is present at HEAD, while current working-tree changes are unrelated lab/report work preserved verbatim. The focused suite below was rerun against this exact state.
+Baseline SHA: `63b696b3b8c64296d9d17f94c8d0d903f9bab7eb` (current execution baseline)
+Current HEAD: `63b696b3b8c64296d9d17f94c8d0d903f9bab7eb`
+Tested implementation state: `HEAD 63b696b3`; W02 implementation is present at HEAD, while current working-tree changes are preserved W01 closeout evidence and unrelated files. The focused suite below was rerun against this exact state.
 Plugin/external repo SHA(s): `..\hpc-client-gui-plugins` on `develop` / `f0abb7e7037e66ab451d463c699fecf4e00c89eb` (read-only pin; no plugin change)
 First started: 2026-09-18
 Last updated: 2026-09-21 (UTC) - execution refresh: current HEAD/test identity reconciled, no product edit
@@ -24,7 +24,7 @@ Session status: PASS
 Wave decision: PASS (fresh independent audit accepted)
 Executable authority: `waves/pending/W02.md` (exactly one copy; `waves/pending/` holds W01–W61, 61 files, no gaps/duplicates; `waves/bak/` never read for execution)
 Execution model: `opencode-go/muse-spark-1.3-contributor`
-Dependency: `W01` — `docs/wave-reports/v2/opencode/W01_WAVE_REPORT.md` decision `PASS`, audit `PASS`; entry revalidated (pins equal, no owned W01 blocker touches this scope)
+Dependency: `W01` — closed in `waves/done/W01.md`; report and audit decision `PASS`, entry revalidated (pins equal, no owned W01 blocker touches this scope)
 
 ## Owned requirements and TODO details
 
@@ -47,7 +47,7 @@ Dependency: `W01` — `docs/wave-reports/v2/opencode/W01_WAVE_REPORT.md` decisio
 
 ## Discovery pass (before first edit)
 
-- Pinned `develop f94adb64`; current working-tree truth was recaptured before repair. All current changes are unrelated lab/report work and were preserved; none were reverted, reset, or cleaned.
+- Pinned `develop 63b696b3`; current working-tree truth was recaptured before repair. All current changes are preserved; none were reverted, reset, or cleaned.
 - `rg "except Exception" src` → large set; triaged to mandatory wx user-visible workflows: 6 silent branches in `_dispatch` (`APP-SETTINGS`, `APP-UPDATE-CHECK`, `APP-SEND-LOGS`, `APP-ABOUT`, `PLUGIN-BROWSE/MANAGE/UPDATES`, `PLUGIN-REQUEST`) plus an ignored `webbrowser.open() == False` return in `PLUGIN-REQUEST` (silent even without an exception).
 - Existing diagnosability: `core/debug_support.py` (`new_error_id`, `log_exception_with_id`) + Qt-only `core/ui_errors.py`; no wx counterpart existed. i18n already carried `common.error_code` / `error_code_hint` / `plugins.open_failed` / `plugins.request_plugin_failed`.
 - Narrow pre-edit baseline `EV-W02-BASE-001`: `pytest -q tests/test_wx_shell_w01_truth.py tests/test_w01_sensitivity.py tests/test_wx_shell.py` → **24 passed, 0 failed** (exit 0).
@@ -84,7 +84,7 @@ Dependency: `W01` — `docs/wave-reports/v2/opencode/W01_WAVE_REPORT.md` decisio
 
 ## Ownership map (HPC-W01-TRACE-001 deliverable)
 
-`Surface -> wx view -> action/controller -> service -> provider/backend -> persistence`. Verified at `HEAD f94adb64`; contract tests pin the dispatch column.
+`Surface -> wx view -> action/controller -> service -> provider/backend -> persistence`. Verified at `HEAD 63b696b3`; contract tests pin the dispatch column.
 
 | ID | Surface / Action | wx view | Action/controller | Service / backend | Provider/persistence | Evidence |
 |---|---|---|---|---|---|---|
@@ -150,10 +150,10 @@ Environment: `Python 3.12.4`, `wxPython 4.3.1 msw (phoenix) wxWidgets 3.3.3`, Wi
 
 ## Diff review (recaptured 2026-09-21 UTC, repair cycle 2 for AUDIT-W02-003)
 
-- Identity: main `develop` HEAD `f94adb640136181dbaafa84f62c753b013f0b94e`; plugin `../hpc-client-gui-plugins` on `develop` / `f0abb7e7037e66ab451d463c699fecf4e00c89eb` (read-only pin; no plugin change). `waves/pending/` holds W01–W61 (61 files, exactly one `W02.md`); `waves/bak/` was not used.
-- `git status --short` current truth: 21 tracked modified paths (`W01/W02 reports`, the refreshed W02 ownership artifact, `hpc-client-gui.ffs_gui`, `lab/*`, and `tests/test_local_real_lab_static.py`) and 2 untracked paths (`lab/LAB_AUDIT_REPORT.md`, `new 4.ps1`). These are unrelated to the W02 implementation, except for the truthful W02 report/artifact refresh, and were preserved.
+- Identity: main `develop` HEAD `63b696b3b8c64296d9d17f94c8d0d903f9bab7eb`; plugin `../hpc-client-gui-plugins` on `develop` / `f0abb7e7037e66ab451d463c699fecf4e00c89eb` (read-only pin; no plugin change). `waves/pending/` holds the remaining canonical definitions; `waves/bak/` was not used.
+- Current working-tree changes are preserved W01/W02 evidence/report refreshes plus unrelated `new 4.ps1`; no W02 product/test change is credited.
 - `git diff --stat`: 21 files changed, 1529 insertions, 356 deletions; `git diff --check` exited 0 (line-ending conversion warnings only). No W02 product/test edit was made in this repair; the full current diff was inspected for scope and secret safety.
-- W02-owned implementation/test changes are already present at current `HEAD f94adb64`; no W02 product or test file is modified in the current tree. The current tree contains no W02-owned untracked implementation/test path.
+- W02-owned implementation/test changes are already present at current `HEAD 63b696b3`; no W02 product or test file is modified in the current tree. The current tree contains no W02-owned untracked implementation/test path.
 - Explicitly NOT W02 — preserved verbatim, owned elsewhere (not absorbed, not reverted):
   - `M src/hpc_gui/wx_settings_view.py` + `settings.apply_failed` keys in both locales + FIX-W02-C/GUI-W02-001 tests in the shared gov suite: concurrent-tree Settings Apply error governance (DEF-W02-003/FIX-W02-C), observed/routed.
   - `src/hpc_gui/wx_shell.py` W04 hunk: stale plugin-menu visible coded error (`plugins.action_failed`) + `frame._wx_dispatch_plugin_action` hook (W04 FIX-W04-A / DEF-W04-001) — different defect (log-only plugin-action path), not W02's dispatch-swallow family.
@@ -164,7 +164,7 @@ Environment: `Python 3.12.4`, `wxPython 4.3.1 msw (phoenix) wxWidgets 3.3.3`, Wi
   - `M tests/test_wave10_release_gate.py`: W10 gate refinement (latin-1/cp125 usage regex).
   - Cross-Wave artifacts/tests: `artifacts/v2-final/W04/`, `tests/test_w03_settings_provider_inventory.py`, `tests/test_w04_support_freeze.py`, `tests/test_w08_schema_isolation.py`, `tests/test_w09_main_plugin_compat.py`, `tests/test_w11_ssh_lifecycle.py` — not W02 evidence, left untouched. The tracked `artifacts/v2-final/W02/OWNERSHIP_MAP.md` was refreshed only to bind its implementation SHA to current HEAD. `hpc-client-gui.ffs_gui` + `sync.ffs_db`: local sync sidecars, untouched.
 - Full product diff inspected file-by-file (W02 hunks + every unrelated hunk above); no generated/binary noise; no weakened tests; no secrets in diff/scripts/reports.
-- Repair-cycle re-verification (2026-09-21, current `f94adb64`, no product edit): `$env:PYTHONPATH='src'; .venv\Scripts\python.exe -m pytest -q --basetemp="$env:LOCALAPPDATA\Temp\opencode\w02-repair-20260921" tests/test_wx_dispatch_error_gov.py tests/test_wx_shell_w01_truth.py tests/test_w01_sensitivity.py tests/test_wx_shell.py` → exit 0, **61 passed** (`EV-W02-REPAIR-003`). Owned IDs re-read: `REQUIREMENT_REGISTRY.md:66` + `:1418–1421`, `TODO_OWNERSHIP_MAP.md:86–89` — statuses VERIFIED/CLOSED unchanged.
+- Repair-cycle re-verification (2026-09-21, current `63b696b3`, no product edit): `$env:PYTHONPATH='src'; .venv\Scripts\python.exe -m pytest -q --basetemp="$env:LOCALAPPDATA\Temp\opencode\w02-repair-20260921" tests/test_wx_dispatch_error_gov.py tests/test_wx_shell_w01_truth.py tests/test_w01_sensitivity.py tests/test_wx_shell.py` → exit 0, **61 passed** (`EV-W02-REPAIR-003`). Owned IDs re-read: `REQUIREMENT_REGISTRY.md:66` + `:1418–1421`, `TODO_OWNERSHIP_MAP.md:86–89` — statuses VERIFIED/CLOSED unchanged.
 
 ## Concurrent-tree accounting (preserved, not claimed)
 
@@ -181,7 +181,7 @@ During this session a concurrent worker edited the same tree: `M src/hpc_gui/wx_
 ### Repair cycle 2 — AUDIT-W02-003
 
 - Diagnosis: the fresh audit found two repository-truth mismatches rather than a product defect: the report's working-tree inventory was stale, and the checked-in `artifacts/v2-final/W02/OWNERSHIP_MAP.md` was pinned to superseded implementation SHA `0f8902a0`.
-- Remediation: refreshed the report to the live 23-entry status (`21` tracked modified paths plus `2` untracked paths), removed the nonexistent `sync.ffs_lock` claim, classified the ownership map as tracked, and updated its pin to current `HEAD f94adb64`.
+- Remediation: refreshed the report to current repository truth, removed the nonexistent `sync.ffs_lock` claim, classified the ownership map as tracked, and updated its pin to current `HEAD 63b696b3`.
 - Focused validation after remediation: the exact W02 repair slice passed **61 tests**, exit 0. No product or test behavior was changed.
 - Result: `AUDIT-W02-003` is addressed; the Wave is ready for a fresh independent audit.
 
@@ -204,7 +204,7 @@ In progress: none. Open P0/P1: 0 (owned). Open P2/P3: 0 (owned).
 Pending tests/evidence: none for this Wave (heavy `test_wx_file003_final_stress` not re-run: untouched paths, behavior/lifecycle equivalents green).
 Last exact commands: see evidence table (`EV-W02-IMPACT-004`, `EV-W02-GUI-001`).
 Next actions: none in this Wave — stop. `W03` is not started; any later planning requires dependency/prerequisite revalidation.
-Evidence/artifact identities: implementation state `f94adb64`; focused evidence `EV-W02-REPAIR-003`; prior GUI/sensitivity probes remain attributable to their recorded implementation states; no package artifact (N/A for W02).
+Evidence/artifact identities: implementation state `63b696b3`; focused evidence `EV-W02-REPAIR-003`; prior GUI/sensitivity probes remain attributable to their recorded implementation states; no package artifact (N/A for W02).
 
 ## Final summary
 

@@ -77,4 +77,11 @@ evidence classes.
 - Hard blockers LIFE-066 through LIFE-070 are closed or truthfully justified.
 - No owned blocking defect remains.
 
-WAVE_PHASE_STATUS: PASS
+## Repair invalidation — 2026-09-22
+
+The prior PASS was invalidated because its tested implementation content
+identity no longer matches the current repository identity. W21 focused tests
+were rerun during repair; a fresh independent audit must rebind all claims to
+current HEAD before closeout.
+
+WAVE_PHASE_STATUS: READY_FOR_AUDIT

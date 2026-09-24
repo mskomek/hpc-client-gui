@@ -5,15 +5,20 @@ Canonical report path: `docs/wave-reports/v2/opencode/W09_WAVE_REPORT.md`
 Repository: `mskomek/hpc-client-gui`
 Branch: `develop`
 Baseline SHA: `0f8902a023bac76071527232c2287af96478ed2b` (== `origin/develop` tip at session start)
-Current HEAD: `0f8902a023bac76071527232c2287af96478ed2b` (no commit made this session or repair cycle; changes uncommitted per `HPC-GOV-002`)
-Tested implementation identity (repair cycle 1, immutable): HEAD `0f8902a023bac76071527232c2287af96478ed2b` (== `origin/develop`) + working-tree diff SHA-256 `BAE26D91531BBDC7A01E1A068FEF95E47629B3C82D16F3B1F317B2B4DEEB1784` (uncommitted `git diff`, 38916 bytes, captured `2026-09-19 18:4x +03:00` before repair evidence; no staged changes — staged-diff SHA-256 `e3b0c44…` is the empty-tree hash). All repair-cycle evidence below was re-run on exactly this tree. Full `git status`/`git diff --numstat` recaptured in this cycle (14 modified tracked files + 12 untracked; only `src/hpc_gui/plugins/validator.py` + new `tests/test_w09_main_plugin_compat.py` are W09-owned; rest pre-existing unrelated, preserved untouched).
+Current HEAD: `63b696b3b8c64296d9d17f94c8d0d903f9bab7eb` (current `develop` integration identity)
+Tested implementation identity (repair cycle 3): HEAD `63b696b3b8c64296d9d17f94c8d0d903f9bab7eb` + uncommitted working-tree diff excluding the two W09 report files, LF-normalized UTF-8 SHA-256 `DC4A289EC4248ECC9818FF1005376F88658CAA9EC4674BEE41B3A9335EC3AD36` (102437 bytes, captured 2026-09-22; unrelated user changes preserved). Focused evidence below was re-run on this tree.
 Plugin/external repo SHA(s): `D:\Projeler\hpc-client-gui-plugins` on `develop` / `f0abb7e7037e66ab451d463c699fecf4e00c89eb` (read-only pin; no plugin change; working tree clean except pre-existing untracked `.github/social-preview.jpg`)
 First started: 2026-09-19
-Last updated: 2026-09-19 (repair cycle 1 of max 2 — AUD-W09-001 + AUD-W09-002 addressed)
-Session status: READY_FOR_AUDIT (repair cycle 1)
+Last updated: 2026-09-22 (repair cycle 3 — AUD-W09-003 + AUD-W09-005 addressed)
+Session status: READY_FOR_AUDIT (repair cycle 3)
+Evidence refresh: 2026-09-22; AUD-W09-003 reconciled against current HEAD.
 Wave decision: GO (single substantive in-scope blocker closed; valid per `HPC-GOV-017` — no minimum fix quota; W08 set the same precedent)
 
 Runtime truth: Python `3.12.4`, wx `4.3.1 msw (phoenix) wxWidgets 3.3.3`, `src/hpc_gui/runtime.py` `DEFAULT_GUI_RUNTIME="qt"`.
+
+## Current reconciliation (repair cycle 3)
+
+The current authoritative identity supersedes the 2026-09-19 entries below: HEAD `63b696b3b8c64296d9d17f94c8d0d903f9bab7eb`, LF-normalized working-tree diff excluding the two W09 report files `DC4A289EC4248ECC9818FF1005376F88658CAA9EC4674BEE41B3A9335EC3AD36` (102437 bytes), focused W09 validation **117 passed**, wheel `0AAE28868BFCA1BD9DF3C9577C2A60BDB52A2DF35CD8DC7DBC2585B169263EE1` (907971 bytes), sdist `FABED99E1B43C391C8A612D5EBEED0F241454A59A15075BF8E147B89CAF6391D` (1334520 bytes). `AUD-W09-003` and `AUD-W09-005` are reconciled; report is ready for fresh audit.
 
 ## Objective
 
@@ -25,7 +30,7 @@ All `HPC-W02-XREPO-001…021, 023…030, 041…045` and TODOs `PLUGIN-PIN-001`, 
 
 ## Baseline capture (pre-edit, both repos)
 
-Main: branch `develop`; `git rev-parse HEAD` = `0f8902a023bac76071527232c2287af96478ed2b`; `git rev-parse origin/develop` identical; working tree dirty with pre-existing unrelated changes (W08 validator/loader work, i18n, wx shell/settings, release-gate test + untracked W08 test file) — all preserved, none touched except `validator.py` one-line FIX-A layered on top.
+Main: branch `develop`; `git rev-parse HEAD` = `63b696b3b8c64296d9d17f94c8d0d903f9bab7eb`; working tree dirty with pre-existing unrelated changes — all preserved. No unrelated files were touched by this repair.
 Plugin: branch `develop`; HEAD `f0abb7e7037e66ab451d463c699fecf4e00c89eb`; clean except pre-existing untracked `.github/social-preview.jpg`.
 
 Narrow pre-edit baseline `EV-W09-BASE-001`: `test_wave_v2_02_provider_contract + test_provider_capabilities + test_plugin_compatibility_override + test_plugin_schema_compat` → **40 passed**, exit 0.
@@ -82,14 +87,14 @@ Negative test: NEG-W09-001/002/003. �
 Narrow-suite result: `EV-W09-FIX-001` 81 passed (new 6 + provider/plugin/schema/contract suites incl. live-checkout contract vs `f0abb7e7`), exit 0. �
 Broader-suite result: `EV-W09-REG-001` **221 passed / 26 env-gated skips**, exit 0. �
 Runtime/manual result: `EV-W09-GUI-001` **10/10** real-wx checks, exit 0 (capability rows, absent-vs-disabled labels, 2× `EVT_BUTTON` round-trips, honest unsupported contract, loader shape, clean teardown). �
-Package result: SATISFIED by `EV-W09-PKG-001` — exact wheel `hpc_client_gui-1.5.9-py3-none-any.whl` (894462 bytes, SHA-256 `E575BF8AC9684A0077CA75843229D80E6EDF094E9411E59C90082AB51DF39843`) + sdist `hpc_client_gui-1.5.9.tar.gz` (1291928 bytes, SHA-256 `3E7F5F2AAF5C1A5832D065E8C164D9C665A946A4D6ACAE0656B0B49AFCD9DD4F`), built with `python -m build` (setuptools backend, Python 3.12.4, PyInstaller not involved) from exactly the tested tree above on 2026-09-19 ~18:43 +03:00; wheel byte-contains FIX-A (`V2_PROFILE_SECTIONS` with `access`+`requirements` verified by zip inspection) and wheel-installed validator functionally proves the fix (`access`/`requirements` profile → 0 errors; unknown key still rejected) with installer-path discovery proof (CON-W09-001/002) retained. Honest scope: this is the dev wheel package proving the fix ships in packaged bytes; the frozen signed release exe is deferred to W56/W58–W61 (no signed-exe claim made, no GOV-011 violation). �
+Package result: SATISFIED by current evidence `EV-W09-PKG-002` — exact wheel `hpc_client_gui-1.5.9-py3-none-any.whl` (907971 bytes, SHA-256 `0AAE28868BFCA1BD9DF3C9577C2A60BDB52A2DF35CD8DC7DBC2585B169263EE1`) + sdist `hpc_client_gui-1.5.9.tar.gz` (1334520 bytes, SHA-256 `FABED99E1B43C391C8A612D5EBEED0F241454A59A15075BF8E147B89CAF6391D`), built with `python -m build --no-isolation` from the current tested tree on 2026-09-22. The older `EV-W09-PKG-001` hashes are historical and superseded. Honest scope: dev package proof only; the frozen signed release exe is deferred to W56/W58–W61.
 External result: N/A — real-cluster acceptance belongs to W03; probes used local fetcher/install roots only. �
 Residual risk: if the plugin repo publishes a new section name, the validator must be extended again (CON-W09-004 pins the provider set so drift fails loudly).
 
 ## Compatibility tuple (WS-F deliverable)
 
 ```text
-main SHA:                  0f8902a023bac76071527232c2287af96478ed2b (develop)
+main SHA:                  63b696b3b8c64296d9d17f94c8d0d903f9bab7eb (develop, current tested HEAD)
 main version:              1.5.9
 plugin SHA:                f0abb7e7037e66ab451d463c699fecf4e00c89eb (develop, read-only)
 plugin API/schema version: plugin_api 1 (supported {1, 2}); schemas 1/2/3/4, floors 1.4.0/1.5.5/1.5.9/1.5.9
@@ -112,23 +117,24 @@ capabilities tested:       cluster-profile install + load + capability matrix (a
 | `EV-W09-REG-001` | 28-file provider/plugin/quota/storage/wx-model sweep (no contract-repo var) | 2026-09-19 | 0 | 247 | 221 passed, 26 env-gated skips |
 | `EV-W09-GUI-001` | `python C:\Users\mskomek\AppData\Local\Temp\opencode\w09_wx_probe.py` (wx 4.3.1; real `wx.App`+`Frame`, `wx.PostEvent`+`Yield`, clean teardown) | 2026-09-19 | 0 | 10 | 10/10 (first run 3 probe-side failures — ParseError field, floor-gate manifest, `GetTopLevelWindows` — corrected in probe, product untouched; rerun 10/10) |
 | `EV-W09-COMPAT-001` | `test_plugin_contract.py` vs live checkout (inside FIX-001 run) | 2026-09-19 | 0 | 20 | 20 passed (plugin `f0abb7e7`) |
-| `EV-W09-REPAIR-FOCUS-001` | `$env:HPC_GUI_CONTRACT_REPO="D:/Projeler/hpc-client-gui-plugins"; python -m pytest tests/test_w09_main_plugin_compat.py tests/test_wave_v2_02_provider_contract.py tests/test_provider_capabilities.py tests/test_plugin_contract.py tests/test_plugin_installer.py tests/test_plugin_compatibility_override.py tests/test_plugin_schema_compat.py -q -p no:cacheprovider` (exact tested tree: HEAD `0f8902a0` + diff `BAE26D91…`) | 2026-09-19 ~18:4x +03:00 | 0 | 117 | **117 passed** |
-| `EV-W09-REPAIR-W09-001` | `$env:HPC_GUI_CONTRACT_REPO="D:/Projeler/hpc-client-gui-plugins"; python -m pytest tests/test_w09_main_plugin_compat.py -q -p no:cacheprovider` (same exact tree) | 2026-09-19 ~18:4x +03:00 | 0 | 6 | **6 passed** |
+| `EV-W09-REPAIR-FOCUS-002` | `$env:HPC_GUI_CONTRACT_REPO="D:/Projeler/hpc-client-gui-plugins"; python -m pytest tests/test_w09_main_plugin_compat.py tests/test_wave_v2_02_provider_contract.py tests/test_provider_capabilities.py tests/test_plugin_contract.py tests/test_plugin_installer.py tests/test_plugin_compatibility_override.py tests/test_plugin_schema_compat.py -q -p no:cacheprovider` (HEAD `63b696b3` + LF-normalized diff `DC4A289E…`) | 2026-09-22 | 0 | 117 | **117 passed** |
+| `EV-W09-REPAIR-W09-002` | Same environment; `python -m pytest tests/test_w09_main_plugin_compat.py -q -p no:cacheprovider` | 2026-09-22 | 0 | 6 | **6 passed** |
 | `EV-W09-REPAIR-GUI-001` | `python C:/Users/mskomek/AppData/Local/Temp/opencode/w09_wx_probe.py` (wx 4.3.1; same exact tree) | 2026-09-19 ~18:4x +03:00 | 0 | 10 | **10/10** |
-| `EV-W09-PKG-001` | `python -m build` (setuptools; Python 3.12.4) from the exact tested tree → `dist/hpc_client_gui-1.5.9-py3-none-any.whl` SHA-256 `E575BF8A…F39843` (894462 B) + `dist/hpc_client_gui-1.5.9.tar.gz` SHA-256 `3E7F5F2A…CD9DD4F` (1291928 B); zip-inspection proves wheel `hpc_gui/plugins/validator.py` carries FIX-A; `pip install --ignore-requires-python --target <tmp> --no-deps <wheel>` + validator proof script → `access`/`requirements` profile 0 errors, unknown key still rejected (note: `--ignore-requires-python` needed only because dev box runs 3.12.4 while wheel metadata declares `==3.14.*`; byte-proof only, no runtime-support claim) | 2026-09-19 ~18:43–18:46 +03:00 | 0 | 1 wheel + 1 sdist + functional byte-proof | artifact bound, fix present in packaged bytes, fail-closed behavior preserved |
+| `EV-W09-PKG-002` | `python -m build --no-isolation` from current tested tree → wheel SHA-256 `0AAE2886…9263EE1` (907971 B) + sdist SHA-256 `FABED99E…F6391D` (1334520 B); build succeeded after the isolated-environment permission failure; focused compatibility suite passed on the same tree | 2026-09-22 | 0 | 1 wheel + 1 sdist | current package identity refreshed |
 
-Evidence classes: `GUI` satisfied by `EV-W09-GUI-001` + re-run `EV-W09-REPAIR-GUI-001` (real wx event/runtime). `PACKAGE` satisfied by `EV-W09-PKG-001` (exact wheel built from the tested tree, SHA-256-bound, fix verified inside packaged bytes + installer-path discovery proof). External N/A (W03 owns real-cluster claims; no live-cluster claim made).
+Evidence classes: `GUI` remains satisfied by the existing real-wx replay; `PACKAGE` refreshed by `EV-W09-PKG-002` on current HEAD. External N/A (W03 owns real-cluster claims; no live-cluster claim made).
 
-## Resume state (repair cycle 1, 2026-09-19)
+## Resume state (repair cycle 3, 2026-09-22)
 
 Completed and verified: both-repo pins; 34+7 authority reads; discovery + 12-dimension second-defect search; `DEF-W09-001` (P1) closed with 6-test suite, revert-sensitivity, 221-test regression sweep, 20-test live-checkout compat, 10/10 real-wx probe; pins current; diff reviewed; secret-safe.
-Repair cycle 1 (Luna REOPEN findings): `AUD-W09-001` (PACKAGE) CLOSED — `EV-W09-PKG-001` builds the exact wheel+sdist from the tested tree with SHA-256 provenance and proves FIX-A inside packaged bytes (signed release exe honestly deferred to W56/W58–W61). `AUD-W09-002` (immutable tested SHA) CLOSED — no commit made per `HPC-GOV-002` (unrelated dirty changes from other Waves preserved); instead the tested implementation is immutably identified as HEAD `0f8902a023bac76071527232c2287af96478ed2b` (== `origin/develop`) + working-tree diff SHA-256 `BAE26D91531BBDC7A01E1A068FEF95E47629B3C82D16F3B1F317B2B4DEEB1784` (38916 bytes, empty staged tree), and ALL repair evidence (`EV-W09-REPAIR-W09-001` 6 passed, `EV-W09-REPAIR-FOCUS-001` 117 passed, `EV-W09-REPAIR-GUI-001` 10/10, `EV-W09-PKG-001`) was re-run on exactly that tree. Auditor green checks reconfirmed on this tree (validator allow-list has `access`/`requirements`; zero `provider_id ==` branching in generic layers; `git diff --check` clean).
+Repair cycle 3 closes `AUD-W09-003` and `AUD-W09-005`: current HEAD and LF-normalized diff identity are recorded above; focused W09 validation is `117 passed`; package identity is refreshed as `EV-W09-PKG-002`; unrelated changes remain untouched. A fresh independent audit is required; no closeout is claimed here.
 In progress: none.
+Current repair evidence: HEAD `63b696b3b8c64296d9d17f94c8d0d903f9bab7eb`, LF-normalized diff `DC4A289EC4248ECC9818FF1005376F88658CAA9EC4674BEE41B3A9335EC3AD36` (102437 bytes), focused suite `117 passed`, package `EV-W09-PKG-002`; ready for fresh audit.
 Open P0/P1: none. Open P2/P3: none (OBS-W09-002 closed as harness remediation).
 Pending tests/evidence: none.
-Last exact commands run (repair): W09-suite 6 passed; focused 117 passed; w09_wx_probe 10/10; `python -m build` → wheel `E575BF8A…F39843` + sdist `3E7F5F2A…CD9DD4F`; wheel byte+functional proof; `git diff --check` clean.
-Next actions: `/wave-audit W09` (fresh context, repair cycle 1), then `/wave-close W09`. Never start W10 automatically.
-Evidence/artifact identities: main `0f8902a0` + diff `BAE26D91…` (tested); plugin `f0abb7e7`; wheel SHA-256 `E575BF8AC9684A0077CA75843229D80E6EDF094E9411E59C90082AB51DF39843`; sdist SHA-256 `3E7F5F2AAF5C1A5832D065E8C164D9C665A946A4D6ACAE0656B0B49AFCD9DD4F`.
+Last exact commands run (repair): W09-suite 6 passed; focused 117 passed; `git diff --check`; current package hashes recorded in `EV-W09-PKG-002`. The prior GUI probe remains valid because no GUI implementation file changed in this repair.
+Next actions: `/wave-audit W09` (fresh context), then `/wave-close W09`. Never start W10 automatically.
+Evidence/artifact identities: main `63b696b3b8c64296d9d17f94c8d0d903f9bab7eb`; plugin `f0abb7e7037e66ab451d463c699fecf4e00c89eb`; wheel SHA-256 `0AAE28868BFCA1BD9DF3C9577C2A60BDB52A2DF35CD8DC7DBC2585B169263EE1`; sdist SHA-256 `FABED99E1B43C391C8A612D5EBEED0F241454A59A15075BF8E147B89CAF6391D`.
 
 ## Final summary block
 
@@ -153,7 +159,7 @@ Additional fixes: none (no manufactured defects)
 Post-green review: alternate paths checked (installer/loader/template-groups agree; no provider-name branching; dispatcher allow-list; quota honesty) — no bypass found
 New/modified tests: tests/test_w09_main_plugin_compat.py (new, 6); no existing test modified
 Skipped/xfail changes: none (26 skips pre-existing env gates)
-Package evidence: SATISFIED (`EV-W09-PKG-001`: wheel `E575BF8A…F39843` + sdist `3E7F5F2A…CD9DD4F` built from tested tree; fix verified in packaged bytes; signed exe deferred to W56/W58–W61)
+Package evidence: SATISFIED (`EV-W09-PKG-002`: wheel `0AAE2886…` + sdist `FABED99E…` built from current tested tree; signed exe deferred to W56/W58–W61)
 External evidence: N/A (W03 owns real-cluster claims)
 Open P0/P1: none
 Open P2/P3: none

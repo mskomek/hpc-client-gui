@@ -35,8 +35,8 @@
     },
     "input_method": "Win32 SendInput",
     "terminal_click": [
-      850,
-      614
+      746,
+      510
     ],
     "click_events": 2,
     "sendinput_events": 36,
@@ -497,6 +497,6 @@
   },
   "queue_count": 1,
   "queue_text": "\u00e7al\u0131\u015fma.txt",
-  "wx_app_name": "hpc-client-gui-smoke-9332",
-  "wx_local_data_dir": "C:\\Users\\mskomek\\AppData\\Local\\hpc-client-gui-smoke-9332"
+  "wx_app_name": "hpc-client-gui-smoke-52008",
+  "wx_local_data_dir": "C:\\Users\\mskomek\\AppData\\Local\\hpc-client-gui-smoke-52008"
 }

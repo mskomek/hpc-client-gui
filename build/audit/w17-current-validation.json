@@ -1,0 +1,12 @@
+{
+  "wave": "W17",
+  "implementation_sha": "63b696b3b8c64296d9d17f94c8d0d903f9bab7eb",
+  "validated_at_utc": "2026-09-22T12:26:42Z",
+  "command": "python -m pytest tests/test_connection_profile_service.py tests/test_wx_connection_profiles.py tests/test_profile_identity.py tests/test_profile_patch_preservation.py tests/test_profile_duplicate.py -q",
+  "exit_code": 0,
+  "passed": 61,
+  "failed": 0,
+  "skipped": 0,
+  "scope": "W17 profile service, real wx profile dialog/panel tests, identity, patch preservation, and duplication",
+  "evidence_class": "GUI"
+}

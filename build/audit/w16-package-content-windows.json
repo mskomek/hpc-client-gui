@@ -1,10 +1,10 @@
 {
   "schema": "wx-package-content/1",
-  "identity_header": "Artifact: hpc-client-gui.exe\nSHA256: cb69c1ceeca7861c922371a2827dea2526baa27381594cfd80d16a49153c0899\nMain SHA: 0f8902a023bac76071527232c2287af96478ed2b\nPlugin SHA: f0abb7e7037e66ab451d463c699fecf4e00c89eb\nVersion: 1.5.9\nOS/arch: windows/amd64",
-  "commit": "0f8902a023bac76071527232c2287af96478ed2b",
+  "identity_header": "Artifact: hpc-client-gui.exe\nSHA256: 544e186f81aa685ee80a3c07185ee0eb03ab1bc73a81151b1323253503c0a1da\nMain SHA: 63b696b3b8c64296d9d17f94c8d0d903f9bab7eb\nPlugin SHA: f0abb7e7037e66ab451d463c699fecf4e00c89eb\nVersion: 1.5.9\nOS/arch: windows/amd64",
+  "commit": "63b696b3b8c64296d9d17f94c8d0d903f9bab7eb",
   "bundle": "hpc-client-gui",
   "artifact": "hpc-client-gui.exe",
-  "artifact_sha256": "cb69c1ceeca7861c922371a2827dea2526baa27381594cfd80d16a49153c0899",
+  "artifact_sha256": "544e186f81aa685ee80a3c07185ee0eb03ab1bc73a81151b1323253503c0a1da",
   "result": "PASS",
   "checks": {
     "bundle_layout": "PASS",
@@ -17,7 +17,7 @@
     "provider_templates": "PASS"
   },
   "details": {
-    "exe_bytes": 7415251,
+    "exe_bytes": 7425277,
     "asset_files": 11,
     "i18n_namespaces": [
       "about",
@@ -65,5 +65,5 @@
     "updater_trust_mode": "trust anchors code-embedded: services/update_verification.py (trusted_keys mapping + ALLOWED_UPDATE_HOSTS); no bundled key files expected; exercised by packaged-smoke diagnostics_updater_surface import probe",
     "provider_defaults_mode": "defaults code-embedded: config/models.py + config/system_profile.py (no schema/template files shipped by this distribution mode); exercised by packaged-smoke settings_opened + editor/files/jobs probes"
   },
-  "generated_utc": "2026-09-19T20:56:36.459796+00:00"
+  "generated_utc": "2026-09-22T11:39:19.901286+00:00"
 }

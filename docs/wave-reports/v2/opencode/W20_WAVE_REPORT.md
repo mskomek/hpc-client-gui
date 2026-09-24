@@ -6,12 +6,12 @@ Canonical report path: docs/wave-reports/v2/opencode/W20_WAVE_REPORT.md
 Repository: mskomek/hpc-client-gui (main)
 Branch: develop
 Baseline SHA: 0f8902a023bac76071527232c2287af96478ed2b
-Current HEAD: 0f8902a023bac76071527232c2287af96478ed2b
-Tested implementation SHA: 0f8902a023bac76071527232c2287af96478ed2b + working-tree W20 changes listed below (no commit created by this session; pre-existing stacked work preserved byte-for-byte)
+Current HEAD: ccaf871ffc139973db826363859ca2933b216e9c
+Tested implementation SHA: f36809842502fac3ded6289e797b37c6c11894c9 (committed W20 implementation snapshot; controller-only commits are later)
 Plugin/external repo SHA(s): f0abb7e7037e66ab451d463c699fecf4e00c89eb (develop; verified read-only, no plugin changes)
 First started: 2026-09-20
-Last updated: 2026-09-20
-Session status: READY FOR FINAL REVIEW
+Last updated: 2026-09-22
+Session status: READY FOR FRESH AUDIT
 Wave decision: READY_FOR_AUDIT
 ```
 

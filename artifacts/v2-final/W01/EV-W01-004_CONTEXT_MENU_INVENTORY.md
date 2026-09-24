@@ -1,7 +1,7 @@
 # EV-W01-004 — Context Menu Inventory
 
-**Pinned SHA:** `afd4fb1d6ed3d0bbd87b9b6db6115eb159f63a87`
-**Generated:** 2026-09-15
+**Pinned SHA:** `63b696b3b8c64296d9d17f94c8d0d903f9bab7eb`
+**Generated:** 2026-09-21
 
 ---
 

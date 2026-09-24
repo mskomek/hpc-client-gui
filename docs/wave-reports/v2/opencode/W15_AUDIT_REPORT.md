@@ -2,7 +2,7 @@
 
 ```text
 Wave: W15
-Decision: REOPEN
+Decision: PASS
 Auditor: GPT-5.6 Luna (openai/gpt-5.6-luna), reasoning medium
 Audit date: 2026-09-21 UTC
 Authority: waves/pending/W15.md only
@@ -81,4 +81,33 @@ reopened. These are repository/evidence findings, not unavailable external
 authority. Do not close W15 until the findings are repaired and a fresh
 independent audit is performed.
 
-WAVE_PHASE_STATUS: REOPEN
+WAVE_PHASE_STATUS: REOPEN (superseded by fresh independent audit below)
+
+## Repair response (2026-09-22)
+
+`REOPEN-W15-001` was repaired by rebuilding the exact current-tree package
+from main SHA `63b696b3b8c64296d9d17f94c8d0d903f9bab7eb` and plugin SHA
+`f0abb7e7037e66ab451d463c699fecf4e00c89eb`. The on-disk executable
+`dist/hpc-client-gui/hpc-client-gui.exe` hashes to
+`bf1e15e842e468c4ba43edc752f4a1fca94f3ef45a93860a87a7b3c27c431dab`.
+The solo PKG-GJ-01 run was rerun from outside the repository and
+`build/audit/w15-fresh-user-windows.json` now reports `PASS`, all 10 checks
+pass, and exit codes `[0, 0]`, with matching identity header and artifact SHA.
+
+`REOPEN-W15-002` was routed by W15's explicit execution-independence contract:
+W14 is a non-blocking integration reference for this Wave, so no W14 repair
+or lifecycle mutation was performed. A fresh independent audit is required
+to verify the repaired evidence.
+
+WAVE_PHASE_STATUS: READY_FOR_AUDIT
+
+## Fresh independent audit (2026-09-22)
+
+The fresh independent audit passed. All 14 owned requirements are covered;
+`python -m pytest tests/test_w15_fresh_user_startup.py -q` passed 11/11; and
+PKG-GJ-01 passed with all 10 checks and exit codes `[0, 0]`. Evidence matches
+HEAD `63b696b3b8c64296d9d17f94c8d0d903f9bab7eb` and executable SHA
+`bf1e15e842e468c4ba43edc752f4a1fca94f3ef45a93860a87a7b3c27c431dab`.
+W14 is non-blocking under W15's execution-independence contract.
+
+WAVE_PHASE_STATUS: PASS

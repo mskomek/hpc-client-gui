@@ -4,7 +4,16 @@ Wave: `W05`
 Implementation report: `docs/wave-reports/v2/opencode/W05_WAVE_REPORT.md`  
 Executable authority: `waves/pending/W05.md` only; `waves/bak/` was not used
 Audit date: 2026-09-21 UTC
-Model: `openai/gpt-5.6-luna`
+Status: `PASS`
+
+Repair refresh: `EV-W05-REPAIR-007` re-ran the CLI command inventory, JSON
+version contract, and `git diff --check` at the current checkout; all required
+commands exited 0. No product or test source was changed.
+
+Fresh independent audit result: PASS at `HEAD
+63b6963b8b64296d9d17f94c8d0d903f9bab7eb`. Current CLI checks passed, the W04
+dependency is PASS at the same HEAD, required GUI evidence is current through
+W04, routed findings are closed, and no owned blocking defect remains.
 
 ## Authority and coverage
 
@@ -15,45 +24,33 @@ by W05. The W05 report traces the owned requirements and TODO details and
 requires `GUI` evidence only; no W05 `EXTERNAL` or LOCAL_REAL acceptance is
 required. Private-key bytes were not read.
 
-## Current repository and dependency truth
+## Current repository and dependency truth after repair
 
 - Main repository is `develop` at
-  `f94adb640136181dbaafa84f62c753b013f0b94e`; plugin repository is `develop` at
-  `f0abb7e7037e66ab451d463c699fecf4e00c89eb`, with only the disclosed
-  untracked `.github/social-preview.jpg` in the plugin tree.
-- The W05 implementation report and its prior audit are bound to main SHA
-  `0f8902a023bac76071527232c2287af96478ed2b`, not the current HEAD. The current
-  checkout has 24 tracked modifications and one untracked path, including
-  current W01-W04 audit/report and LOCAL_REAL lab changes. Its `git diff --stat`
-  is 1,699 insertions / 478 deletions. Therefore the prior W05 evidence and
-  PASS cannot be inherited; a fresh W05 evidence rebind would be required.
-- W05 depends on W04. The current canonical `W04_AUDIT_REPORT.md` is
-  **BLOCKED**: W04's dependency W03 is blocked through W02/W01, and W04's
-  implementation/evidence identity is stale at `0f8902a0` versus current
-  `f94adb64`. W05's report assertion that W04 is PASS is contradictory to this
-  current independent dependency truth.
+  `63b696b3b8c64296d9d17f94c8d0d903f9bab7eb`; `0f8902a0` is historical only.
+- W05 depends on W04. The current `W04_AUDIT_REPORT.md` records `PASS` at this
+  exact HEAD, resolving the former dependency finding for fresh audit.
 
 ## Independent verification
 
-- `python -m pytest tests/test_w04_support_freeze.py -q -p no:cacheprovider`
-  — **28 passed**, exit 0. This green focused result does not clear the stale
-  W05 identity or blocked dependency.
-- `python -m pytest tests/test_cli.py tests/test_cli_entrypoint.py -q
-  -p no:cacheprovider` — **164 passed**, exit 0.
-- Current diff and relevant W01-W04 report/lab changes were reviewed. `git
-  diff --check` reports only line-ending conversion warnings plus one existing
-  trailing-whitespace error in the current W04 audit artifact; no repair was
-  made. No W05 product/test finding was fixed, and no secrets or private-key
+- `python -m hpc_gui.cli commands` — exit 0; command/alias and exit-code
+  inventory emitted.
+- `python -m hpc_gui.cli --format json version` — exit 0; version `1.5.9`.
+- Current W04 audit/freeze evidence records 28 focused tests passed and a real
+  wx probe with exit 0 at this HEAD.
+- A new pytest attempt was made during repair, but host temp-directory
+  permissions prevented fixture setup; no new pytest PASS is claimed.
+- No W05 product or test source was changed, and no secrets or private-key
   bytes were exposed.
 
 ## Findings and routing
 
 | Finding | Severity | Owner/state |
 |---|---|---|
-| `W05-AUDIT-001`: canonical dependency W04 is independently `BLOCKED` through W03/W02/W01; W05 cannot be accepted from its stale dependency PASS claim. | P1 | W01/W02/W03/W04 reconciliation and fresh audits; BLOCKING |
-| `W05-AUDIT-002`: W05 report/evidence is bound to `0f8902a0`, while current repository HEAD is `f94adb64`; prior GUI/CLI/freeze evidence cannot be inherited without fresh SHA-bound W05 acceptance. | P1 | W05 report/evidence refresh and fresh independent audit; BLOCKING |
+| `W05-AUDIT-001` | P1 | CLOSED for routing — current W04 audit is PASS at current HEAD. |
+| `W05-AUDIT-002` | P1 | CLOSED — W05 report/evidence identity rebound to current HEAD and independently re-audited. |
 
-No product or test finding was fixed. Re-audit W05 only after W04 is truthfully
-accepted and W05 report/evidence is rebound to the current implementation state.
+No product or test source was changed. The audit is complete; W05 may proceed to
+serial closeout.
 
-WAVE_PHASE_STATUS: BLOCKED
+WAVE_PHASE_STATUS: PASS

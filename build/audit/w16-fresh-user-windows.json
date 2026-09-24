@@ -1,11 +1,11 @@
 {
   "schema": "wx-fresh-user-smoke/1",
   "procedure": "PKG-GJ-01",
-  "identity_header": "Artifact: hpc-client-gui.exe\nSHA256: cb69c1ceeca7861c922371a2827dea2526baa27381594cfd80d16a49153c0899\nMain SHA: 0f8902a023bac76071527232c2287af96478ed2b\nPlugin SHA: f0abb7e7037e66ab451d463c699fecf4e00c89eb\nVersion: 1.5.9\nOS/arch: windows/amd64",
-  "commit": "0f8902a023bac76071527232c2287af96478ed2b",
+  "identity_header": "Artifact: hpc-client-gui.exe\nSHA256: 544e186f81aa685ee80a3c07185ee0eb03ab1bc73a81151b1323253503c0a1da\nMain SHA: 63b696b3b8c64296d9d17f94c8d0d903f9bab7eb\nPlugin SHA: f0abb7e7037e66ab451d463c699fecf4e00c89eb\nVersion: 1.5.9\nOS/arch: windows/amd64",
+  "commit": "63b696b3b8c64296d9d17f94c8d0d903f9bab7eb",
   "platform": "windows",
   "artifact": "hpc-client-gui.exe",
-  "artifact_sha256": "cb69c1ceeca7861c922371a2827dea2526baa27381594cfd80d16a49153c0899",
+  "artifact_sha256": "544e186f81aa685ee80a3c07185ee0eb03ab1bc73a81151b1323253503c0a1da",
   "result": "PASS",
   "checks": {
     "fresh_config_root": "PASS",
@@ -20,10 +20,10 @@
     "relaunch_no_src_leakage": "PASS"
   },
   "details": {
-    "fresh_root": "C:\\Users\\mskomek\\AppData\\Local\\Temp\\hpc-fresh-user-dpcf2fnb\\config",
-    "workdir": "C:\\Users\\mskomek\\AppData\\Local\\Temp\\hpc-fresh-user-dpcf2fnb\\work",
-    "workdir_outside_repo": true,
-    "fresh_parent_kept": "C:\\Users\\mskomek\\AppData\\Local\\Temp\\hpc-fresh-user-dpcf2fnb"
+    "fresh_root": "D:\\Projeler\\hpc-client-gui\\.tmp\\os\\20260922-103254-9af3da2d\\hpc-fresh-user-doeup7e1\\config",
+    "workdir": "D:\\Projeler\\hpc-client-gui\\.tmp\\os\\20260922-103254-9af3da2d\\hpc-fresh-user-doeup7e1\\work",
+    "workdir_outside_repo": false,
+    "fresh_parent_kept": "D:\\Projeler\\hpc-client-gui\\.tmp\\os\\20260922-103254-9af3da2d\\hpc-fresh-user-doeup7e1"
   },
   "runs": {
     "run1": {
@@ -42,8 +42,8 @@
           "clean_shutdown": "PASS"
         },
         "details": {
-          "fresh_root": "C:\\Users\\mskomek\\AppData\\Local\\Temp\\hpc-fresh-user-dpcf2fnb\\config",
-          "app_data_dir": "C:\\Users\\mskomek\\AppData\\Local\\Temp\\hpc-fresh-user-dpcf2fnb\\config",
+          "fresh_root": "D:\\Projeler\\hpc-client-gui\\.tmp\\os\\20260922-103254-9af3da2d\\hpc-fresh-user-doeup7e1\\config",
+          "app_data_dir": "D:\\Projeler\\hpc-client-gui\\.tmp\\os\\20260922-103254-9af3da2d\\hpc-fresh-user-doeup7e1\\config",
           "frozen": true,
           "executable": "D:\\Projeler\\hpc-client-gui\\dist\\hpc-client-gui\\hpc-client-gui.exe"
         },
@@ -62,8 +62,8 @@
           "clean_shutdown": "PASS"
         },
         "details": {
-          "fresh_root": "C:\\Users\\mskomek\\AppData\\Local\\Temp\\hpc-fresh-user-dpcf2fnb\\config",
-          "app_data_dir": "C:\\Users\\mskomek\\AppData\\Local\\Temp\\hpc-fresh-user-dpcf2fnb\\config",
+          "fresh_root": "D:\\Projeler\\hpc-client-gui\\.tmp\\os\\20260922-103254-9af3da2d\\hpc-fresh-user-doeup7e1\\config",
+          "app_data_dir": "D:\\Projeler\\hpc-client-gui\\.tmp\\os\\20260922-103254-9af3da2d\\hpc-fresh-user-doeup7e1\\config",
           "frozen": true,
           "executable": "D:\\Projeler\\hpc-client-gui\\dist\\hpc-client-gui\\hpc-client-gui.exe"
         },
@@ -78,7 +78,7 @@
   ],
   "python": "3.12.4",
   "platform_detail": "Windows-11-10.0.26200-SP0",
-  "generated_utc": "2026-09-19T20:58:49.296880+00:00",
+  "generated_utc": "2026-09-22T11:40:41.051510+00:00",
   "isolated_from_src": true,
   "manual_required": [
     "display",

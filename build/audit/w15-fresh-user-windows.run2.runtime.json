@@ -7,8 +7,8 @@
     "clean_shutdown": "PASS"
   },
   "details": {
-    "fresh_root": "C:\\Users\\mskomek\\AppData\\Local\\Temp\\.ctx-mode-bjkwh8\\hpc-fresh-user-r9_ocgy4\\config",
-    "app_data_dir": "C:\\Users\\mskomek\\AppData\\Local\\Temp\\.ctx-mode-bjkwh8\\hpc-fresh-user-r9_ocgy4\\config",
+    "fresh_root": "C:\\Users\\mskomek\\AppData\\Local\\Temp\\hpc-fresh-user-yy97hrx7\\config",
+    "app_data_dir": "C:\\Users\\mskomek\\AppData\\Local\\Temp\\hpc-fresh-user-yy97hrx7\\config",
     "frozen": true,
     "executable": "D:\\Projeler\\hpc-client-gui\\dist\\hpc-client-gui\\hpc-client-gui.exe"
   },

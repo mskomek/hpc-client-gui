@@ -1,0 +1,857 @@
+{
+ "spec_profile_id": "HPC",
+ "protocol_revision": 2,
+ "wave_id": "W24",
+ "wave_spec_revision": "sha256:6c988ee7f2bf058c2faa5daea7ea9f305855c5d7ce33de90e786992714ab76bd",
+ "status": "ACCEPTANCE_GREEN",
+ "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c",
+ "closure_sha": null,
+ "dependency_validation": {
+  "dependencies": []
+ },
+ "requirements": [
+  {
+   "requirement_id": "HPC-W06-DIR-001",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_shell.py",
+    "src/hpc_gui/wx_directories_view.py"
+   ],
+   "test_nodes": [
+    "tests/test_wx_directories.py::test_w24_directories_rebind_and_disconnect_helpers",
+    "tests/test_wx_directories.py",
+    "tests/test_wx_shell.py"
+   ],
+   "expected_semantics": "directories UX is first class with dedicated splitter and two remote panes",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W24_WAVE_REPORT.md",
+    "docs/wave-reports/v2/opencode/W24_AUDIT_REPORT.md",
+    ".tmp/w24-close/w24-focused-close.txt",
+    ".tmp/w24-close/w24-adjacent-close.txt"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-DIR-002",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_directories_view.py"
+   ],
+   "test_nodes": [
+    "tests/test_wx_directories.py::test_w24_new_slurm_target_resolves_from_current_session_at_click_time",
+    "tests/test_wx_directories.py::test_w24_directories_backend_rebind_prefers_live_session_files",
+    "tests/test_remote_directory_listing.py"
+   ],
+   "expected_semantics": "storage areas derived truthfully from session system settings never hardcoded",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W24_WAVE_REPORT.md",
+    "docs/wave-reports/v2/opencode/W24_AUDIT_REPORT.md",
+    ".tmp/w24-close/w24-focused-close.txt",
+    ".tmp/w24-close/w24-adjacent-close.txt"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-DIR-003",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_directories_view.py"
+   ],
+   "test_nodes": [
+    "tests/test_wx_directories.py",
+    "tests/test_remote_directory_listing.py"
+   ],
+   "expected_semantics": "conditional quota status not fabricated no quota widgets on surface",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W24_WAVE_REPORT.md",
+    "docs/wave-reports/v2/opencode/W24_AUDIT_REPORT.md",
+    ".tmp/w24-close/w24-focused-close.txt",
+    ".tmp/w24-close/w24-adjacent-close.txt"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-DIR-004",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_directories.py",
+    "src/hpc_gui/wx_directories_view.py"
+   ],
+   "test_nodes": [
+    "tests/test_wx_directories.py::test_w24_double_click_targets_selected_storage_area",
+    "tests/test_remote_directory_listing.py",
+    "tests/test_transfer_directory_controllers.py"
+   ],
+   "expected_semantics": "root switching updates actual remote path with selected pane targeting",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W24_WAVE_REPORT.md",
+    "docs/wave-reports/v2/opencode/W24_AUDIT_REPORT.md",
+    ".tmp/w24-close/w24-focused-close.txt",
+    ".tmp/w24-close/w24-adjacent-close.txt"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-DIR-005",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_directories_view.py"
+   ],
+   "test_nodes": [
+    "tests/test_wx_directories.py::test_w24_double_click_targets_selected_storage_area",
+    "tests/test_wx_directories.py"
+   ],
+   "expected_semantics": "directory actions target selected storage area per pane",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W24_WAVE_REPORT.md",
+    "docs/wave-reports/v2/opencode/W24_AUDIT_REPORT.md",
+    ".tmp/w24-close/w24-focused-close.txt",
+    ".tmp/w24-close/w24-adjacent-close.txt"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-DIR-006",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/services/remote_directory_controller.py"
+   ],
+   "test_nodes": [
+    "tests/test_remote_directory_listing.py",
+    "tests/test_transfer_directory_controllers.py"
+   ],
+   "expected_semantics": "breadcrumb parent cannot escape normalized remote root",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W24_WAVE_REPORT.md",
+    "docs/wave-reports/v2/opencode/W24_AUDIT_REPORT.md",
+    ".tmp/w24-close/w24-focused-close.txt",
+    ".tmp/w24-close/w24-adjacent-close.txt"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-DIR-007",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_directories_view.py"
+   ],
+   "test_nodes": [
+    "tests/test_wx_directories.py",
+    "tests/test_wx_remote_files.py"
+   ],
+   "expected_semantics": "context menus equal real toolbar actions via shared builder",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W24_WAVE_REPORT.md",
+    "docs/wave-reports/v2/opencode/W24_AUDIT_REPORT.md",
+    ".tmp/w24-close/w24-focused-close.txt",
+    ".tmp/w24-close/w24-adjacent-close.txt"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-DIR-008",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_directories.py",
+    "src/hpc_gui/wx_directories_view.py",
+    "src/hpc_gui/wx_shell.py"
+   ],
+   "test_nodes": [
+    "tests/test_wx_directories.py::test_w24_directories_backend_rebind_prefers_live_session_files",
+    "tests/test_wx_directories.py::test_w24_directories_rebind_and_disconnect_helpers",
+    "tests/test_wx_directories.py"
+   ],
+   "expected_semantics": "provider switch rebuilds roots and discards stale callbacks",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W24_WAVE_REPORT.md",
+    "docs/wave-reports/v2/opencode/W24_AUDIT_REPORT.md",
+    ".tmp/w24-close/w24-focused-close.txt",
+    ".tmp/w24-close/w24-adjacent-close.txt"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-DIR-009",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_directories_view.py",
+    "src/hpc_gui/wx_shell.py"
+   ],
+   "test_nodes": [
+    "tests/test_wx_directories.py::test_w24_directories_rebind_and_disconnect_helpers",
+    "tests/test_wx_directories.py"
+   ],
+   "expected_semantics": "empty unavailable distinguishable from loading error via disconnected labels",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W24_WAVE_REPORT.md",
+    "docs/wave-reports/v2/opencode/W24_AUDIT_REPORT.md",
+    ".tmp/w24-close/w24-focused-close.txt",
+    ".tmp/w24-close/w24-adjacent-close.txt"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-DIR-010",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_remote_files.py"
+   ],
+   "test_nodes": [
+    "tests/test_remote_directory_listing.py",
+    "tests/test_transfer_directory_controllers.py",
+    "tests/test_wave2_directories_local_files.py"
+   ],
+   "expected_semantics": "POSIX remote semantics on Windows client via PurePosixPath",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W24_WAVE_REPORT.md",
+    "docs/wave-reports/v2/opencode/W24_AUDIT_REPORT.md",
+    ".tmp/w24-close/w24-focused-close.txt",
+    ".tmp/w24-close/w24-adjacent-close.txt"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-DIR-011",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_shell.py"
+   ],
+   "test_nodes": [
+    "tests/test_wx_directories.py::test_w24_directories_rebind_and_disconnect_helpers",
+    "tests/test_wx_shell.py",
+    "tests/test_wx_lifecycle.py"
+   ],
+   "expected_semantics": "distinct Directories tab exists and constructs",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W24_WAVE_REPORT.md",
+    "docs/wave-reports/v2/opencode/W24_AUDIT_REPORT.md",
+    ".tmp/w24-close/w24-focused-close.txt",
+    ".tmp/w24-close/w24-adjacent-close.txt"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-TODO-DIR-SESSION-001",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_directories_view.py",
+    "src/hpc_gui/wx_shell.py"
+   ],
+   "test_nodes": [
+    "tests/test_wx_directories.py::test_w24_directories_rebind_and_disconnect_helpers",
+    "tests/test_wx_directories.py"
+   ],
+   "expected_semantics": "rebind Home Scratch after connect reconnect",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W24_WAVE_REPORT.md",
+    "docs/wave-reports/v2/opencode/W24_AUDIT_REPORT.md",
+    ".tmp/w24-close/w24-focused-close.txt",
+    ".tmp/w24-close/w24-adjacent-close.txt"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-TODO-SESSION-REBIND-001",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_directories_view.py",
+    "src/hpc_gui/wx_shell.py"
+   ],
+   "test_nodes": [
+    "tests/test_wx_directories.py::test_w24_directories_rebind_and_disconnect_helpers",
+    "tests/test_wx_directories.py"
+   ],
+   "expected_semantics": "session rebind moves labels models caches history",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W24_WAVE_REPORT.md",
+    "docs/wave-reports/v2/opencode/W24_AUDIT_REPORT.md",
+    ".tmp/w24-close/w24-focused-close.txt",
+    ".tmp/w24-close/w24-adjacent-close.txt"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-TODO-SESSION-REBIND-002",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_directories.py",
+    "src/hpc_gui/wx_directories_view.py",
+    "src/hpc_gui/wx_shell.py"
+   ],
+   "test_nodes": [
+    "tests/test_wx_directories.py::test_w24_directories_backend_rebind_prefers_live_session_files",
+    "tests/test_wx_directories.py::test_w24_directories_rebind_and_disconnect_helpers"
+   ],
+   "expected_semantics": "session switch replaces all prior session state",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W24_WAVE_REPORT.md",
+    "docs/wave-reports/v2/opencode/W24_AUDIT_REPORT.md",
+    ".tmp/w24-close/w24-focused-close.txt",
+    ".tmp/w24-close/w24-adjacent-close.txt"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-TODO-SESSION-DISCONNECT-001",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_directories_view.py",
+    "src/hpc_gui/wx_shell.py"
+   ],
+   "test_nodes": [
+    "tests/test_wx_directories.py::test_w24_directories_rebind_and_disconnect_helpers",
+    "tests/test_wx_directories.py"
+   ],
+   "expected_semantics": "disconnect marks labels and drops stale caches",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W24_WAVE_REPORT.md",
+    "docs/wave-reports/v2/opencode/W24_AUDIT_REPORT.md",
+    ".tmp/w24-close/w24-focused-close.txt",
+    ".tmp/w24-close/w24-adjacent-close.txt"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-TODO-DIR-SESSION-002",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_directories_view.py"
+   ],
+   "test_nodes": [
+    "tests/test_wx_directories.py::test_w24_new_slurm_target_resolves_from_current_session_at_click_time",
+    "tests/test_wx_directories.py"
+   ],
+   "expected_semantics": "new slurm target resolves at click time from current session",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W24_WAVE_REPORT.md",
+    "docs/wave-reports/v2/opencode/W24_AUDIT_REPORT.md",
+    ".tmp/w24-close/w24-focused-close.txt",
+    ".tmp/w24-close/w24-adjacent-close.txt"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-TODO-006",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_directories_view.py"
+   ],
+   "test_nodes": [
+    "tests/test_wx_directories.py::test_w24_directories_rebind_and_disconnect_helpers",
+    "tests/test_wx_directories.py"
+   ],
+   "expected_semantics": "favorites history filter navigation rebind with history cleared",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W24_WAVE_REPORT.md",
+    "docs/wave-reports/v2/opencode/W24_AUDIT_REPORT.md",
+    ".tmp/w24-close/w24-focused-close.txt",
+    ".tmp/w24-close/w24-adjacent-close.txt"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-TODO-EDITOR-ROUTE-001",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_directories_view.py"
+   ],
+   "test_nodes": [
+    "tests/test_wx_directories.py",
+    "tests/test_wave2_directories_local_files.py"
+   ],
+   "expected_semantics": "editor route delegates with is_local False",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W24_WAVE_REPORT.md",
+    "docs/wave-reports/v2/opencode/W24_AUDIT_REPORT.md",
+    ".tmp/w24-close/w24-focused-close.txt",
+    ".tmp/w24-close/w24-adjacent-close.txt"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-TODO-016",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_shell.py",
+    "src/hpc_gui/wx_directories_view.py"
+   ],
+   "test_nodes": [
+    "tests/test_wx_shell.py",
+    "tests/test_wx_lifecycle.py"
+   ],
+   "expected_semantics": "no duplicate detached primary windows embedded dispatch",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W24_WAVE_REPORT.md",
+    "docs/wave-reports/v2/opencode/W24_AUDIT_REPORT.md",
+    ".tmp/w24-close/w24-focused-close.txt",
+    ".tmp/w24-close/w24-adjacent-close.txt"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-TODO-017",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_shell.py"
+   ],
+   "test_nodes": [
+    "tests/test_wx_shell.py",
+    "tests/test_wx_lifecycle.py"
+   ],
+   "expected_semantics": "one shell session generation contract consumed live",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W24_WAVE_REPORT.md",
+    "docs/wave-reports/v2/opencode/W24_AUDIT_REPORT.md",
+    ".tmp/w24-close/w24-focused-close.txt",
+    ".tmp/w24-close/w24-adjacent-close.txt"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-TODO-018",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_directories_view.py"
+   ],
+   "test_nodes": [
+    "tests/test_wx_directories.py"
+   ],
+   "expected_semantics": "toolbar action inventory with New Slurm plus shared pane actions",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W24_WAVE_REPORT.md",
+    "docs/wave-reports/v2/opencode/W24_AUDIT_REPORT.md",
+    ".tmp/w24-close/w24-focused-close.txt",
+    ".tmp/w24-close/w24-adjacent-close.txt"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-TODO-019",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_directories_view.py"
+   ],
+   "test_nodes": [
+    "tests/test_wx_directories.py::test_w24_directories_rebind_and_disconnect_helpers",
+    "tests/test_wx_directories.py"
+   ],
+   "expected_semantics": "balanced split sash 500 gravity 0 point 5",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W24_WAVE_REPORT.md",
+    "docs/wave-reports/v2/opencode/W24_AUDIT_REPORT.md",
+    ".tmp/w24-close/w24-focused-close.txt",
+    ".tmp/w24-close/w24-adjacent-close.txt"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-TODO-020",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_directories_view.py"
+   ],
+   "test_nodes": [
+    "tests/test_wx_directories.py::test_w24_directories_rebind_and_disconnect_helpers",
+    "tests/test_wx_directories.py"
+   ],
+   "expected_semantics": "semantic pane titles Scratch Home with path and disconnected state",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W24_WAVE_REPORT.md",
+    "docs/wave-reports/v2/opencode/W24_AUDIT_REPORT.md",
+    ".tmp/w24-close/w24-focused-close.txt",
+    ".tmp/w24-close/w24-adjacent-close.txt"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-TODO-021",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_directories_view.py"
+   ],
+   "test_nodes": [
+    "tests/test_wx_directories.py"
+   ],
+   "expected_semantics": "explicit directories toolbar profile with shared actions only",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W24_WAVE_REPORT.md",
+    "docs/wave-reports/v2/opencode/W24_AUDIT_REPORT.md",
+    ".tmp/w24-close/w24-focused-close.txt",
+    ".tmp/w24-close/w24-adjacent-close.txt"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-TODO-022",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_directories_view.py"
+   ],
+   "test_nodes": [
+    "tests/test_wx_directories.py",
+    "tests/test_wx_remote_files.py"
+   ],
+   "expected_semantics": "provider panes structurally consistent via same builder",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W24_WAVE_REPORT.md",
+    "docs/wave-reports/v2/opencode/W24_AUDIT_REPORT.md",
+    ".tmp/w24-close/w24-focused-close.txt",
+    ".tmp/w24-close/w24-adjacent-close.txt"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-TODO-023",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_directories_view.py"
+   ],
+   "test_nodes": [
+    "tests/test_wx_directories.py"
+   ],
+   "expected_semantics": "responsive columns with minimum pane and proportional gravity",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W24_WAVE_REPORT.md",
+    "docs/wave-reports/v2/opencode/W24_AUDIT_REPORT.md",
+    ".tmp/w24-close/w24-focused-close.txt",
+    ".tmp/w24-close/w24-adjacent-close.txt"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-TODO-032",
+   "mandatory": true,
+   "disposition": "ALLOWED_DEFERRED",
+   "deferred_allowed": true,
+   "implementation_owners": [],
+   "test_nodes": [],
+   "expected_semantics": "synchronized browsing Compare acceptance needs release candidate identity absent at this HEAD",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W24_WAVE_REPORT.md",
+    "docs/wave-reports/v2/opencode/W24_AUDIT_REPORT.md"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-TODO-041",
+   "mandatory": false,
+   "disposition": "JUSTIFIED_NA",
+   "implementation_owners": [],
+   "test_nodes": [],
+   "expected_semantics": "no new stable ID surfaces introduced so no new IDs required",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W24_WAVE_REPORT.md"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-TODO-044",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_directories_view.py",
+    "src/hpc_gui/wx_shell.py"
+   ],
+   "test_nodes": [
+    "tests/test_wx_directories.py",
+    "tests/test_wx_shell.py"
+   ],
+   "expected_semantics": "source runtime routing covered package binding rides release candidate input",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W24_WAVE_REPORT.md",
+    "docs/wave-reports/v2/opencode/W24_AUDIT_REPORT.md",
+    ".tmp/w24-close/w24-focused-close.txt",
+    ".tmp/w24-close/w24-adjacent-close.txt"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  }
+ ],
+ "tests": [
+  {
+   "node": "tests/test_wx_directories.py::test_w24_new_slurm_target_resolves_from_current_session_at_click_time",
+   "command": "python -m pytest -q tests/test_wx_directories.py::test_w24_new_slurm_target_resolves_from_current_session_at_click_time",
+   "requirement_ids": [
+    "HPC-W06-TODO-DIR-SESSION-002",
+    "HPC-W06-DIR-002"
+   ],
+   "exit_code": 0,
+   "passed": 1,
+   "failed": 0,
+   "skipped": 0,
+   "xfailed": 0,
+   "xpassed": 0,
+   "environment": "Windows 11 Python 3.12.4 wxPython 4.3.1 HEAD ccaf871f working tree with W24 directories rebind fix",
+   "timestamp": "2026-09-24T09:15:00Z",
+   "evidence_path": ".tmp/w24-close/w24-focused-close.txt",
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "node": "tests/test_wx_directories.py::test_w24_directories_backend_rebind_prefers_live_session_files",
+   "command": "python -m pytest -q tests/test_wx_directories.py::test_w24_directories_backend_rebind_prefers_live_session_files",
+   "requirement_ids": [
+    "HPC-W06-DIR-008",
+    "HPC-W06-TODO-SESSION-REBIND-002"
+   ],
+   "exit_code": 0,
+   "passed": 1,
+   "failed": 0,
+   "skipped": 0,
+   "xfailed": 0,
+   "xpassed": 0,
+   "environment": "Windows 11 Python 3.12.4 wxPython 4.3.1 HEAD ccaf871f working tree with W24 directories rebind fix",
+   "timestamp": "2026-09-24T09:15:00Z",
+   "evidence_path": ".tmp/w24-close/w24-focused-close.txt",
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "node": "tests/test_wx_directories.py::test_w24_double_click_targets_selected_storage_area",
+   "command": "python -m pytest -q tests/test_wx_directories.py::test_w24_double_click_targets_selected_storage_area",
+   "requirement_ids": [
+    "HPC-W06-DIR-004",
+    "HPC-W06-DIR-005"
+   ],
+   "exit_code": 0,
+   "passed": 1,
+   "failed": 0,
+   "skipped": 0,
+   "xfailed": 0,
+   "xpassed": 0,
+   "environment": "Windows 11 Python 3.12.4 wxPython 4.3.1 HEAD ccaf871f working tree with W24 directories rebind fix",
+   "timestamp": "2026-09-24T09:15:00Z",
+   "evidence_path": ".tmp/w24-close/w24-focused-close.txt",
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "node": "tests/test_wx_directories.py::test_w24_directories_rebind_and_disconnect_helpers",
+   "command": "python -m pytest -q tests/test_wx_directories.py::test_w24_directories_rebind_and_disconnect_helpers",
+   "requirement_ids": [
+    "HPC-W06-DIR-008",
+    "HPC-W06-DIR-009",
+    "HPC-W06-TODO-DIR-SESSION-001"
+   ],
+   "exit_code": 0,
+   "passed": 1,
+   "failed": 0,
+   "skipped": 0,
+   "xfailed": 0,
+   "xpassed": 0,
+   "environment": "Windows 11 Python 3.12.4 wxPython 4.3.1 HEAD ccaf871f working tree with W24 directories rebind fix",
+   "timestamp": "2026-09-24T09:15:00Z",
+   "evidence_path": ".tmp/w24-close/w24-focused-close.txt",
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "node": "tests/test_wx_directories.py",
+   "command": "python -m pytest -q tests/test_wx_directories.py",
+   "requirement_ids": [
+    "HPC-W06-DIR-001"
+   ],
+   "exit_code": 0,
+   "passed": 6,
+   "failed": 0,
+   "skipped": 0,
+   "xfailed": 0,
+   "xpassed": 0,
+   "environment": "Windows 11 Python 3.12.4 wxPython 4.3.1 HEAD ccaf871f working tree with W24 directories rebind fix",
+   "timestamp": "2026-09-24T09:15:00Z",
+   "evidence_path": ".tmp/w24-close/w24-focused-close.txt",
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "node": "tests/test_remote_directory_listing.py",
+   "command": "python -m pytest -q tests/test_remote_directory_listing.py",
+   "requirement_ids": [
+    "HPC-W06-DIR-006"
+   ],
+   "exit_code": 0,
+   "passed": 8,
+   "failed": 0,
+   "skipped": 0,
+   "xfailed": 0,
+   "xpassed": 0,
+   "environment": "Windows 11 Python 3.12.4 wxPython 4.3.1 HEAD ccaf871f working tree with W24 directories rebind fix",
+   "timestamp": "2026-09-24T09:15:00Z",
+   "evidence_path": ".tmp/w24-close/w24-focused-close.txt",
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "node": "tests/test_transfer_directory_controllers.py",
+   "command": "python -m pytest -q tests/test_transfer_directory_controllers.py",
+   "requirement_ids": [
+    "HPC-W06-DIR-004"
+   ],
+   "exit_code": 0,
+   "passed": 3,
+   "failed": 0,
+   "skipped": 0,
+   "xfailed": 0,
+   "xpassed": 0,
+   "environment": "Windows 11 Python 3.12.4 wxPython 4.3.1 HEAD ccaf871f working tree with W24 directories rebind fix",
+   "timestamp": "2026-09-24T09:15:00Z",
+   "evidence_path": ".tmp/w24-close/w24-focused-close.txt",
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "node": "tests/test_wave2_directories_local_files.py",
+   "command": "python -m pytest -q tests/test_wave2_directories_local_files.py",
+   "requirement_ids": [
+    "HPC-W06-DIR-010"
+   ],
+   "exit_code": 0,
+   "passed": 48,
+   "failed": 0,
+   "skipped": 0,
+   "xfailed": 0,
+   "xpassed": 0,
+   "environment": "Windows 11 Python 3.12.4 wxPython 4.3.1 HEAD ccaf871f working tree with W24 directories rebind fix",
+   "timestamp": "2026-09-24T09:15:00Z",
+   "evidence_path": ".tmp/w24-close/w24-focused-close.txt",
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "node": "tests/test_wx_shell.py",
+   "command": "python -m pytest -q tests/test_wx_shell.py",
+   "requirement_ids": [
+    "HPC-W06-DIR-011"
+   ],
+   "exit_code": 0,
+   "passed": 5,
+   "failed": 0,
+   "skipped": 0,
+   "xfailed": 0,
+   "xpassed": 0,
+   "environment": "Windows 11 Python 3.12.4 wxPython 4.3.1 HEAD ccaf871f working tree with W24 directories rebind fix",
+   "timestamp": "2026-09-24T09:15:00Z",
+   "evidence_path": ".tmp/w24-close/w24-adjacent-close.txt",
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "node": "tests/test_wx_lifecycle.py",
+   "command": "python -m pytest -q tests/test_wx_lifecycle.py",
+   "requirement_ids": [
+    "HPC-W06-TODO-017"
+   ],
+   "exit_code": 0,
+   "passed": 3,
+   "failed": 0,
+   "skipped": 0,
+   "xfailed": 0,
+   "xpassed": 0,
+   "environment": "Windows 11 Python 3.12.4 wxPython 4.3.1 HEAD ccaf871f working tree with W24 directories rebind fix",
+   "timestamp": "2026-09-24T09:15:00Z",
+   "evidence_path": ".tmp/w24-close/w24-adjacent-close.txt",
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "node": "tests/test_wx_remote_files.py",
+   "command": "python -m pytest -q tests/test_wx_remote_files.py",
+   "requirement_ids": [
+    "HPC-W06-DIR-007"
+   ],
+   "exit_code": 0,
+   "passed": 4,
+   "failed": 0,
+   "skipped": 0,
+   "xfailed": 0,
+   "xpassed": 0,
+   "environment": "Windows 11 Python 3.12.4 wxPython 4.3.1 HEAD ccaf871f working tree with W24 directories rebind fix",
+   "timestamp": "2026-09-24T09:15:00Z",
+   "evidence_path": ".tmp/w24-close/w24-adjacent-close.txt",
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "node": "tests/test_directory_comparison.py",
+   "command": "python -m pytest -q tests/test_directory_comparison.py",
+   "requirement_ids": [
+    "HPC-W06-TODO-017"
+   ],
+   "exit_code": 0,
+   "passed": 20,
+   "failed": 0,
+   "skipped": 0,
+   "xfailed": 0,
+   "xpassed": 0,
+   "environment": "Windows 11 Python 3.12.4 wxPython 4.3.1 HEAD ccaf871f working tree with W24 directories rebind fix",
+   "timestamp": "2026-09-24T09:15:00Z",
+   "evidence_path": ".tmp/w24-close/w24-adjacent-close.txt",
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  }
+ ],
+ "gui_actions": [
+  {
+   "status": "FULL",
+   "source_binding": "src/hpc_gui/wx_directories_view.py build_directories_panel plus rebind_directories_storage and mark_directories_disconnected with wx_shell on_connected on_disconnected wiring",
+   "runtime_test_node": "tests/test_wx_directories.py::test_w24_directories_rebind_and_disconnect_helpers",
+   "observed_readback": "real wx build labels Scratch Home with paths plus rebind to new paths plus disconnected labels plus sash 492 gravity 0 point 5 (65 focused plus 32 adjacent green)",
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  }
+ ],
+ "resources": [],
+ "artifacts": [
+  {
+   "path": "docs/wave-reports/v2/opencode/W24_WAVE_REPORT.md",
+   "identity": "canonical W24 wave report at candidate ccaf871f"
+  },
+  {
+   "path": "docs/wave-reports/v2/opencode/W24_AUDIT_REPORT.md",
+   "identity": "fresh independent audit context for W24 at same candidate"
+  },
+  {
+   "path": ".tmp/w24-close/w24-focused-close.txt",
+   "identity": "focused 65 passed evidence at candidate"
+  },
+  {
+   "path": ".tmp/w24-close/w24-adjacent-close.txt",
+   "identity": "adjacent 32 passed evidence at candidate"
+  }
+ ],
+ "review_passes": {
+  "diff_check": "PASS",
+  "claim_source_review": "PASS",
+  "independent_audit": "PASS"
+ },
+ "contradiction_scan": {
+  "unresolved": []
+ },
+ "blockers": [],
+ "deferred_items": [
+  {
+   "requirement_id": "HPC-W06-TODO-032",
+   "reason": "needs release candidate identity absent at this HEAD"
+  },
+  {
+   "requirement_id": "HPC-W06-TODO-041",
+   "reason": "no new stable ID surfaces introduced"
+  }
+ ],
+ "validator_result": {
+  "state": "ACCEPTANCE_GREEN",
+  "reason": "close 65 focused plus 32 adjacent green at candidate HEAD plus fresh independent audit PASS plus diff check clean"
+ }
+}

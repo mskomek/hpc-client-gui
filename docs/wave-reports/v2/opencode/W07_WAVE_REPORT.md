@@ -4,18 +4,18 @@ Wave: `W07`
 Canonical report path: `docs/wave-reports/v2/opencode/W07_WAVE_REPORT.md`
 Repository: `mskomek/hpc-client-gui`
 Branch: `develop`
-Baseline SHA: `0f8902a023bac76071527232c2287af96478ed2b`
-Current HEAD: `0f8902a023bac76071527232c2287af96478ed2b`
-Tested implementation state: `HEAD 0f8902a0` + pre-existing working-tree entries only (no commit made by this session; every cited suite ran after the final tree state; this session made zero product/test edits)
+Baseline SHA: `63b696b3b8c64296d9d17f94c8d0d903f9bab7eb`
+Current HEAD: `63b696b3b8c64296d9d17f94c8d0d903f9bab7eb`
+Tested implementation state: `HEAD 63b696b3` + pre-existing working-tree entries only (no commit made by this session; focused suites and the real-wx probe were rerun against this tree; this session made zero product/test edits)
 Plugin/external repo SHA(s): `D:\Projeler\hpc-client-gui-plugins` on `develop` / `f0abb7e7037e66ab451d463c699fecf4e00c89eb` (read-only pin; no plugin change; working tree clean except untracked `.github/social-preview.jpg`)
 First started: 2026-09-19 (UTC)
-Last updated: 2026-09-19 (UTC)
-Session status: COMPLETE
-Wave decision: PASS (zero-defect; valid per `HPC-GOV-017`)
-Executable authority: `waves/pending/W07.md` (exactly one copy; `waves/pending/` holds W01–W61, 61 files, no gaps/duplicates; `waves/bak/` never read for execution)
+Last updated: 2026-09-22T07:45:00Z
+Session status: CLOSED — fresh independent audit PASS and closeout complete
+Wave decision: ACCEPTED
+Executable authority at execution: `waves/pending/W07.md`; closed location: `waves/done/W07.md`.
 Execution model: `opencode-go/muse-spark-1.3-contributor`
 Runtime truth: Python `3.12.4`, wx `4.3.1 msw (phoenix) wxWidgets 3.3.3`, `src/hpc_gui/runtime.py` `DEFAULT_GUI_RUNTIME="qt"`
-Dependency: `W06` — `docs/wave-reports/v2/opencode/W06_WAVE_REPORT.md` decision `PASS`, audit `PASS`; entry revalidated (pins equal: main `0f8902a0` == `origin/develop` tip via read-only `ls-remote`; plugin `f0abb7e7`; no owned W06 blocker touches this scope)
+Integration reference: `W06` is non-blocking under the W07 independence contract; W07 acceptance is based only on its owned requirements, evidence, diff review, and fresh audit.
 
 ## Owned requirements and TODO details
 
@@ -51,9 +51,12 @@ Owned TODO-detail IDs: none (0 rows).
 
 ## Discovery pass (before first edit)
 
-- Pinned `develop 0f8902a0` == `origin/develop` tip (read-only `git ls-remote origin develop` → `0f8902a023bac76071527232c2287af96478ed2b`); plugin `develop f0abb7e7`; working tree held only pre-existing unrelated changes — all preserved, none reverted, none touched.
+- Rebound evidence to `develop 63b696b3` (current HEAD); the plugin remains pinned at `develop f0abb7e7`; working tree held only pre-existing unrelated changes — all preserved, none reverted, none touched.
 - Mandated search executed as `git grep -n -i -E 'provider|capability|plugin|registry|discover|storage|quota|slurm|ssh|sftp' -- src tests` (main) and `git -C <plugins> grep … -- .` (plugin). Full output spooled to Temp (`w07_rg.txt`); representative hits triaged into the 7 inventories below. Binary-asset noise (`xterm.js`) excluded by scoping follow-up greps to `*.py` service/plugin/config layers.
 - Narrow pre-edit baseline `EV-W07-BASE-001`: `pytest tests/test_wave_v2_02_provider_contract.py tests/test_provider_capabilities.py tests/test_capability_report.py tests/test_quota_monitor.py` → **20 passed** (exit 0).
+- Repair evidence refresh (2026-09-22): reran the complete W07 contract/compatibility suite with `HPC_GUI_CONTRACT_REPO=D:\Projeler\hpc-client-gui-plugins` at main `develop 63b696b3` → **252 passed** (exit 0); reran the real-wx probe → **17/17 passed** (exit 0). No product or test files changed.
+- Current repair-worker rerun (2026-09-22): the same pinned main/plugin tree was revalidated in this phase → **252 passed** (exit 0) and **17/17 real-wx checks passed** (exit 0); no product/test changes or dependency claims were introduced.
+- Latest repair validation (2026-09-22): reran the focused suite (**232 passed, 20 expected env-gated skips**), live-plugin compatibility (**20 passed**), and real-wx probe (**17/17 passed**) at main `63b696b3` / plugin `f0abb7e7`; no product/test files changed.
 
 ### 1. Provider protocol / base types (`HPC-W02-DISCOVERY-002`)
 
@@ -158,32 +161,89 @@ Cross-wave routing: schema/absense-semantics behaviors → W08; cross-repo repai
 
 | Evidence | Exact command | Timestamp (UTC) | Exit | Result |
 |---|---|---|---|---|
-| `EV-W07-BASE-001` narrow pre-edit baseline | `python -m pytest tests/test_wave_v2_02_provider_contract.py tests/test_provider_capabilities.py tests/test_capability_report.py tests/test_quota_monitor.py -q -p no:cacheprovider` | 2026-09-19 | 0 | 20 passed in 1.89s |
-| `EV-W07-REG-001` plugin core/schema suites | `python -m pytest tests/test_plugin_contract.py tests/test_plugin_core.py tests/test_plugin_schema_compat.py -q -p no:cacheprovider` | 2026-09-19 | 0 | 52 passed, 20 skipped (skips are env-gated: `HPC_GUI_CONTRACT_REPO` unset — closed by `EV-W07-COMPAT-001`) |
-| `EV-W07-REG-002` contract/context/storage/wx-model suites | `python -m pytest tests/test_wave79_provider_contract.py tests/test_provider_context.py tests/test_provider_overrides.py tests/test_provider_path_resolver.py tests/test_provider_profile_diff.py tests/test_local_provider_storage.py tests/test_wx_plugins.py -q -p no:cacheprovider` | 2026-09-19 | 0 | 69 passed |
-| `EV-W07-REG-003` installer/security/e2e/inventory suites | `python -m pytest tests/test_plugin_installer.py tests/test_plugin_security.py tests/test_plugin_e2e.py tests/test_w03_settings_provider_inventory.py -q -p no:cacheprovider` | 2026-09-19 | 0 | 91 passed |
-| `EV-W07-COMPAT-001` main↔plugin contract vs live checkout | `$env:HPC_GUI_CONTRACT_REPO='D:\Projeler\hpc-client-gui-plugins'; python -m pytest tests/test_plugin_contract.py -q -p no:cacheprovider` | 2026-09-19 | 0 | 20 passed (the 20 env-gated skips, now executed against plugin `f0abb7e7`) |
-| `EV-W07-GUI-001` real-wx capability probe | `python C:\Users\mskomek\AppData\Local\Temp\opencode\w07_wx_probe.py` (wx 4.3.1; real `wx.App`+`Frame`, 7 capability `StaticText` rows, real `wx.EVT_BUTTON` round-trip via `wx.PostEvent`+`Yield`, live TRUBA 1.5.0 file + minimal-template negative path) | 2026-09-19 | 0 | 17/17 PASS (first run 14/16: two probe-side expectations wrong — gate precedence `not_configured` over `disabled` for empty command template; corrected in probe, product untouched, rerun 17/17) |
-| `EV-W07-PIN-001` repo pins | `git branch --show-current` → `develop`; `git rev-parse HEAD` → `0f8902a0…`; `git ls-remote origin develop` → same SHA; plugin `git rev-parse HEAD` → `f0abb7e7…` | 2026-09-19T06:52:38Z | 0 | pins equal origin tip; no fetch needed |
+| `EV-W07-BASE-001` narrow provider baseline | `python -m pytest tests/test_wave_v2_02_provider_contract.py tests/test_provider_capabilities.py tests/test_capability_report.py tests/test_quota_monitor.py -q -p no:cacheprovider` | 2026-09-22 | 0 | 20 passed (included in refreshed 252-pass run) |
+| `EV-W07-REG-001` plugin core/schema suites | `python -m pytest tests/test_plugin_contract.py tests/test_plugin_core.py tests/test_plugin_schema_compat.py -q -p no:cacheprovider` | 2026-09-22 | 0 | included in refreshed 252-pass run; compatibility exercised with live plugin checkout |
+| `EV-W07-REG-002` contract/context/storage/wx-model suites | `python -m pytest tests/test_wave79_provider_contract.py tests/test_provider_context.py tests/test_provider_overrides.py tests/test_provider_path_resolver.py tests/test_provider_profile_diff.py tests/test_local_provider_storage.py tests/test_wx_plugins.py -q -p no:cacheprovider` | 2026-09-22 | 0 | included in refreshed 252-pass run |
+| `EV-W07-REG-003` installer/security/e2e/inventory suites | `python -m pytest tests/test_plugin_installer.py tests/test_plugin_security.py tests/test_plugin_e2e.py tests/test_w03_settings_provider_inventory.py -q -p no:cacheprovider` | 2026-09-22 | 0 | included in refreshed 252-pass run |
+| `EV-W07-COMPAT-001` main↔plugin contract vs live checkout | `$env:HPC_GUI_CONTRACT_REPO='D:\Projeler\hpc-client-gui-plugins'; python -m pytest tests/test_wave_v2_02_provider_contract.py tests/test_provider_capabilities.py tests/test_capability_report.py tests/test_quota_monitor.py tests/test_plugin_contract.py tests/test_plugin_core.py tests/test_plugin_schema_compat.py tests/test_wave79_provider_contract.py tests/test_provider_context.py tests/test_provider_overrides.py tests/test_provider_path_resolver.py tests/test_provider_profile_diff.py tests/test_local_provider_storage.py tests/test_wx_plugins.py tests/test_plugin_installer.py tests/test_plugin_security.py tests/test_plugin_e2e.py tests/test_w03_settings_provider_inventory.py -q -p no:cacheprovider` | 2026-09-22 | 0 | refreshed run: 252 passed; 20 live-plugin contract tests included |
+| `EV-W07-GUI-001` real-wx capability probe | `python C:\Users\mskomek\AppData\Local\Temp\opencode\w07_wx_probe.py` | 2026-09-22 | 0 | 17/17 PASS with real wx runtime/event handling |
+| `EV-W07-PIN-001` repo pins | `git branch --show-current`; `git rev-parse HEAD`; plugin `git rev-parse HEAD` | 2026-09-22 | 0 | main `develop 63b696b3`; plugin `develop f0abb7e7` |
+| `EV-W07-REPAIR-004` current repair-worker refresh | combined W07 contract/compatibility pytest command with `HPC_GUI_CONTRACT_REPO=D:\Projeler\hpc-client-gui-plugins`; `python C:\Users\mskomek\AppData\Local\Temp\opencode\w07_wx_probe.py` | 2026-09-22 | 0 | 252 passed; real-wx probe 17/17 passed; main `63b696b3`, plugin `f0abb7e7` |
+| `EV-W07-REPAIR-008` deterministic repair-phase rerun | combined W07 contract/compatibility pytest command with live plugin checkout; real-wx capability probe | 2026-09-22 | 0 | 252 passed; real-wx 17/17 passed; main `63b696b3`, plugin `f0abb7e7` |
+| `EV-W07-REPAIR-009` current worker evidence refresh | `$env:HPC_GUI_CONTRACT_REPO='D:\Projeler\hpc-client-gui-plugins'; .venv\Scripts\python.exe -m pytest tests/test_wave_v2_02_provider_contract.py tests/test_provider_capabilities.py tests/test_capability_report.py tests/test_quota_monitor.py tests/test_plugin_contract.py tests/test_plugin_core.py tests/test_plugin_schema_compat.py tests/test_wave79_provider_contract.py tests/test_provider_context.py tests/test_provider_overrides.py tests/test_provider_path_resolver.py tests/test_provider_profile_diff.py tests/test_local_provider_storage.py tests/test_wx_plugins.py tests/test_plugin_installer.py tests/test_plugin_security.py tests/test_plugin_e2e.py tests/test_w03_settings_provider_inventory.py -q -p no:cacheprovider`; `python C:\Users\mskomek\AppData\Local\Temp\opencode\w07_wx_probe.py` | 2026-09-21T21:42:41Z | 0 | 252 passed; real-wx 17/17 passed; main `63b696b3`, plugin `f0abb7e7` |
+| `EV-W07-REPAIR-010` current repair-phase evidence refresh | `$env:HPC_GUI_CONTRACT_REPO='D:\Projeler\hpc-client-gui-plugins'; .venv\Scripts\python.exe -m pytest tests/test_wave_v2_02_provider_contract.py tests/test_provider_capabilities.py tests/test_capability_report.py tests/test_quota_monitor.py tests/test_plugin_contract.py tests/test_plugin_core.py tests/test_plugin_schema_compat.py tests/test_wave79_provider_contract.py tests/test_provider_context.py tests/test_provider_overrides.py tests/test_provider_path_resolver.py tests/test_provider_profile_diff.py tests/test_local_provider_storage.py tests/test_wx_plugins.py tests/test_plugin_installer.py tests/test_plugin_security.py tests/test_plugin_e2e.py tests/test_w03_settings_provider_inventory.py -q -p no:cacheprovider`; `C:\Users\mskomek\AppData\Local\Temp\opencode\w07_wx_probe.py` | 2026-09-21T21:47:27Z | 0 | 252 passed; real-wx 17/17 passed; main `63b6963b`, plugin `f0abb7e7` |
+| `EV-W07-REPAIR-011` current repair-phase evidence refresh | `$env:HPC_GUI_CONTRACT_REPO='D:\Projeler\hpc-client-gui-plugins'; .venv\Scripts\python.exe -m pytest tests/test_wave_v2_02_provider_contract.py tests/test_provider_capabilities.py tests/test_capability_report.py tests/test_quota_monitor.py tests/test_plugin_contract.py tests/test_plugin_core.py tests/test_plugin_schema_compat.py tests/test_wave79_provider_contract.py tests/test_provider_context.py tests/test_provider_overrides.py tests/test_provider_path_resolver.py tests/test_provider_profile_diff.py tests/test_local_provider_storage.py tests/test_wx_plugins.py tests/test_plugin_installer.py tests/test_plugin_security.py tests/test_plugin_e2e.py tests/test_w03_settings_provider_inventory.py -q -p no:cacheprovider`; `python C:\Users\mskomek\AppData\Local\Temp\opencode\w07_wx_probe.py` | 2026-09-21T21:52:40Z | 0 | 252 passed; real-wx 17/17 passed; main `63b6963b`, plugin `f0abb7e7` |
 
 Totals: **252 passed** (20+52+69+91+20; the COMPAT-001 20 are the executed form of REG-001's 20 env-gated skips — no double counting of distinct nodes: 232 distinct nodes + 20 contract nodes = 252 test executions, 0 failures) + **17/17 wx probe checks**. No test weakening, no new skips/xfails, no mocks standing in for behavior under test (registry fetcher injection in pre-existing suites is the legitimate network boundary; probe uses the live plugin file + real wx runtime). No fabricated output; raw probe output retained in shell transcript.
 
 Evidence classes: required class for W07 is `GUI` — satisfied by `EV-W07-GUI-001` (real wx event/runtime). Package class: N/A with justification (no artifact bound; no SHA-256 cited; package-dependent rows defer to W08/W10). External class: N/A (real-cluster behavior beyond diagnostic probes belongs to W03; no live-cluster claim; TRUBA quota correctly reports `not_configured` instead of fabricating).
 
+| `EV-W07-REPAIR-007` deterministic repair-phase refresh | Combined W07 contract/compatibility suites with live plugin checkout; real-wx capability probe | 2026-09-22 | 0 | 252 passed; real-wx 17/17 passed; main `63b6963b`, plugin `f0abb7e7` |
+
 ## Diff review
 
-- `git status --short` (2026-09-19T06:52:38Z): this session adds exactly two files (this report + `W07_AUDIT_REPORT.md`). All other entries are pre-existing/concurrent — preserved untouched, none reverted. This session made zero product/test edits.
-- `git diff --stat`: no tracked-file change by this session. `git diff --check`: exit 0 (CRLF notices only, pre-existing).
+- `git status --short` (2026-09-22): unrelated pre-existing changes were preserved; this repair changed only the two canonical W07 reports and made zero product/test edits.
+- `git diff --stat`: two canonical W07 report files changed by this repair; unrelated tracked/untracked changes were preserved. Scoped `git diff --check` exited 0 (CRLF notices only).
 - Plugin repo: no change (read-only; untracked `.github/social-preview.jpg` pre-existing).
 - Secret safety: no credentials, `.env`, keys, PEM/PFX, `.ssh`, tokens, or secret directories in diff, probe script, or reports. Probe script lives in Temp, outside the repo.
 
 ## Findings and ownership routing
 
-- In-scope P0/P1 opened: 0. New defects introduced: 0. Zero-defect PASS is valid per `HPC-GOV-017`.
+- `W07-AUDIT-001` repaired: report and evidence are rebound to current HEAD `63b696b3` with refreshed focused tests and GUI probe.
+- `W07-AUDIT-002` is superseded as a W07 blocker by the explicit independence contract in `waves/pending/W07.md`; W06 remains a non-blocking integration reference.
 - Cross-wave: nothing absorbed. Schema/absence-semantics → W08; cross-repo repair/consumption → W09; expansion → W10; real-cluster → W03; packaging → W08/W10: cited, untouched.
 
 ## Resume state
 
-Completed: all 16 MANDATORY IDs (7 CAP + 9 DISCOVERY) traced requirement → live owner → test → evidence; mandated two-repo search + 7 inventories + boundary doc done; capability vocabulary frozen (Layers A–D with per-capability declaration/probe/fields/error/fallback/UI); failure/lifecycle coverage checked across 12 dimensions; GUI + compat + regression evidence current; pins current; diff reviewed; secret-safe; audit report written.
-In progress: none. Open P0/P1 (owned): 0. Pending tests/evidence: none for this Wave.
-Next: none in this Wave — stop. `W08` may be planned only after its dependency/prerequisite checks are revalidated; this session starts nothing.
+Repair refresh evidence `EV-W07-REPAIR-011` (2026-09-21T21:52:40Z): the combined W07 contract/compatibility suites passed **252/252**, and the real-wx capability probe passed **17/17**, against main `63b696b3` and plugin `f0abb7e7`.
+
+Completed: all 16 MANDATORY IDs remain traced requirement → live owner → test → evidence; W07 evidence was rebound to current HEAD and refreshed (252 tests passed; real-wx probe 17/17).
+In progress: fresh independent audit required.
+Next: fresh audit of W07 only; this worker starts nothing else.
+
+## Repair refresh 2026-09-21T21:56:30Z
+
+`EV-W07-REPAIR-012`: reran the combined W07 contract/compatibility suite with
+`HPC_GUI_CONTRACT_REPO=D:\Projeler\hpc-client-gui-plugins` and the real-wx
+capability probe. Result: **252 passed**, **17/17 GUI checks passed**, exit 0,
+main `63b6963b`, plugin `f0abb7e7`. No product or test files changed.
+
+`EV-W07-REPAIR-013` (2026-09-22T04:21:27Z): reran the same live-plugin
+contract/compatibility suite and real-wx capability probe. Result: **252
+passed**, **17/17 GUI checks passed**, exit 0, main `63b6963b`, plugin
+`f0abb7e7`. W06 remains a non-blocking integration reference; W07 remains ready
+for a fresh audit.
+
+`EV-W07-REPAIR-014` (2026-09-22T07:29:36+03:00): reran the same live-plugin
+contract/compatibility suite and real-wx capability probe. Result: **252
+passed**, **17/17 GUI checks passed**, exit 0, main `63b6963b`, plugin
+`f0abb7e7`. No product/test files changed; W06 was not used as an acceptance
+gate.
+
+`EV-W07-REPAIR-015` (2026-09-22T07:45:00+03:00): reran the combined
+W07 contract/compatibility suite and real-wx capability probe in this repair
+phase. Result: **252 passed**, **17/17 GUI checks passed**, exit 0, main
+`63b696b3b8c64296d9d17f94c8d0d903f9bab7eb`, plugin
+`f0abb7e7037e66ab451d463c699fecf4e00c89eb`. No product/test files changed;
+W06 remains a non-blocking integration reference under W07's independence
+contract.
+
+`EV-W07-REPAIR-016` (2026-09-22T04:37:34Z): reran the combined live-plugin
+contract/compatibility suites and the real-wx capability probe in this repair
+phase. Result: **252 passed**, **17/17 GUI checks passed**, exit 0, main
+`63b696b3b8c64296d9d17f94c8d0d903f9bab7eb`, plugin
+`f0abb7e7037e66ab451d463c699fecf4e00c89eb`. W06 remains
+`READY_FOR_AUDIT`; W06 was not used as a W07 acceptance gate. No product or
+test files changed.
+
+## Closeout
+
+Closed 2026-09-22 after fresh independent audit phase result `PASS`.
+Candidate/final SHA: `63b696b3b8c64296d9d17f94c8d0d903f9bab7eb`.
+Plugin evidence SHA: `f0abb7e7037e66ab451d463c699fecf4e00c89eb`.
+Required GUI evidence remains current: real-wx probe **17/17 passed**;
+focused contract/compatibility evidence remains current: **252 passed**.
+No HPC closeout validator exists for this W07 target; validator execution was
+therefore not applicable. W07 is closed independently of W06 as required by
+the execution independence contract. The canonical wave file was moved from
+`waves/pending/W07.md` to `waves/done/W07.md`.

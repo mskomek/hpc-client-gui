@@ -78,3 +78,15 @@ These are repository/evidence and dependency findings, not unavailable
 external authority.
 
 WAVE_PHASE_STATUS: REOPEN
+
+## Repair reconciliation (2026-09-22)
+
+This audit remains the historical REOPEN result; it is not a fresh audit. The
+W17 repair worker routed `REOPEN-W17-001` to the W16/controller owner because
+W17's canonical execution-independence contract explicitly makes predecessor
+state non-blocking. The W17-owned stale-identity finding was addressed by
+rerunning the focused W17 GUI/profile validation on current HEAD
+`63b696b3b8c64296d9d17f94c8d0d903f9bab7eb`; evidence is recorded in
+`build/audit/w17-current-validation.json` with 61 passed and 0 failed.
+
+Fresh independent audit required: READY_FOR_AUDIT.

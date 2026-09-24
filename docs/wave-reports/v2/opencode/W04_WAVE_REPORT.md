@@ -4,9 +4,9 @@ Wave: `W04`
 Canonical report path: `docs/wave-reports/v2/opencode/W04_WAVE_REPORT.md`
 Repository: `mskomek/hpc-client-gui`
 Branch: `develop`
-Baseline SHA: `0f8902a023bac76071527232c2287af96478ed2b`
-Current HEAD: `0f8902a023bac76071527232c2287af96478ed2b`
-Tested implementation state: `HEAD 0f8902a0` + working-tree W04 implementation (FIX-W04-A carried from session entry; FIX-W04-B authored and verified by the repair cycle — see Fixes)
+Baseline SHA: `63b696b3b8c64296d9d17f94c8d0d903f9bab7eb`
+Current HEAD: `63b696b3b8c64296d9d17f94c8d0d903f9bab7eb`
+Tested implementation state: `HEAD 63b696b3` + preserved W04 implementation (FIX-W04-A and FIX-W04-B remain present and are covered by the focused suite)
 Plugin/external repo SHA(s): carried (`..\hpc-client-gui-plugins` on `develop` / `f0abb7e7037e66ab451d463c699fecf4e00c89eb`); not re-pinned by this session, no plugin change in scope (plugin working tree holds only `?? .github/social-preview.jpg`, preserved)
 First started: 2026-09-18
 Last updated: 2026-09-19 (UTC) — repair cycle 1 (max 2) for Luna audit REOPEN `DEF-W04-002`
@@ -14,7 +14,7 @@ Session status: COMPLETE (repair cycle 1)
 Wave decision: PASS (pending fresh-context audit)
 Executable authority: `waves/pending/W04.md` (exactly one copy; `waves/pending/` holds W01–W61, 61 files, no gaps/duplicates; `waves/bak/` never read for execution)
 Execution model: `opencode-go/muse-spark-1.3-contributor`
-Dependency: `W03` — `docs/wave-reports/v2/opencode/W03_WAVE_REPORT.md` decision `PASS`, audit `PASS`; entry revalidated (same pins, no owned W03 blocker touches this scope)
+Dependency: `W03` — closed in `waves/done/W03.md`; report and audit decision `PASS`, entry revalidated (same pins, no owned W03 blocker touches this scope)
 
 ## Owned requirements and TODO details
 
@@ -74,7 +74,7 @@ Dependency: `W03` — `docs/wave-reports/v2/opencode/W03_WAVE_REPORT.md` decisio
 
 ## Discovery pass (before first conclusion)
 
-- Pinned `develop 0f8902a0` (== `origin/develop` tip per controller handoff); plugin `f0abb7e7` carried, not re-fetched (read-only here).
+- Pinned `develop 63b696b3`; plugin `f0abb7e7` carried, not re-fetched (read-only here).
 - Working tree at entry already held the W04 implementation (FIX-W04-A in `wx_shell.py`, `wx_errors.py` helper, en/tr failure keys, 56-row freeze artifact, 28-test pin suite) plus concurrent/pre-existing changes (`CONTRIBUTING.md`, `README.md`, `wx_settings_view.py`, `test_wave10_release_gate.py`, W02/W03 artifacts, FFSync sidecars) — all preserved byte-for-byte, none reverted; this session made zero product edits and authored no new repo test file.
 - Bounded plan followed: pin + baseline, requirement → owner → test → evidence trace, minimal in-scope fix already present (verified, not assumed), GUI-class real-wx probe mandatory and run, no mocks for behavior-under-test, no test weakening, cross-Wave defects routed with IDs. Repair cycle 1 (2026-09-19): Luna REOPEN `DEF-W04-002` reproduced (90s TIMEOUT), diagnosed via Temp probe (native `FileDialog` boundary hit, routing intact), fixed with the smallest coherent change (FIX-W04-B: one `_header_download` handler hunk + one test-boundary helper; assertions unchanged), and re-proven (28/28 in 15.51s + probe PASS + 53/24 impact lanes).
 - `wxPython 4.3.1 msw (phoenix) wxWidgets 3.3.3` present; `Python 3.12.4` active truth.
@@ -151,7 +151,7 @@ In progress: none. Open P0/P1: 0 (owned). Open P2/P3: 0 (owned).
 Pending tests/evidence: none for this Wave — fresh-context re-audit pending (repair cycle 1 of max 2; cycle 2 reserved only if the re-audit reopens).
 Last exact commands: see evidence table (`EV-W04-AFTER-002`, `EV-W04-GUI-002`, `EV-W04-IMPACT-003/004`, `EV-W04-DEF002-*-001`).
 Next actions: none in this Wave — stop. `W05` may be planned only after its dependency/prerequisite checks are revalidated; this session starts nothing.
-Evidence/artifact identities: implementation state `0f8902a0` + working-tree W04 implementation incl. FIX-W04-B; freeze `artifacts/v2-final/W04/SUPPORT_MATRIX_FREEZE.md` (56 rows); suite `tests/test_w04_support_freeze.py` (28 tests); probe `w04_gui_probe.py` + diagnostic `w04_def002_diag.py` (Temp, outside repo); no package artifact (N/A for W04).
+Evidence/artifact identities: implementation state `63b696b3` + preserved W04 implementation incl. FIX-W04-B; freeze `artifacts/v2-final/W04/SUPPORT_MATRIX_FREEZE.md` (56 rows); suite `tests/test_w04_support_freeze.py` (28 tests); probe `w04_gui_probe.py` + diagnostic `w04_def002_diag.py` (Temp, outside repo); no package artifact (N/A for W04).
 
 ## Final summary
 

@@ -1,6 +1,6 @@
 # W02 — Action Ownership Map (TRACE-001)
 
-**Pinned implementation SHA:** `f94adb640136181dbaafa84f62c753b013f0b94e` (`develop`)
+**Pinned implementation SHA:** `63b696b3b8c64296d9d17f94c8d0d903f9bab7eb` (`develop`)
 **Authority:** `waves/pending/W02.md` + `HPC-W01-TRACE-001` + Workstream B (`WAVE_V2_FINAL_01.md` §218–226)
 **Method:** static trace of `src/hpc_gui/wx_shell.py::_dispatch` branches + view/service
 ownership, locked by `tests/test_wx_dispatch_error_gov.py`

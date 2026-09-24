@@ -6,7 +6,7 @@ Canonical report path: docs/wave-reports/v2/opencode/W21_WAVE_REPORT.md
 Repository: mskomek/hpc-client-gui (main)
 Branch: develop
 Baseline SHA: 0f8902a023bac76071527232c2287af96478ed2b
-Current HEAD: 0f8902a023bac76071527232c2287af96478ed2b
+Current HEAD: ccaf871ffc139973db826363859ca2933b216e9c
 Tested implementation SHA: 0f8902a023bac76071527232c2287af96478ed2b + working-tree W21 changes listed below (no commit created by this session; pre-existing stacked work preserved byte-for-byte)
 Plugin/external repo SHA(s): f0abb7e7037e66ab451d463c699fecf4e00c89eb (develop; not re-fetched this session, no plugin paths touched)
 First started: 2026-09-20
@@ -251,3 +251,31 @@ Open P2/P3: OBS-W21-003 (P3 new), OBS-W20-003/004 (P3 carried)
 Two-fix gate: PASS
 Wave decision: READY_FOR_AUDIT
 ```
+
+## Repair update — 2026-09-22
+
+The W21 closeout validator previously failed because the required evidence
+manifest was missing. Added `artifacts/wave_W21/WAVE_W21_EVIDENCE_MANIFEST.json`
+with all 36 owned requirements, LF-normalized W21 spec hash, current commit
+identity, GUI/external evidence references, and explicit resource lifecycle
+owners. Focused validation remains green:
+
+```text
+.venv\\Scripts\\python.exe -m pytest tests/test_w21_terminal_lifecycle.py -q
+8 passed, 0 failed
+.venv\\Scripts\\python.exe scripts/validate_wave_closeout.py --wave W21 --no-execute-tests
+can_close: true; failure_reasons: []
+```
+
+## Repair update — 2026-09-22 (content identity refresh)
+
+The controller detected that the prior audit receipt was bound to implementation
+content identity `6bc123d467622d28ca4e84b0279e6567e0bfc48a44a72234beaa43c0eec5d32a`,
+while the controller handoff identity for the current repository implementation is
+`9a55b7e4349f5d3892105647a1a3f1ddecf37b1d272c7d6e3731a8fb3129c30d`. This is
+repository-owned stale evidence, not a human/external blocker. The focused W21
+runtime suite was rerun against current HEAD `ccaf871ffc139973db826363859ca2933b216e9c`:
+8 passed, 0 failed. A current identity receipt is recorded in
+`build/audit/w21-repair-identity.txt`; fresh independent audit is required.
+
+WAVE_PHASE_STATUS: READY_FOR_AUDIT

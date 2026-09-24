@@ -2,10 +2,10 @@
 
 ```text
 Wave: W20
-Audit cycle: 1
+Audit cycle: 2
 Decision: PASS
 Auditor: GPT-5.6 Luna (openai/gpt-5.6-luna), reasoning medium
-Date: 2026-09-20
+Date: 2026-09-22
 ```
 
 ## Authority and dependency
@@ -78,6 +78,12 @@ test skip/xfail or assertion weakening.
   build-input change.
 
 ## Findings and verdict
+
+Repair verification added the required machine manifest at
+`artifacts/wave_W20/WAVE_W20_EVIDENCE_MANIFEST.json`. The canonical validator
+was rerun after cleaning the validator's disposable `.tmp` ACL state and
+returned `can_close: true` with all 26 owned requirements and four exact GUI
+test nodes bound to candidate `f36809842502fac3ded6289e797b37c6c11894c9`.
 
 No owned P0/P1/P2 blocker remains. `OBS-W20-003` and `OBS-W20-004` remain
 honest, explicitly scoped P3 observations and do not invalidate the required

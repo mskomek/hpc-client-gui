@@ -2,10 +2,10 @@
 
 ```text
 Wave: W19
-Audit cycle: 1
-Decision: PASS
+Audit cycle: 1 (invalidated by current-HEAD reconciliation)
+Decision: STALE — FRESH AUDIT REQUIRED
 Auditor: GPT-5.6 Luna (openai/gpt-5.6-luna), reasoning medium
-Date: 2026-09-20
+Date: 2026-09-22
 ```
 
 ## Authority and dependency
@@ -19,8 +19,8 @@ predecessor gate is satisfied.
 
 ## Identity and working tree
 
-- Branch `develop`; HEAD and `origin/develop` both
-  `0f8902a023bac76071527232c2287af96478ed2b`.
+- Branch `develop`; HEAD `ccaf871ffc139973db826363859ca2933b216e9c`,
+  origin/develop remains `0f8902a023bac76071527232c2287af96478ed2b`.
 - Plugin is `develop` at `f0abb7e7037e66ab451d463c699fecf4e00c89eb`; no
   tracked plugin changes were present (one unrelated untracked preview file).
 - Main working tree is dirty with the documented pre-existing stacked changes;
@@ -73,4 +73,8 @@ seven TODO-detail IDs have implementation/test/evidence coverage. The
 required GUI and EXTERNAL classes are current and truthful, and unrelated
 working-tree changes were preserved.
 
-**PASS.** W19 is eligible for close; W20 must not be started automatically.
+The prior PASS is invalidated because it was bound to the superseded
+`0f8902a023bac76071527232c2287af96478ed2b` identity. Focused repair
+validation is green at `ccaf871ffc139973db826363859ca2933b216e9c`, and the
+required manifest is now present, but this report is not a fresh independent
+audit. **FRESH AUDIT REQUIRED.**

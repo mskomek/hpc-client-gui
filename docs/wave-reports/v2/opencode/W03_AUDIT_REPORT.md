@@ -2,8 +2,8 @@
 
 ## Decision
 
-**BLOCKED** — W03-owned checks are green, but its canonical dependency W02 is
-currently blocked by the independent W02 audit and cannot be treated as PASS.
+**PASS** — W03-owned checks are green, and its canonical dependency W02 is
+closed with a fresh independent PASS.
 
 ## Authority and identity
 
@@ -15,7 +15,7 @@ currently blocked by the independent W02 audit and cannot be treated as PASS.
   ownership map, and Workstreams C/D in
   `opencode/sources/WAVE_V2_FINAL_01.md`. No TODO rows are owned by W03.
 - Main repository: branch `develop`, HEAD
-  `f94adb640136181dbaafa84f62c753b013f0b94e`.
+  `63b696b3b8c64296d9d17f94c8d0d903f9bab7eb`.
 - W03 requires `GUI` evidence only. No package artifact, EXTERNAL, LOCAL_REAL,
   or final-artifact SHA claim is applicable; private-key bytes were not read.
 - Recorded plugin identity: `develop /
@@ -24,12 +24,8 @@ currently blocked by the independent W02 audit and cannot be treated as PASS.
 ## Dependency truth
 
 - W03 declares dependency `W02`.
-- The current canonical `docs/wave-reports/v2/opencode/W02_AUDIT_REPORT.md`
-  is `BLOCKED`, not PASS. It identifies W02's unresolved dependency on W01
-  (`W01_AUDIT_REPORT.md` is `REOPEN`) and a stale W02 report/diff inventory.
-- The W03 wave report's assertion that W02 is PASS is therefore stale and is
-  overridden by the independent current W02 audit. W03 cannot be accepted
-  until W02 is reconciled and freshly audited.
+- W02 is closed in `waves/done/W02.md`; its current report and audit decision
+  are `PASS`.
 
 ## Independent verification
 
@@ -60,9 +56,8 @@ currently blocked by the independent W02 audit and cannot be treated as PASS.
 
 | Finding | Severity | Owner/state |
 |---|---|---|
-| `W03-AUDIT-001`: canonical dependency W02 is independently `BLOCKED` while W02 depends on W01 `REOPEN`; W03's dependency PASS claim is stale. | P1 | W01/W02 report-evidence reconciliation and fresh audits; BLOCKING |
+| `W03-AUDIT-001`: canonical dependency W02 was previously blocked | P1 | CLOSED — W02 is closed with fresh independent PASS |
 
-No W03 product or test finding was fixed. Re-audit W03 after W02 is truthfully
-accepted and any invalidated evidence is refreshed.
+No W03 product or test finding required repair. W03 is ready for serial close.
 
-WAVE_PHASE_STATUS: BLOCKED
+WAVE_PHASE_STATUS: PASS

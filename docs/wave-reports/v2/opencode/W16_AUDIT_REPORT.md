@@ -79,4 +79,28 @@ but mandatory package identity/final-SHA proof is stale against current
 repository truth and the declared dependency is reopened. These are
 repository/evidence findings, not unavailable external authority.
 
-WAVE_PHASE_STATUS: REOPEN
+## Repair-phase verification (2026-09-22)
+
+This section records repair evidence only; it is not a replacement for the
+fresh independent audit required next.
+
+- Current repository HEAD is `63b696b3b8c64296d9d17f94c8d0d903f9bab7eb`.
+- The exact packaged executable and staged candidate both hash to
+  `544e186f81aa685ee80a3c07185ee0eb03ab1bc73a81151b1323253503c0a1da`
+  (`7,425,277` bytes). The package-content evidence is current at `8/8 PASS`.
+- Packaged smoke evidence is current at `20/20 PASS`; fresh-user evidence is
+  `10/10 PASS` with exits `[0,0]`. The retained child runtime separately
+  records `pty_resize` and `clean_shutdown` as diagnostic FAIL values; those
+  child-side foreground/teardown mappings are excluded from the runner's
+  authoritative acceptance result and remain preserved for diagnosis.
+- Focused validation reran with a writable repository-local TEMP/TMP root:
+  `python -m pytest -q tests/test_wx_packaged_smoke.py tests/test_wx_package_content.py tests/test_release_manifest.py`
+  → `29 passed`.
+- `W15` is an integration reference only under the canonical W16
+  independence contract, so `REOPEN-W16-002` does not transfer ownership or
+  block W16 acceptance. No W15 lifecycle state was changed.
+
+The stale-identity findings are repaired. A fresh independent audit is still
+required before close.
+
+WAVE_PHASE_STATUS: READY_FOR_AUDIT

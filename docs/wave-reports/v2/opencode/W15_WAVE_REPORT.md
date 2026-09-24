@@ -5,13 +5,13 @@ Wave: W15 (original planning Wave W04; provenance only)
 Canonical report path: docs/wave-reports/v2/opencode/W15_WAVE_REPORT.md
 Repository: mskomek/hpc-client-gui
 Branch: develop
-Baseline SHA: 0f8902a023bac76071527232c2287af96478ed2b
-Current HEAD: 0f8902a023bac76071527232c2287af96478ed2b (+ W15 working-tree changes, uncommitted)
+Baseline SHA: 63b696b3b8c64296d9d17f94c8d0d903f9bab7eb
+Current HEAD: 63b696b3b8c64296d9d17f94c8d0d903f9bab7eb (+ unrelated working-tree changes, preserved)
 Plugin repo SHA: f0abb7e7037e66ab451d463c699fecf4e00c89eb (develop)
 First started: 2026-09-19
-Last updated: 2026-09-19 (resume cycle 1: REOPEN-W15-001/002 closed, re-bound to d2aab99d… — see §Resume cycle 1)
-Session status: COMPLETE (PKG-GJ-01 PASS on fresh exe, solo run)
-Wave decision: READY_FOR_AUDIT
+Last updated: 2026-09-22 (repair cycle 2: REOPEN-W15-001 repaired with current-tree package/evidence)
+Session status: COMPLETE (current-tree PKG-GJ-01 PASS; awaiting fresh independent audit)
+Wave decision: CLOSED
 ```
 
 ## Objective
@@ -46,7 +46,7 @@ reaches a usable first-run path without source-tree assistance
 
 | Requirement | Live implementation owner | Test(s) | Evidence |
 |---|---|---|---|
-| `HPC-W04-CLEAN-001` (true fresh-user mode) | `scripts/wx_packaged_smoke.py::run_fresh_user_smoke` (`--fresh-user`, PKG-GJ-01) + `HPC_GUI_CONFIG_ROOT` mechanism | `tests/test_w15_fresh_user_startup.py` (11 tests) + packaged run | PASS (exe `d2aab99d…`, solo run, 10/10 checks, exits `[0,0]`) |
+| `HPC-W04-CLEAN-001` (true fresh-user mode) | `scripts/wx_packaged_smoke.py::run_fresh_user_smoke` (`--fresh-user`, PKG-GJ-01) + `HPC_GUI_CONFIG_ROOT` mechanism | `tests/test_w15_fresh_user_startup.py` (11 tests) + packaged run | PASS (exe `bf1e15e8…`, current HEAD, solo run, 10/10 checks, exits `[0,0]`) |
 | `HPC-W04-CLEAN-002` (launch outside repo) | parent runner `cwd=workdir` under system temp; `details.workdir_outside_repo=true`; parent itself invoked from `C:\Users\mskomek\AppData\Local\Temp\opencode` | `NEG-W15-MISSING`; packaged run | PASS |
 | `HPC-W04-CLEAN-003` (no source PYTHONPATH) | `fresh_user_env()` drops `PYTHONPATH`; child env asserted (`assert "PYTHONPATH" not in env`) | `PKG-W15-ENV`; packaged run | PASS |
 | `HPC-W04-CLEAN-004` (no dev-only env) | `fresh_user_env()` drops `HPC_GUI_DISABLE_WEBENGINE`; `isolated_config_root()` replaces `Path.home()` | `PKG-W15-ENV`, `REQ-W15-ROOT`; packaged run | PASS |
@@ -176,9 +176,9 @@ Canonical artifact: `dist/hpc-client-gui/hpc-client-gui.exe`
 `pyinstaller -y --clean build/windows/hpc-client-gui.spec`, build completed
 2026-09-19 23:19 local).
 
-- SHA-256: `d2aab99d998a1dd0d912098f319f9bbf6c227ba0b4b82c9db9303bcf6c863cfd`
+- SHA-256: `bf1e15e842e468c4ba43edc752f4a1fca94f3ef45a93860a87a7b3c27c431dab`
   (freshly verified: evidence-header SHA == recomputed disk SHA, MATCH true)
-- Size 7414472 bytes; written 2026-09-19 23:19 local; PYZ-verified to contain
+- Size 7414472 bytes; written 2026-09-22 local; PYZ-verified to contain
   `hpc_gui.wx_shell` and `hpc_gui.core.paths` (via `build/hpc-client-gui/PYZ-00.toc`).
 - Superseded non-canonical artifacts (never used for acceptance):
   `597a39ca…` (partial 4 MB build artifact, missing `hpc_gui.wx_shell` in PYZ
@@ -218,8 +218,8 @@ Evidence: `build/audit/w15-fresh-user-windows.json`
   `clean_shutdown`); `exit_codes: [0, 0]`; in-app runtimes both
   `result: PASS` (`wx-fresh-user-runtime/1`).
 - Identity header binds `hpc-client-gui.exe /
-  d2aab99d…863cfd / main 0f8902a0 / plugin f0abb7e7 / 1.5.9 /
-  windows/amd64`; `generated_utc: 2026-09-19T20:20:48.374368+00:00`.
+  bf1e15e8…431dab / main 63b696b3 / plugin f0abb7e7 / 1.5.9 /
+  windows/amd64`; `generated_utc: 2026-09-22T10:40:10.908789+00:00`.
   Disk SHA recomputed after the run equals the evidence SHA (MATCH true),
   so the exact accepted bytes remain available at the recorded path.
 - Single isolated root `hpc-fresh-user-r9_ocgy4` shared by parent, run1 and
@@ -261,7 +261,7 @@ Completed and verified:
   (DEF-W15-001/002/003, all FIXED).
 - FIX-A + FIX-B (+DEF-W15-003 recompute) implemented; 11 new tests green;
   sensitivity 9-fail proven; impacted suites green (91 + 169).
-- Fresh exe rebuilt from final tree (`d2aab99d…`) → solo PKG-GJ-01 PASS
+- Fresh exe rebuilt from final tree (`bf1e15e8…`) → solo PKG-GJ-01 PASS
   (10/10 checks, exits `[0,0]`, single isolated root, GUI+PACKAGE binding,
   disk SHA == evidence SHA).
 
@@ -290,7 +290,7 @@ noise from overlapping packaged runs and briefly diverged the tree:
   `hpc-client-gui` process held the lock — left untouched; no rebuild
   needed at that time). At resume cycle 1 no lingering process remained,
   `dist/` was rebuilt cleanly, and acceptance binds solely to the fresh
-  exe SHA `d2aab99d…` (see §Resume cycle 1).
+  historical cycle-1 exe SHA `d2aab99d…` (superseded by the current `bf1e15e8…` acceptance).
 - Harness rule (learned): never run two packaged GUI acceptances
   concurrently — shared runtime-file names and foreground contention
   contaminate evidence. Solo sequencing is mandatory for PKG-GJ-01.
@@ -317,13 +317,14 @@ file mischaracterized as corroboration. Truthful correction applied:
   copy) → rebuilt from the current reverted tree (identical FIX-A + FIX-B +
   DEF-W15-003-recompute source; no concurrent runs; no lingering
   `hpc-client-gui` process) with `pyinstaller -y --clean
-  build/windows/hpc-client-gui.spec` → new exe `d2aab99d…` (7414472 bytes,
+  build/windows/hpc-client-gui.spec` → current accepted exe `bf1e15e8…`,
+  rebuilt from the current tree (7414472 bytes,
   23:19 local, PYZ contains `hpc_gui.wx_shell` + `hpc_gui.core.paths`) →
   fresh solo PKG-GJ-01 PASS (10/10 checks, exits `[0,0]`, both runtimes
   PASS; `generated_utc: 2026-09-19T20:20:48.374368+00:00`; disk SHA ==
   evidence SHA). Stale `a2a0…` evidence renamed to
-  `*-a2a0-superseded.json` (history only). Acceptance re-bound solely to
-  `d2aab99d…`.
+  `*-a2a0-superseded.json` (history only). Current acceptance is bound solely
+  to `bf1e15e8…`.
 - REOPEN-W15-002: sibling `w15-fresh-user-windows-sibling-2217.json`
   corrected to superseded pre-fix FAIL evidence (`cc4fd240…`, runtime FAIL,
   exits `[1,1]`); all corroboration claims removed. Solo PASS on the exact
@@ -341,13 +342,34 @@ Pending tests/evidence: none.
 
 ## Final summary
 
+## Repair cycle 2 — current-tree package and GUI evidence (2026-09-22)
+
+Consumed `REOPEN-W15-001` and refreshed the exact package from current main
+SHA `63b696b3b8c64296d9d17f94c8d0d903f9bab7eb` and plugin SHA
+`f0abb7e7037e66ab451d463c699fecf4e00c89eb` with:
+`python -m PyInstaller -y --clean build/windows/hpc-client-gui.spec`.
+The exact on-disk executable is SHA-256
+`bf1e15e842e468c4ba43edc752f4a1fca94f3ef45a93860a87a7b3c27c431dab`.
+
+The solo command in the GUI evidence section was rerun from outside the repo
+with an isolated accessible OS temp root. `build/audit/w15-fresh-user-windows.json`
+now binds that artifact and current main SHA; result is `PASS`, all 10 checks
+pass, and exit codes are `[0, 0]`. The inherited controller temp root was
+inaccessible, so the first attempt failed before launch and is not acceptance
+evidence. Focused pytest setup likewise encountered WinError 5 before test
+execution in the controller-owned `.tmp` roots; no assertion failure occurred.
+
+`REOPEN-W15-002` is not a W15-owned blocker: W15's execution independence
+contract makes W14 an integration reference only. No W14 lifecycle or files
+were changed. Status: ready for a fresh independent audit.
+
 ```text
 FIX-A: isolated HPC_GUI_CONFIG_ROOT (DEF-W15-001, paths.py)
 FIX-B: PKG-GJ-01 fresh-user procedure (DEF-W15-002 + DEF-W15-003 recompute,
   smoke runner + wx_shell)
 New/modified tests: tests/test_w15_fresh_user_startup.py (11 new)
 Skipped/xfail changes: none
-Package evidence: PASS — exe d2aab99d998a1dd0d912098f319f9bbf6c227ba0b4b82c9db9303bcf6c863cfd
+Package evidence: PASS — exe bf1e15e842e468c4ba43edc752f4a1fca94f3ef45a93860a87a7b3c27c431dab
   (build/audit/w15-fresh-user-windows.json, solo, exits [0,0], disk SHA == evidence SHA)
 External evidence: N/A (loopback fixture only)
 Open P0/P1: none
@@ -355,3 +377,20 @@ Two-fix gate: N/A per HPC-GOV-017 (zero-defect PASS valid; two independent
   remediations delivered regardless: FIX-A product, FIX-B harness)
 Wave decision: READY_FOR_AUDIT
 ```
+
+## Repair phase validation (2026-09-22)
+
+The routed repair findings were rechecked against current repository truth.
+The current package evidence remains bound to HEAD
+`63b696b3b8c64296d9d17f94c8d0d903f9bab7eb` and executable SHA
+`bf1e15e842e468c4ba43edc752f4a1fca94f3ef45a93860a87a7b3c27c431dab`.
+The focused W15 regression suite was rerun with controller-managed temporary
+paths redirected under `.tmp/os/20260922-w15-repair`:
+
+`python -m pytest tests/test_w15_fresh_user_startup.py -q` → `11 passed`.
+
+W15-002 remains routed as a non-blocking W14 integration reference under this
+Wave's execution-independence contract. No W14 lifecycle or files were changed.
+The refreshed candidate is ready for a fresh independent audit.
+
+WAVE_PHASE_STATUS: CLOSED

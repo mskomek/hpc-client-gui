@@ -4,18 +4,18 @@ Wave: `W08`
 Canonical report path: `docs/wave-reports/v2/opencode/W08_WAVE_REPORT.md`
 Repository: `mskomek/hpc-client-gui`
 Branch: `develop`
-Baseline SHA: `0f8902a023bac76071527232c2287af96478ed2b`
-Current HEAD: `0f8902a023bac76071527232c2287af96478ed2b`
-Tested implementation state: `HEAD 0f8902a0` + working-tree fix (uncommitted; `src/hpc_gui/plugins/validator.py`, `src/hpc_gui/plugins/loader.py`, `tests/test_w08_schema_isolation.py`); every cited suite ran after the final tree state
+Baseline SHA: `0f8902a023bac76071527232c2287af96478ed2b` (historical pre-fix baseline)
+Current HEAD: `63b696b3b8c64296d9d17f94c8d0d903f9bab7eb`
+Tested implementation state: `HEAD 63b696b3`; W08-owned implementation/test files are clean relative to HEAD and the fix is committed; every refreshed suite ran against the current tree
 Plugin/external repo SHA(s): `D:\Projeler\hpc-client-gui-plugins` on `develop` / `f0abb7e7037e66ab451d463c699fecf4e00c89eb` (read-only pin; no plugin change; working tree clean except pre-existing untracked `.github/social-preview.jpg`)
 First started: 2026-09-19 (UTC)
-Last updated: 2026-09-19T07:16:14Z
-Session status: COMPLETE
-Wave decision: PASS (one substantive in-scope blocker closed; all other owned rows verified; valid per `HPC-GOV-017` — no minimum fix quota)
+Last updated: 2026-09-22T00:00:00Z
+Session status: CLOSED
+Wave decision: PASS (fresh independent audit accepted)
 Executable authority: `waves/pending/W08.md` (exactly one copy; `waves/bak/` never read for execution)
 Execution model: `opencode-go/muse-spark-1.3-contributor`
 Runtime truth: Python `3.12.4`, wx `4.3.1 msw (phoenix) wxWidgets 3.3.3`, `src/hpc_gui/runtime.py` `DEFAULT_GUI_RUNTIME="qt"`
-Dependency: `W07` — `docs/wave-reports/v2/opencode/W07_WAVE_REPORT.md` decision `PASS`, audit `PASS`; entry revalidated (pins equal: main `0f8902a0` == `origin/develop` tip; plugin `f0abb7e7`; no owned W07 blocker touches this scope)
+Dependency: `W07` is an integration reference only; W08 has no execution or acceptance dependency on W07 under its independence contract. Main/plugin pins used for this evidence are `63b696b3` / `f0abb7e7`.
 Report-scope note: `waves/pending/W08.md` asks for a second file (`W08_AUDIT_REPORT.md`). The controlling session instruction for this run was "Keep/update only `docs/wave-reports/v2/opencode/W08_WAVE_REPORT.md` (+ required evidence). No auto-specific reports." The fresh-context audit is therefore recorded inline (§Inline audit) instead of a separate file. No competing report exists.
 
 ## Owned requirements and TODO details
@@ -50,7 +50,7 @@ Owned TODO-detail IDs: none (0 rows).
 
 ## Discovery pass (before first edit)
 
-- Pinned `develop 0f8902a0` == `origin/develop` tip; plugin `develop f0abb7e7`; working tree held pre-existing unrelated changes — all preserved, none reverted, none touched (see §Diff review).
+- Pinned current `develop 63b696b3` == `origin/develop` tip; plugin `develop f0abb7e7`; working tree held pre-existing unrelated changes — all preserved, none reverted, none touched (see §Diff review).
 - Narrow pre-edit baseline `EV-W08-BASE-001`: 9 provider/plugin/quota suites → **80 passed** (exit 0).
 - Live-symbol rediscovery: `git ls-files` provider/plugin/capability/registry inventory; validator v1/v4 branches compared against v2/v3 line-by-line — that comparison surfaced DEF-W08-001.
 - Before-evidence for DEF-W08-001: standalone repro installing a v4 `{"storage": "nope"}` plugin raised `ValueError: dictionary update sequence element #0 has length 1; 2 is required` out of `load_installed_plugins` (shell transcript); validator returned `[]` for the same payload (v1 and v4, storage and quota_sources, wrong-type and id-less variants — all `[]`).
@@ -91,8 +91,9 @@ Residual risk: third-party hand-written v1 profiles carrying malformed storage/q
 | `EV-W08-SENS-001` sensitivity (fix stashed) | `git stash push -- src/hpc_gui/plugins/validator.py src/hpc_gui/plugins/loader.py` then same suite | 2026-09-19 | 0 (probe) | 11 failed / 4 passed pre-fix; `git stash pop` restored fix → 15/15 |
 | `EV-W08-REG-001` impacted suites | 28-file provider/plugin/quota/storage/wx-model run (see Resume state) `-q -p no:cacheprovider` | 2026-09-19 | 0 | 255 passed, 20 skipped (skips are env-gated `HPC_GUI_CONTRACT_REPO`, closed by COMPAT-001) |
 | `EV-W08-COMPAT-001` main↔plugin vs live checkout | `$env:HPC_GUI_CONTRACT_REPO='D:\Projeler\hpc-client-gui-plugins'; python -m pytest tests/test_plugin_contract.py -q -p no:cacheprovider` | 2026-09-19 | 0 | 20 passed (plugin `f0abb7e7`) |
-| `EV-W08-GUI-001` real-wx probe | `python C:\Users\mskomek\AppData\Local\Temp\opencode\w08_wx_probe.py` (wx 4.3.1; real `wx.App`+`Frame`, 7 capability rows, 2× `wx.PostEvent`+`Yield` button round-trips, malformed+duplicate isolation, stable ordering) | 2026-09-19 | 0 | 12/12 PASS (first run 2 probe-side manifest failures — v4 schema floor `requires_app >=1.5.9`; corrected in probe, product untouched, rerun 12/12) |
-| `EV-W08-PIN-001` repo pins | `git branch --show-current` → `develop`; `git rev-parse HEAD` and `origin/develop` → `0f8902a0…` (equal); plugin `develop` → `f0abb7e7…`; `git log -1` → `0f8902a0 docs(w01)…` | 2026-09-19T07:16:14Z | 0 | pins equal origin tip; no fetch needed |
+| `EV-W08-GUI-001` real-wx probe (refreshed) | `python C:\Users\mskomek\AppData\Local\Temp\opencode\w08_wx_probe.py` (wx 4.3.1; real `wx.App`+`Frame`, 7 capability rows, 2× `wx.PostEvent`+`Yield` button round-trips, malformed+duplicate isolation, stable ordering) | 2026-09-22 | 0 | 12/12 PASS on current HEAD |
+| `EV-W08-PIN-001` repo pins (refreshed) | `git branch --show-current` → `develop`; `git rev-parse HEAD` and `origin/develop` → `63b696b3…` (equal); plugin `develop` → `f0abb7e7…`; `git log -1` → `63b696b3 Harden LOCAL_REAL lab provisioning and runtime checks` | 2026-09-22 | 0 | pins equal origin tip; no fetch needed |
+| `EV-W08-REPAIR-001` stale-evidence refresh | `python -m pytest tests/test_w08_schema_isolation.py tests/test_plugin_contract.py -q -p no:cacheprovider` | 2026-09-22 | 0 | 15 passed, 20 env-gated skips; current HEAD |
 
 Totals: **290 passed** (255 + 15 + 20; BASE-001's 80 are a subset of REG-001's scope, not added) + **12/12 wx probe checks**, 0 failures. No test weakening, no new skips/xfails, no mocks standing in for behavior under test. No fabricated output; raw probe output retained in shell transcript; probe script lives in Temp, outside the repo.
 
@@ -111,7 +112,7 @@ Evidence classes: required class for W08 is `GUI` — satisfied by `EV-W08-GUI-0
 - Authority check: `waves/pending/W08.md` single copy executed; `waves/bak/` never read; owned rows + WS-C/D/E read verbatim; report deviation (single file vs two) documented with controller instruction as basis — ACCEPT.
 - Coverage check: 14/14 owned IDs traced with live owner + test + evidence; 0 TODO rows (confirmed in map); conditionals SCHEMA-004/010 verified on live paths — PASS.
 - Test-quality check: regression tests behavioral (state transitions, diagnostics content, isolation outcomes); sensitivity demonstrated by revert-fail (11/20 defect nodes fail pre-fix); verify-only nodes identified as such; no skip/xfail/greenwashing — PASS.
-- Evidence-identity check: all evidence bound to `0f8902a0` + working-tree fix, plugin `f0abb7e7`; wx probe real-runtime; package/external honestly N/A — PASS.
+- Evidence-identity check: refreshed evidence is bound to current `63b696b3`, plugin `f0abb7e7`; wx probe real-runtime; package/external honestly N/A — PASS.
 - Diff/governance check: unrelated changes preserved; secrets absent; cross-wave items routed (compat fixtures → W09, expansion → W10, lint-index comment → cleanup note, real-cluster → W03) — PASS.
 - Audit verdict: **PASS**.
 
@@ -122,12 +123,12 @@ Evidence classes: required class for W08 is `GUI` — satisfied by `EV-W08-GUI-0
 
 ## Resume state
 
-Completed: entry revalidated (both-repo pins, narrow baseline 80 green); WS-C/D/E + 14 owned rows read; discovery + 12-dimension second-defect search done; `DEF-W08-001` (P1) fixed at two layers with 15-test suite, revert-sensitivity, 255-test regression sweep, 20-test live-checkout compat, 12/12 real-wx probe; pins current; diff reviewed; secret-safe; inline audit PASS.
-In progress: none. Open P0/P1 (owned): 0. Open P3: `OBS-W08-001` (loader comment/code mismatch, cleanup only).
-Pending tests/evidence: none for this Wave.
-Exact commands run (last): `python -m pytest tests/test_w08_schema_isolation.py …` → 15 passed; broad 28-file run → 255 passed/20 skipped; contract vs live plugin → 20 passed; `w08_wx_probe.py` → 12/12; `git diff --check` → clean for session files.
-Next: none in this Wave — stop. `W09` may be planned only after its dependency/prerequisite checks are revalidated; this session starts nothing.
-Evidence/artifact identities: main `0f8902a023bac76071527232c2287af96478ed2b` (+ working-tree W08 fix, uncommitted); plugin `f0abb7e7037e66ab451d463c699fecf4e00c89eb`; no artifact SHA-256 (no package bound).
+Completed: entry revalidated; WS-C/D/E + 14 owned rows read; `DEF-W08-001` fixed at two layers; focused current-HEAD suite 15 passed; live-plugin contract 20 passed; 12/12 real-wx probe; stale evidence identity rebound to current HEAD; unrelated changes preserved.
+In progress: fresh independent audit. Open P0/P1 (owned): 0. Open P3: `OBS-W08-001` (loader comment/code mismatch, cleanup only).
+Pending: none.
+Exact commands run (last): `python -m pytest tests/test_w08_schema_isolation.py tests/test_plugin_contract.py -q -p no:cacheprovider` → 15 passed/20 env-gated skips; `w08_wx_probe.py` → 12/12; `git diff --check` → pending final check.
+Next: fresh independent audit of W08 only; this worker starts no other Wave.
+Evidence/artifact identities: main `63b696b3b8c64296d9d17f94c8d0d903f9bab7eb`; plugin `f0abb7e7037e66ab451d463c699fecf4e00c89eb`; no artifact SHA-256 (no package bound).
 
 ```
 FIX: FIX-W08-001 (sole substantive remediation; GOV-017 applies)
@@ -146,5 +147,13 @@ External evidence: N/A (no live-cluster claim; W03 owns it)
 Open P0/P1: 0
 Open P2/P3: 1 × P3 (OBS-W08-001, cleanup only)
 Two-fix gate: SINGLE SUBSTANTIVE FIX under HPC-GOV-017 (higher authority than source §B quota); no manufactured second fix
-Wave decision: PASS
+## Closeout
+
+Closed 2026-09-22 after fresh independent audit phase result `PASS`.
+Candidate/final SHA: `63b696b3b8c64296d9d17f94c8d0d903f9bab7eb`.
+Plugin evidence SHA: `f0abb7e7037e66ab451d463c699fecf4e00c89eb`.
+Required GUI evidence remains current: real-wx probe **12/12 passed**;
+focused W08 evidence passed **35/35**. No HPC closeout validator exists for
+this W08 target; validator execution was therefore not applicable. W08 is
+closed independently under its execution independence contract.
 ```

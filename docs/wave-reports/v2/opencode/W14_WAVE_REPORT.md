@@ -6,11 +6,11 @@ Canonical report path: docs/wave-reports/v2/opencode/W14_WAVE_REPORT.md
 Repository: mskomek/hpc-client-gui
 Branch: develop
 Baseline SHA: 0f8902a023bac76071527232c2287af96478ed2b
-Current HEAD: 0f8902a023bac76071527232c2287af96478ed2b
+Current HEAD: 63b696b3b8c64296d9d17f94c8d0d903f9bab7eb
 Plugin repo SHA: f0abb7e7037e66ab451d463c699fecf4e00c89eb (develop)
 First started: 2026-09-19
-Last updated: 2026-09-19 (repair cycle 2 of max 2 — FINAL)
-Session status: READY FOR FINAL REVIEW
+Last updated: 2026-09-22 (repair cycle 3)
+Session status: READY FOR FRESH-CONTEXT AUDIT
 Wave decision: GO (pending fresh-context re-audit)
 ```
 
@@ -267,11 +267,69 @@ OS/arch: windows/amd64
   (superseded cycle-0), `dist/w14-candidate-r1/` (current),
   `build/audit/w14-packaged-smoke-r1.json` (current)
 
+## Repair cycle 3 — current identity and negative-path repair (2026-09-22)
+
+Fresh repair started from audit findings `REOPEN-W14-001` and
+`REOPEN-W14-002`. `REOPEN-W14-001` was the current W14-owned finding:
+the prior PACKAGE candidate was bound to obsolete main SHA `0f8902a...`.
+The candidate was rebuilt from current main `63b696b3b8c64296d9d17f94c8d0d903f9bab7eb`
+and plugin `f0abb7e7037e66ab451d463c699fecf4e00c89eb` into
+`.tmp/w14-candidate-r3` (no existing dist/build output was moved or deleted).
+
+Current PACKAGE identity:
+
+```text
+Artifact: hpc_client_gui-1.5.9-py3-none-any.whl
+SHA256: 1dc7d13c65088bf8721b999f47c379e1794e0792f2b9fe50739a1e711f8dd548
+Main SHA: 63b696b3b8c64296d9d17f94c8d0d903f9bab7eb
+Plugin SHA: f0abb7e7037e66ab451d463c699fecf4e00c89eb
+Version: 1.5.9
+OS/arch: windows/amd64
+```
+
+The manifest records Python 3.14.0, `pip==25.2`, the build command, and
+the dependency-lock SHA-256. Pre-build and post-build candidate guards both
+passed with the candidate explicitly declared fresh.
+
+The focused suite initially exposed an in-scope negative-path defect:
+`_git_head()` and provenance capture accepted a child temporary directory as
+the parent repository. Both helpers now require the requested path to be the
+actual Git top-level, returning explicit `unknown` otherwise. The exact
+impacted command was rerun: **43 passed, 0 failed**.
+
+`REOPEN-W14-002` is routed out of W14: W14 explicitly declares W13 a
+non-blocking integration reference and lifecycle-independent acceptance
+authority. No W13 repair or lifecycle mutation was performed.
+
 ## Resume state
 
+## Repair cycle 4 — refreshed PACKAGE evidence (2026-09-22)
+
+Consumed `W14-001`, `W14-006`, `HPC-W04-ART-001`, and
+`HPC-W04-IDENTITY-001/002`. Re-ran the packaged smoke harness against the
+current candidate `.tmp/w14-candidate-r3/hpc_client_gui-1.5.9-py3-none-any.whl`
+and wrote `build/audit/w14-packaged-smoke-r3.json`. The command exited 1
+truthfully because the wx harness does not execute wheels; the evidence now
+starts with the exact current identity rather than the obsolete r1 identity:
+
+```text
+Artifact: hpc_client_gui-1.5.9-py3-none-any.whl
+SHA256: 1dc7d13c65088bf8721b999f47c379e1794e0792f2b9fe50739a1e711f8dd548
+Main SHA: 63b696b3b8c64296d9d17f94c8d0d903f9bab7eb
+Plugin SHA: f0abb7e7037e66ab451d463c699fecf4e00c89eb
+Version: 1.5.9
+OS/arch: windows/amd64
+```
+
+The W13 eligibility finding is not a W14 blocker: W14 declares W13 only as
+a non-blocking integration reference and explicitly makes acceptance
+independent of predecessor/sibling state. No W13 lifecycle or files were
+changed. The focused W14/release suite remains **43 passed, 0 failed**.
+
 Completed: FIX-A, FIX-B, IDENTITY, FIX-W14-C, 17 regression tests,
-PACKAGE evidence bound to SHA-256 `3b2849b7…fcda48`
-(`dist/w14-candidate-r1`), report current.
+PACKAGE evidence refreshed and bound to SHA-256 `1dc7d13c...f8dd548`
+(`.tmp/w14-candidate-r3` + `build/audit/w14-packaged-smoke-r3.json`),
+report current.
 REOPEN-W14-001: re-pinned both repos (plugin truth still `f0abb7e…`;
 audit-cited `0788169…` absent from plugin object DB), rebuilt fresh
 candidate from pinned SHAs — old evidence superseded, not reused.
@@ -283,7 +341,9 @@ impacted count to exact 43 passed with full command + partition breakdown
 (REOPEN-W14-004); re-ran exact impacted command on current tree
 (main `0f8902a0…`, plugin `f0abb7e7…`) → 43 passed.
 Open P0/P1: none. Open P2/P3: none in scope.
-Pending: fresh-context re-audit (`W14_AUDIT_REPORT.md`) by the audit agent.
+Pending: fresh-context re-audit (`W14_AUDIT_REPORT.md`) by the audit agent,
+including current PACKAGE identity `1dc7d13c...f8dd548` and smoke evidence
+`build/audit/w14-packaged-smoke-r3.json`.
 Next: never auto-start W15.
 
 ```text

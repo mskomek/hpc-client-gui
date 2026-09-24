@@ -2,14 +2,13 @@
 
 ## Decision
 
-**BLOCKED** — W02's owned implementation and focused checks are green, but its
-canonical dependency W01 is currently `REOPEN`; W02 cannot be accepted while
-that prerequisite remains unresolved.
+**PASS** — W02's owned implementation and focused checks are green, and its
+canonical dependency W01 is closed with a fresh independent PASS.
 
 ## Authority and identity
 
-- Audited exactly `waves/pending/W02.md`; it is present and unambiguous. No
-  Wave definition was read from `waves/bak/`.
+- Audited exactly `waves/pending/W02.md`; it is present and unambiguous. W01 is
+  closed in `waves/done/W01.md`; no Wave definition was read from `waves/bak/`.
 - Re-read `.opencode/prompts/30_AUDIT_WAVE.md`,
   `.opencode/protocol/CORE_EXECUTION_RULES.md`, the W02 registry/TODO rows,
   and Workstream B of `opencode/sources/WAVE_V2_FINAL_01.md` (§218–226).
@@ -17,11 +16,9 @@ that prerequisite remains unresolved.
   `HPC-W01-TODO-018`, `HPC-W01-TODO-ERROR-GOV-002`, and
   `HPC-W01-TODO-020`.
 - Main repository: branch `develop`, HEAD
-  `f94adb640136181dbaafa84f62c753b013f0b94e`.
-- Dependency truth: the current canonical `W01_AUDIT_REPORT.md` is
-  `REOPEN`, with open current-tree identity/evidence findings. The W02 wave
-  report's assertion that W01 is `PASS` is stale and cannot override the
-  independent dependency audit.
+  `63b696b3b8c64296d9d17f94c8d0d903f9bab7eb`.
+- Dependency truth: W01 is closed in `waves/done/W01.md`; its current
+  canonical report and audit decision are `PASS`.
 - Read-only plugin identity remains `develop` /
   `f0abb7e7037e66ab451d463c699fecf4e00c89eb`; no W02 plugin change is needed.
 
@@ -38,9 +35,8 @@ that prerequisite remains unresolved.
 
 ## Current diff and evidence review
 
-- Immediately before this report update, `git status --porcelain` showed 25
-  entries: 23 tracked modifications and 2 untracked paths. The existing
-  W02 report's 23-entry/21-modified inventory is therefore stale.
+- The working tree contains preserved W01 closeout evidence/report changes and
+  the unrelated `new 4.ps1`; no W02 product/test change is credited here.
 - The current diff and `git diff --check` were reviewed; the latter exits 0
   with only normal line-ending conversion warnings. Existing lab, report,
   sync-sidecar, and local-script changes were preserved and are not credited
@@ -65,10 +61,10 @@ that prerequisite remains unresolved.
 
 | Finding | Severity | Owner/state |
 |---|---|---|
-| `W02-AUDIT-001`: canonical dependency W01 is `REOPEN` for stale report/evidence identity at the same HEAD. W02's dependency claim is contradictory to current dependency truth. | P1 | W01 report/evidence reconciliation; BLOCKING |
-| `W02-AUDIT-002`: W02 report records 23 status entries / 21 tracked paths, while the independently measured current tree has 25 / 23. | P1 | W02 report refresh; OPEN, but this audit may update only the audit artifact |
+| `W02-AUDIT-001`: canonical dependency W01 was previously `REOPEN` | P1 | CLOSED — W01 is closed with fresh independent PASS |
+| `W02-AUDIT-002`: W02 report identity was stale | P1 | CLOSED — W02 report refreshed to current HEAD and preserved-tree truth |
 
-No W02 product/test repair is authorized or performed. A fresh W02 audit is
-required after W01 is accepted and the W02 report/diff inventory is reconciled.
+No W02 product/test repair was required or performed. W02 is ready for serial
+close.
 
-WAVE_PHASE_STATUS: BLOCKED
+WAVE_PHASE_STATUS: PASS

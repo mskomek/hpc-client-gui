@@ -1,5 +1,26 @@
 # W06 Fresh-Context Audit Report
 
+## Repair handoff — 2026-09-21
+
+The prior audit findings were consumed by the W06 repair phase. `W06-AUDIT-001`
+was a stale report/evidence binding and is resolved in the current repair
+binding in `W06_WAVE_REPORT.md` at HEAD
+`63b6963b8b64296d9d17f94c8d0d903f9bab7eb`. `W06-AUDIT-002` is superseded by
+the current W05 and W04 `PASS` reports at that same HEAD. Focused validation
+against the current tree passed 47 tests, and `git diff --check` exited 0.
+This report remains the prior audit record; a fresh independent audit is now
+required.
+
+## Validation refresh — 2026-09-21
+
+`EV-W06-REPAIR-003` reran the focused W06/W01/W04 suites against HEAD
+`63b6963b8b64296d9d17f94c8d0d903f9bab7eb` using a fresh writable temp directory:
+`python -m pytest tests/test_wx_shell_w01_truth.py tests/test_w01_sensitivity.py tests/test_w04_support_freeze.py -q -p no:cacheprovider --basetemp C:\Users\mskomek\AppData\Local\Temp\hpc-w06-repair-20260921`
+→ **47 passed**, exit 0. The W06 repair remains evidence-only; no product
+behavior was changed. A fresh independent audit is required.
+
+WAVE_REPAIR_STATUS: READY_FOR_AUDIT
+
 Wave: `W06`
 Executable authority: `waves/pending/W06.md` only
 Audit date: 2026-09-21 UTC
@@ -51,4 +72,15 @@ clear stale SHA identity or the blocked dependency chain. Rebind W05/W06
 evidence to the current implementation state and obtain fresh dependency
 acceptance before re-auditing W06.
 
-WAVE_PHASE_STATUS: BLOCKED
+PRIOR_AUDIT_VERDICT: BLOCKED
+
+## Lifecycle reconciliation — 2026-09-22
+
+The repair handoff and validation refresh at the top of this canonical report
+supersede the historical BLOCKED phase as the current lifecycle state. This
+reconciliation does **not** assert audit PASS; it records only that W06 is ready
+for a new independent audit against the current candidate. The program
+controller may revisit this completed owner when a fresh dependency finding
+routes back to W06, then must return to the dependent Wave after revalidation.
+
+WAVE_PHASE_STATUS: READY_FOR_AUDIT

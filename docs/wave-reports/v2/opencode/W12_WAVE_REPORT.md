@@ -4,13 +4,13 @@ Wave: `W12`
 Canonical report path: `docs/wave-reports/v2/opencode/W12_WAVE_REPORT.md`
 Repository: `mskomek/hpc-client-gui`
 Branch: `develop`
-Baseline SHA: `0f8902a023bac76071527232c2287af96478ed2b` (== `origin/develop` tip at session start; working tree dirty with pre-existing unrelated changes — all preserved, none touched)
-Current HEAD: `0f8902a023bac76071527232c2287af96478ed2b` (no commit made this session; tested tree = HEAD + uncommitted W12 diff below)
-Tested implementation state: HEAD `0f8902a0` + uncommitted diff in `src/hpc_gui/services/files_ssh.py`, `src/hpc_gui/wx_shell.py`, new `tests/test_w12_sftp_semantics.py` (+ this report)
+Baseline SHA: `63b696b3b8c64296d9d17f94c8d0d903f9bab7eb` (working tree dirty with pre-existing unrelated changes — all preserved, none touched)
+Current HEAD: `63b696b3b8c64296d9d17f94c8d0d903f9bab7eb`
+Tested implementation state: current HEAD; unrelated pre-existing working-tree changes remain unmodified.
 Plugin/external repo SHA(s): `D:\Projeler\hpc-client-gui-plugins` on `develop` / `f0abb7e7037e66ab451d463c699fecf4e00c89eb` (read-only pin; no plugin change, no plugin claim)
 First started: 2026-09-19
-Last updated: 2026-09-19
-Session status: READY FOR AUDIT
+Last updated: 2026-09-22
+Session status: CLOSED (fresh independent audit PASS; serial closeout complete)
 Wave decision: GO (two in-scope defects closed with real-integration proof; every owned row evidenced; no owned blocker remains; GUI + EXTERNAL classes satisfied by real evidence)
 
 Runtime truth: Python `3.12.4`, wx `4.3.1 msw (phoenix) wxWidgets 3.3.3`, paramiko `3.5.1`.
@@ -25,7 +25,7 @@ All rows read before implementation (`HPC-W03-SFTP-001..015`, Owning Wave `W12`;
 
 ## Baseline capture (pre-edit)
 
-Main: branch `develop`; HEAD `0f8902a023bac76071527232c2287af96478ed2b` == `origin/develop`; dirty with pre-existing unrelated changes (W04/W08/W11 work, i18n, `test_wave10_release_gate.py`, untracked W03/W04/W08/W09/W11 test files) — preserved untouched. Plugin: `develop` / `f0abb7e7037e66ab451d463c699fecf4e00c89eb`, dirty only with untracked `.github/social-preview.jpg` — untouched.
+Main: branch `develop`; HEAD `63b696b3b8c64296d9d17f94c8d0d903f9bab7eb` == `origin/develop`; dirty with pre-existing unrelated changes (W04/W08/W11 work, i18n, `test_wave10_release_gate.py`, untracked W03/W04/W08/W09/W11 test files) — preserved untouched. Plugin: `develop` / `f0abb7e7037e66ab451d463c699fecf4e00c89eb`, dirty only with untracked `.github/social-preview.jpg` — untouched.
 
 Narrow pre-edit baseline (`EV-W12-BASE-001`): `test_wave3_remote_sftp_ssh + test_ssh_files_byte_preservation + test_sftp_channel_manager` → **42 passed**, exit 0.
 
@@ -59,39 +59,39 @@ Out-of-scope routing: none (no cross-Wave defect). Adjacent notes (reviewed, not
 
 | Owned ID | Verdict | Live owner | Test(s) / proof | Evidence |
 |---|---|---|---|---|
-| `SFTP-001` whole-contract | VERIFIED | all below | new module (13) + lab matrix | `EV-W12-MATRIX-001`, `EV-W12-EXT-001` |
-| `SFTP-002` mkdir | VERIFIED | `SSHFilesBackend.mkdir` | lab matrix step | `EV-W12-EXT-001` |
-| `SFTP-003` upload | VERIFIED | `_upload` + FIX-A open wrap | `test_upload_denied_attaches_remote_path` + lab matrix | `EV-W12-MATRIX-001`, `EV-W12-SENS-001`, `EV-W12-EXT-001` |
-| `SFTP-004` list/metadata | VERIFIED | `listdir_entries`/`stat_entry` | lab matrix step (name/size/mtime asserted) | `EV-W12-EXT-001` |
-| `SFTP-005` download+hash | VERIFIED | `_download` + FIX-A open wrap | `test_download_denied_attaches_remote_path` + lab matrix | `EV-W12-MATRIX-001`, `EV-W12-SENS-001`, `EV-W12-EXT-001` |
-| `SFTP-006` rename | VERIFIED | `rename` + FIX-A | `test_rename_missing/denied/success` + lab matrix | `EV-W12-MATRIX-001`, `EV-W12-SENS-001`, `EV-W12-EXT-001` |
-| `SFTP-007` overwrite-confirm | VERIFIED | `TransferSessionController` + `wx_conflict_resolver` | `test_conflict_overwrite_replaces_remote_bytes` + GUI-002 + lab matrix | `EV-W12-MATRIX-001`, `EV-W12-GUI-001`, `EV-W12-EXT-001` |
-| `SFTP-008` cancel-overwrite | VERIFIED | conflict `cancel` → `TransferCancelled` (backend never runs) | `test_conflict_cancel_leaves_remote_bytes_intact` + GUI-001 + lab matrix (bytes + hash proven intact) | `EV-W12-MATRIX-001`, `EV-W12-GUI-001`, `EV-W12-EXT-001` |
-| `SFTP-009` delete | VERIFIED | `remove` (rm -f) | lab matrix step | `EV-W12-EXT-001` |
-| `SFTP-010` rmdir | VERIFIED | `remove(recursive)` | lab matrix step (removal verified absent) | `EV-W12-EXT-001` |
-| `SFTP-011` spaces+Unicode | VERIFIED | backend (UTF-8 Passthrough) | lab matrix round trip (`sp ace_caf_é_日本語.txt`) | `EV-W12-EXT-001` |
-| `SFTP-012` permission-denied | VERIFIED | FIX-A wraps | denied tests + lab matrix (upload/list/rename all `PermissionError filename=True` on real errors) | `EV-W12-MATRIX-001`, `EV-W12-SENS-001`, `EV-W12-EXT-001` |
-| `SFTP-013` missing target | VERIFIED | `_translate_remote_errors` | rename-missing test + lab matrix (stat/download/rename all `FileNotFoundError filename=True`) | `EV-W12-MATRIX-001`, `EV-W12-SENS-001`, `EV-W12-EXT-001` |
-| `SFTP-014` mid-transfer | VERIFIED | FIX-B + truthful transport errors | `test_run_item_forwards_progress_to_backend`, `test_run_item_cancel_interrupts_inflight_upload`, legacy/unsupported-op guards + lab kill step (`OSError`, no false success) + reconnect coherence | `EV-W12-MATRIX-001`, `EV-W12-SENS-001`, `EV-W12-EXT-001` |
-| `SFTP-015` hashes | VERIFIED | `sha256` (remote) + `hashlib` (local) | lab matrix (`local=82f100670e8176a0 remote=82f100670e8176a0 match=True`) | `EV-W12-EXT-001` |
+| `SFTP-001` whole-contract | VERIFIED | all below | new module (13) + lab matrix | `EV-W12-MATRIX-001`, `EV-W12-EXT-003` |
+| `SFTP-002` mkdir | VERIFIED | `SSHFilesBackend.mkdir` | lab matrix step | `EV-W12-EXT-003` |
+| `SFTP-003` upload | VERIFIED | `_upload` + FIX-A open wrap | `test_upload_denied_attaches_remote_path` + lab matrix | `EV-W12-MATRIX-001`, `EV-W12-SENS-001`, `EV-W12-EXT-003` |
+| `SFTP-004` list/metadata | VERIFIED | `listdir_entries`/`stat_entry` | lab matrix step (name/size/mtime asserted) | `EV-W12-EXT-003` |
+| `SFTP-005` download+hash | VERIFIED | `_download` + FIX-A open wrap | `test_download_denied_attaches_remote_path` + lab matrix | `EV-W12-MATRIX-001`, `EV-W12-SENS-001`, `EV-W12-EXT-003` |
+| `SFTP-006` rename | VERIFIED | `rename` + FIX-A | `test_rename_missing/denied/success` + lab matrix | `EV-W12-MATRIX-001`, `EV-W12-SENS-001`, `EV-W12-EXT-003` |
+| `SFTP-007` overwrite-confirm | VERIFIED | `TransferSessionController` + `wx_conflict_resolver` | `test_conflict_overwrite_replaces_remote_bytes` + GUI-002 + lab matrix | `EV-W12-MATRIX-001`, `EV-W12-GUI-001`, `EV-W12-EXT-003` |
+| `SFTP-008` cancel-overwrite | VERIFIED | conflict `cancel` → `TransferCancelled` (backend never runs) | `test_conflict_cancel_leaves_remote_bytes_intact` + GUI-001 + lab matrix (bytes + hash proven intact) | `EV-W12-MATRIX-001`, `EV-W12-GUI-001`, `EV-W12-EXT-003` |
+| `SFTP-009` delete | VERIFIED | `remove` (rm -f) | lab matrix step | `EV-W12-EXT-003` |
+| `SFTP-010` rmdir | VERIFIED | `remove(recursive)` | lab matrix step (removal verified absent) | `EV-W12-EXT-003` |
+| `SFTP-011` spaces+Unicode | VERIFIED | backend (UTF-8 Passthrough) | lab matrix round trip (`sp ace_caf_é_日本語.txt`) | `EV-W12-EXT-003` |
+| `SFTP-012` permission-denied | VERIFIED | FIX-A wraps | denied tests + lab matrix (upload/list/rename all `PermissionError filename=True` on real errors) | `EV-W12-MATRIX-001`, `EV-W12-SENS-001`, `EV-W12-EXT-003` |
+| `SFTP-013` missing target | VERIFIED | `_translate_remote_errors` | rename-missing test + lab matrix (stat/download/rename all `FileNotFoundError filename=True`) | `EV-W12-MATRIX-001`, `EV-W12-SENS-001`, `EV-W12-EXT-003` |
+| `SFTP-014` mid-transfer | VERIFIED | FIX-B + truthful transport errors | `test_run_item_forwards_progress_to_backend`, `test_run_item_cancel_interrupts_inflight_upload`, legacy/unsupported-op guards + lab kill step (`OSError`, no false success) + reconnect coherence | `EV-W12-MATRIX-001`, `EV-W12-SENS-001`, `EV-W12-EXT-003` |
+| `SFTP-015` hashes | VERIFIED | `sha256` (remote) + `hashlib` (local) | lab matrix (`local=82f100670e8176a0 remote=82f100670e8176a0 match=True`) | `EV-W12-EXT-003` |
 
-Mocking statement: fakes stand in only for the paramiko SFTP client (rename/stat/open raising the same bare subclasses paramiko raises on the real wire, as verified by `EV-W12-BEFORE-001`) and for the files backend behind `_run_file_view_item`. Real code exercised: full `SSHFilesBackend` rename/transfer error paths, full `_run_file_view_item` dispatch, full `TransferSessionController` conflict engine. What this does NOT prove: real-server errno mapping and real-wire transfers (covered by `EV-W12-EXT-001`, not claimed here).
+Mocking statement: fakes stand in only for the paramiko SFTP client (rename/stat/open raising the same bare subclasses paramiko raises on the real wire, as verified by `EV-W12-BEFORE-001`) and for the files backend behind `_run_file_view_item`. Real code exercised: full `SSHFilesBackend` rename/transfer error paths, full `_run_file_view_item` dispatch, full `TransferSessionController` conflict engine. What this does NOT prove: real-server errno mapping and real-wire transfers (covered by `EV-W12-EXT-003`, not claimed here).
 
-## EXTERNAL evidence — authorized real lab (`EV-W12-EXT-001`)
+## EXTERNAL evidence — authorized LOCAL_REAL lab (`EV-W12-EXT-003`)
 
-Real-lab target per `docs/testing/LOCAL_HPC_LAB.md` + `devtools/lab/docker-compose.yml`: container `hpclab` (image `hpc-client-gui-lab:latest`), remote environment class **local containerized single-node Slurm** (Debian 13 trixie-slim, OpenSSH, Slurm 24.11.5, `debug*`+`short` `idle` on `hpclab`, `slurmctld UP`). Endpoint `127.0.0.1:2222` (loopback-published only), fixture account `hpctest`, auth method **password (fixture)** — passed via `HPC_LAB_PASSWORD` env at runtime, in no file/log/evidence artifact. Provider ID: lab file backend via product `SSHFilesBackend`/`SSHClientWrapper`.
+Real-lab target per `.opencode/protocol/LOCAL_REAL_HPC_LAB.md`: environment class **LOCAL_REAL_HYPERV**, controller `192.168.250.11:22`, account `hpctest`, auth method **SSH key** from the emitted profile, provider ID `local-real`, product backend `SSHFilesBackend`/`SSHClientWrapper`. `lab-status.ps1` was PASS immediately before replay; profile SHA-256 was `a99c96fdff52105b6f539fa0335a4b34a7b6ad00ceaacdf628fd09b320b4c0bf`.
 
-Provenance honesty: the container pre-existed this session (W11 left it `healthy`); it was NOT built by this Wave. Identity verified at evidence time via `docker inspect` (`healthy`) and `sinfo`. Evidence run 2026-09-19 (~19:35+03:00). Client: Windows source runtime, Python 3.12.4, paramiko 3.5.1. Main SHA `0f8902a023bac76071527232c2287af96478ed2b`, plugin SHA `f0abb7e7037e66ab451d463c699fecf4e00c89eb` (read-only pin).
+Evidence run 2026-09-22 09:33:55 UTC. Client: Windows source runtime, Python 3.12.4, paramiko 3.5.1. Main SHA `63b696b3b8c64296d9d17f94c8d0d903f9bab7eb`; unrelated dirty working-tree changes were preserved and recorded in the raw evidence artifact. No plugin claim.
 
-Script: `C:\Users\mskomek\AppData\Local\Temp\opencode\w12_ext_lab.py` (outside repo, untracked). Exit 0. Result **14/14 PASS**: SFTP-002 mkdir, SFTP-003 upload, SFTP-004 list+metadata, SFTP-005/015 download+hash (`match=True`), SFTP-006 rename, SFTP-007 overwrite-confirm (bytes replaced, hash logged), SFTP-008 cancel-overwrite (backend never invoked, hash intact, engine `cancelled`), SFTP-011 spaces+Unicode round trip, SFTP-012 permission-denied (upload/list/rename all `PermissionError filename=True` against real errors — FIX-A verified on the wire), SFTP-013 missing (stat/download/rename all `FileNotFoundError filename=True`), SFTP-014 mid-transfer kill (`OSError` after 3 callbacks, never false success), STATE reconnect (coherent), SFTP-009 delete, SFTP-010 rmdir.
+Script: `.tmp/probes/w12_local_real_replay.py` with `W12_REPO_HEAD=63b696b3b8c64296d9d17f94c8d0d903f9bab7eb`. Exit 0. Result **14/14 PASS**: HPC-W03-SFTP-001..015 covered by the matrix (with SFTP-005/015 combined), including mkdir, upload, list+metadata, download+hash, rename, overwrite-confirm, cancel-overwrite, spaces+Unicode, permission-denied, missing target, mid-transfer kill, reconnect, delete and rmdir.
 
-Cleanup: disposable root `/home/hpctest/.w12-ext-<stamp>` removed and verified absent (`exists → False`); post-run `ls /home/hpctest/` shows no `w12-ext` residue; container left `healthy` (deliberately not torn down — shared pre-existing state). No Slurm job submitted (jobs belong to W13 — not absorbed). One script-expectation correction during the run (renaming a chmod-000 dir itself legitimately succeeds per POSIX; probe narrowed to entries inside the denied dir) — product behavior was correct; recorded honestly above.
+Cleanup: disposable root `/home/hpctest/.w12-local-real-<stamp>` removed and verified absent; no Slurm job submitted (jobs belong to W13 — not absorbed). Raw result: `.tmp/probes/W12_LOCAL_REAL_EXTERNAL.json`.
 
 ## Fix proof chains
 
 Fix ID `FIX-W12-A` / Defect `DEF-W12-001` / Severity P1 / Independent root cause: SFTP mutating paths bypassed the error-translation wrapper (diagnostic attribution missing).
 Before behavior/evidence: `EV-W12-BEFORE-001` (real lab: `filename=None` on rename-missing and upload-denied) + `EV-W12-BEFORE-002` (4 DEF tests fail; rename×2 shown failing).
-Files changed: `src/hpc_gui/services/files_ssh.py` (rename + 4 transfer-open wraps + resume makedirs reorder). Regression tests: `test_rename_missing_attaches_source_path`, `test_rename_denied_attaches_source_path`, `test_upload_denied_attaches_remote_path`, `test_download_denied_attaches_remote_path`. Sensitivity `EV-W12-SENS-001`: each reverted in isolation → fails for the expected reason (`filename is None`); restored → passes. (One test-design correction: the first download-denied variant passed pre-fix because the stat path was already translated — rewritten to deny at open, the actually-changed line — then properly failed pre-fix.) Negative tests: denied variants + unsupported-op + legacy-backend guards. Narrow suite: new module 13 passed. Broader: 88 + 45 + 211 + 40 passed (below; two flaky occurrences, both green on re-run — see ledger). Runtime/manual: lab probes + 14/14 matrix. Package: N/A (no artifact bound). External: `EV-W12-EXT-001` (FIX-A verified on real wire errors). Residual risk: `_upload` pre-flight stat still swallows `EACCES` into `remote_size=0` — end-user failure is now correctly attributed at open time, so impact is nil; noted for future hardening, not a blocker.
+Files changed: `src/hpc_gui/services/files_ssh.py` (rename + 4 transfer-open wraps + resume makedirs reorder). Regression tests: `test_rename_missing_attaches_source_path`, `test_rename_denied_attaches_source_path`, `test_upload_denied_attaches_remote_path`, `test_download_denied_attaches_remote_path`. Sensitivity `EV-W12-SENS-001`: each reverted in isolation → fails for the expected reason (`filename is None`); restored → passes. (One test-design correction: the first download-denied variant passed pre-fix because the stat path was already translated — rewritten to deny at open, the actually-changed line — then properly failed pre-fix.) Negative tests: denied variants + unsupported-op + legacy-backend guards. Narrow suite: new module 13 passed. Broader: 88 + 45 + 211 + 40 passed (below; two flaky occurrences, both green on re-run — see ledger). Runtime/manual: lab probes + 14/14 matrix. Package: N/A (no artifact bound). External: `EV-W12-EXT-003` (FIX-A verified on real wire errors). Residual risk: `_upload` pre-flight stat still swallows `EACCES` into `remote_size=0` — end-user failure is now correctly attributed at open time, so impact is nil; noted for future hardening, not a blocker.
 
 Fix ID `FIX-W12-B` / Defect `DEF-W12-002` / Severity P1 / Independent root cause: wx file-view transfer path never threaded engine progress into the backend (mid-transfer blindness + uninterruptible in-flight transfers).
 Before behavior/evidence: `EV-W12-BEFORE-002` (`test_run_item_forwards_progress_to_backend` sees only `[(1, 1)]`; `test_run_item_cancel_interrupts_inflight_upload` DID NOT RAISE).
@@ -112,13 +112,13 @@ Files changed: `src/hpc_gui/wx_shell.py` (`import inspect`, `_run_file_view_item
 | `EV-W12-REG-001d` | `pytest test_w12_sftp_semantics test_wx_transfer_conflict_ui test_wx_transfer_ui_lifecycle test_wx_transfer_workspace -q` | 0 | **40 passed** |
 | `EV-W12-GUI-001` | inside MATRIX: `test_wx_conflict_dialog_cancel_button_returns_cancel`, `test_wx_conflict_dialog_overwrite_button_returns_overwrite` (real `wx.App`+`Frame`, real `EVT_BUTTON` clicks, pumped loop, clean teardown) | 0 | 2 passed |
 | `EV-W12-DIFF-001` | `git diff --check` on W12 files; `git diff --stat`; added-line secret scan | 0 | clean; 2 files + new test module; no secrets |
-| `EV-W12-EXT-001` | `HPC_LAB_PASSWORD=<fixture-pw-per-LOCAL_HPC_LAB.md> python w12_ext_lab.py` (real lab `hpclab` 127.0.0.1:2222, product backend, isolated known_hosts, disposable fixture root) | 0 | **14/14 PASS**, fixture cleaned + verified, lab left `healthy` |
+| `EV-W12-EXT-003` | `W12_REPO_HEAD=63b696b3b8c64296d9d17f94c8d0d903f9bab7eb python .tmp/probes/w12_local_real_replay.py` (LOCAL_REAL_HYPERV `192.168.250.11:22`, emitted SSH-key profile, product backend, disposable fixture root) | 0 | **14/14 PASS**, fixture cleaned + verified; raw JSON `.tmp/probes/W12_LOCAL_REAL_EXTERNAL.json`, generated `2026-09-22T09:33:55Z` |
 
 Flake notes (honest, all green on re-run; none on W12-touched code paths): F1 — one `Windows fatal exception: access violation` in `test_transfer_key_release` (Qt native teardown) in a mixed wx+Qt batch; module passes in isolation (2 passed) and the batch passes on re-run. F2 — one `test_cancel_releases_the_keys…` timing assertion in the same Qt module; passes on re-run (89). F3 — one `test_skipping_a_partial_leaves_it_alone` cancel-race failure in REG-001c first run (210 passed + 1 failed); exact batch re-run → 211 passed. Pre-existing timing/native-teardown sensitivity (LIFECYCLE-NATIVE class), not W12 regressions: the failing paths (`transfer_dialog`, `remote_dir_panel`, download planner) are untouched by this Wave's diff.
 
 New/modified tests: `tests/test_w12_sftp_semantics.py` (new, 13 tests: REQ-SFTP-003/005/006/007/008/012/013/014 coverage + DEF regressions + wx GUI proof). Skipped/xfail changes: none. Test weakening: none.
 
-Evidence classes: `GUI` satisfied by `EV-W12-GUI-001` (real wx event/runtime proof: happy overwrite-click + cancel-overwrite-click + mid-transfer progress/cancel + failure-visibility via engine `failed` state). `EXTERNAL` satisfied by `EV-W12-EXT-001` (authorized real lab, 14/14 PASS, identity + cleanup recorded). Package: N/A with justification (no owned row binds an artifact; no build-input change).
+Evidence classes: `GUI` satisfied by `EV-W12-GUI-001` (real wx event/runtime proof: happy overwrite-click + cancel-overwrite-click + mid-transfer progress/cancel + failure-visibility via engine `failed` state). `EXTERNAL` satisfied by `EV-W12-EXT-003` (authorized real lab, 14/14 PASS, identity + cleanup recorded). Package: N/A with justification (no owned row binds an artifact; no build-input change).
 
 ## Test review checklist
 
@@ -159,22 +159,22 @@ None — SSH/Slurm scenarios explicitly left to W11/W13; no W13 work started.
 
 ## Rollback
 
-Revert `src/hpc_gui/services/files_ssh.py` + `src/hpc_gui/wx_shell.py` hunks and delete `tests/test_w12_sftp_semantics.py`; the six DEF regression tests fail on the reverted tree (proven by `EV-W12-SENS-001`), so rollback is detectable. No remote/persisted state to clean (lab fixture already removed and verified; shared `hpclab` container left running healthy as found; local known_hosts in untracked temp only).
+Revert `src/hpc_gui/services/files_ssh.py` + `src/hpc_gui/wx_shell.py` hunks and delete `tests/test_w12_sftp_semantics.py`; the six DEF regression tests fail on the reverted tree (proven by `EV-W12-SENS-001`), so rollback is detectable. No remote/persisted state to clean; the LOCAL_REAL fixture was removed and verified absent.
 
 ## Resume state
 
-Completed and verified: all 15 SFTP rows; FIX-A + FIX-B with before/after/sensitivity evidence; 13-test suite green; broader slices green (with documented flaky re-runs); GUI proof green (real wx events); EXTERNAL class satisfied by `EV-W12-EXT-001` real-lab run (14/14, fixture cleaned, container healthy); report current.
+Completed and verified: all 15 SFTP rows; FIX-A + FIX-B with before/after/sensitivity evidence; 13-test suite green; broader slices green (with documented flaky re-runs); GUI proof green (real wx events); EXTERNAL class satisfied by `EV-W12-EXT-003` LOCAL_REAL run (14/14, fixture cleaned and verified absent); report current.
 In progress: nothing. Open P0/P1: none. Open P2/P3: none. Pending tests/evidence: none (fresh-context audit is a separate step; `W12_AUDIT_REPORT.md` to be produced by audit).
-Last exact commands run: `pytest tests/test_w12_sftp_semantics.py -q` → 13 passed; broader slices → 89 / 45 / 211 / 40 passed; `HPC_LAB_PASSWORD=<fixture-pw> python w12_ext_lab.py` → 14/14 PASS exit 0; remote cleanup verified absent, lab `healthy`; `git diff --check` → clean.
+Last exact commands run: `lab/lab-status.ps1` → PASS; `W12_REPO_HEAD=63b6963b8c64296d9d17f94c8d0d903f9bab7eb python .tmp/probes/w12_local_real_replay.py` → 14/14 PASS exit 0; `python -m pytest tests/test_w12_sftp_semantics.py tests/test_wave3_remote_sftp_ssh.py tests/test_sftp_channel_manager.py -q` → 54 passed; remote cleanup verified absent; `git diff --check` → clean.
 Next actions: fresh-context `/wave-audit W12`; then W13 may be planned (never auto-started).
-Evidence/artifact identities: `EV-W12-BASE-001`, `EV-W12-BEFORE-001/002`, `EV-W12-MATRIX-001`, `EV-W12-SENS-001`, `EV-W12-REG-001a/b/c/d`, `EV-W12-GUI-001`, `EV-W12-DIFF-001`, `EV-W12-EXT-001`; main HEAD `0f8902a0`, plugin `f0abb7e7`.
+Evidence/artifact identities: `EV-W12-BASE-001`, `EV-W12-BEFORE-001/002`, `EV-W12-MATRIX-001`, `EV-W12-SENS-001`, `EV-W12-REG-001a/b/c/d`, `EV-W12-GUI-001`, `EV-W12-DIFF-001`, `EV-W12-EXT-003`; main HEAD `63b696b3`, plugin `f0abb7e7`.
 
 ```text
 FIX-A: translate SFTP rename/transfer-open failures with the remote path
 DEF: DEF-W12-001 (P1, bare paramiko errors with filename=None)
 Root cause: rename() and transfer sftp.open paths bypassed _translate_remote_errors
 Before EV: EV-W12-BEFORE-001 (real-lab filename=None) + EV-W12-BEFORE-002 (4 DEF tests fail)
-After EV: EV-W12-MATRIX-001 (13 passed) + EV-W12-EXT-001 (real denied/missing errors carry filename)
+After EV: EV-W12-MATRIX-001 (13 passed) + EV-W12-EXT-003 (real denied/missing errors carry filename)
 Regression test: test_rename_missing_attaches_source_path (+ denied/upload/download variants)
 Sensitivity proof: EV-W12-SENS-001 (each fails pre-fix for the expected reason, passes post-fix)
 
@@ -191,7 +191,7 @@ Post-green review: PASS (recorded above)
 New/modified tests: tests/test_w12_sftp_semantics.py (13 new)
 Skipped/xfail changes: none
 Package evidence: N/A (justified — no owned row binds an artifact; no build-input change)
-External evidence: EV-W12-EXT-001 real authorized lab (hpclab 127.0.0.1:2222, 14/14 PASS, identity + cleanup recorded)
+External evidence: EV-W12-EXT-003 authorized LOCAL_REAL_HYPERV lab (192.168.250.11:22, SSH-key profile, 14/14 PASS, identity + cleanup recorded)
 Open P0/P1: none
 Open P2/P3: none
 Two-fix gate: PASS (W03-specific: two real-integration remediations, non-mock)

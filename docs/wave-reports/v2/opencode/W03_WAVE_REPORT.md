@@ -1,4 +1,4 @@
-Wave status: **PASS** (fresh independent audit accepted)
+Wave status: **READY_FOR_AUDIT** (dependency refresh complete)
 
 # W03 Wave Report — Settings and provider surface inventory
 
@@ -6,9 +6,9 @@ Wave: `W03`
 Canonical report path: `docs/wave-reports/v2/opencode/W03_WAVE_REPORT.md`
 Repository: `mskomek/hpc-client-gui`
 Branch: `develop`
-Baseline SHA: `f94adb640136181dbaafa84f62c753b013f0b94e`
-Current HEAD: `f94adb640136181dbaafa84f62c753b013f0b94e`
-Tested implementation state: `HEAD f94adb64` on `develop` plus the pre-existing working tree reported below (all preserved; focused W03 lanes re-ran 2026-09-21 against this exact dirty tree — see EV-W03-EXEC-001)
+Baseline SHA: `63b696b3b8c64296d9d17f94c8d0d903f9bab7eb`
+Current HEAD: `63b696b3b8c64296d9d17f94c8d0d903f9bab7eb`
+Tested implementation state: `HEAD 63b696b3` on `develop` plus the preserved W01/W02 evidence overlay and unrelated working tree (focused W03 lanes must be rerun against this exact state — see EV-W03-EXEC-001)
 Plugin/external repo SHA(s): `..\hpc-client-gui-plugins` on `develop` / `f0abb7e7037e66ab451d463c699fecf4e00c89eb` (clean except one untracked sidecar `.github/social-preview.jpg`); re-pinned 2026-09-19, no plugin change in scope
 First started: 2026-09-18
 Last updated: 2026-09-21 (UTC) — lifecycle repair and focused revalidation on current repository truth
@@ -16,7 +16,7 @@ Session status: PASS
 Wave decision: PASS (fresh independent audit accepted)
 Executable authority: `waves/pending/W03.md` (exactly one copy; `waves/pending/` holds W01–W61, 61 files, no gaps/duplicates; `waves/bak/` never read for execution)
 Execution model: `opencode-go/muse-spark-1.3-contributor`
-Dependency: `W02` — `docs/wave-reports/v2/opencode/W02_WAVE_REPORT.md` decision `PASS`, audit `PASS`; entry revalidated (same pins, no owned W02 blocker touches this scope)
+Dependency: `W02` — closed in `waves/done/W02.md`; report and audit decision `PASS`, entry revalidated (same pins, no owned W02 blocker touches this scope)
 
 ## Owned requirements and TODO details
 

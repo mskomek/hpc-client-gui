@@ -18,7 +18,7 @@
 | TARGET_WAVE | W01 — Live Inventory, Feature Truth Map, and Support Freeze |
 | TARGET_WAVE_FILE | `waves/waiting/WAVE_V2_FINAL_01.md` |
 | Session scope lock respected | YES |
-| Main SHA | `afd4fb1d6ed3d0bbd87b9b6db6115eb159f63a87` |
+| Main SHA | `63b696b3b8c64296d9d17f94c8d0d903f9bab7eb` |
 | Plugin SHA | Not fetched (no plugin repo changes) |
 | Baseline working tree | Untracked files only (`.integration-recovery/`, `audit.zip`, `docs.zip`, `scripts/*.py`, `tests/WAVE2_REMAINING_TEST_PROMPTS.md`, `waves.zip`) |
 
@@ -28,7 +28,7 @@
 
 | Criterion | Status |
 |---|---|
-| Main repo `develop` fetched and pinned | YES (`afd4fb1d`) |
+| Main repo `develop` refreshed at current HEAD | YES (`63b696b3`) |
 | Plugin repo fetched and pinned | N/A (no plugin changes) |
 | Application can launch in development environment | YES (tests pass) |
 | No destructive repository cleanup needed | YES |

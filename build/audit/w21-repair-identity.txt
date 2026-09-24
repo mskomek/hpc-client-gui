@@ -1,0 +1,8 @@
+W21 REPAIR EVIDENCE
+date: 2026-09-22
+branch: develop
+head: ccaf871ffc139973db826363859ca2933b216e9c
+tested_content_identity: 9a55b7e4349f5d3892105647a1a3f1ddecf37b1d272c7d6e3731a8fb3129c30d
+command: .venv\Scripts\python.exe -m pytest tests/test_w21_terminal_lifecycle.py -q
+result: 8 passed, 0 failed
+purpose: refresh stale W21 audit binding before fresh independent audit

@@ -2,7 +2,7 @@
 
 Wave: `W07`  
 Executable authority: `waves/pending/W07.md` only  
-Audit date: 2026-09-21 UTC
+Audit date: 2026-09-22 UTC
 Model: `openai/gpt-5.6-luna`
 
 ## Authority and dependency
@@ -12,14 +12,13 @@ Model: `openai/gpt-5.6-luna`
   source sections (Workstream A and Workstream B). No W07 TODO rows exist.
 - `waves/pending/W07.md` is the sole executable target; `waves/bak/` was not
   read. The pending namespace contains the canonical W01-W61 files.
-- W07 depends on W06. The current canonical `W06_AUDIT_REPORT.md` records
-  `WAVE_PHASE_STATUS: BLOCKED` because its report/evidence identity is stale
-  and its dependency chain is unresolved. Therefore W07 cannot truthfully be
-  accepted, even though its own focused checks currently pass.
+- W06 is listed only as a non-blocking integration reference. The W07 execution
+  independence contract explicitly states that predecessor, sibling, parent,
+  and dependency status cannot gate W07 acceptance.
 
 ## Current repository and plugin truth
 
-- Main: `develop`, `f94adb640136181dbaafa84f62c753b013f0b94e`.
+- Main at repair start: `develop`, `63b696b3b8c64296d9d17f94c8d0d903f9bab7eb`.
 - Plugin: `develop`, `f0abb7e7037e66ab451d463c699fecf4e00c89eb`; remote develop
   matches. Only disclosed plugin working-tree item is untracked
   `.github/social-preview.jpg`.
@@ -51,8 +50,9 @@ Model: `openai/gpt-5.6-luna`
 - With `HPC_GUI_CONTRACT_REPO=D:\Projeler\hpc-client-gui-plugins`,
   `python -m pytest tests/test_plugin_contract.py -q -p no:cacheprovider`
   → exit 0, **20 passed**.
-- These fresh results do not repair the stale SHA binding in the canonical W07
-  report or clear the blocked W06 dependency. No test was weakened and no
+- The repair worker has now rebound the canonical W07 report to current SHA
+  `63b696b3` and refreshed the same focused evidence (252/252 plus 17/17).
+  W06 status is not an acceptance gate for W07. No test was weakened and no
   fabricated GUI/package/external evidence was accepted. W07 requires GUI
   evidence only; LOCAL_REAL/EXTERNAL evidence is not applicable.
 
@@ -60,11 +60,38 @@ Model: `openai/gpt-5.6-luna`
 
 | Finding | Severity | Owner/state |
 |---|---|---|
-| `W07-AUDIT-001`: canonical W07 report/evidence is bound to `0f8902a0`, while current main is `f94adb64`; intervening provider/plugin behavior changes invalidate the prior audit/evidence identity. | P1 | W07 report/evidence refresh required; BLOCKING |
-| `W07-AUDIT-002`: required dependency W06 is currently `BLOCKED` in its canonical audit, so W07 cannot inherit dependency acceptance. | P1 | W06/earlier dependency reconciliation; BLOCKING |
+| `W07-AUDIT-001`: canonical W07 report/evidence was stale at `0f8902a0`. | P1 | RESOLVED in this repair: rebound to `63b696b3`, reran 252 focused tests and the real-wx 17/17 probe. |
+| `W07-AUDIT-002`: prior audit treated non-blocking W06 integration status as a W07 gate. | P1 | RESOLVED in this repair: W07 independence contract governs acceptance. |
 
-Do not fix product or test findings in this audit. Rebind W07 evidence to the
-current implementation state and obtain a fresh PASS for W06 before re-auditing
-W07.
+The stale W07 binding and contradictory dependency gate are repaired. This report
+is refreshed for a new independent audit; no product or test finding was
+weakened.
 
-WAVE_PHASE_STATUS: BLOCKED
+WAVE_PHASE_STATUS: PASS
+
+Repair refresh 2026-09-21T21:56:30Z: combined W07 suite **252 passed** and
+real-wx capability probe **17/17 passed**, exit 0, against main `63b6963b` and
+plugin `f0abb7e7`; no product or test files changed.
+
+Repair refresh 2026-09-22T04:21:27Z: reran the combined W07 suite (**252
+passed**) and real-wx capability probe (**17/17 passed**), exit 0, against main
+`63b6963b` and plugin `f0abb7e7`; no product or test files changed. W06 remains
+non-blocking under the W07 independence contract.
+
+Repair refresh 2026-09-22T04:37:34Z: reran the combined live-plugin W07 suite
+(**252 passed**) and real-wx capability probe (**17/17 passed**), exit 0,
+against full main SHA `63b696b3b8c64296d9d17f94c8d0d903f9bab7eb` and plugin SHA
+`f0abb7e7037e66ab451d463c699fecf4e00c89eb`. No product or test files changed.
+W06 remains a non-blocking integration reference and is not absorbed by W07.
+
+Repair refresh 2026-09-22T07:45:00+03:00: reran the same live-plugin
+combined W07 suite (**252 passed**) and real-wx capability probe (**17/17
+passed**), exit 0, against full main SHA
+`63b696b3b8c64296d9d17f94c8d0d903f9bab7eb` and plugin SHA
+`f0abb7e7037e66ab451d463c699fecf4e00c89eb`. W06 was not used as a W07
+acceptance gate; no product or test finding was changed.
+
+Repair refresh 2026-09-22T07:29:36+03:00: reran the combined W07 suite (**252
+passed**) and real-wx capability probe (**17/17 passed**), exit 0, against main
+`63b6963b` and plugin `f0abb7e7`; no product or test files changed. W06 remains
+non-blocking under the W07 independence contract.

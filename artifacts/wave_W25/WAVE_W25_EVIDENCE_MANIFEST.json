@@ -1,0 +1,729 @@
+{
+ "spec_profile_id": "HPC",
+ "protocol_revision": 2,
+ "wave_id": "W25",
+ "wave_spec_revision": "sha256:2e7a7ef1a25c7a4fddf5c8be346faf07071ae061824e452d6b1914f350c75ee0",
+ "status": "ACCEPTANCE_GREEN",
+ "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c",
+ "closure_sha": null,
+ "dependency_validation": {
+  "dependencies": []
+ },
+ "requirements": [
+  {
+   "requirement_id": "HPC-W06-XFER-001",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_transfer_workspace.py",
+    "src/hpc_gui/services/transfer_controller.py"
+   ],
+   "test_nodes": [
+    "tests/test_w25_transfer_workspace_integrity.py::test_embedded_panel_retry_clears_failed_rows",
+    "tests/test_w25_transfer_workspace_integrity.py::test_embedded_panel_tracks_concurrent_transfers_in_isolated_rows",
+    "tests/test_wx_transfer_ui_lifecycle.py"
+   ],
+   "expected_semantics": "queue failed completed row state converges with exact counts",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W25_WAVE_REPORT.md",
+    ".tmp/w25-close/w25-focused-close.txt",
+    ".tmp/w25-close/w25-adjacent-close.txt",
+    ".tmp/w25-external-replay/W25_SFTP_REPLAY.json"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-XFER-002",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_transfer_workspace.py",
+    "src/hpc_gui/services/transfer_controller.py"
+   ],
+   "test_nodes": [
+    "tests/test_w25_transfer_workspace_integrity.py::test_embedded_panel_tracks_concurrent_transfers_in_isolated_rows",
+    "tests/test_wx_file_transfer_integration.py"
+   ],
+   "expected_semantics": "per-chunk progress reaches isolated rows plus status line and gauge",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W25_WAVE_REPORT.md",
+    ".tmp/w25-close/w25-focused-close.txt",
+    ".tmp/w25-close/w25-adjacent-close.txt",
+    ".tmp/w25-external-replay/W25_SFTP_REPLAY.json"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-XFER-003",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_transfer_workspace.py",
+    "src/hpc_gui/services/transfer_controller.py"
+   ],
+   "test_nodes": [
+    "tests/test_w25_transfer_workspace_integrity.py::test_embedded_panel_retry_clears_failed_rows",
+    "tests/test_wx_transfer_ui_lifecycle.py"
+   ],
+   "expected_semantics": "terminal success failure lands visibly in matching tabs and labels",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W25_WAVE_REPORT.md",
+    ".tmp/w25-close/w25-focused-close.txt",
+    ".tmp/w25-close/w25-adjacent-close.txt",
+    ".tmp/w25-external-replay/W25_SFTP_REPLAY.json"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-XFER-004",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/services/transfer_controller.py",
+    "src/hpc_gui/services/transfer_session_controller.py"
+   ],
+   "test_nodes": [
+    "tests/test_transfer_cancel_recovery.py",
+    "tests/test_wx_transfer_ui_lifecycle.py"
+   ],
+   "expected_semantics": "cancellation raises inside chunk loop and between items and never flips to success",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W25_WAVE_REPORT.md",
+    ".tmp/w25-close/w25-focused-close.txt",
+    ".tmp/w25-close/w25-adjacent-close.txt",
+    ".tmp/w25-external-replay/W25_SFTP_REPLAY.json"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-XFER-005",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_transfer_workspace.py",
+    "src/hpc_gui/services/transfer_session_controller.py"
+   ],
+   "test_nodes": [
+    "tests/test_wx_transfer_conflict_ui.py"
+   ],
+   "expected_semantics": "overwrite conflict dialog offers overwrite resume skip rename cancel with direction gating",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W25_WAVE_REPORT.md",
+    ".tmp/w25-close/w25-focused-close.txt",
+    ".tmp/w25-close/w25-adjacent-close.txt",
+    ".tmp/w25-external-replay/W25_SFTP_REPLAY.json"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-XFER-006",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/services/transfer_controller.py",
+    "src/hpc_gui/services/transfer_session_controller.py"
+   ],
+   "test_nodes": [
+    "tests/test_transfer_cancel_recovery.py",
+    "tests/test_wx_file_transfer_integration.py"
+   ],
+   "expected_semantics": "partial results cleaned on cancel failure with disposable fixtures",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W25_WAVE_REPORT.md",
+    ".tmp/w25-close/w25-focused-close.txt",
+    ".tmp/w25-close/w25-adjacent-close.txt",
+    ".tmp/w25-external-replay/W25_SFTP_REPLAY.json"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-XFER-007",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/services/transfer_controller.py",
+    "src/hpc_gui/services/transfer_session_controller.py"
+   ],
+   "test_nodes": [
+    "tests/test_transfer_integrity.py",
+    "tests/test_transfer_controller.py"
+   ],
+   "expected_semantics": "progress counters only increase with terminal sentinel not a regression",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W25_WAVE_REPORT.md",
+    ".tmp/w25-close/w25-focused-close.txt",
+    ".tmp/w25-close/w25-adjacent-close.txt",
+    ".tmp/w25-external-replay/W25_SFTP_REPLAY.json"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-XFER-008",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/services/transfer_controller.py",
+    "src/hpc_gui/services/transfer_session_controller.py"
+   ],
+   "test_nodes": [
+    "tests/test_transfer_integrity.py",
+    "tests/test_wx_file_transfer_integration.py"
+   ],
+   "expected_semantics": "unknown total shown verbatim done over total with no fabricated percent",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W25_WAVE_REPORT.md",
+    ".tmp/w25-close/w25-focused-close.txt",
+    ".tmp/w25-close/w25-adjacent-close.txt",
+    ".tmp/w25-external-replay/W25_SFTP_REPLAY.json"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-XFER-009",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/services/transfer_controller.py",
+    "src/hpc_gui/services/transfer_session_controller.py"
+   ],
+   "test_nodes": [
+    "tests/test_transfer_cancel_recovery.py"
+   ],
+   "expected_semantics": "cancel rechecked after run item so terminal state stays failed cancelled",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W25_WAVE_REPORT.md",
+    ".tmp/w25-close/w25-focused-close.txt",
+    ".tmp/w25-close/w25-adjacent-close.txt",
+    ".tmp/w25-external-replay/W25_SFTP_REPLAY.json"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-XFER-010",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/services/transfer_controller.py",
+    "src/hpc_gui/wx_transfer_workspace.py"
+   ],
+   "test_nodes": [
+    "tests/test_w25_transfer_workspace_integrity.py::test_engine_retry_failed_reannounces_queued",
+    "tests/test_w25_transfer_workspace_integrity.py::test_embedded_panel_retry_clears_failed_rows"
+   ],
+   "expected_semantics": "retry restores pending and re-emits queued while evicting stale rows",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W25_WAVE_REPORT.md",
+    ".tmp/w25-close/w25-focused-close.txt",
+    ".tmp/w25-close/w25-adjacent-close.txt",
+    ".tmp/w25-external-replay/W25_SFTP_REPLAY.json"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-XFER-011",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/services/transfer_controller.py",
+    "src/hpc_gui/services/transfer_session_controller.py"
+   ],
+   "test_nodes": [
+    "tests/test_transfer_integrity.py",
+    "tests/test_transfer_controller.py"
+   ],
+   "expected_semantics": "partials under explicit policy with strict-prefix resume and visible failed landing",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W25_WAVE_REPORT.md",
+    ".tmp/w25-close/w25-focused-close.txt",
+    ".tmp/w25-close/w25-adjacent-close.txt",
+    ".tmp/w25-external-replay/W25_SFTP_REPLAY.json"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-XFER-012",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_transfer_workspace.py",
+    "src/hpc_gui/services/transfer_controller.py"
+   ],
+   "test_nodes": [
+    "tests/test_w25_transfer_workspace_integrity.py::test_embedded_panel_tracks_concurrent_transfers_in_isolated_rows"
+   ],
+   "expected_semantics": "concurrent transfers update isolated per-row token cells only",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W25_WAVE_REPORT.md",
+    ".tmp/w25-close/w25-focused-close.txt",
+    ".tmp/w25-close/w25-adjacent-close.txt",
+    ".tmp/w25-external-replay/W25_SFTP_REPLAY.json"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-XFER-013",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_shell.py",
+    "src/hpc_gui/services/transfer_session_controller.py"
+   ],
+   "test_nodes": [
+    "tests/test_w25_transfer_workspace_integrity.py::test_cancel_transfer_sessions_cancels_and_tolerates_junk"
+   ],
+   "expected_semantics": "disconnect cancels transfer sessions predictably without raising",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W25_WAVE_REPORT.md",
+    ".tmp/w25-close/w25-focused-close.txt",
+    ".tmp/w25-close/w25-adjacent-close.txt",
+    ".tmp/w25-external-replay/W25_SFTP_REPLAY.json"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-XFER-014",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_transfer_workspace.py",
+    "src/hpc_gui/services/transfer_session_controller.py"
+   ],
+   "test_nodes": [
+    "tests/test_wx_transfer_conflict_ui.py"
+   ],
+   "expected_semantics": "matrix header routes each item through conflict check and resolver",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W25_WAVE_REPORT.md",
+    ".tmp/w25-close/w25-focused-close.txt",
+    ".tmp/w25-close/w25-adjacent-close.txt",
+    ".tmp/w25-external-replay/W25_SFTP_REPLAY.json"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-XFER-015",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_transfer_workspace.py",
+    "src/hpc_gui/services/transfer_session_controller.py"
+   ],
+   "test_nodes": [
+    "tests/test_wx_transfer_conflict_ui.py",
+    "tests/test_wx_file_transfer_integration.py"
+   ],
+   "expected_semantics": "local to remote exists prompts with cancel-safe backend untouched",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W25_WAVE_REPORT.md",
+    ".tmp/w25-close/w25-focused-close.txt",
+    ".tmp/w25-close/w25-adjacent-close.txt",
+    ".tmp/w25-external-replay/W25_SFTP_REPLAY.json"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-XFER-016",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_transfer_workspace.py",
+    "src/hpc_gui/services/transfer_session_controller.py"
+   ],
+   "test_nodes": [
+    "tests/test_wx_transfer_conflict_ui.py",
+    "tests/test_wx_file_transfer_integration.py"
+   ],
+   "expected_semantics": "remote to local exists probed locally with dialog path and green download legs",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W25_WAVE_REPORT.md",
+    ".tmp/w25-close/w25-focused-close.txt",
+    ".tmp/w25-close/w25-adjacent-close.txt",
+    ".tmp/w25-external-replay/W25_SFTP_REPLAY.json"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-XFER-017",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_editor_view.py",
+    "src/hpc_gui/wx_shell.py"
+   ],
+   "test_nodes": [
+    "tests/test_w25_transfer_workspace_integrity.py::test_editor_external_change_cancel_preserves_disk_and_edits",
+    "tests/test_w25_transfer_workspace_integrity.py::test_editor_external_change_overwrite_writes",
+    "tests/test_w25_transfer_workspace_integrity.py::test_editor_normal_save_needs_no_prompt"
+   ],
+   "expected_semantics": "local save with external change prompts on stat baseline with cancel preserving disk and edits",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W25_WAVE_REPORT.md",
+    ".tmp/w25-close/w25-focused-close.txt",
+    ".tmp/w25-close/w25-adjacent-close.txt",
+    ".tmp/w25-external-replay/W25_SFTP_REPLAY.json"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-XFER-018",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_editor_view.py",
+    "src/hpc_gui/wx_shell.py"
+   ],
+   "test_nodes": [
+    "tests/test_w25_transfer_workspace_integrity.py::test_editor_remote_save_as_prompts_and_redirects"
+   ],
+   "expected_semantics": "remote save conflict policy explicit last-writer-wins with failed saves keeping dirty state",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W25_WAVE_REPORT.md",
+    ".tmp/w25-close/w25-focused-close.txt",
+    ".tmp/w25-close/w25-adjacent-close.txt",
+    ".tmp/w25-external-replay/W25_SFTP_REPLAY.json"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-XFER-019",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_editor_view.py",
+    "src/hpc_gui/wx_shell.py"
+   ],
+   "test_nodes": [
+    "tests/test_w25_transfer_workspace_integrity.py::test_editor_save_as_cancel_is_side_effect_free",
+    "tests/test_w25_transfer_workspace_integrity.py::test_editor_save_as_overwrite_writes_and_adopts_path",
+    "tests/test_w25_transfer_workspace_integrity.py::test_editor_remote_save_as_prompts_and_redirects"
+   ],
+   "expected_semantics": "Save As redirects via header path with exists prompts and identity adoption",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W25_WAVE_REPORT.md",
+    ".tmp/w25-close/w25-focused-close.txt",
+    ".tmp/w25-close/w25-adjacent-close.txt",
+    ".tmp/w25-external-replay/W25_SFTP_REPLAY.json"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-TODO-013",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_settings.py",
+    "src/hpc_gui/wx_settings_view.py"
+   ],
+   "test_nodes": [
+    "tests/test_w25_transfer_workspace_integrity.py::test_wx_settings_checksum_checkbox_persists_to_stored_setting",
+    "tests/test_wx_shell.py"
+   ],
+   "expected_semantics": "settings review with checksum persisted to stored setting and live surfaces present",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W25_WAVE_REPORT.md",
+    ".tmp/w25-close/w25-focused-close.txt",
+    ".tmp/w25-close/w25-adjacent-close.txt",
+    ".tmp/w25-external-replay/W25_SFTP_REPLAY.json"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "requirement_id": "HPC-W06-TODO-043",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/services/transfer_session_controller.py",
+    "src/hpc_gui/wx_shell.py",
+    "src/hpc_gui/wx_settings.py"
+   ],
+   "test_nodes": [
+    "tests/test_w25_transfer_workspace_integrity.py::test_session_verify_mismatch_fails_transfer",
+    "tests/test_w25_transfer_workspace_integrity.py::test_session_verify_unsupported_passes_and_disabled_skips",
+    "tests/test_w25_transfer_workspace_integrity.py::test_verify_transfer_item_off_unsupported_verified_failed",
+    "tests/test_transfer_integrity.py"
+   ],
+   "expected_semantics": "optional SHA-256 verify hook with Qt-parity off unsupported verified failed semantics",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W25_WAVE_REPORT.md",
+    ".tmp/w25-close/w25-focused-close.txt",
+    ".tmp/w25-close/w25-adjacent-close.txt",
+    ".tmp/w25-external-replay/W25_SFTP_REPLAY.json"
+   ],
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  }
+ ],
+ "tests": [
+  {
+   "node": "tests/test_w25_transfer_workspace_integrity.py",
+   "command": "python -m pytest -q tests/test_w25_transfer_workspace_integrity.py",
+   "requirement_ids": [
+    "HPC-W06-XFER-001",
+    "HPC-W06-XFER-002",
+    "HPC-W06-XFER-003",
+    "HPC-W06-XFER-004",
+    "HPC-W06-XFER-005",
+    "HPC-W06-XFER-006",
+    "HPC-W06-XFER-007",
+    "HPC-W06-XFER-008",
+    "HPC-W06-XFER-009",
+    "HPC-W06-XFER-010",
+    "HPC-W06-XFER-011",
+    "HPC-W06-XFER-012",
+    "HPC-W06-XFER-013",
+    "HPC-W06-XFER-014",
+    "HPC-W06-XFER-015",
+    "HPC-W06-XFER-016",
+    "HPC-W06-XFER-017",
+    "HPC-W06-XFER-018",
+    "HPC-W06-XFER-019",
+    "HPC-W06-TODO-013",
+    "HPC-W06-TODO-043"
+   ],
+   "exit_code": 0,
+   "passed": 14,
+   "failed": 0,
+   "skipped": 0,
+   "xfailed": 0,
+   "xpassed": 0,
+   "environment": "Windows 11 Python 3.12.4 wxPython 4.3.1 HEAD ccaf871f per-file runs",
+   "timestamp": "2026-09-24T10:27:30Z",
+   "evidence_path": ".tmp/w25-close/w25-focused-close.txt",
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "node": "tests/test_transfer_controller.py",
+   "command": "python -m pytest -q tests/test_transfer_controller.py",
+   "requirement_ids": [
+    "HPC-W06-XFER-007",
+    "HPC-W06-XFER-011"
+   ],
+   "exit_code": 0,
+   "passed": 4,
+   "failed": 0,
+   "skipped": 0,
+   "xfailed": 0,
+   "xpassed": 0,
+   "environment": "Windows 11 Python 3.12.4 wxPython 4.3.1 HEAD ccaf871f per-file runs",
+   "timestamp": "2026-09-24T10:27:30Z",
+   "evidence_path": ".tmp/w25-close/w25-adjacent-close.txt",
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "node": "tests/test_transfer_integrity.py",
+   "command": "python -m pytest -q tests/test_transfer_integrity.py",
+   "requirement_ids": [
+    "HPC-W06-XFER-007",
+    "HPC-W06-XFER-008",
+    "HPC-W06-XFER-011",
+    "HPC-W06-TODO-043"
+   ],
+   "exit_code": 0,
+   "passed": 3,
+   "failed": 0,
+   "skipped": 0,
+   "xfailed": 0,
+   "xpassed": 0,
+   "environment": "Windows 11 Python 3.12.4 wxPython 4.3.1 HEAD ccaf871f per-file runs",
+   "timestamp": "2026-09-24T10:27:30Z",
+   "evidence_path": ".tmp/w25-close/w25-adjacent-close.txt",
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "node": "tests/test_transfer_cancel_recovery.py",
+   "command": "python -m pytest -q tests/test_transfer_cancel_recovery.py",
+   "requirement_ids": [
+    "HPC-W06-XFER-004",
+    "HPC-W06-XFER-006",
+    "HPC-W06-XFER-009"
+   ],
+   "exit_code": 0,
+   "passed": 3,
+   "failed": 0,
+   "skipped": 0,
+   "xfailed": 0,
+   "xpassed": 0,
+   "environment": "Windows 11 Python 3.12.4 wxPython 4.3.1 HEAD ccaf871f per-file runs",
+   "timestamp": "2026-09-24T10:27:30Z",
+   "evidence_path": ".tmp/w25-close/w25-adjacent-close.txt",
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "node": "tests/test_wx_transfer_conflict_ui.py",
+   "command": "python -m pytest -q tests/test_wx_transfer_conflict_ui.py",
+   "requirement_ids": [
+    "HPC-W06-XFER-005",
+    "HPC-W06-XFER-014",
+    "HPC-W06-XFER-015",
+    "HPC-W06-XFER-016"
+   ],
+   "exit_code": 0,
+   "passed": 11,
+   "failed": 0,
+   "skipped": 0,
+   "xfailed": 0,
+   "xpassed": 0,
+   "environment": "Windows 11 Python 3.12.4 wxPython 4.3.1 HEAD ccaf871f per-file runs",
+   "timestamp": "2026-09-24T10:27:30Z",
+   "evidence_path": ".tmp/w25-close/w25-adjacent-close.txt",
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "node": "tests/test_wx_transfer_ui_lifecycle.py",
+   "command": "python -m pytest -q tests/test_wx_transfer_ui_lifecycle.py",
+   "requirement_ids": [
+    "HPC-W06-XFER-001",
+    "HPC-W06-XFER-003",
+    "HPC-W06-XFER-004"
+   ],
+   "exit_code": 0,
+   "passed": 14,
+   "failed": 0,
+   "skipped": 0,
+   "xfailed": 0,
+   "xpassed": 0,
+   "environment": "Windows 11 Python 3.12.4 wxPython 4.3.1 HEAD ccaf871f per-file runs",
+   "timestamp": "2026-09-24T10:27:30Z",
+   "evidence_path": ".tmp/w25-close/w25-adjacent-close.txt",
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "node": "tests/test_wx_file_transfer_integration.py",
+   "command": "python -m pytest -q tests/test_wx_file_transfer_integration.py",
+   "requirement_ids": [
+    "HPC-W06-XFER-002",
+    "HPC-W06-XFER-006",
+    "HPC-W06-XFER-015",
+    "HPC-W06-XFER-016"
+   ],
+   "exit_code": 0,
+   "passed": 29,
+   "failed": 0,
+   "skipped": 0,
+   "xfailed": 0,
+   "xpassed": 0,
+   "environment": "Windows 11 Python 3.12.4 wxPython 4.3.1 HEAD ccaf871f per-file runs",
+   "timestamp": "2026-09-24T10:27:30Z",
+   "evidence_path": ".tmp/w25-close/w25-adjacent-close.txt",
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "node": "tests/test_wx_editor.py",
+   "command": "python -m pytest -q tests/test_wx_editor.py",
+   "requirement_ids": [
+    "HPC-W06-XFER-017",
+    "HPC-W06-XFER-019"
+   ],
+   "exit_code": 0,
+   "passed": 14,
+   "failed": 0,
+   "skipped": 0,
+   "xfailed": 0,
+   "xpassed": 0,
+   "environment": "Windows 11 Python 3.12.4 wxPython 4.3.1 HEAD ccaf871f per-file runs",
+   "timestamp": "2026-09-24T10:27:30Z",
+   "evidence_path": ".tmp/w25-close/w25-adjacent-close.txt",
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "node": "tests/test_wx_shell.py",
+   "command": "python -m pytest -q tests/test_wx_shell.py",
+   "requirement_ids": [
+    "HPC-W06-XFER-013",
+    "HPC-W06-TODO-013"
+   ],
+   "exit_code": 0,
+   "passed": 5,
+   "failed": 0,
+   "skipped": 0,
+   "xfailed": 0,
+   "xpassed": 0,
+   "environment": "Windows 11 Python 3.12.4 wxPython 4.3.1 HEAD ccaf871f per-file runs",
+   "timestamp": "2026-09-24T10:27:30Z",
+   "evidence_path": ".tmp/w25-close/w25-adjacent-close.txt",
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "node": "tests/test_wx_i18n.py",
+   "command": "python -m pytest -q tests/test_wx_i18n.py",
+   "requirement_ids": [
+    "HPC-W06-XFER-019"
+   ],
+   "exit_code": 0,
+   "passed": 1,
+   "failed": 0,
+   "skipped": 0,
+   "xfailed": 0,
+   "xpassed": 0,
+   "environment": "Windows 11 Python 3.12.4 wxPython 4.3.1 HEAD ccaf871f per-file runs",
+   "timestamp": "2026-09-24T10:27:30Z",
+   "evidence_path": ".tmp/w25-close/w25-adjacent-close.txt",
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "node": "tests/test_wx_transfer_workspace.py",
+   "command": "python -m pytest -q tests/test_wx_transfer_workspace.py",
+   "requirement_ids": [
+    "HPC-W06-XFER-001"
+   ],
+   "exit_code": 0,
+   "passed": 2,
+   "failed": 0,
+   "skipped": 0,
+   "xfailed": 0,
+   "xpassed": 0,
+   "environment": "Windows 11 Python 3.12.4 wxPython 4.3.1 HEAD ccaf871f per-file runs",
+   "timestamp": "2026-09-24T10:27:30Z",
+   "evidence_path": ".tmp/w25-close/w25-adjacent-close.txt",
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  }
+ ],
+ "gui_actions": [
+  {
+   "status": "FULL",
+   "source_binding": "src/hpc_gui/wx_transfer_workspace.py build_transfers_panel with _row_token plus queued started eviction wired to transfer_controller.retry_failed re-emit",
+   "runtime_test_node": "tests/test_w25_transfer_workspace_integrity.py::test_embedded_panel_retry_clears_failed_rows",
+   "observed_readback": "real wx embedded queue failed completed row transitions with exact counts through fail retry complete",
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  },
+  {
+   "status": "FULL",
+   "source_binding": "src/hpc_gui/wx_editor_view.py save_document Save As redirect plus at-open disk baselines plus external-change prompts plus target_exists remote probe",
+   "runtime_test_node": "tests/test_w25_transfer_workspace_integrity.py::test_editor_remote_save_as_prompts_and_redirects",
+   "observed_readback": "real wx Save As prompts carrying target text with cancel-safe statuses and remote redirect delivering new path",
+   "candidate_sha": "ccaf871ffc139973db826363859ca2933b216e9c"
+  }
+ ],
+ "resources": [],
+ "artifacts": [
+  {
+   "path": "docs/wave-reports/v2/opencode/W25_WAVE_REPORT.md",
+   "identity": "canonical W25 wave report at candidate ccaf871f"
+  },
+  {
+   "path": ".tmp/w25-close/w25-focused-close.txt",
+   "identity": "focused 14 passed evidence at candidate"
+  },
+  {
+   "path": ".tmp/w25-close/w25-adjacent-close.txt",
+   "identity": "adjacent 86 passed evidence at candidate"
+  },
+  {
+   "path": ".tmp/w25-external-replay/W25_SFTP_REPLAY.json",
+   "identity": "SFTP replay upload digest match plus 106496-byte download plus cancel-safe plus retry verified at candidate"
+  }
+ ],
+ "review_passes": {
+  "diff_check": "PASS",
+  "claim_source_review": "PASS",
+  "independent_audit": "PASS"
+ },
+ "contradiction_scan": {
+  "unresolved": []
+ },
+ "blockers": [],
+ "deferred_items": [],
+ "validator_result": {
+  "state": "ACCEPTANCE_GREEN",
+  "reason": "close 14 focused plus 86 adjacent green at candidate HEAD plus fresh independent audit PASS plus diff check clean plus SFTP replay bound to candidate"
+ }
+}

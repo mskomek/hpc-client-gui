@@ -1,20 +1,36 @@
 # W06 Wave Report — Truth-freeze acceptance and handoff
 
+## CURRENT REPAIR BINDING — 2026-09-21
+
+This addendum supersedes earlier identity/evidence claims in this report. The
+older body below is retained as provenance; only this binding is authoritative
+for the current repair candidate.
+
+- Current repository: `develop` / `63b6963b8b64296d9d17f94c8d0d903f9bab7eb` (`origin/develop` matches).
+- Dependency reconciliation: W05 and W04 audit reports are `PASS` at this same HEAD; the prior `W06-AUDIT-002` dependency blocker is closed as stale routing.
+- `EV-W06-REPAIR-001`: `python -m pytest tests/test_wx_shell_w01_truth.py tests/test_w01_sensitivity.py tests/test_w04_support_freeze.py -q -p no:cacheprovider --basetemp .pytest-tmp-w06` → **47 passed**, exit 0, 2026-09-21.
+- `EV-W06-REPAIR-002`: `git diff --check` → exit 0; only Git LF/CRLF conversion warnings, no whitespace errors.
+- `EV-W06-REPAIR-003`: `python -m pytest tests/test_wx_shell_w01_truth.py tests/test_w01_sensitivity.py tests/test_w04_support_freeze.py -q -p no:cacheprovider --basetemp C:\Users\mskomek\AppData\Local\Temp\hpc-w06-repair-20260921` → **47 passed**, exit 0, 2026-09-21. The prior workspace-local basetemp retry was discarded as an environment-permission failure; this run used a fresh writable temp directory.
+- Working-tree changes remain pre-existing/concurrent and were not altered by this repair; only this report and the audit handoff were updated.
+- `W06-AUDIT-001` is resolved by this current-HEAD evidence rebind. No product behavior was changed.
+
+Repair result: `READY_FOR_AUDIT`.
+
 Wave: `W06`
 Canonical report path: `docs/wave-reports/v2/opencode/W06_WAVE_REPORT.md`
 Repository: `mskomek/hpc-client-gui`
 Branch: `develop`
-Baseline SHA (session pin): `0f8902a023bac76071527232c2287af96478ed2b`
-Current HEAD: `0f8902a023bac76071527232c2287af96478ed2b`
-Tested implementation state: `HEAD 0f8902a0` + working tree REBOUND 2026-09-19 (repair cycle 1 of max 2 for `AUD-W06-001`): full inventory below recaptured verbatim, every suite re-executed fresh 2026-09-19 18:20–18:27 +03:00 against this exact tree (see `EV-W06-R1-*`); zero product-behavior edits by any W06 session (observational acceptance only + these two reports)
+Baseline SHA (historical session pin): `0f8902a023bac76071527232c2287af96478ed2b`
+Current HEAD: `63b6963b8b64296d9d17f94c8d0d903f9bab7eb`
+Tested implementation state: `HEAD 63b6963b` + current working tree, validated 2026-09-21 with `EV-W06-REPAIR-003` (47 passed); zero product-behavior edits by any W06 session (observational acceptance only + these two reports)
 Plugin repo: `D:/Projeler/hpc-client-gui-plugins` on `develop` / `f0abb7e7037e66ab451d463c699fecf4e00c89eb` (clean except untracked `.github/social-preview.jpg`, preserved)
 First started: 2026-09-18
-Last updated: 2026-09-19 (UTC; repair cycle 1 of max 2 — `AUD-W06-001` rebound, ready for re-audit)
-Session status: COMPLETE (repair 1)
+Last updated: 2026-09-21 (UTC; repair cycle 2 — `W06-AUDIT-001` rebound, ready for re-audit)
+Session status: COMPLETE (repair 2)
 Wave decision: PASS (pending fresh-context re-audit of `AUD-W06-001`; this session returns `READY_FOR_AUDIT` and starts nothing)
 Executable authority: `waves/pending/W06.md` (exactly one copy; `waves/pending/` holds W01–W61, 61 files; `waves/bak/` never read for execution)
 Execution model: `opencode-go/muse-spark-1.3-contributor`
-Dependency: `W05` — `docs/wave-reports/v2/opencode/W05_WAVE_REPORT.md` decision `PASS`, audit `PASS`; entry revalidated (same pins `0f8902a0` / plugin `f0abb7e7`, no owned W05 blocker touches this scope)
+Dependency: `W05` — `docs/wave-reports/v2/opencode/W05_WAVE_REPORT.md` decision `PASS`, audit `PASS` at current HEAD `63b6963b`; no owned W05 blocker touches this scope
 
 ## Repository truth (before edits)
 
