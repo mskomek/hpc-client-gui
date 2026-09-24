@@ -106,3 +106,5 @@ coverage.json
 # FreeFileSync local sync database
 /sync.ffs_db
 /sync.ffs_lock
+.agents/_skill-quarantine/
+.wave-patch-backup/
