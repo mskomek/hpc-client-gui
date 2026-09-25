@@ -60,6 +60,12 @@ THIRD_PARTY_LICENSES_DIR = REPO_ROOT / "third_party_licenses"
 if THIRD_PARTY_LICENSES_DIR.exists():
     datas.append((str(THIRD_PARTY_LICENSES_DIR), "third_party_licenses"))
 
+# W44 ARCH-PACKAGE-001 re-audit: the PySide6/QtWebEngine hidden imports below
+# ship intentionally as dual-runtime packaging (Qt surface + wx runtime both
+# supported). They are NOT stale compatibility imports: the Qt terminal
+# (WebEngine) and Qt dialogs remain first-class until the W56
+# runtime-cutover decision removes or retains Qt explicitly. Revisit only
+# when W56 decides; do not silently drop entries to "slim" the bundle.
 hiddenimports = sorted(
     {
         "PySide6.QtCore",

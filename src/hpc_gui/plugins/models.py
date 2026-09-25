@@ -77,6 +77,11 @@ class PluginManifest:
     entrypoints: Mapping[str, Any]
     files: tuple[PluginFile, ...]
     ui_contributions: Mapping[str, Any] | None = None
+    # W32 Workstream B: optional provider/capability and dependency metadata.
+    # Both are advisory: they never grant loading, execution, or capability
+    # beyond what capabilities/entrypoints already allow.
+    provider_ids: tuple[str, ...] = ()
+    optional_dependencies: tuple[Any, ...] = ()
 
 
 @dataclass(frozen=True)

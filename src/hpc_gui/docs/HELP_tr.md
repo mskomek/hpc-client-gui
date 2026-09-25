@@ -118,7 +118,9 @@ paralelliği kullanabilir.
 
 ### Eklentiler
 
-Sağ üstteki **Eklentiler** düğmesiyle Eklenti Yöneticisi'ni açın. Kayıt
+Menü çubuğundaki **Eklentiler** menüsüyle (**Eklenti Gözat & Kur...**,
+**Kurulu Eklentileri Yönet...**, **Eklenti Güncellemelerini Denetle...**)
+Eklenti Yöneticisi'ni açın. Kayıt
 defteri açılışta otomatik yüklenir — durum *Eklentiler yükleniyor…*, sonra
 *Çevrimiçi*, *Önbellek* veya *Çevrimdışı* olur. **Keşfet** sekmesinden küme
 profili, iş şablonu ve lint paklerini kurun; kurmadan önce karttaki

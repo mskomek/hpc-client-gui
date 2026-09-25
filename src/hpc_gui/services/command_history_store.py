@@ -30,8 +30,10 @@ _SENSITIVE_PATTERNS = [
     r"authorization\s*:\s*bearer\s+",
     # Tools that embed passwords
     r"\bsshpass\b",
-    # PuTTY/Plink password arg (rare, but don't store)
-    r"\b(-pw|--pw)\b",
+    # PuTTY/Plink password arg (rare, but don't store). Leading hyphen is a
+    # non-word char, so \b before it never matches after whitespace; use a
+    # whitespace/start boundary instead (W38 secret-boundary hardening).
+    r"(?<!\S)(?:-pw|--pw|--password)\b",
 ]
 
 

@@ -15,6 +15,15 @@ class WxLogsModel:
         self.bundle = bundle or create_diagnostic_bundle
         self.text = ""
 
+    def logs_dir(self) -> Path:
+        """Return the actual active log directory for the current runtime.
+
+        Resolved lazily at call time (not cached at construction) so the
+        value stays correct after wx reparenting/runtime migration or an
+        isolated-config-root switch changes the active log location.
+        """
+        return Path(self.log_path).expanduser().resolve().parent
+
     def refresh(self) -> str:
         if not self.log_path.is_file():
             self.text = ""
@@ -33,4 +42,15 @@ class WxLogsModel:
         return self.bundle(destination)
 
 
-__all__ = ["WxLogsModel"]
+def resolve_active_logs_dir() -> Path:
+    """Return the current active log directory (fresh, never cached).
+
+    Evaluated at call time so the result reflects runtime migration and
+    isolated-config-root switches instead of a stale construction-time path.
+    """
+    from hpc_gui.core.logging import log_path as default_log_path
+
+    return Path(default_log_path()).expanduser().resolve().parent
+
+
+__all__ = ["WxLogsModel", "resolve_active_logs_dir"]

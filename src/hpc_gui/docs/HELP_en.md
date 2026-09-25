@@ -118,7 +118,8 @@ the configured parallelism when it supports isolated channels.
 
 ### Plugins
 
-Open the Plugin Manager with the **Plugins** button (top-right control strip).
+Open the Plugin Manager from the menubar **Plugins** menu (**Browse &
+Install...**, **Manage Installed...**, **Check for Plugin Updates...**).
 The registry loads automatically when it opens — status shows *Loading
 plugins…*, then *Online*, *Cached*, or *Offline*. Install cluster profiles,
 job templates, and lint packs from **Discover**; see *Details* on any card for

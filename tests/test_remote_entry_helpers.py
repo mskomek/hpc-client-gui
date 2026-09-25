@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from hpc_gui.services.files_base import RemoteEntry  # noqa: E402
+from hpc_gui.services import remote_entry_format as neutral_format  # noqa: E402
 from hpc_gui.ui.models import remote_entry_helpers as helpers  # noqa: E402
 
 pytestmark = [pytest.mark.unit, pytest.mark.semantic]
@@ -39,11 +40,14 @@ class FmtSizeTests(unittest.TestCase):
 
 class FileTypeTests(unittest.TestCase):
     def test_directories_use_translated_folder_label(self) -> None:
-        with patch.object(helpers, "t", return_value="Folder"):
+        # W44: `t` is looked up in the canonical neutral module
+        # (hpc_gui.services.remote_entry_format); the ui shim re-exports it.
+        with patch.object(neutral_format, "t", return_value="Folder"):
             self.assertEqual(helpers.file_type("anything", True), "Folder")
 
     def test_missing_translation_does_not_reintroduce_hardcoded_label(self) -> None:
-        with patch.object(helpers, "t", return_value="[dirs.type_folder]"):
+        # W44: see above — patch the canonical `t` lookup site.
+        with patch.object(neutral_format, "t", return_value="[dirs.type_folder]"):
             self.assertEqual(helpers.file_type("anything", True), "[dirs.type_folder]")
 
     def test_known_extensions_map_to_descriptions(self) -> None:

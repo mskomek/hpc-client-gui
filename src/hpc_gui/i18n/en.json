@@ -362,6 +362,14 @@
     "find_label": "Find:",
     "find_placeholder": "Find text",
     "find_next": "Find next",
+    "find_previous": "Find previous",
+    "match_case": "Match case",
+    "find_empty": "Enter text to find.",
+    "find_no_match": "No match found.",
+    "find_wrapped_top": "Wrapped to top.",
+    "find_wrapped_bottom": "Wrapped to bottom.",
+    "binary_save_blocked": "Binary or oversize file is not saved as text.",
+    "stale_open_ignored": "Ignored a stale editor-open request.",
     "replace_label": "Replace:",
     "replace_placeholder": "Replace with",
     "replace": "Replace",
@@ -690,6 +698,8 @@
     "refresh": "Refresh",
     "copy": "Copy",
     "copy_path": "Copy Log Path",
+    "open_folder": "Open Logs Folder",
+    "folder_open_failed": "Could not open the logs folder: {err}",
     "export_diagnostics": "Export Diagnostics",
     "select_output_folder": "Select output folder",
     "diagnostics_title": "Diagnostics",
@@ -1221,7 +1231,8 @@
     "corrupt_plugin": "{name} failed its integrity check and was skipped. Reinstall it from the Discover tab; no installed version was deleted.",
     "open_tool": "Open tool",
     "tool_open_failed": "Could not open the linter tool",
-    "tool_not_installed": "The plugin is not installed or is disabled."
+    "tool_not_installed": "The plugin is not installed or is disabled.",
+    "lifecycle_effect_note": "Disabling a plugin stops its profiles, templates, rules and tools the next time plugins load (list refresh, view rebuild or reconnect). No app restart is needed; already-opened views refresh on rebuild."
   },
   "menu": {
     "menu": "Menu",

@@ -63,7 +63,13 @@ def describe_connection_error(exc: BaseException, fallback: str = "") -> str:
 
     explanation = t(key)
     if text and text not in explanation:
-        explanation += f"\n\n{t('common.technical_detail')}: {text}"
+        try:
+            from hpc_gui.core.log_redaction import redact_text
+
+            safe_text = redact_text(text)
+        except Exception:
+            safe_text = text
+        explanation += f"\n\n{t('common.technical_detail')}: {safe_text}"
     return explanation
 
 

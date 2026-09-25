@@ -89,6 +89,8 @@ def _build_manifest(raw: Any) -> tuple[PluginManifest | None, str | None]:
     ui_contributions = raw.get("ui_contributions")
     if not isinstance(ui_contributions, dict) and ui_contributions is not None:
         ui_contributions = None
+    provider_ids = raw.get("provider_ids") or []
+    optional_dependencies = raw.get("optional_dependencies") or []
     manifest = PluginManifest(
         schema_version=raw["schema_version"],
         plugin_api=raw["plugin_api"],
@@ -103,6 +105,11 @@ def _build_manifest(raw: Any) -> tuple[PluginManifest | None, str | None]:
         entrypoints=dict(raw.get("entrypoints") or {}),
         files=files,
         ui_contributions=dict(ui_contributions) if isinstance(ui_contributions, dict) else None,
+        provider_ids=tuple(provider_ids) if isinstance(provider_ids, list) else (),
+        optional_dependencies=tuple(
+            dict(entry) if isinstance(entry, dict) else entry
+            for entry in optional_dependencies
+        ) if isinstance(optional_dependencies, list) else (),
     )
     return manifest, None
 

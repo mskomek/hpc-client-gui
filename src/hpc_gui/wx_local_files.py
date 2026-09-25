@@ -17,7 +17,7 @@ from hpc_gui.services.file_context_actions import FILE_CONTEXT_LABEL_KEYS, conte
 from hpc_gui.services.local_files import list_windows_drives
 from hpc_gui.wx_host import make_host
 
-from hpc_gui.ui.models.remote_entry_helpers import file_type as _shared_file_type, fmt_mtime as _shared_fmt_mtime
+from hpc_gui.services.remote_entry_format import file_type as _shared_file_type, fmt_mtime as _shared_fmt_mtime
 
 
 @dataclass(frozen=True)

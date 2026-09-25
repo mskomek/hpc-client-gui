@@ -5,17 +5,19 @@ HPC Client GUI, küme profilleri, iş şablonları ve lint kuralları sağlayan
 eklenti sistemi hiçbir zaman Python kodu, betik veya ikili dosya
 indirmez/çalıştırmaz.
 
-## Eklentiler düğmesi
+## Eklenti Yöneticisini açma
 
-Sağ üstteki kontrol şeridinde (Güncelle ve Günlük Gönder arasında) **Eklentiler**
-düğmesi bulunur. Üç sekmeli Eklenti Yöneticisi'ni açar:
+Menü çubuğundaki **Eklentiler** menüsü, üç sekmeli Eklenti Yöneticisi'ni açar:
 
-- **Keşfet** — resmi kayıt defteri kataloğuna göz atın. Yönetici açıldığında
-  yükleme otomatik başlar (durum sırayla *Eklentiler yükleniyor…*, *Çevrimiçi*,
-  *Önbellek*, *Çevrimdışı* olur); Yenile ile manuel kontrol yapılır.
-- **Kurulu** — kurulu sürümleri görün; devre dışı bırak/etkinleştir veya kaldır.
-- **Güncellemeler** — uyumlu yeni sürümler burada görünür; güncelleme her zaman
-  sizin açık tercihinizdir (otomatik güncelleme yok).
+- **Eklenti Gözat & Kur...** — **Keşfet** sekmesini açar: resmi kayıt defteri
+  kataloğuna göz atın. Yönetici açıldığında yükleme otomatik başlar
+  (durum sırayla *Eklentiler yükleniyor…*, *Çevrimiçi*, *Önbellek*,
+  *Çevrimdışı* olur); Yenile ile manuel kontrol yapılır.
+- **Kurulu Eklentileri Yönet...** — **Kurulu** sekmesini açar: kurulu
+  sürümleri görün; devre dışı bırak/etkinleştir veya kaldır.
+- **Eklenti Güncellemelerini Denetle...** — **Güncellemeler** sekmesini
+  açar: uyumlu yeni sürümler burada görünür; güncelleme her zaman sizin
+  açık tercihinizdir (otomatik güncelleme yok).
 
 Her Keşfet kartında eklenti adı/sürümü, yayıncı, kısa açıklama, çevrilmiş
 yetenek rozetleri (*Küme profilleri*, *İş şablonları*, *Lint kuralları*),
@@ -146,6 +148,48 @@ En küçük Unicode profil örneği:
   ]
 }
 ```
+
+## Eklenti manifesti yazımı
+
+Her eklenti sürümü, yükleyicinin önce doğruladığı bir `manifest.json` taşır.
+Zorunlu anahtarlar (`schema_version`, `plugin_api`, `id`, `name`, `version`,
+`publisher`, `license`, `description`, `requires_app`, `capabilities`,
+`entrypoints`, `files`):
+
+- `schema_version` değeri `1` olur.
+- `plugin_api` değeri `1` olur (yalnızca veri dağıtan eklentiler). `2`
+  sayısal işareti yalnızca uygulama onaylı güvenilir araçlar içindir ve tek
+  başına kod çalıştırmaya izin vermez.
+- `id`, `org.hpcclient.truba` gibi noktalı ters alan adı kimliğidir (küçük
+  harf, bölümler noktayla ayrılır). Serbest biçimli görünen adlar reddedilir:
+  iki eklenti birbirini sessizce gölgeleyemez.
+- `name` görünen etikettir (en fazla 128 karakter); `version` anlamsal
+  sürümdür (`1.0.0`); `requires_app` uyumlu uygulama aralığıdır (örneğin
+  `>=1.3.0`). Uyumsuz eklentiler yüklenmez, açık bir ret durumuyla bildirilir.
+- `capabilities` eklentinin sağladıklarını adlandırır: `cluster-profile`,
+  `lint-rules`, `job-template`, `application-tools`, `linter-tool`.
+- `entrypoints` her yeteneği bildirimsel içerik yoluna bağlar (örneğin
+  `{"cluster_profiles": ["cluster-profile.json"]}`). Yollar göreli, eğik
+  çizgili ve paket içinde kalmalıdır; asla içe aktarılmaz/çalıştırılmaz.
+- `files` her içeriği `path`, SHA-256 `sha256`, bayt `size` ve `role`
+  bilgileriyle listeler. Bildirilen dosyalar her yüklemede yeniden
+  doğrulanır, bildirilmemiş ek dosyalar reddedilir.
+
+İsteğe bağlı danışma anahtarları (`provider_ids`, `optional_dependencies`)
+niyeti belgeler; tek başlarına yükleme, çalıştırma veya yetenek kazandırmaz:
+
+- `provider_ids` eklentinin belgelediği sağlayıcı kimliklerini listeler
+  (örneğin `["truba"]`). Bir eklenti sağlayıcıyı yalnızca `cluster-profile`
+  içeriği ve yetenek bildirimiyle kaydeder, yalnızca bu listeyle değil.
+- `optional_dependencies` birlikte test edilen kimlikleri (veya
+  `{"id", "version"}` nesnelerini) listeler. Eksik ya da geçersiz isteğe
+  bağlı bağımlılık yalnızca bir tanı iletisi üretir; bildiren eklenti normal
+  yüklenir ve ana uygulama açılışı asla engellenmez.
+
+Bozuk manifest, uyumsuz API işareti veya başarısız bütünlük denetimi,
+`plugin_id@version` adını taşıyan kapsanmış bir tanı olarak kaydedilir ve
+yalnızca o eklenti sürümü atlanır — ilgisiz eklentiler ve ana uygulama her
+zaman açılır.
 
 ## İş şablonları ve lint
 

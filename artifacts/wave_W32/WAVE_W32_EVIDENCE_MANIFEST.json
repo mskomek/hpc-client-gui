@@ -1,0 +1,358 @@
+{
+ "spec_profile_id": "HPC",
+ "protocol_revision": 2,
+ "wave_id": "W32",
+ "wave_spec_revision": "sha256:4dac42cccf01cc26a1e6ce04bbb850926e89ec3c61bcc05c772f5c042252dfbe",
+ "status": "ACCEPTANCE_GREEN",
+ "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888",
+ "closure_sha": null,
+ "dependency_validation": {
+  "dependencies": []
+ },
+ "requirements": [
+  {
+   "requirement_id": "HPC-W08-DISC-001",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/plugins/discovery.py"
+   ],
+   "test_nodes": [
+    "tests/test_w32_discovery_manifest.py::test_disc_all_five_sources_enumerated",
+    "tests/test_w32_discovery_manifest.py::test_disc_bundled_is_not_active",
+    "tests/test_w32_discovery_manifest.py::test_disc_precedence_and_identity_deterministic",
+    "tests/test_w32_discovery_manifest.py::test_disc_duplicate_profile_deterministic"
+   ],
+   "expected_semantics": "five-source enumeration; bundled source present but never active; deterministic precedence and registry identity",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W32_WAVE_REPORT.md",
+    "artifacts/opencode/wave_W32/WAVE_W32_AUDIT_REPORT.md",
+    ".tmp/w32-repair/w32-focused.txt",
+    "tests/test_w32_discovery_manifest.py"
+   ],
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  },
+  {
+   "requirement_id": "HPC-W08-DISC-002",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/plugins/loader.py",
+    "src/hpc_gui/plugins/storage.py",
+    "src/hpc_gui/plugins/discovery.py"
+   ],
+   "test_nodes": [
+    "tests/test_w32_discovery_manifest.py::test_disc_user_installed_loads",
+    "tests/test_w32_discovery_manifest.py::test_gui_manager_surfaces_discovery_state"
+   ],
+   "expected_semantics": "user-installed plugins load from explicit root with manifest+profile round trip; manager model surfaces installed state",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W32_WAVE_REPORT.md",
+    "artifacts/opencode/wave_W32/WAVE_W32_AUDIT_REPORT.md",
+    ".tmp/w32-repair/w32-focused.txt",
+    "tests/test_w32_discovery_manifest.py"
+   ],
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  },
+  {
+   "requirement_id": "HPC-W08-DISC-003",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/plugins/storage.py",
+    "src/hpc_gui/plugins/discovery.py"
+   ],
+   "test_nodes": [
+    "tests/test_w32_discovery_manifest.py::test_disc_configured_path_override_is_isolated"
+   ],
+   "expected_semantics": "configured path override is isolated per explicit root; other roots unaffected",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W32_WAVE_REPORT.md",
+    "artifacts/opencode/wave_W32/WAVE_W32_AUDIT_REPORT.md",
+    ".tmp/w32-repair/w32-focused.txt",
+    "tests/test_w32_discovery_manifest.py"
+   ],
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  },
+  {
+   "requirement_id": "HPC-W08-DISC-004",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/plugins/discovery.py",
+    "src/hpc_gui/plugins/loader.py"
+   ],
+   "test_nodes": [
+    "tests/test_w32_discovery_manifest.py::test_disc_entry_point_mechanism_never_executes"
+   ],
+   "expected_semantics": "entry-point/package mechanism never executes code; manifest entrypoints are relative declarative paths; loader has no importlib/exec/eval/subprocess",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W32_WAVE_REPORT.md",
+    "artifacts/opencode/wave_W32/WAVE_W32_AUDIT_REPORT.md",
+    ".tmp/w32-repair/w32-focused.txt",
+    "tests/test_w32_discovery_manifest.py"
+   ],
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  },
+  {
+   "requirement_id": "HPC-W08-DISC-005",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/plugins/discovery.py",
+    "src/hpc_gui/plugins/loader.py",
+    "src/hpc_gui/plugins/storage.py"
+   ],
+   "test_nodes": [
+    "tests/test_w32_discovery_manifest.py::test_disc_development_path_and_cwd_never_discovered"
+   ],
+   "expected_semantics": "development path and CWD never discovered; loader/storage use no getcwd; fake CWD tree ignored",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W32_WAVE_REPORT.md",
+    "artifacts/opencode/wave_W32/WAVE_W32_AUDIT_REPORT.md",
+    ".tmp/w32-repair/w32-focused.txt",
+    "tests/test_w32_discovery_manifest.py"
+   ],
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  },
+  {
+   "requirement_id": "HPC-W08-MANIFEST-001",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/plugins/validator.py",
+    "src/hpc_gui/plugins/loader.py"
+   ],
+   "test_nodes": [
+    "tests/test_w32_discovery_manifest.py::test_manifest_plugin_id_validated"
+   ],
+   "expected_semantics": "plugin id validated as dotted reverse-DNS shape; loader enforces PLUGIN_ID_RE at load",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W32_WAVE_REPORT.md",
+    "artifacts/opencode/wave_W32/WAVE_W32_AUDIT_REPORT.md",
+    ".tmp/w32-repair/w32-focused.txt",
+    "tests/test_w32_discovery_manifest.py"
+   ],
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  },
+  {
+   "requirement_id": "HPC-W08-MANIFEST-002",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/plugins/validator.py"
+   ],
+   "test_nodes": [
+    "tests/test_w32_discovery_manifest.py::test_manifest_display_name_validated"
+   ],
+   "expected_semantics": "display name non-empty with max 128 chars",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W32_WAVE_REPORT.md",
+    "artifacts/opencode/wave_W32/WAVE_W32_AUDIT_REPORT.md",
+    ".tmp/w32-repair/w32-focused.txt",
+    "tests/test_w32_discovery_manifest.py"
+   ],
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  },
+  {
+   "requirement_id": "HPC-W08-MANIFEST-003",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/plugins/validator.py"
+   ],
+   "test_nodes": [
+    "tests/test_w32_discovery_manifest.py::test_manifest_version_semver"
+   ],
+   "expected_semantics": "plugin version must be valid semver",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W32_WAVE_REPORT.md",
+    "artifacts/opencode/wave_W32/WAVE_W32_AUDIT_REPORT.md",
+    ".tmp/w32-repair/w32-focused.txt",
+    "tests/test_w32_discovery_manifest.py"
+   ],
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  },
+  {
+   "requirement_id": "HPC-W08-MANIFEST-004",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/plugins/validator.py",
+    "src/hpc_gui/plugins/compatibility.py",
+    "src/hpc_gui/plugins/schema_compat.py",
+    "src/hpc_gui/plugins/loader.py"
+   ],
+   "test_nodes": [
+    "tests/test_w32_discovery_manifest.py::test_manifest_api_schema_compat"
+   ],
+   "expected_semantics": "plugin_api allow-list plus requires_app syntax; app compat via is_app_compatible and schema floors; loader gates",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W32_WAVE_REPORT.md",
+    "artifacts/opencode/wave_W32/WAVE_W32_AUDIT_REPORT.md",
+    ".tmp/w32-repair/w32-focused.txt",
+    "tests/test_w32_discovery_manifest.py"
+   ],
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  },
+  {
+   "requirement_id": "HPC-W08-MANIFEST-005",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/plugins/validator.py",
+    "src/hpc_gui/plugins/loader.py"
+   ],
+   "test_nodes": [
+    "tests/test_w32_discovery_manifest.py::test_manifest_entrypoint_required"
+   ],
+   "expected_semantics": "entrypoints must be JSON object; v2 linter_engine points at package __init__.py matching declared files; unsafe/missing entrypoint becomes contained PluginProblem",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W32_WAVE_REPORT.md",
+    "artifacts/opencode/wave_W32/WAVE_W32_AUDIT_REPORT.md",
+    ".tmp/w32-repair/w32-focused.txt",
+    "tests/test_w32_discovery_manifest.py"
+   ],
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  },
+  {
+   "requirement_id": "HPC-W08-MANIFEST-006",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/plugins/validator.py",
+    "src/hpc_gui/plugins/models.py",
+    "src/hpc_gui/plugins/loader.py",
+    "src/hpc_gui/plugins/installer.py"
+   ],
+   "test_nodes": [
+    "tests/test_w32_discovery_manifest.py::test_manifest_provider_ids_validated",
+    "tests/test_w32_discovery_manifest.py::test_manifest_provider_ids_preserved_through_loader"
+   ],
+   "expected_semantics": "optional provider_ids list with safe alphabet, max 64, deduped; preserved through loader/installer",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W32_WAVE_REPORT.md",
+    "artifacts/opencode/wave_W32/WAVE_W32_AUDIT_REPORT.md",
+    ".tmp/w32-repair/w32-focused.txt",
+    "tests/test_w32_discovery_manifest.py"
+   ],
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  },
+  {
+   "requirement_id": "HPC-W08-MANIFEST-007",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/plugins/validator.py",
+    "src/hpc_gui/plugins/models.py",
+    "src/hpc_gui/plugins/loader.py",
+    "src/hpc_gui/plugins/installer.py"
+   ],
+   "test_nodes": [
+    "tests/test_w32_discovery_manifest.py::test_manifest_optional_dependencies_advisory",
+    "tests/test_w32_discovery_manifest.py::test_manifest_optional_dep_missing_does_not_block_load"
+   ],
+   "expected_semantics": "optional_dependencies advisory list of string-or-{id,version} with semver check; missing optional dep does not block load",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W32_WAVE_REPORT.md",
+    "artifacts/opencode/wave_W32/WAVE_W32_AUDIT_REPORT.md",
+    ".tmp/w32-repair/w32-focused.txt",
+    "tests/test_w32_discovery_manifest.py"
+   ],
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  },
+  {
+   "requirement_id": "HPC-W08-MANIFEST-008",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/plugins/validator.py",
+    "src/hpc_gui/plugins/loader.py"
+   ],
+   "test_nodes": [
+    "tests/test_w32_discovery_manifest.py::test_manifest_malformed_rejected_with_diagnostic_and_isolated"
+   ],
+   "expected_semantics": "malformed JSON and incompatible app rejected with contained diagnostic; sibling plugin still loads; problems non-empty",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W32_WAVE_REPORT.md",
+    "artifacts/opencode/wave_W32/WAVE_W32_AUDIT_REPORT.md",
+    ".tmp/w32-repair/w32-focused.txt",
+    "tests/test_w32_discovery_manifest.py"
+   ],
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  }
+ ],
+ "tests": [
+  {
+   "node": "tests/test_w32_discovery_manifest.py",
+   "command": "python -m pytest -q tests/test_w32_discovery_manifest.py",
+   "requirement_ids": [
+    "HPC-W08-DISC-001",
+    "HPC-W08-DISC-002",
+    "HPC-W08-DISC-003",
+    "HPC-W08-DISC-004",
+    "HPC-W08-DISC-005",
+    "HPC-W08-MANIFEST-001",
+    "HPC-W08-MANIFEST-002",
+    "HPC-W08-MANIFEST-003",
+    "HPC-W08-MANIFEST-004",
+    "HPC-W08-MANIFEST-005",
+    "HPC-W08-MANIFEST-006",
+    "HPC-W08-MANIFEST-007",
+    "HPC-W08-MANIFEST-008"
+   ],
+   "exit_code": 0,
+   "passed": 19,
+   "failed": 0,
+   "skipped": 0,
+   "xfailed": 0,
+   "xpassed": 0,
+   "environment": "Windows 11 Python 3.12 repair rerun HEAD 3e9635ba",
+   "timestamp": "2026-09-24T15:19:51Z",
+   "evidence_path": ".tmp/w32-repair/w32-focused.txt",
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  }
+ ],
+ "gui_actions": [
+  {
+   "status": "FULL",
+   "source_binding": "src/hpc_gui/wx_plugins_view.py WxPluginManagerModel set_registry/cards plus set_enabled persistence via plugins/storage read_disabled_ids under the same root",
+   "runtime_test_node": "tests/test_w32_discovery_manifest.py::test_gui_manager_surfaces_discovery_state",
+   "observed_readback": "headless WxPluginManagerModel: registry_source cache, card plugin_id org.hpcclient.truba installed True, disabled id persisted via read_disabled_ids under same tmp root, CWD untouched",
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  }
+ ],
+ "resources": [],
+ "artifacts": [
+  {
+   "path": "docs/wave-reports/v2/opencode/W32_WAVE_REPORT.md",
+   "identity": "canonical W32 wave report at candidate 3e9635ba"
+  },
+  {
+   "path": "artifacts/opencode/wave_W32/WAVE_W32_AUDIT_REPORT.md",
+   "identity": "fresh independent W32 audit PASS at candidate 3e9635ba"
+  },
+  {
+   "path": "tests/test_w32_discovery_manifest.py",
+   "identity": "W32 tests, 19 tests at candidate"
+  },
+  {
+   "path": ".tmp/w32-repair/w32-focused.txt",
+   "identity": "focused 19 passed evidence at candidate"
+  }
+ ],
+ "review_passes": {
+  "diff_check": "PASS",
+  "claim_source_review": "PASS",
+  "independent_audit": "PASS"
+ },
+ "contradiction_scan": {
+  "unresolved": []
+ },
+ "blockers": [],
+ "deferred_items": [],
+ "validator_result": {
+  "state": "ACCEPTANCE_GREEN",
+  "reason": "19 focused green at candidate plus fresh independent audit PASS plus diff check clean"
+ }
+}

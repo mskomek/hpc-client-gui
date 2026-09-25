@@ -29,17 +29,23 @@ def _build_logs(parent, model: WxLogsModel | None = None, *, log_path: str | Pat
     panel = wx.Panel(host)
     root = wx.BoxSizer(wx.VERTICAL)
 
+    # Lifetime guard (LOGS-LIFECYCLE-001): background refresh/export workers
+    # must never touch destroyed controls if the tab/app closes first.
+    _alive = {"value": True}
+
     # Top row: title on left, buttons on right
     top = wx.BoxSizer(wx.HORIZONTAL)
     title_label = wx.StaticText(panel, label=t("logs.title"))
     btn_copy = wx.Button(panel, label=t("logs.copy"))
     btn_copy_path = wx.Button(panel, label=t("logs.copy_path"))
+    btn_folder = wx.Button(panel, label=t("logs.open_folder"))
     btn_diag = wx.Button(panel, label=t("logs.export_diagnostics"))
     btn_refresh = wx.Button(panel, label=t("logs.refresh"))
     top.Add(title_label, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 6)
     top.AddStretchSpacer(1)
     top.Add(btn_copy, 0, wx.ALL, 4)
     top.Add(btn_copy_path, 0, wx.ALL, 4)
+    top.Add(btn_folder, 0, wx.ALL, 4)
     top.Add(btn_diag, 0, wx.ALL, 4)
     top.Add(btn_refresh, 0, wx.ALL, 4)
 
@@ -58,6 +64,8 @@ def _build_logs(parent, model: WxLogsModel | None = None, *, log_path: str | Pat
             pass
 
     def _refresh_done(result: str | None, error: Exception | None) -> None:
+        if not _alive["value"]:
+            return
         if error is not None:
             text.SetValue(t("logs.read_failed").format(err=str(error)))
             return
@@ -91,6 +99,28 @@ def _build_logs(parent, model: WxLogsModel | None = None, *, log_path: str | Pat
     def copy_path(_event=None) -> None:
         _set_clipboard(str(model.log_path))
 
+    def open_logs_folder(_event=None) -> None:
+        """Reveal the actual active log directory (resolved at click time)."""
+        try:
+            target = model.logs_dir()
+        except Exception:
+            target = Path(str(model.log_path)).expanduser().parent
+        try:
+            target.mkdir(parents=True, exist_ok=True)
+        except Exception:
+            pass
+        try:
+            wx.LaunchDefaultApplication(str(target))
+        except Exception as exc:
+            try:
+                wx.MessageBox(
+                    t("logs.folder_open_failed").format(err=str(exc)),
+                    t("logs.diagnostics_title"),
+                    wx.OK | wx.ICON_ERROR,
+                )
+            except Exception:
+                pass
+
     def export_diagnostics(_event=None) -> None:
         try:
             import wx as _wx
@@ -107,14 +137,26 @@ def _build_logs(parent, model: WxLogsModel | None = None, *, log_path: str | Pat
         def worker():
             try:
                 bundle_path = model.export_bundle(destination)
-                wx.CallAfter(lambda: wx.MessageBox(t("logs.bundle_created").format(path=str(bundle_path)), t("logs.diagnostics_title"), wx.OK | wx.ICON_INFORMATION))
+                wx.CallAfter(_export_done, bundle_path, None)
             except Exception as exc:
-                wx.CallAfter(lambda exc=exc: wx.MessageBox(t("logs.bundle_failed").format(err=str(exc)), t("logs.diagnostics_title"), wx.OK | wx.ICON_ERROR))
+                wx.CallAfter(_export_done, None, exc)
         Thread(target=worker, daemon=True).start()
+
+    def _export_done(bundle_path=None, error: Exception | None = None) -> None:
+        if not _alive["value"]:
+            return
+        try:
+            if error is None:
+                wx.MessageBox(t("logs.bundle_created").format(path=str(bundle_path)), t("logs.diagnostics_title"), wx.OK | wx.ICON_INFORMATION)
+            else:
+                wx.MessageBox(t("logs.bundle_failed").format(err=str(error)), t("logs.diagnostics_title"), wx.OK | wx.ICON_ERROR)
+        except Exception:
+            pass
 
     btn_refresh.Bind(wx.EVT_BUTTON, refresh)
     btn_copy.Bind(wx.EVT_BUTTON, copy_all)
     btn_copy_path.Bind(wx.EVT_BUTTON, copy_path)
+    btn_folder.Bind(wx.EVT_BUTTON, open_logs_folder)
     btn_diag.Bind(wx.EVT_BUTTON, export_diagnostics)
 
     def refresh_labels(_language=None):
@@ -122,11 +164,23 @@ def _build_logs(parent, model: WxLogsModel | None = None, *, log_path: str | Pat
         title_label.SetLabel(t("logs.title"))
         btn_copy.SetLabel(t("logs.copy"))
         btn_copy_path.SetLabel(t("logs.copy_path"))
+        btn_folder.SetLabel(t("logs.open_folder"))
         btn_diag.SetLabel(t("logs.export_diagnostics"))
         btn_refresh.SetLabel(t("logs.refresh"))
 
+    def _on_host_close(event):
+        _alive["value"] = False
+        try:
+            unsubscribe_language_change(refresh_labels)
+        except Exception:
+            pass
+        try:
+            event.Skip()
+        except Exception:
+            pass
+
     subscribe_language_change(refresh_labels)
-    host.bind_host_close(lambda event: (unsubscribe_language_change(refresh_labels), event.Skip()))
+    host.bind_host_close(_on_host_close)
 
     # Expose for tests / shell introspection
     host._wx_logs_controls = {
@@ -134,11 +188,13 @@ def _build_logs(parent, model: WxLogsModel | None = None, *, log_path: str | Pat
         "text": text,
         "copy": btn_copy,
         "copy_path": btn_copy_path,
+        "open_folder": btn_folder,
         "export": btn_diag,
         "refresh": btn_refresh,
     }
     host._wx_logs_model = model
     host._wx_logs_refresh = refresh
+    host._wx_logs_open_folder = open_logs_folder
 
     # Initial load off-GUI thread
     refresh()

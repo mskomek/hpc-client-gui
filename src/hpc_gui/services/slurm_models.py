@@ -136,3 +136,84 @@ def parse_scontrol(text: str, job_id: str = "") -> SlurmJob:
         stdout_path=observed.get("StdOut", ""),
         stderr_path=observed.get("StdErr", ""),
     )
+
+
+# --- W28 parser safety helpers (additive; existing parsers unchanged) --------
+
+KNOWN_SQUEUE_STATES = frozenset(
+    {
+        "PD", "R", "CA", "CG", "CD", "CF", "F", "NF", "PR", "RV", "S", "ST",
+        "TO", "OOM",
+    }
+)
+
+KNOWN_SACCT_STATES = frozenset(
+    {
+        "PENDING", "RUNNING", "COMPLETED", "FAILED", "CANCELLED", "TIMEOUT",
+        "OUT_OF_MEMORY", "SUSPENDED", "PREEMPTED", "NODE_FAIL", "DEADLINE",
+    }
+)
+
+TERMINAL_STATES = frozenset(
+    {"COMPLETED", "FAILED", "CANCELLED", "TIMEOUT", "OUT_OF_MEMORY", "CD", "F", "CA", "TO", "OOM"}
+)
+
+
+def safe_state_display(state: str) -> str:
+    """Return a crash-safe display state; unknown/new states pass through.
+
+    Unknown scheduler states must display safely rather than crashing or
+    being misreported as success. This helper never maps an unknown token to
+    a success/terminal display value.
+    """
+    text = str(state or "").strip()
+    if not text:
+        return "UNKNOWN"
+    return text
+
+
+def is_terminal_state(state: str) -> bool:
+    """True for scheduler states that mean the job has finished."""
+    return str(state or "").strip().upper() in TERMINAL_STATES
+
+
+def parse_squeue_result(result) -> list[SlurmJob]:
+    """Parse an squeue command result without mistaking failure for empty.
+
+    A non-zero scheduler exit (``SlurmCommandResult.ok is False``) yields no
+    rows so the caller can surface the attached ``message`` instead of
+    rendering error text as phantom jobs. Plain-string input keeps the legacy
+    tolerant behaviour.
+    """
+    code = getattr(result, "code", None)
+    ok = getattr(result, "ok", None)
+    if code is not None or ok is not None:
+        if callable(ok):
+            is_ok = bool(ok())
+        else:
+            is_ok = bool(ok) if ok is not None else int(code) == 0
+        if not is_ok:
+            return []
+        text = getattr(result, "stdout", None)
+        if text is None:
+            text = getattr(result, "text", "")
+        return parse_squeue(str(text or ""))
+    return parse_squeue(str(result or ""))
+
+
+def parse_sacct_result(result) -> list[SlurmJob]:
+    """Parse an sacct command result without mistaking failure for empty."""
+    code = getattr(result, "code", None)
+    ok = getattr(result, "ok", None)
+    if code is not None or ok is not None:
+        if callable(ok):
+            is_ok = bool(ok())
+        else:
+            is_ok = bool(ok) if ok is not None else int(code) == 0
+        if not is_ok:
+            return []
+        text = getattr(result, "stdout", None)
+        if text is None:
+            text = getattr(result, "text", "")
+        return parse_sacct(str(text or ""))
+    return parse_sacct(str(result or ""))

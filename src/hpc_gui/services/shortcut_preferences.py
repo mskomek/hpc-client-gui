@@ -35,16 +35,32 @@ def active_binding(command_id: str, platform: str, settings: dict[str, Any] | No
 
 
 class ShortcutPreferences:
+    #: Top-level keys owned by this module. Anything else is a future/
+    #: unknown key that migration must preserve byte-for-byte
+    #: (HPC-W09-MIG-003 / HPC-W09-TODO-MIGRATION-UNKNOWN-001).
+    _KNOWN_TOP_LEVEL_KEYS = frozenset({"version", "platform", "keymap_mode", "bindings"})
+
     def __init__(self, platform: str, settings: dict[str, Any] | None = None) -> None:
         self.platform = platform
         stored = (settings if settings is not None else load_settings()).get(SETTINGS_KEY, {})
         stored = stored if isinstance(stored, dict) else {}
         mode = stored.get("keymap_mode", "standard")
         self._keymap_mode = mode if mode in KEYMAP_MODES else "standard"
+        # Preserve unknown/future top-level keys (newer-version safety):
+        # they survive round-trips even though this version does not interpret
+        # them. Idempotent: re-loading an already-migrated value is a no-op.
+        self._unknown_top_level: dict[str, Any] = {
+            key: value
+            for key, value in stored.items()
+            if key not in self._KNOWN_TOP_LEVEL_KEYS
+        }
         defaults = bindings_for("windows" if self._keymap_mode == "legacy" else platform)
         self._defaults = tuple(defaults)
         self._bindings = list(defaults)
         custom = stored.get("bindings", stored if "version" not in stored else {})
+        # Unknown/future command ids (bindings for commands this version does
+        # not know) must survive migration instead of being dropped.
+        self._unknown_commands: dict[str, Any] = {}
         if isinstance(custom, dict):
             self._bindings = [item for item in defaults if item.command_id not in custom]
             for command_id, value in custom.items():
@@ -52,6 +68,14 @@ class ShortcutPreferences:
                     template = next((item for item in defaults if item.command_id == command_id), None)
                     if template is not None:
                         self._bindings.extend(KeyBinding(command_id, str(binding), template.context) for binding in value if str(binding).strip())
+                    else:
+                        # Future command: keep the raw binding list verbatim.
+                        kept = [str(binding) for binding in value if str(binding).strip()]
+                        if kept:
+                            self._unknown_commands[str(command_id)] = kept
+                elif command_id not in {item.command_id for item in defaults}:
+                    # Non-list future payload: preserve verbatim.
+                    self._unknown_commands[str(command_id)] = value
 
     def bindings(self) -> tuple[KeyBinding, ...]:
         return tuple(self._bindings)
@@ -97,7 +121,17 @@ class ShortcutPreferences:
         grouped: dict[str, list[str]] = {}
         for item in self._bindings:
             grouped.setdefault(item.command_id, []).append(item.binding)
-        return {"version": SCHEMA_VERSION, "platform": self.platform, "keymap_mode": self._keymap_mode, "bindings": grouped}
+        # Re-attach preserved future/unknown command bindings verbatim so a
+        # newer-version keymap round-trips without data loss.
+        for command_id, value in self._unknown_commands.items():
+            if command_id not in grouped:
+                grouped[command_id] = value if isinstance(value, list) else value
+        payload: dict[str, Any] = {"version": SCHEMA_VERSION, "platform": self.platform, "keymap_mode": self._keymap_mode, "bindings": grouped}
+        # Re-attach preserved unknown top-level keys last (never overwrite
+        # owned keys even if a future version reuses the name differently).
+        for key, value in self._unknown_top_level.items():
+            payload.setdefault(key, value)
+        return payload
 
     def persist(self) -> dict[str, Any]:
         value = self.serialize()

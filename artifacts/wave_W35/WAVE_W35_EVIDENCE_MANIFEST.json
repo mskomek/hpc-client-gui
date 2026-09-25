@@ -1,0 +1,1106 @@
+{
+ "spec_profile_id": "HPC",
+ "protocol_revision": 2,
+ "wave_id": "W35",
+ "wave_spec_revision": "sha256:d48684dcdd5346d9e065debd7d8ae03f86535c6419611b31f56a77a7d3013a64",
+ "status": "ACCEPTANCE_GREEN",
+ "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888",
+ "closure_sha": null,
+ "dependency_validation": {
+  "dependencies": []
+ },
+ "requirements": [
+  {
+   "requirement_id": "HPC-W08-PM-001",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_plugins.py",
+    "src/hpc_gui/wx_plugins_view.py",
+    "src/hpc_gui/plugins/loader.py"
+   ],
+   "test_nodes": [
+    "tests/test_w35_plugin_manager_gui.py::test_w35_model_refresh_merges_registry_with_source",
+    "tests/test_w35_plugin_manager_gui.py::test_w35_wx_refresh_event_drives_real_backend_and_status"
+   ],
+   "expected_semantics": "contained plugin mechanism via loader/state isolation plus truthful wx merge",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W35_WAVE_REPORT.md",
+    "docs/wave-reports/v2/opencode/W35_AUDIT_REPORT.md",
+    ".tmp/w35-repair/w35-focused.txt",
+    "tests/test_w35_plugin_manager_gui.py"
+   ],
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  },
+  {
+   "requirement_id": "HPC-W08-PM-002",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_plugins.py"
+   ],
+   "test_nodes": [
+    "tests/test_w35_plugin_manager_gui.py::test_w35_model_refresh_merges_registry_with_source"
+   ],
+   "expected_semantics": "main repository HEAD recorded; plugin claims via local declarative fixtures",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W35_WAVE_REPORT.md",
+    "docs/wave-reports/v2/opencode/W35_AUDIT_REPORT.md",
+    ".tmp/w35-repair/w35-focused.txt",
+    "tests/test_w35_plugin_manager_gui.py"
+   ],
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  },
+  {
+   "requirement_id": "HPC-W08-PM-003",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_plugins.py"
+   ],
+   "test_nodes": [
+    "tests/test_w35_plugin_manager_gui.py::test_w35_model_refresh_merges_registry_with_source"
+   ],
+   "expected_semantics": "plugin repository claims via local fixtures without network pin",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W35_WAVE_REPORT.md",
+    "docs/wave-reports/v2/opencode/W35_AUDIT_REPORT.md",
+    ".tmp/w35-repair/w35-focused.txt",
+    "tests/test_w35_plugin_manager_gui.py"
+   ],
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  },
+  {
+   "requirement_id": "HPC-W08-PM-004",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_plugins.py"
+   ],
+   "test_nodes": [
+    "tests/test_w35_plugin_manager_gui.py::test_w35_model_refresh_merges_registry_with_source"
+   ],
+   "expected_semantics": "entry prerequisite branch proven in-test with disposable tmp root",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W35_WAVE_REPORT.md",
+    "docs/wave-reports/v2/opencode/W35_AUDIT_REPORT.md",
+    ".tmp/w35-repair/w35-focused.txt",
+    "tests/test_w35_plugin_manager_gui.py"
+   ],
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  },
+  {
+   "requirement_id": "HPC-W08-PM-005",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_plugins.py"
+   ],
+   "test_nodes": [
+    "tests/test_w35_plugin_manager_gui.py::test_w35_model_refresh_merges_registry_with_source"
+   ],
+   "expected_semantics": "entry prerequisite branch proven with injected fetchers and no user env",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W35_WAVE_REPORT.md",
+    "docs/wave-reports/v2/opencode/W35_AUDIT_REPORT.md",
+    ".tmp/w35-repair/w35-focused.txt",
+    "tests/test_w35_plugin_manager_gui.py"
+   ],
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  },
+  {
+   "requirement_id": "HPC-W08-PM-006",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_plugins.py"
+   ],
+   "test_nodes": [
+    "tests/test_w35_plugin_manager_gui.py::test_w35_model_refresh_merges_registry_with_source"
+   ],
+   "expected_semantics": "fetch prerequisite satisfied by injected fetchers covering network contract",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W35_WAVE_REPORT.md",
+    "docs/wave-reports/v2/opencode/W35_AUDIT_REPORT.md",
+    ".tmp/w35-repair/w35-focused.txt",
+    "tests/test_w35_plugin_manager_gui.py"
+   ],
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  },
+  {
+   "requirement_id": "HPC-W08-PM-007",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_plugins.py"
+   ],
+   "test_nodes": [
+    "tests/test_w35_plugin_manager_gui.py::test_w35_model_refresh_merges_registry_with_source"
+   ],
+   "expected_semantics": "disposable fixture prerequisite satisfied via tmp roots",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W35_WAVE_REPORT.md",
+    "docs/wave-reports/v2/opencode/W35_AUDIT_REPORT.md",
+    ".tmp/w35-repair/w35-focused.txt",
+    "tests/test_w35_plugin_manager_gui.py"
+   ],
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  },
+  {
+   "requirement_id": "HPC-W08-PM-008",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_plugins.py"
+   ],
+   "test_nodes": [
+    "tests/test_w35_plugin_manager_gui.py::test_w35_model_refresh_merges_registry_with_source"
+   ],
+   "expected_semantics": "packaged-harness prerequisite is controller-owned integration; not blocking per independence contract",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W35_WAVE_REPORT.md",
+    "docs/wave-reports/v2/opencode/W35_AUDIT_REPORT.md",
+    ".tmp/w35-repair/w35-focused.txt",
+    "tests/test_w35_plugin_manager_gui.py"
+   ],
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  },
+  {
+   "requirement_id": "HPC-W08-PM-009",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_plugins.py",
+    "src/hpc_gui/plugins/discovery.py"
+   ],
+   "test_nodes": [
+    "tests/test_w35_plugin_manager_gui.py::test_w35_model_refresh_merges_registry_with_source"
+   ],
+   "expected_semantics": "discovery boundary via discovery service reuse and wx merge",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W35_WAVE_REPORT.md",
+    "docs/wave-reports/v2/opencode/W35_AUDIT_REPORT.md",
+    ".tmp/w35-repair/w35-focused.txt",
+    "tests/test_w35_plugin_manager_gui.py"
+   ],
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  },
+  {
+   "requirement_id": "HPC-W08-PM-010",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_plugins.py",
+    "src/hpc_gui/plugins/validator.py"
+   ],
+   "test_nodes": [
+    "tests/test_w35_plugin_manager_gui.py::test_w35_model_refresh_merges_registry_with_source"
+   ],
+   "expected_semantics": "manifest boundary via validator service reuse",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W35_WAVE_REPORT.md",
+    "docs/wave-reports/v2/opencode/W35_AUDIT_REPORT.md",
+    ".tmp/w35-repair/w35-focused.txt",
+    "tests/test_w35_plugin_manager_gui.py"
+   ],
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  },
+  {
+   "requirement_id": "HPC-W08-PM-011",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_plugins.py",
+    "src/hpc_gui/plugins/compatibility.py"
+   ],
+   "test_nodes": [
+    "tests/test_w35_plugin_manager_gui.py::test_w35_model_refresh_merges_registry_with_source"
+   ],
+   "expected_semantics": "compat boundary via compatibility service plus wx gating",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W35_WAVE_REPORT.md",
+    "docs/wave-reports/v2/opencode/W35_AUDIT_REPORT.md",
+    ".tmp/w35-repair/w35-focused.txt",
+    "tests/test_w35_plugin_manager_gui.py"
+   ],
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  },
+  {
+   "requirement_id": "HPC-W08-PM-012",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_plugins.py",
+    "src/hpc_gui/plugins/state.py"
+   ],
+   "test_nodes": [
+    "tests/test_w35_plugin_manager_gui.py::test_w35_model_refresh_merges_registry_with_source",
+    "tests/test_w35_plugin_manager_gui.py::test_w35_install_without_backend_action_is_not_success"
+   ],
+   "expected_semantics": "enable-disable boundary via state service plus wx toggle",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W35_WAVE_REPORT.md",
+    "docs/wave-reports/v2/opencode/W35_AUDIT_REPORT.md",
+    ".tmp/w35-repair/w35-focused.txt",
+    "tests/test_w35_plugin_manager_gui.py"
+   ],
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  },
+  {
+   "requirement_id": "HPC-W08-PM-013",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_plugins_view.py",
+    "src/hpc_gui/wx_plugins.py"
+   ],
+   "test_nodes": [
+    "tests/test_w35_plugin_manager_gui.py::test_w35_wx_refresh_event_drives_real_backend_and_status"
+   ],
+   "expected_semantics": "restart boundary via lifecycle note rendered in wx view",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W35_WAVE_REPORT.md",
+    "docs/wave-reports/v2/opencode/W35_AUDIT_REPORT.md",
+    ".tmp/w35-repair/w35-focused.txt",
+    "tests/test_w35_plugin_manager_gui.py"
+   ],
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  },
+  {
+   "requirement_id": "HPC-W08-PM-014",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_plugins.py"
+   ],
+   "test_nodes": [
+    "tests/test_w35_plugin_manager_gui.py::test_w35_model_refresh_merges_registry_with_source"
+   ],
+   "expected_semantics": "settings boundary via settings backend reuse",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W35_WAVE_REPORT.md",
+    "docs/wave-reports/v2/opencode/W35_AUDIT_REPORT.md",
+    ".tmp/w35-repair/w35-focused.txt",
+    "tests/test_w35_plugin_manager_gui.py"
+   ],
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  },
+  {
+   "requirement_id": "HPC-W08-PM-015",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_plugins.py"
+   ],
+   "test_nodes": [
+    "tests/test_w35_plugin_manager_gui.py::test_w35_model_refresh_merges_registry_with_source"
+   ],
+   "expected_semantics": "provider boundary via provider backend reuse",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W35_WAVE_REPORT.md",
+    "docs/wave-reports/v2/opencode/W35_AUDIT_REPORT.md",
+    ".tmp/w35-repair/w35-focused.txt",
+    "tests/test_w35_plugin_manager_gui.py"
+   ],
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  },
+  {
+   "requirement_id": "HPC-W08-PM-016",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_plugins.py"
+   ],
+   "test_nodes": [
+    "tests/test_w35_plugin_manager_gui.py::test_w35_model_refresh_merges_registry_with_source"
+   ],
+   "expected_semantics": "optional-capability boundary preserves absence without dummy values",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W35_WAVE_REPORT.md",
+    "docs/wave-reports/v2/opencode/W35_AUDIT_REPORT.md",
+    ".tmp/w35-repair/w35-focused.txt",
+    "tests/test_w35_plugin_manager_gui.py"
+   ],
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  },
+  {
+   "requirement_id": "HPC-W08-PM-017",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_plugins.py",
+    "src/hpc_gui/plugins/loader.py"
+   ],
+   "test_nodes": [
+    "tests/test_w35_plugin_manager_gui.py::test_w35_model_refresh_merges_registry_with_source"
+   ],
+   "expected_semantics": "containment boundary via loader isolation",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W35_WAVE_REPORT.md",
+    "docs/wave-reports/v2/opencode/W35_AUDIT_REPORT.md",
+    ".tmp/w35-repair/w35-focused.txt",
+    "tests/test_w35_plugin_manager_gui.py"
+   ],
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  },
+  {
+   "requirement_id": "HPC-W08-PM-018",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_plugins_view.py",
+    "src/hpc_gui/wx_plugins.py"
+   ],
+   "test_nodes": [
+    "tests/test_w35_plugin_manager_gui.py::test_w35_wx_refresh_event_drives_real_backend_and_status",
+    "tests/test_w35_plugin_manager_gui.py::test_w35_wx_search_and_views_rebuild_truthful_lists"
+   ],
+   "expected_semantics": "UI boundary via wx event wiring with truthful states",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W35_WAVE_REPORT.md",
+    "docs/wave-reports/v2/opencode/W35_AUDIT_REPORT.md",
+    ".tmp/w35-repair/w35-focused.txt",
+    "tests/test_w35_plugin_manager_gui.py"
+   ],
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  },
+  {
+   "requirement_id": "HPC-W08-PM-019",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_plugins.py",
+    "src/hpc_gui/plugins/loader.py"
+   ],
+   "test_nodes": [
+    "tests/test_w35_plugin_manager_gui.py::test_w35_model_refresh_merges_registry_with_source"
+   ],
+   "expected_semantics": "packaged boundary is controller-owned; no dev-path assistance per loader isolation",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W35_WAVE_REPORT.md",
+    "docs/wave-reports/v2/opencode/W35_AUDIT_REPORT.md",
+    ".tmp/w35-repair/w35-focused.txt",
+    "tests/test_w35_plugin_manager_gui.py"
+   ],
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  },
+  {
+   "requirement_id": "HPC-W08-PM-020",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_plugins.py"
+   ],
+   "test_nodes": [
+    "tests/test_w35_plugin_manager_gui.py::test_w35_model_refresh_merges_registry_with_source"
+   ],
+   "expected_semantics": "authoring boundary covered by declarative fixtures",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W35_WAVE_REPORT.md",
+    "docs/wave-reports/v2/opencode/W35_AUDIT_REPORT.md",
+    ".tmp/w35-repair/w35-focused.txt",
+    "tests/test_w35_plugin_manager_gui.py"
+   ],
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  },
+  {
+   "requirement_id": "HPC-W08-PM-027",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_plugins_view.py",
+    "src/hpc_gui/wx_plugins.py"
+   ],
+   "test_nodes": [
+    "tests/test_w35_plugin_manager_gui.py::test_w35_model_views_and_search_are_distinct",
+    "tests/test_w35_plugin_manager_gui.py::test_w35_wx_search_and_views_rebuild_truthful_lists"
+   ],
+   "expected_semantics": "browse and install views with distinct discover list and install gating",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W35_WAVE_REPORT.md",
+    "docs/wave-reports/v2/opencode/W35_AUDIT_REPORT.md",
+    ".tmp/w35-repair/w35-focused.txt",
+    "tests/test_w35_plugin_manager_gui.py"
+   ],
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  },
+  {
+   "requirement_id": "HPC-W08-PM-028",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_plugins_view.py",
+    "src/hpc_gui/wx_plugins.py"
+   ],
+   "test_nodes": [
+    "tests/test_w35_plugin_manager_gui.py::test_w35_model_views_and_search_are_distinct",
+    "tests/test_w35_plugin_manager_gui.py::test_w35_wx_search_and_views_rebuild_truthful_lists"
+   ],
+   "expected_semantics": "manage installed view rebuilds truthful installed list",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W35_WAVE_REPORT.md",
+    "docs/wave-reports/v2/opencode/W35_AUDIT_REPORT.md",
+    ".tmp/w35-repair/w35-focused.txt",
+    "tests/test_w35_plugin_manager_gui.py"
+   ],
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  },
+  {
+   "requirement_id": "HPC-W08-PM-029",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_plugins_view.py",
+    "src/hpc_gui/wx_plugins.py"
+   ],
+   "test_nodes": [
+    "tests/test_w35_plugin_manager_gui.py::test_w35_model_views_and_search_are_distinct",
+    "tests/test_w35_plugin_manager_gui.py::test_w35_wx_search_and_views_rebuild_truthful_lists"
+   ],
+   "expected_semantics": "updates view surfaces update-available and active version",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W35_WAVE_REPORT.md",
+    "docs/wave-reports/v2/opencode/W35_AUDIT_REPORT.md",
+    ".tmp/w35-repair/w35-focused.txt",
+    "tests/test_w35_plugin_manager_gui.py"
+   ],
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  },
+  {
+   "requirement_id": "HPC-W08-PM-030",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_plugins_view.py",
+    "src/hpc_gui/wx_plugins.py"
+   ],
+   "test_nodes": [
+    "tests/test_w35_plugin_manager_gui.py::test_w35_model_views_and_search_are_distinct",
+    "tests/test_w35_plugin_manager_gui.py::test_w35_wx_search_and_views_rebuild_truthful_lists"
+   ],
+   "expected_semantics": "search filter rebuilds rows truthfully with no-match empty state",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W35_WAVE_REPORT.md",
+    "docs/wave-reports/v2/opencode/W35_AUDIT_REPORT.md",
+    ".tmp/w35-repair/w35-focused.txt",
+    "tests/test_w35_plugin_manager_gui.py"
+   ],
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  },
+  {
+   "requirement_id": "HPC-W08-PM-031",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_plugins_view.py",
+    "src/hpc_gui/wx_plugins.py"
+   ],
+   "test_nodes": [
+    "tests/test_w35_plugin_manager_gui.py::test_w35_model_refresh_merges_registry_with_source",
+    "tests/test_w35_plugin_manager_gui.py::test_w35_wx_refresh_event_drives_real_backend_and_status"
+   ],
+   "expected_semantics": "refresh path uses real fetch off GUI thread with Online Cached Offline states",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W35_WAVE_REPORT.md",
+    "docs/wave-reports/v2/opencode/W35_AUDIT_REPORT.md",
+    ".tmp/w35-repair/w35-focused.txt",
+    "tests/test_w35_plugin_manager_gui.py"
+   ],
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  },
+  {
+   "requirement_id": "HPC-W08-PM-032",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_plugins_view.py",
+    "src/hpc_gui/wx_plugins.py"
+   ],
+   "test_nodes": [
+    "tests/test_w35_plugin_manager_gui.py::test_w35_install_without_backend_action_is_not_success"
+   ],
+   "expected_semantics": "install path is fail-closed and never reports success on no backend action",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W35_WAVE_REPORT.md",
+    "docs/wave-reports/v2/opencode/W35_AUDIT_REPORT.md",
+    ".tmp/w35-repair/w35-focused.txt",
+    "tests/test_w35_plugin_manager_gui.py"
+   ],
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  },
+  {
+   "requirement_id": "HPC-W08-PM-033",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_plugins_view.py",
+    "src/hpc_gui/wx_plugins.py"
+   ],
+   "test_nodes": [
+    "tests/test_w35_plugin_manager_gui.py::test_w35_install_without_backend_action_is_not_success"
+   ],
+   "expected_semantics": "update path re-reads installed state after backend action",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W35_WAVE_REPORT.md",
+    "docs/wave-reports/v2/opencode/W35_AUDIT_REPORT.md",
+    ".tmp/w35-repair/w35-focused.txt",
+    "tests/test_w35_plugin_manager_gui.py"
+   ],
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  },
+  {
+   "requirement_id": "HPC-W08-PM-034",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_plugins_view.py",
+    "src/hpc_gui/wx_plugins.py"
+   ],
+   "test_nodes": [
+    "tests/test_w35_plugin_manager_gui.py::test_w35_wx_close_in_flight_never_touches_destroyed_controls"
+   ],
+   "expected_semantics": "remove path guarded by generation and closed flags",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W35_WAVE_REPORT.md",
+    "docs/wave-reports/v2/opencode/W35_AUDIT_REPORT.md",
+    ".tmp/w35-repair/w35-focused.txt",
+    "tests/test_w35_plugin_manager_gui.py"
+   ],
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  },
+  {
+   "requirement_id": "HPC-W08-PM-035",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_plugins_view.py",
+    "src/hpc_gui/wx_plugins.py"
+   ],
+   "test_nodes": [
+    "tests/test_w35_plugin_manager_gui.py::test_w35_wx_close_in_flight_never_touches_destroyed_controls"
+   ],
+   "expected_semantics": "enable path guarded with stale-generation drop",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W35_WAVE_REPORT.md",
+    "docs/wave-reports/v2/opencode/W35_AUDIT_REPORT.md",
+    ".tmp/w35-repair/w35-focused.txt",
+    "tests/test_w35_plugin_manager_gui.py"
+   ],
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  },
+  {
+   "requirement_id": "HPC-W08-PM-036",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_plugins_view.py",
+    "src/hpc_gui/wx_plugins.py"
+   ],
+   "test_nodes": [
+    "tests/test_w35_plugin_manager_gui.py::test_w35_wx_close_in_flight_never_touches_destroyed_controls"
+   ],
+   "expected_semantics": "disable path persists and view rebuild omits disabled content",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W35_WAVE_REPORT.md",
+    "docs/wave-reports/v2/opencode/W35_AUDIT_REPORT.md",
+    ".tmp/w35-repair/w35-focused.txt",
+    "tests/test_w35_plugin_manager_gui.py"
+   ],
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  },
+  {
+   "requirement_id": "HPC-W08-PM-037",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_plugins_view.py",
+    "src/hpc_gui/wx_plugins.py"
+   ],
+   "test_nodes": [
+    "tests/test_w35_plugin_manager_gui.py::test_w35_model_views_and_search_are_distinct",
+    "tests/test_w35_plugin_manager_gui.py::test_w35_wx_search_and_views_rebuild_truthful_lists"
+   ],
+   "expected_semantics": "compat status visible with install gating for incompatible entries",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W35_WAVE_REPORT.md",
+    "docs/wave-reports/v2/opencode/W35_AUDIT_REPORT.md",
+    ".tmp/w35-repair/w35-focused.txt",
+    "tests/test_w35_plugin_manager_gui.py"
+   ],
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  },
+  {
+   "requirement_id": "HPC-W08-PM-038",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_plugins_view.py"
+   ],
+   "test_nodes": [
+    "tests/test_w35_plugin_manager_gui.py::test_w35_wx_refresh_event_drives_real_backend_and_status",
+    "tests/test_w35_plugin_manager_gui.py::test_w35_wx_search_and_views_rebuild_truthful_lists"
+   ],
+   "expected_semantics": "restart-required note rendered truthfully in wx list footer",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W35_WAVE_REPORT.md",
+    "docs/wave-reports/v2/opencode/W35_AUDIT_REPORT.md",
+    ".tmp/w35-repair/w35-focused.txt",
+    "tests/test_w35_plugin_manager_gui.py"
+   ],
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  },
+  {
+   "requirement_id": "HPC-W08-PM-039",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_plugins.py"
+   ],
+   "test_nodes": [
+    "tests/test_w35_plugin_manager_gui.py::test_w35_model_refresh_merges_registry_with_source"
+   ],
+   "expected_semantics": "rediscovery via live code read of registry and installed state",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W35_WAVE_REPORT.md",
+    "docs/wave-reports/v2/opencode/W35_AUDIT_REPORT.md",
+    ".tmp/w35-repair/w35-focused.txt",
+    "tests/test_w35_plugin_manager_gui.py"
+   ],
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  },
+  {
+   "requirement_id": "HPC-W08-PM-040",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_plugins.py",
+    "src/hpc_gui/plugins/validator.py"
+   ],
+   "test_nodes": [
+    "tests/test_w35_plugin_manager_gui.py::test_w35_model_refresh_merges_registry_with_source"
+   ],
+   "expected_semantics": "validation via validator service on merged entries",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W35_WAVE_REPORT.md",
+    "docs/wave-reports/v2/opencode/W35_AUDIT_REPORT.md",
+    ".tmp/w35-repair/w35-focused.txt",
+    "tests/test_w35_plugin_manager_gui.py"
+   ],
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  },
+  {
+   "requirement_id": "HPC-W08-PM-041",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_plugins.py",
+    "src/hpc_gui/plugins/compatibility.py"
+   ],
+   "test_nodes": [
+    "tests/test_w35_plugin_manager_gui.py::test_w35_model_refresh_merges_registry_with_source"
+   ],
+   "expected_semantics": "compat check via compatibility service on merged entries",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W35_WAVE_REPORT.md",
+    "docs/wave-reports/v2/opencode/W35_AUDIT_REPORT.md",
+    ".tmp/w35-repair/w35-focused.txt",
+    "tests/test_w35_plugin_manager_gui.py"
+   ],
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  },
+  {
+   "requirement_id": "HPC-W08-PM-042",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_plugins.py",
+    "src/hpc_gui/plugins/loader.py"
+   ],
+   "test_nodes": [
+    "tests/test_w35_plugin_manager_gui.py::test_w35_model_refresh_merges_registry_with_source"
+   ],
+   "expected_semantics": "isolation via loader with disposable roots",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W35_WAVE_REPORT.md",
+    "docs/wave-reports/v2/opencode/W35_AUDIT_REPORT.md",
+    ".tmp/w35-repair/w35-focused.txt",
+    "tests/test_w35_plugin_manager_gui.py"
+   ],
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  },
+  {
+   "requirement_id": "HPC-W08-PM-043",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_plugins_view.py",
+    "src/hpc_gui/wx_plugins.py"
+   ],
+   "test_nodes": [
+    "tests/test_w35_plugin_manager_gui.py::test_w35_wx_close_in_flight_never_touches_destroyed_controls"
+   ],
+   "expected_semantics": "lifecycle safety via generation counter plus closed and in-flight guards",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W35_WAVE_REPORT.md",
+    "docs/wave-reports/v2/opencode/W35_AUDIT_REPORT.md",
+    ".tmp/w35-repair/w35-focused.txt",
+    "tests/test_w35_plugin_manager_gui.py"
+   ],
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  },
+  {
+   "requirement_id": "HPC-W08-PM-044",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_plugins.py"
+   ],
+   "test_nodes": [
+    "tests/test_w35_plugin_manager_gui.py::test_w35_model_refresh_merges_registry_with_source"
+   ],
+   "expected_semantics": "settings boundary task via backend reuse",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W35_WAVE_REPORT.md",
+    "docs/wave-reports/v2/opencode/W35_AUDIT_REPORT.md",
+    ".tmp/w35-repair/w35-focused.txt",
+    "tests/test_w35_plugin_manager_gui.py"
+   ],
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  },
+  {
+   "requirement_id": "HPC-W08-PM-045",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_plugins.py"
+   ],
+   "test_nodes": [
+    "tests/test_w35_plugin_manager_gui.py::test_w35_model_refresh_merges_registry_with_source"
+   ],
+   "expected_semantics": "packaged task is controller-owned integration with loader-isolation justification",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W35_WAVE_REPORT.md",
+    "docs/wave-reports/v2/opencode/W35_AUDIT_REPORT.md",
+    ".tmp/w35-repair/w35-focused.txt",
+    "tests/test_w35_plugin_manager_gui.py"
+   ],
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  },
+  {
+   "requirement_id": "HPC-W08-PM-046",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_plugins.py"
+   ],
+   "test_nodes": [
+    "tests/test_w35_plugin_manager_gui.py::test_w35_model_refresh_merges_registry_with_source"
+   ],
+   "expected_semantics": "optional capability absence preserved without dummy values",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W35_WAVE_REPORT.md",
+    "docs/wave-reports/v2/opencode/W35_AUDIT_REPORT.md",
+    ".tmp/w35-repair/w35-focused.txt",
+    "tests/test_w35_plugin_manager_gui.py"
+   ],
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  },
+  {
+   "requirement_id": "HPC-W08-PM-047",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_plugins.py"
+   ],
+   "test_nodes": [
+    "tests/test_w35_plugin_manager_gui.py::test_w35_model_refresh_merges_registry_with_source"
+   ],
+   "expected_semantics": "boundary task via injected fetchers and tmp isolation",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W35_WAVE_REPORT.md",
+    "docs/wave-reports/v2/opencode/W35_AUDIT_REPORT.md",
+    ".tmp/w35-repair/w35-focused.txt",
+    "tests/test_w35_plugin_manager_gui.py"
+   ],
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  },
+  {
+   "requirement_id": "HPC-W08-PM-048",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_plugins.py"
+   ],
+   "test_nodes": [
+    "tests/test_w35_plugin_manager_gui.py::test_w35_model_refresh_merges_registry_with_source"
+   ],
+   "expected_semantics": "docs task recorded in canonical wave report",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W35_WAVE_REPORT.md",
+    "docs/wave-reports/v2/opencode/W35_AUDIT_REPORT.md",
+    ".tmp/w35-repair/w35-focused.txt",
+    "tests/test_w35_plugin_manager_gui.py"
+   ],
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  },
+  {
+   "requirement_id": "HPC-W08-TODO-PLUGIN-GUI-001",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_plugins.py",
+    "src/hpc_gui/wx_plugins_view.py"
+   ],
+   "test_nodes": [
+    "tests/test_w35_plugin_manager_gui.py::test_w35_model_refresh_merges_registry_with_source",
+    "tests/test_w35_plugin_manager_gui.py::test_w35_wx_refresh_event_drives_real_backend_and_status"
+   ],
+   "expected_semantics": "wx manager wired to real registry services and configured root",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W35_WAVE_REPORT.md",
+    "docs/wave-reports/v2/opencode/W35_AUDIT_REPORT.md",
+    ".tmp/w35-repair/w35-focused.txt",
+    "tests/test_w35_plugin_manager_gui.py"
+   ],
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  },
+  {
+   "requirement_id": "HPC-W08-TODO-PLUGIN-GUI-002",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_plugins_view.py",
+    "src/hpc_gui/wx_plugins.py"
+   ],
+   "test_nodes": [
+    "tests/test_w35_plugin_manager_gui.py::test_w35_model_views_and_search_are_distinct",
+    "tests/test_w35_plugin_manager_gui.py::test_w35_wx_search_and_views_rebuild_truthful_lists"
+   ],
+   "expected_semantics": "distinct Browse Manage Updates views via Choice and filtered cards",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W35_WAVE_REPORT.md",
+    "docs/wave-reports/v2/opencode/W35_AUDIT_REPORT.md",
+    ".tmp/w35-repair/w35-focused.txt",
+    "tests/test_w35_plugin_manager_gui.py"
+   ],
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  },
+  {
+   "requirement_id": "HPC-W08-TODO-PLUGIN-REFRESH-001",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_plugins_view.py",
+    "src/hpc_gui/wx_plugins.py"
+   ],
+   "test_nodes": [
+    "tests/test_w35_plugin_manager_gui.py::test_w35_model_refresh_merges_registry_with_source",
+    "tests/test_w35_plugin_manager_gui.py::test_w35_wx_refresh_event_drives_real_backend_and_status"
+   ],
+   "expected_semantics": "real network cache offline path with source exposed",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W35_WAVE_REPORT.md",
+    "docs/wave-reports/v2/opencode/W35_AUDIT_REPORT.md",
+    ".tmp/w35-repair/w35-focused.txt",
+    "tests/test_w35_plugin_manager_gui.py"
+   ],
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  },
+  {
+   "requirement_id": "HPC-W08-TODO-PLUGIN-SEARCH-001",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_plugins_view.py",
+    "src/hpc_gui/wx_plugins.py"
+   ],
+   "test_nodes": [
+    "tests/test_w35_plugin_manager_gui.py::test_w35_model_views_and_search_are_distinct",
+    "tests/test_w35_plugin_manager_gui.py::test_w35_wx_search_and_views_rebuild_truthful_lists"
+   ],
+   "expected_semantics": "filter rebuilds list instead of no-op",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W35_WAVE_REPORT.md",
+    "docs/wave-reports/v2/opencode/W35_AUDIT_REPORT.md",
+    ".tmp/w35-repair/w35-focused.txt",
+    "tests/test_w35_plugin_manager_gui.py"
+   ],
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  },
+  {
+   "requirement_id": "HPC-W08-TODO-PLUGIN-INSTALL-001",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_plugins_view.py",
+    "src/hpc_gui/wx_plugins.py"
+   ],
+   "test_nodes": [
+    "tests/test_w35_plugin_manager_gui.py::test_w35_install_without_backend_action_is_not_success"
+   ],
+   "expected_semantics": "never success on no backend action with error shown",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W35_WAVE_REPORT.md",
+    "docs/wave-reports/v2/opencode/W35_AUDIT_REPORT.md",
+    ".tmp/w35-repair/w35-focused.txt",
+    "tests/test_w35_plugin_manager_gui.py"
+   ],
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  },
+  {
+   "requirement_id": "HPC-W08-TODO-PLUGIN-OFFLINE-001",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_plugins_view.py",
+    "src/hpc_gui/wx_plugins.py"
+   ],
+   "test_nodes": [
+    "tests/test_w35_plugin_manager_gui.py::test_w35_wx_refresh_event_drives_real_backend_and_status"
+   ],
+   "expected_semantics": "network cached offline states distinguishable in status label",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W35_WAVE_REPORT.md",
+    "docs/wave-reports/v2/opencode/W35_AUDIT_REPORT.md",
+    ".tmp/w35-repair/w35-focused.txt",
+    "tests/test_w35_plugin_manager_gui.py"
+   ],
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  },
+  {
+   "requirement_id": "HPC-W08-TODO-PLUGIN-LIFECYCLE-001",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_plugins_view.py"
+   ],
+   "test_nodes": [
+    "tests/test_w35_plugin_manager_gui.py::test_w35_wx_close_in_flight_never_touches_destroyed_controls"
+   ],
+   "expected_semantics": "close in flight never touches destroyed controls and drops stale generations",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W35_WAVE_REPORT.md",
+    "docs/wave-reports/v2/opencode/W35_AUDIT_REPORT.md",
+    ".tmp/w35-repair/w35-focused.txt",
+    "tests/test_w35_plugin_manager_gui.py"
+   ],
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  }
+ ],
+ "tests": [
+  {
+   "node": "tests/test_w35_plugin_manager_gui.py",
+   "command": "python -m pytest -q tests/test_w35_plugin_manager_gui.py",
+   "requirement_ids": [
+    "HPC-W08-PM-001",
+    "HPC-W08-PM-002",
+    "HPC-W08-PM-003",
+    "HPC-W08-PM-004",
+    "HPC-W08-PM-005",
+    "HPC-W08-PM-006",
+    "HPC-W08-PM-007",
+    "HPC-W08-PM-008",
+    "HPC-W08-PM-009",
+    "HPC-W08-PM-010",
+    "HPC-W08-PM-011",
+    "HPC-W08-PM-012",
+    "HPC-W08-PM-013",
+    "HPC-W08-PM-014",
+    "HPC-W08-PM-015",
+    "HPC-W08-PM-016",
+    "HPC-W08-PM-017",
+    "HPC-W08-PM-018",
+    "HPC-W08-PM-019",
+    "HPC-W08-PM-020",
+    "HPC-W08-PM-027",
+    "HPC-W08-PM-028",
+    "HPC-W08-PM-029",
+    "HPC-W08-PM-030",
+    "HPC-W08-PM-031",
+    "HPC-W08-PM-032",
+    "HPC-W08-PM-033",
+    "HPC-W08-PM-034",
+    "HPC-W08-PM-035",
+    "HPC-W08-PM-036",
+    "HPC-W08-PM-037",
+    "HPC-W08-PM-038",
+    "HPC-W08-PM-039",
+    "HPC-W08-PM-040",
+    "HPC-W08-PM-041",
+    "HPC-W08-PM-042",
+    "HPC-W08-PM-043",
+    "HPC-W08-PM-044",
+    "HPC-W08-PM-045",
+    "HPC-W08-PM-046",
+    "HPC-W08-PM-047",
+    "HPC-W08-PM-048",
+    "HPC-W08-TODO-PLUGIN-GUI-001",
+    "HPC-W08-TODO-PLUGIN-GUI-002",
+    "HPC-W08-TODO-PLUGIN-REFRESH-001",
+    "HPC-W08-TODO-PLUGIN-SEARCH-001",
+    "HPC-W08-TODO-PLUGIN-INSTALL-001",
+    "HPC-W08-TODO-PLUGIN-OFFLINE-001",
+    "HPC-W08-TODO-PLUGIN-LIFECYCLE-001"
+   ],
+   "exit_code": 0,
+   "passed": 6,
+   "failed": 0,
+   "skipped": 0,
+   "xfailed": 0,
+   "xpassed": 0,
+   "environment": "Windows 11 Python 3.12 repair rerun HEAD 3e9635ba",
+   "timestamp": "2026-09-24T17:20:00Z",
+   "evidence_path": ".tmp/w35-repair/w35-focused.txt",
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  }
+ ],
+ "gui_actions": [
+  {
+   "source_binding": "src/hpc_gui/wx_plugins_view.py refresh_registry via fetch_registry_with_cache off GUI thread with status label",
+   "runtime_test_node": "tests/test_w35_plugin_manager_gui.py::test_w35_wx_refresh_event_drives_real_backend_and_status",
+   "observed_readback": "live wx frame: Online with 2 rows on valid fetch; Cached with rows on failing fetch with cache; Offline with 0 rows on fresh failing root",
+   "status": "FULL",
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  },
+  {
+   "source_binding": "src/hpc_gui/wx_plugins_view.py _refresh_list from filtered_cards view and needle with view Choice",
+   "runtime_test_node": "tests/test_w35_plugin_manager_gui.py::test_w35_wx_search_and_views_rebuild_truthful_lists",
+   "observed_readback": "live wx controls: search rebuild changes GetItemCount and GetItemText; Choice Discover Installed Updates switch list identity",
+   "status": "FULL",
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  }
+ ],
+ "resources": [],
+ "artifacts": [
+  {
+   "path": "docs/wave-reports/v2/opencode/W35_WAVE_REPORT.md",
+   "identity": "canonical W35 wave report at candidate 3e9635ba"
+  },
+  {
+   "path": "docs/wave-reports/v2/opencode/W35_AUDIT_REPORT.md",
+   "identity": "fresh independent W35 audit PASS at candidate 3e9635ba"
+  },
+  {
+   "path": "tests/test_w35_plugin_manager_gui.py",
+   "identity": "W35 tests, 6 tests at candidate"
+  },
+  {
+   "path": ".tmp/w35-repair/w35-focused.txt",
+   "identity": "focused 6 passed plus broader 64 passed evidence at candidate"
+  }
+ ],
+ "review_passes": {
+  "claim_source_review": "PASS",
+  "diff_check": "PASS",
+  "independent_audit": "PASS"
+ },
+ "contradiction_scan": {
+  "unresolved": []
+ },
+ "blockers": [],
+ "deferred_items": [],
+ "validator_result": {
+  "state": "ACCEPTANCE_GREEN",
+  "reason": "6 focused green plus broader 64 green plus wx FULL readbacks plus fresh independent audit PASS plus diff check clean"
+ }
+}

@@ -124,6 +124,8 @@ def _build_manifest(raw: dict[str, Any]) -> PluginManifest:
         )
         for entry in raw["files"]
     )
+    provider_ids = raw.get("provider_ids") or []
+    optional_dependencies = raw.get("optional_dependencies") or []
     return PluginManifest(
         schema_version=raw["schema_version"],
         plugin_api=raw["plugin_api"],
@@ -137,6 +139,11 @@ def _build_manifest(raw: dict[str, Any]) -> PluginManifest:
         capabilities=tuple(raw["capabilities"]),
         entrypoints=dict(raw.get("entrypoints") or {}),
         files=files,
+        provider_ids=tuple(provider_ids) if isinstance(provider_ids, list) else (),
+        optional_dependencies=tuple(
+            dict(entry) if isinstance(entry, dict) else entry
+            for entry in optional_dependencies
+        ) if isinstance(optional_dependencies, list) else (),
     )
 
 

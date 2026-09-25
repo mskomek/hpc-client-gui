@@ -5,17 +5,19 @@ packages that provide cluster profiles, job templates, and lint rules.
 Plugin API v1 distributes data only — no Python code, scripts, or binaries
 are ever downloaded or executed by the plugin system.
 
-## The Plugins button
+## Opening the Plugin Manager
 
-The top-right control strip contains a **Plugins** button (between Update
-and Send Logs). It opens the Plugin Manager with three tabs:
+The menubar **Plugins** menu opens the Plugin Manager with three tabs:
 
-- **Discover** — browse the official registry catalog. Loading starts
-  automatically when the manager opens (status shows *Loading plugins…*,
-  then *Online*, *Cached*, or *Offline*); Refresh re-checks manually.
-- **Installed** — see installed versions, enable/disable, or remove plugins.
-- **Updates** — compatible newer versions appear here; updating is always
-  your explicit choice (no auto-update).
+- **Browse & Install...** opens the **Discover** tab — browse the official
+  registry catalog. Loading starts automatically when the manager opens
+  (status shows *Loading plugins…*, then *Online*, *Cached*, or *Offline*);
+  Refresh re-checks manually.
+- **Manage Installed...** opens the **Installed** tab — see installed
+  versions, enable/disable, or remove plugins.
+- **Check for Plugin Updates...** opens the **Updates** tab — compatible
+  newer versions appear here; updating is always your explicit choice
+  (no auto-update).
 
 Each Discover card shows the plugin name and version, publisher, a short
 description, translated capability badges (*Cluster profiles*, *Job
@@ -156,6 +158,51 @@ Minimal Unicode profile example:
   ]
 }
 ```
+
+## Plugin manifest authoring
+
+Every plugin version ships a `manifest.json` that the loader validates
+before anything else. Required keys (`schema_version`, `plugin_api`, `id`,
+`name`, `version`, `publisher`, `license`, `description`, `requires_app`,
+`capabilities`, `entrypoints`, `files`):
+
+- `schema_version` is `1`.
+- `plugin_api` is `1` (data-only plugins). The numeric marker `2` is
+  accepted only for application-approved trusted tools and never grants
+  code execution by itself.
+- `id` is a dotted reverse-DNS identity such as `org.hpcclient.truba`
+  (lowercase, segments separated by dots). Free-form display names are
+  rejected: two plugins must never silently shadow each other.
+- `name` is the human label (at most 128 characters); `version` is a
+  semantic version (`1.0.0`); `requires_app` is the compatible app range
+  (for example `>=1.3.0`) and incompatible plugins are reported with a
+  clear rejected status instead of loading.
+- `capabilities` names what the plugin provides: `cluster-profile`,
+  `lint-rules`, `job-template`, `application-tools`, `linter-tool`.
+- `entrypoints` maps each capability to its declarative payload path
+  (for example `{"cluster_profiles": ["cluster-profile.json"]}`). Paths
+  are relative, forward-slash separated, and must stay inside the package;
+  they are never imported or executed.
+- `files` lists every payload with its `path`, SHA-256 `sha256`, byte
+  `size`, and `role`. Declared files are re-verified on every load and
+  undeclared extra files are rejected.
+
+Optional advisory keys (`provider_ids`, `optional_dependencies`) document
+intent but never grant loading, execution, or capability by themselves:
+
+- `provider_ids` lists provider ids the plugin documents (for example
+  `["truba"]`). A plugin registers a provider only through its
+  `cluster-profile` payload and capability declaration, never through
+  this list alone.
+- `optional_dependencies` lists ids (or `{"id", "version"}` objects) the
+  plugin was tested with. A missing or invalid optional dependency is
+  reported as a diagnostic; the declaring plugin still loads normally and
+  host startup is never blocked.
+
+Any malformed manifest, incompatible API marker, or failed integrity check
+is recorded as a contained diagnostic naming `plugin_id@version` and only
+that plugin version is skipped — unrelated plugins and the core app always
+finish loading.
 
 ## Job templates and lint
 

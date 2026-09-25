@@ -51,6 +51,12 @@ def report_wx_action_error(
     text = f"{message}\n\n{label}: {err_id}\n{hint}"
     detail = (technical_detail or "").strip()
     if detail and detail not in text:
+        try:
+            from hpc_gui.core.log_redaction import redact_text
+
+            detail = redact_text(detail)
+        except Exception:
+            pass
         text += f"\n\n{t('common.technical_detail')}: {detail}"
 
     try:

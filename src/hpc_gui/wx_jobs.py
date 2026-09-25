@@ -12,7 +12,15 @@ from uuid import uuid4
 
 from hpc_gui.core.i18n import current_language, subscribe_language_change, t, unsubscribe_language_change
 from hpc_gui.services.job_failure_classifier import explain_job_failure
+from hpc_gui.services.job_identity import cancel_is_safe, make_identity
+from hpc_gui.services.job_list_filter_sort import (
+    cancel_target_is_safe,
+    filter_jobs,
+    selection_still_exists,
+    sort_jobs,
+)
 from hpc_gui.services.job_provenance import JobProvenanceCapture
+from hpc_gui.services.jobs_refresh_state import JobsRefreshState
 from hpc_gui.services.job_tracking_controller import JobTrackingController
 from hpc_gui.services.selected_job_context import SelectedJobStore
 from hpc_gui.services.slurm_models import parse_scontrol
@@ -444,6 +452,9 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
     jobs_toolbar.Add(lbl_filter, 0, wx.RIGHT | wx.ALIGN_CENTER_VERTICAL, 4)
     jobs_toolbar.Add(filter_field, 1, wx.RIGHT | wx.ALIGN_CENTER_VERTICAL, 6)
     jobs_toolbar.Add(cb_auto_refresh, 0, wx.ALIGN_CENTER_VERTICAL)
+    # W28: visible refresh lifecycle readback (idle/refreshing/success/stale).
+    jobs_refresh_label = wx.StaticText(jobs_page, label="")
+    jobs_toolbar.Add(jobs_refresh_label, 0, wx.LEFT | wx.ALIGN_CENTER_VERTICAL, 6)
 
     # -- Jobs table ---------------------------------------------------------
     jobs = wx.ListCtrl(jobs_page, style=wx.LC_REPORT | wx.LC_SINGLE_SEL | wx.LC_HRULES)
@@ -969,6 +980,10 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         "refresh_pending": False,
         "output_in_flight": False,
         "cancel_in_flight": False,
+        "cancel_capability": "available",
+        "last_cancel_outcome": "",
+        "last_cancel_message": "",
+        "last_cancel_is_error": False,
         "user_paused": False,
         "minimized": False,
         "follow_calls": 0,
@@ -991,6 +1006,15 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         "_timer_paused": False,
         "raw_scontrol_visible": False,
         "filter_query": "",
+        "sort_key": "",
+        "sort_reverse": False,
+        "jobs_refresh": JobsRefreshState(),
+        "jobs_refresh_seq": 0,
+        "jobs_refresh_applied_seq": 0,
+        "jobs_refresh_status": "idle",
+        "jobs_refresh_timestamp": "",
+        "jobs_refresh_error": "",
+        "jobs_refresh_stale": False,
         "resolved_channels": [],
         "output_channel_defs": list(output_channel_defs) if output_channel_defs is not None else None,
         "output_channel_defs_provider": kwargs.get("output_channel_defs_provider"),
@@ -1070,14 +1094,18 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         _apply_filter()
 
     def _apply_filter():
+        # W28: filter refresh never mutates backend data; sort uses semantic
+        # values via the framework-neutral helper, not display strings.
         query = state["filter_query"]
-        filtered = []
-        for item in state["raw_items"]:
-            row = _parse_job_row(item)
-            if _matches_filter(row, query):
-                filtered.append((row, item))
-        state["items"] = [item for _, item in filtered]
-        _refresh_job_table(filtered)
+        backend_snapshot = list(state["raw_items"])
+        filtered = filter_jobs(backend_snapshot, query)
+        sort_key = state.get("sort_key", "")
+        if sort_key:
+            filtered = sort_jobs(filtered, sort_key, reverse=bool(state.get("sort_reverse", False)))
+        # Pair each visible item with its normalised row for rendering.
+        paired = [(_parse_job_row(item), item) for item in filtered]
+        state["items"] = list(filtered)
+        _refresh_job_table(paired)
 
     def _refresh_job_table(filtered):
         jobs.DeleteAllItems()
@@ -1258,6 +1286,16 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
                 model.selected_job_store.update(**update_kwargs)
 
     # --- Refresh jobs -------------------------------------------------------
+    # W28: explicit idle -> refreshing -> success(timestamp) | failure(error,
+    # prior-data-marked-stale) machine with a monotonic sequence so an older
+    # response can never overwrite a newer response. Failures retain prior
+    # rows (marked stale) instead of silently clearing them.
+    def _has_key(key: str) -> bool:
+        try:
+            return bool(t(key) != key)
+        except Exception:
+            return False
+
     def refresh_jobs(_event=None):
         if not list_jobs or state["minimized"]:
             return
@@ -1271,33 +1309,116 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
                 state["refresh_pending"] = True
                 return
             state["in_flight"] = True
+            state["jobs_refresh_seq"] += 1
+            request_seq = state["jobs_refresh_seq"]
+            machine: JobsRefreshState = state["jobs_refresh"]
+            machine.begin()
+            # Keep the wx-mirrored status in sync for headless readback.
+            state["jobs_refresh_status"] = "refreshing"
+            try:
+                jobs_refresh_label.SetLabel(t("jobs.refreshing"))
+            except Exception:
+                pass
 
         def fetch():
             try:
                 result = list_jobs()
-                post(done, result, None, request_generation)
+                post(done, result, None, request_generation, request_seq)
             except Exception as error:
-                post(done, (), error, request_generation)
+                post(done, (), error, request_generation, request_seq)
 
-        def done(result, error, req_gen=None):
+        def done(result, error, req_gen=None, req_seq=None):
             with state_lock:
                 state["in_flight"] = False
                 refresh_pending = state.pop("refresh_pending", False)
+            if req_seq is not None and req_seq != state["jobs_refresh_seq"]:
+                # Older overlapping response: never overwrite newer context.
+                if refresh_pending and not state["closed"]:
+                    post(refresh_jobs)
+                return
             if not state["closed"] and (generation is None or req_gen == generation()):
+                machine2: JobsRefreshState = state["jobs_refresh"]
                 if error:
-                    pass  # Job listing errors are logged, not shown in accounting
+                    # Retain prior rows; mark them stale for visible readback.
+                    from datetime import datetime, timezone as _tz
+
+                    applied = machine2.complete_failure(req_seq if req_seq is not None else machine2.sequence, error)
+                    if applied:
+                        state["jobs_refresh_applied_seq"] = machine2.applied_sequence
+                        state["jobs_refresh_status"] = "failure"
+                        state["jobs_refresh_error"] = machine2.last_error
+                        state["jobs_refresh_stale"] = machine2.stale
+                        try:
+                            if machine2.stale:
+                                jobs_refresh_label.SetLabel(
+                                    f"{t('jobs.refresh_failed_stale')}: {machine2.last_error}"
+                                    if _has_key("jobs.refresh_failed_stale")
+                                    else f"Refresh failed (stale): {machine2.last_error}"
+                                )
+                            else:
+                                jobs_refresh_label.SetLabel(
+                                    f"{t('jobs.refresh_failed')}: {machine2.last_error}"
+                                    if _has_key("jobs.refresh_failed")
+                                    else f"Refresh failed: {machine2.last_error}"
+                                )
+                        except Exception:
+                            pass
                 else:
                     items = tuple(result or ())
-                    render_items(items)
-                    for item in items:
-                        if isinstance(item, dict):
-                            job_id = str(item.get("id", item.get("job_id", ""))).strip()
-                            model._job_states.setdefault(job_id, str(item.get("state", "")).strip().upper())
-                    model.poll_active_jobs(items, final_state, generation=req_gen)
+                    from datetime import datetime, timezone as _tz
+
+                    applied = machine2.complete_success(
+                        req_seq if req_seq is not None else machine2.sequence,
+                        list(items),
+                        timestamp=datetime.now(_tz.utc).isoformat(),
+                    )
+                    if applied:
+                        state["jobs_refresh_applied_seq"] = machine2.applied_sequence
+                        state["jobs_refresh_status"] = "success"
+                        state["jobs_refresh_timestamp"] = machine2.last_success_ts
+                        state["jobs_refresh_error"] = ""
+                        state["jobs_refresh_stale"] = False
+                        try:
+                            jobs_refresh_label.SetLabel(
+                                f"{t('jobs.refresh_updated')}: {machine2.last_success_ts}"
+                                if _has_key("jobs.refresh_updated")
+                                else f"Updated: {machine2.last_success_ts}"
+                            )
+                        except Exception:
+                            pass
+                        render_items(items)
+                        for item in items:
+                            if isinstance(item, dict):
+                                job_id = str(item.get("id", item.get("job_id", ""))).strip()
+                                model._job_states.setdefault(job_id, str(item.get("state", "")).strip().upper())
+                        model.poll_active_jobs(items, final_state, generation=req_gen)
+                        # W28: selection survives refresh only when the
+                        # identity still exists; otherwise drop it so a stale
+                        # selection cannot cancel a different row.
+                        if state["selected_job"] and not selection_still_exists(
+                            state["selected_job"], list(items)
+                        ):
+                            _clear_job_selection()
             if refresh_pending and not state["closed"]:
                 post(refresh_jobs)
 
         Thread(target=fetch, daemon=True).start()
+
+    # --- Column sorting (semantic values) ------------------------------------
+    def _on_column_click(event):
+        col = event.GetColumn()
+        if 0 <= col < len(_JOB_TABLE_COLUMNS):
+            key = _JOB_TABLE_COLUMNS[col]
+            if state.get("sort_key") == key:
+                state["sort_reverse"] = not bool(state.get("sort_reverse", False))
+            else:
+                state["sort_key"] = key
+                state["sort_reverse"] = False
+            _apply_filter()
+        try:
+            event.Skip()
+        except Exception:
+            pass
 
     # --- Filter handling ----------------------------------------------------
     def _on_filter_changed(_event=None):
@@ -2102,8 +2223,16 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
                     if follower is None:
                         continue
                     if callable(readers) and channel.path:
-                        _chunk, retained, waiting = follower.poll(readers, _remote_statter)
-                        results[channel.id] = (retained, waiting, False, False)
+                        try:
+                            _chunk, retained, waiting = follower.poll(readers, _remote_statter)
+                        except PermissionError as error:
+                            # W29 OUT-010: permission denied is a per-channel
+                            # error, not a missing-file wait and not a
+                            # whole-tab failure. Sibling channels keep
+                            # their own waiting/following state.
+                            results[channel.id] = (str(error), False, False, False, True)
+                            continue
+                        results[channel.id] = (retained, waiting, False, False, False)
                         continue
                     # Legacy test/adaptor compatibility is restricted to semantic
                     # stdout/stderr channels; arbitrary paths always use readers.
@@ -2117,11 +2246,13 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
                                 content = legacy[0 if "stdout" in channel.roles else 1] if legacy else ""
                             else:
                                 content = legacy
-                            results[channel.id] = (content, False, True, False)
+                            results[channel.id] = (content, False, True, False, False)
+                        except PermissionError as error:
+                            results[channel.id] = (str(error), False, False, False, True)
                         except (FileNotFoundError, OSError):
-                            results[channel.id] = (None, True, False, True)
+                            results[channel.id] = (None, True, False, True, False)
                     else:
-                        results[channel.id] = (follower.text, True, False, False)
+                        results[channel.id] = (follower.text, True, False, False, False)
             except Exception as error:
                 post(_done_outputs, results, error, req_id, g, channels, active_owner)
             else:
@@ -2146,13 +2277,25 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
                         text_ctrl = output_channels.get(channel.id)
                         if not text_ctrl:
                             continue
-                        retained, waiting, snapshot, missing = result.get(channel.id, ("", False, False, False))
+                        entry = result.get(channel.id, ("", False, False, False))
+                        if len(entry) == 5:
+                            retained, waiting, snapshot, missing, channel_error = entry
+                        else:
+                            retained, waiting, snapshot, missing = entry
+                            channel_error = False
                         follower = state.get("followers", {}).get(channel.id)
                         if follower is not None and snapshot:
                             retained = follower.replace_snapshot(retained)
                         elif follower is not None and missing:
                             follower.state.waiting_state = min(follower.state.waiting_state + 1, 5)
                             retained = follower.text
+                        if channel_error:
+                            try:
+                                text_ctrl.SetValue(str(retained or "Permission denied"))
+                            except RuntimeError:
+                                pass
+                            _set_output_channel_status(channel.id, "jobs_outputs.status_error")
+                            continue
                         if output_channel_paused.get(channel.id, False):
                             _set_output_channel_status(channel.id, "jobs_outputs.status_paused")
                             continue
@@ -2179,13 +2322,79 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
             _done_outputs({}, error, output_request_id, gen, resolved, owner)
 
     # --- Cancel with confirmation -------------------------------------------
-    def cancel_job(_event):
+    # W28: identity-safe cancel. The requested target must equal the current
+    # selection and still exist in the latest backend rows; otherwise a stale
+    # selection (reorder/filter/refresh drift) must not cancel another job.
+    # W30 CTRL-003..010: before-cancel identity/cluster/profile wording +
+    # capability gate; after-cancel result reflection, refresh, already-gone
+    # tolerance with unauthorized/error kept distinct.
+    def cancel_job(_event=None):
+        from hpc_gui.services.job_submit_cancel import (
+            build_cancel_confirmation,
+            cancel_capability_available,
+            reflect_cancel_result,
+        )
+
         job_id = model.tracking.selected_job_id
-        if not cancel or not job_id or state["cancel_in_flight"]:
+        if not job_id or state["cancel_in_flight"]:
             return
+        # CTRL-006: capability availability is an explicit visible state,
+        # not a silent no-op. The button is disabled with a recorded reason.
+        _cancel_backend = cancel
+        if not callable(_cancel_backend):
+            try:
+                _slurm_probe = kwargs.get("slurm_backend", None)
+            except Exception:
+                _slurm_probe = None
+            if not cancel_capability_available(_slurm_probe):
+                state["cancel_capability"] = "unavailable"
+                state["last_cancel_outcome"] = "UNAVAILABLE"
+                state["last_cancel_message"] = "Cancel is unavailable for this provider."
+                try:
+                    btn_cancel.Enable(False)
+                except Exception:
+                    pass
+                return
+        state["cancel_capability"] = "available"
+        if not cancel or not job_id:
+            return
+        if not cancel_target_is_safe(
+            state.get("selected_job", ""), list(state.get("raw_items", [])), job_id
+        ):
+            btn_cancel.Enable(False)
+            return
+        # Full identity tuple guard (profile/cluster/provider/session/array).
+        selected_identity = make_identity(
+            state.get("selected_job", ""),
+            profile_id=str(kwargs.get("profile_id", "")),
+            cluster_id=str(kwargs.get("cluster_id", "")),
+            provider_id=str(kwargs.get("provider_id", "")),
+            session_generation=int(state.get("provider_generation", 0)),
+        )
+        requested_identity = make_identity(
+            job_id,
+            profile_id=str(kwargs.get("profile_id", "")),
+            cluster_id=str(kwargs.get("cluster_id", "")),
+            provider_id=str(kwargs.get("provider_id", "")),
+            session_generation=int(state.get("provider_generation", 0)),
+        )
+        if not cancel_is_safe(selected_identity, requested_identity):
+            btn_cancel.Enable(False)
+            return
+        # CTRL-003/004/005: selected identity + cluster/profile scope are the
+        # guarded identities above; the confirmation names the exact target.
         ctx = model.selected_job_store.context
+        try:
+            expected_wording = build_cancel_confirmation(job_id, ctx.name or "")
+        except Exception:
+            expected_wording = ""
         name_part = f" ({ctx.name})" if ctx.name else ""
-        msg = t("jobs.cancel_confirm").format(job_id=job_id + name_part)
+        try:
+            msg = t("jobs.cancel_confirm").format(job_id=job_id + name_part)
+        except Exception:
+            msg = expected_wording or f"Cancel job {job_id}?"
+        if expected_wording and expected_wording not in msg and job_id not in msg:
+            msg = expected_wording
         if wx.MessageBox(msg, t("jobs.cancel"), wx.YES_NO | wx.ICON_WARNING) != wx.YES:
             return
         state["cancel_in_flight"] = True
@@ -2193,16 +2402,53 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
 
         def worker():
             try:
-                cancel(job_id)
-                post(cancel_done, None)
+                _out = cancel(job_id)
+                post(cancel_done, None, str(_out or ""))
             except Exception as error:
-                post(cancel_done, error)
+                post(cancel_done, error, "")
 
-        def cancel_done(error):
+        def cancel_done(error, output_text=""):
             state["cancel_in_flight"] = False
             if state["closed"]:
                 return
-            btn_cancel.Enable(True)
+            # CTRL-009/010: consult the post-cancel scheduler state so an
+            # already-ended race is confirmed, never conflated with refusal.
+            _final = ""
+            try:
+                if callable(final_state):
+                    _final = str(final_state(job_id) or "")
+            except Exception:
+                _final = ""
+            _reflection = reflect_cancel_result(
+                error, output_text, job_id=job_id, final_state=_final
+            )
+            state["last_cancel_outcome"] = _reflection.outcome
+            state["last_cancel_message"] = _reflection.message
+            state["last_cancel_is_error"] = _reflection.is_error
+            # CTRL-007: reflect the command result visibly (dialog for
+            # operators + state mirror for headless readback).
+            try:
+                if _reflection.is_error:
+                    wx.MessageBox(
+                        _reflection.message, t("jobs.cancel"), wx.OK | wx.ICON_ERROR
+                    )
+                else:
+                    wx.MessageBox(
+                        _reflection.message, t("jobs.cancel"), wx.OK | wx.ICON_INFORMATION
+                    )
+            except Exception:
+                pass
+            try:
+                btn_cancel.Enable(True)
+            except Exception:
+                pass
+            # CTRL-008: accepted and already-gone outcomes refresh the listing
+            # so the GUI agrees with the scheduler.
+            if _reflection.should_refresh:
+                try:
+                    refresh_jobs()
+                except Exception:
+                    pass
 
         Thread(target=worker, daemon=True).start()
 
@@ -2435,6 +2681,10 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
             pass
     # --- Bind events --------------------------------------------------------
     jobs.Bind(wx.EVT_LIST_ITEM_SELECTED, select_job)
+    try:
+        jobs.Bind(wx.EVT_LIST_COL_CLICK, _on_column_click)
+    except Exception:
+        pass
     btn_refresh.Bind(wx.EVT_BUTTON, refresh_jobs)
     btn_cancel.Bind(wx.EVT_BUTTON, cancel_job)
     btn_sacct.Bind(wx.EVT_BUTTON, _refresh_sacct)
@@ -2648,6 +2898,8 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         "filter_field": filter_field,
         "cb_auto_refresh": cb_auto_refresh,
         "btn_cancel": btn_cancel,
+        "jobs_refresh_label": jobs_refresh_label,
+        "jobs_sort": _on_column_click,
         "cluster_servers_text": cluster_servers_text,
         "cluster_servers_table": cluster_servers_table,
         "btn_refresh_lssrv": btn_refresh_lssrv,
@@ -2657,6 +2909,7 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
     }
     host._wx_jobs_model = model
     host._wx_jobs_refresh_jobs = refresh_jobs
+    host._wx_jobs_cancel = cancel_job
     host._wx_jobs_refresh_outputs = lambda: refresh_outputs_tab(force=True)
     host._wx_jobs_refresh_sacct = _refresh_sacct
     host._wx_jobs_refresh_raw_job_details = _refresh_raw_job_details

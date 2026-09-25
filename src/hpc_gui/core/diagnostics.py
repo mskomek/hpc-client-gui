@@ -20,27 +20,20 @@ def _bounded_text(path: Path) -> str:
 
 
 def _runtime_summary() -> dict:
+    try:
+        import wx as _wx
+
+        wx_version = _wx.version()
+    except Exception:
+        wx_version = "unknown"
     runtime = {
         "application_version": __version__,
         "os": platform.system(),
         "os_release": platform.release(),
         "architecture": platform.machine(),
         "python": sys.version.split()[0],
-        "ui_framework": "Qt / PySide6",
+        "ui_framework": f"wxPython ({wx_version})",
     }
-    try:
-        from PySide6.QtCore import qVersion
-
-        runtime["qt_version"] = qVersion()
-    except Exception:
-        runtime["qt_version"] = "unknown"
-    try:
-        from PySide6.QtWidgets import QApplication
-
-        app = QApplication.instance()
-        runtime["qt_platform"] = app.platformName() if app is not None else "unknown"
-    except Exception:
-        runtime["qt_platform"] = "unknown"
     return runtime
 
 

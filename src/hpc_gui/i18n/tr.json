@@ -362,6 +362,14 @@
     "find_label": "Ara:",
     "find_placeholder": "Aranacak metin",
     "find_next": "Sonrakini bul",
+    "find_previous": "Öncekini bul",
+    "match_case": "Büyük/küçük harf",
+    "find_empty": "Aranacak metni girin.",
+    "find_no_match": "Eşleşme bulunamadı.",
+    "find_wrapped_top": "Başa sarıldı.",
+    "find_wrapped_bottom": "Sona sarıldı.",
+    "binary_save_blocked": "İkili veya çok büyük dosya metin olarak kaydedilmez.",
+    "stale_open_ignored": "Eski bir düzenleyici açma isteği yok sayıldı.",
     "replace_label": "Değiştir:",
     "replace_placeholder": "Yeni metin",
     "replace": "Değiştir",
@@ -690,6 +698,8 @@
     "refresh": "Yenile",
     "copy": "Kopyala",
     "copy_path": "Günlük Yolunu Kopyala",
+    "open_folder": "Günlük Klasörünü Aç",
+    "folder_open_failed": "Günlük klasörü açılamadı: {err}",
     "export_diagnostics": "Tanı Paketini Dışa Aktar",
     "select_output_folder": "Çıktı klasörünü seç",
     "diagnostics_title": "Tanı",
@@ -1221,7 +1231,8 @@
     "corrupt_plugin": "{name} bütünlük denetimini geçemedi ve atlandı. Keşfet sekmesinden yeniden kurun; kurulu hiçbir sürüm silinmedi.",
     "open_tool": "Aracı aç",
     "tool_open_failed": "Denetleyici aracı açılamadı",
-    "tool_not_installed": "Eklenti kurulu değil veya devre dışı."
+    "tool_not_installed": "Eklenti kurulu değil veya devre dışı.",
+    "lifecycle_effect_note": "Bir eklentiyi devre dışı bırakmak, profillerini, şablonlarını, kurallarını ve araçlarını eklentiler bir sonraki yüklemede (liste yenileme, görünüm oluşturma veya yeniden bağlanma) durdurur. Uygulamayı yeniden başlatmak gerekmez; açık görünümler yeniden oluşturulduğunda yenilenir."
   },
   "menu": {
     "menu": "Menü",

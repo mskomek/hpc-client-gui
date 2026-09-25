@@ -13,7 +13,7 @@ from hpc_gui.services.remote_move_history import RemoteMoveHistory
 from hpc_gui.services.file_filter_registry import build_core_registry, FileFilter
 from hpc_gui.wx_remote_files import WxRemoteDirectoryModel
 from hpc_gui.wx_host import make_host
-from hpc_gui.ui.models.remote_entry_helpers import category as _shared_category, file_type as _shared_file_type, fmt_mtime as _shared_fmt_mtime, fmt_size as _shared_fmt_size, natural_sort_key as _shared_natural_sort_key
+from hpc_gui.services.remote_entry_format import category as _shared_category, file_type as _shared_file_type, fmt_mtime as _shared_fmt_mtime, fmt_size as _shared_fmt_size, natural_sort_key as _shared_natural_sort_key
 
 
 def _entry_name(entry) -> str:

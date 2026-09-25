@@ -46,17 +46,10 @@ from hpc_gui.plugins.registry_client import (
 )
 from hpc_gui.plugins.state import remove_plugin, set_plugin_disabled
 from hpc_gui.plugins.storage import read_active_versions, read_disabled_ids
+from hpc_gui.services.plugin_request import PLUGIN_REQUEST_URL
 from hpc_gui.ui.async_call import AsyncCall
 
 logger = logging.getLogger(__name__)
-
-# Dedicated plugin-request issue form in the official plugin registry repo.
-# This is the only destination the "Request a plugin" action may open; it is
-# a fixed constant and is never built from registry-controlled fields.
-PLUGIN_REQUEST_URL = (
-    "https://github.com/mskomek/hpc-client-gui-plugins/issues/new"
-    "?template=plugin-request.yml"
-)
 
 # Human-readable labels for Plugin API v1/v2 capability identifiers. Raw
 # identifiers must never appear as primary UI text.
@@ -509,6 +502,14 @@ class PluginManagerDialog(QDialog):
 
     def _populate_installed(self, active: dict[str, str]) -> None:
         inner = self._clear_list(self.installed_list)
+        # W33 (HPC-W08-LIFE-005): the installed surface must state the real
+        # enable/disable behavior — a toggle that only flips persisted state
+        # without explanation is misleading.
+        effect_note = QLabel(t("plugins.lifecycle_effect_note"))
+        effect_note.setWordWrap(True)
+        effect_note.setStyleSheet("color: #666; padding: 4px 8px;")
+        effect_note.setObjectName("pluginLifecycleNote")
+        inner.addWidget(effect_note)
         installed_by_id = {
             installed.manifest.id: installed
             for installed in self._installed_versions.plugins

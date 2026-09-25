@@ -183,8 +183,9 @@ The GUI can be used to:
 
 HPC Client GUI has a first-class, declarative plugin ecosystem backed by the
 official registry [hpc-client-gui-plugins](https://github.com/mskomek/hpc-client-gui-plugins).
-Open it via the top-right **Plugins** button. From the Plugin Manager's
-**Discover** tab you can install:
+Open it from the menubar **Plugins** menu (**Browse & Install...**,
+**Manage Installed...**, **Check for Plugin Updates...**). From the Plugin
+Manager's **Discover** tab you can install:
 
 * **Cluster profiles** — ready-made site/scheduler definitions (for example
   TRUBA) with paths and command templates.

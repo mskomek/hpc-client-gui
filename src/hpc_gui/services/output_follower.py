@@ -125,6 +125,11 @@ class OutputFollower:
             self._retry_at = 0.0
             self.text = retain_last_lines(self.text + new_text, self.max_lines)
             return new_text, self.text, False
+        except PermissionError:
+            # W29 OUT-010: permission denied is distinct from a missing file.
+            # Do not swallow it as "waiting"; let the caller surface a
+            # visible error state instead of retry-silence.
+            raise
         except (FileNotFoundError, OSError):
             # A missing/rotated file is retried by the caller; reset the offset
             # so a recreated file is not silently skipped.

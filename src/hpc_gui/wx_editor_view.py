@@ -91,6 +91,36 @@ def _build_editor(parent, model: WxEditorModel | None, *, path: str, content: st
     header.Add(btn_lint, 0, wx.ALL, 3)
     header.Add(save, 0, wx.ALL, 3)
     root.Add(header, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 4)
+    # --- W26 (HPC-W06-EDIT-005): wx find/replace bar (Qt parity) ---
+    find_bar = wx.WrapSizer(wx.HORIZONTAL)
+    find_label = wx.StaticText(panel, label=t("editor.find_label"))
+    find_in = wx.TextCtrl(panel, style=wx.TE_PROCESS_ENTER)
+    try:
+        find_in.SetHint(t("editor.find_placeholder"))
+    except Exception:
+        pass
+    replace_label = wx.StaticText(panel, label=t("editor.replace_label"))
+    replace_in = wx.TextCtrl(panel, style=wx.TE_PROCESS_ENTER)
+    try:
+        replace_in.SetHint(t("editor.replace_placeholder"))
+    except Exception:
+        pass
+    btn_find_next = wx.Button(panel, label=t("editor.find_next"))
+    btn_find_prev = wx.Button(panel, label=t("editor.find_previous"))
+    chk_match_case = wx.CheckBox(panel, label=t("editor.match_case"))
+    btn_replace = wx.Button(panel, label=t("editor.replace"))
+    btn_replace_all = wx.Button(panel, label=t("editor.replace_all"))
+    for item in (find_label, find_in, replace_label, replace_in, btn_find_next, btn_find_prev, chk_match_case, btn_replace, btn_replace_all):
+        try:
+            find_bar.Add(item, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 3)
+        except Exception:
+            pass
+    try:
+        find_in.SetMinSize(wx.Size(140, -1))
+        replace_in.SetMinSize(wx.Size(140, -1))
+    except Exception:
+        pass
+    root.Add(find_bar, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 4)
     # --- document tab strip (always, dynamic) ---
     def _tab_label(doc):
         base = doc.path.rsplit("/", 1)[-1] if doc.path else t("editor.title")
@@ -120,6 +150,20 @@ def _build_editor(parent, model: WxEditorModel | None, *, path: str, content: st
     root.Add(doc_tabs, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 4)
     editor = wx.TextCtrl(panel, style=wx.TE_MULTILINE | wx.TE_RICH2 | wx.HSCROLL)
     editor.SetValue(model.controller.active.content if model.controller.active else content)
+    # W27 (HPC-W06-EDITX-009/010/011): the initial document bypasses
+    # load_document, so apply the binary/large guard here as well. Refused
+    # content stays out of the editable control with a visible diagnostic.
+    initial_guard_reason = editor_binary_guard_reason(path, content)
+    initial_binary_refused = bool(initial_guard_reason)
+    if initial_guard_reason:
+        try:
+            editor.SetValue("")
+        except Exception:
+            pass
+        try:
+            editor.SetEditable(False)
+        except Exception:
+            pass
     buttons = wx.BoxSizer(wx.HORIZONTAL)
     submit = wx.Button(panel, label=t("editor.submit"))
     run = wx.Button(panel, label=t("editor.save_submit"))
@@ -129,8 +173,20 @@ def _build_editor(parent, model: WxEditorModel | None, *, path: str, content: st
     root.Add(editor, 1, wx.EXPAND | wx.ALL, 8)
     root.Add(buttons, 0, wx.ALIGN_RIGHT | wx.LEFT | wx.RIGHT | wx.BOTTOM, 8)
     root.Add(status, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 8)
+    if initial_guard_reason:
+        try:
+            status.SetLabel(initial_guard_reason)
+        except Exception:
+            pass
     panel.SetSizer(root)
-    state = {"closed": False, "in_flight": False, "destroy_notified": False, "disk_baseline": {}}
+    state = {"closed": False, "in_flight": False, "destroy_notified": False, "disk_baseline": {},
+               # W27 (HPC-W11-TODO-002): monotonic open-request sequencing so a
+               # stale async editor-open cannot clobber a newer document.
+               "open_seq": 0, "open_applied": 0,
+               # W27 (HPC-W06-EDITX-009/010/011): initial content refused by
+               # the binary/large guard stays out of the editable control and
+               # blocks text saves until a safe document is loaded.
+               "binary_refused": initial_binary_refused}
 
     def _note_disk_baseline(doc) -> None:
         """Record the at-open disk state for later external-change detection
@@ -201,6 +257,185 @@ def _build_editor(parent, model: WxEditorModel | None, *, path: str, content: st
         dlg.ShowModal()
         dlg.Destroy()
 
+    def _find_query():
+        """W27 (HPC-W06-EDITX-001/005/006): current query + case sensitivity."""
+        try:
+            query = find_in.GetValue()
+        except Exception:
+            return "", True
+        try:
+            match_case = bool(chk_match_case.GetValue())
+        except Exception:
+            match_case = True
+        return query or "", match_case
+
+    def _set_find_status(key: str, fallback: str) -> None:
+        try:
+            label = t(key)
+            if label == f"[{key}]":
+                label = fallback
+            status.SetLabel(label)
+        except Exception:
+            pass
+
+    def _wx_find_next() -> bool:
+        """W27 (HPC-W06-EDITX-001/002/005/006/007): find-next with explicit
+        wrap readback, optional case-insensitive matching, and a visible
+        diagnostic for empty queries or no match."""
+        query, match_case = _find_query()
+        if not query:
+            _set_find_status("editor.find_empty", "Enter text to find.")
+            return False
+        try:
+            text = editor.GetValue()
+            sel_start, sel_end = editor.GetSelection()
+            start = sel_end if sel_end is not None else 0
+            haystack, needle = (text, query) if match_case else (text.lower(), query.lower())
+            idx = haystack.find(needle, start)
+            wrapped = False
+            if idx < 0:
+                idx = haystack.find(needle, 0)
+                wrapped = idx >= 0
+            if idx < 0:
+                _set_find_status("editor.find_no_match", "No match found.")
+                return False
+            editor.SetSelection(idx, idx + len(query))
+            editor.ShowPosition(idx)
+            try:
+                editor.SetFocus()
+            except Exception:
+                pass
+            if wrapped:
+                _set_find_status("editor.find_wrapped_top", "Wrapped to top.")
+            else:
+                try:
+                    status.SetLabel("")
+                except Exception:
+                    pass
+            return True
+        except Exception:
+            return False
+
+    def _wx_find_previous() -> bool:
+        """W27 (HPC-W06-EDITX-001/002/005/006/007): find-previous with
+        explicit wrap readback. Searches backwards from the selection start
+        and wraps to the end of the document."""
+        query, match_case = _find_query()
+        if not query:
+            _set_find_status("editor.find_empty", "Enter text to find.")
+            return False
+        try:
+            text = editor.GetValue()
+            sel_start, sel_end = editor.GetSelection()
+            start = sel_start if sel_start is not None else len(text)
+            haystack, needle = (text, query) if match_case else (text.lower(), query.lower())
+            idx = haystack.rfind(needle, 0, start)
+            wrapped = False
+            if idx < 0:
+                idx = haystack.rfind(needle)
+                wrapped = idx >= 0
+            if idx < 0:
+                _set_find_status("editor.find_no_match", "No match found.")
+                return False
+            editor.SetSelection(idx, idx + len(query))
+            editor.ShowPosition(idx)
+            try:
+                editor.SetFocus()
+            except Exception:
+                pass
+            if wrapped:
+                _set_find_status("editor.find_wrapped_bottom", "Wrapped to bottom.")
+            else:
+                try:
+                    status.SetLabel("")
+                except Exception:
+                    pass
+            return True
+        except Exception:
+            return False
+
+    def _wx_replace_current() -> bool:
+        """W27 (HPC-W06-EDITX-003/005/006/008): replace the current selection
+        when it matches the query under the active case option; otherwise
+        advance with find-next first. Empty queries are a visible no-op and
+        successful replacements update dirty state."""
+        query, match_case = _find_query()
+        if not query:
+            _set_find_status("editor.find_empty", "Enter text to find.")
+            return False
+        try:
+            replacement = replace_in.GetValue()
+        except Exception:
+            replacement = ""
+        try:
+            sel_start, sel_end = editor.GetSelection()
+            selected = editor.GetStringSelection()
+            matches = (selected == query) if match_case else (selected.lower() == query.lower())
+            if not matches:
+                if not _wx_find_next():
+                    return False
+                sel_start, sel_end = editor.GetSelection()
+                selected = editor.GetStringSelection()
+                matches = (selected == query) if match_case else (selected.lower() == query.lower())
+                if not matches:
+                    return False
+            editor.Replace(sel_start, sel_end, replacement)
+            try:
+                model.controller.update_content(editor.GetValue())
+                _update_dirty_marker()
+            except Exception:
+                pass
+            return True
+        except Exception:
+            return False
+
+    def _wx_replace_all() -> int:
+        """W27 (HPC-W06-EDITX-004/005/006/008): replace all occurrences under
+        the active case option and return the count. Empty queries and
+        no-match are visible no-ops; replacements update dirty state."""
+        query, match_case = _find_query()
+        if not query:
+            _set_find_status("editor.find_empty", "Enter text to find.")
+            return 0
+        try:
+            replacement = replace_in.GetValue()
+        except Exception:
+            replacement = ""
+        try:
+            text = editor.GetValue()
+            if match_case:
+                count = text.count(query)
+                if count <= 0:
+                    _set_find_status("editor.find_no_match", "No match found.")
+                    return 0
+                editor.ChangeValue(text.replace(query, replacement))
+            else:
+                lowered, needle = text.lower(), query.lower()
+                count = lowered.count(needle)
+                if count <= 0:
+                    _set_find_status("editor.find_no_match", "No match found.")
+                    return 0
+                # Rebuild preserving non-matched spans from the original text.
+                parts: list[str] = []
+                cursor = 0
+                while True:
+                    idx = lowered.find(needle, cursor)
+                    if idx < 0:
+                        parts.append(text[cursor:])
+                        break
+                    parts.append(text[cursor:idx])
+                    parts.append(replacement)
+                    cursor = idx + len(query)
+                editor.ChangeValue("".join(parts))
+            try:
+                model.controller.update_content(editor.GetValue())
+                _update_dirty_marker()
+            except Exception:
+                pass
+            return count
+        except Exception:
+            return 0
+
     def _ask_overwrite(title_key: str, message: str) -> bool:
         """Modal Yes/No overwrite prompt.  No/closed means cancel-safe abort."""
         try:
@@ -267,6 +502,12 @@ def _build_editor(parent, model: WxEditorModel | None, *, path: str, content: st
 
     def save_document(mode="save", on_done=None):
         if state["closed"] or state["in_flight"]:
+            return
+        # W27 (HPC-W06-EDITX-009/010/011): refused binary/oversize content
+        # must never be written out as text. The user must load a safe
+        # document (or Save As target is still blocked while refused).
+        if state.get("binary_refused"):
+            _set_find_status("editor.binary_save_blocked", "Binary or oversize file is not saved as text.")
             return
         # The header path field doubles as Save As: editing it before Save
         # redirects this save to the new target (HPC-W06-XFER-019).
@@ -451,6 +692,12 @@ def _build_editor(parent, model: WxEditorModel | None, *, path: str, content: st
     btn_open.Bind(wx.EVT_BUTTON, _on_open)
     btn_template.Bind(wx.EVT_BUTTON, _on_template)
     btn_lint.Bind(wx.EVT_BUTTON, _on_lint)
+    btn_find_next.Bind(wx.EVT_BUTTON, lambda _event: _wx_find_next())
+    btn_find_prev.Bind(wx.EVT_BUTTON, lambda _event: _wx_find_previous())
+    btn_replace.Bind(wx.EVT_BUTTON, lambda _event: _wx_replace_current())
+    btn_replace_all.Bind(wx.EVT_BUTTON, lambda _event: _wx_replace_all())
+    find_in.Bind(wx.EVT_TEXT_ENTER, lambda _event: _wx_find_next())
+    replace_in.Bind(wx.EVT_TEXT_ENTER, lambda _event: _wx_replace_current())
     remote_path.Bind(wx.EVT_TEXT_ENTER, _on_remote_path_enter)
     _update_header_enabled()
 
@@ -584,10 +831,45 @@ def _build_editor(parent, model: WxEditorModel | None, *, path: str, content: st
             pass
         submit.SetLabel(t("editor.submit"))
         run.SetLabel(t("editor.save_submit"))
+        try:
+            find_label.SetLabel(t("editor.find_label"))
+            find_in.SetHint(t("editor.find_placeholder"))
+            replace_label.SetLabel(t("editor.replace_label"))
+            replace_in.SetHint(t("editor.replace_placeholder"))
+            btn_find_next.SetLabel(t("editor.find_next"))
+            btn_find_prev.SetLabel(t("editor.find_previous"))
+            chk_match_case.SetLabel(t("editor.match_case"))
+            btn_replace.SetLabel(t("editor.replace"))
+            btn_replace_all.SetLabel(t("editor.replace_all"))
+        except Exception:
+            pass
         _update_header_enabled()
         _refresh_tabs()
 
-    def load_document(new_path, new_content, *, is_local=False, provider: str = "", profile: str = "", session_key: str = "", encoding: str = "utf-8", newline: str | None = None, version: str = ""):
+    def _begin_open_request() -> int:
+        """W27 (HPC-W11-TODO-002): allocate a monotonic open-request sequence.
+
+        Async producers stamp the request at dispatch time and pass it as
+        ``request_seq``; ``load_document`` ignores any request older than the
+        newest one so a stale open cannot replace a newer document."""
+        try:
+            state["open_seq"] = int(state.get("open_seq", 0)) + 1
+            return int(state["open_seq"])
+        except Exception:
+            return 0
+
+    def load_document(new_path, new_content, *, is_local=False, provider: str = "", profile: str = "", session_key: str = "", encoding: str = "utf-8", newline: str | None = None, version: str = "", request_seq: int | None = None):
+        # W27 (HPC-W11-TODO-002): stale async opens are ignored before they
+        # can touch model, tabs, or the visible buffer.
+        if request_seq is None:
+            request_seq = _begin_open_request()
+        try:
+            if int(request_seq) < int(state.get("open_seq", 0)):
+                _set_find_status("editor.stale_open_ignored", "Ignored a stale editor-open request.")
+                return "stale-ignored"
+            state["open_applied"] = int(request_seq)
+        except Exception:
+            pass
         # W26 (HPC-W06-EDIT-007): binary/oversize content is refused with a
         # visible diagnostic instead of opening an editable tab.
         guard_reason = editor_binary_guard_reason(new_path, new_content)
@@ -596,7 +878,7 @@ def _build_editor(parent, model: WxEditorModel | None, *, path: str, content: st
                 status.SetLabel(guard_reason)
             except Exception:
                 pass
-            return
+            return "refused-binary"
         # duplicate suppression on the canonical identity (local vs remote,
         # connection, path): the same path on another connection is a
         # distinct document (HPC-W06-EDIT-010/012/016).
@@ -618,12 +900,18 @@ def _build_editor(parent, model: WxEditorModel | None, *, path: str, content: st
                     _refresh_tabs()
                 except Exception:
                     pass
-                return
-        # handle stale: if in-flight, queue? For now direct open
+                return "activated"
         opened = probe
         model.controller.open(opened)
         _note_disk_baseline(opened)
         editor.ChangeValue(new_content)
+        # W27: a safe document clears a prior initial binary refusal and
+        # restores editing.
+        try:
+            state["binary_refused"] = False
+            editor.SetEditable(True)
+        except Exception:
+            pass
         try:
             remote_path.SetValue(new_path)
         except Exception:
@@ -631,6 +919,7 @@ def _build_editor(parent, model: WxEditorModel | None, *, path: str, content: st
         host.set_host_title(EditorCommandService.suggested_filename(new_path or "untitled.sh"))
         _update_header_enabled()
         _refresh_tabs()
+        return "opened"
 
     def save_for_replacement(callback):
         save_document(on_done=callback)
@@ -686,7 +975,7 @@ def _build_editor(parent, model: WxEditorModel | None, *, path: str, content: st
             event.Skip()
 
         host.Bind(wx.EVT_WINDOW_DESTROY, destroyed)
-    host._wx_editor_controls = {"editor": editor, "save": save, "submit": submit, "run": run, "status": status, "doc_tabs": doc_tabs}
+    host._wx_editor_controls = {"editor": editor, "save": save, "submit": submit, "run": run, "status": status, "doc_tabs": doc_tabs, "find_in": find_in, "replace_in": replace_in, "find_next": btn_find_next, "find_prev": btn_find_prev, "match_case": chk_match_case, "replace": btn_replace, "replace_all": btn_replace_all, "find_label": find_label, "replace_label": replace_label}
     host._wx_editor_header = {"path": remote_path, "path_label": remote_label, "open": btn_open, "new_template": btn_template, "lint": btn_lint, "header": header, "doc_tabs": doc_tabs, "remote_label": remote_label}
     host._wx_editor_state = state
     host._wx_editor_model = model
@@ -695,6 +984,11 @@ def _build_editor(parent, model: WxEditorModel | None, *, path: str, content: st
     host._wx_editor_close_tab = close_tab
     host._wx_editor_reorder_tabs = _reorder_tabs
     host._wx_editor_refresh_tabs = _refresh_tabs
+    host._wx_editor_find_next = _wx_find_next
+    host._wx_editor_find_previous = _wx_find_previous
+    host._wx_editor_replace_current = _wx_replace_current
+    host._wx_editor_replace_all = _wx_replace_all
+    host._wx_editor_begin_open_request = _begin_open_request
     finish()
     return host
 

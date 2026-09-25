@@ -809,6 +809,45 @@ class WxUpdateDialog:
                 self._build_for_state(STATE_DOWNLOAD_CANCELLED)
         self.wx.CallAfter(do_cancelled)
 
+    # W43 (HPC-W09-UPD-039..043): restart-safety hooks. Tests may set
+    # ``unsaved_probe`` (()-> int) and ``confirm_fn`` ((count)-> bool) to
+    # drive the defer path without a live editor. Production editors may
+    # alternatively register providers via update_restart_policy.
+    unsaved_probe = None
+    confirm_fn = None
+
+    def _unsaved_count(self) -> int:
+        probe = getattr(self, "unsaved_probe", None)
+        if callable(probe):
+            try:
+                return max(0, int(probe() or 0))
+            except Exception:
+                return 0
+        try:
+            from hpc_gui.services.update_restart_policy import get_unsaved_count
+            return max(0, int(get_unsaved_count() or 0))
+        except Exception:
+            return 0
+
+    def _confirm_unsaved_install(self, count: int) -> bool:
+        confirm = getattr(self, "confirm_fn", None)
+        if callable(confirm):
+            try:
+                return bool(confirm(int(count)))
+            except Exception:
+                return False
+        try:
+            from hpc_gui.services.update_restart_policy import deferral_message
+            res = self.wx.MessageBox(
+                deferral_message(count),
+                "Unsaved changes",
+                self.wx.YES_NO | self.wx.ICON_WARNING,
+                self.dlg,
+            )
+            return res == self.wx.YES
+        except Exception:
+            return False
+
     def _start_install(self):
         # Close this dialog and open installation splash per §19
         rel = self.release
@@ -820,6 +859,24 @@ class WxUpdateDialog:
             self._error_details = self._error_message
             self._build_for_state(STATE_FAILED)
             return
+        # W43: never install silently with unsaved editor state. Defer
+        # (stay in READY) unless the user explicitly confirms.
+        try:
+            unsaved = self._unsaved_count()
+        except Exception:
+            unsaved = 0
+        self._install_deferred_due_to_unsaved = False
+        if unsaved > 0:
+            try:
+                confirmed = self._confirm_unsaved_install(unsaved)
+            except Exception:
+                confirmed = False
+            if not confirmed:
+                self._install_deferred_due_to_unsaved = True
+                self._build_for_state(STATE_READY_TO_INSTALL)
+                self._zip_path = zip_path
+                return
+            self._install_confirmed_with_unsaved = int(unsaved)
         # Close update dialog
         try:
             self._closed = True

@@ -44,7 +44,12 @@ MANIFEST_REQUIRED_KEYS = (
     "files",
 )
 
-MANIFEST_OPTIONAL_KEYS = frozenset({"ui_contributions"})
+MANIFEST_OPTIONAL_KEYS = frozenset({"ui_contributions", "provider_ids", "optional_dependencies"})
+
+# W32 Workstream B: provider-id shape. Provider ids name concrete provider
+# capabilities (e.g. cluster profile ids); they use the same safe alphabet
+# as cluster profile ids.
+PROVIDER_ID_RE = re.compile(r"^[a-z][a-z0-9_-]*$")
 
 CLUSTER_PROFILE_REQUIRED_KEYS = ("schema_version", "profile_id", "name", "scheduler")
 V2_PROFILE_SECTIONS = frozenset(
@@ -170,6 +175,22 @@ def validate_manifest_dict(manifest: Any) -> list[str]:
     for key in ("id", "name", "publisher", "license", "description"):
         if not _is_nonempty_str(manifest[key]):
             errors.append(f"manifest key '{key}' must be a non-empty string")
+    # W32 MANIFEST-001: plugin ID uses a dotted reverse-DNS shape so two
+    # plugins cannot silently shadow each other with free-form names.
+    # The validator accepts hyphens/underscores in segments (compatible
+    # with historical manifests such as `test.unicode-provider`); the
+    # loader still enforces the exact `PLUGIN_ID_RE` at load time, so any
+    # residual mismatch is contained as a load diagnostic, never startup.
+    _PLUGIN_ID_VALIDATOR_RE = re.compile(r"^[a-z][a-z0-9_-]*(?:\.[a-z0-9_-]+)+$")
+
+    if _is_nonempty_str(manifest["id"]) and not _PLUGIN_ID_VALIDATOR_RE.fullmatch(str(manifest["id"])):
+        errors.append(
+            "manifest key 'id' must match ^[a-z][a-z0-9_-]*(?:\\.[a-z0-9_-]+)+$ "
+            f"(got {manifest['id']!r})"
+        )
+    # W32 MANIFEST-002: display name is a bounded human label (not an id).
+    if _is_nonempty_str(manifest["name"]) and len(str(manifest["name"])) > 128:
+        errors.append("manifest key 'name' must be at most 128 characters")
     if not _is_nonempty_str(manifest["requires_app"]):
         errors.append("manifest key 'requires_app' must be a non-empty string")
     else:
@@ -240,6 +261,82 @@ def validate_manifest_dict(manifest: Any) -> list[str]:
 
         ui_errors = validate_ui_contributions_dict(manifest["ui_contributions"])
         errors.extend(f"ui_contributions: {e}" for e in ui_errors)
+
+    # W32 MANIFEST-006: optional provider IDs / capabilities declaration.
+    # Advisory only: never grants loading or execution by itself.
+    if "provider_ids" in manifest:
+        provider_ids = manifest["provider_ids"]
+        if not isinstance(provider_ids, list):
+            errors.append("manifest provider_ids must be a list")
+        else:
+            seen_providers: set[str] = set()
+            for entry in provider_ids:
+                if not isinstance(entry, str) or not entry.strip():
+                    errors.append("each manifest provider_ids entry must be a non-empty string")
+                    continue
+                if len(entry) > 64 or not PROVIDER_ID_RE.fullmatch(entry):
+                    errors.append(
+                        f"invalid provider id {entry!r}: must match ^[a-z][a-z0-9_-]*$ "
+                        "and be at most 64 characters"
+                    )
+                    continue
+                if entry in seen_providers:
+                    errors.append(f"duplicate provider id {entry!r}")
+                    continue
+                seen_providers.add(entry)
+
+    # W32 MANIFEST-007: optional dependencies. Advisory only: a missing
+    # optional dependency must never block host startup or sibling plugins;
+    # the loader treats the declaring plugin normally (the dependency is
+    # documentation for the registry/operator, not a load gate).
+    if "optional_dependencies" in manifest:
+        optional_deps = manifest["optional_dependencies"]
+        if not isinstance(optional_deps, list):
+            errors.append("manifest optional_dependencies must be a list")
+        else:
+            seen_deps: set[str] = set()
+            for entry in optional_deps:
+                dep_id: Any = entry
+                dep_version: Any = None
+                if isinstance(entry, dict):
+                    dep_id = entry.get("id")
+                    dep_version = entry.get("version", None)
+                    unknown_dep_keys = set(entry) - {"id", "version"}
+                    if unknown_dep_keys:
+                        errors.append(
+                            f"manifest optional_dependencies entry has unknown keys "
+                            f"{sorted(unknown_dep_keys)}"
+                        )
+                        continue
+                elif not isinstance(entry, str):
+                    errors.append(
+                        "each manifest optional_dependencies entry must be a string "
+                        "or an object with an 'id'"
+                    )
+                    continue
+                if not isinstance(dep_id, str) or not dep_id.strip():
+                    errors.append(
+                        "each manifest optional_dependencies entry needs a non-empty 'id'"
+                    )
+                    continue
+                if len(dep_id) > 128:
+                    errors.append(
+                        f"optional dependency id {dep_id!r} must be at most 128 characters"
+                    )
+                    continue
+                if any(ch in dep_id for ch in ("\n", "\r", "\x00", "/", "\\", "..")):
+                    errors.append(f"optional dependency id {dep_id!r} is unsafe")
+                    continue
+                if dep_version is not None and not is_valid_semver(dep_version):
+                    errors.append(
+                        f"optional dependency {dep_id!r} version {dep_version!r} "
+                        "is not a valid semantic version"
+                    )
+                    continue
+                if dep_id in seen_deps:
+                    errors.append(f"duplicate optional dependency {dep_id!r}")
+                    continue
+                seen_deps.add(dep_id)
 
     files = manifest["files"]
     if not isinstance(files, list) or not files:

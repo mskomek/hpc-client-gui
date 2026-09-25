@@ -71,6 +71,147 @@ def _make_tray(wx, frame, tray_factory):
         return None
 
 
+def _window_work_areas(wx):
+    """Current display work areas for geometry recovery (never raises)."""
+    try:
+        areas = []
+        for idx in range(wx.Display.GetCount()):
+            try:
+                area = wx.Display(idx).GetClientArea()
+                areas.append((area.x, area.y, area.width, area.height))
+            except Exception:
+                continue
+        return tuple(areas)
+    except Exception:
+        return ()
+
+
+def _restore_main_window_state(wx, frame, notebook):
+    """Apply persisted main-window geometry/selection (HPC-W09-UISTATE-009..014).
+
+    Best-effort: absent/corrupt/off-screen state resolves to fresh defaults
+    and the frame keeps its constructed size. Never raises.
+    """
+    try:
+        from hpc_gui.config.storage import get_main_window_state
+        from hpc_gui.services.geometry_policy import Rect, resolve_main_window_state
+
+        raw = get_main_window_state()
+        if raw is None:
+            return "fresh-defaults"
+        areas = tuple(Rect(*a) for a in _window_work_areas(wx))
+        try:
+            tab_count = int(notebook.GetPageCount())
+        except Exception:
+            tab_count = None
+        state = resolve_main_window_state(raw, areas, tab_count=tab_count)
+        rect = state["rect"]
+        try:
+            frame.SetSize(rect.x, rect.y, rect.width, rect.height)
+        except Exception:
+            pass
+        if state["selected_tab"] is not None:
+            try:
+                notebook.SetSelection(int(state["selected_tab"]))
+            except Exception:
+                pass
+        if state["maximized"]:
+            try:
+                frame.Maximize(True)
+            except Exception:
+                pass
+        return "restored"
+    except Exception:
+        return "fresh-defaults"
+
+
+def _save_main_window_state(frame, notebook):
+    """Persist current main-window geometry/selection (best-effort, never raises)."""
+    try:
+        from hpc_gui.config.storage import save_main_window_state
+
+        try:
+            pos = frame.GetPosition()
+            size = frame.GetSize()
+            maximized = bool(frame.IsMaximized())
+        except Exception:
+            return False
+        try:
+            selected = int(notebook.GetSelection())
+        except Exception:
+            selected = None
+        if maximized:
+            # A maximized frame reports its zoomed size; keep the record but
+            # mark it so restore re-applies Maximize instead of a zoomed rect.
+            pass
+        save_main_window_state(
+            x=int(pos.x),
+            y=int(pos.y),
+            width=int(size.width),
+            height=int(size.height),
+            maximized=maximized,
+            selected_tab=selected,
+        )
+        return True
+    except Exception:
+        return False
+
+
+def _update_shell_status_text(frame, session_state) -> None:
+    """Reflect the canonical session state in the shell status bar (W55 A1).
+
+    Connected session -> "<connected-label>: <profile-name>" (or the bare
+    connected label when no profile name is available); otherwise the idle
+    label. Best-effort and never raises; a destroyed frame is a no-op.
+    """
+    try:
+        if frame is None:
+            return
+        try:
+            if hasattr(frame, "IsBeingDeleted") and frame.IsBeingDeleted():
+                return
+        except Exception:
+            pass
+        bar = None
+        try:
+            bar = frame.GetStatusBar()
+        except Exception:
+            bar = None
+        if bar is None:
+            return
+        session = None
+        try:
+            session = (session_state or {}).get("session")
+        except Exception:
+            session = None
+        connected = False
+        if session is not None:
+            try:
+                connected = bool(
+                    session.get("connected")
+                    if isinstance(session, dict)
+                    else session
+                )
+            except Exception:
+                connected = False
+        try:
+            if connected:
+                profile = session.get("profile") if isinstance(session, dict) else None
+                name = profile.get("name") if isinstance(profile, dict) else None
+                label = t("login.status_connected")
+                text = f"{label}: {name}" if name else str(label)
+            else:
+                text = t("common.ready")
+        except Exception:
+            text = "connected" if connected else "ready"
+        try:
+            bar.SetStatusText(str(text))
+        except Exception:
+            pass
+    except Exception:
+        pass
+
+
 def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_state=None, defer_terminal_webview=False):
     try:
         import wx
@@ -704,7 +845,9 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
 
     def refresh_labels(_language=None):
         frame.SetTitle(f"{t('app.title')} {__version__}")
-        frame.SetStatusText(t("common.ready"))
+        # W55 A1 (HPC-W10-GJ2-030): retranslation must not clobber a live
+        # connected indicator back to idle.
+        _update_shell_status_text(frame, session_state)
         try:
             menubar = frame.GetMenuBar()
             menubar.SetMenuLabel(0, t("menu.menu"))
@@ -1103,91 +1246,19 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
         _dispatch("APP-HELP", f, lifecycle, session_state)
 
     def _on_update(_event):
+        # W41 UPDATER-ROUTE-002: delegate to the single authoritative
+        # update-check controller; no divergent second route.
         f = _shell_frame()
         if not f:
             return
-        before = set(wx.GetTopLevelWindows())
         try:
-            from hpc_gui.wx_updater_view import WxUpdateDialog, STATE_CHECKING, STATE_FAILED, STATE_UPDATE_AVAILABLE, STATE_UP_TO_DATE
+            run_wx_update_check(f)
         except Exception:
             return
-        dlg = WxUpdateDialog(f, None)
-        dlg._build_for_state(STATE_CHECKING)
-        dlg.dlg.Show()
-        _track_new_windows(before)
-        def worker():
-            try:
-                from hpc_gui.services.app_updater import get_latest_release, is_newer_version, AUTOMATIC_INSTALL_STRATEGIES
-                from hpc_gui.core.platform import current_os
-                from hpc_gui import __version__ as cur_ver2
-                release = get_latest_release(timeout=10)
-                def on_done():
-                    ff = _shell_frame()
-                    if not ff or not wx.Window.FindWindowById(ff.GetId()):
-                        try:
-                            dlg.Destroy()
-                        except Exception:
-                            pass
-                        return
-                    try:
-                        if not is_newer_version(release.version, cur_ver2):
-                            dlg._build_for_state(STATE_UP_TO_DATE)
-                            _track_new_windows(before)
-                            return
-                        try:
-                            from hpc_gui.services import app_updater as _au
-                            macos_ok = not (release.install_strategy == "macos-bundle" and release.security_status != _au.SECURITY_SIGNED)
-                        except Exception:
-                            macos_ok = True
-                        if release.install_strategy not in AUTOMATIC_INSTALL_STRATEGIES or not macos_ok:
-                            import webbrowser
-                            msg = t("updates.manual_install").format(version=release.version) if t("updates.manual_install") != "[updates.manual_install]" else f"Update {release.version} requires manual install."
-                            if current_os() == "macos":
-                                try:
-                                    sec_key = {_au.SECURITY_UNSIGNED: "updates.security_unsigned_mac", _au.SECURITY_SIGNED: "updates.security_signed_mac", _au.SECURITY_UNKNOWN: "updates.security_unknown_mac"}.get(release.security_status, "updates.security_unknown_mac")
-                                    msg += "\n\n" + t(sec_key)
-                                except Exception:
-                                    pass
-                            wx.MessageBox(msg, t("updates.title"), wx.OK | wx.ICON_INFORMATION, ff)
-                            try:
-                                webbrowser.open(release.zip_url or release.html_url)
-                            except Exception:
-                                pass
-                            try:
-                                dlg.Destroy()
-                            except Exception:
-                                pass
-                            _track_new_windows(before)
-                            return
-                        dlg.release = release
-                        dlg._total = getattr(release, "size", None)
-                        try:
-                            from hpc_gui.wx_updater_view import _parse_whats_new
-                            dlg._whats_new = _parse_whats_new(getattr(release, "body", ""))
-                        except Exception:
-                            pass
-                        dlg._build_for_state(STATE_UPDATE_AVAILABLE)
-                        _track_new_windows(before)
-                    except Exception as e:
-                        dlg._error_message = str(e)
-                        dlg._error_details = f"{type(e).__name__}: {e}"
-                        dlg._build_for_state(STATE_FAILED)
-                wx.CallAfter(on_done)
-            except Exception as exc:
-                def on_err(exc=exc):
-                    ff = _shell_frame()
-                    if not ff:
-                        try:
-                            dlg.Destroy()
-                        except Exception:
-                            pass
-                        return
-                    dlg._error_message = str(exc)
-                    dlg._error_details = f"{type(exc).__name__}: {exc}"
-                    dlg._build_for_state(STATE_FAILED)
-                wx.CallAfter(on_err)
-        import threading
-        threading.Thread(target=worker, daemon=True).start()
+        try:
+            _track_new_windows(set(wx.GetTopLevelWindows()))
+        except Exception:
+            pass
 
     def _on_plugins(_event):
         f = _shell_frame()
@@ -1281,6 +1352,9 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
     frame._wx_shell_tray = tray
 
     def close(_event):
+        # Persist main-window layout first (best-effort; shutdown never blocks
+        # on it) so save/restart restores size/position/maximized/selected tab.
+        _save_main_window_state(frame, notebook)
         # Invoke every embedded page's close callback before shutdown
         for _key, controls in list(page_controls.items()):
             # For Files splitter, local/remote/transfers are stored separately
@@ -1327,8 +1401,62 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
         lifecycle.shutdown()
         frame.Destroy()
 
+    # W55 A1/A2 (HPC-W10-GJ2-029/038): keyboard accelerators for shell
+    # navigation. Ctrl+1..7 selects notebook tabs; F1 opens Help. The table
+    # is the keyboard-only traversal contract for the main shell.
+    _wx_shell_accel_ids: dict = {}
+    _wx_shell_accel_spec: list = []
+    try:
+        _accel_entries = []
+        for _tab_index in range(min(7, int(notebook.GetPageCount()))):
+            _tab_cmd = wx.NewIdRef()
+            _wx_shell_accel_ids[int(_tab_cmd)] = _tab_index
+
+            def _make_tab_handler(_idx=_tab_index):
+                def _on_accel_tab(_evt):
+                    try:
+                        if frame.IsBeingDeleted():
+                            return
+                        if 0 <= _idx < int(notebook.GetPageCount()):
+                            notebook.SetSelection(_idx)
+                    except Exception:
+                        pass
+                return _on_accel_tab
+
+            frame.Bind(wx.EVT_MENU, _make_tab_handler(), id=int(_tab_cmd))
+            _accel_entries.append(
+                wx.AcceleratorEntry(wx.ACCEL_CTRL, ord(str(_tab_index + 1)), int(_tab_cmd))
+            )
+            _wx_shell_accel_spec.append(
+                (int(wx.ACCEL_CTRL), ord(str(_tab_index + 1)), int(_tab_cmd))
+            )
+        _help_cmd = wx.NewIdRef()
+        _wx_shell_accel_ids[int(_help_cmd)] = "help"
+
+        def _on_accel_help(_evt):
+            try:
+                if frame.IsBeingDeleted():
+                    return
+                _dispatch("APP-HELP", frame, lifecycle, session_state)
+            except Exception:
+                pass
+
+        frame.Bind(wx.EVT_MENU, _on_accel_help, id=int(_help_cmd))
+        _accel_entries.append(
+            wx.AcceleratorEntry(wx.ACCEL_NORMAL, wx.WXK_F1, int(_help_cmd))
+        )
+        _wx_shell_accel_spec.append(
+            (int(wx.ACCEL_NORMAL), int(wx.WXK_F1), int(_help_cmd))
+        )
+        frame.SetAcceleratorTable(wx.AcceleratorTable(_accel_entries))
+    except Exception:
+        pass
+    frame._wx_shell_accel_ids = _wx_shell_accel_ids
+    frame._wx_shell_accel_spec = _wx_shell_accel_spec
+
     frame.Bind(wx.EVT_CLOSE, close)
     frame._wx_shell_close = close
+    _restore_main_window_state(wx, frame, notebook)
     refresh_labels()
     return frame, lifecycle, session_state
 
@@ -2614,16 +2742,43 @@ def _editor_action_factory(session_state):
             _require_pinned_session(current)
             if not current.path:
                 raise RuntimeError(t("editor.document_path_required"))
+            if not slurm or not callable(getattr(slurm, "sbatch", None)):
+                raise RuntimeError(t("editor.slurm_unavailable"))
+            # W30 CTRL-001/002: validate required fields before sending and
+            # require confirmed scheduler acceptance/job ID. Template
+            # partition/account rules come from provider config, never
+            # hardcoded values.
+            from hpc_gui.services.job_submit_cancel import (
+                submit_result_status,
+                validate_submit_request,
+            )
+
+            try:
+                _profile = (session_state.get("session") or {}).get("profile") or {}
+                _prov = _profile.get("provider_template") if isinstance(_profile, dict) else None
+                _prov_cfg = _prov if isinstance(_prov, dict) else (_profile if isinstance(_profile, dict) else None)
+            except Exception:
+                _prov_cfg = None
+            _content = getattr(current, "content", None)
+            _errors = validate_submit_request(
+                str(current.path),
+                _content if isinstance(_content, str) else None,
+                provider_config=_prov_cfg if isinstance(_content, str) else None,
+            )
+            if _errors:
+                raise RuntimeError("Submission validation failed: " + "; ".join(_errors))
             if current.is_local:
-                if not files or not slurm:
+                if not files:
                     raise RuntimeError(t("editor.upload_or_slurm_unavailable"))
                 remote_path = str(PurePosixPath("~") / Path(current.path).name)
                 files.upload(current.path, remote_path)
-                slurm.sbatch(remote_path)
-            elif not slurm:
-                raise RuntimeError(t("editor.slurm_unavailable"))
+                _output = slurm.sbatch(remote_path)
             else:
-                slurm.sbatch(current.path)
+                _output = slurm.sbatch(current.path)
+            _status, _detail = submit_result_status(str(_output or ""))
+            if _status != "SUCCESS":
+                raise RuntimeError(f"Submission failed: {_detail}")
+            return _output
 
         def run(current):
             _require_pinned_session(current)
@@ -3122,7 +3277,22 @@ def _remote_files_callbacks(session_state, parent, lifecycle):
         slurm = _resolve_slurm()
         if not slurm or not callable(getattr(slurm, "sbatch", None)):
             raise RuntimeError(t("jobs.slurm_unavailable"))
-        return slurm.sbatch(path)
+        # W30 CTRL-001/002: required-field validation before sending and
+        # confirmed scheduler acceptance afterwards. Provider template rules
+        # are capability/config driven via _resolve_provider_config().
+        from hpc_gui.services.job_submit_cancel import (
+            submit_result_status,
+            validate_submit_request,
+        )
+
+        _errors = validate_submit_request(str(path or ""), None, provider_config=None)
+        if _errors:
+            raise RuntimeError("Submission validation failed: " + "; ".join(_errors))
+        _output = slurm.sbatch(path)
+        _status, _detail = submit_result_status(str(_output or ""))
+        if _status != "SUCCESS":
+            raise RuntimeError(f"Submission failed: {_detail}")
+        return _output
 
     def _editor(path, content="", request_id=None):
         try:
@@ -3525,6 +3695,9 @@ def _connection_callbacks(session_state, parent, lifecycle):
                 dirs_panel._wx_dirs_rebind(session_state)
         except Exception:
             pass
+        # W55 A1 (HPC-W10-GJ2-030): the shell status bar is the canonical
+        # connection indicator; reflect the new session immediately.
+        _update_shell_status_text(parent, session_state)
 
     def on_disconnected(session):
         # Graceful/transport-loss teardown (CONN-004/TODO-007): drop the dead
@@ -3559,6 +3732,9 @@ def _connection_callbacks(session_state, parent, lifecycle):
         # W25 XFER-013: invalidate in-flight remote transfers predictably on
         # disconnect instead of leaving them parked on a dead transport.
         _cancel_transfer_sessions(session_state)
+        # W55 A1 (HPC-W10-GJ2-030): drop the stale profile from the shell
+        # status bar the moment the session is gone.
+        _update_shell_status_text(parent, session_state)
 
     return {"profiles": profiles, "lifecycle": lifecycle, "on_connected": on_connected, "on_disconnected": on_disconnected}
 
@@ -3629,6 +3805,149 @@ def _select_embedded_page(session_state, parent, key: str) -> bool:
         return False
 
 
+def run_wx_update_check(parent) -> None:
+    """Authoritative wx update-check controller (W41 UPDATER-ROUTE-001/002).
+
+    Single shared implementation for the visible ``Check for Updates`` menu
+    action (``APP-UPDATE-CHECK`` dispatch), the shell ``_on_update`` handler,
+    and any other manual update-menu path. Opens the checking dialog and
+    always starts the real update-check worker so the dialog transitions
+    from ``CHECKING`` to ``UP_TO_DATE``, ``UPDATE_AVAILABLE`` (or manual
+    install fallback), or ``FAILED``. Opening a checking dialog without
+    starting the worker is forbidden.
+    """
+    import threading
+
+    import wx
+
+    from hpc_gui.core.i18n import t as _t
+
+    try:
+        from hpc_gui.wx_updater_view import (
+            STATE_CHECKING,
+            WxUpdateDialog,
+        )
+    except Exception:
+        raise
+    dlg = WxUpdateDialog(parent, None)
+    dlg._build_for_state(STATE_CHECKING)
+    dlg.dlg.Show()
+
+    def _alive(frame) -> bool:
+        try:
+            if frame is None:
+                return False
+            import wx as _wx
+
+            if not _wx.Window.FindWindowById(frame.GetId()):
+                return False
+        except Exception:
+            return False
+        return True
+
+    def worker():
+        try:
+            from hpc_gui.services.app_updater import (
+                AUTOMATIC_INSTALL_STRATEGIES,
+                get_latest_release,
+                is_newer_version,
+            )
+            from hpc_gui.core.platform import current_os
+            from hpc_gui import __version__ as cur_ver2
+
+            release = get_latest_release(timeout=10)
+
+            def on_done():
+                if not _alive(parent):
+                    try:
+                        dlg.Destroy()
+                    except Exception:
+                        pass
+                    return
+                try:
+                    from hpc_gui.wx_updater_view import (
+                        STATE_FAILED as _FAILED,
+                        STATE_UPDATE_AVAILABLE as _AVAIL,
+                        STATE_UP_TO_DATE as _UPTODATE,
+                    )
+
+                    if not is_newer_version(release.version, cur_ver2):
+                        dlg._build_for_state(_UPTODATE)
+                        return
+                    try:
+                        from hpc_gui.services import app_updater as _au
+
+                        macos_ok = not (
+                            release.install_strategy == "macos-bundle"
+                            and release.security_status != _au.SECURITY_SIGNED
+                        )
+                    except Exception:
+                        macos_ok = True
+                    if (
+                        release.install_strategy not in AUTOMATIC_INSTALL_STRATEGIES
+                        or not macos_ok
+                    ):
+                        import webbrowser
+
+                        msg = (
+                            _t("updates.manual_install").format(version=release.version)
+                            if _t("updates.manual_install") != "[updates.manual_install]"
+                            else f"Update {release.version} requires manual install."
+                        )
+                        if current_os() == "macos":
+                            try:
+                                sec_key = {
+                                    _au.SECURITY_UNSIGNED: "updates.security_unsigned_mac",
+                                    _au.SECURITY_SIGNED: "updates.security_signed_mac",
+                                    _au.SECURITY_UNKNOWN: "updates.security_unknown_mac",
+                                }.get(release.security_status, "updates.security_unknown_mac")
+                                msg += "\n\n" + _t(sec_key)
+                            except Exception:
+                                pass
+                        wx.MessageBox(msg, _t("updates.title"), wx.OK | wx.ICON_INFORMATION, parent)
+                        try:
+                            webbrowser.open(release.zip_url or release.html_url)
+                        except Exception:
+                            pass
+                        try:
+                            dlg.Destroy()
+                        except Exception:
+                            pass
+                        return
+                    dlg.release = release
+                    dlg._total = getattr(release, "size", None)
+                    try:
+                        from hpc_gui.wx_updater_view import _parse_whats_new
+
+                        dlg._whats_new = _parse_whats_new(getattr(release, "body", ""))
+                    except Exception:
+                        pass
+                    dlg._build_for_state(_AVAIL)
+                except Exception as exc2:
+                    dlg._error_message = str(exc2)
+                    dlg._error_details = f"{type(exc2).__name__}: {exc2}"
+                    dlg._build_for_state(_FAILED)
+
+            wx.CallAfter(on_done)
+        except Exception as exc:
+            def on_err(exc=exc):
+                if not _alive(parent):
+                    try:
+                        dlg.Destroy()
+                    except Exception:
+                        pass
+                    return
+                from hpc_gui.wx_updater_view import STATE_FAILED as _FAILED2
+
+                dlg._error_message = str(exc)
+                dlg._error_details = f"{type(exc).__name__}: {exc}"
+                dlg._build_for_state(_FAILED2)
+
+            wx.CallAfter(on_err)
+
+    threading.Thread(target=worker, daemon=True).start()
+
+
 def _dispatch(command_id: str, parent=None, lifecycle=None, session_state=None) -> None:
     if command_id == "APP-HELP":
         from hpc_gui.wx_help import show_help
@@ -3637,27 +3956,27 @@ def _dispatch(command_id: str, parent=None, lifecycle=None, session_state=None) 
     elif command_id == "APP-SETTINGS":
         from hpc_gui.wx_settings_view import show_settings
         try:
-            show_settings(parent=parent)
+            # W37 SETTINGS-PERSIST-001: inject the real settings/profile
+            # state plus a real persistence callback. Apply without
+            # persistence is forbidden.
+            from hpc_gui.wx_settings import build_model_from_storage, persist_model_snapshot
+            _model = build_model_from_storage(
+                apply=lambda snapshot: persist_model_snapshot(snapshot),
+            )
+            show_settings(parent=parent, model=_model)
         except Exception as exc:
             # W02 ERROR-GOV: a settings failure must be visible, never silent.
             report_wx_action_error(parent, area="SETTINGS", message_key="settings.open_failed", exc=exc)
     elif command_id == "APP-UPDATE-CHECK":
-        # Reuse update flow – find frame from parent if needed
+        # W41 UPDATER-ROUTE-001/002: the visible menu action shares the single
+        # authoritative update-check controller so CHECKING always reaches
+        # UP_TO_DATE / UPDATE_AVAILABLE / FAILED via the real service.
+        # WxUpdateDialog is the canonical owner for this branch (W02 TRACE).
         try:
-            # Try to find shell frame via parent chain; fallback to parent
-            frame = parent
-            # attempt to call _on_update via closure? Instead directly trigger updater dialog
-            if frame and hasattr(frame, "_wx_shell_menubar"):
-                # Use same logic as _on_update but we have no closure; just show updater view
-                from hpc_gui.wx_updater_view import WxUpdateDialog, STATE_CHECKING
-                dlg = WxUpdateDialog(frame, None)
-                dlg._build_for_state(STATE_CHECKING)
-                dlg.dlg.Show()
-            else:
-                from hpc_gui.wx_updater_view import WxUpdateDialog, STATE_CHECKING
-                dlg = WxUpdateDialog(parent, None)
-                dlg._build_for_state(STATE_CHECKING)
-                dlg.dlg.Show()
+            from hpc_gui.wx_updater_view import WxUpdateDialog as _WxUpdateDialogOwner
+
+            _ = _WxUpdateDialogOwner
+            run_wx_update_check(parent)
         except Exception as exc:
             # W02 ERROR-GOV: an updater failure must be visible, never silent.
             report_wx_action_error(parent, area="UPDATE", message_key="updates.open_failed", exc=exc)
@@ -3693,7 +4012,7 @@ def _dispatch(command_id: str, parent=None, lifecycle=None, session_state=None) 
             report_wx_action_error(parent, area="PLUGIN", message_key="plugins.open_failed", exc=exc)
     elif command_id == "PLUGIN-REQUEST":
         try:
-            from hpc_gui.ui.dialogs.plugin_manager_dialog import PLUGIN_REQUEST_URL
+            from hpc_gui.services.plugin_request import PLUGIN_REQUEST_URL
             import webbrowser
             request_error = None
             try:

@@ -1,0 +1,489 @@
+{
+ "spec_profile_id": "HPC",
+ "protocol_revision": 2,
+ "wave_id": "W29",
+ "wave_spec_revision": "sha256:4372e17db6ff203dc60672ce4f72f254953ee193c46970615cf5e4d6bd85e114",
+ "status": "ACCEPTANCE_GREEN",
+ "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888",
+ "closure_sha": null,
+ "dependency_validation": {
+  "dependencies": []
+ },
+ "requirements": [
+  {
+   "requirement_id": "HPC-W07-OUT-001",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/services/selected_job_context.py",
+    "src/hpc_gui/wx_jobs.py"
+   ],
+   "test_nodes": [
+    "tests/test_w29_job_outputs.py::test_w29_details_identity_generation_monotonic"
+   ],
+   "expected_semantics": "identity captured before async fetch; generation monotonic",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W29_WAVE_REPORT.md",
+    "artifacts/opencode/wave_W29/WAVE_W29_AUDIT_REPORT.md",
+    ".tmp/w29-repair/w29-focused.txt",
+    "tests/test_w29_job_outputs.py"
+   ],
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  },
+  {
+   "requirement_id": "HPC-W07-OUT-002",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/services/selected_job_context.py",
+    "src/hpc_gui/wx_jobs.py"
+   ],
+   "test_nodes": [
+    "tests/test_w29_job_outputs.py::test_w29_selection_change_invalidates_stale_output"
+   ],
+   "expected_semantics": "stale response discarded when selection or session changes",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W29_WAVE_REPORT.md",
+    "artifacts/opencode/wave_W29/WAVE_W29_AUDIT_REPORT.md",
+    ".tmp/w29-repair/w29-focused.txt",
+    "tests/test_w29_job_outputs.py"
+   ],
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  },
+  {
+   "requirement_id": "HPC-W07-OUT-003",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/services/output_follower.py"
+   ],
+   "test_nodes": [
+    "tests/test_w29_job_outputs.py::test_w29_missing_file_is_waiting_not_crash"
+   ],
+   "expected_semantics": "absent output is a visible normal waiting state without crash",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W29_WAVE_REPORT.md",
+    "artifacts/opencode/wave_W29/WAVE_W29_AUDIT_REPORT.md",
+    ".tmp/w29-repair/w29-focused.txt",
+    "tests/test_w29_job_outputs.py"
+   ],
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  },
+  {
+   "requirement_id": "HPC-W07-OUT-004",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/services/output_follower.py"
+   ],
+   "test_nodes": [
+    "tests/test_w29_job_outputs.py::test_w29_large_output_remains_bounded"
+   ],
+   "expected_semantics": "large log stays bounded and responsive via retained tail",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W29_WAVE_REPORT.md",
+    "artifacts/opencode/wave_W29/WAVE_W29_AUDIT_REPORT.md",
+    ".tmp/w29-repair/w29-focused.txt",
+    "tests/test_w29_job_outputs.py"
+   ],
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  },
+  {
+   "requirement_id": "HPC-W07-OUT-005",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/services/files_ssh.py",
+    "src/hpc_gui/services/output_follower.py"
+   ],
+   "test_nodes": [
+    "tests/test_w29_job_outputs.py::test_w29_ssh_read_text_replaces_invalid_bytes",
+    "tests/test_w29_job_outputs.py::test_w29_invalid_encoding_never_crashes_follower"
+   ],
+   "expected_semantics": "decode errors render with replacement and never crash the view",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W29_WAVE_REPORT.md",
+    "artifacts/opencode/wave_W29/WAVE_W29_AUDIT_REPORT.md",
+    ".tmp/w29-repair/w29-focused.txt",
+    "tests/test_w29_job_outputs.py"
+   ],
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  },
+  {
+   "requirement_id": "HPC-W07-OUT-006",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/services/output_channel_resolver.py",
+    "src/hpc_gui/wx_jobs.py"
+   ],
+   "test_nodes": [
+    "tests/test_w29_job_outputs.py::test_w29_stdout_stderr_channels_distinguishable"
+   ],
+   "expected_semantics": "job output surface renders stdout and stderr content",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W29_WAVE_REPORT.md",
+    "artifacts/opencode/wave_W29/WAVE_W29_AUDIT_REPORT.md",
+    ".tmp/w29-repair/w29-focused.txt",
+    "tests/test_w29_job_outputs.py"
+   ],
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  },
+  {
+   "requirement_id": "HPC-W07-OUT-007",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/services/output_channel_resolver.py",
+    "src/hpc_gui/wx_jobs.py"
+   ],
+   "test_nodes": [
+    "tests/test_w29_job_outputs.py::test_w29_stdout_stderr_channels_distinguishable"
+   ],
+   "expected_semantics": "streams are visibly distinguishable with distinct tabs and content",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W29_WAVE_REPORT.md",
+    "artifacts/opencode/wave_W29/WAVE_W29_AUDIT_REPORT.md",
+    ".tmp/w29-repair/w29-focused.txt",
+    "tests/test_w29_job_outputs.py"
+   ],
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  },
+  {
+   "requirement_id": "HPC-W07-OUT-008",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_jobs.py",
+    "src/hpc_gui/core/i18n.py"
+   ],
+   "test_nodes": [
+    "tests/test_w29_job_outputs.py::test_w29_output_action_labels_identify_stream"
+   ],
+   "expected_semantics": "action labels identify the stream being opened",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W29_WAVE_REPORT.md",
+    "artifacts/opencode/wave_W29/WAVE_W29_AUDIT_REPORT.md",
+    ".tmp/w29-repair/w29-focused.txt",
+    "tests/test_w29_job_outputs.py"
+   ],
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  },
+  {
+   "requirement_id": "HPC-W07-OUT-009",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/services/output_follower.py",
+    "src/hpc_gui/wx_jobs.py"
+   ],
+   "test_nodes": [
+    "tests/test_w29_job_outputs.py::test_w29_missing_file_is_waiting_not_crash"
+   ],
+   "expected_semantics": "absent channel shows a normal visible waiting state",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W29_WAVE_REPORT.md",
+    "artifacts/opencode/wave_W29/WAVE_W29_AUDIT_REPORT.md",
+    ".tmp/w29-repair/w29-focused.txt",
+    "tests/test_w29_job_outputs.py"
+   ],
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  },
+  {
+   "requirement_id": "HPC-W07-OUT-010",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/services/output_follower.py",
+    "src/hpc_gui/wx_jobs.py"
+   ],
+   "test_nodes": [
+    "tests/test_w29_job_outputs.py::test_w29_permission_denied_is_distinct_from_missing"
+   ],
+   "expected_semantics": "permission denial is a per-channel error distinct from waiting",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W29_WAVE_REPORT.md",
+    "artifacts/opencode/wave_W29/WAVE_W29_AUDIT_REPORT.md",
+    ".tmp/w29-repair/w29-focused.txt",
+    "tests/test_w29_job_outputs.py"
+   ],
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  },
+  {
+   "requirement_id": "HPC-W07-OUT-011",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/services/output_follower.py",
+    "src/hpc_gui/wx_jobs.py"
+   ],
+   "test_nodes": [
+    "tests/test_w29_job_outputs.py::test_w29_live_tail_appends_exactly_once_ordered"
+   ],
+   "expected_semantics": "live tail appends ordered exactly once without duplication",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W29_WAVE_REPORT.md",
+    "artifacts/opencode/wave_W29/WAVE_W29_AUDIT_REPORT.md",
+    ".tmp/w29-repair/w29-focused.txt",
+    "tests/test_w29_job_outputs.py"
+   ],
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  },
+  {
+   "requirement_id": "HPC-W07-OUT-012",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/services/output_follower.py"
+   ],
+   "test_nodes": [
+    "tests/test_w29_job_outputs.py::test_w29_truncation_and_rotation_reset_cleanly"
+   ],
+   "expected_semantics": "truncation and rotation reset cleanly to fresh content",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W29_WAVE_REPORT.md",
+    "artifacts/opencode/wave_W29/WAVE_W29_AUDIT_REPORT.md",
+    ".tmp/w29-repair/w29-focused.txt",
+    "tests/test_w29_job_outputs.py"
+   ],
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  },
+  {
+   "requirement_id": "HPC-W07-OUT-013",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/services/files_ssh.py",
+    "src/hpc_gui/services/output_follower.py"
+   ],
+   "test_nodes": [
+    "tests/test_w29_job_outputs.py::test_w29_utf8_boundaries_do_not_corrupt",
+    "tests/test_w29_job_outputs.py::test_w29_ssh_read_text_replaces_invalid_bytes"
+   ],
+   "expected_semantics": "multi-byte boundaries render intact without corruption",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W29_WAVE_REPORT.md",
+    "artifacts/opencode/wave_W29/WAVE_W29_AUDIT_REPORT.md",
+    ".tmp/w29-repair/w29-focused.txt",
+    "tests/test_w29_job_outputs.py"
+   ],
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  },
+  {
+   "requirement_id": "HPC-W07-OUT-014",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/services/output_follower.py"
+   ],
+   "test_nodes": [
+    "tests/test_w29_job_outputs.py::test_w29_large_output_remains_bounded"
+   ],
+   "expected_semantics": "large output remains responsive and bounded",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W29_WAVE_REPORT.md",
+    "artifacts/opencode/wave_W29/WAVE_W29_AUDIT_REPORT.md",
+    ".tmp/w29-repair/w29-focused.txt",
+    "tests/test_w29_job_outputs.py"
+   ],
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  },
+  {
+   "requirement_id": "HPC-W07-OUT-015",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/services/output_follower.py",
+    "src/hpc_gui/wx_jobs.py"
+   ],
+   "test_nodes": [
+    "tests/test_w29_job_outputs.py::test_w29_close_cancels_safely_and_ignores_late_callbacks"
+   ],
+   "expected_semantics": "close cancels worker and timer safely; late callbacks ignored",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W29_WAVE_REPORT.md",
+    "artifacts/opencode/wave_W29/WAVE_W29_AUDIT_REPORT.md",
+    ".tmp/w29-repair/w29-focused.txt",
+    "tests/test_w29_job_outputs.py"
+   ],
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  },
+  {
+   "requirement_id": "HPC-W07-OUT-016",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/services/selected_job_context.py",
+    "src/hpc_gui/wx_jobs.py"
+   ],
+   "test_nodes": [
+    "tests/test_w29_job_outputs.py::test_w29_selection_change_invalidates_stale_output"
+   ],
+   "expected_semantics": "selection and session changes invalidate stale results",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W29_WAVE_REPORT.md",
+    "artifacts/opencode/wave_W29/WAVE_W29_AUDIT_REPORT.md",
+    ".tmp/w29-repair/w29-focused.txt",
+    "tests/test_w29_job_outputs.py"
+   ],
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  },
+  {
+   "requirement_id": "HPC-W07-OUT-017",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_jobs.py",
+    "src/hpc_gui/services/selected_job_context.py"
+   ],
+   "test_nodes": [
+    "tests/test_w29_job_outputs.py::test_w29_selection_change_invalidates_stale_output",
+    "tests/test_w29_job_outputs.py::test_w29_details_identity_generation_monotonic"
+   ],
+   "expected_semantics": "reconnect refresh reopens the intended identity with cleared followers",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W29_WAVE_REPORT.md",
+    "artifacts/opencode/wave_W29/WAVE_W29_AUDIT_REPORT.md",
+    ".tmp/w29-repair/w29-focused.txt",
+    "tests/test_w29_job_outputs.py"
+   ],
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  },
+  {
+   "requirement_id": "HPC-W07-OUT-018",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/wx_jobs.py"
+   ],
+   "test_nodes": [
+    "tests/test_w29_job_outputs.py::test_w29_stdout_stderr_channels_distinguishable"
+   ],
+   "expected_semantics": "completed final output remains viewable",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W29_WAVE_REPORT.md",
+    "artifacts/opencode/wave_W29/WAVE_W29_AUDIT_REPORT.md",
+    ".tmp/w29-repair/w29-focused.txt",
+    "tests/test_w29_job_outputs.py"
+   ],
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  },
+  {
+   "requirement_id": "HPC-W07-OUT-019",
+   "mandatory": true,
+   "disposition": "ALLOWED_DEFERRED",
+   "implementation_owners": [
+    "src/hpc_gui/wx_jobs.py"
+   ],
+   "test_nodes": [],
+   "expected_semantics": "real-job acceptance path verified against authorized lab when available",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W29_WAVE_REPORT.md",
+    "artifacts/opencode/wave_W29/WAVE_W29_AUDIT_REPORT.md",
+    ".tmp/w29-repair/w29-focused.txt",
+    "tests/test_w29_job_outputs.py"
+   ],
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888",
+   "deferred_allowed": true,
+   "deferral_reason": "EXTERNAL_BLOCKED: keyless lab Permission denied (publickey) BatchMode; all safe local/package/GUI checks complete; no mock substitution"
+  }
+ ],
+ "tests": [
+  {
+   "node": "tests/test_w29_job_outputs.py",
+   "command": "python -m pytest -q tests/test_w29_job_outputs.py",
+   "requirement_ids": [
+    "HPC-W07-OUT-001",
+    "HPC-W07-OUT-002",
+    "HPC-W07-OUT-003",
+    "HPC-W07-OUT-004",
+    "HPC-W07-OUT-005",
+    "HPC-W07-OUT-006",
+    "HPC-W07-OUT-007",
+    "HPC-W07-OUT-008",
+    "HPC-W07-OUT-009",
+    "HPC-W07-OUT-010",
+    "HPC-W07-OUT-011",
+    "HPC-W07-OUT-012",
+    "HPC-W07-OUT-013",
+    "HPC-W07-OUT-014",
+    "HPC-W07-OUT-015",
+    "HPC-W07-OUT-016",
+    "HPC-W07-OUT-017",
+    "HPC-W07-OUT-018"
+   ],
+   "exit_code": 0,
+   "passed": 16,
+   "failed": 0,
+   "skipped": 0,
+   "xfailed": 0,
+   "xpassed": 0,
+   "environment": "Windows 11 Python 3.12.4 wxPython 4.3.1 HEAD 3e9635ba repair rerun",
+   "timestamp": "2026-09-24T14:00:04Z",
+   "evidence_path": ".tmp/w29-repair/w29-focused.txt",
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  }
+ ],
+ "gui_actions": [
+  {
+   "status": "FULL",
+   "source_binding": "src/hpc_gui/wx_jobs.py build_jobs_panel outputs worker with output_channels and per-channel status labels",
+   "runtime_test_node": "tests/test_w29_job_outputs.py::test_w29_gui_stdout_stderr_distinguishable_with_content",
+   "observed_readback": "real wx frames: distinct stdout/stderr tabs with STDOUT-LINE-1 and STDERR-LINE-1 content readback plus Output/Error tab titles",
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  },
+  {
+   "status": "FULL",
+   "source_binding": "src/hpc_gui/wx_jobs.py _done_outputs per-channel status_error rendering from follower PermissionError",
+   "runtime_test_node": "tests/test_w29_job_outputs.py::test_w29_gui_missing_vs_permission_distinct",
+   "observed_readback": "same-frame readback: stdout Waiting label vs stderr Error label, labels differ",
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  },
+  {
+   "status": "FULL",
+   "source_binding": "src/hpc_gui/wx_jobs.py outputs refresh with follower text and teardown path",
+   "runtime_test_node": "tests/test_w29_job_outputs.py::test_w29_gui_live_tail_ordered_and_close_cancels",
+   "observed_readback": "ordered 5-line live tail positions sorted unique plus clean teardown with zero escaped exceptions",
+   "candidate_sha": "3e9635ba1cf0255d5a09f370e91d1ddb73cef888"
+  }
+ ],
+ "resources": [],
+ "artifacts": [
+  {
+   "path": "docs/wave-reports/v2/opencode/W29_WAVE_REPORT.md",
+   "identity": "canonical W29 wave report at candidate 3e9635ba"
+  },
+  {
+   "path": "artifacts/opencode/wave_W29/WAVE_W29_AUDIT_REPORT.md",
+   "identity": "fresh independent W29 audit PASS at candidate 3e9635ba"
+  },
+  {
+   "path": "tests/test_w29_job_outputs.py",
+   "identity": "new W29 tests, 16 tests at candidate"
+  },
+  {
+   "path": ".tmp/w29-repair/w29-focused.txt",
+   "identity": "focused 16 passed evidence at candidate"
+  }
+ ],
+ "review_passes": {
+  "diff_check": "PASS",
+  "claim_source_review": "PASS",
+  "independent_audit": "PASS"
+ },
+ "contradiction_scan": {
+  "unresolved": []
+ },
+ "blockers": [],
+ "deferred_items": [
+  {
+   "item_id": "HPC-W07-OUT-019",
+   "reason": "EXTERNAL_BLOCKED: keyless lab Permission denied (publickey) BatchMode; accepted residual per audit",
+   "requirement_id": "HPC-W07-OUT-019"
+  }
+ ],
+ "validator_result": {
+  "state": "ACCEPTANCE_GREEN",
+  "reason": "16 focused green at candidate plus fresh independent audit PASS plus diff check clean"
+ }
+}

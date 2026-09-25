@@ -6,7 +6,15 @@ from hpc_gui.core.paths import app_data_dir
 
 _LANG: dict = {}
 _CURRENT = "tr"
+_FALLBACK: dict = {}
 _LANGUAGE_LISTENERS = set()
+
+#: Canonical user-selectable UI languages (HPC-W09-UISTATE-001).
+#: The wx shell exposes exactly these via the menubar language menu and the
+#: compact language popup (radio items, current language checked). Any other
+#: value is rejected by :func:`load_language`/:func:`set_language` and never
+#: persisted.
+SUPPORTED_LANGUAGES: tuple[str, ...] = ("en", "tr")
 
 
 def subscribe_language_change(callback) -> None:
@@ -16,13 +24,29 @@ def subscribe_language_change(callback) -> None:
 def unsubscribe_language_change(callback) -> None:
     _LANGUAGE_LISTENERS.discard(callback)
 
+def _bundle_path(lang: str):
+    from pathlib import Path as _Path
+
+    base = _Path(__file__).resolve().parent.parent
+    return base / "i18n" / f"{lang}.json"
+
+
+def _fallback_lang(lang: str) -> str:
+    return "en" if lang != "en" else "tr"
+
+
 def load_language(lang: str = "tr") -> None:
-    global _LANG, _CURRENT
-    base = Path(__file__).resolve().parent.parent
-    path = base / "i18n" / f"{lang}.json"
-    with open(path, "r", encoding="utf-8") as f:
+    if lang not in SUPPORTED_LANGUAGES:
+        raise ValueError(f"Unsupported language {lang!r}; supported: {list(SUPPORTED_LANGUAGES)}")
+    global _LANG, _CURRENT, _FALLBACK
+    with open(_bundle_path(lang), "r", encoding="utf-8") as f:
         _LANG = json.load(f)
     _CURRENT = lang
+    try:
+        with open(_bundle_path(_fallback_lang(lang)), "r", encoding="utf-8") as f:
+            _FALLBACK = json.load(f)
+    except Exception:
+        _FALLBACK = {}
 
 
 def current_language() -> str:
@@ -30,7 +54,17 @@ def current_language() -> str:
 
 
 def set_language(lang: str) -> None:
-    """Set UI language and persist it under ~/.truba_slurm_gui/language.json."""
+    """Set UI language and persist it under ~/.truba_slurm_gui/language.json.
+
+    Effect model (HPC-W09-UISTATE-003): the switch is **live** — every
+    subscriber registered via :func:`subscribe_language_change` is notified
+    synchronously, and wx views relabel in place without restart. No
+    restart-required language path exists. Unsupported values raise
+    ``ValueError`` before any state change or persistence
+    (HPC-W09-UISTATE-002/004 negative path).
+    """
+    if lang not in SUPPORTED_LANGUAGES:
+        raise ValueError(f"Unsupported language {lang!r}; supported: {list(SUPPORTED_LANGUAGES)}")
     load_language(lang)
     for callback in tuple(_LANGUAGE_LISTENERS):
         try:
@@ -71,13 +105,33 @@ def load_saved_language(default: str = "tr") -> str:
     load_language(lang)
     return lang
 
+def _lookup(bundle: dict, key: str):
+    cur = bundle
+    for part in key.split("."):
+        if not isinstance(cur, dict) or part not in cur:
+            raise KeyError(key)
+        cur = cur[part]
+    if not isinstance(cur, str):
+        raise KeyError(key)
+    return cur
+
+
 def t(key: str) -> str:
-    cur = _LANG
+    """Translate *key*; fall back to the other shipped language before ``[key]``.
+
+    Missing-key model (HPC-W09-UISTATE-006): a key absent from the current
+    language but present in the other shipped bundle resolves to that
+    fallback string, so the UI never leaks a raw ``[dotted.key]`` for a
+    merely untranslated string. ``[key]`` is returned only when the key is
+    missing from **both** shipped bundles (a development-time key error).
+    """
     try:
-        for part in key.split("."):
-            cur = cur[part]
-        return cur if isinstance(cur, str) else f"[{key}]"
-    except Exception:
+        return _lookup(_LANG, key)
+    except KeyError:
+        pass
+    try:
+        return _lookup(_FALLBACK, key)
+    except KeyError:
         return f"[{key}]"
 
 

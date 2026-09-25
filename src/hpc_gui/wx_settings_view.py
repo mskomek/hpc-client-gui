@@ -16,6 +16,10 @@ def _build_settings(parent, model: WxSettingsModel | None = None, *, settings=No
         raise RuntimeError("wxPython is not installed") from exc
 
     model = model or WxSettingsModel(settings, apply=apply)
+    if apply is not None and getattr(model, "apply_callback", None) is None:
+        # SETTINGS-PERSIST-001: a caller-supplied persistence callback must
+        # not be silently dropped when a prebuilt model is injected.
+        model.apply_callback = apply
     # Spec §96: Settings 840×620 resizable, §4 dialog body 16px, §98 label width 180-240px
     host, finish = make_host(parent, title=t("settings.dialog_title"), size=(840, 620), embedded=embedded)
     panel = wx.Panel(host)
@@ -87,15 +91,29 @@ def _build_settings(parent, model: WxSettingsModel | None = None, *, settings=No
                 if pending:
                     names = ", ".join(name for name, _exc in pending)
                     raise RuntimeError(f"settings rejected ({names}): {pending[0][1]}") from pending[0][1]
-                model.apply()
-                # W25 TODO-013: persist the checksum checkbox to the stored
-                # verification setting so it is a real control, not a
-                # decorative toggle.  Failures surface, never silent-OK.
+                snapshot = model.apply()
+                # W37 SETTINGS-PERSIST-002: Apply reports success only after
+                # the underlying config write succeeds. When the model
+                # carries a real persistence callback (shell-injected) the
+                # callback already persisted; otherwise persist the snapshot
+                # here so Apply-without-persistence is impossible.
                 try:
-                    from hpc_gui.wx_settings import persist_transfer_checksum_to_storage
-                    persist_transfer_checksum_to_storage(model)
+                    if getattr(model, "apply_callback", None) is None:
+                        from hpc_gui.wx_settings import persist_model_snapshot
+                        persist_model_snapshot(snapshot)
+                    else:
+                        # Callback path already persisted; keep the legacy
+                        # checksum bridge as a second write only when it was
+                        # not covered (persist_model_snapshot covers it, a
+                        # minimal custom callback may not).
+                        try:
+                            from hpc_gui.wx_settings import persist_transfer_checksum_to_storage
+                            persist_transfer_checksum_to_storage(model)
+                        except Exception:
+                            from hpc_gui.wx_settings import persist_model_snapshot as _persist
+                            _persist(snapshot)
                 except Exception as exc:
-                    raise RuntimeError(f"settings persist rejected (transfer_checksum): {exc}") from exc
+                    raise RuntimeError(f"settings persist rejected: {exc}") from exc
                 wx.CallAfter(lambda: wx.MessageBox(t("common.ok"), t("settings.dialog_title"), wx.OK | wx.ICON_INFORMATION, host) if not state["closed"] else None)
             except Exception as exc:
                 # Visible, diagnosable error with a stable code; "OK" is only
