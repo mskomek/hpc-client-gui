@@ -247,6 +247,49 @@ real packaging-build verification (ships-no-Qt bundle proof from the clean
 4 (candidate freeze + SHA-256 + manifest), and the fresh-independent audit
 remain OPEN. No new behavior-affecting edit; no test weakened.
 
+## Repair follow-up 4 (2026-09-25, HEAD `427b0a20`)
+
+Follow-up 3's "no PyInstaller candidate" premise is partly superseded by
+committed sibling evidence this repair verified rather than assumed:
+
+- `427b0a20` (`docs/decisions/V2_BUILD_ENVIRONMENT.md`, committed, not a W56
+  edit, not reverted) records: project `.venv` is Python 3.14.0 with
+  PyInstaller 6.22.2, and a system 3.14.0 exists for a fresh clean venv
+  (`uv venv -p 3.14` + `requirements-release.lock`). Re-verified live this
+  phase: `.venv/Scripts/python.exe --version` → `Python 3.14.0`,
+  `python -m PyInstaller --version` → `6.22.2`. The bare-`python`-on-PATH
+  3.12.4 observation in follow-up 3 therefore no longer blocks an on-pin
+  build; what remains is RUN-scope work (clean isolated build venv +
+  provenance + manifest), not a missing interpreter.
+- The same note records the current parallel run as serial dispatch (no
+  sibling executing while W56 runs). Lease authority is still
+  controller-owned under `.opencode/protocol/LOCAL_REAL_HPC_LAB.md`, so this
+  worker claims no exclusive LOCAL_REAL lease and executed no EXTERNAL
+  replay here; the serialization fact is recorded for the controller, not
+  treated as a self-granted lease.
+
+Fresh verification this repair (HEAD `427b0a20`, tree clean at entry):
+
+- Spec `ast.parse` OK x4; code-level Qt tokens: 0 in both GUI specs and the
+  linux/macos specs, 2 in `build/windows/hpc-client-cli.spec` line 40 only —
+  `excludes=["PySide6", "shiboken6"]` (Qt excluded from the bundle, correct).
+- `requirements-release.lock`: 0 Qt records; `requirements.txt` wx-only;
+  `src/hpc_gui/runtime.py`: `DEFAULT_GUI_RUNTIME = "wx"`.
+- Focused suites at final HEAD (`test_qt_removal_gate` +
+  `test_wave0_unicode_baseline` + `test_wheel_packaging`): 61 passed,
+  0 failed. `git diff --check` clean.
+- `git diff de4af82d..HEAD -- build/ requirements.txt
+  requirements-release.lock src/hpc_gui/runtime.py` is empty: all W56 source
+  verification carries over to the new HEAD.
+
+Blocker delta vs follow-up 3: source-level items unchanged RESOLVED;
+blocker 1's remaining item narrows to executing the on-pin clean build
+(now unblocked on interpreter availability); blockers 2 (Workstream E replay
+under controller-held exclusive lease), 4 (candidate freeze + SHA-256 +
+manifest), and the fresh-independent audit remain OPEN. No candidate
+built here (RUN scope + lease authority), nothing fabricated, no test
+weakened.
+
 ## Handoff
 
 - After the build verification (blocker 1) lands on a verified pin, the next W56 attempt must: re-capture baseline, execute full Workstream E replay with exclusive LOCAL_REAL lease (recovering the `down` compute first if two-node paths are required), build exactly one candidate with full provenance + SHA-256 + manifest, rerun affected focused tests, refresh this report, and return `READY_FOR_AUDIT` only when every owned requirement is IMPLEMENT with current truthful evidence. The wx-default flip (`4fb752ad`) and this repair's dependency/spec/support-text re-audit must not be reverted: both implement the durable product-owner decision.
