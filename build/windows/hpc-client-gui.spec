@@ -82,6 +82,11 @@ if _webview2_loader.is_file():
 
 excludes = [
     "_hpc_gui_perf_probe",
+    # W56 RUNTIME-DEPENDENCY-001: Qt is legacy-only, never shipped in the V2
+    # production bundle. PyInstaller follows the source-only Qt fallback import
+    # branch statically, so it must be excluded explicitly (CLI spec already does).
+    "PySide6",
+    "shiboken6",
 ]
 
 # Files that must never ship in production bundles. DevTools resources

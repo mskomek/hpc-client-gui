@@ -67,7 +67,7 @@ a = Analysis(
     hiddenimports=sorted(set(hiddenimports)),
     hookspath=[],
     runtime_hooks=[],
-    excludes=["_hpc_gui_perf_probe"],
+    excludes=["_hpc_gui_perf_probe", "PySide6", "shiboken6"],
     noarchive=False,
 )
 

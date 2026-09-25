@@ -67,6 +67,9 @@ binaries = []
 
 excludes = [
     "_hpc_gui_perf_probe",
+    # W56 RUNTIME-DEPENDENCY-001: Qt legacy-only, never shipped in V2 production.
+    "PySide6",
+    "shiboken6",
 ]
 
 # Files that must never ship in production bundles. DevTools resources exist
