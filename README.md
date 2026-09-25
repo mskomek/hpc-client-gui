@@ -327,7 +327,8 @@ report template live in
 
 * Python 3.14.x
 * Git
-* A desktop environment supported by PySide6
+* A desktop environment supported by wxPython (wxWidgets; V2 production
+  runtime — Qt/PySide6 is legacy-only and not required)
 
 Clone:
 

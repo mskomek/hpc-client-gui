@@ -8,11 +8,16 @@ relicensed under the HPC Client GUI license.
 
 ## Bundled runtime dependencies
 
+The V2 production runtime is wx (wxPython). Qt/PySide6 entries below are
+legacy-only (unadvertised `legacy-qt` extra, not shipped in the V2
+production package) per `docs/decisions/V2_RUNTIME_DECISION.md`.
+
 | Component | License | Notes |
 | --- | --- | --- |
-| PySide6 | LGPLv3 terms used by this project | Qt for Python bindings |
-| shiboken6 | LGPLv3 terms used by this project | CPython bindings generator for Qt (runtime support for PySide6) |
-| Qt libraries | Applicable Qt LGPL terms | Qt libraries distributed through PySide6 |
+| wxPython | wxWindows Library Licence | V2 production GUI runtime |
+| PySide6 (legacy-only) | LGPLv3 terms used by this project | Qt for Python bindings (legacy, not shipped in V2 production package) |
+| shiboken6 (legacy-only) | LGPLv3 terms used by this project | CPython bindings generator for Qt (legacy runtime support for PySide6) |
+| Qt libraries (legacy-only) | Applicable Qt LGPL terms | Qt libraries distributed through PySide6 (legacy, not shipped in V2 production package) |
 | xterm.js / @xterm/addon-fit | MIT | Vendored embedded-terminal assets; license and provenance are in `src/hpc_gui/assets/terminal/NOTICE.md` |
 | paramiko | LGPL-2.1+ | SSHv2 protocol implementation |
 | cryptography | Apache-2.0 / BSD | Cryptographic primitives used by paramiko |
@@ -37,11 +42,12 @@ bundled directly in `third_party_licenses/`:
   terminal assets in Windows and Linux packages.
 
 LGPL-covered components may be replaced or modified under the rights granted
-by the LGPL. The exact dependency and Qt runtime versions shipped in each
+by the LGPL. The exact dependency versions shipped in each
 binary release are recorded in the generated `THIRD_PARTY_VERSIONS.txt`
 manifest, and the machine-readable dependency inventory is in
-`SBOM.cdx.json`. Corresponding-source information for Qt and PySide6
-components is described in `QT_LGPL_SOURCE_OFFER.md`.
+`SBOM.cdx.json`. Corresponding-source information for the legacy-only Qt and PySide6
+components (source-checkout `legacy-qt` extra; not shipped in V2 production
+packages) is described in `QT_LGPL_SOURCE_OFFER.md`.
 
 ## License texts
 

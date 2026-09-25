@@ -117,10 +117,21 @@ class TestRepositoryBaseline:
         )
 
     @pytest.mark.contract
-    def test_pyside6_in_dependencies(self):
+    def test_wx_production_dependencies_match_runtime_decision(self):
+        # V2 runtime decision (docs/decisions/V2_RUNTIME_DECISION.md,
+        # RUNTIME-DEPENDENCY-001): wx is the V2 production runtime, Qt is
+        # legacy-only via the unadvertised `legacy-qt` extra and must not be
+        # a mandatory production dependency.
         pyproject = ROOT / "pyproject.toml"
         content = pyproject.read_text(encoding="utf-8")
-        assert "PySide6" in content, "PySide6 not in dependencies"
+        assert "wxPython" in content, "wxPython not in dependencies"
+        assert "legacy-qt" in content, "legacy-qt extra missing"
+        assert "PySide6" in content, "PySide6 legacy-qt extra missing"
+        mandatory = content.split("[project.optional-dependencies]")[0]
+        assert "PySide6" not in mandatory, (
+            "PySide6 must not be a mandatory production dependency "
+            "(legacy-qt extra only)"
+        )
 
     @pytest.mark.audit
     def test_i18n_files_exist(self):

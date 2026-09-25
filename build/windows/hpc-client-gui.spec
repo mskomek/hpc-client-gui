@@ -4,7 +4,6 @@
 from __future__ import annotations
 from pathlib import Path
 
-from PyInstaller.utils.hooks import collect_dynamic_libs
 import wx
 
 # PyInstaller provides SPECPATH in spec execution namespace.
@@ -60,23 +59,14 @@ THIRD_PARTY_LICENSES_DIR = REPO_ROOT / "third_party_licenses"
 if THIRD_PARTY_LICENSES_DIR.exists():
     datas.append((str(THIRD_PARTY_LICENSES_DIR), "third_party_licenses"))
 
-# W44 ARCH-PACKAGE-001 re-audit: the PySide6/QtWebEngine hidden imports below
-# ship intentionally as dual-runtime packaging (Qt surface + wx runtime both
-# supported). They are NOT stale compatibility imports: the Qt terminal
-# (WebEngine) and Qt dialogs remain first-class until the W56
-# runtime-cutover decision removes or retains Qt explicitly. Revisit only
-# when W56 decides; do not silently drop entries to "slim" the bundle.
+# W56 RUNTIME-DEPENDENCY-001 re-audit (V2 runtime decision
+# docs/decisions/V2_RUNTIME_DECISION.md): wx is the V2 production runtime and
+# Qt/PySide6 is legacy-only, not shipped in the V2 production package. The
+# PySide6/QtWebEngine hidden imports are therefore removed from the
+# production bundle; Qt remains reachable only via the unadvertised
+# `legacy-qt` extra in source checkouts, never from the packaged app.
 hiddenimports = sorted(
     {
-        "PySide6.QtCore",
-        "PySide6.QtGui",
-        "PySide6.QtSvg",
-        "PySide6.QtWidgets",
-        "PySide6.QtWebChannel",
-        "PySide6.QtWebEngineCore",
-        "PySide6.QtWebEngineWidgets",
-        "shiboken6",
-        "shiboken6.Shiboken",
         "hpc_gui.cli",
         "hpc_gui.cli.main",
         "hpc_gui.cli.session",
@@ -84,22 +74,21 @@ hiddenimports = sorted(
     }
 )
 
-binaries = collect_dynamic_libs("shiboken6")
+binaries = []
 _webview2_loader = Path(wx.__file__).resolve().parent / "WebView2Loader.dll"
 if _webview2_loader.is_file():
     # wxWidgets loads this DLL by bare name; keep it beside the PyInstaller DLL set.
     binaries.append((str(_webview2_loader), "."))
 
 excludes = [
-    "PySide6.scripts.deploy_lib",
     "_hpc_gui_perf_probe",
 ]
 
 # Files that must never ship in production bundles. DevTools resources
 # (72 MiB debug pak + 11 MiB standard pak) exist for browser debugging only;
-# the terminal WebView never loads them. Everything else — including
-# QtWebEngineCore itself, ICU data, and software OpenGL fallback — stays so
-# the GUI terminal keeps working everywhere.
+# the terminal WebView never loads them. Per the V2 runtime decision
+# (W56 RUNTIME-DEPENDENCY-001), QtWebEngine/Qt binaries must not ship in the
+# V2 production bundle: the wx terminal uses WebView2, not QtWebEngine.
 EXCLUDED_NAME_PATTERNS = (
     "qtwebengine_devtools_resources",
 )
