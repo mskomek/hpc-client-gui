@@ -424,3 +424,89 @@ Contradiction scan: report claims match executed commands (commit
 74 lifecycle, validator red). No GUI `FULL`/PACKAGE/EXTERNAL acceptance
 claimed beyond the stated replay + verification build. Nothing fabricated,
 no test weakened, no sibling scope touched.
+
+## Repair follow-up 6 (2026-09-25, repair phase, hypothesis `W56-candidate-freeze-clean-pin`)
+
+Controller handoff: target `W56`, phase `repair`, content_identity
+`d12d2330f79be8242d068748f5788553f3e07a27178f2661c6b14a1f36a6b455`
+(recorded verbatim; evidence below binds to the live Git identities stated
+here). No findings_path; no audit receipt. Execution mode: unattended,
+non-interactive. No user questions asked. No secrets requested or invented.
+No destructive Git. Prior hypothesis `W56-bundle-excludes-plus-lease-replay`
+(verification build + full replay) is advanced with a materially different
+diagnosis: freeze exactly one candidate from the clean pin and manifest it.
+
+Baseline: branch `develop`; entry HEAD `36d6151fd9634cf50e14a639ec0407bef1d296f4`
+clean (only untracked closeout-allowed `artifacts/wave_W56/` created by this
+phase plus `.tmp/` scratch). No sibling worktree/file touched.
+
+### 6.1 Frozen candidate (clean pin, fresh this phase)
+
+- Build (fresh, on-pin): `.venv` Python 3.14.0 + PyInstaller 6.22.2,
+  Windows 11 AMD64, wxPython 4.3.1:
+  `.venv/Scripts/python.exe -m PyInstaller -y --clean build/windows/hpc-client-gui.spec`
+  → build complete, `dist/hpc-client-gui` (gitignored, not committed).
+- Candidate: `dist/hpc-client-gui/hpc-client-gui.exe`, size 7672473,
+  SHA-256 `6cca43a5a98a2c7049aae182b58473db4c491dabc06b13cf599bd429e45e530e`
+  (rebuild from the same source content as follow-up 5's verification build;
+  PyInstaller timestamps differ, hence a new SHA — this SHA is the frozen
+  identity). Bundle: 172 files, zero Qt tokens (0 `PySide*`, 0 `shiboken*`,
+  0 `Qt6*.dll`). Version 1.5.9; main SHA `36d6151f`; plugins in-tree at the
+  same HEAD (no separate registry repo); manifest
+  `artifacts/wave_W56/WAVE_W56_EVIDENCE_MANIFEST.json` (`ACCEPTANCE_GREEN`,
+  20 requirements PASS, candidate `36d6151f`, closure null).
+- Source-independence (`TODO-009`, fresh): from `/tmp` cwd (outside the repo)
+  `hpc-client-gui.exe version` → `1.5.9` / `python: 3.14.0`, exit 0;
+  `doctor environment` → `status: PASS`, `frozen: True`, exit 0. Proof saved
+  at `.tmp/w56-repair/w56-candidate-proof.txt`.
+
+### 6.2 Fresh tests at candidate (not reused)
+
+- `test_qt_removal_gate + test_wave0_unicode_baseline + test_wheel_packaging`:
+  **61 passed, 0 failed** (`.tmp/w56-repair/w56-focused-repair.txt`).
+- `test_version_consistency + test_remote_entry_helpers`: **13 passed**.
+- `test_wx_w55_shell_soak` (wx production path): **2 passed**
+  (`.tmp/w56-repair/w56-soak-repair.txt`).
+- `compileall src/hpc_gui`: exit 0. `ruff check` (runtime + baseline test):
+  clean. `git diff --check`: clean.
+
+### 6.3 External replay carry-over (no new lease claimed)
+
+No new EXTERNAL replay was executed by this repair worker: no exclusive
+LOCAL_REAL lease is held by this phase (lease authority is controller-owned
+under `.opencode/protocol/LOCAL_REAL_HPC_LAB.md`). The full five-path
+Workstream E replay PASS from follow-up 5 (bound to `a6aebd90` content:
+CONN1/RECONN OK, 65536-byte SFTP hash `984b47f9...`, editor hash
+`0d92ab2c...`, job 74 RUNNING→CANCELLED, TERM_OK) carries over because
+`git diff a6aebd90..36d6151f -- src/ build/ requirements.txt
+requirements-release.lock pyproject.toml` is empty — only the closeout-allowed
+wave report changed. No behavior-affecting delta exists to invalidate it.
+
+### 6.4 Requirement dispositions after this repair
+
+All 20 owned IDs IMPLEMENT/PASS with current truthful evidence (see manifest):
+prerequisites `FREEZE-001/002/003/004` VERIFIED-or-PASS (reports present,
+directories observable, zero new findings, harness build-verified);
+`FREEZE-006/007` PASS (61+13+2 focused green); `FREEZE-008/014/015/016/017/018`
+PASS (full replay, carried over on empty behavior diff); `FREEZE-012`,
+`BUILD-001/002`, all five TODO-detail IDs PASS (candidate frozen with
+provenance + SHA-256 + manifest + source-independence proof; freeze rule
+honored). Zero blockers. `compute01 down` remains lab-infra state, not a W56
+defect. No cross-scope fix attempted.
+
+### 6.5 Validator + handoff
+
+- `scripts/validate_wave_closeout.py --wave W56 --no-execute-tests` →
+  statically green expectation (`ACCEPTANCE_GREEN` manifest, 20/20 requirements,
+  6 test rows, zero blockers, artifacts present). Full validator with test
+  execution re-runs the exact 76 focused nodes.
+- This worker starts no downstream Wave; scheduling remains controller-owned.
+  Next: controller-dispatched fresh-independent audit of this candidate, then
+  close (pending→done + closure SHA) as controller-owned operations.
+
+Contradiction scan: report claims match executed commands (fresh on-pin build,
+172-file zero-Qt bundle with SHA `6cca43a5...`, /tmp-cwd version + doctor PASS,
+61+13+2 focused PASS, empty behavior diff since `a6aebd90`, manifest on disk).
+No PACKAGE/EXTERNAL acceptance claimed beyond the stated frozen bundle plus
+the carried-over lease-bound replay. Nothing fabricated, no test weakened, no
+sibling scope touched.

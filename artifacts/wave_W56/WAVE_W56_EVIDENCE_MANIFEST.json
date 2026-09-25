@@ -1,0 +1,562 @@
+{
+ "spec_profile_id": "HPC",
+ "protocol_revision": 2,
+ "wave_id": "W56",
+ "wave_spec_revision": "sha256:d6e6ea602d38cf9a0cb999958263c3a2c2ac7c56361cea8f04683d23c828590b",
+ "status": "ACCEPTANCE_GREEN",
+ "candidate_sha": "36d6151fd9634cf50e14a639ec0407bef1d296f4",
+ "closure_sha": null,
+ "dependency_validation": {
+  "dependencies": []
+ },
+ "requirements": [
+  {
+   "requirement_id": "HPC-W10-FREEZE-001",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "opencode/REQUIREMENT_REGISTRY.md",
+    "docs/wave-reports/v2/opencode/W56_WAVE_REPORT.md"
+   ],
+   "test_nodes": [
+    "tests/test_version_consistency.py"
+   ],
+   "expected_semantics": "W01-W09 completion reports present",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W56_WAVE_REPORT.md"
+   ],
+   "candidate_sha": "36d6151fd9634cf50e14a639ec0407bef1d296f4"
+  },
+  {
+   "requirement_id": "HPC-W10-FREEZE-002",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "opencode/REQUIREMENT_REGISTRY.md",
+    "docs/wave-reports/v2/opencode/W56_WAVE_REPORT.md"
+   ],
+   "test_nodes": [
+    "tests/test_version_consistency.py"
+   ],
+   "expected_semantics": "cross-Wave invalidation list observable, no missing-directory condition",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W56_WAVE_REPORT.md"
+   ],
+   "candidate_sha": "36d6151fd9634cf50e14a639ec0407bef1d296f4"
+  },
+  {
+   "requirement_id": "HPC-W10-FREEZE-003",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "opencode/REQUIREMENT_REGISTRY.md",
+    "docs/wave-reports/v2/opencode/W56_WAVE_REPORT.md"
+   ],
+   "test_nodes": [
+    "tests/test_version_consistency.py"
+   ],
+   "expected_semantics": "no new untriaged P0 raised by W56",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W56_WAVE_REPORT.md"
+   ],
+   "candidate_sha": "36d6151fd9634cf50e14a639ec0407bef1d296f4"
+  },
+  {
+   "requirement_id": "HPC-W10-FREEZE-004",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "build/windows/hpc-client-gui.spec",
+    "scripts/ci.py",
+    "docs/wave-reports/v2/opencode/W56_WAVE_REPORT.md"
+   ],
+   "test_nodes": [
+    "tests/test_wheel_packaging.py"
+   ],
+   "expected_semantics": "packaging harness operational, Windows verification build plus frozen candidate build green",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W56_WAVE_REPORT.md"
+   ],
+   "candidate_sha": "36d6151fd9634cf50e14a639ec0407bef1d296f4"
+  },
+  {
+   "requirement_id": "HPC-W10-FREEZE-006",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/runtime.py",
+    "pyproject.toml",
+    "build/windows/hpc-client-gui.spec",
+    "docs/wave-reports/v2/opencode/W56_WAVE_REPORT.md"
+   ],
+   "test_nodes": [
+    "tests/test_qt_removal_gate.py",
+    "tests/test_wave0_unicode_baseline.py",
+    "tests/test_wheel_packaging.py"
+   ],
+   "expected_semantics": "changed-surface regression green at candidate",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W56_WAVE_REPORT.md",
+    ".tmp/w56-repair/w56-focused-repair.txt"
+   ],
+   "candidate_sha": "36d6151fd9634cf50e14a639ec0407bef1d296f4"
+  },
+  {
+   "requirement_id": "HPC-W10-FREEZE-007",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/runtime.py",
+    "tests/test_wave0_unicode_baseline.py",
+    "docs/wave-reports/v2/opencode/W56_WAVE_REPORT.md"
+   ],
+   "test_nodes": [
+    "tests/test_qt_removal_gate.py",
+    "tests/test_wave0_unicode_baseline.py",
+    "tests/test_wheel_packaging.py",
+    "tests/test_version_consistency.py",
+    "tests/test_remote_entry_helpers.py",
+    "tests/test_wx_w55_shell_soak.py"
+   ],
+   "expected_semantics": "broad focused suite green at candidate (61+13+2)",
+   "evidence_refs": [
+    ".tmp/w56-repair/w56-focused-repair.txt",
+    ".tmp/w56-repair/w56-soak-repair.txt",
+    "docs/wave-reports/v2/opencode/W56_WAVE_REPORT.md"
+   ],
+   "candidate_sha": "36d6151fd9634cf50e14a639ec0407bef1d296f4"
+  },
+  {
+   "requirement_id": "HPC-W10-FREEZE-008",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/__main__.py",
+    "docs/wave-reports/v2/opencode/W56_WAVE_REPORT.md"
+   ],
+   "test_nodes": [
+    "tests/test_remote_entry_helpers.py"
+   ],
+   "expected_semantics": "real-cluster replay required by changes executed PASS under held lease (carry-over, behavior diff empty)",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W56_WAVE_REPORT.md"
+   ],
+   "candidate_sha": "36d6151fd9634cf50e14a639ec0407bef1d296f4"
+  },
+  {
+   "requirement_id": "HPC-W10-FREEZE-012",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "build/windows/hpc-client-gui.spec",
+    "dist/hpc-client-gui/hpc-client-gui.exe",
+    "docs/wave-reports/v2/opencode/W56_WAVE_REPORT.md"
+   ],
+   "test_nodes": [
+    "tests/test_qt_removal_gate.py",
+    "tests/test_wheel_packaging.py"
+   ],
+   "expected_semantics": "exactly one candidate frozen from clean pin with provenance, SHA-256, manifest",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W56_WAVE_REPORT.md",
+    "artifacts/wave_W56/WAVE_W56_EVIDENCE_MANIFEST.json"
+   ],
+   "candidate_sha": "36d6151fd9634cf50e14a639ec0407bef1d296f4"
+  },
+  {
+   "requirement_id": "HPC-W10-FREEZE-014",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/__main__.py",
+    "docs/wave-reports/v2/opencode/W56_WAVE_REPORT.md"
+   ],
+   "test_nodes": [
+    "tests/test_remote_entry_helpers.py"
+   ],
+   "expected_semantics": "connection/reconnect PASS, two SSH sessions (carry-over)",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W56_WAVE_REPORT.md"
+   ],
+   "candidate_sha": "36d6151fd9634cf50e14a639ec0407bef1d296f4"
+  },
+  {
+   "requirement_id": "HPC-W10-FREEZE-015",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/__main__.py",
+    "docs/wave-reports/v2/opencode/W56_WAVE_REPORT.md"
+   ],
+   "test_nodes": [
+    "tests/test_remote_entry_helpers.py"
+   ],
+   "expected_semantics": "SFTP round trip PASS with 65536-byte hash proof (carry-over)",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W56_WAVE_REPORT.md"
+   ],
+   "candidate_sha": "36d6151fd9634cf50e14a639ec0407bef1d296f4"
+  },
+  {
+   "requirement_id": "HPC-W10-FREEZE-016",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/__main__.py",
+    "docs/wave-reports/v2/opencode/W56_WAVE_REPORT.md"
+   ],
+   "test_nodes": [
+    "tests/test_remote_entry_helpers.py"
+   ],
+   "expected_semantics": "remote editor save PASS with server-side hash proof (carry-over)",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W56_WAVE_REPORT.md"
+   ],
+   "candidate_sha": "36d6151fd9634cf50e14a639ec0407bef1d296f4"
+  },
+  {
+   "requirement_id": "HPC-W10-FREEZE-017",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/__main__.py",
+    "docs/wave-reports/v2/opencode/W56_WAVE_REPORT.md"
+   ],
+   "test_nodes": [
+    "tests/test_remote_entry_helpers.py"
+   ],
+   "expected_semantics": "job list/submit/cancel PASS, job 74 RUNNING then CANCELLED (carry-over)",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W56_WAVE_REPORT.md"
+   ],
+   "candidate_sha": "36d6151fd9634cf50e14a639ec0407bef1d296f4"
+  },
+  {
+   "requirement_id": "HPC-W10-FREEZE-018",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/__main__.py",
+    "docs/wave-reports/v2/opencode/W56_WAVE_REPORT.md"
+   ],
+   "test_nodes": [
+    "tests/test_remote_entry_helpers.py"
+   ],
+   "expected_semantics": "terminal PASS (carry-over)",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W56_WAVE_REPORT.md"
+   ],
+   "candidate_sha": "36d6151fd9634cf50e14a639ec0407bef1d296f4"
+  },
+  {
+   "requirement_id": "HPC-W10-BUILD-001",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "build/windows/hpc-client-gui.spec",
+    "dist/hpc-client-gui/hpc-client-gui.exe",
+    "requirements-release.lock",
+    "docs/wave-reports/v2/opencode/W56_WAVE_REPORT.md"
+   ],
+   "test_nodes": [
+    "tests/test_qt_removal_gate.py",
+    "tests/test_wheel_packaging.py"
+   ],
+   "expected_semantics": "one candidate from clean pinned source with filename, main SHA, plugin provenance, version, build env, SHA-256, manifest",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W56_WAVE_REPORT.md",
+    "artifacts/wave_W56/WAVE_W56_EVIDENCE_MANIFEST.json"
+   ],
+   "candidate_sha": "36d6151fd9634cf50e14a639ec0407bef1d296f4"
+  },
+  {
+   "requirement_id": "HPC-W10-BUILD-002",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "docs/wave-reports/v2/opencode/W56_WAVE_REPORT.md",
+    "docs/wave-reports/v2/opencode/W56_WAVE_REPORT.md"
+   ],
+   "test_nodes": [
+    "tests/test_version_consistency.py"
+   ],
+   "expected_semantics": "freeze invalidation rule honored: no post-freeze product change",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W56_WAVE_REPORT.md"
+   ],
+   "candidate_sha": "36d6151fd9634cf50e14a639ec0407bef1d296f4"
+  },
+  {
+   "requirement_id": "HPC-W10-TODO-RUNTIME-CUTOVER-001",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "src/hpc_gui/runtime.py",
+    "docs/decisions/V2_RUNTIME_DECISION.md",
+    "docs/wave-reports/v2/opencode/W56_WAVE_REPORT.md"
+   ],
+   "test_nodes": [
+    "tests/test_wave0_unicode_baseline.py"
+   ],
+   "expected_semantics": "wx V2 default decided durable, runtime.py wx, test aligned, smoke green",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W56_WAVE_REPORT.md",
+    ".tmp/w56-repair/w56-focused-repair.txt"
+   ],
+   "candidate_sha": "36d6151fd9634cf50e14a639ec0407bef1d296f4"
+  },
+  {
+   "requirement_id": "HPC-W10-TODO-RUNTIME-DEPENDENCY-001",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "pyproject.toml",
+    "build/windows/hpc-client-gui.spec",
+    "build/linux/hpc-client-gui-linux.spec",
+    "build/macos/hpc-client-gui.spec",
+    "requirements.txt",
+    "requirements-release.lock",
+    "docs/wave-reports/v2/opencode/W56_WAVE_REPORT.md"
+   ],
+   "test_nodes": [
+    "tests/test_qt_removal_gate.py",
+    "tests/test_wave0_unicode_baseline.py"
+   ],
+   "expected_semantics": "Qt removed from shipment: wx mandatory, PySide6 legacy-qt extra only, specs exclude Qt, Windows bundle zero-Qt verified",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W56_WAVE_REPORT.md"
+   ],
+   "candidate_sha": "36d6151fd9634cf50e14a639ec0407bef1d296f4"
+  },
+  {
+   "requirement_id": "HPC-W10-TODO-007",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "build/windows/hpc-client-gui.spec",
+    "dist/hpc-client-gui/hpc-client-gui.exe",
+    "docs/wave-reports/v2/opencode/W56_WAVE_REPORT.md"
+   ],
+   "test_nodes": [
+    "tests/test_wheel_packaging.py",
+    "tests/test_qt_removal_gate.py"
+   ],
+   "expected_semantics": "final Windows artifact built from declared commit and configuration, clean pin 36d6151f, on-pin 3.14.0 and PyInstaller 6.22.2",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W56_WAVE_REPORT.md"
+   ],
+   "candidate_sha": "36d6151fd9634cf50e14a639ec0407bef1d296f4"
+  },
+  {
+   "requirement_id": "HPC-W10-TODO-008",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "dist/hpc-client-gui/hpc-client-gui.exe",
+    "docs/wave-reports/v2/opencode/W56_WAVE_REPORT.md"
+   ],
+   "test_nodes": [
+    "tests/test_wheel_packaging.py"
+   ],
+   "expected_semantics": "artifact identity recorded: filename, size 7672473, SHA-256, main SHA, plugin in-tree, version 1.5.9",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W56_WAVE_REPORT.md",
+    "artifacts/wave_W56/WAVE_W56_EVIDENCE_MANIFEST.json"
+   ],
+   "candidate_sha": "36d6151fd9634cf50e14a639ec0407bef1d296f4"
+  },
+  {
+   "requirement_id": "HPC-W10-TODO-009",
+   "mandatory": true,
+   "disposition": "PASS",
+   "implementation_owners": [
+    "dist/hpc-client-gui/hpc-client-gui.exe",
+    "docs/wave-reports/v2/opencode/W56_WAVE_REPORT.md"
+   ],
+   "test_nodes": [
+    "tests/test_wheel_packaging.py"
+   ],
+   "expected_semantics": "packaged app runs without source checkout: version plus doctor environment PASS from temp cwd, frozen True",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W56_WAVE_REPORT.md"
+   ],
+   "candidate_sha": "36d6151fd9634cf50e14a639ec0407bef1d296f4"
+  }
+ ],
+ "tests": [
+  {
+   "node": "tests/test_qt_removal_gate.py",
+   "command": ".venv/Scripts/python.exe -m pytest -q tests/test_qt_removal_gate.py",
+   "requirement_ids": [
+    "HPC-W10-FREEZE-006",
+    "HPC-W10-FREEZE-007",
+    "HPC-W10-TODO-RUNTIME-DEPENDENCY-001",
+    "HPC-W10-FREEZE-012",
+    "HPC-W10-BUILD-001",
+    "HPC-W10-TODO-007"
+   ],
+   "exit_code": 0,
+   "passed": 15,
+   "failed": 0,
+   "skipped": 0,
+   "xfailed": 0,
+   "xpassed": 0,
+   "environment": "Windows 11 AMD64 Python 3.14.0 PyInstaller 6.22.2 wxPython 4.3.1 HEAD 36d6151f",
+   "timestamp": "2026-09-25T06:11:45Z",
+   "evidence_path": ".tmp/w56-repair/w56-focused-repair.txt",
+   "candidate_sha": "36d6151fd9634cf50e14a639ec0407bef1d296f4"
+  },
+  {
+   "node": "tests/test_wave0_unicode_baseline.py",
+   "command": ".venv/Scripts/python.exe -m pytest -q tests/test_wave0_unicode_baseline.py",
+   "requirement_ids": [
+    "HPC-W10-FREEZE-006",
+    "HPC-W10-FREEZE-007",
+    "HPC-W10-TODO-RUNTIME-CUTOVER-001",
+    "HPC-W10-TODO-RUNTIME-DEPENDENCY-001"
+   ],
+   "exit_code": 0,
+   "passed": 42,
+   "failed": 0,
+   "skipped": 0,
+   "xfailed": 0,
+   "xpassed": 0,
+   "environment": "Windows 11 AMD64 Python 3.14.0 PyInstaller 6.22.2 wxPython 4.3.1 HEAD 36d6151f",
+   "timestamp": "2026-09-25T06:11:45Z",
+   "evidence_path": ".tmp/w56-repair/w56-focused-repair.txt",
+   "candidate_sha": "36d6151fd9634cf50e14a639ec0407bef1d296f4"
+  },
+  {
+   "node": "tests/test_wheel_packaging.py",
+   "command": ".venv/Scripts/python.exe -m pytest -q tests/test_wheel_packaging.py",
+   "requirement_ids": [
+    "HPC-W10-FREEZE-004",
+    "HPC-W10-FREEZE-006",
+    "HPC-W10-FREEZE-012",
+    "HPC-W10-BUILD-001",
+    "HPC-W10-TODO-007",
+    "HPC-W10-TODO-008",
+    "HPC-W10-TODO-009"
+   ],
+   "exit_code": 0,
+   "passed": 4,
+   "failed": 0,
+   "skipped": 0,
+   "xfailed": 0,
+   "xpassed": 0,
+   "environment": "Windows 11 AMD64 Python 3.14.0 PyInstaller 6.22.2 wxPython 4.3.1 HEAD 36d6151f",
+   "timestamp": "2026-09-25T06:11:45Z",
+   "evidence_path": ".tmp/w56-repair/w56-focused-repair.txt",
+   "candidate_sha": "36d6151fd9634cf50e14a639ec0407bef1d296f4"
+  },
+  {
+   "node": "tests/test_version_consistency.py",
+   "command": ".venv/Scripts/python.exe -m pytest -q tests/test_version_consistency.py",
+   "requirement_ids": [
+    "HPC-W10-FREEZE-001",
+    "HPC-W10-FREEZE-002",
+    "HPC-W10-FREEZE-003",
+    "HPC-W10-FREEZE-007",
+    "HPC-W10-BUILD-002"
+   ],
+   "exit_code": 0,
+   "passed": 9,
+   "failed": 0,
+   "skipped": 0,
+   "xfailed": 0,
+   "xpassed": 0,
+   "environment": "Windows 11 AMD64 Python 3.14.0 PyInstaller 6.22.2 wxPython 4.3.1 HEAD 36d6151f",
+   "timestamp": "2026-09-25T06:11:45Z",
+   "evidence_path": ".tmp/w56-repair/w56-focused-repair.txt",
+   "candidate_sha": "36d6151fd9634cf50e14a639ec0407bef1d296f4"
+  },
+  {
+   "node": "tests/test_remote_entry_helpers.py",
+   "command": ".venv/Scripts/python.exe -m pytest -q tests/test_remote_entry_helpers.py",
+   "requirement_ids": [
+    "HPC-W10-FREEZE-007",
+    "HPC-W10-FREEZE-008",
+    "HPC-W10-FREEZE-014",
+    "HPC-W10-FREEZE-015",
+    "HPC-W10-FREEZE-016",
+    "HPC-W10-FREEZE-017",
+    "HPC-W10-FREEZE-018"
+   ],
+   "exit_code": 0,
+   "passed": 4,
+   "failed": 0,
+   "skipped": 0,
+   "xfailed": 0,
+   "xpassed": 0,
+   "environment": "Windows 11 AMD64 Python 3.14.0 PyInstaller 6.22.2 wxPython 4.3.1 HEAD 36d6151f",
+   "timestamp": "2026-09-25T06:11:45Z",
+   "evidence_path": ".tmp/w56-repair/w56-focused-repair.txt",
+   "candidate_sha": "36d6151fd9634cf50e14a639ec0407bef1d296f4"
+  },
+  {
+   "node": "tests/test_wx_w55_shell_soak.py",
+   "command": ".venv/Scripts/python.exe -m pytest -q tests/test_wx_w55_shell_soak.py",
+   "requirement_ids": [
+    "HPC-W10-FREEZE-007",
+    "HPC-W10-TODO-RUNTIME-CUTOVER-001"
+   ],
+   "exit_code": 0,
+   "passed": 2,
+   "failed": 0,
+   "skipped": 0,
+   "xfailed": 0,
+   "xpassed": 0,
+   "environment": "Windows 11 AMD64 Python 3.14.0 PyInstaller 6.22.2 wxPython 4.3.1 HEAD 36d6151f",
+   "timestamp": "2026-09-25T06:11:45Z",
+   "evidence_path": ".tmp/w56-repair/w56-soak-repair.txt",
+   "candidate_sha": "36d6151fd9634cf50e14a639ec0407bef1d296f4"
+  }
+ ],
+ "gui_actions": [
+  {
+   "node": "tests/test_wx_w55_shell_soak.py",
+   "status": "FULL",
+   "source_binding": "src/hpc_gui/wx_shell wx production path via DEFAULT_GUI_RUNTIME=wx",
+   "runtime_test_node": "tests/test_wx_w55_shell_soak.py",
+   "observed_readback": "2 passed: wx shell soak healthy on wx 4.3.1 at candidate",
+   "candidate_sha": "36d6151fd9634cf50e14a639ec0407bef1d296f4"
+  }
+ ],
+ "resources": [],
+ "artifacts": [
+  {
+   "path": "docs/wave-reports/v2/opencode/W56_WAVE_REPORT.md",
+   "identity": "canonical W56 wave report at candidate 36d6151f incl repair follow-up 6"
+  },
+  {
+   "path": "artifacts/wave_W56/WAVE_W56_EVIDENCE_MANIFEST.json",
+   "identity": "this manifest at candidate 36d6151f"
+  },
+  {
+   "path": ".tmp/w56-repair/w56-focused-repair.txt",
+   "identity": "focused 61+13 passed evidence at candidate"
+  },
+  {
+   "path": ".tmp/w56-repair/w56-soak-repair.txt",
+   "identity": "wx soak 2 passed evidence at candidate"
+  },
+  {
+   "path": ".tmp/w56-repair/w56-candidate-proof.txt",
+   "identity": "frozen candidate bundle proof: 172 files zero-Qt, exe SHA-256, source-independence version and doctor PASS"
+  }
+ ],
+ "review_passes": {
+  "diff_check": "PASS",
+  "claim_source_review": "PASS",
+  "independent_audit": "PENDING"
+ },
+ "contradiction_scan": {
+  "unresolved": []
+ },
+ "blockers": [],
+ "deferred_items": [],
+ "validator_result": {
+  "state": "ACCEPTANCE_GREEN",
+  "reason": "focused 61+13+2 green at candidate 36d6151f plus frozen zero-Qt bundle with SHA-256 plus source-independence proof plus carried-over full Workstream E replay (behavior diff empty since a6aebd90); pending fresh independent audit"
+ }
+}
