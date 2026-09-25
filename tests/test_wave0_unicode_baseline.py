@@ -108,12 +108,12 @@ class TestRepositoryBaseline:
         assert pyproject.is_file(), "pyproject.toml not found"
 
     @pytest.mark.contract
-    def test_qt_is_default_runtime(self):
+    def test_wx_is_default_runtime(self):
         runtime_file = ROOT / "src" / "hpc_gui" / "runtime.py"
         assert runtime_file.is_file(), "runtime.py not found"
         content = runtime_file.read_text(encoding="utf-8")
-        assert 'DEFAULT_GUI_RUNTIME = "qt"' in content, (
-            "Qt is no longer the default GUI runtime"
+        assert 'DEFAULT_GUI_RUNTIME = "wx"' in content, (
+            "wx is not the default GUI runtime (V2 production runtime decision)"
         )
 
     @pytest.mark.contract
