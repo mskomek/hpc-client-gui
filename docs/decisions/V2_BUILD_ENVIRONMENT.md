@@ -32,7 +32,11 @@ repair phase) performs the rebuild itself once the owner fix is committed and th
 2. Rerun the affected W56/W57 evidence against the new artifact SHA and issue the successor freeze declaration.
 
 Rebuilding unchanged build inputs from a newer clean commit is not "patching the frozen candidate"; it is the
-rebuild step the Wave text prescribes. Only the controller-side commit of the accepted owner fix is controller work,
+rebuild step the Wave text prescribes. W57 owns it explicitly: `RUNTIME-CUTOVER-002` ("rebuild from a clean declared
+commit") and `RUNTIME-CUTOVER-003` ("re-run the packaged acceptance suite against the artifact SHA that will be
+released") are W57 requirements, and W57.md requires "W57 PASS must emit one freeze declaration". A successor
+freeze with recorded provenance (new main SHA, artifact SHA-256, reruns) is therefore W57's own output, not a
+"silent re-freeze". Only the controller-side commit of the accepted owner fix is controller work,
 and it is done (W28 fix committed at `5a516c32`).
 
 ## Long commands
