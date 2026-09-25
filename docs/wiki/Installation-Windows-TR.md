@@ -7,7 +7,7 @@ Windows için önerilen kurulum **taşınabilir ZIP** paketidir. Python gerekmez
 ## Kurulum
 
 1. [Sürümler sayfasını](https://github.com/mskomek/hpc-client-gui/releases)
-   açın ve 1.2.6 sürümü için Windows ZIP dosyasını indirin.
+   açın ve 1.5.9 sürümü için Windows ZIP dosyasını indirin.
 2. ZIP dosyasına sağ tıklayıp **Tümünü ayıkla** deyin. Yazma izniniz olan bir
    klasöre, örneğin kullanıcı profiliniz altındaki bir klasöre ayıklayın.
 3. Ayıklanan klasördeki `hpc-client-gui.exe` dosyasını çalıştırın.

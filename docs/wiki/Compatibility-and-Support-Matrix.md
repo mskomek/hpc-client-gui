@@ -2,7 +2,7 @@
 
 > Türkçe: [[Compatibility-and-Support-Matrix-TR]]
 
-Current version: **1.2.6** (`pyproject.toml`).
+Current version: **1.5.9** (`pyproject.toml`).
 
 ## Platforms and packaging
 
@@ -19,16 +19,19 @@ Flatpak is optional and not part of the standard release set, because its
 runtime and SDK are substantially larger. There is no ARM64 build.
 
 Linux from-source use is documented for Ubuntu LTS, Fedora, and openSUSE on
-x86_64. Qt platform libraries are required (`libegl1` on Ubuntu/Debian, the
-distribution equivalent elsewhere).
+x86_64. Qt platform libraries (`libegl1` class) are no longer required: the V2
+production runtime is wxPython (wxWidgets); Qt/PySide6 is legacy-only
+(unadvertised `legacy-qt` extra) and is not shipped in the V2 production
+package. Building wxPython from source on Linux needs the GTK/WebKit build
+dependencies documented in `docs/v2/WX_DEPENDENCY_CLOSURE.md`.
 
 ## Runtime requirements
 
 | Requirement | Portable / packaged | From source |
 |---|---|---|
 | Python 3.14.x | Not required | Required |
-| Qt runtime | Bundled | Provided by PySide6 |
-| Qt platform libraries | Bundled or system | System (`libegl1` class) |
+| wxWidgets runtime (wxPython 4.3.1) | Bundled | `wxPython>=4.3.1` required |
+| Qt/PySide6 | Not shipped (legacy-only `legacy-qt` extra) | Optional, legacy-only, not required |
 | `plink.exe` (PuTTY) | Optional, X11 only, Windows | Optional, X11 only |
 | VcXsrv | Optional, X11 only, Windows | Optional, X11 only |
 | System OpenSSH client | Not used for X11 on Windows | Required for X11 on Linux |

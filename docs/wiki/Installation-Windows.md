@@ -8,7 +8,7 @@ The recommended Windows install is the **portable ZIP**. Python is not required.
 
 1. Open the
    [releases page](https://github.com/mskomek/hpc-client-gui/releases) and
-   download the Windows ZIP for version 1.2.6.
+   download the Windows ZIP for version 1.5.9.
 2. Right-click the ZIP and choose **Extract All**. Extract to a folder you can
    write to, such as a folder under your user profile.
 3. Run `hpc-client-gui.exe` from the extracted folder.

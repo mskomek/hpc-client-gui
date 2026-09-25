@@ -2,7 +2,7 @@
 
 > English: [[Compatibility-and-Support-Matrix]]
 
-Geçerli sürüm: **1.2.6** (`pyproject.toml`).
+Geçerli sürüm: **1.5.9** (`pyproject.toml`).
 
 ## Platformlar ve paketleme
 
@@ -19,16 +19,20 @@ Flatpak isteğe bağlıdır ve standart sürüm setinin parçası değildir; ça
 zamanı ve SDK'sı belirgin biçimde daha büyüktür. ARM64 derlemesi yoktur.
 
 Linux'ta kaynaktan kullanım x86_64 üzerinde Ubuntu LTS, Fedora ve openSUSE için
-belgelenmiştir. Qt platform kitaplıkları gereklidir (Ubuntu/Debian'da
-`libegl1`, diğerlerinde dağıtımın karşılığı).
+belgelenmiştir. Qt platform kitaplıkları (`libegl1` sınıfı) artık gerekmez: V2
+üretim çalışma zamanı wxPython'dır (wxWidgets); Qt/PySide6 yalnızca eski
+(legacy) kullanıma yöneliktir (tanıtılmayan `legacy-qt` extrası) ve V2 üretim
+paketinde yer almaz. Linux'ta kaynaktan wxPython derlemek için
+`docs/v2/WX_DEPENDENCY_CLOSURE.md` belgesindeki GTK/WebKit derleme
+bağımlılıkları gerekir.
 
 ## Çalışma zamanı gereksinimleri
 
 | Gereksinim | Taşınabilir / paketli | Kaynaktan |
 |---|---|---|
 | Python 3.14.x | Gerekmez | Gerekir |
-| Qt çalışma zamanı | Birlikte gelir | PySide6 sağlar |
-| Qt platform kitaplıkları | Birlikte gelir veya sistem | Sistem (`libegl1` sınıfı) |
+| wxWidgets çalışma zamanı (wxPython 4.3.1) | Birlikte gelir | `wxPython>=4.3.1` gerekir |
+| Qt/PySide6 | Gönderilmez (yalnızca eski kullanım için `legacy-qt` extrası) | İsteğe bağlı, yalnızca eski kullanım, gerekmez |
 | `plink.exe` (PuTTY) | İsteğe bağlı, yalnızca X11, Windows | İsteğe bağlı, yalnızca X11 |
 | VcXsrv | İsteğe bağlı, yalnızca X11, Windows | İsteğe bağlı, yalnızca X11 |
 | Sistem OpenSSH istemcisi | Windows'ta X11 için kullanılmaz | Linux'ta X11 için gerekir |

@@ -8,17 +8,17 @@ no ARM64 build.
 
 ## Artifact names
 
-For version 1.2.6 the release tooling produces:
+For version 1.5.9 the release tooling produces:
 
-- `hpc-client-gui-1.2.6-x86_64.AppImage`
-- `hpc-client-gui_1.2.6_amd64.deb`
+- `hpc-client-gui-1.5.9-x86_64.AppImage`
+- `hpc-client-gui_1.5.9_amd64.deb`
 
 Each artifact is published with a matching `.sha256` file.
 
 ## Verify the download
 
 ```bash
-sha256sum -c hpc-client-gui-1.2.6-x86_64.AppImage.sha256
+sha256sum -c hpc-client-gui-1.5.9-x86_64.AppImage.sha256
 ```
 
 Do not install an artifact whose checksum does not verify.
@@ -26,8 +26,8 @@ Do not install an artifact whose checksum does not verify.
 ## AppImage
 
 ```bash
-chmod +x hpc-client-gui-1.2.6-x86_64.AppImage
-./hpc-client-gui-1.2.6-x86_64.AppImage
+chmod +x hpc-client-gui-1.5.9-x86_64.AppImage
+./hpc-client-gui-1.5.9-x86_64.AppImage
 ```
 
 The AppImage runs without installation.
@@ -35,21 +35,16 @@ The AppImage runs without installation.
 ## Debian package
 
 ```bash
-sudo apt install ./hpc-client-gui_1.2.6_amd64.deb
+sudo apt install ./hpc-client-gui_1.5.9_amd64.deb
 ```
 
-## Qt platform libraries
+## wxWidgets system libraries
 
-The application is a Qt (PySide6) desktop program and needs the platform
-libraries Qt loads at startup. On Ubuntu and Debian:
-
-```bash
-sudo apt install libegl1
-```
-
-Fedora and openSUSE provide the equivalent packages under their own names. A
-missing platform library typically shows up as a startup failure mentioning the
-`xcb` platform plugin — see [[Troubleshooting|Troubleshooting]].
+The application is a wxPython (wxWidgets) desktop program. Qt (PySide6)
+platform libraries are not required: Qt is legacy-only and is not shipped in
+the V2 production package. A startup failure is not expected to mention the Qt
+`xcb` platform plugin; if the application fails at startup, see
+[[Troubleshooting|Troubleshooting]].
 
 ## X11 forwarding on Linux
 
