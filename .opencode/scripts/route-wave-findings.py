@@ -153,7 +153,14 @@ CHAIN_RE = re.compile(r"previous Wave (\d+) validator not PASS", re.I)
 
 
 def aggregate_owner_of(repo: Path, profile: dict[str, Any], canonical: str) -> str | None:
-    """The aggregate_close_owner Wave (any lifecycle state) for a canonical source."""
+    """The aggregate_close_owner Wave (any lifecycle state) for a canonical source.
+
+    A profile map (aggregate.owner_by_canonical) wins: closed Waves written before
+    frontmatter existed are immutable and cannot declare their canonical source.
+    """
+    mapped = ((profile.get("aggregate") or {}).get("owner_by_canonical") or {}).get(str(canonical))
+    if mapped:
+        return str(mapped)
     for state in ("done", "pending", "blocked", "postponed"):
         for wid, path in wave_targets_in_folder(repo, profile, state, scheduled_only=False):
             meta = wave_metadata(path, profile)
