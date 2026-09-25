@@ -6,8 +6,6 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-from PyInstaller.utils.hooks import collect_dynamic_libs
-
 SPEC_PATH = Path(globals().get("SPECPATH", "")).resolve()
 if not SPEC_PATH.is_file():
     SPEC_PATH = (Path.cwd() / "build" / "macos" / "hpc-client-gui.spec").resolve()
@@ -53,10 +51,10 @@ licenses_dir = REPO_ROOT / "third_party_licenses"
 if licenses_dir.exists():
     datas.append((str(licenses_dir), "third_party_licenses"))
 
+# W56 RUNTIME-DEPENDENCY-001 re-audit (V2 runtime decision
+# docs/decisions/V2_RUNTIME_DECISION.md): wx is the V2 production runtime and
+# Qt/PySide6 is legacy-only, not shipped in the V2 production package.
 hiddenimports = [
-    "PySide6.QtCore", "PySide6.QtGui", "PySide6.QtSvg", "PySide6.QtWidgets",
-    "PySide6.QtWebChannel", "PySide6.QtWebEngineCore",
-    "PySide6.QtWebEngineWidgets", "shiboken6", "shiboken6.Shiboken",
     "hpc_gui.cli", "hpc_gui.cli.main", "hpc_gui.cli.session", "hpc_gui.cli.files",
     "keyring", "keyring.backends.macOS",
 ]
@@ -64,19 +62,20 @@ hiddenimports = [
 a = Analysis(
     [str(ENTRY_SCRIPT)],
     pathex=[str(REPO_ROOT), str(SRC_DIR)],
-    binaries=collect_dynamic_libs("shiboken6"),
+    binaries=[],
     datas=datas,
     hiddenimports=sorted(set(hiddenimports)),
     hookspath=[],
     runtime_hooks=[],
-    excludes=["PySide6.scripts.deploy_lib", "_hpc_gui_perf_probe"],
+    excludes=["_hpc_gui_perf_probe"],
     noarchive=False,
 )
 
 # Files that must never ship in production bundles. DevTools resources exist
-# for browser debugging only; the terminal WebView never loads them.
-# QtWebEngineCore, ICU data, and software GL fallbacks stay so the GUI
-# terminal keeps working everywhere (same policy as the Windows/Linux specs).
+# for browser debugging only; the terminal WebView never loads them. Per the
+# V2 runtime decision (W56 RUNTIME-DEPENDENCY-001), QtWebEngine/Qt binaries
+# must not ship in the V2 production bundle: the wx terminal uses WebView2,
+# not QtWebEngine (same policy as the Windows/Linux specs).
 EXCLUDED_NAME_PATTERNS = (
     "qtwebengine_devtools_resources",
 )

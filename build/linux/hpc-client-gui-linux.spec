@@ -9,8 +9,6 @@
 from __future__ import annotations
 from pathlib import Path
 
-from PyInstaller.utils.hooks import collect_dynamic_libs
-
 SPEC_PATH = Path(globals().get("SPECPATH", "")).resolve()
 if not SPEC_PATH.is_file():
     SPEC_PATH = (Path.cwd() / "build" / "linux" / "hpc-client-gui-linux.spec").resolve()
@@ -50,17 +48,14 @@ THIRD_PARTY_LICENSES_DIR = REPO_ROOT / "third_party_licenses"
 if THIRD_PARTY_LICENSES_DIR.exists():
     datas.append((str(THIRD_PARTY_LICENSES_DIR), "third_party_licenses"))
 
+# W56 RUNTIME-DEPENDENCY-001 re-audit (V2 runtime decision
+# docs/decisions/V2_RUNTIME_DECISION.md): wx is the V2 production runtime and
+# Qt/PySide6 is legacy-only, not shipped in the V2 production package. The
+# PySide6/QtWebEngine hidden imports are therefore removed from the
+# production bundle; Qt remains reachable only via the unadvertised
+# `legacy-qt` extra in source checkouts, never from the packaged app.
 hiddenimports = sorted(
     {
-        "PySide6.QtCore",
-        "PySide6.QtGui",
-        "PySide6.QtSvg",
-        "PySide6.QtWidgets",
-        "PySide6.QtWebChannel",
-        "PySide6.QtWebEngineCore",
-        "PySide6.QtWebEngineWidgets",
-        "shiboken6",
-        "shiboken6.Shiboken",
         "hpc_gui.cli",
         "hpc_gui.cli.main",
         "hpc_gui.cli.session",
@@ -68,17 +63,17 @@ hiddenimports = sorted(
     }
 )
 
-binaries = collect_dynamic_libs("shiboken6")
+binaries = []
 
 excludes = [
-    "PySide6.scripts.deploy_lib",
     "_hpc_gui_perf_probe",
 ]
 
 # Files that must never ship in production bundles. DevTools resources exist
-# for browser debugging only; the terminal WebView never loads them.
-# QtWebEngineCore, ICU data, and software GL fallbacks stay so the GUI
-# terminal keeps working everywhere.
+# for browser debugging only; the terminal WebView never loads them. Per the
+# V2 runtime decision (W56 RUNTIME-DEPENDENCY-001), QtWebEngine/Qt binaries
+# must not ship in the V2 production bundle: the wx terminal uses WebView2,
+# not QtWebEngine.
 EXCLUDED_NAME_PATTERNS = (
     "qtwebengine_devtools_resources",
 )
