@@ -1034,11 +1034,22 @@ def opencode_phase(repo: Path, target: str, phase: str, seq: int, run_dir: Path,
 def phase_controller_context(repo: Path, run_dir: Path, seq: int, target: str, phase: str,
                              content_identity: str, state: dict[str, Any], findings_path: Path | None) -> Path:
     path = run_dir / f"{seq:04d}-{target}-{phase}-controller-context.json"
+    # Paths only (the worker reads them): saves the next worker rediscovering what the plan/last attempt found.
+    results = sorted(run_dir.glob(f"*-{target}-*-normalized.json"))
+    plans = [p for p in results if p.name.endswith("-plan-normalized.json")]
+    previous = read_json_file(results[-1]) if results else None
     payload = {
         "target": target,
         "phase": phase,
         "content_identity": content_identity,
         "findings_path": str(findings_path.relative_to(repo)) if findings_path and findings_path.exists() else None,
+        "plan_result_path": str(plans[-1].relative_to(repo)) if plans else None,
+        "previous_phase": {
+            "phase": results[-1].name.split("-")[-2],
+            "status": previous.get("status"),
+            "repair_hypothesis": previous.get("repair_hypothesis"),
+            "result_path": str(results[-1].relative_to(repo)),
+        } if isinstance(previous, dict) else None,
         "audit_receipt": {
             "audit_status": state.get("audit_status"),
             "tested_wave": state.get("tested_wave"),
