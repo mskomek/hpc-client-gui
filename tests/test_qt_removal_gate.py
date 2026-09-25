@@ -78,7 +78,9 @@ def test_source_scan_fails_closed_for_read_error(tmp_path, monkeypatch):
         production_qt_imports(root)
 
 
-def test_git_tracked_enumeration_rejects_git_failure(tmp_path):
+def test_git_tracked_enumeration_rejects_git_failure(tmp_path, monkeypatch):
+    # tmp_path may sit inside a checkout (e.g. --basetemp under .tmp/); stop git from finding it.
+    monkeypatch.setenv("GIT_CEILING_DIRECTORIES", str(tmp_path.parent))
     with pytest.raises(Exception):
         git_tracked_files(tmp_path)
 
