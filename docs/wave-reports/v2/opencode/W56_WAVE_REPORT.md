@@ -294,3 +294,133 @@ weakened.
 
 - After the build verification (blocker 1) lands on a verified pin, the next W56 attempt must: re-capture baseline, execute full Workstream E replay with exclusive LOCAL_REAL lease (recovering the `down` compute first if two-node paths are required), build exactly one candidate with full provenance + SHA-256 + manifest, rerun affected focused tests, refresh this report, and return `READY_FOR_AUDIT` only when every owned requirement is IMPLEMENT with current truthful evidence. The wx-default flip (`4fb752ad`) and this repair's dependency/spec/support-text re-audit must not be reverted: both implement the durable product-owner decision.
 - This worker starts no downstream Wave; scheduling remains controller-owned. Integration references W55 (done) and W57 (pending) are non-blocking hints only.
+
+## Run follow-up 5 (2026-09-25, run phase, hypothesis `W56-bundle-excludes-plus-lease-replay`)
+
+Controller handoff: target `W56`, phase `run`, content_identity
+`c15e7b0c7bda847b2d37aa044c568f18b655751a7b1f730634f92bf808bcf96b`
+(recorded verbatim; this worker binds all evidence below to the live Git
+identities stated here, not to the handoff hash). No findings_path; no audit
+receipt. Execution mode: unattended, non-interactive. No user questions asked.
+No secrets requested or invented. No destructive Git (no reset/clean/stash).
+
+Baseline: branch `develop`; entry HEAD `9ab2e7ca` clean; during this phase the
+integration base advanced `9ab2e7ca → 3e80512a` (product-owner commit:
+in serial `parallel_serial_fallback` runs the dispatched Wave phase holds the
+exclusive LOCAL_REAL lease; run ID + phase are the lease identity). All
+external replay below ran as the dispatched W56 run phase under that held
+lease. No sibling worktree/file touched.
+
+### 5.1 Owned defect found and fixed: GUI specs still bundled Qt
+
+A real on-pin verification build from the entry tree
+(`.venv` Python 3.14.0 + PyInstaller 6.22.2, Windows 11 AMD64,
+`PyInstaller -y --clean build/windows/hpc-client-gui.spec`) succeeded but the
+fresh `dist/hpc-client-gui` contained **3293 files including `PySide6`,
+`shiboken6`, `pyside6.abi3.dll` and ~100 `Qt6*.dll`** (exe SHA
+`f14b6401727baccf3d32c026d9c9c3e7ff34e0fe61b90b7ab940c9be3`). Root cause:
+the W56 re-audit had removed Qt hidden imports but the GUI specs' `excludes`
+listed only `_hpc_gui_perf_probe`; PyInstaller statically follows the
+source-only Qt fallback branch in `src/hpc_gui/__main__.py:72`
+(`from hpc_gui.app import main`, reached only when the default is not `wx`)
+and auto-collected Qt. The CLI spec already excluded Qt correctly.
+
+Owned minimal fix (committed `a6aebd90`, 3 files, 9 insertions, 1 deletion):
+
+- `build/windows/hpc-client-gui.spec`: `excludes` += `PySide6`, `shiboken6`.
+- `build/linux/hpc-client-gui-linux.spec`: same.
+- `build/macos/hpc-client-gui.spec`: same (single-line excludes form).
+- Production path is unaffected: `DEFAULT_GUI_RUNTIME` is `"wx"`, so the
+  packaged app never imports Qt at runtime; the excludes only remove the
+  statically-followed legacy branch from the bundle, exactly as
+  `docs/decisions/V2_RUNTIME_DECISION.md` requires (Qt remains source-only
+  via the `legacy-qt` extra).
+
+Rebuild after the fix (same command, `--clean`): bundle is **204 files,
+zero Qt** (no `pyside`/`shiboken`/`Qt6*.dll` names, no `PySide6`/`shiboken6`
+dirs); exe `dist/hpc-client-gui/hpc-client-gui.exe` size 7672473, SHA-256
+`9cd967609045d28087dc64c045ced48061eaaa677bf8e25175e1e5e434f39549`.
+This is a verification build only (built pre-commit from HEAD + diff,
+content-identical to `a6aebd90`; `dist/` is gitignored): it proves the
+ships-no-Qt claim at bundle level but is NOT a frozen candidate (no
+provenance record, no manifest, no source-independence launch proof).
+`git diff --check` clean; spec `ast.parse` OK x3; no test weakened.
+
+### 5.2 Full Workstream E replay: all five paths PASS (held lease, fresh)
+
+Target `LOCAL_REAL_HYPERV` (`hpctest@192.168.250.11:22`, key from the emitted
+lab profile, `BatchMode=yes`, `ConnectTimeout=8`). Lab health at replay:
+`compute02 idle`, `compute01 down` (unchanged); all replay constrained to the
+healthy single node / controller. No keys/secrets copied to reports/Git.
+
+- `FREEZE-014` connection/reconnect: two separate SSH sessions
+  (`CONN1_OK`/`login-control01`, then `RECONN_OK`/`hpctest` + `sinfo`),
+  exit 0 both. PASS.
+- `FREEZE-015` SFTP round trip: 65536 random bytes up via `scp`, remote
+  `sha256sum` `984b47f9585fad514255b5538ae88943b80ef8032b991acd92642b4b3ac880d7`,
+  download back, local hash match `True`; remote + local disposables removed.
+  PASS with byte/hash proof.
+- `FREEZE-016` remote editor save: remote create `line1`, rewrite
+  `line1/line2-edited`, server `sha256sum`
+  `0d92ab2c388fd115bca65942c020928ffac4f18a16ab272b849a3110e04a6788`,
+  `scp` download verified, remote + local disposables removed. PASS.
+- `FREEZE-017` job list/submit/cancel: `sinfo`/`squeue` read; disposable
+  `w56-replay`(`--nodelist=compute02`, `sleep 120`) submitted as job **74**,
+  observed `RUNNING` on `compute02` via `squeue`/`scontrol`, `scancel 74`,
+  `squeue` empty for 74, `sacct` confirms `CANCELLED`; sbatch + output
+  disposables removed. PASS.
+- `FREEZE-018` terminal: `TERM_OK`/`login-control01`/`uptime`/`2+3=5`,
+  exit 0. PASS.
+
+### 5.3 Focused tests (fresh at `a6aebd90`, not reused)
+
+- `test_qt_removal_gate + test_wave0_unicode_baseline + test_wheel_packaging`:
+  **61 passed, 0 failed** (includes wx-default + deps-contract assertions).
+- `test_version_consistency + test_remote_entry_helpers`: **13 passed**.
+- `test_wx_w55_shell_soak` (100s timeout): **2 passed**.
+- `compileall src/hpc_gui`: exit 0. `ruff check` (runtime + baseline test):
+  clean. `git diff --check`: clean.
+- Validator `scripts/validate_wave_closeout.py --wave W56 --no-execute-tests`:
+  `can_close false` (manifest absent; none fabricated) — red as expected for
+  BLOCKED. Full `scripts/ci.py` suite not run (bounded run; belongs to the
+  freeze attempt).
+
+### 5.4 Requirement dispositions after this run
+
+`FREEZE-001/002/003/004`: VERIFIED (reports present, directories observable,
+zero new findings, harness present + now build-verified on Windows).
+`FREEZE-006/007`: PARTIAL (all focused slices green incl. bundle proof; full
+suite pending freeze attempt). `FREEZE-008/014/015/016/017/018`: IMPLEMENT
+(full replay PASS above, bound to `a6aebd90` content + lease identity).
+`FREEZE-012`, `BUILD-001/002`, `TODO-007/008/009`: BLOCKED (verification
+build exists with SHA/size above but no frozen candidate: needs clean-pin
+rebuild provenance + plugin SHA/provenance + manifest + source-independence
+launch proof). `TODO-RUNTIME-CUTOVER-001`: IMPLEMENT (unchanged).
+`TODO-RUNTIME-DEPENDENCY-001`: IMPLEMENT-AT-SOURCE + WINDOWS-BUNDLE-VERIFIED
+(specs + lock + requirements wx-only; Windows bundle proves zero Qt;
+Linux/macOS bundle proof belongs to platform CI builds). `BUILD-002` rule
+honored (no freeze exists; pre-freeze changes invalidate nothing).
+
+### 5.5 Blockers (controller-owned resume)
+
+1. `BLOCKED-CANDIDATE-FREEZE` (only remaining product blocker): build exactly
+   one candidate from the clean pin `a6aebd90`, record filename, main SHA
+   `a6aebd90`, plugin SHA/bundle provenance, version 1.5.9, build environment
+   (Windows 11 AMD64, Python 3.14.0, PyInstaller 6.22.2, wx 4.3.1),
+   candidate SHA-256 + manifest (`artifacts/wave_W56/...`), prove the packaged
+   app runs without a source checkout (`TODO-009`), rerun affected focused
+   tests, then return `READY_FOR_AUDIT`. Prior `BLOCKED-BUILD-VERIFICATION`,
+   `BLOCKED-FULL-REPLAY`, lock-prune and platform-spec items are RESOLVED by
+   this run; `compute01 down` remains lab-infra state (single-node replay
+   viable; two-node paths must wait for lab recovery via maintained tooling).
+2. Fresh-independent audit + close remain controller-dispatched after
+   `READY_FOR_AUDIT`. `W56_AUDIT_REPORT.md` not created by this worker.
+3. No new product findings raised; the `down` compute is infrastructure state,
+   not a W56 defect; no cross-scope fix attempted.
+
+Contradiction scan: report claims match executed commands (commit
+`a6aebd90`, 61 + 13 + 2 focused PASS, compile/ruff/parse clean, bundle
+204-files/zero-Qt with SHA, five replay paths with named outputs/hashes/job
+74 lifecycle, validator red). No GUI `FULL`/PACKAGE/EXTERNAL acceptance
+claimed beyond the stated replay + verification build. Nothing fabricated,
+no test weakened, no sibling scope touched.
