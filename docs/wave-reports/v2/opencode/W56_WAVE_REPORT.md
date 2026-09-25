@@ -185,6 +185,68 @@ pyproject/spec/support-text surface already committed at `ebce9e9f`):
   routed), `ruff check tests/test_wave0_unicode_baseline.py` clean,
   `git diff --check` clean.
 
+## Repair follow-up 3 (this phase — committed-HEAD re-verification + report refresh, hypothesis `W56-platform-specs-reaudit`)
+
+Diagnosis unchanged from the handed-off finding: platform-specs re-audit
+verification at the committed HEAD. This repair makes one genuine correction:
+the canonical report above was factually stale — "Repair follow-up 2" (lines
+174-180) records `build/linux` + `build/macos` specs as deliberately NOT
+changed and still carrying Qt hidden imports, and blocker 1 records
+`requirements-release.lock` as still pinning Qt. Both statements were
+superseded by later committed W56 repair work that was never written back
+into this report:
+
+- `16254fe7` (HEAD): `build/linux/hpc-client-gui-linux.spec` +
+  `build/macos/hpc-client-gui.spec` Qt hidden imports removed, mirroring
+  `build/windows/hpc-client-gui.spec` per `docs/decisions/V2_RUNTIME_DECISION.md`.
+- `967afc47`: Qt pins pruned from the release lock.
+- `2341331a`: V2 runtime decision recorded for Linux/macOS specs; lock prune verified.
+
+Fresh verification this repair (HEAD `16254fe7`, tree clean at entry and exit
+apart from this report refresh):
+
+- Spec `ast.parse` OK x4 (`build/linux/hpc-client-gui-linux.spec`,
+  `build/macos/hpc-client-gui.spec`, `build/windows/hpc-client-gui.spec`,
+  `build/windows/hpc-client-cli.spec`).
+- Code-level Qt refs in shipped GUI specs: 0 (`PySide6`/`shiboken6`/
+  `collect_dynamic_libs`-for-Qt absent; comment-only mentions excluded).
+  The CLI spec's only `PySide6`/`shiboken6` tokens are inside its
+  `excludes=[...]` list (correct: Qt excluded, not shipped) and its only
+  `collect_dynamic_libs` call targets `paramiko`, not Qt.
+- `src/hpc_gui/runtime.py`: `DEFAULT_GUI_RUNTIME = "wx"`.
+- `requirements.txt` ships `wxPython>=4.3.1`, no Qt lines (test-guarded).
+- `requirements-release.lock`: 0 Qt records.
+- Focused tests: `test_wave0_unicode_baseline` + `test_wheel_packaging`
+  46 passed; `test_qt_removal_gate` 15 passed, 0 failed (the prior
+  single environmental failure
+  `test_git_tracked_enumeration_rejects_git_failure` no longer reproduces
+  on this tree — resolved without a W56 edit, Wave 66/67 scope unaffected).
+- `git diff --check` clean; `git status` clean apart from this report.
+- Validator `scripts/validate_wave_closeout.py --wave W56`: red as expected —
+  `artifacts/wave_W56/WAVE_W56_EVIDENCE_MANIFEST.json` absent (no PASS to
+  manifest; not fabricated).
+- No `PyInstaller` build executed: the repo invariant requires the candidate
+  from a clean Python 3.14 pin; this environment provides Python 3.12.4, so
+  building here would bind an off-pin artifact. No lab probe executed: no
+  exclusive LOCAL_REAL lease is held by this worker and the program runs
+  parallel siblings, so any EXTERNAL replay now would violate the lab
+  serialization rule.
+- Final binding: during this phase the integration base advanced
+  `16254fe7 → 52f44f35` (sibling Wave 66/67-scope isolation fix to
+  `tests/test_qt_removal_gate.py`, the exact test whose environmental failure
+  previously reproduced — explains the resolution; not a W56 edit, not
+  reverted). `git diff 16254fe7..HEAD -- build/ requirements.txt
+  requirements-release.lock src/hpc_gui/runtime.py` is empty, so all W56
+  source verification above carries over; the focused suite was re-run at
+  the final HEAD: 61 passed, 0 failed, tree clean.
+
+Blocker delta vs follow-up 2: blocker 1's lock-prune and linux/macos-spec
+sub-items are RESOLVED at source level; blocker 1 remains OPEN only for the
+real packaging-build verification (ships-no-Qt bundle proof from the clean
+3.14 pin). Blockers 2 (full Workstream E replay with exclusive lease),
+4 (candidate freeze + SHA-256 + manifest), and the fresh-independent audit
+remain OPEN. No new behavior-affecting edit; no test weakened.
+
 ## Handoff
 
 - After the build verification (blocker 1) lands on a verified pin, the next W56 attempt must: re-capture baseline, execute full Workstream E replay with exclusive LOCAL_REAL lease (recovering the `down` compute first if two-node paths are required), build exactly one candidate with full provenance + SHA-256 + manifest, rerun affected focused tests, refresh this report, and return `READY_FOR_AUDIT` only when every owned requirement is IMPLEMENT with current truthful evidence. The wx-default flip (`4fb752ad`) and this repair's dependency/spec/support-text re-audit must not be reverted: both implement the durable product-owner decision.
