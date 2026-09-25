@@ -97,6 +97,7 @@ TaskPlugin=task/none
 SelectType=select/cons_tres
 SelectTypeParameters=CR_Core
 SchedulerType=sched/backfill
+ReturnToService=2
 AccountingStorageType=accounting_storage/slurmdbd
 AccountingStorageHost=$SLURM_CONTROLLER_HOST
 NodeName=$SLURM_COMPUTE_NODES CPUs=$SLURM_COMPUTE_CPUS RealMemory=$SLURM_COMPUTE_REAL_MEMORY State=UNKNOWN
