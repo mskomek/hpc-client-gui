@@ -25,7 +25,13 @@ rather than waiting for a separate verdict artifact.
 - Tests that pin Qt as the default (e.g. `tests/test_wave0_unicode_baseline.py::test_qt_is_default_runtime`)
   encode the superseded decision and are updated to assert the wx default; Qt-only tests move under the
   existing `qt` marker as legacy coverage.
-- Packaging (`build/windows/hpc-client-gui.spec` hidden imports, `pyproject.toml` dependencies), README/support
-  text and third-party notices are re-audited to match this decision.
+- Packaging on **every** release platform (`build/windows/hpc-client-gui.spec`, `build/linux/hpc-client-gui-linux.spec`,
+  `build/macos/hpc-client-gui.spec`: no PySide6/shiboken6/QtWebEngine hidden imports, binaries, data or Qt LGPL
+  source-offer files), `pyproject.toml`/`requirements*.txt`/`requirements-release.lock` dependencies, README/support
+  text and third-party notices are re-audited to match this decision. The Linux/macOS specs are edited to mirror
+  the Windows spec; each platform's release build (CI `release.yml`) is its verification.
+- `requirements-release.lock` was pruned of `PySide6`, `PySide6_Addons`, `PySide6_Essentials` and `shiboken6`
+  (2026-09-25, `967afc47`): nothing else in the lock depends on them; verified by a clean `uv venv` install of the
+  lock (32 packages, `uv pip check` compatible, no Qt importable, `wx 4.3.1`).
 - The runtime-default/packaging change invalidates pre-cutover final evidence: a new clean candidate is built,
   hashed and replayed (W56 build, W57 `RUNTIME-CUTOVER-002/003`).
