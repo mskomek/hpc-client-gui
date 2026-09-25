@@ -132,6 +132,16 @@ class TestRepositoryBaseline:
             "PySide6 must not be a mandatory production dependency "
             "(legacy-qt extra only)"
         )
+        # requirements.txt is a gate-scanned production dependency file
+        # (scripts/qt_removal_gate.py): it must ship the wx runtime, not Qt.
+        req_lines = (ROOT / "requirements.txt").read_text(encoding="utf-8").splitlines()
+        assert any(line.strip().startswith("wxPython") for line in req_lines), (
+            "wxPython not in requirements.txt production dependencies"
+        )
+        assert not any("PySide6" in line or "shiboken6" in line for line in req_lines), (
+            "Qt must not remain in requirements.txt production dependencies "
+            "(legacy-qt extra only)"
+        )
 
     @pytest.mark.audit
     def test_i18n_files_exist(self):

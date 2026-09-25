@@ -134,7 +134,7 @@ All runs at HEAD `4fb752ad` + this repair's 5-file re-audit diff (plus this repo
 
 ## Blockers (controller-owned resume)
 
-1. `BLOCKED-BUILD-VERIFICATION`: `RUNTIME-DEPENDENCY-001` source re-audit is applied but the ships-no-Qt claim is not yet build-verified — `requirements-release.lock` still pins `PySide6==6.11.2`/`shiboken6==6.11.2` (regeneration belongs to the verified build step); no `PyInstaller` build has proven the wx-default bundle ships no Qt; no install/CI proof for the `legacy-qt` extra split. Resume: regenerate/verify the release lock, run a real packaging build from the clean pin, prove Qt absence in the bundle + `pip install -e .` pulls wx without Qt, then run packaged/W04-harness regression (packaged acceptance itself is W57 scope; W56 records the frozen identity). Overlaps W57 packaged-acceptance scope — controller routes the boundary.
+1. `BLOCKED-BUILD-VERIFICATION`: `RUNTIME-DEPENDENCY-001` source re-audit is applied but the ships-no-Qt claim is not yet build-verified — `requirements-release.lock` still pins `PySide6==6.11.2`/`shiboken6==6.11.2` (regeneration belongs to the verified build step); `requirements.txt` realigned to wxPython by this repair (test-guarded); `build/linux` + `build/macos` specs still carry Qt hidden imports (20 gate blockers; re-audit at the verified build step, sibling platform scope); no `PyInstaller` build has proven the wx-default bundle ships no Qt; no install/CI proof for the `legacy-qt` extra split. Resume: regenerate/verify the release lock, run a real packaging build from the clean pin, prove Qt absence in the bundle + `pip install -e .` pulls wx without Qt, then run packaged/W04-harness regression (packaged acceptance itself is W57 scope; W56 records the frozen identity). Overlaps W57 packaged-acceptance scope — controller routes the boundary.
 2. `BLOCKED-FULL-REPLAY`: full Workstream E replay (connection/reconnect, SFTP round trip with byte/hash proof, remote editor save with server-side proof, disposable job submit/cancel, terminal) not executed; bounded probe only (fresh PASS this repair: `LAB_SSH_OK`, `login-control01`, `idle` + `down`). Resume: with exclusive LOCAL_REAL lease on the post-verification pin, execute the five replay paths with environment/target/profile/requirement binding and cleanup.
 3. `PARTIAL-LAB-DEGRADED`: one compute `down` (`sinfo`: one `idle`, one `down`; unchanged since `ae97a177`). Single-node replay viable; two-node `srun` and any test requiring both computes must wait for lab recovery via maintained tooling. Not a W56 product defect; infrastructure/orchestration state until diagnosed.
 4. `BLOCKED-CANDIDATE`: no candidate filename, main SHA beyond HEAD, plugin SHA/provenance, version, build environment, SHA-256, or manifest exists. Correctly absent (building before the ships-no-Qt build verification would risk binding a Qt-bundled artifact against the wx-only decision). Resume: after blocker 1, build exactly one candidate from the clean post-re-audit pin, record full provenance, then run packaged/W04-harness regression.
@@ -151,6 +151,39 @@ All runs at HEAD `4fb752ad` + this repair's 5-file re-audit diff (plus this repo
 ## Contradiction scan
 
 - W56 product change this repair (dependency/spec/support-text re-audit + deps-contract test update) is consistent with sibling evidence: report claims match executed commands (compile PASS, 42 baseline PASS incl. wx-default + new deps-contract assertions, 27 + 1-environmental gate/consistency/helpers, 2 soak PASS, ruff PASS, spec parse PASS, `tomllib` deps/extras readback, SSH probe PASS, validator red). No GUI/PACKAGE/EXTERNAL acceptance claimed beyond the bounded probe. Config statements match live files (`pyproject.toml` mandatory deps wx-only, `legacy-qt` extra holds PySide6; spec holds zero Qt references; lock file explicitly still pins Qt pending the verified build step — not hidden). Lab statements match observed `sinfo` output including the one-compute-`down` degradation (not hidden). The `test_qt_removal_gate` single failure is recorded with its exact identity and routed, not hidden.
+
+## Repair follow-up 2 (this phase — production requirements realignment, hypothesis `W56-prod-requirements-realign`)
+
+Prior hypothesis `W56-wx-deps-spec-reaudit` left two gate-scanned production
+dependency files still advertising Qt. This repair advances with a materially
+different diagnosis (remaining production requirements files, not the
+pyproject/spec/support-text surface already committed at `ebce9e9f`):
+
+- `requirements.txt`: `PySide6>=6.5` → `wxPython>=4.3.1` (gate-scanned
+  production dependency file; now ships the wx runtime, no Qt).
+- `tests/test_wave0_unicode_baseline.py::test_wx_production_dependencies_match_runtime_decision`:
+  strengthened with two `requirements.txt` assertions (wxPython present, no
+  `PySide6`/`shiboken6` lines) — authority-directed, strictly stronger.
+- Gate scan: Qt dependency records `6 → 5` (`requirements.txt` clean).
+  Remaining records are truthfully out of this edit's reach: `pyproject.toml`
+  `legacy-qt` extra (explicitly authorized by the decision as unadvertised
+  developer opt-in; the gate has no extra-scoping and is Wave 66/67 scope) and
+  `requirements-release.lock` (4 records; hand-editing a freeze lock without a
+  real resolve would fabricate provenance — regeneration belongs to the
+  verified build step with a clean wx-only venv, blocker 1).
+- Deliberately NOT changed: `build/linux/...spec` + `build/macos/...spec`
+  still carry Qt hidden imports (20 gate packaging blockers). The durable
+  decision names the Windows spec; Linux/macOS bundle scope overlaps sibling
+  platform waves, and editing those specs without build-verification ability on
+  those platforms risks cross-scope breakage. Routed as follow-up inside
+  blocker 1 (verified build step re-audits all shipped specs) — not fixed
+  opportunistically here.
+- Fresh verification this repair (HEAD `ebce9e9f` + this 2-file diff):
+  `test_wave0_unicode_baseline` 42 passed, `test_wheel_packaging` 4 passed,
+  `test_qt_removal_gate` 14 passed + 1 pre-existing environmental failure
+  (`test_git_tracked_enumeration_rejects_git_failure`, Wave 66/67 scope,
+  routed), `ruff check tests/test_wave0_unicode_baseline.py` clean,
+  `git diff --check` clean.
 
 ## Handoff
 
