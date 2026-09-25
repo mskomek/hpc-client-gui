@@ -1292,7 +1292,8 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
     # rows (marked stale) instead of silently clearing them.
     def _has_key(key: str) -> bool:
         try:
-            return bool(t(key) != key)
+            # t() returns "[key]" on total miss (both bundles), never bare key.
+            return bool(t(key) != f"[{key}]")
         except Exception:
             return False
 
