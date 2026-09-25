@@ -154,6 +154,12 @@ For `/wave-a-end-l-p` and other program parallel modes:
 - PLAN and source-only work may still run in parallel;
 - GUI/PACKAGE/EXTERNAL acceptance using LOCAL_REAL requires an exclusive
   LOCAL_REAL lease unless explicitly proven disjoint;
+- in serial mode the lease is the controller's serialization, not a separate
+  artifact: when the run records `parallel_serial_fallback`, exactly one Wave
+  phase executes at a time, so the dispatched Wave holds the exclusive
+  LOCAL_REAL lease for that phase and may run its full EXTERNAL replay; record
+  the run ID and phase as the lease identity. Any parallel mode still requires
+  an explicit lease (product owner decision, 2026-09-25);
 - after a fault-injection Wave, recover/reset only through the maintained lab
   lifecycle tooling before another Wave consumes the lab.
 
