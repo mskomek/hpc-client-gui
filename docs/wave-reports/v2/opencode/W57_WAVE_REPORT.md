@@ -1,4 +1,4 @@
-# W57 Wave Report - Packaged regression, support finalization and freeze (run phase 161)
+# W57 Wave Report - Packaged regression, support finalization and freeze (repair phase 162)
 
 Wave: `W57`
 Canonical report path: `docs/wave-reports/v2/opencode/W57_WAVE_REPORT.md`
@@ -15,7 +15,8 @@ Content identity (controller handoff): `45c46c0a09c3f9b85b4679c40f3779a694b5a8f0
   repair-144 binding and is stale for this dispatch; see §25.)*
 Phase instance: `20260925-074235-63df86b0:161:W57:run`
 Prior phase: `run` `REOPEN` (`0158-W57-run-normalized.json`). That dispatch returned `REOPEN` on a two-cause diagnosis (25 s child budget **and** foreground-dependent synthetic input) routed to the `W04` packaging-harness surface. This dispatch tested that diagnosis instead of restating it and **falsified its second cause**; §25 records the measurement and the corrected owner route.
-Last updated: 2026-09-28 (run phase 161, opencode executor)
+Last updated: 2026-09-28 (repair phase 162, opencode executor)
+Repair 162 supersession note: the header block below still carries run phase 161's identity fields (content identity `45c46c0a.`, phase instance `.:161:W57:run`, HEAD `c9c1754e.`) because the controller hands the content identity per dispatch and did not hand a new one for this repair dispatch. This dispatch ran at phase instance `20260925-074235-63df86b0:162:W57:repair` on branch `develop` at HEAD `313a3e0d39665f478b6836c175f3359e1d4ffcfc`, with the tested candidate still `bdf6c6c7` / artifact SHA-256 `8BA80453...` and harness SHA-256 `47763C6A...` both unchanged. **Section 26 supersedes the run-155 and run-161 owner route**; the run-161 diagnosis in the block above is retained as history, not as the current conclusion.
 Session status: **REOPEN** *(re-set at run phase 161; the reason is now a proven mechanism, not an inference about ambient conditions).* The external and identity prerequisites remain resolved and were **re-measured in this dispatch**: `lab/lab-status.ps1` exits 0 with `status: PASS`, 3/3 nodes `transport_ok`/`services_ok`, `compute02` restored (ssh/munge/slurmd active), Slurm `compute01|idle compute02|idle`, `image_pin_ok=true`, `profile_valid=true`; and the maintained `lab/lab-test.ps1` exits 0 in 27 s with **23/23** required gates true and `failed: []`. `W57-AUD-005` stays closed by candidate commit `bdf6c6c7`, whose artifact identity was re-verified without rebuild.
 
 The single remaining reason is a measured, repository-owned defect that is **not** W57-owned, and its mechanism is now established rather than hypothesised. The maintained packaged gate `scripts/wx_packaged_smoke.py` was run **unmodified**, three times, against the unchanged candidate: 3/3 exit 1, `FAIL` **1/20**, `details.timeout='artifact did not exit within 25s'`, 26.512 s / 26.859 s / 27.059 s. In all three runs the artifact's own packaged runtime sidecar — the very file the gate scores — reports **`result: PASS`, `phase: 4`**, with 17/19 of its own checks PASS and full input delivery (`ssh_input_chars` 18, DOM `keydown` 18, `sendinput_events` 36, click `[770,544]`). The two artifact-reported failures, `pty_resize` and `clean_shutdown`, are recomputed and overridden by the gate itself (`wx_packaged_smoke.py:206`, `:210-220`, `:236`), so every check the artifact can prove passed. That complete passing payload was on disk **19.444 s before** the gate emitted its `FAIL 1/20` verdict, and the gate never opened it: `wx_packaged_smoke.py:190-192` short-circuits on `timed_out`. Root cause: the artifact completes every smoke phase and writes complete `PASS` evidence roughly 5–7 s into the run, then does not terminate inside the gate's hardcoded `timeout=25`, and the gate converts that into 1/20 by discarding the evidence. Routed to the true owners — the gate budget and discard path to `HPC-W04-FRESH-009` (W15) / `HPC-W04-HARNESS-025` (W16), both CLOSED, so a controller-owned closed-owner repair transaction; the artifact's post-phase-4 shutdown to the product/frozen-candidate surface, which would invalidate W56 and require an owner rebuild. This is a repository-owned red and **not** `HUMAN_DEFERRED`: no credential, MFA, authority, hardware, service or manual-acceptance step is missing. See §25 and `artifacts/wave_W57/W57_RUN161_PKGREG_EVIDENCE_DISCARD_ROOT_CAUSE.json`.
@@ -2782,3 +2783,137 @@ Unchanged in shape from 24.x, but with a corrected owner list:
 
 Wave lifecycle is unchanged: `waves/pending/W57.md` stays pending, and this run scheduled, closed or
 touched no other Wave.
+
+## 26. Repair phase 162 - the blocker is a frozen-candidate shutdown DEADLOCK at `wx_shell.py:1394`, not a harness budget defect
+
+Run 161 left one question explicitly open: *"This run did not settle whether the shutdown path is
+genuinely at fault or merely slow under ambient load."* Run 155 had already recommended a different
+remedy for the same red - make the gate's `timeout=25` host-relative - which is a harness change. Two
+competing owner routes could not both be right. This repair phase settled it by measurement, and the
+answer moves the primary defect from the W04 harness surface to the frozen product.
+
+### 26.1 What was tested
+
+**FINDING.** W57's sole remaining blocker is the maintained gate returning `FAIL 1/20` with
+`details.timeout='artifact did not exit within 25s'` against the unchanged candidate.
+
+**OBSERVED_FAILURE.** Red 4/4 in this dispatch - three instrumented runs plus one unmodified gate run
+through the real entrypoint: exit 1, `1/20`, 26.5-26.9 s, `child_killed=true`, `exit_code=null`, while
+the sidecar the gate never opens reported `result: PASS`, `phase: 4`, `ssh_input_chars: 18`,
+DOM `keydown: 18`, `sendinput_events: 36`.
+
+**HYPOTHESIS.** One mechanism explains all of it: the artifact finishes every smoke phase, then
+**deadlocks in the shell close handler** on a synchronous cross-thread window message issued by
+`frame.Hide()`, so `app.ExitMainLoop()` is never reached and the process never exits. If true, the
+artifact is genuinely defective, the gate is reporting truthfully, and the owner is the product.
+
+**CHANGE.** No repository, product, test, harness or candidate file was modified. The smallest change
+that could discriminate was instrumentation only: a throwaway probe under `.tmp/w57-repair162/` that
+**imports** `scripts/wx_packaged_smoke.py` read-only, reuses the gate's own loopback SSH fixture,
+environment and clean-room workdir, and then times the three events the gate conflates into one -
+`t_sidecar` (evidence on disk), `t_child_exit` (`Popen.poll()` shows the OS process gone) and
+`t_pipes_closed` (both stdout readers hit EOF). stdout/stderr were drained by dedicated reader threads
+so the pipes could never back-pressure, which is what allowed the pipe hypothesis to be tested instead
+of assumed.
+
+### 26.2 The child never exits - the pipes are not the story
+
+`Popen.poll()` stayed `None` for the entire observation window in 3/3 runs (limits 150 s, 120 s, 100 s).
+The OS process itself does not terminate. That **falsifies** the pipe/descendant hypothesis I set out
+to test: had a surviving WebView2 helper been holding the inherited stdio handles, `poll()` would have
+gone non-`None` and `t_pipes_closed` alone would have lagged. The WebView2 helpers *did* exit (thread
+count `10 -> 7`, handles `349 -> 346`); the thing that survives is the artifact.
+
+### 26.3 The wait is blocked, not slow
+
+| t (s) | CPU (s) | threads | handles | WaitReasons |
+|---|---|---|---|---|
+| 14.9 | 2.703 | 10 | 349 | `UserRequest=2, EventPairLow=8` |
+| 31.1 | 2.703 | 10 | 349 | `UserRequest=2, EventPairLow=8` |
+| 46.5 | 2.703 | 10 | 349 | `UserRequest=2, EventPairLow=8` |
+| 62.1 | 2.703 | 10 | 346 | `UserRequest=2, EventPairLow=8` |
+| 77.6 | 2.703 | 10 | 346 | `UserRequest=2, EventPairLow=8` |
+| 93.2 | 2.703 | 7 | 346 | `UserRequest=2, EventPairLow=5` |
+
+Cumulative CPU **froze** and never advanced again. Working set was flat. Every surviving thread sat in
+kernel wait. This is the signature of `NtWaitForSingleObject` on a synchronous cross-thread window
+message. Host CPU load was a constant 77% across the whole dispatch, so load cannot explain a frozen
+CPU counter - and run 155's own 240 s budget run took **218 s** wall clock, i.e. it did not fix
+anything, it waited out a deadlock.
+
+### 26.4 The exact line, from the frozen executable itself
+
+`py-spy` attached to the frozen one-file `.exe` (`rc=0`) and returned a byte-identical stack at
+`t=15.5 s` and `t=47.0 s`:
+
+```
+Thread <id> (idle): "MainThread"
+    close  (wx_shell.py:1394)   <- frame.Hide()
+    finish (wx_shell.py:2060)   <- frame.Close()
+    probe  (wx_shell.py:2480)   <- finish() from the success path
+    Notify (core.py:3554)
+    Notify (core.py:2342)
+    MainLoop (core.py:2258)
+    main   (wx_shell.py:2508)
+```
+
+`wx_shell.py:2479` sets `state["result"] = "PASS"`; `:2480` calls `finish()`; `finish()` writes the
+passing payload at `:2050`, closes the smoke SSH session at `:2056` (returns normally), and calls
+`frame.Close()` at `:2060`. The close handler runs to **`:1394 frame.Hide()`** and blocks there. Because
+`:1401 lifecycle.shutdown()`, `:1402 frame.Destroy()` and `:2063 wx.CallLater(50, app.ExitMainLoop)`
+are all *after* the blocking call, the wx main loop is never told to exit and the process never
+terminates. `wx.Frame.Hide()` issues `ShowWindow(SW_HIDE)`, which synchronously messages the window and
+its children; the embedded WebView2 (`wx.html2.WebView`) child is hosted on a thread that is not
+pumping, so the main thread waits indefinitely. That is the defect, and it is in the shipped product.
+
+### 26.5 What this supersedes
+
+- **Run 155 ("budget is a host-speed function; make it host-relative")** - falsified as the primary
+  cause and demoted. No finite budget yields a clean shutdown before the deadlock clears.
+- **Run 161 ("the gate discards passing evidence for a working artifact")** - half sustained, and the
+  half that matters is wrong about both owner and fix. The gate genuinely does short-circuit at
+  `wx_packaged_smoke.py:190-192`, so `1/20` under-reports the *phase* reached; but `wx_packaged_smoke.py:236`
+  requires `returncode == 0` for `clean_shutdown`, and the artifact's own sidecar already self-reports
+  `clean_shutdown: FAIL`. Scoring the sidecar on timeout would not flip one of the 20 checks.
+- **Run 161 defect B ("open")** - resolved. Real, located, mechanism-classified.
+- **Runs 155/158/161 ambient and foreground framings** - not discriminators. `WerFault=0` and the
+  `14/20` contamination signature never appeared in 4/4 runs. `foreground_request_accepted` was
+  `false`, `false`, `true` across the three runs, yet all three hung identically. Every run reached
+  phase 4 with full input delivery. The blocker is strictly **post-phase-4**.
+
+### 26.6 Corrected owner route
+
+1. **Primary - `W57-PKGREG-SHELL-CLOSE-HIDE-DEADLOCK`**, surface `src/hpc_gui/wx_shell.py:1394`,
+   owner **W56 / the wx shell + packaged-candidate surface**. A correction is a product change: it
+   invalidates the W56 candidate, requires an owner rebuild, and a rerun of affected W56/W57 evidence.
+   W57 must not patch the frozen candidate.
+2. **Secondary - `W57-PKGREG-GATE-EVIDENCE-DISCARD-ON-TIMEOUT`**, surface
+   `scripts/wx_packaged_smoke.py:190-192` / `:236-237`, owners **W15** (`HPC-W04-FRESH-009`) and
+   **W16** (`HPC-W04-HARNESS-025`), both CLOSED, so a controller-owned closed-owner transaction. Still a
+   real reporting-quality defect, but **not** the blocker and not a route to a green.
+
+Invalidated owned rows are unchanged from run 161: `HPC-W10-PKGREG-001`, `HPC-W10-FREEZE-009`, `-032`,
+`-041`, `HPC-W10-TODO-012`, `-013`, `-014`, `-016`, `HPC-W10-TODO-RUNTIME-CUTOVER-003`.
+
+### 26.7 W57 state re-verified in this dispatch
+
+- Maintained gate **unmodified** (`47763C6A...` before and after): exit 1, `FAIL 1/20`, 26.786 s.
+- W57-owned seams: **30 passed in 12.74 s**, exit 0.
+- `WAVE_W57_EVIDENCE_MANIFEST.json` still deliberately absent; no green freeze declaration re-issued.
+- External and identity prerequisites were **not** re-measured here. They were green at run 161
+  (`lab-status` PASS 3/3, `lab-test` 23/23) and this dispatch changed nothing that could affect them;
+  they are inherited history and are labelled as such, not this dispatch's evidence.
+- Ambient during this dispatch: `WerFault=0`, host CPU load 77% on 12 logical CPUs, 4 `vmwp`
+  processes.
+
+### 26.8 Resume point
+
+W57 cannot reach `READY_FOR_AUDIT` until the owner rebuilds the candidate and the maintained
+**unmodified** gate returns `PASS 20/20` with `exit_code 0` on the new SHA-256. The external and
+identity prerequisites are already green and need only a refresh at that point; the candidate
+identity, real-cluster regression (25.7), W57 seams, closeout validator and this packaged-gate
+measurement must not be re-litigated as open questions before the rebuild.
+
+Wave lifecycle is unchanged: `waves/pending/W57.md` stays pending, and this repair phase scheduled,
+closed or touched no other Wave. Evidence artifact:
+`artifacts/wave_W57/W57_REPAIR162_SHELL_CLOSE_HIDE_DEADLOCK_ROOT_CAUSE.json`.

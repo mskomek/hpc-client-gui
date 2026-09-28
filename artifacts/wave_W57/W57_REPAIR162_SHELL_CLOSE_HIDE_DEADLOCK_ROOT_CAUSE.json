@@ -1,0 +1,210 @@
+{
+  "schema": "w57-repair-finding",
+  "wave_id": "W57",
+  "phase": "repair",
+  "phase_instance_id": "20260925-074235-63df86b0:162:W57:repair",
+  "finding_id": "W57-PKGREG-SHELL-CLOSE-HIDE-DEADLOCK",
+  "supersedes_owner_route_in": [
+    "artifacts/wave_W57/W57_RUN155_PKGREG_HARNESS_BUDGET_DEFECT.json",
+    "artifacts/wave_W57/W57_RUN161_PKGREG_EVIDENCE_DISCARD_ROOT_CAUSE.json"
+  ],
+  "severity": "product-shutdown-deadlock",
+  "title": "The packaged artifact deadlocks in the shell close handler: its MainThread blocks inside wx.Frame.Hide() at src/hpc_gui/wx_shell.py:1394, so app.ExitMainLoop() at wx_shell.py:2063 is never reached and the process never exits. This is a frozen-candidate product defect, not a harness budget defect, and it is the sole remaining W57 blocker.",
+  "repair_hypothesis": "W57-REPAIR162-SHELL-CLOSE-DEADLOCK",
+
+  "FINDING": "W57's sole remaining blocker is the maintained packaged-regression gate scripts/wx_packaged_smoke.py returning FAIL 1/20 with details.timeout='artifact did not exit within 25s' against the unchanged frozen candidate. Previous dispatches disagreed about the cause: run 155 blamed the gate's hardcoded 25 s child budget, run 161 blamed the gate for discarding passing evidence on timeout and left the artifact's shutdown 'open'. Those two cannot both be the primary cause, and neither settles whether the child process actually fails to exit.",
+
+  "OBSERVED_FAILURE": "Gate red 4/4 in this dispatch (three instrumented probe runs plus one unmodified gate run): exit 1, FAIL 1/20, elapsed 26.5-26.9 s, details.timeout='artifact did not exit within 25s', child_killed=true, exit_code=null. In every run the artifact's own runtime sidecar, which the gate never opens on the timed_out branch, reports result=PASS, phase=4, ssh_input_chars=18, DOM keydown=18, sendinput_events=36. Direct process-level instrumentation shows the child OS process is still alive 93-143 s after it wrote that evidence.",
+
+  "HYPOTHESIS": "One mechanism explains every observation: the artifact finishes all four smoke phases, then deadlocks in the shell close handler on a synchronous cross-thread window message issued by frame.Hide(), so the process never terminates. If true, the artifact is a genuinely defective product (the gate is reporting truthfully), the gate's budget is not the defect, and the owner route belongs to the product/frozen-candidate surface, not to the W04 harness surface.",
+
+  "CHANGE": "No repository, product, test, harness or candidate file was modified. The smallest change that could test the hypothesis was instrumentation only: a throwaway probe under .tmp/w57-repair162/ that imports scripts/wx_packaged_smoke.py read-only, reuses the gate's own loopback SSH fixture, environment and clean-room workdir, and then times three separate events that the gate conflates into one: t_sidecar (runtime evidence first on disk), t_child_exit (Popen.poll() shows the OS process gone) and t_pipes_closed (both stdout/stderr readers hit EOF). It also samples the child's CPU time, thread count, handle count and thread WaitReasons, and attaches py-spy to dump the hung Python stack. This deliberately separates 'the child never exits' from 'the child exited but a surviving descendant holds the inherited stdio handles so subprocess.communicate() never returns' - the second explanation would have been a harness defect with a completely different owner.",
+
+  "RESULT": "HYPOTHESIS CONFIRMED, and the harness-side explanation is falsified. t_child_exit was null at the 150 s, 120 s and 100 s observation limits in three consecutive runs, while t_pipes_closed was never reached because the child was still alive. The child is not waiting on pipes; the OS process itself never terminates. The wait is blocked, not slow: cumulative CPU time froze at 2.70-4.0 s from t=15 s onward and never advanced again, thread count fell 10 -> 7 and handles 349 -> 346 as WebView2 threads wound down, and every surviving thread sat in kernel wait (WaitReason UserRequest=2, EventPairLow=5..8) - the signature of NtWaitForSingleObject on a synchronous cross-thread window message, not of slow work and not of host load (host CPU load was a constant 77% across the whole dispatch, and load cannot explain a frozen CPU counter). py-spy attached successfully to the frozen one-file executable and returned a byte-identical stack at t=15.5 s and t=47.0 s:
+
+    Thread <id> (idle): \"MainThread\"
+        close  (wx_shell.py:1394)   <- frame.Hide()
+        finish (wx_shell.py:2060)   <- frame.Close()
+        probe  (wx_shell.py:2480)   <- finish() reached from the success path
+        Notify (core.py:3554)
+        Notify (core.py:2342)
+        MainLoop (core.py:2258)
+        main   (wx_shell.py:2508)
+
+  src/hpc_gui/wx_shell.py:2479 sets state[\"result\"] = \"PASS\"; :2480 calls finish(); finish() writes the passing payload at :2050, closes the smoke SSH session at :2056 (which returns), and calls frame.Close() at :2060. The close handler runs to :1394 frame.Hide() and blocks there. Because :1401 lifecycle.shutdown(), :1402 frame.Destroy() and :2063 wx.CallLater(50, app.ExitMainLoop) are all after the blocking call, the wx main loop is never told to exit and the process never terminates. wx.Frame.Hide() issues ShowWindow(SW_HIDE), which synchronously messages the window and its children; the embedded WebView2 (wx.html2.WebView) child is hosted on a thread that is not pumping, so the main thread waits indefinitely. That is the defect.",
+
+  "measurements": {
+    "harness_under_test": {
+      "path": "scripts/wx_packaged_smoke.py",
+      "sha256_before": "47763C6ABD7EBDF4235C0ADD36FCE56269AA9C073BED798ED2A5784876FA0FDD",
+      "sha256_after": "47763C6ABD7EBDF4235C0ADD36FCE56269AA9C073BED798ED2A5784876FA0FDD",
+      "modified_by_this_repair": false
+    },
+    "candidate_under_test": {
+      "sha256": "8BA80453A76A664959BAEDF7716C476A5334B6AFF860A4BC79B9E220D48B4C57",
+      "size_bytes": 7672468,
+      "candidate_commit": "bdf6c6c7e2817422b6f9005873247d3636c5eac4",
+      "rebuilt_or_patched": false
+    },
+    "probe_runs": [
+      {
+        "run": 1,
+        "observe_limit_s": 150,
+        "t_sidecar_s": 7.067,
+        "t_child_exit_s": null,
+        "t_pipes_closed_s": null,
+        "verdict": "PRODUCT_HANG",
+        "sidecar_result": "PASS",
+        "sidecar_phase": 4,
+        "foreground_request_accepted": true
+      },
+      {
+        "run": 2,
+        "observe_limit_s": 120,
+        "t_sidecar_s": 8.852,
+        "t_child_exit_s": null,
+        "t_pipes_closed_s": null,
+        "verdict": "PRODUCT_HANG",
+        "sidecar_result": "PASS",
+        "sidecar_phase": 4,
+        "cpu_seconds_frozen_at": 4.0,
+        "thread_transition": "10 threads / 349 handles at t=17s -> 7 threads / 346 handles at t=64s, then flat to t=111s",
+        "wait_reasons": "UserRequest=2, EventPairLow=5"
+      },
+      {
+        "run": 3,
+        "observe_limit_s": 100,
+        "t_sidecar_s": 6.806,
+        "t_child_exit_s": null,
+        "t_pipes_closed_s": null,
+        "verdict": "PRODUCT_HANG",
+        "sidecar_result": "PASS",
+        "sidecar_phase": 4,
+        "cpu_seconds_frozen_at": 2.703125,
+        "thread_transition": "10 threads / 349 handles flat to t=77s -> 7 threads / 346 handles at t=93s",
+        "wait_reasons": "UserRequest=2, EventPairLow=5",
+        "pyspy": "attached rc=0; identical stack at t=15.5s and t=47.0s"
+      }
+    ],
+    "maintained_gate_recheck_unmodified": {
+      "command": ".venv/Scripts/python.exe scripts/wx_packaged_smoke.py --artifact dist/hpc-client-gui/hpc-client-gui.exe --platform windows --output .tmp/w57-repair162/gate/gate-1.json",
+      "exit_code": 1,
+      "elapsed_s": 26.786,
+      "result": "FAIL",
+      "passed_of_20": 1,
+      "details": {
+        "timeout": "artifact did not exit within 25s",
+        "child_killed": true,
+        "exit_code": null,
+        "workdir_outside_repo": true
+      },
+      "unread_sidecar": "result=PASS, phase=4, ssh_input_chars=18"
+    },
+    "ambient": {
+      "werfault_processes": 0,
+      "host_cpu_load_pct": 77,
+      "logical_cpus": 12,
+      "hyper_v_vmwp_processes": 4,
+      "contaminant_signature_14_of_20_werfault": "not present in any run in this dispatch"
+    }
+  },
+
+  "falsifications": [
+    {
+      "prior_claim": "Run 155: the gate's hardcoded timeout=25 is a host-speed function and the owner should make the budget host-relative or configurable.",
+      "measured_here": "False as the primary cause. The child does not exit at 25 s, 100 s, 120 s or 150 s. It is blocked in a kernel wait with a frozen CPU counter, so no finite budget produces a clean shutdown sooner than the deadlock clears, and run 155's own 240 s budget run took 218 s wall clock - it did not fix anything, it waited out a deadlock. Acting on this remedy would have masked a real product defect behind a bigger number.",
+      "verdict": "FALSIFIED as the primary cause; demoted to a secondary reporting-quality issue"
+    },
+    {
+      "prior_claim": "Run 161: the root cause is that the gate discards complete passing evidence on the timed_out branch, making the gate report 1/20 for a working artifact.",
+      "measured_here": "Half right, and the half that matters is wrong about the owner. The gate does short-circuit at wx_packaged_smoke.py:190-192 and never opens the sidecar, so the 1/20 under-reports - that part stands as a reporting defect. But the artifact is not 'a working artifact' that merely exits slowly: wx_packaged_smoke.py:236 requires returncode==0 for clean_shutdown, and the artifact's own sidecar already self-reports clean_shutdown=FAIL. The gate is scoring a genuinely failed shutdown. Reading the sidecar on timeout would not have produced a green.",
+      "verdict": "PARTIALLY SUSTAINED as a reporting defect, FALSIFIED as the cause and as the fix"
+    },
+    {
+      "prior_claim": "Run 161 defect B: 'This run did not settle whether the shutdown path is genuinely at fault or merely slow under ambient load.'",
+      "measured_here": "Settled. Genuinely at fault. The MainThread is pinned at src/hpc_gui/wx_shell.py:1394 in two byte-identical py-spy dumps 32 s apart, with CPU frozen and all threads in kernel wait.",
+      "verdict": "RESOLVED - defect B is real, located and mechanism-classified"
+    },
+    {
+      "hypothesis_tested_and_rejected": "The child exits promptly but a surviving descendant (e.g. a WebView2 helper) inherits the stdio handles, so subprocess.communicate() at wx_packaged_smoke.py:114 blocks on the pipes while the real work is already done. This would have been a harness-side defect with a cheap, correct fix.",
+      "measured_here": "Explicitly instrumented and rejected. stdout/stderr were drained by dedicated reader threads so the pipes could never back-pressure, and Popen.poll() was sampled independently of pipe state. poll() stayed None for the entire observation window in 3/3 runs, so the OS process itself is alive. The WebView2 helpers did exit (thread count 10 -> 7), so the surviving process is the artifact, not a helper.",
+      "verdict": "FALSIFIED by direct measurement"
+    },
+    {
+      "prior_claim": "Runs 155/158/161 in turn: ambient desktop contention, topmost-window contamination, and foreground-dependent synthetic input are the discriminator.",
+      "measured_here": "Not discriminators, and now provably irrelevant to the blocker. WerFault=0 and the 14/20 contamination signature never appeared in 4/4 runs. foreground_request_accepted was false in runs 2 and 3 and true in run 1, yet all three hung identically. Every run reached phase 4 with ssh_input_chars=18 and full DOM keydown delivery, so the input path is not the blocker. The blocker is after phase 4, in shutdown.",
+      "verdict": "NOT SUPPORTED; the blocker is strictly post-phase-4"
+    }
+  ],
+
+  "corrected_owner_route": {
+    "primary_defect": {
+      "finding_id": "W57-PKGREG-SHELL-CLOSE-HIDE-DEADLOCK",
+      "surface": "src/hpc_gui/wx_shell.py:1394 frame.Hide() in the shell frame close handler, reached from the packaged smoke finish() at wx_shell.py:2060",
+      "class": "frozen-candidate product defect: cross-thread window-message deadlock against the embedded WebView2 host thread during shutdown",
+      "owner": "the W56 packaged-candidate / wx shell surface owner; a correction is a product change that invalidates the W56 candidate and requires an owner rebuild plus a rerun of affected W56 and W57 evidence",
+      "w57_must_not": "W57's Frozen-candidate invariants forbid patching the frozen candidate, and its Implementation Contract routes a finding that belongs to an earlier domain Wave to that owner instead of fixing it opportunistically"
+    },
+    "secondary_defect": {
+      "finding_id": "W57-PKGREG-GATE-EVIDENCE-DISCARD-ON-TIMEOUT",
+      "surface": "scripts/wx_packaged_smoke.py:190-192 and :236-237",
+      "class": "acceptance-gate reporting quality: on timed_out the gate discards the runtime evidence it would otherwise score, so a completed-but-unshut-down artifact is reported as 1/20 with no indication that phase 4 was reached",
+      "owner_requirement_ids": [
+        "HPC-W04-FRESH-009 (owner W15)",
+        "HPC-W04-HARNESS-025 (owner W16)"
+      ],
+      "note": "Still a genuine defect and still owned by two CLOSED Waves, so still a controller-owned closed-owner transaction. It is NOT the blocker and must not be used to obtain a green: wx_packaged_smoke.py:236 requires returncode==0, and the artifact's own sidecar self-reports clean_shutdown=FAIL, so scoring the sidecar would not flip a single one of the 20 checks to PASS."
+    },
+    "w57_role": "consumer. HPC-W10-PKGREG-001 and FREEZE-009/-032/-041 require W57 to run the maintained gate against the frozen candidate. W57 owns neither the shell shutdown path nor the gate's budget/reporting policy.",
+    "invalidates": [
+      "HPC-W10-PKGREG-001",
+      "HPC-W10-FREEZE-009",
+      "HPC-W10-FREEZE-032",
+      "HPC-W10-FREEZE-041",
+      "HPC-W10-TODO-012",
+      "HPC-W10-TODO-013",
+      "HPC-W10-TODO-014",
+      "HPC-W10-TODO-016",
+      "HPC-W10-TODO-RUNTIME-CUTOVER-003"
+    ]
+  },
+
+  "w57_state_unchanged_and_reverified_in_this_dispatch": {
+    "w57_owned_seams": {
+      "command": ".venv/Scripts/python.exe -m pytest -q -p no:cacheprovider --basetemp=.tmp/w57-repair162/pytest tests/test_local_real_lab_bounded_commands.py tests/test_local_real_lab_static.py tests/test_wave_controller_regressions.py tests/test_w57_freeze_consistency.py",
+      "result": "30 passed in 12.74s",
+      "exit_code": 0
+    },
+    "external_and_identity_prerequisites": "Not re-measured in this dispatch. They were re-measured green in run phase 161 (.tmp/agent-runs/ac-wave-opencode-parallel/20260925-074235-63df86b0/0161-W57-run-normalized.json: lab-status PASS 3/3, lab-test 23/23) and this repair phase changed nothing that could affect them. They are inherited history, not this dispatch's evidence, and are labelled as such.",
+    "no_manifest_authored": "artifacts/wave_W57/WAVE_W57_EVIDENCE_MANIFEST.json is still deliberately absent. Authoring an ACCEPTANCE_GREEN manifest while the maintained gate is red would fabricate acceptance."
+  },
+
+  "explicitly_rejected": [
+    "editing src/hpc_gui/wx_shell.py to fix or bound frame.Hide(), because the candidate is frozen and a product change invalidates W56",
+    "editing scripts/wx_packaged_smoke.py to raise timeout=25, to read the sidecar on the timed_out branch, or to relax clean_shutdown, because that is the closed owner Waves' acceptance-gate surface and changing a gate to obtain a green is not W57's authority",
+    "rebuilding or patching the frozen candidate",
+    "retrying the gate until it goes green, or presenting any of the probe or instrumented runs as the acceptance evidence for the 20-check gate",
+    "narrowing, skipping or xfail-ing any of the 20 checks or any W57 seam",
+    "closing, minimising, moving or raising any of the operator's windows to obtain a green",
+    "attributing the blocker to host CPU load, foreground state or topmost-window contamination, all of which were measured and do not discriminate",
+    "HUMAN_DEFERRED: there is no unavailable credential, MFA, authority, hardware, service or manual-acceptance step in this path"
+  ],
+
+  "not_done": [
+    "no file under src/, tests/, scripts/, build/ or waves/ was modified",
+    "no acceptance gate was redefined",
+    "no test was weakened, skipped or xfailed",
+    "no evidence manifest was authored and no green freeze declaration was re-issued",
+    "no push, tag, release, sign or publish"
+  ],
+
+  "safety": {
+    "tests_weakened": false,
+    "skips_added": false,
+    "fabricated_pass": false,
+    "committed_beyond_wave_owned_evidence": false,
+    "pushed": false
+  },
+
+  "resume_point": "W57's sole remaining blocker is now a located, mechanism-classified frozen-candidate defect at src/hpc_gui/wx_shell.py:1394. The controller should route W57-PKGREG-SHELL-CLOSE-HIDE-DEADLOCK to the W56 product owner and W57-PKGREG-GATE-EVIDENCE-DISCARD-ON-TIMEOUT to a closed-owner transaction against the W04 harness surface. W57 cannot reach READY_FOR_AUDIT until the owner rebuilds the candidate and the maintained unmodified gate returns PASS 20/20 with exit_code 0 on the new SHA-256; the external and identity prerequisites are already green and need only a refresh at that point."
+}
