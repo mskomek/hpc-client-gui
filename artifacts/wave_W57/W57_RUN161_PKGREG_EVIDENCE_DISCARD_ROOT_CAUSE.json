@@ -167,12 +167,13 @@
       "note": "The single truthful reason. The ACCEPTANCE_GREEN manifest is deliberately withheld because the packaged gate is red."
     },
     "postrun_validators": {
+      "note": "Measured in this dispatch with .venv/Scripts/python.exe. Five of the six profile postrun_checks are green. The sixth is Agent-Core/controller-owned and Wave-independent and is NOT a W57 gate.",
       "validate-ac-project.py": "PASS (exit 0) - was red at run 158, now green",
       "validate-agent-parity.py": "PASS (exit 0)",
-      "validate-managed-runtime.py": "recorded separately; Agent-Core/controller-owned and Wave-independent, not a W57 gate",
-      "validate-wave-authoring.py": "recorded separately",
-      "validate-wave-orchestration.py": "recorded separately",
-      "validate-wave-program.py": "recorded separately"
+      "validate-wave-authoring.py": "PASS (exit 0), AC_WAVE_AUTHORING_VALID=61",
+      "validate-wave-orchestration.py": "PASS (exit 0), AC_WAVE_METADATA_VALID=61",
+      "validate-wave-program.py": "PASS (exit 0), status PASS, errors []",
+      "validate-managed-runtime.py": "DID NOT COMPLETE within a 180 s bound and was killed. This is the Agent-Core/controller-owned managed-runtime check, Wave-independent and not a W57 acceptance gate; it is the same controller-owned defect already recorded as DEF-W57-007 in W57 sections 22.2 and 23.7 (canonical-managed-surface-changed plus managed-file-content-mismatch against the external canonical root, and run_postrun_checks() giving non-.py entries no interpreter). It must stay an unfixed, recorded red owned by the controller; this phase did not modify it and it does not change W57's status."
     }
   },
   "why_this_is_REOPEN_and_not_HUMAN_DEFERRED": "The defect is repository-owned, has stable owner requirement IDs, and is routing state rather than human deferral. There is no unavailable credential, MFA, authority, hardware, service or manual-acceptance step anywhere in this path, and the external lab is up and green.",

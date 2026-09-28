@@ -2746,6 +2746,18 @@ Invalidated evidence rows: `HPC-W10-PKGREG-001`, `HPC-W10-FREEZE-009`, `HPC-W10-
 | closeout validator | `scripts/validate_wave_closeout.py --wave W57` | `can_close: false`, one truthful reason - the deliberately withheld `ACCEPTANCE_GREEN` manifest |
 | project validator | `.opencode/scripts/validate-ac-project.py` | exit 0 `PASS` (red at run 158) |
 | agent parity | `.opencode/scripts/validate-agent-parity.py` | exit 0 `PASS` |
+| wave authoring | `.opencode/scripts/validate-wave-authoring.py` | exit 0 `PASS`, `AC_WAVE_AUTHORING_VALID=61` |
+| wave orchestration | `.opencode/scripts/validate-wave-orchestration.py` | exit 0 `PASS`, `AC_WAVE_METADATA_VALID=61` |
+| wave program | `.opencode/scripts/validate-wave-program.py` | exit 0 `PASS`, `errors: []` |
+| managed runtime | `.opencode/scripts/validate-managed-runtime.py` | did not complete within a 180 s bound, killed |
+
+Five of the six profile `postrun_checks` are green. The sixth, `validate-managed-runtime`, is the
+Agent-Core/controller-owned managed-runtime check — Wave-independent, not a W57 acceptance gate,
+and the same controller-owned defect already recorded as `DEF-W57-007` in §22.2/§23.7
+(`canonical-managed-surface-changed` plus `managed-file-content-mismatch` against the external
+canonical root, and `run_postrun_checks()` giving non-`.py` entries no interpreter). It must stay
+an unfixed, recorded red owned by the controller; this phase did not modify it and it does not
+change W57's status.
 
 Stray root-level duplicate `test_wave_controller_regressions.py` is byte-identical to
 `tests/test_wave_controller_regressions.py` (`9EAFA5B769344070B0D9A460DA433A8EAEE0AA486119F0BB74146B7C59AC897D`),
