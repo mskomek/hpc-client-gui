@@ -1,4 +1,4 @@
-# W57 Wave Report - Packaged regression, support finalization and freeze (run phase 155)
+# W57 Wave Report - Packaged regression, support finalization and freeze (run phase 158)
 
 Wave: `W57`
 Canonical report path: `docs/wave-reports/v2/opencode/W57_WAVE_REPORT.md`
@@ -6,7 +6,7 @@ Repository: `mskomek/hpc-client-gui`
 Branch: `develop`
 Baseline SHA (W56 frozen candidate base): `36d6151fd9634cf50e14a639ec0407bef1d296f4`
 Main SHA: `bdf6c6c7e2817422b6f9005873247d3636c5eac4` (candidate commit; the W30 closed-owner repair, the W57 lab-harness hardening and the canonical Agent Core materialization are now inside a real commit)
-Branch/HEAD at this run: `develop` / `bdf6c6c7e2817422b6f9005873247d3636c5eac4`
+Branch/HEAD at this run: `develop` / `32db374bece1ed278198677e99fe67413a68fe78` (run-155 closeout commit; the tested candidate under it is still `bdf6c6c7`)
 Product delta vs Main SHA: `src/hpc_gui/services/job_submit_cancel.py` (W30 closed-owner repair, applied in the working tree, audited PASS)
 Content identity (controller handoff): `692e534df1c49b8d420f2e04999c8487216cc27575dd90f1347f4be1c44fcb07`
   *(Re-bound at repair 144, after audit finding `W57-AUD-004` routed the stale value here for
@@ -16,10 +16,10 @@ Content identity (controller handoff): `692e534df1c49b8d420f2e04999c8487216cc275
   The value now recorded is the identity **measured in this dispatch** and it is byte-equal to
   the controller's handed `content_identity` for phase instance `…:144:W57:repair`. See §17 for
   the measurement and for why this rebind is convergent rather than another oscillation.)*
-Phase instance: `20260925-074235-63df86b0:155:W57:run`
-Prior phase: `run` `ORCHESTRATION_RECOVERY_REQUIRED` (`0154-W57-run-normalized.json`), whose dispatch produced real measurements but emitted no machine-result block. Its DEF-W57-006 premise is superseded by section 23.1: the lab is up.
-Last updated: 2026-09-28 (run phase 155, opencode executor)
-Session status: **REOPEN** *(re-set at run phase 155, superseding the repair-145 `REOPEN` header only in its reasons.)* The two prerequisites that blocked this Wave are resolved: `DEF-W57-006` (`compute02` down) is closed - the real lab is up and the maintained regression is 23/23 - and `W57-AUD-005` (uncommitted `candidate_sha`) is closed by candidate commit `bdf6c6c7e2817422b6f9005873247d3636c5eac4`. The single remaining reason is a NEW, measured, repository-owned defect that is not W57-owned: the maintained packaged gate `scripts/wx_packaged_smoke.py` is non-hermetic (`W57-PKGREG-HARNESS-25S-BUDGET-NON-HERMETIC`). It is routed to its true owner, so this is a repository-owned red and NOT `HUMAN_DEFERRED` - there is no unavailable credential, authority, hardware or service in the way. See section 23.
+Phase instance: `20260925-074235-63df86b0:158:W57:run`
+Prior phase: `run` `ORCHESTRATION_RECOVERY_REQUIRED` (`0155-W57-run-normalized.json`). That dispatch produced real measurements but its provider stream died on a quota limit before any machine-result block, so it was never machine-attested. This dispatch therefore re-ran the one item the canonical state left unattested (T05, packaged regression, recorded `completed` with empty detail and empty evidence) from scratch instead of trusting its prose. Section 24 records the result and supersedes one of its measurement claims.
+Last updated: 2026-09-28 (run phase 158, opencode executor)
+Session status: **REOPEN** *(re-set again at run phase 158; the reason is now sharper, not weaker).* The external and identity prerequisites from run 155 remain resolved: `DEF-W57-006` (`compute02` down) is closed - re-measured in this dispatch, `lab/lab-status.ps1` exits 0 with `status: PASS`, 3/3 nodes `transport_ok`/`services_ok`, Slurm `compute01|idle compute02|idle`, `image_pin_ok=true` - and `W57-AUD-005` (uncommitted `candidate_sha`) is closed by candidate commit `bdf6c6c7`. The single remaining reason is a measured, repository-owned defect that is **not** W57-owned: the maintained packaged gate `scripts/wx_packaged_smoke.py` is non-hermetic in **two** independent ways, its hardcoded 25s child budget and its foreground-dependent synthetic input, so its verdict tracks ambient host and desktop contention rather than artifact behaviour. It is routed to its true owner (`W04` packaging-harness surface, owners `W15` / `W16`). This is a repository-owned red and **not** `HUMAN_DEFERRED`: no credential, MFA, authority, hardware, service or manual-acceptance step is missing. See sections 23.5 and 24.
 
 Two W57-owned items are re-verified green in this dispatch: `tests/test_wave_controller_regressions.py`
 is **17/17** and the canonical content identity is byte-equal to the controller handoff
@@ -2446,3 +2446,192 @@ Resume point, in order:
    independent audit. Steps already independently satisfied and not to be repeated: the candidate
    commit (23.2), candidate identity (23.3), the real-cluster regression (23.1), the W57 seams
    and static gates (23.7), and the FREEZE-029 decision (23.6).
+
+## 24. Run phase 158 - the packaged gate is re-measured from scratch, the run-155 "240s makes it PASS" claim is corrected, and the non-hermetic finding is routed
+
+The run-155 dispatch ended on a provider quota limit before it could emit a machine-result block, so
+it was never machine-attested. Canonical `state.json` reflects that honestly in one place: `T05`
+(packaged regression) is recorded `completed` with **empty detail and empty evidence**. The
+controller handed this dispatch `previous_phase.status = ORCHESTRATION_RECOVERY_REQUIRED` and no
+findings path. Rather than adopt the prior prose, `T05` was re-executed here in full, and the
+candidate identity was re-pinned without any rebuild.
+
+### 24.1 Candidate re-pinned, no rebuild, no patch
+
+| item | value |
+| --- | --- |
+| candidate commit | `bdf6c6c7e2817422b6f9005873247d3636c5eac4` |
+| HEAD at this run | `32db374bece1ed278198677e99fe67413a68fe78` (run-155 closeout only) |
+| artifact SHA-256 | `8BA80453A76A664959BAEDF7716C476A5334B6AFF860A4BC79B9E220D48B4C57` |
+| size / bundle files | `7672468` / `172` |
+
+Byte-identical to the identity pinned at run 155 and at the 01:06 green run, so `FREEZE-028` stays
+satisfied and no rebuild was performed or permitted.
+
+### 24.2 External preflight re-measured - still green, still not the blocker
+
+`lab/lab-status.ps1` exits `0` with `status: PASS`; all three nodes report `transport_ok` and
+`services_ok` (`ssh`/`munge`/`slurmd` active), Slurm reports `compute01|idle compute02|idle`, and
+`image_pin_ok=true` with the pinned image digest. `DEF-W57-006` stays **RESOLVED**. The lab is
+running, and it is part of the ambient load discussed in 24.4 - but the external evidence class is
+green and is not the reason for the freeze.
+
+### 24.3 `T05` re-run: the maintained entrypoint, unmodified, is red 3/3
+
+```
+.venv/Scripts/python.exe scripts/wx_packaged_smoke.py \
+    --artifact dist/hpc-client-gui/hpc-client-gui.exe --platform windows \
+    --output .tmp/w57-run158/pkg-N.json
+```
+
+| run | exit | result | checks | elapsed | `details.timeout` | `child_killed` |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | 1 | FAIL | 1/20 | 26.981s | `artifact did not exit within 25s` | true |
+| 2 | 1 | FAIL | 1/20 | 27.769s | `artifact did not exit within 25s` | true |
+| 3 | 1 | FAIL | 1/20 | 27.071s | `artifact did not exit within 25s` | true |
+
+`scripts/wx_packaged_smoke.py` was not edited. In every run `details` contains only
+`workdir_outside_repo`, `timeout` and `child_killed`, which confirms the short-circuit at
+`scripts/wx_packaged_smoke.py:190-192`: on timeout the harness never reads the packaged runtime
+evidence the artifact wrote, so all 19 non-`process_started` checks keep their initial `FAIL`.
+Evidence: `artifacts/wave_W57/W57_PACKAGED_SMOKE_RUN158_{1,2,3}.json`.
+
+### 24.4 CORRECTION - the run-155 claim "240s returns PASS 20/20" does not reproduce
+
+Run 155 asserted that the unmodified function at its `run_fresh_user_smoke` budget of 240s
+returned `PASS 20/20` in 3m37.98s, and that the budget was therefore the whole defect. Measured in
+this dispatch, on the same host and the same artifact bytes, it does not:
+
+| probe | result | elapsed | runtime | phase | input actually delivered |
+| --- | --- | --- | --- | --- | --- |
+| `timeout=240`, unmodified function | FAIL 14/20 | 9.62s | `keyboard_input:foreground_lost_after_terminal_click` | 0 | `ssh_input_chars=0`, `dom keydown/beforeinput/input = 0/0/0` |
+
+The larger budget does not produce green; it produces a **different** failure. The child now exits
+*fast* and aborts at phase 0 with `exit_code: "artifact exit 1"`, because
+`foreground_request_accepted=false`, `foreground_matches_frame=false`, and no synthetic input ever
+reaches the WebView. Failing checks: `terminal_readback`, `pty_input_output`,
+`remote_file_roundtrip`, `job_roundtrip`, `transfer_queue_render`, `clean_shutdown`.
+
+This matters for routing. It is also worth recording precisely *why* this is still not a product
+verdict: `14/20` with `keyboard_input:foreground_lost_after_terminal_click` is the exact signature
+this Wave's plan already recorded as a **false** packaged red caused by desktop contamination. And
+the artifact is demonstrably capable of full marks on this host - the 01:06 run on the identical
+SHA-256 is `PASS 20/20`, `runtime_phase 4`, `sendinput_events 36`, `ssh_input_chars 18`,
+`dom keydown 18`, `exit 0`.
+
+So the gate has **two** non-hermetic inputs, not one: the hardcoded 25s child budget, and the
+absolute-coordinate foreground/input expectation. Correcting the run-155 recommendation is
+therefore not cosmetic - "raise the timeout" would not have produced a green gate.
+
+### 24.5 Contamination ruled out first, then the real contention source measured
+
+Per the plan's rule, no packaged red is treated as product before a topmost-window contaminant is
+excluded. In this dispatch: `WerFault` process count `0`; `EnumWindows` topmost count `0`; no
+`hpc-client-gui.exe` process alive during the probe. The only title matches were `pycharm64.exe`
+and a `WindowsTerminal.exe` **tab title**, both `TopMost=False`.
+
+A larger, different contention source was then measured directly:
+
+- host CPU load `60-76%`;
+- **three** AC wave programs running concurrently (`hpc-client-gui`, `D:\Projeler\.agents-core`,
+  `D:\Projeler\image-process-para-2`);
+- a **sibling project's live wx GUI** on the desktop: `python.exe` pid `61912` running
+  `D:\Projeler\image-process-para-2\src\main.py`, owning a visible `wxWindowNR` window titled `IMPI`;
+- `20` visible top-level windows, foreground held by `WindowsTerminal.exe` pid `24364`;
+- other owners: Chrome x4, Claude, PyCharm x2, OpenCode, Task Manager, Windows Terminal x3,
+  FreeFileSync, File Explorer x2, Google Drive FS, a `CodeSetup` `TWindowDisabler-Window`, Settings
+  and Windows Security.
+
+The 20-check gate drives the artifact by absolute-coordinate click (`terminal_click [770, 544]` in
+the green run) and requires the artifact to own the foreground. Under those conditions the input
+channel is starved and the verdict becomes a property of the operator's desktop rather than of the
+shipped bundle. This phase did **not** attempt to fix that by touching the desktop.
+
+### 24.6 `T08` re-decided with a sharper root cause, still not deleted
+
+The stray root-level `test_wave_controller_regressions.py` is now positively characterised:
+
+- byte-identical to the tracked `tests/test_wave_controller_regressions.py`
+  (both `9EAFA5B769344070B0D9A460DA433A8EAEE0AA486119F0BB74146B7C59AC897D`);
+- **untracked** (`git ls-files --error-unmatch` -> `error: pathspec ... did not match any file(s) known to git`);
+- expected by **nothing**: the only managed-surface reference to that name in the profile is
+  `tests/test_wave_controller_regressions.py`, and no `.opencode/scripts/*.py` or
+  `.opencode/protocol/*.json` mentions the root copy;
+- collected by **no** maintained gate: `scripts/ci.py` only ever passes explicit `tests/...` paths,
+  and `pyproject.toml`'s `[tool.pytest.ini_options]` declares markers but no `testpaths` override
+  that would sweep the repo root.
+
+Deletion was attempted once and refused by the tool permission layer
+(`{"error":{"type":"permission.rejected","message":"Permission denied: shell"}}`), exactly as in run
+155. No alternative deletion path was attempted, and none should be: routing around a tool
+permission boundary is not an option. Recorded, not worked around.
+
+It is deliberately *not* fixed here for a second reason beyond permission: the root-level copies
+are a **cluster** - `parallel_workspace.py`, `route-wave-findings.py`, `run-wave-program.py`,
+`wave_progress.py`, `wave_state_engine.py` sit beside it - and that cluster is the same class of
+defect as the Agent Core materialization drift in 24.7. Deleting one member of a misrouted
+materialization would treat a symptom and could turn a content-mismatch red into a missing-file
+red. It is reported to its owner instead.
+
+### 24.7 Static gates re-run in this dispatch
+
+| gate | result |
+| --- | --- |
+| `.opencode/scripts/validate-agent-parity.py` | `PASS`, `errors []`, exit `0` |
+| `.opencode/scripts/validate-wave-orchestration.py` | `AC_WAVE_METADATA_VALID=61`, `PASS`, exit `0` |
+| `.opencode/scripts/validate-wave-authoring.py` | `AC_WAVE_AUTHORING_VALID=61`, `PASS`, exit `0` |
+| `.opencode/scripts/validate-wave-program.py` | `PENDING_TRACKER_REGRESSION=PASS`, `COMPLETE_TRACKER_REGRESSION=PASS`, `ATOMIC_TRACKER_WRITE=PASS`, exit `0` |
+| `.opencode/scripts/validate-ac-project.py` | `FAIL`, exit `1` - Wave-independent, see below |
+| `scripts/validate_wave_closeout.py --wave W57` | `can_close=false`, exit `1`, **one** reason: missing manifest |
+
+`validate-ac-project.py` reports `materialization stale: canonical-managed-surface-changed` with
+`managed-file-content-mismatch` on `.opencode/scripts/resolve-ac-model.ps1` and
+`.opencode/scripts/run-wave-program.py`. The mismatching **set changed** since run 155 (which saw
+`run-wave-program.py`, `wave_progress.py`, `wave_state_engine.py`), which is itself evidence that
+this is a live Agent Core materialization drift and not a W57 artifact. It is Agent-Core owned,
+Wave-independent, and recorded rather than fixed.
+
+### 24.8 Still no manifest, still no green freeze
+
+Unchanged from 23.9 and for the same reason. `FREEZE-044` stays unwritten and `FREEZE-046` keeps
+`Frozen for W58: NO`, because a manifest must be `ACCEPTANCE_GREEN` and every `PASS` row must
+carry an exact executed test node - and the packaged-regression rows cannot honestly be `PASS`
+while the gate that must measure them is red. The closeout validator's single reason remains the
+truthful one. Authoring the manifest anyway is the one thing this phase will not do.
+
+### 24.9 Wave decision, owner route and resume point
+
+**NO-GO for freeze. `REOPEN`.** Repository-owned, non-terminal, owner-routed - explicitly **not**
+`HUMAN_DEFERRED`. Routing detail is in
+`artifacts/wave_W57/W57_RUN158_PKGREG_GATE_HERMETICITY_REOPEN_ROUTE.json`:
+
+- **true owner:** the `W04` packaging-harness surface, `scripts/wx_packaged_smoke.py`;
+- **owner requirement IDs:** `HPC-W04-FRESH-009` (owner `W15`, `PKG-GJ-01`) and
+  `HPC-W04-HARNESS-025` (owner `W16`, packaged launch outside source assumptions);
+- both owner Waves are already closed, so this needs a **controller-owned closed-owner repair
+  transaction**, not a W57 edit;
+- **invalidated W57 evidence:** `PKGREG-001`, `FREEZE-009`, `FREEZE-032`, `FREEZE-041`,
+  `TODO-012`, `TODO-013`, `TODO-014`, `TODO-016`, `TODO-RUNTIME-CUTOVER-003`.
+
+Recommended owner action, stated so it cannot be narrowed later: make the gate measure the artifact
+rather than the machine - (1) make the child budget host-relative or configurable and, on timeout,
+still read whatever runtime evidence the artifact wrote instead of short-circuiting at
+`wx_packaged_smoke.py:190-192`; (2) replace the absolute-coordinate terminal click with a
+foreground-independent activation or direct WebView-2 input channel; (3) declare and audit an
+explicit precondition (quiescent interactive session) instead of silently inheriting the operator's
+desktop.
+
+Resume point, in order:
+
+1. **Controller** - open the closed-owner repair transaction for the `W04` harness surface with the
+   routing artifact above.
+2. **W04 harness owner (W15 / W16)** - the three-part fix; then W57 re-runs
+   `wx_packaged_smoke.py` **unmodified** against `8BA80453`.
+3. **W57 run (re-dispatch)** - with (2) green, author `WAVE_W57_EVIDENCE_MANIFEST.json` with all 46
+   owned rows, re-issue the declaration `Frozen for W58: YES`, then dispatch the fresh independent
+   audit. Not to be repeated: candidate commit (23.2), candidate identity (23.3, 24.1), the
+   real-cluster regression (23.1, 24.2), the W57 seams and static gates (23.7, 24.7), the FREEZE-029
+   decision (23.6), and the packaged re-measurement in 24.3.
+
+Wave lifecycle is unchanged: `waves/pending/W57.md` stays pending, and this run scheduled, closed or
+touched no other Wave.

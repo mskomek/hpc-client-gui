@@ -1,0 +1,153 @@
+{
+  "schema": "w57-run-finding",
+  "wave_id": "W57",
+  "phase": "run",
+  "phase_instance_id": "20260925-074235-63df86b0:158:W57:run",
+  "finding_id": "W57-PKGREG-GATE-NON-HERMETIC-OWNER-ROUTE",
+  "supersedes_measurement_claim_in": "artifacts/wave_W57/W57_RUN155_PKGREG_HARNESS_BUDGET_DEFECT.json",
+  "severity": "acceptance-gate-defect",
+  "title": "Run 158 re-measures the maintained packaged-regression gate on the unchanged candidate and confirms it is not hermetic: the 25s child budget AND the foreground-dependent synthetic input both make the verdict a function of ambient host and desktop contention, not of artifact behaviour",
+  "candidate_under_test": {
+    "candidate_commit": "bdf6c6c7e2817422b6f9005873247d3636c5eac4",
+    "closure_commit_at_head": "32db374bece1ed278198677e99fe67413a68fe78",
+    "sha256": "8BA80453A76A664959BAEDF7716C476A5334B6AFF860A4BC79B9E220D48B4C57",
+    "size_bytes": 7672468,
+    "bundle_files": 172,
+    "rebuilt_or_patched": false,
+    "reverified_without_rebuild": true
+  },
+  "why_this_finding_exists": "The controller handed this dispatch the previous run's status ORCHESTRATION_RECOVERY_REQUIRED (0155-W57-run-normalized.json) with no machine-result block, and canonical state.json shows T05 completed with empty detail and empty evidence. The packaged verdict was therefore unattested in any validated dispatch. T05 was re-run from scratch in this phase instance rather than being read off the prior prose.",
+  "measurement_A_maintained_entrypoint_unmodified": {
+    "command": ".venv/Scripts/python.exe scripts/wx_packaged_smoke.py --artifact dist/hpc-client-gui/hpc-client-gui.exe --platform windows --output .tmp/w57-run158/pkg-N.json",
+    "runs": 3,
+    "exits": [1, 1, 1],
+    "results": ["FAIL", "FAIL", "FAIL"],
+    "checks_each_run": "1/20 (process_started PASS; the other 19 FAIL)",
+    "elapsed_s": [26.981, 27.769, 27.071],
+    "details_each_run": "workdir_outside_repo=true, timeout='artifact did not exit within 25s', child_killed=true",
+    "harness_edit": "none; scripts/wx_packaged_smoke.py is byte-unchanged in this dispatch",
+    "evidence": [
+      "artifacts/wave_W57/W57_PACKAGED_SMOKE_RUN158_1.json",
+      "artifacts/wave_W57/W57_PACKAGED_SMOKE_RUN158_2.json",
+      "artifacts/wave_W57/W57_PACKAGED_SMOKE_RUN158_3.json"
+    ],
+    "code_path_confirmed": "scripts/wx_packaged_smoke.py:190-192 short-circuits on timed_out, so the packaged runtime evidence file is never read and every non-process_started check keeps its initial FAIL"
+  },
+  "measurement_B_falsification_same_unmodified_function_larger_budget": {
+    "purpose": "separate a product regression from a budget and foreground defect; diagnostic only, never acceptance evidence",
+    "command": "run_packaged_smoke(dist/hpc-client-gui/hpc-client-gui.exe, 'windows', out, timeout=240) imported from the unmodified scripts/wx_packaged_smoke.py",
+    "elapsed_s": 9.62,
+    "result": "FAIL",
+    "checks": "14/20",
+    "fail_checks": [
+      "terminal_readback",
+      "pty_input_output",
+      "remote_file_roundtrip",
+      "job_roundtrip",
+      "transfer_queue_render",
+      "clean_shutdown"
+    ],
+    "exit_code": "artifact exit 1",
+    "runtime": "keyboard_input:foreground_lost_after_terminal_click",
+    "runtime_phase": 0,
+    "input_delivered": {
+      "foreground_request_accepted": false,
+      "foreground_matches_frame": false,
+      "wx_focus_type": "WebView",
+      "wx_focus_within_terminal_panel": true,
+      "webview_dom_focus": "TEXTAREA/xterm-helper-textarea insideTerminal=true",
+      "bridge_input_chars": 0,
+      "ssh_input_chars": 0,
+      "dom_input_events": { "keydown": 0, "beforeinput": 0, "input": 0 }
+    },
+    "evidence": ["artifacts/wave_W57/W57_PACKAGED_SMOKE_RUN158_PROBE240_DIAGNOSTIC.json"]
+  },
+  "correction_to_the_run_155_finding": {
+    "claim_in_run_155": "the same unmodified code at the harness's own 240s constant returned result=PASS with 20/20 checks in 3m37.98s",
+    "measured_in_run_158": "FAIL 14/20 in 9.62s with runtime='keyboard_input:foreground_lost_after_terminal_click', runtime_phase=0 and zero input events delivered",
+    "consequence": "The 240s budget is not a demonstrated cure. It changes the failure signature from 'child never finished' to 'child finished fast and aborted at phase 0 because it could not obtain foreground and no synthetic input was delivered'. The gate therefore has TWO non-hermetic inputs - the hardcoded 25s child budget and the absolute-coordinate foreground/input expectation - and both track ambient conditions rather than the artifact.",
+    "comparison_to_the_last_green_run": "artifacts/wave_W57/W57_PACKAGED_SMOKE_8BA80453_PASS.json (2026-09-28 01:06) is PASS 20/20, exit 0, runtime_phase 4, sendinput_events 36, ssh_input_chars 18, dom_input_events keydown 18, on the identical artifact SHA-256. The artifact is therefore demonstrably capable of 20/20 on this host; what is not hermetic is the harness measurement."
+  },
+  "contaminant_ruled_out_first": {
+    "rule": "any packaged red must first rule out a topmost-window contaminant before it is treated as product",
+    "werfault_processes": 0,
+    "topmost_windows": 0,
+    "hpc_client_gui_product_processes_running_during_probe": 0,
+    "windows_matching_product_title": [
+      { "title": "hpc-client-gui - .gitignore", "owner": "pycharm64.exe pid 77216", "topmost": false },
+      { "title": "Oturumda 10 dakikada bir debug yaz | hpc-client-gui", "owner": "WindowsTerminal.exe pid 24364", "topmost": false, "note": "this is a terminal tab title, not a product window" }
+    ],
+    "conclusion": "The stale topmost WerFault signature is absent. A second, different and larger desktop-contention source is present instead, measured below."
+  },
+  "ambient_contention_measured": {
+    "host_cpu_load_percent": [60, 76],
+    "concurrent_ac_programs": [
+      "D:\\Projeler\\hpc-client-gui\\.opencode\\scripts\\run-wave-program.py (this dispatch)",
+      "D:\\Projeler\\.agents-core\\.opencode\\scripts\\run-wave-program.py (pid 45104)",
+      "D:\\Projeler\\image-process-para-2\\.opencode\\scripts\\run-wave-program.py (pid 67288)"
+    ],
+    "sibling_project_gui_on_desktop": "python.exe pid 61912 = D:\\Projeler\\image-process-para-2\\src\\main.py owning a visible wxWindowNR window titled 'IMPI'",
+    "visible_top_level_windows": 20,
+    "foreground_window_at_probe_time": "WindowsTerminal.exe pid 24364, CASCADIA_HOSTING_WINDOW_CLASS",
+    "other_visible_window_owners": [
+      "chrome x4",
+      "claude",
+      "pycharm64 x2",
+      "OpenCode",
+      "Taskmgr",
+      "WindowsTerminal x3",
+      "FreeFileSync_x64",
+      "explorer x2",
+      "GoogleDriveFS",
+      "CodeSetup-stable (TWindowDisabler-Window)",
+      "Settings / SecHealthUI / ApplicationFrameHost / TextInputHost"
+    ],
+    "why_this_matters": "The 20-check gate drives the artifact with absolute-coordinate clicks (terminal_click [770,544] in the green run) and requires the artifact to own the foreground. With ~20 competing visible windows, a sibling project's wx GUI, three concurrent agent programs and a terminal holding foreground, foreground_request_accepted is false and zero input events reach the WebView. The verdict is then a property of the operator's desktop, not of the shipped bundle."
+  },
+  "owner_routing": {
+    "true_owner": "the W04 packaging harness surface, scripts/wx_packaged_smoke.py",
+    "owner_requirement_ids": [
+      "HPC-W04-FRESH-009 (owner W15: PKG-GJ-01)",
+      "HPC-W04-HARNESS-025 (owner W16: packaged launch outside source assumptions)"
+    ],
+    "w57_role": "consumer: HPC-W10-PKGREG-001 and FREEZE-032/-041 require W57 to RUN that maintained gate; W57 does not own its timing or foreground policy",
+    "w57_contract_basis": "W57 Implementation Contract 'Integration/freeze rule: if a finding belongs to an earlier domain Wave, stop opportunistic fixing and reopen that owner', and Out of Scope 'Cross-scope defects must be recorded with their stable requirement/finding ID and routed to the true owner Wave'",
+    "recommended_owner_action": "Make the acceptance gate measure the artifact instead of the machine: (1) replace the hardcoded run_packaged_smoke timeout=25 with a host-relative or configurable budget and, on timeout, still read whatever packaged runtime evidence the artifact wrote instead of short-circuiting at wx_packaged_smoke.py:190-192; (2) replace the absolute-coordinate terminal click with a foreground-independent activation or WebView-2 direct input channel so a busy desktop cannot zero the input; (3) expose an explicit, auditable precondition for the gate (quiescent interactive session) instead of silently inheriting the operator's desktop.",
+    "transaction_needed": "both owner Waves are already closed, so this needs a controller-owned closed-owner repair transaction against the W04 harness surface",
+    "invalidates": [
+      "HPC-W10-PKGREG-001",
+      "HPC-W10-FREEZE-009",
+      "HPC-W10-FREEZE-032",
+      "HPC-W10-FREEZE-041",
+      "HPC-W10-TODO-012",
+      "HPC-W10-TODO-013",
+      "HPC-W10-TODO-014",
+      "HPC-W10-TODO-016",
+      "HPC-W10-TODO-RUNTIME-CUTOVER-003"
+    ]
+  },
+  "why_this_is_REOPEN_and_not_HUMAN_DEFERRED": "The defect is repository-owned and has a stable owner, so it is routing state, not human deferral. There is no unavailable credential, MFA, authority, hardware, service or manual-acceptance step anywhere in this path. The lab is up and the external class is green: lab/lab-status.ps1 exits 0 with status PASS, 3/3 nodes transport_ok and services_ok, Slurm reporting 'compute01|idle compute02|idle', image_pin_ok=true.",
+  "explicitly_rejected": [
+    "editing scripts/wx_packaged_smoke.py to raise the 25s default, because that is indistinguishable from weakening an acceptance gate to obtain a green, and the 240s probe proves the budget is not even the whole defect",
+    "presenting the 240s diagnostic run as the maintained entrypoint result",
+    "closing the operator's Chrome, PyCharm, Task Manager, Windows Terminal, File Explorer or the sibling image-process-para-2 'IMPI' GUI to obtain a green, which is taking control of the human desktop, and which this phase did not attempt",
+    "retrying the gate until it happens to go green, which is cherry-picking a measurement",
+    "rebuilding or patching the frozen candidate",
+    "narrowing, skipping or re-scoping any of the 20 checks",
+    "using the manage-Hyper-V path to quiesce the lab VMs: it is permission-denied for this process ('You do not have the required permission to complete this task'), and altering the external lab to shape a measurement is out of bounds regardless"
+  ],
+  "not_done": [
+    "no file under scripts/, src/, tests/, build/ or waves/ was modified",
+    "no acceptance gate was redefined",
+    "no test was weakened, skipped or xfailed",
+    "no evidence manifest was authored and no green freeze declaration was re-issued",
+    "no push, tag, release, sign or publish"
+  ],
+  "safety": {
+    "tests_weakened": false,
+    "skips_added": false,
+    "fabricated_pass": false,
+    "committed_beyond_candidate": false,
+    "pushed": false
+  }
+}
