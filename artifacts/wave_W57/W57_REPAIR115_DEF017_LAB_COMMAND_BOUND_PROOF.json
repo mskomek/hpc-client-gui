@@ -1,0 +1,129 @@
+{
+  "schema": "w57-repair-evidence-fragment",
+  "wave_id": "W57",
+  "phase": "repair",
+  "phase_instance_id": "20260925-074235-63df86b0:115:W57:repair",
+  "finding_id": "DEF-W57-017",
+  "title": "Maintained real-cluster lab harness could not report a two-node srun failure because remote ssh had no wall-clock bound",
+  "repair_hypothesis": "W57-DEF017-LAB-SSH-UNBOUNDED-COMMAND",
+  "is_closeout_manifest": false,
+  "note": "This is a W57-owned evidence fragment, not the ACCEPTANCE_GREEN closeout manifest. artifacts/wave_W57/WAVE_W57_EVIDENCE_MANIFEST.json (FREEZE-044) is deliberately still unwritten because the owned acceptance gate is RED; see open_findings.",
+  "git_identity": {
+    "branch": "develop",
+    "head": "f6ab257fbfd62d402e31e9330f30bb017b795fa8",
+    "head_subject": "Build note: successor freeze after owner correction is W57-owned (RUNTIME-CUTOVER-002/003)"
+  },
+  "lab_environment_identity": {
+    "controller": "login-control01 (192.168.250.11)",
+    "compute_nodes": ["compute01 (192.168.250.12)", "compute02 (192.168.250.13)"],
+    "sinfo_truth": "compute01|idle / compute02|down*",
+    "compute02_tcp22_reachable": false,
+    "measured_by": "lab/lab-status.ps1 sinfo probe + Test-NetConnection, bounded"
+  },
+  "finding": {
+    "observed_failure": "Invoke-LabSshCapture (lab/lab-common.ps1:63-90 pre-fix) ran `& ssh @args` synchronously with no execution bound. ConnectTimeout=5 bounds only the TCP/handshake phase and ServerAliveInterval=5/ServerAliveCountMax=3 only fire when the transport dies. When compute02 is DOWN, Slurm holds the `srun --nodes=2 --ntasks=2` allocation PENDING on a perfectly healthy SSH channel, so `& ssh` never returned and lab-test.ps1 could neither PASS nor FAIL. It was hung indefinitely, not red.",
+    "reproduction_before_fix": {
+      "command": "lab-test.ps1:160 gate command `srun --nodes=2 --ntasks=2 --ntasks-per-node=1 hostname | sort -u` executed through the pre-fix Invoke-LabSshCapture",
+      "result": "INNER_SSH_NEVER_RETURNED",
+      "bounded_by": "only an external 45s Wait-Job around the probe, proving the inner ssh itself had no bound",
+      "artifact": ".tmp/w57-repair-115/probe-srun-pending.ps1"
+    },
+    "hypothesis": "The hang is caused by the absence of a hard local wall-clock bound and child kill on the ssh process, not by a missing SSH keepalive. Adding a bounded, killable execution path with a truthful timeout result makes the maintained harness terminate deterministically with a real FAIL.",
+    "change": [
+      "lab/lab-common.ps1: added Get-LabCommandTimeoutSeconds / Get-LabAllocationTimeoutSeconds (config-driven with 180s/300s fallbacks).",
+      "lab/lab-common.ps1: added ConvertTo-LabProcessArguments (deterministic CommandLineToArgvW re-quoting of the argument vector).",
+      "lab/lab-common.ps1: added Invoke-LabBoundedCommand (hard WaitForExit(ms) bound, process-tree kill on expiry, exit 124 and a truthful stderr marker on timeout, never a false pass).",
+      "lab/lab-common.ps1: Invoke-LabSshCapture now routes through Invoke-LabBoundedCommand and additionally bounds the remote side with `timeout -k 5`, so a killed client cannot orphan a PENDING Slurm allocation. It also exposes timed_out / timeout_seconds / duration_seconds. No unbounded `& ssh` remains in the helper.",
+      "lab/config.json: added timeouts.command_seconds=180 and timeouts.allocation_seconds=300.",
+      "lab/lab-test.ps1: the three allocation-bound gates (srun, sbatch --wait, shared_home_job srun) request the longer allocation budget via the named -TimeoutSeconds parameter."
+    ]
+  },
+  "result_after_fix": {
+    "real_gate_command": {
+      "command": "srun --nodes=2 --ntasks=2 --ntasks-per-node=1 hostname | sort -u via post-fix Invoke-LabSshCapture -TimeoutSeconds 8",
+      "exit_code": 124,
+      "timed_out": true,
+      "elapsed_seconds": 8.1,
+      "interpretation": "The maintained gate now terminates with a truthful failure instead of hanging forever, and is not a false pass."
+    },
+    "bounded_runner": "a child that would run ~29s is terminated at a 3s bound (exit 124, timed_out=True, stderr carries the wall-clock marker)",
+    "normal_path_unaffected": "`hostname` on the controller still returns exit 0, output login-control01, timed_out=False",
+    "argument_quoting": "['plain', 'a b c d', 'has\"quote', ''] round-trips exactly through the re-quoting path"
+  },
+  "verification": {
+    "focused_pytest": {
+      "command": ".venv/Scripts/python.exe -m pytest -q tests/test_w57_freeze_consistency.py tests/test_local_real_lab_static.py tests/test_local_real_lab_bounded_commands.py tests/test_w04_support_freeze.py tests/test_w14_provenance_manifest.py tests/test_version_consistency.py tests/test_w30_submit_cancel.py",
+      "result": "75 passed in 26.84s",
+      "exit_code": 0
+    },
+    "behavioural_retest_pwsh7": {
+      "command": "pwsh -NoProfile -NonInteractive -File .tmp/w57-repair-115/retest-bounded-command.ps1",
+      "result": "RETEST_RESULT=ALL_PASS (16/16)",
+      "exit_code": 0,
+      "host": "PowerShell 7.6.6"
+    },
+    "behavioural_retest_ps51": {
+      "command": "powershell.exe -NoProfile -NonInteractive -File .tmp/w57-repair-115/retest-bounded-command.ps1",
+      "result": "RETEST_RESULT=ALL_PASS (16/16)",
+      "exit_code": 0,
+      "host": "Windows PowerShell 5.1 (exercises the Process.Kill() fallback because Kill(entireProcessTree) is .NET Core only)"
+    },
+    "postrun_validators": {
+      "note": "Unchanged from the phase-114 audit. No new red introduced; the two red validators are the controller's checkpoint/restart obligation over uncommitted controller_restart_paths, which this repair did not touch.",
+      "validate-ac-project.py": "exit 1 (pre-existing: materialization stale / managed-file-content-mismatch over run-wave-program.py, wave_state_engine.py, validate-ac-project.py, validate-managed-runtime.py, AC_WAVE_PROGRESS_STATE_SCHEMA.md)",
+      "validate-agent-parity.py": "exit 0",
+      "validate-wave-orchestration.py": "exit 0",
+      "validate-wave-program.py": "exit 0",
+      "validate-managed-runtime.py": "exit 1 (pre-existing: parallel_cross_wave_true_owner_routing, v2_plan_gate_before_run_repair)",
+      "validate-wave-authoring.py": "exit 0"
+    }
+  },
+  "test_integrity": {
+    "weakened_tests": false,
+    "detail": "git diff -- tests/ adds tests/test_local_real_lab_bounded_commands.py (4 new tests) and replaces exactly one static assertion (`base64 -d | bash -s`) with three stronger ones (`base64 -d | timeout -k 5`, `bash -s`, `Invoke-LabBoundedCommand -FilePath 'ssh'`). Net +3 assertions, 0 removed, 0 skip/xfail added, no assertion deleted. tests/test_w30_submit_cancel.py was already modified by the earlier controller-dispatched W30 repair and was not touched here.",
+    "diff_check": "git diff --check -- lab/ tests/ => clean (exit 0)"
+  },
+  "changed_files": [
+    "lab/lab-common.ps1",
+    "lab/lab-test.ps1",
+    "lab/config.json",
+    "tests/test_local_real_lab_static.py",
+    "tests/test_local_real_lab_bounded_commands.py"
+  ],
+  "file_sha256": {
+    "lab/lab-common.ps1": "a5902d5b21e15959a367fb98c4cd04455526226ec8f497ff7e6d471a5242c8de",
+    "lab/lab-test.ps1": "851ca929dc69be3ccae491b682bcd9b83c4e1f96cd7e9164745ee0f45eca667a",
+    "lab/config.json": "fc81db06216a7d547dc245fc5609d8753b5010817e2e5f1ec27332152e17588d",
+    "tests/test_local_real_lab_static.py": "32c50bc1979f7496b219bb60aca42b3a1ee22b8f09b5c5afb8dac58c9fbabba6",
+    "tests/test_local_real_lab_bounded_commands.py": "af61e4501101025f24c9d8eb18d2f5e8fd455dc42cf8648e9c8fe47d059857bf"
+  },
+  "open_findings": [
+    {
+      "id": "FREEZE-030/FREEZE-040",
+      "status": "RED",
+      "reason": "compute02 is DOWN, so the two-node lab gate cannot pass. lab-status.ps1 reports status: FAIL / slurm.ok: false. The local-real baseline in .opencode/protocol/LOCAL_REAL_HPC_LAB.md requires both compute nodes idle and a two-node srun PASS.",
+      "classification": "EXTERNAL_BLOCKED",
+      "blocking_authority": "Operator recovery of the compute02 VM requires Hyper-V control. This session is not elevated: IsAdmin=False and Get-VM is denied (VirtualizationException), matching the already-accepted DEF-W57-006 classification. No elevation is obtainable from inside this phase and no result was synthesised.",
+      "resume_point": "Recover compute02 (lab/lab-reset.ps1 or an elevated lab/lab-up.ps1 / lab/lab-fault.ps1), then re-run lab/lab-status.ps1 to status: PASS and the maintained lab/lab-test.ps1. DEF-W57-017 no longer blocks this step: the harness is now bounded and will report the failure truthfully instead of hanging."
+    },
+    {
+      "id": "HPC-W10-FREEZE-044",
+      "status": "NOT_WRITTEN",
+      "reason": "artifacts/wave_W57/WAVE_W57_EVIDENCE_MANIFEST.json does not exist. The registry row is MANDATORY/EVIDENCE for W57, but its ACCEPTANCE_GREEN content is not truthfully writable while FREEZE-030/-040 are RED.",
+      "resume_point": "Write the manifest only after the lab gate is green and the declaration is re-issued as Frozen for W58: YES."
+    },
+    {
+      "id": "audit-114 finding 4",
+      "status": "STALE",
+      "reason": "W57_WAVE_REPORT.md and the freeze declaration still describe the pre-repair-113 state and cite DEF-W57-018 as a RED reason although that finding has been withdrawn with proof.",
+      "resume_point": "Refresh report and declaration together with the green lab evidence, so they are not re-issued stale again."
+    },
+    {
+      "id": "audit-114 finding 5",
+      "status": "ROUTED_TO_CONTROLLER",
+      "reason": "validate-ac-project.py and validate-managed-runtime.py are red because run-wave-program.py, wave_state_engine.py and WAVE_PROJECT_PROFILE.json are modified-uncommitted and are controller_restart_paths.",
+      "resume_point": "Controller checkpoint, release the lock, restart, and auto-resume from repository truth. Not W57 repair work."
+    }
+  ],
+  "verdict": "DEF-W57-017 is repaired and proven. W57 is NOT green: the owned two-node acceptance gate is RED on an EXTERNAL_BLOCKED node outage, so the Wave stays REOPEN with a concrete, now-unblocked resume point."
+}

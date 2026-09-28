@@ -1,0 +1,195 @@
+{
+  "artifact": "W57_REPAIR113_ISOLATED_ROOT_OPTIN_PROOF",
+  "wave": "W57",
+  "phase": "repair",
+  "phase_instance_id": "20260925-074235-63df86b0:113:W57:repair",
+  "prior_phase_instance_id": "20260925-074235-63df86b0:112:W57:repair",
+  "prior_hypothesis": "W57-FREEZE030-040-REGRESSION-NEVER-EXECUTED",
+  "prior_hypothesis_status": "SUPERSEDED - true as far as it went (the regression had never been executed), but it stopped at naming blockers instead of clearing the one that was clearable",
+  "repair_hypothesis": "W57-DEF018-ISOLATED-ROOT-UNATTENDED-OPTIN",
+  "owned_requirements": [
+    "HPC-W10-FREEZE-030",
+    "HPC-W10-FREEZE-040"
+  ],
+  "finding_ids": [
+    "DEF-W57-018",
+    "DEF-W57-017",
+    "DEF-W57-006"
+  ],
+
+  "finding": "Repair phase 112 reported DEF-W57-018 as 'The maintained client CLI refuses every remote command because a global default-off security setting has no non-interactive opt-in', and stated 'the CLI exposes no flag and the repo defines no environment override for it'. That conclusion is a FALSE NEGATIVE and is withdrawn. It searched for an override of the setting KEY. The repository ships an override of the STORE that holds the key.",
+
+  "observed_failure": "With no isolated config root, 12/12 remote Workstream E steps were refused in ~0.6 s with 'Remote CLI access is disabled. Enable \"Allow external CLI access to remote commands\" in Settings to use this command.' (artifacts/wave_W57/W57_WORKSTREAM_E_REAL_CLUSTER_REPLAY.json, phase 112).",
+
+  "hypothesis": "The unattended opt-in already exists as the repository's maintained per-run config-root isolation contract. Pointing HPC_GUI_CONFIG_ROOT at a disposable root whose config.json carries settings.cli_external_access_enabled = true enables the unattended CLI path WITHOUT removing the gate at src/hpc_gui/cli/main.py:960, WITHOUT changing the default in src/hpc_gui/config/storage.py:434-443, and WITHOUT touching the real developer profile.",
+
+  "mechanism_proven": {
+    "env_var": "HPC_GUI_CONFIG_ROOT",
+    "constant": "ISOLATED_CONFIG_ROOT_ENV, src/hpc_gui/core/paths.py:17",
+    "redirect_chain": [
+      "src/hpc_gui/core/paths.py:47-68 isolated_config_root() reads HPC_GUI_CONFIG_ROOT and creates it on demand",
+      "src/hpc_gui/core/paths.py:119-133 app_data_dir() returns the override instead of ~/.truba_slurm_gui",
+      "src/hpc_gui/config/storage.py:53-55 _config_path() = app_data_dir()/config.json",
+      "src/hpc_gui/config/storage.py:76-95 load_config() reads that file",
+      "src/hpc_gui/config/storage.py:98-105 load_settings() returns cfg['settings']",
+      "src/hpc_gui/config/storage.py:434-437 get_cli_external_access_enabled() reads that setting"
+    ],
+    "pre_existing_maintained_surface": true,
+    "prior_proof_of_surface": [
+      "scripts/wx_packaged_smoke.py already uses HPC_GUI_CONFIG_ROOT for packaged acceptance",
+      "tests/test_w15_fresh_user_startup.py, tests/test_w18_auth_hostkey.py, tests/test_w39_logs_diagnostics.py exercise it",
+      "W15/W17/W39/W45/W50/W54 wave evidence records it (PKG-GJ-01)"
+    ],
+    "security_posture_unchanged": {
+      "gate_line_unchanged": "if _requires_remote_session(args) and not get_cli_external_access_enabled():",
+      "gate_location": "src/hpc_gui/cli/main.py:960",
+      "gate_removed": false,
+      "default_changed": false,
+      "per_profile_gate_untouched": "src/hpc_gui/cli/session.py:45 cli_allowed",
+      "enabled_value_location": ".tmp/w57-repair-113/isolated-root/config.json (disposable, inside the enforced temp root)",
+      "developer_profile_readback": "~/.truba_slurm_gui/config.json contains NO cli_external_access_enabled key after the run (developer_profile_has_cli_external_access_enabled = false)",
+      "why_this_is_not_a_permission_weakening": "the security control is not bypassed, relaxed or re-defaulted; the enabled value is confined to a throwaway directory that is deleted with the temp root and never affects a real user profile or a packaged run"
+    }
+  },
+
+  "change": {
+    "product_test_spec_build_or_lab_file_changed": false,
+    "candidate_unchanged": true,
+    "candidate_artifact_sha256": "8BA80453A76A664959BAEDF7716C476A5334B6AFF860A4BC79B9E220D48B4C57",
+    "main_sha": "f6ab257fbfd62d402e31e9330f30bb017b795fa8",
+    "git_diff_src_tests_scripts_lab_this_phase": "empty (pre-existing modifications to src/hpc_gui/services/job_submit_cancel.py and tests/test_w30_submit_cancel.py are the controller-dispatched W30 repair, not W57 edits)",
+    "files_written": [
+      ".tmp/w57-repair-113/ (probe scripts, disposable isolated config root, editor probe) - all under the enforced temp root",
+      "artifacts/wave_W57/W57_WORKSTREAM_E_REAL_CLUSTER_REPLAY_R113.json",
+      "artifacts/wave_W57/W57_WORKSTREAM_E_SFTP_SMOKE_R113.json",
+      "artifacts/wave_W57/W57_REPAIR113_ISOLATED_ROOT_OPTIN_PROOF.json (this file)",
+      "docs/wave-reports/v2/opencode/W57_WAVE_REPORT.md (sections 1b and 13.6)"
+    ],
+    "harness_change": "every scenario now runs through Invoke-Bounded, a hard wall clock (Wait-Process -Timeout). A hung child is killed, reported as exit 124 / timed_out, and never awaited. This satisfies W57.md:97 ('Apply explicit timeouts to subprocesses and network/external checks') and contains the DEF-W57-017 failure mode at the W57 harness level without editing lab/."
+  },
+
+  "probe_script_defects_found_and_fixed": [
+    {
+      "id": "H1",
+      "symptom": "printf: usage: printf [-v var] format [arguments], exit 2 (WE-02, WE-04d, WE-06)",
+      "root_cause": "PowerShell native-argument quoting re-split the remote 'bash -c' format string between PowerShell, ssh and bash",
+      "fix": "deliver the exact remote bash bytes base64-encoded, the technique lab/lab-common.ps1 :: Invoke-LabSshCapture already uses"
+    },
+    {
+      "id": "H2",
+      "symptom": "Remote edit failed: [WinError 193] %1 is not a valid Win32 application (WE-04c)",
+      "root_cause": "edit --editor <file.py> cannot exec a .py directly on Windows",
+      "fix": "pass an executable command line, which shlex.split(posix=False) expands into [python, probe]"
+    },
+    {
+      "id": "H3",
+      "symptom": "sbatch: error: Batch script contains DOS line breaks (\\r\\n) (WE-05c)",
+      "root_cause": "Set-Content emitted CRLF on Windows",
+      "fix": "write explicit LF bytes and upload --mode binary"
+    },
+    {
+      "id": "H4",
+      "symptom": "rm: cannot remove '/srv/hpc/home/hpctest/w57-we-...': Is a directory (WE-07)",
+      "root_cause": "files rm without --recursive on a directory target",
+      "fix": "add --recursive"
+    },
+    {
+      "id": "H5",
+      "symptom": "H1-H4 kept failing after each was 'fixed'; the recorded command lines were correct but the child received split arguments",
+      "root_cause": "Start-Process -ArgumentList joins the array with plain spaces and does NOT quote elements, so every argument containing a space was re-split by the child process",
+      "fix": "emit one correctly quoted command line using the MS CommandLineToArgvW escaping rules",
+      "note": "H5 is the defect that masked the other four. It is recorded because it makes a plausible fix appear to do nothing, which is a trap for any later re-run of this harness."
+    }
+  ],
+
+  "result": {
+    "verdict": "HYPOTHESIS CONFIRMED",
+    "regression_result": "PASS",
+    "scenarios_run": 16,
+    "scenarios_failed": [],
+    "scenarios_timed_out": [],
+    "harness_exit_code": 0,
+    "entrypoint": ".venv/Scripts/python.exe -m hpc_gui.cli (src/hpc_gui/cli/main.py)",
+    "source_section": "opencode/sources/WAVE_V2_FINAL_10.md :: Workstream E - Real-cluster regression",
+    "infrastructure_class": "LOCAL_REAL_HYPERV",
+    "human_interaction": "none",
+    "secret_handling": "only the lab key PATH was passed on any command line; no secret value, no password and no private key content appears in any artifact",
+    "workstream_e_classes_proven": {
+      "connection_reconnect": "WE-01 doctor connection PASS (dns/port/auth/sftp/slurm/checksum all PASS); WE-02 'host=login-control01 user=hpctest', Linux 6.8.0-142-generic",
+      "sftp_round_trip": "WE-03 doctor smoke PASS -> artifacts/wave_W57/W57_WORKSTREAM_E_SFTP_SMOKE_R113.json",
+      "remote_editor_save": "WE-04a/b/c/d PASS; remote readback shows 'w57-workstream-e-remote-editor-save', '# w57-workstream-e-editor-save 1', marker_lines=1",
+      "job_list_submit_cancel": "WE-05a..f PASS; batch job 80 submitted via the CLI, Slurm scheduled it onto NodeList=compute01 BatchHost=compute01, JobState=RUNNING, cancelled via jobs cancel (OK), read back in sacct as '80|w57we|CANCELLED by 1000|00:00:08||billing=1,cpu=1,node=1|0:0'",
+      "terminal": "WE-06 real remote shell transport, shell=/bin/bash, bash process probe",
+      "cleanup": "WE-07 exit 0; WE-08 confirms the disposable remote probe directory is gone"
+    },
+    "focused_regression": {
+      "command": ".venv/Scripts/python.exe -m pytest tests/test_w57_freeze_consistency.py tests/test_local_real_lab_static.py tests/test_w04_support_freeze.py tests/test_w14_provenance_manifest.py tests/test_version_consistency.py",
+      "outcome": "55 passed",
+      "exit_code": 0,
+      "delta_vs_prior_phase": "none - identical set and identical result to repair phase 112"
+    },
+    "pre_existing_failure_not_caused_by_this_phase": {
+      "test": "tests/test_w15_fresh_user_startup.py::test_profile_created_through_visible_add_dialog",
+      "error": "TypeError: Dialog.ShowModal(): first argument of unbound method must have type 'Dialog' (src/hpc_gui/wx_connection_dialog.py:1581)",
+      "already_recorded_in": [
+        "artifacts/wave_W57/W57_CI_FULL_FAILURES.txt line 5",
+        "artifacts/wave_W57/W57_CI_FULL_FAILURES_RUN110.txt line 10"
+      ],
+      "owner": "W15 (GUI dialog surface), not W57",
+      "disposition": "recorded, not touched, not suppressed"
+    }
+  },
+
+  "external_cleanup_verified": {
+    "squeue_count": 0,
+    "leftover_probe_dirs": 0,
+    "leftover_note": "the first run's probe directory was left behind by the H4 defect and was found and removed by an explicit cleanup probe",
+    "sacct_w57we_jobs": "79 and 80, both CANCELLED on compute01",
+    "lab_config_vm_disk_or_repository_file_altered": false
+  },
+
+  "external_state_remeasured_this_phase": {
+    "sinfo_N": "compute01|idle, compute02|down*",
+    "lab_below_verified_baseline": true,
+    "verified_baseline_source": ".opencode/protocol/LOCAL_REAL_HPC_LAB.md - 'controller and both compute transports/services: PASS' and 'two-node srun: PASS'",
+    "consequence": "the maintained two-node srun gate inside lab/lab-test.ps1 still cannot complete, and lab/lab-test.ps1 was NOT re-run to completion"
+  },
+
+  "open_items_not_claimed_closed": [
+    {
+      "finding_id": "DEF-W57-006",
+      "status": "OPEN - operator action",
+      "text": "compute02 is down. Recovery is lab/lab-up.ps1, which requires Administrator and drives Get-VM/Stop-VM/Start-VM. This session has IsAdministrator=False, is not in BUILTIN\\Hyper-V Administrators (S-1-5-32-578) and Get-VM is denied. Genuinely unavailable authority, not a repository defect.",
+      "repairable_by_W57_in_this_dispatch": false
+    },
+    {
+      "finding_id": "DEF-W57-017",
+      "status": "OPEN - ROUTED, not fixed",
+      "text": "lab/lab-common.ps1 :: Invoke-LabSshCapture sets only ConnectTimeout=5 and no command timeout, so lab/lab-test.ps1 can neither pass nor fail unattended while a node is DOWN.",
+      "owner": "lab provisioning owner (lab/lab-test.ps1, lab/lab-common.ps1)",
+      "why_not_fixed_here": "lab/ is not W57's product surface and W57.md:143 requires routing rather than opportunistic cross-Wave fixing",
+      "bounded_next_action": "give Invoke-LabSshCapture an explicit command timeout, and/or run the two-node gate through a time-limited allocation (sbatch --time with a sacct readback, or a bounded-wall-clock srun)",
+      "mitigated_for_W57": "the W57 regression no longer depends on it: the phase-113 replay is fully bounded and recorded zero timeouts"
+    },
+    {
+      "finding_id": "HPC-W10-FREEZE-044",
+      "status": "OPEN - manifest deliberately unwritten",
+      "text": "The evidence manifest requires ACCEPTANCE_GREEN. This phase does not self-audit (audit_policy: fresh-independent) and does not self-declare acceptance."
+    }
+  ],
+
+  "acceptance_judgement_left_to_the_fresh_independent_audit": [
+    "HPC-W10-FREEZE-030 ('Required real-cluster regression passes') and HPC-W10-FREEZE-040 ('real-cluster regression') name no compute-node count. This phase executed the Workstream E scenario list from the mandatory source section against the live cluster, on one healthy compute node, and it passed 16/16. Whether that satisfies the rows, given that the lab protocol's own verified baseline expects two compute nodes and lab/lab-test.ps1's two-node srun gate remains unexecutable, is an acceptance judgement for the independent audit. This repair does not claim it.",
+    "Whether lab/lab-test.ps1 is a mandatory maintained gate for these rows that must additionally pass, or lab infrastructure that merely hosts the cluster."
+  ],
+
+  "not_done_and_deliberately_not_faked": [
+    "no self-audit written (audit_policy: fresh-independent)",
+    "no security setting changed in the product, no default flipped, no gate removed",
+    "no developer profile or lab configuration/VM/disk altered",
+    "no test weakened, no skip or xfail added, no validator bypassed",
+    "no evidence fabricated: every quoted line is verbatim captured CLI output from the live cluster",
+    "no PASS, no acceptance and no freeze declared by this repair phase",
+    "FREEZE-044 manifest NOT written"
+  ]
+}

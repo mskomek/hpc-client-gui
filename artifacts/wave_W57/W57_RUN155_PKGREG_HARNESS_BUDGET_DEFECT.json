@@ -1,0 +1,61 @@
+{
+  "schema": "w57-run-finding",
+  "wave_id": "W57",
+  "phase": "run",
+  "phase_instance_id": "20260925-074235-63df86b0:155:W57:run",
+  "finding_id": "W57-PKGREG-HARNESS-25S-BUDGET-NON-HERMETIC",
+  "severity": "acceptance-gate-defect",
+  "title": "The maintained packaged-regression gate has a hardcoded 25s child budget that is a function of host speed, not of product behaviour; on the current host it fails deterministically 3/3 while the same frozen candidate passes 20/20",
+  "observed": "scripts/wx_packaged_smoke.py --artifact dist/hpc-client-gui/hpc-client-gui.exe --platform windows returned exit 1 with checks 1/20 (process_started PASS, every other check FAIL) and details.timeout='artifact did not exit within 25s', details.child_killed=true. Three consecutive unmodified runs at the same candidate: elapsed 27.402s, 27.716s, 28.821s.",
+  "candidate_under_test": {
+    "sha256": "8BA80453A76A664959BAEDF7716C476A5334B6AFF860A4BC79B9E220D48B4C57",
+    "size_bytes": 7672468,
+    "bundle_files": 172,
+    "candidate_commit": "bdf6c6c7e2817422b6f9005873247d3636c5eac4",
+    "unchanged_by_this_finding": true
+  },
+  "contaminant_ruled_out_first": {
+    "rule": "plan KNOWN_RISKS: any packaged red must first rule out a topmost-window contaminant before it is treated as product",
+    "werfault_processes_present_before_run": 0,
+    "matching_topmost_windows": 0,
+    "manual_launch_control": "dist/hpc-client-gui/hpc-client-gui.exe launched by hand: ALIVE_AFTER_12S=True, MainWindow='HPC Client', WERFAULT_COUNT=0",
+    "conclusion": "The documented contamination signature (14/20, keyboard_input:foreground_lost_after_terminal_click) did not occur. This red is a different, deterministic failure mode."
+  },
+  "root_cause": {
+    "mechanism": "run_packaged_smoke() passes timeout=25 into _run_child(). On timeout the harness kills the child, sets details.timeout, and - because the timed_out branch at scripts/wx_packaged_smoke.py:190-192 short-circuits the branch at :193-236 - never reads the packaged runtime evidence file. Every check other than process_started is therefore left at its initial FAIL.",
+    "harness_budget_constants": {
+      "run_packaged_smoke": "scripts/wx_packaged_smoke.py:128 timeout: int = 25",
+      "run_fresh_user_smoke": "scripts/wx_packaged_smoke.py:346 timeout: int = 240"
+    },
+    "proof_the_product_is_green": "Calling the UNMODIFIED harness function run_packaged_smoke(artifact, 'windows', out, timeout=240) - 240 is the harness's own run_fresh_user_smoke default constant, and no harness file was edited - returned result=PASS with 20/20 checks in 3m37.98s wall clock, wx_app_name=hpc-client-gui-smoke-68160, runtime_phase=4, and the full terminal input diagnostic (sendinput_events=36, ssh_input_chars=18, dom_input_events keydown=18). Same artifact SHA-256.",
+    "why_now": "The 25s budget passed 3/3 on this same host earlier today (artifacts/wave_W57/W57_PACKAGED_SMOKE_8BA80453_PASS.json + _RUN2 + _RUN3 + _PASS_SUMMARY). The host is now materially slower: three Hyper-V lab VMs are running (login-control01, compute01, compute02, 2 vCPU each) for the EXTERNAL evidence class, with measured 63% average CPU load across 12 logical CPUs. A budget that flips red purely because unrelated background load rose is not a property of the artifact under test."
+  },
+  "why_this_is_a_defect": "PKGREG-001 and FREEZE-032/-041 require packaged regression to be run against the frozen candidate. The gate's verdict is currently determined by host load rather than by artifact behaviour, so it is neither hermetic nor reproducible: the identical artifact returns PASS 20/20 and FAIL 1/20 on the same machine minutes apart depending only on the timeout constant. An acceptance gate whose result moves with ambient load cannot certify a release.",
+  "owner_routing": {
+    "true_owner": "the W04 packaging harness surface (scripts/wx_packaged_smoke.py) - HPC-W04-FRESH-009 -> W15 owns PKG-GJ-01, HPC-W04-HARNESS-025 -> W16 owns packaged launch outside source assumptions",
+    "w57_role": "consumer: PKGREG-001 requires re-running that harness; W57 does not own its timing policy",
+    "routed_not_fixed_because": "W57's Wave contract forbids opportunistic cross-scope cleanup, and raising the constant inside W57 would be indistinguishable from weakening an acceptance gate to obtain a green. The plan also fixes the harness as 'UNMODIFIED' evidence.",
+    "recommended_owner_action": "Make the child budget a host-relative or configurable value (or derive it from an observed phase-progress signal) so the gate measures artifact behaviour rather than machine speed, then re-run W57 packaged evidence.",
+    "invalidates": "W57 packaged-regression evidence rows bound to the maintained default entrypoint: HPC-W10-PKGREG-001, HPC-W10-FREEZE-009, -032, -041, HPC-W10-TODO-012, -013, -014, -016, HPC-W10-TODO-RUNTIME-CUTOVER-003"
+  },
+  "explicitly_rejected": [
+    "editing scripts/wx_packaged_smoke.py to raise the 25s default so the gate returns green",
+    "substituting the 240s budget run as the acceptance evidence for the 20-check gate while still labelling it the default entrypoint",
+    "rebuilding or patching the frozen candidate, which W57's frozen-candidate invariants forbid",
+    "narrowing, skipping or re-scoping any of the 20 checks"
+  ],
+  "not_done": [
+    "no file under scripts/, src/, tests/, build/ or waves/ was modified by this finding",
+    "no acceptance gate was redefined",
+    "no test was weakened, skipped or xfailed",
+    "no manifest was authored and no freeze declaration was re-issued",
+    "no push, tag, release, sign or publish"
+  ],
+  "safety": {
+    "tests_weakened": false,
+    "skips_added": false,
+    "fabricated_pass": false,
+    "committed_beyond_candidate": false,
+    "pushed": false
+  }
+}

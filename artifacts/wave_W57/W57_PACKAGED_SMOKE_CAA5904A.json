@@ -1,0 +1,49 @@
+{
+  "schema": "wx-packaged-smoke/1",
+  "identity_header": "Artifact: hpc-client-gui.exe\nSHA256: caa5904ad0be8adefa9a6e362d29945a9d9175c963bc75f4dc79a447eab38a15\nMain SHA: f6ab257fbfd62d402e31e9330f30bb017b795fa8\nPlugin SHA: f0abb7e7037e66ab451d463c699fecf4e00c89eb\nVersion: 1.5.9\nOS/arch: windows/amd64",
+  "commit": "f6ab257fbfd62d402e31e9330f30bb017b795fa8",
+  "platform": "windows",
+  "artifact": "hpc-client-gui.exe",
+  "artifact_sha256": "caa5904ad0be8adefa9a6e362d29945a9d9175c963bc75f4dc79a447eab38a15",
+  "result": "FAIL",
+  "checks": {
+    "process_started": "PASS",
+    "wx_runtime_started": "FAIL",
+    "main_frame_created": "FAIL",
+    "settings_opened": "FAIL",
+    "terminal_readback": "FAIL",
+    "pty_input_output": "FAIL",
+    "pty_resize": "FAIL",
+    "remote_file_roundtrip": "FAIL",
+    "job_roundtrip": "FAIL",
+    "files_surface": "FAIL",
+    "editor_surface": "FAIL",
+    "jobs_surface": "FAIL",
+    "plugin_ansys_surface": "FAIL",
+    "diagnostics_updater_surface": "FAIL",
+    "files_controls": "FAIL",
+    "editor_controls": "FAIL",
+    "jobs_controls": "FAIL",
+    "editor_roundtrip": "FAIL",
+    "transfer_queue_render": "FAIL",
+    "clean_shutdown": "FAIL"
+  },
+  "details": {
+    "workdir_outside_repo": true,
+    "timeout": "artifact did not exit within 180s",
+    "child_killed": true
+  },
+  "python": "3.14.0",
+  "platform_detail": "Windows-11-10.0.26200-SP0",
+  "generated_utc": "2026-09-27T18:56:44.419547+00:00",
+  "exit_code": null,
+  "isolated_from_src": true,
+  "manual_required": [
+    "display",
+    "cluster",
+    "MFA",
+    "X11",
+    "DnD",
+    "transfer-conflict"
+  ]
+}

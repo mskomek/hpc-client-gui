@@ -1,0 +1,237 @@
+{
+  "artifact": "W57_REPAIR127_STALE_MATERIALIZATION_PROVEN_REMEDY",
+  "wave_id": "W57",
+  "phase": "repair",
+  "phase_instance_id": "20260925-074235-63df86b0:127:W57:repair",
+  "content_identity": "9c70d980b0c9940e8643de8b925f6b0d53706ecbc4e1afc9e811ed76bbf05a2e",
+  "finding_id_routed_in": "W57-ORCHESTRATION-RED-CORE-ROOT-MIXED-REVISION-PAIRING",
+  "repair_hypothesis_previous": "W57-ORCHESTRATION-RED-CORE-ROOT-MIXED-REVISION-PAIRING",
+  "repair_hypothesis_this": "W57-ORCHESTRATION-RED-STALE-MATERIALIZATION-BLOCKED-ON-CONTROLLER-LOCK",
+  "hypothesis_changed": true,
+  "hypothesis_change_reason": "Materially different diagnosis with a different owner and a different, now-proven remedy. Dispatch 126 held the project's managed bytes to be correct and placed the whole fault on the core root, recommending branch R1 (point AC_CORE_ROOT at a clean v1.0.0 checkout) as a no-project-change fix. This dispatch ran the two measurements 126 declined to run and obtained the opposite answer on both. First, the project's own sanctioned staleness guard, invoked correctly with --core (the probe 126 explicitly discarded for omitting --core), reports STALE / exit 3 / 17 reasons against the core root the program actually resolves. Second, R1 was executed as an A/B: pointing the same project at a pristine v1.0.0 core root takes the guard from 16 managed-file mismatches to 91 and still exits 3, so R1 is not a remedy but a third inconsistent pairing. The canonical project-side remedy, which 126 declared 'not required', was then run end to end in a faithful scratch copy and it succeeds: materializer exit 0, all six project validators green, guard PASS.",
+
+  "narrative": {
+    "FINDING": "W57's non-acceptance red is a stale Agent Core materialization of the project, not a defect in any W57 deliverable and not a mixed pairing that can be resolved by repointing AC_CORE_ROOT. The project's 110 managed files are byte-exactly the released v1.0.0 content, but the canonical core's 176-file source surface has moved past that in 18 places, so the project and the core root it resolves to are genuinely inconsistent and the project's own guard says so.",
+    "OBSERVED_FAILURE": "validate-managed-runtime.py exit 1, 30 PASS / 7 FAIL, 318s, reproduced on this exact dispatch. Failing behaviours, all aborting before the scripted dispatch: controller_semantic_counters_vs_retries (8.6s), progress_contract_v1_v2_deterministic (8.6s), audit_close_todo_semantic_history (8.3s), controller_worker_timeout_serial_parallel_barrier (8.0s), multi_group_managed_parallel_synthetic_base (8.8s), parallel_cross_wave_true_owner_routing (12.8s), v2_plan_gate_before_run_repair (52.6s). Error signature: \"unexpected dispatch plan; next scripted=[{'phase': 'run', 'status': 'READY_FOR_AUDIT'}]\" and \"multi-group run did not complete: 30 missing-candidates:W101a,W101b\".",
+    "HYPOTHESIS": "The red is caused by the project being materialized from a core source state that no longer exists. The project's recorded core digest is 50549a1a..., the released tag v1.0.0 digests to 78fcecc0..., and the live core working tree digests to 20a9bde7...: three mutually distinct states. The project's managed bytes correspond to none of the two states that are actually available, so every controller run pairs released project bytes with a core root that has moved ahead.",
+    "CHANGE": "Read-only probes plus one scratch-copy transaction. (a) Ran the guard with --core for the first time. (b) Attributed all 110 managed files against v1.0.0 and against the live core. (c) Executed dispatch 126 branch R1 as an A/B against a pristine v1.0.0 archive, and again LF-normalized to separate content from CRLF. (d) Copied the whole project surface (15027 files) into scratch and ran the canonical materializer against the LIVE core root, then re-checked the guard. (e) Asked the materializer's own lock detector what it sees in the real repo, read-only. No repository, core, manifest or lock file was written; no commit, no push, no controller restart, no materialization in the real repo.",
+    "RESULT": "Hypothesis confirmed and the remedy proven. The project is stale against the core root it resolves to; R1 is falsified by direct measurement; re-materialization from the live core root produces a fully guard-PASS, fully validator-green project. Exactly one prerequisite remains, and it is the controller's own lock."
+  },
+
+  "three_state_digest_identity": {
+    "project_recorded_core_manifest_sha256": "50549a1abbc44e4987354af92132d156bf9ffa9ffc7b511ee228806060b537ae",
+    "released_tag_v1_0_0_core_digest": "78fcecc00a851d2d8133046b116cf5aeab4f657b8daaa4daa63c17adcd6a70c0",
+    "live_core_working_tree_core_digest": "20a9bde780f0b61ca0bc025e0448c850b0963703c26d26d8d32fae065f876af9",
+    "note": "core_revision/core_manifest_sha256 is a content digest over the core's 176 canonical source files (core_digest), not a Git commit SHA. Dispatch 126 read the unchanged core_revision as evidence of core stability; it is only the project's recorded observation and is stale. Three mutually distinct states; the project matches none of the two available ones.",
+    "verified_with": "materialization_guard.core_digest imported from the project's own .opencode/scripts/materialization_guard.py"
+  },
+
+  "managed_byte_attribution": {
+    "method": "For each of the 110 managed files compare the project's LF-normalized bytes against the v1.0.0 Git blob and against the live core working-tree bytes.",
+    "result": {
+      "at_released_v1_0_0_with_core_wip_moved_ahead": 16,
+      "identical_in_v1_0_0_and_live_core": 94,
+      "at_live_core_wip_but_not_v1_0_0": 0,
+      "at_neither_state": 0
+    },
+    "conclusion": "Dispatch 126 was right that all 110 managed files hold the released v1.0.0 bytes. That is the whole problem, not a defence of it: the project is entirely at the tag while the core root it resolves to has 18 canonical-surface files past the tag, so project-versus-core parity is impossible under the current pairing.",
+    "core_canonical_surface": {
+      "canonical_source_files": 176,
+      "extra_surface_files_where_live_core_differs_from_v1_0_0": 18,
+      "the_18": [
+        "protocol/AC_WAVE_PROGRAM_ORCHESTRATION.md",
+        "protocol/AC_WAVE_PROGRESS_STATE_SCHEMA.md",
+        "runtime/run-wave-program.py",
+        "runtime/wave_state_engine.py",
+        "setup/materialize-ac-core.py",
+        "skills/ac-wave-hybrid-plan/SKILL.md",
+        "skills/ac-wave-hybrid-repair/SKILL.md",
+        "skills/ac-wave-hybrid-run/SKILL.md",
+        "skills/ac-wave-luna-openai-plan/SKILL.md",
+        "skills/ac-wave-luna-openai-repair/SKILL.md",
+        "skills/ac-wave-luna-openai-run/SKILL.md",
+        "skills/ac-wave-opencode-plan/SKILL.md",
+        "skills/ac-wave-opencode-repair/SKILL.md",
+        "skills/ac-wave-opencode-run/SKILL.md",
+        "validators/validate-ac-core.py",
+        "validators/validate-ac-project.py",
+        "validators/validate-managed-runtime.py",
+        "validators/validate-wave-program.py"
+      ]
+    }
+  },
+
+  "staleness_probe_correctly_invoked": {
+    "why_this_is_new": "Dispatch 126 ran materialization_guard.py --check with AC_CORE_ROOT set in the environment and DISCARDED the result, correctly noting that the script honours only --core and therefore never observed the core root. It never re-ran it with --core. This dispatch did, which is the authoritative invocation and produces the opposite conclusion.",
+    "command": "python .opencode/scripts/materialization_guard.py --repo . --core D:\\Projeler\\.agents-core --check",
+    "result": {
+      "status": "STALE",
+      "exit_code": 3,
+      "reasons_total": 17,
+      "managed_file_content_mismatch": 16,
+      "non_mismatch_reasons": ["canonical-core-revision-changed"]
+    },
+    "significance": "The project's own sanctioned tool, pointed at the core root the running program resolves, declares the project stale. This is the fact the entire 124-126 chain never established."
+  },
+
+  "remedy_ab_falsified": {
+    "branch_under_test": "Dispatch 126 branch R1: point AC_CORE_ROOT at a clean v1.0.0 checkout; no project change, no controller restart, no managed-byte change. Predicted: exit 0, 36/36.",
+    "arms": [
+      {
+        "id": "S0",
+        "arm": "real project, live core root (baseline)",
+        "guard_status": "STALE",
+        "guard_exit": 3,
+        "reasons": 17,
+        "managed_mismatches": 16
+      },
+      {
+        "id": "S1",
+        "arm": "real project, pristine 'git archive v1.0.0' core root",
+        "guard_status": "STALE",
+        "guard_exit": 3,
+        "reasons": 92,
+        "managed_mismatches": 91,
+        "reading": "Worse, not better. 75 additional managed files diverge because the project is not materialized from the v1.0.0 core root either."
+      },
+      {
+        "id": "S2",
+        "arm": "real project, pristine v1.0.0 core root, LF-normalized (332 files), isolating CRLF from content",
+        "guard_status": "STALE",
+        "guard_exit": 3,
+        "reasons": 51,
+        "managed_mismatches": 50,
+        "reading": "CRLF accounts for 41 of S1's 91 mismatches but 50 are real content divergence. R1 does not hold even after removing the line-ending confound."
+      }
+    ],
+    "conclusion": "R1 is falsified by direct measurement. No core-root choice available to this dispatch makes the guard pass, because the project matches neither the tag nor the working tree. R1 would additionally have left the project at 91 managed-file mismatches while the controller ran on different bytes than the guard certifies."
+  },
+
+  "remedy_proven": {
+    "arm": "S3",
+    "description": "Faithful scratch copy of the entire project surface (15027 files: managed runtime, waves/, scripts/, profile, opencode.jsonc; excluding .git, .tmp, artifacts, dist, build), then the canonical materializer pointed at the LIVE core root.",
+    "command": "python D:\\Projeler\\.agents-core\\setup\\materialize-ac-core.py --core D:\\Projeler\\.agents-core --repo <scratch>",
+    "materializer_exit": 0,
+    "materializer_validators": {
+      "validate-ac-project.py": 0,
+      "validate-agent-parity.py": 0,
+      "validate-wave-orchestration.py": 0,
+      "validate-wave-program.py": 0,
+      "validate-wave-authoring.py": 0,
+      "validate-managed-runtime.py": 0
+    },
+    "guard_after": {
+      "status": "PASS",
+      "reasons": 0,
+      "core_revision": "20a9bde780f0b61c"
+    },
+    "significance": "The project's own canonical materializer, run against the core root the program actually resolves, yields a green project including validate-managed-runtime.py exit 0. The 7 behaviour failures are a materialization-parity artefact and disappear under a self-consistent pairing. Dispatch 126's claim that project-side re-materialization is 'not required' and would only 'import 2188 unreleased insertions' as a cost is wrong on the requirement and understated on the cost: the rewrite is 16 managed files, not 2188 scattered insertions."
+  },
+
+  "the_one_remaining_prerequisite": {
+    "prerequisite": "The controller's own lock must be released before the proven remedy can run in the real repository.",
+    "evidence": "materialize-ac-core.py line 602 calls engine.live_controller_locks(repo, project_profile) and returns exit 3 with 'AC_WAVE_MATERIALIZATION=REFUSED live controller: ...' when any lock is held, because replacing managed runtime under a live controller races its own mutations.",
+    "real_repo_locks_seen": ["ac-wave-opencode-parallel.lock run_id=20260925-074235-63df86b0 pid=51592"],
+    "scratch_copy_locks_seen": [],
+    "why_the_scratch_succeeded": "The identical transaction on the identical core root saw no lock and proceeded to exit 0. The lock is therefore the sole difference between the proven green scratch state and the real repository.",
+    "owner": "controller (global_bookkeeping_owner: controller; controller_restart_paths sequencing)",
+    "worker_must_not_do_it_and_why": "Releasing the live controller's lock from inside one of that controller's own phase dispatches would weaken a safety invariant and would destroy the controller and this very dispatch mid-run. AGENTS.md assigns the sequence to the controller: checkpoint, stop the phase pool, release the lock, run the materializer, restart, auto-resume from repository truth.",
+    "exact_sequence_for_the_controller": [
+      "1. checkpoint the run state and stop the phase pool (pid 51592 is the controller)",
+      "2. release ac-wave-opencode-parallel.lock by the controller's own orderly shutdown, not by an external delete",
+      "3. run: python D:\\Projeler\\.agents-core\\setup\\materialize-ac-core.py --core D:\\Projeler\\.agents-core --repo D:\\Projeler\\hpc-client-gui",
+      "4. restart the controller (run-wave-program.py and wave_state_engine.py are controller_restart_paths and are rewritten by step 3)",
+      "5. re-bind every W57 evidence artifact to the new content identity; the manifest moves to core_revision 20a9bde780f0b61c and all evidence bound to 9c70d980... is superseded"
+    ]
+  },
+
+  "blast_radius": {
+    "managed_files_total": 110,
+    "managed_files_the_remedy_rewrites": 16,
+    "controller_restart_paths_among_them": 2,
+    "the_two": [
+      ".opencode/scripts/run-wave-program.py",
+      ".opencode/scripts/wave_state_engine.py"
+    ],
+    "consequence": "A controller restart is mandatory, by profile declaration and by AGENTS.md, because the transaction rewrites two files the controller is itself executing from. This is the one legitimate reason the remedy cannot be applied from inside a live phase dispatch.",
+    "w57_owned_requirements_affected": 0
+  },
+
+  "prior_dispatch_claims_falsified": [
+    {
+      "prior_claim": "W57_REPAIR126: 'The project's sanctioned re-materialization tool refuses while the live controller holds the lock ... and releasing the controller's own lock from inside its own dispatch would weaken a safety invariant.' 'Not required anymore: project-side re-materialization ... Any change to .opencode/scripts/*, .agents/* or any other managed file in this repository.'",
+      "falsification": "Partly right, decisively wrong. The lock observation is correct and this dispatch re-verified it read-only. But 'not required' is false: re-materialization is the remedy, it is proven, and it is the only one of the three candidate remedies that works. The correct statement is that the remedy is required and available, and is gated by exactly one controller-sequenced step."
+    },
+    {
+      "prior_claim": "W57_REPAIR126 branch R1: 'make the core root resolve to the released revision the project pins ... Predicted: exit 0, 36/36. No project re-materialization, no controller restart, no managed-byte change.'",
+      "falsification": "Executed as arm S1: guard exit 3 with 91 managed-file mismatches, against 16 at baseline. R1 is not a remedy; it is a third inconsistent pairing that would leave the project further from parity, not closer."
+    },
+    {
+      "prior_claim": "W57_REPAIR126: 'Re-materialization ... would additionally import 2188 insertions of uncommitted, unreleased core WIP (diffstat measured this dispatch)'.",
+      "falsification": "The measured rewrite is 16 managed files whose total diff is far smaller than 2188 insertions. The 2188 figure is the whole-core diffstat, which is not the project-side cost."
+    },
+    {
+      "prior_claim": "W57_REPAIR126: the materialization-staleness question was settled by a probe that was itself discarded: 'materialization_guard.py's main() resolves its core from --core only; it never reads AC_CORE_ROOT ... No conclusion in this artifact rests on it.'",
+      "falsification": "Correct as far as it went, and that is the defect: the probe was discarded for omitting --core and was never re-run with it. Re-run correctly it returns STALE, exit 3, 17 reasons, and that result reverses the dispatch's central conclusion."
+    }
+  ],
+
+  "why_this_phase_still_cannot_clear_it": [
+    "The remaining step is a controller lifecycle move: release the live controller lock and restart the controller, because the transaction rewrites .opencode/scripts/run-wave-program.py and .opencode/scripts/wave_state_engine.py, which are declared controller_restart_paths. AGENTS.md and the profile assign that sequence to the controller.",
+    "Performing it from inside dispatch 127 would destroy controller pid 51592 and this phase worker along with it, and would weaken the very safety invariant that produces the refusal. A phase worker may not do it.",
+    "W57's machine-owned scope is FREEZE-*/TODO-*/PKGREG-*; canonical-core materialization is neither W57-owned nor global_bookkeeping_owner=controller work."
+  ],
+
+  "what_w57_owns_and_is_unaffected": [
+    "0 of W57's 45 owned_requirements are touched by this finding.",
+    "0 W57 product, test, evidence or lifecycle files were changed by this phase.",
+    "The W57 defect ledger, freeze declaration, support matrix and candidate content are untouched.",
+    "The 7 behaviour failures are orchestration-runtime parity failures, not W57 acceptance criteria failures. W57's own acceptance (WAVE_W57_EVIDENCE_MANIFEST, validate_wave_closeout) was not re-judged by this phase and is not claimed green."
+  ],
+
+  "mutation_guarantee": {
+    "project_dirty_paths_before": 63,
+    "project_dirty_paths_after": 64,
+    "new_paths_from_this_dispatch": [
+      "artifacts/wave_W57/W57_REPAIR127_STALE_MATERIALIZATION_PROVEN_REMEDY.json (this artifact)",
+      ".tmp/w57-repair-127/** (scratch: probe scripts, validator log, faithful scratch project)"
+    ],
+    "changed_product_test_evidence_lifecycle_files": [],
+    "core_dirty_paths_before": 40,
+    "core_dirty_paths_after": 40,
+    "core_commits_created": 0,
+    "project_commits_created": 0,
+    "lock_files_touched": 0,
+    "materializations_run_in_real_repo": 0,
+    "materializations_run_in_scratch": 1,
+    "project_head_unchanged": "f6ab257fbfd62d402e31e9330f30bb017b795fa8",
+    "core_head_unchanged": "73c1b7d8c7b5e925613eacf4450aa860271c10c5",
+    "scratch_retained": ".tmp/w57-repair-127/ (probe scripts, proj-remat/ faithful scratch project, managed-runtime-real-repo.txt validator log)"
+  },
+
+  "evidence_files": {
+    "live_validator_run_this_dispatch": ".tmp/w57-repair-127/managed-runtime-real-repo.txt",
+    "correct_guard_probe": "command recorded in staleness_probe_correctly_invoked",
+    "managed_byte_attribution": ".tmp/w57-repair-127/managed_byte_attribution.py",
+    "full_managed_set_attribution": ".tmp/w57-repair-127/full_managed_attribution.py",
+    "remedy_ab_and_proven_remedy": ".tmp/w57-repair-127/test_remedy.py and .tmp/w57-repair-127/test_remedy2.py",
+    "lock_and_blast_radius": ".tmp/w57-repair-127/confirm_prerequisite.py",
+    "re_materialized_scratch_project": ".tmp/w57-repair-127/proj-remat"
+  },
+
+  "core_identity_at_this_dispatch": {
+    "head": "73c1b7d8c7b5e925613eacf4450aa860271c10c5",
+    "branch": "main",
+    "tag": "v1.0.0",
+    "origin_main": "0a8a832",
+    "dirty_paths": 40,
+    "core_digest": "20a9bde780f0b61ca0bc025e0448c850b0963703c26d26d8d32fae065f876af9"
+  },
+
+  "progress_events": "None emitted. This dispatch's controller handoff carried no pending repair-owned TODO id: in state.json, T08 'Repair #1' and T09 'Focused retest #1' are both already status=completed, T10 is audit-owned and T08/Close is close-owned. AC_WAVE_PROGRESS_EVENT start/update/complete/block/cancel each require a known todo_id owned by this phase, so no legitimate event exists to emit. Claiming a completed TODO would be false progress.",
+
+  "phase_status": "BLOCKED",
+  "human_only": false,
+  "not_human_deferred": "Repository-owned orchestration state with a proven remedy and exactly one named prerequisite (the controller lock). Not an unavailable credential, MFA, authority, hardware, service or manual acceptance.",
+  "no_product_change": "This phase changed no W57 product, test, evidence or lifecycle file. All writes are confined to .tmp/ plus this artifact."
+}

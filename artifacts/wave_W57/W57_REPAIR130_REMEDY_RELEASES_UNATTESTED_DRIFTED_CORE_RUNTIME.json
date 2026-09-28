@@ -1,0 +1,105 @@
+{
+  "artifact": "W57_REPAIR130_REMEDY_RELEASES_UNATTESTED_DRIFTED_CORE_RUNTIME",
+  "wave_id": "W57",
+  "phase": "repair",
+  "phase_instance_id": "20260925-074235-63df86b0:130:W57:repair",
+  "content_identity": "9c70d980b0c9940e8643de8b925f6b0d53706ecbc4e1afc9e811ed76bbf05a2e",
+  "repair_hypothesis_previous": "w57.repair-loop.phase-result-prose-scraped-as-pseudo-requirements",
+  "repair_hypothesis_this": "W57-ORCHESTRATION-RED-CORE-RUNTIME-FOLLOW-PS1-DRIFT-RELEASE-UNSAFE",
+  "hypothesis_changed": true,
+  "hypothesis_change_reason": "The previous dispatch diagnosed a controller-owned routing loop in run-wave-program.py/route-wave-findings.py and made no measurement of W57 content. Dispatch 128 diagnosed the orchestration red as unattested core WIP and prescribed 'commit the core's 16 files, then re-materialize the project through start-wave-program.ps1'. This dispatch tested that prescription instead of the diagnosis, and it is unsafe as written: the core contains a ninth, larger delta file that dispatch 128 did not inventory (runtime/follow-wave-program.ps1), it is uncommitted, it is unattested in any core commit, and it has already drifted away from the core's own released self-materialized snapshot. Re-materializing now would import that file into the canonical runtime of this 61-wave program. The prescribed remedy is therefore changed, not merely delayed.",
+  "narrative": {
+    "FINDING": "Dispatch 128's inventory of the core's uncommitted canonical surface was incomplete, and its prescribed remedy - re-materialize this project from the core through .opencode/scripts/start-wave-program.ps1 - is currently unsafe. Three cheap measurements on this dispatch: (1) the project's own validate-ac-project.py is red on 18 managed-file-content-mismatch entries, not the 16 dispatch 128 enumerated; (2) the newly surfaced pair is .opencode/scripts/follow-wave-program.ps1 and .opencode/scripts/start-wave-program.ps1 - the two files the prescribed remedy itself invokes; (3) inside the core, runtime/follow-wave-program.ps1 is ' M' (25453 bytes) while the core's own released snapshot .opencode/scripts/follow-wave-program.ps1 is still the v1.0.0 blob (18583 bytes), and at commit v1.0.0 those two paths are the SAME blob 01de748479767ed683c97c8b7956deca318cefca. The core has therefore drifted from its own release in exactly the two orchestration entry points a release would be performed through. The core also has a live controller (pid 27300) that was dispatching its own 'repair'/'plan W04' worker while this phase ran, and its waves/done/ directory was written at 07:16:48, roughly 90 seconds before this measurement.",
+    "OBSERVED_FAILURE": "python .opencode/scripts/validate-ac-project.py -> exit 1, {\"status\": \"FAIL\", \"errors\": [\"materialization stale: canonical-core-revision-changed; managed-file-content-mismatch:<18 paths>\"]}. The 18 paths: .agents/protocol/AC_WAVE_PROGRAM_ORCHESTRATION.md, .agents/protocol/AC_WAVE_PROGRESS_STATE_SCHEMA.md, .agents/skills/ac-wave-{hybrid,luna-openai,opencode}-{plan,repair,run}/SKILL.md (9), .opencode/scripts/follow-wave-program.ps1, .opencode/scripts/run-wave-program.py, .opencode/scripts/start-wave-program.ps1, .opencode/scripts/validate-ac-project.py, .opencode/scripts/validate-managed-runtime.py, .opencode/scripts/validate-wave-program.py, .opencode/scripts/wave_state_engine.py. python .opencode/scripts/validate-wave-orchestration.py -> exit 0 (PASS, AC_WAVE_METADATA_VALID=61). python -m pytest tests/test_wave_controller_regressions.py -q -> 17 passed in 0.60s, exit 0. W57 candidate dist/hpc-client-gui/hpc-client-gui.exe still on disk at SHA-256 8BA80453A76A664959BAEDF7716C476A5334B6AFF860A4BC79B9E220D48B4C57, 7672468 bytes - the W57 report's frozen-candidate identity is intact. DEF-W57-006 unchanged: Test-Connection 192.168.250.13 -> False; session IsAdministrator -> False.",
+    "HYPOTHESIS": "If dispatch 128's 'commit the 16, then re-materialize through start-wave-program.ps1' remedy were sound, then every file that remedy would import would be (a) inventoried, (b) attested, and (c) consistent with the core's own released copy. Measured: the inventory is short by at least two files, at least one imported file (runtime/follow-wave-program.ps1 -> project .opencode/scripts/follow-wave-program.ps1) is unattested in every commit on every ref, and that same file has already diverged from the core's own released snapshot. Therefore the release is not merely a release decision; it would also have to publish a self-inconsistent core, and the entry point used to perform it is one of the drifted files.",
+    "CHANGE": "Measurement only. No repository file, no core file, no manifest, no lock and no lifecycle file was written in D:\\Projeler\\hpc-client-gui or in D:\\Projeler\\.agents-core. New paths from this dispatch: this artifact and .tmp/w57repair130/** (drift.py, follow_drift.py, validate-managed-runtime.out.txt).",
+    "RESULT": "Hypothesis confirmed. The prescribed remedy is unsafe as written, so REOPEN is returned to route the corrected remedy to the true owner rather than BLOCKED, which would re-assert the prerequisite that dispatch 128 already falsified (releasing the controller lock). The corrected owner action is enumerated in true_owner_and_corrected_remedy. W57 is unchanged: 0 owned requirements touched, 0 product/test/evidence/lifecycle files changed, and the wave remains correctly not-accepted because FREEZE-030/-040 are still red on DEF-W57-006."
+  },
+  "core_internal_drift_measured_this_dispatch": {
+    "check": "the core's own _managed_source_drift() rule in validate-managed-runtime.py: a tracked .opencode/ tree is a second, silent copy of the managed surface and 'must never quietly disagree with the canonical sources'",
+    "independent_reimplementation": ".tmp/w57repair130/drift.py - sha256 of core/.opencode/scripts/<name> against core/{runtime,validators,opencode-scripts}/<name> for every canonical source",
+    "drift_count": 1,
+    "drift": "runtime/follow-wave-program.ps1 -> .opencode/scripts/follow-wave-program.ps1",
+    "core_snapshot_sha256_prefix": "d2a3aed23659e3dc (18583 bytes)",
+    "core_canonical_sha256_prefix": "40fc1daef6b729d0 (25453 bytes)",
+    "delta_bytes": 6870,
+    "at_v1_0_0_both_paths_are_blob": "01de748479767ed683c97c8b7956deca318cefca",
+    "reading": "The drift is NOT a released defect: at v1.0.0 and at HEAD the two paths are byte-identical. The drift was introduced by an uncommitted edit to core/runtime/follow-wave-program.ps1 that was never propagated to the core's own self-materialized snapshot. The project is currently being asked to adopt that unreconciled file as its canonical copy.",
+    "corroboration": "git status --porcelain in the core returns ' M runtime/follow-wave-program.ps1' and nothing for .opencode/scripts/follow-wave-program.ps1"
+  },
+  "attestation_of_the_delta_this_dispatch": {
+    "method": "For a 10-file sample of the delta: git rev-parse <ref>:<path> at v1.0.0 and at HEAD, git hash-object of the live core working-tree file, and a search of git rev-list --all for a commit whose blob at that path equals the live blob.",
+    "core_head": "73c1b7d8c7b5e925613eacf4450aa860271c10c5",
+    "core_head_equals_tag_v1_0_0": true,
+    "core_dirty_path_count_this_dispatch": 40,
+    "results": [
+      { "path": ".agents/protocol/AC_WAVE_PROGRAM_ORCHESTRATION.md", "core_status": " M", "live_equals_v1_0_0": false, "live_blob_attested_in_any_core_commit": false },
+      { "path": ".agents/protocol/AC_WAVE_PROGRESS_STATE_SCHEMA.md", "core_status": " M", "live_equals_v1_0_0": false, "live_blob_attested_in_any_core_commit": false },
+      { "path": ".agents/skills/ac-wave-opencode-repair/SKILL.md", "core_status": " M", "live_equals_v1_0_0": false, "live_blob_attested_in_any_core_commit": false },
+      { "path": ".opencode/scripts/run-wave-program.py", "core_status": " M", "live_equals_v1_0_0": false, "live_blob_attested_in_any_core_commit": false },
+      { "path": ".opencode/scripts/validate-ac-project.py", "core_status": " M", "live_equals_v1_0_0": false, "live_blob_attested_in_any_core_commit": false },
+      { "path": ".opencode/scripts/validate-managed-runtime.py", "core_status": " M", "live_equals_v1_0_0": false, "live_blob_attested_in_any_core_commit": false },
+      { "path": ".opencode/scripts/validate-wave-program.py", "core_status": " M", "live_equals_v1_0_0": false, "live_blob_attested_in_any_core_commit": false },
+      { "path": ".opencode/scripts/wave_state_engine.py", "core_status": " M", "live_equals_v1_0_0": false, "live_blob_attested_in_any_core_commit": false },
+      { "path": ".opencode/scripts/follow-wave-program.ps1", "core_status": "clean", "live_equals_v1_0_0": true, "live_blob_attested_in_any_core_commit": true, "note": "clean in .opencode/scripts/; the uncommitted canonical source is runtime/follow-wave-program.ps1" },
+      { "path": ".opencode/scripts/start-wave-program.ps1", "core_status": "clean", "live_equals_v1_0_0": true, "live_blob_attested_in_any_core_commit": true, "note": "clean in .opencode/scripts/; the project-side mismatch comes from the uncommitted canonical source" }
+    ],
+    "conclusion": "Dispatch 128's core claim - that the delta is uncommitted, unattested core WIP and the project is at the release - is CONFIRMED and is not disputed here. What is new is that the delta is a moving target: it grew from 16 to 18 project-side mismatches, and the two newest members are the program entry points a release would be performed through."
+  },
+  "concurrent_activity_in_the_core_this_dispatch": {
+    "core_controller_pid": 27300,
+    "core_controller_command": "python D:\\Projeler\\.agents-core\\.opencode\\scripts\\run-wave-program.py --repo D:\\Projeler\\.agents-core --backend opencode --program ac-wave-opencode-parallel",
+    "core_active_dispatch": "powershell -File D:\\Projeler\\.agents-core\\.opencode\\scripts\\run-ac-wave-opencode-phase.ps1 plan W04 -RepoRoot D:\\Projeler\\.agents-core (pid 41420)",
+    "core_latest_mtime_observed": "2026-09-28 07:16:48 on core/waves/done/ (about 90 s before this measurement; local time at measurement 07:18:03)",
+    "core_wip_last_content_edit": "2026-09-28 05:13:09 on .opencode/protocol/AC_CORE_MATERIALIZATION.json",
+    "reading": "The core is an actively running program, not a frozen release candidate. Committing 38 working-tree files there while its own controller is dispatching workers races the writers, and dispatch 128's step 1 was written as if the tree were quiescent. This is the concrete reason the remedy must be sequenced after a quiesce, not merely deferred."
+  },
+  "true_owner_and_corrected_remedy": {
+    "owner": "the Agent Core repository D:\\Projeler\\.agents-core - a different repository with its own live controller (pid 27300). Not W57, and not any Wave in this project. The project-side restart is then the controller's (global_bookkeeping_owner: controller), since run-wave-program.py, wave_state_engine.py and route-wave-findings.py are controller_restart_paths.",
+    "corrected_remedy": [
+      "1. Quiesce the core's own program (pid 27300 and its dispatched workers). Do not commit or revert the core's working tree while it is running.",
+      "2. In the core, decide each of the 9 uncommitted canonical-surface files: commit-and-tag, or revert. This includes runtime/follow-wave-program.ps1, which dispatch 128 did not inventory.",
+      "3. Reconcile the core's own self-materialized snapshot before anything is published: bring .opencode/scripts/follow-wave-program.ps1 and the other .opencode/scripts mirrors into agreement with runtime/ and validators/, so the core's own _managed_source_drift() check is clean. A release that ships a self-inconsistent core cannot be attested.",
+      "4. Re-run the core's own validators (validate-managed-runtime.py, validate-wave-program.py, validate-ac-project.py) on the committed state and require them green BEFORE any project consumes it. The released v1.0.0 pair is already known-red against its own 7 behaviours.",
+      "5. Only then restart this program through the sanctioned entry point .opencode/scripts/start-wave-program.ps1, which guards at bootstrap, materializes on STALE, re-verifies, and only then launches the controller. No manual lock surgery.",
+      "6. Rebind W57 evidence to the resulting content identity; everything currently bound to 9c70d980... is superseded by the materialization."
+    ],
+    "what_was_deliberately_not_done": "This phase did not commit, revert, stash or materialize anything in either repository, did not touch the lock, did not start or stop any controller, and did not re-judge W57 acceptance. WAVE_W57_EVIDENCE_MANIFEST and validate_wave_closeout were not run and are not claimed green."
+  },
+  "w57_state_this_dispatch": {
+    "w57_owned_requirements_touched": 0,
+    "w57_product_test_evidence_lifecycle_files_changed": [],
+    "focused_retest": "python -m pytest tests/test_wave_controller_regressions.py -q -> 17 passed in 0.60s, exit 0",
+    "postrun_check_orchestration": "python .opencode/scripts/validate-wave-orchestration.py -> exit 0, AC_WAVE_ORCHESTRATION_VALIDATION: PASS, AC_WAVE_METADATA_VALID=61",
+    "postrun_check_ac_project": "python .opencode/scripts/validate-ac-project.py -> exit 1, status FAIL, 18 managed-file-content-mismatch entries",
+    "postrun_check_managed_runtime": "python .opencode/scripts/validate-managed-runtime.py -> launched in background on this dispatch; still running after ~25 min against dispatch 128's 303.0 s, which is consistent with the core's concurrent controller load. Its result is NOT claimed here either way.",
+    "candidate_identity_reverified": "dist/hpc-client-gui/hpc-client-gui.exe = 8BA80453A76A664959BAEDF7716C476A5334B6AFF860A4BC79B9E220D48B4C57, 7672468 bytes - matches the W57 report's frozen candidate",
+    "def_w57_006_reverified": "Test-Connection 192.168.250.13 -Count 2 -> False; IsAdministrator -> False. Unchanged: genuine unavailable hardware plus unavailable authority, and it is the sole cause of the FREEZE-030/-040 red. It is not a ground for HUMAN_DEFERRED here, because a repository-owned orchestration red is open alongside it.",
+    "acceptance_not_rejudged": "FREEZE-030/-040 remain red; WAVE_W57_EVIDENCE_MANIFEST is deliberately still unwritten; the W57 report and the freeze declaration are unchanged and still state Frozen for W58: NO."
+  },
+  "why_reopen_not_blocked_not_human_deferred": {
+    "not_ready_for_audit": "W57 has two red owned rows (FREEZE-030, FREEZE-040) and no ACCEPTANCE_GREEN manifest. Dispatching an audit would only re-return the same reds that audit 114 already returned.",
+    "not_human_deferred": "The open blocker is a repository-owned technical/orchestration defect with a named technical remedy in a named repository. It is not an unavailable credential, MFA, authority, hardware, service or manual acceptance. DEF-W57-006 is the only human-deferral item and it does not license deferring the whole Wave while an orchestration red is open.",
+    "not_blocked": "BLOCKED asserts one missing prerequisite. Dispatch 128 already measured that the prerequisite it named (release the controller lock) is the wrong one, so repeating BLOCKED would be the identical no-progress rerun the protocol forbids.",
+    "reopen": "The finding must go back to its true owner - the Agent Core repository - for a corrected release decision. That is precisely what REOPEN means, and the corrected remedy above differs materially from dispatch 128's."
+  },
+  "mutation_guarantee": {
+    "project_head_unchanged": "f6ab257fbfd62d402e31e9330f30bb017b795fa8",
+    "core_head_unchanged": "73c1b7d8c7b5e925613eacf4450aa860271c10c5",
+    "project_commits_created": 0,
+    "core_commits_created": 0,
+    "core_stash_or_reset_or_checkout": 0,
+    "lock_files_touched": 0,
+    "materializations_run_in_real_repo": 0,
+    "controllers_started_or_stopped": 0,
+    "new_paths_from_this_dispatch": [
+      "artifacts/wave_W57/W57_REPAIR130_REMEDY_RELEASES_UNATTESTED_DRIFTED_CORE_RUNTIME.json (this artifact)",
+      ".tmp/w57repair130/drift.py",
+      ".tmp/w57repair130/follow_drift.py",
+      ".tmp/w57repair130/validate-managed-runtime.out.txt"
+    ]
+  },
+  "progress_events": "None emitted. The controller handoff for this dispatch carries no pending repair-owned TODO: T08 'Repair #1' and T09 'Focused retest #1' are status=completed, T10 'Audit #2' is audit-owned, and T08 'Close' is close-owned. AC_WAVE_PROGRESS_EVENT start/update/complete/block/cancel each require a known todo_id owned by this phase, so no legitimate event exists to emit and claiming a completed TODO would be false progress.",
+  "phase_status": "REOPEN",
+  "human_only": false
+}

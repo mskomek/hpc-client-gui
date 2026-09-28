@@ -1,0 +1,56 @@
+{
+  "schema": "w57-routed-finding",
+  "wave_id": "W57",
+  "phase": "run",
+  "phase_instance_id": "20260925-074235-63df86b0:154:W57:run",
+  "finding_id": "DEF-W57-008",
+  "title": "POSTRUN sweep inventory is defective by construction: 8 of 21 postrun_checks entries are not self-checking runnable evidence",
+  "owner": "controller / Agent Core (profile .opencode/protocol/WAVE_PROJECT_PROFILE.json postrun_checks)",
+  "status_in_this_phase": "CONFIRMED_STATICALLY_ROUTED_NOT_FIXED",
+  "measured": {
+    "postrun_entries_total": 21,
+    "non_python_entries": 8,
+    "json_data_documents": 2,
+    "powershell_entries": 6
+  },
+  "json_data_documents": [
+    ".opencode/protocol/AC_MODELS.json",
+    ".opencode/protocol/WAVE_PROJECT_PROFILE.json"
+  ],
+  "powershell_entries": [
+    {
+      "path": ".opencode/scripts/resolve-ac-model.ps1",
+      "shape": "function library, no param block",
+      "consequence": "launched bare it would define functions and exit 0 without checking anything - a manufactured false green"
+    },
+    {
+      "path": ".opencode/scripts/run-ac-wave-hybrid-phase.ps1",
+      "shape": "[CmdletBinding()] param() with Mandatory=$true",
+      "consequence": "bare launch has no supplied mandatory argument"
+    },
+    {
+      "path": ".opencode/scripts/run-ac-wave-luna-openai-phase.ps1",
+      "shape": "[CmdletBinding()] param() with Mandatory=$true",
+      "consequence": "bare launch has no supplied mandatory argument"
+    },
+    {
+      "path": ".opencode/scripts/run-ac-wave-opencode-phase.ps1",
+      "shape": "[CmdletBinding()] param() with Mandatory=$true",
+      "consequence": "bare launch has no supplied mandatory argument"
+    },
+    {
+      "path": ".opencode/scripts/follow-wave-program.ps1",
+      "shape": "[CmdletBinding()] with -View parameter",
+      "consequence": "not a self-checking evidence script"
+    },
+    {
+      "path": ".opencode/scripts/start-wave-program.ps1",
+      "shape": "[CmdletBinding()] param($ProjectRoot=...)",
+      "consequence": "not a self-checking evidence script"
+    }
+  ],
+  "effect": "Because run_postrun_checks() launches non-.py entries bare as argv[0] with no interpreter, the sweep produces 8 explicit \"postrun check not launchable\" failure reasons and is therefore a true red until the inventory is corrected. The 0146 containment fix converts a crash-with-no-report into a measured red with every entry accounted for; it does not and must not make this gate green.",
+  "explicitly_rejected": "Deleting the 8 entries to obtain a green, or dispatching .ps1 entries through a host that exits 0 without checking - either would be an evidence weakening and a fabricated PASS.",
+  "why_not_fixed_here": "Correcting the inventory is a semantic change to a controller-owned gate definition, not a W57-owned requirement. W57 owned_requirements do not include the POSTRUN gate definition, and W57 may not opportunistically edit a controller-owned gate to turn a program gate green.",
+  "wave_scope_note": "This red is Agent-Core/controller owned and Wave-independent. It must stay a recorded red and must never be masked by W57 status or by W57 evidence."
+}

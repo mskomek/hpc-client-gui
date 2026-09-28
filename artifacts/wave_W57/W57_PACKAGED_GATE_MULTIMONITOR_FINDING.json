@@ -1,0 +1,60 @@
+{
+  "artifact": "W57_PACKAGED_GATE_MULTIMONITOR_FINDING",
+  "wave": "W57",
+  "phase": "run",
+  "phase_instance_id": "20260925-074235-63df86b0:110:W57:run",
+  "finding_id": "DEF-W57-016",
+  "title": "Packaged terminal-accept path fails deterministically in the current two-display desktop; independent of the W30 repair",
+  "severity": "P2",
+  "status": "OPEN",
+  "owner_wave": "UNRESOLVED - the packaged smoke self-report path lives in src/hpc_gui/wx_shell.py (run-phase-accepted evidence code); the controller must assign the stable owner. It is NOT W57-owned and NOT the W30 repair.",
+  "gates_red": [
+    "HPC-W10-FREEZE-009",
+    "HPC-W10-FREEZE-032",
+    "HPC-W10-FREEZE-041",
+    "HPC-W10-PKGREG-001",
+    "HPC-W10-TODO-012",
+    "HPC-W10-TODO-RUNTIME-CUTOVER-003"
+  ],
+  "harness": {
+    "entrypoint": ".venv/Scripts/python.exe scripts/wx_packaged_smoke.py --artifact dist/hpc-client-gui/hpc-client-gui.exe --platform windows --output <json>",
+    "modified_by_this_phase": false,
+    "default_timeout_seconds": 25,
+    "note": "The maintained W04 harness was executed unmodified in every run below, at its default budget."
+  },
+  "runs": [
+    { "run": 1, "artifact_sha256": "9DEDBEA3A108DAC644C759FBFF62945BCC4941C69FBC558EF56CEADD53709B5F", "product": "post-W30-repair", "result": "FAIL", "exit_code": 1, "passed_of_20": 14, "failing_checks": ["terminal_readback", "pty_input_output", "remote_file_roundtrip", "job_roundtrip", "transfer_queue_render", "clean_shutdown"], "runtime": "keyboard_input:foreground_lost_after_terminal_click" },
+    { "run": 2, "artifact_sha256": "9DEDBEA3A108DAC644C759FBFF62945BCC4941C69FBC558EF56CEADD53709B5F", "product": "post-W30-repair", "result": "FAIL", "exit_code": 1, "passed_of_20": 14, "failing_checks": ["terminal_readback", "pty_input_output", "remote_file_roundtrip", "job_roundtrip", "transfer_queue_render", "clean_shutdown"], "runtime": "keyboard_input:foreground_lost_after_terminal_click" },
+    { "run": 3, "artifact_sha256": "9DEDBEA3A108DAC644C759FBFF62945BCC4941C69FBC558EF56CEADD53709B5F", "product": "post-W30-repair", "result": "FAIL", "exit_code": 1, "passed_of_20": 14, "failing_checks": ["terminal_readback", "pty_input_output", "remote_file_roundtrip", "job_roundtrip", "transfer_queue_render", "clean_shutdown"], "runtime": "keyboard_input:foreground_lost_after_terminal_click" },
+    { "run": 4, "artifact_sha256": "F904FAAFDE2218FE8463C32BFE2878AE84C37CDAE8657A63D7185E7B0065B52B", "product": "PRE-repair (the W30 change reverted, same tree otherwise)", "result": "FAIL", "exit_code": 1, "passed_of_20": 14, "failing_checks": ["terminal_readback", "pty_input_output", "remote_file_roundtrip", "job_roundtrip", "transfer_queue_render", "clean_shutdown"], "runtime": "keyboard_input:foreground_lost_after_terminal_click" },
+    { "run": 5, "artifact_sha256": "F904FAAFDE2218FE8463C32BFE2878AE84C37CDAE8657A63D7185E7B0065B52B", "product": "PRE-repair", "result": "FAIL", "exit_code": 1, "passed_of_20": 14, "failing_checks": ["terminal_readback", "pty_input_output", "remote_file_roundtrip", "job_roundtrip", "transfer_queue_render", "clean_shutdown"], "runtime": "keyboard_input:foreground_lost_after_terminal_click" },
+    { "run": 6, "artifact_sha256": "8BA80453A76A664959BAEDF7716C476A5334B6AFF860A4BC79B9E220D48B4C57", "product": "post-W30-repair, harness console window minimised via Start-Process -WindowStyle Minimized", "result": "FAIL", "exit_code": 1, "passed_of_20": 14, "failing_checks": ["terminal_readback", "pty_input_output", "remote_file_roundtrip", "job_roundtrip", "transfer_queue_render", "clean_shutdown"], "runtime": "keyboard_input:foreground_lost_after_terminal_click" }
+  ],
+  "discriminating_experiment": {
+    "question": "Is the packaged-gate red caused by the W30 closed_owner_repair, or by the execution environment?",
+    "method": "The W30 repair was reverted in the product file only (src/hpc_gui/services/job_submit_cancel.py), the candidate was rebuilt with the identical maintained build path (.venv/Scripts/python.exe -m PyInstaller -y --clean build/windows/hpc-client-gui.spec) and the unmodified harness was re-run twice.",
+    "result": "The pre-repair build F904FAAF fails the IDENTICAL 6 checks with the IDENTICAL runtime diagnostic. The red is therefore NOT attributable to the W30 repair and NOT to anything W57 changed.",
+    "build_size_control": "pre-repair build = 7672516 bytes, exactly the size of the previously declared CAA5904A candidate; post-repair build = 7672468 bytes. The 48-byte delta is the removed 2-line gate. The build is not bit-reproducible (PE timestamps), so identical product bytes yield a different SHA-256 on each build."
+  },
+  "mechanism": {
+    "observed_diagnostic": {
+      "foreground_request_accepted": false,
+      "foreground_matches_frame": false,
+      "wx_focus_type": "WebView",
+      "wx_focus_within_terminal_panel": true,
+      "webview_dom_focus": { "tag": "TEXTAREA", "className": "xterm-helper-textarea", "insideTerminal": true },
+      "bridge_input_chars": 0,
+      "ssh_input_chars": 0,
+      "dom_input_events": { "keydown": 0, "beforeinput": 0, "input": 0 }
+    },
+    "code_path": "src/hpc_gui/wx_shell.py:2226-2375. The smoke child raises its frame, claims foreground with SetForegroundWindow (accepted; wx_shell.py:2296 check passes), reads the xterm DOM focus, then positions the real cursor at the centre of the WebView via panel._webview.ClientToScreen and injects a synthetic left click with SendInput. Immediately afterwards wx_shell.py:2373 re-reads GetForegroundWindow, it is no longer the frame, and the run finishes with keyboard_input:foreground_lost_after_terminal_click. Because the click never lands, every downstream input and round-trip stage cascades.",
+    "environment_measurement": "Two displays are attached to the active console session: \\\\.\\DISPLAY1 primary at X=0 1920x1080 and \\\\.\\DISPLAY4 secondary at X=1920 1920x1080; virtual desktop 3840x1080. The foreground window at measurement time was the harness's own Python console.",
+    "hypothesis": "ClientToScreen/SetCursorPos coordinate handling for a WebView host on a non-primary display is the failing link: the synthetic click lands on a window other than the packaged frame, so foreground moves away and the smoke run aborts. This is consistent with 6/6 deterministic reproductions and with the prior run's four 20/20 green runs, which the earlier report did not record alongside a display change.",
+    "confidence": "The environment difference is measured and the product independence is proven. The precise Win32 cause inside the click path is a hypothesis, not a proven root cause, and is stated as such."
+  },
+  "release_decision": "DEFER as P2 with the packaged gate recorded as RED. This is not a product regression and not a W57 defect: it reproduces identically on a build that excludes the W30 repair. It is also not a human deferral - the two next actions are bounded and machine-executable. The gate stays red in this report; no 20/20 is claimed and the prior CAA5904A green evidence is preserved unmodified and explicitly not reused for this candidate.",
+  "next_actions": [
+    "Controller/owner: assign the stable owner for the packaged smoke terminal-accept path in src/hpc_gui/wx_shell.py and decide whether the click path must be made multi-display safe (DPI-awareness manifest verification, or refusing to rely on a synthetic click when the webview is not on the primary display).",
+    "Operator: re-run the unmodified harness on a single-display session, or on a session where the packaged frame is the only top-level window, to separate the environment contribution from any product contribution. This is a measurement action, not a substitute for the owner decision."
+  ]
+}

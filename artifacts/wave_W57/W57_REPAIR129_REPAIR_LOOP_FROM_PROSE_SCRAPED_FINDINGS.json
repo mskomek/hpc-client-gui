@@ -1,0 +1,193 @@
+{
+  "artifact": "W57_REPAIR129_REPAIR_LOOP_FROM_PROSE_SCRAPED_FINDINGS",
+  "wave_id": "W57",
+  "phase": "repair",
+  "phase_instance_id": "20260925-074235-63df86b0:129:W57:repair",
+  "content_identity": "9c70d980b0c9940e8643de8b925f6b0d53706ecbc4e1afc9e811ed76bbf05a2e",
+  "finding_id_routed_in": [
+    "L316-323",
+    "L329-353",
+    "L355-360",
+    "W57-ORCHESTRATION-RED-DELTA-IS-UNATTESTED-CORE-WIP-NOT-A-MISSED-RELEASE"
+  ],
+  "repair_hypothesis_previous": "W57-ORCHESTRATION-RED-DELTA-IS-UNATTESTED-CORE-WIP-NOT-A-MISSED-RELEASE",
+  "repair_hypothesis_this": "w57.repair-loop.phase-result-prose-scraped-as-pseudo-requirements",
+  "hypothesis_changed": true,
+  "hypothesis_change_reason": "Dispatch 128 answered 'what is the core delta made of'. That answer is still true and still unmet. This dispatch answers a different and prior question: 'why is W57 repair being re-dispatched at all, six times, with a new finding identity each time'. The routed findings routed into this dispatch are themselves the output of the previous repair phase's prose, not independent defects. That is a routing-loop diagnosis, not a content diagnosis, and it names a different owner and a different remedy.",
+
+  "narrative": {
+    "FINDING": "The W57 repair queue is self-sustaining. W57 is being re-dispatched as the repair owner of findings that W57 itself manufactured one dispatch earlier. The routed findings are line-range citations and a repair hypothesis identifier scraped out of dispatch 128's own prose by the controller's finding router, then defaulted onto W57 because no Wave owns them. No W57-owned requirement is implicated by any of them.",
+    "OBSERVED_FAILURE": "This dispatch's routed input (.tmp/agent-runs/ac-wave-opencode-parallel/20260925-074235-63df86b0/0128-W57-findings.json) contains four findings. Three of them are literal line-range citations taken from dispatch 128's prose where it pointed at bootstrap guards in the program launcher, and the fourth is dispatch 128's own repair hypothesis string. All four carry source 'phase-result'. All four are owned by W57. The failing validator re-run on this exact dispatch is unchanged: python .opencode/scripts/validate-managed-runtime.py -> exit 1, status FAIL, 283.0s, same seven behaviours, same signature. W57's own focused retest is green on this dispatch: python -m pytest tests/test_wave_controller_regressions.py -q -> 17 passed in 0.39s, exit 0.",
+    "HYPOTHESIS": "If W57 is being re-dispatched because of real W57 defects, then at least one routed finding id must be a requirement W57 actually owns. Measured instead: W57's frontmatter declares 46 owned requirement ids, and the intersection between those 46 and the finding ids of dispatches 123, 124, 126, 127 and 128 is empty. The finding ids are instead a sequence of five distinct self-generated repair-hypothesis strings plus three line-range tokens. So the queue is fed by the previous phase's own output.",
+    "CHANGE": "Measurement only, plus this artifact. No repository, core, manifest, lock, lifecycle, product, test or evidence file was written. (a) Re-ran the failing validator on this dispatch. (b) Re-ran W57's focused retest. (c) Re-ran the real finding router against dispatch 128's receipt and against dispatch 127's receipt. (d) Drove the router's own REQUIREMENT_RE over dispatch 128's finding text in process. (e) A/B through the real router CLI: the original text versus the same text with only the line-range citations and the inline hypothesis token removed. (f) Enumerated W57's owned requirement ids from its frontmatter and intersected them with every dispatch 123 to 128 finding id. (g) Read the two controller files that implement the loop. Scratch evidence under .tmp/w57-repair-129/.",
+    "RESULT": "Hypothesis confirmed. The loop is real, deterministic and reproduced on this dispatch. The two code sites that close it are both controller-owned restart paths: the parallel channel owner route promotes the tail of the worker's authoritative prose into a finding list whenever the worker supplies none, and the finding router then scrapes any uppercase-hyphen token out of that text as if it were a requirement id, defaulting ownership to the current Wave when no Wave claims it. Because the OpenCode backend's machine block carries only status and repair hypothesis, the prose-tail fallback is unconditional, so at least one W57-owned finding is manufactured from every non-green repair receipt. The worker cannot prevent this from its own output. W57 repair therefore cannot make progress by being re-run, and another REOPEN would only feed the loop again."
+  },
+
+  "root_cause_code_sites": [
+    {
+      "site": ".opencode/scripts/run-wave-program.py:980",
+      "owner": "controller",
+      "is_controller_restart_path": true,
+      "code": "findings = [str(x) for x in (machine.get('findings') or []) if str(x).strip()] or [authoritative[-1600:]]",
+      "why_it_matters": "channel_owner_route() routes a parallel channel's finding through the controller ledger. The fallback promotes the last 1600 characters of the worker's prose into the finding list whenever the machine block supplies no findings.",
+      "why_the_worker_cannot_avoid_it": "channel_machine_result() at run-wave-program.py:1005-1024 parses the OpenCode bridge output with parse_machine_result(), which yields only status and repair hypothesis. The OpenCode machine-result contract has no findings key. For this backend the fallback therefore fires on every dispatch, unconditionally.",
+      "note": "The last 1600 characters of this dispatch's own output include its machine block, so the tail is worker-influenceable, but only down to a floor: see floor_analysis."
+    },
+    {
+      "site": ".opencode/scripts/route-wave-findings.py:20 with :204-208",
+      "owner": "controller",
+      "is_controller_restart_path": true,
+      "code": "REQUIREMENT_RE = re.compile(r'\\b[A-Z][A-Z0-9]*(?:-[A-Z0-9]+){1,}\\b')",
+      "why_it_matters": "main() scrapes every token matching REQUIREMENT_RE out of each phase-result finding string and emits one finding per token. The pattern accepts any uppercase-hyphenated token, so source-line citations and the worker's own hypothesis identifier are indistinguishable from a real requirement id.",
+      "project_requirement_id_shape": "W57's real requirement ids are a project prefix, a wave segment, a family segment and a three digit number, e.g. prefix plus W10 plus FREEZE plus a number. A conforming pattern would anchor on that shape."
+    },
+    {
+      "site": ".opencode/scripts/route-wave-findings.py:211-215",
+      "owner": "controller",
+      "is_controller_restart_path": true,
+      "code": "findings.append(Finding(rid, source, text, owner[0] if owner else args.wave, owner[1] if owner else 'current_or_unresolved', bool(HUMAN_RE.search(text))))",
+      "why_it_matters": "When no Wave's owned-requirement index claims the scraped id, ownership silently defaults to the current Wave and lifecycle state defaults to current_or_unresolved. This is fail-open: unrecognised text becomes an owned finding for whichever Wave happens to be running, and current_or_unresolved is a schedulable state. Fail-closed behaviour would drop or quarantine an id that no Wave claims."
+    }
+  ],
+
+  "reproduction": {
+    "method": "Ran the project's own router, unmodified, against the controller's own receipt, and separately drove the router's own REQUIREMENT_RE in process.",
+    "commands": [
+      "python .opencode/scripts/route-wave-findings.py --repo . --wave W57 --phase-result .tmp/agent-runs/ac-wave-opencode-parallel/20260925-074235-63df86b0/0128-W57-repair-normalized.json",
+      "python .opencode/scripts/route-wave-findings.py --repo . --wave W57 --phase-result .tmp/agent-runs/ac-wave-opencode-parallel/20260925-074235-63df86b0/0127-W57-repair-normalized.json",
+      "in-process REQUIREMENT_RE sweep plus router CLI A/B, evidence .tmp/w57-repair-129/ab-finding-extractor.json"
+    ],
+    "router_on_dispatch_128_receipt": {
+      "exit_code": 0,
+      "finding_count": 4,
+      "ids": [
+        "L316-323",
+        "L329-353",
+        "L355-360",
+        "W57-ORCHESTRATION-RED-DELTA-IS-UNATTESTED-CORE-WIP-NOT-A-MISSED-RELEASE"
+      ],
+      "all_owned_by": "W57",
+      "owner_states": ["current_or_unresolved", "current_or_unresolved", "current_or_unresolved", "pending"]
+    },
+    "router_on_dispatch_127_receipt": {
+      "exit_code": 0,
+      "finding_count": 1,
+      "ids": ["W57-ORCHESTRATION-RED-STALE-MATERIALIZATION-BLOCKED-ON-CONTROLLER-LOCK"],
+      "all_owned_by": "W57"
+    },
+    "ab_in_process": {
+      "tokens_extracted_from_dispatch_128_text": 4,
+      "tokens_after_removing_line_range_citations_and_inline_hypothesis_token": 0,
+      "eliminated": [
+        "L316-323",
+        "L329-353",
+        "L355-360",
+        "W57-ORCHESTRATION-RED-DELTA-IS-UNATTESTED-CORE-WIP-NOT-A-MISSED-RELEASE"
+      ]
+    },
+    "ab_through_router_cli": {
+      "original_text_finding_count": 4,
+      "stripped_text_finding_count": 1,
+      "stripped_text_ids": ["UNSCOPED"],
+      "reading": "Removing the two prose shapes collapses four fabricated requirement ids to the router's single documented unscoped fallback. It does not reach zero, because route-wave-findings.py:208 substitutes UNSCOPED when no id is scraped, and :215 then defaults that unscoped finding to the current Wave."
+    }
+  },
+
+  "floor_analysis": {
+    "question": "Can a worker stop the loop by controlling its own output?",
+    "answer": "No, not completely. The worker controls the prose, and therefore the tail that becomes the finding text, but the router's two fail-open defaults at :208 and :215 guarantee at least one W57-owned finding per non-green repair receipt.",
+    "worker_side_minimisation": "A worker can reduce four fabricated requirement ids to one unscoped finding by keeping the tail free of uppercase-hyphenated tokens, including the line-range citation shape and the repair hypothesis identifier shape. This dispatch adopts a lowercase dotted hypothesis identifier and keeps its tail free of those shapes, verified with the router before emitting.",
+    "controller_side_fix_required": "Anchor REQUIREMENT_RE on the project's real requirement id shape, and make ownership fail-closed: a scraped id that no Wave's owned index claims must not default to the current Wave and must not default to a schedulable lifecycle state.",
+    "classification": "Repository-owned orchestration defect in controller code. Not human deferral. Not a W57 defect. Not repairable by a Wave worker."
+  },
+
+  "dispatch_123_to_128_finding_identity": {
+    "note": "Each dispatch produced a different self-generated finding identity for the same unresolved condition. The identity churn is itself the signature of the loop: there is no stable finding to converge on.",
+    "rows": [
+      {"dispatch": 123, "id": "W57-ORCHESTRATION-RED-ROOTCAUSE-INCOMPLETE-AC-CORE-MATERIALIZATION", "owner": "W57", "owner_state": "pending"},
+      {"dispatch": 124, "id": "W57-ORCHESTRATION-RED-ROOTCAUSE-CANONICAL-CORE-UNCOMMITTED-WIP", "owner": "W57", "owner_state": "pending"},
+      {"dispatch": 126, "id": "W57-ORCHESTRATION-RED-CORE-ROOT-MIXED-REVISION-PAIRING", "owner": "W57", "owner_state": "pending"},
+      {"dispatch": 127, "id": "W57-ORCHESTRATION-RED-STALE-MATERIALIZATION-BLOCKED-ON-CONTROLLER-LOCK", "owner": "W57", "owner_state": "pending"},
+      {"dispatch": 128, "id": "L316-323", "owner": "W57", "owner_state": "current_or_unresolved"},
+      {"dispatch": 128, "id": "L329-353", "owner": "W57", "owner_state": "current_or_unresolved"},
+      {"dispatch": 128, "id": "L355-360", "owner": "W57", "owner_state": "current_or_unresolved"},
+      {"dispatch": 128, "id": "W57-ORCHESTRATION-RED-DELTA-IS-UNATTESTED-CORE-WIP-NOT-A-MISSED-RELEASE", "owner": "W57", "owner_state": "pending"}
+    ],
+    "w57_owned_requirement_count": 46,
+    "owned_requirements_intersecting_any_finding_id": 0
+  },
+
+  "upstream_blocker_still_unmet": {
+    "revalidated_this_dispatch": true,
+    "core_root": "D:\\Projeler\\.agents-core",
+    "core_head": "73c1b7d8c7b5e925613eacf4450aa860271c10c5",
+    "core_head_unchanged_from_dispatch_128": true,
+    "dirty_canonical_source_paths_under_runtime_validators_skills_protocol_setup_templates": 19,
+    "conclusion": "Dispatch 128's content diagnosis stands and its prerequisite is still unmet: the canonical core surface is uncommitted work in progress in another repository, and that repository's own controller is live. This dispatch does not dispute it and does not re-litigate it. It is recorded here only to show the prerequisite has not been satisfied in the interval, so the content blocker and the routing-loop blocker are independent and both open.",
+    "failing_validator_this_dispatch": {
+      "command": "python .opencode/scripts/validate-managed-runtime.py",
+      "exit_code": 1,
+      "status": "FAIL",
+      "elapsed_seconds": 283.0,
+      "red_behaviours": [
+        "controller_semantic_counters_vs_retries",
+        "progress_contract_v1_v2_deterministic",
+        "audit_close_todo_semantic_history",
+        "controller_worker_timeout_serial_parallel_barrier",
+        "multi_group_managed_parallel_synthetic_base",
+        "parallel_cross_wave_true_owner_routing",
+        "v2_plan_gate_before_run_repair"
+      ],
+      "signature": "unexpected dispatch plan; next scripted=[{'phase': 'run', 'status': 'READY_FOR_AUDIT'}]; multi-group run did not complete: 30 missing-candidates",
+      "note": "The materialization sub-validators at the head of the run all reported exit_code 0, so this red is behavioural, not a materialization-guard red. These seven are Agent Core runtime regression tests, not W57 acceptance criteria."
+    }
+  },
+
+  "true_owner_and_the_actual_remedy": {
+    "owner": "the controller, for the routing loop, in .opencode/scripts/run-wave-findings.py and .opencode/scripts/run-wave-program.py. Both are controller_restart_paths. Separately, the Agent Core repository for the content blocker. Neither is W57.",
+    "remedy_sequence": [
+      "1. Controller, owner routing: anchor the finding router's requirement pattern on the project's real requirement id shape instead of any uppercase-hyphen token, so source-line citations and hypothesis identifiers can no longer be promoted to requirement ids.",
+      "2. Controller, owner routing: make ownership fail-closed. A scraped id that no Wave's owned index claims must not default execution_owner to the current Wave and must not default to a schedulable lifecycle state.",
+      "3. Controller, global state: the parallel channel owner route should not promote a raw prose tail into the finding list. If the worker supplies no findings, the correct outcome is no finding, not a fabricated one.",
+      "4. These three are controller_restart_paths. Apply them through the controller's own restart and auto-resume path, not from inside a running phase worker.",
+      "5. Then, separately, the content blocker: the canonical core surface in the Agent Core repository must be committed and validated before any project re-materializes from it. That is another repository's release decision and remains open."
+    ],
+    "why_a_worker_must_not_do_this": "Owner routing and global state are controller-owned. A repair worker owns one Wave. Editing these files mid-run would also rewrite a controller_restart_path from inside the process the controller is supervising, which the repository workflow requires to be done by checkpointing and restarting the controller instead."
+  },
+
+  "w57_impact": {
+    "w57_owned_requirements_touched": 0,
+    "w57_owned_requirements_implicated_by_the_routed_findings": 0,
+    "w57_product_test_evidence_lifecycle_files_changed": 0,
+    "w57_focused_retest_this_dispatch": "python -m pytest tests/test_wave_controller_regressions.py -q -> 17 passed in 0.39s, exit 0",
+    "w57_acceptance_not_rejudged": "WAVE_W57_EVIDENCE_MANIFEST and validate_wave_closeout were not re-run or re-judged by this phase and are not claimed green. W57's next machine phase remains Audit, which is audit-owned and was already pending before this dispatch.",
+    "progress_events": "None emitted. There is no pending repair-owned todo in this run's progress state, so a start, update, complete, block or cancel event would have to name a todo this phase does not own, which would be false progress."
+  },
+
+  "mutation_guarantee": {
+    "project_head": "f6ab257fbfd62d402e31e9330f30bb017b795fa8",
+    "project_commits_created": 0,
+    "core_head": "73c1b7d8c7b5e925613eacf4450aa860271c10c5",
+    "core_commits_created": 0,
+    "lock_files_touched": 0,
+    "materializations_run": 0,
+    "controller_or_routing_files_edited": 0,
+    "w57_product_test_evidence_lifecycle_files_changed": [],
+    "new_paths_from_this_dispatch": [
+      "artifacts/wave_W57/W57_REPAIR129_REPAIR_LOOP_FROM_PROSE_SCRAPED_FINDINGS.json (this artifact)",
+      ".tmp/w57-repair-129/managed-runtime-129.txt (failing validator re-run, exit 1)",
+      ".tmp/w57-repair-129/phase-result-AB_orig.json and .tmp/w57-repair-129/phase-result-AB_stripped.json (scratch router inputs)",
+      ".tmp/w57-repair-129/ab-finding-extractor.json (A/B evidence)"
+    ]
+  },
+
+  "evidence_files": {
+    "failing_validator_run_this_dispatch": ".tmp/w57-repair-129/managed-runtime-129.txt",
+    "extractor_ab_result": ".tmp/w57-repair-129/ab-finding-extractor.json",
+    "extractor_ab_inputs": [
+      ".tmp/w57-repair-129/phase-result-AB_orig.json",
+      ".tmp/w57-repair-129/phase-result-AB_stripped.json"
+    ],
+    "prior_dispatch_root_cause_artifact": "artifacts/wave_W57/W57_REPAIR128_DELTA_IS_UNATTESTED_CORE_WIP_ROOT_CAUSE.json"
+  }
+}

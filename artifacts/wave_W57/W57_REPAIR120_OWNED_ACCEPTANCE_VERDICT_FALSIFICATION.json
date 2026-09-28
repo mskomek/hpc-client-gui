@@ -1,0 +1,106 @@
+{
+  "schema": "ac-wave-opencode-repair-evidence/1",
+  "artifact": "W57_REPAIR120_OWNED_ACCEPTANCE_VERDICT_FALSIFICATION",
+  "wave": "W57",
+  "phase": "repair",
+  "phase_instance_id": "20260925-074235-63df86b0:120:W57:repair",
+  "repair_hypothesis": "W57-OWNED-ACCEPTANCE-VERDICT-FALSIFIED-BY-OWN-EVIDENCE",
+  "prior_hypothesis": "W57-CANONICAL-REPORT-SCOPE-CLAIMS-FALSIFIED-BY-REPO-TRUTH",
+  "prior_hypothesis_status": "RESOLVED at repair 119 (different claim class: working-tree SCOPE at report sections 2 and 7; this repair addresses ACCEPTANCE VERDICTS at sections 6, 10, 11, 12 and the freeze declaration - materially new, not a rerun)",
+  "finding_id": "DEF-W57-020",
+  "severity": "P2",
+  "status": "RESOLVED",
+  "owner": "W57",
+  "title": "W57's canonical report and freeze declaration recorded owned acceptance verdicts as RED while the Wave's own committed evidence closed those exact requirements",
+  "falsifiable_by": "one command: compare report section 6 against artifacts/wave_W57/W57_PACKAGED_SMOKE_8BA80453_PASS_SUMMARY.json -> closes_findings",
+  "authority_bound": false,
+  "gated_on_compute02": false,
+  "gated_on_hyperv_rights": false,
+  "root_cause": "The repair-116 section-6 sweep corrected TODO-012/-013/-014/-016 and TODO-RUNTIME-CUTOVER-003 from the same superseded run-110 packaged-gate red but left the owned requirement HPC-W10-FREEZE-009 behind. The stale verdict then propagated into the report header, the section 10 stop condition, the section 11 resume state, the section 12 final summary, and the FREEZE-046 freeze declaration. Repair 119 fixed working-tree SCOPE claims in sections 2 and 7 and did not read section 6 against closes_findings. Repairs 116 and 119 therefore both ran without ever closing the loop between the report's acceptance verdicts and the Wave's own evidence.",
+  "falsification_measurement": {
+    "owned_requirement": "HPC-W10-FREEZE-009",
+    "owned_requirement_source": "waves/pending/W57.md frontmatter owned_requirements",
+    "report_section_6_said": "RED - EV-21/22/23, 14/20 on all six runs, all three builds",
+    "evidence_closes_findings": [
+      "HPC-W10-FREEZE-009",
+      "HPC-W10-FREEZE-032",
+      "HPC-W10-FREEZE-041",
+      "HPC-W10-PKGREG-001",
+      "HPC-W10-TODO-012",
+      "HPC-W10-TODO-RUNTIME-CUTOVER-003"
+    ],
+    "evidence_source": "artifacts/wave_W57/W57_PACKAGED_SMOKE_8BA80453_PASS_SUMMARY.json",
+    "packaged_smoke_payload_result": "PASS",
+    "packaged_smoke_payload_candidate_sha256": "8ba80453a76a664959baedf7716c476a5334b6aff860a4bc79b9e220d48b4c57",
+    "def_w57_016_supersession_status": "RESOLVED",
+    "def_w57_016_supersession_severity": "P4 / RESOLVED-ENVIRONMENTAL",
+    "internal_self_contradiction_in_the_report": "Section 13.5 states 'This recovers FREEZE-009, FREEZE-032, FREEZE-041, PKGREG-001, TODO-012 and TODO-RUNTIME-CUTOVER-003' while section 6 records FREEZE-009 as RED. Section 4 records DEF-W57-016 as RESOLVED while section 11 still lists it open."
+  },
+  "propagated_stale_claims_corrected": [
+    "header block: 'Session status: REOPEN' and 'the two owned EXTERNAL gates remain red, and repair 112 proved that compute02 is down is not their only cause' -> HUMAN_DEFERRED with the single DEF-W57-006 cause",
+    "header block: 'Prior phase: repair -> REOPEN, hypothesis W57-PACKAGED-GATE-WERFAULT-DIALOG-FG-STEAL' -> the actual repair-119 HUMAN_DEFERRED result and hypothesis",
+    "section 6: FREEZE-009 RED -> GREEN as of repair 111, corrected at repair 120, bound to the closes_findings payload",
+    "section 10: packaged group moved from red stop condition #1 to GREEN; phase status REOPEN -> HUMAN_DEFERRED with the authority-bound DEF-W57-006 as the sole red blocker",
+    "section 11: open-P2 list no longer carries DEF-W57-016; DEF-W57-006 refiled from P3 to P2 per section 4; pending item 1 marked done at repair 111; pending item 5 red-row list narrowed to FREEZE-030/-040 and renumbered to 'after items 2-4'",
+    "section 12: 'RED: FREEZE-009/-032/-041, PKGREG-001, TODO-012/-013, TODO-RUNTIME-CUTOVER-003' -> GREEN as of repair 111; 'Package evidence: RED and recorded as red' -> GREEN with the superseded red payload retained for audit; 'Manifest ... FREEZE-009/-030/-032/-040/-041 are red' -> FREEZE-030/-040 only; 'Wave decision: REOPEN' -> HUMAN_DEFERRED",
+    "artifacts/wave_W57/W57_FREEZE_DECLARATION_SUCCESSOR.md: 'Frozen for W58: NO ... three independently measured reasons (repair phase 112)' -> one remaining reason, with DEF-W57-018 marked WITHDRAWN at 113 and DEF-W57-017 CLOSED AND VERIFIED at 116",
+    "artifacts/wave_W57/W57_FREEZE_DECLARATION_SUCCESSOR.md: FREEZE-044 justification red-row list narrowed to FREEZE-030/-040"
+  ],
+  "invariants_preserved": {
+    "frozen_for_w58": "NO (unchanged)",
+    "freeze_030": "RED (unchanged)",
+    "freeze_040": "RED (unchanged)",
+    "freeze_044_manifest": "deliberately NOT written (unchanged - requires ACCEPTANCE_GREEN)",
+    "declared_candidate_sha256": "8ba80453a76a664959baedf7716c476a5334b6aff860a4bc79b9e220d48b4c57 (unchanged; not patched, not rebuilt)",
+    "head_sha": "f6ab257fbfd62d402e31e9330f30bb017b795fa8 (unchanged)",
+    "tests_weakened": false,
+    "skip_or_xfail_added": false,
+    "evidence_payload_rewritten": false,
+    "superseded_red_artifacts": "retained unmodified for audit",
+    "product_test_spec_lock_build_input_lab_security_controller_touched": false,
+    "self_audit_written": false,
+    "audit_policy": "fresh-independent"
+  },
+  "routing_left_as_is": {
+    "def_w57_007": "controller - orchestration tree not in the candidate; a Wave worker must not materialize or commit controller files",
+    "def_w57_010": "W44 / W52",
+    "def_w57_011": "editor adapter owner",
+    "def_w57_012": "W06 (CLOSED)",
+    "def_w57_013": "W03 (CLOSED)",
+    "def_w57_014": "W44 - hard constraint: must not restore Qt",
+    "def_w57_015": "owner to be derived by the controller from d0d544c1",
+    "def_w57_009": "P3 defer",
+    "postrun_checks_not_in_repository_truth_section_16": "left exactly as routed to the controller; .git/info/exclude untouched, no controller file added, tracked, un-ignored, committed or edited",
+    "wx_shell_py_third_party_topmost_hardening": "still-unowned robustness question for the controller to assign; not a W57 blocker, gates nothing here"
+  },
+  "residual_blocker": {
+    "finding_id": "DEF-W57-006",
+    "owned_rows_red": ["HPC-W10-FREEZE-030", "HPC-W10-FREEZE-040"],
+    "also_blocked": "HPC-W10-TODO-014 two-node leg",
+    "classification": "genuine unavailable OPERATOR AUTHORITY - Windows Administrator / Hyper-V rights on MSKOMEK; human-deferral category, not a repository defect",
+    "measured": [
+      "compute02 192.168.250.13: ping 100% loss, ARP Unreachable with MAC 00-00-00-00-00-00 (never resolved), sinfo -N reports down*, scontrol State=DOWN+NOT_RESPONDING BootTime=None",
+      "lab-status.ps1 exit 3; login-control01 6/6 services and compute01 3/3 services healthy; image_pin_ok true; profile_valid true - the fabric is provably alive, the outage is isolated to one VM object",
+      "Start-VM -Name compute02 and Get-VM both refused: 'You do not have the required permission to complete this task'; IsAdministrator=False; principal not in BUILTIN\\Hyper-V Administrators; Start-VM is precisely the call lab/lab-reset.ps1:10 and lab/lab-up.ps1:178 make"
+    ],
+    "wave_worker_repair_path": "none - no repository, product, test or orchestration change can alter the outcome"
+  },
+  "focused_retest": {
+    "command": ".venv/Scripts/python.exe -m pytest tests/test_w57_freeze_consistency.py tests/test_local_real_lab_bounded_commands.py tests/test_local_real_lab_static.py -q",
+    "result": "13 passed in 9.32s",
+    "exit_code": 0,
+    "note": "test_w57_freeze_consistency.py parses this canonical report and is green after the correction; the DEF-W57-017 bounded-harness hardening stays green"
+  },
+  "changed_files": [
+    "docs/wave-reports/v2/opencode/W57_WAVE_REPORT.md",
+    "artifacts/wave_W57/W57_FREEZE_DECLARATION_SUCCESSOR.md",
+    "artifacts/wave_W57/W57_REPAIR120_OWNED_ACCEPTANCE_VERDICT_FALSIFICATION.json"
+  ],
+  "wave_disposition": {
+    "repository_owned_technical_defects_open_on_w57": 0,
+    "wave_decision": "NO-GO for freeze",
+    "frozen_for_w58": "NO",
+    "normalized_state": "HUMAN_DEFERRED",
+    "next_action": "operator: an Administrator / Hyper-V session runs lab/lab-reset.ps1 (or lab/lab-up.ps1), then lab/lab-status.ps1 to status PASS, then lab/lab-test.ps1 to produce the FREEZE-030/-040 verdict; then W57 re-declares the SHA-256 from the shipped bytes, writes WAVE_W57_EVIDENCE_MANIFEST.json with ACCEPTANCE_GREEN, re-issues the declaration with Frozen for W58 YES, and dispatches the fresh independent audit"
+  }
+}

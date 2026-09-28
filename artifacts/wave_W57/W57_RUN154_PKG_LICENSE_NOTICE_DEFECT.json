@@ -1,0 +1,38 @@
+{
+  "schema": "w57-run-finding",
+  "wave_id": "W57",
+  "phase": "run",
+  "phase_instance_id": "20260925-074235-63df86b0:154:W57:run",
+  "finding_id": "W57-PKG-LICENSE-NOTICE-FALSE-QT-CLAIM",
+  "severity": "package-content-defect",
+  "title": "Packaged candidate ships a third-party license notice that asserts PySide6/Shiboken6/Qt components which are not present in the bundle",
+  "observed": "dist/hpc-client-gui/_internal/QT_LGPL_SOURCE_OFFER.md states \"HPC Client GUI binary releases contain PySide6, Shiboken6, and Qt components distributed under applicable LGPLv3 terms\" and refers to a THIRD_PARTY_VERSIONS.txt manifest for exact versions.",
+  "measured_bundle_contents": {
+    "bundle_files": 172,
+    "qt_runtime_dlls": 0,
+    "qt_python_bindings": 0,
+    "pyside6_present": false,
+    "shiboken6_present": false,
+    "wx_v2_runtime": "wxbase333u / wxmsw333u_core / wxmsw333u_webview / wxmsw333u_html vc140_x64 (wxWidgets 3.3.3) + WebView2Loader.dll",
+    "webview2_runtime": "WebView2 system runtime via WebView2Loader.dll"
+  },
+  "why_this_is_a_defect": "The notice is a licensing representation about artifact contents and it is false for this bundle. The declared runtime is wxWidgets V2 WebView, not Qt/PySide6, so the corresponding-source obligation it claims does not apply and the referenced THIRD_PARTY_VERSIONS.txt is not present in the bundle. Shipping a false third-party attribution is a release-integrity defect independent of any single test outcome.",
+  "owner_routing": {
+    "true_owner": "W56 (build / frozen-candidate owner)",
+    "routed_not_fixed_because": "W57 Frozen-candidate invariants forbid patching the frozen candidate: any package-content correction invalidates W56 and must be routed to the owner, rebuilt, then affected W56/W57 evidence rerun. W57 must not opportunistically edit package content it does not own.",
+    "invalidates": "W56 candidate identity; requires rebuild and W56/W57 packaged regression rerun"
+  },
+  "related": "Interacts with the T03 candidate-identity instability (on-disk exe 8ba80453... vs recorded frozen caa5904a...). Both must be resolved by the packaging owner before W57 can emit a freeze declaration.",
+  "not_done": [
+    "no package file was edited or deleted",
+    "no bundle was rebuilt",
+    "no license text was rewritten"
+  ],
+  "safety": {
+    "tests_weakened": false,
+    "skips_added": false,
+    "fabricated_pass": false,
+    "committed": false,
+    "pushed": false
+  }
+}

@@ -1,0 +1,125 @@
+{
+  "artifact": "W57_DEF007_CANDIDATE_COMPLETENESS_CLONE",
+  "wave": "W57",
+  "phase": "repair",
+  "phase_instance_id": "20260925-074235-63df86b0:104:W57:repair",
+  "finding_id": "DEF-W57-007",
+  "repair_hypothesis": "W57-DEF007-EXCLUDE-VS-CLONE",
+  "requirement_ids": [
+    "HPC-W10-FREEZE-029",
+    "HPC-W10-FREEZE-044"
+  ],
+  "candidate": {
+    "sha": "f6ab257fbfd62d402e31e9330f30bb017b795fa8",
+    "branch": "develop",
+    "top_level": "D:/Projeler/hpc-client-gui",
+    "git_dir": "D:/Projeler/TrubaGUI/.git/worktrees/TrubaGUI-develop-work",
+    "note": "The wave working tree is a linked worktree of the main repository D:/Projeler/TrubaGUI. It shares that repository's .git/info/exclude."
+  },
+  "method": {
+    "previous": "git worktree add --detach .tmp/w57-hermetic f6ab257f",
+    "previous_defect": "A linked worktree shares .git/info/exclude with the main repository, so it cannot distinguish 'absent from the repository' from 'hidden by a local ignore rule'.",
+    "this": "git clone --shared D:/Projeler/TrubaGUI .tmp/w57-repair-0104/clone-a && git -C <clone> checkout --detach f6ab257f",
+    "this_advantage": "A clone writes a fresh default .git/info/exclude, so the measurement is independent of any local ignore rule."
+  },
+  "root_cause": {
+    "local_exclude": "D:/Projeler/TrubaGUI/.git/info/exclude line 33: /.opencode/",
+    "local_exclude_is_uncommitted": true,
+    "tracked_gitignore_has_opencode_rule": false,
+    "tracked_gitignore_opencode_lines": ["/docs/OPENCODE_*"],
+    "consequence": "Every .opencode/** sibling of the three tracked scripts is invisible to git add on this machine and was therefore never committed. The repository tracks .opencode/protocol/WAVE_PROJECT_PROFILE.json, .opencode/scripts/run-wave-program.py, .opencode/scripts/wave_state_engine.py and .opencode/scripts/route-wave-findings.py, so partial tracking of the directory is an accidental omission, not a policy."
+  },
+  "declared_path_audit": {
+    "source": ".opencode/protocol/WAVE_PROJECT_PROFILE.json postrun_checks + controller_restart_paths + parallel.integration_validators",
+    "declared_unique": 19,
+    "tracked": 4,
+    "untracked": 15,
+    "tracked_list": [
+      ".opencode/protocol/WAVE_PROJECT_PROFILE.json",
+      ".opencode/scripts/route-wave-findings.py",
+      ".opencode/scripts/run-wave-program.py",
+      ".opencode/scripts/wave_state_engine.py"
+    ],
+    "missing_in_pristine_clone": [
+      ".opencode/scripts/validate-ac-project.py",
+      ".opencode/scripts/validate-agent-parity.py",
+      ".opencode/scripts/validate-wave-orchestration.py",
+      ".opencode/scripts/validate-wave-program.py",
+      ".opencode/scripts/validate-managed-runtime.py",
+      ".opencode/scripts/validate-wave-authoring.py",
+      ".opencode/scripts/phase_job.py",
+      ".opencode/scripts/parallel_workspace.py",
+      ".opencode/scripts/wave_progress.py",
+      ".opencode/scripts/start-wave-program.ps1",
+      ".opencode/scripts/resolve-ac-model.ps1",
+      ".opencode/scripts/run-ac-wave-opencode-phase.ps1",
+      ".opencode/scripts/run-ac-wave-luna-openai-phase.ps1",
+      ".opencode/scripts/run-ac-wave-hybrid-phase.ps1",
+      ".opencode/protocol/AC_MODELS.json"
+    ],
+    "all_15_addable_without_force": true,
+    "addable_check": "git -C <clone> check-ignore -q <path> returned exit 1 (not ignored) for all 15 paths"
+  },
+  "blast_radius_at_candidate": {
+    "full_suite_collect": {
+      "command": "python -m pytest --collect-only -q",
+      "cwd": ".tmp/w57-repair-0104/clone-a (detached f6ab257f)",
+      "collected": 3356,
+      "errors": 1,
+      "exit_code": 2,
+      "uncollectable_module": "tests/test_wave_controller_regressions.py",
+      "error": "ModuleNotFoundError: No module named 'phase_job' raised from .opencode/scripts/run-wave-program.py:44"
+    },
+    "postrun_checks_available_at_candidate": "0 of 6",
+    "integration_validators_available_at_candidate": "0 of 4",
+    "second_test_module": {
+      "module": "tests/test_wave_state_engine.py",
+      "collected": 13,
+      "exit_code": 0,
+      "note": "Collects cleanly at the candidate because wave_state_engine.py is tracked. The prior '2 committed tests uncollectable' count over-counts by one; exactly 1 module is uncollectable."
+    }
+  },
+  "refuted_claims": [
+    {
+      "claim": "protocols.program_orchestration points at .agents/protocol/WAVE_PROGRAM_ORCHESTRATION.md, which does not exist",
+      "status": "REFUTED at candidate f6ab257f",
+      "observed": "protocols = {canonical_root: .agents/protocol, execution: .agents/protocol/AC_WAVE_EXECUTION_AND_TEST_PROTOCOL.md, evidence_schema: .agents/protocol/AC_WAVE_VALIDATION_EVIDENCE_SCHEMA.md, program_orchestration: .agents/protocol/AC_WAVE_PROGRAM_ORCHESTRATION.md, real_infrastructure: .opencode/protocol/LOCAL_REAL_HPC_LAB.md}",
+      "note": "The profile names the AC_-prefixed file, which exists on the development line (Test-Path True). The finding text carries a stale filename from an older profile revision."
+    },
+    {
+      "claim": "The untracked orchestration files may be a local-ignore measurement artifact",
+      "status": "REFUTED",
+      "observed": "A pristine clone with a default .git/info/exclude still lacks all 15 declared .opencode paths and still fails to collect tests/test_wave_controller_regressions.py."
+    },
+    {
+      "claim": "The missing /.agents/ protocol tree is part of the candidate-completeness defect",
+      "status": "REFUTED as a defect",
+      "observed": "git show HEAD:.gitignore line 81 ignores /.agents/ under an explicit comment: 'Internal-only paths kept local; never published on main.' git -C <clone> check-ignore confirms .agents/protocol/AC_WAVE_PROGRAM_ORCHESTRATION.md is ignored by the tracked .gitignore. Absence of .agents/ from the candidate is intended policy and must be excluded from DEF-W57-007."
+    }
+  ],
+  "confirmed_finding": {
+    "id": "DEF-W57-007",
+    "severity": "P1",
+    "statement": "The candidate cannot execute or even collect its own program validation: 15 of 19 profile-declared .opencode paths are absent from Git, including all 6 POSTRUN checks, all 4 integration validators and phase_job.py, which the tracked .opencode/scripts/run-wave-program.py imports at module scope (line 44).",
+    "owner": "controller (profile + orchestration runtime)",
+    "why_not_w57": "W57's owned_requirements contain no orchestration-runtime requirement; its canonical scope is packaged regression, support finalization and the freeze declaration. Adding the 15 paths changes the candidate tree, therefore the candidate SHA, which invalidates the W56 freeze artifact and every W56/W57 evidence record bound to it. W57 must not change the candidate after the freeze (FREEZE-031/036/044/045/046/048).",
+    "blocks": [
+      "HPC-W10-FREEZE-029 (maintained full suite green) - not candidate-verifiable while a committed test module is uncollectable",
+      "HPC-W10-FREEZE-044 (candidate manifest) - cannot be emitted as ACCEPTANCE_GREEN while FREEZE-029 is red",
+      "PROGRAM_COMPLETE final validation - the profile-owned final canonical validator sweep cannot run from the candidate"
+    ]
+  },
+  "controller_remedy": {
+    "precondition": "controller-owned transaction; not executable by the W57 worker",
+    "step_1": "git add the 15 declared paths (plain add, no -f, no .gitignore change) and commit.",
+    "step_2": "Optionally remove '/.opencode/' from D:/Projeler/TrubaGUI/.git/info/exclude so the local toolchain stops hiding declared runtime files.",
+    "step_3": "Re-measure: python -m pytest --collect-only -q must report 0 collection errors at the new SHA.",
+    "step_4": "The candidate SHA changes, so re-issue the W56 freeze, rerun ci.py full + packaged regression + EXTERNAL at the new SHA, then re-dispatch the fresh independent W57 audit.",
+    "expected_after_step_3": "3356 collected, 0 errors, exit 0"
+  },
+  "w57_owned_gates_still_red": {
+    "HPC-W10-FREEZE-029": "red - 21 candidate-reproducible failures in five CLOSED owner Waves (W09 x12, W06 x3, W26 x3, W03, W10, W44) plus this candidate-completeness defect",
+    "HPC-W10-FREEZE-044": "deliberately not written - a manifest requires status ACCEPTANCE_GREEN and FREEZE-029 is red"
+  },
+  "fabrication_guard": "No ACCEPTANCE_GREEN candidate manifest was written and no self-audit report was produced (audit_policy: fresh-independent). No product, test, spec or build input was modified."
+}

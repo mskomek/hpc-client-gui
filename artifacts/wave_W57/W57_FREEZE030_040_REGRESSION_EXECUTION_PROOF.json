@@ -1,0 +1,101 @@
+{
+  "artifact": "W57_FREEZE030_040_REGRESSION_EXECUTION_PROOF",
+  "wave": "W57",
+  "phase": "repair",
+  "phase_instance_id": "20260925-074235-63df86b0:112:W57:repair",
+  "prior_hypothesis": "W57-PACKAGED-GATE-WERFAULT-DIALOG-FG-STEAL",
+  "prior_hypothesis_status": "SUPERSEDED - already proven and environmentally cleared at repair phase 111; not re-tested here",
+  "finding_ids": [
+    "DEF-W57-017",
+    "DEF-W57-018",
+    "FREEZE-030",
+    "FREEZE-040"
+  ],
+  "owned_requirements": [
+    "HPC-W10-FREEZE-030",
+    "HPC-W10-FREEZE-040"
+  ],
+  "requirement_semantics_measured": {
+    "HPC-W10-FREEZE-030": "[ ] Required real-cluster regression passes. (GATE, MANDATORY, WAVE_V2_FINAL_10.md:355)",
+    "HPC-W10-FREEZE-040": "real-cluster regression; (EVIDENCE, MANDATORY, WAVE_V2_FINAL_10.md:380)",
+    "defining_source_section": "opencode/sources/WAVE_V2_FINAL_10.md :: Workstream E - Real-cluster regression",
+    "workstream_e_text": "Replay at least the high-risk W03 scenarios affected by later code: connection/reconnect; SFTP round trip; remote editor save; job list/submit/cancel; terminal.",
+    "node_count_named_by_the_requirement": "none - FREEZE-030 and FREEZE-040 name no compute-node count and no two-node requirement; the two-node expectation comes from the lab's own verified-baseline list in .opencode/protocol/LOCAL_REAL_HPC_LAB.md, not from the owned requirement wording",
+    "what_prior_phases_actually_ran": "lab/lab-status.ps1, a lab HEALTH CHECK. Neither repair phase 110, 111 nor this phase had ever executed the required real-cluster regression itself."
+  },
+  "hypothesis_tested": "The FREEZE-030/-040 red is fully explained by 'compute02 is down and recovery needs Administrator'. This phase tested that by executing the required regression for the first time.",
+  "hypothesis_result": "INCOMPLETE - 'compute02 is down' is real and still blocks, but it is NOT the only blocker, and it was never measured at the regression level. Two further, independent and precisely located blockers were found, both repository-owned.",
+  "blocker_1": {
+    "finding_id": "DEF-W57-017",
+    "title": "The maintained real-cluster regression harness cannot complete or fail unattended while a compute node is DOWN",
+    "surface": "lab/lab-test.ps1 + lab/lab-common.ps1 :: Invoke-LabSshCapture",
+    "measured": {
+      "command_run": "pwsh -NoProfile -NonInteractive -File .\\lab\\lab-test.ps1",
+      "outcome": "did not return; produced no output and wrote no evidence artifact",
+      "squeue_while_blocked": [
+        "77 debug hostname PENDING 0:00 2 (ReqNodeNotAvail, UnavailableNodes:compute02)",
+        "76 debug hostname PENDING 0:00 2 (Nodes required for job are DOWN, DRAINED or reserved for jobs in higher priority partitions)"
+      ],
+      "blocked_remote_process": "srun --nodes=2 --ntasks=2 --ntasks-per-node=1 hostname",
+      "oldest_leaked_step_seconds": 19704,
+      "oldest_leaked_step_note": "a 5.47 hour old srun step from a PREVIOUS wave phase was still holding a pending allocation on the controller when this phase started",
+      "root_cause": "Invoke-LabSshCapture passes only SSH -o ConnectTimeout=5 and no command timeout, and an interactive srun step has no Slurm time limit, so the two-node srun gate pends forever instead of failing",
+      "consequence": "the regression gate can neither pass nor fail, so the wave can never obtain a truthful FREEZE-040 result by re-running it",
+      "cleanup_performed": "the two leaked pending jobs (76, 77) were cancelled with scancel and the local harness processes were stopped; squeue verified empty afterwards. No lab configuration, VM, disk or repository file was altered."
+    },
+    "owner": "lab provisioning owner (lab/lab-test.ps1, lab/lab-common.ps1) - NOT W57 product surface",
+    "bounded_next_action": "give Invoke-LabSshCapture an explicit command timeout, and/or run the two-node gate through a time-limited allocation (sbatch --time with a sacct readback, or srun with a bounded wall clock) so a DOWN node produces a failure instead of an indefinite pend",
+    "status": "OPEN - ROUTED, not fixed here (W57 scope discipline, W57.md:143)"
+  },
+  "blocker_2": {
+    "finding_id": "DEF-W57-018",
+    "title": "The maintained client CLI refuses every remote command because a global default-off security setting has no non-interactive opt-in",
+    "surface": "src/hpc_gui/cli/main.py:960 (gate) + src/hpc_gui/config/storage.py:434-443 (setting)",
+    "measured": {
+      "harness": ".tmp/w57-repair-112/w57_workstream_e_replay.ps1 (13 Workstream E scenario steps, deterministic, no human interaction, only the lab key PATH passed on the command line)",
+      "artifact": "artifacts/wave_W57/W57_WORKSTREAM_E_REAL_CLUSTER_REPLAY.json",
+      "result": "FAIL - 12 of 13 steps refused in 0.6 s each, all with the identical error",
+      "error_text": "Remote CLI access is disabled. Enable \"Allow external CLI access to remote commands\" in Settings to use this command.",
+      "gate_code": "if _requires_remote_session(args) and not get_cli_external_access_enabled():",
+      "setting": "cli_external_access_enabled, load_settings().get(key, default=False) - a single GLOBAL application setting, default false",
+      "no_automation_surface": "the CLI exposes no flag and the repo defines no environment override for it; `profile create` and `profile update` expose only --host/--port/--user/--key/--host-key-policy",
+      "secondary_gate": "src/hpc_gui/cli/session.py:45 additionally requires a per-profile cli_allowed flag when a saved --profile is used",
+      "why_this_is_repository_owned": "docs/testing/LOCAL_HPC_LAB.md documents an unattended CLI procedure ('hpc-gui --profile lab doctor connection', 'doctor smoke', 'jobs list/submit/cancel') with a 'Verified on first build' PASS table, but the shipped default forbids every one of those commands and offers no unattended way to enable it. The lab profile emitted by lab/lab-up.ps1 carries \"cli_allowed\": false.",
+      "why_this_was_not_worked_around": "enabling cli_external_access_enabled is a deliberate change to a default-off security control and would persist beyond this run for the whole application. W57 rules forbid weakening permissions to turn a gate green, so the setting was left untouched and the refusal is reported as measured."
+    },
+    "owner": "CLI / settings owner (src/hpc_gui/cli, src/hpc_gui/config) - NOT W57 product surface; the doc/automation gap also needs the docs owner",
+    "bounded_next_action": "either expose the control as a scoped opt-in (per-profile flag on profile create/update and/or an explicit documented automation switch) so an unattended regression run against a disposable lab is possible, or correct docs/testing/LOCAL_HPC_LAB.md to state that the CLI path requires a prior manual Settings action. The gate itself must not be removed.",
+    "status": "OPEN - ROUTED, not fixed here"
+  },
+  "external_state_remeasured_this_phase": {
+    "command": "pwsh -NoProfile -NonInteractive -File .\\lab\\lab-status.ps1",
+    "exit_code": 3,
+    "status": "FAIL",
+    "login-control01_192_168_250_11": "transport_ok true, services_ok true, 6/6 active (ssh, munge, slurmctld, slurmdbd, mariadb, nfs-server)",
+    "compute01_192_168_250_12": "transport_ok true, services_ok true, 3/3 active (ssh, munge, slurmd)",
+    "compute02_192_168_250_13": "transport_ok false, services_ok false, ssh connect timeout",
+    "profile_valid": true,
+    "profile_sha256": "a99c96fdff52105b6f539fa0335a4b34a7b6ad00ceaacdf628fd09b320b4c0bf",
+    "image_pin_ok": true,
+    "conclusion": "the real SSH key path, SFTP subsystem and a working Slurm compute node are all available right now; only the second Hyper-V guest is down",
+    "authority_check": {
+      "user": "MSKOMEK\\mskomek",
+      "is_administrator": false,
+      "in_hyperv_administrators_group_S-1_5_32_578": false,
+      "get_vm_result": "Microsoft.HyperV.PowerShell.VirtualizationException: You do not have the required permission to complete this task.",
+      "note": "this closes the alternative reading of repair phase 111 - there is no unelevated Hyper-V Administrators group path that could start compute02 either"
+    }
+  },
+  "candidate_impact": {
+    "main_sha": "f6ab257fbfd62d402e31e9330f30bb017b795fa8",
+    "artifact_sha256": "8BA80453A76A664959BAEDF7716C476A5334B6AFF860A4BC79B9E220D48B4C57",
+    "product_test_spec_or_build_file_changed_by_this_phase": false,
+    "candidate_rebuilt": false,
+    "frozen_for_w58": "NO - unchanged"
+  },
+  "not_done_and_deliberately_not_faked": [
+    "FREEZE-044 manifest NOT written - it requires ACCEPTANCE_GREEN and FREEZE-030/-040 are not satisfied",
+    "no self-audit written (audit_policy: fresh-independent)",
+    "no security setting changed, no test weakened, no skip or xfail added, no evidence fabricated, no PASS claimed"
+  ]
+}

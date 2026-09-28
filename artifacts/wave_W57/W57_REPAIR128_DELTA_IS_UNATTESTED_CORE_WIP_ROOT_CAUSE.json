@@ -1,0 +1,144 @@
+{
+  "artifact": "W57_REPAIR128_DELTA_IS_UNATTESTED_CORE_WIP_ROOT_CAUSE",
+  "wave_id": "W57",
+  "phase": "repair",
+  "phase_instance_id": "20260925-074235-63df86b0:128:W57:repair",
+  "content_identity": "9c70d980b0c9940e8643de8b925f6b0d53706ecbc4e1afc9e811ed76bbf05a2e",
+  "finding_id_routed_in": "W57-ORCHESTRATION-RED-STALE-MATERIALIZATION-BLOCKED-ON-CONTROLLER-LOCK",
+  "repair_hypothesis_previous": "W57-ORCHESTRATION-RED-STALE-MATERIALIZATION-BLOCKED-ON-CONTROLLER-LOCK",
+  "repair_hypothesis_this": "W57-ORCHESTRATION-RED-DELTA-IS-UNATTESTED-CORE-WIP-NOT-A-MISSED-RELEASE",
+  "hypothesis_changed": true,
+  "hypothesis_change_reason": "Materially different diagnosis, a different remedy, and it reverses the direction of the fix. Dispatch 127 concluded the project is 'stale', that the remedy is re-materialization from the live core root, and that the only thing standing in the way is the controller lock (release it, restart, done). This dispatch measured the provenance of the 16-file delta instead of its size. All 16 core-side sources of the delta are uncommitted working-tree modifications, and 16 of 16 of their blobs are absent from every commit on every ref of the core repository. Re-materializing therefore does not bring the project up to a canonical state; it binds a 61-wave program's canonical runtime to unreleased, unattested WIP. The controller lock is not the blocker and the proposed remedy is not the fix.",
+
+  "narrative": {
+    "FINDING": "The Agent Core project/core delta is not a missed release. It is unreleased work-in-progress that lives only in an uncommitted working tree of a different repository. The project's own 110 managed files are byte-for-byte the last released core state, so the project is not stale; the core is unreleased. All 7 red behaviours are tests that already exist in the released v1.0.0 validator, so the released core pair fails its own regression suite and the fix exists only as unattested WIP. This is a core-release defect in D:\\Projeler\\.agents-core, not a W57 defect, not a project defect, and not a defect that any project-side action can honestly repair.",
+    "OBSERVED_FAILURE": "Re-run on this exact dispatch: python .opencode/scripts/validate-managed-runtime.py -> exit 1, status FAIL, 303.0s. Failing behaviours unchanged from dispatch 127: controller_semantic_counters_vs_retries, progress_contract_v1_v2_deterministic, audit_close_todo_semantic_history, controller_worker_timeout_serial_parallel_barrier, multi_group_managed_parallel_synthetic_base, parallel_cross_wave_true_owner_routing (closed-owner and sibling-owner), v2_plan_gate_before_run_repair. Signature unchanged: 'unexpected dispatch plan; next scripted=[{phase: run, status: READY_FOR_AUDIT}]' and 'multi-group run did not complete: 30 missing-candidates:W101a,W101b'. W57's own focused retest is green on this dispatch: python -m pytest tests/test_wave_controller_regressions.py -q -> 17 passed in 0.45s, exit 0.",
+    "HYPOTHESIS": "If the project were 'stale with respect to a canonical core state', then the 16-file delta would consist of bytes that exist somewhere in the core's history. Measured instead, using the project's own guard pairing: all 16 are uncommitted core working-tree modifications, and not one of their blobs is present in any commit on any ref. The delta is therefore unattested WIP, and the project's correct state is the one it is already in.",
+    "CHANGE": "Measurement only. No repository, core, manifest, lock or lifecycle file was written. (a) Re-ran the failing validator on this dispatch. (b) Re-ran W57's focused retest. (c) Re-ran the project's own guard with --core. (d) Drove materialization_guard.canonical_managed_targets(core) to obtain the authoritative 110 project/core pairs, then compared each project file against the live core source, and searched git rev-list --all for each delta source blob. (e) Compared each of the 16 project-side files against its v1.0.0 blob, raw and LF-normalised. (f) Located the 7 failing behaviours in both the released project validator and the core WIP validator. One new artifact plus .tmp scratch.",
+    "RESULT": "Hypothesis confirmed and the previous remedy falsified. The project is at the release; the core is not. 16/16 delta sources are uncommitted, 16/16 delta blobs unattested in any core commit, 0/16 attested. 0 of the 16 project-side files differ from v1.0.0. The released v1.0.0 pair fails its own suite, and the fix is only in unattested WIP. Nothing in W57 can clear this, and re-materializing would import unreleased WIP into the canonical runtime of a 61-wave program."
+  },
+
+  "measured_attribution": {
+    "method": "materialization_guard.canonical_managed_targets(D:\\Projeler\\.agents-core) gives the guard's own (canonical source, project-relative) pairs, 110 in total. This is the same pairing check_materialization uses, so the attribution cannot disagree with the guard. For each pair: sha256 of the project file against sha256 of the live core source (the guard's own comparison, no line-ending normalisation). For each delta pair: git hash-object of the live core source, then a search of git rev-list --all for a commit whose blob at that path equals it.",
+    "command": "python .tmp/w57-repair-128/attest_via_guard_pairing.py",
+    "evidence_file": ".tmp/w57-repair-128/attestation-via-guard.json",
+    "results": {
+      "guard_canonical_pairs": 110,
+      "pairs_matching_live_core": 94,
+      "pairs_in_delta": 16,
+      "matching_pairs_whose_core_blob_is_attested_in_a_core_commit": 94,
+      "delta_core_git_statuses": ["M"],
+      "delta_all_core_dirty_uncommitted": true,
+      "delta_live_blobs_attested_in_any_core_commit": 0,
+      "delta_live_blobs_UNATTESTED_in_any_core_commit": 16
+    },
+    "delta_project_side_vs_v1_0_0": {
+      "raw_byte_identical_to_v1_0_0_blob": 9,
+      "identical_after_lf_normalisation": 7,
+      "differ_from_v1_0_0": 0,
+      "conclusion": "Every one of the 16 project-side files in the delta is the released v1.0.0 content. Combined with the 94 matching-and-attested pairs, all 110 project-managed files are the released state. The project is not stale."
+    }
+  },
+
+  "core_repository_state": {
+    "root": "D:\\Projeler\\.agents-core",
+    "head": "73c1b7d8c7b5e925613eacf4450aa860271c10c5",
+    "head_equals_tag_v1_0_0": true,
+    "origin_main": "0a8a832558832344189740eb1ed4f32bde864246",
+    "origin_main_relation": "ancestor of HEAD; the pushed state is behind the tag, so the missing work exists on no ref anywhere",
+    "dirty_path_count": 40,
+    "dirty_canonical_surface_files": 16,
+    "dirty_composition": "the same 16 canonical files mirrored into the core's own self-materialized snapshot (.agents/, .opencode/), plus setup/materialize-ac-core.py, validators/validate-ac-core.py, templates/new-project/WAVE_PROJECT_PROFILE.json.template, .opencode/protocol/AC_CORE_MATERIALIZATION.json, and lifecycle churn (D waves/pending/W01.md, D waves/pending/W02.md, ?? artifacts/, ?? waves/done/)",
+    "live_core_digest": "20a9bde780f0b61ca0bc025e0448c850b0963703c26d26d8d32fae065f876af9",
+    "project_recorded_core_digest": "50549a1abbc44e4987354af92132d156bf9ffa9ffc7b511ee228806060b537ae",
+    "digest_interpretation": "The recorded-vs-live digest difference is not evidence that the project missed a release. The project's 110 files are all at v1.0.0 and the live core's difference from v1.0.0 is entirely uncommitted. The recorded observation is stale because the core working tree moved under uncommitted edits, which is precisely what the attestation above shows.",
+    "concurrent_activity_in_the_core": "A second live controller is running against the core itself (python run-wave-program.py --repo D:\\Projeler\\.agents-core, pid 27300), plus an active probe running the core's own guard and validate-managed-runtime.py. The core is under active development, not a frozen release candidate."
+  },
+
+  "the_released_pair_fails_its_own_suite": {
+    "why_this_is_the_decisive_fact": "It establishes that the 7 red behaviours are not new WIP tests and not a project/environment artefact. They are tests that ship in the released v1.0.0 validator, failing against the released v1.0.0 runtime. The fix exists only in the unattested WIP.",
+    "evidence": {
+      "controller_semantic_counters_vs_retries": "project validator line 3311; core WIP validator line 3848",
+      "progress_contract_v1_v2_deterministic": "project line 3312; core WIP line 3849",
+      "audit_close_todo_semantic_history": "project line 3317; core WIP line 3857",
+      "controller_worker_timeout_serial_parallel_barrier": "project line 3319; core WIP line 3859",
+      "multi_group_managed_parallel_synthetic_base": "project line 3322; core WIP line 3862",
+      "parallel_cross_wave_true_owner_routing": "project line 3328; core WIP line 3868",
+      "v2_plan_gate_before_run_repair": "project line 3330; core WIP line 3870"
+    },
+    "validator_sizes": {
+      "released_project_validator_bytes": 244764,
+      "core_wip_validator_bytes": 285868
+    },
+    "reading": "Both validators define all 7 behaviours. The WIP validator is 41 KB larger and the WIP runtime is the only place the failures are resolved. Dispatch 127's scratch arm S3 was green because it replaced the released thing-under-test with the WIP, which is the exact outcome core commit 41524e7 is titled to forbid: 'Never let the core's self-materialized snapshot be the thing under test.'"
+  },
+
+  "prior_dispatch_claims_falsified": [
+    {
+      "prior_claim": "W57_REPAIR127: 'The project's 110 managed files are byte-exactly the released v1.0.0 content, but the canonical core's 176-file source surface has moved past that in 18 places, so the project and the core root it resolves to are genuinely inconsistent' -> the project is stale.",
+      "falsification": "The observation is right and the conclusion is inverted. The project is at the release; the core is past the release only in its uncommitted working tree. Being past a tag in an uncommitted working tree is not a canonical state to converge on. All 16 delta sources are ' M' and 16/16 of their blobs are in no commit on any ref."
+    },
+    {
+      "prior_claim": "W57_REPAIR127: 'the canonical project-side remedy, which 126 declared not required, was then run end to end in a faithful scratch copy and it succeeds ... The 7 behaviour failures are a materialization-parity artefact and disappear under a self-consistent pairing.'",
+      "falsification": "The failures disappear by substitution, not by repair. The self-consistent pairing is (unreleased WIP validator, unreleased WIP runtime); the project's pairing is (released validator, released runtime). The released pairing fails its own suite, which is a core defect. A parity artefact is a reporting error; this is a genuine behavioural regression present in a released artifact."
+    },
+    {
+      "prior_claim": "W57_REPAIR127: 'the 2188 insertions of uncommitted, unreleased core WIP' figure is 'the whole-core diffstat, which is not the project-side cost'; the measured rewrite is only 16 managed files.",
+      "falsification": "That is a correct measurement of cost and a non-answer to the objection. The objection to importing core WIP is provenance, not size. Measured provenance: 16 managed files, 0 of them attested in any core commit. A 16-file import of unattested WIP is still an unattested import; the rebuttal answered a different question."
+    },
+    {
+      "prior_claim": "W57_REPAIR127: the remaining prerequisite is 'the controller's own lock must be released', a controller lifecycle move, and the remedy is otherwise available.",
+      "falsification": "Releasing the lock would unblock the wrong action. The lock gate is not the obstacle to repairing W57; the obstacle is that the only content that makes the red go green is unreleased WIP in another repository. Removing the lock would not produce a valid state, it would produce a project whose canonical runtime is unattested."
+    }
+  ],
+
+  "true_owner_and_the_actual_remedy": {
+    "owner": "the Agent Core repository D:\\Projeler\\.agents-core (a different repository, with its own live controller pid 27300), and then the global bookkeeping owner (controller) for the project-side restart. Not W57, and not any Wave in this project.",
+    "remedy_sequence": [
+      "1. In the core repository: bring the 16 canonical-surface modifications to a committed, reviewed state (commit and tag, or revert). Until that happens there is no canonical state for any project to converge on, and the released v1.0.0 pair is known-red against its own suite.",
+      "2. Re-run the core's own validators on the committed state so the fix is attested before anything consumes it.",
+      "3. Only then re-materialize the project. Use the sanctioned entry point, not a bespoke transaction: .opencode/scripts/start-wave-program.ps1 already runs the guard at bootstrap (lines 316-323), performs the canonical materialization refresh on STALE (lines 329-353), re-verifies the guard (lines 355-360) and only then launches the controller (line 365). Restarting the program through it is the whole of the controller-side procedure; no manual lock surgery is required.",
+      "4. Rebind W57 evidence to the resulting content identity. Everything currently bound to 9c70d980... is superseded by the materialization."
+    ],
+    "why_a_phase_worker_cannot_do_this_and_why_that_is_not_the_point": "The worker cannot stop the controller it is running inside, and this dispatch's process ancestry was verified: pid 46004 -> 49016 (opencode serve) -> 10544 (opencode run) -> 56264 (run-ac-wave-opencode-phase.ps1 repair W57) -> 51592 (the live controller holding ac-wave-opencode-parallel.lock). But the lock is not the real constraint. The real constraint is that steps 1 and 2 are another repository's release decision. A worker that materialized around the lock would produce a green guard over unreleased WIP, which is worse than the honest red."
+  },
+
+  "w57_impact": {
+    "w57_owned_requirements_touched": 0,
+    "w57_product_test_evidence_lifecycle_files_changed": 0,
+    "w57_focused_retest_this_dispatch": "python -m pytest tests/test_wave_controller_regressions.py -q -> 17 passed in 0.45s, exit 0",
+    "w57_acceptance_not_rejudged": "WAVE_W57_EVIDENCE_MANIFEST and validate_wave_closeout were not re-run or re-judged by this phase and are not claimed green. W57's next machine phase is Audit #2 (T10), which is audit-owned and was already pending before this dispatch.",
+    "reading": "The 7 red behaviours are Agent Core runtime regression tests. They are not W57 acceptance criteria. This finding is not W57's, and W57's repair attempt 24 should not be spent on it again."
+  },
+
+  "mutation_guarantee": {
+    "project_head_unchanged": "f6ab257fbfd62d402e31e9330f30bb017b795fa8",
+    "core_head_unchanged": "73c1b7d8c7b5e925613eacf4450aa860271c10c5",
+    "project_commits_created": 0,
+    "core_commits_created": 0,
+    "lock_files_touched": 0,
+    "materializations_run_in_real_repo": 0,
+    "materializations_run_in_scratch": 0,
+    "w57_product_test_evidence_lifecycle_files_changed": [],
+    "new_paths_from_this_dispatch": [
+      "artifacts/wave_W57/W57_REPAIR128_DELTA_IS_UNATTESTED_CORE_WIP_ROOT_CAUSE.json (this artifact)",
+      ".tmp/w57-repair-128/** (attribution probe, attestation JSON, validator output)"
+    ]
+  },
+
+  "evidence_files": {
+    "attribution_probe": ".tmp/w57-repair-128/attest_via_guard_pairing.py",
+    "attestation_result": ".tmp/w57-repair-128/attestation-via-guard.json",
+    "failing_validator_run_this_dispatch": ".tmp/w57-repair-128/managed-runtime-128.txt (exit 1, status FAIL, 303.0s)",
+    "core_wip_snapshot": ".tmp/w57-repair-128/core-wip-snapshot-t0.json"
+  },
+
+  "superseded_probe_note": ".tmp/w57-repair-128/attest_project_managed_files.py was a first attempt that used ad-hoc path mapping and git blob SHA-1 without the guard's pairing, so it reported 110/110 in delta. It is wrong and is superseded by attest_via_guard_pairing.py, which reproduces the guard's own 16/94 split exactly. It is retained only so the correction is auditable.",
+
+  "progress_events": "None emitted. This dispatch's controller handoff carried no pending repair-owned TODO: in state.json, T08 'Repair #1' and T09 'Focused retest #1' are both status=completed, T10 'Audit #2' is audit-owned and pending, and T08 'Close' is close-owned and pending. AC_WAVE_PROGRESS_EVENT start/update/complete/block/cancel each require a known todo_id owned by this phase, so no legitimate event exists to emit. Claiming a completed TODO would be false progress.",
+
+  "phase_status": "REOPEN",
+  "human_only": false,
+  "not_human_deferred": "This is a repository-owned technical/orchestration defect with a named technical remedy in a named repository. It is not an unavailable credential, MFA, authority, hardware, service or manual acceptance. Human deferral is prohibited here.",
+  "why_reopen_not_blocked": "BLOCKED was returned by dispatches 126 and 127 and asserts a single missing prerequisite that this dispatch has measured to be the wrong prerequisite. REOPEN is the normalized state for a finding that must go back to its true owner so the controller can route it, which is what the finding requires: it is owned by the Agent Core repository, not by W57."
+}

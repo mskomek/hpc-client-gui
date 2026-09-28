@@ -1,0 +1,170 @@
+{
+  "artifact": "W57_REPAIR144_CLOSEOUT_IDENTITY_REBIND_CONVERGENCE",
+  "wave_id": "W57",
+  "wave_kind": "execution",
+  "phase": "repair",
+  "phase_instance_id": "20260925-074235-63df86b0:144:W57:repair",
+  "repair_hypothesis": "W57-CLOSEOUT-ARTIFACTS-IDENTITY-REBIND-IS-CONVERGENT",
+  "previous_phase": {
+    "phase": "audit",
+    "status": "REOPEN",
+    "repair_hypothesis": null,
+    "findings_path": ".tmp/agent-runs/ac-wave-opencode-parallel/20260925-074235-63df86b0/0143-W57-findings.json"
+  },
+  "recorded_at": "2026-09-28",
+  "environment": {
+    "repository": "mskomek/hpc-client-gui",
+    "branch": "develop",
+    "head": "f6ab257fbfd62d402e31e9330f30bb017b795fa8",
+    "commits_this_dispatch": 0,
+    "platform": "Windows 11 AMD64 10.0.26200",
+    "python": "3.12"
+  },
+  "finding": {
+    "routed_to_w57_repair": [
+      "W57-AUD-003",
+      "W57-AUD-004",
+      "W57-AUD-009 (plan T08)"
+    ],
+    "w57_observed_failure": "Both W57 closeout-only evidence artifacts quoted an identity that is not the candidate: the canonical report header recorded the stale cf5aff2031aed28d70e3365e3db5a744b5f9f3781b35f13d5e558382acd217b0 (from dispatch 122) and the successor freeze declaration recorded 8f522decd2c83afd9ffb70dd7ad36e19b73c1617bca4278c47093aabcdfad839, which is W30's audit_receipt.tested_content_identity, not W57's own identity. Evidence binding in this program is fail-closed, so a foreign or superseded identity in an evidence header is a real reporting defect.",
+    "why_it_looked_unfixable": "The same rebind had been attempted under W57-SUCCESSOR-FREEZE-REBIND across 47 consecutive dispatches (0025-0091) and never appeared to stick, which reads as a self-invalidating oscillation."
+  },
+  "hypothesis": {
+    "claim": "If the rebind were self-invalidating, the identity written into a W57 closeout-only artifact would itself be an input to the digest that artifact quotes, so the value would go stale on the next dispatch regardless of what was written.",
+    "prediction": "HYPOTHESIS CONFIRMED AS FALSE. The rebind is convergent.",
+    "mechanism": "The W57 evidence identity is wave_state_engine.repository_content_identity() evaluated with the profile's allowed_closeout_only_paths as ignore prefixes, and that filter is applied inside the hashing loop at .opencode/scripts/wave_state_engine.py:1028-1030 ('if not rel or _is_under(rel, ignored): continue'). The profile's allowed_closeout_only_paths contains 'docs/wave-reports/' and 'artifacts/', which are exactly W57's two closeout-only surfaces. Neither is an input to the digest it quotes.",
+    "why_prior_repeats_went_stale": "Other closure members moved, not the rebind. The identity closure holds 1058 tracked/untracked paths; the movers are the tracked lab/config.json, lab/lab-common.ps1, lab/lab-test.ps1 repair delta and six untracked root-level stray scripts (parallel_workspace.py, route-wave-findings.py, run-wave-program.py, wave_progress.py, wave_state_engine.py, test_wave_controller_regressions.py).",
+    "next_suspect_measured_and_falsified": "lab/evidence/ and lab/state/ are git-ignored and are therefore NOT in the identity closure, so a lab run does not move the identity. This was measured rather than assumed, because it is the obvious next suspect."
+  },
+  "change": {
+    "files_changed": [
+      "docs/wave-reports/v2/opencode/W57_WAVE_REPORT.md",
+      "artifacts/wave_W57/W57_FREEZE_DECLARATION_SUCCESSOR.md",
+      "artifacts/wave_W57/W57_REPAIR144_CLOSEOUT_IDENTITY_REBIND_CONVERGENCE.json"
+    ],
+    "all_inside_profile_allowed_closeout_only_paths": true,
+    "edits": [
+      "report header: content identity cf5aff20... -> 692e534d...; phase instance ...:122:W57:repair -> ...:144:W57:repair; last-updated -> repair 144; full identity substitution history recorded in place",
+      "freeze declaration: content identity 8f522dec... (W30's) -> 692e534d... (W57's own); phase instance ...:110:W57:run -> ...:144:W57:repair; the one legitimate W30 reference is now explicitly labelled as carrying W30's identity; new section C records the rebind with a before/after table",
+      "report section 17 added: FINDING / OBSERVED_FAILURE / HYPOTHESIS / CHANGE / RESULT / status decision",
+      "Frozen for W58 deliberately left at NO"
+    ],
+    "not_done": [
+      "no product, test, spec, build, lab or wave file changed",
+      "no manifest written",
+      "no self-audit written (audit_policy: fresh-independent)",
+      "no commit, stash, reset, clean, push, tag, release, sign or publish",
+      "no gate relaxed, no assertion weakened, no skip or xfail added",
+      "the canonical-core materialization drift was neither touched nor suppressed",
+      "the stray untracked root-level duplicate was neither deleted nor worked around"
+    ]
+  },
+  "result": {
+    "hypothesis_outcome": "refuted-as-stated, and the correct mechanism established: the rebind is convergent and does not perturb the identity it binds to",
+    "identity_before_edit": "692e534df1c49b8d420f2e04999c8487216cc27575dd90f1347f4be1c44fcb07",
+    "identity_after_edit": "692e534df1c49b8d420f2e04999c8487216cc27575dd90f1347f4be1c44fcb07",
+    "identity_stable_across_the_edit": true,
+    "byte_equal_to_controller_handed_content_identity": true,
+    "control_full_content_identity_before_edit": "5db67360d1ea589e7c712fae89324430a9ba68c85396f010afb2f70cfbf8b0c9",
+    "control_full_content_identity_after_edit": "04f47bafbf5c33e4a29e33c3350bbfb28fdcffa4b3ed3bb0e67ba6e2e2e0ac89",
+    "control_note": "The full (unfiltered) content identity DID change, which proves the edits landed. The filtered implementation identity did not change, which proves the filter excludes exactly the two edited surfaces.",
+    "control_full_content_identity_after_all_three_writes": "a1a9dc1206ab28d6ab7e72580cc34095c39a8ee4dbc24c2acb42c4e8225f0005",
+    "control_note_2": "The full identity moved again when this artifact was written into artifacts/. The filtered implementation identity stayed 692e534d... across all three writes, which is the convergence proof.",
+    "post_edit_assertions": {
+      "report_header_bound_to_live_identity": true,
+      "declaration_bound_to_live_identity": true,
+      "stale_cf5aff20_absent_from_report_header": true,
+      "w30_8f522dec_absent_from_declaration_identity_line": true,
+      "w30_8f522dec_still_referenced_in_declaration": true,
+      "w30_reference_note": "Correct and intentional. The W30 audit receipt is legitimately quoted in the product-delta block and is now explicitly labelled as carrying W30's identity, not W57's."
+    }
+  },
+  "frozen_for_w58_deliberately_unchanged": {
+    "verdict": "NO",
+    "why": "The audit's W57-AUD-003 described 'Frozen for W58: NO' as part of the finding. It is not a defect; it is the truthful verdict at this candidate. Writing YES to clear a finding would fabricate an acceptance. Only the identity half of that finding was repaired.",
+    "external_blocker_re_measured_live_this_dispatch": {
+      "IsAdministrator": false,
+      "user": "MSKOMEK\\mskomek",
+      "Get-VM": "You do not have the required permission to complete this task. Contact the administrator of the authorization policy for the computer 'MSKOMEK'.",
+      "tcp22_bound_seconds": 3,
+      "192.168.250.11:22": "open",
+      "192.168.250.12:22": "open",
+      "192.168.250.13:22": "unreachable",
+      "compute02_identity": "192.168.250.13 is compute02",
+      "conclusion": "Both halves of the external test hold: the resource is unavailable and the authority to restore it is unavailable to this agent. Not taken from prose; re-measured in this dispatch."
+    }
+  },
+  "T08_stray_root_duplicate": {
+    "plan_item": "T08 - remove the stray root-level duplicate test file before freeze assembly, or record it truthfully",
+    "branch_taken": "recorded truthfully, not deleted",
+    "file": "test_wave_controller_regressions.py (repository root)",
+    "bytes": 11321,
+    "created": "2026-09-28T04:03:52",
+    "canonical_equivalent": "tests/test_wave_controller_regressions.py",
+    "why_not_deleted": "It is untracked workspace state, not a Wave-owned artifact. Repository rules forbid a Wave worker dropping unknown files. Removal belongs to the controller together with the commit approval W57-AUD-005 already requires.",
+    "blast_radius": "Untracked, so it cannot enter a candidate_sha. It can only matter to a dirty-tree freeze assembly, which is unreachable while Frozen for W58 is NO."
+  },
+  "retest": {
+    "focused_seam": {
+      "command": "python -m pytest tests/test_wave_controller_regressions.py -q -p no:cacheprovider",
+      "result": "17 passed",
+      "exit_code": 0
+    },
+    "failing_validator_rerun": {
+      "command": "python scripts/validate_wave_closeout.py --wave W57",
+      "can_close": false,
+      "exit_code": 1,
+      "failure_reasons": [
+        "missing/invalid evidence manifest: artifacts/wave_W57/WAVE_W57_EVIDENCE_MANIFEST.json does not exist"
+      ],
+      "reason_count": 1,
+      "materialization_or_core_digest_term_present": false,
+      "assessment": "Unchanged and expected. AUD-001 shows why a truthful manifest cannot be written: the validator rejects any status outside {ACCEPTANCE_GREEN, CLOSED}, requires all 46 owned rows with zero blockers, and re-executes the exact pytest nodes named by PASS rows. FREEZE-030/-040 are EXTERNAL and red."
+    },
+    "program_validators": {
+      "validate-wave-orchestration.py": {"exit_code": 0, "marker": "AC_WAVE_METADATA_VALID=61 / PASS"},
+      "validate-wave-authoring.py": {"exit_code": 0, "marker": "AC_WAVE_AUTHORING_VALID=61 / PASS"},
+      "validate-agent-parity.py": {"exit_code": 0, "errors": []},
+      "validate-wave-program.py": {"exit_code": 0, "errors": []}
+    }
+  },
+  "diff_review": {
+    "git_diff_check": "exit 0 (only the pre-existing LF/CRLF notice for the report)",
+    "test_weakening_markers_introduced": 0,
+    "secrets_or_binary_noise": "none; all three files are text",
+    "unrelated_changes": "none; every path is W57-owned and inside allowed_closeout_only_paths"
+  },
+  "status": {
+    "value": "HUMAN_DEFERRED",
+    "supersedes": "the REOPEN session status this header carried since repair 122, and repair 135's BLOCKED",
+    "not_ready_for_audit_because": "validate_wave_closeout is red with exactly one reason, the missing manifest, and a truthful manifest cannot be written while FREEZE-030/-040 are EXTERNAL-red.",
+    "not_fail_because": "W57's repository-owned surface is green: 17/17 focused retest, four program validators PASS, zero product defects implicated.",
+    "not_blocked_or_reopen_because": "BLOCKED and REOPEN are the states for repository-owned technical or orchestration defects. After this dispatch there is no such defect owned by W57: both W57-owned audit findings are closed and the stray-file item is recorded. A further repair loop has nothing left to repair and the residual is not a code fault.",
+    "not_orchestration_recovery_required_because": "The program's own machinery is healthy; four program validators PASS.",
+    "human_deferral_justified_because": "The sole remaining prerequisite is DEF-W57-006: a Hyper-V guest that is down, whose recovery needs administrator authority this agent provably does not have. That is genuinely unavailable hardware plus unavailable operator authority, which is what deferral is reserved for.",
+    "explicitly_not_deferred": [
+      "DEF-W57-007 / W57-AUD-006 - the canonical-core materialization drift (33 managed files) stays a non-terminal, controller-owned POSTRUN red for the Agent Core owner and the program controller. This status neither masks nor suppresses it, and W57 neither touched nor worked around it. Repair 136's proof is not re-litigated: with W57's manifest absent and require_all_manifests true, the program ends in PROGRAM_FINAL_VALIDATION_BLOCKED whether W57 is deferred or not, so no green program is being hidden.",
+      "W57-AUD-005 - candidate_sha still cannot bind to a real commit because the W30 closed-owner product repair is uncommitted. That needs controller commit approval and is a second prerequisite."
+    ]
+  },
+  "findings_disposition": {
+    "W57-AUD-001": "OPEN - requires the real-cluster gate; a truthful manifest cannot be written while FREEZE-030/-040 are red",
+    "W57-AUD-002": "OPEN - external; re-measured live, owner is controller/operator authority",
+    "W57-AUD-003": "RESOLVED - identity half REPAIRED; the Frozen-for-W58:NO half was not a defect and was deliberately left unchanged",
+    "W57-AUD-004": "RESOLVED - header re-bound to the measured identity and proven stable across the edit",
+    "W57-AUD-005": "OPEN - controller commit approval; unchanged",
+    "W57-AUD-006": "RECORDED, NOT FIXED, NOT DEFERRED - Agent-Core/controller owned",
+    "W57-AUD-007": "CONTROLLER - not a W57 surface",
+    "W57-AUD-008": "CONTROLLER - scheduling/bookkeeping, not a W57 surface",
+    "W57-AUD-009": "RECORDED TRUTHFULLY - stray root duplicate present, not deleted, routed to controller",
+    "DEF-W57-007": "RECORDED, NOT FIXED, NOT DEFERRED - Agent-Core/controller owned"
+  },
+  "resume_point": {
+    "items": [
+      "an operator starts the compute02 guest (192.168.250.13) as administrator and re-runs lab/lab-test.ps1 expecting 23/23 and exit 0",
+      "the controller approves the commit of the W30 repair delta so candidate_sha can bind to a real commit"
+    ],
+    "then": "W57 re-runs lab-status.ps1, the Workstream E replay and the exact-pytest manifest gate, writes WAVE_W57_EVIDENCE_MANIFEST.json, re-issues the declaration with Frozen for W58: YES, and only then dispatches the fresh independent audit.",
+    "nothing_else_in_w57_needs_to_change_first": true
+  }
+}

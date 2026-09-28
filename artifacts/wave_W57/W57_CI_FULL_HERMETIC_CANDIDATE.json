@@ -1,0 +1,246 @@
+{
+  "schema": "w57-freeze029-hermetic-candidate-measurement/v1",
+  "wave_id": "W57",
+  "requirement_id": "HPC-W10-FREEZE-029",
+  "generated_utc": "2026-09-27T19:41:42.4279705Z",
+  "candidate_sha": "f6ab257fbfd62d402e31e9330f30bb017b795fa8",
+  "method": "git worktree add --detach .tmp/w57-hermetic f6ab257f; rerun exactly the 28 node ids recorded in W57_CI_FULL_FAILURES.txt",
+  "hermetic_worktree_clean": true,
+  "dirty_tree_contaminants_removed": [
+    "AGENTS.md (gitignored, untracked, machine-local) present only in the main worktree",
+    ".opencode/scripts/run-wave-program.py, wave_state_engine.py, WAVE_PROJECT_PROFILE.json (uncommitted controller WIP) present only in the main worktree"
+  ],
+  "totals": {
+    "recorded_in_dirty_full_suite": 28,
+    "failed_at_candidate_identity": 21,
+    "passed_at_candidate_identity": 7,
+    "not_measurable_at_candidate": 3
+  },
+  "caveat": "Subset rerun (28 of 3022 collected tests) in an isolated worktree. Necessary but not sufficient: full-suite ordering/pollution effects are not reproduced, so 4 tests that pass here are not claimed to pass in the full suite.",
+  "items": [
+    {
+      "node_id": "tests/contracts/test_wave_closeout_hardening.py::test_backend_parity_validator_passes",
+      "hermetic_status": "NOT_FAILED",
+      "classification": "CANDIDATE_INCOMPLETE_ORCHESTRATION",
+      "measurable_at_candidate": false,
+      "owner_wave": "controller",
+      "reason": null
+    },
+    {
+      "node_id": "tests/test_docs_references.py::test_agent_guidance_points_at_single_authority",
+      "hermetic_status": "NOT_FAILED",
+      "classification": "LOCAL_UNTRACKED_ARTIFACT",
+      "measurable_at_candidate": true,
+      "owner_wave": "W57-docs-contract",
+      "reason": null
+    },
+    {
+      "node_id": "tests/test_file_manager_profile.py::FtpWidgetLocalStartTests::test_missing_file_manager_key_is_legacy_behavior",
+      "hermetic_status": "FAILED",
+      "classification": "CANDIDATE_DEFECT_OTHER_WAVE",
+      "measurable_at_candidate": true,
+      "owner_wave": "W06",
+      "reason": null
+    },
+    {
+      "node_id": "tests/test_file_manager_profile.py::FtpWidgetLocalStartTests::test_missing_local_folder_keeps_global_behavior_without_modal",
+      "hermetic_status": "FAILED",
+      "classification": "CANDIDATE_DEFECT_OTHER_WAVE",
+      "measurable_at_candidate": true,
+      "owner_wave": "W06",
+      "reason": null
+    },
+    {
+      "node_id": "tests/test_w15_fresh_user_startup.py::test_profile_created_through_visible_add_dialog",
+      "hermetic_status": "NOT_FAILED",
+      "classification": "CANDIDATE_DEFECT_OTHER_WAVE",
+      "measurable_at_candidate": true,
+      "owner_wave": "W15",
+      "reason": null
+    },
+    {
+      "node_id": "tests/test_w26_run_supplement.py::test_w26_supplement_save_submit_uses_sbatch_not_shell",
+      "hermetic_status": "FAILED",
+      "classification": "CANDIDATE_DEFECT_OTHER_WAVE",
+      "measurable_at_candidate": true,
+      "owner_wave": "W26",
+      "reason": "RuntimeError: Submission validation failed: no #SBATCH directives found"
+    },
+    {
+      "node_id": "tests/test_w37_settings_persistence.py::test_w37_wx_apply_event_persists_to_storage",
+      "hermetic_status": "NOT_FAILED",
+      "classification": "CANDIDATE_DEFECT_OTHER_WAVE",
+      "measurable_at_candidate": true,
+      "owner_wave": "W37",
+      "reason": null
+    },
+    {
+      "node_id": "tests/test_w44_arch_qt_wx_package.py::test_w44_package_hidden_imports_are_intentional",
+      "hermetic_status": "FAILED",
+      "classification": "CANDIDATE_DEFECT_OTHER_WAVE",
+      "measurable_at_candidate": true,
+      "owner_wave": "W44",
+      "reason": "AssertionError: spec lost required dual-runtime import PySide6.QtCore"
+    },
+    {
+      "node_id": "tests/test_wave10_release_gate.py::TestRegressionSearch::test_no_new_errors_ignore",
+      "hermetic_status": "FAILED",
+      "classification": "CANDIDATE_DEFECT_OTHER_WAVE",
+      "measurable_at_candidate": true,
+      "owner_wave": "W10",
+      "reason": "AssertionError: errors='ignore' found in source: 1"
+    },
+    {
+      "node_id": "tests/test_wave3_remote_sftp_ssh.py::TestSFTPUnicodePaths::test_ssh_backend_rejects_invalid_utf8_text",
+      "hermetic_status": "FAILED",
+      "classification": "CANDIDATE_DEFECT_OTHER_WAVE",
+      "measurable_at_candidate": true,
+      "owner_wave": "W03",
+      "reason": "Failed: DID NOT RAISE <class 'UnicodeDecodeError'>"
+    },
+    {
+      "node_id": "tests/test_wave6_plugin_provider_unicode.py::TestIntegration::test_full_plugin_unicode_flow",
+      "hermetic_status": "FAILED",
+      "classification": "CANDIDATE_DEFECT_OTHER_WAVE",
+      "measurable_at_candidate": true,
+      "owner_wave": "W06",
+      "reason": "AssertionError: Profile validation errors: [\"cluster profile 'storage[0]' needs a non-empty id\"]"
+    },
+    {
+      "node_id": "tests/test_wave_controller_regressions.py::test_audit_close_receipt_overrides_historical_ready",
+      "hermetic_status": "NOT_FAILED",
+      "classification": "CANDIDATE_INCOMPLETE_ORCHESTRATION",
+      "measurable_at_candidate": false,
+      "owner_wave": "controller",
+      "reason": null
+    },
+    {
+      "node_id": "tests/test_wave_controller_regressions.py::test_audit_close_receipt_survives_restart_when_identity_unchanged",
+      "hermetic_status": "NOT_FAILED",
+      "classification": "CANDIDATE_INCOMPLETE_ORCHESTRATION",
+      "measurable_at_candidate": false,
+      "owner_wave": "controller",
+      "reason": null
+    },
+    {
+      "node_id": "tests/test_wx_dispatch_error_gov.py::test_editor_save__local_and_remote_paths_have_distinct_owners",
+      "hermetic_status": "FAILED",
+      "classification": "CANDIDATE_DEFECT_OTHER_WAVE",
+      "measurable_at_candidate": true,
+      "owner_wave": "W09",
+      "reason": "assert 'Path(snapshot.path).write_text' in '\"\"\"Native wx editor adapter for the framework-neutral editor model.\"\"\"\\n\\nfrom __future__ import annotations\\n\\nimpor...rsion)\\n\\n\\n__all__ = [\"show_editor\", \"build_editor_panel\", \"editor_binary_guard_reason\", \"BINARY_GUARD_SIZE_BYTES\"]\\n'"
+    },
+    {
+      "node_id": "tests/test_wx_editor_cross_view_actions.py::test_wx_local_editor_submit_semantics_survive_remote_view_dispatch",
+      "hermetic_status": "FAILED",
+      "classification": "CANDIDATE_DEFECT_OTHER_WAVE",
+      "measurable_at_candidate": true,
+      "owner_wave": "W09",
+      "reason": "AssertionError: assert [] == [('upload', '...'~/local.sh')]"
+    },
+    {
+      "node_id": "tests/test_wx_editor_cross_view_actions.py::test_wx_remote_editor_submit_semantics_survive_local_view_dispatch",
+      "hermetic_status": "FAILED",
+      "classification": "CANDIDATE_DEFECT_OTHER_WAVE",
+      "measurable_at_candidate": true,
+      "owner_wave": "W09",
+      "reason": "AssertionError: assert [('write', 's...', 'changed')] == [('write', 's...remote/A.sh')]"
+    },
+    {
+      "node_id": "tests/test_wx_editor_cross_view_actions.py::test_wx_standalone_editor_actions_survive_cross_view_dispatch[True]",
+      "hermetic_status": "FAILED",
+      "classification": "CANDIDATE_DEFECT_OTHER_WAVE",
+      "measurable_at_candidate": true,
+      "owner_wave": "W09",
+      "reason": null
+    },
+    {
+      "node_id": "tests/test_wx_editor_cross_view_actions.py::test_wx_standalone_editor_actions_survive_cross_view_dispatch[False]",
+      "hermetic_status": "FAILED",
+      "classification": "CANDIDATE_DEFECT_OTHER_WAVE",
+      "measurable_at_candidate": true,
+      "owner_wave": "W09",
+      "reason": null
+    },
+    {
+      "node_id": "tests/test_wx_editor_cross_view_actions.py::test_wx_shared_primary_switch_local_to_remote_updates_document_semantics",
+      "hermetic_status": "FAILED",
+      "classification": "CANDIDATE_DEFECT_OTHER_WAVE",
+      "measurable_at_candidate": true,
+      "owner_wave": "W09",
+      "reason": null
+    },
+    {
+      "node_id": "tests/test_wx_editor_cross_view_actions.py::test_wx_existing_editor_uses_new_session_after_reconnect",
+      "hermetic_status": "FAILED",
+      "classification": "CANDIDATE_DEFECT_OTHER_WAVE",
+      "measurable_at_candidate": true,
+      "owner_wave": "W09",
+      "reason": "AssertionError: assert [] == ['upload', 'sbatch']"
+    },
+    {
+      "node_id": "tests/test_wx_editor_cross_view_actions.py::test_wx_editor_operation_does_not_mix_sessions_during_reconnect",
+      "hermetic_status": "FAILED",
+      "classification": "CANDIDATE_DEFECT_OTHER_WAVE",
+      "measurable_at_candidate": true,
+      "owner_wave": "W09",
+      "reason": "assert False"
+    },
+    {
+      "node_id": "tests/test_wx_editor_cross_view_actions.py::test_wx_existing_remote_editor_uses_new_session_after_reconnect",
+      "hermetic_status": "FAILED",
+      "classification": "CANDIDATE_DEFECT_OTHER_WAVE",
+      "measurable_at_candidate": true,
+      "owner_wave": "W09",
+      "reason": "AssertionError: assert ['write', 'write', 'run'] == ['write', 'sb...write', 'run']"
+    },
+    {
+      "node_id": "tests/test_wx_editor_cross_view_actions.py::test_wx_standalone_editor_uses_new_session_after_reconnect[True]",
+      "hermetic_status": "FAILED",
+      "classification": "CANDIDATE_DEFECT_OTHER_WAVE",
+      "measurable_at_candidate": true,
+      "owner_wave": "W09",
+      "reason": null
+    },
+    {
+      "node_id": "tests/test_wx_editor_cross_view_actions.py::test_wx_standalone_editor_uses_new_session_after_reconnect[False]",
+      "hermetic_status": "FAILED",
+      "classification": "CANDIDATE_DEFECT_OTHER_WAVE",
+      "measurable_at_candidate": true,
+      "owner_wave": "W09",
+      "reason": null
+    },
+    {
+      "node_id": "tests/test_wx_editor_cross_view_actions.py::test_wx_shell_real_file_dispatches_preserve_existing_editor_semantics",
+      "hermetic_status": "FAILED",
+      "classification": "CANDIDATE_DEFECT_OTHER_WAVE",
+      "measurable_at_candidate": true,
+      "owner_wave": "W09",
+      "reason": "AssertionError: assert [] == ['upload', 'sbatch']"
+    },
+    {
+      "node_id": "tests/test_wx_term002.py::test_file_view_shell_script_runs_in_real_terminal_path",
+      "hermetic_status": "FAILED",
+      "classification": "CANDIDATE_DEFECT_OTHER_WAVE",
+      "measurable_at_candidate": true,
+      "owner_wave": "W26",
+      "reason": "StopIteration"
+    },
+    {
+      "node_id": "tests/test_wx_term002.py::test_editor_run_button_uses_real_wx_event_and_terminal_path",
+      "hermetic_status": "FAILED",
+      "classification": "CANDIDATE_DEFECT_OTHER_WAVE",
+      "measurable_at_candidate": true,
+      "owner_wave": "W26",
+      "reason": "StopIteration"
+    },
+    {
+      "node_id": "tests/test_wx_w55_shell_soak.py::test_w55_shell_tab_and_help_accelerators",
+      "hermetic_status": "NOT_FAILED",
+      "classification": "CANDIDATE_DEFECT_OTHER_WAVE",
+      "measurable_at_candidate": true,
+      "owner_wave": "W55",
+      "reason": null
+    }
+  ]
+}

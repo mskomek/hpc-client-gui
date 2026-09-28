@@ -1,0 +1,135 @@
+{
+  "schema_version": 1,
+  "wave_id": "W57",
+  "phase": "repair",
+  "phase_instance_id": "20260925-074235-63df86b0:145:W57:repair",
+  "finding_id": "W57-POSTRUN-SWEEP-CRASHES-ON-NONPY-ENTRIES-SO-DEF007-NEVER-REPORTS",
+  "classification": "repository-owned",
+  "human_only": false,
+  "owner": "controller + Agent Core",
+  "w57_fixable": false,
+  "recorded_not_fixed": true,
+  "head_unchanged": "f6ab257fbfd62d402e31e9330f30bb017b795fa8",
+  "commits": 0,
+  "manifests_written": 0,
+  "self_audit_written": false,
+
+  "falsified_prior_claim": {
+    "claim": "DEF-W57-007 is canonical-core materialization drift across 33 managed files",
+    "measured_truth": "3 managed-file content mismatches out of 110, plus canonical-core-revision-changed",
+    "populations_measured": {
+      "manifest_recorded_entries": 110,
+      "live_project_managed_files": 110,
+      "canonical_managed_targets": 110,
+      "recorded_but_absent": 0,
+      "live_but_unrecorded": 0,
+      "content_mismatches": 3
+    },
+    "claim_33_matches_any_population": false
+  },
+
+  "new_defect": {
+    "summary": "run_postrun_checks() cannot execute the profile's non-.py postrun_checks entries on Windows; the uncaught OSError aborts the program-completion sweep before any report is written",
+    "source_location": ".opencode/scripts/run-wave-program.py:3664-3676",
+    "call_site_unguarded": ".opencode/scripts/run-wave-program.py:4331",
+    "also_present_in_canonical_core": "D:\\Projeler\\.agents-core\\runtime\\run-wave-program.py:3735",
+    "defect_line": "command = [sys.executable, str(p)] if p.suffix.lower() == '.py' else [str(p)]",
+    "missing_guard": "no try/except around subprocess.run",
+    "observed_exception": "OSError: [WinError 193] %1 is not a valid Win32 application",
+    "postrun_total_entries": 21,
+    "postrun_non_python_entries": 8,
+    "postrun_non_python_list": [
+      ".opencode/protocol/AC_MODELS.json",
+      ".opencode/protocol/WAVE_PROJECT_PROFILE.json",
+      ".opencode/scripts/follow-wave-program.ps1",
+      ".opencode/scripts/resolve-ac-model.ps1",
+      ".opencode/scripts/run-ac-wave-hybrid-phase.ps1",
+      ".opencode/scripts/run-ac-wave-luna-openai-phase.ps1",
+      ".opencode/scripts/run-ac-wave-opencode-phase.ps1",
+      ".opencode/scripts/start-wave-program.ps1"
+    ],
+    "postrun_entries_at_head": 5,
+    "postrun_non_python_at_head": 0,
+    "regression_introduced_by": "uncommitted WAVE_PROJECT_PROFILE.json postrun_checks expansion (5 -> 21)",
+    "partial_report_written": false
+  },
+
+  "measurements": {
+    "closeout_validator": {
+      "command": "python scripts/validate_wave_closeout.py --wave W57",
+      "can_close": false,
+      "exit": 1,
+      "failure_reason_count": 1,
+      "failure_reason": "missing/invalid evidence manifest: artifacts/wave_W57/WAVE_W57_EVIDENCE_MANIFEST.json"
+    },
+    "focused_retest": {
+      "command": "pytest tests/test_wave_controller_regressions.py -q",
+      "passed": 17,
+      "failed": 0,
+      "exit": 0
+    },
+    "content_identity": {
+      "engine_profile_filtered": "692e534df1c49b8d420f2e04999c8487216cc27575dd90f1347f4be1c44fcb07",
+      "controller_handed": "692e534df1c49b8d420f2e04999c8487216cc27575dd90f1347f4be1c44fcb07",
+      "match": true,
+      "unfiltered_before_report_edit": "4f1c0e302e4d65b7235633c91a0e88066aeadcf2551a18f6751ab80afd25ddfa",
+      "unfiltered_after_report_edit": "449a5444387f2635ec56935d994f7643d6eac910c4eaa3dc414426915eaa256e",
+      "control": "filtered identity held constant across the report edit while the unfiltered identity moved; confirms the profile filter excludes closeout-only artifacts and the repair-144 rebind is convergent"
+    },
+    "materialization_project_only": {"command": "materialization_guard.py --check", "status": "PASS", "exit": 0},
+    "materialization_vs_core": {
+      "command": "materialization_guard.py --check --core D:\\Projeler\\.agents-core",
+      "status": "STALE",
+      "exit": 3,
+      "recorded_core_digest": "fe0cf0868ce6ee716d7f405c68b50a253b8f7f23f6150efabebe743b3fe752f6",
+      "live_core_digest": "f84145a2709036323f81ab57133957615879fdf0ff59ffae91a006dc674b1446",
+      "reasons": [
+        "canonical-core-revision-changed",
+        "managed-file-content-mismatch:.opencode/scripts/run-wave-program.py",
+        "managed-file-content-mismatch:.opencode/scripts/validate-wave-program.py",
+        "managed-file-content-mismatch:.opencode/scripts/wave_state_engine.py"
+      ]
+    },
+    "program_validators": {
+      "validate-ac-project.py": {"exit": 1, "status": "FAIL", "errors": [
+        "materialization stale: canonical-core-revision-changed; managed-file-content-mismatch:.opencode/scripts/run-wave-program.py; managed-file-content-mismatch:.opencode/scripts/validate-wave-program.py; managed-file-content-mismatch:.opencode/scripts/wave_state_engine.py"
+      ]},
+      "validate-agent-parity.py": {"exit": 0},
+      "validate-wave-orchestration.py": {"exit": 0},
+      "validate-wave-authoring.py": {"exit": 0}
+    },
+    "def_w57_006_external": {
+      "icmp_192_168_250_13": false,
+      "is_administrator": false,
+      "get_vm": "denied - you do not have the required permission to complete this task",
+      "genuine_operator_authority": true
+    }
+  },
+
+  "category_correction": {
+    "prior_status": "HUMAN_DEFERRED",
+    "corrected_status": "REOPEN",
+    "reason": "HUMAN_DEFERRED masked a live repository-owned orchestration red. Deferral is reserved for genuinely unavailable external authority, which DEF-W57-006 alone is; it cannot be the status of a Wave simultaneously carrying a repository-owned red. Same masking pattern repair 121 identified and repair 122 corrected once; it recurred at repair 144 and is corrected again here.",
+    "def_w57_006_remains_deferrable": true,
+    "def_w57_007_not_deferred": true
+  },
+
+  "w57_owned_changes": [
+    "docs/wave-reports/v2/opencode/W57_WAVE_REPORT.md (header category correction + section 22)"
+  ],
+  "explicitly_not_done": [
+    "no try/except or suffix-aware interpreter added to run_postrun_checks (controller/Agent Core owned)",
+    "no profile postrun_checks list edit (global_bookkeeping_owner: controller)",
+    "no canonical core re-materialization (Agent Core owned)",
+    "no WAVE_W57_EVIDENCE_MANIFEST.json written (candidate_sha uncommitted per W57-AUD-005; DEF-W57-006 lab verdict unearned)",
+    "no validator weakened, skipped or xfailed",
+    "no commit, push, tag, release, sign or publish",
+    "no self-audit (audit_policy: fresh-independent)"
+  ],
+
+  "resume_point": [
+    "operator: start compute02 (192.168.250.13) with elevated Hyper-V rights, then lab/lab-status.ps1 to PASS, then lab/lab-test.ps1 for FREEZE-030/-040",
+    "controller: commit the W30 closed-owner product delta so candidate_sha binds to a real commit (W57-AUD-005); own the run_postrun_checks launch defect (suffix-aware interpreter + try/except) and decide whether non-executable .json/.ps1 entries belong in an executable postrun_checks list",
+    "Agent Core: re-materialize to clear the 3 mismatched managed files and canonical-core-revision-changed, then re-run the POSTRUN sweep to obtain real per-entry verdicts"
+  ]
+}

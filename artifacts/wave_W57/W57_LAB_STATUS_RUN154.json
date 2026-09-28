@@ -1,0 +1,103 @@
+{
+  "status": "PASS",
+  "topology": [
+    {
+      "name": "login-control01",
+      "ip": "192.168.250.11",
+      "role": "controller",
+      "transport_ok": true,
+      "services_ok": true,
+      "services": [
+        "ssh",
+        "munge",
+        "slurmctld",
+        "slurmdbd",
+        "mariadb",
+        "nfs-server"
+      ],
+      "service_states": "active\nactive\nactive\nactive\nactive\nactive",
+      "stderr": ""
+    },
+    {
+      "name": "compute01",
+      "ip": "192.168.250.12",
+      "role": "compute",
+      "transport_ok": true,
+      "services_ok": true,
+      "services": [
+        "ssh",
+        "munge",
+        "slurmd"
+      ],
+      "service_states": "active\nactive\nactive",
+      "stderr": ""
+    },
+    {
+      "name": "compute02",
+      "ip": "192.168.250.13",
+      "role": "compute",
+      "transport_ok": true,
+      "services_ok": true,
+      "services": [
+        "ssh",
+        "munge",
+        "slurmd"
+      ],
+      "service_states": "active\nactive\nactive",
+      "stderr": ""
+    }
+  ],
+  "slurm": {
+    "ok": true,
+    "output": "compute01|idle\ncompute02|idle",
+    "stderr": ""
+  },
+  "environment_identity": {
+    "kind": "LOCAL_REAL_HYPERV",
+    "switch": "hpc-lab",
+    "prefix": "192.168.250.0/24",
+    "gateway": "192.168.250.1",
+    "image_url": "https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img",
+    "image_file": "ubuntu-24.04-server-cloudimg-amd64.img",
+    "expected_image_sha256": "612b2c0cc1bc413a6cb8c38fd611794caf0f2b436c50013d8b3794db12ad7354",
+    "image_sha256": "612b2c0cc1bc413a6cb8c38fd611794caf0f2b436c50013d8b3794db12ad7354",
+    "image_pin_ok": true,
+    "base_vhdx_source_sha256": "612b2c0cc1bc413a6cb8c38fd611794caf0f2b436c50013d8b3794db12ad7354",
+    "remote_versions": "os=Ubuntu 24.04.5 LTS\nslurm-wlm 23.11.4\nmariadb-server=1:10.11.14-0ubuntu0.24.04.1\nmunge=0.5.15-4ubuntu0.1\nnfs-kernel-server=1:2.6.4-3ubuntu5.1\nopenssh-server=1:9.6p1-3ubuntu13.19\nslurm-wlm=23.11.4-1.2ubuntu5\nslurmctld=23.11.4-1.2ubuntu5\nslurmdbd=23.11.4-1.2ubuntu5",
+    "remote_versions_stderr": "",
+    "profile_path": "C:\\Users\\mskomek\\AppData\\Local\\hpc-client-gui-lab\\hpc-client-profile.json",
+    "profile_sha256": "a99c96fdff52105b6f539fa0335a4b34a7b6ad00ceaacdf628fd09b320b4c0bf",
+    "profile_valid": true,
+    "profile_error": "",
+    "nodes": [
+      {
+        "name": "login-control01",
+        "ip": "192.168.250.11",
+        "role": "controller",
+        "cpus": 2,
+        "memory_mb": 4096,
+        "disk_gb": 40
+      },
+      {
+        "name": "compute01",
+        "ip": "192.168.250.12",
+        "role": "compute",
+        "cpus": 2,
+        "memory_mb": 2048,
+        "disk_gb": 20
+      },
+      {
+        "name": "compute02",
+        "ip": "192.168.250.13",
+        "role": "compute",
+        "cpus": 2,
+        "memory_mb": 2048,
+        "disk_gb": 20
+      }
+    ]
+  },
+  "generated_at": "2026-09-28T11:21:31.3055736Z",
+  "w57_phase_instance_id": "20260925-074235-63df86b0:154:W57:run",
+  "wave_id": "W57",
+  "purpose": "T01 lab preflight: confirms DEF-W57-006 (compute02 unreachable) is resolved and T04 lab-test.ps1 is attemptable"
+}

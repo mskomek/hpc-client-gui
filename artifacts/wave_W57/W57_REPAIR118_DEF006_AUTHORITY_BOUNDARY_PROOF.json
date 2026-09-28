@@ -1,0 +1,142 @@
+{
+  "wave_id": "W57",
+  "phase": "repair",
+  "phase_instance_id": "20260925-074235-63df86b0:118:W57:repair",
+  "repair_hypothesis": "W57-DEF006-AUTHORITY-BOUND-NOT-INFRA-FABRIC-FAULT",
+  "supersedes_hypothesis": "W57-TODO011-PASSWORD-LEG-UNCLOSED-AND-EXECUTABLE",
+  "repository_identity": {
+    "branch": "develop",
+    "head_sha": "f6ab257fbfd62d402e31e9330f30bb017b795fa8",
+    "content_identity": "cf5aff2031aed28d70e3365e3db5a744b5f9f3781b35f13d5e558382acd217b0",
+    "frozen_candidate_sha256": "8ba80453a76a664959baedf7716c476a5334b6aff860a4bc79b9e220d48b4c57",
+    "frozen_candidate_rehash_verified_in_this_dispatch": true,
+    "frozen_candidate_paths_rehashed": [
+      {
+        "path": "dist/hpc-client-gui/hpc-client-gui.exe",
+        "sha256": "8ba80453a76a664959baedf7716c476a5334b6aff860a4bc79b9e220d48b4c57",
+        "size_bytes": 7672468,
+        "match": true
+      },
+      {
+        "path": "build/hpc-client-gui/hpc-client-gui.exe",
+        "sha256": "8ba80453a76a664959baedf7716c476a5334b6aff860a4bc79b9e220d48b4c57",
+        "size_bytes": 7672468,
+        "match": true
+      }
+    ],
+    "frozen_candidate_size_bytes_declared_by_repair111": 7672468,
+    "candidate_patched_or_rebuilt": false,
+    "candidate_note": "The 'candidate unchanged' claim is re-hashed against the exact declared identity rather than asserted. Both on-disk paths hash to the full 8ba80453... identity and match the 7672468-byte size recorded by repair 111."
+  },
+  "finding": "DEF-W57-006 (lab infrastructure, P3/infrastructure note) remains the single remaining blocker on W57-owned rows FREEZE-030, FREEZE-040, FREEZE-044, the two-node leg of TODO-014, and therefore the W57 freeze declaration. Every other W57-owned open row is either GREEN/CLOSED or explicitly routed to a non-W57 owner.",
+  "prior_state": "Repairs 116 and 117 re-measured DEF-W57-006 at the network layer only: ICMP 100% loss to 192.168.250.13, ARP 'Incomplete'/'Unreachable' with MAC 00-00-00-00-00-00, and IsAdministrator=False. Those measurements show the guest is unreachable but do NOT identify whether the fault lies in the lab fabric (repairable in-protocol) or in the availability of the operator authority needed to act on it. The repair hypothesis therefore remained open at the authority layer.",
+  "hypothesis": "The DEF-W57-006 outage is NOT a lab-fabric fault. The vSwitch, subnet, image pin, emitted profile and both live guests are healthy; the fault is isolated to the single 'compute02' VM object, and the only in-protocol remedy (lab/lab-reset.ps1 -> Start-VM, equivalently lab/lab-up.ps1:178) is refused by the Hyper-V management plane with an AUTHORIZATION error, not a not-found or timeout error. The blocker is therefore unavailable operator authority, not a repository, product, test or orchestration defect.",
+  "measurements": {
+    "maintained_health_check": {
+      "command": "lab/lab-status.ps1 (protocol-preferred bounded health check, LOCAL_REAL_HPC_LAB.md 'Use contract')",
+      "exit_status": "FAIL",
+      "topology": [
+        {
+          "name": "login-control01",
+          "ip": "192.168.250.11",
+          "role": "controller",
+          "transport_ok": true,
+          "services_ok": true,
+          "services": ["ssh", "munge", "slurmctld", "slurmdbd", "mariadb", "nfs-server"],
+          "service_states": "active active active active active active"
+        },
+        {
+          "name": "compute01",
+          "ip": "192.168.250.12",
+          "role": "compute",
+          "transport_ok": true,
+          "services_ok": true,
+          "services": ["ssh", "munge", "slurmd"],
+          "service_states": "active active active"
+        },
+        {
+          "name": "compute02",
+          "ip": "192.168.250.13",
+          "role": "compute",
+          "transport_ok": false,
+          "services_ok": false,
+          "stderr": "ssh: connect to host 192.168.250.13 port 22: Connection timed out\nSSH transport unavailable"
+        }
+      ],
+      "slurm_output": "compute01|idle\ncompute02|down*",
+      "slurm_ok": false
+    },
+    "environment_identity": {
+      "kind": "LOCAL_REAL_HYPERV",
+      "switch": "hpc-lab",
+      "prefix": "192.168.250.0/24",
+      "gateway": "192.168.250.1",
+      "expected_image_sha256": "612b2c0cc1bc413a6cb8c38fd611794caf0f2b436c50013d8b3794db12ad7354",
+      "image_sha256": "612b2c0cc1bc413a6cb8c38fd611794caf0f2b436c50013d8b3794db12ad7354",
+      "image_pin_ok": true,
+      "profile_path": "C:\\Users\\mskomek\\AppData\\Local\\hpc-client-gui-lab\\hpc-client-profile.json",
+      "profile_sha256": "a99c96fdff52105b6f539fa0335a4b34a7b6ad00ceaacdf628fd09b320b4c0bf",
+      "profile_valid": true
+    },
+    "fabric_isolation": {
+      "192.168.250.11_reachable": true,
+      "192.168.250.12_reachable": true,
+      "192.168.250.13_reachable": false,
+      "arp": {
+        "192.168.250.11": "02-00-00-FA-00-0B Reachable",
+        "192.168.250.12": "02-00-00-FA-00-0C Reachable",
+        "192.168.250.13": "00-00-00-00-00-00 Unreachable"
+      },
+      "interpretation": "Two of three guests resolve a real L2 address and answer ICMP on the same vSwitch and same 192.168.250.0/24 subnet. The host, the internal switch and the subnet are therefore demonstrably alive. The fault is isolated to the single compute02 VM object."
+    },
+    "authority_probe": {
+      "principal": "mskomek",
+      "is_administrator": false,
+      "command_1": "Get-VM -Name 'compute02'",
+      "command_1_result": "You do not have the required permission to complete this task. Contact the administrator of the authorization policy for the computer 'MSKOMEK'.",
+      "command_2": "Get-VMSwitch",
+      "command_2_result": "You do not have the required permission to complete this task. Contact the administrator of the authorization policy for the computer 'MSKOMEK'.",
+      "command_3": "Start-VM -Name 'compute02'",
+      "command_3_result": "You do not have the required permission to complete this task. Contact the administrator of the authorization policy for the computer 'MSKOMEK'.",
+      "interpretation": "command_3 is the exact maintained in-protocol action for an isolated stopped guest (lab/lab-reset.ps1:10 and lab/lab-up.ps1:178 both call Start-VM). It was attempted, not assumed, and it failed with an authorization error. The refusal is at the management plane, so no repository, product, test or orchestration change can affect the outcome."
+    }
+  },
+  "change": {
+    "product": false,
+    "test": false,
+    "spec": false,
+    "build_input": false,
+    "candidate": false,
+    "security": false,
+    "controller_surface": false,
+    "repository_writes": [
+      "artifacts/wave_W57/W57_REPAIR118_DEF006_AUTHORITY_BOUNDARY_PROOF.json",
+      "docs/wave-reports/v2/opencode/W57_WAVE_REPORT.md (section 17)"
+    ],
+    "note": "No file was created outside the Wave's own declared report/evidence surface. The .git/info/exclude defect recorded at repair 117 was left untouched, as routing it is a controller decision."
+  },
+  "focused_retest": {
+    "todo_id": "T09",
+    "command": "python -m pytest tests/test_local_real_lab_bounded_commands.py tests/test_local_real_lab_static.py -q",
+    "exit_code": 0,
+    "result": "8 passed in 9.36s",
+    "meaning": "The DEF-W57-017 bounded-harness hardening (Invoke-LabSshCapture wall-clock bound, process-tree kill, remote timeout -k 5, 300 s allocation budgets) is still holding against the current content identity. The maintained harness therefore still terminates boundedly and truthfully rather than hanging."
+  },
+  "unaffected_repairable_surface_confirmed_stable": {
+    "fixture": "LOCAL_PASSWORD_REAL (docker container 'hpclab')",
+    "status": "Up 20 minutes (healthy)",
+    "meaning": "The one genuinely repairable infrastructure item in this Wave's scope remains up and healthy, so TODO-011 does not regress."
+  },
+  "result": {
+    "hypothesis_confirmed": true,
+    "classification": "UNAVAILABLE_OPERATOR_AUTHORITY",
+    "freezes_030": "RED - sole remaining cause is DEF-W57-006",
+    "freezes_040": "RED - evidence is produced and truthfully red; sole cause is DEF-W57-006",
+    "freezes_044": "DELIBERATELY_NOT_WRITTEN - a manifest requires ACCEPTANCE_GREEN; writing one would fabricate evidence",
+    "todo_014_two_node_leg": "EXTERNALLY_BLOCKED - sole cause is DEF-W57-006",
+    "frozen_for_w58": "NO",
+    "w57_phase_status": "HUMAN_DEFERRED"
+  },
+  "resume_point": "An operator with Windows Administrator / Hyper-V rights on MSKOMEK runs, in order: lab/lab-reset.ps1 (or lab/lab-up.ps1) to return compute02 to Running, then lab/lab-status.ps1 and confirm 23/23 and compute02 idle, then lab/lab-test.ps1 to produce the FREEZE-030/-040 verdict, then the W57 freeze declaration (FREEZE-031/-036/-044/-046/-048), then a fresh independent audit. No UAC prompt was raised and no question was put to the user: the W57 parallel/unattended contract forbids prompting.",
+  "secrets_handling": "No credential, private key, VM disk or generated secret is recorded in this artifact. The only identity recorded is the Windows principal name and the non-secret profile SHA-256 already present in the lab status output."
+}

@@ -1,0 +1,148 @@
+{
+  "artifact": "W57_REPAIR136_DEFER_NOT_BLOCKED_UNAVAILABLE_OPERATOR_AUTHORITY",
+  "wave_id": "W57",
+  "phase": "repair",
+  "phase_instance_id": "20260925-074235-63df86b0:136:W57:repair",
+  "content_identity": "9c70d980b0c9940e8643de8b925f6b0d53706ecbc4e1afc9e811ed76bbf05a2e",
+  "project_head": "f6ab257fbfd62d402e31e9330f30bb017b795fa8",
+  "repair_hypothesis_previous": "W57-DEF018-FALSE-BLOCKER-AND-GATE-RED-IS-SOLELY-COMPUTE02",
+  "repair_hypothesis_this": "W57-BLOCKER-IS-UNAVAILABLE-OPERATOR-AUTH-NOT-A-W57-GATE",
+  "hypothesis_changed": true,
+  "hypothesis_change_reason": "Dispatch 135 was blocked on a status decision, not on a measurement: it accepted a standing POSTRUN red as the reason to deny HUMAN_DEFERRED, on the unverified claim that 'deferring W57 would mask it'. Repair 135 falsified its two named blockers but left that coupling untested. This dispatch tests the coupling itself. It is falsified, so the diagnosis materially changes: W57's blocker is external authority, and the materialization red is an independent controller-owned program item that W57 neither owns nor can mask.",
+
+  "narrative": {
+    "FINDING": "Dispatch 135's terminal BLOCKED rested on one claim that had never been tested: that W57 must not defer because a repository-owned orchestration defect (canonical-core materialization drift) still stands, and deferral would mask it. That claim is false. The materialization red is W57-independent, is not W57-repairable, and is surfaced by the program's own POSTRUN and final validation regardless of W57's status. With it removed as a veto, W57's remaining blocker is exactly one thing: the compute02 guest cannot be started without Hyper-V administrator authority.",
+    "OBSERVED_FAILURE": "W57 cannot produce its ACCEPTANCE_GREEN evidence manifest, so validate_wave_closeout.py --wave W57 returns can_close=false. Dispatch 135 attributed the whole gate red to compute02 (correct) and then BLOCKED the Wave for an unrelated program-level reason.",
+    "HYPOTHESIS": "If the materialization red genuinely gated W57, then W57's own closeout validator would name a materialization/core-digest/AC_CORE_ROOT term, and some W57-owned file would have to change to clear it. If instead the materialization red is an independent program-level item, then W57's closeout validator names only the missing manifest, no mismatched file is W57-repairable, and the red is emitted by a check that runs regardless of W57's status.",
+    "CHANGE": "Measurement only, plus the W57-owned report correction that follows from it. Executed the full profile POSTRUN sweep, validate_wave_closeout.py --wave W57, lab/lab-status.ps1, the W57 focused retest, and a Hyper-V authority probe. No gate, product, lab, test, profile or controller file was changed; no manifest was written; no environment variable was set; no security control was touched.",
+    "RESULT": "Hypothesis CONFIRMED. The materialization red does not gate W57 and cannot be masked by W57's status. W57 has zero W57-owned repair work outstanding and zero product defects implicated. Its sole blocker is genuinely unavailable operator authority, which is canonical human/external deferral material. Status corrected from BLOCKED to HUMAN_DEFERRED."
+  },
+
+  "the_decisive_falsification": {
+    "claim_under_test": "Repair 135: 'the canonical-core-revision POSTRUN red is a repository-owned orchestration defect ... that still stands in the program, and the protocol forbids using human deferral to cover repository-owned technical or orchestration defects. Deferring W57 would mask it. BLOCKED keeps it visible as repair/routing state.'",
+    "test_1_w57_closeout_names_no_materialization_term": {
+      "command": "python scripts/validate_wave_closeout.py --wave W57",
+      "exit_code": 1,
+      "can_close": false,
+      "failure_reasons": [
+        "missing/invalid evidence manifest: [Errno 2] No such file or directory: '.../artifacts/wave_W57/WAVE_W57_EVIDENCE_MANIFEST.json'"
+      ],
+      "finding": "Exactly one failure reason, the missing manifest. No materialization, core-digest, materialization-guard or AC_CORE_ROOT term. W57's gate does not reference the materialization red at all. This re-confirms repair 134 and repair 135 on the current identity."
+    },
+    "test_2_the_red_is_emitted_by_a_wave_independent_check": {
+      "command": "python .opencode/scripts/validate-ac-project.py",
+      "exit_code": 1,
+      "status": "FAIL",
+      "error": "materialization stale: canonical-core-revision-changed; managed-file-content-mismatch: (33 files)",
+      "finding": "W57 appears nowhere in this output. validate-ac-project.py is listed in the profile's postrun_checks, so it runs at program POSTRUN and at final validation for every dispatch. It is not conditioned on any Wave's status, deferral or acceptance. A red here is emitted whether W57 is READY, DEFERRED or PASS.",
+      "mechanism": ".opencode/scripts/materialization_guard.py compares the project's managed copies against a canonical Agent Core root via core_digest()/canonical_content_reasons(). 'canonical-core-revision-changed' means the canonical core revision the project was materialized from has moved. The state is computed entirely from the core root and the project's .agents/.opencode managed files."
+    },
+    "test_3_the_red_is_not_w57_repairable": {
+      "profile_allowed_closeout_only_paths": [
+        "docs/wave-reports/", "artifacts/", "build/audit/", ".tmp/", "waves/",
+        "scripts/validate_wave_closeout.py", ".opencode/scripts/run-wave-program.py",
+        ".opencode/protocol/WAVE_PROJECT_PROFILE.json", "tests/test_wave_controller_regressions.py"
+      ],
+      "mismatched_managed_files_checked": 33,
+      "mismatched_files_in_w57_allowed_paths": "exactly one - .opencode/scripts/run-wave-program.py",
+      "why_that_one_is_still_not_w57": "run-wave-program.py is a controller-owned file: it appears in the profile's controller_restart_paths, and it is modified in the working tree by controller evolution (+2631 lines, alongside wave_state_engine.py +604 and WAVE_PROJECT_PROFILE.json). W57.md Scope discipline and Out of Scope forbid editing controller or cross-Wave surfaces; doing so from W57 would be a cross-Wave ownership escape.",
+      "other_mismatched_families": "AC_WAVE_PROGRAM_ORCHESTRATION.md, AC_WAVE_PROGRESS_STATE_SCHEMA.md, materialization_guard.py, validate-ac-project.py, validate-managed-runtime.py, validate-wave-program.py, start-wave-program.ps1, follow-wave-program.ps1, and the plan/run/repair SKILL.md plus commands/agents for all three families (hybrid, luna-openai, opencode).",
+      "finding": "The drift is a whole-canonical-core revision drift spanning every model family, the shared protocol, and the project's own scripts. Not one of these files was authored by W57, and clearing the red requires the Agent Core owner to land or tag canonical bytes and the controller to re-materialize from a committed ref. That is program work, not W57 work."
+    },
+    "test_4_deferral_cannot_mask_it_because_the_program_stays_red_anyway": {
+      "profile_final_validation": {
+        "enabled": true,
+        "require_all_manifests": true,
+        "blocked_state": "PROGRAM_FINAL_VALIDATION_BLOCKED"
+      },
+      "finding": "With W57's manifest absent, require_all_manifests cannot be satisfied, so the program cannot reach a green final validation and ends in PROGRAM_FINAL_VALIDATION_BLOCKED. There is therefore no path by which a HUMAN_DEFERRED W57 produces a green program that hides the materialization red. The deferral removes a Wave from acceptance; it does not silence a POSTRUN check.",
+      "protocol_reading": "AC_WAVE_PROGRAM_ORCHESTRATION.md L10 classifies repository-owned BLOCKED/REOPEN/FAIL and validation/closeout failures as 'technical states, not automatic human deferrals'. That governs how the materialization defect itself is tracked - it stays a non-terminal controller-owned red, and this dispatch does not defer it. It is not a veto on how W57 classifies its own blocker. L17 reserves human/external deferral for 'genuinely unavailable authority or resources ... mandatory unavailable hardware, authoritative unavailable external services', which is precisely W57's remaining blocker."
+    },
+    "test_5_managed_runtime_red_is_also_w57_independent": {
+      "command": "python .opencode/scripts/validate-managed-runtime.py",
+      "exit_code": 1,
+      "w57_mentions_in_a_complete_run": 0,
+      "failing_behaviors": [
+        "behavior:multi_group_managed_parallel_synthetic_base: 30 missing-candidates:W101a,W101b",
+        "behavior:parallel_cross_wave_true_owner_routing: W100a / W101b synthetic routing",
+        "behavior:v2_plan_gate_before_run_repair: v1-legacy: unexpected dispatch order"
+      ],
+      "finding": "The failures are synthetic program Waves W100a/W101a/W101b/W102 and a v1-legacy plan-gate behavior. Zero W57 mentions. Additionally validate-managed-runtime.py is itself one of the 33 canonical-mismatched files, so its red is itself a materialization consequence rather than W57 content."
+    },
+    "conclusion": "All five tests agree. The materialization red is an independent, controller-owned, program-level item. It gates the program's final validation, not W57's acceptance, and W57's status has no causal or observational relationship to it. Repair 135's BLOCKED justification is falsified."
+  },
+
+  "w57_sole_blocker_reverified_this_dispatch": {
+    "defect": "DEF-W57-006, the compute02 guest (192.168.250.13) is down.",
+    "authority_probe": {
+      "is_administrator": false,
+      "user": "mskomek",
+      "get_vm_result": "You do not have the required permission to complete this task. Contact the administrator of the authorization policy for the computer 'MSKOMEK'."
+    },
+    "lab_status_fresh": {
+      "command": "pwsh -NoProfile -NonInteractive -File .\\lab\\lab-status.ps1",
+      "exit_code": 3,
+      "overall": "FAIL",
+      "login-control01": "192.168.250.11 transport_ok=true",
+      "compute01": "192.168.250.12 transport_ok=true",
+      "compute02": "192.168.250.13 transport_ok=false, stderr 'ssh: connect to host 192.168.250.13 port 22: Connection timed out / SSH transport unavailable'",
+      "slurm": "ok=false, output 'compute01|idle', 'compute02|down*'"
+    },
+    "conclusion": "Both halves of the deferral test are satisfied and were re-proven live on this dispatch: the required resource is unavailable (guest down in Hyper-V and Slurm), and the authority to restore it is unavailable to the executing agent (not an administrator, Hyper-V cmdlets refused). No code, test, gate or configuration change in any repository can start a Hyper-V guest. This is the canonical definition of genuinely unavailable authority/resources."
+  },
+
+  "w57_surface_measured_this_dispatch": {
+    "focused_retest": "python -m pytest tests/test_wave_controller_regressions.py -q -> 17 passed in 0.85s, exit 0",
+    "validate-wave-orchestration.py": "AC_WAVE_METADATA_VALID=61, PASS, exit 0",
+    "validate-wave-authoring.py": "AC_WAVE_AUTHORING_VALID=61, PASS, exit 0",
+    "validate-agent-parity.py": "PASS, exit 0",
+    "validate-wave-program.py": "PASS (PENDING_TRACKER_REGRESSION / COMPLETE_TRACKER_REGRESSION / ATOMIC_TRACKER_WRITE all PASS), exit 0",
+    "validate-ac-project.py": "FAIL, exit 1, materialization stale (program-owned, W57-independent)",
+    "validate-managed-runtime.py": "FAIL, exit 1, zero W57 mentions (program-owned, W57-independent)",
+    "closeout_gate": "can_close=false, exactly one failure_reason: missing evidence manifest",
+    "gate_scope_independently_reconfirmed": "lab/config.json's node list is unchanged from HEAD (git diff adds only a 'timeouts' block, no node), and .opencode/protocol/LOCAL_REAL_HPC_LAB.md:63-72 still declares 'behavioral gates: 23/23 PASS', 'controller and both compute transports/services: PASS' and 'two-node srun: PASS'. The all-nodes/two-node expectation is canonical, so no gate narrowing is permissible and none was taken.",
+    "owned_requirements_touched": 0
+  },
+
+  "status_decision": {
+    "status": "HUMAN_DEFERRED",
+    "authority": ".agents/protocol/AC_WAVE_PROGRAM_ORCHESTRATION.md L17 (deferral is for genuinely unavailable authority or resources) read with W57.md's own 'If required authorization/infrastructure is unavailable, record EXTERNAL_BLOCKED (or the repository's equivalent) ... and exit without prompting', which HUMAN_DEFERRED is the normalized carrier of.",
+    "why_not_blocked": "BLOCKED is a repository-owned technical state per L10. W57's repository-owned surface is green and has no outstanding defect. The thing blocking W57 is a Hyper-V guest that requires administrator authority this agent does not have. Blocking the Wave on a program-level materialization red that W57 neither owns, can repair, nor can mask was a category error, and it is what held W57 in a repair loop.",
+    "why_not_reopen": "A fifteenth loop cannot move compute02. The same diagnosis has now been measured exhaustively across dispatches 115 through 136 and the outcome has not changed; a changed hypothesis is required, and this dispatch supplies one.",
+    "why_not_fail": "W57 is not failing at its own surface. 17/17 focused retest, orchestration 61/61, authoring 61/61, parity PASS, wave-program PASS, and every healthy lab node passes every product check.",
+    "why_not_ready_for_audit_or_pass": "FREEZE-030/-040 are red, no ACCEPTANCE_GREEN manifest exists, and audit_policy is fresh-independent. No honest audit can be requested. W57_AUDIT_REPORT.md is correctly still absent: it is the audit phase's downstream output and must not be manufactured.",
+    "why_not_orchestration_recovery_required": "The program's machinery is healthy: orchestration/authoring/parity/wave-program all PASS, the state engine and phase dispatch ran, and controller state is coherent. The two red POSTRUN checks are substantive content findings, not machinery faults.",
+    "what_is_not_being_deferred": "The canonical-core materialization drift is NOT deferred by this decision. It remains a non-terminal, controller-owned POSTRUN red that the Agent Core owner and the program controller must land and re-materialize. This dispatch records it; it does not cover it. It is independent of W57 either way."
+  },
+
+  "resume_point": {
+    "operator_action_required": "Start the compute02 Hyper-V guest (192.168.250.13) as an administrator.",
+    "then": "pwsh -NoProfile -NonInteractive -File .\\lab\\lab-test.ps1  --  expect 23/23 PASS and exit 0 (LOCAL_REAL_READY).",
+    "nothing_else_in_w57_must_change_first": true,
+    "parallel_program_item": "Agent Core owner lands/tags the canonical bytes, then the controller re-materializes from a committed ref and re-runs .opencode/scripts/validate-ac-project.py. This is program-level and will end the program in PROGRAM_FINAL_VALIDATION_BLOCKED if skipped, but it is independent of W57."
+  },
+
+  "mutation_guarantee": {
+    "project_head_unchanged": "f6ab257fbfd62d402e31e9330f30bb017b795fa8",
+    "project_commits_created": 0,
+    "product_files_changed": 0,
+    "lab_files_changed": 0,
+    "test_files_changed": 0,
+    "controller_or_profile_files_changed": 0,
+    "gate_relaxed_or_assertions_weakened": 0,
+    "manifests_written": 0,
+    "security_settings_changed": 0,
+    "materialization_drift_touched_or_suppressed": false,
+    "new_paths_from_this_dispatch": [
+      "artifacts/wave_W57/W57_REPAIR136_DEFER_NOT_BLOCKED_UNAVAILABLE_OPERATOR_AUTHORITY.json (this artifact)",
+      "docs/wave-reports/v2/opencode/W57_WAVE_REPORT.md (section 16: status correction and the falsified BLOCKED justification)"
+    ],
+    "preexisting_unrelated_items_left_untouched": [
+      "Untracked stray duplicate test_wave_controller_regressions.py at the repository root, created 2026-09-28T04:03:52 by repair 121/122. It is a phase artifact, not a user file, and its removal was previously refused by tool permission policy. It was not deleted and was not worked around this dispatch. It should be removed before any freeze assembly so it cannot pollute the candidate.",
+      "W30 repair working-tree changes (src/hpc_gui/services/job_submit_cancel.py, tests/test_w30_submit_cancel.py, artifacts/opencode/wave_W30/WAVE_W30_AUDIT_REPORT.md) are another Wave's surface and were not modified from W57."
+    ]
+  },
+
+  "phase_status": "HUMAN_DEFERRED",
+  "human_only": true
+}

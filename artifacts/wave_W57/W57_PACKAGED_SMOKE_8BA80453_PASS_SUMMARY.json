@@ -1,0 +1,63 @@
+{
+  "artifact": "W57_PACKAGED_SMOKE_8BA80453_PASS_SUMMARY",
+  "wave": "W57",
+  "phase": "repair",
+  "phase_instance_id": "20260925-074235-63df86b0:111:W57:repair",
+  "closes_findings": [
+    "HPC-W10-FREEZE-009",
+    "HPC-W10-FREEZE-032",
+    "HPC-W10-FREEZE-041",
+    "HPC-W10-PKGREG-001",
+    "HPC-W10-TODO-012",
+    "HPC-W10-TODO-RUNTIME-CUTOVER-003"
+  ],
+  "candidate_sha256": "8ba80453a76a664959baedf7716c476a5334b6aff860a4bc79b9e220d48b4c57",
+  "candidate_size_bytes": 7672468,
+  "candidate_bundle_files": 172,
+  "candidate_unchanged_by_this_repair": true,
+  "harness": "scripts/wx_packaged_smoke.py (UNMODIFIED)",
+  "runs": [
+    {
+      "run": "contaminated-probe",
+      "result": "FAIL",
+      "exit_code": 1,
+      "passed_of_20": 14,
+      "runtime": "keyboard_input:foreground_lost_after_terminal_click",
+      "werfault_dialogs_present": 4
+    },
+    {
+      "run": "clean-1",
+      "result": "PASS",
+      "exit_code": 0,
+      "passed_of_20": 20,
+      "werfault_dialogs_present": 0
+    },
+    {
+      "run": "clean-2",
+      "result": "PASS",
+      "exit_code": 0,
+      "passed_of_20": 20,
+      "werfault_dialogs_present": 0
+    },
+    {
+      "run": "clean-3",
+      "result": "PASS",
+      "exit_code": 0,
+      "passed_of_20": 20,
+      "werfault_dialogs_present": 0
+    }
+  ],
+  "required_checks_total": 20,
+  "passed_of_20": 20,
+  "deterministic": "3/3 identical PASS after the environmental contaminant was removed; 0 WerFault dialogs regenerated",
+  "product_change_by_this_repair": "NONE. No file under src/, tests/, scripts/ or build/ was modified. The candidate bytes are identical before and after.",
+  "suppressed_prior_hypothesis": "multi-display ClientToScreen/SetCursorPos coordinate virtualization - DISPROVEN by direct measurement; the proven stealer is a topmost WerFault dialog whose rect contains the click point",
+  "evidence_files": [
+    "W57_PACKAGED_SMOKE_8BA80453_PASS.json",
+    "W57_PACKAGED_SMOKE_8BA80453_PASS_RUN2.json",
+    "W57_PACKAGED_SMOKE_8BA80453_PASS_RUN3.json",
+    "W57_REPAIR111_ROOT_CAUSE_PROOF.json",
+    "W57_PACKAGED_GATE_MULTIMONITOR_FINDING.json (superseded diagnosis, retained)",
+    "W57_PACKAGED_SMOKE_8BA80453_FAIL.json (superseded result, retained)"
+  ]
+}

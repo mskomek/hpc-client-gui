@@ -1,0 +1,31 @@
+{
+  "artifact": "W57_DEFECT_TRIAGE_DEF_W57_016_SUPERSESSION",
+  "wave": "W57",
+  "phase": "repair",
+  "phase_instance_id": "20260925-074235-63df86b0:111:W57:repair",
+  "supersedes": "W57_PACKAGED_GATE_MULTIMONITOR_FINDING.json (DEF-W57-016)",
+  "supersedes_status": "RETAINED UNMODIFIED for audit; its diagnosis is now disproven",
+  "finding_id": "DEF-W57-016",
+  "new_title": "Packaged terminal-accept path failed because stale topmost WerFault crash dialogs covered the smoke frame click point - ENVIRONMENTAL, not a product defect, not multi-display",
+  "severity": "P4 / RESOLVED-ENVIRONMENTAL",
+  "status": "RESOLVED",
+  "root_cause": "Four stale topmost Windows Error Reporting crash dialogs (WerFault.exe, class #32770, title \"Python\") left behind by crashed python.exe processes (23:48, 23:57, 00:02, 00:06) covered the packaged smoke frame. The frame rect was (130,130)-(1410,890), so the WebView centre click point was (770,510); the dialog rect was (769,394)-(1135,580), i.e. the click point fell 1 pixel inside the dialog's left edge. SendInput delivered the synthetic left click to the topmost window at the cursor - the dialog - so the click never reached the xterm WebView and the dialog reclaimed foreground.",
+  "proof_timeline": [
+    "t=0.001s WerFault dialog (hwnd 4791140) owns foreground",
+    "t=6.633s smoke frame hpc-client-gui.exe (hwnd 5969520) correctly claims foreground - the wx_shell.py:2296 guard passes, so \"foreground_lost\" is NOT raised",
+    "t=7.049s WerFault dialog reclaims foreground 0.416s later, exactly at the synthetic click; wx_shell.py:2373 raises keyboard_input:foreground_lost_after_terminal_click and 6 dependent checks cascade to FAIL"
+  ],
+  "disconfirmed_hypothesis": "The run-phase-110 hypothesis (ClientToScreen/SetCursorPos coordinate virtualization for a WebView host on a non-primary display) is DISPROVEN. It was recorded as unproven at the time and is now shown to be unnecessary and unsupported: the proven stealer sits on the PRIMARY display inside the frame rect, and the identical pre-repair build that excluded the W30 change exhibited the same red for the same environmental reason.",
+  "resolution_action": "Closed the four stale WER report dialogs (transient UI only; the python.exe crash dumps and WER reports were already archived on disk beforehand, so no diagnostic evidence was destroyed) and re-ran the UNMODIFIED maintained harness against the UNMODIFIED candidate 8BA80453.",
+  "resolution_result": "3/3 runs PASS exit 0, 20/20 checks, zero WerFault dialogs regenerated. Clean-run foreground timeline shows the frame RETAINING foreground across the click phase, the inverse of the contaminated run.",
+  "product_change": "NONE. No file under src/, tests/, scripts/ or build/ was modified by this repair. Candidate bytes 8BA80453A76A664959BAEDF7716C476A5334B6AFF860A4BC79B9E220D48B4C57 are identical before and after.",
+  "residual_owner_question": "The wx_shell.py click path still assumes no third-party topmost window overlaps the frame. That robustness hardening remains an outward-routed owner question and is deliberately NOT patched by W57 (scope discipline, W57.md:95). W57 does not claim it as done.",
+  "gates_recovered": [
+    "HPC-W10-FREEZE-009",
+    "HPC-W10-FREEZE-032",
+    "HPC-W10-FREEZE-041",
+    "HPC-W10-PKGREG-001",
+    "HPC-W10-TODO-012",
+    "HPC-W10-TODO-RUNTIME-CUTOVER-003"
+  ]
+}

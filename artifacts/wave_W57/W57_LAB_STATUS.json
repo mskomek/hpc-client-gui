@@ -1,0 +1,100 @@
+{
+    "status":  "FAIL",
+    "topology":  [
+                     {
+                         "name":  "login-control01",
+                         "ip":  "192.168.250.11",
+                         "role":  "controller",
+                         "transport_ok":  true,
+                         "services_ok":  true,
+                         "services":  [
+                                          "ssh",
+                                          "munge",
+                                          "slurmctld",
+                                          "slurmdbd",
+                                          "mariadb",
+                                          "nfs-server"
+                                      ],
+                         "service_states":  "active\r\nactive\r\nactive\r\nactive\r\nactive\r\nactive",
+                         "stderr":  ""
+                     },
+                     {
+                         "name":  "compute01",
+                         "ip":  "192.168.250.12",
+                         "role":  "compute",
+                         "transport_ok":  true,
+                         "services_ok":  true,
+                         "services":  [
+                                          "ssh",
+                                          "munge",
+                                          "slurmd"
+                                      ],
+                         "service_states":  "active\r\nactive\r\nactive",
+                         "stderr":  ""
+                     },
+                     {
+                         "name":  "compute02",
+                         "ip":  "192.168.250.13",
+                         "role":  "compute",
+                         "transport_ok":  false,
+                         "services_ok":  false,
+                         "services":  [
+                                          "ssh",
+                                          "munge",
+                                          "slurmd"
+                                      ],
+                         "service_states":  "",
+                         "stderr":  "ssh.exe : ssh: connect to host 192.168.250.13 port 22: Connection timed out\r\nAt D:\\Projeler\\hpc-client-gui\\lab\\lab-common.ps1:79 char:5\r\n+     \u0026 ssh @args 1\u003e $stdoutPath 2\u003e $stderrPath\r\n+     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\r\n    + CategoryInfo          : NotSpecified: (ssh: connect to...ction timed out:String) [], RemoteException\r\n    + FullyQualifiedErrorId : NativeCommandError\nSSH transport unavailable"
+                     }
+                 ],
+    "slurm":  {
+                  "ok":  false,
+                  "output":  "compute01|idle\r\ncompute02|down*",
+                  "stderr":  ""
+              },
+    "environment_identity":  {
+                                 "kind":  "LOCAL_REAL_HYPERV",
+                                 "switch":  "hpc-lab",
+                                 "prefix":  "192.168.250.0/24",
+                                 "gateway":  "192.168.250.1",
+                                 "image_url":  "https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img",
+                                 "image_file":  "ubuntu-24.04-server-cloudimg-amd64.img",
+                                 "expected_image_sha256":  "612b2c0cc1bc413a6cb8c38fd611794caf0f2b436c50013d8b3794db12ad7354",
+                                 "image_sha256":  "612b2c0cc1bc413a6cb8c38fd611794caf0f2b436c50013d8b3794db12ad7354",
+                                 "image_pin_ok":  true,
+                                 "base_vhdx_source_sha256":  "612b2c0cc1bc413a6cb8c38fd611794caf0f2b436c50013d8b3794db12ad7354",
+                                 "remote_versions":  "os=Ubuntu 24.04.5 LTS\r\nslurm-wlm 23.11.4\r\nmariadb-server=1:10.11.14-0ubuntu0.24.04.1\r\nmunge=0.5.15-4ubuntu0.1\r\nnfs-kernel-server=1:2.6.4-3ubuntu5.1\r\nopenssh-server=1:9.6p1-3ubuntu13.19\r\nslurm-wlm=23.11.4-1.2ubuntu5\r\nslurmctld=23.11.4-1.2ubuntu5\r\nslurmdbd=23.11.4-1.2ubuntu5",
+                                 "remote_versions_stderr":  "",
+                                 "profile_path":  "C:\\Users\\mskomek\\AppData\\Local\\hpc-client-gui-lab\\hpc-client-profile.json",
+                                 "profile_sha256":  "a99c96fdff52105b6f539fa0335a4b34a7b6ad00ceaacdf628fd09b320b4c0bf",
+                                 "profile_valid":  true,
+                                 "profile_error":  "",
+                                 "nodes":  [
+                                               {
+                                                   "name":  "login-control01",
+                                                   "ip":  "192.168.250.11",
+                                                   "role":  "controller",
+                                                   "cpus":  2,
+                                                   "memory_mb":  4096,
+                                                   "disk_gb":  40
+                                               },
+                                               {
+                                                   "name":  "compute01",
+                                                   "ip":  "192.168.250.12",
+                                                   "role":  "compute",
+                                                   "cpus":  2,
+                                                   "memory_mb":  2048,
+                                                   "disk_gb":  20
+                                               },
+                                               {
+                                                   "name":  "compute02",
+                                                   "ip":  "192.168.250.13",
+                                                   "role":  "compute",
+                                                   "cpus":  2,
+                                                   "memory_mb":  2048,
+                                                   "disk_gb":  20
+                                               }
+                                           ]
+                             },
+    "generated_at":  "2026-09-27T18:20:25.9146163Z"
+}

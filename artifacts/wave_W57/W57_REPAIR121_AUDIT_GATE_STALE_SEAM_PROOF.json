@@ -1,0 +1,138 @@
+{
+  "wave_id": "W57",
+  "phase": "repair",
+  "phase_instance_id": "20260925-074235-63df86b0:121:W57:repair",
+  "repair_hypothesis": "W57-PRIOR-TERMINAL-CLEAN-CLAIM-FALSIFIED-BY-LIVE-REPO-ORCHESTRATION-RED",
+  "supersedes_hypothesis": "W57-OWNED-ACCEPTANCE-VERDICT-FALSIFIED-BY-OWN-EVIDENCE",
+  "hypothesis_changed_because": "The prior hypothesis was confirmed and closed at repair 120 (FREEZE-009 verdict corrected). Its terminal corollary - 'No repository-owned technical or orchestration defect remains open on W57' - was never itself tested. This dispatch tested it directly and it is false.",
+
+  "repository_identity": {
+    "branch": "develop",
+    "head_sha": "f6ab257fbfd62d402e31e9330f30bb017b795fa8",
+    "controller_handoff_content_identity": "cf5aff2031aed28d70e3365e3db5a744b5f9f3781b35f13d5e558382acd217b0",
+    "recomputed_content_identity_this_dispatch": "d6d0791a1bebce1355af86e8fbef16e1a2b5ee6a67d8316acaad27788db05aaf",
+    "recompute_note": "wave_state_engine.repository_content_identity() re-run at this dispatch. It differs from the handoff value because the identity covers tracked+untracked non-ignored content and the W57 report plus artifacts/wave_W57/*.json changed on disk since the handoff was minted. This is a re-measurement, not a contradiction of the handoff.",
+    "frozen_candidate_sha256": "8ba80453a76a664959baedf7716c476a5334b6aff860a4bc79b9e220d48b4c57",
+    "candidate_patched_or_rebuilt": false,
+    "candidate_note": "Not re-hashed as a gate in this dispatch: no W57-owned requirement moved and the candidate is untouched. The dispatch made no product, build-input or candidate change."
+  },
+
+  "finding": "The prior phase's terminal classification is falsified. Repairs 116/117/118/119/120 each concluded that DEF-W57-006 (compute02 down, Hyper-V authority refused) was the single remaining blocker, on the stated basis that no repository-owned technical or orchestration defect remained open on W57. At the current content identity there IS one: the tracked, maintained test tests/test_wave_controller_regressions.py is RED on two nodes, and both are the audit-CLOSE gate - the exact gate W57 must pass to close.",
+
+  "observed_failure": {
+    "command": ".venv\\Scripts\\python.exe -m pytest tests/test_wave_controller_regressions.py -q --no-header -p no:cacheprovider",
+    "exit_code": 1,
+    "result": "2 failed, 15 passed in 0.63s",
+    "failing_nodes": [
+      "tests/test_wave_controller_regressions.py::test_audit_close_receipt_overrides_historical_ready",
+      "tests/test_wave_controller_regressions.py::test_audit_close_receipt_survives_restart_when_identity_unchanged"
+    ],
+    "failure_mode": "assert controller.audit_receipt_valid(tmp_path, {}, 'W18', receipt, 'content-1') is truthy; actual False",
+    "test_file_tracked": true,
+    "test_file_last_touched_by": "c8293d3c 'Sync Agent Core runtime 21c15de7; align controller regression tests with canonical API'",
+    "in_profile_allowed_closeout_only_paths": true
+  },
+
+  "hypothesis": "The RED is a STALE TEST SEAM, not a broken close gate. Production audit_receipt_valid() was migrated from the git() helper to the aliased engine seam git_capability()/engine_git_capability(), but the two tests still monkeypatch controller.git, which production no longer calls. The patch is a silent no-op, and because tmp_path is not a Git repository, git_capability() returns has_head=False, the gate takes its documented 'No Git/HEAD' branch, and it correctly returns False for a receipt that names a candidate_sha. The gate is right; the test's injection point moved out from under it.",
+
+  "root_cause_evidence": {
+    "production_diff_observed": "run-wave-program.py: audit_receipt_valid() body changed from `code, head = git(repo, 'rev-parse', 'HEAD'); return code == 0 and bool(head) and recorded_head == head` to `cap = engine_git_capability(repo); if cap.get('has_head'): return bool(recorded_head) and recorded_head == str(cap.get('head') or ''); return not recorded_head`.",
+    "seam_is_intentional_and_tracked": "wave_state_engine.git_capability() is the canonical read-only Git capability probe and explicitly refuses to borrow an ancestor repository's VCS authority. Tracked in c8293d3c. The production change is correct by design and must not be reverted.",
+    "gate_is_correct_against_the_real_repository": {
+      "probe": ".tmp/w57-repair-121/probe_audit_gate.py (read-only; writes only into its own scratch dir)",
+      "method": "The same receipt shape the tests build is replayed against the ACTUAL repository, where git_capability().has_head is True, exercising the branch the tests never reach.",
+      "truth_table": [
+        {"case": "receipt matches real HEAD + identity", "expected": true, "actual": true},
+        {"case": "receipt candidate_sha is a STALE head", "expected": false, "actual": false},
+        {"case": "content identity moved since audit", "expected": false, "actual": false},
+        {"case": "audited a DIFFERENT wave", "expected": false, "actual": false},
+        {"case": "audit_result_path points at a missing file", "expected": false, "actual": false},
+        {"case": "audit_status is not PASS", "expected": false, "actual": false},
+        {"case": "normalized result is REOPEN while receipt says PASS", "expected": false, "actual": false}
+      ],
+      "result": "TRUTH_TABLE ALL OK (7/7)",
+      "meaning": "The close gate is fail-closed and correct in production. It is not the defect. The defect is that no maintained test exercises it in its real has_head=True configuration."
+    },
+    "minimal_change_confirmed": {
+      "probe": ".tmp/w57-repair-121/probe_seam_retarget.py",
+      "method": "The maintained test file was copied to scratch; ONLY the stale injection point was retargeted from controller.git to controller.engine_git_capability returning {'status':'ok','has_head':True,'head':'head-1',...}. Production was NOT modified.",
+      "seam_occurrences_retargeted": 4,
+      "assertion_lines_changed": 0,
+      "assert_count_original": 38,
+      "assert_count_patched": 38,
+      "negative_nodes_included": [
+        "test_audit_close_receipt_invalidates_on_content_change",
+        "test_audit_close_receipt_fails_closed_for_missing_or_nonpass_result"
+      ],
+      "result": "17 passed in 0.51s",
+      "meaning": "All 17 nodes pass, including both negative nodes, against unmodified production. The truth table is preserved and widened to the has_head=True path, not narrowed. This is the proof that the defect is confined to the test seam."
+    }
+  },
+
+  "change": {
+    "product": false,
+    "test": false,
+    "controller_surface": false,
+    "candidate": false,
+    "security": false,
+    "repository_writes": [
+      "artifacts/wave_W57/W57_REPAIR121_AUDIT_GATE_STALE_SEAM_PROOF.json",
+      "docs/wave-reports/v2/opencode/W57_WAVE_REPORT.md (section 20 and the falsified terminal claims)"
+    ],
+    "why_the_red_test_was_not_edited_here": "tests/test_wave_controller_regressions.py is the maintained regression suite for .opencode/scripts/run-wave-program.py, which is a declared controller_restart_path. DEF-W57-007 already routes this surface to the controller, and W57's own scope discipline forbids a Wave worker from opportunistically mutating it. The minimal patch is therefore delivered here as a proven, ready-to-apply routing payload rather than applied unilaterally. No test was weakened, skipped or xfailed; no assertion was removed.",
+    "scratch_only": [
+      ".tmp/w57-repair-121/probe_audit_gate.py",
+      ".tmp/w57-repair-121/probe_seam_retarget.py",
+      ".tmp/w57-repair-121/ci.py",
+      ".tmp/test_w57_audit_gate_seam_probe_121.py"
+    ]
+  },
+
+  "focused_retest": {
+    "command": ".venv\\Scripts\\python.exe -m pytest tests/test_w57_freeze_consistency.py tests/test_local_real_lab_bounded_commands.py tests/test_local_real_lab_static.py tests/test_wave_controller_regressions.py -q --no-header -p no:cacheprovider",
+    "exit_code": 1,
+    "result": "2 failed, 28 passed in 10.54s",
+    "meaning": "The W57-owned freeze-consistency and bounded-lab checks stay green (13 passed). The 2 reds are the untouched controller-owned audit-gate nodes. This is the expected pre-fix state and is the red the routing payload addresses; it is deliberately NOT reported as green."
+  },
+
+  "secondary_finding_content_identity_header": {
+    "observation": "The canonical report header records 'Content identity (controller handoff): 8f522decd2c83afd9ffb70dd7ad36e19b73c1617bca4278c47093aabcdfad839'. That value is the audit_receipt.tested_content_identity for W30 in this dispatch's controller context, not W57's own content identity (cf5aff20...).",
+    "impact": "An auditor binding W57 evidence to content identity reads a foreign Wave's identity from the report header. Evidence binding is a fail-closed contract, so a mislabeled identity is a real reporting defect, not cosmetic.",
+    "disposition": "Recorded and corrected in the report this dispatch; not repaired in production, because the identity is controller-minted and the controller owns durable receipt persistence."
+  },
+
+  "unaffected_claims_re_verified_this_dispatch": {
+    "def_w57_006_still_authority_bound": {
+      "command": "powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .\\lab\\lab-status.ps1",
+      "exit_code": 3,
+      "elapsed_seconds": 10,
+      "login-control01": "transport_ok true, 6/6 services active",
+      "compute01": "transport_ok true, 3/3 services active",
+      "compute02": "transport_ok false, ssh connect timeout, no service states",
+      "slurm": "compute01|idle, compute02|down*",
+      "image_pin_ok": true,
+      "independent_authority_probe": "IsAdministrator=False; Get-VM -Name compute02 refused with 'You do not have the required permission to complete this task.'; Test-Connection 192.168.250.13 -Quiet = False",
+      "verdict": "CONFIRMED AND UNCHANGED. DEF-W57-006 remains genuine unavailable operator authority. This dispatch does not dispute it; it disputes only that it is the sole remaining blocker."
+    },
+    "frozen_candidate": "8ba80453..., untouched, not rebuilt, not patched by this dispatch.",
+    "w57_owned_freeze_rows": "FREEZE-009/-032/-041/PKGREG-001 remain GREEN per repair 111 evidence; FREEZE-030/-040 remain RED solely via DEF-W57-006; FREEZE-044 manifest still deliberately unwritten because a non-ACCEPTANCE_GREEN manifest would be a non-closeable fabrication (validate_wave_closeout.py accepts only ACCEPTANCE_GREEN/CLOSED)."
+  },
+
+  "result": {
+    "hypothesis_confirmed": true,
+    "prior_terminal_claim": "FALSIFIED - a repository-owned orchestration defect is open and was masked by the DEF-W57-006 deferral",
+    "defect_class": "REPOSITORY_OWNED_TECHNICAL_ORCHESTRATION",
+    "defect_owner": "controller (Agent Core runtime / .opencode/scripts/run-wave-program.py close gate + its maintained regression suite)",
+    "classification_rule_applied": "ac-wave-opencode-repair: 'Repository-owned technical/orchestration findings are repair/routing state, not human deferral.' A repository-owned RED may not be discharged under HUMAN_DEFERRED.",
+    "w57_phase_status": "REOPEN",
+    "why_not_human_deferred": "HUMAN_DEFERRED remains correct for DEF-W57-006 alone, which is re-verified genuine unavailable operator authority. It is not correct for the Wave while a repository-owned defect is open, because human deferral is reserved for genuinely unavailable authority and would silently retire a repairable RED.",
+    "why_not_blocked": "W57 is not blocked on a missing prerequisite it must wait for; it has a concrete, proven, one-step repository repair that belongs to the controller. REOPEN routes it to its true owner.",
+    "why_not_ready_for_audit": "A fresh independent audit cannot be truthfully dispatched over an open RED on the close gate itself, and FREEZE-030/-040 are still red.",
+    "w57_owned_rows_unchanged": "No W57-owned requirement disposition changed in this dispatch.",
+    "frozen_for_w58": "NO"
+  },
+
+  "resume_point": "Controller applies the proven seam retarget to tests/test_wave_controller_regressions.py - replace the 4 occurrences of monkeypatch.setattr(controller, 'git', lambda *_args: (0, 'head-1')) with a patch of controller.engine_git_capability returning has_head True and head 'head-1', changing no assertion - then re-runs validate-managed-runtime.py, which currently exits 1 on 7 behaviours (controller_semantic_counters_vs_retries, progress_contract_v1_v2_deterministic, audit_close_todo_semantic_history, controller_worker_timeout_serial_parallel_barrier, multi_group_managed_parallel_synthetic_base, parallel_cross_wave_true_owner_routing, v2_plan_gate_before_run_repair) and whose dominant signature is 'unexpected dispatch plan', consistent with the same untracked-validator/tracked-controller drift recorded as DEF-W57-007. Independently, an operator with Windows Administrator / Hyper-V rights runs lab/lab-reset.ps1, then lab/lab-status.ps1 to PASS, then lab/lab-test.ps1 for the FREEZE-030/-040 verdict. Only then can FREEZE-044 be written and the fresh independent audit dispatched.",
+
+  "secrets_handling": "No credential, private key, VM disk, token or generated secret is recorded. Only the Windows principal name and the already-public profile SHA-256 from lab status output. No UAC prompt was raised and no user question was asked."
+}

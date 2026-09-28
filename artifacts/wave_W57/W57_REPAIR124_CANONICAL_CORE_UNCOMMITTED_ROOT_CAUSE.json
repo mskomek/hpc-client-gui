@@ -1,0 +1,127 @@
+{
+  "artifact": "W57_REPAIR124_CANONICAL_CORE_UNCOMMITTED_ROOT_CAUSE",
+  "wave_id": "W57",
+  "phase": "repair",
+  "phase_instance_id": "20260925-074235-63df86b0:124:W57:repair",
+  "recorded_at_utc": "2026-09-28",
+  "finding_id": "W57-ORCHESTRATION-RED-ROOTCAUSE-INCOMPLETE-AC-CORE-MATERIALIZATION",
+  "repair_hypothesis_previous": "W57-ORCHESTRATION-RED-ROOTCAUSE-INCOMPLETE-AC-CORE-MATERIALIZATION",
+  "repair_hypothesis_this": "W57-ORCHESTRATION-RED-ROOTCAUSE-CANONICAL-CORE-UNCOMMITTED-WIP",
+  "hypothesis_changed": true,
+  "hypothesis_change_reason": "Materially different diagnosis: the previous hypothesis said the project holds an incomplete/stale materialization and that re-materializing the project is the fix. Machine evidence shows the project is byte-exactly at the last COMMITTED canonical core release and that the staleness is produced entirely by the canonical core's uncommitted working tree.",
+
+  "observed_failure": {
+    "validator": ".opencode/scripts/validate-managed-runtime.py",
+    "command": "AC_CORE_ROOT=D:\\Projeler\\.agents-core python .opencode/scripts/validate-managed-runtime.py --repo .",
+    "exit_code": 1,
+    "status": "FAIL",
+    "behaviours_failed": [
+      "controller_semantic_counters_vs_retries",
+      "progress_contract_v1_v2_deterministic",
+      "audit_close_todo_semantic_history",
+      "controller_worker_timeout_serial_parallel_barrier",
+      "multi_group_managed_parallel_synthetic_base",
+      "parallel_cross_wave_true_owner_routing",
+      "v2_plan_gate_before_run_repair"
+    ],
+    "behaviours_passed": 31,
+    "evidence_path": ".tmp/w57-repair-124/baseline-managed-runtime.txt",
+    "note": "Reproduced at this dispatch; identical to the previous repair phase's observed red."
+  },
+
+  "secondary_red": {
+    "validator": ".opencode/scripts/validate-ac-project.py",
+    "reasons": [
+      "canonical-core-revision-changed",
+      "managed-file-content-mismatch:.agents/protocol/AC_WAVE_PROGRESS_STATE_SCHEMA.md",
+      "managed-file-content-mismatch:.opencode/scripts/run-wave-program.py",
+      "managed-file-content-mismatch:.opencode/scripts/validate-ac-project.py",
+      "managed-file-content-mismatch:.opencode/scripts/validate-managed-runtime.py",
+      "managed-file-content-mismatch:.opencode/scripts/wave_state_engine.py"
+    ]
+  },
+
+  "root_cause": {
+    "statement": "The project is materialized byte-exactly at the last COMMITTED canonical Agent Core release (v1.0.0). materialization_guard.core_digest() hashes the core's WORKING-TREE canonical source files, and the canonical core at D:\\Projeler\\.agents-core is a dirty working tree, so uncommitted core WIP - not a core release - is what makes every project materialization read stale.",
+    "core_head": "73c1b7d8c7b5e925613eacf4450aa860271c10c5",
+    "core_head_subject": "v1.0.0",
+    "core_head_committed_at": "2026-09-27 20:58:51 +0300",
+    "core_dirty_tracked_paths": 24,
+    "core_dirty_diffstat": "26 files changed, 1635 insertions(+), 218 deletions(-)",
+    "project_manifest_core_revision": "50549a1abbc44e49",
+    "project_materialized_at": "2026-09-27T21:01:03",
+    "core_worktree_digest16_observed": "438a8139b9cfdf5b",
+    "guard_digest_implementation": ".opencode/scripts/materialization_guard.py:97 core_digest() over canonical_source_files() - working-tree bytes, not a git revision"
+  },
+
+  "evidence_checks": [
+    {
+      "id": "E1-project-is-at-committed-core",
+      "claim": "All 5 content-mismatched managed files are byte-identical to core@HEAD (v1.0.0) after CRLF->LF normalization; none match the core's current worktree; none are orphaned.",
+      "method": "python .tmp/w57-repair-124/provenance_eol.py - git cat-file blob HEAD:<core path> vs project file bytes, LF-normalized",
+      "result": "5/5 AT COMMITTED CORE v1.0.0; 0 at core WIP; 0 orphaned",
+      "evidence_path": ".tmp/w57-repair-124/provenance_eol.json"
+    },
+    {
+      "id": "E2-canonical-core-is-dirty",
+      "claim": "The canonical core working tree carries 24 modified tracked paths (+1635/-218) on top of commit v1.0.0, including every canonical source the project materializes.",
+      "method": "git -C D:\\Projeler\\.agents-core status --porcelain=v1 ; git -C D:\\Projeler\\.agents-core diff --stat",
+      "result": "24 tracked paths dirty, including runtime/run-wave-program.py, runtime/wave_state_engine.py, validators/*.py, protocol/AC_WAVE_PROGRESS_STATE_SCHEMA.md, setup/materialize-ac-core.py",
+      "evidence_path": ".tmp/w57-repair-124/provenance_eol.json"
+    },
+    {
+      "id": "E3-sanctioned-tool-refuses-on-real-tree",
+      "claim": "The project's own repair tool refuses to re-materialize the real tree while a controller is live. This is a machine-verified tool verdict, not an inference from policy.",
+      "command": "python D:\\Projeler\\.agents-core\\setup\\materialize-ac-core.py --core D:\\Projeler\\.agents-core --repo D:\\Projeler\\hpc-client-gui",
+      "exit_code": 3,
+      "stdout": "AC_WAVE_MATERIALIZATION=REFUSED live controller: ac-wave-opencode-parallel.lock run_id=20260925-074235-63df86b0 pid=51592",
+      "lock_liveness": "pid 51592 alive (python, started 2026-09-27 21:15:00); recorded process_start_time matches the live process",
+      "refusal_site": "setup/materialize-ac-core.py:602-606 live_controller_locks()"
+    },
+    {
+      "id": "E4-refused-run-mutated-nothing",
+      "claim": "The refused materialization left the project byte-identical.",
+      "method": "sha256 over the sorted (relpath|sha256) listing of .opencode + .agents (excluding __pycache__), before and after",
+      "before": "842D645FD7FC840891220485CCEFC42168B37DC7FF8723033F03EF7ED048FD3D",
+      "after": "842D645FD7FC840891220485CCEFC42168B37DC7FF8723033F03EF7ED048FD3D",
+      "result": "UNCHANGED (146 files)"
+    }
+  ],
+
+  "previous_phase_claims_falsified": [
+    {
+      "previous_claim": "Re-materializing would overwrite ~3141 lines of uncommitted user work; AGENTS.md forbids dropping user changes.",
+      "falsification": "Those uncommitted bytes are not user authoring. All 5 content-mismatched managed files are byte-identical to the canonical core's COMMITTED v1.0.0 tree, i.e. the materializer's own output. The 3141-insertion diff vs project HEAD is the derived materialization of core v1.0.0 and is fully recoverable from the core's committed tree. WAVE_PROJECT_PROFILE.json (the uncommitted 'parallel' block) is NOT a managed file and is not touched by materialization."
+    },
+    {
+      "previous_claim": "The project holds an incomplete/stale materialization; swapping in canonical bytes makes all validators green.",
+      "falsification": "The project is exactly at committed v1.0.0. The previous green scratch proved nothing durable: it copied only the 5 files' then-current core WIP bytes into a partial tree (no .git, no lab/src/docs) and the core WIP has since changed again, so that result is not reproducible. Re-materializing now would import the core's uncommitted, unreleased, unpinned WIP into the project."
+    }
+  ],
+
+  "why_this_wave_cannot_repair_it": [
+    "The defect is upstream of the project: the canonical Agent Core is an uncommitted working tree, so no project-side change can produce a stable, pinned materialization.",
+    "The project's only sanctioned re-materialization tool refuses on the real tree under the live controller lock (E3). Bypassing that guard would weaken a safety invariant.",
+    "Re-materializing the managed runtime (run-wave-program.py, wave_state_engine.py) touches profile controller_restart_paths, which AGENTS.md sequences as: checkpoint -> release the old lock -> restart the controller -> auto-resume from repository truth. That is a controller action.",
+    "W57's machine-owned scope is FREEZE-*/TODO-*/PKGREG-*; global_bookkeeping_owner is controller. Canonical-core revision control is neither."
+  ],
+
+  "concrete_missing_prerequisites": [
+    "1. Stabilize the canonical core: commit the 24 dirty tracked paths in D:\\Projeler\\.agents-core (or discard the WIP) so core_digest() is pinned to a committed revision. Until then every materialization of every project re-stals on the next core edit.",
+    "2. Controller-sequenced re-materialization: checkpoint progress, stop the worker pool, release .tmp\\locks\\ac-wave-opencode-parallel.lock (pid 51592), then run: python D:\\Projeler\\.agents-core\\setup\\materialize-ac-core.py --core D:\\Projeler\\.agents-core --repo D:\\Projeler\\hpc-client-gui",
+    "3. Restart the controller so it picks up the refreshed run-wave-program.py / wave_state_engine.py, and auto-resume from repository truth.",
+    "4. Re-run the six profile postrun_checks plus the W57 closeout validator against the new materialization, and rebind evidence to the new content identity."
+  ],
+
+  "safety_observations_for_controller": [
+    "WAVE_PROJECT_PROFILE.json is NOT a managed file: the uncommitted 'parallel' block, the extra postrun check and the extra controller_restart_paths survive re-materialization.",
+    "W57 lifecycle truth is clean: waves/pending/W57.md only; no W## duplicates across lifecycle directories; validate-wave-orchestration.py reports AC_WAVE_METADATA_VALID=61 and validate-wave-authoring.py reports AC_WAVE_AUTHORING_VALID=61.",
+    "Six stray untracked root-level duplicates (run-wave-program.py, wave_state_engine.py, wave_progress.py, parallel_workspace.py, route-wave-findings.py, test_wave_controller_regressions.py) are byte-identical to their canonical counterparts and keep the tree dirty, which triggers profile parallel.dirty_tree_policy = serial_fallback.",
+    "Scratch retained, not deleted (AGENTS.md: never drop files): .tmp/w57-matproof-01/ (previous phase) and .tmp/w57-repair-124/ (this phase; contains the git-archive extraction core-HEAD-v1.0.0/, superseded by the eol-independent provenance_eol.py check and safe for the controller to prune).",
+    "No AC_WAVE_PROGRESS_EVENT lines were emitted: the controller handoff for this dispatch carried no repair-owned TODO id, and progress events require a known TODO id owned by this phase."
+  ],
+
+  "no_product_change": "This phase changed no W57 product, test, evidence or lifecycle file. All writes are confined to .tmp/ plus this artifact.",
+  "phase_status": "REOPEN",
+  "human_only": false
+}

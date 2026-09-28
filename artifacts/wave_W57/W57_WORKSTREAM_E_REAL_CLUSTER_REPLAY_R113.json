@@ -1,0 +1,221 @@
+{
+  "artifact": "W57_WORKSTREAM_E_REAL_CLUSTER_REPLAY_R113",
+  "wave": "W57",
+  "phase": "repair",
+  "phase_instance_id": "20260925-074235-63df86b0:113:W57:repair",
+  "prior_dispatch": "20260925-074235-63df86b0:112:W57:repair",
+  "run": 3,
+  "repair_hypothesis": "W57-DEF018-ISOLATED-ROOT-UNATTENDED-OPTIN",
+  "owned_requirements": [
+    "HPC-W10-FREEZE-030",
+    "HPC-W10-FREEZE-040"
+  ],
+  "source_section": "opencode/sources/WAVE_V2_FINAL_10.md :: Workstream E - Real-cluster regression",
+  "infrastructure_class": "LOCAL_REAL_HYPERV",
+  "entrypoint": ".venv/Scripts/python.exe -m hpc_gui.cli (src/hpc_gui/cli/main.py)",
+  "unattended_opt_in": {
+    "developer_profile_has_cli_external_access_enabled": false,
+    "default_changed": false,
+    "gate_removed": false,
+    "mechanism": "HPC_GUI_CONFIG_ROOT isolated per-run config root (src/hpc_gui/core/paths.py:17, ISOLATED_CONFIG_ROOT_ENV)",
+    "isolated_root": "D:\\Projeler\\hpc-client-gui\\.tmp\\w57-repair-113\\isolated-root",
+    "developer_profile_value": null,
+    "gate_unchanged": "if _requires_remote_session(args) and not get_cli_external_access_enabled():",
+    "secret_handling": "only the lab key PATH was passed on the command line; no secret value, no password, no private key content is recorded in this artifact",
+    "developer_profile": "C:\\Users\\mskomek\\.truba_slurm_gui\\config.json",
+    "enabled_in_root": true,
+    "isolated_config": "D:\\Projeler\\hpc-client-gui\\.tmp\\w57-repair-113\\isolated-root\\config.json"
+  },
+  "harness_bound": "every scenario runs through a hard wall clock (Invoke-Bounded, Wait-Process -Timeout); a hung child is killed with exit 124 and reported as timed_out, never awaited",
+  "probe_script_fixes": [
+    "H1 remote bash delivered base64-encoded (PowerShell native-argument quoting split the printf format string)",
+    "H2 edit --editor given an executable command line instead of a bare .py path (WinError 193 on Windows)",
+    "H3 sbatch script written with explicit LF bytes and uploaded --mode binary (sbatch rejects CRLF)",
+    "H4 files rm given --recursive for a directory target",
+    "H5 Invoke-Bounded now passes one correctly quoted command line to Start-Process, which silently re-split every argument containing a space"
+  ],
+  "human_interaction": "none",
+  "scenarios_run": 16,
+  "scenarios_failed": [],
+  "scenarios_timed_out": [],
+  "result": "PASS",
+  "scenarios": [
+    {
+      "id": "WE-01",
+      "title": "connection - doctor connection (real SSH key + SFTP init)",
+      "command": "-m hpc_gui.cli --format json --host 192.168.250.11 --port 22 --user hpctest --key C:\\Users\\mskomek\\AppData\\Local\\hpc-client-gui-lab\\id_ed25519 --timeout 90 doctor connection",
+      "exit_code": 0,
+      "timed_out": false,
+      "expectation": "exit_0",
+      "ok": true,
+      "duration_s": 1.67,
+      "output": "{\r\n  \"status\": \"PASS\",\r\n  \"profile\": \"\",\r\n  \"stages\": {\r\n    \"dns\": {\r\n      \"status\": \"PASS\",\r\n      \"detail\": \"name resolved\"\r\n    },\r\n    \"port\": {\r\n      \"status\": \"PASS\",\r\n      \"detail\": \"reachable\"\r\n    },\r\n    \"auth\": {\r\n      \"status\": \"PASS\",\r\n      \"detail\": \"authenticated\"\r\n    },\r\n    \"sftp\": {\r\n      \"status\": \"PASS\",\r\n      \"detail\": \"sftp subsystem available\"\r\n    },\r\n    \"slurm\": {\r\n      \"status\": \"PASS\",\r\n      \"detail\": \"scheduler reachable\"\r\n    },\r\n    \"checksum\": {\r\n      \"status\": \"PASS\",\r\n      \"detail\": \"sha256sum available\"\r\n    }\r\n  }\r\n}"
+    },
+    {
+      "id": "WE-02",
+      "title": "reconnect - second session + remote shell command",
+      "command": "-m hpc_gui.cli --format json --host 192.168.250.11 --port 22 --user hpctest --key C:\\Users\\mskomek\\AppData\\Local\\hpc-client-gui-lab\\id_ed25519 --timeout 90 sh -- bash -c printf %s cHJpbnRmICdXRS0wMiBob3N0PSVzIHVzZXI9JXMgdHR5PSVzXG4nICIkKGhvc3RuYW1lKSIgIiRVU0VSIiAiJCh0dHkpIgp1bmFtZSAtc3I= | base64 -d | bash -s",
+      "exit_code": 0,
+      "timed_out": false,
+      "expectation": "exit_0",
+      "ok": true,
+      "duration_s": 1.24,
+      "output": "{\r\n  \"stdout\": \"WE-02 host=login-control01 user=hpctest tty=not a tty\\nLinux 6.8.0-142-generic\\n\",\r\n  \"stderr\": \"\",\r\n  \"exit_code\": 0\r\n}"
+    },
+    {
+      "id": "WE-03",
+      "title": "SFTP round trip - doctor smoke (temp_dir/upload/list/download/checksum/cleanup)",
+      "command": "-m hpc_gui.cli --format json --host 192.168.250.11 --port 22 --user hpctest --key C:\\Users\\mskomek\\AppData\\Local\\hpc-client-gui-lab\\id_ed25519 --timeout 90 doctor smoke --artifact D:\\Projeler\\hpc-client-gui\\artifacts\\wave_W57\\W57_WORKSTREAM_E_SFTP_SMOKE_R113.json",
+      "exit_code": 0,
+      "timed_out": false,
+      "expectation": "exit_0",
+      "ok": true,
+      "duration_s": 1.48,
+      "output": "{\r\n  \"status\": \"PASS\",\r\n  \"temp_dir\": \"truba_smoke_20260927T224339Z_609d120c\",\r\n  \"stages\": {\r\n    \"temp_dir\": {\r\n      \"status\": \"PASS\",\r\n      \"detail\": \"created\"\r\n    },\r\n    \"upload\": {\r\n      \"status\": \"PASS\",\r\n      \"detail\": \"uploaded\"\r\n    },\r\n    \"list\": {\r\n      \"status\": \"PASS\",\r\n      \"detail\": \"present\"\r\n    },\r\n    \"download\": {\r\n      \"status\": \"PASS\",\r\n      \"detail\": \"verified\"\r\n    },\r\n    \"checksum\": {\r\n      \"status\": \"PASS\",\r\n      \"detail\": \"verified\"\r\n    },\r\n    \"cleanup\": {\r\n      \"status\": \"PASS\",\r\n      \"detail\": \"removed\"\r\n    }\r\n  },\r\n  \"profile\": \"\",\r\n  \"cleanup_requested\": true,\r\n  \"schema\": \"sftp-smoke/1\"\r\n}"
+    },
+    {
+      "id": "WE-04a",
+      "title": "remote editor save - create remote probe dir + upload seed",
+      "command": "-m hpc_gui.cli --format json --host 192.168.250.11 --port 22 --user hpctest --key C:\\Users\\mskomek\\AppData\\Local\\hpc-client-gui-lab\\id_ed25519 --timeout 90 files mkdir /srv/hpc/home/hpctest/w57-we-20260927T224335Z",
+      "exit_code": 0,
+      "timed_out": false,
+      "expectation": "exit_0",
+      "ok": true,
+      "duration_s": 1.13,
+      "output": "{\r\n  \"operation\": \"mkdir\",\r\n  \"path\": \"/srv/hpc/home/hpctest/w57-we-20260927T224335Z\",\r\n  \"status\": \"ok\"\r\n}"
+    },
+    {
+      "id": "WE-04b",
+      "title": "remote editor save - upload seed file",
+      "command": "-m hpc_gui.cli --format json --host 192.168.250.11 --port 22 --user hpctest --key C:\\Users\\mskomek\\AppData\\Local\\hpc-client-gui-lab\\id_ed25519 --timeout 90 files upload D:\\Projeler\\hpc-client-gui\\.tmp\\w57-repair-113\\stage\\editor\\seed.txt /srv/hpc/home/hpctest/w57-we-20260927T224335Z/editor_probe.txt",
+      "exit_code": 0,
+      "timed_out": false,
+      "expectation": "exit_0",
+      "ok": true,
+      "duration_s": 1.19,
+      "output": "{\r\n  \"operation\": \"upload\",\r\n  \"source\": \"D:\\\\Projeler\\\\hpc-client-gui\\\\.tmp\\\\w57-repair-113\\\\stage\\\\editor\\\\seed.txt\",\r\n  \"destination\": \"/srv/hpc/home/hpctest/w57-we-20260927T224335Z/editor_probe.txt\",\r\n  \"files\": 1,\r\n  \"verified\": false,\r\n  \"policy\": \"overwrite\"\r\n}\r\n\rupload: 100% (36/36 bytes)"
+    },
+    {
+      "id": "WE-04c",
+      "title": "remote editor save - download/edit/upload with --verify",
+      "command": "-m hpc_gui.cli --format json --host 192.168.250.11 --port 22 --user hpctest --key C:\\Users\\mskomek\\AppData\\Local\\hpc-client-gui-lab\\id_ed25519 --timeout 90 edit --editor D:\\Projeler\\hpc-client-gui\\.venv\\Scripts\\python.exe D:\\Projeler\\hpc-client-gui\\.tmp\\w57-repair-113\\w57_editor_probe.py --verify /srv/hpc/home/hpctest/w57-we-20260927T224335Z/editor_probe.txt",
+      "exit_code": 0,
+      "timed_out": false,
+      "expectation": "exit_0",
+      "ok": true,
+      "duration_s": 1.36,
+      "output": "{\r\n  \"remote_path\": \"/srv/hpc/home/hpctest/w57-we-20260927T224335Z/editor_probe.txt\",\r\n  \"changed\": true,\r\n  \"status\": \"updated\"\r\n}"
+    },
+    {
+      "id": "WE-04d",
+      "title": "remote editor save - remote readback and marker proof",
+      "command": "-m hpc_gui.cli --format json --host 192.168.250.11 --port 22 --user hpctest --key C:\\Users\\mskomek\\AppData\\Local\\hpc-client-gui-lab\\id_ed25519 --timeout 90 sh -- bash -c printf %s c2V0IC11CmNhdCAnL3Nydi9ocGMvaG9tZS9ocGN0ZXN0L3c1Ny13ZS0yMDI2MDkyN1QyMjQzMzVaL2VkaXRvcl9wcm9iZS50eHQnCnByaW50ZiAnbWFya2VyX2xpbmVzPSVzXG4nICIkKGdyZXAgLWMgJ3c1Ny13b3Jrc3RyZWFtLWUtZWRpdG9yLXNhdmUnICcvc3J2L2hwYy9ob21lL2hwY3Rlc3QvdzU3LXdlLTIwMjYwOTI3VDIyNDMzNVovZWRpdG9yX3Byb2JlLnR4dCcpIgp0ZXN0ICIkKGdyZXAgLWMgJ3c1Ny13b3Jrc3RyZWFtLWUtZWRpdG9yLXNhdmUnICcvc3J2L2hwYy9ob21lL2hwY3Rlc3QvdzU3LXdlLTIwMjYwOTI3VDIyNDMzNVovZWRpdG9yX3Byb2JlLnR4dCcpIiAtZ2UgMQ== | base64 -d | bash -s",
+      "exit_code": 0,
+      "timed_out": false,
+      "expectation": "exit_0",
+      "ok": true,
+      "duration_s": 1.14,
+      "output": "{\r\n  \"stdout\": \"w57-workstream-e-remote-editor-save\\r\\n# w57-workstream-e-editor-save 1\\r\\nmarker_lines=1\\n\",\r\n  \"stderr\": \"\",\r\n  \"exit_code\": 0\r\n}"
+    },
+    {
+      "id": "WE-05a",
+      "title": "jobs - list (before submit)",
+      "command": "-m hpc_gui.cli --format json --host 192.168.250.11 --port 22 --user hpctest --key C:\\Users\\mskomek\\AppData\\Local\\hpc-client-gui-lab\\id_ed25519 --timeout 90 jobs list",
+      "exit_code": 0,
+      "timed_out": false,
+      "expectation": "exit_0",
+      "ok": true,
+      "duration_s": 1.15,
+      "output": "{\r\n  \"result\": \"\"\r\n}"
+    },
+    {
+      "id": "WE-05b",
+      "title": "jobs - submit real batch script",
+      "command": "-m hpc_gui.cli --format json --host 192.168.250.11 --port 22 --user hpctest --key C:\\Users\\mskomek\\AppData\\Local\\hpc-client-gui-lab\\id_ed25519 --timeout 90 files upload --mode binary D:\\Projeler\\hpc-client-gui\\.tmp\\w57-repair-113\\stage\\job_probe.sh /srv/hpc/home/hpctest/w57-we-20260927T224335Z/job_probe.sh",
+      "exit_code": 0,
+      "timed_out": false,
+      "expectation": "exit_0",
+      "ok": true,
+      "duration_s": 1.13,
+      "output": "{\r\n  \"operation\": \"upload\",\r\n  \"source\": \"D:\\\\Projeler\\\\hpc-client-gui\\\\.tmp\\\\w57-repair-113\\\\stage\\\\job_probe.sh\",\r\n  \"destination\": \"/srv/hpc/home/hpctest/w57-we-20260927T224335Z/job_probe.sh\",\r\n  \"files\": 1,\r\n  \"verified\": false,\r\n  \"policy\": \"overwrite\"\r\n}\r\n\rupload: 100% (200/200 bytes)"
+    },
+    {
+      "id": "WE-05c",
+      "title": "jobs - submit (sbatch) and capture job id",
+      "command": "-m hpc_gui.cli --format json --host 192.168.250.11 --port 22 --user hpctest --key C:\\Users\\mskomek\\AppData\\Local\\hpc-client-gui-lab\\id_ed25519 --timeout 90 jobs submit /srv/hpc/home/hpctest/w57-we-20260927T224335Z/job_probe.sh --yes",
+      "exit_code": 0,
+      "timed_out": false,
+      "expectation": "exit_0",
+      "ok": true,
+      "duration_s": 1.15,
+      "output": "{\r\n  \"result\": \"Submitted batch job 80\\n\"\r\n}"
+    },
+    {
+      "id": "WE-05d",
+      "title": "jobs - status of submitted job 80",
+      "command": "-m hpc_gui.cli --format json --host 192.168.250.11 --port 22 --user hpctest --key C:\\Users\\mskomek\\AppData\\Local\\hpc-client-gui-lab\\id_ed25519 --timeout 90 jobs status 80",
+      "exit_code": 0,
+      "timed_out": false,
+      "expectation": "exit_0",
+      "ok": true,
+      "duration_s": 1.15,
+      "output": "{\r\n  \"result\": \"JobId=80 JobName=w57we\\n   UserId=hpctest(1000) GroupId=hpctest(1000) MCS_label=N/A\\n   Priority=1 Nice=0 Account=local QOS=normal\\n   JobState=RUNNING Reason=None Dependency=(null)\\n   Requeue=1 Restarts=0 BatchFlag=1 Reboot=0 ExitCode=0:0\\n   RunTime=00:00:07 TimeLimit=00:05:00 TimeMin=N/A\\n   SubmitTime=2026-09-27T22:43:50 EligibleTime=2026-09-27T22:43:50\\n   AccrueTime=2026-09-27T22:43:50\\n   StartTime=2026-09-27T22:43:50 EndTime=2026-09-27T22:48:50 Deadline=N/A\\n   SuspendTime=None SecsPreSuspend=0 LastSchedEval=2026-09-27T22:43:50 Scheduler=Backfill\\n   Partition=debug AllocNode:Sid=login-control01:9171\\n   ReqNodeList=(null) ExcNodeList=(null)\\n   NodeList=compute01\\n   BatchHost=compute01\\n   NumNodes=1 NumCPUs=1 NumTasks=1 CPUs/Task=1 ReqB:S:C:T=0:0:*:*\\n   ReqTRES=cpu=1,mem=1792M,node=1,billing=1\\n   AllocTRES=cpu=1,node=1,billing=1\\n   Socks/Node=* NtasksPerN:B:S:C=0:0:*:* CoreSpec=*\\n   MinCPUsNode=1 MinMemoryNode=0 MinTmpDiskNode=0\\n   Features=(null) DelayBoot=00:00:00\\n   OverSubscribe=OK Contiguous=0 Licenses=(null) Network=(null)\\n   Command=/srv/hpc/home/hpctest/w57-we-20260927T224335Z/job_probe.sh\\n   WorkDir=/srv/hpc/home/hpctest/w57-we-20260927T224335Z\\n   StdErr=/srv/hpc/home/hpctest/w57-we-20260927T224335Z/w57we-80.out\\n   StdIn=/dev/null\\n   StdOut=/srv/hpc/home/hpctest/w57-we-20260927T224335Z/w57we-80.out\\n   Power=\\n   \\n\\n\"\r\n}"
+    },
+    {
+      "id": "WE-05e",
+      "title": "jobs - cancel job 80",
+      "command": "-m hpc_gui.cli --format json --host 192.168.250.11 --port 22 --user hpctest --key C:\\Users\\mskomek\\AppData\\Local\\hpc-client-gui-lab\\id_ed25519 --timeout 90 jobs cancel 80 --yes",
+      "exit_code": 0,
+      "timed_out": false,
+      "expectation": "exit_0",
+      "ok": true,
+      "duration_s": 1.14,
+      "output": "{\r\n  \"result\": \"OK\"\r\n}"
+    },
+    {
+      "id": "WE-05f",
+      "title": "jobs - accounting readback for 80",
+      "command": "-m hpc_gui.cli --format json --host 192.168.250.11 --port 22 --user hpctest --key C:\\Users\\mskomek\\AppData\\Local\\hpc-client-gui-lab\\id_ed25519 --timeout 90 jobs accounting",
+      "exit_code": 0,
+      "timed_out": false,
+      "expectation": "exit_0",
+      "ok": true,
+      "duration_s": 1.33,
+      "output": "{\r\n  \"result\": \"76|hostname|CANCELLED by 1000|00:00:00|||0:0\\n77|hostname|CANCELLED by 1000|00:00:00|||0:0\\n78|sbatch|COMPLETED|00:00:03||billing=1,cpu=1,node=1|0:0\\n78.batch|batch|COMPLETED|00:00:03||cpu=1,mem=0,node=1|0:0\\n79|w57we|CANCELLED by 1000|00:00:09||billing=1,cpu=1,node=1|0:0\\n79.batch|batch|CANCELLED|00:00:09||cpu=1,mem=0,node=1|0:15\\n80|w57we|CANCELLED by 1000|00:00:08||billing=1,cpu=1,node=1|0:0\\n80.batch|batch|CANCELLED|00:00:08||cpu=1,mem=0,node=1|0:15\\n\"\r\n}"
+    },
+    {
+      "id": "WE-06",
+      "title": "terminal class - remote shell transport + tty probe",
+      "command": "-m hpc_gui.cli --format json --host 192.168.250.11 --port 22 --user hpctest --key C:\\Users\\mskomek\\AppData\\Local\\hpc-client-gui-lab\\id_ed25519 --timeout 90 sh -- bash -c printf %s cHJpbnRmICdXRS0wNiBzaGVsbD0lcyBwdHlfc2xhdmU9JXNcbicgIiRTSEVMTCIgIiQodGVzdCAtdCAwICYmIGVjaG8geWVzIHx8IGVjaG8gbm8pIgpwcyAtbyBwaWQsY29tbSAtcCAkJA== | base64 -d | bash -s",
+      "exit_code": 0,
+      "timed_out": false,
+      "expectation": "exit_0",
+      "ok": true,
+      "duration_s": 1.15,
+      "output": "{\r\n  \"stdout\": \"WE-06 shell=/bin/bash pty_slave=no\\n    PID COMMAND\\n   9416 bash\\n\",\r\n  \"stderr\": \"\",\r\n  \"exit_code\": 0\r\n}"
+    },
+    {
+      "id": "WE-07",
+      "title": "cleanup - remove disposable remote probe directory",
+      "command": "-m hpc_gui.cli --format json --host 192.168.250.11 --port 22 --user hpctest --key C:\\Users\\mskomek\\AppData\\Local\\hpc-client-gui-lab\\id_ed25519 --timeout 90 files rm --recursive --yes /srv/hpc/home/hpctest/w57-we-20260927T224335Z",
+      "exit_code": 0,
+      "timed_out": false,
+      "expectation": "exit_0",
+      "ok": true,
+      "duration_s": 1.14,
+      "output": "{\r\n  \"operation\": \"rm\",\r\n  \"path\": \"/srv/hpc/home/hpctest/w57-we-20260927T224335Z\",\r\n  \"status\": \"ok\"\r\n}"
+    },
+    {
+      "id": "WE-08",
+      "title": "post-cleanup - verify remote probe dir is gone",
+      "command": "-m hpc_gui.cli --format json --host 192.168.250.11 --port 22 --user hpctest --key C:\\Users\\mskomek\\AppData\\Local\\hpc-client-gui-lab\\id_ed25519 --timeout 90 files ls \\srv\\hpc\\home\\hpctest\\w57-we-20260927T224335Z",
+      "exit_code": 1,
+      "timed_out": false,
+      "expectation": "observed",
+      "ok": true,
+      "duration_s": 1.11,
+      "output": "{\r\n  \"error\": {\r\n    \"message\": \"Not found: \\\\srv\\\\hpc\\\\home\\\\hpctest\\\\w57-we-20260927T224335Z\",\r\n    \"exit_code\": 1\r\n  }\r\n}"
+    }
+  ],
+  "generated_at": "2026-09-27T22:44:04.1119026Z"
+}

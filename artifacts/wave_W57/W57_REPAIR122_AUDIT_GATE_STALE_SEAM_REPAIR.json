@@ -1,0 +1,104 @@
+{
+  "wave": "W57",
+  "phase": "repair",
+  "phase_instance_id": "20260925-074235-63df86b0:122:W57:repair",
+  "produced_by": "opencode repair executor (W57 owned)",
+  "produced_at_utc": "2026-09-28T01:22:02.917139+00:00",
+  "head": "f6ab257fbfd62d402e31e9330f30bb017b795fa8",
+  "finding": "DEF-W57-007",
+  "root_cause": {
+    "class": "stale_test_seam",
+    "detail": "audit_receipt_valid() reads HEAD through the module alias engine_git_capability(repo) at run-wave-program.py:2318 and never calls git(). The 4 maintained tests monkeypatched controller.git, so the patch was a silent no-op.",
+    "consequence": "tmp_path is not a Git repo, so git_capability() returned has_head=False and the gate correctly took its documented 'No Git/HEAD' branch (return not recorded_head), which is False when a candidate SHA is recorded.",
+    "production_defect": false,
+    "gate_is_correct": true
+  },
+  "change": {
+    "file": "tests/test_wave_controller_regressions.py",
+    "kind": "test seam retarget",
+    "seam_retargets": 4,
+    "assertion_changes": 0,
+    "production_files_changed": 0,
+    "before": "monkeypatch.setattr(controller, \"git\", lambda *_args: (0, \"head-1\"))",
+    "after": "monkeypatch.setattr(controller, \"engine_git_capability\", lambda _repo: {\"has_head\": True, \"head\": \"head-1\"})"
+  },
+  "ownership_correction": {
+    "prior_claim": "the maintained test guards a declared controller_restart_path already routed as DEF-W57-007, so it must not be edited",
+    "verdict": "false",
+    "evidence": "profile controller_restart_paths contains 13 entries, all under .opencode/, and ZERO under tests/. The test file is instead explicitly listed in evidence.allowed_closeout_only_paths, i.e. an authorized closeout surface.",
+    "method": "python json read of .opencode/protocol/WAVE_PROJECT_PROFILE.json"
+  },
+  "mutation_test": {
+    "purpose": "prove the retargeted tests are live and that this is not test-weakening",
+    "technique": "isolated scratch copy under .tmp/; production audit_receipt_valid mutated to drop the tested_content_identity binding",
+    "mutant_plus_pre_fix_test": {
+      "result": "2 failed, 15 passed",
+      "kills_mutant": false
+    },
+    "mutant_plus_retargeted_test": {
+      "result": "1 failed, 16 passed (test_audit_close_receipt_invalidates_on_content_change)",
+      "kills_mutant": true
+    },
+    "conclusion": "The pre-fix suite could not detect removal of the audit identity binding. The retargeted suite does. Negative coverage strictly increased; no assertion was relaxed."
+  },
+  "retest": {
+    "focused_w57_owned": "30 passed, exit 0",
+    "prior_phase_focused_w57_owned": "2 failed, 28 passed, exit 1",
+    "audit_close_gate_file": "17 passed, exit 0",
+    "broader_regression": "62 passed, 3316 deselected, exit 0 (-k 'controller or wave_program or orchestration or routing')"
+  },
+  "validator_state": {
+    "validate-wave-orchestration.py": "PASS (AC_WAVE_ORCHESTRATION_VALIDATION: PASS, 61 Waves)",
+    "validate-wave-authoring.py": "PASS (AC_WAVE_AUTHORING_VALIDATION: PASS, 61 Waves)",
+    "validate-agent-parity.py": "PASS",
+    "validate-wave-program.py": "PASS",
+    "validate-managed-runtime.py": "FAIL exit 1, 7 behaviours - PRE-EXISTING, proven independent",
+    "validate-ac-project.py": "FAIL exit 1, materialization stale on controller-managed files - controller surface",
+    "validate_wave_closeout.py --wave W57": "can_close=false: no WAVE_W57_EVIDENCE_MANIFEST.json"
+  },
+  "independent_baseline_proof": {
+    "method": "temporarily reverted the test file via git checkout, re-ran validate-managed-runtime.py, then restored",
+    "result": "byte-identical 7-behaviour error list before and after the change",
+    "conclusion": "validate-managed-runtime.py red is not caused or masked by this repair"
+  },
+  "remaining_blockers": {
+    "DEF-W57-006": {
+      "state": "OPEN, re-verified independently in this phase",
+      "class": "genuine unavailable external operator authority",
+      "measurements": {
+        "icmp_192.168.250.13_reachable": false,
+        "slurm_node_state": "compute01|idle, compute02|down*",
+        "IsAdministrator": false,
+        "Get-VM": "refused: required permission / authorization policy"
+      },
+      "blocks": [
+        "FREEZE-030",
+        "FREEZE-040",
+        "two-node leg of TODO-014"
+      ],
+      "w57_repairable": false,
+      "note": "No repository or product defect. External Hyper-V/operator authority only."
+    },
+    "evidence_manifest": {
+      "state": "deliberately unwritten",
+      "reason": "validate_wave_closeout.py accepts only ACCEPTANCE_GREEN/CLOSED. FREEZE-030/-040 are red on DEF-W57-006, so a green manifest would be a fabrication. Correct behaviour, not a defect."
+    },
+    "validate-managed-runtime.py": {
+      "state": "OPEN, routed to controller",
+      "dominant_signature": "unexpected dispatch plan; next scripted=[{'phase': 'run', 'status': 'READY_FOR_AUDIT'}]",
+      "owner": "controller + .opencode orchestration runtime (DEF-W57-007)",
+      "w57_repairable": false
+    }
+  },
+  "files_changed": [
+    "tests/test_wave_controller_regressions.py"
+  ],
+  "files_not_touched": [
+    ".opencode/scripts/run-wave-program.py",
+    ".opencode/scripts/wave_state_engine.py",
+    ".opencode/protocol/WAVE_PROJECT_PROFILE.json",
+    ".git/info/exclude"
+  ],
+  "fabrication_guard": "No evidence manifest, no ACCEPTANCE_GREEN, no freeze declaration, no PASS claim was produced. No test was weakened, skipped or xfailed. No credential or secret was used or requested.",
+  "test_file_sha256": "9eafa5b769344070b0d9a460da433a8eaee0aa486119f0bb74146b7c59ac897d"
+}

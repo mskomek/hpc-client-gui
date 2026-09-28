@@ -1,0 +1,33 @@
+{
+  "status": "PASS",
+  "temp_dir": "truba_smoke_20260927T224339Z_609d120c",
+  "stages": {
+    "temp_dir": {
+      "status": "PASS",
+      "detail": "created"
+    },
+    "upload": {
+      "status": "PASS",
+      "detail": "uploaded"
+    },
+    "list": {
+      "status": "PASS",
+      "detail": "present"
+    },
+    "download": {
+      "status": "PASS",
+      "detail": "verified"
+    },
+    "checksum": {
+      "status": "PASS",
+      "detail": "verified"
+    },
+    "cleanup": {
+      "status": "PASS",
+      "detail": "removed"
+    }
+  },
+  "profile": "",
+  "cleanup_requested": true,
+  "schema": "sftp-smoke/1"
+}

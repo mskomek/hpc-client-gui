@@ -1,0 +1,99 @@
+{
+  "artifact": "W57_REPAIR111_ROOT_CAUSE_PROOF",
+  "wave": "W57",
+  "phase": "repair",
+  "phase_instance_id": "20260925-074235-63df86b0:111:W57:repair",
+  "finding_id": "DEF-W57-016",
+  "prior_hypothesis_status": "DISPROVEN",
+  "prior_hypothesis": "multi-display ClientToScreen/SetCursorPos coordinate virtualization for a WebView host on a non-primary display (recorded by run phase 110 as an unproven hypothesis)",
+  "proven_cause": "Stale topmost Windows Error Reporting crash dialogs (WerFault.exe, class #32770, window title \"Python\") spawned by crashed python.exe processes occupy the packaged smoke frame's WebView centre click point and reclaim foreground at the moment of the synthetic left click.",
+  "measurement_method": "Non-destructive 10ms GetForegroundWindow poller (.tmp/w57-repair-111/fg_watch.py) running concurrently with the UNMODIFIED maintained harness scripts/wx_packaged_smoke.py. No input was sent and no window state was changed by the watcher.",
+  "foreground_timeline": [
+    {
+      "t_seconds": 0.001,
+      "hwnd": 4791140,
+      "pid": 75660,
+      "process": "WerFault.exe",
+      "class": "#32770",
+      "title": "Python",
+      "rect": [
+        769,
+        394,
+        1135,
+        580
+      ],
+      "meaning": "crash dialog owns foreground before the smoke child starts"
+    },
+    {
+      "t_seconds": 6.633,
+      "hwnd": 5969520,
+      "pid": 71620,
+      "process": "hpc-client-gui.exe",
+      "class": "wxWindowNR",
+      "title": "HPC Client GUI 1.5.9",
+      "rect": [
+        130,
+        130,
+        1410,
+        890
+      ],
+      "meaning": "smoke frame correctly claims foreground; wx_shell.py:2296 guard passes, so \"foreground_lost\" is NOT raised"
+    },
+    {
+      "t_seconds": 7.049,
+      "hwnd": 4791140,
+      "pid": 75660,
+      "process": "WerFault.exe",
+      "class": "#32770",
+      "title": "Python",
+      "rect": [
+        769,
+        394,
+        1135,
+        580
+      ],
+      "meaning": "0.416s later the topmost crash dialog reclaims foreground at the synthetic click; wx_shell.py:2373 raises keyboard_input:foreground_lost_after_terminal_click and the 6 dependent checks cascade to FAIL"
+    }
+  ],
+  "geometric_confirmation": {
+    "smoke_frame_rect": [
+      130,
+      130,
+      1410,
+      890
+    ],
+    "webview_centre_click_point": [
+      770,
+      510
+    ],
+    "werfault_dialog_rect": [
+      769,
+      394,
+      1135,
+      580
+    ],
+    "click_point_inside_dialog": true,
+    "click_point_offset_inside_dialog_left_edge_px": 1,
+    "note": "SendInput delivers the left click to the topmost window at the cursor position, not to the intended frame, so the click never reaches the xterm WebView. This is a desktop-contamination effect, not a coordinate-virtualization effect and not a product defect."
+  },
+  "supporting_environment_facts": {
+    "werfault_process_ids": [
+      75660,
+      72708,
+      71140,
+      60484
+    ],
+    "werfault_start_times_local": [
+      "2026-09-27T23:48:39",
+      "2026-09-27T23:57:22",
+      "2026-09-28T00:02:37",
+      "2026-09-28T00:06:48"
+    ],
+    "crashed_image": "python.exe",
+    "crash_dumps_archived": "C:\\Users\\mskomek\\AppData\\Local\\CrashDumps\\python.exe*.dmp (23:31-23:34)",
+    "wer_reports_archived": "C:\\ProgramData\\Microsoft\\Windows\\WER\\ReportArchive\\AppCrash_python.exe_* (23:34-00:07)",
+    "display_topology": "DISPLAY1 primary 1920x1080 at X=0; DISPLAY4 secondary 1920x1080 at X=1920 (Parsec Virtual Display Driver attached 19:21); virtual desktop 3840x1080",
+    "secondary_display_relevance": "The secondary display exists but the proven foreground stealer sits on the PRIMARY display, inside the smoke frame rect. The multi-display explanation is not required and is not supported."
+  },
+  "product_independence": "The product source is unchanged by this repair; the diagnosis is environmental. wx_shell.py click-path hardening remains an outward-routed owner question (DEF-W57-016 owner still UNRESOLVED) and is deliberately NOT patched by W57."
+}

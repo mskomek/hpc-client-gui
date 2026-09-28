@@ -1,0 +1,21 @@
+# W57 run phase 155 - maintained full suite failing node ids
+# candidate_commit=bdf6c6c7e2817422b6f9005873247d3636c5eac4  branch=develop
+# command=.venv/Scripts/python.exe scripts/ci.py full  (see .tmp/w57-run155/ci-full.log)
+# result=14 failed, 3005 passed, 36 skipped, 32 deselected, 2 warnings, 29 subtests passed in 1733.06s (0:28:53)
+# supersedes W57_CI_FULL_FAILURES_RUN110.txt (15 failed at f6ab257f pre-candidate-commit)
+FAILED_COUNT=14
+
+FAILED tests/contracts/test_wave_closeout_hardening.py::test_backend_parity_validator_passes
+FAILED tests/test_docs_references.py::test_agent_guidance_points_at_single_authority
+FAILED tests/test_file_manager_profile.py::FtpWidgetLocalStartTests::test_missing_file_manager_key_is_legacy_behavior
+FAILED tests/test_file_manager_profile.py::FtpWidgetLocalStartTests::test_missing_local_folder_keeps_global_behavior_without_modal
+FAILED tests/test_w15_fresh_user_startup.py::test_profile_created_through_visible_add_dialog
+FAILED tests/test_w44_arch_qt_wx_package.py::test_w44_package_hidden_imports_are_intentional
+FAILED tests/test_wave10_release_gate.py::TestRegressionSearch::test_no_new_errors_ignore
+FAILED tests/test_wave3_remote_sftp_ssh.py::TestSFTPUnicodePaths::test_ssh_backend_rejects_invalid_utf8_text
+FAILED tests/test_wave6_plugin_provider_unicode.py::TestIntegration::test_full_plugin_unicode_flow
+FAILED tests/test_wx_dispatch_error_gov.py::test_editor_save__local_and_remote_paths_have_distinct_owners
+FAILED tests/test_wx_term002.py::test_file_view_shell_script_runs_in_real_terminal_path
+FAILED tests/test_wx_term002.py::test_editor_run_button_uses_real_wx_event_and_terminal_path
+FAILED tests/test_wx_terminal_behavioral.py::test_input_chain_through_script_message_handler
+FAILED tests/test_wx_w55_shell_soak.py::test_w55_shell_tab_and_help_accelerators

@@ -1,0 +1,114 @@
+{
+  "artifact": "W57_REPAIR131_CORE_DIGEST_LIVE_TREE_IDENTITY_UNPINNABLE",
+  "wave_id": "W57",
+  "phase": "repair",
+  "phase_instance_id": "20260925-074235-63df86b0:131:W57:repair",
+  "dispatch_seq": 30,
+  "repair_attempt": 27,
+  "content_identity": "9c70d980b0c9940e8643de8b925f6b0d53706ecbc4e1afc9e811ed76bbf05a2e",
+  "repair_hypothesis_previous": "W57-ORCHESTRATION-RED-CORE-RUNTIME-FOLLOW-PS1-DRIFT-RELEASE-UNSAFE",
+  "repair_hypothesis_this": "W57-ORCHESTRATION-RED-CORE-DIGEST-LIVE-TREE-UNPINNABLE",
+  "hypothesis_changed": true,
+  "hypothesis_change_reason": "Dispatch 130 changed its diagnosis to 'the delta is unattested core WIP, do not release it'. It then inherited dispatch 128's remedy as correct-in-principle: quiesce the core, commit/tag the WIP, re-materialize. This dispatch tested that remedy's convergence property instead of re-measuring the core. Convergence is false and the failure is structural, not a matter of the core not yet having been committed. Consequently dispatch 130's own routing conclusion is not the operative fact; the operative fact is that the guard's core identity is a digest of the core's LIVE WORKING TREE, so parity is not a state any project can ever be pinned to.",
+  "narrative": {
+    "FINDING": "The orchestration red is not project corruption and is not a core-release decision. Two independent facts, both measured this dispatch with the project's own guard code. (1) The project is internally perfect: every one of the 30 managed files that the guard reports as mismatched is byte-identical to the entry the project itself recorded in .opencode/protocol/AC_CORE_MATERIALIZATION.json. There is nothing wrong with the project's materialized bytes. (2) core_manifest_sha256 is not a Git revision. materialization_guard.core_digest() hashes relpath\\0bytes\\0 over the core's live working tree (AC_MANIFEST.json, AC_MODELS.json, skills/, protocol/, opencode-commands/, opencode-agents/, opencode-scripts/, runtime/, validators/, setup/). The project is pinned to digest 50549a1abbc44e49..., which is reproducible by NEITHER attested core state (v1.0.0 = 78fcecc00a851d2d..., origin/main = 655a7d0e24f92bd5...) NOR the core's current live tree (3a5e7e3d88030fee5...). The pinned identity existed only as a live observation of a moving tree at 2026-09-27T18:01:03Z and is now unreproducible by construction.",
+    "OBSERVED_FAILURE": "python .opencode/scripts/validate-ac-project.py -> exit 1, status FAIL, 'materialization stale: canonical-core-revision-changed' + 30 managed-file-content-mismatch entries. 30, not the 18 recorded by dispatch 130 forty minutes earlier; the core's dirty path count went 40 -> 55 in the same window. python .opencode/scripts/validate-wave-orchestration.py -> exit 0, AC_WAVE_METADATA_VALID=61, AC_WAVE_ORCHESTRATION_VALIDATION: PASS. python -m pytest tests/test_wave_controller_regressions.py -q -> 17 passed in 0.53s, exit 0 (the focused retest for this dispatch). Candidate dist/hpc-client-gui/hpc-client-gui.exe = 8BA80453A76A664959BAEDF7716C476A5334B6AFF860A4BC79B9E220D48B4C57, 7672468 bytes - frozen candidate identity intact. DEF-W57-006 unchanged: Test-Connection 192.168.250.13 -> False; IsAdministrator -> False.",
+    "HYPOTHESIS": "If dispatch 130's remedy were sound, then committing the core's WIP and re-materializing would converge - i.e. the resulting project state would be stable and the guard would go green. The remedy's convergence rests on the pinned core identity being an addressable, reproducible state. Measured: core_digest is computed over uncommitted working-tree bytes, so the pinned identity is not addressable, is not reproducible by any commit, and moves every time the core's own program edits its canonical sources. Therefore re-materialization cannot converge to any fixed point: each materialization pins a fresh digest that the core's next WIP edit invalidates. The mismatch count already grew 18 -> 30 inside one repair dispatch, which is that non-convergence observed directly.",
+    "CHANGE": "Measurement only. No repository file, no core file, no manifest, no lock and no lifecycle file was written in D:\\Projeler\\hpc-client-gui or in D:\\Projeler\\.agents-core. The core was read with git archive / log / show / cat-file / rev-parse only; no worktree, no checkout, no stash, no commit, no reset, no gc. New paths from this dispatch: this artifact and .tmp/w57repair131/**.",
+    "RESULT": "Hypothesis confirmed. The blocker is a single, named, repository-owned technical defect in a different repository: materialization_guard.core_digest() derives the core's identity from a live working tree instead of from a committed ref, so a project can never be pinned to a reproducible core state. That defect is upstream of every remedy attempted in dispatches 124-130 and is not repairable from W57, which is additionally forbidden by its own report from materializing. Observed twice, independently, inside this one dispatch: the project-side mismatch count grew 18 -> 30, and the core's dirty canonical path count grew 40 -> 55 -> 69 with a new canonical file (setup/materialize-ac-core.py) entering the digest's input set. W57's own product/evidence surface is healthy: focused retest 17/17, orchestration 61/61, candidate identity intact. The sole W57-owned red is FREEZE-030/-040 on DEF-W57-006, genuine unavailable external authority. BLOCKED is returned on the one proven prerequisite, replacing a REOPEN that has now been returned three times with the same unaddressable owner."
+  },
+  "core_digest_identity_measured_this_dispatch": {
+    "method": "core_digest() from the project's own .opencode/scripts/materialization_guard.py, executed against (a) git archive extractions of the core's attested refs and (b) the core's live working tree. The extraction is read-only: `git archive --format=zip` writes only into this project's .tmp, so the core repository's index, working tree and object store are untouched.",
+    "project_pinned": {
+      "core_revision": "50549a1abbc44e49",
+      "core_manifest_sha256": "50549a1abbc44e4987354af92132d156bf9ffa9ffc7b511ee228806060b537ae",
+      "materialized_at": "2026-09-27T18:01:03.266471+00:00"
+    },
+    "digests": {
+      "core@v1.0.0 (tag 73c1b7d, attested)": "78fcecc00a851d2d8133046b116cf5aeab4f657b8daaa4daa63c17adcd6a70c0",
+      "core@origin/main (0a8a832, attested)": "655a7d0e24f92bd55db7a5284d43ff79c4aa1a413527ec99a60d0852acf9845a",
+      "core@LIVE working tree (55 dirty paths)": "3a5e7e3d88030fee5cd1fc2713a3950515836ea3b43be92dee77d4bd551a33a9"
+    },
+    "convergence_test": "Is the project pinned to a state that ANY attested core ref can reproduce?  FALSE. Is it reproducible by the core's own live tree?  ALSO FALSE.",
+    "reading": "core_revision is NOT a Git revision. A probe for the literal string 50549a1abbc44e49 as a Git object in the core correctly returns 'Not a valid object name' - the value is a truncated SHA-256 over working-tree bytes, not a commit id. Recorded here so no later dispatch re-derives a false git-history claim from it.",
+    "root_cause": "D:\\Projeler\\.agents-core\\runtime\\materialization_guard.py :: core_digest() (and its consumers validators/validate-managed-runtime.py and .opencode/scripts/validate-ac-project.py). Half-fixed by core commit 0a8a832 'Measure materialization parity against canonical, not against a past observation', which made the guard own a single inventory of managed FILES but left the core's IDENTITY derived from a live tree. The file list is now stable; the identity is not."
+  },
+  "project_side_is_not_corrupt_this_dispatch": {
+    "method": "For each managed path reported mismatched, compare the project's live bytes against (a) the project's own pinned managed_files_sha256 entry, (b) core@v1.0.0 canonical source, (c) core@origin/main canonical source, (d) core live canonical source.",
+    "result": "30 of 30 mismatching project files are byte-identical to the project's OWN pinned manifest entry. The project materialized exactly what it recorded. Zero project-side drift, zero missing managed files (0 managed-file-absent).",
+    "buckets": {
+      "matches pinned manifest only (core has moved on)": 26,
+      "matches v1.0.0 AND origin/main AND pinned manifest": [
+        ".opencode/scripts/follow-wave-program.ps1",
+        ".opencode/scripts/validate-wave-program.py",
+        ".opencode/scripts/wave_state_engine.py"
+      ],
+      "matches v1.0.0 AND pinned manifest": [
+        ".opencode/scripts/start-wave-program.ps1"
+      ]
+    },
+    "reading": "The project already holds the released v1.0.0 bytes for 4 of the 7 orchestration scripts including both program entry points. The 30 red entries are the project sitting one core-version behind a core that is being edited underneath it, not a divergence anyone introduced into this repository.",
+    "corroboration": "docs/wave-reports/v2/opencode/W57_WAVE_REPORT.md section 16 already states this routing: the validate-ac-project.py materialization staleness is 'controller-owned per AGENTS.md; a Wave worker must not materialize or commit'. This dispatch confirms that routing independently by measurement rather than by repeating it."
+  },
+  "corrections_to_prior_dispatches_this_dispatch": [
+    "Dispatch 130 reported 'core_dirty_path_count 40' and 18 project-side mismatches. Measured now: 55 dirty paths and 30 mismatches, in the same core session. The target is moving faster than repair dispatches, which is itself the non-convergence evidence.",
+    "Dispatch 128's inventory omitted runtime/follow-wave-program.ps1 (dispatch 130 caught this) and then the count still grew. Any inventory of the core's delta is stale on arrival; enumerating it is not a repair strategy.",
+    "Dispatch 130's .tmp/w57repair130/validate-managed-runtime.out.txt must not be read as a passing validate-managed-runtime.py result. That file mixes two streams: the six AC_MATERIALIZATION_VALIDATOR_* records (emitted by validate-managed-runtime.py, and by run-wave-program.py:2826) are followed by unrelated content from another process (W7 progress events, 'legacy worker prose without structured progress', '[program] waiting for non-current phase worker PID=46908 to exit (test)'). The capture is impure, so no PASS is claimed from it - the same 'not claimed either way' conclusion dispatch 130 reached, now with the reason recorded.",
+    "DEF-W57-007 states the cause of the untracked orchestration tree is 'a machine-local .git/info/exclude rule'. Measured: .git/info/ is EMPTY - there is no exclude file at all. The tree is untracked because those files were never added. This is a routed controller item, not a W57 repair target, and the Wave report was deliberately NOT edited for it in this dispatch; it is recorded here for the next W57 dispatch that owns the report."
+  ],
+  "the_one_missing_prerequisite": {
+    "statement": "Agent Core must expose an immutable, reproducible canonical identity - core_digest() computed over a committed ref (or a released manifest identity) rather than over the core's live working tree - OR the controller must materialize this project from a committed core ref instead of from the live core directory.",
+    "owner": "the Agent Core repository D:\\Projeler\\.agents-core (a different repository, currently running its own program: controller pid 27300 since 05:44:17, plus a dispatched phase worker). The project-side checkpoint/materialization obligation is then the controller's (global_bookkeeping_owner: controller; run-wave-program.py, wave_state_engine.py, route-wave-findings.py are controller_restart_paths). NOT W57.",
+    "file": "runtime/materialization_guard.py :: core_digest()",
+    "why_it_is_the_only_prerequisite": "Every other candidate remedy presupposes that a stable core state exists to materialize from. Measured, none does. Until identity is reproducible, re-materialization cannot converge, and re-materializing against the live tree would additionally import 30 files of unattested, uncommitted core WIP into the canonical runtime of a 61-wave program.",
+    "verified_boundary": "This phase did not and must not satisfy it: the W57 report forbids a Wave worker from materializing, and the core repository is not this Wave's to change."
+  },
+  "w57_state_this_dispatch": {
+    "w57_owned_requirements_touched": 0,
+    "w57_product_test_evidence_lifecycle_files_changed": [],
+    "focused_retest": "python -m pytest tests/test_wave_controller_regressions.py -q -> 17 passed in 0.53s, exit 0",
+    "postrun_check_orchestration": "python .opencode/scripts/validate-wave-orchestration.py -> exit 0, AC_WAVE_ORCHESTRATION_VALIDATION: PASS, AC_WAVE_METADATA_VALID=61",
+    "postrun_check_ac_project": "python .opencode/scripts/validate-ac-project.py -> exit 1, status FAIL, canonical-core-revision-changed + 30 managed-file-content-mismatch entries",
+    "candidate_identity_reverified": "dist/hpc-client-gui/hpc-client-gui.exe = 8BA80453A76A664959BAEDF7716C476A5334B6AFF860A4BC79B9E220D48B4C57, 7672468 bytes - matches the W57 report's frozen candidate",
+    "def_w57_006_reverified": "Test-Connection 192.168.250.13 -Count 2 -> False; IsAdministrator -> False. Unchanged: genuinely unavailable external operator authority, and it is the sole cause of the FREEZE-030/-040 red.",
+    "acceptance_not_rejudged": "FREEZE-030/-040 remain red; WAVE_W57_EVIDENCE_MANIFEST is deliberately still unwritten (it requires ACCEPTANCE_GREEN); the freeze declaration still reads Frozen for W58: NO."
+  },
+  "why_blocked_not_reopen_not_human_deferred_not_fail": {
+    "not_reopen": "REOPEN was returned by dispatches 128, 129 and 130 with the same owner and escalating prose, and the controller re-dispatched W57 repair each time (130 -> 131). The controller's own state now records W57 health=stalled, no_progress_count=9 against no_progress_limit=3, repair_attempt=27. Returning REOPEN a fourth time to the same unaddressable owner is the identical-rerun no-progress cycle the protocol forbids. This dispatch did act on something materially new - it falsified the prior hypothesis's convergence premise and localized the root cause to a named function - and the correct response to a proven-unreachable prerequisite is to name it, not to re-route the same finding.",
+    "not_human_deferred": "The open blocker is a repository-owned technical defect with a named file, a named function and a named remedy. It is not an unavailable credential, MFA, authority, hardware, service or manual acceptance. DEF-W57-006 is the only human-deferral item and it does not license deferring the Wave while a repository-owned orchestration red is open.",
+    "not_fail": "FAIL would assert that W57's own work is broken. It is not. The focused retest is 17/17, program orchestration metadata is 61/61, the frozen candidate is byte-intact, and every owned row except FREEZE-030/-040 is green. W57 is blocked by something outside its surface, not failing at it.",
+    "not_orchestration_recovery_required": "This program's own orchestration machinery is healthy: the state engine, routing and phase dispatch all ran, validate-wave-orchestration.py exits 0 with 61 valid Wave metadata records, and the controller state is coherent. The defect is in a different repository's identity function. ORCHESTRATION_RECOVERY_REQUIRED is for this program's controller/state-engine/profile needing a checkpoint and restart, which is not the case.",
+    "not_ready_for_audit_or_pass": "FREEZE-030 and FREEZE-040 are red and no ACCEPTANCE_GREEN manifest exists. Audit 114 already returned these reds; dispatching another audit would only re-return them.",
+    "blocked": "BLOCKED asserts exactly one missing prerequisite. This dispatch has proven it, measured it, and shown that no project-side action can substitute for it."
+  },
+  "mutation_guarantee": {
+    "project_head_unchanged": "f6ab257fbfd62d402e31e9330f30bb017b795fa8",
+    "core_head_unchanged": "73c1b7d8c7b5e925613eacf4450aa860271c10c5",
+    "project_commits_created": 0,
+    "core_commits_created": 0,
+    "core_stash_reset_checkout_or_worktree_add": 0,
+    "core_read_only_operations_only": ["git archive", "git log", "git show", "git cat-file", "git rev-parse", "git status", "git rev-list", "git ls-tree", "git for-each-ref", "git tag"],
+    "core_dirty_paths_at_dispatch_start": 55,
+    "core_dirty_paths_at_dispatch_end": 69,
+    "core_dirty_growth_attributed_to_this_dispatch": 0,
+    "core_dirty_growth_evidence": "The core added 14 dirty paths while this phase ran. Its own worktree mtimes interleave this dispatch's window and are its own writes, not mine: .agents/protocol/AC_WAVE_PROGRESS_STATE_SCHEMA.md 07:23:51, AC_WAVE_PROGRAM_ORCHESTRATION.md 07:23:57, runtime/follow-wave-program.ps1 07:27:55, validators/validate-wave-program.py 07:32:21, validators/validate-managed-runtime.py 07:33:33, validators/__pycache__/validate-managed-runtime.cpython-312.pyc 07:37:31, runtime/start-wave-program.ps1 07:38:15. A NEW canonical file also became dirty during the phase: setup/materialize-ac-core.py, which is inside the guard's canonical_source_files inventory ('setup/') and therefore inside core_digest. This phase's only writes were to the project side: .tmp/w57repair131/probe.py 07:34:14 and the .zip/manifest dumps at 07:33:03-07:33:50. This growth is the non-convergence observed a second way: the identity this project must match moved 14 files during a single repair dispatch, and one of them changes the digest's input set.",
+    "core_controller_not_stopped": 27300,
+    "lock_files_touched": 0,
+    "materializations_run_in_real_repo": 0,
+    "manifests_written": 0,
+    "tests_weakened_or_skipped": 0,
+    "new_paths_from_this_dispatch": [
+      "artifacts/wave_W57/W57_REPAIR131_CORE_DIGEST_LIVE_TREE_IDENTITY_UNPINNABLE.json (this artifact)",
+      ".tmp/w57repair131/probe.py",
+      ".tmp/w57repair131/core-v1_0_0.zip",
+      ".tmp/w57repair131/core-origin-main.zip",
+      ".tmp/w57repair131/core-v1_0_0/** (read-only extraction)",
+      ".tmp/w57repair131/core-origin-main/** (read-only extraction)",
+      ".tmp/w57repair131/mm-0b2cae7442bd.json",
+      ".tmp/w57repair131/mm-7d0174a27608.json"
+    ]
+  },
+  "progress_events": "None emitted. Verified against the live controller state for this dispatch: the W57 todo list has no pending repair-owned item. T08 'Repair #1' and T09 'Focused retest #1' are status=completed; T10 'Audit #2' is owner_phase=audit; T08 'Close' is owner_phase=close; T01-T06 are owner_phase=run. AC_WAVE_PROGRESS_EVENT start/update/complete/block/cancel each require a known todo_id owned by this phase, so no legitimate event exists to emit, and claiming a completed TODO would be false progress.",
+  "phase_status": "BLOCKED",
+  "human_only": false
+}

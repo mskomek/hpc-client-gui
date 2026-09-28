@@ -1,0 +1,301 @@
+{
+  "artifact": "W57_DEFECT_TRIAGE_WORKSTREAM_H",
+  "wave": "W57",
+  "wave_kind": "execution",
+  "phase": "repair",
+  "phase_instance_id": "20260925-074235-63df86b0:106:W57:repair",
+  "supersedes_for_severity_and_release_decision": "artifacts/wave_W57/W57_FREEZE029_DEFECT_LEDGER_ROUTING.json",
+  "candidate_identity": {
+    "main_sha": "f6ab257fbfd62d402e31e9330f30bb017b795fa8",
+    "branch": "develop",
+    "frozen_artifact_sha256": "CAA5904A",
+    "candidate_changed_by_this_phase": false
+  },
+  "owned_requirements_this_artifact_serves": [
+    "HPC-W10-FREEZE-010",
+    "HPC-W10-FREEZE-019",
+    "HPC-W10-FREEZE-020",
+    "HPC-W10-FREEZE-021",
+    "HPC-W10-FREEZE-022",
+    "HPC-W10-FREEZE-029",
+    "HPC-W10-FREEZE-033",
+    "HPC-W10-FREEZE-034",
+    "HPC-W10-FREEZE-043"
+  ],
+  "purpose": "Complete the W57-owned Workstream H defect-triage field set (severity + release decision) that the previous repair left undecided, and replace the ambiguous 'route to a closed owner' framing of DEF-W57-008 with a machine-verified single-commit regression root cause and a proven one-hunk owner fix.",
+
+  "authority_correction": {
+    "problem": "The previous repair set severity_authority='undecided - classification is the release authority's call, not the W57 worker's' on every finding. No such external release authority exists anywhere in the repository (searched .opencode/protocol/*.json, .agents/protocol/*.md, rules.md, opencode/REQUIREMENT_REGISTRY.md).",
+    "correct_authority": "Severity classification and the P2/P3 deferral decision are W57-OWNED requirements, not an external approval. opencode/REQUIREMENT_REGISTRY.md: HPC-W10-FREEZE-010='defect triage', FREEZE-019='P0: mandatory NO-GO.', FREEZE-020='P1: mandatory NO-GO.', FREEZE-021='P2: may defer only with explicit impact/workaround/owner.', FREEZE-022='P3: may defer with concise record.', FREEZE-033='No open P0/P1', FREEZE-034='Every P2/P3 has an explicit decision', FREEZE-043='defect ledger'. W57.md:127 lists 'Workstream H - Defect triage' as a mandatory source section, and opencode/sources/WAVE_V2_FINAL_10.md:318-339 requires every finding to carry ID, severity, surface, reproduction, expected, observed, owner Wave, status, release decision.",
+    "why_this_mattered": "The undecided severity was the reason no single owner transaction could be dispatched: with severity open, P1 NO-GO was arguable, so the controller could not tell a P2 deferral from a P1 stop. Executing FREEZE-019..022 collapses 22 failures / 9 unowned causes into exactly ONE P1 with a bounded fix, and 13 node ids that are release-decidable as P2/P3.",
+    "classification_discipline": "Where the P1/P2 boundary is genuinely contested, this ledger takes the NO-GO side. FREEZE-029's escape hatch applies only to deviations that are 'not P0/P1', so over-classifying toward P2 would manufacture a green gate; under-classifying toward P1 costs one cheap owner transaction. The asymmetry is deliberate and is not an approval."
+  },
+
+  "severity_scale_applied": "opencode/sources/WAVE_V2_FINAL_10.md:500-505",
+
+  "findings": [
+    {
+      "id": "DEF-W57-008",
+      "severity": "P1",
+      "severity_basis": "Core advertised workflow broken: the editor 'Submit' and the run-supplement 'Save & Submit' actions raise RuntimeError and perform no submission. P1 requires 'no safe practical workaround'; the workaround here (hand-authoring a #SBATCH line outside the product) is not an in-product path, and the resulting client is materially stricter than sbatch itself, which accepts non-#SBATCH scripts. A maintained test was also committed ALREADY FAILING in the same commit, which is a release-integrity signal. Contested against P2; resolved to the NO-GO side per classification_discipline.",
+      "surface": "src/hpc_gui/services/job_submit_cancel.py:119-120 - `if \"#SBATCH\" not in text: errors.append(\"no #SBATCH directives found\")` inside validate_submit_request; enforced at the call sites src/hpc_gui/wx_shell.py:2763-2769 (editor submit) and :3288 (run supplement).",
+      "reproduction": "python -m pytest -q tests/test_wx_editor_cross_view_actions.py tests/test_w26_run_supplement.py  (in a clean detached worktree at f6ab257f) -> 12 failed, 3 passed, exit 1. RuntimeError: Submission validation failed: no #SBATCH directives found",
+      "expected": "Submitting a user script that carries no #SBATCH line transfers the file and then calls sbatch, producing backend events ['upload','sbatch'] / ['write','sbatch'].",
+      "observed": "validate_submit_request rejects the buffer before any transfer, so submit emits no sbatch event at all: assert [] == ['upload','sbatch']; assert ['write','write','run'] == [...,'sbatch', ...].",
+      "failing_node_ids": 12,
+      "failing_tests": [
+        "tests/test_wx_editor_cross_view_actions.py::test_wx_local_editor_submit_semantics_survive_remote_view_dispatch",
+        "tests/test_wx_editor_cross_view_actions.py::test_wx_remote_editor_submit_semantics_survive_local_view_dispatch",
+        "tests/test_wx_editor_cross_view_actions.py::test_wx_standalone_editor_actions_survive_cross_view_dispatch[True]",
+        "tests/test_wx_editor_cross_view_actions.py::test_wx_standalone_editor_actions_survive_cross_view_dispatch[False]",
+        "tests/test_wx_editor_cross_view_actions.py::test_wx_shared_primary_switch_local_to_remote_updates_document_semantics",
+        "tests/test_wx_editor_cross_view_actions.py::test_wx_existing_editor_uses_new_session_after_reconnect",
+        "tests/test_wx_editor_cross_view_actions.py::test_wx_editor_operation_does_not_mix_sessions_during_reconnect",
+        "tests/test_wx_editor_cross_view_actions.py::test_wx_existing_remote_editor_uses_new_session_after_reconnect",
+        "tests/test_wx_editor_cross_view_actions.py::test_wx_standalone_editor_uses_new_session_after_reconnect[True]",
+        "tests/test_wx_editor_cross_view_actions.py::test_wx_standalone_editor_uses_new_session_after_reconnect[False]",
+        "tests/test_wx_editor_cross_view_actions.py::test_wx_shell_real_file_dispatches_preserve_existing_editor_semantics",
+        "tests/test_w26_run_supplement.py::test_w26_supplement_save_submit_uses_sbatch_not_shell"
+      ],
+      "owner_wave": "W30",
+      "owner_evidence": "opencode/REQUIREMENT_REGISTRY.md:704-705 - HPC-W07-CTRL-001/002 are owned by W30; waves/done/W30.md frontmatter lists HPC-W07-CTRL-001..010, aggregate_close_owner:false, audit_policy:fresh-independent. The code comment at wx_shell.py:2747 names the same CTRL-001/002. W30 is CLOSED, so the fix is a controller-owned closed_owner_repair transaction.",
+      "status": "OPEN",
+      "release_decision": "NO-GO (P1, mandatory). Not deferrable. The single open P1 in the whole ledger.",
+      "blocks_w57_owned_requirement": "HPC-W10-FREEZE-033 ('No open P0/P1') and therefore HPC-W10-FREEZE-029; and HPC-W10-TODO-014 (real Slurm submit acceptance) while the editor cannot submit at all."
+    },
+    {
+      "id": "DEF-W57-007",
+      "severity": "P2",
+      "severity_basis": "Repository-hygiene / local-exclude defect with no product impact. It blocks running 3 maintained node ids from a clean checkout, but they run in the developer's tree. Meaningful, safe workaround, non-core impact -> P2.",
+      "surface": "Controller-owned orchestration runtime import closure: tests/test_wave_controller_regressions.py (tracked) loads .opencode/scripts/run-wave-program.py (tracked), which imports phase_job, wave_progress and parallel_workspace - present only as untracked working-tree files because /.opencode/ is listed in the worktree-shared D:/Projeler/TrubaGUI/.git/info/exclude:33. tests/contracts/test_wave_closeout_hardening.py shells out to the untracked .opencode/scripts/validate-agent-parity.py.",
+      "reproduction": "python -m pytest --collect-only -q  -> 1 module / 2 node ids uncollectable (ModuleNotFoundError: No module named 'phase_job'); test_backend_parity_validator_passes cannot open validate-agent-parity.py (Errno 2).",
+      "expected": "The maintained suite is collectable and runnable from a clean checkout of the candidate.",
+      "observed": "3 of the 28 candidate-red node ids are uncollectable outside the dirty working tree.",
+      "failing_node_ids": 3,
+      "owner_wave": "controller",
+      "owner_evidence": "Project AGENTS.md makes .opencode/scripts/{wave_state_engine,run-wave-program}.py and .opencode/protocol/WAVE_PROJECT_PROFILE.json canonical Wave policy sources and assigns controller/state-engine/phase-runner/routing/profile code to the controller. Tracked .gitignore has no .opencode rule.",
+      "status": "OPEN",
+      "release_decision": "DEFER as P2. Impact: 3 maintained node ids are uncollectable from a clean checkout. Workaround: the tests run in the controller's working tree. Owner: controller. Not a Wave product defect.",
+      "blocks_w57_owned_requirement": null
+    },
+    {
+      "id": "DEF-W57-009",
+      "severity": "P3",
+      "severity_basis": "CORRECTED DOWN from the previous repair's implied product failure. The previous repair recorded 'no top-level window exposing _wx_editor_controls is created, so the editor never opens', which implies a broken core workflow. Source reading refutes that: src/hpc_gui/wx_editor_view.py:978 sets host._wx_editor_controls on the embedded host object, and src/hpc_gui/wx_shell.py:1479 registers the ('_embedded_editor_panel','_wx_editor_controls') host mapping - the editor is an embedded panel, not a top-level window. tests/test_wx_term002.py:83 still searches wx.GetTopLevelWindows(), i.e. it is stale against the embedded-editor refactor. Independent proof the editor works: the 12 DEF-W57-008 failures exercise editor content and reach the submit handler. Test-currency defect, no product impact -> P3.",
+      "surface": "tests/test_wx_term002.py:83 - `next(window for window in wx.GetTopLevelWindows() if hasattr(window,'_wx_editor_controls'))` searches top-level windows, but the editor controls now live on the embedded panel host.",
+      "reproduction": "python -m pytest -q tests/test_wx_term002.py  -> 2 failed (StopIteration at line 83).",
+      "expected": "The terminal/run-button tests locate the editor controls.",
+      "observed": "StopIteration - the lookup targets the window model that the embedded-editor refactor replaced.",
+      "failing_node_ids": 2,
+      "failing_tests": [
+        "tests/test_wx_term002.py::test_file_view_shell_script_runs_in_real_terminal_path",
+        "tests/test_wx_term002.py::test_editor_run_button_uses_real_wx_event_and_terminal_path"
+      ],
+      "owner_wave": "UNRESOLVED - controller must assign the stable owner",
+      "owner_evidence": "No waves/done or waves/pending wave file names test_wx_term002 and no REQUIREMENT_REGISTRY row names it. Previously attributed by surface only; the correction above means the defect is in the test's window model, which does not by itself identify an owner.",
+      "status": "OPEN",
+      "release_decision": "DEFER as P3 with concise record: stale top-level-window lookup in test_wx_term002.py against the embedded-editor host model. The owner refreshes the lookup to the embedded host; no product change and no test weakening.",
+      "blocks_w57_owned_requirement": null
+    },
+    {
+      "id": "DEF-W57-010",
+      "severity": "P2",
+      "severity_basis": "Meaningful defect with a safe workaround. The local panel falls back to the user home directory instead of the process cwd. Workaround: set an explicit local folder in settings. Non-core impact -> P2.",
+      "surface": "src/hpc_gui/wx_file_manager local panel start-up - widget.local_panel.current_dir fallback when the file-manager key or local folder is missing.",
+      "reproduction": "python -m pytest -q tests/test_file_manager_profile.py  -> 2 failed.",
+      "expected": "With a missing file-manager key or a missing local folder the local panel falls back to the process cwd / global dir.",
+      "observed": "AssertionError: 'C:\\\\Users\\\\mskomek' != '<candidate worktree>' - the panel keeps the home directory instead of the cwd.",
+      "failing_node_ids": 2,
+      "failing_tests": [
+        "tests/test_file_manager_profile.py::FtpWidgetLocalStartTests::test_missing_file_manager_key_is_legacy_behavior",
+        "tests/test_file_manager_profile.py::FtpWidgetLocalStartTests::test_missing_local_folder_keeps_global_behavior_without_modal"
+      ],
+      "owner_wave": "W44 / W52 profile-management surface",
+      "owner_evidence": "docs/wave-reports/v2/opencode/W44_WAVE_REPORT.md and W52_WAVE_REPORT.md are the only non-W57 reports that name test_file_manager_profile; no registry row names the test.",
+      "status": "OPEN",
+      "release_decision": "DEFER as P2. Impact: the local panel opens in the home directory rather than the cwd when no local folder is configured. Workaround: configure an explicit local folder. Owner: profile-management owner, who must confirm or restate the legacy-behaviour contract.",
+      "blocks_w57_owned_requirement": null
+    },
+    {
+      "id": "DEF-W57-011",
+      "severity": "P2",
+      "severity_basis": "The failing assertion is a source-text equality check ('Path(snapshot.path).write_text' in editor_src) that a snapshot-write refactor invalidated, so the likely resolution is a brittle-assertion refresh. It is not classifiable as P3 because the assertion encodes a real dispatch-error governance invariant - 'local and remote save paths have distinct owners' - and until the owner confirms that invariant still holds in the refactored code, a product regression cannot be excluded.",
+      "surface": "tests/test_wx_dispatch_error_gov.py::test_editor_save__local_and_remote_paths_have_distinct_owners - asserts the literal 'Path(snapshot.path).write_text' appears in the editor adapter source; src/hpc_gui/wx_editor.py no longer contains it after a snapshot-write refactor.",
+      "reproduction": "python -m pytest -q tests/test_wx_dispatch_error_gov.py::test_editor_save__local_and_remote_paths_have_distinct_owners  -> 1 failed.",
+      "expected": "The governance test finds the snapshot write call in the editor adapter source.",
+      "observed": "assert 'Path(snapshot.path).write_text' in editor_src fails; the adapter now writes through a different path.",
+      "failing_node_ids": 1,
+      "owner_wave": "UNRESOLVED - editor adapter owner; controller must assign the stable owner",
+      "owner_evidence": "No registry row and no wave file names this test.",
+      "status": "OPEN",
+      "release_decision": "DEFER as P2. Impact: the distinct-owner governance invariant is currently unverified because the assertion is stale. Workaround: none for the invariant itself; the owner must re-point the check at the refactored write path and confirm local and remote save paths still have distinct owners. W57 must not refresh the assertion from its own surface.",
+      "blocks_w57_owned_requirement": null
+    },
+    {
+      "id": "DEF-W57-012",
+      "severity": "P2",
+      "severity_basis": "A cluster profile whose storage entries carry no id is now rejected. Manifests that were previously accepted can be refused, which is a material contract change, but the fix is a one-field addition to the fixture or a contract restatement - safe workaround, non-core -> P2.",
+      "surface": "src/hpc_gui cluster-profile validation - validate_cluster_profile_dict now requires a non-empty id on every storage entry; the W06 unicode provider/plugin integration fixture has none.",
+      "reproduction": "python -m pytest -q tests/test_wave6_plugin_provider_unicode.py  -> 1 failed.",
+      "expected": "The unicode provider/plugin integration fixture validates with zero errors.",
+      "observed": "AssertionError: Manifest validation errors: [\"cluster profile 'storage[0]' needs a non-empty id\"]",
+      "failing_node_ids": 1,
+      "failing_tests": [
+        "tests/test_wave6_plugin_provider_unicode.py::TestIntegration::test_full_plugin_unicode_flow"
+      ],
+      "owner_wave": "W06",
+      "owner_evidence": "test_wave6_plugin_provider_unicode.py is a W06-owned test by name; W06 is CLOSED in waves/done.",
+      "status": "OPEN",
+      "release_decision": "DEFER as P2. Impact: manifests without storage ids are rejected, so a previously accepted profile can be refused. Workaround: add a non-empty id to the storage entry. Owner: W06 as a closed-owner repair transaction - either the validation contract or the fixture is stale.",
+      "blocks_w57_owned_requirement": null
+    },
+    {
+      "id": "DEF-W57-013",
+      "severity": "P2",
+      "severity_basis": "Not P0: the UI cannot readily produce invalid UTF-8 input, so the destructive wrong-target path is not reachable from the product. But silently mangling a remote path is a real risk if the decode no longer raises, and there is no user-visible workaround for a silently corrupted path. Meaningful defect -> P2.",
+      "surface": "ssh backend - invalid UTF-8 text is no longer rejected.",
+      "reproduction": "python -m pytest -q tests/test_wave3_remote_sftp_ssh.py  -> 1 failed.",
+      "expected": "with pytest.raises(UnicodeDecodeError) - the ssh backend rejects invalid UTF-8 text.",
+      "observed": "Failed: DID NOT RAISE <class 'UnicodeDecodeError'>",
+      "failing_node_ids": 1,
+      "failing_tests": [
+        "tests/test_wave3_remote_sftp_ssh.py::TestSFTPUnicodePaths::test_ssh_backend_rejects_invalid_utf8_text"
+      ],
+      "owner_wave": "W03",
+      "owner_evidence": "test_wave3_remote_sftp_ssh.py is a W03-owned test by name; W03 is CLOSED in waves/done.",
+      "status": "OPEN",
+      "release_decision": "DEFER as P2. Impact: an invalid UTF-8 remote path is no longer rejected and may be silently mangled, risking a wrong-target remote operation. Workaround: none user-visible. Owner: W03 as a closed-owner repair transaction.",
+      "blocks_w57_owned_requirement": null
+    },
+    {
+      "id": "DEF-W57-014",
+      "severity": "P3",
+      "severity_basis": "Test-currency conflict, not a packaging regression. The product is correct: commit a6aebd90 'W56 ships-no-Qt bundle fix: exclude PySide6/shiboken6 in GUI specs' and the W56 acceptance made wx-only the authoritative contract, and the frozen candidate contains zero Qt tokens. The maintained W44 test still demands a dual-runtime hidden import. No product impact -> P3.",
+      "surface": "build/windows/hpc-client-gui.spec - hidden imports no longer contain PySide6.QtCore; tests/test_w44_arch_qt_wx_package.py::test_w44_package_hidden_imports_are_intentional still requires it.",
+      "reproduction": "python -m pytest -q tests/test_w44_arch_qt_wx_package.py  -> 1 failed.",
+      "expected": "The spec keeps a dual-runtime (Qt + wx) hidden-import set.",
+      "observed": "AssertionError: spec lost required dual-runtime import PySide6.QtCore",
+      "failing_node_ids": 1,
+      "failing_tests": [
+        "tests/test_w44_arch_qt_wx_package.py::test_w44_package_hidden_imports_are_intentional"
+      ],
+      "owner_wave": "W44",
+      "owner_evidence": "W44 packaging-architecture test, in conflict with the accepted W56 no-Qt contract bound to artifact SHA256 CAA5904A.",
+      "status": "OPEN",
+      "release_decision": "DEFER as P3 with concise record. HARD CONSTRAINT: the owner must retire or restate the dual-runtime assertion. Re-adding PySide6.QtCore to the spec would violate the W56 no-Qt freeze bound to CAA5904A and invalidate the frozen candidate. W57 must not reintroduce Qt, and the controller must not dispatch a naive 'restore Qt' repair.",
+      "blocks_w57_owned_requirement": null
+    },
+    {
+      "id": "DEF-W57-015",
+      "severity": "P3",
+      "severity_basis": "Source-hygiene regression-search finding. The flagged line is a substring probe on a marker file inside the source-checkout detection, so there is no runtime or user-visible impact. Polish/hygiene -> P3.",
+      "surface": "src/hpc_gui/services/local_files.py:65 - marker.read_text(encoding='utf-8', errors='ignore') inside the source-checkout detection used by the packaged isolated_from_src evidence.",
+      "reproduction": "python -m pytest -q tests/test_wave10_release_gate.py::TestRegressionSearch::test_no_new_errors_ignore  -> 1 failed.",
+      "expected": "The W10 release-gate hygiene rule 'no new errors=\"ignore\" in source' holds (count == 0).",
+      "observed": "AssertionError: errors='ignore' found in source: 1",
+      "failing_node_ids": 1,
+      "failing_tests": [
+        "tests/test_wave10_release_gate.py::TestRegressionSearch::test_no_new_errors_ignore"
+      ],
+      "owner_wave": "UNRESOLVED - introduced by bulk record d0d544c1 'Wave W19-W25 product and test work (W26 editor identity in progress)'",
+      "owner_evidence": "git blame -L 60,70 src/hpc_gui/services/local_files.py attributes the line to d0d544c1. No REQUIREMENT_REGISTRY row and no wave file names local_files.py or isolated_from_src, so the stable owning Wave cannot be derived from repository truth.",
+      "status": "OPEN",
+      "release_decision": "DEFER as P3 with concise record: one errors='ignore' in a marker-file substring probe, no runtime impact. Owner unresolved - the controller must derive the stable owner from the d0d544c1 bulk record before this can be dispatched. W57 must not self-release-accept it by editing the source.",
+      "blocks_w57_owned_requirement": null
+    }
+  ],
+
+  "severity_rollup": {
+    "P0": 0,
+    "P1": 1,
+    "P2": 5,
+    "P3": 3,
+    "root_causes": 9,
+    "candidate_reproducible_failing_node_ids": 22,
+    "node_ids_covered_by_the_single_P1": 12,
+    "node_ids_release_decidable_as_P2_or_P3": 10
+  },
+
+  "regression_bisect_DEF_W57_008": {
+    "claim": "DEF-W57-008 is a single-commit regression, not stale tests. The previous repair asserted that the failing tests 'assert the pre-regression behaviour' but did not prove it. This is proven.",
+    "method": "Three-run bisect in clean detached worktrees under .tmp/, identical node ids, -p no:cacheprovider.",
+    "runs": [
+      {
+        "commit": "c8293d3c (= bb8ac6b3~1)",
+        "subject": "Sync Agent Core runtime 21c15de7; align controller regression tests with canonical API",
+        "command": "python -m pytest -q tests/test_wx_editor_cross_view_actions.py",
+        "result": "14 passed, exit 0",
+        "state_of_gate": "src/hpc_gui/services/job_submit_cancel.py DOES NOT EXIST; wx_shell.py:2613 submit() calls slurm.sbatch(remote_path)/slurm.sbatch(current.path) directly, with no validation gate"
+      },
+      {
+        "commit": "bb8ac6b30522a40f18fc809eb80f134d098cae3e",
+        "subject": "Record accepted Wave W26-W55 product, test and evidence work (2026-09-25 07:39:20 +0300)",
+        "command": "python -m pytest -q tests/test_wx_editor_cross_view_actions.py tests/test_w26_run_supplement.py",
+        "result": "12 failed, 8 passed, exit 1",
+        "state_of_gate": "the service module AND the 2-line `if \"#SBATCH\" not in text` gate AND the validating call sites are all introduced by this commit; the 12 failing node ids are already exactly the 12 failing at today's candidate"
+      },
+      {
+        "commit": "f6ab257fbfd62d402e31e9330f30bb017b795fa8 (candidate)",
+        "subject": "Build note: successor freeze after owner correction is W57-owned",
+        "command": "python -m pytest -q tests/test_wx_editor_cross_view_actions.py tests/test_w26_run_supplement.py::test_w26_supplement_save_submit_uses_sbatch_not_shell",
+        "result": "12 failed, 3 passed, exit 1 - identical node id set to bb8ac6b3"
+      }
+    ],
+    "conclusions": [
+      "tests/test_wx_editor_cross_view_actions.py was added at a8cb6ea8 (2026-09-03, 'Fix wx editor cross-view action semantics'), three weeks BEFORE bb8ac6b3, and was green at bb8ac6b3~1.",
+      "tests/test_w26_run_supplement.py::test_w26_supplement_save_submit_uses_sbatch_not_shell was added IN bb8ac6b3 and was ALREADY FAILING in that commit - a maintained test was committed red.",
+      "The failure set has been unchanged from bb8ac6b3 to f6ab257f. No later commit is responsible and the regression was never repaired.",
+      "bb8ac6b3 is a bulk 'Record accepted Wave ...' commit. The W26-W55 work it recorded was therefore accepted into the permanent record with a red maintained suite."
+    ]
+  },
+
+  "proven_owner_fix_DEF_W57_008": {
+    "status": "PROVEN IN A THROWAWAY PROBE WORKTREE, NOT APPLIED TO THE CANDIDATE",
+    "change": "Delete the 2-line presence gate at src/hpc_gui/services/job_submit_cancel.py:119-120:  `if \"#SBATCH\" not in text:` / `    errors.append(\"no #SBATCH directives found\")`",
+    "why_w57_may_not_apply_it": "W57.md:143 'Integration/freeze rule: if a finding belongs to an earlier domain Wave, stop opportunistic fixing and reopen that owner.' The surface is W30-owned (HPC-W07-CTRL-001/002) and W30 is CLOSED, so this is a controller-owned closed_owner_repair transaction. Applying it from W57 would be cross-scope opportunistic fixing of a closed Wave's product surface AND would patch the frozen candidate.",
+    "verification": [
+      {
+        "command": "python -m pytest -q tests/test_wx_editor_cross_view_actions.py tests/test_w26_run_supplement.py",
+        "with_gate_removed": "20 passed, exit 0 (was 12 failed, 8 passed)",
+        "proves": "the 2-line gate is the whole root cause; nothing else in the file or call sites contributes"
+      },
+      {
+        "command": "python -m pytest -q tests/test_w30_submit_cancel.py",
+        "with_gate_removed": "15 passed, exit 0",
+        "proves": "W30's OWN submit/cancel acceptance suite is unaffected. The W30-owned contract (path required, empty content, placeholder detection, provider partition/account) is preserved by validate_template_against_provider, which is a separate call at line 121 and is not removed. No maintained test anywhere asserts the '#SBATCH directives found' error, so no test needs weakening."
+      }
+    ],
+    "candidate_untouched": "The probe worktree was restored to clean (`git checkout --`) after the experiment, and the candidate worktree and the repository working tree were verified unchanged: no product, test, spec or build-input file was modified by this phase.",
+    "preferred_fix_direction_for_the_owner": "Delete the 2-line gate. If W30 judges the guard desirable for template submissions, scope it to the template path only (validate_template_against_provider already covers partition/account). Do NOT relax the 12 failing tests and do NOT edit the W26 supplement test - they encode the pre-regression contract."
+  },
+
+  "gate_disposition": {
+    "HPC-W10-FREEZE-029": "RED. First branch fails: the maintained suite is not green (22 candidate-reproducible node ids). Second branch is not available: DEF-W57-008 is an OPEN P1, and the branch requires deviations to be 'not P0/P1'.",
+    "HPC-W10-FREEZE-033": "RED. 'No open P0/P1' - one open P1 (DEF-W57-008).",
+    "HPC-W10-FREEZE-034": "SATISFIED for this ledger. All 8 P2/P3 findings now carry an explicit release decision with impact/workaround/owner (P2) or a concise record (P3).",
+    "HPC-W10-FREEZE-019": "EXECUTED. P0 count = 0.",
+    "HPC-W10-FREEZE-020": "EXECUTED. P1 count = 1 (DEF-W57-008) -> mandatory NO-GO recorded.",
+    "HPC-W10-FREEZE-021": "EXECUTED. All 5 P2 findings carry explicit impact, workaround and owner.",
+    "HPC-W10-FREEZE-022": "EXECUTED. All 3 P3 findings carry a concise record.",
+    "HPC-W10-FREEZE-010": "EXECUTED. Defect triage performed against WAVE_V2_FINAL_10.md:500-505.",
+    "HPC-W10-FREEZE-043": "EXECUTED. Defect ledger is this artifact.",
+    "HPC-W10-FREEZE-031": "NOT ISSUED. No green manifest or freeze declaration may be written while FREEZE-029/033 are red.",
+    "HPC-W10-FREEZE-036": "NOT ISSUED.",
+    "HPC-W10-FREEZE-044": "NOT ISSUED.",
+    "HPC-W10-FREEZE-045": "NOT ISSUED.",
+    "HPC-W10-FREEZE-046": "NOT ISSUED.",
+    "HPC-W10-FREEZE-048": "NOT ISSUED. The successor declaration stays 'Frozen for W58: NO'; W58 must not consume it."
+  },
+
+  "controller_actions_requested": [
+    "PRIORITY 1 - open a closed_owner_repair transaction for W30 (HPC-W07-CTRL-001/002, waves/done/W30.md) for DEF-W57-008. This is now a bounded, proven transaction: delete 2 lines at src/hpc_gui/services/job_submit_cancel.py:119-120. It clears the ONLY open P1 and 12 of 22 candidate-reproducible node ids. Precedent: 5a516c32 'W28 closed-owner repair: add missing jobs.refresh* i18n keys (DEF-W57-001)'.",
+    "Record the release-integrity fact that bb8ac6b3 'Record accepted Wave W26-W55 product, test and evidence work' committed a maintained test already failing; the W26-W55 acceptance evidence needs a current-commit freshness check per HPC-W09-TODO-EVIDENCE-FRESHNESS-001.",
+    "Assign stable owners for DEF-W57-009, DEF-W57-011 and DEF-W57-015 - no registry row or wave file names their surface, so they cannot be dispatched from repository truth. All three are P3 deferrals and none blocks FREEZE-033.",
+    "Open closed-owner repair transactions for the P2s: W06 (DEF-W57-012), W03 (DEF-W57-013), and the W44/W52 profile-management surface (DEF-W57-010).",
+    "For DEF-W57-014, route to W44 as a P3 test-currency conflict with the accepted W56 no-Qt contract. Do NOT re-add PySide6.QtCore; that would invalidate the W56 freeze bound to CAA5904A.",
+    "Run the controller infrastructure transaction for DEF-W57-007 (track the .opencode/scripts import closure and validate-agent-parity.py, or exclude the controller tests from the product suite by an authoritative decision).",
+    "After the W30 repair lands: re-freeze from current main, re-measure at the new candidate, and re-dispatch the fresh independent W57 audit (audit_policy: fresh-independent; no self-audit was written by this phase). The 12 node ids are proven green by the probe, so the expected post-repair result is 22 - 12 = 10 candidate-reproducible node ids, all of them P2/P3 deferrals, which would satisfy FREEZE-029's second branch and FREEZE-033."
+  ],
+
+  "no_fabrication_statement": "No severity was invented and no deviation was release-accepted to make a gate green. Every severity is derived from opencode/sources/WAVE_V2_FINAL_10.md:500-505 and every release decision from FREEZE-019..022. Where the P1/P2 boundary was contested, the NO-GO side was taken deliberately. No product, test, spec or build-input file was modified. No self-audit was written. The candidate SHA and the frozen artifact SHA256 CAA5904A are unchanged. No human approval, credential or release sign-off was fabricated, and none was requested."
+}

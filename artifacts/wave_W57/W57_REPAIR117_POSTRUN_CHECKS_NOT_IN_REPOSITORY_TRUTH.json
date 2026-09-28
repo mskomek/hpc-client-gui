@@ -1,0 +1,66 @@
+{
+  "artifact": "W57_REPAIR117_POSTRUN_CHECKS_NOT_IN_REPOSITORY_TRUTH",
+  "wave": "W57",
+  "phase": "repair",
+  "phase_instance_id": "20260925-074235-63df86b0:117:W57:repair",
+  "severity": "orchestration",
+  "owner": "controller",
+  "execution_owner_this_phase": "W57 (report and route only; NOT fixed here)",
+  "content_identity": "cf5aff2031aed28d70e3365e3db5a744b5f9f3781b35f13d5e558382acd217b0",
+  "head_measured": "f6ab257fbfd62d402e31e9330f30bb017b795fa8",
+
+  "finding": "Every executable POSTRUN check declared by the tracked Wave profile is absent from Git. The profile's postrun_checks names six scripts; git ls-files shows that none of the six are tracked. They exist in the working tree only, suppressed by a local .git/info/exclude rule. AGENTS.md makes executable POSTRUN checks a precondition for PROGRAM_COMPLETE, so the program's terminal gate currently rests on code that is not part of repository truth.",
+
+  "measured_evidence": {
+    "method": "Compared the six paths in WAVE_PROJECT_PROFILE.json.postrun_checks against `git ls-files` and `git check-ignore`, at HEAD f6ab257f.",
+    "per_check": {
+      ".opencode/scripts/validate-ac-project.py": { "tracked": false, "ignored": true, "exists_in_worktree": true },
+      ".opencode/scripts/validate-agent-parity.py": { "tracked": false, "ignored": true, "exists_in_worktree": true },
+      ".opencode/scripts/validate-wave-orchestration.py": { "tracked": false, "ignored": true, "exists_in_worktree": true },
+      ".opencode/scripts/validate-wave-program.py": { "tracked": false, "ignored": true, "exists_in_worktree": true },
+      ".opencode/scripts/validate-managed-runtime.py": { "tracked": false, "ignored": true, "exists_in_worktree": true },
+      ".opencode/scripts/validate-wave-authoring.py": { "tracked": false, "ignored": true, "exists_in_worktree": true }
+    },
+    "matched_ignore_rule": "D:/Projeler/TrubaGUI/.git/info/exclude:33  ->  /.opencode/  (matches all six)",
+    "important_nuance": "The exclusion is a LOCAL, UNTRACKED rule in shared clone metadata, not a committed .gitignore policy. It therefore differs per clone and is invisible to review.",
+    "dot_opencode_files_that_ARE_tracked": [
+      ".opencode/protocol/LOCAL_REAL_HPC_LAB.md",
+      ".opencode/protocol/WAVE_PROJECT_PROFILE.json",
+      ".opencode/scripts/route-wave-findings.py",
+      ".opencode/scripts/run-wave-program.py",
+      ".opencode/scripts/wave_state_engine.py"
+    ],
+    "why_those_five_are_tracked": "Git tracking wins over an exclude rule, so files already tracked remain tracked. /.opencode/ only suppresses otherwise-untracked files. This is why the profile that DECLARES the six checks is in Git while the six checks themselves are not.",
+    "repo_shape_note": "This working tree is itself a linked worktree: git-dir is D:/Projeler/TrubaGUI/.git/worktrees/TrubaGUI-develop-work, common-dir D:/Projeler/TrubaGUI/.git, so the exclude rule is shared by every worktree of that clone."
+  },
+
+  "consequences": [
+    "PROGRAM_COMPLETE is defined (AGENTS.md) as requiring executable POSTRUN checks plus the profile-owned final canonical validator sweep. Those checks are not reproducible from repository truth, so the program's terminal gate is not self-contained.",
+    "An independent auditor working from a fresh clone or from Git alone cannot run, read or review any of the six POSTRUN checks.",
+    "Any Wave disposition that cites POSTRUN results is resting on untracked code, which weakens every such evidence chain without any single artifact being obviously wrong.",
+    "The evidence manifests the profile requires cannot cite a validator identity that a reviewer can resolve from Git."
+  ],
+
+  "collateral_correction_to_an_inherited_claim": {
+    "claim_under_test": "Repair 116 recorded that the two red POSTRUN validators (validate-ac-project.py materialization staleness, validate-managed-runtime.py controller behaviour) are 'produced by the uncommitted local modifications to the profile's controller_restart_paths'.",
+    "verdict": "NOT VERIFIABLE by the method that claim implies, and the claim should not be relied on as an established cause.",
+    "why": "A HEAD-versus-worktree comparison requires the validators to exist at HEAD. They do not exist at HEAD. A pristine `git worktree add --detach <path> HEAD` was created to run the comparison and the six scripts were simply absent from it, so the comparison cannot be performed at all. Any prior attribution of these reds to the uncommitted controller_restart_paths diff is therefore an assumption, not a measurement.",
+    "classification_still_correct": "The materialization/checkpoint obligation remains controller-owned per AGENTS.md, and a Wave worker must not materialize or commit controller files. So the ROUTING conclusion is unchanged. Only the recorded REASON is unverified.",
+    "additional_observation_noting_a_changed_signature": "The failing check set recorded by repair 116 was a dispatch-plan mismatch ('multi-group managed-parallel synthetic base did not produce candidates W101a/W101b'). Re-running validate-managed-runtime.py in this dispatch produced a DIFFERENT and BROADER failing set: controller_semantic_counters_vs_retries, progress_contract_v1_v2_deterministic, audit_close_todo_semantic_history, controller_worker_timeout_serial_parallel_barrier and multi_group_managed_parallel_synthetic_base all FAIL, while parallel_restart_mismatch_fail_closed, serial_foreign_job_fail_closed and windows_case_path_collisions_fail_closed all PASS. A changed failure signature is consistent with untracked validator scripts drifting out of sync with the tracked controller code they exercise, and it is a further reason not to accept the inherited attribution.",
+    "self_correction": "An earlier attempt in this phase to run this comparison was invalid: it executed the worktree's script path with the MAIN repository as the working directory, which produced a misleading EXIT=2. That was detected and the run was repeated with the correct working directory, which revealed the real cause (the scripts are absent from a HEAD checkout at all). The invalid attempt is disclosed here rather than discarded."
+  },
+
+  "recommended_owner_action": [
+    "Decide, as a product/controller owner, whether the six POSTRUN checks are intended to be repository truth. If yes, track them and drop the blanket /.opencode/ exclusion, which currently hides them along with everything else under that directory.",
+    "If they are intentionally local-only tooling, then the profile must stop declaring them as postrun_checks, and AGENTS.md's PROGRAM_COMPLETE precondition must be re-expressed against checks that actually exist in Git.",
+    "Until that decision is made, treat POSTRUN results in any Wave report as non-reproducible and say so explicitly rather than citing them as authoritative.",
+    "Re-verify validate-managed-runtime.py against the tracked controller code once the scripts are either tracked or regenerated from a tracked source."
+  ],
+
+  "not_done_and_deliberately_not_faked": [
+    "No controller file was added, tracked, un-ignored, committed or edited by this phase.",
+    ".git/info/exclude was NOT modified: it is shared clone metadata outside the repository working tree, and changing another clone's ignore rules is not a Wave worker's call.",
+    "No POSTRUN validator was rewritten, skipped, weakened or made to pass.",
+    "The temporary pristine worktree created for the comparison was removed after the measurement."
+  ]
+}

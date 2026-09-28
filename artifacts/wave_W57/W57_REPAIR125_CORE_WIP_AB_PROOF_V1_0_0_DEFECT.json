@@ -1,0 +1,89 @@
+{
+  "wave_id": "W57",
+  "phase": "repair",
+  "phase_instance_id": "20260925-074235-63df86b0:125:W57:repair",
+  "content_identity": "9c70d980b0c9940e8643de8b925f6b0d53706ecbc4e1afc9e811ed76bbf05a2e",
+  "finding_id": "W57-ORCHESTRATION-RED-ROOTCAUSE-CANONICAL-CORE-UNCOMMITTED-WIP",
+  "repair_hypothesis": "W57-ORCHESTRATION-RED-ROOTCAUSE-CANONICAL-CORE-UNCOMMITTED-WIP",
+  "claim_tested": "The prior 7 repair cycles asserted, but never tested, that re-materializing the project from the canonical core's uncommitted working tree would clear the validate-managed-runtime.py red. This dispatch ran that claim as a controlled A/B on one machine, same host, same core checkout.",
+  "method": {
+    "arm_A_head": "project working tree as-is (byte-exact core@HEAD v1.0.0 for all managed files)",
+    "arm_B_wip": "isolated overlay under .tmp/w57-repair-125/proj-wip: project managed-file tree with the canonical core's uncommitted working-tree versions of run-wave-program.py, wave_state_engine.py, validate-ac-project.py, validate-managed-runtime.py, validate-wave-program.py, AC_CORE_MATERIALIZATION.json and all .agents/{skills,protocol} files overlaid (47 files copied from D:\\Projeler\\.agents-core)",
+    "isolation": "AC_CORE_ROOT pinned to D:\\Projeler\\.agents-core; no project file, no core file and no lock was written",
+    "command": "python .opencode\\scripts\\validate-managed-runtime.py   (one of profile postrun_checks)"
+  },
+  "arm_A_head_result": {
+    "exit_code": 1,
+    "status": "FAIL",
+    "behaviour_counts": {
+      "pass": 29,
+      "fail": 7
+    },
+    "failing_behaviours": [
+      "controller_semantic_counters_vs_retries",
+      "progress_contract_v1_v2_deterministic",
+      "audit_close_todo_semantic_history",
+      "controller_worker_timeout_serial_parallel_barrier",
+      "multi_group_managed_parallel_synthetic_base",
+      "parallel_cross_wave_true_owner_routing",
+      "v2_plan_gate_before_run_repair"
+    ],
+    "errors": [
+      "behavior:controller_semantic_counters_vs_retries: RuntimeError: unexpected dispatch plan; next scripted=[{'phase': 'run', 'status': 'READY_FOR_AUDIT'}]",
+      "behavior:progress_contract_v1_v2_deterministic: RuntimeError: unexpected dispatch plan; next scripted=[{'phase': 'run', 'status': 'READY_FOR_AUDIT'}]",
+      "behavior:audit_close_todo_semantic_history: RuntimeError: unexpected dispatch plan; next scripted=[{'phase': 'run', 'status': 'READY_FOR_AUDIT'}]",
+      "behavior:controller_worker_timeout_serial_parallel_barrier: RuntimeError: unexpected dispatch plan; next scripted=[{'phase': 'run', 'hang': True}]",
+      "behavior:multi_group_managed_parallel_synthetic_base: multi-group run did not complete: 30 missing-candidates:W101a,W101b",
+      "behavior:multi_group_managed_parallel_synthetic_base: both multi-channel groups must start managed: [101]",
+      "behavior:parallel_cross_wave_true_owner_routing: run did not complete: 30 missing-candidates:W101a,W101b",
+      "behavior:v2_plan_gate_before_run_repair: v1-legacy: unexpected dispatch plan",
+      "materialization stale: canonical-core-revision-changed; managed-file-content-mismatch on 5 managed files"
+    ],
+    "behaviour_counts_note": "counts are occurrences of '=PASS' / '=FAIL' markers in the retained arm A log"
+  },
+  "arm_B_wip_result": {
+    "exit_code": 0,
+    "status": "PASS",
+    "behaviour_counts": {
+      "pass": 41,
+      "fail": 0
+    },
+    "elapsed_seconds": 805.4,
+    "note": "Recorded from the retained logs: arm A = 29 PASS / 7 FAIL (exit 1); arm B = 41 PASS / 0 FAIL (exit 0). The WIP harness adds 7 further behaviour tests, so arm B is a strict superset of arm A and is still fully green."
+  },
+  "conclusions": [
+    "The project is byte-exactly at released core v1.0.0 for every managed file (CRLF-normalised sha256 of project bytes == git cat-file blob HEAD:<path>). The 7 FAILs therefore reproduce in the RELEASED core, not as a project staleness artifact.",
+    "The defect and its complete fix both live in the canonical core D:\\Projeler\\.agents-core. Adopting the core working tree clears all 7 behaviours and the materialization-staleness error in one step.",
+    "The defect is the progress-contract v2 structured-TODO-plan gate as released in v1.0.0: the controller re-dispatches 'plan' instead of advancing to 'run', and the parallel path stalls with missing candidates for W101a/W101b.",
+    "The core working-tree fix adds normalize_todo_plan_state/_plan_gate_meta plus todo_plan_state plumbing through channel jobs and run_parallel_group_implement (core diff: run-wave-program.py +238/-41, wave_state_engine.py +66, validate-managed-runtime.py +566)."
+  ],
+  "not_repairable_by_W57_because": [
+    "Both the defect and the fix are in a different repository (canonical Agent Core). AGENTS.md forbids a second substantive Wave policy tree outside .agents/ and the materializer overwrites these exact managed files, so a W57 edit to .opencode/scripts/* would be silently reverted by the next materialization.",
+    "Committing/releasing the core's 40 uncommitted WIP paths is a release act requiring explicit current-conversation approval; it is not a Wave worker action.",
+    "The materializer correctly refuses while a live controller holds the lock (prior dispatch: EXIT=3, 'live controller: ac-wave-opencode-parallel.lock pid=51592'). Releasing the controller's own lock from inside its own dispatch would weaken a safety invariant. pid 51592 was confirmed alive (python, StartTime 2026-09-27 21:15) during this dispatch."
+  ],
+  "concrete_missing_prerequisite": [
+    "1. Core owner commits or discards the 40 dirty paths in D:\\Projeler\\.agents-core so core_digest is pinned by a released tree instead of a working tree.",
+    "2. Controller checkpoints, stops the pool and releases the pid=51592 lock, then runs setup\\materialize-ac-core.py --core D:\\Projeler\\.agents-core --repo D:\\Projeler\\hpc-client-gui.",
+    "3. Controller restarts (run-wave-program.py / wave_state_engine.py are controller_restart_paths) and auto-resumes.",
+    "4. Controller re-runs the six postrun_checks and rebinds evidence to the new content identity. Arm B above predicts validate-managed-runtime.py -> exit 0, 41 PASS / 0 FAIL."
+  ],
+  "mutation_guarantee": {
+    "project_dirty_paths_before": 61,
+    "project_dirty_paths_after": 61,
+    "core_dirty_paths_before": 40,
+    "core_dirty_paths_after": 40,
+    "changed_files": [],
+    "scratch_retained": ".tmp/w57-repair-125/ (proj-head, proj-wip, baseline + A/B logs) - retained, not deleted"
+  },
+  "evidence_files": {
+    "arm_A_log": ".tmp/w57-repair-125/managed-runtime-baseline.txt",
+    "arm_B_log": ".tmp/w57-repair-125/wip-run.txt",
+    "arm_A_managed_runwave_sha256": "2427267d0619de82415520cdaebaebc4104460b724483c7a85cbe11c31393581",
+    "arm_B_managed_runwave_sha256": "a28f2e8c02d039d680937601f442cf9a5c7d5e113af64929e3a81cb82e0c3fcb"
+  },
+  "core_identity": {
+    "head": "73c1b7d8c7b5e925613eacf4450aa860271c10c5",
+    "tag": "v1.0.0"
+  }
+}

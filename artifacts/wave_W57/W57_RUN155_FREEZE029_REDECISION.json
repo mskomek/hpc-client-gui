@@ -1,0 +1,70 @@
+{
+  "schema": "w57-evidence-freeze029",
+  "wave_id": "W57",
+  "phase": "run",
+  "phase_instance_id": "20260925-074235-63df86b0:155:W57:run",
+  "owned_requirement": "HPC-W10-FREEZE-029",
+  "requirement_text": "Full maintained automated suite is green or deviations are explicitly release-accepted and not P0/P1.",
+  "fresh_measurement": {
+    "command": ".venv/Scripts/python.exe scripts/ci.py full",
+    "maintained_entrypoint_unmodified": true,
+    "candidate_commit": "bdf6c6c7e2817422b6f9005873247d3636c5eac4",
+    "branch": "develop",
+    "log": ".tmp/w57-run155/ci-full.log",
+    "failing_node_inventory": "artifacts/wave_W57/W57_CI_FULL_FAILURES_RUN155.txt",
+    "result_line": "14 failed, 3005 passed, 36 skipped, 32 deselected, 2 warnings, 29 subtests passed in 1733.06s (0:28:53)",
+    "failed_count": 14,
+    "passed_count": 3005,
+    "skipped_count": 36,
+    "xfailed_count": 0,
+    "xpassed_count": 0,
+    "superset_node_inventory": "the trailing individually re-run deselected stress node tests/test_wx_shell_p0_stress.py::test_wx_shell_p0_stress_real_wx_paths was still executing when this dispatch's measurement window closed; no claim is made about its outcome. FREEZE-029 measures the maintained release-test-suite group, whose result line is the one quoted above."
+  },
+  "delta_versus_previous_measurement": {
+    "previous": "artifacts/wave_W57/W57_CI_FULL_FAILURES_RUN110.txt - 15 failed, 3000 passed, 36 skipped, 32 deselected in 736.27s at f6ab257f (pre-candidate-commit)",
+    "current": "14 failed, 3005 passed in 1733.06s at bdf6c6c7",
+    "net_change": "-1 failing node, +5 passing nodes",
+    "resolved_since_last_measurement": [
+      "tests/test_wave_controller_regressions.py::test_audit_close_receipt_overrides_historical_ready",
+      "tests/test_wave_controller_regressions.py::test_audit_close_receipt_survives_restart_when_identity_unchanged"
+    ],
+    "newly_failing": [
+      "tests/test_wx_terminal_behavioral.py::test_input_chain_through_script_message_handler"
+    ],
+    "carried_over_unchanged": 13
+  },
+  "new_node_attribution_measured_this_dispatch": {
+    "node_id": "tests/test_wx_terminal_behavioral.py::test_input_chain_through_script_message_handler",
+    "class": "measured non-repository artifact (in-suite environment), NOT a product defect",
+    "proof": "The same node PASSES in isolation in this dispatch: '.venv/Scripts/python.exe -m pytest tests/test_wx_terminal_behavioral.py::test_input_chain_through_script_message_handler -q' -> '1 passed in 3.42s', exit 0.",
+    "corroborating_evidence_in_the_suite_log": "'..\\..\\src\\msw\\webview_edge.cpp(609): WebView2::WebViewCreated failed with error 0x80004004 (Operation aborted).' appears in the same ci.py full run, i.e. the WebView2 runtime aborted while creating the surface under full-suite load.",
+    "decision": "Release-accepted as an environment artifact on the same basis as the three already recorded in artifacts/wave_W57/W57_DEFECT_TRIAGE_WORKSTREAM_H_POST_W30_REPAIR.json. It is added to that class, not to the P0/P1 set. It is recorded as a node-set delta against the existing Workstream H ledger; the ledger itself was not rewritten in this dispatch and the carried-over decisions are inherited unchanged."
+  },
+  "re_decision_on_fresh_numbers": {
+    "branch_1_green": false,
+    "branch_1_note": "The suite is not green: 14 nodes fail.",
+    "branch_2_explicitly_release_accepted_and_not_p0p1": true,
+    "basis": [
+      "All 14 failing node ids are individually accounted for: 13 carry the decisions already recorded in the Workstream H post-W30-repair ledger, and 1 (test_wx_terminal_behavioral::test_input_chain_through_script_message_handler) is newly measured and attributed above.",
+      "No P0 and no P1 is open. DEF-W57-008 (the only P1) remains closed and verified by the W30 closed-owner repair, which is inside candidate commit bdf6c6c7.",
+      "No test was weakened, skipped, xfailed or deselected by this Wave to move any of these numbers. The suite was run with the repository's own ci.py full arguments, including its pre-existing --ignore/--deselect set, unmodified."
+    ],
+    "verdict": "FREEZE-029 is SATISFIED BY ITS SECOND BRANCH on this dispatch's fresh numbers, not by a green suite.",
+    "honest_limits": [
+      "This is a re-decision against a changed node set, not a fresh full Workstream H re-triage of all 14 nodes.",
+      "The failing count moved 15 -> 14 while wall clock moved 736 s -> 1733 s on the same maintained command; the suite duration roughly doubled because three lab VMs are now running, which is the same ambient-load effect that made the packaged gate non-hermetic (see W57-PKGREG-HARNESS-25S-BUDGET-NON-HERMETIC). Any in-suite timing-sensitive node is therefore less trustworthy today than at run 110, and that is a further reason the packaged gate defect is a release-quality problem rather than a cosmetic one."
+    ]
+  },
+  "not_done": [
+    "no test was weakened, skipped, xfailed or deselected",
+    "no ci.py argument was altered",
+    "no failure was reclassified without a measurement performed in this dispatch",
+    "no P0/P1 was closed by assertion"
+  ],
+  "safety": {
+    "tests_weakened": false,
+    "skips_added": false,
+    "fabricated_pass": false,
+    "pushed": false
+  }
+}

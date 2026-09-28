@@ -1,0 +1,78 @@
+{
+  "schema": "w57-evidence-stray-root-duplicates",
+  "wave_id": "W57",
+  "phase": "run",
+  "phase_instance_id": "20260925-074235-63df86b0:154:W57:run",
+  "todo_id": "T08",
+  "decision": "RECORDED_TRUTHFULLY_NOT_DELETED",
+  "rationale": "These are untracked files that this phase did not create and whose provenance is unknown to W57. AGENTS.md Safety requires preserving unrelated untracked user changes and forbids dropping unknown files; rules.md line 6 requires preserving unrelated changes. Deleting them is therefore not a W57-owned action, and deleting the two drifted copies would destroy content that exists nowhere else. All six are also outside W57 evidence.allowed_closeout_only_paths, so W57 cannot closeout over them.",
+  "classification": {
+    "byte_identical_duplicates": [
+      "wave_progress.py",
+      "parallel_workspace.py",
+      "route-wave-findings.py",
+      "test_wave_controller_regressions.py"
+    ],
+    "drifted_copies_unique_content": [
+      "run-wave-program.py",
+      "wave_state_engine.py"
+    ]
+  },
+  "files": [
+    {
+      "root_file": "run-wave-program.py",
+      "root_sha256": "2427267d0619de82415520cdaebaebc4104460b724483c7a85cbe11c31393581",
+      "canonical_path": ".opencode\\scripts\\run-wave-program.py",
+      "canonical_sha256": "082db6213930ac4732614f053686dbc23df4b1baf580860952fa6505f4447214",
+      "identical": false,
+      "bytes": 256120,
+      "last_write": "2026-09-27T09:59:46"
+    },
+    {
+      "root_file": "wave_state_engine.py",
+      "root_sha256": "1bd3ea27692d65b34c7f8f535dc2726a33a1e72a96d2b232aed803681318869f",
+      "canonical_path": ".opencode\\scripts\\wave_state_engine.py",
+      "canonical_sha256": "828a0051058b68b20511ad923075f7ee3cfa4783c5efbd9fcc3e0dd5b93a364e",
+      "identical": false,
+      "bytes": 56857,
+      "last_write": "2026-09-27T17:23:37"
+    },
+    {
+      "root_file": "wave_progress.py",
+      "root_sha256": "e3fdf455236e6aba8458b0b29ce5d82974908af9a74c8e3e42c3643f12a39ddc",
+      "canonical_path": ".opencode\\scripts\\wave_progress.py",
+      "canonical_sha256": "e3fdf455236e6aba8458b0b29ce5d82974908af9a74c8e3e42c3643f12a39ddc",
+      "identical": true,
+      "bytes": 21462,
+      "last_write": "2026-09-26T16:59:02"
+    },
+    {
+      "root_file": "parallel_workspace.py",
+      "root_sha256": "eab16c5cbd89594bd31d91d3b34270391d1392cf7bbf458931e6b4a6f6ffed0a",
+      "canonical_path": ".opencode\\scripts\\parallel_workspace.py",
+      "canonical_sha256": "eab16c5cbd89594bd31d91d3b34270391d1392cf7bbf458931e6b4a6f6ffed0a",
+      "identical": true,
+      "bytes": 53089,
+      "last_write": "2026-09-27T09:58:52"
+    },
+    {
+      "root_file": "route-wave-findings.py",
+      "root_sha256": "c19e5ba872b92cf0dcc4439329f8af84645e1b3de9a2fd790c2fb19120cc13e6",
+      "canonical_path": ".opencode\\scripts\\route-wave-findings.py",
+      "canonical_sha256": "c19e5ba872b92cf0dcc4439329f8af84645e1b3de9a2fd790c2fb19120cc13e6",
+      "identical": true,
+      "bytes": 9961,
+      "last_write": "2026-09-24T23:56:48"
+    },
+    {
+      "root_file": "test_wave_controller_regressions.py",
+      "root_sha256": "9eafa5b769344070b0d9a460da433a8eaee0aa486119f0bb74146b7c59ac897d",
+      "canonical_path": "tests\\test_wave_controller_regressions.py",
+      "canonical_sha256": "9eafa5b769344070b0d9a460da433a8eaee0aa486119f0bb74146b7c59ac897d",
+      "identical": true,
+      "bytes": 11321,
+      "last_write": "2026-09-28T04:03:52"
+    }
+  ],
+  "effect_on_freeze": "These root-level copies are untracked, so they are not part of any Git commit and do not affect candidate_sha. They are a repository hygiene defect routed to the controller/Agent Core owner, not a W57 blocker, and they are not counted as freeze content."
+}

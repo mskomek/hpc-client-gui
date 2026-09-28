@@ -1,0 +1,129 @@
+{
+  "artifact": "W57_REPAIR135_FALSE_BLOCKER_FALSIFIED_AND_GATE_ATTRIBUTED",
+  "wave_id": "W57",
+  "phase": "repair",
+  "phase_instance_id": "20260925-074235-63df86b0:135:W57:repair",
+  "content_identity": "9c70d980b0c9940e8643de8b925f6b0d53706ecbc4e1afc9e811ed76bbf05a2e",
+  "project_head": "f6ab257fbfd62d402e31e9330f30bb017b795fa8",
+  "repair_hypothesis_previous": "W57-CORE-DIGEST-RED-IS-PROGRAM-POSTRUN-NOT-W57-GATE",
+  "repair_hypothesis_this": "W57-DEF018-FALSE-BLOCKER-AND-GATE-RED-IS-SOLELY-COMPUTE02",
+  "hypothesis_changed": true,
+  "hypothesis_change_reason": "Dispatch 134's own two named blockers were re-tested one at a time. DEF-W57-018 is falsified as a blocker by live execution. A second, genuinely new hypothesis (that the maintained gate's all-nodes expectation is an undeclared W57 over-specification) was tested and ALSO falsified, this time by the canonical lab protocol. What survives is narrower and now machine-attributed per node.",
+
+  "narrative": {
+    "FINDING": "Two of the three items on dispatch 134's blocker list do not survive testing. (1) DEF-W57-018 is not a blocker: the unattended opt-in exists and was re-proven live on the current identity. (2) The maintained gate's two-node/all-nodes expectation is NOT an undeclared W57 over-specification, so no gate may be relaxed: it is the declared accepted baseline of the LOCAL_REAL environment. (3) What is left is a single external node outage, and every one of the gate's 7 failures is now attributed per node with proof that every healthy node passes every product check.",
+    "OBSERVED_FAILURE": "python .opencode/scripts/../lab/lab-status.ps1 -> FAIL, compute02 192.168.250.13 transport_ok=false, 'ssh: connect to host 192.168.250.13 port 22: Connection timed out', slurm 'compute01|idle' / 'compute02|down*'. Dispatch 134 had run only this status probe; it never executed the FREEZE-030 gate itself in that dispatch.",
+    "HYPOTHESIS": "If the FREEZE-030/-040 red were partly a W57-owned gate-scope defect, the authoritative source section (Workstream E) and the canonical lab protocol would disagree with the implemented gate. If the red is purely external, every failed check must trace to compute02 alone and every healthy node must pass every product check.",
+    "CHANGE": "Measurement plus one W57-owned evidence-truthfulness correction. Executed: lab/lab-status.ps1; lab/lab-test.ps1 (the maintained FREEZE-030 gate, end to end); the isolated-root CLI opt-in probe on both sides; validate_wave_closeout.py --wave W57; pytest tests/test_wave_controller_regressions.py; validate-wave-orchestration.py. NO gate, no product file, no lab file, no test, no manifest and no environment variable was changed. The only repository write is the W57-owned defect-ledger correction described in w57_owned_repair.",
+    "RESULT": "Hypothesis REFUTED on the gate-scope half, CONFIRMED on the attribution half. The gate is correctly scoped and must not be relaxed. All 7 failures trace to compute02. W57 has no W57-repairable work remaining; its only gate is external and administrator-only."
+  },
+
+  "falsified_1_def_w57_018_is_not_a_blocker": {
+    "prior_dispatch_134_claim": "DEF-W57-018 is unchanged: the maintained client CLI refuses every remote command, cli_external_access_enabled is a single GLOBAL default-off security setting with no unattended opt-in, owner CLI/settings, not worked around.",
+    "refuted_by": "The unattended opt-in is the shipped isolation contract HPC_GUI_CONFIG_ROOT. It overrides the STORE that holds the key, not the key. Re-proven live on the current identity, both sides:",
+    "side_a_control_intact": "No HPC_GUI_CONFIG_ROOT -> 'Remote CLI access is disabled. Enable \"Allow external CLI access to remote commands\" in Settings to use this command.', exit_code 1. The default-off control still refuses.",
+    "side_b_optin_works": "HPC_GUI_CONFIG_ROOT = <disposable .tmp/w57r135/isolated-root> whose config.json carries settings.cli_external_access_enabled=true -> same remote command returns 'DEF-W57-018-OPTIN-OK host=login-control01 user=hpctest', exit_code 0.",
+    "no_contamination": "Developer profile C:\\Users\\mskomek\\.truba_slurm_gui\\config.json contains NO cli_external_access_enabled key after the run.",
+    "authority_unchanged": "src/hpc_gui/cli/main.py:960 gate line unchanged; src/hpc_gui/config/storage.py:434 get_cli_external_access_enabled(default: bool = False) default still off; src/hpc_gui/core/paths.py:17 ISOLATED_CONFIG_ROOT_ENV.",
+    "already_recorded": "The withdrawal was already established at repair 113 in W57_WAVE_REPORT.md sections 1b and 13.6. Dispatch 134 re-listed it as open, contradicting the Wave's own report.",
+    "consequence": "DEF-W57-018 is removed from the W57 blocking set. It is CLOSED AND VERIFIED, not routed-and-open."
+  },
+
+  "falsified_2_the_two_node_expectation_is_declared_not_invented": {
+    "hypothesis_tested": "The maintained gate derives its node count from lab/config.json inventory rather than from the requirement, so a two-node red is a W57-owned test-strategy defect that W57 could legitimately narrow.",
+    "measured_mechanism": "lab/lab-common.ps1 Get-ComputeNodes returns every config.json node with role=compute, so lab/lab-test.ps1:159 $taskCount = 2 regardless of liveness; :164 srun --nodes={taskCount}; :230 the required-check key is literally 'srun_two_nodes'; :174 sinfo_nodes requires EVERY declared compute node to be idle|mix|alloc; :219-220 host_keys_pinned_all_nodes and ssh_key_login_all_nodes iterate all nodes.",
+    "why_the_hypothesis_failed": "The requirement text names no node count (REQUIREMENT_REGISTRY.md L1112 'Required real-cluster regression passes.', L1122 'real-cluster regression;'), which is what made the over-specification hypothesis look right. But the node count is not left unspecified by the project: .opencode/protocol/LOCAL_REAL_HPC_LAB.md, the profile-referenced canonical external-lab protocol, states the accepted LOCAL_REAL baseline as 'lab-test.ps1: LOCAL_REAL_READY', 'behavioral gates: 23/23 PASS', 'controller and both compute transports/services: PASS', 'compute nodes: Slurm idle', and 'two-node srun: PASS' (lines 63-72). The same document's Wave selection rule (lines 92-106) requires the lab infrastructure itself to be healthy for a Wave whose owned requirement includes EXTERNAL evidence, and W57 declares required_evidence_classes: GUI,PACKAGE,EXTERNAL.",
+    "consequence": "Narrowing the gate would contradict the canonical lab protocol's own accepted baseline and would be a gate weakening to obtain a green. REJECTED. This is the specific wrong repair that dispatches could otherwise have taken to break out of the red, and it is now closed off with authority rather than left available."
+  },
+
+  "maintained_gate_executed_this_dispatch": {
+    "why_this_was_missing_before": "Dispatch 134 ran only lab-status.ps1, a status probe, and asserted the FREEZE-030 state from prose. The maintained FREEZE-030 gate had not been executed on the current content identity in that dispatch. Per the capability profile the controller does not build, test or replay, so it had to be run here.",
+    "command": "pwsh -NoProfile -NonInteractive -File .\\lab\\lab-test.ps1",
+    "canonical_evidence": "lab/evidence/LOCAL_REAL_TEST.json (9315 B, written 2026-09-28T05:24:16Z)",
+    "working_copy": ".tmp/w57r135_labtest.json",
+    "exit_code": 3,
+    "status": "FAIL",
+    "required_count": 23,
+    "failed_count": 7,
+    "failed_checks": [
+      "ssh_key_login_all_nodes",
+      "canonical_paths",
+      "identity_consistency",
+      "storage_roundtrip",
+      "srun_two_nodes",
+      "sinfo_nodes",
+      "shared_home_compute_job"
+    ],
+    "bounded_harness_holds": "DEF-W57-017 remains fixed: srun and shared_home_job terminated at the 300 s allocation bound with exit 124 and a truthful stderr marker. The gate returned instead of hanging and orphaned no allocation.",
+    "matches_repair_116": "23 required / 7 failed / exit 3, identical to the repair 116 measurement, now re-established on the current content identity."
+  },
+
+  "per_node_attribution_every_failure_is_compute02": {
+    "method": "The four per-node required checks record one probe per declared node in config.json order: login-control01 192.168.250.11, compute01 192.168.250.12, compute02 192.168.250.13.",
+    "ssh_key_login": ["node1 exit 0", "node2 exit 0", "node3 exit 255 'ssh: connect to host 192.168.250.13 port 22: Connection timed out'"],
+    "canonical_paths": ["node1 exit 0 'home=/srv/hpc/home scratch=/srv/hpc/scratch project=/srv/hpc/project'", "node2 exit 0 same", "node3 exit 255 connection timed out"],
+    "identity_consistency": ["node1 exit 0 '/home/hpctest 1000 1000 64030 64030'", "node2 exit 0 same", "node3 exit 255 connection timed out"],
+    "storage_roundtrip": ["node1 exit 0 'home=/srv/hpc/home/hpctest scratch=/srv/hpc/scratch/hpctest project=/srv/hpc/project/hpctest'", "node2 exit 0 same", "node3 exit 255 connection timed out"],
+    "srun_two_nodes": "exit 124, stderr 'srun: Required node not available (down, drained or reserved)' / 'srun: job 90 queued and waiting for resources' / 'lab command exceeded the 300s wall-clock bound and was terminated'. Needs compute02 to grant a 2-node allocation.",
+    "sinfo_nodes": "exit 0, output 'compute01|idle', 'compute02|down*'. The check requires every declared compute node to be idle|mix|alloc.",
+    "shared_home_compute_job": "srun --nodes=2 with the same unavailable-node requirement as srun_two_nodes.",
+    "conclusion": "Every healthy node passes every product check. Zero product or client defects are implicated by this red. The cause is uniquely and completely the compute02 outage.",
+    "no_icmp_credit": "Consistent with dispatch 134: ICMP reachability is not service evidence and was not treated as progress here. SSH transport and Slurm node state are the only accepted signals."
+  },
+
+  "w57_owned_repair": {
+    "defect": "The W57 defect ledger contradicted the W57 report's own body. Ledger row DEF-W57-018 still read 'OPEN - ROUTED with a bounded next action', while sections 1b and 13.6 of the same report recorded the withdrawal at repair 113. The source's Required evidence list includes a defect ledger and Workstream H requires every finding to carry a truthful status/decision, so a ledger row that contradicts the body is a Wave-owned evidence-truthfulness defect.",
+    "why_it_was_repairable_here": "It is W57-owned (docs/wave-reports/v2/opencode/W57_WAVE_REPORT.md is the file W57.md:171-176 mandates, and docs/wave-reports/ is in the profile's allowed_closeout_only_paths) and it is not gated on the compute02 outage, unlike every other open item.",
+    "change": "Ledger row DEF-W57-018 status cell corrected to CLOSED AND VERIFIED - WITHDRAWN, recording the refuted routing premise, the HPC_GUI_CONFIG_ROOT mechanism, the repair 135 two-sided live re-verification, the zero-contamination result, and the explicit consequence that repair 134's blocker list wrongly carried it.",
+    "not_done_and_why": "No gate was relaxed, no test weakened, no product file touched, no manifest written, no evidence status upgraded. FREEZE-044's manifest stays deliberately unwritten because it requires ACCEPTANCE_GREEN and FREEZE-030/-040 are still red; a green manifest would fabricate evidence."
+  },
+
+  "w57_state_this_dispatch": {
+    "focused_retest": "python -m pytest tests/test_wave_controller_regressions.py -q -> 17 passed in 0.41s, exit 0",
+    "orchestration": "python .opencode/scripts/validate-wave-orchestration.py -> AC_WAVE_METADATA_VALID=61, AC_WAVE_ORCHESTRATION_VALIDATION: PASS, exit 0",
+    "closeout_gate": "python scripts/validate_wave_closeout.py --wave W57 -> can_close=false, exactly one failure_reason: missing/invalid evidence manifest. No core-digest, materialization or AC_CORE_ROOT term, confirming dispatch 134's routing on the current identity.",
+    "lab_status": "lab/lab-status.ps1 -> FAIL; login-control01 transport_ok/services_ok true 6/6 active; compute01 transport_ok/services_ok true 3/3 active; compute02 transport_ok FALSE 'ssh: connect to host 192.168.250.13 port 22: Connection timed out'; slurm.ok false 'compute01|idle' 'compute02|down*'",
+    "maintained_freeze_030_gate": "23 required / 7 failed / exit 3, all 7 attributed to compute02",
+    "evidence_manifest": "still absent, deliberately",
+    "owned_requirements_touched": 0,
+    "acceptance_not_rejudged": "FREEZE-030/-040 remain red; the freeze declaration still reads Frozen for W58: NO."
+  },
+
+  "mutation_guarantee": {
+    "project_head_unchanged": "f6ab257fbfd62d402e31e9330f30bb017b795fa8",
+    "project_commits_created": 0,
+    "product_files_changed": 0,
+    "lab_files_changed": 0,
+    "test_files_changed": 0,
+    "gate_relaxed_or_assertions_weakened": 0,
+    "manifests_written": 0,
+    "security_settings_changed": 0,
+    "default_off_control": "unchanged and still refusing; proven by side_a of the opt-in probe",
+    "external_cluster_mutations": "the gate's own bounded submit/cancel path ran (job 90 was queued and the harness terminated it at the bound; prior leaked PENDING jobs were not created by this run)",
+    "new_paths_from_this_dispatch": [
+      "artifacts/wave_W57/W57_REPAIR135_FALSE_BLOCKER_FALSIFIED_AND_GATE_ATTRIBUTED.json (this artifact)",
+      ".tmp/w57r135/ (gate capture, isolated-root opt-in probe)",
+      "lab/evidence/LOCAL_REAL_TEST.json (the maintained gate's own canonical evidence output)",
+      "docs/wave-reports/v2/opencode/W57_WAVE_REPORT.md (DEF-W57-018 ledger row corrected)"
+    ]
+  },
+
+  "why_blocked": {
+    "single_remaining_w57_gate": "DEF-W57-006, the compute02 (192.168.250.13) outage. It reds every FREEZE-030/-040 required check and therefore blocks the WAVE_W57_EVIDENCE_MANIFEST, which the profile will only accept as ACCEPTANCE_GREEN or CLOSED.",
+    "genuinely_unavailable_authority": "Restarting the guest needs Hyper-V administrator. Re-verified this dispatch: IsAdministrator=False, user MSKOMEK\\mskomek, Get-VM returns 'You do not have the required permission to complete this task.' No unelevated repair path exists. Local code fix is the test, and the test is already fixed.",
+    "no_w57_owned_repair_work_remains": "DEF-W57-017 closed and verified at repair 116 and its boundedness re-proven here. DEF-W57-018 is withdrawn and re-verified. The gate-scope hypothesis is refuted by the canonical lab protocol, so no permissible W57 gate change exists. The defect ledger is now truthful. Every remaining item is either external or program-owned.",
+    "not_reopen": "A fourteenth REOPEN would re-enter a loop that has already run with no_progress_count far beyond its limit, against a target that has now been shown twice over to be unable to change W57's outcome. There is also no pending repair-owned TODO on which to record progress.",
+    "not_human_deferred": "The compute02 outage alone would qualify. But the canonical-core-revision-changed POSTRUN red is a repository-owned orchestration defect (Agent Core bytes plus this repository's re-materialization invocation) that still stands in the program, and the protocol forbids using human deferral to cover repository-owned technical or orchestration defects. Deferring W57 would mask it. BLOCKED keeps it visible as repair/routing state.",
+    "not_fail": "W57 is not failing at its own surface. 17/17 focused retest, orchestration 61/61, closeout verdict names only the missing manifest, and every healthy lab node passes every product check.",
+    "not_ready_for_audit_or_pass": "FREEZE-030/-040 are red, no ACCEPTANCE_GREEN manifest exists, and audit_policy is fresh-independent, so no audit can be honestly requested. docs/wave-reports/v2/opencode/W57_AUDIT_REPORT.md is correctly still absent: it is the audit phase's output and is downstream of the red, not repair work, and fabricating it is forbidden.",
+    "not_orchestration_recovery_required": "The program's machinery is healthy: validate-wave-orchestration.py exits 0 with 61 valid records, the state engine and phase dispatch ran, and the controller state is coherent."
+  },
+
+  "concrete_missing_prerequisites": [
+    "An operator with Hyper-V administrator authority must start the compute02 guest (192.168.250.13). This is the ONLY prerequisite standing between W57 and its manifest. Re-run `lab/lab-test.ps1`; 23/23 and exit 0 is the expected green, and nothing else in W57 needs to change first.",
+    "The Agent Core owner must land or tag the canonical bytes the project is to track, and the program controller must re-materialize from a committed ref. This is program-level and will end the program in PROGRAM_FINAL_VALIDATION_BLOCKED if skipped, but it is not a W57 gate and must not be repaired inside W57, which is frozen."
+  ],
+
+  "phase_status": "BLOCKED",
+  "human_only": false
+}

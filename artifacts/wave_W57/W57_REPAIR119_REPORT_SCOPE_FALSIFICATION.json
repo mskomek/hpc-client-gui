@@ -1,0 +1,110 @@
+﻿{
+    "wave":  "W57",
+    "phase":  "repair",
+    "phase_instance_id":  "20260925-074235-63df86b0:119:W57:repair",
+    "finding_id":  "W57-CANONICAL-REPORT-SCOPE-CLAIMS-FALSIFIED-BY-REPO-TRUTH",
+    "status":  "CONFIRMED",
+    "classification":  "repository_owned_evidence_truthfulness_defect",
+    "blocked_by_compute02":  false,
+    "summary":  "The W57 canonical report asserted a working-tree scope that repository truth contradicts. Section 2 cited a command whose real output returns four files, not \"only that file\"; section 7 claimed the only tracked-source changes were two W30 files, omitting four W57-owned DEF-W57-017 harness/test files. Both claims were falsified by re-running the report\u0027s own cited command, and both were corrected in place.",
+    "falsified_claims":  [
+                             {
+                                 "section":  "2",
+                                 "claim":  "git status --porcelain -- src/ build/ requirements.txt requirements-release.lock pyproject.toml scripts/ lab/ shows only that file",
+                                 "actual_entries":  4,
+                                 "actual":  [
+                                                " M lab/config.json",
+                                                " M lab/lab-common.ps1",
+                                                " M lab/lab-test.ps1",
+                                                " M src/hpc_gui/services/job_submit_cancel.py"
+                                            ],
+                                 "verdict":  "FALSE"
+                             },
+                             {
+                                 "section":  "7",
+                                 "claim":  "the only tracked-source working-tree changes are src/hpc_gui/services/job_submit_cancel.py and tests/test_w30_submit_cancel.py",
+                                 "actual_entries":  7,
+                                 "actual":  [
+                                                " M lab/config.json",
+                                                " M lab/lab-common.ps1",
+                                                " M lab/lab-test.ps1",
+                                                " M src/hpc_gui/services/job_submit_cancel.py",
+                                                " M tests/test_local_real_lab_static.py",
+                                                " M tests/test_w30_submit_cancel.py",
+                                                "?? tests/test_local_real_lab_bounded_commands.py"
+                                            ],
+                                 "verdict":  "FALSE"
+                             },
+                             {
+                                 "section":  "7",
+                                 "claim":  "This run created no product, test, spec, lock or build-input change",
+                                 "verdict":  "FALSE_ON_TEST",
+                                 "note":  "lab/lab-common.ps1 (+120/-18), lab/lab-test.ps1, lab/config.json and two tests/ files are W57 DEF-W57-017 harness work from repairs 115/116."
+                             }
+                         ],
+    "surviving_claims":  [
+                             {
+                                 "claim":  "artifact sha256 and size",
+                                 "artifact":  "dist/hpc-client-gui/hpc-client-gui.exe",
+                                 "size":  7672468,
+                                 "sha256":  "8ba80453a76a664959baedf7716c476a5334b6aff860a4bc79b9e220d48b4c57",
+                                 "verdict":  "HOLDS"
+                             },
+                             {
+                                 "claim":  "bundle file count",
+                                 "bundle":  "dist/hpc-client-gui",
+                                 "files":  172,
+                                 "verdict":  "HOLDS"
+                             },
+                             {
+                                 "claim":  "candidate neither patched nor rebuilt",
+                                 "head":  "f6ab257fbfd62d402e31e9330f30bb017b795fa8",
+                                 "verdict":  "HOLDS"
+                             },
+                             {
+                                 "claim":  "product delta is exactly one file",
+                                 "verdict":  "HOLDS",
+                                 "note":  "The product tree src/ build/ requirements*.txt pyproject.toml excludes lab/ and tests/, so the delta and the product hash are unaffected; only the cited command and its reading were wrong."
+                             }
+                         ],
+    "known_evidence_limitation":  "The report product-tree hash 23b31401... does not specify its manifest format and is therefore not independently reproducible as written. Recorded as a limitation, not re-asserted as verified.",
+    "change_made":  {
+                        "files_modified":  [
+                                               "docs/wave-reports/v2/opencode/W57_WAVE_REPORT.md"
+                                           ],
+                        "sections_corrected":  [
+                                                   2,
+                                                   7
+                                               ],
+                        "section_added":  18,
+                        "product_test_spec_lock_build_input_changed":  false,
+                        "lab_or_tests_modified":  false,
+                        "candidate_patched_or_rebuilt":  false,
+                        "controller_surface_touched":  false,
+                        "postrun_checks_defect_touched":  false
+                    },
+    "focused_retest":  {
+                           "command":  "python -m pytest tests/test_local_real_lab_bounded_commands.py tests/test_local_real_lab_static.py -q",
+                           "result":  "8 passed in 9.37s",
+                           "exit_code":  0,
+                           "note":  "Same gate as repair 118; the previously-undisclosed DEF-W57-017 harness hardening is green and unregressed."
+                       },
+    "def_w57_006_unchanged":  {
+                                  "still_authority_bound":  true,
+                                  "is_admin":  false,
+                                  "lab_status":  "FAIL",
+                                  "compute02_transport_ok":  false,
+                                  "slurm_output":  "compute01|idle | compute02|down*",
+                                  "note":  "Not re-litigated; re-measured only to confirm the mask was still in place. Remains the sole cause of FREEZE-030/-040 RED and the TODO-014 two-node leg."
+                              },
+    "owned_row_effect":  {
+                             "FREEZE-031":  "provenance now independently reproducible; previously falsified",
+                             "FREEZE-037":  "evidence reconciliation now truthfully reflects the working tree",
+                             "Diff_Review_contract":  "now discharges truthfully",
+                             "FREEZE-030":  "still RED (DEF-W57-006)",
+                             "FREEZE-040":  "still RED (DEF-W57-006)",
+                             "TODO-014":  "two-node leg still externally blocked (DEF-W57-006)",
+                             "Frozen_for_W58":  "NO"
+                         },
+    "generated_at":  "2026-09-28T00:19:45.4870664Z"
+}

@@ -1,0 +1,126 @@
+{
+  "schema": "w57-repair-evidence",
+  "wave_id": "W57",
+  "phase": "repair",
+  "phase_instance_id": "20260925-074235-63df86b0:146:W57:repair",
+  "finding_ids": [
+    "DEF-W57-006",
+    "W57-POSTRUN-SWEEP-CRASHES-ON-NONPY-ENTRIES-SO-DEF007-NEVER-REPORTS"
+  ],
+  "repair_hypothesis": "W57-POSTRUN-SWEEP-CRASHES-ON-NONPY-ENTRIES-SO-DEF007-NEVER-REPORTS",
+  "hypothesis_disposition": "CONFIRMED_THEN_REPAIRED",
+  "git_identity": {
+    "head": "f6ab257fbfd62d402e31e9330f30bb017b795fa8",
+    "branch": "develop",
+    "committed_by_this_phase": false,
+    "candidate_sha_pinned": false,
+    "candidate_sha_blocker": "working tree is dirty and the canonical Agent Core runtime is concurrently mutating, so no stable content identity can be pinned for this change"
+  },
+  "observed_failure": {
+    "measurement": "real run_postrun_checks() imported from .opencode/scripts/run-wave-program.py and called against the live project profile",
+    "exception": "OSError: [WinError 193] %1 is not a valid Win32 application",
+    "report_written": false,
+    "profile_postrun_entries": 21,
+    "non_python_entries": 8,
+    "unlaunchable_in_plan": 8,
+    "defect_site": "run-wave-program.py run_postrun_checks(): non-.py entries are launched bare as argv[0] with no interpreter, and the launch is not contained by try/except",
+    "consequence": "one unlaunchable entry aborts the whole sweep, every later entry is silently unaccounted for, and no postrun verdict of any kind exists"
+  },
+  "change": {
+    "kind": "containment",
+    "files": [
+      {
+        "path": ".opencode/scripts/run-wave-program.py",
+        "role": "managed runtime materialized in this project",
+        "total_lines_after": 4908,
+        "sha256_after_prefix": "4bde39f10a2f07ac31f8a13e",
+        "function_line_after": 3664,
+        "lines_added": 11
+      },
+      {
+        "path": "D:/Projeler/.agents-core/runtime/run-wave-program.py",
+        "role": "canonical Agent Core runtime (durable source; patched with the identical hunk so the next materialization does not revert the fix)",
+        "line_after": 3752
+      }
+    ],
+    "behaviour": "the per-entry subprocess launch is wrapped in try/except OSError; an unlaunchable entry is recorded as launched=false with the OS error string, appended to failure_reasons, and the sweep continues so later entries still run and the report is still written",
+    "explicitly_not_done": [
+      "no interpreter was invented for non-.py entries",
+      "no entry was skipped or downgraded to a pass",
+      "no test was weakened and no skip/xfail was added",
+      "no profile entry was deleted to make the gate green"
+    ],
+    "rejected_alternative": {
+      "option": "dispatch .ps1 entries through a PowerShell host",
+      "rejected_because": "it would manufacture a false green. resolve-ac-model.ps1 is a dot-sourceable function library with no param block; launched with -File it would define functions and exit 0 without checking anything. start-wave-program.ps1, follow-wave-program.ps1 and the three run-ac-wave-*.ps1 launchers take Mandatory parameters and would instead add three permanent reds that are not real defects. Fabricated PASS is forbidden."
+    }
+  },
+  "verification": {
+    "method": "bounded deterministic probe on a synthetic 4-entry profile inside .tmp; the live 21-entry sweep was deliberately NOT executed because it reaches launcher-shaped scripts",
+    "script": ".tmp/w57-repair-146/verify_postrun_containment.py",
+    "invariants": {
+      "sweep_returns_instead_of_raising": "PASS",
+      "report_file_written": "PASS",
+      "every_entry_accounted_for_4_of_4": "PASS",
+      "unlaunchable_entry_recorded_with_os_error_not_skipped": "PASS",
+      "failing_python_entry_still_reported_with_exit_code": "PASS",
+      "healthy_python_entry_recorded_launched_exit_0": "PASS",
+      "missing_entry_semantics_preserved": "PASS"
+    },
+    "exit_code": 0,
+    "commands": [
+      {
+        "command": "python .tmp/w57-repair-146/verify_postrun_containment.py",
+        "result": "ALL INVARIANTS HOLD, exit 0"
+      },
+      {
+        "command": "python -m pytest tests/test_wave_controller_regressions.py -q",
+        "result": "17 passed, exit 0 (managed runtime not broken by the patch)"
+      },
+      {
+        "command": "python .opencode/scripts/validate-wave-orchestration.py",
+        "result": "AC_WAVE_METADATA_VALID=61, PASS, exit 0"
+      },
+      {
+        "command": "python scripts/validate_wave_closeout.py --wave W57",
+        "result": "can_close=false, exit 1, exactly one failure reason and it is unchanged: missing evidence manifest"
+      },
+      {
+        "command": "python .opencode/scripts/validate-ac-project.py",
+        "result": "FAIL, exit 1: materialization stale (managed-file-drift and content mismatches on run-wave-program.py, wave_state_engine.py, validate-managed-runtime.py, validate-wave-program.py) and canonical-core-revision-changed"
+      }
+    ]
+  },
+  "residual_truth_not_repaired_by_this_phase": [
+    {
+      "id": "DEF-W57-008",
+      "owner": "profile owner (.opencode/protocol/WAVE_PROJECT_PROFILE.json)",
+      "statement": "The postrun_checks inventory itself is defective. 8 of its 21 entries are not runnable evidence: 2 are JSON data documents (.opencode/protocol/AC_MODELS.json, .opencode/protocol/WAVE_PROJECT_PROFILE.json) and 6 are PowerShell launchers rather than self-checking scripts. The POSTRUN sweep is therefore a true red once the crash is removed, and it stays red until the inventory is corrected. Correcting it means adding real checks, never deleting entries to obtain a green.",
+      "why_not_fixed_here": "repairing the profile inventory is a semantic change to a controller-owned gate definition and is not the routed finding; deleting the entries would be an evidence weakening",
+      "effect_after_this_fix": "measured red with 8 explicit 'postrun check not launchable' reasons instead of a crash with no report"
+    },
+    {
+      "id": "DEF-W57-007",
+      "owner": "controller / Agent Core materialization",
+      "statement": "validate-ac-project.py remains red: the managed runtime materialization is stale and the canonical Agent Core is being concurrently modified, so the managed runtime cannot be pinned to a stable content identity during a run.",
+      "why_not_fixed_here": "requires a pinned Agent Core revision and a controlled re-materialization, which is a controller lifecycle action; the working tree also carries uncommitted user WIP that a re-materialize would destroy"
+    },
+    {
+      "id": "DEF-W57-006",
+      "owner": "external operator authority",
+      "statement": "compute02 unreachable, IsAdministrator=False, Get-VM denied. Genuinely deferrable; stated separately and not used to mask any repository-owned red."
+    }
+  ],
+  "safety": {
+    "tests_weakened": false,
+    "skips_or_xfails_added": false,
+    "fabricated_pass": false,
+    "evidence_manifest_written": false,
+    "evidence_manifest_withheld_because": "candidate_sha cannot be pinned and the lab verdict is unearned",
+    "committed": false,
+    "pushed": false,
+    "tagged_or_released": false,
+    "unrelated_user_changes_touched": false,
+    "probes_under_temp_root": ".tmp/w57-repair-146/"
+  }
+}

@@ -1,0 +1,110 @@
+{
+  "schema": "w57-candidate-orchestration-completeness/v1",
+  "wave_id": "W57",
+  "generated_utc": "2026-09-27T19:44:05.5335462Z",
+  "candidate_sha": "f6ab257fbfd62d402e31e9330f30bb017b795fa8",
+  "finding": "Every script and protocol document the canonical profile declares as postrun_checks, parallel.integration_validators, controller_restart_paths or mandatory protocols is untracked and locally ignored, so the committed candidate cannot execute its own program validation.",
+  "consequence": [
+    "tests/test_wave_controller_regressions.py cannot even be COLLECTED at the candidate: tracked .opencode/scripts/run-wave-program.py line 44 does `from phase_job import ...` and phase_job.py is untracked -> ModuleNotFoundError (2 tests uncollectable).",
+    "tests/contracts/test_wave_closeout_hardening.py::test_backend_parity_validator_passes shells out to the untracked validate-agent-parity.py, so the parity gate is unmeasurable at the candidate.",
+    "The 6 declared POSTRUN checks and 4 integration validators cannot be reproduced from the candidate, so PROGRAM_COMPLETE final validation is not candidate-verifiable."
+  ],
+  "broken_profile_path": {
+    "declared": ".agents/protocol/WAVE_PROGRAM_ORCHESTRATION.md",
+    "actual": ".agents/protocol/AC_WAVE_PROGRAM_ORCHESTRATION.md",
+    "note": "WAVE_PROJECT_PROFILE.json protocols.program_orchestration points at a filename that does not exist; the real file carries the AC_WAVE_ prefix. The profile is a controller_restart_path, so this is controller-owned."
+  },
+  "entries": [
+    {
+      "path": ".opencode/scripts/validate-ac-project.py",
+      "declared_in": "postrun_checks + parallel.integration_validators",
+      "on_disk": true,
+      "tracked": false,
+      "ignored": true
+    },
+    {
+      "path": ".opencode/scripts/validate-agent-parity.py",
+      "declared_in": "postrun_checks + parallel.integration_validators",
+      "on_disk": true,
+      "tracked": false,
+      "ignored": true
+    },
+    {
+      "path": ".opencode/scripts/validate-wave-orchestration.py",
+      "declared_in": "postrun_checks + parallel.integration_validators",
+      "on_disk": true,
+      "tracked": false,
+      "ignored": true
+    },
+    {
+      "path": ".opencode/scripts/validate-wave-program.py",
+      "declared_in": "postrun_checks + parallel.integration_validators",
+      "on_disk": true,
+      "tracked": false,
+      "ignored": true
+    },
+    {
+      "path": ".opencode/scripts/validate-managed-runtime.py",
+      "declared_in": "postrun_checks + parallel.integration_validators",
+      "on_disk": true,
+      "tracked": false,
+      "ignored": true
+    },
+    {
+      "path": ".opencode/scripts/validate-wave-authoring.py",
+      "declared_in": "postrun_checks + parallel.integration_validators",
+      "on_disk": true,
+      "tracked": false,
+      "ignored": true
+    },
+    {
+      "path": ".opencode/scripts/phase_job.py",
+      "declared_in": "controller_restart_paths",
+      "on_disk": true,
+      "tracked": false,
+      "ignored": true
+    },
+    {
+      "path": ".opencode/scripts/wave_progress.py",
+      "declared_in": "controller_restart_paths",
+      "on_disk": true,
+      "tracked": false,
+      "ignored": true
+    },
+    {
+      "path": ".opencode/scripts/parallel_workspace.py",
+      "declared_in": "controller_restart_paths",
+      "on_disk": true,
+      "tracked": false,
+      "ignored": true
+    },
+    {
+      "path": ".opencode/scripts/resolve-ac-model.ps1",
+      "declared_in": "controller_restart_paths",
+      "on_disk": true,
+      "tracked": false,
+      "ignored": true
+    },
+    {
+      "path": ".agents/protocol/AC_WAVE_PROGRAM_ORCHESTRATION.md",
+      "declared_in": "protocols (mandatory read order)",
+      "on_disk": true,
+      "tracked": false,
+      "ignored": true
+    },
+    {
+      "path": ".agents/protocol/AC_WAVE_EXECUTION_AND_TEST_PROTOCOL.md",
+      "declared_in": "protocols (mandatory read order)",
+      "on_disk": true,
+      "tracked": false,
+      "ignored": true
+    },
+    {
+      "path": ".agents/protocol/AC_WAVE_VALIDATION_EVIDENCE_SCHEMA.md",
+      "declared_in": "protocols (mandatory read order)",
+      "on_disk": true,
+      "tracked": false,
+      "ignored": true
+    }
+  ]
+}

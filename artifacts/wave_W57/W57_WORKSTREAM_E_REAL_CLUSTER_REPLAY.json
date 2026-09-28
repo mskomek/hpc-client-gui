@@ -1,0 +1,164 @@
+{
+  "artifact": "W57_WORKSTREAM_E_REAL_CLUSTER_REPLAY",
+  "wave": "W57",
+  "phase": "repair",
+  "phase_instance_id": "20260925-074235-63df86b0:112:W57:repair",
+  "owned_requirements": [
+    "HPC-W10-FREEZE-030",
+    "HPC-W10-FREEZE-040"
+  ],
+  "source_section": "opencode/sources/WAVE_V2_FINAL_10.md :: Workstream E - Real-cluster regression",
+  "infrastructure_class": "LOCAL_REAL_HYPERV",
+  "entrypoint": ".venv/Scripts/python.exe -m hpc_gui.cli (src/hpc_gui/cli/main.py)",
+  "secret_handling": "only the lab key PATH was passed on the command line; no secret value, no password, no private key content is recorded in this artifact",
+  "human_interaction": "none",
+  "scenarios_run": 13,
+  "scenarios_failed": [
+    "WE-01",
+    "WE-02",
+    "WE-03",
+    "WE-04a",
+    "WE-04b",
+    "WE-04c",
+    "WE-04d",
+    "WE-05a",
+    "WE-05b",
+    "WE-05c",
+    "WE-06",
+    "WE-07"
+  ],
+  "result": "FAIL",
+  "scenarios": [
+    {
+      "id": "WE-01",
+      "title": "connection - doctor connection (real SSH key + SFTP init)",
+      "command": "-m hpc_gui.cli --format json --host 192.168.250.11 --port 22 --user hpctest --key C:\\Users\\mskomek\\AppData\\Local\\hpc-client-gui-lab\\id_ed25519 --timeout 90 doctor connection",
+      "exit_code": 1,
+      "expectation": "exit_0",
+      "ok": false,
+      "duration_s": 0.6,
+      "output": "{\r\n  \"error\": {\r\n    \"message\": \"Remote CLI access is disabled. Enable \\\"Allow external CLI access to remote commands\\\" in Settings to use this command.\",\r\n    \"exit_code\": 1\r\n  }\r\n}"
+    },
+    {
+      "id": "WE-02",
+      "title": "reconnect - second session + remote shell command",
+      "command": "-m hpc_gui.cli --format json --host 192.168.250.11 --port 22 --user hpctest --key C:\\Users\\mskomek\\AppData\\Local\\hpc-client-gui-lab\\id_ed25519 --timeout 90 sh -- bash -c printf \"WE-02 host=%s user=%s tty=%s\\n\" \"$(hostname)\" \"$USER\" \"$(tty)\"; uname -sr",
+      "exit_code": 1,
+      "expectation": "exit_0",
+      "ok": false,
+      "duration_s": 0.64,
+      "output": "{\r\n  \"error\": {\r\n    \"message\": \"Remote CLI access is disabled. Enable \\\"Allow external CLI access to remote commands\\\" in Settings to use this command.\",\r\n    \"exit_code\": 1\r\n  }\r\n}"
+    },
+    {
+      "id": "WE-03",
+      "title": "SFTP round trip - doctor smoke (temp_dir/upload/list/download/checksum/cleanup)",
+      "command": "-m hpc_gui.cli --format json --host 192.168.250.11 --port 22 --user hpctest --key C:\\Users\\mskomek\\AppData\\Local\\hpc-client-gui-lab\\id_ed25519 --timeout 90 doctor smoke --artifact D:\\Projeler\\hpc-client-gui\\artifacts\\wave_W57\\W57_WORKSTREAM_E_SFTP_SMOKE.json",
+      "exit_code": 1,
+      "expectation": "exit_0",
+      "ok": false,
+      "duration_s": 0.61,
+      "output": "{\r\n  \"error\": {\r\n    \"message\": \"Remote CLI access is disabled. Enable \\\"Allow external CLI access to remote commands\\\" in Settings to use this command.\",\r\n    \"exit_code\": 1\r\n  }\r\n}"
+    },
+    {
+      "id": "WE-04a",
+      "title": "remote editor save - create remote probe dir + upload seed",
+      "command": "-m hpc_gui.cli --format json --host 192.168.250.11 --port 22 --user hpctest --key C:\\Users\\mskomek\\AppData\\Local\\hpc-client-gui-lab\\id_ed25519 --timeout 90 files mkdir /srv/hpc/home/hpctest/w57-we-20260927T222328Z",
+      "exit_code": 1,
+      "expectation": "exit_0",
+      "ok": false,
+      "duration_s": 0.62,
+      "output": "{\r\n  \"error\": {\r\n    \"message\": \"Remote CLI access is disabled. Enable \\\"Allow external CLI access to remote commands\\\" in Settings to use this command.\",\r\n    \"exit_code\": 1\r\n  }\r\n}"
+    },
+    {
+      "id": "WE-04b",
+      "title": "remote editor save - upload seed file",
+      "command": "-m hpc_gui.cli --format json --host 192.168.250.11 --port 22 --user hpctest --key C:\\Users\\mskomek\\AppData\\Local\\hpc-client-gui-lab\\id_ed25519 --timeout 90 files upload D:\\Projeler\\hpc-client-gui\\.tmp\\w57-repair-112\\stage\\editor\\seed.txt /srv/hpc/home/hpctest/w57-we-20260927T222328Z/editor_probe.txt",
+      "exit_code": 1,
+      "expectation": "exit_0",
+      "ok": false,
+      "duration_s": 0.57,
+      "output": "{\r\n  \"error\": {\r\n    \"message\": \"Remote CLI access is disabled. Enable \\\"Allow external CLI access to remote commands\\\" in Settings to use this command.\",\r\n    \"exit_code\": 1\r\n  }\r\n}"
+    },
+    {
+      "id": "WE-04c",
+      "title": "remote editor save - download/edit/upload with --verify",
+      "command": "-m hpc_gui.cli --format json --host 192.168.250.11 --port 22 --user hpctest --key C:\\Users\\mskomek\\AppData\\Local\\hpc-client-gui-lab\\id_ed25519 --timeout 90 edit --editor D:\\Projeler\\hpc-client-gui\\.tmp\\w57-repair-112\\w57_editor_probe.py --verify /srv/hpc/home/hpctest/w57-we-20260927T222328Z/editor_probe.txt",
+      "exit_code": 1,
+      "expectation": "exit_0",
+      "ok": false,
+      "duration_s": 0.63,
+      "output": "{\r\n  \"error\": {\r\n    \"message\": \"Remote CLI access is disabled. Enable \\\"Allow external CLI access to remote commands\\\" in Settings to use this command.\",\r\n    \"exit_code\": 1\r\n  }\r\n}"
+    },
+    {
+      "id": "WE-04d",
+      "title": "remote editor save - remote readback and marker proof",
+      "command": "-m hpc_gui.cli --format json --host 192.168.250.11 --port 22 --user hpctest --key C:\\Users\\mskomek\\AppData\\Local\\hpc-client-gui-lab\\id_ed25519 --timeout 90 sh -- bash -c cat '/srv/hpc/home/hpctest/w57-we-20260927T222328Z/editor_probe.txt'; grep -c 'w57-workstream-e-editor-save' '/srv/hpc/home/hpctest/w57-we-20260927T222328Z/editor_probe.txt'",
+      "exit_code": 1,
+      "expectation": "exit_0",
+      "ok": false,
+      "duration_s": 0.58,
+      "output": "{\r\n  \"error\": {\r\n    \"message\": \"Remote CLI access is disabled. Enable \\\"Allow external CLI access to remote commands\\\" in Settings to use this command.\",\r\n    \"exit_code\": 1\r\n  }\r\n}"
+    },
+    {
+      "id": "WE-05a",
+      "title": "jobs - list (before submit)",
+      "command": "-m hpc_gui.cli --format json --host 192.168.250.11 --port 22 --user hpctest --key C:\\Users\\mskomek\\AppData\\Local\\hpc-client-gui-lab\\id_ed25519 --timeout 90 jobs list",
+      "exit_code": 1,
+      "expectation": "exit_0",
+      "ok": false,
+      "duration_s": 0.64,
+      "output": "{\r\n  \"error\": {\r\n    \"message\": \"Remote CLI access is disabled. Enable \\\"Allow external CLI access to remote commands\\\" in Settings to use this command.\",\r\n    \"exit_code\": 1\r\n  }\r\n}"
+    },
+    {
+      "id": "WE-05b",
+      "title": "jobs - submit real batch script",
+      "command": "-m hpc_gui.cli --format json --host 192.168.250.11 --port 22 --user hpctest --key C:\\Users\\mskomek\\AppData\\Local\\hpc-client-gui-lab\\id_ed25519 --timeout 90 files upload D:\\Projeler\\hpc-client-gui\\.tmp\\w57-repair-112\\stage\\job_probe.sh /srv/hpc/home/hpctest/w57-we-20260927T222328Z/job_probe.sh",
+      "exit_code": 1,
+      "expectation": "exit_0",
+      "ok": false,
+      "duration_s": 0.58,
+      "output": "{\r\n  \"error\": {\r\n    \"message\": \"Remote CLI access is disabled. Enable \\\"Allow external CLI access to remote commands\\\" in Settings to use this command.\",\r\n    \"exit_code\": 1\r\n  }\r\n}"
+    },
+    {
+      "id": "WE-05c",
+      "title": "jobs - submit (sbatch) and capture job id",
+      "command": "-m hpc_gui.cli --format json --host 192.168.250.11 --port 22 --user hpctest --key C:\\Users\\mskomek\\AppData\\Local\\hpc-client-gui-lab\\id_ed25519 --timeout 90 jobs submit /srv/hpc/home/hpctest/w57-we-20260927T222328Z/job_probe.sh --yes",
+      "exit_code": 1,
+      "expectation": "exit_0",
+      "ok": false,
+      "duration_s": 0.61,
+      "output": "{\r\n  \"error\": {\r\n    \"message\": \"Remote CLI access is disabled. Enable \\\"Allow external CLI access to remote commands\\\" in Settings to use this command.\",\r\n    \"exit_code\": 1\r\n  }\r\n}"
+    },
+    {
+      "id": "WE-06",
+      "title": "terminal class - remote shell transport + tty probe",
+      "command": "-m hpc_gui.cli --format json --host 192.168.250.11 --port 22 --user hpctest --key C:\\Users\\mskomek\\AppData\\Local\\hpc-client-gui-lab\\id_ed25519 --timeout 90 sh -- bash -c printf \"WE-06 shell=%s pty_slave=%s\\n\" \"$SHELL\" \"$(test -t 0 && echo yes || echo no)\"; ps -o pid,comm -p $$",
+      "exit_code": 1,
+      "expectation": "exit_0",
+      "ok": false,
+      "duration_s": 0.59,
+      "output": "{\r\n  \"error\": {\r\n    \"message\": \"Remote CLI access is disabled. Enable \\\"Allow external CLI access to remote commands\\\" in Settings to use this command.\",\r\n    \"exit_code\": 1\r\n  }\r\n}"
+    },
+    {
+      "id": "WE-07",
+      "title": "cleanup - remove disposable remote probe directory",
+      "command": "-m hpc_gui.cli --format json --host 192.168.250.11 --port 22 --user hpctest --key C:\\Users\\mskomek\\AppData\\Local\\hpc-client-gui-lab\\id_ed25519 --timeout 90 files rm --yes /srv/hpc/home/hpctest/w57-we-20260927T222328Z",
+      "exit_code": 1,
+      "expectation": "exit_0",
+      "ok": false,
+      "duration_s": 0.57,
+      "output": "{\r\n  \"error\": {\r\n    \"message\": \"Remote CLI access is disabled. Enable \\\"Allow external CLI access to remote commands\\\" in Settings to use this command.\",\r\n    \"exit_code\": 1\r\n  }\r\n}"
+    },
+    {
+      "id": "WE-08",
+      "title": "post-cleanup - verify remote probe dir is gone",
+      "command": "-m hpc_gui.cli --format json --host 192.168.250.11 --port 22 --user hpctest --key C:\\Users\\mskomek\\AppData\\Local\\hpc-client-gui-lab\\id_ed25519 --timeout 90 files ls \\srv\\hpc\\home\\hpctest\\w57-we-20260927T222328Z",
+      "exit_code": 1,
+      "expectation": "observed",
+      "ok": true,
+      "duration_s": 0.58,
+      "output": "{\r\n  \"error\": {\r\n    \"message\": \"Remote CLI access is disabled. Enable \\\"Allow external CLI access to remote commands\\\" in Settings to use this command.\",\r\n    \"exit_code\": 1\r\n  }\r\n}"
+    }
+  ],
+  "generated_at": "2026-09-27T22:23:36.1666523Z"
+}

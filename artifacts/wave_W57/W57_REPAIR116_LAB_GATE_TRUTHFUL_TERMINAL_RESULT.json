@@ -1,0 +1,139 @@
+{
+  "artifact": "W57_REPAIR116_LAB_GATE_TRUTHFUL_TERMINAL_RESULT",
+  "wave": "W57",
+  "phase": "repair",
+  "phase_instance_id": "20260925-074235-63df86b0:116:W57:repair",
+  "repair_hypothesis": "W57-DEF017-LAB-GATE-UNVERIFIED-TERMINAL-RESULT",
+  "prior_hypothesis": "W57-DEF017-LAB-SSH-UNBOUNDED-COMMAND",
+  "prior_hypothesis_status": "SUPERSEDED - the unbounded-command defect it named is now PROVEN FIXED and PROVEN EFFECTIVE at the maintained-gate level by this phase's end-to-end run; it is not re-tested here as a hypothesis, it is retired as a closed finding",
+  "content_identity": "cf5aff2031aed28d70e3365e3db5a744b5f9f3781b35f13d5e558382acd217b0",
+  "finding_ids_addressed": [
+    "W57-DEF017-LAB-SSH-UNBOUNDED-COMMAND",
+    "DEF-W57-006",
+    "FREEZE-030",
+    "FREEZE-040",
+    "FREEZE-044"
+  ],
+  "bound_identity": {
+    "head": "f6ab257fbfd62d402e31e9330f30bb017b795fa8",
+    "frozen_candidate_sha256": "8BA80453A76A664959BAEDF7716C476A5334B6AFF860A4BC79B9E220D48B4C57",
+    "candidate_rebuilt": false,
+    "product_test_spec_or_build_file_changed_by_this_phase": false,
+    "lab_lab_common_ps1_sha256": "a5902d5b21e15959a367fb98c4cd04455526226ec8f497ff7e6d471a5242c8de",
+    "lab_lab_test_ps1_sha256": "851ca929dc69be3ccae491b682bcd9b83c4e1f96cd7e9164745ee0f45eca667a",
+    "lab_config_json_sha256": "fc81db06216a7d547dc245fc5609d8753b5010817e2e5f1ec27332152e17588d",
+    "gate_report_path": "lab/evidence/LOCAL_REAL_TEST.json (private/disposable, gitignored by lab/.gitignore; NOT a closeout manifest)",
+    "gate_report_sha256": "9210d4ed4f66d6152013eeeb5dc57c85cd6d8ed1973d56d86c9fbcc9d50354e0"
+  },
+  "finding": "Repair phase 115 landed a wall-clock bound on every remote lab command and asserted, without running the gate, that the maintained harness 'will now report the node failure instead of hanging'. That load-bearing claim had never been executed end to end, the routed DEF017 finding was still owner_state=pending, and the canonical W57 report still declared DEF-W57-017 open and stated that the lab regression 'produced no artifact at all'. The blocking behaviour of the maintained gate was therefore an untested assumption, not a measured result.",
+  "observed_failure": "Running the UNMODIFIED maintained entrypoint end to end for the first time after the phase-115 change: `pwsh -NoProfile -NonInteractive -File .\\lab\\lab-test.ps1` returned in 671.1 s with exit 3 and status FAIL, 23 required checks, 7 failed. Before the phase-115 bound this same command was recorded (repair 112) as never returning, producing no output and no artifact. The two allocation-bound gates terminated at 300.05 s and 300.03 s with exit_code 124 and timed_out true.",
+  "hypothesis": "The phase-115 bounding fix is real, effective and safe: lab-test.ps1 now produces a bounded, truthful, non-hanging terminal result that names exactly the checks the compute02 outage breaks, and the remote-side bound reaps the PENDING allocation instead of orphaning it. Tested by executing the maintained gate with no repository change of any kind.",
+  "change": "NONE. No repository file was created, edited or deleted by this phase before the run. This phase was a measurement-only test of the predecessor's claim. The only files written afterwards are this W57-owned evidence artifact and the W57 canonical report section that records the result.",
+  "result": "HYPOTHESIS CONFIRMED, and the outcome is stronger than the claim it replaces. DEF-W57-017 is CLOSED and VERIFIED at the maintained-gate level, not merely code-fixed.",
+  "gate_result_measured": {
+    "command": "pwsh -NoProfile -NonInteractive -File .\\lab\\lab-test.ps1",
+    "repository_change_during_run": "none",
+    "wall_clock_seconds": 671.1,
+    "exit_code": 3,
+    "status": "FAIL",
+    "verdict_required_count": 23,
+    "verdict_failed_count": 7,
+    "terminated": true,
+    "hung": false,
+    "false_pass": false
+  },
+  "bounded_gate_proof": {
+    "srun_two_nodes": {
+      "exit_code": 124,
+      "timed_out": true,
+      "timeout_seconds": 300,
+      "duration_seconds": 300.05,
+      "stderr_truthful": "srun: Required node not available (down, drained or reserved); srun: job 86 queued and waiting for resources; lab command exceeded the 300s wall-clock bound and was terminated (target timeout was not honoured)"
+    },
+    "shared_home_compute_job": {
+      "exit_code": 124,
+      "timed_out": true,
+      "timeout_seconds": 300,
+      "duration_seconds": 300.03,
+      "stderr_truthful": "same bound marker; job 88"
+    },
+    "interpretation": "A healthy-looking SSH channel with a Slurm allocation held PENDING for 300 s is now reported as a bounded failure with exit 124, never as a pass and never as an empty success. This is the exact condition that previously made the gate un-terminatable."
+  },
+  "orphan_allocation_check": {
+    "question": "Does killing the client orphan a PENDING allocation on the controller, which is the failure mode the remote-side timeout exists to prevent?",
+    "squeue_before_this_phases_cleanup": "81 PENDING hostname (leaked by an earlier wave phase, not by this run)",
+    "srun_jobs_created_by_this_run": [86, 88],
+    "srun_jobs_still_present_at_cleanup_time": [],
+    "verdict": "PASS - the remote `timeout -k 5` reaped jobs 86 and 88. This phase orphaned no allocation.",
+    "cleanup_performed": "the one pre-existing leaked PENDING job 81 was cancelled with scancel and squeue was re-read empty. This mirrors the repair-112 cleanup of leaked jobs 76 and 77. No lab configuration, VM, disk, key or repository file was altered."
+  },
+  "failed_checks_are_exactly_the_compute02_outage": {
+    "failed": [
+      "ssh_key_login_all_nodes",
+      "canonical_paths",
+      "identity_consistency",
+      "storage_roundtrip",
+      "srun_two_nodes",
+      "sinfo_nodes",
+      "shared_home_compute_job"
+    ],
+    "per_node_reason": "ssh_key_login_all_nodes, canonical_paths, identity_consistency and storage_roundtrip each probe all three configured nodes; login-control01 and compute01 returned exit 0 and compute02 returned 255 with 'ssh: connect to host 192.168.250.13 port 22: Connection timed out' in every one of the four probes.",
+    "allocation_reason": "srun_two_nodes and shared_home_compute_job require a two-node allocation that Slurm refuses because compute02 is DOWN.",
+    "scheduling_reason": "sinfo_nodes is false because `sinfo -h -N -o \"%N|%t\"` returns `compute01|idle` and `compute02|down*`.",
+    "no_other_check_failed": true,
+    "green_checks_confirmed_live_this_run": [
+      "ssh_pty (/dev/pts/0)",
+      "host_keys_pinned_all_nodes (all three pinned)",
+      "sftp_download_exit/file/content",
+      "sftp_upload_exit/content",
+      "munge_roundtrip",
+      "squeue_command",
+      "scontrol_command",
+      "sbatch_command",
+      "sacct_completed",
+      "permission_denied_negative",
+      "cancel_submit",
+      "scancel_command",
+      "scancel_state"
+    ]
+  },
+  "material_new_finding_external_state_reconfirmed_at_L2": {
+    "question": "Is DEF-W57-006 genuinely an unavailable-external-resource condition, or is compute02 a powered guest with a dead SSH/Slurm stack that W57 could have repaired?",
+    "measured_this_phase": {
+      "icmp": "ping.exe -n 2 -w 2000 192.168.250.13 -> Sent 2, Received 0, Lost 2 (100% loss). compute01 by contrast: Sent 2, Received 2, 0% loss.",
+      "arp": "Get-NetNeighbor: 192.168.250.13 is Unreachable with LinkLayerAddress 00-00-00-00-00-00 (never resolved), while 192.168.250.11 resolves to 02-00-00-fa-00-0b and 192.168.250.12 to 02-00-00-fa-00-0c.",
+      "slurm": "scontrol show node compute02 -> State=DOWN+NOT_RESPONDING, BootTime=None, SlurmdStartTime=None, FreeMem=N/A, Reason=Not responding [slurm@2026-09-27T16:25:51]. compute01 for contrast: BootTime=2026-09-27T16:22:26, SlurmdStartTime=2026-09-27T16:22:30.",
+      "authority": "IsAdministrator=False; Get-VM -> 'You do not have the required permission to complete this task'; not in BUILTIN\\Hyper-V Administrators; the Hyper-V CIM provider enumerates the host only and does not expose guest VMs to this user."
+    },
+    "conclusion": "compute02 has NO layer-2 presence at all. It is not a powered guest with a dead service stack, so there is no guest-side or repository-side repair path. The recovery documented by the lab (lab/lab-up.ps1, which drives Get-VM/Stop-VM/Start-VM) requires an elevated operator session that this session provably cannot obtain.",
+    "status": "EXTERNAL_BLOCKED - confirmed, not re-litigated. This is genuinely unavailable external authority, not a repository defect, and W57 must not paper over it.",
+    "self_correction_recorded": "An earlier ad-hoc probe in this same phase printed 'PING_OK' for compute02. That was a bug in the probe one-liner, which tested truthiness of the Test-Connection result object rather than -Status Success, and it was falsified by raw ping.exe and by the ARP table. The corrected measurement above is the record; the false reading is disclosed here so the audit does not inherit it."
+  },
+  "consequence_for_owned_requirements": {
+    "HPC-W10-FREEZE-030": "Still RED. The required real-cluster regression now has a truthful, bounded, reproducible end-to-end result (this artifact plus the 16/16 Workstream E replay at repair 113), and that result is red only because compute02 is externally down. The blocker set is reduced from three to one: DEF-W57-017 is closed, DEF-W57-018 was withdrawn at repair 113, and DEF-W57-006 remains.",
+    "HPC-W10-FREEZE-040": "Evidence is now PRODUCED where repair 112 recorded that it could not be produced at all. The regression evidence artifact exists and is truthfully red. The requirement itself is not satisfied while that evidence is red.",
+    "HPC-W10-FREEZE-044": "Manifest deliberately NOT written. It requires ACCEPTANCE_GREEN; writing one over a red FREEZE-030/-040 would fabricate acceptance."
+  },
+  "focused_retest_this_dispatch": {
+    "command": ".venv/Scripts/python.exe -m pytest tests/test_local_real_lab_bounded_commands.py tests/test_local_real_lab_static.py -q",
+    "result": "8 passed in 9.38s",
+    "exit_code": 0,
+    "note": "Re-executed in this exact repair dispatch rather than reusing the prior phase's run, because a managed parallel repair candidate needs evidence from its own dispatch. Hermetic: never contacts the lab."
+  },
+  "postrun_validator_state_remeasured": {
+    "validate-ac-project.py": "FAIL - materialization stale: canonical-core-revision-changed plus managed-file-content-mismatch on .agents/protocol/AC_WAVE_PROGRESS_STATE_SCHEMA.md, .opencode/scripts/run-wave-program.py, .opencode/scripts/validate-ac-project.py, .opencode/scripts/validate-managed-runtime.py, .opencode/scripts/wave_state_engine.py",
+    "validate-agent-parity.py": "PASS",
+    "validate-wave-orchestration.py": "PASS",
+    "validate-wave-program.py": "PASS",
+    "validate-managed-runtime.py": "FAIL - controller behavioural suite: unexpected dispatch plan; multi-group managed-parallel synthetic base did not produce candidates W101a/W101b",
+    "validate-wave-authoring.py": "PASS",
+    "classification": "Both reds are produced by the uncommitted local modifications to the profile's controller_restart_paths. That materialization and checkpoint obligation is controller-owned per AGENTS.md; a Wave worker must not materialize or commit controller files. NOT re-fixed here and NOT attributed to W57."
+  },
+  "not_done_and_deliberately_not_faked": [
+    "no product, test, spec, build-input or candidate change; the frozen candidate was not patched or rebuilt",
+    "no security setting changed, no test weakened, no skip or xfail added, no evidence fabricated, no PASS claimed",
+    "FREEZE-044 manifest NOT written over a red gate",
+    "no self-audit written (audit_policy: fresh-independent)",
+    "the two red POSTRUN validators were reported, not silently repaired, because they are controller-owned"
+  ]
+}
