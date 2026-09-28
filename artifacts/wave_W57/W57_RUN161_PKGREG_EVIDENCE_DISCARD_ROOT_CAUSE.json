@@ -1,0 +1,204 @@
+{
+  "schema": "w57-run-finding",
+  "wave_id": "W57",
+  "phase": "run",
+  "phase_instance_id": "20260925-074235-63df86b0:161:W57:run",
+  "finding_id": "W57-PKGREG-RUNTIME-EVIDENCE-DISCARDED-ON-TIMEOUT",
+  "supersedes_measurement_claims_in": [
+    "artifacts/wave_W57/W57_RUN158_PKGREG_GATE_HERMETICITY_REOPEN_ROUTE.json",
+    "artifacts/wave_W57/W57_RUN155_PKGREG_HARNESS_BUDGET_DEFECT.json"
+  ],
+  "severity": "acceptance-gate-defect",
+  "title": "Run 161 re-measures the maintained packaged-regression gate unmodified on the unchanged candidate and identifies the single root cause the earlier runs missed: the artifact completes all four smoke phases and writes COMPLETE PASSING runtime evidence, then fails to exit before the gate's hardcoded timeout=25, and the gate discards the passing evidence and reports 1/20",
+  "candidate_under_test": {
+    "candidate_commit": "bdf6c6c7e2817422b6f9005873247d3636c5eac4",
+    "sha256": "8BA80453A76A664959BAEDF7716C476A5334B6AFF860A4BC79B9E220D48B4C57",
+    "size_bytes": 7672468,
+    "bundle_files": 172,
+    "rebuilt_or_patched": false,
+    "reverified_without_rebuild": true,
+    "reverified_by": "Get-FileHash SHA256 + byte length + recursive file count, read-only"
+  },
+  "harness_under_test": {
+    "path": "scripts/wx_packaged_smoke.py",
+    "sha256_before": "47763C6ABD7EBDF4235C0ADD36FCE56269AA9C073BED798ED2A5784876FA0FDD",
+    "sha256_after": "47763C6ABD7EBDF4235C0ADD36FCE56269AA9C073BED798ED2A5784876FA0FDD",
+    "mtime_utc": "2026-09-22T11:37:18.6060637Z",
+    "modified_by_this_phase": false,
+    "note": "Unmodified in this dispatch; byte-identical before and after; untouched since 2026-09-22, i.e. never touched by W57."
+  },
+  "measurement_A_maintained_entrypoint_unmodified": {
+    "command": ".venv/Scripts/python.exe scripts/wx_packaged_smoke.py --artifact dist/hpc-client-gui/hpc-client-gui.exe --platform windows --output .tmp/w57-run161/pkg/pkg-runN.json",
+    "runs": 3,
+    "exits": [1, 1, 1],
+    "results": ["FAIL", "FAIL", "FAIL"],
+    "checks_each_run": "1/20 (process_started PASS; the other 19 FAIL)",
+    "elapsed_s": [26.512, 26.859, 27.059],
+    "details_each_run": "workdir_outside_repo=true, timeout='artifact did not exit within 25s', child_killed=true, exit_code=null",
+    "identical_across_runs": true,
+    "evidence": [
+      ".tmp/w57-run161/pkg/pkg-run1.json",
+      ".tmp/w57-run161/pkg/pkg-run2.json",
+      ".tmp/w57-run161/pkg/pkg-run3.json"
+    ]
+  },
+  "measurement_B_the_evidence_the_gate_threw_away": {
+    "purpose": "read the packaged runtime sidecar that the harness never opens on the timed_out branch; this is the same file the gate would have scored",
+    "source": ".tmp/w57-run161/pkg/pkg-runN.runtime.json (all three runs)",
+    "artifact_reported_result": "PASS",
+    "artifact_reported_phase": 4,
+    "artifact_reported_error": "",
+    "artifact_own_checks": "17 of 19 PASS",
+    "artifact_own_checks_failing": ["pty_resize", "clean_shutdown"],
+    "why_the_two_artifact_failures_are_not_product_failures": "Both are recomputed and overridden by the gate itself and are not read from the artifact. pty_resize is skipped in the artifact-check loop at wx_packaged_smoke.py:206 and recomputed from the disposable loopback server at wx_packaged_smoke.py:210-220; clean_shutdown is recomputed at wx_packaged_smoke.py:236 from returncode/isolation/runtime result. So every check the artifact can actually prove passed.",
+    "input_delivered_each_run": {
+      "input_method": "Win32 SendInput",
+      "terminal_click": [770, 544],
+      "click_events": 2,
+      "sendinput_events": 36,
+      "bridge_input_chars": 18,
+      "ssh_input_chars": 18,
+      "dom_input_events": { "keydown": 18, "beforeinput": 11, "input": 11 },
+      "foreground_request_accepted": false,
+      "foreground_matches_frame": false,
+      "wx_focus_type": "WebView",
+      "wx_focus_within_terminal_panel": true,
+      "webview_dom_focus": "TEXTAREA/xterm-helper-textarea insideTerminal=true"
+    },
+    "write_timing_run1": {
+      "artifact_runtime_written": "16:11:02.004",
+      "harness_verdict_written": "16:11:21.448",
+      "seconds_evidence_on_disk_before_the_FAIL_verdict": 19.444,
+      "interpretation": "The gate's timeout fires at 25 s and the child is killed and reaped before the verdict is written, so the artifact had already finished its work and written complete PASS evidence roughly 5-7 s into the run, then did not exit for the remaining ~18 s."
+    }
+  },
+  "root_cause": {
+    "statement": "The packaged artifact completes every smoke phase, writes a complete PASS runtime payload, and then does not terminate before the gate's hardcoded timeout=25. scripts/wx_packaged_smoke.py:190-192 short-circuits on timed_out, sets details.timeout/child_killed, and never opens the runtime evidence file, so all 19 remaining checks keep their initial FAIL and the gate reports 1/20 for a working artifact.",
+    "code_path": [
+      "scripts/wx_packaged_smoke.py:128 - def run_packaged_smoke(..., timeout: int = 25) - the hardcoded budget",
+      "scripts/wx_packaged_smoke.py:190-192 - if timed_out: details['timeout']=...; details['child_killed']=True  # runtime evidence never read",
+      "scripts/wx_packaged_smoke.py:196 - runtime = json.loads(runtime_output.read_text(...))  # unreachable on the timed_out branch",
+      "scripts/wx_packaged_smoke.py:237 - result = 'FAIL' if timed_out else (...)"
+    ],
+    "budget_is_not_internally_consistent": "In the same maintained file, run_fresh_user_smoke uses timeout=240 by default (wx_packaged_smoke.py:346) for a comparable packaged GUI workload with two launches, while run_packaged_smoke uses timeout=25 (wx_packaged_smoke.py:128) for a heavier 20-check workload against a real loopback paramiko SSH/SFTP fixture and a wx+WebView2 child. The 25 s constant is therefore not a validated figure.",
+    "25s_is_provably_not_intrinsically_insufficient": "artifacts/wave_W57/W57_PACKAGED_SMOKE_8BA80453_PASS.json (2026-09-28 01:06) is PASS 20/20 with exit_code 0 on the identical artifact SHA-256 through the same unmodified harness, so the artifact can finish and exit inside 25 s. What varies is the latency of its post-phase-4 shutdown, not its work."
+  },
+  "falsifications_of_run_158": [
+    {
+      "run_158_claim": "the maintained gate is blocked by a foreground-dependent synthetic input, evidenced by runtime='keyboard_input:foreground_lost_after_terminal_click', runtime_phase 0, ssh_input_chars 0",
+      "measured_here": "0 of 3 runs produced that runtime error. All three reached phase 4 with artifact result PASS and full input delivery (ssh_input_chars 18, dom keydown 18, sendinput_events 36).",
+      "verdict": "FALSIFIED as the blocker for this dispatch"
+    },
+    {
+      "run_158_claim": "foreground_request_accepted=false and foreground_matches_frame=false show input could not be delivered",
+      "measured_here": "the identical pair of values is present in all three red runs AND in the known-green 20/20 evidence artifacts/wave_W57/W57_PACKAGED_SMOKE_8BA80453_PASS.json. They are not discriminators.",
+      "verdict": "FALSIFIED as a discriminator; the fields are a diagnostic snapshot taken at wx_shell.py:2245-2250, BEFORE the AttachThreadInput activation block at wx_shell.py:2286-2295 that can still make the frame foreground"
+    },
+    {
+      "run_158_claim": "the true owner is the W04 packaging harness surface scripts/wx_packaged_smoke.py, and its absolute-coordinate terminal click should be replaced",
+      "measured_here": "the harness contains no input-synthesis code at all. Grep of scripts/wx_packaged_smoke.py for SetCursorPos|SendInput|mouse_event|keybd_event|SetForegroundWindow|BringWindowToTop|AttachThreadInput|ClientToScreen returns only --wx-smoke argv hits (lines 154, 156, 337, 339). Every foreground/input call lives in src/hpc_gui/wx_shell.py:2231, 2288, 2290, 2353, 2357, 2361, 2377 - the shipped product smoke driver inside the frozen artifact.",
+      "verdict": "MISATTRIBUTED owner route for the input half"
+    },
+    {
+      "run_158_claim": "ambient desktop contention (sibling wx GUI, ~20 windows, terminal foreground) is what makes the verdict track the operator's desktop",
+      "measured_here": "6 of 6 ambient snapshots show 0 topmost windows covering the click point [770,544] and WerFault=0. The foreground was the operator's WindowsTerminal pid 24364 in all three pre-runs, yet the three runs were byte-identical in verdict and the green 01:06 run also had a foreign foreground window. Desktop load is constant across the 3/3 identical FAILs, so it does not discriminate.",
+      "verdict": "NOT SUPPORTED as the discriminator; the mechanism is the timeout/discard path, which it is"
+    },
+    {
+      "run_158_claim": "raising the timeout would not have produced a green",
+      "measured_here": "Not re-litigated here. The mechanism is now identified precisely, so the budget is an owner decision to be made once against a fixed harness, not a matter the consumer may resolve by re-running until green. This phase did not change the budget and did not re-run for a green.",
+      "verdict": "SUPERSEDED - the underlying question is no longer open, it is routed"
+    }
+  ],
+  "owner_routing": {
+    "defect_A_gate_discards_passing_evidence_and_uses_an_inconsistent_budget": {
+      "surface": "scripts/wx_packaged_smoke.py (run_packaged_smoke)",
+      "owner_requirement_ids": [
+        "HPC-W04-FRESH-009 (owner W15: PKG-GJ-01)",
+        "HPC-W04-HARNESS-025 (owner W16: packaged launch outside source assumptions)"
+      ],
+      "transaction_needed": "both owner Waves are already CLOSED, so this requires a controller-owned closed-owner repair transaction against the W04 harness surface",
+      "recommended_action": "On the timed_out branch, still read whatever packaged runtime evidence the artifact wrote and score it, so a child that completes its work but exits slowly is never reported as 1/20; and size the budget consistently with the sibling run_fresh_user_smoke entrypoint in the same file (240) or make it host-relative and configurable."
+    },
+    "defect_B_artifact_does_not_terminate_after_completing_its_phases": {
+      "surface": "src/hpc_gui/wx_shell.py - the packaged smoke driver's post-phase-4 shutdown path",
+      "consequence_if_real": "a correction here is a product/frozen-candidate change; it invalidates the W56 candidate and requires the owner to rebuild and rerun affected W56/W57 evidence",
+      "transaction_needed": "product owner route plus rebuild; W57 must not patch the frozen candidate",
+      "open": true,
+      "note": "This run did not settle whether the shutdown path is genuinely at fault or merely slow under ambient load. Settling it belongs to the closed-owner repair transaction, which can vary the budget without changing the artifact."
+    },
+    "w57_role": "consumer: HPC-W10-PKGREG-001 and FREEZE-009/-032/-041 require W57 to RUN the maintained gate against the frozen candidate; W57 owns neither the gate's budget policy nor the artifact's shutdown path.",
+    "w57_contract_basis": "W57 Implementation Contract 'Integration/freeze rule: if a finding belongs to an earlier domain Wave, stop opportunistic fixing and reopen that owner'; Frozen-candidate invariants 'Do not patch the frozen candidate'; Out of Scope 'Cross-scope defects must be recorded with their stable requirement/finding ID and routed to the true owner Wave'.",
+    "invalidates": [
+      "HPC-W10-PKGREG-001",
+      "HPC-W10-FREEZE-009",
+      "HPC-W10-FREEZE-032",
+      "HPC-W10-FREEZE-041",
+      "HPC-W10-TODO-012",
+      "HPC-W10-TODO-013",
+      "HPC-W10-TODO-014",
+      "HPC-W10-TODO-016",
+      "HPC-W10-TODO-RUNTIME-CUTOVER-003"
+    ]
+  },
+  "other_measurements_this_phase": {
+    "external_lab_preflight": {
+      "command": "powershell -NoProfile -ExecutionPolicy Bypass -File lab/lab-status.ps1",
+      "exit_code": 0,
+      "status": "PASS",
+      "nodes": "3/3 transport_ok=true services_ok=true",
+      "compute02_restored": true,
+      "compute02_detail": "ssh/munge/slurmd all active",
+      "slurm": "compute01|idle compute02|idle",
+      "image_pin_ok": true,
+      "profile_valid": true,
+      "conclusion": "EXTERNAL evidence class is green; no external block; no unavailable credential, MFA, authority, hardware, service or manual-acceptance step exists anywhere in this path."
+    },
+    "w57_owned_seams": {
+      "command": ".venv/Scripts/python.exe -m pytest -q -p no:cacheprovider --basetemp=.tmp/w57-run161/pytest tests/test_local_real_lab_bounded_commands.py tests/test_local_real_lab_static.py tests/test_wave_controller_regressions.py tests/test_w57_freeze_consistency.py",
+      "result": "30 passed in 12.80s",
+      "exit_code": 0
+    },
+    "closeout_validator": {
+      "command": ".venv/Scripts/python.exe scripts/validate_wave_closeout.py --wave W57",
+      "can_close": false,
+      "failure_reasons": ["missing/invalid evidence manifest: artifacts/wave_W57/WAVE_W57_EVIDENCE_MANIFEST.json"],
+      "exit_code": 1,
+      "note": "The single truthful reason. The ACCEPTANCE_GREEN manifest is deliberately withheld because the packaged gate is red."
+    },
+    "postrun_validators": {
+      "validate-ac-project.py": "PASS (exit 0) - was red at run 158, now green",
+      "validate-agent-parity.py": "PASS (exit 0)",
+      "validate-managed-runtime.py": "recorded separately; Agent-Core/controller-owned and Wave-independent, not a W57 gate",
+      "validate-wave-authoring.py": "recorded separately",
+      "validate-wave-orchestration.py": "recorded separately",
+      "validate-wave-program.py": "recorded separately"
+    }
+  },
+  "why_this_is_REOPEN_and_not_HUMAN_DEFERRED": "The defect is repository-owned, has stable owner requirement IDs, and is routing state rather than human deferral. There is no unavailable credential, MFA, authority, hardware, service or manual-acceptance step anywhere in this path, and the external lab is up and green.",
+  "explicitly_rejected": [
+    "editing scripts/wx_packaged_smoke.py to raise timeout=25 or to read the runtime evidence on the timed_out branch, because that is the closed owner Waves' harness surface and changing an acceptance gate to obtain a green is not W57's authority",
+    "editing src/hpc_gui/wx_shell.py to fix the smoke driver's shutdown, because the candidate is frozen and a product correction invalidates W56",
+    "closing, minimising, moving or raising any of the operator's windows, including the sibling project's 'IMPI' wx GUI and the foreground WindowsTerminal, to obtain a green",
+    "retrying the gate until it goes green, which is cherry-picking a measurement",
+    "presenting the artifact's own PASS runtime payload as acceptance evidence for the gate, which would bypass the gate's own scoring contract",
+    "authoring an ACCEPTANCE_GREEN manifest or re-issuing a green freeze declaration while the gate is red",
+    "rebuilding or patching the frozen candidate",
+    "narrowing, skipping or re-scoping any of the 20 checks",
+    "treating the observed root cause as licence to raise the budget inside the consuming Wave"
+  ],
+  "not_done": [
+    "no file under scripts/, src/, tests/, build/, waves/ or src/hpc_gui/ was modified",
+    "no acceptance gate was redefined",
+    "no test was weakened, skipped or xfailed",
+    "no evidence manifest was authored and no green freeze declaration was re-issued",
+    "no push, tag, release, sign or publish"
+  ],
+  "safety": {
+    "tests_weakened": false,
+    "skips_added": false,
+    "fabricated_pass": false,
+    "committed_beyond_evidence_artifact": false,
+    "pushed": false
+  }
+}
