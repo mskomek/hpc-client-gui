@@ -1,30 +1,28 @@
-# W57 Wave Report - Packaged regression, support finalization and freeze (run phase 158)
+# W57 Wave Report - Packaged regression, support finalization and freeze (run phase 161)
 
 Wave: `W57`
 Canonical report path: `docs/wave-reports/v2/opencode/W57_WAVE_REPORT.md`
 Repository: `mskomek/hpc-client-gui`
 Branch: `develop`
 Baseline SHA (W56 frozen candidate base): `36d6151fd9634cf50e14a639ec0407bef1d296f4`
-Main SHA: `bdf6c6c7e2817422b6f9005873247d3636c5eac4` (candidate commit; the W30 closed-owner repair, the W57 lab-harness hardening and the canonical Agent Core materialization are now inside a real commit)
-Branch/HEAD at this run: `develop` / `32db374bece1ed278198677e99fe67413a68fe78` (run-155 closeout commit; the tested candidate under it is still `bdf6c6c7`)
-Product delta vs Main SHA: `src/hpc_gui/services/job_submit_cancel.py` (W30 closed-owner repair, applied in the working tree, audited PASS)
-Content identity (controller handoff): `692e534df1c49b8d420f2e04999c8487216cc27575dd90f1347f4be1c44fcb07`
-  *(Re-bound at repair 144, after audit finding `W57-AUD-004` routed the stale value here for
-  repair. History: repair 121 corrected a foreign `8f522decd2c8...` — that is **W30's**
-  `audit_receipt.tested_content_identity`, not W57's own identity (see 20.5) — and recorded
-  `cf5aff20...`, which was the then-live identity of a working tree that has since moved.
-  The value now recorded is the identity **measured in this dispatch** and it is byte-equal to
-  the controller's handed `content_identity` for phase instance `…:144:W57:repair`. See §17 for
-  the measurement and for why this rebind is convergent rather than another oscillation.)*
-Phase instance: `20260925-074235-63df86b0:158:W57:run`
-Prior phase: `run` `ORCHESTRATION_RECOVERY_REQUIRED` (`0155-W57-run-normalized.json`). That dispatch produced real measurements but its provider stream died on a quota limit before any machine-result block, so it was never machine-attested. This dispatch therefore re-ran the one item the canonical state left unattested (T05, packaged regression, recorded `completed` with empty detail and empty evidence) from scratch instead of trusting its prose. Section 24 records the result and supersedes one of its measurement claims.
-Last updated: 2026-09-28 (run phase 158, opencode executor)
-Session status: **REOPEN** *(re-set again at run phase 158; the reason is now sharper, not weaker).* The external and identity prerequisites from run 155 remain resolved: `DEF-W57-006` (`compute02` down) is closed - re-measured in this dispatch, `lab/lab-status.ps1` exits 0 with `status: PASS`, 3/3 nodes `transport_ok`/`services_ok`, Slurm `compute01|idle compute02|idle`, `image_pin_ok=true` - and `W57-AUD-005` (uncommitted `candidate_sha`) is closed by candidate commit `bdf6c6c7`. The single remaining reason is a measured, repository-owned defect that is **not** W57-owned: the maintained packaged gate `scripts/wx_packaged_smoke.py` is non-hermetic in **two** independent ways, its hardcoded 25s child budget and its foreground-dependent synthetic input, so its verdict tracks ambient host and desktop contention rather than artifact behaviour. It is routed to its true owner (`W04` packaging-harness surface, owners `W15` / `W16`). This is a repository-owned red and **not** `HUMAN_DEFERRED`: no credential, MFA, authority, hardware, service or manual-acceptance step is missing. See sections 23.5 and 24.
+Main SHA: `bdf6c6c7e2817422b6f9005873247d3636c5eac4` (candidate commit; unchanged by run 161 — the frozen candidate was neither rebuilt nor patched)
+Branch/HEAD at this run: `develop` / `c9c1754ef61f50aa79b167857397ec91bc711542` (run-161 evidence commit; the tested candidate under it is still `bdf6c6c7`, artifact SHA-256 `8BA80453A76A664959BAEDF7716C476A5334B6AFF860A4BC79B9E220D48B4C57`, re-verified read-only in this dispatch)
+Product delta vs Main SHA: none. Run 161 modified no file under `src/`, `scripts/`, `tests/` or `build/`; its only commit adds one W57 evidence artifact.
+Content identity (controller handoff): `45c46c0a09c3f9b85b4679c40f3779a694b5a8f0c0c63b64cc1380823eeac3fc`
+  *(The identity handed by the controller for phase instance `…:161:W57:run` and recorded here
+  verbatim. It is **not** the run-158 value `0c9c5812140d…`, so this dispatch is not a same-content
+  repetition of the previous run. The earlier header carried `692e534d…`, which was the
+  repair-144 binding and is stale for this dispatch; see §25.)*
+Phase instance: `20260925-074235-63df86b0:161:W57:run`
+Prior phase: `run` `REOPEN` (`0158-W57-run-normalized.json`). That dispatch returned `REOPEN` on a two-cause diagnosis (25 s child budget **and** foreground-dependent synthetic input) routed to the `W04` packaging-harness surface. This dispatch tested that diagnosis instead of restating it and **falsified its second cause**; §25 records the measurement and the corrected owner route.
+Last updated: 2026-09-28 (run phase 161, opencode executor)
+Session status: **REOPEN** *(re-set at run phase 161; the reason is now a proven mechanism, not an inference about ambient conditions).* The external and identity prerequisites remain resolved and were **re-measured in this dispatch**: `lab/lab-status.ps1` exits 0 with `status: PASS`, 3/3 nodes `transport_ok`/`services_ok`, `compute02` restored (ssh/munge/slurmd active), Slurm `compute01|idle compute02|idle`, `image_pin_ok=true`, `profile_valid=true`; and the maintained `lab/lab-test.ps1` exits 0 in 27 s with **23/23** required gates true and `failed: []`. `W57-AUD-005` stays closed by candidate commit `bdf6c6c7`, whose artifact identity was re-verified without rebuild.
 
-Two W57-owned items are re-verified green in this dispatch: `tests/test_wave_controller_regressions.py`
-is **17/17** and the canonical content identity is byte-equal to the controller handoff
-(`692e534d…`, measured — see §22.2), so the repair-144 identity rebind is confirmed convergent and
-is not re-litigated here.
+The single remaining reason is a measured, repository-owned defect that is **not** W57-owned, and its mechanism is now established rather than hypothesised. The maintained packaged gate `scripts/wx_packaged_smoke.py` was run **unmodified**, three times, against the unchanged candidate: 3/3 exit 1, `FAIL` **1/20**, `details.timeout='artifact did not exit within 25s'`, 26.512 s / 26.859 s / 27.059 s. In all three runs the artifact's own packaged runtime sidecar — the very file the gate scores — reports **`result: PASS`, `phase: 4`**, with 17/19 of its own checks PASS and full input delivery (`ssh_input_chars` 18, DOM `keydown` 18, `sendinput_events` 36, click `[770,544]`). The two artifact-reported failures, `pty_resize` and `clean_shutdown`, are recomputed and overridden by the gate itself (`wx_packaged_smoke.py:206`, `:210-220`, `:236`), so every check the artifact can prove passed. That complete passing payload was on disk **19.444 s before** the gate emitted its `FAIL 1/20` verdict, and the gate never opened it: `wx_packaged_smoke.py:190-192` short-circuits on `timed_out`. Root cause: the artifact completes every smoke phase and writes complete `PASS` evidence roughly 5–7 s into the run, then does not terminate inside the gate's hardcoded `timeout=25`, and the gate converts that into 1/20 by discarding the evidence. Routed to the true owners — the gate budget and discard path to `HPC-W04-FRESH-009` (W15) / `HPC-W04-HARNESS-025` (W16), both CLOSED, so a controller-owned closed-owner repair transaction; the artifact's post-phase-4 shutdown to the product/frozen-candidate surface, which would invalidate W56 and require an owner rebuild. This is a repository-owned red and **not** `HUMAN_DEFERRED`: no credential, MFA, authority, hardware, service or manual-acceptance step is missing. See §25 and `artifacts/wave_W57/W57_RUN161_PKGREG_EVIDENCE_DISCARD_ROOT_CAUSE.json`.
+
+Run 161 also **falsifies the second cause** recorded at run 158. The run-158 report treated `foreground_request_accepted=false` and `foreground_matches_frame=false` as proof that a busy desktop zeroed the input. Those exact two values are present in all three run-161 red runs **and** in the known-green 20/20 evidence `artifacts/wave_W57/W57_PACKAGED_SMOKE_8BA80453_PASS.json`, so they are not discriminators; they are a diagnostic snapshot taken at `wx_shell.py:2245-2250`, *before* the `AttachThreadInput` activation block at `wx_shell.py:2286-2295`. No run in this dispatch produced `keyboard_input:foreground_lost_after_terminal_click`; all three reached phase 4. The run-158 owner route for the input half was also **misattributed**: `scripts/wx_packaged_smoke.py` contains no input-synthesis code at all (only `--wx-smoke` argv at lines 154, 156, 337, 339), while every `SetForegroundWindow`/`BringWindowToTop`/`SetCursorPos`/`SendInput`/`ClientToScreen` call lives in `src/hpc_gui/wx_shell.py:2231, 2288, 2290, 2353, 2357, 2361, 2377` — the shipped product smoke driver. Finally, ambient contention does not discriminate either: 6/6 ambient snapshots show **0** topmost windows covering the click point `[770,544]` and `WerFault=0`, and the three runs were byte-identical under a constant desktop.
+
+Four W57-owned seams are re-verified green in this dispatch: `tests/test_local_real_lab_bounded_commands.py`, `tests/test_local_real_lab_static.py`, `tests/test_wave_controller_regressions.py` and `tests/test_w57_freeze_consistency.py` → **30 passed in 12.80 s**, exit 0. `scripts/validate_wave_closeout.py --wave W57` reports `can_close: false` for its one truthful reason — the deliberately withheld `ACCEPTANCE_GREEN` manifest. `.opencode/scripts/validate-ac-project.py`, red at run 158, now exits 0 `PASS`.
 
 `DEF-W57-006` (`compute02` at 192.168.250.13) was down for the whole history of this Wave and
 was the reason this Wave was repeatedly deferred. It is **RESOLVED**, measured in run phase
@@ -2632,6 +2630,143 @@ Resume point, in order:
    audit. Not to be repeated: candidate commit (23.2), candidate identity (23.3, 24.1), the
    real-cluster regression (23.1, 24.2), the W57 seams and static gates (23.7, 24.7), the FREEZE-029
    decision (23.6), and the packaged re-measurement in 24.3.
+
+Wave lifecycle is unchanged: `waves/pending/W57.md` stays pending, and this run scheduled, closed or
+touched no other Wave.
+
+## 25. Run phase 161 - the run-158 second cause is FALSIFIED; the gate's root cause is that it discards complete passing evidence on timeout
+
+This section records run phase 161 (`20260925-074235-63df86b0:161:W57:run`), whose purpose was to
+**test** the run-158 diagnosis rather than restate it. It did, and the second of the two causes
+recorded at 24.x does not survive.
+
+Durable evidence: `artifacts/wave_W57/W57_RUN161_PKGREG_EVIDENCE_DISCARD_ROOT_CAUSE.json`
+(commit `c9c1754e`).
+
+### 25.1 Candidate and harness were unchanged, so the measurement is comparable
+
+| Item | Value | How established |
+| --- | --- | --- |
+| candidate commit | `bdf6c6c7e2817422b6f9005873247d3636c5eac4` | `git rev-parse` |
+| artifact | `dist/hpc-client-gui/hpc-client-gui.exe` | - |
+| artifact SHA-256 | `8BA80453A76A664959BAEDF7716C476A5334B6AFF860A4BC79B9E220D48B4C57` | `Get-FileHash`, before and after |
+| artifact size / bundle files | 7672468 / 172 | byte length, recursive count |
+| gate SHA-256 | `47763C6ABD7EBDF4235C0ADD36FCE56269AA9C073BED798ED2A5784876FA0FDD` | before **and** after; gate never modified |
+| gate mtime | `2026-09-22T11:37:18.6060637Z` | untouched since 2026-09-22, i.e. never touched by W57 |
+
+### 25.2 Measurement A - the maintained gate, unmodified, 3 runs
+
+`.venv/Scripts/python.exe scripts/wx_packaged_smoke.py --artifact dist/hpc-client-gui/hpc-client-gui.exe --platform windows --output .tmp/w57-run161/pkg/pkg-runN.json`
+
+3/3 identical: exit `1`, `FAIL` **1/20**, `workdir_outside_repo=true`,
+`timeout='artifact did not exit within 25s'`, `child_killed=true`, `exit_code=null`.
+Elapsed 26.512 s / 26.859 s / 27.059 s.
+
+### 25.3 Measurement B - the evidence the gate threw away
+
+The same three runs each left a packaged runtime sidecar (`.runtime.json`, 9686 bytes). Read
+directly, in **all three**:
+
+- `result: PASS`, `phase: 4`, `error: ""`
+- 17 of the artifact's 19 reported checks PASS; the only two failures are `pty_resize` and
+  `clean_shutdown`
+- input fully delivered: `terminal_click [770,544]`, `click_events 2`, `sendinput_events 36`,
+  `bridge_input_chars 18`, `ssh_input_chars 18`, DOM `keydown 18 / beforeinput 11 / input 11`
+
+Both artifact-reported failures are **not** product failures, because the gate recomputes and
+overrides them and never reads them from the artifact:
+
+- `pty_resize` - skipped in the artifact-check loop (`wx_packaged_smoke.py:206`) and recomputed
+  from the disposable loopback server (`:210-220`)
+- `clean_shutdown` - recomputed at `:236` from `returncode`, isolation and the runtime result
+
+Timing (run 1): the artifact's payload was on disk at `16:11:02.004`, the gate's verdict at
+`16:11:21.448` — **19.444 s** of passing evidence sitting unread. The gate's timeout fires at
+25 s and the child is killed and reaped before the verdict is written, so the artifact had
+finished its work and written complete `PASS` evidence roughly 5-7 s into the run, then did not
+exit for the remaining ~18 s.
+
+### 25.4 Root cause
+
+The artifact completes every smoke phase and writes a complete passing runtime payload, then fails
+to terminate before the gate's hardcoded `timeout=25`. `wx_packaged_smoke.py:190-192`
+short-circuits on `timed_out`, records `timeout`/`child_killed`, and never opens the runtime
+evidence file, so the other 19 checks keep their initial `FAIL` and `:237` reports `FAIL`.
+
+Two supporting facts, neither of which run 158 had:
+
+- **The budget is internally inconsistent inside the same maintained file.**
+  `run_fresh_user_smoke` defaults to `timeout=240` (`:346`) for a comparable packaged GUI workload
+  with two launches, while `run_packaged_smoke` defaults to `timeout=25` (`:128`) for the heavier
+  20-check workload against a real loopback paramiko SSH/SFTP fixture and a wx+WebView2 child.
+- **25 s is provably not intrinsically insufficient.** The known-green
+  `artifacts/wave_W57/W57_PACKAGED_SMOKE_8BA80453_PASS.json` (2026-09-28 01:06) is `PASS` 20/20
+  with `exit_code 0` on the identical SHA through the same unmodified gate. What varies is the
+  latency of the artifact's post-phase-4 shutdown, not its work.
+
+### 25.5 What this falsifies in run 158
+
+| Run-158 claim | Run-161 measurement | Verdict |
+| --- | --- | --- |
+| Foreground-dependent input blocks the gate (`keyboard_input:foreground_lost_after_terminal_click`, `runtime_phase 0`, `ssh_input_chars 0`) | 0/3 runs produced that error; all three reached phase 4 with `result PASS` and 18 SSH chars / 18 DOM keydowns | **Falsified** for this dispatch |
+| `foreground_request_accepted=false` + `foreground_matches_frame=false` show input cannot be delivered | The identical pair appears in all three red runs **and** in the known-green 20/20 evidence. They are a snapshot taken at `wx_shell.py:2245-2250`, *before* the `AttachThreadInput` activation at `:2286-2295` | **Falsified as a discriminator** |
+| True owner is `scripts/wx_packaged_smoke.py` and its absolute-coordinate terminal click should be replaced | The gate contains no input-synthesis code at all - only `--wx-smoke` argv (`:154`, `:156`, `:337`, `:339`). All foreground/input calls are in `src/hpc_gui/wx_shell.py:2231, 2288, 2290, 2353, 2357, 2361, 2377` | **Misattributed owner route** for the input half |
+| Ambient desktop contention makes the verdict track the operator's desktop | 6/6 ambient snapshots: **0** topmost windows covering `[770,544]`, `WerFault=0`; three byte-identical runs under a constant desktop; the green 01:06 run also had a foreign foreground window | **Not supported** as the discriminator |
+| Raising the timeout would not have produced a green | Mechanism now identified, so the budget is an owner decision to make once against a fixed gate. This run did not change the budget and did not re-run for a green | **Superseded** - routed, not open |
+
+### 25.6 Corrected owner route (two surfaces, both outside W57)
+
+- **Defect A - gate budget and evidence-discard path.** Surface `scripts/wx_packaged_smoke.py`.
+  Owners `HPC-W04-FRESH-009` (W15) / `HPC-W04-HARNESS-025` (W16), both **CLOSED** - requires a
+  controller-owned closed-owner repair transaction. Recommended: on the `timed_out` branch still
+  read and score whatever runtime evidence the artifact wrote, and size the budget consistently
+  with the sibling `run_fresh_user_smoke` entrypoint (or make it host-relative/configurable).
+- **Defect B - artifact does not terminate after completing its phases.** Surface
+  `src/hpc_gui/wx_shell.py` (packaged smoke driver shutdown). A correction here is a
+  frozen-candidate change: it invalidates W56 and requires an owner rebuild plus rerun of affected
+  W56/W57 evidence. W57 must not patch the frozen candidate. Left **open** - this run did not settle
+  it, and settling it belongs to the closed-owner transaction, which can vary the budget without
+  changing the artifact.
+
+W57's role is consumer: `HPC-W10-PKGREG-001` and `FREEZE-009/-032/-041` require W57 to *run* the
+maintained gate against the frozen candidate. W57 owns neither the gate's budget policy nor the
+artifact's shutdown path.
+
+Invalidated evidence rows: `HPC-W10-PKGREG-001`, `HPC-W10-FREEZE-009`, `HPC-W10-FREEZE-032`,
+`HPC-W10-FREEZE-041`, `HPC-W10-TODO-012`, `HPC-W10-TODO-013`, `HPC-W10-TODO-014`,
+`HPC-W10-TODO-016`, `HPC-W10-TODO-RUNTIME-CUTOVER-003`.
+
+### 25.7 Everything else re-verified in this dispatch
+
+| Check | Command | Result |
+| --- | --- | --- |
+| external preflight | `lab/lab-status.ps1` | exit 0, `status: PASS`, 3/3 nodes `transport_ok`/`services_ok`, `compute02` restored, Slurm `compute01\|idle compute02\|idle`, `image_pin_ok=true`, `profile_valid=true` |
+| real-cluster regression | `lab/lab-test.ps1` | exit 0 in 27 s, `status: LOCAL_REAL_READY`, **23/23** required gates true, `failed: []` |
+| W57 seams | `pytest -q tests/test_local_real_lab_bounded_commands.py tests/test_local_real_lab_static.py tests/test_wave_controller_regressions.py tests/test_w57_freeze_consistency.py` | **30 passed in 12.80 s**, exit 0 |
+| closeout validator | `scripts/validate_wave_closeout.py --wave W57` | `can_close: false`, one truthful reason - the deliberately withheld `ACCEPTANCE_GREEN` manifest |
+| project validator | `.opencode/scripts/validate-ac-project.py` | exit 0 `PASS` (red at run 158) |
+| agent parity | `.opencode/scripts/validate-agent-parity.py` | exit 0 `PASS` |
+
+Stray root-level duplicate `test_wave_controller_regressions.py` is byte-identical to
+`tests/test_wave_controller_regressions.py` (`9EAFA5B769344070B0D9A460DA433A8EAEE0AA486119F0BB74146B7C59AC897D`),
+untracked, and **not collectable** (collecting it directly raises `FileNotFoundError`). It belongs
+to the untracked core-drift delta, not to W57. It is recorded here rather than deleted: removing an
+untracked file from someone's working tree is a destructive action that no acceptance gate requires.
+
+### 25.8 Resume point
+
+Unchanged in shape from 24.x, but with a corrected owner list:
+
+1. **Controller** - open the closed-owner repair transaction for **Defect A**
+   (`scripts/wx_packaged_smoke.py` budget + evidence discard; owners W15 / W16), and route
+   **Defect B** (artifact shutdown) to the product owner.
+2. **Owner(s)** - apply the fix on their own surface; W57 then re-runs `wx_packaged_smoke.py`
+   **unmodified** against `8BA80453`.
+3. **W57 run (re-dispatch)** - with the gate green, author `WAVE_W57_EVIDENCE_MANIFEST.json` with
+   all 46 owned rows, re-issue the declaration `Frozen for W58: YES`, then dispatch the fresh
+   independent audit. **Not to be repeated:** candidate commit, candidate identity, the real-cluster
+   regression (25.7), the W57 seams, the closeout validator, and the packaged-gate measurement -
+   all measured green or definitively here.
 
 Wave lifecycle is unchanged: `waves/pending/W57.md` stays pending, and this run scheduled, closed or
 touched no other Wave.
