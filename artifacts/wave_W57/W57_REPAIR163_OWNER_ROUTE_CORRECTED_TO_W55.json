@@ -1,0 +1,158 @@
+{
+  "schema": "w57-repair-finding",
+  "wave_id": "W57",
+  "phase": "repair",
+  "phase_instance_id": "20260925-074235-63df86b0:163:W57:repair",
+  "finding_id": "W57-PKGREG-SHELL-CLOSE-HIDE-DEADLOCK",
+  "supersedes_owner_route_in": [
+    "artifacts/wave_W57/W57_REPAIR162_SHELL_CLOSE_HIDE_DEADLOCK_ROOT_CAUSE.json"
+  ],
+  "correction_scope": "owner route only. The dispatch-162 mechanism diagnosis is NOT re-argued or overturned here; it is inherited and re-measured.",
+  "severity": "product-shutdown-deadlock",
+  "repair_hypothesis": "W57-REPAIR163-OWNER-ROUTE-UNVERIFIED",
+
+  "FINDING": "W57's sole remaining blocker is the maintained packaged-regression gate scripts/wx_packaged_smoke.py returning FAIL 1/20 with details.timeout='artifact did not exit within 25s' against the unchanged frozen candidate, because the packaged artifact never terminates. Dispatch 162 located the mechanism at src/hpc_gui/wx_shell.py:1394 frame.Hide() inside the shell frame close handler (def close(_event) at :1354) and then routed the defect to 'the W56 packaged-candidate / wx shell surface owner'. That route was asserted from mechanism, not from any machine-readable ownership record, and it is not supported by W56's Wave frontmatter.",
+
+  "OBSERVED_FAILURE": "Re-measured in this exact dispatch, not inherited. (1) Maintained gate unmodified: .venv/Scripts/python.exe scripts/wx_packaged_smoke.py --artifact dist/hpc-client-gui/hpc-client-gui.exe --platform windows --output .tmp/w57-repair163/gate/gate-1.json -> exit 1, result FAIL, 1/20, elapsed 26.51s, details.timeout='artifact did not exit within 25s', child_killed=true, exit_code=null, clean_shutdown=FAIL, isolated_from_src=true. This reproduces the dispatch-162 numbers (26.5-26.9s) and confirms the blocker is unchanged and stable, not a transient. (2) W57-owned focused retest, required for this repair dispatch: .venv/Scripts/python.exe -m pytest -q -p no:cacheprovider --basetemp=.tmp/w57-repair163/pytest tests/test_local_real_lab_bounded_commands.py tests/test_local_real_lab_static.py tests/test_wave_controller_regressions.py tests/test_w57_freeze_consistency.py -> 30 passed in 11.12s, exit 0. The Wave's own seams are green; the failure is exclusively in the packaged artifact's shutdown path.",
+
+  "HYPOTHESIS": "The repair loop is not caused by an unlocated defect; it is caused by a misrouted finding. waves/done/W56.md frontmatter shows W56 owns only candidate build and pinned-identity rows (HPC-W10-FREEZE-001/002/003/004/006/007/008/012/014..018, HPC-W10-BUILD-001/002, HPC-W10-TODO-RUNTIME-CUTOVER-001, HPC-W10-TODO-RUNTIME-DEPENDENCY-001, HPC-W10-TODO-007/008/009). It contains no shell/GUI/lifecycle requirement row, so W56 cannot own a runtime correction inside src/hpc_gui/wx_shell.py. The shell surface that contains the defect is owned by waves/done/W55.md ('Integrated shell, accessibility, DPI and lifecycle soak', objective 'Replay canonical navigation, accessibility/localization/DPI and resource/lifecycle soak after the ten Golden Journeys', mandatory source section 'Workstream A3 - Resource/lifecycle soak', owned rows HPC-W10-GJ2-024..054). Routing the defect to a Wave that has no ownership of the surface guarantees the controller can never obtain the owner correction, which is exactly the observed symptom: W57 is re-dispatched to repair indefinitely with no change in its red state.",
+
+  "CHANGE": "Ownership verification only, plus a fresh re-measurement of the failing gate and the W57-owned focused retest. Four machine checks were run: (a) the W56 and W55 frontmatter owned_requirements blocks; (b) the candidate/source parity check; (c) the focused retest; (d) the unmodified gate. No file under src/, tests/, scripts/, build/ or waves/ was modified. No acceptance gate was redefined. No test was weakened, skipped or xfailed.",
+
+  "RESULT": "HYPOTHESIS CONFIRMED. W56's frontmatter contains no requirement row that can own a src/hpc_gui/wx_shell.py shutdown correction, so the dispatch-162 route 'W56 packaged-candidate / wx shell surface owner' is FALSIFIED as an ownership claim and is corrected to the W55 closed-owner surface. This is not a cosmetic relabel: the corrected route changes the shape of the required transaction from 'owner rebuilds a candidate' (W56, build) to 'controller-owned closed-owner repair transaction against a CLOSED shell/lifecycle Wave' (W55), because waves/done/W55.md is a historical CLOSED Wave. One residual gap is reported rather than guessed: W57's own spec names REQUIREMENT_REGISTRY.md and TODO_OWNERSHIP_MAP.md as the mandatory authority for resolving 'Owning Wave' per row, and neither file exists anywhere in this repository, so the exact owning requirement row for the shell close handler cannot be machine-resolved. The file-level evidence points at W55 (the only Wave whose owned rows annotate src/hpc_gui/wx_shell.py in the shell/lifecycle region), but resolving that gap is controller-owned owner-routing, not W57's authority.",
+
+  "measurements": {
+    "focused_retest_this_dispatch": {
+      "command": ".venv/Scripts/python.exe -m pytest -q -p no:cacheprovider --basetemp=.tmp/w57-repair163/pytest tests/test_local_real_lab_bounded_commands.py tests/test_local_real_lab_static.py tests/test_wave_controller_regressions.py tests/test_w57_freeze_consistency.py",
+      "result": "30 passed in 11.12s",
+      "exit_code": 0
+    },
+    "maintained_gate_this_dispatch": {
+      "command": ".venv/Scripts/python.exe scripts/wx_packaged_smoke.py --artifact dist/hpc-client-gui/hpc-client-gui.exe --platform windows --output .tmp/w57-repair163/gate/gate-1.json",
+      "exit_code": 1,
+      "elapsed_s": 26.51,
+      "result": "FAIL",
+      "passed_of_20": 1,
+      "clean_shutdown": "FAIL",
+      "isolated_from_src": true,
+      "details": {
+        "timeout": "artifact did not exit within 25s",
+        "child_killed": true,
+        "workdir_outside_repo": true
+      },
+      "exit_code_field": null
+    },
+    "candidate_source_parity": {
+      "candidate_commit": "bdf6c6c7e2817422b6f9005873247d3636c5eac4",
+      "candidate_commit_subject": "W57 candidate: attest W30 closed-owner repair, W57 lab-harness hardening, canonical-core materialization",
+      "is_ancestor_of_head": true,
+      "commits_touching_src/hpc_gui/wx_shell.py_since_candidate": 0,
+      "diff_stat_candidate_to_head_wx_shell": "empty",
+      "conclusion": "The dispatch-162 diagnosis line numbers (:1394 frame.Hide(), :2060 frame.Close(), :2063 wx.CallLater(50, app.ExitMainLoop)) do correspond to the frozen candidate's build input, so the mechanism anchor is sound. This dispatch did not re-derive the mechanism and does not restate it as new evidence."
+    },
+    "ownership_records_read": {
+      "waves/done/W56.md": "owned_requirements are exclusively HPC-W10-FREEZE-001..004/006/007/008/012/014..018, HPC-W10-BUILD-001/002, HPC-W10-TODO-RUNTIME-CUTOVER-001, HPC-W10-TODO-RUNTIME-DEPENDENCY-001, HPC-W10-TODO-007/008/009. Objective: 'Replay high-risk real-cluster paths and build one clean pinned candidate with exact provenance, manifest and SHA-256.' No shell/GUI/lifecycle row.",
+      "waves/done/W55.md": "owned_requirements include HPC-W10-GJ2-024..054 (GJ2-029/030/038 are the rows that annotate src/hpc_gui/wx_shell.py). Title: 'Integrated shell, accessibility, DPI and lifecycle soak'. Objective: 'Replay canonical navigation, accessibility/localization/DPI and resource/lifecycle soak after the ten Golden Journeys.' Mandatory source section: 'Workstream A3 - Resource/lifecycle soak'.",
+      "waves/pending/W57.md": "owned_requirements are HPC-W10-FREEZE-005/009/010/011/013/019..048, HPC-W10-PKGREG-001, HPC-W10-TODO-RUNTIME-CUTOVER-002/003, HPC-W10-TODO-010..017. W57 is a consumer of the packaged candidate and owns neither the shell shutdown path nor the gate policy."
+    },
+    "missing_mandatory_authority": {
+      "REQUIREMENT_REGISTRY.md": "absent from the repository",
+      "TODO_OWNERSHIP_MAP.md": "absent from the repository",
+      "note": "Both are named by waves/pending/W57.md 'Mandatory authority to read before implementation' as the place where each row's Owning Wave is resolved. Their absence is why the exact owning requirement row cannot be machine-resolved here, and why the route had to be inferred from Wave frontmatter."
+    },
+    "harness_under_test": {
+      "path": "scripts/wx_packaged_smoke.py",
+      "modified_by_this_repair": false
+    },
+    "candidate_under_test": {
+      "sha256": "8BA80453A76A664959BAEDF7716C476A5334B6AFF860A4BC79B9E220D48B4C57",
+      "size_bytes": 7672468,
+      "rebuilt_or_patched": false
+    }
+  },
+
+  "falsifications": [
+    {
+      "prior_claim": "Dispatch 162: 'owner: the W56 packaged-candidate / wx shell surface owner'.",
+      "measured_here": "FALSIFIED as an ownership claim. waves/done/W56.md lists 19 owned requirement rows, all of them candidate build, pinned identity, runtime cutover or build/TODO rows. None of them is a shell, GUI, lifecycle or packaged-runtime behaviour row. A Wave that owns no requirement on the surface cannot be the owner of a correction to src/hpc_gui/wx_shell.py.",
+      "verdict": "FALSIFIED; route corrected to W55"
+    },
+    {
+      "hypothesis_tested_and_rejected": "The repair loop is caused by an unmeasured or drifting defect, so the diagnosis must be re-derived from scratch with fresh instrumentation before anything can be routed.",
+      "measured_here": "Rejected. The unmodified gate reproduced its red within 1.0s of dispatch 162 (26.51s vs 26.786s, same 1/20, same timeout string, same child_killed/exit_code null), the candidate source for the defective file is bit-identical to the candidate build input, and the W57-owned focused retest is 30/30 green. The failure is stable, the anchor is sound, and re-running py-spy would be an identical rerun with no new information. The loop cause is the route, not the measurement.",
+      "verdict": "FALSIFIED; avoided an identical rerun"
+    },
+    {
+      "hypothesis_tested_and_rejected": "W57 itself owns the shutdown behaviour and should fix wx_shell.py directly.",
+      "measured_here": "Rejected by W57's own frontmatter and contract. W57 owns PKGREG-001 and FREEZE rows only, its 'Frozen-candidate invariants' forbid patching the frozen candidate because any product correction invalidates W56, and its 'Integration/freeze rule' requires routing an earlier-domain finding to its owner. W57 is a consumer.",
+      "verdict": "FALSIFIED; W57 must not patch wx_shell.py"
+    }
+  ],
+
+  "corrected_owner_route": {
+    "primary_defect": {
+      "finding_id": "W57-PKGREG-SHELL-CLOSE-HIDE-DEADLOCK",
+      "surface": "src/hpc_gui/wx_shell.py:1394 frame.Hide() in the shell frame close handler (def close(_event) at :1354), reached from the packaged smoke finish() at wx_shell.py:2060",
+      "class": "frozen-candidate product defect: cross-thread window-message deadlock against the embedded WebView2 host thread during shutdown",
+      "true_owner_wave": "W55",
+      "owner_evidence": "waves/done/W55.md owned_requirements HPC-W10-GJ2-024..054; title 'Integrated shell, accessibility, DPI and lifecycle soak'; objective includes 'resource/lifecycle soak'; mandatory source section 'Workstream A3 - Resource/lifecycle soak'. GJ2-029/030/038 are the rows already annotating src/hpc_gui/wx_shell.py.",
+      "owner_lifecycle_state": "CLOSED (waves/done/W55.md)",
+      "required_transaction": "controller-owned closed-owner repair transaction, per the profile capability closed_owner_repair_transaction=true and the repository rule that a current defect owned by a historical CLOSED Wave uses a controller-owned closed-owner repair transaction",
+      "superseded_route": "W56 (dispatch 162) - unsupported by W56 frontmatter",
+      "w57_must_not": "W57 must not patch src/hpc_gui/wx_shell.py, rebuild or patch the frozen candidate, or redefine the gate to obtain a green"
+    },
+    "secondary_defect": {
+      "finding_id": "W57-PKGREG-GATE-EVIDENCE-DISCARD-ON-TIMEOUT",
+      "surface": "scripts/wx_packaged_smoke.py:190-192 and :236-237",
+      "class": "acceptance-gate reporting quality: on timed_out the gate discards the runtime evidence it would otherwise score",
+      "status": "unchanged from dispatch 162, not the blocker, and it must not be used to obtain a green: wx_packaged_smoke.py:236 requires returncode==0, which is null in this dispatch"
+    },
+    "controller_action_requested": [
+      "Route W57-PKGREG-SHELL-CLOSE-HIDE-DEADLOCK to W55 as a closed-owner repair transaction, not to W56.",
+      "Resolve the exact owning requirement row for the shell close handler. REQUIREMENT_REGISTRY.md and TODO_OWNERSHIP_MAP.md, which W57's spec names as the mandatory authority for per-row owning-Wave resolution, do not exist in this repository, so the route had to be inferred from Wave frontmatter.",
+      "After the owner correction, the candidate must be rebuilt by its own owner and W57 reruns the maintained unmodified gate three times against the new SHA-256 plus the external and identity prerequisites, which were green at run 161 and need only a refresh."
+    ],
+    "w57_role": "consumer. W57 cannot reach READY_FOR_AUDIT until the owner correction lands, the candidate is rebuilt, and the maintained unmodified gate returns 20/20 with exit_code 0 on the new SHA-256.",
+    "invalidates": [
+      "HPC-W10-PKGREG-001",
+      "HPC-W10-FREEZE-009",
+      "HPC-W10-FREEZE-032",
+      "HPC-W10-FREEZE-041",
+      "HPC-W10-TODO-012",
+      "HPC-W10-TODO-013",
+      "HPC-W10-TODO-014",
+      "HPC-W10-TODO-016",
+      "HPC-W10-TODO-RUNTIME-CUTOVER-003"
+    ]
+  },
+
+  "explicitly_rejected": [
+    "editing src/hpc_gui/wx_shell.py to fix or bound frame.Hide(), because the candidate is frozen and a product change invalidates W56",
+    "editing scripts/wx_packaged_smoke.py to raise timeout=25, to read the sidecar on the timed_out branch, or to relax clean_shutdown",
+    "rebuilding or patching the frozen candidate",
+    "re-running the py-spy probe a fourth time, which would be an identical rerun and not progress",
+    "retrying the gate until it goes green, or presenting the focused retest as evidence for the 20-check gate",
+    "narrowing, skipping or xfail-ing any of the 20 checks or any W57 seam",
+    "asserting the exact owning requirement row when REQUIREMENT_REGISTRY.md is absent; the route is stated at Wave-file granularity with its evidence",
+    "HUMAN_DEFERRED: there is no unavailable credential, MFA, authority, hardware, service or manual-acceptance step in this path"
+  ],
+
+  "not_done": [
+    "no file under src/, tests/, scripts/, build/ or waves/ was modified",
+    "no acceptance gate was redefined",
+    "no test was weakened, skipped or xfailed",
+    "no evidence manifest was authored and no green freeze declaration was re-issued",
+    "no W57 lifecycle state was changed; W57 remains pending",
+    "no push, tag, release, sign or publish"
+  ],
+
+  "safety": {
+    "tests_weakened": false,
+    "skips_added": false,
+    "fabricated_pass": false,
+    "committed_beyond_wave_owned_evidence": false,
+    "pushed": false
+  },
+
+  "resume_point": "W57 is REOPEN-blocked on a corrected owner route, not on an open diagnosis. The defect at src/hpc_gui/wx_shell.py:1394 is mechanism-located and the anchor is verified against the candidate build input; its true owner is W55 (CLOSED), reachable only through a controller-owned closed-owner repair transaction. W57's own seams are green (30/30) and its external and identity prerequisites were green at run 161. W57 cannot reach READY_FOR_AUDIT until the owner correction lands, the candidate is rebuilt by its owner, and the maintained unmodified gate returns 20/20 with exit_code 0 on the new SHA-256."
+}
