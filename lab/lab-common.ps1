@@ -60,33 +60,123 @@ function Get-PublicKey {
   if ($public -notmatch '^ssh-(ed25519|rsa|ecdsa-[^ ]+)\s+\S+') { throw "Lab SSH public key is malformed: $pubPath" }
   return $public
 }
-function Invoke-LabSshCapture([string]$TargetHost,[string]$Command,[switch]$Pty) {
+function Get-LabCommandTimeoutSeconds {
+  # Every remote lab command is bounded. Slurm holds an allocation PENDING
+  # forever when a required node is DOWN, so an unbounded ssh child would hang
+  # the maintained harness instead of failing it.
+  $configured = $Config.timeouts.command_seconds
+  if ($null -ne $configured -and [int]$configured -gt 0) { return [int]$configured }
+  return 180
+}
+function Get-LabAllocationTimeoutSeconds {
+  $configured = $Config.timeouts.allocation_seconds
+  if ($null -ne $configured -and [int]$configured -gt 0) { return [int]$configured }
+  return 300
+}
+function ConvertTo-LabProcessArguments([string[]]$ArgumentList) {
+  # Windows CommandLineToArgvW quoting. The lab passes arguments that contain
+  # spaces (the base64 remote command), so the argument vector is re-quoted
+  # deterministically instead of relying on PowerShell 5.1 array joining.
+  $parts = @()
+  foreach ($argument in @($ArgumentList)) {
+    $value = [string]$argument
+    if ($value -eq '') { $parts += '""'; continue }
+    if ($value -notmatch '[\s"]') { $parts += $value; continue }
+    $escaped = $value -replace '(\\*)"', '$1$1\"'
+    $escaped = $escaped -replace '(\\+)$', '$1$1'
+    $parts += '"' + $escaped + '"'
+  }
+  return ($parts -join ' ')
+}
+function Invoke-LabBoundedCommand {
+  param(
+    [Parameter(Mandatory=$true)][string]$FilePath,
+    [Parameter()][AllowEmptyCollection()][AllowEmptyString()][string[]]$ArgumentList,
+    [Parameter(Mandatory=$true)][string]$StdoutPath,
+    [Parameter(Mandatory=$true)][string]$StderrPath,
+    [int]$TimeoutSeconds = 180
+  )
+  # Runs a child process under a hard wall-clock bound and kills the process
+  # tree on expiry, so a healthy-looking but non-completing child can never hang
+  # the harness. A timeout is reported truthfully as a failure (exit 124), never
+  # as a pass and never as an empty success.
+  if ($null -eq $ArgumentList) { $ArgumentList = @() }
+  if ($TimeoutSeconds -le 0) { $TimeoutSeconds = 180 }
+  $startInfo = New-Object System.Diagnostics.ProcessStartInfo
+  $startInfo.FileName = $FilePath
+  $startInfo.Arguments = ConvertTo-LabProcessArguments $ArgumentList
+  $startInfo.UseShellExecute = $false
+  $startInfo.CreateNoWindow = $true
+  $startInfo.RedirectStandardOutput = $true
+  $startInfo.RedirectStandardError = $true
+  $process = New-Object System.Diagnostics.Process
+  $process.StartInfo = $startInfo
+  $started = Get-Date
+  $timedOut = $false
+  $code = 255
+  $stdout = ''
+  $stderr = ''
+  $null = $process.Start()
+  $stdoutTask = $process.StandardOutput.ReadToEndAsync()
+  $stderrTask = $process.StandardError.ReadToEndAsync()
+  try {
+    if (-not $process.WaitForExit(($TimeoutSeconds * 1000))) {
+      $timedOut = $true
+      # Kill(entireProcessTree) exists on .NET Core (PowerShell 7); Windows
+      # PowerShell 5.1 falls back to killing the direct child.
+      try { $process.Kill($true) } catch { try { $process.Kill() } catch { } }
+      $null = $process.WaitForExit(5000)
+    }
+    try { if ($stdoutTask.Wait(5000)) { $stdout = [string]$stdoutTask.Result } } catch { }
+    try { if ($stderrTask.Wait(5000)) { $stderr = [string]$stderrTask.Result } } catch { }
+    $code = if ($timedOut) { 124 } else { $process.ExitCode }
+  } finally {
+    try { if (-not $process.HasExited) { $process.Kill() } } catch { }
+    $process.Dispose()
+  }
+  if ($timedOut) {
+    $message = "lab command exceeded the {0}s wall-clock bound and was terminated (target timeout was not honoured)" -f $TimeoutSeconds
+    $stderr = (@($stderr) + $message) -join [Environment]::NewLine
+  }
+  [IO.File]::WriteAllText($StdoutPath, $stdout)
+  [IO.File]::WriteAllText($StderrPath, $stderr)
+  [pscustomobject]@{
+    exit_code       = $code
+    output          = ([string]$stdout).TrimEnd()
+    stderr          = ([string]$stderr).TrimEnd()
+    timed_out       = $timedOut
+    timeout_seconds = $TimeoutSeconds
+    duration_seconds = [math]::Round(((Get-Date) - $started).TotalSeconds, 2)
+  }
+}
+function Invoke-LabSshCapture([string]$TargetHost,[string]$Command,[switch]$Pty,[int]$TimeoutSeconds = 0) {
   # PowerShell 5.1 + Windows OpenSSH may rewrite nested quoting in a raw remote
   # command argument. Encode the exact command bytes and decode them remotely.
+  if ($TimeoutSeconds -le 0) { $TimeoutSeconds = Get-LabCommandTimeoutSeconds }
   $commandBytes = [Text.Encoding]::UTF8.GetBytes($Command)
   $commandBase64 = [Convert]::ToBase64String($commandBytes)
-  $remoteCommand = "printf %s $commandBase64 | base64 -d | bash -s"
+  # timeout guards the remote side too, so a killed client cannot orphan a Slurm
+  # allocation that stays PENDING on the controller.
+  $remoteCommand = "printf %s $commandBase64 | base64 -d | timeout -k 5 $TimeoutSeconds bash -s"
   $args = @(Get-LabSshCommonOptions) + @('-p',[string]$Config.ssh.port,'-i',(Get-KeyPath),"$($Config.ssh.user)@$TargetHost",$remoteCommand)
   if ($Pty) { $args = @('-tt') + $args }
   $stdoutPath = [IO.Path]::GetTempFileName()
   $stderrPath = [IO.Path]::GetTempFileName()
-  $previousErrorActionPreference = $ErrorActionPreference
-  $code = 255
-  $stdout = ''
-  $stderr = ''
   try {
-    $ErrorActionPreference = 'Continue'
-    & ssh @args 1> $stdoutPath 2> $stderrPath
-    $code = $LASTEXITCODE
-    $stdoutRaw = if (Test-Path $stdoutPath) { Get-Content $stdoutPath -Raw -ErrorAction SilentlyContinue } else { $null }
-    $stderrRaw = if (Test-Path $stderrPath) { Get-Content $stderrPath -Raw -ErrorAction SilentlyContinue } else { $null }
-    if ($null -ne $stdoutRaw) { $stdout = [string]$stdoutRaw }
-    if ($null -ne $stderrRaw) { $stderr = [string]$stderrRaw }
+    $r = Invoke-LabBoundedCommand -FilePath 'ssh' -ArgumentList $args -StdoutPath $stdoutPath -StderrPath $stderrPath -TimeoutSeconds $TimeoutSeconds
   } finally {
-    $ErrorActionPreference = $previousErrorActionPreference
     Remove-Item $stdoutPath,$stderrPath -Force -ErrorAction SilentlyContinue
   }
-  [pscustomobject]@{ exit_code = $code; output = ([string]$stdout).TrimEnd(); stderr = ([string]$stderr).TrimEnd() }
+  $stdout = [string]$r.output
+  $stderr = [string]$r.stderr
+  [pscustomobject]@{
+    exit_code        = $r.exit_code
+    output           = ([string]$stdout).TrimEnd()
+    stderr           = ([string]$stderr).TrimEnd()
+    timed_out        = $r.timed_out
+    timeout_seconds  = $r.timeout_seconds
+    duration_seconds = $r.duration_seconds
+  }
 }
 function Invoke-LabSsh([string]$TargetHost,[string]$Command,[switch]$Pty) { $r = Invoke-LabSshCapture $TargetHost $Command $Pty; $r.output; return $r.exit_code }
 function Write-Json($Value,[string]$Path) { $Value | ConvertTo-Json -Depth 12 | Set-Content -Encoding utf8 $Path }

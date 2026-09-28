@@ -227,21 +227,68 @@
     ]
   },
   "postrun_checks": [
-    ".opencode/scripts/validate-ac-project.py",
-    ".opencode/scripts/validate-agent-parity.py",
-    ".opencode/scripts/validate-wave-orchestration.py",
-    ".opencode/scripts/validate-wave-program.py",
-    ".opencode/scripts/validate-managed-runtime.py"
-  ],
-  "controller_restart_paths": [
-    ".opencode/scripts/run-wave-program.py",
-    ".opencode/scripts/wave_state_engine.py",
+    ".opencode/protocol/AC_MODELS.json",
+    ".opencode/protocol/WAVE_PROJECT_PROFILE.json",
+    ".opencode/scripts/follow-wave-program.ps1",
+    ".opencode/scripts/materialization_guard.py",
+    ".opencode/scripts/parallel_workspace.py",
+    ".opencode/scripts/phase_job.py",
+    ".opencode/scripts/resolve-ac-model.ps1",
     ".opencode/scripts/route-wave-findings.py",
+    ".opencode/scripts/run-ac-wave-hybrid-phase.ps1",
     ".opencode/scripts/run-ac-wave-luna-openai-phase.ps1",
     ".opencode/scripts/run-ac-wave-opencode-phase.ps1",
-    ".opencode/scripts/run-ac-wave-hybrid-phase.ps1",
+    ".opencode/scripts/run-wave-program.py",
+    ".opencode/scripts/start-wave-program.ps1",
+    ".opencode/scripts/validate-ac-project.py",
+    ".opencode/scripts/validate-agent-parity.py",
+    ".opencode/scripts/validate-managed-runtime.py",
+    ".opencode/scripts/validate-wave-authoring.py",
+    ".opencode/scripts/validate-wave-orchestration.py",
+    ".opencode/scripts/validate-wave-program.py",
+    ".opencode/scripts/wave_progress.py",
+    ".opencode/scripts/wave_state_engine.py"
+  ],
+  "controller_restart_paths": [
+    ".opencode/protocol/AC_MODELS.json",
     ".opencode/protocol/WAVE_PROJECT_PROFILE.json",
+    ".opencode/scripts/follow-wave-program.ps1",
+    ".opencode/scripts/materialization_guard.py",
+    ".opencode/scripts/parallel_workspace.py",
     ".opencode/scripts/phase_job.py",
-    ".opencode/scripts/start-wave-program.ps1"
-  ]
+    ".opencode/scripts/resolve-ac-model.ps1",
+    ".opencode/scripts/route-wave-findings.py",
+    ".opencode/scripts/run-ac-wave-hybrid-phase.ps1",
+    ".opencode/scripts/run-ac-wave-luna-openai-phase.ps1",
+    ".opencode/scripts/run-ac-wave-opencode-phase.ps1",
+    ".opencode/scripts/run-wave-program.py",
+    ".opencode/scripts/start-wave-program.ps1",
+    ".opencode/scripts/validate-ac-project.py",
+    ".opencode/scripts/validate-agent-parity.py",
+    ".opencode/scripts/validate-managed-runtime.py",
+    ".opencode/scripts/validate-wave-authoring.py",
+    ".opencode/scripts/validate-wave-orchestration.py",
+    ".opencode/scripts/validate-wave-program.py",
+    ".opencode/scripts/wave_progress.py",
+    ".opencode/scripts/wave_state_engine.py"
+  ],
+  "parallel": {
+    "mode": "managed",
+    "max_concurrency": 2,
+    "isolation": "git_worktree",
+    "dirty_tree_policy": "serial_fallback",
+    "integration_order": "channel",
+    "group_barrier": "lifecycle_done",
+    "integration_validators": [
+      ".opencode/scripts/validate-agent-parity.py",
+      ".opencode/scripts/validate-wave-orchestration.py",
+      ".opencode/scripts/validate-ac-project.py",
+      ".opencode/scripts/validate-wave-authoring.py"
+    ],
+    "focused_tests": []
+  },
+  "progress": {
+    "enabled": true,
+    "contract_version": 2
+  }
 }

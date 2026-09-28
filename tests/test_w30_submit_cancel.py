@@ -97,6 +97,34 @@ def test_w30_submit_validation_threads_provider_config():
     assert any("partition" in e for e in errors)
 
 
+def test_w30_submit_does_not_gate_on_sbatch_directive_presence():
+    # CTRL-001/002 required fields are the path, non-empty content, no
+    # template placeholder and the provider-config rules. A script's own
+    # #SBATCH content is the scheduler's business, so a directive-free script
+    # must still reach sbatch (DEF-W57-008 closed-owner repair for W30).
+    plain = "#!/bin/sh\necho hi\n"
+    assert validate_submit_request("/remote/A.sh", plain) == []
+    # Every remaining CTRL-001/002 check still applies to the same script.
+    assert any(
+        "placeholder" in e for e in validate_submit_request("/remote/A.sh", plain + "# {{job}}\n")
+    )
+    # An undeclared partition dimension imposes no constraint (CTRL-002).
+    assert (
+        validate_submit_request("/remote/A.sh", plain, provider_config={"allowed_partitions": ["prod"]})
+        == []
+    )
+    # A declared provider rule is still enforced without any #SBATCH line.
+    errors = validate_submit_request(
+        "/remote/A.sh", plain, provider_config={"requirements": {"account": True}}
+    )
+    assert any("account" in e for e in errors)
+    # Required-field checks are untouched by the removal.
+    assert validate_submit_request("", plain) == ["script path is required"]
+    assert any("empty" in e for e in validate_submit_request("/remote/A.sh", "   "))
+    # Acceptance still requires a confirmed scheduler job ID.
+    assert submit_result_status("echo hi", ok=True)[0] == "FAILURE"
+
+
 # --- CTRL-003/004: identity + cluster/profile scope -------------------------
 
 

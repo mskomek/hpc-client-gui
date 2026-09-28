@@ -116,8 +116,10 @@ def validate_submit_request(
         if token in text:
             errors.append(f"template placeholder detected: {token}")
             break
-    if "#SBATCH" not in text:
-        errors.append("no #SBATCH directives found")
+    # CTRL-001/002: no hardcoded script-shape rule. Directive content is not a
+    # required field here — the scheduler owns directive validity, provider
+    # config owns partition/account rules, and success still requires a
+    # confirmed job ID (submit_result_status).
     errors.extend(validate_template_against_provider(text, provider_config))
     return errors
 

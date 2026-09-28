@@ -122,7 +122,8 @@ def _audit_receipt(tmp_path: Path, *, status="PASS", identity="content-1", wave=
 
 def test_audit_close_receipt_overrides_historical_ready(tmp_path: Path, monkeypatch):
     receipt = _audit_receipt(tmp_path)
-    monkeypatch.setattr(controller, "git", lambda *_args: (0, "head-1"))
+    monkeypatch.setattr(controller, "engine_git_capability",
+                        lambda _repo: {"has_head": True, "head": "head-1"})
     assert controller.audit_receipt_valid(tmp_path, {}, "W18", receipt, "content-1")
     prompt = controller.build_phase_prompt(
         tmp_path, "HPC", "W18", tmp_path / "W18.md", "close", "W18", None, False, receipt
@@ -133,19 +134,22 @@ def test_audit_close_receipt_overrides_historical_ready(tmp_path: Path, monkeypa
 
 def test_audit_close_receipt_survives_restart_when_identity_unchanged(tmp_path: Path, monkeypatch):
     receipt = _audit_receipt(tmp_path)
-    monkeypatch.setattr(controller, "git", lambda *_args: (0, "head-1"))
+    monkeypatch.setattr(controller, "engine_git_capability",
+                        lambda _repo: {"has_head": True, "head": "head-1"})
     saved_state = json.loads(json.dumps(receipt))
     assert controller.audit_receipt_valid(tmp_path, {}, "W18", saved_state, "content-1")
 
 
 def test_audit_close_receipt_invalidates_on_content_change(tmp_path: Path, monkeypatch):
     receipt = _audit_receipt(tmp_path)
-    monkeypatch.setattr(controller, "git", lambda *_args: (0, "head-1"))
+    monkeypatch.setattr(controller, "engine_git_capability",
+                        lambda _repo: {"has_head": True, "head": "head-1"})
     assert not controller.audit_receipt_valid(tmp_path, {}, "W18", receipt, "content-2")
 
 
 def test_audit_close_receipt_fails_closed_for_missing_or_nonpass_result(tmp_path: Path, monkeypatch):
-    monkeypatch.setattr(controller, "git", lambda *_args: (0, "head-1"))
+    monkeypatch.setattr(controller, "engine_git_capability",
+                        lambda _repo: {"has_head": True, "head": "head-1"})
     missing = {"audit_status": "PASS", "tested_wave": "W18", "tested_content_identity": "content-1",
                "audit_result_path": ".tmp/missing.json", "audit_candidate_sha": "head-1"}
     assert not controller.audit_receipt_valid(tmp_path, {}, "W18", missing, "content-1")

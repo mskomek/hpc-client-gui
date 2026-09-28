@@ -86,7 +86,11 @@ def test_local_real_runtime_harness_is_deterministic():
     assert "ConnectTimeout=5" in COMMON
     assert "ServerAliveInterval=5" in COMMON
     assert "ToBase64String($commandBytes)" in COMMON
-    assert "base64 -d | bash -s" in COMMON
+    # The command still travels base64-encoded into bash -s, and is now bounded
+    # on both ends so a DOWN compute node cannot hang the maintained harness.
+    assert "base64 -d | timeout -k 5" in COMMON
+    assert "bash -s" in COMMON
+    assert "Invoke-LabBoundedCommand -FilePath 'ssh'" in COMMON
     assert "([string]$stdout).TrimEnd()" in COMMON
     assert "id -u hpctest; id -g hpctest; id -u slurm; id -g slurm" in UP
     assert "ssh_pty_ok" in LAB_TEST

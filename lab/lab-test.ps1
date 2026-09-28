@@ -157,7 +157,11 @@ try {
 
 $results.munge = Invoke-LabSshCapture $controller.ip 'munge -n | unmunge >/dev/null'
 $taskCount = $computeNodes.Count
-$results.srun = Invoke-LabSshCapture $controller.ip ("srun --nodes={0} --ntasks={0} --ntasks-per-node=1 hostname | sort -u" -f $taskCount)
+# Allocation-bound gates get the longer budget: these block on Slurm granting a
+# two-node allocation, and a DOWN node holds that request PENDING. Without an
+# explicit bound the maintained harness could never report the failure.
+$allocationTimeout = Get-LabAllocationTimeoutSeconds
+$results.srun = Invoke-LabSshCapture $controller.ip ("srun --nodes={0} --ntasks={0} --ntasks-per-node=1 hostname | sort -u" -f $taskCount) -TimeoutSeconds $allocationTimeout
 $expectedComputeNames = @($computeNodes | ForEach-Object { [string]$_.name } | Sort-Object)
 $actualSrunNames = @($results.srun.output -split "`r?`n" | Where-Object { $_ } | Sort-Object)
 $results.srun_nodes_ok = ($results.srun.exit_code -eq 0 -and (($actualSrunNames -join '|') -eq ($expectedComputeNames -join '|')))
@@ -175,14 +179,14 @@ $nodeList = (@($computeNodes | ForEach-Object { $_.name }) -join ',')
 $results.scontrol = Invoke-LabSshCapture $controller.ip ("scontrol show node {0}" -f $nodeList)
 
 
-$results.sbatch = Invoke-LabSshCapture $controller.ip 'printf "#!/bin/sh\necho LOCAL_REAL_SBATCH\nsleep 2\n" | sbatch --parsable --wait'
+$results.sbatch = Invoke-LabSshCapture $controller.ip 'printf "#!/bin/sh\necho LOCAL_REAL_SBATCH\nsleep 2\n" | sbatch --parsable --wait' -TimeoutSeconds $allocationTimeout
 $job = if ($results.sbatch.exit_code -eq 0) { (($results.sbatch.output -split '\s+')[0]).Trim() } else { '' }
 if ($job) { $results.sacct = Invoke-LabSshCapture $controller.ip "sacct -n -P -j $job --format=JobIDRaw,State,ExitCode" }
 else { $results.sacct = [pscustomobject]@{ exit_code=1; output=''; stderr='sbatch did not return a job id' } }
 $results.sacct_completed_ok = ($results.sacct.exit_code -eq 0 -and $results.sacct.output -match 'COMPLETED')
 
 
-$results.shared_home_job = Invoke-LabSshCapture $controller.ip (('cd /srv/hpc/home/hpctest && rm -rf .local-real-job && mkdir .local-real-job && srun --nodes={0} --ntasks={0} --ntasks-per-node=1 --chdir=/srv/hpc/home/hpctest/.local-real-job /bin/sh -c ''printf "%s %s\n" "$(hostname)" "$PWD"'' | sort > /srv/hpc/home/hpctest/.local-real-job/result && cat /srv/hpc/home/hpctest/.local-real-job/result' -f $taskCount))
+$results.shared_home_job = Invoke-LabSshCapture $controller.ip (('cd /srv/hpc/home/hpctest && rm -rf .local-real-job && mkdir .local-real-job && srun --nodes={0} --ntasks={0} --ntasks-per-node=1 --chdir=/srv/hpc/home/hpctest/.local-real-job /bin/sh -c ''printf "%s %s\n" "$(hostname)" "$PWD"'' | sort > /srv/hpc/home/hpctest/.local-real-job/result && cat /srv/hpc/home/hpctest/.local-real-job/result' -f $taskCount)) -TimeoutSeconds $allocationTimeout
 $expectedJobLines = @($expectedComputeNames | ForEach-Object { "$_ /srv/hpc/home/hpctest/.local-real-job" })
 $actualJobLines = @($results.shared_home_job.output -split "`r?`n" | Where-Object { $_ } | Sort-Object)
 $results.shared_home_job_ok = ($results.shared_home_job.exit_code -eq 0 -and (($actualJobLines -join '|') -eq (($expectedJobLines | Sort-Object) -join '|')))
