@@ -5,7 +5,7 @@
     "file_regex": "^W(?P<number>\\d{2})\\.md$",
     "id_format": "W{number:02d}",
     "min": 1,
-    "max": 61
+    "max": 73
   },
   "paths": {
     "pending": "waves/pending",
