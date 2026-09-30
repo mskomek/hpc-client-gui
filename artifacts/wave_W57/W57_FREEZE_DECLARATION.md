@@ -1,3 +1,5 @@
+> **SUPERSEDED (2026-09-30).** The W56 frozen bytes (`6cca43a5`) are unrecoverable. The authoritative W57 frozen candidate is the authorized rebuild `B3019DEA16783C8AB859FA36D2B0FEF2FB70DB075633E54EB0F36587295374FD` declared in the repository-root `W57_FREEZE_DECLARATION.md` (W57.1 rebind, closed). W57.2-W57.4 bind to that declaration. This record is kept for history only.
+
 # W57 — Candidate Verification and Freeze Declaration Record
 
 Wave: `W57` (execution kind, canonical_source `W57`).

@@ -1,3 +1,5 @@
+> **SUPERSEDED (2026-09-30).** The W56 frozen bytes (`6cca43a5`) are unrecoverable. The authoritative W57 frozen candidate is the authorized rebuild `B3019DEA16783C8AB859FA36D2B0FEF2FB70DB075633E54EB0F36587295374FD` declared in the repository-root `W57_FREEZE_DECLARATION.md` (W57.1 rebind, closed). W57.2-W57.4 bind to that declaration. This record is kept for history only.
+
 # W57 — Successor Freeze Declaration (post-W30-owner-repair rebind, run phase 110)
 
 Wave: `W57` (execution kind, canonical_source `W57`).
@@ -317,3 +319,65 @@ deleted and not worked around**. It is untracked user/workspace state, so removi
 Wave worker's call; it is recorded here and routed to the controller, which owns commit approval
 and cleanup. It is untracked, so it cannot enter a `candidate_sha`; it can only affect a dirty-tree
 freeze assembly, which is not reachable while `Frozen for W58: NO`.
+
+---
+
+## Run phase 169 addendum - `Frozen for W58` remains **NO**, and the Wave ID itself changed
+
+Phase instance: `20260927-194532-eb70d8dd:5:W57:run`
+Content identity recomputed here: `3bdbf3eb62053d26bd0a4a2c36948cab88b3ac42d50d683f97a5261c934f0494`
+(the identity handed by the controller, `45c46c0a...`, is stale for this dispatch)
+Branch/HEAD: `develop` / `ad02258620ef34c0d778037bb16b0f4421e950b5`
+Candidate: commit `bdf6c6c7e2817422b6f9005873247d3636c5eac4`, artifact
+`dist/hpc-client-gui/hpc-client-gui.exe` SHA-256
+`8BA80453A76A664959BAEDF7716C476A5334B6AFF860A4BC79B9E220D48B4C57`, 7672468 bytes,
+re-verified read-only. **No rebuild, no patch, no manifest change.**
+
+| field | value | changed? |
+|---|---|---|
+| `Frozen for W58` | **`NO`** | **NO - unchanged, and deliberately unchanged** |
+| `Candidate SHA-256` | `8BA80453A76A664959BAEDF7716C476A5334B6AFF860A4BC79B9E220D48B4C57` | NO |
+| `Candidate commit` | `bdf6c6c7e2817422b6f9005873247d3636c5eac4` | NO |
+| `Product source SHA-256` | `33217D9168CCF66E7A2AB038AA44EC34B9556C737C76B4EE34FA85E92A1D2525` | NO |
+| `ACCEPTANCE_GREEN` manifest | **not authored** | NO |
+
+**Why `Frozen for W58` stays `NO` at run 169.** It is not one blocker any more but four independent
+reasons, each measured in this dispatch:
+
+1. `HPC-W10-PKGREG-001` is **bistable**, not fixed. At one artifact SHA-256 the packaged smoke hangs 9/9 in
+   one window and passes 9/9 in another, with the complete `result=PASS, phase=4` payload on disk at
+   8.60-9.00 s of the 25 s deadline. Routed to `HPC-W10-GJ2-051` (W55, done).
+2. The only green is bound to an **uncommitted, out-of-Wave-contract** edit to
+   `scripts/wx_packaged_smoke.py` and `tests/test_wx_packaged_smoke.py` (W16-owned,
+   `HPC-W04-HARNESS-025`). It is a sound, non-weakening change, but it is not this Wave's to certify.
+3. `HPC-W10-FREEZE-029` is red: `scripts/ci.py full` measured `17 failed, 3002 passed` plus
+   `2 failed, 2 passed` in a sub-suite = 19 failing node ids, 6 of them new and none of them W57-owned.
+4. `FREEZE-044` (no `dist/hpc-client-gui/MANIFEST.json`) and `FREEZE-035` (support matrix pinned to no
+   candidate identity) are unsatisfied, and `FREEZE-036` carries an ambiguity risk because the one candidate
+   directory under test has neither a version suffix nor a manifest.
+
+**A finding is WITHDRAWN in this addendum.** `PKGREG-PTY-RESIZE-NOT-DELIVERED`, routed in repair 164 to
+`HPC-W05-TERM-023` (W20, done) on the strength of the sidecar's `pty_resize=FAIL`, is **FALSIFIED**. That
+field is an uninitialised literal default at `src/hpc_gui/wx_shell.py:1994` and is never assigned. Measured
+directly against the gate's own criterion using the repository's maintained loopback SSH server, the resize
+reaches the wire **PASS 6/6** (`pty_sizes` contains `96x31`, `resize_sizes` contains `123x45`). The W20 route is
+withdrawn.
+
+**The Wave ID changed during this phase.** `waves/pending/W57.md` no longer exists; commit `ad022586` split it
+into `waves/pending/W57.1.md` ... `W57.4.md` and the profile `scheduled_wave_ids` is now empty. This
+declaration is therefore bound to a Wave identity the profile no longer schedules. The controller must
+re-dispatch against the new parts. `W57.1` is the part that owns `HPC-W10-PKGREG-001`, `RUNTIME-CUTOVER-002/003`
+and `TODO-010`..`TODO-017`; `W57.3` owns the acceptance gates `FREEZE-026`..`FREEZE-037`; `W57.4` owns the
+evidence rows `FREEZE-038`..`FREEZE-048` including `FREEZE-044`, `FREEZE-046` and `FREEZE-047`.
+
+**Exact resume point.** (1) Controller commits or reverts the W16 gate/test correction under its own
+closed-owner transaction, which decides whether the 8/8 green is admissible. (2) A W55 closed-owner repair
+(`HPC-W10-GJ2-051`) makes the packaged teardown terminate repeatably, followed by an owner-driven rebuild at a
+new artifact identity. (3) W57 re-runs the maintained gate on the rebuilt candidate, re-runs
+`scripts/ci.py full` for `FREEZE-029`, generates the candidate manifest for `FREEZE-044`, pins the support
+matrix for `FREEZE-035`, and only then authors `artifacts/wave_W57/WAVE_W57_EVIDENCE_MANIFEST.json` and flips
+`Frozen for W58` to `YES`.
+
+Evidence: `artifacts/wave_W57/W57_RUN169_PTY_RESIZE_MEASURED_GATE_REMEASURED.json`,
+`docs/wave-reports/v2/opencode/W57_WAVE_REPORT.md` section 32, `.tmp/w57-run169/**`,
+`lab/evidence/LOCAL_REAL_TEST.json` (23/23, generated 2026-09-29T15:37:48Z).
