@@ -48,7 +48,9 @@ def _canonical_wave_files(root: Path, profile: dict[str,Any]) -> dict[str,Path]:
             m=rx.match(p.name)
             if not m:continue
             number=int(m.groupdict().get('number') or next(x for x in m.groups() if str(x).isdigit()))
-            wid=profile['wave']['id_format'].format(number=number)
+            part=m.groupdict().get('part')
+            # Decimal split parts (W57.1) are Waves of their own, not their base number.
+            wid=profile['wave']['id_format'].format(number=number)+(f'.{part}' if part else '')
             if wid not in found or state=='done':found[wid]=p
     return found
 
