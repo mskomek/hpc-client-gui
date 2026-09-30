@@ -10,6 +10,7 @@ shows up as a measured number rather than as a missing assertion.
 
 from __future__ import annotations
 
+import os
 import threading
 import time
 import subprocess
@@ -1428,6 +1429,12 @@ def test_reconnect_session_snapshot_repeated(wx_app, tmp_path):
 @pytest.mark.reporting
 @pytest.mark.semantic
 def test_zz_measured_invariants(capsys):
+    # METRICS/EXECUTED are per process. Under xdist the groups are spread over
+    # workers: the zero invariants still hold for this worker's share, but group
+    # completeness is only checkable when the module runs in one process.
+    distributed = bool(os.environ.get("PYTEST_XDIST_WORKER"))
+    if not EXECUTED and not distributed:
+        pytest.skip("aggregate of the GUI-FILE-003 stress groups; run the whole module")
     lines = ["", "GUI-FILE-003 executed stress counts:"]
     for name, (executed, required) in EXECUTED.items():
         lines.append("  %s: %d/%d %s" % (name, executed, required, "PASS" if executed >= required else "FAIL"))
@@ -1451,7 +1458,8 @@ def test_zz_measured_invariants(capsys):
         "FILE transfer items",
         "unicode/space names",
     ) if name not in EXECUTED]
-    assert not missing, "stress groups did not run: %s" % missing
+    if not distributed:
+        assert not missing, "stress groups did not run: %s" % missing
     for name in ZERO_INVARIANTS:
         assert METRICS[name] == 0, "%s = %d" % (name, METRICS[name])
     assert METRICS["peak_local_mutation_concurrency"] <= 1

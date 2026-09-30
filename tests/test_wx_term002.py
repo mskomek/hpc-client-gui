@@ -29,6 +29,17 @@ class Files:
         pass
 
 
+def _find_host(attr):
+    """Files and Editor are embedded pages of the shell frame, not top-level windows."""
+    pending = list(wx.GetTopLevelWindows())
+    while pending:
+        window = pending.pop(0)
+        if hasattr(window, attr):
+            return window
+        pending.extend(window.GetChildren())
+    raise AssertionError(f"no window exposes {attr}")
+
+
 @pytest.fixture
 def shell(tmp_path):
     load_language("en")
@@ -58,13 +69,8 @@ def test_file_view_shell_script_runs_in_real_terminal_path(shell):
     script = tmp_path / "hello world.sh"
     script.write_text("echo hello", encoding="utf-8")
 
-    before = set(wx.GetTopLevelWindows())
     _dispatch("NAV-FILES", shell_frame, lifecycle, state)
-    browser = next(
-        window
-        for window in wx.GetTopLevelWindows()
-        if window not in before and hasattr(window, "_wx_local_run_action")
-    )
+    browser = _find_host("_wx_local_run_action")
     browser._wx_local_tabs[0]["entries"][:] = [LocalEntry(script, False, script.stat().st_size)]
     listing = browser._wx_local_controls["listing"]
     listing.InsertItem(0, script.name)
@@ -80,7 +86,7 @@ def test_file_view_shell_script_runs_in_real_terminal_path(shell):
 def test_editor_run_button_uses_real_wx_event_and_terminal_path(shell):
     _app, shell_frame, lifecycle, state, ssh, _tmp_path = shell
     _dispatch("NAV-EDITOR", shell_frame, lifecycle, state)
-    editor = next(window for window in wx.GetTopLevelWindows() if hasattr(window, "_wx_editor_controls"))
+    editor = _find_host("_wx_editor_controls")
     editor._wx_editor_load_document("/remote/job.slurm", "#!/bin/bash\necho job", is_local=False)
 
     event = wx.CommandEvent(wx.wxEVT_BUTTON, editor._wx_editor_controls["run"].GetId())
