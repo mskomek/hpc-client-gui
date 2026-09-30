@@ -19,8 +19,35 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def _clean_room_dir(prefix: str) -> Path:
+    """A fresh temporary directory guaranteed to lie outside the repository tree.
+
+    A controller-managed TEMP may point into the repository's ``.tmp`` area; the
+    packaged child then ran inside the source tree and the clean-room evidence
+    (workdir_outside_repo) was false. Fall back to the sibling ``../.tmp`` root.
+    """
+    base = Path(tempfile.gettempdir())
+    if not _outside_repo(base):
+        base = ROOT.parent / ".tmp" / "wx-packaged-clean-room"
+        base.mkdir(parents=True, exist_ok=True)
+    return Path(tempfile.mkdtemp(prefix=prefix, dir=str(base)))
+
+
 def _outside_repo(path: Path) -> bool:
-    return not path.resolve().is_relative_to(ROOT.resolve())
+    """True when `path` is not inside the repository tree.
+
+    The comparison is deliberately lexical.  The repository's own ``.tmp`` root
+    is an NTFS junction to an external physical store, and ``Path.resolve()``
+    follows that junction, so a genuinely in-repo path such as
+    ``.tmp/os/run`` was mis-reported as outside the repository and the
+    clean-room isolation claim in the evidence was wrong
+    (HPC-W04-HARNESS-025).  The contract is about the repository tree, not
+    about where a link happens to point, so normalize case and ``..`` without
+    dereferencing links.
+    """
+    root = Path(os.path.normcase(os.path.abspath(ROOT)))
+    candidate = Path(os.path.normcase(os.path.abspath(path)))
+    return not candidate.is_relative_to(root)
 
 sys.path.insert(0, str(ROOT / "scripts"))
 try:
@@ -174,7 +201,7 @@ def run_packaged_smoke(artifact: Path, platform_name: str, output: Path, timeout
             # Clean-room cwd: the packaged child must not run with the source
             # checkout as its working directory (HPC-W04-HARNESS-025). System
             # temp is outside the repo by construction.
-            workdir = Path(tempfile.mkdtemp(prefix="wx-packaged-cwd-"))
+            workdir = _clean_room_dir("wx-packaged-cwd-")
             # Controller-managed TEMP may live under the repository's .tmp/
             # area; the contract is isolation from the source tree, not from
             # the controller's own temporary bookkeeping.
@@ -186,54 +213,65 @@ def run_packaged_smoke(artifact: Path, platform_name: str, output: Path, timeout
                 timeout=timeout,
             )
             shutil.rmtree(workdir, ignore_errors=True)
-            combined = ""
+            # A kill is an acceptance verdict, not a reason to throw away
+            # evidence: the child may already have written its runtime payload
+            # and its stdout before it was killed (HPC-W04-HARNESS-025).
+            # Evidence is therefore scored on BOTH paths; only `result` below
+            # still forces FAIL whenever the child timed out.
+            combined = (child_stdout or "") + (child_stderr or "")
             if timed_out:
                 details["timeout"] = f"artifact did not exit within {timeout}s"
                 details["child_killed"] = True
+                details["evidence_scored_on_timeout"] = True
+                if combined:
+                    # Bounded tail (fresh-user convention): the last words the
+                    # child managed to write are the diagnostic ones.
+                    details["output_tail"] = combined[-2000:]
             else:
-                combined = (child_stdout or "") + (child_stderr or "")
                 exit_code = returncode
-                runtime = json.loads(runtime_output.read_text(encoding="utf-8")) if runtime_output.is_file() else {}
-                runtime_checks = runtime.get("checks", {}) if isinstance(runtime, dict) else {}
-                if isinstance(runtime, dict):
-                    for key in ("wx_app_name", "wx_local_data_dir"):
-                        if runtime.get(key):
-                            details[key] = str(runtime[key])
-                    for key in ("phase", "input_diagnostic", "last_line", "last_buffer", "last_screen"):
-                        if key in runtime:
-                            details[f"runtime_{key}"] = runtime[key]
-                for name in REQUIRED_CHECKS:
-                    if name in ("process_started", "clean_shutdown", "pty_resize"):
-                        continue
-                    if runtime_checks.get(name) == "PASS":
-                        checks[name] = "PASS"
-                # The packaged process can prove that it requested a resize, but
-                # only the disposable server can prove the resize reached the wire.
-                deadline = time.monotonic() + 2.0
-                while time.monotonic() < deadline:
-                    if any(size[0:2] == (123, 45) for size in loopback_server.resize_sizes):
-                        break
-                    time.sleep(0.02)
-                if any(size[0:2] == (96, 31) for size in loopback_server.pty_sizes) and any(
-                    size[0:2] == (123, 45) for size in loopback_server.resize_sizes
-                ):
-                    checks["pty_resize"] = "PASS"
-                else:
-                    details["pty_resize"] = {
-                        "pty_sizes": loopback_server.pty_sizes,
-                        "resize_sizes": loopback_server.resize_sizes,
-                    }.__repr__()
-                if not runtime_output.is_file():
-                    details["runtime"] = "artifact exited without packaged runtime evidence"
-                elif runtime.get("error"):
-                    details["runtime"] = str(runtime["error"])
-                src_path = str(ROOT / "src")
-                isolated = src_path not in combined
-                if not isolated:
-                    details["isolation"] = "artifact output referenced repo src path"
-                if returncode != 0:
-                    details["exit_code"] = f"artifact exit {returncode}"
-                checks["clean_shutdown"] = "PASS" if returncode == 0 and isolated and runtime.get("result") == "PASS" else "FAIL"
+            runtime = json.loads(runtime_output.read_text(encoding="utf-8")) if runtime_output.is_file() else {}
+            runtime_checks = runtime.get("checks", {}) if isinstance(runtime, dict) else {}
+            if isinstance(runtime, dict):
+                for key in ("wx_app_name", "wx_local_data_dir"):
+                    if runtime.get(key):
+                        details[key] = str(runtime[key])
+                for key in ("phase", "input_diagnostic", "last_line", "last_buffer", "last_screen"):
+                    if key in runtime:
+                        details[f"runtime_{key}"] = runtime[key]
+            for name in REQUIRED_CHECKS:
+                if name in ("process_started", "clean_shutdown", "pty_resize"):
+                    continue
+                if runtime_checks.get(name) == "PASS":
+                    checks[name] = "PASS"
+            # The packaged process can prove that it requested a resize, but
+            # only the disposable server can prove the resize reached the wire.
+            deadline = time.monotonic() + 2.0
+            while time.monotonic() < deadline:
+                if any(size[0:2] == (123, 45) for size in loopback_server.resize_sizes):
+                    break
+                time.sleep(0.02)
+            if any(size[0:2] == (96, 31) for size in loopback_server.pty_sizes) and any(
+                size[0:2] == (123, 45) for size in loopback_server.resize_sizes
+            ):
+                checks["pty_resize"] = "PASS"
+            else:
+                details["pty_resize"] = {
+                    "pty_sizes": loopback_server.pty_sizes,
+                    "resize_sizes": loopback_server.resize_sizes,
+                }.__repr__()
+            if not runtime_output.is_file():
+                details["runtime"] = "artifact wrote no packaged runtime evidence"
+            elif runtime.get("error"):
+                details["runtime"] = str(runtime["error"])
+            src_path = str(ROOT / "src")
+            isolated = src_path not in combined
+            if not isolated:
+                details["isolation"] = "artifact output referenced repo src path"
+            if returncode != 0 and not timed_out:
+                details["exit_code"] = f"artifact exit {returncode}"
+            # clean_shutdown is recomputed on the timeout path too, and stays
+            # FAIL there: a killed child never shut down cleanly.
+            checks["clean_shutdown"] = "PASS" if returncode == 0 and isolated and runtime.get("result") == "PASS" else "FAIL"
             result = "FAIL" if timed_out else ("PASS" if all(value == "PASS" for value in checks.values()) else "FAIL")
             if result == "FAIL" and combined:
                 details["output_snippet"] = combined[:2000]
@@ -366,7 +404,7 @@ def run_fresh_user_smoke(artifact: Path, platform_name: str, output: Path, timeo
         if not artifact.is_file():
             details["error"] = f"artifact not found: {artifact}"
         else:
-            fresh_parent = Path(tempfile.mkdtemp(prefix="hpc-fresh-user-"))
+            fresh_parent = _clean_room_dir("hpc-fresh-user-")
             fresh_root = fresh_parent / "config"
             workdir = fresh_parent / "work"
             workdir.mkdir(parents=True, exist_ok=True)
@@ -484,6 +522,8 @@ def main() -> int:
     parser.add_argument("--output", type=Path, default=None, help="Output evidence JSON path")
     parser.add_argument("--fresh-user", action="store_true",
                         help="Run PKG-GJ-01 fresh-user acceptance (isolated config root, first-run, relaunch)")
+    parser.add_argument("--timeout", type=int, default=25,
+                        help="Seconds before the packaged child is killed and reaped (default: 25)")
     args = parser.parse_args()
 
     # Default platform inference
@@ -516,9 +556,9 @@ def main() -> int:
     output = args.output or (ROOT / f"build/audit/wx-packaged-smoke-{plat}.json")
 
     if args.fresh_user:
-        evidence = run_fresh_user_smoke(artifact, plat, output)
+        evidence = run_fresh_user_smoke(artifact, plat, output, timeout=args.timeout)
     else:
-        evidence = run_packaged_smoke(artifact, plat, output)
+        evidence = run_packaged_smoke(artifact, plat, output, timeout=args.timeout)
     # Machine-readable contract: stdout carries exactly the evidence JSON so
     # `json.loads(stdout)` succeeds; the human identity header goes to stderr.
     print(evidence.get("identity_header", ""), file=sys.stderr)
