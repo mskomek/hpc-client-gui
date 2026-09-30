@@ -115,7 +115,8 @@ def test_stub_settings_pass_maps_to_parent(tmp_path, monkeypatch):  # REQ-W16-SE
     for name, value in evidence["checks"].items():
         if name not in ("pty_resize",):
             assert value == "PASS", name
-    assert evidence["details"]["workdir_outside_repo"] is runner._outside_repo(Path(tempfile.gettempdir()))
+    # The clean-room workdir lies outside the repository even when TEMP points inside it.
+    assert evidence["details"]["workdir_outside_repo"] is True
 
 
 def test_stub_settings_fail_maps_to_parent(tmp_path, monkeypatch):  # NEG-W16-SETTINGS
