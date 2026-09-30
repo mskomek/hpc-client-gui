@@ -2562,12 +2562,9 @@ def main() -> int:
                 splash._wx_splash_set_progress(prog, t("splash.checking_updates") if t("splash.checking_updates") != "[splash.checking_updates]" else "Checking for updates...")
             except Exception:
                 pass
+        # Only a real, newer release offers an update; timeout/error/up-to-date never do.
         if not _upd_result["done"]:
-            from hpc_gui.services.app_updater import UpdateRelease
-
-            fake = UpdateRelease(version="1.9.0", tag="v1.9.0", zip_name="hpc-client-gui_windows_onedir.zip", zip_url="https://example.com/fake.zip", sha_name="fake.sha256", sha_url="https://example.com/fake.sha256", html_url="https://github.com/mskomek/hpc-client-gui/releases/tag/v1.9.0", install_strategy="windows-portable", security_status="unknown")
-            splash._wx_splash_append_log(f"Update available: {fake.version} (timed out check, demo)", "")
-            splash._wx_splash_state["found_update"] = fake
+            splash._wx_splash_append_log("Update check timed out", "")
             splash._wx_splash_set_stage("updates", STATE_COMPLETE)
         elif _upd_result["error"] is not None:
             err = _upd_result["error"]
@@ -2577,16 +2574,11 @@ def main() -> int:
                 logging.getLogger("hpc_gui").debug("update check failed: %s", err, exc_info=err)
             except Exception:
                 pass
-            # Demo: fake update found in splash per user request — show "Update available" even on benign errors
-            from hpc_gui.services.app_updater import UpdateRelease
-
-            fake = UpdateRelease(version="1.9.0", tag="v1.9.0", zip_name="hpc-client-gui_windows_onedir.zip", zip_url="https://example.com/fake.zip", sha_name="fake.sha256", sha_url="https://example.com/fake.sha256", html_url="https://github.com/mskomek/hpc-client-gui/releases/tag/v1.9.0", install_strategy="windows-portable", security_status="unknown")
-            splash._wx_splash_append_log(f"Update available: {fake.version}", "")
-            splash._wx_splash_state["found_update"] = fake
+            splash._wx_splash_append_log("Update check failed", "")
             splash._wx_splash_set_stage("updates", STATE_COMPLETE)
         else:
             try:
-                from hpc_gui.services.app_updater import is_newer_version, UpdateRelease
+                from hpc_gui.services.app_updater import is_newer_version
                 from hpc_gui import __version__ as _cur
 
                 rel = _upd_result["release"]
@@ -2594,10 +2586,7 @@ def main() -> int:
                     splash._wx_splash_append_log(f"Update available: {rel.version}", "")
                     splash._wx_splash_state["found_update"] = rel
                 else:
-                    # Demo fake for splash per request
-                    fake = UpdateRelease(version="1.9.0", tag="v1.9.0", zip_name="hpc-client-gui_windows_onedir.zip", zip_url="https://example.com/fake.zip", sha_name="fake.sha256", sha_url="https://example.com/fake.sha256", html_url="https://github.com/mskomek/hpc-client-gui/releases/tag/v1.9.0", install_strategy="windows-portable", security_status="unknown")
-                    splash._wx_splash_append_log(f"Update available: {fake.version}", "")
-                    splash._wx_splash_state["found_update"] = fake
+                    splash._wx_splash_append_log("No updates available", "OK")
             except Exception as e:
                 try:
                     import logging
@@ -2607,14 +2596,14 @@ def main() -> int:
                     pass
                 splash._wx_splash_append_log("No updates available", "OK")
             splash._wx_splash_set_stage("updates", STATE_COMPLETE)
-        # Show "Güncelleme yapılsın mı?" popup on splash if fake update found per request
+        # Offer the real release found above on the splash.
         _found = splash._wx_splash_state.get("found_update")
         if _found is not None:
             try:
                 from hpc_gui.wx_updater_view import show_update_available
 
                 # §86 dialog parented to splash so it appears on splash
-                do_download = show_update_available(splash, __version__, getattr(_found, "version", "1.9.0"), "Sahte güncelleme — demo için.\n\nYeni özellikler ve düzeltmeler içerir.")
+                do_download = show_update_available(splash, __version__, _found.version, getattr(_found, "body", ""), release=_found)
                 if do_download:
                     splash._wx_splash_append_log("Update download requested (on splash)", "")
                 else:

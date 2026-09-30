@@ -1036,17 +1036,21 @@ def show_up_to_date(parent, version: str = __version__):
     return res
 
 
-def show_update_available(parent, current: str, latest: str, release_info: str = ""):
+def show_update_available(parent, current: str, latest: str, release_info: str = "", release=None):
     """Show the legacy availability dialog and return whether download began.
 
     The original wrapper returned ``True`` when the user pressed Download and
     ``False`` for Later or close.  The current dialog continues through the
     download/install flow, so modal return IDs alone no longer represent that
     compatibility contract.
+
+    Production passes the real ``release``; without one a placeholder release
+    is built for previews/tests only.
     """
-    from hpc_gui.services.app_updater import UpdateRelease
-    fake = UpdateRelease(version=latest or "1.9.0", tag=f"v{latest}", zip_name="hpc-client-gui_windows_onedir.zip", zip_url="https://example.com/fake.zip", sha_name="fake.sha256", sha_url="https://example.com", html_url="https://example.com", body=release_info, size=None)
-    dlg = WxUpdateDialog(parent, fake)
+    if release is None:
+        from hpc_gui.services.app_updater import UpdateRelease
+        release = UpdateRelease(version=latest or "1.9.0", tag=f"v{latest}", zip_name="hpc-client-gui_windows_onedir.zip", zip_url="https://example.com/fake.zip", sha_name="fake.sha256", sha_url="https://example.com", html_url="https://example.com", body=release_info, size=None)
+    dlg = WxUpdateDialog(parent, release)
     dlg._build_for_state(STATE_UPDATE_AVAILABLE)
     download_requested = False
     start_download = dlg._start_download
