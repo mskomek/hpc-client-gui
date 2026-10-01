@@ -1,0 +1,5 @@
+P1_nongui exit=1 elapsed=444s :: 9 failed, 1424 passed, 31 skipped, 22 subtests passed in 434.62s (0:07:14)
+P2_qt exit=1 elapsed=142s :: 4 failed, 558 passed, 5 skipped, 7 subtests passed in 135.70s (0:02:15)
+P3_mixed exit=0 elapsed=14s :: 12 passed in 9.34s
+P4_wx exit=1 elapsed=2738s :: 4 failed, 1309 passed, 1 warning in 2731.00s (0:45:30)
+P5_webview exit=0 elapsed=53s :: 29 passed in 48.37s

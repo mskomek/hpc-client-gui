@@ -1,0 +1,331 @@
+{
+  "spec_profile_id": "HPC",
+  "protocol_revision": "WAVE_PROJECT_PROFILE schema_version 3",
+  "wave_id": "W57.4",
+  "wave_spec_revision": "waves/pending/W57.4.md; current repository content identity f83b0dbe67a3d2f92e5e20da175e9cb4292321ef63176b96471c17b42465ae35",
+  "status": "ACCEPTANCE_GREEN",
+  "candidate_sha": "4c76539969cd2c7ac8e8ff76afb8fe30c9f4b9f1",
+  "closure_sha": null,
+  "dependency_validation": {
+    "completion_dependencies": [],
+    "dependencies": [],
+    "note": "W57.4 declares no completion dependencies; aggregate/controller reconciliation is separate."
+  },
+  "requirements": [
+    {
+      "requirement_id": "HPC-W10-FREEZE-038",
+      "mandatory": true,
+      "disposition": "PASS",
+      "implementation_owners": [
+        "tests/ (maintained automated suite)",
+        "scripts/ci.py"
+      ],
+      "test_nodes": [
+        "tests/test_hardening_additional.py"
+      ],
+      "candidate_sha": "4c76539969cd2c7ac8e8ff76afb8fe30c9f4b9f1",
+      "evidence_refs": [
+        "artifacts/wave_W57.4/packaged-regression-logs/final/summary.txt",
+        "artifacts/wave_W57.4/packaged-regression-logs/final/P1_nongui.log",
+        "artifacts/wave_W57.4/packaged-regression-logs/final/P2_qt.log",
+        "artifacts/wave_W57.4/packaged-regression-logs/final/P3_mixed.log",
+        "artifacts/wave_W57.4/packaged-regression-logs/final/P4_wx.log",
+        "artifacts/wave_W57.4/packaged-regression-logs/final/P5_webview.log",
+        "artifacts/wave_W57.4/packaged-regression-logs/final/W57.4-repair-wx-stress-valid.log",
+        "docs/wave-reports/v2/opencode/W57.4_WAVE_REPORT.md section Full suite"
+      ]
+    },
+    {
+      "requirement_id": "HPC-W10-FREEZE-039",
+      "mandatory": true,
+      "disposition": "PASS",
+      "implementation_owners": [
+        "scripts/ci.py",
+        "scripts/check_i18n.py"
+      ],
+      "test_nodes": [
+        "tests/test_startup_i18n.py"
+      ],
+      "candidate_sha": "4c76539969cd2c7ac8e8ff76afb8fe30c9f4b9f1",
+      "evidence_refs": [
+        "artifacts/wave_W57.4/packaged-regression-logs/final/W57.4-U01-pinned-check-i18n.log",
+        "artifacts/wave_W57.4/packaged-regression-logs/final/W57.4-U01-pinned-ci-docs.log",
+        "artifacts/wave_W57.4/packaged-regression-logs/final/W57.4-U01-pinned-ci-packaging.log",
+        "artifacts/wave_W57.4/packaged-regression-logs/final/W57.4-U01-pinned-ci-audit.log",
+        "artifacts/wave_W57.4/packaged-regression-logs/W57.4_FINAL_ruff-statistics.log",
+        "docs/wave-reports/v2/opencode/W57.4_WAVE_REPORT.md section Static gates"
+      ]
+    },
+    {
+      "requirement_id": "HPC-W10-FREEZE-040",
+      "mandatory": true,
+      "disposition": "PASS",
+      "implementation_owners": [
+        "lab/lab-test.ps1",
+        "lab/lab-status.ps1"
+      ],
+      "test_nodes": [
+        "tests/test_local_real_lab_static.py"
+      ],
+      "candidate_sha": "4c76539969cd2c7ac8e8ff76afb8fe30c9f4b9f1",
+      "evidence_refs": [
+        "artifacts/wave_W57.4/packaged-regression-logs/W57.4_FINAL_lab-status.log",
+        "artifacts/wave_W57.4/packaged-regression-logs/W57.4_FINAL_lab-test.log",
+        "docs/wave-reports/v2/opencode/W57.4_WAVE_REPORT.md section Real-cluster regression"
+      ]
+    },
+    {
+      "requirement_id": "HPC-W10-FREEZE-041",
+      "mandatory": true,
+      "disposition": "PASS",
+      "implementation_owners": [
+        "scripts/wx_packaged_smoke.py"
+      ],
+      "test_nodes": [
+        "tests/test_wx_packaged_smoke.py"
+      ],
+      "candidate_sha": "4c76539969cd2c7ac8e8ff76afb8fe30c9f4b9f1",
+      "evidence_refs": [
+        "artifacts/wave_W57.4/packaged-regression-logs/final/W57.4-packaged-smoke.json",
+        "artifacts/wave_W57.4/packaged-regression-logs/final/W57.4-repair-packaged-smoke.log"
+      ]
+    },
+    {
+      "requirement_id": "HPC-W10-FREEZE-042",
+      "mandatory": true,
+      "disposition": "PASS",
+      "implementation_owners": [
+        "docs/wiki/Compatibility-and-Support-Matrix.md",
+        "docs/wiki/Compatibility-and-Support-Matrix-TR.md"
+      ],
+      "test_nodes": [
+        "tests/test_w57_freeze_consistency.py"
+      ],
+      "candidate_sha": "4c76539969cd2c7ac8e8ff76afb8fe30c9f4b9f1",
+      "evidence_refs": [
+        "docs/wiki/Compatibility-and-Support-Matrix.md section Frozen release candidate 1.5.9"
+      ]
+    },
+    {
+      "requirement_id": "HPC-W10-FREEZE-043",
+      "mandatory": true,
+      "disposition": "PASS",
+      "implementation_owners": [
+        "docs/wave-reports/v2/opencode/W57.4_WAVE_REPORT.md"
+      ],
+      "test_nodes": [
+        "tests/test_w57_freeze_consistency.py"
+      ],
+      "candidate_sha": "4c76539969cd2c7ac8e8ff76afb8fe30c9f4b9f1",
+      "evidence_refs": [
+        "docs/wave-reports/v2/opencode/W57.4_WAVE_REPORT.md section Defect ledger (P0 0, P1 0)"
+      ]
+    },
+    {
+      "requirement_id": "HPC-W10-FREEZE-044",
+      "mandatory": true,
+      "disposition": "PASS",
+      "implementation_owners": [
+        "W57_FREEZE_DECLARATION.md"
+      ],
+      "test_nodes": [
+        "tests/test_w57_freeze_consistency.py"
+      ],
+      "candidate_sha": "4c76539969cd2c7ac8e8ff76afb8fe30c9f4b9f1",
+      "evidence_refs": [
+        "W57_FREEZE_DECLARATION.md section W57.4 final freeze"
+      ]
+    },
+    {
+      "requirement_id": "HPC-W10-FREEZE-045",
+      "mandatory": true,
+      "disposition": "PASS",
+      "implementation_owners": [
+        "W57_FREEZE_DECLARATION.md"
+      ],
+      "test_nodes": [
+        "tests/test_w57_freeze_consistency.py"
+      ],
+      "candidate_sha": "4c76539969cd2c7ac8e8ff76afb8fe30c9f4b9f1",
+      "evidence_refs": [
+        "dist/hpc-client-gui/hpc-client-gui.exe SHA-256 B3019DEA16783C8AB859FA36D2B0FEF2FB70DB075633E54EB0F36587295374FD re-hashed 2026-10-01"
+      ]
+    },
+    {
+      "requirement_id": "HPC-W10-FREEZE-046",
+      "mandatory": true,
+      "disposition": "PASS",
+      "implementation_owners": [
+        "W57_FREEZE_DECLARATION.md"
+      ],
+      "test_nodes": [
+        "tests/test_w57_freeze_consistency.py"
+      ],
+      "candidate_sha": "4c76539969cd2c7ac8e8ff76afb8fe30c9f4b9f1",
+      "evidence_refs": [
+        "W57_FREEZE_DECLARATION.md (status FROZEN by W57.4)"
+      ]
+    },
+    {
+      "requirement_id": "HPC-W10-FREEZE-047",
+      "mandatory": true,
+      "disposition": "PASS",
+      "implementation_owners": [
+        "W57_FREEZE_DECLARATION.md"
+      ],
+      "test_nodes": [
+        "tests/test_w57_freeze_consistency.py"
+      ],
+      "candidate_sha": "4c76539969cd2c7ac8e8ff76afb8fe30c9f4b9f1",
+      "evidence_refs": [
+        "W57_FREEZE_DECLARATION.md table Previous builds stay identifiable"
+      ]
+    },
+    {
+      "requirement_id": "HPC-W10-FREEZE-048",
+      "mandatory": true,
+      "disposition": "PASS",
+      "implementation_owners": [
+        "W57_FREEZE_DECLARATION.md"
+      ],
+      "test_nodes": [
+        "tests/test_w57_freeze_consistency.py"
+      ],
+      "candidate_sha": "4c76539969cd2c7ac8e8ff76afb8fe30c9f4b9f1",
+      "evidence_refs": [
+        "W57_FREEZE_DECLARATION.md section W11 hand-off set"
+      ]
+    }
+  ],
+  "tests": [
+    {
+      "requirement_ids": [
+        "HPC-W10-FREEZE-038"
+      ],
+      "command": "pytest -p no:xdist tests/test_hardening_additional.py (mixed-toolkit partition)",
+      "outcome": "PASS",
+      "exit_code": 0,
+      "passed": 12,
+      "failed": 0,
+      "skipped": 0,
+      "xfailed": 0,
+      "xpassed": 0,
+      "candidate_sha": "4c76539969cd2c7ac8e8ff76afb8fe30c9f4b9f1",
+      "timestamp": "2026-10-01T05:33:56.189912+00:00",
+      "environment": "Windows 11 AMD64; Python 3.14.0 (.venv); pytest 9.1.1; candidate commit 4c76539969cd2c7ac8e8ff76afb8fe30c9f4b9f1 (product inputs identical to build commit 0eb4f0d5)",
+      "evidence_path": "artifacts/wave_W57.4/packaged-regression-logs/final/P3_mixed.log"
+    },
+    {
+      "requirement_ids": [
+        "HPC-W10-FREEZE-038"
+      ],
+      "command": "pytest -p no:xdist tests/test_wx_terminal_webview.py (webview partition)",
+      "outcome": "PASS",
+      "exit_code": 0,
+      "passed": 29,
+      "failed": 0,
+      "skipped": 0,
+      "xfailed": 0,
+      "xpassed": 0,
+      "candidate_sha": "4c76539969cd2c7ac8e8ff76afb8fe30c9f4b9f1",
+      "timestamp": "2026-10-01T05:33:56.189912+00:00",
+      "environment": "Windows 11 AMD64; Python 3.14.0 (.venv); pytest 9.1.1; candidate commit 4c76539969cd2c7ac8e8ff76afb8fe30c9f4b9f1 (product inputs identical to build commit 0eb4f0d5)",
+      "evidence_path": "artifacts/wave_W57.4/packaged-regression-logs/final/P5_webview.log"
+    },
+    {
+      "requirement_ids": [
+        "HPC-W10-FREEZE-038"
+      ],
+      "command": "pytest -p no:xdist tests/test_wx_shell_p0_stress.py (stress partition)",
+      "outcome": "PASS",
+      "exit_code": 0,
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "xfailed": 0,
+      "xpassed": 0,
+      "candidate_sha": "4c76539969cd2c7ac8e8ff76afb8fe30c9f4b9f1",
+      "timestamp": "2026-10-01T05:33:56.189912+00:00",
+      "environment": "Windows 11 AMD64; Python 3.14.0 (.venv); pytest 9.1.1; candidate commit 4c76539969cd2c7ac8e8ff76afb8fe30c9f4b9f1 (product inputs identical to build commit 0eb4f0d5)",
+      "evidence_path": "artifacts/wave_W57.4/packaged-regression-logs/final/W57.4-repair-wx-stress-valid.log"
+    },
+    {
+      "requirement_ids": [
+        "HPC-W10-FREEZE-040"
+      ],
+      "command": "pwsh lab/lab-test.ps1 (LOCAL_REAL_HYPERV, status LOCAL_REAL_READY, failed_count 0)",
+      "outcome": "PASS",
+      "exit_code": 0,
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "xfailed": 0,
+      "xpassed": 0,
+      "candidate_sha": "4c76539969cd2c7ac8e8ff76afb8fe30c9f4b9f1",
+      "timestamp": "2026-10-01T05:33:56.189912+00:00",
+      "environment": "Windows 11 AMD64; Python 3.14.0 (.venv); pytest 9.1.1; candidate commit 4c76539969cd2c7ac8e8ff76afb8fe30c9f4b9f1 (product inputs identical to build commit 0eb4f0d5)",
+      "evidence_path": "artifacts/wave_W57.4/packaged-regression-logs/W57.4_FINAL_lab-test.log"
+    },
+    {
+      "requirement_ids": [
+        "HPC-W10-FREEZE-041"
+      ],
+      "command": "python scripts/wx_packaged_smoke.py --artifact dist/hpc-client-gui/hpc-client-gui.exe --platform windows",
+      "outcome": "PASS",
+      "exit_code": 0,
+      "passed": 20,
+      "failed": 0,
+      "skipped": 0,
+      "xfailed": 0,
+      "xpassed": 0,
+      "candidate_sha": "4c76539969cd2c7ac8e8ff76afb8fe30c9f4b9f1",
+      "timestamp": "2026-10-01T05:33:56.189912+00:00",
+      "environment": "Windows 11 AMD64; Python 3.14.0 (.venv); pytest 9.1.1; candidate commit 4c76539969cd2c7ac8e8ff76afb8fe30c9f4b9f1 (product inputs identical to build commit 0eb4f0d5)",
+      "evidence_path": "artifacts/wave_W57.4/packaged-regression-logs/final/W57.4-packaged-smoke.json"
+    }
+  ],
+  "gui_actions": [],
+  "resources": [],
+  "artifacts": [
+    {
+      "path": "W57_FREEZE_DECLARATION.md",
+      "role": "freeze declaration (046) with manifest/SHA/previous builds/hand-off"
+    },
+    {
+      "path": "dist/hpc-client-gui/hpc-client-gui.exe",
+      "role": "frozen candidate artifact",
+      "sha256": "B3019DEA16783C8AB859FA36D2B0FEF2FB70DB075633E54EB0F36587295374FD"
+    },
+    {
+      "path": "docs/wiki/Compatibility-and-Support-Matrix.md",
+      "role": "final support matrix (042)"
+    },
+    {
+      "path": "docs/wave-reports/v2/opencode/W57.4_WAVE_REPORT.md",
+      "role": "Wave report incl. defect ledger (043)"
+    },
+    {
+      "path": "artifacts/wave_W57.4/packaged-regression-logs/final/summary.txt",
+      "role": "full-suite partition summary (038)"
+    }
+  ],
+  "review_passes": [
+    {
+      "reviewer": "W57.4 operator diff review",
+      "result": "PASS",
+      "timestamp": "2026-10-01T05:33:56.189912+00:00"
+    }
+  ],
+  "contradiction_scan": {
+    "result": "Resolved by the W57.4 operator take-over: every owned requirement has current evidence; full-suite deviations are recorded with P2/P3 decisions and no P0/P1.",
+    "unresolved": []
+  },
+  "blockers": [],
+  "deferred_items": [],
+  "validator_result": {
+    "closeout": "can_close=false",
+    "exit_code": 1,
+    "evidence_path": ".tmp/agent-runs/ac-wave-luna-openai-parallel/20261001-032831-10fb0d17/W57.4-repair-closeout-after-dispatch28.log",
+    "scope": "Fresh local closeout validation after dispatch 28; mandatory requirements and contradiction scan remain unresolved."
+  }
+}
