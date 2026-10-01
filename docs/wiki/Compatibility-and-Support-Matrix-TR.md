@@ -76,3 +76,19 @@ Ayrıca bkz. [[Windows Kurulumu|Installation-Windows-TR]],
 [[Linux Kurulumu|Installation-Linux-TR]] ve
 [[macOS Kurulumu|Installation-macOS-TR]],
 [[X11 Yönlendirme|X11-Forwarding-TR]].
+
+## Dondurulmuş sürüm adayı 1.5.9 (W57.4 son destek beyanı)
+
+Bu bölüm W11'e devredilen dondurulmuş aday için bağlayıcıdır; yukarıdaki
+platform tablosu projenin üretebildiği sürüm *setini* anlatır.
+
+| Kalem | Bu aday için durum | Kanıt |
+|---|---|---|
+| Windows 10/11 AMD64, taşınabilir `hpc-client-gui.exe` (SHA-256 `B3019DEA16783C8AB859FA36D2B0FEF2FB70DB075633E54EB0F36587295374FD`) | **Destekleniyor** | birebir artefakt üzerinde paket smoke 20/20; W57.1 paket fonksiyonel tekrar 110/110; LOCAL_REAL Hyper-V küme `lab-test` LOCAL_REAL_READY (0 hata) |
+| GUI çalışma zamanı | **wxPython 4.3.1 (wx V2)**; Qt/PySide6 pakette yok | pakette sıfır Qt dosyası (freeze beyanı) |
+| Küme tarafı | SSH/SFTP + Slurm (`sbatch`/`squeue`/`sacct`/`scancel`) | LOCAL_REAL lab: SSH, SFTP gidiş-dönüş, sbatch, iptal, ortak home |
+| macOS (Apple Silicon / Intel) DMG | **Bu adayın parçası değil** | bu freeze için macOS artefaktı üretilmedi/sınanmadı |
+| Linux AppImage / `.deb` | **Bu adayın parçası değil** | bu freeze için Linux artefaktı üretilmedi/sınanmadı |
+| Kaynaktan (Python 3.14.x) | Yalnız geliştirici kullanımı, sürüm artefaktı değil | W57.4 raporundaki tam otomatik test takımı |
+
+Artefakttaki her bayt değişikliği yeni bir SHA-256 üretir ve bu beyanı geçersiz kılar.

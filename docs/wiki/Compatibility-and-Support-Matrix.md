@@ -72,3 +72,19 @@ See also [[Installation on Windows|Installation-Windows]],
 [[Installation on Linux|Installation-Linux]], and
 [[Installation on macOS|Installation-macOS]], and
 [[X11 Forwarding|X11-Forwarding]].
+
+## Frozen release candidate 1.5.9 (W57.4 final support statement)
+
+This section is authoritative for the frozen candidate handed to W11; the
+platform table above describes the release *set* the project can produce.
+
+| Item | Status for this candidate | Evidence |
+|---|---|---|
+| Windows 10/11 AMD64, portable `hpc-client-gui.exe` (SHA-256 `B3019DEA16783C8AB859FA36D2B0FEF2FB70DB075633E54EB0F36587295374FD`) | **Supported** | packaged smoke 20/20 on the exact artifact; W57.1 packaged functional replay 110/110; LOCAL_REAL Hyper-V cluster `lab-test` LOCAL_REAL_READY (0 failed) |
+| GUI runtime | **wxPython 4.3.1 (wx V2)**; Qt/PySide6 not shipped | bundle has zero Qt files (freeze declaration) |
+| Cluster side | SSH/SFTP + Slurm (`sbatch`/`squeue`/`sacct`/`scancel`) | LOCAL_REAL lab: SSH, SFTP round trip, sbatch, cancel, shared home |
+| macOS (Apple Silicon / Intel) DMG | **Not part of this candidate** | no macOS artifact was built or regressed for this freeze |
+| Linux AppImage / `.deb` | **Not part of this candidate** | no Linux artifact was built or regressed for this freeze |
+| From source (Python 3.14.x) | Developer use only, not a release artifact | full automated suite in W57.4 report |
+
+Any later byte change to the artifact mints a new SHA-256 and voids this statement.
