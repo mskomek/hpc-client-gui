@@ -942,12 +942,12 @@ def run_cli(argv: Sequence[str] | None = None, *, default_group: str | None = No
     if args.group is None and default_group is not None:
         args.group = default_group
     if args.group in (None, "gui"):
-        # Keep QApplication and all widgets out of the CLI import path.
-        from hpc_gui.app import main as gui_main
+        # Keep the selected GUI runtime and its widgets out of CLI startup.
+        from hpc_gui.cli.gui import launch_gui
 
         if args.group == "gui":
             sys.argv = [sys.argv[0]]
-        return int(gui_main())
+        return launch_gui()
     if args.group == "version":
         _emit(
             {"version": CLI_VERSION, "name": "hpc-client-gui", "python": platform.python_version()},

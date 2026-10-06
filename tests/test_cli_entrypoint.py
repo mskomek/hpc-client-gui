@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import subprocess
 import sys
+import types
 from io import StringIO
 from pathlib import Path
 from types import SimpleNamespace
@@ -50,6 +51,26 @@ def test_console_entry_defaults_to_interactive_prompt() -> None:
     with patch("hpc_gui.cli.main._run_interactive", return_value=0) as interactive:
         assert run_cli([], default_group="interactive") == 0
     interactive.assert_called_once()
+
+
+@pytest.mark.unit
+def test_gui_subcommand_uses_configured_wx_runtime(monkeypatch) -> None:
+    from hpc_gui.cli.gui import launch_gui
+
+    wx_shell = types.ModuleType("hpc_gui.wx_shell")
+    wx_shell.main = Mock(return_value=0)
+    monkeypatch.setitem(sys.modules, "hpc_gui.wx_shell", wx_shell)
+    monkeypatch.setattr("hpc_gui.cli.gui.DEFAULT_GUI_RUNTIME", "wx")
+
+    assert launch_gui() == 0
+    wx_shell.main.assert_called_once_with()
+
+
+@pytest.mark.unit
+def test_gui_subcommand_dispatches_to_runtime_launcher() -> None:
+    with patch("hpc_gui.cli.gui.launch_gui", return_value=0) as launch:
+        assert run_cli(["gui"]) == 0
+    launch.assert_called_once_with()
 
 
 @pytest.mark.unit
