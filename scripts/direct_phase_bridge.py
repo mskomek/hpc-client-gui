@@ -40,9 +40,14 @@ def main(argv: list[str] | None = None) -> int:
     schema_path = args.run_dir / "phase-result.schema.json"
     if not prompt_path.is_file() or not schema_path.is_file():
         raise SystemExit("controller prompt or phase-result schema is missing")
-    prompt_bytes = prompt.encode("utf-8")
-    if hashlib.sha256(prompt_path.read_bytes()).hexdigest() != hashlib.sha256(prompt_bytes).hexdigest():
-        raise SystemExit("controller prompt on disk differs from the dispatched prompt")
+    # Text stdin is newline-normalized by Python on Windows, while the saved
+    # prompt may contain CRLF bytes. Bind the receipt to the controller's raw
+    # file identity and compare semantic dispatch identity from both copies.
+    saved_prompt_bytes = prompt_path.read_bytes()
+    saved_prompt = prompt_path.read_text(encoding="utf-8")
+    saved_match = DISPATCH_RE.search(saved_prompt)
+    if not saved_match or json.loads(saved_match.group(1)) != dispatch:
+        raise SystemExit("controller prompt on disk has a different dispatch identity")
     contract = {
         "version": 1,
         "run_id": args.run_id,
@@ -53,7 +58,7 @@ def main(argv: list[str] | None = None) -> int:
         "phase_instance_id": args.phase_instance_id,
         "repo_root": str(args.repo_root.resolve()),
         "prompt_path": str(prompt_path.relative_to(args.repo_root.resolve())),
-        "prompt_sha256": hashlib.sha256(prompt_bytes).hexdigest(),
+        "prompt_sha256": hashlib.sha256(saved_prompt_bytes).hexdigest(),
         "result_schema_path": str(schema_path.resolve()),
         "result_schema_sha256": hashlib.sha256(schema_path.read_bytes()).hexdigest(),
         "executor_mode": "direct",
