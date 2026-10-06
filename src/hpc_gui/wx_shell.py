@@ -1352,6 +1352,20 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
     frame._wx_shell_tray = tray
 
     def close(_event):
+        # W55 PKGREG-SHUTDOWN-BISTABLE-NON-TERMINATION closed-owner repair:
+        # the former frame.Hide() before shutdown/Destroy was observed hung
+        # on the main thread (py-spy inside Hide) while the same bytes also
+        # exited cleanly, i.e. a bistable teardown race. Hide() is redundant
+        # (Destroy hides/removes the window) so it no longer gates shutdown.
+        # Order is now: page teardown -> chrome close -> lifecycle.shutdown
+        # (bounded, never blocks) -> child close -> Destroy. Reentrant closes
+        # are ignored via lifecycle.shutdown_started.
+        if lifecycle.shutdown_started:
+            try:
+                frame.Destroy()
+            except Exception:
+                pass
+            return
         # Persist main-window layout first (best-effort; shutdown never blocks
         # on it) so save/restart restores size/position/maximized/selected tab.
         _save_main_window_state(frame, notebook)
@@ -1391,15 +1405,20 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
             shell_ref[0] = None
         except Exception:
             pass
-        frame.Hide()
+        # Bounded lifecycle teardown first so SSH/timers/threads are released
+        # even if a later native window call misbehaves. shutdown() itself is
+        # time-boxed per cleanup (see WxLifecycleController).
+        lifecycle.shutdown()
         for child in wx.GetTopLevelWindows():
             if child is not frame and child.GetParent() is frame:
                 try:
                     child.Close()
                 except Exception:
                     pass
-        lifecycle.shutdown()
-        frame.Destroy()
+        try:
+            frame.Destroy()
+        except Exception:
+            pass
 
     # W55 A1/A2 (HPC-W10-GJ2-029/038): keyboard accelerators for shell
     # navigation. Ctrl+1..7 selects notebook tabs; F1 opens Help. The table
@@ -2060,7 +2079,14 @@ def _run_packaged_smoke(app, frame, session_state, output_path, lifecycle=None):
             frame.Close()
         except Exception:
             pass
+        # Primary loop exit; plus a bounded fallback so a delayed native
+        # teardown cannot hold the packaged child past its payload write.
+        # Both go through the normal ExitMainLoop path (no force-kill).
         wx.CallLater(50, app.ExitMainLoop)
+        try:
+            wx.CallLater(2000, app.ExitMainLoop)
+        except Exception:
+            pass
 
     def retry():
         if not state["done"]:

@@ -16,6 +16,11 @@ class UpdateProgress:
 
 
 class WxLifecycleController:
+    # Bounded-shutdown budget (W55 PKGREG-SHUTDOWN-BISTABLE-NON-TERMINATION).
+    # Each registered cleanup runs on a daemon thread with this join timeout
+    # so one blocking network/native teardown cannot hold process exit.
+    CLEANUP_TIMEOUT_S = 2.0
+
     def __init__(self, *, tray_notify: Callable[[str], None] | None = None) -> None:
         self.progress = UpdateProgress()
         self.cancel_token = Event()
@@ -64,12 +69,22 @@ class WxLifecycleController:
         if self.shutdown_started:
             return
         self.shutdown_started = True
+        import threading
+
         for cleanup in reversed(self._cleanup):
-            try:
-                cleanup()
-            except Exception:
-                pass
+            worker = threading.Thread(target=self._run_cleanup, args=(cleanup,), daemon=True)
+            worker.start()
+            worker.join(timeout=self.CLEANUP_TIMEOUT_S)
+            # Daemon thread left running on timeout: never join again, never
+            # block process termination on it.
         self._cleanup.clear()
+
+    @staticmethod
+    def _run_cleanup(cleanup: Callable[[], None]) -> None:
+        try:
+            cleanup()
+        except Exception:
+            pass
 
 
 __all__ = ["UpdateProgress", "WxLifecycleController"]
