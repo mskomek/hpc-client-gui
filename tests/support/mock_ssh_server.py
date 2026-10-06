@@ -341,7 +341,37 @@ class MockSSHServer:
         self.port = self._sock.getsockname()[1]
         self._thread = threading.Thread(target=self._serve_forever, daemon=True)
         self._thread.start()
+        self._wait_for_readiness()
         return self
+
+    def _wait_for_readiness(self, timeout_s: float = 5.0) -> None:
+        """Bounded readiness probe (REL-046 fixture race).
+
+        ``listen()`` is synchronous but the Paramiko banner/KEX worker runs
+        on the serve thread; a client that connects before the first accept
+        cycle can hit a transient handshake flake. Poll a bare TCP handshake
+        until one succeeds or the budget expires. Best-effort only: failure
+        raises, so a dead server fails fast instead of flaking downstream.
+        """
+        import time
+
+        deadline = time.monotonic() + timeout_s
+        last_error: OSError | None = None
+        while time.monotonic() < deadline:
+            probe = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            try:
+                probe.settimeout(0.2)
+                probe.connect(("127.0.0.1", self.port))
+                return
+            except OSError as exc:
+                last_error = exc
+            finally:
+                try:
+                    probe.close()
+                except OSError:
+                    pass
+            time.sleep(0.02)
+        raise RuntimeError(f"mock SSH server not ready on 127.0.0.1:{self.port}: {last_error}")
 
     def _serve_forever(self) -> None:
         self._sock.settimeout(0.5)
@@ -385,4 +415,11 @@ class MockSSHServer:
             try:
                 self._sock.close()
             except OSError:
+                pass
+        # Bounded join so a prior serial run's serve thread cannot linger
+        # indefinitely; daemon thread still never blocks interpreter exit.
+        if self._thread is not None:
+            try:
+                self._thread.join(timeout=2.0)
+            except Exception:
                 pass
