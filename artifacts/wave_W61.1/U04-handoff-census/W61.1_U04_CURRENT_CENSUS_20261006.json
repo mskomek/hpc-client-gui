@@ -74,6 +74,11 @@
         "path": "artifacts/wave_W61.1/owner-routing/W61.1_W05_CLI_SURFACE_001_CLOSED_OWNER_REPAIR_20261006.json",
         "sha256": "D5519DC8FA2C0FE94213A1F026F397546C442E3FD3C2A66FC36BF44B00B596D5",
         "size_bytes": 3090
+      },
+      {
+        "path": "artifacts/wave_W61.1/owner-routing/W61.1_W02_TRACE_001_LOG_REVALIDATION_20261006.json",
+        "sha256": "11332DE933C1201B258C475142AE0F21F84F7013AEE7EF6BDF25F638CD33BE43",
+        "size_bytes": 1456
       }
     ],
     "current_head": "33954d71602e7949b5860c192ec7af7946f1d020",
@@ -141,11 +146,15 @@
             "path": "artifacts/wave_W61.1/owner-routing/W61.1_W02_TRACE_001_CLOSED_OWNER_REPAIR_20261006.json"
           },
           {
-            "sha256": "021035F8773F3165776BBAD19AF9BF3BB59C984BA48D1D058B114FD7D47983A8",
-            "path": ".tmp/w61.1-repair-final/w02-trace-regression.log"
+            "path": "artifacts/wave_W61.1/owner-routing/W61.1_W02_TRACE_001_LOG_REVALIDATION_20261006.json",
+            "sha256": "11332DE933C1201B258C475142AE0F21F84F7013AEE7EF6BDF25F638CD33BE43"
+          },
+          {
+            "path": ".tmp/w61.1-repair-final/w02-trace-audit-refresh.log",
+            "sha256": "F0729BC67138F31FA1E74F2F72B66C334C02E1BE88C9E4F6C2D1174C0F38A470"
           }
         ],
-        "basis": "Resolved by closed-owner repair receipt: stale local-save assertion now checks the encoding-aware writer, the distinct remote writer ownership remains covered, and the full 37-test owner suite passed.",
+        "basis": "Resolved by closed-owner repair plus stable log revalidation: stale local-save assertion checks the encoding-aware writer, distinct remote ownership remains covered, and a fresh complete 37-test owner suite passed.",
         "owner_repair_kind": "closed_owner_repair_revalidation"
       },
       {
@@ -158,7 +167,7 @@
         "evidence_refs": [
           "artifacts/wave_W61.1/U04-handoff-census/W61.1_U04_CURRENT_CENSUS_20261005.json"
         ],
-        "basis": "Previous census recorded NOT_CURRENTLY_DEMONSTRATED. This refreshed inventory still cannot claim authoritative zero counts while GUI validation and owner disposition remain unresolved."
+        "basis": "The current inventory remains non-authoritative because GUI journeys are incomplete and P0/P1 severity has not been assessed for all release-relevant findings. The W02 owner disposition is resolved; it is not a remaining census prerequisite."
       },
       {
         "finding_id": "W61.1-U04-ROLLBACK-READINESS",
@@ -200,6 +209,22 @@
           }
         ],
         "basis": "The operative W57 candidate still fails the documented gui command. Source repair and exact Windows 11 retest pass on a follow-up candidate, but it has not superseded the operative release freeze. Keep release finding open; severity is not inferred."
+      },
+      {
+        "finding_id": "W61.1-U02.2-HYPERV-DIRECT-CREDENTIAL-INVALID",
+        "classification": "ENVIRONMENT_BLOCKED",
+        "requirements": [
+          "HPC-W11-REL-026"
+        ],
+        "status": "BLOCKED_ENV",
+        "severity": "NOT_APPLICABLE_ENVIRONMENT_PREREQUISITE",
+        "evidence_refs": [
+          {
+            "path": "artifacts/wave_W61.1/packaged-runtime/U02.2_HYPERV_DIRECT_RUNNER_BLOCKED_ENV_20261006.json",
+            "sha256": "F4760B4AD133D76ACFDCF060F3F1A510C12BAABF1075FD9D8C432BBA1E139A82"
+          }
+        ],
+        "basis": "The canonical runner failed to establish a new PowerShell Direct session with “The credential is invalid.” Host Hyper-V services are running and the VM reports Running/Operating normally. No guest GUI retry was performed; prior exact candidate receipts remain valid for their capture time."
       }
     ]
   },
@@ -260,7 +285,8 @@
     "No previously verified compatible rollback target or live channel withdrawal proof is available.",
     "The operative W57 candidate remains unchanged; the CLI repair candidate needs release-owned freeze/provenance treatment.",
     "Integrated GUI journeys remain incomplete and require exact operative-candidate replay.",
-    "Wave-local evidence manifest and fresh final audit remain pending."
+    "Wave-local evidence manifest and fresh final audit remain pending.",
+    "New guest GUI evidence is currently BLOCKED_ENV because the canonical PowerShell Direct runner rejects its configured credential; no credential was inspected or recorded."
   ],
   "audit_focus": [
     "Verify old operative W57 candidate identity separately from the fixed follow-up candidate and its GUI readback.",

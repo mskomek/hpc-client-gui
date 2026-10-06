@@ -3,7 +3,7 @@
   "evidence_id": "EV-W61.1-U04-CURRENT-OWNER-REPAIR-GOVERNANCE-20261006",
   "wave_id": "W61.1",
   "unit": "U04",
-  "captured_at_utc": "2026-10-06T15:54:57Z",
+  "captured_at_utc": "2026-10-06T16:15:19Z",
   "evidence_head": "33954d71602e7949b5860c192ec7af7946f1d020",
   "branch": "develop",
   "worktree_dirty": true,
@@ -11,11 +11,11 @@
   "follow_up_candidate_sha256": "B8CF2AEFF55443962F2F89AF3B7DA5168DBFD2857CEE228CBA46CB19DC883C3F",
   "wave_report": {
     "path": "docs/wave-reports/v2/opencode/W61.1_WAVE_REPORT.md",
-    "sha256": "EEB49434E92E7A946872A3CA877FFEF3D5B3601FBAD6F5C568DDC5FD77869DAE"
+    "sha256": "34316774BF64362B11A80574D85EECB9582FE3FB088B4F1746896962F2F57E20"
   },
   "census": {
     "path": "artifacts/wave_W61.1/U04-handoff-census/W61.1_U04_CURRENT_CENSUS_20261006.json",
-    "sha256": "03DA9ADC0C2FDEE9A03E28612D8B90120B675BFEB708E3937056B6CA23A6B505",
+    "sha256": "50443CD18644DF90A7E3084F4FCB5AAA1C53C03FD6E331DF511980D2DC21FCFE",
     "p0_count": "NOT_CURRENTLY_DEMONSTRATED",
     "p1_count": "NOT_CURRENTLY_DEMONSTRATED",
     "rollback": "NOT_READY"
@@ -89,16 +89,24 @@
       "path": "tests/test_w61_1_release_handoff.py"
     },
     {
-      "sha256": "03DA9ADC0C2FDEE9A03E28612D8B90120B675BFEB708E3937056B6CA23A6B505",
-      "path": "artifacts/wave_W61.1/U04-handoff-census/W61.1_U04_CURRENT_CENSUS_20261006.json"
+      "sha256": "F4760B4AD133D76ACFDCF060F3F1A510C12BAABF1075FD9D8C432BBA1E139A82",
+      "path": "artifacts/wave_W61.1/packaged-runtime/U02.2_HYPERV_DIRECT_RUNNER_BLOCKED_ENV_20261006.json"
     },
     {
-      "sha256": "EEB49434E92E7A946872A3CA877FFEF3D5B3601FBAD6F5C568DDC5FD77869DAE",
-      "path": "docs/wave-reports/v2/opencode/W61.1_WAVE_REPORT.md"
+      "path": "artifacts/wave_W61.1/U04-handoff-census/W61.1_U04_CURRENT_CENSUS_20261006.json",
+      "sha256": "50443CD18644DF90A7E3084F4FCB5AAA1C53C03FD6E331DF511980D2DC21FCFE"
+    },
+    {
+      "path": "artifacts/wave_W61.1/owner-routing/W61.1_W02_TRACE_001_LOG_REVALIDATION_20261006.json",
+      "sha256": "11332DE933C1201B258C475142AE0F21F84F7013AEE7EF6BDF25F638CD33BE43"
+    },
+    {
+      "path": "docs/wave-reports/v2/opencode/W61.1_WAVE_REPORT.md",
+      "sha256": "34316774BF64362B11A80574D85EECB9582FE3FB088B4F1746896962F2F57E20"
     }
   ],
   "disposition": "NO-GO",
-  "interpretation": "W05 GUI CLI repair passed on a follow-up Windows 11 candidate but has not superseded the operative W57 freeze; the W02 assertion repair is resolved and its 37-test suite passes. Windows 11 transfer blocker is resolved. REL-026 journeys, complete authoritative P0/P1 census, rollback readiness, final manifest and fresh independent audit remain open. Closeout validator is red only because the manifest is absent; overall disposition remains NO-GO.",
+  "interpretation": "W05 GUI CLI repair passed only on the unfrozen follow-up candidate; W02 assertion repair and Windows 11 transfer blocker are resolved. A current bounded PowerShell Direct health attempt is BLOCKED_ENV because the canonical runner reports its configured credential invalid; no credential was inspected. REL-026 journeys, authoritative P0/P1 census, rollback readiness, final manifest and fresh audit remain open. Overall NO-GO. The stale W02 scratch-log binding was reconciled by a fresh dedicated 37-pass run and immutable addendum; the original repair receipt remains unchanged.",
   "final_validator": {
     "command": ".venv/Scripts/python.exe scripts/validate_wave_closeout.py --wave W61.1",
     "exit_code": 1,
@@ -110,10 +118,10 @@
     "output_log_sha256": "70661C7BE60AFC2BA1AD239DA551B53F9C6B1285801A6C91D000AB3AE0C93165"
   },
   "final_regression": {
-    "command": ".venv/Scripts/python.exe -m pytest tests/test_w61_1_release_handoff.py tests/test_wx_dispatch_error_gov.py -q -p no:cacheprovider --basetemp .tmp/w61.1-repair-final/final-regression-logged",
+    "command": ".venv/Scripts/python.exe -m pytest tests/test_w61_1_release_handoff.py tests/test_wx_dispatch_error_gov.py -q -p no:cacheprovider --basetemp .tmp/w61.1-repair-final/final-regression-last",
     "observed": "39 passed, 0 failed",
     "exit_code": 0,
-    "tests": [
+    "test_sources": [
       {
         "path": "tests/test_w61_1_release_handoff.py",
         "sha256": "3A086E2BDB6D49020AA9F69A995D1439661BC219A39231651E1FD6EDE8B4FC3E"
@@ -123,7 +131,21 @@
         "sha256": "F6235185735FF9711A089974216A7F41CCBB85B798250EFF129DA115C9ADB167"
       }
     ],
-    "log": ".tmp/w61.1-repair-final/final-regression.log",
-    "log_sha256": "844DCFAD3F1AD437C5224B1CF1282F6922EF3B96E12BD45321677720D8ACEA1A"
+    "log": ".tmp/w61.1-repair-final/final-regression-last.log",
+    "log_sha256": "F710DAFD843375324FD72E75889AD7E0B2528F3BC1A8E943BEDA1F551EF3C4FC"
+  },
+  "environment_recheck": {
+    "path": "artifacts/wave_W61.1/packaged-runtime/U02.2_HYPERV_DIRECT_RUNNER_BLOCKED_ENV_20261006.json",
+    "sha256": "F4760B4AD133D76ACFDCF060F3F1A510C12BAABF1075FD9D8C432BBA1E139A82",
+    "disposition": "BLOCKED_ENV",
+    "impact": "No new guest GUI evidence could be collected."
+  },
+  "w02_log_revalidation": {
+    "path": "artifacts/wave_W61.1/owner-routing/W61.1_W02_TRACE_001_LOG_REVALIDATION_20261006.json",
+    "sha256": "11332DE933C1201B258C475142AE0F21F84F7013AEE7EF6BDF25F638CD33BE43",
+    "log_path": ".tmp/w61.1-repair-final/w02-trace-audit-refresh.log",
+    "log_sha256": "F0729BC67138F31FA1E74F2F72B66C334C02E1BE88C9E4F6C2D1174C0F38A470",
+    "observed": "37 passed, 0 failed",
+    "exit_code": 0
   }
 }

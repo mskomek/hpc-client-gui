@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "evidence_id": "EV-W61.1-W02-TRACE-001-LOG-REVALIDATION-20261006",
+  "wave_id": "W61.1",
+  "owner_wave": "W02",
+  "owner_requirement": "REQ-W02-TRACE-001",
+  "captured_at_utc": "2026-10-06T16:14:20Z",
+  "supersedes_log_binding_only": {
+    "receipt_path": "artifacts/wave_W61.1/owner-routing/W61.1_W02_TRACE_001_CLOSED_OWNER_REPAIR_20261006.json",
+    "receipt_sha256": "4ED345E1A239A623C5644D7F8BC767C8BB3E179BE6D5A1DEBCA90C22B472D11C",
+    "prior_log_path": ".tmp/w61.1-repair-final/w02-trace-regression.log",
+    "prior_claimed_log_sha256": "021035F8773F3165776BBAD19AF9BF3BB59C984BA48D1D058B114FD7D47983A8",
+    "prior_path_was_reused_by_later_run": true
+  },
+  "revalidation": {
+    "command": ".venv/Scripts/python.exe -m pytest tests/test_wx_dispatch_error_gov.py -q -p no:cacheprovider --basetemp .tmp/w61.1-repair-final/w02-trace-audit-refresh",
+    "exit_code": 0,
+    "observed": "37 passed, 0 failed",
+    "test_path": "tests/test_wx_dispatch_error_gov.py",
+    "test_sha256": "F6235185735FF9711A089974216A7F41CCBB85B798250EFF129DA115C9ADB167",
+    "log_path": ".tmp/w61.1-repair-final/w02-trace-audit-refresh.log",
+    "log_sha256": "F0729BC67138F31FA1E74F2F72B66C334C02E1BE88C9E4F6C2D1174C0F38A470"
+  },
+  "product_code_changed": false,
+  "disposition": "W02 assertion repair remains resolved; this addendum provides a fresh stable log identity and does not alter the original receipt."
+}
