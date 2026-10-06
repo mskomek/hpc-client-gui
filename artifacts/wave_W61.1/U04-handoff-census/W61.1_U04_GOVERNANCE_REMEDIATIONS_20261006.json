@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "evidence_id": "EV-W61.1-U04-GOVERNANCE-REMEDIATIONS-20261006",
+  "wave_id": "W61.1",
+  "unit": "U04",
+  "phase": "focused-regression-and-sensitivity",
+  "repository_head": "22b0c156f8a6875b7d2aa5e5a8934ecc4f8b5597",
+  "candidate_sha256": "B3019DEA16783C8AB859FA36D2B0FEF2FB70DB075633E54EB0F36587295374FD",
+  "test": {
+    "sha256": "0A88528D4623DC609FF877097988E55A264905CC5133F6E85DDBCFBD060C1FA8",
+    "observed": "2 passed in 0.29s",
+    "exit_code": 0,
+    "path": "tests/test_w61_1_release_handoff.py",
+    "command": ".venv/Scripts/python.exe -m pytest tests/test_w61_1_release_handoff.py -q -p no:cacheprovider --basetemp .tmp/w61.1-handoff-test",
+    "log_sha256": "2CAE6438AFB5A2B238F9BAA91EC19955B0B824036A3449AF9E0E31461AF32012",
+    "log_path": ".tmp/w61.1-evidence/handoff-regression-current.txt"
+  },
+  "sensitivity": {
+    "observed": "2 failed as expected on controlled stale report heading and pre-fix rollback guidance",
+    "fixture_inputs": [
+      "stale guest-PASS heading fixture",
+      "pre-fix docs/VERIFYING_RELEASES.md recovered from HEAD before rollback procedure insertion"
+    ],
+    "exit_code": 1,
+    "command": "$env:W61_1_HANDOFF_ROOT='.tmp/w61.1-remediation-sensitivity'; .venv/Scripts/python.exe -m pytest tests/test_w61_1_release_handoff.py -q -p no:cacheprovider --basetemp .tmp/w61.1-handoff-sensitivity",
+    "log_sha256": "29EFEA168C00B799745995D7D6424048FA85F42304BB953567C18C6008BC1BE0",
+    "log_path": ".tmp/w61.1-evidence/handoff-regression-sensitivity.txt"
+  },
+  "bound_inputs": [
+    {
+      "sha256": "F848C143829770B730C1DD59A138ADCBBAED99DD72F7BAC43174A6FBA220A192",
+      "path": "docs/wave-reports/v2/opencode/W61.1_WAVE_REPORT.md"
+    },
+    {
+      "sha256": "D18AE6228C5913F80E1385663991E9EF949C5E4F2A5574A337B91C3AD00939E4",
+      "path": "docs/VERIFYING_RELEASES.md"
+    }
+  ],
+  "interpretation": "Regression detectors pass on current evidence and fail on the two controlled pre-fix conditions. This validates report truth labeling and rollback handoff documentation only; it does not clear Windows guest launch, GUI, owner disposition, complete P0/P1 census, or rollback artifact readiness. Wave remains NO-GO."
+}

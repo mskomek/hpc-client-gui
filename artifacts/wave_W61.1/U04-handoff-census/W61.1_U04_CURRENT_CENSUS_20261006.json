@@ -1,0 +1,187 @@
+{
+  "schema_version": 1,
+  "evidence_id": "EV-W61.1-U04-CURRENT-CENSUS-20261006",
+  "wave_id": "W61.1",
+  "unit": "U04",
+  "phase": "manual-current-reconciliation",
+  "candidate_identity": {
+    "artifact": "dist/hpc-client-gui/hpc-client-gui.exe",
+    "artifact_sha256": "b3019dea16783c8ab859fa36d2b0fef2fb70db075633e54eb0f36587295374fd",
+    "size_bytes": 7672106,
+    "source_commit": "0eb4f0d5026f87ba1aaad0dc1ba301590d82ca7d",
+    "head": "22b0c156f8a6875b7d2aa5e5a8934ecc4f8b5597",
+    "branch": "develop",
+    "runtime": "wx"
+  },
+  "repository_identity": {
+    "source_to_head_scope": [
+      "src",
+      "build/windows",
+      "pyproject.toml"
+    ],
+    "source_to_head_diff_paths": [],
+    "rollback_instructions_sha256": "d18ae6228c5913f80e1385663991e9ef949c5e4f2a5574a337b91c3ad00939e4",
+    "worktree_file_identities": [
+      {
+        "path": "docs/VERIFYING_RELEASES.md",
+        "sha256": "d18ae6228c5913f80e1385663991e9ef949c5e4f2a5574a337b91c3ad00939e4",
+        "size_bytes": 4955
+      },
+      {
+        "path": "tests/test_w61_1_release_handoff.py",
+        "sha256": "0a88528d4623dc609ff877097988e55a264905cc5133f6e85ddbcfbd060c1fa8",
+        "size_bytes": 2421
+      },
+      {
+        "path": "artifacts/wave_W61.1/packaged-runtime/U02.1-clean-launch/W61.1_U02.1_COPY_VMFILE_FAILURE_20261006.json",
+        "sha256": "59932f0fd19de215891e1b4f7020e7dd93fc90619d056678952997783ec0670b",
+        "size_bytes": 1786
+      }
+    ]
+  },
+  "current_census": {
+    "method": "Read the current W61.1 requirement status ledger, U02/U03/U04 evidence sections, canonical P0/P1 definitions and current release handoff; classify only findings with evidence and keep unevaluated severity explicit.",
+    "authoritative_census_complete": false,
+    "p0_count": "NOT_CURRENTLY_DEMONSTRATED",
+    "p1_count": "NOT_CURRENTLY_DEMONSTRATED",
+    "confirmed_open_p0_count": 0,
+    "confirmed_open_p1_count": 0,
+    "disposition": "NO-GO",
+    "finding_rows": [
+      {
+        "finding_id": "W61.1-U02.1-WIN11-CANDIDATE-UNAVAILABLE",
+        "classification": "ENVIRONMENT_BLOCKED",
+        "requirements": [
+          "HPC-W11-REL-025"
+        ],
+        "status": "OPEN",
+        "evidence_refs": [
+          {
+            "path": "artifacts/wave_W61.1/packaged-runtime/U02.1-clean-launch/W61.1_U02.1_COPY_VMFILE_FAILURE_20261006.json",
+            "sha256": "59932f0fd19de215891e1b4f7020e7dd93fc90619d056678952997783ec0670b"
+          }
+        ],
+        "basis": "Canonical Windows 11 guest transfer failed before copy with 0x80070005. This is a required-evidence blocker, not a confirmed product severity."
+      },
+      {
+        "finding_id": "W61.1-U02-GUI-EVIDENCE-INCOMPLETE",
+        "classification": "EVIDENCE_PREREQUISITE_BLOCKED",
+        "requirements": [
+          "HPC-W11-REL-026"
+        ],
+        "status": "OPEN",
+        "evidence_refs": [
+          {
+            "path": "artifacts/wave_W61.1/packaged-runtime/W61.1_U02_GUI_RETEST.json",
+            "sha256": "f212288bd072a8f3ff7a140163835891ea938502ab98b339bc1ec626329eadc8",
+            "basis": "Exact frozen artifact; packaged WebView2 creation aborted before GUI journeys; prior report marks GJ rows PARTIAL."
+          }
+        ],
+        "basis": "Integrated GUI actions and semantic readbacks for GJ-01..GJ-10 remain PARTIAL; no defect severity is inferred from absent evidence."
+      },
+      {
+        "finding_id": "W61.1-U03-W02-ASSERTION-DISPOSITION",
+        "classification": "OWNER_DEPENDENCY_BLOCKED",
+        "requirements": [
+          "HPC-W11-REL-029"
+        ],
+        "owner": "W02",
+        "owner_requirement_ids": [
+          "REQ-W02-TRACE-001"
+        ],
+        "status": "OPEN",
+        "evidence_refs": [
+          "tests/test_wx_dispatch_error_gov.py",
+          "docs/wave-reports/v2/opencode/W02_WAVE_REPORT.md"
+        ],
+        "basis": "Prior W61.1 report classifies the stale assertion as test-maintenance with no P0/P1 product impact; only W02 can authoritatively dispose of its owned contract."
+      },
+      {
+        "finding_id": "W61.1-U04-CENSUS-001",
+        "classification": "EVIDENCE_PREREQUISITE_BLOCKED",
+        "requirements": [
+          "HPC-W11-REL-032"
+        ],
+        "status": "OPEN",
+        "evidence_refs": [
+          "artifacts/wave_W61.1/U04-handoff-census/W61.1_U04_CURRENT_CENSUS_20261005.json"
+        ],
+        "basis": "Previous census recorded NOT_CURRENTLY_DEMONSTRATED. This refreshed inventory still cannot claim authoritative zero counts while GUI validation and owner disposition remain unresolved."
+      },
+      {
+        "finding_id": "W61.1-U04-ROLLBACK-READINESS",
+        "classification": "EVIDENCE_PREREQUISITE_BLOCKED",
+        "requirements": [
+          "HPC-W11-REL-032"
+        ],
+        "status": "OPEN",
+        "evidence_refs": [
+          "W57_FREEZE_DECLARATION.md",
+          "docs/VERIFYING_RELEASES.md"
+        ],
+        "basis": "Rollback steps are documented, but the local W16 file is labelled a previous candidate and no previously verified compatible rollback artifact or authorized channel-withdrawal evidence was demonstrated."
+      }
+    ]
+  },
+  "support_matrix": {
+    "path": "docs/wiki/Compatibility-and-Support-Matrix.md",
+    "sha256": "8678ef62a72c70caf967eadae0cfa1f6765a4f52d21b077b7b86e749711a657e",
+    "requirement": "HPC-W11-REL-030",
+    "disposition": "CURRENT_READBACK_ONLY"
+  },
+  "release_notes": {
+    "path": "src/hpc_gui/docs/CHANGELOG.md",
+    "sha256": "a9a4efe92e451124934c81b70ffcd3c8c8132c05d2416fcc79d57d0b5f2f0e51",
+    "requirement": "HPC-W11-REL-031",
+    "disposition": "CURRENT_READBACK_ONLY"
+  },
+  "rollback_readiness": {
+    "disposition": "NOT_READY",
+    "previous_local_file": {
+      "path": "dist/releases/w16-candidate/hpc-client-gui-windows-onedir.exe",
+      "sha256": "544e186f81aa685ee80a3c07185ee0eb03ab1bc73a81151b1323253503c0a1da",
+      "size_bytes": 7425277,
+      "declared_role": "previous W16 candidate, not verified compatible known-good release"
+    },
+    "procedure_path": "docs/VERIFYING_RELEASES.md",
+    "procedure_sha256": "d18ae6228c5913f80e1385663991e9ef949c5e4f2a5574a337b91c3ad00939e4",
+    "procedure_added": "Documented channel withdrawal, immutable artifact integrity checks, configuration migration assessment and restored-artifact validation; no channel operation or rollback was executed."
+  },
+  "requirements": [
+    {
+      "requirement_id": "HPC-W11-REL-030",
+      "disposition": "CURRENT_READBACK_ONLY",
+      "decision": "bounded statements verified"
+    },
+    {
+      "requirement_id": "HPC-W11-REL-031",
+      "disposition": "CURRENT_READBACK_ONLY",
+      "decision": "scope aligned"
+    },
+    {
+      "requirement_id": "HPC-W11-REL-032",
+      "disposition": "NOT_CURRENTLY_DEMONSTRATED",
+      "decision": "NO-GO-held-open"
+    },
+    {
+      "requirement_id": "HPC-W11-REL-026",
+      "disposition": "PARTIAL",
+      "decision": "NO-GO-held-open"
+    }
+  ],
+  "no_product_or_package_changes": true,
+  "remaining_uncertainty": [
+    "Authoritative complete current P0/P1 census remains unproven.",
+    "No previously verified compatible rollback target or live channel withdrawal proof is available.",
+    "U02.1 guest transfer/launch and U02.2 GUI journey gates remain blocked/partial.",
+    "REL-029 waits for W02 disposition.",
+    "Wave-local evidence manifest and fresh final audit remain pending.",
+    "The two governance/evidence regression tests are current and sensitivity-tested, but do not remove the guest, GUI, owner, census, or rollback readiness blockers."
+  ],
+  "audit_focus": [
+    "Verify the report, candidate, support matrix, changelog and rollback procedure identities against the live workspace.",
+    "Confirm no current report turns historical host smoke into Windows 11 guest proof.",
+    "Check that census and rollback readiness remain NO-GO-held-open, not falsely PASS.",
+    "Confirm the current report and rollback tests match the exact checkout content; do not treat documentation fixes as product launch evidence."
+  ]
+}

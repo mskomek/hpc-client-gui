@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "wave_id": "W61.1",
+  "unit_id": "U02.1",
+  "requirement_id": "HPC-W11-REL-025",
+  "finding_id": "W61.1-U02.1-WIN11-CANDIDATE-UNAVAILABLE",
+  "candidate": {
+    "path": "dist/hpc-client-gui/hpc-client-gui.exe",
+    "sha256": "B3019DEA16783C8AB859FA36D2B0FEF2FB70DB075633E54EB0F36587295374FD"
+  },
+  "transfer_attempt": {
+    "method": "Hyper-V Copy-VMFile",
+    "host_bundle_path": ".tmp/w61.1-u021-transfer/frozen-candidate-onedir.zip",
+    "host_bundle_sha256": "D76A68BADB9DB87A45E1F7CA35ED034C14DA548897B4E13001551FDDBE7C97C2",
+    "guest_destination": "D:\\Projeler\\.tmp\\hpc-client-gui\\W61.1\\U02.1\\bundle.zip",
+    "guest_service": "Guest Service Interface",
+    "service_original_enabled": false,
+    "service_restored_enabled": false,
+    "result": "failed_before_transfer",
+    "error": "Access is denied. (0x80070005)",
+    "guest_bundle_present": false
+  },
+  "guest": {
+    "vm": "Windows11",
+    "vm_state": "Running",
+    "vm_status": "Operating normally",
+    "os": "Windows 11 Pro 10.0.26200 build 26200",
+    "identity": "test\\home"
+  },
+  "disposition": {
+    "candidate_launched": false,
+    "clean_launch_result": "BLOCKED_ENV",
+    "reason": "Host-to-guest Copy-VMFile is denied with 0x80070005; the required project .tmp staging path is unavailable to the guest identity. Guest Service Interface was restored to disabled.",
+    "next_unblock_condition": "Provide an approved transfer/shared path and guest write authorization for the project .tmp staging location, then verify the frozen bundle digest in the guest before running bounded probes."
+  },
+  "scope": "No VM settings beyond the temporary Guest Service Interface enable/restore were changed; no guest candidate bytes were written; no credential material was accessed."
+}
