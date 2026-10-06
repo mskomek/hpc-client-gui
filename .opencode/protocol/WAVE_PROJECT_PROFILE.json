@@ -139,6 +139,9 @@
       "waves/",
       "scripts/validate_wave_closeout.py",
       ".opencode/scripts/run-wave-program.py",
+      "scripts/run-wave-program-direct.py",
+      "scripts/direct_executor.py",
+      "scripts/direct_phase_bridge.py",
       ".opencode/protocol/WAVE_PROJECT_PROFILE.json",
       "tests/test_wave_controller_regressions.py"
     ],

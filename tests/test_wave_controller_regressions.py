@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib.util
 import json
 from pathlib import Path
+import pytest
 
 
 ROOT = Path(__file__).parents[1]
@@ -22,6 +23,11 @@ def load_script(name: str, filename: str):
 
 controller = load_script("wave_program_controller", "run-wave-program.py")
 router = load_script("wave_findings_router", "route-wave-findings.py")
+direct_spec = importlib.util.spec_from_file_location("wave_direct_executor", ROOT / "scripts" / "direct_executor.py")
+assert direct_spec and direct_spec.loader
+direct_executor = importlib.util.module_from_spec(direct_spec)
+sys.modules[direct_spec.name] = direct_executor
+direct_spec.loader.exec_module(direct_executor)
 
 
 def test_latest_lifecycle_marker_wins(tmp_path: Path):
@@ -76,6 +82,38 @@ def test_generic_lab_capability_findings_are_not_human_only():
     authority = "interactive authorization required: provider returned 401 unauthorized"
     assert not any(router.HUMAN_RE.search(text) for text in generic)
     assert router.HUMAN_RE.search(authority)
+
+
+def test_direct_execution_receipt_is_bound_to_controller_contract(tmp_path: Path):
+    run_dir = tmp_path / ".tmp" / "run-direct"
+    run_dir.mkdir(parents=True)
+    schema_path = run_dir / "phase-result.schema.json"
+    schema = {
+        "type": "object",
+        "properties": {
+            "status": {"type": "string", "enum": ["READY", "PASS"]},
+            "summary": {"type": "string"},
+            "findings": {"type": "array", "items": {"type": "string"}},
+        },
+        "required": ["status", "summary", "findings"],
+        "additionalProperties": False,
+    }
+    schema_path.write_text(json.dumps(schema), encoding="utf-8")
+    contract = {
+        "version": 1,
+        "run_id": run_dir.name,
+        "wave_id": "W61.4",
+        "phase": "plan",
+        "phase_instance_id": "run-direct:1:W61.4:plan",
+        "result_schema_path": str(schema_path),
+    }
+    contract_path, receipt_path = direct_executor.publish_contract(run_dir, contract)
+    result = {"status": "READY", "summary": "plan ready", "findings": []}
+    assert direct_executor.submit_result(contract_path, result) == receipt_path
+    accepted = direct_executor.wait_for_receipt(run_dir, contract_path)
+    assert accepted["result"] == result
+    with pytest.raises(FileExistsError):
+        direct_executor.submit_result(contract_path, result)
 
 
 def test_no_progress_key_spans_repair_audit_cycle():
