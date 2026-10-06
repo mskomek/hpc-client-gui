@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "evidence_id": "EV-W61.1-U02.1-GUEST-PULL-BLOCKED-20261006",
+  "wave_id": "W61.1",
+  "unit": "U02.1",
+  "captured_at_utc": "2026-10-06T14:38:13Z",
+  "phase": "host-to-guest-transfer-diagnostic",
+  "guest": {
+    "ipv4": "172.24.3.131",
+    "identity": "test\\home",
+    "candidate_launched": false,
+    "os": "Windows 11 Pro 10.0.26200 build 26200",
+    "default_gateway": "172.24.0.1",
+    "cleaned_empty_probe_directory": true,
+    "transfer_destination": "C:\\Users\\home\\.tmp\\w61.1-u021-transfer\\frozen-candidate-onedir.zip",
+    "destination_archive_created": false
+  },
+  "host": {
+    "host_listener_received_guest_request": false,
+    "interface": "vEthernet (Default Switch)",
+    "guest_tcp_test_succeeded": false,
+    "ipv4": "172.24.0.1",
+    "local_firewall_rules": "N/A (GPO-store only)",
+    "policy_changed": false,
+    "default_inbound_action": "BlockInbound",
+    "temporary_listener": "172.24.0.1:8765/TCP",
+    "firewall_enabled": true,
+    "temporary_listener_processes_stopped": true,
+    "http_request": "Invoke-WebRequest failed: Unable to connect to the remote server",
+    "active_firewall_profile": "Public"
+  },
+  "host_bundle": {
+    "size_bytes": 29209990,
+    "sha256": "D76A68BADB9DB87A45E1F7CA35ED034C14DA548897B4E13001551FDDBE7C97C2",
+    "path": ".tmp/w61.1-u021-transfer/frozen-candidate-onedir.zip"
+  },
+  "candidate": {
+    "sha256": "B3019DEA16783C8AB859FA36D2B0FEF2FB70DB075633E54EB0F36587295374FD",
+    "guest_launch_performed": false,
+    "path": "dist/hpc-client-gui/hpc-client-gui.exe"
+  },
+  "result": "BLOCKED_ENV",
+  "interpretation": "Guest pull over the Default Switch is blocked by the host Public firewall inbound policy. Local firewall rules are GPO-only, so no rule or GPO was changed. This does not provide guest launch evidence or clear REL-025.",
+  "next_action": "Obtain an administrator-approved guest transfer method that conforms to host inbound policy and the project .tmp staging contract."
+}
