@@ -1,0 +1,102 @@
+{
+  "schema_version": 1,
+  "evidence_id": "EV-W61.1-U02.1-WIN11-DOCUMENTED-GUI-CLI-REPAIR-20261006",
+  "wave_id": "W61.1",
+  "unit": "U02.1",
+  "captured_at_utc": "2026-10-06T15:44:17Z",
+  "owner_requirement": "HPC-W01-TODO-CLI-SURFACE-001",
+  "historical_owner_wave": "W05",
+  "repair_commit": "33954d71602e7949b5860c192ec7af7946f1d020",
+  "artifact": {
+    "runtime": "wx",
+    "version": "1.5.9",
+    "path": ".tmp/w61.1-repair-final/dist/hpc-client-gui/hpc-client-gui.exe",
+    "sha256": "B8CF2AEFF55443962F2F89AF3B7DA5168DBFD2857CEE228CBA46CB19DC883C3F",
+    "size_bytes": 7672644,
+    "bundle_files": 172,
+    "archive_path": ".tmp/w61.1-repair-final/candidate-wx-gui.zip",
+    "archive_sha256": "C5F33B318B37A207DB4E06AABF3B1C38B9AB0359C58C12A41973F64B0C879416",
+    "archive_size_bytes": 29212098,
+    "build_commit": "33954d71602e7949b5860c192ec7af7946f1d020",
+    "build_toolchain": "Python 3.14.0 / PyInstaller 6.22.2 / wxPython 4.3.1"
+  },
+  "sources": [
+    {
+      "path": "src/hpc_gui/cli/main.py",
+      "sha256": "0DDD1E272C655E431DB0E96B019567A5B90847E48007F9B32A96F97FC2CAD58B"
+    },
+    {
+      "path": "src/hpc_gui/cli/gui.py",
+      "sha256": "419A7FD97B5E77CE6F22B5FFF476E12FC51258BD35B569E108E73AD4193EA84E"
+    },
+    {
+      "path": "src/hpc_gui/runtime.py",
+      "sha256": "20AB15E7458C47915591B568AFB3ED0579A3BA3A1CAAA1BB943C1E1F086628E4"
+    },
+    {
+      "path": "build/windows/hpc-client-gui.spec",
+      "sha256": "68177D27F8CBCCD821125F3753F638BB14594511F68C4E084E85C0E309D0160E"
+    },
+    {
+      "path": "tests/test_cli_entrypoint.py",
+      "sha256": "256A19B0D19337FD8128C56A50B75CF99E9F914B1C411DADC5845A134C3A6D71"
+    },
+    {
+      "path": "src/hpc_gui/docs/CHANGELOG.md",
+      "sha256": "A9A4EFE92E451124934C81B70FFCD3C8C8132C05D2416FCC79D57D0B5F2F0E51",
+      "included_as": "PyInstaller spec docs data; pre-existing unrelated worktree modification preserved"
+    }
+  ],
+  "guest": {
+    "identity": "test\\home",
+    "os": "Windows 11 Pro 10.0.26200",
+    "transfer_method": "PowerShell Direct New-PSSession + Copy-Item -ToSession",
+    "staging": "C:\\Users\\home\\.tmp\\hpc-client-gui\\W61.1\\repair-final-u02.1\\candidate",
+    "archive_sha256_verified": "C5F33B318B37A207DB4E06AABF3B1C38B9AB0359C58C12A41973F64B0C879416",
+    "candidate_sha256_verified": "B8CF2AEFF55443962F2F89AF3B7DA5168DBFD2857CEE228CBA46CB19DC883C3F",
+    "pythonpath_cleared": true,
+    "pythonhome_cleared": true,
+    "isolated_config_root": "status: PASS\r\npython: 3.14.0\r\nplatform: Windows-11-10.0.26200-SP0\r\nfrozen: True\r\nexecutable: C:\\Users\\home\\.tmp\\hpc-client-gui\\W61.1\\repair-final-u02.1\\candidate\\hpc-client-gui.exe\r\nconfig_dir: C:\\Users\\home\\.tmp\\hpc-client-gui\\W61.1\\repair-final-u02.1\\isolated-cli-config\r\nprofiles: 0"
+  },
+  "cli_checks": [
+    {
+      "exit_code": 0,
+      "command": "hpc-client-gui.exe version",
+      "stdout": "version: 1.5.9\r\nname: hpc-client-gui\r\npython: 3.14.0"
+    },
+    {
+      "exit_code": 0,
+      "command": "hpc-client-gui.exe doctor environment",
+      "stdout": "status: PASS\r\npython: 3.14.0\r\nplatform: Windows-11-10.0.26200-SP0\r\nfrozen: True\r\nexecutable: C:\\Users\\home\\.tmp\\hpc-client-gui\\W61.1\\repair-final-u02.1\\candidate\\hpc-client-gui.exe\r\nconfig_dir: C:\\Users\\home\\.tmp\\hpc-client-gui\\W61.1\\repair-final-u02.1\\isolated-cli-config\r\nprofiles: 0"
+    }
+  ],
+  "gui_command": {
+    "command": "hpc-client-gui.exe gui",
+    "visible_main_window": true,
+    "window_title": "HPC Client GUI 1.5.9",
+    "window_handle": "0x160324",
+    "session_id": 1,
+    "close_requested": true,
+    "closed_gracefully": true,
+    "force_terminated": false,
+    "result_log": ".tmp/w61.1-repair-final/gui-command-final-observed.json",
+    "result_log_sha256": "9CBBEFDE6E88FF71472D5AF9BA0DE184B8F2D070193910979B852D850C704190",
+    "task_removed": true,
+    "process_cleaned_up": true
+  },
+  "regression": {
+    "command": ".venv/Scripts/python.exe -m pytest tests/test_cli_entrypoint.py -q -p no:cacheprovider --basetemp .tmp/w61.1-repair-final/pytest-temp",
+    "path": "tests/test_cli_entrypoint.py",
+    "exit_code": 0,
+    "observed": "10 passed",
+    "log_path": ".tmp/w61.1-repair-final/cli-regression.log",
+    "log_sha256": "6D1DBBA960B967CD060B0C285D30D8526DD07B5F5B81057A8F8629151713AACF"
+  },
+  "finding_disposition": "The documented gui entrypoint failure is fixed in source and verified on this follow-up test candidate.",
+  "release_disposition": "PARTIAL / NO-GO: this follow-up candidate SHA is not the operative W57 freeze SHA; GUI journeys, W02-owned REL-029, current P0/P1 census, rollback readiness, manifest, and fresh audit remain open.",
+  "limitations": [
+    "No W61.1 manifest or release acceptance is claimed.",
+    "The historical W05 file and W57 freeze records were not rewritten.",
+    "This probe does not establish integrated GUI journeys or P0/P1/rollback readiness."
+  ]
+}

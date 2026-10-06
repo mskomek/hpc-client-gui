@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "transaction_id": "EV-W61.1-OWNER-ROUTE-W02-TRACE-001-20261006",
+  "kind": "closed_owner_repair_revalidation",
+  "wave_id": "W61.1",
+  "finding_id": "W61.1-U03-W02-ASSERTION-DISPOSITION",
+  "owner_wave": "W02",
+  "owner_requirement": "REQ-W02-TRACE-001",
+  "captured_at_utc": "2026-10-06T15:49:03Z",
+  "disposition": "TEST_ASSERTION_REPAIRED_AND_REVALIDATED",
+  "repair_summary": "Updated the stale local-save source assertion to verify the live encoding-aware _write_local_text path while preserving the distinct remote SFTP save ownership assertions.",
+  "finding_diagnosis": {
+    "prior_assertion": "Path(snapshot.path).write_text",
+    "live_local_writer": "_write_local_text(snapshot.path, payload, snapshot.encoding)",
+    "remote_writer": "files.write_text(path, content)",
+    "product_code_changed": false
+  },
+  "change": {
+    "path": "tests/test_wx_dispatch_error_gov.py",
+    "sha256": "F6235185735FF9711A089974216A7F41CCBB85B798250EFF129DA115C9ADB167",
+    "changed_lines": [
+      "assert local path discriminator exists",
+      "assert local encoding-aware writer call exists",
+      "assert local writer contract exists"
+    ]
+  },
+  "verified_sources": [
+    {
+      "path": "src/hpc_gui/wx_editor_view.py",
+      "sha256": "8DC6B7B1170E9C8F189390528AFB44666C202B6FBD939159DB1E5C795BBFB5C6"
+    },
+    {
+      "path": "src/hpc_gui/wx_shell.py",
+      "sha256": "D3411212AE299EC804230375524209E18E9DD73300B64702BBBF4450CF69D159"
+    }
+  ],
+  "verification": {
+    "command": ".venv/Scripts/python.exe -m pytest tests/test_wx_dispatch_error_gov.py -q -p no:cacheprovider --basetemp .tmp/w02-trace-repair-final-logged",
+    "observed": "37 passed in 4.61s",
+    "exit_code": 0,
+    "log_path": ".tmp/w61.1-repair-final/w02-trace-regression.log",
+    "log_sha256": "021035F8773F3165776BBAD19AF9BF3BB59C984BA48D1D058B114FD7D47983A8",
+    "targeted_command": ".venv/Scripts/python.exe -m pytest tests/test_wx_dispatch_error_gov.py::test_editor_save__local_and_remote_paths_have_distinct_owners -q -p no:cacheprovider",
+    "targeted_observed": "1 passed in 0.37s",
+    "targeted_exit_code": 0
+  },
+  "history": {
+    "closed_owner_wave_spec": "waves/done/W02.md",
+    "closed_owner_wave_sha256": "4990B1673A8C78F972B51CD27E1C7CDB39DED039DFBF384AFEC4EA80DFB21E24",
+    "historical_wave_report": "docs/wave-reports/v2/opencode/W02_WAVE_REPORT.md",
+    "historical_wave_report_sha256": "71947CD1D0F8B226C24D1397857BD68FD62AC59B7240280E8D42886088A7DE5A",
+    "historical_files_modified": false
+  },
+  "follow_up": "Fresh independent audit of the exact W61.1 report/evidence identity remains required."
+}

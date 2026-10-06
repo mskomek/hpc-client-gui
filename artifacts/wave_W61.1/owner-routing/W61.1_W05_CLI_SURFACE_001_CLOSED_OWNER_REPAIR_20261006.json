@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "transaction_id": "EV-W61.1-OWNER-ROUTE-W05-CLI-SURFACE-001-20261006",
+  "kind": "closed_owner_repair_revalidation",
+  "wave_id": "W61.1",
+  "finding_id": "W61.1-U02.1-DOCUMENTED-GUI-CLI-ENTRYPOINT-FAILURE",
+  "owner_wave": "W05",
+  "owner_requirement": "HPC-W01-TODO-CLI-SURFACE-001",
+  "captured_at_utc": "2026-10-06T15:51:53Z",
+  "disposition": "SOURCE_REPAIR_AND_FOLLOWUP_CANDIDATE_RETEST_PASS_RELEASE_FREEZE_RECONCILIATION_PENDING",
+  "repair_summary": "Dispatch the supported gui subcommand lazily through DEFAULT_GUI_RUNTIME, preserving Qt-free CLI startup and using wx for the production packaged runtime.",
+  "change": {
+    "commit": "33954d71602e7949b5860c192ec7af7946f1d020",
+    "source_paths": [
+      {
+        "sha256": "0DDD1E272C655E431DB0E96B019567A5B90847E48007F9B32A96F97FC2CAD58B",
+        "path": "src/hpc_gui/cli/main.py"
+      },
+      {
+        "sha256": "419A7FD97B5E77CE6F22B5FFF476E12FC51258BD35B569E108E73AD4193EA84E",
+        "path": "src/hpc_gui/cli/gui.py"
+      }
+    ],
+    "test_path": "tests/test_cli_entrypoint.py",
+    "test_sha256": "256A19B0D19337FD8128C56A50B75CF99E9F914B1C411DADC5845A134C3A6D71",
+    "product_cli_tests": {
+      "command": ".venv/Scripts/python.exe -m pytest tests/test_cli_entrypoint.py -q -p no:cacheprovider --basetemp .tmp/w61.1-repair-final/pytest-temp",
+      "path": "tests/test_cli_entrypoint.py",
+      "exit_code": 0,
+      "observed": "10 passed",
+      "log_path": ".tmp/w61.1-repair-final/cli-regression.log",
+      "log_sha256": "6D1DBBA960B967CD060B0C285D30D8526DD07B5F5B81057A8F8629151713AACF"
+    }
+  },
+  "artifact": {
+    "sha256": "B8CF2AEFF55443962F2F89AF3B7DA5168DBFD2857CEE228CBA46CB19DC883C3F",
+    "archive_sha256": "C5F33B318B37A207DB4E06AABF3B1C38B9AB0359C58C12A41973F64B0C879416",
+    "candidate_source_commit": "33954d71602e7949b5860c192ec7af7946f1d020",
+    "path": ".tmp/w61.1-repair-final/dist/hpc-client-gui/hpc-client-gui.exe",
+    "is_operative_W57_freeze": false
+  },
+  "guest_verification": {
+    "receipt_path": "artifacts/wave_W61.1/packaged-runtime/U02.1-clean-launch/W61.1_U02.1_CLI_GUI_REPAIR_20261006.json",
+    "receipt_sha256": "5F8935C23B26B3B337026182D6477205960761FC6F1365FE228B59232385AC85",
+    "os": "Windows 11 Pro 10.0.26200",
+    "identity": "test\\home",
+    "gui_open": true,
+    "window_title": "HPC Client GUI 1.5.9",
+    "closed_gracefully": true,
+    "version_exit": 0,
+    "doctor_exit": 0
+  },
+  "history": {
+    "closed_owner_wave_spec": "waves/done/W05.md",
+    "closed_owner_wave_sha256": "F2B893C5CD96E70FDEAF394E813574BE46465BEDD9749D7BA35D4FB82EEF6F8D",
+    "historical_wave_report": "docs/wave-reports/v2/opencode/W05_WAVE_REPORT.md",
+    "historical_wave_report_sha256": "B5A4FDC73E2F32D5839305487EF2B1A852827354E58EBDD1099F32479EDEA21A",
+    "historical_files_modified": false
+  },
+  "remaining": "Repair candidate has not superseded the operative W57 frozen artifact. Release-owned freeze/provenance reconciliation and remaining W61.1 acceptance gates are pending."
+}

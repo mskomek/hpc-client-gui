@@ -1,0 +1,103 @@
+{
+  "schema_version": 1,
+  "evidence_id": "EV-W61.1-U04-CURRENT-CENSUS-20261005",
+  "wave_id": "W61.1",
+  "unit": "U04",
+  "phase": "repair",
+  "phase_instance_id": "20261003-103938-81e3c2a8:22:W61.1:repair",
+  "candidate_identity": {
+    "artifact": "dist/hpc-client-gui/hpc-client-gui.exe",
+    "artifact_sha256": "B3019DEA16783C8AB859FA36D2B0FEF2FB70DB075633E54EB0F36587295374FD",
+    "size_bytes": 7672106,
+    "source_commit": "0eb4f0d5026f87ba1aaad0dc1ba301590d82ca7d",
+    "head": "92128c8726435aa0087f090c4a080720f148781f",
+    "branch": "develop",
+    "runtime": "wx"
+  },
+  "repository_identity": {
+    "source_to_head_scope": ["src", "build", "pyproject.toml"],
+    "source_to_head_diff_paths": [],
+    "source_to_head_diff_exit_code": 0,
+    "command": "git diff --name-only 0eb4f0d5026f87ba1aaad0dc1ba301590d82ca7d HEAD -- src build pyproject.toml",
+    "product_or_package_change_claim": "not observed in the checked candidate scope"
+  },
+  "current_census": {
+    "method": "Read current candidate-bound report, support matrix, changelog, rollback procedure, and live previous-candidate file; historical P0/P1 ledgers are not counted as current census rows.",
+    "p0_count": "NOT_CURRENTLY_DEMONSTRATED",
+    "p1_count": "NOT_CURRENTLY_DEMONSTRATED",
+    "disposition": "NO-GO",
+    "finding_rows": [
+      {
+        "finding_id": "W61.1-U04-CENSUS-001",
+        "severity": "UNRESOLVED_CENSUS",
+        "status": "OPEN_FOR_CURRENT_PROOF",
+        "basis": "No current unified P0/P1 finding ledger with candidate and HEAD binding was found; W57.4 P0/P1=0 is historical evidence only.",
+        "requirements": ["HPC-W11-REL-032"],
+        "evidence_refs": ["docs/wave-reports/v2/opencode/W57.4_WAVE_REPORT.md", "docs/wave-reports/v2/opencode/W61.1_WAVE_REPORT.md"]
+      },
+      {
+        "finding_id": "W61.1-U04-CENSUS-002",
+        "severity": "OWNER_DEPENDENCY",
+        "status": "OPEN",
+        "basis": "REL-029 remains pending authoritative W02 disposition for REQ-W02-TRACE-001; this is not reclassified as a current P0/P1 product defect.",
+        "requirements": ["HPC-W11-REL-029"],
+        "owner_requirement_ids": ["REQ-W02-TRACE-001"],
+        "evidence_refs": ["tests/test_wx_dispatch_error_gov.py", "docs/wave-reports/v2/opencode/W02_WAVE_REPORT.md"]
+      }
+    ]
+  },
+  "support_matrix": {
+    "path": "docs/wiki/Compatibility-and-Support-Matrix.md",
+    "sha256": "d99c4eded8be9268a0adcc570d37a55a300bb04fb86c0f70dc1304b41edc7265",
+    "candidate_binding": "The frozen 1.5.9 section names the current executable SHA and wx runtime; no matrix edit was made by this repair.",
+    "requirement": "HPC-W11-REL-030",
+    "disposition": "CURRENT_READBACK_ONLY"
+  },
+  "release_notes": {
+    "path": "src/hpc_gui/docs/CHANGELOG.md",
+    "sha256": "800c1234a2aa6dde0ac957b296c5a64ad03d6294fe3a55a7f0d7acbcdee09ae7",
+    "version": "1.5.9",
+    "candidate_binding": "The changelog is the canonical release-note source and the current report records no product/build-input/package-byte change.",
+    "requirement": "HPC-W11-REL-031",
+    "disposition": "CURRENT_READBACK_ONLY"
+  },
+  "rollback_readiness": {
+    "disposition": "DOCUMENTED_AND_IDENTITY_VERIFIED_NOT_EXECUTED",
+    "previous_known_good": {
+      "path": "dist/releases/w16-candidate/hpc-client-gui-windows-onedir.exe",
+      "sha256": "544E186F81AA685EE80A3C07185EE0EB03AB1BC73A81151B1323253503C0A1DA",
+      "size_bytes": 7425277,
+      "existence_check": "Get-FileHash and Get-Item succeeded"
+    },
+    "procedure_path": "docs/VERIFYING_RELEASES.md",
+    "procedure_sha256": "f1fb4f10b4695283197b231ad3de4cbbaff921fe63110f51f6a5984d2a48fcf7",
+    "release_process_path": "docs/wiki/Release-Process.md",
+    "release_process_sha256": "76644a53894712bd42babf6f3d50c0ac2cbca5fa9b834a4ac809ba13f38cc250",
+    "proof": "The prior executable is distinct by path, size, and SHA; verification and release-process instructions exist. No destructive rollback or updater withdrawal was executed in this evidence-only repair.",
+    "requirement": "HPC-W11-REL-032"
+  },
+  "checks": [
+    {"command": "Get-FileHash -Algorithm SHA256 dist/hpc-client-gui/hpc-client-gui.exe", "result": "PASS", "observed": "B3019DEA16783C8AB859FA36D2B0FEF2FB70DB075633E54EB0F36587295374FD"},
+    {"command": "git rev-parse HEAD", "result": "PASS", "observed": "92128c8726435aa0087f090c4a080720f148781f"},
+    {"command": "git diff --name-only 0eb4f0d5026f87ba1aaad0dc1ba301590d82ca7d HEAD -- src build pyproject.toml", "result": "PASS", "observed": "empty"},
+    {"command": "Get-FileHash dist/releases/w16-candidate/hpc-client-gui-windows-onedir.exe -Algorithm SHA256", "result": "PASS", "observed": "544E186F81AA685EE80A3C07185EE0EB03AB1BC73A81151B1323253503C0A1DA"}
+  ],
+  "requirements": [
+    {"requirement_id": "HPC-W11-REL-030", "disposition": "CURRENT_READBACK_ONLY", "decision": "NO-GO-held-open"},
+    {"requirement_id": "HPC-W11-REL-031", "disposition": "CURRENT_READBACK_ONLY", "decision": "NO-GO-held-open"},
+    {"requirement_id": "HPC-W11-REL-032", "disposition": "NOT_CURRENTLY_DEMONSTRATED", "decision": "NO-GO-held-open"}
+  ],
+  "no_product_or_package_changes": true,
+  "remaining_uncertainty": [
+    "A current unified P0/P1 census with authoritative zero counts is still not demonstrated.",
+    "Rollback execution/readiness under the live updater channel was not exercised; only distinct previous-artifact identity and documented verification procedure were proven.",
+    "The wave-local manifest and fresh independent audit remain absent.",
+    "REL-029 remains routed to W02 under REQ-W02-TRACE-001."
+  ],
+  "audit_focus": [
+    "Verify every identity in this receipt against the live files and current HEAD.",
+    "Reject historical W57.4 zero-count claims as a substitute for the current P0/P1 census.",
+    "Confirm rollback proof is limited to identity/procedure evidence and does not claim an unexecuted rollback.",
+    "Confirm U04 evidence does not imply GO, manifest validity, GUI PASS, or fresh audit PASS."
+  ]
+}

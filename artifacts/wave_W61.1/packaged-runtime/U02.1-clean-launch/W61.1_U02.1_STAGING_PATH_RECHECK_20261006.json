@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "wave_id": "W61.1",
+  "unit_id": "U02.1",
+  "phase_instance_id": "20261005-204809-bbf508cb:20:W61.1:repair",
+  "captured_at_utc": "2026-10-06T13:54:58.1577041Z",
+  "runner": "C:\\Users\\mskomek\\.hyperv-tools\\Invoke-Windows11.ps1",
+  "runner_result": "PASS: PowerShell Direct read-only staging-path check",
+  "environment_identity": "Windows 11 Pro 10.0.26200 build 26200; guest test; identity test\\home",
+  "filesystem_drives": [
+    {
+      "root": "C:\\",
+      "name": "C"
+    },
+    {
+      "root": "D:\\",
+      "name": "D"
+    }
+  ],
+  "path_checks": [
+    {
+      "path": "D:\\Projeler\\.tmp\\hpc-client-gui",
+      "exists": false,
+      "writable": false
+    },
+    {
+      "path": "D:\\Projeler\\hpc-client-gui",
+      "exists": false,
+      "writable": false
+    },
+    {
+      "approved_project_temp_root": false,
+      "path": "C:\\Users\\home\\AppData\\Local\\Temp",
+      "exists": true,
+      "writable": true
+    },
+    {
+      "path": "C:\\Users\\test\\home\\.tmp",
+      "exists": false,
+      "writable": false
+    }
+  ],
+  "guest_service_interface_enabled": false,
+  "candidate_transfer_attempted": false,
+  "candidate_launch_attempted": false,
+  "vm_configuration_changed": false,
+  "disposition": "BLOCKED_ENV",
+  "failure_signature": "No pre-existing D:\\Projeler repo/temp mount or approved project .tmp path exists in the guest; only OS TEMP is writable, outside the project temp contract, and the guest service interface remains disabled.",
+  "unblock_condition": "Provide an approved shared/transfer path that places the exact frozen bundle under an authorized project .tmp location in the Windows 11 guest without changing VM configuration; verify the bundle digest there before bounded launch probes."
+}

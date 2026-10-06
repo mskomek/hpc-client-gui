@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "wave_id": "W61.1",
+  "unit_id": "U02.1",
+  "phase_instance_id": "20261005-204809-bbf508cb:18:W61.1:run",
+  "captured_at_utc": "2026-10-06T13:49:39.5139582Z",
+  "environment_identity": "Microsoft Windows 11 Pro 10.0.26200 build 26200; guest test; identity test\\home",
+  "vm_state": "Running",
+  "vm_status": "Operating normally",
+  "runner": "C:\\Users\\mskomek\\.hyperv-tools\\Invoke-Windows11.ps1",
+  "runner_result": "PASS: PowerShell Direct command completed",
+  "guest_candidate_path": "D:\\Projeler\\hpc-client-gui\\dist\\hpc-client-gui\\hpc-client-gui.exe",
+  "guest_candidate_accessible": false,
+  "host_frozen_candidate_path": "dist/hpc-client-gui/hpc-client-gui.exe",
+  "host_frozen_candidate_sha256": "B3019DEA16783C8AB859FA36D2B0FEF2FB70DB075633E54EB0F36587295374FD",
+  "expected_frozen_sha256": "B3019DEA16783C8AB859FA36D2B0FEF2FB70DB075633E54EB0F36587295374FD",
+  "guest_service_interface_enabled": false,
+  "disposition": "BLOCKED_ENV",
+  "failure_signature": "Windows 11 guest is healthy and available, but the exact frozen candidate is absent at the checked path and Hyper-V Guest Service Interface is disabled; no clean-launch probe ran.",
+  "unblock_condition": "Make the exact frozen 172-file candidate bundle available inside Windows 11 guest through an approved transfer/shared-path mechanism, verify its SHA-256 before/after, then run only bounded CLI clean-launch probes.",
+  "required_evidence_paths": [
+    "dist/hpc-client-gui/hpc-client-gui.exe"
+  ],
+  "remediation_evidence_paths": [
+    "artifacts/wave_W61.1/packaged-runtime/U02.1-clean-launch/W61.1_U02.1_ENVIRONMENT_BLOCKER_20261006.json"
+  ],
+  "product_or_package_changed": false,
+  "gui_or_launch_claimed": false
+}

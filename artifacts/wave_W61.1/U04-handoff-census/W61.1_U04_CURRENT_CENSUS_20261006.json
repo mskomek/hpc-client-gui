@@ -19,7 +19,10 @@
       "build/windows",
       "pyproject.toml"
     ],
-    "source_to_head_diff_paths": [],
+    "source_to_head_diff_paths": [
+      "src/hpc_gui/cli/gui.py",
+      "src/hpc_gui/cli/main.py"
+    ],
     "rollback_instructions_sha256": "d18ae6228c5913f80e1385663991e9ef949c5e4f2a5574a337b91c3ad00939e4",
     "worktree_file_identities": [
       {
@@ -33,16 +36,49 @@
         "size_bytes": 1786
       },
       {
-        "size_bytes": 3074,
+        "size_bytes": 3808,
         "path": "tests/test_w61_1_release_handoff.py",
-        "sha256": "316A7F3130174E60A3D8F3C29F6F3A72AF1FEF2EA87D76EA74542D0D2617495E"
+        "sha256": "3A086E2BDB6D49020AA9F69A995D1439661BC219A39231651E1FD6EDE8B4FC3E"
       },
       {
         "size_bytes": 5586,
         "path": "artifacts/wave_W61.1/packaged-runtime/U02.1-clean-launch/W61.1_U02.1_GUEST_LAUNCH_20261006.json",
         "sha256": "2E35510AD0254B8A87A30532E460EB3447D67FB450FD6FD1EBF7855719858DD6"
+      },
+      {
+        "path": "artifacts/wave_W61.1/packaged-runtime/U02.1-clean-launch/W61.1_U02.1_CLI_GUI_REPAIR_20261006.json",
+        "sha256": "5F8935C23B26B3B337026182D6477205960761FC6F1365FE228B59232385AC85",
+        "size_bytes": 5026
+      },
+      {
+        "path": "artifacts/wave_W61.1/owner-routing/W61.1_W02_TRACE_001_CLOSED_OWNER_REPAIR_20261006.json",
+        "sha256": "4ED345E1A239A623C5644D7F8BC767C8BB3E179BE6D5A1DEBCA90C22B472D11C",
+        "size_bytes": 2695
+      },
+      {
+        "path": "tests/test_wx_dispatch_error_gov.py",
+        "sha256": "F6235185735FF9711A089974216A7F41CCBB85B798250EFF129DA115C9ADB167",
+        "size_bytes": 21540
+      },
+      {
+        "path": "docs/wiki/Compatibility-and-Support-Matrix.md",
+        "sha256": "8678EF62A72C70CAF967EADAE0CFA1F6765A4F52D21B077B7B86E749711A657E",
+        "size_bytes": 5654
+      },
+      {
+        "path": "src/hpc_gui/docs/CHANGELOG.md",
+        "sha256": "A9A4EFE92E451124934C81B70FFCD3C8C8132C05D2416FCC79D57D0B5F2F0E51",
+        "size_bytes": 23739
+      },
+      {
+        "path": "artifacts/wave_W61.1/owner-routing/W61.1_W05_CLI_SURFACE_001_CLOSED_OWNER_REPAIR_20261006.json",
+        "sha256": "D5519DC8FA2C0FE94213A1F026F397546C442E3FD3C2A66FC36BF44B00B596D5",
+        "size_bytes": 3090
       }
-    ]
+    ],
+    "current_head": "33954d71602e7949b5860c192ec7af7946f1d020",
+    "follow_up_test_source_sha256": "256A19B0D19337FD8128C56A50B75CF99E9F914B1C411DADC5845A134C3A6D71",
+    "owner_repair_test_sha256": "F6235185735FF9711A089974216A7F41CCBB85B798250EFF129DA115C9ADB167"
   },
   "current_census": {
     "method": "Read the current W61.1 requirement status ledger, U02/U03/U04 evidence sections, canonical P0/P1 definitions and current release handoff; classify only findings with evidence and keep unevaluated severity explicit.",
@@ -70,7 +106,7 @@
             "path": "artifacts/wave_W61.1/packaged-runtime/U02.1-clean-launch/W61.1_U02.1_GUEST_LAUNCH_20261006.json"
           }
         ],
-        "basis": "Canonical Windows 11 guest transfer failed before copy with 0x80070005. This is a required-evidence blocker, not a confirmed product severity."
+        "basis": "Resolved: canonical Windows 11 guest transfer and exact bundle/executable SHA readback succeeded through PowerShell Direct; the initial Copy-VMFile failure is historical and does not block the follow-up guest run."
       },
       {
         "finding_id": "W61.1-U02-GUI-EVIDENCE-INCOMPLETE",
@@ -90,7 +126,7 @@
       },
       {
         "finding_id": "W61.1-U03-W02-ASSERTION-DISPOSITION",
-        "classification": "OWNER_DEPENDENCY_BLOCKED",
+        "classification": "CLOSED_OWNER_ASSERTION_REPAIR_RESOLVED",
         "requirements": [
           "HPC-W11-REL-029"
         ],
@@ -98,12 +134,19 @@
         "owner_requirement_ids": [
           "REQ-W02-TRACE-001"
         ],
-        "status": "OPEN",
+        "status": "RESOLVED",
         "evidence_refs": [
-          "tests/test_wx_dispatch_error_gov.py",
-          "docs/wave-reports/v2/opencode/W02_WAVE_REPORT.md"
+          {
+            "sha256": "4ED345E1A239A623C5644D7F8BC767C8BB3E179BE6D5A1DEBCA90C22B472D11C",
+            "path": "artifacts/wave_W61.1/owner-routing/W61.1_W02_TRACE_001_CLOSED_OWNER_REPAIR_20261006.json"
+          },
+          {
+            "sha256": "021035F8773F3165776BBAD19AF9BF3BB59C984BA48D1D058B114FD7D47983A8",
+            "path": ".tmp/w61.1-repair-final/w02-trace-regression.log"
+          }
         ],
-        "basis": "Prior W61.1 report classifies the stale assertion as test-maintenance with no P0/P1 product impact; only W02 can authoritatively dispose of its owned contract."
+        "basis": "Resolved by closed-owner repair receipt: stale local-save assertion now checks the encoding-aware writer, the distinct remote writer ownership remains covered, and the full 37-test owner suite passed.",
+        "owner_repair_kind": "closed_owner_repair_revalidation"
       },
       {
         "finding_id": "W61.1-U04-CENSUS-001",
@@ -141,18 +184,22 @@
           "HPC-W01-TODO-CLI-SURFACE-001"
         ],
         "severity": "NOT_ASSESSED",
-        "status": "OPEN",
+        "status": "FIXED_ON_FOLLOWUP_CANDIDATE_NOT_RELEASE_FROZEN",
         "evidence_refs": [
           {
             "sha256": "2E35510AD0254B8A87A30532E460EB3447D67FB450FD6FD1EBF7855719858DD6",
             "path": "artifacts/wave_W61.1/packaged-runtime/U02.1-clean-launch/W61.1_U02.1_GUEST_LAUNCH_20261006.json"
           },
           {
-            "sha256": "D8C1982AD027A830F96F1A11642B0B0DE7B1E50D40F64E0E5F597D21B6BCD227",
-            "path": "src/hpc_gui/docs/CLI_GUIDE_en.md"
+            "sha256": "5F8935C23B26B3B337026182D6477205960761FC6F1365FE228B59232385AC85",
+            "path": "artifacts/wave_W61.1/packaged-runtime/U02.1-clean-launch/W61.1_U02.1_CLI_GUI_REPAIR_20261006.json"
+          },
+          {
+            "path": "artifacts/wave_W61.1/owner-routing/W61.1_W05_CLI_SURFACE_001_CLOSED_OWNER_REPAIR_20261006.json",
+            "sha256": "D5519DC8FA2C0FE94213A1F026F397546C442E3FD3C2A66FC36BF44B00B596D5"
           }
         ],
-        "basis": "The default frozen wx launch succeeds in the Windows 11 interactive desktop, but the documented `gui` subcommand routes into hpc_gui.app and raises ModuleNotFoundError for PySide6. This is a candidate defect; do not infer P0/P1 severity without owner assessment. W05 owns the historical CLI-SURFACE-001 surface."
+        "basis": "The operative W57 candidate still fails the documented gui command. Source repair and exact Windows 11 retest pass on a follow-up candidate, but it has not superseded the operative release freeze. Keep release finding open; severity is not inferred."
       }
     ]
   },
@@ -200,22 +247,37 @@
       "requirement_id": "HPC-W11-REL-026",
       "disposition": "PARTIAL",
       "decision": "NO-GO-held-open"
+    },
+    {
+      "requirement_id": "HPC-W11-REL-029",
+      "disposition": "OWNER_ASSERTION_REPAIRED",
+      "decision": "37-test W02 governance suite passes; historical W02 records immutable"
     }
   ],
-  "no_product_or_package_changes": true,
+  "no_product_or_package_changes": false,
   "remaining_uncertainty": [
-    "Authoritative complete current P0/P1 census remains unproven.",
+    "Authoritative complete current P0/P1 census remains unproven; do not infer zero.",
     "No previously verified compatible rollback target or live channel withdrawal proof is available.",
-    "REL-029 waits for W02 disposition.",
-    "Wave-local evidence manifest and fresh final audit remain pending.",
-    "The two governance/evidence regression tests are current and sensitivity-tested, but do not remove the guest, GUI, owner, census, or rollback readiness blockers.",
-    "The default frozen wx GUI launch and CLI doctor pass on Windows 11 guest, but the documented gui CLI subcommand raises ModuleNotFoundError for PySide6; owner repair and exact-candidate retest are pending."
+    "The operative W57 candidate remains unchanged; the CLI repair candidate needs release-owned freeze/provenance treatment.",
+    "Integrated GUI journeys remain incomplete and require exact operative-candidate replay.",
+    "Wave-local evidence manifest and fresh final audit remain pending."
   ],
   "audit_focus": [
-    "Verify the report, candidate, support matrix, changelog and rollback procedure identities against the live workspace.",
-    "Confirm no current report turns historical host smoke into Windows 11 guest proof.",
-    "Check that census and rollback readiness remain NO-GO-held-open, not falsely PASS.",
-    "Confirm the current report and rollback tests match the exact checkout content; do not treat documentation fixes as product launch evidence.",
-    "Verify default launch receipt and the documented gui-subcommand package defect; retain REL-025 PARTIAL until repaired."
-  ]
+    "Verify old operative W57 candidate identity separately from the fixed follow-up candidate and its GUI readback.",
+    "Confirm P0/P1 counts remain NOT_CURRENTLY_DEMONSTRATED and rollback remains NOT_READY.",
+    "Verify the W02 owner-repair receipt and its 37-test evidence while confirming W02 historical files are unchanged.",
+    "Confirm W61.1 remains NO-GO and no manifest/final acceptance is inferred."
+  ],
+  "follow_up_candidate_identity": {
+    "artifact": ".tmp/w61.1-repair-final/dist/hpc-client-gui/hpc-client-gui.exe",
+    "artifact_sha256": "B8CF2AEFF55443962F2F89AF3B7DA5168DBFD2857CEE228CBA46CB19DC883C3F",
+    "size_bytes": 7672644,
+    "source_commit": "33954d71602e7949b5860c192ec7af7946f1d020",
+    "head": "33954d71602e7949b5860c192ec7af7946f1d020",
+    "branch": "develop",
+    "runtime": "wx",
+    "release_freeze_status": "NOT_OPERATIVE_W57_FREEZE",
+    "archive_sha256": "C5F33B318B37A207DB4E06AABF3B1C38B9AB0359C58C12A41973F64B0C879416",
+    "changelog_sha256": "A9A4EFE92E451124934C81B70FFCD3C8C8132C05D2416FCC79D57D0B5F2F0E51"
+  }
 }

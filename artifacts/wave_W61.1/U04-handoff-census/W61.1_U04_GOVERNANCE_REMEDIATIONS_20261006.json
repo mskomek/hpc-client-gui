@@ -1,48 +1,129 @@
 {
   "schema_version": 1,
-  "evidence_id": "EV-W61.1-U04-GOVERNANCE-REMEDIATIONS-20261006",
+  "evidence_id": "EV-W61.1-U04-CURRENT-OWNER-REPAIR-GOVERNANCE-20261006",
   "wave_id": "W61.1",
   "unit": "U04",
-  "phase": "focused-regression-and-sensitivity",
-  "repository_head": "2b45d8a5bd6c7152f03eab59dde8f28f995a5d18",
-  "candidate_sha256": "B3019DEA16783C8AB859FA36D2B0FEF2FB70DB075633E54EB0F36587295374FD",
-  "test": {
-    "sha256": "316A7F3130174E60A3D8F3C29F6F3A72AF1FEF2EA87D76EA74542D0D2617495E",
-    "observed": "2 passed in 0.27s",
-    "exit_code": 0,
-    "path": "tests/test_w61_1_release_handoff.py",
-    "command": "$env:PYTHONUTF8='1'; .venv/Scripts/python.exe -m pytest tests/test_w61_1_release_handoff.py -q -p no:cacheprovider --basetemp .tmp/w61.1-handoff-test-final-guest",
-    "log_sha256": "906996A8244B87813CB7AEBFC4585474ADD919438CD4DFB323246CD6ACECEF3A",
-    "log_path": ".tmp/w61.1-evidence/handoff-regression-current.txt"
+  "captured_at_utc": "2026-10-06T15:54:57Z",
+  "evidence_head": "33954d71602e7949b5860c192ec7af7946f1d020",
+  "branch": "develop",
+  "worktree_dirty": true,
+  "official_candidate_sha256": "B3019DEA16783C8AB859FA36D2B0FEF2FB70DB075633E54EB0F36587295374FD",
+  "follow_up_candidate_sha256": "B8CF2AEFF55443962F2F89AF3B7DA5168DBFD2857CEE228CBA46CB19DC883C3F",
+  "wave_report": {
+    "path": "docs/wave-reports/v2/opencode/W61.1_WAVE_REPORT.md",
+    "sha256": "EEB49434E92E7A946872A3CA877FFEF3D5B3601FBAD6F5C568DDC5FD77869DAE"
   },
-  "sensitivity": {
-    "observed": "2 failed as expected on controlled stale report heading and pre-fix rollback guidance",
-    "fixture_inputs": [
-      "pre-fix W61.1 report fixture with stale guest-PASS presentation and no current guest launch receipt",
-      "pre-fix docs/VERIFYING_RELEASES.md recovered from pre-remediation HEAD"
-    ],
-    "exit_code": 1,
-    "command": "$env:PYTHONUTF8='1'; $env:W61_1_HANDOFF_ROOT='.tmp/w61.1-remediation-sensitivity'; .venv/Scripts/python.exe -m pytest tests/test_w61_1_release_handoff.py -q -p no:cacheprovider --basetemp .tmp/w61.1-handoff-sensitivity-final-guest",
-    "log_sha256": "FACAA08F5F3E7402BFE4CC740A43EC3AAC967102B199978F5954A79842D7666E",
-    "log_path": ".tmp/w61.1-evidence/handoff-regression-sensitivity.txt"
+  "census": {
+    "path": "artifacts/wave_W61.1/U04-handoff-census/W61.1_U04_CURRENT_CENSUS_20261006.json",
+    "sha256": "03DA9ADC0C2FDEE9A03E28612D8B90120B675BFEB708E3937056B6CA23A6B505",
+    "p0_count": "NOT_CURRENTLY_DEMONSTRATED",
+    "p1_count": "NOT_CURRENTLY_DEMONSTRATED",
+    "rollback": "NOT_READY"
   },
-  "bound_inputs": [
+  "owner_repairs": [
     {
-      "sha256": "0428F8A6FB9042158954A830EA0CA942856E794D6698B7A9AAE20E242E13E8E8",
-      "path": "docs/wave-reports/v2/opencode/W61.1_WAVE_REPORT.md"
+      "path": "artifacts/wave_W61.1/owner-routing/W61.1_W05_CLI_SURFACE_001_CLOSED_OWNER_REPAIR_20261006.json",
+      "requirement": "HPC-W01-TODO-CLI-SURFACE-001",
+      "owner": "W05",
+      "sha256": "D5519DC8FA2C0FE94213A1F026F397546C442E3FD3C2A66FC36BF44B00B596D5"
     },
     {
-      "sha256": "D18AE6228C5913F80E1385663991E9EF949C5E4F2A5574A337B91C3AD00939E4",
-      "path": "docs/VERIFYING_RELEASES.md"
-    },
-    {
-      "sha256": "2E35510AD0254B8A87A30532E460EB3447D67FB450FD6FD1EBF7855719858DD6",
-      "path": "artifacts/wave_W61.1/packaged-runtime/U02.1-clean-launch/W61.1_U02.1_GUEST_LAUNCH_20261006.json"
-    },
-    {
-      "sha256": "71EA3463441DC1EC222F04582D62BB47C19ECFD5CB00A6A8255533AD6F1E7C1E",
-      "path": "artifacts/wave_W61.1/U04-handoff-census/W61.1_U04_CURRENT_CENSUS_20261006.json"
+      "path": "artifacts/wave_W61.1/owner-routing/W61.1_W02_TRACE_001_CLOSED_OWNER_REPAIR_20261006.json",
+      "requirement": "REQ-W02-TRACE-001",
+      "owner": "W02",
+      "sha256": "4ED345E1A239A623C5644D7F8BC767C8BB3E179BE6D5A1DEBCA90C22B472D11C"
     }
   ],
-  "interpretation": "Current regressions validate the exact Windows 11 guest launch receipt and keep the documented GUI CLI defect open; sensitivity rejects the stale pre-fix guest-evidence/report and rollback inputs. This does not clear the GUI journeys, W02 owner dependency, complete P0/P1 census, or rollback readiness. Wave remains NO-GO."
+  "regressions": [
+    {
+      "command": ".venv/Scripts/python.exe -m pytest tests/test_cli_entrypoint.py -q -p no:cacheprovider --basetemp .tmp/w61.1-repair-final/cli-regression-final",
+      "exit_code": 0,
+      "test_sha256": "256A19B0D19337FD8128C56A50B75CF99E9F914B1C411DADC5845A134C3A6D71",
+      "test": "tests/test_cli_entrypoint.py",
+      "observed": "10 passed, 0 failed",
+      "log": ".tmp/w61.1-repair-final/cli-regression-final.log",
+      "log_sha256": "364556F769C5BF8D3B871FF854EF719E77CABC292C947649A9DA73319A8D4A2F"
+    },
+    {
+      "command": ".venv/Scripts/python.exe -m pytest tests/test_wx_dispatch_error_gov.py -q -p no:cacheprovider --basetemp .tmp/w61.1-repair-final/w02-trace-final",
+      "exit_code": 0,
+      "test_sha256": "F6235185735FF9711A089974216A7F41CCBB85B798250EFF129DA115C9ADB167",
+      "test": "tests/test_wx_dispatch_error_gov.py",
+      "observed": "37 passed, 0 failed",
+      "log": ".tmp/w61.1-repair-final/w02-trace-regression.log",
+      "log_sha256": "2D09DC52DB50D9AAFB7C5FFAB288ED4A9929BFBC19485804D1149EC19D599374"
+    },
+    {
+      "command": ".venv/Scripts/python.exe -m pytest tests/test_w61_1_release_handoff.py -q -p no:cacheprovider --basetemp .tmp/w61.1-repair-final/handoff-regression-final",
+      "exit_code": 0,
+      "test_sha256": "3A086E2BDB6D49020AA9F69A995D1439661BC219A39231651E1FD6EDE8B4FC3E",
+      "test": "tests/test_w61_1_release_handoff.py",
+      "observed": "2 passed, 0 failed",
+      "log": ".tmp/w61.1-repair-final/handoff-regression.log",
+      "log_sha256": "2CAE6438AFB5A2B238F9BAA91EC19955B0B824036A3449AF9E0E31461AF32012"
+    }
+  ],
+  "bound_inputs": [
+    {
+      "sha256": "5F8935C23B26B3B337026182D6477205960761FC6F1365FE228B59232385AC85",
+      "path": "artifacts/wave_W61.1/packaged-runtime/U02.1-clean-launch/W61.1_U02.1_CLI_GUI_REPAIR_20261006.json"
+    },
+    {
+      "sha256": "4ED345E1A239A623C5644D7F8BC767C8BB3E179BE6D5A1DEBCA90C22B472D11C",
+      "path": "artifacts/wave_W61.1/owner-routing/W61.1_W02_TRACE_001_CLOSED_OWNER_REPAIR_20261006.json"
+    },
+    {
+      "sha256": "D5519DC8FA2C0FE94213A1F026F397546C442E3FD3C2A66FC36BF44B00B596D5",
+      "path": "artifacts/wave_W61.1/owner-routing/W61.1_W05_CLI_SURFACE_001_CLOSED_OWNER_REPAIR_20261006.json"
+    },
+    {
+      "sha256": "256A19B0D19337FD8128C56A50B75CF99E9F914B1C411DADC5845A134C3A6D71",
+      "path": "tests/test_cli_entrypoint.py"
+    },
+    {
+      "sha256": "F6235185735FF9711A089974216A7F41CCBB85B798250EFF129DA115C9ADB167",
+      "path": "tests/test_wx_dispatch_error_gov.py"
+    },
+    {
+      "sha256": "3A086E2BDB6D49020AA9F69A995D1439661BC219A39231651E1FD6EDE8B4FC3E",
+      "path": "tests/test_w61_1_release_handoff.py"
+    },
+    {
+      "sha256": "03DA9ADC0C2FDEE9A03E28612D8B90120B675BFEB708E3937056B6CA23A6B505",
+      "path": "artifacts/wave_W61.1/U04-handoff-census/W61.1_U04_CURRENT_CENSUS_20261006.json"
+    },
+    {
+      "sha256": "EEB49434E92E7A946872A3CA877FFEF3D5B3601FBAD6F5C568DDC5FD77869DAE",
+      "path": "docs/wave-reports/v2/opencode/W61.1_WAVE_REPORT.md"
+    }
+  ],
+  "disposition": "NO-GO",
+  "interpretation": "W05 GUI CLI repair passed on a follow-up Windows 11 candidate but has not superseded the operative W57 freeze; the W02 assertion repair is resolved and its 37-test suite passes. Windows 11 transfer blocker is resolved. REL-026 journeys, complete authoritative P0/P1 census, rollback readiness, final manifest and fresh independent audit remain open. Closeout validator is red only because the manifest is absent; overall disposition remains NO-GO.",
+  "final_validator": {
+    "command": ".venv/Scripts/python.exe scripts/validate_wave_closeout.py --wave W61.1",
+    "exit_code": 1,
+    "can_close": false,
+    "failure_reasons": [
+      "missing/invalid evidence manifest: artifacts/wave_W61.1/WAVE_W61.1_EVIDENCE_MANIFEST.json is absent"
+    ],
+    "output_log": ".tmp/w61.1-repair-final/closeout-validator-final.txt",
+    "output_log_sha256": "70661C7BE60AFC2BA1AD239DA551B53F9C6B1285801A6C91D000AB3AE0C93165"
+  },
+  "final_regression": {
+    "command": ".venv/Scripts/python.exe -m pytest tests/test_w61_1_release_handoff.py tests/test_wx_dispatch_error_gov.py -q -p no:cacheprovider --basetemp .tmp/w61.1-repair-final/final-regression-logged",
+    "observed": "39 passed, 0 failed",
+    "exit_code": 0,
+    "tests": [
+      {
+        "path": "tests/test_w61_1_release_handoff.py",
+        "sha256": "3A086E2BDB6D49020AA9F69A995D1439661BC219A39231651E1FD6EDE8B4FC3E"
+      },
+      {
+        "path": "tests/test_wx_dispatch_error_gov.py",
+        "sha256": "F6235185735FF9711A089974216A7F41CCBB85B798250EFF129DA115C9ADB167"
+      }
+    ],
+    "log": ".tmp/w61.1-repair-final/final-regression.log",
+    "log_sha256": "844DCFAD3F1AD437C5224B1CF1282F6922EF3B96E12BD45321677720D8ACEA1A"
+  }
 }

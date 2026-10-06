@@ -345,8 +345,10 @@ def test_editor_save__local_and_remote_paths_have_distinct_owners():
     # Remote save: SFTP backend through the session file service.
     assert "def save_remote(path, content)" in shell_src
     assert "files.write_text(path, content)" in shell_src
-    # Local save: local filesystem through the editor view.
-    assert "Path(snapshot.path).write_text" in editor_src
+    # Local save: local filesystem through its encoding/newline-aware writer.
+    assert "if snapshot.is_local and snapshot.path:" in editor_src
+    assert "_write_local_text(snapshot.path, payload, snapshot.encoding)" in editor_src
+    assert "def _write_local_text(path: str, content: str, encoding: str)" in editor_src
     assert "def save_remote" not in editor_src, (
         "remote save must stay with the session/SFTP owner, not the local view"
     )
