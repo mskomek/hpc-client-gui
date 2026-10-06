@@ -4,37 +4,45 @@
   "wave_id": "W61.1",
   "unit": "U04",
   "phase": "focused-regression-and-sensitivity",
-  "repository_head": "22b0c156f8a6875b7d2aa5e5a8934ecc4f8b5597",
+  "repository_head": "2b45d8a5bd6c7152f03eab59dde8f28f995a5d18",
   "candidate_sha256": "B3019DEA16783C8AB859FA36D2B0FEF2FB70DB075633E54EB0F36587295374FD",
   "test": {
-    "sha256": "0A88528D4623DC609FF877097988E55A264905CC5133F6E85DDBCFBD060C1FA8",
-    "observed": "2 passed in 0.26s",
+    "sha256": "316A7F3130174E60A3D8F3C29F6F3A72AF1FEF2EA87D76EA74542D0D2617495E",
+    "observed": "2 passed in 0.27s",
     "exit_code": 0,
     "path": "tests/test_w61_1_release_handoff.py",
-    "command": ".venv/Scripts/python.exe -m pytest tests/test_w61_1_release_handoff.py -q -p no:cacheprovider --basetemp .tmp/w61.1-handoff-test-postdiagnosis",
-    "log_sha256": "F22CDC0600FA497D5466D18BA0AA8D4AACFD7C60DE88A0604E1E42F04D2F6613",
+    "command": "$env:PYTHONUTF8='1'; .venv/Scripts/python.exe -m pytest tests/test_w61_1_release_handoff.py -q -p no:cacheprovider --basetemp .tmp/w61.1-handoff-test-final-guest",
+    "log_sha256": "906996A8244B87813CB7AEBFC4585474ADD919438CD4DFB323246CD6ACECEF3A",
     "log_path": ".tmp/w61.1-evidence/handoff-regression-current.txt"
   },
   "sensitivity": {
     "observed": "2 failed as expected on controlled stale report heading and pre-fix rollback guidance",
     "fixture_inputs": [
-      "stale guest-PASS heading fixture",
-      "pre-fix docs/VERIFYING_RELEASES.md recovered from HEAD before rollback procedure insertion"
+      "pre-fix W61.1 report fixture with stale guest-PASS presentation and no current guest launch receipt",
+      "pre-fix docs/VERIFYING_RELEASES.md recovered from pre-remediation HEAD"
     ],
     "exit_code": 1,
-    "command": "$env:W61_1_HANDOFF_ROOT='.tmp/w61.1-remediation-sensitivity'; .venv/Scripts/python.exe -m pytest tests/test_w61_1_release_handoff.py -q -p no:cacheprovider --basetemp .tmp/w61.1-handoff-sensitivity",
-    "log_sha256": "29EFEA168C00B799745995D7D6424048FA85F42304BB953567C18C6008BC1BE0",
+    "command": "$env:PYTHONUTF8='1'; $env:W61_1_HANDOFF_ROOT='.tmp/w61.1-remediation-sensitivity'; .venv/Scripts/python.exe -m pytest tests/test_w61_1_release_handoff.py -q -p no:cacheprovider --basetemp .tmp/w61.1-handoff-sensitivity-final-guest",
+    "log_sha256": "FACAA08F5F3E7402BFE4CC740A43EC3AAC967102B199978F5954A79842D7666E",
     "log_path": ".tmp/w61.1-evidence/handoff-regression-sensitivity.txt"
   },
   "bound_inputs": [
     {
-      "sha256": "CCD373B1BD9990485CAE8AB7D6428A6EA9E010108031AD1E63318FD7A6C2FF07",
+      "sha256": "0428F8A6FB9042158954A830EA0CA942856E794D6698B7A9AAE20E242E13E8E8",
       "path": "docs/wave-reports/v2/opencode/W61.1_WAVE_REPORT.md"
     },
     {
       "sha256": "D18AE6228C5913F80E1385663991E9EF949C5E4F2A5574A337B91C3AD00939E4",
       "path": "docs/VERIFYING_RELEASES.md"
+    },
+    {
+      "sha256": "2E35510AD0254B8A87A30532E460EB3447D67FB450FD6FD1EBF7855719858DD6",
+      "path": "artifacts/wave_W61.1/packaged-runtime/U02.1-clean-launch/W61.1_U02.1_GUEST_LAUNCH_20261006.json"
+    },
+    {
+      "sha256": "71EA3463441DC1EC222F04582D62BB47C19ECFD5CB00A6A8255533AD6F1E7C1E",
+      "path": "artifacts/wave_W61.1/U04-handoff-census/W61.1_U04_CURRENT_CENSUS_20261006.json"
     }
   ],
-  "interpretation": "Regression detectors pass on current evidence and fail on the two controlled pre-fix conditions. This validates report truth labeling and rollback handoff documentation only; it does not clear Windows guest launch, GUI, owner disposition, complete P0/P1 census, or rollback artifact readiness. Wave remains NO-GO."
+  "interpretation": "Current regressions validate the exact Windows 11 guest launch receipt and keep the documented GUI CLI defect open; sensitivity rejects the stale pre-fix guest-evidence/report and rollback inputs. This does not clear the GUI journeys, W02 owner dependency, complete P0/P1 census, or rollback readiness. Wave remains NO-GO."
 }

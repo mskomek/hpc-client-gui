@@ -1,0 +1,110 @@
+{
+  "schema_version": 1,
+  "evidence_id": "EV-W61.1-U02.1-WIN11-GUEST-LAUNCH-20261006",
+  "wave_id": "W61.1",
+  "unit": "U02.1",
+  "captured_at_utc": "2026-10-06T15:03:00Z",
+  "phase": "guest-frozen-package-launch",
+  "repository_identity": {
+    "candidate_source_commit": "0eb4f0d5026f87ba1aaad0dc1ba301590d82ca7d",
+    "branch": "develop",
+    "head": "2b45d8a5bd6c7152f03eab59dde8f28f995a5d18"
+  },
+  "artifact": {
+    "runtime": "wx",
+    "bundle_size_bytes": 29209990,
+    "path": "dist/hpc-client-gui/hpc-client-gui.exe",
+    "bundle_sha256": "D76A68BADB9DB87A45E1F7CA35ED034C14DA548897B4E13001551FDDBE7C97C2",
+    "version": "1.5.9",
+    "bundle_path": ".tmp/w61.1-u021-transfer/frozen-candidate-onedir.zip",
+    "sha256": "B3019DEA16783C8AB859FA36D2B0FEF2FB70DB075633E54EB0F36587295374FD",
+    "size_bytes": 7672106
+  },
+  "guest": {
+    "identity": "test\\home",
+    "source_checkout_used": false,
+    "os": "Windows 11 Pro 10.0.26200",
+    "candidate_sha256_verified": "B3019DEA16783C8AB859FA36D2B0FEF2FB70DB075633E54EB0F36587295374FD",
+    "vm_state": "Running / Operating normally",
+    "archive_sha256_verified": "D76A68BADB9DB87A45E1F7CA35ED034C14DA548897B4E13001551FDDBE7C97C2",
+    "guest_service_interface_enabled": false,
+    "candidate_staging": "C:\\Users\\home\\.tmp\\hpc-client-gui\\W61.1\\U02.1\\candidate",
+    "build": "26200",
+    "transfer_method": "PowerShell Direct New-PSSession + Copy-Item -ToSession; no network firewall changes",
+    "pythonpath_cleared": true
+  },
+  "cli_checks": [
+    {
+      "result": "version 1.5.9, Python 3.14.0",
+      "stdout_sha256": "EEB0A8AA395FA9123630D42E8FF780C523D1672134969BC8DECF16BEB8F75BFE",
+      "exit_code": 0,
+      "command": "hpc-client-gui.exe version",
+      "stdout": ".tmp/w61.1-evidence/guest-u02.1/version-corrected.stdout.txt"
+    },
+    {
+      "command": "hpc-client-gui.exe doctor environment",
+      "stdout": ".tmp/w61.1-evidence/guest-u02.1/doctor-environment-corrected.stdout.txt",
+      "exit_code": 0,
+      "result": "PASS; frozen=True; Windows-11-10.0.26200-SP0; profiles=0",
+      "isolated_config_root": "C:\\Users\\home\\.tmp\\hpc-client-gui\\W61.1\\U02.1\\cli-evidence\\isolated-config",
+      "stdout_sha256": "D8E8D56B68FB7FDA66147E7A496146A081DB5EE22EE7CD88C726CE770FE8FD8A"
+    }
+  ],
+  "default_gui_launch": {
+    "pythopath_cleared": true,
+    "command": "hpc-client-gui.exe (no arguments)",
+    "result_json_path": ".tmp/w61.1-evidence/guest-u02.1/interactive-gui-launch.json",
+    "stderr_observed": "wx duplicate image-handler warnings (bitmap and animation types 1, 2, 3); no exception trace",
+    "stderr_path": ".tmp/w61.1-evidence/guest-u02.1/interactive-gui.stderr.txt",
+    "window_handle": "0x70624",
+    "exit": "process started; main window observed; closed gracefully",
+    "process_cleaned_up": true,
+    "stderr_sha256": "6C4A223263A0E881B94B05F1A71D70DAFA4FD66DCE42ACD76D450FF8E145C117",
+    "session_id": 1,
+    "pythonhome_cleared": true,
+    "isolated_config_root": "C:\\Users\\home\\.tmp\\hpc-client-gui\\W61.1\\U02.1\\gui-isolated-config",
+    "window_title": "HPC Client GUI 1.5.9",
+    "result_json_sha256": "F78FC3F63F86C03F9571F0E691BC7CB53033AFD9F3AFCF79F85123B1D06787B7",
+    "stdout_sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+  },
+  "documented_gui_command": {
+    "result": "FAIL",
+    "stderr_path": ".tmp/w61.1-evidence/guest-u02.1/explicit-gui-command.stderr.txt",
+    "command": "hpc-client-gui.exe gui",
+    "owner_requirement": "HPC-W01-TODO-CLI-SURFACE-001",
+    "window_readback_json_path": ".tmp/w61.1-evidence/guest-u02.1/explicit-gui-command.json",
+    "stderr_sha256": "1C2EE241A9A189FAF71E9AFFEA2F4DCFF60268057D5A95025FB3006B89355191",
+    "task_removed": true,
+    "failure": "ModuleNotFoundError: No module named PySide6",
+    "documented_in": "src/hpc_gui/docs/CLI_GUIDE_en.md",
+    "process_cleaned_up": true,
+    "classification": "PRODUCT_DEFECT",
+    "window_title": "Unhandled exception in script",
+    "basis": "The current CLI guide documents gui as a desktop launch command; the frozen wx-only package dispatches that explicit subcommand into hpc_gui.app and fails because PySide6 is absent.",
+    "owner_wave": "W05",
+    "window_readback_json_sha256": "4403DA0FC1074F50ACD793F356926ADCBABB65F3C17871CCAFFDF7C015C989C2",
+    "severity": "NOT_ASSESSED",
+    "documented_source_hashes": [
+      {
+        "path": "src/hpc_gui/cli/main.py",
+        "sha256": "B65FF132C9A359F4FF70AEE21B0FB4A99E438849FD8A4E44B7EAEF74DE93698C"
+      },
+      {
+        "path": "src/hpc_gui/runtime.py",
+        "sha256": "20AB15E7458C47915591B568AFB3ED0579A3BA3A1CAAA1BB943C1E1F086628E4"
+      },
+      {
+        "path": "src/hpc_gui/docs/CLI_GUIDE_en.md",
+        "sha256": "D8C1982AD027A830F96F1A11642B0B0DE7B1E50D40F64E0E5F597D21B6BCD227"
+      }
+    ]
+  },
+  "release_disposition": "NO-GO",
+  "requirement_disposition": "HPC-W11-REL-025 PARTIAL: default frozen wx launch passes, but the documented gui subcommand fails; clean launch requirement remains unaccepted until owner repair and exact-candidate retest.",
+  "remaining": [
+    "HPC-W11-REL-026 integrated Golden Journeys remain PARTIAL and were not run in this launch probe.",
+    "HPC-W11-REL-029 remains W02-owned.",
+    "HPC-W11-REL-032 current authoritative P0/P1 census and rollback readiness remain unproven.",
+    "Default GUI startup evidence is a launch readback only; no GUI journey or plugin/provider discovery claim is made."
+  ]
+}

@@ -9,7 +9,7 @@
     "artifact_sha256": "b3019dea16783c8ab859fa36d2b0fef2fb70db075633e54eb0f36587295374fd",
     "size_bytes": 7672106,
     "source_commit": "0eb4f0d5026f87ba1aaad0dc1ba301590d82ca7d",
-    "head": "22b0c156f8a6875b7d2aa5e5a8934ecc4f8b5597",
+    "head": "2b45d8a5bd6c7152f03eab59dde8f28f995a5d18",
     "branch": "develop",
     "runtime": "wx"
   },
@@ -28,14 +28,19 @@
         "size_bytes": 4955
       },
       {
-        "path": "tests/test_w61_1_release_handoff.py",
-        "sha256": "0a88528d4623dc609ff877097988e55a264905cc5133f6e85ddbcfbd060c1fa8",
-        "size_bytes": 2421
-      },
-      {
         "path": "artifacts/wave_W61.1/packaged-runtime/U02.1-clean-launch/W61.1_U02.1_COPY_VMFILE_FAILURE_20261006.json",
         "sha256": "59932f0fd19de215891e1b4f7020e7dd93fc90619d056678952997783ec0670b",
         "size_bytes": 1786
+      },
+      {
+        "size_bytes": 3074,
+        "path": "tests/test_w61_1_release_handoff.py",
+        "sha256": "316A7F3130174E60A3D8F3C29F6F3A72AF1FEF2EA87D76EA74542D0D2617495E"
+      },
+      {
+        "size_bytes": 5586,
+        "path": "artifacts/wave_W61.1/packaged-runtime/U02.1-clean-launch/W61.1_U02.1_GUEST_LAUNCH_20261006.json",
+        "sha256": "2E35510AD0254B8A87A30532E460EB3447D67FB450FD6FD1EBF7855719858DD6"
       }
     ]
   },
@@ -50,15 +55,19 @@
     "finding_rows": [
       {
         "finding_id": "W61.1-U02.1-WIN11-CANDIDATE-UNAVAILABLE",
-        "classification": "ENVIRONMENT_BLOCKED",
+        "classification": "ENVIRONMENT_UNBLOCKED",
         "requirements": [
           "HPC-W11-REL-025"
         ],
-        "status": "OPEN",
+        "status": "RESOLVED",
         "evidence_refs": [
           {
             "path": "artifacts/wave_W61.1/packaged-runtime/U02.1-clean-launch/W61.1_U02.1_COPY_VMFILE_FAILURE_20261006.json",
             "sha256": "59932f0fd19de215891e1b4f7020e7dd93fc90619d056678952997783ec0670b"
+          },
+          {
+            "sha256": "2E35510AD0254B8A87A30532E460EB3447D67FB450FD6FD1EBF7855719858DD6",
+            "path": "artifacts/wave_W61.1/packaged-runtime/U02.1-clean-launch/W61.1_U02.1_GUEST_LAUNCH_20261006.json"
           }
         ],
         "basis": "Canonical Windows 11 guest transfer failed before copy with 0x80070005. This is a required-evidence blocker, not a confirmed product severity."
@@ -120,6 +129,30 @@
           "docs/VERIFYING_RELEASES.md"
         ],
         "basis": "Rollback steps are documented, but the local W16 file is labelled a previous candidate and no previously verified compatible rollback artifact or authorized channel-withdrawal evidence was demonstrated."
+      },
+      {
+        "finding_id": "W61.1-U02.1-DOCUMENTED-GUI-CLI-ENTRYPOINT-FAILURE",
+        "classification": "PRODUCT_DEFECT",
+        "requirements": [
+          "HPC-W11-REL-025"
+        ],
+        "owner": "W05",
+        "owner_requirement_ids": [
+          "HPC-W01-TODO-CLI-SURFACE-001"
+        ],
+        "severity": "NOT_ASSESSED",
+        "status": "OPEN",
+        "evidence_refs": [
+          {
+            "sha256": "2E35510AD0254B8A87A30532E460EB3447D67FB450FD6FD1EBF7855719858DD6",
+            "path": "artifacts/wave_W61.1/packaged-runtime/U02.1-clean-launch/W61.1_U02.1_GUEST_LAUNCH_20261006.json"
+          },
+          {
+            "sha256": "D8C1982AD027A830F96F1A11642B0B0DE7B1E50D40F64E0E5F597D21B6BCD227",
+            "path": "src/hpc_gui/docs/CLI_GUIDE_en.md"
+          }
+        ],
+        "basis": "The default frozen wx launch succeeds in the Windows 11 interactive desktop, but the documented `gui` subcommand routes into hpc_gui.app and raises ModuleNotFoundError for PySide6. This is a candidate defect; do not infer P0/P1 severity without owner assessment. W05 owns the historical CLI-SURFACE-001 surface."
       }
     ]
   },
@@ -173,15 +206,16 @@
   "remaining_uncertainty": [
     "Authoritative complete current P0/P1 census remains unproven.",
     "No previously verified compatible rollback target or live channel withdrawal proof is available.",
-    "U02.1 guest transfer/launch and U02.2 GUI journey gates remain blocked/partial.",
     "REL-029 waits for W02 disposition.",
     "Wave-local evidence manifest and fresh final audit remain pending.",
-    "The two governance/evidence regression tests are current and sensitivity-tested, but do not remove the guest, GUI, owner, census, or rollback readiness blockers."
+    "The two governance/evidence regression tests are current and sensitivity-tested, but do not remove the guest, GUI, owner, census, or rollback readiness blockers.",
+    "The default frozen wx GUI launch and CLI doctor pass on Windows 11 guest, but the documented gui CLI subcommand raises ModuleNotFoundError for PySide6; owner repair and exact-candidate retest are pending."
   ],
   "audit_focus": [
     "Verify the report, candidate, support matrix, changelog and rollback procedure identities against the live workspace.",
     "Confirm no current report turns historical host smoke into Windows 11 guest proof.",
     "Check that census and rollback readiness remain NO-GO-held-open, not falsely PASS.",
-    "Confirm the current report and rollback tests match the exact checkout content; do not treat documentation fixes as product launch evidence."
+    "Confirm the current report and rollback tests match the exact checkout content; do not treat documentation fixes as product launch evidence.",
+    "Verify default launch receipt and the documented gui-subcommand package defect; retain REL-025 PARTIAL until repaired."
   ]
 }

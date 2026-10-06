@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 from pathlib import Path
 
@@ -17,8 +18,9 @@ def _section(text: str, heading: str, next_heading: str) -> tuple[str, str]:
     return text[start:end], heading
 
 
-def test_w611_rel025_history_cannot_be_misrepresented_as_guest_pass() -> None:
-    report = (_root() / "docs/wave-reports/v2/opencode/W61.1_WAVE_REPORT.md").read_text(
+def test_w611_rel025_uses_guest_launch_and_keeps_documented_cli_failure_open() -> None:
+    root = _root()
+    report = (root / "docs/wave-reports/v2/opencode/W61.1_WAVE_REPORT.md").read_text(
         encoding="utf-8-sig"
     )
     current, _ = _section(
@@ -26,6 +28,12 @@ def test_w611_rel025_history_cannot_be_misrepresented_as_guest_pass() -> None:
         "## U02.1 current clean-launch result",
         "## Current requirement status reconciliation",
     )
+    receipt_path = (
+        root
+        / "artifacts/wave_W61.1/packaged-runtime/U02.1-clean-launch/"
+        "W61.1_U02.1_GUEST_LAUNCH_20261006.json"
+    )
+    receipt = json.loads(receipt_path.read_text(encoding="utf-8-sig"))
     current_historical_heading = "## Historical host-side packaged wx smoke"
     stale_guest_heading = "## section-runtime-smoke-launch (U02.1: REL-025 packaged wx clean launch)"
     assert current_historical_heading in report, "host smoke must be labelled historical"
@@ -36,9 +44,15 @@ def test_w611_rel025_history_cannot_be_misrepresented_as_guest_pass() -> None:
         "## section-runtime-smoke-gj",
     )
 
-    assert "0x80070005" in current
-    assert "No guest archive or candidate was created, extracted, or launched" in current
-    assert "BLOCKED_ENV" in current
+    assert "Copy-Item -ToSession" in current
+    assert "PARTIAL" in current and "NO-GO" in current
+    assert receipt["guest"]["candidate_sha256_verified"] == (
+        "B3019DEA16783C8AB859FA36D2B0FEF2FB70DB075633E54EB0F36587295374FD"
+    )
+    assert receipt["default_gui_launch"]["window_title"] == "HPC Client GUI 1.5.9"
+    assert receipt["default_gui_launch"]["process_cleaned_up"] is True
+    assert receipt["documented_gui_command"]["result"] == "FAIL"
+    assert "No module named PySide6" in receipt["documented_gui_command"]["failure"]
     assert "not current guest REL-025 proof" in historical.splitlines()[0]
     assert "Slice verdict: **PASS on the U02.1 slice**" not in historical
     assert "does not satisfy `HPC-W11-REL-025`" in historical
