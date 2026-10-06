@@ -189,6 +189,11 @@ class WxTerminalWebViewPanel(wx.Panel if _WX_AVAILABLE else object):  # type: ig
         self._diagnostic_text = ""
         self._webview_failure_stage = "not-created"
         self._webview_failure_detail = ""
+        # REL-046 bounded recreate budget: initial creation + at most 2
+        # recreates for transient native aborts (e.g. WebView2 E_ABORT
+        # 0x80004004 on cold start). Never unlimited, never after close.
+        self._webview_create_attempts = 0
+        self._webview_max_attempts = 3
 
         # Generation counter for stale-output rejection across reconnects
         self._generation = 0
@@ -297,7 +302,14 @@ class WxTerminalWebViewPanel(wx.Panel if _WX_AVAILABLE else object):  # type: ig
             self._wx_terminal_is_parity = False
             return
 
-        # WebView path
+        # WebView path: single-shot creation plus bounded recreate on
+        # transient native abort (see _on_readiness_timeout).
+        self._mount_webview(root)
+
+    def _mount_webview(self, root):
+        """Create the native WebView controller, bind the bridge, load the
+        local terminal page and arm the readiness timer. One attempt."""
+        self._webview_create_attempts += 1
         self._is_parity = True
         self._webview_failure_stage = "creating"
         try:
@@ -570,7 +582,88 @@ class WxTerminalWebViewPanel(wx.Panel if _WX_AVAILABLE else object):  # type: ig
             self._status_label.SetLabel(t("login.terminal_readiness_timeout") if t("login.terminal_readiness_timeout") != "[login.terminal_readiness_timeout]" else "Terminal did not become ready in time.")
         except Exception:
             pass
+        # REL-046: a native controller that aborted silently (e.g. WebView2
+        # E_ABORT 0x80004004 on cold start) never fires loaded/ready/error, so
+        # polling alone cannot recover it. Bounded recreate while attempts
+        # remain; the last attempt keeps the diagnostic state above.
         # Do not clear pending — if ready arrives late, flush then
+        try:
+            being_deleted = False
+            is_being_deleted = getattr(self, "IsBeingDeleted", None)
+            if callable(is_being_deleted):
+                being_deleted = bool(is_being_deleted())
+        except Exception:
+            being_deleted = False
+        if (not being_deleted and self._webview is not None
+                and self._webview_create_attempts < self._webview_max_attempts):
+            self._retry_webview_creation()
+
+    def _retry_webview_creation(self) -> None:
+        """Destroy a never-ready native controller and mount a fresh one.
+
+        Bounded by _webview_max_attempts, never runs after close(), never
+        touches a panel under destruction, never duplicates the mount (the
+        old controller is detached and destroyed first). Stale callbacks are
+        impossible: the old native control is gone before the new one exists.
+        """
+        try:
+            if self._closed or self._ready:
+                return
+            is_being_deleted = getattr(self, "IsBeingDeleted", None)
+            if callable(is_being_deleted) and bool(is_being_deleted()):
+                return
+            # Invalidate anything in flight from the aborted controller.
+            self._generation += 1
+            self._page_loaded = False
+            old = self._webview
+            self._webview = None
+            for timer_attr in ("_readiness_timer", "_resize_timer"):
+                try:
+                    timer = getattr(self, timer_attr, None)
+                    if timer is not None:
+                        try:
+                            if timer.IsRunning():
+                                timer.Stop()
+                        except Exception:
+                            pass
+                        try:
+                            timer.Destroy()
+                        except Exception:
+                            pass
+                except Exception:
+                    pass
+                try:
+                    setattr(self, timer_attr, None)
+                except Exception:
+                    pass
+            sizer = None
+            try:
+                sizer = self.GetSizer()
+            except Exception:
+                sizer = None
+            if old is not None:
+                try:
+                    if sizer is not None:
+                        sizer.Detach(old)
+                except Exception:
+                    pass
+                try:
+                    old.Destroy()
+                except Exception:
+                    pass
+            self._webview_failure_detail = (
+                f"recreate attempt {self._webview_create_attempts + 1}"
+                f"/{self._webview_max_attempts} after stage={self._webview_failure_stage}"
+            )
+            if sizer is None:
+                return
+            self._mount_webview(sizer)
+            try:
+                self.Layout()
+            except Exception:
+                pass
+        except Exception:
+            pass
 
     # ---------- Input / Resize ----------
 
