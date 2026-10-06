@@ -3,7 +3,7 @@
   "evidence_id": "EV-W61.1-U04-CURRENT-OWNER-REPAIR-GOVERNANCE-20261006",
   "wave_id": "W61.1",
   "unit": "U04",
-  "captured_at_utc": "2026-10-06T16:15:19Z",
+  "captured_at_utc": "2026-10-06T16:52:11Z",
   "evidence_head": "33954d71602e7949b5860c192ec7af7946f1d020",
   "branch": "develop",
   "worktree_dirty": true,
@@ -11,11 +11,11 @@
   "follow_up_candidate_sha256": "B8CF2AEFF55443962F2F89AF3B7DA5168DBFD2857CEE228CBA46CB19DC883C3F",
   "wave_report": {
     "path": "docs/wave-reports/v2/opencode/W61.1_WAVE_REPORT.md",
-    "sha256": "34316774BF64362B11A80574D85EECB9582FE3FB088B4F1746896962F2F57E20"
+    "sha256": "6B9E0E7E60DCBB07BFE65FE4653A3E3A9319BBB8451E92CECF5DA08700E67A5B"
   },
   "census": {
     "path": "artifacts/wave_W61.1/U04-handoff-census/W61.1_U04_CURRENT_CENSUS_20261006.json",
-    "sha256": "50443CD18644DF90A7E3084F4FCB5AAA1C53C03FD6E331DF511980D2DC21FCFE",
+    "sha256": "DE2658EBF0A0C67FE2B3CCF5986320CCF11E3994FC81BA36762687AB183184F6",
     "p0_count": "NOT_CURRENTLY_DEMONSTRATED",
     "p1_count": "NOT_CURRENTLY_DEMONSTRATED",
     "rollback": "NOT_READY"
@@ -93,16 +93,20 @@
       "path": "artifacts/wave_W61.1/packaged-runtime/U02.2_HYPERV_DIRECT_RUNNER_BLOCKED_ENV_20261006.json"
     },
     {
-      "path": "artifacts/wave_W61.1/U04-handoff-census/W61.1_U04_CURRENT_CENSUS_20261006.json",
-      "sha256": "50443CD18644DF90A7E3084F4FCB5AAA1C53C03FD6E331DF511980D2DC21FCFE"
-    },
-    {
       "path": "artifacts/wave_W61.1/owner-routing/W61.1_W02_TRACE_001_LOG_REVALIDATION_20261006.json",
       "sha256": "11332DE933C1201B258C475142AE0F21F84F7013AEE7EF6BDF25F638CD33BE43"
     },
     {
+      "path": "artifacts/wave_W61.1/U04-handoff-census/W61.1_U04_LOCAL_ROLLBACK_CANDIDATE_REVIEW_20261006.json",
+      "sha256": "283F4A57E40B360CF191B4A64424F034AF74A4739FC7B42BA0C1A28289FA7BC1"
+    },
+    {
       "path": "docs/wave-reports/v2/opencode/W61.1_WAVE_REPORT.md",
-      "sha256": "34316774BF64362B11A80574D85EECB9582FE3FB088B4F1746896962F2F57E20"
+      "sha256": "6B9E0E7E60DCBB07BFE65FE4653A3E3A9319BBB8451E92CECF5DA08700E67A5B"
+    },
+    {
+      "path": "artifacts/wave_W61.1/U04-handoff-census/W61.1_U04_CURRENT_CENSUS_20261006.json",
+      "sha256": "DE2658EBF0A0C67FE2B3CCF5986320CCF11E3994FC81BA36762687AB183184F6"
     }
   ],
   "disposition": "NO-GO",
@@ -118,7 +122,7 @@
     "output_log_sha256": "70661C7BE60AFC2BA1AD239DA551B53F9C6B1285801A6C91D000AB3AE0C93165"
   },
   "final_regression": {
-    "command": ".venv/Scripts/python.exe -m pytest tests/test_w61_1_release_handoff.py tests/test_wx_dispatch_error_gov.py -q -p no:cacheprovider --basetemp .tmp/w61.1-repair-final/final-regression-last",
+    "command": ".venv/Scripts/python.exe -m pytest tests/test_w61_1_release_handoff.py tests/test_wx_dispatch_error_gov.py -q",
     "observed": "39 passed, 0 failed",
     "exit_code": 0,
     "test_sources": [
@@ -131,8 +135,8 @@
         "sha256": "F6235185735FF9711A089974216A7F41CCBB85B798250EFF129DA115C9ADB167"
       }
     ],
-    "log": ".tmp/w61.1-repair-final/final-regression-last.log",
-    "log_sha256": "F710DAFD843375324FD72E75889AD7E0B2528F3BC1A8E943BEDA1F551EF3C4FC"
+    "log": ".tmp/w61.1-repair-final/final-regression-p2.log",
+    "log_sha256": "66CCE75A20999C132D25CDA819ED394277CAAB5534C57FC338175E434AA7E706"
   },
   "environment_recheck": {
     "path": "artifacts/wave_W61.1/packaged-runtime/U02.2_HYPERV_DIRECT_RUNNER_BLOCKED_ENV_20261006.json",
@@ -147,5 +151,22 @@
     "log_sha256": "F0729BC67138F31FA1E74F2F72B66C334C02E1BE88C9E4F6C2D1174C0F38A470",
     "observed": "37 passed, 0 failed",
     "exit_code": 0
+  },
+  "rollback_candidate_review": {
+    "path": "artifacts/wave_W61.1/U04-handoff-census/W61.1_U04_LOCAL_ROLLBACK_CANDIDATE_REVIEW_20261006.json",
+    "sha256": "283F4A57E40B360CF191B4A64424F034AF74A4739FC7B42BA0C1A28289FA7BC1",
+    "disposition": "LOCAL_CANDIDATE_ONLY_NOT_READY"
+  },
+  "known_finding_severity": {
+    "finding_id": "W61.1-U02.1-DOCUMENTED-GUI-CLI-ENTRYPOINT-FAILURE",
+    "severity": "P2",
+    "confirmed_current_counts": {
+      "P0": 0,
+      "P1": 0,
+      "P2": 1,
+      "P3": 0
+    },
+    "authoritative_census_complete": false,
+    "basis": "Safe no-argument GUI workaround is proven on the operative candidate; incomplete integrated GUI journeys leave unknown findings unassessed."
   }
 }

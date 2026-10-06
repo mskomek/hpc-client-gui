@@ -79,6 +79,11 @@
         "path": "artifacts/wave_W61.1/owner-routing/W61.1_W02_TRACE_001_LOG_REVALIDATION_20261006.json",
         "sha256": "11332DE933C1201B258C475142AE0F21F84F7013AEE7EF6BDF25F638CD33BE43",
         "size_bytes": 1456
+      },
+      {
+        "path": "artifacts/wave_W61.1/U04-handoff-census/W61.1_U04_LOCAL_ROLLBACK_CANDIDATE_REVIEW_20261006.json",
+        "sha256": "283F4A57E40B360CF191B4A64424F034AF74A4739FC7B42BA0C1A28289FA7BC1",
+        "size_bytes": 2527
       }
     ],
     "current_head": "33954d71602e7949b5860c192ec7af7946f1d020",
@@ -178,9 +183,10 @@
         "status": "OPEN",
         "evidence_refs": [
           "W57_FREEZE_DECLARATION.md",
-          "docs/VERIFYING_RELEASES.md"
+          "docs/VERIFYING_RELEASES.md",
+          "artifacts/wave_W61.1/U04-handoff-census/W61.1_U04_LOCAL_ROLLBACK_CANDIDATE_REVIEW_20261006.json"
         ],
-        "basis": "Rollback steps are documented, but the local W16 file is labelled a previous candidate and no previously verified compatible rollback artifact or authorized channel-withdrawal evidence was demonstrated."
+        "basis": "Local W16 candidate bytes match its manifest and historical W16 packaged/fresh-user smoke receipts. The current package-content receipt belongs to B301, while configuration rollback compatibility, published release role and channel-withdrawal proof remain absent."
       },
       {
         "finding_id": "W61.1-U02.1-DOCUMENTED-GUI-CLI-ENTRYPOINT-FAILURE",
@@ -192,7 +198,7 @@
         "owner_requirement_ids": [
           "HPC-W01-TODO-CLI-SURFACE-001"
         ],
-        "severity": "NOT_ASSESSED",
+        "severity": "P2",
         "status": "FIXED_ON_FOLLOWUP_CANDIDATE_NOT_RELEASE_FROZEN",
         "evidence_refs": [
           {
@@ -208,7 +214,18 @@
             "sha256": "D5519DC8FA2C0FE94213A1F026F397546C442E3FD3C2A66FC36BF44B00B596D5"
           }
         ],
-        "basis": "The operative W57 candidate still fails the documented gui command. Source repair and exact Windows 11 retest pass on a follow-up candidate, but it has not superseded the operative release freeze. Keep release finding open; severity is not inferred."
+        "basis": "The operative W57 candidate still fails the documented gui command. Source repair and exact Windows 11 retest pass on a follow-up candidate, but it has not superseded the operative release freeze. Keep release finding open; severity is not inferred.",
+        "severity_basis": "The documented explicit `gui` subcommand failed on the operative candidate, but the same frozen candidate's no-argument GUI launch opened and closed successfully in the Windows 11 guest. The documented failure therefore has a safe practical workaround under the source severity definitions. The source fix remains unreconciled to the official freeze.",
+        "severity_evidence_refs": [
+          {
+            "path": "artifacts/wave_W61.1/packaged-runtime/U02.1-clean-launch/W61.1_U02.1_GUEST_LAUNCH_20261006.json",
+            "sha256": "2E35510AD0254B8A87A30532E460EB3447D67FB450FD6FD1EBF7855719858DD6"
+          },
+          {
+            "path": "artifacts/wave_W61.1/packaged-runtime/U02.1-clean-launch/W61.1_U02.1_CLI_GUI_REPAIR_20261006.json",
+            "sha256": "5F8935C23B26B3B337026182D6477205960761FC6F1365FE228B59232385AC85"
+          }
+        ]
       },
       {
         "finding_id": "W61.1-U02.2-HYPERV-DIRECT-CREDENTIAL-INVALID",
@@ -226,7 +243,10 @@
         ],
         "basis": "The canonical runner failed to establish a new PowerShell Direct session with “The credential is invalid.” Host Hyper-V services are running and the VM reports Running/Operating normally. No guest GUI retry was performed; prior exact candidate receipts remain valid for their capture time."
       }
-    ]
+    ],
+    "confirmed_open_p2_count": 1,
+    "confirmed_open_p3_count": 0,
+    "severity_scope_note": "These are counts of currently evidenced findings only. Incomplete GJ-01..GJ-10 GUI validation leaves unknown findings unassessed, so authoritative census_complete remains false."
   },
   "support_matrix": {
     "path": "docs/wiki/Compatibility-and-Support-Matrix.md",
@@ -250,7 +270,10 @@
     },
     "procedure_path": "docs/VERIFYING_RELEASES.md",
     "procedure_sha256": "d18ae6228c5913f80e1385663991e9ef949c5e4f2a5574a337b91c3ad00939e4",
-    "procedure_added": "Documented channel withdrawal, immutable artifact integrity checks, configuration migration assessment and restored-artifact validation; no channel operation or rollback was executed."
+    "procedure_added": "Documented channel withdrawal, immutable artifact integrity checks, configuration migration assessment and restored-artifact validation; no channel operation or rollback was executed.",
+    "candidate_review_path": "artifacts/wave_W61.1/U04-handoff-census/W61.1_U04_LOCAL_ROLLBACK_CANDIDATE_REVIEW_20261006.json",
+    "candidate_review_sha256": "283F4A57E40B360CF191B4A64424F034AF74A4739FC7B42BA0C1A28289FA7BC1",
+    "candidate_assessment": "Exact local manifest and W16 GUI smoke identities verified; this remains a local candidate, not a verified compatible published rollback release."
   },
   "requirements": [
     {

@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "evidence_id": "EV-W61.1-U04-LOCAL-ROLLBACK-CANDIDATE-REVIEW-20261006",
+  "wave_id": "W61.1",
+  "unit": "U04",
+  "captured_at_utc": "2026-10-06T16:52:11Z",
+  "artifact": {
+    "path": "dist/releases/w16-candidate/hpc-client-gui-windows-onedir.exe",
+    "sha256": "544E186F81AA685EE80A3C07185EE0EB03AB1BC73A81151B1323253503C0A1DA",
+    "size_bytes": 7425277,
+    "manifest_path": "dist/releases/w16-candidate/MANIFEST.json",
+    "manifest_sha256": "3A19872C002A2CA75D37814FBDCE28B0173AD43983047DA07F262D27DE919D3A",
+    "manifest_candidate_sha_matches_disk": true,
+    "app_version": "1.5.9",
+    "main_commit": "63b696b3b8c64296d9d17f94c8d0d903f9bab7eb",
+    "python_runtime": "3.12.4",
+    "packager": "PyInstaller 6.19.0"
+  },
+  "prior_candidate_evidence": [
+    {
+      "path": "build/audit/w16-packaged-smoke-windows.json",
+      "sha256": "34C5BFBB5FA64F96EB8F2B4B7453130C9093C8083C7C4222C0065F6B64A23023",
+      "result": "PASS",
+      "candidate_sha256": "544E186F81AA685EE80A3C07185EE0EB03AB1BC73A81151B1323253503C0A1DA",
+      "main_commit": "63b696b3b8c64296d9d17f94c8d0d903f9bab7eb",
+      "reported_checks": "20/20"
+    },
+    {
+      "path": "build/audit/w16-fresh-user-windows.json",
+      "sha256": "FD58B7E6785FC5A402793840E86AD8539C877F54B414839B51B39A6C451EFF08",
+      "result": "PASS",
+      "candidate_sha256": "544E186F81AA685EE80A3C07185EE0EB03AB1BC73A81151B1323253503C0A1DA",
+      "main_commit": "63b696b3b8c64296d9d17f94c8d0d903f9bab7eb",
+      "reported_checks": "10/10"
+    }
+  ],
+  "limits": {
+    "current_package_content_receipt_matches_this_artifact": false,
+    "current_package_content_receipt_candidate_sha256": "B3019DEA16783C8AB859FA36D2B0FEF2FB70DB075633E54EB0F36587295374FD",
+    "config_migration_rollback_replay": "NOT_DEMONSTRATED",
+    "public_or_live_release_channel_role": "NOT_DEMONSTRATED",
+    "authorized_channel_withdrawal_readiness": "NOT_DEMONSTRATED",
+    "sbom": null
+  },
+  "disposition": "LOCAL_PREVIOUS_CANDIDATE_IDENTITY_AND_GUI_SMOKES_VERIFIED; NOT_A_VERIFIED_COMPATIBLE_RELEASE_ROLLBACK_TARGET",
+  "rollback_readiness": "NOT_READY",
+  "basis": "The disk bytes match their local manifest and historical W16 packaged/fresh-user smoke receipts for the same main commit and artifact SHA. The current package-content receipt is for the operative B301 candidate, and no migration rollback, published release role, or channel-withdrawal proof exists. Do not promote this local candidate to known-good rollback status from smoke evidence alone."
+}
