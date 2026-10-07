@@ -272,6 +272,14 @@ def run_packaged_smoke(artifact: Path, platform_name: str, output: Path, timeout
             # clean_shutdown is recomputed on the timeout path too, and stays
             # FAIL there: a killed child never shut down cleanly.
             checks["clean_shutdown"] = "PASS" if returncode == 0 and isolated and runtime.get("result") == "PASS" else "FAIL"
+            raw_failed_critical = [
+                name for name in ("pty_resize", "clean_shutdown")
+                if runtime_checks.get(name) == "FAIL"
+            ]
+            if raw_failed_critical:
+                details["raw_runtime_failed_checks"] = raw_failed_critical
+                for name in raw_failed_critical:
+                    checks[name] = "FAIL"
             result = "FAIL" if timed_out else ("PASS" if all(value == "PASS" for value in checks.values()) else "FAIL")
             if result == "FAIL" and combined:
                 details["output_snippet"] = combined[:2000]
