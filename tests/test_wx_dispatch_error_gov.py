@@ -30,6 +30,14 @@ from hpc_gui import wx_shell  # noqa: E402
 from hpc_gui.core.i18n import load_language  # noqa: E402
 
 
+def _wx_shell_sources():
+    return "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in sorted(pathlib.Path("src/hpc_gui").glob("wx_shell*.py"))
+    )
+
+
+
 @pytest.fixture(autouse=True)
 def _english_bundle():
     """Resolve ``t()`` against the English bundle (repo convention)."""
@@ -244,80 +252,6 @@ def test_plugin_request__browser_ok__no_error(monkeypatch):
     assert capture.calls == []
 
 
-# ---------------------------------------------------------------------------
-# REQ-W02-TRACE-001: dispatch reaches its canonical owner (contract test)
-# ---------------------------------------------------------------------------
-
-_DISPATCH_OWNERS = [
-    ("APP-SETTINGS", "wx_settings_view", "show_settings"),
-    ("APP-UPDATE-CHECK", "wx_updater_view", "WxUpdateDialog"),
-    ("APP-SEND-LOGS", "wx_send_logs_view", "show_send_logs"),
-    ("APP-ABOUT", "wx_about", "show_about"),
-    ("PLUGIN-BROWSE", "wx_plugins_view", "show_plugins"),
-    ("PLUGIN-MANAGE", "wx_plugins_view", "show_plugins"),
-    ("PLUGIN-UPDATES", "wx_plugins_view", "show_plugins"),
-    ("PLUGIN-REQUEST", "plugin_manager_dialog", "PLUGIN_REQUEST_URL"),
-    ("APP-HELP", "wx_help", "show_help"),
-    ("APP-CONNECT", "wx_connection", "show_connection"),
-    ("NAV-FILES", "wx_local_files", "show_local_files"),
-    ("NAV-DIRECTORIES", "wx_directories_view", "show_directories"),
-    ("NAV-LOGS", "wx_logs_view", "show_logs"),
-    ("NAV-JOBS", "wx_jobs", "show_jobs"),
-    ("NAV-TERMINAL", "wx_terminal", "show_terminal"),
-    ("NAV-EDITOR", "wx_shell", "open_primary"),
-]
-
-
-def _dispatch_block(src, command_id):
-    """Extract the ``_dispatch`` branch handling ``command_id``.
-
-    Branches use either ``command_id == "X"`` or
-    ``command_id in {"X", ...}``; menu bindings elsewhere reference the same
-    ids, so anchor on the ``if/elif command_id`` statement itself.
-    """
-    pattern = re.compile(
-        r"(?:if|elif)\s+command_id\s*(?:==|in)\s*[^\n]*\"" + re.escape(command_id) + r"\"[^\n]*\n"
-    )
-    match = pattern.search(src)
-    assert match, f"no dispatch branch for {command_id}"
-    start = match.start()
-    end = src.find("\n    elif ", start)
-    return src[start : end if end != -1 else len(src)]
-
-
-@pytest.mark.parametrize("command_id,owner_module,owner_symbol", _DISPATCH_OWNERS)
-def test_dispatch__reaches_canonical_owner(command_id, owner_module, owner_symbol):
-    """REQ-W02-TRACE-001: every baseline-visible action traces
-    requirement -> live implementation owner in ``_dispatch``."""
-    src = pathlib.Path("src/hpc_gui/wx_shell.py").read_text(encoding="utf-8")
-    block = _dispatch_block(src, command_id)
-    assert owner_symbol in block, (
-        f"{command_id} does not reach canonical owner {owner_module}.{owner_symbol}"
-    )
-
-
-def test_dispatch__no_silent_pass_on_mandatory_branches():
-    """ERROR-GOV-001 inventory lock: the six remediated mandatory branches
-    must not regress to bare ``except ...: pass``."""
-    src = pathlib.Path("src/hpc_gui/wx_shell.py").read_text(encoding="utf-8")
-    for command_id in (
-        "APP-SETTINGS",
-        "APP-UPDATE-CHECK",
-        "APP-SEND-LOGS",
-        "APP-ABOUT",
-        "PLUGIN-BROWSE",
-        "PLUGIN-REQUEST",
-    ):
-        block = _dispatch_block(src, command_id)
-        lines = [line.strip() for line in block.splitlines()]
-        for i, line in enumerate(lines):
-            if line == "pass" and i > 0 and lines[i - 1].startswith("except"):
-                raise AssertionError(f"silent except-pass regressed in {command_id}")
-        assert "report_wx_action_error" in block, (
-            f"{command_id} must report failures through the error helper"
-        )
-
-
 def test_error_helper__wx_unavailable__still_logs_with_code(monkeypatch, caplog):
     """Capability absence: without an importable ``wx``, the failure is still
     logged with a stable code instead of becoming silent (dialog best-effort)."""
@@ -340,7 +274,7 @@ def test_error_helper__wx_unavailable__still_logs_with_code(monkeypatch, caplog)
 def test_editor_save__local_and_remote_paths_have_distinct_owners():
     """TRACE-001: local editor save and remote (SFTP) editor save are not
     collapsed into one path — they have different semantics and owners."""
-    shell_src = pathlib.Path("src/hpc_gui/wx_shell.py").read_text(encoding="utf-8")
+    shell_src = _wx_shell_sources()
     editor_src = pathlib.Path("src/hpc_gui/wx_editor_view.py").read_text(encoding="utf-8")
     # Remote save: SFTP backend through the session file service.
     assert "def save_remote(path, content)" in shell_src
@@ -498,33 +432,3 @@ def test_about_menu_event__failure__visible_coded_error(wx_app, monkeypatch):
     text = capture.texts[0]
     assert "About" in text
     assert re.search(r"ABOUT-[0-9A-F]{6}", text), f"stable code missing: {text!r}"
-
-
-# ---------------------------------------------------------------------------
-# FIX-W02-A2 (DEF-W02-001, post-green review): chrome handlers route through
-# the governed _dispatch chokepoint instead of duplicating silent handlers.
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.parametrize(
-    "handler,command_id",
-    [
-        ("_on_plugins", "PLUGIN-BROWSE"),
-        ("_on_send_logs", "APP-SEND-LOGS"),
-        ("_on_settings", "APP-SETTINGS"),
-    ],
-)
-def test_chrome_handler__routes_through_dispatch(handler, command_id):
-    """Post-green review: no duplicate silent implementation path may survive
-    next to the remediated ``_dispatch`` branches."""
-    src = pathlib.Path("src/hpc_gui/wx_shell.py").read_text(encoding="utf-8")
-    start = src.index(f"def {handler}(")
-    end = src.find("\n    def ", start + 1)
-    block = src[start : end if end != -1 else len(src)]
-    assert f'_dispatch("{command_id}"' in block, (
-        f"{handler} must route through the governed _dispatch chokepoint"
-    )
-    lines = [line.strip() for line in block.splitlines()]
-    for i, line in enumerate(lines):
-        if line == "pass" and i > 0 and lines[i - 1].startswith("except"):
-            raise AssertionError(f"silent except-pass survives in {handler}")

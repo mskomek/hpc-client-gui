@@ -26,9 +26,11 @@ class WxLifecycleController:
         self.cancel_token = Event()
         self.tray_notify = tray_notify
         self._notified_jobs: set[str] = set()
-        self._cleanup: list[Callable[[], None]] = []
+        self._cleanup: list[tuple[Callable[[], None], bool]] = []
         self.splash_message = ""
         self.shutdown_started = False
+        self.cleanup_complete = False
+        self.cleanup_timed_out = False
 
     def set_splash(self, message: str) -> str:
         self.splash_message = str(message)
@@ -49,8 +51,14 @@ class WxLifecycleController:
         self.cancel_token.set()
         self.progress = UpdateProgress(self.progress.percent, self.progress.downloaded, self.progress.total, "cancelled")
 
-    def register_cleanup(self, cleanup: Callable[[], None]) -> None:
-        self._cleanup.append(cleanup)
+    def register_cleanup(self, cleanup: Callable[[], None], *, worker_safe: bool = False) -> None:
+        """Register teardown with its thread-affinity contract.
+
+        UI/native-window cleanup runs on the caller (normally wx's main
+        thread). Only callbacks explicitly marked worker-safe use the bounded
+        daemon-worker path.
+        """
+        self._cleanup.append((cleanup, worker_safe))
 
     def set_tray_notifier(self, notifier: Callable[[str], None] | None) -> None:
         self.tray_notify = notifier
@@ -71,20 +79,33 @@ class WxLifecycleController:
         self.shutdown_started = True
         import threading
 
-        for cleanup in reversed(self._cleanup):
-            worker = threading.Thread(target=self._run_cleanup, args=(cleanup,), daemon=True)
+        complete = True
+        for cleanup, worker_safe in reversed(self._cleanup):
+            if not worker_safe:
+                try:
+                    cleanup()
+                except Exception:
+                    complete = False
+                continue
+            outcome = {}
+            worker = threading.Thread(target=self._run_cleanup, args=(cleanup, outcome), daemon=True)
             worker.start()
             worker.join(timeout=self.CLEANUP_TIMEOUT_S)
-            # Daemon thread left running on timeout: never join again, never
-            # block process termination on it.
+            if worker.is_alive():
+                complete = False
+                self.cleanup_timed_out = True
+            elif outcome.get("failed"):
+                complete = False
         self._cleanup.clear()
+        self.cleanup_complete = complete
 
     @staticmethod
-    def _run_cleanup(cleanup: Callable[[], None]) -> None:
+    def _run_cleanup(cleanup: Callable[[], None], outcome: dict | None = None) -> None:
         try:
             cleanup()
         except Exception:
-            pass
+            if outcome is not None:
+                outcome["failed"] = True
 
 
 __all__ = ["UpdateProgress", "WxLifecycleController"]

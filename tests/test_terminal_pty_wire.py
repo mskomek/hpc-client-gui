@@ -1,3 +1,4 @@
+import logging
 import tempfile
 import time
 import unittest
@@ -8,6 +9,13 @@ import pytest
 from hpc_gui.ssh.client import SSHClientWrapper, SSHConnInfo
 
 from support.mock_ssh_server import MOCK_PASSWORD, MOCK_USERNAME, MockSSHServer
+
+
+def test_readiness_wait_does_not_open_and_abort_a_fake_ssh_transport(tmp_path, caplog):
+    with caplog.at_level(logging.ERROR, logger="paramiko.transport"):
+        with MockSSHServer(tmp_path) as server:
+            assert server._ready.is_set()
+    assert not any("Error reading SSH protocol banner" in record.message for record in caplog.records)
 
 
 @pytest.mark.integration

@@ -8,14 +8,14 @@ wx = pytest.importorskip("wx")
 
 @pytest.mark.audit
 def test_wx_shell_is_optional_and_has_migration_entrypoint():
-    source = Path("src/hpc_gui/wx_shell.py").read_text(encoding="utf-8")
+    source = "".join(path.read_text(encoding="utf-8") for path in Path("src/hpc_gui").glob("wx_shell*.py"))
     assert "import wx" in source and "from PySide6" not in source
     assert "--wx" in Path("src/hpc_gui/__main__.py").read_text(encoding="utf-8")
 
 
 @pytest.mark.audit
 def test_wx_shell_uses_shared_commands_and_responsive_start_size():
-    source = Path("src/hpc_gui/wx_shell.py").read_text(encoding="utf-8")
+    source = "".join(path.read_text(encoding="utf-8") for path in Path("src/hpc_gui").glob("wx_shell*.py"))
     # Spec §3: recommended default 1440×900, min 1280×760 (accept legacy 960×640 for backward compat)
     assert "COMMAND_REGISTRY" in source and ("size=(1440, 900)" in source or "size=(960, 640)" in source)
     assert "TaskBarIcon" in source and "lifecycle.shutdown" in source
@@ -23,7 +23,7 @@ def test_wx_shell_uses_shared_commands_and_responsive_start_size():
 
 @pytest.mark.audit
 def test_wx_shell_dispatches_core_views():
-    source = Path("src/hpc_gui/wx_shell.py").read_text(encoding="utf-8")
+    source = "".join(path.read_text(encoding="utf-8") for path in Path("src/hpc_gui").glob("wx_shell*.py"))
     assert 'command_id == "NAV-FILES"' in source
     assert '"open_editor_new_window": lambda path: open_local(path, True)' in source
     assert "Path(path).read_text" in source and "manager.open_primary" in source
@@ -33,7 +33,7 @@ def test_wx_shell_dispatches_core_views():
     assert 'command_id == "NAV-JOBS"' in source
     assert "show_jobs(" in source and "lifecycle=lifecycle" in source and '"list_jobs": list_jobs' in source
     assert "show_connection(parent, **_conn)" in source
-    assert "lifecycle.register_cleanup(ssh.close)" in source
+    assert "lifecycle.register_cleanup(ssh.close, worker_safe=True)" in source
     assert "def save_remote(path, content)" in source and "files.write_text(path, content)" in source
     assert "send_shell_text" in source
     assert "slurm.squeue" in source and "slurm.scontrol_show_job" in source

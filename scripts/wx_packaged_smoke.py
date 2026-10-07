@@ -3,61 +3,36 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import os
 import platform
-import re
 import shutil
-import subprocess
 import sys
 import tempfile
 import time
 from datetime import datetime, timezone
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
+from wx_packaged_smoke_support import (
+    ROOT,
+    TEMP_ROOT,
+    clean_room_dir as _clean_room_dir,
+    current_commit,
+    format_artifact_identity,
+    outside_repo as _outside_repo,
+    outside_source_tree as _outside_source_tree,
+    plugin_commit as _plugin_commit,
+    run_child as _run_child,
+    sha256 as _sha256,
+    start_loopback_ssh as _start_loopback_ssh,
+)
+from wx_fresh_user_smoke import fresh_user_env, run_fresh_user_smoke
 
-
-def _clean_room_dir(prefix: str) -> Path:
-    """A fresh temporary directory guaranteed to lie outside the repository tree.
-
-    A controller-managed TEMP may point into the repository's ``.tmp`` area; the
-    packaged child then ran inside the source tree and the clean-room evidence
-    (workdir_outside_repo) was false. Fall back to the sibling ``../.tmp`` root.
-    """
-    base = Path(tempfile.gettempdir())
-    if not _outside_repo(base):
-        base = ROOT.parent / ".tmp" / "wx-packaged-clean-room"
-        base.mkdir(parents=True, exist_ok=True)
-    return Path(tempfile.mkdtemp(prefix=prefix, dir=str(base)))
-
-
-def _outside_repo(path: Path) -> bool:
-    """True when `path` is not inside the repository tree.
-
-    The comparison is deliberately lexical.  The repository's own ``.tmp`` root
-    is an NTFS junction to an external physical store, and ``Path.resolve()``
-    follows that junction, so a genuinely in-repo path such as
-    ``.tmp/os/run`` was mis-reported as outside the repository and the
-    clean-room isolation claim in the evidence was wrong
-    (HPC-W04-HARNESS-025).  The contract is about the repository tree, not
-    about where a link happens to point, so normalize case and ``..`` without
-    dereferencing links.
-    """
-    root = Path(os.path.normcase(os.path.abspath(ROOT)))
-    candidate = Path(os.path.normcase(os.path.abspath(path)))
-    return not candidate.is_relative_to(root)
-
-sys.path.insert(0, str(ROOT / "scripts"))
-try:
-    from artifact_identity import format_artifact_identity
-except ImportError:  # pragma: no cover - evidence must never fail on helper import
-    def format_artifact_identity(artifact, sha256, main_sha, plugin_sha, version, os_arch):
-        return (
-            f"Artifact: {artifact}\nSHA256: {sha256}\nMain SHA: {main_sha}\n"
-            f"Plugin SHA: {plugin_sha}\nVersion: {version}\nOS/arch: {os_arch}"
-        )
+# The parent validates the child's PTY request against the disposable server
+# and finalizes shutdown only after observing the child process exit.
+if str(ROOT / "src") not in sys.path:
+    sys.path.insert(0, str(ROOT / "src"))
+from hpc_gui.wx_runtime_observation import finalize_runtime_observation
 
 # Expected checks per gate spec
 REQUIRED_CHECKS = (
@@ -84,74 +59,6 @@ REQUIRED_CHECKS = (
 )
 
 
-def _start_loopback_ssh(output: Path):
-    """Start the existing disposable SSH/SFTP fixture for the packaged app."""
-    import sys as _sys
-
-    support_root = ROOT / "tests"
-    if str(support_root) not in _sys.path:
-        _sys.path.insert(0, str(support_root))
-    from support.mock_ssh_server import MOCK_PASSWORD, MOCK_USERNAME, MockSSHServer
-
-    root = tempfile.TemporaryDirectory(
-        prefix="wx-packaged-ssh-",
-        dir=str(output.parent),
-        ignore_cleanup_errors=True,
-    )
-    server = MockSSHServer(Path(root.name))
-    server.__enter__()
-    return root, server, MOCK_USERNAME, MOCK_PASSWORD
-
-
-def _sha256(path: Path) -> str:
-    h = hashlib.sha256()
-    h.update(path.read_bytes())
-    return h.hexdigest()
-
-
-def current_commit() -> str | None:
-    try:
-        r = subprocess.run(["git", "rev-parse", "HEAD"], cwd=ROOT, capture_output=True, text=True, check=False, timeout=10)
-    except Exception:
-        return None
-    v = r.stdout.strip()
-    return v if r.returncode == 0 and re.fullmatch(r"[0-9a-fA-F]{40}", v) else None
-
-
-def _plugin_commit() -> str:
-    sibling = ROOT.parent / "hpc-client-gui-plugins"
-    if not (sibling / ".git").is_dir():
-        return "unknown"
-    try:
-        r = subprocess.run(["git", "rev-parse", "HEAD"], cwd=sibling, capture_output=True, text=True, check=False, timeout=10)
-    except Exception:
-        return "unknown"
-    v = r.stdout.strip()
-    return v if r.returncode == 0 and re.fullmatch(r"[0-9a-fA-F]{40}", v) else "unknown"
-
-
-def _run_child(cmd: list, *, cwd: str, env: dict, timeout: int):
-    """Run a packaged GUI child; kill it on timeout so no orphan GUI lingers.
-
-    Returns (returncode, stdout, stderr, timed_out). A timed-out child is
-    killed and reaped before returning so solo-run sequencing stays clean.
-    """
-    proc = subprocess.Popen(cmd, cwd=cwd, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-    try:
-        stdout, stderr = proc.communicate(timeout=timeout)
-        return proc.returncode, stdout or "", stderr or "", False
-    except subprocess.TimeoutExpired:
-        try:
-            proc.kill()
-        except Exception:
-            pass
-        try:
-            stdout, stderr = proc.communicate(timeout=10)
-        except Exception:
-            stdout, stderr = "", ""
-        return proc.returncode, stdout or "", stderr or "", True
-
-
 def run_packaged_smoke(artifact: Path, platform_name: str, output: Path, timeout: int = 25) -> dict:
     commit = current_commit() or "unknown"
     artifact_name = artifact.name if artifact else "missing"
@@ -174,7 +81,9 @@ def run_packaged_smoke(artifact: Path, platform_name: str, output: Path, timeout
         env.pop("PYTHONPATH", None)
         runtime_output = output.with_suffix(".runtime.json")
         runtime_output.unlink(missing_ok=True)
-        runtime_webview_path = Path(tempfile.mkdtemp(prefix="wx-webview-", dir=str(output.parent)))
+        runtime_webview_path = _clean_room_dir("wx-webview-")
+        for temp_var in ("TMP", "TEMP", "TMPDIR"):
+            env[temp_var] = str(TEMP_ROOT)
         try:
             loopback_root, loopback_server, loopback_user, loopback_password = _start_loopback_ssh(output)
             if artifact.suffix == ".py":
@@ -198,14 +107,11 @@ def run_packaged_smoke(artifact: Path, platform_name: str, output: Path, timeout
                 f"{browser_args} --disable-gpu --user-data-dir={runtime_webview_path.resolve()}"
             ).strip()
             checks["process_started"] = "PASS"
-            # Clean-room cwd: the packaged child must not run with the source
-            # checkout as its working directory (HPC-W04-HARNESS-025). System
-            # temp is outside the repo by construction.
+            # Keep the disposable cwd under .tmp and outside the source tree.
             workdir = _clean_room_dir("wx-packaged-cwd-")
-            # Controller-managed TEMP may live under the repository's .tmp/
-            # area; the contract is isolation from the source tree, not from
-            # the controller's own temporary bookkeeping.
             details["workdir_outside_repo"] = _outside_repo(workdir)
+            details["workdir_outside_source_tree"] = _outside_source_tree(workdir)
+            details["workdir_under_temp_root"] = workdir.is_relative_to(ROOT / ".tmp")
             returncode, child_stdout, child_stderr, timed_out = _run_child(
                 cmd,
                 cwd=str(workdir),
@@ -238,11 +144,6 @@ def run_packaged_smoke(artifact: Path, platform_name: str, output: Path, timeout
                 for key in ("phase", "input_diagnostic", "last_line", "last_buffer", "last_screen"):
                     if key in runtime:
                         details[f"runtime_{key}"] = runtime[key]
-            for name in REQUIRED_CHECKS:
-                if name in ("process_started", "clean_shutdown", "pty_resize"):
-                    continue
-                if runtime_checks.get(name) == "PASS":
-                    checks[name] = "PASS"
             # The packaged process can prove that it requested a resize, but
             # only the disposable server can prove the resize reached the wire.
             deadline = time.monotonic() + 2.0
@@ -250,15 +151,15 @@ def run_packaged_smoke(artifact: Path, platform_name: str, output: Path, timeout
                 if any(size[0:2] == (123, 45) for size in loopback_server.resize_sizes):
                     break
                 time.sleep(0.02)
-            if any(size[0:2] == (96, 31) for size in loopback_server.pty_sizes) and any(
-                size[0:2] == (123, 45) for size in loopback_server.resize_sizes
-            ):
-                checks["pty_resize"] = "PASS"
-            else:
-                details["pty_resize"] = {
-                    "pty_sizes": loopback_server.pty_sizes,
-                    "resize_sizes": loopback_server.resize_sizes,
-                }.__repr__()
+            observation = runtime.get("observation", {}) if isinstance(runtime, dict) else {}
+            initial_observed = next(
+                (size[0:2] for size in loopback_server.pty_sizes if size[0:2] == (96, 31)),
+                None,
+            )
+            resized_observed = next(
+                (size[0:2] for size in loopback_server.resize_sizes if size[0:2] == (123, 45)),
+                None,
+            )
             if not runtime_output.is_file():
                 details["runtime"] = "artifact wrote no packaged runtime evidence"
             elif runtime.get("error"):
@@ -269,17 +170,39 @@ def run_packaged_smoke(artifact: Path, platform_name: str, output: Path, timeout
                 details["isolation"] = "artifact output referenced repo src path"
             if returncode != 0 and not timed_out:
                 details["exit_code"] = f"artifact exit {returncode}"
-            # clean_shutdown is recomputed on the timeout path too, and stays
-            # FAIL there: a killed child never shut down cleanly.
-            checks["clean_shutdown"] = "PASS" if returncode == 0 and isolated and runtime.get("result") == "PASS" else "FAIL"
+            runtime = finalize_runtime_observation(
+                runtime,
+                pty_initial_requested=observation.get("pty_initial_requested"),
+                pty_initial_observed=initial_observed,
+                pty_resize_requested=observation.get("pty_resize_requested"),
+                pty_resize_observed=resized_observed,
+                transport_closed=observation.get("transport_closed") is True,
+                cleanup_callbacks_drained=observation.get("cleanup_callbacks_drained") is True,
+                frame_destroyed=observation.get("frame_destroyed") is True,
+                event_loop_exited=not timed_out and returncode is not None,
+                exit_code=returncode,
+                timed_out=timed_out,
+                mandatory_checks=REQUIRED_CHECKS,
+            )
             raw_failed_critical = [
                 name for name in ("pty_resize", "clean_shutdown")
-                if runtime_checks.get(name) == "FAIL"
+                if runtime.get("checks", {}).get(name) == "FAIL"
             ]
             if raw_failed_critical:
                 details["raw_runtime_failed_checks"] = raw_failed_critical
-                for name in raw_failed_critical:
-                    checks[name] = "FAIL"
+            runtime_checks = runtime.get("checks", {})
+            checks["process_started"] = "PASS"
+            for name in REQUIRED_CHECKS:
+                if name == "process_started":
+                    continue
+                checks[name] = "PASS" if runtime_checks.get(name) == "PASS" else "FAIL"
+            if runtime_output.is_file():
+                runtime_output.write_text(json.dumps(runtime, indent=2) + "\n", encoding="utf-8")
+            if resized_observed is None or initial_observed is None:
+                details["pty_resize"] = {
+                    "pty_sizes": loopback_server.pty_sizes,
+                    "resize_sizes": loopback_server.resize_sizes,
+                }.__repr__()
             result = "FAIL" if timed_out else ("PASS" if all(value == "PASS" for value in checks.values()) else "FAIL")
             if result == "FAIL" and combined:
                 details["output_snippet"] = combined[:2000]
@@ -339,190 +262,6 @@ def run_packaged_smoke(artifact: Path, platform_name: str, output: Path, timeout
     return evidence
 
 
-# PKG-GJ-01 — Fresh-user packaged startup contract (W15).
-#
-# Procedure: isolated clean config root -> launch GUI artifact outside the
-# repo with a clean-room env -> first-run empty state -> profile creation
-# through visible controls -> loopback success + safe visible failure ->
-# close -> relaunch with persisted non-secret state -> src-leakage assertion.
-# A wheel can never satisfy this: it is not launchable GUI evidence.
-FRESH_RUN1_CHECKS = (
-    "fresh_config_root",
-    "first_run_empty_state",
-    "profile_via_visible_controls",
-    "loopback_success_via_controls",
-    "safe_visible_failure",
-    "persisted_nonsecret_state",
-    "no_src_leakage",
-    "clean_shutdown",
-)
-FRESH_RUN2_CHECKS = (
-    "relaunch_state_present",
-    "relaunch_no_src_leakage",
-    "clean_shutdown",
-)
-FRESH_PROFILE_NAME = "fresh-user-loopback"
-
-#: Developer-only variables that must never leak into the packaged child env.
-_FRESH_DEV_ONLY_VARS = ("PYTHONPATH", "HPC_GUI_DISABLE_WEBENGINE")
-
-
-def fresh_user_env(base: dict, *, fresh_root: Path, run_index: int) -> dict:
-    """Build the clean-room child environment for a PKG-GJ-01 run."""
-    env = {k: v for k, v in base.items()}
-    for name in _FRESH_DEV_ONLY_VARS:
-        env.pop(name, None)
-    env["HPC_GUI_CONFIG_ROOT"] = str(fresh_root)
-    env["HPC_GUI_FRESH_USER"] = "1"
-    env["HPC_GUI_FRESH_RUN"] = str(run_index)
-    return env
-
-
-def _fresh_launch_cmd(artifact: Path) -> list:
-    if artifact.suffix == ".py":
-        return [sys.executable, str(artifact), "--wx-smoke"]
-    if artifact.suffix == ".exe":
-        return [str(artifact), "--wx-smoke"]
-    raise ValueError(
-        f"fresh-user packaged startup requires a GUI-capable artifact (.py/.exe), "
-        f"got {artifact.suffix or 'unknown'}: a wheel is never GUI evidence"
-    )
-
-
-def run_fresh_user_smoke(artifact: Path, platform_name: str, output: Path, timeout: int = 240) -> dict:
-    """Execute PKG-GJ-01 against the exact artifact; bind evidence to its SHA."""
-    commit = current_commit() or "unknown"
-    artifact_name = artifact.name if artifact else "missing"
-    artifact_sha = _sha256(artifact) if artifact and artifact.is_file() else "0" * 64
-    checks = {name: "FAIL" for name in (*FRESH_RUN1_CHECKS, *FRESH_RUN2_CHECKS)}
-    result = "FAIL"
-    details: dict[str, object] = {}
-    runs: dict[str, object] = {}
-    exit_codes: list = []
-    loopback_root = None
-    loopback_server = None
-    fresh_parent = None
-    output.parent.mkdir(parents=True, exist_ok=True)
-
-    try:
-        cmd = _fresh_launch_cmd(artifact)
-    except ValueError as exc:
-        details["error"] = str(exc)
-    else:
-        if not artifact.is_file():
-            details["error"] = f"artifact not found: {artifact}"
-        else:
-            fresh_parent = _clean_room_dir("hpc-fresh-user-")
-            fresh_root = fresh_parent / "config"
-            workdir = fresh_parent / "work"
-            workdir.mkdir(parents=True, exist_ok=True)
-            if (fresh_root / "config.json").exists():
-                details["error"] = "fresh root is not clean: config.json pre-exists"
-            else:
-                details["fresh_root"] = str(fresh_root)
-                details["workdir"] = str(workdir)
-                details["workdir_outside_repo"] = _outside_repo(workdir)
-                try:
-                    loopback_root, loopback_server, loopback_user, loopback_password = _start_loopback_ssh(output)
-                    runtime_webview = Path(tempfile.mkdtemp(prefix="wx-webview-", dir=str(fresh_parent)))
-                    for run_index, expected in ((1, FRESH_RUN1_CHECKS), (2, FRESH_RUN2_CHECKS)):
-                        runtime_output = output.parent / f"{output.stem}.run{run_index}.runtime.json"
-                        runtime_output.unlink(missing_ok=True)
-                        env = fresh_user_env(os.environ, fresh_root=fresh_root, run_index=run_index)
-                        env["HPC_GUI_PACKAGED_SMOKE_OUTPUT"] = str(runtime_output.resolve())
-                        env["HPC_GUI_PACKAGED_SMOKE_SSH_HOST"] = "127.0.0.1"
-                        env["HPC_GUI_PACKAGED_SMOKE_SSH_PORT"] = str(loopback_server.port)
-                        env["HPC_GUI_PACKAGED_SMOKE_SSH_USER"] = loopback_user
-                        env["HPC_GUI_PACKAGED_SMOKE_SSH_PASSWORD"] = loopback_password
-                        env["HPC_GUI_PACKAGED_SMOKE_SSH_KNOWN_HOSTS"] = str(Path(loopback_root.name) / "known_hosts")
-                        env["HPC_GUI_PACKAGED_SMOKE_APP_NAME"] = f"hpc-fresh-user-{run_index}-{os.getpid()}"
-                        env["WEBVIEW2_USER_DATA_FOLDER"] = str(runtime_webview.resolve())
-                        assert "PYTHONPATH" not in env, "clean-room env leaked PYTHONPATH"
-                        returncode, child_stdout, child_stderr, timed_out = _run_child(
-                            cmd, cwd=str(workdir), env=env, timeout=timeout,
-                        )
-                        if timed_out:
-                            details[f"run{run_index}_timeout"] = f"artifact did not exit within {timeout}s"
-                            details[f"run{run_index}_killed"] = True
-                            runs[f"run{run_index}"] = {"error": "timeout"}
-                            break
-                        exit_codes.append(returncode)
-                        combined = (child_stdout or "") + (child_stderr or "")
-                        runtime = json.loads(runtime_output.read_text(encoding="utf-8")) if runtime_output.is_file() else {}
-                        runs[f"run{run_index}"] = {
-                            "exit_code": returncode,
-                            "runtime": runtime,
-                            "output_tail": combined[-2000:],
-                        }
-                        if returncode != 0:
-                            details[f"run{run_index}_exit"] = f"artifact exit {returncode}"
-                            details[f"run{run_index}_output"] = combined[:2000]
-                        runtime_checks = runtime.get("checks", {}) if isinstance(runtime, dict) else {}
-                        for name in expected:
-                            if runtime_checks.get(name) == "PASS":
-                                checks[name] = "PASS"
-                        if not runtime_output.is_file():
-                            details[f"run{run_index}_runtime"] = "artifact exited without fresh-user runtime evidence"
-                        elif runtime.get("error"):
-                            details[f"run{run_index}_runtime"] = str(runtime["error"])
-                        src_path = str(ROOT / "src")
-                        if src_path in combined:
-                            details["isolation"] = "artifact output referenced repo src path"
-                    if not details.get("error"):
-                        isolated = "isolation" not in details
-                        result = "PASS" if all(v == "PASS" for v in checks.values()) and isolated else "FAIL"
-                except Exception as exc:
-                    details["error"] = f"{type(exc).__name__}: {exc}"
-                finally:
-                    shutil.rmtree(runtime_webview, ignore_errors=True) if "runtime_webview" in locals() else None
-                    if loopback_server is not None:
-                        try:
-                            loopback_server.__exit__(None, None, None)
-                        except Exception:
-                            pass
-                    if loopback_root is not None:
-                        try:
-                            loopback_root.cleanup()
-                        except OSError:
-                            pass
-                    details["fresh_parent_kept"] = str(fresh_parent) if fresh_parent else None
-
-    try:
-        from hpc_gui import __version__ as _app_version
-    except Exception:
-        _app_version = "unknown"
-    identity_header = format_artifact_identity(
-        artifact=artifact_name,
-        sha256=artifact_sha,
-        main_sha=commit,
-        plugin_sha=_plugin_commit(),
-        version=_app_version,
-        os_arch=f"{platform.system().lower()}/{platform.machine().lower()}",
-    )
-    evidence = {
-        "schema": "wx-fresh-user-smoke/1",
-        "procedure": "PKG-GJ-01",
-        "identity_header": identity_header,
-        "commit": commit,
-        "platform": platform_name,
-        "artifact": artifact_name,
-        "artifact_sha256": artifact_sha,
-        "result": result,
-        "checks": checks,
-        "details": details,
-        "runs": runs,
-        "exit_codes": exit_codes,
-        "python": platform.python_version(),
-        "platform_detail": platform.platform(),
-        "generated_utc": datetime.now(timezone.utc).isoformat(),
-        "isolated_from_src": "isolation" not in details,
-        "manual_required": ["display", "cluster", "MFA", "X11", "DnD", "transfer-conflict"],
-    }
-    output.parent.mkdir(parents=True, exist_ok=True)
-    output.write_text(json.dumps(evidence, indent=2) + "\n", encoding="utf-8")
-    return evidence
-
-
 def main() -> int:
     parser = argparse.ArgumentParser(description="Real packaged wx smoke (isolated from src)")
     parser.add_argument("--artifact", type=Path, default=None, help="Path to built wx artifact (exe, whl, or py)")
@@ -530,9 +269,11 @@ def main() -> int:
     parser.add_argument("--output", type=Path, default=None, help="Output evidence JSON path")
     parser.add_argument("--fresh-user", action="store_true",
                         help="Run PKG-GJ-01 fresh-user acceptance (isolated config root, first-run, relaunch)")
-    parser.add_argument("--timeout", type=int, default=25,
-                        help="Seconds before the packaged child is killed and reaped (default: 25)")
+    parser.add_argument("--timeout", type=int, default=None,
+                        help="Seconds before the child is killed and reaped "
+                             "(default: 25 packaged, 240 fresh-user)")
     args = parser.parse_args()
+    timeout = args.timeout if args.timeout is not None else (240 if args.fresh_user else 25)
 
     # Default platform inference
     plat = args.platform
@@ -564,9 +305,9 @@ def main() -> int:
     output = args.output or (ROOT / f"build/audit/wx-packaged-smoke-{plat}.json")
 
     if args.fresh_user:
-        evidence = run_fresh_user_smoke(artifact, plat, output, timeout=args.timeout)
+        evidence = run_fresh_user_smoke(artifact, plat, output, timeout=timeout)
     else:
-        evidence = run_packaged_smoke(artifact, plat, output, timeout=args.timeout)
+        evidence = run_packaged_smoke(artifact, plat, output, timeout=timeout)
     # Machine-readable contract: stdout carries exactly the evidence JSON so
     # `json.loads(stdout)` succeeds; the human identity header goes to stderr.
     print(evidence.get("identity_header", ""), file=sys.stderr)
