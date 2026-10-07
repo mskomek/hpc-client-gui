@@ -194,6 +194,12 @@ class WxTerminalWebViewPanel(wx.Panel if _WX_AVAILABLE else object):  # type: ig
         # 0x80004004 on cold start). Never unlimited, never after close.
         self._webview_create_attempts = 0
         self._webview_max_attempts = 3
+        # Retired never-ready controllers awaiting quiescent destroy (REL-046).
+        # A controller that aborted creation asynchronously must never be
+        # destroyed while native teardown may still be in flight (observed
+        # fastfail 0xC0000409); it is detached, replaced, and destroyed only
+        # after its replacement reaches bridge-ready.
+        self._retired_webviews: list = []
 
         # Generation counter for stale-output rejection across reconnects
         self._generation = 0
@@ -563,6 +569,15 @@ class WxTerminalWebViewPanel(wx.Panel if _WX_AVAILABLE else object):  # type: ig
             return
         self._webview_failure_stage = "ready"
         self._ready = True
+        # A replacement made it: retired controllers have been silent since
+        # their own readiness timeout, so they are quiescent and safe to
+        # destroy now (never destroy a possibly in-flight controller).
+        retired, self._retired_webviews = self._retired_webviews, []
+        for dead in retired:
+            try:
+                dead.Destroy()
+            except Exception:
+                pass
         try:
             if self._readiness_timer and self._readiness_timer.IsRunning():
                 self._readiness_timer.Stop()
@@ -599,12 +614,18 @@ class WxTerminalWebViewPanel(wx.Panel if _WX_AVAILABLE else object):  # type: ig
             self._retry_webview_creation()
 
     def _retry_webview_creation(self) -> None:
-        """Destroy a never-ready native controller and mount a fresh one.
+        """Detach a never-ready native controller and mount a fresh one.
 
         Bounded by _webview_max_attempts, never runs after close(), never
         touches a panel under destruction, never duplicates the mount (the
-        old controller is detached and destroyed first). Stale callbacks are
-        impossible: the old native control is gone before the new one exists.
+        old controller is detached from the sizer first). The old controller
+        is NOT destroyed here: destroying a controller whose async native
+        creation may still be in flight caused a native fastfail (0xC0000409).
+        It is retired and destroyed only after the replacement reaches
+        bridge-ready (see _on_bridge_ready); if no replacement ever readies,
+        panel teardown destroys it natively. Stale callbacks are impossible:
+        the old control leaves the layout before the new one exists and the
+        generation is bumped.
         """
         try:
             if self._closed or self._ready:
@@ -647,8 +668,11 @@ class WxTerminalWebViewPanel(wx.Panel if _WX_AVAILABLE else object):  # type: ig
                         sizer.Detach(old)
                 except Exception:
                     pass
+                # Retire without destroying: the native creation may still be
+                # in flight; Destroy happens in _on_bridge_ready or natively
+                # at panel teardown.
                 try:
-                    old.Destroy()
+                    self._retired_webviews.append(old)
                 except Exception:
                     pass
             self._webview_failure_detail = (
@@ -1127,6 +1151,13 @@ class WxTerminalWebViewPanel(wx.Panel if _WX_AVAILABLE else object):  # type: ig
         self._closed = True
         self._webview = None
         self._is_parity = False
+        # Drop retired controllers without touching them: still-attached
+        # children are destroyed natively at panel teardown, and an explicit
+        # Destroy here would repeat the in-flight-teardown race.
+        try:
+            self._retired_webviews = []
+        except Exception:
+            pass
         # Increment generation to cancel any in-flight callbacks
         self._generation += 1
         try:
