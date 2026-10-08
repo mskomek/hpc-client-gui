@@ -1,0 +1,74 @@
+{
+  "schema": "candidate5-comparative-trace-blocker/1",
+  "evidence_id": "CANDIDATE5-COMPARATIVE-TRACE-BLOCKER-20261008",
+  "status": "DIAGNOSTIC_BLOCKED",
+  "candidate": {
+    "source_head": "1292e89b0d383d2cd08cdae759ee57d336dfb070",
+    "archive_sha256": "7ae23f2d6cea49d4c4b422dacdf88cbac8eba7f43aff58a44e0c92a041d7e953",
+    "executable_sha256": "2966a977edc0fe5525c8591df6108e731cd944e2b9d396ee72847792afca654c",
+    "artifact_identity_check": "PASS",
+    "artifact_rebuilt_or_modified": false
+  },
+  "current_guest_preflight": {
+    "vm": "Windows11",
+    "identity": "test\\home",
+    "windows": "Windows 11 Pro build 26200",
+    "interactive_session": 2,
+    "session_state": "Active",
+    "explorer_running_same_session": true,
+    "webview2_runtime": "154.0.4258.62 (verified by Candidate 5 run01 evidence; current registry probe did not resolve version)",
+    "candidate_process_running_at_preflight": false,
+    "canonical_runner": "C:\\Users\\mskomek\\.hyperv-tools\\Invoke-Windows11.ps1",
+    "runner_result": "PowerShell Direct PASS"
+  },
+  "instrumentation_preflight": {
+    "maintained_harness": "scripts/wx_packaged_smoke.py and scripts/wx_fresh_user_smoke.py",
+    "harness_capability": "aggregate acceptance checks plus app-emitted cleanup/runtime observation; no per-object wx handler/caller trace, no WebViewCreated callback-enter/success/error trace",
+    "guest_python": "3.14.0",
+    "guest_python_wx_import": "ModuleNotFoundError: No module named wx (the packaged app embeds wx; this runtime cannot attach Python-level wx instrumentation to it)",
+    "native_debugger_probe": "cdb.exe, windbg.exe, procdump.exe not found; logman.exe available",
+    "trace_schema_valid": false,
+    "trace_limitation": "External Win32 observation can see HWND-level events but cannot provide wx object identities, handler owners/callers, CallAfter/CallLater callback execution, or WebView2 callback HRESULT without in-process hooks or a compatible native instrumentation/debug-symbol path. No such path is present in the maintained harness or this guest setup."
+  },
+  "comparative_runs_this_turn": {
+    "trace_a_packaged_pass": "NOT_RUN: no external observer could produce the required trace schema before launch",
+    "trace_b_fresh": "NOT_RUN: gated on valid packaged diagnostic PASS",
+    "candidate5_bytes_changed": false,
+    "product_source_changed": false,
+    "push": false
+  },
+  "prior_candidate5_guest_run01": {
+    "evidence": "artifacts/candidate5/CANDIDATE5_GUEST_FRESH_USER_RUN01_20261008.json",
+    "same_candidate_hashes": true,
+    "same_guest_class": "Windows11 test\\home, active interactive session 2, Explorer running, Windows 11 build 26200, WebView2 154.0.4258.62",
+    "last_successful_check": "profile_via_visible_controls",
+    "first_failed_check": "loopback_success_via_controls",
+    "webview_created_callback": "No PASS/event recorded in sidecar",
+    "shutdown": "cleanup callbacks drained; transport closed; frame destroy requested; event loop exited; process exited with 0xC0000005",
+    "valid_comparative_trace": false
+  },
+  "native_windows_evidence_from_prior_run01": {
+    "application_error_event_id": 1000,
+    "application_error_time_local": "2026-10-08T13:22:36+03:00",
+    "process": "hpc-client-gui.exe",
+    "process_id_hex": "0x1E44",
+    "faulting_module": "wxbase333u_vc140_x64.dll",
+    "faulting_module_path": "C:\\Users\\home\\.tmp\\hpc-client-gui\\candidate5\\release\\bundle\\_internal\\wx\\wxbase333u_vc140_x64.dll",
+    "exception_code": "0xC0000005",
+    "fault_offset": "0x0000000000008753",
+    "report_id": "897a84b2-b598-458e-be77-7dca5bc58293",
+    "wer_event_id": 1001,
+    "wer_report_archived": true,
+    "thread_id": "not present in retained Application Error/WER event fields; dump analysis not performed"
+  },
+  "analysis": {
+    "loopback_success_via_controls_implementation": "Builds the connection panel, saves a profile through AddConnection/modal Save, selects it in the ListBox, calls the real ConnectSelected button handler, then pumps wx events while waiting up to 60 seconds for a status label containing Connected and excluding Connecting/Disconnected. On timeout it records a visible-flow failure and returns; the outer smoke finalizer calls frame.Close().",
+    "shutdown_trigger_for_prior_run01": "HARNESS_FAILURE_CLEANUP (smoke finalizer closes the frame after the visible-flow check fails; no evidence shows normal journey success)",
+    "first_divergent_event": "UNKNOWN; semantic check boundary is known, event-level prefix is unavailable",
+    "root_cause_owner": "narrowed to native wxWidgets boundary by WER fault module; exact mechanism not established",
+    "why_fresh_only": "UNKNOWN",
+    "why_packaged_passes": "Packaged smoke does not exercise the fresh-user visible profile/connect workflow; therefore its pass does not cover this path.",
+    "confidence": "High for the observed run01 failure ordering, teardown sequence, and wxbase native fault signature; insufficient for causal root-cause acceptance."
+  },
+  "next_resume_point": "Provide a Candidate-5-compatible external native instrumentation path or diagnostic observer that captures wx object/handler/callback lifecycle without modifying the exact Candidate 5 archive or executable. Then perform one traced packaged smoke; only if PASS, perform the single traced fresh-user run."
+}
