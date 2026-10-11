@@ -245,6 +245,18 @@ class ConnectionDialogStorageMixin:
             self.quota_subject_ctrl.SetValue("")
         self._update_quota_status()
         self.scrolled.Layout()
+    def _sync_legacy_storage_control(self, area: dict[str, Any]) -> None:
+        kind = str(area.get("kind") or "")
+        area_id = str(area.get("id") or "")
+        key = next(
+            (name for name in ("home", "scratch") if kind == name),
+            next((name for name in ("home", "scratch") if area_id == name), ""),
+        )
+        if key:
+            getattr(self, f"{key}_dir_ctrl").SetValue(
+                str(area.get("path_template") or "")
+            )
+
     def _add_storage_area(self) -> None:
         # Ensure provider template exists for local edits
         if self._provider_template is None:
@@ -274,6 +286,7 @@ class ConnectionDialogStorageMixin:
             self._wx.MessageBox(validate_storage_area(area) or t("connection.storage_path_invalid"), t("common.error"), self._wx.OK | self._wx.ICON_WARNING)
             return
         self.storage_rows.append(area)
+        self._sync_legacy_storage_control(area)
         self._sync_structured_editor()
         self._refresh_storage_list()
     def _edit_storage_area(self) -> None:
@@ -289,6 +302,7 @@ class ConnectionDialogStorageMixin:
             return
         # Preserve id uniqueness not needed for edit
         self.storage_rows[sel] = updated
+        self._sync_legacy_storage_control(updated)
         self._sync_structured_editor()
         self._refresh_storage_list()
     def _remove_storage_area(self) -> None:

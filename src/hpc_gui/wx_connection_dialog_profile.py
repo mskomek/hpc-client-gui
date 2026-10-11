@@ -47,9 +47,13 @@ class ConnectionDialogProfileMixin:
             if current != previous:
                 for row in rows:
                     row["path_template"] = current
-            elif rows and rows[0].get("path_template"):
-                current = str(rows[0]["path_template"]).strip()
-                ctrl.SetValue(current)
+            elif rows:
+                if current:
+                    for row in rows:
+                        row["path_template"] = current
+                elif rows[0].get("path_template"):
+                    current = str(rows[0]["path_template"]).strip()
+                    ctrl.SetValue(current)
             self._legacy_storage_snapshot[key] = current
     def _sync_structured_editor(self) -> None:
         feature_used = bool(getattr(self, "storage_rows", []))
