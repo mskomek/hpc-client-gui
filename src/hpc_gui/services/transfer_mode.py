@@ -2,213 +2,40 @@ from __future__ import annotations
 
 import os
 import inspect
-import json
 import tempfile
 from pathlib import Path
 
-
-AUTO = "auto"
-BINARY = "binary"
-ASCII = "ascii"
-TRANSFER_MODES = (AUTO, BINARY, ASCII)
-
-# Bounded read size for classification samples and streaming conversion.
-CHUNK_SIZE = 8192
-
-# Suffix for an in-progress transfer. The planner reads it too, so that a
-# leftover chunk from a cancelled download is offered to the user instead of
-# being resumed or discarded behind their back.
-PARTIAL_SUFFIX = ".part"
-
-_ASCII_INVALID = (
-    "ASCII transfer requires UTF-8 text content; use Binary mode for this file."
+from .transfer_resume_store import (
+    local_file_identity,
+    progress_with_resume_checkpoints,
+    transfer_record_key,
+    transfer_resume_store_for_backend,
 )
 
-# ``.dat`` stays out of the known-text set on purpose: in Auto mode data
-# files are transferred as Binary unless the user explicitly picks ASCII.
-TEXT_EXTENSIONS = {
-    ".bash",
-    ".cfg",
-    ".conf",
-    ".csv",
-    ".ini",
-    ".json",
-    ".log",
-    ".md",
-    ".out",
-    ".py",
-    ".sbatch",
-    ".sh",
-    ".slurm",
-    ".text",
-    ".toml",
-    ".tsv",
-    ".txt",
-    ".xml",
-    ".yaml",
-    ".yml",
-}
 
+# Re-export mode helpers from the focused text-conversion module for callers.
+from .transfer_text_mode import (
+    ASCII,
+    AUTO,
+    BINARY,
+    CHUNK_SIZE,
+    TRANSFER_MODES,
+    TEXT_EXTENSIONS,
+    _ASCII_INVALID,
+    _ascii_bytes_for_local,
+    _ascii_bytes_for_remote,
+    _flush_normalized_lines,
+    _is_utf8_prefix,
+    _stream_utf8_lines,
+    _utf8_carry_split,
+    is_known_text_path,
+    looks_binary,
+    normalize_transfer_mode,
+    resolve_transfer_mode,
+)
 
-def normalize_transfer_mode(value: str, default: str = AUTO) -> str:
-    normalized = str(value or "").strip().lower()
-    return normalized if normalized in TRANSFER_MODES else default
-
-
-def looks_binary(data: bytes) -> bool:
-    if b"\x00" in data:
-        return True
-    if not data:
-        return False
-    try:
-        data[:8192].decode("utf-8")
-    except UnicodeDecodeError:
-        return True
-    sample = data[:8192]
-    suspicious = sum(
-        1 for byte in sample if byte < 9 or (13 < byte < 32)
-    )
-    return suspicious / len(sample) > 0.10
-
-
-def is_known_text_path(path: str) -> bool:
-    name = Path(path).name
-    if not Path(name).suffix:
-        return False
-    return any(name.casefold().endswith(ext) for ext in TEXT_EXTENSIONS)
-
-
-def resolve_transfer_mode(path: str, requested: str, sample: bytes | None = None) -> str:
-    requested = normalize_transfer_mode(requested)
-    if requested == BINARY:
-        return BINARY
-    if sample is not None and looks_binary(sample):
-        if requested == ASCII:
-            raise ValueError("ASCII transfer rejected because binary content was detected.")
-        return BINARY
-    if requested == ASCII:
-        return ASCII
-    return ASCII if is_known_text_path(path) else BINARY
-
-
-def _ascii_bytes_for_remote(data: bytes) -> bytes:
-    try:
-        text = data.decode("utf-8")
-    except UnicodeDecodeError as exc:
-        raise ValueError(_ASCII_INVALID) from exc
-    return text.replace("\r\n", "\n").replace("\r", "\n").encode("utf-8")
-
-
-def _ascii_bytes_for_local(data: bytes) -> bytes:
-    try:
-        text = data.decode("utf-8")
-    except UnicodeDecodeError as exc:
-        raise ValueError(_ASCII_INVALID) from exc
-    normalized = text.replace("\r\n", "\n").replace("\r", "\n")
-    return normalized.replace("\n", os.linesep).encode("utf-8")
-
-
-def _is_utf8_prefix(tail: bytes) -> bool:
-    """Return True when ``tail`` is the (possibly truncated) start of a
-    UTF-8 code point, i.e. safe to carry into the next read chunk."""
-    if not tail:
-        return False
-    lead = tail[0]
-    if lead & 0x80 == 0:
-        return True
-    if lead & 0xE0 == 0xC0:
-        needed = 1
-    elif lead & 0xF0 == 0xE0:
-        needed = 2
-    elif lead & 0xF8 == 0xF0:
-        needed = 3
-    else:
-        return False
-    return len(tail) <= needed + 1 and all(
-        byte & 0xC0 == 0x80 for byte in tail[1:]
-    )
-
-
-def _utf8_carry_split(data: bytes) -> tuple[str, bytes]:
-    """Decode ``data`` as UTF-8, returning ``(text, carry)`` where ``carry``
-    holds an incomplete trailing code point to join with the next chunk.
-
-    Raises ``ValueError`` when ``data`` is not valid UTF-8 text, matching the
-    whole-file conversion helpers.
-    """
-    try:
-        return data.decode("utf-8"), b""
-    except UnicodeDecodeError as exc:
-        tail = data[exc.start:]
-        if not _is_utf8_prefix(tail) or exc.end != len(data):
-            raise ValueError(_ASCII_INVALID) from None
-        return data[: exc.start].decode("utf-8"), tail
-
-
-def _flush_normalized_lines(
-    text: str, newline: str, pending_cr: bool
-) -> tuple[str, bool]:
-    """Normalize every CRLF/CR/LF in ``text`` to ``newline``.
-
-    A trailing CR is held back across chunk boundaries so a CRLF split by a
-    read boundary still collapses into a single newline.
-    """
-    parts: list[str] = []
-    if pending_cr:
-        if text.startswith("\n"):
-            parts.append(newline)
-            text = text[1:]
-        else:
-            parts.append(newline)
-        pending_cr = False
-    index = 0
-    length = len(text)
-    while index < length:
-        char = text[index]
-        if char == "\r":
-            if index + 1 < length:
-                if text[index + 1] == "\n":
-                    parts.append(newline)
-                    index += 2
-                else:
-                    parts.append(newline)
-                    index += 1
-            else:
-                pending_cr = True
-                index += 1
-        elif char == "\n":
-            parts.append(newline)
-            index += 1
-        else:
-            parts.append(char)
-            index += 1
-    return "".join(parts), pending_cr
-
-
-def _stream_utf8_lines(source_path: str, dest_path: str, newline: str) -> None:
-    """Stream ``source_path`` as UTF-8 into ``dest_path``, normalizing every
-    line terminator (CRLF/CR/LF) to ``newline``.
-
-    Reads bounded chunks and never loads the whole file for conversion, so
-    ASCII conversion stays O(chunk) in memory for arbitrarily large files.
-    """
-    carry = b""
-    pending_cr = False
-    with open(source_path, "rb") as source, open(
-        dest_path, "w", encoding="utf-8", newline=""
-    ) as dest:
-        while True:
-            chunk = source.read(CHUNK_SIZE)
-            if not chunk:
-                break
-            text, carry = _utf8_carry_split(carry + chunk)
-            flushed, pending_cr = _flush_normalized_lines(text, newline, pending_cr)
-            dest.write(flushed)
-        if carry:
-            # A file that ends inside a multi-byte sequence is not valid UTF-8.
-            raise ValueError(_ASCII_INVALID)
-        if pending_cr:
-            dest.write(newline)
+# The planner offers this partial to the user after cancellation.
+PARTIAL_SUFFIX = ".part"
 
 
 def _upload_remote(files, local_path: str, remote_path: str, progress_cb=None, resume_identity=None) -> None:
@@ -226,33 +53,73 @@ def _upload_remote(files, local_path: str, remote_path: str, progress_cb=None, r
     temp_remote = remote_path + PARTIAL_SUFFIX
     meta_remote = temp_remote + ".meta"
     source = Path(local_path).stat()
-    identity = json.dumps(resume_identity or {"path": str(remote_path), "size": source.st_size, "mtime_ns": source.st_mtime_ns}, sort_keys=True)
-    # A server-side partial whose identity still matches is a real resume
-    # point; anything else is dropped so the upload starts from byte zero.
+    identity = resume_identity or {
+        "direction": "upload",
+        "path": str(remote_path),
+        "size": source.st_size,
+        "mtime_ns": source.st_mtime_ns,
+    }
+    registry = transfer_resume_store_for_backend(files)
+    key = transfer_record_key("upload", remote_path)
+    record = registry.get(key) if registry else None
     resume = False
+    complete = False
+    partial_size = 0
     try:
+        # Remove sidecars created by older releases; resume identity now lives
+        # in the encrypted application profile store.
+        try:
+            if files.exists(meta_remote):
+                files.remove(meta_remote)
+        except Exception:
+            pass
         if files.exists(temp_remote):
-            try:
-                resume = files.read_text(meta_remote) == identity
-            except Exception:
-                resume = False
+            resume = bool(
+                registry
+                and record
+                and record.get("identity") == identity
+                and record.get("partial_path") == temp_remote
+            )
             if resume:
                 try:
                     partial_size, _mtime = files.stat(temp_remote)
-                    resume = 0 < partial_size < source.st_size
+                    resume = 0 < partial_size <= source.st_size
+                    complete = resume and partial_size == source.st_size
                 except Exception:
                     resume = False
             if not resume:
                 files.remove(temp_remote)
-        files.write_text(meta_remote, identity)
+        if registry:
+            try:
+                registry.save(key, identity, temp_remote, partial_size if resume else 0)
+            except Exception:
+                registry = None
+                if resume:
+                    files.remove(temp_remote)
+                resume = complete = False
     except (AttributeError, NotImplementedError):
-        pass
-    _upload_file(files, local_path, temp_remote, progress_cb=progress_cb, resume=resume)
-    rename(temp_remote, remote_path)
+        registry = None
+        resume = complete = False
     try:
-        files.remove(meta_remote)
-    except (AttributeError, FileNotFoundError, NotImplementedError):
-        pass
+        if not complete:
+            tracked_progress = progress_with_resume_checkpoints(
+                registry, key, identity, temp_remote, progress_cb
+            )
+            _upload_file(files, local_path, temp_remote, progress_cb=tracked_progress, resume=resume)
+    except Exception:
+        if registry:
+            try:
+                partial_size, _mtime = files.stat(temp_remote)
+                registry.save(key, identity, temp_remote, partial_size)
+            except Exception:
+                pass
+        raise
+    rename(temp_remote, remote_path)
+    if registry:
+        try:
+            registry.remove(key)
+        except Exception:
+            pass
 
 
 def _upload_file(files, local_path: str, remote_path: str, progress_cb=None, *, resume: bool = False) -> None:
@@ -279,8 +146,13 @@ def upload_with_mode(
     with open(local_path, "rb") as source:
         sample = source.read(CHUNK_SIZE)
     effective = resolve_transfer_mode(local_path, requested, sample)
-    source_stat = Path(local_path).stat()
-    resume_identity = {"path": str(remote_path), "size": source_stat.st_size, "mtime_ns": source_stat.st_mtime_ns}
+    source_identity = local_file_identity(local_path)
+    resume_identity = {
+        "direction": "upload",
+        "remote_path": str(remote_path),
+        **source_identity,
+        "mode": effective,
+    }
     if effective == BINARY:
         _upload_remote(files, local_path, remote_path, progress_cb=progress_cb, resume_identity=resume_identity)
         return effective
@@ -323,31 +195,90 @@ def download_with_mode(
     requested: str,
     progress_cb=None,
 ) -> str:
-    destination = Path(local_path)
+    destination = Path(local_path).expanduser()
     destination.parent.mkdir(parents=True, exist_ok=True)
     part_path = Path(str(destination) + PARTIAL_SUFFIX)
     meta_path = Path(str(part_path) + ".meta")
-    # Only a partial whose identity still matches the remote file, and which
-    # is a strict prefix of it, is a real resume point.
+    # Persist only identity and byte offset in encrypted per-profile app data.
+    # The adjacent .part contains transfer bytes; no metadata sidecar is used.
     resume = False
+    complete = False
+    partial_size = 0
+    registry = transfer_resume_store_for_backend(files)
     remote_stat = getattr(files, "stat", None)
     if callable(remote_stat):
         remote_size, remote_mtime = remote_stat(remote_path)
-        identity = {"path": str(remote_path), "size": remote_size, "mtime": remote_mtime}
+        identity = {
+            "direction": "download",
+            "remote_path": str(remote_path),
+            "local_path": str(destination.expanduser().resolve()),
+            "size": remote_size,
+            "mtime": remote_mtime,
+            "mode": normalize_transfer_mode(requested),
+        }
+        part_identity = str(part_path.resolve())
+        key = transfer_record_key("download", str(destination))
+        record = registry.get(key) if registry else None
         try:
-            saved = json.loads(meta_path.read_text(encoding="utf-8"))
-        except (OSError, ValueError):
-            saved = None
-        if part_path.exists() and saved != identity:
-            part_path.unlink(missing_ok=True)
+            meta_path.unlink(missing_ok=True)
+        except OSError:
+            pass
         if part_path.exists():
-            resume = 0 < part_path.stat().st_size < remote_size
+            resume = bool(
+                registry
+                and record
+                and record.get("identity") == identity
+                and record.get("partial_path") == part_identity
+            )
+            if resume:
+                partial_size = part_path.stat().st_size
+                resume = 0 < partial_size <= remote_size
+                complete = resume and partial_size == remote_size
             if not resume:
                 part_path.unlink(missing_ok=True)
-        meta_path.write_text(json.dumps(identity, sort_keys=True), encoding="utf-8")
-    elif part_path.exists():
-        part_path.unlink(missing_ok=True)
-    _download_file(files, remote_path, str(part_path), progress_cb=progress_cb, resume=resume)
+        if registry:
+            try:
+                registry.save(
+                    key, identity, part_identity,
+                    part_path.stat().st_size if resume else 0,
+                )
+            except Exception:
+                registry = None
+                resume = complete = False
+                part_path.unlink(missing_ok=True)
+    else:
+        identity = {
+            "direction": "download",
+            "remote_path": str(remote_path),
+            "local_path": str(destination.expanduser().resolve()),
+            "mode": normalize_transfer_mode(requested),
+        }
+        part_identity = str(part_path.resolve())
+        key = transfer_record_key("download", str(destination))
+        try:
+            meta_path.unlink(missing_ok=True)
+            if part_path.exists():
+                part_path.unlink()
+        except OSError:
+            pass
+        if registry:
+            try:
+                registry.save(key, identity, part_identity, 0)
+            except Exception:
+                registry = None
+    try:
+        if not complete:
+            tracked_progress = progress_with_resume_checkpoints(
+                registry, key, identity, part_identity, progress_cb
+            )
+            _download_file(files, remote_path, str(part_path), progress_cb=tracked_progress, resume=resume)
+    except Exception:
+        if registry:
+            try:
+                registry.save(key, identity, part_identity, part_path.stat().st_size)
+            except Exception:
+                pass
+        raise
     try:
         with open(part_path, "rb") as stream:
             sample = stream.read(CHUNK_SIZE)
@@ -370,5 +301,9 @@ def download_with_mode(
             pass
     else:
         os.replace(part_path, destination)
-    meta_path.unlink(missing_ok=True)
+    if registry:
+        try:
+            registry.remove(key)
+        except Exception:
+            pass
     return effective

@@ -9,82 +9,25 @@ reports itself unavailable instead of falling back to plaintext.
 
 from __future__ import annotations
 
-import json
-import os
-import tempfile
 import threading
 import time
 import uuid
-from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from ..core import secret_store
-from hpc_gui.core.paths import app_data_dir
+from .private_profile_data import (
+    delete_private_profile_data,
+    is_private_profile_data_available,
+    load_private_profile_data,
+    save_private_profile_data,
+)
 
 MAX_HISTORY = 100
 SCHEMA_VERSION = 1
-_MAGIC = b"HPCNAV1\n"
-_KEYRING_SERVICE = "hpc-client-gui"
-_KEYRING_USERNAME = "remote-navigation"
-
-
-def _private_dir() -> Path:
-    d = app_data_dir() / "private"
-    d.mkdir(parents=True, exist_ok=True)
-    return d
-
-
-def _state_path(profile_id: str) -> Path:
-    return _private_dir() / f"{profile_id}.bin"
-
-
-def _fernet():
-    """Return a Fernet bound to a key held by the OS keyring, or None."""
-    try:
-        import keyring
-        from cryptography.fernet import Fernet
-    except Exception:
-        return None
-    try:
-        key = keyring.get_password(_KEYRING_SERVICE, _KEYRING_USERNAME)
-        if not key:
-            key = Fernet.generate_key().decode("ascii")
-            keyring.set_password(_KEYRING_SERVICE, _KEYRING_USERNAME, key)
-        return Fernet(key.encode("ascii"))
-    except Exception:
-        return None
 
 
 def is_available() -> bool:
     """Whether private profile state can be stored encrypted on this machine."""
-    return secret_store.is_available() or _fernet() is not None
-
-
-def _encrypt(payload: Dict[str, Any]) -> bytes:
-    raw = json.dumps(payload, ensure_ascii=False)
-    if secret_store.is_available():
-        return _MAGIC + secret_store.protect_secret(raw).encode("ascii")
-    fernet = _fernet()
-    if fernet is None:
-        raise RuntimeError("no OS-held secret available for private profile state")
-    return _MAGIC + fernet.encrypt(raw.encode("utf-8"))
-
-
-def _decrypt(blob: bytes) -> Dict[str, Any]:
-    if not blob.startswith(_MAGIC):
-        raise ValueError("unrecognised private profile state")
-    body = blob[len(_MAGIC) :]
-    if secret_store.is_available():
-        raw = secret_store.unprotect_secret(body.decode("ascii"))
-    else:
-        fernet = _fernet()
-        if fernet is None:
-            raise RuntimeError("no OS-held secret available for private profile state")
-        raw = fernet.decrypt(body).decode("utf-8")
-    data = json.loads(raw)
-    if not isinstance(data, dict):
-        raise ValueError("unrecognised private profile state")
-    return data
+    return is_private_profile_data_available()
 
 
 def _normalize(path: str) -> str:
@@ -101,9 +44,18 @@ def delete_profile_navigation(profile_id: str) -> None:
     with _INSTANCES_LOCK:
         _INSTANCES.pop(profile_id, None)
     try:
-        _state_path(profile_id).unlink(missing_ok=True)
+        delete_private_profile_data(profile_id, "navigation")
     except Exception:
         pass
+    try:
+        from .transfer_resume_store import delete_profile_transfer_resume
+
+        delete_profile_transfer_resume(profile_id)
+    except Exception:
+        try:
+            delete_private_profile_data(profile_id, "transfer-resume")
+        except Exception:
+            pass
 
 
 class RemoteNavigationStore:
@@ -117,19 +69,7 @@ class RemoteNavigationStore:
     # ---- persistence ----------------------------------------------------
     def _load(self) -> Dict[str, Any]:
         empty = {"schema_version": SCHEMA_VERSION, "favorites": [], "history": []}
-        path = _state_path(self.profile_id)
-        try:
-            blob = path.read_bytes()
-        except FileNotFoundError:
-            return empty
-        except Exception:
-            return empty
-        try:
-            data = _decrypt(blob)
-        except Exception:
-            # Tampered, truncated, or written under a key we no longer hold.
-            # Losing bookmarks beats guessing at damaged private state.
-            return empty
+        data = load_private_profile_data(self.profile_id, "navigation", empty)
         favorites = data.get("favorites")
         history = data.get("history")
         return {
@@ -139,19 +79,7 @@ class RemoteNavigationStore:
         }
 
     def _save(self) -> None:
-        path = _state_path(self.profile_id)
-        blob = _encrypt(self._state)
-        fd, tmp_name = tempfile.mkstemp(prefix=path.name + ".", suffix=".tmp", dir=path.parent)
-        tmp = Path(tmp_name)
-        try:
-            with os.fdopen(fd, "wb") as fh:
-                fh.write(blob)
-                fh.flush()
-                os.fsync(fh.fileno())
-            os.replace(tmp, path)
-        except Exception:
-            tmp.unlink(missing_ok=True)
-            raise
+        save_private_profile_data(self.profile_id, "navigation", self._state)
 
     def _persist(self) -> None:
         try:
