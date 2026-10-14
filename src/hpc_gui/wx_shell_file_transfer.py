@@ -144,10 +144,12 @@ def _start_file_transfers(session_state, lifecycle, items, *, on_progress=None, 
     if not files or not items:
         raise RuntimeError(t("common.no_connection"))
 
+    rename_for_all = {"enabled": False}
+
     def wx_conflict_resolver(item):
         import wx
 
-        if session_state.get("conflict_policy") == "rename":
+        if session_state.get("conflict_policy") == "rename" or rename_for_all["enabled"]:
             target = PurePosixPath(item.dst)
             suffix = target.suffix
             stem = target.name[: -len(suffix)] if suffix else target.name
@@ -157,25 +159,36 @@ def _start_file_transfers(session_state, lifecycle, items, *, on_progress=None, 
                     return ("rename", str(candidate))
             return "cancel"
 
-        from hpc_gui.wx_transfer_workspace import create_transfer_conflict_dialog
+        from hpc_gui.wx_transfer_conflict_dialog import create_wx_transfer_conflict_dialog
 
         decision = {"value": "cancel"}
         ready = Event()
 
         def ask():
             try:
-                dlg = create_transfer_conflict_dialog(parent, files, item)
+                dlg = create_wx_transfer_conflict_dialog(parent, files, item)
                 if not dlg:
                     decision["value"] = "cancel"
                     return
                 dlg.ShowModal()
                 raw = dlg._wx_conflict_result["value"]
+                apply_all = bool(
+                    getattr(dlg, "_wx_conflict_apply_all", None)
+                    and dlg._wx_conflict_apply_all.GetValue()
+                )
                 # if rename, raw is tuple
                 if isinstance(raw, tuple) and raw and raw[0] == "rename":
-                    decision["value"] = raw
+                    selected = raw
+                    if apply_all:
+                        rename_for_all["enabled"] = True
                 else:
                     # map string decisions
-                    decision["value"] = raw if raw in {"overwrite", "skip", "resume", "cancel"} else "cancel"
+                    selected = raw if raw in {"overwrite", "skip", "resume", "cancel"} else "cancel"
+                decision["value"] = (
+                    {"value": selected, "apply_all": True}
+                    if apply_all
+                    else selected
+                )
                 dlg.Destroy()
             finally:
                 ready.set()

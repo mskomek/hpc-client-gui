@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import inspect
 from dataclasses import dataclass
+from threading import Lock
 from typing import Iterable
 
 from hpc_gui.services.transfer_controller import TransferCancelled, TransferController, TransferItem
@@ -38,16 +39,31 @@ class TransferSessionController:
         )
         self.engine = TransferController(items, self._run_item, **kwargs)
         self.conflict_policy = "ask"
+        self._conflict_resolution_lock = Lock()
         self.checksum_enabled = False
 
     def _run_item(self, item: TransferItem, progress) -> None:
         decision = None
         if self._conflict_check and self._conflict_check(item):
-            decision = self.conflict_policy
-            if decision in {"ask", "rename"}:
-                if not self._conflict_resolver:
-                    raise RuntimeError("transfer conflict requires a decision")
-                decision = self._conflict_resolver(item)
+            with self._conflict_resolution_lock:
+                decision = self.conflict_policy
+                if decision in {"ask", "rename"}:
+                    if not self._conflict_resolver:
+                        raise RuntimeError("transfer conflict requires a decision")
+                    resolved = self._conflict_resolver(item)
+                    apply_all = False
+                    if isinstance(resolved, dict) and "value" in resolved:
+                        apply_all = bool(resolved.get("apply_all"))
+                        resolved = resolved["value"]
+                    decision = resolved
+                    if apply_all:
+                        action = (
+                            decision[0]
+                            if isinstance(decision, tuple) and decision
+                            else decision
+                        )
+                        if action in {"overwrite", "skip", "rename", "resume"}:
+                            self.conflict_policy = action
             if isinstance(decision, tuple) and decision and decision[0] == "rename":
                 item.dst = str(decision[1])
                 decision = "overwrite"
