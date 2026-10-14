@@ -9,13 +9,11 @@ from hpc_gui.services.directory_comparison import ComparableEntry, compare_direc
 from hpc_gui.services.synchronized_browsing import (
     SyncRoots, local_to_remote, normalize_local_root, normalize_remote_root, remote_to_local,
 )
-from hpc_gui.services.transfer_controller import TransferItem
-from hpc_gui.wx_directories_view import build_directories_panel
 from hpc_gui.wx_local_files import build_local_files_panel
+from hpc_gui.wx_local_files_navigation import build_local_files_navigation
 from hpc_gui.wx_remote_files_view import build_remote_files_panel
 from hpc_gui.wx_transfer_workspace import build_transfers_panel
 from hpc_gui.wx_shell_files import _local_files_callbacks, _remote_files_callbacks
-from hpc_gui.wx_shell_file_transfer import _start_file_transfers
 
 
 def build_files_surface(wx, frame, notebook, page_controls, session_state, lifecycle, t):
@@ -74,15 +72,14 @@ def build_files_surface(wx, frame, notebook, page_controls, session_state, lifec
     _remote = _remote_files_callbacks(session_state, frame, lifecycle)
     local_panel = build_local_files_panel(top_splitter, **_local)
     session_state["_embedded_local_files_panel"] = local_panel
+    local_workspace = build_local_files_navigation(wx, top_splitter, local_panel, t)
     remote_panel = build_remote_files_panel(top_splitter, **_remote)
     session_state["_embedded_remote_files_panel"] = remote_panel
-    top_splitter.SplitVertically(local_panel, remote_panel, 340)
+    top_splitter.SplitVertically(local_workspace, remote_panel, 340)
     top_splitter.SetMinimumPaneSize(300)
-    # TODO-031: keep the Local/Remote split proportionally balanced on resize
-    # instead of pinning the local pane to the fixed 340px initial sash.
+    # Keep the Local/Remote split proportionally balanced as the window resizes.
     top_splitter.SetSashGravity(0.5)
-    from hpc_gui.wx_transfer_workspace import build_transfers_panel
-
+    session_state["_embedded_files_panes_splitter"] = top_splitter
     transfers_panel = build_transfers_panel(transfer_splitter)
     # store for routing in _start_file_transfers
     session_state["embedded_transfers_panel"] = transfers_panel

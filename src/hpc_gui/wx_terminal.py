@@ -74,6 +74,9 @@ def build_terminal_panel(parent, *, model: TerminalModel | None = None, ssh=None
             try:
                 # Reuse same ssh/lifecycle contract; model is compat-only for WebView (xterm is authority)
                 panel = WxTerminalWebViewPanel(parent, ssh=ssh, send_input=send_input, resize_pty=resize_pty, lifecycle=lifecycle)
+                from hpc_gui.wx_terminal_clipboard import install_terminal_clipboard_shortcuts
+
+                install_terminal_clipboard_shortcuts(panel)
                 # Expose same production seam as composition path for shell compat
                 panel._wx_terminal_set_ssh = panel.set_ssh
                 panel._wx_terminal_close = panel.close

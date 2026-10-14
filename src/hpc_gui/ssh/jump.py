@@ -18,12 +18,14 @@ from typing import Any, Callable, Optional
 import paramiko
 
 from hpc_gui.config.jump_host_profile import normalize_jump_host_settings
+from hpc_gui.ssh.auth_strategy import load_private_key_with_certificate
 from hpc_gui.ssh.client import (
+    coerce_keepalive_interval,
+)
+from hpc_gui.ssh.host_keys import (
     HostKeyChangedError,
     HostKeyRejectedError,
     _KnownHostsPolicy,
-    coerce_keepalive_interval,
-    load_private_key_with_certificate,
 )
 
 

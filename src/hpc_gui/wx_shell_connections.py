@@ -14,8 +14,21 @@ def _connection_callbacks(session_state, parent, lifecycle):
 
     def on_connected(session):
         session_state["session"] = session
+        session_state["connection_status"] = "connected"
         session_state["generation"] = session_state.get("generation", 0) + 1
         profile = session.get("profile") if isinstance(session, dict) else None
+        remote_directories = {"home_dir": "", "scratch_dir": ""}
+        if isinstance(profile, dict):
+            try:
+                from hpc_gui.config.system_profile import (
+                    profile_remote_directories,
+                    profile_system_settings,
+                )
+
+                profile["system"] = profile_system_settings(profile)
+                remote_directories = profile_remote_directories(profile)
+            except (AttributeError, TypeError, ValueError):
+                pass
         file_manager = profile.get("file_manager") if isinstance(profile, dict) else None
         local_start_dir = file_manager.get("local_start_dir") if isinstance(file_manager, dict) else ""
         local_panel = session_state.get("_embedded_local_files_panel")
@@ -50,6 +63,14 @@ def _connection_callbacks(session_state, parent, lifecycle):
                 if panel is not None and hasattr(panel, "_wx_remote_set_provider_filters"):
                     cbs = _remote_files_callbacks(session_state, parent, lifecycle)
                     panel._wx_remote_set_provider_filters(cbs.get("provider_filters"), cbs.get("plugin_filters"))
+                if panel_key == "_embedded_remote_files_panel" and panel is not None:
+                    controls = getattr(panel, "_wx_remote_controls", {})
+                    target = remote_directories.get("home_dir") or remote_directories.get("scratch_dir")
+                    navigate = controls.get("navigate") if isinstance(controls, dict) else None
+                    load = controls.get("load") if isinstance(controls, dict) else None
+                    if target and callable(navigate) and callable(load):
+                        navigate(target)
+                        load()
             except Exception:
                 pass
         # W24 DIR-SESSION-001 / SESSION-REBIND-001: rebind directories storage
@@ -63,6 +84,12 @@ def _connection_callbacks(session_state, parent, lifecycle):
         # W55 A1 (HPC-W10-GJ2-030): the shell status bar is the canonical
         # connection indicator; reflect the new session immediately.
         _update_shell_status_text(parent, session_state)
+        try:
+            from hpc_gui.wx_shell_events import _select_embedded_page
+
+            _select_embedded_page(session_state, parent, "NAV-TERMINAL")
+        except Exception:
+            pass
 
     def on_disconnected(session):
         # Graceful/transport-loss teardown (CONN-004/TODO-007): drop the dead
@@ -72,6 +99,7 @@ def _connection_callbacks(session_state, parent, lifecycle):
         # truthfully once it is None; the terminal write path is
         # neutralized explicitly so input cannot reach a dead transport.
         session_state["session"] = None
+        session_state["connection_status"] = "disconnected"
         session_state["generation"] = session_state.get("generation", 0) + 1
         try:
             panel = session_state.get("_embedded_terminal_panel")

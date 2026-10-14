@@ -10,7 +10,7 @@ from hpc_gui.wx_shell_files import _editor_action_factory
 from hpc_gui.wx_shell_jobs import _jobs_callbacks
 from hpc_gui.wx_shell_events import _logs_callbacks
 from hpc_gui.wx_shell_terminal import _run_shell_in_terminal
-from hpc_gui.core.i18n import current_language, load_saved_language, set_language, subscribe_language_change, system_default_language, t, unsubscribe_language_change
+from hpc_gui.core.i18n import current_language, set_language, t, unsubscribe_language_change
 from hpc_gui.wx_shell_window_support import (
     _make_tray, _restore_main_window_state, _save_main_window_state,
     _update_shell_status_text,
@@ -61,7 +61,6 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
     frame.Bind(wx.EVT_MENU, lambda _e: _dispatch("PLUGIN-MANAGE", frame, lifecycle, session_state), act_manage)
     act_plugin_updates = plugins_menu.Append(wx.ID_ANY, t("menu.check_plugin_updates"))
     frame.Bind(wx.EVT_MENU, lambda _e: _dispatch("PLUGIN-UPDATES", frame, lifecycle, session_state), act_plugin_updates)
-    sep_plugins_top = None
     # Dynamic plugin roots will be inserted here (between the two separators) - top separator created on demand
     sep_plugins_bottom = plugins_menu.AppendSeparator()
     act_request = plugins_menu.Append(wx.ID_ANY, t("menu.request_plugin"))
@@ -116,15 +115,32 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
     from hpc_gui.wx_directories_view import build_directories_panel
     from hpc_gui.wx_editor_view import build_editor_panel
     from hpc_gui.wx_jobs import build_jobs_panel
-    from hpc_gui.wx_local_files import build_local_files_panel
     from hpc_gui.wx_logs_view import build_logs_panel
-    from hpc_gui.wx_remote_files_view import build_remote_files_panel
 
     # Connection
     _conn = _connection_callbacks(session_state, frame, lifecycle)
     connection_panel = build_connection_panel(notebook, **_conn)
     notebook.AddPage(connection_panel, t("tabs.login"), False)
     page_controls["APP-CONNECT"] = {"page": connection_panel}
+    connection_model = getattr(connection_panel, "_wx_connection_model", None)
+    controller = getattr(connection_model, "controller", None)
+    previous_state_emitter = getattr(controller, "_emit", None)
+    if controller is not None:
+        def update_shell_connection_status(state):
+            if callable(previous_state_emitter):
+                previous_state_emitter(state)
+            value = str(getattr(state, "value", state))
+
+            def apply_status():
+                session_state["connection_status"] = value
+                _update_shell_status_text(frame, session_state)
+
+            try:
+                wx.CallAfter(apply_status)
+            except Exception:
+                pass
+
+        controller._emit = update_shell_connection_status
     # Transport-loss reports (disconnect_cb) must invalidate the canonical
     # shell session too, not just the connection panel's controller, so no
     # domain keeps resolving a dead transport (CONN-005/TODO-007).
@@ -151,7 +167,11 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
         def mount_terminal():
             if terminal_page.IsBeingDeleted():
                 return
-            real_panel = _build_terminal_panel(terminal_page, ssh=_term_ssh, lifecycle=lifecycle)
+            live_session = session_state.get("session") or {}
+            live_ssh = live_session.get("ssh") if isinstance(live_session, dict) else None
+            real_panel = _build_terminal_panel(
+                terminal_page, ssh=live_ssh or _term_ssh, lifecycle=lifecycle
+            )
             terminal_sizer.Add(real_panel, 1, wx.EXPAND)
             terminal_page.Layout()
             session_state["_embedded_terminal_panel"] = real_panel
@@ -190,8 +210,13 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
     session_state["_embedded_directories_panel"] = directories_panel
 
     from hpc_gui.wx_shell_files_surface import build_files_surface
-    files_page = build_files_surface(
-        wx, frame, notebook, page_controls, session_state, lifecycle, t
+    build_files_surface(wx, frame, notebook, page_controls, session_state, lifecycle, t)
+    from hpc_gui.wx_shell_layout import center_splitter_on_first_layout
+
+    dirs_controls = getattr(directories_panel, "_wx_dirs_controls", {})
+    center_splitter_on_first_layout(wx, dirs_controls.get("splitter"))
+    center_splitter_on_first_layout(
+        wx, session_state.get("_embedded_files_panes_splitter")
     )
 
     # Script Editor
@@ -253,7 +278,9 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
                 pass
             # Refresh dynamic plugin menu labels without restart
             try:
-                _wx_rebuild_plugins_menu()
+                rebuild_plugins_menu = getattr(frame, "_wx_rebuild_plugins_menu", None)
+                if callable(rebuild_plugins_menu):
+                    rebuild_plugins_menu()
             except Exception:
                 pass
         except Exception:

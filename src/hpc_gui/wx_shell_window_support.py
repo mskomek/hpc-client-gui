@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from hpc_gui.core.i18n import current_language, load_saved_language, set_language, subscribe_language_change, system_default_language, t, unsubscribe_language_change
+from hpc_gui.core.i18n import t
 
 
 def _flag_bitmap(wx, language):
@@ -141,13 +141,31 @@ def _save_main_window_state(frame, notebook):
         return False
 
 
-def _update_shell_status_text(frame, session_state) -> None:
-    """Reflect the canonical session state in the shell status bar (W55 A1).
+def _set_shell_status_color(frame, bar, state: str, wx_module=None) -> None:
+    try:
+        if wx_module is None:
+            import wx as wx_module
+        defaults = getattr(frame, "_wx_shell_statusbar_colors", None)
+        if defaults is None:
+            defaults = (bar.GetBackgroundColour(), bar.GetForegroundColour())
+            frame._wx_shell_statusbar_colors = defaults
+        color = {
+            "connecting": wx_module.Colour(179, 38, 30),
+            "connected": wx_module.Colour(28, 120, 56),
+        }.get(state)
+        if color is None:
+            background, foreground = defaults
+        else:
+            background, foreground = color, wx_module.Colour(255, 255, 255)
+        bar.SetBackgroundColour(background)
+        bar.SetForegroundColour(foreground)
+        bar.Refresh()
+    except Exception:
+        pass
 
-    Connected session -> "<connected-label>: <profile-name>" (or the bare
-    connected label when no profile name is available); otherwise the idle
-    label. Best-effort and never raises; a destroyed frame is a no-op.
-    """
+
+def _update_shell_status_text(frame, session_state) -> None:
+    """Reflect connection state in the shell status bar and its background."""
     try:
         if frame is None:
             return
@@ -164,8 +182,10 @@ def _update_shell_status_text(frame, session_state) -> None:
         if bar is None:
             return
         session = None
+        state = ""
         try:
             session = (session_state or {}).get("session")
+            state = str((session_state or {}).get("connection_status") or "")
         except Exception:
             session = None
         connected = False
@@ -178,12 +198,21 @@ def _update_shell_status_text(frame, session_state) -> None:
                 )
             except Exception:
                 connected = False
+        is_connecting = state in {"connecting", "authenticating"}
+        if is_connecting or state == "failed":
+            connected = False
+        elif state == "connected":
+            connected = True
         try:
             if connected:
                 profile = session.get("profile") if isinstance(session, dict) else None
                 name = profile.get("name") if isinstance(profile, dict) else None
                 label = t("login.status_connected")
                 text = f"{label}: {name}" if name else str(label)
+            elif is_connecting:
+                text = t("login.status_connecting")
+            elif state == "failed":
+                text = t("connection.status_failed")
             else:
                 text = t("common.ready")
         except Exception:
@@ -192,5 +221,9 @@ def _update_shell_status_text(frame, session_state) -> None:
             bar.SetStatusText(str(text))
         except Exception:
             pass
+        color_state = "connecting" if is_connecting else (
+            "connected" if connected else state
+        )
+        _set_shell_status_color(frame, bar, color_state)
     except Exception:
         pass

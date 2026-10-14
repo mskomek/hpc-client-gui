@@ -1,28 +1,42 @@
 from __future__ import annotations
 
 import contextlib
-import os
-from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable, Optional, Protocol, Tuple
+from typing import Callable, Optional, Tuple
 
 import socket
 
 from hpc_gui.core.debug_support import timed
 
 import paramiko
-from paramiko.auth_strategy import (
-    AuthFailure,
-    AuthResult,
-    AuthSource,
-    AuthStrategy,
-    InMemoryPrivateKey,
-    OnDiskPrivateKey,
-    SourceResult,
-)
 
 from hpc_gui.core.logging import get_logger
 from hpc_gui.core.paths import app_data_dir
+from hpc_gui.ssh.auth_strategy import (
+    _ConnectionAuthStrategy as _BaseConnectionAuthStrategy,
+    _KeyboardInteractiveSource,  # noqa: F401 - compatibility re-export
+    _PasswordSource,  # noqa: F401 - compatibility re-export
+    NoAuthenticationCredentialError,
+    _agent_key_sources,
+    _discoverable_key_sources,
+    load_private_key_with_certificate,
+)
+from hpc_gui.ssh.contracts import (
+    SSHConnInfo,
+    SocketLike,
+    _KEEPALIVE_INTERVAL_DEFAULT,
+    _SSH_AUTH_TIMEOUT_SECONDS,
+    _SSH_BANNER_TIMEOUT_SECONDS,
+    _SSH_CHANNEL_TIMEOUT_SECONDS,
+    _SSH_CONNECT_AND_KEX_TIMEOUT_SECONDS,
+    coerce_keepalive_interval,
+)
+from hpc_gui.ssh.host_keys import (
+    HostKeyChangedError,
+    HostKeyInfo,  # noqa: F401 - compatibility re-export
+    HostKeyRejectedError,  # noqa: F401 - compatibility re-export
+    _KnownHostsPolicy,
+)
 from hpc_gui.services.command_history_store import is_sensitive_command
 from hpc_gui.ssh.sftp_channels import (
     SFTPChannelManager,
@@ -31,259 +45,23 @@ from hpc_gui.ssh.sftp_channels import (
 )
 from hpc_gui.ssh.shell_session import InteractiveShellSession, _sanitize_terminal_text
 
-if TYPE_CHECKING:  # pragma: no cover - import cycle guard for typing only
-    from hpc_gui.ssh.jump import SSHJumpInfo
-
-
-class SocketLike(Protocol):
-    """Minimal socket-like surface Paramiko needs from a preconnected channel."""
-
-    def send(self, data: bytes) -> int: ...
-
-    def recv(self, size: int) -> bytes: ...
-
-    def settimeout(self, timeout: float | None) -> None: ...
-
-    def close(self) -> None: ...
-
-
 # (Terminal ACS map and sanitizer live in hpc_gui.ssh.shell_session.)
-
-# Paramiko uses ``timeout`` both for the TCP connection and for waiting for
-# the initial SSH key exchange.  Clusters behind VPNs or busy login nodes can
-# legitimately take longer than the former 15-second limit.
-_SSH_CONNECT_AND_KEX_TIMEOUT_SECONDS = 45
-_SSH_BANNER_TIMEOUT_SECONDS = 45
-_SSH_AUTH_TIMEOUT_SECONDS = 30
-_SSH_CHANNEL_TIMEOUT_SECONDS = 30
-# Generous relative to the interactive-shell timeout: a transfer channel
-# only needs to detect a truly dead connection, not bound normal chunk
-# pacing on a slow HPC link.
-# (Timeout constants live in hpc_gui.ssh.sftp_channels now; they are
-# re-exported above so existing imports keep working.)
-
-_KEEPALIVE_INTERVAL_DEFAULT = 30
-
 
 def _decode_remote_text(data: bytes) -> str:
     """Decode command/banner output as UTF-8 without hiding display failures."""
     return data.decode("utf-8", errors="replace")
 
 
-def coerce_keepalive_interval(
-    value: object, default: int = _KEEPALIVE_INTERVAL_DEFAULT
-) -> int:
-    """Return a profile interval clamped to 0..3600 seconds."""
-    try:
-        return max(0, min(3600, int(value)))  # type: ignore[arg-type]
-    except (OverflowError, TypeError, ValueError):
-        return default
-
-
-@dataclass(frozen=True)
-class HostKeyInfo:
-    hostname: str
-    key_type: str
-    fingerprint: str
-    role: str = "target"  # target | jump
-
-
-class HostKeyChangedError(paramiko.SSHException):
-    def __init__(self, hostname: str, role: str = "target"):
-        self.hostname = hostname
-        self.role = role
-        super().__init__(f"Host key changed for {hostname}; connection cancelled.")
-
-
-class HostKeyRejectedError(paramiko.SSHException):
-    def __init__(self, hostname: str, role: str = "target"):
-        self.hostname = hostname
-        self.role = role
-        super().__init__(f"Unknown host key rejected for {hostname}.")
-
-
-class NoAuthenticationCredentialError(paramiko.SSHException):
-    """No credential/source was available to authenticate at all.
-
-    This is deliberately distinct from "the supplied credential was rejected":
-    the server never received anything to validate. The raw Paramiko failure
-    stays attached as ``__cause__`` for diagnostics.
-    """
-
-    def __init__(self) -> None:
-        super().__init__(
-            "No authentication credential is available for this connection. "
-            "Enter a password, configure an SSH key, or enable an applicable "
-            "authentication method."
-        )
-
-
-def load_private_key_with_certificate(key_path: str, password: str | None = None):
-    """Load a private key and its conventional sibling OpenSSH certificate."""
-    if password:
-        pkey = paramiko.PKey.from_path(key_path, password)
-    else:
-        pkey = paramiko.PKey.from_path(key_path)
-    certificate_path = Path(key_path).with_name(Path(key_path).name + "-cert.pub")
-    if certificate_path.is_file():
-        pkey.load_certificate(str(certificate_path))
-    return pkey
-
-
-class _KnownHostsPolicy(paramiko.MissingHostKeyPolicy):
-    def __init__(
-        self,
-        path: Path,
-        decide: Optional[Callable[[HostKeyInfo], str]],
-        role: str = "target",
-    ) -> None:
-        self.path = path
-        self.decide = decide
-        self.role = role
-
-    def missing_host_key(self, client, hostname, key) -> None:
-        fingerprint = getattr(key, "fingerprint", "") or key.get_fingerprint().hex()
-        decision = self.decide(
-            HostKeyInfo(hostname, key.get_name(), fingerprint, role=self.role)
-        ) if self.decide else "save"
-        if decision == "once":
-            return
-        if decision != "save":
-            raise HostKeyRejectedError(hostname)
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        client.get_host_keys().add(hostname, key.get_name(), key)
-        # ponytail: single-process write; add locking if parallel profile connects arrive.
-        client.save_host_keys(str(self.path))
-        if os.name == "posix" and self.path.exists():
-            self.path.chmod(0o600)
-
-
-@dataclass
-class SSHConnInfo:
-    host: str
-    port: int
-    username: str = ""
-    # Never include the plaintext secret in a repr that may reach logs.
-    password: str = field(default="", repr=False)
-    key_path: str = ""
-    host_key_policy: str = "accept-new"  # accept-new | strict
-    x11_forwarding: bool = False  # UI flag; actual X11 is handled separately
-    timeout: Optional[float] = None  # None keeps the per-knob defaults below
-    keepalive_interval_seconds: int = _KEEPALIVE_INTERVAL_DEFAULT  # 0 disables
-    known_hosts_path: str = ""
-    host_key_decision: Optional[Callable[[HostKeyInfo], str]] = None
-    preconnected_socket: Optional[SocketLike] = None
-    jump: Optional["SSHJumpInfo"] = None
-    keyboard_interactive_handler: Optional[Callable[[str, str, list[tuple[str, bool]]], list[str]]] = None
-    # Auth-source switches that must survive every code path (including the
-    # custom keyboard-interactive strategy) exactly like Paramiko defaults.
-    allow_agent: bool = True
-    look_for_keys: bool = True
-
-
-def _agent_key_sources(username: str):
-    """Yield in-memory sources for keys offered by a running ssh-agent."""
-    try:
-        agent = paramiko.Agent()
-        keys = list(agent.get_keys())
-    except Exception:
-        return
-    for key in keys:
-        yield InMemoryPrivateKey(username, key)
-
-
-def _discoverable_key_sources(username: str, password: str):
-    """Yield sources for conventional ~/.ssh id_* keys Paramiko would find.
-
-    ``password`` is only used as a key passphrase, mirroring Paramiko's
-    ``_auth`` behavior; unreadable/encrypted keys are skipped.
-    """
-    candidates: list[Path] = []
-    for directory in (".ssh", "ssh"):  # ~/ssh/ is the Windows convention
-        for name in ("id_rsa", "id_ecdsa", "id_ed25519"):
-            candidates.append(Path.home() / directory / name)
-    seen: set[str] = set()
-    for key_path in candidates:
-        path_key = str(key_path)
-        if path_key in seen or not key_path.is_file():
-            continue
-        seen.add(path_key)
-        try:
-            pkey = load_private_key_with_certificate(path_key, password or None)
-        except Exception:
-            continue
-        yield OnDiskPrivateKey(username, "implicit-home", key_path, pkey)
-
-
-class _KeyboardInteractiveSource(AuthSource):
-    def __init__(self, username, handler):
-        super().__init__(username)
-        self.handler = handler
-
-    def __repr__(self):
-        return self._repr(user=self.username)
-
-    def authenticate(self, transport):
-        return transport.auth_interactive(self.username, self.handler)
-
-
-class _ConnectionAuthStrategy(AuthStrategy):
-    """Explicit auth order that preserves Paramiko's default source set.
-
-    ``SSHClient.connect(auth_strategy=...)`` bypasses Paramiko's built-in
-    ``_auth`` discovery, so the strategy must itself offer the configured key,
-    ssh-agent keys, discoverable ``~/.ssh`` keys, the password, and the
-    keyboard-interactive handler. Unlike the base implementation, partial
-    authentication (multi-step servers) continues with the remaining sources
-    instead of being mistaken for success.
-    """
+class _ConnectionAuthStrategy(_BaseConnectionAuthStrategy):
+    """Compatibility facade keeping legacy source-injection hooks stable."""
 
     def __init__(self, info: SSHConnInfo, pkey=None):
-        super().__init__(ssh_config=None)
-        self.info = info
-        self.pkey = pkey
-
-    def get_sources(self):
-        username = self.info.username
-        if self.pkey is not None:
-            yield InMemoryPrivateKey(username, self.pkey)
-        if getattr(self.info, "allow_agent", True):
-            yield from _agent_key_sources(username)
-        if getattr(self.info, "look_for_keys", True):
-            yield from _discoverable_key_sources(username, self.info.password)
-        if self.info.password:
-            yield _PasswordSource(username, lambda: self.info.password)
-        if self.info.keyboard_interactive_handler is not None:
-            yield _KeyboardInteractiveSource(
-                username, self.info.keyboard_interactive_handler
-            )
-
-    def authenticate(self, transport):
-        overall_result = AuthResult(strategy=self)
-        for source in self.get_sources():
-            try:
-                result = source.authenticate(transport)
-            except Exception as exc:  # noqa: BLE001 - recorded, not swallowed
-                overall_result.append(SourceResult(source, exc))
-                continue
-            overall_result.append(SourceResult(source, result))
-            if not result:
-                return overall_result
-            # Non-empty result means partial authentication: the server wants
-            # another method (for example publickey followed by password).
-        raise AuthFailure(result=overall_result)
-
-
-class _PasswordSource(AuthSource):
-    def __init__(self, username, password_getter):
-        super().__init__(username)
-        self.password_getter = password_getter
-
-    def __repr__(self):
-        return self._repr(user=self.username)
-
-    def authenticate(self, transport):
-        return transport.auth_password(self.username, self.password_getter())
+        super().__init__(
+            info,
+            pkey,
+            agent_key_sources=_agent_key_sources,
+            discoverable_key_sources=_discoverable_key_sources,
+        )
 
 
 class SSHClientWrapper:

@@ -49,6 +49,10 @@
     } catch (e) {}
   };
 
+  const clipboardCopyPrefix = "\u0000HPCGUI_CLIPBOARD_COPY\u0000";
+  const clipboardPasteRequest = "\u0000HPCGUI_CLIPBOARD_PASTE\u0000";
+  const clipboardEscapePrefix = "\u0000HPCGUI_CLIPBOARD_ESC\u0000";
+
   window.hpcClear = () => {
     try {
       terminal.clear();
@@ -192,8 +196,36 @@
     } catch (e) {}
   };
 
-  // Input: xterm is authority for all keys, including Ctrl, navigation, Unicode, paste
+  // Clipboard shortcuts use the native clipboard through the existing bridge.
+  terminal.attachCustomKeyEventHandler((event) => {
+    if (event.type !== "keydown") return true;
+    const isMac = /Mac|iPhone|iPad/.test(navigator.platform || "");
+    const modifier = isMac ? event.metaKey : event.ctrlKey;
+    if (!modifier) return true;
+    const key = String(event.key || "").toLowerCase();
+    const shortcut = event.shiftKey || isMac;
+    if (!shortcut || (key !== "c" && key !== "v")) return true;
+    event.preventDefault();
+    if (key === "c") {
+      const selection = terminal.getSelection();
+      if (selection) {
+        postToPython({ type: "input", data: clipboardCopyPrefix + selection });
+      }
+    } else {
+      postToPython({ type: "input", data: clipboardPasteRequest });
+    }
+    return false;
+  });
+
+  // Input: xterm is authority for normal keys, navigation, Unicode, and paste.
   terminal.onData((data) => {
+    // Escape text that resembles our control protocol so user content remains
+    // ordinary terminal input. Shortcut requests are posted directly above.
+    if (data.startsWith(clipboardCopyPrefix)
+        || data === clipboardPasteRequest
+        || data.startsWith(clipboardEscapePrefix)) {
+      data = clipboardEscapePrefix + data;
+    }
     postToPython({ type: "input", data: data });
   });
 

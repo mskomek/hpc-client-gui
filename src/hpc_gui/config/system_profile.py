@@ -115,9 +115,68 @@ def normalize_system_settings(value: Any) -> dict[str, Any]:
             candidate = value.get(key)
             if isinstance(candidate, str) and candidate.strip():
                 settings[key] = candidate.strip()
-        if isinstance(value.get("provider_template"), dict):
-            settings["provider_template"] = dict(value["provider_template"])
+        provider = value.get("provider_template")
+        if isinstance(provider, dict):
+            settings["provider_template"] = dict(provider)
+            for key in ("scratch_dir", "home_dir"):
+                if not settings[key]:
+                    candidate = _provider_path_template(provider, key)
+                    if candidate:
+                        settings[key] = candidate
     return settings
+
+
+def _provider_path_template(provider: dict[str, Any], key: str) -> str:
+    paths = provider.get("paths")
+    candidate = paths.get(key) if isinstance(paths, dict) else None
+    if isinstance(candidate, str) and candidate.strip():
+        return candidate.strip()
+
+    kind = key.removesuffix("_dir")
+    areas = provider.get("storage")
+    for area in areas if isinstance(areas, list) else ():
+        if not isinstance(area, dict) or area.get("enabled") is False:
+            continue
+        area_kind = str(area.get("kind") or "").strip().lower()
+        if area_kind not in {"home", "scratch"}:
+            area_kind = str(area.get("id") or "").strip().lower()
+        if area_kind != kind:
+            continue
+        candidate = area.get("path_template")
+        if isinstance(candidate, str) and candidate.strip():
+            return candidate.strip()
+    return ""
+
+
+def profile_system_settings(profile: Any) -> dict[str, Any]:
+    """Normalize system settings while retaining top-level provider metadata."""
+    if not isinstance(profile, dict):
+        return normalize_system_settings(profile)
+    raw = profile.get("system")
+    values = dict(raw) if isinstance(raw, dict) else {}
+    provider = profile.get("provider_template")
+    if not isinstance(provider, dict):
+        provider = values.get("provider_template")
+    if isinstance(provider, dict):
+        values["provider_template"] = provider
+    return normalize_system_settings(values)
+
+
+def profile_remote_directories(profile: Any) -> dict[str, str]:
+    """Resolve a profile's configured Home and Scratch paths for browsing."""
+    settings = profile_system_settings(profile)
+    source = profile if isinstance(profile, dict) else {}
+    context = ProviderContext(
+        user=str(source.get("username") or source.get("user") or ""),
+        project=str(source.get("project") or ""),
+        account=str(source.get("account") or ""),
+    )
+    result: dict[str, str] = {}
+    for key in ("scratch_dir", "home_dir"):
+        template = settings.get(key, "")
+        resolved = resolve_provider_path(template, context)
+        result[key] = resolved.path if resolved.state == "resolved" else ""
+    return result
 
 
 def load_user_system_templates() -> list[dict[str, Any]]:

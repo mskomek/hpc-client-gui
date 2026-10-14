@@ -36,24 +36,42 @@ def _build_logs(parent, model: WxLogsModel | None = None, *, log_path: str | Pat
     # Top row: title on left, buttons on right
     top = wx.BoxSizer(wx.HORIZONTAL)
     title_label = wx.StaticText(panel, label=t("logs.title"))
+    collapse_repeats = wx.CheckBox(panel, label=t("logs.collapse_repeats"))
+    top.Add(title_label, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 6)
+    top.AddStretchSpacer(1)
+    top.Add(collapse_repeats, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 6)
+    actions = wx.WrapSizer(wx.HORIZONTAL)
     btn_copy = wx.Button(panel, label=t("logs.copy"))
     btn_copy_path = wx.Button(panel, label=t("logs.copy_path"))
     btn_folder = wx.Button(panel, label=t("logs.open_folder"))
     btn_diag = wx.Button(panel, label=t("logs.export_diagnostics"))
     btn_refresh = wx.Button(panel, label=t("logs.refresh"))
-    top.Add(title_label, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 6)
-    top.AddStretchSpacer(1)
-    top.Add(btn_copy, 0, wx.ALL, 4)
-    top.Add(btn_copy_path, 0, wx.ALL, 4)
-    top.Add(btn_folder, 0, wx.ALL, 4)
-    top.Add(btn_diag, 0, wx.ALL, 4)
-    top.Add(btn_refresh, 0, wx.ALL, 4)
+    btn_copy_path.SetToolTip(t("logs.copy_path_hint"))
+    btn_folder.SetToolTip(t("logs.open_folder_hint"))
+    btn_diag.SetToolTip(t("logs.export_diagnostics_hint"))
+    for button in (btn_copy, btn_copy_path, btn_folder, btn_diag, btn_refresh):
+        button.SetMinSize(wx.Size(-1, 32))
+        actions.Add(button, 0, wx.ALL, 3)
 
     text = wx.TextCtrl(panel, style=wx.TE_MULTILINE | wx.TE_READONLY | wx.HSCROLL)
 
     root.Add(top, 0, wx.EXPAND)
+    root.Add(actions, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 3)
     root.Add(text, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 8)
     panel.SetSizer(root)
+
+    display_override = {"text": None}
+
+    def render_text() -> str:
+        override = display_override["text"]
+        if override is not None:
+            value = override
+        elif collapse_repeats.GetValue():
+            value = model.collapsed_text(t("logs.repeated_summary"))
+        else:
+            value = model.copy_all()
+        text.SetValue(value)
+        return value
 
     def _set_clipboard(value: str) -> None:
         try:
@@ -67,17 +85,18 @@ def _build_logs(parent, model: WxLogsModel | None = None, *, log_path: str | Pat
         if not _alive["value"]:
             return
         if error is not None:
-            text.SetValue(t("logs.read_failed").format(err=str(error)))
+            display_override["text"] = t("logs.read_failed").format(err=str(error))
+            render_text()
             return
+        display_override["text"] = None
         # model.refresh returns "" for missing file -> show not_created
         if not result:
             # Check if file exists to decide empty vs not_created
             if not model.log_path.is_file():
-                text.SetValue(t("logs.not_created").format(path=str(model.log_path)))
-            else:
-                text.SetValue(result)
+                display_override["text"] = t("logs.not_created").format(path=str(model.log_path))
+            render_text()
             return
-        text.SetValue(result)
+        render_text()
 
     def refresh(_event=None) -> None:
         def worker():
@@ -89,11 +108,7 @@ def _build_logs(parent, model: WxLogsModel | None = None, *, log_path: str | Pat
         Thread(target=worker, daemon=True).start()
 
     def copy_all(_event=None) -> None:
-        try:
-            value = model.copy_all()
-        except Exception:
-            value = text.GetValue()
-        # Fallback to displayed text if model empty yet file exists? keep model value
+        value = render_text() if model.text else text.GetValue()
         _set_clipboard(value)
 
     def copy_path(_event=None) -> None:
@@ -158,15 +173,22 @@ def _build_logs(parent, model: WxLogsModel | None = None, *, log_path: str | Pat
     btn_copy_path.Bind(wx.EVT_BUTTON, copy_path)
     btn_folder.Bind(wx.EVT_BUTTON, open_logs_folder)
     btn_diag.Bind(wx.EVT_BUTTON, export_diagnostics)
+    collapse_repeats.Bind(wx.EVT_CHECKBOX, lambda _event: render_text())
 
     def refresh_labels(_language=None):
         host.set_host_title(t("tabs.logs"))
         title_label.SetLabel(t("logs.title"))
         btn_copy.SetLabel(t("logs.copy"))
         btn_copy_path.SetLabel(t("logs.copy_path"))
+        btn_copy_path.SetToolTip(t("logs.copy_path_hint"))
         btn_folder.SetLabel(t("logs.open_folder"))
+        btn_folder.SetToolTip(t("logs.open_folder_hint"))
         btn_diag.SetLabel(t("logs.export_diagnostics"))
+        btn_diag.SetToolTip(t("logs.export_diagnostics_hint"))
         btn_refresh.SetLabel(t("logs.refresh"))
+        collapse_repeats.SetLabel(t("logs.collapse_repeats"))
+        if model.text and collapse_repeats.GetValue():
+            render_text()
 
     def _on_host_close(event):
         _alive["value"] = False
@@ -191,6 +213,7 @@ def _build_logs(parent, model: WxLogsModel | None = None, *, log_path: str | Pat
         "open_folder": btn_folder,
         "export": btn_diag,
         "refresh": btn_refresh,
+        "collapse_repeats": collapse_repeats,
     }
     host._wx_logs_model = model
     host._wx_logs_refresh = refresh
