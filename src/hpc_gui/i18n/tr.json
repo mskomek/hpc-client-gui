@@ -992,6 +992,8 @@
     "cluster_settings": "Küme Ayarları",
     "save": "Kaydet",
     "save_and_connect": "Kaydet ve Bağlan",
+    "switch_active_transfer_title": "Bağlantı değiştirme",
+    "switch_active_transfer_message": "{count} etkin veya sırada bekleyen aktarım var. Bağlantı değişirse bu aktarımlar iptal edilir ve mevcut oturum ekranı sıfırlanır. Devam etmek istiyor musunuz?",
     "edit_dialog_title": "Bağlantıyı Düzenle",
     "edit_action": "Düzenle",
     "password_no_prompt": "Bağlanırken bir daha şifre sorma",

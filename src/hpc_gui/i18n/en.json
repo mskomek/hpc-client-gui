@@ -992,6 +992,8 @@
     "cluster_settings": "Cluster Settings",
     "save": "Save",
     "save_and_connect": "Save & Connect",
+    "switch_active_transfer_title": "Switch connection",
+    "switch_active_transfer_message": "Active or queued transfers: {count}. Switching connections cancels these transfers and resets the current session view. Continue?",
     "edit_dialog_title": "Edit Connection",
     "edit_action": "Edit",
     "password_no_prompt": "Do not ask for the password again when connecting",

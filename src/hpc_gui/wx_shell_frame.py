@@ -4,6 +4,7 @@ from __future__ import annotations
 from hpc_gui.wx_lifecycle import WxLifecycleController
 from hpc_gui import __version__
 from hpc_gui.wx_shell_connections import _connection_callbacks
+from hpc_gui.wx_shell_connection_switch import install_connection_switch_guard
 from hpc_gui.wx_shell_events import _directories_callbacks
 from hpc_gui.wx_shell_dispatch import _dispatch
 from hpc_gui.wx_shell_files import _editor_action_factory
@@ -148,6 +149,9 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
         _conn_model = getattr(connection_panel, "_wx_connection_model", None)
         if _conn_model is not None:
             _conn_model._session_invalidated_hook = _conn["on_disconnected"]
+            install_connection_switch_guard(
+                wx, connection_panel, session_state, _conn["on_disconnected"]
+            )
     except Exception:
         pass
 

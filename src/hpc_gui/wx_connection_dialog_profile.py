@@ -278,6 +278,13 @@ class ConnectionDialogProfileMixin:
         if profile is None:
             return
         callback = self._on_save_and_connect or self._on_save
+        will_connect = callable(self._on_save_and_connect)
+        before_switch = getattr(self.parent, "_wx_before_connection_switch", None)
+        if will_connect and callable(before_switch) and not before_switch():
+            return
         if callback is not None and not callback(profile):
             return
+        after_switch = getattr(self.parent, "_wx_after_connection_switch", None)
+        if will_connect and callable(after_switch):
+            after_switch()
         self.dlg.EndModal(self._wx.ID_OK)
