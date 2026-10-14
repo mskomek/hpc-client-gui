@@ -1,9 +1,11 @@
 import codecs
 import unittest
+from types import SimpleNamespace
 
 import pytest
 
 from hpc_gui.ssh.client import SSHClientWrapper
+from hpc_gui.ssh.shell_session import InteractiveShellSession
 
 
 class _PartialChannel:
@@ -24,6 +26,33 @@ class _PartialChannel:
         return len(piece)
 
 
+def test_connected_wrapper_holds_startup_output_until_terminal_attachment(monkeypatch):
+    captured = {}
+
+    class _Session:
+        def __init__(self, **kwargs):
+            captured.update(kwargs)
+            self.activated = False
+
+        def start(self):
+            return True
+
+        def activate_output(self):
+            self.activated = True
+
+    monkeypatch.setattr("hpc_gui.ssh.client.InteractiveShellSession", _Session)
+    wrapper = SSHClientWrapper(shell_output_cb=lambda _text: None)
+    wrapper.client = SimpleNamespace(
+        get_transport=lambda: SimpleNamespace(is_active=lambda: True)
+    )
+
+    wrapper._start_shell_session()
+    assert captured["defer_output"] is True
+
+    wrapper.activate_shell_output()
+    assert wrapper._shell_session.activated is True
+
+
 def _wrapper(channel, output):
     wrapper = SSHClientWrapper(shell_output_cb=output.append)
     wrapper._shell_channel = channel
@@ -33,6 +62,23 @@ def _wrapper(channel, output):
 @pytest.mark.unit
 @pytest.mark.semantic
 class SshTerminalStreamTests(unittest.TestCase):
+    def test_startup_output_waits_for_terminal_and_then_keeps_order(self):
+        output = []
+        session = InteractiveShellSession(
+            invoke_shell=lambda **_kwargs: None,
+            on_output=output.append,
+            defer_output=True,
+        )
+
+        session._handle_output("welcome screen")
+        session._handle_output("\r\ncontinue")
+        self.assertEqual(output, [])
+
+        session.activate_output()
+        session._handle_output("\r\nprompt")
+
+        self.assertEqual(output, ["welcome screen", "\r\ncontinue", "\r\nprompt"])
+
     def test_utf8_split_at_each_byte_boundary(self):
         value = "Türkçe 🐍 terminal"
         expected = value

@@ -13,7 +13,11 @@ import codecs
 import socket
 import threading
 import time
+from collections import deque
 from typing import Callable, Optional, Tuple
+
+_MAX_PENDING_OUTPUT_BYTES = 2 * 1024 * 1024
+_MAX_PENDING_OUTPUT_CHUNKS = 5000
 
 _ACS_MAP = {
     "j": "┘",
@@ -107,6 +111,7 @@ class InteractiveShellSession:
         on_disconnect: Optional[Callable[[str], None]] = None,
         log: Optional[Callable[[str], None]] = None,
         sanitize: Callable[[str], str] = _sanitize_terminal_text,
+        defer_output: bool = False,
     ) -> None:
         self._invoke_shell = invoke_shell
         self.geometry = (max(1, int(geometry[0])), max(1, int(geometry[1])))
@@ -114,6 +119,11 @@ class InteractiveShellSession:
         self._on_disconnect_cb = on_disconnect
         self._log = log or (lambda msg: None)
         self._sanitize = sanitize
+        self._defer_output = bool(defer_output)
+        self._output_ready = not self._defer_output
+        self._pending_output = deque()
+        self._pending_output_bytes = 0
+        self._output_lock = threading.RLock()
 
         self.channel = None
         self.decoder = codecs.getincrementaldecoder("utf-8")("replace")
@@ -125,6 +135,10 @@ class InteractiveShellSession:
 
     def start(self) -> bool:
         self.stop()
+        with self._output_lock:
+            self._output_ready = not self._defer_output
+            self._pending_output.clear()
+            self._pending_output_bytes = 0
         try:
             cols, rows = self.geometry
             try:
@@ -223,6 +237,17 @@ class InteractiveShellSession:
 
     # ---------- output ----------
 
+    def activate_output(self) -> None:
+        """Deliver startup output after the terminal UI has subscribed."""
+        with self._output_lock:
+            if self._output_ready:
+                return
+            self._output_ready = True
+            while self._pending_output:
+                text, byte_count = self._pending_output.popleft()
+                self._pending_output_bytes -= byte_count
+                self._deliver_output(text)
+
     def decode_bytes(self, data: bytes, *, final: bool = False) -> None:
         try:
             text = self.decoder.decode(data, final=final)
@@ -249,6 +274,21 @@ class InteractiveShellSession:
     def _handle_output(self, text: str) -> None:
         if not text:
             return
+        with self._output_lock:
+            if not self._output_ready:
+                byte_count = len(text.encode("utf-8", errors="replace"))
+                self._pending_output.append((text, byte_count))
+                self._pending_output_bytes += byte_count
+                while self._pending_output and (
+                    len(self._pending_output) > _MAX_PENDING_OUTPUT_CHUNKS
+                    or self._pending_output_bytes > _MAX_PENDING_OUTPUT_BYTES
+                ):
+                    _, removed_bytes = self._pending_output.popleft()
+                    self._pending_output_bytes -= removed_bytes
+                return
+            self._deliver_output(text)
+
+    def _deliver_output(self, text: str) -> None:
         if self._on_output_cb is not None:
             try:
                 self._on_output_cb(text)

@@ -26,6 +26,20 @@ def test_connect_uses_plugin_home_and_routes_to_terminal(monkeypatch):
     remote = _RemotePanel(calls)
     directories = type("Directories", (), {"_wx_dirs_rebind": lambda *_args: None})()
     selected = []
+    terminal_events = []
+
+    class _TerminalPanel:
+        def _wx_terminal_set_ssh(self, ssh):
+            terminal_events.append(("attached", ssh))
+
+    class _SSH:
+        def close(self):
+            pass
+
+        def activate_shell_output(self):
+            terminal_events.append(("activated", self))
+
+    ssh = _SSH()
     monkeypatch.setattr(wx_shell_connections, "_update_shell_status_text", lambda *_args: None)
     monkeypatch.setattr(wx_shell_connections, "_remote_files_callbacks", lambda *_args: {
         "navigation_store": object(),
@@ -38,6 +52,7 @@ def test_connect_uses_plugin_home_and_routes_to_terminal(monkeypatch):
         lambda _state, _parent, key: selected.append(key) or True,
     )
     state = {
+        "_embedded_terminal_panel": _TerminalPanel(),
         "_embedded_remote_files_panel": remote,
         "_embedded_directories_panel": directories,
     }
@@ -51,11 +66,13 @@ def test_connect_uses_plugin_home_and_routes_to_terminal(monkeypatch):
                     {"id": "scratch", "kind": "scratch", "path_template": "/scratch/{user}"},
                 ]
             },
-        }
+        },
+        "ssh": ssh,
     }
 
     callbacks["on_connected"](session)
 
     assert session["profile"]["system"]["home_dir"] == "/home/{user}"
     assert calls == [("navigate", "/home/alice"), ("load",)]
+    assert terminal_events == [("attached", ssh), ("activated", ssh)]
     assert selected == ["NAV-TERMINAL"]

@@ -338,10 +338,16 @@ class SSHClientWrapper:
             on_output=self._shell_output_cb,
             on_disconnect=self._on_shell_unexpected_disconnect,
             log=self.log,
+            defer_output=self._shell_output_cb is not None,
         )
         if not session.start():
             return
         self._shell_session = session
+
+    def activate_shell_output(self) -> None:
+        """Release shell startup output after a terminal view subscribes."""
+        if self._shell_session is not None:
+            self._shell_session.activate_output()
 
     def resize_shell_pty(self, cols: int, rows: int) -> None:
         cols = max(1, int(cols))

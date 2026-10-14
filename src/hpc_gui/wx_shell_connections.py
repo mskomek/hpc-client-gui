@@ -49,6 +49,9 @@ def _connection_callbacks(session_state, parent, lifecycle):
             panel = session_state.get("_embedded_terminal_panel")
             if panel is not None and hasattr(panel, "_wx_terminal_set_ssh"):
                 panel._wx_terminal_set_ssh(ssh)
+                activate_output = getattr(ssh, "activate_shell_output", None)
+                if callable(activate_output):
+                    activate_output()
         except Exception:
             pass
         for panel_key in ("_embedded_jobs_panel", "_embedded_remote_files_panel"):
