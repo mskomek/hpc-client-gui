@@ -4,9 +4,13 @@ from __future__ import annotations
 
 from threading import Thread
 
-from hpc_gui.config.system_profile import format_remote_path, normalize_system_settings
 from hpc_gui.core.i18n import subscribe_language_change, t, unsubscribe_language_change
 from hpc_gui.wx_directories import WxDirectoriesWorkspace
+from hpc_gui.wx_directories_session import (
+    _resolve_scratch_home,
+    mark_directories_disconnected,
+    rebind_directories_storage,
+)
 from hpc_gui.wx_host import make_host
 from hpc_gui.wx_remote_files import WxRemoteDirectoryModel
 
@@ -38,56 +42,6 @@ def _pinned_remote_identity(session_state) -> dict:
         return {"provider": "", "profile": "", "session_key": ""}
 
 
-def _resolve_scratch_home(session_state) -> tuple[str, str]:
-    """Derive scratch/home paths from session, never hardcode."""
-    session = None
-    if isinstance(session_state, dict):
-        session = session_state.get("session")
-        if session is None and session_state.get("profile"):
-            # session_state itself might be session
-            session = session_state
-    if not isinstance(session, dict):
-        session = {}
-
-    cfg = session.get("cfg") if isinstance(session.get("cfg"), (dict, object)) and session.get("cfg") is not None else None
-    # Fallback to profile dict if cfg missing
-    if cfg is None:
-        profile = session.get("profile")
-        if isinstance(profile, dict):
-            cfg = profile
-        else:
-            cfg = session.get("cfg")
-
-    user = "user"
-    system_raw = None
-    if isinstance(cfg, dict):
-        user = str(cfg.get("username") or cfg.get("user") or user)
-        system_raw = cfg.get("system_settings") if "system_settings" in cfg else cfg.get("system") if "system" in cfg else cfg.get("system_profile")
-        # also provider may be elsewhere, but normalize handles missing
-    elif cfg is not None:
-        # object with attributes
-        user = str(getattr(cfg, "username", None) or getattr(cfg, "user", None) or user)
-        system_raw = getattr(cfg, "system_settings", None)
-        if system_raw is None:
-            system_raw = getattr(cfg, "system", None)
-    else:
-        # try profile again
-        profile = session.get("profile") if isinstance(session.get("profile"), dict) else {}
-        if isinstance(profile, dict):
-            user = str(profile.get("username") or user)
-            system_raw = profile.get("system_settings") or profile.get("system")
-
-    system = normalize_system_settings(system_raw)
-    scratch_dir = format_remote_path(system.get("scratch_dir", ""), user) if isinstance(system.get("scratch_dir"), str) else ""
-    home_dir = format_remote_path(system.get("home_dir", ""), user) if isinstance(system.get("home_dir"), str) else ""
-    # fallback to "/" if still empty (panel must still construct)
-    if not scratch_dir:
-        scratch_dir = "/"
-    if not home_dir:
-        home_dir = "/"
-    return scratch_dir, home_dir
-
-
 def _resolve_live_files(session_state, snapshot_files=None):
     """Return the CURRENT session files backend (live-first rebind contract).
 
@@ -111,69 +65,6 @@ def _resolve_new_slurm_target(session_state, name: str) -> str:
     live_scratch, _home = _resolve_scratch_home(session_state)
     clean = (name or "").strip()
     return live_scratch.rstrip("/") + "/" + clean
-
-
-def rebind_directories_storage(host, session_state) -> dict:
-    """Rebind directories panes to the CURRENT session (W24 DIR-SESSION-001).
-
-    Recomputes scratch/home from the live session, updates semantic labels,
-    navigates both models, and invalidates stale listing caches. Returns the
-    resolved ``{"scratch": ..., "home": ...}`` paths.
-    """
-    live_scratch, live_home = _resolve_scratch_home(session_state)
-    models = getattr(host, "_wx_dirs_models", None) or {}
-    controls = getattr(host, "_wx_dirs_controls", None) or {}
-    for key, path in (("scratch", live_scratch), ("home", live_home)):
-        model = models.get(key)
-        if model is not None:
-            try:
-                model.invalidate()
-            except Exception:
-                pass
-            # W24 TODO-006 / DIR-008: a provider switch starts a new navigation
-            # context; provider-A history entries must not linger. Favorites
-            # are explicit user saves and persist by design.
-            try:
-                if isinstance(getattr(model, "history", None), list):
-                    model.history.clear()
-            except Exception:
-                pass
-            try:
-                model.navigate(path)
-            except Exception:
-                pass
-    semantic = {"scratch": "Scratch", "home": "Home"}
-    for key, path in (("scratch", live_scratch), ("home", live_home)):
-        label = controls.get(f"{key}_label")
-        if label is not None:
-            try:
-                label.SetLabel(f"{semantic[key]} — {path}")
-            except Exception:
-                pass
-    return {"scratch": live_scratch, "home": live_home}
-
-
-def mark_directories_disconnected(host) -> None:
-    """Show explicit disconnected state (W24 SESSION-DISCONNECT-001 / DIR-009).
-
-    Labels become distinguishable from loading/error, and stale listing
-    caches are dropped so no dead-backend listing is presented as valid.
-    """
-    controls = getattr(host, "_wx_dirs_controls", None) or {}
-    models = getattr(host, "_wx_dirs_models", None) or {}
-    for key, semantic in (("scratch", "Scratch"), ("home", "Home")):
-        model = models.get(key)
-        if model is not None:
-            try:
-                model.invalidate()
-            except Exception:
-                pass
-        label = controls.get(f"{key}_label")
-        if label is not None:
-            try:
-                label.SetLabel(f"{semantic} — disconnected")
-            except Exception:
-                pass
 
 
 def _build_directories(parent, *, session_state=None, workspace: WxDirectoriesWorkspace | None = None, loader=None, operation=None, read_text=None, open_editor=None, open_editor_new_window=None, run_shell=None, submit=None, embedded):

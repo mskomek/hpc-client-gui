@@ -840,6 +840,8 @@
     "local_nav_documents": "Documents",
     "local_nav_downloads": "Downloads",
     "local_nav_drives": "This PC",
+    "local_favorites_empty": "No local favorites yet",
+    "local_history_empty": "No recent local folders",
     "drives": "Drives",
     "back": "Back",
     "parent": "Up",

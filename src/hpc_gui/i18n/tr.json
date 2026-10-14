@@ -840,6 +840,8 @@
     "local_nav_documents": "Belgeler",
     "local_nav_downloads": "İndirilenler",
     "local_nav_drives": "Bu Bilgisayar",
+    "local_favorites_empty": "Henüz yerel favori yok",
+    "local_history_empty": "Yakınlarda açılan yerel klasör yok",
     "drives": "Sürücüler",
     "back": "Geri",
     "parent": "Üst Dizin",
