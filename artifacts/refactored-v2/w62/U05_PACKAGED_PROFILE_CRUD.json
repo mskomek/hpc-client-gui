@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "wave_id": "W62",
+  "unit_id": "U05",
+  "requirement_ids": [
+    "HPC-W62-BASE-005"
+  ],
+  "disposition": "BLOCKED_AWAITING_AUTHORIZED_PACKAGED_CANDIDATE",
+  "phase_instance_id": "20261013-090906-358da80d:9:W62:repair",
+  "repository_identity": {
+    "git_head": "4268668f4b1af6cac2affd8679e3ffc62fbb6f0d",
+    "working_tree": "dirty; pre-existing modifications and untracked files preserved",
+    "candidate_identity": null
+  },
+  "candidate_preflight": {
+    "authority_path": "artifacts/refactored-v2/w62/SUCCESSOR_CANDIDATE_AUTHORITY.json",
+    "authority_disposition": "AWAITING_INPUT",
+    "candidate_authority_created": false,
+    "successor_executable": null,
+    "successor_archive": null,
+    "release_owner_disposition": "unverified",
+    "existing_build_output_authorized": false
+  },
+  "focused_source_regression": {
+    "command": "python -m pytest tests/test_command_registry.py::test_unknown_and_duplicate_commands_fail tests/test_connection_profile_service.py tests/test_wx_connection_profiles.py",
+    "exit_code": 0,
+    "output": "42 passed in 7.17s (1 command_registry + 12 connection_profile_service + 29 wx_connection_profiles); re-run in repair dispatch 20261013-090906-358da80d:4:W62:repair",
+    "scope": "source-level regression only; does not establish packaged GUI behavior"
+  },
+  "packaged_fixture": {
+    "status": "NOT_RUN",
+    "actions": [
+      "Save",
+      "Edit",
+      "Duplicate",
+      "Delete",
+      "right-click",
+      "Save-and-Connect"
+    ],
+    "dispatch_results": null,
+    "persistence_results": null,
+    "restart_readback": null,
+    "process_exit_and_wer": {
+      "wer_collector": "absent: no WER/LocalDumps collector in src/scripts or scripts at HEAD; no WER bytes invented; no packaged process launched so no exit code captured"
+    },
+    "reason": "No authorized immutable successor candidate identity is available; running existing build output would not produce candidate-bound evidence. Windows11 guest runner preflight in this dispatch (Invoke-Windows11.ps1 -ScriptBlock { hostname; whoami }) returned healthy output (test / test\\\\home), so no BLOCKED_ENV reclassification; packaged CRUD retained as REPOSITORY_TECHNICAL_BLOCKED W62-005:packaged-crud-regression-not-run. No guest packaged launch attempted without an authorized candidate."
+  },
+  "blocker": {
+    "blocker_class": "REPOSITORY_TECHNICAL_BLOCKED",
+    "blocker_owner": "CURRENT_WAVE",
+    "unblock_condition": "An authorized successor release owner supplies or approves an immutable source/package candidate and supersession disposition; bind the exact EXE, archive, and manifest identities before running the packaged fixture via the Windows11 guest with persistence/restart readback and WER check.",
+    "failure_signature": "W62-005:packaged-crud-regression-not-run",
+    "requirement_ids": [
+      "HPC-W62-BASE-005"
+    ],
+    "required_evidence_paths": [
+      "artifacts/refactored-v2/w62/SUCCESSOR_CANDIDATE_AUTHORITY.json"
+    ],
+    "affected_unit_ids": [
+      "U05"
+    ]
+  }
+}

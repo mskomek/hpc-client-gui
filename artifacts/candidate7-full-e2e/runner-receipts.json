@@ -1,0 +1,191 @@
+[
+  {
+    "file": "06606c5bf6f54ed7902cd540c70ab459.result.json",
+    "run_id": "06606c5bf6f54ed7902cd540c70ab459",
+    "user": "test\\home",
+    "explorer_session": 2,
+    "exit_code": 0,
+    "timeout": false,
+    "candidate7_exe_sha256": "a95a71c3b296d279f548330598e9e1e44f468b32bc0514f056b376deae600266"
+  },
+  {
+    "file": "0de21e82aab747ddb9326edb6ffb169b.result.json",
+    "run_id": "0de21e82aab747ddb9326edb6ffb169b",
+    "user": "test\\home",
+    "explorer_session": 2,
+    "exit_code": 1,
+    "timeout": false,
+    "candidate7_exe_sha256": "a95a71c3b296d279f548330598e9e1e44f468b32bc0514f056b376deae600266"
+  },
+  {
+    "file": "12c8241e617042dbaf50208d363d8518.result.json",
+    "run_id": "12c8241e617042dbaf50208d363d8518",
+    "user": "test\\home",
+    "explorer_session": 2,
+    "exit_code": 0,
+    "timeout": false,
+    "candidate7_exe_sha256": "a95a71c3b296d279f548330598e9e1e44f468b32bc0514f056b376deae600266"
+  },
+  {
+    "file": "1b4746a08d514aa681ea679bfee3b637.result.json",
+    "run_id": "1b4746a08d514aa681ea679bfee3b637",
+    "user": "test\\home",
+    "explorer_session": 2,
+    "exit_code": 0,
+    "timeout": false,
+    "candidate7_exe_sha256": "a95a71c3b296d279f548330598e9e1e44f468b32bc0514f056b376deae600266"
+  },
+  {
+    "file": "2e94383ed8e04138ad9584786225f28c.result.json",
+    "run_id": "2e94383ed8e04138ad9584786225f28c",
+    "user": "test\\home",
+    "explorer_session": 2,
+    "exit_code": 0,
+    "timeout": false,
+    "candidate7_exe_sha256": "a95a71c3b296d279f548330598e9e1e44f468b32bc0514f056b376deae600266"
+  },
+  {
+    "file": "3b8bb512ae1d48a4b0c7aa7356cdc47f.result.json",
+    "run_id": "3b8bb512ae1d48a4b0c7aa7356cdc47f",
+    "user": "test\\home",
+    "explorer_session": 2,
+    "exit_code": 0,
+    "timeout": false,
+    "candidate7_exe_sha256": "a95a71c3b296d279f548330598e9e1e44f468b32bc0514f056b376deae600266"
+  },
+  {
+    "file": "3d07399443b84a8e943cec8b19928d17.result.json",
+    "run_id": "3d07399443b84a8e943cec8b19928d17",
+    "user": "test\\home",
+    "explorer_session": 2,
+    "exit_code": 0,
+    "timeout": false,
+    "candidate7_exe_sha256": "a95a71c3b296d279f548330598e9e1e44f468b32bc0514f056b376deae600266"
+  },
+  {
+    "file": "42530423ef494689b42f0e668a747f12.result.json",
+    "run_id": "42530423ef494689b42f0e668a747f12",
+    "user": "test\\home",
+    "explorer_session": 2,
+    "exit_code": 0,
+    "timeout": false,
+    "candidate7_exe_sha256": "a95a71c3b296d279f548330598e9e1e44f468b32bc0514f056b376deae600266"
+  },
+  {
+    "file": "4386fb79e9a040fc903bd2ae30bf31ee.result.json",
+    "run_id": "4386fb79e9a040fc903bd2ae30bf31ee",
+    "user": "test\\home",
+    "explorer_session": 2,
+    "exit_code": 1,
+    "timeout": false,
+    "candidate7_exe_sha256": "a95a71c3b296d279f548330598e9e1e44f468b32bc0514f056b376deae600266"
+  },
+  {
+    "file": "43e909190d374b05b9034410bdcdd07b.result.json",
+    "run_id": "43e909190d374b05b9034410bdcdd07b",
+    "user": "test\\home",
+    "explorer_session": 2,
+    "exit_code": 0,
+    "timeout": false,
+    "candidate7_exe_sha256": "a95a71c3b296d279f548330598e9e1e44f468b32bc0514f056b376deae600266"
+  },
+  {
+    "file": "47838542aeb84da896b6c9ccf092272a.result.json",
+    "run_id": "47838542aeb84da896b6c9ccf092272a",
+    "user": "test\\home",
+    "explorer_session": 2,
+    "exit_code": 0,
+    "timeout": false,
+    "candidate7_exe_sha256": "a95a71c3b296d279f548330598e9e1e44f468b32bc0514f056b376deae600266"
+  },
+  {
+    "file": "75f5b757bb3d406ca98414ea1ebe0cc2.result.json",
+    "run_id": "75f5b757bb3d406ca98414ea1ebe0cc2",
+    "user": "test\\home",
+    "explorer_session": 2,
+    "exit_code": 0,
+    "timeout": false,
+    "candidate7_exe_sha256": "a95a71c3b296d279f548330598e9e1e44f468b32bc0514f056b376deae600266"
+  },
+  {
+    "file": "85b3b812509c4b7fa63f5db946c868a5.result.json",
+    "run_id": "85b3b812509c4b7fa63f5db946c868a5",
+    "user": "test\\home",
+    "explorer_session": 2,
+    "exit_code": 0,
+    "timeout": false,
+    "candidate7_exe_sha256": "a95a71c3b296d279f548330598e9e1e44f468b32bc0514f056b376deae600266"
+  },
+  {
+    "file": "894dd3669aea4e6991502b674337713e.result.json",
+    "run_id": "894dd3669aea4e6991502b674337713e",
+    "user": "test\\home",
+    "explorer_session": 2,
+    "exit_code": 0,
+    "timeout": false,
+    "candidate7_exe_sha256": "a95a71c3b296d279f548330598e9e1e44f468b32bc0514f056b376deae600266"
+  },
+  {
+    "file": "9fcb93d4d2614d42846d44b7fc8fa456.result.json",
+    "run_id": "9fcb93d4d2614d42846d44b7fc8fa456",
+    "user": "test\\home",
+    "explorer_session": 2,
+    "exit_code": 0,
+    "timeout": false,
+    "candidate7_exe_sha256": "a95a71c3b296d279f548330598e9e1e44f468b32bc0514f056b376deae600266"
+  },
+  {
+    "file": "b38ace7450b043a58c0a28e4f0bfcfbf.result.json",
+    "run_id": "b38ace7450b043a58c0a28e4f0bfcfbf",
+    "user": "test\\home",
+    "explorer_session": 2,
+    "exit_code": 0,
+    "timeout": false,
+    "candidate7_exe_sha256": "a95a71c3b296d279f548330598e9e1e44f468b32bc0514f056b376deae600266"
+  },
+  {
+    "file": "bab1ddb8098e419d846fa911abb2593f.result.json",
+    "run_id": "bab1ddb8098e419d846fa911abb2593f",
+    "user": "test\\home",
+    "explorer_session": 2,
+    "exit_code": 1,
+    "timeout": false,
+    "candidate7_exe_sha256": "a95a71c3b296d279f548330598e9e1e44f468b32bc0514f056b376deae600266"
+  },
+  {
+    "file": "d523731bf2224775992bc0726d82e076.result.json",
+    "run_id": "d523731bf2224775992bc0726d82e076",
+    "user": "test\\home",
+    "explorer_session": 2,
+    "exit_code": 1,
+    "timeout": false,
+    "candidate7_exe_sha256": "a95a71c3b296d279f548330598e9e1e44f468b32bc0514f056b376deae600266"
+  },
+  {
+    "file": "deaeb8a51030486abc50036ec130f6e7.result.json",
+    "run_id": "deaeb8a51030486abc50036ec130f6e7",
+    "user": "test\\home",
+    "explorer_session": 2,
+    "exit_code": 0,
+    "timeout": false,
+    "candidate7_exe_sha256": "a95a71c3b296d279f548330598e9e1e44f468b32bc0514f056b376deae600266"
+  },
+  {
+    "file": "e564e790586542ee990f760d277e6a90.result.json",
+    "run_id": "e564e790586542ee990f760d277e6a90",
+    "user": "test\\home",
+    "explorer_session": 2,
+    "exit_code": 1,
+    "timeout": false,
+    "candidate7_exe_sha256": "a95a71c3b296d279f548330598e9e1e44f468b32bc0514f056b376deae600266"
+  },
+  {
+    "file": "fd2a02b822d442a2a6452431b136645e.result.json",
+    "run_id": "fd2a02b822d442a2a6452431b136645e",
+    "user": "test\\home",
+    "explorer_session": 2,
+    "exit_code": 1,
+    "timeout": false,
+    "candidate7_exe_sha256": "a95a71c3b296d279f548330598e9e1e44f468b32bc0514f056b376deae600266"
+  }
+]

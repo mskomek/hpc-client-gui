@@ -1,0 +1,19 @@
+{
+  "run_id": "2aa753d41bc14651b1b7df85335475fd",
+  "app_pid": 4088,
+  "window_found": false,
+  "main_title": "",
+  "main_handle": 0,
+  "controls": [],
+  "initial_screenshot": null,
+  "target_found": false,
+  "target_name": "",
+  "target_invoked": false,
+  "post_controls": [],
+  "post_screenshot": null,
+  "app_exit_code": 0,
+  "errors": [
+    "app did not exit after CloseMainWindow"
+  ],
+  "ended_utc": "2026-10-09T19:11:35.1893128Z"
+}

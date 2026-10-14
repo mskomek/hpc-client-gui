@@ -4,6 +4,7 @@ from __future__ import annotations
 from pathlib import Path
 from hpc_gui.wx_shell_file_transfer import _cancel_transfer_sessions
 from hpc_gui.wx_shell_files import _remote_files_callbacks
+from hpc_gui.wx_shell_window_support import _update_shell_status_text
 
 
 def _connection_callbacks(session_state, parent, lifecycle):

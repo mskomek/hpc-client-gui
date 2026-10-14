@@ -1,0 +1,4 @@
+"step","name","type","class","enabled","rect"
+"1","","ControlType.Pane","ListBox","True","36,127,645,539"
+"2","panel","ControlType.Pane","wxWindowNR","True","693,127,657,539"
+"3","Add Connection","ControlType.Pane","Button","True","36,706,108,23"

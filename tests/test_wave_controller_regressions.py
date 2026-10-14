@@ -23,6 +23,7 @@ def load_script(name: str, filename: str):
 
 controller = load_script("wave_program_controller", "run-wave-program.py")
 router = load_script("wave_findings_router", "route-wave-findings.py")
+lifecycle = sys.modules["controller_lifecycle_project"]
 direct_spec = importlib.util.spec_from_file_location("wave_direct_executor", ROOT / "scripts" / "direct_executor.py")
 assert direct_spec and direct_spec.loader
 direct_executor = importlib.util.module_from_spec(direct_spec)
@@ -160,19 +161,19 @@ def _audit_receipt(tmp_path: Path, *, status="PASS", identity="content-1", wave=
 
 def test_audit_close_receipt_overrides_historical_ready(tmp_path: Path, monkeypatch):
     receipt = _audit_receipt(tmp_path)
-    monkeypatch.setattr(controller, "engine_git_capability",
+    monkeypatch.setattr(lifecycle, "engine_git_capability",
                         lambda _repo: {"has_head": True, "head": "head-1"})
     assert controller.audit_receipt_valid(tmp_path, {}, "W18", receipt, "content-1")
     prompt = controller.build_phase_prompt(
         tmp_path, "HPC", "W18", tmp_path / "W18.md", "close", "W18", None, False, receipt
     )
-    assert "controller audit gate" in prompt.lower()
-    assert "Historical READY_FOR_AUDIT" in prompt
+    assert "controller already owns the fresh audit receipt" in prompt.lower()
+    assert "Do not reopen from stale prose." in prompt
 
 
 def test_audit_close_receipt_survives_restart_when_identity_unchanged(tmp_path: Path, monkeypatch):
     receipt = _audit_receipt(tmp_path)
-    monkeypatch.setattr(controller, "engine_git_capability",
+    monkeypatch.setattr(lifecycle, "engine_git_capability",
                         lambda _repo: {"has_head": True, "head": "head-1"})
     saved_state = json.loads(json.dumps(receipt))
     assert controller.audit_receipt_valid(tmp_path, {}, "W18", saved_state, "content-1")
@@ -180,13 +181,13 @@ def test_audit_close_receipt_survives_restart_when_identity_unchanged(tmp_path: 
 
 def test_audit_close_receipt_invalidates_on_content_change(tmp_path: Path, monkeypatch):
     receipt = _audit_receipt(tmp_path)
-    monkeypatch.setattr(controller, "engine_git_capability",
+    monkeypatch.setattr(lifecycle, "engine_git_capability",
                         lambda _repo: {"has_head": True, "head": "head-1"})
     assert not controller.audit_receipt_valid(tmp_path, {}, "W18", receipt, "content-2")
 
 
 def test_audit_close_receipt_fails_closed_for_missing_or_nonpass_result(tmp_path: Path, monkeypatch):
-    monkeypatch.setattr(controller, "engine_git_capability",
+    monkeypatch.setattr(lifecycle, "engine_git_capability",
                         lambda _repo: {"has_head": True, "head": "head-1"})
     missing = {"audit_status": "PASS", "tested_wave": "W18", "tested_content_identity": "content-1",
                "audit_result_path": ".tmp/missing.json", "audit_candidate_sha": "head-1"}
@@ -256,7 +257,13 @@ def test_routed_owner_includes_done_owner(tmp_path: Path):
             "human_only": False,
         }]
     }), encoding="utf-8")
-    assert controller.routed_owner(findings, "W22") == "W21"
+    (tmp_path / "waves" / "done").mkdir(parents=True)
+    (tmp_path / "waves" / "done" / "W21.md").write_text("# W21\n", encoding="utf-8")
+    profile = {
+        "wave": {"file_regex": r"^W(?P<number>\d{2})\.md$", "id_format": "W{number:02d}", "min": 1, "max": 61},
+        "paths": {"pending": "waves/pending", "done": "waves/done", "blocked": "waves/blocked", "postponed": "waves/postponed"},
+    }
+    assert controller.routed_owner(findings, "W22", tmp_path, profile) == "W21"
 
 
 def test_progress_epoch_distinguishes_owner_round_trip():
@@ -272,8 +279,17 @@ def test_repository_owned_no_progress_is_not_a_program_terminal():
     assert 'terminal_class":"PROGRAM_NO_PROGRESS"' not in source
     assert 'print("PROGRAM_NO_PROGRESS")' not in source
     # A repository-owned final-validation block is a non-terminal state label; it must never be terminal.
+    # Canonical owner after the W1x controller split is controller_loop.py;
+    # the runner delegates to it, so accept the label in either surface.
     import re as _re
-    blocks = _re.findall(r"state\.update\(\{[^}]*PROGRAM_FINAL_VALIDATION_BLOCKED[^}]*\}\)", source)
+    runner_blocks = _re.findall(r"state\.update\(\{[^}]*PROGRAM_FINAL_VALIDATION_BLOCKED[^}]*\}\)", source)
+    loop_path = ROOT / ".opencode" / "scripts" / "controller_loop_stage_3.py"
+    loop_source = loop_path.read_text(encoding="utf-8") if loop_path.is_file() else ""
+    loop_blocks = _re.findall(
+        r"(?:frame\.)?state\.update\(\s*\{\s*\"terminal\"\s*:\s*False,\s*\"terminal_class\"\s*:\s*\"PROGRAM_FINAL_VALIDATION_BLOCKED\"[^}]*\}\s*\)",
+        loop_source,
+    )
+    blocks = runner_blocks + loop_blocks
     assert blocks, "final-validation block state label not found"
     for block in blocks:
         assert '"terminal":False' in block.replace(" ", "")

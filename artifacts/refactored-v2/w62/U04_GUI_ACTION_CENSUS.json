@@ -1,0 +1,85 @@
+{
+  "schema_version": 1,
+  "wave_id": "W62",
+  "unit_id": "U04",
+  "requirement_ids": [
+    "HPC-W62-BASE-004"
+  ],
+  "disposition": "PARTIAL_AWAITING_AUTHORIZED_PACKAGED_CANDIDATE",
+  "phase_instance_id": "20261013-090906-358da80d:9:W62:repair",
+  "generated_at_local": "2026-10-13",
+  "source_inventory": {
+    "identity": {
+      "git_head": "4268668f4b1af6cac2affd8679e3ffc62fbb6f0d",
+      "working_tree": "dirty; source contains pre-existing modifications",
+      "identity_scope": "HEAD plus working-tree state; not a clean immutable candidate"
+    },
+    "enumerator": "Bounded regex inventory across src/hpc_gui/*.py (top-level, 65 files); counts are syntactic indicators and are not deduplicated GUI actions.",
+    "source_file_count": 65,
+    "syntactic_indicators": {
+      "wx_bind_calls": 272,
+      "wx_button_constructors": 138,
+      "wx_menu_item_constructors": 0,
+      "wx_menu_append_calls": 48
+    },
+    "command": "Inline Python over sorted src/hpc_gui/*.py, counting .Bind(, wx.Button(, wx.MenuItem(, and .Append( with regex; recomputed in repair dispatch 20261013-090906-358da80d:4:W62:repair.",
+    "exit_code": 0,
+    "extended_scope_note": "Recursive src/hpc_gui/**/*.py count is 268 files; primary census stays on the bounded 65-file top-level scope for comparability.",
+    "limitations": [
+      "The bounded source scan does not resolve aliases, dynamically generated controls, other widget constructors, or duplicate bindings.",
+      "No canonical action-census generator or prior 175-action census artifact was found in the searched W62/W61.1 evidence paths."
+    ],
+    "registry_dispatch_mapping": {
+      "CommandRegistry": "src/hpc_gui/services/command_registry.py:67 class CommandRegistry",
+      "_dispatch": "src/hpc_gui/wx_shell_dispatch.py:15 def _dispatch",
+      "manifest_generator": "scripts/generate_current_gui_manifest.py (present)"
+    }
+  },
+  "packaged_runtime_inventory": {
+    "status": "NOT_RUN",
+    "candidate_authority_path": "artifacts/refactored-v2/w62/SUCCESSOR_CANDIDATE_AUTHORITY.json",
+    "candidate_authority_disposition": "AWAITING_INPUT",
+    "candidate_authority_created": false,
+    "candidate_identity": null,
+    "reason": "No authorized immutable successor executable/archive identity is declared. Existing build output is not authorized as a candidate, so runtime enumeration would not be candidate-bound.",
+    "runtime_count": null
+  },
+  "historical_baseline": {
+    "action_count": 175,
+    "disposition": {
+      "pass": 1,
+      "not_run": 174
+    },
+    "classification": "HISTORICAL_ONLY",
+    "counts_as_current_coverage": false,
+    "source_note": "Retained as the supplied historical baseline. It was not remeasured and no located census artifact was used to reclassify it."
+  },
+  "commands_and_results": [
+    {
+      "command": "Get-Content artifacts/refactored-v2/w62/SUCCESSOR_CANDIDATE_AUTHORITY.json",
+      "result": "disposition=AWAITING_INPUT; candidate_authority_created=false; candidate identity fields are null",
+      "exit_code": 0
+    },
+    {
+      "command": "Inline Python regex inventory over src/hpc_gui/*.py",
+      "result": "65 files; 272 Bind calls; 138 wx.Button constructors; 48 Append calls; 0 wx.MenuItem constructors; recomputed 2026-10-13",
+      "exit_code": 0
+    },
+    {
+      "command": "Select-String CommandRegistry/_dispatch/manifest-generator symbols",
+      "result": "command_registry.py:67 class CommandRegistry; wx_shell_dispatch.py:15 def _dispatch; scripts/generate_current_gui_manifest.py present",
+      "exit_code": 0
+    },
+    {
+      "command": "Get-ChildItem build for EXE/ZIP outputs",
+      "result": "build executable exists, but authority record excludes unauthorized build output; no candidate-bound runtime census run",
+      "exit_code": 0
+    }
+  ],
+  "acceptance": {
+    "requirement_id": "HPC-W62-BASE-004",
+    "source_inventory_recorded": true,
+    "packaged_runtime_inventory_candidate_bound": false,
+    "historical_baseline_preserved": true
+  }
+}

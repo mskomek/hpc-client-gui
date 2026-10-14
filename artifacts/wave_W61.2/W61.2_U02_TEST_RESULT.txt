@@ -1,0 +1,6 @@
+--- Current U02 dispatch harness regression (2026-10-07; HEAD bc2e61dcf86dadeda26141e5324088be8285243f; dirty working tree) ---
+Command: .venv/Scripts/python.exe -m pytest tests/test_wx_packaged_smoke.py -q --durations=25
+Result: exit 0; 12 passed, 0 failed, 0 skipped, 0 xfailed, 0 xpassed; 48.82s.
+This is maintained harness regression only. The exact frozen-package runtime smoke was not run because the pinned bytes (B3019DEA16783C8AB859FA36D2B0FEF2FB70DB075633E54EB0F36587295374FD) are unavailable; current dist SHA is DB29B6A8BD2C78FE1D9169F36B595752DEC40F411085AB8E6032384E740BBFBD (7675423 bytes).
+The current LOCAL_REAL read-only preflight passed, but the active controller state contains no parallel_serial_fallback or exclusive LOCAL_REAL lease identity. No external replay was run.
+Detailed package gate and current environment preflight: artifacts/wave_W61.2/W61.2_U02_FROZEN_PACKAGE_GATE.json and artifacts/wave_W61.2/W61.2_U02_LOCAL_REAL_HEALTH.json

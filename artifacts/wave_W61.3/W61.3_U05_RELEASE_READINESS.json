@@ -1,0 +1,159 @@
+{
+  "schema": "wave-u05-release-readiness/1",
+  "wave_id": "W61.3",
+  "unit_id": "U05",
+  "requirement_ids": [
+    "HPC-W11-REL-049"
+  ],
+  "status": "BLOCKED",
+  "repository": {
+    "branch": "develop",
+    "head": "bc2e61dcf86dadeda26141e5324088be8285243f",
+    "working_tree_dirty": true,
+    "identity_source": "git rev-parse HEAD; git status --short"
+  },
+  "candidate": {
+    "path": "dist/hpc-client-gui/hpc-client-gui.exe",
+    "version": "1.5.9",
+    "platform": "Windows/AMD64",
+    "sha256": "DB29B6A8BD2C78FE1D9169F36B595752DEC40F411085AB8E6032384E740BBFBD",
+    "size_bytes": 7675423,
+    "identity_source": "Get-FileHash -LiteralPath dist/hpc-client-gui/hpc-client-gui.exe -Algorithm SHA256; Get-Item .Length",
+    "identity_receipt": {
+      "path": "artifacts/wave_W61.3/W61.3_U01_ARTIFACT_IDENTITY.json",
+      "sha256": "401B807E27E43CFB83F8AD3CC234C6D06596CA57C6C2829DB561A3969A381661"
+    },
+    "provenance_receipt": {
+      "path": "artifacts/wave_W61.3/W61.3_U01_PROVENANCE.json",
+      "sha256": "2346DB529D18F463FA239B692DAC037BEAD609FA9F1065334D96A77BE2BE05F2"
+    }
+  },
+  "sources": {
+    "release_notes": {
+      "path": "src/hpc_gui/docs/CHANGELOG.md",
+      "section": "v1.5.9",
+      "sha256": "e118eb586f12ed69bcbfdfdbf3a0b2cbc0b5a32db953b95fe55daecbeee90874",
+      "claims": [
+        "W61.2 B3019DEA… is identified as the freeze reference and its prior smoke is tied to HEAD 92128c8…",
+        "The current checkout HEAD bc2e61d… contains observed executable SHA DB29B6A8…",
+        "The DB29… summary receipt reports 20/20 packaged checks, but its referenced runtime sidecar is missing and does not establish a verified runtime result",
+        "No macOS/Linux artifact or real-cluster replay is established by this candidate evidence",
+        "Release readiness remains NO-GO pending unresolved gates"
+      ]
+    },
+    "support_matrix": {
+      "path": "docs/wiki/Compatibility-and-Support-Matrix.md",
+      "section": "Frozen release candidate 1.5.9 (evidence scope)",
+      "sha256": "998f3d14f4fdb76879d660fe2c713250fe8b0efd49ef96f79a93c0b38962deda",
+      "claims": [
+        "B3019DEA… remains the freeze reference and current-checkout release support is not established",
+        "Current executable is DB29B6A8…; its summary reports 20 checks PASS, while the referenced runtime sidecar is missing",
+        "GUI evidence is bounded to recorded smoke summaries; current-candidate runtime acceptance is not established",
+        "Cluster evidence is not validated for the candidate",
+        "macOS/Linux artifacts are not part of this candidate",
+        "From-source use is developer-only and not validated as a W61.2 release artifact"
+      ]
+    }
+  },
+  "evidence_chain": [
+    {
+      "path": "artifacts/wave_W61.3/W61.3_U01_ARTIFACT_IDENTITY.json",
+      "sha256": "401B807E27E43CFB83F8AD3CC234C6D06596CA57C6C2829DB561A3969A381661",
+      "disposition": "working-tree executable identity recorded; W10 frozen executable identity unavailable"
+    },
+    {
+      "path": "artifacts/wave_W61.3/W61.3_U01_PROVENANCE.json",
+      "sha256": "2346DB529D18F463FA239B692DAC037BEAD609FA9F1065334D96A77BE2BE05F2",
+      "disposition": "main/plugin/toolchain provenance captured at current HEAD; main working tree dirty"
+    },
+    {
+      "path": "artifacts/wave_W61.3/W61.3_U02_CORE_SMOKE.json",
+      "sha256": "0D3743E53FFF9EBCAA58889C8D6C61F2958E21377C3174880C532291A5E4CF19",
+      "disposition": "20 named checks report PASS, bound in identity header to current candidate SHA and HEAD"
+    },
+    {
+      "path": "artifacts/wave_W61.3/W61.3_U02_EXTERNAL_SMOKE.json",
+      "sha256": "AA3CE623BB71D1FAE77D12C0C66D3A44E1BE9B722B6F71BF9B9EA71F979C70F6",
+      "disposition": "EXTERNAL_BLOCKED; no real-cluster replay without exclusive lease"
+    },
+    {
+      "path": "artifacts/wave_W61.3/W61.3_U02_NEGATIVE_SMOKE.json",
+      "sha256": "D94735F76200304E9BF65C312A685BA60C8F5E817E008DCE9FBAE52D55412F9D",
+      "disposition": "BLOCKED; negative-case runtime diagnostics were not observed; receipt is for old HEAD/candidate"
+    }
+  ],
+  "alignment_table": [
+    {
+      "claim": "Current frozen candidate identity and runtime support",
+      "release_notes": "Clearly distinguish W61.2 B3019DEA… freeze reference from current DB29B6A8… checkout bytes.",
+      "support_matrix": "Describes B3019DEA… as frozen candidate and DB29B6A8… as current bytes; its referenced U02 runtime sidecar is absent.",
+      "current_evidence": "U01 confirms DB29B6A8…; U02 summary names the same SHA and HEAD and reports 20 checks PASS. The referenced runtime sidecar is missing, so the summary is not accepted as a verified runtime result.",
+      "disposition": "BOUNDED_AND_UNVERIFIED; no current-candidate runtime support claim is accepted."
+    },
+    {
+      "claim": "Windows platform scope",
+      "release_notes": "Bounds the current observation to Windows AMD64 onedir executable.",
+      "support_matrix": "Lists Windows 10/11 portable ZIP as a general format and a specific Windows AMD64 candidate; general platform row is not candidate certification.",
+      "current_evidence": "Candidate identity is Windows/AMD64; U02 summary reports 20 checks PASS but the referenced runtime sidecar is missing.",
+      "disposition": "BOUNDED_BUT_NOT_RUNTIME_VERIFIED"
+    },
+    {
+      "claim": "macOS and Linux support for this candidate",
+      "release_notes": "Explicitly says no macOS/Linux artifact is established.",
+      "support_matrix": "Explicitly says those artifacts are not part of this candidate.",
+      "current_evidence": "No such artifacts are listed in the candidate receipts.",
+      "disposition": "ALIGNED; EXCLUDED_FROM_CANDIDATE"
+    },
+    {
+      "claim": "Real-cluster support for this candidate",
+      "release_notes": "Explicitly says no real-cluster replay is established.",
+      "support_matrix": "Marks cluster side not validated for this candidate.",
+      "current_evidence": "U02 external receipt is EXTERNAL_BLOCKED because no exclusive lease was established.",
+      "disposition": "ALIGNED; NOT_VALIDATED"
+    },
+    {
+      "claim": "Known limitations and prerequisites",
+      "release_notes": "Directs readers to the matrix and states unresolved release gates.",
+      "support_matrix": "Retains Windows-first, Slurm parsing variability, and X11 network-quality limitations.",
+      "current_evidence": "The statements are bounded general limitations; they do not prove candidate acceptance.",
+      "disposition": "TEXT_ALIGNED; CANDIDATE_ACCEPTANCE_UNRESOLVED"
+    },
+    {
+      "claim": "v1.5.9 new/fixed feature notes",
+      "release_notes": "Lists shipped feature changes under v1.5.9.",
+      "support_matrix": "Does not inventory feature-level claims.",
+      "current_evidence": "U05 did not independently validate each feature statement against requirement-level implementation evidence.",
+      "disposition": "NOT_RECONCILED_BY_THIS_UNIT"
+    }
+  ],
+  "mandatory_gate_effect": {
+    "requirement": "HPC-W11-REL-049",
+    "text_alignment": "Documentation now consistently distinguishes the B301… freeze reference from DB29… observed bytes and explicitly states that the referenced runtime sidecar is missing; candidate release support remains unverified.",
+    "release_readiness": "NO-GO-gated",
+    "decision": "NO-GO",
+    "reasons": [
+      "W10 authoritative frozen-executable SHA is not present in U01 identity evidence.",
+      "The support matrix and release notes identify B3019DEA… as the freeze reference and DB29B6A8… as current observed bytes; these are not the same candidate.",
+      "The DB29… U02 summary reports 20 PASS checks but its referenced runtime sidecar is missing, so current runtime acceptance is not demonstrated.",
+      "U02 external workflow is EXTERNAL_BLOCKED and the negative-smoke receipt is bound to the earlier 92128c8… / B3019DEA… candidate.",
+      "The authoritative P0/P1 census remains incomplete; rollback readiness is not established."
+    ],
+    "no_go_criteria": [
+      "artifact hash matches W10: unresolved",
+      "core smoke: summary exists but required runtime sidecar is missing",
+      "required real-cluster smoke: EXTERNAL_BLOCKED",
+      "negative/error smoke: BLOCKED",
+      "support matrix and release notes are bounded and factually aligned; candidate support acceptance remains unresolved",
+      "P0/P1 count: not currently demonstrated as zero",
+      "rollback readiness: not demonstrated viable"
+    ]
+  },
+  "disposition": "BLOCKED: release claims are explicitly bounded and reconciled to current file contents, but current-candidate runtime support and authoritative W10 freeze identity remain unverified. No positive release-support claim is accepted.",
+  "product_or_package_changes": false,
+  "missing_evidence": [
+    {
+      "path": "artifacts/wave_W61.3/W61.3_U02_CORE_SMOKE.runtime.json",
+      "disposition": "MISSING at review time; no sidecar hash or runtime checks can be asserted"
+    }
+  ]
+}

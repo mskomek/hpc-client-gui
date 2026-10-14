@@ -1,0 +1,17 @@
+{
+ "sinfo": 0,
+ "sinfo_out": "compute01 idle\ncompute02 idle",
+ "submit_rc": 0,
+ "jobid": "130",
+ "final_state": "COMPLETED",
+ "job_output": "",
+ "cancel_jobid": "131",
+ "cancel_pre_state": "RUNNING",
+ "scancel_rc": 0,
+ "cancel_final_state": "CANCELLED by 1000",
+ "neg_submit_rc": 1,
+ "neg_submit_msg": "sbatch: error: invalid partition specified: no-such-partition\nsbatch: error: Batch job submission failed: Invalid partition name specified ",
+ "queue": "QUEUE_CLEAN",
+ "host": "192.168.250.11",
+ "user": "hpctest"
+}

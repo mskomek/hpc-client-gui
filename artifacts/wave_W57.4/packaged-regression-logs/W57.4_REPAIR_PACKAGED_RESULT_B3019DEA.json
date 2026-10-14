@@ -1,0 +1,31 @@
+{
+  "wave": "W57.4",
+  "unit": "U01",
+  "generated_local": "2026-09-30",
+  "candidate": {
+    "artifact": "dist/hpc-client-gui/hpc-client-gui.exe",
+    "sha256": "B3019DEA16783C8AB859FA36D2B0FEF2FB70DB075633E54EB0F36587295374FD",
+    "sha256_rechecked_after_tests": true
+  },
+  "commands": [
+    ".venv/Scripts/python.exe scripts/wx_packaged_smoke.py --artifact <absolute dist/hpc-client-gui/hpc-client-gui.exe> --platform windows --output artifacts/wave_W57.4/packaged-regression-logs/W57.4_REPAIR_PACKAGED_SMOKE_B3019DEA.json --timeout 180",
+    ".venv/Scripts/python.exe scripts/wx_package_content.py --bundle-dir dist/hpc-client-gui --output artifacts/wave_W57.4/packaged-regression-logs/W57.4_REPAIR_PACKAGE_CONTENT_B3019DEA.json"
+  ],
+  "results": {
+    "packaged_smoke_exit": 0,
+    "packaged_smoke": "PASS",
+    "pty_resize": "PASS",
+    "clean_shutdown": "PASS",
+    "package_content_exit": 0,
+    "package_content": "PASS",
+    "package_content_artifact_sha256": "b3019dea16783c8ab859fa36d2b0fef2fb70db075633e54eb0f36587295374fd"
+  },
+  "evidence_files": [
+    "artifacts/wave_W57.4/packaged-regression-logs/W57.4_REPAIR_PACKAGED_SMOKE_B3019DEA.json",
+    "artifacts/wave_W57.4/packaged-regression-logs/W57.4_REPAIR_PACKAGED_SMOKE_B3019DEA.runtime.json",
+    "artifacts/wave_W57.4/packaged-regression-logs/W57.4_REPAIR_PACKAGED_SMOKE_B3019DEA.log",
+    "artifacts/wave_W57.4/packaged-regression-logs/W57.4_REPAIR_PACKAGE_CONTENT_B3019DEA.json",
+    "artifacts/wave_W57.4/packaged-regression-logs/W57.4_REPAIR_PACKAGE_CONTENT_B3019DEA.log"
+  ],
+  "disposition": "The fresh checks resolve the historical PTY-resize and clean-shutdown disagreement in this run. The maintained smoke JSON reports details.workdir_outside_repo=false, so source-checkout independence is not established by this run and must not be claimed. Existing full-suite and external-cluster work remains outside this leaf's completed proof."
+}

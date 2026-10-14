@@ -1,0 +1,28 @@
+{
+  "schema": "w57.1-u021-ssh/1",
+  "commit": "ad02258620ef34c0d778037bb16b0f4421e950b5",
+  "artifact": "dist/hpc-client-gui/hpc-client-gui.exe",
+  "artifact_sha256": "740fe48ea3e52bfdf7b5dc781b50b021c3d4a4649ac6908dbc162b5c854175ab",
+  "environment": "LOCAL_REAL_HYPERV controller 192.168.250.11 + LOCAL_PASSWORD_REAL 127.0.0.1:2222 (hpclab healthy)",
+  "lab_status": "lab-status.ps1 PASS all services active",
+  "isolation": "HPC_GUI_CONFIG_ROOT disposable .tmp/w571-u021-ssh/config; real user config untouched",
+  "key_auth": {
+    "cmd": "exe --host 192.168.250.11 --user hpctest --key [REDACTED-PATH] doctor connection",
+    "exit": 0,
+    "stages": "dns/port/auth/sftp/slurm/checksum all PASS"
+  },
+  "hostkey": {
+    "accept_new": "first 127.0.0.1:2222 connection persisted 1 pin to isolated known_hosts",
+    "strict_lab": "--strict-host-key rerun exit 0 PASS (system pin, read-only)",
+    "strict_fixture": "--strict-host-key rerun exit 0 PASS against fresh isolated pin"
+  },
+  "password": {
+    "success_exit": 0,
+    "success_stages": "all PASS",
+    "rejection_exit": 3,
+    "rejection": "auth FAIL truthful, later stages not_attempted",
+    "channel": "stdin only, value never recorded in evidence/logs/report"
+  },
+  "cleanup": "disposable fixture dirs under .tmp; no lab-side state created; no secrets persisted",
+  "redaction": "no passwords, private keys, or key material in evidence; key referenced by existing lab path only"
+}

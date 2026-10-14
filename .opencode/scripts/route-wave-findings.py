@@ -4,7 +4,7 @@ import argparse
 import json
 import re
 import sys
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass, asdict, field
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -34,6 +34,8 @@ class Finding:
     execution_owner: str | None = None
     owner_state: str | None = None
     human_only: bool = False
+    owner_requirement_ids: list[str] = field(default_factory=list)
+    requirement_ids: list[str] = field(default_factory=list)
 
 def read_text(path: Path) -> str:
     try:
@@ -150,6 +152,39 @@ def dependency_ids(repo: Path, profile: dict[str, Any], current_wave: str) -> li
     return [str(x) for x in deps if str(x).strip()]
 
 CHAIN_RE = re.compile(r"previous Wave (\d+) validator not PASS", re.I)
+LIFECYCLE_DEPENDENCY_RE = re.compile(
+    r"\b(?:completion|lifecycle)\s+(?:dependenc(?:y|ies)|prerequisites?)\b"
+    r"|\b(?:prior|previous|predecessor)\s+Wave\b",
+    re.I,
+)
+FREEZE_DECLARATION_RE = re.compile(r"\b(?P<base>W\d{2})_FREEZE_DECLARATION\.md\b", re.I)
+FINAL_FREEZE_OWNER_RE = re.compile(r"\b(?P<wave>W\d{2}\.\d)\s+final\s+freeze\b", re.I)
+
+
+def declared_freeze_owner(repo: Path, profile: dict[str, Any], text: str) -> str | None:
+    """Resolve a cited freeze declaration to the Wave explicitly issuing its final freeze.
+
+    Release requirements on a consuming Wave describe validation of the candidate;
+    they do not transfer authority to create or supersede the upstream freeze.
+    The declaration itself must name the final-freeze Wave, and that Wave must own
+    freeze requirements. Ambiguous or incomplete provenance remains unresolved.
+    """
+    match = FREEZE_DECLARATION_RE.search(text)
+    if not match:
+        return None
+    declaration = repo / match.group(0)
+    declaration_text = read_text(declaration)
+    owners = {m.group("wave").upper() for m in FINAL_FREEZE_OWNER_RE.finditer(declaration_text)}
+    if len(owners) != 1:
+        return None
+    owner = next(iter(owners))
+    path, _state = wave_location(repo, profile, owner)
+    if path is None:
+        return None
+    owned = owned_ids_from_wave(path, profile)
+    if not any("FREEZE" in req for req in owned):
+        return None
+    return owner
 
 
 def aggregate_owner_of(repo: Path, profile: dict[str, Any], canonical: str) -> str | None:
@@ -170,6 +205,9 @@ def aggregate_owner_of(repo: Path, profile: dict[str, Any], canonical: str) -> s
 
 
 def infer_lifecycle_owner(repo: Path, profile: dict[str, Any], current_wave: str, finding_id: str, text: str) -> str | None:
+    freeze_owner = declared_freeze_owner(repo, profile, text)
+    if freeze_owner and freeze_owner != current_wave:
+        return freeze_owner
     # Canonical chain gate: the defect lives in the previous canonical source's aggregate owner.
     chain = CHAIN_RE.search(text)
     if chain:
@@ -177,8 +215,10 @@ def infer_lifecycle_owner(repo: Path, profile: dict[str, Any], current_wave: str
         if owner and owner != current_wave:
             return owner
     deps = dependency_ids(repo, profile, current_wave)
-    low = text.lower()
-    if any(word in low for word in ("dependency", "predecessor", "prerequisite")):
+    # A code/module dependency is not a Wave lifecycle dependency. Route to a
+    # predecessor only when the finding explicitly describes a completion or
+    # lifecycle prerequisite (or names a predecessor Wave).
+    if LIFECYCLE_DEPENDENCY_RE.search(text):
         mentioned = [dep for dep in deps if re.search(rf"\b{re.escape(dep)}\b", text, re.I)]
         if mentioned:
             return mentioned[0]
@@ -192,12 +232,63 @@ def infer_lifecycle_owner(repo: Path, profile: dict[str, Any], current_wave: str
             return wid
     return None
 
+
+def structured_owner_findings(repo: Path, profile: dict[str, Any], current_wave: str,
+                              phase: dict[str, Any]) -> list[Finding]:
+    """Materialize explicit cross-Wave blocker edges for the owner router.
+
+    The local requirement IDs and the true owner's requirement IDs belong to
+    different Waves. Preserve both identities on a routed ledger row instead of
+    trying to intersect the two namespaces.
+    """
+    handoff = phase.get("handoff")
+    if not isinstance(handoff, dict):
+        return []
+    current_path, _ = wave_location(repo, profile, current_wave)
+    if current_path is None:
+        return []
+    current_requirements = owned_ids_from_wave(current_path, profile)
+    result: list[Finding] = []
+    blockers = handoff.get("blockers")
+    if not isinstance(blockers, list):
+        return result
+    for blocker in blockers:
+        if not isinstance(blocker, dict) or blocker.get("blocker_class") != "OWNER_DEPENDENCY_BLOCKED":
+            continue
+        owner = str(blocker.get("blocker_owner") or "").strip()
+        if not owner or owner == current_wave or re.search(r"[\s/\\]", owner):
+            continue
+        owner_path, owner_state = wave_location(repo, profile, owner)
+        if owner_path is None:
+            continue
+        owner_requirements = owned_ids_from_wave(owner_path, profile)
+        raw_owner_ids = blocker.get("owner_requirement_ids") or []
+        if isinstance(raw_owner_ids, str):
+            raw_owner_ids = [raw_owner_ids]
+        owner_ids = sorted({str(value).strip().upper() for value in raw_owner_ids
+                            if str(value).strip()} & owner_requirements)
+        if not owner_ids:
+            continue
+        raw_local_ids = blocker.get("requirement_ids") or []
+        if isinstance(raw_local_ids, str):
+            raw_local_ids = [raw_local_ids]
+        local_ids = sorted({str(value).strip().upper() for value in raw_local_ids
+                            if str(value).strip()} & current_requirements)
+        if not local_ids:
+            continue
+        text = str(blocker.get("failure_signature") or blocker.get("unblock_condition") or
+                   "Structured owner dependency requires an authoritative disposition.")
+        result.append(Finding(local_ids[0], "owner-dependency", text, owner,
+                              owner_state or "current_or_unresolved", False, owner_ids,
+                              local_ids))
+    return result
+
 def main() -> int:
     ap=argparse.ArgumentParser()
     ap.add_argument("--repo", default="."); ap.add_argument("--wave", required=True)
     ap.add_argument("--manifest"); ap.add_argument("--validator-json"); ap.add_argument("--audit-report"); ap.add_argument("--phase-result"); ap.add_argument("--out")
     args=ap.parse_args(); repo=Path(args.repo).resolve(); profile=load_profile(repo)
-    owner_index=build_owner_index(repo, profile); rows=[]
+    owner_index=build_owner_index(repo, profile); rows=[]; structured_rows={}
     if args.manifest: rows += manifest_findings(repo / args.manifest)
     if args.validator_json: rows += validator_findings(repo / args.validator_json)
     if args.audit_report: rows += audit_findings(repo / args.audit_report)
@@ -206,13 +297,45 @@ def main() -> int:
         for finding in (phase or {}).get("findings", []) if isinstance(phase, dict) else []:
             blob=str(finding); ids=[x.upper() for x in REQUIREMENT_RE.findall(blob)]
             rows.extend((rid, "phase-result", blob[:1600]) for rid in (ids or ["UNSCOPED"]))
+        if isinstance(phase, dict):
+            structured = structured_owner_findings(repo, profile, args.wave, phase)
+            for finding in structured:
+                key = (finding.finding_id, finding.source, finding.text)
+                rows.append(key)
+                structured_rows[key] = finding
+    # A phase result may name the Wave that owns the fix; honour it when that Wave exists.
+    declared=None
+    if args.phase_result and isinstance(phase, dict) and isinstance(phase.get("handoff"), dict):
+        named=str(phase["handoff"].get("execution_owner") or "").strip()
+        if named and named != args.wave:
+            path, state=wave_location(repo, profile, named)
+            if path is not None: declared=(named, state or "current_or_unresolved")
     findings=[]
-    for rid, source, text in dedupe(rows):
+    for row in dedupe(rows):
+        rid, source, text = row
+        structured = structured_rows.get(row)
+        if isinstance(structured, Finding):
+            findings.append(structured)
+            continue
         owner=None if CHAIN_RE.search(text) else owner_index.get(rid)
-        inferred=infer_lifecycle_owner(repo, profile, args.wave, rid, text) if not owner else None
-        if inferred:
+        # Requirement ownership outranks a worker-named owner: a Wave that owns the ID keeps
+        # the finding even when its ID prefix or canonical source names another Wave.
+        if declared and source == "phase-result" and not owner:
+            findings.append(Finding(rid, source, text, declared[0], declared[1], bool(HUMAN_RE.search(text)))); continue
+        freeze_owner = declared_freeze_owner(repo, profile, text)
+        inferred=infer_lifecycle_owner(repo, profile, args.wave, rid, text) if (not owner or freeze_owner) else None
+        owner_requirement_ids: list[str] = []
+        if inferred and (not owner or freeze_owner):
             _, state=wave_location(repo, profile, inferred); owner=(inferred, state or "current_or_unresolved")
-        findings.append(Finding(rid, source, text, owner[0] if owner else args.wave, owner[1] if owner else "current_or_unresolved", bool(HUMAN_RE.search(text))))
+            if freeze_owner:
+                owner_path, _ = wave_location(repo, profile, inferred)
+                if owner_path is not None:
+                    owner_requirement_ids = sorted(
+                        req for req in owned_ids_from_wave(owner_path, profile) if "FREEZE" in req
+                    )
+        findings.append(Finding(rid, source, text, owner[0] if owner else args.wave,
+                                owner[1] if owner else "current_or_unresolved",
+                                bool(HUMAN_RE.search(text)), owner_requirement_ids))
     result={"wave":args.wave,"finding_count":len(findings),"human_only":bool(findings) and all(f.human_only for f in findings),"findings":[asdict(f) for f in findings]}
     payload=json.dumps(result,ensure_ascii=False,indent=2)
     if args.out:

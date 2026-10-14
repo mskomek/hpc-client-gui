@@ -1,0 +1,140 @@
+{
+  "schema": "W57.4-U01-owner-triage-supplement-v1",
+  "content_identity": "77957874143a357e2e803179ba83c334126cb14ae092b688ddfd6d694fe7453a",
+  "git_head": "27a1662baa0f7be8854a9f42a4f18d6bbe7cc90c",
+  "candidate": {
+    "path": "dist/hpc-client-gui/hpc-client-gui.exe",
+    "sha256": "B3019DEA16783C8AB859FA36D2B0FEF2FB70DB075633E54EB0F36587295374FD",
+    "identity": "B3019DEA"
+  },
+  "source_reconciliation": "U01_reconciliation_77957874.json",
+  "finding": "W57.4-U01-validation-evidence-incomplete",
+  "status": "OPEN_NOT_WAIVED",
+  "owner_authority_review": {
+    "sources": [
+      "opencode/REQUIREMENT_REGISTRY.md",
+      "opencode/TODO_OWNERSHIP_MAP.md",
+      ".opencode/protocol/WAVE_PROJECT_PROFILE.json"
+    ],
+    "result": "These authorities assign requirement/TODO ownership by Wave, but provide no explicit source/test-file owner mapping for the listed failures or individual Ruff findings. No specific owner is asserted without an authoritative mapping."
+  },
+  "failed_tests": [
+    {
+      "test_id": "tests/contracts/test_wave_closeout_hardening.py::test_dynamic_required_ids_follow_actual_execution_wave_spec",
+      "result": "FAILED",
+      "owner": "UNRESOLVED_BY_AVAILABLE_AUTHORITY",
+      "routing_note": "Exact failing test is preserved; map the test/source surface to an owning Wave using its canonical requirement authority before code repair."
+    },
+    {
+      "test_id": "tests/contracts/test_wave_closeout_hardening.py::test_all_w01_w61_have_machine_frontmatter_and_exact_owned_rows",
+      "result": "FAILED",
+      "owner": "UNRESOLVED_BY_AVAILABLE_AUTHORITY",
+      "routing_note": "Exact failing test is preserved; map the test/source surface to an owning Wave using its canonical requirement authority before code repair."
+    },
+    {
+      "test_id": "tests/contracts/test_wave_closeout_hardening.py::test_final_program_complete_has_profile_owned_fail_closed_sweep",
+      "result": "FAILED",
+      "owner": "UNRESOLVED_BY_AVAILABLE_AUTHORITY",
+      "routing_note": "Exact failing test is preserved; map the test/source surface to an owning Wave using its canonical requirement authority before code repair."
+    },
+    {
+      "test_id": "tests/contracts/test_wave_closeout_hardening.py::test_backend_parity_validator_passes",
+      "result": "FAILED",
+      "owner": "UNRESOLVED_BY_AVAILABLE_AUTHORITY",
+      "routing_note": "Exact failing test is preserved; map the test/source surface to an owning Wave using its canonical requirement authority before code repair."
+    },
+    {
+      "test_id": "tests/test_docs_references.py::test_agent_guidance_points_at_single_authority",
+      "result": "FAILED",
+      "owner": "UNRESOLVED_BY_AVAILABLE_AUTHORITY",
+      "routing_note": "Exact failing test is preserved; map the test/source surface to an owning Wave using its canonical requirement authority before code repair."
+    },
+    {
+      "test_id": "tests/contracts/test_wave_closeout_hardening.py::test_validator_self_test_rejects_namespace_sha_status_and_collect_only",
+      "result": "FAILED",
+      "owner": "UNRESOLVED_BY_AVAILABLE_AUTHORITY",
+      "routing_note": "Exact failing test is preserved; map the test/source surface to an owning Wave using its canonical requirement authority before code repair."
+    },
+    {
+      "test_id": "tests/test_w44_arch_qt_wx_package.py::test_w44_package_hidden_imports_are_intentional",
+      "result": "FAILED",
+      "owner": "UNRESOLVED_BY_AVAILABLE_AUTHORITY",
+      "routing_note": "Exact failing test is preserved; map the test/source surface to an owning Wave using its canonical requirement authority before code repair."
+    },
+    {
+      "test_id": "tests/test_wave3_remote_sftp_ssh.py::TestSFTPUnicodePaths::test_ssh_backend_rejects_invalid_utf8_text",
+      "result": "FAILED",
+      "owner": "UNRESOLVED_BY_AVAILABLE_AUTHORITY",
+      "routing_note": "Exact failing test is preserved; map the test/source surface to an owning Wave using its canonical requirement authority before code repair."
+    },
+    {
+      "test_id": "tests/test_wave10_release_gate.py::TestRegressionSearch::test_no_new_errors_ignore",
+      "result": "FAILED",
+      "owner": "UNRESOLVED_BY_AVAILABLE_AUTHORITY",
+      "routing_note": "Exact failing test is preserved; map the test/source surface to an owning Wave using its canonical requirement authority before code repair."
+    },
+    {
+      "test_id": "tests/test_wave6_plugin_provider_unicode.py::TestIntegration::test_full_plugin_unicode_flow",
+      "result": "FAILED",
+      "owner": "UNRESOLVED_BY_AVAILABLE_AUTHORITY",
+      "routing_note": "Exact failing test is preserved; map the test/source surface to an owning Wave using its canonical requirement authority before code repair."
+    },
+    {
+      "test_id": "tests/test_wave_controller_regressions.py::test_audit_close_receipt_overrides_historical_ready",
+      "result": "FAILED",
+      "owner": "UNRESOLVED_BY_AVAILABLE_AUTHORITY",
+      "routing_note": "Exact failing test is preserved; map the test/source surface to an owning Wave using its canonical requirement authority before code repair."
+    },
+    {
+      "test_id": "tests/test_wx_dispatch_error_gov.py::test_editor_save__local_and_remote_paths_have_distinct_owners",
+      "result": "FAILED",
+      "owner": "UNRESOLVED_BY_AVAILABLE_AUTHORITY",
+      "routing_note": "Exact failing test is preserved; map the test/source surface to an owning Wave using its canonical requirement authority before code repair."
+    },
+    {
+      "test_id": "tests/test_download_cancel_wire.py::DownloadCancelWireTests::test_resuming_after_a_cancel_completes_the_file",
+      "result": "FAILED",
+      "owner": "UNRESOLVED_BY_AVAILABLE_AUTHORITY",
+      "routing_note": "Exact failing test is preserved; map the test/source surface to an owning Wave using its canonical requirement authority before code repair."
+    },
+    {
+      "test_id": "tests/test_download_cancel_wire.py::DownloadCancelWireTests::test_skipping_a_partial_leaves_it_alone",
+      "result": "FAILED",
+      "owner": "UNRESOLVED_BY_AVAILABLE_AUTHORITY",
+      "routing_note": "Exact failing test is preserved; map the test/source surface to an owning Wave using its canonical requirement authority before code repair."
+    }
+  ],
+  "collection_errors": {
+    "count": 12,
+    "cause": "Repeated collection failure in tests/test_wave_controller_regressions.py because it imports a hard-coded D:\\Projeler\\.opencode\\scripts\\run-wave-program.py path absent in this checkout layout.",
+    "result": "COLLECTION_ERROR",
+    "owner": "UNRESOLVED_BY_AVAILABLE_AUTHORITY",
+    "routing_note": "Controller-regression test import/path portability defect; ownership map does not assign that test file."
+  },
+  "ruff": {
+    "count": 282,
+    "exit_code": 1,
+    "inventory": "U01_ruff_20261001-225500.log",
+    "result": "GATE_FAILED",
+    "owner": "UNRESOLVED_PER_FINDING",
+    "routing_note": "The preserved log is the authoritative per-finding inventory; repository ownership authority does not map each source finding to a Wave. Do not treat as cleared."
+  },
+  "gui_wx": {
+    "initial_exit_code": 2,
+    "retry_exit_code": -1073740771,
+    "retry_failure": "Native Windows access violation in tests/test_editor_flow.py::test_ctrl_o_focuses_remote_path_and_enter_opens_it",
+    "terminal_totals": null,
+    "result": "INCOMPLETE",
+    "routing_note": "No required-module-excluding retry is accepted; no complete totals inferred."
+  },
+  "preserved_outcomes": {
+    "non_gui": "2385 passed, 36 skipped, 14 failed, 12 collection errors",
+    "stress": "1 passed; exit 0",
+    "compile": "exit 0",
+    "i18n": "exit 0",
+    "ruff": "exit 1; 282 findings",
+    "smoke": "exit 0"
+  },
+  "candidate_sha256": "B3019DEA16783C8AB859FA36D2B0FEF2FB70DB075633E54EB0F36587295374FD",
+  "integrity": "Evidence-only; no source/tests/candidate/preserved logs changed."
+}

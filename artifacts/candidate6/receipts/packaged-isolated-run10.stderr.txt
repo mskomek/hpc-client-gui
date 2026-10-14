@@ -1,0 +1,29 @@
+Exception (server): Error reading SSH protocol banner[WinError 10053] An established connection was aborted by the software in your host machine
+Traceback (most recent call last):
+  File "C:\Users\home\AppData\Local\CodexGuestRuns\495b5582a3a4444ab4115787739a2f61\python\Lib\site-packages\paramiko\transport.py", line 2369, in _check_banner
+    buf = self.packetizer.readline(timeout)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\home\AppData\Local\CodexGuestRuns\495b5582a3a4444ab4115787739a2f61\python\Lib\site-packages\paramiko\packet.py", line 395, in readline
+    buf += self._read_timeout(timeout)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\home\AppData\Local\CodexGuestRuns\495b5582a3a4444ab4115787739a2f61\python\Lib\site-packages\paramiko\packet.py", line 663, in _read_timeout
+    x = self.__socket.recv(128)
+        ^^^^^^^^^^^^^^^^^^^^^^^
+ConnectionAbortedError: [WinError 10053] An established connection was aborted by the software in your host machine
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\home\AppData\Local\CodexGuestRuns\495b5582a3a4444ab4115787739a2f61\python\Lib\site-packages\paramiko\transport.py", line 2185, in run
+    self._check_banner()
+  File "C:\Users\home\AppData\Local\CodexGuestRuns\495b5582a3a4444ab4115787739a2f61\python\Lib\site-packages\paramiko\transport.py", line 2373, in _check_banner
+    raise SSHException(
+paramiko.ssh_exception.SSHException: Error reading SSH protocol banner[WinError 10053] An established connection was aborted by the software in your host machine
+
+Artifact: hpc-client-gui.exe
+SHA256: 67f60b50f1ea0ff45347b1c9afa942eb12172b21523d67011ec2d28e9379aae6
+Main SHA: unknown
+Plugin SHA: unknown
+Version: 1.5.9
+OS/arch: windows/amd64
+---

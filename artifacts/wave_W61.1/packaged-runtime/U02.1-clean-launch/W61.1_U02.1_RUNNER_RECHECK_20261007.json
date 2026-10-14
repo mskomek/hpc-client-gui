@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "wave_id": "W61.1",
+  "unit_id": "U02.1",
+  "phase_instance_id": "20261005-204809-bbf508cb:41:W61.1:run",
+  "captured_at_utc": "2026-10-07T07:59:49.0099330Z",
+  "runner": "C:\\Users\\mskomek\\.hyperv-tools\\Invoke-Windows11.ps1",
+  "runner_result": "PASS: PowerShell Direct read-only identity and path/hash probes",
+  "environment_identity": "Microsoft Windows 11 Pro 10.0.26200 build 26200; guest TEST; identity test\\home",
+  "guest_candidate_path": "D:\\Projeler\\hpc-client-gui\\dist\\hpc-client-gui.exe",
+  "guest_candidate_accessible": false,
+  "guest_candidate_sha256": null,
+  "guest_project_checkout_exists": false,
+  "guest_project_temp_exists": false,
+  "guest_candidate_probe": "Test-Path returned false; hash not available",
+  "host_candidate_path": "dist/hpc-client-gui/hpc-client-gui.exe",
+  "host_candidate_sha256": "DB29B6A8BD2C78FE1D9169F36B595752DEC40F411085AB8E6032384E740BBFBD",
+  "host_candidate_size_bytes": 7675423,
+  "expected_frozen_sha256": "B3019DEA16783C8AB859FA36D2B0FEF2FB70DB075633E54EB0F36587295374FD",
+  "freeze_declaration": "W57_FREEZE_DECLARATION.md",
+  "freeze_pin": "artifacts/wave_W61.1/freeze-pin/W61.1_U01_FREEZE_PIN.json",
+  "head": "bc2e61dcf86dadeda26141e5324088be8285243f",
+  "clean_launch_probes": [],
+  "disposition": "BLOCKED",
+  "blockers": [
+    {
+      "unblock_condition": "Establish authoritative release freeze/provenance for the current candidate or restore the authorized frozen candidate before generating candidate-bound evidence.",
+      "blocker_class": "EVIDENCE_PREREQUISITE_BLOCKED",
+      "failure_signature": "Host executable SHA-256 differs from release freeze/pin (DB29B6A8... vs B3019DEA...); authoritative candidate provenance is unreconciled."
+    },
+    {
+      "unblock_condition": "Provide an approved project .tmp transfer/shared path for the exact frozen bundle, verify its hash before/after, then run bounded CLI probes.",
+      "blocker_class": "ENVIRONMENT_BLOCKED",
+      "failure_signature": "Canonical runner reaches Windows 11 Pro 10.0.26200 guest test\\home, but no project checkout, project .tmp path, or candidate exists at the guest path; no approved transfer route is available."
+    }
+  ],
+  "product_or_package_changed": false,
+  "candidate_transfer_attempted": false,
+  "candidate_launch_attempted": false
+}

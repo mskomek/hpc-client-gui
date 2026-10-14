@@ -1,0 +1,147 @@
+{
+ "candidate10": {
+  "declaration_file_sha256": {
+   "waves/refactored/hpc-client-gui-v2-20261012/REFACTORED_WORKSTREAM_MANIFEST_V2.md": "3e60aced67eb5588a13aafa615f6dd77f6348e04ae578a0a7263145534a93ae1",
+   "waves/refactored/hpc-client-gui-v2-20261012/WORKSTREAM_600_CANDIDATE10_REBASELINE_AND_CONNECTION_REGRESSION.md": "f93dd45f37e7cdf53c5befeab53c593fdfce17511130bd3b423ace3218312fbe"
+  },
+  "declared_exe_sha256": "8b51407c7040cc12ee5e161b6797f44c83069fc404f75ee974f5fda03aa8bb20",
+  "declared_zip_sha256": "11ad5509d371f37e07af887a04ff7bed47312a63e91a4e98c4453b0a2af145ca",
+  "declared_source_commit": "8177ee9c0992f6a3d6285b146f64abef1192b064",
+  "exact_exe_zip_bytes": "unavailable_in_prior_bounded_search; search_not_repeated",
+  "historical_declaration_files_unchanged_by_this_run": true,
+  "observed_commit_tree_parent": [
+   "8177ee9c0992f6a3d6285b146f64abef1192b064",
+   "05b9d456fef4217699a992cf5cf8d45dac30177d",
+   "eabd030e16f8eaac354fbd9028dd195ddf22e50f"
+  ],
+  "source_commit_resolves": true
+ },
+ "captured_at_utc": "2026-10-12T20:56:40.7616997Z",
+ "commands": [
+  {
+   "command": "git cat-file -t 8177ee9c0992f6a3d6285b146f64abef1192b064",
+   "exit_code": 0,
+   "observed": "commit"
+  },
+  {
+   "command": "git cat-file -e 8177ee9c0992f6a3d6285b146f64abef1192b064^{commit}",
+   "exit_code": 0,
+   "observed": "object exists and resolves as commit"
+  },
+  {
+   "command": "git show -s --format=%H%n%T%n%P 8177ee9c0992f6a3d6285b146f64abef1192b064",
+   "exit_code": 0,
+   "observed": [
+    "8177ee9c0992f6a3d6285b146f64abef1192b064",
+    "05b9d456fef4217699a992cf5cf8d45dac30177d",
+    "eabd030e16f8eaac354fbd9028dd195ddf22e50f"
+   ]
+  },
+  {
+   "command": "Get-FileHash SHA256 dist/hpc-client-gui/hpc-client-gui.exe",
+   "exit_code": 0,
+   "observed": "DB29B6A8BD2C78FE1D9169F36B595752DEC40F411085AB8E6032384E740BBFBD"
+  },
+  {
+   "command": "(Get-Item dist/hpc-client-gui/hpc-client-gui.exe).Length",
+   "exit_code": 0,
+   "observed": 7675423
+  },
+  {
+   "command": "Get-FileHash SHA256 waves/refactored/hpc-client-gui-v2-20261012/WORKSTREAM_600_CANDIDATE10_REBASELINE_AND_CONNECTION_REGRESSION.md",
+   "exit_code": 0,
+   "observed": "F93DD45F37E7CDF53C5BEFEAB53C593FDFCE17511130BD3B423ACE3218312FBE"
+  },
+  {
+   "command": "Get-FileHash SHA256 waves/refactored/hpc-client-gui-v2-20261012/REFACTORED_WORKSTREAM_MANIFEST_V2.md",
+   "exit_code": 0,
+   "observed": "3E60ACED67EB5588A13AAFA615F6DD77F6348E04AE578A0A7263145534A93AE1"
+  },
+  {
+   "command": "Get-FileHash SHA256 W57_FREEZE_DECLARATION.md",
+   "exit_code": 0,
+   "observed": "21F0E47AFAF5C17BF6EA2DE6F9FDC3E4362AA172148268041E29E8A18583817E"
+  },
+  {
+   "command": "JSON parse validation + SHA256 recompute for CANDIDATE10_PROVENANCE.json, U01_CANDIDATE10_IDENTITY_VERIFICATION.json, W57_FROZEN_ARTIFACT_SHA256_RECONCILIATION.json, LEGACY_FREEZE_DEBT_REBIND.json, SUCCESSOR_CANDIDATE_AUTHORITY.json, U03_SUCCESSOR_AUTHORITY_PREFLIGHT.json",
+   "exit_code": 0,
+   "observed": "all 6 parse OK; hashes 1a5778fb/6f32dfe5/267ca5a7/8126aa19/7502110a/81a4f667 match reconciled_receipts"
+  }
+ ],
+ "current_dispatch_reconciliation": {
+  "candidate_identity": "103399427530f30878f01b77b4937eafbac4a68da7596f62d82ee7f92a35e74e",
+  "current_executable_sha256_recomputed": "db29b6a8bd2c78fe1d9169f36b595752dec40f411085ab8e6032384e740bbfbd",
+  "current_executable_size_bytes_recomputed": 7675423,
+  "dispatch_head": "4268668f4b1af6cac2affd8679e3ffc62fbb6f0d",
+  "dispatch_id": "20261012-235259-ee9bf1b3:3:W62:run",
+  "historical_authority_and_artifact_bytes_modified": false,
+  "input_receipt_sha256": {
+   "artifacts/refactored-v2/w62/CANDIDATE10_PROVENANCE.json": "1a5778fb0c1e38eb0af635025c6f7ebf388a1a45c34845af43531e93f5b21d4a",
+   "artifacts/refactored-v2/w62/LEGACY_FREEZE_DEBT_REBIND.json": "8126aa19130c806655492990df452edc1d45b8ca8b94501a565faac8a949272d",
+   "artifacts/refactored-v2/w62/SUCCESSOR_CANDIDATE_AUTHORITY.json": "7502110a1c48b88a9be40522277ddd5c2d672597cbaa223fe2ca5fccaed94a7c",
+   "artifacts/refactored-v2/w62/U01_CANDIDATE10_IDENTITY_VERIFICATION.json": "6f32dfe5a25f5186d581dafba134b4a5a8aea0e4fff79db5350ed6d132e4f075",
+   "artifacts/refactored-v2/w62/U03_SUCCESSOR_AUTHORITY_PREFLIGHT.json": "81a4f667b58c35edbbb8ef0e5c41912db545a652f6352203f0c733c030ce2ef3",
+   "artifacts/refactored-v2/w62/W57_FROZEN_ARTIFACT_SHA256_RECONCILIATION.json": "267ca5a7f09ff5f36f1932c15987a58b1954a645a8dbbfcff36015732f3663d6"
+  },
+  "reconciliation": "MATCHES_EXISTING_RECEIPT; DIFFERS_FROM_CANDIDATE10_AND_W57_DECLARATIONS"
+ },
+ "current_executable": {
+  "matches_candidate10_declared_hash": false,
+  "matches_w57_frozen_declared_hash": false,
+  "path": "dist/hpc-client-gui/hpc-client-gui.exe",
+  "sha256": "db29b6a8bd2c78fe1d9169f36b595752dec40f411085ab8e6032384e740bbfbd",
+  "size_bytes": 7675423
+ },
+ "phase_instance_id": "20261012-235259-ee9bf1b3:3:W62:run",
+ "reconciled_receipts": {
+  "artifacts/refactored-v2/w62/CANDIDATE10_PROVENANCE.json": "1a5778fb0c1e38eb0af635025c6f7ebf388a1a45c34845af43531e93f5b21d4a",
+  "artifacts/refactored-v2/w62/LEGACY_FREEZE_DEBT_REBIND.json": "8126aa19130c806655492990df452edc1d45b8ca8b94501a565faac8a949272d",
+  "artifacts/refactored-v2/w62/SUCCESSOR_CANDIDATE_AUTHORITY.json": "7502110a1c48b88a9be40522277ddd5c2d672597cbaa223fe2ca5fccaed94a7c",
+  "artifacts/refactored-v2/w62/U01_CANDIDATE10_IDENTITY_VERIFICATION.json": "6f32dfe5a25f5186d581dafba134b4a5a8aea0e4fff79db5350ed6d132e4f075",
+  "artifacts/refactored-v2/w62/U03_SUCCESSOR_AUTHORITY_PREFLIGHT.json": "81a4f667b58c35edbbb8ef0e5c41912db545a652f6352203f0c733c030ce2ef3",
+  "artifacts/refactored-v2/w62/W57_FROZEN_ARTIFACT_SHA256_RECONCILIATION.json": "267ca5a7f09ff5f36f1932c15987a58b1954a645a8dbbfcff36015732f3663d6"
+ },
+ "repository_identity": {
+  "dirty_worktree_preserved": true,
+  "head": "4268668f4b1af6cac2affd8679e3ffc62fbb6f0d"
+ },
+ "requirement_ids": [
+  "HPC-W62-BASE-001",
+  "HPC-W62-BASE-002"
+ ],
+ "audit_focus": [
+  "Recompute candidate declaration, W57 declaration, executable and referenced receipt hashes.",
+  "Verify no historical or executable file was modified.",
+  "Confirm unavailable exact historical bytes remain unresolved, with no PASS claim."
+ ],
+ "identity_receipt_consistency": {
+  "candidate10_source_commit_and_tree_match_recorded_receipt": true,
+  "current_exe_hash_and_size_match_existing_reconciliation": true,
+  "legacy_debt_is_aggregate_only_and_not_candidate_bound": true,
+  "successor_authority_and_preflight_both_await_authorized_input": true
+ },
+ "proof": [
+  "Candidate-10 source commit 8177ee9c resolves via git cat-file/show to tree 05b9d456fef4217699a992cf5cf8d45dac30177d and parent eabd030e16f8eaac354fbd9028dd195ddf22e50f.",
+  "Current executable SHA256 DB29B6A8 and size 7675423 recomputed; differ from Candidate-10 8B51407C and W57 frozen B3019DEA; mismatch preserved.",
+  "Declaration files re-hashed F93DD45F and 3E60ACED; W57 declaration 21F0E47A unchanged; all input receipts JSON-parse OK with hashes captured.",
+  "Receipt rebound to current dispatch 20261012-235259-ee9bf1b3:3:W62:run with head 4268668f and candidate 10339942; prior-dispatch identifiers removed from both dispatch fields."
+ ],
+ "result": "HISTORICAL_IDENTITIES_RECONCILED; SUCCESSOR_AUTHORITY_UNAVAILABLE",
+ "schema_version": 1,
+ "semantic_problem_id": null,
+ "unresolved": [
+  "Exact Candidate-10 EXE/ZIP bytes unavailable in the previously bounded search.",
+  "Distinct W57 frozen B3019DEA bytes unavailable in the previously bounded search.",
+  "Authorized release-owner disposition and immutable successor candidate identity absent.",
+  "Six-entry itemized legacy freeze-debt ledger unavailable; no per-entry disposition inferred."
+ ],
+ "w57_frozen": {
+  "declaration_path": "W57_FREEZE_DECLARATION.md",
+  "declaration_sha256": "21f0e47afaf5c17bf6ea2de6f9fdc3e4362aa172148268041e29e8a18583817e",
+  "declared_exe_sha256": "b3019dea16783c8ab859fa36d2b0fef2fb70db075633e54eb0f36587295374fd",
+  "declared_size_bytes": 7672106,
+  "historical_declaration_unchanged_by_this_run": true,
+  "separate_frozen_bytes": "unavailable_in_prior_bounded_search; search_not_repeated"
+ },
+ "wave_id": "W62"
+}

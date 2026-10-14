@@ -1,0 +1,34 @@
+{
+  "Phase": "process-running",
+  "TaskStartUtc": "2026-10-10T07:00:07.3859363Z",
+  "TaskWorkerPid": 5756,
+  "TaskWorkerProcessCreatedUtc": "2026-10-10T07:00:06.3565217Z",
+  "PID": 2180,
+  "ProcessCreatedUtc": "2026-10-10T07:00:07.9638089Z",
+  "SessionId": 2,
+  "Username": "test\\home",
+  "ExplorerSessionId": 2,
+  "ExitCode": 1,
+  "StdoutPath": "C:\\Users\\home\\AppData\\Local\\CodexGuestRuns\\71142da3b67f4b9fb1bff9591773e866\\stdout.txt",
+  "StderrPath": "C:\\Users\\home\\AppData\\Local\\CodexGuestRuns\\71142da3b67f4b9fb1bff9591773e866\\stderr.txt",
+  "ResultPath": "C:\\Users\\home\\AppData\\Local\\CodexGuestRuns\\71142da3b67f4b9fb1bff9591773e866\\result.json",
+  "Executable": "C:\\Users\\home\\AppData\\Local\\CodexGuestRuns\\71142da3b67f4b9fb1bff9591773e866\\powershell.exe",
+  "ExecutableSha256": "8bb6fa8c283b4d92120b1ef249a9b311b0f804d4cabbe9981159976c8be76a5e",
+  "Error": null,
+  "ResultCompletedUtc": "2026-10-10T07:00:09.2078681Z",
+  "RunId": "71142da3b67f4b9fb1bff9591773e866",
+  "Timeout": false,
+  "HostStartUtc": "2026-10-10T06:59:49.1879015Z",
+  "GuestStagePath": "C:\\Users\\home\\AppData\\Local\\CodexGuestRuns\\71142da3b67f4b9fb1bff9591773e866",
+  "HostExecutableSha256": "8bb6fa8c283b4d92120b1ef249a9b311b0f804d4cabbe9981159976c8be76a5e",
+  "GuestExecutableSha256": "8bb6fa8c283b4d92120b1ef249a9b311b0f804d4cabbe9981159976c8be76a5e",
+  "HostAdditionalFileHashes": {
+    "candidate7\\hpc-client-gui.exe": "a95a71c3b296d279f548330598e9e1e44f468b32bc0514f056b376deae600266"
+  },
+  "GuestAdditionalFileHashes": {
+    "candidate7\\hpc-client-gui.exe": "a95a71c3b296d279f548330598e9e1e44f468b32bc0514f056b376deae600266"
+  },
+  "CleanupStatus": "completed",
+  "HostStdoutPath": "D:\\Projeler\\hpc-client-gui\\artifacts\\candidate7-validation\\71142da3b67f4b9fb1bff9591773e866.stdout.txt",
+  "HostStderrPath": "D:\\Projeler\\hpc-client-gui\\artifacts\\candidate7-validation\\71142da3b67f4b9fb1bff9591773e866.stderr.txt"
+}

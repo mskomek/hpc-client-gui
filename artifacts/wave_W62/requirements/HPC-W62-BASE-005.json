@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "wave_id": "W62",
+  "requirement_id": "HPC-W62-BASE-005",
+  "candidate_sha256": null,
+  "tests": [],
+  "readback": {
+    "observed_disposition": "AWAITING_INPUT",
+    "observation": "Source regression is historical; packaged CRUD/persistence/restart readback is NOT_RUN pending authorized candidate."
+  },
+  "requirement_status": "BLOCKED",
+  "blocker": {
+    "class": "EVIDENCE_PREREQUISITE_BLOCKED",
+    "unblock_condition": "Source regression is historical; packaged CRUD/persistence/restart readback is NOT_RUN pending authorized candidate."
+  },
+  "phase_instance_id": "20261013-135210-c8904e34:7:W62:repair",
+  "candidate_identity": null,
+  "candidate_bound": false,
+  "historical_pass_transfer": false,
+  "evidence_references": [
+    {
+      "path": "artifacts/refactored-v2/w62/U05_PACKAGED_PROFILE_CRUD.json",
+      "sha256": "6d9edecba6c5a76dba5699e36bf07f6216df836c650fff31b9cf269f7545d31a",
+      "size_bytes": 3111,
+      "phase_instance_id": null,
+      "candidate_bound": false
+    },
+    {
+      "path": "artifacts/refactored-v2/w62/SUCCESSOR_CANDIDATE_AUTHORITY.json",
+      "sha256": "a51d857b708d868a2b9fd9200d172a858fd2aa19c5b11c6ca92d76398c1e415f",
+      "size_bytes": 2370,
+      "phase_instance_id": null,
+      "candidate_bound": false
+    }
+  ]
+}

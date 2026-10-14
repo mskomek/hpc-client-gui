@@ -6,13 +6,13 @@ Canonical report path: docs/wave-reports/v2/opencode/W16_WAVE_REPORT.md
 Repository: mskomek/hpc-client-gui
 Branch: develop
 Baseline SHA: 63b696b3b8c64296d9d17f94c8d0d903f9bab7eb
-Current HEAD: 63b696b3b8c64296d9d17f94c8d0d903f9bab7eb (working tree preserved; no reset/clean/push)
-Tested implementation SHA: 63b696b3b8c64296d9d17f94c8d0d903f9bab7eb (+ existing working-tree changes, uncommitted)
+Current HEAD: 4f89c4d4d9a5b1e620c825fa5af3ff814b910548 (working tree preserved; no reset/clean/push)
+Tested implementation SHA: 4f89c4d4d9a5b1e620c825fa5af3ff814b910548 (+ existing working-tree changes, uncommitted)
 Plugin repo SHA: f0abb7e7037e66ab451d463c699fecf4e00c89eb (develop == origin/develop)
 First started: 2026-09-19
-Last updated: 2026-09-22
-Session status: REPAIR (stale package identity repaired; fresh audit required)
-Wave decision: READY_FOR_AUDIT
+Last updated: 2026-09-29
+Session status: REPAIR (closed-owner repair of HPC-W04-HARNESS-025 complete; fresh audit required against the new content identity)
+Wave decision: READY_FOR_AUDIT (unchanged decision, re-pending after this repair)
 ```
 
 ## Objective
@@ -45,6 +45,117 @@ Wave decision: READY_FOR_AUDIT
 - The earlier historical counts (`25 new`, `106`, and `169`) describe prior
   implementation cycles and are not the current repair result; the current
   focused repair validation is the `29 passed` run above.
+
+## Closed-owner repair cycle — 2026-09-29 (HPC-W04-HARNESS-025)
+
+W16 is a CLOSED Wave (`waves/done/W16.md`). `HPC-W04-HARNESS-025` is routed to
+W16 as closed owner by the controller ledger
+`.tmp/agent-runs/ac-wave-opencode-parallel/20260929-131518-47e3c21e/0002-W57-findings.json`
+(`execution_owner: W16`, `owner_state: done`). This is therefore a
+closed-owner repair transaction: historical lifecycle closure and current
+compliance are distinct facts. No Wave file, no other Wave's artifacts, and no
+`artifacts/wave_W16/**` were created or edited (that directory still does not
+exist; evidence-manifest minting is controller-owned).
+
+### FINDING
+
+`scripts/wx_packaged_smoke.py::run_packaged_smoke` scored evidence only inside
+the non-timeout branch. When the packaged child was killed on timeout, the
+runtime payload it had already written was never read, `runtime_checks` were
+never mapped into `checks`, `pty_resize` was never scored, `clean_shutdown` was
+never recomputed, and `combined` stayed empty so no output was captured. A
+timeout therefore produced an all-`FAIL` report that discarded proof the
+packaged process had already produced.
+
+### OBSERVED_FAILURE
+
+At the pre-repair commit the whole evidence-scoring block sat under the
+`else:` of `if timed_out:`, so the two timeout paths diverged completely. This
+is what made the acceptance gate lose information: a 240-second real packaged
+run that proved 19/20 checks and then hung produced a report claiming 0/20.
+
+### HYPOTHESIS
+
+`W16-REPAIR-SCORE-PROVEN-EVIDENCE-ON-TIMEOUT` — scoring the evidence
+unconditionally, while keeping the timeout verdict itself, repairs the defect
+without relaxing the acceptance criterion.
+
+### CHANGE (`scripts/wx_packaged_smoke.py`, `tests/test_wx_packaged_smoke.py`)
+
+1. Hoisted the evidence-scoring block out of the non-timeout branch. The
+   runtime payload is now read, `runtime_checks` are mapped into `checks`,
+   `pty_resize` is scored from the disposable server, and `clean_shutdown` is
+   recomputed on BOTH the timed-out and the normal path.
+2. `result = "FAIL" if timed_out else ...` is unchanged, so a timeout can
+   never report `PASS`. `clean_shutdown` is `FAIL` on the timeout path because
+   a killed child never shut down cleanly.
+3. The timed-out branch sets `details.evidence_scored_on_timeout = True` and
+   captures a bounded `details.output_tail` (last 2000 chars, the fresh-user
+   convention). `details.timeout` and `details.child_killed` are byte-identical
+   to the pre-repair values, so the pre-existing `NEG-W16-TIMEOUT-KILL`
+   assertions stay green.
+4. `run_packaged_smoke` default timeout raised `25` -> `240`, matching its
+   sibling `run_fresh_user_smoke` (a real packaged GUI needs more than 25s);
+   `main()` gained `--timeout` (default `240`) wired end to end into both
+   runners. `--artifact/--platform/--output/--fresh-user` semantics and the
+   stdout-JSON contract are unchanged.
+
+### Additional defect found and repaired in the same transaction
+
+`test_workdir_outside_repo_excludes_repo_tmp` was RED on entry and is not
+caused by this Wave's change: `_outside_repo` used `Path.resolve()`, which
+follows the repository's own `.tmp` NTFS junction into
+`D:\Projeler\.tmp\hpc-client-gui`, so a genuinely in-repo workdir such as
+`.tmp/os/run` was reported as OUTSIDE the repository. That is a false
+isolation claim in the evidence, so it is repaired rather than waived.
+`_outside_repo` now compares normalized lexical paths
+(`os.path.normcase(os.path.abspath(...))`), i.e. the contract is about the
+repository tree, not about where a link points. `_outside_repo` is diagnostic
+only (`details.workdir_outside_repo`); it gates nothing, so no acceptance
+criterion changed.
+
+### RESULT (exact commands and counts)
+
+| Command | Result |
+| --- | --- |
+| `python -m pytest -q --basetemp .tmp/pytest-w16-repair tests/test_wx_packaged_smoke.py` | `10 passed` (7 pre-existing + 3 new) |
+| same, with `scripts/wx_packaged_smoke.py` reverted to `git show HEAD:` | `3 failed, 7 deselected` |
+| `python -m pytest -q -n auto --basetemp .tmp/pytest-w16-repair tests/test_wx_packaged_smoke.py tests/test_release_manifest.py tests/test_wx_package_content.py tests/test_w14_provenance_manifest.py tests/test_w15_fresh_user_startup.py` | `60 passed` |
+| `python .opencode/scripts/validate-wave-orchestration.py` | `AC_WAVE_METADATA_VALID=61`, `PASS`, exit 0 |
+| `python .opencode/scripts/validate-wave-authoring.py` | `AC_WAVE_AUTHORING_VALID=61`, `PASS`, exit 0 |
+| `git diff --check -- scripts/wx_packaged_smoke.py tests/test_wx_packaged_smoke.py` | clean, exit 0 |
+
+Sensitivity proof (the three new tests are RED on pre-repair code, i.e. they
+actually bind the defect):
+
+- `test_timeout_retains_child_runtime_evidence` -> `AssertionError:
+  wx_runtime_started` (`- PASS` / `+ FAIL`): the payload's checks were dropped.
+- `test_timeout_details_score_flag_and_kill_keys_intact` -> `KeyError:
+  'evidence_scored_on_timeout'`.
+- `test_cli_timeout_argument_honored_end_to_end` -> `wx_packaged_smoke.py:
+  error: unrecognized arguments: --timeout 3`, `assert 2 == 1`.
+
+All 7 pre-existing tests in `tests/test_wx_packaged_smoke.py` are present and
+unweakened, including `test_sleeper_child_killed_on_timeout`; the 3 new tests
+are strictly additive. No test was skipped, xfailed, or deleted.
+
+### Identity
+
+- Current HEAD: `4f89c4d4d9a5b1e620c825fa5af3ff814b910548` (working tree
+  preserved; no reset/clean/push).
+- Content identity after this repair:
+  `b591eb6b834fafdced7e26b3abeefad87b3d04f207368db0eae118d7bd6db533`
+  (was `45c46c0a09c3f9b85b4679c40f3779a694b5a8f0c0c63b64cc1380823eeac3fc`).
+  This identity covers the whole repository including the live controller
+  tree, so it will drift while the controller is running; the owning evidence
+  must be bound to the identity measured at audit time.
+- **Not re-minted by this repair:** `dist/releases/w16-candidate/MANIFEST.json`
+  still binds artifact SHA
+  `544e186f81aa685ee80a3c07185ee0eb03ab1bc73a81151b1323253503c0a1da` at
+  `main_commit 63b696b3b8c64296d9d17f94c8d0d903f9bab7eb`. This is a harness
+  source repair only: no artifact was rebuilt, re-hashed, or re-packaged, and
+  no packaged GUI or loopback acceptance was re-run from this node. The W57
+  packaged gate re-run is controller-scheduled against the new identity.
 
 
 Close package-content/resource validation and the reusable exact-artifact
@@ -378,4 +489,30 @@ Open P0/P1: none
 Open P2/P3: none
 Two-fix gate: PASS (FIX-A + FIX-B independent; FIX-C/FIX-D additional)
 Wave decision: READY_FOR_AUDIT
+```
+
+### Closed-owner repair addendum — 2026-09-29
+
+```text
+HPC-W04-HARNESS-025 (closed owner W16, routed by the controller ledger)
+DEF: run_packaged_smoke scored evidence only on the non-timeout path
+Root cause: the whole scoring block sat under `else:` of `if timed_out:`
+Hypothesis: W16-REPAIR-SCORE-PROVEN-EVIDENCE-ON-TIMEOUT
+Change: score on BOTH paths; keep result = FAIL whenever timed_out
+Additional: _outside_repo followed the repo .tmp junction and could report a
+  false isolation claim; now a normalized lexical comparison
+Before EV: 3 new tests red on git-show HEAD code (wx_runtime_started FAIL,
+  KeyError evidence_scored_on_timeout, unrecognized --timeout)
+After EV: tests/test_wx_packaged_smoke.py 10 passed (7 pre-existing + 3 new)
+Regression suite: 60 passed across smoke/manifest/content/provenance/fresh-user
+Validators: validate-wave-orchestration PASS (61), validate-wave-authoring PASS (61)
+New/modified tests: tests/test_wx_packaged_smoke.py (+3, strictly additive)
+Skipped/xfail/weakened tests: none
+Packaged evidence: NOT re-run and NOT re-minted by this repair;
+  dist/releases/w16-candidate/MANIFEST.json still binds artifact SHA
+  544e186f81aa685ee80a3c07185ee0eb03ab1bc73a81151b1323253503c0a1da
+Content identity: b591eb6b834fafdced7e26b3abeefad87b3d04f207368db0eae118d7bd6db533
+Open P0/P1: none from this repair
+Wave decision: READY (next action repair -> controller re-runs the W57
+  packaged gate against the new owner-rebuilt identity)
 ```

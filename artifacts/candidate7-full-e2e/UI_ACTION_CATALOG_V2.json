@@ -1,0 +1,356 @@
+{
+  "schema": "hpc-client-gui-ui-action-catalog/2",
+  "catalog_limit": "Source-based inventory of known controls and actions; dynamically populated item cardinality is open-ended. It does not assert runtime discovery of every conditional action.",
+  "surfaces": [
+    {
+      "id": "main-tabs",
+      "source": "src/hpc_gui/wx_shell_frame.py:127-208",
+      "controls": [
+        "Login/Connections",
+        "Terminal",
+        "Jobs/Outputs",
+        "Directories",
+        "Files/FTP",
+        "Editor",
+        "Logs"
+      ],
+      "actions": [
+        "Select tab by pointer or keyboard",
+        "Ctrl+1 through Ctrl+7"
+      ],
+      "conditional": "Terminal has alternate construction paths."
+    },
+    {
+      "id": "menu",
+      "source": "src/hpc_gui/wx_shell_frame.py:41-100",
+      "actions": [
+        "Settings",
+        "Check for Updates",
+        "Exit",
+        "Browse/Install Plugins",
+        "Manage Plugins",
+        "Check Plugin Updates",
+        "Request Plugin",
+        "Help Center",
+        "Send Logs",
+        "About",
+        "English",
+        "Turkish",
+        "Version item (disabled)"
+      ]
+    },
+    {
+      "id": "plugin-menu-roots",
+      "source": "src/hpc_gui/wx_shell_plugins.py:93-182",
+      "actions": [
+        "Invoke each plugin-contributed root command",
+        "Open each plugin-contributed submenu and invoke each action"
+      ],
+      "cardinality": "Dynamic by installed plugins."
+    },
+    {
+      "id": "connection-list",
+      "source": "src/hpc_gui/wx_connection.py:501-509",
+      "actions": [
+        "Add",
+        "Edit",
+        "Duplicate",
+        "Delete",
+        "Connect",
+        "Disconnect",
+        "Cancel"
+      ]
+    },
+    {
+      "id": "connection-dialog",
+      "source": "src/hpc_gui/wx_connection_dialog_view.py:39-40,107-120,131,160-162,234,263,316,337-341",
+      "actions": [
+        "Choose system template",
+        "Save system template",
+        "Select password authentication",
+        "Select key authentication",
+        "Browse key file",
+        "Expand/collapse Cluster Settings",
+        "Expand/collapse Advanced Settings",
+        "Browse jump-host key",
+        "Browse local folder",
+        "Test Cluster",
+        "Cancel",
+        "Save",
+        "Save & Connect"
+      ]
+    },
+    {
+      "id": "connection-storage",
+      "source": "src/hpc_gui/wx_connection_dialog_storage.py:176,207",
+      "actions": [
+        "Choose storage/quota backend",
+        "Add storage",
+        "Edit storage",
+        "Remove storage"
+      ]
+    },
+    {
+      "id": "connection-templates",
+      "source": "src/hpc_gui/wx_connection_dialog_templates.py:32-70",
+      "actions": [
+        "Select system template",
+        "Select plugin template",
+        "Select user template",
+        "Get More Plugins"
+      ],
+      "cardinality": "Template entries are dynamic."
+    },
+    {
+      "id": "terminal",
+      "source": "src/hpc_gui/wx_terminal.py:114-117",
+      "actions": [
+        "Find",
+        "Clear",
+        "Decrease font",
+        "Increase font",
+        "Send terminal input",
+        "Copy",
+        "Paste",
+        "Resize PTY"
+      ]
+    },
+    {
+      "id": "jobs",
+      "source": "src/hpc_gui/wx_jobs.py:429-620",
+      "controls": [
+        "Jobs",
+        "Cluster",
+        "Details",
+        "Files",
+        "Outputs"
+      ],
+      "actions": [
+        "Refresh jobs",
+        "Cancel job",
+        "Refresh cluster",
+        "Show raw server status",
+        "Go to Jobs empty-state action",
+        "Show raw job details",
+        "Refresh accounting",
+        "Show raw accounting",
+        "Open Main Files"
+      ]
+    },
+    {
+      "id": "job-output-tabs",
+      "source": "src/hpc_gui/wx_jobs.py:737,897-919,1986-2006,2068",
+      "actions": [
+        "Refresh all outputs",
+        "Pause all outputs",
+        "Find next",
+        "Jump to latest",
+        "Open output in window",
+        "Show output in Files",
+        "Refresh output channel",
+        "Pause output channel"
+      ],
+      "cardinality": "Output channels and output tabs are dynamic."
+    },
+    {
+      "id": "directories",
+      "source": "src/hpc_gui/wx_directories_view.py:305",
+      "actions": [
+        "New SLURM Edit"
+      ]
+    },
+    {
+      "id": "remote-files",
+      "source": "src/hpc_gui/wx_remote_files_view.py:78-89,215,389,674,744,1363",
+      "actions": [
+        "New folder",
+        "New file",
+        "Upload",
+        "Download",
+        "Delete",
+        "Undo",
+        "Favorite",
+        "Open history",
+        "Refresh",
+        "Back",
+        "Forward",
+        "Up",
+        "Open path tab",
+        "Select filter tab",
+        "Compare directories"
+      ],
+      "cardinality": "Path, filter, and favorite entries are dynamic."
+    },
+    {
+      "id": "local-files",
+      "source": "src/hpc_gui/wx_local_files.py:321-325,585,759,964,1146",
+      "actions": [
+        "Select drive",
+        "Back",
+        "Forward",
+        "Parent directory",
+        "Refresh",
+        "Open local path tab"
+      ],
+      "cardinality": "Drives and path tabs are dynamic."
+    },
+    {
+      "id": "files-ftp",
+      "source": "src/hpc_gui/wx_shell_files_surface.py:56-60",
+      "actions": [
+        "Compare",
+        "Upload Selected",
+        "Download Selected"
+      ]
+    },
+    {
+      "id": "editor",
+      "source": "src/hpc_gui/wx_editor_view.py:83-112,137,145,168-169,710",
+      "actions": [
+        "Open",
+        "New from Template",
+        "Lint",
+        "Save",
+        "Find Next",
+        "Find Previous",
+        "Replace",
+        "Replace All",
+        "Submit",
+        "Save & Submit",
+        "Select document tab"
+      ],
+      "cardinality": "Document tabs are dynamic."
+    },
+    {
+      "id": "logs",
+      "source": "src/hpc_gui/wx_logs_view.py:39-43",
+      "actions": [
+        "Copy",
+        "Copy Path",
+        "Open Folder",
+        "Export Diagnostics",
+        "Refresh"
+      ]
+    },
+    {
+      "id": "keyboard",
+      "source": "src/hpc_gui/wx_shell_frame.py:409-453",
+      "actions": [
+        "Ctrl+1",
+        "Ctrl+2",
+        "Ctrl+3",
+        "Ctrl+4",
+        "Ctrl+5",
+        "Ctrl+6",
+        "Ctrl+7",
+        "F1"
+      ]
+    },
+    {
+      "id": "settings-dialog",
+      "source": "src/hpc_gui/wx_settings_view.py:44-45",
+      "actions": [
+        "Apply",
+        "Close"
+      ]
+    },
+    {
+      "id": "updater-dialog",
+      "source": "src/hpc_gui/wx_updater_view.py:371,386-404,470,531-532,564,600-645,694",
+      "actions": [
+        "Release notes",
+        "Download",
+        "Exit",
+        "Later",
+        "Cancel",
+        "Install",
+        "Show details",
+        "Close",
+        "Retry"
+      ]
+    },
+    {
+      "id": "plugins-dialog",
+      "source": "src/hpc_gui/wx_plugins_view.py:93-97",
+      "actions": [
+        "Refresh",
+        "Install",
+        "Disable",
+        "Remove",
+        "Close"
+      ]
+    },
+    {
+      "id": "about-dialog",
+      "source": "src/hpc_gui/wx_about.py:79,89,111,133",
+      "actions": [
+        "Project link",
+        "License",
+        "Notices",
+        "Close"
+      ]
+    },
+    {
+      "id": "help-dialog",
+      "source": "src/hpc_gui/wx_help.py:93",
+      "actions": [
+        "Close"
+      ]
+    },
+    {
+      "id": "window-lifecycle",
+      "source": "src/hpc_gui/wx_shell_window_support.py and src/hpc_gui/wx_shell_frame.py",
+      "actions": [
+        "Resize",
+        "Minimize",
+        "Maximize/restore",
+        "Close",
+        "Tray restore",
+        "Persist/restore geometry"
+      ]
+    }
+  ],
+  "absent_or_disabled": [
+    {
+      "action": "Command Palette",
+      "status": "NOT_APPLICABLE",
+      "source": "src/hpc_gui/wx_shell_frame.py:51",
+      "reason": "Source comment says there is no real palette UI."
+    },
+    {
+      "action": "Help Tour",
+      "status": "NOT_APPLICABLE",
+      "source": "src/hpc_gui/wx_shell_frame.py:75-77",
+      "reason": "Help tour item is None."
+    }
+  ],
+  "candidate7_validation": {
+    "source_base_commit": "d40f03d0289be158294241b8542e64ba6a0947be",
+    "source_branch": "codex/c6-full-e2e-fix",
+    "exe_sha256": "a95a71c3b296d279f548330598e9e1e44f468b32bc0514f056b376deae600266",
+    "package_zip_sha256": "9085561a41e1a83a1ee4235ebe68922e9354af785b7b39bcac0f6ff3a6420f80",
+    "package_file_count": 157,
+    "generated_utc": "2026-10-09T19:39:02.9598007Z"
+  },
+  "candidate7_current_environment": {
+    "checked_utc": "2026-10-10T06:44:27.9721223Z",
+    "target": "Ubuntu-Test at 192.168.77.10",
+    "canonical_ubuntu_doctor": "PASS",
+    "windows11_tcp_22": "PASS",
+    "gui_runner": "BLOCKED_ENV",
+    "reason": "Windows11 is Running, but quser returned no active sessions and there is no Explorer process. Invoke-Windows11Interactive rejected before launching the app.",
+    "evidence": "artifacts/candidate7-validation/ui-catalog-discovery-result.json"
+  },
+  "candidate7": {
+    "branch": "codex/c6-full-e2e-fix",
+    "source_commit": "d40f03d0289be158294241b8542e64ba6a0947be",
+    "exe_sha256": "a95a71c3b296d279f548330598e9e1e44f468b32bc0514f056b376deae600266",
+    "zip_sha256": "9085561a41e1a83a1ee4235ebe68922e9354af785b7b39bcac0f6ff3a6420f80",
+    "version": "1.5.9"
+  },
+  "catalog_freeze": {
+    "status": "PROVISIONAL_NOT_EXHAUSTIVE",
+    "source": "Candidate6 source inventory upgraded with Candidate7 identity; runtime surfaces/plugins/context menus/accelerators remain to enumerate",
+    "source_rows": 152
+  }
+}

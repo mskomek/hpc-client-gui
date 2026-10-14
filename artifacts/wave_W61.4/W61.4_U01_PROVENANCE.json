@@ -1,0 +1,47 @@
+{
+  "wave_id": "W61.4",
+  "unit": "U01",
+  "requirement_ids": [
+    "HPC-W11-HANDOFF-001",
+    "HPC-W11-HANDOFF-002",
+    "HPC-W11-HANDOFF-003",
+    "HPC-W11-HANDOFF-004"
+  ],
+  "observed_artifact": "dist/hpc-client-gui/hpc-client-gui.exe",
+  "observed_sha256": "DB29B6A8BD2C78FE1D9169F36B595752DEC40F411085AB8E6032384E740BBFBD",
+  "observed_size_bytes": 7675423,
+  "freeze_pin_path": "artifacts/wave_W61.1/freeze-pin/W61.1_U01_FREEZE_PIN.json",
+  "freeze_pin_sha256": "B3019DEA16783C8AB859FA36D2B0FEF2FB70DB075633E54EB0F36587295374FD",
+  "freeze_pin_size_bytes": 7672106,
+  "freeze_pin_build_commit": "0eb4f0d5026f87ba1aaad0dc1ba301590d82ca7d",
+  "observation_matches_freeze_pin": false,
+  "decision": "NO-GO: observed checkout executable does not match the authoritative W61.1 frozen-candidate pin.",
+  "capture_command": "python scripts/capture_build_provenance.py --json",
+  "capture_exit_code": 0,
+  "capture": {
+    "main_commit": "bc2e61dcf86dadeda26141e5324088be8285243f",
+    "main_status": "M .github/workflows/release.yml\n M .gitignore\n M .opencode/protocol/WAVE_PROJECT_PROFILE.json\n M .opencode/scripts/route-wave-findings.py\n M .opencode/scripts/run-wave-program.py\n M .opencode/scripts/wave_state_engine.py\n M artifacts/wave_W57.4/WAVE_W57.4_EVIDENCE_MANIFEST.json\n M build/audit/w16-package-content-windows.json\n M build/audit/wx-packaged-smoke-windows.json\n M docs/wave-reports/v2/opencode/W16_AUDIT_REPORT.md\n M docs/wave-reports/v2/opencode/W16_WAVE_REPORT.md\n M docs/wave-reports/v2/opencode/W53_WAVE_REPORT.md\n M docs/wave-reports/v2/opencode/W55_WAVE_REPORT.md\n M docs/wave-reports/v2/opencode/W57_WAVE_REPORT.md\n M docs/wave-reports/v2/opencode/W61.1_WAVE_REPORT.md\n M docs/wiki/Compatibility-and-Support-Matrix.md\n M scripts/release_gate.py\n M scripts/wx_package_content.py\n M scripts/wx_packaged_smoke.py\n M src/hpc_gui/docs/CHANGELOG.md\n M src/hpc_gui/services/local_files.py\n M tests/conftest.py\n M tests/support/mock_ssh_server.py\n M tests/test_release_gate.py\n M tests/test_terminal_pty_wire.py\n M tests/test_wave_controller_regressions.py\n M tests/test_wx_package_content.py\n M tests/test_wx_packaged_smoke.py\n?? .github/workflows/ci.yml\n?? artifacts/opencode/wave_W57.2/\n?? artifacts/opencode/wave_W57.3/\n?? artifacts/opencode/wave_W57.4/\n?? artifacts/opencode/wave_W58.1/\n?? artifacts/opencode/wave_W58.3/\n?? artifacts/opencode/wave_W58.4/\n?? artifacts/opencode/wave_W59.1/\n?? artifacts/opencode/wave_W59.2/\n?? artifacts/opencode/wave_W60.2/\n?? artifacts/wave_W55/\n?? artifacts/wave_W56/W56_CANDIDATE_DB29B6A8.json\n?? artifacts/wave_W57.1/\n?? artifacts/wave_W57.2/\n?? artifacts/wave_W57.3/\n?? artifacts/wave_W57.4/W57.4_U01_CANDIDATE_AUTHORITY_DISCREPANCY.json\n?? artifacts/wave_W57.4/W57.4_U01_validation_receipt.json\n?? artifacts/wave_W57.4/packaged-regression-logs/U01_diagnostic_followup_77957874.json\n?? artifacts/wave_W57.4/packaged-regression-logs/U01_fresh_evidence_20261001-225500.json\n?? artifacts/wave_W57.4/packaged-regression-logs/U01_owner_triage_77957874.json\n?? artifacts/wave_W57.4/packaged-regression-logs/U01_reconciliation_77957874.json\n?? artifacts/wave_W57.4/packaged-regression-logs/U01_routing_review_77957874.json\n?? artifacts/wave_W57.4/packaged-regression-logs/W57.4_PACKAGED_SMOKE_B3019DEA.json\n?? artifacts/wave_W57.4/packaged-regression-logs/W57.4_PACKAGED_SMOKE_B3019DEA.runtime.json\n?? artifacts/wave_W57.4/packaged-regression-logs/W57.4_REPAIR_PACKAGED_RESULT_B3019DEA.json\n?? artifacts/wave_W57.4/packaged-regression-logs/W57.4_REPAIR_PACKAGED_SMOKE_B3019DEA.execution.json\n?? artifacts/wave_W57.4/packaged-regression-logs/W57.4_REPAIR_PACKAGED_SMOKE_B3019DEA.json\n?? artifacts/wave_W57.4/packaged-regression-logs/W57.4_REPAIR_PACKAGED_SMOKE_B3019DEA.runtime.json\n?? artifacts/wave_W57.4/packaged-regression-logs/W57.4_REPAIR_PACKAGED_SMOKE_OBSERVER_B3019DEA.json\n?? artifacts/wave_W57.4/packaged-regression-logs/W57.4_REPAIR_PACKAGE_CONTENT_B3019DEA.json\n?? artifacts/wave_W57.4/packaged-regression-logs/w57.4-U01-package-content-B3019DEA.json\n?? artifacts/wave_W57/W57_REPAIR164_ROUTE_KEYED_TO_GJ2_051.json\n?? artifacts/wave_W57/W57_REPAIR168_POST_PASS_NON_TERMINATION.json\n?? artifacts/wave_W57/W57_REPAIR170_ROUTING_LEDGER_PROOF.json\n?? artifacts/wave_W57/W57_RUN148_LAB_GREEN_PKGREG_NONDETERMINISTIC_CRASH.json\n?? artifacts/wave_W57/W57_RUN152_LAB_GREEN_PKGREG_BLOCKED_REOPEN.json\n?? artifacts/wave_W57/W57_RUN152_NEW_SEAM_DEFECTS_ROUTED.json\n?? artifacts/wave_W57/W57_RUN169_PTY_RESIZE_MEASURED_GATE_REMEASURED.json\n?? artifacts/wave_W57/W57_U01_CLOSED_OWNER_ROUTE.json\n?? artifacts/wave_W57/WAVE_W57_EVIDENCE_MANIFEST.json\n?? artifacts/wave_W58.1/\n?? artifacts/wave_W58.3/\n?? artifacts/wave_W58.4/\n?? artifacts/wave_W61.1/CENSUS_INTERIM_DB29B6A8_20261007.json\n?? artifacts/wave_W61.1/ROLLBACK_LIVE_DB29B6A8_20261007.json\n?? artifacts/wave_W61.1/U01-artifact-identity/\n?? artifacts/wave_W61.1/U01-identity/\n?? artifacts/wave_W61.1/freeze-pin/\n?? artifacts/wave_W61.1/packaged-runtime/U02-evidence/\n?? artifacts/wave_W61.1/packaged-runtime/U02.1-clean-launch/W61.1_U02.1_RUNNER_RECHECK_20261007.json\n?? artifacts/wave_W61.1/packaged-runtime/W61.1_U02_FRESH_SESSION_RETEST.json\n?? artifacts/wave_W61.1/packaged-runtime/W61.1_U02_GUI_RETEST.json\n?? artifacts/wave_W61.1/packaged-runtime/W61.1_U02_PACKAGED_RUNTIME.json\n?? artifacts/wave_W61.1/packaged-runtime/W61.1_U02_REPAIR.json\n?? artifacts/wave_W61.1/packaged-runtime/W61.1_U02_REPAIR_ENVIRONMENT_BLOCKER_20261005.json\n?? artifacts/wave_W61.1/packaged-runtime/W61.1_U02_REPAIR_HEALTH_GATE.json\n?? artifacts/wave_W61.1/packaged-runtime/W61.1_U02_REPAIR_HEALTH_GATE_19.json\n?? artifacts/wave_W61.1/packaged-runtime/W61.1_U02_REPAIR_HEALTH_GATE_21.json\n?? artifacts/wave_W61.1/packaged-runtime/W61.1_U02_REPAIR_HEALTH_GATE_23.json\n?? artifacts/wave_W61.1/packaged-runtime/W61.1_U02_REPAIR_HEALTH_GATE_25.json\n?? artifacts/wave_W61.1/packaged-runtime/W61.1_U02_REPAIR_HEALTH_GATE_27.json\n?? artifacts/wave_W61.1/packaged-runtime/W61.1_U02_REPAIR_HEALTH_GATE_29.json\n?? artifacts/wave_W61.1/packaged-runtime/W61.1_U02_REPAIR_HEALTH_GATE_31.json\n?? artifacts/wave_W61.1/packaged-runtime/W61.1_U02_REPAIR_HEALTH_GATE_33.json\n?? artifacts/wave_W61.2/\n?? artifacts/wave_W61.3/\n?? artifacts/wave_W61.4/\n?? build/audit/wx-packaged-smoke-windows.runtime.json\n?? docs/wave-reports/v2/opencode/W57.1_AUDIT_REPORT.md\n?? docs/wave-reports/v2/opencode/W57.1_WAVE_REPORT.md\n?? docs/wave-reports/v2/opencode/W57.2_WAVE_REPORT.md\n?? docs/wave-reports/v2/opencode/W57.3_WAVE_REPORT.md\n?? docs/wave-reports/v2/opencode/W58.1_WAVE_REPORT.md\n?? docs/wave-reports/v2/opencode/W58.2_AUDIT_REPORT.md\n?? docs/wave-reports/v2/opencode/W58.2_WAVE_REPORT.md\n?? docs/wave-reports/v2/opencode/W58.3_WAVE_REPORT.md\n?? docs/wave-reports/v2/opencode/W58.4_WAVE_REPORT.md\n?? docs/wave-reports/v2/opencode/W59.1_WAVE_REPORT.md\n?? docs/wave-reports/v2/opencode/W59.2_WAVE_REPORT.md\n?? docs/wave-reports/v2/opencode/W60.1_AUDIT_REPORT.md\n?? docs/wave-reports/v2/opencode/W60.1_WAVE_REPORT.md\n?? docs/wave-reports/v2/opencode/W61.2_WAVE_REPORT.md\n?? docs/wave-reports/v2/opencode/W61.3_AUDIT_REPORT.md\n?? docs/wave-reports/v2/opencode/W61.3_WAVE_REPORT.md\n?? docs/wave-reports/v2/opencode/W61.4_AUDIT_REPORT.md\n?? docs/wave-reports/v2/opencode/W61.4_WAVE_REPORT.md\n?? parallel_workspace.py\n?? route-wave-findings.py\n?? run-wave-program.py\n?? scripts/wx_fresh_user_smoke.py\n?? scripts/wx_packaged_smoke_support.py\n?? test_wave_controller_regressions.py\n?? tests/test_temp_root_policy.py\n?? wave_progress.py\n?? wave_state_engine.py",
+    "main_dirty": true,
+    "plugin_commit": "f0abb7e7037e66ab451d463c699fecf4e00c89eb",
+    "plugin_status": "?? .github/social-preview.jpg",
+    "toolchain": {
+      "python": "3.12.4",
+      "pyinstaller": "6.19.0",
+      "pip": "26.0.1",
+      "setuptools": "70.3.0",
+      "os_arch": "windows/amd64"
+    },
+    "dependency_lock_sha256": "1b73e127c35a1ca00d30557f51c21f3ac0def9155268fd9eaf048670ce97c30d",
+    "captured_utc": "2026-10-07T10:58:40.472408+00:00"
+  },
+  "branch": "develop",
+  "dependency_lock_path": "requirements-release.lock",
+  "dependency_lock_sha256_recomputed": "1B73E127C35A1CA00D30557F51C21F3AC0DEF9155268FD9EAF048670CE97C30D",
+  "build_manifest_path": "artifacts/wave_W57.3/candidate-manifest/W57.3_CANDIDATE_MANIFEST.json",
+  "build_manifest_sha256": "0081A5DFC2B877BFF9E4CABB67117BC701A008C354D696AAEB422DDB2C0D1F17",
+  "build_manifest_artifact_sha256": "B3019DEA16783C8AB859FA36D2B0FEF2FB70DB075633E54EB0F36587295374FD",
+  "build_manifest_identity_scope": "Historical frozen-candidate provenance; it does not identify the observed DB29\u2026 executable as that build output.",
+  "main_worktree_dirty": true,
+  "plugin_worktree_status": "?? .github/social-preview.jpg",
+  "provenance_disposition": "Current source/plugin/toolchain identities captured; current observed executable is not tied to a matching build manifest and differs from freeze pin."
+}

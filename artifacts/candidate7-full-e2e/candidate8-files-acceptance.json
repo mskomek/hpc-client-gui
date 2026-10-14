@@ -1,0 +1,128 @@
+{
+  "candidate": "Candidate 8",
+  "version": "1.5.9",
+  "exe_sha256": "2b3123260134ae68e9255560aa2cc3e17bd7cf4419e8badb41e47677756f2e05",
+  "backend": "LOCAL_REAL SFTP over SSH",
+  "result": "PASS_PARTIAL",
+  "remote_directory": "/home/hpctest/gui_c7_ui_acceptance",
+  "run_id": "gui8_56f17e8ea5",
+  "actions": [
+    {
+      "evidence": "GUI remote Directory field/tab changed from / to /home/hpctest/gui_c7_ui_acceptance after keyboard Enter",
+      "action": "Navigate remote path",
+      "status": "PASS"
+    },
+    {
+      "action": "New Folder",
+      "status": "PASS",
+      "name": "gui8_56f17e8ea5_folder",
+      "verification": "GUI listing after Refresh and independent strict-known-host SSH stat: directory mode 775"
+    },
+    {
+      "action": "New File",
+      "status": "PASS",
+      "name": "gui8_56f17e8ea5_empty.txt",
+      "verification": "GUI listing after Refresh and independent strict-known-host SSH stat: zero-byte regular file; SHA-256 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "action": "Refresh",
+      "status": "PASS",
+      "verification": "both created entries remained visible in remote listing after GUI Refresh"
+    },
+    {
+      "reason": null,
+      "action": "Favorites",
+      "status": "PASS",
+      "verification": "Hash-verified Candidate8 GUI selected existing favorite from /home/hpctest; UIA readback observed remote path /home/hpctest/gui_c7_ui_acceptance. Independent strict-known-host SSH confirmed fixture directory and the unique empty file SHA-256.",
+      "runner_receipt": "../.tmp/candidate8-final/runner-files-favorite-up.json",
+      "run_id": "gui8_f7088e36c5"
+    },
+    {
+      "action": "Back",
+      "status": "PASS",
+      "run_id": "gui8_c7e6a590b9",
+      "verification": "GUI remote Directory changed from fixture path to /home/hpctest; captured screenshot shows the parent listing.",
+      "screenshot": "screenshots/candidate8-files-nav-remote_back.jpg"
+    },
+    {
+      "action": "Forward",
+      "status": "PASS",
+      "run_id": "gui8_c7e6a590b9",
+      "verification": "GUI remote Directory returned to /home/hpctest/gui_c7_ui_acceptance; captured screenshot shows the fixture listing.",
+      "screenshot": "screenshots/candidate8-files-nav-remote_forward.jpg"
+    },
+    {
+      "action": "History",
+      "status": "PASS",
+      "run_id": "gui8_c7e6a590b9",
+      "verification": "Clicked remote History control; popup visibly listed /home/hpctest/gui_c7_ui_acceptance and /home/hpctest.",
+      "screenshot": "screenshots/candidate8-files-nav-remote_history.jpg"
+    },
+    {
+      "status": "PASS",
+      "screenshot": "screenshots/candidate8-files-filter-slurm.jpg",
+      "action": "Slurm filter tab",
+      "run_id": "gui8_3f2ded44e8",
+      "verification": "Clicked the remote Slurm filter through UIA. The remote pane listed Slurm fixtures (including c8_save_submit_fresh.slurm) and no GUI non-Slurm file gui_c7_file.txt."
+    },
+    {
+      "status": "PASS",
+      "action": "Create + Refresh repeat",
+      "run_id": "gui8_3f2ded44e8",
+      "verification": "Unique folder and empty file shown after GUI Refresh; strict-known-host SSH confirmed the directory, zero-byte regular file and empty-file SHA-256."
+    },
+    {
+      "screenshot": "screenshots/candidate8-files-upload-destination-final.jpg",
+      "run_id": "gui8_5e61803ad9",
+      "action": "Upload selected",
+      "status": "PASS",
+      "sha256": "9912cbe443c468fe45f6374675b21fcfaf7c2ad9be3c400745351819b086d04b",
+      "verification": "GUI upload action opened the destination-directory prompt; selected destination through the prompt; Completed queue showed upload / Successful. LOCAL_REAL SSH independently confirmed 41-byte remote file and matching SHA-256."
+    },
+    {
+      "action": "Download selected",
+      "screenshot": "screenshots/candidate8-files-download-completed.jpg",
+      "verification": "GUI download opened the Windows Choose local download folder picker; selected the disposable download directory. File was created there and local SHA-256 matched independent remote SHA-256. Completed queue screenshot showed download status Successful.",
+      "run_id": "gui8_713116a302",
+      "local_sha256": "0cb72469582b2b2ccdfad9462887c4702dfe9ebdb5321119bf63fd727b0f0728",
+      "remote_sha256": "0cb72469582b2b2ccdfad9462887c4702dfe9ebdb5321119bf63fd727b0f0728",
+      "file": "c8_save_submit_fresh.slurm",
+      "status": "PASS"
+    },
+    {
+      "runner_receipt": "candidate8-files-delete-undo-runner-receipt.json",
+      "action": "Delete + Undo",
+      "verification": "Initial screenshot proves the harness clicked the local pane: the local row remained selected and no delete confirmation appeared. Remote target gui8_38ebf3b1a8_folder was independently verified still present by strict-host-key SSH. Harness now scrolls the remote pane to the end, requires the exact remote row to be wholly visible, uses SelectionItemPattern and refuses Delete unless IsSelected is true. A rerun was launched with the corrected Candidate 8 harness, but its interactive runner did not return a receipt within the observation window; no Delete/Undo semantic result is counted.",
+      "screenshot": "screenshots/candidate8-files-delete-remote_folder_selected.jpg",
+      "run_id": "gui8_38ebf3b1a8",
+      "status": "BLOCKED_HARNESS"
+    }
+  ],
+  "remote_readback": "strict-host-key canonical lab SSH helper verified the exact remote directory, empty-file size and SHA-256; no private values emitted",
+  "successful_screenshots": [
+    "screenshots/candidate8-files-home-enter-connected.jpg",
+    "screenshots/candidate8-files-home-enter-disposable_remote_path.jpg",
+    "screenshots/candidate8-files-home-enter-folder_created.jpg",
+    "screenshots/candidate8-files-home-enter-file_created.jpg",
+    "screenshots/candidate8-files-home-enter-refreshed.jpg",
+    "screenshots/candidate8-files-favorite-up-favorites_menu.jpg",
+    "screenshots/candidate8-files-favorite-up-favorite_selection_menu.jpg",
+    "screenshots/candidate8-files-favorite-up-favorite_selected.jpg",
+    "screenshots/candidate8-files-nav-remote_back.jpg",
+    "screenshots/candidate8-files-nav-remote_forward.jpg",
+    "screenshots/candidate8-files-nav-remote_history.jpg",
+    "screenshots/candidate8-files-upload-destination-final.jpg",
+    "screenshots/candidate8-files-download-completed.jpg"
+  ],
+  "harness_debug": [
+    "Initial prompt search falsely matched the toolbar label; scoped dialog discovery fixed it.",
+    "An initial mkdir at / returned the expected permission-denied dialog; test was navigated through the GUI to the disposable user fixture directory.",
+    "Favorites was not tested because its control discovery selected the local Favorites folder.",
+    "Favorite selection retry used the remote Up toolbar control at the screenshot-verified 1366x768 coordinate. This avoided a remote path field re-entry false failure. The favorite menu showed gui_c7_ui_acceptance; selecting it returned to the exact remote path.",
+    "Back and Forward screenshots show the respective remote paths and listings. History popup screenshot shows full path labels. Harness expected the basename in UIA menu names, so its exact comparison false-failed; visual list content establishes the visited paths.",
+    "First upload attempt was rejected as non-PASS: it stopped at the destination prompt and a local list item caused a false completed detection. The corrected attempt typed the disposable remote destination in the visible dialog, observed Completed/Successful, and independently matched remote SHA-256.",
+    "Download prompt was the native Choose local download folder dialog, not Destination directory. Corrected harness selected the test-only local folder; downloaded file and remote/local SHA-256 matched.",
+    "Delete/Undo was not counted: screenshot showed the local row selected and remote target gui8_38ebf3b1a8_folder still present by independent SSH. Harness was hardened to scroll the remote grid, require a wholly visible exact row and SelectionItemPattern IsSelected before permitting Delete. The corrected full Files journey was launched, but its runner did not return a result within the observation window; that run is unverified and does not count."
+  ],
+  "runner_receipt": "../.tmp/candidate8-final/runner-files-home-enter.json"
+}

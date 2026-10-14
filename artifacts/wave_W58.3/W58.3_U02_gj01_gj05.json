@@ -1,0 +1,88 @@
+{
+ "after_last_test_sha256": "B3019DEA16783C8AB859FA36D2B0FEF2FB70DB075633E54EB0F36587295374FD",
+ "artifact": "dist/hpc-client-gui/hpc-client-gui.exe",
+ "artifact_bytes": 7672106,
+ "artifact_files": 172,
+ "before_first_test_sha256": "B3019DEA16783C8AB859FA36D2B0FEF2FB70DB075633E54EB0F36587295374FD",
+ "environment": "Windows-11-10.0.26200-SP0 AMD64; LOCAL_REAL_HYPERV (login-control01 192.168.250.11, compute01 .12, compute02 .13; Ubuntu 24.04, Slurm 23.11.4, key-only hpctest)",
+ "external_identity": {
+  "lab_status": "PASS",
+  "profile_sha256": "a99c96fdff52105b6f539fa0335a4b34a7b6ad00ceaacdf628fd09b320b4c0bf",
+  "profile_valid": true,
+  "provider": "local-real"
+ },
+ "freeze_match": true,
+ "gj_rows": [
+  {
+   "automated": "Packaged fresh-root init (doctor environment PASS, profiles 0), profile create/list/show u02-lab; packaged wx main_frame_created PASS x2 smoke runs",
+   "external": "N/A (no remote needed; lab_status PASS recorded as env identity)",
+   "id": "GJ-01",
+   "manual_runtime": "doctor environment frozen True config_dir=disposable root; config.json persisted with profile id; no warnings",
+   "result": "PASS",
+   "scope_note": "GUI-click connection creation inherits W57.4 20/20 isolated_from_src on identical bytes; in-session WebView terminal unavailable (env-gated, see GJ-note)"
+  },
+  {
+   "automated": "doctor connection accept-new 6/6 PASS on exact bytes; strict known-key exit 0 PASS; strict unknown-key (.13) exit 3 FAIL visibly; global CLI gate + per-profile cli_allowed gate both fail-closed with truthful diagnostics",
+   "external": "LOCAL_REAL_HYPERV lab-status PASS; key-only hpctest + accept-new against 192.168.250.11; system known_hosts supplied trust (read-only)",
+   "id": "GJ-02",
+   "manual_runtime": "doctor connection JSON readback; strict probes via wrapper BATs with exit-code capture (direct console capture drops frozen-exe output on this path)",
+   "result": "PASS",
+   "scope_note": "Strict PASS to .11 trusts developer system known_hosts via load_system_host_keys (read-only); unknown-key rejection proven against .13"
+  },
+  {
+   "automated": "SFTP doctor smoke PASS (upload/list/download/checksum/cleanup); files ls real listing; upload --verify; submit job 177; status RUNNING on compute01; cancel --yes OK; status CANCELLED; rm cleanup of sbatch+output; cancel-without---yes refused (exit 2)",
+   "external": "LOCAL_REAL_HYPERV real Slurm job 177 (debug partition, compute01), SFTP to /home/hpctest, full cleanup, no residue",
+   "id": "GJ-03",
+   "manual_runtime": "JSON readbacks per step via wrapper BATs; jobs list truthful empty; lssrv exit 1 truthful: no site-status command in local-real template (template scope, not journey failure)",
+   "result": "PASS",
+   "scope_note": "Terminal/editor interactive surfaces inherit W57.4 20/20 on identical bytes; lssrv unsupported-by-template recorded, not a defect"
+  },
+  {
+   "automated": "Plugin contract+core+wx suites: 44 passed; packaged startup discovery clean (process_started + main_frame PASS x2, no plugin load errors in artifact output; frozen plugin code == in-tree per byte-identical product inputs)",
+   "external": "N/A (no remote needed)",
+   "id": "GJ-04",
+   "manual_runtime": "Packaged frame creation on exact bytes; no candidate mutation (no install/remove performed on frozen bytes)",
+   "result": "PASS",
+   "scope_note": "Full GUI browse/install/remove clicks inherit W57.4 20/20 plugin_ansys_surface PASS on identical bytes; no plugin mutation attempted headless by design"
+  },
+  {
+   "automated": "config-storage-atomic + diagnostics suites: 4 passed; cli_external_access_enabled persisted to disposable config.json and took effect (remote gate opened); profile persisted with id",
+   "external": "N/A (local settings)",
+   "id": "GJ-05",
+   "manual_runtime": "doctor environment diagnostics PASS; settings round-trip observed across launches; file-log stream is GUI-session driven (not exercised headless)",
+   "result": "PASS",
+   "scope_note": "Language/window-state effect paths inherit W57.4 packaged evidence on identical bytes"
+  }
+ ],
+ "identity_header": "Artifact: dist/hpc-client-gui/hpc-client-gui.exe\nSHA256: B3019DEA16783C8AB859FA36D2B0FEF2FB70DB075633E54EB0F36587295374FD\nMain SHA: 0eb4f0d5026f87ba1aaad0dc1ba301590d82ca7d\nPlugin SHA: f0abb7e7037e66ab451d463c699fecf4e00c89eb\nVersion: 1.5.9\nOS/arch: Windows-11-10.0.26200-SP0 AMD64",
+ "main_sha": "0eb4f0d5026f87ba1aaad0dc1ba301590d82ca7d",
+ "packaged_gui_smoke": {
+  "note": "Deterministic in-session WebView2 creation abort (0x80004004 then 0x80080005); main_frame_created PASS in both runs proves wx frame path; identical bytes passed 20/20 in W57.4 -> environment-gated, not product",
+  "result": "FAIL (environment-gated)",
+  "run1": "FAIL phase 0, main_frame PASS, WebView2 0x80004004",
+  "run2": "FAIL phase 0, main_frame PASS, WebView2 0x80080005 Server execution failed"
+ },
+ "phase": "run",
+ "phase_instance_id": "20261002-131602-284e33ab:4:W58.3:run",
+ "plugin_sha": "f0abb7e7037e66ab451d463c699fecf4e00c89eb",
+ "product_mutation": "none (pre-existing dirty entries untouched; new files only under .tmp/ and this Wave surfaces)",
+ "routed_findings": [
+  {
+   "id": "U02-F01",
+   "owner": "Fix-Waves-75-77 test lineage (true owner)",
+   "status": "routed, not fixed here",
+   "summary": "tests/test_gui_verification.py run_verification() raises KeyError 'jobs_box': show_jobs() now returns int, script expects controls dict. Stale verification script vs evolved API."
+  }
+ ],
+ "unit": "U02",
+ "validators": {
+  "plugin_suites": "44 passed (contract+core+wx), 20 skipped (pre-existing conditionals)",
+  "pytest_collect_only": "pending (runs at close of unit)",
+  "settings_suites": "4 passed (config-storage-atomic, diagnostics)",
+  "validate_wave_closeout": "pending (runs at close of unit)",
+  "wx_packaged_smoke": "FAIL environment-gated (WebView2), 2/2 runs, isolated_from_src true"
+ },
+ "version": "1.5.9",
+ "w57_freeze_sha256": "B3019DEA16783C8AB859FA36D2B0FEF2FB70DB075633E54EB0F36587295374FD",
+ "wave_id": "W58.3"
+}

@@ -1,0 +1,71 @@
+{
+  "wave": "W57.4",
+  "unit": "U01",
+  "captured_utc": "2026-09-30T21:57:17.3154404Z",
+  "controller_content_identity": "77957874143a357e2e803179ba83c334126cb14ae092b688ddfd6d694fe7453a",
+  "git_head": "27a1662baa0f7be8854a9f42a4f18d6bbe7cc90c",
+  "candidate": {
+    "identity_match": true,
+    "expected_prefix": "B3019DEA",
+    "path": "dist/hpc-client-gui/hpc-client-gui.exe",
+    "sha256": "B3019DEA16783C8AB859FA36D2B0FEF2FB70DB075633E54EB0F36587295374FD"
+  },
+  "pytest": {
+    "non_gui": {
+      "log": "U01_non_gui_xdist_20261001-225500.log",
+      "command": ".venv/Scripts/python.exe -m pytest -n auto -m 'not gui and not wx' --durations=25",
+      "summary": "2385 passed, 36 skipped, 14 failed, 12 errors; 60.80s",
+      "exit_code": 1
+    },
+    "wx_shell_stress": {
+      "log": "U01_wx_shell_stress_20261001-225500.log",
+      "command": ".venv/Scripts/python.exe -m pytest tests/test_wx_shell_p0_stress.py --durations=25",
+      "slowest": "425.27s call",
+      "summary": "1 passed in 425.79s",
+      "exit_code": 0
+    },
+    "gui_wx_serial": {
+      "log": "U01_gui_wx_serial_20261001-225500.log",
+      "command": ".venv/Scripts/python.exe -m pytest -p no:xdist -m 'gui or wx' --durations=25",
+      "summary": "2435 deselected, 1 collection error; no selected tests executed",
+      "exit_code": 2
+    },
+    "gui_wx_serial_crash": {
+      "log": "U01_gui_wx_serial_excluding_broken_root_test_20261001-225500.log",
+      "exit_code": -1073740771,
+      "summary": "Windows process terminated with native fatal runtime error (exit -1073740771) during tests/test_editor_flow.py::test_ctrl_o_focuses_remote_path_and_enter_opens_it; no pytest terminal summary",
+      "command": ".venv/Scripts/python.exe -m pytest -p no:xdist -m 'gui or wx' --ignore=test_wave_controller_regressions.py --durations=25",
+      "omission": "Excluded root test_wave_controller_regressions.py because its import fails on missing D:Projeler.opencodescripts\run-wave-program.py"
+    }
+  },
+  "quick_gates": {
+    "ruff": {
+      "log": "U01_ruff_20261001-225500.log",
+      "command": ".venv/Scripts/python.exe -m ruff check src scripts tests",
+      "summary": "282 errors; 19 fixable, 25 unsafe fixes potentially",
+      "exit_code": 1
+    },
+    "compile": {
+      "log": "U01_compile_20261001-225500.log",
+      "command": ".venv/Scripts/python.exe -m compileall -q src/hpc_gui",
+      "exit_code": 0
+    },
+    "i18n": {
+      "log": "U01_i18n_20261001-225500.log",
+      "command": ".venv/Scripts/python.exe scripts/check_i18n.py",
+      "exit_code": 0
+    },
+    "smoke": {
+      "log": "U01_smoke_20261001-225500.log",
+      "command": ".venv/Scripts/python.exe scripts/smoke_test.py",
+      "environment": {
+        "PYTHONPATH": "src",
+        "QT_QPA_PLATFORM": "offscreen",
+        "HPC_GUI_DISABLE_WEBENGINE": "1"
+      },
+      "summary": "smoke test: OK",
+      "exit_code": 0
+    }
+  },
+  "note": "Evidence-only run; no frozen source, tests, gate criteria or candidate bytes were changed. GUI selection is incomplete due unrelated controller regression test collection error."
+}

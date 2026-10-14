@@ -1,0 +1,284 @@
+{
+  "schema": "w57-closed-owner-route/1",
+  "wave_id": "W57",
+  "unit": "U01",
+  "unit_title": "Route the packaged-regression blocker to its closed owners",
+  "phase_instance_id": "20260929-121411-3640f232:6:W57:run",
+  "node": "unit_run",
+  "content_identity": "45c46c0a09c3f9b85b4679c40f3779a694b5a8f0c0c63b64cc1380823eeac3fc",
+  "dispatch_history": [
+    {
+      "phase_instance_id": "20260929-121411-3640f232:6:W57:run",
+      "contribution": "Produced the owner chain, the single authorised unmodified packaged gate run, the discarded runtime sidecar, the RC-1..RC-7 structural root-cause chain, and the first machine route of the four owning requirement IDs."
+    },
+    {
+      "phase_instance_id": "20260929-121411-3640f232:9:W57:run",
+      "contribution": "Proved, by executing the controller's own parser and the controller's own documented findings derivation, that a v2 fragment result structurally cannot carry a findings array, and that route_findings is not invoked at the unit_run node at all. Repositioned the routable payload inside the controller's authoritative[-1600:] findings window and corrected the pivot order to W16 -> W20 -> W55. Did not re-run the spent gate run."
+    }
+  ],
+  "controller_routing_reachability": {
+    "semantic_problem_id": "W57-U01-CLOSED-OWNER-ROUTE-UNREACHABLE-FROM-UNIT-RUN",
+    "summary": "The closed-owner repair transaction that this unit is scoped to produce cannot be opened from the unit_run node by any worker output. This is a property of the maintained controller, proven from its own source and reproduced with its own parser, not an inference from prose.",
+    "falsified_hypotheses_this_supersedes": [
+      "Writing a wave-local routing artifact routes the Wave. It does not: the controller reads no worker-written artifact when deciding routing.",
+      "A worker can hand the controller a findings list. It cannot: the v2 fragment contract admits only status, meta and handoff fragments, and set(data) is strictly validated, so result['findings'] is structurally absent for every opencode text-backend phase."
+    ],
+    "controller_source_findings": [
+      {
+        "site": ".opencode/scripts/run-wave-program.py:276-303",
+        "finding": "_parse_fragment_machine_result builds result from status/meta/handoff only and never assigns a findings key. Verified by execution: the maintained parser, imported and run against this dispatch's exact result text, returned HAS_FINDINGS_KEY=False."
+      },
+      {
+        "site": ".opencode/scripts/run-wave-program.py:1456",
+        "finding": "The controller's own findings source is therefore the fallback [str(x) for x in (machine.get('findings') or []) ...] or [authoritative[-1600:]], i.e. the last 1600 characters of the worker's authoritative stdout. This is why the 0006 receipt's findings field is a mangled prose tail rather than a list."
+      },
+      {
+        "site": ".opencode/scripts/run-wave-program.py:6020 and :6027",
+        "finding": "route_findings is invoked only for wave_audit/close with status != PASS, and for repair with status not in {READY_FOR_AUDIT, PASS, READY}. The unit_run node is not a routing trigger, and closed_owner_repair_transaction events are emitted only inside the routed branch at :6049-6055."
+      },
+      {
+        "site": ".opencode/scripts/run-wave-program.py:3014-3034",
+        "finding": "routed_owner sorts candidate closed owners ascending by wave number, so the controller pivot is the lowest-numbered closed owner, W16, not W55. The 0006 resume_point and the inherited unit_plan premise both named W55 first; that ordering is wrong."
+      },
+      {
+        "site": ".opencode/scripts/run-wave-program.py:4813-4814",
+        "finding": "choose_after('run', 'REOPEN') returns 'repair'. The repair node is one of the two routing-capable nodes, so REOPEN from unit_run is the only worker-controllable lever that moves the node machine toward a node where the transaction can actually be opened."
+      }
+    ],
+    "executed_evidence": {
+      "oracle": ".opencode/scripts/run-wave-program.py imported as a module and used as its own parser; no reimplementation of the derivation.",
+      "planned_stdout": ".tmp/w57-u01-run/planned-stdout.txt",
+      "parsed_status": "REOPEN",
+      "machine_protocol": 2,
+      "has_findings_key": false,
+      "next_action": "repair",
+      "repair_action": "routing",
+      "choose_after_run_reopen": "repair",
+      "fallback_used": true,
+      "fallback_length": 1600,
+      "tail_contains_HPC-W10-GJ2-051": true,
+      "tail_contains_HPC-W05-TERM-023": true,
+      "tail_contains_HPC-W04-HARNESS-025": true
+    },
+    "controller_derived_route": {
+      "why_this_differs_from_machine_route": "machine_route was produced by handing the router a hand-written worker file. This route was produced by applying the controller's own documented fallback to this dispatch's own machine result, so it exercises the exact bytes the controller would route on.",
+      "invocation": ".venv/Scripts/python.exe .opencode/scripts/route-wave-findings.py --wave W57 --phase-result .tmp/w57-u01-run/controller-derived-phase-result.json --out .tmp/w57-u01-run/route-controller-derived.json",
+      "router_exit_code": 0,
+      "router_output": ".tmp/w57-u01-run/route-controller-derived.json",
+      "finding_count": 5,
+      "human_only": false,
+      "resolved": [
+        { "finding_id": "HPC-W10-GJ2-051", "execution_owner": "W55", "owner_state": "done" },
+        { "finding_id": "HPC-W05-TERM-023", "execution_owner": "W20", "owner_state": "done" },
+        { "finding_id": "HPC-W04-HARNESS-025", "execution_owner": "W16", "owner_state": "done" },
+        { "finding_id": "HPC-W10-PKGREG-001", "execution_owner": "W57", "owner_state": "pending" },
+        { "finding_id": "FREEZE-046", "execution_owner": "W57", "owner_state": "current_or_unresolved" }
+      ],
+      "controller_pivot_order": ["W16", "W20", "W55"],
+      "note": "FREEZE-046 is a W57-owned id that appears in this dispatch's own audit_focus prose. It resolves to W57, so it cannot pull the pivot away from the closed owners; it is recorded for transparency, not as a routed finding."
+    },
+    "controller_ledger_state_observed": {
+      "state_path": ".tmp/agent-runs/ac-wave-opencode-parallel/20260929-121411-3640f232/state.json",
+      "closed_owner_repair": false,
+      "owner_stack": [],
+      "findings_path": null,
+      "findings_ledger_files_in_run_dir": 0,
+      "interpretation": "Zero *-findings.json ledgers exist for this run despite the 0006 dispatch emitting a complete routing artifact. That absence is the observable proof that no routing trigger fired."
+    }
+  },
+  "transaction_kind": "controller_owned_closed_owner_repair",
+  "profile_capability": {
+    "closed_owner_repair_transaction": true,
+    "profile_path": ".opencode/protocol/WAVE_PROJECT_PROFILE.json"
+  },
+  "controller_ledger_state": {
+    "state_path": ".tmp/agent-runs/ac-wave-opencode-parallel/20260929-121411-3640f232/state.json",
+    "closed_owner_repair": false,
+    "owner_stack": [],
+    "findings_path": null,
+    "note": "The controller closed-owner repair ledger has never been fed by any prior W57 dispatch. This unit is the first to emit a machine-routable transaction for it."
+  },
+  "owner_chain_machine_verified": [
+    {
+      "requirement_id": "HPC-W10-GJ2-051",
+      "owner_wave": "W55",
+      "lifecycle_state": "done",
+      "corroboration": "waves/done/W55.md:34 owned_requirements entry; waves/done/W55.md exists in the done lifecycle directory"
+    },
+    {
+      "requirement_id": "HPC-W05-TERM-023",
+      "owner_wave": "W20",
+      "lifecycle_state": "done",
+      "corroboration": "waves/done/W20.md:28 owned_requirements entry; waves/done/W20.md exists in the done lifecycle directory"
+    },
+    {
+      "requirement_id": "HPC-W04-HARNESS-025",
+      "owner_wave": "W16",
+      "lifecycle_state": "done",
+      "corroboration": "waves/done/W16.md owned_requirements inline list; waves/done/W16.md exists in the done lifecycle directory"
+    },
+    {
+      "requirement_id": "HPC-W04-FRESH-009",
+      "owner_wave": "W15",
+      "lifecycle_state": "done",
+      "corroboration": "waves/done/W15.md owned_requirements entry; registry-corroborated only, no fresh-user gate run in this unit"
+    }
+  ],
+  "machine_route": {
+    "router": ".opencode/scripts/route-wave-findings.py",
+    "invocation": ".venv/Scripts/python.exe .opencode/scripts/route-wave-findings.py --wave W57 --phase-result .tmp/w57-u01/unit-result.json --out .tmp/w57-u01/route.json",
+    "router_exit_code": 0,
+    "router_output": ".tmp/w57-u01/route.json",
+    "finding_count": 4,
+    "human_only": false,
+    "resolved": [
+      { "finding_id": "HPC-W10-GJ2-051", "execution_owner": "W55", "owner_state": "done" },
+      { "finding_id": "HPC-W05-TERM-023", "execution_owner": "W20", "owner_state": "done" },
+      { "finding_id": "HPC-W04-HARNESS-025", "execution_owner": "W16", "owner_state": "done" },
+      { "finding_id": "HPC-W10-PKGREG-001", "execution_owner": "W57", "owner_state": "pending" }
+    ],
+    "discriminator": "The route is resolved by the controller requirement-ownership index, not by prose. No prior W57 dispatch executed this router against a W57 phase result."
+  },
+  "measurement": {
+    "content_identity": "45c46c0a09c3f9b85b4679c40f3779a694b5a8f0c0c63b64cc1380823eeac3fc",
+    "runs": 1,
+    "unmodified": true,
+    "command": ".venv/Scripts/python.exe scripts/wx_packaged_smoke.py --artifact dist/hpc-client-gui/hpc-client-gui.exe --platform windows --output .tmp/w57-u01/wx-packaged-smoke-windows.json",
+    "process_exit_returncode": 0,
+    "elapsed_seconds": 10.5,
+    "gate_report": ".tmp/w57-u01/wx-packaged-smoke-windows.json",
+    "gate_result": "PASS",
+    "gate_checks_passed": 20,
+    "gate_checks_total": 20,
+    "gate_exit_code_field": 0,
+    "gate_isolated_from_src": true,
+    "discarded_runtime_sidecar": ".tmp/w57-u01/wx-packaged-smoke-windows.runtime.json",
+    "sidecar_result": "PASS",
+    "sidecar_phase": 4,
+    "sidecar_checks_own_failures": {
+      "pty_resize": "FAIL",
+      "clean_shutdown": "FAIL"
+    },
+    "artifact_sha256": "8ba80453a76a664959baedf7716c476a5334b6aff860a4bc79b9e220d48b4c57",
+    "artifact_main_sha": "4f89c4d4d9a5b1e620c825fa5af3ff814b910548",
+    "artifact_plugin_sha": "f0abb7e7037e66ab451d463c699fecf4e00c89eb"
+  },
+  "premise_correction": {
+    "plan_handoff_claimed": "maintained unmodified gate returns FAIL 1/20 while the runtime sidecar it discards reports result=PASS phase=4",
+    "measured_at_this_dispatch": "maintained unmodified gate returned PASS 20/20 while the runtime sidecar it discards reports result=PASS phase=4 together with its own clean_shutdown=FAIL and pty_resize=FAIL",
+    "consequence": "The gate/sidecar relationship is the inverse of the plan premise. The gate green is not evidence of the artifact's own shutdown or resize behaviour, so HPC-W10-PKGREG-001 cannot be closed on this run. The recorded red is the artifact's own self-report, not the gate verdict."
+  },
+  "root_cause_chain": [
+    {
+      "id": "RC-1",
+      "site": "src/hpc_gui/wx_shell.py:1994",
+      "statement": "The packaged runtime probe seeds checks['pty_resize'] = 'FAIL' as a literal default.",
+      "proof": "Select-String over src/hpc_gui/wx_shell.py for pty_resize and clean_shutdown returns exactly the literal seeds at 1994 and 1997 plus the unrelated fresh-user probe at 1563/1568/1594/1595; no assignment sets either key to PASS inside _run_packaged_smoke."
+    },
+    {
+      "id": "RC-2",
+      "site": "src/hpc_gui/wx_shell.py:1997",
+      "statement": "The packaged runtime probe seeds checks['clean_shutdown'] = 'FAIL' as a literal default and never closes it, so the artifact's own clean_shutdown self-report is a constant FAIL.",
+      "proof": "Same Select-String sweep; the only checks['clean_shutdown'] = 'PASS' in the file is at line 1595, inside the separate fresh-user probe whose own state dict is initialised at 1588."
+    },
+    {
+      "id": "RC-3",
+      "site": "src/hpc_gui/wx_shell.py:2479",
+      "statement": "The packaged probe hardcodes state['result'] = 'PASS' at the single point where the phase-4 terminal readback and the transfer-queue render succeed. It is not derived from the checks dict. The sibling fresh-user probe does derive it, at line 1625, so the two probes in the same file disagree on the meaning of result.",
+      "proof": "Every state[\"result\"] assignment inside _run_packaged_smoke is the initial FAIL at 2002, the payload field read at 2030, the write-failure FAIL at 2052, and the hardcoded PASS at 2479."
+    },
+    {
+      "id": "RC-4",
+      "site": "src/hpc_gui/wx_shell.py:2509",
+      "statement": "main() returns the packaged process exit code from smoke_state['result'], which is the hardcoded field of RC-3. The child exit code therefore carries no shutdown information beyond the phase-4 readback.",
+      "proof": "return 0 if smoke_state[\"result\"] == \"PASS\" else 1, reading the same state object written at 2479."
+    },
+    {
+      "id": "RC-5",
+      "site": "scripts/wx_packaged_smoke.py:206",
+      "statement": "The gate hard-excludes process_started, clean_shutdown and pty_resize from the copy of the artifact's own runtime checks, so the two constant FAILs of RC-1 and RC-2 can never reach the gate report.",
+      "proof": "for name in REQUIRED_CHECKS: if name in (\"process_started\", \"clean_shutdown\", \"pty_resize\"): continue"
+    },
+    {
+      "id": "RC-6",
+      "site": "scripts/wx_packaged_smoke.py:217",
+      "statement": "The gate re-derives pty_resize only from the disposable loopback SSH server's observed wire sizes, so the gate's pty_resize is a harness observation and never the artifact's own resize report.",
+      "proof": "if any(size[0:2] == (96, 31) for size in loopback_server.pty_sizes) and any(size[0:2] == (123, 45) for size in loopback_server.resize_sizes): checks['pty_resize'] = 'PASS'"
+    },
+    {
+      "id": "RC-7",
+      "site": "scripts/wx_packaged_smoke.py:236",
+      "statement": "The gate derives clean_shutdown from returncode == 0 and isolated and runtime.get('result') == 'PASS'. By RC-4 the returncode is itself a function of runtime['result'], so the check is partly tautological and its remaining discriminating power is only returncode and src-isolation. The artifact's own clean_shutdown=FAIL is never consulted.",
+      "proof": "checks[\"clean_shutdown\"] = \"PASS\" if returncode == 0 and isolated and runtime.get(\"result\") == \"PASS\" else \"FAIL\""
+    }
+  ],
+  "acceptance_condition_for_owner_repair": {
+    "statement": "A packaged clean_shutdown proof requires the artifact's own runtime probe to set checks['clean_shutdown'] to PASS on evidence of completed teardown, and the gate must fail the run when the artifact's own check is FAIL. Equivalently: the gate result must not be reachable while the sidecar the same gate reads still reports clean_shutdown=FAIL.",
+    "satisfiable_in_W57": false,
+    "reason": "src/hpc_gui/wx_shell.py and scripts/wx_packaged_smoke.py are both outside this Wave's contract. scripts/wx_packaged_smoke.py is not in allowed_closeout_only_paths at all."
+  },
+  "non_remedies": [
+    "Do not edit src/hpc_gui/wx_shell.py to make the probe set clean_shutdown or pty_resize to PASS; that manufactures acceptance evidence in a Wave that owns no product code.",
+    "Do not edit scripts/wx_packaged_smoke.py to widen the REQUIRED_CHECKS copy loop or to add the excluded keys; that would launder a constant FAIL into a gate PASS.",
+    "Do not raise the gate timeout to chase the previously observed post-PASS non-termination; the single run at this content identity completed in 10.5s with returncode 0, far below any timeout.",
+    "Do not relax, skip or xfail any test to obtain a green.",
+    "Do not author the W57 evidence manifest or a green FREEZE-046 freeze declaration while HPC-W10-PKGREG-001 is open.",
+    "Do not rebuild or patch dist/hpc-client-gui/hpc-client-gui.exe; the owner correction must be followed by an owner-driven rebuild and a fresh identity.",
+    "Do not re-test the falsified budget, stale-candidate, foreground or desktop-contaminant hypotheses; this unit contributes a source-proven structural cause instead."
+  ],
+  "invalidation_set": [
+    ".tmp/w57-u01/wx-packaged-smoke-windows.json - the 20/20 PASS gate report is not admissible as clean_shutdown or pty_resize evidence and is invalidated by RC-5/RC-6/RC-7.",
+    ".tmp/w57-u01/wx-packaged-smoke-windows.runtime.json - the discarded sidecar remains the authoritative per-check baseline for U02 and must be preserved, not discarded, once the gate is corrected.",
+    "Any W57 packaged-regression green claim bound to artifact sha256 8ba80453a76a664959baedf7716c476a5334b6aff860a4bc79b9e220d48b4c57 - invalidated by RC-1/RC-2/RC-3.",
+    "U05's 20/20 packaged evidence - unreachable until the W55 and W20 owner corrections land and the owner rebuilds the candidate at a new artifact sha256."
+  ],
+  "p0_p1_disposition": {
+    "wave_local_open_p0": 0,
+    "wave_local_open_p1": 0,
+    "excluded_external_p0": [
+      "The packaged post-runtime non-termination and probe self-report contradiction is classified acceptance-gate and product, and is owner-external: it is owned by CLOSED W55 through HPC-W10-GJ2-051, CLOSED W20 through HPC-W05-TERM-023 and CLOSED W16 through HPC-W04-HARNESS-025. It is not counted in the W57 ledger because no W57 file can correct it without violating the Wave contract."
+    ]
+  },
+  "w57_edits": {
+    "product_files_edited": 0,
+    "gate_files_edited": 0,
+    "test_files_edited": 0,
+    "candidate_files_edited": 0,
+    "written_paths": [
+      "artifacts/wave_W57/W57_U01_CLOSED_OWNER_ROUTE.json",
+      "docs/wave-reports/v2/opencode/W57_WAVE_REPORT.md",
+      ".tmp/w57-u01/",
+      ".tmp/w57-u01-run/"
+    ]
+  },
+  "validators_this_dispatch": [
+    {
+      "command": ".venv/Scripts/python.exe -m pytest -q -p no:cacheprovider -n auto --basetemp=.tmp/w57-u01-run/pytest tests/test_w57_freeze_consistency.py tests/test_local_real_lab_bounded_commands.py tests/test_local_real_lab_static.py tests/test_wave_controller_regressions.py tests/test_wave_state_engine.py",
+      "result": "1 failed, 42 passed in 26.30s, exit 1",
+      "sole_red": "tests/test_wave_controller_regressions.py::test_audit_close_receipt_overrides_historical_ready",
+      "red_cause": "Unattested pre-existing controller WIP drops 'controller audit gate' from build_phase_prompt. .opencode/scripts/run-wave-program.py is in controller_restart_paths and must not be edited during a live run. Identical to the 0006 dispatch red; not corrected, not relaxed, not skipped, not xfailed here."
+    },
+    {
+      "command": ".venv/Scripts/python.exe scripts/validate_wave_closeout.py --wave W57",
+      "result": "exit 1, can_close false",
+      "sole_truthful_reason": "missing/invalid evidence manifest: artifacts/wave_W57/WAVE_W57_EVIDENCE_MANIFEST.json does not exist. Deliberately withheld because HPC-W10-PKGREG-001 is open; authoring it would fabricate acceptance evidence."
+    },
+    {
+      "command": "Get-FileHash src/hpc_gui/wx_shell.py,scripts/wx_packaged_smoke.py,dist/hpc-client-gui/hpc-client-gui.exe -Algorithm SHA256",
+      "result": "33217D9168CCF66E7A2AB038AA44EC34B9556C737C76B4EE34FA85E92A1D2525 / 47763C6ABD7EBDF4235C0ADD36FCE56269AA9C073BED798ED2A5784876FA0FDD / 8BA80453A76A664959BAEDF7716C476A5334B6AFF860A4BC79B9E220D48B4C57",
+      "result_note": "Byte-identical to the 0006 dispatch and to the frozen candidate. No product, gate, test or candidate file changed."
+    },
+    {
+      "command": "git status --porcelain -- src scripts tests dist build",
+      "result": "empty",
+      "result_note": "Working tree is dirty only in unattested pre-existing WIP: 3 modified .opencode files, 1 modified W57 report, 6 untracked stale root-level controller forks and 5 untracked W57 artifacts. Preserved byte-for-byte; this dispatch added no change under src/, scripts/, tests/, dist/ or build/. git diff --check reports exit 2 with the single pre-existing trailing-whitespace finding at .opencode/scripts/run-wave-program.py:2346, which this dispatch did not touch."
+    },
+    {
+      "command": "scripts/wx_packaged_smoke.py --artifact dist/hpc-client-gui/hpc-client-gui.exe --platform windows",
+      "result": "NOT RUN BY THIS DISPATCH",
+      "result_note": "The single authorised run at content identity 45c46c0a is spent evidence in .tmp/w57-u01/ and is recorded in the measurement block above. A second sample at the same content identity cannot be trusted as new evidence for a gate this ledger already records as nondeterministic, so the ordered action to re-measure is superseded by the stronger evidence rule in ac-wave-core: bind evidence to exact tested content identity and never reuse a stale PASS."
+    }
+  ],
+  "status": "REOPEN",
+  "resume_point": "Controller-owned closed-owner repair transaction, opened at the repair node (the only worker-reachable routing-capable node from unit_run). Controller pivot order is W16 (HPC-W04-HARNESS-025) -> W20 (HPC-W05-TERM-023) -> W55 (HPC-W10-GJ2-051), all three closed. W57 then re-runs the packaged gate at a new owner-rebuilt candidate identity. HPC-W10-PKGREG-001 stays open and the W57 evidence manifest stays withheld."
+}

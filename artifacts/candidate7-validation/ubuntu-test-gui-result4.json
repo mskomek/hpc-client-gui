@@ -1,0 +1,33 @@
+{
+  "RunId": "62bbdd372c7e4305955618d140869aa4",
+  "TaskName": "CodexGuestRun_62bbdd372c7e4305955618d140869aa4",
+  "HostStartUtc": "2026-10-10T07:10:56.3819941Z",
+  "TaskStartUtc": "2026-10-10T07:11:23.7346632Z",
+  "PID": 7036,
+  "ProcessCreatedUtc": "2026-10-10T07:11:24.3161357Z",
+  "GuestStagePath": "C:\\Users\\home\\AppData\\Local\\CodexGuestRuns\\62bbdd372c7e4305955618d140869aa4",
+  "GuestArtifactsPreserved": false,
+  "Username": "test\\home",
+  "ExplorerPid": 1952,
+  "ExplorerOwner": "test\\home",
+  "ExplorerSessionId": 2,
+  "ExitCode": 0,
+  "Timeout": false,
+  "CleanupStatus": "completed",
+  "TransferTimeoutSeconds": 300,
+  "StageBytes": 65472235,
+  "TransferArchiveBytes": 35391918,
+  "HostStdoutPath": "D:\\Projeler\\hpc-client-gui\\artifacts\\candidate7-validation\\62bbdd372c7e4305955618d140869aa4.stdout.txt",
+  "HostStderrPath": "D:\\Projeler\\hpc-client-gui\\artifacts\\candidate7-validation\\62bbdd372c7e4305955618d140869aa4.stderr.txt",
+  "TaskResultPath": "D:\\Projeler\\hpc-client-gui\\artifacts\\candidate7-validation\\62bbdd372c7e4305955618d140869aa4.result.json",
+  "ResultPath": "D:\\Projeler\\hpc-client-gui\\artifacts\\candidate7-validation\\ubuntu-test-gui-result4.json",
+  "HostExecutableSha256": "8bb6fa8c283b4d92120b1ef249a9b311b0f804d4cabbe9981159976c8be76a5e",
+  "GuestExecutableSha256": "8bb6fa8c283b4d92120b1ef249a9b311b0f804d4cabbe9981159976c8be76a5e",
+  "HostAdditionalFileHashes": {
+    "candidate7\\hpc-client-gui.exe": "a95a71c3b296d279f548330598e9e1e44f468b32bc0514f056b376deae600266"
+  },
+  "GuestAdditionalFileHashes": {
+    "candidate7\\hpc-client-gui.exe": "a95a71c3b296d279f548330598e9e1e44f468b32bc0514f056b376deae600266"
+  },
+  "Error": null
+}

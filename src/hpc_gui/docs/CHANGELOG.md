@@ -4,6 +4,22 @@
 
 ## v1.5.9
 
+The W61.2 freeze reference is the Windows AMD64 onedir executable with SHA-256
+`B3019DEA16783C8AB859FA36D2B0FEF2FB70DB075633E54EB0F36587295374FD`.
+The prior packaged smoke receipt applies only to those exact bytes and is tied
+to HEAD `92128c8726435aa0087f090c4a080720f148781f`; it does not validate the
+current checkout at HEAD `bc2e61dcf86dadeda26141e5324088be8285243f`, whose
+executable SHA-256 is `DB29B6A8BD2C78FE1D9169F36B595752DEC40F411085AB8E6032384E740BBFBD`.
+W61.3's summary receipt reports 20/20 packaged smoke checks on those DB29…
+bytes, but its referenced runtime sidecar is currently absent. The bytes do
+not match the B301… freeze reference and the authoritative W10 identity remains
+unresolved. The summary is bounded evidence, not release acceptance or a
+verified current-candidate runtime result.
+No macOS/Linux artifact or real-cluster replay is established. Feature entries
+below are release-note claims; prior evidence and the limits on current-candidate
+validation are summarized in the W59.2 report and Compatibility and Support
+Matrix. Release readiness remains NO-GO pending the unresolved gates.
+
 ### SSH authentication
 - Preserved a typed password for the current connection attempt when "remember
   password" is off; the transient credential is used for that connection only

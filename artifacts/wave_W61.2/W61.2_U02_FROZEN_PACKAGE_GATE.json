@@ -1,0 +1,94 @@
+{
+  "schema": "w61.2-u02-frozen-package-gate/1",
+  "wave_id": "W61.2",
+  "unit_id": "U02",
+  "requirement_ids": [
+    "HPC-W11-REL-038"
+  ],
+  "candidate_identity": {
+    "branch": "develop",
+    "head": "bc2e61dcf86dadeda26141e5324088be8285243f",
+    "working_tree": "dirty"
+  },
+  "freeze_pin": {
+    "path": "artifacts/wave_W61.1/freeze-pin/W61.1_U01_FREEZE_PIN.json",
+    "file_sha256": "7E4E79C4B20D78F0E4D5D081EE5E443BA59E6DAF480E6C28C23EF6662ECF7744",
+    "artifact_path": "dist/hpc-client-gui/hpc-client-gui.exe",
+    "artifact_sha256": "B3019DEA16783C8AB859FA36D2B0FEF2FB70DB075633E54EB0F36587295374FD",
+    "artifact_size_bytes": 7672106
+  },
+  "current_artifact": {
+    "path": "dist/hpc-client-gui/hpc-client-gui.exe",
+    "artifact_sha256": "DB29B6A8BD2C78FE1D9169F36B595752DEC40F411085AB8E6032384E740BBFBD",
+    "artifact_size_bytes": 7675423,
+    "matches_freeze_pin": false
+  },
+  "recovery_search": {
+    "searched_paths": [
+      "dist",
+      "artifacts/wave_W61.1",
+      "artifacts/wave_W61.2"
+    ],
+    "matching_executable_found": false
+  },
+  "runtime_smoke": {
+    "executed": false,
+    "reason": "Exact W61.1-pinned bytes are unavailable; the current dist executable does not match and must not be substituted or rebuilt."
+  },
+  "harness_regression": {
+    "command": ".venv/Scripts/python.exe -m pytest tests/test_wx_packaged_smoke.py -q --durations=25",
+    "exit_code": 0,
+    "passed": 14,
+    "failed": 0,
+    "skipped": 0,
+    "xfailed": 0,
+    "xpassed": 0,
+    "result": "PASS; harness tests only, not packaged GUI runtime evidence"
+  },
+  "disposition": "BLOCKED_PENDING_EXACT_FROZEN_BYTES",
+  "unblock_condition": "Restore the executable whose SHA-256 is B3019DEA16783C8AB859FA36D2B0FEF2FB70DB075633E54EB0F36587295374FD, then rerun packaged smoke and reconcile its raw runtime receipt.",
+  "prior_runtime_receipt_reconciliation": "Existing receipts are bound to HEAD 92128c8726435aa0087f090c4a080720f148781f and conflict: aggregate marks pty_resize and clean_shutdown PASS while raw runtime marks both FAIL. They are not current evidence for HEAD bc2e61dcf86dadeda26141e5324088be8285243f.",
+  "current_dispatch_check": {
+    "checked_at": "2026-10-07",
+    "candidate_head": "bc2e61dcf86dadeda26141e5324088be8285243f",
+    "current_artifact_sha256": "DB29B6A8BD2C78FE1D9169F36B595752DEC40F411085AB8E6032384E740BBFBD",
+    "current_artifact_size_bytes": 7675423,
+    "matching_executable_found_in_approved_locations": false,
+    "searched_locations": [
+      "dist",
+      "artifacts/wave_W61.1",
+      "artifacts/wave_W61.2"
+    ],
+    "result": "BLOCKED_PENDING_EXACT_FROZEN_BYTES"
+  },
+  "latest_harness_regression": {
+    "command": ".venv/Scripts/python.exe -m pytest tests/test_wx_packaged_smoke.py -q --durations=25",
+    "exit_code": 0,
+    "passed": 12,
+    "failed": 0,
+    "skipped": 0,
+    "xfailed": 0,
+    "xpassed": 0,
+    "duration": "48.82s",
+    "result": "PASS; harness tests only, not packaged GUI runtime evidence"
+  },
+  "local_real_preflight": {
+    "command": "lab/lab-status.ps1",
+    "exit_code": 0,
+    "status": "PASS",
+    "environment_class": "LOCAL_REAL_HYPERV",
+    "profile_sha256": "a99c96fdff52105b6f539fa0335a4b34a7b6ad00ceaacdf628fd09b320b4c0bf",
+    "image_sha256": "612b2c0cc1bc413a6cb8c38fd611794caf0f2b436c50013d8b3794db12ad7354",
+    "nodes": [
+      "login-control01",
+      "compute01",
+      "compute02"
+    ],
+    "slurm_nodes": "compute01|idle; compute02|idle",
+    "controller_parallel_strategy": null,
+    "serial_fallback_recorded": false,
+    "exclusive_lease_recorded": false,
+    "replay": "NOT_RUN",
+    "reason": "Current controller state contains no serial-fallback or exclusive-lease identity."
+  }
+}

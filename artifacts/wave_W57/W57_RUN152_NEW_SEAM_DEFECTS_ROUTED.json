@@ -1,0 +1,53 @@
+{
+ "schema": "w57-run-finding",
+ "wave_id": "W57",
+ "phase": "run",
+ "phase_instance_id": "20260925-074235-63df86b0:152:W57:run",
+ "content_identity": "3005d0433246cc5b4ddcc55947ce7062352e365bd62776d0ef49d688ca4f8055",
+ "branch": "develop",
+ "head": "4f89c4d4d9a5b1e620c825fa5af3ff814b910548",
+ "finding_id": "W57-RUN152-TWO-CROSS-SCOPE-SEAM-DEFECTS",
+ "severity": "test-contract-drift",
+ "title": "The W57 seam suite is red 2/80. Both failures are previously unreported by any W57 dispatch, both are test-contract drift rather than product defects, and both sit outside the W57 ownership surface, so they are routed and not repaired here.",
+ "observed_failure": ".venv/Scripts/python.exe -m pytest -q tests/test_local_real_lab_bounded_commands.py tests/test_local_real_lab_static.py tests/test_wx_packaged_smoke.py tests/test_wave_controller_regressions.py tests/test_wave_state_engine.py tests/contracts/test_wave_closeout_hardening.py tests/test_w30_submit_cancel.py tests/test_wx_editor_cross_view_actions.py -> exit 1, 2 failed 78 passed in 58.78s",
+ "defects": [
+  {
+   "id": "W57-RUN152-D01-TMP-JUNCTION-EXPECTATION-INVALID",
+   "test": "tests/test_wx_packaged_smoke.py::test_workdir_outside_repo_excludes_repo_tmp",
+   "test_tag": "NEG-W16-WORKDIR-SCOPE",
+   "location": "tests/test_wx_packaged_smoke.py lines 97-100",
+   "assertion": "assert runner._outside_repo(runner.ROOT / '.tmp' / 'os' / 'run') is False",
+   "actual": "_outside_repo returns True",
+   "root_cause": "scripts/wx_packaged_smoke.py line 22-23 implements _outside_repo as: not path.resolve().is_relative_to(ROOT.resolve()). On this host the repo-root .tmp is a documented NTFS junction to D:\\Projeler\\.tmp\\hpc-client-gui\\, so Path.resolve() follows the junction and yields a path outside ROOT, which makes the assertion is False fail. AGENTS.md documents the junction as intentional: the repo-root .tmp is an NTFS junction to the external temp root precisely so the enforced temp_root == .tmp contract keeps working. The gate itself already accounts for this at wx_packaged_smoke.py lines 178-180, which document that controller-managed TEMP may live under the repository .tmp area and that the contract is isolation from the source tree rather than from the controller own temporary bookkeeping. The test encodes the pre-junction expectation and is now invalid on this host.",
+   "is_it_a_product_defect": false,
+   "is_it_a_test_weakening_risk": "Any local fix that flipped this assertion would weaken a real isolation guarantee. That is exactly why it is not fixed here.",
+   "owner_route": "W16 and W04 packaging-harness surface (HPC-W04-HARNESS-* and HPC-W04-SMOKE-*). W16 is CLOSED, so this needs a controller-owned closed-owner repair transaction. The correct correction is to restore the isolation intent in a way that is junction-aware, not to relax the assertion.",
+   "repaired_by_w57": false
+  },
+  {
+   "id": "W57-RUN152-D02-AGENT-PARITY-STDOUT-TOKEN-STALE",
+   "test": "tests/contracts/test_wave_closeout_hardening.py::test_backend_parity_validator_passes",
+   "location": "tests/contracts/test_wave_closeout_hardening.py lines 29-31",
+   "assertion": "assert cp.returncode == 0; assert 'AGENT_PARITY=PASS' in cp.stdout",
+   "actual": "The validator exits 0 and prints {\"status\": \"PASS\", \"errors\": []}. The assertion on returncode passes; the assertion on the AGENT_PARITY=PASS stdout token fails because the validator contains no AGENT_PARITY token at all.",
+   "root_cause": "The tracked test asserts a legacy KEY=VALUE stdout contract on .opencode/scripts/validate-agent-parity.py. That validator is NOT tracked in Git (git ls-files returns nothing, git log --diff-filter=A returns nothing) and is not reported by git status, so it is untracked and gitignored. It is also newer than the test: tests/contracts/test_wave_closeout_hardening.py was last changed in commit d0d544c1, while the validator has no commit history. The validator output contract moved to JSON while this assertion was never updated, so the test has been red for as long as the current validator has existed.",
+   "substantive_impact": "The validator is functionally GREEN. Its exit code is 0 and its JSON status is PASS with an empty errors array. Only the output-format assertion is stale, so this is not a hidden product or policy red.",
+   "is_it_a_product_defect": false,
+   "is_it_a_test_weakening_risk": "Loosening the test to merely assert returncode == 0 would drop the positive check that the validator actually reports PASS rather than exiting 0 with a failing payload. The correct correction parses the JSON and asserts status == PASS and errors == [].",
+   "owner_route": "Controller and Agent-Core owner, not a Wave-owned product surface. The asserted target is an untracked, gitignored .opencode validator, and the test is a Wave/closeout orchestration contract test. W57 does not own either surface and must not opportunistically edit them.",
+   "repaired_by_w57": false
+  }
+ ],
+ "why_not_repaired_here": "W57 owned requirements are HPC-W10-FREEZE-005..048, HPC-W10-PKGREG-001 and HPC-W10-TODO-RUNTIME-CUTOVER-002/003 plus TODO-010..017. The W57 Wave body puts Other Waves and opportunistic cleanup out of scope and requires cross-scope defects to be recorded with a stable ID and routed to the true owner. Neither defect maps to a W57-owned ID, and one of them targets a surface that is gitignored and outside the product tree entirely.",
+ "not_done_deliberately": [
+  "No test was edited, relaxed, skipped or xfailed. Neither assertion was weakened.",
+  "No xfail or skip marker was added.",
+  "The W16 isolation assertion was not flipped to make the suite green.",
+  "The controller validator was not modified to re-emit a legacy AGENT_PARITY=PASS token."
+ ],
+ "evidence": {
+  "log": ".tmp/w57-run152/seams-run152.txt",
+  "parent": "artifacts/wave_W57/W57_RUN152_LAB_GREEN_PKGREG_BLOCKED_REOPEN.json"
+ },
+ "wave_impact": "Neither defect is a W57-owned blocking defect and neither changes the W57 terminal state. The W57 owned blocker remains HPC-W10-PKGREG-001. These two are recorded so the seam suite is not silently carried forward as green."
+}

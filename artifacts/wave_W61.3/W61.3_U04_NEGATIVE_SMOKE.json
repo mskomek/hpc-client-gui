@@ -1,0 +1,106 @@
+{
+  "schema": "wave-u04-negative-smoke/1",
+  "wave_id": "W61.3",
+  "unit_id": "U04",
+  "requirement_ids": ["HPC-W11-REL-048"],
+  "status": "BLOCKED",
+  "repository": {
+    "branch": "develop",
+    "head": "bc2e61dcf86dadeda26141e5324088be8285243f",
+    "working_tree_dirty": true
+  },
+  "candidate": {
+    "path": "dist/hpc-client-gui/hpc-client-gui.exe",
+    "size_bytes": 7675423,
+    "sha256_before": "DB29B6A8BD2C78FE1D9169F36B595752DEC40F411085AB8E6032384E740BBFBD",
+    "sha256_after": "DB29B6A8BD2C78FE1D9169F36B595752DEC40F411085AB8E6032384E740BBFBD",
+    "unchanged": true
+  },
+  "environment": {
+    "host": "Windows 11",
+    "platform_detail": "Windows-11-10.0.26200-SP0",
+    "python": "3.12.4",
+    "temp_root": ".tmp",
+    "ui_automation_packages_available": false
+  },
+  "maintained_harness_regression": {
+    "command": "pytest tests/test_wx_packaged_smoke.py -q --durations=25 -p no:cacheprovider --basetemp=.tmp/os/20261007-134743-041ba691/63808-1791370063234575900/u04-pytest/base",
+    "first_attempt": "FAILED_BEFORE_ASSERTIONS: pytest could not remove junction-backed basetemp (WinError 5 Access is denied).",
+    "retry_exit_code": 0,
+    "retry_result": "14 passed in 47.33s",
+    "assertions_executed": true,
+    "scope_note": "Harness regression uses controlled/stub artifacts and does not exercise REL-048 failure workflows in the frozen candidate."
+  },
+  "packaged_candidate_probe": {
+    "command": "python scripts/wx_packaged_smoke.py --artifact dist/hpc-client-gui/hpc-client-gui.exe --platform windows --output artifacts/wave_W61.3/W61.3_U04_PACKAGED_RUNTIME.json --timeout 25",
+    "exit_code": 0,
+    "duration_seconds": 10.92,
+    "summary_result": "PASS",
+    "summary_checks": "20/20 PASS",
+    "summary_sha256": "31304621211270e7c1c3c2344bbc4f6c791f46e032e2782095e07263861bbe4c",
+    "runtime_sidecar": "artifacts/wave_W61.3/W61.3_U04_PACKAGED_RUNTIME.runtime.json",
+    "runtime_sidecar_sha256": "d92d3a941953de9a37e84e939d952f50a9ee30418d14ef8a414ee5157b871142",
+    "runtime_result": "PASS",
+    "runtime_check_contradictions": {
+      "pty_resize": "FAIL",
+      "clean_shutdown": "FAIL"
+    },
+    "scope_note": "The maintained positive packaged smoke is not negative-case proof. Conflicting summary/runtime checks are retained as-is and are not treated as an accepted runtime verdict."
+  },
+  "cases": [
+    {
+      "case": "invalid credentials",
+      "status": "BLOCKED",
+      "action": "Not triggered against the frozen candidate; no automated GUI driver is available in this environment.",
+      "diagnostic": null,
+      "state_readback": null,
+      "cleanup": "Not applicable; case did not start."
+    },
+    {
+      "case": "disconnected remote action",
+      "status": "BLOCKED",
+      "action": "Not triggered against the frozen candidate; no automated GUI driver is available in this environment.",
+      "diagnostic": null,
+      "state_readback": null,
+      "cleanup": "Not applicable; case did not start."
+    },
+    {
+      "case": "overwrite cancellation",
+      "status": "BLOCKED",
+      "action": "Not triggered against the frozen candidate; no automated GUI driver is available in this environment.",
+      "diagnostic": null,
+      "state_readback": null,
+      "cleanup": "Not applicable; case did not start."
+    },
+    {
+      "case": "unavailable optional capability",
+      "status": "BLOCKED",
+      "action": "Not triggered against the frozen candidate; no automated GUI driver is available in this environment.",
+      "diagnostic": null,
+      "state_readback": null,
+      "cleanup": "Not applicable; case did not start."
+    },
+    {
+      "case": "plugin load failure fixture",
+      "status": "BLOCKED",
+      "action": "Not attempted; no controlled disposable packaged-runtime fixture was available.",
+      "diagnostic": null,
+      "state_readback": null,
+      "cleanup": "No fixture was installed and no candidate state was mutated."
+    },
+    {
+      "case": "updater invalid-signature fixture",
+      "status": "BLOCKED",
+      "action": "Not attempted; no controlled disposable packaged-runtime fixture was available.",
+      "diagnostic": null,
+      "state_readback": null,
+      "cleanup": "No fixture was installed and no candidate state was mutated."
+    }
+  ],
+  "unresolved": [
+    "No negative case has candidate-bound visible diagnostics, semantic state readback, or case-specific cleanup evidence.",
+    "The available packaged smoke exercises supported workflows only; the summary/runtime receipt pair has contradictory pty_resize and clean_shutdown results.",
+    "Automated native GUI interaction packages and controlled plugin/updater failure fixtures are unavailable in this execution environment."
+  ],
+  "disposition": "Do not claim REL-048 acceptance. Keep all negative cases BLOCKED until an automated exact-candidate case harness captures diagnostics, state readback, cleanup, and unchanged candidate SHA."
+}

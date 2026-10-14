@@ -1,0 +1,84 @@
+{
+  "schema": "hpc-client-gui-virtual-lab-inventory/1",
+  "operator_direction": "Treat a virtual system with comparable system power as a lab target.",
+  "candidate_target": "Ubuntu-Test",
+  "live_hyperv_status": {
+    "vm_state": "Running",
+    "generation": 2,
+    "vcpus": 8,
+    "memory_assigned_gb": 9.61,
+    "memory_startup_gb": 8,
+    "memory_minimum_gb": 4,
+    "memory_maximum_gb": 16,
+    "connection_ip": "192.168.77.10",
+    "heartbeat": "OK",
+    "kvp_contact": "No Contact",
+    "ssh_configured": true,
+    "verified_guest_address": "192.168.77.10",
+    "static_ssh_switch": "Ubuntu-SSH (host vNIC 192.168.77.1/24; VM adapter MAC 00-15-5D-00-02-07)"
+  },
+  "doctor": "PASS (2026-10-10; canonical ubuntu-doctor.ps1 -Username test)",
+  "console_host_key_fingerprint_supplied_by_user": "ED25519 SHA256:KEFEY0srtHIesFWiooG697/hyEYhhTYL6U2pwH12STQ",
+  "ssh_key_and_host_trust": "Canonical doctor PASS using strict host-key checking; remote preflight returned ubuntu-ssh-ok; live ED25519 fingerprint matched the fingerprint supplied from Ubuntu console.",
+  "guest_service_inventory": {
+    "run_status": "PASS_READ_ONLY_INVENTORY",
+    "hostname": "test-Virtual-Machine",
+    "os": "Ubuntu 24.04.5 LTS",
+    "kernel": "Linux 7.0.0-38-generic",
+    "vcpus": 8,
+    "memory_total_reported": "9.4Gi",
+    "memory_available_reported": "3.0Gi",
+    "root_disk": "97G total, 11G used, 82G free",
+    "services": {
+      "slurmctld": "inactive",
+      "slurmdbd": "inactive",
+      "ssh": "active",
+      "nfs-kernel-server": "inactive",
+      "munge": "inactive",
+      "mysql": "inactive",
+      "slurmd": "inactive",
+      "nfs-server": "inactive",
+      "mariadb": "inactive"
+    },
+    "commands": {
+      "srun": "absent",
+      "sbatch": "absent",
+      "sftp": "/usr/bin/sftp",
+      "ssh": "/usr/bin/ssh",
+      "sacct": "absent",
+      "scontrol": "absent",
+      "squeue": "absent",
+      "sinfo": "absent",
+      "scancel": "absent"
+    },
+    "observed_utc": "2026-10-10T06:41:23.4723150Z",
+    "current_address": "192.168.77.10"
+  },
+  "blocking_prerequisite": "GUI acceptance only: Windows11 VM is running but has no active test\\\\home Explorer session; PowerShell Direct reports quser empty and no explorer.exe. Required interactive runner refuses launch.",
+  "functional_limit": "Ubuntu-Test is accepted as the lab target by user direction and has comparable CPU/memory resources, but actual services are SSH/SFTP only. Slurm, MUNGE, database accounting, and NFS are absent or inactive. Candidate7 app-to-lab GUI transaction remains unrun because Windows11 has no active interactive desktop.",
+  "windows11_client_reachability": {
+    "tcp_22_old_172_23_44_150": "FAIL_TIMEOUT",
+    "tcp_22_verified_192_168_77_10": "PASS",
+    "ssh_banner": "OpenSSH_9.6p1 Ubuntu-3ubuntu13.19",
+    "strict_host_key": "PASS",
+    "fingerprint": "SHA256:KEFEY0srtHIesFWiooG697/hyEYhhTYL6U2pwH12STQ",
+    "gui_acceptance_runner": "BLOCKED_ENV",
+    "reason": "VM Running; test\\\\home PowerShell Direct session ID 0; quser returned no sessions; no Explorer process. Invoke-Windows11Interactive.ps1 rejected launch."
+  },
+  "app_known_hosts": {
+    "status": "SAVED_AND_FINGERPRINT_VERIFIED",
+    "path": "C:\\Users\\home\\.truba_slurm_gui\\known_hosts",
+    "host": "192.168.77.10",
+    "alias": "ubuntu-test",
+    "algorithm": "ED25519",
+    "fingerprint": "SHA256:KEFEY0srtHIesFWiooG697/hyEYhhTYL6U2pwH12STQ",
+    "source": "Host key matched VM console supplied fingerprint; trust line installed in test user app known_hosts. No host-key policy weakened.",
+    "latest_attempt": "No app connection attempted; interactive GUI runner blocked before launching candidate."
+  },
+  "temporary_gui_test_identity": {
+    "generated_in_windows11_guest": true,
+    "public_key_temporarily_added_to_ubuntu_test_authorized_keys": true,
+    "app_connection_attempted": false,
+    "cleanup": "PASS: exact temporary authorized_keys line removed through ubuntu-ssh.ps1; guest private/public key files removed; fingerprint checked before public-file deletion."
+  }
+}

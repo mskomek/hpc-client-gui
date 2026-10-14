@@ -141,3 +141,16 @@ Two legitimate countable remediations were found and fixed; no TWO-FIX-EXCEPTION
 - Production hunks: `src/hpc_gui/wx_shell.py` (`_update_shell_status_text`, accel block, 3 hook sites).
 - Package artifact: none (NO-CANDIDATE; freeze owned W56–W61).
 - External claims: none (no real-cluster claim; no EXTERNAL substitution).
+
+## Closed-owner repair addendum -- PKGREG-SHUTDOWN-BISTABLE-NON-TERMINATION (2026-10-06)
+
+- Finding: PKGREG-SHUTDOWN-BISTABLE-NON-TERMINATION, owner HPC-W10-GJ2-051 -> W55 (done).
+- Prior deterministic hypothesis PKGREG-SHUTDOWN-HIDE-DEADLOCK (single frame.Hide cause) stays SUPERSEDED: same bytes hung and exited cleanly (bistable race).
+- Repair commit: 3904432eb614686275bf612a8ae71b78d1923301 (scope exactly src/hpc_gui/wx_lifecycle.py, src/hpc_gui/wx_shell.py; no test edits).
+- Repair content: WxLifecycleController.shutdown time-boxed per cleanup (daemon thread + 2.0s join, idempotent, reversed, swallowing); create_shell_frame.close drops frame.Hide() gate, runs lifecycle.shutdown() before child Close/Destroy, reentrancy-guarded; packaged-smoke finish() adds bounded CallLater(2000, app.ExitMainLoop) fallback via the normal path (no force-kill; 12s probe deadline unchanged).
+- Test integrity: no timeout loosening, no assertion changes, no flaky-marks, no force-kill PASS, no failure ignored (commit scope proof in git).
+- Independent read-only audit: PASS (safe closed-owner repair, rebuild authorized).
+- Repair candidate: dist/hpc-client-gui/hpc-client-gui.exe, SHA-256 7299BE216918B7C0445443C3BF27515BB570C6ED441B7CE21157871CAC1D30DC, 7673112 bytes, 172 files, 0 Qt tokens, v1.5.9 / Python 3.14.0 / PyInstaller 6.22.2 / wxPython 4.3.1. Role: REPAIR CANDIDATE (not final freeze).
+- Serial evidence: 10 runs, 7 full PASS (payload + clean_shutdown PASS + exit 0), 0 post-PASS hangs; 3 early-phase FAILs owned separately (2x WebView2 0x80004004 cold-init, 1x mock-SSH setup flake) under REL-046.
+- Receipt: artifacts/wave_W55/W55_REPAIR_PKGREG_SHUTDOWN_BISTABLE_7299BE21.json.
+- This addendum does not rewrite history above; pre-repair sections stay historical.

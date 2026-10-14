@@ -1,0 +1,312 @@
+{
+ "artifacts": [
+  {
+   "path": "dist/hpc-client-gui/hpc-client-gui.exe",
+   "role": "W57-frozen candidate tested unchanged by W58.1",
+   "sha256": "B3019DEA16783C8AB859FA36D2B0FEF2FB70DB075633E54EB0F36587295374FD",
+   "size_bytes": 7672106
+  },
+  {
+   "bundle_files": 172,
+   "path": "dist/hpc-client-gui/",
+   "qt_tokens": 0,
+   "role": "onedir bundle identity"
+  }
+ ],
+ "audit_policy": "fresh-independent",
+ "blockers": [],
+ "candidate_sha": "92128c8726435aa0087f090c4a080720f148781f",
+ "closure_sha": null,
+ "contradiction_scan": {
+  "bundle": "zero Qt filename tokens in dist/hpc-client-gui; src runtime DEFAULT_GUI_RUNTIME=wx with wx-first branch; no contradiction",
+  "result": "no contradiction between freeze declaration, manifest, report, live bytes and runtime truth"
+ },
+ "deferred_items": [],
+ "dependency_validation": {
+  "completion_dependencies": [],
+  "dependencies": [],
+  "note": "W58.1 declares no completion dependencies; start gate NONE per wave frontmatter."
+ },
+ "deferred_note": null,
+ "evidence_policy": "wave-local",
+ "gui_actions": [
+  {
+   "status": "FULL",
+   "source_binding": "U02 focused run 2026-10-01",
+   "runtime_test_node": "tests/test_wx_shell_w01_truth.py (16 tests, wx event proof)",
+   "observed_readback": "wx About dispatch calls wx.About with app version; no MessageBox substitution; no network dependency",
+   "candidate_sha": "92128c8726435aa0087f090c4a080720f148781f"
+  },
+  {
+   "status": "FULL",
+   "source_binding": "U02 focused run 2026-10-01",
+   "runtime_test_node": "tests/test_wx_lifecycle.py (3 tests)",
+   "observed_readback": "shutdown/relaunch, tray fail-soft, late/deduplicated tray notifications lifecycle holds",
+   "candidate_sha": "92128c8726435aa0087f090c4a080720f148781f"
+  }
+ ],
+ "protocol_revision": "WAVE_PROJECT_PROFILE schema_version 3",
+ "requirements": [
+  {
+   "candidate_sha": "92128c8726435aa0087f090c4a080720f148781f",
+   "disposition": "PASS",
+   "evidence_refs": [
+    "Get-FileHash dist/hpc-client-gui/hpc-client-gui.exe = B3019DEA16783C8AB859FA36D2B0FEF2FB70DB075633E54EB0F36587295374FD",
+    "W57_FREEZE_DECLARATION.md expected SHA",
+    "artifacts/wave_W57.4/WAVE_W57.4_EVIDENCE_MANIFEST.json lines 151/297/329",
+    "docs/wave-reports/v2/opencode/W57.4_WAVE_REPORT.md frozen-artifact rows"
+   ],
+   "implementation_owners": [
+    "U01 identity gate (Workstream A)"
+   ],
+   "mandatory": true,
+   "requirement_id": "HPC-W11-IDENTITY-001",
+   "test_nodes": [
+    "SHA256 recompute before (Get-FileHash)"
+   ]
+  },
+  {
+   "candidate_sha": "92128c8726435aa0087f090c4a080720f148781f",
+   "disposition": "PASS",
+   "evidence_refs": [
+    "recomputed SHA equals all three W57-frozen sources; gate GO, no NO-GO triggered"
+   ],
+   "implementation_owners": [
+    "U01 identity gate (Workstream A)"
+   ],
+   "mandatory": true,
+   "requirement_id": "HPC-W11-IDENTITY-002",
+   "test_nodes": [
+    "SHA256-before vs W57-frozen comparison"
+   ]
+  },
+  {
+   "candidate_sha": "92128c8726435aa0087f090c4a080720f148781f",
+   "disposition": "PASS",
+   "evidence_refs": [
+    "path dist/hpc-client-gui/hpc-client-gui.exe",
+    "version 1.5.9 (pyproject.toml and packaged `version` probe agree)",
+    "size 7672106 bytes, 172-file bundle",
+    "build/windows/hpc-client-gui.spec provenance present"
+   ],
+   "implementation_owners": [
+    "U01 identity gate (Workstream A)"
+   ],
+   "mandatory": true,
+   "requirement_id": "HPC-W11-IDENTITY-003",
+   "test_nodes": [
+    "filename/version/bundle-count verification"
+   ]
+  },
+  {
+   "candidate_sha": "92128c8726435aa0087f090c4a080720f148781f",
+   "disposition": "PASS",
+   "evidence_refs": [
+    "packaged `version`: 1.5.9, python 3.14.0",
+    "src/hpc_gui/runtime.py DEFAULT_GUI_RUNTIME=wx",
+    "src/hpc_gui/__main__.py wx-first branch",
+    "tests/test_wx_package_content.py + tests/test_wx_packaged_smoke.py 31 passed (U01 verify)"
+   ],
+   "implementation_owners": [
+    "U01 identity gate (Workstream A)"
+   ],
+   "mandatory": true,
+   "requirement_id": "HPC-W11-IDENTITY-004",
+   "test_nodes": [
+    "embedded/reported version probe + bundle/version assertions"
+   ]
+  },
+  {
+   "candidate_sha": "92128c8726435aa0087f090c4a080720f148781f",
+   "disposition": "PASS",
+   "evidence_refs": [
+    "Get-AuthenticodeSignature: NotSigned",
+    "justification: unsigned onedir distribution; integrity bound by SHA-256 manifest triple-agreement, never silent pass"
+   ],
+   "implementation_owners": [
+    "U01 identity gate (Workstream A)"
+   ],
+   "mandatory": true,
+   "requirement_id": "HPC-W11-IDENTITY-005",
+   "test_nodes": [
+    "signature/integrity metadata check (N/A-with-reason)"
+   ]
+  },
+  {
+   "candidate_sha": "92128c8726435aa0087f090c4a080720f148781f",
+   "disposition": "PASS",
+   "evidence_refs": [
+    "Windows 11 Pro x64-based PC (systeminfo)",
+    "wxV2 runtime, embedded Python 3.14.0 (packaged probe)",
+    "PyInstaller 6.22.2 per freeze declaration support matrix"
+   ],
+   "implementation_owners": [
+    "U01 identity gate (Workstream A)"
+   ],
+   "mandatory": true,
+   "requirement_id": "HPC-W11-IDENTITY-006",
+   "test_nodes": [
+    "OS/arch + support-matrix probe"
+   ]
+  },
+  {
+   "candidate_sha": "92128c8726435aa0087f090c4a080720f148781f",
+   "disposition": "PASS",
+   "evidence_refs": [
+    "SHA-before match plus wx truth held, so Workstreams B/C/D proceeded",
+    "SHA-after recomputed in U03: B3019DEA match, invariant holds"
+   ],
+   "implementation_owners": [
+    "U01 identity gate (Workstream A)",
+    "U03 SHA-after invariant"
+   ],
+   "mandatory": true,
+   "requirement_id": "HPC-W11-IDENTITY-007",
+   "test_nodes": [
+    "NO-GO gate enforcement"
+   ]
+  },
+  {
+   "candidate_sha": "92128c8726435aa0087f090c4a080720f148781f",
+   "disposition": "PASS",
+   "evidence_refs": [
+    "clean launch from dist with empty PYTHONPATH: version/commands/doctor environment PASS frozen True",
+    "fresh-user isolated root (HPC_GUI_CONFIG_ROOT disposable): doctor environment PASS profiles 0",
+    "focused pytest 77 passed: linux_release + macos_release + wx_package_content + wx_lifecycle + wx_shell_w01_truth",
+    "lab-status.ps1 PASS; lab-test.ps1 23/23 LOCAL_REAL_READY failed_count 0",
+    "packaged functional replay 110/110 stands on identical SHA from W57.1 U02 (history; no src/build delta since freeze)"
+   ],
+   "implementation_owners": [
+    "U02 clean launch + core smoke (Workstreams B+C)"
+   ],
+   "mandatory": true,
+   "requirement_id": "HPC-W10-TODO-GOLDEN-JOURNEY-002",
+   "test_nodes": [
+    "clean-launch probes",
+    "focused GJ-subset pytest",
+    "LOCAL_REAL_HYPERV lab smoke"
+   ]
+  },
+  {
+   "candidate_sha": "92128c8726435aa0087f090c4a080720f148781f",
+   "disposition": "PASS",
+   "evidence_refs": [
+    "packaged CLI negatives with disposable root: doctor connection zero-profile gate refusal exit 1; unreachable host timed-out exit 3; nonexistent key truthful ENOENT exit 3",
+    "focused negative pytest 24 passed: w11 ssh lifecycle (invalid creds, unreachable host, host-key mismatch, dead transport), w18 auth/hostkey (wrong password, no-credential, secret redaction, GUI cancel safe-state), w19 disconnect lifecycle, w03 unavailable-capability explicit, w04 disconnected-terminal warn, wx_jobs disconnected states explicit, updater unverified-artifact/cancel/verification/in-flight/late-callback safety, untrusted-redirect rejection"
+   ],
+   "implementation_owners": [
+    "U03 negative release smoke (Workstream D)"
+   ],
+   "mandatory": true,
+   "requirement_id": "HPC-W11-TODO-029",
+   "test_nodes": [
+    "packaged CLI negative probes",
+    "focused negative pytest"
+   ]
+  }
+ ],
+ "resources": [],
+ "review_passes": [
+  {
+   "date": "2026-10-01",
+   "result": "clean except pre-existing U01-recorded worktree state; no new tracked modifications from U01/U02/U03 runs",
+   "scope": "git status/dist/src/build diff review"
+  }
+ ],
+ "spec_profile_id": "HPC",
+ "status": "ACCEPTANCE_GREEN",
+ "tests": [
+  {
+   "candidate_sha": "92128c8726435aa0087f090c4a080720f148781f",
+   "command": "python -m pytest tests/test_wx_package_content.py tests/test_wx_packaged_smoke.py -q",
+   "environment": "Windows 11 AMD64; checkout HEAD 92128c87",
+   "evidence_path": "U01 verify dispatch log",
+   "exit_code": 0,
+   "failed": 0,
+   "outcome": "PASS",
+   "passed": 31,
+   "requirement_ids": [
+    "HPC-W11-IDENTITY-004"
+   ],
+   "skipped": 0,
+   "timestamp": "2026-10-01T19:00:00+00:00",
+   "xfailed": 0,
+   "xpassed": 0
+  },
+  {
+   "candidate_sha": "92128c8726435aa0087f090c4a080720f148781f",
+   "command": "python -m pytest tests/test_linux_release.py tests/test_macos_release.py tests/test_wx_package_content.py tests/test_wx_lifecycle.py tests/test_wx_shell_w01_truth.py -q --durations=25 (single serial invocation; GUI event tests run serially per skill)",
+   "environment": "Windows 11 AMD64; checkout HEAD 92128c87",
+   "evidence_path": "U02 run dispatch log",
+   "exit_code": 0,
+   "failed": 0,
+   "outcome": "PASS",
+   "passed": 77,
+   "requirement_ids": [
+    "HPC-W10-TODO-GOLDEN-JOURNEY-002"
+   ],
+   "skipped": 0,
+   "timestamp": "2026-10-01T19:05:00+00:00",
+   "xfailed": 0,
+   "xpassed": 0
+  },
+  {
+   "candidate_sha": "92128c8726435aa0087f090c4a080720f148781f",
+   "command": "pwsh lab/lab-status.ps1 + pwsh lab/lab-test.ps1",
+   "environment": "LOCAL_REAL_HYPERV 192.168.250.11:22 user hpctest; checkout HEAD 92128c87",
+   "evidence_path": "U02 run dispatch log",
+   "exit_code": 0,
+   "failed": 0,
+   "outcome": "PASS",
+   "passed": 23,
+   "requirement_ids": [
+    "HPC-W10-TODO-GOLDEN-JOURNEY-002"
+   ],
+   "skipped": 0,
+   "timestamp": "2026-10-01T19:06:47+00:00",
+   "xfailed": 0,
+   "xpassed": 0
+  },
+  {
+   "candidate_sha": "92128c8726435aa0087f090c4a080720f148781f",
+   "command": "python -m pytest <18 negative node IDs across w11/w18/w03/wx_updater/security_hardening> -q (serial) plus 6 disconnect-lifecycle tests in prior selection",
+   "environment": "Windows 11 AMD64; checkout HEAD 92128c87; loopback MockSSHServer fixture where noted",
+   "evidence_path": "U03 run dispatch log",
+   "exit_code": 0,
+   "failed": 0,
+   "outcome": "PASS",
+   "passed": 24,
+   "requirement_ids": [
+    "HPC-W11-TODO-029"
+   ],
+   "skipped": 0,
+   "timestamp": "2026-10-01T19:15:00+00:00",
+   "xfailed": 0,
+   "xpassed": 0
+  },
+  {
+   "candidate_sha": "92128c8726435aa0087f090c4a080720f148781f",
+   "command": "packaged exe with HPC_GUI_CONFIG_ROOT disposable root and empty PYTHONPATH: doctor connection (zero profiles), files ls unreachable 192.0.2.1, files ls nonexistent key",
+   "environment": "Windows 11 AMD64; dist/hpc-client-gui/hpc-client-gui.exe SHA B3019DEA",
+   "evidence_path": "U03 run dispatch log",
+   "exit_code": 0,
+   "failed": 0,
+   "outcome": "PASS",
+   "passed": 4,
+   "requirement_ids": [
+    "HPC-W11-TODO-029"
+   ],
+   "skipped": 0,
+   "timestamp": "2026-10-01T19:12:00+00:00",
+   "xfailed": 0,
+   "xpassed": 0
+  }
+ ],
+ "validator_result": {
+  "date": "2026-10-01",
+  "scope": "scripts/validate_wave_closeout.py --wave W58.1",
+  "result": "can_close=true; 9/9 requirements; 5 test records; failure_reasons=[]; candidate 92128c87"
+ },
+ "wave_id": "W58.1",
+ "wave_spec_revision": "waves/pending/W58.1.md; current repository content identity HEAD 92128c8726435aa0087f090c4a080720f148781f"
+}

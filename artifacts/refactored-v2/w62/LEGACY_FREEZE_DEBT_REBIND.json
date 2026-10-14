@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "wave_id": "W62",
+  "unit_id": "U06",
+  "requirement_ids": [
+    "HPC-W62-BASE-006"
+  ],
+  "disposition": "PARTIAL_FORWARD_ROUTING; ITEMIZED_LEDGER_UNAVAILABLE",
+  "phase_instance_id": "20261013-090906-358da80d:9:W62:repair",
+  "scope": {
+    "historical_waves_not_invoked": [
+      "W57.4",
+      "W61.1",
+      "W61.2",
+      "W61.3",
+      "W61.4"
+    ],
+    "historical_declarations_modified": false,
+    "candidate_identity": null,
+    "candidate_bound_rebind": false
+  },
+  "routing": [
+    {
+      "debt_scope": "W57.4 frozen artifact identity, successor authority, and impacted acceptance evidence",
+      "current_owner": "W62",
+      "forward_owner": "W73",
+      "status": "OPEN",
+      "basis": "W62 owns successor executable identity and authority; W73 owns final acceptance/freeze and rollback. Reaffirmed in repair dispatch 20261013-090906-358da80d:9:W62:repair for the W73 gate; per-entry dispositions remain W73-gated until the authoritative six-entry ledger is supplied."
+    },
+    {
+      "debt_scope": "W61.1-W61.4 release decision, NO-GO criteria, final handoff, and package census",
+      "current_owner": "W73",
+      "forward_owner": "W73",
+      "status": "OPEN",
+      "basis": "Successor routing authority assigns these release-acceptance obligations to W73."
+    }
+  ],
+  "ledger_gap": {
+    "expected": "Six existing legacy freeze-debt entries in the successor evidence ledger",
+    "observed": "No itemized six-entry ledger was present in the bounded W62 evidence paths inspected; only aggregate routing authority and U03 unregistered-rebind status were available.",
+    "action": "Do not synthesize six entry identities or claim per-entry dispositions. Import the authoritative six entries when available, map each to W62-owned evidence or W73 acceptance, and bind them after successor candidate authorization."
+  },
+  "candidate_prerequisite": {
+    "authority_path": "artifacts/refactored-v2/w62/SUCCESSOR_CANDIDATE_AUTHORITY.json",
+    "disposition": "AWAITING_INPUT",
+    "candidate_authority_created": false,
+    "unblock_condition": "Authorized successor release owner supplies or approves immutable source/package identities and supersession disposition; then bind exact EXE/ZIP/manifest identities and itemized legacy debt rebinds."
+  },
+  "constraints_observed": [
+    "W57.4 was not invoked.",
+    "No historical freeze declaration or artifact was modified.",
+    "No historical candidate identity was promoted to successor authority."
+  ],
+  "audit_focus": [
+    "Confirm the two aggregate routes against the successor routing authority.",
+    "Confirm the receipt does not claim six item-level dispositions or candidate-bound closure.",
+    "Confirm W57.4 remains uninvoked and the missing itemized ledger remains an explicit gap."
+  ]
+}

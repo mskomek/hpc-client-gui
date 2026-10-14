@@ -62,7 +62,7 @@ def _is_source_checkout(path_value: str) -> bool:
         marker = root / "pyproject.toml"
         if marker.is_file():
             try:
-                text = marker.read_text(encoding="utf-8", errors="ignore")
+                text = marker.read_text(encoding="utf-8", errors="replace")
             except OSError:
                 return False
             return "hpc-client-gui" in text or "hpc_gui" in text

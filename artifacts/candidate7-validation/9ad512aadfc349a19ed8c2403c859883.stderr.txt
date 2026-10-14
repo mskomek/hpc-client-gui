@@ -1,0 +1,7 @@
+C:\Users\home\AppData\Local\CodexGuestRuns\9ad512aadfc349a19ed8c2403c859883\ui-ubuntu-test.ps1 : A positional 
+parameter cannot be found that accepts argument 'using System; using System.Runtime.InteropServices; public static 
+class Mouse { [DllImport("user32.dll")] public static extern bool SetCursorPos(int X,int Y); [DllImport("user32.dll")] 
+public static extern void mouse_event(uint flags,uint dx,uint dy,uint data,UIntPtr extra); }'.
+    + CategoryInfo          : InvalidArgument: (:) [ui-ubuntu-test.ps1], ParameterBindingException
+    + FullyQualifiedErrorId : PositionalParameterNotFound,ui-ubuntu-test.ps1
+ 

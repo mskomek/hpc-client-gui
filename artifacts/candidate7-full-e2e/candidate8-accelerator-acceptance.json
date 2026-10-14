@@ -1,0 +1,63 @@
+{
+  "candidate": "Candidate 8",
+  "limitations": [
+    "Supplementary Candidate 8 evidence only; does not retroactively pass Candidate 7 rows."
+  ],
+  "interactive_user": "test\\home",
+  "version": "1.5.9",
+  "results": [
+    {
+      "target_tab": "Connection",
+      "status": "PASS_UIA_SELECTION",
+      "screenshot": "screenshots/candidate8-accelerator-ctrl1.jpg",
+      "action": "Ctrl+1"
+    },
+    {
+      "target_tab": "Terminal",
+      "status": "PASS_UIA_SELECTION",
+      "screenshot": "screenshots/candidate8-accelerator-ctrl2.jpg",
+      "action": "Ctrl+2"
+    },
+    {
+      "target_tab": "Jobs_Outputs",
+      "status": "PASS_SCREENSHOT",
+      "screenshot": "screenshots/candidate8-accelerator-ctrl3.jpg",
+      "action": "Ctrl+3",
+      "note": "Jobs/Outputs page visibly selected; UIA selection property unavailable."
+    },
+    {
+      "target_tab": "Directories",
+      "status": "PASS_UIA_SELECTION",
+      "screenshot": "screenshots/candidate8-accelerator-ctrl4.jpg",
+      "action": "Ctrl+4"
+    },
+    {
+      "target_tab": "Files",
+      "status": "PASS_UIA_SELECTION",
+      "screenshot": "screenshots/candidate8-accelerator-ctrl5.jpg",
+      "action": "Ctrl+5"
+    },
+    {
+      "target_tab": "Script Editor",
+      "status": "PASS_UIA_SELECTION",
+      "screenshot": "screenshots/candidate8-accelerator-ctrl6.jpg",
+      "action": "Ctrl+6"
+    },
+    {
+      "target_tab": "Logs",
+      "status": "PASS_UIA_SELECTION",
+      "screenshot": "screenshots/candidate8-accelerator-ctrl7.jpg",
+      "action": "Ctrl+7"
+    },
+    {
+      "evidence": "Packaged GUI created a distinct top-level Help window.",
+      "screenshot": "screenshots/candidate8-accelerator-f1.jpg",
+      "target_tab": "Help",
+      "status": "PASS_WINDOW",
+      "action": "F1"
+    }
+  ],
+  "runner_run_id": "025d1ee67ef4432aafd73b9bb8a89ab3",
+  "resolution": "1366x768",
+  "exe_sha256": "2b3123260134ae68e9255560aa2cc3e17bd7cf4419e8badb41e47677756f2e05"
+}

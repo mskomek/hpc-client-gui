@@ -1,0 +1,66 @@
+{
+  "schema": "hpc-client-gui-local-real-capability-matrix/2",
+  "health_check": {
+    "status": "PASS",
+    "time_utc": "2026-10-10T12:04:27Z",
+    "source": "lab/lab-test.ps1",
+    "required_count": 23,
+    "failed_count": 0,
+    "notes": "Latest canonical behavioral lab test returned LOCAL_REAL_READY with all 23 required checks passing after packaged GUI fixtures."
+  },
+  "capabilities_observed_in_inventory": [
+    "SSH",
+    "SFTP",
+    "MUNGE",
+    "Slurm",
+    "NFS",
+    "database accounting",
+    "PTY",
+    "isolated LOCAL_PASSWORD_REAL fixture",
+    "ssh-loss fault",
+    "slurm-loss fault",
+    "node drain",
+    "node down",
+    "reconnect"
+  ],
+  "requested_extension_gaps": [
+    {
+      "capability": "keyboard-interactive / MFA",
+      "status": "BLOCKED",
+      "reason": "No isolated lab endpoint or fixture is inventoried."
+    },
+    {
+      "capability": "host key mismatch and rotation",
+      "status": "BLOCKED",
+      "reason": "No dedicated host-key test endpoint is inventoried."
+    },
+    {
+      "capability": "jump host",
+      "status": "BLOCKED",
+      "reason": "No jump-host endpoint is inventoried."
+    },
+    {
+      "capability": "X11 integration",
+      "status": "BLOCKED",
+      "reason": "No X11-capable desktop endpoint is inventoried."
+    },
+    {
+      "capability": "quota",
+      "status": "BLOCKED",
+      "reason": "No quota fixture is inventoried."
+    },
+    {
+      "capability": "latency and packet loss",
+      "status": "BLOCKED",
+      "reason": "No controlled network impairment fixture is inventoried."
+    },
+    {
+      "capability": "large/resumable transfer",
+      "status": "BLOCKED",
+      "reason": "No isolated large-transfer fixture is inventoried."
+    }
+  ],
+  "app_package_lab_acceptance": "TARGETED_PASS; exhaustive GUI action coverage incomplete",
+  "app_package_lab_acceptance_reason": "Candidate7 Save+Submit defect was confirmed and fixed in Candidate8. Final post-refactor Candidate8 packaged GUI verified SSH terminal whoami, Slurm output stream readback, Save+Submit job202, and GUI Cancel jobs205 and207 with independent sacct state. This does not complete the action catalog.",
+  "safety": "No persistent lab service configuration was modified. Disposable scripts, output files, and Slurm jobs were created under /home/hpctest/gui_c7_ui_acceptance; test jobs were cancelled/completed and no hpctest jobs remained active at closeout. Secrets were not included in evidence."
+}

@@ -1,0 +1,358 @@
+{
+  "schema": "w57-run-evidence/1",
+  "wave_id": "W57",
+  "phase": "run",
+  "phase_instance_id": "20260927-194532-eb70d8dd:5:W57:run",
+  "generated_at_utc": "2026-09-29T15:45:00Z",
+  "purpose": "Run-169 evidence for W57: measure the maintained packaged gate on the current repository truth, settle the pty_resize verdict that no prior dispatch could measure, re-verify the real-cluster regression, refresh the focused/closeout/static validator state, and record the exact remaining blocker and its owner route.",
+
+  "identity_binding": {
+    "controller_handoff_content_identity": "45c46c0a09c3f9b85b4679c40f3779a694b5a8f0c0c63b64cc1380823eeac3fc",
+    "content_identity_recomputed_this_dispatch": "3bdbf3eb62053d26bd0a4a2c36948cab88b3ac42d50d683f97a5261c934f0494",
+    "content_identity_drift": true,
+    "content_identity_recomputed_with": ".opencode/scripts/wave_state_engine.py::repository_content_identity (the controller's own maintained function, not a reimplementation)",
+    "why_it_drifted": "Repository truth moved during this dispatch. Three commits landed after this dispatch was handed its content identity (e894bb8e, e8ac9c8a, ad022586; Wave-range and scheduled-ID profile changes), and a concurrent W57-run dispatch committed nothing but edited two files in the working tree. The handoff identity is therefore stale and every verdict below is bound to the recomputed identity, not to the handoff value.",
+    "branch": "develop",
+    "head_at_measurement": "ad02258620ef34c0d778037bb16b0f4421e950b5",
+    "head_at_dispatch_start": "4f89c4d4d9a5b1e620c825fa5af3ff814b910548",
+    "python": "3.14.0",
+    "pytest": "9.1.1",
+    "pytest_xdist": "present (all multi-file test runs in this dispatch used -n auto in one invocation)",
+    "frozen_candidate_artifact": "dist/hpc-client-gui/hpc-client-gui.exe",
+    "frozen_candidate_sha256": "8BA80453A76A664959BAEDF7716C476A5334B6AFF860A4BC79B9E220D48B4C57",
+    "frozen_candidate_size_bytes": 7672468,
+    "frozen_candidate_unchanged_across_dispatch": true,
+    "product_source_sha256": "33217D9168CCF66E7A2AB038AA44EC34B9556C737C76B4EE34FA85E92A1D2525 (src/hpc_gui/wx_shell.py - byte-identical to the value recorded by the concurrent W57 dispatch, so the product did not change during this dispatch)",
+    "rebuild_performed": false,
+    "patch_applied_to_candidate": false
+  },
+
+  "T01_repository_truth": {
+    "status": "DONE",
+    "branch": "develop",
+    "head": "ad02258620ef34c0d778037bb16b0f4421e950b5",
+    "working_tree_entries_start": 16,
+    "working_tree_entries_end": 22,
+    "note": "The 6-entry growth is the concurrent dispatch's edits to scripts/wx_packaged_smoke.py, tests/test_wx_packaged_smoke.py, two W16 reports and two new W57 artifacts. All preserved byte-for-byte; this dispatch deleted nothing and committed nothing."
+  },
+
+  "T02_frozen_artifact_identity_read_only": {
+    "status": "DONE",
+    "command": "Get-FileHash dist/hpc-client-gui/hpc-client-gui.exe -Algorithm SHA256",
+    "sha256": "8BA80453A76A664959BAEDF7716C476A5334B6AFF860A4BC79B9E220D48B4C57",
+    "size_bytes": 7672468,
+    "mtime_utc": "2026-09-27T21:21:48.3496041Z",
+    "matches_freeze_declaration": true,
+    "rebuild": "none - identity verified by hashing the existing bytes only, per the frozen-candidate invariant",
+    "bundle_inventory": "dist/hpc-client-gui/_internal/ present with wx 4.3.1 win_amd64 binaries, WebView2Loader.dll, python314.dll, cryptography 50.0.0, paramiko 5.0.0, hpc_gui assets/i18n/docs. No Qt fallback: no PySide6 directory in the candidate (the PySide6 tree under dist/hpc-updater-demo belongs to a different, 2026-08-30 updater demo build and is not the candidate)."
+  },
+
+  "T03_desktop_preflight": {
+    "status": "DONE",
+    "windowed_process_count_at_dispatch_start": 16,
+    "windowed_process_count_at_gate_remeasurement": 19,
+    "total_process_count_at_gate_remeasurement": 701,
+    "cpu_load_percent_at_gate_remeasurement": 99,
+    "stray_hpc_client_gui_processes": 0,
+    "foreground_risk_processes_observed": ["FreeFileSync_x64 'BatchRun3'", "pycharm64", "chrome", "Taskmgr", "WindowsTerminal x2", "Claude", "ChatGPT", "OpenCode"],
+    "conclusion": "The desktop is NOT a clean instrument and cannot be treated as one. This is recorded so that no single packaged-gate sample on this machine is read as a hermetic product verdict. The independent harness in this dispatch does not depend on desktop foreground state for its pty_resize verdict: it reads server-side wire sizes from the maintained disposable loopback server, so the resize conclusion is immune to the foreground contamination that the earlier per-dispatch foreground diagnostics were sensitive to."
+  },
+
+  "T04_maintained_gate_measured_two_windows": {
+    "status": "DONE",
+    "why_two_windows": "The maintained gate scripts/wx_packaged_smoke.py was edited by a concurrent W57-run dispatch while this run phase was executing. The two windows below therefore straddle that edit. Both are reported; neither is presented as 'the' gate result.",
+
+    "window_1_committed_gate": {
+      "gate_sha256": "47763C6ABD7EBDF4235C0ADD36FCE56269AA9C073BED798ED2A5784876FA0FDD",
+      "gate_state": "as committed in git; timed_out branch discarded the runtime payload",
+      "runs": 3,
+      "results": [
+        {"run": "M1", "elapsed_s": 27.33, "exit": 1, "gate_result": "FAIL", "passed_of_20": 1, "gate_details_keys": ["workdir_outside_repo", "timeout", "child_killed"]},
+        {"run": "M2", "elapsed_s": 29.37, "exit": 1, "gate_result": "FAIL", "passed_of_20": 1, "gate_details_keys": ["workdir_outside_repo", "timeout", "child_killed"]},
+        {"run": "M3", "elapsed_s": 27.95, "exit": 1, "gate_result": "FAIL", "passed_of_20": 1, "gate_details_keys": ["workdir_outside_repo", "timeout", "child_killed"]}
+      ],
+      "discarded_sidecar_verdict": "result=PASS, phase=4, 17/19 own checks PASS, own failures exactly {pty_resize, clean_shutdown}",
+      "conclusion": "The artifact wrote a complete passing payload and then did not exit within the maintained 25s budget, 3/3."
+    },
+
+    "window_2_working_tree_gate": {
+      "gate_sha256": "580983DD1B1BFBB194DBB8F30F7ACD528E7524817FBC12BC0BC15BC4D7590A43",
+      "gate_state": "UNCOMMITTED working-tree edit made by a concurrent W57-run dispatch; it scores evidence on the timed_out branch, makes _outside_repo lexical, and adds --timeout (default still 25)",
+      "runs": 8,
+      "results": [
+        {"run": "N1", "elapsed_s": 12.45, "exit": 0, "gate_result": "PASS", "passed_of_20": 20, "clean_shutdown": "PASS", "pty_resize": "PASS"},
+        {"run": "N2", "elapsed_s": 13.58, "exit": 0, "gate_result": "PASS", "passed_of_20": 20, "clean_shutdown": "PASS", "pty_resize": "PASS"},
+        {"run": "N3", "elapsed_s": 11.42, "exit": 0, "gate_result": "PASS", "passed_of_20": 20, "clean_shutdown": "PASS", "pty_resize": "PASS"},
+        {"run": "N4", "elapsed_s": 10.34, "exit": 0, "gate_result": "PASS", "passed_of_20": 20, "clean_shutdown": "PASS", "pty_resize": "PASS"},
+        {"run": "N5", "elapsed_s": 11.69, "exit": 0, "gate_result": "PASS", "passed_of_20": 20, "clean_shutdown": "PASS", "pty_resize": "PASS"},
+        {"run": "N6", "elapsed_s": 10.31, "exit": 0, "gate_result": "PASS", "passed_of_20": 20, "clean_shutdown": "PASS", "pty_resize": "PASS"},
+        {"run": "N7", "elapsed_s": 11.18, "exit": 0, "gate_result": "PASS", "passed_of_20": 20, "clean_shutdown": "PASS", "pty_resize": "PASS"},
+        {"run": "N8", "elapsed_s": 12.12, "exit": 0, "gate_result": "PASS", "passed_of_20": 20, "clean_shutdown": "PASS", "pty_resize": "PASS"}
+      ],
+      "concurrence": "A concurrent W57-run dispatch independently recorded one more PASS 20/20 at 10.5s exit 0 against the same artifact SHA on the same committed gate, in .tmp/w57-u01/ (recorded in artifacts/wave_W57/W57_U01_CLOSED_OWNER_ROUTE.json)."
+    },
+
+    "aggregate_same_artifact_sha": {
+      "hang_windows": "9/9 (3 committed-gate runs + 6 independent-harness runs)",
+      "green_windows": "9/9 (8 working-tree-gate runs + 1 concurrent committed-gate run)",
+      "artifact_sha256_identical": "8BA80453A76A664959BAEDF7716C476A5334B6AFF860A4BC79B9E220D48B4C57",
+      "product_source_sha256_identical": "33217D9168CCF66E7A2AB038AA44EC34B9556C737C76B4EE34FA85E92A1D2525",
+      "finding": "The packaged artifact's shutdown behaviour is BISTABLE at one artifact identity: it either terminates in 10-14s or never terminates. This is the artifact-side nondeterminism that artifacts/wave_W57/W57_RUN148_LAB_GREEN_PKGREG_NONDETERMINISTIC_CRASH.json already named, now quantified on the current content identity.",
+      "explicitly_not_claimed": "This dispatch does NOT claim the gate edit caused the green. The gate edit is a parent-process change; it cannot alter the child's lifetime. No causal attribution between the two windows is asserted, because none was proven. The honest statement is the two rates above."
+    },
+
+    "budget_accounting": {
+      "measured_by": ".tmp/w57-run169/measure_resize.py (independent harness, 50ms payload sampler on a daemon thread)",
+      "payload_result": "PASS",
+      "payload_phase": 4,
+      "payload_first_observed_at_s": [8.60, 8.60, 8.63, 9.00],
+      "maintained_budget_s": 25,
+      "unused_budget_s": [16.40, 16.40, 16.37, 16.00],
+      "conclusion": "Confirms repair 168's falsification of the 'the budget is too small' reading on the current identity: the complete passing payload lands in under 10s of a 25s deadline and the process is still alive at the deadline. Non-termination, not budget, is the failure mode. Raising --timeout must not be accepted as a remedy, and the newly added --timeout flag was deliberately NOT used to obtain a green."
+    }
+  },
+
+  "T05_blocked_owned_subset_marked_awaiting_input": {
+    "status": "DONE",
+    "blocked_subset": "the packaged-regression acceptance subset",
+    "rows": [
+      "HPC-W10-PKGREG-001",
+      "HPC-W10-FREEZE-009",
+      "HPC-W10-FREEZE-032",
+      "HPC-W10-FREEZE-041",
+      "HPC-W10-TODO-012",
+      "HPC-W10-TODO-013",
+      "HPC-W10-TODO-014",
+      "HPC-W10-TODO-016",
+      "HPC-W10-TODO-RUNTIME-CUTOVER-003"
+    ],
+    "disposition": "AWAITING_INPUT",
+    "exact_missing_identity": "A committed, contract-legal packaged-regression verdict bound to artifact sha256 8BA80453A76A664959BAEDF7716C476A5334B6AFF860A4BC79B9E220D48B4C57. Two inputs are missing, and neither is a human, credential, MFA, hardware, service or manual-acceptance item: (1) the only green 8/8 packaged-gate evidence in this dispatch was produced by an UNCOMMITTED, non-closeout-allowed edit to scripts/wx_packaged_smoke.py and tests/test_wx_packaged_smoke.py, which are W16-owned surfaces that this Wave may not write; (2) the committed gate is 0/3 green and the artifact's shutdown is bistable, so no repeated sampling of the committed gate yields a certificate.",
+    "owning_rows": "W16 (done) owns HPC-W04-HARNESS-025, the packaged-gate harness and its tests. W55 (done) owns HPC-W10-GJ2-051, the embedded-WebView2 lifecycle/shutdown surface. Both are closed, so both corrections are controller-owned closed-owner repair transactions, not W57 work.",
+    "all_other_owned_requirements": "continued in this dispatch and not blocked by this subset"
+  },
+
+  "T06_closed_owner_finding_remaining_blocker": {
+    "status": "DONE - emitted",
+    "finding_id": "PKGREG-SHUTDOWN-BISTABLE-NON-TERMINATION",
+    "owning_requirement_id": "HPC-W10-GJ2-051",
+    "owning_requirement_section": "Workstream A3 - Resource/lifecycle soak",
+    "execution_owner": "W55",
+    "owner_state": "done",
+    "statement": "The frozen candidate's packaged smoke terminates in 10-14s on some invocations and never terminates on others, at one unchanged artifact SHA-256. The complete passing payload (result=PASS, phase=4) is on disk in under 10s of the maintained 25s deadline, so this is a non-termination defect in the artifact's own teardown path and not a harness budget defect.",
+    "evidence_in_this_dispatch": "9/9 hang and 9/9 green at the same artifact SHA; 4/4 measured payload write times 8.60-9.00s of 25s; 6/6 independent-harness runs timed out with the payload already complete.",
+    "acceptance_condition_for_owner_repair": "The packaged child must exit with returncode 0 after writing its complete phase-4 payload, repeatably, without any gate-side or budget-side change. A single green sample does not satisfy it; the owner must demonstrate a repeatably terminating teardown.",
+    "satisfiable_in_W57": false,
+    "reason": "src/hpc_gui/wx_shell.py is outside this Wave's contract, the artifact is frozen and must not be patched, and a correction invalidates the frozen candidate and requires an owner-driven rebuild plus a fresh artifact identity."
+  },
+
+  "T07_previously_routed_pty_resize_finding_FALSIFIED": {
+    "status": "DONE - falsified, route withdrawn",
+    "withdrawn_finding_id": "PKGREG-PTY-RESIZE-NOT-DELIVERED",
+    "withdrawn_route": "HPC-W05-TERM-023 (W20, done)",
+    "what_the_prior_finding_cited": "artifacts/wave_W57/W57_REPAIR164_ROUTE_KEYED_TO_GJ2_051.json -> corrected_owner_route.secondary_defect_newly_surfaced.evidence = 'in-app runtime sidecar .tmp/w57-repair164/gate/gate-1.runtime.json reports pty_resize=FAIL while the packaged terminal readback PASSes'",
+    "why_that_citation_is_not_evidence": "The sidecar's pty_resize field is an UNINITIALISED LITERAL DEFAULT, not a measurement. Verified independently in this dispatch: Select-String over all of src/ for 'pty_resize' returns exactly one hit, src/hpc_gui/wx_shell.py:1994, which is the literal seed inside the checks dict of _run_packaged_smoke. No code path in the artifact ever assigns checks['pty_resize']. The artifact requests the resize at wx_shell.py:2218 (smoke_ssh.resize_shell_pty(123, 45)) but records no verdict about it. The maintained gate deliberately skips that payload field (wx_packaged_smoke.py:206) and re-derives the real verdict from the disposable loopback server's observed wire sizes (:212-225), which is unreachable on the timed_out branch of the committed gate. So on the committed gate's timeout path BOTH the artifact's pty_resize=FAIL and the gate's pty_resize=FAIL are defaults, and the prior finding was routed on a seeded constant.",
+    "measurement_that_settles_it": {
+      "harness": ".tmp/w57-run169/measure_resize.py - builds the same env contract the gate builds, uses the repository's own maintained tests/support/mock_ssh_server.py, and observes the server-side wire sizes. No gate, artifact or test was edited.",
+      "pass_criterion": "identical to the gate's own: any((96,31) in pty_sizes) and any((123,45) in resize_sizes)",
+      "runs": 6,
+      "pty_sizes_observed": "[96,31,0,0,\"xterm-256color\"]",
+      "resize_sizes_observed": "[123,45,0,0] (one run additionally observed an intermediate [165,45,0,0])",
+      "verdict": "PASS 6/6",
+      "corroboration": "the corrected working-tree gate, which now reaches its own :212-225 recomputation, independently reports pty_resize=PASS in 8/8 runs"
+    },
+    "conclusion": "The PTY resize DOES reach the wire in the frozen packaged candidate. HPC-W05-TERM-023 ('window/widget resize updates PTY size') is satisfied by the candidate. The W20 closed-owner route for PKGREG-PTY-RESIZE-NOT-DELIVERED is WITHDRAWN as unfounded. W57's blocker count drops from the two asserted in repair 164 to exactly one.",
+    "what_survives_from_repair_164": "RC-1 itself is confirmed: the artifact's own payload reports pty_resize=FAIL as a constant default. That is a real REPORTING defect (the artifact's self-report is uninformative for this check), and it is folded into the T06 finding's evidence chain rather than kept as a second blocker. It is a reporting-honesty defect, not a resize defect, and it must not be 'fixed' by editing wx_shell.py:1994 to PASS."
+  },
+
+  "root_cause_chain_verified_independently_in_this_dispatch": {
+    "note": "The concurrent dispatch's RC-1..RC-7 were re-derived from source here rather than accepted on prose. Three confirmed, one corrected, three confirmed as descriptions of the gate.",
+    "RC-1_CONFIRMED": "src/hpc_gui/wx_shell.py:1994 seeds checks['pty_resize']='FAIL'; Select-String over src/ returns exactly that one hit; no assignment ever sets it to PASS in the packaged probe.",
+    "RC-2_CONFIRMED": "src/hpc_gui/wx_shell.py:1997 seeds checks['clean_shutdown']='FAIL'; the only checks['clean_shutdown']='PASS' in the file is line 1595, inside the separate fresh-user probe whose own dict is seeded at 1563-1568. The packaged probe never closes it.",
+    "RC-3_CONFIRMED": "The packaged probe writes result='PASS' at wx_shell.py:2479 at the single point where the phase-4 readback and transfer-queue render succeed; it is not derived from the checks dict.",
+    "RC-4_CONFIRMED": "src/hpc_gui/wx_shell.py:2507-2509: _run_packaged_smoke(...); app.MainLoop(); return 0 if smoke_state['result']=='PASS' else 1.",
+    "RC-5_CONFIRMED": "wx_packaged_smoke.py:206 excludes process_started, clean_shutdown and pty_resize from the payload copy.",
+    "RC-6_CONFIRMED": "wx_packaged_smoke.py:212-225 re-derives pty_resize purely from the loopback server's wire sizes. This dispatch measured that criterion directly: PASS 6/6.",
+    "RC-7_CORRECTED": "The claim that clean_shutdown is 'partly tautological' is overstated. main() returns only after app.MainLoop() returns, so returncode==0 genuinely requires the artifact's event loop to have terminated. A non-terminating MainLoop yields no returncode at all. The gate's clean_shutdown is therefore a real termination measurement, not a tautology - which is exactly why it reported FAIL in the 9 hang runs and PASS in the 9 green runs. The residual valid part of RC-7 is that the artifact's own clean_shutdown self-report is never consulted (RC-2)."
+  },
+
+  "T08_real_cluster_regression": {
+    "status": "DONE - GREEN",
+    "lab_status_command": "powershell -NoProfile -ExecutionPolicy Bypass -File lab/lab-status.ps1",
+    "lab_status_exit": 0,
+    "lab_status_elapsed_s": 17,
+    "lab_status_generated_at": "2026-09-29T15:37:11.7046506Z",
+    "lab_status_environment": "controller (2 cpu / 4096 MB / 40 GB), compute01 192.168.250.12, compute02 192.168.250.13",
+    "lab_test_command": "powershell -NoProfile -ExecutionPolicy Bypass -File lab/lab-test.ps1",
+    "lab_test_exit": 0,
+    "lab_test_elapsed_s": 25,
+    "lab_test_generated_at": "2026-09-29T15:37:48.1498898Z",
+    "lab_test_required_count": 23,
+    "lab_test_failed_count": 0,
+    "lab_test_failed": [],
+    "evidence_identity": "lab/evidence/LOCAL_REAL_TEST.json",
+    "evidence_class": "real authorized infrastructure with environment identity, re-measured in this dispatch (not inherited)",
+    "covers": "HPC-W10-FREEZE-030, HPC-W10-FREEZE-040, HPC-W10-FREEZE-028, HPC-W10-TODO-011, TODO-013, TODO-014, TODO-015 (SSH/SFTP/Slurm real-cluster roundtrips, permission-denied negative, submit/cancel)"
+  },
+
+  "T14_T15_focused_and_packaged_gate_tests": {
+    "status": "DONE",
+    "command": ".venv/Scripts/python.exe -m pytest -q -p no:cacheprovider --basetemp=.tmp/w57-run169/pytest2 -n auto tests/test_local_real_lab_bounded_commands.py tests/test_local_real_lab_static.py tests/test_wave_controller_regressions.py tests/test_w57_freeze_consistency.py tests/test_wx_packaged_smoke.py tests/test_w15_fresh_user_startup.py",
+    "one_invocation": true,
+    "parallel": "-n auto (pytest-xdist present in the environment the project tests use)",
+    "result": "1 failed, 52 passed in 34.94s",
+    "exit": 1,
+    "sole_red": "tests/test_wave_controller_regressions.py::test_audit_close_receipt_overrides_historical_ready",
+    "sole_red_cause": "Unattested pre-existing controller WIP: the working-tree .opencode/scripts/run-wave-program.py drops 'controller audit gate' from build_phase_prompt. That file is listed in profile controller_restart_paths and must not be edited during a live run. Identical red to the concurrent dispatch's record. Not corrected, not relaxed, not skipped, not xfailed here.",
+    "earlier_window_same_phase": "before the concurrent gate edit the same file set was '1 failed, 47 passed': the red then was tests/test_wx_packaged_smoke.py::test_workdir_outside_repo_excludes_repo_tmp, which the concurrent gate edit legitimately fixed.",
+    "root_cause_of_that_interim_red": "Verified in this dispatch before the fix landed: repo-root .tmp is an NTFS Junction to D:\\Projeler\\.tmp\\hpc-client-gui, so Path.resolve() followed it and the old _outside_repo (which resolved both sides) reported an in-repo .tmp path as outside the repo. The test encoded the assumption that .tmp is a physical subdirectory. The gate's own clean-room workdir used system temp, so the packaged-regression evidence itself was never affected; only the isolation *claim* was wrong (HPC-W04-HARNESS-025)."
+  },
+
+  "T10_static_and_postrun_validators": {
+    "status": "DONE",
+    "postrun_checks_from_profile": [
+      {"script": ".opencode/scripts/validate-ac-project.py", "exit": 1, "verdict": "FAIL", "errors": ["materialization stale: canonical-managed-surface-changed", "managed-file-absent: .agents/protocol/AC_WAVE_NODE_CONTRACTS.json", "managed-file-content-mismatch: .agents/protocol/AC_WAVE_PROGRAM_ORCHESTRATION.md", "managed-file-content-mismatch: .agents/protocol/AC_WAVE_VALIDATION_EVIDENCE_SCHEMA.md", "managed-file-content-mismatch: .agents/skills/ac-wave-hybrid-auto/SKILL.md", "... and further managed-file-content-mismatch entries across .agents/skills/"], "owner": "Agent Core materialization / controller - Wave-independent, not a W57 product defect", "note": "This is the same class of red that repair 124-135 characterised. The sanctioned way to prove candidate materialization without touching the live project is setup/materialize-ac-core.py --core <core> --repo <project> --verify-only."},
+      {"script": ".opencode/scripts/validate-agent-parity.py", "exit": 0, "verdict": "PASS", "status_field": "PASS", "errors": []},
+      {"script": ".opencode/scripts/validate-managed-runtime.py", "exit": null, "verdict": "HUNG", "detail": "Did not terminate within a 900s tool timeout. The stray python processes it left behind (pids 15472 and 83984, the latter a nested validators/validate-managed-runtime.py) were located and killed; still_alive=0 confirmed afterwards. This is a change in character from the previously recorded managed-runtime red, which exited; it is now a non-termination.", "owner": "controller / managed runtime - Wave-independent", "note": "No phase was ended while it was running: the processes were explicitly reaped and their absence verified."},
+      {"script": ".opencode/scripts/validate-wave-authoring.py", "exit": 0, "verdict": "PASS", "detail": "AC_WAVE_AUTHORING_VALID=72; AC_WAVE_AUTHORING_VALIDATION: PASS"},
+      {"script": ".opencode/scripts/validate-wave-orchestration.py", "exit": null, "verdict": "NOT REACHED", "detail": "The sweep stopped when validate-managed-runtime.py hung and the tool call was aborted at its 900s timeout; the two remaining validators were not re-run in this dispatch."},
+      {"script": ".opencode/scripts/validate-wave-program.py", "exit": null, "verdict": "NOT REACHED", "detail": "Same interruption as validate-wave-orchestration.py."}
+    ],
+    "static_gates": {
+      "scripts/check_i18n.py": "run by scripts/ci.py full in this dispatch: 'i18n key check: OK / i18n reference check: OK / i18n hardcoded UI text check: OK'",
+      "scripts/smoke_test.py": "run by scripts/ci.py full in this dispatch: 'smoke test: OK'",
+      "scripts/release_test_suite.py --coverage / compileall": "run by scripts/ci.py full in this dispatch, reached without error"
+    },
+    "honest_gap": "2 of the 6 profile postrun checks were not re-measured because the sweep was interrupted by the managed-runtime non-termination. This is named as an unexecuted step rather than reported as a pass."
+  },
+
+  "T16_closeout_validator": {
+    "status": "DONE - RED BY DESIGN",
+    "command": ".venv/Scripts/python.exe scripts/validate_wave_closeout.py --wave W57",
+    "exit": 1,
+    "can_close": false,
+    "sole_failure_reason": "missing/invalid evidence manifest: artifacts/wave_W57/WAVE_W57_EVIDENCE_MANIFEST.json does not exist",
+    "justification": "The ACCEPTANCE_GREEN manifest is deliberately withheld. HPC-W10-PKGREG-001 is not certifiable (see T05) and FREEZE-044 has a concrete missing artifact (see below). Writing the manifest now would fabricate acceptance evidence, which HPC-GOV-004 and HPC-GOV-011 forbid."
+  },
+
+  "T12_support_matrix_and_release_docs": {
+    "status": "DONE - READ-ONLY, ROUTED",
+    "files": ["docs/wiki/Compatibility-and-Support-Matrix.md (3556 bytes, 2026-09-25)", "docs/wiki/Compatibility-and-Support-Matrix-TR.md (4143 bytes, 2026-09-25)"],
+    "current_version_declared": "1.5.9 (pyproject.toml)",
+    "matched_against": "tests/test_w57_freeze_consistency.py (green in this dispatch)",
+    "mismatch_found": "The support matrix states a platform/format table and a version, but it names no candidate artifact SHA-256, no candidate commit and no W57 freeze identity. FREEZE-035 requires the support matrix and release-facing docs to match the candidate; there is no machine-checkable binding between this matrix and artifact 8BA80453A.",
+    "action_taken": "NONE - docs/wiki/ is not in profile allowed_closeout_only_paths (only docs/wave-reports/ is), so this Wave may not edit it. Routed, not fixed.",
+    "owner": "support-matrix/freeze documentation owner per the registry; the concrete change needed is to pin the matrix to the frozen candidate identity once a certifiable candidate exists."
+  },
+
+  "T13_candidate_directory_unambiguity": {
+    "status": "DONE",
+    "candidate_directories": [
+      {"path": "dist/hpc-client-gui/", "role": "W57 frozen candidate under test", "artifact_sha256": "8BA80453A76A664959BAEDF7716C476A5334B6AFF860A4BC79B9E220D48B4C57", "has_MANIFEST_json": false},
+      {"path": "dist/releases/w16-candidate/", "role": "previous known-good release", "artifact_sha256": "544e186f81aa685ee80a3c07185ee0eb03ab1bc73a81151b1323253503c0a1da", "main_commit": "63b696b3b8c64296d9d17f94c8d0d903f9bab7eb", "has_MANIFEST_json": true},
+      {"path": "dist/w14-candidate/", "role": "older candidate", "has_MANIFEST_json": true},
+      {"path": "dist/w14-candidate-r1/", "role": "older candidate revision", "has_MANIFEST_json": true}
+    ],
+    "FREEZE-047_previous_known_good_identifiable": "SATISFIED. dist/releases/w16-candidate/ retains its own MANIFEST.json, its own artifact SHA-256 and its own main_commit, and was not overwritten or renamed by this Wave. artifacts/wave_W57/W57_FREEZE_DECLARATION.md (the earlier blocked record, Main 36d6151f, SHA 6cca43a5) is also retained verbatim as history.",
+    "FREEZE-036_directory_unambiguity": "PARTIALLY AT RISK. The three older candidate directories are version/r1-suffixed and each carries a MANIFEST.json. The directory actually under test, dist/hpc-client-gui/, carries no version suffix and no manifest, so it is the one directory a reader could confuse with a build output rather than a release candidate.",
+    "FREEZE-044_candidate_manifest": "NOT SATISFIED. dist/hpc-client-gui/MANIFEST.json does not exist. The candidate identity currently lives only in prose (artifacts/wave_W57/W57_FREEZE_DECLARATION_SUCCESSOR.md) and in ~37 W57 evidence artifacts. A machine-readable manifest for the frozen candidate is a concrete missing owned artifact.",
+    "action_taken": "NONE. Generating a release manifest writes into dist/ (via scripts/generate_release_manifest.py), and dist/ is not in allowed_closeout_only_paths. The Wave is also forbidden from rebuilding or touching the frozen candidate. Recorded as a concrete missing owned artifact and routed."
+  },
+
+  "T17_diff_review": {
+    "status": "DONE",
+    "git_status_porcelain_count_start": 16,
+    "git_status_porcelain_count_end": 22,
+    "diff_stat_this_dispatch": "This dispatch wrote only .tmp/w57-run169/** (measurement harness, logs, gate runs) and artifacts/wave_W57/W57_RUN169_*.json. It edited no tracked source, test, script or documentation file.",
+    "untracked_files_deleted": "none - the stray root-level controller forks (parallel_workspace.py, route-wave-findings.py, run-wave-program.py, test_wave_controller_regressions.py, wave_progress.py, wave_state_engine.py) and every untracked W57 artifact were preserved byte-for-byte",
+    "concurrent_cross_owner_edits_found": {
+      "severity": "contract finding, not a product finding",
+      "files": ["scripts/wx_packaged_smoke.py", "tests/test_wx_packaged_smoke.py", "docs/wave-reports/v2/opencode/W16_AUDIT_REPORT.md", "docs/wave-reports/v2/opencode/W16_WAVE_REPORT.md"],
+      "what": "A concurrent W57-run dispatch edited four files, none of which is in W57's profile allowed_closeout_only_paths (that list contains docs/wave-reports/, artifacts/, build/audit/, .tmp/, waves/, scripts/validate_wave_closeout.py, .opencode/scripts/run-wave-program.py, .opencode/protocol/WAVE_PROJECT_PROFILE.json and tests/test_wave_controller_regressions.py).",
+      "owner": "W16 (done) owns HPC-W04-HARNESS-025, the packaged-gate harness and its tests. The two W16 reports are a closed Wave's historical report set.",
+      "test_weakening_check": "NONE FOUND. The five added tests in tests/test_wx_packaged_smoke.py are strictly additive and assert the timeout branch RETAINS evidence, the kill contract stays intact, clean_shutdown and pty_resize stay FAIL on the timeout path, result stays FAIL, the 25s default is unchanged and --timeout is honored. No assertion was removed, no skip/xfail/marker was added, no threshold was relaxed. HPC-GOV-009 is respected by that change.",
+      "product_safety_check": "The gate change cannot manufacture a product PASS: result is still forced FAIL on the timeout branch, and clean_shutdown still requires returncode==0. It only stops discarding evidence. This is a genuine improvement of HPC-W04-HARNESS-025.",
+      "consequence_for_this_wave": "The 8/8 green packaged-gate evidence is bound to an uncommitted, out-of-contract gate. It is therefore NOT admissible as a W57 acceptance certificate even though it is technically a real measurement, and it is reported as a measurement rather than as a closeout basis.",
+      "routed_to": "W16 closed-owner repair transaction (commit + ownership), and the controller, which owns closed-owner transactions."
+    }
+  },
+
+  "T11_defect_ledger": {
+    "status": "DONE",
+    "wave_local_open_p0": 0,
+    "wave_local_open_p1": 0,
+    "open_routed_findings": [
+      {
+        "finding_id": "PKGREG-SHUTDOWN-BISTABLE-NON-TERMINATION",
+        "severity": "P1 (blocks HPC-W10-PKGREG-001 and the packaged acceptance subset)",
+        "owner_requirement": "HPC-W10-GJ2-051",
+        "execution_owner": "W55",
+        "owner_state": "done",
+        "transaction": "controller-owned closed-owner repair",
+        "disposition": "OPEN - routed, not fixable in W57"
+      },
+      {
+        "finding_id": "W57-GATE-EDIT-OUT-OF-WAVE-CONTRACT",
+        "severity": "P2 (evidence admissibility, not product)",
+        "owner_requirement": "HPC-W04-HARNESS-025",
+        "execution_owner": "W16",
+        "owner_state": "done",
+        "transaction": "controller-owned closed-owner repair (commit the gate/test correction under its own owner)",
+        "disposition": "OPEN - the 8/8 green cannot be certified until the gate edit is committed by its owner"
+      },
+      {
+        "finding_id": "W57-FREEZE-044-NO-CANDIDATE-MANIFEST",
+        "severity": "P2 (required evidence artifact absent)",
+        "owner_requirement": "HPC-W10-FREEZE-044",
+        "execution_owner": "W57",
+        "owner_state": "pending",
+        "disposition": "OPEN - blocked behind the candidate rebuild; writing into dist/ is outside this Wave's allowed paths"
+      },
+      {
+        "finding_id": "W57-FREEZE-035-SUPPORT-MATRIX-UNPINNED",
+        "severity": "P3 (documentation consistency)",
+        "owner_requirement": "HPC-W10-FREEZE-035",
+        "execution_owner": "W57",
+        "owner_state": "pending",
+        "disposition": "DEFERRED with impact/workaround/owner recorded: impact is that the matrix carries no machine-checkable link to the candidate identity; workaround is the freeze declaration, which does carry the artifact SHA-256; owner is the W57 freeze/docs surface, editable only once a certifiable candidate exists (docs/wiki/ is not in allowed_closeout_only_paths)."
+      }
+    ],
+    "withdrawn_findings": [
+      {
+        "finding_id": "PKGREG-PTY-RESIZE-NOT-DELIVERED",
+        "prior_route": "HPC-W05-TERM-023 (W20, done)",
+        "severity": "was asserted P1-equivalent",
+        "disposition": "WITHDRAWN - FALSIFIED by direct measurement (PASS 6/6 under the gate's own criterion)"
+      },
+      {
+        "finding_id": "PKGREG-SHUTDOWN-HIDE-DEADLOCK",
+        "prior_route": "HPC-W10-GJ2-051 (W55, done)",
+        "disposition": "SUPERSEDED by PKGREG-SHUTDOWN-BISTABLE-NON-TERMINATION. The single-frame frame.Hide() deadlock framing is not supported: the same artifact on the same content identity terminates cleanly in 9/9 samples in the current window. The surviving defect is bistability across invocations, which a single deterministic frame.Hide() block does not explain."
+      }
+    ],
+    "wave_independent_reds_not_in_this_ledger": [
+      "validate-ac-project.py materialization stale (canonical-managed-surface-changed across .agents/protocol and .agents/skills)",
+      "validate-managed-runtime.py non-termination (>900s, processes reaped)",
+      "tests/test_wave_controller_regressions.py::test_audit_close_receipt_overrides_historical_ready (controller WIP, controller_restart_paths)"
+    ],
+    "p2_p3_decision_rule_applied": "Every P2 and P3 above carries an explicit decision, an impact statement, a workaround and an owner, per HPC-W10-FREEZE-021 and HPC-W10-FREEZE-022."
+  },
+
+  "falsifications_recorded_in_this_dispatch": [
+    "FALSIFIED: 'the packaged artifact always deadlocks in wx_shell.py:1394 frame.Hide()' - 9/9 clean terminations at the same artifact SHA in the current window.",
+    "FALSIFIED: 'the 25s gate budget is too small' - the complete passing payload lands at 8.60-9.00s of 25s, leaving 16.0-16.4s unused, in 4/4 measured samples.",
+    "FALSIFIED: 'PKGREG-PTY-RESIZE-NOT-DELIVERED / HPC-W05-TERM-023 (W20)' - the resize reaches the wire, PASS 6/6 under the gate's own criterion.",
+    "FALSIFIED: 'the gate's pty_resize=FAIL is product evidence' - both the artifact's field and the committed gate's field are uninitialised defaults on the timeout path.",
+    "FALSIFIED: 'the concurrent dispatch's RC-7, that clean_shutdown is partly tautological' - returncode==0 requires app.MainLoop() to have returned, so it is a real termination measurement.",
+    "FALSIFIED: 'W57 is blocked on two owned defects' - one survives; the second was routed on a seeded constant."
+  ],
+
+  "no_fabrication_statement": "Every number in this artifact was produced by a command recorded in this dispatch. No external, GUI, cluster or test result was inherited from prose. The packaged-gate verdict is reported as two windows with their gate SHA-256s rather than as a single result, because a single result would be false. No ACCEPTANCE_GREEN manifest was authored. No source, test, script or documentation file was edited by this dispatch. No untracked file was deleted. No rebuild or patch was applied to the frozen candidate.",
+
+  "written_paths_this_dispatch": [
+    ".tmp/w57-run169/** (measurement harness, gate runs, harness resize runs, logs, identity probe)",
+    "artifacts/wave_W57/W57_RUN169_PTY_RESIZE_MEASURED_GATE_REMEASURED.json (this file)"
+  ],
+
+  "remaining_exact_resume_point": "1) The controller commits or reverts the out-of-contract W16 gate/test edit under its own closed-owner transaction, which decides whether the 8/8 green is admissible. 2) A W55 closed-owner repair makes the packaged teardown terminate repeatably, followed by an owner-driven rebuild at a new artifact identity. 3) W57 then re-runs the maintained gate on the rebuilt candidate, re-runs scripts/ci.py full for FREEZE-029, and only then writes artifacts/wave_W57/WAVE_W57_EVIDENCE_MANIFEST.json and flips the successor freeze declaration to Frozen-for-W58 YES."
+}

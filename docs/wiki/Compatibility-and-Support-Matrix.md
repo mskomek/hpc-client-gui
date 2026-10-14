@@ -6,6 +6,11 @@ Current version: **1.5.9** (`pyproject.toml`).
 
 ## Platforms and packaging
 
+The platform rows below describe documented build and installation formats;
+they do not certify that every listed artifact was produced or validated for
+the current frozen release candidate. Candidate-specific support is recorded
+in the dated evidence section below.
+
 | Platform | Format | Notes |
 |---|---|---|
 | Windows 10 / 11 | Portable ZIP containing `hpc-client-gui.exe` | Python not required |
@@ -73,18 +78,24 @@ See also [[Installation on Windows|Installation-Windows]],
 [[Installation on macOS|Installation-macOS]], and
 [[X11 Forwarding|X11-Forwarding]].
 
-## Frozen release candidate 1.5.9 (W57.4 final support statement)
+## Frozen release candidate 1.5.9 (evidence scope)
 
-This section is authoritative for the frozen candidate handed to W11; the
-platform table above describes the release *set* the project can produce.
+This section bounds the evidence for the frozen 1.5.9 candidate. It does not
+certify the full platform release set described above.
 
 | Item | Status for this candidate | Evidence |
 |---|---|---|
-| Windows 10/11 AMD64, portable `hpc-client-gui.exe` (SHA-256 `B3019DEA16783C8AB859FA36D2B0FEF2FB70DB075633E54EB0F36587295374FD`) | **Supported** | packaged smoke 20/20 on the exact artifact; W57.1 packaged functional replay 110/110; LOCAL_REAL Hyper-V cluster `lab-test` LOCAL_REAL_READY (0 failed) |
-| GUI runtime | **wxPython 4.3.1 (wx V2)**; Qt/PySide6 not shipped | bundle has zero Qt files (freeze declaration) |
-| Cluster side | SSH/SFTP + Slurm (`sbatch`/`squeue`/`sacct`/`scancel`) | LOCAL_REAL lab: SSH, SFTP round trip, sbatch, cancel, shared home |
+| Windows 10/11 AMD64, onedir `hpc-client-gui.exe` (freeze SHA-256 `B3019DEA16783C8AB859FA36D2B0FEF2FB70DB075633E54EB0F36587295374FD`) | **B301… is the frozen reference; observed DB29… bytes are not validated against that pin, so release support is not established** | The W61.2 U02 smoke was tied to HEAD `92128c8726435aa0087f090c4a080720f148781f` and exact B301… bytes. At HEAD `bc2e61dcf86dadeda26141e5324088be8285243f`, the observed executable SHA-256 is `DB29B6A8BD2C78FE1D9169F36B595752DEC40F411085AB8E6032384E740BBFBD`, differing from the frozen reference. W61.3 U02 records a 20/20 packaged smoke on DB29…; W61.1 records that the authoritative W10 identity/census remains unresolved. The smoke does not reconcile the B301/DB29 mismatch or establish release acceptance. |
+| GUI runtime | wxPython 4.3.1 observed in W61.2's B301… smoke; W61.3's DB29… summary reports 20 checks PASS, but its referenced runtime sidecar is absent, so current-candidate runtime acceptance is not demonstrated | `artifacts/wave_W61.2/W61.2_U02_FROZEN_PACKAGE_GATE.json`; `artifacts/wave_W61.3/W61.3_U02_CORE_SMOKE.json`. `W61.3_U02_CORE_SMOKE.runtime.json` is currently missing. These records do not validate DB29… against the B301… freeze pin. |
+| Cluster side | **Not validated for this candidate** | W61.2 U03 did not run a mutating replay against LOCAL_REAL: the exact pinned executable is unavailable and no controller-established serial fallback or exclusive lab lease was present. Health probes and disposable loopback smoke do not establish real-cluster support. |
 | macOS (Apple Silicon / Intel) DMG | **Not part of this candidate** | no macOS artifact was built or regressed for this freeze |
 | Linux AppImage / `.deb` | **Not part of this candidate** | no Linux artifact was built or regressed for this freeze |
-| From source (Python 3.14.x) | Developer use only, not a release artifact | full automated suite in W57.4 report |
+| From source (Python 3.14.x) | Developer use only; not validated as a W61.2 release candidate artifact | Historical W57.4 suite results are not current frozen-candidate platform evidence. |
 
-Any later byte change to the artifact mints a new SHA-256 and voids this statement.
+No macOS or Linux artifact is included in this candidate evidence. These rows
+record historical, bounded checks only; DB29… has a separate narrow packaged
+smoke summary but has no current runtime sidecar and remains unreconciled with
+the B301… freeze pin. The receipts do not imply release acceptance or that every documented platform is supported
+by this candidate. Any later byte
+change to the executable mints a new SHA-256 and voids its candidate-specific
+evidence.

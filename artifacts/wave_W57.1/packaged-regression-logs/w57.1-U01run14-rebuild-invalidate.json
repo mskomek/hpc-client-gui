@@ -1,0 +1,24 @@
+{
+  "schema": "w57.1-u0121-rebuild-invalidate/1",
+  "declared_commit": "ad02258620ef34c0d778037bb16b0f4421e950b5",
+  "build_command": ".venv/Scripts/python.exe -m PyInstaller -y --clean build/windows/hpc-client-gui.spec",
+  "toolchain": ".venv Python 3.14.0 + PyInstaller 6.22.2, Windows AMD64",
+  "live": {
+    "sha256": "740fe48ea3e52bfdf7b5dc781b50b021c3d4a4649ac6908dbc162b5c854175ab",
+    "size": 7672468,
+    "match_run4": true
+  },
+  "plugin_sha": "f0abb7e7037e66ab451d463c699fecf4e00c89eb",
+  "rebuild_decision": "NO-REBUILD: live bytes match run4 post-cutover provenance at same HEAD; a fresh rebuild would mint a new SHA and invalidate run11/12/13 (no-progress forbidden)",
+  "invalidated": [
+    "pre-cutover SHA 8ba80453 evidence (U01run2 smoke/content/freshuser and all 8ba80453-bound PASS) SUPERSEDED",
+    "frozen W56 SHA 6cca43a5 replay UNVERIFIED (bytes absent, unrecoverable)",
+    "any pre-cutover PASS reuse forbidden for closeout"
+  ],
+  "current_valid_set": [
+    "run11 smoke 20/20 + content 8/8",
+    "run12 W05-W09 sample + CLI probes",
+    "run13 fresh-user 10/10"
+  ],
+  "freeze": "artifacts/wave_W57.1/W57.1_FREEZE_DECLARATION.md binds 740fe48e at ad022586"
+}

@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "evidence_id": "EV-W61.1-U02-REPAIR-ENV-20261005",
+  "wave_id": "W61.1",
+  "unit": "U02",
+  "phase": "repair",
+  "phase_instance_id": "20261004-180341-a1e00235:10:W61.1:repair",
+  "candidate_identity": {
+    "artifact": "dist/hpc-client-gui/hpc-client-gui.exe",
+    "artifact_sha256": "B3019DEA16783C8AB859FA36D2B0FEF2FB70DB075633E54EB0F36587295374FD",
+    "size_bytes": 7672106,
+    "source_commit": "0eb4f0d5026f87ba1aaad0dc1ba301590d82ca7d",
+    "head": "92128c8726435aa0087f090c4a080720f148781f",
+    "runtime": "wx"
+  },
+  "repository_identity": {
+    "branch": "develop",
+    "source_to_head_diff": {
+      "paths": [],
+      "exit_code": 0,
+      "command": "git diff --name-only 0eb4f0d5026f87ba1aaad0dc1ba301590d82ca7d HEAD -- src build pyproject.toml"
+    },
+    "candidate_behavior_scope_diff": {
+      "paths": [],
+      "exit_code": 0,
+      "command": "git diff --name-only -- src pyproject.toml tests/test_wx_dispatch_error_gov.py dist/hpc-client-gui/hpc-client-gui.exe"
+    }
+  },
+  "host_probe": {
+    "observed_at": "2026-10-05T11:17:05.7979945Z",
+    "command": "Read-only PowerShell probe of hpc-client-gui/msedgewebview2 process counts and EdgeUpdate WebView2 Runtime registry version",
+    "hpc_client_gui_count": 0,
+    "msedgewebview2_embedder_count": 20,
+    "webview2_runtime": {
+      "product": "Microsoft Edge WebView2 Runtime",
+      "version": "154.0.4258.53",
+      "registry_view": "HKLM\\SOFTWARE\\WOW6432Node\\Microsoft\\EdgeUpdate\\Clients"
+    },
+    "host_remediated": false,
+    "environment_identity": "Windows packaged host with 20 live msedgewebview2 embedders and WebView2 Runtime 154.0.4258.53; no healthy/remediated host identity established"
+  },
+  "action": "Performed the ordered frozen-candidate and host-health verification. Per the accepted repair plan, did not retry the packaged wx harness on this contaminated host.",
+  "result": "ENVIRONMENT_BLOCKED",
+  "failure_signature": "The current host still has 20 live msedgewebview2 embedders while no hpc-client-gui process is running; the previously reproduced exact-candidate WebView2 COM activation failure remains unrepaired. This receipt contains no GUI PASS claim.",
+  "requirements": [
+    "HPC-W11-REL-025",
+    "HPC-W11-REL-026"
+  ],
+  "decision": "NO-GO",
+  "unblock_condition": "Provide an independently healthy or remediated WebView2 host identity and replay the exact frozen packaged wx launch plus GJ-01..GJ-10 action/readback checks.",
+  "proof": [
+    "Get-FileHash recomputed the frozen executable as B3019DEA16783C8AB859FA36D2B0FEF2FB70DB075633E54EB0F36587295374FD.",
+    "Get-Item read back the frozen executable size as 7672106 bytes.",
+    "The frozen source commit to current HEAD comparison for src, build, and pyproject.toml returned exit 0 with no paths.",
+    "The current candidate behavior scope comparison for src, pyproject.toml, tests/test_wx_dispatch_error_gov.py, and the executable returned exit 0 with no paths.",
+    "The read-only host probe found 20 live msedgewebview2 embedders and WebView2 Runtime 154.0.4258.53; no hpc-client-gui process was running.",
+    "No packaged launch, GUI journey replay, rebuild, repack, resign, source edit, test edit, or package-byte edit was performed by this action."
+  ],
+  "remaining_uncertainty": [
+    "REL-025 packaged wx launch and the GUI-dependent portions of REL-026 remain unverified until the host is remediated or replaced.",
+    "The W02-owned REL-029 assertion still requires authoritative W02 disposition and replay evidence.",
+    "U04 current P0/P1 census and executable rollback-readiness proof are still absent.",
+    "The wave-local evidence manifest and fresh independent audit report remain absent."
+  ],
+  "audit_focus": [
+    "Bind the environment-blocked result to the frozen artifact SHA, source commit, and current HEAD without treating it as product evidence.",
+    "Confirm REL-025 and GUI-dependent REL-026 remain NO-GO and that no GUI PASS is inferred from prior non-GUI receipts.",
+    "Require a changed host identity before any further packaged wx retry; do not repeat the same contaminated-host harness."
+  ]
+}

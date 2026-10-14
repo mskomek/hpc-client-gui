@@ -1,0 +1,13 @@
+{
+  "wave": "W57.1",
+  "unit": "U02",
+  "phase": "run",
+  "commit": "ad02258620ef34c0d778037bb16b0f4421e950b5",
+  "artifact_sha256": "740fe48ea3e52bfdf7b5dc781b50b021c3d4a4649ac6908dbc162b5c854175ab",
+  "pytest": "61 passed (test_w15_fresh_user_startup + ssh_terminal_stream + terminal_pty_wire + w12_sftp_semantics + ssh_credential_flow + sftp_channel_manager, -n auto, .tmp/pytest-w571-u02)",
+  "labtest": "LOCAL_REAL_READY 23/23 (lab/lab-test.ps1, .tmp/w571-u02-labtest.json)",
+  "ssh": "key login exit 0, forced-PTY /dev/pts/0, disposable fixture created+removed",
+  "sftp": "paramiko CRUD hash_match true cleaned true (w57.1-U02-sftp-crud-proof.json)",
+  "packaged_freshuser_exe": "FAIL timeout 180s + wxRecursionGuard (pre-existing w57.1-U02-freshuser.json, routed to packaging owner, not patched)",
+  "generated_utc": "2026-09-30T00:40:50.6463040Z"
+}

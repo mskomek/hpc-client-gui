@@ -1,0 +1,50 @@
+{
+  "schema": "w61.2-u03-local-real-replay/1",
+  "wave_id": "W61.2",
+  "unit_id": "U03",
+  "requirement_ids": [
+    "HPC-W11-REL-039"
+  ],
+  "candidate_identity": {
+    "branch": "develop",
+    "head": "bc2e61dcf86dadeda26141e5324088be8285243f",
+    "working_tree": "dirty"
+  },
+  "artifact": {
+    "path": "dist/hpc-client-gui/hpc-client-gui.exe",
+    "expected_sha256": "B3019DEA16783C8AB859FA36D2B0FEF2FB70DB075633E54EB0F36587295374FD",
+    "expected_size_bytes": 7672106,
+    "observed_sha256": "DB29B6A8BD2C78FE1D9169F36B595752DEC40F411085AB8E6032384E740BBFBD",
+    "observed_size_bytes": 7675423,
+    "matches_pin": false,
+    "pin_path": "artifacts/wave_W61.1/freeze-pin/W61.1_U01_FREEZE_PIN.json"
+  },
+  "environment": {
+    "infrastructure_class": "LOCAL_REAL_HYPERV",
+    "provider_profile_id": "local-real",
+    "profile_identity_sha256": "a99c96fdff52105b6f539fa0335a4b34a7b6ad00ceaacdf628fd09b320b4c0bf",
+    "prior_health_receipt": "artifacts/wave_W61.2/W61.2_U02_LOCAL_REAL_HEALTH.json",
+    "prior_health_receipt_is_replay_evidence": false
+  },
+  "serialization": {
+    "controller_run_id": "20261005-204809-bbf508cb",
+    "phase_instance_id": "20261005-204809-bbf508cb:37:W61.2:run",
+    "parallel_serial_fallback_recorded": false,
+    "exclusive_local_real_lease_recorded": false
+  },
+  "actions": {
+    "pin_comparison": "BLOCKED_MISMATCH",
+    "serialization_check": "BLOCKED_NO_AUTHORITY",
+    "health_check": "NOT_RUN_PIN_AND_SERIALIZATION_PREREQUISITES_UNMET",
+    "gui_real_cluster_replay": "NOT_RUN",
+    "ssh": "NOT_RUN",
+    "sftp": "NOT_RUN",
+    "slurm": "NOT_RUN",
+    "filesystem": "NOT_RUN",
+    "job_workflow": "NOT_RUN",
+    "cleanup": "NOT_APPLICABLE_NO_EXTERNAL_MUTATION"
+  },
+  "disposition": "EXTERNAL_BLOCKED",
+  "unblock_condition": "Restore the exact W61.1-pinned executable and have the controller record a serial fallback or grant an explicit exclusive LOCAL_REAL lease; then replay the maintained GUI workflow against LOCAL_REAL and record outcomes plus cleanup.",
+  "credential_or_private_profile_data_included": false
+}

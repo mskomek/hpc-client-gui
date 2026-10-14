@@ -1,0 +1,54 @@
+{
+  "schema": "hpc-v2-guest-session-preflight/1",
+  "evidence_id": "CANDIDATE5-GUEST-SESSION-BLOCKER-20261008",
+  "status": "EXTERNAL_BLOCKED_INTERACTIVE_LOGON",
+  "captured_at_utc": "2026-10-08T09:52:13.0799044Z",
+  "candidate": {
+    "source_head": "1292e89b0d383d2cd08cdae759ee57d336dfb070",
+    "archive_sha256": "7ae23f2d6cea49d4c4b422dacdf88cbac8eba7f43aff58a44e0c92a041d7e953",
+    "branch": "codex/v2-candidate-20261008-r5",
+    "executable_sha256": "2966a977edc0fe5525c8591df6108e731cd944e2b9d396ee72847792afca654c"
+  },
+  "guest": {
+    "session_processes": [
+      {
+        "name": "winlogon.exe",
+        "session_id": 1
+      },
+      {
+        "name": "LogonUI.exe",
+        "session_id": 1
+      }
+    ],
+    "runner_result": "PowerShell Direct PASS",
+    "explorer_processes": 0,
+    "vm": "Windows11",
+    "build": "26200",
+    "active_interactive_session": "absent",
+    "identity": "test\\home",
+    "quser_result": "No User exists for *",
+    "os": "Windows 11 Pro",
+    "webview2_process_count": 0,
+    "hpc_gui_process_count": 0,
+    "runner": "C:\\Users\\mskomek\\.hyperv-tools\\Invoke-Windows11.ps1",
+    "webview2_runtime": "154.0.4258.62"
+  },
+  "authorized_session_mechanisms": {
+    "vm_state": "Running",
+    "repository_search": "No guest interactive-logon launcher found in lab/, scripts/, or .opencode/",
+    "host_tooling_inventory": [
+      "Invoke-Windows11.ps1 (PowerShell Direct runner only)"
+    ],
+    "vm_status": "Operating normally",
+    "guest_service_interface": "disabled",
+    "auto_logon": {
+      "stored_password_value_present": false,
+      "configured_user_matches_home": true,
+      "password_value_read": false,
+      "enabled": false
+    }
+  },
+  "decision": "GUI/WebView2 acceptance was not attempted: PowerShell Direct is noninteractive and the guest has no active user desktop.",
+  "operator_action": "Sign in to the Windows11 VM console as test\\home using the operator-approved mechanism; leave the desktop session Active with Explorer.exe running. Do not provide the password in chat. Resume with quser/session, runtime/process health, exact archive transfer/hash, then Candidate 5 fresh-user run01.",
+  "resume_point": "Candidate 5 exact artifacts remain in durable custody. No transfer or fresh-user attempt has occurred on this guest."
+}

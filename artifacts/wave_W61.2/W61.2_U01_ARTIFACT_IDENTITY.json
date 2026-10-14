@@ -1,0 +1,19 @@
+{
+  "wave_id": "W61.2",
+  "unit": "U01",
+  "requirement_ids": [
+    "HPC-W11-REL-035"
+  ],
+  "artifact": "dist/hpc-client-gui/hpc-client-gui.exe",
+  "sha256": "DB29B6A8BD2C78FE1D9169F36B595752DEC40F411085AB8E6032384E740BBFBD",
+  "size_bytes": 7675423,
+  "freeze_pin_sha256": "B3019DEA16783C8AB859FA36D2B0FEF2FB70DB075633E54EB0F36587295374FD",
+  "freeze_pin_size_bytes": 7672106,
+  "freeze_pin_build_commit": "0eb4f0d5026f87ba1aaad0dc1ba301590d82ca7d",
+  "current_head": "bc2e61dcf86dadeda26141e5324088be8285243f",
+  "candidate_identity": "develop@bc2e61dcf86dadeda26141e5324088be8285243f; dirty working tree; status_sha256=87b2e67c4327e081afa75edf65593d29942dc25df54ff8c346abc61fd6f033b6",
+  "cross_check": "MISMATCH: current executable SHA-256 and size differ from W61.1 freeze pin",
+  "command": "Get-FileHash dist/hpc-client-gui/hpc-client-gui.exe -Algorithm SHA256; Get-Item ... Length",
+  "recomputed_at_utc": "2026-10-07T11:19:17Z",
+  "result": "MISMATCH"
+}

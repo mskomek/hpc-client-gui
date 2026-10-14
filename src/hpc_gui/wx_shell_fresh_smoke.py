@@ -5,7 +5,10 @@ from pathlib import Path
 import json
 import os
 from hpc_gui.core.i18n import current_language, load_saved_language, set_language, subscribe_language_change, system_default_language, t, unsubscribe_language_change
-from hpc_gui.wx_shell_smoke_session import _connect_packaged_smoke_session
+from hpc_gui.wx_shell_smoke_session import (
+    _attach_packaged_smoke_session,
+    _create_packaged_smoke_session,
+)
 
 
 _FRESH_USER_RUN1_CHECKS = (
@@ -279,15 +282,22 @@ def _fresh_run1_visible_flow(frame, session_state, lifecycle, checks, details):
         return
 
     def transient_connect(profile):
-        return _connect_packaged_smoke_session(
-            session_state, frame, lifecycle,
+        return _create_packaged_smoke_session(
             host=str(profile.get("host") or ""),
             port=profile.get("port"),
             username=str(profile.get("username") or ""),
             profile_name=str(profile.get("name") or "fresh-user"),
         )
 
-    panel_host = build_connection_panel(frame, profiles=[], connect=transient_connect)
+    panel_host = build_connection_panel(
+        frame,
+        profiles=[],
+        connect=transient_connect,
+        lifecycle=lifecycle,
+        on_connected=lambda session: _attach_packaged_smoke_session(
+            session_state, frame, lifecycle, session,
+        ),
+    )
 
     def listbox_strings():
         found = []

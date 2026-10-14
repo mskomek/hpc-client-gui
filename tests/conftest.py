@@ -12,10 +12,16 @@ from __future__ import annotations
 
 import os
 import sys
+import tempfile
 from pathlib import Path
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
+TEMP_ROOT = ROOT / ".tmp"
+TEMP_ROOT.mkdir(parents=True, exist_ok=True)
+for _temp_var in ("TMP", "TEMP", "TMPDIR"):
+    os.environ[_temp_var] = str(TEMP_ROOT)
+tempfile.tempdir = str(TEMP_ROOT)
 if str(ROOT / "src") not in sys.path:
     sys.path.insert(0, str(ROOT / "src"))
 

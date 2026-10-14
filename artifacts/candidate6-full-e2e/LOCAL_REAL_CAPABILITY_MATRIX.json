@@ -1,0 +1,17 @@
+{
+  "schema": "hpc-client-gui-local-real-capability-matrix/1",
+  "health_check": {"status":"PASS","time_utc":"2026-10-09T18:48:04Z","source":"lab/lab-status.ps1","notes":"login-control01 and both compute nodes reported healthy; cluster idle; Ubuntu 24.04.5; Slurm 23.11.4; MariaDB, MUNGE, NFS, and OpenSSH healthy."},
+  "capabilities_observed_in_inventory": ["SSH","SFTP","MUNGE","Slurm","NFS","database accounting","PTY","isolated LOCAL_PASSWORD_REAL fixture","ssh-loss fault","slurm-loss fault","node drain","node down","reconnect"],
+  "requested_extension_gaps": [
+    {"capability":"keyboard-interactive / MFA","status":"BLOCKED","reason":"No isolated lab endpoint or fixture is inventoried."},
+    {"capability":"host key mismatch and rotation","status":"BLOCKED","reason":"No dedicated host-key test endpoint is inventoried."},
+    {"capability":"jump host","status":"BLOCKED","reason":"No jump-host endpoint is inventoried."},
+    {"capability":"X11 integration","status":"BLOCKED","reason":"No X11-capable desktop endpoint is inventoried."},
+    {"capability":"quota","status":"BLOCKED","reason":"No quota fixture is inventoried."},
+    {"capability":"latency and packet loss","status":"BLOCKED","reason":"No controlled network impairment fixture is inventoried."},
+    {"capability":"large/resumable transfer","status":"BLOCKED","reason":"No isolated large-transfer fixture is inventoried."}
+  ],
+  "app_package_lab_acceptance": "BLOCKED",
+  "app_package_lab_acceptance_reason": "No Candidate6 or Candidate7 packaged GUI connection/session/transfer transaction was run against LOCAL_REAL during this acceptance pass. Lab health is infrastructure readiness only, not packaged UI acceptance.",
+  "safety": "No lab nodes or shared services were modified. Credentials and key material were not accessed or included."
+}

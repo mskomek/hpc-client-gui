@@ -1,0 +1,70 @@
+{
+  "candidate": "Candidate8 final post-refactor package",
+  "source_commit": "9ae04ff7a6c1265818522bc5c1fad43466b14378",
+  "exe_sha256": "2b3123260134ae68e9255560aa2cc3e17bd7cf4419e8badb41e47677756f2e05",
+  "runner": "runner-receipts/candidate8-final-output207-runner.json",
+  "runner_target": "PowerShell runner host; packaged Candidate EXE separately hash-verified as staged additional file",
+  "windows_vm": "Windows11 / test\\home / Explorer session 2",
+  "local_real": "login/controller 192.168.250.11; compute01 192.168.250.12; compute02 192.168.250.13",
+  "checks": {
+    "terminal_whoami": {
+      "status": "PASS",
+      "gui_output": [
+        "whoami",
+        "hpctest"
+      ],
+      "hostname_prompt": "hpctest@login-control01",
+      "screenshot": "screenshots/candidate8-final-output207-terminal_whoami.jpg"
+    },
+    "job_outputs": {
+      "status": "PASS",
+      "job_id": "207",
+      "job_name": "c8output207",
+      "gui_view": "Standard Output + Standard Error child tab",
+      "gui_content": [
+        "GUI_OUTPUT_MARKER_207",
+        "compute01"
+      ],
+      "remote_stdout_path": "/home/hpctest/gui_c7_ui_acceptance/output-207.out",
+      "independent_readback": [
+        "GUI_OUTPUT_MARKER_207",
+        "compute01"
+      ],
+      "stderr_bytes_before_cancel": 0,
+      "screenshots": [
+        "screenshots/candidate8-final-output207-outputs_refreshed.jpg",
+        "screenshots/candidate8-final-output207-stdout_stderr.jpg"
+      ]
+    },
+    "gui_cancel": {
+      "status": "PASS",
+      "job_id": "207",
+      "gui_confirmation": "Cancel accepted for 207",
+      "squeue": "no active row after action",
+      "sacct": "CANCELLED+, ExitCode 0:0",
+      "screenshot": "screenshots/candidate8-final-output207-cancelled.jpg"
+    },
+    "independent_final_package_gui_cancel": {
+      "status": "PASS",
+      "job_id": "205",
+      "job_name": "c8cancel205",
+      "gui_confirmation": "Cancel accepted for 205",
+      "sacct": "CANCELLED+, ExitCode 0:0",
+      "screenshot": "screenshots/candidate8-debug-cancel205-after_cancel.jpg"
+    }
+  },
+  "diagnostic_history": [
+    {
+      "observation": "Initial Outputs aggregate panel was blank before selecting the Standard Output + Standard Error child tab. On job 207, selecting the stream tab displayed the remote marker and hostname. This is a navigation/readback clarification, not a product failure."
+    },
+    {
+      "observation": "One early job 206 GUI run displayed stale SSH client errors; after a GUI terminal whoami and Jobs refresh in the same packaged session, GUI Cancel succeeded and sacct confirmed CANCELLED+. A separate later connection-only run did not confirm Connected within its 60-second wait when the Connection tab was selected through UIA. No Candidate product regression is assigned from these mixed runs; the canonical coordinate-based tab click plus UIA profile selection and terminal probe passed end-to-end."
+    },
+    {
+      "observation": "Two earlier runner timeouts were harness misuse: Candidate EXE was passed as runner executable with PowerShell switches, so the application launched instead of the automation script. Corrected invocations target staged PowerShell.exe and verify Candidate EXE hash as an additional file. Nine acceptance-owned Candidate GUI processes from mis-targeted launches were stopped; zero such processes remained at final inventory."
+    }
+  ],
+  "lab_health": "LOCAL_REAL lab-test.ps1 PASS, required_count=23, failed_count=0 at 2026-10-10T12:04:27Z",
+  "no_push": true,
+  "cancel205_runner": "runner-receipts/candidate8-final-cancel205-runner.json"
+}

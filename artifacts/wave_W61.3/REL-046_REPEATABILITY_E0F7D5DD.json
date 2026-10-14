@@ -1,0 +1,61 @@
+{
+ "artifact_sha256": "E0F7D5DDBF19D5ABAB403643CE4A5E763797D9E1A7C36E00C9BB4CDF784CFBFB",
+ "candidate_role": "REL-046 validation candidate (NOT final freeze; W56 acceptance + W57 revalidation pending)",
+ "cli": {
+  "doctor_environment": "exit 0 PASS frozen-true",
+  "version": "exit 0, 1.5.9, python 3.14.0"
+ },
+ "close_relaunch_cycle": "covered by 12 consecutive process launches with clean shutdown each (19-30); explicit back-to-back relaunch-state receipt pending fresh-user run2",
+ "cold_start_note": "chain runs 19-21 followed ~10 min idle (warm); true post-reboot cold-start not demonstrated -- recorded as gap, not claimed",
+ "consecutive_full_pass_chain": [
+  19,
+  20,
+  21,
+  22,
+  23,
+  24,
+  25,
+  26,
+  27,
+  28,
+  29,
+  30
+ ],
+ "each_pass": {
+  "clean_shutdown": "PASS",
+  "exit_code": 0,
+  "payload": "complete",
+  "unpassed_checks": "none"
+ },
+ "environment_windows": {
+  "foreground_lost_cluster": "runs 3-10,13,18 -- host desktop non-interactive window (SetForegroundWindow rejected); environmental, not product",
+  "no_evidence_hang_cluster": "runs 14,16 -- child hung pre-frame under degraded Edge state after 12 foreign msedgewebview2 processes killed mid-session; no receipt written",
+  "post_prune_recovery": "12-chain achieved after Edge prune + quiet desktop"
+ },
+ "fix_commits": {
+  "fixture": "c38aa761 mock SSH readiness probe + thread reap (no product bytes)",
+  "product": "04a3eba6 bounded WebView recreate max 3 (invalidated 7299BE21)"
+ },
+ "fresh_user": "pending (.tmp/rel046-E0F7D5DD/fresh-user-E0F7D5DD.json)",
+ "package_content": "PASS 8/8 (.tmp/rel046-E0F7D5DD/package-content-E0F7D5DD.json)",
+ "post_pass_hangs": 0,
+ "prior_candidate": "7299BE21... SUPERSEDED_BY_PRODUCT_CHANGE (WebView retry)",
+ "receipts_dir": ".tmp/rel046-E0F7D5DD/smoke-serial-1..30.json",
+ "requirement": "HPC-W11-REL-046",
+ "fresh_user_E0F7D5DD": {
+  "r1_60s": "FAIL timeout (short budget)",
+  "r2_240s": "FAIL timeout, host wedged",
+  "r3_240s": "FAIL child crash 0xC0000409 (ucrtbase fastfail, event 1000) -- first crash ever on packaged runs; profile-creation checks passed, loopback+later failed"
+ },
+ "crash_analysis": {
+  "code": "0xC0000409 STATUS_STACK_BUFFER_OVERRUN in ucrtbase.dll",
+  "correlation": "only crash across all packaged runs; introduced with E0F7D5DD retry Destroy path",
+  "root_cause": "Destroy() on async-aborted WebView controller races native teardown (extends known HPC-W05-TODO-LIFECYCLE-NATIVE-002)"
+ },
+ "retire_fix": {
+  "commit": "0ade1818",
+  "audit": "PASS delta-only",
+  "content": "retire+detach instead of Destroy; destroy retired only after replacement ready; close drops refs"
+ },
+ "candidate_status": "E0F7D5DD SUPERSEDED_BY_PRODUCT_CHANGE (retire fix); rebuild in progress from 0ade1818"
+}

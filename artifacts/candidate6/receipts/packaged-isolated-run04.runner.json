@@ -1,0 +1,33 @@
+{
+  "RunId": "0382c7a881ec4d9eb37724e90353eaaa",
+  "TaskName": "CodexGuestRun_0382c7a881ec4d9eb37724e90353eaaa",
+  "HostStartUtc": "2026-10-09T15:46:08.4922822Z",
+  "TaskStartUtc": "2026-10-09T15:46:29.5974208Z",
+  "PID": 12028,
+  "ProcessCreatedUtc": "2026-10-09T15:46:29.9055233Z",
+  "GuestStagePath": "C:\\Users\\home\\AppData\\Local\\CodexGuestRuns\\0382c7a881ec4d9eb37724e90353eaaa",
+  "GuestArtifactsPreserved": false,
+  "Username": "test\\home",
+  "ExplorerPid": 5116,
+  "ExplorerOwner": "test\\home",
+  "ExplorerSessionId": 2,
+  "ExitCode": 0,
+  "Timeout": false,
+  "CleanupStatus": "completed",
+  "TransferTimeoutSeconds": 300,
+  "StageBytes": 146830837,
+  "TransferArchiveBytes": 74896004,
+  "HostStdoutPath": "D:\\Projeler\\.tmp\\hpc-client-gui\\runner-smoke\\results\\0382c7a881ec4d9eb37724e90353eaaa.stdout.txt",
+  "HostStderrPath": "D:\\Projeler\\.tmp\\hpc-client-gui\\runner-smoke\\results\\0382c7a881ec4d9eb37724e90353eaaa.stderr.txt",
+  "TaskResultPath": "D:\\Projeler\\.tmp\\hpc-client-gui\\runner-smoke\\results\\0382c7a881ec4d9eb37724e90353eaaa.result.json",
+  "ResultPath": "D:\\Projeler\\.tmp\\hpc-client-gui\\runner-smoke\\results\\candidate6-d40-isolated-run04.json",
+  "HostExecutableSha256": "fd5c46d73d29ba21b04c844bbaf9096066136526911230645a2a040d23fb612b",
+  "GuestExecutableSha256": "fd5c46d73d29ba21b04c844bbaf9096066136526911230645a2a040d23fb612b",
+  "HostAdditionalFileHashes": {
+    "app\\hpc-client-gui.exe": "67f60b50f1ea0ff45347b1c9afa942eb12172b21523d67011ec2d28e9379aae6"
+  },
+  "GuestAdditionalFileHashes": {
+    "app\\hpc-client-gui.exe": "67f60b50f1ea0ff45347b1c9afa942eb12172b21523d67011ec2d28e9379aae6"
+  },
+  "Error": null
+}

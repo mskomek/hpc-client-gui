@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "wave_id": "W62",
+  "requirement_id": "HPC-W62-BASE-002",
+  "disposition": "MISMATCH",
+  "phase_instance_id": "20261013-135210-c8904e34:7:W62:repair",
+  "candidate_identity": null,
+  "repository_head": "4268668f4b1af6cac2affd8679e3ffc62fbb6f0d",
+  "reconciliation": {
+    "current_executable": {
+      "path": "dist/hpc-client-gui/hpc-client-gui.exe",
+      "sha256": "DB29B6A8BD2C78FE1D9169F36B595752DEC40F411085AB8E6032384E740BBFBD",
+      "size_bytes": 7675423,
+      "observed_command": "Get-FileHash -LiteralPath dist/hpc-client-gui/hpc-client-gui.exe -Algorithm SHA256 plus (Get-Item).Length",
+      "recomputed_in_this_dispatch": true
+    },
+    "candidate10_declared": {
+      "sha256": "8B51407C7040CC12EE5E161B6797F44C83069FC404F75EE974F5FDA03AA8BB20",
+      "source": "artifacts/refactored-v2/w62/CANDIDATE10_PROVENANCE.json",
+      "bytes_available": false,
+      "note": "Declared EXE bytes unavailable in retained scope; no byte comparison beyond declaration mismatch."
+    },
+    "w57_frozen_declared": {
+      "sha256": "B3019DEA16783C8AB859FA36D2B0FEF2FB70DB075633E54EB0F36587295374FD",
+      "declared_size_bytes": 7672106,
+      "source": "W57 freeze declaration via artifacts/refactored-v2/w62/W57_FROZEN_ARTIFACT_SHA256_RECONCILIATION.json",
+      "bytes_available": false,
+      "note": "Independent frozen bytes unavailable in bounded retained-artifact search per artifacts/wave_W57.4/W57.4_REPAIR_EXACT_ARTIFACT_RECOVERY.json; global absence not established."
+    },
+    "observation_note": "Both declarations resolve to the same artifact path dist/hpc-client-gui/hpc-client-gui.exe; the current DB29B6A8 value is a single shared-path observation. No independent frozen-byte observation exists.",
+    "historical_pass_transfer": false,
+    "freeze_declarations_modified": false
+  },
+  "commands": [
+    {
+      "command": "Get-FileHash -LiteralPath dist/hpc-client-gui/hpc-client-gui.exe -Algorithm SHA256",
+      "exit_code": 0,
+      "observed": "DB29B6A8BD2C78FE1D9169F36B595752DEC40F411085AB8E6032384E740BBFBD"
+    },
+    {
+      "command": "(Get-Item -LiteralPath dist/hpc-client-gui/hpc-client-gui.exe).Length",
+      "exit_code": 0,
+      "observed": 7675423
+    }
+  ],
+  "unblock_condition": "reconciliation record with both real SHA-256 values present; MISMATCH retained until an authorized successor supersedes the current bytes with no historical PASS transfer",
+  "evidence_sources": [
+    "artifacts/refactored-v2/w62/W57_FROZEN_ARTIFACT_SHA256_RECONCILIATION.json",
+    "artifacts/refactored-v2/w62/CANDIDATE10_PROVENANCE.json"
+  ],
+  "candidate_sha256": null,
+  "tests": [],
+  "readback": {
+    "observed_disposition": "MISMATCH",
+    "historical_pass_transfer": false
+  },
+  "requirement_status": "BLOCKED",
+  "evidence_references": [
+    {
+      "path": "artifacts/refactored-v2/w62/CANDIDATE10_PROVENANCE.json",
+      "sha256": "1a5778fb0c1e38eb0af635025c6f7ebf388a1a45c34845af43531e93f5b21d4a",
+      "size_bytes": 4184,
+      "phase_instance_id": null,
+      "candidate_bound": false
+    },
+    {
+      "path": "artifacts/refactored-v2/w62/W57_FROZEN_ARTIFACT_SHA256_RECONCILIATION.json",
+      "sha256": "267ca5a7f09ff5f36f1932c15987a58b1954a645a8dbbfcff36015732f3663d6",
+      "size_bytes": 3299,
+      "phase_instance_id": null,
+      "candidate_bound": false
+    }
+  ],
+  "candidate_bound": false,
+  "historical_pass_transfer": false
+}

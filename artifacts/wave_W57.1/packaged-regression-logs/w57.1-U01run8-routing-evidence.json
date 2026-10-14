@@ -1,0 +1,31 @@
+{
+ "artifact": "dist/hpc-client-gui/hpc-client-gui.exe",
+ "artifact_sha256": "740FE48EA3E52BFDF7B5DC781B50B021C3D4A4649AC6908DBC162B5C854175AB",
+ "byte_identity": "HEAD ad02258620ef34c0d778037bb16b0f4421e950b5, SHA 740FE48EA3E52BFDF7B5DC781B50B021C3D4A4649AC6908DBC162B5C854175AB, 7672468 bytes, unchanged",
+ "commit": "ad02258620ef34c0d778037bb16b0f4421e950b5",
+ "environment_blocker": {
+  "detail": "Two identical normal-smoke runs on unchanged bytes (run6 --timeout 60, run7 --timeout 120) fail 14/20 with runtime=keyboard_input:foreground_lost_after_terminal_click, bridge_input_chars 0; zombie PID 40264 (72K WorkingSet, relic of killed 25s fresh-user child) survives Stop-Process -Force; exclusive foreground is unavailable in this session",
+  "required_prerequisite": "GUI session free of zombie PID 40264 with exclusive foreground for one normal smoke re-dispatch on SHA 740fe48e"
+ },
+ "finding": "HPC-W10-PKGREG-001 normal smoke 14/20 FAIL is an unavailable environment prerequisite, not a product regression",
+ "frozen_sha_replay": "UNVERIFIED: W56 SHA 6cca43a5a98a2c7049aae182b58473db4c491dabc06b13cf599bd429e45e530e bytes absent and unrecoverable; no PASS claimed",
+ "hypothesis": "W57.1-U01-SMOKE-FOCUS-01 changed: stop re-dispatching in this contended session; route the environment plus harness correction to owners",
+ "manifest": "WAVE_W57_EVIDENCE_MANIFEST.json absent; aggregate manifest is controller/integration reconciliation, not fabricated here",
+ "phase": "repair",
+ "repair_action": "routing",
+ "retained_proof_set": [
+  "run5 normal smoke 20/20 PASS on identical SHA 740fe48e (w57.1-U01run5-packaged-smoke.json)",
+  "run6 package content 8/8 PASS on identical SHA (w57.1-U01run6-package-content.json)",
+  "pytest tests/test_wx_package_content.py tests/test_wx_packaged_smoke.py -> 31 passed in 60.28s on identical bytes (run6)",
+  "wx-only entrypoint: DEFAULT_GUI_RUNTIME=wx, wx_shell zero Qt imports, 0 Qt-named bundle files"
+ ],
+ "routes": [
+  "Controller: re-dispatch one normal smoke on SHA 740fe48e in a session free of zombie PID 40264 with exclusive foreground, or coordinator-cleared session",
+  "Harness owner via controller closed-owner repair: dirty-tree wx-only correction in scripts/wx_package_content.py plus fixture update, with focus-loss diagnostics plus output_tail on the normal smoke path"
+ ],
+ "run": "U01run8",
+ "size": 7672468,
+ "unit": "U01",
+ "wave": "W57.1",
+ "zombie_probe": "Stop-Process -Force PID 40264 ineffective on 2026-09-30; ZOMBIE_SURVIVES; no further GUI re-dispatch attempted in this session"
+}

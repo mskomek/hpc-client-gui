@@ -1,0 +1,99 @@
+{
+ "acceptance": {
+  "all_pass_terminated_cleanly": true,
+  "bounded_fallback": "CallLater(2000, ExitMainLoop) via normal path; no force-kill; 12s probe deadline unchanged",
+  "cleanup_completed": true,
+  "force_kill_used": false,
+  "payload_written_before_close": true,
+  "post_pass_hang_observed": false,
+  "return_code_zero_on_pass": true,
+  "serial_repeat": "7/10 full PASS with clean_shutdown PASS; 3 early-phase FAILs (2x WebView2 init race, 1x mock SSH) unrelated to post-PASS termination"
+ },
+ "artifact": {
+  "bundle_files": 172,
+  "path": "dist/hpc-client-gui/hpc-client-gui.exe",
+  "pyinstaller": "6.22.2",
+  "python": "3.14.0",
+  "qt_filename_tokens": 0,
+  "sha256": "7299BE216918B7C0445443C3BF27515BB570C6ED441B7CE21157871CAC1D30DC",
+  "size_bytes": 7673112,
+  "version": "1.5.9",
+  "wxpython": "4.3.1"
+ },
+ "audit": "independent read-only subagent audit 2026-10-06: PASS, safe closed-owner repair, rebuild authorized; no weakened assertions or scope creep",
+ "candidate_role": "REPAIR CANDIDATE ONLY -- does not supersede W57 frozen candidate B3019DEA16783C8AB859FA36D2B0FEF2FB70DB075633E54EB0F36587295374FD pending W56 rebuild acceptance + W57 full revalidation + new freeze",
+ "cli": {
+  "doctor_environment": "exit 0, status PASS, frozen true",
+  "note": "dash form --version is not a CLI command (absent from _CLI_COMMANDS) and falls through to GUI launch; dashless version is the documented command",
+  "version": "exit 0, 1.5.9, python 3.14.0"
+ },
+ "evidence": {
+  "package_content_receipt": ".tmp/w55-repair-7299BE21/package-content-7299BE21.json (result PASS)",
+  "smoke_receipts": [
+   ".tmp/w55-repair-7299BE21/smoke-serial-1..10.json"
+  ]
+ },
+ "finding_id": "PKGREG-SHUTDOWN-BISTABLE-NON-TERMINATION",
+ "focused_tests": {
+  "test_cli_entrypoint_w21_lifecycle": "18 passed",
+  "test_release_gate_w19_w20": "48 passed",
+  "test_wx_packaged_smoke_harness": "12 passed (basetemp .tmp workaround for WinError5)"
+ },
+ "owner": "HPC-W10-GJ2-051 -> W55 (done; closed-owner repair transaction)",
+ "prior_hypothesis_superseded": "single deterministic frame.Hide() root cause (W57_REPAIR162) remains superseded; bistable race addressed by removing Hide gate + bounded teardown",
+ "repair_commit": "3904432eb614686275bf612a8ae71b78d1923301",
+ "repair_files": [
+  "src/hpc_gui/wx_lifecycle.py",
+  "src/hpc_gui/wx_shell.py"
+ ],
+ "repair_summary": "WxLifecycleController.shutdown time-boxed per cleanup (daemon thread + 2s join, idempotent, reversed, swallowing); create_shell_frame close drops frame.Hide() gate, shutdown before child Close/Destroy, reentrancy guard; packaged smoke finish adds bounded ExitMainLoop fallback via normal path",
+ "source": {
+  "build_source_commit": "0eb4f0d5026f87ba1aaad0dc1ba301590d82ca7d",
+  "cli_fix_committed": "33954d71602e7949b5860c192ec7af7946f1d020 (src/hpc_gui/cli/gui.py, main.py)",
+  "plugin_commit": "f0abb7e7037e66ab451d463c699fecf4e00c89eb (in-tree, no submodule)",
+  "w55_repair_commit": "3904432eb614686275bf612a8ae71b78d1923301"
+ },
+ "serial_smoke_7299BE21": {
+  "runs": 10,
+  "pass": 7,
+  "fail": 3,
+  "pass_runs": [
+   2,
+   3,
+   4,
+   5,
+   8,
+   9,
+   10
+  ],
+  "fail_runs": {
+   "1": "phase0 WebView2::WebViewCreated 0x80004004 cold-start init race",
+   "6": "phase0 WebView2::WebViewCreated 0x80004004 init race",
+   "7": "phase0 loopback_ssh SSHException mock-SSH setup flake"
+  },
+  "post_pass_hang": 0,
+  "all_pass_exit_zero_with_payload": true
+ },
+ "fresh_user_pkg_gj01": {
+  "run1_60s": "FAIL timeout (budget too short for full first-run flow)",
+  "run2_240s": "PASS, all checks, sha 7299BE21"
+ },
+ "cli_7299BE21": {
+  "version": "exit 0, 1.5.9, python 3.14.0",
+  "doctor_environment": "exit 0 PASS frozen-true",
+  "dash_version_note": "--version not a CLI command (absent from _CLI_COMMANDS in __main__.py:43); falls through to GUI launch and hangs headless -- undocumented flag, observation only, not a release blocker"
+ },
+ "rollback_target": {
+  "path": "dist/releases/w16-candidate/hpc-client-gui-windows-onedir.exe",
+  "sha256": "544E186F81AA685EE80A3C07185EE0EB03AB1BC73A81151B1323253503C0A1DA",
+  "size_bytes": 7425277,
+  "integrity": "verified on disk; live rollback NOT exercised -> NOT_READY stands"
+ },
+ "agent_core_snapshot": {
+  "consumer_materialization": "db3d985a7ef74d86 (2026-10-05)",
+  "consumer_direct_support": false,
+  "core_head": "fedd72ce87290054b74ffc323238d21f010f32d5",
+  "core_dirty_entries": 208,
+  "disposition": "update deferred: materializing from dirty core unsafe; W61.4 remains blocked with resume point"
+ }
+}

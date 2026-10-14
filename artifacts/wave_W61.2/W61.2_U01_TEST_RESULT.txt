@@ -1,0 +1,12 @@
+Command: .venv/Scripts/python.exe -m pytest tests/test_w14_provenance_manifest.py tests/test_wx_package_content.py tests/test_plugin_integrity.py -n auto --durations=25 --basetemp .tmp/w61.2-u01-pytest-20261007-134743
+Environment: Windows; CPython 3.14.0; pytest 9.1.1; pytest-xdist 3.8.0; 12 workers
+Result: 46 passed; 0 failed; 0 skipped; 0 xfailed; 0 xpassed; exit code 0
+Elapsed: 31.46s
+Slowest: test_stale_guard_cli_known_fresh_exempts_declared_artifact 8.78s; test_manifest_identity_headers_bind_exact_hashes 6.52s; test_provenance_captures_git_identity_and_toolchain 5.13s
+Candidate branch: develop
+Candidate HEAD: bc2e61dcf86dadeda26141e5324088be8285243f
+Working tree: dirty; status SHA-256 87b2e67c4327e081afa75edf65593d29942dc25df54ff8c346abc61fd6f033b6
+Package SHA-256: DB29B6A8BD2C78FE1D9169F36B595752DEC40F411085AB8E6032384E740BBFBD; size 7675423 bytes
+Freeze pin SHA-256: B3019DEA16783C8AB859FA36D2B0FEF2FB70DB075633E54EB0F36587295374FD; size 7672106 bytes
+Identity result: MISMATCH
+Note: initial default-temp invocation stopped before collection because pytest could not create its configured temp directory; this accepted-basetemp rerun completed all tests.

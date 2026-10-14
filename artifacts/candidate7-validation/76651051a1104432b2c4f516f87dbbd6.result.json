@@ -1,0 +1,34 @@
+{
+  "Phase": "error",
+  "TaskStartUtc": "2026-10-10T06:59:11.7180838Z",
+  "TaskWorkerPid": 5996,
+  "TaskWorkerProcessCreatedUtc": "2026-10-10T06:59:10.9748044Z",
+  "PID": 11140,
+  "ProcessCreatedUtc": "2026-10-10T06:59:12.3574738Z",
+  "SessionId": 2,
+  "Username": "test\\home",
+  "ExplorerSessionId": 2,
+  "ExitCode": 1,
+  "StdoutPath": "C:\\Users\\home\\AppData\\Local\\CodexGuestRuns\\76651051a1104432b2c4f516f87dbbd6\\stdout.txt",
+  "StderrPath": "C:\\Users\\home\\AppData\\Local\\CodexGuestRuns\\76651051a1104432b2c4f516f87dbbd6\\stderr.txt",
+  "ResultPath": "C:\\Users\\home\\AppData\\Local\\CodexGuestRuns\\76651051a1104432b2c4f516f87dbbd6\\result.json",
+  "Executable": "C:\\Users\\home\\AppData\\Local\\CodexGuestRuns\\76651051a1104432b2c4f516f87dbbd6\\powershell.exe",
+  "ExecutableSha256": "8bb6fa8c283b4d92120b1ef249a9b311b0f804d4cabbe9981159976c8be76a5e",
+  "Error": "The process cannot access the file 'C:\\Users\\home\\AppData\\Local\\CodexGuestRuns\\76651051a1104432b2c4f516f87dbbd6\\state.json' because it is being used by another process.",
+  "ResultCompletedUtc": "2026-10-10T06:59:12.4683267Z",
+  "RunId": "76651051a1104432b2c4f516f87dbbd6",
+  "Timeout": false,
+  "HostStartUtc": "2026-10-10T06:58:54.3174536Z",
+  "GuestStagePath": "C:\\Users\\home\\AppData\\Local\\CodexGuestRuns\\76651051a1104432b2c4f516f87dbbd6",
+  "HostExecutableSha256": "8bb6fa8c283b4d92120b1ef249a9b311b0f804d4cabbe9981159976c8be76a5e",
+  "GuestExecutableSha256": "8bb6fa8c283b4d92120b1ef249a9b311b0f804d4cabbe9981159976c8be76a5e",
+  "HostAdditionalFileHashes": {
+    "candidate7\\hpc-client-gui.exe": "a95a71c3b296d279f548330598e9e1e44f468b32bc0514f056b376deae600266"
+  },
+  "GuestAdditionalFileHashes": {
+    "candidate7\\hpc-client-gui.exe": "a95a71c3b296d279f548330598e9e1e44f468b32bc0514f056b376deae600266"
+  },
+  "CleanupStatus": "completed",
+  "HostStdoutPath": "D:\\Projeler\\hpc-client-gui\\artifacts\\candidate7-validation\\76651051a1104432b2c4f516f87dbbd6.stdout.txt",
+  "HostStderrPath": "D:\\Projeler\\hpc-client-gui\\artifacts\\candidate7-validation\\76651051a1104432b2c4f516f87dbbd6.stderr.txt"
+}

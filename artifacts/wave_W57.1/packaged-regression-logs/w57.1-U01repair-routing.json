@@ -1,0 +1,36 @@
+{
+  "schema": "w57.1-u01-repair-routing/1",
+  "semantic_problem_id": "W57-1-U01-FROZEN-BYTES-001",
+  "repair_action": "routing",
+  "checked_utc": "2026-09-29T23:30:38.6274356Z",
+  "baseline_head": "ad02258620ef34c0d778037bb16b0f4421e950b5",
+  "frozen": {
+    "sha256": "6cca43a5a98a2c7049aae182b58473db4c491dabc06b13cf599bd429e45e530e",
+    "size": 7672473
+  },
+  "live": {
+    "sha256": "8ba80453a76a664959baedf7716c476a5334b6aff860a4bc79b9e220d48b4c57",
+    "size": 7672468
+  },
+  "retention_search": {
+    "roots": [
+      ".tmp",
+      "artifacts",
+      "dist"
+    ],
+    "size_match_files": [],
+    "result": "no 7672473-byte file in retention trees"
+  },
+  "routed_to": [
+    "W56 retention authority: supply exact frozen executable+bundle+provenance",
+    "harness owner: wx_package_content.py wx_runtime shiboken6 contract vs wx-only shipment"
+  ],
+  "protected_untouched": [
+    "dist/hpc-client-gui/hpc-client-gui.exe",
+    "src/",
+    "scripts/wx_packaged_smoke.py",
+    "scripts/wx_package_content.py",
+    "tests/",
+    "artifacts/wave_W56"
+  ]
+}

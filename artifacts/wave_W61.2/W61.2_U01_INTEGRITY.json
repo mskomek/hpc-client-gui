@@ -1,0 +1,16 @@
+{
+  "wave_id": "W61.2",
+  "unit": "U01",
+  "requirement_ids": [
+    "HPC-W11-REL-037"
+  ],
+  "artifact": "dist/hpc-client-gui/hpc-client-gui.exe",
+  "authenticode_status": "NotSigned",
+  "authenticode_status_message": "The executable is not digitally signed.",
+  "signature_applicability": "N/A-with-reason for unsigned onedir candidate; SHA-256 is the integrity binding, but the executable does not match the W61.1 freeze pin.",
+  "sha256_binding": "DB29B6A8BD2C78FE1D9169F36B595752DEC40F411085AB8E6032384E740BBFBD",
+  "candidate_identity": "develop@bc2e61dcf86dadeda26141e5324088be8285243f; dirty working tree; status_sha256=87b2e67c4327e081afa75edf65593d29942dc25df54ff8c346abc61fd6f033b6",
+  "command": "Get-AuthenticodeSignature dist/hpc-client-gui/hpc-client-gui.exe",
+  "captured_utc": "2026-10-07T11:19:17Z",
+  "result": "VERIFIED-N/A; FREEZE-PIN-MISMATCH"
+}

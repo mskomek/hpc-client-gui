@@ -58,8 +58,6 @@ def make_bundle(root: Path, *, exe_bytes: bytes = b"fake-exe") -> Path:
     (internal / "wx").mkdir(parents=True)
     (internal / "python312.dll").write_bytes(b"py")
     (internal / "WebView2Loader.dll").write_bytes(b"wv")
-    (internal / "shiboken6").mkdir(exist_ok=True)
-    (internal / "shiboken6" / "Shiboken.pyd").write_bytes(b"sh")
     (bundle / EXE).write_bytes(exe_bytes)
     _asset_tree(root)
     i18n = internal / "hpc_gui" / "i18n"
@@ -86,7 +84,7 @@ def test_happy_bundle_passes_with_sha_binding(tmp_path):  # PKG-W16-CONTENT-HAPP
 
 
 @pytest.mark.parametrize("remove", [
-    "exe", "internal", "webview", "wxdir", "shiboken", "ico", "terminal",
+    "exe", "internal", "webview", "wxdir", "ico", "terminal",
     "en", "tr", "helpdoc", "plugindoc", "license",
 ])
 def test_missing_resource_fails_named_check(tmp_path, remove):  # NEG-W16-CONTENT-*
@@ -97,7 +95,6 @@ def test_missing_resource_fails_named_check(tmp_path, remove):  # NEG-W16-CONTEN
         "internal": internal,
         "webview": internal / "WebView2Loader.dll",
         "wxdir": internal / "wx",
-        "shiboken": internal / "shiboken6" / "Shiboken.pyd",
         "ico": internal / "hpc_gui" / "assets" / "hpc-client-gui.ico",
         "terminal": internal / "hpc_gui" / "assets" / "terminal" / "wx_index.html",
         "en": internal / "hpc_gui" / "i18n" / "en.json",
@@ -115,6 +112,17 @@ def test_missing_resource_fails_named_check(tmp_path, remove):  # NEG-W16-CONTEN
     evidence = content.check_bundle(bundle, source_root=tmp_path)
     assert evidence["result"] == "FAIL"
     assert "FAIL" in evidence["checks"].values()
+
+
+def test_qt_tokens_fail_wx_runtime(tmp_path):  # REQ-W56-SHIPS-NO-QT
+    bundle = make_bundle(tmp_path)
+    internal = bundle / "_internal"
+    (internal / "shiboken6").mkdir(exist_ok=True)
+    (internal / "shiboken6" / "Shiboken.pyd").write_bytes(b"qt")
+    evidence = content.check_bundle(bundle, source_root=tmp_path)
+    assert evidence["result"] == "FAIL"
+    assert evidence["checks"]["wx_runtime"] == "FAIL"
+    assert "Qt" in evidence["details"]["wx_runtime"]
 
 
 def test_corrupt_i18n_fails_localization(tmp_path):  # NEG-W16-CONTENT-I18N

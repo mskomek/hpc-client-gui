@@ -59,6 +59,7 @@ def test_agent_guidance_points_at_single_authority() -> None:
     if agents.exists():
         text = agents.read_text(encoding="utf-8")
         assert "rules.md" in text
-        assert "pull request" in text.lower()
+    rules = (ROOT / "rules.md").read_text(encoding="utf-8")
+    assert "pull request" in rules.lower()
     contributing = (ROOT / "CONTRIBUTING.md").read_text(encoding="utf-8")
     assert "pull request" in contributing.lower()

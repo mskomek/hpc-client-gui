@@ -1,0 +1,48 @@
+{
+  "candidate": "Candidate7",
+  "exe_sha256": "a95a71c3b296d279f548330598e9e1e44f468b32bc0514f056b376deae600266",
+  "branch": "codex/c6-full-e2e-fix",
+  "journey": "GUI profile save, restart, connect, PTY command",
+  "status": "PARTIAL_PASS",
+  "steps": [
+    {
+      "evidence": "screenshots/nav-run02-dialog.jpg",
+      "status": "PASS",
+      "step": "Add Connection"
+    },
+    {
+      "evidence": "screenshots/gui-testcluster-run02-test_result.jpg",
+      "status": "PASS",
+      "step": "Test Cluster"
+    },
+    {
+      "evidence": "screenshots/gui-golden-save-run01-after_save.jpg; independent config readback (profile/host/user only)",
+      "status": "PASS",
+      "step": "Save profile"
+    },
+    {
+      "evidence": "screenshots/gui-connect-run04-profile_selected.jpg",
+      "status": "PASS",
+      "step": "Restart and profile selection"
+    },
+    {
+      "evidence": "screenshots/gui-connect-run04-after_connect.jpg",
+      "status": "PASS",
+      "step": "Connect SSH"
+    },
+    {
+      "evidence": "screenshots/gui-terminal-run02-terminal.jpg; independent SSH marker readback GUI_C7_PTY_OK",
+      "status": "PASS",
+      "step": "Terminal PTY whoami/hostname/pwd/marker"
+    },
+    {
+      "evidence": "",
+      "status": "NOT_RUN",
+      "step": "Disconnect and 3 consecutive repetitions"
+    }
+  ],
+  "limitations": [
+    "Home/Scratch defaults displayed; no provider storage configured; Test Cluster reported storage NOT_CONFIGURED.",
+    "Only one end-to-end connect/PTY path completed; required 3/3 and Save & Connect journey not run."
+  ]
+}

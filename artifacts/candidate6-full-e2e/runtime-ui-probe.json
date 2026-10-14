@@ -1,0 +1,48 @@
+{
+  "probe_id": "0463bbfc0d924dc3b6b84c51efb2c617",
+  "app_pid": 10084,
+  "app_start_utc": "2026-10-09T19:03:37.0312908Z",
+  "app_window_found": true,
+  "initial_tree": [
+    {
+      "name": "HPC Client",
+      "type": "ControlType.Window",
+      "automation_id": "",
+      "class": "#32770",
+      "enabled": true,
+      "offscreen": false,
+      "depth": 0,
+      "rect": [
+        303,
+        80,
+        760,
+        560
+      ]
+    },
+    {
+      "name": null,
+      "type": null,
+      "automation_id": null,
+      "class": null,
+      "enabled": false,
+      "offscreen": false,
+      "depth": 0,
+      "rect": [
+        0,
+        0,
+        0,
+        0
+      ]
+    }
+  ],
+  "initial_screenshot_jpeg_base64": null,
+  "add_button_found": false,
+  "dialog_opened": false,
+  "dialog_tree": [],
+  "dialog_screenshot_jpeg_base64": null,
+  "cancel_clicked": false,
+  "dialog_closed": false,
+  "errors": [],
+  "app_exit_code": 0,
+  "ended_utc": "2026-10-09T19:03:42.9003442Z"
+}

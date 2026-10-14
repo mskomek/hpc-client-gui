@@ -1,0 +1,5 @@
+C:\Users\home\AppData\Local\CodexGuestRuns\71142da3b67f4b9fb1bff9591773e866\ui-catalog-discovery.ps1 : Cannot bind 
+argument to parameter 'Path' because it is null.
+    + CategoryInfo          : InvalidData: (:) [ui-catalog-discovery.ps1], ParameterBindingValidationException
+    + FullyQualifiedErrorId : ParameterArgumentValidationErrorNullNotAllowed,ui-catalog-discovery.ps1
+ 

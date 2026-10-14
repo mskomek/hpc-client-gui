@@ -1,0 +1,94 @@
+{
+  "schema": "w61.2-u05-rollback-readiness/1",
+  "evidence_id": "EV-W61.2-U05-ROLLBACK-READINESS-bc2e61dc",
+  "wave_id": "W61.2",
+  "unit_id": "U05",
+  "requirement_ids": [
+    "HPC-W11-REL-034",
+    "HPC-W11-REL-042"
+  ],
+  "candidate_identity": {
+    "branch": "develop",
+    "head": "bc2e61dcf86dadeda26141e5324088be8285243f",
+    "working_tree": "dirty",
+    "artifact_path": "dist/hpc-client-gui/hpc-client-gui.exe",
+    "artifact_sha256": "DB29B6A8BD2C78FE1D9169F36B595752DEC40F411085AB8E6032384E740BBFBD",
+    "artifact_size_bytes": 7675423,
+    "w61_1_freeze_pin_sha256": "B3019DEA16783C8AB859FA36D2B0FEF2FB70DB075633E54EB0F36587295374FD",
+    "matches_freeze_pin": false
+  },
+  "rollback_target": {
+    "artifact_path": "dist/releases/w16-candidate/hpc-client-gui-windows-onedir.exe",
+    "artifact_sha256": "544E186F81AA685EE80A3C07185EE0EB03AB1BC73A81151B1323253503C0A1DA",
+    "artifact_size_bytes": 7425277,
+    "manifest_path": "dist/releases/w16-candidate/MANIFEST.json",
+    "manifest_sha256": "3A19872C002A2CA75D37814FBDCE28B0173AD43983047DA07F262D27DE919D3A",
+    "manifest_candidate_sha_matches_disk": true,
+    "app_version": "1.5.9",
+    "main_commit": "63b696b3b8c64296d9d17f94c8d0d903f9bab7eb",
+    "plugin_commit": "f0abb7e7037e66ab451d463c699fecf4e00c89eb",
+    "release_channel_role": "NOT_DEMONSTRATED; local w16-candidate artifact is not established as a published known-good release",
+    "identity_evidence": "artifacts/wave_W61.1/U04-handoff-census/W61.1_U04_LOCAL_ROLLBACK_CANDIDATE_REVIEW_20261006.json"
+  },
+  "migration": {
+    "documented_narrow_behavior": "src/hpc_gui/config/storage.py copies config.json to a unique config.json.bak* before the legacy profile/id/parallelism migration; save_config writes atomically.",
+    "documented_scope": "docs/v2/USER_DATA_KEYMAP_MIGRATION.md requires disposable user data and a backup before writes.",
+    "full_rollback_matrix": "NOT_DEMONSTRATED; docs/v2/WX_MIGRATION_WAVE_STATUS.md row 64 is PARTIAL for settings/history/favorites/keymap/plugins/connection/updater and visible restore.",
+    "rollback_execution": {
+      "status": "NOT_DEMONSTRATED",
+      "performed": false,
+      "reason": "The local older candidate is not a verified compatible release, the exact frozen current candidate is unavailable, and no authorized disposable migration/restore execution evidence was available. No user data or release artifact was modified."
+    }
+  },
+  "updater_stop_withdraw": {
+    "documented_procedure": "docs/VERIFYING_RELEASES.md section 6 and docs/wiki/Release-Process.md describe stopping the release workflow and withdrawing the affected download/updater channel through release-owner controls.",
+    "live_capability": "NOT_DEMONSTRATED",
+    "action": "NOT_RUN",
+    "readback": "NOT_AVAILABLE",
+    "reason": "This dispatch contains no authorized release-owner channel-control evidence. No live workflow or channel action was attempted.",
+    "release_metadata_safety": "NOT_DEMONSTRATED for a published compatible rollback release; the local manifest identifies immutable local bytes but not a live channel state."
+  },
+  "evidence": [
+    {
+      "path": "artifacts/wave_W61.1/U04-handoff-census/W61.1_U04_LOCAL_ROLLBACK_CANDIDATE_REVIEW_20261006.json",
+      "sha256": "283F4A57E40B360CF191B4A64424F034AF74A4739FC7B42BA0C1A28289FA7BC1",
+      "result": "Historical identity review; states NOT_READY and does not establish migration rollback, published release role, or authorized withdrawal."
+    },
+    {
+      "path": "artifacts/wave_W61.3/W61.3_U03_ROLLBACK.json",
+      "sha256": "5BBE3E3CECAB6AAC59EFC0E634D86BE83DD71E000D362F311C4A6BBD35F51C57",
+      "result": "Historical corroboration bound to candidate SHA B3019DEA and HEAD 92128c8726435aa0087f090c4a080720f148781f; not current-candidate proof."
+    },
+    {
+      "path": "artifacts/wave_W61.2/W61.2_U02_FROZEN_PACKAGE_GATE.json",
+      "sha256": "4AC713A360E7DB5FA84B8DA2C0CE95F88D23D05A5AC414963F7AB818EA31C8EC",
+      "result": "Current candidate differs from W61.1 freeze pin; exact pinned bytes unavailable."
+    }
+  ],
+  "requirements": [
+    {
+      "requirement_id": "HPC-W11-REL-034",
+      "disposition": "NOT_DEMONSTRATED",
+      "decision": "NO-GO-held-open",
+      "reason": "Rollback target and local manifest identities are verified, but compatibility, full migration restore, and a published known-good release role are not demonstrated."
+    },
+    {
+      "requirement_id": "HPC-W11-REL-042",
+      "disposition": "NOT_DEMONSTRATED",
+      "decision": "NO-GO-held-open",
+      "reason": "Stop/withdraw procedures are documented, but no authorized live channel action/readback or safe metadata behavior evidence exists for this candidate."
+    }
+  ],
+  "overall_rollback_readiness": "NOT_READY",
+  "wave_decision_impact": "NO-GO; this unit does not issue a Wave-level decision or self-certify.",
+  "resume_conditions": [
+    "Establish a published previous release with verified provenance, integrity, supported workflow compatibility, and migration compatibility for the current candidate.",
+    "Execute rollback and restore against disposable user data and record before/after state and cleanup.",
+    "Use authorized release-owner controls to execute updater stop/withdraw and record exact action, readback, release metadata identity, and cleanup."
+  ],
+  "audit_focus": [
+    "Recompute branch, HEAD, current executable SHA/size, rollback executable SHA/size, and manifest SHA; confirm the current executable does not match the W61.1 freeze pin.",
+    "Confirm the old local artifact and manifest match each other while preserving NOT_READY because release-channel role and migration compatibility are unproven.",
+    "Confirm no rollback/restore or live updater stop/withdraw action is represented as executed and both REL-034/042 remain NOT_DEMONSTRATED / NO-GO-held-open."
+  ]
+}

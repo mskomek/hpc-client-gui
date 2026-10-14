@@ -1,0 +1,133 @@
+{
+  "schema": "candidate5-guest-fresh-user-attempt/1",
+  "evidence_id": "CANDIDATE5-GUEST-FRESH-USER-RUN01-20261008",
+  "status": "CANDIDATE5_FRESH_USER_RUN01_FAIL",
+  "candidate": {
+    "branch": "codex/v2-candidate-20261008-r5",
+    "head": "1292e89b0d383d2cd08cdae759ee57d336dfb070",
+    "archive_sha256": "7ae23f2d6cea49d4c4b422dacdf88cbac8eba7f43aff58a44e0c92a041d7e953",
+    "archive_bytes": 35966717,
+    "executable_sha256": "2966a977edc0fe5525c8591df6108e731cd944e2b9d396ee72847792afca654c",
+    "executable_bytes": 7625511,
+    "build_input_manifest_sha256": "3665561879eb91f32a8316f2e7186919a0f943700bd41587e7e1f3246280959a",
+    "plugin_subtree_sha256": "0cbf3eec2c143e9e3822b3985a38c445cc65d41e6863c5c2d92ccf58d0d0e9b4"
+  },
+  "guest": {
+    "vm": "Windows11",
+    "identity": "test\\home",
+    "interactive_session_id": 2,
+    "session_state": "Active",
+    "explorer_same_session": true,
+    "windows": "Windows 11 Pro",
+    "build": "26200",
+    "webview2_runtime": "154.0.4258.62",
+    "webview_process_count_after_run": 7,
+    "hpc_process_count_after_run": 0
+  },
+  "transfer": {
+    "canonical_runner": "C:\\Users\\mskomek\\.hyperv-tools\\Invoke-Windows11.ps1",
+    "guest_archive_sha256": "7ae23f2d6cea49d4c4b422dacdf88cbac8eba7f43aff58a44e0c92a041d7e953",
+    "guest_executable_sha256": "2966a977edc0fe5525c8591df6108e731cd944e2b9d396ee72847792afca654c",
+    "identity": "MATCH",
+    "harness_runtime_bundle_sha256": "1d84952da88820599a4e6cac5a3ea7cd3cbe83a27575982c270568e79339b4ff",
+    "guest_harness_runtime_bundle_sha256": "1d84952da88820599a4e6cac5a3ea7cd3cbe83a27575982c270568e79339b4ff"
+  },
+  "harness": {
+    "procedure": "scripts/wx_packaged_smoke.py --fresh-user",
+    "source_commit": "1292e89b0d383d2cd08cdae759ee57d336dfb070",
+    "tracked_harness_sources_match_candidate_head": true,
+    "python": "3.14.0",
+    "paramiko": "5.0.0",
+    "cryptography": "50.0.0",
+    "plugin_digest_guest_verified": "0cbf3eec2c143e9e3822b3985a38c445cc65d41e6863c5c2d92ccf58d0d0e9b4",
+    "interactive_task": "HpcCandidate5FreshRun01-direct-20261008",
+    "task_logon_type": "Interactive",
+    "timeout_seconds": 240,
+    "source_commit_in_harness_output": "unknown",
+    "identity_binding_note": "Transferred maintained harness source files were individually matched to Candidate 5 HEAD Git blobs; the staged guest harness had no .git metadata, so its native commit field remained unknown."
+  },
+  "run01": {
+    "harness_result": "FAIL",
+    "checks": {
+      "fresh_config_root": "PASS",
+      "first_run_empty_state": "PASS",
+      "profile_via_visible_controls": "PASS",
+      "loopback_success_via_controls": "FAIL",
+      "safe_visible_failure": "FAIL",
+      "persisted_nonsecret_state": "FAIL",
+      "no_src_leakage": "PASS",
+      "clean_shutdown": "FAIL",
+      "relaunch_state_present": "FAIL",
+      "relaunch_no_src_leakage": "FAIL"
+    },
+    "first_launch": {
+      "exit_code": 3221225477,
+      "exit_hex": "0xC0000005",
+      "timed_out": false,
+      "forced_kill": false,
+      "last_successful_check": "profile_via_visible_controls",
+      "first_failed_check": "loopback_success_via_controls",
+      "webview_created_callback": "No PASS/event recorded in sidecar",
+      "hresult": "No HRESULT recorded",
+      "wx_recursion_guard_assertions": true,
+      "summary_output_tail": "See raw evidence.json"
+    },
+    "internal_relaunch": {
+      "exit_code": 1,
+      "timed_out": false,
+      "forced_kill": false,
+      "result": "FAIL",
+      "separate_three_run_acceptance_index": false
+    },
+    "shutdown": {
+      "cleanup_callbacks_drained": true,
+      "transport_closed": true,
+      "frame_destroyed": true,
+      "event_loop_exited": true,
+      "process_exit": "FAIL",
+      "destroy_event_count": 3,
+      "frame_reference_alive_after_event": true,
+      "clean_shutdown": "FAIL"
+    },
+    "failure_fingerprint": {
+      "classification": "PRODUCT",
+      "candidate_executable_sha256": "2966a977edc0fe5525c8591df6108e731cd944e2b9d396ee72847792afca654c",
+      "guest_identity": "test\\home",
+      "session_id": 2,
+      "windows_build": "26200",
+      "webview2_runtime": "154.0.4258.62",
+      "phase": "fresh-user visible profile/connect workflow and shutdown",
+      "last_successful_event": "profile_via_visible_controls PASS",
+      "first_failing_event": "loopback_success_via_controls FAIL",
+      "hresult": null,
+      "exception": "wxAssertionError: wxRecursionGuard unbalanced in WindowDestroyEvent/MainLoop",
+      "exit_code": "0xC0000005",
+      "timeout": false,
+      "forced_kill": false,
+      "root_cause": "Not established. Raw evidence contains no 0x80004004, WebViewCreated PASS/event, or DestroyWindow error; wx shutdown assertion and application crash are directly observed."
+    }
+  },
+  "raw_evidence": {
+    "directory": "artifacts/candidate5/fresh-user/run01",
+    "summary_sha256": "e803368b2ffbf5ce96a5eb8139112f533199e22d94fe2f3271468c98935ecb36",
+    "run1_runtime_sha256": "3b02bebd066e53568dcb01367bed28846a884194cfd72577a8725fd54c86e7c8",
+    "internal_relaunch_runtime_sha256": "5cf8f7edf33492f9bbbbb4c70ceb0eb7707e3f97c50898e42d2b5024851f72d9",
+    "credential_scan": "No mock fixture password or SSH password-variable value in copied JSON evidence."
+  },
+  "decision": {
+    "three_run_sequence_started": false,
+    "reason": "Mandatory run01 acceptance failed; user instruction prohibits starting 3-run sequence after a run01 failure.",
+    "candidate5_acceptance": "NOT_ACCEPTED",
+    "local_real": "NOT_STARTED",
+    "negative_paths": "NOT_STARTED",
+    "golden_journeys": "NOT_STARTED",
+    "census": "NOT_STARTED",
+    "rollback": "NOT_STARTED",
+    "w57_successor_revalidation": "NOT_STARTED",
+    "w61_lifecycle_changed": false,
+    "program_complete": false,
+    "candidate_rebuild": false,
+    "push": false
+  },
+  "generated_local": "2026-10-08"
+}

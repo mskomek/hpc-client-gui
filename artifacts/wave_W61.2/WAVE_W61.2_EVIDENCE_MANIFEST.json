@@ -1,0 +1,306 @@
+{
+  "spec_profile_id": "HPC",
+  "protocol_revision": "WAVE_PROJECT_PROFILE schema_version 3",
+  "wave_id": "W61.2",
+  "wave_spec_revision": "waves/pending/W61.2.md; current HEAD bc2e61dcf86dadeda26141e5324088be8285243f; working tree dirty",
+  "status": "IN_PROGRESS",
+  "candidate_sha": "bc2e61dcf86dadeda26141e5324088be8285243f",
+  "closure_sha": null,
+  "dependency_validation": {
+    "completion_dependencies": [],
+    "dependencies": [],
+    "note": "W61.2 has no completion dependencies; later U01-independent gates remain controller-scheduled."
+  },
+  "requirements": [
+    {
+      "requirement_id": "HPC-W11-REL-033",
+      "mandatory": true,
+      "disposition": "FAIL_BLOCKED",
+      "implementation_owners": [
+        "W61.2 U04"
+      ],
+      "evidence_refs": [
+        "artifacts/wave_W61.2/W61.2_U04_CURRENT_CENSUS.json"
+      ],
+      "candidate_sha": "bc2e61dcf86dadeda26141e5324088be8285243f",
+      "decision": "NO-GO-held-open; zero counts not demonstrated"
+    },
+    {
+      "requirement_id": "HPC-W11-REL-034",
+      "mandatory": true,
+      "disposition": "FAIL_BLOCKED",
+      "implementation_owners": [
+        "W61.2 U04"
+      ],
+      "evidence_refs": [
+        "artifacts/wave_W61.2/W61.2_U05_ROLLBACK_READINESS.json"
+      ],
+      "candidate_sha": "bc2e61dcf86dadeda26141e5324088be8285243f",
+      "decision": "NO-GO-held-open; Rollback receipt records NOT_READY: local target identity is verified but published known-good role, compatibility and disposable migration restore are not demonstrated."
+    },
+    {
+      "requirement_id": "HPC-W11-REL-035",
+      "mandatory": true,
+      "disposition": "NO_GO",
+      "implementation_owners": [
+        "artifacts/wave_W61.2/W61.2_U01_ARTIFACT_IDENTITY.json"
+      ],
+      "test_nodes": [
+        "tests/test_w14_provenance_manifest.py::test_manifest_identity_headers_bind_exact_hashes",
+        "tests/test_w14_provenance_manifest.py::test_smoke_evidence_carries_identity_header"
+      ],
+      "evidence_refs": [
+        "artifacts/wave_W61.2/W61.2_U01_ARTIFACT_IDENTITY.json",
+        "artifacts/wave_W61.1/freeze-pin/W61.1_U01_FREEZE_PIN.json"
+      ],
+      "candidate_sha": "bc2e61dcf86dadeda26141e5324088be8285243f",
+      "decision": "MISMATCH: current executable SHA-256 and size differ from W61.1 freeze pin"
+    },
+    {
+      "requirement_id": "HPC-W11-REL-036",
+      "mandatory": true,
+      "disposition": "PASS",
+      "implementation_owners": [
+        "artifacts/wave_W61.2/W61.2_U01_PROVENANCE.json"
+      ],
+      "test_nodes": [
+        "tests/test_w14_provenance_manifest.py::test_provenance_captures_git_identity_and_toolchain",
+        "tests/test_w14_provenance_manifest.py::test_manifest_contains_all_provenance_fields"
+      ],
+      "evidence_refs": [
+        "artifacts/wave_W61.2/W61.2_U01_PROVENANCE.json"
+      ],
+      "candidate_sha": "bc2e61dcf86dadeda26141e5324088be8285243f",
+      "decision": "current branch, HEAD, dirty working tree, in-tree plugin identity, toolchain, and dependency-lock identity recorded"
+    },
+    {
+      "requirement_id": "HPC-W11-REL-037",
+      "mandatory": true,
+      "disposition": "VERIFIED_NA_WITH_REASON",
+      "implementation_owners": [
+        "artifacts/wave_W61.2/W61.2_U01_INTEGRITY.json"
+      ],
+      "test_nodes": [
+        "tests/test_plugin_integrity.py::test_clean_restart_records_trusted_hash_and_loads",
+        "tests/test_plugin_integrity.py::test_modified_manifest_detected_against_trusted_hash"
+      ],
+      "evidence_refs": [
+        "artifacts/wave_W61.2/W61.2_U01_INTEGRITY.json"
+      ],
+      "candidate_sha": "bc2e61dcf86dadeda26141e5324088be8285243f",
+      "decision": "NotSigned; unsigned onedir applicability N/A with reason; SHA bound to current executable; freeze-pin mismatch remains"
+    },
+    {
+      "requirement_id": "HPC-W11-REL-038",
+      "mandatory": true,
+      "disposition": "ALLOWED_DEFERRED",
+      "deferred_allowed": true,
+      "implementation_owners": [
+        "W61.2 later unit"
+      ],
+      "evidence_refs": [
+        "Active unit U01 is limited to identity/provenance/integrity"
+      ],
+      "candidate_sha": "92128c8726435aa0087f090c4a080720f148781f"
+    },
+    {
+      "requirement_id": "HPC-W11-REL-039",
+      "mandatory": true,
+      "disposition": "ALLOWED_DEFERRED",
+      "deferred_allowed": true,
+      "implementation_owners": [
+        "artifacts/wave_W61.2/W61.2_U03_LOCAL_REAL_REPLAY.json"
+      ],
+      "evidence_refs": [
+        "artifacts/wave_W61.2/W61.2_U03_LOCAL_REAL_REPLAY.json: exact frozen-package SHA mismatch; no controller-recorded serial fallback or exclusive LOCAL_REAL lease; no replay performed"
+      ],
+      "candidate_sha": "bc2e61dcf86dadeda26141e5324088be8285243f"
+    },
+    {
+      "requirement_id": "HPC-W11-REL-040",
+      "mandatory": true,
+      "disposition": "FAIL_BLOCKED",
+      "implementation_owners": [
+        "W61.2 U04"
+      ],
+      "evidence_refs": [
+        "artifacts/wave_W61.2/W61.2_U04_CURRENT_CENSUS.json"
+      ],
+      "candidate_sha": "bc2e61dcf86dadeda26141e5324088be8285243f",
+      "decision": "NO-GO-held-open; zero counts not demonstrated"
+    },
+    {
+      "requirement_id": "HPC-W11-REL-041",
+      "mandatory": true,
+      "disposition": "PASS",
+      "implementation_owners": [
+        "W61.2 U04"
+      ],
+      "evidence_refs": [
+        "docs/wiki/Compatibility-and-Support-Matrix.md",
+        "src/hpc_gui/docs/CHANGELOG.md",
+        "artifacts/wave_W61.2/W61.2_U04_CURRENT_CENSUS.json"
+      ],
+      "candidate_sha": "bc2e61dcf86dadeda26141e5324088be8285243f",
+      "decision": "candidate claims bounded to exact available evidence",
+      "test_nodes": [
+        "scripts/check_release_consistency.ps1 -Version 1.5.9"
+      ]
+    },
+    {
+      "requirement_id": "HPC-W11-REL-042",
+      "mandatory": true,
+      "disposition": "FAIL_BLOCKED",
+      "implementation_owners": [
+        "W61.2 U04"
+      ],
+      "evidence_refs": [
+        "artifacts/wave_W61.2/W61.2_U05_ROLLBACK_READINESS.json"
+      ],
+      "candidate_sha": "bc2e61dcf86dadeda26141e5324088be8285243f",
+      "decision": "NO-GO-held-open; Rollback receipt records NOT_DEMONSTRATED: stop/withdraw procedure is documented, but no authorized live action or readback occurred."
+    }
+  ],
+  "tests": [
+    {
+      "node": "focused identity/provenance/integrity suite",
+      "command": ".venv/Scripts/python.exe -m pytest tests/test_w14_provenance_manifest.py tests/test_wx_package_content.py tests/test_plugin_integrity.py -n auto --durations=25 --basetemp .tmp/w61.2-u01-pytest-20261007-134743",
+      "requirement_ids": [
+        "HPC-W11-REL-035",
+        "HPC-W11-REL-036",
+        "HPC-W11-REL-037"
+      ],
+      "exit_code": 0,
+      "passed": 46,
+      "failed": 0,
+      "skipped": 0,
+      "xfailed": 0,
+      "xpassed": 0,
+      "environment": "Windows; CPython 3.14.0; pytest 9.1.1; pytest-xdist 3.8.0; 12 workers",
+      "timestamp": "2026-10-07T11:19:17Z",
+      "evidence_path": "artifacts/wave_W61.2/W61.2_U01_TEST_RESULT.txt",
+      "candidate_sha": "bc2e61dcf86dadeda26141e5324088be8285243f",
+      "artifact_sha256": "DB29B6A8BD2C78FE1D9169F36B595752DEC40F411085AB8E6032384E740BBFBD"
+    },
+    {
+      "node": "U04 release consistency check",
+      "command": "scripts/check_release_consistency.ps1 -Version 1.5.9",
+      "requirement_ids": [
+        "HPC-W11-REL-041"
+      ],
+      "exit_code": 0,
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "xfailed": 0,
+      "xpassed": 0,
+      "environment": "Windows PowerShell; release consistency checker",
+      "timestamp": "2026-10-07T11:50:16Z",
+      "evidence_path": "docs/wiki/Compatibility-and-Support-Matrix.md; src/hpc_gui/docs/CHANGELOG.md",
+      "candidate_sha": "bc2e61dcf86dadeda26141e5324088be8285243f"
+    },
+    {
+      "node": "U04 rollback handoff regression",
+      "command": ".venv/Scripts/python.exe -m pytest tests/test_w61_1_release_handoff.py::test_release_rollback_handoff_covers_integrity_migration_and_not_ready_case -q --durations=25",
+      "requirement_ids": [
+        "HPC-W11-REL-034",
+        "HPC-W11-REL-042"
+      ],
+      "exit_code": 0,
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "xfailed": 0,
+      "xpassed": 0,
+      "environment": "Windows; project .venv; pytest",
+      "evidence_path": "tests/test_w61_1_release_handoff.py::test_release_rollback_handoff_covers_integrity_migration_and_not_ready_case",
+      "candidate_sha": "bc2e61dcf86dadeda26141e5324088be8285243f",
+      "artifact_sha256": "DB29B6A8BD2C78FE1D9169F36B595752DEC40F411085AB8E6032384E740BBFBD",
+      "timestamp": "2026-10-07T11:50:16Z"
+    }
+  ],
+  "gui_actions": [],
+  "resources": [],
+  "artifacts": [
+    {
+      "path": "artifacts/wave_W61.2/W61.2_U01_ARTIFACT_IDENTITY.json",
+      "role": "current executable hash and size compared with W61.1 freeze pin; mismatch is explicit"
+    },
+    {
+      "path": "artifacts/wave_W61.2/W61.2_U01_PROVENANCE.json",
+      "role": "current source/plugin/toolchain/working-tree provenance"
+    },
+    {
+      "path": "artifacts/wave_W61.2/W61.2_U01_INTEGRITY.json",
+      "role": "current Authenticode applicability and SHA-bound integrity result"
+    },
+    {
+      "path": "artifacts/wave_W61.2/W61.2_U03_LOCAL_REAL_REPLAY.json",
+      "role": "REL-039 prerequisite assessment; explicitly records pin mismatch, missing LOCAL_REAL serialization authorization, no replay, and resume condition"
+    },
+    {
+      "path": "artifacts/wave_W61.2/W61.2_U04_CURRENT_CENSUS.json",
+      "role": "candidate- and HEAD-bound P0/P1 census; counts NOT_DEMONSTRATED"
+    },
+    {
+      "path": "docs/wiki/Compatibility-and-Support-Matrix.md",
+      "role": "candidate support claims reconciled to current artifact identity and evidence limits"
+    },
+    {
+      "path": "src/hpc_gui/docs/CHANGELOG.md",
+      "role": "v1.5.9 release claims reconciled to current artifact identity and evidence limits"
+    },
+    {
+      "path": "artifacts/wave_W61.2/W61.2_U05_ROLLBACK_READINESS.json",
+      "role": "U04 rollback readiness and updater stop/withdraw disposition; records NOT_READY/NOT_DEMONSTRATED without claiming unperformed execution"
+    }
+  ],
+  "review_passes": [],
+  "contradiction_scan": {
+    "result": "Current U04 ownership and rollback/updater dispositions are reconciled to the candidate-bound rollback receipt; census, rollback readiness and updater execution remain NO-GO-held-open.",
+    "unresolved": [
+      "Authoritative current P0/P1 severity census is unavailable; HPC-W11-REL-033 and HPC-W11-REL-040 remain NOT_DEMONSTRATED.",
+      "Published compatible rollback release, full disposable-data migration restore, and authorized updater stop/withdraw readback are not demonstrated for REL-034/REL-042."
+    ]
+  },
+  "blockers": [
+    {
+      "requirement_id": "HPC-W11-REL-035",
+      "class": "REPOSITORY_TECHNICAL_BLOCKED",
+      "finding": "Current executable SHA-256 and size differ from the W61.1 freeze pin; source files under src/hpc_gui differ from the pin build commit. Rebuild/re-freeze or restore authoritative freeze outputs before accepting artifact identity."
+    },
+    {
+      "requirement_id": "HPC-W11-REL-039",
+      "class": "EVIDENCE_PREREQUISITE_BLOCKED",
+      "finding": "The executable SHA-256 DB29B6A8BD2C78FE1D9169F36B595752DEC40F411085AB8E6032384E740BBFBD does not match the W61.1 pin B3019DEA16783C8AB859FA36D2B0FEF2FB70DB075633E54EB0F36587295374FD; the active controller state records neither parallel_serial_fallback nor an exclusive LOCAL_REAL lease. No external replay was performed."
+    },
+    {
+      "requirement_ids": [
+        "HPC-W11-REL-033",
+        "HPC-W11-REL-040"
+      ],
+      "class": "EVIDENCE_PREREQUISITE_BLOCKED",
+      "finding": "No authoritative unified P0/P1 census is bound to the current candidate and HEAD; the available census receipts are incomplete and/or stale. Counts remain NOT_DEMONSTRATED."
+    },
+    {
+      "requirement_id": "HPC-W11-REL-034",
+      "class": "EVIDENCE_PREREQUISITE_BLOCKED",
+      "finding": "Rollback readiness receipt verifies only local artifact/manifest identity. Published known-good role, compatibility and disposable-data migration restore remain NOT_DEMONSTRATED; preserve NO-GO."
+    },
+    {
+      "requirement_id": "HPC-W11-REL-042",
+      "class": "EVIDENCE_PREREQUISITE_BLOCKED",
+      "finding": "Updater stop/withdraw procedure is documented, but authorized live channel action, readback and metadata safety evidence are unavailable; preserve NO-GO."
+    }
+  ],
+  "deferred_items": [
+    "HPC-W11-REL-038",
+    "HPC-W11-REL-039"
+  ],
+  "validator_result": {
+    "focused_tests": "46 passed, 0 failed, exit 0",
+    "identity": "MISMATCH: current DB29B6A8.../7675423 bytes vs pin B3019DEA.../7672106 bytes",
+    "integrity": "NotSigned / explicit unsigned onedir N/A reason / SHA-bound to current executable",
+    "U04_focused_tests": "rollback handoff regression: 1 passed, 0 failed, exit 0; release consistency 1.5.9: exit 0; U04 census, rollback receipt and manifest JSON: valid"
+  }
+}

@@ -108,3 +108,9 @@ coverage.json
 /sync.ffs_lock
 .agents/_skill-quarantine/
 .wave-patch-backup/
+
+# Local credential and secret material
+*.credential.xml
+*.credentials.xml
+.secrets/
+secrets/

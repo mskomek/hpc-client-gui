@@ -1,0 +1,683 @@
+[
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\golden-run03-cluster_expanded.jpg",
+    "bytes": 64959
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\golden-run03-dialog_start.jpg",
+    "bytes": 64959
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\golden-run03-fields.jpg",
+    "bytes": 64959
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\golden-run03-storage_values.jpg",
+    "bytes": 64959
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-click-run02-base_fields.jpg",
+    "bytes": 120387
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-click-run02-dialog.jpg",
+    "bytes": 121415
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-click-run02-main.jpg",
+    "bytes": 64962
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-click-run02-scrolled.jpg",
+    "bytes": 124028
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-click-run05-base_fields.jpg",
+    "bytes": 120359
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-click-run05-dialog.jpg",
+    "bytes": 121421
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-click-run05-main.jpg",
+    "bytes": 64947
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-click-run05-scrolled.jpg",
+    "bytes": 127427
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-click-run06-base_fields.jpg",
+    "bytes": 122158
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-click-run06-cluster_expanded.jpg",
+    "bytes": 128776
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-click-run06-dialog.jpg",
+    "bytes": 123166
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-click-run06-key_filled.jpg",
+    "bytes": 127872
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-click-run06-scrolled_to_key.jpg",
+    "bytes": 123375
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-click-run07-cluster_details.jpg",
+    "bytes": 133315
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-click-run07-cluster_expanded.jpg",
+    "bytes": 128777
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-click-run07-key_filled.jpg",
+    "bytes": 127869
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-click-run07-scrolled_to_key.jpg",
+    "bytes": 123375
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-connect-run01-after_connect.jpg",
+    "bytes": 74285
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-connect-run01-profile_selected.jpg",
+    "bytes": 68163
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-connect-run01-terminal.jpg",
+    "bytes": 70580
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-connect-run02-after_connect.jpg",
+    "bytes": 74230
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-connect-run02-profile_initial.jpg",
+    "bytes": 68494
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-connect-run02-profile_selected.jpg",
+    "bytes": 0
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-connect-run02-terminal.jpg",
+    "bytes": 70869
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-connect-run03-after_connect.jpg",
+    "bytes": 70224
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-connect-run03-profile_initial.jpg",
+    "bytes": 70134
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-connect-run03-profile_selected.jpg",
+    "bytes": 70224
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-connect-run03-terminal.jpg",
+    "bytes": 70744
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-connect-run04-after_connect.jpg",
+    "bytes": 84077
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-connect-run04-profile_initial.jpg",
+    "bytes": 70136
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-connect-run04-profile_selected.jpg",
+    "bytes": 81507
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-connect-run04-terminal.jpg",
+    "bytes": 72274
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-edit-key-run01-edit_typed.jpg",
+    "bytes": 135494
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-edit-key-run01-saved.jpg",
+    "bytes": 88836
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-files-download-run01-complete.jpg",
+    "bytes": 165899
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-files-download-run01-folder_dialog.jpg",
+    "bytes": 136465
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-files-download-run01-listing.jpg",
+    "bytes": 162475
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-files-inspect-run01-connected.jpg",
+    "bytes": 84188
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-files-inspect-run01-files.jpg",
+    "bytes": 151840
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-files-newfile-run01-created.jpg",
+    "bytes": 158006
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-files-newfile-run01-path.jpg",
+    "bytes": 155801
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-files-newfile-run01-refreshed.jpg",
+    "bytes": 160314
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-files-newfolder-run01-created.jpg",
+    "bytes": 163954
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-files-newfolder-run01-listing.jpg",
+    "bytes": 166208
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-files-newfolder-run01-refreshed.jpg",
+    "bytes": 166456
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-files-transfer-run01-download_dialog.jpg",
+    "bytes": 143340
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-files-transfer-run01-downloaded.jpg",
+    "bytes": 143340
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-files-transfer-run01-listing.jpg",
+    "bytes": 145048
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-files-transfer-run01-ready.jpg",
+    "bytes": 134917
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-files-transfer-run01-uploaded.jpg",
+    "bytes": 140227
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-golden-save-run01-after_save.jpg",
+    "bytes": 80565
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-golden-save-run01-after_test.jpg",
+    "bytes": 134962
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-golden-save-run01-test_result.jpg",
+    "bytes": 135820
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-saveconnect-connect-run01-connected.jpg",
+    "bytes": 105666
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-saveconnect-connect-run01-connection_attempt.jpg",
+    "bytes": 100308
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-saveconnect-connect-run01-main.jpg",
+    "bytes": 68554
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-saveconnect-connect-run01-selected.jpg",
+    "bytes": 81694
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-saveconnect-connect-run01-terminal.jpg",
+    "bytes": 80548
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-saveconnect-connect-run02-connected.jpg",
+    "bytes": 83093
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-saveconnect-connect-run02-connection_attempt.jpg",
+    "bytes": 84291
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-saveconnect-connect-run02-main.jpg",
+    "bytes": 68276
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-saveconnect-connect-run02-selected.jpg",
+    "bytes": 81403
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-saveconnect-connect-run02-terminal.jpg",
+    "bytes": 90097
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-saveconnect-final-after_save_connect.jpg",
+    "bytes": 83250
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-saveconnect-final-dialog.jpg",
+    "bytes": 126660
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-saveconnect-final-terminal.jpg",
+    "bytes": 90076
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-saveconnect-repeat02-after_save_connect.jpg",
+    "bytes": 83247
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-saveconnect-repeat02-dialog.jpg",
+    "bytes": 126635
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-saveconnect-repeat02-terminal.jpg",
+    "bytes": 90090
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-saveconnect-repeat03-after_save_connect.jpg",
+    "bytes": 83251
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-saveconnect-repeat03-dialog.jpg",
+    "bytes": 126643
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-saveconnect-repeat03-terminal.jpg",
+    "bytes": 90314
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-saveconnect-run02-after_save_connect.jpg",
+    "bytes": 73397
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-saveconnect-run02-dialog.jpg",
+    "bytes": 129068
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-saveconnect-run02-filled.jpg",
+    "bytes": 73366
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-saveconnect-run03-after_save_connect.jpg",
+    "bytes": 100148
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-saveconnect-run03-dialog.jpg",
+    "bytes": 122984
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-saveconnect-run03-filled.jpg",
+    "bytes": 126407
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-saveconnect-run03-main.jpg",
+    "bytes": 66567
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-saveconnect-run03-terminal.jpg",
+    "bytes": 80215
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-savekey-run02-filled.jpg",
+    "bytes": 137660
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-savekey-run02-saved.jpg",
+    "bytes": 80257
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-scrollprobe-run02-dialog.jpg",
+    "bytes": 140738
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-scrollprobe-run02-scrolled.jpg",
+    "bytes": 140832
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-tabprobe.jpg",
+    "bytes": 137517
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-terminal-controls-run01-cleared.jpg",
+    "bytes": 76708
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-terminal-controls-run01-connected.jpg",
+    "bytes": 84182
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-terminal-controls-run01-disconnected.jpg",
+    "bytes": 79775
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-terminal-controls-run01-find_result.jpg",
+    "bytes": 80812
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-terminal-controls-run01-font_down.jpg",
+    "bytes": 76065
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-terminal-controls-run01-font_up.jpg",
+    "bytes": 76955
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-terminal-controls-run01-terminal_output.jpg",
+    "bytes": 78696
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-terminal-run01-after_connect.jpg",
+    "bytes": 84064
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-terminal-run01-terminal.jpg",
+    "bytes": 72119
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-terminal-run02-terminal.jpg",
+    "bytes": 89613
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-testcluster-run01-cluster_values.jpg",
+    "bytes": 134858
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-testcluster-run01-test_result.jpg",
+    "bytes": 151780
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\gui-testcluster-run02-test_result.jpg",
+    "bytes": 135822
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\nav-run02-after_cancel.jpg",
+    "bytes": 66575
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\nav-run02-after_ctrl1.jpg",
+    "bytes": 146614
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\nav-run02-dialog.jpg",
+    "bytes": 121677
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\nav-run02-initial.jpg",
+    "bytes": 146614
+  },
+  {
+    "path": "screenshots/candidate7-save-submit-fresh-submitted.jpg",
+    "description": "Candidate 7 Save + Submit opened Terminal and ran bash -- remote path"
+  },
+  {
+    "path": "screenshots/candidate8-save-submit-final-submitted.jpg",
+    "description": "Candidate 8 submitted real Slurm job 196; GUI job list readback"
+  },
+  {
+    "path": "screenshots/candidate8-cancel-after_cancel.jpg",
+    "description": "Candidate 8 GUI accepted cancellation of job 197"
+  },
+  {
+    "path": "screenshots/candidate8-final-submitted.jpg",
+    "description": "Final post-refactor Candidate 8 package; Save + Submit editor action and remote Slurm script"
+  },
+  {
+    "path": "screenshots/candidate8-final-after_cancel.jpg",
+    "description": "Final package Jobs page showed real job 202 RUNNING"
+  },
+  {
+    "path": "screenshots/candidate8-debug-cancel205-cancel_prompt.jpg",
+    "bytes": 100863,
+    "description": "Final Candidate 8 job 205 selected RUNNING with Cancel Job confirmation dialog"
+  },
+  {
+    "path": "screenshots/candidate8-debug-cancel205-after_cancel.jpg",
+    "bytes": 98482,
+    "description": "Final Candidate 8 GUI confirmed cancellation of job 205"
+  },
+  {
+    "path": "screenshots/candidate8-final-output207-terminal_whoami.jpg",
+    "bytes": 76756,
+    "description": "Candidate 8 terminal ran whoami and displayed hpctest"
+  },
+  {
+    "path": "screenshots/candidate8-final-output207-outputs_refreshed.jpg",
+    "bytes": 83023,
+    "description": "Candidate 8 outputs aggregate view after refresh"
+  },
+  {
+    "path": "screenshots/candidate8-final-output207-stdout_stderr.jpg",
+    "bytes": 102490,
+    "description": "Candidate 8 Standard Output + Standard Error displayed GUI_OUTPUT_MARKER_207 and compute01"
+  },
+  {
+    "path": "screenshots/candidate8-final-output207-cancel_prompt.jpg",
+    "bytes": 101493,
+    "description": "Final Candidate 8 selected RUNNING job 207 with cancellation confirmation"
+  },
+  {
+    "path": "screenshots/candidate8-final-output207-cancelled.jpg",
+    "bytes": 98393,
+    "description": "Final Candidate 8 GUI confirmed cancellation of job 207"
+  },
+  {
+    "description": "Candidate 8 UI language acceptance: candidate8-language-language_menu_initial.jpg",
+    "bytes": 87111,
+    "path": "screenshots/candidate8-language-language_menu_initial.jpg"
+  },
+  {
+    "description": "Candidate 8 UI language acceptance: candidate8-language-turkish.jpg",
+    "bytes": 88618,
+    "path": "screenshots/candidate8-language-turkish.jpg"
+  },
+  {
+    "description": "Candidate 8 UI language acceptance: candidate8-language-language_menu_after_tr.jpg",
+    "bytes": 87793,
+    "path": "screenshots/candidate8-language-language_menu_after_tr.jpg"
+  },
+  {
+    "description": "Candidate 8 UI language acceptance: candidate8-language-english.jpg",
+    "bytes": 88080,
+    "path": "screenshots/candidate8-language-english.jpg"
+  },
+  {
+    "bytes": 86646,
+    "description": "Candidate 8 Help/About GUI journey: candidate8-about-menu.jpg",
+    "path": "screenshots/candidate8-about-menu.jpg"
+  },
+  {
+    "bytes": 103245,
+    "description": "Candidate 8 Help/About GUI journey: candidate8-about-about.jpg",
+    "path": "screenshots/candidate8-about-about.jpg"
+  },
+  {
+    "path": "screenshots/candidate8-settings-menu.jpg",
+    "bytes": 85000,
+    "description": "Candidate 8 Settings dialog opened via packaged GUI: candidate8-settings-menu.jpg"
+  },
+  {
+    "path": "screenshots/candidate8-settings-dialog.jpg",
+    "bytes": 88717,
+    "description": "Candidate 8 Settings dialog opened via packaged GUI: candidate8-settings-dialog.jpg"
+  },
+  {
+    "bytes": 80024,
+    "path": "screenshots/candidate8-logs-page.jpg",
+    "description": "Candidate 8 Logs GUI surface and copy path verification: candidate8-logs-page.jpg"
+  },
+  {
+    "bytes": 79898,
+    "path": "screenshots/candidate8-logs-copypath.jpg",
+    "description": "Candidate 8 Logs GUI surface and copy path verification: candidate8-logs-copypath.jpg"
+  },
+  {
+    "description": "Candidate 8 Files/SFTP UI path and create acceptance evidence: candidate8-files-home-enter-connected.jpg",
+    "bytes": 84046,
+    "path": "screenshots/candidate8-files-home-enter-connected.jpg"
+  },
+  {
+    "description": "Candidate 8 Files/SFTP UI path and create acceptance evidence: candidate8-files-home-enter-disposable_remote_path.jpg",
+    "bytes": 168651,
+    "path": "screenshots/candidate8-files-home-enter-disposable_remote_path.jpg"
+  },
+  {
+    "description": "Candidate 8 Files/SFTP UI path and create acceptance evidence: candidate8-files-home-enter-folder_created.jpg",
+    "bytes": 168741,
+    "path": "screenshots/candidate8-files-home-enter-folder_created.jpg"
+  },
+  {
+    "description": "Candidate 8 Files/SFTP UI path and create acceptance evidence: candidate8-files-home-enter-file_created.jpg",
+    "bytes": 168843,
+    "path": "screenshots/candidate8-files-home-enter-file_created.jpg"
+  },
+  {
+    "description": "Candidate 8 Files/SFTP UI path and create acceptance evidence: candidate8-files-home-enter-refreshed.jpg",
+    "bytes": 168723,
+    "path": "screenshots/candidate8-files-home-enter-refreshed.jpg"
+  },
+  {
+    "description": "Candidate 8 Files/SFTP UI path and create acceptance evidence: candidate8-files-home-enter-favorites_menu.jpg",
+    "bytes": 172907,
+    "path": "screenshots/candidate8-files-home-enter-favorites_menu.jpg"
+  },
+  {
+    "description": "Candidate 8 Files/SFTP UI path and create acceptance evidence: candidate8-files-prompt-failure.jpg",
+    "bytes": 159439,
+    "path": "screenshots/candidate8-files-prompt-failure.jpg"
+  },
+  {
+    "description": "Candidate 8 Files/SFTP UI path and create acceptance evidence: candidate8-files-home-failure.jpg",
+    "bytes": 166193,
+    "path": "screenshots/candidate8-files-home-failure.jpg"
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\candidate8-accelerator-ctrl1.jpg",
+    "bytes": 74138
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\candidate8-accelerator-ctrl2.jpg",
+    "bytes": 70817
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\candidate8-accelerator-ctrl3.jpg",
+    "bytes": 88415
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\candidate8-accelerator-ctrl4.jpg",
+    "bytes": 109159
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\candidate8-accelerator-ctrl5.jpg",
+    "bytes": 148614
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\candidate8-accelerator-ctrl6.jpg",
+    "bytes": 87823
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\candidate8-accelerator-ctrl7.jpg",
+    "bytes": 80000
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\candidate8-accelerator-f1.jpg",
+    "bytes": 94166
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\candidate8-files-favorite-up-connected.jpg",
+    "bytes": 84044
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\candidate8-files-favorite-up-disposable_remote_path.jpg",
+    "bytes": 169011
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\candidate8-files-favorite-up-favorite_selected.jpg",
+    "bytes": 169444
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\candidate8-files-favorite-up-favorite_selection_menu.jpg",
+    "bytes": 163357
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\candidate8-files-favorite-up-favorite_selection_source.jpg",
+    "bytes": 163813
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\candidate8-files-favorite-up-favorites_menu.jpg",
+    "bytes": 169350
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\candidate8-files-favorite-up-file_created.jpg",
+    "bytes": 169162
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\candidate8-files-favorite-up-files_initial.jpg",
+    "bytes": 151613
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\candidate8-files-favorite-up-folder_created.jpg",
+    "bytes": 169063
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\candidate8-files-favorite-up-refreshed.jpg",
+    "bytes": 169042
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\candidate8-files-nav-remote_back.jpg",
+    "bytes": 163862
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\candidate8-files-nav-remote_forward.jpg",
+    "bytes": 169087
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\candidate8-files-nav-remote_history.jpg",
+    "bytes": 166083
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\candidate8-files-filter-slurm.jpg",
+    "bytes": 169381
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\candidate8-files-upload-destination-final.jpg",
+    "bytes": 156890
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\candidate8-files-download-completed.jpg",
+    "bytes": 179148
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\candidate8-files-delete-confirmation.jpg",
+    "bytes": 185605
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\candidate8-files-delete-delete_confirmation.jpg",
+    "bytes": 192201
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\candidate8-files-delete-failure.jpg",
+    "bytes": 192201
+  },
+  {
+    "path": "artifacts\\candidate7-full-e2e\\screenshots\\candidate8-files-delete-remote_folder_selected.jpg",
+    "bytes": 191764
+  }
+]

@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "wave_id": "W62",
+  "unit_id": "U03",
+  "requirement_ids": ["HPC-W62-BASE-003", "HPC-W62-BASE-006"],
+  "disposition": "AWAITING_INPUT",
+  "candidate_authority_created": false,
+  "verified_inputs": {
+    "candidate10_source_commit": "8177ee9c0992f6a3d6285b146f64abef1192b064",
+    "candidate10_source_tree": "05b9d456fef4217699a992cf5cf8d45dac30177d",
+    "current_executable_path": "dist/hpc-client-gui/hpc-client-gui.exe",
+    "current_executable_sha256": "DB29B6A8BD2C78FE1D9169F36B595752DEC40F411085AB8E6032384E740BBFBD",
+    "current_executable_size_bytes": 7675423,
+    "historical_candidate10_exe_sha256": "8b51407c7040cc12ee5e161b6797f44c83069fc404f75ee974f5fda03aa8bb20",
+    "historical_candidate10_zip_sha256": "11ad5509d371f37e07af887a04ff7bed47312a63e91a4e98c4453b0a2af145ca",
+    "candidate10_exact_bytes": "unavailable_in_recorded_bounded_scope"
+  },
+  "registration_prerequisites": {
+    "successor_release_owner": "unverified",
+    "successor_source_commit_and_tree": "not_authorized_for_new_candidate",
+    "successor_exe_and_zip_pair": "not_established",
+    "successor_manifest": "absent",
+    "supersession_rationale": "requires release-owner disposition",
+    "legacy_debt_rebind": "not_registered"
+  },
+  "historical_debt_handling": {
+    "w57_4_invoked": false,
+    "historical_declarations_modified": false,
+    "shared_db29b6a8_path_treated_as_frozen_bytes": false,
+    "bounded_search_repeated": false,
+    "limitation": "Other retained storage outside the recorded bounded search remains unsearched."
+  },
+  "unblock_condition": "An authorized successor release owner supplies or approves an immutable source/package candidate and supersession disposition; then bind exact EXE/ZIP hashes, manifest, and the six legacy freeze-debt rebinds to it.",
+  "evidence_sources": [
+    "artifacts/refactored-v2/w62/CANDIDATE10_PROVENANCE.json",
+    "artifacts/refactored-v2/w62/W57_FROZEN_ARTIFACT_SHA256_RECONCILIATION.json",
+    "waves/refactored/hpc-client-gui-v2-20261012/WORKSTREAM_600_CANDIDATE10_REBASELINE_AND_CONNECTION_REGRESSION.md",
+    "waves/refactored/hpc-client-gui-v2-20261012/REFACTORED_WORKSTREAM_MANIFEST_V2.md"
+  ]
+}

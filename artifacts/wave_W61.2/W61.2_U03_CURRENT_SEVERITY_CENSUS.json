@@ -1,0 +1,180 @@
+{
+  "schema": "w61.2-u03-current-severity-census/1",
+  "evidence_id": "EV-W61.2-U03-CURRENT-SEVERITY-CENSUS-bc2e61dc",
+  "wave_id": "W61.2",
+  "unit_id": "U03",
+  "phase": "run",
+  "requirement_ids": [
+    "HPC-W11-REL-033",
+    "HPC-W11-REL-040"
+  ],
+  "candidate_identity": {
+    "branch": "develop",
+    "head": "bc2e61dcf86dadeda26141e5324088be8285243f",
+    "working_tree": "dirty",
+    "working_tree_status_line_count": 262,
+    "working_tree_status_sha256": "96cdb788445857d1a4d0627dcfae4eb4d1da2b8ece6d0ae2da7c6054956ddec9",
+    "artifact_path": "dist/hpc-client-gui/hpc-client-gui.exe",
+    "artifact_sha256": "DB29B6A8BD2C78FE1D9169F36B595752DEC40F411085AB8E6032384E740BBFBD",
+    "artifact_size_bytes": 7675423,
+    "freeze_pin_path": "artifacts/wave_W61.1/freeze-pin/W61.1_U01_FREEZE_PIN.json",
+    "freeze_pin_file_sha256": "7E4E79C4B20D78F0E4D5D081EE5E443BA59E6DAF480E6C28C23EF6662ECF7744",
+    "expected_artifact_sha256": "B3019DEA16783C8AB859FA36D2B0FEF2FB70DB075633E54EB0F36587295374FD",
+    "artifact_matches_freeze_pin": false,
+    "plugin_sha": "f0abb7e7037e66ab451d463c699fecf4e00c89eb"
+  },
+  "authoritative_complete": false,
+  "method": {
+    "authoritative_complete": false,
+    "summary": "Recomputed repository, candidate executable, freeze-pin and cited receipt identities; read the owned requirement registry rows and TODO ownership map; reconciled current W61.2 U01/U02/U03/U04/U05 evidence and available W61.1/W61.3 census records. Inventory includes each currently evidenced release/evidence condition found in these sources. No authoritative complete finding ledger covers all current release-relevant P0/P1 findings on this candidate and HEAD, so completeness and zero counts are not established.",
+    "limitations": [
+      "The executable differs from the W61.1 freeze pin, so candidate-specific release runtime and external claims cannot be carried forward from the pinned bytes.",
+      "The 2026-10-06 W61.1 census and W61.3 severity ledger bind to older HEAD/candidate identities and explicitly leave census completeness or severity counts undemonstrated.",
+      "The 2026-10-07 W61.1 interim snapshot is explicitly incomplete and bound to HEAD 0ade18184a88f557983c9511c536108d17656efe.",
+      "This inventory is an evidence-backed observation set, not an assertion that no additional finding exists."
+    ]
+  },
+  "counts": {
+    "open_p0": "NOT_DEMONSTRATED",
+    "open_p1": "NOT_DEMONSTRATED",
+    "confirmed_open_p0": "NOT_DEMONSTRATED",
+    "confirmed_open_p1": "NOT_DEMONSTRATED",
+    "disposition": "NO-GO"
+  },
+  "findings": [
+    {
+      "finding_id": "W61.2-U03-CENSUS-001",
+      "classification": "EVIDENCE_PREREQUISITE_BLOCKED",
+      "severity": "UNASSESSED_P0_P1; severity census completeness not demonstrated",
+      "owner": "W61.2 U03",
+      "disposition": "OPEN; authoritative complete current census unavailable",
+      "requirement_ids": ["HPC-W11-REL-033", "HPC-W11-REL-040"],
+      "evidence": [
+        {
+          "path": "artifacts/wave_W61.2/W61.2_U04_CURRENT_CENSUS.json",
+          "sha256": "7675DE2B005C4A1E85194E9D68964A906077F44448100C3A8650EA35C8739957",
+          "limitation": "Current candidate-bound receipt explicitly sets P0/P1 counts to NOT_DEMONSTRATED and authoritative_complete=false."
+        },
+        {
+          "path": "artifacts/wave_W61.1/U04-handoff-census/W61.1_U04_CURRENT_CENSUS_20261006.json",
+          "sha256": "DE2658EBF0A0C67FE2B3CCF5986320CCF11E3994FC81BA36762687AB183184F6",
+          "limitation": "Earlier candidate and HEAD; authoritative census completeness is false."
+        },
+        {
+          "path": "artifacts/wave_W61.1/CENSUS_INTERIM_DB29B6A8_20261007.json",
+          "sha256": "38112E788655DF4083C0D98B1CC6BD11A9C8F57C15EDF27D93016412F2026CC7",
+          "limitation": "Interim and explicitly incomplete; bound to HEAD 0ade18184a88f557983c9511c536108d17656efe."
+        }
+      ]
+    },
+    {
+      "finding_id": "W61.2-U02-FROZEN-PACKAGE-001",
+      "classification": "RELEASE_EVIDENCE_PREREQUISITE",
+      "severity": "NOT_ASSESSED_AS_PRODUCT_P0_OR_P1; release integrity gate is open",
+      "owner": "W61.2 U02",
+      "disposition": "BLOCKED; exact frozen executable unavailable and current executable mismatches pin",
+      "requirement_ids": ["HPC-W11-REL-035", "HPC-W11-REL-038"],
+      "evidence": [
+        {
+          "path": "artifacts/wave_W61.2/W61.2_U02_FROZEN_PACKAGE_GATE.json",
+          "sha256": "92FF0BD8103C9463A81F03A6CFBC87AE9F627248CCFAA220F59612E27275059F",
+          "limitation": "Records current executable SHA DB29B6A8, expected freeze SHA B3019DEA, no matching executable in searched approved locations, and no current packaged runtime replay."
+        },
+        {
+          "path": "artifacts/wave_W61.1/freeze-pin/W61.1_U01_FREEZE_PIN.json",
+          "sha256": "7E4E79C4B20D78F0E4D5D081EE5E443BA59E6DAF480E6C28C23EF6662ECF7744",
+          "limitation": "Authoritative expected frozen artifact identity; does not establish that those bytes are currently available."
+        }
+      ]
+    },
+    {
+      "finding_id": "W61.2-U03-LOCALREAL-001",
+      "classification": "EXTERNAL_EVIDENCE_PREREQUISITE_BLOCKED",
+      "severity": "NOT_ASSESSED_AS_PRODUCT_P0_OR_P1; required external evidence absent",
+      "owner": "W61.2 U02 / ENVIRONMENT",
+      "disposition": "EXTERNAL_BLOCKED; GUI real-cluster replay not run without exact pin and controller serialization authority",
+      "requirement_ids": ["HPC-W11-REL-039"],
+      "evidence": [
+        {
+          "path": "artifacts/wave_W61.2/W61.2_U03_LOCAL_REAL_REPLAY.json",
+          "sha256": "CCEB4CE1748299117A86692AE9219FC52B0C128E7C4FF23E25308B7647C67D70",
+          "limitation": "SSH/SFTP/Slurm/filesystem/job replay is NOT_RUN; no serial fallback or exclusive LOCAL_REAL lease was recorded."
+        }
+      ]
+    },
+    {
+      "finding_id": "W61.2-U05-ROLLBACK-READINESS-001",
+      "classification": "RELEASE_EVIDENCE_PREREQUISITE",
+      "severity": "NOT_ASSESSED_AS_PRODUCT_P0_OR_P1; rollback and updater readiness gates are open",
+      "owner": "W61.2 U05",
+      "disposition": "NOT_DEMONSTRATED; compatibility/restore and authorized updater stop-withdraw action/readback were not executed",
+      "requirement_ids": ["HPC-W11-REL-034", "HPC-W11-REL-042"],
+      "evidence": [
+        {
+          "path": "artifacts/wave_W61.2/W61.2_U05_ROLLBACK_READINESS.json",
+          "sha256": "A46C04A94556277B4EAF2816367BDAFC5C46A734B241BDFADDC362B90FED05EB",
+          "limitation": "Local rollback artifact identity is recorded, but published known-good role, full migration restore, and live updater control are NOT_DEMONSTRATED."
+        }
+      ]
+    },
+    {
+      "finding_id": "W61.2-MANIFEST-VALIDATION-001",
+      "classification": "RELEASE_GOVERNANCE_EVIDENCE_DEFECT",
+      "severity": "UNASSESSED_P0_P1; no product defect severity inferred",
+      "owner": "W61.2 aggregate evidence reconciliation",
+      "disposition": "OPEN; current closeout validation is red and manifest remains IN_PROGRESS",
+      "requirement_ids": ["HPC-W11-REL-033", "HPC-W11-REL-035", "HPC-W11-REL-037", "HPC-W11-REL-040"],
+      "evidence": [
+        {
+          "path": "artifacts/wave_W61.2/WAVE_W61.2_EVIDENCE_MANIFEST.json",
+          "sha256": "5AB2609E55FDFB64A70C59F979088DA3368B97F3C623986B96107F67413026CD",
+          "limitation": "Manifest is not the severity ledger; prior U05 report records validator exit 1 for unresolved contradiction scan, invalid REL-035/037 dispositions and unresolved blockers."
+        }
+      ]
+    }
+  ],
+  "excluded_or_limited_sources": [
+    {
+      "path": "artifacts/wave_W61.3/W61.3_U03_SEVERITY_LEDGER.json",
+      "sha256": "C8F79110087796CD39E3BE1F8DB63EB407F6B7F3A0E44A4BB2777FF3B1AD3163",
+      "decision": "Not counted as current-candidate findings; bound to HEAD 92128c8726435aa0087f090c4a080720f148781f and B3019DEA, with P0/P1 NOT_CURRENTLY_DEMONSTRATED."
+    },
+    {
+      "path": "artifacts/wave_W61.2/W61.2_U02_PACKAGED_SMOKE.json",
+      "decision": "Earlier aggregate and raw runtime receipts disagree on pty_resize and clean_shutdown and bind to prior HEAD; neither is used to establish current candidate PASS."
+    }
+  ],
+  "requirement_decisions": [
+    {
+      "requirement_id": "HPC-W11-REL-033",
+      "disposition": "NOT_DEMONSTRATED",
+      "decision": "NO-GO-held-open; zero open P1 not proven by an authoritative complete census"
+    },
+    {
+      "requirement_id": "HPC-W11-REL-040",
+      "disposition": "NOT_DEMONSTRATED",
+      "decision": "NO-GO-held-open; zero open P0/P1 not proven by an authoritative complete census"
+    }
+  ],
+  "sources": [
+    {"path": "opencode/REQUIREMENT_REGISTRY.md", "sha256": "C22B18D3195769CD102BF06D3BCCE413A05F5DDBB3E6B8965FAA0461B903D3C7"},
+    {"path": "opencode/TODO_OWNERSHIP_MAP.md", "sha256": "C188B80CDE7E57DD6FF1DAD05D7F04554C79F138DC8F1C0703DEFD2EC488232D"},
+    {"path": "artifacts/wave_W61.2/W61.2_U01_ARTIFACT_IDENTITY.json", "sha256": "74D7A21D89AEDF5FA1ACE6273D8AA9D6FC257A1F7982DCDFC2D884F1B2FC8E93"},
+    {"path": "artifacts/wave_W61.2/W61.2_U01_PROVENANCE.json", "sha256": "BB8E885AB74123B5E748B587376B4FDBAD9FFE52A370789D897182BCB3812CA2"},
+    {"path": "artifacts/wave_W61.2/W61.2_U01_INTEGRITY.json", "sha256": "636AF1103C36AFAFF0D897DABB79880E5BBD4C6954A7AAD8BBB1C8144B41F415"}
+  ],
+  "no_wave_level_go": true,
+  "remaining_uncertainty": [
+    "No complete authoritative finding ledger establishes all current P0/P1 findings or zero counts for this dirty candidate and HEAD.",
+    "The exact W61.1 frozen executable is unavailable in the approved search locations; current executable SHA differs from the pin.",
+    "Candidate-specific runtime/external evidence remains blocked, and rollback plus updater stop-withdraw readiness is not demonstrated.",
+    "The inventory records observed current release/evidence gates only; additional unobserved findings may exist."
+  ],
+  "audit_focus": [
+    "Recompute branch, HEAD, dirty-status digest, current executable SHA/size, freeze pin and every cited source receipt hash.",
+    "Confirm P0/P1 counts remain NOT_DEMONSTRATED and no missing or stale source is treated as a zero count.",
+    "Verify every listed condition has an explicit stable ID, classification, severity treatment, owner, disposition and evidence identity.",
+    "Confirm the stale W61.1/W61.3 census records and conflicting prior runtime receipts are excluded from current-candidate clearance.",
+    "Confirm REL-033/040 remain NO-GO-held-open and this receipt does not self-certify W61.2."
+  ]
+}

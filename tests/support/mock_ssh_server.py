@@ -328,6 +328,7 @@ class MockSSHServer:
         self._sock: socket.socket | None = None
         self._thread: threading.Thread | None = None
         self._stop = threading.Event()
+        self._ready = threading.Event()
         self.port = 0
         self.pty_sizes: list[tuple[int, int, int, int, str]] = []
         self.resize_sizes: list[tuple[int, int, int, int]] = []
@@ -341,40 +342,25 @@ class MockSSHServer:
         self.port = self._sock.getsockname()[1]
         self._thread = threading.Thread(target=self._serve_forever, daemon=True)
         self._thread.start()
-        self._wait_for_readiness()
+        try:
+            self._wait_for_readiness()
+        except BaseException:
+            self.__exit__()
+            raise
         return self
 
     def _wait_for_readiness(self, timeout_s: float = 5.0) -> None:
-        """Bounded readiness probe (REL-046 fixture race).
-
-        ``listen()`` is synchronous but the Paramiko banner/KEX worker runs
-        on the serve thread; a client that connects before the first accept
-        cycle can hit a transient handshake flake. Poll a bare TCP handshake
-        until one succeeds or the budget expires. Best-effort only: failure
-        raises, so a dead server fails fast instead of flaking downstream.
-        """
-        import time
-
-        deadline = time.monotonic() + timeout_s
-        last_error: OSError | None = None
-        while time.monotonic() < deadline:
-            probe = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            try:
-                probe.settimeout(0.2)
-                probe.connect(("127.0.0.1", self.port))
-                return
-            except OSError as exc:
-                last_error = exc
-            finally:
-                try:
-                    probe.close()
-                except OSError:
-                    pass
-            time.sleep(0.02)
-        raise RuntimeError(f"mock SSH server not ready on 127.0.0.1:{self.port}: {last_error}")
+        """Wait for the listener thread without opening a fake SSH connection."""
+        if not self._ready.wait(timeout_s):
+            raise RuntimeError(f"mock SSH server not ready on 127.0.0.1:{self.port}")
+        if self._thread is None or not self._thread.is_alive():
+            raise RuntimeError(f"mock SSH server thread exited on 127.0.0.1:{self.port}")
 
     def _serve_forever(self) -> None:
         self._sock.settimeout(0.5)
+        # bind/listen already succeeded; publish readiness from the serving
+        # thread so callers never need a raw connect-and-close banner probe.
+        self._ready.set()
         while not self._stop.is_set():
             try:
                 client_sock, _addr = self._sock.accept()

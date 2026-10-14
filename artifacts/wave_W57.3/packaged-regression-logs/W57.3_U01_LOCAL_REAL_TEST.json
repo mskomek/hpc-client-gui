@@ -1,0 +1,261 @@
+﻿{
+    "status":  "LOCAL_REAL_READY",
+    "tests":  {
+                  "sftp_exit":  0,
+                  "sftp_put_exit":  0,
+                  "ssh":  {
+                              "exit_code":  0,
+                              "output":  "/dev/pts/0\r\nhpctest\r\nlogin-control01",
+                              "stderr":  ""
+                          },
+                  "ssh_pty_device":  "/dev/pts/0",
+                  "ssh_pty_ok":  true,
+                  "host_keys":  {
+                                    "login-control01":  true,
+                                    "compute01":  true,
+                                    "compute02":  true
+                                },
+                  "host_keys_pinned_ok":  true,
+                  "ssh_key_login":  [
+                                        {
+                                            "exit_code":  0,
+                                            "output":  "",
+                                            "stderr":  "",
+                                            "timed_out":  false,
+                                            "timeout_seconds":  180,
+                                            "duration_seconds":  0.33
+                                        },
+                                        {
+                                            "exit_code":  0,
+                                            "output":  "",
+                                            "stderr":  "",
+                                            "timed_out":  false,
+                                            "timeout_seconds":  180,
+                                            "duration_seconds":  0.77
+                                        },
+                                        {
+                                            "exit_code":  0,
+                                            "output":  "",
+                                            "stderr":  "",
+                                            "timed_out":  false,
+                                            "timeout_seconds":  180,
+                                            "duration_seconds":  0.86
+                                        }
+                                    ],
+                  "ssh_key_login_ok":  true,
+                  "canonical_paths":  [
+                                          {
+                                              "exit_code":  0,
+                                              "output":  "home=/srv/hpc/home scratch=/srv/hpc/scratch project=/srv/hpc/project",
+                                              "stderr":  "",
+                                              "timed_out":  false,
+                                              "timeout_seconds":  180,
+                                              "duration_seconds":  0.25
+                                          },
+                                          {
+                                              "exit_code":  0,
+                                              "output":  "home=/srv/hpc/home scratch=/srv/hpc/scratch project=/srv/hpc/project",
+                                              "stderr":  "",
+                                              "timed_out":  false,
+                                              "timeout_seconds":  180,
+                                              "duration_seconds":  0.26
+                                          },
+                                          {
+                                              "exit_code":  0,
+                                              "output":  "home=/srv/hpc/home scratch=/srv/hpc/scratch project=/srv/hpc/project",
+                                              "stderr":  "",
+                                              "timed_out":  false,
+                                              "timeout_seconds":  180,
+                                              "duration_seconds":  0.27
+                                          }
+                                      ],
+                  "canonical_paths_same":  true,
+                  "canonical_paths_ok":  true,
+                  "identity":  [
+                                   {
+                                       "exit_code":  0,
+                                       "output":  "/home/hpctest\n1000\n1000\n64030\n64030",
+                                       "stderr":  "",
+                                       "timed_out":  false,
+                                       "timeout_seconds":  180,
+                                       "duration_seconds":  0.3
+                                   },
+                                   {
+                                       "exit_code":  0,
+                                       "output":  "/home/hpctest\n1000\n1000\n64030\n64030",
+                                       "stderr":  "",
+                                       "timed_out":  false,
+                                       "timeout_seconds":  180,
+                                       "duration_seconds":  0.27
+                                   },
+                                   {
+                                       "exit_code":  0,
+                                       "output":  "/home/hpctest\n1000\n1000\n64030\n64030",
+                                       "stderr":  "",
+                                       "timed_out":  false,
+                                       "timeout_seconds":  180,
+                                       "duration_seconds":  0.29
+                                   }
+                               ],
+                  "identity_same":  true,
+                  "identity_ok":  true,
+                  "storage":  [
+                                  {
+                                      "exit_code":  0,
+                                      "output":  "home=/srv/hpc/home/hpctest scratch=/srv/hpc/scratch/hpctest project=/srv/hpc/project/hpctest",
+                                      "stderr":  "",
+                                      "timed_out":  false,
+                                      "timeout_seconds":  180,
+                                      "duration_seconds":  0.27
+                                  },
+                                  {
+                                      "exit_code":  0,
+                                      "output":  "home=/srv/hpc/home/hpctest scratch=/srv/hpc/scratch/hpctest project=/srv/hpc/project/hpctest",
+                                      "stderr":  "",
+                                      "timed_out":  false,
+                                      "timeout_seconds":  180,
+                                      "duration_seconds":  0.49
+                                  },
+                                  {
+                                      "exit_code":  0,
+                                      "output":  "home=/srv/hpc/home/hpctest scratch=/srv/hpc/scratch/hpctest project=/srv/hpc/project/hpctest",
+                                      "stderr":  "",
+                                      "timed_out":  false,
+                                      "timeout_seconds":  180,
+                                      "duration_seconds":  0.33
+                                  }
+                              ],
+                  "storage_same":  true,
+                  "storage_ok":  true,
+                  "sftp_output":  "sftp\u003e get /etc/hostname \"C:/Users/mskomek/AppData/Local/hpc-client-gui-lab/hostname.copy\"\r\n",
+                  "sftp_stderr":  null,
+                  "sftp_file_exists":  true,
+                  "sftp_content_match":  true,
+                  "sftp_put_content_match":  true,
+                  "munge":  {
+                                "exit_code":  0,
+                                "output":  "",
+                                "stderr":  "",
+                                "timed_out":  false,
+                                "timeout_seconds":  180,
+                                "duration_seconds":  0.38
+                            },
+                  "srun":  {
+                               "exit_code":  0,
+                               "output":  "compute01\ncompute02",
+                               "stderr":  "",
+                               "timed_out":  false,
+                               "timeout_seconds":  300,
+                               "duration_seconds":  0.28
+                           },
+                  "srun_nodes_ok":  true,
+                  "sinfo":  {
+                                "exit_code":  0,
+                                "output":  "compute01|idle\ncompute02|idle",
+                                "stderr":  "",
+                                "timed_out":  false,
+                                "timeout_seconds":  180,
+                                "duration_seconds":  0.25
+                            },
+                  "sinfo_nodes_ok":  true,
+                  "squeue":  {
+                                 "exit_code":  0,
+                                 "output":  "",
+                                 "stderr":  "",
+                                 "timed_out":  false,
+                                 "timeout_seconds":  180,
+                                 "duration_seconds":  0.24
+                             },
+                  "scontrol":  {
+                                   "exit_code":  0,
+                                   "output":  "NodeName=compute01 Arch=x86_64 CoresPerSocket=1 \n   CPUAlloc=0 CPUEfctv=2 CPUTot=2 CPULoad=0.00\n   AvailableFeatures=(null)\n   ActiveFeatures=(null)\n   Gres=(null)\n   NodeAddr=compute01 NodeHostName=compute01 Version=23.11.4\n   OS=Linux 6.8.0-142-generic #142-Ubuntu SMP PREEMPT_DYNAMIC Wed Sep  2 14:24:27 UTC 2026 \n   RealMemory=1792 AllocMem=0 FreeMem=1083 Sockets=2 Boards=1\n   State=IDLE ThreadsPerCore=1 TmpDisk=0 Weight=1 Owner=N/A MCS_label=N/A\n   Partitions=debug \n   BootTime=2026-09-28T00:11:16 SlurmdStartTime=2026-09-28T10:38:06\n   LastBusyTime=2026-09-30T11:52:15 ResumeAfterTime=None\n   CfgTRES=cpu=2,mem=1792M,billing=2\n   AllocTRES=\n   CapWatts=n/a\n   CurrentWatts=0 AveWatts=0\n   ExtSensorsJoules=n/a ExtSensorsWatts=0 ExtSensorsTemp=n/a\n\nNodeName=compute02 Arch=x86_64 CoresPerSocket=1 \n   CPUAlloc=0 CPUEfctv=2 CPUTot=2 CPULoad=0.00\n   AvailableFeatures=(null)\n   ActiveFeatures=(null)\n   Gres=(null)\n   NodeAddr=compute02 NodeHostName=compute02 Version=23.11.4\n   OS=Linux 6.8.0-142-generic #142-Ubuntu SMP PREEMPT_DYNAMIC Wed Sep  2 14:24:27 UTC 2026 \n   RealMemory=1792 AllocMem=0 FreeMem=1002 Sockets=2 Boards=1\n   State=IDLE ThreadsPerCore=1 TmpDisk=0 Weight=1 Owner=N/A MCS_label=N/A\n   Partitions=debug \n   BootTime=2026-09-28T18:26:13 SlurmdStartTime=2026-09-28T10:38:11\n   LastBusyTime=2026-09-30T11:52:15 ResumeAfterTime=None\n   CfgTRES=cpu=2,mem=1792M,billing=2\n   AllocTRES=\n   CapWatts=n/a\n   CurrentWatts=0 AveWatts=0\n   ExtSensorsJoules=n/a ExtSensorsWatts=0 ExtSensorsTemp=n/a",
+                                   "stderr":  "",
+                                   "timed_out":  false,
+                                   "timeout_seconds":  180,
+                                   "duration_seconds":  0.24
+                               },
+                  "sbatch":  {
+                                 "exit_code":  0,
+                                 "output":  "138",
+                                 "stderr":  "",
+                                 "timed_out":  false,
+                                 "timeout_seconds":  300,
+                                 "duration_seconds":  10.36
+                             },
+                  "sacct":  {
+                                "exit_code":  0,
+                                "output":  "138|COMPLETED|0:0\n138.batch|COMPLETED|0:0",
+                                "stderr":  "",
+                                "timed_out":  false,
+                                "timeout_seconds":  180,
+                                "duration_seconds":  0.34
+                            },
+                  "sacct_completed_ok":  true,
+                  "shared_home_job":  {
+                                          "exit_code":  0,
+                                          "output":  "compute01 /srv/hpc/home/hpctest/.local-real-job\ncompute02 /srv/hpc/home/hpctest/.local-real-job",
+                                          "stderr":  "",
+                                          "timed_out":  false,
+                                          "timeout_seconds":  300,
+                                          "duration_seconds":  0.27
+                                      },
+                  "shared_home_job_ok":  true,
+                  "permission_denied":  {
+                                            "observed_exit_code":  1,
+                                            "output":  "",
+                                            "stderr":  "cat: /srv/hpc/project/root-only: Permission denied"
+                                        },
+                  "permission_denied_ok":  true,
+                  "cancel_submit":  {
+                                        "exit_code":  0,
+                                        "output":  "140",
+                                        "stderr":  "",
+                                        "timed_out":  false,
+                                        "timeout_seconds":  180,
+                                        "duration_seconds":  0.26
+                                    },
+                  "scancel_ok":  true,
+                  "scancel":  {
+                                  "exit_code":  0,
+                                  "output":  "",
+                                  "stderr":  "",
+                                  "timed_out":  false,
+                                  "timeout_seconds":  180,
+                                  "duration_seconds":  0.28
+                              },
+                  "verdict":  {
+                                  "required":  {
+                                                   "ssh_pty":  true,
+                                                   "host_keys_pinned_all_nodes":  true,
+                                                   "ssh_key_login_all_nodes":  true,
+                                                   "canonical_paths":  true,
+                                                   "identity_consistency":  true,
+                                                   "storage_roundtrip":  true,
+                                                   "sftp_download_exit":  true,
+                                                   "sftp_download_file":  true,
+                                                   "sftp_download_content":  true,
+                                                   "sftp_upload_exit":  true,
+                                                   "sftp_upload_content":  true,
+                                                   "munge_roundtrip":  true,
+                                                   "srun_two_nodes":  true,
+                                                   "sinfo_nodes":  true,
+                                                   "squeue_command":  true,
+                                                   "scontrol_command":  true,
+                                                   "sbatch_command":  true,
+                                                   "sacct_completed":  true,
+                                                   "shared_home_compute_job":  true,
+                                                   "permission_denied_negative":  true,
+                                                   "cancel_submit":  true,
+                                                   "scancel_command":  true,
+                                                   "scancel_state":  true
+                                               },
+                                  "failed":  [
+
+                                             ],
+                                  "required_count":  23,
+                                  "failed_count":  0
+                              }
+              },
+    "generated_at":  "2026-09-30T11:52:26.0459262Z",
+    "note":  "Laboratory evidence only; not W22 PASS."
+}

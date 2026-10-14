@@ -1,0 +1,21 @@
+{
+  "schema": "w57.1-u01-repair-routing/2",
+  "semantic_problem_id": "W57-1-U01-FROZEN-BYTES-001",
+  "repair_action": "routing",
+  "phase_instance": "20260930-021923-21fa3571:7:W57.1:repair",
+  "baseline_head": "ad02258620ef34c0d778037bb16b0f4421e950b5",
+  "frozen_sha256": "6cca43a5a98a2c7049aae182b58473db4c491dabc06b13cf599bd429e45e530e",
+  "frozen_size": 7672473,
+  "live_sha256": "8BA80453A76A664959BAEDF7716C476A5334B6AFF860A4BC79B9E220D48B4C57",
+  "live_size": 7672468,
+  "expanded_search_roots": [
+    "repo-root-recursive",
+    "D:/Projeler/.tmp/hpc-client-gui-recursive"
+  ],
+  "size_match_files": [],
+  "result": "no 7672473-byte file anywhere searched; retention has not supplied frozen bytes",
+  "routed_to": [
+    "W56-retention-authority",
+    "harness-owner-wx-package-content-wx_runtime-shiboken6"
+  ]
+}

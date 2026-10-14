@@ -1,0 +1,523 @@
+{
+ "artifacts": [
+  "artifacts/wave_W63/requirements/HPC-W63-PROV-001.json",
+  "artifacts/wave_W63/requirements/HPC-W63-PROV-002.json",
+  "artifacts/wave_W63/requirements/HPC-W63-PROV-003.json",
+  "artifacts/wave_W63/requirements/HPC-W63-PROV-004.json",
+  "artifacts/wave_W63/requirements/HPC-W63-PROV-005.json",
+  "artifacts/wave_W63/requirements/HPC-W63-PROV-006.json",
+  "artifacts/wave_W63/WAVE_W63_EVIDENCE_MANIFEST.json",
+  "artifacts/refactored-v2/w63/registry-transaction.json"
+ ],
+ "blockers": [],
+ "candidate_sha": "4268668f4b1af6cac2affd8679e3ffc62fbb6f0d",
+ "closure_sha": null,
+ "contradiction_scan": "No contradictions: all six owned requirements carry candidate-bound receipts with zero MISMATCH; sibling packages reused read-only; no guessed values.",
+ "deferred_items": [],
+ "dependency_validation": {
+  "dependencies": []
+ },
+ "gui_actions": [],
+ "product_or_sibling_files_changed": false,
+ "protocol_revision": "WAVE_PROJECT_PROFILE.json schema_version 3",
+ "requirements": [
+  {
+   "requirement_id": "HPC-W63-PROV-001",
+   "artifact": "artifacts/wave_W63/requirements/HPC-W63-PROV-001.json",
+   "summary": "Perlmutter 27 keys, zero MISMATCH, focused pytest 6 passed",
+   "disposition": "PASS",
+   "implementation_owners": [
+    "hpc_gui.plugins.providers.registered_providers",
+    "hpc_gui.plugins.validator.validate_cluster_profile_dict",
+    "hpc_gui.services.nersc_quota.parse_nersc_showquota_json"
+   ],
+   "test_nodes": [
+    "tests/test_nersc_quota.py::test_nersc_json_parser_reads_space_and_inode_quota",
+    "tests/test_plugin_profile_v2.py::test_v1_profile_still_validates",
+    "tests/test_plugin_profile_v2.py::test_v2_profile_rejects_unknown_top_level_keys",
+    "tests/test_plugin_profile_v3.py::test_v1_v2_v3_profiles_remain_valid",
+    "tests/test_plugin_schema_compat.py::test_plugin_8_future_schema_is_rejected",
+    "tests/test_plugin_security.py::test_only_application_owned_slurm_commands_are_accepted"
+   ],
+   "evidence_refs": [
+    "artifacts/wave_W63/requirements/HPC-W63-PROV-001.json"
+   ],
+   "candidate_sha": "4268668f4b1af6cac2affd8679e3ffc62fbb6f0d",
+   "candidate_content_sha256": "86cc03d553eebe531f3c2a2c0104f59daece004963b64d2070322327a340c44d"
+  },
+  {
+   "requirement_id": "HPC-W63-PROV-002",
+   "artifact": "artifacts/wave_W63/requirements/HPC-W63-PROV-002.json",
+   "summary": "Frontera 27 keys, zero MISMATCH, retirement 2026-10-15 flagged, install-cycle 6x exit 0, focused pytest 5 passed",
+   "disposition": "PASS",
+   "implementation_owners": [
+    "hpc_gui.plugins.validator.validate_cluster_profile_dict",
+    "hpc_gui.services.provider_contract.extract_contract",
+    "hpc_gui.plugins.installer.install_plugin_from_registry"
+   ],
+   "test_nodes": [
+    "tests/test_plugin_profile_v2.py::test_v1_profile_still_validates",
+    "tests/test_plugin_profile_v2.py::test_v2_profile_rejects_unknown_top_level_keys",
+    "tests/test_wave79_provider_contract.py::TestProviderContract::test_extract_full_contract",
+    "tests/test_wave79_provider_contract.py::TestProviderContract::test_extract_partial_contract",
+    "tests/test_wave79_provider_contract.py::TestProviderContract::test_extract_malformed_section"
+   ],
+   "evidence_refs": [
+    "artifacts/wave_W63/requirements/HPC-W63-PROV-002.json",
+    "artifacts/refactored-v2/w63/registry-transaction.json"
+   ],
+   "candidate_sha": "4268668f4b1af6cac2affd8679e3ffc62fbb6f0d",
+   "candidate_content_sha256": "86cc03d553eebe531f3c2a2c0104f59daece004963b64d2070322327a340c44d"
+  },
+  {
+   "requirement_id": "HPC-W63-PROV-003",
+   "artifact": "artifacts/wave_W63/requirements/HPC-W63-PROV-003.json",
+   "summary": "Stampede3 27 keys, zero MISMATCH, focused pytest 8 passed",
+   "disposition": "PASS",
+   "implementation_owners": [
+    "hpc_gui.plugins.providers.registered_providers",
+    "hpc_gui.plugins.validator.validate_cluster_profile_dict"
+   ],
+   "test_nodes": [
+    "tests/test_plugin_profile_v2.py::test_v1_profile_still_validates",
+    "tests/test_plugin_profile_v2.py::test_v2_profile_rejects_unknown_top_level_keys",
+    "tests/test_w34_provider_settings.py::test_prov001_provider_registers_through_registry",
+    "tests/test_plugin_security.py::test_only_application_owned_slurm_commands_are_accepted",
+    "tests/test_fluent_plugin_integration.py::test_latest_fluent_template_renders_after_install",
+    "tests/test_fluent_plugin_integration.py::test_registry_entry_installs_via_exact_file_protocol",
+    "tests/test_plugin_compatibility_override.py::test_override_cannot_widen_what_the_manifest_permits",
+    "tests/test_plugin_compatibility_override.py::test_unsupported_schema_stays_fail_closed_under_an_override"
+   ],
+   "evidence_refs": [
+    "artifacts/wave_W63/requirements/HPC-W63-PROV-003.json"
+   ],
+   "candidate_sha": "4268668f4b1af6cac2affd8679e3ffc62fbb6f0d",
+   "candidate_content_sha256": "86cc03d553eebe531f3c2a2c0104f59daece004963b64d2070322327a340c44d"
+  },
+  {
+   "requirement_id": "HPC-W63-PROV-004",
+   "artifact": "artifacts/wave_W63/requirements/HPC-W63-PROV-004.json",
+   "summary": "Delta 27 keys, zero MISMATCH, install-cycle 6x exit 0, focused pytest 5 passed",
+   "disposition": "PASS",
+   "implementation_owners": [
+    "hpc_gui.plugins.validator.validate_cluster_profile_dict",
+    "hpc_gui.services.provider_contract.extract_contract",
+    "hpc_gui.plugins.installer.install_plugin_from_registry"
+   ],
+   "test_nodes": [
+    "tests/test_plugin_profile_v2.py::test_v1_profile_still_validates",
+    "tests/test_plugin_profile_v2.py::test_v2_profile_rejects_unknown_top_level_keys",
+    "tests/test_wave79_provider_contract.py::TestProviderContract::test_extract_full_contract",
+    "tests/test_wave79_provider_contract.py::TestProviderContract::test_extract_partial_contract",
+    "tests/test_wave79_provider_contract.py::TestProviderContract::test_extract_malformed_section"
+   ],
+   "evidence_refs": [
+    "artifacts/wave_W63/requirements/HPC-W63-PROV-004.json",
+    "artifacts/refactored-v2/w63/registry-transaction.json"
+   ],
+   "candidate_sha": "4268668f4b1af6cac2affd8679e3ffc62fbb6f0d",
+   "candidate_content_sha256": "86cc03d553eebe531f3c2a2c0104f59daece004963b64d2070322327a340c44d"
+  },
+  {
+   "requirement_id": "HPC-W63-PROV-005",
+   "artifact": "artifacts/wave_W63/requirements/HPC-W63-PROV-005.json",
+   "summary": "5 generic registry checks clean, focused pytest 8 passed",
+   "disposition": "PASS",
+   "implementation_owners": [
+    "hpc_gui.plugins.validator.validate_registry_dict",
+    "hpc_gui.plugins.integrity.verify_installed_version",
+    "hpc_gui.plugins.installer.install_plugin_from_registry",
+    "hpc_gui.wx_plugins.WxPluginManagerModel.set_enabled",
+    "hpc_gui.wx_plugins.WxPluginManagerModel.remove"
+   ],
+   "test_nodes": [
+    "tests/test_plugin_profile_v2.py::test_v1_profile_still_validates",
+    "tests/test_plugin_profile_v2.py::test_v2_profile_rejects_unknown_top_level_keys",
+    "tests/test_w34_provider_settings.py::test_prov001_provider_registers_through_registry",
+    "tests/test_plugin_security.py::test_only_application_owned_slurm_commands_are_accepted",
+    "tests/test_fluent_plugin_integration.py::test_latest_fluent_template_renders_after_install",
+    "tests/test_fluent_plugin_integration.py::test_registry_entry_installs_via_exact_file_protocol",
+    "tests/test_plugin_compatibility_override.py::test_override_cannot_widen_what_the_manifest_permits",
+    "tests/test_plugin_compatibility_override.py::test_unsupported_schema_stays_fail_closed_under_an_override"
+   ],
+   "evidence_refs": [
+    "artifacts/wave_W63/requirements/HPC-W63-PROV-005.json"
+   ],
+   "candidate_sha": "4268668f4b1af6cac2affd8679e3ffc62fbb6f0d",
+   "candidate_content_sha256": "86cc03d553eebe531f3c2a2c0104f59daece004963b64d2070322327a340c44d"
+  },
+  {
+   "requirement_id": "HPC-W63-PROV-006",
+   "artifact": "artifacts/wave_W63/requirements/HPC-W63-PROV-006.json",
+   "summary": "Provenance captured read-only, focused pytest 3 passed",
+   "disposition": "PASS",
+   "implementation_owners": [
+    "scripts.generate_release_manifest._plugin_commit",
+    "scripts.wx_packaged_smoke_support.plugin_commit",
+    "hpc_gui.plugins.registry_client.fetch_registry_with_cache"
+   ],
+   "test_nodes": [
+    "tests/test_plugin_compatibility_override.py::test_override_survives_the_cached_registry_path",
+    "tests/test_plugin_installer.py::test_corrupt_cache_is_not_trusted",
+    "tests/test_plugin_installer.py::test_network_fetch_then_cache_fallback"
+   ],
+   "evidence_refs": [
+    "artifacts/wave_W63/requirements/HPC-W63-PROV-006.json",
+    "artifacts/refactored-v2/w63/registry-transaction.json"
+   ],
+   "candidate_sha": "4268668f4b1af6cac2affd8679e3ffc62fbb6f0d",
+   "candidate_content_sha256": "86cc03d553eebe531f3c2a2c0104f59daece004963b64d2070322327a340c44d"
+  }
+ ],
+ "resources": {
+  "project_head": "4268668f4b1af6cac2affd8679e3ffc62fbb6f0d (dirty worktree; receipts bind candidate identity)",
+  "sibling_head": "f0abb7e7037e66ab451d463c699fecf4e00c89eb",
+  "sibling_repository": "D:/Projeler/hpc-client-gui-plugins"
+ },
+ "review_passes": [
+  "unit_run U01-U04 with candidate-bound focused pytest",
+  "wave-local consolidation in this manifest"
+ ],
+ "sibling_head": "f0abb7e7037e66ab451d463c699fecf4e00c89eb",
+ "spec_profile_id": "HPC",
+ "status": "ACCEPTANCE_GREEN",
+ "tests": [
+  {
+   "node": "tests/test_nersc_quota.py::test_nersc_json_parser_reads_space_and_inode_quota",
+   "command": "pytest tests/test_nersc_quota.py::test_nersc_json_parser_reads_space_and_inode_quota",
+   "requirement_ids": [
+    "HPC-W63-PROV-001"
+   ],
+   "exit_code": 0,
+   "passed": 1,
+   "failed": 0,
+   "skipped": 0,
+   "xfailed": 0,
+   "xpassed": 0,
+   "environment": "windows-opencode-venv",
+   "timestamp": "2026-10-14T07:50:41Z",
+   "evidence_path": "artifacts/wave_W63/requirements/HPC-W63-PROV-001.json",
+   "candidate_sha": "4268668f4b1af6cac2affd8679e3ffc62fbb6f0d",
+   "candidate_content_sha256": "86cc03d553eebe531f3c2a2c0104f59daece004963b64d2070322327a340c44d"
+  },
+  {
+   "node": "tests/test_plugin_profile_v2.py::test_v1_profile_still_validates",
+   "command": "pytest tests/test_plugin_profile_v2.py::test_v1_profile_still_validates",
+   "requirement_ids": [
+    "HPC-W63-PROV-001",
+    "HPC-W63-PROV-002",
+    "HPC-W63-PROV-003",
+    "HPC-W63-PROV-004",
+    "HPC-W63-PROV-005"
+   ],
+   "exit_code": 0,
+   "passed": 1,
+   "failed": 0,
+   "skipped": 0,
+   "xfailed": 0,
+   "xpassed": 0,
+   "environment": "windows-opencode-venv",
+   "timestamp": "2026-10-14T07:50:41Z",
+   "evidence_path": "artifacts/wave_W63/requirements/HPC-W63-PROV-001.json",
+   "candidate_sha": "4268668f4b1af6cac2affd8679e3ffc62fbb6f0d",
+   "candidate_content_sha256": "86cc03d553eebe531f3c2a2c0104f59daece004963b64d2070322327a340c44d"
+  },
+  {
+   "node": "tests/test_plugin_profile_v2.py::test_v2_profile_rejects_unknown_top_level_keys",
+   "command": "pytest tests/test_plugin_profile_v2.py::test_v2_profile_rejects_unknown_top_level_keys",
+   "requirement_ids": [
+    "HPC-W63-PROV-001",
+    "HPC-W63-PROV-002",
+    "HPC-W63-PROV-003",
+    "HPC-W63-PROV-004",
+    "HPC-W63-PROV-005"
+   ],
+   "exit_code": 0,
+   "passed": 1,
+   "failed": 0,
+   "skipped": 0,
+   "xfailed": 0,
+   "xpassed": 0,
+   "environment": "windows-opencode-venv",
+   "timestamp": "2026-10-14T07:50:41Z",
+   "evidence_path": "artifacts/wave_W63/requirements/HPC-W63-PROV-001.json",
+   "candidate_sha": "4268668f4b1af6cac2affd8679e3ffc62fbb6f0d",
+   "candidate_content_sha256": "86cc03d553eebe531f3c2a2c0104f59daece004963b64d2070322327a340c44d"
+  },
+  {
+   "node": "tests/test_plugin_profile_v3.py::test_v1_v2_v3_profiles_remain_valid",
+   "command": "pytest tests/test_plugin_profile_v3.py::test_v1_v2_v3_profiles_remain_valid",
+   "requirement_ids": [
+    "HPC-W63-PROV-001"
+   ],
+   "exit_code": 0,
+   "passed": 1,
+   "failed": 0,
+   "skipped": 0,
+   "xfailed": 0,
+   "xpassed": 0,
+   "environment": "windows-opencode-venv",
+   "timestamp": "2026-10-14T07:50:41Z",
+   "evidence_path": "artifacts/wave_W63/requirements/HPC-W63-PROV-001.json",
+   "candidate_sha": "4268668f4b1af6cac2affd8679e3ffc62fbb6f0d",
+   "candidate_content_sha256": "86cc03d553eebe531f3c2a2c0104f59daece004963b64d2070322327a340c44d"
+  },
+  {
+   "node": "tests/test_plugin_schema_compat.py::test_plugin_8_future_schema_is_rejected",
+   "command": "pytest tests/test_plugin_schema_compat.py::test_plugin_8_future_schema_is_rejected",
+   "requirement_ids": [
+    "HPC-W63-PROV-001"
+   ],
+   "exit_code": 0,
+   "passed": 1,
+   "failed": 0,
+   "skipped": 0,
+   "xfailed": 0,
+   "xpassed": 0,
+   "environment": "windows-opencode-venv",
+   "timestamp": "2026-10-14T07:50:41Z",
+   "evidence_path": "artifacts/wave_W63/requirements/HPC-W63-PROV-001.json",
+   "candidate_sha": "4268668f4b1af6cac2affd8679e3ffc62fbb6f0d",
+   "candidate_content_sha256": "86cc03d553eebe531f3c2a2c0104f59daece004963b64d2070322327a340c44d"
+  },
+  {
+   "node": "tests/test_plugin_security.py::test_only_application_owned_slurm_commands_are_accepted",
+   "command": "pytest tests/test_plugin_security.py::test_only_application_owned_slurm_commands_are_accepted",
+   "requirement_ids": [
+    "HPC-W63-PROV-001",
+    "HPC-W63-PROV-003",
+    "HPC-W63-PROV-005"
+   ],
+   "exit_code": 0,
+   "passed": 1,
+   "failed": 0,
+   "skipped": 0,
+   "xfailed": 0,
+   "xpassed": 0,
+   "environment": "windows-opencode-venv",
+   "timestamp": "2026-10-14T07:50:41Z",
+   "evidence_path": "artifacts/wave_W63/requirements/HPC-W63-PROV-001.json",
+   "candidate_sha": "4268668f4b1af6cac2affd8679e3ffc62fbb6f0d",
+   "candidate_content_sha256": "86cc03d553eebe531f3c2a2c0104f59daece004963b64d2070322327a340c44d"
+  },
+  {
+   "node": "tests/test_wave79_provider_contract.py::TestProviderContract::test_extract_full_contract",
+   "command": "pytest tests/test_wave79_provider_contract.py::TestProviderContract::test_extract_full_contract",
+   "requirement_ids": [
+    "HPC-W63-PROV-002",
+    "HPC-W63-PROV-004"
+   ],
+   "exit_code": 0,
+   "passed": 1,
+   "failed": 0,
+   "skipped": 0,
+   "xfailed": 0,
+   "xpassed": 0,
+   "environment": "windows-opencode-venv",
+   "timestamp": "2026-10-14T07:50:41Z",
+   "evidence_path": "artifacts/wave_W63/requirements/HPC-W63-PROV-002.json",
+   "candidate_sha": "4268668f4b1af6cac2affd8679e3ffc62fbb6f0d",
+   "candidate_content_sha256": "86cc03d553eebe531f3c2a2c0104f59daece004963b64d2070322327a340c44d"
+  },
+  {
+   "node": "tests/test_wave79_provider_contract.py::TestProviderContract::test_extract_partial_contract",
+   "command": "pytest tests/test_wave79_provider_contract.py::TestProviderContract::test_extract_partial_contract",
+   "requirement_ids": [
+    "HPC-W63-PROV-002",
+    "HPC-W63-PROV-004"
+   ],
+   "exit_code": 0,
+   "passed": 1,
+   "failed": 0,
+   "skipped": 0,
+   "xfailed": 0,
+   "xpassed": 0,
+   "environment": "windows-opencode-venv",
+   "timestamp": "2026-10-14T07:50:41Z",
+   "evidence_path": "artifacts/wave_W63/requirements/HPC-W63-PROV-002.json",
+   "candidate_sha": "4268668f4b1af6cac2affd8679e3ffc62fbb6f0d",
+   "candidate_content_sha256": "86cc03d553eebe531f3c2a2c0104f59daece004963b64d2070322327a340c44d"
+  },
+  {
+   "node": "tests/test_wave79_provider_contract.py::TestProviderContract::test_extract_malformed_section",
+   "command": "pytest tests/test_wave79_provider_contract.py::TestProviderContract::test_extract_malformed_section",
+   "requirement_ids": [
+    "HPC-W63-PROV-002",
+    "HPC-W63-PROV-004"
+   ],
+   "exit_code": 0,
+   "passed": 1,
+   "failed": 0,
+   "skipped": 0,
+   "xfailed": 0,
+   "xpassed": 0,
+   "environment": "windows-opencode-venv",
+   "timestamp": "2026-10-14T07:50:41Z",
+   "evidence_path": "artifacts/wave_W63/requirements/HPC-W63-PROV-002.json",
+   "candidate_sha": "4268668f4b1af6cac2affd8679e3ffc62fbb6f0d",
+   "candidate_content_sha256": "86cc03d553eebe531f3c2a2c0104f59daece004963b64d2070322327a340c44d"
+  },
+  {
+   "node": "tests/test_w34_provider_settings.py::test_prov001_provider_registers_through_registry",
+   "command": "pytest tests/test_w34_provider_settings.py::test_prov001_provider_registers_through_registry",
+   "requirement_ids": [
+    "HPC-W63-PROV-003",
+    "HPC-W63-PROV-005"
+   ],
+   "exit_code": 0,
+   "passed": 1,
+   "failed": 0,
+   "skipped": 0,
+   "xfailed": 0,
+   "xpassed": 0,
+   "environment": "windows-opencode-venv",
+   "timestamp": "2026-10-14T07:50:41Z",
+   "evidence_path": "artifacts/wave_W63/requirements/HPC-W63-PROV-003.json",
+   "candidate_sha": "4268668f4b1af6cac2affd8679e3ffc62fbb6f0d",
+   "candidate_content_sha256": "86cc03d553eebe531f3c2a2c0104f59daece004963b64d2070322327a340c44d"
+  },
+  {
+   "node": "tests/test_fluent_plugin_integration.py::test_latest_fluent_template_renders_after_install",
+   "command": "pytest tests/test_fluent_plugin_integration.py::test_latest_fluent_template_renders_after_install",
+   "requirement_ids": [
+    "HPC-W63-PROV-003",
+    "HPC-W63-PROV-005"
+   ],
+   "exit_code": 0,
+   "passed": 1,
+   "failed": 0,
+   "skipped": 0,
+   "xfailed": 0,
+   "xpassed": 0,
+   "environment": "windows-opencode-venv",
+   "timestamp": "2026-10-14T07:50:41Z",
+   "evidence_path": "artifacts/wave_W63/requirements/HPC-W63-PROV-003.json",
+   "candidate_sha": "4268668f4b1af6cac2affd8679e3ffc62fbb6f0d",
+   "candidate_content_sha256": "86cc03d553eebe531f3c2a2c0104f59daece004963b64d2070322327a340c44d"
+  },
+  {
+   "node": "tests/test_fluent_plugin_integration.py::test_registry_entry_installs_via_exact_file_protocol",
+   "command": "pytest tests/test_fluent_plugin_integration.py::test_registry_entry_installs_via_exact_file_protocol",
+   "requirement_ids": [
+    "HPC-W63-PROV-003",
+    "HPC-W63-PROV-005"
+   ],
+   "exit_code": 0,
+   "passed": 1,
+   "failed": 0,
+   "skipped": 0,
+   "xfailed": 0,
+   "xpassed": 0,
+   "environment": "windows-opencode-venv",
+   "timestamp": "2026-10-14T07:50:41Z",
+   "evidence_path": "artifacts/wave_W63/requirements/HPC-W63-PROV-003.json",
+   "candidate_sha": "4268668f4b1af6cac2affd8679e3ffc62fbb6f0d",
+   "candidate_content_sha256": "86cc03d553eebe531f3c2a2c0104f59daece004963b64d2070322327a340c44d"
+  },
+  {
+   "node": "tests/test_plugin_compatibility_override.py::test_override_cannot_widen_what_the_manifest_permits",
+   "command": "pytest tests/test_plugin_compatibility_override.py::test_override_cannot_widen_what_the_manifest_permits",
+   "requirement_ids": [
+    "HPC-W63-PROV-003",
+    "HPC-W63-PROV-005"
+   ],
+   "exit_code": 0,
+   "passed": 1,
+   "failed": 0,
+   "skipped": 0,
+   "xfailed": 0,
+   "xpassed": 0,
+   "environment": "windows-opencode-venv",
+   "timestamp": "2026-10-14T07:50:41Z",
+   "evidence_path": "artifacts/wave_W63/requirements/HPC-W63-PROV-003.json",
+   "candidate_sha": "4268668f4b1af6cac2affd8679e3ffc62fbb6f0d",
+   "candidate_content_sha256": "86cc03d553eebe531f3c2a2c0104f59daece004963b64d2070322327a340c44d"
+  },
+  {
+   "node": "tests/test_plugin_compatibility_override.py::test_unsupported_schema_stays_fail_closed_under_an_override",
+   "command": "pytest tests/test_plugin_compatibility_override.py::test_unsupported_schema_stays_fail_closed_under_an_override",
+   "requirement_ids": [
+    "HPC-W63-PROV-003",
+    "HPC-W63-PROV-005"
+   ],
+   "exit_code": 0,
+   "passed": 1,
+   "failed": 0,
+   "skipped": 0,
+   "xfailed": 0,
+   "xpassed": 0,
+   "environment": "windows-opencode-venv",
+   "timestamp": "2026-10-14T07:50:41Z",
+   "evidence_path": "artifacts/wave_W63/requirements/HPC-W63-PROV-003.json",
+   "candidate_sha": "4268668f4b1af6cac2affd8679e3ffc62fbb6f0d",
+   "candidate_content_sha256": "86cc03d553eebe531f3c2a2c0104f59daece004963b64d2070322327a340c44d"
+  },
+  {
+   "node": "tests/test_plugin_compatibility_override.py::test_override_survives_the_cached_registry_path",
+   "command": "pytest tests/test_plugin_compatibility_override.py::test_override_survives_the_cached_registry_path",
+   "requirement_ids": [
+    "HPC-W63-PROV-006"
+   ],
+   "exit_code": 0,
+   "passed": 1,
+   "failed": 0,
+   "skipped": 0,
+   "xfailed": 0,
+   "xpassed": 0,
+   "environment": "windows-opencode-venv",
+   "timestamp": "2026-10-14T07:50:41Z",
+   "evidence_path": "artifacts/wave_W63/requirements/HPC-W63-PROV-006.json",
+   "candidate_sha": "4268668f4b1af6cac2affd8679e3ffc62fbb6f0d",
+   "candidate_content_sha256": "86cc03d553eebe531f3c2a2c0104f59daece004963b64d2070322327a340c44d"
+  },
+  {
+   "node": "tests/test_plugin_installer.py::test_corrupt_cache_is_not_trusted",
+   "command": "pytest tests/test_plugin_installer.py::test_corrupt_cache_is_not_trusted",
+   "requirement_ids": [
+    "HPC-W63-PROV-006"
+   ],
+   "exit_code": 0,
+   "passed": 1,
+   "failed": 0,
+   "skipped": 0,
+   "xfailed": 0,
+   "xpassed": 0,
+   "environment": "windows-opencode-venv",
+   "timestamp": "2026-10-14T07:50:41Z",
+   "evidence_path": "artifacts/wave_W63/requirements/HPC-W63-PROV-006.json",
+   "candidate_sha": "4268668f4b1af6cac2affd8679e3ffc62fbb6f0d",
+   "candidate_content_sha256": "86cc03d553eebe531f3c2a2c0104f59daece004963b64d2070322327a340c44d"
+  },
+  {
+   "node": "tests/test_plugin_installer.py::test_network_fetch_then_cache_fallback",
+   "command": "pytest tests/test_plugin_installer.py::test_network_fetch_then_cache_fallback",
+   "requirement_ids": [
+    "HPC-W63-PROV-006"
+   ],
+   "exit_code": 0,
+   "passed": 1,
+   "failed": 0,
+   "skipped": 0,
+   "xfailed": 0,
+   "xpassed": 0,
+   "environment": "windows-opencode-venv",
+   "timestamp": "2026-10-14T07:50:41Z",
+   "evidence_path": "artifacts/wave_W63/requirements/HPC-W63-PROV-006.json",
+   "candidate_sha": "4268668f4b1af6cac2affd8679e3ffc62fbb6f0d",
+   "candidate_content_sha256": "86cc03d553eebe531f3c2a2c0104f59daece004963b64d2070322327a340c44d"
+  }
+ ],
+ "validator_result": {
+  "closeout_validator": "can_close true",
+  "wave": "W63",
+  "candidate_sha": "4268668f4b1af6cac2affd8679e3ffc62fbb6f0d",
+  "test_count": 17,
+  "failure_reasons": [],
+  "executed_by": "W63-REPAIR-U02",
+  "executed_on": "2026-10-14"
+ },
+ "wave_id": "W63",
+ "wave_spec_revision": "waves/pending/W63.md",
+ "candidate_content_sha256": "86cc03d553eebe531f3c2a2c0104f59daece004963b64d2070322327a340c44d",
+ "candidate_binding_note": "Validator-owned candidate_sha is the verified Git commit HEAD 4268668f; controller content identity 86cc03d5 plus exact sibling manifest/profile hashes are bound in every requirement receipt and candidate_content_sha256, not HEAD alone."
+}

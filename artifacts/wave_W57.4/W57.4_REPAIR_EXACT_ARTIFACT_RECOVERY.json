@@ -1,0 +1,159 @@
+{
+  "schema": "w57.4-exact-artifact-recovery/1",
+  "semantic_problem_id": "W57.4/AUTO/6c56e976b8544e1b",
+  "repair_hypothesis": "W57.4/AUTO/6c56e976b8544e1b",
+  "declared_identity": {
+    "sha256": "B3019DEA16783C8AB859FA36D2B0FEF2FB70DB075633E54EB0F36587295374FD",
+    "size_bytes": 7672106
+  },
+  "designated_candidate": {
+    "path": "dist/hpc-client-gui/hpc-client-gui.exe",
+    "sha256": "DB29B6A8BD2C78FE1D9169F36B595752DEC40F411085AB8E6032384E740BBFBD",
+    "size_bytes": 7675423
+  },
+  "search": {
+    "scope": "Current designated artifact and retained W57-named temporary candidate directories under .tmp",
+    "candidate_files_examined": 13,
+    "exact_matches": [],
+    "result": "NO_EXACT_MATCH_IN_SCOPED_LOCATIONS",
+    "locations": [
+      "D:\\Projeler\\hpc-client-gui\\.tmp\\c7-exhaustive-fix",
+      "D:\\Projeler\\hpc-client-gui\\.tmp\\w57-148-budget",
+      "D:\\Projeler\\hpc-client-gui\\.tmp\\w57-148-freshuser",
+      "D:\\Projeler\\hpc-client-gui\\.tmp\\w57-148-freshuser2",
+      "D:\\Projeler\\hpc-client-gui\\.tmp\\w57-148-fullpostrun",
+      "D:\\Projeler\\hpc-client-gui\\.tmp\\w57-148-labtest",
+      "D:\\Projeler\\hpc-client-gui\\.tmp\\w57-148-labtest2",
+      "D:\\Projeler\\hpc-client-gui\\.tmp\\w57-148-labtest3",
+      "D:\\Projeler\\hpc-client-gui\\.tmp\\w57-148-pkgreg",
+      "D:\\Projeler\\hpc-client-gui\\.tmp\\w57-148-postrun-rundir",
+      "D:\\Projeler\\hpc-client-gui\\.tmp\\w57-148-seam-rundir",
+      "D:\\Projeler\\hpc-client-gui\\.tmp\\w57-148-t06",
+      "D:\\Projeler\\hpc-client-gui\\.tmp\\w57-148-t07",
+      "D:\\Projeler\\hpc-client-gui\\.tmp\\w57-148-t12",
+      "D:\\Projeler\\hpc-client-gui\\.tmp\\w57-audit-0167",
+      "D:\\Projeler\\hpc-client-gui\\.tmp\\w57-audit-114",
+      "D:\\Projeler\\hpc-client-gui\\.tmp\\w57-matproof-01",
+      "D:\\Projeler\\hpc-client-gui\\.tmp\\w57-probe",
+      "D:\\Projeler\\hpc-client-gui\\.tmp\\w57-repair",
+      "D:\\Projeler\\hpc-client-gui\\.tmp\\w57-repair-0102",
+      "D:\\Projeler\\hpc-client-gui\\.tmp\\w57-repair-0104",
+      "D:\\Projeler\\hpc-client-gui\\.tmp\\w57-repair-0105",
+      "D:\\Projeler\\hpc-client-gui\\.tmp\\w57-repair-0106",
+      "D:\\Projeler\\hpc-client-gui\\.tmp\\w57-repair-111",
+      "D:\\Projeler\\hpc-client-gui\\.tmp\\w57-repair-112",
+      "D:\\Projeler\\hpc-client-gui\\.tmp\\w57-repair-113",
+      "D:\\Projeler\\hpc-client-gui\\.tmp\\w57-repair-115",
+      "D:\\Projeler\\hpc-client-gui\\.tmp\\w57-repair-116",
+      "D:\\Projeler\\hpc-client-gui\\.tmp\\w57-repair-121",
+      "D:\\Projeler\\hpc-client-gui\\.tmp\\w57-repair-124",
+      "D:\\Projeler\\hpc-client-gui\\.tmp\\w57-repair-125",
+      "D:\\Projeler\\hpc-client-gui\\.tmp\\w57-repair-126",
+      "D:\\Projeler\\hpc-client-gui\\.tmp\\w57-repair-127",
+      "D:\\Projeler\\hpc-client-gui\\.tmp\\w57-repair-128",
+      "D:\\Projeler\\hpc-client-gui\\.tmp\\w57-repair-129",
+      "D:\\Projeler\\hpc-client-gui\\.tmp\\w57-repair-140",
+      "D:\\Projeler\\hpc-client-gui\\.tmp\\w57-repair-146",
+      "D:\\Projeler\\hpc-client-gui\\.tmp\\w57-repair-170",
+      "D:\\Projeler\\hpc-client-gui\\.tmp\\w57-repair117-password-real",
+      "D:\\Projeler\\hpc-client-gui\\.tmp\\w57-repair119",
+      "D:\\Projeler\\hpc-client-gui\\.tmp\\w57-repair162",
+      "D:\\Projeler\\hpc-client-gui\\.tmp\\w57-repair163",
+      "D:\\Projeler\\hpc-client-gui\\.tmp\\w57-repair164",
+      "D:\\Projeler\\hpc-client-gui\\.tmp\\w57-repair168",
+      "D:\\Projeler\\hpc-client-gui\\.tmp\\w57-replay",
+      "D:\\Projeler\\hpc-client-gui\\.tmp\\w57-run",
+      "D:\\Projeler\\hpc-client-gui\\.tmp\\w57-run-0004",
+      "D:\\Projeler\\hpc-client-gui\\.tmp\\w57-run-110",
+      "D:\\Projeler\\hpc-client-gui\\.tmp\\w57-run-150",
+      "D:\\Projeler\\hpc-client-gui\\.tmp\\w57-run-154",
+      "D:\\Projeler\\hpc-client-gui\\.tmp\\w57-run-99",
+      "D:\\Projeler\\hpc-client-gui\\.tmp\\w57-run152",
+      "D:\\Projeler\\hpc-client-gui\\.tmp\\w57-run155",
+      "D:\\Projeler\\hpc-client-gui\\.tmp\\w57-run158",
+      "D:\\Projeler\\hpc-client-gui\\.tmp\\w57-run161",
+      "D:\\Projeler\\hpc-client-gui\\.tmp\\w57-run169",
+      "D:\\Projeler\\hpc-client-gui\\.tmp\\w57-u01",
+      "D:\\Projeler\\hpc-client-gui\\.tmp\\w57-u01-run",
+      "D:\\Projeler\\hpc-client-gui\\.tmp\\W57.4-repair-partitions",
+      "D:\\Projeler\\hpc-client-gui\\.tmp\\W57.4-U01-source-0eb4f0d5",
+      "D:\\Projeler\\hpc-client-gui\\.tmp\\w571-audit",
+      "D:\\Projeler\\hpc-client-gui\\.tmp\\w571-repair",
+      "D:\\Projeler\\hpc-client-gui\\.tmp\\w571-repair-verify",
+      "D:\\Projeler\\hpc-client-gui\\.tmp\\w571-u01112",
+      "D:\\Projeler\\hpc-client-gui\\.tmp\\w571-u021-ssh",
+      "D:\\Projeler\\hpc-client-gui\\.tmp\\w57r122-mutation",
+      "D:\\Projeler\\hpc-client-gui\\.tmp\\w57r134",
+      "D:\\Projeler\\hpc-client-gui\\.tmp\\w57r135",
+      "D:\\Projeler\\hpc-client-gui\\.tmp\\w57repair130",
+      "D:\\Projeler\\hpc-client-gui\\.tmp\\w57repair131",
+      "D:\\Projeler\\hpc-client-gui\\.tmp\\w57repair132",
+      "D:\\Projeler\\hpc-client-gui\\.tmp\\w57repair133",
+      "D:\\Projeler\\hpc-client-gui\\.tmp\\w57repair144"
+    ]
+  },
+  "action": "No candidate bytes restored. Extended the bounded inspection to retained W57.1-W57.3 artifact directories (zero exe/zip candidates) and identity-checked declaration-listed previous builds, which are explicitly distinct products; no packaged checks were rerun because no exact authorized bytes were available. Additional repository-retained artifacts candidates were also hashed and sized; nine .exe/.zip candidates outside W57.1-W57.4 contained no exact match.",
+  "remaining": "No exact authorized bytes were found in the inspected W57-named .tmp locations, W57.1-W57.3 directories, known distinct declaration-listed builds, or nine additional repository artifacts candidates. Other retained storage remains unsearched; global absence is not established.",
+  "additional_bounded_search": {
+    "scope": "Repository-retained executable/archive candidates under artifacts, excluding W57.1-W57.4 directories already inspected; all files were hashed and sized; candidates are identity evidence only, not presumed authorized replacements.",
+    "candidate_glob": "artifacts/**/*.exe and artifacts/**/*.zip",
+    "candidate_count": 9,
+    "exact_matches": [],
+    "candidates_examined": [
+      {
+        "path": "artifacts/candidate5/hpc-client-gui.exe",
+        "sha256": "2966A977EDC0FE5525C8591DF6108E731CD944E2B9D396EE72847792AFCA654C",
+        "size_bytes": 7625511
+      },
+      {
+        "path": "artifacts/candidate5/hpc-client-gui_windows_onedir.zip",
+        "sha256": "7AE23F2D6CEA49D4C4B422DACDF88CBAC8EBA7F43AFF58A44E0C92A041D7E953",
+        "size_bytes": 35966717
+      },
+      {
+        "path": "artifacts/candidate5-final-closure/CANDIDATE5_FINAL_EVIDENCE_20261009.zip",
+        "sha256": "6FD4CFB76CC57082EF8614E7B90DBEE9263FCACCEAB08D9B3326F88208AD0C47",
+        "size_bytes": 2057830
+      },
+      {
+        "path": "artifacts/candidate6/hpc-client-gui.exe",
+        "sha256": "67F60B50F1EA0FF45347B1C9AFA942EB12172B21523D67011EC2D28E9379AAE6",
+        "size_bytes": 7549252
+      },
+      {
+        "path": "artifacts/candidate6/hpc-client-gui_windows_onedir.zip",
+        "sha256": "41714332B3FBF6568684E2BAF14339E7377240BDBB52835131C933692FD1D212",
+        "size_bytes": 27998208
+      },
+      {
+        "path": "artifacts/candidate7-validation/hpc-client-gui.exe",
+        "sha256": "A95A71C3B296D279F548330598E9E1E44F468B32BC0514F056B376DEAE600266",
+        "size_bytes": 7550025
+      },
+      {
+        "path": "artifacts/candidate7-validation/hpc-client-gui_windows_onedir.zip",
+        "sha256": "9085561A41E1A83A1EE4235EBE68922E9354AF785B7B39BCAC0F6FF3A6420F80",
+        "size_bytes": 28848723
+      },
+      {
+        "path": "artifacts/candidate8-validation/hpc-client-gui.exe",
+        "sha256": "2B3123260134AE68E9255560AA2CC3E17BD7CF4419E8BADB41E47677756F2E05",
+        "size_bytes": 7715630
+      },
+      {
+        "path": "artifacts/candidate8-validation/hpc-client-gui_windows_onedir.zip",
+        "sha256": "15ED7D11D77F60E6D174AB2AC675ABF55585BBA3B779C25F64E534EF8B69DA26",
+        "size_bytes": 35693274
+      }
+    ],
+    "result": "NO_EXACT_MATCH_IN_ADDITIONAL_ARTIFACT_CANDIDATES",
+    "limitation": "Other retained storage outside repository artifacts and previously inspected W57-named .tmp locations remains unsearched. Candidate artifacts are not accepted as authorized recovery bytes without matching identity and provenance."
+  },
+  "git_history_search": {
+    "scope": "All commits reachable from current repository refs, filtered to dist/hpc-client-gui/hpc-client-gui.exe",
+    "commits_containing_path": 0,
+    "exact_declared_identity_found": false,
+    "result": "NO_PATH_COMMIT_IN_CURRENT_REFS",
+    "limitation": "This checks current local Git refs only; it does not establish absence from unreachable objects, other clones, or external retained storage."
+  }
+}

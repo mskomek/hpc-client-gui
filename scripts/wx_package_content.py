@@ -138,7 +138,11 @@ def check_bundle(bundle_dir: Path, *, source_root: Path = ROOT, exe_name: str = 
             f"(exe={exe.is_file()}, internal={internal.is_dir()})"
         )
 
-    # wx/runtime dependencies (HPC-W04-HARNESS-006).
+    # wx/runtime dependencies (HPC-W04-HARNESS-006) plus the W56 ships-no-Qt
+    # rule (RUNTIME-DEPENDENCY-001): build/windows/hpc-client-gui.spec
+    # excludes PySide6/shiboken6, so the gate requires the wx runtime AND
+    # requires zero Qt tokens (0 PySide*, 0 shiboken*, 0 Qt6*.dll). Requiring
+    # shiboken6/Shiboken.pyd here would fail every correct V2 bundle.
     missing_runtime = []
     if checks["bundle_layout"] == "PASS":
         if not list(internal.glob("python3*.dll")) and not list(internal.glob("python*.dll")):
@@ -147,10 +151,15 @@ def check_bundle(bundle_dir: Path, *, source_root: Path = ROOT, exe_name: str = 
             missing_runtime.append("wx package")
         if not (internal / "WebView2Loader.dll").is_file():
             missing_runtime.append("WebView2Loader.dll")
-        if not (internal / "shiboken6" / "Shiboken.pyd").is_file():
-            missing_runtime.append("shiboken6/Shiboken.pyd")
+        qt_tokens = sorted(
+            str(p.relative_to(bundle))
+            for pattern in ("PySide*", "shiboken*", "Qt6*.dll")
+            for p in internal.rglob(pattern)
+        )
         if missing_runtime:
             details["wx_runtime"] = f"missing: {', '.join(missing_runtime)}"
+        elif qt_tokens:
+            details["wx_runtime"] = f"forbidden Qt tokens shipped: {', '.join(qt_tokens)}"
         else:
             checks["wx_runtime"] = "PASS"
 

@@ -1,0 +1,20 @@
+{
+  "candidate_sha256_before": "B3019DEA16783C8AB859FA36D2B0FEF2FB70DB075633E54EB0F36587295374FD",
+  "candidate_sha256_after": "B3019DEA16783C8AB859FA36D2B0FEF2FB70DB075633E54EB0F36587295374FD",
+  "command": ".venv\\Scripts\\python.exe scripts/wx_packaged_smoke.py --artifact dist/hpc-client-gui/hpc-client-gui.exe --platform windows --output artifacts/wave_W57.4/packaged-regression-logs/W57.4_REPAIR_PACKAGED_SMOKE_B3019DEA.json",
+  "caller_cwd": "D:\\Projeler\\hpc-client-gui",
+  "TEMP": "D:\\Projeler\\.tmp\\hpc-client-gui\\os\\20260930-171816-ead2509d\\smoke-observer-valid",
+  "TMP": "D:\\Projeler\\.tmp\\hpc-client-gui\\os\\20260930-171816-ead2509d\\smoke-observer-valid",
+  "observer_root": "D:\\Projeler\\.tmp\\wx-packaged-clean-room",
+  "observed_wx_packaged_cwd": "D:\\Projeler\\.tmp\\wx-packaged-clean-room\\wx-packaged-cwd-vg138pqe",
+  "process_exit_code": 0,
+  "smoke_result": "PASS",
+  "smoke_workdir_outside_repo": true,
+  "runtime_result": "PASS",
+  "runtime_checks": {
+    "pty_resize": "FAIL",
+    "clean_shutdown": "FAIL"
+  },
+  "interpretation": "The observer-confirmed child cwd is outside the checkout, matching workdir_outside_repo=true. The maintained smoke exited normally with PASS; however, the raw runtime sidecar still records PTY resize and clean shutdown as FAIL. The smoke-level synthesized checks and runtime raw checks therefore differ; preserve this contradiction for audit/owner triage rather than claim all raw runtime checks passed.",
+  "observer_method": "PowerShell polled the helper's resolved external clean-room parent D:\\Projeler\\.tmp\\wx-packaged-clean-room while the unchanged smoke process ran. Candidate and smoke implementation were not modified."
+}

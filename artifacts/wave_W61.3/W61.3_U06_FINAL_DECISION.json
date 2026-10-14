@@ -1,0 +1,178 @@
+{
+  "schema": "wave-u06-final-decision/1",
+  "wave_id": "W61.3",
+  "unit_id": "U06",
+  "requirement_ids": [
+    "HPC-W11-REL-043",
+    "HPC-W11-REL-051",
+    "HPC-W11-REL-052"
+  ],
+  "status": "NO-GO",
+  "decision": "NO-GO",
+  "repository": {
+    "branch": "develop",
+    "head": "bc2e61dcf86dadeda26141e5324088be8285243f",
+    "working_tree": "dirty; pre-existing changes preserved",
+    "working_tree_identity": "git status --short observed; candidate and report worktree files were pre-existing/untracked before this unit"
+  },
+  "release_artifact": {
+    "path": "dist/hpc-client-gui/hpc-client-gui.exe",
+    "sha256": "DB29B6A8BD2C78FE1D9169F36B595752DEC40F411085AB8E6032384E740BBFBD",
+    "size_bytes": 7675423,
+    "version": "1.5.9",
+    "platform": "Windows/AMD64",
+    "authority": "observed working-tree executable; not an authorized frozen release candidate",
+    "sha256_command": "Get-FileHash -LiteralPath dist/hpc-client-gui/hpc-client-gui.exe -Algorithm SHA256",
+    "w10_authoritative_frozen_executable_sha256": "NOT_FOUND",
+    "w61_1_freeze_pin_sha256": "B3019DEA16783C8AB859FA36D2B0FEF2FB70DB075633E54EB0F36587295374FD",
+    "w61_1_freeze_comparison": "MISMATCH"
+  },
+  "integrity": {
+    "signature_status": "NotSigned",
+    "signature_disposition": "unsigned onedir candidate; SHA-256 identity is recorded, but no signature PASS is claimed",
+    "evidence": {
+      "path": "artifacts/wave_W61.2/W61.2_U01_INTEGRITY.json",
+      "sha256": "636AF1103C36AFAFF0D897DABB79880E5BBD4C6954A7AAD8BBB1C8144B41F415"
+    }
+  },
+  "build_provenance": {
+    "current_candidate_build_manifest": "NOT_PRESENT",
+    "build_manifest_note": "dist/releases/w16-candidate/MANIFEST.json applies to the prior W16 rollback artifact, not the current DB29... candidate",
+    "main_source_sha": "bc2e61dcf86dadeda26141e5324088be8285243f",
+    "plugin_sha": "f0abb7e7037e66ab451d463c699fecf4e00c89eb",
+    "dependency_lock_sha256": "1b73e127c35a1ca00d30557f51c21f3ac0def9155268fd9eaf048670ce97c30d",
+    "toolchain": {
+      "python": "3.12.4",
+      "pyinstaller": "6.19.0",
+      "pip": "26.0.1",
+      "setuptools": "70.3.0",
+      "os_arch": "windows/amd64"
+    },
+    "evidence": {
+      "path": "artifacts/wave_W61.3/W61.3_U01_PROVENANCE.json",
+      "sha256": "2346DB529D18F463FA239B692DAC037BEAD609FA9F1065334D96A77BE2BE05F2"
+    }
+  },
+  "support_matrix": {
+    "path": "docs/wiki/Compatibility-and-Support-Matrix.md",
+    "sha256": "998F3D14F4FDB76879D660FE2C713250FE8B0EFD49EF96F79A93C0B38962DEDA",
+    "revision": "Frozen release candidate 1.5.9 evidence scope; candidate support remains unverified"
+  },
+  "release_notes": {
+    "path": "src/hpc_gui/docs/CHANGELOG.md",
+    "section": "v1.5.9",
+    "sha256": "E118EB586F12ED69BCBFDFDBF3A0B2CBC0B5A32DB953B95FE55DAECBEEE90874",
+    "disposition": "bounded claims; current-candidate support is not accepted"
+  },
+  "mandatory_gates": [
+    {
+      "requirement_id": "HPC-W11-REL-044",
+      "status": "OPEN",
+      "finding": "Authoritative W10 executable SHA is unavailable; observed DB29... candidate differs from W61.1 freeze pin B301...",
+      "owner": "W61.3 evidence; W10 artifact authority required",
+      "reopen_condition": "authoritative W10 executable identity or governing release authority changes",
+      "evidence": [
+        {"path": "artifacts/wave_W61.3/W61.3_U01_ARTIFACT_IDENTITY.json", "sha256": "401B807E27E43CFB83F8AD3CC234C6D06596CA57C6C2829DB561A3969A381661"},
+        {"path": "artifacts/wave_W61.3/REL-044_W10_IDENTITY_GOVERNANCE.json", "sha256": "5D665C0EC8B5F56FDE9CEC6B7B58CAD6B93A0C63A5010A565B227CB5AFDCFB9"}
+      ]
+    },
+    {
+      "requirement_id": "HPC-W11-REL-046",
+      "status": "OPEN / BLOCKED",
+      "finding": "The canonical core smoke summary exists but the referenced runtime sidecar is absent, so no consistent exact-candidate runtime verdict is established.",
+      "owner": "W61.3 U02 evidence",
+      "reopen_condition": "fresh exact-candidate summary and runtime sidecar are mutually bound and show consistent required checks",
+      "evidence": [
+        {"path": "artifacts/wave_W61.3/W61.3_U02_CORE_SMOKE.json", "sha256": "0D3743E53FFF9EBCAA58889C8D6C61F2958E21377C3174880C532291A5E4CF19"},
+        {"path": "artifacts/wave_W61.3/W61.3_U02_CORE_SMOKE.runtime.json", "identity": "MISSING"}
+      ]
+    },
+    {
+      "requirement_id": "HPC-W11-REL-047",
+      "status": "OPEN / EXTERNAL_BLOCKED",
+      "finding": "No candidate-bound real-cluster workflow was replayed because no exclusive LOCAL_REAL lease identity was present.",
+      "owner": "W61.3 U03 evidence; controller lease authority required",
+      "reopen_condition": "controller establishes exclusive LOCAL_REAL lease or serial-fallback identity and required workflow plus cleanup evidence is captured",
+      "evidence": [
+        {"path": "artifacts/wave_W61.3/W61.3_U03_EXTERNAL_SMOKE.json", "sha256": "1F81531A94089235862C4BD512AEE0A668C28B9BF51E31908A66A5821384F3FE"}
+      ]
+    },
+    {
+      "requirement_id": "HPC-W11-REL-048",
+      "status": "OPEN / BLOCKED",
+      "finding": "Candidate-bound negative-case actions, safe-failure diagnostics, readback, and cleanup are not demonstrated.",
+      "owner": "W61.3 U04 evidence",
+      "reopen_condition": "candidate-bound negative-case runtime evidence records action, diagnostic, semantic readback, and cleanup",
+      "evidence": [
+        {"path": "artifacts/wave_W61.3/W61.3_U04_NEGATIVE_SMOKE.json", "sha256": "DD7DEF51F842BA498269F9359D7B11FF949AD80CAF652D7E1D75FB6D54672124"}
+      ]
+    },
+    {
+      "requirement_id": "HPC-W11-REL-049",
+      "status": "OPEN / NO-GO-gated",
+      "finding": "Release notes and support matrix are bounded and aligned, but current-candidate support is not verified.",
+      "owner": "W61.3 U05 evidence",
+      "reopen_condition": "current candidate identity and runtime evidence are accepted and documentation is reconciled to them",
+      "evidence": [
+        {"path": "artifacts/wave_W61.3/W61.3_U05_RELEASE_READINESS.json", "sha256": "3C6B159A9ED143A711A6F6DB67C982A7DBFD64FED1C91727A67BD896EB51660C"}
+      ]
+    },
+    {
+      "requirement_id": "HPC-W11-REL-050",
+      "status": "OPEN / NOT_CURRENTLY_DEMONSTRATED",
+      "finding": "No zero-open-P0/P1 claim is supported; the authoritative census is incomplete.",
+      "owner": "W61.1 owns W61.1-U04-CENSUS-001; W61.3 consumes the completed census",
+      "reopen_condition": "W61.1 publishes an authoritative complete census for the authorized candidate and W61.3 re-evaluates it",
+      "evidence": [
+        {"path": "artifacts/wave_W61.3/W61.3_U06_SEVERITY_LEDGER.json", "sha256": "92EC43CC54049F5A47053AF11EB03D497EFA7E987150E9B013AA1DBEE6EC5C17"},
+        {"path": "artifacts/wave_W61.1/CENSUS_INTERIM_DB29B6A8_20261007.json", "sha256": "38112E788655DF4083C0D98B1CC6BD11A9C8F57C15EDF27D93016412F2026CC7"}
+      ]
+    },
+    {
+      "requirement_id": "HPC-W11-REL-051",
+      "status": "OPEN / BLOCKED",
+      "finding": "Prior rollback target and procedure are identified, but compatibility, complete disposable-profile user-data restoration, rollback execution, and authorized updater stop/withdraw readback are unproven.",
+      "owner": "W61.3 U07 rollback evidence; release-owner channel authority required for updater readback",
+      "reopen_condition": "authorized frozen candidate and compatible prior release are established, a candidate-bound full-store restore rehearsal succeeds, and updater withdrawal/readback is captured",
+      "evidence": [
+        {"path": "artifacts/wave_W61.3/W61.3_U07_ROLLBACK.json", "sha256": "5E37F425B87618E137CA1830835C8A3DAD16E484CA2D763115AE0444BF51AD4F"},
+        {"path": "dist/releases/w16-candidate/MANIFEST.json", "sha256": "3A19872C002A2CA75D37814FBDCE28B0173AD43983047DA07F262D27DE919D3A"}
+      ]
+    }
+  ],
+  "owner_routing": [
+    {
+      "finding": "W61.1-U04-CENSUS-001",
+      "owner_wave": "W61.1",
+      "reopen_condition": "authoritative census artifact identity changes to a complete candidate-bound census"
+    },
+    {
+      "finding": "W61.3-U01/U02/U03/U04/U05/U07 evidence gates",
+      "owner_wave": "W61.3",
+      "reopen_condition": "the corresponding evidence fingerprint or governing authority changes"
+    }
+  ],
+  "rollback": {
+    "target": "dist/releases/w16-candidate/hpc-client-gui-windows-onedir.exe",
+    "target_sha256": "544E186F81AA685EE80A3C07185EE0EB03AB1BC73A81151B1323253503C0A1DA",
+    "procedure": "docs/VERIFYING_RELEASES.md section 6; prior target identified, but candidate compatibility and full restore are not demonstrated",
+    "migration_implications": "existing-user migration/rollback remains PARTIAL; settings/history/favorites/keymap/plugins/connection/updater compatibility across versions is not established",
+    "updater_stop_withdraw": "BLOCKED; no authorized non-production release-channel control identity or channel readback endpoint was available",
+    "rollback_viability": "NOT_DEMONSTRATED"
+  },
+  "handoff": {
+    "known_issues_ledger": "artifacts/wave_W61.3/W61.3_U06_SEVERITY_LEDGER.json; open P0/P1 totals NOT_CURRENTLY_DEMONSTRATED",
+    "evidence_index": "This decision's mandatory_gates[].evidence plus U01 provenance and identity receipts",
+    "approver_or_agent": "W61.3 run worker; no release approver or release authorization asserted",
+    "decision_evidence_id": "artifacts/wave_W61.3/W61.3_U06_FINAL_DECISION.json",
+    "release_authorization": "NONE",
+    "resume_point": "Resolve owner-specific evidence and authority conditions above, refresh all candidate-bound receipts, and recalculate the full gate table before reconsidering GO."
+  },
+  "decision_basis": [
+    "W10 executable identity is unavailable and the observed artifact is not an authorized frozen candidate.",
+    "Mandatory current runtime, external, negative-case, P0/P1 census, and rollback gates are open or unproven.",
+    "The decision table requires every mandatory gate to pass; NO-GO criteria apply to missing provenance, blocked required evidence, unproven zero P0/P1, and unsafe/unverified rollback."
+  ],
+  "product_or_package_changes": false,
+  "independent_audit": "PENDING; this run receipt does not self-certify U06 or the Wave"
+}

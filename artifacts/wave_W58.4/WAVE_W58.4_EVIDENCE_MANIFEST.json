@@ -1,0 +1,421 @@
+{
+ "artifacts": [
+  {
+   "path": "W57_FREEZE_DECLARATION.md",
+   "role": "W57.4 final freeze declaration consumed unchanged by W58.4"
+  },
+  {
+   "path": "dist/hpc-client-gui/hpc-client-gui.exe",
+   "role": "frozen candidate artifact launched from distribution location",
+   "sha256": "B3019DEA16783C8AB859FA36D2B0FEF2FB70DB075633E54EB0F36587295374FD"
+  },
+  {
+   "path": "docs/wave-reports/v2/opencode/W58.4_WAVE_REPORT.md",
+   "role": "W58.4 Wave report, U01 clean-launch gate plus U02 negative smoke"
+  },
+  {
+   "path": "docs/wiki/Compatibility-and-Support-Matrix.md",
+   "role": "support matrix revision 1.5.9 cited for ART-023 conditional capability"
+  },
+  {
+   "path": "artifacts/wave_W58.4/W58.4_U01_identity_cleanlaunch.json",
+   "role": "U01 machine fragment: freeze pin, wx truth, clean launch"
+  },
+  {
+   "path": "artifacts/wave_W58.4/W58.4_U02_negative_smoke.json",
+   "role": "U02 machine fragment: ART-020..025 negative fixtures, SHA unchanged"
+  },
+  {
+   "path": "build/audit/wx-packaged-smoke-windows.json",
+   "role": "packaged wx proof 20/20 on identical SHA B3019DEA"
+  },
+  {
+   "path": "build/audit/w16-package-content-windows.json",
+   "role": "package content proof: discovery modes, zero Qt runtime"
+  }
+ ],
+ "blockers": [],
+ "candidate_sha": "92128c8726435aa0087f090c4a080720f148781f",
+ "closure_sha": null,
+ "contradiction_scan": {
+  "result": "W58.4 operator review: all 12 owned requirements carry current U01/U02 evidence on frozen SHA B3019DEA; no open P0/P1; isolated-root fixtures left the candidate and the real profile untouched.",
+  "unresolved": []
+ },
+ "deferred_items": [],
+ "dependency_validation": {
+  "completion_dependencies": [],
+  "dependencies": [],
+  "note": "W58.4 declares no completion dependencies; aggregate and controller reconciliation remain separate."
+ },
+ "deferred_note": "none",
+ "gui_actions": [],
+ "protocol_revision": "WAVE_PROJECT_PROFILE schema_version 3",
+ "requirements": [
+  {
+   "candidate_sha": "92128c8726435aa0087f090c4a080720f148781f",
+   "disposition": "PASS",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W58.4_WAVE_REPORT.md section 1",
+    "artifacts/wave_W58.4/W58.4_U01_identity_cleanlaunch.json",
+    "W57_FREEZE_DECLARATION.md W57.4 final freeze section",
+    "build/audit/wx-packaged-smoke-windows.json identity_header"
+   ],
+   "implementation_owners": [
+    "src/hpc_gui/cli/main.py (version and doctor entrypoints)",
+    "scripts/wx_packaged_smoke.py (packaged wx proof on frozen bytes)",
+    "tests/test_w57_freeze_consistency.py (freeze binding suite)"
+   ],
+   "mandatory": true,
+   "requirement_id": "HPC-W11-ART-014",
+   "test_nodes": [
+    "tests/test_w57_freeze_consistency.py::test_matrix_versions_match_pyproject_version",
+    "tests/test_w57_freeze_consistency.py::test_install_docs_reference_current_version_only",
+    "tests/test_w57_freeze_consistency.py::test_matrix_does_not_advertise_qt_runtime",
+    "tests/test_w57_freeze_consistency.py::test_install_linux_does_not_require_qt_platform_libs",
+    "tests/test_w57_freeze_consistency.py::test_production_runtime_default_is_wx"
+   ]
+  },
+  {
+   "candidate_sha": "92128c8726435aa0087f090c4a080720f148781f",
+   "disposition": "PASS",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W58.4_WAVE_REPORT.md section 3",
+    "artifacts/wave_W58.4/W58.4_U01_identity_cleanlaunch.json clean_launch.pythonpath_absent"
+   ],
+   "implementation_owners": [
+    "src/hpc_gui/cli/main.py (distribution-location launch path)",
+    "scripts/wx_package_content.py (bundle content proof)"
+   ],
+   "mandatory": true,
+   "requirement_id": "HPC-W11-ART-015",
+   "test_nodes": [
+    "tests/test_wx_package_content.py::test_happy_bundle_passes_with_sha_binding",
+    "tests/test_wx_package_content.py::test_qt_tokens_fail_wx_runtime"
+   ]
+  },
+  {
+   "candidate_sha": "92128c8726435aa0087f090c4a080720f148781f",
+   "disposition": "PASS",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W58.4_WAVE_REPORT.md section 3",
+    "build/audit/wx-packaged-smoke-windows.json checks wx_runtime_started and main_frame_created and clean_shutdown"
+   ],
+   "implementation_owners": [
+    "src/hpc_gui/runtime.py (DEFAULT_GUI_RUNTIME wx)",
+    "src/hpc_gui/__main__.py (wx-first routing)",
+    "scripts/wx_packaged_smoke.py (packaged startup proof)"
+   ],
+   "mandatory": true,
+   "requirement_id": "HPC-W11-ART-016",
+   "test_nodes": [
+    "tests/test_w57_freeze_consistency.py::test_production_runtime_default_is_wx",
+    "tests/test_wx_shell.py::test_wx_shell_is_optional_and_has_migration_entrypoint"
+   ]
+  },
+  {
+   "candidate_sha": "92128c8726435aa0087f090c4a080720f148781f",
+   "disposition": "PASS",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W58.4_WAVE_REPORT.md section 4",
+    "artifacts/wave_W58.4/W58.4_U02_negative_smoke.json isolated_root_clean_profile"
+   ],
+   "implementation_owners": [
+    "src/hpc_gui/core/paths.py (HPC_GUI_CONFIG_ROOT isolated root)",
+    "src/hpc_gui/config/storage.py (profile and settings persistence)"
+   ],
+   "mandatory": true,
+   "requirement_id": "HPC-W11-ART-017",
+   "test_nodes": [
+    "tests/test_wx_migration.py::test_legacy_profile_migration_preserves_unicode_and_is_idempotent",
+    "tests/test_wx_migration.py::test_migration_save_failure_keeps_original_config_readable",
+    "tests/test_wx_migration.py::test_corrupt_config_keeps_unique_recovery_backups",
+    "tests/test_wx_migration.py::test_diagnostic_bundle_excludes_saved_profile_secrets"
+   ]
+  },
+  {
+   "candidate_sha": "92128c8726435aa0087f090c4a080720f148781f",
+   "disposition": "PASS",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W58.4_WAVE_REPORT.md section 5",
+    "build/audit/w16-package-content-windows.json plugin_discovery_mode and provider_defaults_mode"
+   ],
+   "implementation_owners": [
+    "src/hpc_gui/plugins/discovery.py (user-installed source)",
+    "src/hpc_gui/plugins/loader.py (loader contract)",
+    "src/hpc_gui/plugins/validator.py (manifest diagnostics)"
+   ],
+   "mandatory": true,
+   "requirement_id": "HPC-W11-ART-018",
+   "test_nodes": [
+    "tests/test_w32_discovery_manifest.py::test_disc_user_installed_loads",
+    "tests/test_w32_discovery_manifest.py::test_disc_configured_path_override_is_isolated",
+    "tests/test_w32_discovery_manifest.py::test_disc_development_path_and_cwd_never_discovered",
+    "tests/test_w32_discovery_manifest.py::test_disc_precedence_and_identity_deterministic"
+   ]
+  },
+  {
+   "candidate_sha": "92128c8726435aa0087f090c4a080720f148781f",
+   "disposition": "PASS",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W58.4_WAVE_REPORT.md section 6",
+    "artifacts/wave_W58.4/W58.4_U01_identity_cleanlaunch.json clean_launch empty stderr probes"
+   ],
+   "implementation_owners": [
+    "src/hpc_gui/cli/main.py (exit-code and error-emission contract)",
+    "scripts/wx_packaged_smoke.py (clean shutdown probe)"
+   ],
+   "mandatory": true,
+   "requirement_id": "HPC-W11-ART-019",
+   "test_nodes": [
+    "tests/test_wx_packaged_smoke.py::test_missing_artifact_report_fails_critical_stages",
+    "tests/test_wx_packaged_smoke.py::test_cli_stdout_parseable_on_stub_path"
+   ]
+  },
+  {
+   "candidate_sha": "92128c8726435aa0087f090c4a080720f148781f",
+   "disposition": "PASS",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W58.4_WAVE_REPORT.md section 8 ART-020",
+    "artifacts/wave_W58.4/W58.4_U02_negative_smoke.json art_020_invalid_credentials"
+   ],
+   "implementation_owners": [
+    "src/hpc_gui/cli/session.py (profile CLI-use gate)",
+    "src/hpc_gui/cli/main.py (CONNECTION exit contract)"
+   ],
+   "mandatory": true,
+   "requirement_id": "HPC-W11-ART-020",
+   "test_nodes": [
+    "tests/test_cli.py::test_profile_test_connection_failure_exit_three_fail_payload",
+    "tests/test_cli.py::test_profile_test_connection_failure_text_carries_fail"
+   ]
+  },
+  {
+   "candidate_sha": "92128c8726435aa0087f090c4a080720f148781f",
+   "disposition": "PASS",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W58.4_WAVE_REPORT.md section 8 ART-021",
+    "artifacts/wave_W58.4/W58.4_U02_negative_smoke.json art_021_disconnected_action"
+   ],
+   "implementation_owners": [
+    "src/hpc_gui/cli/main.py (CONNECTION exit contract)",
+    "src/hpc_gui/services/sftp_smoke.py (smoke round-trip surface)"
+   ],
+   "mandatory": true,
+   "requirement_id": "HPC-W11-ART-021",
+   "test_nodes": [
+    "tests/test_cli.py::test_connection_failure_exit_three",
+    "tests/test_cli.py::test_doctor_connection_any_fail_exit_three_json_four_stages"
+   ]
+  },
+  {
+   "candidate_sha": "92128c8726435aa0087f090c4a080720f148781f",
+   "disposition": "PASS",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W58.4_WAVE_REPORT.md section 8 ART-022",
+    "artifacts/wave_W58.4/W58.4_U02_negative_smoke.json art_022_overwrite_cancel"
+   ],
+   "implementation_owners": [
+    "src/hpc_gui/cli/main.py (destructive-action confirmation gate)"
+   ],
+   "mandatory": true,
+   "requirement_id": "HPC-W11-ART-022",
+   "test_nodes": [
+    "tests/test_cli.py::test_files_rm_refusal_exit_two_stderr_retained"
+   ]
+  },
+  {
+   "candidate_sha": "92128c8726435aa0087f090c4a080720f148781f",
+   "disposition": "PASS",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W58.4_WAVE_REPORT.md section 8 ART-023",
+    "docs/wiki/Compatibility-and-Support-Matrix.md platform and packaging table",
+    "artifacts/wave_W58.4/W58.4_U02_negative_smoke.json art_023_optional_capability"
+   ],
+   "implementation_owners": [
+    "src/hpc_gui/services/provider_capabilities.py (declared versus observed view)"
+   ],
+   "mandatory": false,
+   "requirement_id": "HPC-W11-ART-023",
+   "test_nodes": [
+    "tests/test_provider_capabilities.py::test_rich_provider_keeps_declared_and_observed_separate",
+    "tests/test_provider_capabilities.py::test_generic_profile_and_declared_or_observed_only_capabilities"
+   ]
+  },
+  {
+   "candidate_sha": "92128c8726435aa0087f090c4a080720f148781f",
+   "disposition": "PASS",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W58.4_WAVE_REPORT.md section 8 ART-024",
+    "artifacts/wave_W58.4/W58.4_U02_negative_smoke.json art_024_plugin_failure"
+   ],
+   "implementation_owners": [
+    "src/hpc_gui/plugins/loader.py (skip-and-record contract)",
+    "src/hpc_gui/plugins/integrity.py (trust anchor verification)"
+   ],
+   "mandatory": true,
+   "requirement_id": "HPC-W11-ART-024",
+   "test_nodes": [
+    "tests/test_plugin_integrity.py::test_broken_plugin_skipped_while_healthy_plugin_loads",
+    "tests/test_plugin_integrity.py::test_missing_payload_file_detected",
+    "tests/test_plugin_integrity.py::test_unexpected_extra_file_rejected"
+   ]
+  },
+  {
+   "candidate_sha": "92128c8726435aa0087f090c4a080720f148781f",
+   "disposition": "PASS",
+   "evidence_refs": [
+    "docs/wave-reports/v2/opencode/W58.4_WAVE_REPORT.md section 8 ART-025",
+    "artifacts/wave_W58.4/W58.4_U02_negative_smoke.json art_025_updater_signature"
+   ],
+   "implementation_owners": [
+    "src/hpc_gui/services/update_verification.py (signed metadata verification)"
+   ],
+   "mandatory": true,
+   "requirement_id": "HPC-W11-ART-025",
+   "test_nodes": [
+    "tests/test_update_verification.py::test_signed_metadata_requires_known_key_and_valid_signature",
+    "tests/test_update_verification.py::test_metadata_rejects_duplicate_targets_and_non_https_urls",
+    "tests/test_update_verification.py::test_artifact_size_and_digest_are_verified"
+   ]
+  }
+ ],
+ "resources": [],
+ "review_passes": [
+  {
+   "result": "PASS",
+   "reviewer": "W58.4 close diff review",
+   "scope": "docs/wave-reports/v2/opencode/W58.4_WAVE_REPORT.md plus artifacts/wave_W58.4 only; pre-existing dirty entries untouched; frozen executable SHA unchanged",
+   "timestamp": "2026-10-02T12:09:41Z"
+  }
+ ],
+ "spec_profile_id": "HPC",
+ "status": "ACCEPTANCE_GREEN",
+ "tests": [
+  {
+   "candidate_sha": "92128c8726435aa0087f090c4a080720f148781f",
+   "command": "pytest tests/test_w57_freeze_consistency.py",
+   "environment": "Windows 11 AMD64; CPython 3.12.4; pytest 9.0.2; candidate commit 92128c8726435aa0087f090c4a080720f148781f",
+   "evidence_path": "docs/wave-reports/v2/opencode/W58.4_WAVE_REPORT.md section 1",
+   "exit_code": 0,
+   "failed": 0,
+   "passed": 5,
+   "requirement_ids": [
+    "HPC-W11-ART-014",
+    "HPC-W11-ART-016"
+   ],
+   "skipped": 0,
+   "timestamp": "2026-10-02T12:09:41Z",
+   "xfailed": 0,
+   "xpassed": 0
+  },
+  {
+   "candidate_sha": "92128c8726435aa0087f090c4a080720f148781f",
+   "command": "pytest tests/test_wx_package_content.py",
+   "environment": "Windows 11 AMD64; CPython 3.12.4; pytest 9.0.2; candidate commit 92128c8726435aa0087f090c4a080720f148781f",
+   "evidence_path": "build/audit/w16-package-content-windows.json",
+   "exit_code": 0,
+   "failed": 0,
+   "passed": 19,
+   "requirement_ids": [
+    "HPC-W11-ART-014",
+    "HPC-W11-ART-015"
+   ],
+   "skipped": 0,
+   "timestamp": "2026-10-02T12:09:41Z",
+   "xfailed": 0,
+   "xpassed": 0
+  },
+  {
+   "candidate_sha": "92128c8726435aa0087f090c4a080720f148781f",
+   "command": "pytest tests/test_wx_migration.py",
+   "environment": "Windows 11 AMD64; CPython 3.12.4; pytest 9.0.2; candidate commit 92128c8726435aa0087f090c4a080720f148781f",
+   "evidence_path": "docs/wave-reports/v2/opencode/W58.4_WAVE_REPORT.md section 4",
+   "exit_code": 0,
+   "failed": 0,
+   "passed": 4,
+   "requirement_ids": [
+    "HPC-W11-ART-017"
+   ],
+   "skipped": 0,
+   "timestamp": "2026-10-02T12:09:41Z",
+   "xfailed": 0,
+   "xpassed": 0
+  },
+  {
+   "candidate_sha": "92128c8726435aa0087f090c4a080720f148781f",
+   "command": "pytest tests/test_w32_discovery_manifest.py --deselect tests/test_w32_discovery_manifest.py::test_gui_manager_surfaces_discovery_state",
+   "environment": "Windows 11 AMD64; CPython 3.12.4; pytest 9.0.2; candidate commit 92128c8726435aa0087f090c4a080720f148781f",
+   "evidence_path": "docs/wave-reports/v2/opencode/W58.4_WAVE_REPORT.md section 5",
+   "exit_code": 0,
+   "failed": 0,
+   "passed": 18,
+   "requirement_ids": [
+    "HPC-W11-ART-018"
+   ],
+   "skipped": 0,
+   "timestamp": "2026-10-02T12:09:41Z",
+   "xfailed": 0,
+   "xpassed": 0
+  },
+  {
+   "candidate_sha": "92128c8726435aa0087f090c4a080720f148781f",
+   "command": "pytest tests/test_cli.py::test_connection_failure_exit_three tests/test_cli.py::test_profile_test_connection_failure_exit_three_fail_payload tests/test_cli.py::test_profile_test_connection_failure_text_carries_fail tests/test_cli.py::test_files_rm_refusal_exit_two_stderr_retained tests/test_cli.py::test_doctor_connection_any_fail_exit_three_json_four_stages",
+   "environment": "Windows 11 AMD64; CPython 3.12.4; pytest 9.0.2; candidate commit 92128c8726435aa0087f090c4a080720f148781f",
+   "evidence_path": "docs/wave-reports/v2/opencode/W58.4_WAVE_REPORT.md section 8",
+   "exit_code": 0,
+   "failed": 0,
+   "passed": 5,
+   "requirement_ids": [
+    "HPC-W11-ART-020",
+    "HPC-W11-ART-021",
+    "HPC-W11-ART-022"
+   ],
+   "skipped": 0,
+   "timestamp": "2026-10-02T12:09:41Z",
+   "xfailed": 0,
+   "xpassed": 0
+  },
+  {
+   "candidate_sha": "92128c8726435aa0087f090c4a080720f148781f",
+   "command": "pytest tests/test_provider_capabilities.py tests/test_update_verification.py tests/test_plugin_integrity.py",
+   "environment": "Windows 11 AMD64; CPython 3.12.4; pytest 9.0.2; candidate commit 92128c8726435aa0087f090c4a080720f148781f",
+   "evidence_path": "docs/wave-reports/v2/opencode/W58.4_WAVE_REPORT.md section 8",
+   "exit_code": 0,
+   "failed": 0,
+   "passed": 15,
+   "requirement_ids": [
+    "HPC-W11-ART-023",
+    "HPC-W11-ART-024",
+    "HPC-W11-ART-025"
+   ],
+   "skipped": 0,
+   "timestamp": "2026-10-02T12:09:41Z",
+   "xfailed": 0,
+   "xpassed": 0
+  },
+  {
+   "candidate_sha": "92128c8726435aa0087f090c4a080720f148781f",
+   "command": "pytest tests/test_wx_packaged_smoke.py tests/test_wx_shell.py::test_wx_shell_is_optional_and_has_migration_entrypoint",
+   "environment": "Windows 11 AMD64; CPython 3.12.4; pytest 9.0.2; candidate commit 92128c8726435aa0087f090c4a080720f148781f",
+   "evidence_path": "build/audit/wx-packaged-smoke-windows.json",
+   "exit_code": 0,
+   "failed": 0,
+   "passed": 13,
+   "requirement_ids": [
+    "HPC-W11-ART-016",
+    "HPC-W11-ART-019"
+   ],
+   "skipped": 0,
+   "timestamp": "2026-10-02T12:09:41Z",
+   "xfailed": 0,
+   "xpassed": 0
+  }
+ ],
+ "validator_result": {
+  "closeout": "can_close=true",
+  "exit_code": 0,
+  "scope": "W58.4 closeout validation with exact pytest re-execution on candidate HEAD 92128c8726435aa0087f090c4a080720f148781f with frozen executable SHA-256 B3019DEA16783C8AB859FA36D2B0FEF2FB70DB075633E54EB0F36587295374FD. can_close=true; 12 requirements, 7 test records, no failure reasons."
+ },
+ "wave_id": "W58.4",
+ "wave_spec_revision": "waves/pending/W58.4.md; current repository content identity 92128c8726435aa0087f090c4a080720f148781f"
+}

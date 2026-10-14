@@ -1,0 +1,26 @@
+{
+  "candidate": "Candidate7",
+  "identity": "a95a71c3b296d279f548330598e9e1e44f468b32bc0514f056b376deae600266",
+  "journey": "Save & Connect from the packaged GUI, then terminal command and independent backend marker readback",
+  "consecutive_runs": 3,
+  "status": "PASS",
+  "runs": [
+    {
+      "screenshot": "screenshots/gui-saveconnect-final-after_save_connect.jpg",
+      "marker": "GUI_C7_SAVECONNECT_FINAL_OK",
+      "runner": "gui-saveconnect-final.json"
+    },
+    {
+      "screenshot": "screenshots/gui-saveconnect-repeat02-after_save_connect.jpg",
+      "marker": "GUI_C7_SAVECONNECT_FINAL_OK",
+      "runner": "gui-saveconnect-repeat02.json"
+    },
+    {
+      "screenshot": "screenshots/gui-saveconnect-repeat03-after_save_connect.jpg",
+      "marker": "GUI_C7_SAVECONNECT_FINAL_OK",
+      "runner": "gui-saveconnect-repeat03.json"
+    }
+  ],
+  "persistence": "Profile LOCAL_REAL-C7-SC2 persisted in guest config across application restart; readback confirmed host, username, key path; password absent.",
+  "verification": "Each run returned exit code 0; each visible terminal showed user/host/pwd; independent SSH readback found and removed marker."
+}
