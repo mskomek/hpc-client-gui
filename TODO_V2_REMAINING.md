@@ -29,6 +29,12 @@
 - [x] Değişen kaynak/test Ruff ve Agent Core source architecture gate PASS; 500 satır üstü dosya yok, bağımlılık hatası yok.
 - [ ] Bu GUI turunda wxWebView2 teardown sırasında `0x80004004 Operation aborted` stderr satırı görüldü; test ve layout invariantları PASS olsa da terminal WebView2 lifecycle/native-crash kabul maddesi açık kalıyor.
 
+### Transfer integration turu — 2026-10-15, `develop` `7336764cbd95b99e9130974595ee282b718c8faa`
+
+- [x] `tests/test_transfer_concurrency.py` **10/10 PASS**: FTP paralel upload'larında ayrı bağlantılar ve SHA-256 içerik eşitliği; SFTP paralel upload'larında ayrı kanal; iptal/başarısızlık/yeniden denemede backend resource kapanışı.
+- [x] `tests/test_download_cancel_wire.py` **4/4 PASS**: yerel mock SSH/SFTP wire üzerinde 48 MiB indirmeyi iptal etme, kısmi dosyayı koruma, resume ile tamamlayıp boyutu doğrulama, ayrıca overwrite/skip davranışları.
+- [ ] Bu fixture sonuçları gerçek HPC endpointindeki transfer/resume kanıtı değildir; credential/proje erişimi olan gerçek sistem doğrulaması açık kalıyor.
+
 ### Başlangıç çalışma kaydı — 2026-10-15
 
 - [x] İlk yerel Ruff baseline'ı ve kaynak/test/script dağılımı çıkarıldı.
@@ -94,6 +100,7 @@
 - [ ] Gerçek ortamda upload/download resume işlemlerini doğrula.
 - [ ] Çakışma durumlarında overwrite/skip/rename seçeneklerini doğrula.
 - [ ] Kuyrukta iptal, tekrar deneme ve başarısızlık akışlarını doğrula.
+- [x] Yerel mock FTP/SFTP integration turunda paralel transfer, ayrı bağlantı/kanal, 48 MiB iptal/resume, overwrite/skip ve SHA-256 içeriği doğrulandı (10 + 4 test PASS); gerçek HPC endpointi ayrıca açık.
 - [x] `TransferController` retry sonrası ikinci `start()` çağrısının eski worker canlı görünürken sessizce atlanması düzeltildi; `_done` artık worker kapanış bildirimlerinden sonra set ediliyor.
 - [x] CLI test parçalarındaki eksik ortak autouse fixture bağlantıları eklendi; CLI erişim kapısı artık testleri yanlışlıkla erken kesmiyor. CLI/W18 hedefli grup 90/90 PASS.
 - [x] W15/W21/W28/W37/W40 testlerindeki gerçek kullanılmayan import/değişkenler temizlendi; W37 ve W40 büyük test dosyaları GUI/contract sorumluluklarına göre bölündü.
@@ -101,7 +108,7 @@
 - [x] W15/W37/W40 hedefli grupları sırasıyla 11/11, 31/31 ve 25/25 PASS; W21/W28 grubu 31/31 PASS; CLI/W18 grubu 90/90 PASS; W11/W13/W32/W35/W38/W43 ve wx thread-affinity grubu 84/84 PASS. Toplam **272 hedefli test PASS**.
 - [x] Kaynak mimari doğrulayıcısı değişen 38 kaynak/test dosyasında PASS; 500 satır üstü dosya yok, bağımlılık çevrimi yok. 11 dosya 400–500 satırlık uyarı bölgesinde.
 - [ ] Linux guest `Ubuntu-Test` başlatıldı; canlı durum, strict SSH host-key ve `ubuntu-doctor` PASS. Ancak guest'te Python 3.12.3 var, `pip`, wxPython, `wx-config` ve `pkg-config` yok; `test` hesabında parolasız sudo yok. Linux wxPython/GTK doğrulaması **BLOCKED_ENV**.
-- [ ] Büyük dosya, Unicode dosya adı ve paralel transferleri doğrula.
+- [ ] Gerçek HPC endpointinde büyük dosya, Unicode dosya adı ve paralel transferleri doğrula; yerel mock/stress kanıtı ayrı kaydedildi.
 - [ ] GUI üzerinden SHA-256 doğrulamasını doğrula.
 - [ ] SFTP dizin gezinmesi ve yetki hatalarını doğrula.
 
