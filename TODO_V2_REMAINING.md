@@ -16,6 +16,7 @@
 
 - [x] Python 3.14 yerel bağlantı/profil grupları: servis kimliği, profil saklama ve auth 33/33; Qt gelişmiş ayarlar/profil koruma 34/34; wx bağlantı, profil, hardening, host-key, lifecycle ve migration 124/124. Toplam **191 hedefli test PASS**. Bunlar paketlenmiş GUI ya da gerçek uzak host kabulü değildir.
 - [x] Provider/plugin yerel testleri, `HPC_GUI_CONTRACT_REPO=D:\Projeler\hpc-client-gui-plugins` ve plugin checkout HEAD `8cce85446a8db72ea6b89b56bcb3df8916cbb0a8` ile **215/215 PASS, 0 skip** verdi. Ayrı Qt plugin manager grubu 37/37 yeni test, wx plugin manager grubu 17/17 PASS; toplam **269 yerel provider/plugin testi PASS**. Bu, resmi registry yayını veya gerçek HPC bağlantısını kanıtlamaz.
+- [x] Aynı plugin checkout'unda `python scripts/validate_registry.py` **OK**, tam pytest paketi **188/188 PASS**, `ruff check --no-cache scripts tests` **PASS**. Yerel registry Perlmutter, Frontera, Stampede3, Delta, LUMI, Leonardo, Setonix ve JUWELS 1.0.0 profillerini içeriyor; TRUBA 1.5.0 da mevcut. Bu profillerin resmi yayımı/gerçek host kullanımı bu kanıtın dışında.
 - [ ] Windows onedir candidate `dd488023` kaynak kimliğiyle üretildi: EXE SHA-256 `ad9d83cb5b4a3c79561a250c52d3f1218f15eba068d177cb72713212ffcd8bee`, plugin SHA `8cce85446a8db72ea6b89b56bcb3df8916cbb0a8`, Python 3.14 / PyInstaller 6.22.2. Aynı EXE üzerinde iki packaged smoke da **19/20 PASS** verdi; tüm UI, SSH/PTY, resize, dosya/job roundtrip ve transfer kontrolleri geçti, `clean_shutdown` kaldı.
 - [ ] Kapanış tanısı tekrar üretildi: wxPython 4.3.1'de `wx.IsDestroyed` API'si yok; mevcut finalizer bu çağrıdaki `AttributeError`'ı yutup `frame_destroyed=false` yazıyor. Ayrıca lifecycle cleanup kaydında `Panel.Hide()` callback'i panel yok edildikten sonra `RuntimeError: wrapped C/C++ object of type Panel has been deleted` veriyor; bu yüzden `cleanup_complete=false`. Gecikmeli gözlemde de callback hatası sürüyor. Kaynak alanı kapalı W55'e (HPC-W10-GJ2-051), smoke/gate gözlem düzeltmesi kapalı W16'ya yönlendirilmeli; kod/evidence gate değiştirilmedi. Kapalı owner düzeltmesi yapılmadan bu FAIL kabul edilmemeli veya PASS'a çevrilmemeli.
 - [ ] Bu candidate host Windows'ta çalıştırılmıştır; Hyper-V guest acceptance, native crash/WER ve gerçek bağlantı testi değildir. Windows11 `test\home` kimliği ve guest IP'leri PowerShell Direct ile doğrulandı; ancak guest'ten geçici SSH/SFTP fixture'ına Default Switch (`172.28.144.1`) ve `hpc-lab` (`192.168.250.1`) üzerinden TCP erişimi başarısız oldu. Firewall/VM ayarı değiştirilmedi; guest packaged smoke **BLOCKED_ENV** (guest'ten test servisine erişim yok). Candidate geçici `.tmp` altında tutuluyor; immutable release candidate değildir.
@@ -115,10 +116,11 @@
 | LUMI | Yerel kanıtlardan sonra resmî yayımlama ve doğrulama. |
 | Leonardo | Yerel kanıtlardan sonra resmî yayımlama ve doğrulama. |
 | Setonix | Yerel kanıtlardan sonra resmî yayımlama ve doğrulama. |
-| JUWELS | Eksik provider paketini oluşturma, yayımlama ve doğrulama. |
+| JUWELS | Yerel `1.0.0` paketi mevcut ve registry doğrulamasından geçiyor; resmi yayımlama ve gerçek kullanım doğrulaması açık. |
 
 - [ ] Tüm sağlayıcılarda kurulum, etkinleştirme, devre dışı bırakma, güncelleme ve kaldırmayı doğrula.
-- [ ] Registry güvenliği, şeması, hash ve sürüm uyumluluğu kontrollerini tamamla.
+- [x] Yerel plugin checkout'unda registry şeması, manifest/payload hash'leri, sürüm uyumluluğu ve güvenli yol/rol kontrolleri doğrulandı (`validate_registry.py` + 188 test).
+- [ ] Resmi yayımlanmış registry kimliğinde provider paketlerini ve uygulama uyumluluğunu tekrar doğrula.
 
 ## 7. V2 acceptance
 
