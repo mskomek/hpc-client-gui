@@ -104,7 +104,7 @@
 ## 1. Kod ve test hataları
 
 - [x] Tarihsel 413 bulgusunu GitHub CI run `38688191566` / `4a7170ad` ile eşleştir ve temiz worktree'de doğrula; aynı Ruff 0.16.8/komut `53bc413d`'de 245 verdi, düşüş commit aralığındaki kod/test değişiklikleriyle açıklanıyor.
-- [ ] Kalan 245 Ruff bulgusunu kapat; current source `src/` temiz, bulgular validator ve test yüzeyinde.
+- [ ] Current `develop` `362ece5e` üzerinde Ruff **0.16.8** ve `ruff check src scripts tests` yeniden çalıştırıldı: **245** bulgu; `src/` 0, `tests/` 127, `scripts/` 118. Başlıca kodlar E702 123, E701 64 ve F405 50; lint düzeltmeleri açık.
 - [ ] `develop`'da silinmiş `.github/workflows/ci.yml` gate'inin geri çalıştırılabilirliğini doğrula; `a759aebc` için GitHub CI run yok.
 - [ ] Uygulama/test/script kaynaklarındaki gerçek Ruff hatalarını, dosya sorumluluklarını ve 500 satır mimari sınırını koruyarak düzelt.
 - [ ] Ubuntu-Test Linux GUI ortamı artık `.tmp` içine kurulu Python **3.14.8**, wxPython **4.3.1+ubuntu2404**, Xvfb ve yerel runtime bağımlılıklarıyla çalışıyor; GTK3 `wx.Frame` smoke'u PASS. Kalan test bulguları 26/27 ve WebView 28/29 PASS ile sınırlı değil: bir POSIX path varsayımı, güncel facade'a uymayan dispatch testi, screen-state readback `None` ve tekrarlanan W19 fixture teardown SIGSEGV var (ayrıntı Linux VM devam kaydında).
