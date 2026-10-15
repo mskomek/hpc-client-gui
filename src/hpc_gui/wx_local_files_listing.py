@@ -5,6 +5,7 @@ from threading import Thread
 from hpc_gui.core.i18n import t
 from hpc_gui.services.local_files import list_windows_drives
 from hpc_gui.wx_file_list_style import alternate_row_colour
+from hpc_gui.wx_file_type_icons import file_type_icon_index, install_file_type_icons
 from hpc_gui.wx_local_files_model import format_local_size
 from hpc_gui.wx_local_files_support import _format_mtime, _type_label
 
@@ -77,6 +78,9 @@ def install_listing(view):
             stripe = alternate_row_colour(wx)
             for row_index, entry in enumerate(tab_entry["entries"]):
                 index = listing.InsertItem(listing.GetItemCount(), entry.path.name)
+                listing.SetItemImage(
+                    index, file_type_icon_index(entry.path.name, entry.is_dir)
+                )
                 listing.SetItem(index, 1, format_local_size(entry))
                 listing.SetItem(index, 2, _type_label(entry))
                 listing.SetItem(index, 3, _format_mtime(getattr(entry, "mtime", None)))
@@ -202,6 +206,7 @@ def install_listing(view):
         target_path = Path(target_path).expanduser().resolve()
         panel = wx.Panel(notebook)
         listing = wx.ListCtrl(panel, style=wx.LC_REPORT)
+        image_list = install_file_type_icons(wx, listing)
         listing.InsertColumn(0, t("dirs.col_name"))
         listing.InsertColumn(1, t("dirs.col_size"))
         listing.InsertColumn(2, t("dirs.col_type"))
@@ -210,7 +215,7 @@ def install_listing(view):
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.Add(listing, 1, wx.EXPAND)
         panel.SetSizer(sizer)
-        tab_entry = {"id": next_tab_id[0], "path": target_path, "listing": listing, "entries": [], "view_generation": 0, "listing_request_id": 0, "closed": False, "panel": panel}
+        tab_entry = {"id": next_tab_id[0], "path": target_path, "listing": listing, "entries": [], "view_generation": 0, "listing_request_id": 0, "closed": False, "panel": panel, "image_list": image_list}
         next_tab_id[0] += 1
         tabs.append(tab_entry)
         # sync model
@@ -261,6 +266,7 @@ def install_listing(view):
                 ent._drive_name = str(name)
                 tstate["entries"].append(ent)
                 idx = lst.InsertItem(lst.GetItemCount(), str(name))
+                lst.SetItemImage(idx, file_type_icon_index(str(name), True))
                 lst.SetItem(idx, 1, "")
                 lst.SetItem(idx, 2, t("dirs.type_folder"))
                 lst.SetItem(idx, 3, "")

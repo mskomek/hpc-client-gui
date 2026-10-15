@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from pathlib import PurePath
-
 from PySide6.QtCore import QEvent, QObject, QRectF, QSize, Qt, QTimer
 from PySide6.QtGui import (
     QColor,
@@ -21,6 +19,7 @@ from PySide6.QtWidgets import (
     QTreeWidget,
     QWidget,
 )
+from hpc_gui.services.directory_file_types import directory_file_icon_key
 
 
 _ROW_STYLE = """
@@ -41,35 +40,6 @@ QTreeWidget::item:selected {
 }
 """
 
-_EXTENSION_GROUPS = (
-    ({"pdf"}, "PDF", "#d64a4a"),
-    ({"doc", "docx", "odt", "rtf"}, "DOC", "#3577c8"),
-    ({"xls", "xlsx", "csv", "tsv", "ods"}, "XLS", "#2f9a69"),
-    ({"ppt", "pptx", "odp"}, "PPT", "#d47b36"),
-    (
-        {"png", "jpg", "jpeg", "gif", "bmp", "svg", "webp", "tif", "tiff"},
-        "IMG",
-        "#8b62c8",
-    ),
-    ({"zip", "tar", "gz", "bz2", "xz", "7z", "rar", "tgz"}, "ZIP", "#bc842d"),
-    (
-        {
-            "py", "js", "ts", "tsx", "jsx", "html", "css", "json", "xml",
-            "yaml", "yml", "sh", "ps1", "c", "cpp", "h", "java", "go",
-            "rs", "ipynb",
-        },
-        "<>",
-        "#7359bd",
-    ),
-    ({"mp4", "mkv", "mov", "avi", "webm"}, "▶", "#ce5d78"),
-    ({"mp3", "wav", "flac", "ogg", "m4a"}, "♪", "#368b9b"),
-    ({"txt", "md", "log", "ini", "cfg", "conf", "out", "err"}, "TXT", "#617c9b"),
-)
-_EXTENSION_LOOKUP = {
-    extension: (label, color)
-    for extensions, label, color in _EXTENSION_GROUPS
-    for extension in extensions
-}
 _ICON_CACHE: dict[tuple[str, str], QIcon] = {}
 
 
@@ -133,11 +103,9 @@ def _draw_icon(kind: str, label: str, color: str) -> QIcon:
 
 
 def _entry_icon(name: str, is_directory: bool) -> QIcon:
-    if is_directory:
-        key = ("folder", "#f7c957")
-        return _ICON_CACHE.get(key) or _draw_icon("folder", "", "#f7c957")
-    extension = PurePath(name).suffix.lower().lstrip(".")
-    label, color = _EXTENSION_LOOKUP.get(extension, ("FILE", "#718096"))
+    label, color = directory_file_icon_key(name, is_directory)
+    if label == "folder":
+        return _ICON_CACHE.get((label, color)) or _draw_icon("folder", "", color)
     key = (label, color)
     return _ICON_CACHE.get(key) or _draw_icon("file", label, color)
 

@@ -6,6 +6,7 @@ from hpc_gui.services.file_filter_registry import FileFilter
 from hpc_gui.services.remote_entry_format import natural_sort_key as _shared_natural_sort_key
 from hpc_gui.wx_remote_files_support import _format_mtime, _fmt_size, _type_label
 from hpc_gui.wx_file_list_style import alternate_row_colour
+from hpc_gui.wx_file_type_icons import file_type_icon_index, install_file_type_icons
 
 
 def install_listing(view):
@@ -217,6 +218,13 @@ def install_listing(view):
         stripe = alternate_row_colour(wx)
         for row_index, entry in enumerate(entries):
             idx = listing.InsertItem(listing.GetItemCount(), PurePosixPath(entry.path).name or entry.path)
+            listing.SetItemImage(
+                idx,
+                file_type_icon_index(
+                    PurePosixPath(entry.path).name or entry.path,
+                    bool(getattr(entry, "is_dir", False)),
+                ),
+            )
             listing.SetItem(idx, 1, _fmt_size(entry))
             listing.SetItem(idx, 2, _type_label(entry))
             listing.SetItem(idx, 3, _format_mtime(getattr(entry, "mtime", None)))
@@ -239,6 +247,7 @@ def install_listing(view):
             filter_nb.AddPage(p, _filter_label(filt) or fid)
 
         listing = wx.ListCtrl(tab_panel, style=wx.LC_REPORT | wx.LC_HRULES)
+        image_list = install_file_type_icons(wx, listing)
         listing.InsertColumn(0, t("dirs.col_name"))
         listing.InsertColumn(1, t("dirs.col_size"))
         listing.InsertColumn(2, t("dirs.col_type"))
@@ -260,6 +269,7 @@ def install_listing(view):
             "closed": False, "sort_col": -1, "sort_reverse": False,
             "filter_ids": filter_ids, "back_stack": [], "forward_stack": [],
             "pending_navigation": None, "highlight_path": "",
+            "image_list": image_list,
         }
         next_tab_id[0] += 1
         tabs.append(tab_entry)
