@@ -40,6 +40,12 @@
 - [x] `tests/test_wx_file_keyboard_parity.py` **17/17 PASS**, `tests/test_wx_file_context_i18n.py` **5/5 PASS** ve `tests/test_wx_a11y.py` **2/2 PASS**. Yerel klavye eylemleri, EN/TR context-menu etiketleri, tab/menu metinleri ve temel sekme seçimi denetlendi.
 - [ ] Tam erişilebilirlik kabulü açık: W61 testi `files_page.IsShown() or True` ile görünürlüğü gerçekte doğrulamıyor; focus traversal, screen reader ve görsel/DPI denetimleri bu test turunda kanıtlanmadı. Keyboard test sonrasında wxWidgets `UnregisterClass ... Class still has open windows` stderr uyarısı da görüldü; GUI lifecycle kabulü ayrı açık.
 
+### Startup ve terminal kaynak GUI turu — 2026-10-15, `develop` `2d9126546571383b3a2da97e3511532bdffef064`
+
+- [x] `tests/test_w40_gui_acceptance.py` **6/6 PASS**; source wx shell'de yeni oturum Connection sekmesinde başlıyor ve EN/TR 1280×760 / 1440×900 geometry kontrolleri geçti.
+- [x] İzole `tests/test_wx_terminal_webview.py` **29/29 PASS**; local WebView/xterm, input/output, resize, reconnect generation guard, close/destroy-before-ready ve reconnect döngüleri denetlendi.
+- [ ] Bu izole kaynak turu paketlenmiş WebView2/WER veya karma GUI suite native-heap kabulü değildir. Daha önceki layout kapanışında `0x80004004 Operation aborted` stderr görüldü; mixed-suite native crash maddesi açık kalıyor.
+
 ### Başlangıç çalışma kaydı — 2026-10-15
 
 - [x] İlk yerel Ruff baseline'ı ve kaynak/test/script dağılımı çıkarıldı.
@@ -90,6 +96,8 @@
 - [ ] Terminal WebView2 yaşam döngüsü ve native crash senaryolarını kapat.
 - [ ] Birden fazla ekran çözünürlüğü ile %100/%150/%200 DPI ölçeklerinde doğrula.
 - [ ] Paketlenmiş GUI klavye/context-menu kabulü ile gerçek focus traversal, screen reader ve görsel erişilebilirlik denetimlerini tamamla.
+- [x] Source GUI startup ve locale geometry kontrolleri güncel `develop` üzerinde `tests/test_w40_gui_acceptance.py` 6/6 PASS; paketlenmiş GUI doğrulaması ayrıca açık.
+- [x] wx terminal WebView source lifecycle/regression dosyası izole süreçte 29/29 PASS; karma GUI native-crash ve WER doğrulaması ayrıca açık.
 - [x] Kaynak checkout'unda wx keyboard/context smoke grubu 24/24 PASS; bu, erişilebilirlik kabulünün tamamlandığı anlamına gelmez (eksik kanıt yeni devam doğrulama kaydında).
 
 ## 3. Bağlantı ve güvenlik
