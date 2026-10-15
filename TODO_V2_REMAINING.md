@@ -21,6 +21,14 @@
 - [ ] Kapanış tanısı tekrar üretildi: wxPython 4.3.1'de `wx.IsDestroyed` API'si yok; mevcut finalizer bu çağrıdaki `AttributeError`'ı yutup `frame_destroyed=false` yazıyor. Ayrıca lifecycle cleanup kaydında `Panel.Hide()` callback'i panel yok edildikten sonra `RuntimeError: wrapped C/C++ object of type Panel has been deleted` veriyor; bu yüzden `cleanup_complete=false`. Gecikmeli gözlemde de callback hatası sürüyor. Kaynak alanı kapalı W55'e (HPC-W10-GJ2-051), smoke/gate gözlem düzeltmesi kapalı W16'ya yönlendirilmeli; kod/evidence gate değiştirilmedi. Kapalı owner düzeltmesi yapılmadan bu FAIL kabul edilmemeli veya PASS'a çevrilmemeli.
 - [ ] Bu candidate host Windows'ta çalıştırılmıştır; Hyper-V guest acceptance, native crash/WER ve gerçek bağlantı testi değildir. Windows11 `test\home` kimliği ve guest IP'leri PowerShell Direct ile doğrulandı; ancak guest'ten geçici SSH/SFTP fixture'ına Default Switch (`172.28.144.1`) ve `hpc-lab` (`192.168.250.1`) üzerinden TCP erişimi başarısız oldu. Firewall/VM ayarı değiştirilmedi; guest packaged smoke **BLOCKED_ENV** (guest'ten test servisine erişim yok). Candidate geçici `.tmp` altında tutuluyor; immutable release candidate değildir.
 
+### Devam doğrulaması — 2026-10-15, `develop` `cec26ae352d0d2bcee29e79d0bafdc7198135d03`
+
+- [x] wx splitters artık oranı `wx_splitter_ratios` ayarıyla kaydedip yeniden açılışta yüklüyor; Directories, Files local/remote ve Files browser/transfers ayraçları oranı resize sırasında koruyor.
+- [x] Windows wx GUI testleri: `tests/test_wx_shell_layout.py` **7/7 PASS**; dar Files workspace'te local toolbar **1/1 PASS**. Sash oranını kaydetme/yeniden yükleme simülasyonu ve gerçek dikey/yatay splitter resize senaryoları kapsandı.
+- [x] `tests/test_wx_layout_resize.py::test_wx_layout_resize` **1/1 PASS**: EN/TR **400/400** resize ve **2.800/2.800** tab seçimi; sıfır geometri, kırpılma, overflow, layout exception ve detached-frame invariantlarının tümü **0**. Test commit `cec26ae3` üzerinde çalıştırıldı.
+- [x] Değişen kaynak/test Ruff ve Agent Core source architecture gate PASS; 500 satır üstü dosya yok, bağımlılık hatası yok.
+- [ ] Bu GUI turunda wxWebView2 teardown sırasında `0x80004004 Operation aborted` stderr satırı görüldü; test ve layout invariantları PASS olsa da terminal WebView2 lifecycle/native-crash kabul maddesi açık kalıyor.
+
 ### Başlangıç çalışma kaydı — 2026-10-15
 
 - [x] İlk yerel Ruff baseline'ı ve kaynak/test/script dağılımı çıkarıldı.
@@ -35,7 +43,7 @@
 - [x] `wx_local_files.py` 1.183 satırdan 249 satıra, toolkit-free model, destek, liste/gezinme, etkileşim, mutation ve lifecycle modüllerine ayrıldı. Local ve remote wx listelerine sistem paletinden türetilen zebra satırları eklendi.
 - [x] Local ve remote dosya listesi zebra GUI testleri geçti. 133 local/remote dosya, sekme, eylem ve model regresyonu; 12 GUI-FILE-003 stres testi PASS. Stres kampanyasında 200 sağ-tık, 100+100 mutation, 200 navigation yarışı, 50 aç/kapat, 25 in-flight close, 100 transfer, 50 Unicode/boşluk adı ve 20 reconnect snapshot tamamlandı; kaçak/stale/yanlış hedef/kayıp/çift transfer ölçümleri sıfır.
 - [x] Dosya türü ikonları için Qt ve wx arayüzlerinin paylaştığı framework bağımsız uzantı sınıflandırması eklendi; wx local/remote listelerinde dosya türü ve klasör ikonları satırlara bağlandı. Gerçek wx `ListCtrl` öğelerindeki ikon indeksleri test edildi; odaklı local/remote GUI ve regresyon grubu 95/95 PASS, değişen Ruff ve kaynak mimarisi kontrolleri PASS.
-- [ ] Splitter kalıcılığı açık: varsayılan wx oranı 960/1200/1600 genişliklerinde okundu (2/2 PASS), ancak kullanıcı oranı kaydedilip açılışta yüklenmiyor. Python 3.14 tam shell testi 400 resize ve 2.800 tab seçimini çalıştırdı; FAIL: 553 sıfır geometri ve 546 clipping. Görünürlük tanısında 474/468 ölçüm gizli sekme kontrollerinden (`IsShown()` kullanımı), 79/78 görünür kontrollerden geldi. İlk görünür kusur `1355x929` boyutunda Files sekmesindeki yerel `btn_refresh` genişliğinin `0` olması: 166 px navigation sidebar ve 300 px splitter minimumu, beş düğmeli toolbar'a sığmıyor. Test ölçümü `IsShownOnScreen()` ile düzeltilmeli ve toolbar dar genişliklerde yeniden düzenlenmeli; splitter kalıcılığı ayrıca doğrulanmalı.
+- [x] `cec26ae3` ile wx splitter oranlarının saklanması/geri yüklenmesi ve resize davranışı tamamlandı; önceki `dd488023` baseline'ındaki layout ölçüm sorunu `IsShownOnScreen()` ölçümüne, `1355x929` dar local toolbar sorunu `wx.WrapSizer` düzenine geçirildi. Commit'e bağlı 400 resize / 2.800 tab kabul testi ve ayrıntılar yeni devam doğrulama kaydında.
 - [ ] SSH/SFTP/terminal/Slurm/transfer turu güncel `a759aebc` ve Python 3.14'te 120 test çalıştırdı: 119 PASS, 1 FAIL (`test_ssh_backend_rejects_invalid_utf8_text`). `W57.4_WAVE_REPORT.md`, testin W29 öncesi strict-decode beklentisi olduğunu ve W29 OUT-005 replacement davranışının doğru kabul edildiğini kaydediyor; bu nedenle FAIL doğrulanmış ürün hatası değil, kapalı W03 test beklentisinin owner-routed güncelleme işi. Test güncellenip tekrar çalışana kadar suite kırmızı kalır.
 - [ ] `wx_shell.py` facade düzenlemesinden sonraki geniş regresyon turunda native Windows access violation oluşturan Qt transfer-iptal senaryosunu kapat; test ayrı süreçte geçiyor, karışık GUI suite içinde doğrulama sürüyor.
 - [x] Transfer retry worker-race düzeltmesi yapıldı; ilgili birim grubu 5/5 ve yeniden deneme regresyonu 10/10 PASS verdi.
@@ -65,7 +73,8 @@
 
 - [x] Dosya türü ikonlarını wx dosya listelerine uygula ve doğrula.
 - [x] wx local ve remote dosya listelerinde zebra satırlarını uygula ve GUI'de doğrula.
-- [ ] Splitter oranlarını wx içinde sakla ve yeniden açılışta geri yükle; tam shell'de oran ve geometriyi doğrula.
+- [x] Splitter oranlarını wx içinde sakla ve yeniden açılışta geri yükle; tam shell'de oran ve geometriyi doğrula (`cec26ae3`, devam doğrulama kaydı).
+- [x] `1355x929` boyutunda ve minimum local pane genişliğinde wx local-files araç çubuğunun taşmadan görünmesini doğrula (`wx.WrapSizer`, tam resize testinde tüm geometri invariantları 0).
 - [ ] Uygulama açılışında doğru bağlantı ekranının gösterildiğini paketlenmiş GUI'de doğrula.
 - [ ] Terminal WebView2 yaşam döngüsü ve native crash senaryolarını kapat.
 - [ ] Birden fazla ekran çözünürlüğü ile %100/%150/%200 DPI ölçeklerinde doğrula.
