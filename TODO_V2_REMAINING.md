@@ -35,6 +35,11 @@
 - [x] `tests/test_download_cancel_wire.py` **4/4 PASS**: yerel mock SSH/SFTP wire üzerinde 48 MiB indirmeyi iptal etme, kısmi dosyayı koruma, resume ile tamamlayıp boyutu doğrulama, ayrıca overwrite/skip davranışları.
 - [ ] Bu fixture sonuçları gerçek HPC endpointindeki transfer/resume kanıtı değildir; credential/proje erişimi olan gerçek sistem doğrulaması açık kalıyor.
 
+### Klavye ve erişilebilirlik turu — 2026-10-15, `develop` `7ea65ef5eea149277b79ed05a18939ba0b5313ca`
+
+- [x] `tests/test_wx_file_keyboard_parity.py` **17/17 PASS**, `tests/test_wx_file_context_i18n.py` **5/5 PASS** ve `tests/test_wx_a11y.py` **2/2 PASS**. Yerel klavye eylemleri, EN/TR context-menu etiketleri, tab/menu metinleri ve temel sekme seçimi denetlendi.
+- [ ] Tam erişilebilirlik kabulü açık: W61 testi `files_page.IsShown() or True` ile görünürlüğü gerçekte doğrulamıyor; focus traversal, screen reader ve görsel/DPI denetimleri bu test turunda kanıtlanmadı. Keyboard test sonrasında wxWidgets `UnregisterClass ... Class still has open windows` stderr uyarısı da görüldü; GUI lifecycle kabulü ayrı açık.
+
 ### Başlangıç çalışma kaydı — 2026-10-15
 
 - [x] İlk yerel Ruff baseline'ı ve kaynak/test/script dağılımı çıkarıldı.
@@ -84,7 +89,8 @@
 - [ ] Uygulama açılışında doğru bağlantı ekranının gösterildiğini paketlenmiş GUI'de doğrula.
 - [ ] Terminal WebView2 yaşam döngüsü ve native crash senaryolarını kapat.
 - [ ] Birden fazla ekran çözünürlüğü ile %100/%150/%200 DPI ölçeklerinde doğrula.
-- [ ] Klavye kısayolları, context menüler ve erişilebilirlik denetimlerini tamamla.
+- [ ] Paketlenmiş GUI klavye/context-menu kabulü ile gerçek focus traversal, screen reader ve görsel erişilebilirlik denetimlerini tamamla.
+- [x] Kaynak checkout'unda wx keyboard/context smoke grubu 24/24 PASS; bu, erişilebilirlik kabulünün tamamlandığı anlamına gelmez (eksik kanıt yeni devam doğrulama kaydında).
 
 ## 3. Bağlantı ve güvenlik
 
