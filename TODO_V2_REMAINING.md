@@ -9,8 +9,7 @@
 - Bu dosya çalışma TODO'sudur; release kabul belgesi değildir.
 - Bir madde yalnızca kod mevcut diye tamamlanmaz. Kanıt, test edilen tam commit ve mümkünse paket SHA-256 ile eşleşmelidir.
 - Önceki Candidate 6/7/8/9 sonuçları kendi commit ve paketlerine aittir; güncel `develop` için kabul kanıtı sayılmaz.
-- Başlangıçta mevcut checkout'ta `ruff check .` 434 bulgu verdi; hedefli temizlikten sonra sayı 313. Önceki CI notundaki 413 sayısıyla fark, temiz CI kapsamı ve yerel checkout farkları ayrıştırılarak açıklanmalıdır.
-- Önceki hedefli temizlik sonrasında `ruff check src scripts tests --statistics` 292 bulguydu. Devam turunda `wx_remote_files_view.py` modülerleştirildi ve eski iki F401 bulgusu kapandı; güncel sonuç **245**: E702 123, E701 64, F405 50, E401 3, F841 2, F403 1, F401 1, E703 1. 243 bulgu Agent Core Wave doğrulama/test dosyalarında; kalan iki bulgu `tests/test_w04_support_freeze.py` (F841) ve `tests/test_w33_lifecycle_isolation.py` (F401). Temiz CI kapsamı ile önceki 413 bulgunun farkını açıklama işi hâlâ açık.
+- Temiz, izlenen `53bc413d` worktree'sinde CI komutu `python -m ruff check src scripts tests --statistics` **245** bulgu verdi; aynı komut ana checkout'ta da 245 verdi. Geniş `python -m ruff check . --statistics` kapsamı temiz worktree'de **252** bulgu verdi. CI kapsamındaki sayım: E702 123, E701 64, F405 50, E401 3, F841 2, F403 1, F401 1, E703 1. `src/` altında Ruff bulgusu yok; bulgular validator/test yüzeylerinde. Eski CI notundaki 413 için commit/komut çıktısı henüz eşleştirilemedi.
 - Bu çalışmaya başlamadan önce checkout'ta var olan kullanıcı değişiklikleri korunur.
 
 ### Başlangıç çalışma kaydı — 2026-10-15
@@ -28,7 +27,7 @@
 - [x] Local ve remote dosya listesi zebra GUI testleri geçti. 133 local/remote dosya, sekme, eylem ve model regresyonu; 12 GUI-FILE-003 stres testi PASS. Stres kampanyasında 200 sağ-tık, 100+100 mutation, 200 navigation yarışı, 50 aç/kapat, 25 in-flight close, 100 transfer, 50 Unicode/boşluk adı ve 20 reconnect snapshot tamamlandı; kaçak/stale/yanlış hedef/kayıp/çift transfer ölçümleri sıfır.
 - [x] Dosya türü ikonları için Qt ve wx arayüzlerinin paylaştığı framework bağımsız uzantı sınıflandırması eklendi; wx local/remote listelerinde dosya türü ve klasör ikonları satırlara bağlandı. Gerçek wx `ListCtrl` öğelerindeki ikon indeksleri test edildi; odaklı local/remote GUI ve regresyon grubu 95/95 PASS, değişen Ruff ve kaynak mimarisi kontrolleri PASS.
 - [ ] Splitter kalıcılığı açık: gerçek wx `SplitterWindow` üzerinde varsayılan 50/50 oranı 960/1200/1600 genişliklerinde okundu (2/2 test PASS), ancak wx henüz Qt ile aynı şekilde kullanıcı oranını kaydetmiyor ve yeniden açılışta yüklemiyor. Tam shell `tests/test_wx_layout_resize.py` 400 resize/tab turunu çalıştırdı; geometri `FAIL` verdi (553 sıfır/negatif kontrol ölçümü, 546 clipping, 0 layout exception), bu sayaçların splitter kalıcılığıyla ilişkisi gösterilmedi ve ayrıştırılmalı.
-- [ ] SSH/SFTP/terminal/Slurm/transfer odaklı regresyon turu `52d9fef6` HEAD'de 120 test çalıştırdı: 119 PASS, 1 FAIL (`test_ssh_backend_rejects_invalid_utf8_text`). Test remote editor için bozuk UTF-8'in değiştirilmemesini bekliyor; `SSHFilesBackend.read_text` ise W29 uyumluluk yorumuyla replacement decode yapıyor. Bu çelişki veri kaybı riski ve stdout/stderr görüntüleme gereksinimi ayrıştırılarak çözülmeli; kırmızı test henüz PASS sayılmıyor.
+- [ ] SSH/SFTP/terminal/Slurm/transfer odaklı regresyon turu `52d9fef6` HEAD'de 120 test çalıştırdı: 119 PASS, 1 FAIL (`test_ssh_backend_rejects_invalid_utf8_text`). `W57.4_WAVE_REPORT.md`, testin W29 öncesi strict-decode beklentisi olduğunu ve W29 OUT-005 replacement davranışının doğru kabul edildiğini kaydediyor; bu nedenle mevcut FAIL doğrulanmış ürün hatası değil, kapalı W03 test beklentisinin owner-routed güncelleme işi. Test düzeltilip güncel HEAD'de tekrar çalışana kadar suite sonucu kırmızı kalır.
 - [ ] `wx_shell.py` facade düzenlemesinden sonraki geniş regresyon turunda native Windows access violation oluşturan Qt transfer-iptal senaryosunu kapat; test ayrı süreçte geçiyor, karışık GUI suite içinde doğrulama sürüyor.
 - [x] Transfer retry worker-race düzeltmesi yapıldı; ilgili birim grubu 5/5 ve yeniden deneme regresyonu 10/10 PASS verdi.
 - [x] Linux/Windows release preflight için pinlenmiş test-only Qt lock eklendi; testlerden sonra Qt paketleri kaldırılarak wx release build ortamı temiz tutuluyor.
@@ -42,7 +41,8 @@
 
 ## 1. Kod ve test hataları
 
-- [ ] Temiz/izlenen dosya kapsamındaki Ruff baseline'ını çıkar; önceki 413 CI bulgusuyla mevcut 434 yerel bulguyu dosya ve kural bazında karşılaştır.
+- [x] CI'nın gerçek Ruff kapsamını temiz, izlenen `53bc413d` worktree'sinde ve mevcut checkout'ta karşılaştır: ikisi de `src scripts tests` için 245 bulgu verdi; `ruff check .` 252 verdi.
+- [ ] Önceki 413 CI bulgusunun tam commit ve komut çıktısını bulup 245/252 baseline'larıyla farkını açıklığa kavuştur.
 - [ ] Uygulama/test/script kaynaklarındaki gerçek Ruff hatalarını, dosya sorumluluklarını ve 500 satır mimari sınırını koruyarak düzelt.
 - [ ] Linux wxPython/GTK3 kurulum ve test ortamını düzelt; gerçek Linux ortamında doğrula. Mevcut Ubuntu-Test ölçümü **BLOCKED_ENV**: Python 3.12.3; pip/wxPython/wx-config/pkg-config eksik; sudo parola istiyor.
 - [ ] Windows PySide6 test bağımlılığı/opsiyonel bağımlılık çözümünü güncel release preflight runner'ında doğrula.
