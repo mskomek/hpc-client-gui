@@ -24,7 +24,8 @@
 - [x] İlk odaklı GUI regresyon turu 54/54 PASS verdi.
 - [x] 1.408 satırlık `wx_remote_files_view.py`, listeleme, gezinme, etkileşim, aksiyon ve işlem bileşenlerine ayrıldı; ana facade 447 satır, yeni bileşenlerin en uzunu 322 satır. İlgili Ruff kontrolü temiz, değişen kaynak mimari doğrulaması PASS.
 - [x] Refaktör sonrası remote dosya eylemleri, sekmeler, yaşam döngüsü, klavye, undo, editör ve transfer regresyonları 125/125 PASS; remote kaynak sözleşmeleri 19/19 PASS; 200 sağ-tık seçim stres kontrolü 1/1 PASS.
-- [x] Remote wx dosya listesine sistem paletinden türetilen zebra satırları eklendi ve GUI testi PASS verdi. Local wx listesi bu maddede açık kaldı; `wx_local_files.py` 1.183 satır ve doğrudan değişiklik mimari kapısını bozacağından önce o dosyanın bölünmesi gerekiyor.
+- [x] `wx_local_files.py` 1.183 satırdan 249 satıra, toolkit-free model, destek, liste/gezinme, etkileşim, mutation ve lifecycle modüllerine ayrıldı. Local ve remote wx listelerine sistem paletinden türetilen zebra satırları eklendi.
+- [x] Local ve remote dosya listesi zebra GUI testleri geçti. 133 local/remote dosya, sekme, eylem ve model regresyonu; 12 GUI-FILE-003 stres testi PASS. Stres kampanyasında 200 sağ-tık, 100+100 mutation, 200 navigation yarışı, 50 aç/kapat, 25 in-flight close, 100 transfer, 50 Unicode/boşluk adı ve 20 reconnect snapshot tamamlandı; kaçak/stale/yanlış hedef/kayıp/çift transfer ölçümleri sıfır.
 - [ ] `wx_shell.py` facade düzenlemesinden sonraki geniş regresyon turunda native Windows access violation oluşturan Qt transfer-iptal senaryosunu kapat; test ayrı süreçte geçiyor, karışık GUI suite içinde doğrulama sürüyor.
 - [x] Transfer retry worker-race düzeltmesi yapıldı; ilgili birim grubu 5/5 ve yeniden deneme regresyonu 10/10 PASS verdi.
 - [x] Linux/Windows release preflight için pinlenmiş test-only Qt lock eklendi; testlerden sonra Qt paketleri kaldırılarak wx release build ortamı temiz tutuluyor.
@@ -49,7 +50,7 @@
 ## 2. GUI V2
 
 - [ ] Dosya türü ikonlarını wx dosya listelerine uygula ve doğrula.
-- [ ] wx dosya listelerinde zebra satırlarını doğrula.
+- [x] wx local ve remote dosya listelerinde zebra satırlarını uygula ve GUI'de doğrula.
 - [ ] Splitter oranlarının wx üzerinde saklanıp geri yüklendiğini doğrula.
 - [ ] Uygulama açılışında doğru bağlantı ekranının gösterildiğini paketlenmiş GUI'de doğrula.
 - [ ] Terminal WebView2 yaşam döngüsü ve native crash senaryolarını kapat.

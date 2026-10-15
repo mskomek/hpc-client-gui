@@ -40,7 +40,7 @@ def test_w23_delete_message_empty_falls_back_to_generic():
 def test_w23_view_confirm_wiring_mentions_target():
     import pathlib
 
-    for rel in ("src/hpc_gui/wx_local_files.py", "src/hpc_gui/wx_remote_files_view.py"):
+    for rel in ("src/hpc_gui/wx_local_files_support.py", "src/hpc_gui/wx_remote_files_view.py"):
         text = pathlib.Path(rel).read_text(encoding="utf-8")
         assert "_delete_confirm_text" in text
         assert "dirs.delete_confirm_detail" in text

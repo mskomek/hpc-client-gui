@@ -9,6 +9,7 @@ import pytest
 wx = pytest.importorskip("wx")
 
 from hpc_gui.core.i18n import load_language
+from hpc_gui.wx_local_files import show_local_files
 from hpc_gui.wx_remote_files import WxRemoteDirectoryModel
 from hpc_gui.wx_remote_files_view import show_remote_files
 from mock_hpc_files import MockRemoteFilesBackend
@@ -43,6 +44,20 @@ def _assert_zebra_rows(listing):
     colors = [listing.GetItemBackgroundColour(index) for index in range(3)]
     assert colors[0] != colors[1]
     assert colors[0] == colors[2]
+
+
+@pytest.mark.gui
+@pytest.mark.wx
+def test_local_file_list_uses_alternating_row_colors(wx_app, tmp_path):
+    for name in ("a.txt", "b.txt", "c.txt"):
+        (tmp_path / name).write_text(name, encoding="utf-8")
+
+    show_local_files(path=tmp_path)
+    frame = next(window for window in wx.GetTopLevelWindows() if hasattr(window, "_wx_local_controls"))
+    listing = frame._wx_local_controls["listing"]
+    _wait_for_rows(wx_app, listing, 3)
+
+    _assert_zebra_rows(listing)
 
 
 @pytest.mark.gui

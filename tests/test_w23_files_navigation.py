@@ -119,6 +119,6 @@ def test_w23_remote_done_guards_destroyed_notebook__contract():
 
 
 def test_w23_local_done_guards_destroyed_notebook__contract():
-    src = Path(__file__).resolve().parents[1] / "src" / "hpc_gui" / "wx_local_files.py"
+    src = Path(__file__).resolve().parents[1] / "src" / "hpc_gui" / "wx_local_files_listing.py"
     text = src.read_text(encoding="utf-8")
     assert "LIFECYCLE-NATIVE-001" in text

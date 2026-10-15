@@ -80,7 +80,7 @@ def test_local_clipboard_copy_and_move_paste(tmp_path: Path):
 @pytest.mark.audit
 @pytest.mark.wx
 def test_local_browser_model_has_no_toolkit_import():
-    source = open("src/hpc_gui/wx_local_files.py", encoding="utf-8").read()
+    source = open("src/hpc_gui/wx_local_files_model.py", encoding="utf-8").read()
     assert "from PySide6" not in source
 
 
@@ -95,7 +95,16 @@ def test_local_context_actions_include_safe_navigation_actions():
 @pytest.mark.audit
 @pytest.mark.wx
 def test_local_view_exposes_keyboard_and_context_actions():
-    source = open("src/hpc_gui/wx_local_files.py", encoding="utf-8").read()
+    source_paths = (
+        "src/hpc_gui/wx_local_files.py",
+        "src/hpc_gui/wx_local_files_model.py",
+        "src/hpc_gui/wx_local_files_support.py",
+        "src/hpc_gui/wx_local_files_listing.py",
+        "src/hpc_gui/wx_local_files_interactions.py",
+        "src/hpc_gui/wx_local_files_mutations.py",
+        "src/hpc_gui/wx_local_files_lifecycle.py",
+    )
+    source = "\n".join(open(path, encoding="utf-8").read() for path in source_paths)
     assert "EVT_LIST_ITEM_ACTIVATED" in source
     assert "EVT_CONTEXT_MENU" in source and "open_editor" in source
     assert "context_selection" in source and "visible_actions" in source
