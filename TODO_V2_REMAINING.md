@@ -46,6 +46,14 @@
 - [x] İzole `tests/test_wx_terminal_webview.py` **29/29 PASS**; local WebView/xterm, input/output, resize, reconnect generation guard, close/destroy-before-ready ve reconnect döngüleri denetlendi.
 - [ ] Bu izole kaynak turu paketlenmiş WebView2/WER veya karma GUI suite native-heap kabulü değildir. Daha önceki layout kapanışında `0x80004004 Operation aborted` stderr görüldü; mixed-suite native crash maddesi açık kalıyor.
 
+### VM devamı — 2026-10-15, güncel `develop` `a66ed9a2`, test edilen kaynak `8499f2b2`
+
+- [x] Windows 11 `test\home` aktif Explorer oturumunda GUI smoke çalıştırıldı. Temiz worktree'den üretilen onedir GUI EXE SHA-256 `f250ba6752a889444821ac02ed24634254cc63c88725cf079d2510921ca3c1d6`; `Invoke-Windows11Interactive.ps1` host/guest EXE hash eşleşmesini, oturum 2 kimliğini ve başarılı cleanup'ı doğruladı. Runner `ExitCode=0`, `Timeout=false`, `CleanupStatus=completed`; smoke runtime SHA-256 `6be21794c566117ead49c65e2aee6b154fd8789388b967e3a39306d30f8b0eac` ve yerel kanıt `.tmp/w11-vm-acceptance-8499f2b2/w11-runtime.json`.
+- [ ] W11 runtime raporunda 19 kontrolün 17'si PASS, `clean_shutdown=FAIL`, `pty_resize=PENDING`. Kapanışta `frame_destroyed=false` ve `cleanup_callbacks_drained=false`; resize için istek `(123,45)` kaydedildi ancak gözlenen PTY ölçümü yok. Üst seviye JSON `result=PASS` dese de alt kontroller acceptance PASS sağlamıyor. Bulgular W55 lifecycle ve W16 smoke/evidence sahiplerine kapalı-owner repair akışıyla yönlendirilmeli.
+- [ ] Paket, `8499f2b2` commit'inden üretildi. Güncel `develop` `a66ed9a2` ile arasındaki değişikliklerde `src/`, `tests/`, `scripts/` ve `build/` aynı kaldı; yine de bu çıktı güncel HEAD kimliğinde immutable Candidate değildir ve V2 acceptance maddelerini kapatmaz.
+- [x] W11 guest'te host fixture erişimi `172.23.128.1:53665` için başarısız oldu; firewall/VM ağı değiştirilmedi. SSH/SFTP adımlarını sınamak için smoke fixture'ı W11 içinde yalnızca loopback'e bağlandı.
+- [ ] Ubuntu-Test canlı `Running`; `ubuntu-doctor` strict SSH ile PASS ve registry'deki Linux hesabı `test`. Guest Python `3.12.3`, proje ise `==3.14.*` istiyor. Sistem `pip`, pytest, wxPython, `wx-config`, `pkg-config` ve `xvfb-run` yok; kullanıcı venv'i ve pip 24.0 oluşturulabildi, ancak PyPI wheel isteği guest DNS çözümleme hatasıyla başarısız oldu ve parolasız sudo yok. Linux wxPython/pytest turu **BLOCKED_ENV**; bu turda Linux testi çalıştırılmadı.
+
 ### Başlangıç çalışma kaydı — 2026-10-15
 
 - [x] İlk yerel Ruff baseline'ı ve kaynak/test/script dağılımı çıkarıldı.
