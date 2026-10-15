@@ -106,6 +106,9 @@ coverage.json
 # FreeFileSync local sync database
 /sync.ffs_db
 /sync.ffs_lock
+/hpc-client-gui.ffs_gui
+/opencode.jsonc
+/new 4.ps1
 .agents/_skill-quarantine/
 .wave-patch-backup/
 
