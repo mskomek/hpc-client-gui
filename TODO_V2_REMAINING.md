@@ -64,6 +64,13 @@
 - [ ] `test_wx_terminal_webview.py` özel D-Bus oturumu + Xvfb + GTK X11 + software-render ayarlarıyla **28/29 PASS**. Bridge-ready testi artık geçiyor; tek fail `test_wx_terminal_screen_state_readback_and_alternate_buffer`, yazımdan sonra gerçek `hpc_get_screen_state()` sonucu `None`. Xvfb-only ilk koşuda bridge-ready timeout ve pytest hang'i oldu; sadece bu pytest süreci durduruldu, VM açık kaldı.
 - [ ] Güncel commit'te `tests/test_wave_controller_regressions.py` ve `tests/test_wave_state_engine.py`, kaldırılmış `.opencode/scripts` dosyalarını import ediyor. Canonical preflight managed Core dosyalarını yeniledi ancak proje profili olmadığı için boş template oluşturdu ve compatibility exit 10 ile durdu. Tarihsel commit'te W55/W16 owner spec'leri yok; kapalı-owner onarımını gerçek authority olmadan başlatmak veya bu testleri yok sayarak suite PASS saymak mümkün değil.
 
+### Güncel Windows11 paket kabulü — 2026-10-15, kaynak `bc32cd44`
+
+- [x] Temiz `git archive` kaynağından Python **3.14.0**, PyInstaller **6.22.2**, wxPython **4.3.1** ile geçici onedir GUI paketi ve smoke launcher üretildi. Kaynak arşiv SHA-256 `edcc37cbeeba419a940108a1706959e3e3fdde7ecd05d409cc84030379b18875`; GUI EXE SHA-256 `c8d99e4122af28fc38aa5a05d4452a6f4e30a7656808be84af8901b55bf17f0b`. Manifest ve dosya listesi `.tmp/w11-current-bc32cd44/` altında.
+- [x] Canonical `Invoke-Windows11Interactive.ps1`, aktif `test\home` Explorer oturumunu (session 2) kullandı; runner exit 0, timeout yok, cleanup tamamlandı. Launcher ve GUI EXE ile candidate manifestinin host/guest SHA-256 değerleri eşleşti. RunId `38a6a07aaa5449f7811719002dd57c3d`; uygulama raporu SHA-256 `386c677572501979599dc026dc09df719e40845f785d6d39a03cf0a34a889dca`.
+- [ ] Paketli GUI smoke raporunda 19 kontrolden **17 PASS, 1 FAIL, 1 PENDING**: `clean_shutdown=FAIL`, `pty_resize=PENDING`; `frame_destroyed=false`, `cleanup_callbacks_drained=false`, PTY resize isteği `(123,45)` için gözlenen ölçüm yok. Raporun üst seviye `result=PASS` değeri bu alt kontrolleri PASS yapmaz ve kabulü kapatmaz.
+- [x] W11 Application log'unda çalıştırma zamanını kapsayan iki saatlik sorguda uygulama adına eşleşen WER/Application Error olayı bulunmadı; smoke sonrası uygulama süreci kalmadı. Bu tek koşu için olay yokluğu, geniş native-crash kampanyası yerine geçmez.
+
 ### Başlangıç çalışma kaydı — 2026-10-15
 
 - [x] İlk yerel Ruff baseline'ı ve kaynak/test/script dağılımı çıkarıldı.
@@ -98,7 +105,7 @@
 - [ ] Kalan 245 Ruff bulgusunu kapat; current source `src/` temiz, bulgular validator ve test yüzeyinde.
 - [ ] `develop`'da silinmiş `.github/workflows/ci.yml` gate'inin geri çalıştırılabilirliğini doğrula; `a759aebc` için GitHub CI run yok.
 - [ ] Uygulama/test/script kaynaklarındaki gerçek Ruff hatalarını, dosya sorumluluklarını ve 500 satır mimari sınırını koruyarak düzelt.
-- [ ] Linux wxPython/GTK3 kurulum ve test ortamını düzelt; gerçek Linux ortamında doğrula. Mevcut Ubuntu-Test ölçümü **BLOCKED_ENV**: Python 3.12.3; pip/wxPython/wx-config/pkg-config eksik; sudo parola istiyor.
+- [ ] Ubuntu-Test Linux GUI ortamı artık `.tmp` içine kurulu Python **3.14.8**, wxPython **4.3.1+ubuntu2404**, Xvfb ve yerel runtime bağımlılıklarıyla çalışıyor; GTK3 `wx.Frame` smoke'u PASS. Kalan test bulguları 26/27 ve WebView 28/29 PASS ile sınırlı değil: bir POSIX path varsayımı, güncel facade'a uymayan dispatch testi, screen-state readback `None` ve tekrarlanan W19 fixture teardown SIGSEGV var (ayrıntı Linux VM devam kaydında).
 - [ ] Windows PySide6 test bağımlılığı/opsiyonel bağımlılık çözümünü güncel release preflight runner'ında doğrula.
 - [ ] macOS test başarısızlıklarını macOS ortamında gider ve doğrula.
 - [ ] SSH, SFTP, terminal, Slurm ve transfer regresyonlarını güncel `develop` üzerinde çalıştır.
