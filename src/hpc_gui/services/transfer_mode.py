@@ -38,7 +38,14 @@ from .transfer_text_mode import (
 PARTIAL_SUFFIX = ".part"
 
 
-def _upload_remote(files, local_path: str, remote_path: str, progress_cb=None, resume_identity=None) -> None:
+def _upload_remote(
+    files,
+    local_path: str,
+    remote_path: str,
+    progress_cb=None,
+    resume_identity=None,
+    resume_registry=None,
+) -> None:
     """Upload to a server-side ``<remote>.part`` and rename once when the
     backend can rename; otherwise upload directly to the final name.
 
@@ -59,7 +66,7 @@ def _upload_remote(files, local_path: str, remote_path: str, progress_cb=None, r
         "size": source.st_size,
         "mtime_ns": source.st_mtime_ns,
     }
-    registry = transfer_resume_store_for_backend(files)
+    registry = resume_registry
     key = transfer_record_key("upload", remote_path)
     record = registry.get(key) if registry else None
     resume = False
@@ -146,7 +153,12 @@ def upload_with_mode(
     with open(local_path, "rb") as source:
         sample = source.read(CHUNK_SIZE)
     effective = resolve_transfer_mode(local_path, requested, sample)
-    source_identity = local_file_identity(local_path)
+    resume_registry = (
+        transfer_resume_store_for_backend(files)
+        if callable(getattr(files, "rename", None))
+        else None
+    )
+    source_identity = local_file_identity(local_path) if resume_registry else {}
     resume_identity = {
         "direction": "upload",
         "remote_path": str(remote_path),
@@ -154,7 +166,14 @@ def upload_with_mode(
         "mode": effective,
     }
     if effective == BINARY:
-        _upload_remote(files, local_path, remote_path, progress_cb=progress_cb, resume_identity=resume_identity)
+        _upload_remote(
+            files,
+            local_path,
+            remote_path,
+            progress_cb=progress_cb,
+            resume_identity=resume_identity,
+            resume_registry=resume_registry,
+        )
         return effective
     # ASCII conversion streams the source so its line endings can be
     # normalized before the backend upload without ever materializing the
@@ -164,7 +183,14 @@ def upload_with_mode(
         with tempfile.NamedTemporaryFile(delete=False) as temp:
             temp_path = temp.name
         _stream_utf8_lines(local_path, temp_path, "\n")
-        _upload_remote(files, temp_path, remote_path, progress_cb=progress_cb, resume_identity=resume_identity)
+        _upload_remote(
+            files,
+            temp_path,
+            remote_path,
+            progress_cb=progress_cb,
+            resume_identity=resume_identity,
+            resume_registry=resume_registry,
+        )
     finally:
         if temp_path:
             try:

@@ -43,14 +43,15 @@ class TestExistingUserUpgrade:
     @pytest.mark.integration
     def test_navigation_store_encrypted(self, tmp_path, monkeypatch):
         """Navigation paths are not persisted as plaintext."""
+        from hpc_gui.services import private_profile_data as private_data
         from hpc_gui.services import remote_navigation_store as navigation
 
-        monkeypatch.setattr(navigation, "_state_path", lambda profile_id: tmp_path / f"{profile_id}.bin")
-        monkeypatch.setattr(navigation, "secret_store", _FakeSecretStore)
+        monkeypatch.setattr(private_data, "app_data_dir", lambda: tmp_path)
+        monkeypatch.setattr(private_data, "secret_store", _FakeSecretStore)
         store = navigation.RemoteNavigationStore("profile")
         store.add_favorite("/scratch/日本語")
-        raw = (tmp_path / "profile.bin").read_bytes()
-        assert raw.startswith(b"HPCNAV1\n")
+        raw = private_data._path("profile", "navigation").read_bytes()
+        assert raw.startswith(private_data._MAGIC)
         assert "/scratch/".encode("utf-8") not in raw
         assert "日本語".encode("utf-8") not in raw
 
@@ -161,7 +162,7 @@ class TestReleaseGate:
         critical_paths = [
             "services/files_ssh.py",
             "ssh/client.py",
-            "services/remote_navigation_store.py",
+            "services/private_profile_data.py",
         ]
         for rel_path in critical_paths:
             path = ROOT / "src" / "hpc_gui" / rel_path

@@ -64,6 +64,7 @@ class TerminalPtyWireTests(unittest.TestCase):
                 )
                 try:
                     ssh.connect(shell_size=(96, 31))
+                    ssh.activate_shell_output()
                     self.assertTrue(ssh.send_shell_input("echo PACKAGED-PTY\r"))
                     deadline = time.monotonic() + 2
                     while time.monotonic() < deadline and "PACKAGED-PTY" not in "".join(output):

@@ -8,6 +8,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
+from hpc_gui.services import private_profile_data as private_data  # noqa: E402
 from hpc_gui.services import remote_navigation_store as store_mod  # noqa: E402
 
 
@@ -37,13 +38,22 @@ class RemoteNavigationStoreTests(unittest.TestCase):
         home = self._tmp.start()
         home.return_value = Path(self._dir.name)
         self.addCleanup(self._tmp.stop)
-        secret = mock.patch.object(store_mod, "secret_store", _FakeSecretStore)
+        app_data = mock.patch.object(
+            private_data, "app_data_dir", return_value=Path(self._dir.name)
+        )
+        app_data.start()
+        self.addCleanup(app_data.stop)
+        secret = mock.patch.object(private_data, "secret_store", _FakeSecretStore)
         secret.start()
         self.addCleanup(secret.stop)
         store_mod._INSTANCES.clear()
 
     def _store(self, profile_id: str = "profile-a"):
         return store_mod.RemoteNavigationStore(profile_id)
+
+    @staticmethod
+    def _state_path(profile_id: str) -> Path:
+        return private_data._path(profile_id, "navigation")
 
     @pytest.mark.integration
     def test_favorites_survive_a_reload(self):
@@ -94,7 +104,7 @@ class RemoteNavigationStoreTests(unittest.TestCase):
         store = self._store()
         store.add_favorite("/arf/scratch/mkomek/secret-project")
         store.record_visit("/arf/scratch/mkomek/secret-project")
-        raw = store_mod._state_path("profile-a").read_bytes()
+        raw = self._state_path("profile-a").read_bytes()
         self.assertNotIn(b"/arf/scratch", raw)
         self.assertNotIn(b"secret-project", raw)
 
@@ -102,13 +112,13 @@ class RemoteNavigationStoreTests(unittest.TestCase):
     def test_tampered_file_does_not_leak_or_crash(self):
         store = self._store()
         store.add_favorite("/arf/scratch/mkomek")
-        path = store_mod._state_path("profile-a")
+        path = self._state_path("profile-a")
         path.write_bytes(b"HPCNAV1\nnot-really-encrypted")
         self.assertEqual(self._store().favorites(), [])
 
     @pytest.mark.integration
     def test_plaintext_state_is_never_accepted(self):
-        path = store_mod._state_path("profile-a")
+        path = self._state_path("profile-a")
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(json.dumps({"favorites": [{"path": "/etc"}]}).encode("utf-8"))
         self.assertEqual(self._store().favorites(), [])
@@ -118,7 +128,7 @@ class RemoteNavigationStoreTests(unittest.TestCase):
         store = self._store()
         store.add_favorite("/arf/scratch/mkomek")
         store_mod.delete_profile_navigation("profile-a")
-        self.assertFalse(store_mod._state_path("profile-a").exists())
+        self.assertFalse(self._state_path("profile-a").exists())
 
     @pytest.mark.unit
     def test_shared_instance_per_profile(self):
@@ -128,8 +138,8 @@ class RemoteNavigationStoreTests(unittest.TestCase):
 
     @pytest.mark.unit
     def test_unavailable_secure_storage_disables_the_feature(self):
-        with mock.patch.object(store_mod.secret_store, "is_available", return_value=False), \
-             mock.patch.object(store_mod, "_fernet", return_value=None):
+        with mock.patch.object(private_data.secret_store, "is_available", return_value=False), \
+             mock.patch.object(private_data, "_fernet", return_value=None):
             self.assertFalse(store_mod.is_available())
             self.assertIsNone(store_mod.navigation_store_for_profile("profile-a"))
 

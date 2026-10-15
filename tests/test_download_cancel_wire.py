@@ -14,9 +14,9 @@ import os
 import sys
 import tempfile
 import threading
-import time
 import unittest
 from pathlib import Path
+from unittest import mock
 
 import pytest
 
@@ -28,6 +28,12 @@ from support.mock_ssh_server import MOCK_PASSWORD, MOCK_USERNAME, MockSSHServer 
 from PySide6.QtWidgets import QApplication  # noqa: E402
 
 from hpc_gui.services.files_ssh import SSHFilesBackend  # noqa: E402
+from hpc_gui.services import private_profile_data as private_data  # noqa: E402
+from hpc_gui.services import transfer_resume_store as resume_data  # noqa: E402
+from hpc_gui.services.transfer_resume_store import (  # noqa: E402
+    transfer_record_key,
+    transfer_resume_store_for_backend,
+)
 from hpc_gui.services.transfer_controller import TransferController, TransferItem  # noqa: E402
 from hpc_gui.ssh.client import SSHClientWrapper, SSHConnInfo  # noqa: E402
 from hpc_gui.ui.widgets.remote_dir_panel import RemoteDirPanel  # noqa: E402
@@ -35,6 +41,21 @@ from hpc_gui.ui.widgets.remote_dir_panel import RemoteDirPanel  # noqa: E402
 BIG_NAME = "big_result.cas.h5"
 BIG_SIZE = 48 * 1024 * 1024
 CANCEL_AFTER_BYTES = 6 * 1024 * 1024
+
+
+class _FakeSecretStore:
+    @staticmethod
+    def is_available() -> bool:
+        return True
+
+    @staticmethod
+    def protect_secret(plaintext: str) -> str:
+        return plaintext.encode("utf-8").hex()
+
+    @staticmethod
+    def unprotect_secret(token: str) -> str:
+        return bytes.fromhex(token).decode("utf-8")
+
 
 pytestmark = [
     pytest.mark.e2e,
@@ -96,6 +117,19 @@ class DownloadCancelWireTests(unittest.TestCase):
         cls._temp.cleanup()
 
     def setUp(self) -> None:
+        self.profile_id = "download-cancel-wire"
+        self.files.profile_id = self.profile_id
+        app_data = mock.patch.object(
+            private_data, "app_data_dir", return_value=self.root / "app_data"
+        )
+        secret_store = mock.patch.object(private_data, "secret_store", _FakeSecretStore)
+        app_data.start()
+        secret_store.start()
+        resume_data._STORES.clear()
+        self.addCleanup(resume_data._STORES.clear)
+        self.addCleanup(secret_store.stop)
+        self.addCleanup(app_data.stop)
+
         self.panel = RemoteDirPanel()
         self.panel.set_session({"connected": True, "files": self.files})
         self.addCleanup(self.panel.deleteLater)
@@ -125,22 +159,20 @@ class DownloadCancelWireTests(unittest.TestCase):
             lambda item, progress: self.panel._execute_transfer_item(item, progress_cb=progress),
             parallel_limit=1,
         )
-        controller._on_progress = lambda _item, done, _total: seen.update(bytes=done)
 
-        def cancel_when_underway() -> None:
-            deadline = time.monotonic() + 60
-            while time.monotonic() < deadline:
-                if seen["bytes"] > CANCEL_AFTER_BYTES:
-                    controller.cancel_all()
-                    return
-                time.sleep(0.01)
+        def cancel_when_underway(_item, done: int, _total: int) -> None:
+            seen["bytes"] = done
+            if done > CANCEL_AFTER_BYTES:
+                controller.cancel_all()
 
-        watcher = threading.Thread(target=cancel_when_underway, daemon=True)
-        watcher.start()
+        controller._on_progress = cancel_when_underway
         controller.start()
         self.assertTrue(controller.wait(120), "queue never finished")
-        watcher.join(5)
         self.assertGreater(seen["bytes"], CANCEL_AFTER_BYTES, "cancel never triggered")
+        self.assertEqual(
+            [(Path(item.dst).name, error) for item, error in controller.failed],
+            [(BIG_NAME, "cancelled")],
+        )
         return controller
 
     @pytest.mark.resource
@@ -162,13 +194,25 @@ class DownloadCancelWireTests(unittest.TestCase):
             [(BIG_NAME, "cancelled")],
         )
 
-        # The partial download never takes the real filename, and its resume
-        # metadata survives for the next attempt.
+        # The partial remains separate from the final file. Resume identity
+        # is encrypted in profile data instead of a readable sidecar.
         folder = self.target / "DP_41"
         names = sorted(p.name for p in folder.iterdir())
         self.assertIn(f"{BIG_NAME}.part", names)
-        self.assertIn(f"{BIG_NAME}.part.meta", names)
+        self.assertNotIn(f"{BIG_NAME}.part.meta", names)
         self.assertNotIn(BIG_NAME, names)
+        partial = folder / f"{BIG_NAME}.part"
+        registry = transfer_resume_store_for_backend(self.files)
+        self.assertIsNotNone(registry)
+        record = registry.get(transfer_record_key("download", str(folder / BIG_NAME)))
+        self.assertIsNotNone(record)
+        self.assertEqual(record["partial_bytes"], partial.stat().st_size)
+        raw_resume_state = private_data._path(
+            self.profile_id, "transfer-resume"
+        ).read_bytes()
+        self.assertTrue(raw_resume_state.startswith(private_data._MAGIC))
+        self.assertNotIn(BIG_NAME.encode("utf-8"), raw_resume_state)
+        self.assertNotIn(str(partial).encode("utf-8"), raw_resume_state)
 
         # Browsing still works and no channel was leaked by the abort.
         self.assertEqual(len(list(self.files.listdir_entries("/results/DP_41"))), 5)

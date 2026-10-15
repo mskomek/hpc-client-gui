@@ -10,6 +10,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from hpc_gui.config import storage  # noqa: E402
+from hpc_gui.services import private_profile_data as private_data  # noqa: E402
 from hpc_gui.services import remote_navigation_store as store_mod  # noqa: E402
 
 
@@ -52,12 +53,15 @@ class ProfileIdentityTests(unittest.TestCase):
     def test_delete_takes_the_private_state_with_it(self) -> None:
         self._write_legacy_config()
         profile_id = storage.load_profiles()[0]["id"]
-        with mock.patch.object(store_mod, "secret_store", _FakeSecretStore):
+        path = Path(self._dir.name) / "private" / f"{profile_id}.bin"
+        with mock.patch.object(
+            private_data, "app_data_dir", return_value=Path(self._dir.name)
+        ), mock.patch.object(private_data, "secret_store", _FakeSecretStore):
             store_mod.RemoteNavigationStore(profile_id).add_favorite("/arf/scratch/mkomek")
-            self.assertTrue(store_mod._state_path(profile_id).exists())
+            self.assertTrue(path.exists())
             storage.delete_profile("TRUBA")
         self.assertEqual(storage.load_profiles(), [])
-        self.assertFalse(store_mod._state_path(profile_id).exists())
+        self.assertFalse(path.exists())
 
 
 class _FakeSecretStore:

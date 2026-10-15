@@ -12,17 +12,36 @@ if str(ROOT / "src") not in sys.path:
     sys.path.insert(0, str(ROOT / "src"))
 
 
+class _FakeSecretStore:
+    """Portable stand-in for the operating system's protected secret store."""
+
+    @staticmethod
+    def is_available() -> bool:
+        return True
+
+    @staticmethod
+    def protect_secret(plaintext: str) -> str:
+        return plaintext.encode("utf-8").hex()
+
+    @staticmethod
+    def unprotect_secret(token: str) -> str:
+        return bytes.fromhex(token).decode("utf-8")
+
+
 @pytest.fixture(autouse=True)
-def _clear_store_cache():
+def _clear_store_cache(monkeypatch, tmp_path):
+    from hpc_gui.services import private_profile_data as private_data
     from hpc_gui.services import remote_navigation_store as rns
+
+    monkeypatch.setattr(private_data, "app_data_dir", lambda: tmp_path)
+    monkeypatch.setattr(private_data, "secret_store", _FakeSecretStore)
     rns._INSTANCES.clear()
     yield
     rns._INSTANCES.clear()
 
 
-def _make_store(profile, tmp_path, monkeypatch):
+def _make_store(profile, tmp_path):
     from hpc_gui.services import remote_navigation_store as rns
-    monkeypatch.setattr(rns, "_state_path", lambda pid: tmp_path / f"{pid}.bin")
     return rns.RemoteNavigationStore(profile)
 
 
@@ -55,19 +74,19 @@ class TestFavoritesRendering:
 class TestFavorites:
     @pytest.mark.unit
     def test_survive_reload(self, tmp_path, monkeypatch):
-        s = _make_store("a", tmp_path, monkeypatch)
+        s = _make_store("a", tmp_path)
         for p in ("/scratch/Çalışmalar", "/scratch/日本語", "/scratch/Türkçe_日本語", "/work/★"):
             s.toggle_favorite(p, kind="directory")
         assert len(s.favorites()) == 4
         s._save()
-        s2 = _make_store("a", tmp_path, monkeypatch)
+        s2 = _make_store("a", tmp_path)
         assert len(s2.favorites()) == 4
         assert {f["path"] for f in s2.favorites()} == {"/scratch/Çalışmalar", "/scratch/日本語", "/scratch/Türkçe_日本語", "/work/★"}
 
     @pytest.mark.unit
     def test_duplicate_ignored(self, tmp_path, monkeypatch):
         """toggle_favorite toggles: add then remove."""
-        s = _make_store("b", tmp_path, monkeypatch)
+        s = _make_store("b", tmp_path)
         s.toggle_favorite("/work/test", kind="directory")
         assert len(s.favorites()) == 1
         s.toggle_favorite("/work/test", kind="directory")
@@ -76,7 +95,7 @@ class TestFavorites:
 
     @pytest.mark.unit
     def test_toggle_removes(self, tmp_path, monkeypatch):
-        s = _make_store("c", tmp_path, monkeypatch)
+        s = _make_store("c", tmp_path)
         s.toggle_favorite("/work/test", kind="directory")
         assert len(s.favorites()) == 1
         s.toggle_favorite("/work/test", kind="directory")
@@ -88,7 +107,7 @@ class TestFavorites:
 class TestHistory:
     @pytest.mark.unit
     def test_record_visit(self, tmp_path, monkeypatch):
-        s = _make_store("h1", tmp_path, monkeypatch)
+        s = _make_store("h1", tmp_path)
         for p in ("/work/dir1", "/work/dir2", "/work/dir3"):
             s.record_visit(p)
         h = s.history()
@@ -97,7 +116,7 @@ class TestHistory:
 
     @pytest.mark.unit
     def test_deduplication(self, tmp_path, monkeypatch):
-        s = _make_store("h2", tmp_path, monkeypatch)
+        s = _make_store("h2", tmp_path)
         s.record_visit("/work/dir1")
         s.record_visit("/work/dir2")
         s.record_visit("/work/dir1")
@@ -108,14 +127,14 @@ class TestHistory:
     @pytest.mark.unit
     def test_max_cap(self, tmp_path, monkeypatch):
         from hpc_gui.services.remote_navigation_store import MAX_HISTORY
-        s = _make_store("h3", tmp_path, monkeypatch)
+        s = _make_store("h3", tmp_path)
         for i in range(MAX_HISTORY + 10):
             s.record_visit(f"/work/dir{i}")
         assert len(s.history()) <= MAX_HISTORY
 
     @pytest.mark.unit
     def test_clear(self, tmp_path, monkeypatch):
-        s = _make_store("h4", tmp_path, monkeypatch)
+        s = _make_store("h4", tmp_path)
         s.record_visit("/work/dir1")
         s.record_visit("/work/dir2")
         assert len(s.history()) == 2
@@ -124,7 +143,7 @@ class TestHistory:
 
     @pytest.mark.unit
     def test_unicode_paths(self, tmp_path, monkeypatch):
-        s = _make_store("h5", tmp_path, monkeypatch)
+        s = _make_store("h5", tmp_path)
         for p in ("/scratch/Çalışmalar", "/scratch/日本語", "/scratch/Türkçe_日本語"):
             s.record_visit(p)
         assert [h["path"] for h in s.history()] == ["/scratch/Türkçe_日本語", "/scratch/日本語", "/scratch/Çalışmalar"]
@@ -135,21 +154,21 @@ class TestHistory:
 class TestSerialization:
     @pytest.mark.integration
     def test_unicode_roundtrip(self, tmp_path, monkeypatch):
-        s = _make_store("s1", tmp_path, monkeypatch)
+        s = _make_store("s1", tmp_path)
         for p in ("/scratch/Çalışmalar", "/scratch/日本語", "/scratch/Türkçe_日本語"):
             s.toggle_favorite(p, kind="directory")
         s._save()
-        s2 = _make_store("s1", tmp_path, monkeypatch)
+        s2 = _make_store("s1", tmp_path)
         assert {f["path"] for f in s2.favorites()} == {"/scratch/Çalışmalar", "/scratch/日本語", "/scratch/Türkçe_日本語"}
 
     @pytest.mark.integration
     def test_atomic_write(self, tmp_path, monkeypatch):
-        s = _make_store("s2", tmp_path, monkeypatch)
+        s = _make_store("s2", tmp_path)
         s.toggle_favorite("/work/test", kind="directory")
         s._save()
-        state_files = list(tmp_path.glob("*.bin"))
+        state_files = list((tmp_path / "private").glob("*.bin"))
         assert len(state_files) == 1
-        assert len(list(tmp_path.glob("*.tmp"))) == 0
+        assert len(list((tmp_path / "private").glob("*.tmp"))) == 0
 
     @pytest.mark.integration
     def test_event_history_is_utf8_and_atomic(self, tmp_path, monkeypatch):
@@ -180,14 +199,14 @@ class TestSerialization:
 class TestProfileIsolation:
     @pytest.mark.integration
     def test_separate_favorites(self, tmp_path, monkeypatch):
-        s1 = _make_store("p1", tmp_path, monkeypatch)
-        s2 = _make_store("p2", tmp_path, monkeypatch)
+        s1 = _make_store("p1", tmp_path)
+        s2 = _make_store("p2", tmp_path)
         s1.toggle_favorite("/work/profile1", kind="directory")
         s2.toggle_favorite("/work/profile2", kind="directory")
         s1._save()
         s2._save()
-        r1 = _make_store("p1", tmp_path, monkeypatch)
-        r2 = _make_store("p2", tmp_path, monkeypatch)
+        r1 = _make_store("p1", tmp_path)
+        r2 = _make_store("p2", tmp_path)
         assert r1.favorites()[0]["path"] == "/work/profile1"
         assert r2.favorites()[0]["path"] == "/work/profile2"
 
@@ -197,20 +216,24 @@ class TestProfileIsolation:
 class TestEncryption:
     @pytest.mark.integration
     def test_raw_not_readable(self, tmp_path, monkeypatch):
-        s = _make_store("e1", tmp_path, monkeypatch)
+        s = _make_store("e1", tmp_path)
         s.toggle_favorite("/secret/日本語", kind="directory")
         s._save()
-        raw = (tmp_path / "e1.bin").read_bytes()
+        from hpc_gui.services import private_profile_data as private_data
+
+        raw = private_data._path("e1", "navigation").read_bytes()
         assert b"/secret/" not in raw
         assert "日本語".encode("utf-8") not in raw
 
     @pytest.mark.integration
     def test_tampered_empty(self, tmp_path, monkeypatch):
-        s = _make_store("e2", tmp_path, monkeypatch)
+        s = _make_store("e2", tmp_path)
         s.toggle_favorite("/work/test", kind="directory")
         s._save()
-        (tmp_path / "e2.bin").write_bytes(b"tampered" * 100)
-        s2 = _make_store("e2", tmp_path, monkeypatch)
+        from hpc_gui.services import private_profile_data as private_data
+
+        private_data._path("e2", "navigation").write_bytes(b"tampered" * 100)
+        s2 = _make_store("e2", tmp_path)
         assert len(s2.favorites()) == 0
         assert len(s2.history()) == 0
 
@@ -221,11 +244,10 @@ class TestDelete:
     @pytest.mark.integration
     def test_removes_file(self, tmp_path, monkeypatch):
         from hpc_gui.services import remote_navigation_store as rns
-        monkeypatch.setattr(rns, "_state_path", lambda pid: tmp_path / f"{pid}.bin")
         s = rns.RemoteNavigationStore("d1")
         s.toggle_favorite("/work/test", kind="directory")
         s._save()
-        state_files = list(tmp_path.glob("*.bin"))
+        state_files = list((tmp_path / "private").glob("*.bin"))
         assert len(state_files) == 1
         rns.delete_profile_navigation("d1")
         assert not state_files[0].exists()
@@ -236,7 +258,7 @@ class TestDelete:
 class TestIntegration:
     @pytest.mark.integration
     def test_full_workflow(self, tmp_path, monkeypatch):
-        s = _make_store("f1", tmp_path, monkeypatch)
+        s = _make_store("f1", tmp_path)
         favs = [("/scratch/Çalışmalar", "directory"), ("/scratch/日本語", "directory"), ("/scratch/Türkçe_日本語/file.txt", "file")]
         for p, k in favs:
             s.toggle_favorite(p, kind=k)
@@ -245,12 +267,12 @@ class TestIntegration:
             s.record_visit(p)
         assert len(s.history()) == 3
         s._save()
-        s2 = _make_store("f1", tmp_path, monkeypatch)
+        s2 = _make_store("f1", tmp_path)
         assert len(s2.favorites()) == 3
         assert len(s2.history()) == 3
         s2.toggle_favorite("/scratch/Çalışmalar", kind="directory")
         assert len(s2.favorites()) == 2
         s2._save()
-        s3 = _make_store("f1", tmp_path, monkeypatch)
+        s3 = _make_store("f1", tmp_path)
         assert len(s3.favorites()) == 2
         assert "/scratch/Çalışmalar" not in {f["path"] for f in s3.favorites()}
