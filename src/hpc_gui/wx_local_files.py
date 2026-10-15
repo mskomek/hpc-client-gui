@@ -45,7 +45,7 @@ def _build_local_files(parent, path: str | Path | None = None, *, open_editor=No
     from hpc_gui.services.local_files import safe_initial_local_directory
     model = LocalBrowserModel(path or safe_initial_local_directory(""))
     host, finish = make_host(parent, title=t("tabs.ftp"), size=(900, 600), embedded=embedded)
-    toolbar_sizer = wx.BoxSizer(wx.HORIZONTAL)
+    toolbar_sizer = wx.WrapSizer(wx.HORIZONTAL)
     btn_drives = wx.Button(host, label=t("ftp.drives"))
     btn_back = wx.Button(host, label=t("ftp.back"))
     btn_forward = wx.Button(host, label=t("ftp.forward"))

@@ -67,6 +67,7 @@ def build_files_surface(wx, frame, notebook, page_controls, session_state, lifec
     files_sizer.Add(files_header, 0, wx.EXPAND | wx.ALL, 4)
     transfer_splitter = wx.SplitterWindow(files_page)
     transfer_splitter.SetMinimumPaneSize(140)
+    session_state["_embedded_files_transfer_splitter"] = transfer_splitter
     top_splitter = wx.SplitterWindow(transfer_splitter)
     _local = _local_files_callbacks(session_state, frame, lifecycle)
     _remote = _remote_files_callbacks(session_state, frame, lifecycle)
@@ -77,8 +78,6 @@ def build_files_surface(wx, frame, notebook, page_controls, session_state, lifec
     session_state["_embedded_remote_files_panel"] = remote_panel
     top_splitter.SplitVertically(local_workspace, remote_panel, 340)
     top_splitter.SetMinimumPaneSize(300)
-    # Keep the Local/Remote split proportionally balanced as the window resizes.
-    top_splitter.SetSashGravity(0.5)
     session_state["_embedded_files_panes_splitter"] = top_splitter
     transfers_panel = build_transfers_panel(transfer_splitter)
     # store for routing in _start_file_transfers
@@ -86,7 +85,6 @@ def build_files_surface(wx, frame, notebook, page_controls, session_state, lifec
     # Give the transfers list room for its column headers, and let a taller
     # window grow the browsers rather than the transfers area.
     transfer_splitter.SplitHorizontally(top_splitter, transfers_panel, -220)
-    transfer_splitter.SetSashGravity(0.7)
     files_sizer.Add(transfer_splitter, 1, wx.EXPAND)
     files_page.SetSizer(files_sizer)
     session_state["_embedded_files_page"] = files_page

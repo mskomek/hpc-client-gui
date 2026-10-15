@@ -215,13 +215,9 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
 
     from hpc_gui.wx_shell_files_surface import build_files_surface
     build_files_surface(wx, frame, notebook, page_controls, session_state, lifecycle, t)
-    from hpc_gui.wx_shell_layout import center_splitter_on_first_layout
+    from hpc_gui.wx_shell_layout import install_shell_splitter_ratios
 
-    dirs_controls = getattr(directories_panel, "_wx_dirs_controls", {})
-    center_splitter_on_first_layout(wx, dirs_controls.get("splitter"))
-    center_splitter_on_first_layout(
-        wx, session_state.get("_embedded_files_panes_splitter")
-    )
+    install_shell_splitter_ratios(wx, directories_panel, session_state)
 
     # Script Editor
     _editor_kwargs = {"action_factory": _editor_action_factory(session_state)}

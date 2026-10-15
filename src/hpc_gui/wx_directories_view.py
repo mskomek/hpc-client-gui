@@ -239,9 +239,8 @@ def _build_directories(parent, *, session_state=None, workspace: WxDirectoriesWo
     home_sizer.Add(home_panel, 1, wx.EXPAND)
     home_container.SetSizer(home_sizer)
 
-    # W24 TODO-019: balanced ~50/50 initial layout (host is 1000px wide) with
-    # sash gravity so user movement is preserved proportionally on resize.
-    splitter.SetSashGravity(0.5)
+    # W24 TODO-019: start with a balanced two-pane layout. The shell restores
+    # the user's persisted ratio after the first real layout.
     splitter.SplitVertically(scratch_container, home_container, 500)
     splitter.SetMinimumPaneSize(260)
     root.Add(splitter, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 8)
