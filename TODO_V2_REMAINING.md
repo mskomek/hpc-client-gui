@@ -4,6 +4,18 @@
 **Başlangıç HEAD:** `develop` `b80a06e419fbe77f485b9c5924f1e86c764201f0`
 **Amaç:** V2 tamamlanması için kalan kod, doğrulama, provider, acceptance ve release işlerini tek yerde izlemek.
 
+### Yeniden audit — 2026-10-15, güncel `develop` `ea27d75c`
+
+Önceki başlıklardaki commit kimlikleri tarihsel test kayıtlarıdır; aşağıdaki bulgular güncel `develop` üzerindeki son kontrolleri gösterir.
+
+- [ ] Güncel Ruff 0.16.8 taraması `ruff check src scripts tests` ile **245** bulgu verdi: `src/` 0, `tests/` 127, `scripts/` 118. Dağılım: E702 123, E701 64, F405 50, E401 3, F841 2, E703 1, F401 1, F403 1. Önceki 413 bulguluk rapora göre azalmış olsa da CI/lint işi tamamlanmış değildir.
+- [ ] Ubuntu-Test üzerinde wxPython 4.3.1 + GTK3 GUI testlerinde WebKitGTK `RunScript` CSP tarafından reddediliyor (`unsafe-eval`); terminal ekran durumu readback testi bu yüzden başarısız. `test_w19_connection_lifecycle.py` teardown sırasında `libjavascriptcoregtk-4.1.so.0` içinde SIGSEGV verdi. Ayrıca POSIX testinde Windows yolu beklenmesi ve wx plugin testinin eski facade sembolünü araması olmak üzere iki dar test uyumsuzluğu var. Güvenlik politikasını zayıflatmadan WebKit köprüsü/owner çözümü gerekli.
+- [ ] Windows11 guest'te güncel kaynak arşivinden üretilen wx packaged smoke 20 kontrolden 19'unu geçti; `clean_shutdown` başarısız. WER/Application Error sorgusunda son iki saatte uygulamayla eşleşen olay yok; bu tam crash/lifecycle kampanyası yerine geçmez.
+- [ ] Windows11 normal başlangıç/Connection sekmesi UIA probe'u uygulamaya ulaşmadan runner'ın geçici görev başlatma hatasıyla durdu (`Cannot create a file when that file already exists`). Bu uygulama FAIL kanıtı değildir; probe/runner yürütme kanıtı eksiktir.
+- [ ] Linux odaklı grubun güncel kaydı 26/27 PASS; kalan yukarıdaki path/facade/WebKit/lifecycle hataları açık. Önceki başarılı hedefli testler kendi commit kimliklerine aittir ve yeni HEAD için toplu kabul sayılmaz.
+- [ ] Canonical Wave preflight daha önce proje WAVE profile'ı ile W55/W16 owner tanımlarının mevcut kaynakta bulunmadığını bildirdi. İlgili kapalı-Wave onarımını kanonik owner işlemi olmadan yapma; resmi authority kaynağını geri kazan veya eksikliği belgeleyerek bağımsız TODO maddelerinde ilerle.
+- [ ] Bu audit sırasında çalışma ağacında önceden var olan `.gitignore`, `docs/wave-reports/v2/luna/W64_WAVE_REPORT.md` değişiklikleri ile `W57_FREEZE_DECLARATION.md` ve `rapor` silmeleri korundu; bu dosyalar V2 TODO commit'ine dahil edilmemelidir.
+
 ## Durum ve kanıt kuralları
 
 - Bu dosya çalışma TODO'sudur; release kabul belgesi değildir.
