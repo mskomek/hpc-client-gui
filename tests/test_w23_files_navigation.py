@@ -103,13 +103,13 @@ def test_w23_forward_cleared_on_new_navigation__no_stale_forward():
 def test_w23_remote_done_guards_destroyed_notebook__contract():
     """Static contract: remote load() completion must survive Notebook destroy.
 
-    Real code exercised: wx_remote_files_view.load/done guard structure.
+    Real code exercised: wx_remote_files_navigation.load/done guard structure.
     Mocked boundary: none (source inspection).
     Why legitimate: the CallAfter race cannot be deterministically triggered
     headless; queue-time no-op after close is proven at runtime below.
     What this test does NOT prove: a real destroyed-C++-window dispatch.
     """
-    src = Path(__file__).resolve().parents[1] / "src" / "hpc_gui" / "wx_remote_files_view.py"
+    src = Path(__file__).resolve().parents[1] / "src" / "hpc_gui" / "wx_remote_files_navigation.py"
     text = src.read_text(encoding="utf-8")
     done_start = text.index("def done(entries, error):")
     done_body = text[done_start : done_start + 3000]

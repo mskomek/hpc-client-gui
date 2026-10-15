@@ -10,7 +10,7 @@
 - Bir madde yalnızca kod mevcut diye tamamlanmaz. Kanıt, test edilen tam commit ve mümkünse paket SHA-256 ile eşleşmelidir.
 - Önceki Candidate 6/7/8/9 sonuçları kendi commit ve paketlerine aittir; güncel `develop` için kabul kanıtı sayılmaz.
 - Başlangıçta mevcut checkout'ta `ruff check .` 434 bulgu verdi; hedefli temizlikten sonra sayı 313. Önceki CI notundaki 413 sayısıyla fark, temiz CI kapsamı ve yerel checkout farkları ayrıştırılarak açıklanmalıdır.
-- Önceki hedefli temizlik sonrasında `ruff check src scripts tests --statistics` 292 bulguydu. Bu devam turunda kullanılmayan import/değişkenler temizlendi ve test dosyaları sorumluluğa göre bölündü; güncel sonuç **247**: E702 123, E701 64, F405 50, E401 3, F401 3, F841 2, F403 1, E703 1. 243 bulgu Wave doğrulama/test dosyalarında; kalan 4 bulgu, mimari refaktör bekleyen `wx_remote_files_view.py` (2) ve iki Wave test dosyasındaki kullanılmayan yerel değişkenler (2). Temiz CI kapsamı karşılaştırması hâlâ açık.
+- Önceki hedefli temizlik sonrasında `ruff check src scripts tests --statistics` 292 bulguydu. Devam turunda `wx_remote_files_view.py` modülerleştirildi ve eski iki F401 bulgusu kapandı; güncel sonuç **245**: E702 123, E701 64, F405 50, E401 3, F841 2, F403 1, F401 1, E703 1. 243 bulgu Agent Core Wave doğrulama/test dosyalarında; kalan iki bulgu `tests/test_w04_support_freeze.py` (F841) ve `tests/test_w33_lifecycle_isolation.py` (F401). Temiz CI kapsamı ile önceki 413 bulgunun farkını açıklama işi hâlâ açık.
 - Bu çalışmaya başlamadan önce checkout'ta var olan kullanıcı değişiklikleri korunur.
 
 ### Başlangıç çalışma kaydı — 2026-10-15
@@ -22,6 +22,8 @@
 - [x] Ruff'taki gerçek kullanılmayan transfer facade importları explicit re-export olarak işaretlendi; packaged-smoke script/test import temizliği yapıldı; CI lint kapsamı 306'dan 292'ye indi.
 - [x] File-manager başlangıç testleri TODO-025 kaynak-checkout korumasına uyumlu hale getirildi; file-manager profili 10/10, local-directory politikası 18/18 PASS.
 - [x] İlk odaklı GUI regresyon turu 54/54 PASS verdi.
+- [x] 1.408 satırlık `wx_remote_files_view.py`, listeleme, gezinme, etkileşim, aksiyon ve işlem bileşenlerine ayrıldı; ana facade 447 satır, yeni bileşenlerin en uzunu 322 satır. İlgili Ruff kontrolü temiz, değişen kaynak mimari doğrulaması PASS.
+- [x] Refaktör sonrası remote dosya eylemleri, sekmeler, yaşam döngüsü, klavye, undo, editör ve transfer regresyonları 125/125 PASS; remote kaynak sözleşmeleri 19/19 PASS; 200 sağ-tık seçim stres kontrolü 1/1 PASS.
 - [ ] `wx_shell.py` facade düzenlemesinden sonraki geniş regresyon turunda native Windows access violation oluşturan Qt transfer-iptal senaryosunu kapat; test ayrı süreçte geçiyor, karışık GUI suite içinde doğrulama sürüyor.
 - [x] Transfer retry worker-race düzeltmesi yapıldı; ilgili birim grubu 5/5 ve yeniden deneme regresyonu 10/10 PASS verdi.
 - [x] Linux/Windows release preflight için pinlenmiş test-only Qt lock eklendi; testlerden sonra Qt paketleri kaldırılarak wx release build ortamı temiz tutuluyor.
@@ -29,9 +31,9 @@
 - [x] Qt transfer-iptal test dosyası release suite'te ayrı prosese alındı; izole dosya 3/3 PASS verdi. Geniş release suite sonucu henüz alınmadı.
 - [ ] Windows Qt transfer-iptal testinde native access violation inceleniyor; guest runner çalışıyor ama guest'te proje checkout'u bulunmuyor (`D:\Projeler\hpc-client-gui` yok).
 - [ ] Tam release preflight yerel ortamda henüz sonuçlanmadı: PATH'teki `python` 3.12 (repo Python 3.14 istiyor); 3.14 yorumlayıcısında pytest ve GUI bağımlılıkları kurulu değil. 3.12 turunda compile, i18n ve smoke geçti, pytest collection ise mevcut yerel `.opencode` dosya silmeleri nedeniyle iki Wave testi bulamadı.
-- [ ] `wx_remote_files_view.py` dosyasını sorumluluklarına göre böl (şu an 1.408 satır); sonra içindeki iki Ruff bulgusunu düzeltip mimari sınırı doğrula.
+- [x] `wx_remote_files_view.py` dosyasını sorumluluklarına göre böl; iki Ruff bulgusunu kapatıp mimari sınırı doğrula.
 - [ ] Ruff farkının temiz, izlenen checkout/CI karşılığını kesinleştir ve kalan gerçek bulguları kapat.
-- [ ] Değişen wx alanları için odaklı regresyon grubunu tamamla.
+- [x] Remote dosya tarayıcısı refaktörü için odaklı wx regresyon grubunu tamamla; kalan GUI V2 kabul testleri ayrı maddeler olarak açık.
 
 ## 1. Kod ve test hataları
 

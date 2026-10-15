@@ -50,7 +50,16 @@ def test_remote_model_has_no_toolkit_import():
 @pytest.mark.audit
 @pytest.mark.wx
 def test_remote_view_runs_operations_off_the_wx_thread():
-    source = open("src/hpc_gui/wx_remote_files_view.py", encoding="utf-8").read()
+    source_paths = (
+        "src/hpc_gui/wx_remote_files_view.py",
+        "src/hpc_gui/wx_remote_files_support.py",
+        "src/hpc_gui/wx_remote_files_listing.py",
+        "src/hpc_gui/wx_remote_files_navigation.py",
+        "src/hpc_gui/wx_remote_files_interactions.py",
+        "src/hpc_gui/wx_remote_files_actions.py",
+        "src/hpc_gui/wx_remote_files_operations.py",
+    )
+    source = "\n".join(open(path, encoding="utf-8").read() for path in source_paths)
     assert "Thread(target=worker" in source
     assert 't("dirs.delete_confirm")' in source
     assert "safe_call_after(operation_done" in source
