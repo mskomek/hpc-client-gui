@@ -54,6 +54,16 @@
 - [x] W11 guest'te host fixture erişimi `172.23.128.1:53665` için başarısız oldu; firewall/VM ağı değiştirilmedi. SSH/SFTP adımlarını sınamak için smoke fixture'ı W11 içinde yalnızca loopback'e bağlandı.
 - [ ] Ubuntu-Test canlı `Running`; `ubuntu-doctor` strict SSH ile PASS ve registry'deki Linux hesabı `test`. Guest Python `3.12.3`, proje ise `==3.14.*` istiyor. Sistem `pip`, pytest, wxPython, `wx-config`, `pkg-config` ve `xvfb-run` yok; kullanıcı venv'i ve pip 24.0 oluşturulabildi, ancak PyPI wheel isteği guest DNS çözümleme hatasıyla başarısız oldu ve parolasız sudo yok. Linux wxPython/pytest turu **BLOCKED_ENV**; bu turda Linux testi çalıştırılmadı.
 
+### Linux VM devamı — 2026-10-15, `develop` `5bc6ea29`
+
+- [x] Ubuntu-Test `Ubuntu 24.04.5 LTS`, `Running`; `ubuntu-doctor` ve strict SSH (`test`) PASS. Guest DNS/PyPI erişimi bu turda çalıştı. Güncel commit kaynak arşivi `git archive 5bc6ea29` ile üretildi (SHA-256 `cec2f788c1f568bd99434df021ce1ed10f4ce856b11f286fe361b393eaaab061`) ve guest `.tmp` altına açıldı; guest'e Git kurulmadığından test kaynağının kimliği arşiv hash'iyle tutuldu.
+- [x] Guest `.tmp` içinde uv ile Python **3.14.8**, test venv'i ve `requirements-legacy-qt-test.lock`'tan PySide6 **6.11.2** kuruldu. wxPython **4.3.1+ubuntu2404** CPython 3.14 wheel'ı [wxPython'ın resmi indirme sayfasındaki](https://wxpython.org/pages/downloads/) GitHub release'inden kuruldu; eksik SDL2 runtime ve Xvfb paketleri sistem kurulumuna dokunmadan `.tmp` içine indirip açıldı. Xvfb/GTK3 altında `wx.Frame` açma-kapama smoke'u PASS.
+- [ ] `test_wx_lifecycle.py`, `test_wx_runtime_observation.py`, `test_wx_packaged_smoke.py`, `test_wx_packaged_smoke_raw_runtime.py`: **26/27 PASS**. Tek fail `test_workdir_outside_repo_excludes_repo_tmp`: test Linux'ta da Windows yolu `C:/Windows/Temp` veriyor; POSIX `Path` bunu mutlak yol saymıyor.
+- [ ] wx işaretli testlerde `test_hardening_additional.py::test_wx_dispatch_uses_host` ilk hata: **15 PASS, 1 FAIL**. Test `WxPluginMenuHost` sembolünün `src/hpc_gui/wx_shell.py` facade dosyasında bulunmasını bekliyor; güncel facade bu parçayı başka modüllerden birleştiriyor.
+- [ ] `test_w19_connection_lifecycle.py` Ubuntu/Xvfb altında 16 testten sonra fixture teardown sırasında native **SIGSEGV** verdi; C-stack `libjavascriptcoregtk-4.1.so.0` içinde. Tam wx işaretli run aynı crash'te kesildi; toplam suite sonucu alınamadı.
+- [ ] `test_wx_terminal_webview.py::test_wx_terminal_webview_page_loads_and_posts_ready` ilk izolasyon fail'i: child WebView 6 saniyede bridge-ready olmadı, test subprocess'i 15 saniyede timeout oldu. Tam dosya run'ı 303 saniye boyunca yalnızca 3 saniye CPU kullandı ve ilerlemedi; yalnızca bu pytest PID'si durduruldu, VM açık kaldı.
+- [ ] Güncel commit'te `tests/test_wave_controller_regressions.py` ve `tests/test_wave_state_engine.py`, kaldırılmış `.opencode/scripts` dosyalarını import ediyor. Canonical preflight managed Core dosyalarını yeniledi ancak proje profili olmadığı için boş template oluşturdu ve compatibility exit 10 ile durdu. Tarihsel commit'te W55/W16 owner spec'leri yok; kapalı-owner onarımını gerçek authority olmadan başlatmak veya bu testleri yok sayarak suite PASS saymak mümkün değil.
+
 ### Başlangıç çalışma kaydı — 2026-10-15
 
 - [x] İlk yerel Ruff baseline'ı ve kaynak/test/script dağılımı çıkarıldı.
