@@ -71,12 +71,17 @@ def _window_work_areas(wx):
 
 
 def _restore_main_window_state(wx, frame, notebook):
-    """Apply persisted main-window geometry/selection (HPC-W09-UISTATE-009..014).
+    """Restore window geometry while opening the Connection page each time.
 
     Best-effort: absent/corrupt/off-screen state resolves to fresh defaults
     and the frame keeps its constructed size. Never raises.
     """
     try:
+        try:
+            if int(notebook.GetPageCount()) > 0:
+                notebook.SetSelection(0)
+        except Exception:
+            pass
         from hpc_gui.config.storage import get_main_window_state
         from hpc_gui.services.geometry_policy import Rect, resolve_main_window_state
 
@@ -94,11 +99,6 @@ def _restore_main_window_state(wx, frame, notebook):
             frame.SetSize(rect.x, rect.y, rect.width, rect.height)
         except Exception:
             pass
-        if state["selected_tab"] is not None:
-            try:
-                notebook.SetSelection(int(state["selected_tab"]))
-            except Exception:
-                pass
         if state["maximized"]:
             try:
                 frame.Maximize(True)
