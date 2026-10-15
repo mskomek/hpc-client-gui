@@ -114,3 +114,11 @@ coverage.json
 *.credentials.xml
 .secrets/
 secrets/
+
+# Local-only workspace and evidence directories
+/.venv314/
+/wave-spec-authoring/
+/artifacts/
+/audit/
+/benchmarks/
+/.opencode/

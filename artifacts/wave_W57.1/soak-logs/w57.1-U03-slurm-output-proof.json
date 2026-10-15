@@ -1,6 +1,0 @@
-{
- "jobid": "132",
- "final_state": "COMPLETED",
- "output": "compute01\nhpctest\nSLURM_OUT_OK",
- "cleaned": true
-}

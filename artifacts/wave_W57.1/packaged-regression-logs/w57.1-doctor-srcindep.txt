@@ -1,7 +1,0 @@
-status: PASS
-python: 3.14.0
-platform: Windows-11-10.0.26200-SP0
-frozen: True
-executable: D:\Projeler\hpc-client-gui\dist\hpc-client-gui\hpc-client-gui.exe
-config_dir: C:\Users\mskomek\.truba_slurm_gui
-profiles: 1
