@@ -12,6 +12,14 @@
 - GitHub CI run `38688191566`, `4a7170ad` üzerinde 15 Ekim'de aynı `ruff check src scripts tests` komutuyla **413** bulgu kaydetti; temiz detached worktree'de Ruff 0.16.8 ile bu sonuç yeniden üretildi. Sonraki temiz `53bc413d` HEAD'inde aynı Ruff sürümü ve komut **245** verdi; geniş `ruff check .` sayısı 252. Aradaki 81 dosyalık değişiklikte F401 123→1, F841 25→2 ve E402 20→0 oldu; dolayısıyla tarihsel 413 farkı commit içeriğindeki değişikliklerle açıklanıyor, araç sürümü/kapsam farkıyla değil. `src/` altında güncel Ruff bulgusu yok; kalan 245 bulgu validator/test yüzeylerinde. Mevcut `develop`'da `.github/workflows/ci.yml` silinmiş olduğundan `a759aebc` push'u için yeni CI çalışması oluşmadı.
 - Bu çalışmaya başlamadan önce checkout'ta var olan kullanıcı değişiklikleri korunur.
 
+### Güncel doğrulama kaydı — 2026-10-15, `develop` `dd488023`
+
+- [x] Python 3.14 yerel bağlantı/profil grupları: servis kimliği, profil saklama ve auth 33/33; Qt gelişmiş ayarlar/profil koruma 34/34; wx bağlantı, profil, hardening, host-key, lifecycle ve migration 124/124. Toplam **191 hedefli test PASS**. Bunlar paketlenmiş GUI ya da gerçek uzak host kabulü değildir.
+- [x] Provider/plugin yerel testleri, `HPC_GUI_CONTRACT_REPO=D:\Projeler\hpc-client-gui-plugins` ve plugin checkout HEAD `8cce85446a8db72ea6b89b56bcb3df8916cbb0a8` ile **215/215 PASS, 0 skip** verdi. Ayrı Qt plugin manager grubu 37/37 yeni test, wx plugin manager grubu 17/17 PASS; toplam **269 yerel provider/plugin testi PASS**. Bu, resmi registry yayını veya gerçek HPC bağlantısını kanıtlamaz.
+- [ ] Windows onedir candidate `dd488023` kaynak kimliğiyle üretildi: EXE SHA-256 `ad9d83cb5b4a3c79561a250c52d3f1218f15eba068d177cb72713212ffcd8bee`, plugin SHA `8cce85446a8db72ea6b89b56bcb3df8916cbb0a8`, Python 3.14 / PyInstaller 6.22.2. Aynı EXE üzerinde iki packaged smoke da **19/20 PASS** verdi; tüm UI, SSH/PTY, resize, dosya/job roundtrip ve transfer kontrolleri geçti, `clean_shutdown` kaldı.
+- [ ] Kapanış tanısı tekrar üretildi: wxPython 4.3.1'de `wx.IsDestroyed` API'si yok; mevcut finalizer bu çağrıdaki `AttributeError`'ı yutup `frame_destroyed=false` yazıyor. Ayrıca lifecycle cleanup kaydında `Panel.Hide()` callback'i panel yok edildikten sonra `RuntimeError: wrapped C/C++ object of type Panel has been deleted` veriyor; bu yüzden `cleanup_complete=false`. Gecikmeli gözlemde de callback hatası sürüyor. Kaynak alanı kapalı W55'e (HPC-W10-GJ2-051), smoke/gate gözlem düzeltmesi kapalı W16'ya yönlendirilmeli; kod/evidence gate değiştirilmedi. Kapalı owner düzeltmesi yapılmadan bu FAIL kabul edilmemeli veya PASS'a çevrilmemeli.
+- [ ] Bu candidate host Windows'ta çalıştırılmıştır; Hyper-V guest acceptance, native crash/WER ve gerçek bağlantı testi değildir. Candidate geçici `.tmp` altında tutuluyor; immutable release candidate değildir.
+
 ### Başlangıç çalışma kaydı — 2026-10-15
 
 - [x] İlk yerel Ruff baseline'ı ve kaynak/test/script dağılımı çıkarıldı.
