@@ -29,6 +29,7 @@ from hpc_gui.core.debug_support import log_startup_snapshot
 from hpc_gui.core.debug_telemetry import DebugTelemetry, is_source_run
 from hpc_gui.core.crash_reporter import read_crash_flag, clear_crash_flag
 from hpc_gui.ui.main_window import MainWindow
+from hpc_gui.ui.directory_list_appearance import install_directory_list_appearance
 from hpc_gui.ui.splitter_ratio import install_main_browser_splitter_ratios
 from hpc_gui.config.storage import get_ui_pref_bool, set_ui_pref_bool, update_settings
 from hpc_gui.ui.dialogs.welcome_dialog import WelcomeDialog
@@ -210,6 +211,7 @@ def main() -> int:
 
     w = MainWindow()
     install_main_browser_splitter_ratios(w)
+    install_directory_list_appearance(w)
     _performance_mark("main_window_created")
     # Crash-safe shutdown: ensure cleanup runs even if window closeEvent is skipped.
     try:
