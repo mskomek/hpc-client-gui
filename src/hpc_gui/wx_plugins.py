@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any, Callable
 
 from hpc_gui import __version__
@@ -12,7 +12,7 @@ from hpc_gui.plugins.state import activate_version, remove_plugin, set_plugin_di
 
 def _parse_version(value: object):
     try:
-        from packaging.version import InvalidVersion, Version
+        from packaging.version import Version
 
         return Version(str(value or ""))
     except Exception:
@@ -21,7 +21,7 @@ def _parse_version(value: object):
 
 def _is_newer(candidate: str, current: str) -> bool:
     try:
-        from packaging.version import InvalidVersion, Version
+        from packaging.version import Version
 
         return Version(str(candidate)) > Version(str(current))
     except Exception:

@@ -74,6 +74,7 @@ def test_real_connect_selected_runs_transport_worker_then_attaches_once_on_gui(w
     assert len(worker_threads) == 1 and worker_threads[0][1] is False
     assert len(attached) == 1 and attached[0][0] is session and attached[0][2] is True
     assert attached[0][1] == threading.get_ident()
+    assert model.controller.state.value == "connected"
 
 
 def test_transport_creator_is_ui_free_and_cleanup_is_owned_by_attach(monkeypatch):

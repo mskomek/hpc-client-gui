@@ -26,7 +26,6 @@ from hpc_gui.services.slurm_models import (
     is_terminal_state,
     parse_sacct,
     parse_sacct_result,
-    parse_scontrol,
     parse_squeue,
     parse_squeue_result,
     safe_state_display,

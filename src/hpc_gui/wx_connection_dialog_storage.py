@@ -6,7 +6,6 @@ from typing import Any
 
 from hpc_gui.core.i18n import t
 from hpc_gui.plugins.models import validate_storage_area, validate_storage_policy
-from hpc_gui.services.quota_monitor import quota_gate
 
 # Extracted dialog responsibility; behavior stays on the public dialog facade.
 

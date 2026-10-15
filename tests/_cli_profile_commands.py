@@ -11,9 +11,9 @@ from _cli_test_support import (
     CLIConnectionError,
     CLISession,
     SSHConnInfo,
+    _isolated_cli_config as _isolated_cli_config,
+    _remote_cli_access_enabled as _remote_cli_access_enabled,
 )
-from _cli_transfer_policies import FakeFiles
-
 @pytest.mark.contract
 def test_exit_code_timeout_value_lock() -> None:
     assert int(ExitCode.TIMEOUT) == 124

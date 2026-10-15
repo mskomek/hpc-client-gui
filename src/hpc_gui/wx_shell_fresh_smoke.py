@@ -4,7 +4,6 @@ from __future__ import annotations
 from pathlib import Path
 import json
 import os
-from hpc_gui.core.i18n import current_language, load_saved_language, set_language, subscribe_language_change, system_default_language, t, unsubscribe_language_change
 from hpc_gui.wx_shell_smoke_session import (
     _attach_packaged_smoke_session,
     _create_packaged_smoke_session,
@@ -44,7 +43,6 @@ def _run_fresh_user_acceptance(app, frame, session_state, output_path, lifecycle
     relaunch against state persisted to disk (never to process memory).
     """
     import sys
-    import time
     import wx
 
     run_index = os.environ.get("HPC_GUI_FRESH_RUN", "1").strip() or "1"

@@ -3,10 +3,10 @@ from __future__ import annotations
 
 from pathlib import Path
 from pathlib import PurePosixPath
-from threading import Event, Thread
+from threading import Thread
 from hpc_gui.services.transfer_controller import TransferItem
 import shlex
-from hpc_gui.core.i18n import current_language, load_saved_language, set_language, subscribe_language_change, system_default_language, t, unsubscribe_language_change
+from hpc_gui.core.i18n import t
 from hpc_gui.wx_shell_terminal import _run_shell_in_terminal
 from hpc_gui.wx_shell_file_transfer import _start_file_transfers
 

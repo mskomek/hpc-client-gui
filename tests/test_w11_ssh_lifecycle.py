@@ -369,6 +369,7 @@ def test_wx_panel_reports_failed_connect_as_failed(monkeypatch):
         raise RuntimeError("connection refused (w11 lab)")
 
     app = wx.App.Get() or wx.App(False)
+    assert app is wx.GetApp()
     frame = wx.Frame(None, title="w11-lab-failed")
     try:
         host = wx_conn.build_connection_panel(frame, profiles=profiles, connect=_refused)
@@ -411,6 +412,7 @@ def test_wx_panel_transport_failure_repaints_status(monkeypatch):
         return {"connected": True, "profile_name": "lab"}
 
     app = wx.App.Get() or wx.App(False)
+    assert app is wx.GetApp()
     frame = wx.Frame(None, title="w11-lab-repaint")
     try:
         host = wx_conn.build_connection_panel(frame, profiles=profiles, connect=_ok)

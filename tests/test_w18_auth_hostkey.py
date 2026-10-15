@@ -23,7 +23,6 @@ import pytest
 from hpc_gui.core.i18n import t
 from hpc_gui.services.connection_controller import (
     HostKeyRequest,
-    KeyboardInteractiveRequest,
 )
 from hpc_gui.ssh.client import (
     HostKeyChangedError,
@@ -247,6 +246,7 @@ def test_gui_unknown_host_prompt_accept_reject_cancel(monkeypatch, tmp_path):
     storage = _isolated_profiles(monkeypatch, tmp_path)
     storage.upsert_profile({"name": "p", "host": "h", "port": 22, "username": "u"})
     app = wx.App.Get() or wx.App(False)
+    assert app is not None
     frame = wx.Frame(None, title="w18-hostkey")
     try:
         host = build_connection_panel(frame, profiles=storage.load_profiles(), connect=lambda p: {"connected": True})
@@ -289,9 +289,9 @@ def test_gui_wrong_password_fails_visibly_with_actionable_message(monkeypatch, t
 
     storage = _isolated_profiles(monkeypatch, tmp_path)
     app = wx.App.Get() or wx.App(False)
+    assert app is not None
     frame = wx.Frame(None, title="w18-wrongpw")
     shown = {}
-    real_box = wx.MessageBox
     try:
         def boom(profile):
             raise paramiko.AuthenticationException("Authentication failed.")
@@ -317,6 +317,7 @@ def test_gui_missing_key_actionable_and_changed_key_hard_fail(monkeypatch, tmp_p
 
     storage = _isolated_profiles(monkeypatch, tmp_path)
     app = wx.App.Get() or wx.App(False)
+    assert app is not None
     frame = wx.Frame(None, title="w18-keyerrs")
     try:
         def missing(profile):
@@ -353,6 +354,7 @@ def test_gui_master_cancel_returns_to_safe_state(monkeypatch, tmp_path):
 
     storage = _isolated_profiles(monkeypatch, tmp_path)
     app = wx.App.Get() or wx.App(False)
+    assert app is not None
     frame = wx.Frame(None, title="w18-cancel")
     try:
         def cancelled(profile):

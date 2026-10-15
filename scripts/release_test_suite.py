@@ -65,8 +65,12 @@ ISOLATED_WIRE_FILES = (
 # layout owner nodes fail with PyNoAppError only in broad order. Keep every
 # proven native boundary process-scoped; every node below still runs in a
 # dedicated pytest process instead of being skipped.
+# Transfer cancellation pumps Qt events while its worker and process-queue
+# state is shutting down; mixed GUI runs triggered a Windows native crash,
+# while the module passes in its own process.
 ISOLATED_NATIVE_GUI_FILES = (
     "tests/test_corrective_jobs_details.py",
+    "tests/test_transfer_cancel_recovery.py",
     "tests/test_wx_terminal_webview.py",
     "tests/test_wx_jobs_behavior.py",
     "tests/test_wx_layout_resize.py",

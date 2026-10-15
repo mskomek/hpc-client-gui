@@ -12,7 +12,6 @@ from hpc_gui.config.system_profile import (
     save_user_system_template,
 )
 from hpc_gui.core.i18n import t
-from hpc_gui.plugins.models import validate_storage_area
 from hpc_gui.plugins.templates import installed_cluster_template_groups
 
 # Extracted dialog responsibility; behavior stays on the public dialog facade.

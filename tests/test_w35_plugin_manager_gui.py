@@ -22,6 +22,7 @@ from pathlib import Path
 
 import pytest
 
+from hpc_gui.core.i18n import t
 from hpc_gui.wx_plugins import WxPluginManagerModel
 
 APP_VERSION = "1.5.9"
@@ -151,6 +152,7 @@ def test_w35_wx_refresh_event_drives_real_backend_and_status(tmp_path: Path):
         root=tmp_path, fetcher=network_fetch, app_version=APP_VERSION
     )
     app = wx.App.Get() or wx.App(False)
+    assert app is wx.GetApp()
     frame = wx.Frame(None, title="w35-refresh-probe")
     try:
         panel = build_plugins_panel(frame, model, root=tmp_path, initial_tab="discover")
@@ -167,7 +169,10 @@ def test_w35_wx_refresh_event_drives_real_backend_and_status(tmp_path: Path):
         ok = _wait_until(lambda: state["in_flight"] is False, timeout=8.0)
         assert ok, "refresh worker never completed"
         assert model.registry_source == "network"
-        assert "Online" in status.GetLabel()
+        online_label = t("plugins.status_online")
+        if online_label == "[plugins.status_online]":
+            online_label = "Online"
+        assert online_label in status.GetLabel()
         assert listing.GetItemCount() == 2
         assert listing.GetItemText(0, 1) != ""
         # NEG: network down with a good cache falls back to distinguishable cache.
@@ -180,7 +185,10 @@ def test_w35_wx_refresh_event_drives_real_backend_and_status(tmp_path: Path):
         ok2 = _wait_until(lambda: state["in_flight"] is False, timeout=8.0)
         assert ok2
         assert model.registry_source == "cache"
-        assert "Cached" in status.GetLabel()
+        cached_label = t("plugins.status_cached")
+        if cached_label == "[plugins.status_cached]":
+            cached_label = "Cached"
+        assert cached_label in status.GetLabel()
         # NEG2: network down with no cache is distinguishable offline (fresh root).
         from pathlib import Path as _Path
         import tempfile as _tempfile
@@ -203,7 +211,10 @@ def test_w35_wx_refresh_event_drives_real_backend_and_status(tmp_path: Path):
                 ok3 = _wait_until(lambda: state2["in_flight"] is False, timeout=8.0)
                 assert ok3
                 assert fresh_model.registry_source == "offline"
-                assert "Offline" in status2.GetLabel()
+                offline_label = t("plugins.status_offline")
+                if offline_label == "[plugins.status_offline]":
+                    offline_label = "Offline"
+                assert offline_label in status2.GetLabel()
             finally:
                 try:
                     frame2.Destroy()
@@ -310,6 +321,7 @@ def test_w35_wx_search_and_views_rebuild_truthful_lists(tmp_path: Path):
     write_active_versions({"org.hpcclient.truba": "1.0.0"}, root=tmp_path)
     model.build_cards_from_registry(registry, "cache", root=tmp_path)
     app = wx.App.Get() or wx.App(False)
+    assert app is wx.GetApp()
     frame = wx.Frame(None, title="w35-search-probe")
     try:
         panel = build_plugins_panel(frame, model, root=tmp_path, initial_tab="discover")
@@ -391,6 +403,7 @@ def test_w35_wx_close_in_flight_never_touches_destroyed_controls(tmp_path: Path)
         root=tmp_path, fetcher=slow_fetch, app_version=APP_VERSION
     )
     app = wx.App.Get() or wx.App(False)
+    assert app is wx.GetApp()
     frame = wx.Frame(None, title="w35-lifecycle-probe")
     try:
         panel = build_plugins_panel(frame, model, root=tmp_path)

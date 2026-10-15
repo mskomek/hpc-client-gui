@@ -9,8 +9,6 @@ from _cli_test_support import (
     run_cli,
     CLIConnectionError,
 )
-from _cli_transfer_policies import FakeFiles
-
 @pytest.mark.integration
 @pytest.mark.semantic
 def test_cli_settings_round_trip_and_defaults(tmp_path: Path) -> None:

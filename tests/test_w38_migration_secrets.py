@@ -325,6 +325,7 @@ def test_w38_wx_redacted_error_dialog_shows_no_secret(monkeypatch):
         lambda text, title, style, parent=None: captured.__setitem__("text", text) or 0,
     )
     app = wx.App.Get() or wx.App(False)
+    assert app is wx.GetApp()
     frame = wx.Frame(None, title="w38-secret-probe")
     try:
         wx_errors.report_wx_action_error(

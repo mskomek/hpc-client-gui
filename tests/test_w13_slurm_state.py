@@ -264,6 +264,7 @@ def test_wx_jobs_panel_lists_headerless_lab_job():
         return _job_dicts(backend.squeue("hpctest"))
 
     app = wx.App.Get() or wx.App(False)
+    assert app is wx.GetApp()
     frame = wx.Frame(None, title="w13-lab-job-visible")
     try:
         host = build_jobs_panel(frame, list_jobs=_list_jobs)
@@ -309,6 +310,7 @@ def test_wx_jobs_panel_empty_queue_shows_no_rows_and_no_exit_token():
         return _job_dicts(text)
 
     app = wx.App.Get() or wx.App(False)
+    assert app is wx.GetApp()
     frame = wx.Frame(None, title="w13-lab-queue-empty")
     try:
         host = build_jobs_panel(frame, list_jobs=_list_jobs)

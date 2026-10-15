@@ -226,6 +226,7 @@ def test_ready_dialog_states_restart_requirement(monkeypatch):
 
     monkeypatch.setattr(wx, "CallAfter", lambda fn, *a, **k: fn(*a, **k))
     app = wx.App.Get() or wx.App(False)
+    assert app is wx.GetApp()
     parent = wx.Frame(None, title="w43-label")
     release = app_updater.UpdateRelease(
         version="1.9.0",
@@ -261,7 +262,9 @@ def test_ready_dialog_states_restart_requirement(monkeypatch):
         _expected = _t("updates.restart_required")
         if _expected == "[updates.restart_required]":
             _expected = "The application must restart to install the update."
-        _norm = lambda s: str(s or "").strip().casefold()
+        def _norm(value):
+            return str(value or "").strip().casefold()
+
         assert any(
             _norm(text) == _norm(_expected)
             or "restart" in _norm(text)

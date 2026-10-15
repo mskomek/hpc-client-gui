@@ -1,7 +1,7 @@
 """Dynamic wx plugin menu construction and action routing."""
 from __future__ import annotations
 
-from hpc_gui.core.i18n import current_language, subscribe_language_change
+from hpc_gui.core.i18n import subscribe_language_change
 from hpc_gui.core.wx_errors import report_wx_action_error
 
 

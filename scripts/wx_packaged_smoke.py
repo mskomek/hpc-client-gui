@@ -8,7 +8,6 @@ import os
 import platform
 import shutil
 import sys
-import tempfile
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -26,7 +25,7 @@ from wx_packaged_smoke_support import (
     sha256 as _sha256,
     start_loopback_ssh as _start_loopback_ssh,
 )
-from wx_fresh_user_smoke import fresh_user_env, run_fresh_user_smoke
+from wx_fresh_user_smoke import run_fresh_user_smoke
 
 # The parent validates the child's PTY request against the disposable server
 # and finalizes shutdown only after observing the child process exit.

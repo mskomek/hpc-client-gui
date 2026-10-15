@@ -93,7 +93,9 @@ class FtpWidgetLocalStartTests(unittest.TestCase):
         state_patch = patch(
             "hpc_gui.ui.widgets.ftp_widget.get_ftp_state",
             return_value={
-                "local_dir": os.getcwd(),
+                # A source checkout is intentionally rejected as a default
+                # local directory by TODO-025; use a safe persisted path.
+                "local_dir": tempfile.gettempdir(),
                 "active_remote": "scratch",
                 "splitter_sizes": [500, 500],
             },
@@ -146,7 +148,7 @@ class FtpWidgetLocalStartTests(unittest.TestCase):
             },
             file_manager_settings={"local_start_dir": str(Path("Z:/definitely-missing"))},
         )
-        global_dir = os.getcwd()
+        global_dir = tempfile.gettempdir()
         widget = self._widget_with_session(cfg)
         self.assertEqual(widget.local_panel.current_dir, global_dir)
 
@@ -160,7 +162,7 @@ class FtpWidgetLocalStartTests(unittest.TestCase):
             file_manager_settings={},
         )
         widget = self._widget_with_session(cfg)
-        self.assertEqual(widget.local_panel.current_dir, os.getcwd())
+        self.assertEqual(widget.local_panel.current_dir, tempfile.gettempdir())
 
     def test_profiles_carry_different_local_start_folders(self) -> None:
         with tempfile.TemporaryDirectory() as dir_a, tempfile.TemporaryDirectory() as dir_b:

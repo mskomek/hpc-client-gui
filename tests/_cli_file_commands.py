@@ -7,9 +7,9 @@ from _cli_test_support import (
     run_cli,
     CLIConnectionError,
     SSHFilesBackend,
+    _isolated_cli_config as _isolated_cli_config,
+    _remote_cli_access_enabled as _remote_cli_access_enabled,
 )
-from _cli_transfer_policies import FakeFiles
-
 @pytest.mark.integration
 @pytest.mark.semantic
 def test_files_stat_metadata_parity_with_ls(capsys) -> None:

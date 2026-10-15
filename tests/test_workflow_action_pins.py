@@ -71,3 +71,22 @@ def test_release_workflow_publish_step_is_pinned():
     assert re.search(
         r"uses: softprops/action-gh-release@[0-9a-f]{40}", text
     ), "release publication step must stay SHA-pinned"
+
+
+@pytest.mark.audit
+@pytest.mark.semantic
+def test_windows_and_linux_release_tests_use_pinned_legacy_qt_lock():
+    root = WORKFLOWS_DIR.parents[1]
+    workflow = (WORKFLOWS_DIR / "release.yml").read_text(encoding="utf-8")
+    qt_lock = (root / "requirements-legacy-qt-test.lock").read_text(encoding="utf-8")
+    release_lock = (root / "requirements-release.lock").read_text(encoding="utf-8")
+
+    assert workflow.count("pip install -r requirements-legacy-qt-test.lock") == 2
+    assert workflow.count("pip uninstall --yes PySide6 PySide6_Addons PySide6_Essentials shiboken6") == 2
+    assert "PySide6" not in release_lock
+    assert set(qt_lock.splitlines()) == {
+        "PySide6==6.11.2",
+        "PySide6_Addons==6.11.2",
+        "PySide6_Essentials==6.11.2",
+        "shiboken6==6.11.2",
+    }

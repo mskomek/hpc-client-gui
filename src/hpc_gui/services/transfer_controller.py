@@ -49,6 +49,7 @@ class TransferController:
         self._cancel = Event()
         self._stop_after_current = Event()
         self._lock = Lock()
+        self._start_lock = Lock()
         self._thread: Thread | None = None
         self._done = Event()
 
@@ -76,11 +77,15 @@ class TransferController:
             return list(self._completed)
 
     def start(self) -> None:
-        if self._thread and self._thread.is_alive():
-            return
-        self._done.clear()
-        self._thread = Thread(target=self._run, daemon=True)
-        self._thread.start()
+        with self._start_lock:
+            previous = self._thread
+            if previous and previous.is_alive():
+                if not self._done.is_set():
+                    return
+                previous.join()
+            self._done.clear()
+            self._thread = Thread(target=self._run, daemon=True)
+            self._thread.start()
 
     def enqueue(self, items: Iterable[TransferItem]) -> bool:
         """Append work to a currently running queue."""
@@ -220,6 +225,8 @@ class TransferController:
                     if self._cancel.is_set():
                         break
         finally:
-            self._done.set()
-            for item in self.pending:
-                self._emit_queue("queued", item)
+            try:
+                for item in self.pending:
+                    self._emit_queue("queued", item)
+            finally:
+                self._done.set()

@@ -191,6 +191,7 @@ def test_disc_entry_point_mechanism_never_executes(tmp_path: Path):
         {"path": "other.json", "sha256": "a" * 64, "size": 1, "role": "cluster-profile"}
     ]
     errors = validate_manifest_dict(manifest)
+    assert errors == []  # Declarative entrypoint text is never evaluated as Python.
     # Either the entrypoint/file mismatch surfaces at install/load time;
     # the key point is no import happens.
     _install(tmp_path, _base_manifest())

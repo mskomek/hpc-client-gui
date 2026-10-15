@@ -31,8 +31,6 @@ import sys
 import tempfile
 import time
 from pathlib import Path
-from unittest import mock
-
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -171,7 +169,7 @@ def test_fresh_runner_reports_missing_artifact_truthfully(tmp_path):
 @pytest.mark.unit
 def test_fresh_env_strips_dev_leakage_and_sets_isolation(tmp_path):
     """PKG-W15-ENV: child env drops source/dev leakage, keeps smoke wiring."""
-    import wx_packaged_smoke as smoke
+    import wx_fresh_user_smoke as smoke
 
     fresh = tmp_path / "fresh"
     env = smoke.fresh_user_env(
@@ -273,6 +271,7 @@ def test_profile_created_through_visible_add_dialog(monkeypatch):
     tmp = _fresh_env(monkeypatch)
     storage.save_config({"profiles": [], "settings": {}})
     app = wx.App(False)
+    assert app is wx.GetApp()
     frame = wx.Frame(None, title="w15")
     try:
         host = build_connection_panel(frame, profiles=[])
@@ -311,6 +310,7 @@ def test_closed_port_connect_fails_visibly_without_connected_state(monkeypatch):
     storage.save_config({"profiles": [], "settings": {}})
     storage.upsert_profile({"name": "dead-port", "host": "127.0.0.1", "port": 1, "username": "u"})
     app = wx.App(False)
+    assert app is wx.GetApp()
     frame = wx.Frame(None, title="w15-neg")
     try:
         def refused(profile):
@@ -319,6 +319,7 @@ def test_closed_port_connect_fails_visibly_without_connected_state(monkeypatch):
             return False
 
         host = build_connection_panel(frame, profiles=storage.load_profiles(), connect=refused)
+        model = host._wx_connection_model
 
         selected = []
 
@@ -350,11 +351,17 @@ def test_closed_port_connect_fails_visibly_without_connected_state(monkeypatch):
         while time.monotonic() < deadline:
             wx.YieldIfNeeded()
             texts = [c.GetLabel() for c in find_status(host)]
-            if any("ail" in t or "ailed" in t for t in texts):
+            if (
+                model.controller.state.value == "failed"
+                and any("ail" in text or "ailed" in text for text in texts)
+            ):
                 label = texts
                 break
             time.sleep(0.1)
-        assert label is not None, "failure must be visible, not silent"
+        assert label is not None, (
+            "failure must be visible, not silent; "
+            f"state={model.controller.state.value}, labels={texts}"
+        )
     finally:
         frame.Destroy()
 
@@ -379,6 +386,7 @@ def test_visible_connect_drives_controller_to_connected(monkeypatch):
     storage.save_config({"profiles": [], "settings": {}})
     storage.upsert_profile({"name": "loop", "host": "127.0.0.1", "port": 22, "username": "u"})
     app = wx.App(False)
+    assert app is wx.GetApp()
     frame = wx.Frame(None, title="w15-conn")
     try:
         host = build_connection_panel(

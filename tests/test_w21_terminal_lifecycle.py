@@ -70,8 +70,6 @@ def test_w21_close_skips_native_destroy_while_being_deleted():
     """DEF-W21-001 / REQ-LIFE-022/068: no explicit Destroy mid-teardown."""
     if not _is_webview_available():
         pytest.skip("WebView backend unavailable")
-    from hpc_gui.wx_terminal_webview import WxTerminalWebViewPanel
-
     code = _SETUP + """
 from hpc_gui.wx_terminal_webview import WxTerminalWebViewPanel
 frame = wx.Frame(None, size=(900, 600))

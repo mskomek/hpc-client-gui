@@ -13,9 +13,9 @@ from _cli_test_support import (
     SSHClientWrapper,
     SSHConnInfo,
     SSHFilesBackend,
+    _isolated_cli_config as _isolated_cli_config,
+    _remote_cli_access_enabled as _remote_cli_access_enabled,
 )
-from _cli_transfer_policies import FakeFiles
-
 def _errno_sftp_raiser(exc_factory):
     """SFTP client whose listdir_attr/stat raise a freshly built OSError."""
     return SimpleNamespace(

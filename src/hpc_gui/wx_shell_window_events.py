@@ -1,7 +1,6 @@
 """Frame-owned transient window tracking and shell menu handlers."""
 from __future__ import annotations
 
-from hpc_gui.core.i18n import current_language, set_language, t
 from hpc_gui.wx_shell_dispatch import _dispatch
 from hpc_gui.wx_shell_settings import run_wx_update_check
 
@@ -107,42 +106,5 @@ def create_window_event_state(wx, frame, lifecycle, session_state):
         # are visible with a stable code instead of silently swallowed.
         _dispatch("APP-SETTINGS", f, lifecycle, session_state)
         _track_new_windows(before)
-
-    def _on_language_button(_event):
-        f = _shell_frame()
-        if not f:
-            return
-        # show popup menu parented to shell frame, not button
-        cur = current_language()
-        menu = wx.Menu()
-        ids = {}
-        for lang, key in (("en", "english"), ("tr", "turkish")):
-            item = menu.AppendRadioItem(wx.ID_ANY, t(f"language.{key}"))
-            try:
-                item.SetBitmap(_flag_bitmap(wx, lang))
-            except Exception:
-                pass
-            if lang == cur:
-                item.Check(True)
-            ids[item.GetId()] = lang
-
-        def on_choice(evt):
-            lang = ids.get(evt.GetId())
-            if lang:
-                set_language(lang)
-
-        # bind each id
-        for _id in ids:
-            f.Bind(wx.EVT_MENU, on_choice, id=_id)
-        try:
-            f.PopupMenu(menu)
-        finally:
-            menu.Destroy()
-            for _id in ids:
-                try:
-                    f.Unbind(wx.EVT_MENU, id=_id)
-                except Exception:
-                    pass
-
 
     return chrome_windows, shell_ref

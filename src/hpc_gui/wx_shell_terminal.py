@@ -1,7 +1,7 @@
 """wx shell terminal workflows."""
 from __future__ import annotations
 
-from threading import Event, Thread
+from threading import Event
 import shlex
 
 

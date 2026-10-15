@@ -5,7 +5,6 @@ import json
 import os
 from pathlib import Path
 
-from hpc_gui.services.transfer_controller import TransferItem
 from hpc_gui.wx_shell_fresh_smoke import _run_fresh_user_acceptance
 from hpc_gui.wx_shell_smoke_session import _connect_packaged_smoke_session
 from hpc_gui.wx_shell_smoke_contract import (
