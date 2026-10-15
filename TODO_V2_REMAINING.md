@@ -27,6 +27,7 @@
 - [x] `wx_local_files.py` 1.183 satırdan 249 satıra, toolkit-free model, destek, liste/gezinme, etkileşim, mutation ve lifecycle modüllerine ayrıldı. Local ve remote wx listelerine sistem paletinden türetilen zebra satırları eklendi.
 - [x] Local ve remote dosya listesi zebra GUI testleri geçti. 133 local/remote dosya, sekme, eylem ve model regresyonu; 12 GUI-FILE-003 stres testi PASS. Stres kampanyasında 200 sağ-tık, 100+100 mutation, 200 navigation yarışı, 50 aç/kapat, 25 in-flight close, 100 transfer, 50 Unicode/boşluk adı ve 20 reconnect snapshot tamamlandı; kaçak/stale/yanlış hedef/kayıp/çift transfer ölçümleri sıfır.
 - [x] Dosya türü ikonları için Qt ve wx arayüzlerinin paylaştığı framework bağımsız uzantı sınıflandırması eklendi; wx local/remote listelerinde dosya türü ve klasör ikonları satırlara bağlandı. Gerçek wx `ListCtrl` öğelerindeki ikon indeksleri test edildi; odaklı local/remote GUI ve regresyon grubu 95/95 PASS, değişen Ruff ve kaynak mimarisi kontrolleri PASS.
+- [ ] Splitter kalıcılığı açık: gerçek wx `SplitterWindow` üzerinde varsayılan 50/50 oranı 960/1200/1600 genişliklerinde okundu (2/2 test PASS), ancak wx henüz Qt ile aynı şekilde kullanıcı oranını kaydetmiyor ve yeniden açılışta yüklemiyor. Tam shell `tests/test_wx_layout_resize.py` 400 resize/tab turunu çalıştırdı; geometri `FAIL` verdi (553 sıfır/negatif kontrol ölçümü, 546 clipping, 0 layout exception), bu sayaçların splitter kalıcılığıyla ilişkisi gösterilmedi ve ayrıştırılmalı.
 - [ ] `wx_shell.py` facade düzenlemesinden sonraki geniş regresyon turunda native Windows access violation oluşturan Qt transfer-iptal senaryosunu kapat; test ayrı süreçte geçiyor, karışık GUI suite içinde doğrulama sürüyor.
 - [x] Transfer retry worker-race düzeltmesi yapıldı; ilgili birim grubu 5/5 ve yeniden deneme regresyonu 10/10 PASS verdi.
 - [x] Linux/Windows release preflight için pinlenmiş test-only Qt lock eklendi; testlerden sonra Qt paketleri kaldırılarak wx release build ortamı temiz tutuluyor.
@@ -52,7 +53,7 @@
 
 - [x] Dosya türü ikonlarını wx dosya listelerine uygula ve doğrula.
 - [x] wx local ve remote dosya listelerinde zebra satırlarını uygula ve GUI'de doğrula.
-- [ ] Splitter oranlarının wx üzerinde saklanıp geri yüklendiğini doğrula.
+- [ ] Splitter oranlarını wx içinde sakla ve yeniden açılışta geri yükle; tam shell'de oran ve geometriyi doğrula.
 - [ ] Uygulama açılışında doğru bağlantı ekranının gösterildiğini paketlenmiş GUI'de doğrula.
 - [ ] Terminal WebView2 yaşam döngüsü ve native crash senaryolarını kapat.
 - [ ] Birden fazla ekran çözünürlüğü ile %100/%150/%200 DPI ölçeklerinde doğrula.

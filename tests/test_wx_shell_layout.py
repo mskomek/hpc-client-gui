@@ -47,3 +47,35 @@ def test_splitter_stays_centered_as_its_real_width_changes():
     splitter.handlers[event_type](SimpleNamespace(Skip=lambda: None))
 
     assert splitter.positions == [600, 750]
+
+
+def test_native_splitter_keeps_balanced_ratio_across_resizes():
+    import pytest
+
+    wx = pytest.importorskip("wx")
+    app = wx.App.Get() or wx.App(False)
+    frame = wx.Frame(None, size=(1200, 700))
+    splitter = wx.SplitterWindow(frame)
+    left = wx.Panel(splitter)
+    right = wx.Panel(splitter)
+    splitter.SetMinimumPaneSize(150)
+    splitter.SetSashGravity(0.5)
+    splitter.SplitVertically(left, right, 500)
+    frame.SetSizer(wx.BoxSizer(wx.VERTICAL))
+    frame.GetSizer().Add(splitter, 1, wx.EXPAND)
+
+    center_splitter_on_first_layout(wx, splitter)
+    frame.Show()
+
+    try:
+        app.ProcessPendingEvents()
+        for width in (960, 1200, 1600):
+            frame.SetSize((width, 700))
+            frame.Layout()
+            app.ProcessPendingEvents()
+            client_width = splitter.GetClientSize().width
+            ratio = splitter.GetSashPosition() / client_width
+            assert abs(ratio - 0.5) <= 0.03
+    finally:
+        frame.Destroy()
+        app.ProcessPendingEvents()
