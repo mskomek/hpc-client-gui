@@ -5,6 +5,7 @@ from hpc_gui.core.i18n import current_language, t
 from hpc_gui.services.file_filter_registry import FileFilter
 from hpc_gui.services.remote_entry_format import natural_sort_key as _shared_natural_sort_key
 from hpc_gui.wx_remote_files_support import _format_mtime, _fmt_size, _type_label
+from hpc_gui.wx_file_list_style import alternate_row_colour
 
 
 def install_listing(view):
@@ -213,11 +214,14 @@ def install_listing(view):
 
     def _populate_listing(listing, entries, tab_entry):
         listing.DeleteAllItems()
-        for entry in entries:
+        stripe = alternate_row_colour(wx)
+        for row_index, entry in enumerate(entries):
             idx = listing.InsertItem(listing.GetItemCount(), PurePosixPath(entry.path).name or entry.path)
             listing.SetItem(idx, 1, _fmt_size(entry))
             listing.SetItem(idx, 2, _type_label(entry))
             listing.SetItem(idx, 3, _format_mtime(getattr(entry, "mtime", None)))
+            if row_index % 2:
+                listing.SetItemBackgroundColour(idx, stripe)
             if tab_entry.get("highlight_path") and str(entry.path) == tab_entry["highlight_path"]:
                 listing.Select(idx)
                 listing.Focus(idx)
