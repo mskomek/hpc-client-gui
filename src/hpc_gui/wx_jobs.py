@@ -2501,8 +2501,13 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         _close_files_browser()
         timer.Stop()
         unsubscribe_language_change(refresh_labels)
-        host.Hide()
-        host.Destroy()
+        # Embedded hosts belong to the parent wx.Notebook. Destroying an
+        # enrolled page here leaves a stale page pointer in the notebook,
+        # which wxGTK later dereferences in DeleteAllPages() during shell
+        # teardown (W19 native SIGSEGV). Standalone windows own their close.
+        if not embedded:
+            host.Hide()
+            host.Destroy()
 
     def on_destroy(event):
         # Embedded hosts can be destroyed directly by their parent without

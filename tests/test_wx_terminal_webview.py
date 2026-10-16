@@ -1066,6 +1066,10 @@ try:
     assert restored['bufferType'] == 'normal', restored
     assert panel.hpc_get_line_text(0) == 'NORMAL-LINE'
     assert 'ALT-SCREEN' not in (panel.hpc_get_buffer_text() or '')
+    if sys.platform.startswith('linux'):
+        # Terminal output must not remain in the visible WebView location.
+        url = panel._webview.GetCurrentURL()
+        assert '#hpc=' not in url, 'local bridge fragment retained in URL'
 except BaseException:
     traceback.print_exc()
     os._exit(1)

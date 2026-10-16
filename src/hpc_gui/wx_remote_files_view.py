@@ -203,7 +203,12 @@ def _build_remote_files(parent, model: WxRemoteDirectoryModel | None = None, *, 
 
     def close(_event):
         _mark_closed()
-        host.Destroy()
+        # Embedded remote panes are registered with wx.SplitterWindow. The
+        # splitter owns their native destruction; deleting a pane from the
+        # child close callback leaves a stale pointer in DoGetBestSize()
+        # during wxGTK shell teardown (W19). Detached frames own themselves.
+        if not embedded:
+            host.Destroy()
 
     def _mark_closed():
         with lock:

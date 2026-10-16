@@ -13,6 +13,8 @@ from __future__ import annotations
 
 import json
 import pathlib
+import sys
+from hpc_gui.wx_terminal_url_bridge import encode_terminal_fragment, parse_terminal_call
 from dataclasses import dataclass
 from typing import Any, Callable, Optional
 
@@ -186,6 +188,14 @@ class WxTerminalWebViewPanel(wx.Panel if _WX_AVAILABLE else object):  # type: ig
         self._readiness_timer = None
         self._webview = None
         self._is_parity = False
+        # Linux wx/WebKit rejects RunScript under the page's strict CSP.
+        self._gtk_fragment_transport = sys.platform.startswith("linux")
+        self._gtk_base_url = _wx_index_path().as_uri()
+        self._gtk_commands: list[tuple[int, str, object]] = []
+        self._gtk_next_seq = 0
+        self._gtk_inflight: int | None = None
+        self._gtk_screen_snapshot: dict | None = None
+        self._gtk_query_pending = False
         self._diagnostic_text = ""
         self._webview_failure_stage = "not-created"
         self._webview_failure_detail = ""
@@ -549,6 +559,19 @@ class WxTerminalWebViewPanel(wx.Panel if _WX_AVAILABLE else object):  # type: ig
             if not isinstance(msg, dict):
                 return
             mtype = msg.get("type")
+            if mtype == "bridge-ack":
+                if self._gtk_fragment_transport and msg.get("seq") == self._gtk_inflight:
+                    self._gtk_inflight = None
+                    self._gtk_send_next()
+                return
+            if mtype == "bridge-response":
+                if (self._gtk_fragment_transport
+                        and msg.get("op") == "hpcGetScreenState"
+                        and msg.get("seq") == self._gtk_inflight):
+                    value = msg.get("value")
+                    self._gtk_screen_snapshot = value if isinstance(value, dict) else None
+                    self._gtk_query_pending = False
+                return
             if mtype == "ready":
                 self._on_bridge_ready()
             elif mtype == "input":
@@ -806,8 +829,56 @@ class WxTerminalWebViewPanel(wx.Panel if _WX_AVAILABLE else object):  # type: ig
 
     # ---------- Public API (Python -> JS) ----------
 
+    def _gtk_enqueue(self, method: str, arg=None):
+        """Queue allowlisted commands over a local, non-network file fragment.
+
+        Only one command is in-flight at a time. The URL fragment can contain
+        terminal output and must never be logged or persisted as history.
+        """
+        if self._closed or self._webview is None:
+            return
+        if method in {"hpcWrite", "hpcClear"}:
+            self._gtk_screen_snapshot = None
+            self._gtk_query_pending = False
+        parts = [arg]
+        if method == "hpcWrite" and isinstance(arg, str) and len(arg) > 2048:
+            parts = [arg[i:i + 2048] for i in range(0, len(arg), 2048)]
+        for value in parts:
+            self._gtk_next_seq += 1
+            self._gtk_commands.append((self._gtk_next_seq, method, value))
+        self._gtk_send_next()
+
+    def _gtk_send_next(self):
+        if (self._closed or self._webview is None or self._gtk_inflight is not None
+                or not self._gtk_commands):
+            return
+        seq, method, value = self._gtk_commands.pop(0)
+        self._gtk_inflight = seq
+        try:
+            self._webview.LoadURL(
+                self._gtk_base_url + encode_terminal_fragment(seq, method, value)
+            )
+        except Exception:
+            self._gtk_inflight = None
+            self._gtk_screen_snapshot = None
+            self._gtk_query_pending = False
+
+    def _gtk_get_snapshot(self) -> dict | None:
+        if self._closed or not self._ready:
+            return None
+        if self._gtk_screen_snapshot is None and not self._gtk_query_pending:
+            self._gtk_query_pending = True
+            self._gtk_enqueue("hpcGetScreenState")
+        return self._gtk_screen_snapshot
+
     def _run_js(self, code: str):
         if self._closed or not self._is_parity or self._webview is None:
+            return
+        if self._gtk_fragment_transport:
+            command = parse_terminal_call(code)
+            if command is not None:
+                self._gtk_enqueue(*command)
+            # Never execute unrecognized script under strict page CSP.
             return
         try:
             # Fire-and-forget calls must not synchronously back up WebView2's
@@ -1049,16 +1120,32 @@ class WxTerminalWebViewPanel(wx.Panel if _WX_AVAILABLE else object):  # type: ig
 
     def hpc_get_line_text(self, row: int) -> str | None:
         """Read a single line from xterm buffer via JS helper."""
+        if self._gtk_fragment_transport:
+            state = self._gtk_get_snapshot()
+            lines = state.get("lines", []) if state else []
+            if 0 <= int(row) < len(lines) and isinstance(lines[int(row)], dict):
+                return lines[int(row)].get("text")
+            return None
         js = f"window.hpcGetLineText && window.hpcGetLineText({int(row)})"
         return self._run_js_readback(js)
 
     def hpc_get_buffer_text(self) -> str | None:
         """Read all visible+scrollback lines from xterm buffer."""
+        if self._gtk_fragment_transport:
+            state = self._gtk_get_snapshot()
+            if state is None:
+                return None
+            return "\n".join(
+                line.get("text", "") for line in state.get("lines", [])
+                if isinstance(line, dict)
+            )
         js = "window.hpcGetBufferText && window.hpcGetBufferText()"
         return self._run_js_readback(js)
 
     def hpc_get_screen_state(self) -> dict | None:
         """Read full screen state (cursor, buffer type, lines) from xterm."""
+        if self._gtk_fragment_transport:
+            return self._gtk_get_snapshot()
         js = "JSON.stringify(window.hpcGetScreenState && window.hpcGetScreenState())"
         result = self._run_js_readback(js)
         try:
@@ -1178,6 +1265,12 @@ class WxTerminalWebViewPanel(wx.Panel if _WX_AVAILABLE else object):  # type: ig
                 pass
             self._subscriber = None
             self._subscribers_list = None
+        # Clear GTK IPC fragments and cached terminal screen immediately.
+        # Both may contain sensitive terminal output; nothing is persisted.
+        self._gtk_commands.clear()
+        self._gtk_inflight = None
+        self._gtk_screen_snapshot = None
+        self._gtk_query_pending = False
         # Clear pending
         self._pending.clear()
         self._pending_bytes = 0

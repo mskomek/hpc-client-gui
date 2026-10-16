@@ -543,7 +543,10 @@ def test_shell_tab_order_is_canonical(wx_app):
         assert indices == sorted(indices)
         assert len(set(indices)) == len(indices)
     finally:
-        frame.Destroy()
+        # The real shell owns nested wx.Notebook children. EVT_CLOSE runs
+        # page/lifecycle callbacks before native Destroy; calling Destroy
+        # directly bypasses that contract and can crash wxGTK teardown.
+        frame.Close()
 
 
 def test_nav_actions_route_to_embedded_pages(wx_app):
@@ -561,7 +564,10 @@ def test_nav_actions_route_to_embedded_pages(wx_app):
             assert notebook.GetSelection() == notebook.FindPage(pages[key]["page"]), key
         assert len(wx.GetTopLevelWindows()) == before
     finally:
-        frame.Destroy()
+        # The real shell owns nested wx.Notebook children. EVT_CLOSE runs
+        # page/lifecycle callbacks before native Destroy; calling Destroy
+        # directly bypasses that contract and can crash wxGTK teardown.
+        frame.Close()
 
 
 def test_keyboard_tab_navigation_and_focus_restoration(wx_app):
@@ -589,7 +595,10 @@ def test_keyboard_tab_navigation_and_focus_restoration(wx_app):
             ancestor = ancestor.GetParent()
         assert ancestor is terminal_page
     finally:
-        frame.Destroy()
+        # The real shell owns nested wx.Notebook children. EVT_CLOSE runs
+        # page/lifecycle callbacks before native Destroy; calling Destroy
+        # directly bypasses that contract and can crash wxGTK teardown.
+        frame.Close()
 
 
 # ---------------------------------------------------------------------------
@@ -618,14 +627,29 @@ def test_reconnect_rebinds_all_domains_through_canonical_session(wx_app):
         assert _attached_ssh(terminal) is ssh_b
         assert session_state["generation"] >= 2
     finally:
-        frame.Destroy()
+        # The real shell owns nested wx.Notebook children. EVT_CLOSE runs
+        # page/lifecycle callbacks before native Destroy; calling Destroy
+        # directly bypasses that contract and can crash wxGTK teardown.
+        frame.Close()
 
 
-def test_profile_switch_invalidates_navigation_and_filters():
-    """TODO HPC-W02-TODO-002: stores/filters follow the new profile."""
+def test_profile_switch_invalidates_navigation_and_filters(monkeypatch):
+    """TODO HPC-W02-TODO-002: stores/filters follow the new profile.
+
+    Private navigation state is intentionally unavailable without an OS
+    keyring. The tested boundary is per-profile routing, so provide a fake
+    encrypted-store backend, never weakening production keyring requirements.
+    """
     from hpc_gui.services.remote_navigation_store import navigation_store_for_profile
     from hpc_gui.wx_shell import _remote_files_callbacks
 
+    monkeypatch.setattr(
+        "hpc_gui.services.remote_navigation_store.is_available", lambda: True
+    )
+    monkeypatch.setattr(
+        "hpc_gui.services.remote_navigation_store.load_private_profile_data",
+        lambda profile_id, namespace, default: dict(default),
+    )
     store_a = navigation_store_for_profile("profile-alpha")
     store_b = navigation_store_for_profile("profile-beta")
     assert store_a is not store_b
