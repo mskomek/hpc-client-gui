@@ -72,4 +72,5 @@ jobs:
           tests/test_wx_packaged_smoke.py::test_workdir_outside_repo_excludes_repo_tmp
           tests/test_hardening_additional.py::test_wx_dispatch_uses_host
           tests/test_wx_smoke_shutdown_contract.py
+          tests/test_wx_terminal_url_bridge.py
           -q --tb=short
