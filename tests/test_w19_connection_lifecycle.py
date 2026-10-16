@@ -543,7 +543,10 @@ def test_shell_tab_order_is_canonical(wx_app):
         assert indices == sorted(indices)
         assert len(set(indices)) == len(indices)
     finally:
-        frame.Destroy()
+        # The real shell owns nested wx.Notebook children. EVT_CLOSE runs
+        # page/lifecycle callbacks before native Destroy; calling Destroy
+        # directly bypasses that contract and can crash wxGTK teardown.
+        frame.Close()
 
 
 def test_nav_actions_route_to_embedded_pages(wx_app):
@@ -561,7 +564,10 @@ def test_nav_actions_route_to_embedded_pages(wx_app):
             assert notebook.GetSelection() == notebook.FindPage(pages[key]["page"]), key
         assert len(wx.GetTopLevelWindows()) == before
     finally:
-        frame.Destroy()
+        # The real shell owns nested wx.Notebook children. EVT_CLOSE runs
+        # page/lifecycle callbacks before native Destroy; calling Destroy
+        # directly bypasses that contract and can crash wxGTK teardown.
+        frame.Close()
 
 
 def test_keyboard_tab_navigation_and_focus_restoration(wx_app):
@@ -589,7 +595,10 @@ def test_keyboard_tab_navigation_and_focus_restoration(wx_app):
             ancestor = ancestor.GetParent()
         assert ancestor is terminal_page
     finally:
-        frame.Destroy()
+        # The real shell owns nested wx.Notebook children. EVT_CLOSE runs
+        # page/lifecycle callbacks before native Destroy; calling Destroy
+        # directly bypasses that contract and can crash wxGTK teardown.
+        frame.Close()
 
 
 # ---------------------------------------------------------------------------
@@ -618,7 +627,10 @@ def test_reconnect_rebinds_all_domains_through_canonical_session(wx_app):
         assert _attached_ssh(terminal) is ssh_b
         assert session_state["generation"] >= 2
     finally:
-        frame.Destroy()
+        # The real shell owns nested wx.Notebook children. EVT_CLOSE runs
+        # page/lifecycle callbacks before native Destroy; calling Destroy
+        # directly bypasses that contract and can crash wxGTK teardown.
+        frame.Close()
 
 
 def test_profile_switch_invalidates_navigation_and_filters():
