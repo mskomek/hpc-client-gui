@@ -26,6 +26,15 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterable, List, Optional
 
+from linux_release_validation import (
+    PackagingError,
+    validate_apprun as _validate_apprun,
+    validate_deb_control as _validate_deb_control,
+    validate_desktop_entry as _validate_desktop_entry,
+    validate_flatpak_manifest as _validate_flatpak_manifest,
+    validate_pip_metadata as _validate_pip_metadata,
+)
+
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SRC_DIR = REPO_ROOT / "src"
@@ -43,10 +52,6 @@ FLATPAK_ID = "io.github.mskomek.HpcClientGui"
 REQUIRED_HELP_FILES = ("HELP_tr.md", "HELP_en.md", "CLI_GUIDE_tr.md", "CLI_GUIDE_en.md")
 REQUIRED_LICENSE_FILES = ("LICENSE", "COMMERCIAL_LICENSE.md", "THIRD_PARTY_NOTICES.md", "QT_LGPL_SOURCE_OFFER.md")
 THIRD_PARTY_LICENSES_DIR = REPO_ROOT / "third_party_licenses"
-
-
-class PackagingError(RuntimeError):
-    """An actionable Linux packaging failure."""
 
 
 def require_ubuntu_host() -> None:
@@ -121,27 +126,11 @@ def validate_required_files() -> None:
 
 
 def validate_desktop_entry() -> None:
-    """Validate the static AppImage .desktop entry without shipping bad metadata."""
-    path = APPIMAGE_DEF_DIR / DESKTOP_ENTRY_NAME
-    if not path.is_file():
-        raise PackagingError(f"AppImage desktop entry missing: {path}")
-    text = path.read_text(encoding="utf-8")
-    if "[Desktop Entry]" not in text:
-        raise PackagingError(f"AppImage desktop entry has no [Desktop Entry] section: {path}")
-    if not re.search(r"(?m)^Exec=\S+$", text):
-        raise PackagingError(f"AppImage desktop entry has no Exec= line: {path}")
-    if not re.search(r"(?m)^Name=", text):
-        raise PackagingError(f"AppImage desktop entry has no Name= line: {path}")
+    _validate_desktop_entry(APPIMAGE_DEF_DIR / DESKTOP_ENTRY_NAME)
 
 
 def validate_apprun() -> None:
-    """Validate the AppImage AppRun launcher and require a shebang."""
-    path = APPIMAGE_DEF_DIR / APPRUN_NAME
-    if not path.is_file():
-        raise PackagingError(f"AppImage AppRun launcher missing: {path}")
-    text = path.read_text(encoding="utf-8")
-    if not text.startswith("#!"):
-        raise PackagingError(f"AppImage AppRun has no shebang: {path}")
+    _validate_apprun(APPIMAGE_DEF_DIR / APPRUN_NAME)
 
 
 def deb_artifact_name(version: str) -> str:
@@ -155,32 +144,11 @@ def flatpak_artifact_name(version: str) -> str:
 
 
 def validate_deb_control() -> None:
-    """Validate the .deb control file and require the version placeholder."""
-    path = DEB_DEF_DIR / "DEBIAN" / "control"
-    if not path.is_file():
-        raise PackagingError(f".deb control file missing: {path}")
-    text = path.read_text(encoding="utf-8")
-    for required_field in ("Package:", "Version:", "Architecture:", "Description:"):
-        if not re.search(rf"(?m)^{re.escape(required_field)}", text):
-            raise PackagingError(f".deb control file has no {required_field} field: {path}")
-    if "<VERSION>" not in text:
-        raise PackagingError(f".deb control file has no <VERSION> placeholder: {path}")
+    _validate_deb_control(DEB_DEF_DIR / "DEBIAN" / "control")
 
 
 def validate_flatpak_manifest() -> None:
-    """Validate the Flatpak manifest parses and carries the required keys."""
-    path = FLATPAK_DEF_DIR / f"{FLATPAK_ID}.json"
-    if not path.is_file():
-        raise PackagingError(f"Flatpak manifest missing: {path}")
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError as exc:
-        raise PackagingError(f"Flatpak manifest is not valid JSON: {exc}") from exc
-    for key in ("app-id", "runtime", "sdk", "command", "modules"):
-        if key not in data:
-            raise PackagingError(f"Flatpak manifest has no {key} key: {path}")
-    if not isinstance(data.get("modules"), list) or not data["modules"]:
-        raise PackagingError(f"Flatpak manifest modules must be a non-empty list: {path}")
+    _validate_flatpak_manifest(FLATPAK_DEF_DIR / f"{FLATPAK_ID}.json")
 
 
 def sha256_hex(path: Path) -> str:
@@ -249,19 +217,7 @@ def pip_install_command() -> List[str]:
 
 
 def validate_pip_metadata() -> None:
-    """Verify the pip/source path is well-formed (pyproject entry point + deps)."""
-    pyproject = REPO_ROOT / "pyproject.toml"
-    if not pyproject.is_file():
-        raise PackagingError(f"pyproject.toml missing: {pyproject}")
-    text = pyproject.read_text(encoding="utf-8")
-    if "requires-python" not in text:
-        raise PackagingError("pyproject.toml has no requires-python declaration.")
-    for dep in ("PySide6", "paramiko", "cryptography"):
-        if dep not in text:
-            raise PackagingError(f"pyproject.toml missing dependency {dep}.")
-    entry = SRC_DIR / "hpc_gui" / "__main__.py"
-    if not entry.is_file():
-        raise PackagingError(f"pip entry point missing: {entry}")
+    _validate_pip_metadata(REPO_ROOT / "pyproject.toml", SRC_DIR / "hpc_gui" / "__main__.py")
 
 
 def release_dir_contents(version: str) -> List[str]:
