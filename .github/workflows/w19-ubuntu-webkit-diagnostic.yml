@@ -1,0 +1,92 @@
+name: V2 W19 Ubuntu WebKitGTK native diagnostics
+
+on:
+  pull_request:
+    branches: [develop]
+    paths:
+      - ".github/workflows/w19-ubuntu-webkit-diagnostic.yml"
+      - "src/hpc_gui/wx_terminal_webview.py"
+      - "src/hpc_gui/assets/terminal/wx_index.html"
+      - "src/hpc_gui/assets/terminal/wx_bridge.js"
+      - "tests/test_w19_connection_lifecycle.py"
+      - "tests/test_wx_terminal_webview.py"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: w19-ubuntu-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  webkitgtk-probe:
+    name: W19 Ubuntu 24.04 WebKitGTK reproducibility
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      PYTHONPATH: src
+      GDK_BACKEND: x11
+      QT_QPA_PLATFORM: offscreen
+      HPC_GUI_DISABLE_WEBENGINE: "1"
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Python 3.14
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.14"
+      - name: Install GTK3 WebKitGTK and native debugger
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            xvfb dbus-x11 gdb libgtk-3-0 libwebkit2gtk-4.1-0 \
+            libnotify4 libgstreamer1.0-0 libgstreamer-plugins-base1.0-0 \
+            libsm6 libxtst6 libjpeg-turbo8 libtiff6 libpng16-16t64
+      - name: Install wxPython Ubuntu wheel and targeted test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install --only-binary=:all: \
+            --find-links https://extras.wxpython.org/wxPython4/extras/linux/gtk3/ubuntu-24.04 \
+            "wxPython==4.3.1" "pytest==9.1.1"
+          python -m pip install -r requirements-release.lock --no-deps
+          python -m pip install --no-deps -e .
+          python -c "import wx, wx.html2; print('WX:',wx.version(),'WX_HTML2:',wx.html2.WebView)"
+      - name: Capture isolated screen-readback and W19 teardown
+        shell: bash
+        run: |
+          mkdir -p .tmp/w19-native
+          printf 'source_sha=%s\n' "$(git rev-parse HEAD)" > .tmp/w19-native/identity.txt
+          python --version >> .tmp/w19-native/identity.txt
+          timeout --signal=TERM --kill-after=5s 70s \
+            dbus-run-session -- xvfb-run -a -s '-screen 0 1280x900x24' \
+            python -m pytest -q -s --tb=short \
+            tests/test_wx_terminal_webview.py::test_wx_terminal_screen_state_readback_and_alternate_buffer \
+            > .tmp/w19-native/readback.log 2>&1
+          readback_rc=$?
+          echo "readback_exit=$readback_rc" >> .tmp/w19-native/identity.txt
+          timeout --signal=TERM --kill-after=5s 100s \
+            dbus-run-session -- xvfb-run -a -s '-screen 0 1280x900x24' \
+            gdb -q -batch -ex 'set pagination off' -ex run -ex 'thread apply all bt 12' --args \
+            python -m pytest -q -s --tb=short tests/test_w19_connection_lifecycle.py \
+            > .tmp/w19-native/w19-gdb.log 2>&1
+          lifecycle_rc=$?
+          echo "lifecycle_exit=$lifecycle_rc" >> .tmp/w19-native/identity.txt
+          tail -n 35 .tmp/w19-native/readback.log
+          tail -n 50 .tmp/w19-native/w19-gdb.log
+          if [ "$readback_rc" -ne 0 ] || [ "$lifecycle_rc" -ne 0 ]; then
+            echo "::error::W19 native Linux regression remains; inspect artifact logs/backtrace."
+            echo "FAIL" > .tmp/w19-native/verdict.txt
+            exit 1
+          fi
+          echo "PASS" > .tmp/w19-native/verdict.txt
+      - name: Upload W19 native evidence on success or failure
+        if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: w19-ubuntu-native-${{ github.sha }}
+          path: .tmp/w19-native/**
+          retention-days: 7
+          if-no-files-found: warn
