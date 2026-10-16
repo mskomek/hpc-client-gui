@@ -3,6 +3,7 @@
 import json
 from types import SimpleNamespace
 
+from hpc_gui.wx_lifecycle import WxLifecycleController
 from hpc_gui.wx_runtime_observation import finalize_runtime_observation
 from hpc_gui.wx_shell_smoke_finalize import (
     _frame_destroyed,
@@ -129,3 +130,21 @@ def test_explicit_child_shutdown_failure_is_not_overridden(tmp_path):
     finalized = _parent_finalize(child)
     assert finalized["checks"]["clean_shutdown"] == "FAIL"
     assert finalized["result"] == "FAIL"
+
+
+def test_cleanup_failure_diagnostics_include_no_exception_messages():
+    def broken_cleanup():
+        raise RuntimeError("private password/token details")
+
+    for worker_safe in (False, True):
+        lifecycle = WxLifecycleController()
+        lifecycle.register_cleanup(broken_cleanup, worker_safe=worker_safe)
+        lifecycle.shutdown()
+        assert lifecycle.cleanup_complete is False
+        assert lifecycle.cleanup_timed_out is False
+        assert lifecycle.cleanup_failures == [{
+            "callback": "test_cleanup_failure_diagnostics_include_no_exception_messages"
+            ".<locals>.broken_cleanup",
+            "error_type": "RuntimeError",
+        }]
+        assert "private password" not in json.dumps(lifecycle.cleanup_failures)
