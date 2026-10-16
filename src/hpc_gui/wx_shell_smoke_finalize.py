@@ -6,15 +6,33 @@ from pathlib import Path
 
 
 def _frame_destroyed(wx, frame) -> bool:
-    """Observe actual top-level removal, not a pending Destroy() request.
+    """Fail-closed proof that wx removed and deleted the native frame.
 
-    wxPython does not provide wx.IsDestroyed. A still-registered frame must
-    never be reported as destroyed, even if shutdown callbacks have run.
+    wxPython has no wx.IsDestroyed. Python membership on wx frames invokes
+    C++ equality on a deleted wrapper, turning successful cleanup into FAIL.
     """
     try:
-        return frame not in wx.GetTopLevelWindows()
+        # Identity comparison never dispatches into a deleted C++ wrapper.
+        if any(window is frame for window in wx.GetTopLevelWindows()):
+            return False
+        probe = getattr(frame, "IsBeingDeleted", None)
+        if not callable(probe):
+            # Lightweight test doubles have only the authoritative registry.
+            return True
+        probe()
+    except RuntimeError as exc:
+        # Native wrapper deletion is stronger than a scheduled Destroy().
+        # Unrelated GUI/runtime exceptions must NOT count as destruction.
+        description = str(exc)
+        return (
+            "wrapped C/C++ object" in description
+            and "has been deleted" in description
+        )
     except Exception:
         return False
+    # An accessible C++ object is not yet deleted, regardless of Hide/Destroy
+    # requests or a momentary absence from the top-level registry.
+    return False
 
 
 def finish_packaged_smoke(state, checks, error, output_path, app, wx, frame, session_state, lifecycle):
