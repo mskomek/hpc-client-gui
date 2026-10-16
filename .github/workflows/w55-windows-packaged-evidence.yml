@@ -97,6 +97,12 @@ jobs:
               cleanup_callbacks_drained = $obs.cleanup_callbacks_drained
               cleanup_failures = @($obs.cleanup_failures)
               frame_destroyed = $obs.frame_destroyed
+              frame_destroy_poll_count = $obs.frame_destroy_poll_count
+              frame_destroy_budget_exhausted = $obs.frame_destroy_budget_exhausted
+              frame_destroy_invoked = $obs.frame_destroy_invoked
+              frame_destroy_return = $obs.frame_destroy_return
+              frame_destroy_error_type = $obs.frame_destroy_error_type
+              frame_is_being_deleted = $obs.frame_is_being_deleted
               child_timed_out = $obs.child_timed_out
             }
             $line = ($summary | ConvertTo-Json -Compress -Depth 5)
