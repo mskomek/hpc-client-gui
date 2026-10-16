@@ -115,6 +115,21 @@ def finish_packaged_smoke(state, checks, error, output_path, app, wx, frame, ses
                 # Missing native timer: keep FAIL and stop after persistence.
                 pass
         observation["frame_destroy_budget_exhausted"] = not gone
+        # Diagnostic only: actual Destroy() call outcome and native delete
+        # state. These fields do NOT contribute to PASS independently.
+        observation["frame_destroy_invoked"] = bool(
+            getattr(frame, "_wx_shell_destroy_invoked", False)
+        )
+        observation["frame_destroy_return"] = getattr(
+            frame, "_wx_shell_destroy_return", None
+        )
+        observation["frame_destroy_error_type"] = getattr(
+            frame, "_wx_shell_destroy_error_type", None
+        )
+        try:
+            observation["frame_is_being_deleted"] = bool(frame.IsBeingDeleted())
+        except Exception as exc:
+            observation["frame_is_being_deleted"] = type(exc).__name__
         write_payload()
         app.ExitMainLoop()
 
