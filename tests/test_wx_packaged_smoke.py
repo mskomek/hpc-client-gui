@@ -97,7 +97,10 @@ def _canned_checks(runner, **overrides):
 def test_workdir_outside_repo_excludes_repo_tmp(tmp_path):  # NEG-W16-WORKDIR-SCOPE
     runner = _runner_module()
     assert runner._outside_repo(runner.ROOT / ".tmp" / "os" / "run") is False
-    assert runner._outside_repo(Path("C:/Windows/Temp")) is True
+    # Use a portable absolute path: Windows drive letters are relative on POSIX.
+    outside = runner.ROOT.parent / "hpc-wx-smoke-outside-probe"
+    assert not outside.is_relative_to(runner.ROOT)
+    assert runner._outside_repo(outside) is True
     assert runner._outside_source_tree(runner.ROOT / ".tmp" / "os" / "run") is True
     clean_room = runner._clean_room_dir("test-clean-room-")
     try:

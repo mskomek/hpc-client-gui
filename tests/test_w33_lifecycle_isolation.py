@@ -234,6 +234,7 @@ def test_life005_wx_view_states_effect_and_toggle_works(tmp_path: Path):
     load_language("en")
     _install(tmp_path, _base_manifest())
     app = wx.App.Get() or wx.App(False)
+    assert wx.App.Get() is app
     frame = wx.Frame(None, title="w33-probe")
     try:
         model = WxPluginManagerModel(root=tmp_path)

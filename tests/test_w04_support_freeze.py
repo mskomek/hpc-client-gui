@@ -751,7 +751,7 @@ def test_remote_context__allowed_actions_resolve_to_labels():
 def test_header_upload_download__use_panel_run_actions(wx_app, monkeypatch):
     """TRUTH-069: header Upload/Download funnel into the same panel
     run_action paths the browser toolbars use (one truthful transfer path)."""
-    capture = _MessageBoxCapture(monkeypatch)
+    _MessageBoxCapture(monkeypatch)
     _auto_cancel_native_selectors(monkeypatch)
     frame, _lifecycle, _session = wx_shell.create_shell_frame(wx_app)
     try:
