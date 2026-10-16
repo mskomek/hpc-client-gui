@@ -5,6 +5,18 @@ import json
 from pathlib import Path
 
 
+def _frame_destroyed(wx, frame) -> bool:
+    """Observe actual top-level removal, not a pending Destroy() request.
+
+    wxPython does not provide wx.IsDestroyed. A still-registered frame must
+    never be reported as destroyed, even if shutdown callbacks have run.
+    """
+    try:
+        return frame not in wx.GetTopLevelWindows()
+    except Exception:
+        return False
+
+
 def finish_packaged_smoke(state, checks, error, output_path, app, wx, frame, session_state, lifecycle):
     if state["done"]:
         return
@@ -60,6 +72,12 @@ def finish_packaged_smoke(state, checks, error, output_path, app, wx, frame, ses
             smoke_session["ssh"].close()
     except Exception:
         pass
+    # Keep the smoke's event loop alive long enough for wx deferred native
+    # destruction to run before checking its top-level registry.
+    try:
+        app.SetExitOnFrameDelete(False)
+    except Exception:
+        pass
     try:
         frame.Close()
     except Exception:
@@ -75,12 +93,22 @@ def finish_packaged_smoke(state, checks, error, output_path, app, wx, frame, ses
     observation["cleanup_callbacks_drained"] = bool(
         lifecycle.cleanup_complete and not lifecycle.cleanup_timed_out
     )
+    # Diagnostic only: no exception messages, profile names, or credentials.
+    observation["cleanup_failures"] = list(
+        getattr(lifecycle, "cleanup_failures", ())
+    )
+    # wx.Destroy() is deferred on some platforms. Sample after one bounded
+    # event-loop turn; the parent still requires a zero exit and no timeout.
+    def observe_destroy_and_exit():
+        observation["frame_destroyed"] = _frame_destroyed(wx, frame)
+        write_payload()
+        app.ExitMainLoop()
+
     try:
-        observation["frame_destroyed"] = bool(wx.IsDestroyed(frame))
+        wx.CallLater(100, observe_destroy_and_exit)
     except Exception:
-        observation["frame_destroyed"] = False
-    write_payload()
-    wx.CallLater(50, app.ExitMainLoop)
+        # Missing timer/event loop is not a PASS: the registry decides.
+        observe_destroy_and_exit()
     try:
         wx.CallLater(2000, app.ExitMainLoop)
     except Exception:

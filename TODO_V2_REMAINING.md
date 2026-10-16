@@ -4,6 +4,21 @@
 **Başlangıç HEAD:** `develop` `b80a06e419fbe77f485b9c5924f1e86c764201f0`
 **Amaç:** V2 tamamlanması için kalan kod, doğrulama, provider, acceptance ve release işlerini tek yerde izlemek.
 
+### Güncel ilerleme — 2026-10-16
+
+**Güncel develop:** `935bc1c57b14438d7b657f3c6cddab2328ecc3e2` (PR #41 squash-merge). GitHub Actions run `38861669606`: **4/4 PASS**. Aşağıdaki 15 Ekim raporları tarihsel kayıtlardır; eski 245 Ruff bulgusu güncel HEAD sonucu değildir.
+
+- [x] `.github/workflows/ci.yml` restore edildi. Ubuntu+Windows Python 3.14/Ruff 0.16.8/compileall/i18n ve iki portable test PASS; bu tam V2 acceptance veya packaged GUI testi değildir.
+- [x] Tarihsel Ruff hatalarını oluşturan emekli Agent Core kodları (4 script + 4 test) kaldırıldı; iki gerçek F841 düzeltildi. Kaynak CI 4/4 PASS.
+- [x] POSIX path ve wx plugin owner statik testleri düzeltildi; Ubuntu+Windows'ta hedefli iki test PASS.
+- [x] `tests/test_wx_a11y.py` sahte `IsShown() or True` olumlaması kaldırıldı; GUI a11y kabulü ayrıca açık.
+- [ ] **W55/W16 clean_shutdown:** Bu takip dalında `clean_shutdown` ilk değerinin `FAIL` yerine `PENDING` olması, olmayan `wx.IsDestroyed` çağrısının kaldırılması ve 100ms deferred registry gözlemi kodlandı; headless pozitif/negatif shutdown testleri CI'ye eklendi; `WxLifecycleController` artık başarısız cleanup callback adını ve yalnızca exception sınıfını (`cleanup_failures`) runtime JSON'a taşıyor, gizli exception mesajlarını taşımıyor. Headless source/contract CI `38862771589` (HEAD `1a2bc1514a2f6cdc468a17fa4e40bd39c988567c`) Ubuntu+Windows **4/4 PASS**; yeni Windows11 immutable Candidate / packaged 20/20 / native WER PASS kanıtı **yok**.
+- [ ] **W19/Linux:** WebKitGTK CSP `RunScript` readback ve `libjavascriptcoregtk-4.1.so.0` SIGSEGV hâlâ açık. Headless CI bu alanı kapsamıyor.
+- [ ] **Windows UIA:** Normal packaged Connection startup runner kanıtı eksik (önceden proses başlamadan runner hatası).
+- [ ] **Tam V2:** LOCAL_REAL, full GUI suite, Windows/Linux/macOS paketler, DPI/accessibility, artifact+SHA, çift audit, freeze ve release açık.
+
+**Kanıt ayrımı:** W55 source/contract doğrulaması `1a2bc151` üzerinde 4/4 PASS ile sonuçlandı. Bu native shutdown başarı kanıtı değildir; yeni immutable Windows11 packaged smoke ve WER doğrulaması zorunludur.
+
 ### Yeniden audit — 2026-10-15, güncel `develop` `ea27d75c`
 
 Önceki başlıklardaki commit kimlikleri tarihsel test kayıtlarıdır; aşağıdaki bulgular güncel `develop` üzerindeki son kontrolleri gösterir.
@@ -116,9 +131,9 @@
 ## 1. Kod ve test hataları
 
 - [x] Tarihsel 413 bulgusunu GitHub CI run `38688191566` / `4a7170ad` ile eşleştir ve temiz worktree'de doğrula; aynı Ruff 0.16.8/komut `53bc413d`'de 245 verdi, düşüş commit aralığındaki kod/test değişiklikleriyle açıklanıyor.
-- [ ] Current `develop` `362ece5e` üzerinde Ruff **0.16.8** ve `ruff check src scripts tests` yeniden çalıştırıldı: **245** bulgu; `src/` 0, `tests/` 127, `scripts/` 118. Başlıca kodlar E702 123, E701 64 ve F405 50; lint düzeltmeleri açık.
-- [ ] `develop`'da silinmiş `.github/workflows/ci.yml` gate'inin geri çalıştırılabilirliğini doğrula; `a759aebc` için GitHub CI run yok.
-- [ ] Uygulama/test/script kaynaklarındaki gerçek Ruff hatalarını, dosya sorumluluklarını ve 500 satır mimari sınırını koruyarak düzelt.
+- [x] Tarihsel `362ece5e` Ruff 245 bulgusu PR #41 sonrası `develop` `935bc1c5` için ortadan kalktı. Ubuntu ve Windows kaynak kalite gate'i Ruff 0.16.8 ile PASS (`38861669606`); eski silinen Agent Core dosyaları artık tarama kapsamının parçası değil.
+- [x] `.github/workflows/ci.yml` PR #41 ile `develop` üzerine geri alındı; GitHub Actions run `38861669606` **4/4 PASS**. Tam GUI/LOCAL_REAL/packaged acceptance ayrıca açık.
+- [x] Güncel `develop` için `ruff check src scripts tests` gate'i Ubuntu+Windows CI'da PASS. Proje genelinde 500 satır sınırı ve GUI mimari uyumluluğunun bağımsız auditi ayrıca açık.
 - [ ] Ubuntu-Test Linux GUI ortamı artık `.tmp` içine kurulu Python **3.14.8**, wxPython **4.3.1+ubuntu2404**, Xvfb ve yerel runtime bağımlılıklarıyla çalışıyor; GTK3 `wx.Frame` smoke'u PASS. Kalan test bulguları 26/27 ve WebView 28/29 PASS ile sınırlı değil: bir POSIX path varsayımı, güncel facade'a uymayan dispatch testi, screen-state readback `None` ve tekrarlanan W19 fixture teardown SIGSEGV var (ayrıntı Linux VM devam kaydında).
 - [ ] Windows PySide6 test bağımlılığı/opsiyonel bağımlılık çözümünü güncel release preflight runner'ında doğrula.
 - [ ] macOS test başarısızlıklarını macOS ortamında gider ve doğrula.
@@ -221,6 +236,8 @@
 
 ## Şimdi yürütülecek sıra
 
-1. İzlenen kaynak dosyalarına göre Ruff bulgularını ayrıştır ve gerçek CI kapsamını belirle.
-2. Uygulama kodu ve testlerindeki güvenli, anlamlı lint düzeltmelerinden başla.
-3. Platform ve GUI doğrulamalarını uygun Windows/Linux/macOS ortamlarında, her sonucu tam commit ve artifact kimliğine bağlayarak ilerlet.
+1. W55/W16: takip dalı CI PASS sonucunu al; aynı commit'ten Windows11 guest immutable onedir candidate üretip hash/20-check runtime JSON/exit code/WER ve temiz kapanışı tekrar doğrula. Sorun sürerse lifecycle callback kök nedenini ve native stack'i ayrı düzelt.
+2. W19 Ubuntu: WebKitGTK CSP `RunScript` readback ve JavaScriptCore SIGSEGV için minimal native repro/stack ile ürün-tarafı düzeltme ve GUI tekrar testini tamamla.
+3. Windows packaged normal başlangıç Connection UIA runner'ını onar ve aynı Candidate üzerinde gerçek açılış doğrula.
+4. Bölünmüş GUI ve SSH/SFTP/Slurm/transfer suite, LOCAL_REAL, %100/%150/%200 DPI, erişilebilirlik, Linux/macOS paketleri için güncel HEAD test matrisi tamamla.
+5. Immutable artifact/SHA/SBOM, iki bağımsız audit, freeze/release gate PASS ve açık yayın izni tamamlanmadan V2 COMPLETED deme.

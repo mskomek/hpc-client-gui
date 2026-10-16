@@ -31,6 +31,8 @@ class WxLifecycleController:
         self.shutdown_started = False
         self.cleanup_complete = False
         self.cleanup_timed_out = False
+        # Only callable identity and error type; exception messages may contain secrets.
+        self.cleanup_failures: list[dict[str, str]] = []
 
     def set_splash(self, message: str) -> str:
         self.splash_message = str(message)
@@ -81,11 +83,13 @@ class WxLifecycleController:
 
         complete = True
         for cleanup, worker_safe in reversed(self._cleanup):
+            label = str(getattr(cleanup, "__qualname__", type(cleanup).__name__))
             if not worker_safe:
                 try:
                     cleanup()
-                except Exception:
+                except Exception as exc:
                     complete = False
+                    self.cleanup_failures.append({"callback": label, "error_type": type(exc).__name__})
                 continue
             outcome = {}
             worker = threading.Thread(target=self._run_cleanup, args=(cleanup, outcome), daemon=True)
@@ -94,8 +98,10 @@ class WxLifecycleController:
             if worker.is_alive():
                 complete = False
                 self.cleanup_timed_out = True
+                self.cleanup_failures.append({"callback": label, "error_type": "TimeoutError"})
             elif outcome.get("failed"):
                 complete = False
+                self.cleanup_failures.append({"callback": label, "error_type": outcome["error_type"]})
         self._cleanup.clear()
         self.cleanup_complete = complete
 
@@ -103,9 +109,10 @@ class WxLifecycleController:
     def _run_cleanup(cleanup: Callable[[], None], outcome: dict | None = None) -> None:
         try:
             cleanup()
-        except Exception:
+        except Exception as exc:
             if outcome is not None:
                 outcome["failed"] = True
+                outcome["error_type"] = type(exc).__name__
 
 
 __all__ = ["UpdateProgress", "WxLifecycleController"]
