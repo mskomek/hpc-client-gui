@@ -375,7 +375,11 @@ def test_menu_qt_smoke_offscreen():
 @pytest.mark.audit
 @pytest.mark.wx
 def test_wx_dispatch_uses_host():
-    src = pathlib.Path("src/hpc_gui/wx_shell.py").read_text(encoding="utf-8")
+    root = pathlib.Path(__file__).resolve().parents[1]
+    # The thin wx_shell facade delegates plugin menu ownership to this module.
+    src = (root / "src/hpc_gui/wx_shell_plugins.py").read_text(encoding="utf-8")
+    frame = (root / "src/hpc_gui/wx_shell_frame.py").read_text(encoding="utf-8")
+    assert "bind_plugin_menu(" in frame
     assert "WxPluginMenuHost" in src
     assert "dispatch_plugin_menu_action(action, plugin, host)" in src
     # Legacy fallback must not be used in production wx path
