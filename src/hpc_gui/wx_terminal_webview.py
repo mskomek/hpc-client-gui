@@ -1265,6 +1265,12 @@ class WxTerminalWebViewPanel(wx.Panel if _WX_AVAILABLE else object):  # type: ig
                 pass
             self._subscriber = None
             self._subscribers_list = None
+        # Clear GTK IPC fragments and cached terminal screen immediately.
+        # Both may contain sensitive terminal output; nothing is persisted.
+        self._gtk_commands.clear()
+        self._gtk_inflight = None
+        self._gtk_screen_snapshot = None
+        self._gtk_query_pending = False
         # Clear pending
         self._pending.clear()
         self._pending_bytes = 0
