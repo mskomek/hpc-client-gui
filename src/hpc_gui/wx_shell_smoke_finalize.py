@@ -97,17 +97,30 @@ def finish_packaged_smoke(state, checks, error, output_path, app, wx, frame, ses
     observation["cleanup_failures"] = list(
         getattr(lifecycle, "cleanup_failures", ())
     )
-    # wx.Destroy() is deferred on some platforms. Sample after one bounded
-    # event-loop turn; the parent still requires a zero exit and no timeout.
+    # A wx.Frame with child WebView2 controllers may survive multiple idle
+    # turns after Destroy() is requested. Never treat the request as a PASS:
+    # probe actual removal, with a finite 1.3 s budget (100 + 24 * 50 ms).
+    max_probes = 25
+
     def observe_destroy_and_exit():
-        observation["frame_destroyed"] = _frame_destroyed(wx, frame)
+        count = int(observation.get("frame_destroy_poll_count", 0)) + 1
+        observation["frame_destroy_poll_count"] = count
+        gone = _frame_destroyed(wx, frame)
+        observation["frame_destroyed"] = gone
+        if not gone and count < max_probes:
+            try:
+                wx.CallLater(50, observe_destroy_and_exit)
+                return
+            except Exception:
+                # Missing native timer: keep FAIL and stop after persistence.
+                pass
+        observation["frame_destroy_budget_exhausted"] = not gone
         write_payload()
         app.ExitMainLoop()
 
     try:
         wx.CallLater(100, observe_destroy_and_exit)
     except Exception:
-        # Missing timer/event loop is not a PASS: the registry decides.
         observe_destroy_and_exit()
     try:
         wx.CallLater(2000, app.ExitMainLoop)
