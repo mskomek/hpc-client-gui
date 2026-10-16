@@ -12,12 +12,12 @@
 - [x] Tarihsel Ruff hatalarını oluşturan emekli Agent Core kodları (4 script + 4 test) kaldırıldı; iki gerçek F841 düzeltildi. Kaynak CI 4/4 PASS.
 - [x] POSIX path ve wx plugin owner statik testleri düzeltildi; Ubuntu+Windows'ta hedefli iki test PASS.
 - [x] `tests/test_wx_a11y.py` sahte `IsShown() or True` olumlaması kaldırıldı; GUI a11y kabulü ayrıca açık.
-- [ ] **W55/W16 clean_shutdown:** Bu takip dalında `clean_shutdown` ilk değerinin `FAIL` yerine `PENDING` olması, olmayan `wx.IsDestroyed` çağrısının kaldırılması ve 100ms deferred registry gözlemi kodlandı; headless pozitif/negatif shutdown testleri CI'ye eklendi; `WxLifecycleController` artık başarısız cleanup callback adını ve yalnızca exception sınıfını (`cleanup_failures`) runtime JSON'a taşıyor, gizli exception mesajlarını taşımıyor. Henüz yeni Windows11 immutable Candidate / packaged 20/20 / native WER PASS kanıtı yok.
+- [ ] **W55/W16 clean_shutdown:** Bu takip dalında `clean_shutdown` ilk değerinin `FAIL` yerine `PENDING` olması, olmayan `wx.IsDestroyed` çağrısının kaldırılması ve 100ms deferred registry gözlemi kodlandı; headless pozitif/negatif shutdown testleri CI'ye eklendi; `WxLifecycleController` artık başarısız cleanup callback adını ve yalnızca exception sınıfını (`cleanup_failures`) runtime JSON'a taşıyor, gizli exception mesajlarını taşımıyor. Headless source/contract CI `38862771589` (HEAD `1a2bc1514a2f6cdc468a17fa4e40bd39c988567c`) Ubuntu+Windows **4/4 PASS**; yeni Windows11 immutable Candidate / packaged 20/20 / native WER PASS kanıtı **yok**.
 - [ ] **W19/Linux:** WebKitGTK CSP `RunScript` readback ve `libjavascriptcoregtk-4.1.so.0` SIGSEGV hâlâ açık. Headless CI bu alanı kapsamıyor.
 - [ ] **Windows UIA:** Normal packaged Connection startup runner kanıtı eksik (önceden proses başlamadan runner hatası).
 - [ ] **Tam V2:** LOCAL_REAL, full GUI suite, Windows/Linux/macOS paketler, DPI/accessibility, artifact+SHA, çift audit, freeze ve release açık.
 
-**Kanıt ayrımı:** Bu takip dalındaki W55 değişiklikleri CI tamamlanmadan doğrulanmış sayılmaz; CI PASS olsa bile native packaged smoke doğrulaması zorunludur.
+**Kanıt ayrımı:** W55 source/contract doğrulaması `1a2bc151` üzerinde 4/4 PASS ile sonuçlandı. Bu native shutdown başarı kanıtı değildir; yeni immutable Windows11 packaged smoke ve WER doğrulaması zorunludur.
 
 ### Yeniden audit — 2026-10-15, güncel `develop` `ea27d75c`
 
