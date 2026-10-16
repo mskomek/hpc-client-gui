@@ -1,5 +1,30 @@
 # HPC Client GUI V2 — Kalan İşler
 
+## Güncel yerel non-interactive kampanya — 2026-10-16
+
+Kaynak: `origin/develop` `062773261040fe3d3194c64ab74e461e14609481`; çalışma dalı `codex/v2-noninteractive-completion`. Kullanıcının kirli ana checkout'u değiştirilmedi; ayrı worktree kullanıldı. Bu kampanyada yerel commit'ler `32c174cba96c93e1e94c4e02b69b94c25372c295` ve `0e3e555bcaa820dc2274aa65a97b93537f818ac8`; GitHub'a push yapılmadı.
+
+Durum sözlüğü: **COMPLETED** = exact source/artifact üzerinde kanıt var; **PARTIAL** = uygulandı, matris veya bağımsız kanıt eksik; **BLOCKED** = ortam/bağımlılık engeli kanıtlandı; **FAILED** = çalıştırılan test başarısız; **PENDING** = henüz yürütülmedi.
+
+| Alan | Güncel durum | Kanıt ve kalan iş |
+|---|---|---|
+| Terminal IPC, CSP ve içerik mahremiyeti | **COMPLETED (hedefli)** | `32c174c` Ubuntu 24.04.5 üzerinde WebKitGTK terminal/fragment suite 42/42, davranış suite 19/19 ve W19 GDB lifecycle 20/20 PASS; inferior normal çıktı. Fragment queue 2 MiB / 4096-entry limitli; output tekrar gönderimi kapalı; ACK timeout/retry, sıra ve per-panel channel testleri eklendi. CSP `script-src 'self'`, `connect-src 'none'` korunuyor; URL/history'den terminal fragment kaldırılıyor. Geniş/high-volume soak ve gerçek ağ reconnect acceptance **PARTIAL/PENDING**. Kanıt `.tmp/evidence-linux-v2-32c174cb/`. |
+| Ubuntu onedir Candidate | **COMPLETED (smoke)** | `32c174c` onedir tar SHA-256 `7c5b7e585b6817e598f200c397a051f6a8294dfecb2a2d4b8d3b763094362978`, 254 dosya; Linux packaged CLI, doctor ve GUI startup smoke PASS. |
+| Ubuntu `.deb` | **COMPLETED (build/extract smoke)** | `0e3e555` kaynak kimliğiyle `.deb` üretildi, SHA-256 `dae29a464d8195cbeb88ae9dbee40cc9d1f64b92692f22b3beb62ab0b5073424`, 152,519,014 byte. `dpkg-deb -I`/contents doğrulandı; extracted packaged binary, Xvfb altında `linux_release_smoke.py --gui` PASS. Kontrol açıklamasındaki eski PySide6 ibaresi wxPython/WebKitGTK olarak düzeltildi. `.deb` root yetkisi olmadan kurulmadı; gerçek kurulum/upgrade/rollback **PENDING**. |
+| Ubuntu AppImage / Flatpak | **BLOCKED** | Paylaşımlı Ubuntu-Test VM'de `appimagetool`, `flatpak` ve `flatpak-builder` yok; VM'ye sistem paketi kurma yetkisi kullanılmadı. CI/Docker release builder hattında artifact üretme ve smoke kanıtı gerekli. |
+| Windows onedir Candidate | **COMPLETED (host smoke)** | `32c174c` kaynaklı EXE SHA-256 `10ea19d78d48667393dac2f5ade4aa0d8254ef5170e21bbe47760505f754b9bf`; smoke 20/20 PASS, `clean_shutdown` PASS. Manifest/log `.tmp/evidence-windows-v2-32c174cb/`. |
+| Windows 11 guest | **PARTIAL** | Canonical runner `test\\home` oturumunda aynı EXE SHA ile `version` CLI çalıştı (exit 0, timeout yok, cleanup tamam). Bu GUI/UIA, WER lifecycle veya guest packaged full smoke değildir. Normal GUI başlangıç/UIA otomasyonu kanıtı eksik; eski runner geçici görev çakışması raporu var. |
+| Ortak regresyonlar | **PARTIAL; geniş koşu FAILED** | `32c174c` Windows broad release suite **3020 PASS / 32 SKIP / 39 deselected / 49 FAIL** (1024.77 sn). Üç stale WebView/test path/facade varsayımı düzeltildi ve ilgili hedefli grup 25/25 geçti; geniş suite düzeltmelerden sonra yeniden çalıştırılmadı. Bu nedenle tüm suite **FAILED (yeniden doğrulama gerekli)**; kalan hataları yalnızca ortam kaynaklı sayma. FTP 168, transfer cancel 4, editor 14, remote listing 8 ve ilgili Jobs/transfer hedefli testleri PASS. Gerçek HPC LOCAL_REAL credential/endpoint kullanılmadı; uzak sistem davranışı bu kanıtta yok. |
+| Kaynak mimarisi | **COMPLETED (değişen kapsam)** | Agent Core `validate-source-architecture.py --scope changed` her iki commit'te 0 limit aşımı / 0 dependency error verdi. Linux release validation ayrıştırmasından sonra `release_linux.py` 477 satır (uyarı bandı). Tüm proje kapsamlı taraması mevcut legacy dosyalardaki 500+ LOC ihlalleri nedeniyle **FAILED**; bunlar bu değişikliğin tamamlanmış kapısı değildir ve ayrı modülerleştirme işi olarak kalır. |
+| Güvenlik, SBOM ve release integrity | **PARTIAL** | Strict CSP regression testleri ve candidate SHA/manifest kanıtları var. Linux `.deb` SHA sabit; Windows EXE SHA sabit. İki bağımsız audit katmanı, tam CI matrisi, tüm formatlar için imzalı/hash'li manifest ve release preflight henüz tamamlanmadı. |
+| V2 acceptance | **PENDING** | Otomatik hedefli doğrulama ilerledi; geniş suite failure/retest, AppImage/Flatpak, Windows guest GUI lifecycle, Linux install/upgrade/rollback ve bağımsız auditler açık. İnteraktif kullanıcı testleri kapsam dışı. V2 **COMPLETED ilan edilmemelidir**. |
+
+### `0e3e555` Linux metadata follow-up
+
+- [x] Debian paket kontrol metni güncel wxPython/WebKitGTK runtime'ını tanımlıyor; release validator yanlış Qt runtime açıklamasını reddediyor. `tests/test_linux_release.py`: 28/28 PASS; Ruff PASS; changed-source architecture PASS.
+- [x] Ubuntu 24.04.5'te yeni kaynak arşivi (`0e3e555` archive SHA-256 `06246dd7ad7fab6a8788286571af99c883a6c1bbe7eb99f85865fa656431d5be`) üzerinden `.deb` üretildi ve extracted packaged smoke PASS oldu. Paket, 32c'den 0e3e'ye değişmeyen onedir ürün içeriğini kullanıyor; metadata/test/release-validator kaynakları 0e3e commit'indendir.
+- [ ] Ubuntu release planı dry-run PASS; tam release artifact seti (AppImage, `.deb`, Flatpak) ve bu formatların CI smoke/hash imzaları henüz yok.
+
 **Audit tarihi:** 2026-10-15  
 **Son uygulama/doğrulama:** 2026-10-16 — PR #44, Ubuntu WebKitGTK + Windows Actions
 **Başlangıç HEAD:** `develop` `b80a06e419fbe77f485b9c5924f1e86c764201f0`
