@@ -337,6 +337,72 @@
     }
   };
 
+  // WebKitGTK disallows wxWebView.RunScript under script-src 'self'.
+  // A local file:// fragment navigates within this existing document;
+  // no script evaluation, network request, or command file is involved.
+  // Commands carry terminal contents briefly in the fragment. Remove it
+  // from browser history immediately, and never echo command arguments.
+  let lastNativeSequence = 0;
+  const nativeCommands = new Set([
+    "hpcWrite", "hpcClear", "hpcPaste", "hpcFocus", "hpcSetFontSize",
+    "hpcFit", "hpcFind", "hpcFindNext", "hpcFindPrev", "hpcGetScreenState",
+  ]);
+
+  function handleNativeFragment() {
+    const hash = window.location.hash || "";
+    if (!hash.startsWith("#hpc=")) return;
+    let msg;
+    try {
+      msg = JSON.parse(decodeURIComponent(hash.slice(5)));
+    } catch (e) {
+      return;
+    }
+    try {
+      window.history.replaceState(null, "", window.location.href.split("#")[0]);
+    } catch (e) {
+      // No URL logging or external navigation even when history is disabled.
+    }
+    if (!msg || !Number.isSafeInteger(msg.seq) ||
+        msg.seq <= lastNativeSequence || !nativeCommands.has(msg.op)) return;
+    lastNativeSequence = msg.seq;
+    const seq = msg.seq;
+    const ack = () => postToPython({ type: "bridge-ack", seq });
+    try {
+      switch (msg.op) {
+        case "hpcWrite":
+          if (typeof msg.arg !== "string") break;
+          terminal.write(msg.arg, ack); // ACK only after buffer update
+          return;
+        case "hpcPaste":
+        case "hpcFind":
+          if (typeof msg.arg !== "string") break;
+          window[msg.op](msg.arg);
+          break;
+        case "hpcSetFontSize":
+          if (!Number.isInteger(msg.arg) || msg.arg < 6 || msg.arg > 32) break;
+          window.hpcSetFontSize(msg.arg);
+          break;
+        case "hpcGetScreenState":
+          postToPython({
+            type: "bridge-response",
+            seq, op: "hpcGetScreenState",
+            value: window.hpcGetScreenState(),
+          });
+          break;
+        default:
+          if (msg.arg !== null) break;
+          window[msg.op]();
+      }
+    } catch (e) {
+      // Invalid native command must not become a successful readback.
+    }
+    ack(); // Release the serial queue even if a command is malformed.
+  }
+  window.addEventListener("hashchange", handleNativeFragment);
+  if ((window.location.hash || "").startsWith("#hpc=")) {
+    handleNativeFragment();
+  }
+
   // Ready handshake — after xterm + fit are initialized
   // Delay slightly to ensure WebView message handler is registered on Python side before posting ready
   setTimeout(() => {
