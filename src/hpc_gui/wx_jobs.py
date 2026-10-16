@@ -2841,7 +2841,9 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
     host.Bind(wx.EVT_ICONIZE, iconized)
     host.bind_host_close(close)
     if lifecycle is not None:
-        lifecycle.register_cleanup(host.Hide)
+        # close() is the single owner of this embedded page's teardown.
+        # A second bound host.Hide cleanup runs after Destroy() and raises
+        # RuntimeError on the deleted wx Panel (W55 packaged shutdown).
         lifecycle.register_cleanup(close)
     subscribe_language_change(refresh_labels)
 
