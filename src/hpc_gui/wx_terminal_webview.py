@@ -1120,16 +1120,32 @@ class WxTerminalWebViewPanel(wx.Panel if _WX_AVAILABLE else object):  # type: ig
 
     def hpc_get_line_text(self, row: int) -> str | None:
         """Read a single line from xterm buffer via JS helper."""
+        if self._gtk_fragment_transport:
+            state = self._gtk_get_snapshot()
+            lines = state.get("lines", []) if state else []
+            if 0 <= int(row) < len(lines) and isinstance(lines[int(row)], dict):
+                return lines[int(row)].get("text")
+            return None
         js = f"window.hpcGetLineText && window.hpcGetLineText({int(row)})"
         return self._run_js_readback(js)
 
     def hpc_get_buffer_text(self) -> str | None:
         """Read all visible+scrollback lines from xterm buffer."""
+        if self._gtk_fragment_transport:
+            state = self._gtk_get_snapshot()
+            if state is None:
+                return None
+            return "\n".join(
+                line.get("text", "") for line in state.get("lines", [])
+                if isinstance(line, dict)
+            )
         js = "window.hpcGetBufferText && window.hpcGetBufferText()"
         return self._run_js_readback(js)
 
     def hpc_get_screen_state(self) -> dict | None:
         """Read full screen state (cursor, buffer type, lines) from xterm."""
+        if self._gtk_fragment_transport:
+            return self._gtk_get_snapshot()
         js = "JSON.stringify(window.hpcGetScreenState && window.hpcGetScreenState())"
         result = self._run_js_readback(js)
         try:
