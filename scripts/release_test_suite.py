@@ -71,7 +71,11 @@ ISOLATED_WIRE_FILES = (
 ISOLATED_NATIVE_GUI_FILES = (
     "tests/test_corrective_jobs_details.py",
     "tests/test_transfer_cancel_recovery.py",
-    "tests/test_wx_terminal_webview.py",
+    "tests/test_wx_terminal_webview_bridge.py",
+    "tests/test_wx_terminal_webview_input.py",
+    "tests/test_wx_terminal_webview_lifecycle.py",
+    "tests/test_wx_terminal_webview_output.py",
+    "tests/test_wx_terminal_webview_readback.py",
     "tests/test_wx_jobs_behavior.py",
     "tests/test_wx_layout_resize.py",
     "tests/test_wx_jobs_files_outputs.py",

@@ -342,7 +342,6 @@
   // no script evaluation, network request, or command file is involved.
   // Commands carry terminal contents briefly in the fragment. Remove it
   // from browser history immediately, and never echo command arguments.
-  let lastNativeSequence = 0;
   const nativeCommands = new Set([
     "hpcWrite", "hpcClear", "hpcPaste", "hpcFocus", "hpcSetFontSize",
     "hpcFit", "hpcFind", "hpcFindNext", "hpcFindPrev", "hpcGetScreenState",
@@ -362,11 +361,21 @@
     } catch (e) {
       // No URL logging or external navigation even when history is disabled.
     }
-    if (!msg || !Number.isSafeInteger(msg.seq) ||
-        msg.seq <= lastNativeSequence || !nativeCommands.has(msg.op)) return;
-    lastNativeSequence = msg.seq;
+    const ack = () => postToPython({ type: "bridge-ack", seq: msg.seq });
+    if (!msg || !Number.isSafeInteger(msg.seq) || !nativeCommands.has(msg.op)
+        || typeof msg.channel !== "string" || !/^[0-9a-f]{32}$/.test(msg.channel)) return;
+    const stored = /^hpc-terminal:([0-9a-f]{32}):(\d+)$/.exec(window.name || "");
+    const lastNativeSequence = stored && stored[1] === msg.channel
+      ? Number(stored[2]) : 0;
+    // A reload may reset page globals while a late fragment is still in flight.
+    // Persist only the random channel and sequence in this WebView context so
+    // the command stays at-most-once without placing terminal data in storage.
+    if (msg.seq <= lastNativeSequence) {
+      ack();
+      return;
+    }
+    window.name = `hpc-terminal:${msg.channel}:${msg.seq}`;
     const seq = msg.seq;
-    const ack = () => postToPython({ type: "bridge-ack", seq });
     try {
       switch (msg.op) {
         case "hpcWrite":

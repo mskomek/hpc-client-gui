@@ -6,10 +6,14 @@ on:
     paths:
       - ".github/workflows/w19-ubuntu-webkit-diagnostic.yml"
       - "src/hpc_gui/wx_terminal_webview.py"
+      - "src/hpc_gui/wx_terminal_fragment_transport.py"
+      - "src/hpc_gui/wx_terminal_fragment_queue.py"
+      - "src/hpc_gui/wx_terminal_webview_io.py"
+      - "src/hpc_gui/wx_terminal_webview_bridge.py"
       - "src/hpc_gui/assets/terminal/wx_index.html"
       - "src/hpc_gui/assets/terminal/wx_bridge.js"
       - "tests/test_w19_connection_lifecycle.py"
-      - "tests/test_wx_terminal_webview.py"
+      - "tests/test_wx_terminal_webview_readback.py"
   workflow_dispatch:
 
 permissions:
@@ -68,7 +72,7 @@ jobs:
           timeout --signal=TERM --kill-after=5s 70s \
             dbus-run-session -- xvfb-run -a -s '-screen 0 1280x900x24' \
             python -m pytest -q -s --tb=short \
-            tests/test_wx_terminal_webview.py::test_wx_terminal_screen_state_readback_and_alternate_buffer \
+            tests/test_wx_terminal_webview_readback.py::test_wx_terminal_screen_state_readback_and_alternate_buffer \
             > .tmp/w19-native/readback.log 2>&1
           readback_rc=$?
           echo "readback_exit=$readback_rc" >> .tmp/w19-native/identity.txt

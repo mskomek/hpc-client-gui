@@ -28,11 +28,13 @@ def test_terminal_control_codes_resize_find_clear_and_font():
 @pytest.mark.wx
 def test_wx_terminal_keeps_ssh_renderer_optional():
     source = Path("src/hpc_gui/wx_terminal.py").read_text(encoding="utf-8")
-    webview = Path("src/hpc_gui/wx_terminal_webview.py").read_text(encoding="utf-8")
+    webview_io = Path("src/hpc_gui/wx_terminal_webview_io.py").read_text(encoding="utf-8")
+    bridge = Path("src/hpc_gui/assets/terminal/wx_bridge.js").read_text(encoding="utf-8")
     assert "from PySide6" not in source and "import wx" in source
     assert "ssh.send_shell_input" in source and "ssh.resize_shell_pty" in source
     assert "wx.ID_CANCEL" in source and "status_disconnected" in source
     assert "lifecycle.register_cleanup(close)" in source
     assert "render_output" in source
     assert "event.ControlDown()" in source and "text.Copy()" in source
-    assert "terminal.write" in webview and "terminal.paste" in webview
+    assert "terminal.write" in bridge and "terminal.paste" in bridge
+    assert "def hpc_write" in webview_io and "def hpc_paste" in webview_io
