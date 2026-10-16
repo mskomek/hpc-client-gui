@@ -4,6 +4,12 @@
 **Başlangıç HEAD:** `develop` `b80a06e419fbe77f485b9c5924f1e86c764201f0`
 **Amaç:** V2 tamamlanması için kalan kod, doğrulama, provider, acceptance ve release işlerini tek yerde izlemek.
 
+### Windows onedir tanı kampanyası — 2026-10-16 (PR #43)
+
+- [x] PR #42 birleşti: `develop` HEAD `2d8a34c920bc771d7c370b4d73236b96c8c56c65`. W55/W16 kaynak düzeltmeleri ve temizleme hata tanıları güncel dalda.
+- [ ] Ayrı PR #43 ile GitHub-hosted `windows-latest` üzerinde Python 3.14 + kilitli PyInstaller ile onedir EXE üretimi, EXE SHA-256/commit manifesti, 20 kontrollü wx packaged SSH/PTY smoke ve sonuç JSON/log/artifact saklama tanı akışı eklendi. **Çalışma/sonuç henüz teyit edilmedi.** Bu release veya Windows11 guest kabulü değildir.
+- [ ] GitHub runner sonucuna göre paket/GUI/hosted-session kusurunu ayır; same-source Windows11 interactive guest'te bağımsız packed 20/20 + WER kontrolü tamamlanana kadar W55 acceptance açık.
+- [ ] W19 Linux WebKitGTK CSP readback + teardown SIGSEGV bu tanı kampanyasının dışında; ayrı native repro gerekiyor.
 ### Güncel ilerleme — 2026-10-16
 
 **Güncel develop:** `935bc1c57b14438d7b657f3c6cddab2328ecc3e2` (PR #41 squash-merge). GitHub Actions run `38861669606`: **4/4 PASS**. Aşağıdaki 15 Ekim raporları tarihsel kayıtlardır; eski 245 Ruff bulgusu güncel HEAD sonucu değildir.
