@@ -7,9 +7,12 @@
 ### Windows onedir tanı kampanyası — 2026-10-16 (PR #43)
 
 - [x] PR #42 birleşti: `develop` HEAD `2d8a34c920bc771d7c370b4d73236b96c8c56c65`. W55/W16 kaynak düzeltmeleri ve temizleme hata tanıları güncel dalda.
-- [ ] Ayrı PR #43 ile GitHub-hosted `windows-latest` üzerinde Python 3.14 + kilitli PyInstaller ile onedir EXE üretimi, EXE SHA-256/commit manifesti, 20 kontrollü wx packaged SSH/PTY smoke ve sonuç JSON/log/artifact saklama tanı akışı eklendi. **Çalışma/sonuç henüz teyit edilmedi.** Bu release veya Windows11 guest kabulü değildir.
-- [ ] GitHub runner sonucuna göre paket/GUI/hosted-session kusurunu ayır; same-source Windows11 interactive guest'te bağımsız packed 20/20 + WER kontrolü tamamlanana kadar W55 acceptance açık.
-- [ ] W19 Linux WebKitGTK CSP readback + teardown SIGSEGV bu tanı kampanyasının dışında; ayrı native repro gerekiyor.
+- [x] **GitHub-hosted Windows onedir paket tanısı 20/20 PASS:** PR #43 head `afdfb2b4b29a4ee5836f7f1dec723d688f5ae621` / workflow checkout PR merge snapshot `7bc405f3b7747545f7cc07f4240c89bae60fee47`; Actions run `38865908045` PASS. Python 3.14.8 + `requirements-release.lock` + PyInstaller onedir; EXE SHA-256 `1b645db42a425b5312dcd1f152e39e1c0c0967d501b6dca67c1b950a34e78d7c`. Packaged loopback SSH/PTY, all 20 smoke checks PASS, child exit 0, frame_destroyed=true, cleanup_callbacks_drained=true, cleanup_failures=[], transport_closed=true, event_loop_exited=true. Candidate ve runtime JSON logları run artifactlerinde yedi gün tutulur. **GitHub-hosted Windows Server 2025 kanıtıdır; Windows11 interactive guest/release kabulü değildir.**
+- [ ] **Windows11 gerçek kullanıcı oturumu acceptance hâlâ açık:** Aynı PR #43 kod kimliğinden Windows11 VM'de immutable onedir build veya hash-eş Windows artifact, WER/native teardown ve canonical interactive 20/20 doğrulanmalı. Hosted Windows 20/20 sonuçları sanal makineyi ikame etmez; PR #43 henüz develop'a birleşmedi.
+- [ ] **W19 Linux açık:** WebKitGTK CSP `RunScript` readback ve `libjavascriptcoregtk-4.1.so.0` native SIGSEGV için Linux GUI/native debugger kanıtı gerekir; CSP'yi `unsafe-eval` ile zayıflatıp PASS sayma.
+- [x] **W55 kapanış zinciri kök neden ve düzeltme:** `src/hpc_gui/wx_jobs.py` eski `host.Hide` cleanup callback'i yıkılmış wx panelde `RuntimeError` üretiyordu; callback kaldırıldı ve cleanup boş hata listesiyle PASS oldu. Son sahte FAIL, silinmiş wx Frame C++ wrapper'ında Python üyelik/eşitlik karşılaştırmasından kaynaklanıyordu; identity ve gerçek C++ silinme işareti ile fail-closed doğrulandı. Bounded 25-poll negative/positive unit regressions PASS.
+- [x] **PR #43 head source CI:** Ubuntu+Windows source quality ve portable tests `38865908160` üzerinde **4/4 PASS** (head `afdfb2b4`).
+
 ### Güncel ilerleme — 2026-10-16
 
 **Güncel develop:** `935bc1c57b14438d7b657f3c6cddab2328ecc3e2` (PR #41 squash-merge). GitHub Actions run `38861669606`: **4/4 PASS**. Aşağıdaki 15 Ekim raporları tarihsel kayıtlardır; eski 245 Ruff bulgusu güncel HEAD sonucu değildir.
