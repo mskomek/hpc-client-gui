@@ -27,6 +27,40 @@ def test_frame_destroyed_requires_removal_from_wx_top_level_registry():
     ) is False
 
 
+def test_deleted_native_wrapper_cannot_trigger_cpp_equality():
+    class DeletedWxFrame:
+        def __eq__(self, _other):
+            raise RuntimeError("C++ wrapper equality must not be called")
+
+        def IsBeingDeleted(self):
+            raise RuntimeError(
+                "wrapped C/C++ object of type Frame has been deleted"
+            )
+
+    frame = DeletedWxFrame()
+    other_window = object()
+    wx = SimpleNamespace(GetTopLevelWindows=lambda: [other_window])
+    assert _frame_destroyed(wx, frame) is True
+    # A still-registered exact wrapper must not pass even if its native
+    # method reports deletion; the registry must have released ownership.
+    registered = SimpleNamespace(GetTopLevelWindows=lambda: [frame])
+    assert _frame_destroyed(registered, frame) is False
+
+
+def test_pending_or_unrelated_native_exception_never_counts_as_destroyed():
+    class PendingFrame:
+        def IsBeingDeleted(self):
+            return True
+
+    class BrokenFrame:
+        def IsBeingDeleted(self):
+            raise RuntimeError("unrelated GTK initialization error")
+
+    wx = SimpleNamespace(GetTopLevelWindows=lambda: [])
+    assert _frame_destroyed(wx, PendingFrame()) is False
+    assert _frame_destroyed(wx, BrokenFrame()) is False
+
+
 def _child_finish(
     tmp_path, *, remove_frame=True, remove_after_polls=None,
     cleanup_complete=True, check="PENDING",
