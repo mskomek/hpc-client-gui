@@ -1037,6 +1037,17 @@ def read_state():
         if state is not None:
             return state
         pump(0.05)
+    # Safe W19 diagnostic: no terminal contents or sensitive session state.
+    for label, script in (
+        ('primitive', '1 + 1'),
+        ('helper_type', 'typeof window.hpcGetScreenState'),
+        ('helper_json', 'JSON.stringify(window.hpcGetScreenState && window.hpcGetScreenState())'),
+    ):
+        try:
+            probe = panel._webview.RunScript(script)
+            print('W19_READBACK_PROBE', label, 'ok=', probe[0] if isinstance(probe, tuple) else type(probe).__name__, 'kind=', type(probe[1]).__name__ if isinstance(probe, tuple) else 'unknown', flush=True)
+        except Exception as exc:
+            print('W19_READBACK_PROBE', label, 'exception=', type(exc).__name__, flush=True)
     raise AssertionError('screen state readback returned None')
 
 try:
