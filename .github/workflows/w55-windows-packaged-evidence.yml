@@ -101,7 +101,7 @@ jobs:
             }
             $line = ($summary | ConvertTo-Json -Compress -Depth 5)
             Write-Host "W55_SHUTDOWN_SUMMARY=$line"
-            Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "```json`n$line`n```"
+            Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value $line
           } else {
             Write-Host "W55_SHUTDOWN_SUMMARY=runtime evidence missing; never PASS"
           }
