@@ -1,10 +1,15 @@
 name: V2 W55 Windows packaged evidence
 
 on:
-  push:
-    branches: [codex/v2-w55-packaged-ci-evidence-20261016]
   pull_request:
     branches: [develop]
+    paths:
+      - ".github/workflows/w55-windows-packaged-evidence.yml"
+      - "src/hpc_gui/wx_jobs.py"
+      - "src/hpc_gui/wx_shell_frame.py"
+      - "src/hpc_gui/wx_shell_smoke_finalize.py"
+      - "src/hpc_gui/wx_lifecycle.py"
+      - "tests/test_wx_smoke_shutdown_contract.py"
   workflow_dispatch:
 
 # Diagnostic validation only. No signing, release creation, publication,
