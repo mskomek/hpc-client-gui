@@ -48,10 +48,12 @@ jobs:
       - name: Install wxPython Ubuntu wheel and targeted test dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install --only-binary=:all: \
-            --find-links https://extras.wxpython.org/wxPython4/extras/linux/gtk3/ubuntu-24.04 \
-            "wxPython==4.3.1" "pytest==9.1.1"
+          # Official Phoenix Ubuntu 24.04 / CPython 3.14 wheel, exact SHA-256
+          # from wxWidgets/Phoenix 4.3.1 release. Do not build a random sdist.
+          python -m pip install --no-deps \
+            'https://github.com/wxWidgets/Phoenix/releases/download/wxPython-4.3.1/wxpython-4.3.1+ubuntu2404-cp314-cp314-linux_x86_64.whl#sha256=03c95c048a7c1ea5ff4cbcb05bf7a1788c9791739d0649b88b57dd461ea5b343'
           python -m pip install -r requirements-release.lock --no-deps
+          python -m pip install "numpy" "pillow" "six"
           python -m pip install --no-deps -e .
           python -c "import wx, wx.html2; print('WX:',wx.version(),'WX_HTML2:',wx.html2.WebView)"
       - name: Capture isolated screen-readback and W19 teardown
