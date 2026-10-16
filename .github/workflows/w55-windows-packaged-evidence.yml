@@ -23,7 +23,7 @@ jobs:
     timeout-minutes: 35
     env:
       PYTHONPATH: src
-      W55_EVIDENCE: ${{ runner.temp }}\\w55-evidence
+      W55_EVIDENCE: .tmp/w55-evidence
     steps:
       - name: Checkout exact candidate source
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -81,7 +81,7 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: w55-evidence-${{ github.sha }}
-          path: ${{ runner.temp }}/w55-evidence/**
+          path: .tmp/w55-evidence/**
           retention-days: 7
           if-no-files-found: warn
       - name: Upload onedir candidate for exact-hash reproduction
