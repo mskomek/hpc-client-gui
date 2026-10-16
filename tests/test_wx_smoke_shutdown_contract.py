@@ -27,11 +27,55 @@ def test_frame_destroyed_requires_removal_from_wx_top_level_registry():
     ) is False
 
 
-def _child_finish(tmp_path, *, remove_frame=True, cleanup_complete=True, check="PENDING"):
+def test_deleted_native_wrapper_cannot_trigger_cpp_equality():
+    class DeletedWxFrame:
+        def __eq__(self, _other):
+            raise RuntimeError("C++ wrapper equality must not be called")
+
+        def IsBeingDeleted(self):
+            raise RuntimeError(
+                "wrapped C/C++ object of type Frame has been deleted"
+            )
+
+    frame = DeletedWxFrame()
+    other_window = object()
+    wx = SimpleNamespace(GetTopLevelWindows=lambda: [other_window])
+    assert _frame_destroyed(wx, frame) is True
+    # A still-registered exact wrapper must not pass even if its native
+    # method reports deletion; the registry must have released ownership.
+    registered = SimpleNamespace(GetTopLevelWindows=lambda: [frame])
+    assert _frame_destroyed(registered, frame) is False
+
+
+def test_pending_or_unrelated_native_exception_never_counts_as_destroyed():
+    class PendingFrame:
+        def IsBeingDeleted(self):
+            return True
+
+    class BrokenFrame:
+        def IsBeingDeleted(self):
+            raise RuntimeError("unrelated GTK initialization error")
+
+    wx = SimpleNamespace(GetTopLevelWindows=lambda: [])
+    assert _frame_destroyed(wx, PendingFrame()) is False
+    assert _frame_destroyed(wx, BrokenFrame()) is False
+
+
+def _child_finish(
+    tmp_path, *, remove_frame=True, remove_after_polls=None,
+    cleanup_complete=True, check="PENDING",
+):
     windows = []
     timers = []
     exits = []
     app_exit_policy = []
+    registry_probes = [0]
+
+    def registered_windows():
+        registry_probes[0] += 1
+        if remove_after_polls is not None and registry_probes[0] >= remove_after_polls:
+            windows.clear()
+        return windows
 
     class Frame:
         def Close(self):
@@ -41,7 +85,7 @@ def _child_finish(tmp_path, *, remove_frame=True, cleanup_complete=True, check="
     frame = Frame()
     windows.append(frame)
     wx = SimpleNamespace(
-        GetTopLevelWindows=lambda: windows,
+        GetTopLevelWindows=registered_windows,
         CallLater=lambda ms, callback: timers.append((ms, callback)),
     )
     app = SimpleNamespace(
@@ -83,8 +127,15 @@ def _child_finish(tmp_path, *, remove_frame=True, cleanup_complete=True, check="
     assert state["done"] is True
     assert app_exit_policy == [False]
     assert timers[0][0] == 100
-    # Deferred registry observation must be persisted before exit.
-    timers[0][1]()
+    # Drain scheduled callbacks in their logical timer order. The native
+    # callback still observes the registry; no mocked PASS is injected.
+    for _ in range(40):
+        if exits:
+            break
+        assert timers, "frame observer must schedule a bounded next step"
+        index = min(range(len(timers)), key=lambda i: timers[i][0])
+        _delay, callback = timers.pop(index)
+        callback()
     assert exits == [True]
     return json.loads(report_path.read_text(encoding="utf-8"))
 
@@ -114,6 +165,22 @@ def test_child_deferred_destroy_and_parent_can_complete_pending_shutdown(tmp_pat
     finalized = _parent_finalize(child)
     assert finalized["checks"]["clean_shutdown"] == "PASS"
     assert finalized["result"] == "PASS"
+
+
+def test_deferred_frame_removal_requires_real_registry_transition(tmp_path):
+    child = _child_finish(tmp_path, remove_frame=False, remove_after_polls=3)
+    assert child["observation"]["frame_destroyed"] is True
+    assert child["observation"]["frame_destroy_poll_count"] == 3
+    assert child["observation"]["frame_destroy_budget_exhausted"] is False
+    assert _parent_finalize(child)["checks"]["clean_shutdown"] == "PASS"
+
+
+def test_frame_remains_live_after_bounded_poll_budget(tmp_path):
+    child = _child_finish(tmp_path, remove_frame=False)
+    assert child["observation"]["frame_destroyed"] is False
+    assert child["observation"]["frame_destroy_poll_count"] == 25
+    assert child["observation"]["frame_destroy_budget_exhausted"] is True
+    assert _parent_finalize(child)["checks"]["clean_shutdown"] == "FAIL"
 
 
 def test_live_frame_or_failed_cleanup_cannot_pass_shutdown(tmp_path):

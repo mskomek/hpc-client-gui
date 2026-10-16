@@ -6,15 +6,33 @@ from pathlib import Path
 
 
 def _frame_destroyed(wx, frame) -> bool:
-    """Observe actual top-level removal, not a pending Destroy() request.
+    """Fail-closed proof that wx removed and deleted the native frame.
 
-    wxPython does not provide wx.IsDestroyed. A still-registered frame must
-    never be reported as destroyed, even if shutdown callbacks have run.
+    wxPython has no wx.IsDestroyed. Python membership on wx frames invokes
+    C++ equality on a deleted wrapper, turning successful cleanup into FAIL.
     """
     try:
-        return frame not in wx.GetTopLevelWindows()
+        # Identity comparison never dispatches into a deleted C++ wrapper.
+        if any(window is frame for window in wx.GetTopLevelWindows()):
+            return False
+        probe = getattr(frame, "IsBeingDeleted", None)
+        if not callable(probe):
+            # Lightweight test doubles have only the authoritative registry.
+            return True
+        probe()
+    except RuntimeError as exc:
+        # Native wrapper deletion is stronger than a scheduled Destroy().
+        # Unrelated GUI/runtime exceptions must NOT count as destruction.
+        description = str(exc)
+        return (
+            "wrapped C/C++ object" in description
+            and "has been deleted" in description
+        )
     except Exception:
         return False
+    # An accessible C++ object is not yet deleted, regardless of Hide/Destroy
+    # requests or a momentary absence from the top-level registry.
+    return False
 
 
 def finish_packaged_smoke(state, checks, error, output_path, app, wx, frame, session_state, lifecycle):
@@ -97,17 +115,45 @@ def finish_packaged_smoke(state, checks, error, output_path, app, wx, frame, ses
     observation["cleanup_failures"] = list(
         getattr(lifecycle, "cleanup_failures", ())
     )
-    # wx.Destroy() is deferred on some platforms. Sample after one bounded
-    # event-loop turn; the parent still requires a zero exit and no timeout.
+    # A wx.Frame with child WebView2 controllers may survive multiple idle
+    # turns after Destroy() is requested. Never treat the request as a PASS:
+    # probe actual removal, with a finite 1.3 s budget (100 + 24 * 50 ms).
+    max_probes = 25
+
     def observe_destroy_and_exit():
-        observation["frame_destroyed"] = _frame_destroyed(wx, frame)
+        count = int(observation.get("frame_destroy_poll_count", 0)) + 1
+        observation["frame_destroy_poll_count"] = count
+        gone = _frame_destroyed(wx, frame)
+        observation["frame_destroyed"] = gone
+        if not gone and count < max_probes:
+            try:
+                wx.CallLater(50, observe_destroy_and_exit)
+                return
+            except Exception:
+                # Missing native timer: keep FAIL and stop after persistence.
+                pass
+        observation["frame_destroy_budget_exhausted"] = not gone
+        # Diagnostic only: actual Destroy() call outcome and native delete
+        # state. These fields do NOT contribute to PASS independently.
+        observation["frame_destroy_invoked"] = bool(
+            getattr(frame, "_wx_shell_destroy_invoked", False)
+        )
+        observation["frame_destroy_return"] = getattr(
+            frame, "_wx_shell_destroy_return", None
+        )
+        observation["frame_destroy_error_type"] = getattr(
+            frame, "_wx_shell_destroy_error_type", None
+        )
+        try:
+            observation["frame_is_being_deleted"] = bool(frame.IsBeingDeleted())
+        except Exception as exc:
+            observation["frame_is_being_deleted"] = type(exc).__name__
         write_payload()
         app.ExitMainLoop()
 
     try:
         wx.CallLater(100, observe_destroy_and_exit)
     except Exception:
-        # Missing timer/event loop is not a PASS: the registry decides.
         observe_destroy_and_exit()
     try:
         wx.CallLater(2000, app.ExitMainLoop)

@@ -1,0 +1,134 @@
+name: V2 W55 Windows packaged evidence
+
+on:
+  pull_request:
+    branches: [develop]
+    paths:
+      - ".github/workflows/w55-windows-packaged-evidence.yml"
+      - "src/hpc_gui/wx_jobs.py"
+      - "src/hpc_gui/wx_shell_frame.py"
+      - "src/hpc_gui/wx_shell_smoke_finalize.py"
+      - "src/hpc_gui/wx_lifecycle.py"
+      - "tests/test_wx_smoke_shutdown_contract.py"
+  workflow_dispatch:
+
+# Diagnostic validation only. No signing, release creation, publication,
+# auto-merge, or acceptance substitution for an interactive Windows 11 guest.
+permissions:
+  contents: read
+
+concurrency:
+  group: w55-windows-evidence-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-probe:
+    name: Windows onedir candidate and packaged smoke
+    runs-on: windows-latest
+    timeout-minutes: 35
+    env:
+      PYTHONPATH: src
+      W55_EVIDENCE: .tmp/w55-evidence
+    steps:
+      - name: Checkout exact candidate source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Set up Python 3.14
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.14"
+      - name: Install pinned Windows packaging dependencies
+        shell: pwsh
+        run: |
+          python -m pip install -r requirements-release.lock
+          python -m pip install --no-deps -e .
+      - name: Build onedir wx candidate
+        shell: pwsh
+        run: |
+          python -m PyInstaller --noconfirm --clean build/windows/hpc-client-gui.spec
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $exe = "dist/hpc-client-gui/hpc-client-gui.exe"
+          if (-not (Test-Path -LiteralPath $exe -PathType Leaf)) { throw "missing onedir executable" }
+          New-Item -ItemType Directory -Force -Path $env:W55_EVIDENCE | Out-Null
+          $manifest = [ordered]@{
+            schema = "w55-windows-onedir-identity/1"
+            source_commit = (git rev-parse HEAD).Trim()
+            executable = $exe
+            executable_sha256 = (Get-FileHash -LiteralPath $exe -Algorithm SHA256).Hash.ToLowerInvariant()
+            python = (python --version)
+            runner_os = $env:RUNNER_OS
+            runner_name = $env:RUNNER_NAME
+            built_utc = [DateTime]::UtcNow.ToString("o")
+            acceptance_environment = "GITHUB_HOSTED_RUNNER_ONLY_NOT_WINDOWS11_GUEST"
+          }
+          $manifest | ConvertTo-Json -Depth 5 | Set-Content -Encoding utf8 "$env:W55_EVIDENCE/candidate.json"
+          Write-Host "candidate sha256: $($manifest.executable_sha256)"
+      - name: Run real packaged wx smoke with loopback SSH
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path $env:W55_EVIDENCE | Out-Null
+          $exe = "dist/hpc-client-gui/hpc-client-gui.exe"
+          $out = Join-Path $env:W55_EVIDENCE "wx-packaged-smoke.json"
+          $log = Join-Path $env:W55_EVIDENCE "smoke-runner.log"
+          # The child is the built exe; the parent reports its real checks,
+          # exit code, timeout and two-sided SSH/PTY observations.
+          python scripts/wx_packaged_smoke.py --artifact $exe --platform windows --output $out --timeout 90 > $log 2>&1
+          $code = $LASTEXITCODE
+          "exit_code=$code" | Set-Content -Encoding utf8 (Join-Path $env:W55_EVIDENCE "smoke-exit.txt")
+          Get-Content -Path $log -Tail 100
+          if ($code -ne 0) {
+            Write-Host "::error::Windows runner packaged smoke failed. Review uploaded evidence; do not infer guest acceptance."
+            exit $code
+          }
+      - name: Report exact W55 shutdown subchecks
+        if: ${{ always() }}
+        shell: pwsh
+        run: |
+          $parentPath = Join-Path $env:W55_EVIDENCE "wx-packaged-smoke.json"
+          $runtimePath = Join-Path $env:W55_EVIDENCE "wx-packaged-smoke.runtime.json"
+          if ((Test-Path $parentPath) -and (Test-Path $runtimePath)) {
+            $parent = Get-Content -Raw $parentPath | ConvertFrom-Json
+            $runtime = Get-Content -Raw $runtimePath | ConvertFrom-Json
+            $obs = $runtime.observation
+            $summary = [ordered]@{
+              parent_result = $parent.result
+              failed_checks = @($parent.checks.PSObject.Properties | Where-Object { $_.Value -ne "PASS" } | ForEach-Object Name)
+              source_sha = $parent.commit
+              executable_sha256 = $parent.artifact_sha256
+              child_exit_code = $parent.exit_code
+              event_loop_exited = $obs.event_loop_exited
+              transport_closed = $obs.transport_closed
+              cleanup_callbacks_drained = $obs.cleanup_callbacks_drained
+              cleanup_failures = @($obs.cleanup_failures)
+              frame_destroyed = $obs.frame_destroyed
+              frame_destroy_poll_count = $obs.frame_destroy_poll_count
+              frame_destroy_budget_exhausted = $obs.frame_destroy_budget_exhausted
+              frame_destroy_invoked = $obs.frame_destroy_invoked
+              frame_destroy_return = $obs.frame_destroy_return
+              frame_destroy_error_type = $obs.frame_destroy_error_type
+              frame_is_being_deleted = $obs.frame_is_being_deleted
+              child_timed_out = $obs.child_timed_out
+            }
+            $line = ($summary | ConvertTo-Json -Compress -Depth 5)
+            Write-Host "W55_SHUTDOWN_SUMMARY=$line"
+            Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value $line
+          } else {
+            Write-Host "W55_SHUTDOWN_SUMMARY=runtime evidence missing; never PASS"
+          }
+      - name: Upload native smoke diagnostics and candidate identity
+        if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: w55-evidence-${{ github.sha }}
+          path: .tmp/w55-evidence/**
+          retention-days: 7
+          if-no-files-found: warn
+      - name: Upload onedir candidate for exact-hash reproduction
+        if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: w55-onedir-${{ github.sha }}
+          path: dist/hpc-client-gui/**
+          retention-days: 7
+          if-no-files-found: warn

@@ -418,10 +418,11 @@ def create_shell_frame(app=None, *, tray_factory=None, lifecycle=None, session_s
                     child.Close()
                 except Exception:
                     pass
+        frame._wx_shell_destroy_invoked = True
         try:
-            frame.Destroy()
-        except Exception:
-            pass
+            frame._wx_shell_destroy_return = bool(frame.Destroy())
+        except Exception as exc:
+            frame._wx_shell_destroy_error_type = type(exc).__name__
 
     # W55 A1/A2 (HPC-W10-GJ2-029/038): keyboard accelerators for shell
     # navigation. Ctrl+1..7 selects notebook tabs; F1 opens Help. The table
