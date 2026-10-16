@@ -1,6 +1,8 @@
 name: V2 W55 Windows packaged evidence
 
 on:
+  push:
+    branches: [codex/v2-w55-packaged-ci-evidence-20261016]
   pull_request:
     branches: [develop]
   workflow_dispatch:
