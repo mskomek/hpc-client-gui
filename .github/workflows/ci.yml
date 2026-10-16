@@ -66,9 +66,10 @@ jobs:
         run: |
           python -m pip install pytest packaging paramiko cryptography keyring pyftpdlib
           python -m pip install --no-deps -e .
-      - name: Portable path and plugin dispatch regressions
+      - name: Portable path, plugin and shutdown contracts
         run: >-
           python -m pytest
           tests/test_wx_packaged_smoke.py::test_workdir_outside_repo_excludes_repo_tmp
           tests/test_hardening_additional.py::test_wx_dispatch_uses_host
+          tests/test_wx_smoke_shutdown_contract.py
           -q --tb=short
