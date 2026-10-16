@@ -6,6 +6,8 @@ import json
 import os
 from pathlib import Path
 
+import pytest
+
 
 def _root() -> Path:
     override = os.environ.get("W61_1_HANDOFF_ROOT")
@@ -18,6 +20,7 @@ def _section(text: str, heading: str, next_heading: str) -> tuple[str, str]:
     return text[start:end], heading
 
 
+@pytest.mark.artifact_dependent
 def test_w611_rel025_records_the_repaired_documented_cli_entrypoint() -> None:
     root = _root()
     report = (root / "docs/wave-reports/v2/opencode/W61.1_WAVE_REPORT.md").read_text(

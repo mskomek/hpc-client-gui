@@ -5,7 +5,7 @@ import hashlib
 import json
 import pytest
 
-pytestmark = pytest.mark.reporting
+pytestmark = [pytest.mark.reporting, pytest.mark.artifact_dependent]
 
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / "audit" / "current-gui" / "MANIFEST.json"

@@ -358,7 +358,8 @@ def _remote_files_callbacks(session_state, parent, lifecycle):
     def _read_text(path):
         files = _resolve_files()
         if files and hasattr(files, "read_text"):
-            return files.read_text(path)
+            reader = getattr(files, "read_text_for_edit", files.read_text)
+            return reader(path)
         return ""
 
     # Wrap loader/read_text to be callable with path; the remote view will call loader(path)

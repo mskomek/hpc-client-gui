@@ -58,7 +58,7 @@ def _make_editor():
 def test_editor_local_open_save_roundtrip(qapp, tmp_path, monkeypatch):
     target = tmp_path / "case.jou"
     target.write_text("/display set\n", encoding="utf-8")
-    monkeypatch.setattr("hpc_gui.ui.widgets.editor_widget.QMessageBox", FakeBox)
+    monkeypatch.setattr("hpc_gui.ui.widgets.editor_remote_io.QMessageBox", FakeBox)
 
     widget = _make_editor()
     widget.open_local_file(str(target))
@@ -102,7 +102,7 @@ def test_editor_rejects_non_utf8_without_rewriting(qapp, tmp_path):
 def test_editor_remote_save_still_requires_session(qapp, monkeypatch):
     warnings = []
     monkeypatch.setattr(
-        "hpc_gui.ui.widgets.editor_widget.QMessageBox",
+        "hpc_gui.ui.widgets.editor_remote_io.QMessageBox",
         type(
             "Box",
             (),

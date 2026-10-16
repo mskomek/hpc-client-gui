@@ -6,7 +6,7 @@ import pytest
 
 
 def read_wx():
-    return pathlib.Path("src/hpc_gui/wx_shell.py").read_text(encoding="utf-8")
+    return pathlib.Path("src/hpc_gui/wx_shell_frame.py").read_text(encoding="utf-8")
 
 @pytest.mark.audit
 def test_wx_no_shell_command_dump_under_help():
@@ -36,13 +36,13 @@ def test_wx_version_plain_text():
 
 @pytest.mark.audit
 def test_wx_shared_contribution_model():
-    src = read_wx()
+    src = pathlib.Path("src/hpc_gui/wx_shell_plugins.py").read_text(encoding="utf-8")
     assert "collect_plugin_menu_contributions" in src
     assert "ui_contributions" in src or "PluginMenu" in src
 
 @pytest.mark.audit
 def test_wx_no_fake_parity_claims():
-    src = read_wx()
+    src = pathlib.Path("src/hpc_gui/wx_shell_plugins.py").read_text(encoding="utf-8")
     # plugin.open_trusted_tool should be disabled, not claimed working
     assert 'plugin.open_trusted_tool' in src
     assert 'Enable(False)' in src or 'disable' in src.lower()

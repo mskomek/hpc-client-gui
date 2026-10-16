@@ -219,7 +219,7 @@ def test_publish_rebuilds_manifest_after_final_artifact_merge():
 @pytest.mark.semantic
 def test_manual_release_jobs_share_the_release_preflight():
     shared = (ROOT / "scripts" / "release_test_suite.py").read_text(encoding="utf-8")
-    assert '"not packaging"' in shared
+    assert '"not packaging and not artifact_dependent"' in shared
     assert "check_i18n.py" in shared
     assert "smoke_test.py" in shared
     # Wire-heavy suites must stay isolated in their own processes while

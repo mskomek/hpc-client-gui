@@ -16,7 +16,7 @@ The earlier native termination is no longer reproduced by the latest official ru
 | WebView2 after the broad mixed-GUI process | The broad run previously hit heap corruption `0xC0000374` in `test_wx_terminal_external_navigation_blocked`; the exact node and 29-node module pass in isolation, and the terminal neighborhood passed 65 nodes. | `tests/test_wx_terminal_webview.py` runs in its own pytest process. |
 | Embedded TextCtrl fallback | The controls suite had selected WebView2 but asserted the fallback model. Its detached/embedded owner also left a detached frame open. | The fallback suite explicitly disables WebView2, exercises the visible TextCtrl controls, closes the actual detached frame, and passes 9 tests with exit 0. |
 
-The first two are documented native process boundaries, not skipped suites. The Jobs predecessor set is a reproduced candidate rather than a fully minimized polluter; the WebView2 predecessor set is also not fully minimized. Their evidence is in [`native-order-dependence-minimization.json`](../../audit/test-governance/integration-closeout-20260913/native-order-dependence-minimization.json). The ordered current runner groups are in [`release-process-order.json`](../../audit/test-governance/integration-closeout-20260913/release-process-order.json): 2,653 non-packaging nodes across the broad process and five isolated files.
+The first two are documented native process boundaries, not skipped suites. The Jobs predecessor set is a reproduced candidate rather than a fully minimized polluter; the WebView2 predecessor set is also not fully minimized. Their evidence is in ``native-order-dependence-minimization.json`` (local audit evidence path). The ordered current runner groups are in ``release-process-order.json`` (local audit evidence path): 2,653 non-packaging nodes across the broad process and five isolated files.
 
 The remaining broad-run wx error is different from the earlier process termination:
 
@@ -57,7 +57,7 @@ Automatic GitHub Actions CI remains intentionally disabled; `.github/workflows/c
 | Collection errors | 0 |
 | Net change from governance snapshot | +1 |
 
-From the 2,656-node governance mapping, 15 nodeids have truthful successor names and one callback-lifecycle node was added. There are no unmapped removed nodeids. The exact list is in [`collection-delta.json`](../../audit/test-governance/integration-closeout-20260913/collection-delta.json).
+From the 2,656-node governance mapping, 15 nodeids have truthful successor names and one callback-lifecycle node was added. There are no unmapped removed nodeids. The exact list is in ``collection-delta.json`` (local audit evidence path).
 
 | Primary category | Nodes |
 | --- | ---: |

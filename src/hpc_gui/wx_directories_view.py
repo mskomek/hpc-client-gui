@@ -104,7 +104,8 @@ def _build_directories(parent, *, session_state=None, workspace: WxDirectoriesWo
         def read_text(path):
             files = _files()
             if files and hasattr(files, "read_text"):
-                return files.read_text(path)
+                reader = getattr(files, "read_text_for_edit", files.read_text)
+                return reader(path)
             return ""
 
     if operation is None:

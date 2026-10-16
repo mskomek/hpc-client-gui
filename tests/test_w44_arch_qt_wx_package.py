@@ -118,17 +118,13 @@ def test_w44_wx_imports_without_qt_ui_or_pyside():
 
 
 def test_w44_package_hidden_imports_are_intentional():
-    """ARCH-PACKAGE-001: Qt/WebEngine hidden imports ship by dual-runtime decision."""
+    """V2 ships the wx runtime and excludes legacy Qt from production bundles."""
     spec = ROOT / "build" / "windows" / "hpc-client-gui.spec"
     assert spec.is_file(), "windows PyInstaller spec missing"
     text = spec.read_text(encoding="utf-8")
-    for mod in (
-        "PySide6.QtCore",
-        "PySide6.QtWidgets",
-        "PySide6.QtWebEngineCore",
-        "PySide6.QtWebEngineWidgets",
-    ):
-        assert mod in text, f"spec lost required dual-runtime import {mod}"
-    # The spec must carry the W44 audit marker documenting intentional
-    # dual-runtime packaging until the W56 runtime-cutover decision.
-    assert "ARCH-PACKAGE-001" in text, "spec lacks W44 hidden-import audit marker"
+    hidden_imports = text.split("hiddenimports =", 1)[1].split("binaries =", 1)[0]
+    excludes = text.split("excludes =", 1)[1].split("# Files that must never ship", 1)[0]
+    assert "PySide6" not in hidden_imports, "legacy Qt must not be bundled in V2"
+    assert '"PySide6"' in excludes and '"shiboken6"' in excludes
+    decision = (ROOT / "docs" / "decisions" / "V2_RUNTIME_DECISION.md").read_text(encoding="utf-8")
+    assert "wx" in decision.lower() and "pyside6" in decision.lower()

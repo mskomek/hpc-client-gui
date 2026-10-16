@@ -160,17 +160,20 @@ class SSHFilesBackend(FilesBackend):
         entries.sort(key=lambda e: (not e.is_dir, e.name.lower()))
         return entries
     def read_text(self, remote_path: str) -> str:
-        # W29 OUT-005/OUT-013: decoding must never crash the UI and UTF-8
-        # chunk/boundary noise must not corrupt output. Strict decode raised
-        # UnicodeDecodeError on non-UTF8 bytes; replacement keeps the view
-        # truthful and responsive. Errors are translated so missing vs
-        # permission-denied stay typed (OUT-003/OUT-009 vs OUT-010).
+        """Decode remote log/output text with replacement for display."""
+        return self._read_text(remote_path, errors="replace")
+
+    def read_text_for_edit(self, remote_path: str) -> str:
+        """Read editable text strictly to prevent replacement-byte data loss."""
+        return self._read_text(remote_path, errors="strict")
+
+    def _read_text(self, remote_path: str, *, errors: str) -> str:
         with _translate_remote_errors(remote_path):
             sftp = self.ssh.open_transfer_sftp()
             try:
                 with sftp.open(remote_path, "rb") as f:
                     data = f.read()
-                return bytes(data).decode("utf-8", errors="replace")
+                return bytes(data).decode("utf-8", errors=errors)
             finally:
                 sftp.close()
 

@@ -60,10 +60,14 @@ def test_local_file_list_uses_alternating_row_colors(wx_app, tmp_path):
     _wait_for_rows(wx_app, listing, 3)
 
     _assert_zebra_rows(listing)
-    assert listing.GetItem(0).GetImage() == file_type_icon_index("a.py", False)
-    assert listing.GetItem(1).GetImage() == file_type_icon_index("b.txt", False)
-    assert listing.GetItem(2).GetImage() == file_type_icon_index("c.png", False)
-    assert listing.GetItem(3).GetImage() == file_type_icon_index("d-folder", True)
+    # Native list sorting can put directories first; assert each row by its
+    # displayed name rather than relying on platform-specific enumeration.
+    for name in ("a.py", "b.txt", "c.png", "d-folder"):
+        index = listing.FindItem(-1, name)
+        assert index >= 0
+        assert listing.GetItem(index).GetImage() == file_type_icon_index(
+            name, name == "d-folder"
+        )
 
 
 @pytest.mark.gui
