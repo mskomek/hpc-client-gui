@@ -829,8 +829,56 @@ class WxTerminalWebViewPanel(wx.Panel if _WX_AVAILABLE else object):  # type: ig
 
     # ---------- Public API (Python -> JS) ----------
 
+    def _gtk_enqueue(self, method: str, arg=None):
+        """Queue allowlisted commands over a local, non-network file fragment.
+
+        Only one command is in-flight at a time. The URL fragment can contain
+        terminal output and must never be logged or persisted as history.
+        """
+        if self._closed or self._webview is None:
+            return
+        if method in {"hpcWrite", "hpcClear"}:
+            self._gtk_screen_snapshot = None
+            self._gtk_query_pending = False
+        parts = [arg]
+        if method == "hpcWrite" and isinstance(arg, str) and len(arg) > 2048:
+            parts = [arg[i:i + 2048] for i in range(0, len(arg), 2048)]
+        for value in parts:
+            self._gtk_next_seq += 1
+            self._gtk_commands.append((self._gtk_next_seq, method, value))
+        self._gtk_send_next()
+
+    def _gtk_send_next(self):
+        if (self._closed or self._webview is None or self._gtk_inflight is not None
+                or not self._gtk_commands):
+            return
+        seq, method, value = self._gtk_commands.pop(0)
+        self._gtk_inflight = seq
+        try:
+            self._webview.LoadURL(
+                self._gtk_base_url + encode_terminal_fragment(seq, method, value)
+            )
+        except Exception:
+            self._gtk_inflight = None
+            self._gtk_screen_snapshot = None
+            self._gtk_query_pending = False
+
+    def _gtk_get_snapshot(self) -> dict | None:
+        if self._closed or not self._ready:
+            return None
+        if self._gtk_screen_snapshot is None and not self._gtk_query_pending:
+            self._gtk_query_pending = True
+            self._gtk_enqueue("hpcGetScreenState")
+        return self._gtk_screen_snapshot
+
     def _run_js(self, code: str):
         if self._closed or not self._is_parity or self._webview is None:
+            return
+        if self._gtk_fragment_transport:
+            command = parse_terminal_call(code)
+            if command is not None:
+                self._gtk_enqueue(*command)
+            # Never execute unrecognized script under strict page CSP.
             return
         try:
             # Fire-and-forget calls must not synchronously back up WebView2's
