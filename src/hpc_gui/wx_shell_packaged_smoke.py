@@ -29,7 +29,8 @@ def _run_packaged_smoke(app, frame, session_state, output_path, lifecycle=None):
         "pty_resize": "FAIL",
         "remote_file_roundtrip": "FAIL",
         "job_roundtrip": "FAIL",
-        "clean_shutdown": "FAIL",
+        # Await the parent process/transport observer; FAIL is terminal.
+        "clean_shutdown": "PENDING",
         **{name: "FAIL" for name in _PACKAGED_SMOKE_SURFACES},
     }
     state = {
