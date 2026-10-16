@@ -13,6 +13,8 @@ from __future__ import annotations
 
 import json
 import pathlib
+import sys
+from hpc_gui.wx_terminal_url_bridge import encode_terminal_fragment, parse_terminal_call
 from dataclasses import dataclass
 from typing import Any, Callable, Optional
 
@@ -186,6 +188,14 @@ class WxTerminalWebViewPanel(wx.Panel if _WX_AVAILABLE else object):  # type: ig
         self._readiness_timer = None
         self._webview = None
         self._is_parity = False
+        # Linux wx/WebKit rejects RunScript under the page's strict CSP.
+        self._gtk_fragment_transport = sys.platform.startswith("linux")
+        self._gtk_base_url = _wx_index_path().as_uri()
+        self._gtk_commands: list[tuple[int, str, object]] = []
+        self._gtk_next_seq = 0
+        self._gtk_inflight: int | None = None
+        self._gtk_screen_snapshot: dict | None = None
+        self._gtk_query_pending = False
         self._diagnostic_text = ""
         self._webview_failure_stage = "not-created"
         self._webview_failure_detail = ""
@@ -549,6 +559,19 @@ class WxTerminalWebViewPanel(wx.Panel if _WX_AVAILABLE else object):  # type: ig
             if not isinstance(msg, dict):
                 return
             mtype = msg.get("type")
+            if mtype == "bridge-ack":
+                if self._gtk_fragment_transport and msg.get("seq") == self._gtk_inflight:
+                    self._gtk_inflight = None
+                    self._gtk_send_next()
+                return
+            if mtype == "bridge-response":
+                if (self._gtk_fragment_transport
+                        and msg.get("op") == "hpcGetScreenState"
+                        and msg.get("seq") == self._gtk_inflight):
+                    value = msg.get("value")
+                    self._gtk_screen_snapshot = value if isinstance(value, dict) else None
+                    self._gtk_query_pending = False
+                return
             if mtype == "ready":
                 self._on_bridge_ready()
             elif mtype == "input":
