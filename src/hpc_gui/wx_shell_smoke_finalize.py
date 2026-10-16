@@ -93,6 +93,10 @@ def finish_packaged_smoke(state, checks, error, output_path, app, wx, frame, ses
     observation["cleanup_callbacks_drained"] = bool(
         lifecycle.cleanup_complete and not lifecycle.cleanup_timed_out
     )
+    # Diagnostic only: no exception messages, profile names, or credentials.
+    observation["cleanup_failures"] = list(
+        getattr(lifecycle, "cleanup_failures", ())
+    )
     # wx.Destroy() is deferred on some platforms. Sample after one bounded
     # event-loop turn; the parent still requires a zero exit and no timeout.
     def observe_destroy_and_exit():
