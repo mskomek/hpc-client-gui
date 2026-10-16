@@ -60,6 +60,9 @@ jobs:
         shell: bash
         run: |
           mkdir -p .tmp/w19-native
+          # Keep recording both isolated failures instead of stopping on the
+          # first red pytest exit (GitHub uses bash -e by default).
+          set +e
           printf 'source_sha=%s\n' "$(git rev-parse HEAD)" > .tmp/w19-native/identity.txt
           python --version >> .tmp/w19-native/identity.txt
           timeout --signal=TERM --kill-after=5s 70s \
