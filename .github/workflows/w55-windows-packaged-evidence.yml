@@ -76,6 +76,35 @@ jobs:
             Write-Host "::error::Windows runner packaged smoke failed. Review uploaded evidence; do not infer guest acceptance."
             exit $code
           }
+      - name: Report exact W55 shutdown subchecks
+        if: ${{ always() }}
+        shell: pwsh
+        run: |
+          $parentPath = Join-Path $env:W55_EVIDENCE "wx-packaged-smoke.json"
+          $runtimePath = Join-Path $env:W55_EVIDENCE "wx-packaged-smoke.runtime.json"
+          if ((Test-Path $parentPath) -and (Test-Path $runtimePath)) {
+            $parent = Get-Content -Raw $parentPath | ConvertFrom-Json
+            $runtime = Get-Content -Raw $runtimePath | ConvertFrom-Json
+            $obs = $runtime.observation
+            $summary = [ordered]@{
+              parent_result = $parent.result
+              failed_checks = @($parent.checks.PSObject.Properties | Where-Object { $_.Value -ne "PASS" } | ForEach-Object Name)
+              source_sha = $parent.commit
+              executable_sha256 = $parent.artifact_sha256
+              child_exit_code = $parent.exit_code
+              event_loop_exited = $obs.event_loop_exited
+              transport_closed = $obs.transport_closed
+              cleanup_callbacks_drained = $obs.cleanup_callbacks_drained
+              cleanup_failures = @($obs.cleanup_failures)
+              frame_destroyed = $obs.frame_destroyed
+              child_timed_out = $obs.child_timed_out
+            }
+            $line = ($summary | ConvertTo-Json -Compress -Depth 5)
+            Write-Host "W55_SHUTDOWN_SUMMARY=$line"
+            Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "```json`n$line`n```"
+          } else {
+            Write-Host "W55_SHUTDOWN_SUMMARY=runtime evidence missing; never PASS"
+          }
       - name: Upload native smoke diagnostics and candidate identity
         if: ${{ always() }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
