@@ -633,11 +633,23 @@ def test_reconnect_rebinds_all_domains_through_canonical_session(wx_app):
         frame.Close()
 
 
-def test_profile_switch_invalidates_navigation_and_filters():
-    """TODO HPC-W02-TODO-002: stores/filters follow the new profile."""
+def test_profile_switch_invalidates_navigation_and_filters(monkeypatch):
+    """TODO HPC-W02-TODO-002: stores/filters follow the new profile.
+
+    Private navigation state is intentionally unavailable without an OS
+    keyring. The tested boundary is per-profile routing, so provide a fake
+    encrypted-store backend, never weakening production keyring requirements.
+    """
     from hpc_gui.services.remote_navigation_store import navigation_store_for_profile
     from hpc_gui.wx_shell import _remote_files_callbacks
 
+    monkeypatch.setattr(
+        "hpc_gui.services.remote_navigation_store.is_available", lambda: True
+    )
+    monkeypatch.setattr(
+        "hpc_gui.services.remote_navigation_store.load_private_profile_data",
+        lambda profile_id, namespace, default: dict(default),
+    )
     store_a = navigation_store_for_profile("profile-alpha")
     store_b = navigation_store_for_profile("profile-beta")
     assert store_a is not store_b
