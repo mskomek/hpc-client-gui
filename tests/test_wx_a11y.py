@@ -26,7 +26,13 @@ def test_wx_a11y_focus_order_and_labels():
         # Check that main panels have accessible names via labels
         # Files header
         files_page = frame._wx_shell_controls["pages"]["NAV-FILES"]["page"]
-        assert files_page.IsShown() or True
+        files_index = next(
+            (i for i in range(nb.GetPageCount()) if nb.GetPage(i) == files_page), -1
+        )
+        assert files_index >= 0, "Files workspace is not a notebook page"
+        nb.SetSelection(files_index)
+        wx.Yield()
+        assert files_page.IsShownOnScreen(), "Files workspace is not visible after selection"
         # Terminal panel should have find/clear buttons with labels
         term_panel = frame._wx_shell_controls["pages"]["NAV-TERMINAL"]["page"]
         # it is a panel with controls
