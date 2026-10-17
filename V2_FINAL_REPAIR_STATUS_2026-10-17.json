@@ -2,9 +2,9 @@
   "verdict": "V2_FAILED",
   "branch": "codex/v2-master-repair-20261017",
   "initial_head": "79fec4776066d9e0759adcbeb3f90430d4fc0955",
-  "final_head": "79fec4776066d9e0759adcbeb3f90430d4fc0955",
-  "committed": false,
-  "pushed": false,
+  "final_head": "e6440fbb",
+  "committed": true,
+  "pushed": true,
   "worktree_status_entries": 33,
   "architecture_validator": {
     "status": "FAIL",
@@ -101,5 +101,6 @@
     "B": "NOT_RERUN_FOR_FINAL_SOURCE"
   },
   "ruff_current_source": "UNVERIFIED: Python 3.14 environment has no ruff module; prior retained Ruff log predates latest edits.",
-  "main_checkout_status_discrepancy": "UNRESOLVED: recorded 35-to-34 dirty-entry difference; no retained status snapshot examined."
+  "main_checkout_status_discrepancy": "UNRESOLVED: recorded 35-to-34 dirty-entry difference; no retained status snapshot examined.",
+  "delivery_note": "The 33-entry repair snapshot is committed as e6440fbb. User explicitly requested push on 2026-10-17; this supersedes the attachment no-push instruction. Push target: origin/codex/v2-master-repair-20261017."
 }

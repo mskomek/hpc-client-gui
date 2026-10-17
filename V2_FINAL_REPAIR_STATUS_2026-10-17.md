@@ -7,8 +7,8 @@
 - Repair worktree: `D:\Projeler\.tmp\hpc-client-gui\v2-master-repair-20261017`
 - Branch: `codex/v2-master-repair-20261017`
 - Initial HEAD: `79fec4776066d9e0759adcbeb3f90430d4fc0955`
-- Final HEAD: `79fec4776066d9e0759adcbeb3f90430d4fc0955` (no commit)
-- Current worktree: 33 changed/untracked entries; changes are uncommitted.
+- Final source HEAD: `e6440fbb` (`fix: split v2 cli and jobs outputs modules`; based on initial HEAD above).
+- The source snapshot contained 33 changed/untracked entries and is committed as `e6440fbb`.
 - Main checkout was not modified. The previously recorded 35-to-34 dirty-entry discrepancy remains unresolved; no retained status snapshot was examined in this run.
 
 ## Native crash investigation
@@ -54,4 +54,4 @@ See the JSON companion for the exact current validator counts. They are `plugin_
 
 ## Delivery state
 
-This report is a progress/failure record, not a release acceptance claim. The requested release deliverables and gates are incomplete. No commit or push was made. The attached task prompt says “Do not push”; the direct request also asked for a push, so this report is left local pending resolution of that conflict and completion of the required gates.
+This report is a progress/failure record, not a release acceptance claim. The requested release deliverables and gates are incomplete. On 2026-10-17, the user explicitly requested publication, superseding the attachment’s earlier “Do not push” line. The incomplete `V2_FAILED` source snapshot is committed and will be pushed to `origin/codex/v2-master-repair-20261017` with these reports.
