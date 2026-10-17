@@ -240,8 +240,16 @@ def test_wx_editor_dirty_close_save_changes_popup_saves_then_closes(wx_app, monk
     monkeypatch.setattr(wx, "MessageBox", lambda *_args, **_kwargs: wx.YES)
 
     frame.Close()
-    _pump(wx_app, lambda: saved == [("/remote/job.slurm", "popup-approved")])
-    wx.Yield()
+    # The worker appends to ``saved`` before it posts the wx.CallAfter(done)
+    # callback. Waiting only for the append can let this test yield before
+    # the close callback is queued, then poll without servicing the deferred
+    # native destroy. Wait for the GUI completion barrier before yielding.
+    _pump(
+        wx_app,
+        lambda: saved == [("/remote/job.slurm", "popup-approved")]
+        and not frame._wx_editor_state["in_flight"],
+    )
+    wx.SafeYield()
     _pump(wx_app, lambda: not [window for window in wx.GetTopLevelWindows() if window and window.GetTitle() == "job.slurm"])
     assert not model.controller.active.dirty
 

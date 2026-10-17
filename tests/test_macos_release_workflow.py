@@ -234,6 +234,12 @@ def test_manual_release_jobs_share_the_release_preflight():
         assert "python scripts/ci.py release" in block
         assert "unittest discover" not in block
     assert "workflow_dispatch:" in TEXT
+    linux = _job_block("build-linux")
+    assert "libwebkit2gtk-4.1-dev" in linux
+    assert "libgstreamer-plugins-base1.0-dev" in linux
+    assert "dbus-run-session -- xvfb-run" in linux
+    assert "scripts/wx_packaged_smoke.py" in linux
+    assert "linux_release_smoke.py --binary dist/hpc-client-gui/hpc-client-gui --gui" not in linux
     for job in ("build-linux", "build-windows"):
         assert "python scripts/ci.py release" in _job_block(job)
 

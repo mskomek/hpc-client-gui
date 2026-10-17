@@ -38,6 +38,8 @@ class ReleaseTestSuiteTests(unittest.TestCase):
         self.assertEqual(
             ISOLATED_NATIVE_GUI_FILES,
             (
+                "tests/test_w19_connection_gui.py",
+                "tests/test_w19_connection_shell.py",
                 "tests/test_w15_fresh_user_startup.py",
                 "tests/test_wx_w55_shell_soak.py",
                 "tests/test_wx_file_list_zebra.py",

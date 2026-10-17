@@ -3,7 +3,7 @@ Version: <VERSION>
 Section: net
 Priority: optional
 Architecture: amd64
-Depends: libegl1, libgl1, libxkbcommon0, libxcb-xinerama0
+Depends: libegl1, libgl1, libxkbcommon0, libxcb-xinerama0, libwebkit2gtk-4.1-0
 Maintainer: Mehmed Sinan KOMEK <mskomek@users.noreply.github.com>
 Description: SSH + Slurm + file transfer client for Slurm-based HPC systems
  Desktop client for SSH, remote files, Slurm jobs, and optional X11 on

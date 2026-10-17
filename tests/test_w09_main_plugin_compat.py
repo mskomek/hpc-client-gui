@@ -51,14 +51,17 @@ from hpc_gui.services.provider_capabilities import (
 CONTRACT_APP_VERSION = "1.5.9"
 
 # Every registry id whose published payload carries a cluster-profile role.
-# Pinned against plugin checkout f0abb7e7; a newly published provider that
-# is missing here fails CON-W09-004 explicitly instead of silently escaping
-# install/load coverage.
+# Pinned against official plugin checkout 8cce8544; a newly published provider
+# that is missing here fails CON-W09-004 explicitly instead of silently
+# escaping install/load coverage.
 EXPECTED_CLUSTER_PROVIDERS = (
     "org.hpcclient.cineca.leonardo",
+    "org.hpcclient.jsc.juwels",
     "org.hpcclient.lumi",
+    "org.hpcclient.ncsa.delta",
     "org.hpcclient.nersc.perlmutter",
     "org.hpcclient.pawsey.setonix",
+    "org.hpcclient.tacc.frontera",
     "org.hpcclient.tacc.stampede3",
     "org.hpcclient.truba",
 )

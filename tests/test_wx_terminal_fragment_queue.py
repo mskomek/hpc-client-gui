@@ -98,6 +98,57 @@ def test_fragment_queue_is_bounded_and_emits_visible_output_drop_notice():
     assert notice.arg == OUTPUT_LIMIT_NOTICE
 
 
+def test_fragment_queue_accepts_exact_two_mibibytes_then_reports_overflow():
+    queue = TerminalFragmentQueue()
+    # 963 full fragments plus a 1,536-character final fragment. Each of
+    # the 964 queued commands accounts for its 128-byte IPC envelope.
+    exact_payload_chars = 2 * 1024 * 1024 - 964 * 128
+    assert exact_payload_chars == 963 * FRAGMENT_WRITE_CHARS + 1536
+    assert queue.enqueue("hpcWrite", "x" * exact_payload_chars)
+    assert queue.queued_bytes == MAX_QUEUE_BYTES
+    assert queue.queued_entries == 964
+
+    # The next byte exceeds the cap. Stale queued output is replaced with a
+    # bounded visible notice rather than retained past the memory limit.
+    assert not queue.enqueue("hpcWrite", "x")
+    assert queue.queued_entries == 1
+    assert queue.queued_bytes <= MAX_QUEUE_BYTES
+    assert queue.start_next().arg == OUTPUT_LIMIT_NOTICE
+
+
+def test_fragment_queue_accepts_exact_entry_cap_and_rejects_next_command():
+    queue = TerminalFragmentQueue()
+    for _ in range(MAX_QUEUE_ENTRIES):
+        assert queue.enqueue("hpcClear")
+
+    assert queue.queued_entries == MAX_QUEUE_ENTRIES
+    assert queue.queued_bytes == MAX_QUEUE_ENTRIES * 128
+    assert not queue.enqueue("hpcClear")
+    assert queue.queued_entries == MAX_QUEUE_ENTRIES
+    assert queue.queued_bytes == MAX_QUEUE_ENTRIES * 128
+
+
+def test_fragment_queue_drains_high_volume_ansi_unicode_in_order():
+    queue = TerminalFragmentQueue()
+    payload = ("Türkçe 日本語 🙂 \x1b[32mANSI\x1b[0m\r\n" * 16_000)
+
+    assert queue.enqueue("hpcWrite", payload)
+    assert queue.queued_entries <= MAX_QUEUE_ENTRIES
+    assert queue.queued_bytes <= MAX_QUEUE_BYTES
+
+    parts = []
+    sequences = []
+    while (command := queue.start_next()) is not None:
+        parts.append(command.arg)
+        sequences.append(command.seq)
+        assert queue.acknowledge(command.seq)
+
+    assert sequences == sorted(set(sequences))
+    assert "".join(parts) == payload
+    assert queue.queued_entries == 0
+    assert queue.queued_bytes == 0
+
+
 def test_fragment_queue_clears_inflight_and_sensitive_payload_on_reset():
     queue = TerminalFragmentQueue()
     assert queue.enqueue("hpcWrite", "sensitive-output")

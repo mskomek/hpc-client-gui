@@ -69,6 +69,11 @@ ISOLATED_WIRE_FILES = (
 # state is shutting down; mixed GUI runs triggered a Windows native crash,
 # while the module passes in its own process.
 ISOLATED_NATIVE_GUI_FILES = (
+    # W19 GUI fixtures pump wx.Yield() while neighboring mixed-GUI tests can
+    # still own deferred WebView-backed native deletes. The combined process
+    # hit a Windows access violation in that teardown; isolate the GUI files.
+    "tests/test_w19_connection_gui.py",
+    "tests/test_w19_connection_shell.py",
     "tests/test_w15_fresh_user_startup.py",
     "tests/test_wx_w55_shell_soak.py",
     "tests/test_wx_file_list_zebra.py",
@@ -93,6 +98,9 @@ ISOLATED_TEST_NODES = (
 ISOLATED_FILES = ISOLATED_WIRE_FILES + ISOLATED_NATIVE_GUI_FILES
 EVIDENCE_GATED_TESTS = {
     "tests/test_w04_support_freeze.py": "artifacts/v2-final/W04/SUPPORT_MATRIX_FREEZE.md",
+    "tests/test_w04_menu_actions.py": "artifacts/v2-final/W04/SUPPORT_MATRIX_FREEZE.md",
+    "tests/test_w04_file_actions.py": "artifacts/v2-final/W04/SUPPORT_MATRIX_FREEZE.md",
+    "tests/test_w04_about_packaging.py": "artifacts/v2-final/W04/SUPPORT_MATRIX_FREEZE.md",
 }
 
 
