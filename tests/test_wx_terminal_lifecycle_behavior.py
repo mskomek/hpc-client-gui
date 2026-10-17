@@ -1,8 +1,8 @@
 """Behavioral wx terminal regression tests split by stable responsibility."""
 
 from wx_terminal_behavioral_support import (
-    ASSETS, MockScriptEvent, _is_webview_available, _mk_script, _run, _SETUP,
-    pathlib, pytest, textwrap, wx,
+    ASSETS, _is_webview_available, _mk_script, _run, _SETUP,
+    pytest, textwrap, wx,
 )
 
 pytestmark = pytest.mark.wx

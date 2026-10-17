@@ -19,6 +19,9 @@ pytestmark = pytest.mark.wx
 
 from hpc_gui.wx_terminal_webview import _is_webview_available
 
+__all__ = ["_is_webview_available"]
+
+
 ASSETS = pathlib.Path(__file__).parents[1] / "src" / "hpc_gui" / "assets" / "terminal"
 
 
