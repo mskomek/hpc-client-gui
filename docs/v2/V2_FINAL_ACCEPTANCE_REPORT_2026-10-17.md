@@ -16,7 +16,7 @@ Windows broad suite **3052 PASS / 0 FAIL / 2 SKIP / 65 DESELECTED / 29 subtest P
 
 | Alan | Başlangıç | Son durum | Kanıt | Kalan iş |
 |---|---|---|---|---|
-| Git / user changes | Worktree temiz; ana checkout'ta 34 kullanıcı değişikliği korunuyordu. | Test edilen HEAD `e41cb026`; ürün kodu değişmedi. Ana checkout'taki 34 değişiklik korunuyor. | `git status`, branch/log; ana checkout bağımsız kaldı. | Aşağıda kayıtlı yerel rapor/evidence commit ve push durumu. |
+| Git / user changes | Ana checkout ayrıydı; önceki gözlemde 34 status girdisi vardı. | Test edilen HEAD `e41cb026`; ürün kodu değişmedi. Son salt-okunur kontrolde ana checkout'ta 35 status girdisi vardı; hiçbirine dokunulmadı. | `git status`, branch/log; `.tmp/evidence-v2-final-closure/closure-final-identity.json`. | — |
 | Windows broad | Önceki broad kampanyada W37 transient failure vardı; izole testler geçiyordu. | **3052 PASS, 0 FAIL, 2 SKIP, 65 DESELECTED, 29 subtest PASS; exit 0; 1022.09 s.** | `.tmp/evidence-v2-final-closure/release-suite-zero-fail.log`, `.log.exit`, `release-suite-zero-fail-skips.jsonl`; release preflight PASS. POSIX skip'leri Ubuntu'da 2/2 PASS. | 65 deselected test broad kapsamı dışında; interaktif/manual akışlar ayrı. |
 | W37 | Atomic replace sırasında Windows `WinError 5` broad suite'te görülmüştü. | **PASS**; testte config read / replace yarışı giderildi; production retry/sleep eklenmedi. W37 file 8/8 ve broad 0 FAIL. | `w37-race-fix-targeted.log` ve broad log. | — |
 | Architecture / lint | Önceki audit kayıtları eski SHA'lara bağlıydı. | Canonical architecture PASS: 25 source, 0 over-limit, 0 dependency violation; Ruff PASS; `git diff --check` PASS. | `.tmp/evidence-v2-final-closure/architecture-final-acceptance-rerun.json`, Ruff ve diff-check logları. | 400–500 LOC warning'leri ve kapsam dışı legacy borç ayrı kalır. |
@@ -50,4 +50,4 @@ Ubuntu-Test, Ubuntu 24.04'tür. Gerçek Candidate `.deb` kuruldu; apt history in
 
 ## Yerel commitler ve GitHub işlemleri
 
-Mevcut ürün/test commitleri: `32c174c`, `0e3e555`, `b76aa72`, `d31dcb71`, `7b626d29`, `8345c825`, `e41cb026`. Final rapor ve TODO güncellemesi ayrı bir yerel commit olarak kaydedilecek; GitHub'a push, PR merge veya release yapılmayacaktır. Ana checkout'taki 34 kullanıcı değişikliği korunmuştur.
+Mevcut ürün/test commitleri: `32c174c`, `0e3e555`, `b76aa72`, `d31dcb71`, `7b626d29`, `8345c825`, `e41cb026`. Final rapor ve TODO ayrı yerel dokümantasyon commitleri olarak kaydedilmiştir. GitHub'a push, PR merge veya release yapılmamıştır. Ana checkout'taki 35 status girdisi değiştirilmeden bırakılmıştır.
