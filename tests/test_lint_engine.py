@@ -407,7 +407,7 @@ def test_editor_without_linter_shows_no_linter_hint(qapp, monkeypatch):
     widget, FakeBox, shown = _make_dialog_with_box_capture()
     widget.path_in.setText("case.jou")
     widget.text.setPlainText("/display set\n")
-    monkeypatch.setattr("hpc_gui.ui.widgets.editor_widget.QMessageBox", FakeBox)
+    monkeypatch.setattr("hpc_gui.ui.widgets.editor_linting.QMessageBox", FakeBox)
     widget.run_lint()
     assert any(t("editor.lint_ok") in str(args) for _, args in shown)
 
@@ -448,7 +448,7 @@ def test_editor_runs_installed_linter_for_jou_files(qapp, tmp_path, monkeypatch)
         "_show_lint_results",
         lambda path, issues, diagnostics: shown.append((path, issues, diagnostics)),
     )
-    monkeypatch.setattr("hpc_gui.ui.widgets.editor_widget.QMessageBox", FakeBox)
+    monkeypatch.setattr("hpc_gui.ui.widgets.editor_linting.QMessageBox", FakeBox)
 
     widget.path_in.setText("case.jou")
     widget.text.setPlainText("/gui/mesh\n")
@@ -484,7 +484,7 @@ def test_editor_lint_does_not_mutate_file(qapp, tmp_path, monkeypatch):
     target = tmp_path / "case.jou"
     target.write_text("/display set\n", encoding="utf-8")
     widget, FakeBox, _ = _make_dialog_with_box_capture()
-    monkeypatch.setattr("hpc_gui.ui.widgets.editor_widget.QMessageBox", FakeBox)
+    monkeypatch.setattr("hpc_gui.ui.widgets.editor_linting.QMessageBox", FakeBox)
     monkeypatch.setattr(
         widget,
         "_show_lint_results",

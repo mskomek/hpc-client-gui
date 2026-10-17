@@ -25,18 +25,18 @@ class TestQuickTourGhostRemoval:
 
     def test_help_items_tour_is_none(self):
         """help_items['tour'] must be None — no menu item created."""
-        src = pathlib.Path("src/hpc_gui/wx_shell.py").read_text(encoding="utf-8")
+        src = pathlib.Path("src/hpc_gui/wx_shell_frame.py").read_text(encoding="utf-8")
         assert 'help_items["tour"] = None' in src
 
     def test_no_tour_menu_append(self):
         """No Append call creates a visible Quick Tour menu item."""
-        src = pathlib.Path("src/hpc_gui/wx_shell.py").read_text(encoding="utf-8")
+        src = pathlib.Path("src/hpc_gui/wx_shell_frame.py").read_text(encoding="utf-8")
         # The old code did: act_tour = help_menu.Append(wx.ID_ANY, t("menu.quick_tour"))
         assert 'help_menu.Append(wx.ID_ANY, t("menu.quick_tour"))' not in src
 
     def test_no_tour_dispatch_branch(self):
         """The dead APP-QUICKTOUR dispatch branch is removed."""
-        src = pathlib.Path("src/hpc_gui/wx_shell.py").read_text(encoding="utf-8")
+        src = pathlib.Path("src/hpc_gui/wx_shell_dispatch.py").read_text(encoding="utf-8")
         assert 'APP-QUICKTOUR' not in src
 
     def test_tour_menu_item_absent_from_wx_help_menu(self):
@@ -45,7 +45,7 @@ class TestQuickTourGhostRemoval:
         This is the canonical regression test for DEF-W01-001.
         If someone re-adds a visible Quick Tour item, this test catches it.
         """
-        src = pathlib.Path("src/hpc_gui/wx_shell.py").read_text(encoding="utf-8")
+        src = pathlib.Path("src/hpc_gui/wx_shell_frame.py").read_text(encoding="utf-8")
         # Extract the help_menu construction block
         # Look for any Append call within the help_menu block that mentions "tour"
         in_help_menu_block = False
@@ -64,7 +64,7 @@ class TestQuickTourGhostRemoval:
 
     def test_sensitive_tour_lang_guard_is_harmless(self):
         """The language-change guard for tour is safely null-checked."""
-        src = pathlib.Path("src/hpc_gui/wx_shell.py").read_text(encoding="utf-8")
+        src = pathlib.Path("src/hpc_gui/wx_shell_frame.py").read_text(encoding="utf-8")
         # The guard should be: tour_act = help_items.get("tour"); if tour_act: ...
         assert 'help_items.get("tour")' in src or "help_items.get('tour')" in src
 
@@ -117,13 +117,13 @@ class TestWxAboutDialog:
 
     def test_dispatch_about_calls_wx_about(self):
         """APP-ABOUT dispatch in wx_shell.py must call wx_about.show_about."""
-        src = pathlib.Path("src/hpc_gui/wx_shell.py").read_text(encoding="utf-8")
+        src = pathlib.Path("src/hpc_gui/wx_shell_dispatch.py").read_text(encoding="utf-8")
         assert "wx_about" in src
         assert "show_about" in src
 
     def test_dispatch_about_not_messagebox(self):
         """APP-ABOUT dispatch must NOT use wx.MessageBox."""
-        src = pathlib.Path("src/hpc_gui/wx_shell.py").read_text(encoding="utf-8")
+        src = pathlib.Path("src/hpc_gui/wx_shell_dispatch.py").read_text(encoding="utf-8")
         start = src.index('elif command_id == "APP-ABOUT":')
         end = src.index("\n    elif ", start + 1)
         block = src[start:end]

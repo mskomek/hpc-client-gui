@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-SHELL = Path(__file__).resolve().parents[1] / "src" / "hpc_gui" / "wx_shell.py"
+SHELL = Path(__file__).resolve().parents[1] / "src" / "hpc_gui" / "wx_application.py"
 
 
 def test_splash_update_check_has_no_demo_release():

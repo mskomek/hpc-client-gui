@@ -190,6 +190,12 @@ class DebFlatpakTest(unittest.TestCase):
     def test_validate_deb_control_passes(self) -> None:
         rl.validate_deb_control()
 
+    def test_deb_control_describes_current_linux_gui_runtime(self) -> None:
+        control = (rl.DEB_DEF_DIR / "DEBIAN" / "control").read_text(encoding="utf-8")
+        self.assertIn("wxPython", control)
+        self.assertIn("WebKitGTK", control)
+        self.assertNotIn("PySide6", control)
+
     def test_validate_flatpak_manifest_passes(self) -> None:
         rl.validate_flatpak_manifest()
 

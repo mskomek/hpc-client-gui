@@ -8,7 +8,7 @@ The suite mirrors the CI gates:
     * source compilation;
     * i18n drift gate;
     * headless smoke test;
-    * the normal non-packaging pytest suite (``-m "not packaging"``).
+    * source/test contracts (excluding package and supplied-evidence gates).
 
 Usage:
     python scripts/release_test_suite.py [--coverage]
@@ -39,7 +39,7 @@ PYTEST_BASE = (
     "--tb=short",
     "-rf",
     "-m",
-    "not packaging",
+    "not packaging and not artifact_dependent",
     "tests",
 )
 
@@ -69,9 +69,21 @@ ISOLATED_WIRE_FILES = (
 # state is shutting down; mixed GUI runs triggered a Windows native crash,
 # while the module passes in its own process.
 ISOLATED_NATIVE_GUI_FILES = (
+    # W19 GUI fixtures pump wx.Yield() while neighboring mixed-GUI tests can
+    # still own deferred WebView-backed native deletes. The combined process
+    # hit a Windows access violation in that teardown; isolate the GUI files.
+    "tests/test_w19_connection_gui.py",
+    "tests/test_w19_connection_shell.py",
+    "tests/test_w15_fresh_user_startup.py",
+    "tests/test_wx_w55_shell_soak.py",
+    "tests/test_wx_file_list_zebra.py",
     "tests/test_corrective_jobs_details.py",
     "tests/test_transfer_cancel_recovery.py",
-    "tests/test_wx_terminal_webview.py",
+    "tests/test_wx_terminal_webview_bridge.py",
+    "tests/test_wx_terminal_webview_input.py",
+    "tests/test_wx_terminal_webview_lifecycle.py",
+    "tests/test_wx_terminal_webview_output.py",
+    "tests/test_wx_terminal_webview_readback.py",
     "tests/test_wx_jobs_behavior.py",
     "tests/test_wx_layout_resize.py",
     "tests/test_wx_jobs_files_outputs.py",
@@ -79,10 +91,17 @@ ISOLATED_NATIVE_GUI_FILES = (
     "tests/test_wx_jobs_stress.py",
 )
 ISOLATED_TEST_NODES = (
+    "tests/test_wx_terminal_interaction.py::test_header_status_identity_dimensions",
     "tests/test_wx_file_actions_stress.py::test_wx_remote_context_target_stress_uses_real_events",
     "tests/test_wx_shell_p0_stress.py::test_wx_shell_p0_stress_real_wx_paths",
 )
 ISOLATED_FILES = ISOLATED_WIRE_FILES + ISOLATED_NATIVE_GUI_FILES
+EVIDENCE_GATED_TESTS = {
+    "tests/test_w04_support_freeze.py": "artifacts/v2-final/W04/SUPPORT_MATRIX_FREEZE.md",
+    "tests/test_w04_menu_actions.py": "artifacts/v2-final/W04/SUPPORT_MATRIX_FREEZE.md",
+    "tests/test_w04_file_actions.py": "artifacts/v2-final/W04/SUPPORT_MATRIX_FREEZE.md",
+    "tests/test_w04_about_packaging.py": "artifacts/v2-final/W04/SUPPORT_MATRIX_FREEZE.md",
+}
 
 
 COVERAGE_FAIL_UNDER = 65
@@ -117,13 +136,21 @@ def build_commands(*, coverage: bool) -> list[tuple[str, ...]]:
         for path in ISOLATED_FILES
         for argument in ("--ignore", path)
     )
+    blocked_paths = tuple(
+        path
+        for path, prerequisite in EVIDENCE_GATED_TESTS.items()
+        if not (REPO_ROOT / prerequisite).is_file()
+    )
+    evidence_ignores = tuple(
+        argument for path in blocked_paths for argument in ("--ignore", path)
+    )
     deselects = tuple(
         argument
         for nodeid in ISOLATED_TEST_NODES
         for argument in ("--deselect", nodeid)
     )
     commands.append(
-        PYTEST_BASE + ignores + deselects + (COVERAGE_ARGS if coverage else ())
+        PYTEST_BASE + ignores + evidence_ignores + deselects + (COVERAGE_ARGS if coverage else ())
     )
     isolated_selectors = (
         *ISOLATED_TEST_NODES,
@@ -146,6 +173,13 @@ def main(argv: list[str] | None = None) -> int:
         help="add the CI coverage gate flags to the pytest invocation",
     )
     args = parser.parse_args(argv)
+
+    for test_path, prerequisite in EVIDENCE_GATED_TESTS.items():
+        if not (REPO_ROOT / prerequisite).is_file():
+            print(
+                f"[release-test-suite] BLOCKED evidence prerequisite missing: {prerequisite} ({test_path})",
+                flush=True,
+            )
 
     failed_test_partition = 0
     for index, command in enumerate(build_commands(coverage=args.coverage)):

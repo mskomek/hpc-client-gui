@@ -29,15 +29,33 @@ from hpc_gui.wx_terminal_webview import _is_webview_available
 
 def _run_subprocess_test(code_str, timeout=30):
     import os
+    import shutil
     import subprocess
     import sys
+    import tempfile
+    from pathlib import Path
 
     env = os.environ.copy()
     env["PYTHONPATH"] = "src"
-    return subprocess.run(
-        [sys.executable, "-c", code_str],
-        capture_output=True, text=True, timeout=timeout, env=env,
-    )
+    profile_root = Path(".tmp") / "w21-webview2-profiles"
+    profile_root.mkdir(parents=True, exist_ok=True)
+    profile = tempfile.mkdtemp(prefix="w21-", dir=profile_root)
+    # WebView2 children can outlive the test Python process briefly. Give
+    # every subprocess its own user-data directory so one test or unrelated
+    # GUI cannot lock the next WebView2 environment and turn startup into
+    # E_ABORT/APPCRASH.
+    env["WEBVIEW2_USER_DATA_FOLDER"] = profile
+    browser_args = env.get("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS", "").strip()
+    env["WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS"] = (
+        f"{browser_args} --disable-gpu --user-data-dir={profile}"
+    ).strip()
+    try:
+        return subprocess.run(
+            [sys.executable, "-c", code_str],
+            capture_output=True, text=True, timeout=timeout, env=env,
+        )
+    finally:
+        shutil.rmtree(profile, ignore_errors=True)
 
 
 _SETUP = """
@@ -116,11 +134,37 @@ def test_w21_double_close_and_destroy_is_idempotent():
 from hpc_gui.wx_terminal_webview import WxTerminalWebViewPanel
 frame = wx.Frame(None, size=(900, 600))
 panel = WxTerminalWebViewPanel(frame, ssh=FakeSSH())
-panel.close()
-panel.close()
-panel.Destroy()
-frame.Destroy()
-import os; os._exit(0)
+frame.Show()
+import time
+failures = []
+closed_before_ready = []
+started = time.monotonic()
+
+def close_early():
+    try:
+        # Exercise real asynchronous native creation and the supported early
+        # close path while wx still owns the top-level window and event loop.
+        closed_before_ready.append(not panel._ready)
+        panel.close()
+        panel.close()
+        panel.Destroy()
+        # Allow queued WebView2 completion/teardown callbacks to drain before
+        # destroying the owner frame. Immediate os._exit masked these races.
+        wx.CallLater(350, finish)
+    except Exception as exc:
+        failures.append(f"{type(exc).__name__}: {exc}")
+        finish()
+
+def finish():
+    if frame:
+        frame.Destroy()
+    wx.CallAfter(app.ExitMainLoop)
+
+wx.CallLater(20, close_early)
+app.MainLoop()
+assert closed_before_ready == [True], closed_before_ready
+assert not failures, failures
+app.Destroy()
 """
     result = _run_subprocess_test(code)
     assert result.returncode == 0, f"subprocess failed: {result.stdout}\n{result.stderr}"
@@ -137,21 +181,52 @@ def test_w21_disconnect_visible_and_reconnect_fresh_identity():
 from hpc_gui.wx_terminal_webview import WxTerminalWebViewPanel
 frame = wx.Frame(None, size=(900, 600))
 panel = WxTerminalWebViewPanel(frame, ssh=FakeSSH("u1", "h1"))
-assert "u1@h1" in panel._identity_label.GetLabel(), panel._identity_label.GetLabel()
-gen_before = panel._generation
-# Disconnect: write path neutralized, status + identity cleared visibly.
-panel.set_ssh(None)
-assert panel._status_label.GetLabel() != "", "disconnect must stay visible"
-assert panel._identity_label.GetLabel() == "", "identity must clear on disconnect"
-assert panel._handle_input("echo nowhere") is False
-# Reconnect: fresh generation (stale callbacks rejected) + new identity.
-panel.set_ssh(FakeSSH("u2", "h2"))
-assert panel._generation != gen_before, "reconnect must mint a fresh generation"
-assert "u2@h2" in panel._identity_label.GetLabel(), panel._identity_label.GetLabel()
-assert panel._handle_input("echo back") is True
-panel.close()
-frame.Destroy()
-import os; os._exit(0)
+frame.Show()
+import time
+deadline = time.monotonic() + 15
+failures = []
+
+def finish(error=None):
+    if error:
+        failures.append(error)
+    panel.close()
+    frame.Destroy()
+    wx.CallAfter(app.ExitMainLoop)
+
+def exercise_reconnect():
+    if not panel._ready:
+        if time.monotonic() < deadline:
+            wx.CallLater(25, exercise_reconnect)
+            return
+        finish(
+            "WebView2 did not become ready before reconnect: "
+            f"stage={panel._webview_failure_stage} "
+            f"attempts={panel._webview_create_attempts}"
+        )
+        return
+    try:
+        assert "u1@h1" in panel._identity_label.GetLabel(), panel._identity_label.GetLabel()
+        gen_before = panel._generation
+        # Disconnect: write path neutralized, status + identity cleared visibly.
+        panel.set_ssh(None)
+        assert panel._status_label.GetLabel() != "", "disconnect must stay visible"
+        assert panel._identity_label.GetLabel() == "", "identity must clear on disconnect"
+        assert panel._handle_input("echo nowhere") is False
+        # Reconnect: fresh generation (stale callbacks rejected) + new identity.
+        panel.set_ssh(FakeSSH("u2", "h2"))
+        assert panel._generation != gen_before, "reconnect must mint a fresh generation"
+        assert "u2@h2" in panel._identity_label.GetLabel(), panel._identity_label.GetLabel()
+        assert panel._handle_input("echo back") is True
+    except Exception as exc:
+        finish(f"{type(exc).__name__}: {exc}")
+    else:
+        finish()
+
+wx.CallAfter(exercise_reconnect)
+app.MainLoop()
+if failures:
+    raise AssertionError(failures[0])
+app.Destroy()
 """
     result = _run_subprocess_test(code)
     assert result.returncode == 0, f"subprocess failed: {result.stdout}\n{result.stderr}"

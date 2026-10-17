@@ -43,14 +43,22 @@ def parse_terminal_call(code: str) -> tuple[str, object] | None:
     return method, arg
 
 
-def encode_terminal_fragment(seq: int, method: str, arg: object = None) -> str:
+def encode_terminal_fragment(
+    seq: int,
+    method: str,
+    arg: object = None,
+    *,
+    channel: str | None = None,
+) -> str:
     """Encode a whitelisted action in a fragment, never query/path/network."""
     if type(seq) is not int or seq < 1 or method not in _ALLOWED:
         raise ValueError("invalid terminal bridge command")
-    envelope = json.dumps(
-        {"seq": seq, "op": method, "arg": arg},
-        ensure_ascii=True, separators=(",", ":"),
-    )
+    payload = {"seq": seq, "op": method, "arg": arg}
+    if channel is not None:
+        if not re.fullmatch(r"[0-9a-f]{32}", channel):
+            raise ValueError("invalid terminal bridge channel")
+        payload["channel"] = channel
+    envelope = json.dumps(payload, ensure_ascii=True, separators=(",", ":"))
     return "#hpc=" + quote(envelope, safe="")
 
 

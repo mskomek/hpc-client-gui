@@ -227,8 +227,8 @@ class TestContextMenuEventWiring:
         assert len(model.clipboard) == 1, "Clipboard should have one item"
         assert model.clipboard_move is True, "Should be move (cut)"
 
-    def test_context_menu_copy_path(self, wx_app, tmp_path):
-        """Copy Path menu item should copy path to clipboard."""
+    def test_context_menu_copy_path(self, wx_app, tmp_path, monkeypatch):
+        """Copy Path routes the selected path to the clipboard adapter."""
         (tmp_path / "path_test.txt").write_text("content", encoding="utf-8")
 
         frame = _local(wx_app, tmp_path)
@@ -236,15 +236,23 @@ class TestContextMenuEventWiring:
         _pump(wx_app, lambda: listing.GetItemCount() == 1)
         listing.Select(0)
 
+        class ClipboardBoundary:
+            text = None
+
+            def Open(self):
+                return True
+
+            def SetData(self, data):
+                self.text = data.GetText()
+                return True
+
+            def Close(self):
+                pass
+
+        clipboard = ClipboardBoundary()
+        monkeypatch.setattr(wx, "TheClipboard", clipboard)
         _context_action(listing, t("dirs.copy_path"))
-        data = wx.TextDataObject()
-        try:
-            assert wx.TheClipboard.Open()
-            assert wx.TheClipboard.GetData(data)
-            assert data.GetText() == str((tmp_path / "path_test.txt").resolve())
-        finally:
-            if wx.TheClipboard.IsOpened():
-                wx.TheClipboard.Close()
+        assert clipboard.text == str((tmp_path / "path_test.txt").resolve())
 
     def test_background_new_folder_wired(self, wx_app, tmp_path, monkeypatch):
         """Background New Folder should create folder in current directory."""

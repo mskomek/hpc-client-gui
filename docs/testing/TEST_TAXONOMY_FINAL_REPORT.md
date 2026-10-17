@@ -2,14 +2,14 @@
 
 Status: Packet O DONE; the integration-closeout and remediation lines were consolidated and finally validated on 2026-09-14. Post-consolidation census: **2,661 collected**, every node with exactly one primary category, **zero-primary 0**, **multi-primary 0**, warnings 0, and strict zero-debt RATCHET PASS. Both the normal and coverage release suites exit 0 on this state (see the post-consolidation section at the end). The historical 2,656-node / six-exception and 2,657/2,658 census sections below are retained as history.
 
-See [TEST_SUITE_INTEGRATION_CLOSEOUT_2026-09-13.md](TEST_SUITE_INTEGRATION_CLOSEOUT_2026-09-13.md) and [the strict ratchet baseline](../../audit/test-governance/integration-closeout-20260913/taxonomy-ratchet-strict.json) for the closeout evidence and the post-consolidation report artifact.
+See [TEST_SUITE_INTEGRATION_CLOSEOUT_2026-09-13.md](TEST_SUITE_INTEGRATION_CLOSEOUT_2026-09-13.md) and `the strict ratchet baseline` (local audit evidence path) for the closeout evidence and the post-consolidation report artifact.
 
 Frozen baseline: `12ce79935bf076e1062c57dc7dbd148bad2bfae1`
 Taxonomy snapshot SHA: `d83b76beff24ae9810f3db64611eab351bd93a02`
 Governance branch: `test-suite-governance-20260912`
 Integration-remediation starting HEAD: `70e6005d`. At that checkpoint, `origin/test-suite-governance-20260912` was `18e59fff3d8ebfa47666347a0d9cfc4d137b43c1` and `origin/develop` was at the frozen baseline. The earlier governance push was complete; the subsequent local remediation commits were pending push.
 
-This report uses actual pytest collection and `iter_markers()` data. It does not use the Phase 1 heuristic proposal as marker truth. The per-node machine mapping, exact removal evidence, and all marker/qualifier values are in [`taxonomy-final-mapping.json`](../../audit/test-taxonomy/taxonomy-final-mapping.json).
+This report uses actual pytest collection and `iter_markers()` data. It does not use the Phase 1 heuristic proposal as marker truth. The per-node machine mapping, exact removal evidence, and all marker/qualifier values are in ``taxonomy-final-mapping.json`` (local audit evidence path).
 
 ## Final taxonomy
 
@@ -66,7 +66,7 @@ The six zero-primary nodes are retained baseline-failure exceptions. No marker w
 | Unchanged exact nodeids | 2,620 |
 | Net collection change | -15 |
 
-The 38 current additions comprise 19 new nodes plus 19 renamed successors. The 53 absent frozen nodeids comprise 19 renamed predecessors plus 34 deletions. The full baseline list remains [`nodeids.txt`](../../audit/archive/12ce7993/test-suite-baseline/nodeids.txt).
+The 38 current additions comprise 19 new nodes plus 19 renamed successors. The 53 absent frozen nodeids comprise 19 renamed predecessors plus 34 deletions. The full baseline list remains ``nodeids.txt`` (local audit evidence path).
 
 ### Added nodes
 

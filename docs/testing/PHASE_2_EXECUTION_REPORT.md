@@ -27,7 +27,7 @@ The seven known isolated baseline failures are:
 - `tests/test_wx_packaged_smoke.py::test_packaged_wx_smoke_gate_reports_critical_stages`
 - `tests/test_gui_audit_screenshots.py::test_manifest_exists_and_commit_current`
 
-The archive is [audit/archive/12ce7993/test-suite-baseline](../../audit/archive/12ce7993/test-suite-baseline/). It contains `README.md`, `baseline.json`, `nodeids.txt`, `inventory-enriched.json`, `proposed-taxonomy-heuristic.json`, `lane-inventory.json`, `duration-partial.json`, and `static-findings.json`. The baseline JSON is schema version 1 and leaves unavailable full-suite totals null.
+The archive is `audit/archive/12ce7993/test-suite-baseline` (local audit evidence path). It contains `README.md`, `baseline.json`, `nodeids.txt`, `inventory-enriched.json`, `proposed-taxonomy-heuristic.json`, `lane-inventory.json`, `duration-partial.json`, and `static-findings.json`. The baseline JSON is schema version 1 and leaves unavailable full-suite totals null.
 
 ## Packet B — taxonomy and REPORT checker
 
@@ -39,9 +39,9 @@ REPORT counts actual pytest markers; it never assigns a primary by filename or h
 
 ## Packet C — ratchet and lane comparison
 
-The local RATCHET mode compares actual marker state against [taxonomy-ratchet.json](../../audit/archive/12ce7993/test-suite-baseline/taxonomy-ratchet.json), refreshed only after reviewed classification and deletion work. Its exact legacy zero-primary allowlist is currently 791 nodes after 1,703 reviewed Packet M nodes (1,691 classified and 12 deliberate false/skip gates), anchored to the pre-K committed state; it fails on any new zero-primary nodeid or any multi-primary item. Classified and deleted nodeids are removed from the allowlist. REPORT remains non-gating, and RATCHET is not wired into CI.
+The local RATCHET mode compares actual marker state against `taxonomy-ratchet.json` (local audit evidence path), refreshed only after reviewed classification and deletion work. Its exact legacy zero-primary allowlist is currently 791 nodes after 1,703 reviewed Packet M nodes (1,691 classified and 12 deliberate false/skip gates), anchored to the pre-K committed state; it fails on any new zero-primary nodeid or any multi-primary item. Classified and deleted nodeids are removed from the allowlist. REPORT remains non-gating, and RATCHET is not wired into CI.
 
-The selector comparison is [lane-comparison-phase2.json](../../audit/archive/12ce7993/test-suite-baseline/lane-comparison-phase2.json). It applies recorded file and marker selectors to pytest collection records and their actual markers. All frozen lane counts reproduced. Current broad release selectors collect 2,682 nodes: 2,671 frozen non-packaging nodes plus 11 checker audit tests. The explicit CI and archived lanes retain their frozen counts, including 54 nodes in each release macOS architecture list.
+The selector comparison is `lane-comparison-phase2.json` (local audit evidence path). It applies recorded file and marker selectors to pytest collection records and their actual markers. All frozen lane counts reproduced. Current broad release selectors collect 2,682 nodes: 2,671 frozen non-packaging nodes plus 11 checker audit tests. The explicit CI and archived lanes retain their frozen counts, including 54 nodes in each release macOS architecture list.
 
 | Selector | Frozen | Current | Zero-primary | Audit |
 | --- | ---: | ---: | ---: | ---: |

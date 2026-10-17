@@ -6,11 +6,22 @@ import os
 from pathlib import Path
 
 from hpc_gui.wx_shell_fresh_smoke import _run_fresh_user_acceptance
+from hpc_gui.wx_shell_smoke_terminal_finish import finish_terminal_acceptance_phase
 from hpc_gui.wx_shell_smoke_session import _connect_packaged_smoke_session
 from hpc_gui.wx_shell_smoke_contract import (
     _PACKAGED_SMOKE_CONTROL_SURFACES, _PACKAGED_SMOKE_SURFACES,
 )
 from hpc_gui.wx_shell_smoke_finalize import finish_packaged_smoke as _finish_packaged_smoke
+
+
+def _send_linux_smoke_text(keyboard, wx_module, text):
+    """Type ASCII through wx key events for GTK builds lacking Text(str)."""
+    sent = True
+    for character in text:
+        keycode = ord(character.lower()) if character.isalpha() else ord(character)
+        modifiers = wx_module.MOD_SHIFT if character.isupper() else wx_module.MOD_NONE
+        sent = bool(keyboard.Char(keycode, modifiers)) and sent
+    return bool(sent and keyboard.Char(wx_module.WXK_RETURN))
 
 
 def _run_packaged_smoke(app, frame, session_state, output_path, lifecycle=None):
@@ -29,6 +40,7 @@ def _run_packaged_smoke(app, frame, session_state, output_path, lifecycle=None):
         "pty_resize": "FAIL",
         "remote_file_roundtrip": "FAIL",
         "job_roundtrip": "FAIL",
+        "reconnect_fresh_identity": "FAIL",
         # Await the parent process/transport observer; FAIL is terminal.
         "clean_shutdown": "PENDING",
         **{name: "FAIL" for name in _PACKAGED_SMOKE_SURFACES},
@@ -383,7 +395,9 @@ def _run_packaged_smoke(app, frame, session_state, output_path, lifecycle=None):
                     state["input_diagnostic"]["sendinput_events"] = int(sent)
                 else:
                     keyboard = wx.UIActionSimulator()
-                    input_sent = keyboard.Text("echo PACKAGED-PTY") and keyboard.Char(wx.WXK_RETURN)
+                    input_sent = _send_linux_smoke_text(
+                        keyboard, wx, "echo PACKAGED-PTY"
+                    )
             except Exception as exc:
                 finish(f"keyboard_input:{type(exc).__name__}:{exc}")
                 return
@@ -464,18 +478,9 @@ def _run_packaged_smoke(app, frame, session_state, output_path, lifecycle=None):
                     state["phase"] = 4
             elif state["phase"] == 4:
                 if screen and screen.get("bufferType") == "normal" and "PACKAGED-NORMAL" in buffer and "PACKAGED-ALT" not in buffer:
-                    transfer_panel = session_state.get("embedded_transfers_panel")
-                    queue = getattr(transfer_panel, "_wx_transfer_controls", {}).get("queue") if transfer_panel else None
-                    item = state.get("transfer_item")
-                    state["queue_count"] = queue.GetItemCount() if queue is not None else None
-                    state["queue_text"] = queue.GetItemText(0) if queue is not None and queue.GetItemCount() else None
-                    if queue is None or queue.GetItemCount() < 1 or queue.GetItemText(0) != item.src:
-                        retry()
-                        return
-                    checks["transfer_queue_render"] = "PASS"
-                    checks["terminal_readback"] = "PASS"
-                    state["result"] = "PASS"
-                    finish()
+                    finish_terminal_acceptance_phase(
+                        state, checks, session_state, frame, lifecycle, panel, retry, finish
+                    )
                     return
         except Exception as exc:
             finish(type(exc).__name__)

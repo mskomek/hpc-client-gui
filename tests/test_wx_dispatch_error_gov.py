@@ -357,8 +357,12 @@ def test_settings_apply__staging_failure__coded_error_no_ok(wx_app, monkeypatch)
 def test_settings_apply__success__ok_without_error(wx_app, monkeypatch):
     """Happy-path guard: a clean Apply still reports "OK" with no error code."""
     from hpc_gui.wx_settings import WxSettingsModel
+    import hpc_gui.wx_settings as settings_module
 
-    model = WxSettingsModel({})
+    # Isolate the success-reporting boundary from a machine's active profile.
+    # Persistence success/failure is covered by W37's storage integration tests.
+    model = WxSettingsModel({}, apply=lambda _snapshot: None)
+    monkeypatch.setattr(settings_module, "persist_transfer_checksum_to_storage", lambda _model: True)
     monkeypatch.setattr(wx, "CallAfter", lambda func, *a, **k: func(*a, **k))
     capture = _MessageBoxCapture(monkeypatch)
     parent, host = _build_settings_host(model)

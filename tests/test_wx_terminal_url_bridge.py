@@ -52,6 +52,34 @@ def test_strict_page_csp_and_no_remote_ipc():
     assert "https%3A" in fragment
 
 
+def test_webkit_fragment_handler_acknowledges_duplicate_without_replaying_data():
+    from pathlib import Path
+
+    bridge = Path(__file__).parents[1] / "src/hpc_gui/assets/terminal/wx_bridge.js"
+    source = bridge.read_text(encoding="utf-8")
+    duplicate = source.index("if (msg.seq <= lastNativeSequence)")
+    apply = source.index("window.name = `hpc-terminal:${msg.channel}:${msg.seq}`")
+    assert duplicate < apply
+    assert "ack();\n      return;" in source[duplicate:apply]
+    assert "window.history.replaceState" in source
+    assert "msg.arg" not in source[source.index("const stored =") : apply]
+    assert "console.log" not in source and "console.debug" not in source
+
+
+def test_terminal_fragment_channel_is_metadata_only_and_validated():
+    channel = "a" * 32
+    fragment = encode_terminal_fragment(4, "hpcWrite", "terminal text", channel=channel)
+    envelope = json.loads(unquote(fragment.removeprefix("#hpc=")))
+    assert envelope == {
+        "seq": 4, "op": "hpcWrite", "arg": "terminal text", "channel": channel,
+    }
+
+    import pytest
+
+    with pytest.raises(ValueError):
+        encode_terminal_fragment(4, "hpcWrite", "x", channel="terminal text")
+
+
 def test_reject_untrusted_action_envelope():
     import pytest
 

@@ -84,6 +84,7 @@ class TestPluginManifestUnicode:
             scheduler="slurm",
             storage=(
                 {
+                    "id": "scratch",
                     "label": "Çalışma Alanı",
                     "path": "/scratch/çalışmalar/日本語",
                     "kind": "scratch",
@@ -357,6 +358,7 @@ class TestIntegration:
             "scheduler": "slurm",
             "storage": [
                 {
+                    "id": "scratch",
                     "label": "Çalışma Alanı",
                     "path": "/scratch/çalışmalar/日本語",
                     "kind": "scratch",

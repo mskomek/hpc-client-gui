@@ -57,7 +57,7 @@ class EditorFlowTests(unittest.TestCase):
         QMessageBox.warning = staticmethod(lambda *a, **k: QMessageBox.StandardButton.Ok)
         QMessageBox.critical = staticmethod(lambda *a, **k: QMessageBox.StandardButton.Ok)
         self._history_patch = patch(
-            "hpc_gui.ui.widgets.editor_widget.append_event"
+            "hpc_gui.ui.widgets.editor_remote_io.append_event"
         )
         self._history_patch.start()
 

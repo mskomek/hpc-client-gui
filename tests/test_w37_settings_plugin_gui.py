@@ -178,11 +178,12 @@ def test_w37_wx_apply_event_persists_to_storage(isolated_config, monkeypatch):
         controls["checksum"].SetValue(True)
         click = wx.CommandEvent(wx.EVT_BUTTON.typeId, controls["apply"].GetId())
         controls["apply"].GetEventHandler().ProcessEvent(click)
-        ok = _wait_until(
-            lambda: storage.get_transfer_checksum_verification_enabled() is True,
-            timeout=8.0,
-        )
-        assert ok, "Apply event never persisted transfer_checksum to storage"
+        # The worker performs an atomic config replacement before posting the
+        # success dialog. Wait for that completion signal instead of repeatedly
+        # opening config.json while Windows is replacing it.
+        ok = _wait_until(lambda: calls["ok"] == 1, timeout=8.0)
+        assert ok, "Apply event never reported successful persistence"
+        assert storage.get_transfer_checksum_verification_enabled() is True
         for _ in range(5):
             _pump(wx)
         assert calls["ok"] == 1  # success dialog only on the persisted path

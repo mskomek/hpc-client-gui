@@ -83,7 +83,7 @@ def test_w55_shell_tab_and_help_accelerators():
     frame.Show()
     wx.Yield()
     try:
-        from hpc_gui import wx_shell as _wx_shell_mod
+        from hpc_gui import wx_shell_frame as _wx_shell_mod
 
         table = frame.GetAcceleratorTable()
         assert table is not None and table.IsOk(), "shell frame must carry an AcceleratorTable"

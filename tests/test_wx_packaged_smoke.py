@@ -80,6 +80,43 @@ def _runner_module():
     return runner
 
 
+def test_linux_onedir_artifact_command_accepts_extensionless_binary():
+    runner = _runner_module()
+    artifact = Path("dist/hpc-client-gui/hpc-client-gui")
+    assert runner._artifact_command(artifact, "linux") == [str(artifact), "--wx-smoke"]
+
+
+def test_windows_artifact_command_rejects_extensionless_binary():
+    runner = _runner_module()
+    with pytest.raises(ValueError, match="unsupported windows artifact type"):
+        runner._artifact_command(Path("dist/hpc-client-gui/hpc-client-gui"), "windows")
+
+
+def test_linux_smoke_input_uses_character_events_for_ascii_text():
+    from hpc_gui.wx_shell_packaged_smoke import _send_linux_smoke_text
+
+    class FakeWx:
+        MOD_NONE = 0
+        MOD_SHIFT = 1
+        WXK_RETURN = 13
+
+    class FakeKeyboard:
+        def __init__(self):
+            self.events = []
+
+        def Char(self, keycode, modifiers=0):
+            self.events.append((keycode, modifiers))
+            return True
+
+    keyboard = FakeKeyboard()
+
+    assert _send_linux_smoke_text(keyboard, FakeWx, "echo PACKAGED-PTY") is True
+    assert keyboard.events == [
+        (ord(char.lower()), FakeWx.MOD_SHIFT if char.isupper() else FakeWx.MOD_NONE)
+        for char in "echo PACKAGED-PTY"
+    ] + [(FakeWx.WXK_RETURN, FakeWx.MOD_NONE)]
+
+
 def _stub(tmp_path, monkeypatch, *, payload=None, exit_code=0, sleep=0):
     artifact = tmp_path / "stub-artifact.py"
     artifact.write_text(STUB_ARTIFACT, encoding="utf-8")

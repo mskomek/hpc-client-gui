@@ -64,6 +64,7 @@ def test_wx_a11y_focus_order_and_labels():
 
 @pytest.mark.audit
 @pytest.mark.regression
+@pytest.mark.artifact_dependent
 def test_wx_a11y_terminal_limits_documented():
     import pathlib
     p = pathlib.Path("audit/A11Y_AUDIT.md")

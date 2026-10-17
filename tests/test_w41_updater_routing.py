@@ -152,14 +152,16 @@ def test_single_authoritative_controller(monkeypatch):
     import inspect
     import pathlib
 
-    src = pathlib.Path("src/hpc_gui/wx_shell.py").read_text(encoding="utf-8")
-    assert "def run_wx_update_check" in src
-    block_start = src.find('command_id == "APP-UPDATE-CHECK"')
+    dispatch = pathlib.Path("src/hpc_gui/wx_shell_dispatch.py").read_text(encoding="utf-8")
+    settings = pathlib.Path("src/hpc_gui/wx_shell_settings.py").read_text(encoding="utf-8")
+    events = pathlib.Path("src/hpc_gui/wx_shell_window_events.py").read_text(encoding="utf-8")
+    assert "def run_wx_update_check" in settings
+    block_start = dispatch.find('command_id == "APP-UPDATE-CHECK"')
     assert block_start != -1
-    block = src[block_start : src.find("\n    elif ", block_start)]
+    block = dispatch[block_start : dispatch.find("\n    elif ", block_start)]
     assert "run_wx_update_check" in block, "dispatch must call the shared controller"
     # The shell _on_update handler must delegate (no divergent worker copy).
-    on_update = src[src.find("def _on_update") : src.find("def _on_plugins")]
+    on_update = events[events.find("def _on_update") : events.find("def _on_plugins")]
     assert "run_wx_update_check" in on_update
     assert "get_latest_release" not in on_update, "duplicate worker copy forbidden"
     assert callable(wx_shell.run_wx_update_check)

@@ -41,7 +41,7 @@ class EditorShortcutSafetyTests(unittest.TestCase):
         self.editor.text.setPlainText("echo new")
         requested = []
         self.editor.run_in_terminal_requested.connect(requested.append)
-        with patch("hpc_gui.ui.widgets.editor_widget.Path.write_text"):
+        with patch("hpc_gui.ui.widgets.editor_remote_io.Path.write_text"):
             self.editor.save_path(run_in_terminal=True)
         self.assertEqual(requested, ["C:/work/run.sh"])
         self.assertFalse(self.editor._is_document_modified(self.editor._current_document()))

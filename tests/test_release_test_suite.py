@@ -1,6 +1,7 @@
 from contextlib import redirect_stderr, redirect_stdout
 from io import StringIO
 import unittest
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
@@ -10,6 +11,7 @@ from scripts.release_test_suite import (
     ISOLATED_NATIVE_GUI_FILES,
     ISOLATED_TEST_NODES,
     ISOLATED_WIRE_FILES,
+    EVIDENCE_GATED_TESTS,
     PREFLIGHT_COMMANDS,
     build_commands,
     main,
@@ -36,8 +38,18 @@ class ReleaseTestSuiteTests(unittest.TestCase):
         self.assertEqual(
             ISOLATED_NATIVE_GUI_FILES,
             (
+                "tests/test_w19_connection_gui.py",
+                "tests/test_w19_connection_shell.py",
+                "tests/test_w15_fresh_user_startup.py",
+                "tests/test_wx_w55_shell_soak.py",
+                "tests/test_wx_file_list_zebra.py",
                 "tests/test_corrective_jobs_details.py",
-                "tests/test_wx_terminal_webview.py",
+                "tests/test_transfer_cancel_recovery.py",
+                "tests/test_wx_terminal_webview_bridge.py",
+                "tests/test_wx_terminal_webview_input.py",
+                "tests/test_wx_terminal_webview_lifecycle.py",
+                "tests/test_wx_terminal_webview_output.py",
+                "tests/test_wx_terminal_webview_readback.py",
                 "tests/test_wx_jobs_behavior.py",
                 "tests/test_wx_layout_resize.py",
                 "tests/test_wx_jobs_files_outputs.py",
@@ -47,6 +59,9 @@ class ReleaseTestSuiteTests(unittest.TestCase):
         )
         broad = next(command for command in commands if "--ignore" in command)
         self.assertIn("--deselect", broad)
+        for path, prerequisite in EVIDENCE_GATED_TESTS.items():
+            if not (Path(__file__).resolve().parents[1] / prerequisite).is_file():
+                self.assertIn(path, broad)
         for nodeid in ISOLATED_TEST_NODES:
             self.assertIn(nodeid, broad)
         for path in (*ISOLATED_WIRE_FILES, *ISOLATED_NATIVE_GUI_FILES):

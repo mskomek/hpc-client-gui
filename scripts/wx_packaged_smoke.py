@@ -44,6 +44,7 @@ REQUIRED_CHECKS = (
     "pty_resize",
     "remote_file_roundtrip",
     "job_roundtrip",
+    "reconnect_fresh_identity",
     "files_surface",
     "editor_surface",
     "jobs_surface",
@@ -56,6 +57,15 @@ REQUIRED_CHECKS = (
     "transfer_queue_render",
     "clean_shutdown",
 )
+
+
+def _artifact_command(artifact: Path, platform_name: str) -> list[str]:
+    """Build the packaged runtime command for the platform artifact layout."""
+    if artifact.suffix == ".py":
+        return [sys.executable, str(artifact), "--wx-smoke"]
+    if artifact.suffix == ".exe" or (platform_name == "linux" and not artifact.suffix):
+        return [str(artifact), "--wx-smoke"]
+    raise ValueError(f"unsupported {platform_name} artifact type: {artifact.suffix or '<no suffix>'}")
 
 
 def run_packaged_smoke(artifact: Path, platform_name: str, output: Path, timeout: int = 25) -> dict:
@@ -75,6 +85,10 @@ def run_packaged_smoke(artifact: Path, platform_name: str, output: Path, timeout
         checks = {k: "FAIL" for k in REQUIRED_CHECKS}
         result = "FAIL"
     else:
+        # The child runs from a disposable working directory. Resolve the
+        # candidate before constructing its command so relative CLI paths do
+        # not become invalid after the cwd changes (notably in guest runs).
+        artifact = artifact.resolve()
         # The artifact owns the runtime probe.  No source import or --help heuristic counts as evidence.
         env = {k: v for k, v in os.environ.items()}
         env.pop("PYTHONPATH", None)
@@ -85,12 +99,7 @@ def run_packaged_smoke(artifact: Path, platform_name: str, output: Path, timeout
             env[temp_var] = str(TEMP_ROOT)
         try:
             loopback_root, loopback_server, loopback_user, loopback_password = _start_loopback_ssh(output)
-            if artifact.suffix == ".py":
-                cmd = [sys.executable, str(artifact), "--wx-smoke"]
-            elif artifact.suffix == ".exe":
-                cmd = [str(artifact), "--wx-smoke"]
-            else:
-                raise ValueError(f"unsupported artifact type: {artifact.suffix}")
+            cmd = _artifact_command(artifact, platform_name)
             env["HPC_GUI_PACKAGED_SMOKE_OUTPUT"] = str(runtime_output.resolve())
             env["HPC_GUI_PACKAGED_SMOKE_SSH_HOST"] = "127.0.0.1"
             env["HPC_GUI_PACKAGED_SMOKE_SSH_PORT"] = str(loopback_server.port)

@@ -61,7 +61,12 @@ def _pump(app, predicate, timeout=3):
 
 def _shell(app):
     tray = _Tray(None)
-    frame, lifecycle, session = create_shell_frame(app, tray_factory=lambda _parent: tray)
+    # Match the production entrypoint: the terminal WebView mounts after the
+    # shell is stable, so rapid open/close stress does not abort dozens of
+    # uninitialized WebView2 controllers unrelated to shell teardown.
+    frame, lifecycle, session = create_shell_frame(
+        app, tray_factory=lambda _parent: tray, defer_terminal_webview=True
+    )
     frame.Show()
     return frame, lifecycle, session, tray
 

@@ -53,13 +53,7 @@ def test_referenced_local_files_exist() -> None:
 
 
 def test_agent_guidance_points_at_single_authority() -> None:
-    # AGENTS.md is intentionally local-only (gitignored); the public
-    # contribution workflow lives in CONTRIBUTING.md.
-    agents = ROOT / "AGENTS.md"
-    if agents.exists():
-        text = agents.read_text(encoding="utf-8")
-        assert "rules.md" in text
-    rules = (ROOT / "rules.md").read_text(encoding="utf-8")
-    assert "pull request" in rules.lower()
+    # Local AGENTS.md/rules.md overlays are deliberately not tracked. The
+    # public, clean-checkout authority must be self-contained.
     contributing = (ROOT / "CONTRIBUTING.md").read_text(encoding="utf-8")
     assert "pull request" in contributing.lower()

@@ -11,7 +11,6 @@ ACTIVE_WORKFLOW = ROOT / ".github" / "workflows" / "ci.yml"
 
 
 def test_archived_macos_matrix_covers_both_native_architectures():
-    assert not ACTIVE_WORKFLOW.exists(), "automatic CI is intentionally disabled"
     text = ARCHIVED_WORKFLOW.read_text(encoding="utf-8")
     assert "name: macOS (${{ matrix.arch }})" in text
     assert "os: macos-15" in text
@@ -20,12 +19,17 @@ def test_archived_macos_matrix_covers_both_native_architectures():
     assert "arch: x86_64" in text
     assert "fail-fast: false" in text
     assert "python scripts/ci.py macos" in text
+    active = ACTIVE_WORKFLOW.read_text(encoding="utf-8")
+    assert "os: [ubuntu-latest, windows-latest]" in active
+    assert "macos" not in active.lower()
 
 
 def test_archived_macos_job_has_no_release_upload_or_signing_step():
-    assert not ACTIVE_WORKFLOW.exists(), "automatic CI is intentionally disabled"
     text = ARCHIVED_WORKFLOW.read_text(encoding="utf-8")
     macos_block = text.split("  macos:\n", 1)[1].split("  windows:\n", 1)[0]
     assert "actions/upload-release-asset" not in macos_block
     assert "notarytool" not in macos_block
     assert "codesign" not in macos_block
+    active = ACTIVE_WORKFLOW.read_text(encoding="utf-8")
+    assert "release.yml" not in active
+    assert "upload-release-asset" not in active

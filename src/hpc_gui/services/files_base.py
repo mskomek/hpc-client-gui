@@ -45,6 +45,15 @@ class FilesBackend(ABC):
     def read_text(self, remote_path: str) -> str:
         raise NotImplementedError
 
+    def read_text_for_edit(self, remote_path: str) -> str:
+        """Read text for an editor without altering undecodable source bytes.
+
+        Backends that replace invalid bytes for log/output display override
+        this method with strict decoding so an accidental save cannot corrupt
+        the original file.
+        """
+        return self.read_text(remote_path)
+
     @abstractmethod
     def write_text(self, remote_path: str, text: str) -> None:
         raise NotImplementedError
