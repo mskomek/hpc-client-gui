@@ -47,7 +47,8 @@ def _isolated_cli_config(tmp_path):
     unaffected.
     """
     with patch(
-        "hpc_gui.config.storage._config_path", return_value=tmp_path / "config.json"
+        "hpc_gui.config._storage_core._config_path",
+        return_value=tmp_path / "config.json",
     ):
         yield
 

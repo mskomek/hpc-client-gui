@@ -17,7 +17,7 @@ class FtpWidgetTests(FtpWidgetTestCase):
     @pytest.mark.contract
     @pytest.mark.regression
     def test_sbatch_follow_mode_settings_migrate_and_persist(self) -> None:
-        from hpc_gui.config import storage
+        from hpc_gui.config import _storage_preferences as storage
 
         with patch.object(storage, "load_settings", return_value={
             "focus_jobs_outputs_after_submission_enabled": False,
@@ -313,7 +313,7 @@ class FtpWidgetTests(FtpWidgetTestCase):
             self.assertIn(".slurm", dialog.file_associations_list.item(0).text())
             dialog.file_associations_list.setCurrentRow(0)
             with patch(
-                "hpc_gui.ui.dialogs.settings_dialog.clear_file_association",
+                "hpc_gui.ui.dialogs._settings_dialog_actions.clear_file_association",
                 return_value={},
             ) as clear_assoc:
                 dialog._clear_selected_file_association()

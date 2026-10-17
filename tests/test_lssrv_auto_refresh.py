@@ -7,7 +7,7 @@ import time
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -18,6 +18,7 @@ from PySide6.QtCore import QThreadPool
 from PySide6.QtWidgets import QApplication
 
 from hpc_gui.config import storage
+from hpc_gui.config import _storage_core
 from hpc_gui.ui.widgets.jobs_outputs_widget import JobsOutputsWidget
 
 
@@ -64,29 +65,43 @@ class LssrvAutoRefreshTests(unittest.TestCase):
 
     def setUp(self):
         self.interval = patch(
-            "hpc_gui.ui.widgets.jobs_outputs_widget."
-            "get_jobs_outputs_refresh_interval_seconds",
+            "hpc_gui.ui.widgets._jobs_outputs_live.get_jobs_outputs_refresh_interval_seconds",
             return_value=23,
         )
-        self.enabled = patch(
-            "hpc_gui.ui.widgets.jobs_outputs_widget."
-            "get_lssrv_auto_refresh_enabled",
-            return_value=False,
+        self.enabled_mock = Mock(return_value=False)
+        self.squeue_enabled_mock = Mock(return_value=False)
+        self.sacct_enabled_mock = Mock(return_value=False)
+        self.enabled_lifecycle = patch(
+            "hpc_gui.ui.widgets._jobs_outputs_lifecycle.get_lssrv_auto_refresh_enabled",
+            new=self.enabled_mock,
         )
-        self.squeue_enabled = patch(
-            "hpc_gui.ui.widgets.jobs_outputs_widget."
-            "get_squeue_auto_refresh_enabled",
-            return_value=False,
+        self.enabled_live = patch(
+            "hpc_gui.ui.widgets._jobs_outputs_live.get_lssrv_auto_refresh_enabled",
+            new=self.enabled_mock,
         )
-        self.sacct_enabled = patch(
-            "hpc_gui.ui.widgets.jobs_outputs_widget."
-            "get_sacct_auto_refresh_enabled",
-            return_value=False,
+        self.squeue_lifecycle = patch(
+            "hpc_gui.ui.widgets._jobs_outputs_lifecycle.get_squeue_auto_refresh_enabled",
+            new=self.squeue_enabled_mock,
         )
+        self.squeue_live = patch(
+            "hpc_gui.ui.widgets._jobs_outputs_live.get_squeue_auto_refresh_enabled",
+            new=self.squeue_enabled_mock,
+        )
+        self.sacct_lifecycle = patch(
+            "hpc_gui.ui.widgets._jobs_outputs_lifecycle.get_sacct_auto_refresh_enabled",
+            new=self.sacct_enabled_mock,
+        )
+        self.sacct_live = patch(
+            "hpc_gui.ui.widgets._jobs_outputs_live.get_sacct_auto_refresh_enabled",
+            new=self.sacct_enabled_mock,
+        )
+        for patcher in (
+            self.enabled_lifecycle, self.enabled_live,
+            self.squeue_lifecycle, self.squeue_live,
+            self.sacct_lifecycle, self.sacct_live,
+        ):
+            patcher.start()
         self.interval.start()
-        self.enabled_mock = self.enabled.start()
-        self.squeue_enabled_mock = self.squeue_enabled.start()
-        self.sacct_enabled_mock = self.sacct_enabled.start()
         self.widget = JobsOutputsWidget()
         self.slurm = _FakeSlurm()
         self.session = {
@@ -101,9 +116,12 @@ class LssrvAutoRefreshTests(unittest.TestCase):
         QThreadPool.globalInstance().waitForDone(2000)
         self._app.processEvents()
         self.widget.deleteLater()
-        self.sacct_enabled.stop()
-        self.squeue_enabled.stop()
-        self.enabled.stop()
+        for patcher in (
+            self.sacct_live, self.sacct_lifecycle,
+            self.squeue_live, self.squeue_lifecycle,
+            self.enabled_live, self.enabled_lifecycle,
+        ):
+            patcher.stop()
         self.interval.stop()
 
     def _wait_for_workers(self):
@@ -300,7 +318,7 @@ class LssrvAutoRefreshTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
 
             config_path = os.path.join(temp_dir, "config.json")
-            with patch.object(storage, "_config_path", return_value=Path(config_path)):
+            with patch.object(_storage_core, "_config_path", return_value=Path(config_path)):
                 self.assertFalse(storage.get_lssrv_auto_refresh_enabled())
 
     @pytest.mark.integration
@@ -308,7 +326,7 @@ class LssrvAutoRefreshTests(unittest.TestCase):
     def test_setting_persists_enabled_value(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             config_path = os.path.join(temp_dir, "config.json")
-            with patch.object(storage, "_config_path", return_value=Path(config_path)):
+            with patch.object(_storage_core, "_config_path", return_value=Path(config_path)):
                 storage.set_lssrv_auto_refresh_enabled(True)
                 self.assertTrue(storage.get_lssrv_auto_refresh_enabled())
 

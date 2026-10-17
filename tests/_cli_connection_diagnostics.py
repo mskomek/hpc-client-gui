@@ -139,7 +139,7 @@ def test_diagnostics_all_stages_pass_and_wrapper_closed() -> None:
 @pytest.mark.semantic
 def test_doctor_connection_all_pass_exit_zero_json_four_stages(capsys) -> None:
     fixture = _diag_fixture({"port": "PASS", "auth": "PASS", "sftp": "PASS", "checksum": "PASS"})
-    with patch("hpc_gui.cli.main.run_connection_diagnostics", return_value=fixture):
+    with patch("hpc_gui.cli._doctor_commands.run_connection_diagnostics", return_value=fixture):
         assert run_cli(["--format", "json", "--host", "host", "doctor", "connection"]) == 0
     payload = json.loads(capsys.readouterr().out)
     assert payload["status"] == "PASS"
@@ -152,7 +152,7 @@ def test_doctor_connection_any_fail_exit_three_json_four_stages(capsys) -> None:
     fixture = _diag_fixture(
         {"port": "PASS", "auth": "FAIL", "sftp": "not_attempted", "checksum": "not_attempted"}
     )
-    with patch("hpc_gui.cli.main.run_connection_diagnostics", return_value=fixture):
+    with patch("hpc_gui.cli._doctor_commands.run_connection_diagnostics", return_value=fixture):
         assert run_cli(["--format", "json", "--host", "host", "doctor", "connection"]) == 3
     payload = json.loads(capsys.readouterr().out)
     assert payload["status"] == "FAIL"
@@ -165,7 +165,7 @@ def test_doctor_connection_text_exposes_same_stage_names(capsys) -> None:
     fixture = _diag_fixture(
         {"port": "PASS", "auth": "PASS", "sftp": "PASS", "checksum": "FAIL"}
     )
-    with patch("hpc_gui.cli.main.run_connection_diagnostics", return_value=fixture):
+    with patch("hpc_gui.cli._doctor_commands.run_connection_diagnostics", return_value=fixture):
         assert run_cli(["--host", "host", "doctor", "connection"]) == 3
     out = capsys.readouterr().out
     assert "status: FAIL" in out
@@ -190,7 +190,7 @@ def test_doctor_connection_never_leaks_raw_exception_detail(capsys) -> None:
             checksum_probe=lambda _wrapper: 0,
         )
 
-    with patch("hpc_gui.cli.main.run_connection_diagnostics", wrapped):
+    with patch("hpc_gui.cli._doctor_commands.run_connection_diagnostics", wrapped):
         assert run_cli(["--host", "host", "doctor", "connection"]) == 3
     captured = capsys.readouterr()
     assert secret not in captured.out + captured.err

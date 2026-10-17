@@ -1,0 +1,105 @@
+{
+  "verdict": "V2_FAILED",
+  "branch": "codex/v2-master-repair-20261017",
+  "initial_head": "79fec4776066d9e0759adcbeb3f90430d4fc0955",
+  "final_head": "79fec4776066d9e0759adcbeb3f90430d4fc0955",
+  "committed": false,
+  "pushed": false,
+  "worktree_status_entries": 33,
+  "architecture_validator": {
+    "status": "FAIL",
+    "over_limit_count": 10,
+    "dependency_errors": 0,
+    "remaining_over_limit": [
+      {
+        "path": "src/hpc_gui/ui/dialogs/plugin_manager_dialog.py",
+        "physical_lines": 1028
+      },
+      {
+        "path": "src/hpc_gui/ui/main_window.py",
+        "physical_lines": 1277
+      },
+      {
+        "path": "src/hpc_gui/ui/widgets/ftp_widget.py",
+        "physical_lines": 1803
+      },
+      {
+        "path": "src/hpc_gui/ui/widgets/local_dir_panel.py",
+        "physical_lines": 1169
+      },
+      {
+        "path": "src/hpc_gui/ui/widgets/login_widget.py",
+        "physical_lines": 1704
+      },
+      {
+        "path": "src/hpc_gui/ui/widgets/remote_dir_panel.py",
+        "physical_lines": 4628
+      },
+      {
+        "path": "src/hpc_gui/wx_connection.py",
+        "physical_lines": 1387
+      },
+      {
+        "path": "src/hpc_gui/wx_editor_view.py",
+        "physical_lines": 1005
+      },
+      {
+        "path": "src/hpc_gui/wx_jobs.py",
+        "physical_lines": 2967
+      },
+      {
+        "path": "src/hpc_gui/wx_transfer_workspace.py",
+        "physical_lines": 921
+      }
+    ]
+  },
+  "native_crash": {
+    "exit": "0xC000041D",
+    "raw_log": ".tmp/v2-final-architecture-20261017/ci-release-current.log",
+    "environment": {
+      "python": "3.14",
+      "pytest": "9.1.1",
+      "wxPython": "4.3.1 / wxWidgets 3.3.3",
+      "Qt": "PySide6 6.11.2",
+      "windows": "11 build 26300"
+    },
+    "minimal_sequence": [
+      "tests/test_corrective_jobs_details_i18n_and_regression.py::TestRegression_FilesOutputs::test_files_tab_untouched",
+      "tests/test_ftp_widget_activity_queue_controls.py::FtpWidgetTests::test_completion_action_persists_and_never_runs_system_action"
+    ],
+    "repair": "Updated release runner process-isolation lists for split wx and Qt modules; all affected tests still run with assertions.",
+    "isolated_regression": {
+      "modules": 20,
+      "passed": 165,
+      "crashes": 0
+    },
+    "broad_post_fix_release": "NOT_RUN"
+  },
+  "focused_tests": {
+    "cli_runner_settings_profiles": {
+      "passed": 185
+    },
+    "jobs_outputs_auto_refresh_following": {
+      "passed": 34,
+      "subtests_passed": 4
+    },
+    "compileall": "PASS"
+  },
+  "release": {
+    "status": "NOT_ACCEPTED",
+    "post_fix_full_run": "NOT_RUN",
+    "wheel_sha256": null,
+    "windows_exe_sha256": null,
+    "linux_deb_sha256": null
+  },
+  "gui_acceptance": {
+    "windows11_profile_save_reopen_reconnect": "NOT_RUN",
+    "ubuntu_install_upgrade_rollback_purge": "NOT_RUN"
+  },
+  "audits": {
+    "A": "NOT_RERUN_FOR_FINAL_SOURCE",
+    "B": "NOT_RERUN_FOR_FINAL_SOURCE"
+  },
+  "ruff_current_source": "UNVERIFIED: Python 3.14 environment has no ruff module; prior retained Ruff log predates latest edits.",
+  "main_checkout_status_discrepancy": "UNRESOLVED: recorded 35-to-34 dirty-entry difference; no retained status snapshot examined."
+}

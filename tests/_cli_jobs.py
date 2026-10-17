@@ -192,7 +192,7 @@ def test_jobs_lssrv_uses_configured_status_template(capsys) -> None:
 
     backend = SSHSlurmBackend(fake_ssh, system_settings={"status_command": "lssrv"})
     with patch("hpc_gui.cli.main.CLISession.open", return_value=_fake_jobs_session(fake_ssh)), patch(
-        "hpc_gui.cli.main.jobs_backend", return_value=backend
+        "hpc_gui.cli._job_commands.jobs_backend", return_value=backend
     ):
         assert run_cli(["--host", "host", "jobs", "lssrv"]) == 0
     assert fake_ssh.commands == ["lssrv"]
@@ -208,7 +208,7 @@ def test_jobs_lssrv_json_envelope_matches_stdout(capsys) -> None:
 
     backend = SSHSlurmBackend(fake_ssh, system_settings={"status_command": "lssrv"})
     with patch("hpc_gui.cli.main.CLISession.open", return_value=_fake_jobs_session(fake_ssh)), patch(
-        "hpc_gui.cli.main.jobs_backend", return_value=backend
+        "hpc_gui.cli._job_commands.jobs_backend", return_value=backend
     ):
         assert run_cli(["--format", "json", "--host", "host", "jobs", "lssrv"]) == 0
     assert fake_ssh.commands == ["lssrv"]
@@ -248,7 +248,7 @@ def test_jobs_lssrv_nonzero_exit_maps_to_operation_failed(capsys) -> None:
 
     backend = SSHSlurmBackend(fake_ssh, system_settings={"status_command": "lssrv"})
     with patch("hpc_gui.cli.main.CLISession.open", return_value=_fake_jobs_session(fake_ssh)), patch(
-        "hpc_gui.cli.main.jobs_backend", return_value=backend
+        "hpc_gui.cli._job_commands.jobs_backend", return_value=backend
     ):
         assert run_cli(["--host", "host", "jobs", "lssrv"]) == 1
     captured = capsys.readouterr()

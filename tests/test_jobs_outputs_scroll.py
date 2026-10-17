@@ -230,8 +230,7 @@ class JobsOutputsScrollTests(unittest.TestCase):
                 widget = JobsOutputsWidget()
                 try:
                     with patch(
-                        "hpc_gui.ui.widgets.jobs_outputs_widget."
-                        "get_follow_window_open_minimized_enabled",
+                        "hpc_gui.ui.widgets._jobs_outputs_followers.get_follow_window_open_minimized_enabled",
                         return_value=False,
                     ):
                         result = open_window(widget)
@@ -257,8 +256,7 @@ class JobsOutputsScrollTests(unittest.TestCase):
         widget._start_async = lambda *_args, **_kwargs: True
 
         with patch(
-            "hpc_gui.ui.widgets.jobs_outputs_widget."
-            "get_pause_live_follow_when_minimized_enabled",
+            "hpc_gui.ui.widgets._jobs_outputs_lifecycle.get_pause_live_follow_when_minimized_enabled",
             return_value=True,
         ):
             widget.set_application_minimized(True)
@@ -281,8 +279,7 @@ class JobsOutputsScrollTests(unittest.TestCase):
         follower._live_timer.start()
 
         with patch(
-            "hpc_gui.ui.widgets.jobs_outputs_widget."
-            "get_pause_live_follow_when_minimized_enabled",
+            "hpc_gui.ui.widgets._jobs_output_follower_views.get_pause_live_follow_when_minimized_enabled",
             return_value=True,
         ):
             follower.set_window_minimized(True)
@@ -307,12 +304,11 @@ class JobsOutputsScrollTests(unittest.TestCase):
 
         with (
             patch(
-                "hpc_gui.ui.widgets.jobs_outputs_widget."
-                "get_pause_live_follow_when_minimized_enabled",
+                "hpc_gui.ui.widgets._jobs_output_follower_views.get_pause_live_follow_when_minimized_enabled",
                 return_value=True,
             ),
             patch(
-                "hpc_gui.ui.widgets.jobs_outputs_widget.time.monotonic",
+                "hpc_gui.ui.widgets._jobs_output_follower_views.time.monotonic",
                 side_effect=(100.0, 160.0),
             ),
         ):
@@ -332,12 +328,11 @@ class JobsOutputsScrollTests(unittest.TestCase):
 
         with (
             patch(
-                "hpc_gui.ui.widgets.jobs_outputs_widget."
-                "get_pause_live_follow_when_minimized_enabled",
+                "hpc_gui.ui.widgets._jobs_outputs_lifecycle.get_pause_live_follow_when_minimized_enabled",
                 return_value=True,
             ),
             patch(
-                "hpc_gui.ui.widgets.jobs_outputs_widget.time.monotonic",
+                "hpc_gui.ui.widgets._jobs_outputs_lifecycle.time.monotonic",
                 side_effect=(100.0, 160.0),
             ),
         ):

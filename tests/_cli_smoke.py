@@ -184,7 +184,7 @@ class _FakeSmokeSession:
     [([], True), (["--keep"], False)],
 )
 def test_doctor_smoke_keep_flag_controls_cleanup(extra_args, expected_cleanup, capsys) -> None:
-    with patch("hpc_gui.cli.main.run_sftp_smoke", return_value=_smoke_all_pass()) as run_mock, patch(
+    with patch("hpc_gui.cli._doctor_commands.run_sftp_smoke", return_value=_smoke_all_pass()) as run_mock, patch(
         "hpc_gui.cli.main.CLISession.open", return_value=_FakeSmokeSession()
     ):
         assert run_cli(["--format", "json", "--host", "host", "doctor", "smoke", *extra_args]) == 0
@@ -202,7 +202,7 @@ def test_doctor_smoke_keep_flag_controls_cleanup(extra_args, expected_cleanup, c
 @pytest.mark.artifact_dependent
 def test_doctor_smoke_artifact_written(tmp_path, capsys, fixture, expected_exit) -> None:
     artifact = tmp_path / "smoke.json"
-    with patch("hpc_gui.cli.main.run_sftp_smoke", return_value=fixture), patch(
+    with patch("hpc_gui.cli._doctor_commands.run_sftp_smoke", return_value=fixture), patch(
         "hpc_gui.cli.main.CLISession.open", return_value=_FakeSmokeSession()
     ):
         assert run_cli(
@@ -218,7 +218,7 @@ def test_doctor_smoke_artifact_written(tmp_path, capsys, fixture, expected_exit)
 @pytest.mark.semantic
 @pytest.mark.artifact_dependent
 def test_doctor_smoke_artifact_write_failure_returns_operation_failed(tmp_path, capsys) -> None:
-    with patch("hpc_gui.cli.main.run_sftp_smoke", return_value=_smoke_all_pass()), patch(
+    with patch("hpc_gui.cli._doctor_commands.run_sftp_smoke", return_value=_smoke_all_pass()), patch(
         "hpc_gui.cli.main.CLISession.open", return_value=_FakeSmokeSession()
     ):
         result = run_cli(
@@ -232,12 +232,12 @@ def test_doctor_smoke_artifact_write_failure_returns_operation_failed(tmp_path, 
 @pytest.mark.semantic
 def test_doctor_smoke_text_and_json_expose_identical_stage_set(capsys) -> None:
     fixture = _smoke_fixture(_PARTIAL)
-    with patch("hpc_gui.cli.main.run_sftp_smoke", return_value=fixture), patch(
+    with patch("hpc_gui.cli._doctor_commands.run_sftp_smoke", return_value=fixture), patch(
         "hpc_gui.cli.main.CLISession.open", return_value=_FakeSmokeSession()
     ):
         assert run_cli(["--host", "host", "doctor", "smoke"]) == 3
     text_out = capsys.readouterr().out
-    with patch("hpc_gui.cli.main.run_sftp_smoke", return_value=fixture), patch(
+    with patch("hpc_gui.cli._doctor_commands.run_sftp_smoke", return_value=fixture), patch(
         "hpc_gui.cli.main.CLISession.open", return_value=_FakeSmokeSession()
     ):
         assert run_cli(["--format", "json", "--host", "host", "doctor", "smoke"]) == 3
@@ -258,7 +258,7 @@ def test_doctor_smoke_closes_session(capsys) -> None:
         def close(self):
             closed.append(True)
 
-    with patch("hpc_gui.cli.main.run_sftp_smoke", return_value=_smoke_all_pass()), patch(
+    with patch("hpc_gui.cli._doctor_commands.run_sftp_smoke", return_value=_smoke_all_pass()), patch(
         "hpc_gui.cli.main.CLISession.open", return_value=FakeSession()
     ):
         assert run_cli(["--format", "json", "--host", "host", "doctor", "smoke"]) == 0

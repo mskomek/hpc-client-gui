@@ -20,7 +20,7 @@ pytestmark = [pytest.mark.contract, pytest.mark.regression]
 
 def _config(tmp_path: Path):
     config = tmp_path / "config.json"
-    return patch("hpc_gui.config.storage._config_path", return_value=config), config
+    return patch("hpc_gui.config._storage_core._config_path", return_value=config), config
 
 
 def _write_config(config: Path, payload: dict) -> None:

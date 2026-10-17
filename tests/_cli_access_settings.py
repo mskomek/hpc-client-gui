@@ -8,6 +8,7 @@ from _cli_test_support import (
     ExitCode,
     run_cli,
     CLIConnectionError,
+    _isolated_cli_config,  # noqa: F401
 )
 @pytest.mark.integration
 @pytest.mark.semantic
@@ -20,7 +21,7 @@ def test_cli_settings_round_trip_and_defaults(tmp_path: Path) -> None:
     )
 
     config = tmp_path / "config.json"
-    with patch("hpc_gui.config.storage._config_path", return_value=config):
+    with patch("hpc_gui.config._storage_core._config_path", return_value=config):
         assert get_cli_external_access_enabled() is False
         assert get_cli_default_profile() == ""
         assert set_cli_external_access_enabled(True) is True
@@ -81,8 +82,10 @@ def test_access_gate_off_blocked_command_json(capsys) -> None:
 def test_access_gate_off_exempt_commands_still_succeed(capsys, tmp_path: Path) -> None:
     profiles = [{"name": "alpha", "host": "cluster.example", "username": "user"}]
     with patch("hpc_gui.cli.session.load_profiles", return_value=profiles), patch(
-        "hpc_gui.cli.main.load_profiles", return_value=profiles
-    ), patch("hpc_gui.cli.main.app_data_dir", return_value=tmp_path), patch(
+        "hpc_gui.cli._profile_commands.load_profiles", return_value=profiles
+    ), patch(
+        "hpc_gui.cli._doctor_commands.load_profiles", return_value=profiles
+    ), patch("hpc_gui.cli._doctor_commands.app_data_dir", return_value=tmp_path), patch(
         "hpc_gui.cli.main.get_cli_external_access_enabled", return_value=False
     ):
         assert run_cli(["--format", "json", "version"]) == 0
@@ -220,8 +223,8 @@ def test_jobs_username_honors_default_profile() -> None:
     from hpc_gui.cli.main import _jobs_username
 
     args = argparse.Namespace(profile="", username="")
-    with patch("hpc_gui.cli.main.effective_profile_name", return_value="alpha"), patch(
-        "hpc_gui.cli.main.resolve_profile",
+    with patch("hpc_gui.cli._shared.effective_profile_name", return_value="alpha"), patch(
+        "hpc_gui.cli._shared.resolve_profile",
         return_value={"name": "alpha", "username": "defaultuser"},
     ):
         assert _jobs_username(args) == "defaultuser"
@@ -233,8 +236,8 @@ def test_jobs_username_explicit_profile_beats_default() -> None:
     from hpc_gui.cli.main import _jobs_username
 
     args = argparse.Namespace(profile="explicit", username="")
-    with patch("hpc_gui.cli.main.effective_profile_name", return_value="explicit"), patch(
-        "hpc_gui.cli.main.resolve_profile",
+    with patch("hpc_gui.cli._shared.effective_profile_name", return_value="explicit"), patch(
+        "hpc_gui.cli._shared.resolve_profile",
         return_value={"name": "explicit", "username": "explicituser"},
     ):
         assert _jobs_username(args) == "explicituser"

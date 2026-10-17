@@ -53,6 +53,7 @@ class ReleaseTestSuiteTests(unittest.TestCase):
                 "tests/test_wx_w55_shell_soak.py",
                 "tests/test_wx_file_list_zebra.py",
                 "tests/test_corrective_jobs_details.py",
+                "tests/test_corrective_jobs_details_i18n_and_regression.py",
                 "tests/test_transfer_cancel_recovery.py",
                 "tests/test_wx_terminal_webview_bridge.py",
                 "tests/test_wx_terminal_webview_input.py",
@@ -65,6 +66,35 @@ class ReleaseTestSuiteTests(unittest.TestCase):
                 "tests/test_wx_jobs_final_fix.py",
                 "tests/test_wx_jobs_stress.py",
             ),
+        )
+        self.assertIn("tests/test_ftp_widget_activity_queue_controls.py", ISOLATED_WIRE_FILES)
+        self.assertEqual(
+            ISOLATED_WIRE_FILES[1:20],
+            (
+                "tests/test_ftp_widget_activity_queue_controls.py",
+                "tests/test_ftp_widget_activity_rows_history.py",
+                "tests/test_ftp_widget_backend_concurrency.py",
+                "tests/test_ftp_widget_connection_profiles.py",
+                "tests/test_ftp_widget_directory_tabs_cache_lifecycle.py",
+                "tests/test_ftp_widget_directory_tabs_cache_lifecycle_2.py",
+                "tests/test_ftp_widget_file_drop.py",
+                "tests/test_ftp_widget_job_output_following.py",
+                "tests/test_ftp_widget_local_file_operations.py",
+                "tests/test_ftp_widget_permissions_and_path_navigation.py",
+                "tests/test_ftp_widget_remote_file_operations.py",
+                "tests/test_ftp_widget_script_submission.py",
+                "tests/test_ftp_widget_settings_profiles.py",
+                "tests/test_ftp_widget_transfer_backend_policy.py",
+                "tests/test_ftp_widget_transfer_backend_policy_2.py",
+                "tests/test_ftp_widget_transfer_dialog_planning.py",
+                "tests/test_ftp_widget_transfer_dialog_planning_2.py",
+                "tests/test_ftp_widget_transfer_preflight_pipeline.py",
+                "tests/test_ftp_widget_transfer_preflight_pipeline_2.py",
+            ),
+        )
+        self.assertIn(
+            "tests/test_corrective_jobs_details_i18n_and_regression.py",
+            ISOLATED_NATIVE_GUI_FILES,
         )
         broad = next(command for command in commands if "--ignore" in command)
         self.assertIn("--deselect", broad)

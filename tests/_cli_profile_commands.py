@@ -83,7 +83,7 @@ def test_profile_show_never_prints_sensitive_field_values(capsys) -> None:
 @pytest.mark.semantic
 def test_profile_create_round_trips_to_config_path(capsys, tmp_path: Path) -> None:
     config = tmp_path / "config.json"
-    with patch("hpc_gui.config.storage._config_path", return_value=config):
+    with patch("hpc_gui.config._storage_core._config_path", return_value=config):
         assert (
             run_cli(
                 [
@@ -149,7 +149,7 @@ def test_profile_update_preserves_secrets_and_system_round_trip(capsys, tmp_path
         "password_salt": "salt-value",
         "system": {"slurm": True},
     }
-    with patch("hpc_gui.config.storage._config_path", return_value=config):
+    with patch("hpc_gui.config._storage_core._config_path", return_value=config):
         json.dump({"profiles": [existing]}, config.open("w", encoding="utf-8"))
         assert run_cli(["--format", "json", "profile", "update", "alpha", "--host", "new.example"]) == 0
     output = capsys.readouterr().out
@@ -174,8 +174,8 @@ def test_profile_update_preserves_secrets_and_system_round_trip(capsys, tmp_path
 @pytest.mark.unit
 @pytest.mark.semantic
 def test_profile_update_with_no_field_exits_two_no_write(capsys) -> None:
-    with patch("hpc_gui.cli.main.load_profiles", return_value=[]), patch(
-        "hpc_gui.cli.main.upsert_profile"
+    with patch("hpc_gui.cli._profile_commands.load_profiles", return_value=[]), patch(
+        "hpc_gui.cli._profile_commands.upsert_profile"
     ) as upsert:
         assert run_cli(["profile", "update", "alpha"]) == 2
     captured = capsys.readouterr()
@@ -189,7 +189,7 @@ def test_profile_update_with_no_field_exits_two_no_write(capsys) -> None:
 @pytest.mark.semantic
 def test_profile_update_missing_name_exit_one_no_write(capsys) -> None:
     with patch("hpc_gui.cli.session.load_profiles", return_value=[]), patch(
-        "hpc_gui.cli.main.upsert_profile"
+        "hpc_gui.cli._profile_commands.upsert_profile"
     ) as upsert:
         assert run_cli(["profile", "update", "MISSING", "--host", "new.example"]) == 1
     captured = capsys.readouterr()
@@ -202,7 +202,7 @@ def test_profile_update_missing_name_exit_one_no_write(capsys) -> None:
 @pytest.mark.unit
 @pytest.mark.semantic
 def test_profile_delete_without_yes_exit_two_no_call(capsys) -> None:
-    with patch("hpc_gui.cli.main.delete_profile") as delete:
+    with patch("hpc_gui.cli._profile_commands.delete_profile") as delete:
         assert run_cli(["profile", "delete", "alpha"]) == 2
     captured = capsys.readouterr()
     assert captured.out == ""
@@ -214,7 +214,7 @@ def test_profile_delete_without_yes_exit_two_no_call(capsys) -> None:
 @pytest.mark.semantic
 def test_profile_delete_missing_name_exit_one_no_write(capsys) -> None:
     with patch("hpc_gui.cli.session.load_profiles", return_value=[]), patch(
-        "hpc_gui.cli.main.delete_profile"
+        "hpc_gui.cli._profile_commands.delete_profile"
     ) as delete:
         assert run_cli(["profile", "delete", "MISSING", "--yes"]) == 1
     captured = capsys.readouterr()
@@ -227,7 +227,7 @@ def test_profile_delete_missing_name_exit_one_no_write(capsys) -> None:
 @pytest.mark.semantic
 def test_profile_delete_yes_calls_delete_profile_and_exits_zero(capsys) -> None:
     with patch("hpc_gui.cli.session.load_profiles", return_value=[{"name": "alpha"}]), patch(
-        "hpc_gui.cli.main.delete_profile"
+        "hpc_gui.cli._profile_commands.delete_profile"
     ) as delete:
         assert run_cli(["--format", "json", "profile", "delete", "alpha", "--yes"]) == 0
     payload = json.loads(capsys.readouterr().out)
@@ -240,8 +240,8 @@ def test_profile_delete_yes_calls_delete_profile_and_exits_zero(capsys) -> None:
 @pytest.mark.unit
 @pytest.mark.semantic
 def test_doctor_environment_json(capsys, tmp_path: Path) -> None:
-    with patch("hpc_gui.cli.main.app_data_dir", return_value=tmp_path), patch(
-        "hpc_gui.cli.main.load_profiles", return_value=[]
+    with patch("hpc_gui.cli._doctor_commands.app_data_dir", return_value=tmp_path), patch(
+        "hpc_gui.cli._profile_commands.load_profiles", return_value=[]
     ):
         assert run_cli(["--format", "json", "doctor", "environment"]) == 0
     payload = json.loads(capsys.readouterr().out)

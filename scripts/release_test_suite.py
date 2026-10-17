@@ -64,6 +64,28 @@ PYTEST_BASE = (
 # or weakened.
 ISOLATED_WIRE_FILES = (
     "tests/test_ftp_widget.py",
+    # These modules were split out of test_ftp_widget.py. Keep their Qt
+    # widget, worker, and event-loop lifetimes within the same process
+    # boundary that protected the original monolithic module.
+    "tests/test_ftp_widget_activity_queue_controls.py",
+    "tests/test_ftp_widget_activity_rows_history.py",
+    "tests/test_ftp_widget_backend_concurrency.py",
+    "tests/test_ftp_widget_connection_profiles.py",
+    "tests/test_ftp_widget_directory_tabs_cache_lifecycle.py",
+    "tests/test_ftp_widget_directory_tabs_cache_lifecycle_2.py",
+    "tests/test_ftp_widget_file_drop.py",
+    "tests/test_ftp_widget_job_output_following.py",
+    "tests/test_ftp_widget_local_file_operations.py",
+    "tests/test_ftp_widget_permissions_and_path_navigation.py",
+    "tests/test_ftp_widget_remote_file_operations.py",
+    "tests/test_ftp_widget_script_submission.py",
+    "tests/test_ftp_widget_settings_profiles.py",
+    "tests/test_ftp_widget_transfer_backend_policy.py",
+    "tests/test_ftp_widget_transfer_backend_policy_2.py",
+    "tests/test_ftp_widget_transfer_dialog_planning.py",
+    "tests/test_ftp_widget_transfer_dialog_planning_2.py",
+    "tests/test_ftp_widget_transfer_preflight_pipeline.py",
+    "tests/test_ftp_widget_transfer_preflight_pipeline_2.py",
     "tests/test_download_cancel_wire.py",
     "tests/test_editor_flow.py",
     "tests/test_remote_directory_listing.py",
@@ -91,6 +113,9 @@ ISOLATED_NATIVE_GUI_FILES = (
     "tests/test_wx_w55_shell_soak.py",
     "tests/test_wx_file_list_zebra.py",
     "tests/test_corrective_jobs_details.py",
+    # Split from test_corrective_jobs_details.py; it creates and tears down
+    # a real wx.App before the refactored Qt FTP tests in collection order.
+    "tests/test_corrective_jobs_details_i18n_and_regression.py",
     "tests/test_transfer_cancel_recovery.py",
     "tests/test_wx_terminal_webview_bridge.py",
     "tests/test_wx_terminal_webview_input.py",
