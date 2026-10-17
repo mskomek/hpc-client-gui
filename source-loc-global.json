@@ -1,0 +1,533 @@
+{
+  "status": "FAIL",
+  "scope": "project",
+  "root": "D:\\Projeler\\.tmp\\hpc-client-gui\\v2-master-repair-20261017",
+  "source_count": 773,
+  "warning_count": 56,
+  "warnings": [
+    {
+      "path": "scripts/capture_current_gui_wx.py",
+      "loc": 429
+    },
+    {
+      "path": "scripts/create_demo_gif.py",
+      "loc": 450
+    },
+    {
+      "path": "scripts/release_gate.py",
+      "loc": 450
+    },
+    {
+      "path": "scripts/release_linux.py",
+      "loc": 477
+    },
+    {
+      "path": "src/hpc_gui/assets/terminal/wx_bridge.js",
+      "loc": 463
+    },
+    {
+      "path": "src/hpc_gui/plugins/installer.py",
+      "loc": 451
+    },
+    {
+      "path": "src/hpc_gui/plugins/lifecycle.py",
+      "loc": 410
+    },
+    {
+      "path": "src/hpc_gui/plugins/loader.py",
+      "loc": 414
+    },
+    {
+      "path": "src/hpc_gui/services/files_ftp.py",
+      "loc": 405
+    },
+    {
+      "path": "src/hpc_gui/services/files_ssh.py",
+      "loc": 433
+    },
+    {
+      "path": "src/hpc_gui/services/output_channel_resolver.py",
+      "loc": 413
+    },
+    {
+      "path": "src/hpc_gui/ssh/client.py",
+      "loc": 489
+    },
+    {
+      "path": "src/hpc_gui/ui/widgets/directories_submission.py",
+      "loc": 404
+    },
+    {
+      "path": "src/hpc_gui/wx_ansys_view.py",
+      "loc": 417
+    },
+    {
+      "path": "src/hpc_gui/wx_directories_view.py",
+      "loc": 408
+    },
+    {
+      "path": "src/hpc_gui/wx_remote_files_view.py",
+      "loc": 452
+    },
+    {
+      "path": "src/hpc_gui/wx_settings.py",
+      "loc": 405
+    },
+    {
+      "path": "src/hpc_gui/wx_shell_files.py",
+      "loc": 405
+    },
+    {
+      "path": "src/hpc_gui/wx_shell_files_surface.py",
+      "loc": 458
+    },
+    {
+      "path": "src/hpc_gui/wx_shell_frame.py",
+      "loc": 484
+    },
+    {
+      "path": "src/hpc_gui/wx_shell_fresh_smoke.py",
+      "loc": 448
+    },
+    {
+      "path": "src/hpc_gui/wx_shell_packaged_smoke.py",
+      "loc": 491
+    },
+    {
+      "path": "src/hpc_gui/wx_terminal.py",
+      "loc": 422
+    },
+    {
+      "path": "src/hpc_gui/wx_terminal_webview.py",
+      "loc": 450
+    },
+    {
+      "path": "tests/_cli_profile_commands.py",
+      "loc": 484
+    },
+    {
+      "path": "tests/_cli_transfer_policies.py",
+      "loc": 413
+    },
+    {
+      "path": "tests/support/mock_ssh_server.py",
+      "loc": 411
+    },
+    {
+      "path": "tests/test_directory_comparison.py",
+      "loc": 419
+    },
+    {
+      "path": "tests/test_hardening_additional.py",
+      "loc": 440
+    },
+    {
+      "path": "tests/test_lint_engine.py",
+      "loc": 496
+    },
+    {
+      "path": "tests/test_linter_tools_v2.py",
+      "loc": 450
+    },
+    {
+      "path": "tests/test_plugin_security.py",
+      "loc": 481
+    },
+    {
+      "path": "tests/test_transfer_concurrency.py",
+      "loc": 455
+    },
+    {
+      "path": "tests/test_transfer_resume_semantics.py",
+      "loc": 446
+    },
+    {
+      "path": "tests/test_w11_ssh_lifecycle.py",
+      "loc": 496
+    },
+    {
+      "path": "tests/test_w12_sftp_semantics.py",
+      "loc": 425
+    },
+    {
+      "path": "tests/test_w15_fresh_user_startup.py",
+      "loc": 429
+    },
+    {
+      "path": "tests/test_w25_transfer_workspace_integrity.py",
+      "loc": 475
+    },
+    {
+      "path": "tests/test_w29_job_outputs.py",
+      "loc": 496
+    },
+    {
+      "path": "tests/test_w32_discovery_manifest.py",
+      "loc": 401
+    },
+    {
+      "path": "tests/test_w34_provider_settings.py",
+      "loc": 429
+    },
+    {
+      "path": "tests/test_w35_plugin_manager_gui.py",
+      "loc": 430
+    },
+    {
+      "path": "tests/test_w36_packaged_docs.py",
+      "loc": 480
+    },
+    {
+      "path": "tests/test_w37_settings_persistence.py",
+      "loc": 410
+    },
+    {
+      "path": "tests/test_w43_restart_package_policy.py",
+      "loc": 413
+    },
+    {
+      "path": "tests/test_wave2_wx_ui_parity.py",
+      "loc": 401
+    },
+    {
+      "path": "tests/test_wave3_remote_sftp_ssh.py",
+      "loc": 480
+    },
+    {
+      "path": "tests/test_wave6_plugin_provider_unicode.py",
+      "loc": 484
+    },
+    {
+      "path": "tests/test_wave78_jobs_details.py",
+      "loc": 458
+    },
+    {
+      "path": "tests/test_wx_dispatch_error_gov.py",
+      "loc": 438
+    },
+    {
+      "path": "tests/test_wx_files_sync_compare.py",
+      "loc": 482
+    },
+    {
+      "path": "tests/test_wx_jobs_behavior.py",
+      "loc": 457
+    },
+    {
+      "path": "tests/test_wx_jobs_final_fix.py",
+      "loc": 497
+    },
+    {
+      "path": "tests/test_wx_packaged_smoke.py",
+      "loc": 442
+    },
+    {
+      "path": "tests/test_wx_terminal_webview_output.py",
+      "loc": 453
+    },
+    {
+      "path": "tests/test_wx_transfer_ui_lifecycle.py",
+      "loc": 425
+    }
+  ],
+  "over_limit_count": 55,
+  "over_limit": [
+    {
+      "path": "scripts/ftp_transfer_stress.py",
+      "loc": 508
+    },
+    {
+      "path": "src/hpc_gui/cli/main.py",
+      "loc": 990
+    },
+    {
+      "path": "src/hpc_gui/config/storage.py",
+      "loc": 805
+    },
+    {
+      "path": "src/hpc_gui/plugins/ui_contributions.py",
+      "loc": 698
+    },
+    {
+      "path": "src/hpc_gui/plugins/validator.py",
+      "loc": 698
+    },
+    {
+      "path": "src/hpc_gui/services/app_updater.py",
+      "loc": 664
+    },
+    {
+      "path": "src/hpc_gui/services/connection_profile_service.py",
+      "loc": 541
+    },
+    {
+      "path": "src/hpc_gui/ui/dialogs/connection_dialog.py",
+      "loc": 1031
+    },
+    {
+      "path": "src/hpc_gui/ui/dialogs/plugin_manager_dialog.py",
+      "loc": 1028
+    },
+    {
+      "path": "src/hpc_gui/ui/dialogs/settings_dialog.py",
+      "loc": 529
+    },
+    {
+      "path": "src/hpc_gui/ui/dialogs/transfer_dialog.py",
+      "loc": 805
+    },
+    {
+      "path": "src/hpc_gui/ui/main_window.py",
+      "loc": 1277
+    },
+    {
+      "path": "src/hpc_gui/ui/widgets/ftp_widget.py",
+      "loc": 1803
+    },
+    {
+      "path": "src/hpc_gui/ui/widgets/jobs_outputs_widget.py",
+      "loc": 1862
+    },
+    {
+      "path": "src/hpc_gui/ui/widgets/local_dir_panel.py",
+      "loc": 1169
+    },
+    {
+      "path": "src/hpc_gui/ui/widgets/login_widget.py",
+      "loc": 1704
+    },
+    {
+      "path": "src/hpc_gui/ui/widgets/remote_dir_panel.py",
+      "loc": 4628
+    },
+    {
+      "path": "src/hpc_gui/wx_connection.py",
+      "loc": 1387
+    },
+    {
+      "path": "src/hpc_gui/wx_editor_view.py",
+      "loc": 1005
+    },
+    {
+      "path": "src/hpc_gui/wx_jobs.py",
+      "loc": 2967
+    },
+    {
+      "path": "src/hpc_gui/wx_plugins_view.py",
+      "loc": 583
+    },
+    {
+      "path": "src/hpc_gui/wx_splash.py",
+      "loc": 541
+    },
+    {
+      "path": "src/hpc_gui/wx_transfer_workspace.py",
+      "loc": 921
+    },
+    {
+      "path": "src/hpc_gui/wx_updater_view.py",
+      "loc": 1204
+    },
+    {
+      "path": "tests/test_corrective_jobs_details.py",
+      "loc": 512
+    },
+    {
+      "path": "tests/test_ftp_widget.py",
+      "loc": 6248
+    },
+    {
+      "path": "tests/test_jobs_outputs_scroll.py",
+      "loc": 606
+    },
+    {
+      "path": "tests/test_luna_fm_integration.py",
+      "loc": 541
+    },
+    {
+      "path": "tests/test_plugin_contract.py",
+      "loc": 512
+    },
+    {
+      "path": "tests/test_plugin_installer.py",
+      "loc": 852
+    },
+    {
+      "path": "tests/test_plugin_manager_ui.py",
+      "loc": 1192
+    },
+    {
+      "path": "tests/test_ssh_credential_flow.py",
+      "loc": 673
+    },
+    {
+      "path": "tests/test_ssh_jump_host.py",
+      "loc": 538
+    },
+    {
+      "path": "tests/test_synchronized_browsing.py",
+      "loc": 536
+    },
+    {
+      "path": "tests/test_w33_lifecycle_isolation.py",
+      "loc": 550
+    },
+    {
+      "path": "tests/test_wave0_unicode_baseline.py",
+      "loc": 542
+    },
+    {
+      "path": "tests/test_wave2_directories_local_files.py",
+      "loc": 1025
+    },
+    {
+      "path": "tests/test_wave79_audit.py",
+      "loc": 528
+    },
+    {
+      "path": "tests/test_wave79_provider_contract.py",
+      "loc": 592
+    },
+    {
+      "path": "tests/test_wave80_files_outputs.py",
+      "loc": 609
+    },
+    {
+      "path": "tests/test_wx_65a_stress.py",
+      "loc": 540
+    },
+    {
+      "path": "tests/test_wx_connection_71_2.py",
+      "loc": 519
+    },
+    {
+      "path": "tests/test_wx_connection_71_3.py",
+      "loc": 662
+    },
+    {
+      "path": "tests/test_wx_connection_71_4.py",
+      "loc": 660
+    },
+    {
+      "path": "tests/test_wx_connection_71_5.py",
+      "loc": 649
+    },
+    {
+      "path": "tests/test_wx_connection_hardening.py",
+      "loc": 992
+    },
+    {
+      "path": "tests/test_wx_connection_profiles.py",
+      "loc": 1175
+    },
+    {
+      "path": "tests/test_wx_file003_final_stress.py",
+      "loc": 1489
+    },
+    {
+      "path": "tests/test_wx_file_actions_lifecycle.py",
+      "loc": 544
+    },
+    {
+      "path": "tests/test_wx_file_browser_tabs.py",
+      "loc": 661
+    },
+    {
+      "path": "tests/test_wx_file_transfer_integration.py",
+      "loc": 523
+    },
+    {
+      "path": "tests/test_wx_jobs_files_outputs.py",
+      "loc": 673
+    },
+    {
+      "path": "tests/test_wx_remote_file_actions_behavior.py",
+      "loc": 555
+    },
+    {
+      "path": "tests/test_wx_terminal_parity_evidence.py",
+      "loc": 580
+    },
+    {
+      "path": "tests/test_wx_updater_spec.py",
+      "loc": 684
+    }
+  ],
+  "dependency_errors": [],
+  "errors": [
+    "scripts/ftp_transfer_stress.py has 508 physical lines (limit 500)",
+    "src/hpc_gui/cli/main.py has 990 physical lines (limit 500)",
+    "src/hpc_gui/config/storage.py has 805 physical lines (limit 500)",
+    "src/hpc_gui/plugins/ui_contributions.py has 698 physical lines (limit 500)",
+    "src/hpc_gui/plugins/validator.py has 698 physical lines (limit 500)",
+    "src/hpc_gui/services/app_updater.py has 664 physical lines (limit 500)",
+    "src/hpc_gui/services/connection_profile_service.py has 541 physical lines (limit 500)",
+    "src/hpc_gui/ui/dialogs/connection_dialog.py has 1031 physical lines (limit 500)",
+    "src/hpc_gui/ui/dialogs/plugin_manager_dialog.py has 1028 physical lines (limit 500)",
+    "src/hpc_gui/ui/dialogs/settings_dialog.py has 529 physical lines (limit 500)",
+    "src/hpc_gui/ui/dialogs/transfer_dialog.py has 805 physical lines (limit 500)",
+    "src/hpc_gui/ui/main_window.py has 1277 physical lines (limit 500)",
+    "src/hpc_gui/ui/widgets/ftp_widget.py has 1803 physical lines (limit 500)",
+    "src/hpc_gui/ui/widgets/jobs_outputs_widget.py has 1862 physical lines (limit 500)",
+    "src/hpc_gui/ui/widgets/local_dir_panel.py has 1169 physical lines (limit 500)",
+    "src/hpc_gui/ui/widgets/login_widget.py has 1704 physical lines (limit 500)",
+    "src/hpc_gui/ui/widgets/remote_dir_panel.py has 4628 physical lines (limit 500)",
+    "src/hpc_gui/wx_connection.py has 1387 physical lines (limit 500)",
+    "src/hpc_gui/wx_editor_view.py has 1005 physical lines (limit 500)",
+    "src/hpc_gui/wx_jobs.py has 2967 physical lines (limit 500)",
+    "src/hpc_gui/wx_plugins_view.py has 583 physical lines (limit 500)",
+    "src/hpc_gui/wx_splash.py has 541 physical lines (limit 500)",
+    "src/hpc_gui/wx_transfer_workspace.py has 921 physical lines (limit 500)",
+    "src/hpc_gui/wx_updater_view.py has 1204 physical lines (limit 500)",
+    "tests/test_corrective_jobs_details.py has 512 physical lines (limit 500)",
+    "tests/test_ftp_widget.py has 6248 physical lines (limit 500)",
+    "tests/test_jobs_outputs_scroll.py has 606 physical lines (limit 500)",
+    "tests/test_luna_fm_integration.py has 541 physical lines (limit 500)",
+    "tests/test_plugin_contract.py has 512 physical lines (limit 500)",
+    "tests/test_plugin_installer.py has 852 physical lines (limit 500)",
+    "tests/test_plugin_manager_ui.py has 1192 physical lines (limit 500)",
+    "tests/test_ssh_credential_flow.py has 673 physical lines (limit 500)",
+    "tests/test_ssh_jump_host.py has 538 physical lines (limit 500)",
+    "tests/test_synchronized_browsing.py has 536 physical lines (limit 500)",
+    "tests/test_w33_lifecycle_isolation.py has 550 physical lines (limit 500)",
+    "tests/test_wave0_unicode_baseline.py has 542 physical lines (limit 500)",
+    "tests/test_wave2_directories_local_files.py has 1025 physical lines (limit 500)",
+    "tests/test_wave79_audit.py has 528 physical lines (limit 500)",
+    "tests/test_wave79_provider_contract.py has 592 physical lines (limit 500)",
+    "tests/test_wave80_files_outputs.py has 609 physical lines (limit 500)",
+    "tests/test_wx_65a_stress.py has 540 physical lines (limit 500)",
+    "tests/test_wx_connection_71_2.py has 519 physical lines (limit 500)",
+    "tests/test_wx_connection_71_3.py has 662 physical lines (limit 500)",
+    "tests/test_wx_connection_71_4.py has 660 physical lines (limit 500)",
+    "tests/test_wx_connection_71_5.py has 649 physical lines (limit 500)",
+    "tests/test_wx_connection_hardening.py has 992 physical lines (limit 500)",
+    "tests/test_wx_connection_profiles.py has 1175 physical lines (limit 500)",
+    "tests/test_wx_file003_final_stress.py has 1489 physical lines (limit 500)",
+    "tests/test_wx_file_actions_lifecycle.py has 544 physical lines (limit 500)",
+    "tests/test_wx_file_browser_tabs.py has 661 physical lines (limit 500)",
+    "tests/test_wx_file_transfer_integration.py has 523 physical lines (limit 500)",
+    "tests/test_wx_jobs_files_outputs.py has 673 physical lines (limit 500)",
+    "tests/test_wx_remote_file_actions_behavior.py has 555 physical lines (limit 500)",
+    "tests/test_wx_terminal_parity_evidence.py has 580 physical lines (limit 500)",
+    "tests/test_wx_updater_spec.py has 684 physical lines (limit 500)"
+  ],
+  "exclusions": {
+    ".opencode": "materialized Agent Core mirror; canonical source is counted once",
+    ".git": "Git object database and repository metadata",
+    ".tmp": "temporary and scratch artifacts",
+    ".legacy-backup": "inactive historical source snapshots",
+    ".agent-legacy-backup": "inactive historical Agent Core source snapshots",
+    "vendor": "vendored third-party code",
+    "vendored": "vendored third-party code",
+    "synced": "vendor-managed marketplace skill drop; rewritten by environment sync",
+    "third_party": "external third-party code",
+    "third-party": "external third-party code",
+    "node_modules": "external package dependencies",
+    "generated": "generated source output",
+    ".generated": "generated source output",
+    "build": "generated build output",
+    "dist": "generated distribution output",
+    ".venv": "local Python environment",
+    "venv": "local Python environment"
+  }
+}

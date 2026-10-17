@@ -1,22 +1,23 @@
-"""Run the shared release preflight test suite.
+"""Run the portable test suite or mandatory supplied-evidence acceptance suite.
 
-The manual release workflow and local release gate use this same test
-definition, so a release cannot be published when its required suite is red.
+Portable CI omits supplied-evidence probes by policy. Mandatory acceptance
+requires those evidence files and verifies their pinned hashes before testing.
 
 The suite mirrors the CI gates:
 
     * source compilation;
     * i18n drift gate;
     * headless smoke test;
-    * source/test contracts (excluding package and supplied-evidence gates).
+    * source/test contracts (excluding package and artifact-dependent tests).
 
 Usage:
-    python scripts/release_test_suite.py [--coverage]
+    python scripts/release_test_suite.py [--scope portable|acceptance] [--coverage]
 """
 
 from __future__ import annotations
 
 import argparse
+import hashlib
 import os
 import subprocess
 import sys
@@ -31,13 +32,25 @@ PREFLIGHT_COMMANDS: tuple[tuple[str, ...], ...] = (
     (sys.executable, str(REPO_ROOT / "scripts" / "smoke_test.py")),
 )
 
+ACCEPTANCE_ARTIFACT_COMMANDS: tuple[tuple[str, ...], ...] = (
+    (
+        sys.executable,
+        "-m",
+        "build",
+        "--wheel",
+        "--outdir",
+        str(REPO_ROOT / ".tmp" / "w31-package"),
+        str(REPO_ROOT),
+    ),
+)
+
 PYTEST_BASE = (
     sys.executable,
     "-m",
     "pytest",
     "-q",
     "--tb=short",
-    "-rf",
+    "-rfs",
     "-m",
     "not packaging and not artifact_dependent",
     "tests",
@@ -103,6 +116,11 @@ EVIDENCE_GATED_TESTS = {
     "tests/test_w04_about_packaging.py": "artifacts/v2-final/W04/SUPPORT_MATRIX_FREEZE.md",
 }
 
+EVIDENCE_EXPECTED_SHA256 = {
+    "artifacts/v2-final/W04/SUPPORT_MATRIX_FREEZE.md":
+    "6c41e085a1ecaeaedf6261316ea483cccaafc9b3dbea2ba71bda313fc56d6ed5",
+}
+
 
 COVERAGE_FAIL_UNDER = 65
 
@@ -129,20 +147,40 @@ def _test_environment() -> dict[str, str]:
     return environment
 
 
-def build_commands(*, coverage: bool) -> list[tuple[str, ...]]:
+def _evidence_failures() -> tuple[str, ...]:
+    failures = []
+    for prerequisite in dict.fromkeys(EVIDENCE_GATED_TESTS.values()):
+        path = REPO_ROOT / prerequisite
+        if not path.is_file():
+            failures.append(f"missing: {prerequisite}")
+            continue
+        expected = EVIDENCE_EXPECTED_SHA256.get(prerequisite)
+        if expected is None:
+            failures.append(f"no pinned SHA-256 configured for: {prerequisite}")
+            continue
+        actual = hashlib.sha256(path.read_bytes()).hexdigest()
+        if actual != expected:
+            failures.append(
+                f"SHA-256 mismatch for {prerequisite}: expected {expected}, got {actual}"
+            )
+    return tuple(failures)
+
+
+def build_commands(*, coverage: bool, scope: str = "portable") -> list[tuple[str, ...]]:
     commands = list(PREFLIGHT_COMMANDS)
     ignores = tuple(
         argument
         for path in ISOLATED_FILES
         for argument in ("--ignore", path)
     )
-    blocked_paths = tuple(
-        path
-        for path, prerequisite in EVIDENCE_GATED_TESTS.items()
-        if not (REPO_ROOT / prerequisite).is_file()
-    )
-    evidence_ignores = tuple(
-        argument for path in blocked_paths for argument in ("--ignore", path)
+    evidence_ignores = (
+        tuple(
+            argument
+            for path in EVIDENCE_GATED_TESTS
+            for argument in ("--ignore", path)
+        )
+        if scope == "portable"
+        else ()
     )
     deselects = tuple(
         argument
@@ -172,17 +210,45 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="add the CI coverage gate flags to the pytest invocation",
     )
+    parser.add_argument(
+        "--scope",
+        choices=("portable", "acceptance"),
+        default="portable",
+        help=(
+            "portable omits supplied-evidence probes; acceptance requires every "
+            "supplied evidence file and its pinned SHA-256"
+        ),
+    )
     args = parser.parse_args(argv)
 
-    for test_path, prerequisite in EVIDENCE_GATED_TESTS.items():
-        if not (REPO_ROOT / prerequisite).is_file():
-            print(
-                f"[release-test-suite] BLOCKED evidence prerequisite missing: {prerequisite} ({test_path})",
-                flush=True,
-            )
+    print(f"[release-test-suite] scope={args.scope}", flush=True)
+    if args.scope == "acceptance":
+        failures = _evidence_failures()
+        if failures:
+            for failure in failures:
+                print(
+                    f"[release-test-suite] BLOCKED evidence prerequisite {failure}",
+                    file=sys.stderr,
+                    flush=True,
+                )
+            return 2
 
     failed_test_partition = 0
-    for index, command in enumerate(build_commands(coverage=args.coverage)):
+    commands = build_commands(coverage=args.coverage, scope=args.scope)
+    if args.scope == "acceptance":
+        for command in ACCEPTANCE_ARTIFACT_COMMANDS:
+            printable = " ".join(str(part) for part in command)
+            print(f"[release-test-suite] {printable}", flush=True)
+            result = subprocess.run(command, cwd=REPO_ROOT, env=_test_environment())
+            if result.returncode:
+                print(
+                    f"[release-test-suite] FAILED with exit code {result.returncode}: {printable}",
+                    file=sys.stderr,
+                )
+                return result.returncode
+    for index, command in enumerate(
+        commands
+    ):
         printable = " ".join(str(part) for part in command)
         print(f"[release-test-suite] {printable}", flush=True)
         result = subprocess.run(command, cwd=REPO_ROOT, env=_test_environment())

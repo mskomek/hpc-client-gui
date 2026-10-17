@@ -1,5 +1,6 @@
 from contextlib import redirect_stderr, redirect_stdout
 from io import StringIO
+import tempfile
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
@@ -19,6 +20,14 @@ from scripts.release_test_suite import (
 
 
 class ReleaseTestSuiteTests(unittest.TestCase):
+    @pytest.mark.unit
+    @pytest.mark.regression
+    def test_pytest_commands_report_failure_and_skip_reasons(self):
+        commands = build_commands(coverage=False)
+        pytest_commands = [command for command in commands if "pytest" in command]
+        self.assertTrue(pytest_commands)
+        self.assertTrue(all("-rfs" in command for command in pytest_commands))
+
     @pytest.mark.unit
     @pytest.mark.semantic
     def test_coverage_commands_are_flat_argument_lists(self):
@@ -80,6 +89,81 @@ class ReleaseTestSuiteTests(unittest.TestCase):
             self.assertNotIn("--deselect", commands[index])
         self.assertIn(ISOLATED_WIRE_FILES[-1], commands[-1])
         self.assertNotIn("--ignore", commands[-1])
+
+    @pytest.mark.unit
+    @pytest.mark.regression
+    def test_acceptance_commands_include_evidence_gated_tests(self):
+        commands = build_commands(coverage=False, scope="acceptance")
+        broad = next(command for command in commands if "--ignore" in command)
+        for path in EVIDENCE_GATED_TESTS:
+            self.assertNotIn(path, broad)
+
+    @pytest.mark.unit
+    @pytest.mark.regression
+    def test_portable_commands_ignore_evidence_gated_tests_even_when_present(self):
+        commands = build_commands(coverage=False, scope="portable")
+        broad = next(command for command in commands if "--ignore" in command)
+        for path in EVIDENCE_GATED_TESTS:
+            self.assertIn(path, broad)
+
+    @pytest.mark.unit
+    @pytest.mark.regression
+    def test_acceptance_builds_candidate_wheel_before_tests(self):
+        with (
+            patch("scripts.release_test_suite._evidence_failures", return_value=()),
+            patch("scripts.release_test_suite.subprocess.run") as run,
+            redirect_stdout(StringIO()),
+            redirect_stderr(StringIO()),
+        ):
+            run.return_value = SimpleNamespace(returncode=0)
+            result = main(["--scope", "acceptance"])
+
+        self.assertEqual(result, 0)
+        first_call = run.call_args_list[0]
+        self.assertEqual(first_call.args[0][1:4], ("-m", "build", "--wheel"))
+
+    @pytest.mark.unit
+    @pytest.mark.regression
+    def test_acceptance_fails_before_running_tests_when_evidence_is_missing(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            with (
+                patch("scripts.release_test_suite.REPO_ROOT", root),
+                patch(
+                    "scripts.release_test_suite.EVIDENCE_GATED_TESTS",
+                    {"tests/test_w04_support_freeze.py": "freeze.md"},
+                ),
+                patch("scripts.release_test_suite.EVIDENCE_EXPECTED_SHA256", {"freeze.md": "a" * 64}),
+                patch("scripts.release_test_suite.subprocess.run") as run,
+                redirect_stdout(StringIO()),
+                redirect_stderr(StringIO()),
+            ):
+                result = main(["--scope", "acceptance"])
+
+        self.assertEqual(result, 2)
+        run.assert_not_called()
+
+    @pytest.mark.unit
+    @pytest.mark.regression
+    def test_acceptance_fails_before_running_tests_when_evidence_hash_is_wrong(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            (root / "freeze.md").write_text("tampered", encoding="utf-8")
+            with (
+                patch("scripts.release_test_suite.REPO_ROOT", root),
+                patch(
+                    "scripts.release_test_suite.EVIDENCE_GATED_TESTS",
+                    {"tests/test_w04_support_freeze.py": "freeze.md"},
+                ),
+                patch("scripts.release_test_suite.EVIDENCE_EXPECTED_SHA256", {"freeze.md": "a" * 64}),
+                patch("scripts.release_test_suite.subprocess.run") as run,
+                redirect_stdout(StringIO()),
+                redirect_stderr(StringIO()),
+            ):
+                result = main(["--scope", "acceptance"])
+
+        self.assertEqual(result, 2)
+        run.assert_not_called()
 
     @pytest.mark.unit
     @pytest.mark.semantic

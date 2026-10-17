@@ -67,7 +67,11 @@ def docs() -> int:
 
 
 def gui() -> int:
-    if _run("GUI tests and coverage", _python("scripts/release_test_suite.py", "--coverage"), gui=True):
+    if _run(
+        "GUI tests and coverage",
+        _python("scripts/release_test_suite.py", "--scope", "portable", "--coverage"),
+        gui=True,
+    ):
         return 1
     return _run("module coverage", _python("scripts/check_module_coverage.py", "coverage.xml"))
 
@@ -87,7 +91,11 @@ def audit() -> int:
 
 
 def release() -> int:
-    return _run("release preflight", _python("scripts/release_test_suite.py"), gui=True)
+    return _run(
+        "mandatory release acceptance preflight",
+        _python("scripts/release_test_suite.py", "--scope", "acceptance"),
+        gui=True,
+    )
 
 
 def _pytest(*paths: str) -> list[str]:

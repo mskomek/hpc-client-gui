@@ -1,0 +1,233 @@
+{
+  "schema": "hpc-v2-master-repair-acceptance/1",
+  "generated_local": "2026-10-17 Europe/Istanbul",
+  "verdict": "V2_FAILED",
+  "verdict_reason": "The repository-wide 500-line architecture rule still has 55 first-party violations; no modularization was performed in this repair worktree. The exact-candidate interactive profile-entry workflow was not separately evidenced.",
+  "git": {
+    "main_checkout": {
+      "path": "D:/Projeler/hpc-client-gui",
+      "branch": "develop",
+      "head": "c838ac46f34f547b964de97ffeef163503722d7e",
+      "initial_dirty_entries": 35,
+      "ending_dirty_entries": 35,
+      "modified_by_this_repair": false
+    },
+    "repair_worktree": {
+      "path": "D:/Projeler/.tmp/hpc-client-gui/v2-master-repair-20261017",
+      "branch": "codex/v2-master-repair-20261017",
+      "base_head": "42c8b471cf24c047c2f7f58047a5177bfd158a20",
+      "ending_head": "42c8b471cf24c047c2f7f58047a5177bfd158a20",
+      "commit_created": false,
+      "push_performed": false,
+      "product_src_build_changed": false,
+      "ending_status_entries": 4,
+      "ending_working_tree_patch_sha256": "12e53c115a196f87d6caa5f18f031675604b0610f0750f786549504331198d6e",
+      "ending_working_tree_patch_bytes": 35522
+    },
+    "origin_main": "063d83b523be377d4ef02dc8a61e2fdd15876ecc",
+    "origin_develop": "42c8b471cf24c047c2f7f58047a5177bfd158a20",
+    "merge_bases": [
+      "81fa71db89bae25d9fd3535fa9ea2336e7494595",
+      "d230ea3c62d554c895d2b0c172e5b92c1d3899d4"
+    ],
+    "main_to_develop_path_inventory": {
+      "path": ".tmp/v2-master-repair-20261017/main-to-develop-paths.json",
+      "entry_count": 974
+    }
+  },
+  "repairs": [
+    {
+      "finding": "W04 missing evidence could silently exclude 28 tests and still pass",
+      "implementation": "Restored and pinned the canonical freeze; added mandatory evidence existence/hash validation; separated portable and acceptance scopes; added acceptance-only fresh wheel build before tests; made CI GUI select portable explicitly and CI release select acceptance.",
+      "files": [
+        "artifacts/v2-final/W04/SUPPORT_MATRIX_FREEZE.md",
+        "scripts/release_test_suite.py",
+        "scripts/ci.py",
+        "tests/test_release_test_suite.py"
+      ],
+      "result": "PASS"
+    },
+    {
+      "finding": "Skip reasons were absent from acceptance output",
+      "implementation": "Changed pytest summary flags from -rf to -rfs and added a runner regression test.",
+      "result": "PASS"
+    },
+    {
+      "finding": "W31 contract test required a wheel but acceptance did not build one",
+      "implementation": "Acceptance builds a candidate wheel into .tmp/w31-package before running pytest.",
+      "result": "PASS"
+    }
+  ],
+  "w04": {
+    "evidence_path": "artifacts/v2-final/W04/SUPPORT_MATRIX_FREEZE.md",
+    "sha256": "6c41e085a1ecaeaedf6261316ea483cccaafc9b3dbea2ba71bda313fc56d6ed5",
+    "owner": "W04",
+    "source_commit": "63b696b3b8c64296d9d17f94c8d0d903f9bab7eb",
+    "focused_tests_passed": 28,
+    "negative_missing_file_test": "PASS; acceptance returns 2 before subprocess execution",
+    "negative_wrong_hash_test": "PASS; acceptance returns 2 before subprocess execution",
+    "hash_index_and_working_file_match": true,
+    "gitignore_artifacts_rule_changed": false
+  },
+  "test_execution": {
+    "python": "3.14.0",
+    "required_python": "==3.14.*",
+    "full_release_runner": {
+      "command": "python scripts/ci.py release",
+      "exit_code": 0,
+      "raw_log": ".tmp/v2-master-repair-20261017/release-acceptance-python314-skip-reasons.log",
+      "raw_exit": ".tmp/v2-master-repair-20261017/release-acceptance-python314-skip-reasons.exit",
+      "broad": {
+        "passed": 3030,
+        "failed": 0,
+        "skipped": 30,
+        "deselected": 65,
+        "subtests_passed": 29,
+        "duration_seconds": 1161.16
+      },
+      "isolated_and_broad_aggregate": {
+        "passed": 3356,
+        "failed": 0,
+        "skipped": 30,
+        "deselected": 65,
+        "subtests_passed": 29
+      },
+      "selection_summary": ".tmp/v2-master-repair-20261017/test-selection-summary.json",
+      "skip_reason_counts": {
+        "official_plugin_checkout_missing": 27,
+        "sibling_plugin_repository_missing": 1,
+        "posix_permission_semantics_on_windows": 1,
+        "posix_case_sensitivity_on_windows": 1
+      },
+      "deselection_counts": {
+        "packaging_or_artifact_dependent_marker": 62,
+        "isolated_nodes_rerun_separately": 3
+      }
+    },
+    "release_test_suite_unit_tests": "9 passed",
+    "w04_plus_runner_focused_tests": "37 passed (28 W04 + 9 runner)",
+    "w37_gui": {
+      "command": "python -m pytest tests/test_w37_settings_plugin_gui.py -q --tb=short -rf",
+      "result": "8 passed",
+      "raw_log": ".tmp/v2-master-repair-20261017/w37-gui-focused.log"
+    },
+    "w37_persistence": {
+      "command": "python -m pytest tests/test_w37_settings_persistence.py -q --tb=short -rf",
+      "result": "23 passed",
+      "raw_log": ".tmp/v2-master-repair-20261017/w37-persistence-focused.log"
+    },
+    "packaging_gate": {
+      "command": "python scripts/ci.py packaging",
+      "result": "1 passed, 3 deselected",
+      "raw_log": ".tmp/v2-master-repair-20261017/packaging-focused.log"
+    },
+    "ruff": "PASS; python -m ruff check src scripts tests",
+    "compile_i18n_smoke": "PASS in full release runner"
+  },
+  "architecture": {
+    "validator": "D:/Projeler/.agents-core/validators/validate-source-architecture.py",
+    "global_project_scope": {
+      "result": "FAIL",
+      "source_count": 773,
+      "warning_count": 56,
+      "over_limit_count": 55,
+      "dependency_errors": "Not checked by project scope",
+      "inventory": ".tmp/v2-master-repair-20261017/source-loc-global.json",
+      "raw_log": ".tmp/v2-master-repair-20261017/source-architecture-project-final.log"
+    },
+    "changed_scope": {
+      "result": "PASS",
+      "source_count": 3,
+      "warning_count": 0,
+      "over_limit_count": 0,
+      "dependency_errors": [],
+      "raw_log": ".tmp/v2-master-repair-20261017/source-architecture-changed-final.log"
+    },
+    "priority_examples_still_over_limit": {
+      "src/hpc_gui/ui/widgets/remote_dir_panel.py": 4628,
+      "src/hpc_gui/wx_jobs.py": 2967,
+      "src/hpc_gui/config/storage.py": 805,
+      "tests/test_ftp_widget.py": 6248,
+      "tests/test_wx_connection_profiles.py": 1175
+    },
+    "refactored_files": []
+  },
+  "product_source_identity": {
+    "acceptance_product_source_commit": "e41cb02613b6bad32c41480a88308750bd05ce15",
+    "windows_candidate_source_commit": "8345c82526635b485afd42a3678a1f3c59b222f1",
+    "origin_develop_src_tree": "1ea6f877a8949ca4537f843fae38a7f33ea48970",
+    "origin_develop_build_tree": "df5d68a241b023842b01f060c49a9d5b5d1c55ac",
+    "e41_src_and_build_trees_match_origin_develop": true,
+    "repair_product_src_build_diff": false
+  },
+  "artifacts": {
+    "acceptance_wheel": {
+      "path": ".tmp/w31-package/hpc_client_gui-1.5.9-py3-none-any.whl",
+      "sha256": "f27c0c6971b8ff9449b5058fb649ed1e6fefcd40255fdc9b4e08f376387c75ea",
+      "w31_resource_test": "PASS"
+    },
+    "windows_exe": {
+      "path": "D:/Projeler/.tmp/worktrees/hpc-v2-noninteractive-completion/.tmp/candidates/windows-v2-final-current/hpc-client-gui/hpc-client-gui.exe",
+      "sha256": "77a82b273c97b0d6168fdd718509032a1f49d49f2e5a52e38582c5607c4f9216",
+      "source_commit": "8345c82526635b485afd42a3678a1f3c59b222f1",
+      "rebuild_reasoning": "src/ and build/ inputs equal current product inputs; no product-source Candidate rebuild triggered"
+    },
+    "linux_deb": {
+      "path": "D:/Projeler/.tmp/worktrees/hpc-v2-noninteractive-completion/.tmp/evidence-linux-final-current/hpc-client-gui_1.5.9_amd64.deb",
+      "sha256": "1eaeb425b8a52df14b33abc60960f686946142e001a9272d51ee9383d5c46892",
+      "source_commit": "e41cb02613b6bad32c41480a88308750bd05ce15",
+      "payload_sha256": "309dd25c9fb3c61c28afdc2b367ee84fa463921c2e8e9e048d504b807dcb9e95"
+    }
+  },
+  "windows_guest": {
+    "evidence_date": "2026-10-16",
+    "candidate_sha256": "77a82b273c97b0d6168fdd718509032a1f49d49f2e5a52e38582c5607c4f9216",
+    "uia_result": "PASS; run 715daa17b7b143ddb420b346afd38100; exit 0; no timeout; Explorer owner test\\home; session 2; 22 visible nodes; WindowPattern.Close; candidate exit 0",
+    "uia_semantics_limit": "All 22 nodes were ControlType.Pane; ButtonCount=0 and EditCount=0",
+    "packaged_smoke": "21/21; run f3fd659a638c407c8c019fc8258dc04d; candidate additional-file hash matches; clean shutdown and reconnect_fresh_identity",
+    "wer": "QuerySucceeded=true; no relevant WER records; no candidate processes",
+    "profile_workflow_limit": "Packaged smoke uses a loopback session and verifies reconnect identity; interactive profile entry through visible controls was not separately run on this exact EXE in this task. Older profile UI evidence with a different EXE hash is excluded."
+  },
+  "ubuntu": {
+    "evidence_date": "2026-10-17",
+    "distribution": "Ubuntu 24.04 / Ubuntu-Test",
+    "candidate_sha256": "1eaeb425b8a52df14b33abc60960f686946142e001a9272d51ee9383d5c46892",
+    "migration": "PASS; install, version-only upgrade, rollback, installed GUI smoke 21/21, normal shutdown, purge, dpkg audit clean, temporary sudoers cleanup verified",
+    "final_cleanup_recheck_exit": 0,
+    "raw_record": "D:/Projeler/.tmp/worktrees/hpc-v2-noninteractive-completion/.tmp/evidence-v2-final-closure/ubuntu-system-package-migration.json",
+    "fresh_vm_run_this_task": false,
+    "source_compatibility": "Same product src/build trees; prior raw record remains artifact/source-compatible"
+  },
+  "terminal": {
+    "webkitgtk": "51 passed in 29.50s",
+    "w19_lifecycle": "20 passed in 4.15s; exit 0",
+    "fragment_queue": "10 passed in 0.13s; exit 0",
+    "gdb_lifecycle": "12 cycles; inferior exited normally",
+    "synthetic_benchmark": "Queue throughput only; not an HPC network test",
+    "raw_evidence_directory": "D:/Projeler/.tmp/worktrees/hpc-v2-noninteractive-completion/.tmp/evidence-linux-final-current"
+  },
+  "audits": {
+    "audit_a": {
+      "result": "FAIL",
+      "path": ".tmp/v2-master-repair-20261017/audit-a-implementation.md"
+    },
+    "audit_b": {
+      "result": "PASS for selected evidence/provenance chain",
+      "path": ".tmp/v2-master-repair-20261017/audit-b-evidence.md"
+    }
+  },
+  "final_changes": {
+    "modified_source_files": [
+      "scripts/ci.py",
+      "scripts/release_test_suite.py",
+      "tests/test_release_test_suite.py"
+    ],
+    "staged_evidence": [
+      "artifacts/v2-final/W04/SUPPORT_MATRIX_FREEZE.md"
+    ],
+    "source_modularization": "None",
+    "commit": false,
+    "push": false,
+    "other_worktrees_modified": false
+  }
+}

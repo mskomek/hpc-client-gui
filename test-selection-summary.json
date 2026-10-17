@@ -1,0 +1,171 @@
+{
+  "summary": {
+    "passed": 3356,
+    "failed": 0,
+    "skipped": 30,
+    "deselected": 65,
+    "subtests": 29
+  },
+  "skip_entries": [
+    {
+      "test_file": "tests/test_job_templates.py",
+      "line": 279,
+      "reason": "sibling plugin repo missing"
+    },
+    {
+      "test_file": "tests/test_plugin_contract.py",
+      "line": 82,
+      "reason": "HPC_GUI_CONTRACT_REPO does not point to an official plugins checkout"
+    },
+    {
+      "test_file": "tests/test_plugin_contract.py",
+      "line": 96,
+      "reason": "HPC_GUI_CONTRACT_REPO does not point to an official plugins checkout"
+    },
+    {
+      "test_file": "tests/test_plugin_contract.py",
+      "line": 140,
+      "reason": "HPC_GUI_CONTRACT_REPO does not point to an official plugins checkout"
+    },
+    {
+      "test_file": "tests/test_plugin_contract.py",
+      "line": 161,
+      "reason": "HPC_GUI_CONTRACT_REPO does not point to an official plugins checkout"
+    },
+    {
+      "test_file": "tests/test_plugin_contract.py",
+      "line": 174,
+      "reason": "HPC_GUI_CONTRACT_REPO does not point to an official plugins checkout"
+    },
+    {
+      "test_file": "tests/test_plugin_contract.py",
+      "line": 186,
+      "reason": "HPC_GUI_CONTRACT_REPO does not point to an official plugins checkout"
+    },
+    {
+      "test_file": "tests/test_plugin_contract.py",
+      "line": 205,
+      "reason": "HPC_GUI_CONTRACT_REPO does not point to an official plugins checkout"
+    },
+    {
+      "test_file": "tests/test_plugin_contract.py",
+      "line": 235,
+      "reason": "HPC_GUI_CONTRACT_REPO does not point to an official plugins checkout"
+    },
+    {
+      "test_file": "tests/test_plugin_contract.py",
+      "line": 254,
+      "reason": "HPC_GUI_CONTRACT_REPO does not point to an official plugins checkout"
+    },
+    {
+      "test_file": "tests/test_plugin_contract.py",
+      "line": 271,
+      "reason": "HPC_GUI_CONTRACT_REPO does not point to an official plugins checkout"
+    },
+    {
+      "test_file": "tests/test_plugin_contract.py",
+      "line": 288,
+      "reason": "HPC_GUI_CONTRACT_REPO does not point to an official plugins checkout"
+    },
+    {
+      "test_file": "tests/test_plugin_contract.py",
+      "line": 322,
+      "reason": "HPC_GUI_CONTRACT_REPO does not point to an official plugins checkout"
+    },
+    {
+      "test_file": "tests/test_plugin_contract.py",
+      "line": 338,
+      "reason": "HPC_GUI_CONTRACT_REPO does not point to an official plugins checkout"
+    },
+    {
+      "test_file": "tests/test_plugin_contract.py",
+      "line": 360,
+      "reason": "HPC_GUI_CONTRACT_REPO does not point to an official plugins checkout"
+    },
+    {
+      "test_file": "tests/test_plugin_contract.py",
+      "line": 370,
+      "reason": "HPC_GUI_CONTRACT_REPO does not point to an official plugins checkout"
+    },
+    {
+      "test_file": "tests/test_plugin_contract.py",
+      "line": 387,
+      "reason": "HPC_GUI_CONTRACT_REPO does not point to an official plugins checkout"
+    },
+    {
+      "test_file": "tests/test_plugin_contract.py",
+      "line": 405,
+      "reason": "HPC_GUI_CONTRACT_REPO does not point to an official plugins checkout"
+    },
+    {
+      "test_file": "tests/test_plugin_contract.py",
+      "line": 431,
+      "reason": "HPC_GUI_CONTRACT_REPO does not point to an official plugins checkout"
+    },
+    {
+      "test_file": "tests/test_plugin_contract.py",
+      "line": 478,
+      "reason": "HPC_GUI_CONTRACT_REPO does not point to an official plugins checkout"
+    },
+    {
+      "test_file": "tests/test_plugin_contract.py",
+      "line": 509,
+      "reason": "HPC_GUI_CONTRACT_REPO does not point to an official plugins checkout"
+    },
+    {
+      "test_file": "tests/test_plugin_v2_integration.py",
+      "line": 166,
+      "reason": "HPC_GUI_CONTRACT_REPO does not point to an official plugins checkout"
+    },
+    {
+      "test_file": "tests/test_security_hardening_wave.py",
+      "line": 176,
+      "reason": "POSIX permission semantics"
+    },
+    {
+      "test_file": "tests/test_synchronized_browsing.py",
+      "line": 117,
+      "reason": "POSIX-only exact-case rule"
+    },
+    {
+      "test_file": "tests/test_w09_main_plugin_compat.py",
+      "line": 115,
+      "reason": "HPC_GUI_CONTRACT_REPO does not point to an official plugins checkout"
+    },
+    {
+      "test_file": "tests/test_w09_main_plugin_compat.py",
+      "line": 128,
+      "reason": "HPC_GUI_CONTRACT_REPO does not point to an official plugins checkout"
+    },
+    {
+      "test_file": "tests/test_w09_main_plugin_compat.py",
+      "line": 158,
+      "reason": "HPC_GUI_CONTRACT_REPO does not point to an official plugins checkout"
+    },
+    {
+      "test_file": "tests/test_w09_main_plugin_compat.py",
+      "line": 196,
+      "reason": "HPC_GUI_CONTRACT_REPO does not point to an official plugins checkout"
+    },
+    {
+      "test_file": "tests/test_w09_main_plugin_compat.py",
+      "line": 210,
+      "reason": "HPC_GUI_CONTRACT_REPO does not point to an official plugins checkout"
+    },
+    {
+      "test_file": "tests/test_w09_main_plugin_compat.py",
+      "line": 224,
+      "reason": "HPC_GUI_CONTRACT_REPO does not point to an official plugins checkout"
+    }
+  ],
+  "skip_count_from_entries": 30,
+  "deselection_policy": {
+    "marker_selected_count": 62,
+    "explicit_nodes": 3,
+    "explicit_nodeids": [
+      "tests/test_wx_terminal_interaction.py::test_header_status_identity_dimensions",
+      "tests/test_wx_file_actions_stress.py::test_wx_remote_context_target_stress_uses_real_events",
+      "tests/test_wx_shell_p0_stress.py::test_wx_shell_p0_stress_real_wx_paths"
+    ]
+  }
+}
