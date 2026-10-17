@@ -1,67 +1,16 @@
-import pytest
-
-from hpc_gui.services.transfer_controller import TransferItem
-from hpc_gui.wx_shell import _start_file_transfers
-import time
-from threading import Event
+from support.test_wx_file_transfer_integration_shared import (
+    TransferItem,
+    _BlockingFiles,
+    _FailingFiles,
+    _Files,
+    _Lifecycle,
+    _ResumableFiles,
+    _start_file_transfers,
+    pytest,
+    time,
+)
 
 pytestmark = pytest.mark.wx
-
-
-class _Files:
-    def __init__(self):
-        self.calls = []
-
-    def upload(self, source, destination):
-        self.calls.append(("upload", source, destination))
-
-    def download(self, source, destination):
-        self.calls.append(("download", source, destination))
-
-
-class _ResumableFiles(_Files):
-    def __init__(self, direction):
-        super().__init__()
-        self.direction = direction
-        self.existing = {"/work/item"}
-
-    def exists(self, path):
-        return path in self.existing
-
-    def resume_upload(self, source, destination):
-        assert self.direction == "upload"
-        self.calls.append(("resume_upload", source, destination))
-
-    def resume_download(self, source, destination):
-        assert self.direction == "download"
-        self.calls.append(("resume_download", source, destination))
-
-
-class _Lifecycle:
-    def __init__(self):
-        self.cleanups = []
-
-    def register_cleanup(self, callback):
-        self.cleanups.append(callback)
-
-
-class _FailingFiles(_Files):
-    def upload(self, source, destination):
-        super().upload(source, destination)
-        raise OSError("transfer failed")
-
-
-class _BlockingFiles(_Files):
-    def __init__(self):
-        super().__init__()
-        self.started = Event()
-        self.release = Event()
-
-    def upload(self, source, destination):
-        super().upload(source, destination)
-        self.started.set()
-        self.release.wait(2)
-
 
 @pytest.mark.integration
 @pytest.mark.concurrency
@@ -89,29 +38,6 @@ def test_wx_file_transfer_uses_operation_session_snapshot():
     assert next_controller.engine.wait(2)
     assert files_b.calls == [("upload", "b.txt", "/b.txt")]
 
-
-class _ConflictFiles(_Files):
-    def __init__(self):
-        super().__init__()
-        self.existing = {"/work/a.txt"}
-
-    def exists(self, path):
-        return path in self.existing
-
-
-def _run_conflict(policy, resolver=None):
-    files = _ConflictFiles()
-    state = {"session": {"files": files}, "conflict_policy": policy}
-    controller = _start_file_transfers(
-        state,
-        _Lifecycle(),
-        [TransferItem("upload", "a.txt", "/work/a.txt")],
-        conflict_resolver=resolver,
-    )
-    assert controller.engine.wait(2)
-    return files.calls
-
-
 @pytest.mark.integration
 def test_file_context_transfer_uses_transfer_session_boundary():
     files = _Files()
@@ -121,7 +47,6 @@ def test_file_context_transfer_uses_transfer_session_boundary():
     assert controller.engine.wait(2)
     assert files.calls == [("upload", "iş sonuç.txt", "/work/iş sonuç.txt")]
     assert lifecycle.cleanups
-
 
 @pytest.mark.integration
 @pytest.mark.resource
@@ -135,7 +60,6 @@ def test_wx_file_transfer_session_removed_after_success():
         time.sleep(0.01)
     assert state["transfer_sessions"] == set()
 
-
 @pytest.mark.integration
 @pytest.mark.resource
 def test_wx_file_transfer_session_removed_after_failure():
@@ -146,7 +70,6 @@ def test_wx_file_transfer_session_removed_after_failure():
     while time.monotonic() < deadline and state.get("transfer_sessions"):
         time.sleep(0.01)
     assert state["transfer_sessions"] == set()
-
 
 @pytest.mark.integration
 @pytest.mark.resource
@@ -164,7 +87,6 @@ def test_wx_file_transfer_session_removed_after_cancel():
     while time.monotonic() < deadline and state.get("transfer_sessions"):
         time.sleep(0.01)
     assert state["transfer_sessions"] == set()
-
 
 @pytest.mark.integration
 @pytest.mark.resource
@@ -184,7 +106,6 @@ def test_wx_file_transfer_lifecycle_shutdown_cleans_active_session():
         time.sleep(0.01)
     assert state["transfer_sessions"] == set()
 
-
 @pytest.mark.integration
 def test_wx_file_context_transfer_reaches_progress_callback():
     files = _Files()
@@ -198,31 +119,6 @@ def test_wx_file_context_transfer_reaches_progress_callback():
     )
     assert controller.engine.wait(2)
     assert progress == [("a.txt", 1, 1)]
-
-
-@pytest.mark.integration
-@pytest.mark.semantic
-def test_wx_file_transfer_conflict_ask_overwrite():
-    assert _run_conflict("ask", lambda _item: "overwrite") == [("upload", "a.txt", "/work/a.txt")]
-
-
-@pytest.mark.integration
-@pytest.mark.semantic
-def test_wx_file_transfer_conflict_ask_skip():
-    assert _run_conflict("ask", lambda _item: "skip") == []
-
-
-@pytest.mark.integration
-@pytest.mark.semantic
-def test_wx_file_transfer_conflict_ask_rename():
-    assert _run_conflict("ask", lambda _item: ("rename", "/work/a-1.txt")) == [("upload", "a.txt", "/work/a-1.txt")]
-
-
-@pytest.mark.integration
-@pytest.mark.semantic
-def test_wx_file_transfer_conflict_ask_cancel():
-    assert _run_conflict("ask", lambda _item: "cancel") == []
-
 
 @pytest.mark.integration
 @pytest.mark.semantic
@@ -251,128 +147,6 @@ def test_wx_file_transfer_resume_uses_direction_specific_backend_method(tmp_path
     )
     assert download.engine.wait(2)
     assert download_files.calls == [("resume_download", "/remote/item", str(local_destination))]
-
-
-@pytest.mark.integration
-@pytest.mark.semantic
-def test_wx_file_transfer_policy_overwrite():
-    assert _run_conflict("overwrite") == [("upload", "a.txt", "/work/a.txt")]
-
-
-@pytest.mark.integration
-@pytest.mark.semantic
-def test_wx_file_transfer_policy_skip():
-    assert _run_conflict("skip") == []
-
-
-@pytest.mark.integration
-@pytest.mark.semantic
-def test_wx_file_transfer_policy_rename():
-    assert _run_conflict("rename", lambda _item: ("rename", "/work/a-1.txt")) == [("upload", "a.txt", "/work/a-1.txt")]
-
-
-@pytest.mark.integration
-@pytest.mark.semantic
-def test_wx_file_transfer_conflict_ask_uses_gui_decision_seam(monkeypatch):
-    wx = pytest.importorskip("wx")
-    app = wx.App.Get()
-    if app is None:
-        app = wx.App(False)
-    parent = wx.Frame(None)
-    files = _ConflictFiles()
-    state = {"session": {"files": files}, "conflict_policy": "ask"}
-    # New conflict UI is a dedicated dialog, not MessageBox; mock the dialog creation to return overwrite
-    from hpc_gui import wx_transfer_workspace as _wx_tw
-    class _MockDlg:
-        def __init__(self, *a, **kw):
-            self._wx_conflict_result = {"value": "overwrite"}
-        def ShowModal(self):
-            return wx.ID_OK
-        def Destroy(self):
-            pass
-    monkeypatch.setattr(_wx_tw, "create_transfer_conflict_dialog", lambda *a, **kw: _MockDlg())
-    # also keep old MessageBox mock for fallback
-    monkeypatch.setattr(wx, "MessageBox", lambda *_args, **_kwargs: wx.YES)
-    controller = _start_file_transfers(
-        state,
-        _Lifecycle(),
-        [TransferItem("upload", "a.txt", "/work/a.txt")],
-        parent=parent,
-    )
-    while not controller.engine.wait(0):
-        app.ProcessPendingEvents()
-        wx.MilliSleep(5)
-    app.ProcessPendingEvents()
-    assert files.calls == [("upload", "a.txt", "/work/a.txt")]
-    parent.Destroy()
-    app.ProcessPendingEvents()
-    app.Destroy()
-
-
-@pytest.mark.integration
-@pytest.mark.semantic
-def test_wx_file_transfer_rename_policy_generates_available_destination():
-    wx = pytest.importorskip("wx")
-    app = wx.App.Get()
-    if app is None:
-        app = wx.App(False)
-    parent = wx.Frame(None)
-    files = _ConflictFiles()
-    state = {"session": {"files": files}, "conflict_policy": "rename"}
-    controller = _start_file_transfers(
-        state,
-        _Lifecycle(),
-        [TransferItem("upload", "a.txt", "/work/a.txt")],
-        parent=parent,
-    )
-    assert controller.engine.wait(2)
-    assert files.calls == [("upload", "a.txt", "/work/a (1).txt")]
-    parent.Destroy()
-    app.ProcessPendingEvents()
-    app.Destroy()
-
-
-@pytest.mark.parametrize("choice", ["no", "cancel"])
-@pytest.mark.integration
-@pytest.mark.semantic
-def test_wx_file_transfer_conflict_gui_decline_does_not_upload(monkeypatch, choice):
-    wx = pytest.importorskip("wx")
-    app = wx.App.Get()
-    if app is None:
-        app = wx.App(False)
-    parent = wx.Frame(None)
-    files = _ConflictFiles()
-    state = {"session": {"files": files}, "conflict_policy": "ask"}
-    result = wx.NO if choice == "no" else wx.CANCEL
-    # Mock dialog to respect old MessageBox-based decline semantics
-    from hpc_gui import wx_transfer_workspace as _wx_tw
-    decision = "skip" if choice == "no" else "cancel"
-    class _MockDlg:
-        def __init__(self, *a, **kw):
-            self._wx_conflict_result = {"value": decision}
-        def ShowModal(self):
-            return wx.ID_OK if decision == "skip" else wx.ID_CANCEL
-        def Destroy(self):
-            pass
-    monkeypatch.setattr(_wx_tw, "create_transfer_conflict_dialog", lambda *a, **kw: _MockDlg())
-    monkeypatch.setattr(wx, "MessageBox", lambda *_args, **_kwargs: result)
-    controller = _start_file_transfers(
-        state,
-        _Lifecycle(),
-        [TransferItem("upload", "a.txt", "/work/a.txt")],
-        parent=parent,
-    )
-    deadline = time.monotonic() + 2
-    while not controller.engine.wait(0) and time.monotonic() < deadline:
-        app.ProcessPendingEvents()
-        wx.MilliSleep(5)
-    app.ProcessPendingEvents()
-    assert controller.engine.wait(0)
-    assert files.calls == []
-    parent.Destroy()
-    app.ProcessPendingEvents()
-    app.Destroy()
-
 
 @pytest.mark.gui
 def test_wx_file_transfer_opens_visible_progress_surface():
@@ -405,7 +179,6 @@ def test_wx_file_transfer_opens_visible_progress_surface():
     app.ProcessPendingEvents()
     app.Destroy()
 
-
 @pytest.mark.gui
 @pytest.mark.concurrency
 @pytest.mark.resource
@@ -437,87 +210,3 @@ def test_wx_file_transfer_cancel_button_cancels_controller():
     parent.Destroy()
     app.ProcessPendingEvents()
     app.Destroy()
-
-
-# --------------------------------------------------------------------------
-# Conflict decision -> real backend byte semantics (not method labels)
-# --------------------------------------------------------------------------
-
-from test_transfer_resume_semantics import (  # noqa: E402
-    PARTIAL,
-    REMOTE_FILE,
-    SOURCE,
-    ftp_backend,
-    ssh_backend,
-)
-
-
-def _run_decision(files, item, decision):
-    controller = _start_file_transfers(
-        {"session": {"files": files}, "conflict_policy": "ask"},
-        _Lifecycle(),
-        [item],
-        conflict_resolver=lambda _item: decision,
-    )
-    assert controller.engine.wait(5)
-    return controller
-
-
-@pytest.mark.parametrize("decision,expected", [
-    ("overwrite", SOURCE),
-    ("resume", PARTIAL + SOURCE[len(PARTIAL):]),
-])
-@pytest.mark.integration
-@pytest.mark.semantic
-def test_conflict_decision_drives_ftp_upload_bytes(tmp_path, decision, expected):
-    source = tmp_path / "src.bin"
-    source.write_bytes(SOURCE)
-    files = ftp_backend({REMOTE_FILE: PARTIAL})
-    _run_decision(files, TransferItem("upload", str(source), REMOTE_FILE), decision)
-    assert bytes(files.ftp.files[REMOTE_FILE]) == expected
-    assert files.ftp.transfer_commands == (["STOR"] if decision == "overwrite" else ["APPE"])
-
-
-@pytest.mark.parametrize("decision,expected", [
-    ("overwrite", SOURCE),
-    ("resume", PARTIAL + SOURCE[len(PARTIAL):]),
-])
-@pytest.mark.integration
-@pytest.mark.semantic
-def test_conflict_decision_drives_ssh_upload_bytes(tmp_path, decision, expected):
-    source = tmp_path / "src.bin"
-    source.write_bytes(SOURCE)
-    files, sftp = ssh_backend({REMOTE_FILE: PARTIAL})
-    _run_decision(files, TransferItem("upload", str(source), REMOTE_FILE), decision)
-    assert bytes(sftp.store[REMOTE_FILE]) == expected
-    assert sftp.modes(REMOTE_FILE) == (["wb"] if decision == "overwrite" else ["ab"])
-
-
-@pytest.mark.parametrize("decision,expected", [
-    ("overwrite", SOURCE),
-    ("resume", PARTIAL + SOURCE[len(PARTIAL):]),
-])
-@pytest.mark.integration
-@pytest.mark.semantic
-def test_conflict_decision_drives_ssh_download_bytes(tmp_path, decision, expected):
-    local = tmp_path / "dst.bin"
-    local.write_bytes(PARTIAL)
-    files, sftp = ssh_backend({REMOTE_FILE: SOURCE})
-    _run_decision(files, TransferItem("download", REMOTE_FILE, str(local)), decision)
-    assert local.read_bytes() == expected
-    assert sftp.seeks(REMOTE_FILE) == ([] if decision == "overwrite" else [len(PARTIAL)])
-
-
-@pytest.mark.parametrize("decision,expected", [
-    ("overwrite", SOURCE),
-    ("resume", PARTIAL + SOURCE[len(PARTIAL):]),
-])
-@pytest.mark.integration
-@pytest.mark.semantic
-def test_conflict_decision_drives_ftp_download_bytes(tmp_path, decision, expected):
-    local = tmp_path / "dst.bin"
-    local.write_bytes(PARTIAL)
-    files = ftp_backend({REMOTE_FILE: SOURCE})
-    _run_decision(files, TransferItem("download", REMOTE_FILE, str(local)), decision)
-    assert local.read_bytes() == expected
-    assert files.ftp.rest_offsets == ([None] if decision == "overwrite" else [len(PARTIAL)])

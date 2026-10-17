@@ -29,6 +29,7 @@ import pytest
 
 from hpc_gui.core import i18n
 from hpc_gui.config import storage
+from hpc_gui.config import _storage_core
 from hpc_gui.services.geometry_policy import (
     Rect,
     dispose_legacy_qt_geometry_blob,
@@ -56,7 +57,7 @@ def isolated_app_data(tmp_path, monkeypatch):
 @pytest.fixture
 def isolated_config(tmp_path, monkeypatch):
     config_path = tmp_path / "config.json"
-    monkeypatch.setattr(storage, "_config_path", lambda: config_path)
+    monkeypatch.setattr(_storage_core, "_config_path", lambda: config_path)
     return config_path
 
 

@@ -15,114 +15,26 @@ readback) plus the Qt installed-tab note widget.
 """
 
 from __future__ import annotations
-
-import hashlib
-import json
-from pathlib import Path
-
-import pytest
-
-from hpc_gui.plugins import discovery as disc
-from hpc_gui.plugins import lifecycle as life
-from hpc_gui.plugins.loader import load_installed_plugins
-from hpc_gui.plugins.models import PLUGIN_API_VERSION
-from hpc_gui.plugins.state import read_installed_state, set_plugin_disabled
-from hpc_gui.plugins.storage import (
+from support.test_w33_lifecycle_isolation_shared import (
+    APP_VERSION,
+    Path,
+    WxPluginManagerModel,
+    _base_manifest,
+    _install,
+    _install_broken_sibling,
+    _install_version,
+    _write_package,
+    disc,
+    json,
+    life,
+    load_installed_plugins,
+    pytest,
     read_active_versions,
     read_disabled_ids,
+    read_installed_state,
+    set_plugin_disabled,
     write_active_versions,
 )
-from hpc_gui.wx_plugins import WxPluginManagerModel
-
-
-APP_VERSION = "1.5.9"
-
-VALID_PROFILE = {
-    "schema_version": 1,
-    "profile_id": "truba",
-    "name": "TRUBA",
-    "scheduler": "slurm",
-    "paths": {"home_dir": "/arf/home/{user}", "scratch_dir": "/arf/scratch/{user}"},
-    "commands": {"status_command": "lssrv"},
-}
-
-
-def _base_manifest(plugin_id="org.hpcclient.truba", version="1.0.0", **overrides):
-    base = {
-        "schema_version": 1,
-        "plugin_api": PLUGIN_API_VERSION,
-        "id": plugin_id,
-        "name": "TRUBA",
-        "version": version,
-        "publisher": "HPC Client GUI",
-        "license": "MIT",
-        "description": "TRUBA cluster profile.",
-        "requires_app": ">=1.3.0",
-        "capabilities": ["cluster-profile"],
-        "entrypoints": {"cluster_profiles": ["cluster-profile.json"]},
-        "files": [],
-    }
-    base.update(overrides)
-    return base
-
-
-def _write_package(root: Path, manifest: dict, profile: dict | None = VALID_PROFILE) -> dict:
-    pkg = root / "packages" / manifest["id"] / manifest["version"]
-    pkg.mkdir(parents=True, exist_ok=True)
-    files = []
-    if profile is not None:
-        rels = (manifest.get("entrypoints") or {}).get("cluster_profiles") or []
-        if isinstance(rels, str):
-            rels = [rels]
-        for rel in rels:
-            payload = json.dumps(profile).encode("utf-8")
-            target = pkg / rel
-            target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_bytes(payload)
-            files.append(
-                {
-                    "path": rel,
-                    "sha256": hashlib.sha256(payload).hexdigest(),
-                    "size": len(payload),
-                    "role": "cluster-profile",
-                }
-            )
-    stored = {**manifest, "files": files or manifest.get("files") or []}
-    (pkg / "manifest.json").write_text(json.dumps(stored), encoding="utf-8")
-    return stored
-
-
-def _install(root: Path, manifest: dict, profile: dict | None = VALID_PROFILE) -> dict:
-    stored = _write_package(root, manifest, profile)
-    from hpc_gui.plugins.state import record_installed_version
-
-    # Recorded through the state owner so installed.json and the active
-    # pointer stay consistent (two-version tests read installed.json).
-    record_installed_version(
-        stored["id"], stored["version"], root=root, activate=True,
-        manifest_sha256=None,
-    )
-    return stored
-
-
-def _install_version(
-    root: Path, manifest: dict, profile: dict | None = VALID_PROFILE
-) -> dict:
-    """Install an extra version without moving the active pointer."""
-    stored = _write_package(root, manifest, profile)
-    from hpc_gui.plugins.state import record_installed_version
-
-    record_installed_version(
-        stored["id"], stored["version"], root=root, activate=False,
-        manifest_sha256=None,
-    )
-    return stored
-
-
-# ---------------------------------------------------------------------------
-# Workstream C — LIFE-001..004: effect matrix
-# ---------------------------------------------------------------------------
-
 
 @pytest.mark.unit
 def test_life_effect_matrix_covers_all_scopes():
@@ -137,7 +49,6 @@ def test_life_effect_matrix_covers_all_scopes():
     assert "current load" in by_req["HPC-W08-LIFE-003"][0]["detail"]
     assert "restart" in by_req["HPC-W08-LIFE-004"][0]["scope"]
     assert len(effects) == 5
-
 
 @pytest.mark.integration
 def test_life001_disable_takes_effect_on_next_load_without_restart(tmp_path: Path):
@@ -157,7 +68,6 @@ def test_life001_disable_takes_effect_on_next_load_without_restart(tmp_path: Pat
     restored = load_installed_plugins(root=tmp_path, app_version=APP_VERSION)
     assert [p.manifest.id for p in restored.plugins] == ["org.hpcclient.truba"]
 
-
 @pytest.mark.integration
 def test_life002_view_rebuild_reloads_without_disabled_plugin(tmp_path: Path):
     """LIFE-002: a view/menu rebuild (fresh load) drops disabled content."""
@@ -172,7 +82,6 @@ def test_life002_view_rebuild_reloads_without_disabled_plugin(tmp_path: Path):
     rebuilt = load_installed_plugins(root=tmp_path, app_version=APP_VERSION)
     assert rebuilt.plugins == []
     assert collect_plugin_menu_contributions(rebuilt.plugins) == []
-
 
 @pytest.mark.integration
 def test_life003_reconnect_resolves_fresh_saved_snapshots_kept(tmp_path: Path):
@@ -189,7 +98,6 @@ def test_life003_reconnect_resolves_fresh_saved_snapshots_kept(tmp_path: Path):
     assert saved_connection["provider"]["profile_id"] == "truba"
     assert saved_snapshot is not None
 
-
 @pytest.mark.integration
 def test_life004_restart_reads_same_persisted_flags(tmp_path: Path):
     """LIFE-004: restart is sufficient but never required (same flags)."""
@@ -201,12 +109,6 @@ def test_life004_restart_reads_same_persisted_flags(tmp_path: Path):
     assert read_active_versions(tmp_path) == {"org.hpcclient.truba": "1.0.0"}
     after_restart = load_installed_plugins(root=tmp_path, app_version=APP_VERSION)
     assert after_restart.plugins == []
-
-
-# ---------------------------------------------------------------------------
-# Workstream C — LIFE-005: the UI states the real behavior
-# ---------------------------------------------------------------------------
-
 
 @pytest.mark.contract
 def test_life005_effect_note_keys_exist_in_both_languages():
@@ -220,7 +122,6 @@ def test_life005_effect_note_keys_exist_in_both_languages():
         assert "restart" in text.lower() or "yeniden ba" in text
     load_language("en")
     assert life.lifecycle_effect_note().startswith("Disabling a plugin")
-
 
 @pytest.mark.gui
 @pytest.mark.wx
@@ -276,7 +177,6 @@ def test_life005_wx_view_states_effect_and_toggle_works(tmp_path: Path):
     assert "org.hpcclient.truba" in read_disabled_ids(tmp_path)
     assert load_installed_plugins(root=tmp_path, app_version=APP_VERSION).plugins == []
 
-
 @pytest.mark.gui
 @pytest.mark.subprocess
 @pytest.mark.semantic
@@ -320,12 +220,6 @@ def test_life005_qt_installed_tab_states_effect():
     assert result.returncode == 0, f"Qt lifecycle note probe failed: {result.stdout}\n{result.stderr}"
     assert "qt-lifecycle-note=PASS" in result.stdout
 
-
-# ---------------------------------------------------------------------------
-# Workstream D — LIFE-006: isolation across the seven phases
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.unit
 def test_life006_seven_phases_enumerated():
     """LIFE-006: the contract names all seven planning phases with gates."""
@@ -341,18 +235,6 @@ def test_life006_seven_phases_enumerated():
     ]
     assert all(row["gate"].strip() for row in phases)
     assert "never blocks" in life.isolation_note() or "always finish loading" in life.isolation_note()
-
-
-def _install_broken_sibling(root: Path, plugin_id: str, version: str, mutate) -> None:
-    good = _install(root, _base_manifest())
-    active = read_active_versions(root=root)
-    broken_manifest = _base_manifest(plugin_id=plugin_id, version=version)
-    stored = _write_package(root, broken_manifest)
-    mutate(root, stored)
-    active[plugin_id] = version
-    write_active_versions(active, root=root)
-    assert good["id"] in active
-
 
 @pytest.mark.integration
 @pytest.mark.parametrize(
@@ -380,7 +262,6 @@ def test_life006_broken_sibling_never_blocks_healthy(tmp_path: Path, phase: str,
     assert len(result.problems) >= 1
     assert all(p.reason.strip() for p in result.problems)
 
-
 @pytest.mark.integration
 def test_life006_integrity_and_compat_failures_are_contained(tmp_path: Path):
     """LIFE-006: tampered files / incompatible siblings stay diagnostics."""
@@ -403,7 +284,6 @@ def test_life006_integrity_and_compat_failures_are_contained(tmp_path: Path):
     assert "org.hpcclient.tampered" in by_id
     assert "incompatible" in by_id.get("org.hpcclient.future", "")
 
-
 @pytest.mark.integration
 def test_life006_import_never_executes_and_shutdown_is_trivial(tmp_path: Path):
     """LIFE-006: no import/exec surface at load; failures leave no teardown."""
@@ -417,12 +297,6 @@ def test_life006_import_never_executes_and_shutdown_is_trivial(tmp_path: Path):
     phases = {row["phase"]: row["gate"] for row in life.describe_isolation_phases()}
     assert "declarative only" in phases["import"]
     assert "nothing to tear down" in phases["shutdown"]
-
-
-# ---------------------------------------------------------------------------
-# Workstream E — LIFE-007..012: duplicates and conflicts
-# ---------------------------------------------------------------------------
-
 
 @pytest.mark.integration
 def test_life008_duplicate_provider_id_sorted_winner_and_diagnostic(tmp_path: Path):
@@ -442,7 +316,6 @@ def test_life008_duplicate_provider_id_sorted_winner_and_diagnostic(tmp_path: Pa
     assert decision.rejected == ("org.hpcclient.zzz",)
     assert decision.requirement == "HPC-W08-LIFE-008"
 
-
 @pytest.mark.unit
 def test_life007_duplicate_plugin_id_sorted_first_wins():
     """LIFE-007: duplicate plugin IDs resolve sorted-first with a diagnostic."""
@@ -452,7 +325,6 @@ def test_life007_duplicate_plugin_id_sorted_first_wins():
     assert "duplicate plugin id" in decision.diagnostic
     single = life.resolve_duplicate_plugin_id("org.hpcclient.solo", ["only-root"])
     assert single.rejected == ()
-
 
 @pytest.mark.integration
 def test_life009_two_versions_active_pointer_wins(tmp_path: Path):
@@ -478,14 +350,12 @@ def test_life009_two_versions_active_pointer_wins(tmp_path: Path):
     assert switched.plugins[0].manifest.version == "2.0.0"
     assert first["id"] == "org.hpcclient.truba"
 
-
 @pytest.mark.unit
 def test_life009_no_pointer_highest_version_wins_deterministically():
     """LIFE-009: without a pointer the highest version wins (never random)."""
     first = life.resolve_plugin_versions("p", ["1.0.0", "2.0.0", "1.5.0"], None)
     second = life.resolve_plugin_versions("p", ["1.5.0", "1.0.0", "2.0.0"], None)
     assert first.winner == second.winner == "2.0.0"
-
 
 @pytest.mark.unit
 def test_life010_bundled_never_shadows_user_installed():
@@ -502,7 +372,6 @@ def test_life010_bundled_never_shadows_user_installed():
         "org.hpcclient.truba", user_installed=False, bundled_present=True
     )
     assert absent.winner is None and "no silent bundled fallback" in absent.diagnostic
-
 
 @pytest.mark.integration
 def test_life011_invalid_dependency_version_is_advisory(tmp_path: Path):
@@ -525,7 +394,6 @@ def test_life011_invalid_dependency_version_is_advisory(tmp_path: Path):
     result = load_installed_plugins(root=tmp_path, app_version=APP_VERSION)
     assert [p.manifest.id for p in result.plugins] == ["org.hpcclient.truba"]
     assert result.problems == []
-
 
 @pytest.mark.unit
 def test_life012_resolution_is_deterministic_and_visible(tmp_path: Path):

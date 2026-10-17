@@ -1,3 +1,5 @@
+from support.mock_ssh_server import MOCK_PASSWORD, MOCK_USERNAME, MockSSHServer
+
 import logging
 import tempfile
 import time
@@ -8,7 +10,6 @@ import pytest
 
 from hpc_gui.ssh.client import SSHClientWrapper, SSHConnInfo
 
-from support.mock_ssh_server import MOCK_PASSWORD, MOCK_USERNAME, MockSSHServer
 
 
 def test_readiness_wait_does_not_open_and_abort_a_fake_ssh_transport(tmp_path, caplog):

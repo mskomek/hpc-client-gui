@@ -32,6 +32,8 @@ Defect regressions (counted W11 remediations):
 
 from __future__ import annotations
 
+from support.mock_ssh_server import MOCK_PASSWORD, MOCK_USERNAME, MockSSHServer
+
 import sys
 import threading
 import time
@@ -53,7 +55,6 @@ from hpc_gui.ssh.client import (
     SSHConnInfo,
 )
 from hpc_gui.wx_connection import WxConnectionModel, connect_profile
-from support.mock_ssh_server import MOCK_PASSWORD, MOCK_USERNAME, MockSSHServer
 
 
 # ---------------------------------------------------------------------------

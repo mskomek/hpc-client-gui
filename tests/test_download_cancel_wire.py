@@ -23,7 +23,6 @@ import pytest
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from support.mock_ssh_server import MOCK_PASSWORD, MOCK_USERNAME, MockSSHServer  # noqa: E402
 
 from PySide6.QtWidgets import QApplication  # noqa: E402
 
@@ -279,3 +278,5 @@ class DownloadCancelWireTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+from support.mock_ssh_server import MOCK_PASSWORD, MOCK_USERNAME, MockSSHServer

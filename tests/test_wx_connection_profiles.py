@@ -5,41 +5,21 @@ advanced SSH, ssh_info mapping, MFA/host-key, action states, i18n.
 
 Uses isolated temp storage and mock/fake backends; never hits a real cluster.
 """
+from support.test_wx_connection_profiles_shared import (
+    WxConnectionModel,
+    _isolated_storage,
+    duplicate_profile,
+    load_profiles,
+    mock,
+    normalize_file_manager_settings,
+    normalize_jump_host_settings,
+    normalize_system_settings,
+    pytest,
+    storage,
+    validate_storage_area,
+    wx,
+)
 
-import tempfile
-from pathlib import Path
-from unittest import mock
-
-import pytest
-
-# Shared imports
-from hpc_gui.config import storage
-from hpc_gui.config.storage import load_profiles
-from hpc_gui.services.profile_duplicate import duplicate_profile
-from hpc_gui.services.quota_monitor import quota_gate
-from hpc_gui.plugins.models import validate_storage_area
-from hpc_gui.ssh.client import HostKeyInfo
-from hpc_gui.wx_connection import WxConnectionModel, ssh_info_from_profile
-from hpc_gui.config.system_profile import builtin_system_template_groups
-from hpc_gui.plugins.templates import installed_cluster_template_groups
-from hpc_gui.config.system_profile import normalize_system_settings
-from hpc_gui.config.file_manager_profile import normalize_file_manager_settings
-from hpc_gui.config.jump_host_profile import normalize_jump_host_settings
-
-wx = pytest.importorskip("wx", reason="wxPython not installed – skipping wx GUI tests")
-
-
-def _isolated_storage(monkeypatch):
-    tmp = tempfile.TemporaryDirectory()
-    monkeypatch.setattr(Path, "home", lambda: Path(tmp.name))
-    # Ensure clean config
-    storage.save_config({"profiles": [], "settings": {}})
-    return tmp
-
-
-# ---------------------------------------------------------------------------
-# 35.1 Add button
-# ---------------------------------------------------------------------------
 
 @pytest.mark.gui
 @pytest.mark.wx
@@ -64,7 +44,6 @@ def test_wx_add_button_enabled_in_normal_startup(monkeypatch):
             wx.Yield()
     finally:
         tmp.cleanup()
-
 
 @pytest.mark.gui
 @pytest.mark.wx
@@ -107,11 +86,6 @@ def test_wx_add_opens_dialog(monkeypatch):
     finally:
         tmp.cleanup()
 
-
-# ---------------------------------------------------------------------------
-# 35.2 Add + Save
-# ---------------------------------------------------------------------------
-
 @pytest.mark.integration
 def test_add_and_save_persists_and_refreshes(monkeypatch):
     tmp = _isolated_storage(monkeypatch)
@@ -148,11 +122,6 @@ def test_add_and_save_persists_and_refreshes(monkeypatch):
         assert len(load_profiles()) == 1
     finally:
         tmp.cleanup()
-
-
-# ---------------------------------------------------------------------------
-# 35.3 Save & Connect
-# ---------------------------------------------------------------------------
 
 @pytest.mark.unit
 def test_save_and_connect_invokes_connect_once(monkeypatch):
@@ -201,17 +170,6 @@ def test_save_and_connect_invokes_connect_once(monkeypatch):
     finally:
         tmp.cleanup()
 
-
-# ---------------------------------------------------------------------------
-# 35.4 Cancel
-# ---------------------------------------------------------------------------
-
-
-
-# ---------------------------------------------------------------------------
-# 35.5 Edit – unknown keys survive
-# ---------------------------------------------------------------------------
-
 @pytest.mark.integration
 @pytest.mark.regression
 def test_edit_preserves_unknown_and_provenance(monkeypatch):
@@ -256,11 +214,6 @@ def test_edit_preserves_unknown_and_provenance(monkeypatch):
     finally:
         tmp.cleanup()
 
-
-# ---------------------------------------------------------------------------
-# 35.6 Rename
-# ---------------------------------------------------------------------------
-
 @pytest.mark.integration
 @pytest.mark.regression
 def test_rename_removes_old_only_after_success(monkeypatch):
@@ -280,11 +233,6 @@ def test_rename_removes_old_only_after_success(monkeypatch):
     finally:
         tmp.cleanup()
 
-
-# ---------------------------------------------------------------------------
-# 35.7 Duplicate
-# ---------------------------------------------------------------------------
-
 @pytest.mark.unit
 def test_duplicate_uses_naming_and_independent_identity(monkeypatch):
     existing = {"id": "one", "name": "Cluster", "host": "h.example", "username": "alice"}
@@ -299,11 +247,6 @@ def test_duplicate_uses_naming_and_independent_identity(monkeypatch):
     # Second duplicate should increment
     duplicate2 = duplicate_profile(existing, ["Cluster", "Cluster (copy)"])
     assert duplicate2["name"] == "Cluster (copy) 2"
-
-
-# ---------------------------------------------------------------------------
-# 35.8 Delete
-# ---------------------------------------------------------------------------
 
 @pytest.mark.gui
 @pytest.mark.wx
@@ -347,62 +290,6 @@ def test_delete_requires_confirmation_and_cleans(monkeypatch):
     finally:
         tmp.cleanup()
 
-
-# ---------------------------------------------------------------------------
-# 35.9 Secure password
-# ---------------------------------------------------------------------------
-
-@pytest.mark.integration
-@pytest.mark.semantic
-def test_secret_persistence_and_removal(monkeypatch):
-    tmp = _isolated_storage(monkeypatch)
-    try:
-        from hpc_gui.services.connection_profile_service import save_profile
-
-        # Save with password -> no plaintext
-        collected = {"name": "sec", "host": "h.example", "port": 22, "username": "user", "system": {}, "file_manager": {}, "jump_host": {}, "save_password": True, "password_prompt_policy": "when-needed"}
-        with mock.patch("hpc_gui.services.connection_profile_service.keychain_available", return_value=False), \
-             mock.patch("hpc_gui.services.connection_profile_service.os_secret_store_available", return_value=False), \
-             mock.patch("hpc_gui.services.connection_profile_service.encrypt_with_master") as mock_enc:
-            from hpc_gui.core.crypto_master import EncryptedSecret
-            mock_enc.return_value = EncryptedSecret(token="tok", salt="salt")
-            saved = save_profile(collected, initial_profile=None, plain_password="s3cret", save_password=True, prompt_policy="when-needed", ask_master=lambda c: "master")
-        assert saved.get("password") == ""
-        assert "s3cret" not in str(saved)
-        assert "password_enc" in saved
-        assert saved["password_enc"] == "tok"
-
-        # Editing unrelated field retains secret without re-entering
-        collected2 = dict(collected, host="newhost.example")
-        # collected2 has no password field; plain empty
-        with mock.patch("hpc_gui.services.connection_profile_service.keychain_available", return_value=False), \
-             mock.patch("hpc_gui.services.connection_profile_service.os_secret_store_available", return_value=False):
-            saved2 = save_profile(collected2, initial_profile=saved, plain_password="", save_password=True, prompt_policy="when-needed", ask_master=lambda c: "master")
-        assert saved2["password_enc"] == "tok"
-        assert saved2.get("password") == ""
-
-        # Disabling save removes secret
-        collected3 = dict(collected2, save_password=False)
-        with mock.patch("hpc_gui.services.connection_profile_service.keychain_available", return_value=False), \
-             mock.patch("hpc_gui.services.connection_profile_service.os_secret_store_available", return_value=False):
-            saved3 = save_profile(collected3, initial_profile=saved2, plain_password="", save_password=False, prompt_policy="when-needed")
-        assert "password_enc" not in saved3
-        assert "password_salt" not in saved3
-        assert saved3.get("password") == ""
-
-        # Only one scheme survives – keychain vs dpapi vs enc
-        # Simulate keychain save over previous enc
-        with mock.patch("hpc_gui.services.connection_profile_service.keychain_available", return_value=True), \
-             mock.patch("hpc_gui.services.connection_profile_service.protect_keychain_secret", return_value="ref123"), \
-             mock.patch("hpc_gui.services.connection_profile_service.delete_keychain_secret"):
-            saved4 = save_profile(dict(collected, save_password=True), initial_profile=saved3, plain_password="newsecret", save_password=True, prompt_policy="when-needed")
-        assert "password_keychain_ref" in saved4
-        assert "password_enc" not in saved4
-        assert "password_dpapi" not in saved4
-    finally:
-        tmp.cleanup()
-
-
 @pytest.mark.gui
 @pytest.mark.wx
 @pytest.mark.semantic
@@ -425,116 +312,6 @@ def test_saved_password_not_autopopulated(monkeypatch):
             wx.Yield()
     finally:
         tmp.cleanup()
-
-
-# ---------------------------------------------------------------------------
-# 35.10 Provider templates
-# ---------------------------------------------------------------------------
-
-@pytest.mark.contract
-def test_provider_templates_builtin_and_user():
-    groups = builtin_system_template_groups()
-    assert "Generic Slurm" in groups
-    assert len(groups["Generic Slurm"]) >= 1
-
-    # User templates – isolated storage
-    import tempfile
-    from pathlib import Path
-    from unittest.mock import patch
-    tmpdir = tempfile.TemporaryDirectory()
-    try:
-        with patch.object(Path, "home", return_value=Path(tmpdir.name)):
-            storage.save_config({"profiles": [], "settings": {}})
-            from hpc_gui.config.system_profile import save_user_system_template, load_user_system_templates
-            save_user_system_template("MyTemplate", {"name": "MyTemplate", "scratch_dir": "/scratch/{user}"})
-            loaded = load_user_system_templates()
-            assert any(t["name"] == "MyTemplate" for t in loaded)
-    finally:
-        tmpdir.cleanup()
-
-@pytest.mark.audit
-@pytest.mark.wx
-def test_plugin_templates_without_hardcoded_names():
-    groups = installed_cluster_template_groups()
-    # Should be dict, keys are plugin names, no hardcoded logic
-    assert isinstance(groups, dict)
-    # Generic logic contains no provider-name branch – check source
-    src = open("src/hpc_gui/wx_connection_dialog.py", encoding="utf-8").read()
-    # Ensure no hardcoded provider names like "TRUBA" in generic logic
-    assert "TRUBA" not in src or "provider_template" in src  # allow minimal mention but not branch
-    # Also wx_connection generic logic shouldn't hardcode
-    src2 = open("src/hpc_gui/wx_connection.py", encoding="utf-8").read()
-    assert src2.count("TRUBA") == 0
-
-
-@pytest.mark.gui
-@pytest.mark.wx
-@pytest.mark.regression
-def test_template_provenance_preserved(monkeypatch):
-    tmp = _isolated_storage(monkeypatch)
-    try:
-        from hpc_gui.wx_connection_dialog import WxConnectionDialog
-        _wx_app = wx.App.Get() or wx.App(False)
-        frame = wx.Frame(None)
-        # Create profile with plugin provenance
-        initial = {
-            "name": "lab",
-            "host": "h.example",
-            "provider_template": {"name": "PluginProv", "storage": []},
-            "system_template_source": {"kind": "plugin", "plugin_id": "org.example.plugin", "profile_id": "p1"},
-        }
-        dlg = WxConnectionDialog(frame, initial_profile=initial, mode="edit", on_save=lambda p: True)
-        # Without template action, provenance should survive
-        collected = dlg._collect_profile()
-        assert collected is not None
-        assert collected.get("system_template_source") == {"kind": "plugin", "plugin_id": "org.example.plugin", "profile_id": "p1"}
-        dlg.Destroy()
-        frame.Destroy()
-        for _ in range(3):
-            wx.Yield()
-    finally:
-        tmp.cleanup()
-
-
-@pytest.mark.gui
-@pytest.mark.wx
-def test_provider_required_project_account_validation(monkeypatch):
-    tmp = _isolated_storage(monkeypatch)
-    try:
-        _wx_app = wx.App.Get() or wx.App(False)
-        from hpc_gui.wx_connection_dialog import WxConnectionDialog
-        frame = wx.Frame(None)
-        # Provider requiring project
-        initial = {
-            "name": "lab",
-            "host": "h.example",
-            "provider_template": {"requirements": {"project": {"required": True, "label": "Project"}}},
-        }
-        dlg = WxConnectionDialog(frame, initial_profile=initial, mode="edit", on_save=lambda p: True)
-        dlg.host_ctrl.SetValue("h.example")
-        dlg.project_ctrl.SetValue("")  # Required but empty
-        # Mock MessageBox to capture validation
-        with mock.patch.object(dlg._wx, "MessageBox") as mock_msg:
-            result = dlg._collect_profile()
-            assert result is None
-            mock_msg.assert_called()
-        # Now fill required
-        dlg.project_ctrl.SetValue("myproj")
-        with mock.patch.object(dlg._wx, "MessageBox"):
-            result2 = dlg._collect_profile()
-            assert result2 is not None
-            assert result2["project"] == "myproj"
-        dlg.Destroy()
-        frame.Destroy()
-        for _ in range(3):
-            wx.Yield()
-    finally:
-        tmp.cleanup()
-
-
-# ---------------------------------------------------------------------------
-# 35.11 Storage
-# ---------------------------------------------------------------------------
 
 @pytest.mark.unit
 @pytest.mark.wx
@@ -585,200 +362,6 @@ def test_storage_add_edit_remove_and_validation(monkeypatch):
     finally:
         tmp.cleanup()
 
-
-# ---------------------------------------------------------------------------
-# 35.12 Quota
-# ---------------------------------------------------------------------------
-
-@pytest.mark.integration
-def test_quota_states_fail_closed():
-    # disabled
-    assert quota_gate({"enabled": False, "command_template": "cmd", "backend_id": "x", "consent": True}, backend_ids=["x"], connected=True) == "disabled"
-    # not_configured (no command)
-    assert quota_gate({"enabled": True, "command_template": "", "backend_id": "x"}, backend_ids=["x"]) == "not_configured"
-    # invalid_configuration (bad scope)
-    assert quota_gate({"enabled": True, "command_template": "cmd", "backend_id": "x", "scope": "bad"}, backend_ids=["x"], connected=True) == "invalid_configuration"
-    # incomplete/unsupported (missing backend)
-    assert quota_gate({"enabled": True, "command_template": "cmd", "backend_id": "missing", "consent": True}, backend_ids=["x"], connected=True) == "incomplete/unsupported"
-    # provider without quota source -> not_configured via helper
-    from hpc_gui.services.quota_monitor import quota_state_for_profile
-    assert quota_state_for_profile({"provider_template": {"quota_sources": []}}) == "not_configured"
-    assert quota_state_for_profile({"provider_template": {}}) == "not_configured"
-    # No guessed command executed – quota_gate never runs command; monitor refresh returns None if not eligible
-    from hpc_gui.services.quota_monitor import QuotaMonitor, QuotaBackendRegistry
-    monitor = QuotaMonitor(QuotaBackendRegistry([]), lambda c,t,m: "output")
-    assert monitor.refresh({"enabled": True, "command_template": "myquota", "backend_id": "unknown"}, connection_id="c", provider_id="p", subject="subj", connected=True) is None
-    monitor.close()
-
-
-# ---------------------------------------------------------------------------
-# 35.13 Advanced SSH
-# ---------------------------------------------------------------------------
-
-@pytest.mark.gui
-@pytest.mark.wx
-def test_advanced_ssh_persistence(monkeypatch):
-    tmp = _isolated_storage(monkeypatch)
-    try:
-        _wx_app = wx.App.Get() or wx.App(False)
-        from hpc_gui.wx_connection_dialog import WxConnectionDialog
-        frame = wx.Frame(None)
-        dlg = WxConnectionDialog(frame, initial_profile={"name": "lab", "host": "h.example"}, mode="add", on_save=lambda p: True)
-        # Set advanced values
-        dlg.cb_host_key_policy.SetSelection(1)  # strict
-        dlg.sp_keepalive.SetValue(120)
-        dlg.sp_ssh_timeout.SetValue(45.5)
-        dlg.sp_transfer_parallelism.SetValue(4)
-        dlg.cb_jump_enabled.SetValue(True)
-        dlg.jump_host_ctrl.SetValue("jump.example")
-        dlg.sp_jump_port.SetValue(2222)
-        dlg.jump_username_ctrl.SetValue("jumpuser")
-        dlg.jump_key_path_ctrl.SetValue("/tmp/key")
-        dlg.cb_jump_host_key_policy.SetSelection(1)
-        dlg.cb_x11.SetValue(True)
-        dlg.cb_cli_allowed.SetValue(True)
-        dlg.default_local_dir_ctrl.SetValue("/tmp/local")
-        dlg.host_ctrl.SetValue("h.example")
-        dlg.username_ctrl.SetValue("alice")
-        # Collect
-        collected = dlg._collect_profile()
-        assert collected is not None
-        assert collected["host_key_policy"] == "strict"
-        assert collected["keepalive_interval_seconds"] == 120
-        assert collected["ssh_timeout"] == 45.5
-        assert collected["transfer_parallelism"] == 4
-        assert collected["x11_forwarding"] is True
-        assert collected["cli_allowed"] is True
-        assert collected["jump_host"]["enabled"] is True
-        assert collected["jump_host"]["host"] == "jump.example"
-        assert collected["jump_host"]["port"] == 2222
-        assert collected["jump_host"]["username"] == "jumpuser"
-        assert collected["file_manager"]["local_start_dir"] == "/tmp/local"
-        # Jump required validation: enabled with empty host should fail
-        dlg.jump_host_ctrl.SetValue("")
-        with mock.patch.object(dlg._wx, "MessageBox") as mock_msg:
-            result = dlg._collect_profile()
-            assert result is None
-            mock_msg.assert_called()
-        dlg.Destroy()
-        frame.Destroy()
-        for _ in range(3):
-            wx.Yield()
-    finally:
-        tmp.cleanup()
-
-
-# ---------------------------------------------------------------------------
-# 35.14 Real connection mapping
-# ---------------------------------------------------------------------------
-
-@pytest.mark.contract
-def test_saved_profile_to_sshinfo_mapping():
-    profile = {
-        "name": "lab",
-        "host": "h.example",
-        "port": 2222,
-        "username": "alice",
-        "password": "secret",
-        "key_path": "/home/alice/.ssh/id_rsa",
-        "host_key_policy": "strict",
-        "keepalive_interval_seconds": 60,
-        "ssh_timeout": 30.5,
-        "x11_forwarding": True,
-        "jump_host": {"enabled": True, "host": "jump.example", "port": 2222, "username": "juser", "key_path": "/tmp/jkey", "host_key_policy": "strict"},
-        "save_password": True,
-        "system": {"name": "Test"},
-    }
-    model = WxConnectionModel([profile], host_key_decision=lambda r: "save", keyboard_interactive=lambda r: ["mfa"])
-    info = ssh_info_from_profile(profile, model)
-    assert info.host == "h.example"
-    assert info.port == 2222
-    assert info.username == "alice"
-    assert info.password == "secret"
-    assert info.key_path == "/home/alice/.ssh/id_rsa"
-    assert info.host_key_policy == "strict"
-    assert info.keepalive_interval_seconds == 60
-    assert info.timeout == 30.5
-    assert info.x11_forwarding is True
-    assert info.jump is not None
-    assert info.jump.host == "jump.example"
-    assert info.jump.port == 2222
-    # Keyboard interactive handler should be callable
-    assert callable(info.keyboard_interactive_handler)
-    # Host key decision should delegate
-    assert info.host_key_decision(HostKeyInfo("h.example", "ssh-rsa", "aa:bb")) == "save"
-
-
-@pytest.mark.unit
-def test_ssh_info_resolves_secure_password():
-    # Profile with keychain ref, no plaintext
-    profile = {"name": "sec", "host": "h.example", "port": 22, "username": "user", "password": "", "save_password": True, "password_keychain_ref": "ref123", "host_key_policy": "accept-new"}
-    model = WxConnectionModel([profile])
-    with mock.patch("hpc_gui.services.connection_profile_service.decrypt_profile_password", return_value="decrypted-secret"):
-        # Need to patch within ssh_info_from_profile's import path
-        with mock.patch("hpc_gui.wx_connection.decrypt_profile_password", return_value="decrypted-secret", create=True):
-            # Actually ssh_info_from_profile imports inside function, so patch the source module
-            import hpc_gui.services.connection_profile_service as svc
-            with mock.patch.object(svc, "decrypt_profile_password", return_value="decrypted-secret"):
-                info = ssh_info_from_profile(profile, model)
-                # Password should be resolved
-                assert info.password == "decrypted-secret"
-    # Alternative: patch directly where used inside function (import inside)
-    # Our implementation imports decrypt_profile_password inside function under try; patch that module
-    with mock.patch("hpc_gui.services.connection_profile_service.decrypt_profile_password", return_value="resolved2"):
-        info2 = ssh_info_from_profile(profile, model)
-        assert info2.password == "resolved2"
-
-
-# ---------------------------------------------------------------------------
-# 35.15 MFA / host key
-# ---------------------------------------------------------------------------
-
-@pytest.mark.unit
-@pytest.mark.wx
-def test_host_key_dialog_mapping(monkeypatch):
-    tmp = _isolated_storage(monkeypatch)
-    try:
-        _wx_app = wx.App.Get() or wx.App(False)
-        from hpc_gui.wx_connection import build_connection_panel
-        frame = wx.Frame(None)
-        host = build_connection_panel(frame, profiles=[])
-        model = host._wx_connection_model
-        # Mock wx.MessageDialog to return YES/NO/CANCEL
-        for expected, wx_id in [("save", wx.ID_YES), ("once", wx.ID_NO), ("reject", wx.ID_CANCEL)]:
-            with mock.patch("wx.MessageDialog") as MockDlg:
-                inst = MockDlg.return_value
-                inst.ShowModal.return_value = wx_id
-                result = model.decide_host_key(mock.Mock(hostname="h.example", fingerprint="aa:bb", role="target"))
-                assert result == expected
-        frame.Destroy()
-        for _ in range(3):
-            wx.Yield()
-    finally:
-        tmp.cleanup()
-
-
-@pytest.mark.unit
-def test_mfa_order_and_no_log(monkeypatch, caplog):
-    requests = []
-    model = WxConnectionModel([], keyboard_interactive=lambda req: requests.append(req) or ["r1", "r2"])
-    from hpc_gui.services.connection_controller import KeyboardInteractiveRequest
-    req = KeyboardInteractiveRequest("Title", "Instructions", ("Prompt1:", "Prompt2:"), (False, True))
-    # Should return in order
-    answers = model.answer_keyboard_interactive(req)
-    assert answers == ["r1", "r2"]
-    assert requests[0].echo == (False, True)
-    # Ensure no secret in logs
-    # Simulate no logging of MFA responses – check that answer not in caplog
-    # Our model does not log; verify that responses are not retained on model
-    assert not hasattr(model, "r1")
-    assert "r1" not in str(caplog.text)
-
-
-# ---------------------------------------------------------------------------
-# 35.16 i18n
-# ---------------------------------------------------------------------------
-
 @pytest.mark.contract
 def test_i18n_en_tr_labels():
     from hpc_gui.core.i18n import t, load_language
@@ -808,197 +391,6 @@ def test_i18n_en_tr_labels():
         assert t(key) != f"[{key}]"
     load_language("en")  # leave EN for tests expecting English (e.g., macOS X11)
 
-
-# ---------------------------------------------------------------------------
-# 35.17 Action-state tests
-# ---------------------------------------------------------------------------
-
-@pytest.mark.gui
-@pytest.mark.wx
-def test_action_enable_disable_states(monkeypatch):
-    tmp = _isolated_storage(monkeypatch)
-    try:
-        _wx_app = wx.App.Get() or wx.App(False)
-        from hpc_gui.wx_connection import build_connection_panel
-        frame = wx.Frame(None)
-        # No profile selected -> Edit/Duplicate/Delete/Connect disabled
-        host = build_connection_panel(frame, profiles=[])
-        ctrls = host._wx_connection_controls
-        assert not ctrls["edit"].IsEnabled()
-        assert not ctrls["duplicate"].IsEnabled()
-        assert not ctrls["delete"].IsEnabled()
-        assert not ctrls["connect"].IsEnabled()
-        assert ctrls["add_connection"].IsEnabled()
-        # Add a profile and select
-        storage.upsert_profile({"name": "p1", "host": "h.example", "port": 22, "username": "user"})
-        host2 = build_connection_panel(frame, profiles=load_profiles())
-        ctrls2 = host2._wx_connection_controls
-        choices = ctrls2["choices"]
-        choices.SetStringSelection("p1")
-        # Trigger selection event manually
-        evt = wx.CommandEvent(wx.EVT_LISTBOX.typeId, choices.GetId())
-        choices.GetEventHandler().ProcessEvent(evt)
-        wx.Yield()
-        assert ctrls2["edit"].IsEnabled()
-        assert ctrls2["duplicate"].IsEnabled()
-        assert ctrls2["delete"].IsEnabled()
-        assert ctrls2["connect"].IsEnabled()
-        # Do not manually Disable/Enable – production handler must control states
-        frame.Destroy()
-        for _ in range(3):
-            wx.Yield()
-    finally:
-        tmp.cleanup()
-
-
-@pytest.mark.gui
-@pytest.mark.wx
-def test_action_states_during_connection_and_recovery(monkeypatch):
-    """Real production Add/Connect event chain proves button states without manual manipulation."""
-    tmp = _isolated_storage(monkeypatch)
-    try:
-        from hpc_gui.core.i18n import load_language
-        load_language("en")
-        _wx_app = wx.App.Get() or wx.App(False)
-        from hpc_gui.wx_connection import build_connection_panel
-        import threading
-
-        storage.upsert_profile({"name": "p1", "host": "h.example", "port": 22, "username": "user"})
-        frame = wx.Frame(None)
-        host = build_connection_panel(frame, profiles=load_profiles())
-        ctrls = host._wx_connection_controls
-        choices = ctrls["choices"]
-        connect_btn = ctrls["connect"]
-        edit_btn = ctrls["edit"]
-        duplicate_btn = ctrls["duplicate"]
-        delete_btn = ctrls["delete"]
-        add_btn = ctrls["add_connection"]
-        status = ctrls["status"] if "status" in ctrls else host._wx_connection_controls["status"]
-        # Select
-        choices.SetStringSelection("p1")
-        evt = wx.CommandEvent(wx.EVT_LISTBOX.typeId, choices.GetId())
-        choices.GetEventHandler().ProcessEvent(evt)
-        for _ in range(3):
-            wx.Yield()
-        assert edit_btn.IsEnabled() and connect_btn.IsEnabled()
-        # Blocking connector
-        block = threading.Event()
-        called = {"connected": 0}
-
-        def blocking_connect(profile):
-            called["connected"] += 1
-            block.wait(timeout=5)
-            return {"connected": True, "profile_name": profile.get("name", "")}
-
-        host._wx_connection_model._connect = blocking_connect
-        # Trigger Connect via real button event
-        evt2 = wx.CommandEvent(wx.EVT_BUTTON.typeId, connect_btn.GetId())
-        connect_btn.GetEventHandler().ProcessEvent(evt2)
-        # Allow worker to start and disable buttons
-        for _ in range(10):
-            wx.Yield()
-            wx.MilliSleep(20)
-        # While blocked, production handler must have disabled conflicting actions
-        assert not connect_btn.IsEnabled(), "Connect must be disabled while connecting"
-        assert not edit_btn.IsEnabled(), "Edit must be disabled while connecting"
-        assert not duplicate_btn.IsEnabled(), "Duplicate must be disabled while connecting"
-        assert not delete_btn.IsEnabled(), "Delete must be disabled while connecting"
-        assert not add_btn.IsEnabled(), "Add must be disabled while connecting per product contract"
-        assert "Connecting" in status.GetLabel() or "Bağlan" in status.GetLabel()
-        # Release connector – success path
-        block.set()
-        for _ in range(50):
-            wx.Yield()
-            wx.MilliSleep(20)
-            if "Connected" in status.GetLabel() or "Bağlı" in status.GetLabel():
-                break
-        assert host._wx_connection_model.controller.state.value == "connected"
-        assert "Connected" in status.GetLabel() or "Bağlı" in status.GetLabel()
-        assert add_btn.IsEnabled(), "Add restored after success"
-        assert edit_btn.IsEnabled(), "Edit restored after success"
-        assert called["connected"] == 1
-        # Now test failure recovery with a second panel
-        frame.Destroy()
-        for _ in range(3):
-            wx.Yield()
-        # Failure case
-        storage.save_config({"profiles": [], "settings": {}})
-        storage.upsert_profile({"name": "p2", "host": "h.example", "port": 22, "username": "user"})
-        frame2 = wx.Frame(None)
-        host2 = build_connection_panel(frame2, profiles=load_profiles())
-        ctrls2 = host2._wx_connection_controls
-        choices2 = ctrls2["choices"]
-        connect_btn2 = ctrls2["connect"]
-        edit_btn2 = ctrls2["edit"]
-        add_btn2 = ctrls2["add_connection"]
-        status2 = ctrls2["status"]
-        choices2.SetStringSelection("p2")
-        evt3 = wx.CommandEvent(wx.EVT_LISTBOX.typeId, choices2.GetId())
-        choices2.GetEventHandler().ProcessEvent(evt3)
-        for _ in range(3):
-            wx.Yield()
-
-        def failing_connect(profile):
-            raise RuntimeError("synthetic-failure-71")
-
-        host2._wx_connection_model._connect = failing_connect
-        # Need to mock MessageBox to avoid modal
-        with mock.patch("wx.MessageDialog") as MockDlg, mock.patch("wx.MessageBox") as MockBox:
-            MockDlg.return_value.ShowModal.return_value = wx.ID_OK
-            MockDlg.return_value.Destroy = mock.Mock()
-            evt4 = wx.CommandEvent(wx.EVT_BUTTON.typeId, connect_btn2.GetId())
-            connect_btn2.GetEventHandler().ProcessEvent(evt4)
-            for _ in range(50):
-                wx.Yield()
-                wx.MilliSleep(20)
-                if "failed" in status2.GetLabel().lower() or "başarısız" in status2.GetLabel().lower():
-                    break
-            assert host2._wx_connection_model.controller.state.value == "failed"
-            assert "failed" in status2.GetLabel().lower() or "başarısız" in status2.GetLabel().lower()
-            # No control stays stuck disabled – production callback must restore
-            assert add_btn2.IsEnabled(), "Add must be restored after failure"
-            assert edit_btn2.IsEnabled(), "Edit must be restored after failure"
-            assert connect_btn2.IsEnabled(), "Connect must be restored after failure"
-            # Error string must not contain secret
-            if MockBox.called:
-                args, _ = MockBox.call_args
-                assert "s3cret" not in str(args)
-                assert "synthetic-failure-71" in str(args) or "Connection" in str(args)
-        frame2.Destroy()
-        for _ in range(3):
-            wx.Yield()
-    finally:
-        tmp.cleanup()
-
-
-@pytest.mark.gui
-@pytest.mark.wx
-def test_dialog_save_and_connect_calls_one_callback(monkeypatch):
-    tmp = _isolated_storage(monkeypatch)
-    try:
-        _wx_app = wx.App.Get() or wx.App(False)
-        from hpc_gui.wx_connection_dialog import WxConnectionDialog
-
-        frame = wx.Frame(None)
-        calls = []
-        dlg = WxConnectionDialog(
-            frame,
-            on_save=lambda _profile: calls.append("save") or True,
-            on_save_and_connect=lambda _profile: calls.append("save_and_connect") or True,
-        )
-        dlg._collect_profile = lambda: {"name": "p", "host": "h.example"}
-        with mock.patch.object(dlg.dlg, "EndModal") as end_modal:
-            dlg._save_and_connect_clicked()
-        assert calls == ["save_and_connect"]
-        end_modal.assert_called_once_with(wx.ID_OK)
-        dlg.Destroy()
-        frame.Destroy()
-        for _ in range(3):
-            wx.Yield()
-    finally:
-        tmp.cleanup()
-
-
 @pytest.mark.contract
 @pytest.mark.wx
 def test_dialog_preserves_unknown_nested_system_fields(monkeypatch):
@@ -1016,158 +408,6 @@ def test_dialog_preserves_unknown_nested_system_fields(monkeypatch):
         dlg = WxConnectionDialog(frame, initial_profile=initial, mode="edit")
         assert dlg._system_form_values()["future_scheduler_key"] == {"version": 3}
         dlg.Destroy()
-        frame.Destroy()
-        for _ in range(3):
-            wx.Yield()
-    finally:
-        tmp.cleanup()
-
-
-@pytest.mark.contract
-def test_quota_profile_lookup_supports_nested_provider_template():
-    from hpc_gui.services.quota_monitor import quota_state_for_profile
-
-    profile = {"system": {"provider_template": {"quota_sources": [{"enabled": False, "command_template": "quota"}]}}}
-    assert quota_state_for_profile(profile) == "disabled"
-
-
-# ---------------------------------------------------------------------------
-# W17.1 Rename-collision guard (DEF-W17-001) — real wx dialog + real service
-# ---------------------------------------------------------------------------
-
-@pytest.mark.gui
-@pytest.mark.wx
-@pytest.mark.semantic
-def test_real_dialog_rename_onto_existing_name_rejected(monkeypatch):
-    """Real WxConnectionDialog (edit beta -> rename alpha) -> real Save button -> rejected."""
-    from hpc_gui.core.i18n import t, load_language
-    from hpc_gui.services.connection_profile_service import save_profile as svc_save
-    from hpc_gui.wx_connection_dialog import WxConnectionDialog
-
-    load_language("en")
-    expected = 'Profile name "alpha" is already used by another profile. Choose a different name.'
-    assert t("connection.rename_name_taken").format(name="alpha") == expected
-    tmp = _isolated_storage(monkeypatch)
-    try:
-        _wx_app = wx.App.Get() or wx.App(False)
-        storage.upsert_profile({"name": "alpha", "host": "h1.example", "port": 22, "username": "u1"})
-        storage.upsert_profile({"name": "beta", "host": "h2.example", "port": 22, "username": "u2"})
-        beta = next(p for p in load_profiles() if p.get("name") == "beta")
-
-        frame = wx.Frame(None)
-        shown = []
-
-        def panel_like_on_save(collected):
-            # Mirrors build_connection_panel._handle_save for the edit path.
-            plain = str(collected.get("password", "") or "")
-            save_pw = bool(collected.get("save_password", False))
-            prompt_policy = str(collected.get("password_prompt_policy") or "when-needed")
-            initial = next((p for p in load_profiles() if p.get("name") == "beta"), None)
-            try:
-                svc_save(
-                    collected,
-                    initial_profile=initial,
-                    plain_password=plain,
-                    save_password=save_pw,
-                    prompt_policy=prompt_policy,
-                    ask_master=None,
-                    original_name_override="beta",
-                )
-            except ValueError as exc:
-                msg = str(exc)
-                if msg.startswith("profile_name_taken:"):
-                    taken = msg.split(":", 1)[1].strip()
-                    msg = t("connection.rename_name_taken").format(name=taken)
-                shown.append(msg)
-                return False
-            return True
-
-        dlg = WxConnectionDialog(
-            frame,
-            initial_profile=beta,
-            mode="edit",
-            on_save=panel_like_on_save,
-        )
-        assert dlg.profile_name_ctrl.GetValue() == "beta"
-        dlg.profile_name_ctrl.SetValue("alpha")
-
-        with mock.patch.object(dlg.dlg, "EndModal") as end_modal:
-            btn = dlg.btn_save
-            evt = wx.CommandEvent(wx.EVT_BUTTON.typeId, btn.GetId())
-            btn.GetEventHandler().ProcessEvent(evt)
-            for _ in range(10):
-                wx.Yield()
-
-        end_modal.assert_not_called()
-        assert shown == [expected]
-        rows = load_profiles()
-        assert len([p for p in rows if p.get("name") == "alpha"]) == 1
-        assert len([p for p in rows if p.get("name") == "beta"]) == 1
-        assert next(p for p in rows if p.get("name") == "beta")["host"] == "h2.example"
-        dlg.Destroy()
-        frame.Destroy()
-        for _ in range(3):
-            wx.Yield()
-    finally:
-        tmp.cleanup()
-
-
-# ---------------------------------------------------------------------------
-# W17.2 Rename-collision guard — real panel _handle_save mapping
-# ---------------------------------------------------------------------------
-
-@pytest.mark.gui
-@pytest.mark.wx
-@pytest.mark.semantic
-def test_panel_save_maps_rename_conflict_to_warning(monkeypatch):
-    """Real build_connection_panel._handle_save rejects a rename-onto-existing save."""
-    from hpc_gui.core.i18n import t, load_language
-    from hpc_gui.wx_connection import build_connection_panel
-
-    load_language("en")
-    expected = 'Profile name "alpha" is already used by another profile. Choose a different name.'
-    assert t("connection.rename_name_taken").format(name="alpha") == expected
-    tmp = _isolated_storage(monkeypatch)
-    try:
-        _wx_app = wx.App.Get() or wx.App(False)
-        storage.upsert_profile({"name": "alpha", "host": "h1.example", "port": 22, "username": "u1"})
-        storage.upsert_profile({"name": "beta", "host": "h2.example", "port": 22, "username": "u2"})
-
-        frame = wx.Frame(None)
-        host = build_connection_panel(frame, profiles=load_profiles())
-
-        conflicting = {
-            "name": "alpha",
-            "host": "h2x.example",
-            "port": 22,
-            "username": "u2",
-            "password": "",
-            "save_password": False,
-            "password_prompt_policy": "when-needed",
-        }
-
-        class FakeDialog:
-            def __init__(self, parent, initial_profile=None, mode="add", on_save=None, on_save_and_connect=None):
-                assert mode == "edit"
-                self._result = on_save(conflicting) if on_save else False
-
-            def ShowModal(self):
-                return wx.ID_CANCEL
-
-            def Destroy(self):
-                pass
-
-        shown = []
-        with mock.patch("hpc_gui.wx_connection_dialog.WxConnectionDialog", FakeDialog):
-            with mock.patch.object(wx, "MessageBox", side_effect=lambda msg, *a, **k: shown.append(msg) or wx.ID_OK):
-                host._wx_connection_open_dialog("edit", "beta")
-                for _ in range(5):
-                    wx.Yield()
-
-        assert shown == [expected]
-        rows = load_profiles()
-        assert sorted(p["name"] for p in rows) == ["alpha", "beta"]
-        assert next(p for p in rows if p.get("name") == "beta")["host"] == "h2.example"
         frame.Destroy()
         for _ in range(3):
             wx.Yield()

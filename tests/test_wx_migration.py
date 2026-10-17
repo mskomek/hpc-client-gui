@@ -8,14 +8,14 @@ from pathlib import Path
 
 import pytest
 
-from hpc_gui.config import storage
+from hpc_gui.config import storage, _storage_core, _storage_profiles
 
 
 @pytest.mark.unit
 @pytest.mark.semantic
 @pytest.mark.resource
 def test_legacy_profile_migration_preserves_unicode_and_is_idempotent(tmp_path, monkeypatch):
-    monkeypatch.setattr(storage, "_config_dir", lambda: tmp_path)
+    monkeypatch.setattr(_storage_core, "_config_dir", lambda: tmp_path)
     cfg_path = tmp_path / "config.json"
     legacy = {
         "profiles": [
@@ -53,7 +53,7 @@ def test_legacy_profile_migration_preserves_unicode_and_is_idempotent(tmp_path, 
 @pytest.mark.semantic
 @pytest.mark.resource
 def test_migration_save_failure_keeps_original_config_readable(tmp_path, monkeypatch):
-    monkeypatch.setattr(storage, "_config_dir", lambda: tmp_path)
+    monkeypatch.setattr(_storage_core, "_config_dir", lambda: tmp_path)
     cfg_path = tmp_path / "config.json"
     original = json.dumps(
         {"profiles": [{"name": "Türkçe İş"}], "settings": {"transfer_parallelism": 4}},
@@ -64,7 +64,7 @@ def test_migration_save_failure_keeps_original_config_readable(tmp_path, monkeyp
     def fail_save(_cfg):
         raise OSError("simulated migration write failure")
 
-    monkeypatch.setattr(storage, "save_config", fail_save)
+    monkeypatch.setattr(_storage_profiles, "save_config", fail_save)
     with pytest.raises(OSError, match="simulated migration write failure"):
         storage.load_profiles()
 
@@ -76,7 +76,7 @@ def test_migration_save_failure_keeps_original_config_readable(tmp_path, monkeyp
 @pytest.mark.semantic
 @pytest.mark.resource
 def test_corrupt_config_keeps_unique_recovery_backups(tmp_path, monkeypatch):
-    monkeypatch.setattr(storage, "_config_dir", lambda: tmp_path)
+    monkeypatch.setattr(_storage_core, "_config_dir", lambda: tmp_path)
     cfg_path = tmp_path / "config.json"
 
     first_corrupt = b"{not-json"

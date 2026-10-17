@@ -8,7 +8,6 @@ from hpc_gui.wx_local_files import show_local_files
 from hpc_gui.wx_remote_files import WxRemoteDirectoryModel
 from hpc_gui.wx_remote_files_view import show_remote_files
 from mock_hpc_files import MockRemoteFilesBackend
-from support.wx_clipboard import read_clipboard_text
 from hpc_gui.core.i18n import load_language, t
 from hpc_gui.services.file_clipboard import get_file_clipboard
 

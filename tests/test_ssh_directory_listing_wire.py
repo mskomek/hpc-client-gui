@@ -19,7 +19,6 @@ import pytest
 pytestmark = [pytest.mark.integration, pytest.mark.semantic]
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from support.mock_ssh_server import MOCK_PASSWORD, MOCK_USERNAME, MockSSHServer  # noqa: E402
 
 from hpc_gui.services.files_ssh import SSHFilesBackend  # noqa: E402
 from hpc_gui.ssh.client import SSHClientWrapper, SSHConnInfo  # noqa: E402
@@ -96,3 +95,5 @@ class SSHDirectoryListingWireTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+from support.mock_ssh_server import MOCK_PASSWORD, MOCK_USERNAME, MockSSHServer

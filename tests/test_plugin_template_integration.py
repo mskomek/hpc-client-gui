@@ -167,7 +167,7 @@ def _menu_texts(menu) -> list[str]:
 @pytest.mark.gui
 def test_menu_without_plugins_has_builtin_user_and_more(qapp, monkeypatch):
     monkeypatch.setattr(
-        "hpc_gui.ui.dialogs.connection_dialog.installed_cluster_template_groups",
+        "hpc_gui.ui.dialogs._connection_dialog_templates.installed_cluster_template_groups",
         lambda: {},
     )
     dialog = ConnectionDialog()

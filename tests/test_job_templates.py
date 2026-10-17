@@ -268,7 +268,7 @@ def test_render_never_executes(monkeypatch):
 # ---------------------------------------------------------------------------
 
 
-PLUGIN_REPO = Path(__file__).resolve().parents[2] / "hpc-client-gui-plugins"
+PLUGIN_REPO = Path(os.environ.get("HPC_GUI_CONTRACT_REPO", Path(__file__).resolve().parents[2] / "hpc-client-gui-plugins"))
 FLUENT_DIR = PLUGIN_REPO / "plugins" / "fluent" / "0.2.0"
 
 requires_repo = pytest.mark.skipif(

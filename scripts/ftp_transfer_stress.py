@@ -22,7 +22,7 @@ import threading
 import time
 from types import SimpleNamespace
 from contextlib import contextmanager
-from dataclasses import asdict, dataclass
+from dataclasses import asdict
 from pathlib import Path
 from typing import Iterator
 
@@ -39,34 +39,10 @@ SMALL_SIZE = 10 * 1024
 FULL_LARGE_SIZE = 1024**3
 
 
-@dataclass
-class PhaseResult:
-    name: str
-    elapsed_seconds: float
-    bytes_transferred: int
-    throughput_mib_s: float
-    completed_rows: int
-    error_rows: list[str]
-    pending_rows: list[str]
-    max_observed_concurrency: int
-
-
-class ConcurrencyTracker:
-    def __init__(self) -> None:
-        self._lock = threading.Lock()
-        self.active = 0
-        self.maximum = 0
-
-    @contextmanager
-    def transfer(self) -> Iterator[None]:
-        with self._lock:
-            self.active += 1
-            self.maximum = max(self.maximum, self.active)
-        try:
-            yield
-        finally:
-            with self._lock:
-                self.active -= 1
+try:
+    from .ftp_transfer_stress_metrics import ConcurrencyTracker, PhaseResult
+except ImportError:  # Support direct execution as `python scripts/ftp_transfer_stress.py`.
+    from ftp_transfer_stress_metrics import ConcurrencyTracker, PhaseResult
 
 
 class LoopbackFtpBackend:
@@ -506,3 +482,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
+

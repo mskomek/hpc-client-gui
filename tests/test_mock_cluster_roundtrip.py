@@ -22,7 +22,6 @@ from pathlib import Path
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from support.mock_ssh_server import MOCK_PASSWORD, MOCK_USERNAME, MockSSHServer  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -147,3 +146,5 @@ class MockClusterRoundTripTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+from support.mock_ssh_server import MOCK_PASSWORD, MOCK_USERNAME, MockSSHServer

@@ -28,6 +28,7 @@ import json
 import pytest
 
 from hpc_gui.config import storage
+from hpc_gui.config import _storage_core
 from hpc_gui.wx_settings import (
     GLOBAL_KEYS,
     INVENTORY_FLAGS,
@@ -47,7 +48,7 @@ from hpc_gui.wx_settings import (
 @pytest.fixture
 def isolated_config(tmp_path, monkeypatch):
     config_path = tmp_path / "config.json"
-    monkeypatch.setattr(storage, "_config_path", lambda: config_path)
+    monkeypatch.setattr(_storage_core, "_config_path", lambda: config_path)
     return config_path
 
 
@@ -242,9 +243,7 @@ def test_w37_failed_write_raises_no_false_success(isolated_config, monkeypatch):
 
     model = build_model_from_storage(apply=lambda snap: persist_model_snapshot(snap))
     model.set_global("transfer_checksum", True)
-    with mock_patch.object(
-        storage, "save_config", side_effect=OSError("read-only location")
-    ):
+    with mock_patch("hpc_gui.config._storage_preferences.save_config", side_effect=OSError("read-only location")):
         with pytest.raises(RuntimeError, match="persist rejected"):
             model.apply()
     # No false-success: the next read still shows the old value pattern
