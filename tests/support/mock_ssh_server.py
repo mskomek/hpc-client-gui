@@ -49,19 +49,19 @@ class _MockShell:
                 # Published TRUBA profile command: pipe delimited, without the
                 # newer submit-time field.
                 return 0, (
-                    "12346|short|waitingjob|mockuser|PENDING|00:00:00|0|0|Priority\n"
+                    "6810497_[0-3%4]|orfoz|dataset_solver|mockuser|PENDING|00:00:00|1|112|Priority\n"
                     "12345|short|mockjob|mockuser|RUNNING|00:00:05|1|1|None\n"
                 ), ""
             if " -o " not in lowered and " --format" not in lowered:
                 return 0, (
                     "JOBID PARTITION NAME USER ST TIME NODES NODELIST(REASON)\n"
-                    "12346 short waitingjob mockuser PENDING 0:00 0 (Priority)\n"
+                    "6810497_[0-3%4] orfoz dataset_solver mockuser PENDING 0:00 1 (Priority)\n"
                     "12345 short mockjob mockuser R 0:05 1 (None)\n"
                 ), ""
             return 0, (
                 "12345|short|mockjob|mockuser|RUNNING|00:00:05|1|1|None|"
                 "2026-10-18T10:00:00\n"
-                "12346|short|waitingjob|mockuser|PENDING|00:00:00|0|0|Priority|"
+                "6810497_[0-3%4]|orfoz|dataset_solver|mockuser|PENDING|00:00:00|1|112|Priority|"
                 "2026-10-18T11:00:00\n"
             ), ""
         if "sbatch" in lowered:
@@ -73,7 +73,7 @@ class _MockShell:
                 # Published TRUBA accounting format (7 fields, no partition,
                 # node counts, paths, or submit/end timestamps).
                 return 0, (
-                    "12346|waitingjob|PENDING|00:00:00|0|cpu=0|0:0\n"
+                    "6810497_[0-3%4]|dataset_solver|PENDING|00:00:00|0|cpu=112|0:0\n"
                     "12345|mockjob|RUNNING|00:00:05|512M|cpu=1|0:0\n"
                     "12344|finished|COMPLETED|00:02:00|1G|cpu=2|0:0\n"
                     "12343|failed|FAILED|00:00:03|0|cpu=1|1:0\n"
@@ -88,8 +88,8 @@ class _MockShell:
             return 0, (
                 "12345|mockjob|short|RUNNING|00:00:05|1|1||0:0|"
                 "2026-10-18T10:00:00||/work/mockjob|/work/mockjob.out|/work/mockjob.err\n"
-                "12346|waitingjob|short|PENDING|00:00:00|0|0|Priority|0:0|"
-                "2026-10-18T11:00:00||/work/waitingjob|/work/waitingjob.out|/work/waitingjob.err\n"
+                "6810497_[0-3%4]|dataset_solver|orfoz|PENDING|00:00:00|1|112|Priority|0:0|"
+                "2026-10-18T11:00:00||/work/dataset_solver|/work/dataset_solver.out|/work/dataset_solver.err\n"
                 "12344|finished|short|COMPLETED|00:02:00|1|2||0:0|"
                 "2026-10-18T09:00:00|2026-10-18T09:02:00|/work/finished|"
                 "/work/finished.out|/work/finished.err\n"

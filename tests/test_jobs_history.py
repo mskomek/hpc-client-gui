@@ -15,6 +15,18 @@ def test_parse_sacct_history_omits_step_rows_and_keeps_array_tasks():
     assert rows[1]["end_time"] == "2026-10-01T10:06:00"
 
 
+def test_merge_keeps_compact_pending_array_summary():
+    from hpc_gui.services.jobs_history import merge_job_sources
+
+    rows = merge_job_sources(
+        [{"id": "6810497_[0-3%4]", "name": "dataset_solver", "state": "PENDING"}],
+        [],
+    )
+    assert [(row["job_id"], row["state"]) for row in rows] == [
+        ("6810497_[0-3%4]", "PENDING")
+    ]
+
+
 def test_merge_prefers_queue_row_and_sorts_active_then_recent_terminal():
     rows = merge_job_sources(
         [{"id": "12", "name": "live", "state": "RUNNING", "submit_time": "2026-10-18T09:00:00"}],

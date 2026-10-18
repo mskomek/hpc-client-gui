@@ -71,6 +71,12 @@ def test_w28_job_identity_preserves_array_task_identifiers():
     assert not selection_survives_refresh(bare, [array])
 
 
+def test_w28_job_identity_preserves_compact_array_summary():
+    from hpc_gui.services.job_identity import split_job_id
+
+    assert split_job_id("6810497_[0-3%4]") == ("6810497", "_[0-3%4]", "")
+
+
 def test_w28_job_identity_same_target_requires_every_field():
     left = make_identity("42", profile_id="p", cluster_id="c", provider_id="s", session_generation=3)
     right = make_identity("42", profile_id="p", cluster_id="c", provider_id="s", session_generation=3)

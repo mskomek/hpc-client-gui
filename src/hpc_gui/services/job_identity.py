@@ -13,7 +13,7 @@ from dataclasses import dataclass
 
 _ARRAY_SUFFIX_RE = re.compile(
     r"^(?P<base>\d+)"
-    r"(?P<array>(?:_\d+|\.batch|\.extern|\[[^\]]+\])?)"
+    r"(?P<array>(?:_\d+|_\[[0-9,:%-]+\]|\.batch|\.extern|\[[^\]]+\])?)"
     r"(?P<step>(?:\.0|\+0|s\d+)?)$"
 )
 
@@ -22,7 +22,7 @@ def split_job_id(raw: str) -> tuple[str, str, str]:
     """Split ``raw`` into (base_id, array_suffix, step_suffix).
 
     Preserves scheduler array representations such as ``123_4``,
-    ``123.batch``, ``123_[1-3]`` without normalising them away. A bare
+    ``123.batch``, ``123_[1-3]``, and ``123_[0-3%4]`` without normalising them away. A bare
     ``123`` yields ``("123", "", "")``.
     """
     text = str(raw or "").strip()
