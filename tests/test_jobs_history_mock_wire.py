@@ -49,12 +49,14 @@ def test_jobs_list_round_trip_shows_live_and_finished_jobs(tmp_path):
             assert frames
             frame = frames[-1]
             deadline = time.monotonic() + 10
-            while frame._wx_jobs_controls["jobs"].GetItemCount() != 3 and time.monotonic() < deadline:
+            while frame._wx_jobs_controls["jobs"].GetItemCount() != 4 and time.monotonic() < deadline:
                 app.ProcessPendingEvents()
                 wx.SafeYield()
                 wx.MilliSleep(10)
             jobs = frame._wx_jobs_controls["jobs"]
-            assert [jobs.GetItemText(index) for index in range(3)] == ["12345", "12344", "12343"]
+            assert [jobs.GetItemText(index) for index in range(4)] == [
+                "12346", "12345", "12344", "12343"
+            ]
 
             # Older saved profiles may use default Slurm table output.
             legacy_backend = SSHSlurmBackend(
@@ -68,6 +70,7 @@ def test_jobs_list_round_trip_shows_live_and_finished_jobs(tmp_path):
             state["session"]["profile"]["id"] = "mock-legacy"
             legacy = _jobs_callbacks(state, None, None)["list_jobs"]()
             assert [(row["job_id"], row["state"]) for row in legacy["jobs"]] == [
+                ("12346", "PENDING"),
                 ("12345", "R"),
                 ("12344", "COMPLETED"),
                 ("12343", "FAILED"),
@@ -79,7 +82,9 @@ def test_jobs_list_round_trip_shows_live_and_finished_jobs(tmp_path):
                 app.ProcessPendingEvents()
                 wx.SafeYield()
                 wx.MilliSleep(10)
-            assert [jobs.GetItemText(index) for index in range(3)] == ["12345", "12344", "12343"]
+            assert [jobs.GetItemText(index) for index in range(4)] == [
+                "12346", "12345", "12344", "12343"
+            ]
 
             # Published TRUBA profiles use a 9-column squeue command and the
             # older 7-column sacct accounting format.
@@ -101,6 +106,7 @@ def test_jobs_list_round_trip_shows_live_and_finished_jobs(tmp_path):
             truba_callbacks = _jobs_callbacks(state, None, None)
             truba_result = truba_callbacks["list_jobs"]()
             assert [(row["job_id"], row["state"]) for row in truba_result["jobs"]] == [
+                ("12346", "PENDING"),
                 ("12345", "RUNNING"),
                 ("12344", "COMPLETED"),
                 ("12343", "FAILED"),
@@ -112,7 +118,9 @@ def test_jobs_list_round_trip_shows_live_and_finished_jobs(tmp_path):
                 app.ProcessPendingEvents()
                 wx.SafeYield()
                 wx.MilliSleep(10)
-            assert [jobs.GetItemText(index) for index in range(3)] == ["12345", "12344", "12343"]
+            assert [jobs.GetItemText(index) for index in range(4)] == [
+                "12346", "12345", "12344", "12343"
+            ]
         finally:
             for window in list(wx.GetTopLevelWindows()):
                 try:
@@ -126,6 +134,7 @@ def test_jobs_list_round_trip_shows_live_and_finished_jobs(tmp_path):
             ssh.close()
 
     assert [(row["job_id"], row["state"]) for row in result["jobs"]] == [
+        ("12346", "PENDING"),
         ("12345", "RUNNING"),
         ("12344", "COMPLETED"),
         ("12343", "FAILED"),

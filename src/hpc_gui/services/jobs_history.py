@@ -97,6 +97,10 @@ def merge_job_sources(
     history_rows: Iterable[dict[str, Any]],
 ) -> list[dict[str, Any]]:
     """Deduplicate queue/accounting rows and keep array tasks, never steps."""
+    active_rows = list(active_rows or ())
+    queue_order = {
+        _job_id(row): index for index, row in enumerate(active_rows) if _job_id(row)
+    }
     merged: dict[str, dict[str, Any]] = {}
     active_ids: set[str] = set()
     for source, is_active in ((history_rows, False), (active_rows, True)):
@@ -117,7 +121,18 @@ def merge_job_sources(
     for parent in task_parents:
         if parent not in active_ids:
             merged.pop(parent, None)
-    return sorted(merged.values(), key=job_sort_key)
+
+    def merged_sort_key(row: dict[str, Any]) -> tuple[Any, ...]:
+        key = job_sort_key(row)
+        state = str(row.get("state", "")).strip().upper()
+        if not is_terminal_state(state) and _time_key(row.get("submit_time")) < 0:
+            # Legacy/TRUBA queue templates omit submit time. Keep the order
+            # returned by squeue for active jobs instead of letting sacct's
+            # duplicate insertion order move a pending job below a running one.
+            return (*key, queue_order.get(_job_id(row), len(queue_order)))
+        return (*key, 0)
+
+    return sorted(merged.values(), key=merged_sort_key)
 
 
 def job_sort_key(row: dict[str, Any]) -> tuple[Any, ...]:
