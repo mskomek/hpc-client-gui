@@ -40,8 +40,30 @@ def _id_key(value: str) -> tuple[int, str]:
 def parse_sacct_history(text: str) -> list[dict[str, str]]:
     """Parse the configured pipe format; ignore array steps and step records."""
     rows = []
-    for line in str(text or "").splitlines():
+    lines = [line.strip() for line in str(text or "").splitlines() if line.strip()]
+    table_columns: dict[str, int] = {}
+    if lines and "|" not in lines[0]:
+        header = lines[0].split()
+        table_columns = {name.lower(): index for index, name in enumerate(header)}
+        if "jobid" in table_columns or "jobidraw" in table_columns:
+            lines = lines[1:]
+        else:
+            table_columns = {}
+    for line in lines:
         parts = [part.strip() for part in line.strip().split("|")]
+        if table_columns and "|" not in line:
+            values = line.split()
+            parts = [""] * 14
+            for name, target in (
+                ("jobidraw", 0), ("jobid", 0), ("jobname", 1),
+                ("partition", 2), ("state", 3), ("elapsed", 4),
+                ("allocnodes", 5), ("alloccpus", 6), ("reason", 7),
+                ("exitcode", 8), ("submit", 9), ("end", 10),
+                ("workdir", 11), ("stdout", 12), ("stderr", 13),
+            ):
+                index = table_columns.get(name)
+                if index is not None and index < len(values) and not parts[target]:
+                    parts[target] = values[index]
         if len(parts) < 4 or parts[0].lower() in {"jobid", "jobidraw"}:
             continue
         if not _JOB_ID.fullmatch(parts[0]) or _STEP_ID.fullmatch(parts[0]):

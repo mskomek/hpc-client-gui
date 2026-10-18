@@ -45,13 +45,37 @@ class _MockShell:
     def respond(self, command: str) -> tuple[int, str, str]:
         lowered = command.lower()
         if "squeue" in lowered:
-            return 0, "JOBID PARTITION NAME USER ST TIME NODES\n12345 short mockjob mockuser R 0:05 1\n", ""
+            if " -o " not in lowered and " --format" not in lowered:
+                return 0, (
+                    "JOBID PARTITION NAME USER ST TIME NODES NODELIST(REASON)\n"
+                    "12345 short mockjob mockuser R 0:05 1 (None)\n"
+                ), ""
+            return 0, (
+                "12345|short|mockjob|mockuser|RUNNING|00:00:05|1|1|None|"
+                "2026-10-18T10:00:00\n"
+            ), ""
         if "sbatch" in lowered:
             return 0, "Submitted batch job 12345\n", ""
         if "scancel" in lowered:
             return 0, "", ""
         if "sacct" in lowered:
-            return 0, "JobID JobName Partition Account AllocCPUS State ExitCode\n12345 mockjob short mock 1 COMPLETED 0:0\n", ""
+            if "--format" not in lowered and " -o " not in lowered:
+                return 0, (
+                    "JobID JobName Partition Account AllocCPUS State ExitCode\n"
+                    "12345 mockjob short mock 1 RUNNING 0:0\n"
+                    "12344 finished short mock 2 COMPLETED 0:0\n"
+                    "12343 failed short mock 1 FAILED 1:0\n"
+                ), ""
+            return 0, (
+                "12345|mockjob|short|RUNNING|00:00:05|1|1||0:0|"
+                "2026-10-18T10:00:00||/work/mockjob|/work/mockjob.out|/work/mockjob.err\n"
+                "12344|finished|short|COMPLETED|00:02:00|1|2||0:0|"
+                "2026-10-18T09:00:00|2026-10-18T09:02:00|/work/finished|"
+                "/work/finished.out|/work/finished.err\n"
+                "12343|failed|short|FAILED|00:00:03|1|1||1:0|"
+                "2026-10-18T08:00:00|2026-10-18T08:00:03|/work/failed|"
+                "/work/failed.out|/work/failed.err\n"
+            ), ""
         if "scontrol show job" in lowered or "scontrol" in lowered:
             return 0, "JobId=12345 JobName=mockjob JobState=RUNNING\n", ""
         if lowered.strip() == "command -v sha256sum":

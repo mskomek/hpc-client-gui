@@ -103,6 +103,19 @@ def _jobs_callbacks(session_state, parent, lifecycle):
                 "submit_time": submit_time,
                 "source": "squeue",
             })
+        if not rows and str(raw or "").strip():
+            # Retain support for existing profiles whose squeue template emits
+            # Slurm's human-readable columns instead of the pipe format.
+            from hpc_gui.services.slurm_models import parse_squeue_result
+            rows = [
+                {
+                    "id": job.job_id, "job_id": job.job_id, "name": job.name,
+                    "state": job.state, "partition": job.partition,
+                    "elapsed": job.elapsed, "nodes": job.nodes, "cpus": job.cpus,
+                    "reason": job.reason, "user": job.user, "source": "squeue",
+                }
+                for job in parse_squeue_result(raw)
+            ]
         cache = owner_state.setdefault("_jobs_history_cache", {})
         identity = (
             str(profile.get("id", profile.get("profile_id", ""))),

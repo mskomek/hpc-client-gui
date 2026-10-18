@@ -11,12 +11,12 @@ from typing import Any, Callable
 from uuid import uuid4
 
 from hpc_gui.core.i18n import current_language, subscribe_language_change, t, unsubscribe_language_change
+from hpc_gui.config import storage
 from hpc_gui.services.job_failure_classifier import explain_job_failure
 from hpc_gui.services.job_identity import cancel_is_safe, make_identity
 from hpc_gui.services.job_list_filter_sort import (
     cancel_target_is_safe,
     filter_jobs,
-    selection_still_exists,
     sort_jobs,
 )
 from hpc_gui.services.job_provenance import JobProvenanceCapture
@@ -448,10 +448,13 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         pass
     cb_auto_refresh = wx.CheckBox(jobs_page, label=t("jobs.auto_refresh"))
     cb_auto_refresh.SetValue(True)
+    cb_hide_finished = wx.CheckBox(jobs_page, label=t("jobs.hide_finished"))
+    cb_hide_finished.SetValue(storage.get_hide_finished_jobs_enabled())
     jobs_toolbar.Add(btn_refresh, 0, wx.RIGHT | wx.ALIGN_CENTER_VERTICAL, 6)
     jobs_toolbar.Add(lbl_filter, 0, wx.RIGHT | wx.ALIGN_CENTER_VERTICAL, 4)
     jobs_toolbar.Add(filter_field, 1, wx.RIGHT | wx.ALIGN_CENTER_VERTICAL, 6)
     jobs_toolbar.Add(cb_auto_refresh, 0, wx.ALIGN_CENTER_VERTICAL)
+    jobs_toolbar.Add(cb_hide_finished, 0, wx.LEFT | wx.ALIGN_CENTER_VERTICAL, 8)
     # W28: visible refresh lifecycle readback (idle/refreshing/success/stale).
     jobs_refresh_label = wx.StaticText(jobs_page, label="")
     jobs_toolbar.Add(jobs_refresh_label, 0, wx.LEFT | wx.ALIGN_CENTER_VERTICAL, 6)
@@ -1099,9 +1102,15 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         query = state["filter_query"]
         backend_snapshot = list(state["raw_items"])
         filtered = filter_jobs(backend_snapshot, query)
+        from hpc_gui.services.jobs_history import job_sort_key
+        from hpc_gui.services.slurm_models import is_terminal_state
+        if cb_hide_finished.GetValue():
+            filtered = [item for item in filtered if not is_terminal_state(_parse_job_row(item)["state"])]
         sort_key = state.get("sort_key", "")
         if sort_key:
             filtered = sort_jobs(filtered, sort_key, reverse=bool(state.get("sort_reverse", False)))
+        else:
+            filtered.sort(key=job_sort_key)
         # Pair each visible item with its normalised row for rendering.
         paired = [(_parse_job_row(item), item) for item in filtered]
         state["items"] = list(filtered)
@@ -1128,8 +1137,6 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
             btn_cancel.Enable(False)
         if not filtered:
             btn_cancel.Enable(False)
-            if state["selected_job"]:
-                _clear_job_selection()
         jobs_page_sizer.Layout()
 
     # --- Show/hide details page content vs no-selection state ----------------
@@ -1195,6 +1202,7 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         # Publish to the shared selected-job context
         model.selected_job_store.select(
             job_id=job_id,
+            cluster_id=str(kwargs.get("cluster_id", "")),
             name=row["name"],
             state=row["state"],
             partition=row["partition"],
@@ -1365,7 +1373,12 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
                         except Exception:
                             pass
                 else:
-                    items = tuple(result or ())
+                    if isinstance(result, dict):
+                        items = tuple(result.get("jobs") or ())
+                        state["history_stale"] = bool(result.get("history_stale", False))
+                        state["history_error"] = str(result.get("history_error", ""))
+                    else:
+                        items = tuple(result or ())
                     from datetime import datetime, timezone as _tz
 
                     applied = machine2.complete_success(
@@ -1392,14 +1405,22 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
                             if isinstance(item, dict):
                                 job_id = str(item.get("id", item.get("job_id", ""))).strip()
                                 model._job_states.setdefault(job_id, str(item.get("state", "")).strip().upper())
+                                if job_id == state["selected_job"]:
+                                    selected_row = _parse_job_row(item)
+                                    model.selected_job_store.update(
+                                        state=selected_row["state"], name=selected_row["name"],
+                                        partition=selected_row["partition"], elapsed=selected_row["elapsed"],
+                                        nodes=selected_row["nodes"], cpus=selected_row["cpus"],
+                                        reason=selected_row["reason"],
+                                        workdir=str(item.get("workdir", "")),
+                                        stdout_path=str(item.get("stdout_path", "")),
+                                        stderr_path=str(item.get("stderr_path", "")),
+                                    )
+                                    from hpc_gui.services.slurm_models import is_active_state
+                                    btn_cancel.Enable(is_active_state(selected_row["state"]) and bool(cancel))
                         model.poll_active_jobs(items, final_state, generation=req_gen)
-                        # W28: selection survives refresh only when the
-                        # identity still exists; otherwise drop it so a stale
-                        # selection cannot cancel a different row.
-                        if state["selected_job"] and not selection_still_exists(
-                            state["selected_job"], list(items)
-                        ):
-                            _clear_job_selection()
+                        # A refresh can hide a selected row while its details,
+                        # files, or outputs remain a valid user context.
             if refresh_pending and not state["closed"]:
                 post(refresh_jobs)
 
@@ -2526,9 +2547,16 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         event.Skip()
 
     def set_session(session):
+        profile = (session or {}).get("profile") or {}
+        new_cluster_id = str(profile.get("cluster_id", profile.get("id", profile.get("profile_id", ""))))
+        current_cluster_id = model.selected_job_store.context.cluster_id or str(kwargs.get("cluster_id", ""))
+        keep_selection = bool(
+            state["selected_job"] and current_cluster_id and current_cluster_id == new_cluster_id
+        )
         state["session"] = session
         state["provider_generation"] += 1
-        state["selected_job"] = ""
+        if not keep_selection:
+            state["selected_job"] = ""
         state["selected_generation"] += 1
         state["outputs_generation"] += 1
         state["outputs_request_id"] += 1
@@ -2561,16 +2589,18 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         for cid, button in output_channel_pause_buttons.items():
             output_channel_paused[cid] = False
             button.SetLabel(t("jobs.pause_output"))
-        model.selected_job_store.clear()
+        if not keep_selection:
+            model.selected_job_store.clear()
         _ensure_output_tabs([])
         _update_outputs_visibility()
         outputs_pause_btn.SetLabel(t("jobs_outputs.pause_all"))
         for cid in output_channel_status:
             _set_output_channel_status(cid, "jobs_outputs.status_disconnected")
-        _clear_detail_values()
-        _show_details_content(False)
-        _reset_files_browser()
-        _show_files_selected_state(False)
+        if not keep_selection:
+            _clear_detail_values()
+            _show_details_content(False)
+            _reset_files_browser()
+            _show_files_selected_state(False)
         _update_files_header()
         set_navigation_store = getattr(files_browser, "_wx_remote_set_navigation_store", None)
         if callable(set_navigation_store):
@@ -2601,6 +2631,7 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
             pass
         btn_refresh.SetLabel(t("jobs.refresh"))
         cb_auto_refresh.SetLabel(t("jobs.auto_refresh"))
+        cb_hide_finished.SetLabel(t("jobs.hide_finished"))
         btn_cancel.SetLabel(t("jobs.cancel"))
         jobs_empty_label.SetLabel(t("jobs_outputs.no_active_jobs"))
         for col_idx, col_key in enumerate(_JOB_TABLE_COLUMNS):
@@ -2692,6 +2723,11 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
     except Exception:
         pass
     btn_refresh.Bind(wx.EVT_BUTTON, refresh_jobs)
+    def _toggle_hide_finished(_event=None):
+        storage.set_hide_finished_jobs_enabled(cb_hide_finished.GetValue())
+        _apply_filter()
+
+    cb_hide_finished.Bind(wx.EVT_CHECKBOX, _toggle_hide_finished)
     btn_cancel.Bind(wx.EVT_BUTTON, cancel_job)
     btn_sacct.Bind(wx.EVT_BUTTON, _refresh_sacct)
     btn_toggle_raw_acct.Bind(wx.EVT_BUTTON, _open_raw_accounting)
@@ -2821,7 +2857,8 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
 
     # --- Timer tick ---------------------------------------------------------
     def tick(event):
-        refresh_jobs(event)
+        if cb_auto_refresh.GetValue():
+            refresh_jobs(event)
         try:
             if notebook.GetCurrentPage() is outputs_page:
                 ctx = model.selected_job_store.context
@@ -2905,6 +2942,7 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         "output_show_files": btn_show_files,
         "filter_field": filter_field,
         "cb_auto_refresh": cb_auto_refresh,
+        "hide_finished": cb_hide_finished,
         "btn_cancel": btn_cancel,
         "jobs_refresh_label": jobs_refresh_label,
         "jobs_sort": _on_column_click,
