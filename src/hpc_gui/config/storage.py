@@ -197,6 +197,19 @@ def set_lssrv_auto_refresh_enabled(enabled: bool) -> bool:
     return value
 
 
+def get_hide_finished_jobs_enabled(default: bool = False) -> bool:
+    """Return whether terminal jobs are hidden in the Jobs table."""
+    value = load_settings().get("hide_finished_jobs_enabled", default)
+    return value if isinstance(value, bool) else default
+
+
+def set_hide_finished_jobs_enabled(enabled: bool) -> bool:
+    """Persist the Jobs table terminal-job visibility preference."""
+    value = bool(enabled)
+    update_settings({"hide_finished_jobs_enabled": value})
+    return value
+
+
 def coerce_profile_transfer_parallelism(value: Any, default: int = 1) -> int:
     return _coerce_int_in_range(value, default, 1, 10)
 

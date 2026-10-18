@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import posixpath
+import re
 import shlex
 from dataclasses import dataclass
 from typing import Any
@@ -85,6 +86,22 @@ class SSHSlurmBackend(SlurmBackend):
 
     def sacct_result(self, user: str) -> SlurmCommandResult:
         return self._run("sacct_command", user=user)
+
+    def sacct_history_result(self, user: str, days: int = 7) -> SlurmCommandResult:
+        """Query an approved rolling accounting window (7, 30, 90, or 365 days)."""
+        window = int(days)
+        if window not in {7, 30, 90, 365}:
+            raise ValueError("history window must be one of 7, 30, 90, or 365 days")
+        command = self._command("sacct_command", user=user)
+        start = f"now-{window}days"
+        if re.search(r"(?:^|\s)-S(?:\s+|=)\S+", command):
+            command = re.sub(r"(?<!\S)-S(?:\s+|=)\S+", f"-S {start}", command, count=1)
+        else:
+            command = re.sub(r"(?=\s+--format(?:=|\s))", f" -S {start}", command, count=1)
+            if " -S " not in command:
+                command = f"{command} -S {start}"
+        code, out, err = self.ssh.run(command, log_output=False)
+        return SlurmCommandResult(code=code, stdout=out, stderr=err)
 
     def scontrol_show_job_result(self, job_id: str) -> SlurmCommandResult:
         return self._run("scontrol_command", job_id=job_id)

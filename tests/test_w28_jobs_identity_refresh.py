@@ -349,12 +349,19 @@ def test_w28_wx_refresh_failure_retains_rows_and_marks_stale(wx_app):
     frame = _open(wx_app, list_jobs)
     _pump(wx_app, lambda: frame._wx_jobs_controls["jobs"].GetItemCount() == 1)
     _pump(wx_app, lambda: frame._wx_jobs_state.get("jobs_refresh_status") == "success")
+    jobs = frame._wx_jobs_controls["jobs"]
+    jobs.Select(0)
+    selected = wx.ListEvent(wx.wxEVT_LIST_ITEM_SELECTED, jobs.GetId())
+    selected.SetIndex(0)
+    jobs.ProcessEvent(selected)
     frame._wx_jobs_refresh_jobs()
     _pump(wx_app, lambda: frame._wx_jobs_state.get("jobs_refresh_status") == "failure")
     # Prior rows remain visible and are flagged stale, never silently cleared.
     assert frame._wx_jobs_controls["jobs"].GetItemCount() == 1
     assert frame._wx_jobs_state.get("jobs_refresh_stale") is True
     assert "unreachable" in frame._wx_jobs_state.get("jobs_refresh_error", "")
+    assert frame._wx_jobs_state["selected_job"] == "1"
+    assert frame._wx_jobs_model.selected_job_store.context.job_id == "1"
     label = frame._wx_jobs_controls["jobs_refresh_label"].GetLabel()
     assert "stale" in label.lower() or "fail" in label.lower()
 
@@ -363,21 +370,112 @@ def test_w28_wx_refresh_failure_retains_rows_and_marks_stale(wx_app):
 @pytest.mark.wx
 @pytest.mark.semantic
 @pytest.mark.regression
-def test_w28_wx_selection_cleared_when_identity_disappears(wx_app):
+def test_w28_wx_selection_is_retained_when_filter_or_queue_hides_identity(wx_app):
     backend = {"rows": [{"id": "1", "name": "a", "state": "RUNNING"}, {"id": "2", "name": "b", "state": "RUNNING"}]}
     frame = _open(wx_app, lambda: list(backend["rows"]))
     _pump(wx_app, lambda: frame._wx_jobs_controls["jobs"].GetItemCount() == 2)
+    jobs = frame._wx_jobs_controls["jobs"]
+    selected_index = jobs.FindItem(-1, "1")
+    jobs.Select(selected_index)
+    event = wx.ListEvent(wx.wxEVT_LIST_ITEM_SELECTED, jobs.GetId())
+    event.SetIndex(selected_index)
+    jobs.ProcessEvent(event)
+    assert frame._wx_jobs_state["selected_job"] == "1"
+    backend["rows"] = [{"id": "2", "name": "b", "state": "RUNNING"}]
+    frame._wx_jobs_refresh_jobs()
+    _pump(wx_app, lambda: frame._wx_jobs_state.get("jobs_refresh_status") == "success")
+    assert frame._wx_jobs_state["selected_job"] == "1"
+    assert frame._wx_jobs_model.selected_job_store.context.job_id == "1"
+
+
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
+def test_finished_job_moves_below_active_and_selection_survives_transition(wx_app):
+    backend = {"rows": [
+        {"id": "20", "name": "history", "state": "COMPLETED", "end_time": "2026-10-17T10:00:00"},
+        {"id": "22", "name": "active", "state": "RUNNING", "submit_time": "2026-10-18T10:00:00"},
+        {"id": "21", "name": "recent", "state": "FAILED", "end_time": "2026-10-18T09:00:00"},
+    ]}
+    frame = _open(wx_app, lambda: list(backend["rows"]))
+    _pump(wx_app, lambda: frame._wx_jobs_controls["jobs"].GetItemCount() == 3)
+    jobs = frame._wx_jobs_controls["jobs"]
+    assert [jobs.GetItemText(i) for i in range(3)] == ["22", "21", "20"]
+
+    jobs.Select(0)
+    event = wx.ListEvent(wx.wxEVT_LIST_ITEM_SELECTED, jobs.GetId())
+    event.SetIndex(0)
+    jobs.ProcessEvent(event)
+    assert frame._wx_jobs_state["selected_job"] == "22"
+    frame._wx_jobs_controls["notebook"].SetSelection(4)
+    backend["rows"] = [
+        {"id": "22", "name": "active", "state": "COMPLETED", "end_time": "2026-10-18T10:05:00"},
+        {"id": "23", "name": "new active", "state": "RUNNING", "submit_time": "2026-10-18T10:01:00"},
+    ]
+    frame._wx_jobs_refresh_jobs()
+    _pump(wx_app, lambda: frame._wx_jobs_controls["jobs"].GetItemCount() == 2
+          and frame._wx_jobs_model.selected_job_store.context.state == "COMPLETED")
+    assert [jobs.GetItemText(i) for i in range(2)] == ["23", "22"]
+    assert frame._wx_jobs_state["selected_job"] == "22"
+    assert frame._wx_jobs_model.selected_job_store.context.job_id == "22"
+    assert frame._wx_jobs_controls["notebook"].GetSelection() == 4
+    assert not frame._wx_jobs_controls["cancel"].IsEnabled()
+
+
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
+def test_hide_finished_toggle_hides_rows_without_clearing_selection(wx_app, monkeypatch, tmp_path):
+    from hpc_gui.config import storage
+
+    monkeypatch.setattr(storage, "_config_path", lambda: tmp_path / "config.json")
+    backend = {"rows": [
+        {"id": "31", "name": "active", "state": "RUNNING"},
+        {"id": "30", "name": "done", "state": "COMPLETED", "end_time": "2026-10-18T10:00:00"},
+    ]}
+    frame = _open(wx_app, lambda: list(backend["rows"]))
+    _pump(wx_app, lambda: frame._wx_jobs_controls["jobs"].GetItemCount() == 2)
+    jobs = frame._wx_jobs_controls["jobs"]
+    jobs.Select(1)
+    event = wx.ListEvent(wx.wxEVT_LIST_ITEM_SELECTED, jobs.GetId())
+    event.SetIndex(1)
+    jobs.ProcessEvent(event)
+    toggle = frame._wx_jobs_controls["hide_finished"]
+    toggle.SetValue(True)
+    toggle.ProcessEvent(wx.CommandEvent(wx.wxEVT_CHECKBOX, toggle.GetId()))
+    assert jobs.GetItemCount() == 1
+    assert frame._wx_jobs_state["selected_job"] == "30"
+    assert frame._wx_jobs_model.selected_job_store.context.job_id == "30"
+    assert storage.get_hide_finished_jobs_enabled() is True
+    toggle.SetValue(False)
+    toggle.ProcessEvent(wx.CommandEvent(wx.wxEVT_CHECKBOX, toggle.GetId()))
+    assert jobs.GetItemCount() == 2
+    assert frame._wx_jobs_state["selected_job"] == "30"
+
+
+@pytest.mark.gui
+@pytest.mark.wx
+@pytest.mark.semantic
+def test_reconnect_keeps_same_cluster_selection_and_cluster_switch_clears_it(wx_app):
+    session = {"connected": True, "profile": {"id": "cluster-a", "profile_id": "cluster-a"}}
+    frame = _open(
+        wx_app,
+        lambda: [{"id": "44", "name": "job", "state": "RUNNING"}],
+        session_state={"session": session}, cluster_id="cluster-a",
+    )
+    _pump(wx_app, lambda: frame._wx_jobs_controls["jobs"].GetItemCount() == 1)
     jobs = frame._wx_jobs_controls["jobs"]
     jobs.Select(0)
     event = wx.ListEvent(wx.wxEVT_LIST_ITEM_SELECTED, jobs.GetId())
     event.SetIndex(0)
     jobs.ProcessEvent(event)
-    assert frame._wx_jobs_state["selected_job"] == "1"
-    backend["rows"] = [{"id": "2", "name": "b", "state": "RUNNING"}]
-    frame._wx_jobs_refresh_jobs()
-    _pump(
-        wx_app,
-        lambda: frame._wx_jobs_state.get("jobs_refresh_status") == "success"
-        and frame._wx_jobs_state.get("selected_job", "1") == "",
-    )
+    same_cluster = {"connected": True, "profile": {"id": "cluster-a", "profile_id": "cluster-a"}}
+    frame._wx_jobs_set_session(same_cluster)
+    assert frame._wx_jobs_state["selected_job"] == "44"
+    assert frame._wx_jobs_model.selected_job_store.context.job_id == "44"
+    assert frame._wx_jobs_model.selected_job_store.context.cluster_id == "cluster-a"
+
+    other_cluster = {"connected": True, "profile": {"id": "cluster-b", "profile_id": "cluster-b"}}
+    frame._wx_jobs_set_session(other_cluster)
     assert frame._wx_jobs_state["selected_job"] == ""
+    assert frame._wx_jobs_model.selected_job_store.context.job_id == ""

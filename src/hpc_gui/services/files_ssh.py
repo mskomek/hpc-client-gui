@@ -177,9 +177,26 @@ class SSHFilesBackend(FilesBackend):
             finally:
                 sftp.close()
 
+    def read_text_document(self, remote_path: str) -> tuple[str, str]:
+        from hpc_gui.services.file_open import decode_text_with_encoding
+
+        with _translate_remote_errors(remote_path):
+            sftp = self.ssh.open_transfer_sftp()
+            try:
+                with sftp.open(remote_path, "rb") as source:
+                    data = bytes(source.read())
+                return decode_text_with_encoding(data, name=remote_path)
+            finally:
+                sftp.close()
+
     def write_text(self, remote_path: str, text: str) -> None:
         with self.ssh.sftp.open(remote_path, "wb") as f:
             f.write(text.encode("utf-8"))
+
+    def write_text_document(self, remote_path: str, text: str, encoding: str) -> None:
+        payload = text.encode(encoding)
+        with self.ssh.sftp.open(remote_path, "wb") as target:
+            target.write(payload)
 
     def stat(self, remote_path: str) -> Tuple[int, int]:
         with _translate_remote_errors(remote_path):

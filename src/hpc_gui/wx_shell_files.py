@@ -4,6 +4,7 @@ from __future__ import annotations
 from pathlib import Path
 from pathlib import PurePosixPath
 from threading import Thread
+import os
 from hpc_gui.services.transfer_controller import TransferItem
 import shlex
 from hpc_gui.core.i18n import t
@@ -71,7 +72,11 @@ def _editor_action_factory(session_state):
             _require_pinned_session(document)
             if not files:
                 raise RuntimeError(t("editor.remote_file_service_unavailable"))
-            files.write_text(path, content)
+            writer = getattr(files, "write_text_document", None)
+            if callable(writer):
+                writer(path, content, getattr(document, "encoding", "utf-8"))
+            else:
+                files.write_text(path, content)
 
         def submit(current):
             _require_pinned_session(current)
@@ -170,16 +175,18 @@ def _local_files_callbacks(session_state, parent, lifecycle):
 
         def worker():
             try:
-                content = Path(path).read_text(encoding="utf-8")
+                from hpc_gui.services.file_open import decode_text_with_encoding
+
+                content, encoding = decode_text_with_encoding(Path(path).read_bytes(), name=path)
                 opener = manager.open_new_window if new_window else manager.open_primary
                 if new_window:
                     import wx
 
-                    wx.CallAfter(opener, path, content, is_local=True)
+                    wx.CallAfter(opener, path, content, is_local=True, encoding=encoding)
                 else:
                     import wx
 
-                    wx.CallAfter(opener, path, content, is_local=True, request_id=request_id)
+                    wx.CallAfter(opener, path, content, is_local=True, encoding=encoding, request_id=request_id)
             except Exception as error:
                 import wx
 
@@ -187,24 +194,83 @@ def _local_files_callbacks(session_state, parent, lifecycle):
 
         Thread(target=worker, daemon=True).start()
 
+    def active_remote_directory():
+        """Read the currently selected remote tab path for Files uploads."""
+        panel = (session_state or {}).get("_embedded_remote_files_panel") or parent
+        try:
+            tabs = getattr(panel, "_wx_remote_tabs", None) or ()
+            notebook = getattr(panel, "_wx_remote_notebook", None)
+            index = notebook.GetSelection() if notebook is not None else 0
+            if 0 <= index < len(tabs):
+                path = str(tabs[index].get("path") or "").strip()
+                if path:
+                    return str(PurePosixPath("/") / path.lstrip("/"))
+        except Exception:
+            pass
+        try:
+            model = getattr(panel, "_wx_remote_model", None)
+            path = str(getattr(model, "current_path", "") or "").strip()
+            if path:
+                return str(PurePosixPath("/") / path.lstrip("/"))
+        except Exception:
+            pass
+        raise RuntimeError("The active remote directory is unavailable. Open the Files tab and select a remote directory first.")
+
     def upload_local(paths):
         session = (session_state or {}).get("session") or {}
         files = _snapshot_files if _snapshot_files is not None else session.get("files")
         if not files:
             return
-        import wx
-
-        dialog = wx.TextEntryDialog(parent, t("dirs.destination"), t("dirs.destination"), "~")
+        # Snapshot at invocation time so both upload entry points target the
+        # active remote tab even if the user navigates while planning.
         try:
-            if dialog.ShowModal() != wx.ID_OK:
-                return
-            remote_dir = PurePosixPath(dialog.GetValue().strip() or "~")
-        finally:
-            dialog.Destroy()
+            remote_dir = active_remote_directory()
+        except Exception as error:
+            import wx
+
+            wx.MessageBox(str(error), t("login.err_title"), wx.OK | wx.ICON_ERROR)
+            return
 
         def worker():
             try:
-                items = [TransferItem("upload", local_path, str(remote_dir / Path(local_path).name)) for local_path in paths]
+                items = []
+                seen = set()
+                for local_path in paths:
+                    source = os.path.abspath(str(local_path))
+                    if source in seen:
+                        continue
+                    seen.add(source)
+                    name = os.path.basename(source.rstrip(os.sep))
+                    remote_base = str(PurePosixPath(remote_dir) / name)
+                    if not os.path.isdir(source):
+                        items.append(TransferItem("upload", source, remote_base))
+                        continue
+                    items.append(TransferItem("mkdir_remote", "", remote_base))
+
+                    def raise_walk_error(error):
+                        raise error
+
+                    for root, directories, filenames in os.walk(source, onerror=raise_walk_error):
+                        directories.sort()
+                        filenames.sort()
+                        relative = os.path.relpath(root, source)
+                        remote_root = (
+                            str(PurePosixPath(remote_base) / relative.replace(os.sep, "/"))
+                            if relative != "."
+                            else remote_base
+                        )
+                        for directory in directories:
+                            items.append(TransferItem(
+                                "mkdir_remote", "", str(PurePosixPath(remote_root) / directory)
+                            ))
+                        for filename in filenames:
+                            items.append(TransferItem(
+                                "upload",
+                                os.path.join(root, filename),
+                                str(PurePosixPath(remote_root) / filename),
+                            ))
+                if not items:
+                    return
                 _start_file_transfers(session_state, lifecycle, items, files_backend=files, parent=parent)
             except Exception as error:
                 import wx

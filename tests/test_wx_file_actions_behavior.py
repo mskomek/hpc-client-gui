@@ -63,7 +63,8 @@ def test_local_double_click_routes_file_to_editor_and_folder_to_visible_navigati
     event.SetIndex(folder_index)
     listing.ProcessEvent(event)
     assert frame._wx_local_state["context_target"] is None
-    _pump(wx_app, lambda: frame._wx_local_controls["listing"].GetItemCount() == 0)
+    _pump(wx_app, lambda: frame._wx_local_tabs[0]["path"] == (tmp_path / "results").resolve())
+    assert listing.GetItemText(0) == ".."
 
 
 @pytest.mark.gui
@@ -92,12 +93,14 @@ def test_local_delete_key_runs_async_and_refreshes_visible_rows(wx_app, tmp_path
     target.write_text("x", encoding="utf-8")
     frame = _browser(wx_app, tmp_path)
     listing = frame._wx_local_controls["listing"]
-    listing.Select(0)
+    row = next(index for index in range(listing.GetItemCount()) if listing.GetItemText(index) == "remove.txt")
+    listing.Select(row)
     monkeypatch.setattr(wx, "MessageBox", lambda *_args, **_kwargs: wx.YES)
     event = wx.KeyEvent(wx.wxEVT_KEY_DOWN)
     event.SetKeyCode(wx.WXK_DELETE)
     listing.ProcessEvent(event)
-    _pump(wx_app, lambda: not target.exists() and listing.GetItemCount() == 0)
+    _pump(wx_app, lambda: not target.exists() and listing.GetItemCount() == 1)
+    assert listing.GetItemText(0) == ".."
 
 
 @pytest.mark.gui
@@ -105,13 +108,14 @@ def test_local_delete_key_runs_async_and_refreshes_visible_rows(wx_app, tmp_path
 def test_wx_local_f5_refreshes_without_a_selection(wx_app, tmp_path: Path):
     frame = _browser(wx_app, tmp_path)
     listing = frame._wx_local_controls["listing"]
-    assert listing.GetItemCount() == 0
+    assert listing.GetItemCount() == 1
+    assert listing.GetItemText(0) == ".."
     (tmp_path / "new.txt").write_text("x", encoding="utf-8")
     event = wx.KeyEvent(wx.wxEVT_KEY_DOWN)
     event.SetKeyCode(wx.WXK_F5)
     listing.ProcessEvent(event)
-    _pump(wx_app, lambda: listing.GetItemCount() == 1)
-    assert listing.GetItemText(0) == "new.txt"
+    _pump(wx_app, lambda: any(listing.GetItemText(index) == "new.txt" for index in range(listing.GetItemCount())))
+    assert listing.GetItemText(1) == "new.txt"
 
 
 @pytest.mark.gui
@@ -145,7 +149,7 @@ def test_local_directory_context_creates_folder_under_clicked_directory(wx_app, 
     folder.mkdir()
     frame = _browser(wx_app, tmp_path)
     listing = frame._wx_local_controls["listing"]
-    index = 0
+    index = next(index for index in range(listing.GetItemCount()) if listing.GetItemText(index) == "folder")
     listing.Select(index)
     monkeypatch.setattr(wx, "TextEntryDialog", lambda *_args, **_kwargs: _Dialog(wx, "child"))
     frame._wx_local_run_action("new_folder")

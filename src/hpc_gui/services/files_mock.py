@@ -96,12 +96,27 @@ class MockFilesBackend(FilesBackend):
         remote_path = _norm(remote_path)
         if remote_path not in self._files:
             raise FileNotFoundError(remote_path)
-        return self._files[remote_path].decode("utf-8", errors="replace")
+        return self._files[remote_path].decode("utf-8")
+
+    def read_text_document(self, remote_path: str) -> tuple[str, str]:
+        remote_path = _norm(remote_path)
+        if remote_path not in self._files:
+            raise FileNotFoundError(remote_path)
+        from hpc_gui.services.file_open import decode_text_with_encoding
+
+        return decode_text_with_encoding(self._files[remote_path], name=remote_path)
 
     def write_text(self, remote_path: str, text: str) -> None:
         remote_path = _norm(remote_path)
         self._ensure_parent_dirs(remote_path)
         self._files[remote_path] = text.encode("utf-8")
+        self._mode[remote_path] = stat.S_IFREG | 0o644
+        self._touch(remote_path)
+
+    def write_text_document(self, remote_path: str, text: str, encoding: str) -> None:
+        remote_path = _norm(remote_path)
+        self._ensure_parent_dirs(remote_path)
+        self._files[remote_path] = text.encode(encoding)
         self._mode[remote_path] = stat.S_IFREG | 0o644
         self._touch(remote_path)
 
@@ -120,8 +135,9 @@ class MockFilesBackend(FilesBackend):
         os.makedirs(os.path.dirname(local_path) or ".", exist_ok=True)
         data = self._files[remote_path]
         Path(local_path).write_bytes(data)
-        if progress_cb is not None:
-            progress_cb(len(data), len(data))
+        if progress_cb is not None and progress_cb(len(data), len(data)) is False:
+            Path(local_path).unlink(missing_ok=True)
+            raise InterruptedError("download cancelled")
 
     def upload(self, local_path: str, remote_path: str) -> None:
         remote_path = _norm(remote_path)

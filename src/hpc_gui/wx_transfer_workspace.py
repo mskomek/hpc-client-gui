@@ -169,7 +169,10 @@ def _build_transfers(parent, controller=None, embedded=False):
         btn_stop = wx.Button(panel, label=t("transfer.stop"))
         btn_cancel = wx.Button(panel, label=t("transfer.cancel"))
         btn_clear = wx.Button(panel, label=t("transfer.clear_pending"))
+        btn_retry = wx.Button(panel, label=t("transfer.retry_failed"))
+        btn_retry.Disable()
         btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        btn_sizer.Add(btn_retry, 0, wx.ALL, 4)
         btn_sizer.Add(btn_stop, 0, wx.ALL, 4)
         btn_sizer.Add(btn_cancel, 0, wx.ALL, 4)
         btn_sizer.Add(btn_clear, 0, wx.ALL, 4)
@@ -189,6 +192,7 @@ def _build_transfers(parent, controller=None, embedded=False):
             "stop": btn_stop,
             "cancel": btn_cancel,
             "clear_pending": btn_clear,
+            "retry_failed": btn_retry,
         }
         # keep host-level sizer so embedded panel expands correctly when placed in splitter
         host_sizer = wx.BoxSizer(wx.VERTICAL)
@@ -276,6 +280,10 @@ def _build_transfers(parent, controller=None, embedded=False):
                 controls["stop"].Enable(has_cancel)
                 controls["cancel"].Enable(has_cancel)
                 controls["clear_pending"].Enable(has_clear)
+                engine = getattr(ctrl, "engine", None)
+                controls["retry_failed"].Enable(bool(
+                    state["failed_map"] and engine is not None and engine.wait(0)
+                ))
             else:
                 # detached has single cancel button: enabled when controller present and not closed
                 # keep enabled if controller exists; disable on finish
@@ -385,6 +393,9 @@ def _build_transfers(parent, controller=None, embedded=False):
     def _add_row(lst, item, status_text, progress_text):
         # Columns mirror Qt's transfer list: local, direction, remote, size,
         # progress, priority, status.
+        if status_text == "Failed":
+            detail = str(getattr(item, "error_message", "") or "Transfer failed.")
+            status_text = f"Failed: {detail}"
         op = str(getattr(item, "op", "") or "")
         local, remote = str(getattr(item, "src", "")), str(getattr(item, "dst", ""))
         if op == "download":
@@ -516,6 +527,7 @@ def _build_transfers(parent, controller=None, embedded=False):
                     controls["cancel"].Disable()
                 except Exception:
                     pass
+                _update_button_state()
             except RuntimeError:
                 return
 
@@ -579,6 +591,15 @@ def _build_transfers(parent, controller=None, embedded=False):
                     _update_button_state()
                 except RuntimeError:
                     pass
+
+        def _do_retry_failed(_event=None):
+            ctrl = state["controller"]
+            engine = getattr(ctrl, "engine", None) if ctrl is not None else None
+            if engine is None or not engine.wait(0):
+                return
+            if engine.retry_failed():
+                engine.start()
+                _update_button_state()
 
         def close(event=None):
             if state["closed"]:
@@ -686,6 +707,7 @@ def _build_transfers(parent, controller=None, embedded=False):
                 controls["stop"].SetLabel(t("transfer.stop"))
                 controls["cancel"].SetLabel(t("transfer.cancel"))
                 controls["clear_pending"].SetLabel(t("transfer.clear_pending"))
+                controls["retry_failed"].SetLabel(t("transfer.retry_failed"))
                 _update_button_state()
             except RuntimeError:
                 return
@@ -693,6 +715,7 @@ def _build_transfers(parent, controller=None, embedded=False):
         controls["stop"].Bind(wx.EVT_BUTTON, _do_cancel)
         controls["cancel"].Bind(wx.EVT_BUTTON, _do_cancel)
         controls["clear_pending"].Bind(wx.EVT_BUTTON, _do_clear_pending)
+        controls["retry_failed"].Bind(wx.EVT_BUTTON, _do_retry_failed)
 
     else:
         # detached logic (original)

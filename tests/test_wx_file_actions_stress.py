@@ -85,7 +85,7 @@ def test_wx_remote_context_target_stress_uses_real_events(wx_app):
     for index in range(200):
         mode = index % 4
         if mode == 0:
-            clicked = index % listing.GetItemCount()
+            clicked = 1 + (index % (listing.GetItemCount() - 1))
             for item_index in range(listing.GetItemCount()):
                 listing.Select(item_index, False)
             listing.Select(clicked)
@@ -94,9 +94,9 @@ def test_wx_remote_context_target_stress_uses_real_events(wx_app):
         elif mode == 1:
             for item_index in range(listing.GetItemCount()):
                 listing.Select(item_index, False)
-            listing.Select(0)
             listing.Select(1)
-            rect = listing.GetItemRect(1)
+            listing.Select(2)
+            rect = listing.GetItemRect(2)
             position = listing.ClientToScreen(rect.GetPosition() + wx.Point(5, max(1, rect.height // 2)))
         elif mode == 2:
             rect = listing.GetItemRect(listing.GetItemCount() - 1)
@@ -104,7 +104,7 @@ def test_wx_remote_context_target_stress_uses_real_events(wx_app):
         else:
             for item_index in range(listing.GetItemCount()):
                 listing.Select(item_index, False)
-            listing.Select(0)
+            listing.Select(1)
             position = wx.DefaultPosition
         event = wx.ContextMenuEvent(wx.wxEVT_CONTEXT_MENU, listing.GetId())
         event.SetPosition(position)

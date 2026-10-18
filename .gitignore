@@ -78,7 +78,6 @@ tools/ai/deepseek-models.local.psd1
 **/AGENTS.md
 **/CLAUDE.md
 **/rules.md
-/.agents/
 /.agent-runs/
 /.claude/
 /tools/
@@ -109,9 +108,9 @@ coverage.json
 /hpc-client-gui.ffs_gui
 /opencode.jsonc
 /new 4.ps1
-.agents/_skill-quarantine/
+HPC_CLIENT_GUI_KAPSAMLI_KABUL_RAPORU_V2_20261010.md
 .wave-patch-backup/
-
+rapor_final_45_54.md
 # Local credential and secret material
 *.credential.xml
 *.credentials.xml
@@ -125,3 +124,8 @@ secrets/
 /audit/
 /benchmarks/
 /.opencode/
+
+# Local simple Wave loop operator tooling and state (not product code)
+/tools/simple-wave/
+/tools/
+/.tmp/

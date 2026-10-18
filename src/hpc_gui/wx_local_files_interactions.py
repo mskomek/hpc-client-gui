@@ -3,6 +3,7 @@
 from hpc_gui.core.i18n import t
 from hpc_gui.wx_local_files_model import LocalEntry
 from hpc_gui.services.file_context_actions import context_selection
+from hpc_gui.wx_smart_file_open import open_local_file
 
 def install_interactions(view):
     active_tab_state = view.active_tab_state
@@ -24,6 +25,10 @@ def install_interactions(view):
     def visible_actions(*args, **kwargs):
         return view.visible_actions(*args, **kwargs)
 
+    def is_parent_entry(entry, tstate):
+        parent = tstate["path"].parent
+        return parent != tstate["path"] and entry.path == parent
+
     def activate(event) -> None:
         tstate = active_tab_state()
         if not tstate:
@@ -35,8 +40,8 @@ def install_interactions(view):
         if entry.is_dir:
             navigate(entry.path)
             refresh()
-        elif open_editor:
-            open_editor(str(entry.path))
+        else:
+            open_local_file(wx, host, entry.path, open_editor)
 
     def middle_click(event) -> None:
         tstate = active_tab_state()
@@ -82,9 +87,11 @@ def install_interactions(view):
             for selected_index in range(listing.GetItemCount()):
                 listing.Select(selected_index, False)
             listing.Select(index)
-        # gather selected entries for active tab
-        selected = [entry for idx2, entry in enumerate(entries) if listing.IsSelected(idx2)]
         entry = entries[index] if 0 <= index < len(entries) else None
+        if entry and is_parent_entry(entry, tstate):
+            return
+        # gather selected entries for active tab
+        selected = [item for idx2, item in enumerate(entries) if listing.IsSelected(idx2) and not is_parent_entry(item, tstate)]
         state["context_target"] = entry.path if entry and entry.is_dir else tstate["path"]
         selection = context_selection(
             str(entry.path) if entry else None,
@@ -107,7 +114,7 @@ def install_interactions(view):
             return []
         listing = tstate["listing"]
         entries = tstate["entries"]
-        return [entry for idx2, entry in enumerate(entries) if listing.IsSelected(idx2)]
+        return [entry for idx2, entry in enumerate(entries) if listing.IsSelected(idx2) and not is_parent_entry(entry, tstate)]
 
     def key_down(event) -> None:
         # Use active listing; if no selection handle accordingly

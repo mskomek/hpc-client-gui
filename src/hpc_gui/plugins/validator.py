@@ -74,10 +74,10 @@ ALLOWED_PARSER_IDS = frozenset({
 })
 
 _TRUSTED_SLURM_COMMANDS = {
-    "squeue_command": 'squeue -h -u {user} -o "%i|%P|%j|%u|%T|%M|%D|%C|%R"',
+    "squeue_command": 'squeue -h -u {user} -o "%i|%P|%j|%u|%T|%M|%D|%C|%R|%V"',
     "sbatch_command": "cd -- {script_dir_q} && sbatch -- {script_name_q}",
     "scancel_command": "scancel {job_id_q}",
-    "sacct_command": "sacct -n -P -u {user} --format=JobIDRaw,JobName,State,Elapsed,MaxRSS,AllocTRES,ExitCode",
+    "sacct_command": "sacct -n -P -S now-7days -u {user} --format=JobIDRaw,JobName,Partition,State,Elapsed,AllocNodes,AllocCPUS,Reason,ExitCode,Submit,End,WorkDir,StdOut,StdErr",
     "sacct_job_command": "sacct -n -P -j {job_id_q} --format=JobIDRaw,State,Elapsed,MaxRSS,AllocTRES,ExitCode",
     "scontrol_command": "scontrol show job {job_id_q}",
     "status_command": "lssrv",
@@ -87,8 +87,12 @@ _TRUSTED_SLURM_COMMANDS = {
 # Published v1 TRUBA profiles use this fixed accounting format. Keep it as an
 # exact compatibility variant; arbitrary command strings remain rejected.
 _TRUSTED_SLURM_COMMAND_VARIANTS = {
+    "squeue_command": frozenset({
+        'squeue -h -u {user} -o "%i|%P|%j|%u|%T|%M|%D|%C|%R"',
+    }),
     "sacct_command": frozenset({
         "sacct -u {user} --format=JobID,JobName,State,Elapsed,MaxRSS,AllocTRES",
+        "sacct -n -P -u {user} --format=JobIDRaw,JobName,State,Elapsed,MaxRSS,AllocTRES,ExitCode",
     }),
 }
 

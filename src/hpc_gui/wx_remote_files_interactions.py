@@ -4,6 +4,8 @@ from pathlib import PurePosixPath
 
 from hpc_gui.core.i18n import t
 from hpc_gui.services.file_context_actions import FILE_CONTEXT_LABEL_KEYS, context_selection
+from hpc_gui.services.file_open import detect_file_type, smart_open_preferences
+from hpc_gui.wx_smart_file_open import choose_smart_open
 
 
 def install_interactions(view):
@@ -22,6 +24,7 @@ def install_interactions(view):
     open_in_editor = view.open_in_editor
     operation = view.operation
     operation_supported = view.operation_supported
+    open_external = view.open_external
     panel = view.panel
     path = view.path
     run_action = view.run_action
@@ -33,6 +36,10 @@ def install_interactions(view):
     def visible_actions(*args, **kwargs):
         return view.visible_actions(*args, **kwargs)
 
+    def is_parent_entry(entry, tstate):
+        parent = PurePosixPath(tstate["path"]).parent
+        return parent != PurePosixPath(tstate["path"]) and entry.path == str(parent)
+
     def key_down(event):
         tstate = active_tab_state()
         if not tstate:
@@ -43,7 +50,7 @@ def install_interactions(view):
             for index in range(listing.GetItemCount()):
                 listing.Select(index)
             return
-        selected = tuple(entry.path for index, entry in enumerate(tstate["entries"]) if listing.IsSelected(index))
+        selected = tuple(entry.path for index, entry in enumerate(tstate["entries"]) if listing.IsSelected(index) and not is_parent_entry(entry, tstate))
         if event.ControlDown() and event.GetKeyCode() in (ord("C"), ord("X"), ord("V")):
             action = {ord("C"): "copy", ord("X"): "cut", ord("V"): "paste"}[event.GetKeyCode()]
             run_action(action, selected, tstate["path"])
@@ -73,8 +80,26 @@ def install_interactions(view):
         if entry.is_dir:
             navigate(entry.path)
             load()
-        elif open_editor:
+            return
+        file_type = detect_file_type(entry.path)
+        if file_type.category == "text" and open_editor:
             open_in_editor(entry.path, open_editor)
+            return
+        preferred = smart_open_preferences().get(file_type.extension)
+        if preferred == "system" and not file_type.executable and callable(open_external):
+            open_external(entry.path, int(getattr(entry, "size", 0) or 0))
+            return
+        if preferred == "editor" and file_type.editable and open_editor:
+            open_in_editor(entry.path, open_editor)
+            return
+        action = choose_smart_open(
+            wx, panel, name=entry.path.rsplit("/", 1)[-1],
+            size=int(getattr(entry, "size", 0) or 0), has_editor=bool(open_editor),
+        )
+        if action == "editor" and open_editor:
+            open_in_editor(entry.path, open_editor)
+        elif action == "system" and callable(open_external):
+            open_external(entry.path, int(getattr(entry, "size", 0) or 0))
 
     def middle_click(event):
         tstate = active_tab_state()
@@ -115,8 +140,10 @@ def install_interactions(view):
             for selected_index in range(listing.GetItemCount()):
                 listing.Select(selected_index, False)
             listing.Select(index)
-        selected_entries = tuple(entry for idx, entry in enumerate(entries) if listing.IsSelected(idx))
         clicked = entries[index] if 0 <= index < len(entries) else None
+        if clicked and is_parent_entry(clicked, tstate):
+            return
+        selected_entries = tuple(entry for idx, entry in enumerate(entries) if listing.IsSelected(idx) and not is_parent_entry(entry, tstate))
         selection = context_selection(
             clicked.path if clicked else None,
             clicked.is_dir if clicked else None,

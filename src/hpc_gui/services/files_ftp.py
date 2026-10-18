@@ -197,9 +197,29 @@ class FTPFilesBackend(FilesBackend):
         self.ftp.retrbinary(f"RETR {_norm(remote_path)}", chunks.append)
         return b"".join(chunks).decode("utf-8")
 
+    def read_text_document(self, remote_path: str) -> tuple[str, str]:
+        from hpc_gui.services.file_open import decode_text_with_encoding
+
+        chunks: list[bytes] = []
+        self.ftp.retrbinary(f"RETR {_norm(remote_path)}", chunks.append)
+        return decode_text_with_encoding(b"".join(chunks), name=remote_path)
+
     def write_text(self, remote_path: str, text: str) -> None:
         with tempfile.NamedTemporaryFile(delete=False) as tmp:
             tmp.write(text.encode("utf-8"))
+            tmp_path = tmp.name
+        try:
+            self.upload(tmp_path, remote_path)
+        finally:
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass
+
+    def write_text_document(self, remote_path: str, text: str, encoding: str) -> None:
+        payload = text.encode(encoding)
+        with tempfile.NamedTemporaryFile(delete=False) as tmp:
+            tmp.write(payload)
             tmp_path = tmp.name
         try:
             self.upload(tmp_path, remote_path)
@@ -263,8 +283,8 @@ class FTPFilesBackend(FilesBackend):
             nonlocal transferred
             handle.write(chunk)
             transferred += len(chunk)
-            if progress_cb is not None:
-                progress_cb(transferred, remote_size)
+            if progress_cb is not None and progress_cb(transferred, remote_size) is False:
+                raise InterruptedError("download cancelled")
 
         with open(local_path, mode) as handle:
             self.ftp.retrbinary(

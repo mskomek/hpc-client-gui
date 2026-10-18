@@ -11,12 +11,12 @@ GENERIC_SLURM_DEFAULTS: dict[str, str] = {
     "name": "Generic Slurm",
     "scratch_dir": "",
     "home_dir": "",
-    "squeue_command": 'squeue -h -u {user} -o "%i|%P|%j|%u|%T|%M|%D|%C|%R"',
+    "squeue_command": 'squeue -h -u {user} -o "%i|%P|%j|%u|%T|%M|%D|%C|%R|%V"',
     "sbatch_command": "cd -- {script_dir_q} && sbatch -- {script_name_q}",
     "scancel_command": "scancel {job_id_q}",
     "sacct_command": (
-        "sacct -n -P -u {user} "
-        "--format=JobIDRaw,JobName,State,Elapsed,MaxRSS,AllocTRES,ExitCode"
+        "sacct -n -P -S now-7days -u {user} "
+        "--format=JobIDRaw,JobName,Partition,State,Elapsed,AllocNodes,AllocCPUS,Reason,ExitCode,Submit,End,WorkDir,StdOut,StdErr"
     ),
     "sacct_job_command": (
         "sacct -n -P -j {job_id_q} "

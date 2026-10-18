@@ -2,7 +2,7 @@
 
 Automated checks cover importability, the shared geometry matrix, file URL
 payload construction, and Ctrl+C terminal interrupt semantics. On this machine
-the wx smoke uses wxPython 4.3.1 under Python 3.12.
+the wx smoke uses wxPython 4.3.1 under Python 3.14.
 
 Before a packaged release, manually verify on Windows:
 

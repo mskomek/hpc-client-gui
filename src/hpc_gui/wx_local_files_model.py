@@ -85,7 +85,11 @@ class LocalBrowserModel:
                 mtime = float(getattr(metadata, "st_mtime", 0.0) or 0.0)
                 entries.append(LocalEntry(item, is_dir, size, mtime))
         key = (lambda item: item.path.name.casefold()) if self.sort_key == "name" else (lambda item: item.size)
-        return tuple(sorted(entries, key=key, reverse=self.reverse))
+        directories = [item for item in entries if item.is_dir]
+        files = [item for item in entries if not item.is_dir]
+        directories.sort(key=key, reverse=self.reverse)
+        files.sort(key=key, reverse=self.reverse)
+        return tuple(directories + files)
 
     def navigate(self, path: str | Path, *, _remember: bool = True) -> None:
         target = Path(path).expanduser().resolve()

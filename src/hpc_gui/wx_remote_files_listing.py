@@ -2,6 +2,7 @@
 
 from pathlib import PurePosixPath
 from hpc_gui.core.i18n import current_language, t
+from hpc_gui.services.files_base import RemoteEntry
 from hpc_gui.services.file_filter_registry import FileFilter
 from hpc_gui.services.remote_entry_format import natural_sort_key as _shared_natural_sort_key
 from hpc_gui.wx_remote_files_support import _format_mtime, _fmt_size, _type_label
@@ -189,8 +190,9 @@ def install_listing(view):
         reverse = tab_entry.get("sort_reverse", False)
         base = list(tab_entry.get("full_entries", []))
         if col < 0:
-            tab_entry["_sorted_entries"] = base
-            return
+            # Initial remote listings need a stable directory-first order too.
+            # The server may return entries in arbitrary/mixed order.
+            col = 0
         def _sort_key(entry):
             name = PurePosixPath(entry.path).name or entry.path
             if col == 0:
@@ -216,12 +218,20 @@ def install_listing(view):
     def _populate_listing(listing, entries, tab_entry):
         listing.DeleteAllItems()
         stripe = alternate_row_colour(wx)
-        for row_index, entry in enumerate(entries):
-            idx = listing.InsertItem(listing.GetItemCount(), PurePosixPath(entry.path).name or entry.path)
+        current_path = PurePosixPath(tab_entry.get("path") or "/")
+        parent_path = current_path.parent
+        has_parent = parent_path != current_path
+        parent_entry = RemoteEntry("..", str(parent_path), True) if has_parent else None
+        visible_entries = ([parent_entry] if parent_entry else []) + list(entries)
+        tab_entry["entries"] = visible_entries
+        for row_index, entry in enumerate(visible_entries):
+            is_parent = parent_entry is not None and row_index == 0
+            name = ".." if is_parent else (PurePosixPath(entry.path).name or entry.path)
+            idx = listing.InsertItem(listing.GetItemCount(), name)
             listing.SetItemImage(
                 idx,
                 file_type_icon_index(
-                    PurePosixPath(entry.path).name or entry.path,
+                    name,
                     bool(getattr(entry, "is_dir", False)),
                 ),
             )
@@ -282,7 +292,7 @@ def install_listing(view):
                 return
             tab_entry["filter"] = current_filter_ids[sel]
             try:
-                base = tab_entry.get("full_entries", tab_entry.get("entries", []))
+                base = tab_entry.get("_sorted_entries", tab_entry.get("full_entries", tab_entry.get("entries", [])))
                 visible = _filtered_entries(tab_entry, base)
                 tab_entry["entries"] = visible
                 _populate_listing(listing, visible, tab_entry)

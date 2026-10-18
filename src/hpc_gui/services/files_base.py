@@ -54,9 +54,18 @@ class FilesBackend(ABC):
         """
         return self.read_text(remote_path)
 
+    def read_text_document(self, remote_path: str) -> tuple[str, str]:
+        """Return decoded text and its source encoding when the backend can detect it."""
+        return self.read_text(remote_path), "utf-8"
+
     @abstractmethod
     def write_text(self, remote_path: str, text: str) -> None:
         raise NotImplementedError
+
+    def write_text_document(self, remote_path: str, text: str, encoding: str) -> None:
+        if encoding.lower().replace("_", "-") != "utf-8":
+            raise ValueError(f"Remote backend cannot preserve the {encoding} encoding.")
+        self.write_text(remote_path, text)
 
     @abstractmethod
     def stat(self, remote_path: str) -> Tuple[int, int]:

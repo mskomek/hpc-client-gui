@@ -205,3 +205,65 @@ grounds only — `mandatory requirement blocked: HPC-W64-PROV-004` plus
 `unresolved blockers: 1`. Manifest is schema-clean (6/6 owned requirements,
 valid dispositions, green test rows). Closure awaits the PROV-004 owner
 decision; no further evidence work is pending in this Wave.
+
+## Repair 2026-10-14 - PROV-004 JUWELS rebind to sibling 8cce854 (repair 20261014-121312-6ab80522:4:W64:repair)
+
+Evidence-only repair for finding W64-F001-PROV-004-JUWELS-REBIND
+(semantic W64/AUTO/aae8afb8e725d606, hypothesis
+PROV-004-juwels-present-at-sibling-8cce854-rebind-verify-only).
+No product source modified; S02 files re-measured with zero drift vs the
+W64 S02 snapshot; sibling repo untouched (read-only).
+
+### Changed condition
+
+- Sibling repo HEAD is now 8cce85446a8db72ea6b89b56bcb3df8916cbb0a8
+  (feat: add Frontera Delta and JUWELS providers), previously f0abb7e7.
+- plugins/juwels/1.0.0/ is committed at that HEAD
+  (cluster-profile.json, manifest.json, README.md, sources.md;
+  working tree clean for plugins/juwels/).
+- The stale OWNER_DECISION_REQUIRED blocker for absent-juwels at f0abb7e7
+  is therefore cleared without any owner CREATE grant.
+
+### JUWELS 1.0.0 verification (truthful, no fabrication)
+
+- validate_cluster_profile_dict(JUWELS 1.0.0 cluster-profile.json) returns []
+  (exit 0); schema_version 2, profile_id juwels, scheduler slurm.
+- Data-only: storage resolvers all remote-environment (HOME/PROJECT/SCRATCH);
+  project/account are parameterized user-supplied requirement labels.
+- No secrets or executables: no private-key material and no stored
+  credential/username/project values (the access note explicitly states none
+  are stored); manifest capabilities are [cluster-profile] only.
+- Hosts juwels-cluster/juwels-booster.fz-juelich.de:22,
+  auth ssh-key + keyboard-interactive, partitions snapshot
+  batch, mem192, devel, gpus, booster, develbooster, large, largebooster
+  (committed JSC-guide snapshot; large partitions are timeslot-restricted;
+  re-check the live JSC guide before submission).
+- File hashes (SHA-256): cluster-profile.json
+  544c33fd34c4cb012e228b72b1e701ac6e6d087ef6a2833857c5b7ec2b7a4a40,
+  manifest.json 31ce0abcd4160f6b9c78b56853698aba81080ee39feA632AB03F61E5106033DB,
+  README.md AAF40F31303067EB8F386ABD321F6E883A625091583177B0C8113028636B76BF,
+  sources.md E7686CB159BDDC3240408988A5F0A1EDEC9B562CD12B2EFA75D00728980A809D.
+
+### Rebound evidence
+
+- artifacts/wave_W64/requirements/HPC-W64-PROV-004.json: requirement_status
+  PASS, plugins_head 8cce854, validator [], focused rerun recorded.
+- artifacts/refactored-v2/w64/setonix-juwels-provenance.json: juwels presence
+  proof with hashes and verified fields; disposition ACCEPTANCE_GREEN.
+- artifacts/refactored-v2/w64/provider-evidence-normalized.json: juwels entry
+  ACCEPTANCE_GREEN with requirement HPC-W64-PROV-004; repository head 8cce854.
+- artifacts/wave_W64/WAVE_W64_EVIDENCE_MANIFEST.json: PROV-004 disposition PASS
+  (implementation owner W64-U02), plugins_head 8cce854, blockers [], repair
+  focused-retest row appended.
+- HPC-W64-PROV-001/002/003/005/006 PASS rows preserved byte-identical.
+
+### Focused proof
+
+- Focused pytest (test_v1_profile_still_validates,
+  test_v1_v2_v3_profiles_remain_valid,
+  test_only_application_owned_slurm_commands_are_accepted): 3 passed, exit 0.
+- scripts/validate_wave_closeout.py --wave W64 --no-execute-tests re-run at
+  close of this repair; required outcome can_close=true with zero unresolved
+  blockers (see repair receipt).
+
+Repair written at 2026-10-14T09:27:18Z (UTC).

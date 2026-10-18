@@ -35,6 +35,7 @@ class SelectedJobContext:
     exit_code: str = ""
     nodelist: str = ""
     failure_reason: str = ""
+    cluster_id: str = ""
 
     # -- derived helpers -----------------------------------------------------
 
@@ -105,6 +106,7 @@ class SelectedJobStore:
                 merged: dict[str, Any] = {
                     "generation": self._generation,
                     "job_id": new_job_id,
+                    "cluster_id": "",
                     "name": "",
                     "state": "",
                     "partition": "",
@@ -127,6 +129,7 @@ class SelectedJobStore:
                 merged = {
                     "generation": self._generation,
                     "job_id": current.job_id,
+                    "cluster_id": current.cluster_id,
                     "name": current.name,
                     "state": current.state,
                     "partition": current.partition,
@@ -160,6 +163,7 @@ class SelectedJobStore:
             merged: dict[str, Any] = {
                 "generation": current.generation,
                 "job_id": current.job_id,
+                "cluster_id": current.cluster_id,
                 "name": current.name,
                 "state": current.state,
                 "partition": current.partition,
@@ -185,7 +189,7 @@ class SelectedJobStore:
 
     def clear(self) -> None:
         """Clear the selection entirely."""
-        self.select(job_id="", name="", state="", workdir="", stdout_path="", stderr_path="", raw_scontrol="")
+        self.select(job_id="", cluster_id="", name="", state="", workdir="", stdout_path="", stderr_path="", raw_scontrol="")
 
     # -- subscriptions -------------------------------------------------------
 

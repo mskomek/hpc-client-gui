@@ -6,13 +6,12 @@ Facts for W56/W57 candidate builds on this Windows host. They correct two observ
 ## Interpreter: use the project venv, not `python` on PATH
 
 - `pyproject.toml` pins `requires-python = "==3.14.*"`.
-- `python` on PATH is `D:\Python\Python312\python.exe` (3.12.4) and is **not** the build interpreter.
-- The project venv is on the pin: `.venv\Scripts\python.exe --version` → `Python 3.14.0`;
+- Use the project venv for builds: `.venv\Scripts\python.exe --version` → `Python 3.14.0`;
   `.venv\Scripts\python.exe -m PyInstaller --version` → `6.22.2`.
 - A system 3.14.0 also exists at `%LOCALAPPDATA%\Programs\Python\Python314\python.exe` for a fresh clean venv
   (`uv venv -p 3.14` resolves it), e.g. to install `requirements-release.lock` into an isolated build venv.
 
-So an on-pin Windows candidate can be built here; building with 3.12 would be off-pin and is not required.
+So an on-pin Windows candidate can be built here with Python 3.14.
 
 ## Program concurrency
 

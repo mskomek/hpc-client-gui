@@ -6,7 +6,7 @@ from hpc_gui.core.i18n import t
 from hpc_gui.services.local_files import list_windows_drives
 from hpc_gui.wx_file_list_style import alternate_row_colour
 from hpc_gui.wx_file_type_icons import file_type_icon_index, install_file_type_icons
-from hpc_gui.wx_local_files_model import format_local_size
+from hpc_gui.wx_local_files_model import LocalEntry, format_local_size
 from hpc_gui.wx_local_files_support import _format_mtime, _type_label
 
 _COLUMN_FLOORS = (140, 70, 110, 120)
@@ -71,15 +71,19 @@ def install_listing(view):
 
     def render_entries(tab_entry, entries, selected_paths=()) -> None:
         selected_paths = set(selected_paths)
-        tab_entry["entries"][:] = entries
+        path = tab_entry["path"]
+        parent = path.parent
+        visible_entries = ([LocalEntry(parent, True, 0)] if parent != path else []) + list(entries)
+        tab_entry["entries"][:] = visible_entries
         listing = tab_entry["listing"]
         try:
             listing.DeleteAllItems()
             stripe = alternate_row_colour(wx)
             for row_index, entry in enumerate(tab_entry["entries"]):
-                index = listing.InsertItem(listing.GetItemCount(), entry.path.name)
+                is_parent = entry.path == parent and parent != path
+                index = listing.InsertItem(listing.GetItemCount(), ".." if is_parent else entry.path.name)
                 listing.SetItemImage(
-                    index, file_type_icon_index(entry.path.name, entry.is_dir)
+                    index, file_type_icon_index(".." if is_parent else entry.path.name, entry.is_dir)
                 )
                 listing.SetItem(index, 1, format_local_size(entry))
                 listing.SetItem(index, 2, _type_label(entry))
@@ -175,21 +179,24 @@ def install_listing(view):
         if not tstate:
             return
         resolved = Path(target).expanduser().resolve()
-        if resolved != tstate["path"]:
-            state["view_generation"] += 1
-            tstate["view_generation"] += 1
-        tstate["path"] = resolved
-        # sync model tabs entry
+        changed = resolved != tstate["path"]
         idx = notebook.GetSelection()
-        if 0 <= idx < len(model.tabs):
-            model.tabs[idx] = resolved
-        model.current_path = resolved
         model.active_tab = idx
         try:
-            path_ctrl.SetValue(str(resolved))
+            model.navigate(resolved)
+        except Exception as error:
+            wx.MessageBox(str(error), t("login.err_title"), wx.OK | wx.ICON_ERROR)
+            return
+        tstate["path"] = model.current_path
+        if changed:
+            state["view_generation"] += 1
+            tstate["view_generation"] += 1
+        try:
+            path_ctrl.SetValue(str(model.current_path))
         except Exception:
             pass
         refresh_active_tab_label(idx)
+        _update_back_button()
 
     def _apply_column_widths(listing) -> None:
         try:

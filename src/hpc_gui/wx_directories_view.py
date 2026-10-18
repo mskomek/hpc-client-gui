@@ -67,13 +67,14 @@ def _resolve_new_slurm_target(session_state, name: str) -> str:
     return live_scratch.rstrip("/") + "/" + clean
 
 
-def _build_directories(parent, *, session_state=None, workspace: WxDirectoriesWorkspace | None = None, loader=None, operation=None, read_text=None, open_editor=None, open_editor_new_window=None, run_shell=None, submit=None, embedded):
+def _build_directories(parent, *, session_state=None, workspace: WxDirectoriesWorkspace | None = None, loader=None, operation=None, read_text=None, open_editor=None, open_editor_new_window=None, run_shell=None, submit=None, submit_slurm=None, submit_slurm_supported=None, embedded):
     try:
         import wx
     except ImportError as exc:
         raise RuntimeError("wxPython is not installed") from exc
 
     from hpc_gui.wx_remote_files_view import build_remote_files_panel
+    from hpc_gui.wx_smart_file_open import open_remote_with_system
 
     scratch_dir, home_dir = _resolve_scratch_home(session_state)
 
@@ -107,6 +108,37 @@ def _build_directories(parent, *, session_state=None, workspace: WxDirectoriesWo
                 reader = getattr(files, "read_text_for_edit", files.read_text)
                 return reader(path)
             return ""
+
+    def read_text_document(path):
+        files = _files()
+        reader = getattr(files, "read_text_document", None) if files else None
+        if callable(reader):
+            return reader(path)
+        return read_text(path), "utf-8"
+
+    def open_external(remote_path, size):
+        files = _files()
+        if files is None or not callable(getattr(files, "download", None)):
+            wx.MessageBox("Remote download is not available for this connection.", t("login.err_title"), wx.OK | wx.ICON_ERROR, parent)
+            return
+
+        def download(path, local_path, progress_cb):
+            files.download(path, local_path, progress_cb=progress_cb)
+
+        def checked(error, current_size):
+            if error:
+                wx.MessageBox(str(error), t("login.err_title"), wx.OK | wx.ICON_ERROR, parent)
+                return
+            open_remote_with_system(wx, parent, remote_path, current_size, download)
+
+        def inspect_metadata():
+            try:
+                current_size, _mtime = files.stat(remote_path)
+                wx.CallAfter(checked, None, int(current_size))
+            except Exception as error:
+                wx.CallAfter(checked, error, 0)
+
+        Thread(target=inspect_metadata, daemon=True).start()
 
     if operation is None:
         def operation(action, paths, destination=""):
@@ -143,27 +175,27 @@ def _build_directories(parent, *, session_state=None, workspace: WxDirectoriesWo
 
     if open_editor is None:
         # fallback to session_state editor_manager if available
-        def open_editor(path, content="", request_id=None):
+        def open_editor(path, content="", request_id=None, *, encoding="utf-8"):
             if session_state is not None and isinstance(session_state, dict):
                 mgr = session_state.get("editor_manager")
                 if mgr:
                     try:
                         # choose primary
                         if request_id is not None:
-                            mgr.open_primary(path, content, is_local=False, request_id=request_id, **_pinned_remote_identity(session_state))
+                            mgr.open_primary(path, content, is_local=False, request_id=request_id, encoding=encoding, **_pinned_remote_identity(session_state))
                         else:
-                            mgr.open_primary(path, content, is_local=False, **_pinned_remote_identity(session_state))
+                            mgr.open_primary(path, content, is_local=False, encoding=encoding, **_pinned_remote_identity(session_state))
                         return
                     except Exception:
                         pass
 
     if open_editor_new_window is None:
-        def open_editor_new_window(path, content=""):
+        def open_editor_new_window(path, content="", *, encoding="utf-8"):
             if session_state is not None and isinstance(session_state, dict):
                 mgr = session_state.get("editor_manager")
                 if mgr:
                     try:
-                        mgr.open_new_window(path, content, is_local=False, **_pinned_remote_identity(session_state))
+                        mgr.open_new_window(path, content, is_local=False, encoding=encoding, **_pinned_remote_identity(session_state))
                         return
                     except Exception:
                         pass
@@ -174,15 +206,17 @@ def _build_directories(parent, *, session_state=None, workspace: WxDirectoriesWo
         # try to get manager for request id handling
         _mgr = (session_state or {}).get("editor_manager") if isinstance(session_state, dict) else None
         if _mgr is not None:
-            def _editor(path, content="", request_id=None):
-                _mgr.open_primary(path, content, is_local=False, request_id=request_id, **_pinned_remote_identity(session_state))
+            def _editor(path, content="", request_id=None, *, encoding="utf-8"):
+                _mgr.open_primary(path, content, is_local=False, request_id=request_id, encoding=encoding, **_pinned_remote_identity(session_state))
             _editor._wx_request_aware = True
+            _editor._wx_encoding_aware = True
             def _started():
                 return _mgr.begin_primary_request()
             _editor._wx_request_started = _started
             open_editor = _editor
-            def _editor_new(path, content=""):
-                _mgr.open_new_window(path, content, is_local=False, **_pinned_remote_identity(session_state))
+            def _editor_new(path, content="", *, encoding="utf-8"):
+                _mgr.open_new_window(path, content, is_local=False, encoding=encoding, **_pinned_remote_identity(session_state))
+            _editor_new._wx_encoding_aware = True
             open_editor_new_window = _editor_new
         else:
             # keep original but mark if possible
@@ -216,9 +250,13 @@ def _build_directories(parent, *, session_state=None, workspace: WxDirectoriesWo
         loader=loader,
         operation=operation,
         read_text=read_text,
+        read_text_document=read_text_document,
         open_editor=open_editor,
         open_editor_new_window=open_editor_new_window,
+        open_external=open_external,
         run_shell=run_shell,
+        submit_slurm=submit_slurm or submit,
+        submit_slurm_supported=submit_slurm_supported,
     )
     scratch_sizer.Add(scratch_panel, 1, wx.EXPAND)
     scratch_container.SetSizer(scratch_sizer)
@@ -233,9 +271,13 @@ def _build_directories(parent, *, session_state=None, workspace: WxDirectoriesWo
         loader=loader,
         operation=operation,
         read_text=read_text,
+        read_text_document=read_text_document,
         open_editor=open_editor,
         open_editor_new_window=open_editor_new_window,
+        open_external=open_external,
         run_shell=run_shell,
+        submit_slurm=submit_slurm or submit,
+        submit_slurm_supported=submit_slurm_supported,
     )
     home_sizer.Add(home_panel, 1, wx.EXPAND)
     home_container.SetSizer(home_sizer)
@@ -367,7 +409,7 @@ def _build_directories(parent, *, session_state=None, workspace: WxDirectoriesWo
     return host
 
 
-def build_directories_panel(parent, *, session_state=None, workspace: WxDirectoriesWorkspace | None = None, loader=None, operation=None, read_text=None, open_editor=None, open_editor_new_window=None, run_shell=None, submit=None):
+def build_directories_panel(parent, *, session_state=None, workspace: WxDirectoriesWorkspace | None = None, loader=None, operation=None, read_text=None, open_editor=None, open_editor_new_window=None, run_shell=None, submit=None, submit_slurm=None, submit_slurm_supported=None):
     """Embedded panel factory. Returns the wx.Panel host."""
     return _build_directories(
         parent,
@@ -380,11 +422,13 @@ def build_directories_panel(parent, *, session_state=None, workspace: WxDirector
         open_editor_new_window=open_editor_new_window,
         run_shell=run_shell,
         submit=submit,
+        submit_slurm=submit_slurm,
+        submit_slurm_supported=submit_slurm_supported,
         embedded=True,
     )
 
 
-def show_directories(parent=None, *, session_state=None, workspace: WxDirectoriesWorkspace | None = None, loader=None, operation=None, read_text=None, open_editor=None, open_editor_new_window=None, run_shell=None, submit=None) -> int:
+def show_directories(parent=None, *, session_state=None, workspace: WxDirectoriesWorkspace | None = None, loader=None, operation=None, read_text=None, open_editor=None, open_editor_new_window=None, run_shell=None, submit=None, submit_slurm=None, submit_slurm_supported=None) -> int:
     try:
         import wx
     except ImportError as exc:
@@ -400,6 +444,8 @@ def show_directories(parent=None, *, session_state=None, workspace: WxDirectorie
         open_editor_new_window=open_editor_new_window,
         run_shell=run_shell,
         submit=submit,
+        submit_slurm=submit_slurm,
+        submit_slurm_supported=submit_slurm_supported,
         embedded=False,
     )
     return wx.ID_OK

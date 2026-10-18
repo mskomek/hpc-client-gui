@@ -19,6 +19,7 @@ def install_operations(view):
     operation = view.operation
     panel = view.panel
     read_text = view.read_text
+    read_text_document = view.read_text_document
     render_for_tab = view.render_for_tab
     safe_call_after = view.safe_call_after
     state = view.state
@@ -66,14 +67,25 @@ def install_operations(view):
             if error:
                 wx.MessageBox(str(error), t("login.err_title"), wx.OK | wx.ICON_ERROR)
             else:
+                encoding = "utf-8"
+                if isinstance(content, tuple) and len(content) == 2:
+                    content, encoding = content
                 if getattr(callback, "_wx_request_aware", False):
-                    callback(remote_path, content, request_id)
+                    if getattr(callback, "_wx_encoding_aware", False):
+                        callback(remote_path, content, request_id, encoding=encoding)
+                    else:
+                        callback(remote_path, content, request_id)
+                elif getattr(callback, "_wx_encoding_aware", False):
+                    callback(remote_path, content, encoding=encoding)
                 else:
                     callback(remote_path, content)
 
         def worker():
             try:
-                safe_call_after(done, read_text(remote_path), None)
+                if callable(read_text_document):
+                    safe_call_after(done, read_text_document(remote_path), None)
+                else:
+                    safe_call_after(done, read_text(remote_path), None)
             except Exception as error:
                 safe_call_after(done, "", error)
 

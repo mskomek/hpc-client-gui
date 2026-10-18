@@ -33,6 +33,7 @@ def _build_settings(parent, model: WxSettingsModel | None = None, *, settings=No
     cb_remote_cache.SetValue(bool(model.global_settings.get("remote_directory_cache", True)))
     cb_checksum = wx.CheckBox(panel, label=t("settings.transfer_checksum_verification_label") if t("settings.transfer_checksum_verification_label") != "[settings.transfer_checksum_verification_label]" else "Verify transfers with SHA-256")
     cb_checksum.SetValue(bool(model.global_settings.get("transfer_checksum", False)))
+    btn_reset_smart_open = wx.Button(panel, label=t("settings.smart_open_reset"))
 
     # Profile settings
     lbl_parallel = wx.StaticText(panel, label=t("connection.transfer_parallelism") if t("connection.transfer_parallelism") != "[connection.transfer_parallelism]" else "Profile transfer parallelism")
@@ -51,6 +52,7 @@ def _build_settings(parent, model: WxSettingsModel | None = None, *, settings=No
     root.Add(title, 0, wx.ALL, 16)
     root.Add(cb_remote_cache, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 12)
     root.Add(cb_checksum, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 12)
+    root.Add(btn_reset_smart_open, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 12)
     row1 = wx.BoxSizer(wx.HORIZONTAL)
     row1.Add(lbl_parallel, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 8)
     row1.Add(sp_parallel, 0)
@@ -123,6 +125,21 @@ def _build_settings(parent, model: WxSettingsModel | None = None, *, settings=No
 
         Thread(target=worker, daemon=True).start()
 
+    def reset_smart_open(_event=None):
+        answer = wx.MessageBox(
+            t("settings.smart_open_reset_confirm"), t("settings.dialog_title"),
+            wx.YES_NO | wx.ICON_QUESTION, host,
+        )
+        if answer != wx.YES:
+            return
+        try:
+            from hpc_gui.services.file_open import reset_smart_open_preferences
+            reset_smart_open_preferences()
+            wx.MessageBox(t("common.ok"), t("settings.dialog_title"), wx.OK | wx.ICON_INFORMATION, host)
+        except Exception as exc:
+            from hpc_gui.core.wx_errors import report_wx_action_error
+            report_wx_action_error(host, area="SETTINGS", message_key="settings.apply_failed", exc=exc)
+
     def close_host(_event=None):
         if state["closed"]:
             return
@@ -148,6 +165,7 @@ def _build_settings(parent, model: WxSettingsModel | None = None, *, settings=No
             title.SetLabel(t("settings.dialog_title"))
             cb_remote_cache.SetLabel(t("settings.remote_directory_cache_label") if t("settings.remote_directory_cache_label") != "[settings.remote_directory_cache_label]" else "Cache remote directory listings")
             cb_checksum.SetLabel(t("settings.transfer_checksum_verification_label") if t("settings.transfer_checksum_verification_label") != "[settings.transfer_checksum_verification_label]" else "Verify transfers with SHA-256")
+            btn_reset_smart_open.SetLabel(t("settings.smart_open_reset"))
             lbl_parallel.SetLabel(t("connection.transfer_parallelism") if t("connection.transfer_parallelism") != "[connection.transfer_parallelism]" else "Profile transfer parallelism")
             lbl_timeout.SetLabel(t("connection.ssh_timeout") if t("connection.ssh_timeout") != "[connection.ssh_timeout]" else "SSH timeout (0 = default)")
             btn_apply.SetLabel(t("settings.apply"))
@@ -156,6 +174,7 @@ def _build_settings(parent, model: WxSettingsModel | None = None, *, settings=No
             pass
 
     btn_apply.Bind(wx.EVT_BUTTON, apply_settings)
+    btn_reset_smart_open.Bind(wx.EVT_BUTTON, reset_smart_open)
     btn_close.Bind(wx.EVT_BUTTON, lambda e: host.Close())
     subscribe_language_change(refresh_labels)
     host.bind_host_close(on_close)
@@ -164,6 +183,7 @@ def _build_settings(parent, model: WxSettingsModel | None = None, *, settings=No
         "title": title,
         "remote_cache": cb_remote_cache,
         "checksum": cb_checksum,
+        "reset_smart_open": btn_reset_smart_open,
         "parallelism": sp_parallel,
         "timeout": sp_timeout,
         "apply": btn_apply,

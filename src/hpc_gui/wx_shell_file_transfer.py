@@ -32,10 +32,21 @@ def _run_file_view_item(files, item, progress, *, conflict_decision=None):
     """
     if item.op == "upload":
         method = files.resume_upload if conflict_decision == "resume" else files.upload
-        _call_transfer_with_progress(method, item.src, item.dst, progress)
+        try:
+            _call_transfer_with_progress(method, item.src, item.dst, progress)
+        except Exception as error:
+            raise RuntimeError(f"Upload failed ({item.src} -> {item.dst}): {error}") from error
     elif item.op == "download":
         method = files.resume_download if conflict_decision == "resume" else files.download
-        _call_transfer_with_progress(method, item.src, item.dst, progress)
+        try:
+            _call_transfer_with_progress(method, item.src, item.dst, progress)
+        except Exception as error:
+            raise RuntimeError(f"Download failed ({item.src} -> {item.dst}): {error}") from error
+    elif item.op == "mkdir_remote":
+        try:
+            files.mkdir(item.dst)
+        except Exception as error:
+            raise RuntimeError(f"Remote directory creation failed ({item.dst}): {error}") from error
     else:
         raise RuntimeError(f"unsupported transfer item: {item.op}")
     progress(1, 1)
@@ -254,6 +265,12 @@ def _start_file_transfers(session_state, lifecycle, items, *, on_progress=None, 
 
     def queue_event(event, item):
         if transfer_window:
+            if event == "failed":
+                error = next(
+                    (message for failed, message in controller.engine.failed if failed is item),
+                    "Transfer failed without a backend error message.",
+                )
+                item.error_message = str(error)
             transfer_window._wx_transfer_queue(event, item)
 
     def progress_event(item, done, total):
@@ -268,7 +285,10 @@ def _start_file_transfers(session_state, lifecycle, items, *, on_progress=None, 
         items,
         run_item,
         parallel_limit=parallel_limit,
-        conflict_check=lambda item: _destination_exists(files, item.op, item.dst),
+        conflict_check=lambda item: (
+            item.op in {"upload", "download"}
+            and _destination_exists(files, item.op, item.dst)
+        ),
         conflict_resolver=conflict_resolver or session_state.get("conflict_resolver") or (wx_conflict_resolver if parent else None),
         verify=lambda item: _verify_transfer_item(files, item),
         on_queue=queue_event,

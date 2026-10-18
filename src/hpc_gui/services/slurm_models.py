@@ -155,8 +155,18 @@ KNOWN_SACCT_STATES = frozenset(
 )
 
 TERMINAL_STATES = frozenset(
-    {"COMPLETED", "FAILED", "CANCELLED", "TIMEOUT", "OUT_OF_MEMORY", "CD", "F", "CA", "TO", "OOM"}
+    {
+        "COMPLETED", "FAILED", "CANCELLED", "TIMEOUT", "OUT_OF_MEMORY",
+        "PREEMPTED", "NODE_FAIL", "DEADLINE", "REVOKED", "BOOT_FAIL",
+        "SPECIAL_EXIT", "STOPPED", "CD", "F", "CA", "TO", "OOM",
+        "PR", "NF", "DL", "BF", "SE",
+    }
 )
+
+ACTIVE_STATES = frozenset({
+    "PENDING", "PD", "RUNNING", "R", "CONFIGURING", "CF", "COMPLETING", "CG",
+    "SUSPENDED", "S", "RESIZING", "SIGNALING", "STAGE_OUT", "REQUEUED",
+})
 
 
 def safe_state_display(state: str) -> str:
@@ -174,7 +184,14 @@ def safe_state_display(state: str) -> str:
 
 def is_terminal_state(state: str) -> bool:
     """True for scheduler states that mean the job has finished."""
-    return str(state or "").strip().upper() in TERMINAL_STATES
+    text = str(state or "").strip().upper().split()[0] if str(state or "").strip() else ""
+    return text.rstrip("+") in TERMINAL_STATES
+
+
+def is_active_state(state: str) -> bool:
+    """True only for known states where cancelling the job is appropriate."""
+    text = str(state or "").strip().upper().split()[0] if str(state or "").strip() else ""
+    return text.rstrip("+") in ACTIVE_STATES
 
 
 def parse_squeue_result(result) -> list[SlurmJob]:

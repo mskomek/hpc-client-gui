@@ -11,8 +11,17 @@ def _logs_callbacks(session_state, parent, lifecycle):
 def _directories_callbacks(session_state, parent, lifecycle):
     # Share single implementation between embedded tab and dispatch
     # Pass session_state so view can derive scratch/home via system_profile helpers
-    # Also provide run_shell delegation matching _remote_files_callbacks pattern
-    return {"session_state": session_state}
+    # Reuse the remote file surface's live Slurm capability and submission path.
+    from hpc_gui.wx_shell_files import _remote_files_callbacks
+
+    remote_callbacks = _remote_files_callbacks(session_state, parent, lifecycle)
+    submit = remote_callbacks["submit_slurm"]
+    return {
+        "session_state": session_state,
+        "submit": submit,
+        "submit_slurm": submit,
+        "submit_slurm_supported": remote_callbacks["submit_slurm_supported"],
+    }
 
 
 def _select_embedded_page(session_state, parent, key: str) -> bool:
