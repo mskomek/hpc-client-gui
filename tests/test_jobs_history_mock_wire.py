@@ -80,6 +80,39 @@ def test_jobs_list_round_trip_shows_live_and_finished_jobs(tmp_path):
                 wx.SafeYield()
                 wx.MilliSleep(10)
             assert [jobs.GetItemText(index) for index in range(3)] == ["12345", "12344", "12343"]
+
+            # Published TRUBA profiles use a 9-column squeue command and the
+            # older 7-column sacct accounting format.
+            truba_backend = SSHSlurmBackend(
+                ssh,
+                system_settings={
+                    "squeue_command": (
+                        'squeue -h -u {user} '
+                        '-o "%i|%P|%j|%u|%T|%M|%D|%C|%R"'
+                    ),
+                    "sacct_command": (
+                        "sacct -n -P -u {user} "
+                        "--format=JobIDRaw,JobName,State,Elapsed,MaxRSS,AllocTRES,ExitCode"
+                    ),
+                },
+            )
+            state["session"]["slurm"] = truba_backend
+            state["session"]["profile"]["id"] = "truba"
+            truba_callbacks = _jobs_callbacks(state, None, None)
+            truba_result = truba_callbacks["list_jobs"]()
+            assert [(row["job_id"], row["state"]) for row in truba_result["jobs"]] == [
+                ("12345", "RUNNING"),
+                ("12344", "COMPLETED"),
+                ("12343", "FAILED"),
+            ]
+            previous_seq = frame._wx_jobs_state.get("jobs_refresh_applied_seq", 0)
+            frame._wx_jobs_refresh_jobs()
+            deadline = time.monotonic() + 10
+            while frame._wx_jobs_state.get("jobs_refresh_applied_seq", 0) <= previous_seq and time.monotonic() < deadline:
+                app.ProcessPendingEvents()
+                wx.SafeYield()
+                wx.MilliSleep(10)
+            assert [jobs.GetItemText(index) for index in range(3)] == ["12345", "12344", "12343"]
         finally:
             for window in list(wx.GetTopLevelWindows()):
                 try:

@@ -45,6 +45,12 @@ class _MockShell:
     def respond(self, command: str) -> tuple[int, str, str]:
         lowered = command.lower()
         if "squeue" in lowered:
+            if "|%r\"" in lowered:
+                # Published TRUBA profile command: pipe delimited, without the
+                # newer submit-time field.
+                return 0, (
+                    "12345|short|mockjob|mockuser|RUNNING|00:00:05|1|1|None\n"
+                ), ""
             if " -o " not in lowered and " --format" not in lowered:
                 return 0, (
                     "JOBID PARTITION NAME USER ST TIME NODES NODELIST(REASON)\n"
@@ -59,6 +65,14 @@ class _MockShell:
         if "scancel" in lowered:
             return 0, "", ""
         if "sacct" in lowered:
+            if "jobidraw,jobname,state,elapsed,maxrss,alloctres,exitcode" in lowered:
+                # Published TRUBA accounting format (7 fields, no partition,
+                # node counts, paths, or submit/end timestamps).
+                return 0, (
+                    "12345|mockjob|RUNNING|00:00:05|512M|cpu=1|0:0\n"
+                    "12344|finished|COMPLETED|00:02:00|1G|cpu=2|0:0\n"
+                    "12343|failed|FAILED|00:00:03|0|cpu=1|1:0\n"
+                ), ""
             if "--format" not in lowered and " -o " not in lowered:
                 return 0, (
                     "JobID JobName Partition Account AllocCPUS State ExitCode\n"
