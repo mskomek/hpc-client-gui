@@ -45,6 +45,13 @@ class _MockShell:
     def respond(self, command: str) -> tuple[int, str, str]:
         lowered = command.lower()
         if "squeue" in lowered:
+            if "--mock-shapes" in lowered:
+                return 0, (
+                    "JOBID PARTITION NAME USER ST TIME NODES NODELIST(REASON)\n"
+                    "1080_[5-1024] orfoz dataset_solver mockuser PD 0:00 1 "
+                    "(ReqNodeNotAvail, UnavailableNodes:nid[001-002])\n"
+                    "93+0 debug het_job mockuser R 0:15 2 nid[003-004]\n"
+                ), ""
             if "|%r\"" in lowered:
                 # Published TRUBA profile command: pipe delimited, without the
                 # newer submit-time field.
@@ -69,6 +76,17 @@ class _MockShell:
         if "scancel" in lowered:
             return 0, "", ""
         if "sacct" in lowered:
+            if "--mock-shapes" in lowered:
+                return 0, (
+                    "1080_[5-1024]|wide-array|orfoz|FAILED|00:01|1|4||1:0|"
+                    "2026-10-18T08:00:00|2026-10-18T08:01:00||||\n"
+                    "93+0|heterogeneous|debug|COMPLETED|00:15|2|8||0:0|"
+                    "2026-10-18T08:10:00|2026-10-18T08:25:00||||\n"
+                    "93+0.batch|batch|debug|COMPLETED|00:15|2|8||0:0|||||\n"
+                    "93+1.extern|extern|debug|CANCELLED|00:01|1|4||0:0|||||\n"
+                    "90003|cancelled|short|CANCELLED|00:01|1|1||0:0|"
+                    "2026-10-18T07:00:00|2026-10-18T07:01:00||||\n"
+                ), ""
             if "jobidraw,jobname,state,elapsed,maxrss,alloctres,exitcode" in lowered:
                 # Published TRUBA accounting format (7 fields, no partition,
                 # node counts, paths, or submit/end timestamps).

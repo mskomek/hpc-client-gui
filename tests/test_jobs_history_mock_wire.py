@@ -140,3 +140,44 @@ def test_jobs_list_round_trip_shows_live_and_finished_jobs(tmp_path):
         ("12343", "FAILED"),
     ]
     assert result["history_stale"] is False
+
+
+def test_mock_wire_keeps_array_heterogeneous_and_multiword_reason_shapes(tmp_path):
+    with MockSSHServer(tmp_path) as server:
+        ssh = SSHClientWrapper()
+        ssh.connect(
+            SSHConnInfo(
+                host="127.0.0.1",
+                port=server.port,
+                username=MOCK_USERNAME,
+                password=MOCK_PASSWORD,
+                host_key_policy="accept-new",
+                known_hosts_path=str(tmp_path / "known_hosts"),
+            )
+        )
+        try:
+            backend = SSHSlurmBackend(
+                ssh,
+                system_settings={
+                    "squeue_command": "squeue --mock-shapes -u {user}",
+                    "sacct_command": "sacct --mock-shapes -u {user}",
+                },
+            )
+            state = {
+                "session": {
+                    "slurm": backend,
+                    "profile": {"username": MOCK_USERNAME, "id": "mock-shapes"},
+                }
+            }
+            result = _jobs_callbacks(state, None, None)["list_jobs"]()
+            jobs = result["jobs"]
+            assert [(job["job_id"], job["state"]) for job in jobs] == [
+                ("93+0", "R"),
+                ("1080_[5-1024]", "PD"),
+                ("90003", "CANCELLED"),
+            ]
+            assert jobs[1]["reason"] == "(ReqNodeNotAvail, UnavailableNodes:nid[001-002])"
+            assert jobs[0]["nodes"] == "2"
+            assert result["history_stale"] is False
+        finally:
+            ssh.close()

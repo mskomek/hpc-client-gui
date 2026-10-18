@@ -5,7 +5,6 @@ import hashlib
 import json
 import os
 import platform
-import re
 import shlex
 import subprocess
 import sys
@@ -30,6 +29,7 @@ from hpc_gui.cli.session import (
 )
 from hpc_gui.services.connection_diagnostics import run_connection_diagnostics
 from hpc_gui.services.sftp_smoke import run_sftp_smoke
+from hpc_gui.services.job_identity import is_valid_job_id
 from hpc_gui.cli.files import IF_EXISTS_CHOICES, download as download_files, upload as upload_files
 from hpc_gui.cli.jobs import emit_job_result, jobs_backend
 
@@ -45,9 +45,6 @@ ROOT_ALIASES = {
     "sacct": ("jobs", "accounting"), "lssrv": ("jobs", "lssrv"),
     "sbatch": ("jobs", "submit"), "scancel": ("jobs", "cancel"),
 }
-
-_JOBS_JOB_ID_RE = re.compile(r"\d+(?:[_.]\d+)?\Z")
-
 
 class _FullHelpArgumentParser(argparse.ArgumentParser):
     def error(self, message: str) -> None:
@@ -812,12 +809,12 @@ def _profile_system_settings(args: argparse.Namespace) -> dict[str, Any] | None:
 
 
 def _is_valid_job_id(value: str) -> bool:
-    """Return whether a job ID is a safe plain, array-task, or step identifier.
+    """Return whether a job ID is a safe plain, array, het, or step identifier.
 
-    Accepts only digits, optionally followed by a single ``_`` or ``.`` and one
-    or more further digits (for example ``12345``, ``12345_3``, ``12345.0``).
+    Accepts plain IDs, array task/range IDs, heterogeneous components, and
+    common step suffixes while rejecting shell metacharacters.
     """
-    return bool(_JOBS_JOB_ID_RE.fullmatch(value))
+    return is_valid_job_id(value)
 
 
 def _run_jobs(args: argparse.Namespace) -> int:

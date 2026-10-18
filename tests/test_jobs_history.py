@@ -27,6 +27,16 @@ def test_merge_keeps_compact_pending_array_summary():
     ]
 
 
+def test_history_keeps_array_and_heterogeneous_jobs_but_drops_steps():
+    rows = parse_sacct_history(
+        "1080_[5-1024]|wide-array|gpu|FAILED|00:01|1|4||1:0|2026-10-01T10:00:00|2026-10-01T10:01:00||||\n"
+        "93+0|heterogeneous|gpu|CANCELLED|00:01|1|4||0:0|2026-10-01T10:00:00|2026-10-01T10:01:00||||\n"
+        "93+0.batch|batch|gpu|CANCELLED|00:01|1|4||0:0|||||\n"
+        "93+1.extern|extern|gpu|CANCELLED|00:01|1|4||0:0|||||\n"
+    )
+    assert [row["job_id"] for row in rows] == ["1080_[5-1024]", "93+0"]
+
+
 def test_merge_prefers_queue_row_and_sorts_active_then_recent_terminal():
     rows = merge_job_sources(
         [{"id": "12", "name": "live", "state": "RUNNING", "submit_time": "2026-10-18T09:00:00"}],

@@ -13,17 +13,27 @@ from dataclasses import dataclass
 
 _ARRAY_SUFFIX_RE = re.compile(
     r"^(?P<base>\d+)"
-    r"(?P<array>(?:_\d+|_\[[0-9,:%-]+\]|\.batch|\.extern|\[[^\]]+\])?)"
-    r"(?P<step>(?:\.0|\+0|s\d+)?)$"
+    r"(?P<array>(?:(?:_\d+|_\[[0-9,:%-]+\]|\[[^\]]+\])?(?:\+\d+)?(?:\.(?:batch|extern))?|\.batch|\.extern)?)"
+    r"(?P<step>(?:\.0|s\d+)?)$",
+    re.IGNORECASE,
 )
+_SAFE_JOB_ID_RE = re.compile(
+    r"\d+(?:(?:_\d+|_\[[0-9,:%-]+\]|\[[^]]+\])(?:\+\d+)?|\+\d+)?(?:\.(?:batch|extern|\d+))?\Z",
+    re.IGNORECASE,
+)
+
+
+def is_valid_job_id(raw: str) -> bool:
+    """Return whether a plain, array, heterogeneous, or step ID is safe."""
+    return bool(_SAFE_JOB_ID_RE.fullmatch(str(raw or "")))
 
 
 def split_job_id(raw: str) -> tuple[str, str, str]:
     """Split ``raw`` into (base_id, array_suffix, step_suffix).
 
-    Preserves scheduler array representations such as ``123_4``,
-    ``123.batch``, ``123_[1-3]``, and ``123_[0-3%4]`` without normalising them away. A bare
-    ``123`` yields ``("123", "", "")``.
+    Preserves array and heterogeneous job representations such as ``123_4``,
+    ``123_[1-3]``, ``123_[0-3%4]``, and ``123+1``. It also preserves
+    recognized step suffixes. A bare ``123`` yields ``("123", "", "")``.
     """
     text = str(raw or "").strip()
     match = _ARRAY_SUFFIX_RE.match(text)

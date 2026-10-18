@@ -53,9 +53,19 @@ def _rows(text: str) -> list[tuple[str, list[str]]]:
     # detected from the whole response rather than only the first line.
     delimiter = "|" if any("|" in line for line in lines) else None
 
+    header_index = next(
+        (index for index, line in enumerate(lines) if line.split()[0].lower() == "jobid"),
+        None,
+    )
+    header_size = len(lines[header_index].split()) if header_index is not None else 0
+
     def _parts(line: str) -> list[str]:
         if delimiter:
             return [part.strip() for part in line.split(delimiter)]
+        if header_size > 1:
+            # Human-readable Slurm tables have no delimiter. Keep the final
+            # NODELIST(REASON) column intact because reasons can contain spaces.
+            return line.split(None, maxsplit=header_size - 1)
         return line.split()
 
     def _is_header(line: str) -> bool:
@@ -67,12 +77,8 @@ def _rows(text: str) -> list[tuple[str, list[str]]]:
     # A single banner/MOTD line ahead of the header is still tolerated.
     # Previously the first line was always dropped, which silently discarded
     # the only (or first) real job row of every headerless response.
-    start = 0
-    if _is_header(lines[0]):
-        start = 1
-    elif len(lines) > 1 and _is_header(lines[1]):
-        start = 2
-    return [(line, _parts(line)) for line in lines[start:]]
+    start = (header_index + 1) if header_index is not None else 0
+    return [(line, _parts(line)) for line in lines[start:] if not _is_header(line)]
 
 
 def parse_squeue(text: str) -> list[SlurmJob]:

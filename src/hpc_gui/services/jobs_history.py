@@ -9,8 +9,13 @@ from typing import Any, Iterable
 from .slurm_models import is_terminal_state
 
 
-_JOB_ID = re.compile(r"^\d+(?:_\d+|_\[[0-9,:%-]+\]|\[[^]]+\])?$")
-_STEP_ID = re.compile(r"^\d+(?:_\d+)?\.(?:batch|extern|\d+)$", re.I)
+_JOB_ID = re.compile(
+    r"^\d+(?:_\d+|_\[[0-9,:%-]+\]|\[[^]]+\])?(?:\+\d+)?$"
+)
+_STEP_ID = re.compile(
+    r"^\d+(?:_\d+|_\[[0-9,:%-]+\])?(?:\+\d+)?\.(?:batch|extern|\d+)$",
+    re.I,
+)
 
 
 def _job_id(row: dict[str, Any]) -> str:

@@ -101,6 +101,17 @@ class SqueueMatrixTests(unittest.TestCase):
         jobs = parse_squeue(text)
         self.assertEqual({job.job_id for job in jobs}, {"100001", "100002"})
 
+    def test_legacy_table_preserves_multiword_pending_reason_and_node_ranges(self) -> None:
+        text = "\n".join([
+            "JOBID PARTITION NAME USER ST TIME NODES NODELIST(REASON)",
+            "1080_[5-1024] orfoz dataset_solver researcher PD 0:00 1 (ReqNodeNotAvail, UnavailableNodes:nid[001-002])",
+            "93+0 debug het_job researcher R 0:15 2 nid[003-004]",
+        ])
+        jobs = parse_squeue(text)
+        self.assertEqual([job.job_id for job in jobs], ["1080_[5-1024]", "93+0"])
+        self.assertEqual(jobs[0].reason, "(ReqNodeNotAvail, UnavailableNodes:nid[001-002])")
+        self.assertEqual(jobs[1].reason, "nid[003-004]")
+
 
 @pytest.mark.contract
 class SacctMatrixTests(unittest.TestCase):

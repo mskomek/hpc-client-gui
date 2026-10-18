@@ -1,4 +1,5 @@
 from __future__ import annotations
+import shlex
 from _cli_test_support import (
     json,
     patch,
@@ -49,7 +50,7 @@ def test_jobs_list_text_uses_default_squeue_template(capsys) -> None:
     fake_ssh = _FakeJobsSSH((0, "JOBID STATE\n  123 RUNNING\n", ""))
     with patch("hpc_gui.cli.main.CLISession.open", return_value=_fake_jobs_session(fake_ssh)):
         assert run_cli(["--host", "host", "--user", "alice", "jobs", "list"]) == 0
-    assert fake_ssh.commands == ['squeue -h -u alice -o "%i|%P|%j|%u|%T|%M|%D|%C|%R"']
+    assert fake_ssh.commands == ['squeue -h -u alice -o "%i|%P|%j|%u|%T|%M|%D|%C|%R|%V"']
     out = capsys.readouterr().out
     assert "JOBID STATE" in out
     assert "123 RUNNING" in out
@@ -61,7 +62,7 @@ def test_jobs_list_json_envelope_matches_stdout(capsys) -> None:
     fake_ssh = _FakeJobsSSH((0, "JOBID STATE\n  123 RUNNING\n", ""))
     with patch("hpc_gui.cli.main.CLISession.open", return_value=_fake_jobs_session(fake_ssh)):
         assert run_cli(["--format", "json", "--host", "host", "--user", "alice", "jobs", "list"]) == 0
-    assert fake_ssh.commands == ['squeue -h -u alice -o "%i|%P|%j|%u|%T|%M|%D|%C|%R"']
+    assert fake_ssh.commands == ['squeue -h -u alice -o "%i|%P|%j|%u|%T|%M|%D|%C|%R|%V"']
     payload = json.loads(capsys.readouterr().out)
     assert payload == {"result": "JOBID STATE\n  123 RUNNING\n"}
 
@@ -75,7 +76,7 @@ def test_jobs_list_username_falls_back_to_profile(capsys) -> None:
         "hpc_gui.cli.main.CLISession.open", return_value=_fake_jobs_session(fake_ssh)
     ):
         assert run_cli(["--profile", "alpha", "jobs", "list"]) == 0
-    assert fake_ssh.commands == ['squeue -h -u profileuser -o "%i|%P|%j|%u|%T|%M|%D|%C|%R"']
+    assert fake_ssh.commands == ['squeue -h -u profileuser -o "%i|%P|%j|%u|%T|%M|%D|%C|%R|%V"']
 
 
 @pytest.mark.contract
@@ -125,7 +126,11 @@ def test_jobs_status_unexpected_exception_exit_one_jobs_prefix(capsys) -> None:
     assert "scheduler exploded" in captured.err
 
 
-_SACCT_COMMAND = "sacct -n -P -u alice --format=JobIDRaw,JobName,State,Elapsed,MaxRSS,AllocTRES,ExitCode"
+_SACCT_COMMAND = (
+    "sacct -n -P -S now-7days -u alice "
+    "--format=JobIDRaw,JobName,Partition,State,Elapsed,AllocNodes,AllocCPUS,Reason,"
+    "ExitCode,Submit,End,WorkDir,StdOut,StdErr"
+)
 _ACCOUNTING_STDOUT = (
     "JobID     JobName     State    Elapsed     MaxRSS   AllocTRES\n"
     "101       compute.cpu RUNNING  00:10:00        512K c01[1-2]\n"
@@ -167,7 +172,9 @@ def test_jobs_accounting_username_falls_back_to_profile(capsys) -> None:
     ):
         assert run_cli(["--profile", "alpha", "jobs", "accounting"]) == 0
     assert fake_ssh.commands == [
-        "sacct -n -P -u profileuser --format=JobIDRaw,JobName,State,Elapsed,MaxRSS,AllocTRES,ExitCode"
+        "sacct -n -P -S now-7days -u profileuser "
+        "--format=JobIDRaw,JobName,Partition,State,Elapsed,AllocNodes,AllocCPUS,Reason,"
+        "ExitCode,Submit,End,WorkDir,StdOut,StdErr"
     ]
 
 
@@ -330,6 +337,17 @@ def test_jobs_cancel_array_task_id_accepted(capsys) -> None:
         assert run_cli(["--host", "host", "jobs", "cancel", "12345_3", "--yes"]) == 0
     assert fake_ssh.commands == ["scancel 12345_3"]
     assert "scancel: Terminated job 12345_3" in capsys.readouterr().out
+
+
+@pytest.mark.contract
+@pytest.mark.semantic
+def test_jobs_cancel_compact_array_and_heterogeneous_ids_are_accepted(capsys) -> None:
+    for job_id in ("6810497_[0-3%4]", "93+0"):
+        fake_ssh = _FakeJobsSSH((0, f"scancel: Terminated job {job_id}\n", ""))
+        with patch("hpc_gui.cli.main.CLISession.open", return_value=_fake_jobs_session(fake_ssh)):
+            assert run_cli(["--host", "host", "jobs", "cancel", job_id, "--yes"]) == 0
+        assert fake_ssh.commands == [f"scancel {shlex.quote(job_id)}"]
+        assert f"scancel: Terminated job {job_id}" in capsys.readouterr().out
 
 
 @pytest.mark.contract

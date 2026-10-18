@@ -144,6 +144,7 @@ from _cli_jobs import (
     test_jobs_cancel_without_yes_exits_usage_no_session,  # noqa: F401
     test_jobs_cancel_unsafe_job_id_exits_usage_no_session,  # noqa: F401
     test_jobs_cancel_array_task_id_accepted,  # noqa: F401
+    test_jobs_cancel_compact_array_and_heterogeneous_ids_are_accepted,  # noqa: F401
     test_jobs_cancel_yes_json_envelope_has_result_key,  # noqa: F401
 )
 from _cli_access_settings import (
