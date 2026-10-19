@@ -27,15 +27,20 @@ class SelectedJobContext:
     cpus: str = ""
     reason: str = ""
     workdir: str = ""
+    workdir_source: str = ""
     stdout_path: str = ""
     stderr_path: str = ""
     raw_scontrol: str = ""
     user: str = ""
     script_path: str = ""
+    script_text: str = ""
+    submit_directory: str = ""
     exit_code: str = ""
     nodelist: str = ""
     failure_reason: str = ""
+    profile_id: str = ""
     cluster_id: str = ""
+    provider_id: str = ""
 
     # -- derived helpers -----------------------------------------------------
 
@@ -101,12 +106,18 @@ class SelectedJobStore:
             self._generation += 1
             new_job_id = str(kwargs.get("job_id", "")).strip()
             previous_job_id = self._context.job_id
+            new_scope = tuple(str(kwargs.get(key, "")).strip() for key in
+                              ("profile_id", "cluster_id", "provider_id"))
+            previous_scope = tuple(getattr(self._context, key) for key in
+                                   ("profile_id", "cluster_id", "provider_id"))
 
-            if new_job_id and new_job_id != previous_job_id:
+            if new_job_id and (new_job_id != previous_job_id or new_scope != previous_scope):
                 merged: dict[str, Any] = {
                     "generation": self._generation,
                     "job_id": new_job_id,
-                    "cluster_id": "",
+                    "profile_id": new_scope[0],
+                    "cluster_id": new_scope[1],
+                    "provider_id": new_scope[2],
                     "name": "",
                     "state": "",
                     "partition": "",
@@ -115,11 +126,14 @@ class SelectedJobStore:
                     "cpus": "",
                     "reason": "",
                     "workdir": "",
+                    "workdir_source": "",
                     "stdout_path": "",
                     "stderr_path": "",
                     "raw_scontrol": "",
                     "user": "",
                     "script_path": "",
+                    "script_text": "",
+                    "submit_directory": "",
                     "exit_code": "",
                     "nodelist": "",
                     "failure_reason": "",
@@ -130,6 +144,8 @@ class SelectedJobStore:
                     "generation": self._generation,
                     "job_id": current.job_id,
                     "cluster_id": current.cluster_id,
+                    "profile_id": current.profile_id,
+                    "provider_id": current.provider_id,
                     "name": current.name,
                     "state": current.state,
                     "partition": current.partition,
@@ -138,11 +154,14 @@ class SelectedJobStore:
                     "cpus": current.cpus,
                     "reason": current.reason,
                     "workdir": current.workdir,
+                    "workdir_source": current.workdir_source,
                     "stdout_path": current.stdout_path,
                     "stderr_path": current.stderr_path,
                     "raw_scontrol": current.raw_scontrol,
                     "user": current.user,
                     "script_path": current.script_path,
+                    "script_text": current.script_text,
+                    "submit_directory": current.submit_directory,
                     "exit_code": current.exit_code,
                     "nodelist": current.nodelist,
                     "failure_reason": current.failure_reason,
@@ -164,6 +183,8 @@ class SelectedJobStore:
                 "generation": current.generation,
                 "job_id": current.job_id,
                 "cluster_id": current.cluster_id,
+                "profile_id": current.profile_id,
+                "provider_id": current.provider_id,
                 "name": current.name,
                 "state": current.state,
                 "partition": current.partition,
@@ -172,11 +193,14 @@ class SelectedJobStore:
                 "cpus": current.cpus,
                 "reason": current.reason,
                 "workdir": current.workdir,
+                "workdir_source": current.workdir_source,
                 "stdout_path": current.stdout_path,
                 "stderr_path": current.stderr_path,
                 "raw_scontrol": current.raw_scontrol,
                 "user": current.user,
                 "script_path": current.script_path,
+                "script_text": current.script_text,
+                "submit_directory": current.submit_directory,
                 "exit_code": current.exit_code,
                 "nodelist": current.nodelist,
                 "failure_reason": current.failure_reason,
