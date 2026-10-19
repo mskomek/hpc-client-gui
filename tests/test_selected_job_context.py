@@ -117,6 +117,17 @@ class TestSelectedJobStore:
         assert ctx2.failure_reason == ""
 
     @pytest.mark.unit
+    def test_same_job_id_in_new_profile_clears_previous_metadata(self):
+        store = SelectedJobStore()
+        store.select(job_id="42", profile_id="p1", cluster_id="c1", provider_id="slurm",
+                     workdir="/profile-one")
+        changed = store.select(job_id="42", profile_id="p2", cluster_id="c2", provider_id="truba")
+        assert changed.workdir == ""
+        assert changed.profile_id == "p2"
+        assert changed.cluster_id == "c2"
+        assert changed.provider_id == "truba"
+
+    @pytest.mark.unit
     def test_update_does_not_increment_generation(self):
         store = SelectedJobStore()
         ctx1 = store.select(job_id="100")

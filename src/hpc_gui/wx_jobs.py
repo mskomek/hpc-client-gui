@@ -466,7 +466,7 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
     jobs_toolbar.Add(jobs_refresh_label, 0, wx.LEFT | wx.ALIGN_CENTER_VERTICAL, 6)
 
     # -- Jobs table ---------------------------------------------------------
-    jobs = wx.ListCtrl(jobs_page, style=wx.LC_REPORT | wx.LC_SINGLE_SEL | wx.LC_HRULES)
+    jobs = wx.ListCtrl(jobs_page, style=wx.LC_REPORT | wx.LC_HRULES)
     for col_idx, col_key in enumerate(_JOB_TABLE_COLUMNS):
         label = t(_COLUMN_LABEL_KEYS.get(col_key, col_key))
         jobs.InsertColumn(col_idx, label)
@@ -866,8 +866,16 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
 
     def _open_in_main_files(_event=None):
         ctx = model.selected_job_store.context
-        if ctx.job_id and callable(open_main_files):
-            open_main_files(ctx.workdir or "/")
+        directory = _files_directory(ctx)
+        if not ctx.job_id or not directory:
+            wx.MessageBox(t("jobs_outputs.directory_unavailable"), t("jobs_outputs.workdir"), wx.OK | wx.ICON_INFORMATION)
+            return
+        try:
+            result = open_main_files(directory) if callable(open_main_files) else False
+            if result is False:
+                raise RuntimeError(t("jobs_outputs.main_files_unavailable"))
+        except Exception as error:
+            wx.MessageBox(str(error), t("jobs_outputs.workdir"), wx.OK | wx.ICON_ERROR)
 
     def _reset_files_browser():
         reset = getattr(files_browser, "_wx_remote_reset", None)
@@ -982,6 +990,8 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         "items": [],
         "raw_items": [],
         "selected_job": "",
+        "bulk_selected_job_ids": set(),
+        "rendering_jobs": False,
         "selected_generation": 0,
         "closed": False,
         "files_browser_closed": False,
@@ -1123,6 +1133,13 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         _refresh_job_table(paired)
 
     def _refresh_job_table(filtered):
+        selected_ids = set(state.get("bulk_selected_job_ids", set()))
+        selected_ids.update(
+            jobs.GetItemText(index, 0) for index in range(jobs.GetItemCount())
+            if jobs.GetItemState(index, wx.LIST_STATE_SELECTED)
+        )
+        state["bulk_selected_job_ids"] = selected_ids
+        state["rendering_jobs"] = True
         jobs.DeleteAllItems()
         selected_still_visible = False
         jobs_empty_label.Show(not filtered)
@@ -1135,10 +1152,11 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
             jobs.SetItem(index, 5, row["nodes"])
             jobs.SetItem(index, 6, row["cpus"])
             jobs.SetItem(index, 7, row["reason"])
-            if row["job_id"] == state["selected_job"]:
+            if row["job_id"] in selected_ids or row["job_id"] == state["selected_job"]:
                 selected_still_visible = True
                 jobs.Select(index)
                 jobs.SetItemState(index, wx.LIST_STATE_SELECTED, wx.LIST_STATE_SELECTED)
+        state["rendering_jobs"] = False
         if not selected_still_visible and state["selected_job"]:
             btn_cancel.Enable(False)
         if not filtered:
@@ -1166,6 +1184,7 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
 
     def _clear_job_selection():
         state["selected_job"] = ""
+        state["bulk_selected_job_ids"].clear()
         state["selected_generation"] += 1
         state["sacct_request_id"] += 1
         state["details_request_id"] += 1
@@ -1184,6 +1203,7 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         _show_files_selected_state(False)
         _ensure_output_tabs([])
         _update_outputs_visibility()
+        _update_files_header(model.selected_job_store.context)
 
     def _clear_job_row_selection():
         for idx in range(jobs.GetItemCount()):
@@ -1205,6 +1225,11 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
             _clear_job_row_selection()
         event.Skip()
 
+    def _on_job_item_deselected(event):
+        if not state.get("rendering_jobs"):
+            state["bulk_selected_job_ids"].discard(jobs.GetItemText(event.GetIndex(), 0))
+        event.Skip()
+
     # --- Job selection handler -----------------------------------------------
     def select_job(event):
         idx = event.GetIndex()
@@ -1218,6 +1243,7 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         if job_id == state["selected_job"]:
             return
         state["selected_job"] = job_id
+        state["bulk_selected_job_ids"].add(job_id)
         state["selected_generation"] += 1
         state["raw_details_result"] = None
         state["raw_accounting_result"] = None
@@ -1232,7 +1258,9 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         # Publish to the shared selected-job context
         model.selected_job_store.select(
             job_id=job_id,
+            profile_id=str(kwargs.get("profile_id", "")),
             cluster_id=str(kwargs.get("cluster_id", "")),
+            provider_id=str(kwargs.get("provider_id", "")),
             name=row["name"],
             state=row["state"],
             partition=row["partition"],
@@ -1274,7 +1302,10 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         idx = event.GetIndex()
         if idx < 0 or idx >= len(state.get("items", [])):
             return
-        jobs.Select(idx)
+        if not jobs.GetItemState(idx, wx.LIST_STATE_SELECTED):
+            _clear_job_row_selection()
+            jobs.SetItemState(idx, wx.LIST_STATE_SELECTED, wx.LIST_STATE_SELECTED)
+            jobs.Select(idx)
         select_job(event)
         row = _parse_job_row(state["items"][idx])
         menu = wx.Menu()
@@ -1286,8 +1317,37 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
             and not state["cancel_in_flight"]
         )
         menu.Bind(wx.EVT_MENU, cancel_job, id=cancel_item.GetId())
+        delete_item = menu.Append(wx.ID_ANY, t("jobs.delete_details"))
+        delete_item.Enable(callable(kwargs.get("delete_job_details")) and jobs.GetSelectedItemCount() > 0)
+        menu.Bind(wx.EVT_MENU, _delete_selected_details, id=delete_item.GetId())
         jobs.PopupMenu(menu)
         menu.Destroy()
+
+    def _delete_selected_details(_event=None):
+        delete_records = kwargs.get("delete_job_details")
+        selected_ids = list(state.get("bulk_selected_job_ids", set()))
+        for index in range(jobs.GetItemCount()):
+            if jobs.GetItemState(index, wx.LIST_STATE_SELECTED):
+                selected_ids.append(jobs.GetItemText(index, 0))
+        selected_ids = list(dict.fromkeys(job_id for job_id in selected_ids if job_id))
+        if not selected_ids or not callable(delete_records):
+            return
+        message = t("jobs.delete_details_confirm").format(count=len(selected_ids))
+        if wx.MessageBox(message, t("jobs.delete_details"), wx.YES_NO | wx.ICON_WARNING) != wx.YES:
+            return
+        try:
+            deleted = int(delete_records(selected_ids) or 0)
+        except Exception as error:
+            wx.MessageBox(str(error), t("jobs.delete_details"), wx.OK | wx.ICON_ERROR)
+            return
+        state["bulk_selected_job_ids"].difference_update(selected_ids)
+        if state.get("selected_job") in selected_ids:
+            _clear_job_selection()
+        wx.MessageBox(
+            t("jobs.delete_details_done").format(count=deleted),
+            t("jobs.delete_details"), wx.OK | wx.ICON_INFORMATION,
+        )
+        refresh_jobs()
 
     def _update_summary_header():
         ctx = model.selected_job_store.context
@@ -1343,6 +1403,7 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
             "cpus": row.get("cpus", ""),
             "reason": reason,
             "workdir": workdir,
+            "workdir_source": str(item.get("workdir_source", item.get("source", ""))).strip(),
             "stdout_path": stdout_p,
             "stderr_path": stderr_p,
             "script_path": script_p,
@@ -1350,6 +1411,8 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
             "exit_code": exit_code,
             "failure_reason": reason,
             "user": str(item.get("user", "")).strip(),
+            "script_text": str(item.get("script_text", "")),
+            "submit_directory": str(item.get("submit_directory", item.get("submit_dir", ""))),
         }
         update_kwargs.update({key: value for key, value in metadata.items() if value})
         if update_kwargs:
@@ -1518,6 +1581,7 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
                                         nodes=selected_row["nodes"], cpus=selected_row["cpus"],
                                         reason=selected_row["reason"],
                                         workdir=str(item.get("workdir", "")),
+                                        workdir_source=str(item.get("workdir_source", item.get("source", ""))),
                                         stdout_path=str(item.get("stdout_path", "")),
                                         stderr_path=str(item.get("stderr_path", "")),
                                     )
@@ -1572,6 +1636,8 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
                     or model.selected_job_store.generation != request_generation):
                 return state.get("raw_details_result")
             state["raw_details_result"] = raw
+            if raw.ok and raw.stdout and callable(kwargs.get("save_job_raw_snapshot")):
+                kwargs["save_job_raw_snapshot"](job_id, "raw_details", raw.stdout)
             return raw
         except Exception as exc:
             raw = RawCommandResult.from_response(
@@ -1614,6 +1680,8 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
                     or model.selected_job_store.generation != request_generation):
                 return state.get("raw_accounting_result")
             state["raw_accounting_result"] = raw
+            if raw.ok and raw.stdout and callable(kwargs.get("save_job_raw_snapshot")):
+                kwargs["save_job_raw_snapshot"](job_id, "raw_accounting", raw.stdout)
             return raw
         except Exception as exc:
             raw = RawCommandResult.from_response(
@@ -2044,15 +2112,8 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
 
     # --- Job files ----------------------------------------------------------
     def _files_directory(ctx):
-        """Use the work directory, or the known output/script parent as a fallback."""
-        if ctx.workdir:
-            return ctx.workdir
-        for remote_path in (ctx.stdout_path, ctx.stderr_path, ctx.script_path):
-            if remote_path:
-                parent = str(PurePosixPath(remote_path).parent)
-                if parent not in {"", "."}:
-                    return parent
-        return ""
+        from hpc_gui.services.job_paths import resolve_job_directory
+        return resolve_job_directory(ctx).path
 
     def _update_files_header(ctx=None):
         ctx = ctx or model.selected_job_store.context
@@ -2064,9 +2125,10 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
             f"{t('jobs_outputs.job_label')} {ctx.job_id}"
             + (f" · {ctx.name}" if ctx.name else "")
         )
-        files_workdir_label.SetLabel(
-            f"{t('jobs_outputs.workdir')}: {_files_directory(ctx) or '—'}"
-        )
+        from hpc_gui.services.job_paths import resolve_job_directory
+        resolved = resolve_job_directory(ctx)
+        qualifier = "" if resolved.verified or not resolved.path else f" · fallback: {resolved.source}"
+        files_workdir_label.SetLabel(f"{t('jobs_outputs.workdir')}: {resolved.path or '—'}{qualifier}")
 
     def _navigate_files_to_workdir(_event=None):
         """Navigate the shared browser to the selected job's WorkDir."""
@@ -2087,8 +2149,8 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         try:
             files_browser._wx_remote_controls["navigate"](workdir)
             files_browser._wx_remote_controls["load"]()
-        except Exception:
-            pass
+        except Exception as error:
+            wx.MessageBox(str(error), t("jobs_outputs.workdir"), wx.OK | wx.ICON_ERROR)
 
     # --- Outputs tab --------------------------------------------------------
     def _ensure_output_tabs(channels: list[ResolvedOutputChannel]):
@@ -2225,12 +2287,9 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
                     idx = next((index for index in range(output_channel_notebook.GetPageCount())
                                 if output_channel_notebook.GetPage(index) is output_no_channels_label), -1)
                     if idx >= 0:
-                        output_channel_notebook.DeletePage(idx)
-                    else:
-                        output_no_channels_label.Destroy()
+                        output_channel_notebook.RemovePage(idx)
                 except Exception:
                     pass
-                output_no_channels_label = None
 
     def _refresh_single_channel(channel_id):
         """Refresh output for a single channel (per-channel refresh button)."""
@@ -2310,6 +2369,8 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
                 workdir=ctx.workdir,
                 scontrol_stdout=ctx.stdout_path,
                 scontrol_stderr=ctx.stderr_path,
+                script_text=ctx.script_text,
+                script_remote_path=ctx.script_path,
                 job_name=ctx.name,
                 language=current_language(),
             )
@@ -2319,6 +2380,8 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
                 workdir=ctx.workdir,
                 scontrol_stdout=ctx.stdout_path,
                 scontrol_stderr=ctx.stderr_path,
+                script_text=ctx.script_text,
+                script_remote_path=ctx.script_path,
                 job_name=ctx.name,
                 language=current_language(),
             )
@@ -2451,11 +2514,23 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
             )
             if current:
                 if err:
-                    for text_ctrl in output_channels.values():
-                        text_ctrl.SetValue(str(err))
-                        break
+                    try:
+                        cached = kwargs.get("load_output_snapshots", lambda _job: {})(active_owner[0])
+                    except Exception:
+                        cached = {}
                     for channel in channels:
-                        _set_output_channel_status(channel.id, "jobs_outputs.status_error")
+                        snapshot = cached.get(channel.id) if isinstance(cached, dict) else None
+                        text_ctrl = output_channels.get(channel.id)
+                        if snapshot and text_ctrl is not None:
+                            text_ctrl.SetValue(retain_last_lines(str(snapshot.get("text", ""))))
+                            stamp = str(snapshot.get("captured_at", ""))
+                            label = output_channel_status.get(channel.id)
+                            if label is not None:
+                                label.SetLabel(t("jobs_outputs.status_cached").format(captured_at=stamp))
+                        else:
+                            if text_ctrl is not None:
+                                text_ctrl.SetValue(str(err))
+                            _set_output_channel_status(channel.id, "jobs_outputs.status_error")
                 else:
                     for channel in channels:
                         text_ctrl = output_channels.get(channel.id)
@@ -2475,11 +2550,30 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
                             retained = follower.text
                         if channel_error:
                             try:
-                                text_ctrl.SetValue(str(retained or "Permission denied"))
-                            except RuntimeError:
-                                pass
-                            _set_output_channel_status(channel.id, "jobs_outputs.status_error")
+                                cached = kwargs.get("load_output_snapshots", lambda _job: {})(active_owner[0])
+                                snapshot = cached.get(channel.id) if isinstance(cached, dict) else None
+                            except Exception:
+                                snapshot = None
+                            if snapshot:
+                                text_ctrl.SetValue(retain_last_lines(str(snapshot.get("text", ""))))
+                                label = output_channel_status.get(channel.id)
+                                if label is not None:
+                                    label.SetLabel(t("jobs_outputs.status_cached").format(
+                                        captured_at=snapshot.get("captured_at", "")))
+                            else:
+                                try:
+                                    text_ctrl.SetValue(str(retained or "Permission denied"))
+                                except RuntimeError:
+                                    pass
+                                _set_output_channel_status(channel.id, "jobs_outputs.status_error")
                             continue
+                        if not waiting and retained and callable(kwargs.get("save_output_snapshot")):
+                            try:
+                                kwargs["save_output_snapshot"](
+                                    active_owner[0], channel.id, channel.path, retained,
+                                )
+                            except Exception:
+                                pass
                         if output_channel_paused.get(channel.id, False):
                             _set_output_channel_status(channel.id, "jobs_outputs.status_paused")
                             continue
@@ -2712,9 +2806,11 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         profile = (session or {}).get("profile") or {}
         new_cluster_id = str(profile.get("cluster_id", profile.get("id", profile.get("profile_id", ""))))
         current_cluster_id = model.selected_job_store.context.cluster_id or str(kwargs.get("cluster_id", ""))
-        keep_selection = bool(
-            state["selected_job"] and current_cluster_id and current_cluster_id == new_cluster_id
-        )
+        previous_session_id = str((state.get("session") or {}).get("id", ""))
+        next_session_id = str((session or {}).get("id", ""))
+        same_session = bool(previous_session_id and next_session_id and previous_session_id == next_session_id)
+        same_cluster = bool(current_cluster_id and new_cluster_id and current_cluster_id == new_cluster_id)
+        keep_selection = bool(state["selected_job"] and (same_cluster or same_session))
         state["session"] = session
         state["provider_generation"] += 1
         if not keep_selection:
@@ -2754,7 +2850,12 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         if not keep_selection:
             model.selected_job_store.clear()
         _ensure_output_tabs([])
+        if not keep_selection:
+            state["selected_job"] = ""
+            model.tracking.select_job("")
+            model.selected_job_store.clear()
         _update_outputs_visibility()
+        outputs_no_selection_panel.Show(not bool(state.get("selected_job")))
         outputs_pause_btn.SetLabel(t("jobs_outputs.pause_all"))
         for cid in output_channel_status:
             _set_output_channel_status(cid, "jobs_outputs.status_disconnected")
@@ -2886,6 +2987,7 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
     # --- Bind events --------------------------------------------------------
     jobs.Bind(wx.EVT_LEFT_DOWN, _on_jobs_left_down)
     jobs.Bind(wx.EVT_LIST_ITEM_SELECTED, select_job)
+    jobs.Bind(wx.EVT_LIST_ITEM_DESELECTED, _on_job_item_deselected)
     jobs.Bind(wx.EVT_LIST_ITEM_RIGHT_CLICK, _on_jobs_right_click)
     try:
         jobs.Bind(wx.EVT_LIST_COL_CLICK, _on_column_click)
@@ -3161,6 +3263,7 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         "cb_auto_refresh": cb_auto_refresh,
         "hide_finished": cb_hide_finished,
         "btn_cancel": btn_cancel,
+        "delete_selected_details": _delete_selected_details,
         "jobs_refresh_label": jobs_refresh_label,
         "jobs_sort": _on_column_click,
         "cluster_servers_text": cluster_servers_text,

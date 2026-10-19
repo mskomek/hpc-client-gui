@@ -36,6 +36,22 @@ def _jobs_callbacks(session_state, parent, lifecycle):
             "provider_id": str(profile.get("provider_id", profile.get("provider", ""))),
         }
 
+    def _job_store():
+        from hpc_gui.services.job_record_store import JobRecordStore
+        if not isinstance(session_state, dict):
+            return JobRecordStore()
+        store = session_state.get("_job_record_store")
+        if store is None:
+            store = JobRecordStore()
+            session_state["_job_record_store"] = store
+        return store
+
+    def _scoped_record(job_id):
+        return {**_profile_identity(), "job_id": str(job_id)}
+
+    def _local_job_record(job_id):
+        return _job_store().get(str(job_id), **_profile_identity())
+
     def _execute_contract_adapter(section, slurm, job_id=""):
         contract = extract_contract(_resolve_provider_config())
         adapter_id = getattr(contract, f"{section}_adapter", None)
@@ -57,7 +73,21 @@ def _jobs_callbacks(session_state, parent, lifecycle):
         slurm = _resolve_slurm()
         profile = _resolve_profile()
         if not slurm:
-            return ()
+            scope = _profile_identity()
+            archived = _job_store().list(
+                profile_id=scope["profile_id"], cluster_id=scope["cluster_id"],
+                provider_id=scope["provider_id"],
+            )
+            jobs = []
+            for record in archived:
+                row = {**record.get("metadata", {}), **record.get("paths", {}),
+                       **record.get("resources", {}), "job_id": record["job_id"],
+                       "id": record["job_id"], "state": record.get("state", ""),
+                       "source": "local_archive"}
+                jobs.append(row)
+            from hpc_gui.services.jobs_history import job_sort_key
+            return {"jobs": sorted(jobs, key=job_sort_key), "active_job_ids": (),
+                    "history_stale": True, "history_error": "No active scheduler connection; showing saved jobs."}
         username = str(profile.get("username", ""))
         history_days = int(owner_state.get("_jobs_history_days", 7)) if isinstance(
             owner_state := (session_state if isinstance(session_state, dict) else {}), dict
@@ -155,6 +185,48 @@ def _jobs_callbacks(session_state, parent, lifecycle):
         else:
             stale = bool(entry["error"])
         merged = merge_job_sources(rows, entry["rows"])
+        scope = _profile_identity()
+        archived = _job_store().list(
+            profile_id=scope["profile_id"], cluster_id=scope["cluster_id"],
+            provider_id=scope["provider_id"],
+        )
+        by_id = {str(row.get("job_id", "")): row for row in merged}
+        for record in archived:
+            job_id = str(record.get("job_id", ""))
+            metadata = dict(record.get("metadata") or {})
+            metadata.update(record.get("paths") or {})
+            restored = {**metadata, **(record.get("resources") or {}),
+                        "job_id": job_id, "id": job_id, "state": record.get("state", ""),
+                        "source": "local_archive"}
+            row = by_id.get(job_id)
+            if row is None:
+                merged.append(restored)
+                by_id[job_id] = restored
+            else:
+                for key, value in restored.items():
+                    if row.get(key) in (None, "", "-") and value not in (None, "", "-"):
+                        row[key] = value
+        for row in merged:
+            _job_store().record_observation({
+                **scope, "job_id": row.get("job_id", row.get("id", "")),
+                "state": row.get("state", ""), "source": row.get("source", "observed"),
+                "metadata": {key: row.get(key) for key in (
+                    "name", "user", "partition", "reason", "exit_code", "failure_reason",
+                    "array_job_id", "array_task_id", "dependency", "heterogeneous_id",
+                    "script_text", "script_hash", "raw_details", "raw_accounting",
+                ) if row.get(key) not in (None, "", "-")},
+                "resources": {key: row.get(key) for key in (
+                    "nodes", "cpus", "nodelist", "resources", "elapsed",
+                ) if row.get(key) not in (None, "", "-")},
+                "timing": {key: row.get(key) for key in (
+                    "submit_time", "start_time", "end_time", "updated_at",
+                ) if row.get(key) not in (None, "", "-")},
+                "paths": {key: row.get(key) for key in (
+                    "submit_directory", "workdir", "workdir_source", "script_path", "stdout_path", "stderr_path",
+                ) if row.get(key) not in (None, "", "-")},
+            })
+        from hpc_gui.services.jobs_history import job_sort_key
+        merged.sort(key=job_sort_key)
         return {
             "jobs": merged,
             "active_job_ids": tuple(row["job_id"] for row in rows),
@@ -278,20 +350,29 @@ def _jobs_callbacks(session_state, parent, lifecycle):
     def _refresh_sacct(job_id):
         slurm = _resolve_slurm()
         profile = _resolve_profile()
-        if not slurm:
-            return ""
-        contract_result = _execute_contract_adapter("accounting", slurm, job_id)
-        if contract_result is not None:
-            return contract_result
-        sacct_job = getattr(slurm, "sacct_job", None)
-        if callable(sacct_job):
-            return sacct_job(str(job_id))
-        if not hasattr(slurm, "sacct"):
-            return ""
+        result = ""
         try:
-            return str(slurm.sacct(str(profile.get("username", "")), job_id=job_id) or "")
-        except TypeError:
-            return str(slurm.sacct(str(profile.get("username", ""))) or "")
+            if slurm:
+                contract_result = _execute_contract_adapter("accounting", slurm, job_id)
+                if contract_result is not None:
+                    result = str(contract_result or "")
+                else:
+                    sacct_job = getattr(slurm, "sacct_job", None)
+                    if callable(sacct_job):
+                        result = str(sacct_job(str(job_id)) or "")
+                    elif callable(getattr(slurm, "sacct", None)):
+                        try:
+                            result = str(slurm.sacct(str(profile.get("username", "")), job_id=job_id) or "")
+                        except TypeError:
+                            result = str(slurm.sacct(str(profile.get("username", ""))) or "")
+        except Exception:
+            result = ""
+        if result:
+            return result
+        record = _local_job_record(job_id)
+        details = (record or {}).get("details", {})
+        raw = details.get("raw_accounting", "")
+        return raw
 
     def _refresh_job_metadata(job_id):
         """Return the full sacct row for a selected job, including file paths."""
@@ -334,8 +415,18 @@ def _jobs_callbacks(session_state, parent, lifecycle):
                 raw = slurm.sacct(username)
             else:
                 return {}
-        return next((row for row in parse_sacct_history(str(raw or ""))
-                     if str(row.get("job_id", "")) == job_id), {})
+        row = next((row for row in parse_sacct_history(str(raw or ""))
+                    if str(row.get("job_id", "")) == job_id), None)
+        if row:
+            row["workdir_source"] = "sacct" if row.get("workdir") else ""
+            return row
+        record = _local_job_record(job_id)
+        if record:
+            restored = {**record.get("metadata", {}), **record.get("paths", {}),
+                        "state": record.get("state", ""), "source": "local_archive"}
+            restored.update(record.get("details", {}))
+            return restored
+        return {}
 
     def _show_job_details(job_id):
         slurm = _resolve_slurm()
@@ -344,7 +435,11 @@ def _jobs_callbacks(session_state, parent, lifecycle):
         contract_result = _execute_contract_adapter("job_details", slurm, job_id)
         if contract_result is not None:
             return contract_result
-        return str(slurm.scontrol_show_job(job_id) or "")
+        raw = str(slurm.scontrol_show_job(job_id) or "")
+        if raw.strip():
+            return raw
+        record = _local_job_record(job_id)
+        return str(((record or {}).get("details", {})).get("raw_details", ""))
 
     def _has_status_capability():
         slurm = _resolve_slurm()
@@ -373,12 +468,45 @@ def _jobs_callbacks(session_state, parent, lifecycle):
         job_outputs = config.get("job_outputs") if isinstance(config, dict) else None
         return definitions_from_provider(job_outputs)
 
+    def delete_job_details(job_ids):
+        identities = [_scoped_record(job_id) for job_id in job_ids if str(job_id).strip()]
+        return _job_store().delete_details(identities)
+
+    def save_output_snapshot(job_id, channel_id, path, content):
+        text = str(content or "")
+        if not text:
+            return
+        import time
+        _job_store().record_observation({
+            **_scoped_record(job_id), "source": "output_read",
+            "outputs": {str(channel_id): {
+                "path": str(path or ""), "text": text,
+                "captured_at": time.time(), "source": "remote",
+            }},
+        })
+
+    def load_output_snapshots(job_id):
+        record = _job_store().get(str(job_id), **_profile_identity())
+        return dict(record.get("outputs") or {}) if record else {}
+
+    def save_job_raw_snapshot(job_id, kind, content):
+        text = str(content or "")
+        if not text or kind not in {"raw_details", "raw_accounting"}:
+            return
+        _job_store().record_observation({
+            **_scoped_record(job_id), "source": "details_read",
+            "details": {kind: text},
+        })
+
     def open_main_files(path="", highlight_path=""):
         main_notebook = session_state.get("_embedded_main_notebook")
         files_page = session_state.get("_embedded_files_page")
         remote_panel = session_state.get("_embedded_remote_files_panel")
         if main_notebook is None or files_page is None or remote_panel is None:
-            return
+            return False
+        path = str(path or "").strip()
+        if not path:
+            return False
         page_index = next(
             (index for index in range(main_notebook.GetPageCount())
              if main_notebook.GetPage(index) is files_page),
@@ -396,9 +524,14 @@ def _jobs_callbacks(session_state, parent, lifecycle):
         navigate = controls.get("navigate")
         load = controls.get("load")
         if callable(navigate):
-            navigate(str(path or "/"))
+            navigate(path)
+        else:
+            return False
         if callable(load):
             load()
+        else:
+            return False
+        return True
 
     return {
         "list_jobs": list_jobs,
@@ -417,6 +550,10 @@ def _jobs_callbacks(session_state, parent, lifecycle):
         "refresh_lssrv": _refresh_lssrv,
         "output_channel_defs": None,
         "output_channel_defs_provider": _resolve_output_defs,
+        "delete_job_details": delete_job_details,
+        "save_output_snapshot": save_output_snapshot,
+        "load_output_snapshots": load_output_snapshots,
+        "save_job_raw_snapshot": save_job_raw_snapshot,
         "open_main_files": open_main_files,
         "provider_filters": lambda: (_resolve_provider_config().get("file_filters", ()) if isinstance(_resolve_provider_config().get("file_filters", ()), (list, tuple)) else ()),
         "remote_files_callbacks": _remote_files_callbacks(session_state, parent, lifecycle),
