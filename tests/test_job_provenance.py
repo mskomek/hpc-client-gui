@@ -28,3 +28,15 @@ def test_array_parent_identity_and_restart(tmp_path):
     second = JobRecordStore(path)
     assert second.get("12345")["script_hash"]
     assert capture.analytics_job_id("12345_7") == "12345"
+
+
+@pytest.mark.integration
+def test_stored_script_redacts_secret_assignments(tmp_path):
+    store = JobRecordStore(tmp_path / "safe-script.sqlite3")
+    capture = JobProvenanceCapture(store)
+    capture.submitted("99", "#!/bin/bash\nexport API_TOKEN=top-secret\n#SBATCH --output=slurm-%j.out\n")
+    script = store.get("99")["script_text"]
+    assert "top-secret" not in script
+    assert "[REDACTED]" in script
+    assert "--output=slurm-%j.out" in script
+    store.close()
