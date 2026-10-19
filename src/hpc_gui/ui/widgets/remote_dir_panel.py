@@ -66,10 +66,7 @@ from hpc_gui.config.storage import (
     coerce_profile_transfer_parallelism,
     get_upload_preflight_confirmation_enabled,
     get_transfer_checksum_verification_enabled,
-    get_profile_conflict_action,
     get_profile_id,
-    set_profile_conflict_action,
-    clear_profile_conflict_action,
     set_upload_preflight_confirmation_enabled,
 )
 from hpc_gui.services.file_clipboard import get_file_clipboard
@@ -84,6 +81,12 @@ from hpc_gui.services.transfer_mode import (
     download_with_mode,
     normalize_transfer_mode,
     upload_with_mode,
+)
+from hpc_gui.services.transfer_conflict_policy import (
+    clear_session_conflict_action,
+    get_session_conflict_action,
+    resolve_conflict_action,
+    set_session_conflict_action,
 )
 from hpc_gui.services.transfer_integrity import (
     VerificationState,
@@ -468,6 +471,7 @@ class _TransferPlanWorker(QObject):
         self._pending_source = None
         self._pending_target = None
         self._pending_partial = False
+        self._pending_direction = "download"
         self._pending_decision = "cancel"
         self._pending_rename_dir = ""
         self._pending_rename_name = ""
@@ -482,7 +486,9 @@ class _TransferPlanWorker(QObject):
             return
         self.finished.emit(self.job_id, self.kind, result)
 
-    def request_conflict_decision(self, source, target, *, partial: bool = False) -> str:
+    def request_conflict_decision(
+        self, source, target, *, partial: bool = False, direction: str = "download"
+    ) -> str:
         """Show the conflict dialog on the GUI thread and return the raw action.
 
         Called from the worker thread while planning. Blocks until the GUI
@@ -492,6 +498,7 @@ class _TransferPlanWorker(QObject):
         self._pending_source = source
         self._pending_target = target
         self._pending_partial = bool(partial)
+        self._pending_direction = direction
         self._pending_decision = "cancel"
         QMetaObject.invokeMethod(
             self._panel,
@@ -775,11 +782,6 @@ class RemoteDirPanel(QWidget):
 
     # single-level undo (last operation)
     _last_undo: Optional[_UndoRecord] = None
-
-    # This is deliberately process-local.  "Always use this action" is a
-    # convenience for the current run, not a persisted preference: a fresh
-    # application launch must ask about the first conflict again.
-    _session_conflict_action: Optional[str] = None
 
     @classmethod
     def clear_all_directory_caches(cls) -> None:
@@ -2871,14 +2873,17 @@ class RemoteDirPanel(QWidget):
         """Return one of: overwrite|resume|skip|rename|cancel (optionally applied to all)."""
         source = self._conflict_info(src or dst, is_local=source_is_local)
         target = self._conflict_info(dst, is_local=target_is_local)
-        return self._conflict_decision(source, target)
+        if source_is_local is True:
+            direction = "upload"
+        elif target_is_local is True:
+            direction = "download"
+        else:
+            direction = "other"
+        return self._conflict_decision(source, target, direction=direction)
 
     def reset_conflict_preference(self) -> None:
-        """Forget the persisted always-use choice for the active profile."""
-        profile_name = str((self.session or {}).get("profile_name", "")).strip() if self.session else ""
-        if profile_name:
-            clear_profile_conflict_action(profile_name)
-        RemoteDirPanel._session_conflict_action = None
+        """Forget the process-session always-use choice."""
+        clear_session_conflict_action()
 
     def _conflict_decision(
         self,
@@ -2886,6 +2891,7 @@ class RemoteDirPanel(QWidget):
         target: TransferConflictInfo,
         *,
         partial: bool = False,
+        direction: str = "upload",
     ) -> str:
         """Turn already-known conflict info into a decision.
 
@@ -2894,8 +2900,7 @@ class RemoteDirPanel(QWidget):
         modal dialog. Returns the normalized action string, optionally suffixed
         with "_all".
         """
-        profile_name = str((self.session or {}).get("profile_name", "")).strip() if self.session else ""
-        session_action = get_profile_conflict_action(profile_name) if profile_name else RemoteDirPanel._session_conflict_action
+        session_action = get_session_conflict_action(direction)
         if session_action is not None:
             return self._normalize_conflict_decision(
                 TransferConflictDecision(action=session_action), source, target
@@ -2911,11 +2916,14 @@ class RemoteDirPanel(QWidget):
         if decision.always_use:
             # Keep the selected action (rather than its result) so conditional
             # actions are evaluated against each later conflicting file.
-            if profile_name:
-                set_profile_conflict_action(profile_name, decision.action)
-            else:
-                RemoteDirPanel._session_conflict_action = decision.action
-        apply_all = bool(decision.always_use or decision.apply_current_queue_only)
+            set_session_conflict_action(
+                decision.action,
+                downloads_only=decision.apply_downloads_only,
+            )
+        apply_all = bool(
+            (decision.always_use or decision.apply_current_queue_only)
+            and (not decision.apply_downloads_only or direction == "download")
+        )
         return action + "_all" if apply_all else action
 
     @Slot(int)
@@ -2935,6 +2943,7 @@ class RemoteDirPanel(QWidget):
                 worker._pending_source,
                 worker._pending_target,
                 partial=getattr(worker, "_pending_partial", False),
+                direction=getattr(worker, "_pending_direction", "download"),
             )
         except Exception:
             worker._pending_decision = "cancel"
@@ -3008,26 +3017,13 @@ class RemoteDirPanel(QWidget):
         source: TransferConflictInfo,
         target: TransferConflictInfo,
     ) -> str:
-        action = decision.action
-        if action in {"overwrite", "resume", "skip", "rename", "cancel"}:
-            return action
-        source_newer = (
-            source.mtime is not None
-            and target.mtime is not None
-            and int(source.mtime) > int(target.mtime)
+        return resolve_conflict_action(
+            decision.action,
+            source_size=source.size,
+            target_size=target.size,
+            source_mtime=source.mtime,
+            target_mtime=target.mtime,
         )
-        size_differs = (
-            source.size is not None
-            and target.size is not None
-            and int(source.size) != int(target.size)
-        )
-        if action == "overwrite_if_newer":
-            return "overwrite" if source_newer else "skip"
-        if action == "overwrite_if_size_differs":
-            return "overwrite" if size_differs else "skip"
-        if action == "overwrite_if_size_differs_or_newer":
-            return "overwrite" if (size_differs or source_newer) else "skip"
-        return "cancel"
 
     def _prompt_rename(self, dst_dir: str, current_name: str) -> str | None:
         new_name, ok = QInputDialog.getText(self, "Yeniden adlandır", "Yeni ad:", text=current_name)
@@ -3912,7 +3908,7 @@ class RemoteDirPanel(QWidget):
             get_logger("hpc_gui.debug.transfer").info(
                 "plan.download started sources=%d target=%r session_policy=%r",
                 len(src_paths), target_dir,
-                RemoteDirPanel._session_conflict_action,
+                get_session_conflict_action("download"),
             )
         for src in src_paths:
             if worker.cancelled:
@@ -4049,7 +4045,7 @@ class RemoteDirPanel(QWidget):
                     part_path if partial else local_path, is_local=True
                 )
                 raw_action = worker.request_conflict_decision(
-                    source, target, partial=partial
+                    source, target, partial=partial, direction="download"
                 )
                 if raw_action.endswith("_all"):
                     policy = raw_action.replace("_all", "")

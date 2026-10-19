@@ -5,6 +5,7 @@ pytestmark = [pytest.mark.gui, pytest.mark.wx]
 from hpc_gui.services.transfer_controller import TransferItem
 from hpc_gui.services.transfer_session_controller import TransferSessionController
 from hpc_gui.wx_transfer_workspace import create_transfer_conflict_dialog
+from hpc_gui.wx_transfer_conflict_dialog import create_wx_transfer_conflict_dialog
 from hpc_gui.core.i18n import load_language
 
 @pytest.fixture
@@ -49,6 +50,20 @@ def test_wx_conflict_dialog_has_required_buttons(wx_app):
     assert ctrls["skip"] is not None
     assert ctrls["rename"] is not None
     assert ctrls["cancel"] is not None
+    assert ctrls["overwrite_if_newer"] is not None
+    assert ctrls["overwrite_if_size_differs"] is not None
+    assert ctrls["overwrite_if_size_differs_or_newer"] is not None
+    dlg.Destroy()
+    parent.Destroy()
+    wx_app.ProcessPendingEvents()
+
+def test_wx_conflict_dialog_exposes_session_queue_and_direction_scopes(wx_app):
+    parent=wx.Frame(None)
+    item=TransferItem("download","/src/file.txt","/dst/file.txt")
+    dlg=create_wx_transfer_conflict_dialog(parent, _Files(), item)
+    assert dlg._wx_conflict_apply_all is not None
+    assert dlg._wx_conflict_always_use is not None
+    assert dlg._wx_conflict_downloads_only is not None
     dlg.Destroy()
     parent.Destroy()
     wx_app.ProcessPendingEvents()

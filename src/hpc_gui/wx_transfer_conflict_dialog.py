@@ -1,4 +1,4 @@
-"""Queue-scoped options layered onto the wx transfer conflict dialog."""
+"""Session and queue scope controls layered onto the wx conflict dialog."""
 
 from __future__ import annotations
 
@@ -26,13 +26,25 @@ def create_wx_transfer_conflict_dialog(parent, files, item):
     if panel_sizer is None:
         return dialog
 
-    checkbox = wx.CheckBox(panel, label=t("common.apply_all"))
-    panel_sizer.Insert(1, checkbox, 0, wx.ALL | wx.EXPAND, 12)
+    queue_checkbox = wx.CheckBox(
+        panel, label=t("transfer.conflict_current_queue_only")
+    )
+    session_checkbox = wx.CheckBox(
+        panel, label=t("transfer.conflict_always_use")
+    )
+    downloads_checkbox = wx.CheckBox(
+        panel, label=t("transfer.conflict_downloads_only")
+    )
+    panel_sizer.Insert(1, queue_checkbox, 0, wx.ALL | wx.EXPAND, 12)
+    panel_sizer.Insert(2, session_checkbox, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM | wx.EXPAND, 12)
+    panel_sizer.Insert(3, downloads_checkbox, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM | wx.EXPAND, 12)
     panel_sizer.Layout()
     panel.Layout()
     dialog.Layout()
     dialog.Fit()
-    dialog._wx_conflict_apply_all = checkbox
+    dialog._wx_conflict_apply_all = queue_checkbox
+    dialog._wx_conflict_always_use = session_checkbox
+    dialog._wx_conflict_downloads_only = downloads_checkbox
     return dialog
 
 

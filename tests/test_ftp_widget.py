@@ -21,6 +21,7 @@ from PySide6.QtGui import QKeyEvent
 from PySide6.QtWidgets import QApplication, QDialog, QPlainTextEdit, QMessageBox
 
 from hpc_gui.services.files_mock import MockFilesBackend
+from hpc_gui.services.transfer_conflict_policy import clear_session_conflict_action
 from hpc_gui.services.transfer_mode import (
     ASCII,
     AUTO,
@@ -268,11 +269,13 @@ class FtpWidgetTests(unittest.TestCase):
     @pytest.mark.gui
     @pytest.mark.qt
     def test_bottom_transfer_activity_tabs_are_visible(self) -> None:
+        self.assertFalse(hasattr(self.widget, "btn_upload"))
+        self.assertFalse(hasattr(self.widget, "btn_download"))
         tabs = self.widget.transfer_activity.tabs
         self.assertEqual(tabs.tabPosition(), tabs.TabPosition.South)
         self.assertEqual(
             [tabs.tabText(index) for index in range(tabs.count())],
-            ["Queued files (0)", "Failed transfers (0)", "Successful transfers (0)"],
+            ["Queue (0)", "Failed (0)", "Completed (0)"],
         )
         self.assertEqual(
             [
@@ -2254,7 +2257,7 @@ class FtpWidgetTests(unittest.TestCase):
         # whatever value was present on entry when its own `with` exits, which
         # would silently wipe out the session state _resolve_conflict sets
         # during the block below before the second panel gets a chance to see it.
-        RemoteDirPanel._session_conflict_action = None
+        clear_session_conflict_action()
         try:
             with patch.object(
                 TransferConflictDialog,
@@ -2273,7 +2276,7 @@ class FtpWidgetTests(unittest.TestCase):
 
             self.assertEqual(get_decision.call_count, 1)
         finally:
-            RemoteDirPanel._session_conflict_action = None
+            clear_session_conflict_action()
             first_panel.deleteLater()
             second_panel.deleteLater()
 
@@ -3557,7 +3560,7 @@ class FtpWidgetTests(unittest.TestCase):
         panel = self.widget.panel_scratch
         panel.session = {"connected": True, "files": files}
         panel._show_transfer_dialog = False
-        RemoteDirPanel._session_conflict_action = None
+        clear_session_conflict_action()
         try:
             with tempfile.TemporaryDirectory() as tmp:
                 conflict_target = Path(tmp, "remote", "root.txt")
@@ -3599,7 +3602,7 @@ class FtpWidgetTests(unittest.TestCase):
                 [("download", "/remote/child/nested.txt")],
             )
         finally:
-            RemoteDirPanel._session_conflict_action = None
+            clear_session_conflict_action()
 
     @pytest.mark.integration
     @pytest.mark.semantic

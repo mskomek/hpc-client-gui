@@ -101,6 +101,7 @@ class TransferActivityPanel(QGroupBox):
         self._finished_errors: list[tuple[object, str]] = []
         self._finished_completed: list = []
         self._last_status_text = _tr("transfer.no_active_transfer", "No active transfer.")
+        self._tab_counts = {"queue": 0, "failed": 0, "completed": 0}
         self._progress_by_item: dict[int, int] = {}
         self._row_by_item_id: dict[int, QTreeWidgetItem] = {}
         self._progress_bar_by_item_id: dict[int, QProgressBar] = {}
@@ -168,9 +169,9 @@ class TransferActivityPanel(QGroupBox):
     def retranslate_ui(self) -> None:
         self.setTitle(_tr("transfer.ftp_activity_title", "Transfers"))
         labels = (
-            self._tab_label("Queued files", self.queue_list.topLevelItemCount()),
-            self._tab_label("Failed transfers", self.failed_list.topLevelItemCount()),
-            self._tab_label("Successful transfers", self.completed_list.topLevelItemCount()),
+            self._tab_label(_tr("transfer.queue_tab", "Queue"), self._tab_counts["queue"]),
+            self._tab_label(_tr("transfer.failed_tab", "Failed"), self._tab_counts["failed"]),
+            self._tab_label(_tr("transfer.completed_tab", "Completed"), self._tab_counts["completed"]),
         )
         for index, label in enumerate(labels):
             self.tabs.setTabText(index, label)
@@ -428,43 +429,25 @@ class TransferActivityPanel(QGroupBox):
                 "Queued",
             )
             self._update_summary(logical_items)
+            self._tab_counts["queue"] = len(logical_items)
             self.retranslate_ui()
-            self.tabs.setCurrentWidget(self.queue_list)
             return
         if event == "completed":
-            merged = self._merge_finished_history(self._finished_completed, items)
-            self._render_full_list(self.queue_list, [], "Queued")
-            self._render_full_list(self.completed_list, merged, "Successful")
-            self._update_summary([])
-            self.retranslate_ui()
-            self.tabs.setCurrentWidget(self.completed_list)
+            self._finished_completed = self._merge_finished_history(
+                self._finished_completed, items
+            )
+            self._sync_lists_from_controller()
             return
         if event == "failed":
-            error_text = {
-                id(item): str(err)
-                for item, err in self._finished_errors
-                if getattr(item, "op", "") in {"upload", "download"}
-            }
-            merged = []
-            seen: set[int] = set()
-            for item, _err in self._finished_errors:
-                if getattr(item, "op", "") in {"upload", "download"} and id(item) not in seen:
-                    merged.append(item)
-                    seen.add(id(item))
+            seen = {id(item) for item, _error in self._finished_errors}
             for item in items:
-                if id(item) not in seen:
-                    merged.append(item)
+                if (
+                    getattr(item, "op", "") in {"upload", "download"}
+                    and id(item) not in seen
+                ):
+                    self._finished_errors.append((item, str(title or "")))
                     seen.add(id(item))
-            self._render_full_list(self.queue_list, [], "Queued")
-            rows = [
-                (item, "Failed", error_text.get(id(item), title))
-                for item in merged[: self._MAX_VISIBLE_TRANSFER_ROWS]
-            ]
-            hidden = max(0, len(merged) - self._MAX_VISIBLE_TRANSFER_ROWS)
-            self._reconcile_visible_rows(self.failed_list, rows, hidden)
-            self._update_summary([])
-            self.retranslate_ui()
-            self.tabs.setCurrentWidget(self.failed_list)
+            self._sync_lists_from_controller()
 
     @staticmethod
     def _merge_finished_history(history: list, items: list) -> list:
@@ -654,6 +637,11 @@ class TransferActivityPanel(QGroupBox):
             completed_hidden,
         )
         self._update_summary(queue_items)
+        self._tab_counts.update(
+            queue=len(queue_items),
+            failed=len(failed_items),
+            completed=len(completed_transfers),
+        )
         self.retranslate_ui()
         self._update_controls()
 
@@ -1048,8 +1036,6 @@ class FtpWidget(QWidget):
         self.mode_combo.addItem(t("ftp.mode_ascii"), ASCII)
         self.apply_settings()
         self.effective_label = QLabel()
-        self.btn_upload = QPushButton(t("ftp.upload_selected"))
-        self.btn_download = QPushButton(t("ftp.download_selected"))
 
         self._sync_navigation_guard = False
         self._sync_status_reason = ""
@@ -1096,15 +1082,11 @@ class FtpWidget(QWidget):
         toolbar.addWidget(self.btn_sync_browsing)
         toolbar.addWidget(self.btn_compare_directories)
         toolbar.addStretch(1)
-        toolbar.addWidget(self.btn_upload)
-        toolbar.addWidget(self.btn_download)
 
         layout = QVBoxLayout(self)
         layout.addLayout(toolbar)
         layout.addWidget(self.transfer_splitter)
 
-        self.btn_upload.clicked.connect(self.upload_selected)
-        self.btn_download.clicked.connect(self.download_selected)
         self.mode_combo.currentIndexChanged.connect(self._update_effective_label)
         self.local_panel.selectionChanged.connect(self._update_effective_label)
         self.local_panel.fileActivated.connect(self._upload_local_path)
@@ -1784,8 +1766,6 @@ class FtpWidget(QWidget):
         self.mode_label.setText(t("ftp.transfer_type"))
         for index, key in enumerate(("mode_auto", "mode_binary", "mode_ascii")):
             self.mode_combo.setItemText(index, t(f"ftp.{key}"))
-        self.btn_upload.setText(t("ftp.upload_selected"))
-        self.btn_download.setText(t("ftp.download_selected"))
         self.btn_sync_browsing.setText(t("ftp.sync_browsing"))
         if not self._sync_status_reason:
             self._set_sync_status("")

@@ -41,7 +41,7 @@ def create_transfer_conflict_dialog(parent, files, item):
     msg = wx.StaticText(panel, label=message)
     msg.Wrap(460)
     sizer.Add(msg, 0, wx.ALL | wx.EXPAND, 12)
-    btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
+    btn_sizer = wx.WrapSizer(wx.HORIZONTAL)
     # Buttons: Overwrite, Skip, Rename, Cancel, optionally Resume
     overwrite = wx.Button(panel, label=t("dirs.conflict_overwrite") if t("dirs.conflict_overwrite") != "[dirs.conflict_overwrite]" else "Overwrite")
     skip = wx.Button(panel, label=t("dirs.conflict_skip") if t("dirs.conflict_skip") != "[dirs.conflict_skip]" else "Skip")
@@ -50,6 +50,14 @@ def create_transfer_conflict_dialog(parent, files, item):
     resume_btn = None
     if resume_supported:
         resume_btn = wx.Button(panel, label=t("transfer.conflict_resume") if t("transfer.conflict_resume") != "[transfer.conflict_resume]" else "Resume")
+    conditional_buttons = {
+        action: wx.Button(panel, label=t(f"transfer.conflict_{action}"))
+        for action in (
+            "overwrite_if_newer",
+            "overwrite_if_size_differs",
+            "overwrite_if_size_differs_or_newer",
+        )
+    }
     # order: Overwrite, Resume?, Skip, Rename, Cancel
     btn_sizer.Add(overwrite, 0, wx.ALL, 4)
     if resume_btn:
@@ -57,6 +65,8 @@ def create_transfer_conflict_dialog(parent, files, item):
     btn_sizer.Add(skip, 0, wx.ALL, 4)
     btn_sizer.Add(rename, 0, wx.ALL, 4)
     btn_sizer.Add(cancel, 0, wx.ALL, 4)
+    for button in conditional_buttons.values():
+        btn_sizer.Add(button, 0, wx.ALL, 4)
     sizer.Add(btn_sizer, 0, wx.ALL | wx.EXPAND, 8)
     panel.SetSizer(sizer)
     dlg_sizer = wx.BoxSizer(wx.VERTICAL)
@@ -80,6 +90,13 @@ def create_transfer_conflict_dialog(parent, files, item):
     def on_resume(_event):
         result["value"] = "resume"
         dlg.EndModal(wx.ID_OK)
+
+    def on_conditional(action):
+        def _choose(_event):
+            result["value"] = action
+            dlg.EndModal(wx.ID_OK)
+
+        return _choose
 
     def on_rename(_event):
         # prompt for new name
@@ -121,8 +138,17 @@ def create_transfer_conflict_dialog(parent, files, item):
     rename.Bind(wx.EVT_BUTTON, on_rename)
     if resume_btn:
         resume_btn.Bind(wx.EVT_BUTTON, on_resume)
+    for action, button in conditional_buttons.items():
+        button.Bind(wx.EVT_BUTTON, on_conditional(action))
     # expose for tests
-    dlg._wx_conflict_controls = {"overwrite": overwrite, "skip": skip, "rename": rename, "cancel": cancel, "resume": resume_btn}
+    dlg._wx_conflict_controls = {
+        "overwrite": overwrite,
+        "skip": skip,
+        "rename": rename,
+        "cancel": cancel,
+        "resume": resume_btn,
+        **conditional_buttons,
+    }
     dlg._wx_conflict_result = result
     dlg._wx_conflict_resume_supported = resume_supported
     return dlg
@@ -162,9 +188,9 @@ def _build_transfers(parent, controller=None, embedded=False):
         queue_list = _make_list()
         failed_list = _make_list()
         completed_list = _make_list()
-        notebook.AddPage(queue_list, t("transfer.queue_tab"))
-        notebook.AddPage(failed_list, t("transfer.failed_tab"))
-        notebook.AddPage(completed_list, t("transfer.completed_tab"))
+        notebook.AddPage(queue_list, f"{t('transfer.queue_tab')} (0)")
+        notebook.AddPage(failed_list, f"{t('transfer.failed_tab')} (0)")
+        notebook.AddPage(completed_list, f"{t('transfer.completed_tab')} (0)")
         # button row
         btn_stop = wx.Button(panel, label=t("transfer.stop"))
         btn_cancel = wx.Button(panel, label=t("transfer.cancel"))
@@ -298,11 +324,29 @@ def _build_transfers(parent, controller=None, embedded=False):
         except RuntimeError:
             pass
 
+    def _refresh_tab_counts():
+        if not embedded or not _is_safe():
+            return
+        try:
+            labels = (
+                ("transfer.queue_tab", "queue_map"),
+                ("transfer.failed_tab", "failed_map"),
+                ("transfer.completed_tab", "completed_map"),
+            )
+            for index, (key, map_name) in enumerate(labels):
+                notebook.SetPageText(
+                    index,
+                    f"{t(key)} ({len(state[map_name])})",
+                )
+        except RuntimeError:
+            return
+
     def set_controller(value):
         state["controller"] = value
         # UI updates must run on main thread
         def _do_set():
             _update_button_state()
+            _refresh_tab_counts()
             if embedded and value is not None:
                 try:
                     eng = getattr(value, "engine", None)
@@ -343,6 +387,7 @@ def _build_transfers(parent, controller=None, embedded=False):
                                     pass
                 except Exception:
                     pass
+            _refresh_tab_counts()
 
         # Use post to ensure main thread execution if not on main thread
         try:
@@ -457,10 +502,6 @@ def _build_transfers(parent, controller=None, embedded=False):
                     if iid not in state["completed_map"]:
                         state["completed_map"][iid] = item
                         _add_row(completed_list, item, "Successful", "")
-                    try:
-                        notebook.SetSelection(2)
-                    except Exception:
-                        pass
                 elif event == "failed":
                     try:
                         status.SetLabel(t("transfer.errors_tab"))
@@ -476,11 +517,8 @@ def _build_transfers(parent, controller=None, embedded=False):
                     if iid not in state["failed_map"]:
                         state["failed_map"][iid] = item
                         _add_row(failed_list, item, "Failed", "")
-                    try:
-                        notebook.SetSelection(1)
-                    except Exception:
-                        pass
                 _update_button_state()
+                _refresh_tab_counts()
             except RuntimeError:
                 return
 
@@ -876,6 +914,7 @@ def _build_transfers(parent, controller=None, embedded=False):
 
     # initial button state
     _update_button_state()
+    _refresh_tab_counts()
     if embedded:
         host.Layout()
     else:

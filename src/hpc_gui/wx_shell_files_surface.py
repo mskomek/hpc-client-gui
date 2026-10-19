@@ -20,8 +20,7 @@ def build_files_surface(wx, frame, notebook, page_controls, session_state, lifec
     # Files (header row + splitter with local left, remote right + transfers bottom)
     files_page = wx.Panel(notebook)
     files_sizer = wx.BoxSizer(wx.VERTICAL)
-    # header row: Transfer type [Auto v] Effective: Binary  Synchronized browsing  Compare directories
-    #                                         Upload selected  Download selected
+    # Header row: transfer type, synchronized browsing, and comparison controls.
     # Use WrapSizer so narrow windows wrap.
     files_header = wx.WrapSizer(wx.HORIZONTAL)
     transfer_type_label = wx.StaticText(files_page, label=t("ftp.transfer_type"))
@@ -54,16 +53,12 @@ def build_files_surface(wx, frame, notebook, page_controls, session_state, lifec
     compare_btn = wx.Button(files_page, label=t("ftp.compare_directories"))
     compare_btn.SetToolTip(t("ftp.compare_directories_tooltip") if t("ftp.compare_directories_tooltip") != "[ftp.compare_directories_tooltip]" else "Compare directories")
     # keep enabled for seam; handlers check session/connection if needed but allow fake backends in tests
-    upload_selected_btn = wx.Button(files_page, label=t("ftp.upload_selected"))
-    download_selected_btn = wx.Button(files_page, label=t("ftp.download_selected"))
     files_header.Add(transfer_type_label, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 4)
     files_header.Add(transfer_choice, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 4)
     files_header.Add(effective_label, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 4)
     files_header.Add(sync_cb, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 4)
     files_header.Add(compare_btn, 0, wx.ALL, 4)
     files_header.AddStretchSpacer(1)
-    files_header.Add(upload_selected_btn, 0, wx.ALL, 4)
-    files_header.Add(download_selected_btn, 0, wx.ALL, 4)
     files_sizer.Add(files_header, 0, wx.EXPAND | wx.ALL, 4)
     transfer_splitter = wx.SplitterWindow(files_page)
     transfer_splitter.SetMinimumPaneSize(140)
@@ -98,45 +93,8 @@ def build_files_surface(wx, frame, notebook, page_controls, session_state, lifec
         except Exception:
             pass
     transfer_choice.Bind(wx.EVT_CHOICE, _on_transfer_choice)
-    # Upload/Download selected must call same operation callbacks the remote panel toolbar already uses
-    def _header_upload(_evt):
-        # Same implementation the local toolbar uses; no second upload path.
-        run = getattr(local_panel, "_wx_local_run_action", None)
-        if callable(run):
-            run("upload")
-
-    def _header_download(_evt):
-        # Same implementation the remote toolbar uses; no second download path.
-        # Mirror _on_toolbar_download: forward the panel's current selection
-        # plus its directory (DEF-W04-002: a bare run("download") never
-        # matched run_action(action, selected, target_dir) and raised
-        # TypeError on every header click, leaving a silent no-op).
-        run = getattr(remote_panel, "_wx_remote_run_action", None)
-        if not callable(run):
-            return
-        try:
-            tabs = getattr(remote_panel, "_wx_remote_tabs", None) or []
-            notebook = getattr(remote_panel, "_wx_remote_notebook", None)
-            sel_idx = notebook.GetSelection() if notebook is not None else 0
-            tstate = tabs[sel_idx] if 0 <= sel_idx < len(tabs) else (tabs[0] if tabs else None)
-            if tstate is not None:
-                listing = tstate.get("listing")
-                entries = tstate.get("entries") or ()
-                selected = tuple(
-                    entry.path
-                    for idx, entry in enumerate(entries)
-                    if listing is not None and listing.IsSelected(idx)
-                )
-                run("download", selected, tstate.get("path", "/"))
-                return
-        except Exception:
-            pass
-        run("download", (), "/")
-
-    upload_selected_btn.Bind(wx.EVT_BUTTON, _header_upload)
-    download_selected_btn.Bind(wx.EVT_BUTTON, _header_download)
     notebook.AddPage(files_page, t("tabs.ftp"), False)
-    page_controls["NAV-FILES"] = {"page": files_page, "local": local_panel, "remote": remote_panel, "transfers": transfers_panel, "splitter": transfer_splitter, "header": files_header, "transfer_type_label": transfer_type_label, "transfer_choice": transfer_choice, "effective_label": effective_label, "sync_cb": sync_cb, "compare_btn": compare_btn, "upload_selected": upload_selected_btn, "download_selected": download_selected_btn, "current_effective_mode": _current_effective_mode}
+    page_controls["NAV-FILES"] = {"page": files_page, "local": local_panel, "remote": remote_panel, "transfers": transfers_panel, "splitter": transfer_splitter, "header": files_header, "transfer_type_label": transfer_type_label, "transfer_choice": transfer_choice, "effective_label": effective_label, "sync_cb": sync_cb, "compare_btn": compare_btn, "current_effective_mode": _current_effective_mode}
     # --- Sync browsing & Compare directories wiring (Wave 48) ---
     _sync_state = {"enabled": False, "roots": SyncRoots(), "guard": False, "generation": 0}
     _compare_state = {"generation": 0, "in_flight": False, "closed": False}

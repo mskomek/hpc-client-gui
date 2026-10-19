@@ -4,6 +4,7 @@ from __future__ import annotations
 from threading import Event, Thread
 from pathlib import PurePosixPath
 from hpc_gui.services.transfer_session_controller import TransferSessionController
+from hpc_gui.services.transfer_conflict_policy import resolve_conflict_action
 import inspect
 import os
 from hpc_gui.core.i18n import t
@@ -149,6 +150,7 @@ def _start_file_transfers(session_state, lifecycle, items, *, on_progress=None, 
     """Queue file-view transfers through the shared transfer lifecycle."""
     from hpc_gui.wx_transfer_workspace import create_transfer_progress
     from hpc_gui.config.storage import coerce_profile_transfer_parallelism
+    from hpc_gui.services.transfer_conflict_policy import get_session_conflict_action
 
     session = session_state.get("session") or {}
     files = files_backend or session.get("files")
@@ -157,10 +159,37 @@ def _start_file_transfers(session_state, lifecycle, items, *, on_progress=None, 
 
     rename_for_all = {"enabled": False}
 
+    def conflict_evaluator(item, action):
+        def metadata(path, *, local):
+            try:
+                if local:
+                    info = os.stat(path)
+                    return int(info.st_size), int(info.st_mtime)
+                size, mtime = files.stat(path)
+                return int(size), int(mtime)
+            except Exception:
+                return None, None
+
+        source_local = item.op == "upload"
+        target_local = item.op == "download"
+        source_size, source_mtime = metadata(item.src, local=source_local)
+        target_size, target_mtime = metadata(item.dst, local=target_local)
+        return resolve_conflict_action(
+            action,
+            source_size=source_size,
+            target_size=target_size,
+            source_mtime=source_mtime,
+            target_mtime=target_mtime,
+        )
+
     def wx_conflict_resolver(item):
         import wx
 
-        if session_state.get("conflict_policy") == "rename" or rename_for_all["enabled"]:
+        if (
+            session_state.get("conflict_policy") == "rename"
+            or rename_for_all["enabled"]
+            or get_session_conflict_action(item.op) == "rename"
+        ):
             target = PurePosixPath(item.dst)
             suffix = target.suffix
             stem = target.name[: -len(suffix)] if suffix else target.name
@@ -187,6 +216,14 @@ def _start_file_transfers(session_state, lifecycle, items, *, on_progress=None, 
                     getattr(dlg, "_wx_conflict_apply_all", None)
                     and dlg._wx_conflict_apply_all.GetValue()
                 )
+                always_use = bool(
+                    getattr(dlg, "_wx_conflict_always_use", None)
+                    and dlg._wx_conflict_always_use.GetValue()
+                )
+                downloads_only = bool(
+                    getattr(dlg, "_wx_conflict_downloads_only", None)
+                    and dlg._wx_conflict_downloads_only.GetValue()
+                )
                 # if rename, raw is tuple
                 if isinstance(raw, tuple) and raw and raw[0] == "rename":
                     selected = raw
@@ -194,10 +231,23 @@ def _start_file_transfers(session_state, lifecycle, items, *, on_progress=None, 
                         rename_for_all["enabled"] = True
                 else:
                     # map string decisions
-                    selected = raw if raw in {"overwrite", "skip", "resume", "cancel"} else "cancel"
+                    selected = raw if raw in {
+                        "overwrite",
+                        "overwrite_if_newer",
+                        "overwrite_if_size_differs",
+                        "overwrite_if_size_differs_or_newer",
+                        "skip",
+                        "resume",
+                        "cancel",
+                    } else "cancel"
                 decision["value"] = (
-                    {"value": selected, "apply_all": True}
-                    if apply_all
+                    {
+                        "value": selected,
+                        "apply_all": apply_all,
+                        "always_use": always_use,
+                        "downloads_only": downloads_only,
+                    }
+                    if apply_all or always_use
                     else selected
                 )
                 dlg.Destroy()
@@ -280,7 +330,17 @@ def _start_file_transfers(session_state, lifecycle, items, *, on_progress=None, 
             on_progress(item, done, total)
 
     profile = session.get("profile") if isinstance(session.get("profile"), dict) else {}
-    parallel_limit = coerce_profile_transfer_parallelism(profile.get("transfer_parallelism", 1))
+    configured_parallel_limit = coerce_profile_transfer_parallelism(
+        profile.get("transfer_parallelism", 1)
+    )
+    # A profile cannot override the backend's channel-safety contract. FTP
+    # adapters share a control/data session and advertise serial-only; SSH
+    # adapters may opt in after isolating each transfer channel.
+    parallel_limit = (
+        configured_parallel_limit
+        if bool(getattr(files, "supports_parallel_transfers", False))
+        else 1
+    )
     controller = TransferSessionController(
         items,
         run_item,
@@ -290,6 +350,7 @@ def _start_file_transfers(session_state, lifecycle, items, *, on_progress=None, 
             and _destination_exists(files, item.op, item.dst)
         ),
         conflict_resolver=conflict_resolver or session_state.get("conflict_resolver") or (wx_conflict_resolver if parent else None),
+        conflict_evaluator=conflict_evaluator,
         verify=lambda item: _verify_transfer_item(files, item),
         on_queue=queue_event,
         on_progress=progress_event,

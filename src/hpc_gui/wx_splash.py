@@ -5,24 +5,16 @@ from __future__ import annotations
 from threading import Thread
 
 from hpc_gui.core.i18n import subscribe_language_change, t, unsubscribe_language_change
-
-
-STAGES = ("updates", "preferences", "helpers")
-STAGE_LABELS = {
-    "updates": "Updates",
-    "preferences": "Preferences",
-    "helpers": "Helpers",
-}
-
-# Visual states for each stage — spec §22
-STATE_PENDING = "pending"   # ○
-STATE_ACTIVE = "active"     # ● / spinner
-STATE_COMPLETE = "complete" # ✓
-STATE_FAILED = "failed"     # !
-
-
-def _stage_icon(state: str) -> str:
-    return {"pending": "○", "active": "●", "complete": "✓", "failed": "!"} .get(state, "○")
+from hpc_gui.wx_splash_stages import (
+    STATE_ACTIVE,
+    STATE_COMPLETE,
+    STATE_FAILED,
+    STATE_PENDING,
+    STAGES,
+    create_stage_indicators,
+    refresh_stage_indicators,
+)
+from hpc_gui.wx_splash_progress import create_splash_gauge
 
 
 def create_startup_splash(parent=None, *, profiles: list[dict] | None = None, lifecycle=None, on_connect=None, on_offline=None, on_reload=None, pure_splash: bool = False, mock_update: bool = False):
@@ -71,80 +63,11 @@ def create_startup_splash(parent=None, *, profiles: list[dict] | None = None, li
     root.Add(brand_sub, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.BOTTOM, 12)
 
     # --- Stage indicators §22: Preferences Helpers Updates Session with ○/●/✓/! ---
-    stage_sizer = wx.BoxSizer(wx.HORIZONTAL)
-    stage_controls: dict[str, wx.StaticText] = {}
-    for sid in STAGES:
-        # Use label keys if available, else fallback
-        label_key = f"splash.stage_{sid}"
-        lbl = t(label_key) if t(label_key) != f"[{label_key}]" else STAGE_LABELS[sid]
-        st = wx.StaticText(panel, label=f"{_stage_icon(STATE_PENDING)}  {lbl}")
-        try:
-            st.SetMinSize(wx.Size(110, -1))
-        except Exception:
-            pass
-        stage_controls[sid] = st
-        # 8px standard spacing between related controls per §4
-        stage_sizer.Add(st, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 4)
+    stage_sizer, stage_controls = create_stage_indicators(wx, panel)
     root.Add(stage_sizer, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.BOTTOM, 8)
 
-    # --- Progress bar §23: custom filled bar — always full on open, reliable on all platforms ---
-    class _SplashGauge(wx.Panel):
-        def __init__(self, parent):
-            super().__init__(parent, style=wx.BORDER_NONE)
-            self.SetMinSize(wx.Size(-1, 18))
-            self.SetBackgroundColour(wx.Colour(229, 231, 235))
-            self._range = 100
-            self._value = 100
-            self._fill = wx.Panel(self, style=wx.BORDER_NONE)
-            self._fill.SetBackgroundColour(wx.Colour(37, 99, 235))
-            # Use absolute positioning for reliable fill; sizer proportion caused 0-width on some DPIs
-            self.Bind(wx.EVT_SIZE, self._on_size)
-            self.Bind(wx.EVT_PAINT, self._on_paint)
-        def _on_size(self, evt):
-            self._update_fill()
-            evt.Skip()
-        def _on_paint(self, evt):
-            evt.Skip()
-        def _update_fill(self):
-            try:
-                sz = self.GetClientSize()
-                w = int(sz.width * max(0, min(1, self._value / max(1, self._range))))
-                # Ensure at 100% we fill exactly, at 0 we hide
-                if w <= 0:
-                    self._fill.Hide()
-                else:
-                    self._fill.SetSize(wx.Size(w, sz.height))
-                    self._fill.SetPosition(wx.Point(0, 0))
-                    self._fill.Show()
-                self.Refresh()
-            except Exception:
-                pass
-        def SetValue(self, v):
-            self._value = max(0, min(self._range, int(v)))
-            self._update_fill()
-        def GetValue(self):
-            return self._value
-        def GetRange(self):
-            return self._range
-        def SetRange(self, r):
-            self._range = max(1, int(r))
-            self._update_fill()
-        def Pulse(self):
-            # Keep full — no indeterminate
-            self.SetValue(self._range)
-        def SetForegroundColour(self, c):
-            try:
-                self._fill.SetBackgroundColour(c)
-            except Exception:
-                pass
-        def SetBackgroundColour(self, c):
-            try:
-                super().SetBackgroundColour(c)
-            except Exception:
-                pass
-
-    gauge = _SplashGauge(panel)
-    gauge.SetValue(0)
+    # --- Progress bar §23: custom filled bar, reliable across platforms ---
+    gauge = create_splash_gauge(wx, panel)
     root.Add(gauge, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 12)
     progress_detail = wx.StaticText(panel, label="")
     root.Add(progress_detail, 0, wx.ALIGN_CENTER | wx.LEFT | wx.RIGHT | wx.BOTTOM, 8)
@@ -198,6 +121,13 @@ def create_startup_splash(parent=None, *, profiles: list[dict] | None = None, li
     mandatory_panel.Hide()
     root.Add(mandatory_panel, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 8)
 
+    skip_updates_label = t("updates.skip_updates")
+    if skip_updates_label == "[updates.skip_updates]":
+        skip_updates_label = "Skip Updates"
+    update_skip_btn = wx.Button(panel, label=skip_updates_label)
+    update_skip_btn.Hide()
+    root.Add(update_skip_btn, 0, wx.ALIGN_RIGHT | wx.RIGHT | wx.BOTTOM, 12)
+
     panel.SetSizer(root)
     # Dialog sizer
     dlg_sizer = wx.BoxSizer(wx.VERTICAL)
@@ -208,21 +138,7 @@ def create_startup_splash(parent=None, *, profiles: list[dict] | None = None, li
 
     # Helpers
     def _refresh_stage_labels():
-        for sid, ctrl in stage_controls.items():
-            cur = state["stages"].get(sid, STATE_PENDING)
-            base = t(f"splash.stage_{sid}") if t(f"splash.stage_{sid}") != f"[splash.stage_{sid}]" else STAGE_LABELS[sid]
-            icon = _stage_icon(cur)
-            try:
-                ctrl.SetLabel(f"{icon}  {base}")
-                # Bold for active
-                fnt = ctrl.GetFont()
-                if cur == STATE_ACTIVE:
-                    fnt.SetWeight(wx.FONTWEIGHT_BOLD)
-                else:
-                    fnt.SetWeight(wx.FONTWEIGHT_NORMAL)
-                ctrl.SetFont(fnt)
-            except Exception:
-                pass
+        refresh_stage_indicators(wx, stage_controls, state["stages"])
         panel.Layout()
 
     def set_stage(stage_id: str, stage_state: str):
@@ -230,12 +146,21 @@ def create_startup_splash(parent=None, *, profiles: list[dict] | None = None, li
             return
         state["stages"][stage_id] = stage_state
         state["stage"] = stage_id
+        if stage_id != "updates" or stage_state != STATE_ACTIVE:
+            set_update_skip_visible(False)
         try:
             import wx as _wx
             if _wx.GetApp() is not None:
                 _wx.CallAfter(_refresh_stage_labels)
             else:
                 _refresh_stage_labels()
+        except Exception:
+            pass
+
+    def set_update_skip_visible(visible: bool):
+        try:
+            update_skip_btn.Show(bool(visible) and state["stage"] == "updates" and state["stages"].get("updates") == STATE_ACTIVE)
+            panel.Layout()
         except Exception:
             pass
 
@@ -475,6 +400,8 @@ def create_startup_splash(parent=None, *, profiles: list[dict] | None = None, li
         try:
             mand_view.SetLabel(t("common.details") if t("common.details") != "[common.details]" else "View Details")
             mand_update.SetLabel(t("updates.update_now") if t("updates.update_now") != "[updates.update_now]" else "Update Now")
+            skip_label = t("updates.skip_updates")
+            update_skip_btn.SetLabel(skip_label if skip_label != "[updates.skip_updates]" else "Skip Updates")
         except Exception:
             pass
 
@@ -508,8 +435,10 @@ def create_startup_splash(parent=None, *, profiles: list[dict] | None = None, li
         "mandatory_view": mand_view,
         "mandatory_update": mand_update,
         "mandatory_skip": mand_skip,
+        "update_skip": update_skip_btn,
     }
     dlg._wx_splash_set_stage = set_stage
+    dlg._wx_splash_set_update_skip_visible = set_update_skip_visible
     dlg._wx_splash_set_progress = set_progress
     dlg._wx_splash_set_status = set_status
     dlg._wx_splash_append_log = append_log

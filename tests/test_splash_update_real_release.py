@@ -3,14 +3,14 @@ from pathlib import Path
 
 import pytest
 
-SHELL = Path(__file__).resolve().parents[1] / "src" / "hpc_gui" / "wx_application.py"
+SHELL = Path(__file__).resolve().parents[1] / "src" / "hpc_gui" / "wx_startup_flow.py"
 
 
 def test_splash_update_check_has_no_demo_release():
     source = SHELL.read_text(encoding="utf-8")
     assert "Sahte güncelleme" not in source
     assert "example.com" not in source
-    assert "release=_found" in source
+    assert "release=release" in source
 
 
 def test_update_available_dialog_uses_the_given_release(monkeypatch):
