@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import os
+import select
 import sys
+import time
 from contextlib import contextmanager
 from typing import Callable, Iterator
 
@@ -31,10 +33,13 @@ def normalize_terminal_key(key: str) -> str:
     return key
 
 
-def _read_windows_key() -> str:
+def _read_windows_key() -> str | None:
     import msvcrt
 
     while True:
+        if not msvcrt.kbhit():
+            time.sleep(0.05)
+            return None
         try:
             key = msvcrt.getwch()
         except KeyboardInterrupt:
@@ -53,8 +58,8 @@ def _read_windows_key() -> str:
 
 
 @contextmanager
-def terminal_key_reader() -> Iterator[Callable[[], str]]:
-    """Yield a one-key reader, enabling raw mode on POSIX terminals."""
+def terminal_key_reader() -> Iterator[Callable[[], str | None]]:
+    """Yield a nonblocking one-key reader, enabling raw mode on POSIX."""
     if os.name == "nt":
         yield _read_windows_key
         return
@@ -66,7 +71,10 @@ def terminal_key_reader() -> Iterator[Callable[[], str]]:
     previous = termios.tcgetattr(descriptor)
     tty.setraw(descriptor)
     try:
-        def read_key() -> str:
+        def read_key() -> str | None:
+            ready, _, _ = select.select([descriptor], [], [], 0.1)
+            if not ready:
+                return None
             return normalize_terminal_key(sys.stdin.read(1))
 
         yield read_key

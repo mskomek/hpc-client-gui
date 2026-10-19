@@ -617,7 +617,11 @@ def _run_terminal(args: argparse.Namespace) -> int:
         with terminal_key_reader() as read_key:
             while True:
                 key = read_key()
-                if not key or not session.ssh.send_shell_input(key):
+                if key and not session.ssh.send_shell_input(key):
+                    break
+                if not key and not _shell_channel_is_active(
+                    getattr(session.ssh, "_shell_channel", None)
+                ):
                     break
         return ExitCode.SUCCESS
     except CLIConnectionError as exc:
@@ -629,6 +633,10 @@ def _run_terminal(args: argparse.Namespace) -> int:
     finally:
         if session is not None:
             session.close()
+
+
+def _shell_channel_is_active(channel) -> bool:
+    return channel is not None and not getattr(channel, "closed", False)
 
 
 def _run_interactive(args: argparse.Namespace) -> int:
