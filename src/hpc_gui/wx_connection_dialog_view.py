@@ -108,6 +108,7 @@ class ConnectionDialogViewMixin:
         # Qt uses two checkboxes: save password enables edit-only; we'll use radios similarly
         # Actually map: rb.when-needed = Ask when needed (default), rb.edit-only = Do not ask while connecting if secure system storage is available
         self.rb_prompt_edit_only = wx.RadioButton(auth_box, label=t("connection.password_no_prompt"))
+        self.rb_prompt_edit_only.SetToolTip(t("connection.password_no_prompt_tip"))
         # Layout radios vertically
         radio_sizer = wx.BoxSizer(wx.VERTICAL)
         radio_sizer.Add(self.rb_prompt_when_needed, 0, wx.BOTTOM, 4)

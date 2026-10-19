@@ -40,6 +40,8 @@ def _build_settings(parent, model: WxSettingsModel | None = None, *, settings=No
     sp_parallel = wx.SpinCtrl(panel, min=1, max=16, initial=int(model.profile_settings.get("transfer_parallelism", 1) or 1))
     lbl_timeout = wx.StaticText(panel, label=t("connection.ssh_timeout") if t("connection.ssh_timeout") != "[connection.ssh_timeout]" else "SSH timeout (0 = default)")
     sp_timeout = wx.SpinCtrl(panel, min=0, max=300, initial=int(model.profile_settings.get("ssh_timeout", 0) or 0))
+    lbl_attempts = wx.StaticText(panel, label=t("settings.ssh_connection_attempts") if t("settings.ssh_connection_attempts") != "[settings.ssh_connection_attempts]" else "SSH connection attempts")
+    sp_attempts = wx.SpinCtrl(panel, min=1, max=5, initial=int(model.global_settings.get("ssh_connection_attempts", 5) or 5))
 
     btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
     btn_apply = wx.Button(panel, label=t("settings.apply"))
@@ -61,6 +63,10 @@ def _build_settings(parent, model: WxSettingsModel | None = None, *, settings=No
     row2.Add(lbl_timeout, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 8)
     row2.Add(sp_timeout, 0)
     root.Add(row2, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 12)
+    row3 = wx.BoxSizer(wx.HORIZONTAL)
+    row3.Add(lbl_attempts, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 8)
+    row3.Add(sp_attempts, 0)
+    root.Add(row3, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 12)
     root.Add(btn_sizer, 0, wx.EXPAND | wx.ALL, 16)
 
     panel.SetSizer(root)
@@ -87,6 +93,10 @@ def _build_settings(parent, model: WxSettingsModel | None = None, *, settings=No
             model.set_profile("ssh_timeout", int(sp_timeout.GetValue()))
         except Exception as exc:
             set_errors.append(("ssh_timeout", exc))
+        try:
+            model.set_global("ssh_connection_attempts", int(sp_attempts.GetValue()))
+        except Exception as exc:
+            set_errors.append(("ssh_connection_attempts", exc))
 
         def worker(pending=set_errors):
             try:

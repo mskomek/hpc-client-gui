@@ -32,6 +32,9 @@ from hpc_gui.core.secret_store import (
     unprotect_keychain_secret,
     unprotect_secret,
 )
+from hpc_gui.services.connection_profile_secrets import (
+    prepare_secret_fragment as _prepare_secret_fragment,
+)
 
 
 AskMasterCallback = Callable[[bool], str | None]  # confirm -> password or None
@@ -223,79 +226,6 @@ def verify_edit_authorization(
     return True
 
 
-def _prepare_secret_fragment(
-    *,
-    existing: dict[str, Any] | None,
-    plain_password: str,
-    save_password: bool,
-    prompt_policy: str,
-    ask_master: AskMasterCallback | None,
-) -> tuple[dict[str, Any], list[str], str, str]:
-    """Return (patch_fragment, remove_keys, old_keychain_ref, new_keychain_ref_placeholder).
-
-    ``plain_password`` is the text currently in the password field (may be empty).
-    ``existing`` is the stored profile before edit (or None for Add).
-    """
-    patch: dict[str, Any] = {}
-    remove_keys: list[str] = []
-    old_ref = str((existing or {}).get("password_keychain_ref") or "")
-    # Set new_ref placeholder; caller will fill after merging where needed.
-    if save_password:
-        plain = plain_password or ""
-        current = existing
-        # If the user left the field blank but a keychain secret exists, reuse it.
-        if keychain_available():
-            if not plain and current and current.get("password_keychain_ref"):
-                decrypted = decrypt_profile_password(current, allow_prompt=False)
-                if decrypted is None:
-                    # Caller should abort save.
-                    raise RuntimeError("saved_password_unavailable")
-                plain = decrypted
-            try:
-                if plain:
-                    new_ref = protect_keychain_secret(
-                        plain,
-                        str(current.get("password_keychain_ref")) if current and current.get("password_keychain_ref") else None,
-                    )
-                    patch["password_keychain_ref"] = new_ref
-            except Exception as exc:
-                raise RuntimeError(f"password_store_failed:{exc}") from exc
-        elif prompt_policy == "edit-only" and os_secret_store_available():
-            if not plain and current and current.get("password_enc"):
-                decrypted = decrypt_profile_password(current, allow_prompt=True, ask_master=ask_master)
-                if decrypted is None:
-                    raise RuntimeError("saved_password_unavailable")
-                plain = decrypted
-            try:
-                if plain:
-                    patch["password_dpapi"] = protect_secret(plain)
-            except Exception as exc:
-                raise RuntimeError(f"password_store_failed:{exc}") from exc
-        elif plain:
-            if ask_master is None:
-                raise RuntimeError("master_required")
-            master = ask_master(True)
-            if master is None:
-                raise RuntimeError("master_cancelled")
-            enc = encrypt_with_master(master, plain)
-            patch["password_enc"] = enc.token
-            patch["password_salt"] = enc.salt
-        else:
-            # Keep existing encrypted secret when editing and no new plaintext.
-            if current:
-                for key in ("password_keychain_ref", "password_dpapi", "password_enc", "password_salt"):
-                    if current.get(key):
-                        patch[key] = current.get(key)
-        patch["password"] = ""
-    else:
-        patch["password"] = ""
-        if existing and existing.get("password_keychain_ref"):
-            # Actual deletion happens after merge/upsert; we mark for caller.
-            pass
-        remove_keys.extend(["password_keychain_ref", "password_enc", "password_salt", "password_dpapi"])
-    return patch, remove_keys, old_ref, ""
-
-
 def save_profile(
     collected: dict[str, Any],
     *,
@@ -355,12 +285,25 @@ def save_profile(
             raise ValueError(f"profile_name_taken:{name}")
 
     # Prepare secret fragment.
+    def decrypt_existing_secret(
+        item: dict[str, Any], allow_prompt: bool
+    ) -> str | None:
+        return decrypt_profile_password(
+            item, allow_prompt=allow_prompt, ask_master=ask_master
+        )
+
     secret_patch, remove_keys, old_ref, _ = _prepare_secret_fragment(
         existing=existing,
         plain_password=plain_password,
         save_password=save_password,
         prompt_policy=prompt_policy,
         ask_master=ask_master,
+        keychain_available=keychain_available,
+        os_secret_store_available=os_secret_store_available,
+        protect_keychain=protect_keychain_secret,
+        protect_os_secret=protect_secret,
+        decrypt_saved_password=decrypt_existing_secret,
+        encrypt_password=encrypt_with_master,
     )
 
     patch: dict[str, Any] = dict(collected)

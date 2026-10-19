@@ -457,6 +457,20 @@ def set_cli_external_access_enabled(enabled: bool) -> bool:
     return value
 
 
+def get_ssh_connection_attempts(default: int = 5) -> int:
+    """Return the configured number of SSH connection attempts (1..5)."""
+    return _coerce_int_in_range(
+        load_settings().get("ssh_connection_attempts", default), default, 1, 5
+    )
+
+
+def set_ssh_connection_attempts(attempts: int) -> int:
+    """Persist the SSH connection attempt count (1..5)."""
+    value = _coerce_int_in_range(attempts, 5, 1, 5)
+    update_settings({"ssh_connection_attempts": value})
+    return value
+
+
 def get_cli_default_profile(default: str = "") -> str:
     """Return the saved CLI default profile name, or an empty string."""
     value = load_settings().get("cli_default_profile", default)

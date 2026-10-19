@@ -64,10 +64,11 @@ def test_w37_default_settings_are_documented_and_live(isolated_config):
     assert storage.get_transfer_completion_action() == "none"
     assert storage.get_sbatch_follow_mode() == storage.SBATCH_FOLLOW_MODE_OUTPUTS_TAB
     assert storage.get_cli_external_access_enabled() is False
+    assert storage.get_ssh_connection_attempts() == 5
     # Inventory covers every dialog-exposed key with owner/consumer/control.
     keys = {row["key"] for row in SETTINGS_INVENTORY}
     assert {"remote_directory_cache", "transfer_checksum",
-            "transfer_parallelism", "ssh_timeout"} <= keys
+            "ssh_connection_attempts", "transfer_parallelism", "ssh_timeout"} <= keys
     for row in SETTINGS_INVENTORY:
         for field in ("key", "owner", "type", "persisted",
                       "consumer", "ui_control", "scope"):
@@ -80,7 +81,8 @@ def test_w37_default_settings_are_documented_and_live(isolated_config):
 def test_w37_model_key_sets_are_frozen(isolated_config):
     assert set(GLOBAL_KEYS) == {
         "jobs_outputs_refresh_interval", "remote_directory_cache",
-        "transfer_checksum", "shortcut_preferences",
+        "transfer_checksum", "ssh_connection_attempts", "shortcut_preferences",
+        "ssh_connection_attempts",
     }
     assert set(PROFILE_KEYS) == {
         "transfer_parallelism", "ssh_timeout",
@@ -234,6 +236,15 @@ def test_w37_apply_reports_success_only_after_write(isolated_config):
     snapshot = model.apply()
     assert snapshot.global_settings["transfer_checksum"] is True
     assert storage.get_transfer_checksum_verification_enabled() is True
+
+
+@pytest.mark.integration
+def test_ssh_connection_attempts_setting_round_trips(isolated_config):
+    model = build_model_from_storage(apply=lambda snap: persist_model_snapshot(snap))
+    assert model.global_settings["ssh_connection_attempts"] == 5
+    model.set_global("ssh_connection_attempts", 3)
+    model.apply()
+    assert storage.get_ssh_connection_attempts() == 3
 
 
 @pytest.mark.integration

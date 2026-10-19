@@ -137,6 +137,59 @@ class ConnectionProfileServiceTests(unittest.TestCase):
         self.assertIn("password_enc", saved)
         self.assertNotIn("mysecret", str(saved))
 
+    @pytest.mark.unit
+    @pytest.mark.regression
+    def test_edit_only_profile_migrates_saved_password_to_dpapi(self):
+        existing = {
+            "name": "arf-cli",
+            "host": "h.example",
+            "save_password": True,
+            "password_enc": "encrypted-token",
+            "password_salt": "encrypted-salt",
+        }
+        storage.upsert_profile(dict(existing))
+        collected = {
+            "name": "arf-cli",
+            "host": "h.example",
+            "port": 22,
+            "username": "user",
+            "save_password": True,
+            "password_prompt_policy": "edit-only",
+        }
+        ask_master = mock.Mock(return_value="master")
+        with mock.patch("hpc_gui.services.connection_profile_service.keychain_available", return_value=False), \
+             mock.patch("hpc_gui.services.connection_profile_service.os_secret_store_available", return_value=True), \
+             mock.patch("hpc_gui.services.connection_profile_service.decrypt_profile_password", return_value="ssh-secret") as decrypt, \
+             mock.patch("hpc_gui.services.connection_profile_service.protect_secret", return_value="dpapi-token"):
+            saved = save_profile(
+                collected,
+                initial_profile=existing,
+                plain_password="",
+                save_password=True,
+                prompt_policy="edit-only",
+                ask_master=ask_master,
+            )
+
+        self.assertEqual(saved["password_dpapi"], "dpapi-token")
+        self.assertNotIn("password_enc", saved)
+        self.assertNotIn("password_salt", saved)
+        args, kwargs = decrypt.call_args
+        self.assertEqual(args[0]["password_enc"], existing["password_enc"])
+        self.assertTrue(kwargs["allow_prompt"])
+        self.assertIs(kwargs["ask_master"], ask_master)
+
+    @pytest.mark.unit
+    def test_edit_only_profile_requires_os_credential_store(self):
+        with mock.patch("hpc_gui.services.connection_profile_service.keychain_available", return_value=False), \
+             mock.patch("hpc_gui.services.connection_profile_service.os_secret_store_available", return_value=False):
+            with self.assertRaisesRegex(RuntimeError, "os_secret_store_required"):
+                save_profile(
+                    {"name": "lab", "host": "h.example"},
+                    plain_password="secret",
+                    save_password=True,
+                    prompt_policy="edit-only",
+                )
+
     @pytest.mark.integration
     @pytest.mark.wx
     @pytest.mark.semantic

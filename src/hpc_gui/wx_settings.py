@@ -29,7 +29,7 @@ from hpc_gui.core.platform import current_os
 from hpc_gui.services.shortcut_preferences import ShortcutPreferences
 
 
-GLOBAL_KEYS = frozenset({"jobs_outputs_refresh_interval", "remote_directory_cache", "transfer_checksum", "shortcut_preferences"})
+GLOBAL_KEYS = frozenset({"jobs_outputs_refresh_interval", "remote_directory_cache", "transfer_checksum", "ssh_connection_attempts", "shortcut_preferences"})
 PROFILE_KEYS = frozenset({"transfer_parallelism", "ssh_timeout", "keepalive_interval_seconds", "x11_enabled"})
 LEGACY_IGNORED_KEYS = frozenset({"terminal_graphics_auto_compatibility", "qt_webengine_gpu"})
 
@@ -39,6 +39,7 @@ GLOBAL_STORAGE_KEYS: dict[str, str] = {
     "transfer_checksum": "transfer_checksum_verification_enabled",
     "jobs_outputs_refresh_interval": "jobs_outputs_refresh_interval_seconds",
     "shortcut_preferences": "shortcut_preferences",
+    "ssh_connection_attempts": "ssh_connection_attempts",
 }
 
 #: Model profile key -> stored per-profile record key.
@@ -58,6 +59,7 @@ LIVE_APPLY_KEYS = frozenset({
     "remote_directory_cache",
     "transfer_checksum",
     "jobs_outputs_refresh_interval",
+    "ssh_connection_attempts",
     "transfer_parallelism",
     "ssh_timeout",
     "keepalive_interval_seconds",
@@ -99,6 +101,7 @@ SETTINGS_INVENTORY: tuple[dict[str, Any], ...] = (
     {"key": "transfer_checksum", "owner": "core/transfers", "type": "bool", "default": False, "persisted": "config.json:settings.transfer_checksum_verification_enabled", "sensitive": False, "migrated_from": None, "consumer": "get_transfer_checksum_verification_enabled", "ui_control": "wx Settings checkbox", "scope": "global", "live": True},
     {"key": "jobs_outputs_refresh_interval", "owner": "core/jobs", "type": "int seconds", "default": 15, "persisted": "config.json:settings.jobs_outputs_refresh_interval_seconds", "sensitive": False, "migrated_from": None, "consumer": "get_jobs_outputs_refresh_interval_seconds", "ui_control": "Jobs refresh path (no Settings dialog spin; hidden-capability, not orphan)", "scope": "global", "live": True},
     {"key": "shortcut_preferences", "owner": "core/keymap", "type": "object", "default": {}, "persisted": "config.json:settings.shortcut_preferences", "sensitive": False, "migrated_from": None, "consumer": "ShortcutPreferences", "ui_control": "shortcut preferences surface", "scope": "global", "live": True},
+    {"key": "ssh_connection_attempts", "owner": "core/connection", "type": "int 1..5", "default": 5, "persisted": "config.json:settings.ssh_connection_attempts", "sensitive": False, "migrated_from": None, "consumer": "get_ssh_connection_attempts", "ui_control": "wx Settings spin", "scope": "global", "live": True},
     {"key": "transfer_parallelism", "owner": "core/transfers", "type": "int 1..10", "default": 1, "persisted": "config.json:profiles[].transfer_parallelism", "sensitive": False, "migrated_from": "settings.transfer_parallelism (v1.4.0 global)", "consumer": "coerce_profile_transfer_parallelism", "ui_control": "wx Settings spin (profile)", "scope": "profile", "live": True},
     {"key": "ssh_timeout", "owner": "core/connection", "type": "float|None", "default": None, "persisted": "config.json:profiles[].ssh_timeout", "sensitive": False, "migrated_from": None, "consumer": "coerce_profile_ssh_timeout", "ui_control": "wx Settings spin (profile)", "scope": "profile", "live": True},
     {"key": "keepalive_interval_seconds", "owner": "core/connection", "type": "int 0..3600", "default": 30, "persisted": "config.json:profiles[].keepalive_interval_seconds", "sensitive": False, "migrated_from": None, "consumer": "coerce_keepalive_interval (CLI+GUI)", "ui_control": "connection dialog keepalive spin", "scope": "profile", "live": True},
@@ -202,6 +205,7 @@ def build_model_from_storage(
         "remote_directory_cache": _storage.get_remote_directory_cache_enabled(),
         "transfer_checksum": _storage.get_transfer_checksum_verification_enabled(),
         "jobs_outputs_refresh_interval": _storage.get_jobs_outputs_refresh_interval_seconds(),
+        "ssh_connection_attempts": _storage.get_ssh_connection_attempts(),
     }
     raw_shortcuts = settings.get("shortcut_preferences")
     if isinstance(raw_shortcuts, dict):
@@ -305,6 +309,14 @@ def persist_model_snapshot(
             persisted["global"]["jobs_outputs_refresh_interval"] = value
         except Exception as exc:
             _fail("jobs_outputs_refresh_interval", exc)
+    if "ssh_connection_attempts" in mapping:
+        try:
+            value = _storage.set_ssh_connection_attempts(
+                int(mapping["ssh_connection_attempts"])
+            )
+            persisted["global"]["ssh_connection_attempts"] = value
+        except Exception as exc:
+            _fail("ssh_connection_attempts", exc)
     if "shortcut_preferences" in mapping and isinstance(
         mapping["shortcut_preferences"], dict
     ):

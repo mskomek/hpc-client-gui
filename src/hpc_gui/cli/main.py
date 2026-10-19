@@ -612,9 +612,13 @@ def _run_terminal(args: argparse.Namespace) -> int:
         if session.ssh is None:
             raise CLIConnectionError("This command requires --transport sftp.")
         session.ssh.resize_shell_pty(args.cols, args.rows)
-        for line in sys.stdin:
-            if not session.ssh.send_shell_input(line):
-                break
+        from hpc_gui.cli.terminal_input import terminal_key_reader
+
+        with terminal_key_reader() as read_key:
+            while True:
+                key = read_key()
+                if not key or not session.ssh.send_shell_input(key):
+                    break
         return ExitCode.SUCCESS
     except CLIConnectionError as exc:
         emit_error(str(exc), exit_code=ExitCode.CONNECTION, output_format=args.format)

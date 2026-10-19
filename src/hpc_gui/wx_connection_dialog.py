@@ -104,6 +104,7 @@ class WxConnectionDialog(
         self.btn_save_system_template.SetLabel(t("connection.save_system_template"))
         self.rb_prompt_when_needed.SetLabel(t("connection.password_prompt_when_needed"))
         self.rb_prompt_edit_only.SetLabel(t("connection.password_no_prompt"))
+        self.rb_prompt_edit_only.SetToolTip(t("connection.password_no_prompt_tip"))
         self.cb_save_password.SetLabel(t("login.save_password"))
         self.cluster_toggle.SetLabel(
             f"{t('connection.system_settings')}  {'▼' if self.cluster_toggle.GetValue() else '▶'}"

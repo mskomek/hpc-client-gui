@@ -328,6 +328,7 @@ def connect_profile(profile: dict[str, Any], model: "WxConnectionModel") -> dict
     holder: dict[str, Any] = {}
     ssh = SSHClientWrapper(
         ssh_info_from_profile(profile, model),
+        logger=model.report_connection_progress,
         shell_output_cb=lambda text: [callback(text) for callback in tuple(output_subscribers)],
         disconnect_cb=_controller_disconnect_cb(model, lambda: holder.get("ssh")),
     )
@@ -358,10 +359,16 @@ class WxConnectionModel:
         self._connect = connect
         self._host_key_decision = host_key_decision
         self._keyboard_interactive = keyboard_interactive
+        self.progress_callback: Callable[[str], None] | None = None
         # Monotonic connect-attempt identity. The threaded panel worker tags
         # each attempt so a late/cancelled worker can never apply a stale
         # result over a newer attempt's state (CONN-002/CONN-003).
         self._wx_attempt = 0
+
+    def report_connection_progress(self, message: str) -> None:
+        callback = self.progress_callback
+        if callback is not None:
+            callback(str(message))
 
     def summaries(self) -> tuple[ProfileSummary, ...]:
         return tuple(
@@ -448,7 +455,7 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
     except Exception:
         pass
 
-    host, finish = make_host(parent, title=t("tabs.connection"), size=(840, 520), embedded=embedded)
+    host, finish = make_host(parent, title=t("tabs.connection"), size=(840, 620), embedded=embedded)
     panel = wx.Panel(host)
 
     # Root sizer
@@ -497,6 +504,10 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
     status_row.Add(status, 0, wx.RIGHT, 12)
     status_row.Add(active_label, 1, wx.EXPAND)
     root.Add(status_row, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 12)
+
+    from hpc_gui.wx_connection_progress import ConnectionProgressView
+
+    connection_progress = ConnectionProgressView(wx, panel, root)
 
     # Button row
     button_row = wx.BoxSizer(wx.HORIZONTAL)
@@ -652,6 +663,7 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
         state = model.controller.state.value
         if state == "connected":
             status.SetLabel(t("login.status_connected"))
+            status.SetForegroundColour(wx.Colour(34, 139, 70))
             # Show active
             active_name = ""
             try:
@@ -669,12 +681,15 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
                 active_label.SetLabel("")
         elif state == "connecting":
             status.SetLabel(t("login.status_connecting"))
+            status.SetForegroundColour(wx.Colour(180, 120, 0))
             active_label.SetLabel("")
         elif state == "failed":
             status.SetLabel(t("connection.status_failed"))
+            status.SetForegroundColour(wx.Colour(200, 35, 45))
             active_label.SetLabel("")
         else:
             status.SetLabel(t("login.status_disconnected"))
+            status.SetForegroundColour(wx.Colour(200, 35, 45))
             active_label.SetLabel("")
 
     def _update_status_from_controller():
@@ -817,7 +832,11 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
         ask_master._cache = cache  # type: ignore
         return ask_master
 
-    def _handle_save(profile: dict[str, Any], original_name: str | None = None) -> dict[str, Any] | None:
+    def _handle_save(
+        profile: dict[str, Any],
+        original_name: str | None = None,
+        ask_master_override=None,
+    ) -> dict[str, Any] | None:
         # profile is collected dict from dialog (including password plain)
         # Use shared service
         try:
@@ -832,7 +851,7 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
         # For rename, initial is old name
         if original_name and original_name != profile.get("name"):
             initial = next((p for p in model.profiles if p.get("name") == original_name), None)
-        ask_master = _master_ask_factory()
+        ask_master = ask_master_override or _master_ask_factory()
         try:
             saved = svc_save(
                 profile,
@@ -845,14 +864,19 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
             )
         except RuntimeError as exc:
             msg = str(exc)
-            if "saved_password_unavailable" in msg:
+            if "os_secret_store_required" in msg:
+                wx.MessageBox(t("connection.password_no_prompt_store_required"), t("login.err_title"), wx.OK | wx.ICON_ERROR)
+                connection_progress.set_stage(t("connection.progress_failed"))
+            elif "saved_password_unavailable" in msg:
                 wx.MessageBox(t("connection.saved_password_unavailable"), t("login.err_title"), wx.OK | wx.ICON_ERROR)
             elif "password_store_failed" in msg:
                 wx.MessageBox(t("connection.password_store_failed").format(error=msg.split(":",1)[-1]), t("login.err_title"), wx.OK | wx.ICON_ERROR)
             elif "master_cancelled" in msg:
+                connection_progress.set_stage(t("connection.progress_cancelled"))
                 return None
             else:
                 wx.MessageBox(msg, t("login.err_title"), wx.OK | wx.ICON_ERROR)
+                connection_progress.set_stage(t("connection.progress_failed"))
             return None
         except ValueError as exc:
             msg = str(exc)
@@ -876,6 +900,7 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
                 return
         initial_profile: dict[str, Any] | None = None
         original_name: str | None = None
+        ask_master_for_save = None
         if mode == "add":
             initial_profile = None
         else:
@@ -895,6 +920,7 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
                         dlg.Destroy()
                         return val, result == wx.ID_OK
                     ask_master_edit = _master_ask_factory()
+                    ask_master_for_save = ask_master_edit
                     if not verify_edit_authorization(prof, ask_master=ask_master_edit, prompt_verify=prompt_verify):
                         wx.MessageBox(t("connection.edit_auth_failed"), t("login.err_title"), wx.OK | wx.ICON_WARNING)
                         return
@@ -928,10 +954,18 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
 
         # on_save and on_save_and_connect callbacks for dialog
         def on_save(collected: dict[str, Any]) -> bool:
-            return _handle_save(collected, original_name=original_name) is not None
+            return _handle_save(
+                collected,
+                original_name=original_name,
+                ask_master_override=ask_master_for_save,
+            ) is not None
 
         def on_save_and_connect(collected: dict[str, Any]) -> bool:
-            saved = _handle_save(collected, original_name=original_name)
+            saved = _handle_save(
+                collected,
+                original_name=original_name,
+                ask_master_override=ask_master_for_save,
+            )
             if saved is None:
                 return False
             # Save & Connect owns exactly one save, then starts the normal path.
@@ -1060,6 +1094,8 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
         if stored is None:
             wx.MessageBox(t("connection.profile_not_found").format(name=sel), t("login.err_title"), wx.OK | wx.ICON_WARNING)
             return False
+        connection_progress.reset()
+        connection_progress.set_stage(t("connection.progress_credentials"), 4)
         # Typed password for Connect Selected is empty (wx panel has no typed field);
         # stored["password"] is always empty for persisted profiles, so we rely on
         # shared resolver. For typed-override tests the caller may have set
@@ -1116,6 +1152,7 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
             return False
         if resolved_password is None:
             wx.MessageBox(t("connection.saved_password_unavailable"), t("login.err_title"), wx.OK | wx.ICON_ERROR)
+            connection_progress.set_stage(t("connection.progress_failed"))
             status.SetLabel(t("connection.status_failed"))
             try:
                 model.controller.fail()
@@ -1123,6 +1160,7 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
                 pass
             _update_button_states()
             return False
+        connection_progress.set_stage(t("connection.progress_preparing"), 12)
         # Build transient profile with resolved password – never persisted
         transient = dict(stored)
         transient["password"] = resolved_password if resolved_password is not None else ""
@@ -1141,6 +1179,8 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
         disconnect_button.Enable(False)
         cancel_button.Enable(True)
         status.SetLabel(t("login.status_connecting"))
+        model.progress_callback = connection_progress.on_ssh_message
+        connection_progress.set_stage(t("connection.progress_network"), 18)
         active_label.SetLabel("")
         try:
             model.controller.begin_connect()
@@ -1209,6 +1249,8 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
                 except Exception:
                     pass
                 cancelled_msg = t("connection.auth_cancelled") if t("connection.auth_cancelled") != "[connection.auth_cancelled]" else "Authentication cancelled"
+                connection_progress.set_stage(t("connection.progress_cancelled"))
+                model.progress_callback = None
                 status.SetLabel(cancelled_msg)
                 _update_button_states()
                 return
@@ -1230,6 +1272,9 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
                     msg = describe_wx_connect_failure(error, resolved_password=resolved_password or "")
                 except Exception:
                     msg = "Connection failed"
+                connection_progress.set_stage(t("connection.progress_failed"))
+                connection_progress.set_stage(msg)
+                model.progress_callback = None
                 # Map safe known errors to translated messages
                 if "master_cancelled" in str(error):
                     msg = t("connection.auth_cancelled") if t("connection.auth_cancelled") != "[connection.auth_cancelled]" else "Authentication cancelled"
@@ -1249,6 +1294,8 @@ def _build_connection(parent, profiles, *, connect, lifecycle, on_connected, emb
                 wx.MessageBox(msg, t("login.err_title"), wx.OK | wx.ICON_ERROR)
             else:
                 status.SetLabel(t("login.status_connected"))
+                connection_progress.set_stage(t("connection.progress_ready"), 100)
+                model.progress_callback = None
                 _update_button_states()
                 if on_connected and model.controller.session:
                     on_connected(model.controller.session)

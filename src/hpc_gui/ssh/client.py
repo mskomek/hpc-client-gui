@@ -35,7 +35,7 @@ from hpc_gui.ssh.host_keys import (
     HostKeyChangedError,
     HostKeyInfo,  # noqa: F401 - compatibility re-export
     HostKeyRejectedError,  # noqa: F401 - compatibility re-export
-    _KnownHostsPolicy,
+    configure_known_hosts,
 )
 from hpc_gui.services.command_history_store import is_sensitive_command
 from hpc_gui.ssh.sftp_channels import (
@@ -43,14 +43,9 @@ from hpc_gui.ssh.sftp_channels import (
     _SFTP_LISTING_TIMEOUT_SECONDS,  # noqa: F401  (re-exported facade constant)
     _SFTP_TRANSFER_TIMEOUT_SECONDS,  # noqa: F401  (re-exported facade constant)
 )
+from hpc_gui.ssh.retry import retry_connection
 from hpc_gui.ssh.shell_session import InteractiveShellSession, _sanitize_terminal_text
-
-# (Terminal ACS map and sanitizer live in hpc_gui.ssh.shell_session.)
-
-def _decode_remote_text(data: bytes) -> str:
-    """Decode command/banner output as UTF-8 without hiding display failures."""
-    return data.decode("utf-8", errors="replace")
-
+from hpc_gui.ssh.text import decode_remote_text as _decode_remote_text
 
 class _ConnectionAuthStrategy(_BaseConnectionAuthStrategy):
     """Compatibility facade keeping legacy source-injection hooks stable."""
@@ -170,6 +165,21 @@ class SSHClientWrapper:
         *,
         shell_size: Optional[Tuple[int, int]] = None,
     ) -> None:
+        from hpc_gui.config.storage import get_ssh_connection_attempts
+
+        retry_connection(
+            lambda: self._connect_once(info, shell_size=shell_size),
+            attempts=get_ssh_connection_attempts(),
+            on_retry=self.log,
+            non_retryable=(HostKeyChangedError, HostKeyRejectedError),
+        )
+
+    def _connect_once(
+        self,
+        info: Optional[SSHConnInfo] = None,
+        *,
+        shell_size: Optional[Tuple[int, int]] = None,
+    ) -> None:
         info = info or self.info
         if info is None:
             raise ValueError('SSH connection info not provided')
@@ -181,17 +191,15 @@ class SSHClientWrapper:
             if info.known_hosts_path
             else app_data_dir() / "known_hosts"
         )
-        self.client.load_system_host_keys()
-        if known_hosts_path.exists():
-            self.client.load_host_keys(str(known_hosts_path))
-        policy = (getattr(info, "host_key_policy", "accept-new") or "accept-new").strip().lower()
+        policy = configure_known_hosts(
+            self.client,
+            known_hosts_path,
+            getattr(info, "host_key_policy", "accept-new"),
+            info.host_key_decision,
+        )
         if policy == "strict":
-            self.client.set_missing_host_key_policy(paramiko.RejectPolicy())
             self.log("SSH: host key policy = strict")
         else:
-            self.client.set_missing_host_key_policy(
-                _KnownHostsPolicy(known_hosts_path, info.host_key_decision)
-            )
             self.log("SSH: host key policy = accept-new")
 
         timeout = info.timeout if info.timeout is not None else _SSH_CONNECT_AND_KEX_TIMEOUT_SECONDS
@@ -235,6 +243,7 @@ class SSHClientWrapper:
             auth_strategy = None
             if info.keyboard_interactive_handler is not None:
                 auth_strategy = _ConnectionAuthStrategy(info, pkey)
+            self.log("SSH: negotiating transport and authenticating")
             if auth_strategy is not None:
                 self.client.connect(
                     hostname=info.host,
@@ -298,6 +307,7 @@ class SSHClientWrapper:
         except Exception:
             self._discard_partial_client()
             raise
+        self.log("SSH: authentication completed")
         transport = self.client.get_transport()
         if transport is not None:
             banner = transport.get_banner()
@@ -317,6 +327,7 @@ class SSHClientWrapper:
             cols, rows = shell_size
             self._shell_geometry = (max(1, int(cols)), max(1, int(rows)))
         try:
+            self.log("SSH: opening remote shell and SFTP")
             self._start_shell_session()
             self.sftp = self.client.open_sftp()
         except Exception:

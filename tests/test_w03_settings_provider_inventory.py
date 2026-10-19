@@ -154,6 +154,7 @@ def test_w03_settings_model_key_sets_are_frozen():
         "jobs_outputs_refresh_interval",
         "remote_directory_cache",
         "transfer_checksum",
+        "ssh_connection_attempts",
         "shortcut_preferences",
     }
     assert set(PROFILE_KEYS) == {

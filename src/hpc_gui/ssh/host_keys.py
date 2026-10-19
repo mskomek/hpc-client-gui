@@ -57,3 +57,22 @@ class _KnownHostsPolicy(paramiko.MissingHostKeyPolicy):
         client.save_host_keys(str(self.path))
         if os.name == "posix" and self.path.exists():
             self.path.chmod(0o600)
+
+
+def configure_known_hosts(
+    client: paramiko.SSHClient,
+    path: Path,
+    policy: str,
+    decision: Callable[[HostKeyInfo], str] | None,
+) -> str:
+    """Load host-key stores and install the selected target policy."""
+    client.load_system_host_keys()
+    if path.exists():
+        client.load_host_keys(str(path))
+    normalized = (policy or "accept-new").strip().lower()
+    if normalized == "strict":
+        client.set_missing_host_key_policy(paramiko.RejectPolicy())
+    else:
+        client.set_missing_host_key_policy(_KnownHostsPolicy(path, decision))
+        normalized = "accept-new"
+    return normalized
