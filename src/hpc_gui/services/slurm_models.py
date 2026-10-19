@@ -29,9 +29,22 @@ class SlurmJob:
 def _observed_fields(raw: str) -> dict[str, str]:
     """Read only key=value fields actually emitted by scheduler output."""
     fields: dict[str, str] = {}
-    keys = "NodeList|Reason|ExitCode|Command|FailedNode|WorkDir|StdOut|StdErr"
-    for match in re.finditer(rf"(?P<key>{keys})=(?P<value>.*?)(?=\s+\w+=|$)", raw):
-        fields[match.group("key")] = match.group("value").strip().strip('"')
+    keys = (
+        "JobId", "JobName", "UserId", "JobState", "Partition", "Elapsed",
+        "RunTime", "NumNodes", "NumCPUs", "NodeList", "Reason", "ExitCode",
+        "Command", "FailedNode", "WorkDir", "StdOut", "StdErr",
+    )
+    pattern = re.compile(
+        r"(?P<key>[A-Za-z][A-Za-z0-9_:/.-]*)\s*=\s*"
+        r'(?P<value>"[^"]*"|\'[^\']*\'|.*?)'
+        r"(?=\s+[A-Za-z][A-Za-z0-9_:/.-]*\s*=|$)",
+        re.IGNORECASE,
+    )
+    key_map = {key.lower(): key for key in keys}
+    for match in pattern.finditer(raw.replace("\r", " ").replace("\n", " ")):
+        canonical_key = key_map.get(match.group("key").lower())
+        if canonical_key:
+            fields[canonical_key] = match.group("value").strip().strip('"\'')
     return fields
 
 def _looks_like_job_id(value: str) -> bool:
@@ -130,12 +143,20 @@ def format_job_details(job: SlurmJob) -> str:
 
 def parse_scontrol(text: str, job_id: str = "") -> SlurmJob:
     """Parse observed key=value fields from one scontrol detail response."""
-    observed = _observed_fields(text.replace("\n", " "))
+    observed = _observed_fields(text)
     return SlurmJob(
-        job_id=job_id,
+        job_id=observed.get("JobId", job_id),
+        name=observed.get("JobName", ""),
+        user=observed.get("UserId", ""),
+        state=observed.get("JobState", ""),
+        elapsed=observed.get("Elapsed", observed.get("RunTime", "")),
+        partition=observed.get("Partition", ""),
+        nodes=observed.get("NumNodes", ""),
+        cpus=observed.get("NumCPUs", ""),
+        reason=observed.get("Reason", ""),
         raw=text,
         nodelist=observed.get("NodeList", ""),
-        failure_reason=observed.get("Reason", ""),
+        failure_reason=observed.get("Reason", observed.get("FailedNode", "")),
         exit_code=observed.get("ExitCode", ""),
         script_path=observed.get("Command", ""),
         workdir=observed.get("WorkDir", ""),

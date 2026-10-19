@@ -239,6 +239,7 @@
     "nodes": "Düğümler",
     "cpus": "CPUs",
     "reason": "Neden",
+    "node_or_reason": "Düğüm / Neden",
     "filter_hint": "İşleri filtrele...",
     "auto_refresh": "Otomatik yenile",
     "hide_finished": "Biten işleri gizle",

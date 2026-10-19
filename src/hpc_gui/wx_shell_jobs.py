@@ -174,21 +174,18 @@ def _jobs_callbacks(session_state, parent, lifecycle):
         slurm = _resolve_slurm()
         return callable(getattr(slurm, "sacct_history_result", None))
 
+    def _scontrol_details(slurm, job_id):
+        from hpc_gui.services.slurm_models import parse_scontrol
+        return parse_scontrol(str(slurm.scontrol_show_job(job_id) or ""), str(job_id))
+
     def read_output(job_id):
         slurm = _resolve_slurm()
         files = _resolve_files()
         if not slurm or not files:
             return {}
-        metadata = str(slurm.scontrol_show_job(job_id) or "")
-        paths = {}
-        for key in ("StdOut", "StdErr"):
-            for part in metadata.split():
-                if part.startswith(f"{key}="):
-                    paths[key] = part.split("=", 1)[1]
-                    break
-            else:
-                paths[key] = ""
-        if not paths["StdOut"] and not paths["StdErr"]:
+        details = _scontrol_details(slurm, job_id)
+        stdout_path, stderr_path = details.stdout_path, details.stderr_path
+        if not stdout_path and not stderr_path:
             from hpc_gui.services.jobs_history import parse_sacct_history
             history_cache = (session_state or {}).get("_jobs_history_cache", {})
             profile = _resolve_profile()
@@ -198,16 +195,19 @@ def _jobs_callbacks(session_state, parent, lifecycle):
                 str(profile.get("provider_id", "")),
                 str(profile.get("username", "")),
             )
-            cached = next((row for row in history_cache.get(identity, {}).get("rows", ())
-                           if str(row.get("job_id", "")) == str(job_id)), None)
+            cached = next((
+                row for key, entry in history_cache.items() if tuple(key[:4]) == identity
+                for row in entry.get("rows", ())
+                if str(row.get("job_id", "")) == str(job_id)
+            ), None)
             if cached is None and callable(getattr(slurm, "sacct_job", None)):
                 cached = next((row for row in parse_sacct_history(slurm.sacct_job(str(job_id)))
                                if str(row.get("job_id", "")) == str(job_id)), None)
-            paths["StdOut"] = str((cached or {}).get("stdout_path", ""))
-            paths["StdErr"] = str((cached or {}).get("stderr_path", ""))
+            stdout_path = str((cached or {}).get("stdout_path", ""))
+            stderr_path = str((cached or {}).get("stderr_path", ""))
         return {
-            "stdout": files.read_text(paths["StdOut"]) if paths["StdOut"] else "",
-            "stderr": files.read_text(paths["StdErr"]) if paths["StdErr"] else "",
+            "stdout": files.read_text(stdout_path) if stdout_path else "",
+            "stderr": files.read_text(stderr_path) if stderr_path else "",
         }
 
     def read_remote_path(path):
@@ -234,17 +234,10 @@ def _jobs_callbacks(session_state, parent, lifecycle):
             return ()
         try:
             if not workdir:
-                meta = str(slurm.scontrol_show_job(job_id) or "")
-                for part in meta.split():
-                    if part.startswith("WorkDir="):
-                        workdir = part.split("=", 1)[1]
-                        break
+                details = _scontrol_details(slurm, job_id)
+                workdir = details.workdir
                 if not workdir:
-                    for part in meta.split():
-                        if part.startswith("StdOut="):
-                            p = part.split("=", 1)[1]
-                            workdir = str(PurePosixPath(p).parent) if p else ""
-                            break
+                    workdir = str(PurePosixPath(details.stdout_path).parent) if details.stdout_path else ""
             if not workdir:
                 from hpc_gui.services.jobs_history import parse_sacct_history
                 history_cache = (session_state or {}).get("_jobs_history_cache", {})
@@ -255,8 +248,11 @@ def _jobs_callbacks(session_state, parent, lifecycle):
                     str(profile.get("provider_id", "")),
                     str(profile.get("username", "")),
                 )
-                cached = next((row for row in history_cache.get(identity, {}).get("rows", ())
-                               if str(row.get("job_id", "")) == str(job_id)), None)
+                cached = next((
+                    row for key, entry in history_cache.items() if tuple(key[:4]) == identity
+                    for row in entry.get("rows", ())
+                    if str(row.get("job_id", "")) == str(job_id)
+                ), None)
                 if cached is None and callable(getattr(slurm, "sacct_job", None)):
                     cached = next((row for row in parse_sacct_history(slurm.sacct_job(str(job_id)))
                                    if str(row.get("job_id", "")) == str(job_id)), None)
@@ -296,6 +292,50 @@ def _jobs_callbacks(session_state, parent, lifecycle):
             return str(slurm.sacct(str(profile.get("username", "")), job_id=job_id) or "")
         except TypeError:
             return str(slurm.sacct(str(profile.get("username", ""))) or "")
+
+    def _refresh_job_metadata(job_id):
+        """Return the full sacct row for a selected job, including file paths."""
+        from hpc_gui.services.jobs_history import parse_sacct_history
+
+        slurm = _resolve_slurm()
+        profile = _resolve_profile()
+        if not slurm:
+            return {}
+        job_id = str(job_id or "").strip()
+        username = str(profile.get("username", ""))
+        identity = (
+            str(profile.get("id", profile.get("profile_id", ""))),
+            str(profile.get("cluster_id", "")),
+            str(profile.get("provider_id", "")), username,
+        )
+        history_cache = (session_state or {}).get("_jobs_history_cache", {})
+        for key, entry in history_cache.items():
+            if tuple(key[:4]) != identity:
+                continue
+            cached = next((row for row in entry.get("rows", ())
+                           if str(row.get("job_id", "")) == job_id), None)
+            if cached:
+                return dict(cached)
+
+        history = getattr(slurm, "sacct_history_result", None)
+        if callable(history):
+            response = history(username, 365)
+            if getattr(response, "ok", True) is False:
+                raise RuntimeError(getattr(response, "message", "sacct history is unavailable"))
+            raw = getattr(response, "stdout", response)
+        else:
+            result = getattr(slurm, "sacct_result", None)
+            if callable(result):
+                response = result(username)
+                if getattr(response, "ok", True) is False:
+                    raise RuntimeError(getattr(response, "message", "sacct is unavailable"))
+                raw = getattr(response, "stdout", response)
+            elif callable(getattr(slurm, "sacct", None)):
+                raw = slurm.sacct(username)
+            else:
+                return {}
+        return next((row for row in parse_sacct_history(str(raw or ""))
+                     if str(row.get("job_id", "")) == job_id), {})
 
     def _show_job_details(job_id):
         slurm = _resolve_slurm()
@@ -371,6 +411,7 @@ def _jobs_callbacks(session_state, parent, lifecycle):
         "cancel": _cancel,
         "final_state": _final_state,
         "refresh_sacct": _refresh_sacct,
+        "refresh_job_metadata": _refresh_job_metadata,
         "show_job_details": _show_job_details,
         "has_status_capability": _has_status_capability,
         "refresh_lssrv": _refresh_lssrv,

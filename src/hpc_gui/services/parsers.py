@@ -73,6 +73,7 @@ _KEY_MAP = {
     "JobState": "state",
     "Partition": "partition",
     "Elapsed": "elapsed",
+    "RunTime": "elapsed",
     "NumNodes": "nodes",
     "NumCPUs": "cpus",
     "Reason": "reason",
@@ -93,14 +94,18 @@ def _parse_scontrol_fields(raw: str) -> dict[str, str]:
     Values may contain spaces if quoted. Multi-line output is joined.
     """
     fields: dict[str, str] = {}
-    # Join multi-line into single line for regex extraction
-    text = raw.replace("\n", " ")
-    for match in re.finditer(
-        r'(?P<key>[A-Za-z/]+)=(?P<value>"[^"]*"|\S+)',
-        text,
-    ):
-        key = match.group("key")
-        value = match.group("value").strip().strip('"')
+    text = raw.replace("\r", " ").replace("\n", " ")
+    known_keys = _KNOWN_SCONTROL_KEYS | frozenset(_KEY_MAP)
+    canonical_keys = {key.lower(): key for key in known_keys}
+    pattern = re.compile(
+        r"(?P<key>[A-Za-z][A-Za-z0-9_:/.-]*)\s*=\s*"
+        r'(?P<value>"[^"]*"|\'[^\']*\'|.*?)'
+        r"(?=\s+[A-Za-z][A-Za-z0-9_:/.-]*\s*=|$)"
+    )
+    for match in pattern.finditer(text):
+        raw_key = match.group("key")
+        key = canonical_keys.get(raw_key.lower(), raw_key)
+        value = match.group("value").strip().strip('"\'')
         fields[key] = value
     return fields
 

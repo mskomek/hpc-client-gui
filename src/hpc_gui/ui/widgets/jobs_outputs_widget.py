@@ -9,7 +9,8 @@ from PySide6.QtCore import QEvent, QThreadPool, QTimer, Signal, Qt
 from PySide6.QtGui import QFontDatabase, QTextCursor
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QGroupBox, QPushButton, QTextEdit,
-    QLineEdit, QLabel, QMessageBox, QMainWindow, QTabBar, QTabWidget, QCheckBox
+    QLineEdit, QLabel, QMessageBox, QMainWindow, QTabBar, QTabWidget, QCheckBox,
+    QMenu,
 )
 from shiboken6 import isValid
 
@@ -31,7 +32,7 @@ from hpc_gui.core.i18n import t
 from hpc_gui.core.ui_errors import show_exception
 from hpc_gui.core.history import append_event
 from hpc_gui.ui.widgets.remote_dir_panel import RemoteDirPanel
-from hpc_gui.services.slurm_models import parse_scontrol
+from hpc_gui.services.slurm_models import is_active_state, parse_scontrol, parse_squeue
 from hpc_gui.services.job_tracking_controller import JobTrackingController
 from hpc_gui.services.slurm_script_parser import (
     parse_job_paths,
@@ -606,6 +607,8 @@ class JobsOutputsWidget(QWidget):
         self.jobs_text = QTextEdit()
         self.jobs_text.setReadOnly(True)
         self._apply_terminal_output_style(self.jobs_text)
+        self.jobs_text.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.jobs_text.customContextMenuRequested.connect(self._show_jobs_context_menu)
 
         self.btn_refresh = QPushButton(t("jobs.refresh") if t("jobs.refresh") != "[jobs.refresh]" else "Yenile")
         self.btn_refresh.clicked.connect(self.refresh_jobs)
@@ -1077,6 +1080,36 @@ class JobsOutputsWidget(QWidget):
         return True
 
     # ---------------- Jobs
+    def _show_jobs_context_menu(self, position) -> None:
+        cursor = self.jobs_text.cursorForPosition(position)
+        line = cursor.block().text().strip()
+        fields = line.split(None, 1)
+        if not fields:
+            return
+        job_id = fields[0]
+        job = next((item for item in parse_squeue(self.jobs_text.toPlainText()) if item.job_id == job_id), None)
+        if job is None:
+            return
+        menu = QMenu(self.jobs_text)
+        cancel_action = menu.addAction(t("jobs.cancel"))
+        has_slurm = bool(self.session and self.session.get("slurm"))
+        cancel_action.setEnabled(is_active_state(job.state) and has_slurm)
+        cancel_action.triggered.connect(lambda: self._cancel_job_from_menu(job.job_id))
+        menu.exec(self.jobs_text.mapToGlobal(position))
+
+    def _cancel_job_from_menu(self, job_id: str) -> None:
+        confirmation = t("jobs.cancel_confirm").format(job_id=job_id)
+        if QMessageBox.question(
+            self,
+            t("jobs.cancel"),
+            confirmation,
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        ) != QMessageBox.StandardButton.Yes:
+            return
+        self.cancel_id.setText(job_id)
+        self.cancel_job()
+
     def refresh_jobs(self):
         if not self.session or not self.session.get("slurm"):
             return

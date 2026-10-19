@@ -25,9 +25,12 @@ _WINDOWS_EXTENDED_KEYS = {
 
 
 def normalize_terminal_key(key: str) -> str:
-    """Translate local console Enter and Backspace to terminal key bytes."""
+    """Translate local console Enter and Backspace to remote terminal keys."""
     if key in ("\r", "\n"):
-        return "\r"
+        # LF is the canonical line delimiter for a remote PTY. In particular,
+        # Windows consoles report Enter as CR, which should not be forwarded
+        # unchanged because remote terminal applications may not translate it.
+        return "\n"
     if key in ("\b", "\x7f"):
         return "\x7f"
     return key
@@ -54,7 +57,21 @@ def _read_windows_key() -> str | None:
             if low and 0xDC00 <= ord(low) <= 0xDFFF:
                 codepoint = 0x10000 + ((ord(key) - 0xD800) << 10) + ord(low) - 0xDC00
                 key = chr(codepoint)
+        if key in ("\r", "\n") and _windows_control_is_pressed():
+            # Send CR for Ctrl+Enter; some remote full-screen prompts accept
+            # this key code even when they ignore the regular Enter mapping.
+            return "\r"
         return normalize_terminal_key(key)
+
+
+def _windows_control_is_pressed() -> bool:
+    """Check the Windows modifier state for a Ctrl+Enter key chord."""
+    try:
+        import ctypes
+
+        return bool(ctypes.windll.user32.GetAsyncKeyState(0x11) & 0x8000)
+    except (AttributeError, OSError):
+        return False
 
 
 @contextmanager

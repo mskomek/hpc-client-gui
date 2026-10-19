@@ -46,7 +46,7 @@ _COLUMN_LABEL_KEYS = {
     "elapsed": "jobs.elapsed",
     "nodes": "jobs.nodes",
     "cpus": "jobs.cpus",
-    "reason": "jobs.reason",
+    "reason": "jobs.node_or_reason",
 }
 
 JOBS_PAGE = 0
@@ -371,7 +371,12 @@ def _parse_cluster_server_rows(text: str):
 
 
 def _detail_response_has_fields(text: str) -> bool:
-    return bool(re.search(r"(?:NodeList|Reason|ExitCode|Command|WorkDir|StdOut|StdErr)=", str(text or "")))
+    return bool(re.search(
+        r"\b(?:JobId|JobName|JobState|UserId|Partition|Elapsed|RunTime|NumNodes|NumCPUs|"
+        r"NodeList|Reason|ExitCode|Command|WorkDir|StdOut|StdErr)\s*=",
+        str(text or ""),
+        re.IGNORECASE,
+    ))
 
 
 def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, cancel, lifecycle, final_state, generation, embedded, refresh_sacct=None, show_job_details=None, refresh_lssrv=None, list_job_files=None, output_channel_defs=None, **kwargs):
@@ -402,6 +407,7 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         refresh_lssrv = kwargs.get("lssrv") or kwargs.get("lssrv_refresh") or kwargs.get("lssrv_callback") or kwargs.get("refresh_lssrv_callback")
     if list_job_files is None:
         list_job_files = kwargs.get("list_job_files") or kwargs.get("job_files") or kwargs.get("files_callback")
+    refresh_job_metadata = kwargs.get("refresh_job_metadata")
     open_main_files = kwargs.get("open_main_files")
     has_status_capability = kwargs.get("has_status_capability")
     if refresh_sacct is None and "refresh_sacct" in kwargs:
@@ -1179,6 +1185,26 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         _ensure_output_tabs([])
         _update_outputs_visibility()
 
+    def _clear_job_row_selection():
+        for idx in range(jobs.GetItemCount()):
+            if jobs.GetItemState(idx, wx.LIST_STATE_SELECTED):
+                jobs.SetItemState(idx, 0, wx.LIST_STATE_SELECTED)
+
+    def _on_jobs_left_down(event):
+        idx, _flags = jobs.HitTest(event.GetPosition())
+        selected = bool(state.get("selected_job")) or any(
+            jobs.GetItemState(row, wx.LIST_STATE_SELECTED)
+            for row in range(jobs.GetItemCount())
+        )
+        if idx >= 0 and jobs.GetItemState(idx, wx.LIST_STATE_SELECTED):
+            _clear_job_selection()
+            _clear_job_row_selection()
+            return
+        if idx < 0 and selected:
+            _clear_job_selection()
+            _clear_job_row_selection()
+        event.Skip()
+
     # --- Job selection handler -----------------------------------------------
     def select_job(event):
         idx = event.GetIndex()
@@ -1197,6 +1223,10 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         state["raw_accounting_result"] = None
         state["details_parse_error"] = ""
         state["accounting_parse_error"] = ""
+        # Drop the previous job's channel widgets/followers immediately. The
+        # new selection then gets a fresh resolve and poll, even if an older
+        # output request is still completing in the background.
+        _ensure_output_tabs([])
         model.tracking.select_job(job_id)
         btn_cancel.Enable(True)
         # Publish to the shared selected-job context
@@ -1211,14 +1241,10 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
             cpus=row["cpus"],
             reason=row["reason"],
         )
-        # Also set stdout/stderr from raw item if available
+        # Always show the normalized queue row, even when a provider returns
+        # legacy text rows without the richer accounting metadata.
+        _show_parsed_details(row, item if isinstance(item, dict) else {})
         if isinstance(item, dict):
-            stdout_p = str(item.get("stdout_path", "")).strip()
-            stderr_p = str(item.get("stderr_path", "")).strip()
-            if stdout_p or stderr_p:
-                model.selected_job_store.update(stdout_path=stdout_p, stderr_path=stderr_p)
-                model.set_output(stdout_p, stderr_p)
-            _show_parsed_details(row, item)
             failure = model.explain_failure(SimpleNamespace(**item))
             if failure:
                 current_reason = detail_values["reason"].GetValue()
@@ -1234,12 +1260,34 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         _refresh_sacct()
         # Show details (scontrol)
         _show_job_details()
+        # Completed/failed jobs may no longer have scontrol metadata. Load the
+        # matching sacct history row as a fallback for paths and details.
+        _refresh_job_metadata()
         # Navigate shared browser to WorkDir
         _navigate_files_to_workdir()
         # Refresh outputs tab
-        refresh_outputs_tab()
+        refresh_outputs_tab(force=True)
         # NOTE: Do NOT auto-switch to Details tab.
         # User stays on Jobs; details content is updated in background.
+
+    def _on_jobs_right_click(event):
+        idx = event.GetIndex()
+        if idx < 0 or idx >= len(state.get("items", [])):
+            return
+        jobs.Select(idx)
+        select_job(event)
+        row = _parse_job_row(state["items"][idx])
+        menu = wx.Menu()
+        cancel_item = menu.Append(wx.ID_ANY, t("jobs.cancel"))
+        from hpc_gui.services.slurm_models import is_active_state
+        cancel_item.Enable(
+            bool(cancel)
+            and is_active_state(row["state"])
+            and not state["cancel_in_flight"]
+        )
+        menu.Bind(wx.EVT_MENU, cancel_job, id=cancel_item.GetId())
+        jobs.PopupMenu(menu)
+        menu.Destroy()
 
     def _update_summary_header():
         ctx = model.selected_job_store.context
@@ -1266,12 +1314,17 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         script_p = str(item.get("script_path", "")).strip() if isinstance(item, dict) else ""
         nodelist = str(item.get("nodelist", "")).strip() if isinstance(item, dict) else ""
         exit_code = str(item.get("exit_code", "")).strip() if isinstance(item, dict) else ""
+        reason = (
+            str(item.get("failure_reason", item.get("reason", row.get("reason", "")))).strip()
+            if isinstance(item, dict) else row.get("reason", "")
+        )
         _set_detail("workdir", workdir)
         _set_detail("stdout_path", stdout_p)
         _set_detail("stderr_path", stderr_p)
         _set_detail("script_path", script_p)
         _set_detail("nodelist", nodelist)
         _set_detail("exit_code", exit_code)
+        _set_detail("reason", reason)
         # Compute resources value
         nodes = row.get("nodes", "")
         cpus = row.get("cpus", "")
@@ -1280,18 +1333,70 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         else:
             res_str = "—"
         _set_detail("resources", res_str)
-        if isinstance(item, dict):
-            update_kwargs: dict[str, str] = {}
-            if workdir:
-                update_kwargs["workdir"] = workdir
-            if stdout_p:
-                update_kwargs["stdout_path"] = stdout_p
-            if stderr_p:
-                update_kwargs["stderr_path"] = stderr_p
-            if script_p:
-                update_kwargs["script_path"] = script_p
-            if update_kwargs:
-                model.selected_job_store.update(**update_kwargs)
+        update_kwargs: dict[str, str] = {}
+        metadata = {
+            "name": row.get("name", ""),
+            "state": row.get("state", ""),
+            "partition": row.get("partition", ""),
+            "elapsed": row.get("elapsed", ""),
+            "nodes": row.get("nodes", ""),
+            "cpus": row.get("cpus", ""),
+            "reason": reason,
+            "workdir": workdir,
+            "stdout_path": stdout_p,
+            "stderr_path": stderr_p,
+            "script_path": script_p,
+            "nodelist": nodelist,
+            "exit_code": exit_code,
+            "failure_reason": reason,
+            "user": str(item.get("user", "")).strip(),
+        }
+        update_kwargs.update({key: value for key, value in metadata.items() if value})
+        if update_kwargs:
+            model.selected_job_store.update(**update_kwargs)
+            context = model.selected_job_store.context
+            model.set_output(context.stdout_path, context.stderr_path)
+
+    def _refresh_job_metadata():
+        if not callable(refresh_job_metadata):
+            return
+        job_id = state["selected_job"]
+        if not job_id:
+            return
+        request_generation = model.selected_job_store.generation
+
+        def worker():
+            try:
+                result = refresh_job_metadata(job_id)
+                post(_done_job_metadata, result, None, job_id, request_generation)
+            except Exception as error:
+                post(_done_job_metadata, None, error, job_id, request_generation)
+
+        def _done_job_metadata(result, error, req_job_id, req_generation):
+            if (state["closed"] or state["selected_job"] != req_job_id
+                    or model.selected_job_store.generation != req_generation):
+                return
+            if error or not isinstance(result, dict):
+                return
+            metadata = {key: str(value).strip() for key, value in result.items() if value not in (None, "")}
+            if not metadata:
+                return
+            current_item = next((
+                candidate for candidate in state.get("raw_items", ())
+                if _parse_job_row(candidate)["job_id"] == req_job_id
+            ), {})
+            combined = dict(current_item) if isinstance(current_item, dict) else {}
+            combined.update(metadata)
+            combined.setdefault("id", req_job_id)
+            row = _parse_job_row(combined)
+            base_row = _parse_job_row(current_item) if current_item else {}
+            for field in ("name", "state", "partition", "elapsed", "nodes", "cpus", "reason"):
+                if not row.get(field) and base_row.get(field):
+                    row[field] = base_row[field]
+            _show_parsed_details(row, combined)
+            _update_summary_header()
+            _navigate_files_to_workdir()
+            refresh_outputs_tab(force=True)
 
     # --- Refresh jobs -------------------------------------------------------
     # W28: explicit idle -> refreshing -> success(timestamp) | failure(error,
@@ -1774,27 +1879,29 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
                         details_warning_label.Show()
                         details_content_sizer.Layout()
                         return
+                parsed_job_id = str(getattr(detail, "job_id", "") or "").strip()
+                if parsed_job_id and parsed_job_id != req_job_id:
+                    state["details_parse_error"] = "job details returned a different job ID"
+                    details_warning_label.SetLabel(t("jobs_outputs.parse_error_details"))
+                    details_warning_label.Show()
+                    details_content_sizer.Layout()
+                    return
+                state["details_parse_error"] = ""
+                field_map = (
+                    ("name", "name"), ("state", "state"),
+                    ("partition", "partition"), ("elapsed", "elapsed"),
+                    ("nodes", "nodes"), ("cpus", "cpus"), ("reason", "reason"),
+                    ("workdir", "workdir"), ("stdout_path", "stdout_path"),
+                    ("stderr_path", "stderr_path"), ("script_path", "script_path"),
+                    ("nodelist", "nodelist"), ("exit_code", "exit_code"),
+                    ("failure_reason", "failure_reason"),
+                )
                 update_kwargs: dict[str, str] = {}
-                if detail.workdir:
-                    update_kwargs["workdir"] = detail.workdir
-                if detail.stdout_path:
-                    update_kwargs["stdout_path"] = detail.stdout_path
-                if detail.stderr_path:
-                    update_kwargs["stderr_path"] = detail.stderr_path
-                if detail.script_path:
-                    update_kwargs["script_path"] = detail.script_path
-                if detail.nodelist:
-                    update_kwargs["nodelist"] = detail.nodelist
-                if detail.exit_code:
-                    update_kwargs["exit_code"] = detail.exit_code
-                if detail.failure_reason:
-                    update_kwargs["failure_reason"] = detail.failure_reason
-                _set_detail("workdir", detail.workdir)
-                _set_detail("stdout_path", detail.stdout_path)
-                _set_detail("stderr_path", detail.stderr_path)
-                _set_detail("script_path", detail.script_path)
-                _set_detail("nodelist", detail.nodelist)
-                _set_detail("exit_code", detail.exit_code)
+                for context_field, detail_field in field_map:
+                    value = str(getattr(detail, detail_field, "") or "").strip()
+                    if value:
+                        update_kwargs[context_field] = value
+                        _set_detail(detail_field, value)
                 if update_kwargs:
                     model.selected_job_store.update(**update_kwargs)
                     model.set_output(
@@ -1936,6 +2043,17 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         Thread(target=worker, daemon=True).start()
 
     # --- Job files ----------------------------------------------------------
+    def _files_directory(ctx):
+        """Use the work directory, or the known output/script parent as a fallback."""
+        if ctx.workdir:
+            return ctx.workdir
+        for remote_path in (ctx.stdout_path, ctx.stderr_path, ctx.script_path):
+            if remote_path:
+                parent = str(PurePosixPath(remote_path).parent)
+                if parent not in {"", "."}:
+                    return parent
+        return ""
+
     def _update_files_header(ctx=None):
         ctx = ctx or model.selected_job_store.context
         if not ctx.job_id:
@@ -1947,7 +2065,7 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
             + (f" · {ctx.name}" if ctx.name else "")
         )
         files_workdir_label.SetLabel(
-            f"{t('jobs_outputs.workdir')}: {ctx.workdir or '—'}"
+            f"{t('jobs_outputs.workdir')}: {_files_directory(ctx) or '—'}"
         )
 
     def _navigate_files_to_workdir(_event=None):
@@ -1957,10 +2075,15 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         if not ctx.job_id:
             _show_files_selected_state(False)
             return
-        _show_files_selected_state(bool(ctx.workdir))
-        workdir = ctx.workdir
+        workdir = _files_directory(ctx)
         if not workdir:
+            # The selected job may not have exposed its work directory yet.
+            # Keep the Files page in the selected-job state, and clear any
+            # prior job's listing so it cannot be mistaken for this job's.
+            _reset_files_browser()
+            _show_files_selected_state(True)
             return
+        _show_files_selected_state(True)
         try:
             files_browser._wx_remote_controls["navigate"](workdir)
             files_browser._wx_remote_controls["load"]()
@@ -1970,6 +2093,7 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
     # --- Outputs tab --------------------------------------------------------
     def _ensure_output_tabs(channels: list[ResolvedOutputChannel]):
         """Create or update output channel tabs to match resolved channels."""
+        nonlocal output_no_channels_label
         current_ids = set(output_channels.keys())
         new_ids = {c.id for c in channels}
         for cid in current_ids - new_ids:
@@ -2084,6 +2208,10 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
                         roles=ch.roles,
                     )
         if not channels:
+            if output_no_channels_label is None:
+                output_no_channels_label = wx.StaticText(
+                    output_channel_notebook, label=t("jobs_outputs.no_channels"),
+                )
             output_no_channels_label.Show()
             if output_channel_notebook.GetPageCount() == 0:
                 output_channel_notebook.AddPage(
@@ -2091,13 +2219,18 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
                     t("jobs_outputs.outputs_title"),
                 )
         else:
-            output_no_channels_label.Hide()
-            try:
-                idx = output_channel_notebook.GetPageIndex(output_no_channels_label)
-                if idx >= 0:
-                    output_channel_notebook.DeletePage(idx)
-            except Exception:
-                pass
+            if output_no_channels_label is not None:
+                output_no_channels_label.Hide()
+                try:
+                    idx = next((index for index in range(output_channel_notebook.GetPageCount())
+                                if output_channel_notebook.GetPage(index) is output_no_channels_label), -1)
+                    if idx >= 0:
+                        output_channel_notebook.DeletePage(idx)
+                    else:
+                        output_no_channels_label.Destroy()
+                except Exception:
+                    pass
+                output_no_channels_label = None
 
     def _refresh_single_channel(channel_id):
         """Refresh output for a single channel (per-channel refresh button)."""
@@ -2244,6 +2377,35 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
                     follower = state.get("followers", {}).get(channel.id)
                     if follower is None:
                         continue
+                    selected_context = model.selected_job_store.context
+                    if (
+                        callable(read_output)
+                        and selected_context.job_id == active_owner[0]
+                        and not selected_context.workdir
+                        and not selected_context.stdout_path
+                        and not selected_context.stderr_path
+                        and channel.path
+                        and not PurePosixPath(channel.path).is_absolute()
+                        and set(channel.roles) & {"stdout", "stderr"}
+                    ):
+                        try:
+                            legacy = read_output(active_owner[0])
+                            if isinstance(legacy, dict):
+                                values = [
+                                    str(legacy.get(role, "") or "")
+                                    for role in ("stdout", "stderr")
+                                    if role in channel.roles
+                                ]
+                                content = "\n".join(dict.fromkeys(value for value in values if value))
+                            elif isinstance(legacy, (tuple, list)):
+                                content = "\n".join(str(value or "") for value in legacy if value)
+                            else:
+                                content = str(legacy or "")
+                            results[channel.id] = (content, not bool(content), True, False, False)
+                            continue
+                        except (FileNotFoundError, OSError):
+                            results[channel.id] = (None, True, False, True, False)
+                            continue
                     if callable(readers) and channel.path:
                         try:
                             _chunk, retained, waiting = follower.poll(readers, _remote_statter)
@@ -2613,6 +2775,11 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
                 pass
         _refresh_provider_status()
         refresh_jobs()
+        if keep_selection:
+            _show_job_details()
+            _refresh_job_metadata()
+            _navigate_files_to_workdir()
+            refresh_outputs_tab(force=True)
 
     # --- Minimize -----------------------------------------------------------
     def iconized(event):
@@ -2717,7 +2884,9 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
         except Exception:
             pass
     # --- Bind events --------------------------------------------------------
+    jobs.Bind(wx.EVT_LEFT_DOWN, _on_jobs_left_down)
     jobs.Bind(wx.EVT_LIST_ITEM_SELECTED, select_job)
+    jobs.Bind(wx.EVT_LIST_ITEM_RIGHT_CLICK, _on_jobs_right_click)
     try:
         jobs.Bind(wx.EVT_LIST_COL_CLICK, _on_column_click)
     except Exception:
@@ -2745,12 +2914,17 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
     # --- Per-channel search / find / jump / open / show ---------------------
     def _get_active_channel_textctrl():
         sel = output_channel_notebook.GetSelection()
-        if sel < 0 or sel >= output_channel_notebook.GetPageCount():
-            return None
-        page = output_channel_notebook.GetPage(sel)
-        for cid, tc in output_channels.items():
-            if tc.GetParent() is page:
-                return tc
+        if 0 <= sel < output_channel_notebook.GetPageCount():
+            page = output_channel_notebook.GetPage(sel)
+            for tc in output_channels.values():
+                if tc.GetParent() is page:
+                    return tc
+        for index in range(output_channel_notebook.GetPageCount()):
+            page = output_channel_notebook.GetPage(index)
+            for tc in output_channels.values():
+                if tc.GetParent() is page:
+                    output_channel_notebook.SetSelection(index)
+                    return tc
         return None
 
     def _on_search(_event=None):
@@ -2844,11 +3018,54 @@ def _build_jobs(parent, model: WxJobsModel | None, *, list_jobs, read_output, ca
 
     def _on_notebook_page_changed(evt):
         try:
-            page = notebook.GetCurrentPage()
-            if page is files_page:
+            page_index = evt.GetSelection()
+            ctx = model.selected_job_store.context
+            job_id = state.get("selected_job") or ctx.job_id
+            if not job_id:
+                evt.Skip()
+                return
+            if not state.get("selected_job"):
+                state["selected_job"] = job_id
+                model.tracking.select_job(job_id)
+            current_item = next((
+                candidate for candidate in state.get("raw_items", ())
+                if _parse_job_row(candidate)["job_id"] == job_id
+            ), {})
+            item = dict(current_item) if isinstance(current_item, dict) else {}
+            row = _parse_job_row(item) if item else {"job_id": job_id}
+            context_fields = (
+                "name", "state", "partition", "elapsed", "nodes", "cpus", "reason",
+                "workdir", "stdout_path", "stderr_path", "script_path", "nodelist",
+                "exit_code", "failure_reason",
+            )
+            updates = {}
+            for key in context_fields:
+                value = getattr(ctx, key, "") or item.get(key, "")
+                if value:
+                    updates[key] = value
+                    item[key] = value
+                    if key in row:
+                        row[key] = value
+            updates["job_id"] = job_id
+            model.selected_job_store.update(**updates)
+            _show_parsed_details(row, item)
+            _show_details_content(True)
+            _update_summary_header()
+            if page_index == DETAILS_PAGE:
+                if not (ctx.workdir or ctx.stdout_path or ctx.stderr_path):
+                    _show_job_details()
+                    _refresh_job_metadata()
+                _refresh_sacct()
+            elif page_index == FILES_PAGE:
                 _navigate_files_to_workdir()
-            elif page is outputs_page:
-                refresh_outputs_tab()
+                if not (ctx.workdir or ctx.stdout_path or ctx.stderr_path):
+                    _show_job_details()
+                    _refresh_job_metadata()
+            elif page_index == OUTPUTS_PAGE:
+                if not (ctx.workdir or ctx.stdout_path or ctx.stderr_path):
+                    _show_job_details()
+                    _refresh_job_metadata()
+                refresh_outputs_tab(force=True)
         except Exception:
             pass
         evt.Skip()

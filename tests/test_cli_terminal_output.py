@@ -44,9 +44,9 @@ def test_terminal_session_activates_deferred_shell_output(monkeypatch):
     assert state == {"connected": True, "activated": True}
 
 
-def test_terminal_input_maps_enter_to_carriage_return():
-    assert normalize_terminal_key("\n") == "\r"
-    assert normalize_terminal_key("\r") == "\r"
+def test_terminal_input_maps_enter_to_remote_newline():
+    assert normalize_terminal_key("\n") == "\n"
+    assert normalize_terminal_key("\r") == "\n"
 
 
 def test_terminal_input_maps_backspace_to_delete_key():

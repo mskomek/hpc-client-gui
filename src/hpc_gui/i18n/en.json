@@ -242,6 +242,7 @@
     "nodes": "Nodes",
     "cpus": "CPUs",
     "reason": "Reason",
+    "node_or_reason": "Node / Reason",
     "filter_hint": "Filter jobs...",
     "auto_refresh": "Auto refresh",
     "hide_finished": "Hide finished jobs",

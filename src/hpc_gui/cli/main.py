@@ -607,16 +607,32 @@ def _run_terminal(args: argparse.Namespace) -> int:
         emit_error("terminal requires an interactive terminal.", exit_code=ExitCode.USAGE, output_format=args.format)
         return ExitCode.USAGE
     session = None
+    terminal_started = False
     try:
+        profile = str(getattr(args, "profile", None) or "default profile")
+        print(
+            f"Connecting to {profile}; authenticating and opening the remote terminal...",
+            file=sys.stderr,
+            flush=True,
+        )
         session = CLISession.open(args)
         if session.ssh is None:
             raise CLIConnectionError("This command requires --transport sftp.")
         session.ssh.resize_shell_pty(args.cols, args.rows)
         from hpc_gui.cli.terminal_input import terminal_key_reader
 
+        print(
+            "SSH connected. Remote terminal is ready; use Ctrl+Enter for dialog buttons, Ctrl+C to close.",
+            file=sys.stderr,
+            flush=True,
+        )
         with terminal_key_reader() as read_key:
+            terminal_started = True
             while True:
                 key = read_key()
+                if key == "\x03":
+                    print("Closing remote terminal...", file=sys.stderr, flush=True)
+                    break
                 if key and not session.ssh.send_shell_input(key):
                     break
                 if not key and not _shell_channel_is_active(
@@ -624,6 +640,9 @@ def _run_terminal(args: argparse.Namespace) -> int:
                 ):
                     break
         return ExitCode.SUCCESS
+    except KeyboardInterrupt:
+        print("Terminal connection cancelled.", file=sys.stderr, flush=True)
+        return 130
     except CLIConnectionError as exc:
         emit_error(str(exc), exit_code=ExitCode.CONNECTION, output_format=args.format)
         return ExitCode.CONNECTION
@@ -633,6 +652,11 @@ def _run_terminal(args: argparse.Namespace) -> int:
     finally:
         if session is not None:
             session.close()
+        if terminal_started and sys.stdout.isatty():
+            # Remote full-screen programs can leave the local console in an
+            # alternate screen or hide its cursor when the SSH channel closes.
+            sys.stdout.write("\x1b[0m\x1b[?25h\x1b[?1049l\r\n")
+            sys.stdout.flush()
 
 
 def _shell_channel_is_active(channel) -> bool:
