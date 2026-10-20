@@ -196,16 +196,16 @@ class TestFilesBehavior:
     @pytest.mark.contract
     def test_filter_labels_localized(self):
         load_language("en")
-        assert t("dirs.tab_all") == "All"
+        assert t("dirs.tab_all") == "All files"
         assert t("dirs.tab_folders") == "Folders"
         assert t("dirs.tab_iso") == "ISO"
         assert t("dirs.tab_archives") == "Archives"
         assert t("dirs.tab_slurm") == "Slurm"
-        assert t("dirs.tab_shell") == "SH"
+        assert t("dirs.tab_shell") == "Shell"
         assert t("dirs.tab_other") == "Other"
         load_language("tr")
-        assert t("dirs.tab_all") == "Tümü"
-        assert t("dirs.tab_shell") == "SH"
+        assert t("dirs.tab_all") == "Tüm dosyalar"
+        assert t("dirs.tab_shell") == "Shell"
 
     @pytest.mark.contract
     def test_follow_wording_localized(self):
@@ -463,12 +463,12 @@ class TestWave80Audit:
     def test_files_filter_architecture_preserved(self):
         """Section 15: Filter labels preserved."""
         load_language("en")
-        assert t("dirs.tab_all") == "All"
+        assert t("dirs.tab_all") == "All files"
         assert t("dirs.tab_folders") == "Folders"
         assert t("dirs.tab_iso") == "ISO"
         assert t("dirs.tab_archives") == "Archives"
         assert t("dirs.tab_slurm") == "Slurm"
-        assert t("dirs.tab_shell") == "SH"
+        assert t("dirs.tab_shell") == "Shell"
         assert t("dirs.tab_other") == "Other"
 
     @pytest.mark.contract
