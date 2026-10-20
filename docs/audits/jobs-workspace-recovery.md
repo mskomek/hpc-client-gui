@@ -61,6 +61,7 @@ Date: 2026-10-20
 | Windows PyInstaller build | PASS | Rebuilt from worktree HEAD `4f1179d37cd4cbc96a32323f2b4f07cd35c1998e` with Python 3.14.0 / PyInstaller 6.22.2. Isolated onedir artifact: `.tmp/jobs-vm-final-20261020/dist/hpc-client-gui/hpc-client-gui.exe`, SHA256 `7cbd5073db7a3a43bc343a0029ebadad688c08f4090792f1cb44136ff10094dc`. |
 | Packaged Windows smoke | PASS | Same artifact SHA passed all 21/21 checks: runtime/frame/settings, terminal/PTY, remote file roundtrip, Jobs, Files, editor, transfer queue, reconnect identity, and clean shutdown. Host runner recorded Python 3.12.4 and isolated execution outside `src`. |
 | Windows11 VM package launch | PASS (narrow) | Canonical interactive runner launched the staged artifact in `test\\home` Explorer session with `--help`; exit code 0, no timeout, and guest SHA256 exactly matched host SHA256. This is CLI/package launch evidence, not a second full GUI workflow replay. |
+| Windows11 VM GUI workflow | BLOCKED_ENV | A direct GUI attempt reached the startup update modal and did not reach the main frame. No update was installed. Follow-up isolated GUI harness launches failed in the canonical interactive runner bootstrap with `state.json` creation collision before the executable started; no bypass was used. |
 | Persistent Ubuntu toolchain | PASS | Python 3.14.8 and Python 3.12.3 venvs with release-locked runtime/test libraries (wxPython supplied separately), PyInstaller 6.22.2 and Ruff 0.15.5 live under `/home/test/.venvs/`. Official Ubuntu 24.04 `python3-wxgtk4.0` 4.2.1 plus its three wx runtime `.deb` packages are persistently cached under `/home/test/.cache/hpc-client-gui/wx-debs` and extracted under `/home/test/.local/opt/hpc-client-gui/wx`; `/home/test/.local/bin/hpc-client-gui-python312` sets Python/library paths. GNU binutils 2.42 is extracted under `/home/test/.local/opt/hpc-client-gui/binutils` with `objdump`/`objcopy` wrappers in `/home/test/.local/bin`. No sudo or system package database changes were needed. |
 | Ubuntu Linux PyInstaller build | PASS | GUI-capable build using Python 3.12.3 + wxPython 4.2.1: `/tmp/jobs-workspace-recovery-4f1179d/build-wx42/dist/hpc-client-gui/hpc-client-gui`; SHA256 `c05622024c411446a33ec7e880429ce44e47f1bffa8832ea3b69a5d60ab28ce2`. `ldd` reported no missing shared libraries. |
 | Ubuntu packaged CLI smoke | PASS | Built artifact `--help` returned 0 and printed the expected CLI command inventory. |
@@ -78,7 +79,7 @@ No change was made to `mskomek/hpc-client-gui-plugins`. TRUBA `1.5.0` history fi
 
 - The 3,325-line `wx_jobs.py` still uses the repository-owned exception (expires `2026-10-23`) while a cohesive extraction to `src/hpc_gui/jobs/` is pending; no other newly changed first-party file exceeds 500 lines.
 - Ubuntu runtime validation used the official Ubuntu wxPython 4.2.1 package with Python 3.12.3; it differs from the 4.3.1 release-lock pin. Packaged build, GUI startup, and 158 Jobs tests passed with the distro version. Building the pinned wxPython 4.3.1 from source would require authorized admin provisioning of the missing compiler/GTK development dependencies.
-- Windows11 guest validation launched the rebuilt artifact with `--help` under the `test\home` Explorer session; the full 21/21 packaged workflow smoke passed on the Windows host.
+- Windows11 guest CLI launch passed under `test\home` Explorer; a full GUI guest run remains blocked by the startup update modal and subsequent canonical-runner bootstrap state-file collision. The full 21/21 packaged workflow smoke passed on the Windows host.
 - The feature branch was pushed after the final diff/test gates; the legacy Jobs UI exception remains time-bounded.
 
 ## Local commits
@@ -92,5 +93,6 @@ No change was made to `mskomek/hpc-client-gui-plugins`. TRUBA `1.5.0` history fi
 - `f119e2e7` — wx isolation and regression fixture updates
 - `4f1179d3` — Windows performance probe isolation and audit update
 - `8a27b784` — GUI workflow, release harness and Ubuntu/Windows validation follow-up
+- `596f8603` — final cross-platform Jobs evidence and push record
 
-Push: [origin/codex/jobs-workspace-recovery](https://github.com/mskomek/hpc-client-gui/tree/codex/jobs-workspace-recovery). Code/test commit `8a27b784b260994887827c5451550511e30d782f` was verified as remote HEAD before this audit-only follow-up.
+Push: [origin/codex/jobs-workspace-recovery](https://github.com/mskomek/hpc-client-gui/tree/codex/jobs-workspace-recovery). Code/test commit `8a27b784b260994887827c5451550511e30d782f` and audit commit `596f860396d98f0a6955fd78a0fd60a8f71168c8` were pushed; this follow-up records the Windows11 GUI runner block.
