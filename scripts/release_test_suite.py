@@ -93,6 +93,9 @@ ISOLATED_NATIVE_GUI_FILES = (
     "tests/test_wx_jobs_files_outputs.py",
     "tests/test_wx_jobs_final_fix.py",
     "tests/test_wx_jobs_stress.py",
+    # The performance probe exercises the Qt event loop and can tear down
+    # native GUI state owned by neighboring mixed-toolkit tests on Windows.
+    "tests/test_performance_probe.py",
 )
 ISOLATED_TEST_NODES = (
     "tests/test_wx_terminal_interaction.py::test_header_status_identity_dimensions",

@@ -46,7 +46,7 @@ Date: 2026-10-20
 | Ruff over `src scripts tests` | PASS | `All checks passed!` |
 | Compile, i18n and headless smoke preflight | PASS | Release harness compileall, `check_i18n.py`, and `smoke_test.py` all passed. |
 | Focused Jobs/storage/provider/SSH/Files/wire regression | PASS | 283 passed in 303.16s. |
-| Release harness combined pytest partition | FAIL / BLOCKED | Windows native access violation (`0xC000041D`) in `tests/test_lssrv_auto_refresh.py` after the test process had run other wx/SSH tests. The failing file passes alone (13/13); it was added to the harness isolation list, but the complete harness was not rerun after that final list update. Other prior combined-process crash sites (`jobs_outputs_scroll`, `local_dir_panel`) also passed when isolated and were added to the isolation list. |
+| Release harness combined pytest partition | FAIL / BLOCKED | The latest full run again terminated its combined Windows pytest process with native access violation `0xC000041D` at about 25% progress. `test_performance_probe.py` passed 3/3 when run alone and is now isolated in the release harness, but the broad run still crashes elsewhere. The subsequent isolated `test_wx_shell_p0_stress_real_wx_paths` did not complete within the observed run and was interrupted; it is not counted as a pass. Earlier crash sites (`jobs_outputs_scroll`, `local_dir_panel`, `lssrv_auto_refresh`) passed when isolated and remain separate harness boundaries. |
 | Release harness evidence-gated W04 tests | BLOCKED | `artifacts/v2-final/W04/SUPPORT_MATRIX_FREEZE.md` is absent, so four repository-defined evidence tests are not run. |
 | Windows PyInstaller build | PASS | Project spec build succeeded. Artifact SHA256 `edad31f7c65cc2fe29dadb40b0b8b085d3bf623790281dd9dfa9c29c01b71098`; built from HEAD `2de6fc065fc3e617d5186b6c20d21750aafece9f` plus the then-uncommitted fixes. |
 | Packaged smoke | PASS | Retry passed 21/21 checks, including Jobs, Files, output roundtrip, reconnect identity and clean shutdown. The first run had a transient Turkish keyboard-layout input mismatch and failed; the repeat passed. |
@@ -70,10 +70,11 @@ No change was made to `mskomek/hpc-client-gui-plugins`. TRUBA `1.5.0` history fi
 
 - `72359f27` — profile-scoped workspace records
 - `32aae234` — workspace restoration and safe details deletion
-- `7051a62c` — persistence and path recovery tests`n- `2de6fc06` — initial audit record
+- `7051a62c` — persistence and path recovery tests
+- `2de6fc06` — initial audit record
 - `cd780e09` — SSH jump failure/settings contracts
 - `a043d8d5` — snapshot secret redaction
 - `f119e2e7` — wx isolation and regression fixture updates
-- Audit report commit: this file
+- Windows performance probe isolation and audit update (this commit)
 
 Push: none; validation gates remain open. No remote feature URL exists yet.
