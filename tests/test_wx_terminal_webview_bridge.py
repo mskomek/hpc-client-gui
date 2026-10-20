@@ -206,7 +206,9 @@ def test_wx_terminal_close_releases_native_webview():
     panel.close()
 
     assert webview.stopped == 1
-    assert webview.destroyed == 1
+    # close() stops the native controller but leaves destruction to its wx
+    # parent. Explicitly destroying WebView2 here can race queued callbacks.
+    assert webview.destroyed == 0
     assert panel._webview is None
     assert panel._is_parity is False
 

@@ -421,6 +421,11 @@ def test_wx_terminal_large_pre_ready_output():
 import sys, os
 sys.path.insert(0, "src")
 import wx, time
+import hpc_gui.wx_terminal_webview as terminal_webview
+# This case covers pre-ready buffering; do not create a browser controller.
+def _native_view_not_needed():
+    return False
+terminal_webview._is_webview_available = _native_view_not_needed
 from hpc_gui.wx_terminal_webview import WxTerminalWebViewPanel
 
 class FakeSSH:

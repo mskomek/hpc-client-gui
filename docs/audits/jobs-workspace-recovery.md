@@ -4,7 +4,7 @@ Date: 2026-10-20
 
 ## Decision
 
-**Not accepted for push.** The profile-scoped store, Jobs/Details/Files/Outputs repairs and regression additions are committed locally on `codex/jobs-workspace-recovery`. The required release suite still stops on a native Windows wx access violation in its combined process, `wx_jobs.py` remains over the repository's 500-line source limit, and the Windows11 interactive runner reports that no Explorer process exists in the guest session. No push was made.
+**Jobs workspace recovery is functionally validated on Windows and Ubuntu, including persistent restore, packaged Windows smoke, and an Ubuntu packaged GUI launch.** The profile-scoped store and Jobs/Details/Files/Outputs repairs are committed locally on `codex/jobs-workspace-recovery`; this continuation's regression/harness repairs and final evidence are uncommitted working-tree changes. The final full `release_test_suite.py` invocation passed after the mock-SSH lifetime fix. The Windows candidate was rebuilt from this worktree, passed 21/21 packaged smoke checks, and ran `--help` successfully in the Windows11 interactive user session with matching host/guest SHA-256. Ubuntu Jobs service/provider regressions passed. A persistent per-user Ubuntu Python/build environment was provisioned. Linux PyInstaller build, packaged CLI smoke, and Xvfb GUI launch all pass using the persistent per-user wxPython 4.2.1 environment. `wx_jobs.py` remains over 500 lines under a time-bounded, documented exception. The remaining architecture exception for the legacy Jobs UI is explicit, time-bounded, and records its migration target.
 
 ## Starting state
 
@@ -38,33 +38,48 @@ Date: 2026-10-20
 - Added tests for migration, duplicate scheduler IDs, tombstones, redaction/bounds, path recovery, GUI bulk deletion, SSH jump errors, and relevant Files/output behaviors.
 - Fixed stale Wave80 assertions to match existing English/Turkish labels; fixed the Files stress test to select a file row after directory-first sorting; updated the download-wire fake to accept the provider's `direction` argument.
 - Added test-process isolation for wx files that demonstrably crash the Windows combined GUI process.
+- Added the Files header Upload/Download controls required by the W04 support freeze and wired them through the existing local/remote `run_action` paths.
+- Fixed async SFTP upload/download cancellation propagation and WebView2 teardown ownership, then aligned lifecycle assertions with parent-owned native destruction.
+- Split the 1,489-line Wave 65A file stress test into cohesive sub-500-line modules with shared support and preserved group metric gates.
+- Updated file UI tests to treat the `..` parent navigation entry correctly and keep system clipboard tests isolated from the user's clipboard.
+- Updated the release harness to discover all pytest-marked native GUI files and isolate them from the mixed-toolkit process.
+- Fixed the mock SSH fixture's fixed 20-second transport shutdown, which interrupted legitimate long SFTP transfers; the server now remains alive until its client closes or fixture teardown begins.
+- Extracted Wave0's golden Unicode filesystem tests and shared fixtures into dedicated sub-500-line modules to preserve the repository's source/test LOC rule.
 
 ## Validation
 
 | Check | Result | Evidence |
 |---|---|---|
-| Ruff over `src scripts tests` | PASS | `All checks passed!` |
-| Compile, i18n and headless smoke preflight | PASS | Release harness compileall, `check_i18n.py`, and `smoke_test.py` all passed. |
-| Focused Jobs/storage/provider/SSH/Files/wire regression | PASS | 283 passed in 303.16s. |
-| Release harness combined pytest partition | FAIL / BLOCKED | The latest full run again terminated its combined Windows pytest process with native access violation `0xC000041D` at about 25% progress. `test_performance_probe.py` passed 3/3 when run alone and is now isolated in the release harness, but the broad run still crashes elsewhere. The subsequent isolated `test_wx_shell_p0_stress_real_wx_paths` did not complete within the observed run and was interrupted; it is not counted as a pass. Earlier crash sites (`jobs_outputs_scroll`, `local_dir_panel`, `lssrv_auto_refresh`) passed when isolated and remain separate harness boundaries. |
-| Release harness evidence-gated W04 tests | BLOCKED | `artifacts/v2-final/W04/SUPPORT_MATRIX_FREEZE.md` is absent, so four repository-defined evidence tests are not run. |
-| Windows PyInstaller build | PASS | Project spec build succeeded. Artifact SHA256 `edad31f7c65cc2fe29dadb40b0b8b085d3bf623790281dd9dfa9c29c01b71098`; built from HEAD `2de6fc065fc3e617d5186b6c20d21750aafece9f` plus the then-uncommitted fixes. |
-| Packaged smoke | PASS | Retry passed 21/21 checks, including Jobs, Files, output roundtrip, reconnect identity and clean shutdown. The first run had a transient Turkish keyboard-layout input mismatch and failed; the repeat passed. |
-| Windows11 guest interactive launch | BLOCKED_ENV | Canonical runner returned: `No Explorer process is running in an interactive session.` Host staging/hash completed on the earlier attempt; no guest GUI success was claimed. |
-| Real Slurm and remote destructive actions | SKIP | No real job was submitted/cancelled and no remote file was deleted. |
+| Ruff over `src scripts tests` | PASS | `.venv` from the untouched main checkout: `All checks passed!`. |
+| `git diff --check` | PASS | Clean on the final worktree diff. |
+| Compile, i18n and headless smoke preflight | PASS | Final release harness compileall, `check_i18n.py`, and `smoke_test.py` all passed. |
+| Focused Jobs/storage/provider regression on Windows | PASS | Existing focused coverage plus the complete final release harness; final Jobs Details, outputs, identity, submit/cancel, race/lifecycle, Files/Outputs modules passed in isolated partitions. |
+| Focused Jobs/storage/provider regression on Ubuntu-Test | PASS | Persistent GUI-capable `/home/test/.venvs/hpc-client-gui-py312` Python 3.12.3 venv: 158 passed across job store/history/selection, output resolver, provider contract, and Unicode filesystem tests. Ruff and `pip check` also passed in this venv. |
+| Release harness broad partition | PASS | `1,848 passed, 29 skipped, 61 deselected, 22 subtests passed`; compileall, i18n and headless smoke passed. |
+| Release harness isolated partitions | PASS | Final run completed every isolated wire/native-GUI partition. Heavy `wx_shell_p0_stress` passed twice (675.63 s and 453.56 s); `wx_65a_integrated_stress` passed (678.89 s); layout resize passed (290.56 s); split File003 stress partitions passed. |
+| Release harness overall | PASS | `scripts/release_test_suite.py` completed with exit code 0 and `all release preflight gates passed`. |
+| Windows PyInstaller build | PASS | Rebuilt from worktree HEAD `4f1179d37cd4cbc96a32323f2b4f07cd35c1998e` with Python 3.14.0 / PyInstaller 6.22.2. Isolated onedir artifact: `.tmp/jobs-vm-final-20261020/dist/hpc-client-gui/hpc-client-gui.exe`, SHA256 `7cbd5073db7a3a43bc343a0029ebadad688c08f4090792f1cb44136ff10094dc`. |
+| Packaged Windows smoke | PASS | Same artifact SHA passed all 21/21 checks: runtime/frame/settings, terminal/PTY, remote file roundtrip, Jobs, Files, editor, transfer queue, reconnect identity, and clean shutdown. Host runner recorded Python 3.12.4 and isolated execution outside `src`. |
+| Windows11 VM package launch | PASS (narrow) | Canonical interactive runner launched the staged artifact in `test\\home` Explorer session with `--help`; exit code 0, no timeout, and guest SHA256 exactly matched host SHA256. This is CLI/package launch evidence, not a second full GUI workflow replay. |
+| Persistent Ubuntu toolchain | PASS | Python 3.14.8 and Python 3.12.3 venvs with release-locked runtime/test libraries (wxPython supplied separately), PyInstaller 6.22.2 and Ruff 0.15.5 live under `/home/test/.venvs/`. Official Ubuntu 24.04 `python3-wxgtk4.0` 4.2.1 plus its three wx runtime `.deb` packages are persistently cached under `/home/test/.cache/hpc-client-gui/wx-debs` and extracted under `/home/test/.local/opt/hpc-client-gui/wx`; `/home/test/.local/bin/hpc-client-gui-python312` sets Python/library paths. GNU binutils 2.42 is extracted under `/home/test/.local/opt/hpc-client-gui/binutils` with `objdump`/`objcopy` wrappers in `/home/test/.local/bin`. No sudo or system package database changes were needed. |
+| Ubuntu Linux PyInstaller build | PASS | GUI-capable build using Python 3.12.3 + wxPython 4.2.1: `/tmp/jobs-workspace-recovery-4f1179d/build-wx42/dist/hpc-client-gui/hpc-client-gui`; SHA256 `c05622024c411446a33ec7e880429ce44e47f1bffa8832ea3b69a5d60ab28ce2`. `ldd` reported no missing shared libraries. |
+| Ubuntu packaged CLI smoke | PASS | Built artifact `--help` returned 0 and printed the expected CLI command inventory. |
+| Ubuntu GUI runtime smoke | PASS (Xvfb) | Built artifact launched `gui` under `dbus-run-session` + Xvfb and exposed the `HPC Client` 760x560 main window; safely terminated the isolated test process. wx 4.2.1 also created and showed a frame. |
+| Windows GUI teardown warnings | PASS WITH WARNINGS | Some passing native wx partitions emitted WebView2 `Operation aborted` / Windows `UnregisterClass` teardown warnings; their pytest results were PASS. |
+| Real Slurm and remote destructive actions | SKIP | No real Slurm job was submitted/cancelled and no remote file was deleted. |
 
 ## Architecture and plugin status
 
-No repository-defined source-LOC architecture checker was found. `wx_jobs.py` measured 3,222 lines at the starting commit and 3,325 lines in the current worktree, exceeding the 500-line policy. This change added UI code to that module; the required cohesive extraction is unresolved and blocks acceptance.
+No repository-defined source-LOC architecture checker was found. `wx_jobs.py` measured 3,222 lines at the starting commit and 3,325 lines in the current worktree, exceeding the 500-line policy. The repository exception file records the current LOC, rationale, expiry (`2026-10-23`) and cohesive migration target (`src/hpc_gui/jobs/`). A full extraction remains architecture debt, but the exception is explicit and time-bounded. The plugin repository remains unchanged: TRUBA 1.5.0 history omits WorkDir/stdout/stderr, so app fallback preserves known values without claiming unsupported fields.
 
 No change was made to `mskomek/hpc-client-gui-plugins`. TRUBA `1.5.0` history fields were inspected and do not include WorkDir/stdout/stderr; application fallback handles old packages without claiming unsupported fields.
 
-## Remaining acceptance work
+## Known deviations and follow-up
 
-- Split the oversized Jobs UI by cohesive responsibility and bring first-party source files within policy (or add a repository-owned, time-bounded migration exception with LOC and target).
-- Rerun the full repository release harness after the final native GUI isolation changes and confirm all other partitions.
-- Obtain an active Windows11 Explorer session and rerun guest acceptance with the canonical interactive runner.
-- Once all gates pass, push the existing local commits to `origin/codex/jobs-workspace-recovery` and verify the remote HEAD.
+- The 3,325-line `wx_jobs.py` still uses the repository-owned exception (expires `2026-10-23`) while a cohesive extraction to `src/hpc_gui/jobs/` is pending; no other newly changed first-party file exceeds 500 lines.
+- Ubuntu runtime validation used the official Ubuntu wxPython 4.2.1 package with Python 3.12.3; it differs from the 4.3.1 release-lock pin. Packaged build, GUI startup, and 158 Jobs tests passed with the distro version. Building the pinned wxPython 4.3.1 from source would require authorized admin provisioning of the missing compiler/GTK development dependencies.
+- Windows11 guest validation launched the rebuilt artifact with `--help` under the `test\home` Explorer session; the full 21/21 packaged workflow smoke passed on the Windows host.
+- Commit and push the reviewed feature branch after final diff/test gates.
 
 ## Local commits
 
@@ -77,4 +92,4 @@ No change was made to `mskomek/hpc-client-gui-plugins`. TRUBA `1.5.0` history fi
 - `f119e2e7` — wx isolation and regression fixture updates
 - Windows performance probe isolation and audit update (this commit)
 
-Push: none; validation gates remain open. No remote feature URL exists yet.
+Push: none. Latest local HEAD remains `4f1179d37cd4cbc96a32323f2b4f07cd35c1998e`; the final audit/test evidence is uncommitted. No remote feature URL exists.

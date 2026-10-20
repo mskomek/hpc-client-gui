@@ -3,8 +3,8 @@
   "exceptions": [
     {
       "file": "src/hpc_gui/wx_jobs.py",
-      "current_loc": 3122,
-      "reason": "Existing Jobs UI builder remains a large, tightly coupled closure. This revision integrates the V2 job history, persistent visibility, reconnect selection, and output context into its current composition while the documented extraction into cohesive modules remains in progress.",
+      "current_loc": 3325,
+      "reason": "The existing Jobs panel remains a tightly coupled UI builder. The workspace recovery work integrates persistence, selection guards, Files navigation, output snapshots, and bulk detail deletion into that panel; a cohesive extraction into the documented jobs package is still required.",
       "expiry": "2026-10-23",
       "migration_target": "src/hpc_gui/jobs/ (model, job table/details, provider status, file navigation, output tailing, panel composition)"
     }

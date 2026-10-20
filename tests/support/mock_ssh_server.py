@@ -449,7 +449,11 @@ class MockSSHServer:
             channel = transport.accept(20)
             if channel is None:
                 return
-            server.event.wait(20)
+            # Keep the accepted SSH transport alive for the lifetime of its
+            # client. A fixed event timeout silently dropped long-running SFTP
+            # transfers even though the client was still connected.
+            while transport.is_active() and not self._stop.wait(0.1):
+                pass
         except Exception:
             pass
         finally:

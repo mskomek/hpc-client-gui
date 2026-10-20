@@ -23,6 +23,10 @@ import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+if __package__:
+    from .native_gui_test_files import discover_native_gui_test_files
+else:
+    from native_gui_test_files import discover_native_gui_test_files
 
 # Keep these checks aligned with the local release gate in scripts/ci.py.
 PREFLIGHT_COMMANDS: tuple[tuple[str, ...], ...] = (
@@ -68,7 +72,7 @@ ISOLATED_WIRE_FILES = (
 # Transfer cancellation pumps Qt events while its worker and process-queue
 # state is shutting down; mixed GUI runs triggered a Windows native crash,
 # while the module passes in its own process.
-ISOLATED_NATIVE_GUI_FILES = (
+_KNOWN_NATIVE_GUI_FILES = (
     # W19 GUI fixtures pump wx.Yield() while neighboring mixed-GUI tests can
     # still own deferred WebView-backed native deletes. The combined process
     # hit a Windows access violation in that teardown; isolate the GUI files.
@@ -77,6 +81,24 @@ ISOLATED_NATIVE_GUI_FILES = (
     "tests/test_w15_fresh_user_startup.py",
     "tests/test_wx_w55_shell_soak.py",
     "tests/test_wx_file_list_zebra.py",
+    # Column-click tests dispatch native list-control events; mixed wx test
+    # teardown corrupted this control's state on Windows.
+    "tests/test_remote_dir_panel_sorting.py",
+    # Qt offscreen rendering collides with wx native teardown in the combined
+    # Windows process; run the synthetic benchmark in its own process.
+    "tests/test_remote_directory_gui_benchmark.py",
+    # Startup window resize tests instantiate wx frames; combining them with
+    # prior SSH/WebView fixtures triggers Windows native teardown failures.
+    "tests/test_startup_changelog.py",
+    # Transfer dialog callbacks touch Qt widgets from executor threads; mixed
+    # toolkit teardown crashed the combined process in this invariant test.
+    "tests/test_transfer_key_release.py",
+    # Concurrent transfer UI callbacks cross native GUI/worker boundaries;
+    # the module is stable alone but crashes after mixed toolkit tests.
+    "tests/test_transfer_performance_scenarios.py",
+    # Transfer-activity selection dispatches GUI events and must not share the
+    # interpreter's native event loop with earlier wx/Qt tests on Windows.
+    "tests/test_transfer_tab_selection.py",
     "tests/test_corrective_jobs_details.py",
     "tests/test_jobs_outputs_scroll.py",
     "tests/test_local_dir_panel.py",
@@ -93,16 +115,26 @@ ISOLATED_NATIVE_GUI_FILES = (
     "tests/test_wx_jobs_files_outputs.py",
     "tests/test_wx_jobs_final_fix.py",
     "tests/test_wx_jobs_stress.py",
+    # The accordion fixture creates a wx App while mixed GUI tests may leave
+    # deferred native windows pending teardown on Windows.
+    "tests/test_remote_accordion.py",
+    # Plugin manager refresh tests own native wx timers; mixed GUI execution
+    # terminated Windows while one of those timers was being asserted.
+    "tests/test_plugin_manager_ui.py",
     # The performance probe exercises the Qt event loop and can tear down
     # native GUI state owned by neighboring mixed-toolkit tests on Windows.
     "tests/test_performance_probe.py",
 )
+ISOLATED_NATIVE_GUI_FILES = tuple(dict.fromkeys((
+    *_KNOWN_NATIVE_GUI_FILES,
+    *discover_native_gui_test_files(REPO_ROOT / "tests"),
+)))
 ISOLATED_TEST_NODES = (
     "tests/test_wx_terminal_interaction.py::test_header_status_identity_dimensions",
     "tests/test_wx_file_actions_stress.py::test_wx_remote_context_target_stress_uses_real_events",
     "tests/test_wx_shell_p0_stress.py::test_wx_shell_p0_stress_real_wx_paths",
 )
-ISOLATED_FILES = ISOLATED_WIRE_FILES + ISOLATED_NATIVE_GUI_FILES
+ISOLATED_FILES = tuple(dict.fromkeys((*ISOLATED_WIRE_FILES, *ISOLATED_NATIVE_GUI_FILES)))
 EVIDENCE_GATED_TESTS = {
     "tests/test_w04_support_freeze.py": "artifacts/v2-final/W04/SUPPORT_MATRIX_FREEZE.md",
     "tests/test_w04_menu_actions.py": "artifacts/v2-final/W04/SUPPORT_MATRIX_FREEZE.md",
@@ -161,8 +193,7 @@ def build_commands(*, coverage: bool) -> list[tuple[str, ...]]:
     )
     isolated_selectors = (
         *ISOLATED_TEST_NODES,
-        *ISOLATED_NATIVE_GUI_FILES,
-        *ISOLATED_WIRE_FILES,
+        *ISOLATED_FILES,
     )
     for index, selector in enumerate(isolated_selectors):
         coverage_args = COVERAGE_APPEND_ARGS if coverage else ()
