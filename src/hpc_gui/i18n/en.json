@@ -780,6 +780,7 @@
     "action": "Settings",
     "dialog_title": "Settings",
     "smart_open_reset": "Reset Smart Open preferences",
+    "ssh_connection_attempts": "SSH connection attempts",
     "smart_open_reset_confirm": "Reset all remembered file opening choices?",
     "open_failed": "The Settings dialog could not be opened. Details were written to the logs.",
     "apply_failed": "The settings could not be applied. Details were written to the logs.",

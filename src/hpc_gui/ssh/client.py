@@ -35,6 +35,7 @@ from hpc_gui.ssh.host_keys import (
     HostKeyChangedError,
     HostKeyInfo,  # noqa: F401 - compatibility re-export
     HostKeyRejectedError,  # noqa: F401 - compatibility re-export
+    _KnownHostsPolicy,  # noqa: F401 - compatibility re-export
     configure_known_hosts,
 )
 from hpc_gui.services.command_history_store import is_sensitive_command
@@ -166,12 +167,21 @@ class SSHClientWrapper:
         shell_size: Optional[Tuple[int, int]] = None,
     ) -> None:
         from hpc_gui.config.storage import get_ssh_connection_attempts
+        from hpc_gui.ssh.jump import (
+            JumpAuthenticationError,
+            JumpForwardingDeniedError,
+        )
 
         retry_connection(
             lambda: self._connect_once(info, shell_size=shell_size),
             attempts=get_ssh_connection_attempts(),
             on_retry=self.log,
-            non_retryable=(HostKeyChangedError, HostKeyRejectedError),
+            non_retryable=(
+                HostKeyChangedError,
+                HostKeyRejectedError,
+                JumpAuthenticationError,
+                JumpForwardingDeniedError,
+            ),
         )
 
     def _connect_once(

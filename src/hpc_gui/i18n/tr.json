@@ -780,6 +780,7 @@
     "action": "Ayarlar",
     "dialog_title": "Ayarlar",
     "smart_open_reset": "Akıllı Aç tercihlerini sıfırla",
+    "ssh_connection_attempts": "SSH bağlantı deneme sayısı",
     "smart_open_reset_confirm": "Hatırlanan tüm dosya açma tercihleri sıfırlansın mı?",
     "open_failed": "Ayarlar penceresi açılamadı. Ayrıntılar günlüklere yazıldı.",
     "apply_failed": "Ayarlar uygulanamadı. Ayrıntılar günlüklere yazıldı.",
