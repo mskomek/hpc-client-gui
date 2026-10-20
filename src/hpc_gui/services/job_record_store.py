@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import os
-import re
 import sqlite3
 import threading
 import time
@@ -12,18 +11,13 @@ from pathlib import Path
 from typing import Any, Mapping
 
 from hpc_gui.core.paths import app_data_dir
+from hpc_gui.services.job_security import is_sensitive_key, redact_sensitive_text
 
 
 SCHEMA_VERSION = 4
 MAX_OUTPUT_CHARS = 256_000
 _IDENTITY_FIELDS = ("profile_id", "cluster_id", "provider_id", "job_id", "component_id")
 _JSON_FIELDS = ("metadata", "resources", "timing", "paths", "details", "outputs")
-_SECRET_VALUE = re.compile(
-    r"(?i)(\b(?:password|passwd|token|secret|api[_-]?(?:key|token)|private[_-]?key)\b\s*[=:]\s*)"
-    r"(['\"]?)[^\s'\";,]+"
-)
-
-
 def default_job_record_path() -> Path:
     return app_data_dir() / "job_records.sqlite3"
 
@@ -38,10 +32,14 @@ def _json(value: Any) -> str:
 
 def _bound_output(value: Any) -> Any:
     if isinstance(value, str):
-        redacted = _SECRET_VALUE.sub(r"\1[REDACTED]", value)
+        redacted = redact_sensitive_text(value)
         return redacted[-MAX_OUTPUT_CHARS:]
     if isinstance(value, Mapping):
-        return {str(key): _bound_output(item) for key, item in value.items()}
+        return {
+            str(key): ("[REDACTED]" if is_sensitive_key(str(key)) and item not in (None, "", [], {})
+                       else _bound_output(item))
+            for key, item in value.items()
+        }
     if isinstance(value, list):
         return [_bound_output(item) for item in value[-100:]]
     return value
@@ -198,8 +196,7 @@ class JobRecordStore:
             if isinstance(incoming, Mapping):
                 for field, value in incoming.items():
                     if value not in (None, "", [], {}):
-                        if key in {"outputs", "details"}:
-                            value = _bound_output(value)
+                        value = "[REDACTED]" if is_sensitive_key(str(field)) else _bound_output(value)
                         merged[str(field)] = value
             json_values[key] = _json(merged)
         first_seen = float(record.get("first_seen") or record.get("submitted_at") or

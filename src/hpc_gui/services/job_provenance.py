@@ -1,22 +1,16 @@
 from __future__ import annotations
 
 import hashlib
-import re
 import time
 from typing import Any, Mapping
 
 from hpc_gui import __version__
 from hpc_gui.services.job_record_store import JobRecordStore
-
-
-_SECRET_ASSIGNMENT = re.compile(
-    r"(?im)(\b(?:password|passwd|token|secret|api[_-]?(?:key|token)|private[_-]?key)\b\s*[=:]\s*)"
-    r"(['\"]?)[^\s'\";]+"
-)
+from hpc_gui.services.job_security import redact_sensitive_text
 
 
 def _redact_script(script_text: str) -> str:
-    return _SECRET_ASSIGNMENT.sub(r"\1[REDACTED]", str(script_text or ""))
+    return redact_sensitive_text(script_text)
 
 
 def script_hash(script_text: str) -> str:
@@ -28,11 +22,12 @@ class JobProvenanceCapture:
         self.store = store
 
     def submitted(self, job_id: str, script_text: str, *, profile_id: str = "", cluster_id: str = "", provider_id: str = "", resources: Mapping[str, Any] | None = None, paths: Mapping[str, str] | None = None) -> dict[str, Any]:
+        safe_script = _redact_script(script_text)
         record = {
             "job_id": str(job_id), "profile_id": profile_id, "cluster_id": cluster_id,
             "provider_id": provider_id, "source": "submitted",
             "state": "SUBMITTED", "submitted_at": time.time(), "script_path": str((paths or {}).get("script") or ""),
-            "metadata": {"script_hash": script_hash(script_text), "script_text": _redact_script(script_text)},
+            "metadata": {"script_hash": script_hash(safe_script), "script_text": safe_script},
             "paths": {**dict(paths or {}), "script_path": str((paths or {}).get("script") or "")},
             "resources": dict(resources or {}), "timing": {"app_version": __version__, **dict(paths or {})},
         }

@@ -102,6 +102,23 @@ def test_snapshot_redacts_secret_values(tmp_path):
     store.close()
 
 
+def test_all_persisted_json_buckets_redact_and_bound_metadata(tmp_path):
+    store = JobRecordStore(tmp_path / "metadata-redact.sqlite3")
+    store.record_observation({
+        "job_id": "19",
+        "metadata": {
+            "raw_details": 'JobId=19 Environment={"AWS_SECRET_ACCESS_KEY":"hidden"}',
+            "password": '"quoted value"',
+            "large": "x" * 300_000,
+        },
+    })
+    metadata = store.get("19")["metadata"]
+    assert "hidden" not in metadata["raw_details"]
+    assert "quoted value" not in metadata["password"]
+    assert len(metadata["large"]) == 256_000
+    store.close()
+
+
 def test_v2_migration_preserves_submitted_provenance(tmp_path):
     path = tmp_path / "v2.sqlite3"
     db = sqlite3.connect(path)
