@@ -45,18 +45,22 @@ def test_job_completion_notifies_once_per_terminal_state():
 @pytest.mark.wx
 def test_jobs_model_has_no_qt_import():
     source = open("src/hpc_gui/wx_jobs.py", encoding="utf-8").read()
-    assert "PySide6" not in source and "def show_job_output" in source
+    from hpc_gui.wx_jobs import show_job_output
+
+    assert "PySide6" not in source and callable(show_job_output)
+    assert "from hpc_gui.jobs.output_workspace import" in source
 
 
 @pytest.mark.audit
 @pytest.mark.wx
 def test_job_output_view_has_live_timer_and_resize_hooks():
     source = open("src/hpc_gui/wx_jobs.py", encoding="utf-8").read()
-    assert "EVT_TIMER" in source and "EVT_SIZE" in source and "update_detached" in source
-    assert "lifecycle.register_cleanup(close)" in source
+    output_source = open("src/hpc_gui/jobs/output_workspace.py", encoding="utf-8").read()
+    assert "EVT_TIMER" in output_source and "EVT_SIZE" in output_source and "update_detached" in output_source
+    assert "lifecycle.register_cleanup(closed)" in output_source
     assert "jobs.cancel_confirm" in source and "Thread(target=worker" in source
     assert "files.auto_scroll" in source and "follow.GetValue()" in source
     assert "model.open_detached()" in source and "show_job_output(host" in source
-    assert "def close(_event=None):" in source
+    assert "def closed(_event=None):" in output_source
     assert "items = tuple(result or ())" in source and "for item in items" in source
     assert "SimpleNamespace(**item)" in source and "failure.as_lines()" in source
