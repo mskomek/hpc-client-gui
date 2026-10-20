@@ -4,7 +4,7 @@ Date: 2026-10-20
 
 ## Decision
 
-**Jobs workspace recovery is functionally validated on Windows and Ubuntu, including persistent restore, packaged Windows smoke, and an Ubuntu packaged GUI launch.** The profile-scoped store and Jobs/Details/Files/Outputs repairs are committed locally on `codex/jobs-workspace-recovery`; this continuation's regression/harness repairs and final evidence are uncommitted working-tree changes. The final full `release_test_suite.py` invocation passed after the mock-SSH lifetime fix. The Windows candidate was rebuilt from this worktree, passed 21/21 packaged smoke checks, and ran `--help` successfully in the Windows11 interactive user session with matching host/guest SHA-256. Ubuntu Jobs service/provider regressions passed. A persistent per-user Ubuntu Python/build environment was provisioned. Linux PyInstaller build, packaged CLI smoke, and Xvfb GUI launch all pass using the persistent per-user wxPython 4.2.1 environment. `wx_jobs.py` remains over 500 lines under a time-bounded, documented exception. The remaining architecture exception for the legacy Jobs UI is explicit, time-bounded, and records its migration target.
+**Jobs workspace recovery is functionally validated on Windows and Ubuntu, including persistent restore, packaged Windows smoke, and an Ubuntu packaged GUI launch.** The profile-scoped store and Jobs/Details/Files/Outputs repairs are committed locally on `codex/jobs-workspace-recovery`; the final regression/harness repairs and evidence are committed in `8a27b784` and pushed to `origin/codex/jobs-workspace-recovery`. The final full `release_test_suite.py` invocation passed after the mock-SSH lifetime fix. The Windows candidate was rebuilt from this worktree, passed 21/21 packaged smoke checks, and ran `--help` successfully in the Windows11 interactive user session with matching host/guest SHA-256. Ubuntu Jobs service/provider regressions passed. A persistent per-user Ubuntu Python/build environment was provisioned. Linux PyInstaller build, packaged CLI smoke, and Xvfb GUI launch all pass using the persistent per-user wxPython 4.2.1 environment. `wx_jobs.py` remains over 500 lines under a time-bounded, documented exception. The remaining architecture exception for the legacy Jobs UI is explicit, time-bounded, and records its migration target.
 
 ## Starting state
 
@@ -79,7 +79,7 @@ No change was made to `mskomek/hpc-client-gui-plugins`. TRUBA `1.5.0` history fi
 - The 3,325-line `wx_jobs.py` still uses the repository-owned exception (expires `2026-10-23`) while a cohesive extraction to `src/hpc_gui/jobs/` is pending; no other newly changed first-party file exceeds 500 lines.
 - Ubuntu runtime validation used the official Ubuntu wxPython 4.2.1 package with Python 3.12.3; it differs from the 4.3.1 release-lock pin. Packaged build, GUI startup, and 158 Jobs tests passed with the distro version. Building the pinned wxPython 4.3.1 from source would require authorized admin provisioning of the missing compiler/GTK development dependencies.
 - Windows11 guest validation launched the rebuilt artifact with `--help` under the `test\home` Explorer session; the full 21/21 packaged workflow smoke passed on the Windows host.
-- Commit and push the reviewed feature branch after final diff/test gates.
+- The feature branch was pushed after the final diff/test gates; the legacy Jobs UI exception remains time-bounded.
 
 ## Local commits
 
@@ -90,6 +90,7 @@ No change was made to `mskomek/hpc-client-gui-plugins`. TRUBA `1.5.0` history fi
 - `cd780e09` — SSH jump failure/settings contracts
 - `a043d8d5` — snapshot secret redaction
 - `f119e2e7` — wx isolation and regression fixture updates
-- Windows performance probe isolation and audit update (this commit)
+- `4f1179d3` — Windows performance probe isolation and audit update
+- `8a27b784` — GUI workflow, release harness and Ubuntu/Windows validation follow-up
 
-Push: none. Latest local HEAD remains `4f1179d37cd4cbc96a32323f2b4f07cd35c1998e`; the final audit/test evidence is uncommitted. No remote feature URL exists.
+Push: [origin/codex/jobs-workspace-recovery](https://github.com/mskomek/hpc-client-gui/tree/codex/jobs-workspace-recovery). Code/test commit `8a27b784b260994887827c5451550511e30d782f` was verified as remote HEAD before this audit-only follow-up.
