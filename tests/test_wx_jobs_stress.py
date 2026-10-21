@@ -9,6 +9,7 @@ from mock_hpc_jobs import MockHPCJobs
 
 from hpc_gui.core.i18n import load_language, t
 from hpc_gui.wx_jobs import WxJobsModel, show_jobs
+from support.wx_window_cleanup import cleanup_wx_windows
 
 
 def _pump(app, predicate, timeout=3):
@@ -58,28 +59,15 @@ def _close(frame, app):
 @pytest.fixture
 def wx_app():
     load_language("en")
-    existing = wx.GetApp()
-    if existing is not None:
-        try:
-            for window in wx.GetTopLevelWindows():
-                if window:
-                    window.Destroy()
-            existing.ProcessPendingEvents()
-            existing.Destroy()
-        except Exception:
-            pass
-    app = wx.App.Get()
+    app = wx.GetApp()
     if app is None:
         app = wx.App(redirect=False)
+        existing_ids = set()
+    else:
+        cleanup_wx_windows(wx, app, set())
+        existing_ids = {window.GetId() for window in wx.GetTopLevelWindows() if window}
     yield app
-    for window in wx.GetTopLevelWindows():
-        if window:
-            window.Destroy()
-    app.ProcessPendingEvents()
-    try:
-        app.Destroy()
-    except Exception:
-        pass
+    cleanup_wx_windows(wx, app, existing_ids)
 
 
 @pytest.mark.gui

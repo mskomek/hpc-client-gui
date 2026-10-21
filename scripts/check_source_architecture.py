@@ -13,6 +13,9 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
+from source_architecture_api import api_errors as _api_errors
+from source_architecture_api import public_symbols as _public_symbols
+
 
 LIMIT = 500
 BASELINE_PATH = Path("docs/architecture/source-loc-baseline.json")
@@ -24,7 +27,6 @@ PUBLIC_FACADES = (
     "src/hpc_gui/plugins/ui_contributions.py",
     "src/hpc_gui/ui/widgets/jobs_outputs_widget.py",
     "src/hpc_gui/wx_jobs.py",
-    "src/hpc_gui/wx_shell_jobs.py",
     "src/hpc_gui/ui/main_window.py",
     "src/hpc_gui/wx_connection.py",
     "src/hpc_gui/wx_editor_view.py",
@@ -110,30 +112,6 @@ def _defined_symbols(tree: ast.Module) -> set[str]:
             names.update(target.id for target in targets if isinstance(target, ast.Name))
         elif isinstance(item, (ast.Import, ast.ImportFrom)):
             names.update(alias.asname or alias.name.split(".")[0] for alias in item.names if alias.name != "*")
-    return names
-
-
-def _public_symbols(tree: ast.Module) -> set[str]:
-    names: set[str] = set()
-    for item in tree.body:
-        if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)) and not item.name.startswith("_"):
-            names.add(item.name)
-        elif isinstance(item, (ast.Assign, ast.AnnAssign)):
-            targets = item.targets if isinstance(item, ast.Assign) else [item.target]
-            names.update(target.id for target in targets if isinstance(target, ast.Name) and not target.id.startswith("_"))
-        elif isinstance(item, (ast.Import, ast.ImportFrom)):
-            names.update(
-                alias.asname or alias.name.split(".")[0]
-                for alias in item.names
-                if alias.name != "*" and not (alias.asname or alias.name.split(".")[0]).startswith("_")
-            )
-        if isinstance(item, ast.Assign) and any(
-            isinstance(target, ast.Name) and target.id == "__all__" for target in item.targets
-        ) and isinstance(item.value, (ast.List, ast.Tuple, ast.Set)):
-            names.update(
-                value.value for value in item.value.elts
-                if isinstance(value, ast.Constant) and isinstance(value.value, str)
-            )
     return names
 
 
@@ -266,32 +244,15 @@ def _run_shared_loc(root: Path, core: Path, scope: str, base: str) -> dict[str, 
 
 
 def _baseline(scan: dict[str, Any], root: Path) -> dict[str, Any]:
-    public_api = {}
-    for facade in PUBLIC_FACADES:
-        tree = scan["trees"].get(facade)
-        if tree:
-            public_api[facade] = sorted(_public_symbols(tree))
     commit = subprocess.run(["git", "rev-parse", "HEAD"], cwd=root, check=True, text=True, capture_output=True).stdout.strip()
     return {
         "schema_version": 1,
         "limit": LIMIT,
         "source_commit": commit,
         "files": scan["files"],
-        "public_api": public_api,
         "dependency_errors": scan["dependency_errors"],
         "cycles": _cycles(scan["graph"]),
     }
-
-
-def _api_errors(scan: dict[str, Any], baseline: dict[str, Any] | None) -> list[str]:
-    errors = []
-    for facade, expected in (baseline or {}).get("public_api", {}).items():
-        tree = scan["trees"].get(facade)
-        actual = _public_symbols(tree) if tree else set()
-        missing = sorted(set(expected) - actual)
-        if missing:
-            errors.append(f"{facade}: missing public facade symbols: {', '.join(missing)}")
-    return errors
 
 
 def _write_reports(report: dict[str, Any], json_path: Path, markdown_path: Path) -> None:
@@ -344,14 +305,27 @@ def main(argv: list[str] | None = None) -> int:
     loc_gate = _run_shared_loc(root, core, scope, args.base)
     baseline = json.loads(baseline_path.read_text(encoding="utf-8")) if baseline_path.is_file() else None
     api_contract_path = args.api_contract if args.api_contract.is_absolute() else root / args.api_contract
-    api_contract = (baseline or {}).get("public_api")
-    if api_contract is None and api_contract_path.is_file():
+    api_contract = None
+    if api_contract_path.is_file():
         contract = json.loads(api_contract_path.read_text(encoding="utf-8"))
         api_contract = contract.get("modules", contract.get("public_api", {}))
+    if api_contract is None:
+        api_contract = (baseline or {}).get("public_api")
     if args.mode == "baseline":
         baseline = _baseline(scan, root)
         baseline_path.parent.mkdir(parents=True, exist_ok=True)
         baseline_path.write_text(json.dumps(baseline, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        api_contract_path.parent.mkdir(parents=True, exist_ok=True)
+        contract_modules = {
+            facade: sorted(_public_symbols(scan["trees"][facade]))
+            for facade in PUBLIC_FACADES
+            if facade in scan["trees"]
+        }
+        api_contract_path.write_text(json.dumps({
+            "schema_version": 1,
+            "baseline_commit": baseline["source_commit"],
+            "modules": contract_modules,
+        }, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     dependency_errors = scan["dependency_errors"]
     old_errors = set((baseline or {}).get("dependency_errors", [])) if args.mode != "baseline" else set()
     new_dependency_errors = sorted(

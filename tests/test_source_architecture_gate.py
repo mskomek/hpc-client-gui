@@ -61,6 +61,12 @@ def test_public_facade_contract_detects_removed_exports() -> None:
     assert errors == ["src/hpc_gui/api.py: missing public facade symbols: Removed"]
 
 
+def test_public_symbols_honor_explicit_all_instead_of_imported_names() -> None:
+    tree = ast.parse("import os\nfrom typing import Any\ndef build(): pass\n__all__ = ['build']\n")
+
+    assert architecture._public_symbols(tree) == {"build"}
+
+
 def test_baseline_report_keeps_shared_loc_failure_distinct(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     _git_repo(tmp_path)
     _write(tmp_path / "src/hpc_gui/api.py", "def retained(): pass\n")
@@ -83,7 +89,10 @@ def test_baseline_report_keeps_shared_loc_failure_distinct(tmp_path: Path, monke
     ])
 
     report = json.loads((tmp_path / ".tmp/report.json").read_text(encoding="utf-8"))
+    api_contract = json.loads((tmp_path / "docs/architecture/public-api-contracts.json").read_text(encoding="utf-8"))
     assert code == 0
     assert report["status"] == "BASELINE_RECORDED"
     assert report["shared_loc_passed"] is False
     assert (tmp_path / "docs/architecture/source-loc-baseline.json").is_file()
+    assert len(api_contract["baseline_commit"]) == 40
+    assert api_contract["modules"] == {}

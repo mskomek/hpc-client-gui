@@ -7,6 +7,7 @@ wx = pytest.importorskip("wx")
 
 from hpc_gui.core.i18n import load_language
 from hpc_gui.wx_jobs import show_jobs
+from support.wx_window_cleanup import cleanup_wx_windows
 
 
 def _pump(app, predicate, timeout=15):
@@ -54,30 +55,9 @@ def _output_text(frame):
 def wx_jobs():
     load_language("en")
     app = wx.App.Get() or wx.App(False)
+    existing_ids = {window.GetId() for window in wx.GetTopLevelWindows()}
     yield app
-    try:
-        for window in list(wx.GetTopLevelWindows()):
-            try:
-                if window:
-                    window.Destroy()
-            except Exception:
-                pass
-        for _ in range(5):
-            try:
-                app.ProcessPendingEvents()
-                wx.SafeYield()
-            except Exception:
-                break
-            wx.MilliSleep(10)
-    except Exception:
-        pass
-    # Do not Destroy the global App – other tests reuse it. Only destroy if we created it and no other TopLevelWindows remain.
-    try:
-        if not wx.GetTopLevelWindows():
-            # Keep App alive for reuse; do not Destroy here to avoid UnregisterClass 0x584
-            pass
-    except Exception:
-        pass
+    cleanup_wx_windows(wx, app, existing_ids)
 
 
 @pytest.mark.gui

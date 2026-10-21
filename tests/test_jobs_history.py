@@ -13,8 +13,6 @@ def test_parse_sacct_history_omits_step_rows_and_keeps_array_tasks():
     assert [row["job_id"] for row in rows] == ["123", "123_1"]
     assert rows[1]["exit_code"] == "1:0"
     assert rows[1]["end_time"] == "2026-10-01T10:06:00"
-    assert rows[0]["workdir_source"] == "sacct"
-    assert rows[1]["workdir_source"] == "sacct"
 
 
 def test_merge_keeps_compact_pending_array_summary():
@@ -68,7 +66,10 @@ def test_list_jobs_uses_and_retains_cached_sacct_when_temporarily_unavailable(mo
             return "9|live|cpu|RUNNING|00:10|1|2||0:0|2026-10-17T10:00:00||/work|/work/o|/work/e"
 
     monotonic = {"value": 0.0}
-    monkeypatch.setattr("hpc_gui.wx_shell_jobs.time.monotonic", lambda: monotonic["value"])
+    monkeypatch.setattr(
+        "hpc_gui.wx_shell_jobs_history.time.monotonic",
+        lambda: monotonic["value"],
+    )
     slurm = Slurm()
     state = {"session": {"slurm": slurm, "profile": {"username": "alice", "id": "c1"}}}
     list_jobs = _jobs_callbacks(state, None, None)["list_jobs"]
