@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "status": "WAVE_01_COMPLETE",
+  "status": "WAVE_02_COMPLETE",
   "created_at_local": "2026-10-21",
   "target_branch": "develop",
   "integration_branch": "codex/integration/v2-jobs-staged-20261021",
@@ -28,6 +28,28 @@
     "tests": {"passed": 45, "failed": 0, "skipped": 0, "exit_code": 0},
     "changed_source_gate_exit_code": 0,
     "full_architecture_gate": {"status": "FAIL_BASELINE_DEBT", "over_limit": 52, "dependency_errors": 2, "cycles": 8, "api_errors": 0, "exit_code": 1}
+  },
+  "wave_02": {
+    "status": "WAVE_COMPLETE",
+    "start_sha": "7c3ee2260aac03eea2e6aebf7d9f3e7a39ee55e3",
+    "source_sha": "d12a752c1557b2cff7ea5a21bbf2d391c13b5fa3",
+    "source_tree_sha": "5d55eded058af41d3d2b3d213ba90a4798556706",
+    "jobs_source_sha": "713949fb752b90601e007812ebf2bd765da5ad52",
+    "source_fingerprint_sha256": "fc4a9d5cd19ca175b1557b80a5d9757961ac469cce73b542b835ef9fcd0f2d91",
+    "changed_file_count": 49,
+    "changed_python_file_count": 46,
+    "added_implementation_modules": 29,
+    "added_test_support_modules": 6,
+    "source_commits": [
+      "32aae234c3360172cc1d40592f3e7427912384eb",
+      "f96ec99debbe29d2930a6ff8fad9fe957d5b9820",
+      "90876b1aa2d9eb02f930dde5f9735d58f2902aec",
+      "753db9f69eaf053a4e2bced63411543cc24d4e0c"
+    ],
+    "tests": {"primary_passed": 95, "extended_passed": 64, "post_fix_stress_passed": 10, "api_compatibility_passed": 14, "architecture_gate_passed": 6, "unresolved_failures": 0},
+    "changed_source_gate_exit_code": 0,
+    "full_architecture_gate": {"status": "FAIL_BASELINE_DEBT", "over_limit": 51, "dependency_errors": 2, "cycles": 8, "api_errors": 0, "exit_code": 1},
+    "wx_unregisterclass_warning": "Observed once before fixture fix; post-fix stress and window-handoff reruns exited cleanly"
   },
   "origin_develop_sha": "b2de2bb8ccc533aa0b0ecb7dd2a798a4fcdf709a",
   "jobs_source_sha": "713949fb752b90601e007812ebf2bd765da5ad52",

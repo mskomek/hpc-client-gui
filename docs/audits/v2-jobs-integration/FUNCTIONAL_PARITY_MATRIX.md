@@ -5,10 +5,10 @@ Status values remain **NOT VERIFIED** until focused tests pass against the integ
 | Area | Required behavior | Current evidence | Status |
 |---|---|---|---|
 | Jobs persistence | Finished Details, workdir, raw details, Files paths, stdout/stderr, Outputs, profile/job identity, safe migrations and tombstones | At `c1d8e66f`: 45 focused tests passed; synthetic v2 migration, scoped records, tombstones, bounded/redacted snapshots, path fallback and selected identity covered | PARTIALLY VERIFIED; UI restoration remains |
-| Jobs history | Reopen old jobs, retain cached accounting, ordering/hide settings | At `c1d8e66f`: parser/workdir provenance and history service tests pass; stale accounting UI cache remains for wx Jobs wave | PARTIALLY VERIFIED |
-| Jobs deletion | Delete Details is local-only, multi-delete scopes targets, Cancel Job stays distinct | `test_wx_jobs_bulk_delete.py`; not run | NOT VERIFIED |
-| Async Jobs | Refresh/reconnect preserve selected job and reject stale async results | controller/provider/status tests identified; not run | NOT VERIFIED |
-| wx Jobs | Details/Files/Outputs selection and event lifecycle | wx Jobs suite identified; not run | NOT VERIFIED |
+| Jobs history | Reopen old jobs, retain cached accounting, ordering/hide settings | At `d12a752c`: history parser, workdir provenance, cache retention, wx history callback, hide-finished persistence and identity refresh tests passed | PARTIALLY VERIFIED; final acceptance remains |
+| Jobs deletion | Delete Details is local-only, multi-delete scopes targets, Cancel Job stays distinct | At `d12a752c`: store tombstone and `test_wx_jobs_bulk_delete.py` passed; no remote cancel/delete was issued | PARTIALLY VERIFIED |
+| Async Jobs | Refresh/reconnect preserve selected job and reject stale async results | At `d12a752c`: controller coordinator, provider status, refresh identity, stale-selection/reconnect tests passed | PARTIALLY VERIFIED |
+| wx Jobs | Details/Files/Outputs selection and event lifecycle | At `d12a752c`: 95 focused controller/workspace tests and 64 extended GUI tests passed; post-fix teardown stress passed | PARTIALLY VERIFIED; Windows11 guest acceptance remains |
 | Release runner | Dynamic GUI discovery, isolated processes, scope selection, evidence hashes, crash visibility and coverage | Jobs/V2 runner overlap; not reconciled | NOT VERIFIED |
 | Config | Profiles, legacy JSON, unknown fields, atomic writes, settings, transfer and window state | Focused persistence tests pending | NOT VERIFIED |
 | SSH/SFTP | Password/key/keyboard-interactive, credential store, jump host, reconnect and redaction | Focused auth tests pending | NOT VERIFIED |
