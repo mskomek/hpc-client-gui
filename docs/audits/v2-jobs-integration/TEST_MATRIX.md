@@ -84,3 +84,19 @@ The first `py -m pytest` attempt used the global Python 3.14 installation, which
 ## Pending suites
 
 Focused suites will be added as waves land. Local and GitHub Actions results remain separate. Unrun suites must remain `NOT RUN`; skipped tests and environmental blockers are recorded individually and never counted as PASS. WAVE 08 command output is retained under `.tmp/wave08-*.log` in the integration worktree.
+
+## WAVE 11 VM evidence
+
+| Area | VM command/check | Result | Exit | Classification |
+|---|---|---:|---:|---|
+| Architecture full gate | `scripts/check_source_architecture.py --mode full` on Ubuntu-Test r28 snapshot | 1,014 Python files, 0 over 500, 0 dependency errors, 0 cycles, 0 API errors | 0 | PASS |
+| Architecture tests, Ruff, compileall, i18n | `pytest tests/test_source_architecture_gate.py -q`; Ruff `src scripts tests`; compileall; `scripts/check_i18n.py` | 7 passed; all quality checks passed | 0 | PASS |
+| Windows focused wx/Qt/Jobs batch | Windows11 interactive r27 | 114 passed | 0 | PASS |
+| Windows plugin manager dialog | Windows11 interactive r28, source manifest hash matched | 12 passed | 0 | PASS |
+| Ubuntu portable release runner | Ubuntu-Test r28, `QT_QPA_PLATFORM=offscreen` | 2,639 passed, 206 skipped, 61 deselected, 29 subtests passed; no assertion failures; 101 wx-only isolated partitions exit 5 because `wx` is unavailable | 5 | BLOCKED_ENVIRONMENT; do not count runner as PASS |
+| Windows portable release runner | Windows11 interactive r28 | Running; result recorded in WAVE 12 | — | Pending |
+
+The r28 source manifest fingerprint is `80a17499530c55331e684d984c9fe4971a9b534cb3ad5c2379195ef91329ad57`; manifest SHA-256 is `49c83e66f42317492d3d8705a2f84e0f971b1046e6a92545ee887f243c5da12e`. GitHub Actions has not run.
+
+| Final architecture recheck | Ubuntu-Test VM snapshot r29; baseline deleted, global full mode | PASS: 1,015 Python files, 0 over limit, 0 dependency errors, 0 cycles, 0 API errors; shared LOC scan 1,041 files | 0 | PASS |
+| Architecture regression rerun | `pytest -q tests/test_source_architecture_gate.py` on r29 | 7 passed | 0 | PASS |

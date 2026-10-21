@@ -79,3 +79,9 @@ After WAVE 04, current `develop` `d91c84f1d784fd3391bf132a54134faef44e63c9` was 
 ## Integration risks
 
 Jobs focuses on profile-scoped job persistence, provenance, workspace controllers, wx Jobs behavior, SSH settings, and focused GUI fixtures. V2's committed changes cover CLI/config/plugin facades, Qt outputs, dialogs, updater and release-runner changes. The uncommitted V2 source contains additional GUI modularizations, plus unrelated packaging/test-runner work. Only responsibility-scoped source will be selected; Muse report claims are historical and are not acceptance evidence for this integration.
+
+## WAVE 11 selection
+
+- The remaining large WIP modularizations were integrated by ownership: main window composition, login profile/connect/terminal support, plugin manager cards/state, wx connection/auth/model, editor document/find/save/guards, transfer workspace model/conflict/lifecycle, and split directory/output/terminal support.
+- WAVE 11 adds 36 first-party application modules. Across the wave, 163 Python paths were changed, added, moved, or removed. The test and application splits retain the original public facade and patch targets; VM architecture/API checks report no errors.
+- The complete Ubuntu-Test r28 scan reports 0 size, import, cycle, or public API violations. Windows11 wx and Qt focused batches passed 114 and 12 tests, respectively. Ubuntu portable wx-only partitions remain environment-blocked; no test has been reported as passing on that VM without execution.

@@ -1,13 +1,13 @@
 {
   "schema_version": 1,
-  "status": "WAVE_10_COMPLETE",
+  "status": "WAVE_11_COMPLETE",
   "created_at_local": "2026-10-21",
   "target_branch": "develop",
   "integration_branch": "codex/integration/v2-jobs-staged-20261021",
   "integration_worktree": "D:\\Projeler\\.tmp\\hpc-client-gui\\v2-jobs-staged-20261021",
   "integration_start_sha": "f61919bad12be5f328cb9db3fee3c8de8563fa5b",
-  "latest_integration_sha": "4e5b698653538ceeadb7a2cd16ae593e942b18a4",
-  "latest_integration_tree_sha": "61744f64f1e13cc89069a0117ca6d2d15b796eb7",
+  "latest_integration_sha": "0ece0ad8fb52f028e9acf23bdc792dc6fd266fc0",
+  "latest_integration_tree_sha": "1dde159bac6642c8b024963c353425665b370369",
   "wave_00_source_sha": "718fbd01296793b513526adabedd3e48deea2d4a",
   "wave_00_tree_sha": "bc4297dce73099e4003a93d52d66247b6ecba719",
   "wave_00_source_fingerprint_sha256": "37be9c808f09d80dc5763520d19d8ee756c8cfa2b8ccc20f919f4fb9256f7a07",
@@ -246,42 +246,31 @@
     "remote_mutations": false,
     "wip_snapshot_modified": false
   },
-  "current_local_develop_sha": "d91c84f1d784fd3391bf132a54134faef44e63c9",
+  "current_local_develop_sha": "0ece0ad8fb52f028e9acf23bdc792dc6fd266fc0",
   "current_origin_develop_sha": "d91c84f1d784fd3391bf132a54134faef44e63c9",
   "develop_sync": {
-    "status": "SYNCED_INTEGRATION_ONLY",
+    "status": "FAST_FORWARD_LOCAL_DEVELOP_THROUGH_WAVE_11",
     "source_develop_sha": "d91c84f1d784fd3391bf132a54134faef44e63c9",
-    "integration_merge_sha": "1995d7f5cb28de5cdf34737f95202e9d4fb7af9b",
-    "integration_tree_sha": "c6ef9fdb8af7df91f2ad9bbaf0d62aa3deaa3d71",
+    "integration_sha": "0ece0ad8fb52f028e9acf23bdc792dc6fd266fc0",
+    "develop_worktree_modified_by_task": true,
     "merge_conflicts": 0,
-    "develop_worktree_modified_by_task": false,
-    "remote_mutations": false,
-    "focused_test": {
-      "command": "python -m pytest -q tests/test_wx_logs_groups.py",
-      "passed": 10,
-      "failed": 0,
-      "exit_code": 0,
-      "log": ".tmp/develop-sync-wx-logs-20261021T180714963.log"
-    },
-    "changed_source_architecture_gate": {
-      "status": "PASS",
-      "python_file_count": 823,
-      "over_limit_count": 50,
-      "new_dependency_errors": 0,
-      "new_cycles": 0,
-      "api_errors": 0,
-      "exit_code": 0,
-      "json_report": ".tmp/develop-sync-arch-20261021T180715073.json",
-      "markdown_report": ".tmp/develop-sync-arch-20261021T180715073.md"
-    }
+    "remote_mutations": false
   },
   "global_architecture_inventory": {
-    "over_limit_python_count": 29,
-    "unresolved_internal_imports": 1,
-    "cycles": 8,
+    "over_limit_python_count": 0,
+    "unresolved_internal_imports": 0,
+    "cycles": 0,
     "api_errors": 0,
-    "latest_gate_source_sha": "4e5b698653538ceeadb7a2cd16ae593e942b18a4",
-    "final_zero_gate_reached": false
+    "latest_gate_source_sha": "0ece0ad8fb52f028e9acf23bdc792dc6fd266fc0",
+    "final_zero_gate_reached": true,
+    "python_file_count": 1015,
+    "shared_loc_source_count": 1041,
+    "vm_snapshot": "r29",
+    "vm_snapshot_fingerprint": "a2aae9badd57dc929844606342be468ffa62bdb0d604fd9501add61759fe4007",
+    "vm_manifest_sha256": "af3d75bc8538b8d494d79bd80910816fe11feea802e8209c8f99fb1f925bcc1b",
+    "architecture_regression_tests_passed": 7,
+    "architecture_exit_code": 0,
+    "git_inventory_adapter": "temporary full-mode source inventory shim on VM; all physical sources enumerated"
   },
   "wave_05": {
     "status": "WAVE_COMPLETE",
@@ -1028,5 +1017,59 @@
     "windows11_guest_acceptance_run": false,
     "ubuntu_linux_acceptance_run": false,
     "github_actions_run": false
+  },
+  "wave_12": {
+    "status": "IN_PROGRESS",
+    "source_sha": "0ece0ad8fb52f028e9acf23bdc792dc6fd266fc0",
+    "blocking_conditions": [
+      "Ubuntu-Test portable runner exit 5 because wxPython is unavailable in 101 isolated wx partitions",
+      "Windows full portable release run is still running",
+      "Linux package and source-matched release artifact not built",
+      "GitHub Actions not run"
+    ]
+  },
+  "wave_11": {
+    "status": "WAVE_COMPLETE",
+    "start_sha": "4e5b698653538ceeadb7a2cd16ae593e942b18a4",
+    "source_sha": "0ece0ad8fb52f028e9acf23bdc792dc6fd266fc0",
+    "source_tree_sha": "1dde159bac6642c8b024963c353425665b370369",
+    "tested_git_head": "b38d3633665ac1823a172d5b59017ce2c9203870",
+    "vm_snapshot": "Ubuntu-Test r28 / Windows11 r27-r28",
+    "source_fingerprint_sha256": "80a17499530c55331e684d984c9fe4971a9b534cb3ad5c2379195ef91329ad57",
+    "vm_manifest_sha256": "49c83e66f42317492d3d8705a2f84e0f971b1046e6a92545ee887f243c5da12e",
+    "changed_files": 167,
+    "changed_python_paths": 163,
+    "added_application_modules": 36,
+    "architecture": {
+      "python_files": 1015,
+      "over_500": 0,
+      "dependency_errors": 0,
+      "cycles": 0,
+      "public_api_errors": 0,
+      "exit_code": 0,
+      "shared_loc_source_count": 1041,
+      "snapshot": "r29",
+      "fingerprint": "a2aae9badd57dc929844606342be468ffa62bdb0d604fd9501add61759fe4007"
+    },
+    "tests": {
+      "architecture_tests_passed": 7,
+      "architecture_exit_code": 0,
+      "ruff_exit_code": 0,
+      "compileall_exit_code": 0,
+      "i18n_exit_code": 0,
+      "windows_focused_passed": 114,
+      "windows_plugin_ui_passed": 12,
+      "ubuntu_release_passed": 2639,
+      "ubuntu_release_failed_assertions": 0,
+      "ubuntu_release_skipped": 206,
+      "ubuntu_release_deselected": 61,
+      "ubuntu_release_subtests_passed": 29,
+      "ubuntu_release_runner_exit_code": 5,
+      "ubuntu_release_blocker": "101 wx-only isolated partitions skipped because wxPython is unavailable",
+      "windows_full_release": "IN_PROGRESS",
+      "github_actions": "NOT_RUN",
+      "architecture_r29_exit_code": 0,
+      "architecture_r29_passed": 7
+    }
   }
 }
