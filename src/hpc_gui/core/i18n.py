@@ -135,6 +135,12 @@ def t(key: str) -> str:
         return f"[{key}]"
 
 
+def tr(key: str, fallback: str) -> str:
+    """Translate ``key`` or use ``fallback`` when both bundles lack it."""
+    value = t(key)
+    return fallback if value == f"[{key}]" else value
+
+
 def _flatten_keys(d: dict, prefix: str = "") -> set[str]:
     keys: set[str] = set()
     for k, v in (d or {}).items():
