@@ -15,17 +15,17 @@ Status: **WAVE_COMPLETE** on the isolated integration branch.
 
 | File | Start | End |
 |---|---:|---:|
-| `src/hpc_gui/services/job_record_store.py` | 108 | 262 |
-| `src/hpc_gui/services/job_paths.py` | 0 | 37 |
-| `src/hpc_gui/services/job_provenance.py` | 25 | 34 |
-| `src/hpc_gui/services/job_security.py` | 0 | 24 |
-| `src/hpc_gui/services/jobs_history.py` | 135 | 137 |
-| `src/hpc_gui/services/selected_job_context.py` | 190 | 214 |
-| `tests/test_job_record_store.py` | 29 | 123 |
-| `tests/test_job_paths.py` | 0 | 20 |
-| `tests/test_job_provenance.py` | 25 | 46 |
-| `tests/test_jobs_history.py` | 91 | 93 |
-| `tests/test_selected_job_context.py` | 228 | 238 |
+| `src/hpc_gui/services/job_record_store.py` | 124 | 293 |
+| `src/hpc_gui/services/job_paths.py` | 0 | 43 |
+| `src/hpc_gui/services/job_provenance.py` | 34 | 45 |
+| `src/hpc_gui/services/job_security.py` | 0 | 35 |
+| `src/hpc_gui/services/jobs_history.py` | 155 | 157 |
+| `src/hpc_gui/services/selected_job_context.py` | 222 | 246 |
+| `tests/test_job_record_store.py` | 35 | 143 |
+| `tests/test_job_paths.py` | 0 | 26 |
+| `tests/test_job_provenance.py` | 30 | 55 |
+| `tests/test_jobs_history.py` | 112 | 114 |
+| `tests/test_selected_job_context.py` | 268 | 279 |
 
 Two application modules and one test module were added. All 11 changed Python files remain at or below 500 lines. The inventory is now 782 Python files; the 52 pre-existing over-limit files remain unchanged in count.
 
