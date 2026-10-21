@@ -151,10 +151,10 @@ class TestEncodingBoundaryJustification:
 
     def test_config_json_ensure_ascii_false(self):
         """Config JSON should use ensure_ascii=False for Turkish support."""
-        storage = ROOT / "src" / "hpc_gui" / "config" / "storage.py"
-        if storage.is_file():
-            content = storage.read_text(encoding="utf-8")
-            assert "ensure_ascii=False" in content
+        storage_core = ROOT / "src" / "hpc_gui" / "config" / "_storage_core.py"
+        assert storage_core.is_file(), "Missing config serialization owner"
+        content = storage_core.read_text(encoding="utf-8")
+        assert "ensure_ascii=False" in content
 
 
 # ---------------------------------------------------------------------------

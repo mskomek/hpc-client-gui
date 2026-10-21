@@ -170,8 +170,7 @@ def _isolated_profiles(monkeypatch, tmp_path):
 
 
 def _pump_until(predicate, timeout_s=20):
-    import wx
-
+    wx = pytest.importorskip("wx")
     deadline = time.monotonic() + timeout_s
     while time.monotonic() < deadline:
         wx.YieldIfNeeded()
@@ -182,8 +181,7 @@ def _pump_until(predicate, timeout_s=20):
 
 
 def _status_texts(host):
-    import wx
-
+    wx = pytest.importorskip("wx")
     texts = []
     stack = [host]
     while stack:
@@ -203,8 +201,7 @@ def _build_panel_with_profile(frame, storage, name, connect):
     assert model.select(name) is True
     choices = host._wx_connection_controls["choices"]
     choices.SetStringSelection(name)
-    import wx
-
+    wx = pytest.importorskip("wx")
     choices.GetEventHandler().ProcessEvent(
         wx.CommandEvent(wx.EVT_LISTBOX.typeId, choices.GetId())
     )
@@ -212,8 +209,7 @@ def _build_panel_with_profile(frame, storage, name, connect):
 
 
 def _click_connect(host):
-    import wx
-
+    wx = pytest.importorskip("wx")
     buttons = []
 
     def collect(root):
@@ -239,8 +235,7 @@ def test_gui_unknown_host_prompt_accept_reject_cancel(monkeypatch, tmp_path):
     user gesture into a trust decision; native dialog rendering is platform
     chrome, not product logic.
     """
-    import wx
-
+    wx = pytest.importorskip("wx")
     from hpc_gui.wx_connection import build_connection_panel
 
     storage = _isolated_profiles(monkeypatch, tmp_path)
@@ -285,8 +280,7 @@ def test_gui_wrong_password_fails_visibly_with_actionable_message(monkeypatch, t
     AuthenticationException like a real server rejection); MessageBox chrome
     captured.
     """
-    import wx
-
+    wx = pytest.importorskip("wx")
     storage = _isolated_profiles(monkeypatch, tmp_path)
     app = wx.App.Get() or wx.App(False)
     assert app is not None
@@ -313,8 +307,7 @@ def test_gui_wrong_password_fails_visibly_with_actionable_message(monkeypatch, t
 @pytest.mark.semantic
 def test_gui_missing_key_actionable_and_changed_key_hard_fail(monkeypatch, tmp_path):
     """REQ-W18-AUTH-007/013: missing key guides; changed key hard-fails mapped."""
-    import wx
-
+    wx = pytest.importorskip("wx")
     storage = _isolated_profiles(monkeypatch, tmp_path)
     app = wx.App.Get() or wx.App(False)
     assert app is not None
@@ -350,8 +343,7 @@ def test_gui_missing_key_actionable_and_changed_key_hard_fail(monkeypatch, tmp_p
 @pytest.mark.semantic
 def test_gui_master_cancel_returns_to_safe_state(monkeypatch, tmp_path):
     """REQ-W18-AUTH-008: cancelled auth leaves safe state, no error popup."""
-    import wx
-
+    wx = pytest.importorskip("wx")
     storage = _isolated_profiles(monkeypatch, tmp_path)
     app = wx.App.Get() or wx.App(False)
     assert app is not None

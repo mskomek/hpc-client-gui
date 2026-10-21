@@ -185,7 +185,13 @@ def test_unpackaged_app_never_launches_installer(monkeypatch, tmp_path: Path):
 
 @pytest.mark.audit
 def test_install_handoff_never_shows_complete_before_helper_starts():
-    source = Path("src/hpc_gui/ui/main_window.py").read_text(encoding="utf-8")
+    source = "\n".join(
+        Path(path).read_text(encoding="utf-8")
+        for path in (
+            "src/hpc_gui/ui/main_window.py",
+            "src/hpc_gui/ui/_main_window_updates.py",
+        )
+    )
     handoff = source[source.index("def _on_update_downloaded"):source.index("def _on_update_error")]
     assert '_show_update_progress(100, "installing")' not in handoff
     assert '_show_update_progress(0, "preparing")' in handoff

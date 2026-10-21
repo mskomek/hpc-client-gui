@@ -262,6 +262,29 @@ class ReleaseTestSuiteTests(unittest.TestCase):
             self.assertNotIn("HPC_GUI_CONFIG_ROOT", environment)
             self.assertTrue(environment.get("PYTHONUSERBASE"))
 
+    @pytest.mark.unit
+    @pytest.mark.semantic
+    def test_linux_test_environment_avoids_desktop_keyring_prompts(self):
+        with (
+            patch("scripts.release_test_suite.sys.platform", "linux"),
+            patch.dict("os.environ", {}, clear=True),
+        ):
+            environment = _test_environment()
+        self.assertEqual(
+            environment["PYTHON_KEYRING_BACKEND"],
+            "keyring.backends.null.Keyring",
+        )
+
+        with (
+            patch("scripts.release_test_suite.sys.platform", "linux"),
+            patch.dict(
+                "os.environ",
+                {"PYTHON_KEYRING_BACKEND": "custom.test.Backend"},
+            ),
+        ):
+            environment = _test_environment()
+        self.assertEqual(environment["PYTHON_KEYRING_BACKEND"], "custom.test.Backend")
+
 
 @pytest.mark.unit
 @pytest.mark.semantic

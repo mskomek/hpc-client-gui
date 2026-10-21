@@ -3,6 +3,7 @@ from __future__ import annotations
 import builtins
 import os
 
+from hpc_gui.services import transfer_resume_store as resume_store
 from hpc_gui.services.transfer_resume_store import local_file_identity
 
 
@@ -30,3 +31,18 @@ def test_local_file_identity_reads_only_bounded_edge_samples(tmp_path, monkeypat
     assert identity["size"] == source.stat().st_size
     assert reads == [64 * 1024, 64 * 1024]
     assert all(0 < size < source.stat().st_size for size in reads)
+
+
+def test_backend_without_profile_identity_skips_secret_store_probe(monkeypatch):
+    monkeypatch.setattr(resume_store, "profile_id_for_backend", lambda _files: "")
+
+    def fail_if_secret_store_is_probed():
+        raise AssertionError("secret store must not be queried without a profile")
+
+    monkeypatch.setattr(
+        resume_store,
+        "is_private_profile_data_available",
+        fail_if_secret_store_is_probed,
+    )
+
+    assert resume_store.transfer_resume_store_for_backend(object()) is None

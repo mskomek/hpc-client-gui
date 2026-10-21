@@ -3,13 +3,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Callable, Optional, Protocol
+from typing import Callable, Optional, Protocol
 
 from hpc_gui.ssh.host_keys import HostKeyInfo
-
-if TYPE_CHECKING:
-    from hpc_gui.ssh.jump import SSHJumpInfo
-
 
 class SocketLike(Protocol):
     """Minimal socket-like surface Paramiko needs for a preconnected channel."""
@@ -40,6 +36,19 @@ def coerce_keepalive_interval(
         return default
 
 
+@dataclass(frozen=True)
+class SSHJumpInfo:
+    """Typed runtime jump configuration consumed by the SSH layer."""
+
+    enabled: bool = False
+    host: str = ""
+    port: int = 22
+    username: str = ""
+    key_path: str = ""
+    host_key_policy: str = "accept-new"
+    keepalive_interval_seconds: int = 30
+
+
 @dataclass
 class SSHConnInfo:
     host: str
@@ -55,7 +64,7 @@ class SSHConnInfo:
     known_hosts_path: str = ""
     host_key_decision: Optional[Callable[[HostKeyInfo], str]] = None
     preconnected_socket: Optional[SocketLike] = None
-    jump: Optional["SSHJumpInfo"] = None
+    jump: Optional[SSHJumpInfo] = None
     keyboard_interactive_handler: Optional[
         Callable[[str, str, list[tuple[str, bool]]], list[str]]
     ] = None

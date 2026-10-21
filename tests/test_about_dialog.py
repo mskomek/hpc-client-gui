@@ -49,7 +49,15 @@ def test_about_shows_version_and_no_network():
     result = subprocess.run(
         [sys.executable, "-c", code],
         cwd=root,
-        env={**os.environ, "QT_QPA_PLATFORM": "offscreen", "PYTHONPATH": str(root / "src")},
+        env={
+            **os.environ,
+            "QT_QPA_PLATFORM": "offscreen",
+            "PYTHONPATH": os.pathsep.join(
+                value
+                for value in (str(root / "src"), os.environ.get("PYTHONPATH", ""))
+                if value
+            ),
+        },
         capture_output=True,
         text=True,
         timeout=15,

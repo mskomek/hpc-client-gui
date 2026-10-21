@@ -9,7 +9,7 @@ import time
 from functools import lru_cache
 from typing import Any
 
-from hpc_gui.config.storage import get_profile_id, load_profiles
+from hpc_gui.config.profiles import get_profile_id, load_profiles
 
 from .private_profile_data import (
     delete_private_profile_data,
@@ -218,10 +218,12 @@ class TransferResumeStore:
 def transfer_resume_store_for_backend(files: Any) -> TransferResumeStore | None:
     try:
         profile_id = profile_id_for_backend(files)
+        if not profile_id:
+            return None
         available = is_private_profile_data_available()
     except Exception:
         return None
-    if not profile_id or not available:
+    if not available:
         return None
     try:
         with _STORES_LOCK:

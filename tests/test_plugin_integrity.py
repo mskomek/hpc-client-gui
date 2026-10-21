@@ -192,7 +192,7 @@ def test_atomic_write_failure_keeps_previous_state(tmp_path: Path, monkeypatch):
     index = plugins_root(tmp_path) / INSTALLED_INDEX_NAME
     index.write_text(json.dumps(legacy), encoding="utf-8")
 
-    from hpc_gui.plugins import state as state_module
+    from hpc_gui.plugins import installed_state as state_module
 
     monkeypatch.setattr(
         state_module,

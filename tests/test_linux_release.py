@@ -28,14 +28,14 @@ class ResolveVersionTest(unittest.TestCase):
         real_read_text = rl.Path.read_text
         pyproject = rl.REPO_ROOT / "pyproject.toml"
         init = rl.SRC_DIR / "hpc_gui" / "__init__.py"
-        cli = rl.SRC_DIR / "hpc_gui" / "cli" / "main.py"
+        cli_contracts = rl.SRC_DIR / "hpc_gui" / "cli" / "_contracts.py"
 
         def _fake_read(self, *args, **kwargs):
             if self == pyproject:
                 return 'version = "9.9.9"\n'
             if self == init:
                 return "__version__ = '1.0.0'\n"
-            if self == cli:
+            if self == cli_contracts:
                 return 'CLI_VERSION = "1.0.0"\n'
             return real_read_text(self, *args, **kwargs)
 

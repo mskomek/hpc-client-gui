@@ -48,11 +48,17 @@ VALID_REGISTRY = {
 }
 @pytest.fixture(scope="module", autouse=True)
 def qapp():
+    from PySide6.QtCore import QCoreApplication, QEvent
     from PySide6.QtWidgets import QApplication
 
     app = QApplication.instance() or QApplication([])
     load_language("en")
     yield app
+    for widget in app.topLevelWidgets():
+        widget.close()
+        widget.deleteLater()
+    QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
+    app.processEvents()
     load_language("en")
 def registry_fetcher():
     payload = json.dumps(VALID_REGISTRY).encode()

@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from hpc_gui.services.quota_monitor import QuotaResult
+from hpc_gui.services.quota_contracts import QuotaResult
 
 
 def parse_nersc_showquota_json(output: str) -> QuotaResult:

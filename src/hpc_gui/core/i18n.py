@@ -125,6 +125,11 @@ def t(key: str) -> str:
     merely untranslated string. ``[key]`` is returned only when the key is
     missing from **both** shipped bundles (a development-time key error).
     """
+    # Directly constructed dialogs and service-side UI helpers may request a
+    # translation before application startup has loaded the saved language.
+    # Load it lazily so these entry points do not leak raw ``[key]`` labels.
+    if not _LANG:
+        load_saved_language(default=_CURRENT)
     try:
         return _lookup(_LANG, key)
     except KeyError:

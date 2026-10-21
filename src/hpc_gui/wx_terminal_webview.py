@@ -430,14 +430,31 @@ def build_terminal_panel(parent, *, model=None, ssh=None, send_input=None, resiz
     """Compatibility entry point for WebView terminal composition."""
     from hpc_gui.wx_terminal_webview_composition import build_terminal_panel as compose
 
-    return compose(parent, model=model, ssh=ssh, send_input=send_input, resize_pty=resize_pty, lifecycle=lifecycle)
+    return compose(
+        parent,
+        model=model,
+        ssh=ssh,
+        send_input=send_input,
+        resize_pty=resize_pty,
+        lifecycle=lifecycle,
+        panel_type=WxTerminalWebViewPanel,
+        is_available=_is_webview_available,
+    )
 
 
 def show_terminal(parent=None, send_input=None, resize_pty=None, *, ssh=None, lifecycle=None) -> int:
     """Compatibility entry point for the detached WebView terminal window."""
     from hpc_gui.wx_terminal_webview_composition import show_terminal as show
 
-    return show(parent, send_input, resize_pty, ssh=ssh, lifecycle=lifecycle)
+    return show(
+        parent,
+        send_input,
+        resize_pty,
+        ssh=ssh,
+        lifecycle=lifecycle,
+        panel_type=WxTerminalWebViewPanel,
+        is_available=_is_webview_available,
+    )
 
 
 __all__ = [

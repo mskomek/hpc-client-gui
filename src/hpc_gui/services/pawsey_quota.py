@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 
-from hpc_gui.services.quota_monitor import QuotaResult
+from hpc_gui.services.quota_contracts import QuotaResult
 
 _ROW = re.compile(
     r"^\s*(?P<fs>/\S+)\s+(?P<used>[0-9]+(?:\.[0-9]+)?)\s*(?P<used_u>[KMGT]i?B?)\s+"

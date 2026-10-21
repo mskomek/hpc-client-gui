@@ -156,8 +156,7 @@ def test_shell_pipelines_are_not_treated_as_direct_automatic_queries():
 
 @pytest.fixture
 def wx_app():
-    import wx
-
+    wx = pytest.importorskip("wx")
     app = wx.App.Get() or wx.App(False)
     existing_windows = set(wx.GetTopLevelWindows())
     yield app
@@ -174,8 +173,7 @@ def wx_app():
 
 
 def _pump_until(predicate, timeout_s: float = 5.0) -> bool:
-    import wx
-
+    wx = pytest.importorskip("wx")
     deadline = time.monotonic() + timeout_s
     while time.monotonic() < deadline:
         wx.Yield()
@@ -204,8 +202,7 @@ def english_i18n():
 @pytest.mark.gui
 @pytest.mark.wx
 def test_wx_tree_group_click_refresh_copy_and_normal_view(tmp_path, wx_app, english_i18n, monkeypatch):
-    import wx
-
+    wx = pytest.importorskip("wx")
     from hpc_gui.core import i18n
     from hpc_gui.wx_logs import WxLogsModel
     from hpc_gui.wx_logs_view import build_logs_panel
@@ -289,8 +286,7 @@ def test_wx_tree_group_click_refresh_copy_and_normal_view(tmp_path, wx_app, engl
 @pytest.mark.gui
 @pytest.mark.wx
 def test_wx_large_log_group_view_keeps_all_5000_lines(tmp_path, wx_app, english_i18n):
-    import wx
-
+    wx = pytest.importorskip("wx")
     from hpc_gui.wx_logs import WxLogsModel
     from hpc_gui.wx_logs_view import build_logs_panel
 

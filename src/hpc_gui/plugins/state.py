@@ -2,83 +2,28 @@
 
 from __future__ import annotations
 
-import json
 import logging
-import os
 import shutil
 import time
 from collections.abc import Callable
 from pathlib import Path
-from typing import Mapping
 
 from hpc_gui.plugins.storage import (
     packages_dir,
-    plugins_root,
+    plugins_root,  # noqa: F401 — legacy re-export
     read_active_versions,
     read_disabled_ids,
     write_active_versions,
     write_disabled_ids,
 )
+from hpc_gui.plugins.installed_state import (
+    INSTALLED_SCHEMA_VERSION,  # noqa: F401 — legacy re-export
+    installed_index_path,  # noqa: F401 — legacy re-export
+    read_installed_state,
+    write_installed_state,
+)
 
 logger = logging.getLogger(__name__)
-
-INSTALLED_SCHEMA_VERSION = 2
-
-
-def _atomic_write_json(path: Path, payload: dict) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_name(path.name + ".tmp")
-    with temporary.open("w", encoding="utf-8", newline="\n") as handle:
-        json.dump(payload, handle, indent=2, sort_keys=True)
-        handle.write("\n")
-        handle.flush()
-        os.fsync(handle.fileno())
-    temporary.replace(path)
-    if os.name == "posix":
-        path.chmod(0o600)
-
-
-def installed_index_path(root: str | Path | None = None) -> Path:
-    return plugins_root(root) / "installed.json"
-
-
-def read_installed_state(root: str | Path | None = None) -> dict[str, dict]:
-    """Read the installed index; returns ``{plugin_id: {versions, ...}}``."""
-    try:
-        with installed_index_path(root).open("r", encoding="utf-8") as handle:
-            payload = json.load(handle)
-    except (OSError, json.JSONDecodeError):
-        return {}
-    if not isinstance(payload, dict) or not isinstance(payload.get("plugins"), dict):
-        return {}
-    result: dict[str, dict] = {}
-    for plugin_id, record in payload["plugins"].items():
-        if isinstance(record, dict) and isinstance(record.get("versions"), list):
-            hashes = record.get("manifest_hashes")
-            migrated = record.get("migrated")
-            result[str(plugin_id)] = {
-                "versions": [str(v) for v in record["versions"] if isinstance(v, str)],
-                "installed_at": str(record.get("installed_at", "")),
-                "manifest_hashes": (
-                    {str(k): str(v) for k, v in hashes.items() if isinstance(v, str)}
-                    if isinstance(hashes, dict)
-                    else {}
-                ),
-                "migrated": (
-                    [str(v) for v in migrated if isinstance(v, str)]
-                    if isinstance(migrated, list)
-                    else []
-                ),
-            }
-    return result
-
-
-def write_installed_state(state: Mapping[str, dict], root: str | Path | None = None) -> None:
-    _atomic_write_json(
-        installed_index_path(root),
-        {"schema_version": INSTALLED_SCHEMA_VERSION, "plugins": dict(state)},
-    )
-
 
 def record_installed_version(
     plugin_id: str,

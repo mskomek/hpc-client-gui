@@ -29,7 +29,7 @@ import logging
 from pathlib import Path
 
 from hpc_gui.plugins.downloader import compute_local_sha256
-from hpc_gui.plugins.state import read_installed_state, write_installed_state
+from hpc_gui.plugins.installed_state import read_installed_state, write_installed_state
 from hpc_gui.plugins.storage import MANIFEST_NAME, plugin_package_dir
 from hpc_gui.plugins.validator import validate_manifest_dict
 

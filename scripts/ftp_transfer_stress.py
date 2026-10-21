@@ -14,7 +14,6 @@ import hashlib
 import json
 import os
 import posixpath
-import shutil
 import socket
 import sys
 import tempfile
@@ -22,7 +21,7 @@ import threading
 import time
 from types import SimpleNamespace
 from contextlib import contextmanager
-from dataclasses import asdict, dataclass
+from dataclasses import asdict
 from pathlib import Path
 from typing import Iterator
 
@@ -39,34 +38,12 @@ SMALL_SIZE = 10 * 1024
 FULL_LARGE_SIZE = 1024**3
 
 
-@dataclass
-class PhaseResult:
-    name: str
-    elapsed_seconds: float
-    bytes_transferred: int
-    throughput_mib_s: float
-    completed_rows: int
-    error_rows: list[str]
-    pending_rows: list[str]
-    max_observed_concurrency: int
-
-
-class ConcurrencyTracker:
-    def __init__(self) -> None:
-        self._lock = threading.Lock()
-        self.active = 0
-        self.maximum = 0
-
-    @contextmanager
-    def transfer(self) -> Iterator[None]:
-        with self._lock:
-            self.active += 1
-            self.maximum = max(self.maximum, self.active)
-        try:
-            yield
-        finally:
-            with self._lock:
-                self.active -= 1
+try:
+    from .ftp_transfer_stress_metrics import ConcurrencyTracker, PhaseResult
+    from .ftp_transfer_stress_cleanup import remove_temp_root
+except ImportError:  # Support direct execution as `python scripts/ftp_transfer_stress.py`.
+    from ftp_transfer_stress_metrics import ConcurrencyTracker, PhaseResult
+    from ftp_transfer_stress_cleanup import remove_temp_root
 
 
 class LoopbackFtpBackend:
@@ -349,21 +326,6 @@ def cancel_and_drain(app: QApplication, panel: RemoteDirPanel, timeout_seconds: 
         )
 
 
-def remove_temp_root(temp_root: Path) -> None:
-    """Remove this run's known temp root, retrying transient Windows handles."""
-    last_error: OSError | None = None
-    for _attempt in range(20):
-        try:
-            shutil.rmtree(temp_root)
-            return
-        except FileNotFoundError:
-            return
-        except OSError as exc:
-            last_error = exc
-            time.sleep(0.1)
-    raise RuntimeError(f"temporary cleanup failed for {temp_root}: {last_error}")
-
-
 def run(mode: str, parallel: int, timeout_seconds: int) -> dict[str, object]:
     large_size = 4 * 1024 * 1024 if mode == "smoke" else FULL_LARGE_SIZE
     username = "trubagui_stress"
@@ -506,3 +468,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
+

@@ -219,18 +219,18 @@ class _JobsOutputsLiveMixin:
         def retranslate_ui(self):
             details_title = f"{t('jobs.title')} / {t('common.details')}"
             files_title = t("jobs_outputs.files_title")
-            outputs_title = t("jobs_outputs.outputs_title") if t("jobs_outputs.outputs_title") != "[jobs_outputs.outputs_title]" else "Çıktılar"
+            outputs_title = t("jobs_outputs.outputs_title")
             self.section_tabs.setTabText(0, details_title)
             self.section_tabs.setTabText(1, files_title)
             self.section_tabs.setTabText(2, outputs_title)
-            self.jobs_box.setTitle(t("jobs.title") if t("jobs.title") != "[jobs.title]" else "İşler")
+            self.jobs_box.setTitle(t("jobs.title"))
             self.meta_box.setTitle(t("jobs_outputs.accounting_details"))
             self.lssrv_box.setTitle(t("jobs_outputs.lssrv_title"))
             self.out_group.setTitle(outputs_title)
             self.out_box.setTitle(t("jobs_outputs.output_stdout"))
             self.err_box.setTitle(t("jobs_outputs.output_stderr"))
-            self.lbl_script.setText(t("jobs_outputs.no_script") if t("jobs_outputs.no_script") != "[jobs_outputs.no_script]" else "Aktif Slurm Script: (yok)")
-            self.btn_refresh.setText(t("jobs.refresh") if t("jobs.refresh") != "[jobs.refresh]" else "Yenile")
+            self.lbl_script.setText(t("jobs_outputs.no_script"))
+            self.btn_refresh.setText(t("jobs.refresh"))
             self.btn_cancel.setText(t("jobs.cancel"))
             self.cancel_id.setPlaceholderText(t("jobs.job_id"))
             self.meta_job_id.setPlaceholderText(t("jobs.job_id"))

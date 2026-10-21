@@ -197,6 +197,12 @@ def _test_environment() -> dict[str, str]:
     """Redirect per-user test state into a temporary home and keep Qt headless."""
     environment = os.environ.copy()
     environment.setdefault("QT_QPA_PLATFORM", "offscreen")
+    if sys.platform.startswith("linux"):
+        # A headless release run must never unlock or create credentials in
+        # the operator's desktop Secret Service. Credential tests inject fakes.
+        environment.setdefault(
+            "PYTHON_KEYRING_BACKEND", "keyring.backends.null.Keyring"
+        )
     # APPDATA is redirected below to isolate the application's settings, but
     # Python also derives its user-site package directory from APPDATA on
     # Windows. Preserve the existing user base so installed test extras remain

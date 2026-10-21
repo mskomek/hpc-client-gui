@@ -43,11 +43,10 @@ jobs:
         run: python -m pip install "pytest>=7"
       - name: Architecture gate regression tests
         run: python -m pytest tests/test_source_architecture_gate.py -q
-      - name: Enforce changed-source size, dependencies, cycles and public APIs
+      - name: Enforce global source size, dependencies, cycles and public APIs
         run: >-
           python scripts/check_source_architecture.py
-          --mode gate
-          --base "${{ github.event.pull_request.base.sha || github.event.before || 'HEAD^' }}"
+          --mode full
       - name: Add architecture report
         if: always()
         run: cat .tmp/source-architecture.md >> "$GITHUB_STEP_SUMMARY"

@@ -222,8 +222,7 @@ def test_cancel_empty_success_reports_ok():
 def _pump_until(predicate, timeout_s=20.0):
     import time as _time
 
-    import wx
-
+    wx = pytest.importorskip("wx")
     deadline = _time.monotonic() + timeout_s
     while _time.monotonic() < deadline:
         try:
@@ -253,8 +252,7 @@ def test_wx_jobs_panel_lists_headerless_lab_job():
     the observable jobs table is the verdict. Pre-fix the headerless row was
     dropped by the parser, so the table stayed empty.
     """
-    import wx
-
+    wx = pytest.importorskip("wx")
     from hpc_gui.wx_jobs import build_jobs_panel
 
     ssh = _FakeSSH((0, LAB_SINGLE_ROW + "\n", ""))
@@ -296,8 +294,7 @@ def test_wx_jobs_panel_empty_queue_shows_no_rows_and_no_exit_token():
     panel) must show zero rows for an empty queue, and the scheduler text fed
     to the view must not contain the ``[exit=0]`` pseudo-error token.
     """
-    import wx
-
+    wx = pytest.importorskip("wx")
     from hpc_gui.wx_jobs import build_jobs_panel
 
     ssh = _FakeSSH((0, "", ""))

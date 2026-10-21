@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 
-from hpc_gui.services.quota_monitor import QuotaResult
+from hpc_gui.services.quota_contracts import QuotaResult
 
 _ROW = re.compile(r"^\s*(?P<fs>home|project|scratch|flash)\s+(?P<used>[0-9]+(?:\.[0-9]+)?)\s*(?P<used_u>[KMGT]i?B)\s+(?P<limit>[0-9]+(?:\.[0-9]+)?)\s*(?P<limit_u>[KMGT]i?B)\s+(?P<files>[0-9]+)\s+(?P<file_limit>[0-9]+)\s*$", re.I)
 _UNITS = {"KB": 1000, "MB": 1000**2, "GB": 1000**3, "TB": 1000**4, "KIB": 1024, "MIB": 1024**2, "GIB": 1024**3, "TIB": 1024**4}

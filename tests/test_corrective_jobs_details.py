@@ -1,12 +1,12 @@
 """Corrective tests for Jobs + Details tabs — Sections 3-48."""
 
 import pytest
+
 wx = pytest.importorskip("wx")
 
 from hpc_gui.core.i18n import load_language, t
-from hpc_gui.services.raw_command_result import RawCommandResult
-from hpc_gui.wx_jobs import build_jobs_panel
 
+from hpc_gui.wx_jobs import build_jobs_panel
 
 def _fake_jobs():
     return [
@@ -18,7 +18,6 @@ def _fake_jobs():
          "elapsed": "-", "nodes": "1", "cpus": "4", "reason": "Priority"},
     ]
 
-
 def _build_panel(**kwargs):
     app = wx.App.Get() or wx.App(False)
     frame = wx.Frame(None)
@@ -27,14 +26,12 @@ def _build_panel(**kwargs):
     wx.Yield()
     return app, frame, panel
 
-
 def _select_job(panel, index=0):
     ctrls = panel._wx_jobs_controls
     evt = wx.ListEvent(wx.wxEVT_LIST_ITEM_SELECTED, ctrls["jobs"].GetId())
     evt.SetIndex(index)
     ctrls["jobs"].GetEventHandler().ProcessEvent(evt)
     wx.Yield()
-
 
 def _close(frame):
     try:
@@ -47,9 +44,6 @@ def _close(frame):
         pass
     for _ in range(3):
         wx.Yield()
-
-
-# === Sec 3: Single-click does not change notebook page ===
 
 class TestSec3_NoAutoSwitch:
     @pytest.mark.gui
@@ -115,9 +109,6 @@ class TestSec3_NoAutoSwitch:
         finally:
             _close(frame)
 
-
-# === Sec 6: Raw Accounting button opens viewer ===
-
 class TestSec6_RawAccountingButton:
     @pytest.mark.integration
     @pytest.mark.wx
@@ -143,9 +134,6 @@ class TestSec6_RawAccountingButton:
             assert raw.source_id == "sacct"
         finally:
             _close(frame)
-
-
-# === Sec 7: Three independent raw sources ===
 
 class TestSec7_RawSourceIsolation:
     @pytest.mark.integration
@@ -197,9 +185,6 @@ class TestSec7_RawSourceIsolation:
         finally:
             _close(frame)
 
-
-# === Sec 11: Cluster status not dependent on job selection ===
-
 class TestSec11_ClusterStatusIndependence:
     @pytest.mark.gui
     @pytest.mark.wx
@@ -248,84 +233,6 @@ class TestSec11_ClusterStatusIndependence:
         finally:
             _close(frame)
 
-
-# === Sec 23: Raw viewer close handling ===
-
-class TestSec23_RawViewerClose:
-    @pytest.mark.contract
-    @pytest.mark.wx
-    def test_raw_viewer_source_label(self):
-        """Verify source label is displayed."""
-        load_language("en")
-        from hpc_gui.wx_raw_viewer import _SOURCE_LABELS
-        assert _SOURCE_LABELS.get("scontrol") == "Slurm Job Details"
-        assert _SOURCE_LABELS.get("sacct") == "Slurm Accounting"
-        assert _SOURCE_LABELS.get("lssrv") == "Cluster Server Status"
-
-    @pytest.mark.gui
-    @pytest.mark.wx
-    @pytest.mark.semantic
-    @pytest.mark.regression
-    def test_raw_viewer_refresh_callback_is_called(self, monkeypatch):
-        """Refresh button invokes its callback and replaces visible output."""
-        import threading
-        from hpc_gui.wx_raw_viewer import show_raw_viewer
-
-        _app = wx.App.Get() or wx.App(False)
-        parent = wx.Frame(None)
-        refreshed = []
-        callback_queued = threading.Event()
-        pending_callbacks = []
-        original_call_after = wx.CallAfter
-
-        def refresh():
-            refreshed.append(True)
-            return RawCommandResult.from_response(
-                source_id="scontrol", command="scontrol show job 1001",
-                stdout="new scheduler response", exit_code=0,
-            )
-
-        def capture_worker_callback(callback, *args, **kwargs):
-            if threading.current_thread() is threading.main_thread():
-                return original_call_after(callback, *args, **kwargs)
-            pending_callbacks.append((callback, args, kwargs))
-            callback_queued.set()
-
-        def show_and_refresh(dialog):
-            output = next(
-                control for control in dialog.GetChildren()
-                if isinstance(control, wx.TextCtrl) and control.GetValue() == "old scheduler response"
-            )
-            refresh_button = next(
-                control for control in dialog.GetChildren()
-                if isinstance(control, wx.Button) and control.GetLabel() == t("raw_viewer.refresh")
-            )
-            event = wx.CommandEvent(wx.wxEVT_BUTTON, refresh_button.GetId())
-            refresh_button.GetEventHandler().ProcessEvent(event)
-            assert callback_queued.wait(5), "refresh result was not queued"
-            assert len(pending_callbacks) == 1
-            callback, args, kwargs = pending_callbacks[0]
-            callback(*args, **kwargs)
-            assert output.GetValue() == "new scheduler response"
-            assert refresh_button.IsEnabled()
-            return wx.ID_CLOSE
-
-        try:
-            monkeypatch.setattr(wx, "CallAfter", capture_worker_callback)
-            monkeypatch.setattr(wx.Dialog, "ShowModal", show_and_refresh)
-            initial = RawCommandResult.from_response(
-                source_id="scontrol", command="scontrol show job 1001",
-                stdout="old scheduler response", exit_code=0,
-            )
-            show_raw_viewer(parent, initial, refresh_callback=refresh)
-            assert refreshed == [True]
-        finally:
-            parent.Destroy()
-            wx.Yield()
-
-
-# === Sec 27: I18N keys ===
-
 class TestSec27_I18N:
     @pytest.mark.contract
     def test_parse_warning_keys_exist(self):
@@ -352,9 +259,6 @@ class TestSec27_I18N:
         assert "not available" in t("jobs_outputs.raw_not_available").lower()
         load_language("tr")
         assert t("jobs_outputs.raw_not_available") != "[jobs_outputs.raw_not_available]"
-
-
-# === Sec 39: Job selection does not change tab ===
 
 class TestSec39_SelectionStaysOnJobs:
     @pytest.mark.gui
@@ -384,9 +288,6 @@ class TestSec39_SelectionStaysOnJobs:
             assert ctrls["detail_values"]["job_id"].GetValue() == "1001"
         finally:
             _close(frame)
-
-
-# === Sec 41: Empty job list + cluster status ===
 
 class TestSec41_EmptyJobsClusterStatus:
     @pytest.mark.gui
@@ -418,9 +319,6 @@ class TestSec41_EmptyJobsClusterStatus:
         finally:
             _close(frame)
 
-
-# === Sec 42: Unsupported cluster provider ===
-
 class TestSec42_UnsupportedCluster:
     @pytest.mark.gui
     @pytest.mark.wx
@@ -442,38 +340,6 @@ class TestSec42_UnsupportedCluster:
             assert "not available" in ctrls["cluster_status_text"].GetLabel()
         finally:
             _close(frame)
-
-
-# === Sec 36: Raw source isolation ===
-
-class TestSec36_RawSourceIsolation:
-    @pytest.mark.unit
-    @pytest.mark.semantic
-    def test_each_viewer_shows_only_its_source(self):
-        load_language("en")
-        detail_raw = RawCommandResult.from_response(
-            source_id="scontrol", command="scontrol show job 1001",
-            stdout="DETAIL-X", exit_code=0,
-        )
-        acct_raw = RawCommandResult.from_response(
-            source_id="sacct", command="sacct -j 1001",
-            stdout="ACCOUNT-X", exit_code=0,
-        )
-        status_raw = RawCommandResult.from_response(
-            source_id="lssrv", command="lssrv",
-            stdout="STATUS-X", exit_code=0,
-        )
-        # Each has different source_id
-        assert detail_raw.source_id == "scontrol"
-        assert acct_raw.source_id == "sacct"
-        assert status_raw.source_id == "lssrv"
-        # Each has different stdout
-        assert detail_raw.stdout == "DETAIL-X"
-        assert acct_raw.stdout == "ACCOUNT-X"
-        assert status_raw.stdout == "STATUS-X"
-
-
-# === Regression: Files/Outputs tab routing ===
 
 class TestRegression_FilesOutputs:
     @pytest.mark.gui

@@ -275,7 +275,9 @@ def test_editor_save__local_and_remote_paths_have_distinct_owners():
     """TRACE-001: local editor save and remote (SFTP) editor save are not
     collapsed into one path — they have different semantics and owners."""
     shell_src = _wx_shell_sources()
-    editor_src = pathlib.Path("src/hpc_gui/wx_editor_view.py").read_text(encoding="utf-8")
+    editor_root = pathlib.Path("src/hpc_gui")
+    editor_modules = ("wx_editor_view.py", "wx_editor_guards.py", "_wx_editor_documents.py", "_wx_editor_find.py", "_wx_editor_save.py")
+    editor_src = "\n".join((editor_root / name).read_text(encoding="utf-8") for name in editor_modules)
     # Remote save: SFTP backend through the session file service.
     assert "def save_remote(path, content)" in shell_src
     assert "files.write_text(path, content)" in shell_src

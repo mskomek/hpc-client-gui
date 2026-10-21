@@ -115,6 +115,38 @@ def _defined_symbols(tree: ast.Module) -> set[str]:
     return names
 
 
+def _runtime_imports(tree: ast.Module) -> list[ast.Import | ast.ImportFrom]:
+    """Return imports that execute at runtime, excluding TYPE_CHECKING blocks."""
+    imports: list[ast.Import | ast.ImportFrom] = []
+
+    def is_type_checking(test: ast.expr) -> bool:
+        return (
+            isinstance(test, ast.Name) and test.id == "TYPE_CHECKING"
+        ) or (
+            isinstance(test, ast.Attribute)
+            and test.attr == "TYPE_CHECKING"
+            and isinstance(test.value, ast.Name)
+            and test.value.id == "typing"
+        )
+
+    class Visitor(ast.NodeVisitor):
+        def visit_If(self, node: ast.If) -> None:
+            if is_type_checking(node.test):
+                for item in node.orelse:
+                    self.visit(item)
+                return
+            self.generic_visit(node)
+
+        def visit_Import(self, node: ast.Import) -> None:
+            imports.append(node)
+
+        def visit_ImportFrom(self, node: ast.ImportFrom) -> None:
+            imports.append(node)
+
+    Visitor().visit(tree)
+    return imports
+
+
 def _scan_project(root: Path) -> dict[str, Any]:
     files: dict[str, dict[str, Any]] = {}
     trees: dict[str, ast.Module] = {}
@@ -138,7 +170,7 @@ def _scan_project(root: Path) -> dict[str, Any]:
             errors.append(f"{relative}:{exc.lineno}: syntax error: {exc.msg}")
     for relative, tree in trees.items():
         current = _module_for_path(Path(relative))
-        for node in ast.walk(tree):
+        for node in _runtime_imports(tree):
             if isinstance(node, ast.Import):
                 for alias in node.names:
                     if alias.name.split(".", 1)[0] in {"hpc_gui", "tests", "scripts"}:

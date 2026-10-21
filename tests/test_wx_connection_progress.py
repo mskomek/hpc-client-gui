@@ -1,9 +1,18 @@
 from __future__ import annotations
 
 import pytest
+from hpc_gui.core.i18n import current_language, load_language
 
 
-def test_connection_progress_view_shows_stages_and_monotonic_gradient():
+@pytest.fixture
+def english_language():
+    previous_language = current_language()
+    load_language("en")
+    yield
+    load_language(previous_language)
+
+
+def test_connection_progress_view_shows_stages_and_monotonic_gradient(english_language):
     wx = pytest.importorskip("wx")
     from hpc_gui.wx_connection_progress import ConnectionProgressView
 

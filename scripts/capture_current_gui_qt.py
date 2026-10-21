@@ -242,11 +242,11 @@ def main() -> int:
         print(f"settings fail {e}")
 
     try:
-        from hpc_gui.ui.dialogs.ansys_lint_results_dialog import AnsysLintResultsDialog
-        # Need fake lint results
-        class FakeTool:
-            def lint_text(self, text, file_name=""): return []
-        d = AnsysLintResultsDialog(FakeTool(), win)
+        from hpc_gui.ui.dialogs.ansys_lint_results_dialog import build_ansys_lint_results_dialog
+        # An empty result still exercises the real dialog surface.
+        class FakeRun:
+            files = []
+        d = build_ansys_lint_results_dialog(win, "Ansys Lint Results", FakeRun())
         d.resize(800,600)
         d.show()
         app.processEvents()

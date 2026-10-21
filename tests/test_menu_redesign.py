@@ -9,7 +9,21 @@ import pytest
 
 
 def read_main_window() -> str:
-    return pathlib.Path("src/hpc_gui/ui/main_window.py").read_text(encoding="utf-8")
+    modules = (
+        "src/hpc_gui/ui/main_window.py",
+        "src/hpc_gui/ui/_main_window_menubar.py",
+        "src/hpc_gui/ui/_main_window_plugins.py",
+    )
+    return "\n".join(pathlib.Path(path).read_text(encoding="utf-8") for path in modules)
+
+
+def read_plugin_manager_dialog() -> str:
+    modules = (
+        "src/hpc_gui/ui/dialogs/plugin_manager_dialog.py",
+        "src/hpc_gui/ui/dialogs/plugin_manager_cards.py",
+        "src/hpc_gui/ui/dialogs/plugin_manager_state.py",
+    )
+    return "\n".join(pathlib.Path(path).read_text(encoding="utf-8") for path in modules)
 
 
 @pytest.mark.audit
@@ -107,7 +121,7 @@ def test_no_hardcoded_ansys_truba_ids():
 
 @pytest.mark.audit
 def test_plugin_manager_semantic_tabs():
-    src = pathlib.Path("src/hpc_gui/ui/dialogs/plugin_manager_dialog.py").read_text(encoding="utf-8")
+    src = read_plugin_manager_dialog()
     assert "_INITIAL_TAB_MAP" in src
     assert '"discover": 0' in src
     assert '"installed": 1' in src
@@ -121,7 +135,7 @@ def test_plugin_manager_semantic_tabs():
 
 @pytest.mark.audit
 def test_plugins_changed_emitted_all_paths():
-    src = pathlib.Path("src/hpc_gui/ui/dialogs/plugin_manager_dialog.py").read_text(encoding="utf-8")
+    src = read_plugin_manager_dialog()
     # install, remove, toggle, activate version should emit
     assert src.count("plugins_changed.emit()") >= 4
     assert "def toggle_plugin_disabled" in src and "plugins_changed.emit()" in src.split("def toggle_plugin_disabled")[1][:500]

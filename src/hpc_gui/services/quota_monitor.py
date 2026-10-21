@@ -2,30 +2,16 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from concurrent.futures import Future, ThreadPoolExecutor
+from dataclasses import dataclass
 import re
 from typing import Any, Callable, Iterable
+
+from hpc_gui.services.quota_contracts import QuotaResult
 
 KNOWN_QUOTA_SCOPES = frozenset({"user", "group", "project", "unknown"})
 _PLACEHOLDER_RE = re.compile(r"\{([A-Za-z_][A-Za-z0-9_]*)\}")
 KNOWN_PLACEHOLDERS = frozenset({"user", "subject", "path", "path_q"})
-
-
-@dataclass(frozen=True)
-class QuotaResult:
-    state: str
-    used_bytes: int | None = None
-    soft_limit_bytes: int | None = None
-    hard_limit_bytes: int | None = None
-    scope: str = "unknown"
-    pool_id: str | None = None
-    error: str | None = None
-    used_files: int | None = None
-    soft_limit_files: int | None = None
-    hard_limit_files: int | None = None
-    storage_id: str | None = None
-    path: str | None = None
 
 
 @dataclass(frozen=True)

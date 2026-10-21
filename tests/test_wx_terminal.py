@@ -27,7 +27,10 @@ def test_terminal_control_codes_resize_find_clear_and_font():
 @pytest.mark.audit
 @pytest.mark.wx
 def test_wx_terminal_keeps_ssh_renderer_optional():
-    source = Path("src/hpc_gui/wx_terminal.py").read_text(encoding="utf-8")
+    source = "\n".join(
+        Path(f"src/hpc_gui/{name}").read_text(encoding="utf-8")
+        for name in ("wx_terminal.py", "wx_terminal_text.py")
+    )
     webview_io = Path("src/hpc_gui/wx_terminal_webview_io.py").read_text(encoding="utf-8")
     bridge = Path("src/hpc_gui/assets/terminal/wx_bridge.js").read_text(encoding="utf-8")
     assert "from PySide6" not in source and "import wx" in source

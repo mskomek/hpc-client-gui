@@ -1,19 +1,29 @@
 """Composition entry points for embedded and detached wx WebView terminals."""
 
 from hpc_gui.core.i18n import subscribe_language_change, t, unsubscribe_language_change
-from hpc_gui.wx_terminal_webview import WxTerminalWebViewPanel, _is_webview_available
+from hpc_gui.wx_terminal_text import build_text_terminal_panel
 
 
-def build_terminal_panel(parent, *, model=None, ssh=None, send_input=None, resize_pty=None, lifecycle=None):
+def build_terminal_panel(
+    parent,
+    *,
+    model=None,
+    ssh=None,
+    send_input=None,
+    resize_pty=None,
+    lifecycle=None,
+    panel_type=None,
+    is_available=None,
+):
     """Public composition entry — tries WebView, falls back to diagnostic non-parity panel.
 
     Keeps literal references to ssh.send_shell_input / ssh.resize_shell_pty for test seam.
     """
     # Keep model param for compat but ignore for WebView (xterm is authority)
     # If WebView is available, use it; else fall back to TextCtrl via wx_terminal
-    if _is_webview_available():
+    if panel_type is not None and callable(is_available) and is_available():
         try:
-            panel = WxTerminalWebViewPanel(parent, ssh=ssh, send_input=send_input, resize_pty=resize_pty, lifecycle=lifecycle)
+            panel = panel_type(parent, ssh=ssh, send_input=send_input, resize_pty=resize_pty, lifecycle=lifecycle)
             # Expose same seam as old panel for shell compatibility
             panel._terminal_model = model  # for compat
             panel._terminal_ssh = ssh
@@ -24,6 +34,9 @@ def build_terminal_panel(parent, *, model=None, ssh=None, send_input=None, resiz
                 panel.hpc_write(data)
 
             panel._wx_terminal_render = _render_wrap
+            from hpc_gui.wx_terminal_clipboard import install_terminal_clipboard_shortcuts
+
+            install_terminal_clipboard_shortcuts(panel)
             # Expose model getter for old tests (may be None)
             if model is not None:
                 panel._wx_terminal_model = model
@@ -61,23 +74,29 @@ def build_terminal_panel(parent, *, model=None, ssh=None, send_input=None, resiz
             # Fall through to TextCtrl fallback
             pass
 
-    # Fallback — import legacy TextCtrl panel (non-parity, diagnostic)
-    try:
-        from hpc_gui.wx_terminal import build_terminal_panel as _legacy_build
-    except Exception as exc:
-        raise RuntimeError("wx terminal fallback unavailable") from exc
-    # Legacy panel already handles ssh/send_input/resize_pty/lifecycle
-    panel = _legacy_build(parent, model=model, ssh=ssh, send_input=send_input, resize_pty=resize_pty, lifecycle=lifecycle)
-    # Mark as non-parity explicitly
-    try:
-        panel._wx_terminal_is_webview = False  # type: ignore
-        panel._wx_terminal_is_parity = False  # type: ignore
-    except Exception:
-        pass
+    panel = build_text_terminal_panel(
+        parent,
+        model=model,
+        ssh=ssh,
+        send_input=send_input,
+        resize_pty=resize_pty,
+        lifecycle=lifecycle,
+    )
+    panel._wx_terminal_is_webview = False
+    panel._wx_terminal_is_parity = False
     return panel
 
 
-def show_terminal(parent=None, send_input=None, resize_pty=None, *, ssh=None, lifecycle=None) -> int:
+def show_terminal(
+    parent=None,
+    send_input=None,
+    resize_pty=None,
+    *,
+    ssh=None,
+    lifecycle=None,
+    panel_type=None,
+    is_available=None,
+) -> int:
     """Detached terminal — uses same WebView renderer, not TextCtrl divergence."""
     try:
         import wx
@@ -91,7 +110,15 @@ def show_terminal(parent=None, send_input=None, resize_pty=None, *, ssh=None, li
         resize_pty = getattr(ssh, "resize_shell_pty", resize_pty)
     # Use lifecycle-aware frame
     frame = wx.Frame(parent, title=t("help.section_terminal"), size=(900, 600))
-    panel = build_terminal_panel(frame, ssh=ssh, send_input=send_input, resize_pty=resize_pty, lifecycle=lifecycle)
+    panel = build_terminal_panel(
+        frame,
+        ssh=ssh,
+        send_input=send_input,
+        resize_pty=resize_pty,
+        lifecycle=lifecycle,
+        panel_type=panel_type,
+        is_available=is_available,
+    )
     sizer = wx.BoxSizer(wx.VERTICAL)
     sizer.Add(panel, 1, wx.EXPAND)
     frame.SetSizer(sizer)

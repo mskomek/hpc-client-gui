@@ -15,7 +15,7 @@ controllers.
 
 from __future__ import annotations
 
-from hpc_gui.ui.widgets._legacy_patch_targets import enable_legacy_patch_targets as _enable_legacy_patch_targets
+from hpc_gui.core._legacy_patch_targets import enable_legacy_patch_targets as _enable_legacy_patch_targets
 
 import datetime
 import logging

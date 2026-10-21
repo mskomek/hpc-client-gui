@@ -305,8 +305,7 @@ def test_unicode_command_output_roundtrip(lab_server, lab_env):
 
 def _pump_until(label_fn, expected, timeout_s=20.0):
     """Pump the real wx loop until the observable label reaches ``expected``."""
-    import wx
-
+    wx = pytest.importorskip("wx")
     deadline = time.monotonic() + timeout_s
     while time.monotonic() < deadline:
         try:
@@ -327,8 +326,7 @@ def _pump_until(label_fn, expected, timeout_s=20.0):
 
 def _drive_select_and_connect(ctrls):
     """Drive the real listbox + button event path (no direct handler calls)."""
-    import wx
-
+    wx = pytest.importorskip("wx")
     choices = ctrls["choices"]
     connect_btn = ctrls["connect"]
     choices.SetSelection(0)
@@ -351,8 +349,7 @@ def test_wx_panel_reports_failed_connect_as_failed(monkeypatch):
     Connect travel through real posted ``wx`` command events and the worker
     thread; the observable status label is the verdict.
     """
-    import wx
-
+    wx = pytest.importorskip("wx")
     from hpc_gui import wx_connection as wx_conn
     from hpc_gui.core.i18n import current_language, load_language, t
 
@@ -394,8 +391,7 @@ def test_wx_panel_transport_failure_repaints_status(monkeypatch):
     death, see DEF-W11-001) must repaint the same label to the failed
     state instead of masquerading the dead session as live.
     """
-    import wx
-
+    wx = pytest.importorskip("wx")
     from hpc_gui import wx_connection as wx_conn
     from hpc_gui.core.i18n import current_language, load_language, t
 

@@ -105,14 +105,14 @@ class JobsOutputsWidget(_JobsOutputsLifecycleMixin, _JobsOutputsJobsMixin, _Jobs
         self.outputs_tab = QWidget(self.section_tabs)
 
         # --- Jobs box
-        self.jobs_box = QGroupBox(t("jobs.title") if t("jobs.title") != "[jobs.title]" else "İşler")
+        self.jobs_box = QGroupBox(t("jobs.title"))
         self.jobs_text = QTextEdit()
         self.jobs_text.setReadOnly(True)
         self._apply_terminal_output_style(self.jobs_text)
         self.jobs_text.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.jobs_text.customContextMenuRequested.connect(self._show_jobs_context_menu)
 
-        self.btn_refresh = QPushButton(t("jobs.refresh") if t("jobs.refresh") != "[jobs.refresh]" else "Yenile")
+        self.btn_refresh = QPushButton(t("jobs.refresh"))
         self.btn_refresh.clicked.connect(self.refresh_jobs)
 
         self.cancel_id = QLineEdit()
@@ -173,9 +173,7 @@ class JobsOutputsWidget(_JobsOutputsLifecycleMixin, _JobsOutputsJobsMixin, _Jobs
         lssrv_layout.addWidget(self.lssrv_text)
 
         # --- Scratch panel (Files subtab)
-        self.scratch_panel = RemoteDirPanel(
-            title=t("jobs_outputs.scratch_title") if t("jobs_outputs.scratch_title") != "[jobs_outputs.scratch_title]" else "Scratch"
-        )
+        self.scratch_panel = RemoteDirPanel(title=t("jobs_outputs.scratch_title"))
         self.scratch_panel.open_file.connect(self.load_one_file)  # double click
         self.scratch_panel.enable_output_menu = True
         self.scratch_panel.open_in_slot.connect(self.open_in_output_slot)
@@ -206,11 +204,11 @@ class JobsOutputsWidget(_JobsOutputsLifecycleMixin, _JobsOutputsJobsMixin, _Jobs
         files_layout.addWidget(self.scratch_panel)
 
         # --- Outputs group (2 panels)
-        self.out_group = QGroupBox(t("jobs_outputs.outputs_title") if t("jobs_outputs.outputs_title") != "[jobs_outputs.outputs_title]" else "Çıktılar")
+        self.out_group = QGroupBox(t("jobs_outputs.outputs_title"))
         outputs_layout = QVBoxLayout(self.outputs_tab)
         vg = QVBoxLayout(self.out_group)
 
-        self.lbl_script = QLabel(t("jobs_outputs.no_script") if t("jobs_outputs.no_script") != "[jobs_outputs.no_script]" else "Aktif Slurm Script: (yok)")
+        self.lbl_script = QLabel(t("jobs_outputs.no_script"))
         vg.addWidget(self.lbl_script)
         self.btn_tail_pause = QPushButton()
         self.btn_tail_pause.clicked.connect(self._toggle_tail_pause)

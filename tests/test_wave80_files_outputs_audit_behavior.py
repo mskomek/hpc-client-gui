@@ -206,7 +206,7 @@ class TestWave80Audit:
     @pytest.mark.wx
     def test_files_follow_menu_has_following_check(self):
         """Section 18: following a file creates a visible live channel."""
-        import wx
+        wx = pytest.importorskip("wx")
         from hpc_gui.wx_jobs import show_jobs
         load_language("en")
         app = wx.App.Get() or wx.App(False)
@@ -265,7 +265,7 @@ class TestWave80Audit:
     @pytest.mark.wx
     def test_no_hardcoded_english_in_outputs_controls(self):
         """Verify the visible search control uses the localized hint."""
-        import wx
+        wx = pytest.importorskip("wx")
         from hpc_gui.wx_jobs import show_jobs
         load_language("en")
         app = wx.App.Get() or wx.App(False)
@@ -293,7 +293,7 @@ class TestWave80Audit:
     @pytest.mark.wx
     def test_outputs_controls_use_all_suffix(self):
         """Section 4: Global controls use 'All' suffix."""
-        import wx
+        wx = pytest.importorskip("wx")
         from hpc_gui.wx_jobs import show_jobs
         load_language("en")
         app = wx.App.Get() or wx.App(False)

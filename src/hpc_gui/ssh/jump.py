@@ -19,9 +19,7 @@ import paramiko
 
 from hpc_gui.config.jump_host_profile import normalize_jump_host_settings
 from hpc_gui.ssh.auth_strategy import load_private_key_with_certificate
-from hpc_gui.ssh.client import (
-    coerce_keepalive_interval,
-)
+from hpc_gui.ssh.contracts import SSHJumpInfo, coerce_keepalive_interval
 from hpc_gui.ssh.host_keys import (
     HostKeyChangedError,
     HostKeyRejectedError,
@@ -39,19 +37,6 @@ class JumpAuthenticationError(paramiko.SSHException):
 
 class JumpForwardingDeniedError(paramiko.SSHException):
     """The jump host refused the direct-tcpip channel."""
-
-
-@dataclass(frozen=True)
-class SSHJumpInfo:
-    """Typed runtime jump configuration consumed by the SSH layer."""
-
-    enabled: bool = False
-    host: str = ""
-    port: int = 22
-    username: str = ""
-    key_path: str = ""
-    host_key_policy: str = "accept-new"
-    keepalive_interval_seconds: int = 30
 
 
 def jump_info_from_settings(value: object) -> Optional[SSHJumpInfo]:

@@ -76,11 +76,7 @@ class _OutputFollowerWidget(QWidget):
         layout = QVBoxLayout(self)
         self.lbl_script = QLabel(t("jobs_outputs.no_script"))
         layout.addWidget(self.lbl_script)
-        self.cb_auto_scroll = QCheckBox(
-            t("jobs_outputs.auto_scroll")
-            if t("jobs_outputs.auto_scroll") != "[jobs_outputs.auto_scroll]"
-            else "Otomatik kaydır"
-        )
+        self.cb_auto_scroll = QCheckBox(t("jobs_outputs.auto_scroll"))
         self.cb_auto_scroll.setChecked(True)
         self.cb_auto_scroll.toggled.connect(self._on_auto_scroll_toggled)
         layout.addWidget(self.cb_auto_scroll)

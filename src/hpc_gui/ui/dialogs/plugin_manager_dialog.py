@@ -7,6 +7,10 @@ All registry/installer work runs on the thread pool via ``AsyncCall``; the
 GUI thread only builds widgets from completed results. The dialog emits
 ``plugins_changed`` after a successful install or removal so future waves
 can refresh dependent surfaces without an app restart.
+
+Wave M01: pure rules live in ``plugin_manager_state`` (Qt-free) and card
+widgets in ``plugin_manager_cards``; this module keeps dialog composition,
+service orchestration and the public API.
 """
 
 from __future__ import annotations
@@ -15,57 +19,39 @@ import logging
 
 from PySide6.QtCore import Qt, QUrl, Signal
 from PySide6.QtGui import QDesktopServices
-from packaging.version import InvalidVersion, Version
 from PySide6.QtWidgets import (
     QDialog,
     QFrame,
-    QGridLayout,
     QHBoxLayout,
-    QComboBox,
     QLabel,
     QLineEdit,
     QPushButton,
-    QScrollArea,
     QTabWidget,
-    QToolButton,
     QVBoxLayout,
-    QWidget,
 )
 
 from hpc_gui import __version__
 from hpc_gui.core.i18n import t
-from hpc_gui.plugins.compatibility import (
-    effective_requires_app,
-    entry_is_app_compatible,
-)
 from hpc_gui.plugins.installer import install_plugin_from_registry
 from hpc_gui.plugins.loader import load_installed_plugins
 from hpc_gui.plugins.registry_client import (
-    RegistryError,
     fetch_registry_with_cache,
 )
 from hpc_gui.plugins.state import remove_plugin, set_plugin_disabled
 from hpc_gui.plugins.storage import read_active_versions, read_disabled_ids
 from hpc_gui.services.plugin_request import PLUGIN_REQUEST_URL
 from hpc_gui.ui.async_call import AsyncCall
+from hpc_gui.ui.dialogs import plugin_manager_cards as plugin_cards
+from hpc_gui.ui.dialogs import plugin_manager_state as plugin_state
+from hpc_gui.ui.dialogs.plugin_manager_state import capability_label
+
+__all__ = [
+    "PLUGIN_REQUEST_URL",
+    "PluginManagerDialog",
+    "capability_label",
+]
 
 logger = logging.getLogger(__name__)
-
-# Human-readable labels for Plugin API v1/v2 capability identifiers. Raw
-# identifiers must never appear as primary UI text.
-_CAPABILITY_LABEL_KEYS = {
-    "cluster-profile": "plugins.capability_cluster_profile",
-    "lint-rules": "plugins.capability_lint_rules",
-    "job-template": "plugins.capability_job_templates",
-    "application-tools": "plugins.capability_application_tools",
-    "linter-tool": "plugins.capability_linter_tool",
-}
-
-
-def capability_label(capability: str) -> str:
-    """Translated, user-facing label for a capability identifier."""
-    key = _CAPABILITY_LABEL_KEYS.get(str(capability or "").strip())
-    return t(key) if key else str(capability or "")
 
 
 _INITIAL_TAB_MAP = {"discover": 0, "installed": 1, "updates": 2}
@@ -123,11 +109,11 @@ class PluginManagerDialog(QDialog):
         self.tabs = QTabWidget()
         layout.addWidget(self.tabs, 1)
 
-        self.discover_list = self._make_scroll_list()
+        self.discover_list = plugin_cards.make_scroll_list()
         self.tabs.addTab(self.discover_list, t("plugins.tab_discover"))
-        self.installed_list = self._make_scroll_list()
+        self.installed_list = plugin_cards.make_scroll_list()
         self.tabs.addTab(self.installed_list, t("plugins.tab_installed"))
-        self.updates_list = self._make_scroll_list()
+        self.updates_list = plugin_cards.make_scroll_list()
         self.tabs.addTab(self.updates_list, t("plugins.tab_updates"))
 
         self._installed_versions = load_installed_plugins(app_version=self._app_version)
@@ -135,35 +121,6 @@ class PluginManagerDialog(QDialog):
         tab_index = _INITIAL_TAB_MAP.get(str(initial_tab).strip().lower(), 0)
         self.tabs.setCurrentIndex(tab_index)
         self._initial_tab = str(initial_tab).strip().lower() if str(initial_tab).strip().lower() in _INITIAL_TAB_MAP else "discover"
-
-    # ------------------------------------------------------------------
-    # Widget helpers
-    # ------------------------------------------------------------------
-
-    def _make_scroll_list(self) -> QScrollArea:
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
-        scroll.setFrameShape(QFrame.NoFrame)
-        container = QWidget()
-        container.setLayout(QVBoxLayout())
-        container.layout().setAlignment(Qt.AlignTop)
-        scroll.setWidget(container)
-        return scroll
-
-    def _clear_list(self, scroll: QScrollArea) -> QVBoxLayout:
-        container = scroll.widget()
-        inner = container.layout()
-        while inner.count():
-            item = inner.takeAt(0)
-            widget = item.widget()
-            if widget is not None:
-                widget.deleteLater()
-        return inner
-
-    def _empty_label(self, key: str) -> QLabel:
-        label = QLabel(t(key))
-        label.setStyleSheet("color: #666; padding: 12px;")
-        return label
 
     # ------------------------------------------------------------------
     # Registry refresh
@@ -283,83 +240,20 @@ class PluginManagerDialog(QDialog):
         self._populate_installed(active)
         self._populate_updates(active)
 
-    @staticmethod
-    def _entry_sort_key(entry: dict):
-        return str(entry.get("name") or entry.get("id") or "")
-
-    def _entries(self) -> list[dict]:
-        if not self._registry:
-            return []
-        return sorted(
-            [e for e in self._registry.get("plugins", []) if isinstance(e, dict)],
-            key=self._entry_sort_key,
-        )
-
     def _is_installed(self, entry: dict, active: dict[str, str]) -> bool:
-        return (
-            entry.get("id") in active and active[entry["id"]] == entry.get("version")
-        )
-
-    @staticmethod
-    def _parse_version(value: object) -> Version | None:
-        try:
-            return Version(str(value or ""))
-        except (InvalidVersion, TypeError):
-            return None
-
-    def _grouped_latest(self) -> list[tuple[dict, list[str]]]:
-        """Group registry entries by plugin id.
-
-        Returns one ``(entry, other_versions)`` pair per plugin: the latest
-        app-compatible version is the primary card; when no version is
-        compatible, the highest version is shown as an incompatible card.
-        Registry order never decides which version is latest. Older
-        versions stay reachable through the details view.
-        """
-        groups: dict[str, list[dict]] = {}
-        for entry in self._entries():
-            groups.setdefault(str(entry.get("id", "")), []).append(entry)
-        grouped: list[tuple[dict, list[str]]] = []
-        for entries in groups.values():
-            parsed: list[tuple[Version | None, dict]] = [
-                (self._parse_version(entry.get("version")), entry) for entry in entries
-            ]
-            with_versions = [item for item in parsed if item[0] is not None]
-            pool = (
-                [item for item in with_versions
-                 if entry_is_app_compatible(item[1], self._app_version)]
-                or with_versions
-                or parsed
-            )
-            best_version, best = max(
-                pool,
-                key=lambda item: item[0] if item[0] is not None else Version("0"),
-            )
-            others = sorted(
-                (str(entry.get("version")) for _, entry in parsed
-                 if entry is not best and entry.get("version") != best.get("version")),
-                key=lambda value: Version(value),
-                reverse=True,
-            )
-            grouped.append((best, others))
-        grouped.sort(key=lambda item: self._entry_sort_key(item[0]))
-        return grouped
+        return plugin_state.is_installed(entry, active)
 
     def _populate_discover(self, active: dict[str, str]) -> None:
-        inner = self._clear_list(self.discover_list)
-        grouped = self._grouped_latest()
-        if not grouped:
-            inner.addWidget(
-                self._empty_label(
-                    "plugins.registry_unavailable"
-                    if not self._registry_source
-                    else "plugins.no_plugins"
-                )
-            )
-            return
-        disabled_ids = read_disabled_ids()
-        for entry, others in grouped:
-            inner.addWidget(self._discover_card(entry, active, disabled_ids, others))
+        plugin_cards.populate_discover(
+            self.discover_list,
+            registry=self._registry,
+            registry_source=self._registry_source,
+            active=active,
+            disabled_ids=read_disabled_ids(),
+            app_version=self._app_version,
+            on_details=self.show_details,
+            on_install=self.install_plugin,
+        )
 
     def _discover_card(
         self,
@@ -368,294 +262,34 @@ class PluginManagerDialog(QDialog):
         disabled_ids: set[str] | None = None,
         other_versions: list[str] | None = None,
     ) -> QFrame:
-        card = QFrame()
-        card.setObjectName("pluginCard")
-        grid = QGridLayout(card)
-        disabled_ids = disabled_ids or set()
-        plugin_id = str(entry.get("id", ""))
-        version = str(entry.get("version", ""))
-
-        name = f"{entry.get('name', '')} v{version}"
-        title = QLabel(name)
-        title.setStyleSheet("font-weight: 600;")
-        grid.addWidget(title, 0, 0)
-
-        compatible = entry_is_app_compatible(entry, self._app_version)
-        meta_bits = [
-            f"{t('plugins.publisher')}: {entry.get('publisher', '')}",
-            f"{t('plugins.requires_app_label')} "
-            f"{effective_requires_app(entry) or entry.get('requires_app', '')}",
-            (
-                t("plugins.compatible_with_running")
-                if compatible
-                else t("plugins.incompatible_with_running")
-            ),
-        ]
-        meta = QLabel(" · ".join(bit for bit in meta_bits if bit))
-        meta.setStyleSheet("color: #666;")
-        grid.addWidget(meta, 1, 0)
-
-        description = QLabel(entry.get("description", ""))
-        description.setWordWrap(True)
-        grid.addWidget(description, 2, 0)
-
-        trusted = "linter-tool" in self._entry_capabilities(entry)
-        if trusted:
-            disclosure = QLabel(t("plugins.trusted_tool_disclosure_short"))
-            disclosure.setWordWrap(True)
-            disclosure.setStyleSheet("color: #8a4b00; padding: 2px 0;")
-            grid.addWidget(disclosure, 3, 0)
-
-        # Capability badges (translated; raw identifiers never shown).
-        caps_row = QHBoxLayout()
-        caps_row.setContentsMargins(0, 2, 0, 2)
-        for capability in self._entry_capabilities(entry):
-            badge = QLabel(capability_label(capability))
-            badge.setProperty("capabilityBadge", True)
-            badge.setStyleSheet(
-                "color: #455a64; background: #eceff1; border-radius: 4px;"
-                "padding: 1px 6px; font-size: 11px;"
-            )
-            caps_row.addWidget(badge)
-        caps_row.addStretch(1)
-        grid.addLayout(caps_row, 4 if trusted else 3, 0)
-
-        if other_versions:
-            others = QLabel(
-                f"{t('plugins.other_versions_catalog')}: {', '.join(other_versions)}"
-            )
-            others.setStyleSheet("color: #666;")
-            grid.addWidget(others, 5 if trusted else 4, 0)
-
-        installed_here = self._is_installed(entry, active)
-        active_version = active.get(plugin_id)
-        update_available = bool(
-            compatible
-            and active_version
-            and not installed_here
-            and self._is_newer_version(version, active_version)
-        )
-        buttons = QHBoxLayout()
-
-        details_button = QToolButton(card)
-        details_button.setText(t("plugins.details"))
-        details_button.clicked.connect(
-            lambda _=False, e=entry, o=other_versions or []: self.show_details(e, o)
-        )
-        buttons.addWidget(details_button)
-        buttons.addStretch(1)
-
-        row = 6 if trusted else 5
-        if installed_here and plugin_id not in disabled_ids:
-            badge = QLabel(t("plugins.installed_badge"))
-            badge.setStyleSheet("color: #2e7d32; font-weight: 600; padding-right: 8px;")
-            buttons.addWidget(badge)
-        elif update_available:
-            badge = QLabel(t("plugins.update_available"))
-            badge.setStyleSheet("color: #b26a00; font-weight: 600; padding-right: 8px;")
-            buttons.addWidget(badge)
-            update_button = QPushButton(t("plugins.update"))
-            update_button.clicked.connect(
-                lambda _=False, e=entry, b=update_button: self.install_plugin(e, b)
-            )
-            buttons.addWidget(update_button)
-        elif plugin_id in disabled_ids:
-            badge = QLabel(t("plugins.disabled_label"))
-            badge.setStyleSheet("color: #b26a00; font-weight: 600; padding-right: 8px;")
-            buttons.addWidget(badge)
-        else:
-            install_button = QPushButton(t("plugins.install"))
-            if not compatible:
-                install_button.setEnabled(False)
-                install_button.setToolTip(t("plugins.incompatible"))
-                install_button.setText(t("plugins.incompatible"))
-            else:
-                install_button.clicked.connect(
-                    lambda _=False, e=entry, b=install_button: self.install_plugin(e, b)
-                )
-            buttons.addWidget(install_button)
-
-        grid.addLayout(buttons, row, 0)
-        search_versions = " ".join([version, *(other_versions or [])])
-        card.setProperty(
-            "searchText",
-            (self._search_text_for(entry) + " " + search_versions).lower(),
-        )
-        return card
-
-    @staticmethod
-    def _entry_capabilities(entry: dict) -> list[str]:
-        """Capabilities for display: the authoritative array when present,
-        otherwise the legacy single ``type`` field."""
-        capabilities = entry.get("capabilities")
-        if isinstance(capabilities, list) and capabilities:
-            return [str(item) for item in capabilities if str(item)]
-        legacy = str(entry.get("type", "") or "")
-        return [legacy] if legacy else []
-
-    @staticmethod
-    def _search_text_for(entry: dict) -> str:
-        return " ".join(
-            str(entry.get(key, "") or "")
-            for key in ("name", "id", "description", "publisher", "type")
+        return plugin_cards.build_discover_card(
+            entry,
+            active,
+            disabled_ids,
+            other_versions,
+            app_version=self._app_version,
+            on_details=self.show_details,
+            on_install=self.install_plugin,
         )
 
     def _populate_installed(self, active: dict[str, str]) -> None:
-        inner = self._clear_list(self.installed_list)
-        # W33 (HPC-W08-LIFE-005): the installed surface must state the real
-        # enable/disable behavior — a toggle that only flips persisted state
-        # without explanation is misleading.
-        effect_note = QLabel(t("plugins.lifecycle_effect_note"))
-        effect_note.setWordWrap(True)
-        effect_note.setStyleSheet("color: #666; padding: 4px 8px;")
-        effect_note.setObjectName("pluginLifecycleNote")
-        inner.addWidget(effect_note)
-        installed_by_id = {
-            installed.manifest.id: installed
-            for installed in self._installed_versions.plugins
-        }
-        state_records = {}
-        try:
-            from hpc_gui.plugins.state import read_installed_state
-
-            state_records = read_installed_state()
-        except Exception:  # pragma: no cover - defensive
-            state_records = {}
-        disabled = read_disabled_ids()
-
-        rows = []
-        for installed in self._installed_versions.plugins:
-            versions = state_records.get(installed.manifest.id, {}).get(
-                "versions", [installed.manifest.version]
-            )
-            rows.append((installed.manifest.name, installed.manifest.id, versions))
-        for plugin_id, version in sorted(active.items()):
-            if plugin_id not in installed_by_id:
-                rows.append((plugin_id, plugin_id, [version]))
-
-        for problem in getattr(self._installed_versions, "problems", ()):
-            label = QLabel(t("plugins.corrupt_plugin").format(name=problem.plugin_id))
-            label.setWordWrap(True)
-            label.setStyleSheet("color: #b00020; padding: 8px;")
-            inner.addWidget(label)
-
-        if not rows:
-            if not getattr(self._installed_versions, "problems", ()):
-                inner.addWidget(self._empty_label("plugins.no_installed"))
-            return
-
-        for name, plugin_id, versions in rows:
-            versions = sorted(
-                set(versions) | ({active[plugin_id]} if plugin_id in active else set()),
-                key=lambda value: self._parse_version(value) or Version("0"),
-                reverse=True,
-            )
-            installed = installed_by_id.get(plugin_id)
-            has_tool = bool(
-                installed is not None
-                and "linter-tool" in getattr(installed.manifest, "capabilities", ())
-                and getattr(installed, "linter_engine", None)
-            )
-            inner.addWidget(
-                self._installed_card(
-                    name, plugin_id, versions, active.get(plugin_id), plugin_id in disabled,
-                    has_tool=has_tool,
-                )
-            )
-
-    def _installed_card(
-        self,
-        name: str,
-        plugin_id: str,
-        versions: list[str],
-        active_version: str | None = None,
-        is_disabled: bool = False,
-        has_tool: bool = False,
-    ) -> QFrame:
-        card = QFrame()
-        grid = QGridLayout(card)
-
-        active_version = active_version or (versions[0] if versions else None)
-        title_text = f"{name} — {t('plugins.version')}: {active_version or ''}"
-        title = QLabel(title_text)
-        title.setStyleSheet("font-weight: 600;")
-        grid.addWidget(title, 0, 0)
-        other = ", ".join(version for version in versions if version != active_version)
-        if other:
-            others_label = QLabel(f"{t('plugins.other_versions')}: {other}")
-            others_label.setStyleSheet("color: #666;")
-            grid.addWidget(others_label, 1, 0)
-        if is_disabled:
-            state_label = QLabel(t("plugins.disabled_label"))
-            state_label.setStyleSheet("color: #b26a00;")
-            grid.addWidget(state_label, 2, 0)
-        if has_tool:
-            tool_label = QLabel(t("plugins.trusted_tool_label"))
-            tool_label.setStyleSheet("color: #245a9a;")
-            grid.addWidget(tool_label, 2, 0)
-
-        version_row = QHBoxLayout()
-        version_row.addWidget(QLabel(t("plugins.switch_version_label")))
-        version_combo = QComboBox()
-        version_combo.addItems(versions)
-        if active_version:
-            version_combo.setCurrentText(active_version)
-        version_row.addWidget(version_combo)
-        version_button = QPushButton()
-        version_row.addWidget(version_button)
-        grid.addLayout(version_row, 3, 0)
-
-        def update_version_action(selected: str) -> None:
-            if not active_version or selected == active_version:
-                version_button.setText(t("plugins.rollback"))
-                version_button.setEnabled(False)
-                return
-            version_button.setText(
-                t("plugins.activate")
-                if self._is_newer_version(selected, active_version)
-                else t("plugins.rollback")
-            )
-            version_button.setEnabled(True)
-
-        version_combo.currentTextChanged.connect(update_version_action)
-        version_button.clicked.connect(
-            lambda _=False: self.change_plugin_version(
-                plugin_id, name, version_combo.currentText(), active_version
-            )
+        plugin_cards.populate_installed(
+            self.installed_list,
+            installed_versions=self._installed_versions,
+            active=active,
+            disabled_ids=read_disabled_ids(),
+            on_version_change=self.change_plugin_version,
+            on_toggle=self.toggle_plugin_disabled,
+            on_remove=self.remove_plugin,
+            on_open_tool=self.open_linter_tool,
         )
-        update_version_action(version_combo.currentText())
-
-        row = QHBoxLayout()
-        row.addStretch(1)
-        if has_tool and not is_disabled:
-            open_tool_button = QPushButton(t("plugins.open_tool"))
-            open_tool_button.clicked.connect(
-                lambda _=False, pid=plugin_id: self.open_linter_tool(pid)
-            )
-            row.addWidget(open_tool_button)
-        toggle_button = QPushButton(
-            t("plugins.enable") if is_disabled else t("plugins.disable")
-        )
-        toggle_button.clicked.connect(
-            lambda _=False, pid=plugin_id, disabled=is_disabled: self.toggle_plugin_disabled(
-                pid, disabled
-            )
-        )
-        row.addWidget(toggle_button)
-        remove_button = QPushButton(t("plugins.remove"))
-        remove_button.clicked.connect(
-            lambda _=False, pid=plugin_id, pname=name: self.remove_plugin(pid, pname)
-        )
-        row.addWidget(remove_button)
-        grid.addLayout(row, 4, 0)
-        return card
 
     def change_plugin_version(
         self, plugin_id: str, name: str, version: str, current_version: str
     ) -> None:
         if self._version_worker is not None or version == current_version:
             return
-        rollback = not self._is_newer_version(version, current_version)
+        rollback = not plugin_state.is_newer_version(version, current_version)
         from PySide6.QtWidgets import QMessageBox
 
         key = (
@@ -719,92 +353,16 @@ class PluginManagerDialog(QDialog):
 
     def open_linter_tool(self, plugin_id: str) -> None:
         """Open the approved Trusted Tool hosted in a modal dialog."""
-        from PySide6.QtWidgets import QMessageBox
-
-        installed = next(
-            (
-                item
-                for item in self._installed_versions.plugins
-                if item.manifest.id == plugin_id
-            ),
-            None,
-        )
-        if installed is None:
-            QMessageBox.warning(
-                self,
-                t("plugins.tool_open_failed"),
-                f"{plugin_id}: {t('plugins.tool_not_installed')}",
-            )
-            return
-        try:
-            from hpc_gui.plugins.linter_tools import load_tool_for_plugin
-
-            tool = load_tool_for_plugin(installed)
-        except Exception as exc:
-            logger.warning("Could not load linter tool %s", plugin_id, exc_info=exc)
-            QMessageBox.warning(
-                self,
-                t("plugins.tool_open_failed"),
-                str(exc),
-            )
-            return
-
-        dialog = QDialog(self)
-        dialog.setWindowTitle(f"{tool.title} — {plugin_id}@{tool.version}")
-        dialog.resize(980, 680)
-        layout = QVBoxLayout(dialog)
-        try:
-            page = tool.page_factory(parent=dialog)
-        except Exception as exc:
-            logger.warning("Linter tool page creation failed for %s", plugin_id, exc_info=exc)
-            QMessageBox.warning(
-                self,
-                t("plugins.tool_open_failed"),
-                str(exc),
-            )
-            return
-        layout.addWidget(page)
-        dialog.exec()
+        plugin_cards.open_linter_tool(self, self._installed_versions, plugin_id)
 
     def _populate_updates(self, active: dict[str, str]) -> None:
-        inner = self._clear_list(self.updates_list)
-        updates = []
-        for entry, _others in self._grouped_latest():
-            plugin_id = str(entry.get("id", ""))
-            current = active.get(plugin_id)
-            if not current or current == entry.get("version"):
-                continue
-            if not entry_is_app_compatible(entry, self._app_version):
-                continue
-            if self._is_newer_version(str(entry.get("version", "")), current):
-                updates.append(entry)
-        if not updates:
-            inner.addWidget(self._empty_label("plugins.no_updates"))
-            return
-        for entry in updates:
-            card = QFrame()
-            grid = QGridLayout(card)
-            label = QLabel(
-                f"{entry.get('name', '')}: {active.get(entry['id'])} → v{entry.get('version')}"
-            )
-            grid.addWidget(label, 0, 0)
-            update_row = QHBoxLayout()
-            update_row.addStretch(1)
-            update_button = QPushButton(t("plugins.update"))
-            update_button.clicked.connect(
-                lambda _=False, e=entry, b=update_button: self.install_plugin(e, b)
-            )
-            update_row.addWidget(update_button)
-            grid.addLayout(update_row, 1, 0)
-            inner.addWidget(card)
-
-    @staticmethod
-    def _is_newer_version(candidate: str, current: str) -> bool:
-        """PEP 440 comparison; unparseable versions never count as updates."""
-        try:
-            return Version(candidate) > Version(current)
-        except InvalidVersion:
-            return False
+        plugin_cards.populate_updates(
+            self.updates_list,
+            registry=self._registry,
+            active=active,
+            app_version=self._app_version,
+            on_install=self.install_plugin,
+        )
 
     # ------------------------------------------------------------------
     # Actions
@@ -812,35 +370,7 @@ class PluginManagerDialog(QDialog):
 
     def show_details(self, entry: dict, other_versions: list[str] | None = None) -> None:
         installed_state = self._details_installed_state(entry)
-        lines = [
-            f"ID: {entry.get('id', '')}",
-            f"{t('plugins.publisher')}: {entry.get('publisher', '')}",
-            f"{t('plugins.version')}: {entry.get('version', '')}",
-            f"{t('plugins.license')}: {entry.get('license', '—')}",
-            f"{t('plugins.requires_app_label')}: "
-            f"{effective_requires_app(entry) or entry.get('requires_app', '')}",
-            (
-                f"{t('plugins.capabilities')}: "
-                + ", ".join(
-                    capability_label(capability)
-                    for capability in self._entry_capabilities(entry)
-                )
-            ),
-            f"{t('plugins.source_label')}: {t('plugins.source_official_registry')}",
-            f"{t('plugins.installed_state')}: {installed_state}",
-        ]
-        if other_versions:
-            lines.append(
-                f"{t('plugins.other_versions_catalog')}: {', '.join(other_versions)}"
-            )
-        lines += [
-            "",
-            str(entry.get("description", "")),
-        ]
-        if "cluster-profile" in set(self._entry_capabilities(entry)):
-            lines += ["", t("plugins.cluster_commands_warning")]
-        if "linter-tool" in set(self._entry_capabilities(entry)):
-            lines += ["", t("plugins.trusted_tool_disclosure")]
+        lines = plugin_state.details_lines(entry, installed_state, other_versions)
         from PySide6.QtWidgets import QMessageBox
 
         QMessageBox.information(
@@ -850,16 +380,9 @@ class PluginManagerDialog(QDialog):
         )
 
     def _details_installed_state(self, entry: dict) -> str:
-        active = read_active_versions()
-        disabled_ids = read_disabled_ids()
-        plugin_id = str(entry.get("id", ""))
-        if self._is_installed(entry, active):
-            return (
-                t("plugins.installed_disabled")
-                if plugin_id in disabled_ids
-                else t("plugins.installed_active")
-            )
-        return t("plugins.installed_not_installed")
+        return plugin_cards.details_installed_state(
+            entry, read_active_versions(), read_disabled_ids()
+        )
 
     def install_plugin(self, entry: dict, button: QPushButton) -> None:
         """Install one registry entry off the GUI thread."""
@@ -928,46 +451,7 @@ class PluginManagerDialog(QDialog):
         self.rebuild_tabs()
 
     def _install_summary_text(self, entry: dict) -> str:
-        """Human-readable install/update summary from loader data.
-
-        Counts come only from the freshly loaded installed plugin; when the
-        detailed counts are unavailable a correct generic message is shown.
-        """
-        result = self._last_install_result
-        installed = getattr(result, "installed", None) if result else None
-        manifest = getattr(installed, "manifest", None)
-        name = (
-            getattr(manifest, "name", None)
-            or str(entry.get("name", ""))
-            or t("plugins.action")
-        )
-        counts = self._capability_counts(installed)
-        if not counts or not any(counts.values()):
-            return t("plugins.install_generic").format(name=name)
-        parts = [
-            t("plugins.summary_cluster_profiles").format(count=counts["cluster"]),
-            t("plugins.summary_job_templates").format(count=counts["templates"]),
-            t("plugins.summary_lint_rule_packs").format(count=counts["lint"]),
-        ]
-        details = ", ".join(parts[:-1])
-        if len(parts) > 1:
-            details += f" {t('common.and')} " + parts[-1]
-        else:
-            details = parts[0]
-        return t("plugins.install_summary").format(name=name, details=details)
-
-    @staticmethod
-    def _capability_counts(installed) -> dict[str, int]:
-        cluster = len(tuple(getattr(installed, "cluster_profiles", ()) or ()))
-        lint_index = getattr(installed, "lint_index", None)
-        lint = 1 if isinstance(lint_index, dict) and lint_index.get("rules") is not None else 0
-        templates_index = getattr(installed, "job_templates_index", None)
-        templates = 0
-        if isinstance(templates_index, dict):
-            raw_templates = templates_index.get("templates")
-            if isinstance(raw_templates, list):
-                templates = len(raw_templates)
-        return {"cluster": cluster, "lint": lint, "templates": templates}
+        return plugin_state.install_summary_text(entry, self._last_install_result)
 
     def remove_plugin(self, plugin_id: str, display_name: str) -> None:
         from PySide6.QtWidgets import QMessageBox
@@ -997,19 +481,7 @@ class PluginManagerDialog(QDialog):
     # ------------------------------------------------------------------
 
     def _error_text(self, error: Exception | None) -> str:
-        text = str(error or "")
-        lowered = text.lower()
-        if isinstance(error, RegistryError) or "registry" in lowered:
-            return t("plugins.registry_unavailable")
-        if "sha-256" in lowered or "sha256" in lowered or "size" in lowered:
-            return t("plugins.verification_failed").format(name="")
-        if "requires app" in lowered or "incompatible" in lowered:
-            return t("plugins.incompatible")
-        if "plugin api" in lowered or "plugin_api" in lowered:
-            return t("plugins.unsupported_api")
-        if "identity" in lowered or "invalid" in lowered:
-            return t("plugins.invalid_plugin")
-        return t("plugins.install_failed").format(name="")
+        return plugin_state.install_error_message(error)
 
     def _apply_search_filter(self, text: str) -> None:
         needle = text.strip().lower()

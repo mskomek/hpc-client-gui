@@ -58,24 +58,27 @@ def test_mocked_registry_populates_discover(qapp, monkeypatch):
 @pytest.mark.gui
 def test_updates_tab_lists_newer_compatible_version(qapp):
     dialog = PluginManagerDialog()
-    dialog._registry = json.loads(json.dumps(VALID_REGISTRY))
-    dialog._registry_source = "network"
+    try:
+        dialog._registry = json.loads(json.dumps(VALID_REGISTRY))
+        dialog._registry_source = "network"
 
-    dialog._populate_updates({"org.hpcclient.truba": "0.9.0"})
-    container = dialog.updates_list.widget()
-    text = "\n".join(
-        label.text()
-        for label in container.findChildren(type(dialog.status_label))
-    )
-    assert "0.9.0" in text and "1.0.0" in text
+        dialog._populate_updates({"org.hpcclient.truba": "0.9.0"})
+        container = dialog.updates_list.widget()
+        text = "\n".join(
+            label.text()
+            for label in container.findChildren(type(dialog.status_label))
+        )
+        assert "0.9.0" in text and "1.0.0" in text
 
-    # Up-to-date plugins produce the empty-state message.
-    dialog._populate_updates({"org.hpcclient.truba": "1.0.0"})
-    text = "\n".join(
-        label.text()
-        for label in dialog.updates_list.widget().findChildren(type(dialog.status_label))
-    )
-    assert t("plugins.no_updates") in text
+        # Up-to-date plugins produce the empty-state message.
+        dialog._populate_updates({"org.hpcclient.truba": "1.0.0"})
+        text = "\n".join(
+            label.text()
+            for label in dialog.updates_list.widget().findChildren(type(dialog.status_label))
+        )
+        assert t("plugins.no_updates") in text
+    finally:
+        dialog.deleteLater()
 
 @pytest.mark.gui
 def test_search_filter_hides_non_matching_cards(qapp):

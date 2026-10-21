@@ -1,5 +1,6 @@
 import threading
 import time
+from pathlib import Path
 
 import pytest
 
@@ -30,7 +31,9 @@ def test_shortcut_routing_and_model_has_no_qt():
 
 @pytest.mark.audit
 def test_wx_editor_view_has_async_remote_save_and_distinct_actions():
-    source = open("src/hpc_gui/wx_editor_view.py", encoding="utf-8").read()
+    root = Path("src/hpc_gui")
+    modules = ("wx_editor_view.py", "wx_editor_guards.py", "_wx_editor_documents.py", "_wx_editor_find.py", "_wx_editor_save.py")
+    source = "\n".join((root / name).read_text(encoding="utf-8") for name in modules)
     assert "save_remote=None" in source
     assert "Thread(target=worker" in source
     assert "on_submit=None" in source and "on_run=None" in source

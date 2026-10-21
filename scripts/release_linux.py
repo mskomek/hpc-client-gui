@@ -86,10 +86,10 @@ def resolve_version() -> str:
         raise PackagingError(f"__init__.py has no __version__ declaration: {init}")
     versions.append(match.group(1))
 
-    cli = SRC_DIR / "hpc_gui" / "cli" / "main.py"
+    cli = SRC_DIR / "hpc_gui" / "cli" / "_contracts.py"
     match = re.search(r'CLI_VERSION\s*=\s*"([^"]+)"', cli.read_text(encoding="utf-8"))
     if not match:
-        raise PackagingError(f"cli/main.py has no CLI_VERSION declaration: {cli}")
+        raise PackagingError(f"cli/_contracts.py has no CLI_VERSION declaration: {cli}")
     versions.append(match.group(1))
 
     unique = set(versions)

@@ -160,7 +160,7 @@ def _build_directories(parent, *, session_state=None, workspace: WxDirectoriesWo
                 from pathlib import Path, PurePosixPath
 
                 from hpc_gui.services.transfer_controller import TransferItem
-                from hpc_gui.wx_shell import _start_file_transfers
+                from hpc_gui.wx_shell_file_transfer import _start_file_transfers
 
                 items = [
                     TransferItem("download", remote_path, str(Path(destination) / PurePosixPath(remote_path).name))

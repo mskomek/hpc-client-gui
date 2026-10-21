@@ -42,6 +42,20 @@ def test_project_scan_reports_missing_internal_imports_and_cycles(tmp_path: Path
     assert ["hpc_gui.a", "hpc_gui.b"] in architecture._cycles(scan["graph"])
 
 
+def test_project_scan_ignores_type_checking_only_import_cycles(tmp_path: Path) -> None:
+    _git_repo(tmp_path)
+    _write(
+        tmp_path / "src/hpc_gui/a.py",
+        "from typing import TYPE_CHECKING\nif TYPE_CHECKING:\n    from .b import B\nclass A: pass\n",
+    )
+    _write(tmp_path / "src/hpc_gui/b.py", "from .a import A\nclass B: pass\n")
+
+    scan = architecture._scan_project(tmp_path)
+
+    assert scan["dependency_errors"] == []
+    assert architecture._cycles(scan["graph"]) == []
+
+
 def test_namespace_package_imports_from_tests_and_scripts_resolve(tmp_path: Path) -> None:
     _git_repo(tmp_path)
     _write(tmp_path / "scripts/checker.py", "def run(): pass\n")

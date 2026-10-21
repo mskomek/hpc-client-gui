@@ -204,7 +204,7 @@ class ConnectionDialogSelfTestMixin:
         def worker() -> None:
             try:
                 from hpc_gui.services.cluster_self_test import run_cluster_self_test
-                from hpc_gui.wx_connection import WxConnectionModel, ssh_info_from_profile
+                from hpc_gui.wx_connection_model import WxConnectionModel, ssh_info_from_profile
 
                 info = ssh_info_from_profile(transient, WxConnectionModel())
                 result = run_cluster_self_test(

@@ -161,7 +161,8 @@ class TestReleaseGate:
         # Check critical files for known issues
         critical_paths = [
             "services/files_ssh.py",
-            "ssh/client.py",
+            "ssh/text.py",
+            "ssh/shell_session.py",
             "services/private_profile_data.py",
         ]
         for rel_path in critical_paths:

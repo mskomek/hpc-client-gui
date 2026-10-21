@@ -29,8 +29,7 @@ pytestmark = [pytest.mark.wx, pytest.mark.semantic]
 # ---------------------------------------------------------------------------
 
 def _pump_until(predicate, timeout_s: float = 10.0):
-    import wx
-
+    wx = pytest.importorskip("wx")
     deadline = time.time() + timeout_s
     while time.time() < deadline:
         try:
@@ -48,8 +47,7 @@ def _pump_until(predicate, timeout_s: float = 10.0):
 
 @pytest.fixture
 def wx_app():
-    import wx
-
+    wx = pytest.importorskip("wx")
     app = wx.App.Get()
     created = False
     if app is None:
@@ -103,8 +101,7 @@ def test_w39_diag001_logs_initialize_on_first_run(tmp_path, monkeypatch):
 
 @pytest.mark.gui
 def test_w39_diag002_diag003_viewer_opens_and_refresh_reflects_new_lines(tmp_path, wx_app):
-    import wx
-
+    wx = pytest.importorskip("wx")
     from hpc_gui.wx_logs import WxLogsModel
     from hpc_gui.wx_logs_view import build_logs_panel
 
@@ -150,8 +147,7 @@ def test_w39_diag004_logs_dir_resolves_active_directory(tmp_path):
 
 @pytest.mark.gui
 def test_w39_diag004_open_folder_button_exists_and_resolves(tmp_path, wx_app, monkeypatch):
-    import wx
-
+    wx = pytest.importorskip("wx")
     from hpc_gui.wx_logs import WxLogsModel
     from hpc_gui.wx_logs_view import build_logs_panel
 
@@ -178,8 +174,7 @@ def test_w39_diag004_open_folder_button_exists_and_resolves(tmp_path, wx_app, mo
 def test_w39_diag005_no_unconfirmed_clear_delete_exposed(tmp_path, wx_app):
     """The logs view exposes no destructive clear/delete control, so the
     conditional requirement is vacuously satisfied (no unconfirmed wipe)."""
-    import wx
-
+    wx = pytest.importorskip("wx")
     from hpc_gui.wx_logs import WxLogsModel
     from hpc_gui.wx_logs_view import build_logs_panel
 
@@ -290,8 +285,7 @@ def test_w39_diag008_bundle_survives_missing_optional_files(tmp_path):
 def test_w39_diag009_usable_offline_after_connection_failure(tmp_path, wx_app):
     """The logs view takes no connection object, so a dead/offline network
     cannot break it: refresh of a local file still works."""
-    import wx
-
+    wx = pytest.importorskip("wx")
     from hpc_gui.wx_logs import WxLogsModel
     from hpc_gui.wx_logs_view import build_logs_panel
 
@@ -323,8 +317,7 @@ def test_w39_todo009_export_failure_raises_without_crashing_app(tmp_path):
 def test_w39_lifecycle_pending_refresh_safe_after_close(tmp_path, wx_app):
     """Destroy the host, then deliver a late refresh/export callback: no
     destroyed-control update, no exception (LOGS-LIFECYCLE-001, TODO-008)."""
-    import wx
-
+    wx = pytest.importorskip("wx")
     from hpc_gui.wx_logs import WxLogsModel
     from hpc_gui.wx_logs_view import build_logs_panel
 

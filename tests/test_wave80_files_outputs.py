@@ -103,7 +103,7 @@ class TestOutputsBehavior:
     @pytest.mark.wx
     def test_outputs_tab_exists(self):
         """Outputs tab is present in the notebook."""
-        import wx
+        wx = pytest.importorskip("wx")
         from hpc_gui.wx_jobs import show_jobs
         load_language("en")
         app = wx.App.Get() or wx.App(False)
@@ -242,7 +242,7 @@ class TestRegression:
     @pytest.mark.gui
     @pytest.mark.wx
     def test_wave78_tabs_still_work(self):
-        import wx
+        wx = pytest.importorskip("wx")
         from hpc_gui.wx_jobs import show_jobs
         load_language("en")
         app = wx.App.Get() or wx.App(False)
