@@ -1,13 +1,13 @@
 {
   "schema_version": 1,
-  "status": "WAVE_06_COMPLETE",
+  "status": "WAVE_07_COMPLETE",
   "created_at_local": "2026-10-21",
   "target_branch": "develop",
   "integration_branch": "codex/integration/v2-jobs-staged-20261021",
   "integration_worktree": "D:\\Projeler\\.tmp\\hpc-client-gui\\v2-jobs-staged-20261021",
   "integration_start_sha": "f61919bad12be5f328cb9db3fee3c8de8563fa5b",
-  "latest_integration_sha": "7675422c1d077572f96ff4fad1b8c703d53ffb31",
-  "latest_integration_tree_sha": "eeab892b309b65d4d3bd88d9eacc86e71f8ff3f1",
+  "latest_integration_sha": "ce598c2859b31d0abdfaaf6c071a6898eec60782",
+  "latest_integration_tree_sha": "418427c15e5c10de085df3b47f7137e4fc057310",
   "wave_00_source_sha": "718fbd01296793b513526adabedd3e48deea2d4a",
   "wave_00_tree_sha": "bc4297dce73099e4003a93d52d66247b6ecba719",
   "wave_00_source_fingerprint_sha256": "37be9c808f09d80dc5763520d19d8ee756c8cfa2b8ccc20f919f4fb9256f7a07",
@@ -276,11 +276,11 @@
     }
   },
   "global_architecture_inventory": {
-    "over_limit_python_count": 47,
+    "over_limit_python_count": 42,
     "unresolved_internal_imports": 1,
     "cycles": 8,
     "api_errors": 0,
-    "latest_gate_source_sha": "7675422c1d077572f96ff4fad1b8c703d53ffb31",
+    "latest_gate_source_sha": "ce598c2859b31d0abdfaaf6c071a6898eec60782",
     "final_zero_gate_reached": false
   },
   "wave_05": {
@@ -453,6 +453,148 @@
       "exit_code": 0,
       "json_report": ".tmp/wave06-architecture-final.json",
       "markdown_report": ".tmp/wave06-architecture-final.md"
+    },
+    "develop_updated": false,
+    "remote_mutations": false,
+    "wip_snapshot_modified": false,
+    "full_release_acceptance_run": false,
+    "windows11_guest_acceptance_run": false,
+    "ubuntu_linux_acceptance_run": false,
+    "github_actions_run": false
+  },
+  "wave_07": {
+    "status": "WAVE_COMPLETE",
+    "start_sha": "3efd890b5deb1ccf36e423d3000fa1b75f1481d0",
+    "source_sha": "ce598c2859b31d0abdfaaf6c071a6898eec60782",
+    "source_tree_sha": "418427c15e5c10de085df3b47f7137e4fc057310",
+    "jobs_source_sha": "713949fb752b90601e007812ebf2bd765da5ad52",
+    "v2_source_sha": "c0c6d0e956c9283f0c05f25b799e1b1f57ecb240",
+    "v2_wip_snapshot_fingerprint_sha256": "889fb7432500705ff44281ad2c76407d5ec334de17f2ab777128e33ad0d4980b",
+    "v2_wip_preserved_plugin_ui_files": {
+      "src/hpc_gui/ui/dialogs/plugin_manager_dialog.py": "4b7deff31f172237c39940ef4224045e316e63bff3b051b0c18dfbc428c0e4ed",
+      "src/hpc_gui/ui/dialogs/plugin_manager_cards.py": "eb2b2533608289bf1e6513a5892bf379c3dcb1f70275f9c6fe5e9b5b23420d54",
+      "src/hpc_gui/ui/dialogs/plugin_manager_state.py": "7825ad131b36f8f1f1cf3642cdd33b1dccad47951084e3a09b8a18eb6f044b33"
+    },
+    "source_fingerprint_sha256": "9be467bfb2e843e32bfd9fa04f9ede5cbe7111e024a5a81c2dea798ce5d7347f",
+    "source_fingerprint_method": "SHA256 of sorted path + NUL + SHA256(committed blob bytes) + newline records",
+    "changed_python_files": 19,
+    "added_application_modules": 6,
+    "added_test_support_modules": 3,
+    "ast_preserved_test_functions": {
+      "installer": 39,
+      "plugin_manager_ui": 37,
+      "contract": 20,
+      "missing": 0,
+      "duplicate": 0
+    },
+    "line_counts": {
+      "src/hpc_gui/plugins/validator.py": [
+        702,
+        103
+      ],
+      "src/hpc_gui/plugins/ui_contributions.py": [
+        698,
+        234
+      ],
+      "tests/test_plugin_contract.py": [
+        512,
+        322
+      ],
+      "tests/test_plugin_installer.py": [
+        852,
+        169
+      ],
+      "tests/test_plugin_manager_ui.py": [
+        1192,
+        329
+      ],
+      "src/hpc_gui/plugins/_manifest_validation.py": [
+        0,
+        254
+      ],
+      "src/hpc_gui/plugins/_profile_validation.py": [
+        0,
+        215
+      ],
+      "src/hpc_gui/plugins/_registry_validation.py": [
+        0,
+        80
+      ],
+      "src/hpc_gui/plugins/_validator_contracts.py": [
+        0,
+        150
+      ],
+      "src/hpc_gui/plugins/_ui_contribution_parser.py": [
+        0,
+        295
+      ],
+      "src/hpc_gui/plugins/_ui_contribution_shared.py": [
+        0,
+        210
+      ]
+    },
+    "tests": {
+      "primary_local": {
+        "passed": 450,
+        "failed": 0,
+        "skipped": 40,
+        "exit_code": 0,
+        "log": ".tmp/wave07-plugin-tests-final.log"
+      },
+      "cross_repo_contracts": {
+        "passed": 30,
+        "failed": 0,
+        "skipped": 0,
+        "exit_code": 0,
+        "plugin_checkout_sha": "8cce85446a8db72ea6b89b56bcb3df8916cbb0a",
+        "checkout_status_untracked_preserved": [
+          ".github/social-preview.jpg"
+        ],
+        "log": ".tmp/wave07-plugin-cross-repo-contracts.log"
+      },
+      "fluent_integration": {
+        "passed": 9,
+        "failed": 0,
+        "skipped": 0,
+        "exit_code": 0,
+        "path_override_only": true,
+        "log": ".tmp/wave07-fluent-integration-final.log"
+      },
+      "contract_enabled_full_batch": {
+        "passed": 479,
+        "failed": 1,
+        "skipped": 10,
+        "exit_code": 1,
+        "failure": "test_wx_separator_lifecycle_offscreen exceeded existing 15-second subprocess timeout",
+        "log": ".tmp/wave07-plugin-tests-with-contract-checkout.log"
+      },
+      "timeout_rerun": {
+        "passed": 1,
+        "failed": 0,
+        "skipped": 0,
+        "exit_code": 0,
+        "duration_seconds": 13.32,
+        "also_passed_in_primary_local": true,
+        "log": ".tmp/wave07-wx-menu-timeout-rerun.log"
+      },
+      "ruff_exit_code": 0,
+      "compileall_exit_code": 0,
+      "public_api_missing_symbols": 0,
+      "fluent_initial_path_hook_run_skipped": 9
+    },
+    "changed_source_gate": {
+      "status": "PASS",
+      "python_file_count": 853,
+      "over_limit_python_count": 42,
+      "baseline_over_limit_before": 47,
+      "new_dependency_errors": 0,
+      "new_cycles": 0,
+      "api_errors": 0,
+      "inherited_unresolved_imports": 1,
+      "inherited_cycles": 8,
+      "exit_code": 0,
+      "json_report": ".tmp/wave07-architecture-final.json",
+      "markdown_report": ".tmp/wave07-architecture-final.md"
     },
     "develop_updated": false,
     "remote_mutations": false,

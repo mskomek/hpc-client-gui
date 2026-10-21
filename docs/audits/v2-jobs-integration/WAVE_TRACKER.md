@@ -10,7 +10,7 @@
 | Sync | Advance isolated integration to current develop | COMPLETE | `0aa8ce54321c9b5130bcf4366a88f8d731ac0898` | `1995d7f5cb28de5cdf34737f95202e9d4fb7af9b` | SSH log groups regression 10/10; changed-source architecture gate passed, 50 baseline LOC violations remain | isolated integration |
 | 05 | Connection and SSH | WAVE_COMPLETE | `fabc11b01b517f53c55ebf882972c6529a441a9f` | `b7e6cac89cc8f2efa48c0a4cbbbfbfe834ea8825` | 139 core tests + 9 subtests and 87 wx tests passed; Ruff, compileall, changed-source gate passed; 48 global LOC violations remain | isolated integration |
 | 06 | CLI modularization | WAVE_COMPLETE | `2d08506d85bc287b21c92c2e28e4e81bfa1b4efb` | `7675422c1d077572f96ff4fad1b8c703d53ffb31` | 177 passed; Ruff, compileall, public API check, and changed-source architecture gate passed; 47 LOC violations remain | isolated integration |
-| 07 | Plugin system | NOT STARTED | — | — | — | isolated integration |
+| 07 | Plugin system | WAVE_COMPLETE | `3efd890b5deb1ccf36e423d3000fa1b75f1481d0` | `ce598c2859b31d0abdfaaf6c071a6898eec60782` | 450 passed/40 skipped without external checkout; 30 cross-repo contracts and 9 Fluent tests passed; one load-sensitive wx timeout passed on reruns; Ruff, compileall, API and architecture gates passed; 42 LOC violations remain | isolated integration |
 | 08 | Qt Jobs Outputs | NOT STARTED | — | — | — | isolated integration |
 | 09 | Splash, updater and dialogs | NOT STARTED | — | — | — | isolated integration |
 | 10 | Files / FTP modularization | NOT STARTED | — | — | — | isolated integration |

@@ -7,7 +7,7 @@
 | local `develop` | `d91c84f1d784fd3391bf132a54134faef44e63c9` | `origin/develop` = `d91c84f1d784fd3391bf132a54134faef44e63c9` | clean; checked out in `D:\Projeler\hpc-client-gui-i18n-develop` |
 | Jobs | `713949fb752b90601e007812ebf2bd765da5ad52` | same | clean; `C:\Users\mskomek\.codex\worktrees\jobs-workspace-recovery-merge` |
 | V2 | `c0c6d0e956c9283f0c05f25b799e1b1f57ecb240` | same | 99 modified tracked, 74 untracked, 32 ignored entries |
-| integration | `codex/integration/v2-jobs-staged-20261021` at `7675422c1d077572f96ff4fad1b8c703d53ffb31` | local only | isolated worktree; synchronized with current `develop`; no remote branch |
+| integration | `codex/integration/v2-jobs-staged-20261021` at `ce598c2859b31d0abdfaaf6c071a6898eec60782` | local only | isolated worktree; synchronized with current `develop`; no remote branch |
 
 At startup, the supplied `develop` SHA was the remote-tracking head and local `develop` had one additional commit. During the run, local and remote `develop` advanced to `d91c84f1d784fd3391bf132a54134faef44e63c9` with the collapsible SSH log groups change. The isolated integration branch now contains that head through a clean no-conflict merge checkpoint `1995d7f5cb28de5cdf34737f95202e9d4fb7af9b`. The initial source refs remain recorded below and in the manifest; Jobs and V2 source branches remain unchanged.
 
@@ -61,6 +61,13 @@ After WAVE 04, current `develop` `d91c84f1d784fd3391bf132a54134faef44e63c9` was 
 - The existing Jobs/develop session and terminal input path were preserved because V2's `session.py` removed saved master-password and keyboard-interactive behavior and its terminal rewrite dropped raw-key lifecycle handling. Existing saved-credential and terminal-output tests remain.
 - The V2 job ID validator was replaced with the canonical Jobs identity validator, preserving array and heterogeneous Slurm IDs. All prior public names remain available from `hpc_gui.cli.main`.
 - WAVE 06 source commit is `7675422c1d077572f96ff4fad1b8c703d53ffb31`, with fingerprint `e88f1f29f2fc1db360bc84acca16280008e65be87505978e4fea3d24b8c2554c`. It is isolated and has not been merged into local `develop`.
+
+## WAVE 07 source selection
+
+- V2 source `c0c6d0e956c9283f0c05f25b799e1b1f57ecb240` supplied the plugin validator and UI-contribution extractions plus installer, manager UI, and contract test splits. The 39 installer, 37 manager UI, and 20 contract test bodies were AST-identical to the pre-split tests.
+- Legacy names omitted by the V2 validator facade were explicitly restored. Public-symbol comparison passed for both changed facades. The selected tree adds `_manifest_validation.py`, `_profile_validation.py`, `_registry_validation.py`, `_validator_contracts.py`, `_ui_contribution_parser.py`, and `_ui_contribution_shared.py`.
+- The preserved dirty V2 snapshot also contains plugin-manager dialog, cards, and state UI work. It was inspected but not selected for this validator/parser wave; that work remains preserved for the dialog/UI wave.
+- WAVE 07 source commit is `ce598c2859b31d0abdfaaf6c071a6898eec60782`, with fingerprint `9be467bfb2e843e32bfd9fa04f9ede5cbe7111e024a5a81c2dea798ce5d7347f`. It is isolated and has not been merged into local `develop`.
 
 ## Dirty and ignored source classification
 
