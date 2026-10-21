@@ -740,6 +740,7 @@
     "export_diagnostics_hint": "Export logs and diagnostic information as a bundle",
     "collapse_repeats": "Collapse repeats",
     "repeated_summary": "{count} more occurrences",
+    "command_group_summary": "{command} — {count} runs{time_range}",
     "select_output_folder": "Select output folder",
     "diagnostics_title": "Diagnostics",
     "send_open_failed": "The Send Logs dialog could not be opened. Details were written to the logs.",
